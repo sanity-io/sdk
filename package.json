@@ -1,0 +1,74 @@
+{
+  "name": "sdk",
+  "version": "0.0.0",
+  "description": "Sanity SDK for Content OS",
+  "keywords": [],
+  "homepage": "https://github.com/sanity-io/sdk#readme",
+  "bugs": {
+    "url": "https://github.com/sanity-io/sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/sanity-io/sdk.git"
+  },
+  "license": "MIT",
+  "author": "Sanity <developers@sanity.io>",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    },
+    "./components": {
+      "source": "./src/components.ts",
+      "require": "./dist/components.cjs",
+      "default": "./dist/components.js"
+    },
+    "./react-hooks": {
+      "source": "./src/react-hooks.ts",
+      "require": "./dist/react-hooks.cjs",
+      "default": "./dist/react-hooks.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "pkg build --strict --clean --check",
+    "format": "prettier --write --cache --ignore-unknown .",
+    "ts:check": "tsc --noEmit",
+    "lint": "eslint . --ext .cjs,.js,.ts,.tsx"
+  },
+  "lint-staged": {
+    "*": [
+      "prettier --write --cache --ignore-unknown"
+    ]
+  },
+  "browserslist": "extends @sanity/browserslist-config",
+  "prettier": "@sanity/prettier-config",
+  "dependencies": {},
+  "devDependencies": {
+    "@sanity/pkg-utils": "^6.11.7",
+    "@sanity/prettier-config": "^1.0.3",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
