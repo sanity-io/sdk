@@ -19,8 +19,8 @@
     "format": "prettier --write --cache --ignore-unknown .",
     "ts:check": "tsc --noEmit",
     "lint": "eslint . --ext .cjs,.js,.ts,.tsx",
-    "test": "turbo run test --filter='./packages/core' --filter='./packages/react'",
-    "test:watch": "turbo run test:watch --filter='./packages/core' --filter='./packages/react'"
+    "test": "turbo run test --filter='./packages/*'",
+    "test:watch": "turbo run test:watch --filter='./packages/*'"
   },
   "lint-staged": {
     "*": [
