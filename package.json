@@ -18,6 +18,7 @@
     "build": "turbo run build --filter='./packages/*'",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "turbo run lint -- --fix",
+    "storybook": "turbo run dev --filter='./apps/storybook'",
     "test": "turbo run test --filter='./packages/*'",
     "test:watch": "turbo run test:watch --filter='./packages/*'",
     "ts:check": "tsc --noEmit"
