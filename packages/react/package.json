@@ -42,8 +42,8 @@
     "format": "prettier --write --cache --ignore-unknown .",
     "ts:check": "tsc --noEmit",
     "lint": "eslint . --ext .cjs,.js,.ts,.tsx",
-    "test": "vitest",
-    "test:watch": "vitest watch"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "lint-staged": {
     "*": [
