@@ -1,0 +1,37 @@
+version: 2.1
+
+orbs:
+  node: circleci/node@5.1.0
+
+jobs:
+  build-and-test:
+    docker:
+      - image: cimg/node:20.17
+    steps:
+      - checkout
+
+      # Install pnpm
+      - run:
+          name: Install pnpm
+          command: |
+            sudo corepack enable
+            corepack prepare pnpm@latest --activate
+
+      # Install dependencies
+      - node/install-packages:
+          pkg-manager: pnpm
+
+      # Run build
+      - run:
+          name: Build
+          command: pnpm build
+
+      # Run tests
+      - run:
+          name: Test
+          command: pnpm test
+
+workflows:
+  build-and-test:
+    jobs:
+      - build-and-test
