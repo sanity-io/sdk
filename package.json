@@ -17,10 +17,10 @@
   "scripts": {
     "build": "turbo run build --filter='./packages/*'",
     "format": "prettier --write --cache --ignore-unknown .",
-    "ts:check": "tsc --noEmit",
-    "lint": "eslint . --ext .cjs,.js,.ts,.tsx",
+    "lint": "turbo run lint -- --fix",
     "test": "turbo run test --filter='./packages/*'",
-    "test:watch": "turbo run test:watch --filter='./packages/*'"
+    "test:watch": "turbo run test:watch --filter='./packages/*'",
+    "ts:check": "tsc --noEmit"
   },
   "lint-staged": {
     "*": [
@@ -43,8 +43,8 @@
     "turbo": "^2.2.3",
     "typescript": "^5.6.3"
   },
+  "packageManager": "pnpm@9.10.0",
   "engines": {
     "node": ">=20.0.0"
-  },
-  "packageManager": "pnpm@9.10.0"
+  }
 }
