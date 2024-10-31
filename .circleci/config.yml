@@ -18,8 +18,9 @@ jobs:
             corepack prepare pnpm@latest --activate
 
       # Install dependencies
-      - node/install-packages:
-          pkg-manager: pnpm
+      - run:
+          name: Install Dependencies
+          command: pnpm install
 
       # Run build
       - run:
