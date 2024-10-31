@@ -30,8 +30,8 @@
     },
     "./package.json": "./package.json"
   },
-  "module": "./dist/index.js",
   "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
@@ -40,10 +40,10 @@
   "scripts": {
     "build": "pkg build --strict --clean --check",
     "format": "prettier --write --cache --ignore-unknown .",
-    "ts:check": "tsc --noEmit",
     "lint": "eslint . --ext .cjs,.js,.ts,.tsx",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "ts:check": "tsc --noEmit"
   },
   "lint-staged": {
     "*": [
@@ -77,12 +77,12 @@
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   },
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "packageManager": "pnpm@9.10.0",
   "peerDependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
+  },
+  "packageManager": "pnpm@9.10.0",
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
