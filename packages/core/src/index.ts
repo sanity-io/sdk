@@ -1,4 +1,1 @@
-/** @public */
-export function main(): void {
-  //
-}
+export {testFunction} from './example/example'
