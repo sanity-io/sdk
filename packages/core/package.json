@@ -18,6 +18,7 @@
   "exports": {
     ".": {
       "source": "./src/index.ts",
+      "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
@@ -30,7 +31,8 @@
     "src"
   ],
   "scripts": {
-    "build": "pkg build --strict --clean --check",
+    "build": "pkg build --clean --check",
+    "clean": "rimraf dist",
     "dev": "pkg build --strict",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "eslint . --ext .cjs,.js,.ts,.tsx",
