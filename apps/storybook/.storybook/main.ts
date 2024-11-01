@@ -23,5 +23,14 @@ const config: StorybookConfig = {
     name: getAbsolutePath('@storybook/react-vite'),
     options: {},
   },
+  async viteFinal(config) {
+    return {
+      ...config,
+      optimizeDeps: {
+        ...config.optimizeDeps,
+        exclude: ['sdk-core'],
+      },
+    }
+  },
 }
 export default config

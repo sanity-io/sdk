@@ -31,9 +31,9 @@
     "src"
   ],
   "scripts": {
-    "build": "pkg build --clean --check",
+    "build": "pkg build --strict --clean --check",
     "clean": "rimraf dist",
-    "dev": "pkg build --strict",
+    "dev": "pkg watch",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "eslint . --ext .cjs,.js,.ts,.tsx",
     "test": "vitest run",

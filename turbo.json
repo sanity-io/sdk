@@ -9,25 +9,17 @@
       "dependsOn": ["^check-types"]
     },
     "dev": {
+      "dependsOn": ["^dev"],
       "persistent": true,
       "cache": false
     },
     "lint": {
       "outputLogs": "errors-only"
     },
-    "storybook": {
-      "dependsOn": ["^build"],
-      "cache": false,
-      "persistent": true
-    },
     "test": {
       "outputs": []
     },
     "test:watch": {
-      "cache": false,
-      "persistent": true
-    },
-    "watch": {
       "cache": false,
       "persistent": true
     }
