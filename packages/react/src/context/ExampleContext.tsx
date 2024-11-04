@@ -29,7 +29,7 @@ interface SDKProviderProps {
 export const SDKContext = createContext<SDKContextValue | undefined>(undefined)
 
 /** @public */
-export function SDKPreviewProvider({config, children}: SDKProviderProps): ReactNode {
+export function SDKProvider({config, children}: SDKProviderProps): ReactNode {
   const {projectId, dataset, apiVersion, token, schemaTypes} = config
 
   const client = useMemo(

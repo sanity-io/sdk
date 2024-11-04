@@ -10,3 +10,7 @@ node_modules
 .turbo
 
 storybook-static
+
+# Environment files
+# ignore all local .env files
+*.local
