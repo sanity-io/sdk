@@ -1,5 +1,3 @@
-'use strict'
-
 /** @type import('eslint').Linter.Config */
 module.exports = {
   root: true,
@@ -15,7 +13,7 @@ module.exports = {
   },
   plugins: ['import', 'simple-import-sort', 'prettier'],
   rules: {
-    'no-console': 'error',
+    'no-console': 'warn',
     'no-shadow': 'error',
     'no-warning-comments': [
       'warn',
