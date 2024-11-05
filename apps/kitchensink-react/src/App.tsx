@@ -4,7 +4,7 @@ export function App(): JSX.Element {
   testFunction()
   return (
     <div>
-      <h1>SDK Explorer</h1>
+      <h1>React Kitchensink</h1>
     </div>
   )
 }

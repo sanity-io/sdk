@@ -11,7 +11,4 @@ export default defineConfig({
       'sdk-react': resolve(import.meta.dirname, '../../packages/react/src'),
     },
   },
-  optimizeDeps: {
-    include: ['sdk-core', 'sdk-react'],
-  },
 })

@@ -1,5 +1,5 @@
 {
-  "name": "@sanity/sdk-explorer",
+  "name": "@sanity/kitchensink-react",
   "version": "0.0.0",
   "private": true,
   "type": "module",
