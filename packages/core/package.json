@@ -48,6 +48,9 @@
   },
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
+  "dependencies": {
+    "zustand": "^5.0.1"
+  },
   "devDependencies": {
     "@sanity/pkg-utils": "^6.11.7",
     "@sanity/prettier-config": "^1.0.3",
