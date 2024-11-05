@@ -1,6 +1,7 @@
 {
   "name": "sdk-react",
   "version": "0.0.0",
+  "private": true,
   "description": "Sanity SDK React toolkit for Content OS",
   "keywords": [],
   "homepage": "https://github.com/sanity-io/sdk#readme",
@@ -18,20 +19,23 @@
   "exports": {
     ".": {
       "source": "./src/index.ts",
+      "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./components": {
       "source": "./src/components/index.ts",
+      "import": "./dist/components/index.js",
       "default": "./dist/components/index.js"
     },
     "./hooks": {
       "source": "./src/hooks/index.ts",
+      "import": "./dist/hooks/index.js",
       "default": "./dist/hooks/index.js"
     },
     "./package.json": "./package.json"
   },
-  "module": "./dist/index.js",
   "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
@@ -39,11 +43,13 @@
   ],
   "scripts": {
     "build": "pkg build --strict --clean --check",
+    "clean": "rimraf dist",
+    "dev": "pkg watch",
     "format": "prettier --write --cache --ignore-unknown .",
-    "ts:check": "tsc --noEmit",
     "lint": "eslint . --ext .cjs,.js,.ts,.tsx",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "ts:check": "tsc --noEmit"
   },
   "lint-staged": {
     "*": [
@@ -59,6 +65,7 @@
   "devDependencies": {
     "@sanity/pkg-utils": "^6.11.7",
     "@sanity/prettier-config": "^1.0.3",
+    "@storybook/react": "^8.3.6",
     "@testing-library/jest-dom": "^6.6.2",
     "@testing-library/react": "^16.0.1",
     "@types/react": "^18.2.64",
@@ -74,15 +81,16 @@
     "jsdom": "^25.0.1",
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
+    "sdk-core": "workspace:*",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   },
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "packageManager": "pnpm@9.10.0",
   "peerDependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
+  },
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

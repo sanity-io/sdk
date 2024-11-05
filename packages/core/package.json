@@ -1,6 +1,7 @@
 {
   "name": "sdk-core",
   "version": "0.0.0",
+  "private": true,
   "description": "Sanity SDK for Content OS",
   "keywords": [],
   "homepage": "https://github.com/sanity-io/sdk#readme",
@@ -18,12 +19,13 @@
   "exports": {
     ".": {
       "source": "./src/index.ts",
+      "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },
-  "module": "./dist/index.js",
   "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
@@ -31,11 +33,13 @@
   ],
   "scripts": {
     "build": "pkg build --strict --clean --check",
+    "clean": "rimraf dist",
+    "dev": "pkg watch",
     "format": "prettier --write --cache --ignore-unknown .",
-    "ts:check": "tsc --noEmit",
     "lint": "eslint . --ext .cjs,.js,.ts,.tsx",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "ts:check": "tsc --noEmit"
   },
   "lint-staged": {
     "*": [
@@ -59,8 +63,8 @@
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   },
+  "packageManager": "pnpm@9.12.3",
   "engines": {
     "node": ">=20.0.0"
-  },
-  "packageManager": "pnpm@9.10.0"
+  }
 }
