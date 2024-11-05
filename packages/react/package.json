@@ -59,6 +59,9 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
+    "@sanity/asset-utils": "^2.1.0",
+    "@sanity/icons": "^3.4.0",
+    "@sanity/image-url": "^1.1.0",
     "@sanity/ui": "^2.8.18",
     "classnames": "^2.5.1",
     "react": "^18.2.0",

@@ -138,6 +138,7 @@ export const book = {
           ((options.ordering || {}).name === 'swedishTitle' && (book.translations || {}).se) ||
           book.title,
         subtitle: formatSubtitle(book),
+        // media: () => <div>hi</div>
       })
     },
   },

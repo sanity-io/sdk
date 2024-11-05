@@ -1,152 +1,153 @@
-import {Box, Flex, rem, Skeleton, Stack, Text, TextSkeleton} from '@sanity/ui'
-import classNames from 'classnames'
-import {styled} from 'styled-components'
-import {getDevicePixelRatio} from 'use-device-pixel-ratio'
+import {isImageSource} from '@sanity/asset-utils'
+import {DocumentIcon} from '@sanity/icons'
+import imageUrlBuilder from '@sanity/image-url'
+// import {type SanityImageSource} from '@sanity/image-url/lib/types/types'
+import { type SanityImageSource } from '@sanity/asset-utils'
+import {type ImageUrlFitMode} from '@sanity/types'
+import {
+  type ComponentType,
+  createElement,
+  type ElementType,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+  useCallback,
+  useMemo,
+} from 'react'
+import {isValidElementType} from 'react-is'
 
-// import {useTranslation} from '../../../i18n' // are we implementing a version of this? what should we do?
-import {Media} from '../_common/Media'
-import {PREVIEW_SIZES} from '../constants'
-import {renderPreviewNode} from '../helpers'
-import {type PreviewMediaDimensions, type PreviewProps} from '../types'
+import {useClient} from '../../../hooks/client/useClient'
+import {isString} from '../../../util/isString'
+import {Tooltip} from '../../UIComponents/Tooltip/Tooltip'
+import {type PreviewProps} from '../types'
+import {DefaultPreviewLayout} from './layouts/DefaultPreviewLayout'
 
-/**
- * @hidden
- * @beta */
-export interface DefaultPreviewProps extends Omit<PreviewProps<'default'>, 'renderDefault'> {
-  styles?: {
-    root?: string
-    placeholder?: string
-    media?: string
-    heading?: string
-    title?: string
-    subtitle?: string
-    hasSubtitle?: string
-    mediaString?: string
-    status?: string
-    children?: string
-  }
+function FallbackIcon() {
+  return <DocumentIcon className="sanity-studio__preview-fallback-icon" />
 }
 
-const DEFAULT_MEDIA_DIMENSIONS: PreviewMediaDimensions = {
-  ...PREVIEW_SIZES.default.media,
-  aspect: 1,
-  fit: 'crop',
-  dpr: getDevicePixelRatio(),
+/** @internal */
+export interface SanityDefaultPreviewProps extends Omit<PreviewProps, 'renderDefault'> {
+  error?: Error | null
+  icon?: ElementType | false
+  tooltip?: ReactNode
 }
 
-const Root = styled(Flex)`
-  height: ${rem(PREVIEW_SIZES.default.media.height)};
-  box-sizing: content-box;
-`
-
-const TitleSkeleton = styled(TextSkeleton).attrs({animated: true, radius: 1, size: 1})`
-  max-width: ${rem(160)};
-  width: 80%;
-`
-
-const SubtitleSkeleton = styled(TextSkeleton).attrs({animated: true, radius: 1, size: 1})`
-  max-width: ${rem(120)};
-  width: 60%;
-`
-const SKELETON_DELAY = 300
 /**
- * @hidden
- * @beta */
-export function DefaultPreview(props: DefaultPreviewProps) {
-  const {title, subtitle, media, status, isPlaceholder, children, styles} = props
-  // const {t} = useTranslation() // see above note
-  const rootClassName = classNames(styles?.root, Boolean(subtitle) && styles?.hasSubtitle)
+ * Used in cases where no custom preview component is provided
+ * @internal
+ * */
+export function DefaultPreview(props: SanityDefaultPreviewProps): ReactElement {
+  const {icon, layout, media: mediaProp, imageUrl, title, tooltip, ...restProps} = props
 
-  const statusNode = status && (
-    <Box className={styles?.status} data-testid="default-preview__status">
-      {renderPreviewNode(status, 'default')}
-    </Box>
+  const client = useClient()
+  const imageBuilder = useMemo(() => imageUrlBuilder(client), [client])
+
+  // NOTE: This function exists because the previews provides options
+  // for the rendering of the media (dimensions)
+  const renderMedia = useCallback(
+    (options: {
+      dimensions: {width?: number; height?: number; fit: ImageUrlFitMode; dpr?: number}
+    }) => {
+      const {dimensions} = options
+
+      // Handle sanity image
+      return (
+        <img
+          alt={isString(title) ? title : undefined}
+          referrerPolicy="strict-origin-when-cross-origin"
+          src={
+            imageBuilder
+              .image(
+                mediaProp as SanityImageSource /*will only enter this code path if it's compatible*/,
+              )
+              .width(dimensions.width || 100)
+              .height(dimensions.height || 100)
+              .fit(dimensions.fit)
+              .dpr(dimensions.dpr || 1)
+              .url() || ''
+          }
+        />
+      )
+    },
+    [imageBuilder, mediaProp, title],
   )
 
-  if (isPlaceholder) {
+  const renderIcon = useCallback(() => {
+    return createElement(icon || FallbackIcon)
+  }, [icon])
+
+  const media = useMemo(() => {
+    if (icon === false) {
+      // Explicitly disabled
+      return false
+    }
+
+    if (isValidElementType(mediaProp)) {
+      return mediaProp
+    }
+
+    if (isValidElement(mediaProp)) {
+      return mediaProp
+    }
+
+    if (isImageSource(mediaProp)) {
+      return renderMedia
+    }
+
+    // Handle image urls
+    if (isString(imageUrl)) {
+      return (
+        <img
+          src={imageUrl}
+          alt={isString(title) ? title : undefined}
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+      )
+    }
+
+    // Render fallback icon
+    return renderIcon
+  }, [icon, imageUrl, mediaProp, renderIcon, renderMedia, title])
+
+  const previewProps: Omit<PreviewProps, 'renderDefault'> = useMemo(
+    () => ({
+      ...restProps,
+      // @todo: fix `TS2769: No overload matches this call.`
+      media: media as any,
+      title,
+    }),
+    [media, restProps, title],
+  )
+
+  /*
+   * This lookup typically unlocks previews that would show up in Portable Text,
+   * different kinds of previews for images, etc.
+   * In the interest of trying to keep this code concise and deliver for the end of the cycle,
+   * I'm defaulting to the "default" layout for now, which is what is used in document lists.
+   * Please refer to https://github.com/sanity-io/sanity/blob/8a9d18fb4cb4b8405574251ea6465ede5522bf91/packages/sanity/src/core/preview/components/_previewComponents.ts
+   * for the full implementation.
+   */
+  // const layoutComponent = _previewComponents[layout || 'default']
+
+  const children = createElement(
+    DefaultPreviewLayout as ComponentType<Omit<PreviewProps, 'renderDefault'>>,
+    previewProps,
+  )
+
+  if (tooltip) {
     return (
-      <Root
-        align="center"
-        className={styles?.placeholder}
-        data-testid="default-preview"
-        padding={2}
-        paddingLeft={media ? 2 : 3}
+      <Tooltip
+        content={tooltip}
+        disabled={!tooltip}
+        fallbackPlacements={['top-end']}
+        placement="bottom-end"
       >
-        <Flex align="center" flex={1} gap={2}>
-          {media && (
-            <Box flex="none">
-              <Skeleton
-                animated
-                delay={SKELETON_DELAY}
-                radius={1}
-                style={PREVIEW_SIZES.default.media}
-              />
-            </Box>
-          )}
-
-          <Stack data-testid="default-preview__heading" flex={1} space={2}>
-            <TitleSkeleton delay={SKELETON_DELAY} />
-            <SubtitleSkeleton delay={SKELETON_DELAY} />
-          </Stack>
-
-          <Box flex="none" padding={1}>
-            {statusNode}
-          </Box>
-        </Flex>
-      </Root>
+        {/* Currently tooltips won't trigger without a wrapping element */}
+        <div>{children}</div>
+      </Tooltip>
     )
   }
 
-  return (
-    <Root
-      align="center"
-      className={rootClassName}
-      data-testid="default-preview"
-      padding={2}
-      paddingLeft={media ? 2 : 3}
-    >
-      <Flex align="center" flex={1} gap={2}>
-        {media && (
-          <Box flex="none">
-            <Media
-              dimensions={DEFAULT_MEDIA_DIMENSIONS}
-              layout="default"
-              media={media as any}
-              styles={styles}
-            />
-          </Box>
-        )}
-
-        <Stack className={styles?.heading} data-testid="default-preview__header" flex={1} space={2}>
-          <Text
-            className={styles?.title}
-            size={1}
-            style={{color: 'inherit'}}
-            textOverflow="ellipsis"
-            weight="medium"
-          >
-            {title && renderPreviewNode(title, 'default')}
-            {!title && (
-              <span style={{color: 'var(--card-muted-fg-color)'}}>
-                {/* {t('preview.default.title-fallback')} */}
-                Untitled
-              </span>
-            )}
-          </Text>
-
-          {subtitle && (
-            <Text muted size={1} textOverflow="ellipsis" className={styles?.subtitle}>
-              {renderPreviewNode(subtitle, 'default')}
-            </Text>
-          )}
-        </Stack>
-
-        <Box flex="none" padding={1}>
-          {statusNode}
-        </Box>
-
-        {children && <div className={styles?.children}>{children}</div>}
-      </Flex>
-    </Root>
-  )
+  return children
 }

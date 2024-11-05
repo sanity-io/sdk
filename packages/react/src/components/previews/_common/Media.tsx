@@ -46,6 +46,7 @@ function renderMedia(props: {
   }
 }): ReactNode {
   const {dimensions, layout, media, styles} = props
+  console.log('media', media)
 
   if (isValidElementType(media)) {
     return createElement(media, {dimensions, layout})
