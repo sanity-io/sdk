@@ -7,7 +7,7 @@
 
 ## 💻 About
 
-The Sanity SDK is a bundle of wrappers, helpers, optimizations, and best practices that builds on the existing SanityClients and liveContent API.
+The Sanity SDK is a bundle of wrappers, helpers, optimizations, and best practices that builds on the existing Sanity client and Live Content API.
 
 The Sanity SDK contains the objects you need to build the user interface for a Sanity Content OS app. In addition to drawing windows, buttons, panels, and text fields, it handles all the event management and interaction between your app, people, and the Sanity platform.
 
