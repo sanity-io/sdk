@@ -230,7 +230,7 @@ importers:
       '@sanity/prettier-config':
         specifier: ^1.0.3
         version: 1.0.3(prettier@3.3.3)
-      '@sanity/sdk-core':
+      '@sanity/sdk':
         specifier: workspace:*
         version: link:../core
       '@storybook/react':

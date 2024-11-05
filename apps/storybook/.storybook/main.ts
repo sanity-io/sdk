@@ -27,7 +27,7 @@ const sbConfig: StorybookConfig = {
       ...config,
       optimizeDeps: {
         ...config.optimizeDeps,
-        exclude: ['sdk-core'],
+        exclude: ['sdk'],
       },
     }
   },

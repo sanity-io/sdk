@@ -20,7 +20,7 @@
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "turbo run lint -- --fix",
     "prepare": "husky",
-    "storybook:dev": "turbo run dev --filter={storybook,sdk-react,sdk-core} --parallel",
+    "storybook:dev": "turbo run dev --filter={storybook,sdk-react,sdk} --parallel",
     "test": "turbo run test --filter='./packages/*'",
     "test:watch": "turbo run test:watch --filter='./packages/*'",
     "ts:check": "tsc --noEmit"

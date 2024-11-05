@@ -1,4 +1,4 @@
-import {testFunction} from '@sanity/sdk-core'
+import {testFunction} from '@sanity/sdk'
 
 function ExampleComponent(): JSX.Element {
   return (
