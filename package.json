@@ -18,7 +18,6 @@
     "build": "turbo run build --filter='./packages/*'",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "turbo run lint -- --fix",
-    "pre-commit": "pnpm run pre-commit --filter={storybook,sdk-react,sdk-core}",
     "prepare": "husky",
     "storybook:dev": "turbo run dev --filter={storybook,sdk-react,sdk-core} --parallel",
     "test": "turbo run test --filter='./packages/*'",
