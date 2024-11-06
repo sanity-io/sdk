@@ -15,7 +15,7 @@
   "author": "Sanity <developers@sanity.io>",
   "sideEffects": false,
   "scripts": {
-    "build": "turbo run build --filter='./packages/*'",
+    "build": "turbo run build --filter='./packages/*' --filter='./apps/*'",
     "dev:kitchensink": "(cd apps/kitchensink-react && pnpm run dev)",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "turbo run lint -- --fix",
