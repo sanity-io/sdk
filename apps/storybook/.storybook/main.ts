@@ -1,6 +1,5 @@
 import type {StorybookConfig} from '@storybook/react-vite'
-
-import {join, dirname} from 'path'
+import {dirname, join} from 'path'
 
 /**
  * This function is used to resolve the absolute path of a package.
@@ -11,7 +10,7 @@ import {join, dirname} from 'path'
 function getAbsolutePath(value: string): any {
   return dirname(require.resolve(join(value, 'package.json')))
 }
-const config: StorybookConfig = {
+const sbConfig: StorybookConfig = {
   stories: ['../../../packages/react/src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   addons: [
     getAbsolutePath('@storybook/addon-links'),
@@ -28,9 +27,9 @@ const config: StorybookConfig = {
       ...config,
       optimizeDeps: {
         ...config.optimizeDeps,
-        exclude: ['sdk-core'],
+        exclude: ['sdk'],
       },
     }
   },
 }
-export default config
+export default sbConfig

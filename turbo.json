@@ -14,7 +14,8 @@
       "cache": false
     },
     "lint": {
-      "outputLogs": "errors-only"
+      "outputLogs": "errors-only",
+      "cache": false
     },
     "test": {
       "outputs": []

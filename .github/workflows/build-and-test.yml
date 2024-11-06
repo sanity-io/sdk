@@ -90,5 +90,8 @@ jobs:
           name: dist-artifacts
           path: packages
 
+      - name: Lint
+        run: pnpm lint
+
       - name: Test
         run: pnpm test
