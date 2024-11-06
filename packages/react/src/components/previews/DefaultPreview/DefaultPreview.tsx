@@ -1,8 +1,8 @@
 import {isImageSource} from '@sanity/asset-utils'
+// import {type SanityImageSource} from '@sanity/image-url/lib/types/types'
+import {type SanityImageSource} from '@sanity/asset-utils'
 import {DocumentIcon} from '@sanity/icons'
 import imageUrlBuilder from '@sanity/image-url'
-// import {type SanityImageSource} from '@sanity/image-url/lib/types/types'
-import { type SanityImageSource } from '@sanity/asset-utils'
 import {type ImageUrlFitMode} from '@sanity/types'
 import {
   type ComponentType,

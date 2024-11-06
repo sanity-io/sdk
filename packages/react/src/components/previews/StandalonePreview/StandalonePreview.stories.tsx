@@ -10,11 +10,11 @@ const documentType = 'book'
 
 const StorybookComponent = () => {
   return (
-  <ThemeProvider scheme={'light'} theme={studioTheme}>
-    <SDKProvider config={config}>
-      <StandalonePreview documentId={documentId} documentType={documentType} />
-    </SDKProvider>
-  </ThemeProvider>
+    <ThemeProvider scheme={'light'} theme={studioTheme}>
+      <SDKProvider config={config}>
+        <StandalonePreview documentId={documentId} documentType={documentType} />
+      </SDKProvider>
+    </ThemeProvider>
   )
 }
 
