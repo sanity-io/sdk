@@ -123,27 +123,27 @@ export const book = {
       ],
     },
   ],
-  preview: {
-    select: {
-      title: 'title',
-      translations: 'translations',
-      createdAt: '_createdAt',
-      date: '_updatedAt',
-      authorName: 'author.name',
-      authorBFF: 'author.bestFriend.name',
-      publicationYear: 'publicationYear',
-      media: 'coverImage',
-    },
-    prepare(book: any, options: any = {}) {
-      return Object.assign({}, book, {
-        title:
-          ((options.ordering || {}).name === 'swedishTitle' && (book.translations || {}).se) ||
-          book.title,
-        subtitle: formatSubtitle(book),
-        // media: () => <div>hi</div>
-      })
-    },
-  },
+  // preview: {
+  //   select: {
+  //     title: 'title',
+  //     translations: 'translations',
+  //     createdAt: '_createdAt',
+  //     date: '_updatedAt',
+  //     authorName: 'author.name',
+  //     authorBFF: 'author.bestFriend.name',
+  //     publicationYear: 'publicationYear',
+  //     media: 'coverImage',
+  //   },
+  //   prepare(book: any, options: any = {}) {
+  //     return Object.assign({}, book, {
+  //       title:
+  //         ((options.ordering || {}).name === 'swedishTitle' && (book.translations || {}).se) ||
+  //         book.title,
+  //       subtitle: formatSubtitle(book),
+  //       media: () => <div>hi</div>
+  //     })
+  //   },
+  // },
   initialValue: {
     title: 'Foo',
   },

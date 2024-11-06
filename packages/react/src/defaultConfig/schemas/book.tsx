@@ -1,15 +1,15 @@
 import {type Rule} from '@sanity/types'
 
-function formatSubtitle(book: any) {
-  return [
-    'By',
-    book.authorName || '<unknown>',
-    book.authorBFF && `[BFF ${book.authorBFF} 🤞]`,
-    book.publicationYear && `(${book.publicationYear})`,
-  ]
-    .filter(Boolean)
-    .join(' ')
-}
+// function formatSubtitle(book: any) {
+//   return [
+//     'By',
+//     book.authorName || '<unknown>',
+//     book.authorBFF && `[BFF ${book.authorBFF} 🤞]`,
+//     book.publicationYear && `(${book.publicationYear})`,
+//   ]
+//     .filter(Boolean)
+//     .join(' ')
+// }
 
 export const book = {
   name: 'book',
@@ -121,27 +121,27 @@ export const book = {
       ],
     },
   ],
-  preview: {
-    select: {
-      title: 'title',
-      translations: 'translations',
-      createdAt: '_createdAt',
-      date: '_updatedAt',
-      authorName: 'author.name',
-      authorBFF: 'author.bestFriend.name',
-      publicationYear: 'publicationYear',
-      media: 'coverImage',
-    },
-    prepare(book: any, options: any = {}) {
-      return Object.assign({}, book, {
-        title:
-          ((options.ordering || {}).name === 'swedishTitle' && (book.translations || {}).se) ||
-          book.title,
-        subtitle: formatSubtitle(book),
-        // media: () => <div>hi</div>
-      })
-    },
-  },
+  // preview: {
+  //   select: {
+  //     title: 'title',
+  //     translations: 'translations',
+  //     createdAt: '_createdAt',
+  //     date: '_updatedAt',
+  //     authorName: 'author.name',
+  //     authorBFF: 'author.bestFriend.name',
+  //     publicationYear: 'publicationYear',
+  //     media: 'coverImage',
+  //   },
+  //   prepare(book: any, options: any = {}) {
+  //     return Object.assign({}, book, {
+  //       title:
+  //         ((options.ordering || {}).name === 'swedishTitle' && (book.translations || {}).se) ||
+  //         book.title,
+  //       subtitle: formatSubtitle(book),
+  //       // media: () => <div>hi</div>
+  //     })
+  //   },
+  // },
   initialValue: {
     title: 'Foo',
   },
