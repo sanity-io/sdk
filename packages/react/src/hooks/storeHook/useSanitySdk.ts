@@ -1,4 +1,4 @@
-import {sanitySdkStore} from 'sdk-core'
+import {sanitySdkStore} from '@sanity/sdk'
 import {useStore} from 'zustand'
 
 /** @public */
