@@ -1,7 +1,17 @@
 import {testFunction} from '@sanity/sdk'
-// import {schemaTestSubscribe, setSchema, testFunction} from 'sdk-core'
+// import {useEffect} from 'react'
 
-// schemaTestSubscribe()
+// import {useSanitySdk} from '../../hooks'
+
+// // eslint-disable-next-line @typescript-eslint/no-explicit-any
+// const schema = useSanitySdk((state: any) => state.schema)
+// // eslint-disable-next-line @typescript-eslint/no-explicit-any
+// const setSchema = useSanitySdk((state: any) => state.setSchema) as (newSchema: any) => void
+
+// useEffect(() => {
+//   // eslint-disable-next-line no-console
+//   console.log('[+] Schema State updated', schema)
+// }, [schema])
 
 // setSchema({
 //   types: [

@@ -1,9 +1,10 @@
-import {create} from 'zustand'
 import {devtools} from 'zustand/middleware'
+import {createStore} from 'zustand/vanilla'
 
 import {createSchemaStore} from './config/schemaStore'
 
-export const useSanitySdk = create(
+/** @public */
+export const sanitySdkStore = createStore(
   devtools(
     (...a) => ({
       ...createSchemaStore(...a),
