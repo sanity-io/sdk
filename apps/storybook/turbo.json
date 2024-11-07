@@ -3,7 +3,7 @@
   "extends": ["//"],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["@sanity/sdk#build", "@sanity/sdk-react#build"],
       "outputs": ["storybook-static/**"]
     }
   }
