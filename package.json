@@ -17,10 +17,10 @@
   "scripts": {
     "build": "turbo run build --filter='./packages/*' --filter='./apps/*'",
     "dev:kitchensink": "(cd apps/kitchensink-react && pnpm run dev)",
+    "dev:storybook": "turbo run dev --filter={@sanity/storybook,@sanity/sdk,@sanity/sdk-react} --parallel",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "turbo run lint -- --fix",
     "prepare": "husky",
-    "storybook:dev": "turbo run dev --filter={storybook,sdk-react,sdk} --parallel",
     "test": "turbo run test --filter='./packages/*'",
     "test:watch": "turbo run test:watch --filter='./packages/*'",
     "ts:check": "tsc --noEmit"
