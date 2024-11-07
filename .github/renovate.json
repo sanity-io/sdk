@@ -7,6 +7,21 @@
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["patch", "minor"],
       "groupName": "devDependencies (non-major)"
+    },
+    {
+      "description": "Group TypeScript related deps in a single PR, as they often have to update together",
+      "groupName": "typescript-tooling",
+      "matchPackageNames": ["@sanity/pkg-utils", "@sanity/tsdoc", "typescript"]
+    },
+    {
+      "description": "Group storybook related deps in a single PR, as they often have to update together",
+      "groupName": "storybook-tooling",
+      "matchPackageNames": ["@storybook/*", "storybook"]
+    },
+    {
+      "description": "Group eslint related deps in a single PR, as they often have to update together",
+      "groupName": "eslint-tooling",
+      "matchPackageNames": ["@eslint/*", "eslint", "eslint-plugin-*", "typescript-eslint"]
     }
   ]
 }
