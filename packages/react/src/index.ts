@@ -1,1 +1,4 @@
-export {useSanitySdk} from './hooks/storeHook/useSanitySdk'
+/** @public */
+export function main(): void {
+  //
+}
