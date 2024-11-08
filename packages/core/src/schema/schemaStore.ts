@@ -3,11 +3,13 @@ import type {StoreApi} from 'zustand'
 import {devtools} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
+/** @public */
 export interface SchemaState {
   schema: any
   setSchema: (newSchema: any) => void
 }
 
+/** @public */
 export type SchemaStore = StoreApi<SchemaState>
 
 export const createSchemaStore = (schemaTypes: any[]): SchemaStore => {
