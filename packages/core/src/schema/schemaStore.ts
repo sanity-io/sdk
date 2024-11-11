@@ -1,0 +1,26 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type {StoreApi} from 'zustand'
+import {devtools} from 'zustand/middleware'
+import {createStore} from 'zustand/vanilla'
+
+export interface SchemaState {
+  schema: any
+  setSchema: (newSchema: any) => void
+}
+
+export type SchemaStore = StoreApi<SchemaState>
+
+export const createSchemaStore = (schemaTypes: any[]): SchemaStore => {
+  return createStore<SchemaState>()(
+    devtools(
+      (set) => ({
+        schema: {types: schemaTypes},
+        setSchema: (newSchema) => set({schema: newSchema}, false, 'setSchema'),
+      }),
+      {
+        name: 'SanitySchemaStore',
+        enabled: true, // Should be process.env.NODE_ENV === 'development'
+      },
+    ),
+  )
+}
