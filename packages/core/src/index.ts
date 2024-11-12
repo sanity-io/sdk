@@ -1,6 +1,18 @@
-// Example of a core vanilla js function that subscribes to the schema state
-// const schemaTestSubscribe = (): void => {
-//   sanitySdkStore.subscribe((state: any) => console.log('[+] Schema State updated', state.schema))
-// }
+/** MAIN INSTANCE */
+// Utils
+export {createSanityInstance} from './instance/sanityInstance'
+// Types
+export type {SanityConfig} from './instance/sanityInstance'
+export type {InternalStores, SanityInstance} from './instance/types'
 
+/** CLIENT */
+// Utils
+export {getClient} from './client/getClient'
+// Types
+export type {ClientOptions, ClientState, ClientStore} from './client/clientStore'
+
+/** SCHEMA */
+export type {SchemaState, SchemaStore} from './schema/schemaStore'
+
+/** TEST */
 export {testFunction} from './example/example'

@@ -1,17 +1,20 @@
-import type {SanityClient} from '@sanity/client'
+import {type SanityClient} from '@sanity/client'
 import {type StoreApi} from 'zustand'
 import {devtools} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
+/** @public */
 export interface ClientOptions {
   apiVersion: string
 }
 
-interface ClientState {
+/** @public */
+export interface ClientState {
   clients: Record<string, SanityClient>
   getClient: (options: ClientOptions) => SanityClient
 }
 
+/** @public */
 export type ClientStore = StoreApi<ClientState>
 
 /*
