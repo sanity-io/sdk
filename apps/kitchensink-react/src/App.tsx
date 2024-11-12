@@ -3,7 +3,7 @@ import './style.css'
 import {CubeIcon, HomeIcon, UlistIcon} from '@sanity/icons'
 import {Box, Flex, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
-import {Route, Routes} from 'react-router-dom'
+import {Link, Route, Routes} from 'react-router-dom'
 import styled from 'styled-components'
 
 import {CustomDocumentList} from './pages/CustomDocumentList'
@@ -27,19 +27,19 @@ export function App(): JSX.Element {
         <Bg padding={4}>
           <Ul>
             <li>
-              <a href="/">
+              <Link to="/">
                 <HomeIcon fontSize={32} />
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/document-list">
+              <Link to="/document-list">
                 <UlistIcon fontSize={32} />
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/document-hook">
+              <Link to="/document-hook">
                 <CubeIcon fontSize={32} />
-              </a>
+              </Link>
             </li>
           </Ul>
         </Bg>
