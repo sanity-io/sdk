@@ -35,7 +35,7 @@ export const createClientStore = (client: SanityClient): ClientStore => {
                 ...state.clients,
                 [options.apiVersion]: newClient,
               },
-            })
+            }, false, 'addVersionedClient')
             return newClient
           }
           return state.clients[options.apiVersion]
