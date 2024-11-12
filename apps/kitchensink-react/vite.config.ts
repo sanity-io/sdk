@@ -5,6 +5,7 @@ import {defineConfig} from 'vite'
 
 export default defineConfig({
   plugins: [react()],
+  clearScreen: false,
   resolve: {
     alias: {
       'sdk-core': resolve(import.meta.dirname, '../../packages/core/src'),

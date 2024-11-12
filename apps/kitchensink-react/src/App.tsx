@@ -1,38 +1,56 @@
-import {testFunction} from '@sanity/sdk'
-import {useSanitySdk} from '@sanity/sdk-react'
+import './style.css'
+
+import {CubeIcon, HomeIcon, UlistIcon} from '@sanity/icons'
+import {Box, Flex, ThemeProvider} from '@sanity/ui'
+import {buildTheme} from '@sanity/ui/theme'
+import {Route, Routes} from 'react-router-dom'
+import styled from 'styled-components'
+
+import {CustomDocumentList} from './pages/CustomDocumentList'
+import {CustomHook} from './pages/CustomHook'
+import Home from './pages/Home'
+
+const Bg = styled(Box)`
+  background-color: #f6f6f8;
+`
+
+const Ul = styled.ul`
+  list-style: none;
+`
+
+const theme = buildTheme()
 
 export function App(): JSX.Element {
-  const schema = useSanitySdk((state) => state.schema)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const setSchema = useSanitySdk((state) => state.setSchema) as (newSchema: any) => void
-  const onSetSchema = () =>
-    setSchema({
-      types: [
-        {
-          name: 'person',
-          type: 'document',
-          fields: [
-            {
-              name: 'name',
-              type: 'string',
-            },
-            {
-              name: 'age',
-              type: 'number',
-            },
-          ],
-        },
-      ],
-    })
-
   return (
-    <div>
-      <h1>React Kitchensink</h1>
-      <h2>Test Function</h2>
-      <p>Test Function Output: {testFunction()}</p>
-      <h2>Schema</h2>
-      <button onClick={onSetSchema}>Load Schema</button>
-      <p>{JSON.stringify(schema)}</p>
-    </div>
+    <ThemeProvider theme={theme}>
+      <Flex direction="row" height="fill">
+        <Bg padding={4}>
+          <Ul>
+            <li>
+              <a href="/">
+                <HomeIcon fontSize={32} />
+              </a>
+            </li>
+            <li>
+              <a href="/document-list">
+                <UlistIcon fontSize={32} />
+              </a>
+            </li>
+            <li>
+              <a href="/document-hook">
+                <CubeIcon fontSize={32} />
+              </a>
+            </li>
+          </Ul>
+        </Bg>
+        <Bg paddingTop={3} flex={1}>
+          <Routes>
+            <Route path="/" element={<Home />}></Route>
+            <Route path="/document-list" element={<CustomDocumentList />}></Route>
+            <Route path="/document-hook" element={<CustomHook />}></Route>
+          </Routes>
+        </Bg>
+      </Flex>
+    </ThemeProvider>
   )
 }
