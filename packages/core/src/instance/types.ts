@@ -1,6 +1,5 @@
 import type {ClientStore} from '../client/clientStore'
 import type {SchemaStore} from '../schema/schemaStore'
-import {storesKey} from './sanityInstance'
 
 /** @public */
 export interface InternalStores {
@@ -10,11 +9,14 @@ export interface InternalStores {
 
 /** @public */
 export interface SanityInstance {
+  /**
+   * The following is used to look up resources associated with this instance.
+   */
+  readonly instanceId: unique symbol
+
   config: {
     projectId: string
     dataset: string
     token?: string
   }
-  // a symbol to ensure it can't be accessed from outside the package
-  [storesKey]: InternalStores
 }
