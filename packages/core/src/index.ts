@@ -16,3 +16,6 @@ export type {SchemaState, SchemaStore} from './schema/schemaStore'
 
 /** TEST */
 export {testFunction} from './example/example'
+
+/** DOCUMENTS */
+export {type DocumentOptions, getDocuments, type GetDocumentsResult} from './documents/getDocuments'
