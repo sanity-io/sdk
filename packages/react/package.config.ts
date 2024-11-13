@@ -1,19 +1,7 @@
+import baseConfig from '@repo/package.config'
 import {defineConfig} from '@sanity/pkg-utils'
 
 export default defineConfig({
+  ...baseConfig,
   tsconfig: 'tsconfig.dist.json',
-  extract: {
-    customTags: [
-      {
-        name: 'module',
-        allowMultiple: true,
-        syntaxKind: 'block',
-      },
-      {
-        name: 'category',
-        allowMultiple: true,
-        syntaxKind: 'block',
-      },
-    ],
-  },
 })
