@@ -1,0 +1,22 @@
+{
+  "entryPoints": [
+    "packages/core/src/index.ts",
+    "packages/react/src/components/index.ts",
+    "packages/react/src/hooks/index.ts"
+  ],
+  "out": "docs",
+  "name": "Sanity SDK Documentation",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "excludeInternal": true,
+  "theme": "default",
+  "readme": "README.md",
+  "plugin": ["typedoc-plugin-merge-modules"],
+  "categorizeByGroup": true,
+  "entryPointStrategy": "resolve",
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  }
+}

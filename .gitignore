@@ -10,6 +10,7 @@ node_modules
 .turbo
 
 storybook-static
+docs
 
 .vscode
 

@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module @sanity/sdk
+ */
+
 /** MAIN INSTANCE */
 // Utils
 export {createSanityInstance} from './instance/sanityInstance'

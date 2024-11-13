@@ -2,7 +2,11 @@ import type {SanityInstance} from './types'
 
 export const storesKey = Symbol('stores')
 
-/** @public */
+/**
+ * @public
+ * @module @sanity/sdk
+ * @category Sanity Instance
+ */
 export interface SanityConfig {
   projectId: string
   dataset: string
@@ -12,6 +16,8 @@ export interface SanityConfig {
 /**
  * Returns a new instance of dependecies required for SanitySDK.
  * @public
+ * @module @sanity/sdk
+ * @category Sanity Instance
  */
 export const createSanityInstance = (config: SanityConfig): SanityInstance => {
   return {
