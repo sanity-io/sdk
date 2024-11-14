@@ -32,6 +32,9 @@ importers:
       turbo:
         specifier: ^2.2.3
         version: 2.2.3
+      typedoc:
+        specifier: ^0.26.11
+        version: 0.26.11(typescript@5.6.3)
       typescript:
         specifier: ^5.6.3
         version: 5.6.3
@@ -202,9 +205,6 @@ importers:
       prettier:
         specifier: ^3.3.3
         version: 3.3.3
-      typedoc:
-        specifier: ^0.26.11
-        version: 0.26.11(typescript@5.6.3)
       typedoc-plugin-merge-modules:
         specifier: ^6.0.3
         version: 6.0.3(typedoc@0.26.11(typescript@5.6.3))
@@ -272,9 +272,6 @@ importers:
       prettier:
         specifier: ^3.3.3
         version: 3.3.3
-      typedoc:
-        specifier: ^0.26.11
-        version: 0.26.11(typescript@5.6.3)
       typedoc-plugin-merge-modules:
         specifier: ^6.0.3
         version: 6.0.3(typedoc@0.26.11(typescript@5.6.3))
