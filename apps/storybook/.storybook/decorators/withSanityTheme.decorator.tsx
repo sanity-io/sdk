@@ -1,7 +1,7 @@
+import {Card, studioTheme, ThemeProvider} from '@sanity/ui'
 import {DecoratorHelpers} from '@storybook/addon-themes'
-import {StoryFn} from '@storybook/react'
+import {StoryContext, StoryFn, StoryObj} from '@storybook/react'
 import React from 'react'
-import {ThemeProvider, Card, studioTheme} from '@sanity/ui'
 
 const {initializeThemeState, pluckThemeFromContext, useThemeParameters} = DecoratorHelpers
 
@@ -10,14 +10,23 @@ const {initializeThemeState, pluckThemeFromContext, useThemeParameters} = Decora
  * value defined in Story.
  */
 
-export const withSanityTheme = ({themes, defaultTheme}) => {
+export const withSanityTheme = ({
+  themes,
+  defaultTheme,
+}: {
+  themes: Record<string, string>
+  defaultTheme: string
+}) => {
   initializeThemeState(Object.keys(themes), defaultTheme)
 
-  return (Story: StoryFn, context) => {
+  return (Story: StoryFn, context: StoryContext): JSX.Element => {
     const selectedTheme = pluckThemeFromContext(context)
     const {themeOverride} = useThemeParameters()
 
-    const selected = themeOverride || selectedTheme || defaultTheme
+    const selected =
+      themeOverride === 'dark' || selectedTheme === 'dark' || defaultTheme === 'dark'
+        ? 'dark'
+        : 'light'
 
     return (
       <ThemeProvider scheme={selected} theme={studioTheme}>

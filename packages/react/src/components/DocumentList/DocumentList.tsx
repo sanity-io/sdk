@@ -1,7 +1,7 @@
-import {Stack, Grid} from '@sanity/ui'
+import {Grid, Stack} from '@sanity/ui'
 
-import DocumentPreview from '../DocumentPreview/DocumentPreview.tsx'
 import type {DocumentPreviewProps} from '../DocumentPreview/DocumentPreview.tsx'
+import DocumentPreview from '../DocumentPreview/DocumentPreview.tsx'
 
 export interface DocumentListProps {
   documents: Array<DocumentPreviewProps>
