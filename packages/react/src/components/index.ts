@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module @sanity/sdk-react-components
+ * @module @sanity/sdk-react/components
  */
 
 /** @public */

@@ -1,6 +1,6 @@
 /**
  * @packageDocumentation
- * @module @sanity/sdk-react-hooks
+ * @module @sanity/sdk-react/hooks
  */
 
 /** @public */
