@@ -1,5 +1,5 @@
 // @ts-check
-import customConfig from '@sanity/config-eslint'
+import baseESLintConfig from '@repo/config-eslint'
 
 export default [
   {
@@ -18,5 +18,5 @@ export default [
       'yarn.lock',
     ],
   },
-  ...customConfig,
+  ...baseESLintConfig,
 ]

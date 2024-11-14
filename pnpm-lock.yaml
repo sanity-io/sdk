@@ -54,9 +54,9 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
     devDependencies:
-      '@sanity/config-eslint':
+      '@repo/config-eslint':
         specifier: workspace:*
-        version: link:../../packages/config-eslint
+        version: link:../../packages/@repo/config-eslint
       '@sanity/prettier-config':
         specifier: ^1.0.3
         version: 1.0.3(prettier@3.3.3)
@@ -155,9 +155,7 @@ importers:
         specifier: ^5.4.10
         version: 5.4.10(@types/node@22.8.4)(terser@5.36.0)
 
-  packages/@repo/package.config: {}
-
-  packages/config-eslint:
+  packages/@repo/config-eslint:
     dependencies:
       '@eslint/eslintrc':
         specifier: ^3.1.0
@@ -177,6 +175,8 @@ importers:
       typescript-eslint:
         specifier: ^8.13.0
         version: 8.13.0(eslint@9.14.0(jiti@1.21.6))(typescript@5.6.3)
+
+  packages/@repo/package.config: {}
 
   packages/core:
     dependencies:
@@ -224,12 +224,12 @@ importers:
         specifier: ^5.0.1
         version: 5.0.1(@types/react@18.3.12)(react@18.3.1)(use-sync-external-store@1.2.2(react@18.3.1))
     devDependencies:
+      '@repo/config-eslint':
+        specifier: workspace:*
+        version: link:../@repo/config-eslint
       '@repo/package.config':
         specifier: workspace:*
         version: link:../@repo/package.config
-      '@sanity/config-eslint':
-        specifier: workspace:*
-        version: link:../config-eslint
       '@sanity/pkg-utils':
         specifier: ^6.11.9
         version: 6.11.9(@types/babel__core@7.20.5)(@types/node@22.8.4)(typescript@5.6.3)
