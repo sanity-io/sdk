@@ -9,11 +9,11 @@ export const DEFAULT_API_VERSION = 'v2024-11-12'
 /** @internal */
 export const getClientStore = (instance: SanityInstance): ClientStore => {
   const clientStore = getOrCreateResource(instance, 'clientStore', () => {
-    const {projectId, dataset, token} = instance.config
+    const {config, identity} = instance
     const client = createClient({
-      projectId,
-      dataset,
-      token,
+      projectId: identity.projectId,
+      dataset: identity.dataset,
+      token: config.token,
       useCdn: false,
       apiVersion: DEFAULT_API_VERSION,
     })
