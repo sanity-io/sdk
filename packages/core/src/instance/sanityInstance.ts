@@ -1,4 +1,5 @@
-import type {SanityInstance} from './types'
+import {getSdkIdentity} from './identity'
+import type {SanityInstance, SdkIdentity} from './types'
 
 /**
  * @public
@@ -13,40 +14,33 @@ export interface SanityConfig {
 
 /**
  * Returns a new instance of dependencies required for SanitySDK.
+ *
+ * @param config - The configuration for this instance
+ * @returns A new "instance" of a Sanity SDK, used to bind resources/configuration to it
  * @public
  * @module @sanity/sdk
  * @category Sanity Instance
  */
-export const createSanityInstance = (config: SanityConfig): SanityInstance => {
-  const randomId = Array.from({length: 8}, () =>
-    Math.floor(Math.random() * 16)
-      .toString(16)
-      .padStart(2, '0'),
-  ).join('')
-
+export function createSanityInstance(config: SanityConfig): SanityInstance {
+  const {projectId, dataset, token} = config
   return {
-    config,
-    instanceId: Symbol(['SanityInstance', randomId].join('.')) as SanityInstance['instanceId'],
+    identity: getSdkIdentity({projectId, dataset}),
+    config: {token},
   }
 }
 
-// TODO: we may want to implement a similar mechanism to
-// https://github.com/sanity-io/sanity/pull/7160
-// because this storage mechanism requires this singleton be the same across
-// various imports of the SDK
-// NOTE: this was intended to be a weakmap but symbols cannot be used in those
-const resourceStorage = new Map<symbol, Map<string, unknown>>()
+const resourceStorage = new WeakMap<SdkIdentity, Map<string, unknown>>()
 
 function getResource(instance: SanityInstance, key: string) {
-  const instanceMap = resourceStorage.get(instance.instanceId)
+  const instanceMap = resourceStorage.get(instance.identity)
   return instanceMap?.get(key)
 }
 
 function setResource(instance: SanityInstance, key: string, value: unknown) {
-  let instanceMap = resourceStorage.get(instance.instanceId)
+  let instanceMap = resourceStorage.get(instance.identity)
   if (!instanceMap) {
     instanceMap = new Map()
-    resourceStorage.set(instance.instanceId, instanceMap)
+    resourceStorage.set(instance.identity, instanceMap)
   }
   instanceMap.set(key, value)
 }

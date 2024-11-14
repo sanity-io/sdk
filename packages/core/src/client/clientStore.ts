@@ -1,7 +1,6 @@
 import {type SanityClient} from '@sanity/client'
-import {type StoreApi} from 'zustand'
 import {devtools} from 'zustand/middleware'
-import {createStore} from 'zustand/vanilla'
+import {createStore, type StoreApi} from 'zustand/vanilla'
 
 /** @public */
 export interface ClientOptions {
@@ -33,12 +32,16 @@ export const createClientStore = (client: SanityClient): ClientStore => {
           const state = get()
           if (!state.clients[options.apiVersion]) {
             const newClient = client.withConfig(options)
-            set({
-              clients: {
-                ...state.clients,
-                [options.apiVersion]: newClient,
+            set(
+              {
+                clients: {
+                  ...state.clients,
+                  [options.apiVersion]: newClient,
+                },
               },
-            }, false, 'addVersionedClient')
+              false,
+              'addVersionedClient',
+            )
             return newClient
           }
           return state.clients[options.apiVersion]

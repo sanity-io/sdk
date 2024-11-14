@@ -10,13 +10,22 @@ export interface InternalStores {
 /** @public */
 export interface SanityInstance {
   /**
-   * The following is used to look up resources associated with this instance.
+   * The following is used to look up resources associated with this instance,
+   * and can be used to retrieve an "id" for the instance - useful in debugging.
+   *
+   * @public
    */
-  readonly instanceId: unique symbol
+  readonly identity: SdkIdentity
 
   config: {
-    projectId: string
-    dataset: string
+    /** @todo refactor - if we are binding clients to the identity, we can't have the token changing without those clients getting updated */
     token?: string
   }
+}
+
+/** @public */
+export interface SdkIdentity {
+  readonly id: string
+  readonly projectId: string
+  readonly dataset: string
 }
