@@ -1,10 +1,10 @@
 import {type Meta, type StoryObj} from '@storybook/react'
 
-import DocumentList from './DocumentList'
+import DocumentListUI from './DocumentListUI'
 
-const meta: Meta<typeof DocumentList> = {
-  title: 'DocumentList',
-  component: DocumentList,
+const meta: Meta<typeof DocumentListUI> = {
+  title: 'DocumentListUI',
+  component: DocumentListUI,
 }
 
 export default meta
@@ -32,6 +32,6 @@ export const Default: Story = {
     layout: 'list',
   },
   render: (props) => {
-    return <DocumentList {...props} />
+    return <DocumentListUI {...props} />
   },
 }

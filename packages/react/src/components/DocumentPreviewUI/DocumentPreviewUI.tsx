@@ -11,7 +11,7 @@ export interface DocumentPreviewProps {
   selected?: boolean
 }
 
-export default function DocumentPreview({
+export default function DocumentPreviewUI({
   selected = false,
   subtitle = '',
   title,
@@ -29,8 +29,15 @@ export default function DocumentPreview({
   }
 
   return (
-    <Button as="a" href={url} mode="bleed" width="fill" selected={selected}>
-      <Flex align="center" gap={3} padding={2} data-ui="DocumentPreview">
+    <Button
+      as="a"
+      href={url}
+      mode="bleed"
+      width="fill"
+      selected={selected}
+      data-ui="DocumentPreviewUI"
+    >
+      <Flex align="center" gap={3} padding={2}>
         <TempMedia />
 
         <Stack flex={1} space={2}>
@@ -48,4 +55,4 @@ export default function DocumentPreview({
   )
 }
 
-DocumentPreview.displayName = 'DocumentPreview'
+DocumentPreviewUI.displayName = 'DocumentPreview'

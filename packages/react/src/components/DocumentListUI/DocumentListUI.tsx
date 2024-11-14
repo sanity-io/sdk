@@ -1,14 +1,14 @@
 import {Grid, Stack} from '@sanity/ui'
 
-import type {DocumentPreviewProps} from '../DocumentPreview/DocumentPreview.tsx'
-import DocumentPreview from '../DocumentPreview/DocumentPreview.tsx'
+import type {DocumentPreviewProps} from '../DocumentPreviewUI/DocumentPreviewUI.tsx'
+import DocumentPreviewUI from '../DocumentPreviewUI/DocumentPreviewUI.tsx'
 
 export interface DocumentListProps {
   documents: Array<DocumentPreviewProps>
   layout?: 'list' | 'grid'
 }
 
-export default function DocumentList({
+export default function DocumentListUI({
   documents = [],
   layout = 'list',
 }: DocumentListProps): JSX.Element {
@@ -31,7 +31,7 @@ export default function DocumentList({
     <El as="ol" data-ui="DocumentList" {...elProps}>
       {documents.map((doc) => (
         <li>
-          <DocumentPreview
+          <DocumentPreviewUI
             title={doc.title}
             subtitle={doc.subtitle}
             media={doc.media}
@@ -45,4 +45,4 @@ export default function DocumentList({
   )
 }
 
-DocumentList.displayName = 'DocumentList'
+DocumentListUI.displayName = 'DocumentList'

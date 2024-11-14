@@ -1,13 +1,13 @@
-# DocumentList Component
+# DocumentListUI
 
-The DocumentList component is used to render an index of documents, formatted as a list. Each document in the list is rendered with a [DocumentPreview component](#).
+The DocumentListUI component is used to render an index of documents, formatted as a list. Each document in the list is rendered with a [DocumentPreview component](#).
 
 The document list can be formatted as a traditional vertical list, or as a two dimensional grid layout.
 
 ![An image of the stock document list component]()
 
 ```jsx
-<DocumentList documents={documents} layout="vertical" />
+<DocumentListUI documents={documents} layout="vertical" />
 ```
 
 ## Installation
@@ -17,7 +17,7 @@ npm install @sanity/sdk
 ```
 
 ```javascript
-import { DocumentList } from `@sanity/sdk/react/DocumentList`
+import DocumentListUI from `@sanity/sdk/react/DocumentListUI`
 ```
 
 ## Props

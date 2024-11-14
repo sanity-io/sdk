@@ -1,6 +1,6 @@
 import {Card, studioTheme, ThemeProvider} from '@sanity/ui'
 import {DecoratorHelpers} from '@storybook/addon-themes'
-import {StoryContext, StoryFn, StoryObj} from '@storybook/react'
+import {StoryContext, StoryFn} from '@storybook/react'
 import React from 'react'
 
 const {initializeThemeState, pluckThemeFromContext, useThemeParameters} = DecoratorHelpers
