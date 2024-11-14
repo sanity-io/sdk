@@ -7,6 +7,7 @@
 // Utils
 export {createSanityInstance} from './instance/sanityInstance'
 // Types
+export type {SdkIdentity} from './instance/identity'
 export type {SanityConfig} from './instance/sanityInstance'
 export type {InternalStores, SanityInstance} from './instance/types'
 

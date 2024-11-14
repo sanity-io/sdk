@@ -1,0 +1,39 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/tsdoc/v0/tsdoc.schema.json",
+  "tagDefinitions": [
+    {
+      "tagName": "@hidden",
+      "syntaxKind": "block",
+      "allowMultiple": true
+    },
+    {
+      "tagName": "@todo",
+      "syntaxKind": "block",
+      "allowMultiple": true
+    },
+    {
+      "tagName": "@thoughtLevel",
+      "syntaxKind": "block",
+      "allowMultiple": true
+    }
+  ],
+  "supportForTags": {
+    "@alpha": true,
+    "@beta": true,
+    "@defaultValue": true,
+    "@deprecated": true,
+    "@example": true,
+    "@experimental": true,
+    "@hidden": true,
+    "@internal": true,
+    "@link": true,
+    "@param": true,
+    "@public": true,
+    "@remarks": true,
+    "@returns": true,
+    "@see": true,
+    "@thoughtLevel": true,
+    "@throws": true,
+    "@todo": true
+  }
+}
