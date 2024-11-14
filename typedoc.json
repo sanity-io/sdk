@@ -1,0 +1,14 @@
+{
+  "name": "Sanity SDK Documentation",
+  "entryPoints": [
+    "packages/core/src/index.ts",
+    "packages/react/src/components/index.ts",
+    "packages/react/src/hooks/index.ts"
+  ],
+  "readme": "README.md",
+  "out": "docs",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "excludeInternal": true
+}

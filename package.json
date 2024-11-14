@@ -16,6 +16,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "turbo run build --filter='./packages/*' --filter='./apps/*'",
+    "build:docs": "typedoc --options ./typedoc.json",
     "dev:kitchensink": "turbo run dev --filter={@sanity/kitchensink-react,@sanity/sdk,@sanity/sdk-react} --parallel",
     "dev:storybook": "turbo run dev --filter={@sanity/storybook,@sanity/sdk,@sanity/sdk-react} --parallel",
     "format": "prettier --write --cache --ignore-unknown .",
@@ -40,6 +41,7 @@
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
     "turbo": "^2.2.3",
+    "typedoc": "^0.26.11",
     "typescript": "^5.6.3"
   },
   "packageManager": "pnpm@9.12.3",

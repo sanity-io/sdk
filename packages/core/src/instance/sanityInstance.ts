@@ -1,6 +1,10 @@
 import type {SanityInstance} from './types'
 
-/** @public */
+/**
+ * @public
+ * @module @sanity/sdk
+ * @category Sanity Instance
+ */
 export interface SanityConfig {
   projectId: string
   dataset: string
@@ -10,6 +14,8 @@ export interface SanityConfig {
 /**
  * Returns a new instance of dependencies required for SanitySDK.
  * @public
+ * @module @sanity/sdk
+ * @category Sanity Instance
  */
 export const createSanityInstance = (config: SanityConfig): SanityInstance => {
   const randomId = Array.from({length: 8}, () =>
