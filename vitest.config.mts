@@ -6,6 +6,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html'],
       include: ['packages/*/src/**/*.{ts,tsx}'],
+      exclude: ['**/*.{test,spec,stories,d}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     },
   },
 })
