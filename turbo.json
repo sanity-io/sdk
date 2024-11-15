@@ -18,6 +18,7 @@
       "cache": false
     },
     "test": {
+      "env": ["SANITY_TEST_AUTH_TOKEN"],
       "outputs": []
     },
     "test:watch": {

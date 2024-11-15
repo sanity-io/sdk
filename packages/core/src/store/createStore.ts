@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {devtools} from 'zustand/middleware'
 import {createStore as createZustandStore, type StoreApi} from 'zustand/vanilla'
+
 import type {SanityInstance} from '../instance/types'
 
 /**
@@ -79,6 +80,15 @@ export interface StoreOptions {
   instance: SanityInstance
 }
 
+/**
+ * @internal
+ */
+export type CurriedActions<S, A extends StoreActionMap<S>> = {
+  [K in keyof A]: A[K] extends StoreAction<S>
+    ? (...args: RestParameters<A[K]>) => ActionReturn<A[K]>
+    : never
+}
+
 function createCurriedActions<S, A extends StoreActionMap<S>>(
   actions: A,
   store: StoreActionContext<S>,
@@ -98,9 +108,3 @@ type RestParameters<T extends (...args: any[]) => any> = T extends (
   : never
 
 type ActionReturn<T extends (...args: any[]) => any> = ReturnType<T>
-
-type CurriedActions<S, A extends StoreActionMap<S>> = {
-  [K in keyof A]: A[K] extends StoreAction<S>
-    ? (...args: RestParameters<A[K]>) => ActionReturn<A[K]>
-    : never
-}

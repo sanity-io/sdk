@@ -3,4 +3,3 @@ packages:
   - 'packages/@repo/*'
   - 'packages/*'
   - 'apps/*'
-  - '@repo/package.config'
