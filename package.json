@@ -22,9 +22,9 @@
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "turbo run lint -- --fix",
     "prepare": "husky",
-    "test": "turbo run test --filter='./packages/*'",
-    "test:coverage": "turbo run test:coverage --filter='./packages/*'",
-    "test:watch": "turbo run test:watch --filter='./packages/*'",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest watch",
     "ts:check": "tsc --noEmit"
   },
   "lint-staged": {
@@ -38,12 +38,14 @@
     "@commitlint/config-conventional": "^19.5.0",
     "@sanity/pkg-utils": "^6.11.9",
     "@sanity/prettier-config": "^1.0.3",
+    "@vitest/coverage-v8": "2.1.4",
     "husky": "^9.1.6",
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
     "turbo": "^2.2.3",
     "typedoc": "^0.26.11",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
   },
   "packageManager": "pnpm@9.12.3",
   "engines": {
