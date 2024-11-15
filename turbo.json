@@ -24,6 +24,9 @@
       "cache": false,
       "persistent": true
     },
-    "docs": {}
+    "docs": {},
+    "test:coverage": {
+      "outputs": ["coverage/**"]
+    }
   }
 }
