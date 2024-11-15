@@ -18,7 +18,7 @@ export interface SanityInstance {
   readonly identity: SdkIdentity
 
   config: {
-    /** @todo refactor - if we are binding clients to the identity, we can't have the token changing without those clients getting updated */
+    /** TODO: refactor - if we are binding clients to the identity, we can't have the token changing without those clients getting updated */
     token?: string
   }
 }
