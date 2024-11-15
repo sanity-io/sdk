@@ -23,6 +23,7 @@
     "lint": "turbo run lint -- --fix",
     "prepare": "husky",
     "test": "turbo run test --filter='./packages/*'",
+    "test:coverage": "turbo run test:coverage --filter='./packages/*'",
     "test:watch": "turbo run test:watch --filter='./packages/*'",
     "ts:check": "tsc --noEmit"
   },

@@ -38,6 +38,7 @@
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "ts:check": "tsc --noEmit"
   },
@@ -56,6 +57,7 @@
     "@repo/package.config": "workspace:*",
     "@sanity/pkg-utils": "^6.11.9",
     "@sanity/prettier-config": "^1.0.3",
+    "@vitest/coverage-v8": "2.1.4",
     "eslint": "^9.14.0",
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
