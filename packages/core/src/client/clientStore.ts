@@ -16,9 +16,11 @@ export interface ClientState {
 /** @public */
 export type ClientStore = StoreApi<ClientState>
 
-/*
- * We try to retrieve a client from state based on the apiVersion.
+/**
+ * This is an internal function that creates a client store.
+ * * We try to retrieve a client from state based on the apiVersion.
  * If it doesn't exist, we create a new client and add it to state.
+ * @internal
  */
 export const createClientStore = (client: SanityClient): ClientStore => {
   return createStore<ClientState>()(

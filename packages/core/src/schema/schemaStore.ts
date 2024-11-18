@@ -12,6 +12,10 @@ export interface SchemaState {
 /** @public */
 export type SchemaStore = StoreApi<SchemaState>
 
+/**
+ * This is an internal function that creates a Zustand store for the schema.
+ * @internal
+ */
 export const createSchemaStore = (schemaTypes: any[]): SchemaStore => {
   return createStore<SchemaState>()(
     devtools(

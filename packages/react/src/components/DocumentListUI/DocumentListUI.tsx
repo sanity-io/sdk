@@ -31,7 +31,12 @@ const DocumentGrid = styled.div`
 `
 
 /**
+ * This is a component that renders a list of documents.
  * @public
+ * @param {DocumentListProps} props - The props for the DocumentListUI component.
+ * @param {Array<DocumentPreviewProps>} props.documents - The documents to render.
+ * @param {string} props.layout - The layout to use for the document list.
+ * @returns {JSX.Element} - The DocumentListUI component.
  */
 export const DocumentListUI = ({
   documents = [],

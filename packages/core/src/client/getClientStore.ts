@@ -6,7 +6,10 @@ import {type ClientStore, createClientStore} from './clientStore'
 
 export const DEFAULT_API_VERSION = 'v2024-11-12'
 
-/** @internal */
+/**
+ * This is an internal function that retrieves a client store.
+ * @internal
+ */
 export const getClientStore = (instance: SanityInstance): ClientStore => {
   const clientStore = getOrCreateResource(instance, 'clientStore', () => {
     const {config, identity} = instance

@@ -2,6 +2,7 @@ import {getClient} from '../client/getClient'
 import type {SanityInstance} from '../instance/types'
 
 /**
+ * This is an example function, and will be removed shortly.
  * @public
  * @module @sanity/sdk
  * @category Example
