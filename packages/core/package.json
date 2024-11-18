@@ -54,6 +54,7 @@
     "zustand": "^5.0.1"
   },
   "devDependencies": {
+    "@repo/config-eslint-jsdoc": "workspace:*",
     "@repo/package.config": "workspace:*",
     "@sanity/pkg-utils": "^6.11.9",
     "@sanity/prettier-config": "^1.0.3",
