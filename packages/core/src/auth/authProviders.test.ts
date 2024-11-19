@@ -1,5 +1,6 @@
-import {describe, it, expect} from 'vitest'
-import {getAuthProviders, type AuthProvider} from './authProviders'
+import {describe, expect, it} from 'vitest'
+
+import {type AuthProvider, getAuthProviders} from './authProviders'
 
 describe('getAuthProviders', () => {
   it('returns the correct number of providers', () => {

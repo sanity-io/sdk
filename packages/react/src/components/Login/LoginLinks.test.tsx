@@ -1,7 +1,8 @@
-import {describe, expect, it, vi} from 'vitest'
 import {render, screen} from '@testing-library/react'
-import {LoginLinks} from './LoginLinks'
+import {describe, expect, it, vi} from 'vitest'
+
 import * as useLoginLinksModule from '../../hooks/auth/useLoginLinks'
+import {LoginLinks} from './LoginLinks'
 
 describe('LoginLinks', () => {
   it('renders login provider links correctly', () => {

@@ -4,7 +4,7 @@ import {useLoginLinks} from '../../hooks/auth/useLoginLinks'
  * A component that renders login links for Sanity
  * @public
  */
-export const LoginLinks = ({projectId}: {projectId: string}) => {
+export const LoginLinks = ({projectId}: {projectId: string}): JSX.Element => {
   const authProviders = useLoginLinks(projectId)
   return (
     <div>

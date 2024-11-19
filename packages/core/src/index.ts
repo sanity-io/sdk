@@ -23,4 +23,4 @@ export type {SchemaState, SchemaStore} from './schema/schemaStore'
 export {testFunction} from './example/example'
 
 /** AUTH */
-export {getAuthProviders, type AuthProvider} from './auth/authProviders'
+export {type AuthProvider, getAuthProviders} from './auth/authProviders'

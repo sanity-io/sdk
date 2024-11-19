@@ -1,4 +1,4 @@
-import {getAuthProviders, type AuthProvider} from '@sanity/sdk'
+import {type AuthProvider, getAuthProviders} from '@sanity/sdk'
 import {useMemo} from 'react'
 
 /**

@@ -1,7 +1,8 @@
-import {describe, expect, it, vi} from 'vitest'
-import {renderHook} from '@testing-library/react'
-import {useLoginLinks} from './useLoginLinks'
 import {getAuthProviders} from '@sanity/sdk'
+import {renderHook} from '@testing-library/react'
+import {describe, expect, it, vi} from 'vitest'
+
+import {useLoginLinks} from './useLoginLinks'
 
 // Mock the @sanity/sdk module
 vi.mock('@sanity/sdk', () => ({
