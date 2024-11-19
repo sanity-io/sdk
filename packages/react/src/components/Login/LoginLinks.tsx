@@ -1,10 +1,11 @@
+import {type ReactElement} from 'react'
 import {useLoginLinks} from '../../hooks/auth/useLoginLinks'
 
 /**
  * A component that renders login links for Sanity
  * @public
  */
-export const LoginLinks = ({projectId}: {projectId: string}): JSX.Element => {
+export const LoginLinks = ({projectId}: {projectId: string}): ReactElement => {
   const authProviders = useLoginLinks(projectId)
   return (
     <div>
