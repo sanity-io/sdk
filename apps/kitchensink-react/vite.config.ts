@@ -11,4 +11,12 @@ export default defineConfig({
       'sdk-react': resolve(import.meta.dirname, '../../packages/react/src'),
     },
   },
+  server: {
+    cors: {
+      origin: true,
+      credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+      exposedHeaders: ['Set-Cookie'],
+    },
+  },
 })

@@ -3,7 +3,4 @@
  * @module @sanity/sdk-react/hooks
  */
 
-/** @public */
-export function main(): void {
-  //
-}
+export {useLoginLinks, type AuthProvider} from './auth/useLoginLinks'

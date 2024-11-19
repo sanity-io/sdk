@@ -3,7 +3,4 @@
  * @module @sanity/sdk-react/components
  */
 
-/** @public */
-export function main(): void {
-  //
-}
+export {LoginLinks} from './Login/LoginLinks'
