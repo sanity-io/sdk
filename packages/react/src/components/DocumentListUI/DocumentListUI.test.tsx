@@ -1,6 +1,7 @@
-import {describe, expect, it} from 'vitest'
+import {studioTheme, ThemeProvider} from '@sanity/ui'
 import {render, screen} from '@testing-library/react'
-import {ThemeProvider, studioTheme} from '@sanity/ui'
+import {describe, expect, it} from 'vitest'
+
 import DocumentListUI from './DocumentListUI'
 
 // Create a wrapper component that provides the theme

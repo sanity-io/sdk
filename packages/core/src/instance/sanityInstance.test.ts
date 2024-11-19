@@ -1,4 +1,5 @@
-import {describe, test, expect, beforeEach} from 'vitest'
+import {beforeEach, describe, expect, test} from 'vitest'
+
 import {createSanityInstance, getOrCreateResource, type SanityConfig} from './sanityInstance'
 
 describe('sanityInstance', () => {

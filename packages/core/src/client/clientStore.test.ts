@@ -1,6 +1,7 @@
-import {describe, it, expect, beforeEach} from 'vitest'
 import {type SanityClient} from '@sanity/client'
-import {createClientStore, type ClientStore} from './clientStore'
+import {beforeEach, describe, expect, it} from 'vitest'
+
+import {type ClientStore, createClientStore} from './clientStore'
 
 // Mock SanityClient
 const mockWithConfig = vi.fn()

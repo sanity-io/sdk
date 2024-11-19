@@ -1,8 +1,9 @@
-import {describe, it, expect, vi, beforeEach} from 'vitest'
 import {createClient} from '@sanity/client'
-import {getClientStore, DEFAULT_API_VERSION} from './getClientStore'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
+
 import {getOrCreateResource} from '../instance/sanityInstance'
 import type {SanityInstance} from '../instance/types'
+import {DEFAULT_API_VERSION, getClientStore} from './getClientStore'
 
 // Mock dependencies
 vi.mock('@sanity/client')

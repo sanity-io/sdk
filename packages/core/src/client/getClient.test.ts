@@ -1,9 +1,10 @@
-import {describe, it, expect, vi, beforeEach} from 'vitest'
-import {getClient} from './getClient'
-import {getClientStore} from './getClientStore'
 import type {SanityClient} from '@sanity/client'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
+
 import type {SanityInstance} from '../instance/types'
 import type {ClientStore} from './clientStore'
+import {getClient} from './getClient'
+import {getClientStore} from './getClientStore'
 
 // Mock the getClientStore module
 vi.mock('./getClientStore', () => ({
