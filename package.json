@@ -22,8 +22,8 @@
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "turbo run lint -- --fix",
     "prepare": "husky",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test": "vitest run --coverage",
+    "test:no-coverage": "vitest run",
     "test:watch": "vitest watch",
     "ts:check": "tsc --noEmit"
   },

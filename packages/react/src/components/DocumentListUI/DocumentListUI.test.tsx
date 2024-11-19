@@ -1,0 +1,65 @@
+import {describe, expect, it} from 'vitest'
+import {render, screen} from '@testing-library/react'
+import {ThemeProvider, studioTheme} from '@sanity/ui'
+import DocumentListUI from './DocumentListUI'
+
+// Create a wrapper component that provides the theme
+const Wrapper = ({children}: {children: React.ReactNode}) => (
+  <ThemeProvider theme={studioTheme}>{children}</ThemeProvider>
+)
+
+describe('DocumentListUI', () => {
+  const mockDocuments = [
+    {
+      title: 'Test Document 1',
+      subtitle: 'Subtitle 1',
+      docType: 'post',
+      status: 'published',
+      url: '/doc/1',
+    },
+    {
+      title: 'Test Document 2',
+      subtitle: 'Subtitle 2',
+      docType: 'page',
+      status: 'draft',
+      url: '/doc/2',
+    },
+  ]
+
+  it('renders nothing when documents array is empty', () => {
+    const {container} = render(<DocumentListUI documents={[]} />, {wrapper: Wrapper})
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('renders list layout by default', () => {
+    render(<DocumentListUI documents={mockDocuments} />, {wrapper: Wrapper})
+    const list = screen.getByRole('list')
+    expect(list.tagName).toBe('OL')
+    expect(list.dataset['ui']).toBe('DocumentList')
+  })
+
+  it('renders grid layout when specified', () => {
+    render(<DocumentListUI documents={mockDocuments} layout="grid" />, {wrapper: Wrapper})
+    const grid = screen.getByRole('list')
+    expect(grid.tagName).toBe('OL')
+    expect(grid.dataset['ui']).toBe('DocumentList')
+  })
+
+  it('renders correct number of document previews', () => {
+    render(<DocumentListUI documents={mockDocuments} />, {wrapper: Wrapper})
+    const listItems = screen.getAllByRole('listitem')
+    expect(listItems).toHaveLength(2)
+  })
+
+  it('passes correct props to DocumentPreviewUI components', () => {
+    render(<DocumentListUI documents={mockDocuments} />, {wrapper: Wrapper})
+
+    // Check if titles are rendered
+    expect(screen.getByText('Test Document 1')).toBeInTheDocument()
+    expect(screen.getByText('Test Document 2')).toBeInTheDocument()
+
+    // Check if subtitles are rendered
+    expect(screen.getByText('Subtitle 1')).toBeInTheDocument()
+    expect(screen.getByText('Subtitle 2')).toBeInTheDocument()
+  })
+})
