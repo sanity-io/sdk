@@ -38,5 +38,6 @@ We use Storybook for visually testing presentational components and exercising t
 ```bash
 cd apps/storybook
 pnpm install
-pnpm dev
+pnpm install
+pnpm dev:storybook
 ```
