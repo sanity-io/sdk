@@ -1,7 +1,7 @@
-import { Stack } from '@sanity/ui'
+import {Stack} from '@sanity/ui'
 import styled from 'styled-components'
 
-import type { DocumentPreviewProps } from '../DocumentPreviewUI/DocumentPreviewUI.tsx'
+import type {DocumentPreviewProps} from '../DocumentPreviewUI/DocumentPreviewUI.tsx'
 import DocumentPreviewUI from '../DocumentPreviewUI/DocumentPreviewUI.tsx'
 
 interface DocumentListItemProps extends DocumentPreviewProps {
@@ -39,7 +39,11 @@ export default function DocumentListUI({
   if (documents.length < 1) return <></>
 
   return (
-    <El as="ol" data-ui="DocumentList" {...elProps}>
+    <El
+      as="ol"
+      data-ui={layout === 'grid' ? 'DocumentList:Grid' : 'DocumentList:List'}
+      {...elProps}
+    >
       {documents.map((doc) => (
         <li key={doc.id}>
           <DocumentPreviewUI

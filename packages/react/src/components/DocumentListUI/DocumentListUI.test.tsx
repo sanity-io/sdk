@@ -32,14 +32,14 @@ describe('DocumentListUI', () => {
     render(<DocumentListUI documents={mockDocuments} />)
     const list = screen.getByRole('list')
     expect(list.tagName).toBe('OL')
-    expect(list.dataset['ui']).toBe('DocumentList')
+    expect(list.dataset['ui']).toBe('DocumentList:List')
   })
 
   it('renders grid layout when specified', () => {
     render(<DocumentListUI documents={mockDocuments} layout="grid" />)
     const grid = screen.getByRole('list')
     expect(grid.tagName).toBe('OL')
-    expect(grid.dataset['ui']).toBe('DocumentList')
+    expect(grid.dataset['ui']).toBe('DocumentList:Grid')
   })
 
   it('renders correct number of document previews', () => {
