@@ -7,4 +7,9 @@ describe('DocumentPreviewUI', () => {
     expect(screen.getByText('Test Preview')).toBeVisible()
     expect(screen.getByText('It works')).toBeVisible()
   })
+
+  it('renders empty when no title is provided (todo)', () => {
+    const {container} = render(<DocumentPreviewUI title="" />)
+    expect(container).toBeEmptyDOMElement()
+  })
 })
