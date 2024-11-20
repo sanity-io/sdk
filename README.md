@@ -36,8 +36,6 @@ pnpm test
 We use Storybook for visually testing presentational components and exercising their functionality with hardcoded data.
 
 ```bash
-cd apps/storybook
-pnpm install
 pnpm install
 pnpm dev:storybook
 ```
