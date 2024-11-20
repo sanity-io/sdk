@@ -30,7 +30,7 @@ export default function DocumentListUI({
   return (
     <El as="ol" data-ui="DocumentList" {...elProps}>
       {documents.map((doc) => (
-        <li>
+        <li key={doc.url}>
           <DocumentPreviewUI
             title={doc.title}
             subtitle={doc.subtitle}
