@@ -7,8 +7,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      'sdk-core': resolve(import.meta.dirname, '../../packages/core/src'),
-      'sdk-react': resolve(import.meta.dirname, '../../packages/react/src'),
+      '@sanity/sdk': resolve(import.meta.dirname, '../../packages/core/src/_exports'),
+      '@sanity/sdk-react': resolve(import.meta.dirname, '../../packages/react/src/_exports'),
     },
   },
 })

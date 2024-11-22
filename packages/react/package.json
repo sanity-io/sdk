@@ -18,25 +18,35 @@
   "type": "module",
   "exports": {
     ".": {
-      "source": "./src/index.ts",
+      "source": "./src/_exports/index.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./components": {
-      "source": "./src/components/index.ts",
-      "import": "./dist/components/index.js",
-      "default": "./dist/components/index.js"
+      "source": "./src/_exports/components.ts",
+      "import": "./dist/components.js",
+      "default": "./dist/components.js"
     },
     "./hooks": {
-      "source": "./src/hooks/index.ts",
-      "import": "./dist/hooks/index.js",
-      "default": "./dist/hooks/index.js"
+      "source": "./src/_exports/hooks.ts",
+      "import": "./dist/hooks.js",
+      "default": "./dist/hooks.js"
     },
     "./package.json": "./package.json"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "components": [
+        "./dist/components.d.ts"
+      ],
+      "hooks": [
+        "./dist/hooks.d.ts"
+      ]
+    }
+  },
   "files": [
     "dist",
     "src"
@@ -60,6 +70,7 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
+    "@sanity/sdk": "workspace:*",
     "@sanity/ui": "^2.8.19",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -71,7 +82,6 @@
     "@repo/package.config": "workspace:*",
     "@sanity/pkg-utils": "^6.11.9",
     "@sanity/prettier-config": "^1.0.3",
-    "@sanity/sdk": "workspace:*",
     "@storybook/react": "^8.4.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.0.1",

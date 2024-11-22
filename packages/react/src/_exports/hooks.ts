@@ -4,6 +4,6 @@
  */
 
 /** @public */
-export function main(): void {
+export function useSomeHook(): void {
   //
 }

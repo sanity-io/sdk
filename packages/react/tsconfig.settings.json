@@ -3,6 +3,12 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "./dist",
-    "types": ["vitest/globals", "@testing-library/jest-dom"]
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
+
+    /* Monorepo paths */
+    "paths": {
+      "@sanity/sdk": ["./node_modules/@sanity/sdk/src/_exports/index.ts"],
+      "@sanity/sdk/*": ["./node_modules/@sanity/sdk/src/_exports/*"]
+    }
   }
 }

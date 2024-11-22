@@ -12,5 +12,5 @@ export const testFunction = (sanityInstance?: SanityInstance): string => {
     // eslint-disable-next-line no-console
     console.log(client)
   }
-  return 'example'
+  return 'example lol'
 }

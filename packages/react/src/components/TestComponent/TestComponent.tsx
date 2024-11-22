@@ -4,7 +4,7 @@ import type {ReactElement} from 'react'
 /**
  * @public
  */
-export const TestComponent = (sanityInstance: SanityInstance): ReactElement => {
+export const TestComponent = ({sanityInstance}: {sanityInstance: SanityInstance}): ReactElement => {
   const test = testFunction(sanityInstance)
   // eslint-disable-next-line no-console
   console.log(test)
