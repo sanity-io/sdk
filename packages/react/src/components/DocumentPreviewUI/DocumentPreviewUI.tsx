@@ -1,6 +1,9 @@
 import {Badge, Box, Button, Flex, Stack, Text} from '@sanity/ui'
 import styled from 'styled-components'
 
+/**
+ * @public
+ */
 export interface DocumentPreviewProps {
   docType?: string
   media?: React.ReactNode // Todo: determine how media data will be passed to this component; need to represent either an image or an icon

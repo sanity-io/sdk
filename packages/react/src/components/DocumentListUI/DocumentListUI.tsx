@@ -1,13 +1,20 @@
 import {Stack} from '@sanity/ui'
+import type {ReactElement} from 'react'
 import styled from 'styled-components'
 
 import type {DocumentPreviewProps} from '../DocumentPreviewUI/DocumentPreviewUI.tsx'
 import DocumentPreviewUI from '../DocumentPreviewUI/DocumentPreviewUI.tsx'
 
-interface DocumentListItemProps extends DocumentPreviewProps {
+/**
+ * @public
+ */
+export interface DocumentListItemProps extends DocumentPreviewProps {
   id: string
 }
 
+/**
+ * @public
+ */
 export interface DocumentListProps {
   documents: Array<DocumentListItemProps>
   layout?: 'list' | 'grid'
@@ -23,10 +30,13 @@ const DocumentGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(max(20%, 280px), 1fr));
 `
 
-export default function DocumentListUI({
+/**
+ * @public
+ */
+export const DocumentListUI = ({
   documents = [],
   layout = 'list',
-}: DocumentListProps): JSX.Element {
+}: DocumentListProps): ReactElement => {
   const El = layout === 'grid' ? DocumentGrid : Stack
 
   const stackProps = {

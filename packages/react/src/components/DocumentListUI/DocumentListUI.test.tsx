@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest'
 
 import {render, screen} from '../../../test/test-utils.tsx'
-import DocumentListUI from './DocumentListUI'
+import {DocumentListUI} from './DocumentListUI'
 
 describe('DocumentListUI', () => {
   const mockDocuments = [

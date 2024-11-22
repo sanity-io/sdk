@@ -3,4 +3,9 @@
  * @module @sanity/sdk-react/components
  */
 
-export {TestComponent} from '../components/TestComponent/TestComponent'
+export {
+  type DocumentListItemProps,
+  type DocumentListProps,
+  DocumentListUI,
+} from '../components/DocumentListUI/DocumentListUI'
+export {type DocumentPreviewProps} from '../components/DocumentPreviewUI/DocumentPreviewUI'
