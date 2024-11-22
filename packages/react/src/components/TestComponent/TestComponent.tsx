@@ -1,12 +1,12 @@
-import {getClient, type SanityInstance} from '@sanity/sdk'
+import {type SanityInstance, testFunction} from '@sanity/sdk'
 import type {ReactElement} from 'react'
 
 /**
  * @public
  */
 export const TestComponent = (sanityInstance: SanityInstance): ReactElement => {
-  const client = getClient({apiVersion: 'v2024-11-22'}, sanityInstance)
+  const test = testFunction(sanityInstance)
   // eslint-disable-next-line no-console
-  console.log(client)
+  console.log(test)
   return <div>Test Component</div>
 }
