@@ -1,6 +1,6 @@
 import {type Meta, type StoryObj} from '@storybook/react'
 
-import DocumentListUI from './DocumentListUI'
+import {DocumentListUI} from './DocumentListUI'
 
 const meta: Meta<typeof DocumentListUI> = {
   title: 'DocumentListUI',
