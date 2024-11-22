@@ -8,9 +8,7 @@ import type {SanityInstance} from '../instance/types'
  * */
 export const testFunction = (sanityInstance?: SanityInstance): string => {
   if (sanityInstance) {
-    const client = getClient({apiVersion: 'v2024-11-22'}, sanityInstance)
-    // eslint-disable-next-line no-console
-    console.log(client)
+    getClient({apiVersion: 'v2024-11-22'}, sanityInstance)
   }
-  return 'example lol'
+  return 'example'
 }

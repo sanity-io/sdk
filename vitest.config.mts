@@ -8,10 +8,10 @@ export default defineConfig({
       include: ['packages/*/src/**/*.{ts,tsx}'],
       exclude: [
         '**/*.{test,spec,stories,d}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
-        'packages/core/src/index.ts',
-        'packages/react/src/index.ts',
-        'packages/react/src/components/index.ts',
-        'packages/react/src/hooks/index.ts',
+        'packages/core/src/_exports/index.ts',
+        'packages/react/src/_exports/index.ts',
+        'packages/react/src/_exports/hooks.ts',
+        'packages/react/src/_exports/components.ts',
       ],
       thresholds: {
         // We should adjust these thresholds as we see what a reasonable coverage is
