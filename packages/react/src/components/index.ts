@@ -7,3 +7,5 @@
 export function main(): void {
   //
 }
+
+export {TestComponent} from './TestComponent/TestComponent'
