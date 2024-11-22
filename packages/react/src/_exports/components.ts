@@ -9,3 +9,4 @@ export {
   DocumentListUI,
 } from '../components/DocumentListUI/DocumentListUI'
 export {type DocumentPreviewProps} from '../components/DocumentPreviewUI/DocumentPreviewUI'
+export {LoginLinks} from '../components/Login/LoginLinks'
