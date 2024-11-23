@@ -1,9 +1,4 @@
-import {
-  getClient,
-  getSidUrlHash as getSidUrlSearch,
-  type SanityInstance,
-  tradeTokenForSession,
-} from '@sanity/sdk'
+import {getClient, getSidUrlSearch, type SanityInstance, tradeTokenForSession} from '@sanity/sdk'
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {render, screen} from '@testing-library/react'

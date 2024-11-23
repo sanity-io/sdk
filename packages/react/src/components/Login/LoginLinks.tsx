@@ -1,8 +1,8 @@
 import {type SanityInstance, tradeTokenForSession} from '@sanity/sdk'
+import {getSidUrlSearch} from '@sanity/sdk'
 import {Button, Card, Container, Flex, Heading, Stack} from '@sanity/ui'
 import {type ReactElement, useEffect, useState} from 'react'
 
-import {getSidUrlSearch} from '../../../../core/src/auth/sessionId'
 import {useLoginLinks} from '../../hooks/auth/useLoginLinks'
 
 /**
