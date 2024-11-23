@@ -21,8 +21,8 @@ export interface SanityConfig {
  * @module @sanity/sdk
  * @category Sanity Instance
  */
-export function createSanityInstance(config: SanityConfig): SanityInstance {
-  const {projectId, dataset, token} = config
+export function createSanityInstance(config?: SanityConfig): SanityInstance {
+  const {projectId = '', dataset = '', token} = config ?? {}
   return {
     identity: getSdkIdentity({projectId, dataset}),
     config: {token},

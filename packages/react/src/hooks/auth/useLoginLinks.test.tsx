@@ -26,10 +26,9 @@ describe('useLoginLinks', () => {
     // Setup the mock implementation
     vi.mocked(getAuthProviders).mockReturnValue(mockProviders)
 
-    const projectId = 'test-project'
-    const {result} = renderHook(() => useLoginLinks(projectId))
+    const {result} = renderHook(() => useLoginLinks())
 
-    expect(getAuthProviders).toHaveBeenCalledWith(window.location.href, projectId)
+    expect(getAuthProviders).toHaveBeenCalledWith(window.location.href)
     expect(result.current).toEqual(mockProviders)
   })
 
@@ -44,16 +43,13 @@ describe('useLoginLinks', () => {
 
     vi.mocked(getAuthProviders).mockReturnValue(mockProviders)
 
-    const projectId = 'test-project'
-    const {result, rerender} = renderHook(({id}) => useLoginLinks(id), {
-      initialProps: {id: projectId},
-    })
+    const {result, rerender} = renderHook(() => useLoginLinks())
 
     const firstResult = result.current
     const initialCallCount = vi.mocked(getAuthProviders).mock.calls.length
 
     // Rerender with same props
-    rerender({id: projectId})
+    rerender()
 
     // Should return the same array reference
     expect(result.current).toBe(firstResult)

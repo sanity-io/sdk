@@ -4,26 +4,25 @@ import {type AuthProvider, getAuthProviders} from './authProviders'
 
 describe('getAuthProviders', () => {
   it('returns the correct number of providers', () => {
-    const providers = getAuthProviders('http://callback.url', 'project123')
+    const providers = getAuthProviders('http://callback.url')
     expect(providers).toHaveLength(3)
   })
 
   it('formats provider URLs correctly', () => {
     const callbackUrl = 'http://localhost:3000'
-    const projectId = 'test123'
-    const providers = getAuthProviders(callbackUrl, projectId)
+    const providers = getAuthProviders(callbackUrl)
 
     providers.forEach((provider: AuthProvider) => {
       expect(provider.url).toBe(
         `https://api.sanity.io/v1/auth/login/${provider.name}?origin=${encodeURIComponent(
           callbackUrl,
-        )}&projectId=${projectId}&type=dual`,
+        )}&type=token`,
       )
     })
   })
 
   it('includes all required provider properties', () => {
-    const providers = getAuthProviders('http://callback.url', 'project123')
+    const providers = getAuthProviders('http://callback.url')
 
     providers.forEach((provider: AuthProvider) => {
       expect(provider).toHaveProperty('name')
@@ -33,7 +32,7 @@ describe('getAuthProviders', () => {
   })
 
   it('includes the expected providers', () => {
-    const providers = getAuthProviders('http://callback.url', 'project123')
+    const providers = getAuthProviders('http://callback.url')
     const providerNames = providers.map((p) => p.name)
 
     expect(providerNames).toContain('google')
@@ -43,8 +42,7 @@ describe('getAuthProviders', () => {
 
   it('properly encodes callback URL', () => {
     const callbackUrl = 'http://localhost:3000/callback?param=value'
-    const projectId = 'test123'
-    const providers = getAuthProviders(callbackUrl, projectId)
+    const providers = getAuthProviders(callbackUrl)
 
     providers.forEach((provider: AuthProvider) => {
       expect(provider.url).toContain(encodeURIComponent(callbackUrl))

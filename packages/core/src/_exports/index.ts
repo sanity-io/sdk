@@ -24,3 +24,5 @@ export {testFunction} from '../example/example'
 
 /** AUTH */
 export {type AuthProvider, getAuthProviders} from '../auth/authProviders'
+export {getSidUrlSearch as getSidUrlHash} from '../auth/sessionId'
+export {tradeTokenForSession} from '../auth/tradeTokenForSession'

@@ -5,10 +5,10 @@ import {useMemo} from 'react'
  * A hook that returns the login links for Sanity
  * @public
  */
-export function useLoginLinks(projectId: string): AuthProvider[] {
+export const useLoginLinks = (): AuthProvider[] => {
   const authProviders = useMemo(
-    () => getAuthProviders(window.location.href, projectId),
-    [window.location.href, projectId],
+    () => getAuthProviders(window.location.href),
+    [window.location.href],
   )
   return authProviders
 }
