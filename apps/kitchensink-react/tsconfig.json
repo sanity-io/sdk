@@ -1,5 +1,8 @@
 {
   "compilerOptions": {
+    "rootDir": "../..",
+    "baseUrl": "../..",
+
     "target": "ES2020",
     "lib": ["ES2020", "DOM"],
     "module": "ESNext",
@@ -20,12 +23,15 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
+    /* Types */
+    "types": ["vite/client"],
+
     /* Monorepo paths */
     "paths": {
-      "sdk-core/*": ["../../packages/core/src/*"],
-      "sdk-react/*": ["../../packages/react/src/*"],
-      "sdk-core": ["../../packages/core/src"],
-      "sdk-react": ["../../packages/react/src"]
+      "@sanity/sdk": ["./packages/core/src/_exports/index.ts"],
+      "@sanity/sdk/*": ["./packages/core/src/_exports/*"],
+      "@sanity/sdk-react": ["./packages/react/src/_exports/index.ts"],
+      "@sanity/sdk-react/*": ["./packages/react/src/_exports/*"]
     }
   },
   "include": ["src"]

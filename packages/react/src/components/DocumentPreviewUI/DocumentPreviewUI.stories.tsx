@@ -12,6 +12,7 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   args: {
+    docType: 'article',
     title: 'Hello World',
     subtitle: 'It’s nice to meet you',
     url: '#',

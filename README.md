@@ -30,3 +30,12 @@ pnpm build
 ```bash
 pnpm test
 ```
+
+## 🎨 Storybook
+
+We use Storybook for visually testing presentational components and exercising their functionality with hardcoded data.
+
+```bash
+pnpm install
+pnpm dev:storybook
+```
