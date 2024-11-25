@@ -26,10 +26,6 @@ vi.mock('@sanity/sdk', () => ({
   getClient: vi.fn(),
   tradeTokenForSession: vi.fn(),
   getSidUrlHash: vi.fn().mockReturnValue(null),
-}))
-
-// Add mock for core getSidUrlSearch
-vi.mock('../../../../core/src/auth/sessionId', () => ({
   getSidUrlSearch: vi.fn(),
 }))
 
