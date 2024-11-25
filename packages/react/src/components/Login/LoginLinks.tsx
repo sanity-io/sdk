@@ -8,7 +8,6 @@ import {useLoginLinks} from '../../hooks/auth/useLoginLinks'
 /**
  * Component that handles Sanity authentication flow and renders login provider options
  * @public
- * @component
  * @param {Object} props - Component props
  * @param {SanityInstance} props.sanityInstance - Sanity configuration instance
  * @returns {ReactElement} Rendered component

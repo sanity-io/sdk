@@ -1,16 +1,26 @@
 /**
- * Represents an authentication provider configuration
+ * Configuration for an authentication provider
  * @public
- * @interface AuthProvider
- * @property {string} name - Unique identifier for the auth provider (e.g., 'google', 'github')
- * @property {string} title - Display name for the auth provider in the UI
- * @property {string} url - Complete authentication URL including callback and token parameters
- * @property {string} [signUpUrl] - Optional URL for direct sign-up flow
  */
 export interface AuthProvider {
+  /**
+   * Unique identifier for the auth provider (e.g., 'google', 'github')
+   */
   name: string
+
+  /**
+   * Display name for the auth provider in the UI
+   */
   title: string
+
+  /**
+   * Complete authentication URL including callback and token parameters
+   */
   url: string
+
+  /**
+   * Optional URL for direct sign-up flow
+   */
   signUpUrl?: string
 }
 
@@ -27,8 +37,6 @@ export interface AuthProvider {
  */
 export const getAuthProviders = (callbackUrl: string): AuthProvider[] => {
   // Configure supported authentication providers
-  // SAML providers will be added later as the SAML company ID slug will need to be fetched from the API:
-  // https://api.sanity.io/v2021-10-01/auth/organizations/by-slug/${slug}/providers
   return [
     {
       name: 'google',
