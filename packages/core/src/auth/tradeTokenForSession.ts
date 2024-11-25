@@ -7,7 +7,7 @@ import type {SanityInstance} from '../instance/types'
  * @param {string} sessionId - Temporary session ID received from auth provider
  * @param {SanityInstance} sanityInstance - Configuration instance for the Sanity client
  * @returns {Promise<string | undefined>} Resolves to:
- *   - A permanent session token if exchange is successful
+ *   - A long-lived session token if exchange is successful
  *   - undefined if sessionId is empty or exchange fails
  * @throws {Error} If the API request fails or returns invalid response
  * @example
