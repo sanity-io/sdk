@@ -32,6 +32,17 @@ describe('sanityInstance', () => {
 
       expect(instance.config.token).toBeUndefined()
     })
+
+    test('handles undefined config by using empty strings', () => {
+      const instance = createSanityInstance(undefined)
+      expect(instance.config).toEqual({token: undefined})
+      expect(instance.identity).toEqual(
+        expect.objectContaining({
+          projectId: '',
+          dataset: '',
+        }),
+      )
+    })
   })
 
   describe('getOrCreateResource', () => {

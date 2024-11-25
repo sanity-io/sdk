@@ -2,6 +2,7 @@ import {getClient, getSidUrlSearch, type SanityInstance, tradeTokenForSession} f
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {render, screen} from '@testing-library/react'
+import React from 'react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {useLoginLinks} from '../../hooks/auth/useLoginLinks'
@@ -79,5 +80,51 @@ describe('LoginLinks', () => {
     const tokenMessage = await screen.findByText('You are logged in with token: mock-token')
     expect(tokenMessage).toBeInTheDocument()
     expect(tradeTokenForSession).toHaveBeenCalledWith('mock-sid-token', mockSanityInstance)
+  })
+
+  describe('token handling', () => {
+    it('shows loading state while trading token', async () => {
+      // Setup mocks
+      vi.mocked(getSidUrlSearch).mockReturnValue('sid-token')
+      vi.mocked(tradeTokenForSession).mockImplementation(() => new Promise(() => {})) // Never resolves
+
+      renderWithTheme(<LoginLinks sanityInstance={mockSanityInstance as SanityInstance} />)
+
+      expect(screen.getByText('Logging in...')).toBeInTheDocument()
+    })
+
+    it('displays token when successfully traded', async () => {
+      // Setup mocks
+      const mockToken = 'test-token'
+      vi.mocked(getSidUrlSearch).mockReturnValue('sid-token')
+      vi.mocked(tradeTokenForSession).mockResolvedValue(mockToken)
+
+      renderWithTheme(<LoginLinks sanityInstance={mockSanityInstance as SanityInstance} />)
+
+      // Wait for the token to be displayed
+      expect(
+        await screen.findByText(`You are logged in with token: ${mockToken}`),
+      ).toBeInTheDocument()
+    })
+
+    it('handles null token response', async () => {
+      // Setup mocks
+      vi.mocked(getSidUrlSearch).mockReturnValue('sid-token')
+      vi.mocked(tradeTokenForSession).mockResolvedValue(undefined)
+
+      renderWithTheme(<LoginLinks sanityInstance={mockSanityInstance as SanityInstance} />)
+
+      // Wait for the login providers to be shown (default state when no token)
+      expect(await screen.findByText('Choose login provider')).toBeInTheDocument()
+    })
+
+    it('shows login providers when no SID token is present', () => {
+      // Setup mocks
+      vi.mocked(getSidUrlSearch).mockReturnValue(null)
+
+      renderWithTheme(<LoginLinks sanityInstance={mockSanityInstance as SanityInstance} />)
+
+      expect(screen.getByText('Choose login provider')).toBeInTheDocument()
+    })
   })
 })
