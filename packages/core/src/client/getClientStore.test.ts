@@ -30,6 +30,15 @@ describe('getClientStore', () => {
     },
   } as SanityInstance
 
+  const mockInstanceWithoutProjectId: SanityInstance = {
+    identity: {
+      dataset: 'test-dataset',
+    },
+    config: {
+      token: 'test-token',
+    },
+  } as SanityInstance
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getOrCreateResource).mockImplementation((_, __, factory) => factory())
@@ -56,6 +65,19 @@ describe('getClientStore', () => {
       getState: expect.any(Function),
       getInitialState: expect.any(Function),
       subscribe: expect.any(Function),
+    })
+  })
+
+  it('it creates a project-less client if no projectId is provided', () => {
+    getClientStore(mockInstanceWithoutProjectId)
+    expect(createClient).toHaveBeenCalledWith({
+      withCredentials: false,
+      useProjectHostname: false,
+      ignoreBrowserTokenWarning: true,
+      apiVersion: DEFAULT_API_VERSION,
+      dataset: 'test-dataset',
+      token: 'test-token',
+      useCdn: false,
     })
   })
 

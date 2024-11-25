@@ -11,11 +11,18 @@ export const getClientStore = (instance: SanityInstance): ClientStore => {
   const clientStore = getOrCreateResource(instance, 'clientStore', () => {
     const {config, identity} = instance
     const client = createClient({
-      projectId: identity.projectId,
+      ...(identity.projectId ? {projectId: identity.projectId} : {}),
       dataset: identity.dataset,
       token: config.token,
       useCdn: false,
       apiVersion: DEFAULT_API_VERSION,
+      ...(identity.projectId
+        ? {}
+        : {
+            withCredentials: false,
+            useProjectHostname: false,
+            ignoreBrowserTokenWarning: true,
+          }),
     })
     return createClientStore(client)
   })

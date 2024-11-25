@@ -21,3 +21,8 @@ export type {SchemaState, SchemaStore} from '../schema/schemaStore'
 
 /** TEST */
 export {testFunction} from '../example/example'
+
+/** AUTH */
+export {type AuthProvider, getAuthProviders} from '../auth/authProviders'
+export {getSidUrlSearch} from '../auth/sessionId'
+export {tradeTokenForSession} from '../auth/tradeTokenForSession'

@@ -30,13 +30,15 @@ export const createClientStore = (client: SanityClient): ClientStore => {
             throw new Error('Missing required `apiVersion` option')
           }
           const state = get()
-          if (!state.clients[options.apiVersion]) {
+          // TODO: This key should also include the projectId and dataset
+          const clientKey = options.apiVersion
+          if (!state.clients[clientKey]) {
             const newClient = client.withConfig(options)
             set(
               {
                 clients: {
                   ...state.clients,
-                  [options.apiVersion]: newClient,
+                  [clientKey]: newClient,
                 },
               },
               false,
@@ -44,7 +46,7 @@ export const createClientStore = (client: SanityClient): ClientStore => {
             )
             return newClient
           }
-          return state.clients[options.apiVersion]
+          return state.clients[clientKey]
         },
       }),
       {
