@@ -11,12 +11,4 @@ export default defineConfig({
       '@sanity/sdk-react': resolve(import.meta.dirname, '../../packages/react/src/_exports'),
     },
   },
-  server: {
-    cors: {
-      origin: true,
-      credentials: true,
-      allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-      exposedHeaders: ['Set-Cookie'],
-    },
-  },
 })
