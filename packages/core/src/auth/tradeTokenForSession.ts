@@ -2,8 +2,19 @@ import {getClient} from '../client/getClient'
 import type {SanityInstance} from '../instance/types'
 
 /**
- * Trade a github/google/sanity token for a session ID
+ * Exchanges a temporary authentication token for a permanent session token
  * @public
+ * @param {string} sessionId - Temporary session ID received from auth provider
+ * @param {SanityInstance} sanityInstance - Configuration instance for the Sanity client
+ * @returns {Promise<string | undefined>} Resolves to:
+ *   - A permanent session token if exchange is successful
+ *   - undefined if sessionId is empty or exchange fails
+ * @throws {Error} If the API request fails or returns invalid response
+ * @example
+ * ```ts
+ * const sessionToken = await tradeTokenForSession('temp_session_123', sanityConfig)
+ * // Returns: 'permanent_token_xyz'
+ * ```
  */
 export const tradeTokenForSession = async (
   sessionId: string,
