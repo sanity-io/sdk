@@ -1,5 +1,8 @@
 import {getClient} from '../client/getClient'
 import type {SanityInstance} from '../instance/types'
+import {fetchSessionUser} from './fetchSessionUser'
+import {getSessionStore} from './getSessionStore'
+import {LOGGED_IN_STATES} from './sessionStore'
 
 /**
  * Exchanges a temporary authentication token for a permanent session token
@@ -19,11 +22,15 @@ import type {SanityInstance} from '../instance/types'
 export const tradeTokenForSession = async (
   sessionId: string,
   sanityInstance: SanityInstance,
+  onSuccess?: () => void,
 ): Promise<string | undefined> => {
-  const client = getClient({apiVersion: 'v2024-11-22'}, sanityInstance)
   if (!sessionId) {
     return
   }
+
+  const client = getClient({apiVersion: 'v2024-11-22'}, sanityInstance)
+  const sessionStore = getSessionStore(sanityInstance)
+  sessionStore.getState().setLoggedInState(LOGGED_IN_STATES.LOADING)
 
   const {token} = await client.request<{token: string}>({
     method: 'GET',
@@ -31,6 +38,12 @@ export const tradeTokenForSession = async (
     query: {sid: sessionId},
     tag: 'auth.fetch-token',
   })
+
+  getSessionStore(sanityInstance).getState().setSessionId(token)
+
+  await fetchSessionUser(sanityInstance)
+  sessionStore.getState().setLoggedInState(LOGGED_IN_STATES.LOGGED_IN)
+  onSuccess?.()
 
   return token
 }

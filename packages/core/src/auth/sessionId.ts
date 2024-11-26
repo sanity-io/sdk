@@ -1,10 +1,10 @@
 /**
  * Regular expression pattern to match session ID in URL search parameters
  * Format: `sid=<sessionId>&` where sessionId is at least 20 characters
- * The trailing '&' capture allows replacing `sid=foo&bar=baz` with `bar=baz`
+ * Only matches if there is exactly one 'sid=' parameter
  * @private
  */
-const sidPattern = /sid=([^&]{20,})&?/
+const sidPattern = /^(?!.*sid=.*sid=).*sid=([^&]{20,})&?/
 
 /**
  * Extracts and removes the session ID from the URL search parameters
