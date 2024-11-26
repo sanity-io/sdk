@@ -1,5 +1,5 @@
 import type {CurrentUser} from '@sanity/types'
-import {createStore, type StoreApi} from 'zustand'
+import {createStore, type StoreApi} from 'zustand/vanilla'
 import {devtools} from 'zustand/middleware'
 
 /** @public */
