@@ -8,6 +8,10 @@ const AllTheProviders = ({children}: {children: React.ReactNode}) => {
   return <ThemeProvider theme={theme}>{children}</ThemeProvider>
 }
 
+/**
+ * This is a custom render function that wraps the UI in the AllTheProviders component.
+ * @internal
+ */
 const customRender = (ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>): RenderResult =>
   render(ui, {wrapper: AllTheProviders, ...options})
 

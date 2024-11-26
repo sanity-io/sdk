@@ -45,6 +45,10 @@ function setResource(instance: SanityInstance, key: string, value: unknown) {
   instanceMap.set(key, value)
 }
 
+/**
+ * This is an internal function that retrieves or creates a Zustand store resource.
+ * @internal
+ */
 export function getOrCreateResource<T>(instance: SanityInstance, key: string, creator: () => T): T {
   const cached = getResource(instance, key)
   if (cached) return cached as T

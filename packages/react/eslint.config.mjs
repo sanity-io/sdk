@@ -1,5 +1,6 @@
 // @ts-check
 import baseESLintConfig from '@repo/config-eslint'
+import jsdocConfig from '@repo/config-eslint-jsdoc'
 
 export default [
   {
@@ -19,4 +20,5 @@ export default [
     ],
   },
   ...baseESLintConfig,
+  ...jsdocConfig,
 ]
