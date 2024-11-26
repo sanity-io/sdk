@@ -19,6 +19,15 @@ export type {ClientOptions, ClientState, ClientStore} from '../client/clientStor
 /** SCHEMA */
 export type {SchemaState, SchemaStore} from '../schema/schemaStore'
 
+/** DOCUMENT LIST */
+export type {
+  DocumentHandle,
+  DocumentListOptions,
+  DocumentListState,
+  DocumentListStore,
+} from '../documentList/documentListStore'
+export {createDocumentListStore} from '../documentList/documentListStore'
+
 /** TEST */
 export {testFunction} from '../example/example'
 
