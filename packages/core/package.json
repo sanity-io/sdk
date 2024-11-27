@@ -51,7 +51,6 @@
   "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@sanity/client": "^6.22.3",
-    "@sanity/types": "^3.64.2",
     "@types/lodash-es": "^4.17.12",
     "lodash-es": "^4.17.21",
     "rxjs": "^7.8.1",

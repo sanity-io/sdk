@@ -25,6 +25,7 @@ export type {
   DocumentListOptions,
   DocumentListState,
   DocumentListStore,
+  SortOrderingItem,
 } from '../documentList/documentListStore'
 export {createDocumentListStore} from '../documentList/documentListStore'
 

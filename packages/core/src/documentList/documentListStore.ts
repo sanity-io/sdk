@@ -1,5 +1,4 @@
 import type {SyncTag} from '@sanity/client'
-import {type SortOrderingItem} from '@sanity/types'
 import {isEqual} from 'lodash-es'
 import {
   distinctUntilChanged,
@@ -39,6 +38,15 @@ export interface DocumentListState extends DocumentListOptions {
   result: DocumentHandle[] | null
   /** Indicates whether the document list is currently loading */
   isPending: boolean
+}
+
+/**
+ * Represents a sort ordering configuration.
+ * @public
+ */
+export interface SortOrderingItem {
+  field: string
+  direction: 'asc' | 'desc'
 }
 
 /**
