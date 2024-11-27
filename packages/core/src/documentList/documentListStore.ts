@@ -197,7 +197,7 @@ export function createDocumentListStore(instance: SanityInstance): DocumentListS
   }
 
   function loadMore() {
-    store.setState((prev) => ({limit: (prev.limit += PAGE_SIZE)}), undefined, {type: 'LOAD_MORE'})
+    store.setState((prev) => ({limit: prev.limit + PAGE_SIZE}), undefined, {type: 'LOAD_MORE'})
   }
 
   function getCurrent() {
