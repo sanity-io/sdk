@@ -1,9 +1,12 @@
-import {describe, test, expect, vi, beforeEach} from 'vitest'
-import {tradeTokenForSession} from './tradeTokenForSession'
+import type {SanityClient} from '@sanity/client'
+import {beforeEach, describe, expect, test, vi} from 'vitest'
+
 import {getClient} from '../client/getClient'
+import type {SanityInstance} from '../instance/types'
 import {fetchSessionUser} from './fetchSessionUser'
 import {getSessionStore} from './getSessionStore'
-import {LOGGED_IN_STATES} from './sessionStore'
+import {LOGGED_IN_STATES, type SessionStore} from './sessionStore'
+import {tradeTokenForSession} from './tradeTokenForSession'
 
 vi.mock('../client/getClient')
 vi.mock('./fetchSessionUser')
@@ -12,7 +15,7 @@ vi.mock('./getSessionStore')
 describe('tradeTokenForSession', () => {
   const mockSessionId = 'temp_123'
   const mockToken = 'permanent_xyz'
-  const mockSanityInstance = {projectId: 'test-project'} as any
+  const mockSanityInstance = {projectId: 'test-project'} as unknown as SanityInstance
   const mockSetLoggedInState = vi.fn()
   const mockSetSessionId = vi.fn()
   const mockOnSuccess = vi.fn()
@@ -25,14 +28,14 @@ describe('tradeTokenForSession', () => {
     vi.clearAllMocks()
 
     // Setup mocks
-    vi.mocked(getClient).mockReturnValue(mockClient as any)
+    vi.mocked(getClient).mockReturnValue(mockClient as unknown as SanityClient)
     vi.mocked(fetchSessionUser).mockResolvedValue(null)
     vi.mocked(getSessionStore).mockReturnValue({
       getState: () => ({
         setLoggedInState: mockSetLoggedInState,
         setSessionId: mockSetSessionId,
       }),
-    } as any)
+    } as unknown as SessionStore)
   })
 
   test('returns undefined if sessionId is empty', async () => {
