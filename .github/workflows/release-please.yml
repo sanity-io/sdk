@@ -1,0 +1,19 @@
+on:
+  push:
+    branches:
+      - main
+      # TODO: remove before merge!!
+      - chore/prepare-for-release-please
+permissions:
+  contents: write
+  pull-requests: write
+
+name: release-please
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.NPM_PUBLISH_TOKEN }}
