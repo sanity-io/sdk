@@ -102,9 +102,7 @@ describe('LoginLinks', () => {
       renderWithTheme(<LoginLinks sanityInstance={mockSanityInstance as SanityInstance} />)
 
       // Wait for the token to be displayed
-      expect(
-        await screen.findByText(`You are logged in with token: ${mockToken}`),
-      ).toBeInTheDocument()
+      expect(await screen.findByText('You are logged in')).toBeInTheDocument()
     })
 
     it('handles null token response', async () => {

@@ -1,29 +1,53 @@
 import type {CurrentUser} from '@sanity/types'
-import {createStore, type StoreApi} from 'zustand/vanilla'
 import {devtools} from 'zustand/middleware'
+import {createStore, type StoreApi} from 'zustand/vanilla'
 
-/** @public */
+/**
+ * Enum-like object defining all possible authentication states
+ * @public
+ * @readonly
+ */
 export const LOGGED_IN_STATES = {
+  /** User is authenticated and has valid credentials */
   LOGGED_IN: 'LOGGED_IN',
+  /** User is not authenticated */
   LOGGED_OUT: 'LOGGED_OUT',
+  /** Authentication state is being determined */
   LOADING: 'LOADING',
+  /** User lacks sufficient permissions */
   UNAUTHORIZED: 'UNAUTHORIZED',
 } as const
 
-/** @public */
+/**
+ * Type representing the possible authentication states
+ * @public
+ */
 export type LoggedInState = keyof typeof LOGGED_IN_STATES
 
-/** @public */
+/**
+ * Interface describing the session state and its mutation methods
+ * @public
+ */
 export interface SessionState {
+  /** Unique identifier for the current session */
   sessionId: string | null
+  /** Updates the session identifier */
   setSessionId: (sessionId: string | null) => void
+  /** Current authenticated user information */
   user: CurrentUser | null
+  /** Updates the current user information */
   setUser: (user: CurrentUser | null) => void
+  /** Current authentication state */
   loggedInState: LoggedInState
+  /** Updates the authentication state */
   setLoggedInState: (loggedInState: LoggedInState) => void
 }
 
-/** @internal */
+/**
+ * Creates a new session store instance using Zustand
+ * @internal
+ * @returns {SessionStore} A store instance with session state management capabilities
+ */
 export const createSessionStore = (): SessionStore => {
   return createStore<SessionState>()(
     devtools(
@@ -49,5 +73,8 @@ export const createSessionStore = (): SessionStore => {
   )
 }
 
-/** @public */
+/**
+ * Type representing the session store API
+ * @public
+ */
 export type SessionStore = StoreApi<SessionState>

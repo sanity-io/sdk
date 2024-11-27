@@ -1,63 +1,71 @@
-import type {SanityClient} from '@sanity/client'
-import {describe, expect, it, vi} from 'vitest'
-
-import {getClient} from '../client/getClient'
-import type {SanityInstance} from '../instance/types'
+import {describe, test, expect, vi, beforeEach} from 'vitest'
 import {tradeTokenForSession} from './tradeTokenForSession'
+import {getClient} from '../client/getClient'
+import {fetchSessionUser} from './fetchSessionUser'
+import {getSessionStore} from './getSessionStore'
+import {LOGGED_IN_STATES} from './sessionStore'
 
-// Mock the getClient module
-vi.mock('../client/getClient', () => ({
-  getClient: vi.fn(),
-}))
+vi.mock('../client/getClient')
+vi.mock('./fetchSessionUser')
+vi.mock('./getSessionStore')
 
 describe('tradeTokenForSession', () => {
-  const mockSanityInstance = {
-    // Add minimal required properties for SanityInstance
-    identity: {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
-    },
-    config: {
-      token: 'test-token',
-    },
-  } as SanityInstance
+  const mockSessionId = 'temp_123'
+  const mockToken = 'permanent_xyz'
+  const mockSanityInstance = {projectId: 'test-project'} as any
+  const mockSetLoggedInState = vi.fn()
+  const mockSetSessionId = vi.fn()
+  const mockOnSuccess = vi.fn()
 
-  it('should return undefined if sessionId is empty', async () => {
-    const result = await tradeTokenForSession('', mockSanityInstance)
-    expect(result).toBeUndefined()
+  const mockClient = {
+    request: vi.fn().mockResolvedValue({token: mockToken}),
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    // Setup mocks
+    vi.mocked(getClient).mockReturnValue(mockClient as any)
+    vi.mocked(fetchSessionUser).mockResolvedValue(null)
+    vi.mocked(getSessionStore).mockReturnValue({
+      getState: () => ({
+        setLoggedInState: mockSetLoggedInState,
+        setSessionId: mockSetSessionId,
+      }),
+    } as any)
   })
 
-  it('should return token when request is successful', async () => {
-    const mockToken = 'test-token-123'
-    const mockRequest = vi.fn().mockResolvedValue({token: mockToken})
+  test('returns undefined if sessionId is empty', async () => {
+    const result = await tradeTokenForSession('', mockSanityInstance)
+    expect(result).toBeUndefined()
+    expect(mockClient.request).not.toHaveBeenCalled()
+  })
 
-    // Mock the client returned by getClient
-    const mockClient = {request: mockRequest} as unknown as SanityClient
-    vi.mocked(getClient).mockReturnValue(mockClient)
+  test('successfully trades token and updates session state', async () => {
+    const result = await tradeTokenForSession(mockSessionId, mockSanityInstance, mockOnSuccess)
 
-    const sessionId = 'test-session-id'
-    const result = await tradeTokenForSession(sessionId, mockSanityInstance)
-
-    expect(getClient).toHaveBeenCalledWith({apiVersion: 'v2024-11-22'}, mockSanityInstance)
-    expect(mockRequest).toHaveBeenCalledWith({
+    // Verify the token exchange request
+    expect(mockClient.request).toHaveBeenCalledWith({
       method: 'GET',
       uri: '/auth/fetch',
-      query: {sid: sessionId},
+      query: {sid: mockSessionId},
       tag: 'auth.fetch-token',
     })
+
+    // Verify store updates
+    expect(mockSetLoggedInState).toHaveBeenCalledWith(LOGGED_IN_STATES.LOADING)
+    expect(mockSetSessionId).toHaveBeenCalledWith(mockToken)
+    expect(mockSetLoggedInState).toHaveBeenCalledWith(LOGGED_IN_STATES.LOGGED_IN)
+
+    expect(fetchSessionUser).toHaveBeenCalledWith(mockSanityInstance)
+    expect(mockOnSuccess).toHaveBeenCalled()
     expect(result).toBe(mockToken)
   })
 
-  it('should propagate errors from the client request', async () => {
-    const mockError = new Error('Request failed')
-    const mockRequest = vi.fn().mockRejectedValue(mockError)
+  test('handles API errors appropriately', async () => {
+    const mockError = new Error('API Error')
+    mockClient.request.mockRejectedValueOnce(mockError)
 
-    // Mock the client returned by getClient
-    const mockClient = {request: mockRequest} as unknown as SanityClient
-    vi.mocked(getClient).mockReturnValue(mockClient)
-
-    await expect(tradeTokenForSession('test-session-id', mockSanityInstance)).rejects.toThrow(
-      mockError,
-    )
+    await expect(tradeTokenForSession(mockSessionId, mockSanityInstance)).rejects.toThrow(mockError)
   })
 })

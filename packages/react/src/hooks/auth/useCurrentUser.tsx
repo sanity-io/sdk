@@ -1,4 +1,4 @@
-import {getSessionStore, type CurrentUser, type SanityInstance} from '@sanity/sdk'
+import {type CurrentUser, getSessionStore, type SanityInstance} from '@sanity/sdk'
 import {useMemo} from 'react'
 import {useStore} from 'zustand'
 

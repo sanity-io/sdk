@@ -15,6 +15,7 @@
   "author": "Sanity <developers@sanity.io>",
   "sideEffects": false,
   "scripts": {
+    "all": "turbo run build && turbo run lint && turbo run test:coverage && turbo run build:docs",
     "build": "turbo run build --filter='./packages/*' --filter='./apps/*'",
     "build:docs": "typedoc --options ./typedoc.json",
     "dev:kitchensink": "turbo run dev --filter=@sanity/kitchensink-react",
