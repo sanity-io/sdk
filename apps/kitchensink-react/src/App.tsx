@@ -1,31 +1,22 @@
-import {createSanityInstance, LOGGED_IN_STATES} from '@sanity/sdk'
-import {LoginLinks} from '@sanity/sdk-react/components'
-import {useCurrentUser, useLoggedInState} from '@sanity/sdk-react/hooks'
-import {Avatar, Container, Heading, ThemeProvider} from '@sanity/ui'
+import {SanityProvider} from '@sanity/sdk-react/components'
+import {Container, Heading, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
+import { AuthPlayground } from './AuthPlayground'
 
 const theme = buildTheme({})
 
 export function App(): JSX.Element {
-  const sanityInstance = createSanityInstance()
-  const currentUser = useCurrentUser(sanityInstance)
-  const loggedInState = useLoggedInState(sanityInstance)
-
+  const config = {projectId: 'ppsg7ml5', dataset: 'test'}
   return (
     <ThemeProvider theme={theme}>
+      <SanityProvider config={config}>
       <Container width={0}>
         <Heading as="h1" size={5} style={{marginBottom: 24}}>
           React Kitchensink
         </Heading>
-        {loggedInState === LOGGED_IN_STATES.LOGGED_IN ? (
-          <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
-            <Avatar src={currentUser?.profileImage} color="blue" />{' '}
-            <span>Welcome {currentUser?.name}</span>
-          </div>
-        ) : (
-          <LoginLinks sanityInstance={sanityInstance} />
-        )}
-      </Container>
+        <AuthPlayground />
+        </Container>
+      </SanityProvider>
     </ThemeProvider>
   )
 }
