@@ -1,7 +1,8 @@
-import {renderHook} from '@testing-library/react'
-import {useCurrentUser} from './useCurrentUser'
 import {type CurrentUser, type SanityInstance} from '@sanity/sdk'
-import {describe, it, expect, vi, beforeEach} from 'vitest'
+import {renderHook} from '@testing-library/react'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
+
+import {useCurrentUser} from './useCurrentUser'
 
 const {createStore: realCreateStore} = await vi.importActual<typeof import('zustand')>('zustand')
 

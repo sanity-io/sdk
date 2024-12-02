@@ -1,8 +1,11 @@
-import {describe, expect, it, vi, beforeEach} from 'vitest'
-import {fetchSessionUser} from './fetchSessionUser'
+import type {SanityClient} from '@sanity/client'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
+
 import {getClient} from '../client/getClient'
-import {getSessionStore} from './getSessionStore'
 import type {SanityInstance} from '../instance/types'
+import {fetchSessionUser} from './fetchSessionUser'
+import {getSessionStore} from './getSessionStore'
+import type {SessionStore} from './sessionStore'
 
 // Mock dependencies
 vi.mock('../client/getClient')
@@ -39,7 +42,7 @@ describe('fetchSessionUser', () => {
     // Mock getClient
     vi.mocked(getClient).mockReturnValue({
       withConfig: mockWithConfig,
-    } as any)
+    } as unknown as SanityClient)
 
     // Mock getSessionStore
     vi.mocked(getSessionStore).mockReturnValue({
@@ -47,7 +50,7 @@ describe('fetchSessionUser', () => {
         sessionId: 'test-session-id',
         setUser: mockSetUser,
       }),
-    } as any)
+    } as unknown as SessionStore)
 
     // Mock successful user request
     mockRequest.mockResolvedValue(mockUser)

@@ -1,6 +1,7 @@
-import {describe, test, expect} from 'vitest'
-import {createSessionStore, LOGGED_IN_STATES} from './sessionStore'
 import type {CurrentUser} from '@sanity/types'
+import {describe, expect, test} from 'vitest'
+
+import {createSessionStore, LOGGED_IN_STATES} from './sessionStore'
 
 describe('sessionStore', () => {
   test('creates store with initial state', () => {

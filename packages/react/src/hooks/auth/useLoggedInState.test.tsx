@@ -1,7 +1,8 @@
-import {describe, expect, it, vi} from 'vitest'
-import {renderHook} from '@testing-library/react'
-import {useLoggedInState} from './useLoggedInState'
 import {getSessionStore} from '@sanity/sdk'
+import {renderHook} from '@testing-library/react'
+import {describe, expect, it, vi} from 'vitest'
+
+import {useLoggedInState} from './useLoggedInState'
 
 // Mock the SDK
 vi.mock('@sanity/sdk', () => ({
