@@ -62,7 +62,7 @@
     "@sanity/pkg-utils": "^6.11.9",
     "@sanity/prettier-config": "^1.0.3",
     "@vitest/coverage-v8": "2.1.4",
-    "eslint": "^9.14.0",
+    "eslint": "^9.16.0",
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
     "typescript": "^5.6.3",
