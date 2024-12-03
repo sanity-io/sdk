@@ -79,7 +79,7 @@ describe('LoginLinks', () => {
     // Wait for the token message to appear
     const tokenMessage = await screen.findByText('You are logged in with token: mock-token')
     expect(tokenMessage).toBeInTheDocument()
-    expect(tradeTokenForSession).toHaveBeenCalledWith('mock-sid-token', mockSanityInstance)
+    expect(tradeTokenForSession).toHaveBeenCalledWith('mock-sid-token')
   })
 
   describe('token handling', () => {

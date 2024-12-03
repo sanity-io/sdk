@@ -1,14 +1,16 @@
-import {getClient} from '../client/getClient'
+import {createClient} from '@sanity/client'
+
 import type {SanityInstance} from '../instance/types'
 import {fetchSessionUser} from './fetchSessionUser'
 import {getSessionStore} from './getSessionStore'
 import {LOGGED_IN_STATES} from './sessionStore'
 
+const AUTH_API_VERSION = 'v2024-12-03'
+
 /**
  * Exchanges a temporary authentication token for a permanent session token
  * @public
  * @param {string} sessionId - Temporary session ID received from auth provider
- * @param {SanityInstance} sanityInstance - Configuration instance for the Sanity client
  * @returns {Promise<string | undefined>} Resolves to:
  *   - A long-lived session token if exchange is successful
  *   - undefined if sessionId is empty or exchange fails
@@ -28,9 +30,20 @@ export const tradeTokenForSession = async (
     return
   }
 
-  const client = getClient({apiVersion: 'v2024-11-22'}, sanityInstance)
   const sessionStore = getSessionStore(sanityInstance)
   sessionStore.getState().setLoggedInState(LOGGED_IN_STATES.LOADING)
+  /*
+   * To authenticate, we don't want to call a "project" endpoint
+   * (so, not like "https://{projectId}.api.sanity.io/etc/etc").
+   * We want to get to "api.sanity.io" directly, so we use a client with no project.
+   */
+  const client = createClient({
+    useCdn: false,
+    apiVersion: AUTH_API_VERSION,
+    withCredentials: false,
+    useProjectHostname: false,
+    ignoreBrowserTokenWarning: true,
+  })
 
   const {token} = await client.request<{token: string}>({
     method: 'GET',
