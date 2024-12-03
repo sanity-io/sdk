@@ -98,7 +98,6 @@
     "vitest": "^2.1.8"
   },
   "peerDependencies": {
-    "@sanity/sdk": "*",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
   },
