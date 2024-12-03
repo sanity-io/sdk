@@ -3,6 +3,7 @@
  * @packageDocumentation
  */
 {
+  "$schema": "https://typedoc.org/schema.json",
   /**
    * Display name for the generated documentation
    */
@@ -16,6 +17,7 @@
     "packages/react/src/_exports/components.ts",
     "packages/react/src/_exports/hooks.ts"
   ],
+
   /**
    * Path to the project's README file
    * Will be included as the documentation homepage

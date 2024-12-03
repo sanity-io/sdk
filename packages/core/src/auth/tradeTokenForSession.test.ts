@@ -2,7 +2,6 @@ import {createClient, type SanityClient} from '@sanity/client'
 import {beforeEach, describe, expect, vi} from 'vitest'
 
 import type {SanityInstance} from '../instance/types'
-import {fetchSessionUser} from './fetchSessionUser'
 import {getSessionStore} from './getSessionStore'
 import {LOGGED_IN_STATES, type SessionStore} from './sessionStore'
 import {tradeTokenForSession} from './tradeTokenForSession'

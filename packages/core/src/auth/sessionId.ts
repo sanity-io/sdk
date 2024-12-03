@@ -2,15 +2,20 @@
  * Regular expression pattern to match session ID in URL search parameters
  * Format: `sid=<sessionId>&` where sessionId is at least 20 characters
  * Only matches if there is exactly one 'sid=' parameter
- * @private
+ *
+ * @hidden
  */
 const sidPattern = /^(?!.*sid=.*sid=).*sid=([^&]{20,})&?/
 
 /**
  * Extracts and removes the session ID from the URL search parameters
+ *
  * @public
- * @param {Location} location - Browser's Location object containing URL information
- * @returns {string | null} The session ID if found and valid, null otherwise
+ *
+ * @param location - Browser's Location object containing URL information
+ *
+ * @returns The session ID if found and valid, null otherwise
+ *
  * @example
  * ```ts
  * // For URL: https://example.com?sid=abc123...def&other=param
@@ -18,7 +23,8 @@ const sidPattern = /^(?!.*sid=.*sid=).*sid=([^&]{20,})&?/
  * // Returns: 'abc123...def'
  * // URL becomes: https://example.com?other=param
  * ```
- * @throws {TypeError} If location parameter is not a valid Location object
+ *
+ * @throws  If location parameter is not a valid Location object
  */
 export const getSidUrlSearch = (location: Location): string | null => {
   // Validate location parameter is a browser-like Location object

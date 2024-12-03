@@ -90,9 +90,10 @@ interface DocumentListInternalState extends DocumentListOptions {
 
 /**
  * Creates a `DocumentListStore` from a `SanityInstance`.
- * @see {SanityInstance}
- * @see {DocumentListStore}
+ *
  * @public
+ *
+ * See {@link SanityInstance} and {@link DocumentListStore}
  */
 export function createDocumentListStore(instance: SanityInstance): DocumentListStore {
   const client = getClient({apiVersion: 'vX'}, instance)

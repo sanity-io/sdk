@@ -3,12 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": "./index.mjs",
+  "exports": {
+    ".": "./index.mjs",
+    "./tsdoc": "./tsdoc.mjs"
+  },
   "dependencies": {
     "@eslint/eslintrc": "^3.1.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-config-turbo": "^2.2.3",
     "eslint-plugin-simple-import-sort": "^12.1.1",
+    "eslint-plugin-tsdoc": "^0.4.0",
     "globals": "^15.11.0",
     "typescript-eslint": "^8.13.0"
   }

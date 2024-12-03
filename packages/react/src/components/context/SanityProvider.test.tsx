@@ -1,9 +1,10 @@
+import {createSanityInstance} from '@sanity/sdk'
 import {render} from '@testing-library/react'
 import React from 'react'
 import {describe, expect, it, vi} from 'vitest'
-import {createSanityInstance} from '@sanity/sdk'
-import {SanityProvider} from './SanityProvider'
+
 import {useSanityInstance} from '../../hooks/context/useSanityInstance'
+import {SanityProvider} from './SanityProvider'
 
 vi.mock('@sanity/sdk', () => ({
   createSanityInstance: vi.fn(() => ({

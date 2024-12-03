@@ -1,6 +1,7 @@
 import {defineConfig} from '@sanity/pkg-utils'
 
 export const basePackageConfig = defineConfig({
+  legacyExports: false,
   extract: {
     customTags: [
       {

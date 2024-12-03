@@ -3,11 +3,15 @@ import {useMemo} from 'react'
 
 /**
  * React hook that provides authentication provider links for Sanity login
+ *
  * @public
- * @returns {AuthProvider[]} Array of authentication providers with configured login URLs
- * @remarks
+ *
+ * @returns Array of authentication providers with configured login URLs
+ *
+ *  @remarks
  * The hook memoizes the auth providers based on the current URL to prevent unnecessary
  * recalculations. Each provider includes name, title, and pre-configured login URL.
+ *
  * @example
  * ```tsx
  * const LoginComponent = () => {
@@ -35,6 +39,7 @@ export const useLoginLinks = (): AuthProvider[] => {
 
 /**
  * Re-export AuthProvider type
+ *
  * @public
  */
 export type {AuthProvider}

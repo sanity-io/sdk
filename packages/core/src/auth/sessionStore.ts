@@ -4,8 +4,8 @@ import {createStore, type StoreApi} from 'zustand/vanilla'
 
 /**
  * Enum-like object defining all possible authentication states
+ *
  * @public
- * @readonly
  */
 export const LOGGED_IN_STATES = {
   /** User is authenticated and has valid credentials */
@@ -46,7 +46,7 @@ export interface SessionState {
 /**
  * Creates a new session store instance using Zustand
  * @internal
- * @returns {SessionStore} A store instance with session state management capabilities
+ * @returns A store instance with session state management capabilities
  */
 export const createSessionStore = (): SessionStore => {
   return createStore<SessionState>()(

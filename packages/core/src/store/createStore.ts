@@ -8,7 +8,6 @@ import type {SanityInstance} from '../instance/types'
  * Creates a (vanilla) zustand store with the given initial state and actions.
  * Only the actions will be returned - actions should be created to interact with it.
  *
- * @thoughtLevel 4
  * The rationale for this is to encapsulate the internal state so only the store knows about it,
  * making refactoring easier and more predictable. While this seems like good practice, I am unsure
  * if it might get in our way once we start wanting to subscribe to finer piece of state or similar.
