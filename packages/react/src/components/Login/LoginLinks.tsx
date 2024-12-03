@@ -36,7 +36,7 @@ export const LoginLinks = ({sanityInstance}: {sanityInstance: SanityInstance}): 
     const sidToken = getSidUrlSearch(window.location)
     if (sidToken) {
       setIsLoading(true)
-      tradeTokenForSession(sidToken, sanityInstance)
+      tradeTokenForSession(sidToken)
         .then((tokenResponse) => {
           setToken(tokenResponse ?? null)
         })
