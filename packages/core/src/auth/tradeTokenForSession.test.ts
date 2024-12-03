@@ -1,29 +1,17 @@
 import type {SanityClient} from '@sanity/client'
 import {describe, expect, it, vi} from 'vitest'
 
-import {getClient} from '../client/getClient'
-import type {SanityInstance} from '../instance/types'
+import {createClient} from '@sanity/client'
 import {tradeTokenForSession} from './tradeTokenForSession'
 
-// Mock the getClient module
-vi.mock('../client/getClient', () => ({
-  getClient: vi.fn(),
+// Mock the @sanity/client module
+vi.mock('@sanity/client', () => ({
+  createClient: vi.fn(),
 }))
 
 describe('tradeTokenForSession', () => {
-  const mockSanityInstance = {
-    // Add minimal required properties for SanityInstance
-    identity: {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
-    },
-    config: {
-      token: 'test-token',
-    },
-  } as SanityInstance
-
   it('should return undefined if sessionId is empty', async () => {
-    const result = await tradeTokenForSession('', mockSanityInstance)
+    const result = await tradeTokenForSession('')
     expect(result).toBeUndefined()
   })
 
@@ -31,14 +19,20 @@ describe('tradeTokenForSession', () => {
     const mockToken = 'test-token-123'
     const mockRequest = vi.fn().mockResolvedValue({token: mockToken})
 
-    // Mock the client returned by getClient
+    // Mock the client returned by createClient
     const mockClient = {request: mockRequest} as unknown as SanityClient
-    vi.mocked(getClient).mockReturnValue(mockClient)
+    vi.mocked(createClient).mockReturnValue(mockClient)
 
     const sessionId = 'test-session-id'
-    const result = await tradeTokenForSession(sessionId, mockSanityInstance)
+    const result = await tradeTokenForSession(sessionId)
 
-    expect(getClient).toHaveBeenCalledWith({apiVersion: 'v2024-11-22'}, mockSanityInstance)
+    expect(createClient).toHaveBeenCalledWith({
+      apiVersion: 'v2024-12-03',
+      ignoreBrowserTokenWarning: true,
+      useCdn: false,
+      useProjectHostname: false,
+      withCredentials: false,
+    })
     expect(mockRequest).toHaveBeenCalledWith({
       method: 'GET',
       uri: '/auth/fetch',
@@ -52,12 +46,10 @@ describe('tradeTokenForSession', () => {
     const mockError = new Error('Request failed')
     const mockRequest = vi.fn().mockRejectedValue(mockError)
 
-    // Mock the client returned by getClient
+    // Mock the client returned by createClient
     const mockClient = {request: mockRequest} as unknown as SanityClient
-    vi.mocked(getClient).mockReturnValue(mockClient)
+    vi.mocked(createClient).mockReturnValue(mockClient)
 
-    await expect(tradeTokenForSession('test-session-id', mockSanityInstance)).rejects.toThrow(
-      mockError,
-    )
+    await expect(tradeTokenForSession('test-session-id')).rejects.toThrow(mockError)
   })
 })
