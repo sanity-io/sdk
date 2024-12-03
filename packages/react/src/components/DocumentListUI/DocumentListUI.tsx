@@ -15,19 +15,26 @@ export interface DocumentListItemProps extends DocumentPreviewProps {
 /**
  * @public
  */
+export interface PreviewOptions {
+  showDocumentType?: boolean
+  showDocumentStatus?: boolean
+}
+
+/**
+ * @public
+ */
 export interface DocumentListProps {
   documents: Array<DocumentListItemProps>
   layout?: 'list' | 'grid'
+  previewOptions?: PreviewOptions
 }
 
-// Todo: use styled(Grid)?
-// https://sanity-io.slack.com/archives/C015Z0LLXM1/p1731955338958259
 const DocumentGrid = styled.div`
   display: grid;
   list-style: none;
   margin: unset;
   padding: unset;
-  grid-template-columns: repeat(auto-fit, minmax(max(20%, 280px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(38ch, 1fr));
 `
 
 /**
@@ -41,6 +48,7 @@ const DocumentGrid = styled.div`
 export const DocumentListUI = ({
   documents = [],
   layout = 'list',
+  previewOptions = {},
 }: DocumentListProps): ReactElement => {
   const El = layout === 'grid' ? DocumentGrid : Stack
 
@@ -59,19 +67,25 @@ export const DocumentListUI = ({
       data-ui={layout === 'grid' ? 'DocumentList:Grid' : 'DocumentList:List'}
       {...elProps}
     >
-      {documents.map((doc) => (
-        <li key={doc.id}>
-          <DocumentPreviewUI
-            title={doc.title}
-            subtitle={doc.subtitle}
-            media={doc.media}
-            docType={doc.docType}
-            selected={doc.selected}
-            status={doc.status}
-            url={doc.url}
-          />
-        </li>
-      ))}
+      {documents.map((doc) => {
+        const docPreviewProps: {docType?: string; status?: string} = {}
+
+        if (previewOptions?.showDocumentType) docPreviewProps.docType = doc.docType
+        if (previewOptions?.showDocumentStatus) docPreviewProps.status = doc.status
+
+        return (
+          <li key={doc.id}>
+            <DocumentPreviewUI
+              {...docPreviewProps}
+              title={doc.title}
+              subtitle={doc.subtitle}
+              media={doc.media}
+              selected={doc.selected}
+              url={doc.url}
+            />
+          </li>
+        )
+      })}
     </El>
   )
 }
