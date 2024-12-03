@@ -490,4 +490,45 @@ describe('documentListStore', () => {
     expect(result1?.[0]).toBe(result2?.[0])
     expect(result2?.[0]).toBe(result3?.[0])
   })
+
+  it('fetches all documents when no filter is set', async () => {
+    const result = [
+      {_id: 'first-id', _type: 'author'},
+      {_id: 'second-id', _type: 'book'},
+    ]
+
+    client.observable.fetch.mockImplementation(() =>
+      of({
+        syncTags: [],
+        result,
+      }),
+    )
+
+    const emissionsPromise = subscribeAndGetEmissions()
+
+    // Don't set any filter
+    documentListStore.setOptions({})
+    await tick()
+
+    const emissions = await emissionsPromise
+    expect(emissions).toHaveLength(3)
+
+    expect(emissions).toEqual([
+      {filter: undefined, isPending: false, result: null, sort: undefined},
+      {filter: undefined, isPending: true, result: null, sort: undefined},
+      {filter: undefined, isPending: false, result, sort: undefined},
+    ])
+
+    expect(client.observable.fetch).toHaveBeenCalledTimes(1)
+    expect(client.observable.fetch.mock.calls[0]).toEqual([
+      '*[0..$__limit]{_id, _type}',
+      {__limit: 50},
+      {
+        filterResponse: false,
+        lastLiveEventId: undefined,
+        returnQuery: false,
+        tag: 'sdk.document-list',
+      },
+    ])
+  })
 })
