@@ -12,4 +12,19 @@ describe('DocumentPreviewUI', () => {
     const {container} = render(<DocumentPreviewUI title="" />)
     expect(container).toBeEmptyDOMElement()
   })
+
+  it('renders the doctype when one is provided', () => {
+    const {container} = render(<DocumentPreviewUI title="Test Preview" docType="article" />)
+    expect(screen.getByText('article')).toBeVisible()
+  })
+
+  it('renders the published status when provided', () => {
+    const {container} = render(<DocumentPreviewUI title="Test Preview" status="published" />)
+    expect(screen.getByText('published')).toBeVisible()
+  })
+
+  it('renders the draft status when provided', () => {
+    const {container} = render(<DocumentPreviewUI title="Test Preview" status="draft" />)
+    expect(screen.getByText('draft')).toBeVisible()
+  })
 })

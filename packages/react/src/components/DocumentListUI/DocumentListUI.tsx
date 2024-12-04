@@ -15,18 +15,9 @@ export interface DocumentListItemProps extends DocumentPreviewProps {
 /**
  * @public
  */
-export interface PreviewOptions {
-  showDocumentType?: boolean
-  showDocumentStatus?: boolean
-}
-
-/**
- * @public
- */
 export interface DocumentListProps {
   documents: Array<DocumentListItemProps>
   layout?: 'list' | 'grid'
-  previewOptions?: PreviewOptions
 }
 
 const DocumentGrid = styled.div`
@@ -48,7 +39,6 @@ const DocumentGrid = styled.div`
 export const DocumentListUI = ({
   documents = [],
   layout = 'list',
-  previewOptions = {},
 }: DocumentListProps): ReactElement => {
   const El = layout === 'grid' ? DocumentGrid : Stack
 
@@ -70,13 +60,9 @@ export const DocumentListUI = ({
       {documents.map((doc) => {
         const docPreviewProps: {docType?: string; status?: string} = {}
 
-        if (previewOptions?.showDocumentType) docPreviewProps.docType = doc.docType
-        if (previewOptions?.showDocumentStatus) docPreviewProps.status = doc.status
-
         return (
           <li key={doc.id}>
             <DocumentPreviewUI
-              {...docPreviewProps}
               title={doc.title}
               subtitle={doc.subtitle}
               media={doc.media}
