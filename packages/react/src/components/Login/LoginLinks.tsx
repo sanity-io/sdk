@@ -27,7 +27,6 @@ export const LoginLinks = ({sanityInstance}: {sanityInstance: SanityInstance}): 
 
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-
   /**
    * Effect that handles the token exchange flow when a session ID is present in the URL
    * Attempts to exchange temporary session ID for a permanent token
@@ -36,7 +35,7 @@ export const LoginLinks = ({sanityInstance}: {sanityInstance: SanityInstance}): 
     const sidToken = getSidUrlSearch(window.location)
     if (sidToken) {
       setIsLoading(true)
-      tradeTokenForSession(sidToken)
+      tradeTokenForSession(sidToken, sanityInstance)
         .then((tokenResponse) => {
           setToken(tokenResponse ?? null)
         })
@@ -44,7 +43,7 @@ export const LoginLinks = ({sanityInstance}: {sanityInstance: SanityInstance}): 
           setIsLoading(false)
         })
     }
-  }, [sanityInstance])
+  }, [])
 
   // Show loading state during token exchange
   if (isLoading) {
@@ -53,7 +52,7 @@ export const LoginLinks = ({sanityInstance}: {sanityInstance: SanityInstance}): 
 
   // Show success state after authentication
   if (token) {
-    return <div>You are logged in with token: {token}</div>
+    return <div>You are logged in</div>
   }
 
   /**

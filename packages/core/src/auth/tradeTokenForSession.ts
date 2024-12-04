@@ -1,5 +1,10 @@
 import {createClient} from '@sanity/client'
 
+import type {SanityInstance} from '../instance/types'
+import {fetchSessionUser} from './fetchSessionUser'
+import {getSessionStore} from './getSessionStore'
+import {LOGGED_IN_STATES} from './sessionStore'
+
 const AUTH_API_VERSION = 'v2024-12-03'
 
 /**
@@ -16,11 +21,17 @@ const AUTH_API_VERSION = 'v2024-12-03'
  * // Returns: 'permanent_token_xyz'
  * ```
  */
-export const tradeTokenForSession = async (sessionId: string): Promise<string | undefined> => {
+export const tradeTokenForSession = async (
+  sessionId: string,
+  sanityInstance: SanityInstance,
+  onSuccess?: () => void,
+): Promise<string | undefined> => {
   if (!sessionId) {
     return
   }
 
+  const sessionStore = getSessionStore(sanityInstance)
+  sessionStore.getState().setLoggedInState(LOGGED_IN_STATES.LOADING)
   /*
    * To authenticate, we don't want to call a "project" endpoint
    * (so, not like "https://{projectId}.api.sanity.io/etc/etc").
@@ -40,6 +51,12 @@ export const tradeTokenForSession = async (sessionId: string): Promise<string | 
     query: {sid: sessionId},
     tag: 'auth.fetch-token',
   })
+
+  getSessionStore(sanityInstance).getState().setSessionId(token)
+
+  await fetchSessionUser(sanityInstance)
+  sessionStore.getState().setLoggedInState(LOGGED_IN_STATES.LOGGED_IN)
+  onSuccess?.()
 
   return token
 }
