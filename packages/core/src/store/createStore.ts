@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {devtools} from 'zustand/middleware'
 import {createStore as createZustandStore, type StoreApi} from 'zustand/vanilla'
+
 import type {SanityInstance} from '../instance/types'
 
 /**
