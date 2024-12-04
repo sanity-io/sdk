@@ -1,15 +1,15 @@
-import {type SanityInstance, tradeTokenForSession} from '@sanity/sdk'
+import {tradeTokenForSession} from '@sanity/sdk'
 import {getSidUrlSearch} from '@sanity/sdk'
 import {Button, Card, Container, Flex, Heading, Stack} from '@sanity/ui'
 import {type ReactElement, useEffect, useState} from 'react'
 
 import {useLoginLinks} from '../../hooks/auth/useLoginLinks'
+import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 
 /**
  * Component that handles Sanity authentication flow and renders login provider options
  * @public
  * @param {Object} props - Component props
- * @param {SanityInstance} props.sanityInstance - Sanity configuration instance
  * @returns {ReactElement} Rendered component
  * @remarks
  * The component handles three states:
@@ -22,7 +22,8 @@ import {useLoginLinks} from '../../hooks/auth/useLoginLinks'
  * return <LoginLinks sanityInstance={config} />
  * ```
  */
-export const LoginLinks = ({sanityInstance}: {sanityInstance: SanityInstance}): ReactElement => {
+export const LoginLinks = (): ReactElement => {
+  const sanityInstance = useSanityInstance()
   const authProviders = useLoginLinks()
 
   const [token, setToken] = useState<string | null>(null)
