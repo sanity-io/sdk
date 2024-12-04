@@ -58,8 +58,6 @@ export const DocumentListUI = ({
       {...elProps}
     >
       {documents.map((doc) => {
-        const docPreviewProps: {docType?: string; status?: string} = {}
-
         return (
           <li key={doc.id}>
             <DocumentPreviewUI
