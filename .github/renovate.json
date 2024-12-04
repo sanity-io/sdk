@@ -21,7 +21,13 @@
     {
       "description": "Group eslint related deps in a single PR, as they often have to update together",
       "groupName": "eslint-tooling",
-      "matchPackageNames": ["@eslint/*", "eslint", "eslint-plugin-*", "typescript-eslint"]
+      "matchPackageNames": [
+        "@eslint/*",
+        "eslint",
+        "eslint-plugin-*",
+        "eslint-config-*",
+        "typescript-eslint"
+      ]
     }
   ]
 }
