@@ -9,7 +9,6 @@ export {
   type DocumentListItemProps,
   type DocumentListProps,
   DocumentListUI,
-  type PreviewOptions,
 } from '../components/DocumentListUI/DocumentListUI'
 export {type DocumentPreviewProps} from '../components/DocumentPreviewUI/DocumentPreviewUI'
 export {LoginLinks} from '../components/Login/LoginLinks'

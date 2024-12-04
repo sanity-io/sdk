@@ -92,31 +92,3 @@ export const Grid: Story = {
     return <DocumentListUI {...props} />
   },
 }
-
-export const ListWithPreviewOptions: Story = {
-  args: {
-    documents: mockDocs,
-    layout: 'list',
-    previewOptions: {
-      showDocumentType: true,
-      showDocumentStatus: true,
-    },
-  },
-  render: (props) => {
-    return <DocumentListUI {...props} />
-  },
-}
-
-export const GridWithPreviewOptions: Story = {
-  args: {
-    documents: mockDocs,
-    layout: 'grid',
-    previewOptions: {
-      showDocumentType: true,
-      showDocumentStatus: true,
-    },
-  },
-  render: (props) => {
-    return <DocumentListUI {...props} />
-  },
-}
