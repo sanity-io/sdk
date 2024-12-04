@@ -1,4 +1,4 @@
-import {getClient, getSidUrlSearch, type SanityInstance, tradeTokenForSession} from '@sanity/sdk'
+import {getSidUrlSearch, tradeTokenForSession} from '@sanity/sdk'
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {render, screen} from '@testing-library/react'
@@ -7,6 +7,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {useLoginLinks} from '../../hooks/auth/useLoginLinks'
 import {LoginLinks} from './LoginLinks'
+import {SanityProvider} from '../context/SanityProvider'
 
 // Mock the hooks and SDK functions
 vi.mock('../../hooks/auth/useLoginLinks', () => ({
@@ -24,7 +25,7 @@ vi.mock('../../hooks/auth/useLoginLinks', () => ({
   ]),
 }))
 vi.mock('@sanity/sdk', () => ({
-  getClient: vi.fn(),
+  createSanityInstance: vi.fn(),
   tradeTokenForSession: vi.fn(),
   getSidUrlHash: vi.fn().mockReturnValue(null),
   getSidUrlSearch: vi.fn(),
@@ -33,27 +34,23 @@ vi.mock('@sanity/sdk', () => ({
 const theme = buildTheme({})
 
 describe('LoginLinks', () => {
-  const mockSanityInstance = {
-    identity: {
-      projectId: 'test-project-id',
-    },
-  }
-
   beforeEach(() => {
     vi.clearAllMocks()
-    // Mock getClient return value
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(getClient).mockReturnValue({} as any)
     // Mock successful token response
     vi.mocked(tradeTokenForSession).mockResolvedValue('mock-token')
   })
 
-  const renderWithTheme = (ui: React.ReactElement) => {
-    return render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>)
+  const renderWithWrappers = (ui: React.ReactElement) => {
+    const config = {projectId: 'test-project-id', dataset: 'production'}
+    return render(
+      <ThemeProvider theme={theme}>
+        <SanityProvider config={config}>{ui}</SanityProvider>
+      </ThemeProvider>,
+    )
   }
 
   it('renders auth provider links correctly', () => {
-    renderWithTheme(<LoginLinks sanityInstance={mockSanityInstance as SanityInstance} />)
+    renderWithWrappers(<LoginLinks />)
 
     // Check if the heading is present
     expect(screen.getByText('Choose login provider')).toBeInTheDocument()
@@ -71,7 +68,7 @@ describe('LoginLinks', () => {
     // Mock getSidUrlSearch to return a token
     vi.mocked(getSidUrlSearch).mockReturnValue('mock-sid-token')
 
-    renderWithTheme(<LoginLinks sanityInstance={mockSanityInstance as SanityInstance} />)
+    renderWithWrappers(<LoginLinks />)
 
     // Verify that the login providers are not shown
     expect(screen.queryByText('Choose login provider')).not.toBeInTheDocument()
@@ -88,7 +85,7 @@ describe('LoginLinks', () => {
       vi.mocked(getSidUrlSearch).mockReturnValue('sid-token')
       vi.mocked(tradeTokenForSession).mockImplementation(() => new Promise(() => {})) // Never resolves
 
-      renderWithTheme(<LoginLinks sanityInstance={mockSanityInstance as SanityInstance} />)
+      renderWithWrappers(<LoginLinks />)
 
       expect(screen.getByText('Logging in...')).toBeInTheDocument()
     })
@@ -99,7 +96,7 @@ describe('LoginLinks', () => {
       vi.mocked(getSidUrlSearch).mockReturnValue('sid-token')
       vi.mocked(tradeTokenForSession).mockResolvedValue(mockToken)
 
-      renderWithTheme(<LoginLinks sanityInstance={mockSanityInstance as SanityInstance} />)
+      renderWithWrappers(<LoginLinks />)
 
       // Wait for the token to be displayed
       expect(await screen.findByText('You are logged in')).toBeInTheDocument()
@@ -110,7 +107,7 @@ describe('LoginLinks', () => {
       vi.mocked(getSidUrlSearch).mockReturnValue('sid-token')
       vi.mocked(tradeTokenForSession).mockResolvedValue(undefined)
 
-      renderWithTheme(<LoginLinks sanityInstance={mockSanityInstance as SanityInstance} />)
+      renderWithWrappers(<LoginLinks />)
 
       // Wait for the login providers to be shown (default state when no token)
       expect(await screen.findByText('Choose login provider')).toBeInTheDocument()
@@ -120,7 +117,7 @@ describe('LoginLinks', () => {
       // Setup mocks
       vi.mocked(getSidUrlSearch).mockReturnValue(null)
 
-      renderWithTheme(<LoginLinks sanityInstance={mockSanityInstance as SanityInstance} />)
+      renderWithWrappers(<LoginLinks />)
 
       expect(screen.getByText('Choose login provider')).toBeInTheDocument()
     })
