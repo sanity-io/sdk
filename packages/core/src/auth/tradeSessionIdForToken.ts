@@ -1,7 +1,7 @@
 import {createClient} from '@sanity/client'
 
 import type {SanityInstance} from '../instance/types'
-import {fetchSessionUser} from './fetchSessionUser'
+import {fetchCurrentUser} from './fetchCurrentUser'
 import {getSessionStore} from './getSessionStore'
 import {LOGGED_IN_STATES} from './sessionStore'
 
@@ -17,11 +17,11 @@ const AUTH_API_VERSION = 'v2024-12-03'
  * @throws {Error} If the API request fails or returns invalid response
  * @example
  * ```ts
- * const sessionToken = await tradeTokenForSession('temp_session_123', sanityConfig)
+ * const sessionToken = await tradeSessionIdForToken('temp_session_123', sanityConfig)
  * // Returns: 'permanent_token_xyz'
  * ```
  */
-export const tradeTokenForSession = async (
+export const tradeSessionIdForToken = async (
   sessionId: string,
   sanityInstance: SanityInstance,
   onSuccess?: () => void,
@@ -51,10 +51,9 @@ export const tradeTokenForSession = async (
     query: {sid: sessionId},
     tag: 'auth.fetch-token',
   })
+  sanityInstance.config.token = token
 
-  getSessionStore(sanityInstance).getState().setSessionId(token)
-
-  await fetchSessionUser(sanityInstance)
+  await fetchCurrentUser(sanityInstance)
   sessionStore.getState().setLoggedInState(LOGGED_IN_STATES.LOGGED_IN)
   onSuccess?.()
 

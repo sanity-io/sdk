@@ -1,4 +1,4 @@
-import {tradeTokenForSession} from '@sanity/sdk'
+import {tradeSessionIdForToken} from '@sanity/sdk'
 import {getSidUrlSearch} from '@sanity/sdk'
 import {Button, Card, Container, Flex, Heading, Stack} from '@sanity/ui'
 import {type ReactElement, useEffect, useState} from 'react'
@@ -36,7 +36,7 @@ export const LoginLinks = (): ReactElement => {
     const sidToken = getSidUrlSearch(window.location)
     if (sidToken) {
       setIsLoading(true)
-      tradeTokenForSession(sidToken, sanityInstance)
+      tradeSessionIdForToken(sidToken, sanityInstance)
         .then((tokenResponse) => {
           setToken(tokenResponse ?? null)
         })

@@ -29,10 +29,6 @@ export type LoggedInState = keyof typeof LOGGED_IN_STATES
  * @public
  */
 export interface SessionState {
-  /** Unique identifier for the current session */
-  sessionId: string | null
-  /** Updates the session identifier */
-  setSessionId: (sessionId: string | null) => void
   /** Current authenticated user information */
   user: CurrentUser | null
   /** Updates the current user information */
@@ -52,10 +48,6 @@ export const createSessionStore = (): SessionStore => {
   return createStore<SessionState>()(
     devtools(
       (set, _get) => ({
-        sessionId: null as string | null,
-        setSessionId: (sessionId: string | null) => {
-          set({sessionId}, undefined, 'setSessionId')
-        },
         user: null as CurrentUser | null,
         setUser: (user: CurrentUser | null) => {
           set({user}, undefined, 'setUser')

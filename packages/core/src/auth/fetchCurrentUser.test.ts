@@ -3,7 +3,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getClient} from '../client/getClient'
 import type {SanityInstance} from '../instance/types'
-import {fetchSessionUser} from './fetchSessionUser'
+import {fetchCurrentUser} from './fetchCurrentUser'
 import {getSessionStore} from './getSessionStore'
 import type {SessionStore} from './sessionStore'
 
@@ -11,7 +11,7 @@ import type {SessionStore} from './sessionStore'
 vi.mock('../client/getClient')
 vi.mock('./getSessionStore')
 
-describe('fetchSessionUser', () => {
+describe('fetchCurrentUser', () => {
   const mockUser = {
     id: 'user-123',
     name: 'Test User',
@@ -24,6 +24,7 @@ describe('fetchSessionUser', () => {
       apiHost: 'https://api.sanity.io',
       projectId: 'test-project',
       dataset: 'test-dataset',
+      token: 'test-token',
     },
     identity: {
       id: 'mock-identity',
@@ -47,7 +48,6 @@ describe('fetchSessionUser', () => {
     // Mock getSessionStore
     vi.mocked(getSessionStore).mockReturnValue({
       getState: () => ({
-        sessionId: 'test-session-id',
         setUser: mockSetUser,
       }),
     } as unknown as SessionStore)
@@ -56,11 +56,11 @@ describe('fetchSessionUser', () => {
     mockRequest.mockResolvedValue(mockUser)
   })
 
-  it('fetches user with session ID from store when not provided', async () => {
-    const result = await fetchSessionUser(mockSanityInstance)
+  it('fetches user with token from store when not provided', async () => {
+    const result = await fetchCurrentUser(mockSanityInstance)
 
     expect(getClient).toHaveBeenCalledWith({apiVersion: 'v2024-11-22'}, mockSanityInstance)
-    expect(mockWithConfig).toHaveBeenCalledWith({token: 'test-session-id'})
+    expect(mockWithConfig).toHaveBeenCalledWith({token: 'test-token'})
     expect(mockRequest).toHaveBeenCalledWith({
       method: 'GET',
       uri: '/users/me',
@@ -69,18 +69,10 @@ describe('fetchSessionUser', () => {
     expect(mockSetUser).toHaveBeenCalledWith(mockUser)
   })
 
-  it('fetches user with provided session ID', async () => {
-    const customSessionId = 'custom-session-id'
-    const result = await fetchSessionUser(mockSanityInstance, customSessionId)
-
-    expect(mockWithConfig).toHaveBeenCalledWith({token: customSessionId})
-    expect(result).toEqual(mockUser)
-    expect(mockSetUser).toHaveBeenCalledWith(mockUser)
-  })
-
-  it('handles API errors', async () => {
-    mockRequest.mockRejectedValue(new Error('API Error'))
-
-    await expect(fetchSessionUser(mockSanityInstance)).rejects.toThrow('API Error')
+  it('throws error when token is not set in instance', async () => {
+    const instanceWithoutToken = {...mockSanityInstance, config: {}} as SanityInstance
+    await expect(fetchCurrentUser(instanceWithoutToken)).rejects.toThrow(
+      'No token is set for this instance',
+    )
   })
 })

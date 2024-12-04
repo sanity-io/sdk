@@ -8,21 +8,8 @@ describe('sessionStore', () => {
     const store = createSessionStore()
     const state = store.getState()
 
-    expect(state.sessionId).toBeNull()
     expect(state.user).toBeNull()
     expect(state.loggedInState).toBe(LOGGED_IN_STATES.LOGGED_OUT)
-  })
-
-  test('setSessionId updates session ID', () => {
-    const store = createSessionStore()
-    const testSessionId = 'test-session-123'
-
-    store.getState().setSessionId(testSessionId)
-    expect(store.getState().sessionId).toBe(testSessionId)
-
-    // Test clearing session ID
-    store.getState().setSessionId(null)
-    expect(store.getState().sessionId).toBeNull()
   })
 
   test('setUser updates user information', () => {

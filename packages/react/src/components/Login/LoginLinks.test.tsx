@@ -1,4 +1,4 @@
-import {getSidUrlSearch, tradeTokenForSession} from '@sanity/sdk'
+import {getSidUrlSearch, tradeSessionIdForToken} from '@sanity/sdk'
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {render, screen} from '@testing-library/react'
@@ -6,8 +6,8 @@ import React from 'react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {useLoginLinks} from '../../hooks/auth/useLoginLinks'
-import {LoginLinks} from './LoginLinks'
 import {SanityProvider} from '../context/SanityProvider'
+import {LoginLinks} from './LoginLinks'
 
 // Mock the hooks and SDK functions
 vi.mock('../../hooks/auth/useLoginLinks', () => ({
@@ -26,7 +26,7 @@ vi.mock('../../hooks/auth/useLoginLinks', () => ({
 }))
 vi.mock('@sanity/sdk', () => ({
   createSanityInstance: vi.fn(),
-  tradeTokenForSession: vi.fn(),
+  tradeSessionIdForToken: vi.fn(),
   getSidUrlHash: vi.fn().mockReturnValue(null),
   getSidUrlSearch: vi.fn(),
 }))
@@ -37,7 +37,7 @@ describe('LoginLinks', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Mock successful token response
-    vi.mocked(tradeTokenForSession).mockResolvedValue('mock-token')
+    vi.mocked(tradeSessionIdForToken).mockResolvedValue('mock-token')
   })
 
   const renderWithWrappers = (ui: React.ReactElement) => {
@@ -76,14 +76,14 @@ describe('LoginLinks', () => {
     // Wait for the token message to appear
     const tokenMessage = await screen.findByText('You are logged in with token: mock-token')
     expect(tokenMessage).toBeInTheDocument()
-    expect(tradeTokenForSession).toHaveBeenCalledWith('mock-sid-token')
+    expect(tradeSessionIdForToken).toHaveBeenCalledWith('mock-sid-token')
   })
 
   describe('token handling', () => {
     it('shows loading state while trading token', async () => {
       // Setup mocks
       vi.mocked(getSidUrlSearch).mockReturnValue('sid-token')
-      vi.mocked(tradeTokenForSession).mockImplementation(() => new Promise(() => {})) // Never resolves
+      vi.mocked(tradeSessionIdForToken).mockImplementation(() => new Promise(() => {})) // Never resolves
 
       renderWithWrappers(<LoginLinks />)
 
@@ -94,7 +94,7 @@ describe('LoginLinks', () => {
       // Setup mocks
       const mockToken = 'test-token'
       vi.mocked(getSidUrlSearch).mockReturnValue('sid-token')
-      vi.mocked(tradeTokenForSession).mockResolvedValue(mockToken)
+      vi.mocked(tradeSessionIdForToken).mockResolvedValue(mockToken)
 
       renderWithWrappers(<LoginLinks />)
 
@@ -105,7 +105,7 @@ describe('LoginLinks', () => {
     it('handles null token response', async () => {
       // Setup mocks
       vi.mocked(getSidUrlSearch).mockReturnValue('sid-token')
-      vi.mocked(tradeTokenForSession).mockResolvedValue(undefined)
+      vi.mocked(tradeSessionIdForToken).mockResolvedValue(undefined)
 
       renderWithWrappers(<LoginLinks />)
 
