@@ -14,17 +14,17 @@ describe('DocumentPreviewUI', () => {
   })
 
   it('renders the doctype when one is provided', () => {
-    const {container} = render(<DocumentPreviewUI title="Test Preview" docType="article" />)
+    render(<DocumentPreviewUI title="Test Preview" docType="article" />)
     expect(screen.getByText('article')).toBeVisible()
   })
 
   it('renders the published status when provided', () => {
-    const {container} = render(<DocumentPreviewUI title="Test Preview" status="published" />)
+    render(<DocumentPreviewUI title="Test Preview" status="published" />)
     expect(screen.getByText('published')).toBeVisible()
   })
 
   it('renders the draft status when provided', () => {
-    const {container} = render(<DocumentPreviewUI title="Test Preview" status="draft" />)
+    render(<DocumentPreviewUI title="Test Preview" status="draft" />)
     expect(screen.getByText('draft')).toBeVisible()
   })
 })
