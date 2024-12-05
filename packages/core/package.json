@@ -60,11 +60,11 @@
     "@repo/package.config": "workspace:*",
     "@sanity/pkg-utils": "^6.11.14",
     "@sanity/prettier-config": "^1.0.3",
-    "@sanity/types": "^3.65.0",
+    "@sanity/types": "^3.65.1",
     "@vitest/coverage-v8": "2.1.8",
     "eslint": "^9.16.0",
     "lint-staged": "^15.2.10",
-    "prettier": "^3.4.1",
+    "prettier": "^3.4.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   },
