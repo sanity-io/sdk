@@ -1,4 +1,4 @@
-import type {ClientStore} from '../client/clientStore'
+import type {ClientStore} from '../client/store/clientStore'
 import type {SchemaStore} from '../schema/schemaStore'
 import type {SanityConfig} from './sanityInstance'
 

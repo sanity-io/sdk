@@ -9,7 +9,7 @@ export type {InternalStores, SanityInstance, SdkIdentity} from '../instance/type
 // Utils
 export {getClient} from '../client/getClient'
 // Types
-export type {ClientOptions, ClientState, ClientStore} from '../client/clientStore'
+export type {ClientOptions, ClientState, ClientStore} from '../client/store/clientStore'
 
 /** SCHEMA */
 export type {SchemaState, SchemaStore} from '../schema/schemaStore'
@@ -23,9 +23,6 @@ export type {
   SortOrderingItem,
 } from '../documentList/documentListStore'
 export {createDocumentListStore} from '../documentList/documentListStore'
-
-/** TEST */
-export {testFunction} from '../example/example'
 
 /** AUTH */
 export {type AuthConfig, type AuthProvider, type AuthState, type AuthStore} from '../auth/authStore'

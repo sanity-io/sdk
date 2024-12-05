@@ -1,3 +1,8 @@
+/**
+ * @packageDocumentation
+ * @module @sanity/sdk-react/components
+ */
+
 export type {SanityProviderProps} from '../components/context/SanityProvider'
 export {SanityProvider} from '../components/context/SanityProvider'
 export {DocumentGridLayout} from '../components/DocumentGridLayout/DocumentGridLayout'
