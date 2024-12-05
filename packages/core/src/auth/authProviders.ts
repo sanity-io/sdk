@@ -26,9 +26,13 @@ export interface AuthProvider {
 
 /**
  * Generates a list of configured authentication providers with their respective URLs
+ *
  * @public
- * @param {string} callbackUrl - The URL where the auth provider should redirect after authentication
- * @returns {AuthProvider[]} Array of configured auth providers with complete authentication URLs
+ *
+ * @param callbackUrl - The URL where the auth provider should redirect after authentication
+ *
+ * @returns Array of configured auth providers with complete authentication URLs
+ *
  * @example
  * ```ts
  * const providers = getAuthProviders('https://myapp.com/callback');

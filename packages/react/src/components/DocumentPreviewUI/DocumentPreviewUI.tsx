@@ -22,15 +22,11 @@ const TempMedia = styled(Box)`
 
 /**
  * This is a component that renders a document preview.
+ *
  * @public
- * @param {DocumentPreviewProps} props - The props for the DocumentPreviewUI component.
- * @param {string} props.docType - The type of document to render.
- * @param {React.ReactNode} props.media - The media to render for the document.
- * @param {string} props.status - The status of the document.
- * @param {string} props.subtitle - The subtitle of the document.
- * @param {string} props.title - The title of the document.
- * @param {string} props.url - The URL of the document.
- * @returns {JSX.Element} - The DocumentPreviewUI component.
+ *
+ * @param props - The props for the DocumentPreviewUI component.
+ * @returns - The DocumentPreviewUI component.
  */
 export default function DocumentPreviewUI({
   docType,

@@ -8,14 +8,17 @@ import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 
 /**
  * Component that handles Sanity authentication flow and renders login provider options
+ *
  * @public
- * @param {Object} props - Component props
- * @returns {ReactElement} Rendered component
+ *
+ * @returns Rendered component
+ *
  * @remarks
  * The component handles three states:
  * 1. Loading state during token exchange
  * 2. Success state after successful authentication
  * 3. Provider selection UI when not authenticated
+ *
  * @example
  * ```tsx
  * const config = { projectId: 'your-project-id', dataset: 'production' }

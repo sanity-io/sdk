@@ -3,8 +3,6 @@ import type {SanityInstance, SdkIdentity} from './types'
 
 /**
  * @public
- * @module @sanity/sdk
- * @category Sanity Instance
  */
 export interface SanityConfig {
   projectId: string
@@ -15,11 +13,11 @@ export interface SanityConfig {
 /**
  * Returns a new instance of dependencies required for SanitySDK.
  *
- * @param config - The configuration for this instance
- * @returns A new "instance" of a Sanity SDK, used to bind resources/configuration to it
  * @public
- * @module @sanity/sdk
- * @category Sanity Instance
+ *
+ * @param config - The configuration for this instance
+ *
+ * @returns A new "instance" of a Sanity SDK, used to bind resources/configuration to it
  */
 export function createSanityInstance(config?: SanityConfig): SanityInstance {
   const {projectId = '', dataset = '', token} = config ?? {}

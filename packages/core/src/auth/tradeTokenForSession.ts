@@ -9,12 +9,17 @@ const AUTH_API_VERSION = 'v2024-12-03'
 
 /**
  * Exchanges a temporary authentication token for a permanent session token
+ *
  * @public
- * @param {string} sessionId - Temporary session ID received from auth provider
- * @returns {Promise<string | undefined>} Resolves to:
+ *
+ * @param  sessionId - Temporary session ID received from auth provider
+ *
+ * @returns Resolves to:
  *   - A long-lived session token if exchange is successful
  *   - undefined if sessionId is empty or exchange fails
- * @throws {Error} If the API request fails or returns invalid response
+ *
+ * @throws  If the API request fails or returns invalid response
+ *
  * @example
  * ```ts
  * const sessionToken = await tradeTokenForSession('temp_session_123', sanityConfig)

@@ -7,7 +7,7 @@ import {SanityInstanceContext} from '../../components/context/SanityProvider'
  * Hook that provides the current Sanity instance from the context.
  * This must be called from within a `SanityProvider` component.
  * @public
- * @returns {SanityInstance} the current Sanity instance
+ * @returns the current Sanity instance
  * @example
  * ```tsx
  * const instance = useSanityInstance()

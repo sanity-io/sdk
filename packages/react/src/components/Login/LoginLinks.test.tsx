@@ -6,8 +6,8 @@ import React from 'react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {useLoginLinks} from '../../hooks/auth/useLoginLinks'
-import {LoginLinks} from './LoginLinks'
 import {SanityProvider} from '../context/SanityProvider'
+import {LoginLinks} from './LoginLinks'
 
 // Mock the hooks and SDK functions
 vi.mock('../../hooks/auth/useLoginLinks', () => ({

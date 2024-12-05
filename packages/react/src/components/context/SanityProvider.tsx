@@ -18,8 +18,8 @@ export const SanityInstanceContext = createContext<Instance | null>(null)
  * Top-level context provider that provides a Sanity configuration instance.
  * This must wrap any Sanity SDK React component.
  * @public
- * @param {config} props.config - Sanity project and dataset configuration
- * @returns {ReactElement} Rendered component
+ * @param props - Sanity project and dataset configuration
+ * @returns Rendered component
  * @example
  * ```tsx
  * import {ExampleComponent, SanityProvider} from @sanity/sdk-react'
