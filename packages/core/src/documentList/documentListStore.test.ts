@@ -8,21 +8,62 @@ import {
   type DocumentListStore,
 } from './documentListStore'
 
-vi.mock('../client/getClient', () => {
+vi.mock('../client/store/clientStore', () => {
   const unsubscribe = vi.fn()
-  const subscribe = vi.fn(() => ({unsubscribe}))
+  const subscribe = vi.fn((observer) => {
+    observer.next({
+      id: 'mock-event-id',
+      type: 'message',
+      tags: [],
+    })
+    return {unsubscribe}
+  })
 
   const mockClient = {
     observable: {
-      fetch: vi.fn(() => ({unsubscribe: () => {}})),
+      fetch: vi.fn(() =>
+        of({
+          syncTags: [],
+          result: [],
+        }),
+      ),
     },
     live: {
-      events: () => ({subscribe}),
+      events: vi.fn(() => {
+        const observable = of({
+          id: 'mock-event-id',
+          type: 'message',
+          tags: [],
+        })
+        // @ts-expect-error
+        observable.subscribe = subscribe
+        return observable
+      }),
     },
   }
 
+  const mockStore = {
+    subscribe: (callback: () => void) => {
+      callback()
+      return () => {}
+    },
+  }
+
+  const mockGetClientEvents = () => ({
+    subscribe: (subscriber: any) => {
+      subscriber.next(mockClient)
+      return {
+        unsubscribe: vi.fn(),
+      }
+    },
+  })
+
   return {
-    getClient: () => mockClient,
+    getClientStore: () => ({
+      store: mockStore,
+      getClientEvents: mockGetClientEvents,
+      getOrCreateClient: vi.fn(() => mockClient),
+    }),
   }
 })
 
@@ -35,7 +76,6 @@ describe('documentListStore', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-
     // @ts-expect-error the types are wrong here since we're mocking
     client = getClient()
 

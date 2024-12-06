@@ -1,5 +1,5 @@
 import type {SanityClient} from '@sanity/client'
-import {distinctUntilChanged, last, map, Observable, startWith, type Subscribable} from 'rxjs'
+import {distinctUntilChanged, map, Observable, startWith, type Subscribable} from 'rxjs'
 import type {StoreActionContext} from '../../../store/createStore'
 import type {ClientOptions, ClientState} from '../clientStore'
 import {getOrCreateClient} from './getOrCreateClient'

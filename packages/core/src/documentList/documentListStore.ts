@@ -13,7 +13,6 @@ import {
 import {devtools} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
-import {getClient} from '../client/getClient'
 import type {SanityInstance} from '../instance/types'
 import {getClientStore} from '../client/store/clientStore'
 
