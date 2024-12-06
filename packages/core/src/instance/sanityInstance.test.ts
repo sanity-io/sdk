@@ -9,7 +9,6 @@ describe('sanityInstance', () => {
     config = {
       projectId: 'test-project',
       dataset: 'test-dataset',
-      token: 'test-token',
     }
   })
 
@@ -17,29 +16,10 @@ describe('sanityInstance', () => {
     test('creates instance with correct configuration', () => {
       const instance = createSanityInstance(config)
 
-      expect(instance.config.token).toBe('test-token')
       expect(instance.identity).toEqual(
         expect.objectContaining({
           projectId: 'test-project',
           dataset: 'test-dataset',
-        }),
-      )
-    })
-
-    test('handles missing token', () => {
-      const {token: _, ...configWithoutToken} = config
-      const instance = createSanityInstance(configWithoutToken)
-
-      expect(instance.config.token).toBeUndefined()
-    })
-
-    test('handles undefined config by using empty strings', () => {
-      const instance = createSanityInstance(undefined)
-      expect(instance.config).toEqual({token: undefined})
-      expect(instance.identity).toEqual(
-        expect.objectContaining({
-          projectId: '',
-          dataset: '',
         }),
       )
     })

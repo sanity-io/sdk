@@ -1,3 +1,4 @@
+import type {AuthConfig} from '../auth/authStore'
 import {getSdkIdentity} from './identity'
 import type {SanityInstance, SdkIdentity} from './types'
 
@@ -7,7 +8,7 @@ import type {SanityInstance, SdkIdentity} from './types'
 export interface SanityConfig {
   projectId: string
   dataset: string
-  token?: string
+  auth?: AuthConfig
 }
 
 /**
@@ -19,11 +20,14 @@ export interface SanityConfig {
  *
  * @returns A new "instance" of a Sanity SDK, used to bind resources/configuration to it
  */
-export function createSanityInstance(config?: SanityConfig): SanityInstance {
-  const {projectId = '', dataset = '', token} = config ?? {}
+export function createSanityInstance({
+  projectId = '',
+  dataset = '',
+  ...config
+}: SanityConfig): SanityInstance {
   return {
     identity: getSdkIdentity({projectId, dataset}),
-    config: {token},
+    config,
   }
 }
 

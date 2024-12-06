@@ -1,5 +1,6 @@
 import type {ClientStore} from '../client/clientStore'
 import type {SchemaStore} from '../schema/schemaStore'
+import type {SanityConfig} from './sanityInstance'
 
 /** @public */
 export interface InternalStores {
@@ -17,10 +18,7 @@ export interface SanityInstance {
    */
   readonly identity: SdkIdentity
 
-  config: {
-    /** TODO: refactor - if we are binding clients to the identity, we can't have the token changing without those clients getting updated */
-    token?: string
-  }
+  config: Omit<SanityConfig, 'projectId' | 'dataset'>
 }
 
 /** @public */

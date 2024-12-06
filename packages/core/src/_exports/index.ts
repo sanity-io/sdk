@@ -35,3 +35,6 @@ export type {LoggedInState, SessionState, SessionStore} from '../auth/sessionSto
 export {LOGGED_IN_STATES} from '../auth/sessionStore'
 export {tradeTokenForSession} from '../auth/tradeTokenForSession'
 export type {CurrentUser, Role} from '@sanity/types'
+
+export {type AuthState, type AuthConfig, type AuthStore} from '../auth/authStore'
+export {getAuthStore} from '../auth/getAuthStore'
