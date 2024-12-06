@@ -1,9 +1,7 @@
 export type {SanityProviderProps} from '../components/context/SanityProvider'
 export {SanityProvider} from '../components/context/SanityProvider'
-export {
-  type DocumentListItemProps,
-  type DocumentListProps,
-  DocumentListUI,
-} from '../components/DocumentListUI/DocumentListUI'
-export {type DocumentPreviewProps} from '../components/DocumentPreviewUI/DocumentPreviewUI'
+export {DocumentGridLayout} from '../components/DocumentGridLayout/DocumentGridLayout'
+export {DocumentListLayout} from '../components/DocumentListLayout/DocumentListLayout'
+export {DocumentPreviewLayout} from '../components/DocumentPreviewLayout/DocumentPreviewLayout'
+export {type DocumentPreviewLayoutProps} from '../components/DocumentPreviewLayout/DocumentPreviewLayout'
 export {LoginLinks} from '../components/Login/LoginLinks'
