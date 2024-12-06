@@ -1,15 +1,15 @@
 import {createClient} from '@sanity/client'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {getOrCreateResource} from '../instance/sanityInstance'
-import type {SanityInstance} from '../instance/types'
+import {createSanityInstance, getOrCreateResource} from '../instance/sanityInstance'
 import {DEFAULT_API_VERSION, getClientStore} from './getClientStore'
 
 // Mock dependencies
 vi.mock('@sanity/client')
-vi.mock('../instance/sanityInstance', () => ({
-  getOrCreateResource: vi.fn(),
-}))
+vi.mock('../instance/sanityInstance', async () => {
+  const mod = await vi.importActual('../instance/sanityInstance')
+  return {...mod, getOrCreateResource: vi.fn()}
+})
 vi.mock('../clientStore', () => ({
   createClientStore: vi.fn().mockReturnValue({
     setState: vi.fn(),
@@ -20,24 +20,15 @@ vi.mock('../clientStore', () => ({
 }))
 
 describe('getClientStore', () => {
-  const mockInstance: SanityInstance = {
-    identity: {
-      projectId: 'test-project-id',
-      dataset: 'test-dataset',
-    },
-    config: {
-      token: 'test-token',
-    },
-  } as SanityInstance
+  const instance = createSanityInstance({
+    projectId: 'test-project-id',
+    dataset: 'test-dataset',
+  })
 
-  const mockInstanceWithoutProjectId: SanityInstance = {
-    identity: {
-      dataset: 'test-dataset',
-    },
-    config: {
-      token: 'test-token',
-    },
-  } as SanityInstance
+  // @ts-expect-error TODO: remove this case
+  const instanceWithoutProjectId = createSanityInstance({
+    dataset: 'test-dataset',
+  })
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -48,13 +39,12 @@ describe('getClientStore', () => {
     // Mock getOrCreateResource to execute the factory function
     vi.mocked(getOrCreateResource).mockImplementation((_, __, factory) => factory())
 
-    const clientStore = getClientStore(mockInstance)
+    const clientStore = getClientStore(instance)
 
     // Verify client creation
     expect(createClient).toHaveBeenCalledWith({
       projectId: 'test-project-id',
       dataset: 'test-dataset',
-      token: 'test-token',
       useCdn: false,
       apiVersion: DEFAULT_API_VERSION,
     })
@@ -69,25 +59,20 @@ describe('getClientStore', () => {
   })
 
   it('it creates a project-less client if no projectId is provided', () => {
-    getClientStore(mockInstanceWithoutProjectId)
+    getClientStore(instanceWithoutProjectId)
     expect(createClient).toHaveBeenCalledWith({
       withCredentials: false,
       useProjectHostname: false,
       ignoreBrowserTokenWarning: true,
       apiVersion: DEFAULT_API_VERSION,
       dataset: 'test-dataset',
-      token: 'test-token',
       useCdn: false,
     })
   })
 
   it('uses getOrCreateResource to cache the client store', () => {
-    getClientStore(mockInstance)
+    getClientStore(instance)
 
-    expect(getOrCreateResource).toHaveBeenCalledWith(
-      mockInstance,
-      'clientStore',
-      expect.any(Function),
-    )
+    expect(getOrCreateResource).toHaveBeenCalledWith(instance, 'clientStore', expect.any(Function))
   })
 })
