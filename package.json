@@ -18,6 +18,7 @@
     "all": "turbo run build && turbo run lint && turbo run test:coverage && turbo run build:docs",
     "build": "turbo run build --filter='./packages/*' --filter='./apps/*'",
     "build:docs": "typedoc --options ./typedoc.json --tsconfig tsconfig.tsdoc.json",
+    "build:packages": "turbo run build --filter='./packages/*' --filter='!./packages/@repo/*'",
     "dev:kitchensink": "turbo run dev --filter=@sanity/kitchensink-react",
     "dev:storybook": "turbo run dev --filter={@sanity/storybook,@sanity/sdk,@sanity/sdk-react} --parallel",
     "format": "prettier --write --cache --ignore-unknown .",
