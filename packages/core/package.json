@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk",
-  "version": "0.0.0-alpha.1",
+  "version": "0.0.0-alpha.0",
   "private": true,
   "description": "Sanity SDK for Content OS",
   "keywords": [],
@@ -37,6 +37,7 @@
     "dev": "pkg watch",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "eslint .",
+    "prepublishOnly": "pnpm run build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
@@ -71,5 +72,8 @@
   "packageManager": "pnpm@9.14.4",
   "engines": {
     "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "restricted"
   }
 }
