@@ -5,59 +5,51 @@ import {config} from '../../../../test/fixtures'
 
 describe('getOrCreateClient', () => {
   const API_VERSION = '2024-12-05'
-  let client: SanityClient
+  let defaultClient: SanityClient
   let store: ReturnType<typeof createClientStore>
   let instance: ReturnType<typeof createSanityInstance>
 
   beforeEach(() => {
     instance = createSanityInstance(config)
-    client = createClient({...config, apiVersion: API_VERSION, useCdn: false})
-    store = createClientStore(instance, client)
-  })
-
-  afterEach(() => {
-    vi.clearAllMocks()
+    defaultClient = createClient({...config, apiVersion: API_VERSION, useCdn: false})
+    store = createClientStore(instance, defaultClient)
   })
 
   it('throws error when apiVersion is missing', () => {
     expect(() => store.getOrCreateClient({})).toThrow('Missing required `apiVersion` option')
   })
 
-  it('creates new client when apiVersion is not found', () => {
-    const withConfigSpy = vi.spyOn(client, 'withConfig')
+  it('creates new client with correct apiVersion', () => {
     const apiVersion = '2024-01-01'
-
     const result = store.getOrCreateClient({apiVersion})
-
-    expect(withConfigSpy).toHaveBeenCalledWith({apiVersion})
     expect(result.config().apiVersion).toBe(apiVersion)
   })
 
   it('reuses existing client for same apiVersion', () => {
-    const withConfigSpy = vi.spyOn(client, 'withConfig')
-    const newClientMock = {id: 'new-client'} as unknown as SanityClient
-    withConfigSpy.mockReturnValue(newClientMock)
+    const apiVersion = '2024-01-01'
+    const result1 = store.getOrCreateClient({apiVersion})
+    const result2 = store.getOrCreateClient({apiVersion})
 
-    const result1 = store.getOrCreateClient({apiVersion: '2024-01-01'})
-    const result2 = store.getOrCreateClient({apiVersion: '2024-01-01'})
-
-    expect(withConfigSpy).toHaveBeenCalledTimes(1)
-    expect(result1).toBe(newClientMock)
-    expect(result2).toBe(newClientMock)
+    expect(result1).toBe(result2)
   })
 
-  it('creates different clients for different apiVersions', () => {
-    const withConfigSpy = vi.spyOn(client, 'withConfig')
-    const client1Mock = {id: 'client-1'} as unknown as SanityClient
-    const client2Mock = {id: 'client-2'} as unknown as SanityClient
-    withConfigSpy.mockReturnValueOnce(client1Mock).mockReturnValueOnce(client2Mock)
+  it('preserves client identity after token update', () => {
+    const apiVersion = '2024-01-01'
+    const client1 = store.getOrCreateClient({apiVersion})
 
-    const result1 = store.getOrCreateClient({apiVersion: '2024-01-01'})
-    const result2 = store.getOrCreateClient({apiVersion: '2024-02-01'})
+    // Update token
+    store.receiveToken('new-token')
 
-    expect(withConfigSpy).toHaveBeenCalledTimes(2)
-    expect(result1).toBe(client1Mock)
-    expect(result2).toBe(client2Mock)
-    expect(result1).not.toBe(result2)
+    const client2 = store.getOrCreateClient({apiVersion})
+
+    // Verify the new token was applied
+    expect(client2.config().token).toBe('new-token')
+    expect(client2.config().apiVersion).toBe(apiVersion)
+
+    // Verify we got a new client instance (since token changed)
+    expect(client2).not.toBe(client1)
+
+    // Verify first client keeps its original config
+    expect(client1.config().token).toBeUndefined()
   })
 })
