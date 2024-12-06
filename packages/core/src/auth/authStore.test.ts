@@ -91,6 +91,7 @@ vi.stubGlobal('location', {
 })
 
 beforeEach(() => {
+  vi.clearAllMocks()
   mockRequest.mockReset()
   mockLocalStorage = {}
   eventListeners = {}
@@ -117,7 +118,10 @@ describe('createAuthStore', () => {
   describe('Initialization states', () => {
     it('initializes logged-out if no token and no callback param', () => {
       const store = createAuthStore(instance, {storageArea: mockStorage})
-      expect(store.getCurrent()).toEqual<AuthState>({type: 'logged-out'})
+      expect(store.getCurrent()).toEqual<AuthState>({
+        type: 'logged-out',
+        isDestroyingSession: false,
+      })
     })
 
     it('initializes logged-in if a static token is provided', () => {
@@ -338,9 +342,15 @@ describe('createAuthStore', () => {
       const store = createAuthStore(instance, {storageArea: mockStorage})
       expect(store.getCurrent().type).toBe('logged-in')
 
-      await store.logout()
-      expect(store.getCurrent().type).toBe('logged-out')
+      const logoutPromise = store.logout()
+      expect(store.getCurrent()).toEqual({type: 'logged-out', isDestroyingSession: true})
+      store.logout()
+      expect(store.getCurrent()).toEqual({type: 'logged-out', isDestroyingSession: true})
+
+      await logoutPromise
+      expect(store.getCurrent()).toEqual({type: 'logged-out', isDestroyingSession: false})
       expect(mockGetItem('__sanity_auth_token_testProject_testDataset')).toBe(null)
+      expect(createClient).toHaveBeenCalledTimes(1)
     })
 
     it('does nothing if not logged-in', async () => {
@@ -403,7 +413,7 @@ describe('createAuthStore', () => {
       await store.handleCallback()
 
       expect(states).toEqual([
-        {type: 'logged-out'},
+        {type: 'logged-out', isDestroyingSession: false},
         {type: 'logging-in', isExchangingToken: true},
         {type: 'logged-in', token: 'newToken'},
       ])
@@ -482,7 +492,10 @@ describe('createAuthStore', () => {
       window.dispatchEvent(removeTokenEvent)
 
       await new Promise((r) => setTimeout(r, 0))
-      expect(store.getCurrent()).toEqual<AuthState>({type: 'logged-out'})
+      expect(store.getCurrent()).toEqual<AuthState>({
+        type: 'logged-out',
+        isDestroyingSession: false,
+      })
     })
   })
 

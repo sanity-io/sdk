@@ -28,9 +28,8 @@ const REQUEST_TAG_PREFIX = 'sdk.auth'
 export type AuthState =
   | {type: 'logged-in'; token: string}
   | {type: 'logging-in'; isExchangingToken: boolean}
-  | {type: 'logging-out'}
   | {type: 'error'; error: unknown}
-  | {type: 'logged-out'}
+  | {type: 'logged-out'; isDestroyingSession: boolean}
 
 /**
  * Configuration options for creating an auth store.
@@ -222,7 +221,11 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
       distinctUntilChanged(),
     )
     .subscribe((token) =>
-      store.setState({authState: token ? {type: 'logged-in', token} : {type: 'logged-out'}}),
+      store.setState({
+        authState: token
+          ? {type: 'logged-in', token}
+          : {type: 'logged-out', isDestroyingSession: false},
+      }),
     )
 
   const state$ = new Observable<AuthState>((observer) => {
@@ -285,7 +288,7 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
     if (getAuthCode(initialLocationHref)) return {type: 'logging-in', isExchangingToken: false}
     const token = getTokenFromStorage()
     if (token) return {type: 'logged-in', token}
-    return {type: 'logged-out'}
+    return {type: 'logged-out', isDestroyingSession: false}
   }
 
   async function handleCallback(locationHref = getDefaultLocation()) {
@@ -396,22 +399,29 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
     if (providedToken) return
 
     const {authState} = store.getState()
-    if (authState.type !== 'logged-in') return
+
+    // If we already have an inflight request, no-op
+    if (authState.type === 'logged-out' && authState.isDestroyingSession) return
+    const token = authState.type === 'logged-in' && authState.token
 
     try {
-      const client = clientFactory({
-        token: authState.token,
-        projectId,
-        dataset,
-        requestTagPrefix: REQUEST_TAG_PREFIX,
-        apiVersion: DEFAULT_API_VERSION,
-        useProjectHostname: authScope === 'project',
-        ...(apiHost && {apiHost}),
-      })
+      if (token) {
+        store.setState({authState: {type: 'logged-out', isDestroyingSession: true}})
 
-      await client.request<void>({uri: '/auth/logout', method: 'POST'})
+        const client = clientFactory({
+          token,
+          projectId,
+          dataset,
+          requestTagPrefix: REQUEST_TAG_PREFIX,
+          apiVersion: DEFAULT_API_VERSION,
+          useProjectHostname: authScope === 'project',
+          ...(apiHost && {apiHost}),
+        })
+
+        await client.request<void>({uri: '/auth/logout', method: 'POST'})
+      }
     } finally {
-      store.setState({authState: {type: 'logged-out'}})
+      store.setState({authState: {type: 'logged-out', isDestroyingSession: false}})
       storageArea?.removeItem(storageKey)
     }
   }
