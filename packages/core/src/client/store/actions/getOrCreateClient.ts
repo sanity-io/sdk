@@ -32,7 +32,6 @@ export const getOrCreateClient = (
     const newMap = new Map(prevState.clients)
     newMap.set(apiVersion, client)
     return {
-      ...prevState,
       clients: newMap,
     }
   })
