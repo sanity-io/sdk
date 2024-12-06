@@ -27,7 +27,7 @@ const REQUEST_TAG_PREFIX = 'sdk.auth'
  */
 export type AuthState =
   | {type: 'logged-in'; token: string}
-  | {type: 'logging-in'}
+  | {type: 'logging-in'; isExchangingToken: boolean}
   | {type: 'logging-out'}
   | {type: 'error'; error: unknown}
   | {type: 'logged-out'}
@@ -282,7 +282,7 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
    */
   function getInitialState(): AuthState {
     if (providedToken) return {type: 'logged-in', token: providedToken}
-    if (getAuthCode(initialLocationHref)) return {type: 'logging-in'}
+    if (getAuthCode(initialLocationHref)) return {type: 'logging-in', isExchangingToken: false}
     const token = getTokenFromStorage()
     if (token) return {type: 'logged-in', token}
     return {type: 'logged-out'}
@@ -292,10 +292,16 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
     // If a token is provided, no need to handle callback
     if (providedToken) return false
 
+    // Don't handle the callback if already in flight.
+    const {authState} = store.getState()
+    if (authState.type === 'logging-in' && authState.isExchangingToken) return false
+
+    // If there is no matching `authCode` then we can't handle the callback
     const authCode = getAuthCode(locationHref)
     if (!authCode) return false
 
-    store.setState({authState: {type: 'logging-in'}})
+    // Otherwise, start the exchange
+    store.setState({authState: {type: 'logging-in', isExchangingToken: true}})
 
     try {
       const client = clientFactory({

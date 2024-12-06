@@ -137,7 +137,7 @@ describe('createAuthStore', () => {
     it('initializes logging-in if callback param is present', () => {
       vi.stubGlobal('location', {href: 'http://localhost#sid=oauthcode'})
       const store = createAuthStore(instance, {storageArea: mockStorage})
-      expect(store.getCurrent()).toEqual<AuthState>({type: 'logging-in'})
+      expect(store.getCurrent()).toEqual<AuthState>({type: 'logging-in', isExchangingToken: false})
     })
   })
 
@@ -190,6 +190,19 @@ describe('createAuthStore', () => {
       const result = await store.handleCallback()
       expect(result).toBe('http://localhost/')
       expect(store.getCurrent()).toEqual<AuthState>({type: 'logged-in', token: 'orgToken'})
+    })
+
+    it('returns false if `handleCallback` is called while already logging in', async () => {
+      vi.stubGlobal('location', {href: 'http://localhost#sid=oauthcode'})
+      mockRequest.mockResolvedValueOnce({token: 'fetchedToken', label: 'Test Label'})
+      const store = createAuthStore(instance, {storageArea: mockStorage})
+      expect(store.getCurrent()).toEqual({type: 'logging-in', isExchangingToken: false})
+
+      const handleCallbackPromise = store.handleCallback('http://localhost#sid=oauthcode')
+      expect(store.getCurrent()).toEqual<AuthState>({type: 'logging-in', isExchangingToken: true})
+      await expect(store.handleCallback('http://localhost#sid=oauthcode')).resolves.toBe(false)
+      await handleCallbackPromise
+      expect(store.getCurrent()).toEqual<AuthState>({type: 'logged-in', token: 'fetchedToken'})
     })
   })
 
@@ -389,8 +402,11 @@ describe('createAuthStore', () => {
       mockRequest.mockResolvedValueOnce({token: 'newToken', label: 'Test'})
       await store.handleCallback()
 
-      expect(states).toContainEqual({type: 'logging-in'})
-      expect(states).toContainEqual({type: 'logged-in', token: 'newToken'})
+      expect(states).toEqual([
+        {type: 'logged-out'},
+        {type: 'logging-in', isExchangingToken: true},
+        {type: 'logged-in', token: 'newToken'},
+      ])
       sub.unsubscribe()
     })
 
