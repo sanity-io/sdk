@@ -193,7 +193,7 @@ describe('createAuthStore', () => {
     })
   })
 
-  describe('fetchLoginUrls', () => {
+  describe('getLoginUrls', () => {
     it('returns providers with updated URLs', async () => {
       mockRequest.mockResolvedValueOnce({
         providers: [
@@ -202,10 +202,31 @@ describe('createAuthStore', () => {
         ],
       })
       const store = createAuthStore(instance, {storageArea: mockStorage})
-      const providers = await store.fetchLoginUrls()
+      const providers = await store.getLoginUrls()
       expect(providers.length).toBe(2)
       expect(providers[0].url).toContain('withSid=true')
       expect(providers[1].url).toContain('withSid=true')
+    })
+
+    it('caches the providers and returns synchronously', async () => {
+      mockRequest.mockResolvedValueOnce({
+        providers: [
+          {title: 'Provider A', url: 'https://auth.example.com/a'},
+          {title: 'Provider B', url: 'https://auth.example.com/b'},
+        ],
+      })
+      const store = createAuthStore(instance, {storageArea: mockStorage})
+      const providers = await store.getLoginUrls()
+
+      expect(providers.length).toBe(2)
+      expect(providers[0].url).toContain('withSid=true')
+      expect(providers[1].url).toContain('withSid=true')
+
+      const cachedProvidersA = store.getLoginUrls()
+      const cachedProvidersB = store.getLoginUrls()
+
+      expect(providers).toBe(cachedProvidersA)
+      expect(cachedProvidersA).toBe(cachedProvidersB)
     })
 
     it('handles providers as a static array and merges/replaces accordingly', async () => {
@@ -228,7 +249,7 @@ describe('createAuthStore', () => {
         ],
       })
 
-      const providers = await store.fetchLoginUrls()
+      const providers = await store.getLoginUrls()
       expect(providers.find((p) => p.title === 'Provider A')).toBeTruthy()
       expect(providers.find((p) => p.title === 'Custom Provider B')).toBeTruthy()
       expect(providers.find((p) => p.title === 'Provider C')).toBeTruthy()
@@ -245,7 +266,7 @@ describe('createAuthStore', () => {
         providers: (defaults) => defaults.map((p) => ({...p, title: 'Modified ' + p.title})),
       })
 
-      const providers = await store.fetchLoginUrls()
+      const providers = await store.getLoginUrls()
       expect(providers[0].title).toBe('Modified Provider A')
     })
 
@@ -255,7 +276,7 @@ describe('createAuthStore', () => {
       })
 
       const store = createAuthStore(instance, {storageArea: mockStorage})
-      const providers = await store.fetchLoginUrls()
+      const providers = await store.getLoginUrls()
       expect(providers.length).toBe(1)
       expect(providers[0].title).toBe('Provider A')
     })
@@ -269,7 +290,7 @@ describe('createAuthStore', () => {
         storageArea: mockStorage,
         callbackUrl: 'http://localhost/callback',
       })
-      const providers = await store.fetchLoginUrls()
+      const providers = await store.getLoginUrls()
       expect(providers[0].url).toContain('origin=http%3A%2F%2Flocalhost%2Fcallback')
     })
 
@@ -288,7 +309,7 @@ describe('createAuthStore', () => {
         },
       })
 
-      const providers = await store.fetchLoginUrls()
+      const providers = await store.getLoginUrls()
       expect(providers.length).toBe(2)
       expect(providers.some((p) => p.title === 'Provider C')).toBe(true)
     })
@@ -502,14 +523,14 @@ describe('createAuthStore', () => {
       expect(createClient).toHaveBeenCalledWith(expect.objectContaining({apiHost}))
     })
 
-    it('fetchLoginUrls should call createClient with apiHost if provided', async () => {
+    it('getLoginUrls should call createClient with apiHost if provided', async () => {
       mockRequest.mockResolvedValueOnce({
         providers: [{title: 'Provider A', url: 'https://auth.example.com/a'}],
       })
 
       const apiHost = 'https://custom.api.sanity.io'
       const store = createAuthStore(instance, {storageArea: mockStorage, apiHost})
-      await store.fetchLoginUrls()
+      await store.getLoginUrls()
       expect(createClient).toHaveBeenCalledWith(expect.objectContaining({apiHost}))
     })
 

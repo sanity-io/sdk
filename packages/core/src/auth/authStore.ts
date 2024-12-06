@@ -15,6 +15,11 @@ import {createStore} from 'zustand/vanilla'
 import type {SanityInstance} from '../instance/types'
 import type {AuthProvider} from './authProviders'
 
+const AUTH_CODE_PARAM = 'sid'
+const DEFAULT_BASE = 'http://localhost'
+const DEFAULT_API_VERSION = '2021-06-07'
+const REQUEST_TAG_PREFIX = 'sdk.auth'
+
 /**
  * Represents the various states the authentication store can be in.
  *
@@ -26,11 +31,6 @@ export type AuthState =
   | {type: 'logging-out'}
   | {type: 'error'; error: unknown}
   | {type: 'logged-out'}
-
-const AUTH_CODE_PARAM = 'sid'
-const DEFAULT_BASE = 'http://localhost'
-const DEFAULT_API_VERSION = '2021-06-07'
-const REQUEST_TAG_PREFIX = 'sdk.auth'
 
 /**
  * Configuration options for creating an auth store.
@@ -111,10 +111,11 @@ export interface AuthStore extends Subscribable<AuthState> {
   /**
    * Fetches authentication providers (OAuth endpoints) for logging in.
    * Can optionally be customized with `providers` in {@link AuthConfig}.
+   * Results are cached after the first call. Subsequent calls return synchronously from cache.
    *
-   * @returns A promise resolving to a list of {@link AuthProvider} objects, each including a modified URL for the login flow.
+   * @returns Authentication providers as {@link AuthProvider} objects with pre-configured login URLs.
    */
-  fetchLoginUrls(): Promise<AuthProvider[]>
+  getLoginUrls(): AuthProvider[] | Promise<AuthProvider[]>
 
   /**
    * Logs out the current user. If a static token was provided, logout is a no-op.
@@ -203,8 +204,8 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
   const {projectId, dataset} = instance.identity
   const storageKey = `__sanity_auth_token_${projectId}_${dataset}`
 
-  const store = createStore<{authState: AuthState}>()(
-    devtools((..._unusedArgs) => ({authState: getInitialState()}), {
+  const store = createStore<{authState: AuthState; providers: AuthProvider[] | undefined}>()(
+    devtools((..._unusedArgs) => ({authState: getInitialState(), providers: undefined}), {
       name: 'SanityAuthStore',
       // TODO: Consider enabling only in development environment
       enabled: true,
@@ -325,6 +326,10 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
     }
   }
 
+  /**
+   * Fetches the providers from `/auth/providers`, adds params to each url, and
+   * caches the result for synchronous usage.
+   */
   async function fetchLoginUrls() {
     const client = clientFactory({
       projectId,
@@ -353,7 +358,7 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
         .concat(customProviders)
     }
 
-    return providers.map((provider) => {
+    const configuredProviders = providers.map((provider) => {
       const url = new URL(provider.url)
       const origin = callbackUrl
         ? new URL(callbackUrl, new URL(getDefaultLocation()).origin).toString()
@@ -367,6 +372,17 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
 
       return {...provider, url: url.toString()}
     })
+
+    store.setState({providers: configuredProviders})
+
+    return configuredProviders
+  }
+
+  function getLoginUrls() {
+    const {providers: cachedProviders} = store.getState()
+    if (cachedProviders) return cachedProviders
+
+    return fetchLoginUrls()
   }
 
   async function logout() {
@@ -398,5 +414,5 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
     storageSubscription.unsubscribe()
   }
 
-  return {subscribe, getCurrent, handleCallback, fetchLoginUrls, logout, dispose}
+  return {subscribe, getCurrent, handleCallback, getLoginUrls, logout, dispose}
 }
