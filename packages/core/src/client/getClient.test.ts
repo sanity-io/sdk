@@ -1,8 +1,9 @@
 import type {SanityClient} from '@sanity/client'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
+
 import type {SanityInstance} from '../instance/types'
 import {getClient} from './getClient'
-import {getClientStore, type ClientStore} from './store/clientStore'
+import {type ClientStore, getClientStore} from './store/clientStore'
 
 // Mock the getClientStore module
 vi.mock('./store/clientStore', () => ({

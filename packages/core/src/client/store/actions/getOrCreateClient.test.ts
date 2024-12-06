@@ -1,7 +1,8 @@
-import {type SanityClient, createClient} from '@sanity/client'
+import {createClient, type SanityClient} from '@sanity/client'
+
+import {config} from '../../../../test/fixtures'
 import {createSanityInstance} from '../../../instance/sanityInstance'
 import {createClientStore} from '../clientStore'
-import {config} from '../../../../test/fixtures'
 
 describe('getOrCreateClient', () => {
   const API_VERSION = '2024-12-05'

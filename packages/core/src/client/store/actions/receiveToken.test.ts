@@ -1,5 +1,5 @@
-import {createSanityInstance} from '../../../instance/sanityInstance'
 import {config} from '../../../../test/fixtures'
+import {createSanityInstance} from '../../../instance/sanityInstance'
 import {getClientStore} from '../clientStore'
 
 describe('receiveToken', () => {

@@ -13,8 +13,8 @@ import {
 import {devtools} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
-import type {SanityInstance} from '../instance/types'
 import {getClientStore} from '../client/store/clientStore'
+import type {SanityInstance} from '../instance/types'
 
 const PAGE_SIZE = 50
 

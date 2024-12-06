@@ -4,7 +4,9 @@ import type {StoreActionContext} from '../../../store/createStore'
 import type {ClientOptions, ClientState} from '../clientStore'
 
 /**
- *
+ * Retrieves a memoized client based on the API version,
+ * or creates a new one if it doesn't exist.
+ * @internal
  */
 export const getOrCreateClient = (
   {store}: StoreActionContext<ClientState>,
@@ -26,11 +28,11 @@ export const getOrCreateClient = (
   const client = state.defaultClient.withConfig(options)
 
   // Update state with new client
-  store.setState((state) => {
-    const newMap = new Map(state.clients)
+  store.setState((prevState) => {
+    const newMap = new Map(prevState.clients)
     newMap.set(apiVersion, client)
     return {
-      ...state,
+      ...prevState,
       clients: newMap,
     }
   })

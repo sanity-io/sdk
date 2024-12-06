@@ -1,8 +1,9 @@
+import {createClient, type SanityClient} from '@sanity/client'
 import {describe, expect, it, vi} from 'vitest'
+
+import {config} from '../../../../test/fixtures'
 import {createSanityInstance} from '../../../instance/sanityInstance'
 import {createClientStore} from '../clientStore'
-import {createClient, type SanityClient} from '@sanity/client'
-import {config} from '../../../../test/fixtures'
 
 describe('getClientEvents', () => {
   const API_VERSION = '2024-12-05'

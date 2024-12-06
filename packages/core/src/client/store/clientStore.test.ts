@@ -1,8 +1,9 @@
 import {describe, expect, it, vi} from 'vitest'
-import {getClientStore} from './clientStore'
+
 import {config} from '../../../test/fixtures'
-import {createSanityInstance} from '../../instance/sanityInstance'
 import {getAuthStore} from '../../auth/getAuthStore'
+import {createSanityInstance} from '../../instance/sanityInstance'
+import {getClientStore} from './clientStore'
 
 // Mock at module level but don't provide implementation yet
 vi.mock('../../auth/getAuthStore')
@@ -13,7 +14,7 @@ describe('clientStore', () => {
     vi.clearAllMocks()
     // Reset to default mock implementation
     vi.mocked(getAuthStore).mockImplementation(() => ({
-      // @ts-expect-error
+      // @ts-expect-error -- this is just a mock
       subscribe: () => () => {}, // Default no-op implementation
     }))
   })
@@ -56,7 +57,8 @@ describe('clientStore', () => {
 
     // Override mock implementation just for this test
     vi.mocked(getAuthStore).mockImplementation(() => ({
-      // @ts-expect-error
+      // @ts-expect-error -- this is just a mock
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       subscribe: (observer: any) => {
         observer.next({
           type: 'logged-in',
@@ -68,11 +70,33 @@ describe('clientStore', () => {
 
     const store = getClientStore(sanityInstance)
 
-    // Wait for async operations to complete
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    // Verify the token was received
     const client = store.getOrCreateClient({apiVersion: 'v2023-01-01'})
     expect(client.config().token).toBe('test-token')
+  })
+
+  it('properly cleans up auth subscription when cleanup is called', () => {
+    const unsubscribeSpy = vi.fn()
+    const sanityInstance = createSanityInstance(config)
+
+    // Mock the auth store with a spy on the unsubscribe function
+    vi.mocked(getAuthStore).mockImplementation(() => ({
+      // @ts-expect-error -- this is just a mock
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      subscribe: (observer: any) => {
+        observer.next({
+          type: 'logged-in',
+          token: 'test-token',
+        })
+        return unsubscribeSpy
+      },
+    }))
+
+    const store = getClientStore(sanityInstance)
+    store.dispose()
+
+    // Verify that the unsubscribe function was called
+    expect(unsubscribeSpy).toHaveBeenCalledTimes(1)
   })
 })
