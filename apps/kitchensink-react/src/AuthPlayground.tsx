@@ -1,18 +1,18 @@
-import {LOGGED_IN_STATES} from '@sanity/sdk'
 import {LoginLinks} from '@sanity/sdk-react/components'
-import {useCurrentUser, useLoggedInState, useSanityInstance} from '@sanity/sdk-react/hooks'
+import {useAuthState, useCurrentUser} from '@sanity/sdk-react/hooks'
 import {Avatar} from '@sanity/ui'
 
 export function AuthPlayground(): JSX.Element {
-  const sanityInstance = useSanityInstance()
-  const currentUser = useCurrentUser(sanityInstance)
-  const loggedInState = useLoggedInState(sanityInstance)
+  const authState = useAuthState()
+  // const currentUser = useCurrentUser(sanityInstance)
+
   return (
     <>
-      {loggedInState === LOGGED_IN_STATES.LOGGED_IN ? (
+      {authState === 'logged-in' ? (
         <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
-          <Avatar src={currentUser?.profileImage} color="blue" />{' '}
-          <span>Welcome {currentUser?.name}</span>
+          {/* <Avatar src={currentUser?.profileImage} color="blue" />{' '}
+          <span>Welcome {currentUser?.name}</span> */}
+          <span>Welcome, you are logged in</span>
         </div>
       ) : (
         <LoginLinks />
