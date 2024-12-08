@@ -1,7 +1,8 @@
 import {getAuthStore} from '@sanity/sdk'
+import {useEffect} from 'react'
+
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useAuthState} from './useAuthState'
-import {useEffect} from 'react'
 
 /**
  * A React hook that handles the OAuth callback process after user authentication.

@@ -1,6 +1,4 @@
-import {type CurrentUser, getSessionStore, type SanityInstance} from '@sanity/sdk'
-import {useMemo} from 'react'
-import {useStore} from 'zustand'
+import {type CurrentUser, type SanityInstance} from '@sanity/sdk'
 
 /**
  * Hook to get the currently logged in user
@@ -9,7 +7,8 @@ import {useStore} from 'zustand'
  * @returns The current user or null if not authenticated
  */
 export const useCurrentUser = (sanityInstance: SanityInstance): CurrentUser | null => {
-  const sessionStore = useMemo(() => getSessionStore(sanityInstance), [])
-
-  return useStore(sessionStore, (state) => state.user)
+  // TODO: implement
+  // eslint-disable-next-line no-console
+  console.log('useCurrentUser', sanityInstance)
+  return null
 }

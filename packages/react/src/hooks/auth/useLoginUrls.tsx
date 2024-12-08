@@ -1,5 +1,6 @@
-import {useState, useEffect} from 'react'
-import {getAuthStore, type AuthProvider} from '@sanity/sdk'
+import {type AuthProvider, getAuthStore} from '@sanity/sdk'
+import {useEffect, useState} from 'react'
+
 import {useSanityInstance} from '../context/useSanityInstance'
 
 /**

@@ -28,13 +28,6 @@ export {createDocumentListStore} from '../documentList/documentListStore'
 export {testFunction} from '../example/example'
 
 /** AUTH */
-export {type AuthProvider, getAuthProviders} from '../auth/authProviders'
-export {getSessionStore} from '../auth/getSessionStore'
-export {getSidUrlSearch} from '../auth/sessionId'
-export type {LoggedInState, SessionState, SessionStore} from '../auth/sessionStore'
-export {LOGGED_IN_STATES} from '../auth/sessionStore'
-export {tradeTokenForSession} from '../auth/tradeTokenForSession'
-export type {CurrentUser, Role} from '@sanity/types'
-
-export {type AuthState, type AuthConfig, type AuthStore} from '../auth/authStore'
+export {type AuthConfig, type AuthProvider, type AuthState, type AuthStore} from '../auth/authStore'
 export {getAuthStore} from '../auth/getAuthStore'
+export type {CurrentUser, Role} from '@sanity/types'

@@ -1,7 +1,8 @@
-import {getAuthStore, type AuthState} from '@sanity/sdk'
+import {type AuthState, getAuthStore} from '@sanity/sdk'
 import {useSyncExternalStore} from 'react'
-import {useSanityInstance} from '../context/useSanityInstance'
 import {distinctUntilChanged, map, Observable} from 'rxjs'
+
+import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
  * A React hook that subscribes to authentication state changes.

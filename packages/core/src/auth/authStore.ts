@@ -13,7 +13,6 @@ import {devtools} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
 import type {SanityInstance} from '../instance/types'
-import type {AuthProvider} from './authProviders'
 
 const AUTH_CODE_PARAM = 'sid'
 const DEFAULT_BASE = 'http://localhost'
@@ -30,6 +29,32 @@ export type AuthState =
   | {type: 'logging-in'; isExchangingToken: boolean}
   | {type: 'error'; error: unknown}
   | {type: 'logged-out'; isDestroyingSession: boolean}
+
+/**
+ * Configuration for an authentication provider
+ * @public
+ */
+export interface AuthProvider {
+  /**
+   * Unique identifier for the auth provider (e.g., 'google', 'github')
+   */
+  name: string
+
+  /**
+   * Display name for the auth provider in the UI
+   */
+  title: string
+
+  /**
+   * Complete authentication URL including callback and token parameters
+   */
+  url: string
+
+  /**
+   * Optional URL for direct sign-up flow
+   */
+  signUpUrl?: string
+}
 
 /**
  * Configuration options for creating an auth store.
