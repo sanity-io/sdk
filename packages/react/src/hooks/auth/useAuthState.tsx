@@ -30,7 +30,7 @@ export function useAuthState(): AuthState['type'] {
   const instance = useSanityInstance()
   const authStore = getAuthStore(instance)
 
-  const subscribe = (onStoreChange: () => void) => {
+  const subscribe = (onStoreChange: (state: AuthState['type']) => void) => {
     // Use Observable to handle auth state subscription and cleanup
     // distinctUntilChanged ensures we only trigger for actual type changes
     const subscription = new Observable(authStore.subscribe)
@@ -38,7 +38,7 @@ export function useAuthState(): AuthState['type'] {
         map((authState) => authState.type),
         distinctUntilChanged(),
       )
-      .subscribe(() => onStoreChange())
+      .subscribe((type) => onStoreChange(type))
     return () => subscription.unsubscribe()
   }
 
