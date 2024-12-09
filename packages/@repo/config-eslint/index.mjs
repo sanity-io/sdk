@@ -23,8 +23,8 @@ export default [
   ...compat.extends('eslint-config-turbo'),
   {
     rules: {
-      'simple-import-sort/exports': 'warn',
-      'simple-import-sort/imports': 'warn',
+      'simple-import-sort/exports': 'error',
+      'simple-import-sort/imports': 'error',
       'no-console': 'error',
       'no-shadow': 'error',
       'no-warning-comments': [
