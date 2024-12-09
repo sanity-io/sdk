@@ -27,7 +27,7 @@ describe('DocumentListLayout', () => {
     render(
       <DocumentListLayout>
         {mockDocuments.map((doc) => (
-          <li>{doc.title}</li>
+          <li key={doc.id}>{doc.title}</li>
         ))}
       </DocumentListLayout>,
     )

@@ -1,4 +1,5 @@
 import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
+import type {CurrentUser} from '@sanity/types'
 import {isEqual} from 'lodash-es'
 import {
   distinctUntilChanged,
@@ -7,14 +8,13 @@ import {
   fromEvent,
   map,
   Observable,
-  switchMap,
   type Subscribable,
+  switchMap,
 } from 'rxjs'
 import {devtools} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
 import type {SanityInstance} from '../instance/types'
-import type {CurrentUser} from '@sanity/types'
 
 const AUTH_CODE_PARAM = 'sid'
 const DEFAULT_BASE = 'http://localhost'

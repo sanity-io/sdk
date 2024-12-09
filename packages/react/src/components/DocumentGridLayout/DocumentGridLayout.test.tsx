@@ -27,7 +27,7 @@ describe('DocumentGridLayout', () => {
     render(
       <DocumentGridLayout>
         {mockDocuments.map((doc) => (
-          <li>{doc.title}</li>
+          <li key={doc.id}>{doc.title}</li>
         ))}
       </DocumentGridLayout>,
     )
