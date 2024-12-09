@@ -1,6 +1,6 @@
-# DocumentPreviewUI
+# DocumentPreviewLayout
 
-The DocumentPreviewUI component is used to render a compact representation of a [document](#). These previews are often rendered for each document within a [DocumentListUI component](#), but can also be rendered as standalone components.
+The DocumentPreviewLayout component is used to render a compact representation of a [document](#). These previews are often rendered for each document within a [DocumentListUI component](#), but can also be rendered as standalone components.
 
 Document previews surface the following information about each document:
 
@@ -15,7 +15,7 @@ Additionally, each document preview can take a `url` prop to enable navigation c
 ![An image of the stock preview component]()
 
 ```jsx
-<DocumentPreviewUI
+<DocumentPreviewLayout
   title={doc.title}
   subtitle={doc.subtitle}
   media={doc.media}
@@ -33,7 +33,7 @@ npm install @sanity/sdk
 ```
 
 ```javascript
-import DocumentPreviewUI from `@sanity/sdk/react/DocumentPreviewUI`
+import DocumentPreviewLayout from `@sanity/sdk/react/DocumentPreviewLayout`
 ```
 
 ## Props

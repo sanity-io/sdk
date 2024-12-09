@@ -4,7 +4,7 @@ import styled from 'styled-components'
 /**
  * @public
  */
-export interface DocumentPreviewProps {
+export interface DocumentPreviewLayoutProps {
   docType?: string
   media?: React.ReactNode // Todo: determine how media data will be passed to this component; need to represent either an image or an icon
   selected?: boolean
@@ -48,17 +48,17 @@ const StatusLabel = styled.span`
  *
  * @public
  *
- * @param props - The props for the DocumentPreviewUI component.
- * @returns - The DocumentPreviewUI component.
+ * @param props - The props for the DocumentPreviewLayout component.
+ * @returns - The DocumentPreviewLayout component.
  */
-export default function DocumentPreviewUI({
+export const DocumentPreviewLayout = ({
   docType,
   selected = false,
   status = '',
   subtitle = '',
   title,
   url = '',
-}: DocumentPreviewProps): JSX.Element {
+}: DocumentPreviewLayoutProps): JSX.Element => {
   // Todo: empty state
   if (!title) {
     return <></>
@@ -72,7 +72,7 @@ export default function DocumentPreviewUI({
       width="fill"
       padding={3}
       selected={selected}
-      data-ui="DocumentPreviewUI"
+      data-ui="DocumentPreviewLayout"
     >
       <Container>
         <TempMedia />
@@ -112,4 +112,4 @@ export default function DocumentPreviewUI({
   )
 }
 
-DocumentPreviewUI.displayName = 'DocumentPreview'
+DocumentPreviewLayout.displayName = 'DocumentPreviewLayout'

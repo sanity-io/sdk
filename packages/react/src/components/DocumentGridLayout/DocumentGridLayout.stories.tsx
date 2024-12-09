@@ -1,10 +1,11 @@
 import {type Meta, type StoryObj} from '@storybook/react'
 
-import {DocumentListUI} from './DocumentListUI'
+import {DocumentPreviewLayout} from '../DocumentPreviewLayout/DocumentPreviewLayout.tsx'
+import {DocumentGridLayout} from './DocumentGridLayout.tsx'
 
-const meta: Meta<typeof DocumentListUI> = {
-  title: 'DocumentListUI',
-  component: DocumentListUI,
+const meta: Meta<typeof DocumentGridLayout> = {
+  title: 'DocumentGridLayout',
+  component: DocumentGridLayout,
 }
 
 export default meta
@@ -74,21 +75,21 @@ const mockDocs = [
 ]
 
 export const Default: Story = {
-  args: {
-    documents: mockDocs,
-    layout: 'list',
-  },
-  render: (props) => {
-    return <DocumentListUI {...props} />
-  },
-}
-
-export const Grid: Story = {
-  args: {
-    documents: mockDocs,
-    layout: 'grid',
-  },
-  render: (props) => {
-    return <DocumentListUI {...props} />
+  render: () => {
+    return (
+      <DocumentGridLayout>
+        {mockDocs.map((doc) => (
+          <li key={doc.id}>
+            <DocumentPreviewLayout
+              title={doc.title}
+              subtitle={doc.subtitle}
+              docType={doc.docType}
+              status={doc.status}
+              url={doc.url}
+            />
+          </li>
+        ))}
+      </DocumentGridLayout>
+    )
   },
 }
