@@ -8,6 +8,9 @@
     "./tsdoc": "./tsdoc.mjs",
     "./react": "./react.mjs"
   },
+  "scripts": {
+    "lint": "eslint ."
+  },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",
     "eslint-config-prettier": "^9.1.0",
@@ -17,6 +20,7 @@
     "eslint-plugin-react-refresh": "^0.4.16",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-tsdoc": "^0.4.0",
+    "eslint-plugin-unused-imports": "^4.1.4",
     "globals": "^15.11.0",
     "typescript-eslint": "^8.13.0"
   }
