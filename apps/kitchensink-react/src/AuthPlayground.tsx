@@ -1,6 +1,5 @@
 import {LoginLinks} from '@sanity/sdk-react/components'
-import {useAuthState, useCurrentUser} from '@sanity/sdk-react/hooks'
-import {Avatar} from '@sanity/ui'
+import {useAuthState} from '@sanity/sdk-react/hooks'
 
 export function AuthPlayground(): JSX.Element {
   const authState = useAuthState()
