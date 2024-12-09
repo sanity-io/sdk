@@ -5,12 +5,15 @@
   "type": "module",
   "exports": {
     ".": "./index.mjs",
-    "./tsdoc": "./tsdoc.mjs"
+    "./tsdoc": "./tsdoc.mjs",
+    "./react": "./react.mjs"
   },
-  "dependencies": {
+  "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-config-turbo": "^2.2.3",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-tsdoc": "^0.4.0",
     "globals": "^15.11.0",

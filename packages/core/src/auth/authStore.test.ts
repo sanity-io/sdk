@@ -1,10 +1,10 @@
 import {createClient} from '@sanity/client'
+import {EMPTY, of} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance} from '../instance/sanityInstance'
 import {type SanityInstance} from '../instance/types'
 import {type AuthState, createAuthStore} from './authStore'
-import {EMPTY, of} from 'rxjs'
 
 /**
  * A mocked request function returned by the mocked `@sanity/client`.
