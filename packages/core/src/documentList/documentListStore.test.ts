@@ -8,21 +8,65 @@ import {
   type DocumentListStore,
 } from './documentListStore'
 
-vi.mock('../client/getClient', () => {
+const mockClientUnsubscribe = vi.fn()
+
+vi.mock('../client/store/clientStore', () => {
   const unsubscribe = vi.fn()
-  const subscribe = vi.fn(() => ({unsubscribe}))
+  const subscribe = vi.fn((observer) => {
+    observer.next({
+      id: 'mock-event-id',
+      type: 'message',
+      tags: [],
+    })
+    return {unsubscribe}
+  })
 
   const mockClient = {
     observable: {
-      fetch: vi.fn(() => ({unsubscribe: () => {}})),
+      fetch: vi.fn(() =>
+        of({
+          syncTags: [],
+          result: [],
+        }),
+      ),
     },
     live: {
-      events: () => ({subscribe}),
+      events: vi.fn(() => {
+        const observable = of({
+          id: 'mock-event-id',
+          type: 'message',
+          tags: [],
+        })
+        // @ts-expect-error -- this is just a mock
+        observable.subscribe = subscribe
+        return observable
+      }),
     },
   }
 
+  const mockStore = {
+    subscribe: (callback: () => void) => {
+      callback()
+      return () => {}
+    },
+  }
+
+  const mockGetClientEvents = () => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subscribe: (subscriber: any) => {
+      subscriber.next(mockClient)
+      return {
+        unsubscribe: mockClientUnsubscribe,
+      }
+    },
+  })
+
   return {
-    getClient: () => mockClient,
+    getClientStore: () => ({
+      store: mockStore,
+      getClientEvents: mockGetClientEvents,
+      getOrCreateClient: vi.fn(() => mockClient),
+    }),
   }
 })
 
@@ -35,7 +79,6 @@ describe('documentListStore', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-
     // @ts-expect-error the types are wrong here since we're mocking
     client = getClient()
 
@@ -408,11 +451,9 @@ describe('documentListStore', () => {
       }),
     )
 
-    const {unsubscribe} = client.live.events().subscribe()
-
-    expect(unsubscribe).not.toHaveBeenCalled()
+    expect(mockClientUnsubscribe).not.toHaveBeenCalled()
     documentListStore.dispose()
-    expect(unsubscribe).toHaveBeenCalled()
+    expect(mockClientUnsubscribe).toHaveBeenCalled()
   })
 
   it('preserves referential equality in the result set', async () => {

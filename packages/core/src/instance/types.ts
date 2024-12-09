@@ -1,8 +1,8 @@
-import type {ClientStore} from '../client/clientStore'
+import type {ClientStore} from '../client/store/clientStore'
 import type {SchemaStore} from '../schema/schemaStore'
 import type {SanityConfig} from './sanityInstance'
 
-/** @public */
+/** @internal */
 export interface InternalStores {
   clientStore?: ClientStore
   schemaStore?: SchemaStore

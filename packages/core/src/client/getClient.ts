@@ -1,8 +1,7 @@
 import type {SanityClient} from '@sanity/client'
 
 import type {SanityInstance} from '../instance/types'
-import {type ClientOptions} from './clientStore'
-import {getClientStore} from './getClientStore'
+import {type ClientOptions, getClientStore} from './store/clientStore'
 
 /**
  * Retrieve a memoized client based on the apiVersion.
@@ -10,5 +9,5 @@ import {getClientStore} from './getClientStore'
  */
 export const getClient = (options: ClientOptions, instance: SanityInstance): SanityClient => {
   const clientStore = getClientStore(instance)
-  return clientStore.getState().getClient(options)
+  return clientStore.getOrCreateClient(options)
 }
