@@ -38,10 +38,8 @@ describe('useAuthState', () => {
     expect(result.current).toBe('logged-in')
   })
 
-  it('should update when auth state changes', () => {
-    // Add a variable to track current state
+  it('should update when auth state changes', async () => {
     let currentState = {type: 'logged-in'}
-
     const subscribers: {next: (state: any) => void}[] = []
 
     const mockAuthStore = {
@@ -55,7 +53,6 @@ describe('useAuthState', () => {
           },
         }
       }),
-      // Update getCurrent to return the current state
       getCurrent: vi.fn().mockImplementation(() => currentState),
       handleCallback: vi.fn(),
       getLoginUrls: vi.fn(),
@@ -65,7 +62,7 @@ describe('useAuthState', () => {
 
     vi.mocked(getAuthStore).mockReturnValue(mockAuthStore as unknown as AuthStore)
 
-    const {result} = renderHook(() => useAuthState(), {
+    const {result, rerender} = renderHook(() => useAuthState(), {
       wrapper: ({children}) => (
         <SanityProvider config={{projectId: 'test', dataset: 'test'}}>{children}</SanityProvider>
       ),
@@ -74,11 +71,16 @@ describe('useAuthState', () => {
     // Assert initial state
     expect(result.current).toBe('logged-in')
 
-    // Update currentState when simulating auth state change
+    // Update currentState and trigger subscribers
     currentState = {type: 'logged-out'}
     subscribers.forEach((subscriber) => subscriber.next(currentState))
 
-    // Assert updated state
-    expect(result.current).toBe('logged-out')
+    // Force a re-render to ensure the state update is processed
+    rerender()
+
+    // Wait for next tick to allow state update to complete
+    await vi.waitFor(() => {
+      expect(result.current).toBe('logged-out')
+    })
   })
 })
