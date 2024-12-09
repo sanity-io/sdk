@@ -1,4 +1,4 @@
-import {getAuthStore, type AuthStore} from '@sanity/sdk'
+import {type AuthStore, getAuthStore} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
@@ -21,7 +21,9 @@ describe('useHandleCallback', () => {
   it('should handle callback when in logging-in state', () => {
     // Mock window.location
     const originalLocation = window.location
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (window as any).location
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     window.location = {href: 'http://test.com/callback?code=123'} as any
 
     const handleCallbackMock = vi.fn().mockResolvedValue(null)
@@ -51,7 +53,9 @@ describe('useHandleCallback', () => {
     vi.useFakeTimers()
     // Mock window.location
     const originalLocation = window.location
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (window as any).location
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     window.location = {href: 'http://test.com/callback'} as any
 
     const handleCallbackMock = vi.fn().mockResolvedValue('http://test.com/redirect')

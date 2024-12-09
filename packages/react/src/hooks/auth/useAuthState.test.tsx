@@ -1,8 +1,9 @@
-import {describe, expect, it, vi} from 'vitest'
+import {type AuthState, type AuthStore, getAuthStore} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
-import {useAuthState} from './useAuthState'
-import {getAuthStore, type AuthStore} from '@sanity/sdk'
+import {describe, expect, it, vi} from 'vitest'
+
 import {SanityProvider} from '../../components/context/SanityProvider'
+import {useAuthState} from './useAuthState'
 
 vi.mock(import('@sanity/sdk'), async (importOriginal) => {
   const actual = await importOriginal()
@@ -39,8 +40,8 @@ describe('useAuthState', () => {
   })
 
   it('should update when auth state changes', async () => {
-    let currentState = {type: 'logged-in'}
-    const subscribers: {next: (state: any) => void}[] = []
+    let currentState: AuthState = {type: 'logged-in', token: '123'}
+    const subscribers: {next: (state: AuthState) => void}[] = []
 
     const mockAuthStore = {
       subscribe: vi.fn((subscriber) => {
@@ -72,7 +73,7 @@ describe('useAuthState', () => {
     expect(result.current).toBe('logged-in')
 
     // Update currentState and trigger subscribers
-    currentState = {type: 'logged-out'}
+    currentState = {type: 'logged-out', isDestroyingSession: false}
     subscribers.forEach((subscriber) => subscriber.next(currentState))
 
     // Force a re-render to ensure the state update is processed
