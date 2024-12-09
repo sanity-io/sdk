@@ -1,4 +1,5 @@
+export {useAuthState} from '../hooks/auth/useAuthState'
 export {useCurrentUser} from '../hooks/auth/useCurrentUser'
-export {useLoggedInState} from '../hooks/auth/useLoggedInState'
-export {type AuthProvider, useLoginLinks} from '../hooks/auth/useLoginLinks'
+export {useHandleCallback} from '../hooks/auth/useHandleCallback'
+export {useLoginUrls} from '../hooks/auth/useLoginUrls'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'

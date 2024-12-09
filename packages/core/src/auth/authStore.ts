@@ -13,7 +13,6 @@ import {devtools} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
 import type {SanityInstance} from '../instance/types'
-import type {AuthProvider} from './authProviders'
 
 const AUTH_CODE_PARAM = 'sid'
 const DEFAULT_BASE = 'http://localhost'
@@ -30,6 +29,32 @@ export type AuthState =
   | {type: 'logging-in'; isExchangingToken: boolean}
   | {type: 'error'; error: unknown}
   | {type: 'logged-out'; isDestroyingSession: boolean}
+
+/**
+ * Configuration for an authentication provider
+ * @public
+ */
+export interface AuthProvider {
+  /**
+   * Unique identifier for the auth provider (e.g., 'google', 'github')
+   */
+  name: string
+
+  /**
+   * Display name for the auth provider in the UI
+   */
+  title: string
+
+  /**
+   * Complete authentication URL including callback and token parameters
+   */
+  url: string
+
+  /**
+   * Optional URL for direct sign-up flow
+   */
+  signUpUrl?: string
+}
 
 /**
  * Configuration options for creating an auth store.
@@ -221,11 +246,15 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
       distinctUntilChanged(),
     )
     .subscribe((token) =>
-      store.setState({
-        authState: token
-          ? {type: 'logged-in', token}
-          : {type: 'logged-out', isDestroyingSession: false},
-      }),
+      store.setState(
+        {
+          authState: token
+            ? {type: 'logged-in', token}
+            : {type: 'logged-out', isDestroyingSession: false},
+        },
+        undefined,
+        'tokenSetFromStorageEvent',
+      ),
     )
 
   const state$ = new Observable<AuthState>((observer) => {
@@ -304,7 +333,11 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
     if (!authCode) return false
 
     // Otherwise, start the exchange
-    store.setState({authState: {type: 'logging-in', isExchangingToken: true}})
+    store.setState(
+      {authState: {type: 'logging-in', isExchangingToken: true}},
+      undefined,
+      'exchangeSessionForToken',
+    )
 
     try {
       const client = clientFactory({
@@ -330,7 +363,7 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
       loc.hash = ''
       return loc.toString()
     } catch (error) {
-      store.setState({authState: {type: 'error', error}})
+      store.setState({authState: {type: 'error', error}}, undefined, 'exchangeSessionForTokenError')
       return false
     }
   }
@@ -382,7 +415,7 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
       return {...provider, url: url.toString()}
     })
 
-    store.setState({providers: configuredProviders})
+    store.setState({providers: configuredProviders}, undefined, 'fetchedLoginUrls')
 
     return configuredProviders
   }
@@ -406,7 +439,11 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
 
     try {
       if (token) {
-        store.setState({authState: {type: 'logged-out', isDestroyingSession: true}})
+        store.setState(
+          {authState: {type: 'logged-out', isDestroyingSession: true}},
+          undefined,
+          'loggingOut',
+        )
 
         const client = clientFactory({
           token,
@@ -421,7 +458,11 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
         await client.request<void>({uri: '/auth/logout', method: 'POST'})
       }
     } finally {
-      store.setState({authState: {type: 'logged-out', isDestroyingSession: false}})
+      store.setState(
+        {authState: {type: 'logged-out', isDestroyingSession: false}},
+        undefined,
+        'logoutSuccess',
+      )
       storageArea?.removeItem(storageKey)
     }
   }

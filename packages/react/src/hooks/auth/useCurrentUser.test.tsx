@@ -1,43 +1,15 @@
-import {type CurrentUser, type SanityInstance} from '@sanity/sdk'
+import type {SanityInstance} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {describe, expect, it} from 'vitest'
 
 import {useCurrentUser} from './useCurrentUser'
 
-const {createStore: realCreateStore} = await vi.importActual<typeof import('zustand')>('zustand')
-
-// Mock the zustand store
-const mockUser = {id: '123', name: 'Test User'} as CurrentUser
-let currentMockUser: CurrentUser | null = mockUser
-const mockSessionStore = realCreateStore(() => ({user: currentMockUser}))
-
-vi.mock('zustand', () => ({
-  useStore: () => currentMockUser,
-}))
-
-vi.mock('@sanity/sdk', () => ({
-  getSessionStore: () => mockSessionStore,
-}))
-
 describe('useCurrentUser', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    currentMockUser = mockUser
-  })
-
-  it('should return the current user when authenticated', () => {
-    const sanityInstance = {} as SanityInstance
-    const {result} = renderHook(() => useCurrentUser(sanityInstance))
-
-    expect(result.current).toEqual(mockUser)
-  })
-
-  it('should return null when not authenticated', () => {
-    currentMockUser = null
-
-    const sanityInstance = {} as SanityInstance
-    const {result} = renderHook(() => useCurrentUser(sanityInstance))
-
+  it('should return null initially', () => {
+    const mockInstance = {} as unknown as SanityInstance
+    const {result} = renderHook(() => useCurrentUser(mockInstance))
     expect(result.current).toBeNull()
   })
+
+  // Add more tests once the hook is implemented
 })

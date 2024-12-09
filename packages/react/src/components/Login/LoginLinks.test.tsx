@@ -1,17 +1,17 @@
-import {getSidUrlSearch, tradeTokenForSession} from '@sanity/sdk'
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {render, screen} from '@testing-library/react'
 import React from 'react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {useLoginLinks} from '../../hooks/auth/useLoginLinks'
+import {useAuthState} from '../../hooks/auth/useAuthState'
+import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
 import {SanityProvider} from '../context/SanityProvider'
 import {LoginLinks} from './LoginLinks'
 
 // Mock the hooks and SDK functions
-vi.mock('../../hooks/auth/useLoginLinks', () => ({
-  useLoginLinks: vi.fn(() => [
+vi.mock('../../hooks/auth/useLoginUrls', () => ({
+  useLoginUrls: vi.fn(() => [
     {
       name: 'google',
       title: 'Google',
@@ -31,13 +31,19 @@ vi.mock('@sanity/sdk', () => ({
   getSidUrlSearch: vi.fn(),
 }))
 
+vi.mock('../../hooks/auth/useAuthState', () => ({
+  useAuthState: vi.fn(() => 'logged-out'),
+}))
+
+vi.mock('../../hooks/auth/useHandleCallback', () => ({
+  useHandleCallback: vi.fn(),
+}))
+
 const theme = buildTheme({})
 
 describe('LoginLinks', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // Mock successful token response
-    vi.mocked(tradeTokenForSession).mockResolvedValue('mock-token')
   })
 
   const renderWithWrappers = (ui: React.ReactElement) => {
@@ -49,14 +55,13 @@ describe('LoginLinks', () => {
     )
   }
 
-  it('renders auth provider links correctly', () => {
+  it('renders auth provider links correctly when not authenticated', () => {
+    vi.mocked(useAuthState).mockReturnValue('logged-out')
     renderWithWrappers(<LoginLinks />)
 
-    // Check if the heading is present
     expect(screen.getByText('Choose login provider')).toBeInTheDocument()
 
-    // Check if all provider links are rendered as buttons
-    const authProviders = useLoginLinks()
+    const authProviders = useLoginUrls()
     authProviders.forEach((provider) => {
       const button = screen.getByRole('link', {name: provider.title})
       expect(button).toBeInTheDocument()
@@ -64,62 +69,17 @@ describe('LoginLinks', () => {
     })
   })
 
-  it.skip('handles URL search parameter and displays token message', async () => {
-    // Mock getSidUrlSearch to return a token
-    vi.mocked(getSidUrlSearch).mockReturnValue('mock-sid-token')
-
+  it('shows loading state while logging in', () => {
+    vi.mocked(useAuthState).mockReturnValue('logging-in')
     renderWithWrappers(<LoginLinks />)
 
-    // Verify that the login providers are not shown
-    expect(screen.queryByText('Choose login provider')).not.toBeInTheDocument()
-
-    // Wait for the token message to appear
-    const tokenMessage = await screen.findByText('You are logged in with token: mock-token')
-    expect(tokenMessage).toBeInTheDocument()
-    expect(tradeTokenForSession).toHaveBeenCalledWith('mock-sid-token')
+    expect(screen.getByText('Logging in...')).toBeInTheDocument()
   })
 
-  describe('token handling', () => {
-    it('shows loading state while trading token', async () => {
-      // Setup mocks
-      vi.mocked(getSidUrlSearch).mockReturnValue('sid-token')
-      vi.mocked(tradeTokenForSession).mockImplementation(() => new Promise(() => {})) // Never resolves
+  it('shows success message when logged in', () => {
+    vi.mocked(useAuthState).mockReturnValue('logged-in')
+    renderWithWrappers(<LoginLinks />)
 
-      renderWithWrappers(<LoginLinks />)
-
-      expect(screen.getByText('Logging in...')).toBeInTheDocument()
-    })
-
-    it('displays token when successfully traded', async () => {
-      // Setup mocks
-      const mockToken = 'test-token'
-      vi.mocked(getSidUrlSearch).mockReturnValue('sid-token')
-      vi.mocked(tradeTokenForSession).mockResolvedValue(mockToken)
-
-      renderWithWrappers(<LoginLinks />)
-
-      // Wait for the token to be displayed
-      expect(await screen.findByText('You are logged in')).toBeInTheDocument()
-    })
-
-    it('handles null token response', async () => {
-      // Setup mocks
-      vi.mocked(getSidUrlSearch).mockReturnValue('sid-token')
-      vi.mocked(tradeTokenForSession).mockResolvedValue(undefined)
-
-      renderWithWrappers(<LoginLinks />)
-
-      // Wait for the login providers to be shown (default state when no token)
-      expect(await screen.findByText('Choose login provider')).toBeInTheDocument()
-    })
-
-    it('shows login providers when no SID token is present', () => {
-      // Setup mocks
-      vi.mocked(getSidUrlSearch).mockReturnValue(null)
-
-      renderWithWrappers(<LoginLinks />)
-
-      expect(screen.getByText('Choose login provider')).toBeInTheDocument()
-    })
+    expect(screen.getByText('You are logged in')).toBeInTheDocument()
   })
 })

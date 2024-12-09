@@ -27,8 +27,12 @@ describe('useSanityInstance', () => {
   })
 
   it('throws error when used outside provider', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
     expect(() => {
       renderHook(() => useSanityInstance())
     }).toThrow('useSanityInstance must be called from within the SanityProvider')
+
+    consoleSpy.mockRestore()
   })
 })
