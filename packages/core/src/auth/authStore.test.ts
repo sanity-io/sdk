@@ -4,17 +4,28 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 import {createSanityInstance} from '../instance/sanityInstance'
 import {type SanityInstance} from '../instance/types'
 import {type AuthState, createAuthStore} from './authStore'
+import {EMPTY, of} from 'rxjs'
 
 /**
  * A mocked request function returned by the mocked `@sanity/client`.
  */
 const mockRequest = vi.fn()
 
+/**
+ * A mocked observable request function for fetching the current user.
+ */
+const mockObservableRequest = vi.fn()
+
 // Mock @sanity/client
 vi.mock('@sanity/client', () => {
   return {
     createClient: vi.fn((_config) => {
-      return {request: mockRequest}
+      return {
+        request: mockRequest,
+        observable: {
+          request: mockObservableRequest,
+        },
+      }
     }),
   }
 })
@@ -93,6 +104,11 @@ vi.stubGlobal('location', {
 beforeEach(() => {
   vi.clearAllMocks()
   mockRequest.mockReset()
+  mockObservableRequest.mockReset()
+  // Default observable request to EMPTY so that if a test doesn't care about user fetching,
+  // it will not update currentUser.
+  mockObservableRequest.mockReturnValue(EMPTY)
+
   mockLocalStorage = {}
   eventListeners = {}
   vi.stubGlobal('window', {
@@ -126,7 +142,11 @@ describe('createAuthStore', () => {
 
     it('initializes logged-in if a static token is provided', () => {
       const store = createAuthStore(instance, {token: 'abc123'})
-      expect(store.getCurrent()).toEqual<AuthState>({type: 'logged-in', token: 'abc123'})
+      expect(store.getCurrent()).toEqual<AuthState>({
+        type: 'logged-in',
+        token: 'abc123',
+        currentUser: null,
+      })
     })
 
     it('initializes logged-in if token found in storage', () => {
@@ -135,7 +155,11 @@ describe('createAuthStore', () => {
         JSON.stringify({token: 'storedToken'}),
       )
       const store = createAuthStore(instance, {storageArea: mockStorage})
-      expect(store.getCurrent()).toEqual<AuthState>({type: 'logged-in', token: 'storedToken'})
+      expect(store.getCurrent()).toEqual<AuthState>({
+        type: 'logged-in',
+        token: 'storedToken',
+        currentUser: null,
+      })
     })
 
     it('initializes logging-in if callback param is present', () => {
@@ -152,7 +176,11 @@ describe('createAuthStore', () => {
       const store = createAuthStore(instance, {storageArea: mockStorage})
       const result = await store.handleCallback()
       expect(result).toBe('http://localhost/')
-      expect(store.getCurrent()).toEqual<AuthState>({type: 'logged-in', token: 'fetchedToken'})
+      expect(store.getCurrent()).toEqual<AuthState>({
+        type: 'logged-in',
+        token: 'fetchedToken',
+        currentUser: null,
+      })
       expect(mockGetItem('__sanity_auth_token_testProject_testDataset')).not.toBe(null)
     })
 
@@ -180,7 +208,11 @@ describe('createAuthStore', () => {
       vi.stubGlobal('location', {href: 'http://localhost#sid=oauthcode'})
       const result = await store.handleCallback()
       expect(result).toBe(false)
-      expect(store.getCurrent()).toEqual({type: 'logged-in', token: 'staticToken'})
+      expect(store.getCurrent()).toEqual({
+        type: 'logged-in',
+        token: 'staticToken',
+        currentUser: null,
+      })
     })
 
     it('works with apiHost and org authScope', async () => {
@@ -193,7 +225,11 @@ describe('createAuthStore', () => {
       })
       const result = await store.handleCallback()
       expect(result).toBe('http://localhost/')
-      expect(store.getCurrent()).toEqual<AuthState>({type: 'logged-in', token: 'orgToken'})
+      expect(store.getCurrent()).toEqual<AuthState>({
+        type: 'logged-in',
+        token: 'orgToken',
+        currentUser: null,
+      })
     })
 
     it('returns false if `handleCallback` is called while already logging in', async () => {
@@ -206,7 +242,55 @@ describe('createAuthStore', () => {
       expect(store.getCurrent()).toEqual<AuthState>({type: 'logging-in', isExchangingToken: true})
       await expect(store.handleCallback('http://localhost#sid=oauthcode')).resolves.toBe(false)
       await handleCallbackPromise
-      expect(store.getCurrent()).toEqual<AuthState>({type: 'logged-in', token: 'fetchedToken'})
+      expect(store.getCurrent()).toEqual<AuthState>({
+        type: 'logged-in',
+        token: 'fetchedToken',
+        currentUser: null,
+      })
+    })
+  })
+
+  describe('Current User Fetching', () => {
+    it('fetches current user after logging in via handleCallback', async () => {
+      vi.stubGlobal('location', {href: 'http://localhost#sid=oauthcode'})
+      mockRequest.mockResolvedValueOnce({token: 'fetchedToken', label: 'Test Label'})
+
+      // Once logged in, fetch user data
+      const fakeUser = {id: 'user123', name: 'Jane Doe'}
+      mockObservableRequest.mockReturnValueOnce(of(fakeUser))
+
+      const store = createAuthStore(instance, {storageArea: mockStorage})
+      await store.handleCallback()
+
+      // Wait for async subscription updates
+      await new Promise((r) => setTimeout(r, 0))
+
+      expect(store.getCurrent()).toEqual({
+        type: 'logged-in',
+        token: 'fetchedToken',
+        currentUser: fakeUser,
+      })
+    })
+
+    it('fetches current user on initial load if token is in storage', async () => {
+      mockSetItem(
+        '__sanity_auth_token_testProject_testDataset',
+        JSON.stringify({token: 'storedToken'}),
+      )
+
+      const fakeUser = {id: 'userABC', name: 'Stored User'}
+      mockObservableRequest.mockReturnValueOnce(of(fakeUser))
+
+      const store = createAuthStore(instance, {storageArea: mockStorage})
+
+      // Wait for async subscription updates
+      await new Promise((r) => setTimeout(r, 0))
+
+      expect(store.getCurrent()).toEqual({
+        type: 'logged-in',
+        token: 'storedToken',
+        currentUser: fakeUser,
+      })
     })
   })
 
@@ -350,7 +434,7 @@ describe('createAuthStore', () => {
       await logoutPromise
       expect(store.getCurrent()).toEqual({type: 'logged-out', isDestroyingSession: false})
       expect(mockGetItem('__sanity_auth_token_testProject_testDataset')).toBe(null)
-      expect(createClient).toHaveBeenCalledTimes(1)
+      expect(createClient).toHaveBeenCalledTimes(2)
     })
 
     it('does nothing if not logged-in', async () => {
@@ -363,10 +447,18 @@ describe('createAuthStore', () => {
 
     it('does nothing if a static token is provided', async () => {
       const store = createAuthStore(instance, {token: 'staticToken', storageArea: mockStorage})
-      expect(store.getCurrent()).toEqual({type: 'logged-in', token: 'staticToken'})
+      expect(store.getCurrent()).toEqual({
+        type: 'logged-in',
+        token: 'staticToken',
+        currentUser: null,
+      })
 
       await store.logout()
-      expect(store.getCurrent()).toEqual({type: 'logged-in', token: 'staticToken'})
+      expect(store.getCurrent()).toEqual({
+        type: 'logged-in',
+        token: 'staticToken',
+        currentUser: null,
+      })
     })
 
     it('handles request failure gracefully and still logs out', async () => {
@@ -415,7 +507,8 @@ describe('createAuthStore', () => {
       expect(states).toEqual([
         {type: 'logged-out', isDestroyingSession: false},
         {type: 'logging-in', isExchangingToken: true},
-        {type: 'logged-in', token: 'newToken'},
+        // currentUser=null here since we didn't mock observable user fetch, so it remains null.
+        {type: 'logged-in', token: 'newToken', currentUser: null},
       ])
       sub.unsubscribe()
     })
@@ -458,7 +551,7 @@ describe('createAuthStore', () => {
       window.dispatchEvent(evt)
       await new Promise((r) => setTimeout(r, 0))
 
-      expect(store.getCurrent()).toEqual({type: 'logged-in', token: newToken})
+      expect(store.getCurrent()).toEqual({type: 'logged-in', token: newToken, currentUser: null})
     })
 
     it('updates state to logged-out when token is removed from storage', async () => {
@@ -479,7 +572,7 @@ describe('createAuthStore', () => {
       window.dispatchEvent(addTokenEvent)
 
       await new Promise((r) => setTimeout(r, 0))
-      expect(store.getCurrent()).toEqual<AuthState>({type: 'logged-in', token})
+      expect(store.getCurrent()).toEqual<AuthState>({type: 'logged-in', token, currentUser: null})
 
       // Now simulate removing the token from storage
       mockRemoveItem(evtKey)
