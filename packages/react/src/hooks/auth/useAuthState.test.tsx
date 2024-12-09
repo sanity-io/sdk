@@ -40,7 +40,7 @@ describe('useAuthState', () => {
   })
 
   it('should update when auth state changes', async () => {
-    let currentState: AuthState = {type: 'logged-in', token: '123'}
+    let currentState: AuthState = {type: 'logged-in', token: '123', currentUser: null}
     const subscribers: {next: (state: AuthState) => void}[] = []
 
     const mockAuthStore = {

@@ -7,12 +7,14 @@ import {
   fromEvent,
   map,
   Observable,
+  switchMap,
   type Subscribable,
 } from 'rxjs'
 import {devtools} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
 import type {SanityInstance} from '../instance/types'
+import type {CurrentUser} from '@sanity/types'
 
 const AUTH_CODE_PARAM = 'sid'
 const DEFAULT_BASE = 'http://localhost'
@@ -25,7 +27,7 @@ const REQUEST_TAG_PREFIX = 'sdk.auth'
  * @public
  */
 export type AuthState =
-  | {type: 'logged-in'; token: string}
+  | {type: 'logged-in'; token: string; currentUser: CurrentUser | null}
   | {type: 'logging-in'; isExchangingToken: boolean}
   | {type: 'error'; error: unknown}
   | {type: 'logged-out'; isDestroyingSession: boolean}
@@ -249,13 +251,51 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
       store.setState(
         {
           authState: token
-            ? {type: 'logged-in', token}
+            ? {type: 'logged-in', token, currentUser: null}
             : {type: 'logged-out', isDestroyingSession: false},
         },
         undefined,
         'tokenSetFromStorageEvent',
       ),
     )
+
+  const storeSubscription = new Observable<AuthState>((observer) => {
+    const emitCurrent = () => observer.next(store.getState().authState)
+    const unsubscribe = store.subscribe(emitCurrent)
+    emitCurrent()
+
+    return unsubscribe
+  })
+    .pipe(
+      filter(
+        (e): e is Extract<AuthState, {type: 'logged-in'}> =>
+          e.type === 'logged-in' && !e.currentUser,
+      ),
+      distinctUntilChanged(isEqual),
+      switchMap((authState) => {
+        const client = clientFactory({
+          token: authState.token,
+          projectId,
+          dataset,
+          requestTagPrefix: REQUEST_TAG_PREFIX,
+          apiVersion: DEFAULT_API_VERSION,
+          useProjectHostname: authScope === 'project',
+          ...(apiHost && {apiHost}),
+        })
+
+        // TODO: requests that result in a 401 or don't return a user would
+        // signal an invalid session that we should react to (e.g. setting a
+        // logged-out state)
+        return client.observable
+          .request<CurrentUser>({uri: '/users/me', method: 'GET'})
+          .pipe(map((currentUser) => ({...authState, currentUser})))
+      }),
+    )
+    .subscribe({
+      next: (authState) => {
+        store.setState({authState}, undefined, 'currentUserSet')
+      },
+    })
 
   const state$ = new Observable<AuthState>((observer) => {
     observer.next(store.getState().authState)
@@ -313,10 +353,10 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
    * Determines the initial auth state based on provided token, callback params, or stored token.
    */
   function getInitialState(): AuthState {
-    if (providedToken) return {type: 'logged-in', token: providedToken}
+    if (providedToken) return {type: 'logged-in', token: providedToken, currentUser: null}
     if (getAuthCode(initialLocationHref)) return {type: 'logging-in', isExchangingToken: false}
     const token = getTokenFromStorage()
-    if (token) return {type: 'logged-in', token}
+    if (token) return {type: 'logged-in', token, currentUser: null}
     return {type: 'logged-out', isDestroyingSession: false}
   }
 
@@ -357,7 +397,7 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
       })
 
       storageArea?.setItem(storageKey, JSON.stringify({token}))
-      store.setState({authState: {type: 'logged-in', token}})
+      store.setState({authState: {type: 'logged-in', token, currentUser: null}})
 
       const loc = new URL(locationHref)
       loc.hash = ''
@@ -469,6 +509,7 @@ export function createAuthStore(instance: SanityInstance, config: AuthConfig = {
 
   function dispose() {
     storageSubscription.unsubscribe()
+    storeSubscription.unsubscribe()
   }
 
   return {subscribe, getCurrent, handleCallback, getLoginUrls, logout, dispose}
