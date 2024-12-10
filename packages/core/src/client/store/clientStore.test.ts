@@ -115,7 +115,6 @@ describe.skip('clientStore', () => {
 
   it('properly cleans up auth subscription when cleanup is called', () => {
     const unsubscribeSpy = vi.fn()
-    const sanityInstance = createSanityInstance(config)
 
     // Mock the auth store with a spy on the unsubscribe function
     vi.mocked(getInternalAuthStore).mockImplementation(() => ({
