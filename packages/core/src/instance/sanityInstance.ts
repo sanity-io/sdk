@@ -1,4 +1,4 @@
-import type {AuthConfig} from '../auth/authStore'
+import type {AuthConfig} from '../auth/internalAuthStore'
 import {getSdkIdentity} from './identity'
 import type {SanityInstance, SdkIdentity} from './types'
 

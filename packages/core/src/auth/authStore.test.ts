@@ -4,7 +4,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance} from '../instance/sanityInstance'
 import {type SanityInstance} from '../instance/types'
-import {type AuthState, createAuthStore} from './authStore'
+import {type AuthState, createAuthStore} from './internalAuthStore'
 
 /**
  * A mocked request function returned by the mocked `@sanity/client`.
@@ -697,7 +697,7 @@ describe('createAuthStore', () => {
       })
       vi.stubGlobal('localStorage', throwingLocalStorage)
 
-      const {createAuthStore: newCreateAuthStore} = await import('./authStore')
+      const {createAuthStore: newCreateAuthStore} = await import('./internalAuthStore')
       const store = newCreateAuthStore(instance, {})
       expect(store.getCurrent().type).toBe('logged-out')
     })
@@ -722,7 +722,7 @@ describe('createAuthStore', () => {
       )
       vi.stubGlobal('location', throwingLocation)
       vi.resetModules()
-      const {createAuthStore: newCreateAuthStore} = await import('./authStore')
+      const {createAuthStore: newCreateAuthStore} = await import('./internalAuthStore')
       const store = newCreateAuthStore(instance, {storageArea: mockStorage})
       expect(store.getCurrent().type).toBe('logged-out')
     })
@@ -738,7 +738,7 @@ describe('createAuthStore', () => {
       )
       vi.stubGlobal('localStorage', throwingLocalStorage)
       vi.resetModules()
-      const {createAuthStore: newCreateAuthStore} = await import('./authStore')
+      const {createAuthStore: newCreateAuthStore} = await import('./internalAuthStore')
       const store = newCreateAuthStore(instance, {})
       expect(store.getCurrent().type).toBe('logged-out')
     })
@@ -746,7 +746,7 @@ describe('createAuthStore', () => {
     it('returns undefined if localStorage is defined but getItem is not a function', async () => {
       vi.stubGlobal('localStorage', {})
       vi.resetModules()
-      const {createAuthStore: newCreateAuthStore} = await import('./authStore')
+      const {createAuthStore: newCreateAuthStore} = await import('./internalAuthStore')
       const store = newCreateAuthStore(instance, {})
       expect(store.getCurrent().type).toBe('logged-out')
     })
@@ -762,7 +762,7 @@ describe('createAuthStore', () => {
       }
       vi.stubGlobal('localStorage', mockWorkingLocalStorage)
       vi.resetModules()
-      const {createAuthStore: newCreateAuthStore} = await import('./authStore')
+      const {createAuthStore: newCreateAuthStore} = await import('./internalAuthStore')
       const store = newCreateAuthStore(instance, {})
       expect(store.getCurrent().type).toBe('logged-out')
     })
@@ -770,7 +770,7 @@ describe('createAuthStore', () => {
     it('returns DEFAULT_BASE if location is defined but location.href is not a string', async () => {
       vi.stubGlobal('location', {href: 123})
       vi.resetModules()
-      const {createAuthStore: newCreateAuthStore} = await import('./authStore')
+      const {createAuthStore: newCreateAuthStore} = await import('./internalAuthStore')
       const store = newCreateAuthStore(instance, {storageArea: mockStorage})
       expect(store.getCurrent().type).toBe('logged-out')
     })

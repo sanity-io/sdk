@@ -1,7 +1,7 @@
 import {createClient, type SanityClient} from '@sanity/client'
 import {distinctUntilChanged, map, Observable, type Subscribable} from 'rxjs'
 
-import {getAuthStore} from '../../auth/getAuthStore'
+import {getInternalAuthStore} from '../../auth/getInternalAuthStore'
 import {getOrCreateResource} from '../../instance/sanityInstance'
 import type {SanityInstance} from '../../instance/types'
 import {createStore} from '../../store/createStore'
@@ -60,7 +60,7 @@ export const createClientStore = (
   instance: SanityInstance,
   defaultClient: SanityClient,
 ): ClientStore => {
-  const authStore = getAuthStore(instance)
+  const authStore = getInternalAuthStore(instance)
 
   const store = createStore(createInitialState(defaultClient), clientStoreActions, {
     name: 'clientStore',

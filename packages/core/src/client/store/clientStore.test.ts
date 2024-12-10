@@ -1,7 +1,7 @@
 import {describe, expect, it, vi} from 'vitest'
 
 import {config} from '../../../test/fixtures'
-import {getAuthStore} from '../../auth/getAuthStore'
+import {getInternalAuthStore} from '../../auth/getInternalAuthStore'
 import {createSanityInstance} from '../../instance/sanityInstance'
 import {getClientStore} from './clientStore'
 
@@ -13,7 +13,7 @@ describe('clientStore', () => {
     vi.resetModules()
     vi.clearAllMocks()
     // Reset to default mock implementation
-    vi.mocked(getAuthStore).mockImplementation(() => ({
+    vi.mocked(getInternalAuthStore).mockImplementation(() => ({
       // @ts-expect-error -- this is just a mock
       subscribe: () => () => {}, // Default no-op implementation
     }))
@@ -56,7 +56,7 @@ describe('clientStore', () => {
     const sanityInstance = createSanityInstance(config)
 
     // Override mock implementation just for this test
-    vi.mocked(getAuthStore).mockImplementation(() => ({
+    vi.mocked(getInternalAuthStore).mockImplementation(() => ({
       // @ts-expect-error -- this is just a mock
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       subscribe: (observer: any) => {
@@ -81,7 +81,7 @@ describe('clientStore', () => {
     const sanityInstance = createSanityInstance(config)
 
     // Mock the auth store with a spy on the unsubscribe function
-    vi.mocked(getAuthStore).mockImplementation(() => ({
+    vi.mocked(getInternalAuthStore).mockImplementation(() => ({
       // @ts-expect-error -- this is just a mock
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       subscribe: (observer: any) => {
