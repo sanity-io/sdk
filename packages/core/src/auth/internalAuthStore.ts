@@ -148,7 +148,6 @@ export interface InternalAuthState {
    * After calling dispose, the store should no longer be used.
    */
   dispose(): void
-  getTopSecretInfo(): string
 }
 
 /**
@@ -156,27 +155,6 @@ export interface InternalAuthState {
  * @internal
  */
 export type InternalAuthStore = StoreApi<InternalAuthState>
-
-/**
- * Public interface for the auth store.
- * @public
- */
-export interface PublicAuthState {
-  getState: () => AuthState
-  getInitialState: () => AuthState
-  subscribe: (listener: (state: AuthState, prevState: AuthState) => void) => () => void
-}
-
-/**
- * Public interface for the token store.
- *
- * @public
- */
-export interface PublicTokenState {
-  getCurrent: () => string | null
-  getInitial: () => string | null
-  subscribe: (listener: (token: string | null, prevToken: string | null) => void) => () => void
-}
 
 /**
  * Returns the default location to use.
@@ -410,9 +388,6 @@ export function createInternalAuthStore(
         providers: undefined,
         setProviders: (providers: AuthProvider[] | undefined) => {
           set({providers}, undefined, 'setProviders')
-        },
-        getTopSecretInfo: () => {
-          return 'secret'
         },
         logout: async () => {
           // If a token is statically provided, logout does nothing

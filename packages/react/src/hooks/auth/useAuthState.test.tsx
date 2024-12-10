@@ -26,7 +26,7 @@ describe('useAuthState', () => {
     }
 
     // Mock getAuthStore to return our mock store
-    vi.mocked(getAuthStore).mockReturnValue(mockAuthStore as AuthStore)
+    vi.mocked(getAuthStore).mockReturnValue(mockAuthStore as unknown as AuthStore)
 
     // Wrap hook in SanityProvider and render
     const {result} = renderHook(() => useAuthState(), {

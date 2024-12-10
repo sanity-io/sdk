@@ -29,12 +29,12 @@ export const LoginLinks = (): ReactElement => {
   const authState = useAuthState()
   useHandleCallback()
 
-  if (authState === 'logging-in') {
+  if (authState.type === 'logging-in') {
     return <div>Logging in...</div>
   }
 
   // Show success state after authentication
-  if (authState === 'logged-in') {
+  if (authState.type === 'logged-in') {
     return <div>You are logged in</div>
   }
 

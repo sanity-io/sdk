@@ -1,6 +1,5 @@
 import {type AuthState, getAuthStore} from '@sanity/sdk'
-import {useSyncExternalStore} from 'react'
-import {distinctUntilChanged, map, Observable} from 'rxjs'
+import {useStore} from 'zustand/react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -26,24 +25,9 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *
  * @public
  */
-export function useAuthState(): AuthState['type'] {
+export function useAuthState(): AuthState {
   const instance = useSanityInstance()
-  const authStore = getAuthStore(instance)
+  const {authState} = getAuthStore(instance)
 
-  const subscribe = (onStoreChange: (state: AuthState['type']) => void) => {
-    // Use Observable to handle auth state subscription and cleanup
-    // distinctUntilChanged ensures we only trigger for actual type changes
-    const subscription = new Observable(authStore.subscribe)
-      .pipe(
-        map((authState) => authState.type),
-        distinctUntilChanged(),
-      )
-      .subscribe((type) => onStoreChange(type))
-    return () => subscription.unsubscribe()
-  }
-
-  // Synchronously get current auth state type without subscription
-  const getState = () => authStore.getCurrent().type
-
-  return useSyncExternalStore(subscribe, getState)
+  return useStore(authState)
 }

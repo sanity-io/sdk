@@ -35,7 +35,7 @@ describe('useHandleCallback', () => {
       dispose: vi.fn(),
       subscribe: vi.fn(),
     }
-    vi.mocked(getAuthStore).mockReturnValue(mockAuthStore as AuthStore)
+    vi.mocked(getAuthStore).mockReturnValue(mockAuthStore as unknown as AuthStore)
 
     const wrapper = ({children}: {children: React.ReactNode}) => (
       <SanityProvider config={{projectId: 'test', dataset: 'test'}}>{children}</SanityProvider>
@@ -67,7 +67,7 @@ describe('useHandleCallback', () => {
       dispose: vi.fn(),
       subscribe: vi.fn(),
     }
-    vi.mocked(getAuthStore).mockReturnValue(mockAuthStore as AuthStore)
+    vi.mocked(getAuthStore).mockReturnValue(mockAuthStore as unknown as AuthStore)
 
     const wrapper = ({children}: {children: React.ReactNode}) => (
       <SanityProvider config={{projectId: 'test', dataset: 'test'}}>{children}</SanityProvider>

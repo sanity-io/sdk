@@ -1,50 +1,109 @@
+import type {CurrentUser} from '@sanity/types'
+
 import type {SanityInstance} from '../instance/types'
 import {getInternalAuthStore} from './getInternalAuthStore'
-import type {AuthProvider, PublicAuthState, PublicTokenState} from './internalAuthStore'
+import type {AuthProvider, AuthState} from './internalAuthStore'
 
+/**
+ * @public
+ */
 export interface AuthStore {
-  authState: PublicAuthState
-  tokenState: PublicTokenState
-  handleCallback: () => void
+  authState: AuthStateSlice
+  tokenState: AuthTokenSlice
+  currentUserState: CurrentUserSlice
+  handleCallback: (locationHref?: string) => Promise<string | false>
   logout: () => void
   dispose: () => void
   getLoginUrls: () => AuthProvider[] | Promise<AuthProvider[]>
 }
 
-/*
+/**
+ * Public interface for the auth store.
+ * @public
+ */
+export interface AuthStateSlice {
+  getState: () => AuthState
+  getInitialState: () => AuthState
+  subscribe: (listener: (state: AuthState, prevState: AuthState) => void) => () => void
+}
+
+/**
+ * Public interface for the token store.
+ *
+ * @public
+ */
+export interface AuthTokenSlice {
+  getState: () => string | null
+  getInitialState: () => string | null
+  subscribe: (listener: (token: string | null, prevToken: string | null) => void) => () => void
+}
+
+/**
+ * Public interface for the auth store slice that contains the current user.
+ *
+ * @public
+ */
+export interface CurrentUserSlice {
+  getState: () => CurrentUser | null
+  getInitialState: () => CurrentUser | null
+  subscribe: (
+    listener: (user: CurrentUser | null, prevUser: CurrentUser | null) => void,
+  ) => () => void
+}
+
+export type {AuthConfig, AuthProvider, AuthState} from './internalAuthStore'
+
+/**
  * @public
  */
 export const createAuthStore = (instance: SanityInstance): AuthStore => {
-  const store = getInternalAuthStore(instance)
+  const internalAuthStore = getInternalAuthStore(instance)
 
-  const authState: PublicAuthState = {
-    getState: () => store.getState().authState,
-    getInitialState: () => store.getInitialState().authState,
-    subscribe: store.subscribe.bind(store, (state) => state.authState),
+  const authState: AuthStateSlice = {
+    getState: () => internalAuthStore.getState().authState,
+    getInitialState: () => internalAuthStore.getInitialState().authState,
+    subscribe: internalAuthStore.subscribe.bind(internalAuthStore, (state) => state.authState),
   }
 
-  const tokenState: PublicTokenState = {
-    getCurrent: () => {
-      const state = store.getState().authState
+  const tokenState: AuthTokenSlice = {
+    getState: () => {
+      const state = internalAuthStore.getState().authState
       if (state.type !== 'logged-in') return null
       return state.token
     },
-    getInitial: () => {
-      const state = store.getInitialState().authState
+    getInitialState: () => {
+      const state = internalAuthStore.getInitialState().authState
       if (state.type !== 'logged-in') return null
       return state.token
     },
-    subscribe: store.subscribe.bind(store, (state) =>
+    subscribe: internalAuthStore.subscribe.bind(internalAuthStore, (state) =>
       state.authState.type === 'logged-in' ? state.authState.token : null,
+    ),
+  }
+
+  const currentUserState: CurrentUserSlice = {
+    getState: () => {
+      const state = internalAuthStore.getState().authState
+      if (state.type !== 'logged-in') return null
+      return state.currentUser
+    },
+    getInitialState: () => {
+      const state = internalAuthStore.getInitialState().authState
+      if (state.type !== 'logged-in') return null
+      return state.currentUser
+    },
+    subscribe: internalAuthStore.subscribe.bind(internalAuthStore, (state) =>
+      state.authState.type === 'logged-in' ? state.authState.currentUser : null,
     ),
   }
 
   return {
     authState,
     tokenState,
-    handleCallback: store.getState().handleCallback,
-    logout: store.getState().logout,
-    dispose: store.getState().dispose,
-    getLoginUrls: store.getState().getLoginUrls,
+    currentUserState,
+    handleCallback: internalAuthStore.getState().handleCallback,
+    logout: internalAuthStore.getState().logout,
+    dispose: internalAuthStore.getState().dispose,
+    getLoginUrls: internalAuthStore.getState().getLoginUrls,
   }
 }

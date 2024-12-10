@@ -56,7 +56,10 @@ describe('LoginLinks', () => {
   }
 
   it('renders auth provider links correctly when not authenticated', () => {
-    vi.mocked(useAuthState).mockReturnValue('logged-out')
+    vi.mocked(useAuthState).mockReturnValue({
+      type: 'logged-out',
+      isDestroyingSession: false,
+    })
     renderWithWrappers(<LoginLinks />)
 
     expect(screen.getByText('Choose login provider')).toBeInTheDocument()
@@ -70,14 +73,21 @@ describe('LoginLinks', () => {
   })
 
   it('shows loading state while logging in', () => {
-    vi.mocked(useAuthState).mockReturnValue('logging-in')
+    vi.mocked(useAuthState).mockReturnValue({
+      type: 'logging-in',
+      isExchangingToken: false,
+    })
     renderWithWrappers(<LoginLinks />)
 
     expect(screen.getByText('Logging in...')).toBeInTheDocument()
   })
 
   it('shows success message when logged in', () => {
-    vi.mocked(useAuthState).mockReturnValue('logged-in')
+    vi.mocked(useAuthState).mockReturnValue({
+      type: 'logged-in',
+      token: 'test-token',
+      currentUser: null,
+    })
     renderWithWrappers(<LoginLinks />)
 
     expect(screen.getByText('You are logged in')).toBeInTheDocument()

@@ -1,5 +1,5 @@
 import {createClient, type SanityClient} from '@sanity/client'
-import {distinctUntilChanged, map, Observable, type Subscribable} from 'rxjs'
+import type {Subscribable} from 'rxjs'
 
 import {getInternalAuthStore} from '../../auth/getInternalAuthStore'
 import {getOrCreateResource} from '../../instance/sanityInstance'
@@ -37,7 +37,6 @@ export interface ClientStore {
   getOrCreateClient: (options: ClientOptions) => SanityClient
   receiveToken: (token: string | undefined) => void
   getClientEvents: (options: ClientOptions) => Subscribable<SanityClient>
-  dispose: () => void
 }
 
 const createInitialState = (defaultClient: SanityClient): ClientState => {
@@ -60,33 +59,23 @@ export const createClientStore = (
   instance: SanityInstance,
   defaultClient: SanityClient,
 ): ClientStore => {
-  const authStore = getInternalAuthStore(instance)
+  const internalAuthStore = getInternalAuthStore(instance)
 
   const store = createStore(createInitialState(defaultClient), clientStoreActions, {
     name: 'clientStore',
     instance,
   })
 
-  const observableAuthStore = new Observable(authStore.subscribe)
-  const tokenSubscription = observableAuthStore
-    .pipe(
-      map((authState) => {
-        if (authState.type === 'logged-in') {
-          return authState.token
-        }
-        return undefined
-      }),
-      distinctUntilChanged(),
-    )
-    .subscribe(store.receiveToken)
-
-  const dispose = () => {
-    if (tokenSubscription) {
-      tokenSubscription.unsubscribe()
+  internalAuthStore.subscribe((state, prevState) => {
+    if (state.authState.type === 'logged-in' && prevState.authState.type !== 'logged-in') {
+      store.receiveToken(state.authState.token)
     }
-  }
+    if (prevState.authState.type === 'logged-in' && state.authState.type !== 'logged-in') {
+      store.receiveToken(undefined)
+    }
+  })
 
-  return {...store, dispose}
+  return store
 }
 
 /**
