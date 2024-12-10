@@ -213,8 +213,7 @@ export function createDocumentListStore(instance: SanityInstance): DocumentListS
   }
 
   function getCurrent() {
-    const {isPending, result, filter, sort} = store.getState()
-    return {isPending, result, filter, sort}
+    return store.getState()
   }
 
   const state$ = new Observable<DocumentListState>((observer) => {
