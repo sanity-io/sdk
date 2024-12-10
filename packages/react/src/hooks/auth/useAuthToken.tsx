@@ -1,5 +1,5 @@
 import {getAuthStore} from '@sanity/sdk'
-import {useSyncExternalStore} from 'react'
+import {useStore} from 'zustand'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -12,16 +12,5 @@ export const useAuthToken = (): string | null => {
   const instance = useSanityInstance()
   const {tokenState} = getAuthStore(instance)
 
-  tokenState.subscribe((token, prevToken) => {
-    console.log('useAuthToken token', token)
-    console.log('useAuthToken prevToken', prevToken)
-  })
-
-  // instead of using useStore we will use useSyncExternalStore
-  const token = useSyncExternalStore(
-    tokenState.subscribe,
-    () => tokenState.getState(),
-    () => null,
-  )
-  return token
+  return useStore(tokenState)
 }
