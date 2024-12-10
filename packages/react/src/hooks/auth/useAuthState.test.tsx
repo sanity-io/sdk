@@ -1,7 +1,14 @@
-import {type AuthState, type AuthStore, getAuthStore, type SanityInstance} from '@sanity/sdk'
+import {
+  type AuthState,
+  type AuthStore,
+  createSanityInstance,
+  getAuthStore,
+  type SanityInstance,
+} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
+import {SanityProvider} from '../../components/context/SanityProvider'
 import * as context from '../context/useSanityInstance'
 import {useAuthState} from './useAuthState'
 
@@ -62,7 +69,12 @@ describe('useAuthState', () => {
     })
     vi.mocked(getAuthStore).mockReturnValue(mockAuthStore)
 
-    const {result} = renderHook(() => useAuthState())
+    const sanityInstance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const {result} = renderHook(() => useAuthState(), {
+      wrapper: ({children}) => (
+        <SanityProvider sanityInstance={sanityInstance}>{children}</SanityProvider>
+      ),
+    })
     const current = result.current as Extract<AuthState, {type: 'logged-in'}>
     expect(current.type).toBe('logged-in')
     expect(current.token).toBe('token-123')

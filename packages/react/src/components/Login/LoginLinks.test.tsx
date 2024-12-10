@@ -8,6 +8,7 @@ import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
 import {SanityProvider} from '../context/SanityProvider'
 import {LoginLinks} from './LoginLinks'
+import {createSanityInstance} from '@sanity/sdk'
 
 // Mock the hooks and SDK functions
 vi.mock('../../hooks/auth/useLoginUrls', () => ({
@@ -24,12 +25,16 @@ vi.mock('../../hooks/auth/useLoginUrls', () => ({
     },
   ]),
 }))
-vi.mock('@sanity/sdk', () => ({
-  createSanityInstance: vi.fn(),
-  tradeTokenForSession: vi.fn(),
-  getSidUrlHash: vi.fn().mockReturnValue(null),
-  getSidUrlSearch: vi.fn(),
-}))
+vi.mock('@sanity/sdk', async () => {
+  const actual = await vi.importActual('@sanity/sdk')
+
+  return {
+    ...actual,
+    tradeTokenForSession: vi.fn(),
+    getSidUrlHash: vi.fn().mockReturnValue(null),
+    getSidUrlSearch: vi.fn(),
+  }
+})
 
 vi.mock('../../hooks/auth/useAuthState', () => ({
   useAuthState: vi.fn(() => 'logged-out'),
@@ -46,11 +51,11 @@ describe('LoginLinks', () => {
     vi.clearAllMocks()
   })
 
+  const sanityInstance = createSanityInstance({projectId: 'test-project-id', dataset: 'production'})
   const renderWithWrappers = (ui: React.ReactElement) => {
-    const config = {projectId: 'test-project-id', dataset: 'production'}
     return render(
       <ThemeProvider theme={theme}>
-        <SanityProvider config={config}>{ui}</SanityProvider>
+        <SanityProvider sanityInstance={sanityInstance}>{ui}</SanityProvider>
       </ThemeProvider>,
     )
   }
