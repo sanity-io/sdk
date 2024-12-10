@@ -1,4 +1,5 @@
 export {useAuthState} from '../hooks/auth/useAuthState'
+export {useAuthToken} from '../hooks/auth/useAuthToken'
 export {useCurrentUser} from '../hooks/auth/useCurrentUser'
 export {useHandleCallback} from '../hooks/auth/useHandleCallback'
 export {useLoginUrls} from '../hooks/auth/useLoginUrls'

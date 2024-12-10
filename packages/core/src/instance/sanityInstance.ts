@@ -53,8 +53,13 @@ function setResource(instance: SanityInstance, key: string, value: unknown) {
  */
 export function getOrCreateResource<T>(instance: SanityInstance, key: string, creator: () => T): T {
   const cached = getResource(instance, key)
-  if (cached) return cached as T
 
+  if (cached) {
+    console.log(`Found cached ${key} resource`, cached)
+    return cached as T
+  }
+
+  console.log(`Creating new ${key} resource`)
   const resource = creator()
   setResource(instance, key, resource)
   return resource

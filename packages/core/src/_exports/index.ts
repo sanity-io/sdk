@@ -33,8 +33,7 @@ export {
   type AuthState,
   type AuthStateSlice,
   type AuthStore,
-  createAuthStore,
+  getAuthStore,
   type AuthTokenSlice as PublicTokenSlice,
 } from '../auth/authStore'
-export {getAuthStore} from '../auth/getAuthStore'
 export type {CurrentUser, Role} from '@sanity/types'

@@ -436,7 +436,7 @@ export function createInternalAuthStore(
         },
       }),
       {
-        name: 'SanitySessionStore',
+        name: 'SanityInternalAuthStore',
         enabled: true, // Should be process.env.NODE_ENV === 'development',
       },
     ),
@@ -461,30 +461,44 @@ export function createInternalAuthStore(
         ),
     )
 
+  const fetchCurrentUser = (authState: Extract<AuthState, {type: 'logged-in'}>) => {
+    const client = clientFactory({
+      token: authState.token,
+      projectId,
+      dataset,
+      requestTagPrefix: REQUEST_TAG_PREFIX,
+      apiVersion: DEFAULT_API_VERSION,
+      useProjectHostname: authScope === 'project',
+      ...(apiHost && {apiHost}),
+    })
+
+    client
+      .request<CurrentUser>({uri: '/users/me', method: 'GET'})
+      .then((currentUser) =>
+        store.getState().setAuthState({
+          ...authState,
+          currentUser,
+        } as Extract<AuthState, {type: 'logged-in'}>),
+      )
+      .catch((error) => {
+        return store.getState().setAuthState({
+          ...authState,
+          type: 'error',
+          error,
+        } as Extract<AuthState, {type: 'error'}>)
+      })
+  }
+
+  if (
+    store.getState().authState.type === 'logged-in' &&
+    !(store.getState().authState as Extract<AuthState, {type: 'logged-in'}>).currentUser?.id
+  ) {
+    fetchCurrentUser(store.getState().authState as Extract<AuthState, {type: 'logged-in'}>)
+  }
+
   store.subscribe((state) => {
     if (state.authState.type === 'logged-in' && !state.authState.currentUser) {
-      const client = clientFactory({
-        token: state.authState.token,
-        projectId,
-        dataset,
-        requestTagPrefix: REQUEST_TAG_PREFIX,
-        apiVersion: DEFAULT_API_VERSION,
-        useProjectHostname: authScope === 'project',
-        ...(apiHost && {apiHost}),
-      })
-
-      client
-        .request<CurrentUser>({uri: '/users/me', method: 'GET'})
-        .then((currentUser) =>
-          store.setState({
-            authState: {...state.authState, currentUser} as Extract<AuthState, {type: 'logged-in'}>,
-          }),
-        )
-        .catch((error) => {
-          return store.setState({
-            authState: {...state.authState, error} as Extract<AuthState, {type: 'error'}>,
-          })
-        })
+      fetchCurrentUser(state.authState)
     }
   })
 
