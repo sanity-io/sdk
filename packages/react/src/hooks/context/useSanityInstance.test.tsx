@@ -6,24 +6,17 @@ import {describe, expect, it, vi} from 'vitest'
 import {SanityProvider} from '../../components/context/SanityProvider'
 import {useSanityInstance} from './useSanityInstance'
 
-vi.mock('@sanity/sdk', () => ({
-  createSanityInstance: vi.fn(() => ({
-    mockInstance: true,
-  })),
-}))
-
 describe('useSanityInstance', () => {
-  const config = {projectId: 'test-project', dataset: 'production'}
+  const sanityInstance = createSanityInstance({projectId: 'test-project', dataset: 'production'})
 
   it('returns sanity instance when used within provider', () => {
     const wrapper = ({children}: {children: React.ReactNode}) => (
-      <SanityProvider config={config}>{children}</SanityProvider>
+      <SanityProvider sanityInstance={sanityInstance}>{children}</SanityProvider>
     )
 
     const {result} = renderHook(() => useSanityInstance(), {wrapper})
 
-    expect(result.current).toEqual({mockInstance: true})
-    expect(createSanityInstance).toHaveBeenCalledWith(config)
+    expect(result.current).toBe(sanityInstance)
   })
 
   it('throws error when used outside provider', () => {

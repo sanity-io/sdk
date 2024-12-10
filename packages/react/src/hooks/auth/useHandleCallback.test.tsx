@@ -1,4 +1,4 @@
-import {type AuthStore, getAuthStore} from '@sanity/sdk'
+import {type AuthStore, createSanityInstance, getAuthStore} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
@@ -37,8 +37,9 @@ describe('useHandleCallback', () => {
     }
     vi.mocked(getAuthStore).mockReturnValue(mockAuthStore as AuthStore)
 
+    const sanityInstance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const wrapper = ({children}: {children: React.ReactNode}) => (
-      <SanityProvider config={{projectId: 'test', dataset: 'test'}}>{children}</SanityProvider>
+      <SanityProvider sanityInstance={sanityInstance}>{children}</SanityProvider>
     )
 
     renderHook(() => useHandleCallback(), {wrapper})
@@ -69,8 +70,9 @@ describe('useHandleCallback', () => {
     }
     vi.mocked(getAuthStore).mockReturnValue(mockAuthStore as AuthStore)
 
+    const sanityInstance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const wrapper = ({children}: {children: React.ReactNode}) => (
-      <SanityProvider config={{projectId: 'test', dataset: 'test'}}>{children}</SanityProvider>
+      <SanityProvider sanityInstance={sanityInstance}>{children}</SanityProvider>
     )
 
     renderHook(() => useHandleCallback(), {wrapper})

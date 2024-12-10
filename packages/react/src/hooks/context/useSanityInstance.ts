@@ -14,11 +14,10 @@ import {SanityInstanceContext} from '../../components/context/SanityProvider'
  * ```
  */
 export const useSanityInstance = (): SanityInstance => {
-  const context = useContext(SanityInstanceContext)
-
-  if (!context) throw new Error('useSanityInstance must be called from within the SanityProvider')
-
-  const {sanityInstance} = context
+  const sanityInstance = useContext(SanityInstanceContext)
+  if (!sanityInstance) {
+    throw new Error('useSanityInstance must be called from within the SanityProvider')
+  }
 
   return sanityInstance
 }
