@@ -26,3 +26,5 @@ export type {
 } from '../documentList/documentListStore'
 export {createDocumentListStore} from '../documentList/documentListStore'
 export type {CurrentUser, Role} from '@sanity/types'
+
+export {handleCallback} from '../auth/actions/handleCallback'
