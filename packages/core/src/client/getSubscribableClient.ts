@@ -1,5 +1,6 @@
 import type {SanityClient} from '@sanity/client'
 import type {Subscribable} from 'rxjs'
+
 import type {SanityInstance} from '../instance/types'
 import {type ClientOptions, getClientStore} from './store/clientStore'
 

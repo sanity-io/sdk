@@ -1,9 +1,10 @@
 import {type SanityClient} from '@sanity/client'
 import {describe, expect, it, vi} from 'vitest'
+
+import {config} from '../../test/fixtures'
+import {createSanityInstance} from '../instance/sanityInstance'
 import {getSubscribableClient} from './getSubscribableClient'
 import {getClientStore} from './store/clientStore'
-import {createSanityInstance} from '../instance/sanityInstance'
-import {config} from '../../test/fixtures'
 
 describe('getSubscribableClient', () => {
   const API_VERSION = '2024-12-05'
