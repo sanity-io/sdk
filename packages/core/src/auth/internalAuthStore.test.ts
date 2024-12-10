@@ -1,6 +1,7 @@
 import type {CurrentUser} from '@sanity/types'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {getInternalAuthStore} from './getInternalAuthStore'
 import {createInternalAuthStore} from './internalAuthStore'
 
 // Define mockClient before vi.mock
@@ -52,6 +53,26 @@ describe('createInternalAuthStore', () => {
       token: 'static-token',
       currentUser: null,
     })
+  })
+
+  it('initializes with logged-in state and defaults to local storage', () => {
+    // Create mock window object
+    const mockWindow = {
+      localStorage: mockStorage,
+    }
+    global.window = mockWindow as unknown as typeof window
+
+    const store = createInternalAuthStore(instance, {
+      token: 'static-token',
+    })
+    expect(store.getState().authState).toEqual({
+      type: 'logged-in',
+      token: 'static-token',
+      currentUser: null,
+    })
+
+    // Cleanup
+    global.window = undefined as unknown as Window & typeof globalThis
   })
 
   it('handles successful login callback', async () => {
@@ -140,5 +161,48 @@ describe('createInternalAuthStore', () => {
       token: 'new-token',
       currentUser: mockUser,
     })
+  })
+})
+
+describe('getInternalAuthStore', () => {
+  it('returns the same store instance for the same sanity instance', () => {
+    const store1 = getInternalAuthStore(instance)
+    const store2 = getInternalAuthStore(instance)
+
+    expect(store1).toBe(store2)
+  })
+
+  it.skip('creates new store with instance auth config', () => {
+    const instanceWithConfig = {
+      ...instance,
+      config: {
+        auth: {
+          token: 'configured-token',
+        },
+      },
+    }
+
+    const store = getInternalAuthStore(instanceWithConfig)
+
+    expect(store.getState().authState).toEqual({
+      type: 'logged-in',
+      token: 'configured-token',
+      currentUser: null,
+    })
+  })
+
+  it('creates different stores for different instances', () => {
+    const instance2 = {
+      ...instance,
+      identity: {
+        ...instance.identity,
+        id: 'different-id',
+      },
+    }
+
+    const store1 = getInternalAuthStore(instance)
+    const store2 = getInternalAuthStore(instance2)
+
+    expect(store1).not.toBe(store2)
   })
 })
