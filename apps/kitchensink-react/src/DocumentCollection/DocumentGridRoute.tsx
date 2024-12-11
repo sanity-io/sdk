@@ -1,7 +1,7 @@
-import {DocumentListLayout, DocumentPreviewLayout} from '@sanity/sdk-react/components'
+import {DocumentGridLayout, DocumentPreviewLayout} from '@sanity/sdk-react/components'
 import {useDocuments} from '@sanity/sdk-react/hooks'
 
-export function DocumentListRoute(): JSX.Element {
+export function DocumentGridRoute(): JSX.Element {
   const result = useDocuments({
     filter: '_type == "author"',
     sort: [{field: 'name', direction: 'asc'}],
@@ -9,8 +9,8 @@ export function DocumentListRoute(): JSX.Element {
 
   return (
     <div>
-      <h1>Document List</h1>
-      <DocumentListLayout>
+      <h1>Document Grid</h1>
+      <DocumentGridLayout>
         {result.result?.map((doc) => (
           <DocumentPreviewLayout
             key={doc._id}
@@ -21,7 +21,7 @@ export function DocumentListRoute(): JSX.Element {
             status="published"
           />
         ))}
-      </DocumentListLayout>
+      </DocumentGridLayout>
     </div>
   )
 }
