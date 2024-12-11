@@ -4,6 +4,9 @@ import {useCurrentUser, useLogOut} from '@sanity/sdk-react/hooks'
 import {Button, Flex, Spinner, Text, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {Suspense} from 'react'
+import {BrowserRouter} from 'react-router'
+
+import {AppRoutes} from './AppRoutes'
 
 const theme = buildTheme({})
 const sanityInstance = createSanityInstance({
@@ -16,9 +19,12 @@ export function App(): JSX.Element {
     <ThemeProvider theme={theme}>
       <Suspense fallback={<Spinner />}>
         <SanityProvider sanityInstance={sanityInstance}>
-          <AuthBoundary header={<Text>SDK Kitchen Sink</Text>}>
-            <Authenticated />
-          </AuthBoundary>
+          <BrowserRouter>
+            <AppRoutes />
+            <AuthBoundary header={<Text>SDK Kitchen Sink</Text>}>
+              <Authenticated />
+            </AuthBoundary>
+          </BrowserRouter>
         </SanityProvider>
       </Suspense>
     </ThemeProvider>
