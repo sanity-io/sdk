@@ -41,8 +41,6 @@ jobs:
         if: ${{ steps.release.outputs.release_created || github.event.inputs.publish == 'true' }}
       - uses: pnpm/action-setup@v4
         if: ${{ steps.release.outputs.release_created || github.event.inputs.publish == 'true' }}
-        with:
-          version: 9
       - uses: actions/setup-node@v4
         if: ${{ steps.release.outputs.release_created || github.event.inputs.publish == 'true' }}
         with:
