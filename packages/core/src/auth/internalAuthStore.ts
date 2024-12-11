@@ -360,11 +360,24 @@ export function createInternalAuthStore(
 
     const configuredProviders = providers.map((provider) => {
       const url = new URL(provider.url)
-      const origin = callbackUrl
-        ? new URL(callbackUrl, new URL(getDefaultLocation()).origin).toString()
-        : getDefaultLocation()
+      const origin = new URL(
+        callbackUrl
+          ? new URL(callbackUrl, new URL(getDefaultLocation()).origin).toString()
+          : getDefaultLocation(),
+      )
 
-      url.searchParams.set('origin', origin)
+      // `getDefaultLocation()` may be populated with an `sid` from a previous
+      // failed login attempt and should be omitted from the next login URL
+      const hashParams = new URLSearchParams(origin.hash.slice(1))
+      hashParams.delete('sid')
+      origin.hash = hashParams.toString()
+
+      // similarly, the origin may be populated with an `error` query param if
+      // the auth provider redirects back to the application. this should also
+      // be omitted from the origin sent
+      origin.searchParams.delete('error')
+
+      url.searchParams.set('origin', origin.toString())
       url.searchParams.set('withSid', 'true')
       if (authScope === 'project') {
         url.searchParams.set('projectId', projectId)
@@ -430,7 +443,7 @@ export function createInternalAuthStore(
         },
         getCurrent: () => get().authState,
         handleCallback: (locationHref = getDefaultLocation()) => handleCallback(locationHref),
-        getLoginUrls: () => fetchLoginUrls(),
+        getLoginUrls: () => get().providers ?? fetchLoginUrls(),
         dispose: () => {
           storageSubscription.unsubscribe()
         },
