@@ -5,7 +5,7 @@ React components and hooks for creating Sanity applications.
 ## Installation
 
 ```bash
-npm i @sanity/sdk-react
+npm i @sanity/sdk-react @sanity/sdk
 ```
 
 ## SDK Documentation
