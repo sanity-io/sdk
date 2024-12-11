@@ -32,9 +32,40 @@ const mockStorage = {
   key: vi.fn(),
 }
 
+// Add this mock setup at the top with other mocks
+const mockWindow = {
+  localStorage: mockStorage,
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  dispatchEvent: vi.fn(),
+}
+
+class MockStorageEvent {
+  key: string | null
+  newValue: string | null
+  storageArea: Storage | null
+
+  constructor(_type: string, eventInit?: StorageEventInit) {
+    this.key = eventInit?.key ?? null
+    this.newValue = eventInit?.newValue ?? null
+    this.storageArea = eventInit?.storageArea ?? null
+  }
+}
+
+// Mock StorageEvent globally
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+global.StorageEvent = MockStorageEvent as any
+
 beforeEach(() => {
   vi.clearAllMocks()
   mockStorage.getItem.mockReturnValue(null)
+  // Set up window mock for each test
+  global.window = mockWindow as unknown as Window & typeof globalThis
+})
+
+afterEach(() => {
+  // Clean up window mock after each test
+  global.window = undefined as unknown as Window & typeof globalThis
 })
 
 describe('createInternalAuthStore', () => {
@@ -56,10 +87,6 @@ describe('createInternalAuthStore', () => {
   })
 
   it('initializes with logged-in state and defaults to local storage', () => {
-    // Create mock window object
-    const mockWindow = {
-      localStorage: mockStorage,
-    }
     global.window = mockWindow as unknown as typeof window
 
     const store = createInternalAuthStore(instance, {
@@ -162,6 +189,124 @@ describe('createInternalAuthStore', () => {
       currentUser: mockUser,
     })
   })
+
+  it('handles error during token exchange', async () => {
+    mockClient.request.mockRejectedValueOnce(new Error('Token exchange failed'))
+
+    const store = createInternalAuthStore(instance, {
+      storageArea: mockStorage,
+      initialLocationHref: 'http://localhost/#sid=callback-code',
+    })
+
+    const result = await store
+      .getState()
+      .handleCallback(new URL('http://localhost/#sid=callback-code').href)
+
+    expect(result).toBe(false)
+    expect(store.getState().authState).toEqual({
+      type: 'error',
+      error: new Error('Token exchange failed'),
+    })
+  })
+
+  it('handles error during user fetch', async () => {
+    mockClient.request
+      .mockResolvedValueOnce({token: 'new-token'})
+      .mockRejectedValueOnce(new Error('User fetch failed'))
+
+    const store = createInternalAuthStore(instance, {
+      storageArea: mockStorage,
+      initialLocationHref: 'http://localhost/#sid=callback-code',
+    })
+
+    await store.getState().handleCallback(new URL('http://localhost/#sid=callback-code').href)
+
+    // Add a small delay to allow the async user fetch to complete
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(store.getState().authState).toEqual({
+      type: 'error',
+      token: 'new-token',
+      currentUser: null,
+      error: new Error('User fetch failed'),
+    })
+  })
+
+  it('handles custom providers function', async () => {
+    const customProvider = {
+      name: 'custom',
+      title: 'Custom',
+      url: 'http://custom.auth',
+    }
+
+    mockClient.request.mockResolvedValueOnce({
+      providers: [{name: 'google', title: 'Google', url: 'http://api.sanity.io/auth/google'}],
+    })
+
+    const store = createInternalAuthStore(instance, {
+      storageArea: mockStorage,
+      providers: (defaultProviders) => [...defaultProviders, customProvider],
+    })
+
+    const providers = await store.getState().getLoginUrls()
+
+    expect(providers).toHaveLength(2)
+    expect(providers[1]).toMatchObject({
+      name: 'custom',
+      title: 'Custom',
+      url: expect.stringContaining('http://custom.auth'),
+    })
+  })
+
+  it('handles logout during in-flight logout', async () => {
+    mockStorage.getItem.mockReturnValueOnce(JSON.stringify({token: 'stored-token'}))
+    const store = createInternalAuthStore(instance, {storageArea: mockStorage})
+
+    // Start first logout
+    const firstLogout = store.getState().logout()
+    // Attempt second logout before first completes
+    const secondLogout = store.getState().logout()
+
+    await Promise.all([firstLogout, secondLogout])
+
+    // Should only make one logout request
+    expect(mockClient.request).toHaveBeenCalledWith({
+      uri: '/auth/logout',
+      method: 'POST',
+    })
+    expect(
+      mockClient.request.mock.calls.filter((call) => call[0].uri === '/auth/logout'),
+    ).toHaveLength(1)
+  })
+
+  it('handles storage events', () => {
+    const store = createInternalAuthStore(instance, {
+      storageArea: mockStorage,
+    })
+
+    // Mock the storage to return the new token when checked
+    mockStorage.getItem.mockReturnValue(JSON.stringify({token: 'new-token'}))
+
+    // Simulate storage event
+    const storageEvent = new StorageEvent('storage', {
+      key: '__sanity_auth_token_test-project_test-dataset',
+      newValue: JSON.stringify({token: 'new-token'}),
+      storageArea: mockStorage,
+    })
+
+    // Get the storage event handler
+    const [[eventName, handler]] = mockWindow.addEventListener.mock.calls
+    expect(eventName).toBe('storage')
+
+    // Manually call the handler
+    handler(storageEvent)
+
+    expect(store.getState().authState).toEqual({
+      type: 'logged-in',
+      token: 'new-token',
+      currentUser: null,
+    })
+  })
 })
 
 describe('getInternalAuthStore', () => {
@@ -170,25 +315,6 @@ describe('getInternalAuthStore', () => {
     const store2 = getInternalAuthStore(instance)
 
     expect(store1).toBe(store2)
-  })
-
-  it.skip('creates new store with instance auth config', () => {
-    const instanceWithConfig = {
-      ...instance,
-      config: {
-        auth: {
-          token: 'configured-token',
-        },
-      },
-    }
-
-    const store = getInternalAuthStore(instanceWithConfig)
-
-    expect(store.getState().authState).toEqual({
-      type: 'logged-in',
-      token: 'configured-token',
-      currentUser: null,
-    })
   })
 
   it('creates different stores for different instances', () => {

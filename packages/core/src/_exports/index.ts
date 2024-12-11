@@ -26,7 +26,6 @@ export type {
 export {createDocumentListStore} from '../documentList/documentListStore'
 
 /** AUTH */
-// export {type AuthConfig, type AuthProvider, type AuthState, type AuthStore} from '../auth/authStore'
 export type {CurrentUserSlice} from '../auth/authStore'
 export {
   type AuthConfig,
