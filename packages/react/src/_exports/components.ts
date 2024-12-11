@@ -1,3 +1,8 @@
+export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBoundary'
+export {Login} from '../components/auth/Login'
+export {LoginCallback} from '../components/auth/LoginCallback'
+export {LoginError, type LoginErrorProps} from '../components/auth/LoginError'
+export {LoginLayout, type LoginLayoutProps} from '../components/auth/LoginLayout'
 export type {SanityProviderProps} from '../components/context/SanityProvider'
 export {SanityProvider} from '../components/context/SanityProvider'
 export {DocumentGridLayout} from '../components/DocumentGridLayout/DocumentGridLayout'

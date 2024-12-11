@@ -12,5 +12,16 @@ export const useCurrentUser = (): CurrentUser | null => {
   const instance = useSanityInstance()
   const {currentUserState} = getAuthStore(instance)
 
+  // TODO: update this hook so it can never return null
+  if (!currentUserState.getState())
+    throw new Promise<void>((resolve) => {
+      const unsubscribe = currentUserState.subscribe((currentUser) => {
+        if (currentUser) {
+          unsubscribe()
+          resolve()
+        }
+      })
+    })
+
   return useStore<CurrentUserSlice>(currentUserState)
 }

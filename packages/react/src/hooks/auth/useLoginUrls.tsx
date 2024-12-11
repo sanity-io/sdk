@@ -1,5 +1,5 @@
 import {type AuthProvider, getAuthStore} from '@sanity/sdk'
-import {useEffect, useMemo, useState} from 'react'
+import {useMemo} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -9,10 +9,12 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @remarks
  * This hook fetches the login URLs from the Sanity auth store when the component mounts.
  * Each provider object contains information about an authentication method, including its URL.
+ * The hook will suspend if the login URLs have not yet loaded.
  *
  * @example
  * ```tsx
- * function LoginComponent() {
+ * // LoginProviders component that uses the hook
+ * function LoginProviders() {
  *   const providers = useLoginUrls()
  *
  *   return (
@@ -25,25 +27,25 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *     </div>
  *   )
  * }
+ *
+ * // Parent component with Suspense boundary
+ * function LoginPage() {
+ *   return (
+ *     <Suspense fallback={<div>Loading authentication providers...</div>}>
+ *       <LoginProviders />
+ *     </Suspense>
+ *   )
+ * }
  * ```
  *
  * @returns An array of {@link AuthProvider} objects containing login URLs and provider information
  * @public
  */
 export function useLoginUrls(): AuthProvider[] {
-  const [providers, setProviders] = useState<AuthProvider[]>([])
   const instance = useSanityInstance()
   const authStore = useMemo(() => getAuthStore(instance), [instance])
+  const result = authStore.getLoginUrls()
 
-  useEffect(() => {
-    const authProviders = authStore.getLoginUrls()
-    // Handle both synchronous cached and asynchronous fetch cases
-    if (authProviders instanceof Promise) {
-      authProviders.then(setProviders)
-    } else {
-      setProviders(authProviders)
-    }
-  }, [authStore])
-
-  return providers
+  if (Array.isArray(result)) return result
+  throw result
 }
