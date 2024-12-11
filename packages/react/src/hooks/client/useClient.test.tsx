@@ -1,8 +1,9 @@
 import {type SanityClient} from '@sanity/client'
-import {renderHook} from '../../../test/test-utils'
+import {act} from '@testing-library/react'
 import type {Subscribable, Subscriber} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {renderHook} from '../../../test/test-utils'
 import {useClient} from './useClient'
 
 vi.mock(import('@sanity/sdk'), async (importOriginal) => {
@@ -81,12 +82,12 @@ describe('useClient', () => {
     vi.mocked(getClient).mockReturnValue(authenticatedClient)
 
     // Simulate the client update that would happen after auth change
-    clientSubscriber!.next(authenticatedClient)
+    await act(async () => {
+      clientSubscriber!.next(authenticatedClient)
+    })
 
     // Verify the client was updated with the new token
-    await vi.waitFor(() => {
-      expect(result.current.config().token).toBe('auth-token')
-    })
+    expect(result.current.config().token).toBe('auth-token')
   })
 
   it('should unsubscribe on unmount', () => {
