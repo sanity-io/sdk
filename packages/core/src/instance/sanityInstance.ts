@@ -1,4 +1,4 @@
-import type {AuthConfig} from '../auth/authStore'
+import type {AuthConfig} from '../auth/internalAuthStore'
 import {getSdkIdentity} from './identity'
 import type {SanityInstance, SdkIdentity} from './types'
 
@@ -53,7 +53,10 @@ function setResource(instance: SanityInstance, key: string, value: unknown) {
  */
 export function getOrCreateResource<T>(instance: SanityInstance, key: string, creator: () => T): T {
   const cached = getResource(instance, key)
-  if (cached) return cached as T
+
+  if (cached) {
+    return cached as T
+  }
 
   const resource = creator()
   setResource(instance, key, resource)

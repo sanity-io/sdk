@@ -31,7 +31,7 @@ export function useHandleCallback(): void {
 
   useEffect(() => {
     // Only process the callback when we're in the 'logging-in' state
-    if (authState === 'logging-in') {
+    if (authState.type === 'logging-in') {
       // Handle the OAuth callback using the current URL
       // This processes tokens and other auth-related parameters from the URL
       authStore.handleCallback(window.location.href).then((callbackResult) => {

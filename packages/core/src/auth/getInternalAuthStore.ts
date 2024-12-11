@@ -1,6 +1,6 @@
 import {getOrCreateResource} from '../instance/sanityInstance'
 import type {SanityInstance} from '../instance/types'
-import {type AuthStore, createAuthStore} from './authStore'
+import {createInternalAuthStore, type InternalAuthStore} from './internalAuthStore'
 
 /**
  * Retrieves or creates an `AuthStore` for the given `SanityInstance`.
@@ -13,8 +13,8 @@ import {type AuthStore, createAuthStore} from './authStore'
  *
  * @public
  */
-export const getAuthStore = (instance: SanityInstance): AuthStore => {
+export const getInternalAuthStore = (instance: SanityInstance): InternalAuthStore => {
   return getOrCreateResource(instance, 'authStore', () => {
-    return createAuthStore(instance, instance.config?.auth)
+    return createInternalAuthStore(instance, instance.config?.auth)
   })
 }

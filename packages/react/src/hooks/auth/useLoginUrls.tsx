@@ -1,5 +1,5 @@
 import {type AuthProvider, getAuthStore} from '@sanity/sdk'
-import {useEffect, useState} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -33,7 +33,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
 export function useLoginUrls(): AuthProvider[] {
   const [providers, setProviders] = useState<AuthProvider[]>([])
   const instance = useSanityInstance()
-  const authStore = getAuthStore(instance)
+  const authStore = useMemo(() => getAuthStore(instance), [instance])
 
   useEffect(() => {
     const authProviders = authStore.getLoginUrls()

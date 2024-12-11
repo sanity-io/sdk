@@ -15,8 +15,6 @@ export type {ClientOptions, ClientState, ClientStore} from '../client/store/clie
 export type {SchemaState, SchemaStore} from '../schema/schemaStore'
 
 /** DOCUMENT LIST */
-export {type AuthConfig, type AuthProvider, type AuthState, type AuthStore} from '../auth/authStore'
-export {getAuthStore} from '../auth/getAuthStore'
 export type {
   DocumentHandle,
   DocumentListOptions,
@@ -25,4 +23,17 @@ export type {
   SortOrderingItem,
 } from '../documentList/documentListStore'
 export {createDocumentListStore} from '../documentList/documentListStore'
+
+/** AUTH */
+// export {type AuthConfig, type AuthProvider, type AuthState, type AuthStore} from '../auth/authStore'
+export type {CurrentUserSlice} from '../auth/authStore'
+export {
+  type AuthConfig,
+  type AuthProvider,
+  type AuthState,
+  type AuthStateSlice,
+  type AuthStore,
+  getAuthStore,
+  type AuthTokenSlice as PublicTokenSlice,
+} from '../auth/authStore'
 export type {CurrentUser, Role} from '@sanity/types'
