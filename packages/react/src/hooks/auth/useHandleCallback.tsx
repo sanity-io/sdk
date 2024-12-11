@@ -1,47 +1,50 @@
-import {getAuthStore} from '@sanity/sdk'
-import {useEffect} from 'react'
+import {type AuthStore, getAuthStore} from '@sanity/sdk'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useAuthState} from './useAuthState'
+import {useMemo} from 'react'
 
 /**
- * A React hook that handles the OAuth callback process after user authentication.
- *
- * This hook automatically processes the authentication callback when the auth state
- * is 'logging-in'. It will handle the redirect URL and manage the authentication flow.
+ * A React hook that returns a function for handling authentication callbacks.
  *
  * @remarks
- * The hook should be used in components that handle the OAuth callback redirect.
- * It relies on the auth state being properly managed through the `useAuthState` hook.
+ * This hook provides access to the authentication store's callback handler,
+ * which processes auth redirects by extracting the session ID and fetching the
+ * authentication token. If fetching the long-lived token is successful,
+ * `handleCallback` will return a Promise that resolves a new location that
+ * removes the short-lived token from the URL. Use this in combination with
+ * `history.replaceState` or your own router's `replace` function to update the
+ * current location without triggering a reload.
  *
  * @example
  * ```tsx
- * function CallbackComponent() {
- *   useHandleCallback();
- *   return <div>Processing login...</div>;
+ * function AuthCallback() {
+ *   const handleCallback = useHandleCallback()
+ *   const router = useRouter() // Example router
+ *
+ *   useEffect(() => {
+ *     async function processCallback() {
+ *       // Handle the callback and get the cleaned URL
+ *       const newUrl = await handleCallback(window.location.href)
+ *
+ *       if (newUrl) {
+ *         // Replace URL without triggering navigation
+ *         router.replace(newUrl, {shallow: true})
+ *       }
+ *     }
+ *
+ *     processCallback().catch(console.error)
+ *   }, [handleCallback, router])
+ *
+ *   return <div>Completing login...</div>
  * }
  * ```
  *
+ * @returns A callback handler function that processes OAuth redirects
  * @public
  */
-export function useHandleCallback(): void {
+export function useHandleCallback(): AuthStore['handleCallback'] {
   const instance = useSanityInstance()
-  const authState = useAuthState()
-  const authStore = getAuthStore(instance)
+  const authStore = useMemo(() => getAuthStore(instance), [instance])
 
-  useEffect(() => {
-    // Only process the callback when we're in the 'logging-in' state
-    if (authState.type === 'logging-in') {
-      // Handle the OAuth callback using the current URL
-      // This processes tokens and other auth-related parameters from the URL
-      authStore.handleCallback(window.location.href).then((callbackResult) => {
-        // If we get a redirect URL back, navigate to it
-        // This is typically used to return the user to their original location
-        // without the sid parameter in the URL
-        if (callbackResult) {
-          window.location.href = callbackResult
-        }
-      })
-    }
-  }, [authState, authStore])
+  return authStore.handleCallback
 }
