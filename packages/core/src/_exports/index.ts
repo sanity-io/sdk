@@ -8,6 +8,7 @@ export type {InternalStores, SanityInstance, SdkIdentity} from '../instance/type
 /** CLIENT */
 // Utils
 export {getClient} from '../client/getClient'
+export {getSubscribableClient} from '../client/getSubscribableClient'
 // Types
 export type {ClientOptions, ClientState, ClientStore} from '../client/store/clientStore'
 
