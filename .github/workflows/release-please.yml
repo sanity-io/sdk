@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v4
         if: ${{ steps.release.outputs.release_created || github.event.inputs.publish == 'true' }}
       - uses: pnpm/action-setup@v4
-        if: ${{ steps.release.outputs.release_created || github.event.inputs.publish == 'true' }}}
+        if: ${{ steps.release.outputs.release_created || github.event.inputs.publish == 'true' }}
         with:
           version: 9
       - uses: actions/setup-node@v4
@@ -60,5 +60,3 @@ jobs:
       # need to publish all unpublished versions to NPM here
       - run: pnpm -r publish
         if: ${{ steps.release.outputs.release_created || github.event.inputs.publish == 'true' }}
-        env:
-          NPM_CONFIG_PROVENANCE: true
