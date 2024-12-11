@@ -1,9 +1,17 @@
-import {type AuthState, type AuthStore, createSanityInstance, getAuthStore} from '@sanity/sdk'
-import {renderHook} from '@testing-library/react'
-import {describe, expect, it, vi} from 'vitest'
+// ALL MOCKS MUST GO BEFORE ANY IMPORTS 😤
+vi.mock('../context/useSanityInstance', () => ({
+  useSanityInstance: () => ({
+    projectId: 'test',
+    dataset: 'test',
+  }),
+}))
 
-import {SanityProvider} from '../../components/context/SanityProvider'
-import {useHandleCallback} from './useHandleCallback'
+vi.mock('./useAuthState', () => ({
+  useAuthState: vi.fn().mockReturnValue({
+    type: 'logging-in',
+    isExchangingToken: true,
+  }),
+}))
 
 vi.mock('@sanity/sdk', async () => {
   const actual = await vi.importActual<typeof import('@sanity/sdk')>('@sanity/sdk')
@@ -20,23 +28,26 @@ vi.mock('@sanity/sdk', async () => {
   }
 })
 
-// vi.mock('./useAuthState', () => ({
-//   useAuthState: () => ({type: 'logging-in'}),
-// }))
+// IMPORTS COME AFTER ALL MOCKS
+import {type AuthState, type AuthStore, createSanityInstance, getAuthStore} from '@sanity/sdk'
+import {renderHook} from '@testing-library/react'
+import {describe, expect, it, vi} from 'vitest'
+
+import {SanityProvider} from '../../components/context/SanityProvider'
+import {useAuthState} from './useAuthState'
+import {useHandleCallback} from './useHandleCallback'
 
 describe('useHandleCallback', () => {
   beforeEach(() => {
-    // Reset all mocks before each test
     vi.resetModules()
     vi.clearAllMocks()
+    vi.mocked(useAuthState).mockReturnValue({
+      type: 'logging-in',
+      isExchangingToken: true,
+    } as Extract<AuthState, {type: 'logging-in'}>)
   })
 
-  it.skip('should handle callback when in logging-in state', async () => {
-    vi.mock('./useAuthState', () => ({
-      useAuthState: (): AuthState =>
-        ({type: 'logging-in', isExchangingToken: true}) as Extract<AuthState, {type: 'logging-in'}>,
-    }))
-
+  it('should handle callback when in logging-in state', async () => {
     vi.useFakeTimers()
 
     // Mock window.location
@@ -67,8 +78,7 @@ describe('useHandleCallback', () => {
     // Force a re-render to ensure the effect runs
     rerender()
 
-    // Run timers
-    vi.advanceTimersByTime(0)
+    await vi.runAllTimersAsync()
 
     expect(handleCallbackMock).toHaveBeenCalledWith('http://test.com/callback?code=123')
 
@@ -78,12 +88,11 @@ describe('useHandleCallback', () => {
   })
 
   it('should not handle callback when not in logging-in state', () => {
-    vi.mock('./useAuthState', () => ({
-      useAuthState: () =>
-        ({
-          type: 'logged-in',
-        }) as Extract<AuthState, {type: 'logged-in'}>,
-    }))
+    vi.mocked(useAuthState).mockReturnValue({
+      type: 'logged-in',
+      token: 'test-token',
+      currentUser: null,
+    } as Extract<AuthState, {type: 'logged-in'}>)
 
     const handleCallbackMock = vi.fn().mockResolvedValue(null)
     const mockAuthStore = {
