@@ -1,10 +1,10 @@
 import {type AuthStore, createSanityInstance, getAuthStore} from '@sanity/sdk'
 import {renderHook, waitFor} from '@testing-library/react'
+import {Suspense} from 'react'
 import {describe, expect, it, vi} from 'vitest'
 
 import {SanityProvider} from '../../components/context/SanityProvider'
 import {useLoginUrls} from './useLoginUrls'
-import {Suspense} from 'react'
 
 vi.mock(import('@sanity/sdk'), async (importOriginal) => {
   const actual = await importOriginal()

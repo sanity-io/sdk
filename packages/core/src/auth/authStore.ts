@@ -12,7 +12,7 @@ export interface AuthStore {
   tokenState: AuthTokenSlice
   currentUserState: CurrentUserSlice
   handleCallback: (locationHref?: string) => Promise<string | false>
-  logout: () => void
+  logout: () => Promise<void>
   dispose: () => void
   getLoginUrls: () => AuthProvider[] | Promise<AuthProvider[]>
 }

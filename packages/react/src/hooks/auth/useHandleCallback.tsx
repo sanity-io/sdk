@@ -1,7 +1,7 @@
 import {type AuthStore, getAuthStore} from '@sanity/sdk'
+import {useMemo} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useMemo} from 'react'
 
 /**
  * A React hook that returns a function for handling authentication callbacks.

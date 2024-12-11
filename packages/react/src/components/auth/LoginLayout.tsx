@@ -68,7 +68,11 @@ const ChildrenFlex = styled(Flex)`
  *
  * @alpha
  */
-export function LoginLayout({children, footer = <LoginFooter />, header}: LoginLayoutProps) {
+export function LoginLayout({
+  children,
+  footer = <LoginFooter />,
+  header,
+}: LoginLayoutProps): React.ReactNode {
   return (
     <Root>
       <Container direction="column" gap={4}>

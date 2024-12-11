@@ -1,4 +1,4 @@
-import {getAuthStore} from '@sanity/sdk'
+import {type AuthStore, getAuthStore} from '@sanity/sdk'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -7,7 +7,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @public
  * @returns A function to log out of the current session
  */
-export const useLogOut = (): (() => void) => {
+export const useLogOut = (): AuthStore['logout'] => {
   const instance = useSanityInstance()
   const {logout} = getAuthStore(instance)
 

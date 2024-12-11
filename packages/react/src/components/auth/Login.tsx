@@ -23,7 +23,7 @@ const FallbackRoot = styled(Flex)`
  *
  * @alpha
  */
-export function Login({header, footer}: LoginLayoutProps) {
+export function Login({header, footer}: LoginLayoutProps): JSX.Element {
   return (
     <LoginLayout header={header} footer={footer}>
       <Flex direction="column" gap={4}>

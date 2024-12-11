@@ -55,17 +55,18 @@ export interface AuthBoundaryProps extends LoginLayoutProps {
  */
 export function AuthBoundary({
   LoginErrorComponent = LoginError,
-  ...layoutProps
-}: AuthBoundaryProps) {
-  const LoginComponentWithLayoutProps = useMemo(() => {
+  ...props
+}: AuthBoundaryProps): React.ReactNode {
+  const {header, footer} = props
+  const FallbackComponent = useMemo(() => {
     return function LoginComponentWithLayoutProps(fallbackProps: FallbackProps) {
-      return <LoginError {...fallbackProps} {...layoutProps} />
+      return <LoginErrorComponent {...fallbackProps} header={header} footer={footer} />
     }
-  }, [])
+  }, [header, footer, LoginErrorComponent])
 
   return (
-    <ErrorBoundary FallbackComponent={LoginComponentWithLayoutProps}>
-      <AuthSwitch {...layoutProps} />
+    <ErrorBoundary FallbackComponent={FallbackComponent}>
+      <AuthSwitch {...props} />
     </ErrorBoundary>
   )
 }

@@ -22,14 +22,19 @@ const StyledFlex = styled(Flex)`
  *
  * @alpha
  */
-export function LoginError({error, resetErrorBoundary, header, footer}: LoginErrorProps) {
+export function LoginError({
+  error,
+  resetErrorBoundary,
+  header,
+  footer,
+}: LoginErrorProps): React.ReactNode {
   if (!(error instanceof AuthError)) throw error
   const logout = useLogOut()
 
   const handleRetry = useCallback(async () => {
     await logout()
     resetErrorBoundary()
-  }, [])
+  }, [logout, resetErrorBoundary])
 
   return (
     <LoginLayout header={header} footer={footer}>

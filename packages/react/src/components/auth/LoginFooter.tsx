@@ -38,7 +38,7 @@ const StyledText = styled(Text)`
  *
  * @alpha
  */
-export function LoginFooter() {
+export function LoginFooter(): React.ReactNode {
   return (
     <Flex direction="column" gap={4} justify="center" align="center" paddingTop={2}>
       <Text size={3}>

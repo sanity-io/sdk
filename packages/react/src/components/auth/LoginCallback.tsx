@@ -16,7 +16,7 @@ const StyledFlex = styled(Flex)`
  *
  * @alpha
  */
-export function LoginCallback({header, footer}: LoginLayoutProps) {
+export function LoginCallback({header, footer}: LoginLayoutProps): React.ReactNode {
   const handleCallback = useHandleCallback()
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export function LoginCallback({header, footer}: LoginLayoutProps) {
         history.replaceState(null, '', replacementLocation)
       }
     })
-  }, [])
+  }, [handleCallback])
 
   return (
     <LoginLayout header={header} footer={footer}>

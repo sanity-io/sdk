@@ -1,8 +1,9 @@
-import {renderHook} from '@testing-library/react'
-import {useHandleCallback} from './useHandleCallback'
 import {getAuthStore} from '@sanity/sdk'
+import {renderHook} from '@testing-library/react'
+import {type Mock, vi} from 'vitest'
+
 import {useSanityInstance} from '../context/useSanityInstance'
-import {vi, type Mock} from 'vitest'
+import {useHandleCallback} from './useHandleCallback'
 
 vi.mock('../context/useSanityInstance')
 vi.mock('@sanity/sdk', () => ({getAuthStore: vi.fn()}))
