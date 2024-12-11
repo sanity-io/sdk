@@ -1,7 +1,7 @@
 {
   "name": "@sanity/sdk-react",
   "version": "0.0.0-alpha.0",
-  "private": true,
+  "private": false,
   "description": "Sanity SDK React toolkit for Content OS",
   "keywords": [],
   "homepage": "https://github.com/sanity-io/sdk#readme",
