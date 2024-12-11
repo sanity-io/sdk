@@ -67,7 +67,10 @@ export const getAuthStore = (instance: SanityInstance): AuthStore => {
   const authState: AuthStateSlice = {
     getState: () => internalAuthStore.getState().authState,
     getInitialState: () => internalAuthStore.getInitialState().authState,
-    subscribe: internalAuthStore.subscribe.bind(internalAuthStore, (state) => state.authState),
+    subscribe: (listener) =>
+      internalAuthStore.subscribe((current, prev) => {
+        listener(current.authState, prev.authState)
+      }),
   }
 
   const tokenState: AuthTokenSlice = {
