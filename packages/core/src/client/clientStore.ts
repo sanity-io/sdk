@@ -14,6 +14,8 @@ export interface ClientState {
   clients: Map<string, SanityClient>
 }
 
+export type ClientStore = Resource<ClientContext, ClientState>
+
 export const clientStore = createResource<ClientContext, ClientState>('clientStore', {
   getContext: () => null,
   getInitialState: ({instance}) => {
@@ -44,6 +46,6 @@ const createClientStore = (): Resource<ClientContext, ClientState> => {
   return clientStore
 }
 
-export const getClientStore = (instance: SanityInstance): Resource<ClientContext, ClientState> => {
+export const getClientStore = (instance: SanityInstance): ClientStore => {
   return getOrCreateResource(instance, 'clientStore', () => createClientStore())
 }
