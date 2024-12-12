@@ -113,7 +113,7 @@ export function createDocumentListStore(instance: SanityInstance): DocumentListS
   const store = createStore<DocumentListInternalState>()(
     devtools((..._unusedArgs) => initialState, {
       name: 'SanityDocumentListStore',
-      enabled: true, // Should be process.env.NODE_ENV === 'development'
+      enabled: import.meta.env.DEV,
     }),
   )
 
