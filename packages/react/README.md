@@ -35,7 +35,7 @@ const sanityInstance = createSanityInstance({
   dataset: '<your-dataset>',
   // optional auth config set projectId and dataset to '' and authScope to 'org' for a global token
   // auth: {
-  //   authScope: 'project',
+  //   authScope: 'org',
   //   ...
   // },
 })
