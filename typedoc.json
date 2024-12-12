@@ -12,27 +12,7 @@
    * Source files to include in documentation generation
    * Includes core SDK exports and React components/hooks
    */
-  "entryPoints": [
-    "packages/core/src/_exports/index.ts",
-    "packages/react/src/_exports/components.ts",
-    "packages/react/src/_exports/hooks.ts"
-  ],
-
-  /**
-   * Path to the project's README file
-   * Will be included as the documentation homepage
-   */
-  "readme": "README.md",
-  /**
-   * Output directory for generated documentation
-   */
-  "out": "docs",
-  /**
-   * Documentation visibility filters
-   * Excludes internal implementation details from public documentation
-   */
-  "excludePrivate": true,
-  "excludeProtected": true,
-  "excludeExternals": true,
-  "excludeInternal": true
+  "entryPoints": ["packages/*"],
+  "entryPointStrategy": "packages",
+  "includeVersion": false
 }
