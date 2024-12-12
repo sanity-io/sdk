@@ -11,10 +11,10 @@ export type {StateSource} from '../resources/createStateSourceAction'
 
 /** CLIENT */
 // Utils
-export {getClient} from '../client/getClient'
+export {getClient} from '../client/actions/getClient'
 export {getSubscribableClient} from '../client/getSubscribableClient'
 // Types
-export type {ClientOptions, ClientState, ClientStore} from '../client/store/clientStore'
+export type {ClientState} from '../client/clientStore'
 
 /** DOCUMENT LIST */
 export type {

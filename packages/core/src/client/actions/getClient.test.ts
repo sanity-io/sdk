@@ -2,18 +2,18 @@ import {createClient, type SanityClient} from '@sanity/client'
 
 import {config} from '../../../../test/fixtures'
 import {createSanityInstance} from '../../../instance/sanityInstance'
-import {createClientStore} from '../clientStore'
+import {oldCreateClientStore} from '../clientStore'
 
 describe('getOrCreateClient', () => {
   const API_VERSION = '2024-12-05'
   let defaultClient: SanityClient
-  let store: ReturnType<typeof createClientStore>
+  let store: ReturnType<typeof oldCreateClientStore>
   let instance: ReturnType<typeof createSanityInstance>
 
   beforeEach(() => {
     instance = createSanityInstance(config)
     defaultClient = createClient({...config, apiVersion: API_VERSION, useCdn: false})
-    store = createClientStore(instance, defaultClient)
+    store = oldCreateClientStore(instance, defaultClient)
   })
 
   it('throws error when apiVersion is missing', () => {
