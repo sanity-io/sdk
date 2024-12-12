@@ -450,7 +450,7 @@ export function createInternalAuthStore(
       }),
       {
         name: 'SanityInternalAuthStore',
-        enabled: true, // Should be process.env.NODE_ENV === 'development',
+        enabled: import.meta.env.DEV,
       },
     ),
   )

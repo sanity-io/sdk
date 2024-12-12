@@ -25,7 +25,7 @@ export const createSchemaStore = (schemaTypes: any[]): SchemaStore => {
       }),
       {
         name: 'SanitySchemaStore',
-        enabled: true, // Should be process.env.NODE_ENV === 'development'
+        enabled: import.meta.env.DEV,
       },
     ),
   )
