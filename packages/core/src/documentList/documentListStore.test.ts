@@ -42,6 +42,7 @@ vi.mock('../client/store/clientStore', () => {
         return observable
       }),
     },
+    config: vi.fn(() => ({token: 'mock-token'})),
   }
 
   const mockStore = {

@@ -8,12 +8,6 @@ import {useCallback, useEffect, useMemo, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
-// TODO: using DocumentListOptions for now, but might require more specific types
-/**
- * @public
- */
-export type UseDocumentsOptions = DocumentListOptions
-
 /**
  * @public
  */
@@ -33,7 +27,7 @@ export interface UseDocuments {
  * @param options - options for the document list
  * @returns result of the document list and function to load more
  */
-export function useDocuments(options: UseDocumentsOptions): UseDocuments {
+export function useDocuments(options: DocumentListOptions): UseDocuments {
   const instance = useSanityInstance()
   const documentListStore = useMemo(() => createDocumentListStore(instance), [instance])
 
@@ -48,7 +42,10 @@ export function useDocuments(options: UseDocumentsOptions): UseDocuments {
         next: onStoreChanged,
       })
 
-      return () => subscription.unsubscribe()
+      return () => {
+        subscription.unsubscribe()
+        documentListStore.dispose()
+      }
     },
     [documentListStore],
   )

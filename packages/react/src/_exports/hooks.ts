@@ -5,8 +5,4 @@ export {useHandleCallback} from '../hooks/auth/useHandleCallback'
 export {useLoginUrls} from '../hooks/auth/useLoginUrls'
 export {useLogOut} from '../hooks/auth/useLogOut'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
-export {
-  type UseDocuments,
-  useDocuments,
-  type UseDocumentsOptions,
-} from '../hooks/documentCollection/useDocuments'
+export {type UseDocuments, useDocuments} from '../hooks/documentCollection/useDocuments'

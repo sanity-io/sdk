@@ -1,9 +1,9 @@
-import {createDocumentListStore} from '@sanity/sdk'
+import {createDocumentListStore, type DocumentListOptions} from '@sanity/sdk'
 import {act, renderHook} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useDocuments, type UseDocumentsOptions} from './useDocuments'
+import {useDocuments} from './useDocuments'
 
 vi.mock('@sanity/sdk')
 vi.mock('../context/useSanityInstance')
@@ -17,6 +17,7 @@ describe('useDocuments', () => {
     }),
     getCurrent: vi.fn(),
     loadMore: vi.fn(),
+    dispose: vi.fn(),
   }
 
   beforeEach(() => {
@@ -33,7 +34,7 @@ describe('useDocuments', () => {
   })
 
   it('should initialize with given options', () => {
-    const options: UseDocumentsOptions = {
+    const options: DocumentListOptions = {
       filter: 'some-filter',
       sort: [{field: 'name', direction: 'asc'}],
     }
@@ -44,7 +45,7 @@ describe('useDocuments', () => {
   })
 
   it('should subscribe to document list store changes', () => {
-    const options: UseDocumentsOptions = {}
+    const options: DocumentListOptions = {}
     mockDocumentListStore.subscribe.mockImplementation(() => {
       return {unsubscribe: vi.fn()}
     })
@@ -92,7 +93,7 @@ describe('useDocuments', () => {
     // Simulate a state change by updating `currentState` reference
     currentState = newState
 
-    const {result} = renderHook(() => useDocuments(options as UseDocumentsOptions))
+    const {result} = renderHook(() => useDocuments(options as DocumentListOptions))
 
     expect(result.current).toEqual({
       ...newState,
@@ -119,5 +120,19 @@ describe('useDocuments', () => {
       isPending: false,
       loadMore: mockDocumentListStore.loadMore,
     })
+  })
+
+  it('should unsubscribe from document list store on unmount', () => {
+    const options = {}
+    const unsubscribeSpy = vi.fn()
+    mockDocumentListStore.subscribe.mockImplementation(() => {
+      return {unsubscribe: unsubscribeSpy}
+    })
+
+    const {unmount} = renderHook(() => useDocuments(options))
+
+    unmount()
+    expect(mockDocumentListStore.dispose).toHaveBeenCalled()
+    expect(unsubscribeSpy).toHaveBeenCalled()
   })
 })
