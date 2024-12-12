@@ -1,6 +1,10 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["./packages/**/src/**/*", "./packages/**/typings/**/*"],
+  "include": [
+    "./packages/**/src/**/*",
+    "./packages/**/typings/**/*",
+    "./packages/**/vite-env.d.ts"
+  ],
   "exclude": [
     "./packages/**/src/**/__fixtures__",
     "./packages/**/src/**/__mocks__",
