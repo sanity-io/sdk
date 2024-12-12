@@ -7,7 +7,7 @@ export function ProtectedRoute(): JSX.Element {
   const currentUser = useCurrentUser()
   const logout = useLogOut()
 
-  if (authState.type !== 'logged-in' || !currentUser) {
+  if (authState.type !== 'logged-in') {
     return <Navigate to="/" replace />
   }
 
