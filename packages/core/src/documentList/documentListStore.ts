@@ -119,7 +119,9 @@ export function createDocumentListStore(instance: SanityInstance): DocumentListS
 
   const liveSubscription = clientStream$
     .pipe(
-      switchMap((client) => client.live.events({includeDrafts: true, tag: 'sdk.live-listener'})),
+      switchMap((client) =>
+        client.live.events({includeDrafts: !!client.config().token, tag: 'sdk.live-listener'}),
+      ),
     )
     .subscribe({
       next: (event) => {
@@ -213,8 +215,7 @@ export function createDocumentListStore(instance: SanityInstance): DocumentListS
   }
 
   function getCurrent() {
-    const {isPending, result, filter, sort} = store.getState()
-    return {isPending, result, filter, sort}
+    return store.getState()
   }
 
   const state$ = new Observable<DocumentListState>((observer) => {

@@ -42,6 +42,7 @@ vi.mock('../client/store/clientStore', () => {
         return observable
       }),
     },
+    config: vi.fn(() => ({token: 'mock-token'})),
   }
 
   const mockStore = {
@@ -249,6 +250,8 @@ describe('documentListStore', () => {
       filter: '_type == "author"',
       isPending: false,
       result,
+      limit: 50,
+      syncTags: new Set(),
     })
 
     documentListStore.setOptions({
@@ -260,6 +263,8 @@ describe('documentListStore', () => {
       sort: [{direction: 'asc', field: 'name'}],
       isPending: false,
       result,
+      limit: 50,
+      syncTags: new Set(),
     })
 
     documentListStore.setOptions({
@@ -271,6 +276,8 @@ describe('documentListStore', () => {
       sort: [{direction: 'asc', field: 'name'}],
       isPending: false,
       result,
+      limit: 50,
+      syncTags: new Set(),
     })
 
     documentListStore.setOptions({
@@ -282,6 +289,8 @@ describe('documentListStore', () => {
       sort: [{direction: 'desc', field: 'name'}],
       isPending: false,
       result,
+      limit: 50,
+      syncTags: new Set(),
     })
 
     const emissions = await emissionsPromise
