@@ -45,7 +45,7 @@ export function App(): JSX.Element {
     <ThemeProvider theme={theme}>
       <Suspense fallback={<Spinner />}>
         <SanityProvider sanityInstance={sanityInstance}>
-          <AuthBoundary header={<Text>SDK Kitchen Sink</Text>}>
+          <AuthBoundary header={<Text>My Sanity App</Text>}>
             <Authenticated />
           </AuthBoundary>
         </SanityProvider>
