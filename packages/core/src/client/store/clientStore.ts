@@ -66,6 +66,12 @@ export const createClientStore = (
     instance,
   })
 
+  // Initialize the client store with the current auth state
+  const internalState = internalAuthStore.getState()
+  if (internalState.authState.type === 'logged-in') {
+    store.receiveToken(internalState.authState.token)
+  }
+
   internalAuthStore.subscribe((state, prevState) => {
     if (state.authState.type === 'logged-in' && prevState.authState.type !== 'logged-in') {
       store.receiveToken(state.authState.token)
