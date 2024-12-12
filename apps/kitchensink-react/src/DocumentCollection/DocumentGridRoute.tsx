@@ -12,14 +12,15 @@ export function DocumentGridRoute(): JSX.Element {
       <h1>Document Grid</h1>
       <DocumentGridLayout>
         {result.result?.map((doc) => (
-          <DocumentPreviewLayout
-            key={doc._id}
-            title={doc._id}
-            subtitle={doc._type}
-            docType={doc._type}
-            // hard coded to published for now
-            status="published"
-          />
+          <li key="doc._id">
+            <DocumentPreviewLayout
+              title={doc._id}
+              subtitle={doc._type}
+              docType={doc._type}
+              // hard coded to published for now
+              status="published"
+            />
+          </li>
         ))}
       </DocumentGridLayout>
     </div>
