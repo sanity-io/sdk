@@ -1,6 +1,7 @@
 import {Route, Routes} from 'react-router'
 
 import {AuthPlayground} from './AuthPlayground'
+import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
 import {DocumentListRoute} from './DocumentCollection/DocumentListRoute'
 import {ProtectedRoute} from './ProtectedRoute'
 
@@ -8,6 +9,10 @@ const routes = [
   {
     path: 'document-list',
     element: <DocumentListRoute />,
+  },
+  {
+    path: 'document-grid',
+    element: <DocumentGridRoute />,
   },
 ]
 
