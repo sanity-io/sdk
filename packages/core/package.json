@@ -2,9 +2,17 @@
   "name": "@sanity/sdk",
   "version": "0.0.0-alpha.1",
   "private": false,
-  "description": "Sanity SDK for Content OS",
-  "keywords": [],
-  "homepage": "https://github.com/sanity-io/sdk#readme",
+  "description": "Sanity SDK",
+  "keywords": [
+    "sanity",
+    "sdk",
+    "content operating system",
+    "cms",
+    "headless",
+    "realtime",
+    "content"
+  ],
+  "homepage": "https://github.com/sanity-io/sdk/tree/main/packages/core/README.md",
   "bugs": {
     "url": "https://github.com/sanity-io/sdk/issues"
   },
