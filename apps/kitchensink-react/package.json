@@ -10,12 +10,17 @@
   },
   "prettier": "@sanity/prettier-config",
   "dependencies": {
+    "@sanity/asset-utils": "^2.2.1",
+    "@sanity/client": "^6.24.1",
+    "@sanity/image-url": "^1.1.0",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
     "@sanity/ui": "^2.8.19",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router": "^7.0.2"
+    "react-router": "^7.0.2",
+    "react95": "^4.0.0",
+    "styled-components": "^6.1.13"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",

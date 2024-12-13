@@ -8,6 +8,7 @@ import {OrgAuthHome} from './OrgAuthentication/OrgAuthHome'
 import {OrgInstanceWrapper} from './OrgAuthentication/OrgInstanceWrapper'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProjectInstanceWrapper} from './ProjectAuthentication/ProjectInstanceWrapper'
+import {HooksOnly} from './HooksOnly/HooksOnly'
 import {ProtectedRoute} from './ProtectedRoute'
 import {UnauthenticatedHome} from './Unauthenticated/UnauthenticatedHome'
 import {UnauthenticatedInstanceWrapper} from './Unauthenticated/UnauthenticatedInstanceWrapper'
@@ -19,6 +20,10 @@ const documentCollectionRoutes = [
   {
     path: 'document-grid',
     element: <DocumentGridRoute />,
+  },
+  {
+    path: 'hooks-only',
+    element: <HooksOnly />,
   },
 ]
 
