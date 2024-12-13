@@ -82,6 +82,7 @@
   "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@paramour/css": "1.0.0-rc.2",
+    "@sanity/icons": "^3.5.2",
     "@sanity/logos": "^2.1.13",
     "@sanity/sdk": "workspace:*",
     "@sanity/ui": "^2.8.19",

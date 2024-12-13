@@ -1,6 +1,7 @@
 import 'inter-ui/inter.css'
 import '../../css/styles.css'
 
+import {DocumentIcon} from '@sanity/icons'
 import {forwardRef} from 'react'
 
 /**
@@ -8,8 +9,7 @@ import {forwardRef} from 'react'
  */
 export interface DocumentPreviewLayoutProps {
   docType?: string
-  // @TODO: determine how media data will be passed to this component; need to represent either an image or an icon
-  media?: React.ReactNode
+  media?: {type: string; url: string} | null | undefined
   selected?: boolean
   status?: string
   subtitle?: string
@@ -41,6 +41,20 @@ export const DocumentPreviewLayout = forwardRef(
     // @TODO: empty state
     if (!title) {
       return <></>
+    }
+
+    let PreviewMedia
+
+    if (media?.url) {
+      const baseUrl = new URL(media.url)
+      baseUrl.searchParams.set('h', '66')
+      baseUrl.searchParams.set('w', '66')
+      baseUrl.searchParams.set('fit', 'crop')
+      const mediaUrl = baseUrl.toString()
+      // media url string params for sanity img
+      PreviewMedia = <img src={mediaUrl} alt="" />
+    } else {
+      PreviewMedia = <DocumentIcon />
     }
 
     return (
@@ -76,7 +90,7 @@ export const DocumentPreviewLayout = forwardRef(
               color: var(--subtitleFg, var(--_subtitleFg));
             }
 
-            .TempMedia {
+            .Media {
               aspect-ratio: 1;
               inline-size: 33px;
               border-color: var(--gray-8);
@@ -117,7 +131,9 @@ export const DocumentPreviewLayout = forwardRef(
           className={`DocumentPreviewLayout block p-1 radius1 ${selected ? 'selected' : ''}`}
         >
           <div className="container-inline flex align-items-center gap-2 font-sans">
-            <figure className="TempMedia border0 border-solid flex-none">{media}</figure>
+            <figure className="Media border0 border-solid flex-none flex align-items-center justify-content-center object-cover">
+              {PreviewMedia}
+            </figure>
 
             <div className="leading2 flex-grow overflow-hidden">
               <p className="Title text-1 font-medium truncate">{title}</p>

@@ -20,6 +20,10 @@ const mockDocs = [
     url: '#',
     docType: 'article',
     status: 'draft',
+    media: {
+      type: 'image-asset',
+      url: 'https://picsum.photos/75/75',
+    },
   },
   {
     id: '3',
@@ -28,6 +32,10 @@ const mockDocs = [
     url: '#',
     docType: 'image',
     status: 'published',
+    media: {
+      type: 'image-asset',
+      url: 'https://picsum.photos/100/100',
+    },
   },
   {
     id: '4',
@@ -54,6 +62,10 @@ const mockDocs = [
     url: '#',
     docType: 'pdf',
     status: 'published',
+    media: {
+      type: 'image-asset',
+      url: 'https://picsum.photos/80/80',
+    },
   },
   {id: '7', title: 'Just a title', url: '#', docType: 'note', status: 'published,'},
   {
@@ -71,6 +83,10 @@ const mockDocs = [
     url: '#',
     docType: 'biography',
     status: 'published',
+    media: {
+      type: 'image-asset',
+      url: 'https://picsum.photos/200/200',
+    },
   },
 ]
 
@@ -83,6 +99,7 @@ export const Default: Story = {
             <DocumentPreviewLayout
               title={doc.title}
               subtitle={doc.subtitle}
+              media={doc.media}
               selected={doc.selected}
               docType={doc.docType}
               status={doc.status}
