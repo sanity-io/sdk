@@ -83,6 +83,7 @@ export const Default: Story = {
             <DocumentPreviewLayout
               title={doc.title}
               subtitle={doc.subtitle}
+              selected={doc.selected}
               docType={doc.docType}
               status={doc.status}
               url={doc.url}

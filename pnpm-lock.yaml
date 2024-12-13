@@ -96,14 +96,8 @@ importers:
 
   apps/storybook:
     dependencies:
-      '@sanity/ui':
-        specifier: ^2.8.19
-        version: 2.10.9(@emotion/is-prop-valid@1.2.2)(react-dom@18.3.1(react@18.3.1))(react-is@18.3.1)(react@18.3.1)(styled-components@6.1.13(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
       '@storybook/addon-a11y':
         specifier: ^8.4.5
-        version: 8.4.7(storybook@8.4.7(prettier@3.4.2))
-      '@storybook/addon-themes':
-        specifier: ^8.4.2
         version: 8.4.7(storybook@8.4.7(prettier@3.4.2))
       '@storybook/theming':
         specifier: ^8.4.2
@@ -114,9 +108,6 @@ importers:
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
-      styled-components:
-        specifier: ^6.1.13
-        version: 6.1.13(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
     devDependencies:
       '@chromatic-com/storybook':
         specifier: ^3.2.2
@@ -265,6 +256,9 @@ importers:
 
   packages/react:
     dependencies:
+      '@paramour/css':
+        specifier: 1.0.0-rc.2
+        version: 1.0.0-rc.2
       '@sanity/logos':
         specifier: ^2.1.13
         version: 2.1.13(@sanity/color@3.0.6)(react@18.3.1)
@@ -274,9 +268,15 @@ importers:
       '@sanity/ui':
         specifier: ^2.8.19
         version: 2.10.9(@emotion/is-prop-valid@1.2.2)(react-dom@18.3.1(react@18.3.1))(react-is@18.3.1)(react@18.3.1)(styled-components@6.1.13(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
+      inter-ui:
+        specifier: ^4.1.0
+        version: 4.1.0
       react-error-boundary:
         specifier: ^4.1.2
         version: 4.1.2(react@18.3.1)
+      rollup-plugin-import-css:
+        specifier: ^3.5.7
+        version: 3.5.7(rollup@4.28.1)
       rxjs:
         specifier: ^7.8.1
         version: 7.8.1
@@ -1022,6 +1022,10 @@ packages:
     resolution: {integrity: sha512-pEzPjvEnWHQCTIv8j/6IYdYBJQUL/Z9Vo0SB2yr5GZNgf0OAznapjilOb7JY9dBEgXtbgtTgSpANZAiipsjhhw==}
     engines: {node: '>= 12'}
 
+  '@paramour/css@1.0.0-rc.2':
+    resolution: {integrity: sha512-ji0ghB6mYO9sYXjNf9McZnzeazkav6ZdhDex31ImwK4xgfmdz6V3KnJEI3FufvgnxeSGNVO3CPITg12bD4g/YQ==}
+    hasBin: true
+
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
@@ -1355,11 +1359,6 @@ packages:
 
   '@storybook/addon-outline@8.4.7':
     resolution: {integrity: sha512-6LYRqUZxSodmAIl8icr585Oi8pmzbZ90aloZJIpve+dBAzo7ydYrSQxxoQEVltXbKf3VeVcrs64ouAYqjisMYA==}
-    peerDependencies:
-      storybook: ^8.4.7
-
-  '@storybook/addon-themes@8.4.7':
-    resolution: {integrity: sha512-MZa3eWTz0b3BQvF71WqLqvEYzDtbMhQx1IIluWBMMGzJ4sWBzLX85LoNMUlHsNd4EhEmAZ1xQQFIJpDWTBx0nQ==}
     peerDependencies:
       storybook: ^8.4.7
 
@@ -1956,6 +1955,9 @@ packages:
 
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
+
+  color-to-hsla@0.1.1:
+    resolution: {integrity: sha512-lXqaKMk8lY5R9PK0R/fqSZygEKLIJvBrLc20Y/7CpPdoKe5pNvJQYs2olo5BbuJK9gOVr6za4mndjZHHVLZvEg==}
 
   colorette@2.0.20:
     resolution: {integrity: sha512-IfEDxwoWIjkeXL1eXcDiow4UbKjhLdq6/EuSVR9GMN7KVH3r9gQ83e73hsz1Nd1T3ijd5xv1wcWRYO+D6kCI2w==}
@@ -2701,6 +2703,10 @@ packages:
   ini@4.1.1:
     resolution: {integrity: sha512-QQnnxNyfvmHFIsj7gkPcYymR8Jdw/o7mp5ZFihxn6h8Ci6fh3Dx4E1gPjpQEpIuPo9XVNY/ZUwh4BPMjGyL01g==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
+
+  inter-ui@4.1.0:
+    resolution: {integrity: sha512-lUJ5YLtpj7jWsrhTbN5w32MLOqISGFGOTMRNn+IGhLrbt67z5yvmBRoqpLCWLVlJ+l7kqnH6su4meEqvLMfAAA==}
+    engines: {node: '>=16.0.0'}
 
   internal-slot@1.0.7:
     resolution: {integrity: sha512-NGnrKwXzSms2qUUih/ILZ5JBqNTSa1+ZmP6flaIp6KmSElgE9qdndzS3cqjrDovwFdmwsGsLdeFgB6suw+1e9g==}
@@ -3609,6 +3615,12 @@ packages:
     peerDependencies:
       esbuild: '>=0.18.0'
       rollup: ^1.20.0 || ^2.0.0 || ^3.0.0 || ^4.0.0
+
+  rollup-plugin-import-css@3.5.7:
+    resolution: {integrity: sha512-mipsJ1s5xL5MgALTSMCMehngpAMFMMcYUFk6gAvv4Es8DlHGnA8iNQrw0X6hXiQYtjsa17uV1rpk5tXo0otZ6Q==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      rollup: ^2.x.x || ^3.x.x || ^4.x.x
 
   rollup@4.28.1:
     resolution: {integrity: sha512-61fXYl/qNVinKmGSTHAZ6Yy8I3YIJC/r2m9feHo6SwVAVcLT5MPwOUFe7EuURA/4m0NR8lXG4BBXuo/IZEsjMg==}
@@ -4995,6 +5007,10 @@ snapshots:
       estree-walker: 2.0.2
       magic-string: 0.30.12
 
+  '@paramour/css@1.0.0-rc.2':
+    dependencies:
+      color-to-hsla: 0.1.1
+
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
@@ -5381,11 +5397,6 @@ snapshots:
   '@storybook/addon-outline@8.4.7(storybook@8.4.7(prettier@3.4.2))':
     dependencies:
       '@storybook/global': 5.0.0
-      storybook: 8.4.7(prettier@3.4.2)
-      ts-dedent: 2.2.0
-
-  '@storybook/addon-themes@8.4.7(storybook@8.4.7(prettier@3.4.2))':
-    dependencies:
       storybook: 8.4.7(prettier@3.4.2)
       ts-dedent: 2.2.0
 
@@ -6097,6 +6108,8 @@ snapshots:
       color-name: 1.1.4
 
   color-name@1.1.4: {}
+
+  color-to-hsla@0.1.1: {}
 
   colorette@2.0.20: {}
 
@@ -6948,6 +6961,8 @@ snapshots:
   ini@1.3.8: {}
 
   ini@4.1.1: {}
+
+  inter-ui@4.1.0: {}
 
   internal-slot@1.0.7:
     dependencies:
@@ -7849,6 +7864,11 @@ snapshots:
       rollup: 4.28.1
     transitivePeerDependencies:
       - supports-color
+
+  rollup-plugin-import-css@3.5.7(rollup@4.28.1):
+    dependencies:
+      '@rollup/pluginutils': 5.1.3(rollup@4.28.1)
+      rollup: 4.28.1
 
   rollup@4.28.1:
     dependencies:

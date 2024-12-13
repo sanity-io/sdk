@@ -33,7 +33,7 @@ describe('DocumentListLayout', () => {
     )
     const list = screen.getByRole('list')
     expect(list.tagName).toBe('OL')
-    expect(list.dataset['ui']).toBe('DocumentListLayout')
+    expect(list.classList).toContain('DocumentListLayout')
 
     const items = screen.getAllByRole('listitem')
     expect(items[0]).toContainHTML('Test Document 1')

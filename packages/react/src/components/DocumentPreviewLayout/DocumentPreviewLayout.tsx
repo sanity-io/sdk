@@ -1,13 +1,14 @@
-import {Badge, Button, Stack, Text} from '@sanity/ui'
+import 'inter-ui/inter.css'
+import '../../css/styles.css'
+
 import {forwardRef} from 'react'
-import styled from 'styled-components'
 
 /**
  * @public
  */
 export interface DocumentPreviewLayoutProps {
   docType?: string
-  // Todo: determine how media data will be passed to this component; need to represent either an image or an icon
+  // @TODO: determine how media data will be passed to this component; need to represent either an image or an icon
   media?: React.ReactNode
   selected?: boolean
   status?: string
@@ -15,39 +16,6 @@ export interface DocumentPreviewLayoutProps {
   title: string
   url?: string
 }
-
-// Todo: replace with actual media (either image or icon)
-const TempMedia = styled.div`
-  aspect-ratio: 1 / 1;
-  inline-size: 33px;
-  border: 1px solid #ccc;
-  display: flex;
-  > * {
-    flex: auto;
-  }
-`
-
-// Set a containment context for the Preview
-const Container = styled.div`
-  container-type: inline-size;
-  display: flex;
-  align-items: center;
-  gap: 0.75em;
-`
-
-// Status labels are visually hidden when a narrow document list is rendered;
-// text remains accessible to screen readers
-const StatusLabel = styled.span`
-  @container (width < 52ch) {
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
-    height: 1px;
-    overflow: hidden;
-    position: absolute;
-    white-space: nowrap;
-    width: 1px;
-  }
-`
 
 /**
  * This is a component that renders a document preview.
@@ -70,57 +38,114 @@ export const DocumentPreviewLayout = forwardRef(
     }: DocumentPreviewLayoutProps,
     ref: React.Ref<HTMLElement>,
   ): JSX.Element => {
-    // Todo: empty state
+    // @TODO: empty state
     if (!title) {
       return <></>
     }
 
     return (
-      <Button
-        ref={ref as React.Ref<HTMLButtonElement>}
-        as="a"
-        href={url}
-        mode="bleed"
-        width="fill"
-        padding={3}
-        selected={selected}
-        data-ui="DocumentPreviewLayout"
-      >
-        <Container>
-          <TempMedia>{media}</TempMedia>
+      <>
+        <style>{`
+          .DocumentPreviewLayout {
+            --_hoverFocusBg: light-dark(var(--shade-11), var(--tint-1));
+            --_selectedBg: light-dark(var(--blue-10), var(--blue-2));
+            --_selectedFg: light-dark(var(--gray-1), var(--gray-10));
+            --_titleFg: light-dark(var(--gray-1), var(--gray-10));
+            --_subtitleFg: light-dark(var(--gray-4), var(--gray-7));
+            --_docTypeFg: light-dark(var(--gray-1), var(--gray-10));
+            --_docTypeBg: light-dark(var(--shade-10), var(--tint-1));
+            --_publishedFg: light-dark(var(--gray-1), var(--gray-10));
+            --_publishedBg: light-dark(var(--green-10), var(--green-2));
+            --_draftFg: light-dark(var(--gray-1), var(--gray-10));
+            --_draftBg: light-dark(var(--yellow-6), var(--yellow-2));
 
-          <Stack flex={1} space={2}>
-            <Text size={1} weight="medium" textOverflow="ellipsis">
-              {title}
-            </Text>
-            {subtitle && (
-              <Text muted size={1} textOverflow="ellipsis">
-                {subtitle}
-              </Text>
+            &:has(:hover, focus) {
+              background-color: var(--hoverFocusBg, var(--_hoverFocusBg));
+            }
+
+            &.selected {
+              background-color: var(--selectedBg, var(--_selectedBg));
+              color: var(--selectedFg, var(--_selectedFg));
+            }
+
+            .Title {
+              color: var(--titleFg, var(--_titleFg));
+            }
+
+            &:not(.selected) .Subtitle {
+              color: var(--subtitleFg, var(--_subtitleFg));
+            }
+
+            .TempMedia {
+              aspect-ratio: 1;
+              inline-size: 33px;
+              border-color: var(--gray-8);
+            }
+
+            .DocType {
+              color: var(--docTypeFg, var(--_docTypeFg));
+              background-color: var(--docTypeBg, var(--_docTypeBg));
+            }
+
+            .Published {
+              color: var(--publishedFg, var(--_publishedFg));
+              background-color: var(--publishedBg, var(--_publishedBg));
+            }
+
+            .Draft {
+              color: var(--draftFg, var(--_draftFg));
+              background-color: var(--draftBg, var(--_draftBg));
+            }
+
+            :is(.Published, .Draft) figcaption {
+              @container (width < 52ch) {
+                clip: rect(0 0 0 0);
+                clip-path: inset(50%);
+                height: 1px;
+                overflow: hidden;
+                position: absolute;
+                white-space: nowrap;
+                width: 1px;
+              }
+            }
+
+          }
+        `}</style>
+        <a
+          href={url}
+          ref={ref as React.Ref<HTMLAnchorElement>}
+          className={`DocumentPreviewLayout block p-1 radius1 ${selected ? 'selected' : ''}`}
+        >
+          <div className="container-inline flex align-items-center gap-2 font-sans">
+            <figure className="TempMedia border0 border-solid flex-none">{media}</figure>
+
+            <div className="leading2 flex-grow overflow-hidden">
+              <p className="Title text-1 font-medium truncate">{title}</p>
+              {subtitle && <p className="Subtitle text-1 truncate">{subtitle}</p>}
+            </div>
+
+            {docType && (
+              <figure className="DocType inline-block pb-5 pi-3 radius-pill text-2">
+                <figcaption className="inline">{docType}</figcaption>
+              </figure>
             )}
-          </Stack>
 
-          {docType && (
-            <Badge padding={2} fontSize={0}>
-              {docType}
-            </Badge>
-          )}
+            {/* @TODO: finalize UI for this */}
+            {status === 'published' && (
+              <figure className="Published inline-block pb-5 pi-3 radius-pill text-2">
+                ✔︎ <figcaption className="inline">published</figcaption>
+              </figure>
+            )}
 
-          {/* Todo: finalize UI for this */}
-          {status === 'published' && (
-            <Badge padding={2} fontSize={0} tone="positive">
-              ✔︎ <StatusLabel>published</StatusLabel>
-            </Badge>
-          )}
-
-          {/* Todo: finalize UI for this, determine if we need to show 'draft' or just 'published' */}
-          {status === 'draft' && (
-            <Badge padding={2} fontSize={0} tone="caution">
-              ⛑︎ <StatusLabel>draft</StatusLabel>
-            </Badge>
-          )}
-        </Container>
-      </Button>
+            {/* @TODO: finalize UI for this */}
+            {status === 'draft' && (
+              <figure className="Draft inline-block pb-5 pi-3 radius-pill text-2">
+                ⛑︎ <figcaption className="inline">draft</figcaption>
+              </figure>
+            )}
+          </div>
+        </a>
+      </>
     )
   },
 )
