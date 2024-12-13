@@ -24,6 +24,10 @@ export const AllProps: Story = {
   args: {
     title: 'Hello World',
     subtitle: 'It’s nice to meet you',
+    media: {
+      type: 'image-asset',
+      url: 'https://picsum.photos/80/80',
+    },
     url: '#',
     docType: 'article',
     status: 'published',
