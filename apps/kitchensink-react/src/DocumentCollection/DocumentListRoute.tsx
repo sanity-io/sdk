@@ -1,9 +1,12 @@
-import {DocumentListLayout, DocumentPreviewLayout} from '@sanity/sdk-react/components'
+import {DocumentListLayout} from '@sanity/sdk-react/components'
 import {useDocuments} from '@sanity/sdk-react/hooks'
 import {Box, Heading} from '@sanity/ui'
 
+import {DocumentPreview} from './DocumentPreview'
+import {LoadMore} from './LoadMore'
+
 export function DocumentListRoute(): JSX.Element {
-  const result = useDocuments({
+  const {result, loadMore, isPending} = useDocuments({
     filter: '_type == "author"',
     sort: [{field: 'name', direction: 'asc'}],
   })
@@ -15,17 +18,8 @@ export function DocumentListRoute(): JSX.Element {
       </Heading>
       <Box paddingY={5}>
         <DocumentListLayout>
-          {result.result?.map((doc) => (
-            <li key={doc._id}>
-              <DocumentPreviewLayout
-                title={doc._id}
-                subtitle={doc._type}
-                docType={doc._type}
-                // hard coded to published for now
-                status="published"
-              />
-            </li>
-          ))}
+          {result?.map((doc) => <DocumentPreview key={doc._id} document={doc} />)}
+          <LoadMore isPending={isPending} onLoadMore={loadMore} />
         </DocumentListLayout>
       </Box>
     </div>

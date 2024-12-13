@@ -72,6 +72,7 @@
     "@sanity/types": "^3.65.1",
     "@vitest/coverage-v8": "2.1.8",
     "eslint": "^9.16.0",
+    "groq-js": "^1.14.0",
     "lint-staged": "^15.2.10",
     "prettier": "^3.4.2",
     "typescript": "^5.7.2",
