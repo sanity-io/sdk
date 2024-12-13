@@ -1,48 +1,78 @@
-import {Box, Container, Heading, Text} from '@sanity/ui'
+import {Box, Card, Container, Flex, Heading, Stack, Text} from '@sanity/ui'
 import {Link} from 'react-router'
+
+const styles = {
+  card: {
+    transition: 'all 0.2s ease-in-out',
+    cursor: 'pointer',
+  },
+  cardHover: {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+  },
+}
+
+const menuItems = [
+  {
+    title: 'Project Auth',
+    path: '/project-auth',
+    icon: '🔐',
+  },
+  {
+    title: 'Unauthenticated',
+    path: '/unauthenticated',
+    icon: '🌐',
+  },
+  {
+    title: 'Org Auth',
+    path: '/org-auth',
+    icon: '👷',
+  },
+  {
+    title: 'Cosui Simulator',
+    path: '/cosui-simulator',
+    icon: '🛠️',
+  },
+]
 
 const Home = (): JSX.Element => {
   return (
-    <Container width={1} padding={7}>
-      <Box marginBottom={6}>
-        <Heading as="h1" size={5} align="center">
-          SDK React Kitchen Sink
-        </Heading>
-        <Box marginTop={5}>
-          <ul style={{listStyle: 'none'}}>
-            <li>
-              <Link to="/project-auth">
-                <Box paddingY={2} display="inline-block">
-                  <Text style={{textDecoration: 'underline'}}>Project Auth &rarr;</Text>
-                </Box>
-              </Link>
-            </li>
+    <Container width={2} padding={7}>
+      <Card padding={5} radius={3} shadow={1}>
+        <Stack space={5}>
+          <Box>
+            <Heading as="h1" size={4} align="center">
+              SDK React Kitchen Sink
+            </Heading>
+            <Box marginTop={3}>
+              <Text align="center" size={2} style={{color: '#6e7683'}}>
+                Explore different authentication and functionality examples
+              </Text>
+            </Box>
+          </Box>
 
-            <li>
-              <Link to="/unauthenticated">
-                <Box paddingY={2} display="inline-block">
-                  <Text style={{textDecoration: 'underline'}}>Unauthenticated &rarr;</Text>
-                </Box>
+          <Flex direction="column" gap={3}>
+            {menuItems.map((item) => (
+              <Link key={item.path} to={item.path} style={{textDecoration: 'none'}}>
+                <Card
+                  padding={4}
+                  radius={3}
+                  tone="default"
+                  style={styles.card}
+                  className="hover-card"
+                >
+                  <Flex align="center" gap={3}>
+                    <Text size={3}>{item.icon}</Text>
+                    <Text size={2} style={{color: '#f46b60'}}>
+                      {item.title} <span className="arrow">→</span>
+                    </Text>
+                  </Flex>
+                </Card>
               </Link>
-            </li>
-
-            <li>
-              <Link to="/org-auth">
-                <Box paddingY={2} display="inline-block">
-                  <Text style={{textDecoration: 'underline'}}>👷 Org Auth &rarr;</Text>
-                </Box>
-              </Link>
-            </li>
-            <li>
-              <Link to="/cosui-simulator">
-                <Box paddingY={2} display="inline-block">
-                  <Text style={{textDecoration: 'underline'}}>👷 Cosui Simulator &rarr;</Text>
-                </Box>
-              </Link>
-            </li>
-          </ul>
-        </Box>
-      </Box>
+            ))}
+          </Flex>
+        </Stack>
+      </Card>
     </Container>
   )
 }

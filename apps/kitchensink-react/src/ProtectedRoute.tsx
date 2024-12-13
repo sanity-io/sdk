@@ -1,5 +1,5 @@
 import {useAuthState, useCurrentUser, useLogOut} from '@sanity/sdk-react/hooks'
-import {Avatar, Button, Flex} from '@sanity/ui'
+import {Avatar, Box, Button, Card, Flex} from '@sanity/ui'
 import {Link, Navigate, Outlet} from 'react-router'
 
 export function ProtectedRoute({subPath}: {subPath: string}): JSX.Element {
@@ -12,20 +12,31 @@ export function ProtectedRoute({subPath}: {subPath: string}): JSX.Element {
   }
 
   return (
-    <div style={{width: '100%', padding: '0 20px'}}>
-      <Flex as="nav" align="center" justify="space-between" paddingY={3}>
-        <Link to="/">Kitchen Sink Home</Link>
-        <Link to={subPath}>Home</Link>
-        <div style={{display: 'flex', gap: 10, alignItems: 'center'}}>
-          <Avatar src={currentUser?.profileImage} color="blue" />
-          <span>{currentUser?.name}</span>
-          <Button mode="ghost" onClick={() => logout()}>
-            Log out
-          </Button>
-        </div>
-      </Flex>
+    <Box style={{width: '100%'}}>
+      <Card shadow={1} padding={3}>
+        <Flex as="nav" align="center" justify="space-between" paddingX={4}>
+          <Flex gap={3}>
+            <Link to="/" style={{textDecoration: 'none'}}>
+              <Button mode="ghost" tone="primary" text="← Kitchen Sink Home" />
+            </Link>
+            <Link to={subPath} style={{textDecoration: 'none'}}>
+              <Button mode="ghost" tone="primary" text="Home" />
+            </Link>
+          </Flex>
 
-      <Outlet />
-    </div>
+          <Flex align="center" gap={3}>
+            <Avatar src={currentUser?.profileImage} size={1} />
+            <Box as="span" style={{color: '#6e7683'}}>
+              {currentUser?.name}
+            </Box>
+            <Button mode="ghost" tone="critical" onClick={() => logout()} text="Log out" />
+          </Flex>
+        </Flex>
+      </Card>
+
+      <Box padding={4}>
+        <Outlet />
+      </Box>
+    </Box>
   )
 }

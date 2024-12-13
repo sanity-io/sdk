@@ -11,9 +11,9 @@ export function DocumentGridRoute(): JSX.Element {
   })
 
   return (
-    <div>
+    <Box padding={4}>
       <Heading as="h1" size={5}>
-        DocumentGrid
+        Document Grid
       </Heading>
       <Box paddingY={5}>
         <DocumentGridLayout>
@@ -21,6 +21,6 @@ export function DocumentGridRoute(): JSX.Element {
         </DocumentGridLayout>
         <Button text="Load more" mode="ghost" disabled={isPending} onClick={loadMore} />
       </Box>
-    </div>
+    </Box>
   )
 }

@@ -12,9 +12,9 @@ export function DocumentListRoute(): JSX.Element {
   })
 
   return (
-    <div>
+    <Box padding={4}>
       <Heading as="h1" size={5}>
-        DocumentList
+        Document List
       </Heading>
       <Box paddingY={5}>
         <DocumentListLayout>
@@ -22,6 +22,6 @@ export function DocumentListRoute(): JSX.Element {
           <LoadMore isPending={isPending} onLoadMore={loadMore} />
         </DocumentListLayout>
       </Box>
-    </div>
+    </Box>
   )
 }
