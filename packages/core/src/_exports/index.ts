@@ -37,3 +37,14 @@ export {
   type AuthTokenSlice as PublicTokenSlice,
 } from '../auth/authStore'
 export type {CurrentUser, Role} from '@sanity/types'
+
+/** PREVIEW */
+export {getPreviewStore} from '../preview/getPreviewStore'
+export type {
+  GetPreviewOptions,
+  PreviewEventsOptions,
+  PreviewStore,
+  PreviewValue,
+  ResolvePreviewOptions,
+  ValuePending,
+} from '../preview/types'

@@ -1,9 +1,11 @@
-import {DocumentGridLayout, DocumentPreviewLayout} from '@sanity/sdk-react/components'
+import {DocumentGridLayout} from '@sanity/sdk-react/components'
 import {useDocuments} from '@sanity/sdk-react/hooks'
-import {Box, Heading} from '@sanity/ui'
+import {Box, Button, Heading} from '@sanity/ui'
+
+import {DocumentPreview} from './DocumentPreview'
 
 export function DocumentGridRoute(): JSX.Element {
-  const result = useDocuments({
+  const {result, isPending, loadMore} = useDocuments({
     filter: '_type == "author"',
     sort: [{field: 'name', direction: 'asc'}],
   })
@@ -15,18 +17,9 @@ export function DocumentGridRoute(): JSX.Element {
       </Heading>
       <Box paddingY={5}>
         <DocumentGridLayout>
-          {result.result?.map((doc) => (
-            <li key={doc._id}>
-              <DocumentPreviewLayout
-                title={doc._id}
-                subtitle={doc._type}
-                docType={doc._type}
-                // hard coded to published for now
-                status="published"
-              />
-            </li>
-          ))}
+          {result?.map((doc) => <DocumentPreview key={doc._id} document={doc} />)}
         </DocumentGridLayout>
+        <Button text="Load more" mode="ghost" disabled={isPending} onClick={loadMore} />
       </Box>
     </div>
   )
