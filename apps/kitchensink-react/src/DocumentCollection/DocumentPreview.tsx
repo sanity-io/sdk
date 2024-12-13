@@ -29,6 +29,7 @@ function DocumentPreviewResolved({document}: DocumentPreviewProps): React.ReactN
       docType={document._type}
       media={media}
       status={document._id.startsWith('drafts.') ? 'draft' : 'published'}
+      onClick={() => alert(`Hello from ${title}`)}
     />
   )
 }

@@ -10,11 +10,11 @@ import {forwardRef} from 'react'
 export interface DocumentPreviewLayoutProps {
   docType?: string
   media?: {type: string; url: string} | null | undefined
+  onClick?: () => void
   selected?: boolean
   status?: string
   subtitle?: string
   title: string
-  url?: string
 }
 
 /**
@@ -29,12 +29,12 @@ export const DocumentPreviewLayout = forwardRef(
   (
     {
       docType,
+      media,
+      onClick,
       selected = false,
       status = '',
       subtitle = '',
       title,
-      url = '',
-      media,
     }: DocumentPreviewLayoutProps,
     ref: React.Ref<HTMLElement>,
   ): JSX.Element => {
@@ -72,6 +72,8 @@ export const DocumentPreviewLayout = forwardRef(
             --_publishedBg: light-dark(var(--green-10), var(--green-2));
             --_draftFg: light-dark(var(--gray-1), var(--gray-10));
             --_draftBg: light-dark(var(--yellow-6), var(--yellow-2));
+
+            appearance: none;
 
             &:has(:hover, focus) {
               background-color: var(--hoverFocusBg, var(--_hoverFocusBg));
@@ -125,10 +127,10 @@ export const DocumentPreviewLayout = forwardRef(
 
           }
         `}</style>
-        <a
-          href={url}
-          ref={ref as React.Ref<HTMLAnchorElement>}
-          className={`DocumentPreviewLayout block p-1 radius1 ${selected ? 'selected' : ''}`}
+        <button
+          onClick={onClick}
+          ref={ref as React.Ref<HTMLButtonElement>}
+          className={`DocumentPreviewLayout block si-100 text-start p-1 radius1 ${selected ? 'selected' : ''}`}
         >
           <div className="container-inline flex align-items-center gap-2 font-sans">
             <figure className="Media border0 border-solid flex-none flex align-items-center justify-content-center object-cover">
@@ -160,7 +162,7 @@ export const DocumentPreviewLayout = forwardRef(
               </figure>
             )}
           </div>
-        </a>
+        </button>
       </>
     )
   },

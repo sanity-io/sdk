@@ -17,7 +17,6 @@ const mockDocs = [
     id: '2',
     title: 'A title, but also',
     subtitle: 'A subtitle',
-    url: '#',
     docType: 'article',
     status: 'draft',
     media: {
@@ -29,7 +28,6 @@ const mockDocs = [
     id: '3',
     title: 'Hello World',
     subtitle: 'What a nice list I get to live in',
-    url: '#',
     docType: 'image',
     status: 'published',
     media: {
@@ -42,7 +40,6 @@ const mockDocs = [
     title: 'I’ve been selected',
     subtitle: 'I feel special',
     selected: true,
-    url: '#',
     docType: 'video',
     status: 'draft',
   },
@@ -51,7 +48,6 @@ const mockDocs = [
     title: 'A very long title that at some point might get truncated if it goes for long enough',
     subtitle:
       'Along with a subtitle that is quite long as well, in order to demonstrate the truncation of its text',
-    url: '#',
     docType: 'audio',
     status: 'published',
   },
@@ -59,7 +55,6 @@ const mockDocs = [
     id: '6',
     title: 'Hello World',
     subtitle: 'What a nice list I get to live in',
-    url: '#',
     docType: 'pdf',
     status: 'published',
     media: {
@@ -72,7 +67,6 @@ const mockDocs = [
     id: '8',
     title: 'A title, but also',
     subtitle: 'A subtitle',
-    url: '#',
     docType: 'document',
     status: 'draft',
   },
@@ -80,7 +74,6 @@ const mockDocs = [
     id: '9',
     title: 'Hello World',
     subtitle: 'What a nice list I get to live in',
-    url: '#',
     docType: 'biography',
     status: 'published',
     media: {
@@ -103,7 +96,6 @@ export const Default: Story = {
               selected={doc.selected}
               docType={doc.docType}
               status={doc.status}
-              url={doc.url}
             />
           </li>
         ))}

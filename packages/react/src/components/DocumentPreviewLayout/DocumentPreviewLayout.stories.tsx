@@ -13,7 +13,6 @@ type Story = StoryObj<typeof meta>
 export const Basic: Story = {
   args: {
     title: 'Hello World',
-    url: '#',
   },
   render: (props) => {
     return <DocumentPreviewLayout {...props} />
@@ -24,11 +23,13 @@ export const AllProps: Story = {
   args: {
     title: 'Hello World',
     subtitle: 'It’s nice to meet you',
+    onClick: () => {
+      alert('Hello World!')
+    },
     media: {
       type: 'image-asset',
       url: 'https://picsum.photos/80/80',
     },
-    url: '#',
     docType: 'article',
     status: 'published',
   },
