@@ -114,7 +114,7 @@
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
   },
-  "packageManager": "pnpm@9.14.4",
+  "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=20.0.0"
   },
