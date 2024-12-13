@@ -63,6 +63,7 @@
     "build": "pkg build --strict --clean --check",
     "clean": "rimraf dist",
     "dev": "pkg watch",
+    "docs": "typedoc --out docs --tsconfig ../../tsconfig.tsdoc.json",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "eslint .",
     "prepublishOnly": "pnpm run build",
