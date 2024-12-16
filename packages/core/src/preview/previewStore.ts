@@ -11,6 +11,7 @@ import {
 } from 'rxjs'
 
 import {getClient} from '../client/getClient'
+import {getLiveSubscription} from '../client/getLiveSubscription'
 import {getSubscribableClient} from '../client/getSubscribableClient'
 import type {DocumentHandle} from '../documentList/documentListStore'
 import type {SanityInstance} from '../instance/types'
@@ -101,28 +102,22 @@ export function createPreviewStore(instance: SanityInstance): PreviewStore {
   }
 
   // Subscribe to the live content API
-  const liveSubscription = client$
-    .pipe(
-      switchMap((client) =>
-        client.live.events({includeDrafts: !!client.config().token, tag: 'sdk.previewStore'}),
-      ),
-    )
-    .subscribe((event) => {
-      if (event.type !== 'message') return
+  const liveSubscription = getLiveSubscription(instance).subscribe((event) => {
+    if (event.type !== 'message') return
 
-      const eventId = event.id
+    const eventId = event.id
 
-      // Check each batch to see if the sync tags match
-      for (const batch of batches.values()) {
-        if (batch.syncTags.some((tag) => event.tags.includes(tag))) {
-          // Update batch's lastLiveEventId
-          batch.lastLiveEventId = eventId
-          // Schedule re-fetch of the batch
-          const docs = Array.from(batch.documents.values())
-          scheduleFetch(docs)
-        }
+    // Check each batch to see if the sync tags match
+    for (const batch of batches.values()) {
+      if (batch.syncTags.some((tag) => event.tags.includes(tag))) {
+        // Update batch's lastLiveEventId
+        batch.lastLiveEventId = eventId
+        // Schedule re-fetch of the batch
+        const docs = Array.from(batch.documents.values())
+        scheduleFetch(docs)
       }
-    })
+    }
+  })
 
   function getPreviewProjection(_docType: string): string {
     // TODO: Implement logic to get the GROQ projection for the document type's

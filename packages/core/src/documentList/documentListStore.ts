@@ -13,6 +13,7 @@ import {
 import {devtools} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
+import {getLiveSubscription} from '../client/getLiveSubscription'
 import {getClientStore} from '../client/store/clientStore'
 import type {SanityInstance} from '../instance/types'
 
@@ -117,24 +118,14 @@ export function createDocumentListStore(instance: SanityInstance): DocumentListS
     }),
   )
 
-  const liveSubscription = clientStream$
-    .pipe(
-      switchMap((client) =>
-        client.live.events({includeDrafts: !!client.config().token, tag: 'sdk.live-listener'}),
-      ),
-    )
-    .subscribe({
-      next: (event) => {
-        const {syncTags} = store.getState()
-        if (event.type === 'message' && event.tags.some((tag) => syncTags.has(tag))) {
-          store.setState(
-            {lastLiveEventId: event.id},
-            false,
-            'UPDATE_EVENT_ID_FROM_LIVE_CONTENT_API',
-          )
-        }
-      },
-    })
+  const liveSubscription = getLiveSubscription(instance).subscribe({
+    next: (event) => {
+      const {syncTags} = store.getState()
+      if (event.type === 'message' && event.tags.some((tag) => syncTags.has(tag))) {
+        store.setState({lastLiveEventId: event.id}, false, 'UPDATE_EVENT_ID_FROM_LIVE_CONTENT_API')
+      }
+    },
+  })
 
   const resultSubscription = new Observable<DocumentListInternalState>((observer) =>
     store.subscribe((state) => observer.next(state)),
