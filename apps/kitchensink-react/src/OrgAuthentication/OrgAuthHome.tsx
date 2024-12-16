@@ -1,6 +1,8 @@
 import {AuthBoundary} from '@sanity/sdk-react/components'
-import {Box, Card, Container, Heading, Text} from '@sanity/ui'
+import {Card, Flex, Text} from '@sanity/ui'
 import {Link} from 'react-router'
+
+import {PageLayout} from '../components/PageLayout'
 
 export function OrgAuthHome({
   routes,
@@ -8,34 +10,27 @@ export function OrgAuthHome({
   routes: {path: string; element: JSX.Element}[]
 }): JSX.Element {
   return (
-    <Container width={1} padding={7}>
-      <Box marginBottom={6}>
-        <Heading as="h1" size={5} align="center">
-          (WIP) Org Level Authentication
-        </Heading>
-      </Box>
-      <Box marginY={5}>
-        <AuthBoundary>
-          <Card border radius={3} padding={4}>
-            <Heading as="h4" size={2}>
-              Components
-            </Heading>
-            <Box marginTop={5}>
-              <ul style={{listStyle: 'none'}}>
-                {routes.map((route) => (
-                  <li key={route.path}>
-                    <Link to={route.path}>
-                      <Box paddingY={2} display="inline-block">
-                        <Text style={{textDecoration: 'underline'}}>{route.path} &rarr;</Text>
-                      </Box>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </Box>
-          </Card>
-        </AuthBoundary>
-      </Box>
-    </Container>
+    <PageLayout
+      title="(WIP) Org Level Authentication"
+      subtitle="Explore organization-level authentication examples"
+      homePath="/org-auth"
+      homeText="Org Auth Home"
+    >
+      <AuthBoundary>
+        <Flex direction="column" gap={3}>
+          {routes.map((route) => (
+            <Link key={route.path} to={route.path} style={{textDecoration: 'none'}}>
+              <Card padding={4} radius={3} tone="default" className="hover-card">
+                <Flex align="center" gap={3}>
+                  <Text size={2} style={{color: '#f46b60'}}>
+                    {route.path} <span className="arrow">→</span>
+                  </Text>
+                </Flex>
+              </Card>
+            </Link>
+          ))}
+        </Flex>
+      </AuthBoundary>
+    </PageLayout>
   )
 }

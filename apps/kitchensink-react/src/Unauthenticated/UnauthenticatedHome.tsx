@@ -1,4 +1,4 @@
-import {Box, Card, Container, Heading, Text} from '@sanity/ui'
+import {Box, Card, Container, Flex, Heading, Stack, Text} from '@sanity/ui'
 import {Link} from 'react-router'
 
 export function UnauthenticatedHome({
@@ -7,32 +7,37 @@ export function UnauthenticatedHome({
   routes: {path: string; element: JSX.Element}[]
 }): JSX.Element {
   return (
-    <Container width={1} padding={7}>
-      <Box marginBottom={6}>
-        <Heading as="h1" size={5} align="center">
-          Unauthenticated
-        </Heading>
-      </Box>
-      <Box marginY={5}>
-        <Card border radius={3} padding={4}>
-          <Heading as="h4" size={2}>
-            Components
-          </Heading>
-          <Box marginTop={5}>
-            <ul style={{listStyle: 'none'}}>
+    <Box style={{width: '100%'}}>
+      <Container width={2} padding={7}>
+        <Card padding={5} radius={3} shadow={1}>
+          <Stack space={5}>
+            <Box>
+              <Heading as="h1" size={4} align="center">
+                Unauthenticated
+              </Heading>
+              <Box marginTop={3}>
+                <Text align="center" size={2} style={{color: '#6e7683'}}>
+                  Explore unauthenticated components and examples
+                </Text>
+              </Box>
+            </Box>
+
+            <Flex direction="column" gap={3}>
               {routes.map((route) => (
-                <li key={route.path}>
-                  <Link to={route.path}>
-                    <Box paddingY={2} display="inline-block">
-                      <Text style={{textDecoration: 'underline'}}>{route.path} &rarr;</Text>
-                    </Box>
-                  </Link>
-                </li>
+                <Link key={route.path} to={route.path} style={{textDecoration: 'none'}}>
+                  <Card padding={4} radius={3} tone="default" className="hover-card">
+                    <Flex align="center" gap={3}>
+                      <Text size={2} style={{color: '#f46b60'}}>
+                        {route.path} <span className="arrow">→</span>
+                      </Text>
+                    </Flex>
+                  </Card>
+                </Link>
               ))}
-            </ul>
-          </Box>
+            </Flex>
+          </Stack>
         </Card>
-      </Box>
-    </Container>
+      </Container>
+    </Box>
   )
 }

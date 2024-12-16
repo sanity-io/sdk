@@ -27,3 +27,23 @@
   min-height: 100vh;
   display: flex;
 }
+
+.hover-card {
+  border-radius: 4px;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.hover-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(176, 135, 247, 0.3);
+}
+
+.hover-card .arrow {
+  display: inline-block;
+  transition: transform 0.2s ease-in-out;
+}
+
+.hover-card:hover .arrow {
+  transform: translateX(4px);
+}
