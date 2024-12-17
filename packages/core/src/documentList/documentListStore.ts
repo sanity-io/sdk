@@ -1,4 +1,4 @@
-import type {SyncTag} from '@sanity/client'
+import type {SanityClient, SyncTag} from '@sanity/client'
 import {isEqual} from 'lodash-es'
 import {
   distinctUntilChanged,
@@ -13,8 +13,9 @@ import {
 import {devtools} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
+import {getClient} from '../client/getClient'
 import {getLiveSubscription} from '../client/getLiveSubscription'
-import {getClientStore} from '../client/store/clientStore'
+import {getSubscribableClient} from '../client/getSubscribableClient'
 import type {SanityInstance} from '../instance/types'
 
 const PAGE_SIZE = 50
@@ -99,10 +100,13 @@ interface DocumentListInternalState extends DocumentListOptions {
  * See {@link SanityInstance} and {@link DocumentListStore}
  */
 export function createDocumentListStore(instance: SanityInstance): DocumentListStore {
-  const clientStore = getClientStore(instance)
-  const clientStream$ = new Observable(
-    clientStore.getClientEvents({apiVersion: API_VERSION}).subscribe,
-  )
+  const client$ = new Observable<SanityClient>((observer) => {
+    observer.next(getClient({apiVersion: API_VERSION}, instance))
+    const subscription = getSubscribableClient({apiVersion: API_VERSION}, instance).subscribe(
+      observer,
+    )
+    return () => subscription.unsubscribe()
+  }).pipe(distinctUntilChanged())
 
   const initialState: DocumentListInternalState = {
     syncTags: new Set<SyncTag>(),
@@ -118,13 +122,11 @@ export function createDocumentListStore(instance: SanityInstance): DocumentListS
     }),
   )
 
-  const liveSubscription = getLiveSubscription(instance).subscribe({
-    next: (event) => {
-      const {syncTags} = store.getState()
-      if (event.type === 'message' && event.tags.some((tag) => syncTags.has(tag))) {
-        store.setState({lastLiveEventId: event.id}, false, 'UPDATE_EVENT_ID_FROM_LIVE_CONTENT_API')
-      }
-    },
+  const liveSubscription = getLiveSubscription(instance).subscribe((event) => {
+    const {syncTags} = store.getState()
+    if (event.type === 'message' && event.tags.some((tag) => syncTags.has(tag))) {
+      store.setState({lastLiveEventId: event.id}, false, 'UPDATE_EVENT_ID_FROM_LIVE_CONTENT_API')
+    }
   })
 
   const resultSubscription = new Observable<DocumentListInternalState>((observer) =>
@@ -152,7 +154,7 @@ export function createDocumentListStore(instance: SanityInstance): DocumentListS
               .join(',')})`
           : ''
 
-        return clientStream$.pipe(
+        return client$.pipe(
           switchMap((client) =>
             client.observable.fetch(
               `*${filter}${order}[0..$__limit]{_id, _type}`,

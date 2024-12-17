@@ -4,6 +4,7 @@ import {defer, NEVER, startWith, Subject} from 'rxjs'
 import {beforeEach, describe, it, type Mock, vi} from 'vitest'
 
 import {getClient} from '../client/getClient'
+import type {SanityInstance} from '../instance/types'
 import {BATCH_DEBOUNCE_TIME, createPreviewStore} from './previewStore'
 import {type PreviewStore} from './types'
 
@@ -61,14 +62,19 @@ vi.mock('../client/getSubscribableClient', async () => {
   }
 })
 
+const mockInstance = {
+  identity: {
+    id: 'test-id',
+  },
+} as SanityInstance
+
 describe('previewStore', () => {
   let previewStore!: PreviewStore
   let client!: MockClient
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    // @ts-expect-error params are not required since we're mocking
-    previewStore = createPreviewStore()
+    previewStore = createPreviewStore(mockInstance)
     // @ts-expect-error params are not required since we're mocking
     client = getClient()
   })

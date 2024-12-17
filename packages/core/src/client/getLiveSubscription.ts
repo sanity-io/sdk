@@ -1,4 +1,4 @@
-import type {SanityClient} from '@sanity/client'
+import type {LiveClient, SanityClient} from '@sanity/client'
 import {distinctUntilChanged, Observable, shareReplay, switchMap} from 'rxjs'
 
 import type {SanityInstance} from '../instance/types'
@@ -7,14 +7,16 @@ import {getSubscribableClient} from './getSubscribableClient'
 
 const API_VERSION = 'vX'
 
-const subscriptionCache = new WeakMap<SanityInstance, Observable<any>>()
+const subscriptionCache = new WeakMap<SanityInstance, ReturnType<LiveClient['events']>>()
 
 /**
  * A singleton subscription to the live content API.
  *
+ * @returns A subscribable stream of live content API events.
+ *
  * @internal
  */
-export function getLiveSubscription(instance: SanityInstance) {
+export function getLiveSubscription(instance: SanityInstance): ReturnType<LiveClient['events']> {
   // Check if we already have a cached subscription for this instance
   let cachedSubscription = subscriptionCache.get(instance)
 
