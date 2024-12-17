@@ -2,7 +2,7 @@ import {omit} from 'lodash-es'
 
 import type {DocumentHandle} from '../documentList/documentListStore'
 import {createAction} from '../resources/createAction'
-import {createStateSource, type StateSource} from '../resources/createStateSource'
+import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
 import {getPreview} from './getPreview'
 import {
   previewStore,
@@ -19,6 +19,8 @@ export interface GetPreviewSourceOptions {
   document: DocumentHandle
 }
 
+const _getPreviewSource = createStateSourceAction(() => previewStore, getPreview)
+
 /**
  * @public
  */
@@ -28,10 +30,10 @@ export const getPreviewSource = createAction(
     return function ({document}: GetPreviewSourceOptions): StateSource<ValuePending<PreviewValue>> {
       const {_id, _type: documentType} = document
       const documentId = getPublishedId(_id)
-      const previewSource = createStateSource(state, () => getPreview(this, {document}))
+      const previewSource = _getPreviewSource(this, {document})
 
       return {
-        getCurrent: () => getPreview(this, {document}),
+        ...previewSource,
         subscribe: (subscriber) => {
           const subscriptionId = randomId()
 

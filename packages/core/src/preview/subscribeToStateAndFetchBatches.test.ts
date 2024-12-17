@@ -24,8 +24,19 @@ vi.mock('../resources/createResource', async (importOriginal) => {
 
 describe('subscribeToStateAndFetchBatches', () => {
   const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+
+  const schema: Schema = SchemaConstructor.compile({
+    name: 'default',
+    types: [
+      {
+        name: 'test',
+        type: 'document',
+        fields: [{name: 'title', type: 'string'}],
+      },
+    ],
+  })
+
   let state: ResourceState<PreviewStoreState>
-  let schemaSubject: Subject<Schema>
   let fetchResults: Subject<{result: PreviewQueryResult[]; syncTags: SyncTag[]}>
   let mockFetch: Mock
 
@@ -37,8 +48,6 @@ describe('subscribeToStateAndFetchBatches', () => {
       syncTags: {},
       values: {},
     })
-
-    schemaSubject = new Subject()
     fetchResults = new Subject()
 
     mockFetch = vi.fn().mockImplementation(
@@ -53,21 +62,9 @@ describe('subscribeToStateAndFetchBatches', () => {
     )
     ;(getSubscribableClient as Mock).mockReturnValue(of({observable: {fetch: mockFetch}}))
     ;(getSchemaSource as Mock).mockImplementation(() => ({
-      getCurrent: () =>
-        SchemaConstructor.compile({
-          name: 'default',
-          types: [
-            {
-              name: 'test',
-              type: 'document',
-              fields: [{name: 'title', type: 'string'}],
-            },
-          ],
-        }),
-      subscribe: (callback: (schema: Schema) => void) => {
-        const subscription = schemaSubject.subscribe(callback)
-        return {unsubscribe: () => subscription.unsubscribe()}
-      },
+      getCurrent: () => schema,
+      subscribe: vi.fn(() => vi.fn()),
+      observable: of(schema),
     }))
   })
 

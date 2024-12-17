@@ -15,7 +15,6 @@ import {
 
 import {getSubscribableClient} from '../client/getSubscribableClient'
 import {createAction} from '../resources/createAction'
-import {createObservableFromStateSource} from '../resources/createStateSource'
 import {getSchemaSource} from '../schema/getSchemaSource'
 import {createPreviewQuery, processPreviewQuery} from './previewQuery'
 import {type PreviewQueryResult, previewStore, type PreviewStoreState} from './previewStore'
@@ -30,7 +29,7 @@ export const subscribeToStateAndFetchBatches = createAction(
       const client$ = new Observable<SanityClient>((observer) =>
         getSubscribableClient({apiVersion: 'vX'}, instance).subscribe(observer),
       )
-      const schema$ = createObservableFromStateSource(getSchemaSource(instance))
+      const schema$ = getSchemaSource(instance).observable
       const documentTypes$ = state.observable.pipe(
         map((i) => i.documentTypes),
         distinctUntilChanged(),
