@@ -9,6 +9,7 @@ interface PageLayoutProps {
   subtitle: string
   homePath: string
   homeText: string
+  hideNav?: boolean
 }
 
 export function PageLayout({
@@ -17,10 +18,11 @@ export function PageLayout({
   subtitle,
   homePath,
   homeText,
+  hideNav = false,
 }: PageLayoutProps): JSX.Element {
   return (
     <Box style={{width: '100%'}}>
-      <PageNav homePath={homePath} homeText={homeText} />
+      {!hideNav && <PageNav homePath={homePath} homeText={homeText} />}
 
       <Container width={2} padding={7}>
         <Card padding={5} radius={3} shadow={1}>

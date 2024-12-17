@@ -10,6 +10,7 @@
   },
   "prettier": "@sanity/prettier-config",
   "dependencies": {
+    "@sanity/comlink": "^2.0.2",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
     "@sanity/ui": "^2.8.19",
