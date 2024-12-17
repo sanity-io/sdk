@@ -83,7 +83,8 @@ export const Cosui: FunctionComponent = () => {
             <Flex gap={2}>
               <TextInput
                 placeholder="Enter token"
-                type="text"
+                type="password"
+                autoComplete="off"
                 value={token}
                 onChange={(e) => setToken(e.currentTarget.value)}
                 disabled={!connection}
