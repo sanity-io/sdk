@@ -16,7 +16,7 @@ import {createStore} from 'zustand/vanilla'
 import {getClientStore} from '../client/store/clientStore'
 import type {SanityInstance} from '../instance/types'
 
-const PAGE_SIZE = 50
+const PAGE_SIZE = 25
 
 const API_VERSION = 'vX'
 
@@ -171,12 +171,7 @@ export function createDocumentListStore(instance: SanityInstance): DocumentListS
                 returnQuery: false,
                 lastLiveEventId: state.lastLiveEventId,
                 tag: 'sdk.document-list',
-                // // TODO: this should use the `previewDrafts` perspective for
-                // // removing duplicates in the result set but the live content API
-                // // does not currently return the correct sync tags. CLDX has
-                // // planned to add perspective support to the live content API
-                // // in december of 2024
-                // perspective: 'previewDrafts'
+                perspective: 'previewDrafts',
               },
             ),
           ),

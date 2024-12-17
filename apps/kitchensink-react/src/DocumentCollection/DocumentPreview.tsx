@@ -19,7 +19,23 @@ export function DocumentPreview(props: DocumentPreviewProps): React.ReactNode {
 
 function DocumentPreviewResolved({document}: DocumentPreviewProps): React.ReactNode {
   const ref = useRef<HTMLElement>(null)
-  const [{title, subtitle, media}] = usePreview({document, ref})
+  const [{title, subtitle, media, status}] = usePreview({document, ref})
+
+  let statusLabel
+  if (status?.lastEditedPublishedAt && status?.lastEditedDraftAt) {
+    const published = new Date(status.lastEditedPublishedAt)
+    const draft = new Date(status.lastEditedDraftAt)
+
+    if (published.getTime() > draft.getTime()) {
+      statusLabel = 'published'
+    } else {
+      statusLabel = 'draft'
+    }
+  } else if (status?.lastEditedPublishedAt) {
+    statusLabel = 'published'
+  } else {
+    statusLabel = 'draft'
+  }
 
   return (
     <DocumentPreviewLayout
@@ -28,7 +44,7 @@ function DocumentPreviewResolved({document}: DocumentPreviewProps): React.ReactN
       subtitle={subtitle}
       docType={document._type}
       media={media}
-      status={document._id.startsWith('drafts.') ? 'draft' : 'published'}
+      status={statusLabel}
       onClick={() => alert(`Hello from ${title}`)}
     />
   )

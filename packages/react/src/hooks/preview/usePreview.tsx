@@ -1,10 +1,5 @@
-import {
-  type DocumentHandle,
-  getPreviewStore,
-  type PreviewValue,
-  type ValuePending,
-} from '@sanity/sdk'
-import {type RefObject, useCallback, useSyncExternalStore} from 'react'
+import {type DocumentHandle, getPreviewSource, type PreviewValue, resolvePreview} from '@sanity/sdk'
+import {type RefObject, useCallback, useMemo, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -20,9 +15,16 @@ export interface UsePreviewOptions {
 /**
  * @alpha
  */
-export function usePreview({document, ref}: UsePreviewOptions): [PreviewValue, boolean] {
+export function usePreview({
+  document: {_id, _type},
+  ref,
+}: UsePreviewOptions): [PreviewValue, boolean] {
   const instance = useSanityInstance()
-  const previewStore = getPreviewStore(instance)
+
+  const previewSource = useMemo(
+    () => getPreviewSource(instance, {document: {_id, _type}}),
+    [instance, _id, _type],
+  )
 
   // Create subscribe function for useSyncExternalStore
   const subscribe = useCallback(
@@ -43,9 +45,8 @@ export function usePreview({document, ref}: UsePreviewOptions): [PreviewValue, b
           distinctUntilChanged(),
           switchMap((isVisible) =>
             isVisible
-              ? new Observable<ValuePending<PreviewValue>>((obs) => {
-                  const sub = previewStore.events({document}).subscribe(obs)
-                  return () => sub.unsubscribe()
+              ? new Observable<void>((obs) => {
+                  return previewSource.subscribe(() => obs.next())
                 })
               : EMPTY,
           ),
@@ -54,15 +55,15 @@ export function usePreview({document, ref}: UsePreviewOptions): [PreviewValue, b
 
       return () => subscription.unsubscribe()
     },
-    [document, previewStore, ref],
+    [previewSource, ref],
   )
 
   // Create getSnapshot function to return current state
   const getSnapshot = useCallback(() => {
-    const previewTuple = previewStore.getPreview({document})
-    if (!previewTuple[0]) throw previewStore.resolvePreview({document})
+    const previewTuple = previewSource.getCurrent()
+    if (!previewTuple[0]) throw resolvePreview(instance, {document: {_id, _type}})
     return previewTuple as [PreviewValue, boolean]
-  }, [document, previewStore])
+  }, [_id, _type, instance, previewSource])
 
   return useSyncExternalStore(subscribe, getSnapshot)
 }

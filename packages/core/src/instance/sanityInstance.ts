@@ -1,4 +1,6 @@
 import type {AuthConfig} from '../auth/internalAuthStore'
+import {disposeResources} from '../resources/createResource'
+import type {SchemaConfig} from '../schema/schemaManager'
 import {getSdkIdentity} from './identity'
 import type {SanityInstance, SdkIdentity} from './types'
 
@@ -9,6 +11,7 @@ export interface SanityConfig {
   projectId: string
   dataset: string
   auth?: AuthConfig
+  schema?: SchemaConfig
 }
 
 /**
@@ -25,9 +28,11 @@ export function createSanityInstance({
   dataset = '',
   ...config
 }: SanityConfig): SanityInstance {
+  const identity = getSdkIdentity({projectId, dataset})
   return {
-    identity: getSdkIdentity({projectId, dataset}),
+    identity,
     config,
+    dispose: () => disposeResources(identity),
   }
 }
 

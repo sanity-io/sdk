@@ -7,8 +7,8 @@ import {LoadMore} from './LoadMore'
 
 export function DocumentListRoute(): JSX.Element {
   const {result, loadMore, isPending} = useDocuments({
-    filter: '_type == "author"',
-    sort: [{field: 'name', direction: 'asc'}],
+    filter: '_type == "book"',
+    sort: [{field: '_updatedAt', direction: 'desc'}],
   })
 
   return (
