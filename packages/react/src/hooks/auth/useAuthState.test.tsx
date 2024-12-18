@@ -1,8 +1,10 @@
 import {
   type AuthState,
+  AuthStateType,
   type AuthStore,
   createSanityInstance,
   getAuthStore,
+  type LoggedInAuthState,
   type SanityInstance,
 } from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
@@ -65,7 +67,7 @@ describe('useAuthState', () => {
 
   it('should return the current auth state', () => {
     const mockAuthStore = createMockAuthStore({
-      type: 'logged-in',
+      type: AuthStateType.LOGGED_IN,
       token: 'token-123',
       currentUser: mockUser,
     })
@@ -77,24 +79,27 @@ describe('useAuthState', () => {
         <SanityProvider sanityInstance={sanityInstance}>{children}</SanityProvider>
       ),
     })
-    const current = result.current as Extract<AuthState, {type: 'logged-in'}>
-    expect(current.type).toBe('logged-in')
+    const current = result.current as LoggedInAuthState
+    expect(current.type).toBe(AuthStateType.LOGGED_IN)
     expect(current.token).toBe('token-123')
     expect(current.currentUser).toBe(mockUser)
   })
 
   it('should handle signed out state', () => {
-    const mockAuthStore = createMockAuthStore({type: 'logged-out', isDestroyingSession: false})
+    const mockAuthStore = createMockAuthStore({
+      type: AuthStateType.LOGGED_OUT,
+      isDestroyingSession: false,
+    })
     vi.mocked(getAuthStore).mockReturnValue(mockAuthStore)
 
     const {result} = renderHook(() => useAuthState())
-    expect(result.current.type).toBe('logged-out')
+    expect(result.current.type).toBe(AuthStateType.LOGGED_OUT)
   })
 
   it('should subscribe to auth state changes', () => {
     const subscribe = vi.fn()
     const mockAuthStore = createMockAuthStore({
-      type: 'logged-in',
+      type: AuthStateType.LOGGED_IN,
       token: 'token-123',
       currentUser: null,
     })

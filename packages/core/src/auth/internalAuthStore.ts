@@ -12,15 +12,51 @@ const DEFAULT_API_VERSION = '2021-06-07'
 const REQUEST_TAG_PREFIX = 'sdk.auth'
 
 /**
- * Represents the various states the authentication store can be in.
+ * Represents the various states the authentication type can be in.
+ *
+ * @public
+ */
+export enum AuthStateType {
+  LOGGED_IN = 'logged-in',
+  LOGGING_IN = 'logging-in',
+  ERROR = 'error',
+  LOGGED_OUT = 'logged-out',
+}
+
+/**
+ * Represents the various states the authentication can be in.
  *
  * @public
  */
 export type AuthState =
-  | {type: 'logged-in'; token: string; currentUser: CurrentUser | null}
-  | {type: 'logging-in'; isExchangingToken: boolean}
-  | {type: 'error'; error: unknown}
-  | {type: 'logged-out'; isDestroyingSession: boolean}
+  | {type: AuthStateType.LOGGED_IN; token: string; currentUser: CurrentUser | null}
+  | {type: AuthStateType.LOGGING_IN; isExchangingToken: boolean}
+  | {type: AuthStateType.ERROR; error: unknown}
+  | {type: AuthStateType.LOGGED_OUT; isDestroyingSession: boolean}
+
+/**
+ * Logged-in state from the auth state.
+ * @public
+ */
+export type LoggedInAuthState = Extract<AuthState, {type: AuthStateType.LOGGED_IN}>
+
+/**
+ * Logged-out state from the auth state.
+ * @public
+ */
+export type LoggedOutAuthState = Extract<AuthState, {type: AuthStateType.LOGGED_OUT}>
+
+/**
+ * Logging-in state from the auth state.
+ * @public
+ */
+export type LoggingInAuthState = Extract<AuthState, {type: AuthStateType.LOGGING_IN}>
+
+/**
+ * Error state from the auth state.
+ * @public
+ */
+export type ErrorAuthState = Extract<AuthState, {type: AuthStateType.ERROR}>
 
 /**
  * Configuration for an authentication provider
@@ -271,11 +307,13 @@ export function createInternalAuthStore(
    * Determines the initial auth state based on provided token, callback params, or stored token.
    */
   function getInitialState(): AuthState {
-    if (providedToken) return {type: 'logged-in', token: providedToken, currentUser: null}
-    if (getAuthCode(initialLocationHref)) return {type: 'logging-in', isExchangingToken: false}
+    if (providedToken)
+      return {type: AuthStateType.LOGGED_IN, token: providedToken, currentUser: null}
+    if (getAuthCode(initialLocationHref))
+      return {type: AuthStateType.LOGGING_IN, isExchangingToken: false}
     const token = getTokenFromStorage()
-    if (token) return {type: 'logged-in', token, currentUser: null}
-    return {type: 'logged-out', isDestroyingSession: false}
+    if (token) return {type: AuthStateType.LOGGED_IN, token, currentUser: null}
+    return {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false}
   }
 
   async function handleCallback(locationHref = getDefaultLocation()) {
@@ -284,7 +322,7 @@ export function createInternalAuthStore(
 
     // Don't handle the callback if already in flight.
     const {authState} = store.getState()
-    if (authState.type === 'logging-in' && authState.isExchangingToken) return false
+    if (authState.type === AuthStateType.LOGGING_IN && authState.isExchangingToken) return false
 
     // If there is no matching `authCode` then we can't handle the callback
     const authCode = getAuthCode(locationHref)
@@ -292,7 +330,7 @@ export function createInternalAuthStore(
 
     // Otherwise, start the exchange
     store.setState(
-      {authState: {type: 'logging-in', isExchangingToken: true}},
+      {authState: {type: AuthStateType.LOGGING_IN, isExchangingToken: true}},
       undefined,
       'exchangeSessionForToken',
     )
@@ -315,13 +353,17 @@ export function createInternalAuthStore(
       })
 
       storageArea?.setItem(storageKey, JSON.stringify({token}))
-      store.setState({authState: {type: 'logged-in', token, currentUser: null}})
+      store.setState({authState: {type: AuthStateType.LOGGED_IN, token, currentUser: null}})
 
       const loc = new URL(locationHref)
       loc.hash = ''
       return loc.toString()
     } catch (error) {
-      store.setState({authState: {type: 'error', error}}, undefined, 'exchangeSessionForTokenError')
+      store.setState(
+        {authState: {type: AuthStateType.ERROR, error}},
+        undefined,
+        'exchangeSessionForTokenError',
+      )
       return false
     }
   }
@@ -415,7 +457,7 @@ export function createInternalAuthStore(
           try {
             if (token) {
               set(
-                {authState: {type: 'logged-out', isDestroyingSession: true}},
+                {authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: true}},
                 undefined,
                 'loggingOut',
               )
@@ -434,7 +476,7 @@ export function createInternalAuthStore(
             }
           } finally {
             set(
-              {authState: {type: 'logged-out', isDestroyingSession: false}},
+              {authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false}},
               undefined,
               'logoutSuccess',
             )
@@ -469,12 +511,12 @@ export function createInternalAuthStore(
         .getState()
         .setAuthState(
           token
-            ? {type: 'logged-in', token, currentUser: null}
-            : {type: 'logged-out', isDestroyingSession: false},
+            ? {type: AuthStateType.LOGGED_IN, token, currentUser: null}
+            : {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
         ),
     )
 
-  const fetchCurrentUser = (authState: Extract<AuthState, {type: 'logged-in'}>) => {
+  const fetchCurrentUser = (authState: LoggedInAuthState) => {
     const client = clientFactory({
       token: authState.token,
       projectId,
@@ -491,26 +533,26 @@ export function createInternalAuthStore(
         store.getState().setAuthState({
           ...authState,
           currentUser,
-        } as Extract<AuthState, {type: 'logged-in'}>),
+        } as LoggedInAuthState),
       )
       .catch((error) => {
         return store.getState().setAuthState({
           ...authState,
-          type: 'error',
+          type: AuthStateType.ERROR,
           error,
-        } as Extract<AuthState, {type: 'error'}>)
+        } as ErrorAuthState)
       })
   }
 
   if (
-    store.getState().authState.type === 'logged-in' &&
-    !(store.getState().authState as Extract<AuthState, {type: 'logged-in'}>).currentUser?.id
+    store.getState().authState.type === AuthStateType.LOGGED_IN &&
+    !(store.getState().authState as LoggedInAuthState).currentUser?.id
   ) {
-    fetchCurrentUser(store.getState().authState as Extract<AuthState, {type: 'logged-in'}>)
+    fetchCurrentUser(store.getState().authState as LoggedInAuthState)
   }
 
   store.subscribe((state) => {
-    if (state.authState.type === 'logged-in' && !state.authState.currentUser) {
+    if (state.authState.type === AuthStateType.LOGGED_IN && !state.authState.currentUser) {
       fetchCurrentUser(state.authState)
     }
   })

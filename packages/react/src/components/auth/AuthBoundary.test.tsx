@@ -1,4 +1,4 @@
-import {createSanityInstance} from '@sanity/sdk'
+import {AuthStateType, createSanityInstance} from '@sanity/sdk'
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {render, screen, waitFor} from '@testing-library/react'
@@ -60,7 +60,10 @@ describe('AuthBoundary', () => {
   })
 
   it('renders the Login component when authState="logged-out"', () => {
-    vi.mocked(useAuthState).mockReturnValue({type: 'logged-out', isDestroyingSession: false})
+    vi.mocked(useAuthState).mockReturnValue({
+      type: AuthStateType.LOGGED_OUT,
+      isDestroyingSession: false,
+    })
     renderWithWrappers(<AuthBoundary>Protected Content</AuthBoundary>)
 
     // The login screen should show "Choose login provider" by default
@@ -69,7 +72,10 @@ describe('AuthBoundary', () => {
   })
 
   it('renders the LoginCallback component when authState="logging-in"', () => {
-    vi.mocked(useAuthState).mockReturnValue({type: 'logging-in', isExchangingToken: false})
+    vi.mocked(useAuthState).mockReturnValue({
+      type: AuthStateType.LOGGING_IN,
+      isExchangingToken: false,
+    })
     renderWithWrappers(<AuthBoundary>Protected Content</AuthBoundary>)
 
     // The callback screen shows "Logging you in…"
@@ -78,7 +84,7 @@ describe('AuthBoundary', () => {
 
   it('renders children when authState="logged-in"', () => {
     vi.mocked(useAuthState).mockReturnValue({
-      type: 'logged-in',
+      type: AuthStateType.LOGGED_IN,
       currentUser: null,
       token: 'exampleToken',
     })
@@ -88,7 +94,10 @@ describe('AuthBoundary', () => {
   })
 
   it('shows the LoginError (via ErrorBoundary) when authState="error"', async () => {
-    vi.mocked(useAuthState).mockReturnValue({type: 'error', error: new Error('test error')})
+    vi.mocked(useAuthState).mockReturnValue({
+      type: AuthStateType.ERROR,
+      error: new Error('test error'),
+    })
     renderWithWrappers(<AuthBoundary>Protected Content</AuthBoundary>)
 
     // The AuthBoundary should throw an AuthError internally

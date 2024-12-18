@@ -2,7 +2,7 @@ import type {CurrentUser} from '@sanity/types'
 import {beforeEach, describe, expect, type Mock, test, vi} from 'vitest'
 
 import type {SanityInstance} from '../instance/types'
-import {getAuthStore} from './authStore'
+import {AuthStateType, getAuthStore} from './authStore'
 import {getInternalAuthStore} from './getInternalAuthStore'
 
 // Mock the getInternalAuthStore module
@@ -20,7 +20,7 @@ describe('authStore', () => {
 
   const mockLoggedInState = {
     authState: {
-      type: 'logged-in' as const,
+      type: AuthStateType.LOGGED_IN as const,
       token: 'mock-token',
       currentUser: mockCurrentUser,
     },
@@ -32,7 +32,7 @@ describe('authStore', () => {
 
   const mockLoggedOutState = {
     authState: {
-      type: 'logged-out' as const,
+      type: AuthStateType.LOGGED_OUT as const,
       isDestroyingSession: false,
     },
     handleCallback: vi.fn(),
@@ -173,10 +173,18 @@ describe('authStore', () => {
     // Simulate a state change to 'logged-in' with a new token
     mockInternalStore.subscribe.mock.calls[0][0](
       {
-        authState: {type: 'logged-in', token: 'new-token', currentUser: mockCurrentUser},
+        authState: {
+          type: AuthStateType.LOGGED_IN,
+          token: 'new-token',
+          currentUser: mockCurrentUser,
+        },
       },
       {
-        authState: {type: 'logged-in', token: 'mock-token', currentUser: mockCurrentUser},
+        authState: {
+          type: AuthStateType.LOGGED_IN,
+          token: 'mock-token',
+          currentUser: mockCurrentUser,
+        },
       },
     )
 
@@ -194,13 +202,17 @@ describe('authStore', () => {
     mockInternalStore.subscribe.mock.calls[0][0](
       {
         authState: {
-          type: 'logged-in',
+          type: AuthStateType.LOGGED_IN,
           token: 'mock-token',
           currentUser: {...mockCurrentUser, name: 'New Name'},
         },
       },
       {
-        authState: {type: 'logged-in', token: 'mock-token', currentUser: mockCurrentUser},
+        authState: {
+          type: AuthStateType.LOGGED_IN,
+          token: 'mock-token',
+          currentUser: mockCurrentUser,
+        },
       },
     )
 
@@ -220,10 +232,14 @@ describe('authStore', () => {
     // Simulate a state change to 'logged-out'
     mockInternalStore.subscribe.mock.calls[0][0](
       {
-        authState: {type: 'logged-out', isDestroyingSession: false},
+        authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
       },
       {
-        authState: {type: 'logged-in', token: 'mock-token', currentUser: mockCurrentUser},
+        authState: {
+          type: AuthStateType.LOGGED_IN,
+          token: 'mock-token',
+          currentUser: mockCurrentUser,
+        },
       },
     )
 
@@ -240,10 +256,14 @@ describe('authStore', () => {
     // Simulate a state change to 'logged-out'
     mockInternalStore.subscribe.mock.calls[0][0](
       {
-        authState: {type: 'logged-out', isDestroyingSession: false},
+        authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
       },
       {
-        authState: {type: 'logged-in', token: 'mock-token', currentUser: mockCurrentUser},
+        authState: {
+          type: AuthStateType.LOGGED_IN,
+          token: 'mock-token',
+          currentUser: mockCurrentUser,
+        },
       },
     )
 
@@ -260,10 +280,14 @@ describe('authStore', () => {
     // Simulate a state change from 'logged-out' to 'logged-in'
     mockInternalStore.subscribe.mock.calls[0][0](
       {
-        authState: {type: 'logged-in', token: 'new-token', currentUser: mockCurrentUser},
+        authState: {
+          type: AuthStateType.LOGGED_IN,
+          token: 'new-token',
+          currentUser: mockCurrentUser,
+        },
       },
       {
-        authState: {type: 'logged-out', isDestroyingSession: false},
+        authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
       },
     )
 
@@ -281,13 +305,13 @@ describe('authStore', () => {
     mockInternalStore.subscribe.mock.calls[0][0](
       {
         authState: {
-          type: 'logged-in',
+          type: AuthStateType.LOGGED_IN,
           token: 'new-token',
           currentUser: {...mockCurrentUser, name: 'Updated User'},
         },
       },
       {
-        authState: {type: 'logged-out', isDestroyingSession: false},
+        authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
       },
     )
 

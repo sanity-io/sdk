@@ -1,3 +1,4 @@
+import {AuthStateType} from '@sanity/sdk'
 import {useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
@@ -85,13 +86,13 @@ function AuthSwitch({
   const authState = useAuthState()
 
   switch (authState.type) {
-    case 'error': {
+    case AuthStateType.ERROR: {
       throw new AuthError(authState.error)
     }
-    case 'logging-in': {
+    case AuthStateType.LOGGING_IN: {
       return <CallbackComponent {...props} />
     }
-    case 'logged-in': {
+    case AuthStateType.LOGGED_IN: {
       return children
     }
     default: {

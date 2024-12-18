@@ -1,4 +1,4 @@
-import {createSanityInstance} from '@sanity/sdk'
+import {AuthStateType, createSanityInstance} from '@sanity/sdk'
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {render, screen} from '@testing-library/react'
@@ -62,7 +62,7 @@ describe('LoginLinks', () => {
 
   it('renders auth provider links correctly when not authenticated', () => {
     vi.mocked(useAuthState).mockReturnValue({
-      type: 'logged-out',
+      type: AuthStateType.LOGGED_OUT,
       isDestroyingSession: false,
     })
     renderWithWrappers(<LoginLinks />)
@@ -79,7 +79,7 @@ describe('LoginLinks', () => {
 
   it('shows loading state while logging in', () => {
     vi.mocked(useAuthState).mockReturnValue({
-      type: 'logging-in',
+      type: AuthStateType.LOGGING_IN,
       isExchangingToken: false,
     })
     renderWithWrappers(<LoginLinks />)
@@ -89,7 +89,7 @@ describe('LoginLinks', () => {
 
   it('shows success message when logged in', () => {
     vi.mocked(useAuthState).mockReturnValue({
-      type: 'logged-in',
+      type: AuthStateType.LOGGED_IN,
       token: 'test-token',
       currentUser: null,
     })
