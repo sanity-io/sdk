@@ -18,6 +18,7 @@ import {useAuthState} from './useAuthState'
 vi.mock('@sanity/sdk', async (importOriginal) => {
   const original = await importOriginal<typeof import('@sanity/sdk')>()
   return {
+    ...original,
     getAuthStore: vi.fn(),
     createSanityInstance: original.createSanityInstance,
   }
