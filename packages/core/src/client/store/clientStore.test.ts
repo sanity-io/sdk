@@ -2,6 +2,7 @@ import {describe, expect, it, vi} from 'vitest'
 
 import {config} from '../../../test/fixtures'
 import {getInternalAuthStore} from '../../auth/getInternalAuthStore'
+import {AuthStateType} from '../../auth/internalAuthStore'
 import {createSanityInstance} from '../../instance/sanityInstance'
 import {getClientStore} from './clientStore'
 
@@ -16,7 +17,7 @@ describe.skip('clientStore', () => {
     vi.mocked(getInternalAuthStore).mockImplementation(() => ({
       setState: vi.fn(),
       getState: () => ({
-        authState: {type: 'logged-out', isDestroyingSession: false},
+        authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
         providers: undefined,
         setAuthState: vi.fn(),
         setProviders: vi.fn(),
@@ -26,7 +27,7 @@ describe.skip('clientStore', () => {
         dispose: vi.fn(),
       }),
       getInitialState: () => ({
-        authState: {type: 'logged-out', isDestroyingSession: false},
+        authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
         providers: undefined,
         setAuthState: vi.fn(),
         setProviders: vi.fn(),
@@ -79,7 +80,7 @@ describe.skip('clientStore', () => {
     vi.mocked(getInternalAuthStore).mockImplementation(() => ({
       setState: vi.fn(),
       getState: () => ({
-        authState: {type: 'logged-in', token: 'test-token', currentUser: null},
+        authState: {type: AuthStateType.LOGGED_IN, token: 'test-token', currentUser: null},
         providers: undefined,
         setAuthState: vi.fn(),
         setProviders: vi.fn(),
@@ -89,7 +90,7 @@ describe.skip('clientStore', () => {
         dispose: vi.fn(),
       }),
       getInitialState: () => ({
-        authState: {type: 'logged-in', token: 'test-token', currentUser: null},
+        authState: {type: AuthStateType.LOGGED_IN, token: 'test-token', currentUser: null},
         providers: undefined,
         setAuthState: vi.fn(),
         setProviders: vi.fn(),
@@ -100,7 +101,7 @@ describe.skip('clientStore', () => {
       }),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       subscribe: (observer: any) => {
-        observer.next({type: 'logged-in', token: 'test-token', currentUser: null})
+        observer.next({type: AuthStateType.LOGGED_IN, token: 'test-token', currentUser: null})
         return () => {}
       },
     }))
@@ -120,7 +121,7 @@ describe.skip('clientStore', () => {
     vi.mocked(getInternalAuthStore).mockImplementation(() => ({
       setState: vi.fn(),
       getState: () => ({
-        authState: {type: 'logged-in', token: 'test-token', currentUser: null},
+        authState: {type: AuthStateType.LOGGED_IN, token: 'test-token', currentUser: null},
         providers: undefined,
         setAuthState: vi.fn(),
         setProviders: vi.fn(),
@@ -130,7 +131,7 @@ describe.skip('clientStore', () => {
         dispose: vi.fn(),
       }),
       getInitialState: () => ({
-        authState: {type: 'logged-in', token: 'test-token', currentUser: null},
+        authState: {type: AuthStateType.LOGGED_IN, token: 'test-token', currentUser: null},
         providers: undefined,
         setAuthState: vi.fn(),
         setProviders: vi.fn(),
@@ -141,7 +142,7 @@ describe.skip('clientStore', () => {
       }),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       subscribe: (observer: any) => {
-        observer.next({type: 'logged-in', token: 'test-token', currentUser: null})
+        observer.next({type: AuthStateType.LOGGED_IN, token: 'test-token', currentUser: null})
         return unsubscribeSpy
       },
     }))

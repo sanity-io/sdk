@@ -51,7 +51,16 @@ export interface CurrentUserSlice {
   ) => () => void
 }
 
-export type {AuthConfig, AuthProvider, AuthState} from './internalAuthStore'
+export type {
+  AuthConfig,
+  AuthProvider,
+  AuthState,
+  ErrorAuthState,
+  LoggedInAuthState,
+  LoggedOutAuthState,
+  LoggingInAuthState,
+} from './internalAuthStore'
+export {AuthStateType} from './internalAuthStore'
 
 /**
  * Retrieves or creates an `AuthStore` for the given `SanityInstance`.

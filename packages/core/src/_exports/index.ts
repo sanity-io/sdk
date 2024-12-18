@@ -33,8 +33,13 @@ export {
   type AuthProvider,
   type AuthState,
   type AuthStateSlice,
+  AuthStateType,
   type AuthStore,
+  type ErrorAuthState,
   getAuthStore,
+  type LoggedInAuthState,
+  type LoggedOutAuthState,
+  type LoggingInAuthState,
   type AuthTokenSlice as PublicTokenSlice,
 } from '../auth/authStore'
 export {type SchemaConfig} from '../schema/schemaManager'

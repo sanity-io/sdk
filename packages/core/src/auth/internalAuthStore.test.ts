@@ -3,7 +3,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance} from '../instance/sanityInstance'
 import {getInternalAuthStore} from './getInternalAuthStore'
-import {createInternalAuthStore} from './internalAuthStore'
+import {AuthStateType, createInternalAuthStore} from './internalAuthStore'
 
 // Define mockClient before vi.mock
 const mockClient = {
@@ -68,7 +68,10 @@ afterEach(() => {
 describe('createInternalAuthStore', () => {
   it('initializes with logged-out state when no token is present', () => {
     const store = createInternalAuthStore(instance, {storageArea: mockStorage})
-    expect(store.getState().authState).toEqual({type: 'logged-out', isDestroyingSession: false})
+    expect(store.getState().authState).toEqual({
+      type: AuthStateType.LOGGED_OUT,
+      isDestroyingSession: false,
+    })
   })
 
   it('initializes with logged-in state when token is provided', () => {
@@ -77,7 +80,7 @@ describe('createInternalAuthStore', () => {
       storageArea: mockStorage,
     })
     expect(store.getState().authState).toEqual({
-      type: 'logged-in',
+      type: AuthStateType.LOGGED_IN,
       token: 'static-token',
       currentUser: null,
     })
@@ -90,7 +93,7 @@ describe('createInternalAuthStore', () => {
       token: 'static-token',
     })
     expect(store.getState().authState).toEqual({
-      type: 'logged-in',
+      type: AuthStateType.LOGGED_IN,
       token: 'static-token',
       currentUser: null,
     })
@@ -116,7 +119,7 @@ describe('createInternalAuthStore', () => {
       JSON.stringify({token: 'new-token'}),
     )
     expect(store.getState().authState).toEqual({
-      type: 'logged-in',
+      type: AuthStateType.LOGGED_IN,
       token: 'new-token',
       currentUser: {},
     })
@@ -152,7 +155,7 @@ describe('createInternalAuthStore', () => {
       '__sanity_auth_token_test-project_test-dataset',
     )
     expect(store.getState().authState).toEqual({
-      type: 'logged-out',
+      type: AuthStateType.LOGGED_OUT,
       isDestroyingSession: false,
     })
   })
@@ -181,7 +184,7 @@ describe('createInternalAuthStore', () => {
     })
 
     expect(store.getState().authState).toEqual({
-      type: 'logged-in',
+      type: AuthStateType.LOGGED_IN,
       token: 'new-token',
       currentUser: mockUser,
     })
@@ -201,7 +204,7 @@ describe('createInternalAuthStore', () => {
 
     expect(result).toBe(false)
     expect(store.getState().authState).toEqual({
-      type: 'error',
+      type: AuthStateType.ERROR,
       error: new Error('Token exchange failed'),
     })
   })
@@ -222,7 +225,7 @@ describe('createInternalAuthStore', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(store.getState().authState).toEqual({
-      type: 'error',
+      type: AuthStateType.ERROR,
       token: 'new-token',
       currentUser: null,
       error: new Error('User fetch failed'),
@@ -299,7 +302,7 @@ describe('createInternalAuthStore', () => {
     handler(storageEvent)
 
     expect(store.getState().authState).toEqual({
-      type: 'logged-in',
+      type: AuthStateType.LOGGED_IN,
       token: 'new-token',
       currentUser: null,
     })
