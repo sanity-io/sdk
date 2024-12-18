@@ -1,6 +1,7 @@
 import type {CurrentUser} from '@sanity/types'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {createSanityInstance} from '../instance/sanityInstance'
 import {getInternalAuthStore} from './getInternalAuthStore'
 import {createInternalAuthStore} from './internalAuthStore'
 
@@ -14,14 +15,10 @@ vi.mock('@sanity/client', () => ({
   createClient: () => mockClient,
 }))
 
-const instance = {
-  identity: {
-    id: '123abcStore',
-    projectId: 'test-project',
-    dataset: 'test-dataset',
-  },
-  config: {},
-} as const
+const instance = createSanityInstance({
+  projectId: 'test-project',
+  dataset: 'test-dataset',
+})
 
 const mockStorage = {
   getItem: vi.fn(),

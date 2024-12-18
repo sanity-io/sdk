@@ -19,6 +19,8 @@ export interface SanityInstance {
   readonly identity: SdkIdentity
 
   config: Omit<SanityConfig, 'projectId' | 'dataset'>
+
+  dispose: () => void
 }
 
 /** @public */

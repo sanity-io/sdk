@@ -250,7 +250,7 @@ describe('documentListStore', () => {
       filter: '_type == "author"',
       isPending: false,
       result,
-      limit: 50,
+      limit: 25,
       syncTags: new Set(),
     })
 
@@ -263,7 +263,7 @@ describe('documentListStore', () => {
       sort: [{direction: 'asc', field: 'name'}],
       isPending: false,
       result,
-      limit: 50,
+      limit: 25,
       syncTags: new Set(),
     })
 
@@ -276,7 +276,7 @@ describe('documentListStore', () => {
       sort: [{direction: 'asc', field: 'name'}],
       isPending: false,
       result,
-      limit: 50,
+      limit: 25,
       syncTags: new Set(),
     })
 
@@ -289,7 +289,7 @@ describe('documentListStore', () => {
       sort: [{direction: 'desc', field: 'name'}],
       isPending: false,
       result,
-      limit: 50,
+      limit: 25,
       syncTags: new Set(),
     })
 
@@ -342,40 +342,44 @@ describe('documentListStore', () => {
     expect(client.observable.fetch.mock.calls).toEqual([
       [
         '*[_type == "author"][0..$__limit]{_id, _type}',
-        {__limit: 50},
+        {__limit: 25},
         {
           filterResponse: false,
           lastLiveEventId: undefined,
+          perspective: 'previewDrafts',
           returnQuery: false,
           tag: 'sdk.document-list',
         },
       ],
       [
         '*[_type == "author"]| order(name asc)[0..$__limit]{_id, _type}',
-        {__limit: 50},
+        {__limit: 25},
         {
           filterResponse: false,
           lastLiveEventId: undefined,
+          perspective: 'previewDrafts',
           returnQuery: false,
           tag: 'sdk.document-list',
         },
       ],
       [
         '*[_type == "book"]| order(name asc)[0..$__limit]{_id, _type}',
-        {__limit: 50},
+        {__limit: 25},
         {
           filterResponse: false,
           lastLiveEventId: undefined,
+          perspective: 'previewDrafts',
           returnQuery: false,
           tag: 'sdk.document-list',
         },
       ],
       [
         '*[_type == "book"]| order(name desc)[0..$__limit]{_id, _type}',
-        {__limit: 50},
+        {__limit: 25},
         {
           filterResponse: false,
           lastLiveEventId: undefined,
+          perspective: 'previewDrafts',
           returnQuery: false,
           tag: 'sdk.document-list',
         },
@@ -428,20 +432,22 @@ describe('documentListStore', () => {
     expect(client.observable.fetch.mock.calls).toEqual([
       [
         '*[_type == "author"][0..$__limit]{_id, _type}',
-        {__limit: 50},
+        {__limit: 25},
         {
           filterResponse: false,
           lastLiveEventId: undefined,
+          perspective: 'previewDrafts',
           returnQuery: false,
           tag: 'sdk.document-list',
         },
       ],
       [
         '*[_type == "author"][0..$__limit]{_id, _type}',
-        {__limit: 100},
+        {__limit: 50},
         {
           filterResponse: false,
           lastLiveEventId: undefined,
+          perspective: 'previewDrafts',
           returnQuery: false,
           tag: 'sdk.document-list',
         },
@@ -572,10 +578,11 @@ describe('documentListStore', () => {
     expect(client.observable.fetch).toHaveBeenCalledTimes(1)
     expect(client.observable.fetch.mock.calls[0]).toEqual([
       '*[0..$__limit]{_id, _type}',
-      {__limit: 50},
+      {__limit: 25},
       {
         filterResponse: false,
         lastLiveEventId: undefined,
+        perspective: 'previewDrafts',
         returnQuery: false,
         tag: 'sdk.document-list',
       },

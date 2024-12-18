@@ -1,9 +1,4 @@
-import {
-  type DocumentHandle,
-  getPreviewStore,
-  type PreviewValue,
-  type SanityInstance,
-} from '@sanity/sdk'
+import {type DocumentHandle, getPreviewSource, type PreviewValue, resolvePreview} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
 import {Suspense, useRef} from 'react'
 import type {Mock} from 'vitest'
@@ -30,16 +25,12 @@ beforeAll(() => {
 
 // Mock the preview store
 vi.mock('@sanity/sdk', () => {
-  const eventsMock = vi.fn()
-  const getPreviewMock = vi.fn()
-  const resolvePreviewMock = vi.fn()
+  const getCurrent = vi.fn()
+  const subscribe = vi.fn()
 
   return {
-    getPreviewStore: vi.fn().mockReturnValue({
-      events: eventsMock,
-      getPreview: getPreviewMock,
-      resolvePreview: resolvePreviewMock,
-    }),
+    resolvePreview: vi.fn(),
+    getPreviewSource: vi.fn().mockReturnValue({getCurrent, subscribe}),
   }
 })
 
@@ -66,37 +57,26 @@ function TestComponent({document}: {document: DocumentHandle}) {
 }
 
 describe('usePreview', () => {
-  let eventsMock: Mock
-  let getPreviewMock: Mock
-  let resolvePreviewMock: Mock
-  let observeMock: Mock
-  let disconnectMock: Mock
+  let getCurrent: Mock
+  let subscribe: Mock
 
   beforeEach(() => {
-    eventsMock = getPreviewStore({} as SanityInstance).events as Mock
-    getPreviewMock = getPreviewStore({} as SanityInstance).getPreview as Mock
-    resolvePreviewMock = getPreviewStore({} as SanityInstance).resolvePreview as Mock
-    observeMock = vi.fn()
-    disconnectMock = vi.fn()
+    // @ts-expect-error mock does not need param
+    getCurrent = getPreviewSource().getCurrent as Mock
+    // @ts-expect-error mock does not need param
+    subscribe = getPreviewSource().subscribe as Mock
 
     // Reset all mocks between tests
-    eventsMock.mockReset()
-    getPreviewMock.mockReset()
-    resolvePreviewMock.mockReset()
+    getCurrent.mockReset()
+    subscribe.mockReset()
     mockIntersectionObserver.mockReset()
-    observeMock.mockReset()
-    disconnectMock.mockReset()
   })
 
   test('it only subscribes when element is visible', async () => {
     // Setup initial state
-    getPreviewMock.mockReturnValue([{title: 'Initial Title', subtitle: 'Initial Subtitle'}, false])
+    getCurrent.mockReturnValue([{title: 'Initial Title', subtitle: 'Initial Subtitle'}, false])
     const eventsUnsubscribe = vi.fn()
-    eventsMock.mockImplementation(() => ({
-      subscribe: (_unused: {next: () => void}) => {
-        return {unsubscribe: eventsUnsubscribe}
-      },
-    }))
+    subscribe.mockImplementation(() => eventsUnsubscribe)
 
     render(
       <Suspense fallback={<div>Loading...</div>}>
@@ -106,6 +86,7 @@ describe('usePreview', () => {
 
     // Initially, element is not intersecting
     expect(screen.getByText('Initial Title')).toBeInTheDocument()
+    expect(subscribe).not.toHaveBeenCalled()
 
     // Simulate element becoming visible
     await act(async () => {
@@ -113,8 +94,7 @@ describe('usePreview', () => {
     })
 
     // After element becomes visible, events subscription should be active
-    expect(eventsMock).toHaveBeenCalledWith({document: mockDocument})
-
+    expect(subscribe).toHaveBeenCalled()
     expect(eventsUnsubscribe).not.toHaveBeenCalled()
 
     // Simulate element becoming hidden
@@ -129,21 +109,19 @@ describe('usePreview', () => {
 
   test('it suspends and resolves data when element becomes visible', async () => {
     // Initial setup with pending state
-    getPreviewMock.mockReturnValueOnce([null, true])
+    getCurrent.mockReturnValueOnce([null, true])
     const resolvePromise = Promise.resolve<PreviewValue>({
       title: 'Resolved Title',
       subtitle: 'Resolved Subtitle',
       media: null,
     })
-    resolvePreviewMock.mockReturnValueOnce(resolvePromise)
+    ;(resolvePreview as Mock).mockReturnValueOnce(resolvePromise)
 
-    let observer: {next: () => void}
-    eventsMock.mockImplementation(() => ({
-      subscribe: ({next}: {next: () => void}) => {
-        observer = {next}
-        return {unsubscribe: vi.fn()}
-      },
-    }))
+    let subscriber: () => void
+    subscribe.mockImplementation((sub: () => void) => {
+      subscriber = sub
+      return vi.fn()
+    })
 
     render(
       <Suspense fallback={<div>Loading...</div>}>
@@ -157,11 +135,8 @@ describe('usePreview', () => {
     await act(async () => {
       intersectionObserverCallback([{isIntersecting: true} as IntersectionObserverEntry])
       await resolvePromise
-      getPreviewMock.mockReturnValue([
-        {title: 'Resolved Title', subtitle: 'Resolved Subtitle'},
-        false,
-      ])
-      if (observer?.next) observer.next()
+      getCurrent.mockReturnValue([{title: 'Resolved Title', subtitle: 'Resolved Subtitle'}, false])
+      subscriber?.()
     })
 
     expect(screen.getByText('Resolved Title')).toBeInTheDocument()
@@ -174,13 +149,8 @@ describe('usePreview', () => {
     // @ts-expect-error - Intentionally removing IntersectionObserver
     delete window.IntersectionObserver
 
-    getPreviewMock.mockReturnValue([
-      {title: 'Fallback Title', subtitle: 'Fallback Subtitle'},
-      false,
-    ])
-    eventsMock.mockImplementation(() => ({
-      subscribe: () => ({unsubscribe: vi.fn()}),
-    }))
+    getCurrent.mockReturnValue([{title: 'Fallback Title', subtitle: 'Fallback Subtitle'}, false])
+    subscribe.mockImplementation(() => vi.fn())
 
     render(
       <Suspense fallback={<div>Loading...</div>}>

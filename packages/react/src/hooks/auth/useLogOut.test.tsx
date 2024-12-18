@@ -1,4 +1,4 @@
-import {type AuthStore, getAuthStore, type SanityInstance} from '@sanity/sdk'
+import {type AuthStore, createSanityInstance, getAuthStore} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
@@ -6,9 +6,14 @@ import {useSanityInstance} from '../context/useSanityInstance'
 import {useLogOut} from './useLogOut'
 
 // Mock dependencies
-vi.mock('@sanity/sdk', () => ({
-  getAuthStore: vi.fn(),
-}))
+vi.mock('@sanity/sdk', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@sanity/sdk')>()
+
+  return {
+    getAuthStore: vi.fn(),
+    createSanityInstance: original.createSanityInstance,
+  }
+})
 
 vi.mock('../context/useSanityInstance', () => ({
   useSanityInstance: vi.fn(),
@@ -17,14 +22,10 @@ vi.mock('../context/useSanityInstance', () => ({
 describe('useLogOut', () => {
   it('should return logout function from auth store', () => {
     // Setup mocks
-    const mockInstance: SanityInstance = {
-      identity: {
-        id: 'abc123',
-        projectId: 'test-project-id',
-        dataset: 'test-dataset',
-      },
-      config: {},
-    }
+    const instance = createSanityInstance({
+      projectId: 'test-project-id',
+      dataset: 'test-dataset',
+    })
 
     const mockLogout = vi.fn()
     const mockAuthStore: AuthStore = {
@@ -49,7 +50,7 @@ describe('useLogOut', () => {
       getLoginUrls: vi.fn(),
     }
 
-    vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
+    vi.mocked(useSanityInstance).mockReturnValue(instance)
     vi.mocked(getAuthStore).mockReturnValue(mockAuthStore)
 
     // Test the hook
@@ -58,7 +59,7 @@ describe('useLogOut', () => {
     // Verify the returned function is the logout function
     expect(result.current).toBe(mockLogout)
     expect(useSanityInstance).toHaveBeenCalled()
-    expect(getAuthStore).toHaveBeenCalledWith(mockInstance)
+    expect(getAuthStore).toHaveBeenCalledWith(instance)
 
     // Verify the logout function can be called
     result.current()

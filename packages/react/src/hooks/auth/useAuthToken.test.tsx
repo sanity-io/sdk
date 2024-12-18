@@ -1,4 +1,4 @@
-import {type AuthStore, getAuthStore, type SanityInstance} from '@sanity/sdk'
+import {type AuthStore, createSanityInstance, getAuthStore} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
@@ -6,23 +6,23 @@ import {useSanityInstance} from '../context/useSanityInstance'
 import {useAuthToken} from './useAuthToken'
 
 // Mock dependencies
-vi.mock('@sanity/sdk', () => ({
-  getAuthStore: vi.fn(),
-}))
+vi.mock('@sanity/sdk', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@sanity/sdk')>()
+
+  return {
+    getAuthStore: vi.fn(),
+    createSanityInstance: original.createSanityInstance,
+  }
+})
 
 vi.mock('../context/useSanityInstance', () => ({
   useSanityInstance: vi.fn(),
 }))
 
 describe('useAuthToken', () => {
-  // Helper function to create mock instance
-  const createMockInstance = (): SanityInstance => ({
-    identity: {
-      id: 'abc123',
-      projectId: 'test-project-id',
-      dataset: 'test-dataset',
-    },
-    config: {},
+  const instance = createSanityInstance({
+    projectId: 'test-project-id',
+    dataset: 'test-dataset',
   })
 
   // Helper function to create mock auth store
@@ -64,31 +64,29 @@ describe('useAuthToken', () => {
   })
 
   it('should return null when no token is present', () => {
-    const mockInstance = createMockInstance()
     const mockAuthStore = createMockAuthStore(null)
 
-    vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
+    vi.mocked(useSanityInstance).mockReturnValue(instance)
     vi.mocked(getAuthStore).mockReturnValue(mockAuthStore)
 
     const {result} = renderHook(() => useAuthToken())
 
     expect(result.current).toBeNull()
     expect(useSanityInstance).toHaveBeenCalled()
-    expect(getAuthStore).toHaveBeenCalledWith(mockInstance)
+    expect(getAuthStore).toHaveBeenCalledWith(instance)
   })
 
   it('should return token when authenticated', () => {
-    const mockInstance = createMockInstance()
     const mockToken = 'test-auth-token'
     const mockAuthStore = createMockAuthStore(mockToken)
 
-    vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
+    vi.mocked(useSanityInstance).mockReturnValue(instance)
     vi.mocked(getAuthStore).mockReturnValue(mockAuthStore)
 
     const {result} = renderHook(() => useAuthToken())
 
     expect(result.current).toBe(mockToken)
     expect(useSanityInstance).toHaveBeenCalled()
-    expect(getAuthStore).toHaveBeenCalledWith(mockInstance)
+    expect(getAuthStore).toHaveBeenCalledWith(instance)
   })
 })

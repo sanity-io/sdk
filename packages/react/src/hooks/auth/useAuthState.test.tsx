@@ -13,7 +13,13 @@ import * as context from '../context/useSanityInstance'
 import {useAuthState} from './useAuthState'
 
 // Mock dependencies
-vi.mock('@sanity/sdk')
+vi.mock('@sanity/sdk', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@sanity/sdk')>()
+  return {
+    getAuthStore: vi.fn(),
+    createSanityInstance: original.createSanityInstance,
+  }
+})
 vi.mock('../context/useSanityInstance')
 
 const createMockAuthStore = (authState: AuthState): AuthStore => ({
@@ -47,18 +53,14 @@ const mockUser = {
 }
 
 describe('useAuthState', () => {
-  const mockInstance: SanityInstance = {
-    identity: {
-      id: 'abc123store',
-      projectId: 'project-123',
-      dataset: 'dataset-123',
-    },
-    config: {},
-  }
+  const instance: SanityInstance = createSanityInstance({
+    projectId: 'project-123',
+    dataset: 'dataset-123',
+  })
 
   // Setup mock for useSanityInstance
   beforeEach(() => {
-    vi.spyOn(context, 'useSanityInstance').mockReturnValue(mockInstance)
+    vi.spyOn(context, 'useSanityInstance').mockReturnValue(instance)
   })
 
   it('should return the current auth state', () => {

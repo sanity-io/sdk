@@ -50,12 +50,18 @@ importers:
       '@sanity/comlink':
         specifier: ^2.0.2
         version: 2.0.2
+      '@sanity/schema':
+        specifier: ^3.67.1
+        version: 3.67.1
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../../packages/core
       '@sanity/sdk-react':
         specifier: workspace:*
         version: link:../../packages/react
+      '@sanity/types':
+        specifier: ^3.67.1
+        version: 3.67.1
       '@sanity/ui':
         specifier: ^2.8.19
         version: 2.10.9(@emotion/is-prop-valid@1.2.2)(react-dom@18.3.1(react@18.3.1))(react-is@18.3.1)(react@18.3.1)(styled-components@6.1.13(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
@@ -210,6 +216,12 @@ importers:
       '@sanity/client':
         specifier: ^6.22.3
         version: 6.24.1
+      '@sanity/schema':
+        specifier: ^3.67.1
+        version: 3.67.1
+      '@sanity/types':
+        specifier: ^3.67.1
+        version: 3.67.1
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -232,9 +244,6 @@ importers:
       '@sanity/prettier-config':
         specifier: ^1.0.3
         version: 1.0.3(prettier@3.4.2)
-      '@sanity/types':
-        specifier: ^3.67.1
-        version: 3.67.1
       '@vitest/coverage-v8':
         specifier: 2.1.8
         version: 2.1.8(vitest@2.1.8(@types/node@22.10.1)(jsdom@25.0.1)(terser@5.36.0))
@@ -274,9 +283,15 @@ importers:
       '@sanity/ui':
         specifier: ^2.8.19
         version: 2.10.9(@emotion/is-prop-valid@1.2.2)(react-dom@18.3.1(react@18.3.1))(react-is@18.3.1)(react@18.3.1)(styled-components@6.1.13(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
+      '@types/lodash-es':
+        specifier: ^4.17.12
+        version: 4.17.12
       inter-ui:
         specifier: ^4.1.0
         version: 4.1.0
+      lodash-es:
+        specifier: ^4.17.21
+        version: 4.17.21
       react-error-boundary:
         specifier: ^4.1.2
         version: 4.1.2(react@18.3.1)
@@ -1263,6 +1278,9 @@ packages:
   '@sanity/eventsource@5.0.2':
     resolution: {integrity: sha512-/B9PMkUvAlUrpRq0y+NzXgRv5lYCLxZNsBJD2WXVnqZYOfByL9oQBV7KiTaARuObp5hcQYuPfOAVjgXe3hrixA==}
 
+  '@sanity/generate-help-url@3.0.0':
+    resolution: {integrity: sha512-wtMYcV5GIDIhVyF/jjmdwq1GdlK07dRL40XMns73VbrFI7FteRltxv48bhYVZPcLkRXb0SHjpDS/icj9/yzbVA==}
+
   '@sanity/icons@3.5.2':
     resolution: {integrity: sha512-ZPSBevYnmBvtjWvvM/Akpey+kreAvGhSUJYoqf4bJUwKvC1q/80s2o2EWL+xtZe1K3BJJI8HyBeL4WHQA3EMrA==}
     engines: {node: '>=14.0.0'}
@@ -1291,6 +1309,9 @@ packages:
     resolution: {integrity: sha512-daeoWaW67I2t3yIV1s3PI2o8+A7jZnucFQzaIphpFDhHYM/mqjNvEROka300TcZ1Csm4VyPBSvx1IQQ/FkqA5Q==}
     peerDependencies:
       prettier: ^3.2.5
+
+  '@sanity/schema@3.67.1':
+    resolution: {integrity: sha512-yjlxsfClQgi7941/WeqRV8q2FZYnFsj/TDmrP0IAgsg4cs30o5jqLyJ2UGDcKfTGeYb9cW2xtNl9q8LgOrI4bw==}
 
   '@sanity/types@3.67.1':
     resolution: {integrity: sha512-zK9kazYnwN8X5TLZrmhIgTCiRJKCYg4B9soSFcX1SxZUP90cJpF7MCWh5p73f/9JgZA1nzkolHU4p0GAk5d0zA==}
@@ -1832,6 +1853,10 @@ packages:
   arraybuffer.prototype.slice@1.0.3:
     resolution: {integrity: sha512-bMxMKAjg13EBSVscxTaYA4mRc5t1UAXa2kXiGTNfZ079HIWXEkKmkgFrh/nJqamaLSrXO5H4WFFkPEaLJWbs3A==}
     engines: {node: '>= 0.4'}
+
+  arrify@1.0.1:
+    resolution: {integrity: sha512-3CYzex9M9FGQjCGMGyi6/31c8GJbgb0qGyrx5HWxPd0aCwh4cB2YjMb2Xf9UuoogrMrlO9cTqnB5rI5GHZTcUA==}
+    engines: {node: '>=0.10.0'}
 
   assertion-error@2.0.1:
     resolution: {integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==}
@@ -2669,6 +2694,9 @@ packages:
     resolution: {integrity: sha512-AXcZb6vzzrFAUE61HnN4mpLqd/cSIwNQjtNWR0euPm6y0iqx3G4gOXaIDdtdDwZmhwe82LA6+zinmW4UBWVePQ==}
     engines: {node: '>=16.17.0'}
 
+  humanize-list@1.0.1:
+    resolution: {integrity: sha512-4+p3fCRF21oUqxhK0yZ6yaSP/H5/wZumc7q1fH99RkW7Q13aAxDeP78BKjoR+6y+kaHqKF/JWuQhsNuuI2NKtA==}
+
   husky@9.1.6:
     resolution: {integrity: sha512-sqbjZKK7kf44hfdE94EoX8MZNk0n7HeW37O4YrVGCF4wzgQjp+akPAkfUK5LZ6KuR/6sqeAVuXHji+RzQgOn5A==}
     engines: {node: '>=18'}
@@ -2999,6 +3027,10 @@ packages:
 
   kleur@3.0.3:
     resolution: {integrity: sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==}
+    engines: {node: '>=6'}
+
+  leven@3.1.0:
+    resolution: {integrity: sha512-qsda+H8jTaUaN/x5vzW2rzc+8Rw4TAQ/4KjB46IwK5VH+IlVeeeje/EoZRpiXvIqjFgK84QffqPztGI3VBLG1A==}
     engines: {node: '>=6'}
 
   levn@0.4.1:
@@ -5227,6 +5259,8 @@ snapshots:
       event-source-polyfill: 1.0.31
       eventsource: 2.0.2
 
+  '@sanity/generate-help-url@3.0.0': {}
+
   '@sanity/icons@3.5.2(react@18.3.1)':
     dependencies:
       react: 18.3.1
@@ -5291,6 +5325,20 @@ snapshots:
     dependencies:
       prettier: 3.4.2
       prettier-plugin-packagejson: 2.5.3(prettier@3.4.2)
+
+  '@sanity/schema@3.67.1':
+    dependencies:
+      '@sanity/generate-help-url': 3.0.0
+      '@sanity/types': 3.67.1
+      arrify: 1.0.1
+      groq-js: 1.14.2
+      humanize-list: 1.0.1
+      leven: 3.1.0
+      lodash: 4.17.21
+      object-inspect: 1.13.3
+    transitivePeerDependencies:
+      - debug
+      - supports-color
 
   '@sanity/types@3.67.1':
     dependencies:
@@ -6012,6 +6060,8 @@ snapshots:
       get-intrinsic: 1.2.4
       is-array-buffer: 3.0.4
       is-shared-array-buffer: 1.0.3
+
+  arrify@1.0.1: {}
 
   assertion-error@2.0.1: {}
 
@@ -6955,6 +7005,8 @@ snapshots:
 
   human-signals@5.0.0: {}
 
+  humanize-list@1.0.1: {}
+
   husky@9.1.6: {}
 
   iconv-lite@0.6.3:
@@ -7266,6 +7318,8 @@ snapshots:
       json-buffer: 3.0.1
 
   kleur@3.0.3: {}
+
+  leven@3.1.0: {}
 
   levn@0.4.1:
     dependencies:
