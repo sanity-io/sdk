@@ -1,10 +1,18 @@
 {
   "name": "@sanity/sdk-react",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.0.0-alpha.1",
+  "private": false,
   "description": "Sanity SDK React toolkit for Content OS",
-  "keywords": [],
-  "homepage": "https://github.com/sanity-io/sdk#readme",
+  "keywords": [
+    "sanity",
+    "sdk",
+    "content operating system",
+    "cms",
+    "headless",
+    "realtime",
+    "content"
+  ],
+  "homepage": "https://github.com/sanity-io/sdk/tree/main/packages/react/README.md",
   "bugs": {
     "url": "https://github.com/sanity-io/sdk/issues"
   },
@@ -55,8 +63,11 @@
     "build": "pkg build --strict --clean --check",
     "clean": "rimraf dist",
     "dev": "pkg watch",
+    "docs": "typedoc --out docs --tsconfig ../../tsconfig.tsdoc.json",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "eslint .",
+    "paramour": "npx paramour --config=./src/css/css.config.js --output=./src/css/paramour.css",
+    "prepublishOnly": "pnpm run build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
@@ -70,28 +81,36 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
+    "@paramour/css": "1.0.0-rc.2",
+    "@sanity/icons": "^3.5.2",
+    "@sanity/logos": "^2.1.13",
     "@sanity/sdk": "workspace:*",
     "@sanity/ui": "^2.8.19",
-    "styled-components": "^6.1.13",
+    "@types/lodash-es": "^4.17.12",
+    "inter-ui": "^4.1.0",
+    "lodash-es": "^4.17.21",
+    "react-error-boundary": "^4.1.2",
+    "rollup-plugin-import-css": "^3.5.7",
+    "rxjs": "^7.8.1",
     "zustand": "^5.0.1"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
-    "@repo/config-eslint-jsdoc": "workspace:*",
     "@repo/package.config": "workspace:*",
-    "@sanity/pkg-utils": "^6.11.14",
+    "@sanity/client": "^6.24.1",
+    "@sanity/pkg-utils": "^6.12.0",
     "@sanity/prettier-config": "^1.0.3",
-    "@storybook/react": "^8.4.6",
+    "@storybook/react": "^8.4.7",
     "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.0.1",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "^18.3.16",
+    "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "2.1.8",
     "eslint": "^9.16.0",
     "jsdom": "^25.0.1",
     "lint-staged": "^15.2.10",
-    "prettier": "^3.4.1",
+    "prettier": "^3.4.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "typescript": "^5.7.2",
@@ -99,10 +118,14 @@
   },
   "peerDependencies": {
     "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react-dom": "^18.0.0",
+    "styled-components": "^6.1.13"
   },
-  "packageManager": "pnpm@9.14.4",
+  "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "restricted"
   }
 }

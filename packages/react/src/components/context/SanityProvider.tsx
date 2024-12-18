@@ -1,4 +1,4 @@
-import {createSanityInstance, type SanityConfig, type SanityInstance} from '@sanity/sdk'
+import {type SanityInstance} from '@sanity/sdk'
 import {createContext, type ReactElement} from 'react'
 
 /**
@@ -6,36 +6,36 @@ import {createContext, type ReactElement} from 'react'
  */
 export interface SanityProviderProps {
   children: React.ReactNode
-  config: SanityConfig
-}
-type Instance = {
   sanityInstance: SanityInstance
 }
 
-export const SanityInstanceContext = createContext<Instance | null>(null)
+export const SanityInstanceContext = createContext<SanityInstance | null>(null)
 
 /**
  * Top-level context provider that provides a Sanity configuration instance.
  * This must wrap any Sanity SDK React component.
  * @public
- * @param {config} props.config - Sanity project and dataset configuration
- * @returns {ReactElement} Rendered component
+ * @param props - Sanity project and dataset configuration
+ * @returns Rendered component
  * @example
  * ```tsx
- * import {ExampleComponent, SanityProvider} from @sanity/sdk-react'
- * const config = { projectId: 'your-project-id', dataset: 'production' }
- * return (
- * <SanityProvider config={config}>
- *  <ExampleComponent />
- * </SanityProvider>
- * )
+ * import {createSanityInstance} from '@sanity/sdk'
+ * import {ExampleComponent, SanityProvider} from '@sanity/sdk-react'
+ *
+ * const sanityInstance = createSanityInstance({projectId: 'your-project-id', dataset: 'production'})
+ *
+ * export default function MyApp() {
+ *   return (
+ *     <SanityProvider sanityInstance={sanityInstance}>
+ *      <ExampleComponent />
+ *     </SanityProvider>
+ *   )
+ * }
  * ```
  */
-export const SanityProvider = ({children, config}: SanityProviderProps): ReactElement => {
-  const sanityInstance = createSanityInstance(config)
-
+export const SanityProvider = ({children, sanityInstance}: SanityProviderProps): ReactElement => {
   return (
-    <SanityInstanceContext.Provider value={{sanityInstance}}>
+    <SanityInstanceContext.Provider value={sanityInstance}>
       {children}
     </SanityInstanceContext.Provider>
   )

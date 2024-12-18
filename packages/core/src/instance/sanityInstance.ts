@@ -1,31 +1,38 @@
+import type {AuthConfig} from '../auth/internalAuthStore'
+import {disposeResources} from '../resources/createResource'
+import type {SchemaConfig} from '../schema/schemaManager'
 import {getSdkIdentity} from './identity'
 import type {SanityInstance, SdkIdentity} from './types'
 
 /**
  * @public
- * @module @sanity/sdk
- * @category Sanity Instance
  */
 export interface SanityConfig {
   projectId: string
   dataset: string
-  token?: string
+  auth?: AuthConfig
+  schema?: SchemaConfig
 }
 
 /**
  * Returns a new instance of dependencies required for SanitySDK.
  *
- * @param config - The configuration for this instance
- * @returns A new "instance" of a Sanity SDK, used to bind resources/configuration to it
  * @public
- * @module @sanity/sdk
- * @category Sanity Instance
+ *
+ * @param config - The configuration for this instance
+ *
+ * @returns A new "instance" of a Sanity SDK, used to bind resources/configuration to it
  */
-export function createSanityInstance(config?: SanityConfig): SanityInstance {
-  const {projectId = '', dataset = '', token} = config ?? {}
+export function createSanityInstance({
+  projectId = '',
+  dataset = '',
+  ...config
+}: SanityConfig): SanityInstance {
+  const identity = getSdkIdentity({projectId, dataset})
   return {
-    identity: getSdkIdentity({projectId, dataset}),
-    config: {token},
+    identity,
+    config,
+    dispose: () => disposeResources(identity),
   }
 }
 
@@ -51,7 +58,10 @@ function setResource(instance: SanityInstance, key: string, value: unknown) {
  */
 export function getOrCreateResource<T>(instance: SanityInstance, key: string, creator: () => T): T {
   const cached = getResource(instance, key)
-  if (cached) return cached as T
+
+  if (cached) {
+    return cached as T
+  }
 
   const resource = creator()
   setResource(instance, key, resource)

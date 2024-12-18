@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.settings",
-  "include": ["./src"],
+  "include": ["./src", "./vite-env.d.ts"],
   "exclude": ["./src/**/*.test.ts"]
 }

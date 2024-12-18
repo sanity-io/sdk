@@ -1,6 +1,7 @@
 {
   "name": "sdk-root",
   "version": "0.0.0",
+  "private": true,
   "description": "Sanity SDK for Content OS",
   "keywords": [],
   "homepage": "https://github.com/sanity-io/sdk#readme",
@@ -15,9 +16,10 @@
   "author": "Sanity <developers@sanity.io>",
   "sideEffects": false,
   "scripts": {
-    "all": "turbo run build && turbo run lint && turbo run test:coverage && turbo run build:docs",
+    "all": "turbo run build && turbo run lint && turbo run test:coverage && pnpm build:docs",
     "build": "turbo run build --filter='./packages/*' --filter='./apps/*'",
-    "build:docs": "typedoc --options ./typedoc.json",
+    "build:docs": "turbo run docs && typedoc",
+    "build:packages": "turbo run build --filter='./packages/*' --filter='!./packages/@repo/*'",
     "dev:kitchensink": "turbo run dev --filter=@sanity/kitchensink-react",
     "dev:storybook": "turbo run dev --filter={@sanity/storybook,@sanity/sdk,@sanity/sdk-react} --parallel",
     "format": "prettier --write --cache --ignore-unknown .",
@@ -37,18 +39,18 @@
   "devDependencies": {
     "@commitlint/cli": "^19.6.0",
     "@commitlint/config-conventional": "^19.6.0",
-    "@sanity/pkg-utils": "^6.11.14",
+    "@sanity/pkg-utils": "^6.12.0",
     "@sanity/prettier-config": "^1.0.3",
     "@vitest/coverage-v8": "2.1.8",
     "husky": "^9.1.6",
     "lint-staged": "^15.2.10",
-    "prettier": "^3.4.1",
+    "prettier": "^3.4.2",
     "turbo": "^2.3.3",
-    "typedoc": "^0.27.2",
+    "typedoc": "^0.27.4",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   },
-  "packageManager": "pnpm@9.14.4",
+  "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=20.0.0"
   }

@@ -1,21 +1,23 @@
-import {tradeTokenForSession} from '@sanity/sdk'
-import {getSidUrlSearch} from '@sanity/sdk'
 import {Button, Card, Container, Flex, Heading, Stack} from '@sanity/ui'
-import {type ReactElement, useEffect, useState} from 'react'
+import {type ReactElement} from 'react'
 
-import {useLoginLinks} from '../../hooks/auth/useLoginLinks'
-import {useSanityInstance} from '../../hooks/context/useSanityInstance'
+import {useAuthState} from '../../hooks/auth/useAuthState'
+import {useHandleCallback} from '../../hooks/auth/useHandleCallback'
+import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
 
 /**
  * Component that handles Sanity authentication flow and renders login provider options
+ *
  * @public
- * @param {Object} props - Component props
- * @returns {ReactElement} Rendered component
+ *
+ * @returns Rendered component
+ *
  * @remarks
  * The component handles three states:
  * 1. Loading state during token exchange
  * 2. Success state after successful authentication
  * 3. Provider selection UI when not authenticated
+ *
  * @example
  * ```tsx
  * const config = { projectId: 'your-project-id', dataset: 'production' }
@@ -23,36 +25,16 @@ import {useSanityInstance} from '../../hooks/context/useSanityInstance'
  * ```
  */
 export const LoginLinks = (): ReactElement => {
-  const sanityInstance = useSanityInstance()
-  const authProviders = useLoginLinks()
+  const loginUrls = useLoginUrls()
+  const authState = useAuthState()
+  useHandleCallback()
 
-  const [token, setToken] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  /**
-   * Effect that handles the token exchange flow when a session ID is present in the URL
-   * Attempts to exchange temporary session ID for a permanent token
-   */
-  useEffect(() => {
-    const sidToken = getSidUrlSearch(window.location)
-    if (sidToken) {
-      setIsLoading(true)
-      tradeTokenForSession(sidToken, sanityInstance)
-        .then((tokenResponse) => {
-          setToken(tokenResponse ?? null)
-        })
-        .finally(() => {
-          setIsLoading(false)
-        })
-    }
-  }, [])
-
-  // Show loading state during token exchange
-  if (isLoading) {
+  if (authState.type === 'logging-in') {
     return <div>Logging in...</div>
   }
 
   // Show success state after authentication
-  if (token) {
+  if (authState.type === 'logged-in') {
     return <div>You are logged in</div>
   }
 
@@ -70,7 +52,7 @@ export const LoginLinks = (): ReactElement => {
             </Heading>
 
             <Stack space={2}>
-              {authProviders.map((provider, index) => (
+              {loginUrls.map((provider, index) => (
                 <Button
                   key={`${provider.url}_${index}`}
                   as="a"

@@ -1,43 +1,50 @@
-import {type CurrentUser, type SanityInstance} from '@sanity/sdk'
+import {type AuthStore, type CurrentUser, getAuthStore, type SanityInstance} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {describe, expect, it, vi} from 'vitest'
 
+import {useSanityInstance} from '../context/useSanityInstance'
 import {useCurrentUser} from './useCurrentUser'
 
-const {createStore: realCreateStore} = await vi.importActual<typeof import('zustand')>('zustand')
+// Mock dependencies
+vi.mock('../context/useSanityInstance')
+vi.mock('@sanity/sdk')
 
-// Mock the zustand store
-const mockUser = {id: '123', name: 'Test User'} as CurrentUser
-let currentMockUser: CurrentUser | null = mockUser
-const mockSessionStore = realCreateStore(() => ({user: currentMockUser}))
-
-vi.mock('zustand', () => ({
-  useStore: () => currentMockUser,
-}))
-
-vi.mock('@sanity/sdk', () => ({
-  getSessionStore: () => mockSessionStore,
-}))
+const mockUser: CurrentUser = {
+  id: 'user-123',
+  name: 'Test User',
+  email: 'test@example.com',
+  role: 'admin',
+  roles: [],
+}
 
 describe('useCurrentUser', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    currentMockUser = mockUser
-  })
+  it('returns the current user when authenticated', () => {
+    vi.mocked(useSanityInstance).mockReturnValue({} as unknown as SanityInstance)
 
-  it('should return the current user when authenticated', () => {
-    const sanityInstance = {} as SanityInstance
-    const {result} = renderHook(() => useCurrentUser(sanityInstance))
+    // Mock the auth store with an authenticated user
+    vi.mocked(getAuthStore).mockReturnValue({
+      currentUserState: {
+        getState: () => mockUser,
+        subscribe: vi.fn(),
+      },
+    } as unknown as AuthStore)
 
+    const {result} = renderHook(() => useCurrentUser())
     expect(result.current).toEqual(mockUser)
   })
 
-  it('should return null when not authenticated', () => {
-    currentMockUser = null
+  it('returns null when not authenticated', () => {
+    vi.mocked(useSanityInstance).mockReturnValue({} as unknown as SanityInstance)
 
-    const sanityInstance = {} as SanityInstance
-    const {result} = renderHook(() => useCurrentUser(sanityInstance))
+    // Mock the auth store with no user
+    vi.mocked(getAuthStore).mockReturnValue({
+      currentUserState: {
+        getState: () => null,
+        subscribe: vi.fn(),
+      },
+    } as unknown as AuthStore)
 
+    const {result} = renderHook(() => useCurrentUser())
     expect(result.current).toBeNull()
   })
 })

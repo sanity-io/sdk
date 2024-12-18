@@ -13,10 +13,12 @@ import {
 import {devtools} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
-import {getClient} from '../client/getClient'
+import {getClientStore} from '../client/store/clientStore'
 import type {SanityInstance} from '../instance/types'
 
-const PAGE_SIZE = 50
+const PAGE_SIZE = 25
+
+const API_VERSION = 'vX'
 
 /**
  * Represents an identifier to a Sanity document, containing its `_id` to pull
@@ -90,12 +92,16 @@ interface DocumentListInternalState extends DocumentListOptions {
 
 /**
  * Creates a `DocumentListStore` from a `SanityInstance`.
- * @see {SanityInstance}
- * @see {DocumentListStore}
+ *
  * @public
+ *
+ * See {@link SanityInstance} and {@link DocumentListStore}
  */
 export function createDocumentListStore(instance: SanityInstance): DocumentListStore {
-  const client = getClient({apiVersion: 'vX'}, instance)
+  const clientStore = getClientStore(instance)
+  const clientStream$ = new Observable(
+    clientStore.getClientEvents({apiVersion: API_VERSION}).subscribe,
+  )
 
   const initialState: DocumentListInternalState = {
     syncTags: new Set<SyncTag>(),
@@ -107,12 +113,16 @@ export function createDocumentListStore(instance: SanityInstance): DocumentListS
   const store = createStore<DocumentListInternalState>()(
     devtools((..._unusedArgs) => initialState, {
       name: 'SanityDocumentListStore',
-      enabled: true, // Should be process.env.NODE_ENV === 'development'
+      enabled: import.meta.env.DEV,
     }),
   )
 
-  const liveSubscription = client.live
-    .events({includeDrafts: true, tag: 'sdk.live-listener'})
+  const liveSubscription = clientStream$
+    .pipe(
+      switchMap((client) =>
+        client.live.events({includeDrafts: !!client.config().token, tag: 'sdk.live-listener'}),
+      ),
+    )
     .subscribe({
       next: (event) => {
         const {syncTags} = store.getState()
@@ -151,21 +161,20 @@ export function createDocumentListStore(instance: SanityInstance): DocumentListS
               .join(',')})`
           : ''
 
-        return client.observable.fetch(
-          `*${filter}${order}[0..$__limit]{_id, _type}`,
-          {__limit: state.limit},
-          {
-            filterResponse: false,
-            returnQuery: false,
-            lastLiveEventId: state.lastLiveEventId,
-            tag: 'sdk.document-list',
-            // // TODO: this should use the `previewDrafts` perspective for
-            // // removing duplicates in the result set but the live content API
-            // // does not currently return the correct sync tags. CLDX has
-            // // planned to add perspective support to the live content API
-            // // in december of 2024
-            // perspective: 'previewDrafts'
-          },
+        return clientStream$.pipe(
+          switchMap((client) =>
+            client.observable.fetch(
+              `*${filter}${order}[0..$__limit]{_id, _type}`,
+              {__limit: state.limit},
+              {
+                filterResponse: false,
+                returnQuery: false,
+                lastLiveEventId: state.lastLiveEventId,
+                tag: 'sdk.document-list',
+                perspective: 'previewDrafts',
+              },
+            ),
+          ),
         )
       }),
     )
@@ -201,8 +210,7 @@ export function createDocumentListStore(instance: SanityInstance): DocumentListS
   }
 
   function getCurrent() {
-    const {isPending, result, filter, sort} = store.getState()
-    return {isPending, result, filter, sort}
+    return store.getState()
   }
 
   const state$ = new Observable<DocumentListState>((observer) => {
