@@ -1,137 +1,88 @@
-import {createClient} from '@sanity/client'
-import {Subscription} from 'rxjs'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import type {Subscription} from 'rxjs'
+import {describe, expect, it} from 'vitest'
 
-import {createSanityInstance} from '../../dist'
 import {config} from '../../test/fixtures'
-import {subscribeToAuthEvents} from './actions/subscribeToAuthEvents'
-import {clientStore, getClientStore} from './clientStore'
-
-// Mock dependencies
-vi.mock('@sanity/client', () => ({
-  createClient: vi.fn(() => ({})),
-}))
+import {createSanityInstance} from '../instance/sanityInstance'
+import {createResourceState, getOrCreateResource} from '../resources/createResource'
+import {clientStore} from './clientStore'
 
 vi.mock('./actions/subscribeToAuthEvents', () => ({
-  subscribeToAuthEvents: vi.fn(() => ({
-    unsubscribe: vi.fn(),
-  })),
+  subscribeToAuthEvents: vi.fn(),
 }))
 
+import {subscribeToAuthEvents} from './actions/subscribeToAuthEvents'
+
 describe('clientStore', () => {
-  const instance = createSanityInstance(config)
+  describe('initialization', () => {
+    it('creates initial state without token', () => {
+      const instance = createSanityInstance(config)
+      const store = getOrCreateResource(instance, clientStore)
+      const state = store.state.get()
 
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  afterEach(() => {
-    vi.resetModules()
-  })
-
-  it('store creation should have the correct store key', () => {
-    expect(clientStore.key).toBe('clientStore')
-  })
-
-  it('store creation should return null context', () => {
-    const context = clientStore.getContext({instance})
-    expect(context).toBeNull()
-  })
-
-  it('should create initial state with default client', () => {
-    const initialState = clientStore.getInitialState({
-      instance,
-      context: null,
+      expect(state.defaultClient.config()).toEqual(
+        expect.objectContaining({
+          projectId: config.projectId,
+          dataset: config.dataset,
+          token: undefined,
+          useCdn: false,
+          apiVersion: '2024-11-12',
+        }),
+      )
     })
 
-    expect(createClient).toHaveBeenCalledWith({
-      projectId: 'test-project-id',
-      dataset: 'test-dataset',
-      token: undefined,
-      useCdn: false,
-      apiVersion: 'v2024-11-12',
+    it('creates initial state with token', () => {
+      const instance = createSanityInstance({
+        ...config,
+        auth: {
+          token: 'foo',
+        },
+      })
+      const store = getOrCreateResource(instance, clientStore)
+      const state = store.state.get()
+      expect(state.defaultClient.config().token).toBe('foo')
     })
 
-    expect(initialState).toMatchObject({
-      defaultClient: expect.any(Object),
-      clients: expect.any(Map),
+    it('initializes clients Map with default client', () => {
+      const instance = createSanityInstance(config)
+      const store = getOrCreateResource(instance, clientStore)
+      const state = store.state.get()
+
+      expect(state.clients.size).toBe(1)
+      expect(state.clients.get('2024-11-12')).toBe(state.defaultClient)
     })
 
-    expect(initialState.clients.get('v2024-11-12')).toBe(initialState.defaultClient)
-  })
+    it('maintains separate stores for different instances', () => {
+      const instance1 = createSanityInstance({...config, projectId: 'project1'})
+      const instance2 = createSanityInstance({...config, projectId: 'project2'})
 
-  it('initial state should create initial state with relevant configuration', () => {
-    clientStore.getInitialState({
-      instance,
-      context: null,
-    })
+      const store1 = getOrCreateResource(instance1, clientStore)
+      const store2 = getOrCreateResource(instance2, clientStore)
 
-    expect(createClient).toHaveBeenCalledWith({
-      projectId: 'test-project-id',
-      dataset: 'test-dataset',
-      token: undefined,
-      useCdn: false,
-      apiVersion: 'v2024-11-12',
-    })
-
-    const token = 'test-token'
-    const instanceWithAuth = createSanityInstance({
-      ...config,
-      auth: {token},
-    })
-
-    clientStore.getInitialState({
-      instance: instanceWithAuth,
-      context: null,
-    })
-
-    expect(createClient).toHaveBeenCalledWith({
-      projectId: 'test-project-id',
-      dataset: 'test-dataset',
-      token,
-      useCdn: false,
-      apiVersion: 'v2024-11-12',
+      expect(store1.state.get().defaultClient.config().projectId).toBe('project1')
+      expect(store2.state.get().defaultClient.config().projectId).toBe('project2')
     })
   })
 
   it('should subscribe to auth events and return cleanup function', () => {
+    const instance = createSanityInstance(config)
     const unsubscribeSpy = vi.fn()
     const mockSubscription = {
       unsubscribe: unsubscribeSpy,
     } as unknown as Subscription
 
-    vi.mocked(subscribeToAuthEvents).mockReturnValue(mockSubscription)
+    vi.mocked(subscribeToAuthEvents).mockImplementation(() => mockSubscription)
+    const initialState = clientStore.getInitialState(instance)
 
-    const cleanup = clientStore.initialize({
+    const dispose = clientStore.initialize!.call(
+      {
+        instance,
+        state: createResourceState(initialState),
+      },
       instance,
-      context: null,
-    })
+    )
+    expect(subscribeToAuthEvents).toHaveBeenCalled()
 
-    expect(subscribeToAuthEvents).toHaveBeenCalledWith(instance)
-
-    cleanup()
+    dispose()
     expect(unsubscribeSpy).toHaveBeenCalled()
-  })
-
-  it('should return the same store instance for the same identity', () => {
-    const store1 = getClientStore(instance)
-    const store2 = getClientStore(instance)
-
-    expect(store1).toBe(store2)
-  })
-
-  it('should return different store instances for different identities', () => {
-    const instance2 = createSanityInstance({
-      projectId: 'test-project-id-2',
-      dataset: 'test-dataset-2',
-    })
-
-    // Get the initialized resources
-    const store1 = getClientStore(instance)
-    const store2 = getClientStore(instance2)
-
-    const state1 = store1.getInitialState({instance, context: null})
-    const state2 = store2.getInitialState({instance: instance2, context: null})
-    expect(state1).not.toBe(state2)
   })
 })

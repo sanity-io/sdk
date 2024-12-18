@@ -13,7 +13,7 @@ import {
   withLatestFrom,
 } from 'rxjs'
 
-import {getSubscribableClient} from '../client/getSubscribableClient'
+import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {createAction} from '../resources/createAction'
 import {getSchemaSource} from '../schema/getSchemaSource'
 import {createPreviewQuery, processPreviewQuery} from './previewQuery'
@@ -27,7 +27,7 @@ export const subscribeToStateAndFetchBatches = createAction(
   ({state, instance}) => {
     return function () {
       const client$ = new Observable<SanityClient>((observer) =>
-        getSubscribableClient({apiVersion: 'vX'}, instance).subscribe(observer),
+        getSubscribableClient(instance, {apiVersion: 'vX'}).subscribe(observer),
       )
       const schema$ = getSchemaSource(instance).observable
       const documentTypes$ = state.observable.pipe(

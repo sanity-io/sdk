@@ -11,8 +11,8 @@ export type {StateSource} from '../resources/createStateSourceAction'
 
 /** CLIENT */
 // Utils
-export {getClient} from '../client/actions/getClient'
-export {getSubscribableClient} from '../client/getSubscribableClient'
+export {type ClientOptions, getClient} from '../client/actions/getClient'
+export {getSubscribableClient} from '../client/actions/getSubscribableClient'
 // Types
 export type {ClientState} from '../client/clientStore'
 

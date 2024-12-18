@@ -4,7 +4,7 @@ import type {Schema} from '@sanity/types'
 import {Observable, of, Subject} from 'rxjs'
 import {describe, expect, it, type Mock, vi} from 'vitest'
 
-import {getSubscribableClient} from '../client/getSubscribableClient'
+import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {createSanityInstance} from '../instance/sanityInstance'
 import {
   createResourceState,
@@ -15,7 +15,7 @@ import {getSchemaSource} from '../schema/getSchemaSource'
 import {type PreviewQueryResult, previewStore, type PreviewStoreState} from './previewStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 
-vi.mock('../client/getSubscribableClient')
+vi.mock('../client/actions/getSubscribableClient')
 vi.mock('../schema/getSchemaSource')
 vi.mock('../resources/createResource', async (importOriginal) => {
   const original = await importOriginal<typeof import('../resources/createResource')>()

@@ -2,7 +2,7 @@ import type {LiveEventMessage} from '@sanity/client'
 import {Observable, of, Subject} from 'rxjs'
 import {describe, it, type Mock, vi} from 'vitest'
 
-import {getSubscribableClient} from '../client/getSubscribableClient'
+import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {createSanityInstance} from '../instance/sanityInstance'
 import {
   createResourceState,
@@ -12,7 +12,7 @@ import {
 import {previewStore, type PreviewStoreState} from './previewStore'
 import {subscribeToLiveAndSetLastLiveEventId} from './subscribeToLiveAndSetLastLiveEventId'
 
-vi.mock('../client/getSubscribableClient', () => ({
+vi.mock('../client/actions/getSubscribableClient', () => ({
   getSubscribableClient: vi.fn(),
 }))
 
