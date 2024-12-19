@@ -74,8 +74,10 @@
     "ts:check": "tsc --noEmit"
   },
   "lint-staged": {
-    "*": [
-      "prettier --write --cache --ignore-unknown"
+    "!(*.{ts,tsx})": "prettier --write",
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
     ]
   },
   "browserslist": "extends @sanity/browserslist-config",
