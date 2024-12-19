@@ -13,7 +13,7 @@ import {
 import {devtools} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
-import {getClientStore} from '../client/store/clientStore'
+import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import type {SanityInstance} from '../instance/types'
 
 const PAGE_SIZE = 25
@@ -98,9 +98,8 @@ interface DocumentListInternalState extends DocumentListOptions {
  * See {@link SanityInstance} and {@link DocumentListStore}
  */
 export function createDocumentListStore(instance: SanityInstance): DocumentListStore {
-  const clientStore = getClientStore(instance)
   const clientStream$ = new Observable(
-    clientStore.getClientEvents({apiVersion: API_VERSION}).subscribe,
+    getSubscribableClient(instance, {apiVersion: API_VERSION}).subscribe,
   )
 
   const initialState: DocumentListInternalState = {

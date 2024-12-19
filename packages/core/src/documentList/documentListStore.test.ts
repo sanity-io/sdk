@@ -1,16 +1,13 @@
-import {bufferTime, firstValueFrom, Observable, of} from 'rxjs'
+import {bufferTime, firstValueFrom, Observable, type Observer, of} from 'rxjs'
 import {describe, it, type Mock, vi} from 'vitest'
 
-import {getClient} from '../client/getClient'
-import {
-  createDocumentListStore,
-  type DocumentListState,
-  type DocumentListStore,
-} from './documentListStore'
+import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {createDocumentListStore, type DocumentListState} from './documentListStore'
 
 const mockClientUnsubscribe = vi.fn()
 
-vi.mock('../client/store/clientStore', () => {
+// Mock getSubscribableClient instead of the client store
+vi.mock('../client/actions/getSubscribableClient', () => {
   const unsubscribe = vi.fn()
   const subscribe = vi.fn((observer) => {
     observer.next({
@@ -45,46 +42,43 @@ vi.mock('../client/store/clientStore', () => {
     config: vi.fn(() => ({token: 'mock-token'})),
   }
 
-  const mockStore = {
-    subscribe: (callback: () => void) => {
-      callback()
-      return () => {}
-    },
-  }
-
-  const mockGetClientEvents = () => ({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    subscribe: (subscriber: any) => {
-      subscriber.next(mockClient)
-      return {
-        unsubscribe: mockClientUnsubscribe,
-      }
-    },
-  })
-
   return {
-    getClientStore: () => ({
-      store: mockStore,
-      getClientEvents: mockGetClientEvents,
-      getOrCreateClient: vi.fn(() => mockClient),
-    }),
+    getSubscribableClient: vi.fn(() => ({
+      subscribe: (observer: Observer<typeof mockClient>) => {
+        observer.next(mockClient)
+        return {
+          unsubscribe: mockClientUnsubscribe,
+        }
+      },
+    })),
   }
 })
 
 describe('documentListStore', () => {
-  let documentListStore!: DocumentListStore
-  let client!: {
+  let documentListStore: ReturnType<typeof createDocumentListStore>
+  let client: {
     observable: {fetch: Mock}
     live: {events: () => {subscribe: Mock}}
   }
 
   beforeEach(() => {
     vi.clearAllMocks()
-    // @ts-expect-error the types are wrong here since we're mocking
-    client = getClient()
+
+    // Get the mock client from the mocked getSubscribableClient
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mockSubscribable = getSubscribableClient({} as any, {apiVersion: 'vX'})
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let mockClient: any
+    mockSubscribable.subscribe({
+      next: (value) => {
+        mockClient = value
+      },
+    })
+
+    client = mockClient
 
     // @ts-expect-error the types are wrong here since we're mocking
-    documentListStore = createDocumentListStore()
+    documentListStore = createDocumentListStore({})
   })
 
   function subscribeAndGetEmissions() {

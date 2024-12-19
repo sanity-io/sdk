@@ -23,7 +23,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *     const doc = client.fetch('*[_id == "myDocumentId"]')
  *     setDocument(doc)
  *   }, [])
- *  return <div>{document ?? 'Loading...'}</div>
+ *  return <div>{JSON.stringify(document) ?? 'Loading...'}</div>
  * }
  * ```
  *
@@ -34,7 +34,7 @@ export function useClient(options: ClientOptions): SanityClient {
 
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
-      const client$ = getSubscribableClient(options, instance)
+      const client$ = getSubscribableClient(instance, options)
       const subscription = client$.subscribe({
         next: onStoreChange,
         error: (error) => {
@@ -49,7 +49,7 @@ export function useClient(options: ClientOptions): SanityClient {
   )
 
   const getSnapshot = useCallback(() => {
-    return getClient(options, instance)
+    return getClient(instance, options)
   }, [instance, options])
 
   return useSyncExternalStore(subscribe, getSnapshot)
