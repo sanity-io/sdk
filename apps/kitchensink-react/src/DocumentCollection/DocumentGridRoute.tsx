@@ -5,7 +5,7 @@ import {Box, Button, Heading} from '@sanity/ui'
 import {DocumentPreview} from './DocumentPreview'
 
 export function DocumentGridRoute(): JSX.Element {
-  const {result, isPending, loadMore} = useDocuments({
+  const {isPending, results, hasMore, loadMore} = useDocuments({
     filter: '_type == "author"',
     sort: [{field: 'name', direction: 'asc'}],
   })
@@ -17,9 +17,11 @@ export function DocumentGridRoute(): JSX.Element {
       </Heading>
       <Box paddingY={5}>
         <DocumentGridLayout>
-          {result?.map((doc) => <DocumentPreview key={doc._id} document={doc} />)}
+          {results.map((doc) => (
+            <DocumentPreview key={doc._id} document={doc} />
+          ))}
         </DocumentGridLayout>
-        <Button text="Load more" mode="ghost" disabled={isPending} onClick={loadMore} />
+        <Button text="Load more" mode="ghost" disabled={isPending || !hasMore} onClick={loadMore} />
       </Box>
     </Box>
   )

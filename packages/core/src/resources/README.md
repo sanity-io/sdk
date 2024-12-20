@@ -272,16 +272,16 @@ export interface StateSource<T> {
 }
 ```
 
-By convention, actions that return state sources should end with the `-Source` suffix.
+By convention, actions that return state sources should end with the `-State` suffix.
 
 ```ts
 // example usage in a hook
-import {getSchemaSource} from '@sanity/sdk'
+import {getSchemaState} from '@sanity/sdk'
 import {useSanityInstance} from '@sanity/sdk-react/hooks'
 
 export function useSchema(): Schema {
   const instance = useSanityInstance()
-  const {subscribe, getCurrent} = useMemo(() => getSchemaSource(instance), [instance])
+  const {subscribe, getCurrent} = useMemo(() => getSchemaState(instance), [instance])
 
   return useSyncExternalStore(subscribe, getCurrent)
 }
@@ -289,7 +289,7 @@ export function useSchema(): Schema {
 
 ```ts
 // example usage in an action
-import {getSchemaSource} from '../schema/getSchemaSource'
+import {getSchemaState} from '../schema/getSchemaState'
 import {createAction} from '../resources/createAction'
 import {myResource} from './myResource'
 
@@ -297,7 +297,7 @@ export const myAction = createAction(
   () => myResource,
   ({state, instance}) => {
     return function () {
-      const schema$ = getSchemaSource(instance).observable
+      const schema$ = getSchemaState(instance).observable
 
       // ...
     }
@@ -305,23 +305,66 @@ export const myAction = createAction(
 )
 ```
 
-Creating a state source involves creating an action to pull the desired value from state and then using `createStateSourceAction`.
+Creating a state source involves creating a **selector** to pull the desired value from state and then using `createStateSourceAction`.
 
 ```ts
-import {previewStore} from './previewStore'
-import {createAction} from '../resources/createAction'
+import {schemaStore} from './schemaStore'
 import {createStateSourceAction} from '../resources/createStateSourceAction'
 
-export const getPreview = createAction(
-  () => previewStore,
-  ({state}) => {
-    return function (documentId: string) {
-      return state.get().values[documentId]
-    }
-  },
+export const getSchemaState = createStateSourceAction(
+  () => schemaStore, // pick the resource
+  (state) => state.schema, // write a selector
 )
-
-export const getPreviewSource = createStateSourceAction(() => previewStore, getPreview)
 ```
 
-Note: it's important that the `getCurrent` action returns a stable value from the store or it will cause infinite loops.
+## Selectors
+
+Selectors are functions that extract and compute derived data from the resource state. When used with `createStateSourceAction`, they help create efficient state sources that only update when their selected data changes.
+
+```ts
+import {createSelector} from 'reselect'
+import {createStateSourceAction} from '../resources/createStateSourceAction'
+
+interface DocumentListState {
+  options: DocumentListOptions
+  lastLiveEventId?: string
+  syncTags: SyncTag[]
+  limit: number
+  results: DocumentHandle[]
+  isPending: boolean
+}
+
+const documentList = createResource<DocumentListState>({
+  name: 'documentList',
+  // ... resource implementation
+})
+
+const getDocumentListState = createStateSourceAction(
+  () => documentList,
+  // Basic selector that returns multiple state properties
+  createSelector(
+    [(state: DocumentListState) => state.results, (state: DocumentListState) => state.isPending],
+    (results, isPending) => ({results, isPending}),
+  ),
+)
+```
+
+**When to Use Reselect**
+
+If your selector simply returns an existing object from state without creating a new derived value, you **don't need reselect**:
+
+```ts
+// Simple selector that just returns an existing object - reselect not needed
+const getResults = createStateSourceAction(
+  () => documentList,
+  (state: DocumentListState) => state.results,
+)
+```
+
+However, when computing derived data that creates new objects, arrays, or values, `reselect` provides several key benefits:
+
+1. **Memoization**: The `createSelector` utility from reselect caches results and only recomputes when input selectors return new values, reducing unnecessary calculations.
+2. **Reference Stability**: By memoizing results, reselect helps maintain stable references which is crucial for preventing infinite loops in state source subscriptions.
+3. **Composition**: Input selectors can be either plain functions or other selectors, allowing you to build complex derivations while maintaining performance.
+
+Read more at [reselect.js.org](https://reselect.js.org/)

@@ -1,4 +1,4 @@
-import {type DocumentHandle, getPreviewSource, type PreviewValue, resolvePreview} from '@sanity/sdk'
+import {type DocumentHandle, getPreviewState, type PreviewValue, resolvePreview} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
 import {Suspense, useRef} from 'react'
 import type {Mock} from 'vitest'
@@ -30,7 +30,7 @@ vi.mock('@sanity/sdk', () => {
 
   return {
     resolvePreview: vi.fn(),
-    getPreviewSource: vi.fn().mockReturnValue({getCurrent, subscribe}),
+    getPreviewState: vi.fn().mockReturnValue({getCurrent, subscribe}),
   }
 })
 
@@ -62,9 +62,9 @@ describe('usePreview', () => {
 
   beforeEach(() => {
     // @ts-expect-error mock does not need param
-    getCurrent = getPreviewSource().getCurrent as Mock
+    getCurrent = getPreviewState().getCurrent as Mock
     // @ts-expect-error mock does not need param
-    subscribe = getPreviewSource().subscribe as Mock
+    subscribe = getPreviewState().subscribe as Mock
 
     // Reset all mocks between tests
     getCurrent.mockReset()

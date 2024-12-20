@@ -10,14 +10,17 @@ vi.mock('../context/useSanityInstance')
 
 describe('useDocuments', () => {
   const mockInstance = {}
-  const mockDocumentListStore = {
+
+  const getCurrent = vi.fn()
+  const unsubscribe = vi.fn()
+  const subscribe = vi.fn().mockReturnValue(unsubscribe)
+  const dispose = vi.fn()
+
+  const mockDocumentListStore: ReturnType<typeof createDocumentListStore> = {
     setOptions: vi.fn(),
-    subscribe: vi.fn((_: {next: () => void}) => {
-      return {unsubscribe: vi.fn()}
-    }),
-    getCurrent: vi.fn(),
     loadMore: vi.fn(),
-    dispose: vi.fn(),
+    getState: vi.fn().mockReturnValue({getCurrent, subscribe}),
+    dispose,
   }
 
   beforeEach(() => {
@@ -46,27 +49,18 @@ describe('useDocuments', () => {
 
   it('should subscribe to document list store changes', () => {
     const options: DocumentListOptions = {}
-    mockDocumentListStore.subscribe.mockImplementation(() => {
-      return {unsubscribe: vi.fn()}
-    })
 
     renderHook(() => useDocuments(options))
-
-    expect(mockDocumentListStore.subscribe).toHaveBeenCalledTimes(1)
-    expect(mockDocumentListStore.subscribe.mock.calls.length).toBe(1)
+    expect(subscribe).toHaveBeenCalledTimes(1)
   })
 
   it('should return the current document list state', () => {
     const options = {}
     const currentState = {result: [], isPending: false}
-    mockDocumentListStore.getCurrent.mockReturnValue(currentState)
+    getCurrent.mockReturnValue(currentState)
 
     const {result} = renderHook(() => useDocuments(options))
-
-    expect(result.current).toEqual({
-      ...currentState,
-      loadMore: mockDocumentListStore.loadMore,
-    })
+    expect(result.current).toMatchObject(currentState)
   })
 
   it('should call loadMore when loadMore is invoked', () => {
@@ -85,20 +79,21 @@ describe('useDocuments', () => {
       filter: 'some-filter',
       sort: [{field: 'name', direction: 'asc'}],
     }
-    let currentState: {result: {id: string}[]; isPending: boolean} = {result: [], isPending: true}
-    const newState = {result: [{id: 'doc1'}], isPending: false}
+    getCurrent.mockReturnValue({results: [], isPending: true})
+    const {result, rerender} = renderHook(() => useDocuments(options as DocumentListOptions))
 
-    // Mock the `getCurrent` function
-    mockDocumentListStore.getCurrent.mockImplementation(() => currentState)
-    // Simulate a state change by updating `currentState` reference
-    currentState = newState
+    expect(subscribe).toHaveBeenCalledTimes(1)
+    const [subscriber] = subscribe.mock.calls[0]
 
-    const {result} = renderHook(() => useDocuments(options as DocumentListOptions))
+    const newState = {results: [{id: 'doc1'}], isPending: false}
+    getCurrent.mockReturnValue(newState)
 
-    expect(result.current).toEqual({
-      ...newState,
-      loadMore: mockDocumentListStore.loadMore,
+    act(() => {
+      subscriber()
+      rerender()
     })
+
+    expect(result.current).toMatchObject(newState)
   })
 
   it('should handle empty options', () => {
@@ -111,23 +106,20 @@ describe('useDocuments', () => {
 
   it('should handle null result from document list store', () => {
     const options = {}
-    mockDocumentListStore.getCurrent.mockReturnValue({result: null, isPending: false})
+    getCurrent.mockReturnValue({result: null, isPending: false})
 
     const {result} = renderHook(() => useDocuments(options))
 
-    expect(result.current).toEqual({
+    expect(result.current).toMatchObject({
       result: null,
       isPending: false,
-      loadMore: mockDocumentListStore.loadMore,
     })
   })
 
   it('should unsubscribe from document list store on unmount', () => {
     const options = {}
     const unsubscribeSpy = vi.fn()
-    mockDocumentListStore.subscribe.mockImplementation(() => {
-      return {unsubscribe: unsubscribeSpy}
-    })
+    subscribe.mockReturnValue(unsubscribeSpy)
 
     const {unmount} = renderHook(() => useDocuments(options))
 

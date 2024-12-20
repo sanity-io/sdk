@@ -3,6 +3,7 @@
 export {createSanityInstance} from '../instance/sanityInstance'
 export {type ActionContext, type ResourceAction} from '../resources/createAction'
 export {type ResourceState} from '../resources/createResource'
+export {type BoundResourceAction} from '../resources/createStore'
 
 // Types
 export type {SanityConfig} from '../instance/sanityInstance'
@@ -21,8 +22,6 @@ export type {
   DocumentHandle,
   DocumentListOptions,
   DocumentListState,
-  DocumentListStore,
-  SortOrderingItem,
 } from '../documentList/documentListStore'
 export {createDocumentListStore} from '../documentList/documentListStore'
 
@@ -46,7 +45,6 @@ export {type SchemaConfig} from '../schema/schemaManager'
 export type {CurrentUser, Role} from '@sanity/types'
 
 /** PREVIEW */
-export {getPreview, type GetPreviewOptions} from '../preview/getPreview'
-export {getPreviewSource, type GetPreviewSourceOptions} from '../preview/getPreviewSource'
+export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
 export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'

@@ -1,10 +1,5 @@
-import {
-  createDocumentListStore,
-  type DocumentHandle,
-  type DocumentListOptions,
-  type SortOrderingItem,
-} from '@sanity/sdk'
-import {useCallback, useEffect, useMemo, useSyncExternalStore} from 'react'
+import {createDocumentListStore, type DocumentHandle, type DocumentListOptions} from '@sanity/sdk'
+import {useCallback, useEffect, useState, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -13,10 +8,19 @@ import {useSanityInstance} from '../context/useSanityInstance'
  */
 export interface UseDocuments {
   loadMore: () => void
-  result: DocumentHandle[] | null
+  results: DocumentHandle[]
   isPending: boolean
-  filter?: string
-  sort?: SortOrderingItem[]
+  hasMore: boolean
+  count: number
+}
+
+type DocumentListStore = ReturnType<typeof createDocumentListStore>
+type DocumentListState = ReturnType<DocumentListStore['getState']>['getCurrent']
+const STABLE_EMPTY = {
+  results: [],
+  isPending: false,
+  hasMore: false,
+  count: 0,
 }
 
 /**
@@ -27,35 +31,57 @@ export interface UseDocuments {
  * @param options - options for the document list
  * @returns result of the document list and function to load more
  */
-export function useDocuments(options: DocumentListOptions): UseDocuments {
+export function useDocuments(options: DocumentListOptions = {}): UseDocuments {
   const instance = useSanityInstance()
-  const documentListStore = useMemo(() => createDocumentListStore(instance), [instance])
 
+  // NOTE: useState is used because it guaranteed to return a stable reference
+  // across renders
+  const [ref] = useState<{
+    storeInstance: DocumentListStore | null
+    getCurrent: DocumentListState
+    initialOptions: DocumentListOptions
+  }>(() => ({
+    storeInstance: null,
+    getCurrent: () => STABLE_EMPTY,
+    initialOptions: options,
+  }))
+
+  // serialize options to ensure it only calls `setOptions` when the values
+  // themselves changes (in cases where devs put config inline)
   const serializedOptions = JSON.stringify(options)
   useEffect(() => {
-    documentListStore.setOptions(JSON.parse(serializedOptions))
-  }, [documentListStore, serializedOptions])
+    ref.storeInstance?.setOptions(JSON.parse(serializedOptions))
+  }, [ref, serializedOptions])
 
   const subscribe = useCallback(
     (onStoreChanged: () => void) => {
-      const subscription = documentListStore.subscribe({
-        next: onStoreChanged,
-      })
+      // to match the lifecycle of `useSyncExternalState`, we create the store
+      // instance after subscribe and mutate the ref to connect everything
+      ref.storeInstance = createDocumentListStore(instance)
+      ref.storeInstance.setOptions(ref.initialOptions)
+      const state = ref.storeInstance.getState()
+      ref.getCurrent = state.getCurrent
+      const unsubscribe = state.subscribe(onStoreChanged)
 
       return () => {
-        subscription.unsubscribe()
-        documentListStore.dispose()
+        // unsubscribe to clean up the state subscriptions
+        unsubscribe()
+        // dispose of the instance
+        ref.storeInstance?.dispose()
       }
     },
-    [documentListStore],
+    [instance, ref],
   )
 
-  const getCurrent = useCallback(() => documentListStore.getCurrent(), [documentListStore])
+  const getSnapshot = useCallback(() => {
+    return ref.getCurrent()
+  }, [ref])
 
-  const result = useSyncExternalStore(subscribe, getCurrent)
+  const state = useSyncExternalStore(subscribe, getSnapshot)
 
-  return {
-    ...result,
-    loadMore: documentListStore.loadMore,
-  }
+  const loadMore = useCallback(() => {
+    ref.storeInstance?.loadMore()
+  }, [ref])
+
+  return {loadMore, ...state}
 }

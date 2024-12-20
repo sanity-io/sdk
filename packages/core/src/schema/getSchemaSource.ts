@@ -1,14 +1,7 @@
-import {createAction} from '../resources/createAction'
 import {createStateSourceAction} from '../resources/createStateSourceAction'
 import {schemaManager} from './schemaManager'
 
-const getSchema = createAction(
+export const getSchemaSource = createStateSourceAction(
   () => schemaManager,
-  ({state}) => {
-    return function () {
-      return state.get().schema
-    }
-  },
+  (state) => state.schema,
 )
-
-export const getSchemaSource = createStateSourceAction(() => schemaManager, getSchema)

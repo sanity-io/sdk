@@ -6,7 +6,7 @@ import {
   getOrCreateResource,
   type ResourceState,
 } from '../resources/createResource'
-import {getPreviewSource} from './getPreviewSource'
+import {getPreviewState} from './getPreviewState'
 import {previewStore, type PreviewStoreState} from './previewStore'
 import {randomId, STABLE_EMPTY_PREVIEW} from './util'
 
@@ -20,7 +20,7 @@ vi.mock('../resources/createResource', async (importOriginal) => {
   return {...original, getOrCreateResource: vi.fn()}
 })
 
-describe('getPreviewSource', () => {
+describe('getPreviewState', () => {
   const instance = createSanityInstance({projectId: 'exampleProject', dataset: 'exampleDataset'})
   const document = {_id: 'exampleId', _type: 'exampleType'}
   const initialState: PreviewStoreState = {
@@ -37,11 +37,11 @@ describe('getPreviewSource', () => {
   })
 
   it('returns a state source that emits when the preview value changes', () => {
-    const previewSource = getPreviewSource({state, instance}, {document})
-    expect(previewSource.getCurrent()).toBe(STABLE_EMPTY_PREVIEW)
+    const previewState = getPreviewState({state, instance}, {document})
+    expect(previewState.getCurrent()).toBe(STABLE_EMPTY_PREVIEW)
 
     const subscriber = vi.fn()
-    previewSource.subscribe(subscriber)
+    previewState.subscribe(subscriber)
 
     // emit unrelated state changes
     state.set('updateLastLiveEventId', {lastLiveEventId: 'newLastLiveEventId'})
@@ -64,15 +64,15 @@ describe('getPreviewSource', () => {
   })
 
   it('adds a subscription ID and document type to the state on subscription', () => {
-    const previewSource = getPreviewSource({state, instance}, {document})
+    const previewState = getPreviewState({state, instance}, {document})
 
     expect(state.get().subscriptions).toEqual({})
     ;(randomId as Mock)
       .mockImplementationOnce(() => 'pseudoRandomId1')
       .mockImplementationOnce(() => 'pseudoRandomId2')
 
-    const unsubscribe1 = previewSource.subscribe(vi.fn())
-    const unsubscribe2 = previewSource.subscribe(vi.fn())
+    const unsubscribe1 = previewState.subscribe(vi.fn())
+    const unsubscribe2 = previewState.subscribe(vi.fn())
 
     expect(state.get().subscriptions).toEqual({
       exampleId: {pseudoRandomId1: true, pseudoRandomId2: true},
@@ -92,10 +92,10 @@ describe('getPreviewSource', () => {
       values: {...prev.values, [document._id]: [{title: 'Foo'}, true]},
     }))
 
-    const previewSource = getPreviewSource({state, instance}, {document})
+    const previewState = getPreviewState({state, instance}, {document})
 
-    const unsubscribe1 = previewSource.subscribe(vi.fn())
-    const unsubscribe2 = previewSource.subscribe(vi.fn())
+    const unsubscribe1 = previewState.subscribe(vi.fn())
+    const unsubscribe2 = previewState.subscribe(vi.fn())
 
     expect(state.get().values[document._id]).toEqual([{title: 'Foo'}, true])
 
@@ -109,7 +109,7 @@ describe('getPreviewSource', () => {
 
   it('calls getOrCreateResource if no state is provided', () => {
     ;(getOrCreateResource as Mock).mockReturnValue({state})
-    getPreviewSource(instance, {document})
+    getPreviewState(instance, {document})
     expect(getOrCreateResource).toHaveBeenCalledWith(instance, previewStore)
   })
 })

@@ -11,15 +11,6 @@ describe('createStateSourceAction', () => {
     getInitialState: () => ({value: 10}),
   })
 
-  const getValue = createAction(
-    () => resource,
-    ({state}) => {
-      return function () {
-        return state.get().value
-      }
-    },
-  )
-
   const setValue = createAction(
     () => resource,
     ({state}) => {
@@ -29,7 +20,10 @@ describe('createStateSourceAction', () => {
     },
   )
 
-  const getValueSource = createStateSourceAction(() => resource, getValue)
+  const getValueSource = createStateSourceAction(
+    () => resource,
+    (state) => state.value,
+  )
 
   it('should return the current value', () => {
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
@@ -69,7 +63,7 @@ describe('createStateSourceAction', () => {
     const mockCallback = vi.fn()
     valueSource.subscribe(mockCallback)
 
-    setValue(instance, getValue(instance))
+    setValue(instance, valueSource.getCurrent())
     expect(mockCallback).toHaveBeenCalledTimes(0)
 
     setValue(instance, 5)
@@ -87,7 +81,7 @@ describe('createStateSourceAction', () => {
     expect(observer).toHaveBeenCalledWith(10)
 
     // try a no-op change
-    setValue(instance, getValue(instance))
+    setValue(instance, valueSource.getCurrent())
     expect(observer).toHaveBeenCalledTimes(1)
 
     // set a value that will change

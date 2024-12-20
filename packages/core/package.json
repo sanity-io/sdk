@@ -67,6 +67,7 @@
     "@sanity/types": "^3.67.1",
     "@types/lodash-es": "^4.17.12",
     "lodash-es": "^4.17.21",
+    "reselect": "^5.1.1",
     "rxjs": "^7.8.1",
     "zustand": "^5.0.1"
   },

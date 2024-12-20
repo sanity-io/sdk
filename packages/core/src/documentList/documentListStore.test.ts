@@ -1,585 +1,213 @@
-import {bufferTime, firstValueFrom, Observable, type Observer, of} from 'rxjs'
-import {describe, it, type Mock, vi} from 'vitest'
+import {filter, firstValueFrom} from 'rxjs'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {getSubscribableClient} from '../client/actions/getSubscribableClient'
-import {createDocumentListStore, type DocumentListState} from './documentListStore'
+import {createSanityInstance} from '../instance/sanityInstance'
+import {createResourceState, type ResourceState} from '../resources/createResource'
+import {
+  createDocumentListStore,
+  documentList,
+  type DocumentListState,
+  getDocumentList,
+  PAGE_SIZE,
+} from './documentListStore'
+import {subscribeToLiveClientAndSetLastLiveEventId} from './subscribeToLiveClientAndSetLastLiveEventId'
+import {subscribeToStateAndFetchResults} from './subscribeToStateAndFetchResults'
 
-const mockClientUnsubscribe = vi.fn()
+vi.mock('./subscribeToLiveClientAndSetLastLiveEventId', () => ({
+  subscribeToLiveClientAndSetLastLiveEventId: vi.fn().mockReturnValue({
+    unsubscribe: vi.fn(),
+  }),
+}))
 
-// Mock getSubscribableClient instead of the client store
-vi.mock('../client/actions/getSubscribableClient', () => {
-  const unsubscribe = vi.fn()
-  const subscribe = vi.fn((observer) => {
-    observer.next({
-      id: 'mock-event-id',
-      type: 'message',
-      tags: [],
-    })
-    return {unsubscribe}
-  })
-
-  const mockClient = {
-    observable: {
-      fetch: vi.fn(() =>
-        of({
-          syncTags: [],
-          result: [],
-        }),
-      ),
-    },
-    live: {
-      events: vi.fn(() => {
-        const observable = of({
-          id: 'mock-event-id',
-          type: 'message',
-          tags: [],
-        })
-        // @ts-expect-error -- this is just a mock
-        observable.subscribe = subscribe
-        return observable
-      }),
-    },
-    config: vi.fn(() => ({token: 'mock-token'})),
-  }
-
-  return {
-    getSubscribableClient: vi.fn(() => ({
-      subscribe: (observer: Observer<typeof mockClient>) => {
-        observer.next(mockClient)
-        return {
-          unsubscribe: mockClientUnsubscribe,
-        }
-      },
-    })),
-  }
-})
+vi.mock('./subscribeToStateAndFetchResults', () => ({
+  subscribeToStateAndFetchResults: vi.fn().mockReturnValue({
+    unsubscribe: vi.fn(),
+  }),
+}))
 
 describe('documentListStore', () => {
-  let documentListStore: ReturnType<typeof createDocumentListStore>
-  let client: {
-    observable: {fetch: Mock}
-    live: {events: () => {subscribe: Mock}}
-  }
+  let state: ResourceState<DocumentListState>
+  let instance: ReturnType<typeof createSanityInstance>
 
   beforeEach(() => {
-    vi.clearAllMocks()
-
-    // Get the mock client from the mocked getSubscribableClient
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mockSubscribable = getSubscribableClient({} as any, {apiVersion: 'vX'})
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let mockClient: any
-    mockSubscribable.subscribe({
-      next: (value) => {
-        mockClient = value
-      },
-    })
-
-    client = mockClient
-
-    // @ts-expect-error the types are wrong here since we're mocking
-    documentListStore = createDocumentListStore({})
-  })
-
-  function subscribeAndGetEmissions() {
-    return firstValueFrom(
-      new Observable<DocumentListState>((observer) => {
-        const subscription = documentListStore.subscribe(observer)
-        return () => subscription.unsubscribe()
-      }).pipe(bufferTime(100)),
-    )
-  }
-
-  function tick() {
-    return new Promise((resolve) => setTimeout(resolve, 0))
-  }
-
-  it('fetches a result set based on the set options', async () => {
-    client.observable.fetch.mockImplementation(() =>
-      of({
+    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    state = createResourceState<DocumentListState>(
+      {
+        limit: PAGE_SIZE,
+        options: {perspective: 'previewDrafts'},
+        results: [],
         syncTags: [],
-        result: [
-          {_id: 'first-id', _type: 'author'},
-          {_id: 'second-id', _type: 'author'},
-        ],
-      }),
+        isPending: false,
+        count: 0,
+      },
+      {name: 'documentList'},
     )
-
-    const emissionsPromise = subscribeAndGetEmissions()
-
-    documentListStore.setOptions({
-      filter: '_type == "author"',
-    })
-
-    const emissions = await emissionsPromise
-    expect(emissions).toHaveLength(3)
-
-    expect(emissions).toEqual([
-      {
-        filter: undefined,
-        isPending: false,
-        result: null,
-        sort: undefined,
-      },
-      {
-        filter: '_type == "author"',
-        isPending: true,
-        result: null,
-        sort: undefined,
-      },
-      {
-        filter: '_type == "author"',
-        isPending: false,
-        result: [
-          {_id: 'first-id', _type: 'author'},
-          {_id: 'second-id', _type: 'author'},
-        ],
-        sort: undefined,
-      },
-    ])
   })
 
-  it('re-fetches the result set when the live content API emits a matching sync tag', async () => {
-    client.observable.fetch.mockImplementation(() =>
-      of({
-        syncTags: ['s1:example-sync-tag'],
-        result: [
-          {_id: 'first-id', _type: 'author'},
-          {_id: 'second-id', _type: 'author'},
-        ],
-      }),
-    )
+  describe('store actions', () => {
+    it('should expose a getState selector with empty results', async () => {
+      const store = createDocumentListStore({state, instance})
+      const statePromise = firstValueFrom(store.getState().observable)
 
-    expect(client.live.events().subscribe).toHaveBeenCalledTimes(1)
-    const [[observer]] = client.live.events().subscribe.mock.calls
-
-    documentListStore.setOptions({
-      filter: '_type == "author"',
-    })
-
-    const emissionsPromise = subscribeAndGetEmissions()
-
-    observer.next?.({id: 'event-id', tags: ['s1:example-sync-tag'], type: 'message'})
-    await tick()
-
-    const emissions = await emissionsPromise
-
-    expect(emissions).toHaveLength(3)
-
-    const result = [
-      {_id: 'first-id', _type: 'author'},
-      {_id: 'second-id', _type: 'author'},
-    ]
-
-    const filter = '_type == "author"'
-
-    expect(emissions).toEqual([
-      {isPending: false, result, filter},
-      {isPending: true, result, filter},
-      {isPending: false, result, filter},
-    ])
-  })
-
-  it('does not re-fetch on non-matching sync tags', async () => {
-    client.observable.fetch.mockImplementation(() =>
-      of({
-        syncTags: ['s1:example-sync-tag'],
-        result: [
-          {_id: 'first-id', _type: 'author'},
-          {_id: 'second-id', _type: 'author'},
-        ],
-      }),
-    )
-
-    expect(client.live.events().subscribe).toHaveBeenCalledTimes(1)
-    const [[observer]] = client.live.events().subscribe.mock.calls
-
-    documentListStore.setOptions({
-      filter: '_type == "author"',
-    })
-
-    const emissionsPromise = subscribeAndGetEmissions()
-
-    observer.next?.({id: 'event-id', tags: ['s1:no-match'], type: 'message'})
-    await tick()
-
-    const emissions = await emissionsPromise
-
-    expect(emissions).toHaveLength(1)
-    expect(emissions).toEqual([
-      {
+      await expect(statePromise).resolves.toEqual({
+        results: [],
         isPending: false,
-        filter: '_type == "author"',
-        result: [
-          {_id: 'first-id', _type: 'author'},
-          {_id: 'second-id', _type: 'author'},
-        ],
-      },
-    ])
-  })
+        count: 0,
+        hasMore: false,
+      })
+    })
 
-  it('re-fetches the result set when options are changed', async () => {
-    const result = [
-      {_id: 'first-id', _type: 'author'},
-      {_id: 'second-id', _type: 'author'},
-    ]
-
-    client.observable.fetch.mockImplementation(() =>
-      of({
+    it('should expose a getState selector with populated results', async () => {
+      const store = createDocumentListStore({instance, state})
+      const results = [{_id: 'doc1', _type: 'testType'}]
+      state.set('updateFromFetch', {
+        results,
+        count: 1,
         syncTags: [],
-        result: [
-          {_id: 'first-id', _type: 'author'},
-          {_id: 'second-id', _type: 'author'},
-        ],
-      }),
-    )
-
-    const emissionsPromise = subscribeAndGetEmissions()
-
-    documentListStore.setOptions({
-      filter: '_type == "author"',
-    })
-    await tick()
-    expect(documentListStore.getCurrent()).toEqual({
-      filter: '_type == "author"',
-      isPending: false,
-      result,
-      limit: 25,
-      syncTags: new Set(),
-    })
-
-    documentListStore.setOptions({
-      sort: [{direction: 'asc', field: 'name'}],
-    })
-    await tick()
-    expect(documentListStore.getCurrent()).toEqual({
-      filter: '_type == "author"',
-      sort: [{direction: 'asc', field: 'name'}],
-      isPending: false,
-      result,
-      limit: 25,
-      syncTags: new Set(),
-    })
-
-    documentListStore.setOptions({
-      filter: '_type == "book"',
-    })
-    await tick()
-    expect(documentListStore.getCurrent()).toEqual({
-      filter: '_type == "book"',
-      sort: [{direction: 'asc', field: 'name'}],
-      isPending: false,
-      result,
-      limit: 25,
-      syncTags: new Set(),
-    })
-
-    documentListStore.setOptions({
-      sort: [{direction: 'desc', field: 'name'}],
-    })
-    await tick()
-    expect(documentListStore.getCurrent()).toEqual({
-      filter: '_type == "book"',
-      sort: [{direction: 'desc', field: 'name'}],
-      isPending: false,
-      result,
-      limit: 25,
-      syncTags: new Set(),
-    })
-
-    const emissions = await emissionsPromise
-    expect(emissions).toHaveLength(9)
-
-    expect(emissions).toMatchObject([
-      {filter: undefined, isPending: false, result: null, sort: undefined},
-      {filter: '_type == "author"', isPending: true, result: null, sort: undefined},
-      {filter: '_type == "author"', isPending: false, result, sort: undefined},
-      {
-        filter: '_type == "author"',
-        isPending: true,
-        result,
-        sort: [{direction: 'asc', field: 'name'}],
-      },
-      {
-        filter: '_type == "author"',
         isPending: false,
-        result,
-        sort: [{direction: 'asc', field: 'name'}],
-      },
-      {
-        filter: '_type == "book"',
-        isPending: true,
-        result,
-        sort: [{direction: 'asc', field: 'name'}],
-      },
-      {
-        filter: '_type == "book"',
-        isPending: false,
-        result,
-        sort: [{direction: 'asc', field: 'name'}],
-      },
-      {
-        filter: '_type == "book"',
-        isPending: true,
-        result,
-        sort: [{direction: 'desc', field: 'name'}],
-      },
-      {
-        filter: '_type == "book"',
-        isPending: false,
-        result,
-        sort: [{direction: 'desc', field: 'name'}],
-      },
-    ])
+      })
+      const statePromise = firstValueFrom(
+        store.getState().observable.pipe(filter((s) => !!s.results.length)),
+      )
 
-    expect(client.observable.fetch).toHaveBeenCalledTimes(4)
-    expect(client.observable.fetch.mock.calls).toEqual([
-      [
-        '*[_type == "author"][0..$__limit]{_id, _type}',
-        {__limit: 25},
-        {
-          filterResponse: false,
-          lastLiveEventId: undefined,
+      await expect(statePromise).resolves.toEqual({
+        results,
+        isPending: false,
+        count: 1,
+        hasMore: false,
+      })
+    })
+
+    it('should update filter via setOptions action', async () => {
+      const store = createDocumentListStore({instance, state})
+      store.setOptions({filter: '_type == "testType"'})
+
+      const statePromise = firstValueFrom(
+        state.observable.pipe(filter((s) => s.options.filter === '_type == "testType"')),
+      )
+
+      await expect(statePromise).resolves.toMatchObject({
+        options: {
           perspective: 'previewDrafts',
-          returnQuery: false,
-          tag: 'sdk.document-list',
+          filter: '_type == "testType"',
         },
-      ],
-      [
-        '*[_type == "author"]| order(name asc)[0..$__limit]{_id, _type}',
-        {__limit: 25},
-        {
-          filterResponse: false,
-          lastLiveEventId: undefined,
-          perspective: 'previewDrafts',
-          returnQuery: false,
-          tag: 'sdk.document-list',
-        },
-      ],
-      [
-        '*[_type == "book"]| order(name asc)[0..$__limit]{_id, _type}',
-        {__limit: 25},
-        {
-          filterResponse: false,
-          lastLiveEventId: undefined,
-          perspective: 'previewDrafts',
-          returnQuery: false,
-          tag: 'sdk.document-list',
-        },
-      ],
-      [
-        '*[_type == "book"]| order(name desc)[0..$__limit]{_id, _type}',
-        {__limit: 25},
-        {
-          filterResponse: false,
-          lastLiveEventId: undefined,
-          perspective: 'previewDrafts',
-          returnQuery: false,
-          tag: 'sdk.document-list',
-        },
-      ],
-    ])
-  })
-
-  it('fetches more documents when load more is called', async () => {
-    const firstResult = [
-      {_id: 'first-id', _type: 'author'},
-      {_id: 'second-id', _type: 'author'},
-    ]
-    const secondResult = [
-      ...firstResult,
-      {_id: 'third-id', _type: 'author'},
-      {_id: 'fourth-id', _type: 'author'},
-    ]
-    client.observable.fetch.mockImplementationOnce(() =>
-      of({
-        syncTags: [],
-        result: firstResult,
-      }),
-    )
-
-    client.observable.fetch.mockImplementationOnce(() =>
-      of({
-        syncTags: [],
-        result: secondResult,
-      }),
-    )
-
-    documentListStore.setOptions({
-      filter: '_type == "author"',
+      })
     })
 
-    const emissionsPromise = subscribeAndGetEmissions()
+    it('should update sort order via setOptions action', async () => {
+      const store = createDocumentListStore({instance, state})
+      store.setOptions({sort: [{field: '_createdAt', direction: 'asc'}]})
 
-    documentListStore.loadMore()
-    await tick()
+      const statePromise = firstValueFrom(
+        state.observable.pipe(filter((s) => s.options.sort?.[0].field === '_createdAt')),
+      )
 
-    const emissions = await emissionsPromise
-    expect(emissions).toHaveLength(3)
-    expect(emissions).toEqual([
-      {isPending: false, result: firstResult, filter: '_type == "author"'},
-      {isPending: true, result: firstResult, filter: '_type == "author"'},
-      {isPending: false, result: secondResult, filter: '_type == "author"'},
-    ])
-
-    expect(client.observable.fetch).toHaveBeenCalledTimes(2)
-    expect(client.observable.fetch.mock.calls).toEqual([
-      [
-        '*[_type == "author"][0..$__limit]{_id, _type}',
-        {__limit: 25},
-        {
-          filterResponse: false,
-          lastLiveEventId: undefined,
+      await expect(statePromise).resolves.toMatchObject({
+        options: {
           perspective: 'previewDrafts',
-          returnQuery: false,
-          tag: 'sdk.document-list',
+          sort: [{field: '_createdAt', direction: 'asc'}],
         },
-      ],
-      [
-        '*[_type == "author"][0..$__limit]{_id, _type}',
-        {__limit: 50},
-        {
-          filterResponse: false,
-          lastLiveEventId: undefined,
-          perspective: 'previewDrafts',
-          returnQuery: false,
-          tag: 'sdk.document-list',
-        },
-      ],
-    ])
-  })
-
-  it('unsubscribes from the live client when disposed', async () => {
-    client.observable.fetch.mockImplementation(() =>
-      of({
-        syncTags: [],
-        result: [
-          {_id: 'first-id', _type: 'author'},
-          {_id: 'second-id', _type: 'author'},
-        ],
-      }),
-    )
-
-    expect(mockClientUnsubscribe).not.toHaveBeenCalled()
-    documentListStore.dispose()
-    expect(mockClientUnsubscribe).toHaveBeenCalled()
-  })
-
-  it('preserves referential equality in the result set', async () => {
-    client.observable.fetch.mockImplementationOnce(() =>
-      of({
-        syncTags: [],
-        result: [
-          {_id: 'first-id', _type: 'author'},
-          {_id: 'second-id', _type: 'author'},
-        ],
-      }),
-    )
-
-    client.observable.fetch.mockImplementationOnce(() =>
-      of({
-        syncTags: [],
-        result: [{_id: 'first-id', _type: 'author'}],
-      }),
-    )
-
-    const emissionsPromise = subscribeAndGetEmissions()
-
-    documentListStore.setOptions({
-      filter: '_type == "author"',
-    })
-    await tick()
-    documentListStore.setOptions({
-      filter: '_id == "first-id"',
+      })
     })
 
-    const emissions = await emissionsPromise
-    expect(emissions).toHaveLength(5)
+    it('should increase limit via loadMore action', async () => {
+      const store = createDocumentListStore({instance, state})
+      store.loadMore()
 
-    expect(emissions).toEqual([
-      {
-        filter: undefined,
-        isPending: false,
-        result: null,
-        sort: undefined,
-      },
-      {
-        filter: '_type == "author"',
-        isPending: true,
-        result: null,
-        sort: undefined,
-      },
-      {
-        filter: '_type == "author"',
-        isPending: false,
-        result: [
-          {_id: 'first-id', _type: 'author'},
-          {_id: 'second-id', _type: 'author'},
-        ],
-        sort: undefined,
-      },
-      {
-        filter: '_id == "first-id"',
-        isPending: true,
-        result: [
-          {_id: 'first-id', _type: 'author'},
-          {_id: 'second-id', _type: 'author'},
-        ],
-        sort: undefined,
-      },
-      {
-        filter: '_id == "first-id"',
-        isPending: false,
-        result: [{_id: 'first-id', _type: 'author'}],
-        sort: undefined,
-      },
-    ])
+      const statePromise = firstValueFrom(
+        state.observable.pipe(filter((s) => s.limit === PAGE_SIZE * 2)),
+      )
+      await expect(statePromise).resolves.toMatchObject({limit: PAGE_SIZE * 2})
+    })
 
-    const [{result: result1}, {result: result2}, {result: result3}] = emissions.slice(2)
+    it('should handle multiple loadMore calls', async () => {
+      const store = createDocumentListStore({instance, state})
+      store.loadMore()
+      store.loadMore()
 
-    expect(result1?.[0]).toBe(result2?.[0])
-    expect(result2?.[0]).toBe(result3?.[0])
+      const statePromise = firstValueFrom(
+        state.observable.pipe(filter((s) => s.limit === PAGE_SIZE * 3)),
+      )
+      await expect(statePromise).resolves.toMatchObject({limit: 75})
+    })
+
+    it('should call initialize and unsubscribe when store is destroyed', () => {
+      const liveClientUnsubscribe =
+        // @ts-expect-error no parameter required since mocking
+        subscribeToLiveClientAndSetLastLiveEventId().unsubscribe
+
+      const stateUnsubscribe =
+        // @ts-expect-error no parameter required since mocking
+        subscribeToStateAndFetchResults().unsubscribe
+
+      vi.mocked(subscribeToLiveClientAndSetLastLiveEventId).mockClear()
+      vi.mocked(subscribeToStateAndFetchResults).mockClear()
+
+      expect(subscribeToLiveClientAndSetLastLiveEventId).not.toHaveBeenCalled()
+      expect(subscribeToStateAndFetchResults).not.toHaveBeenCalled()
+      expect(liveClientUnsubscribe).not.toHaveBeenCalled()
+      expect(stateUnsubscribe).not.toHaveBeenCalled()
+
+      const store = createDocumentListStore(instance)
+
+      expect(subscribeToLiveClientAndSetLastLiveEventId).toHaveBeenCalled()
+      expect(subscribeToStateAndFetchResults).toHaveBeenCalled()
+      expect(liveClientUnsubscribe).not.toHaveBeenCalled()
+      expect(stateUnsubscribe).not.toHaveBeenCalled()
+
+      store.dispose()
+
+      expect(liveClientUnsubscribe).toHaveBeenCalled()
+      expect(stateUnsubscribe).toHaveBeenCalled()
+    })
   })
 
-  it('fetches all documents when no filter is set', async () => {
-    const result = [
-      {_id: 'first-id', _type: 'author'},
-      {_id: 'second-id', _type: 'book'},
-    ]
-
-    client.observable.fetch.mockImplementation(() =>
-      of({
+  describe('hasMore calculation', () => {
+    it('should set hasMore true when there are more results than limit', async () => {
+      const store = createDocumentListStore({instance, state})
+      state.set('updateFromFetch', {
+        results: Array.from({length: PAGE_SIZE}, (_, index) => ({
+          _id: `doc${index}`,
+          _type: 'test',
+        })),
+        count: PAGE_SIZE + 1,
         syncTags: [],
-        result,
-      }),
-    )
+        isPending: false,
+      })
 
-    const emissionsPromise = subscribeAndGetEmissions()
+      const statePromise = firstValueFrom(
+        store.getState().observable.pipe(filter((s) => s.results.length === PAGE_SIZE)),
+      )
 
-    // Don't set any filter
-    documentListStore.setOptions({})
-    await tick()
+      await expect(statePromise).resolves.toMatchObject({
+        hasMore: true,
+        count: PAGE_SIZE + 1,
+      })
+    })
 
-    const emissions = await emissionsPromise
-    expect(emissions).toHaveLength(3)
+    it('should set hasMore false when all results are loaded', async () => {
+      const store = createDocumentListStore({instance, state})
+      state.set('updateFromFetch', {
+        results: Array.from({length: 5}, (_, index) => ({_id: `doc${index}`, _type: 'test'})),
+        count: 5,
+        syncTags: [],
+        isPending: false,
+      })
 
-    expect(emissions).toEqual([
-      {filter: undefined, isPending: false, result: null, sort: undefined},
-      {filter: undefined, isPending: true, result: null, sort: undefined},
-      {filter: undefined, isPending: false, result, sort: undefined},
-    ])
+      const statePromise = firstValueFrom(
+        store.getState().observable.pipe(filter((s) => s.results.length === 5)),
+      )
 
-    expect(client.observable.fetch).toHaveBeenCalledTimes(1)
-    expect(client.observable.fetch.mock.calls[0]).toEqual([
-      '*[0..$__limit]{_id, _type}',
-      {__limit: 25},
-      {
-        filterResponse: false,
-        lastLiveEventId: undefined,
-        perspective: 'previewDrafts',
-        returnQuery: false,
-        tag: 'sdk.document-list',
-      },
-    ])
+      await expect(statePromise).resolves.toMatchObject({
+        hasMore: false,
+        count: 5,
+      })
+    })
+  })
+})
+
+describe('getDocumentList', () => {
+  it('returns the documentList resource', () => {
+    expect(getDocumentList()).toBe(documentList)
   })
 })
