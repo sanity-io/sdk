@@ -1,25 +1,16 @@
-import {getAuthStore} from '@sanity/sdk'
-import {renderHook} from '@testing-library/react'
-import {type Mock, vi} from 'vitest'
+import {handleCallback} from '@sanity/sdk'
+import {identity} from 'rxjs'
+import {describe, it} from 'vitest'
 
-import {useSanityInstance} from '../context/useSanityInstance'
-import {useHandleCallback} from './useHandleCallback'
+import {createCallbackHook} from '../helpers/createCallbackHook'
 
-vi.mock('../context/useSanityInstance')
-vi.mock('@sanity/sdk', () => ({getAuthStore: vi.fn()}))
+vi.mock('../helpers/createCallbackHook', () => ({createCallbackHook: vi.fn(identity)}))
+vi.mock('@sanity/sdk', () => ({handleCallback: vi.fn()}))
 
 describe('useHandleCallback', () => {
-  it('returns handleCallback from auth store', () => {
-    const mockInstance = {id: 'test'}
-    const mockHandleCallback = vi.fn()
-    const mockAuthStore = {handleCallback: mockHandleCallback}
-
-    ;(useSanityInstance as Mock).mockReturnValue(mockInstance)
-    ;(getAuthStore as Mock).mockReturnValue(mockAuthStore)
-
-    const {result} = renderHook(() => useHandleCallback())
-
-    expect(getAuthStore).toHaveBeenCalledWith(mockInstance)
-    expect(result.current).toBe(mockHandleCallback)
+  it('calls `createCallbackHook` with `handleCallback`', async () => {
+    const {useHandleCallback} = await import('./useHandleCallback')
+    expect(createCallbackHook).toHaveBeenCalledWith(handleCallback)
+    expect(useHandleCallback).toBe(handleCallback)
   })
 })

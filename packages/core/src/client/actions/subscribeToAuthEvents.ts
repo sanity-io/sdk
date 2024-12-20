@@ -1,24 +1,22 @@
-import {distinctUntilChanged, map, Observable} from 'rxjs'
-
-import {getAuthStore} from '../../auth/authStore'
+import {getTokenState} from '../../auth/authStore'
 import {createAction} from '../../resources/createAction'
-import {type ResourceState} from '../../resources/createResource'
 import {type ClientState, clientStore} from '../clientStore'
 
-const receiveToken = (state: ResourceState<ClientState>, token: string | undefined): void => {
-  const newDefaultClient = state.get().defaultClient.withConfig({
+const receiveToken = (prev: ClientState, token: string | undefined): ClientState => {
+  const newDefaultClient = prev.defaultClient.withConfig({
     token,
   })
   const updatedClients = new Map(
-    Array.from(state.get().clients.entries()).map(([version, client]) => [
+    Array.from(prev.clients.entries()).map(([version, client]) => [
       version,
       client.withConfig({token}),
     ]),
   )
-  state.set('receiveToken', {
+
+  return {
     defaultClient: newDefaultClient,
     clients: updatedClients,
-  })
+  }
 }
 
 /**
@@ -29,21 +27,9 @@ export const subscribeToAuthEvents = createAction(
   () => clientStore,
   ({instance, state}) => {
     return () => {
-      const authStore = getAuthStore(instance)
-
-      const observableAuthStore = new Observable<string | null>((observer) => {
-        observer.next(authStore.tokenState.getState())
-        return authStore.tokenState.subscribe(() => {
-          observer.next(authStore.tokenState.getState())
-        })
+      return getTokenState(instance).observable.subscribe((newToken) => {
+        state.set('receiveToken', (prev) => receiveToken(prev, newToken ?? undefined))
       })
-
-      return observableAuthStore
-        .pipe(
-          map((token) => token ?? undefined),
-          distinctUntilChanged(),
-        )
-        .subscribe((newToken) => receiveToken(state, newToken))
     }
   },
 )

@@ -1,134 +1,252 @@
+import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
 import type {CurrentUser} from '@sanity/types'
 
-import type {SanityInstance} from '../instance/types'
-import {getInternalAuthStore} from './getInternalAuthStore'
-import type {AuthProvider, AuthState} from './internalAuthStore'
+import {createResource, type Resource} from '../resources/createResource'
+import {createStateSourceAction} from '../resources/createStateSourceAction'
+import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
+import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
+import {getAuthCode, getDefaultLocation, getDefaultStorage, getTokenFromStorage} from './utils'
+
+export const DEFAULT_BASE = 'http://localhost'
+export const AUTH_CODE_PARAM = 'sid'
+export const DEFAULT_API_VERSION = '2021-06-07'
+export const REQUEST_TAG_PREFIX = 'sdk.auth'
 
 /**
- * @public
- */
-export interface AuthStore {
-  authState: AuthStateSlice
-  tokenState: AuthTokenSlice
-  currentUserState: CurrentUserSlice
-  handleCallback: (locationHref?: string) => Promise<string | false>
-  logout: () => Promise<void>
-  dispose: () => void
-  getLoginUrls: () => AuthProvider[] | Promise<AuthProvider[]>
-}
-
-/**
- * Public interface for the auth store.
- * @public
- */
-export interface AuthStateSlice {
-  getState: () => AuthState
-  getInitialState: () => AuthState
-  subscribe: (listener: (state: AuthState, prevState: AuthState) => void) => () => void
-}
-
-/**
- * Public interface for the token store.
+ * Represents the various states the authentication type can be in.
  *
  * @public
  */
-export interface AuthTokenSlice {
-  getState: () => string | null
-  getInitialState: () => string | null
-  subscribe: (listener: (token: string | null, prevToken: string | null) => void) => () => void
+export enum AuthStateType {
+  LOGGED_IN = 'logged-in',
+  LOGGING_IN = 'logging-in',
+  ERROR = 'error',
+  LOGGED_OUT = 'logged-out',
 }
 
 /**
- * Public interface for the auth store slice that contains the current user.
+ * Represents the various states the authentication can be in.
  *
  * @public
  */
-export interface CurrentUserSlice {
-  getState: () => CurrentUser | null
-  getInitialState: () => CurrentUser | null
-  subscribe: (
-    listener: (user: CurrentUser | null, prevUser: CurrentUser | null) => void,
-  ) => () => void
-}
-
-export type {
-  AuthConfig,
-  AuthProvider,
-  AuthState,
-  ErrorAuthState,
-  LoggedInAuthState,
-  LoggedOutAuthState,
-  LoggingInAuthState,
-} from './internalAuthStore'
-export {AuthStateType} from './internalAuthStore'
+export type AuthState = LoggedInAuthState | LoggedOutAuthState | LoggingInAuthState | ErrorAuthState
 
 /**
- * Retrieves or creates an `AuthStore` for the given `SanityInstance`.
- *
- * @param instance - The `SanityInstance` to get or create the `AuthStore` for.
- * @returns The `AuthStore` associated with the given `SanityInstance`.
+ * Logged-in state from the auth state.
+ * @public
+ */
+export type LoggedInAuthState = {
+  type: AuthStateType.LOGGED_IN
+  token: string
+  currentUser: CurrentUser | null
+}
+
+/**
+ * Logged-out state from the auth state.
+ * @public
+ */
+export type LoggedOutAuthState = {type: AuthStateType.LOGGED_OUT; isDestroyingSession: boolean}
+
+/**
+ * Logging-in state from the auth state.
+ * @public
+ */
+export type LoggingInAuthState = {type: AuthStateType.LOGGING_IN; isExchangingToken: boolean}
+
+/**
+ * Error state from the auth state.
+ * @public
+ */
+export type ErrorAuthState = {type: AuthStateType.ERROR; error: unknown}
+
+/**
+ * Configuration for an authentication provider
+ * @public
+ */
+export interface AuthProvider {
+  /**
+   * Unique identifier for the auth provider (e.g., 'google', 'github')
+   */
+  name: string
+
+  /**
+   * Display name for the auth provider in the UI
+   */
+  title: string
+
+  /**
+   * Complete authentication URL including callback and token parameters
+   */
+  url: string
+
+  /**
+   * Optional URL for direct sign-up flow
+   */
+  signUpUrl?: string
+}
+
+/**
+ * Configuration options for creating an auth store.
  *
  * @public
  */
-export const getAuthStore = (instance: SanityInstance): AuthStore => {
-  const internalAuthStore = getInternalAuthStore(instance)
+export interface AuthConfig {
+  /**
+   * The initial location href to use when handling auth callbacks.
+   * Defaults to the current window location if available.
+   */
+  initialLocationHref?: string
 
-  const authState: AuthStateSlice = {
-    getState: () => internalAuthStore.getState().authState,
-    getInitialState: () => internalAuthStore.getInitialState().authState,
-    subscribe: (listener) =>
-      internalAuthStore.subscribe((current, prev) => {
-        listener(current.authState, prev.authState)
-      }),
-  }
+  /**
+   * Factory function to create a SanityClient instance.
+   * Defaults to the standard Sanity client factory if not provided.
+   */
+  clientFactory?: (config: ClientConfig) => SanityClient
 
-  const tokenState: AuthTokenSlice = {
-    getState: () => {
-      const state = internalAuthStore.getState()
-      if (state.authState.type !== 'logged-in') return null
-      return state.authState.token
-    },
-    getInitialState: () => {
-      const state = internalAuthStore.getInitialState()
-      if (state.authState.type !== 'logged-in') return null
-      return state.authState.token
-    },
-    subscribe: (listener) =>
-      internalAuthStore.subscribe((state, prevState) => {
-        const token = state.authState.type === 'logged-in' ? state.authState.token : null
-        const prevToken =
-          prevState.authState.type === 'logged-in' ? prevState.authState.token : null
-        listener(token, prevToken)
-      }),
-  }
+  /**
+   * Custom authentication providers to use instead of or in addition to the default ones.
+   * Can be an array of providers or a function that takes the default providers and returns
+   * a modified array or a Promise resolving to one.
+   */
+  providers?: AuthProvider[] | ((prev: AuthProvider[]) => AuthProvider[] | Promise<AuthProvider[]>)
 
-  const currentUserState: CurrentUserSlice = {
-    getState: () => {
-      const state = internalAuthStore.getState()
-      if (state.authState.type !== 'logged-in') return null
-      return state.authState.currentUser
-    },
-    getInitialState: () => {
-      const state = internalAuthStore.getInitialState()
-      if (state.authState.type !== 'logged-in') return null
-      return state.authState.currentUser
-    },
-    subscribe: (listener) =>
-      internalAuthStore.subscribe((state, prevState) => {
-        const user = state.authState.type === 'logged-in' ? state.authState.currentUser : null
-        const prevUser =
-          prevState.authState.type === 'logged-in' ? prevState.authState.currentUser : null
-        listener(user, prevUser)
-      }),
-  }
+  /**
+   * The API hostname for requests. Usually leave this undefined, but it can be set
+   * if using a custom domain or CNAME for the API endpoint.
+   */
+  apiHost?: string
 
-  return {
-    authState,
-    tokenState,
-    currentUserState,
-    handleCallback: internalAuthStore.getState().handleCallback,
-    logout: internalAuthStore.getState().logout,
-    dispose: internalAuthStore.getState().dispose,
-    getLoginUrls: internalAuthStore.getState().getLoginUrls,
+  /**
+   * Storage implementation to persist authentication state.
+   * Defaults to `localStorage` if available.
+   */
+  storageArea?: Storage
+
+  /**
+   * A callback URL for your application.
+   * If none is provided, the auth API will redirect back to the current location (`location.href`).
+   * When handling callbacks, this URL's pathname is checked to ensure it matches the callback.
+   */
+  callbackUrl?: string
+
+  /**
+   * A static authentication token to use instead of handling the OAuth flow.
+   * When provided, the auth store will remain in a logged-in state with this token,
+   * ignoring any storage or callback handling.
+   */
+  token?: string
+
+  /**
+   * The authentication scope.
+   * If set to 'project', requests are scoped to the project-level.
+   * If set to 'org', requests are scoped to the organization-level.
+   * Defaults to 'project'.
+   */
+  authScope?: 'project' | 'org'
+}
+
+/**
+ * @public
+ */
+export interface AuthStoreState {
+  authState: AuthState
+  providers?: AuthProvider[]
+  options: {
+    initialLocationHref: string
+    clientFactory: (config: ClientConfig) => SanityClient
+    customProviders: AuthConfig['providers']
+    authScope: 'project' | 'org'
+    storageKey: string
+    storageArea: Storage | undefined
+    apiHost: string | undefined
+    callbackUrl: string | undefined
+    providedToken: string | undefined
   }
 }
+
+export function getAuthStore(): Resource<AuthStoreState> {
+  return authStore
+}
+
+export const authStore = createResource<AuthStoreState>({
+  name: 'Auth',
+  getInitialState(instance) {
+    const {
+      apiHost,
+      callbackUrl,
+      providers: customProviders,
+      authScope = 'project',
+      token: providedToken,
+      clientFactory = createClient,
+      initialLocationHref = getDefaultLocation(),
+      storageArea = getDefaultStorage(),
+    } = instance.config.auth ?? {}
+    const {projectId, dataset} = instance.identity
+
+    const storageKey = `__sanity_auth_token_${projectId}_${dataset}`
+
+    let authState: AuthState
+
+    const token = getTokenFromStorage(storageArea, storageKey)
+
+    if (providedToken) {
+      authState = {type: AuthStateType.LOGGED_IN, token: providedToken, currentUser: null}
+    } else if (getAuthCode(callbackUrl, initialLocationHref)) {
+      authState = {type: AuthStateType.LOGGING_IN, isExchangingToken: false}
+    } else if (token) {
+      authState = {type: AuthStateType.LOGGED_IN, token, currentUser: null}
+    } else {
+      authState = {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false}
+    }
+
+    return {
+      authState,
+      options: {
+        apiHost,
+        authScope,
+        callbackUrl,
+        customProviders,
+        providedToken,
+        clientFactory,
+        initialLocationHref,
+        storageKey,
+        storageArea,
+      },
+    }
+  },
+  initialize() {
+    const stateSubscription = subscribeToStateAndFetchCurrentUser(this)
+    const storageEventsSubscription = subscribeToStorageEventsAndSetToken(this)
+
+    return () => {
+      stateSubscription.unsubscribe()
+      storageEventsSubscription.unsubscribe()
+    }
+  },
+})
+
+/**
+ * @public
+ */
+export const getCurrentUserState = createStateSourceAction(getAuthStore, ({authState}) =>
+  authState.type === AuthStateType.LOGGED_IN ? authState.currentUser : null,
+)
+
+/**
+ * @public
+ */
+export const getTokenState = createStateSourceAction(getAuthStore, ({authState}) =>
+  authState.type === AuthStateType.LOGGED_IN ? authState.token : null,
+)
+/**
+ * @public
+ */
+export const getLoginUrlsState = createStateSourceAction(
+  getAuthStore,
+  ({providers}) => providers ?? null,
+)
+
+/**
+ * @public
+ */
+export const getAuthState = createStateSourceAction(getAuthStore, ({authState}) => authState)

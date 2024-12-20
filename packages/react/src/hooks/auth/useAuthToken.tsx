@@ -1,16 +1,10 @@
-import {getAuthStore} from '@sanity/sdk'
-import {useStore} from 'zustand'
+import {getTokenState} from '@sanity/sdk'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
 /**
  * Hook to get the currently logged in user
  * @public
  * @returns The current user or null if not authenticated
  */
-export const useAuthToken = (): string | null => {
-  const instance = useSanityInstance()
-  const {tokenState} = getAuthStore(instance)
-
-  return useStore(tokenState)
-}
+export const useAuthToken = createStateSourceHook(getTokenState)

@@ -1,4 +1,4 @@
-import type {AuthConfig} from '../auth/internalAuthStore'
+import type {AuthConfig} from '../auth/authStore'
 import {disposeResources} from '../resources/createResource'
 import type {SchemaConfig} from '../schema/schemaManager'
 import {getSdkIdentity} from './identity'

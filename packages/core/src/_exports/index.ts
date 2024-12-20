@@ -26,21 +26,24 @@ export type {
 export {createDocumentListStore} from '../documentList/documentListStore'
 
 /** AUTH */
-export type {CurrentUserSlice} from '../auth/authStore'
 export {
   type AuthConfig,
   type AuthProvider,
   type AuthState,
-  type AuthStateSlice,
   AuthStateType,
-  type AuthStore,
+  type AuthStoreState,
   type ErrorAuthState,
-  getAuthStore,
+  getAuthState,
+  getCurrentUserState,
+  getLoginUrlsState,
+  getTokenState,
   type LoggedInAuthState,
   type LoggedOutAuthState,
   type LoggingInAuthState,
-  type AuthTokenSlice as PublicTokenSlice,
 } from '../auth/authStore'
+export {fetchLoginUrls} from '../auth/fetchLoginUrls'
+export {handleCallback} from '../auth/handleCallback'
+export {logout} from '../auth/logout'
 export {type SchemaConfig} from '../schema/schemaManager'
 export type {CurrentUser, Role} from '@sanity/types'
 
