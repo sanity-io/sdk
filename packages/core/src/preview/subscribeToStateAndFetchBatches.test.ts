@@ -11,12 +11,12 @@ import {
   getOrCreateResource,
   type ResourceState,
 } from '../resources/createResource'
-import {getSchemaSource} from '../schema/getSchemaSource'
+import {getSchemaState} from '../schema/getSchemaState'
 import {type PreviewQueryResult, previewStore, type PreviewStoreState} from './previewStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 
 vi.mock('../client/actions/getSubscribableClient')
-vi.mock('../schema/getSchemaSource')
+vi.mock('../schema/getSchemaState')
 vi.mock('../resources/createResource', async (importOriginal) => {
   const original = await importOriginal<typeof import('../resources/createResource')>()
   return {...original, getOrCreateResource: vi.fn()}
@@ -61,7 +61,7 @@ describe('subscribeToStateAndFetchBatches', () => {
         }),
     )
     ;(getSubscribableClient as Mock).mockReturnValue(of({observable: {fetch: mockFetch}}))
-    ;(getSchemaSource as Mock).mockImplementation(() => ({
+    ;(getSchemaState as Mock).mockImplementation(() => ({
       getCurrent: () => schema,
       subscribe: vi.fn(() => vi.fn()),
       observable: of(schema),
