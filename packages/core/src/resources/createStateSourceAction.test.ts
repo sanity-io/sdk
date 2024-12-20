@@ -20,24 +20,24 @@ describe('createStateSourceAction', () => {
     },
   )
 
-  const getValueSource = createStateSourceAction(
+  const getValueState = createStateSourceAction(
     () => resource,
     (state) => state.value,
   )
 
   it('should return the current value', () => {
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    const valueSource = getValueSource(instance)
+    const valueState = getValueState(instance)
 
-    expect(valueSource.getCurrent()).toBe(10)
+    expect(valueState.getCurrent()).toBe(10)
   })
 
   it('should subscribe to state changes and call the provided function', () => {
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    const valueSource = getValueSource(instance)
+    const valueState = getValueState(instance)
 
     const mockCallback = vi.fn()
-    valueSource.subscribe(mockCallback)
+    valueState.subscribe(mockCallback)
 
     setValue(instance, 5)
 
@@ -46,10 +46,10 @@ describe('createStateSourceAction', () => {
 
   it('should unsubscribe from the state changes', () => {
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    const valueSource = getValueSource(instance)
+    const valueState = getValueState(instance)
     const mockCallback = vi.fn()
 
-    const unsubscribe = valueSource.subscribe(mockCallback)
+    const unsubscribe = valueState.subscribe(mockCallback)
     unsubscribe()
 
     setValue(instance, 5)
@@ -58,12 +58,12 @@ describe('createStateSourceAction', () => {
 
   it('should emit only when the value actually changes', () => {
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    const valueSource = getValueSource(instance)
+    const valueState = getValueState(instance)
 
     const mockCallback = vi.fn()
-    valueSource.subscribe(mockCallback)
+    valueState.subscribe(mockCallback)
 
-    setValue(instance, valueSource.getCurrent())
+    setValue(instance, valueState.getCurrent())
     expect(mockCallback).toHaveBeenCalledTimes(0)
 
     setValue(instance, 5)
@@ -72,16 +72,16 @@ describe('createStateSourceAction', () => {
 
   it('returns an observable that emits the current value on subscribe', () => {
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    const valueSource = getValueSource(instance)
+    const valueState = getValueState(instance)
 
     const observer = vi.fn()
-    const subscription = valueSource.observable.subscribe(observer)
+    const subscription = valueState.observable.subscribe(observer)
 
     expect(observer).toHaveBeenCalledTimes(1)
     expect(observer).toHaveBeenCalledWith(10)
 
     // try a no-op change
-    setValue(instance, valueSource.getCurrent())
+    setValue(instance, valueState.getCurrent())
     expect(observer).toHaveBeenCalledTimes(1)
 
     // set a value that will change
