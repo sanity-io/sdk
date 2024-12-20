@@ -228,6 +228,9 @@ importers:
       '@sanity/client':
         specifier: ^6.22.3
         version: 6.24.1
+      '@sanity/comlink':
+        specifier: ^2.0.2
+        version: 2.0.3
       '@sanity/schema':
         specifier: ^3.67.1
         version: 3.68.3(@types/react@18.3.18)

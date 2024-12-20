@@ -51,3 +51,21 @@ export type {CurrentUser, Role} from '@sanity/types'
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
 export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
+
+/** COMLINK */
+export {destroyController} from '../comlink/controller/actions/destroyController'
+export {
+  getChannelSource,
+  getOrCreateChannel,
+} from '../comlink/controller/actions/getOrCreateChannel'
+export {
+  getControllerSource,
+  getOrCreateController,
+} from '../comlink/controller/actions/getOrCreateController'
+export {removeChannel} from '../comlink/controller/actions/removeChannel'
+export type {
+  ChannelEntry,
+  ComlinkControllerState,
+  CreateChannelOptions,
+} from '../comlink/controller/comlinkControllerStore'
+export {type FrameMessage, type WindowMessage} from '../comlink/types'
