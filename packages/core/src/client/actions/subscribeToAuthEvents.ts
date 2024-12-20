@@ -32,8 +32,9 @@ export const subscribeToAuthEvents = createAction(
       const authStore = getAuthStore(instance)
 
       const observableAuthStore = new Observable<string | null>((observer) => {
-        return authStore.tokenState.subscribe((token) => {
-          observer.next(token)
+        observer.next(authStore.tokenState.getState())
+        return authStore.tokenState.subscribe(() => {
+          observer.next(authStore.tokenState.getState())
         })
       })
 
