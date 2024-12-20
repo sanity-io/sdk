@@ -1,34 +1,55 @@
 import {type SanityClient} from '@sanity/client'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {firstValueFrom, Observable} from 'rxjs'
+import {beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
 import {config} from '../../../test/fixtures'
+import {getAuthStore} from '../../auth/authStore'
 import {createSanityInstance} from '../../instance/sanityInstance'
+import type {SanityInstance} from '../../instance/types'
+import {getOrCreateResource} from '../../resources/createResource'
+import {clientStore} from '../clientStore'
 import {getSubscribableClient} from './getSubscribableClient'
 
-let tokenCallback: ((token: string | null, prevToken: string | null) => void) | undefined
+type TokenState = ReturnType<typeof getAuthStore>['tokenState']
 
 vi.mock('../../auth/authStore', () => ({
-  getAuthStore: vi.fn(() => {
-    return {
-      tokenState: {
-        subscribe: vi.fn((callback) => {
-          tokenCallback = callback
-        }),
-      },
-    }
+  getAuthStore: vi.fn().mockReturnValue({
+    tokenState: {
+      subscribe: vi.fn().mockReturnValue(
+        // unsubscribe function
+        vi.fn(),
+      ),
+      getState: vi.fn(),
+    },
   }),
 }))
 
 describe('getSubscribableClient', () => {
   const apiVersion = '2024-12-05'
 
+  let instance: SanityInstance
+  let getTokenState: Mock<TokenState['getState']>
+  let tokenSubscribe: Mock<TokenState['subscribe']>
+  let tokenSubscriber: Mock<Parameters<TokenState['subscribe']>[0]>
+
   beforeEach(() => {
-    tokenCallback = undefined
+    instance = createSanityInstance(config)
+
+    // @ts-expect-error no params required since mocking
+    const {tokenState} = getAuthStore()
+    getTokenState = vi.mocked(tokenState.getState)
+    tokenSubscribe = vi.mocked(tokenState.subscribe)
+
     vi.clearAllMocks()
+
+    // ensure resource is created
+    getOrCreateResource(instance, clientStore)
+
+    expect(tokenSubscribe).toHaveBeenCalledTimes(1)
+    tokenSubscriber = vi.mocked(tokenSubscribe.mock.calls[0][0])
   })
 
   it('should create subscribable client and emit initial client', () => {
-    const instance = createSanityInstance(config)
     const client$ = getSubscribableClient(instance, {apiVersion})
 
     client$.subscribe({
@@ -41,7 +62,6 @@ describe('getSubscribableClient', () => {
   it('should emit updated client when auth token changes', () => {
     const emittedClients: SanityClient[] = []
 
-    const instance = createSanityInstance(config)
     const client$ = getSubscribableClient(instance, {apiVersion})
 
     // Track emissions
@@ -51,7 +71,8 @@ describe('getSubscribableClient', () => {
       },
     })
 
-    tokenCallback?.('new-token', null)
+    getTokenState.mockReturnValue('new-token')
+    tokenSubscriber(getTokenState(), null)
 
     // initial client + updated client = 2
     expect(emittedClients.length).toBe(2)
@@ -60,25 +81,20 @@ describe('getSubscribableClient', () => {
   })
 
   it('should use the same client for same API version', async () => {
-    const instance = createSanityInstance(config)
-    const client1$ = getSubscribableClient(instance, {apiVersion})
-    const client2$ = getSubscribableClient(instance, {apiVersion})
+    const client1Promise = firstValueFrom(
+      new Observable<SanityClient>((observer) =>
+        getSubscribableClient(instance, {apiVersion}).subscribe(observer),
+      ),
+    )
+    const client2Promise = firstValueFrom(
+      new Observable<SanityClient>((observer) =>
+        getSubscribableClient(instance, {apiVersion}).subscribe(observer),
+      ),
+    )
 
-    let firstClient: SanityClient | undefined
+    const client1 = await client1Promise
+    const client2 = await client2Promise
 
-    await new Promise<void>((resolve) => {
-      client1$.subscribe({
-        next: (client) => {
-          firstClient = client
-
-          client2$.subscribe({
-            next: (secondClient) => {
-              expect(secondClient).toBe(firstClient)
-              resolve()
-            },
-          })
-        },
-      })
-    })
+    expect(client1).toBe(client2)
   })
 })
