@@ -1,5 +1,5 @@
 import type {SanityClient} from '@sanity/client'
-import {combineLatest, filter, map, Observable, switchMap} from 'rxjs'
+import {combineLatest, distinctUntilChanged, filter, map, Observable, switchMap} from 'rxjs'
 
 import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {createAction} from '../resources/createAction'
@@ -12,7 +12,10 @@ export const subscribeToLiveAndSetLastLiveEventId = createAction(
     const client$ = new Observable<SanityClient>((observer) =>
       getSubscribableClient(instance, {apiVersion: 'vX'}).subscribe(observer),
     )
-    const syncTags$ = state.observable.pipe(map((i) => i.syncTags))
+    const syncTags$ = state.observable.pipe(
+      map((i) => i.syncTags),
+      distinctUntilChanged(),
+    )
 
     return function () {
       const messageEvents$ = client$.pipe(
