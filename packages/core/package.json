@@ -76,7 +76,7 @@
     "@sanity/prettier-config": "^1.0.3",
     "@sanity/types": "^3.68.3",
     "@vitest/coverage-v8": "2.1.8",
-    "eslint": "^9.16.0",
+    "eslint": "^9.17.0",
     "groq-js": "^1.14.2",
     "lint-staged": "^15.2.10",
     "prettier": "^3.4.2",
