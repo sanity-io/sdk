@@ -100,6 +100,7 @@
     "@repo/config-eslint": "workspace:*",
     "@repo/package.config": "workspace:*",
     "@sanity/client": "^6.24.1",
+    "@sanity/comlink": "^2.0.2",
     "@sanity/pkg-utils": "^6.12.2",
     "@sanity/prettier-config": "^1.0.3",
     "@storybook/react": "^8.4.7",
