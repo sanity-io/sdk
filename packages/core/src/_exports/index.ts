@@ -57,4 +57,6 @@ export {getOrCreateChannel} from '../comlink/controller/actions/getOrCreateChann
 export {getOrCreateController} from '../comlink/controller/actions/getOrCreateController'
 export {releaseChannel} from '../comlink/controller/actions/releaseChannel'
 export type {ComlinkControllerState} from '../comlink/controller/comlinkControllerStore'
+export {getNodeSource, getOrCreateNode} from '../comlink/node/actions/getOrCreateNode'
+export type {ComlinkNodeState, NodeEntry} from '../comlink/node/comlinkNodeStore'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'
