@@ -63,4 +63,6 @@ export type {
   ComlinkControllerState,
   CreateChannelOptions,
 } from '../comlink/controller/comlinkControllerStore'
+export {getNodeSource, getOrCreateNode} from '../comlink/node/actions/getOrCreateNode'
+export type {ComlinkNodeState, NodeEntry} from '../comlink/node/comlinkNodeStore'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'
