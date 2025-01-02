@@ -1,52 +1,42 @@
 import {type SanityClient} from '@sanity/client'
-import {firstValueFrom, Observable} from 'rxjs'
-import {beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
+import {firstValueFrom, Observable, Subject} from 'rxjs'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {config} from '../../../test/fixtures'
-import {getAuthStore} from '../../auth/authStore'
+import {getTokenState} from '../../auth/authStore'
 import {createSanityInstance} from '../../instance/sanityInstance'
 import type {SanityInstance} from '../../instance/types'
 import {getOrCreateResource} from '../../resources/createResource'
 import {clientStore} from '../clientStore'
 import {getSubscribableClient} from './getSubscribableClient'
 
-type TokenState = ReturnType<typeof getAuthStore>['tokenState']
-
-vi.mock('../../auth/authStore', () => ({
-  getAuthStore: vi.fn().mockReturnValue({
-    tokenState: {
-      subscribe: vi.fn().mockReturnValue(
-        // unsubscribe function
-        vi.fn(),
-      ),
-      getState: vi.fn(),
-    },
-  }),
-}))
+vi.mock('../../auth/authStore', async (importOriginal) => {
+  const original = importOriginal<typeof import('../../auth/authStore')>()
+  return {
+    ...original,
+    getTokenState: vi.fn().mockReturnValue({
+      observable: new Subject<string | null>(),
+    }),
+  }
+})
 
 describe('getSubscribableClient', () => {
   const apiVersion = '2024-12-05'
 
   let instance: SanityInstance
-  let getTokenState: Mock<TokenState['getState']>
-  let tokenSubscribe: Mock<TokenState['subscribe']>
-  let tokenSubscriber: Mock<Parameters<TokenState['subscribe']>[0]>
+  let tokenSubject: Subject<string | null>
 
   beforeEach(() => {
     instance = createSanityInstance(config)
 
     // @ts-expect-error no params required since mocking
-    const {tokenState} = getAuthStore()
-    getTokenState = vi.mocked(tokenState.getState)
-    tokenSubscribe = vi.mocked(tokenState.subscribe)
+    const tokenState = getTokenState()
+    tokenSubject = tokenState.observable as Subject<string | null>
 
     vi.clearAllMocks()
 
     // ensure resource is created
     getOrCreateResource(instance, clientStore)
-
-    expect(tokenSubscribe).toHaveBeenCalledTimes(1)
-    tokenSubscriber = vi.mocked(tokenSubscribe.mock.calls[0][0])
   })
 
   it('should create subscribable client and emit initial client', () => {
@@ -71,8 +61,7 @@ describe('getSubscribableClient', () => {
       },
     })
 
-    getTokenState.mockReturnValue('new-token')
-    tokenSubscriber(getTokenState(), null)
+    tokenSubject.next('new-token')
 
     // initial client + updated client = 2
     expect(emittedClients.length).toBe(2)

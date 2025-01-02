@@ -1,320 +1,263 @@
+import {type ClientConfig, createClient} from '@sanity/client'
 import type {CurrentUser} from '@sanity/types'
-import {beforeEach, describe, expect, type Mock, test, vi} from 'vitest'
+import type {Subscription} from 'rxjs'
+import {describe, it} from 'vitest'
 
-import type {SanityInstance} from '../instance/types'
-import {AuthStateType, getAuthStore} from './authStore'
-import {getInternalAuthStore} from './getInternalAuthStore'
+import {createSanityInstance} from '../instance/sanityInstance'
+import {createResourceState, getOrCreateResource} from '../resources/createResource'
+import {
+  AuthStateType,
+  authStore,
+  type AuthStoreState,
+  getAuthState,
+  getAuthStore,
+  getCurrentUserState,
+  getLoginUrlsState,
+  getTokenState,
+} from './authStore'
+import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
+import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
+import {getAuthCode, getTokenFromStorage} from './utils'
 
-// Mock the getInternalAuthStore module
-vi.mock('./getInternalAuthStore')
+vi.mock('./utils', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./utils')>()
+  return {...original, getAuthCode: vi.fn(), getTokenFromStorage: vi.fn()}
+})
+
+vi.mock('./subscribeToStateAndFetchCurrentUser')
+vi.mock('./subscribeToStorageEventsAndSetToken')
 
 describe('authStore', () => {
-  const mockCurrentUser: CurrentUser = {
-    id: 'user-123',
-    name: 'Test User',
-    email: 'test@example.com',
-    profileImage: 'https://example.com/image.jpg',
-    role: 'admin',
-    roles: [],
-  }
+  describe('getInitialState', () => {
+    it('sets initial options onto state', () => {
+      const apiHost = 'test-api-host'
+      const authScope = 'org'
+      const callbackUrl = '/login/callback'
+      const providers = [
+        {name: 'test-provider', id: 'test', title: 'Test', url: 'https://example.com'},
+      ]
+      const token = 'provided-token'
+      const clientFactory = (config: ClientConfig) => createClient(config)
+      const initialLocationHref = 'https://example.com'
+      const storageArea = {} as Storage
 
-  const mockLoggedInState = {
-    authState: {
-      type: AuthStateType.LOGGED_IN as const,
-      token: 'mock-token',
-      currentUser: mockCurrentUser,
-    },
-    handleCallback: vi.fn(),
-    logout: vi.fn(),
-    dispose: vi.fn(),
-    getLoginUrls: vi.fn(),
-  }
-
-  const mockLoggedOutState = {
-    authState: {
-      type: AuthStateType.LOGGED_OUT as const,
-      isDestroyingSession: false,
-    },
-    handleCallback: vi.fn(),
-    logout: vi.fn(),
-    dispose: vi.fn(),
-    getLoginUrls: vi.fn(),
-  }
-
-  const mockInternalStore = {
-    getState: vi.fn(() => mockLoggedInState),
-    getInitialState: vi.fn(() => mockLoggedInState),
-    subscribe: vi.fn((_selector, _listener) => vi.fn()),
-  }
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-    ;(getInternalAuthStore as Mock).mockReturnValue(mockInternalStore)
-  })
-
-  test('creates auth store with all required methods', () => {
-    const mockInstance = {} as SanityInstance
-    const store = getAuthStore(mockInstance)
-
-    expect(store).toHaveProperty('authState')
-    expect(store).toHaveProperty('tokenState')
-    expect(store).toHaveProperty('currentUserState')
-    expect(store).toHaveProperty('handleCallback')
-    expect(store).toHaveProperty('logout')
-    expect(store).toHaveProperty('dispose')
-    expect(store).toHaveProperty('getLoginUrls')
-  })
-
-  test('authState returns correct state when logged in', () => {
-    const mockInstance = {} as SanityInstance
-    const store = getAuthStore(mockInstance)
-
-    expect(store.authState.getState()).toBe(mockLoggedInState.authState)
-    expect(store.authState.getInitialState()).toBe(mockLoggedInState.authState)
-  })
-
-  test('tokenState returns correct token when logged in', () => {
-    const mockInstance = {} as SanityInstance
-    const store = getAuthStore(mockInstance)
-
-    expect(store.tokenState.getState()).toBe('mock-token')
-    expect(store.tokenState.getInitialState()).toBe('mock-token')
-  })
-
-  test('tokenState returns null when logged out', () => {
-    const mockInstance = {} as SanityInstance
-    mockInternalStore.getState.mockReturnValue({
-      ...mockLoggedOutState,
-      authState: mockLoggedOutState.authState,
-    } as unknown as typeof mockLoggedInState)
-
-    mockInternalStore.getInitialState.mockReturnValue({
-      ...mockLoggedOutState,
-      authState: mockLoggedOutState.authState,
-    } as unknown as typeof mockLoggedInState)
-
-    const store = getAuthStore(mockInstance)
-
-    expect(store.tokenState.getState()).toBeNull()
-    expect(store.tokenState.getInitialState()).toBeNull()
-  })
-
-  test('currentUserState returns correct user when logged in', () => {
-    const mockInstance = {} as SanityInstance
-    mockInternalStore.getState.mockReturnValue(mockLoggedInState)
-    mockInternalStore.getInitialState.mockReturnValue(mockLoggedInState)
-
-    const store = getAuthStore(mockInstance)
-
-    expect(store.currentUserState.getState()).toBe(mockCurrentUser)
-    expect(store.currentUserState.getInitialState()).toBe(mockCurrentUser)
-  })
-
-  test('currentUserState returns null when logged out', () => {
-    const mockInstance = {} as SanityInstance
-    mockInternalStore.getState.mockReturnValue({
-      ...mockLoggedOutState,
-      authState: mockLoggedOutState.authState,
-    } as unknown as typeof mockLoggedInState)
-
-    mockInternalStore.getInitialState.mockReturnValue({
-      ...mockLoggedOutState,
-      authState: mockLoggedOutState.authState,
-    } as unknown as typeof mockLoggedInState)
-
-    const store = getAuthStore(mockInstance)
-
-    expect(store.currentUserState.getState()).toBeNull()
-    expect(store.currentUserState.getInitialState()).toBeNull()
-  })
-
-  test('subscribe callbacks are properly set up', () => {
-    const mockInstance = {} as SanityInstance
-    const store = getAuthStore(mockInstance)
-    const mockListener = vi.fn()
-
-    store.authState.subscribe(mockListener)
-    store.tokenState.subscribe(mockListener)
-    store.currentUserState.subscribe(mockListener)
-
-    expect(mockInternalStore.subscribe).toHaveBeenCalledTimes(3)
-  })
-
-  test('tokenState.getInitialState returns null when initial state is logged out', () => {
-    const mockInstance = {} as SanityInstance
-    mockInternalStore.getInitialState.mockReturnValue({
-      ...mockLoggedOutState,
-      authState: mockLoggedOutState.authState,
-    } as unknown as typeof mockLoggedInState)
-
-    const store = getAuthStore(mockInstance)
-    expect(store.tokenState.getInitialState()).toBeNull()
-  })
-
-  test('currentUserState.getInitialState returns null when initial state is logged out', () => {
-    const mockInstance = {} as SanityInstance
-    mockInternalStore.getInitialState.mockReturnValue({
-      ...mockLoggedOutState,
-      authState: mockLoggedOutState.authState,
-    } as unknown as typeof mockLoggedInState)
-
-    const store = getAuthStore(mockInstance)
-
-    expect(store.currentUserState.getInitialState()).toBeNull()
-  })
-
-  test('tokenState.subscribe works correctly', () => {
-    const mockInstance = {} as SanityInstance
-    const store = getAuthStore(mockInstance)
-    const mockListener = vi.fn()
-
-    store.tokenState.subscribe(mockListener)
-
-    // Simulate a state change to 'logged-in' with a new token
-    mockInternalStore.subscribe.mock.calls[0][0](
-      {
-        authState: {
-          type: AuthStateType.LOGGED_IN,
-          token: 'new-token',
-          currentUser: mockCurrentUser,
+      const instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {
+          apiHost,
+          authScope,
+          callbackUrl,
+          providers,
+          token,
+          clientFactory,
+          initialLocationHref,
+          storageArea,
         },
-      },
-      {
-        authState: {
-          type: AuthStateType.LOGGED_IN,
-          token: 'mock-token',
-          currentUser: mockCurrentUser,
-        },
-      },
-    )
+      })
 
-    expect(mockListener).toHaveBeenCalledWith('new-token', 'mock-token')
+      vi.mocked(getTokenFromStorage).mockReturnValue(null)
+
+      const {options} = authStore.getInitialState(instance)
+
+      expect(options.apiHost).toBe(apiHost)
+      expect(options.authScope).toBe(authScope)
+      expect(options.callbackUrl).toBe(callbackUrl)
+      expect(options.customProviders).toBe(providers)
+      expect(options.providedToken).toBe(token)
+      expect(options.clientFactory).toBe(clientFactory)
+      expect(options.initialLocationHref).toBe(initialLocationHref)
+      expect(options.storageKey).toBe('__sanity_auth_token_p_d')
+      expect(options.storageArea).toBe(storageArea)
+    })
+
+    it('sets to logged in if provided token is present', () => {
+      const instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {
+          token: 'provided-token',
+        },
+      })
+
+      const {authState} = authStore.getInitialState(instance)
+      expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN})
+    })
+
+    it('sets to logging in if `getAuthCode` returns a code', () => {
+      const instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+      })
+
+      vi.mocked(getAuthCode).mockReturnValue('auth-code')
+
+      const {authState} = authStore.getInitialState(instance)
+      expect(authState).toMatchObject({type: AuthStateType.LOGGING_IN})
+    })
+
+    it('sets to logged in if `getTokenFromStorage` returns a token', () => {
+      const instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+      })
+
+      vi.mocked(getAuthCode).mockReturnValue(null)
+      vi.mocked(getTokenFromStorage).mockReturnValue('new-token')
+
+      const {authState} = authStore.getInitialState(instance)
+      expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN, token: 'new-token'})
+    })
+
+    it('otherwise it sets the state to logged out', () => {
+      const instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+      })
+
+      vi.mocked(getAuthCode).mockReturnValue(null)
+      vi.mocked(getTokenFromStorage).mockReturnValue(null)
+
+      const {authState} = authStore.getInitialState(instance)
+      expect(authState).toMatchObject({type: AuthStateType.LOGGED_OUT})
+    })
   })
 
-  test('currentUserState.subscribe works correctly', () => {
-    const mockInstance = {} as SanityInstance
-    const store = getAuthStore(mockInstance)
-    const mockListener = vi.fn()
+  describe('initialize', () => {
+    it('subscribes to state and storage events and unsubscribes on dispose', () => {
+      const instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+      })
 
-    store.currentUserState.subscribe(mockListener)
+      const stateUnsubscribe = vi.fn()
+      vi.mocked(subscribeToStateAndFetchCurrentUser).mockReturnValue({
+        unsubscribe: stateUnsubscribe,
+      } as unknown as Subscription)
 
-    // Simulate a state change to 'logged-in' with a new user
-    mockInternalStore.subscribe.mock.calls[0][0](
-      {
-        authState: {
-          type: AuthStateType.LOGGED_IN,
-          token: 'mock-token',
-          currentUser: {...mockCurrentUser, name: 'New Name'},
-        },
-      },
-      {
-        authState: {
-          type: AuthStateType.LOGGED_IN,
-          token: 'mock-token',
-          currentUser: mockCurrentUser,
-        },
-      },
-    )
+      const storageEventsUnsubscribe = vi.fn()
+      vi.mocked(subscribeToStorageEventsAndSetToken).mockReturnValue({
+        unsubscribe: storageEventsUnsubscribe,
+      } as unknown as Subscription)
 
-    expect(mockListener).toHaveBeenCalledWith(
-      {...mockCurrentUser, name: 'New Name'},
-      mockCurrentUser,
-    )
+      expect(subscribeToStateAndFetchCurrentUser).not.toHaveBeenCalled()
+      expect(subscribeToStorageEventsAndSetToken).not.toHaveBeenCalled()
+
+      getOrCreateResource(instance, authStore)
+
+      expect(subscribeToStateAndFetchCurrentUser).toHaveBeenCalled()
+      expect(subscribeToStorageEventsAndSetToken).toHaveBeenCalled()
+
+      instance.dispose()
+
+      expect(stateUnsubscribe).toHaveBeenCalled()
+      expect(storageEventsUnsubscribe).toHaveBeenCalled()
+    })
   })
 
-  test('tokenState.subscribe handles logged-out state correctly', () => {
-    const mockInstance = {} as SanityInstance
-    const store = getAuthStore(mockInstance)
-    const mockListener = vi.fn()
+  describe('getCurrentUserState', () => {
+    it('returns the current user if logged in and current user is non-null', () => {
+      const currentUser = {id: 'example-user'} as CurrentUser
+      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const state = createResourceState<AuthStoreState>({
+        authState: {type: AuthStateType.LOGGED_IN, token: 'new-token', currentUser},
+      } as AuthStoreState)
 
-    store.tokenState.subscribe(mockListener)
+      const currentUserState = getCurrentUserState({instance, state})
+      expect(currentUserState.getCurrent()).toBe(currentUser)
 
-    // Simulate a state change to 'logged-out'
-    mockInternalStore.subscribe.mock.calls[0][0](
-      {
-        authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
-      },
-      {
-        authState: {
-          type: AuthStateType.LOGGED_IN,
-          token: 'mock-token',
-          currentUser: mockCurrentUser,
-        },
-      },
-    )
+      // pureness check
+      expect(currentUserState.getCurrent()).toBe(currentUserState.getCurrent())
+    })
 
-    expect(mockListener).toHaveBeenCalledWith(null, 'mock-token')
+    it('returns null otherwise', () => {
+      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const state = createResourceState<AuthStoreState>({
+        authState: {type: AuthStateType.LOGGED_OUT},
+      } as AuthStoreState)
+
+      const currentUserState = getCurrentUserState({instance, state})
+      expect(currentUserState.getCurrent()).toBe(null)
+
+      // pureness check
+      expect(currentUserState.getCurrent()).toBe(currentUserState.getCurrent())
+    })
   })
 
-  test('currentUserState.subscribe handles logged-out state correctly', () => {
-    const mockInstance = {} as SanityInstance
-    const store = getAuthStore(mockInstance)
-    const mockListener = vi.fn()
+  describe('getTokenState', () => {
+    it('returns the token if logged in', () => {
+      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const token = 'new-token'
+      const state = createResourceState<AuthStoreState>({
+        authState: {type: AuthStateType.LOGGED_IN, token},
+      } as AuthStoreState)
 
-    store.currentUserState.subscribe(mockListener)
+      const tokenState = getTokenState({instance, state})
+      expect(tokenState.getCurrent()).toBe(token)
 
-    // Simulate a state change to 'logged-out'
-    mockInternalStore.subscribe.mock.calls[0][0](
-      {
-        authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
-      },
-      {
-        authState: {
-          type: AuthStateType.LOGGED_IN,
-          token: 'mock-token',
-          currentUser: mockCurrentUser,
-        },
-      },
-    )
+      // pureness check
+      expect(tokenState.getCurrent()).toBe(tokenState.getCurrent())
+    })
 
-    expect(mockListener).toHaveBeenCalledWith(null, mockCurrentUser)
+    it('returns null otherwise', () => {
+      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const state = createResourceState<AuthStoreState>({
+        authState: {type: AuthStateType.ERROR, error: new Error('test error')},
+      } as AuthStoreState)
+
+      const tokenState = getTokenState({instance, state})
+      expect(tokenState.getCurrent()).toBe(null)
+
+      // pureness check
+      expect(tokenState.getCurrent()).toBe(tokenState.getCurrent())
+    })
   })
 
-  test('tokenState.subscribe handles transition from logged-out to logged-in correctly', () => {
-    const mockInstance = {} as SanityInstance
-    const store = getAuthStore(mockInstance)
-    const mockListener = vi.fn()
+  describe('getLoginUrlsState', () => {
+    it('returns the cached auth providers if present', () => {
+      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const providers = [{name: 'test', title: 'Test', url: 'https://example.com#withSid=true'}]
+      const state = createResourceState<AuthStoreState>({providers} as AuthStoreState)
 
-    store.tokenState.subscribe(mockListener)
+      const loginUrlsState = getLoginUrlsState({instance, state})
+      expect(loginUrlsState.getCurrent()).toBe(providers)
 
-    // Simulate a state change from 'logged-out' to 'logged-in'
-    mockInternalStore.subscribe.mock.calls[0][0](
-      {
-        authState: {
-          type: AuthStateType.LOGGED_IN,
-          token: 'new-token',
-          currentUser: mockCurrentUser,
-        },
-      },
-      {
-        authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
-      },
-    )
+      // pureness check
+      expect(loginUrlsState.getCurrent()).toBe(loginUrlsState.getCurrent())
+    })
 
-    expect(mockListener).toHaveBeenCalledWith('new-token', null)
+    it('returns nulls otherwise', () => {
+      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const state = createResourceState<AuthStoreState>({} as AuthStoreState)
+
+      const loginUrlsState = getLoginUrlsState({instance, state})
+      expect(loginUrlsState.getCurrent()).toBe(null)
+
+      // pureness check
+      expect(loginUrlsState.getCurrent()).toBe(loginUrlsState.getCurrent())
+    })
   })
 
-  test('currentUserState.subscribe handles transition from logged-out to logged-in correctly', () => {
-    const mockInstance = {} as SanityInstance
-    const store = getAuthStore(mockInstance)
-    const mockListener = vi.fn()
+  describe('getAuthState', () => {
+    it('returns the current state in `authState`', () => {
+      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const authState: AuthStoreState['authState'] = {
+        type: AuthStateType.LOGGED_OUT,
+        isDestroyingSession: false,
+      }
+      const state = createResourceState<AuthStoreState>({authState} as AuthStoreState)
 
-    store.currentUserState.subscribe(mockListener)
+      const authStateSource = getAuthState({instance, state})
+      expect(authStateSource.getCurrent()).toBe(authState)
 
-    // Simulate a state change from 'logged-out' to 'logged-in'
-    mockInternalStore.subscribe.mock.calls[0][0](
-      {
-        authState: {
-          type: AuthStateType.LOGGED_IN,
-          token: 'new-token',
-          currentUser: {...mockCurrentUser, name: 'Updated User'},
-        },
-      },
-      {
-        authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
-      },
-    )
+      // pureness check
+      expect(authStateSource.getCurrent()).toBe(authStateSource.getCurrent())
+    })
+  })
 
-    expect(mockListener).toHaveBeenCalledWith({...mockCurrentUser, name: 'Updated User'}, null)
+  describe('getAuthStore', () => {
+    it('returns the authStore resource', () => {
+      expect(getAuthStore()).toBe(authStore)
+    })
   })
 })

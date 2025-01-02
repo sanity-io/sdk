@@ -1,7 +1,6 @@
-import {type AuthState, getAuthStore} from '@sanity/sdk'
-import {useStore} from 'zustand/react'
+import {getAuthState} from '@sanity/sdk'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
 /**
  * A React hook that subscribes to authentication state changes.
@@ -25,9 +24,4 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *
  * @public
  */
-export function useAuthState(): AuthState {
-  const instance = useSanityInstance()
-  const {authState} = getAuthStore(instance)
-
-  return useStore(authState)
-}
+export const useAuthState = createStateSourceHook(getAuthState)

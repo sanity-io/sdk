@@ -1,33 +1,35 @@
-import {beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
+import {Subject} from 'rxjs'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {config} from '../../../test/fixtures'
-import {getAuthStore} from '../../auth/authStore'
+import {getTokenState} from '../../auth/authStore'
 import {createSanityInstance} from '../../instance/sanityInstance'
 import type {SanityInstance} from '../../instance/types'
 import {getClient} from './getClient'
 
-type TokenState = ReturnType<typeof getAuthStore>['tokenState']
-
-vi.mock('../../auth/authStore', () => ({
-  getAuthStore: vi.fn().mockReturnValue({
-    tokenState: {getState: vi.fn(), subscribe: vi.fn()},
-  }),
-}))
+vi.mock('../../auth/authStore', async (importOriginal) => {
+  const original = importOriginal<typeof import('../../auth/authStore')>()
+  return {
+    ...original,
+    getTokenState: vi.fn().mockReturnValue({
+      observable: new Subject<string | null>(),
+    }),
+  }
+})
 
 describe('getClient', () => {
   const apiVersion = '2024-01-01'
-  let instance: SanityInstance
 
-  let getState: Mock<TokenState['getState']>
-  let subscribe: Mock<TokenState['subscribe']>
+  let instance: SanityInstance
+  let tokenSubject: Subject<string | null>
 
   beforeEach(() => {
     vi.clearAllMocks()
     instance = createSanityInstance(config)
 
-    const {tokenState} = getAuthStore(instance)
-    getState = vi.mocked(tokenState.getState)
-    subscribe = vi.mocked(tokenState.subscribe)
+    // @ts-expect-error no params required since mocking
+    const tokenState = getTokenState()
+    tokenSubject = tokenState.observable as Subject<string | null>
   })
 
   it('throws error when apiVersion is missing', () => {
@@ -48,11 +50,7 @@ describe('getClient', () => {
   it('preserves client identity after token update', async () => {
     const client1 = getClient(instance, {apiVersion})
 
-    expect(subscribe).toHaveBeenCalledTimes(1)
-    const [subscriber] = subscribe.mock.calls[0]
-
-    getState.mockReturnValue('new-token')
-    subscriber('new-token', null)
+    tokenSubject.next('new-token')
 
     const client2 = getClient(instance, {apiVersion})
 

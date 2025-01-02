@@ -1,7 +1,6 @@
-import {type AuthStore, getAuthStore} from '@sanity/sdk'
-import {useMemo} from 'react'
+import {handleCallback} from '@sanity/sdk'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {createCallbackHook} from '../helpers/createCallbackHook'
 
 /**
  * A React hook that returns a function for handling authentication callbacks.
@@ -42,9 +41,4 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @returns A callback handler function that processes OAuth redirects
  * @public
  */
-export function useHandleCallback(): AuthStore['handleCallback'] {
-  const instance = useSanityInstance()
-  const authStore = useMemo(() => getAuthStore(instance), [instance])
-
-  return authStore.handleCallback
-}
+export const useHandleCallback = createCallbackHook(handleCallback)

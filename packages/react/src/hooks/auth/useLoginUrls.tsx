@@ -1,5 +1,5 @@
-import {type AuthProvider, getAuthStore} from '@sanity/sdk'
-import {useMemo} from 'react'
+import {type AuthProvider, fetchLoginUrls, getLoginUrlsState} from '@sanity/sdk'
+import {useMemo, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -43,9 +43,9 @@ import {useSanityInstance} from '../context/useSanityInstance'
  */
 export function useLoginUrls(): AuthProvider[] {
   const instance = useSanityInstance()
-  const authStore = useMemo(() => getAuthStore(instance), [instance])
-  const result = authStore.getLoginUrls()
+  const {subscribe, getCurrent} = useMemo(() => getLoginUrlsState(instance), [instance])
 
-  if (Array.isArray(result)) return result
-  throw result
+  if (!getCurrent()) throw fetchLoginUrls(instance)
+
+  return useSyncExternalStore(subscribe, getCurrent as () => AuthProvider[])
 }
