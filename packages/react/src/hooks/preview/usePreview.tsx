@@ -1,4 +1,4 @@
-import {type DocumentHandle, getPreviewSource, type PreviewValue, resolvePreview} from '@sanity/sdk'
+import {type DocumentHandle, getPreviewState, type PreviewValue, resolvePreview} from '@sanity/sdk'
 import {type RefObject, useCallback, useMemo, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
@@ -21,8 +21,8 @@ export function usePreview({
 }: UsePreviewOptions): [PreviewValue, boolean] {
   const instance = useSanityInstance()
 
-  const previewSource = useMemo(
-    () => getPreviewSource(instance, {document: {_id, _type}}),
+  const stateSource = useMemo(
+    () => getPreviewState(instance, {document: {_id, _type}}),
     [instance, _id, _type],
   )
 
@@ -46,7 +46,7 @@ export function usePreview({
           switchMap((isVisible) =>
             isVisible
               ? new Observable<void>((obs) => {
-                  return previewSource.subscribe(() => obs.next())
+                  return stateSource.subscribe(() => obs.next())
                 })
               : EMPTY,
           ),
@@ -55,15 +55,15 @@ export function usePreview({
 
       return () => subscription.unsubscribe()
     },
-    [previewSource, ref],
+    [stateSource, ref],
   )
 
   // Create getSnapshot function to return current state
   const getSnapshot = useCallback(() => {
-    const previewTuple = previewSource.getCurrent()
+    const previewTuple = stateSource.getCurrent()
     if (!previewTuple[0]) throw resolvePreview(instance, {document: {_id, _type}})
     return previewTuple as [PreviewValue, boolean]
-  }, [_id, _type, instance, previewSource])
+  }, [_id, _type, instance, stateSource])
 
   return useSyncExternalStore(subscribe, getSnapshot)
 }

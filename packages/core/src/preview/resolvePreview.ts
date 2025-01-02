@@ -1,6 +1,6 @@
 import type {DocumentHandle} from '../documentList/documentListStore'
 import {createAction} from '../resources/createAction'
-import {getPreviewSource} from './getPreviewSource'
+import {getPreviewState} from './getPreviewState'
 import {previewStore, type PreviewValue, type ValuePending} from './previewStore'
 
 /**
@@ -17,7 +17,7 @@ export const resolvePreview = createAction(
   () => previewStore,
   () => {
     return function ({document}: ResolvePreviewOptions) {
-      const {getCurrent, subscribe} = getPreviewSource(this, {document})
+      const {getCurrent, subscribe} = getPreviewState(this, {document})
 
       return new Promise<ValuePending<PreviewValue>>((resolve) => {
         const unsubscribe = subscribe(() => {

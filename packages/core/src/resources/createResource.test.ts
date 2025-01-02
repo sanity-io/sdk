@@ -95,7 +95,8 @@ describe('createResource', () => {
     const {dispose} = initializeResource(instance, resource)
     expect(() => dispose()).not.toThrowError()
   })
-  it('should clear resource cache on disposeResources', () => {
+
+  it('should clear resource caqche on disposeResources', () => {
     const resource = createResource<TestState>({
       name: 'test',
       getInitialState: () => ({value: 0}),

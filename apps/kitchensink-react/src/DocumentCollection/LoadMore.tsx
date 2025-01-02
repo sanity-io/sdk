@@ -1,12 +1,13 @@
 import {Flex, Text} from '@sanity/ui'
-import {useEffect, useRef, useState} from 'react'
+import {useEffect, useLayoutEffect, useRef, useState} from 'react'
 
 interface LoadMoreProps {
   isPending: boolean
+  hasMore: boolean
   onLoadMore: () => void
 }
 
-export function LoadMore({onLoadMore, isPending}: LoadMoreProps): React.ReactNode {
+export function LoadMore({onLoadMore, hasMore, isPending}: LoadMoreProps): React.ReactNode {
   const ref = useRef<HTMLDivElement>(null)
   const [isVisible, setIsVisible] = useState(false)
 
@@ -19,10 +20,16 @@ export function LoadMore({onLoadMore, isPending}: LoadMoreProps): React.ReactNod
     return () => intersectionObserver.disconnect()
   }, [])
 
-  const loadMoreRef = useRef(onLoadMore)
+  // don't want `hasMore` affecting the useEffect below
+  // so we wrap and sync it in a non-reactive ref
+  const hasMoreRef = useRef(hasMore)
+  useLayoutEffect(() => {
+    hasMoreRef.current = hasMore
+  }, [hasMore])
 
+  const loadMoreRef = useRef(onLoadMore)
   useEffect(() => {
-    if (isVisible) loadMoreRef.current?.()
+    if (hasMoreRef.current && isVisible) loadMoreRef.current?.()
   }, [isVisible])
 
   return (

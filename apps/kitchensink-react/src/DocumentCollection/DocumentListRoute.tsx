@@ -6,7 +6,7 @@ import {DocumentPreview} from './DocumentPreview'
 import {LoadMore} from './LoadMore'
 
 export function DocumentListRoute(): JSX.Element {
-  const {result, loadMore, isPending} = useDocuments({
+  const {isPending, results, hasMore, loadMore} = useDocuments({
     filter: '_type == "book"',
     sort: [{field: '_updatedAt', direction: 'desc'}],
   })
@@ -18,8 +18,10 @@ export function DocumentListRoute(): JSX.Element {
       </Heading>
       <Box paddingY={5}>
         <DocumentListLayout>
-          {result?.map((doc) => <DocumentPreview key={doc._id} document={doc} />)}
-          <LoadMore isPending={isPending} onLoadMore={loadMore} />
+          {results.map((doc) => (
+            <DocumentPreview key={doc._id} document={doc} />
+          ))}
+          <LoadMore hasMore={hasMore} isPending={isPending} onLoadMore={loadMore} />
         </DocumentListLayout>
       </Box>
     </Box>

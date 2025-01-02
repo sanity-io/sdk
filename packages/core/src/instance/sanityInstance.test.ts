@@ -1,6 +1,8 @@
 import {beforeEach, describe, expect, test} from 'vitest'
 
+import {disposeResources} from '../resources/createResource'
 import {createSanityInstance, getOrCreateResource, type SanityConfig} from './sanityInstance'
+vi.mock('../resources/createResource')
 
 describe('sanityInstance', () => {
   let config: SanityConfig
@@ -22,6 +24,13 @@ describe('sanityInstance', () => {
           dataset: 'test-dataset',
         }),
       )
+    })
+
+    test('instance.dispose', () => {
+      const instance = createSanityInstance(config)
+      instance.dispose()
+
+      expect(disposeResources).toHaveBeenCalled()
     })
   })
 

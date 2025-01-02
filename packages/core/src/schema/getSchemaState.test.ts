@@ -3,16 +3,16 @@ import {describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState} from '../resources/createResource'
-import {getSchemaSource} from './getSchemaSource'
+import {getSchemaState} from './getSchemaState'
 
-describe('getSchemaSource', () => {
+describe('getSchemaState', () => {
   const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
 
   it('should return a state source that emits the schema', () => {
     const mockSchema = {name: 'testSchema', types: []} as unknown as Schema
     const state = createResourceState({schema: mockSchema})
 
-    const source = getSchemaSource({state, instance})
+    const source = getSchemaState({state, instance})
     expect(source.getCurrent()).toEqual(mockSchema)
 
     const next = vi.fn()
@@ -27,7 +27,7 @@ describe('getSchemaSource', () => {
   it('should return the schema from the state', () => {
     const mockSchema = {name: 'testSchema', types: []} as unknown as Schema
     const state = createResourceState({schema: mockSchema})
-    const source = getSchemaSource({state, instance})
+    const source = getSchemaState({state, instance})
 
     expect(source.getCurrent()).toEqual(mockSchema)
   })

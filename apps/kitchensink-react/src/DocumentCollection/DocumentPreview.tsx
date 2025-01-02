@@ -2,6 +2,7 @@ import {DocumentHandle} from '@sanity/sdk'
 import {DocumentPreviewLayout} from '@sanity/sdk-react/components'
 import {usePreview} from '@sanity/sdk-react/hooks'
 import {Suspense, useRef} from 'react'
+import {ErrorBoundary} from 'react-error-boundary'
 
 export interface DocumentPreviewProps {
   document: DocumentHandle
@@ -10,9 +11,13 @@ export interface DocumentPreviewProps {
 export function DocumentPreview(props: DocumentPreviewProps): React.ReactNode {
   return (
     <li>
-      <Suspense fallback={<DocumentPreviewLayout title="Loading" />}>
-        <DocumentPreviewResolved {...props} />
-      </Suspense>
+      <ErrorBoundary
+        fallback={<DocumentPreviewLayout title="Error" subtitle="This preview failed to render." />}
+      >
+        <Suspense fallback={<DocumentPreviewLayout title="Loading" />}>
+          <DocumentPreviewResolved {...props} />
+        </Suspense>
+      </ErrorBoundary>
     </li>
   )
 }

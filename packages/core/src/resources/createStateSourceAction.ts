@@ -14,11 +14,12 @@ export interface StateSource<T> {
 
 export function createStateSourceAction<TState, TParams extends unknown[], TReturn>(
   getResource: () => Resource<TState>,
-  getCurrentAction: ResourceAction<TState, TParams, TReturn>,
+  selector: (state: TState, ...params: TParams) => TReturn,
 ): ResourceAction<TState, TParams, StateSource<TReturn>> {
   return createAction(getResource, ({state}) => {
     return function (...args: TParams): StateSource<TReturn> {
-      const getCurrent = () => getCurrentAction(this, ...args)
+      const getCurrent = () => selector(state.get(), ...args)
+
       const subscribe = (onStoreChanged: () => void) => {
         const subscription = state.observable
           .pipe(
