@@ -1,5 +1,4 @@
 // @ts-check
-
 import js from '@eslint/js'
 import eslintConfigPrettier from 'eslint-config-prettier'
 import turboConfig from 'eslint-config-turbo/flat'
@@ -15,10 +14,24 @@ export default [
   ...turboConfig,
   {
     rules: {
-      'simple-import-sort/exports': 'error',
-      'simple-import-sort/imports': 'error',
       'no-console': 'error',
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/dist', '**/dist/*'],
+              message: 'Do not import from `dist`',
+            },
+            {
+              group: ['**/_exports', '**/_exports/*'],
+              message: 'Do not import from `_exports`',
+            },
+          ],
+        },
+      ],
       'no-shadow': 'error',
+      'no-unused-vars': 'off',
       'no-warning-comments': [
         'warn',
         {
@@ -27,16 +40,17 @@ export default [
         },
       ],
       'quote-props': ['warn', 'consistent-as-needed'],
+      'simple-import-sort/exports': 'error',
+      'simple-import-sort/imports': 'error',
       'strict': ['warn', 'global'],
-      'no-unused-vars': 'off',
       'unused-imports/no-unused-imports': 'error',
       'unused-imports/no-unused-vars': [
         'error',
         {
-          vars: 'all',
-          varsIgnorePattern: '^_',
           args: 'after-used',
           argsIgnorePattern: '^_',
+          vars: 'all',
+          varsIgnorePattern: '^_',
         },
       ],
     },
