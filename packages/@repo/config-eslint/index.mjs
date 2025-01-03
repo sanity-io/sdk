@@ -1,34 +1,37 @@
 // @ts-check
-
-import path from 'node:path'
-import {fileURLToPath} from 'node:url'
-
-import {FlatCompat} from '@eslint/eslintrc'
 import js from '@eslint/js'
 import eslintConfigPrettier from 'eslint-config-prettier'
+import turboConfig from 'eslint-config-turbo/flat'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import unusedImports from 'eslint-plugin-unused-imports'
 import globals from 'globals'
 import tsLint from 'typescript-eslint'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-})
-
 export default [
   js.configs.recommended,
   eslintConfigPrettier,
   ...tsLint.configs.recommended,
-  ...compat.extends('eslint-config-turbo'),
+  ...turboConfig,
   {
     rules: {
-      'simple-import-sort/exports': 'error',
-      'simple-import-sort/imports': 'error',
       'no-console': 'error',
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/dist', '**/dist/*'],
+              message: 'Do not import from `dist`',
+            },
+            {
+              group: ['**/_exports', '**/_exports/*'],
+              message: 'Do not import from `_exports`',
+            },
+          ],
+        },
+      ],
       'no-shadow': 'error',
+      'no-unused-vars': 'off',
       'no-warning-comments': [
         'warn',
         {
@@ -37,16 +40,17 @@ export default [
         },
       ],
       'quote-props': ['warn', 'consistent-as-needed'],
+      'simple-import-sort/exports': 'error',
+      'simple-import-sort/imports': 'error',
       'strict': ['warn', 'global'],
-      'no-unused-vars': 'off',
       'unused-imports/no-unused-imports': 'error',
       'unused-imports/no-unused-vars': [
         'error',
         {
-          vars: 'all',
-          varsIgnorePattern: '^_',
           args: 'after-used',
           argsIgnorePattern: '^_',
+          vars: 'all',
+          varsIgnorePattern: '^_',
         },
       ],
     },
