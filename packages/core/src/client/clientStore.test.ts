@@ -4,13 +4,12 @@ import {describe, expect, it} from 'vitest'
 import {config} from '../../test/fixtures'
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState, getOrCreateResource} from '../resources/createResource'
+import {subscribeToAuthEvents} from './actions/subscribeToAuthEvents'
 import {clientStore} from './clientStore'
 
 vi.mock('./actions/subscribeToAuthEvents', () => ({
   subscribeToAuthEvents: vi.fn(),
 }))
-
-import {subscribeToAuthEvents} from './actions/subscribeToAuthEvents'
 
 describe('clientStore', () => {
   describe('initialization', () => {

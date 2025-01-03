@@ -1,18 +1,6 @@
-import type {AuthConfig} from '../auth/authStore'
 import {disposeResources} from '../resources/createResource'
-import type {SchemaConfig} from '../schema/schemaManager'
 import {getSdkIdentity} from './identity'
-import type {SanityInstance, SdkIdentity} from './types'
-
-/**
- * @public
- */
-export interface SanityConfig {
-  projectId: string
-  dataset: string
-  auth?: AuthConfig
-  schema?: SchemaConfig
-}
+import type {SanityConfig, SanityInstance, SdkIdentity} from './types'
 
 /**
  * Returns a new instance of dependencies required for SanitySDK.

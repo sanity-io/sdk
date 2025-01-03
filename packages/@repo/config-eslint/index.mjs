@@ -4,6 +4,7 @@ import eslintConfigPrettier from 'eslint-config-prettier'
 import turboConfig from 'eslint-config-turbo/flat'
 import {createTypeScriptImportResolver} from 'eslint-import-resolver-typescript'
 import * as importPlugin from 'eslint-plugin-import'
+import eslintPluginPrettier from 'eslint-plugin-prettier/recommended'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import unusedImports from 'eslint-plugin-unused-imports'
 import globals from 'globals'
@@ -13,11 +14,24 @@ export default [
   js.configs.recommended,
   eslintConfigPrettier,
   importPlugin.flatConfigs?.typescript,
+  eslintPluginPrettier,
   ...tsLint.configs.recommended,
   ...turboConfig,
   {
     rules: {
+      'import/first': 'error',
+      'import/newline-after-import': 'error',
+      'import/no-cycle': 'off',
+      'import/no-duplicates': [
+        'error',
+        {
+          'prefer-inline': true,
+        },
+      ],
+      'import/no-self-import': 'error',
+      'import/order': 'off',
       'no-console': 'error',
+      'no-multi-spaces': 'error',
       'no-restricted-imports': [
         'error',
         {
@@ -46,8 +60,6 @@ export default [
       'simple-import-sort/exports': 'error',
       'simple-import-sort/imports': 'error',
       'strict': ['warn', 'global'],
-      'import/no-self-import': 'error',
-      'import/no-cycle': 'error',
       'unused-imports/no-unused-imports': 'error',
       'unused-imports/no-unused-vars': [
         'error',

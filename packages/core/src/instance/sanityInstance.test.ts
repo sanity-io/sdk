@@ -2,6 +2,7 @@ import {beforeEach, describe, expect, test} from 'vitest'
 
 import {disposeResources} from '../resources/createResource'
 import {createSanityInstance, getOrCreateResource, type SanityConfig} from './sanityInstance'
+
 vi.mock('../resources/createResource')
 
 describe('sanityInstance', () => {
