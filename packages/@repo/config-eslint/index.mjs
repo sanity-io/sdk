@@ -2,6 +2,8 @@
 import js from '@eslint/js'
 import eslintConfigPrettier from 'eslint-config-prettier'
 import turboConfig from 'eslint-config-turbo/flat'
+import {createTypeScriptImportResolver} from 'eslint-import-resolver-typescript'
+import * as importPlugin from 'eslint-plugin-import'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import unusedImports from 'eslint-plugin-unused-imports'
 import globals from 'globals'
@@ -10,6 +12,7 @@ import tsLint from 'typescript-eslint'
 export default [
   js.configs.recommended,
   eslintConfigPrettier,
+  importPlugin.flatConfigs?.typescript,
   ...tsLint.configs.recommended,
   ...turboConfig,
   {
@@ -43,6 +46,8 @@ export default [
       'simple-import-sort/exports': 'error',
       'simple-import-sort/imports': 'error',
       'strict': ['warn', 'global'],
+      'import/no-self-import': 'error',
+      'import/no-cycle': 'error',
       'unused-imports/no-unused-imports': 'error',
       'unused-imports/no-unused-vars': [
         'error',
@@ -57,6 +62,7 @@ export default [
     plugins: {
       'simple-import-sort': simpleImportSort,
       'unused-imports': unusedImports,
+      'import': importPlugin,
     },
     languageOptions: {
       globals: {
@@ -64,6 +70,17 @@ export default [
         ...globals.es2017,
         ...globals.node,
       },
+    },
+    settings: {
+      'import/resolver-next': [
+        createTypeScriptImportResolver({
+          alwaysTryTypes: true,
+          extensions: ['.js', '.ts', '.mjs', '.mts'],
+
+          // use an array of glob patterns
+          project: ['packages/*/tsconfig.json', 'apps/*/tsconfig.json'],
+        }),
+      ],
     },
   },
   {

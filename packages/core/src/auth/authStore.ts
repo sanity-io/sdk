@@ -7,11 +7,6 @@ import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCur
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
 import {getAuthCode, getDefaultLocation, getDefaultStorage, getTokenFromStorage} from './utils'
 
-export const DEFAULT_BASE = 'http://localhost'
-export const AUTH_CODE_PARAM = 'sid'
-export const DEFAULT_API_VERSION = '2021-06-07'
-export const REQUEST_TAG_PREFIX = 'sdk.auth'
-
 /**
  * Represents the various states the authentication type can be in.
  *

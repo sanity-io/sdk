@@ -2,13 +2,8 @@ import type {CurrentUser} from '@sanity/types'
 import {distinctUntilChanged, filter, map, switchMap} from 'rxjs'
 
 import {createAction} from '../resources/createAction'
-import {
-  type AuthState,
-  AuthStateType,
-  DEFAULT_API_VERSION,
-  getAuthStore,
-  REQUEST_TAG_PREFIX,
-} from './authStore'
+import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
+import {type AuthState, AuthStateType, getAuthStore} from './authStore'
 
 export const subscribeToStateAndFetchCurrentUser = createAction(
   getAuthStore,

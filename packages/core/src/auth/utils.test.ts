@@ -1,7 +1,7 @@
 import {EMPTY, NEVER} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {AUTH_CODE_PARAM, DEFAULT_BASE} from './authStore'
+import {AUTH_CODE_PARAM, DEFAULT_BASE} from './authConstants'
 import {
   getAuthCode,
   getDefaultLocation,
