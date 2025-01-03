@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "clean": "rimraf dist",
     "dev": "vite",
     "lint": "eslint ."
   },
