@@ -1,28 +1,18 @@
 // @ts-check
 
-import path from 'node:path'
-import {fileURLToPath} from 'node:url'
-
-import {FlatCompat} from '@eslint/eslintrc'
 import js from '@eslint/js'
 import eslintConfigPrettier from 'eslint-config-prettier'
+import turboConfig from 'eslint-config-turbo/flat'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import unusedImports from 'eslint-plugin-unused-imports'
 import globals from 'globals'
 import tsLint from 'typescript-eslint'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-})
-
 export default [
   js.configs.recommended,
   eslintConfigPrettier,
   ...tsLint.configs.recommended,
-  ...compat.extends('eslint-config-turbo'),
+  ...turboConfig,
   {
     rules: {
       'simple-import-sort/exports': 'error',
