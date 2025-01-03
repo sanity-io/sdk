@@ -28,13 +28,27 @@
     ".": {
       "source": "./src/_exports/index.ts",
       "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
       "default": "./dist/index.js"
+    },
+    "./_internal/cli": {
+      "source": "./src/_exports/_internal/cli.ts",
+      "import": "./dist/_internal/cli.js",
+      "require": "./dist/_internal/cli.cjs",
+      "default": "./dist/_internal/cli.js"
     },
     "./package.json": "./package.json"
   },
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "_internal/cli": [
+        "./dist/_internal/cli.d.ts"
+      ]
+    }
+  },
   "files": [
     "dist",
     "src"
@@ -66,16 +80,24 @@
     "@sanity/schema": "^3.67.1",
     "@sanity/types": "^3.67.1",
     "@types/lodash-es": "^4.17.12",
+    "debug": "^4.4.0",
+    "form-data": "^4.0.1",
     "lodash-es": "^4.17.21",
     "reselect": "^5.1.1",
     "rxjs": "^7.8.1",
+    "tar-fs": "^3.0.6",
+    "yargs": "^17.7.2",
     "zustand": "^5.0.1"
   },
   "devDependencies": {
     "@repo/package.config": "workspace:*",
+    "@sanity/cli": "^3.68.3",
     "@sanity/pkg-utils": "^6.12.2",
     "@sanity/prettier-config": "^1.0.3",
     "@sanity/types": "^3.68.3",
+    "@types/debug": "^4.1.12",
+    "@types/tar-fs": "^2.0.4",
+    "@types/yargs": "^17.0.33",
     "@vitest/coverage-v8": "2.1.8",
     "eslint": "^9.17.0",
     "groq-js": "^1.14.2",
