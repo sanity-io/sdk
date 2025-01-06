@@ -1,7 +1,8 @@
 import {beforeEach, describe, expect, test} from 'vitest'
 
 import {disposeResources} from '../resources/createResource'
-import {createSanityInstance, getOrCreateResource, type SanityConfig} from './sanityInstance'
+import {createSanityInstance, getOrCreateResource} from './sanityInstance'
+import type {SanityConfig} from './types'
 
 vi.mock('../resources/createResource')
 
