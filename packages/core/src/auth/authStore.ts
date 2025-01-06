@@ -3,21 +3,10 @@ import type {CurrentUser} from '@sanity/types'
 
 import {createResource, type Resource} from '../resources/createResource'
 import {createStateSourceAction} from '../resources/createStateSourceAction'
+import {AuthStateType} from './authStateType'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
 import {getAuthCode, getDefaultLocation, getDefaultStorage, getTokenFromStorage} from './utils'
-
-/**
- * Represents the various states the authentication type can be in.
- *
- * @public
- */
-export enum AuthStateType {
-  LOGGED_IN = 'logged-in',
-  LOGGING_IN = 'logging-in',
-  ERROR = 'error',
-  LOGGED_OUT = 'logged-out',
-}
 
 /**
  * Represents the various states the authentication can be in.

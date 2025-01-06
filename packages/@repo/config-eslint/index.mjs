@@ -21,7 +21,7 @@ export default [
     rules: {
       'import/first': 'error',
       'import/newline-after-import': 'error',
-      'import/no-cycle': 'off',
+      'import/no-cycle': 'error',
       'import/no-duplicates': [
         'error',
         {

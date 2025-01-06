@@ -3,12 +3,12 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState, type ResourceState} from '../resources/createResource'
+import {PAGE_SIZE} from './documentListConstants'
 import {
   createDocumentListStore,
   documentList,
   type DocumentListState,
   getDocumentList,
-  PAGE_SIZE,
 } from './documentListStore'
 import {subscribeToLiveClientAndSetLastLiveEventId} from './subscribeToLiveClientAndSetLastLiveEventId'
 import {subscribeToStateAndFetchResults} from './subscribeToStateAndFetchResults'

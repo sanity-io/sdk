@@ -1,6 +1,7 @@
 import {createAction} from '../resources/createAction'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
-import {AuthStateType, getAuthStore} from './authStore'
+import {AuthStateType} from './authStateType'
+import {getAuthStore} from './authStore'
 
 /**
  * @public

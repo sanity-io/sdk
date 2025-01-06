@@ -1,10 +1,15 @@
-import {defer, distinctUntilChanged, filter, map} from 'rxjs'
+import {defer, distinctUntilChanged, filter, map, Subscription} from 'rxjs'
 
-import {createAction} from '../resources/createAction'
-import {AuthStateType, getAuthStore} from './authStore'
+import {createInternalAction} from '../resources/createAction'
+import {AuthStateType} from './authStateType'
+import type {AuthStoreState} from './authStore'
 import {getStorageEvents, getTokenFromStorage} from './utils'
 
-export const subscribeToStorageEventsAndSetToken = createAction(getAuthStore, ({state}) => {
+export const subscribeToStorageEventsAndSetToken = createInternalAction<
+  AuthStoreState,
+  [],
+  Subscription
+>(({state}) => {
   const {storageArea, storageKey} = state.get().options
 
   const tokenFromStorage$ = defer(getStorageEvents).pipe(

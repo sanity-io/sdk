@@ -25,11 +25,11 @@ export type {
 export {createDocumentListStore} from '../documentList/documentListStore'
 
 /** AUTH */
+export {AuthStateType} from '../auth/authStateType'
 export {
   type AuthConfig,
   type AuthProvider,
   type AuthState,
-  AuthStateType,
   type AuthStoreState,
   type ErrorAuthState,
   getAuthState,
