@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.0.0-alpha.2](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.1...sdk-v0.0.0-alpha.2) (2025-01-06)
+
+
+### Features
+
+* add preview store ([#62](https://github.com/sanity-io/sdk/issues/62)) ([c343f1e](https://github.com/sanity-io/sdk/commit/c343f1e15f30afd66dbd4c0309b9152600ceb1be))
+* **core:** add README and npm keywords ([#115](https://github.com/sanity-io/sdk/issues/115)) ([8a3c492](https://github.com/sanity-io/sdk/commit/8a3c4928647f6e8c4a8fe3f43da9cb8e904af522))
+* **kitchen-sink:** add routing to kitchen-sink ([#99](https://github.com/sanity-io/sdk/issues/99)) ([50483ea](https://github.com/sanity-io/sdk/commit/50483ea66073bfccdc28e51f7606673eb213bebe))
+* **react:** add useDocuments hook ([#98](https://github.com/sanity-io/sdk/issues/98)) ([d0f0c1a](https://github.com/sanity-io/sdk/commit/d0f0c1ad753b56b7e7cc6ff0830682d4fc6be0d1))
+* resolve preview projections ([#130](https://github.com/sanity-io/sdk/issues/130)) ([d30997e](https://github.com/sanity-io/sdk/commit/d30997e4a3d40c0edd1b3f31f48934bf846ab56a))
+
+
+### Bug Fixes
+
+* **core:** emit current token state on subscribe ([#139](https://github.com/sanity-io/sdk/issues/139)) ([7ec0d98](https://github.com/sanity-io/sdk/commit/7ec0d984f2c7f2da519206165cb7a2c1e2213c79))
+* update typedoc to use package mode ([#117](https://github.com/sanity-io/sdk/issues/117)) ([7f4e0e1](https://github.com/sanity-io/sdk/commit/7f4e0e1f08610fb3861e5dc8eb67fb1556b4d965))
+
 ## [0.0.0-alpha.1](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.0...sdk-v0.0.0-alpha.1) (2024-12-11)
 
 
