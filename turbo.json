@@ -9,10 +9,12 @@
     "check-types": {
       "dependsOn": ["^check-types"]
     },
+    "clean": {},
     "dev": {
       "persistent": true,
       "cache": false
     },
+    "docs": {},
     "lint": {
       "outputLogs": "errors-only",
       "cache": false
@@ -24,7 +26,6 @@
       "cache": false,
       "persistent": true
     },
-    "docs": {},
     "test:coverage": {
       "outputs": ["coverage/**"]
     }
