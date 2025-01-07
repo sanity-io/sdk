@@ -1,4 +1,4 @@
-import {Connection, createConnection} from '@sanity/comlink'
+import {useFrameConnection} from '@sanity/sdk-react/hooks'
 import {Button, Card, Flex, TextInput} from '@sanity/ui'
 import {FunctionComponent, useEffect, useRef, useState} from 'react'
 import {Link} from 'react-router'
@@ -23,43 +23,30 @@ export const Cosui: FunctionComponent = () => {
   const frameRef = useRef<HTMLIFrameElement | null>(null)
   const [token, setToken] = useState('')
   const [tokenSent, setTokenSent] = useState(false)
-  const [connection, setConnection] = useState<Connection<SendMessage, ReceiveMessage> | null>(null)
+  const {connect, sendMessage} = useFrameConnection<SendMessage, ReceiveMessage>({
+    name: 'cosui',
+    connectTo: 'framed-app',
+    targetOrigin: '*',
+    onMessage: {
+      TOKEN_RECEIVED: (data) => {
+        // eslint-disable-next-line no-console
+        console.log('Received token confirmation:', data)
+      },
+    },
+  })
 
   const loadToken = () => {
-    if (!connection) return
-    connection.post('SET_TOKEN', {
-      token,
-    })
+    sendMessage('SET_TOKEN', {token})
     setTokenSent(true)
   }
 
   useEffect(() => {
     if (!frameRef.current) return
-
-    const _connection = createConnection<SendMessage, ReceiveMessage>({
-      name: 'cosui',
-      connectTo: 'framed-app',
-      targetOrigin: '*',
-      heartbeat: true,
-    })
-    setConnection(_connection)
-
-    // Listen for TOKEN_RECEIVED confirmation
-    _connection.on('TOKEN_RECEIVED', (data) => {
-      // eslint-disable-next-line no-console
-      console.log('Received token confirmation:', data)
-      return undefined
-    })
-
-    frameRef.current.onload = () => {
-      _connection.setTarget(frameRef.current!.contentWindow!)
-      _connection.start()
-      _connection.connect()
-    }
+    connect(frameRef.current!.contentWindow!)
 
     return () => {
-      _connection.disconnect()
-      _connection.stop()
+      // _connection.disconnect()
+      // _connection.stop()
     }
   }, [])
 
@@ -87,7 +74,7 @@ export const Cosui: FunctionComponent = () => {
                 autoComplete="off"
                 value={token}
                 onChange={(e) => setToken(e.currentTarget.value)}
-                disabled={!connection}
+                // disabled={!connection}
               />
               <Button type="submit" mode="ghost" tone="primary" text="Load token" />
             </Flex>

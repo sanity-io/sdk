@@ -1,38 +1,78 @@
 import {createSanityInstance} from '@sanity/sdk'
 import {SanityProvider} from '@sanity/sdk-react/components'
-import {useMemo} from 'react'
+import {useWindowConnection} from '@sanity/sdk-react/hooks'
+import {useMemo, useState} from 'react'
 import {Outlet} from 'react-router'
 
 import {PageLayout} from '../components/PageLayout'
 
-export function CosuiSimWrapper({token}: {token?: string}): JSX.Element {
-  const sanityInstance = useMemo(() => {
-    return createSanityInstance({
-      projectId: 'ppsg7ml5',
-      dataset: 'test',
-      auth: {
-        token,
-      },
-    })
-  }, [token])
+interface ReceiveMessage {
+  type: 'SET_TOKEN'
+  data: {
+    token: string
+  }
+  response?: undefined
+}
 
-  if (token) {
+interface SendMessage {
+  type: 'TOKEN_RECEIVED'
+  data: {
+    success: boolean
+  }
+  response?: undefined
+}
+
+export function CosuiSimWrapper(): JSX.Element {
+  const [token, setToken] = useState<string>()
+  const sanityInstance = useMemo(
+    () =>
+      createSanityInstance({
+        projectId: 'ppsg7ml5',
+        dataset: 'test',
+        auth: {token},
+      }),
+    [token],
+  )
+
+  return (
+    <SanityProvider sanityInstance={sanityInstance}>
+      <CosuiSimInner token={token} onTokenUpdate={setToken} />
+    </SanityProvider>
+  )
+}
+
+function CosuiSimInner({
+  token,
+  onTokenUpdate,
+}: {
+  token?: string
+  onTokenUpdate: (newToken: string) => void
+}): JSX.Element {
+  const {sendMessage} = useWindowConnection<SendMessage, ReceiveMessage>({
+    name: 'framed-app',
+    connectTo: 'cosui',
+    onMessage: {
+      SET_TOKEN: (data) => {
+        // probably would be better to update the token via auth store
+        onTokenUpdate(data.token)
+        sendMessage('TOKEN_RECEIVED', {success: true})
+      },
+    },
+  })
+
+  if (!token) {
     return (
-      <SanityProvider sanityInstance={sanityInstance}>
-        <Outlet />
-      </SanityProvider>
+      <PageLayout
+        title="Loading COSUi App"
+        subtitle="Explore authentication examples and components"
+        homePath="/cosui-simulator"
+        homeText="COSUi Simulator Home"
+        hideNav
+      >
+        <p>Waiting for token...</p>
+      </PageLayout>
     )
   }
 
-  return (
-    <PageLayout
-      title="Loading COSUi App"
-      subtitle="Explore authentication examples and components"
-      homePath="/cosui-simulator"
-      homeText="COSUi Simulator Home"
-      hideNav
-    >
-      <p>Waiting for token...</p>
-    </PageLayout>
-  )
+  return <Outlet />
 }

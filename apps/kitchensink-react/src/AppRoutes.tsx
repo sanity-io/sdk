@@ -1,8 +1,8 @@
 import {Route, Routes} from 'react-router'
 
-import {Cosui} from './CosuiSimulator/Cosui'
-import CosuiApp from './CosuiSimulator/CosuiApp'
 import {CosuiAppHome} from './CosuiSimulator/CosuiAppHome'
+import {CosuiSimWrapper} from './CosuiSimulator/CosuiSimWrapper'
+import {CosuiWrapper} from './CosuiSimulator/CosuiWrapper'
 import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
 import {DocumentListRoute} from './DocumentCollection/DocumentListRoute'
 import Home from './Home'
@@ -38,9 +38,9 @@ export function AppRoutes(): JSX.Element {
         </Route>
       </Route>
 
-      <Route index path="/cosui-simulator" element={<Cosui />} />
+      <Route index path="/cosui-simulator" element={<CosuiWrapper />} />
 
-      <Route path="/cosui-app" element={<CosuiApp />}>
+      <Route path="/cosui-app" element={<CosuiSimWrapper />}>
         <Route index element={<CosuiAppHome routes={documentCollectionRoutes} />} />
         {documentCollectionRoutes.map((route) => (
           <Route key={route.path} path={route.path} element={route.element} />
