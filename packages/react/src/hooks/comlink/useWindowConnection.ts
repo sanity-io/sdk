@@ -1,4 +1,4 @@
-import {getNodeSource, type WindowMessage} from '@sanity/sdk'
+import {createNode, type FrameMessage, getNodeState, type WindowMessage} from '@sanity/sdk'
 import {useCallback, useEffect, useMemo, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -13,7 +13,7 @@ export type WindowMessageHandler<TMessage extends WindowMessage> = (data: TMessa
  * Options for the useFrameConnection hook
  * @public
  */
-export interface UseWindowConnectionOptions<TMessage extends WindowMessage> {
+export interface UseWindowConnectionOptions<TMessage extends FrameMessage> {
   name: string
   connectTo: string
   onMessage?: Record<TMessage['type'], WindowMessageHandler<TMessage>>
@@ -36,22 +36,28 @@ export interface WindowConnection<TMessage extends WindowMessage> {
  * via the Comlink API.
  * @public
  */
-export function useWindowConnection<TMessage extends WindowMessage>(
-  options: UseWindowConnectionOptions<TMessage>,
-): WindowConnection<TMessage> {
-  const {name, connectTo, onMessage} = options
+export function useWindowConnection<
+  TWindowMessage extends WindowMessage,
+  TFrameMessage extends FrameMessage,
+>(options: UseWindowConnectionOptions<TFrameMessage>): WindowConnection<TWindowMessage> {
+  const {name, onMessage} = options
   const instance = useSanityInstance()
 
   const {subscribe: subscribeToNode, getCurrent: getCurrentNode} = useMemo(
-    () => getNodeSource(instance, {name, connectTo}),
-    [instance, name, connectTo],
+    () => getNodeState(instance, name),
+    [instance, name],
   )
+
+  if (!getCurrentNode()) {
+    // create a node to communicate with the enclosing app
+    createNode(instance, options)
+  }
 
   const node = useSyncExternalStore(subscribeToNode, getCurrentNode)
 
   useEffect(() => {
     if (onMessage) {
-      const messageHandlers: Array<[string, WindowMessageHandler<TMessage>]> =
+      const messageHandlers: Array<[string, WindowMessageHandler<TFrameMessage>]> =
         Object.entries(onMessage)
 
       messageHandlers.forEach(([type, handler]) => {

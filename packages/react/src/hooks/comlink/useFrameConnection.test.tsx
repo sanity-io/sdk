@@ -9,14 +9,14 @@ vi.mock(import('@sanity/sdk'), async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    getChannelSource: vi.fn(),
-    getControllerSource: vi.fn(),
-    initializeController: vi.fn(),
+    getChannelState: vi.fn(),
+    getControllerState: vi.fn(),
+    createController: vi.fn(),
     createChannel: vi.fn(),
   }
 })
 
-const {getChannelSource, getControllerSource} = await import('@sanity/sdk')
+const {getChannelState, getControllerState} = await import('@sanity/sdk')
 
 interface TestControllerMessage {
   type: 'TEST_MESSAGE'
@@ -72,9 +72,9 @@ describe('useFrameController', () => {
       destroy: vi.fn(),
     } as unknown as Controller
 
-    vi.mocked(getChannelSource).mockReturnValue(createMockSource(channel, channelSubscriber))
+    vi.mocked(getChannelState).mockReturnValue(createMockSource(channel, channelSubscriber))
 
-    vi.mocked(getControllerSource).mockReturnValue(
+    vi.mocked(getControllerState).mockReturnValue(
       createMockSource(controller, controllerSubscriber),
     )
   })
@@ -126,7 +126,7 @@ describe('useFrameController', () => {
     const mockGetCurrent = vi.fn().mockReturnValue(initialChannel)
 
     // Setup initial state source
-    vi.mocked(getChannelSource).mockReturnValue({
+    vi.mocked(getChannelState).mockReturnValue({
       getCurrent: mockGetCurrent,
       subscribe: vi.fn((callback) => {
         subscriberCallback = callback
@@ -164,13 +164,13 @@ describe('useFrameController', () => {
     const unsubscribeChannel = vi.fn()
     const unsubscribeController = vi.fn()
 
-    vi.mocked(getChannelSource).mockReturnValue({
+    vi.mocked(getChannelState).mockReturnValue({
       getCurrent: vi.fn().mockReturnValue(channel),
       subscribe: vi.fn(() => unsubscribeChannel),
       observable: of(channel),
     })
 
-    vi.mocked(getControllerSource).mockReturnValue({
+    vi.mocked(getControllerState).mockReturnValue({
       getCurrent: vi.fn().mockReturnValue(controller),
       subscribe: vi.fn(() => unsubscribeController),
       observable: of(controller),

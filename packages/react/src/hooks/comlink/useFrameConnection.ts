@@ -1,7 +1,9 @@
 import {
+  createChannel,
+  createController,
   type FrameMessage,
-  getChannelSource,
-  getControllerSource,
+  getChannelState,
+  getControllerState,
   type WindowMessage,
 } from '@sanity/sdk'
 import {useCallback, useEffect, useMemo, useSyncExternalStore} from 'react'
@@ -45,22 +47,29 @@ export interface FrameConnection<TFrameMessage extends FrameMessage> {
  * @public
  */
 export function useFrameConnection<
-  TWindowMessage extends WindowMessage,
   TFrameMessage extends FrameMessage,
+  TWindowMessage extends WindowMessage,
 >(options: UseFrameConnectionOptions<TWindowMessage>): FrameConnection<TFrameMessage> {
   const {name, connectTo, targetOrigin, onMessage} = options
   const instance = useSanityInstance()
+  const {subscribe: subscribeToController, getCurrent: getCurrentController} = useMemo(
+    () => getControllerState(instance),
+    [instance],
+  )
+
+  if (!getCurrentController()) {
+    createController(instance, targetOrigin)
+  }
 
   const {subscribe: subscribeToChannel, getCurrent: getCurrentChannel} = useMemo(
-    () => getChannelSource(instance, {name, connectTo}),
+    () => getChannelState(instance, name),
 
-    [instance, name, connectTo],
+    [instance, name],
   )
 
-  const {subscribe: subscribeToController, getCurrent: getCurrentController} = useMemo(
-    () => getControllerSource(instance, targetOrigin),
-    [instance, targetOrigin],
-  )
+  if (!getCurrentChannel()) {
+    createChannel(instance, {name, connectTo})
+  }
 
   const channel = useSyncExternalStore(subscribeToChannel, getCurrentChannel)
 
@@ -72,7 +81,7 @@ export function useFrameConnection<
         Object.entries(onMessage)
 
       messageHandlers.forEach(([type, handler]) => {
-        channel.on(type, (data) => {
+        channel!.on(type, (data) => {
           handler(data)
           return undefined
         })
@@ -92,7 +101,7 @@ export function useFrameConnection<
       type: T,
       data?: Extract<TFrameMessage, {type: T}>['data'],
     ) => {
-      channel.post(type, data)
+      channel!.post(type, data)
     },
     [channel],
   )

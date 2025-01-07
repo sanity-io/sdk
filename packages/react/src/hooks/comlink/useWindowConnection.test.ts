@@ -1,5 +1,5 @@
-import {type Message, type Node} from '@sanity/comlink'
-import {getNodeSource} from '@sanity/sdk'
+import {type Node} from '@sanity/comlink'
+import {getNodeState} from '@sanity/sdk'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'
@@ -9,7 +9,8 @@ vi.mock(import('@sanity/sdk'), async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    getNodeSource: vi.fn(),
+    getNodeState: vi.fn(),
+    createNode: vi.fn(),
   }
 })
 
@@ -30,24 +31,19 @@ function createMockNode() {
     on: vi.fn(),
     post: vi.fn(),
     stop: vi.fn(),
-  } as unknown as Node<TestMessages, Message>
+  } as unknown as Node<TestMessages, TestMessages>
 }
 
 describe('useWindowConnection', () => {
-  let node: Node<TestMessages, Message>
-  let _nodeSubscriber: (() => void) | null
+  let node: Node<TestMessages, TestMessages>
 
   beforeEach(() => {
-    _nodeSubscriber = null
     node = createMockNode()
 
-    vi.mocked(getNodeSource).mockReturnValue({
+    vi.mocked(getNodeState).mockReturnValue({
       getCurrent: vi.fn().mockReturnValue(node),
-      subscribe: vi.fn((callback) => {
-        _nodeSubscriber = callback
-        return () => {
-          _nodeSubscriber = null
-        }
+      subscribe: vi.fn(() => {
+        return () => {}
       }),
       // @ts-expect-error -- just for mocking at the moment
       observable: vi.fn(),
@@ -59,7 +55,7 @@ describe('useWindowConnection', () => {
     const mockData = {someData: 'test'}
 
     renderHook(() =>
-      useWindowConnection<TestMessages>({
+      useWindowConnection<TestMessages, TestMessages>({
         name: 'test',
         connectTo: 'window',
         onMessage: {
@@ -77,7 +73,7 @@ describe('useWindowConnection', () => {
 
   it('should send messages through the node', () => {
     const {result} = renderHook(() =>
-      useWindowConnection<TestMessages>({
+      useWindowConnection<TestMessages, TestMessages>({
         name: 'test',
         connectTo: 'window',
       }),
@@ -93,7 +89,7 @@ describe('useWindowConnection', () => {
   it('should cleanup message handlers on unmount', () => {
     const unsubscribe = vi.fn()
 
-    vi.mocked(getNodeSource).mockReturnValue({
+    vi.mocked(getNodeState).mockReturnValue({
       getCurrent: vi.fn().mockReturnValue(node),
       subscribe: vi.fn(() => unsubscribe),
       // @ts-expect-error -- just for mocking at the moment
@@ -101,7 +97,7 @@ describe('useWindowConnection', () => {
     })
 
     const {unmount} = renderHook(() =>
-      useWindowConnection<TestMessages>({
+      useWindowConnection<TestMessages, TestMessages>({
         name: 'test',
         connectTo: 'window',
       }),
