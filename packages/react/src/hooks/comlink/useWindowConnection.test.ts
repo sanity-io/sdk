@@ -1,5 +1,5 @@
 import {type Message, type Node} from '@sanity/comlink'
-import {getNodeSource} from '@sanity/sdk'
+import {getOrCreateNode, releaseNode} from '@sanity/sdk'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'
@@ -9,10 +9,11 @@ vi.mock(import('@sanity/sdk'), async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    getNodeSource: vi.fn(),
+    getOrCreateNode: vi.fn(),
+    createNode: vi.fn(),
+    releaseNode: vi.fn(),
   }
 })
-
 interface TestMessage {
   type: 'TEST_MESSAGE'
   data: {someData: string}
@@ -27,31 +28,20 @@ type TestMessages = TestMessage | AnotherMessage
 
 function createMockNode() {
   return {
-    on: vi.fn(),
+    // return unsubscribe function
+    on: vi.fn(() => () => {}),
     post: vi.fn(),
     stop: vi.fn(),
-  } as unknown as Node<TestMessages, Message>
+  } as unknown as Node<Message, Message>
 }
 
 describe('useWindowConnection', () => {
-  let node: Node<TestMessages, Message>
-  let _nodeSubscriber: (() => void) | null
+  let node: Node<Message, Message>
 
   beforeEach(() => {
-    _nodeSubscriber = null
     node = createMockNode()
 
-    vi.mocked(getNodeSource).mockReturnValue({
-      getCurrent: vi.fn().mockReturnValue(node),
-      subscribe: vi.fn((callback) => {
-        _nodeSubscriber = callback
-        return () => {
-          _nodeSubscriber = null
-        }
-      }),
-      // @ts-expect-error -- just for mocking at the moment
-      observable: vi.fn(),
-    })
+    vi.mocked(getOrCreateNode).mockReturnValue(node as unknown as Node<Message, Message>)
   })
 
   it('should register message handlers', () => {
@@ -59,7 +49,7 @@ describe('useWindowConnection', () => {
     const mockData = {someData: 'test'}
 
     renderHook(() =>
-      useWindowConnection<TestMessages>({
+      useWindowConnection<TestMessages, TestMessages>({
         name: 'test',
         connectTo: 'window',
         onMessage: {
@@ -77,7 +67,7 @@ describe('useWindowConnection', () => {
 
   it('should send messages through the node', () => {
     const {result} = renderHook(() =>
-      useWindowConnection<TestMessages>({
+      useWindowConnection<TestMessages, TestMessages>({
         name: 'test',
         connectTo: 'window',
       }),
@@ -90,24 +80,15 @@ describe('useWindowConnection', () => {
     expect(node.post).toHaveBeenCalledWith('ANOTHER_MESSAGE', {otherData: 123})
   })
 
-  it('should cleanup message handlers on unmount', () => {
-    const unsubscribe = vi.fn()
-
-    vi.mocked(getNodeSource).mockReturnValue({
-      getCurrent: vi.fn().mockReturnValue(node),
-      subscribe: vi.fn(() => unsubscribe),
-      // @ts-expect-error -- just for mocking at the moment
-      observable: vi.fn(),
-    })
-
+  it('should cleanup on unmount', () => {
     const {unmount} = renderHook(() =>
-      useWindowConnection<TestMessages>({
+      useWindowConnection<TestMessages, TestMessages>({
         name: 'test',
         connectTo: 'window',
       }),
     )
 
     unmount()
-    expect(unsubscribe).toHaveBeenCalled()
+    expect(releaseNode).toHaveBeenCalled()
   })
 })

@@ -6,7 +6,7 @@ export {useLoginUrls} from '../hooks/auth/useLoginUrls'
 export {useLogOut} from '../hooks/auth/useLogOut'
 export {
   type FrameConnection,
-  type MessageHandler,
+  type FrameMessageHandler as MessageHandler,
   useFrameConnection,
   type UseFrameConnectionOptions,
 } from '../hooks/comlink/useFrameConnection'

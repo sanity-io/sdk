@@ -1,88 +1,88 @@
 import {
   type FrameMessage,
-  getChannelSource,
-  getControllerSource,
+  getOrCreateChannel,
+  getOrCreateController,
+  releaseChannel,
   type WindowMessage,
 } from '@sanity/sdk'
-import {useCallback, useEffect, useMemo, useSyncExternalStore} from 'react'
+import {useCallback, useEffect, useMemo} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
- * Function to handle messages from the window or iframe.
  * @public
  */
-export type MessageHandler<TWindowMessage extends WindowMessage> = (
-  data: TWindowMessage['data'],
-) => void
+export type FrameMessageHandler<TWindowMessage extends WindowMessage> = (
+  event: TWindowMessage['data'],
+) => TWindowMessage['response'] | Promise<TWindowMessage['response']>
+
 /**
- * Options for the useFrameConnection hook
  * @public
  */
 export interface UseFrameConnectionOptions<TWindowMessage extends WindowMessage> {
   name: string
   connectTo: string
   targetOrigin: string
-  onMessage?: Record<string, MessageHandler<TWindowMessage>>
+  onMessage?: Record<string, FrameMessageHandler<TWindowMessage>>
 }
 
 /**
- * Frame connections manage connections to iFrames or other windows
  * @public
  */
 export interface FrameConnection<TFrameMessage extends FrameMessage> {
-  connect: (frameWindow: Window) => void
+  connect: (frameWindow: Window) => () => void // Return cleanup function
   sendMessage: <T extends TFrameMessage['type']>(
     ...params: Extract<TFrameMessage, {type: T}>['data'] extends undefined
-      ? [type: T] // Comlink allows sending messages without data
+      ? [type: T]
       : [type: T, data: Extract<TFrameMessage, {type: T}>['data']]
   ) => void
 }
 
 /**
- * Frame connections manage connections to iFrames or other windows
- * via the Comlink API.
  * @public
  */
 export function useFrameConnection<
-  TWindowMessage extends WindowMessage,
   TFrameMessage extends FrameMessage,
+  TWindowMessage extends WindowMessage,
 >(options: UseFrameConnectionOptions<TWindowMessage>): FrameConnection<TFrameMessage> {
-  const {name, connectTo, targetOrigin, onMessage} = options
+  const {onMessage, targetOrigin, name, connectTo} = options
   const instance = useSanityInstance()
 
-  const {subscribe: subscribeToChannel, getCurrent: getCurrentChannel} = useMemo(
-    () => getChannelSource(instance, {name, connectTo}),
-
-    [instance, name, connectTo],
-  )
-
-  const {subscribe: subscribeToController, getCurrent: getCurrentController} = useMemo(
-    () => getControllerSource(instance, targetOrigin),
+  const controller = useMemo(
+    () => getOrCreateController(instance, targetOrigin),
     [instance, targetOrigin],
   )
 
-  const channel = useSyncExternalStore(subscribeToChannel, getCurrentChannel)
-
-  const controller = useSyncExternalStore(subscribeToController, getCurrentController)
+  const channel = useMemo(
+    () =>
+      getOrCreateChannel(instance, {
+        name,
+        connectTo,
+      }),
+    [instance, name, connectTo],
+  )
 
   useEffect(() => {
-    if (onMessage) {
-      const messageHandlers: Array<[string, MessageHandler<TWindowMessage>]> =
-        Object.entries(onMessage)
+    if (!channel || !onMessage) return
 
-      messageHandlers.forEach(([type, handler]) => {
-        channel.on(type, (data) => {
-          handler(data)
-          return undefined
-        })
-      })
+    const unsubscribers: Array<() => void> = []
+
+    Object.entries(onMessage).forEach(([type, handler]) => {
+      const unsubscribe = channel.on(type, handler)
+      unsubscribers.push(unsubscribe)
+    })
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub())
     }
   }, [channel, onMessage])
 
   const connect = useCallback(
     (frameWindow: Window) => {
-      controller?.addTarget(frameWindow)
+      const removeTarget = controller?.addTarget(frameWindow)
+      return () => {
+        removeTarget?.()
+      }
     },
     [controller],
   )
@@ -92,10 +92,17 @@ export function useFrameConnection<
       type: T,
       data?: Extract<TFrameMessage, {type: T}>['data'],
     ) => {
-      channel.post(type, data)
+      channel?.post(type, data)
     },
     [channel],
   )
+
+  // cleanup channel on unmount
+  useEffect(() => {
+    return () => {
+      releaseChannel(instance, name)
+    }
+  }, [name, instance])
 
   return {
     connect,
