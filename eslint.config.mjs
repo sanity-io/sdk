@@ -1,3 +1,4 @@
+// Only lints root files
 import baseESLintConfig from '@repo/config-eslint'
 
 export default [
@@ -9,6 +10,9 @@ export default [
       '**/dist',
       '**/coverage',
       '**/docs',
+      '**/packages/',
+      '**/apps',
+      '**/.turbo',
       '.env',
       '.env.*',
       '!.env.example',
