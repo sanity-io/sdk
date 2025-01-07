@@ -53,18 +53,13 @@ export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/pre
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
 
 /** COMLINK */
+export {createChannel} from '../comlink/controller/actions/createChannel'
+export {createController} from '../comlink/controller/actions/createController'
 export {destroyController} from '../comlink/controller/actions/destroyController'
-export {
-  getChannelSource,
-  getOrCreateChannel,
-} from '../comlink/controller/actions/getOrCreateChannel'
-export {
-  getControllerSource,
-  getOrCreateController,
-} from '../comlink/controller/actions/getOrCreateController'
+export {getChannelState} from '../comlink/controller/actions/getChannelState'
+export {getControllerState} from '../comlink/controller/actions/getControllerState'
 export {removeChannel} from '../comlink/controller/actions/removeChannel'
 export type {
-  ChannelEntry,
   ComlinkControllerState,
   CreateChannelOptions,
 } from '../comlink/controller/comlinkControllerStore'

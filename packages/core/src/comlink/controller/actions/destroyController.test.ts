@@ -5,8 +5,8 @@ import {createSanityInstance} from '../../../instance/sanityInstance'
 import type {SanityInstance} from '../../../instance/types'
 import {getOrCreateResource} from '../../../resources/createResource'
 import {comlinkControllerStore} from '../comlinkControllerStore'
+import {createController} from './createController'
 import {destroyController} from './destroyController'
-import {getOrCreateController} from './getOrCreateController'
 
 describe('destroyController', () => {
   let instance: SanityInstance
@@ -17,7 +17,7 @@ describe('destroyController', () => {
   })
 
   it('should destroy controller and clear state', () => {
-    const controller = getOrCreateController(instance, 'https://test.sanity.dev')!
+    const controller = createController(instance, 'https://test.sanity.dev')!
     const destroySpy = vi.spyOn(controller, 'destroy')
 
     destroyController(instance)

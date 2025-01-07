@@ -6,8 +6,8 @@ import {createSanityInstance} from '../../../instance/sanityInstance'
 import type {SanityInstance} from '../../../instance/types'
 import {getOrCreateResource} from '../../../resources/createResource'
 import {comlinkControllerStore} from '../comlinkControllerStore'
-import {getOrCreateChannel} from './getOrCreateChannel'
-import {getOrCreateController} from './getOrCreateController'
+import {createChannel} from './createChannel'
+import {createController} from './createController'
 
 const channelConfig = {
   name: 'test',
@@ -20,25 +20,20 @@ describe('createChannel', () => {
 
   beforeEach(() => {
     instance = createSanityInstance(config)
-    controller = getOrCreateController(instance, 'https://test.sanity.dev')!
+    controller = createController(instance, 'https://test.sanity.dev')!
     vi.clearAllMocks()
   })
 
   it('should create a new channel using the controller', () => {
     const createChannelSpy = vi.spyOn(controller, 'createChannel')
 
-    const channel = getOrCreateChannel(instance, channelConfig)
+    const channel = createChannel(instance, channelConfig)
 
     expect(createChannelSpy).toHaveBeenCalledWith(channelConfig)
     expect(channel.on).toBeDefined()
     expect(channel.post).toBeDefined()
     const store = getOrCreateResource(instance, comlinkControllerStore)
-    expect(store.state.get().channels.get('test')).toStrictEqual(
-      expect.objectContaining({
-        channel,
-        options: channelConfig,
-      }),
-    )
+    expect(store.state.get().channels.get('test')).toBe(channel)
   })
 
   it('should throw error when controller is not initialized', () => {
@@ -49,27 +44,8 @@ describe('createChannel', () => {
       channels: new Map(),
     })
 
-    expect(() => getOrCreateChannel(instance, channelConfig)).toThrow(
-      'Controller must be initialized before using or creating channels',
+    expect(() => createChannel(instance, channelConfig)).toThrow(
+      'Controller must be initialized before creating channels',
     )
-  })
-
-  it('should retrieve channel directly from store once created', () => {
-    const createdChannel = getOrCreateChannel(instance, channelConfig)
-
-    const retrievedChannel = getOrCreateChannel(instance, channelConfig)
-    expect(retrievedChannel).toBeDefined()
-    expect(retrievedChannel).toBe(createdChannel)
-  })
-
-  it('should throw error when trying to create channel with different options', () => {
-    getOrCreateChannel(instance, channelConfig)
-
-    expect(() =>
-      getOrCreateChannel(instance, {
-        ...channelConfig,
-        connectTo: 'window',
-      }),
-    ).toThrow('Channel "test" already exists with different options')
   })
 })
