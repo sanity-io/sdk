@@ -32,7 +32,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest watch",
-    "ts:check": "tsc --noEmit"
+    "ts:check": "tsc --noEmit",
+    "depcheck": "knip"
   },
   "lint-staged": {
     "!(*.{ts,tsx})": "prettier --write",
@@ -47,9 +48,12 @@
     "@commitlint/config-conventional": "^19.6.0",
     "@sanity/pkg-utils": "^6.12.2",
     "@sanity/prettier-config": "^1.0.3",
+    "@types/node": "^22.10.5",
     "@vitest/coverage-v8": "2.1.8",
     "husky": "^9.1.6",
+    "knip": "^5.41.1",
     "lint-staged": "^15.2.10",
+    "minimatch": "^10.0.1",
     "npm-run-all2": "^7.0.2",
     "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
