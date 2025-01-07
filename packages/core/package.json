@@ -52,13 +52,6 @@
     "test:watch": "vitest",
     "ts:check": "tsc --noEmit"
   },
-  "lint-staged": {
-    "!(*.{ts,tsx})": "prettier --write",
-    "*.{ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ]
-  },
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
@@ -72,16 +65,16 @@
     "zustand": "^5.0.1"
   },
   "devDependencies": {
+    "@repo/config-eslint": "workspace:*",
     "@repo/package.config": "workspace:*",
     "@sanity/pkg-utils": "^6.12.2",
     "@sanity/prettier-config": "^1.0.3",
     "@sanity/types": "^3.68.3",
     "@vitest/coverage-v8": "2.1.8",
     "eslint": "^9.17.0",
-    "groq-js": "^1.14.2",
-    "lint-staged": "^15.2.10",
     "prettier": "^3.4.2",
     "typescript": "^5.7.2",
+    "vite": "^5.4.11",
     "vitest": "^2.1.8"
   },
   "packageManager": "pnpm@9.15.2",

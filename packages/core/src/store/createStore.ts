@@ -53,21 +53,21 @@ export interface StoreActionContext<S> {
  * @param context - Store context. Contains the store API (`getState()`, `setState()`, `subscribe()`), as well as the SDK instance associated with it.
  * @internal
  */
-export type StoreAction<S> = (context: StoreActionContext<S>, ...args: any[]) => any
+type StoreAction<S> = (context: StoreActionContext<S>, ...args: any[]) => any
 
 /**
  * A map of actions that can be performed on a store.
  *
  * @internal
  */
-export type StoreActionMap<S> = Record<string, StoreAction<S>>
+type StoreActionMap<S> = Record<string, StoreAction<S>>
 
 /**
  * Options for creating a store.
  *
  * @internal
  */
-export interface StoreOptions {
+interface StoreOptions {
   /**
    * Name used for debugging
    */

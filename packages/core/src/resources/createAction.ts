@@ -7,7 +7,7 @@ export interface ActionContext<TState> {
   state: ResourceState<TState>
 }
 
-export type ResourceActionDefinition<TState, TParams extends unknown[], TReturn> = (options: {
+type ResourceActionDefinition<TState, TParams extends unknown[], TReturn> = (options: {
   instance: SanityInstance
   state: ResourceState<TState>
 }) => (this: ActionContext<TState>, ...args: TParams) => TReturn

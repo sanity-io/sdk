@@ -5,14 +5,6 @@ import styled from 'styled-components'
 import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
 import {LoginLayout, type LoginLayoutProps} from './LoginLayout'
 
-/**
- * @alpha
- */
-export interface LoginProps {
-  header?: React.ReactNode
-  footer?: React.ReactNode
-}
-
 const FallbackRoot = styled(Flex)`
   height: 123px;
 `

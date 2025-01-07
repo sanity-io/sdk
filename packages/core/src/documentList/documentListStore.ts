@@ -71,7 +71,7 @@ export const documentList = createResource<DocumentListState>({
   },
 })
 
-export const getState = createStateSourceAction(
+const getState = createStateSourceAction(
   getDocumentList,
   createSelector(
     [
@@ -88,7 +88,7 @@ export const getState = createStateSourceAction(
   ),
 )
 
-export const setOptions = createAction(getDocumentList, ({state}) => {
+const setOptions = createAction(getDocumentList, ({state}) => {
   return function (options: DocumentListOptions) {
     state.set('setOptions', (prev) => ({
       options: {
@@ -99,7 +99,7 @@ export const setOptions = createAction(getDocumentList, ({state}) => {
   }
 })
 
-export const loadMore = createAction(getDocumentList, ({state}) => {
+const loadMore = createAction(getDocumentList, ({state}) => {
   return function () {
     state.set('loadMore', (prev) => ({limit: prev.limit + PAGE_SIZE}))
   }
@@ -113,5 +113,3 @@ export const createDocumentListStore = createStore(documentList, {
   loadMore,
   setOptions,
 })
-
-export type DocumentListStore = ReturnType<typeof createDocumentListStore>

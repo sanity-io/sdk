@@ -6,8 +6,15 @@ const project = ['src/**/*.{js,jsx,ts,tsx}', '!**/build/**', '!**/docs/**']
 
 const baseConfig = {
   workspaces: {
+    '.': {
+      entry: ['package.config.ts'],
+    },
     'apps/kitchensink-react': {
       entry: ['src/main.tsx'],
+      project,
+    },
+    'packages/react': {
+      entry: ['src/css/css.config.js'],
       project,
     },
     'packages/*': {
@@ -40,6 +47,8 @@ export const addBundlerEntries = async (config: KnipConfig) => {
             configEntries.push(...value)
           }
         }
+        // Add package.config.ts to entry points
+        configEntries.push('package.config.ts')
         if (config.workspaces && config.workspaces[configKey]) {
           config.workspaces[configKey].entry = Array.from(new Set(configEntries))
         }
