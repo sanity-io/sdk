@@ -1,6 +1,6 @@
 import {type ChannelInstance, type Controller} from '@sanity/comlink'
 
-import {createResource} from '../../resources/createResource'
+import {createResource, type Resource} from '../../resources/createResource'
 import {type FrameMessage, type WindowMessage} from '../types'
 import {destroyController} from './actions/destroyController'
 
@@ -15,21 +15,12 @@ export interface CreateChannelOptions {
 }
 
 /**
- * Individual channel with its relevant options
- * @public
- */
-export interface ChannelEntry {
-  channel: ChannelInstance<FrameMessage, WindowMessage>
-  options: CreateChannelOptions
-}
-
-/**
  * Internal state tracking comlink connections
  * @public
  */
 export interface ComlinkControllerState {
   controller: Controller | null
-  channels: Map<string, ChannelEntry>
+  channels: Map<string, ChannelInstance<FrameMessage, WindowMessage>>
 }
 
 export const comlinkControllerStore = createResource<ComlinkControllerState>({
@@ -47,3 +38,7 @@ export const comlinkControllerStore = createResource<ComlinkControllerState>({
     }
   },
 })
+
+export function getComlinkControllerStore(): Resource<ComlinkControllerState> {
+  return comlinkControllerStore
+}

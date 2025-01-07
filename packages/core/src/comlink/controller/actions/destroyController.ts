@@ -12,6 +12,7 @@ export const destroyController = createAction(
       const {controller} = state.get()
 
       if (controller) {
+        // this function also destroys all channels
         controller.destroy()
         state.set('destroyController', {
           controller: null,
