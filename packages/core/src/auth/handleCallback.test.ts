@@ -4,11 +4,16 @@ import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState} from '../resources/createResource'
 import {AuthStateType, authStore} from './authStore'
 import {handleCallback} from './handleCallback'
-import {getAuthCode, getTokenFromStorage} from './utils'
+import {getAuthCode, getSanityAuthCode, getTokenFromStorage} from './utils'
 
 vi.mock('./utils', async (importOriginal) => {
   const original = await importOriginal<typeof import('./utils')>()
-  return {...original, getTokenFromStorage: vi.fn(), getAuthCode: vi.fn()}
+  return {
+    ...original,
+    getTokenFromStorage: vi.fn(),
+    getAuthCode: vi.fn(),
+    getSanityAuthCode: vi.fn(),
+  }
 })
 
 describe('handleCallback', () => {
@@ -182,5 +187,35 @@ describe('handleCallback', () => {
       tag: 'fetch-token',
       uri: '/auth/fetch',
     })
+  })
+
+  it('falls back to getAuthCode when getSanityAuthCode returns null', async () => {
+    const mockRequest = vi.fn().mockResolvedValue({token: 'new-token'})
+    const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
+    const setItem = vi.fn()
+    const locationHref = 'https://example.com/callback?foo=bar#withSid=code'
+
+    vi.mocked(getSanityAuthCode).mockReturnValue(null)
+    vi.mocked(getAuthCode).mockReturnValue('fallback-auth-code')
+
+    const instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      auth: {
+        clientFactory,
+        storageArea: {setItem} as unknown as Storage,
+      },
+    })
+
+    const state = createResourceState(authStore.getInitialState(instance))
+    await handleCallback({instance, state}, locationHref)
+
+    expect(getSanityAuthCode).toHaveBeenCalledWith(locationHref)
+    expect(getAuthCode).toHaveBeenCalledWith(state.get().options.callbackUrl, locationHref)
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: {sid: 'fallback-auth-code'},
+      }),
+    )
   })
 })

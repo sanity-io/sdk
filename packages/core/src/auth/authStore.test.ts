@@ -17,11 +17,16 @@ import {
 } from './authStore'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
-import {getAuthCode, getTokenFromStorage} from './utils'
+import {getAuthCode, getSanityAuthCode, getTokenFromStorage} from './utils'
 
 vi.mock('./utils', async (importOriginal) => {
   const original = await importOriginal<typeof import('./utils')>()
-  return {...original, getAuthCode: vi.fn(), getTokenFromStorage: vi.fn()}
+  return {
+    ...original,
+    getAuthCode: vi.fn(),
+    getTokenFromStorage: vi.fn(),
+    getSanityAuthCode: vi.fn(),
+  }
 })
 
 vi.mock('./subscribeToStateAndFetchCurrentUser')
@@ -109,6 +114,19 @@ describe('authStore', () => {
       expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN, token: 'new-token'})
     })
 
+    it('sets to logging in if `getSanityAuthCode` returns a code', () => {
+      const instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+      })
+
+      vi.mocked(getAuthCode).mockReturnValue(null)
+      vi.mocked(getSanityAuthCode).mockReturnValue('sanity-auth-code')
+
+      const {authState} = authStore.getInitialState(instance)
+      expect(authState).toMatchObject({type: AuthStateType.LOGGING_IN})
+    })
+
     it('otherwise it sets the state to logged out', () => {
       const instance = createSanityInstance({
         projectId: 'p',
@@ -116,6 +134,7 @@ describe('authStore', () => {
       })
 
       vi.mocked(getAuthCode).mockReturnValue(null)
+      vi.mocked(getSanityAuthCode).mockReturnValue(null)
       vi.mocked(getTokenFromStorage).mockReturnValue(null)
 
       const {authState} = authStore.getInitialState(instance)

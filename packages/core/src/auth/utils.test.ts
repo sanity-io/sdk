@@ -1,11 +1,12 @@
 import {EMPTY, NEVER} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {AUTH_CODE_PARAM, DEFAULT_BASE} from './authStore'
+import {AUTH_CODE_PARAM, DEFAULT_BASE, SANITY_AUTH_CODE_PARAM} from './authStore'
 import {
   getAuthCode,
   getDefaultLocation,
   getDefaultStorage,
+  getSanityAuthCode,
   getStorageEvents,
   getTokenFromStorage,
 } from './utils'
@@ -199,5 +200,26 @@ describe('getDefaultLocation', () => {
 
     const result = getDefaultLocation()
     expect(result).toBe(DEFAULT_BASE)
+  })
+})
+
+describe('getSanityAuthCode', () => {
+  it('returns auth code when present in search params', () => {
+    const testCode = 'test123'
+    const testUrl = `http://example.com?${SANITY_AUTH_CODE_PARAM}=${testCode}`
+    const result = getSanityAuthCode(testUrl)
+    expect(result).toBe(testCode)
+  })
+
+  it('returns null when auth code is not present', () => {
+    const testUrl = 'http://example.com?other=value'
+    const result = getSanityAuthCode(testUrl)
+    expect(result).toBe(null)
+  })
+
+  it('handles empty search params', () => {
+    const testUrl = 'http://example.com'
+    const result = getSanityAuthCode(testUrl)
+    expect(result).toBe(null)
   })
 })

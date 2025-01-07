@@ -5,10 +5,17 @@ import {createResource, type Resource} from '../resources/createResource'
 import {createStateSourceAction} from '../resources/createStateSourceAction'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
-import {getAuthCode, getDefaultLocation, getDefaultStorage, getTokenFromStorage} from './utils'
+import {
+  getAuthCode,
+  getDefaultLocation,
+  getDefaultStorage,
+  getSanityAuthCode,
+  getTokenFromStorage,
+} from './utils'
 
 export const DEFAULT_BASE = 'http://localhost'
 export const AUTH_CODE_PARAM = 'sid'
+export const SANITY_AUTH_CODE_PARAM = 'sanityAuthCode'
 export const DEFAULT_API_VERSION = '2021-06-07'
 export const REQUEST_TAG_PREFIX = 'sdk.auth'
 
@@ -191,6 +198,8 @@ export const authStore = createResource<AuthStoreState>({
 
     if (providedToken) {
       authState = {type: AuthStateType.LOGGED_IN, token: providedToken, currentUser: null}
+    } else if (getSanityAuthCode(initialLocationHref)) {
+      authState = {type: AuthStateType.LOGGING_IN, isExchangingToken: false}
     } else if (getAuthCode(callbackUrl, initialLocationHref)) {
       authState = {type: AuthStateType.LOGGING_IN, isExchangingToken: false}
     } else if (token) {

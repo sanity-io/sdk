@@ -1,6 +1,6 @@
 import {EMPTY, fromEvent, Observable} from 'rxjs'
 
-import {AUTH_CODE_PARAM, DEFAULT_BASE} from './authStore'
+import {AUTH_CODE_PARAM, DEFAULT_BASE, SANITY_AUTH_CODE_PARAM} from './authStore'
 
 export function getAuthCode(callbackUrl: string | undefined, locationHref: string): string | null {
   const loc = new URL(locationHref, DEFAULT_BASE)
@@ -11,6 +11,16 @@ export function getAuthCode(callbackUrl: string | undefined, locationHref: strin
 
   const authCode = new URLSearchParams(loc.hash.slice(1)).get(AUTH_CODE_PARAM)
   return authCode && callbackLocationMatches ? authCode : null
+}
+
+/**
+ * Retrieves the sanity auth code from the location search params. This is used when the COSUi loads the app with a token in the URL.
+ */
+export function getSanityAuthCode(locationHref: string): string | null {
+  const loc = new URL(locationHref, DEFAULT_BASE)
+
+  const authToken = new URLSearchParams(loc.search).get(SANITY_AUTH_CODE_PARAM)
+  return authToken
 }
 
 /**

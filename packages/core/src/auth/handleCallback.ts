@@ -1,6 +1,6 @@
 import {createAction} from '../resources/createAction'
 import {AuthStateType, DEFAULT_API_VERSION, getAuthStore, REQUEST_TAG_PREFIX} from './authStore'
-import {getAuthCode, getDefaultLocation} from './utils'
+import {getAuthCode, getDefaultLocation, getSanityAuthCode} from './utils'
 
 /**
  * @public
@@ -19,7 +19,7 @@ export const handleCallback = createAction(getAuthStore, ({state, instance}) => 
     if (authState.type === AuthStateType.LOGGING_IN && authState.isExchangingToken) return false
 
     // If there is no matching `authCode` then we can't handle the callback
-    const authCode = getAuthCode(callbackUrl, locationHref)
+    const authCode = getSanityAuthCode(locationHref) || getAuthCode(callbackUrl, locationHref)
     if (!authCode) return false
 
     // Otherwise, start the exchange
