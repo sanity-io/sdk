@@ -4,7 +4,7 @@ import {usePreview} from '@sanity/sdk-react/hooks'
 import {Suspense, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 
-export interface DocumentPreviewProps {
+interface DocumentPreviewProps {
   document: DocumentHandle
 }
 

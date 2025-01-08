@@ -15,7 +15,7 @@ import {
   STABLE_ERROR_PREVIEW,
 } from './util'
 
-export interface ProcessPreviewQueryOptions {
+interface ProcessPreviewQueryOptions {
   projectId: string
   dataset: string
   schema: Schema
@@ -76,7 +76,7 @@ export function normalizeMedia(
   return {type: 'image-asset', url: assetIdToUrl(media.asset._ref, projectId, dataset)}
 }
 
-export interface PreparePreviewForSchemaTypeOptions {
+interface PreparePreviewForSchemaTypeOptions {
   projectId: string
   dataset: string
   schema: Schema

@@ -7,7 +7,7 @@ export interface ActionContext<TState> {
   state: ResourceState<TState>
 }
 
-export type ResourceActionDefinition<TState, TParams extends unknown[], TReturn> = (options: {
+type ResourceActionDefinition<TState, TParams extends unknown[], TReturn> = (options: {
   instance: SanityInstance
   state: ResourceState<TState>
 }) => (this: ActionContext<TState>, ...args: TParams) => TReturn
@@ -17,14 +17,6 @@ export type ResourceActionDefinition<TState, TParams extends unknown[], TReturn>
  */
 export type ResourceAction<TState, TParams extends unknown[], TReturn> = (
   dependencies: SanityInstance | ActionContext<TState>,
-  ...params: TParams
-) => TReturn
-
-/**
- * @internal
- */
-export type InternalResourceAction<TState, TParams extends unknown[], TReturn> = (
-  dependencies: ActionContext<TState>,
   ...params: TParams
 ) => TReturn
 
