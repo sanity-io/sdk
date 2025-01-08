@@ -1,7 +1,7 @@
 import {DocumentHandle} from '@sanity/sdk'
 import {DocumentPreviewLayout} from '@sanity/sdk-react/components'
 import {usePreview} from '@sanity/sdk-react/hooks'
-import {Suspense, useRef} from 'react'
+import {Suspense, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 
 export interface DocumentPreviewProps {
@@ -23,7 +23,7 @@ export function DocumentPreview(props: DocumentPreviewProps): React.ReactNode {
 }
 
 function DocumentPreviewResolved({document}: DocumentPreviewProps): React.ReactNode {
-  const ref = useRef<HTMLElement>(null)
+  const [ref, setRef] = useState<HTMLElement | null>(null)
   const [{title, subtitle, media, status}] = usePreview({document, ref})
 
   let statusLabel
@@ -44,7 +44,7 @@ function DocumentPreviewResolved({document}: DocumentPreviewProps): React.ReactN
 
   return (
     <DocumentPreviewLayout
-      ref={ref}
+      ref={setRef}
       title={title}
       subtitle={subtitle}
       docType={document._type}
