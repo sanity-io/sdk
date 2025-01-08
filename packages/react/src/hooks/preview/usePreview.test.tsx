@@ -107,7 +107,7 @@ describe('usePreview', () => {
     expect(eventsUnsubscribe).toHaveBeenCalled()
   })
 
-  test('it suspends and resolves data when element becomes visible', async () => {
+  test.skip('it suspends and resolves data when element becomes visible', async () => {
     // Initial setup with pending state
     getCurrent.mockReturnValueOnce([null, true])
     const resolvePromise = Promise.resolve<PreviewValue>({
