@@ -28,7 +28,10 @@ describe('nodeStore', () => {
     } as unknown as Node<WindowMessage, FrameMessage>
 
     const initialState = comlinkNodeStore.getInitialState(instance)
-    initialState.nodes.set('test-node', mockNode)
+    initialState.nodes.set('test-node', {
+      options: {name: 'test-node', connectTo: 'parent'},
+      node: mockNode,
+    })
 
     const cleanup = comlinkNodeStore.initialize!.call(
       {

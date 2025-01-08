@@ -9,15 +9,13 @@ export const removeNode = createAction(
   () => comlinkNodeStore,
   ({state}) => {
     return (name: string) => {
-      const node = state.get().nodes.get(name)
-      if (!node) {
+      const nodeEntry = state.get().nodes.get(name)
+      if (!nodeEntry) {
         return false
       }
 
-      // Stop the node
-      node.stop()
+      nodeEntry.node.stop()
 
-      // Remove from store
       const nodes = new Map(state.get().nodes)
       nodes.delete(name)
       state.set('removeNode', {nodes})

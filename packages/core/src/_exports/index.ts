@@ -53,12 +53,11 @@ export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePrev
 
 /** COMLINK */
 export {destroyController} from '../comlink/controller/actions/destroyController'
+export {getOrCreateChannel} from '../comlink/controller/actions/getOrCreateChannel'
 export {getOrCreateController} from '../comlink/controller/actions/getOrCreateController'
 export {releaseChannel} from '../comlink/controller/actions/releaseChannel'
-export {getOrCreateChannel} from '../comlink/controller/actions/getOrCreateChannel'
 export type {ComlinkControllerState} from '../comlink/controller/comlinkControllerStore'
-export {createNode} from '../comlink/node/actions/createNode'
-export {getNodeState} from '../comlink/node/actions/getNodeState'
+export {getOrCreateNode} from '../comlink/node/actions/getOrCreateNode'
 export {removeNode} from '../comlink/node/actions/removeNode'
 export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'
