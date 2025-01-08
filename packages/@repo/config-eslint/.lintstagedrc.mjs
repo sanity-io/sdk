@@ -1,3 +1,4 @@
-import baseConfig from '../../.lintstagedrc.mjs'
+// @ts-check
+import baseConfig from '../../../.lintstagedrc.mjs'
 
 export default baseConfig
