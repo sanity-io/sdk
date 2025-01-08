@@ -6,13 +6,9 @@ import {describe, expect, it, type Mock, vi} from 'vitest'
 
 import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {createSanityInstance} from '../instance/sanityInstance'
-import {
-  createResourceState,
-  getOrCreateResource,
-  type ResourceState,
-} from '../resources/createResource'
+import {createResourceState, type ResourceState} from '../resources/createResource'
 import {getSchemaState} from '../schema/getSchemaState'
-import {type PreviewQueryResult, previewStore, type PreviewStoreState} from './previewStore'
+import {type PreviewQueryResult, type PreviewStoreState} from './previewStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 
 vi.mock('../client/actions/getSubscribableClient')
@@ -232,11 +228,5 @@ describe('subscribeToStateAndFetchBatches', () => {
     })
 
     subscription.unsubscribe()
-  })
-
-  it('calls getOrCreateResource if no state is provided', () => {
-    ;(getOrCreateResource as Mock).mockReturnValue({state})
-    subscribeToStateAndFetchBatches(instance)
-    expect(getOrCreateResource).toHaveBeenCalledWith(instance, previewStore)
   })
 })

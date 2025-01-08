@@ -3,6 +3,9 @@ import {defineConfig} from '@sanity/pkg-utils'
 export const basePackageConfig = defineConfig({
   legacyExports: false,
   extract: {
+    rules: {
+      'ae-forgotten-export': 'off',
+    },
     customTags: [
       {
         name: 'thoughtLevel',

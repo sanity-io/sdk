@@ -5,8 +5,8 @@ import {describe, it} from 'vitest'
 
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState, getOrCreateResource} from '../resources/createResource'
+import {AuthStateType} from './authStateType'
 import {
-  AuthStateType,
   authStore,
   type AuthStoreState,
   getAuthState,

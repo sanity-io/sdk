@@ -1,6 +1,6 @@
 import {EMPTY, fromEvent, Observable} from 'rxjs'
 
-import {AUTH_CODE_PARAM, DEFAULT_BASE} from './authStore'
+import {AUTH_CODE_PARAM, DEFAULT_BASE} from './authConstants'
 
 export function getAuthCode(callbackUrl: string | undefined, locationHref: string): string | null {
   const loc = new URL(locationHref, DEFAULT_BASE)

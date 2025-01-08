@@ -13,6 +13,7 @@ import {ProjectInstanceWrapper} from './ProjectAuthentication/ProjectInstanceWra
 import {ProtectedRoute} from './ProtectedRoute'
 import {UnauthenticatedHome} from './Unauthenticated/UnauthenticatedHome'
 import {UnauthenticatedInstanceWrapper} from './Unauthenticated/UnauthenticatedInstanceWrapper'
+
 const documentCollectionRoutes = [
   {
     path: 'document-list',

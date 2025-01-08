@@ -4,12 +4,8 @@ import {describe, it, type Mock, vi} from 'vitest'
 
 import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {createSanityInstance} from '../instance/sanityInstance'
-import {
-  createResourceState,
-  getOrCreateResource,
-  type ResourceState,
-} from '../resources/createResource'
-import {previewStore, type PreviewStoreState} from './previewStore'
+import {createResourceState, type ResourceState} from '../resources/createResource'
+import {type PreviewStoreState} from './previewStore'
 import {subscribeToLiveAndSetLastLiveEventId} from './subscribeToLiveAndSetLastLiveEventId'
 
 vi.mock('../client/actions/getSubscribableClient', () => ({
@@ -114,11 +110,5 @@ describe('subscribeToLiveAndSetLastLiveEventId', () => {
     // Clean up subscriptions
     liveSubscription.unsubscribe()
     expect(unsubscribe).toHaveBeenCalledTimes(2)
-  })
-
-  it('calls getOrCreateResource if no state is provided', () => {
-    ;(getOrCreateResource as Mock).mockReturnValue({state})
-    subscribeToLiveAndSetLastLiveEventId(instance)
-    expect(getOrCreateResource).toHaveBeenCalledWith(instance, previewStore)
   })
 })

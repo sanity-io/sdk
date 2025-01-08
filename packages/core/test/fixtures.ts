@@ -1,4 +1,4 @@
-import {type SanityConfig} from '../src/instance/sanityInstance'
+import type {SanityConfig} from '../src/instance/types'
 
 export const config: SanityConfig = {
   projectId: 'test-project-id',

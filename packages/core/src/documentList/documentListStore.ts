@@ -6,11 +6,9 @@ import {createAction} from '../resources/createAction'
 import {createResource} from '../resources/createResource'
 import {createStateSourceAction} from '../resources/createStateSourceAction'
 import {createStore} from '../resources/createStore'
+import {PAGE_SIZE} from './documentListConstants'
 import {subscribeToLiveClientAndSetLastLiveEventId} from './subscribeToLiveClientAndSetLastLiveEventId'
 import {subscribeToStateAndFetchResults} from './subscribeToStateAndFetchResults'
-
-export const API_VERSION = 'vX'
-export const PAGE_SIZE = 25
 
 /**
  * Configuration options for filtering and sorting documents in a document list.

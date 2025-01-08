@@ -2,7 +2,8 @@ import {describe, it} from 'vitest'
 
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState} from '../resources/createResource'
-import {AuthStateType, authStore} from './authStore'
+import {AuthStateType} from './authStateType'
+import {authStore} from './authStore'
 import {logout} from './logout'
 import {getTokenFromStorage} from './utils'
 

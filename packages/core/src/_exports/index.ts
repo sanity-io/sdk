@@ -6,8 +6,7 @@ export {type ResourceState} from '../resources/createResource'
 export {type BoundResourceAction} from '../resources/createStore'
 
 // Types
-export type {SanityConfig} from '../instance/sanityInstance'
-export type {InternalStores, SanityInstance, SdkIdentity} from '../instance/types'
+export type {SanityConfig, SanityInstance, SdkIdentity} from '../instance/types'
 export type {StateSource} from '../resources/createStateSourceAction'
 
 /** CLIENT */
@@ -26,11 +25,11 @@ export type {
 export {createDocumentListStore} from '../documentList/documentListStore'
 
 /** AUTH */
+export {AuthStateType} from '../auth/authStateType'
 export {
   type AuthConfig,
   type AuthProvider,
   type AuthState,
-  AuthStateType,
   type AuthStoreState,
   type ErrorAuthState,
   getAuthState,

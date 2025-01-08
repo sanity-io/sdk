@@ -1,11 +1,14 @@
-import type {ClientStore} from '../client/store/clientStore'
-import type {SchemaStore} from '../schema/schemaStore'
-import type {SanityConfig} from './sanityInstance'
+import {type AuthConfig} from '../auth/authStore'
+import {type SchemaConfig} from '../schema/schemaManager'
 
-/** @internal */
-export interface InternalStores {
-  clientStore?: ClientStore
-  schemaStore?: SchemaStore
+/**
+ * @public
+ */
+export interface SanityConfig {
+  projectId: string
+  dataset: string
+  auth?: AuthConfig
+  schema?: SchemaConfig
 }
 
 /** @public */
