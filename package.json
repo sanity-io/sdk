@@ -35,13 +35,6 @@
     "ts:check": "tsc --noEmit",
     "depcheck": "knip"
   },
-  "lint-staged": {
-    "!(*.{ts,tsx})": "prettier --write",
-    "*.{ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ]
-  },
   "prettier": "@sanity/prettier-config",
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",
