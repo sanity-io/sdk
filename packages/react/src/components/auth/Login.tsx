@@ -1,5 +1,5 @@
 import {Button, Flex, Heading, Spinner} from '@sanity/ui'
-import {Suspense} from 'react'
+import {type JSX, Suspense} from 'react'
 import styled from 'styled-components'
 
 import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
