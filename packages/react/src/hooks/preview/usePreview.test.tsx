@@ -44,11 +44,11 @@ const mockDocument: DocumentHandle = {
 }
 
 function TestComponent({document}: {document: DocumentHandle}) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [previewValue, pending] = usePreview({document, ref})
+  const ref = useRef<HTMLElement>(null)
+  const [previewValue, pending] = usePreview({document, ref: ref as React.RefObject<HTMLElement>})
 
   return (
-    <div ref={ref}>
+    <div ref={ref as React.RefObject<HTMLDivElement>}>
       <h1>{previewValue.title}</h1>
       <p>{previewValue.subtitle}</p>
       {pending && <div>Pending...</div>}

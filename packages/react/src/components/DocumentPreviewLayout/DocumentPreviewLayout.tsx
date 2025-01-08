@@ -2,7 +2,7 @@ import 'inter-ui/inter.css'
 import '../../css/styles.css'
 
 import {DocumentIcon} from '@sanity/icons'
-import {forwardRef} from 'react'
+import {forwardRef, type JSX} from 'react'
 
 /**
  * @public
