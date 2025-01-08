@@ -1,5 +1,5 @@
 import {type DocumentHandle, getPreviewState, type PreviewValue, resolvePreview} from '@sanity/sdk'
-import {type RefObject, useCallback, useMemo, useSyncExternalStore} from 'react'
+import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -9,7 +9,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  */
 export interface UsePreviewOptions {
   document: DocumentHandle
-  ref?: RefObject<HTMLElement>
+  ref: HTMLElement | null
 }
 
 /**
@@ -37,7 +37,7 @@ export function usePreview({
           ([entry]) => observer.next(entry.isIntersecting),
           {rootMargin: '0px', threshold: 0},
         )
-        if (ref?.current) intersectionObserver.observe(ref.current)
+        if (ref) intersectionObserver.observe(ref)
         return () => intersectionObserver.disconnect()
       })
         .pipe(
