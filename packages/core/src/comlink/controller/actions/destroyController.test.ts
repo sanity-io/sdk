@@ -1,36 +1,32 @@
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {beforeEach, describe, expect, it} from 'vitest'
 
 import {config} from '../../../../test/fixtures'
 import {createSanityInstance} from '../../../instance/sanityInstance'
 import type {SanityInstance} from '../../../instance/types'
-import {getOrCreateResource} from '../../../resources/createResource'
+import {createResourceState} from '../../../resources/createResource'
 import {comlinkControllerStore} from '../comlinkControllerStore'
-import {createController} from './createController'
 import {destroyController} from './destroyController'
+import {getOrCreateController} from './getOrCreateController'
 
 describe('destroyController', () => {
   let instance: SanityInstance
 
   beforeEach(() => {
     instance = createSanityInstance(config)
-    vi.clearAllMocks()
   })
 
   it('should destroy controller and clear state', () => {
-    const controller = createController(instance, 'https://test.sanity.dev')!
-    const destroySpy = vi.spyOn(controller, 'destroy')
+    const state = createResourceState(comlinkControllerStore.getInitialState(instance))
+    getOrCreateController(instance, 'https://test.sanity.dev')!
+    destroyController({state, instance})
 
-    destroyController(instance)
-
-    expect(destroySpy).toHaveBeenCalled()
-
-    const store = getOrCreateResource(instance, comlinkControllerStore)
-    const state = store.state.get()
-    expect(state.controller).toBeNull()
-    expect(state.channels.size).toBe(0)
+    expect(state.get().controller).toBeNull()
+    expect(state.get().channels.size).toBe(0)
   })
 
   it('should do nothing if no controller exists', () => {
-    expect(() => destroyController(instance)).not.toThrow()
+    const state = createResourceState(comlinkControllerStore.getInitialState(instance))
+
+    expect(() => destroyController({state, instance})).not.toThrow()
   })
 })

@@ -1,17 +1,16 @@
-import {type ChannelInstance, type Controller} from '@sanity/comlink'
+import {type ChannelInput, type ChannelInstance, type Controller} from '@sanity/comlink'
 
-import {createResource, type Resource} from '../../resources/createResource'
+import {createResource} from '../../resources/createResource'
 import {type FrameMessage, type WindowMessage} from '../types'
 import {destroyController} from './actions/destroyController'
 
 /**
- * Options for creating a channel
+ * Individual channel with its relevant options
  * @public
  */
-export interface CreateChannelOptions {
-  name: string
-  connectTo: string
-  heartbeat?: boolean
+export interface ChannelEntry {
+  channel: ChannelInstance<FrameMessage, WindowMessage>
+  options: ChannelInput
 }
 
 /**
@@ -20,7 +19,8 @@ export interface CreateChannelOptions {
  */
 export interface ComlinkControllerState {
   controller: Controller | null
-  channels: Map<string, ChannelInstance<FrameMessage, WindowMessage>>
+  controllerOrigin: string | null
+  channels: Map<string, ChannelEntry>
 }
 
 export const comlinkControllerStore = createResource<ComlinkControllerState>({
@@ -28,6 +28,7 @@ export const comlinkControllerStore = createResource<ComlinkControllerState>({
   getInitialState: () => {
     const initialState = {
       controller: null,
+      controllerOrigin: null,
       channels: new Map(),
     }
     return initialState
@@ -38,7 +39,3 @@ export const comlinkControllerStore = createResource<ComlinkControllerState>({
     }
   },
 })
-
-export function getComlinkControllerStore(): Resource<ComlinkControllerState> {
-  return comlinkControllerStore
-}

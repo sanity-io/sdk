@@ -5,8 +5,8 @@ import {createSanityInstance} from '../../../instance/sanityInstance'
 import type {SanityInstance} from '../../../instance/types'
 import {getOrCreateResource} from '../../../resources/createResource'
 import {comlinkControllerStore} from '../comlinkControllerStore'
-import {createChannel} from './createChannel'
-import {createController} from './createController'
+import {getOrCreateChannel} from './getOrCreateChannel'
+import {getOrCreateController} from './getOrCreateController'
 import {removeChannel} from './removeChannel'
 
 describe('removeChannel', () => {
@@ -18,8 +18,8 @@ describe('removeChannel', () => {
   })
 
   it('should remove channel from store', () => {
-    createController(instance, 'https://test.sanity.dev')
-    createChannel(instance, {
+    getOrCreateController(instance, 'https://test.sanity.dev')
+    getOrCreateChannel(instance, {
       name: 'test',
       connectTo: 'iframe',
     })

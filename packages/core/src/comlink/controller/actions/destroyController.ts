@@ -1,18 +1,16 @@
-import {createAction} from '../../../resources/createAction'
-import {comlinkControllerStore} from '../comlinkControllerStore'
+import {createInternalAction} from '../../../resources/createAction'
+import type {ComlinkControllerState} from '../comlinkControllerStore'
 
 /**
  * Calls the destroy method on the controller and resets the controller state.
  * @public
  */
-export const destroyController = createAction(
-  () => comlinkControllerStore,
+export const destroyController = createInternalAction<ComlinkControllerState, [], void>(
   ({state}) => {
     return () => {
       const {controller} = state.get()
 
       if (controller) {
-        // this function also destroys all channels
         controller.destroy()
         state.set('destroyController', {
           controller: null,

@@ -10,10 +10,9 @@ export const removeChannel = createAction(
   ({state}) => {
     return (name: string) => {
       const channels = state.get().channels
-      const channel = channels.get(name)
 
-      if (channel) {
-        channel.stop()
+      if (channels.has(name)) {
+        channels.get(name)?.channel.stop()
         const newChannels = new Map(channels)
         newChannels.delete(name)
 

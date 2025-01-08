@@ -4,7 +4,7 @@ import {config} from '../../../test/fixtures'
 import {createSanityInstance} from '../../instance/sanityInstance'
 import type {SanityInstance} from '../../instance/types'
 import {createResourceState, getOrCreateResource} from '../../resources/createResource'
-import {createController} from './actions/createController'
+import {getOrCreateController} from './actions/getOrCreateController'
 import {comlinkControllerStore} from './comlinkControllerStore'
 
 describe('comlinkStore', () => {
@@ -24,7 +24,7 @@ describe('comlinkStore', () => {
 
   it('should cleanup controller on dispose', () => {
     // Create instance and initialize controller
-    const controller = createController(instance, 'https://test.sanity.dev')
+    const controller = getOrCreateController(instance, 'https://test.sanity.dev')
     const destroySpy = vi.spyOn(controller!, 'destroy')
 
     // Get initial state and create resource state
