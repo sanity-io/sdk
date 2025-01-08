@@ -1,5 +1,6 @@
-import {KnipConfig} from 'knip'
 import {join} from 'node:path'
+
+import {KnipConfig} from 'knip'
 import {match} from 'minimatch'
 
 const project = ['src/**/*.{js,jsx,ts,tsx}', '!**/build/**', '!**/docs/**']
@@ -26,7 +27,7 @@ const baseConfig = {
   },
 } satisfies KnipConfig
 
-export const addBundlerEntries = async (config: KnipConfig) => {
+export const addBundlerEntries = async (config: KnipConfig): Promise<KnipConfig> => {
   const dirs = [
     'packages/@repo/config-eslint',
     'packages/@repo/package.config',

@@ -20,14 +20,6 @@ export type ResourceAction<TState, TParams extends unknown[], TReturn> = (
   ...params: TParams
 ) => TReturn
 
-/**
- * @internal
- */
-export type InternalResourceAction<TState, TParams extends unknown[], TReturn> = (
-  dependencies: ActionContext<TState>,
-  ...params: TParams
-) => TReturn
-
 export function createAction<TState, TParams extends unknown[], TReturn>(
   getResource: () => Resource<TState>,
   actionDefinition: ResourceActionDefinition<TState, TParams, TReturn>,
