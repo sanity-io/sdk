@@ -1,13 +1,8 @@
 import {Button, Flex, Heading, Spinner} from '@sanity/ui'
 import {type JSX, Suspense} from 'react'
-import styled from 'styled-components'
 
 import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
 import {LoginLayout, type LoginLayoutProps} from './LoginLayout'
-
-const FallbackRoot = styled(Flex)`
-  height: 123px;
-`
 
 /**
  * Login component that displays available authentication providers.
@@ -25,9 +20,9 @@ export function Login({header, footer}: LoginLayoutProps): JSX.Element {
 
         <Suspense
           fallback={
-            <FallbackRoot align="center" justify="center">
+            <Flex align="center" justify="center" style={{height: '123px'}}>
               <Spinner />
-            </FallbackRoot>
+            </Flex>
           }
         >
           <Providers />

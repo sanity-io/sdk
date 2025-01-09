@@ -1,7 +1,6 @@
 import {Button, Flex, Text} from '@sanity/ui'
 import {useCallback} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
-import styled from 'styled-components'
 
 import {useLogOut} from '../../hooks/auth/useLogOut'
 import {AuthError} from './AuthError'
@@ -11,10 +10,6 @@ import {LoginLayout, type LoginLayoutProps} from './LoginLayout'
  * @alpha
  */
 export type LoginErrorProps = FallbackProps & LoginLayoutProps
-
-const StyledFlex = styled(Flex)`
-  margin: auto;
-`
 
 /**
  * Displays authentication error details and provides retry functionality.
@@ -38,7 +33,7 @@ export function LoginError({
 
   return (
     <LoginLayout header={header} footer={footer}>
-      <StyledFlex direction="column" gap={4}>
+      <Flex direction="column" gap={4} style={{margin: 'auto'}}>
         <Flex direction="column" gap={3}>
           <Text as="h2" align="center" weight="bold" size={3}>
             Authentication Error
@@ -48,7 +43,7 @@ export function LoginError({
           </Text>
         </Flex>
         <Button text="Retry" tone="primary" onClick={handleRetry} />
-      </StyledFlex>
+      </Flex>
     </LoginLayout>
   )
 }

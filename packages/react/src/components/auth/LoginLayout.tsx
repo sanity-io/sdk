@@ -1,5 +1,4 @@
 import {Card, Flex} from '@sanity/ui'
-import styled from 'styled-components'
 
 import {LoginFooter} from './LoginFooter'
 
@@ -16,23 +15,6 @@ export interface LoginLayoutProps {
   /** Main content rendered in card body */
   children?: React.ReactNode
 }
-
-const Root = styled.div`
-  width: 100%;
-  display: flex;
-`
-
-const Container = styled(Flex)`
-  width: 320px;
-  margin: auto;
-  display: flex;
-`
-
-const StyledCard = styled(Card)``
-
-const ChildrenFlex = styled(Flex)`
-  min-height: 154px;
-`
 
 /**
  * Layout component for login-related screens providing consistent styling and structure.
@@ -74,9 +56,9 @@ export function LoginLayout({
   header,
 }: LoginLayoutProps): React.ReactNode {
   return (
-    <Root>
-      <Container direction="column" gap={4}>
-        <StyledCard border radius={2} paddingY={4}>
+    <div style={{width: '100%', display: 'flex'}}>
+      <Flex direction="column" gap={4} style={{width: '320px', margin: 'auto', display: 'flex'}}>
+        <Card border radius={2} paddingY={4}>
           <Flex direction="column" gap={4}>
             {header && (
               <Card borderBottom paddingX={4} paddingBottom={3}>
@@ -85,15 +67,15 @@ export function LoginLayout({
             )}
 
             {children && (
-              <ChildrenFlex paddingX={4} direction="column">
+              <Flex paddingX={4} direction="column" style={{minHeight: '154px'}}>
                 {children}
-              </ChildrenFlex>
+              </Flex>
             )}
           </Flex>
-        </StyledCard>
+        </Card>
 
         {footer}
-      </Container>
-    </Root>
+      </Flex>
+    </div>
   )
 }
