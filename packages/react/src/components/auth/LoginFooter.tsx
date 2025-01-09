@@ -1,7 +1,6 @@
 import {SanityLogo} from '@sanity/logos'
 import {Flex, Text} from '@sanity/ui'
 import {Fragment} from 'react'
-import styled from 'styled-components'
 
 const LINKS = [
   {
@@ -26,12 +25,6 @@ const LINKS = [
   },
 ]
 
-const StyledText = styled(Text)`
-  a {
-    color: inherit;
-  }
-`
-
 /**
  * Default footer component for login screens showing Sanity branding and legal
  * links.
@@ -48,11 +41,16 @@ export function LoginFooter(): React.ReactNode {
       <Flex align="center" gap={2}>
         {LINKS.map((link, index) => (
           <Fragment key={link.title}>
-            <StyledText muted size={1}>
-              <a href={link.url} target="_blank" rel="noopener noreferrer">
+            <Text muted size={1}>
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{color: 'inherit'}}
+              >
                 {link.title}
               </a>
-            </StyledText>
+            </Text>
 
             {index < LINKS.length - 1 && (
               <Text size={1} muted>

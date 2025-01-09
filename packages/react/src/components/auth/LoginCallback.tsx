@@ -1,14 +1,10 @@
 import {Flex, Spinner, Text} from '@sanity/ui'
 import {useEffect} from 'react'
-import styled from 'styled-components'
 
 import {useHandleCallback} from '../../hooks/auth/useHandleCallback'
 import {LoginLayout, type LoginLayoutProps} from './LoginLayout'
 
-const StyledFlex = styled(Flex)`
-  margin: auto;
-`
-
+/**
 /**
  * Component shown during auth callback processing that handles login completion.
  * Automatically processes the auth callback when mounted and updates the URL
@@ -32,10 +28,10 @@ export function LoginCallback({header, footer}: LoginLayoutProps): React.ReactNo
 
   return (
     <LoginLayout header={header} footer={footer}>
-      <StyledFlex direction="column" justify="center" align="center" gap={4}>
+      <Flex direction="column" justify="center" align="center" gap={4} style={{margin: 'auto'}}>
         <Text size={1}>Logging you in…</Text>
         <Spinner size={4} />
-      </StyledFlex>
+      </Flex>
     </LoginLayout>
   )
 }
