@@ -3,6 +3,7 @@ import {devtools, type DevtoolsOptions} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
 import type {SanityInstance, SdkIdentity} from '../instance/types'
+import {getEnv} from '../utils/getEnv'
 
 const resourceCache = new WeakMap<SdkIdentity, Map<string, InitializedResource<unknown>>>()
 
@@ -58,7 +59,7 @@ export function initializeResource<TState>(
   const initialState = resource.getInitialState(instance)
   const state = createResourceState(initialState, {
     name: resource.name,
-    enabled: import.meta.env.DEV,
+    enabled: !!getEnv('DEV'),
   })
   const dispose = resource.initialize?.call({instance, state}, instance) ?? (() => {})
 
