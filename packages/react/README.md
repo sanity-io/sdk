@@ -10,7 +10,7 @@ React components and hooks for creating Sanity applications.
 ## Installation
 
 ```bash
-npm i @sanity/sdk-react @sanity/sdk styled-components
+npm i @sanity/sdk-react @sanity/sdk
 ```
 
 ## SDK Documentation
@@ -21,7 +21,18 @@ See the [SDK Documentation](https://sdk-docs.sanity.dev) for more information.
 
 Here's how to implement your Sanity application:
 
+```bash
+# Create a new Vite React TypeScript project
+npm create vite@latest my-content-os-app -- --template react-ts -y
+cd my-content-os-app
+# Install Sanity dependencies
+npm i @sanity/sdk-react @sanity/sdk @sanity/ui
+# Run the app
+npm run dev
+```
+
 ```tsx
+// src/App.tsx
 import {createSanityInstance} from '@sanity/sdk'
 import {AuthBoundary, SanityProvider} from '@sanity/sdk-react/components'
 import {useCurrentUser, useLogOut} from '@sanity/sdk-react/hooks'
@@ -65,6 +76,8 @@ function Authenticated() {
     </Flex>
   )
 }
+
+export default App
 ```
 
 ## Customizing your application
