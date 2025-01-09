@@ -1,3 +1,4 @@
+import {getEnv} from '../utils/getEnv'
 import type {PreviewValue, ValuePending} from './previewStore'
 
 export const PREVIEW_TAG = 'sdk.preview'
@@ -5,7 +6,7 @@ export const STABLE_EMPTY_PREVIEW: ValuePending<PreviewValue> = [null, false]
 export const STABLE_ERROR_PREVIEW: ValuePending<PreviewValue> = [
   {
     title: 'Preview Error',
-    ...(import.meta.env.DEV && {subtitle: 'Check the console for more details'}),
+    ...(!!getEnv('DEV') && {subtitle: 'Check the console for more details'}),
   },
   false,
 ]
