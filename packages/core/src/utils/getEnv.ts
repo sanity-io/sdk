@@ -4,7 +4,9 @@ type WindowWithEnv = Window &
     ENV?: Record<string, unknown>
   }
 
-export function getEnv(key: string): unknown {
+type KnownEnvVar = 'DEV'
+
+export function getEnv(key: KnownEnvVar): unknown {
   if (typeof import.meta !== 'undefined' && import.meta.env) {
     // Vite environment variables
     return (import.meta.env as unknown as Record<string, unknown>)[key]
