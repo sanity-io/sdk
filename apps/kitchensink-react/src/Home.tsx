@@ -30,8 +30,8 @@ const menuItems = [
     icon: '👷',
   },
   {
-    title: 'Cosui Simulator',
-    path: '/cosui-simulator',
+    title: 'Comlink Playground',
+    path: '/comlink-demo',
     icon: '🛠️',
   },
 ]
