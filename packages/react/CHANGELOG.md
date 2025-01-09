@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.3](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.2...sdk-react-v0.0.0-alpha.3) (2025-01-09)
+
+
+### Bug Fixes
+
+* styled is not a function in Remix apps ([#169](https://github.com/sanity-io/sdk/issues/169)) ([7a8cfbf](https://github.com/sanity-io/sdk/commit/7a8cfbfedb60c5877cc4edae0caf92dfb6adf388))
+
 ## [0.0.0-alpha.2](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.1...sdk-react-v0.0.0-alpha.2) (2025-01-06)
 
 

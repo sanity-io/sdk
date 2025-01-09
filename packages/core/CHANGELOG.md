@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.3](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.2...sdk-v0.0.0-alpha.3) (2025-01-09)
+
+
+### Bug Fixes
+
+* environment variable access for Remix ([#168](https://github.com/sanity-io/sdk/issues/168)) ([4ad3587](https://github.com/sanity-io/sdk/commit/4ad3587fd0ea262b09c3add20c2ba2bd8d5d15c2))
+
 ## [0.0.0-alpha.2](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.1...sdk-v0.0.0-alpha.2) (2025-01-06)
 
 
