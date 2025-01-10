@@ -74,15 +74,6 @@ importers:
       '@sanity/comlink':
         specifier: ^2.0.2
         version: 2.0.3
-      '@sanity/sdk':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@sanity/sdk-react':
-        specifier: workspace:*
-        version: link:../../packages/react
-      '@sanity/types':
-        specifier: ^3.67.1
-        version: 3.68.3(@types/react@19.0.3)
       '@sanity/ui':
         specifier: ^2.8.19
         version: 2.10.12(@emotion/is-prop-valid@1.2.2)(react-dom@19.0.0(react@19.0.0))(react-is@18.3.1)(react@19.0.0)(styled-components@6.1.13(react-dom@19.0.0(react@19.0.0))(react@19.0.0))
@@ -92,9 +83,6 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.0.0(react@19.0.0)
-      react-error-boundary:
-        specifier: ^4.1.2
-        version: 4.1.2(react@19.0.0)
       react-router:
         specifier: ^7.0.2
         version: 7.1.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -298,9 +286,6 @@ importers:
 
   packages/react:
     dependencies:
-      '@sanity/icons':
-        specifier: ^3.5.2
-        version: 3.5.6(react@19.0.0)
       '@sanity/logos':
         specifier: ^2.1.13
         version: 2.1.13(@sanity/color@3.0.6)(react@19.0.0)

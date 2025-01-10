@@ -75,7 +75,6 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
-    "@sanity/icons": "^3.5.2",
     "@sanity/logos": "^2.1.13",
     "@sanity/sdk": "workspace:*",
     "@sanity/ui": "^2.8.19",
@@ -88,7 +87,6 @@
     "@sanity/client": "^6.24.1",
     "@sanity/pkg-utils": "^6.12.2",
     "@sanity/prettier-config": "^1.0.3",
-    "@storybook/react": "^8.4.7",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/react": "^19.0.3",
