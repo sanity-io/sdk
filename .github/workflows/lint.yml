@@ -1,4 +1,4 @@
-name: PR Check
+name: Lint Check
 
 on:
   # Build on pushes to branches that have a PR (including drafts)
@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
@@ -48,6 +48,3 @@ jobs:
 
       - name: Lint
         run: pnpm lint
-
-      - name: Test
-        run: pnpm test:coverage
