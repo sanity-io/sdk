@@ -1,14 +1,14 @@
-import type {SanityDocumentLike} from '@sanity/types'
-import {createResource} from '../resources/createResource'
+import type {SanityClient} from '@sanity/client'
+import {type Mutation, SanityEncoder} from '@sanity/mutate'
 import {
   createDocumentEventListener,
-  createDocumentLoader,
+  createDocumentLoader, createDocumentLoaderFromClient,
   createOptimisticStore,
-  createSharedListener,
-  type LocalDataset,
+  createSharedListener, createSharedListenerFromClient,
+  type OptimisticStore
 } from '@sanity/mutate/_unstable_store'
-import type {SanityClient} from '@sanity/client'
-import {createAction, createInternalAction} from '../resources/createAction'
+import type {SanityDocumentLike} from '@sanity/types'
+import {omit} from 'lodash-es'
 import {
   combineLatest,
   concatMap,
@@ -23,18 +23,19 @@ import {
   Observable,
   of,
   pairwise,
+  type Subscription,
   switchMap,
   tap,
   throttleTime,
   withLatestFrom,
-  type Subscription,
 } from 'rxjs'
-import {SanityEncoder, type Mutation} from '@sanity/mutate'
-import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
+
 import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import type {DocumentHandle} from '../documentList/documentListStore'
 import {randomId} from '../preview/util'
-import {omit} from 'lodash-es'
+import {createAction, createInternalAction} from '../resources/createAction'
+import {createResource} from '../resources/createResource'
+import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
 
 const SUBMIT_THROTTLE_TIME = 100
 const API_VERSION = '2023-10-27'
@@ -42,7 +43,7 @@ const API_VERSION = '2023-10-27'
 export interface DocumentStoreState {
   documents: Record<string, SanityDocumentLike | undefined>
   activeDocumentSubscriptions: Record<string, string[] | undefined>
-  optimisticStore: LocalDataset | null
+  optimisticStore: OptimisticStore | null
   lastMutation: number | null
 }
 
@@ -194,8 +195,8 @@ const subscribeToClientsAndCreateOptimisticStore = createInternalAction<
   return function () {
     return client$.subscribe({
       next: (client) => {
-        const sharedListener = createSharedListener({client})
-        const loadDocument = createDocumentLoader({client})
+        const sharedListener = createSharedListenerFromClient(client)
+        const loadDocument = createDocumentLoaderFromClient(client)
         const listen = createDocumentEventListener({
           loadDocument,
           listenerEvents: sharedListener,
