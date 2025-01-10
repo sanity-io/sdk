@@ -1,3 +1,4 @@
+import type {JSX} from 'react'
 import {Route, Routes} from 'react-router'
 
 import {Cosui} from './CosuiSimulator/Cosui'

@@ -1,6 +1,7 @@
 import {createSanityInstance} from '@sanity/sdk'
 import {SanityProvider} from '@sanity/sdk-react/components'
 import {Box, Button, Card, Flex} from '@sanity/ui'
+import type {JSX} from 'react'
 import {Link, Outlet} from 'react-router'
 
 import {schema} from '../schema'

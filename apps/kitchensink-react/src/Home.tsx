@@ -1,4 +1,5 @@
 import {Box, Card, Container, Flex, Heading, Stack, Text} from '@sanity/ui'
+import type {JSX} from 'react'
 import {Link} from 'react-router'
 
 const styles = {
