@@ -10,5 +10,5 @@
       "@sanity/sdk/*": ["./node_modules/@sanity/sdk/src/_exports/*"]
     }
   },
-  "include": ["src", "vite-env.d.ts"]
+  "include": ["src"]
 }
