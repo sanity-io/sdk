@@ -3,7 +3,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {config} from '../../../../test/fixtures'
 import {createSanityInstance} from '../../../instance/sanityInstance'
-import type {SanityInstance} from '../../../instance/types'
+import {type SanityInstance} from '../../../instance/types'
 import {getOrCreateResource} from '../../../resources/createResource'
 import {comlinkControllerStore} from '../comlinkControllerStore'
 import {getOrCreateController} from './getOrCreateController'

@@ -2,7 +2,7 @@ import {beforeEach, describe, expect, it} from 'vitest'
 
 import {config} from '../../../../test/fixtures'
 import {createSanityInstance} from '../../../instance/sanityInstance'
-import type {SanityInstance} from '../../../instance/types'
+import {type SanityInstance} from '../../../instance/types'
 import {createResourceState} from '../../../resources/createResource'
 import {comlinkControllerStore} from '../comlinkControllerStore'
 import {destroyController} from './destroyController'

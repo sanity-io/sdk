@@ -55,6 +55,6 @@ export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePrev
 export {destroyController} from '../comlink/controller/actions/destroyController'
 export {getOrCreateChannel} from '../comlink/controller/actions/getOrCreateChannel'
 export {getOrCreateController} from '../comlink/controller/actions/getOrCreateController'
-export {removeChannel} from '../comlink/controller/actions/removeChannel'
+export {releaseChannel} from '../comlink/controller/actions/releaseChannel'
 export type {ComlinkControllerState} from '../comlink/controller/comlinkControllerStore'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'

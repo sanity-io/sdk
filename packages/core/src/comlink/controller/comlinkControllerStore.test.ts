@@ -2,7 +2,7 @@ import {describe, expect, it} from 'vitest'
 
 import {config} from '../../../test/fixtures'
 import {createSanityInstance} from '../../instance/sanityInstance'
-import type {SanityInstance} from '../../instance/types'
+import {type SanityInstance} from '../../instance/types'
 import {createResourceState, getOrCreateResource} from '../../resources/createResource'
 import {getOrCreateController} from './actions/getOrCreateController'
 import {comlinkControllerStore} from './comlinkControllerStore'

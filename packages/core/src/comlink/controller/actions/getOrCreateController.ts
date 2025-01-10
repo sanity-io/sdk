@@ -9,28 +9,25 @@ import {destroyController} from './destroyController'
  * between an application and iframes.
  * @public
  */
-export const getOrCreateController = createAction(
-  () => comlinkControllerStore,
-  ({state, instance}) => {
-    return (targetOrigin: string) => {
-      const {controller, controllerOrigin} = state.get()
-      if (controller && controllerOrigin === targetOrigin) {
-        return state.get().controller
-      }
-
-      // if the target origin has changed, we'll create a new controller,
-      // but need to clean up first
-      if (controller) {
-        destroyController({state, instance})
-      }
-
-      const newController = createController({targetOrigin})
-      state.set('initializeController', {
-        controllerOrigin: targetOrigin,
-        controller: newController,
-      })
-
-      return newController
+export const getOrCreateController = createAction(comlinkControllerStore, ({state, instance}) => {
+  return (targetOrigin: string) => {
+    const {controller, controllerOrigin} = state.get()
+    if (controller && controllerOrigin === targetOrigin) {
+      return controller
     }
-  },
-)
+
+    // if the target origin has changed, we'll create a new controller,
+    // but need to clean up first
+    if (controller) {
+      destroyController({state, instance})
+    }
+
+    const newController = createController({targetOrigin})
+    state.set('initializeController', {
+      controllerOrigin: targetOrigin,
+      controller: newController,
+    })
+
+    return newController
+  }
+})

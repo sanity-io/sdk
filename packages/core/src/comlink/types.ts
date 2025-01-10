@@ -1,4 +1,4 @@
-import type {Message} from '@sanity/comlink'
+import {type Message} from '@sanity/comlink'
 
 /**
  * Message sent from a containing app to an iframe

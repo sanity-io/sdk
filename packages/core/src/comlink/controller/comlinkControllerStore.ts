@@ -10,7 +10,10 @@ import {destroyController} from './actions/destroyController'
  */
 export interface ChannelEntry {
   channel: ChannelInstance<FrameMessage, WindowMessage>
+  // we store options to ensure that channels remain as unique / consistent as possible
   options: ChannelInput
+  // we store refCount to ensure channels remain open only as long as they are in use
+  refCount: number
 }
 
 /**
@@ -35,6 +38,7 @@ export const comlinkControllerStore = createResource<ComlinkControllerState>({
   },
   initialize() {
     return () => {
+      // destroying controller also destroys channels
       destroyController(this)
     }
   },

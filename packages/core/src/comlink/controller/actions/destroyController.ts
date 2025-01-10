@@ -1,5 +1,5 @@
 import {createInternalAction} from '../../../resources/createAction'
-import type {ComlinkControllerState} from '../comlinkControllerStore'
+import {type ComlinkControllerState} from '../comlinkControllerStore'
 
 /**
  * Calls the destroy method on the controller and resets the controller state.
