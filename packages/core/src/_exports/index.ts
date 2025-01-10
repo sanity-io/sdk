@@ -50,3 +50,7 @@ export type {CurrentUser, Role} from '@sanity/types'
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
 export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
+
+/** DOCUMENT */
+export {getDocumentState, mutate} from '../document/documentStore'
+export * from '@sanity/mutate'

@@ -14,6 +14,7 @@ import {ProjectInstanceWrapper} from './ProjectAuthentication/ProjectInstanceWra
 import {ProtectedRoute} from './ProtectedRoute'
 import {UnauthenticatedHome} from './Unauthenticated/UnauthenticatedHome'
 import {UnauthenticatedInstanceWrapper} from './Unauthenticated/UnauthenticatedInstanceWrapper'
+import {EditorPlaygroundRoute} from './CollaborativeEditing/EditorPlaygroundRoute'
 
 const documentCollectionRoutes = [
   {
@@ -23,6 +24,10 @@ const documentCollectionRoutes = [
   {
     path: 'document-grid',
     element: <DocumentGridRoute />,
+  },
+  {
+    path: 'editor-playground',
+    element: <EditorPlaygroundRoute />,
   },
 ]
 
