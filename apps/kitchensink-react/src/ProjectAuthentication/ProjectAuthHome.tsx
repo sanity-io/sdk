@@ -1,5 +1,6 @@
 import {AuthBoundary} from '@sanity/sdk-react/components'
 import {Card, Flex, Text} from '@sanity/ui'
+import type {JSX} from 'react'
 import {Link} from 'react-router'
 
 import {PageLayout} from '../components/PageLayout'

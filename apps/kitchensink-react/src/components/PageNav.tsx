@@ -1,4 +1,5 @@
 import {Button, Card, Flex} from '@sanity/ui'
+import type {JSX} from 'react'
 import {Link} from 'react-router'
 
 interface PageNavProps {

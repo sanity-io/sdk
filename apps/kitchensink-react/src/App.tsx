@@ -1,6 +1,6 @@
 import {Spinner, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
-import {Suspense} from 'react'
+import {type JSX, Suspense} from 'react'
 import {BrowserRouter} from 'react-router'
 
 import {AppRoutes} from './AppRoutes'

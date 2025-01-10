@@ -1,5 +1,5 @@
 import {Box, Card, Container, Heading, Stack, Text} from '@sanity/ui'
-import {ReactNode} from 'react'
+import {type JSX, ReactNode} from 'react'
 
 import {PageNav} from './PageNav'
 

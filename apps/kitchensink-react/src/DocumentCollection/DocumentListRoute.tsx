@@ -1,6 +1,7 @@
 import {DocumentListLayout} from '@sanity/sdk-react/components'
 import {useDocuments} from '@sanity/sdk-react/hooks'
 import {Box, Heading} from '@sanity/ui'
+import type {JSX} from 'react'
 
 import {DocumentPreview} from './DocumentPreview'
 import {LoadMore} from './LoadMore'
