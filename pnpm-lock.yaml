@@ -120,6 +120,9 @@ importers:
       '@repo/config-eslint':
         specifier: workspace:*
         version: link:../../packages/@repo/config-eslint
+      '@repo/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/@repo/tsconfig
       '@sanity/prettier-config':
         specifier: ^1.0.3
         version: 1.0.3(prettier@3.4.2)
@@ -256,6 +259,8 @@ importers:
 
   packages/@repo/package.config: {}
 
+  packages/@repo/tsconfig: {}
+
   packages/core:
     dependencies:
       '@sanity/client':
@@ -289,6 +294,9 @@ importers:
       '@repo/package.config':
         specifier: workspace:*
         version: link:../@repo/package.config
+      '@repo/tsconfig':
+        specifier: workspace:*
+        version: link:../@repo/tsconfig
       '@sanity/pkg-utils':
         specifier: ^6.12.2
         version: 6.12.2(@types/babel__core@7.20.5)(@types/node@22.10.5)(typescript@5.7.2)
@@ -329,6 +337,9 @@ importers:
       '@repo/package.config':
         specifier: workspace:*
         version: link:../@repo/package.config
+      '@repo/tsconfig':
+        specifier: workspace:*
+        version: link:../@repo/tsconfig
       '@sanity/client':
         specifier: ^6.24.1
         version: 6.24.1

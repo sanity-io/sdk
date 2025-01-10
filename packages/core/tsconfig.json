@@ -1,5 +1,9 @@
 {
-  "extends": "./tsconfig.settings",
-  "include": ["./**/*.cjs", "./**/*.ts", "./**/*.tsx", "vite-env.d.ts"],
-  "exclude": ["./node_modules"]
+  "extends": "./tsconfig.settings.json",
+  "include": ["./package.json", "./src", "./test"],
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist",
+    "types": ["vitest/globals"]
+  }
 }

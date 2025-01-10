@@ -1,5 +1,10 @@
 {
-  "extends": "./tsconfig.settings",
-  "include": ["./**/*.ts", "./**/*.tsx"],
-  "exclude": ["./node_modules"]
+  "extends": "./tsconfig.settings.json",
+  "include": ["./package.json", "./src", "./test"],
+  "exclude": ["./node_modules"],
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist",
+    "types": ["vitest/globals", "@testing-library/jest-dom"]
+  }
 }

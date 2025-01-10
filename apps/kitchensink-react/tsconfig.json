@@ -1,27 +1,10 @@
 {
+  "extends": "@repo/tsconfig/base.json",
   "compilerOptions": {
-    "rootDir": "../..",
-    "baseUrl": "../..",
-    "target": "ES2020",
-    "lib": ["ES2020", "DOM"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-    /* Bundler mode */
-    "moduleResolution": "Bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
+    "rootDir": "../../",
+    "baseUrl": "../../",
     "noEmit": true,
-    "jsx": "react-jsx",
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-    /* Types */
-    "types": ["vite/client", "react/jsx-runtime"],
-    /* Monorepo paths */
+    "types": ["vite/client"],
     "paths": {
       "@sanity/sdk": ["./packages/core/src/_exports/index.ts"],
       "@sanity/sdk/*": ["./packages/core/src/_exports/*"],
@@ -29,5 +12,5 @@
       "@sanity/sdk-react/*": ["./packages/react/src/_exports/*"]
     }
   },
-  "include": ["src"]
+  "include": ["**/*.ts", "**/*.tsx"]
 }

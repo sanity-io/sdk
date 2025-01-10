@@ -67,6 +67,7 @@
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
     "@repo/package.config": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
     "@sanity/pkg-utils": "^6.12.2",
     "@sanity/prettier-config": "^1.0.3",
     "@sanity/types": "^3.68.3",

@@ -1,9 +1,10 @@
 {
-  "extends": "@sanity/pkg-utils/tsconfig/strictest.json",
+  "extends": "@repo/tsconfig/base.json",
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "./dist",
-    "types": ["vitest/globals"]
+    // For import.meta.env/import.meta.hot definitions and similar
+    "types": ["vite/client"]
   },
   "include": ["src", "vite-env.d.ts"]
 }
