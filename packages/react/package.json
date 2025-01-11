@@ -66,7 +66,6 @@
     "docs": "typedoc --out docs --tsconfig ../../tsconfig.tsdoc.json",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "eslint .",
-    "paramour": "npx paramour --config=./src/css/css.config.js --output=./src/css/paramour.css",
     "prepublishOnly": "pnpm run build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -76,14 +75,10 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
-    "@paramour/css": "1.0.0-rc.2",
-    "@sanity/icons": "^3.5.2",
     "@sanity/logos": "^2.1.13",
     "@sanity/sdk": "workspace:*",
     "@sanity/ui": "^2.8.19",
-    "inter-ui": "^4.1.0",
     "react-error-boundary": "^4.1.2",
-    "rollup-plugin-import-css": "^3.5.7",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
@@ -92,7 +87,6 @@
     "@sanity/client": "^6.24.1",
     "@sanity/pkg-utils": "^6.12.2",
     "@sanity/prettier-config": "^1.0.3",
-    "@storybook/react": "^8.4.7",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/react": "^19.0.3",
