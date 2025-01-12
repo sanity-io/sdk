@@ -1,24 +1,24 @@
 import {describe, expect, it} from 'vitest'
 
 import {createSanityInstance} from '../instance/sanityInstance'
-import {type ActionContext, createAction} from './createAction'
+import {type ActionContext, createAction, createInternalAction} from './createAction'
 import {createResource, createResourceState} from './createResource'
 
+const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+
+interface TestState {
+  value: number
+}
+
+const testResource = createResource<TestState>({
+  name: 'test',
+  getInitialState: () => ({value: 0}),
+  initialize() {
+    return () => {}
+  },
+})
+
 describe('createAction', () => {
-  const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-
-  interface TestState {
-    value: number
-  }
-
-  const testResource = createResource<TestState>({
-    name: 'test',
-    getInitialState: () => ({value: 0}),
-    initialize() {
-      return () => {}
-    },
-  })
-
   it('should create an action that can access state and instance', () => {
     // Define an action that accesses state and instance
     const testAction = createAction(
@@ -85,5 +85,26 @@ describe('createAction', () => {
     const result2 = testAction({state: mockState2} as ActionContext<TestState>, 30)
     expect(result2).toBe(30)
     expect(mockState2.get()).toEqual({value: 30})
+  })
+})
+
+describe('createInternalAction', () => {
+  it('creates an action that requires state and instance', () => {
+    // Define an action that accesses state and instance
+    const testAction = createInternalAction<TestState, [], string>(
+      ({state, instance: {identity}}) => {
+        return function () {
+          state.set('increment', (prev) => ({value: prev.value + 1}))
+          return identity.projectId
+        }
+      },
+    )
+
+    const result = testAction({
+      state: createResourceState({value: 10}),
+      instance: instance,
+    } as ActionContext<TestState>)
+
+    expect(result).toBe('test')
   })
 })

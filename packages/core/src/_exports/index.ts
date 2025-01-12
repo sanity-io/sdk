@@ -44,9 +44,40 @@ export {fetchLoginUrls} from '../auth/fetchLoginUrls'
 export {handleCallback} from '../auth/handleCallback'
 export {logout} from '../auth/logout'
 export {type SchemaConfig} from '../schema/schemaManager'
-export type {CurrentUser, Role} from '@sanity/types'
+export type {CurrentUser, Role, SanityDocumentLike} from '@sanity/types'
 
 /** PREVIEW */
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
 export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
+
+/** DOCUMENT */
+export {getDocumentState} from '../document/getDocumentState'
+export {
+  append,
+  assign,
+  at,
+  autoKeys,
+  create,
+  createIfNotExists,
+  createOrReplace,
+  dec,
+  del,
+  destroy,
+  diffMatchPatch,
+  inc,
+  insert,
+  insertAfter,
+  insertBefore,
+  mutate,
+  patch,
+  prepend,
+  remove,
+  replace,
+  set,
+  setIfMissing,
+  truncate,
+  unassign,
+  unset,
+  upsert,
+} from '../document/mutate'

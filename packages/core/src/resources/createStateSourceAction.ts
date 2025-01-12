@@ -1,26 +1,38 @@
 import {filter, map, Observable, pairwise} from 'rxjs'
 
-import {createAction, type ResourceAction} from './createAction'
+import {type ActionContext, createAction, type ResourceAction} from './createAction'
 import type {Resource} from './createResource'
 
 /**
  * @public
  */
 export interface StateSource<T> {
-  subscribe: (onStoreChanged: () => void) => () => void
+  subscribe: (onStoreChanged?: () => void) => () => void
   getCurrent: () => T
   observable: Observable<T>
 }
 
+type Selector<TState, TParams extends unknown[], TReturn> = (
+  state: TState,
+  ...params: TParams
+) => TReturn
+interface StateSourceOptions<TState, TParams extends unknown[], TReturn> {
+  selector: Selector<TState, TParams, TReturn>
+  onSubscribe?: (context: ActionContext<TState>, ...params: TParams) => void | (() => void)
+}
+
 export function createStateSourceAction<TState, TParams extends unknown[], TReturn>(
   getResource: () => Resource<TState>,
-  selector: (state: TState, ...params: TParams) => TReturn,
+  options: Selector<TState, TParams, TReturn> | StateSourceOptions<TState, TParams, TReturn>,
 ): ResourceAction<TState, TParams, StateSource<TReturn>> {
+  const selector = typeof options === 'function' ? options : options.selector
+  const subscribeHandler = options && 'onSubscribe' in options ? options.onSubscribe : undefined
+
   return createAction(getResource, ({state}) => {
     return function (...args: TParams): StateSource<TReturn> {
       const getCurrent = () => selector(state.get(), ...args)
 
-      const subscribe = (onStoreChanged: () => void) => {
+      const subscribe = (onStoreChanged?: () => void) => {
         const subscription = state.observable
           .pipe(
             // this is similar to `distinctUntilChanged` expect that it doesn't
@@ -32,7 +44,12 @@ export function createStateSourceAction<TState, TParams extends unknown[], TRetu
           )
           .subscribe({next: onStoreChanged})
 
-        return () => subscription.unsubscribe()
+        const cleanup = subscribeHandler?.(this, ...args)
+
+        return () => {
+          subscription.unsubscribe()
+          cleanup?.()
+        }
       }
 
       const observable = new Observable<TReturn>((observer) => {
