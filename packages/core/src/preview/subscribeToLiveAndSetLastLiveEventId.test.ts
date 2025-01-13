@@ -1,4 +1,4 @@
-import type {LiveEventMessage} from '@sanity/client'
+import {type LiveEventMessage} from '@sanity/client'
 import {Observable, of, Subject} from 'rxjs'
 import {describe, it, type Mock, vi} from 'vitest'
 

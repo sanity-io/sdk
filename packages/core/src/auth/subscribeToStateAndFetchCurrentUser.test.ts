@@ -1,4 +1,4 @@
-import type {CurrentUser} from '@sanity/types'
+import {type CurrentUser} from '@sanity/types'
 import {delay, of, throwError} from 'rxjs'
 import {beforeEach, describe, it} from 'vitest'
 

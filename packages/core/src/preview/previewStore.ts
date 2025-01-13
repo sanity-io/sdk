@@ -1,4 +1,4 @@
-import type {SyncTag} from '@sanity/client'
+import {type SyncTag} from '@sanity/client'
 
 import {createResource} from '../resources/createResource'
 import {subscribeToLiveAndSetLastLiveEventId} from './subscribeToLiveAndSetLastLiveEventId'

@@ -1,6 +1,6 @@
 import {createClient, type SanityClient} from '@sanity/client'
 
-import type {SanityInstance} from '../instance/types'
+import {type SanityInstance} from '../instance/types'
 import {createResource, type Resource} from '../resources/createResource'
 import {subscribeToAuthEvents} from './actions/subscribeToAuthEvents'
 

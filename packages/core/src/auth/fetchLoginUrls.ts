@@ -1,4 +1,4 @@
-import type {AuthProvider} from '@sanity/client'
+import {type AuthProvider} from '@sanity/client'
 
 import {createAction} from '../resources/createAction'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'

@@ -7,7 +7,7 @@ import {AuthError} from './AuthError'
 import {Login} from './Login'
 import {LoginCallback} from './LoginCallback'
 import {LoginError, type LoginErrorProps} from './LoginError'
-import type {LoginLayoutProps} from './LoginLayout'
+import {type LoginLayoutProps} from './LoginLayout'
 
 /**
  * @alpha

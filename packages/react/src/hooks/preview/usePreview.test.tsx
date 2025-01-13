@@ -1,7 +1,7 @@
 import {type DocumentHandle, getPreviewState, type PreviewValue, resolvePreview} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
 import {Suspense, useState} from 'react'
-import type {Mock} from 'vitest'
+import {type Mock} from 'vitest'
 
 import {usePreview} from './usePreview'
 

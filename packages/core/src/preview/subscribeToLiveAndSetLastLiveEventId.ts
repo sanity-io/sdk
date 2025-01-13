@@ -1,9 +1,9 @@
-import type {SanityClient} from '@sanity/client'
+import {type SanityClient} from '@sanity/client'
 import {combineLatest, distinctUntilChanged, filter, map, Observable, switchMap} from 'rxjs'
 
 import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {type ActionContext, createInternalAction} from '../resources/createAction'
-import type {PreviewStoreState} from './previewStore'
+import {type PreviewStoreState} from './previewStore'
 import {PREVIEW_TAG} from './util'
 
 export const subscribeToLiveAndSetLastLiveEventId = createInternalAction(

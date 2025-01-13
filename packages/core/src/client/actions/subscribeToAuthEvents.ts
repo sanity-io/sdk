@@ -1,6 +1,6 @@
 import {getTokenState} from '../../auth/authStore'
 import {type ActionContext, createInternalAction} from '../../resources/createAction'
-import type {ClientState} from '../clientStore'
+import {type ClientState} from '../clientStore'
 
 const receiveToken = (prev: ClientState, token: string | undefined): ClientState => {
   const newDefaultClient = prev.defaultClient.withConfig({

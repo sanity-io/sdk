@@ -1,4 +1,4 @@
-import type {SanityClient} from '@sanity/client'
+import {type SanityClient} from '@sanity/client'
 import {isEqual, pick} from 'lodash-es'
 import {
   debounceTime,

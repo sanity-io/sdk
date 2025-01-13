@@ -2,7 +2,7 @@ import {Observable} from 'rxjs'
 import {devtools, type DevtoolsOptions} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
-import type {SanityInstance, SdkIdentity} from '../instance/types'
+import {type SanityInstance, type SdkIdentity} from '../instance/types'
 import {getEnv} from '../utils/getEnv'
 
 const resourceCache = new WeakMap<SdkIdentity, Map<string, InitializedResource<unknown>>>()

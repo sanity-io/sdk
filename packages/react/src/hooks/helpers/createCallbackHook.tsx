@@ -1,4 +1,4 @@
-import type {SanityInstance} from '@sanity/sdk'
+import {type SanityInstance} from '@sanity/sdk'
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'

@@ -4,7 +4,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 import {config} from '../../../test/fixtures'
 import {getTokenState} from '../../auth/authStore'
 import {createSanityInstance} from '../../instance/sanityInstance'
-import type {SanityInstance} from '../../instance/types'
+import {type SanityInstance} from '../../instance/types'
 import {getClient} from './getClient'
 
 vi.mock('../../auth/authStore', async (importOriginal) => {

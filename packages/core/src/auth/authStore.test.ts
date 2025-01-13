@@ -1,6 +1,6 @@
 import {type ClientConfig, createClient} from '@sanity/client'
-import type {CurrentUser} from '@sanity/types'
-import type {Subscription} from 'rxjs'
+import {type CurrentUser} from '@sanity/types'
+import {type Subscription} from 'rxjs'
 import {describe, it} from 'vitest'
 
 import {createSanityInstance} from '../instance/sanityInstance'

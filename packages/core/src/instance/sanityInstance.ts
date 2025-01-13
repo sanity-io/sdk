@@ -1,6 +1,6 @@
 import {disposeResources} from '../resources/createResource'
 import {getSdkIdentity} from './identity'
-import type {SanityConfig, SanityInstance, SdkIdentity} from './types'
+import {type SanityConfig, type SanityInstance, type SdkIdentity} from './types'
 
 /**
  * Returns a new instance of dependencies required for SanitySDK.

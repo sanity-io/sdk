@@ -1,4 +1,4 @@
-import type {SanityClient} from '@sanity/client'
+import {type SanityClient} from '@sanity/client'
 import {distinctUntilChanged, map, startWith, type Subscribable} from 'rxjs'
 
 import {createAction} from '../../resources/createAction'

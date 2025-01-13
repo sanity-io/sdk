@@ -1,5 +1,5 @@
 import {getEnv} from '../utils/getEnv'
-import type {PreviewValue, ValuePending} from './previewStore'
+import {type PreviewValue, type ValuePending} from './previewStore'
 
 export const PREVIEW_TAG = 'sdk.preview'
 export const STABLE_EMPTY_PREVIEW: ValuePending<PreviewValue> = [null, false]

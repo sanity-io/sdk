@@ -2,7 +2,7 @@
 import {devtools} from 'zustand/middleware'
 import {createStore as createZustandStore, type StoreApi} from 'zustand/vanilla'
 
-import type {SanityInstance} from '../instance/types'
+import {type SanityInstance} from '../instance/types'
 
 /**
  * Creates a (vanilla) zustand store with the given initial state and actions.

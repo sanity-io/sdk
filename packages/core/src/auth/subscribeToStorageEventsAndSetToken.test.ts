@@ -2,7 +2,7 @@ import {Observable, Subject} from 'rxjs'
 import {beforeEach, describe, it} from 'vitest'
 
 import {createSanityInstance} from '../instance/sanityInstance'
-import type {SanityInstance} from '../instance/types'
+import {type SanityInstance} from '../instance/types'
 import {createResourceState} from '../resources/createResource'
 import {AuthStateType} from './authStateType'
 import {authStore} from './authStore'

@@ -1,4 +1,4 @@
-import type {SdkIdentity} from './types'
+import {type SdkIdentity} from './types'
 
 /**
  * thoughtLevel 2 - Primarily what we want is to have an object that we can bind stores/memoizations to, but let the things that depend on it (eg projectId, dataset) be internals that can't be overwritten by accident/intentionally

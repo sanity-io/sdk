@@ -1,6 +1,6 @@
 import {describe, expect, it, vi} from 'vitest'
 
-import type {SanityInstance} from '../instance/types'
+import {type SanityInstance} from '../instance/types'
 import {createStore, type StoreActionContext} from './createStore'
 
 // Mock the devtools middleware

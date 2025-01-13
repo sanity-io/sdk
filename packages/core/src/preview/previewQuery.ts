@@ -1,11 +1,11 @@
-import type {Schema} from '@sanity/types'
+import {type Schema} from '@sanity/types'
 
 import {getProjectionForSchemaType} from './getProjectionForSchemaType'
-import type {
-  PreviewQueryResult,
-  PreviewStoreState,
-  PreviewValue,
-  ValuePending,
+import {
+  type PreviewQueryResult,
+  type PreviewStoreState,
+  type PreviewValue,
+  type ValuePending,
 } from './previewStore'
 import {
   getDraftId,

@@ -1,4 +1,4 @@
-import type {SanityInstance} from '@sanity/sdk'
+import {type SanityInstance} from '@sanity/sdk'
 import {useContext} from 'react'
 
 import {SanityInstanceContext} from '../../components/context/SanityProvider'

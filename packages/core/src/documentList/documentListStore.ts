@@ -1,5 +1,5 @@
-import type {SyncTag} from '@sanity/client'
-import type {SortOrderingItem} from '@sanity/types'
+import {type SyncTag} from '@sanity/client'
+import {type SortOrderingItem} from '@sanity/types'
 import {createSelector} from 'reselect'
 
 import {createAction} from '../resources/createAction'
@@ -46,7 +46,7 @@ export interface DocumentListState {
   isPending: boolean
 }
 
-export const documentList = createResource<DocumentListState>({
+const documentList = createResource<DocumentListState>({
   name: 'documentList',
   getInitialState: () => ({
     limit: PAGE_SIZE,
