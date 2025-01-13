@@ -4,12 +4,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState, type ResourceState} from '../resources/createResource'
 import {PAGE_SIZE} from './documentListConstants'
-import {
-  createDocumentListStore,
-  documentList,
-  type DocumentListState,
-  getDocumentList,
-} from './documentListStore'
+import {createDocumentListStore, type DocumentListState} from './documentListStore'
 import {subscribeToLiveClientAndSetLastLiveEventId} from './subscribeToLiveClientAndSetLastLiveEventId'
 import {subscribeToStateAndFetchResults} from './subscribeToStateAndFetchResults'
 
@@ -203,11 +198,5 @@ describe('documentListStore', () => {
         count: 5,
       })
     })
-  })
-})
-
-describe('getDocumentList', () => {
-  it('returns the documentList resource', () => {
-    expect(getDocumentList()).toBe(documentList)
   })
 })

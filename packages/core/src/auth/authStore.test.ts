@@ -10,7 +10,6 @@ import {
   authStore,
   type AuthStoreState,
   getAuthState,
-  getAuthStore,
   getCurrentUserState,
   getLoginUrlsState,
   getTokenState,
@@ -252,12 +251,6 @@ describe('authStore', () => {
 
       // pureness check
       expect(authStateSource.getCurrent()).toBe(authStateSource.getCurrent())
-    })
-  })
-
-  describe('getAuthStore', () => {
-    it('returns the authStore resource', () => {
-      expect(getAuthStore()).toBe(authStore)
     })
   })
 })

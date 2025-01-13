@@ -46,10 +46,6 @@ export interface DocumentListState {
   isPending: boolean
 }
 
-export function getDocumentList(): typeof documentList {
-  return documentList
-}
-
 export const documentList = createResource<DocumentListState>({
   name: 'documentList',
   getInitialState: () => ({
@@ -72,7 +68,7 @@ export const documentList = createResource<DocumentListState>({
 })
 
 const getState = createStateSourceAction(
-  getDocumentList,
+  documentList,
   createSelector(
     [
       (state: DocumentListState) => state.results,
@@ -88,7 +84,7 @@ const getState = createStateSourceAction(
   ),
 )
 
-const setOptions = createAction(getDocumentList, ({state}) => {
+const setOptions = createAction(documentList, ({state}) => {
   return function (options: DocumentListOptions) {
     state.set('setOptions', (prev) => ({
       options: {
@@ -99,7 +95,7 @@ const setOptions = createAction(getDocumentList, ({state}) => {
   }
 })
 
-const loadMore = createAction(getDocumentList, ({state}) => {
+const loadMore = createAction(documentList, ({state}) => {
   return function () {
     state.set('loadMore', (prev) => ({limit: prev.limit + PAGE_SIZE}))
   }

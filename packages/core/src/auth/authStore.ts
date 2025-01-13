@@ -1,7 +1,7 @@
 import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
 import type {CurrentUser} from '@sanity/types'
 
-import {createResource, type Resource} from '../resources/createResource'
+import {createResource} from '../resources/createResource'
 import {createStateSourceAction} from '../resources/createStateSourceAction'
 import {AuthStateType} from './authStateType'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
@@ -148,10 +148,6 @@ export interface AuthStoreState {
   }
 }
 
-export function getAuthStore(): Resource<AuthStoreState> {
-  return authStore
-}
-
 export const authStore = createResource<AuthStoreState>({
   name: 'Auth',
   getInitialState(instance) {
@@ -212,25 +208,25 @@ export const authStore = createResource<AuthStoreState>({
 /**
  * @public
  */
-export const getCurrentUserState = createStateSourceAction(getAuthStore, ({authState}) =>
+export const getCurrentUserState = createStateSourceAction(authStore, ({authState}) =>
   authState.type === AuthStateType.LOGGED_IN ? authState.currentUser : null,
 )
 
 /**
  * @public
  */
-export const getTokenState = createStateSourceAction(getAuthStore, ({authState}) =>
+export const getTokenState = createStateSourceAction(authStore, ({authState}) =>
   authState.type === AuthStateType.LOGGED_IN ? authState.token : null,
 )
 /**
  * @public
  */
 export const getLoginUrlsState = createStateSourceAction(
-  getAuthStore,
+  authStore,
   ({providers}) => providers ?? null,
 )
 
 /**
  * @public
  */
-export const getAuthState = createStateSourceAction(getAuthStore, ({authState}) => authState)
+export const getAuthState = createStateSourceAction(authStore, ({authState}) => authState)

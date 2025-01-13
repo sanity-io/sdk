@@ -1,13 +1,13 @@
 import {createAction} from '../resources/createAction'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
-import {getAuthStore} from './authStore'
+import {authStore} from './authStore'
 import {getAuthCode, getDefaultLocation} from './utils'
 
 /**
  * @public
  */
-export const handleCallback = createAction(getAuthStore, ({state, instance}) => {
+export const handleCallback = createAction(authStore, ({state, instance}) => {
   const {projectId, dataset} = instance.identity
   const {providedToken, callbackUrl, clientFactory, apiHost, authScope, storageArea, storageKey} =
     state.get().options

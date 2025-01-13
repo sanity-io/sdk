@@ -2,13 +2,13 @@ import type {AuthProvider} from '@sanity/client'
 
 import {createAction} from '../resources/createAction'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
-import {getAuthStore} from './authStore'
+import {authStore} from './authStore'
 import {getDefaultLocation} from './utils'
 
 /**
  * @public
  */
-export const fetchLoginUrls = createAction(getAuthStore, ({state, instance}) => {
+export const fetchLoginUrls = createAction(authStore, ({state, instance}) => {
   const {projectId, dataset} = instance.identity
   const {callbackUrl, clientFactory, apiHost, authScope, customProviders} = state.get().options
   const client = clientFactory({
