@@ -19,6 +19,11 @@ const menuItems = [
     path: '/cosui-simulator',
     icon: '🛠️',
   },
+  {
+    title: 'Editor Playground',
+    path: '/editor-playground',
+    icon: '📝',
+  },
 ]
 
 const Home = (): JSX.Element => {
