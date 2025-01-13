@@ -13,10 +13,10 @@ export interface StateSource<T> {
 }
 
 export function createStateSourceAction<TState, TParams extends unknown[], TReturn>(
-  getResource: () => Resource<TState>,
+  resource: Resource<TState>,
   selector: (state: TState, ...params: TParams) => TReturn,
 ): ResourceAction<TState, TParams, StateSource<TReturn>> {
-  return createAction(getResource, ({state}) => {
+  return createAction(resource, ({state}) => {
     return function (...args: TParams): StateSource<TReturn> {
       const getCurrent = () => selector(state.get(), ...args)
 

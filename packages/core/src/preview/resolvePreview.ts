@@ -13,21 +13,18 @@ export interface ResolvePreviewOptions {
 /**
  * @public
  */
-export const resolvePreview = createAction(
-  () => previewStore,
-  () => {
-    return function ({document}: ResolvePreviewOptions) {
-      const {getCurrent, subscribe} = getPreviewState(this, {document})
+export const resolvePreview = createAction(previewStore, () => {
+  return function ({document}: ResolvePreviewOptions) {
+    const {getCurrent, subscribe} = getPreviewState(this, {document})
 
-      return new Promise<ValuePending<PreviewValue>>((resolve) => {
-        const unsubscribe = subscribe(() => {
-          const current = getCurrent()
-          if (current[0]) {
-            resolve(current)
-            unsubscribe()
-          }
-        })
+    return new Promise<ValuePending<PreviewValue>>((resolve) => {
+      const unsubscribe = subscribe(() => {
+        const current = getCurrent()
+        if (current[0]) {
+          resolve(current)
+          unsubscribe()
+        }
       })
-    }
-  },
-)
+    })
+  }
+})

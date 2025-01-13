@@ -21,13 +21,13 @@ export type ResourceAction<TState, TParams extends unknown[], TReturn> = (
 ) => TReturn
 
 export function createAction<TState, TParams extends unknown[], TReturn>(
-  getResource: () => Resource<TState>,
+  resource: Resource<TState>,
   actionDefinition: ResourceActionDefinition<TState, TParams, TReturn>,
 ): ResourceAction<TState, TParams, TReturn> {
   return (dependencies: SanityInstance | ActionContext<TState>, ...args: TParams): TReturn => {
     const instance = 'state' in dependencies ? dependencies.instance : dependencies
     const {state} =
-      'state' in dependencies ? dependencies : getOrCreateResource(dependencies, getResource())
+      'state' in dependencies ? dependencies : getOrCreateResource(dependencies, resource)
     const actionContext = {instance, state}
     return actionDefinition(actionContext).bind(actionContext)(...args)
   }

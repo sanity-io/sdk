@@ -11,19 +11,13 @@ describe('createStateSourceAction', () => {
     getInitialState: () => ({value: 10}),
   })
 
-  const setValue = createAction(
-    () => resource,
-    ({state}) => {
-      return function (value: number) {
-        state.set('updateValue', {value})
-      }
-    },
-  )
+  const setValue = createAction(resource, ({state}) => {
+    return function (value: number) {
+      state.set('updateValue', {value})
+    }
+  })
 
-  const getValueState = createStateSourceAction(
-    () => resource,
-    (state) => state.value,
-  )
+  const getValueState = createStateSourceAction(resource, (state) => state.value)
 
   it('should return the current value', () => {
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})

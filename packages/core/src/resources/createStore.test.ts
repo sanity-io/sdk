@@ -18,23 +18,17 @@ describe('createStore', () => {
     initialize: vi.fn(),
   })
 
-  const incrementAction = createAction(
-    () => testResource,
-    ({state}) => {
-      return function () {
-        state.set('increment', (prevState) => ({value: prevState.value + 1}))
-      }
-    },
-  )
+  const incrementAction = createAction(testResource, ({state}) => {
+    return function () {
+      state.set('increment', (prevState) => ({value: prevState.value + 1}))
+    }
+  })
 
-  const setAction = createAction(
-    () => testResource,
-    ({state}) => {
-      return function (value: number) {
-        state.set('setValue', {value})
-      }
-    },
-  )
+  const setAction = createAction(testResource, ({state}) => {
+    return function (value: number) {
+      state.set('setValue', {value})
+    }
+  })
 
   it('should return a store with bound actions and a dispose function', () => {
     const store = createStore(testResource, {incrementAction, setAction})

@@ -18,17 +18,15 @@ export interface GetPreviewStateOptions {
   document: DocumentHandle
 }
 
-const getPreviewStore = () => previewStore
-
 const _getPreviewState = createStateSourceAction(
-  getPreviewStore,
+  previewStore,
   (state, {document}: GetPreviewStateOptions) => state.values[document._id] ?? STABLE_EMPTY_PREVIEW,
 )
 
 /**
  * @public
  */
-export const getPreviewState = createAction(getPreviewStore, ({state}) => {
+export const getPreviewState = createAction(previewStore, ({state}) => {
   return function ({document}: GetPreviewStateOptions): StateSource<ValuePending<PreviewValue>> {
     const {_id, _type: documentType} = document
     const documentId = getPublishedId(_id)

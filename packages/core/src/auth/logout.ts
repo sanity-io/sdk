@@ -1,12 +1,12 @@
 import {createAction} from '../resources/createAction'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
-import {getAuthStore} from './authStore'
+import {authStore} from './authStore'
 
 /**
  * @public
  */
-export const logout = createAction(getAuthStore, ({state, instance}) => {
+export const logout = createAction(authStore, ({state, instance}) => {
   const {projectId, dataset} = instance.identity
   const {clientFactory, apiHost, authScope, providedToken, storageArea, storageKey} =
     state.get().options
