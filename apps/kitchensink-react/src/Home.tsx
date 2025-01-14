@@ -15,6 +15,21 @@ const styles = {
 
 const menuItems = [
   {
+    title: 'Project Auth',
+    path: '/project-auth',
+    icon: '🔐',
+  },
+  {
+    title: 'Unauthenticated',
+    path: '/unauthenticated',
+    icon: '🌐',
+  },
+  {
+    title: 'Org Auth',
+    path: '/org-auth',
+    icon: '👷',
+  },
+  {
     title: 'Cosui Simulator',
     path: '/cosui-simulator',
     icon: '🛠️',
