@@ -71,9 +71,6 @@ importers:
 
   apps/kitchensink-react:
     dependencies:
-      '@paramour/css':
-        specifier: 1.0.0-rc.2
-        version: 1.0.0-rc.2
       '@sanity/comlink':
         specifier: ^2.0.2
         version: 2.0.3
@@ -95,6 +92,12 @@ importers:
       '@sanity/ui':
         specifier: ^2.8.19
         version: 2.10.12(@emotion/is-prop-valid@1.2.2)(react-dom@19.0.0(react@19.0.0))(react-is@18.3.1)(react@19.0.0)(styled-components@6.1.13(react-dom@19.0.0(react@19.0.0))(react@19.0.0))
+      '@storybook/react':
+        specifier: ^8.4.7
+        version: 8.4.7(@storybook/test@8.4.7(storybook@8.4.7(prettier@3.4.2)))(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(storybook@8.4.7(prettier@3.4.2))(typescript@5.7.2)
+      '@testing-library/react':
+        specifier: ^16.1.0
+        version: 16.1.0(@testing-library/dom@10.4.0)(@types/react-dom@19.0.2(@types/react@19.0.3))(@types/react@19.0.3)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       inter-ui:
         specifier: ^4.1.0
         version: 4.1.0
@@ -110,9 +113,9 @@ importers:
       react-router:
         specifier: ^7.0.2
         version: 7.1.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      rollup-plugin-import-css:
-        specifier: ^3.5.7
-        version: 3.5.8(rollup@4.28.1)
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.8(@types/node@22.10.5)(jsdom@25.0.1)(terser@5.36.0)
     devDependencies:
       '@repo/config-eslint':
         specifier: workspace:*
@@ -1058,10 +1061,6 @@ packages:
   '@optimize-lodash/transform@3.0.4':
     resolution: {integrity: sha512-pEzPjvEnWHQCTIv8j/6IYdYBJQUL/Z9Vo0SB2yr5GZNgf0OAznapjilOb7JY9dBEgXtbgtTgSpANZAiipsjhhw==}
     engines: {node: '>= 12'}
-
-  '@paramour/css@1.0.0-rc.2':
-    resolution: {integrity: sha512-ji0ghB6mYO9sYXjNf9McZnzeazkav6ZdhDex31ImwK4xgfmdz6V3KnJEI3FufvgnxeSGNVO3CPITg12bD4g/YQ==}
-    hasBin: true
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
@@ -2036,9 +2035,6 @@ packages:
 
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
-
-  color-to-hsla@0.1.1:
-    resolution: {integrity: sha512-lXqaKMk8lY5R9PK0R/fqSZygEKLIJvBrLc20Y/7CpPdoKe5pNvJQYs2olo5BbuJK9gOVr6za4mndjZHHVLZvEg==}
 
   colorette@2.0.20:
     resolution: {integrity: sha512-IfEDxwoWIjkeXL1eXcDiow4UbKjhLdq6/EuSVR9GMN7KVH3r9gQ83e73hsz1Nd1T3ijd5xv1wcWRYO+D6kCI2w==}
@@ -3889,12 +3885,6 @@ packages:
       esbuild: '>=0.18.0'
       rollup: ^1.20.0 || ^2.0.0 || ^3.0.0 || ^4.0.0
 
-  rollup-plugin-import-css@3.5.8:
-    resolution: {integrity: sha512-a3YsZnwHz66mRHCKHjaPCSfWczczvS/HTkgDc+Eogn0mt/0JZXz0WjK0fzM5WwBpVtOqHB4/gHdmEY40ILsaVg==}
-    engines: {node: '>=16'}
-    peerDependencies:
-      rollup: ^2.x.x || ^3.x.x || ^4.x.x
-
   rollup-plugin-visualizer@5.14.0:
     resolution: {integrity: sha512-VlDXneTDaKsHIw8yzJAFWtrzguoJ/LnQ+lMpoVfYJ3jJF4Ihe5oYLAqLklIK/35lgUY+1yEzCkHyZ1j4A5w5fA==}
     engines: {node: '>=18'}
@@ -5352,10 +5342,6 @@ snapshots:
       estree-walker: 2.0.2
       magic-string: 0.30.12
 
-  '@paramour/css@1.0.0-rc.2':
-    dependencies:
-      color-to-hsla: 0.1.1
-
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
@@ -6514,8 +6500,6 @@ snapshots:
       color-name: 1.1.4
 
   color-name@1.1.4: {}
-
-  color-to-hsla@0.1.1: {}
 
   colorette@2.0.20: {}
 
@@ -8499,11 +8483,6 @@ snapshots:
       rollup: 4.28.1
     transitivePeerDependencies:
       - supports-color
-
-  rollup-plugin-import-css@3.5.8(rollup@4.28.1):
-    dependencies:
-      '@rollup/pluginutils': 5.1.4(rollup@4.28.1)
-      rollup: 4.28.1
 
   rollup-plugin-visualizer@5.14.0(rollup@4.28.1):
     dependencies:

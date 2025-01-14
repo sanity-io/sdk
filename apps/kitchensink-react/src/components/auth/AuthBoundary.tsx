@@ -12,7 +12,7 @@ import {type LoginLayoutProps} from './LoginLayout'
 /**
  * @alpha
  */
-export interface AuthBoundaryProps extends LoginLayoutProps {
+interface AuthBoundaryProps extends LoginLayoutProps {
   /**
    * Custom component to render the login screen.
    * Receives all login layout props. Defaults to {@link Login}.
