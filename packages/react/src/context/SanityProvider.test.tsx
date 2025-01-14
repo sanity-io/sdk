@@ -2,7 +2,7 @@ import {createSanityInstance} from '@sanity/sdk'
 import {render} from '@testing-library/react'
 import {describe, expect, it} from 'vitest'
 
-import {useSanityInstance} from '../../hooks/context/useSanityInstance'
+import {useSanityInstance} from '../hooks/context/useSanityInstance'
 import {SanityProvider} from './SanityProvider'
 
 describe('SanityProvider', () => {

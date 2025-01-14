@@ -1,6 +1,6 @@
 import {useAuthState, useCurrentUser, useLogOut} from '@sanity/sdk-react/hooks'
 import {Avatar, Box, Button, Card, Flex} from '@sanity/ui'
-import type {JSX} from 'react'
+import {type JSX} from 'react'
 import {Link, Navigate, Outlet} from 'react-router'
 
 export function ProtectedRoute({subPath}: {subPath: string}): JSX.Element {

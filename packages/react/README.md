@@ -5,7 +5,7 @@
   <h1 align="center">Sanity SDK - React</h1>
 </p>
 
-React components and hooks for creating Sanity applications.
+React hooks for creating Sanity applications.
 
 ## Installation
 
@@ -34,7 +34,7 @@ npm run dev
 ```tsx
 // src/App.tsx
 import {createSanityInstance} from '@sanity/sdk'
-import {AuthBoundary, SanityProvider} from '@sanity/sdk-react/components'
+import {SanityProvider} from '@sanity/sdk-react/context'
 import {useCurrentUser, useLogOut} from '@sanity/sdk-react/hooks'
 import {Button, Flex, Spinner, Text, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
@@ -56,6 +56,7 @@ export function App(): JSX.Element {
     <ThemeProvider theme={theme}>
       <Suspense fallback={<Spinner />}>
         <SanityProvider sanityInstance={sanityInstance}>
+          {/* You will need to implement an auth boundary */}
           <AuthBoundary header={<Text>My Sanity App</Text>}>
             <Authenticated />
           </AuthBoundary>
@@ -79,10 +80,6 @@ function Authenticated() {
 
 export default App
 ```
-
-## Customizing your application
-
-If you would like to implement a custom look and feel, you can use the hooks in your own components.
 
 ## Available Hooks
 

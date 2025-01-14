@@ -1,11 +1,11 @@
 import {createSanityInstance} from '@sanity/sdk'
+import {SanityProvider} from '@sanity/sdk-react/context'
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {fireEvent, render, screen, waitFor} from '@testing-library/react'
 import React from 'react'
 import {describe, expect, it, vi} from 'vitest'
 
-import {SanityProvider} from '../context/SanityProvider'
 import {AuthError} from './AuthError'
 import {LoginError} from './LoginError'
 

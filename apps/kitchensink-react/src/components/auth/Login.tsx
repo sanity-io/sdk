@@ -1,7 +1,7 @@
+import {useLoginUrls} from '@sanity/sdk-react/hooks'
 import {Button, Flex, Heading, Spinner} from '@sanity/ui'
 import {type JSX, Suspense} from 'react'
 
-import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
 import {LoginLayout, type LoginLayoutProps} from './LoginLayout'
 
 /**

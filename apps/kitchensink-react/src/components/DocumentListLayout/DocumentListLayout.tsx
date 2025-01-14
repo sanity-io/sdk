@@ -1,6 +1,6 @@
 import '../../css/styles.css'
 
-import type {PropsWithChildren, ReactElement} from 'react'
+import {type PropsWithChildren, type ReactElement} from 'react'
 
 /**
  * @public

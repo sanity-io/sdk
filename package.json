@@ -33,7 +33,8 @@
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest watch",
     "ts:check": "tsc --noEmit",
-    "depcheck": "knip"
+    "depcheck": "knip",
+    "test:kitchensink": "turbo run test --filter=@sanity/kitchensink-react"
   },
   "prettier": "@sanity/prettier-config",
   "devDependencies": {

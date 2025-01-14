@@ -1,8 +1,9 @@
 import {DocumentHandle} from '@sanity/sdk'
-import {DocumentPreviewLayout} from '@sanity/sdk-react/components'
 import {usePreview} from '@sanity/sdk-react/hooks'
 import {Suspense, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+
+import {DocumentPreviewLayout} from '../components/DocumentPreviewLayout/DocumentPreviewLayout'
 
 interface DocumentPreviewProps {
   document: DocumentHandle

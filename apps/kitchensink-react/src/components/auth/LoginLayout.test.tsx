@@ -1,11 +1,11 @@
 import {createSanityInstance} from '@sanity/sdk'
+import {SanityProvider} from '@sanity/sdk-react/context'
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {render, screen} from '@testing-library/react'
 import React from 'react'
 import {describe, expect, it} from 'vitest'
 
-import {SanityProvider} from '../context/SanityProvider'
 import {LoginLayout} from './LoginLayout'
 
 const theme = buildTheme({})

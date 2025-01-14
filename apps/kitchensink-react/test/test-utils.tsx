@@ -1,4 +1,7 @@
 import {createSanityInstance} from '@sanity/sdk'
+import {SanityProvider} from '@sanity/sdk-react/context'
+import {ThemeProvider} from '@sanity/ui'
+import {buildTheme} from '@sanity/ui/theme'
 import {
   render,
   renderHook,
@@ -8,15 +11,18 @@ import {
 } from '@testing-library/react'
 import React, {type ReactElement} from 'react'
 
-import {SanityProvider} from '../src/context/SanityProvider'
-
 /**
  * This function holds the providers to wrap around UI in tests.
  * @internal
  */
 export const AppProviders = ({children}: {children: React.ReactNode}): ReactElement => {
+  const theme = buildTheme()
   const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-  return <SanityProvider sanityInstance={instance}>{children}</SanityProvider>
+  return (
+    <ThemeProvider theme={theme}>
+      <SanityProvider sanityInstance={instance}>{children}</SanityProvider>
+    </ThemeProvider>
+  )
 }
 
 /**
