@@ -14,6 +14,10 @@ const baseConfig = {
       entry: ['src/main.tsx'],
       project,
     },
+    'packages/react': {
+      entry: ['src/css/css.config.js'],
+      project,
+    },
     'packages/*': {
       project,
     },

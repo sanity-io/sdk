@@ -1,0 +1,11 @@
+@import './paramour.css';
+
+body {
+  color-scheme: light dark;
+  color: light-dark(var(--gray-1), var(--gray-10));
+  background-color: light-dark(var(--gray-11), var(--gray-1));
+}
+
+.container-inline {
+  container-type: inline-size;
+}
