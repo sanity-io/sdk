@@ -7,10 +7,12 @@
     "build": "vite build",
     "clean": "rimraf dist",
     "dev": "vite",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "paramour": "npx paramour --config=./src/css/css.config.js --output=./src/css/paramour.css"
   },
   "prettier": "@sanity/prettier-config",
   "dependencies": {
+    "@paramour/css": "1.0.0-rc.2",
     "@sanity/comlink": "^2.0.2",
     "@sanity/icons": "^3.5.2",
     "@sanity/logos": "^2.1.13",
@@ -18,7 +20,6 @@
     "@sanity/sdk-react": "workspace:*",
     "@sanity/types": "^3.67.1",
     "@sanity/ui": "^2.8.19",
-    "@storybook/react": "^8.4.7",
     "@testing-library/react": "^16.1.0",
     "inter-ui": "^4.1.0",
     "react": "^19.0.0",

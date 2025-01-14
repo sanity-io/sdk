@@ -11,11 +11,7 @@ const baseConfig = {
       entry: ['package.config.ts'],
     },
     'apps/kitchensink-react': {
-      entry: ['src/main.tsx'],
-      project,
-    },
-    'packages/react': {
-      entry: ['src/css/css.config.js'],
+      entry: ['src/main.tsx', 'src/css/css.config.js'],
       project,
     },
     'packages/*': {

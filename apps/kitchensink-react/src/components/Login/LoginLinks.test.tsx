@@ -1,4 +1,5 @@
 import {AuthStateType, createSanityInstance} from '@sanity/sdk'
+import {SanityProvider} from '@sanity/sdk-react/context'
 import {useAuthState, useLoginUrls} from '@sanity/sdk-react/hooks'
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
@@ -6,7 +7,6 @@ import {render, screen} from '@testing-library/react'
 import React from 'react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {SanityProvider} from '../context/SanityProvider'
 import {LoginLinks} from './LoginLinks'
 
 // Mock the hooks and SDK functions

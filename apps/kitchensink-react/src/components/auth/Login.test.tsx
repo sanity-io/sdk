@@ -1,11 +1,11 @@
 import {createSanityInstance} from '@sanity/sdk'
+import {SanityProvider} from '@sanity/sdk-react/context'
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {render, screen} from '@testing-library/react'
 import React from 'react'
 import {describe, expect, it, vi} from 'vitest'
 
-import {SanityProvider} from '../context/SanityProvider'
 import {Login} from './Login'
 
 vi.mock('../../hooks/auth/useLoginUrls', () => ({
