@@ -1,6 +1,6 @@
 import {type SanityClient} from '@sanity/client'
 import {act} from '@testing-library/react'
-import type {Subscribable, Subscriber} from 'rxjs'
+import {type Subscribable, type Subscriber} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'

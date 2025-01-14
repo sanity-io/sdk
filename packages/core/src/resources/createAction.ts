@@ -1,4 +1,4 @@
-import type {SanityInstance} from '../instance/types'
+import {type SanityInstance} from '../instance/types'
 import {getOrCreateResource, type Resource, type ResourceState} from './createResource'
 
 /** @public */

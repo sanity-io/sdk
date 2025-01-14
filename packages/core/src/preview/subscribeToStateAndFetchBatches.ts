@@ -1,4 +1,4 @@
-import type {SanityClient, SyncTag} from '@sanity/client'
+import {type SanityClient, type SyncTag} from '@sanity/client'
 import {
   combineLatest,
   debounceTime,
@@ -17,7 +17,7 @@ import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {type ActionContext, createInternalAction} from '../resources/createAction'
 import {getSchemaState} from '../schema/getSchemaState'
 import {createPreviewQuery, processPreviewQuery} from './previewQuery'
-import type {PreviewQueryResult, PreviewStoreState} from './previewStore'
+import {type PreviewQueryResult, type PreviewStoreState} from './previewStore'
 import {PREVIEW_TAG} from './util'
 
 const BATCH_DEBOUNCE_TIME = 50

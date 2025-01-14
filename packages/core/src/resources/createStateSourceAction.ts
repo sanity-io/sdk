@@ -1,7 +1,7 @@
 import {filter, map, Observable, pairwise} from 'rxjs'
 
 import {createAction, type ResourceAction} from './createAction'
-import type {Resource} from './createResource'
+import {type Resource} from './createResource'
 
 /**
  * @public

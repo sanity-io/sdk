@@ -1,4 +1,4 @@
-import type {Subscription} from 'rxjs'
+import {type Subscription} from 'rxjs'
 import {describe, expect, it} from 'vitest'
 
 import {config} from '../../test/fixtures'

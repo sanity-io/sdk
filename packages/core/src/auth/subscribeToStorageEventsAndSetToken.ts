@@ -2,7 +2,7 @@ import {defer, distinctUntilChanged, filter, map} from 'rxjs'
 
 import {type ActionContext, createInternalAction} from '../resources/createAction'
 import {AuthStateType} from './authStateType'
-import type {AuthStoreState} from './authStore'
+import {type AuthStoreState} from './authStore'
 import {getStorageEvents, getTokenFromStorage} from './utils'
 
 export const subscribeToStorageEventsAndSetToken = createInternalAction(

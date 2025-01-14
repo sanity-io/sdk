@@ -1,6 +1,6 @@
 import {type SyncTag} from '@sanity/client'
 import {Schema as SchemaConstructor} from '@sanity/schema'
-import type {Schema} from '@sanity/types'
+import {type Schema} from '@sanity/types'
 import {Observable, of, Subject} from 'rxjs'
 import {describe, expect, it, type Mock, vi} from 'vitest'
 

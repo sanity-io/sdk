@@ -1,4 +1,4 @@
-import type {ReferenceSchemaType, Schema, SchemaType} from '@sanity/types'
+import {type ReferenceSchemaType, type Schema, type SchemaType} from '@sanity/types'
 
 export function getProjectionForSchemaType(schema: Schema, schemaTypeName: string): string {
   const schemaType = schema.get(schemaTypeName)

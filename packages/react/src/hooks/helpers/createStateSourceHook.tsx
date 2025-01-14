@@ -1,4 +1,4 @@
-import type {SanityInstance, StateSource} from '@sanity/sdk'
+import {type SanityInstance, type StateSource} from '@sanity/sdk'
 import {useMemo, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'

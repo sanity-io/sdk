@@ -1,4 +1,4 @@
-import type {DocumentHandle} from '../documentList/documentListStore'
+import {type DocumentHandle} from '../documentList/documentListStore'
 import {createAction} from '../resources/createAction'
 import {getPreviewState} from './getPreviewState'
 import {previewStore, type PreviewValue, type ValuePending} from './previewStore'

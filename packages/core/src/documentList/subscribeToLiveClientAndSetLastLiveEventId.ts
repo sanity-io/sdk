@@ -1,10 +1,10 @@
-import type {SanityClient} from '@sanity/client'
+import {type SanityClient} from '@sanity/client'
 import {filter, map, Observable, switchMap, withLatestFrom} from 'rxjs'
 
 import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {type ActionContext, createInternalAction} from '../resources/createAction'
 import {API_VERSION} from './documentListConstants'
-import type {DocumentListState} from './documentListStore'
+import {type DocumentListState} from './documentListStore'
 
 export const subscribeToLiveClientAndSetLastLiveEventId = createInternalAction(
   ({state, instance}: ActionContext<DocumentListState>) => {

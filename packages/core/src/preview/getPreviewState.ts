@@ -1,6 +1,6 @@
 import {omit} from 'lodash-es'
 
-import type {DocumentHandle} from '../documentList/documentListStore'
+import {type DocumentHandle} from '../documentList/documentListStore'
 import {createAction} from '../resources/createAction'
 import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
 import {

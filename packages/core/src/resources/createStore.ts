@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {noop} from 'lodash-es'
 
-import type {SanityInstance} from '../instance/types'
-import type {ActionContext, ResourceAction} from './createAction'
+import {type SanityInstance} from '../instance/types'
+import {type ActionContext, type ResourceAction} from './createAction'
 import {initializeResource, type Resource} from './createResource'
 
 /**

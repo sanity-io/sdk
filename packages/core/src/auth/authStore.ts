@@ -1,5 +1,5 @@
 import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
-import type {CurrentUser} from '@sanity/types'
+import {type CurrentUser} from '@sanity/types'
 
 import {createResource} from '../resources/createResource'
 import {createStateSourceAction} from '../resources/createStateSourceAction'

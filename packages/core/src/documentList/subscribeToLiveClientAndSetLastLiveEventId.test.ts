@@ -1,4 +1,4 @@
-import type {SanityClient} from '@sanity/client'
+import {type SanityClient} from '@sanity/client'
 import {debounceTime, filter, firstValueFrom, of, Subject} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 

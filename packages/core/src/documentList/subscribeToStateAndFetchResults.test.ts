@@ -1,4 +1,4 @@
-import type {RawQuerylessQueryResponse, SanityClient} from '@sanity/client'
+import {type RawQuerylessQueryResponse, type SanityClient} from '@sanity/client'
 import {pick} from 'lodash-es'
 import {filter, firstValueFrom, map, of, Subject} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
