@@ -11,15 +11,20 @@
   },
   "prettier": "@sanity/prettier-config",
   "dependencies": {
+    "@paramour/css": "1.0.0-rc.2",
     "@sanity/comlink": "^2.0.2",
+    "@sanity/icons": "^3.5.2",
+    "@sanity/logos": "^2.1.13",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
     "@sanity/types": "^3.67.1",
     "@sanity/ui": "^2.8.19",
+    "inter-ui": "^4.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-error-boundary": "^4.1.2",
-    "react-router": "^7.0.2"
+    "react-router": "^7.0.2",
+    "rollup-plugin-import-css": "^3.5.7"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",

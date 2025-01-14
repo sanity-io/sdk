@@ -1,12 +1,11 @@
 import {AuthStateType, createSanityInstance} from '@sanity/sdk'
+import {useAuthState, useLoginUrls} from '@sanity/sdk-react/hooks'
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {render, screen} from '@testing-library/react'
 import React from 'react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {useAuthState} from '../../hooks/auth/useAuthState'
-import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
 import {SanityProvider} from '../context/SanityProvider'
 import {LoginLinks} from './LoginLinks'
 

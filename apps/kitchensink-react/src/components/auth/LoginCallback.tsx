@@ -1,7 +1,7 @@
+import {useHandleCallback} from '@sanity/sdk-react/hooks'
 import {Flex, Spinner, Text} from '@sanity/ui'
 import {useEffect} from 'react'
 
-import {useHandleCallback} from '../../hooks/auth/useHandleCallback'
 import {LoginLayout, type LoginLayoutProps} from './LoginLayout'
 
 /**

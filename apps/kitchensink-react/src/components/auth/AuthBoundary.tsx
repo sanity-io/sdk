@@ -1,8 +1,8 @@
 import {AuthStateType} from '@sanity/sdk'
+import {useAuthState} from '@sanity/sdk-react/hooks'
 import {useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
-import {useAuthState} from '../../hooks/auth/useAuthState'
 import {AuthError} from './AuthError'
 import {Login} from './Login'
 import {LoginCallback} from './LoginCallback'

@@ -71,9 +71,18 @@ importers:
 
   apps/kitchensink-react:
     dependencies:
+      '@paramour/css':
+        specifier: 1.0.0-rc.2
+        version: 1.0.0-rc.2
       '@sanity/comlink':
         specifier: ^2.0.2
         version: 2.0.3
+      '@sanity/icons':
+        specifier: ^3.5.2
+        version: 3.5.6(react@19.0.0)
+      '@sanity/logos':
+        specifier: ^2.1.13
+        version: 2.1.13(@sanity/color@3.0.6)(react@19.0.0)
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../../packages/core
@@ -86,6 +95,9 @@ importers:
       '@sanity/ui':
         specifier: ^2.8.19
         version: 2.10.12(@emotion/is-prop-valid@1.2.2)(react-dom@19.0.0(react@19.0.0))(react-is@18.3.1)(react@19.0.0)(styled-components@6.1.13(react-dom@19.0.0(react@19.0.0))(react@19.0.0))
+      inter-ui:
+        specifier: ^4.1.0
+        version: 4.1.0
       react:
         specifier: ^19.0.0
         version: 19.0.0
@@ -98,6 +110,9 @@ importers:
       react-router:
         specifier: ^7.0.2
         version: 7.1.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      rollup-plugin-import-css:
+        specifier: ^3.5.7
+        version: 3.5.8(rollup@4.28.1)
     devDependencies:
       '@repo/config-eslint':
         specifier: workspace:*
@@ -298,30 +313,9 @@ importers:
 
   packages/react:
     dependencies:
-      '@paramour/css':
-        specifier: 1.0.0-rc.2
-        version: 1.0.0-rc.2
-      '@sanity/icons':
-        specifier: ^3.5.2
-        version: 3.5.6(react@19.0.0)
-      '@sanity/logos':
-        specifier: ^2.1.13
-        version: 2.1.13(@sanity/color@3.0.6)(react@19.0.0)
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../core
-      '@sanity/ui':
-        specifier: ^2.8.19
-        version: 2.10.12(@emotion/is-prop-valid@1.2.2)(react-dom@19.0.0(react@19.0.0))(react-is@18.3.1)(react@19.0.0)(styled-components@6.1.13(react-dom@19.0.0(react@19.0.0))(react@19.0.0))
-      inter-ui:
-        specifier: ^4.1.0
-        version: 4.1.0
-      react-error-boundary:
-        specifier: ^4.1.2
-        version: 4.1.2(react@19.0.0)
-      rollup-plugin-import-css:
-        specifier: ^3.5.7
-        version: 3.5.8(rollup@4.28.1)
       rxjs:
         specifier: ^7.8.1
         version: 7.8.1

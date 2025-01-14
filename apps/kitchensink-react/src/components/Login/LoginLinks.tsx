@@ -1,9 +1,6 @@
+import {useAuthState, useHandleCallback, useLoginUrls} from '@sanity/sdk-react/hooks'
 import {Button, Card, Container, Flex, Heading, Stack} from '@sanity/ui'
 import {type ReactElement} from 'react'
-
-import {useAuthState} from '../../hooks/auth/useAuthState'
-import {useHandleCallback} from '../../hooks/auth/useHandleCallback'
-import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
 
 /**
  * Component that handles Sanity authentication flow and renders login provider options

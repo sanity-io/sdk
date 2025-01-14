@@ -10,7 +10,7 @@
   "name": "Sanity SDK Documentation",
   /**
    * Source files to include in documentation generation
-   * Includes core SDK exports and React components/hooks
+   * Includes core SDK exports and React hooks/context
    */
   "entryPoints": ["packages/*"],
   "entryPointStrategy": "packages",

@@ -1,8 +1,8 @@
-import {AuthBoundary} from '@sanity/sdk-react/components'
 import {Card, Flex, Text} from '@sanity/ui'
-import type {JSX} from 'react'
+import {type JSX} from 'react'
 import {Link} from 'react-router'
 
+import {AuthBoundary} from '../components/auth/AuthBoundary'
 import {PageLayout} from '../components/PageLayout'
 
 export function ProjectAuthHome({

@@ -30,10 +30,10 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./components": {
-      "source": "./src/_exports/components.ts",
-      "import": "./dist/components.js",
-      "default": "./dist/components.js"
+    "./context": {
+      "source": "./src/_exports/context.ts",
+      "import": "./dist/context.js",
+      "default": "./dist/context.js"
     },
     "./hooks": {
       "source": "./src/_exports/hooks.ts",
@@ -47,8 +47,8 @@
   "types": "./dist/index.d.ts",
   "typesVersions": {
     "*": {
-      "components": [
-        "./dist/components.d.ts"
+      "context": [
+        "./dist/context.d.ts"
       ],
       "hooks": [
         "./dist/hooks.d.ts"
@@ -76,14 +76,7 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
-    "@paramour/css": "1.0.0-rc.2",
-    "@sanity/icons": "^3.5.2",
-    "@sanity/logos": "^2.1.13",
     "@sanity/sdk": "workspace:*",
-    "@sanity/ui": "^2.8.19",
-    "inter-ui": "^4.1.0",
-    "react-error-boundary": "^4.1.2",
-    "rollup-plugin-import-css": "^3.5.7",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
