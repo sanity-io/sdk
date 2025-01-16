@@ -18,7 +18,7 @@ const baseConfig = {
       typescript: {
         config: 'tsconfig.json',
       },
-      ignoreDependencies: ['@repo/tsconfig'],
+      ignoreDependencies: ['@repo/tsconfig', '@testing-library/jest-dom'],
       project,
     },
     'apps/*': {
