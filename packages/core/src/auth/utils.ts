@@ -9,7 +9,11 @@ export function getAuthCode(callbackUrl: string | undefined, locationHref: strin
     ? loc.pathname.toLowerCase().startsWith(callbackLocation.pathname.toLowerCase())
     : true
 
-  const authCode = new URLSearchParams(loc.hash.slice(1)).get(AUTH_CODE_PARAM)
+  // for stamped tokens, the authCode is not in the hash, it is in the query params
+  const authCode =
+    new URLSearchParams(loc.hash.slice(1)).get(AUTH_CODE_PARAM) ||
+    new URLSearchParams(loc.search).get(AUTH_CODE_PARAM)
+
   return authCode && callbackLocationMatches ? authCode : null
 }
 

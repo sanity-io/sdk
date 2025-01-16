@@ -51,6 +51,8 @@ export const handleCallback = createAction(authStore, ({state, instance}) => {
 
       const loc = new URL(locationHref)
       loc.hash = ''
+      loc.searchParams.delete('sid')
+      loc.searchParams.delete('url')
       return loc.toString()
     } catch (error) {
       state.set('exchangeSessionForTokenError', {authState: {type: AuthStateType.ERROR, error}})

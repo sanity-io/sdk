@@ -55,6 +55,8 @@ export const fetchLoginUrls = createAction(authStore, ({state, instance}) => {
       const hashParams = new URLSearchParams(origin.hash.slice(1))
       hashParams.delete('sid')
       origin.hash = hashParams.toString()
+      origin.searchParams.delete('sid')
+      origin.searchParams.delete('url')
 
       // similarly, the origin may be populated with an `error` query param if
       // the auth provider redirects back to the application. this should also
@@ -63,6 +65,7 @@ export const fetchLoginUrls = createAction(authStore, ({state, instance}) => {
 
       url.searchParams.set('origin', origin.toString())
       url.searchParams.set('withSid', 'true')
+      url.searchParams.set('type', 'stampedToken')
       if (authScope === 'project') {
         url.searchParams.set('projectId', projectId)
       }
