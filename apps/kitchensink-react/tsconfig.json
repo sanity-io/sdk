@@ -3,8 +3,10 @@
   "compilerOptions": {
     "rootDir": "../../",
     "baseUrl": "../../",
+    // TODO: Temporary disable this until fix
+    "verbatimModuleSyntax": false,
     "noEmit": true,
-    "types": ["vite/client"],
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "paths": {
       "@sanity/sdk": ["./packages/core/src/_exports/index.ts"],
       "@sanity/sdk/*": ["./packages/core/src/_exports/*"],
