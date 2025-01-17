@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@sanity/pkg-utils/tsconfig/strictest.json",
+  "description": "Shared TS config that are used for builds, dts generation, etl extract, and vscode/intellisense",
+  "compilerOptions": {
+    // Everything needs to use the same lib settings for `paths` to work consistently throughout the monorepo
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+
+    // Output settings
+    "target": "ES2022",
+    "module": "Preserve",
+    "moduleDetection": "force",
+    "allowSyntheticDefaultImports": true,
+    "jsx": "preserve",
+    // If a package that emits code forgets to specify the outDir then the default behavior of tsc is to colocate .d.ts files,
+    // that's incredibly problematic and can be time-consuming to clean up. This default value acts as a failsafe against that
+    "outDir": "./node_modules/.sdk-monorepo/dts",
+
+    // Don't emit anything by default, emit is done by `@sanity/pkg-utils` during build
+    "noEmit": true,
+
+    // Settings
+    "preserveConstEnums": true,
+    "useUnknownInCatchVariables": false,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "checkJs": false,
+
+    // Strict type-checking
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": true,
+    "alwaysStrict": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true,
+
+    // These options are already set by "module": "Preserve" but if someone loads the monorepo in an older TS version you'll get confusing errors and so we set them here as a fallback
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "resolveJsonModule": true
+  }
+}

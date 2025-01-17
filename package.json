@@ -41,6 +41,8 @@
     "@commitlint/cli": "^19.6.1",
     "@commitlint/config-conventional": "^19.6.0",
     "@repo/config-eslint": "workspace:*",
+    "@repo/config-test": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
     "@sanity/pkg-utils": "^6.12.2",
     "@sanity/prettier-config": "^1.0.3",
     "@types/node": "^22.10.5",
@@ -57,6 +59,7 @@
     "turbo": "^2.3.3",
     "typedoc": "^0.27.6",
     "typescript": "^5.7.2",
+    "vite": "^5.4.11",
     "vitest": "^2.1.8"
   },
   "packageManager": "pnpm@9.15.2",

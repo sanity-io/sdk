@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "pnpm tsc && vite build",
     "clean": "rimraf dist",
     "dev": "vite",
     "lint": "eslint .",
-    "paramour": "npx paramour --config=./src/css/css.config.js --output=./src/css/paramour.css"
+    "paramour": "npx paramour --config=./src/css/css.config.js --output=./src/css/paramour.css",
+    "tsc": "tsc --noEmit"
   },
   "prettier": "@sanity/prettier-config",
   "dependencies": {
@@ -20,7 +21,6 @@
     "@sanity/sdk-react": "workspace:*",
     "@sanity/types": "^3.67.1",
     "@sanity/ui": "^2.8.19",
-    "@testing-library/react": "^16.1.0",
     "inter-ui": "^4.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -30,7 +30,10 @@
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
     "@sanity/prettier-config": "^1.0.3",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
     "@types/react": "^19.0.3",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^4.3.4",

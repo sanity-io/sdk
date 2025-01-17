@@ -1,10 +1,9 @@
 {
-  "extends": "./tsconfig.json",
-  "include": [
-    "./packages/**/src/**/*",
-    "./packages/**/typings/**/*",
-    "./packages/**/vite-env.d.ts"
-  ],
+  "extends": "@repo/tsconfig/base.json",
+  "compilerOptions": {
+    "types": ["vite/client"]
+  },
+  "include": ["./packages/**/src/**/*", "./packages/**/typings/**/*"],
   "exclude": [
     "./packages/**/src/**/__fixtures__",
     "./packages/**/src/**/__mocks__",

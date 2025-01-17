@@ -1,6 +1,6 @@
-import {Connection, createConnection} from '@sanity/comlink'
+import {type Connection, createConnection} from '@sanity/comlink'
 import {Button, Card, Flex, TextInput} from '@sanity/ui'
-import {FunctionComponent, useEffect, useRef, useState} from 'react'
+import {type FunctionComponent, useEffect, useRef, useState} from 'react'
 import {Link} from 'react-router'
 
 interface SendMessage {

@@ -1,14 +1,14 @@
 {
-  "extends": "@sanity/pkg-utils/tsconfig/strictest.json",
+  "extends": "@repo/tsconfig/base.json",
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "./dist",
-    "types": ["vitest/globals", "@testing-library/jest-dom"],
-
-    /* Monorepo paths */
+    // For import.meta.env/import.meta.hot definitions and similar
+    "types": ["vite/client"],
     "paths": {
       "@sanity/sdk": ["./node_modules/@sanity/sdk/src/_exports/index.ts"],
       "@sanity/sdk/*": ["./node_modules/@sanity/sdk/src/_exports/*"]
     }
-  }
+  },
+  "include": ["src"]
 }

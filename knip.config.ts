@@ -8,16 +8,29 @@ const project = ['src/**/*.{js,jsx,ts,tsx}', '!**/build/**', '!**/docs/**']
 const baseConfig = {
   workspaces: {
     '.': {
-      entry: ['package.config.ts'],
+      typescript: {
+        config: 'tsconfig.tsdoc.json',
+      },
+      entry: ['package.config.ts', 'vitest.config.mts'],
     },
     'apps/kitchensink-react': {
       entry: ['src/main.tsx', 'src/css/css.config.js'],
-      project,
-    },
-    'packages/*': {
+      typescript: {
+        config: 'tsconfig.json',
+      },
+      ignoreDependencies: ['@repo/tsconfig', '@testing-library/jest-dom'],
       project,
     },
     'apps/*': {
+      typescript: {
+        config: 'tsconfig.json',
+      },
+      project,
+    },
+    'packages/*': {
+      typescript: {
+        config: 'tsconfig.settings.json',
+      },
       project,
     },
   },
@@ -26,6 +39,8 @@ const baseConfig = {
 export const addBundlerEntries = async (config: KnipConfig): Promise<KnipConfig> => {
   const dirs = [
     'packages/@repo/config-eslint',
+    'packages/@repo/config-test',
+    'packages/@repo/tsconfig',
     'packages/@repo/package.config',
     'packages/core',
     'packages/react',

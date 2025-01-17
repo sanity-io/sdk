@@ -45,6 +45,10 @@ export default [
               group: ['**/_exports', '**/_exports/*'],
               message: 'Do not import from `_exports`',
             },
+            {
+              group: ['vitest/config'],
+              message: 'Use `@repo/config-test/vitest` instead',
+            },
           ],
         },
       ],

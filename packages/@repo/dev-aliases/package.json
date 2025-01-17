@@ -1,0 +1,17 @@
+{
+  "name": "@repo/dev-aliases",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dev-aliases.mjs",
+    "./vitest": "./vitest.mjs"
+  },
+  "main": "./dev-aliases.mjs",
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@repo/config-eslint": "workspace:*"
+  }
+}
