@@ -2,9 +2,8 @@ import {SanityApp} from '@sanity/sdk-react/components'
 import {type JSX} from 'react'
 import {Route, Routes} from 'react-router'
 
-import {Cosui} from './CosuiSimulator/Cosui'
-import CosuiApp from './CosuiSimulator/CosuiApp'
-import {CosuiAppHome} from './CosuiSimulator/CosuiAppHome'
+import Frame from './Comlink/Frame'
+import ParentApp from './Comlink/ParentApp'
 import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
 import {DocumentListRoute} from './DocumentCollection/DocumentListRoute'
 import Home from './Home'
@@ -27,6 +26,11 @@ const documentCollectionRoutes = [
   },
 ]
 
+const frameRoutes = [1, 2, 3].map((frameNum) => ({
+  path: `frame${frameNum}`,
+  element: <Frame />,
+}))
+
 export function AppRoutes(): JSX.Element {
   return (
     <Routes>
@@ -41,11 +45,9 @@ export function AppRoutes(): JSX.Element {
         </Route>
       </Route>
 
-      <Route index path="/cosui-simulator" element={<Cosui />} />
-
-      <Route path="/cosui-app" element={<CosuiApp />}>
-        <Route index element={<CosuiAppHome routes={documentCollectionRoutes} />} />
-        {documentCollectionRoutes.map((route) => (
+      <Route path="/comlink-demo" element={<OrgInstanceWrapper />}>
+        <Route index element={<ParentApp />} />
+        {frameRoutes.map((route) => (
           <Route key={route.path} path={route.path} element={route.element} />
         ))}
       </Route>
