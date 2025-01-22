@@ -13,7 +13,7 @@ export function SanityApp({
   sanityConfig,
   children,
 }: {
-  children?: React.ReactNode
+  children: React.ReactNode
   sanityConfig: SanityConfig
 }): JSX.Element {
   const sanityInstance = createSanityInstance(sanityConfig)
