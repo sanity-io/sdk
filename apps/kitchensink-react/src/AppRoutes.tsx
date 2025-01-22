@@ -1,3 +1,4 @@
+import {SanityApp} from '@sanity/sdk-react/components'
 import {type JSX} from 'react'
 import {Route, Routes} from 'react-router'
 
@@ -64,6 +65,16 @@ export function AppRoutes(): JSX.Element {
           <Route key={route.path} path={route.path} element={route.element} />
         ))}
       </Route>
+
+      <Route
+        path="/sanity-app"
+        index
+        element={
+          <SanityApp sanityConfig={{projectId: 'ppsg7ml5', dataset: 'test'}}>
+            <div>Welcome to the Sanity App</div>
+          </SanityApp>
+        }
+      />
     </Routes>
   )
 }

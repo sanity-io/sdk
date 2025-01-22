@@ -34,6 +34,11 @@ const menuItems = [
     path: '/cosui-simulator',
     icon: '🛠️',
   },
+  {
+    title: 'Sanity App',
+    path: '/sanity-app',
+    icon: '📲',
+  },
 ]
 
 const Home = (): JSX.Element => {

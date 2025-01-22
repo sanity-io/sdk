@@ -40,6 +40,11 @@
       "import": "./dist/hooks.js",
       "default": "./dist/hooks.js"
     },
+    "./components": {
+      "source": "./src/_exports/components.ts",
+      "import": "./dist/components.js",
+      "default": "./dist/components.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "./dist/index.js",
@@ -75,7 +80,9 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
+    "@sanity/logos": "^2.1.13",
     "@sanity/sdk": "workspace:*",
+    "react-error-boundary": "^4.1.2",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
