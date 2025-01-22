@@ -17,5 +17,5 @@ export {
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
-export {type UseDocuments, useDocuments} from '../hooks/documentCollection/useDocuments'
+export {type DocumentCollection, useDocuments} from '../hooks/documentCollection/useDocuments'
 export {usePreview, type UsePreviewOptions} from '../hooks/preview/usePreview'

@@ -6,11 +6,16 @@ import {useSanityInstance} from '../context/useSanityInstance'
 /**
  * @public
  */
-export interface UseDocuments {
+export interface DocumentCollection {
+  /** Retrieve more documents matching the provided options */
   loadMore: () => void
+  /** The retrieved document handles of the documents matching the provided options */
   results: DocumentHandle[]
+  /** Whether a retrieval of documents is in flight */
   isPending: boolean
+  /** Whether more documents exist that match the provided options than have been retrieved */
   hasMore: boolean
+  /** The total number of documents in the collection */
   count: number
 }
 
@@ -24,14 +29,56 @@ const STABLE_EMPTY = {
 }
 
 /**
- * Hook to get the list of documents for specified options
- *
  * @public
  *
- * @param options - options for the document list
- * @returns result of the document list and function to load more
+ * The `useDocuments` hook retrieves and provides access to a live collection of documents, optionally filtered, sorted, and matched to a given Content Lake perspective.
+ * Because the returned document collection is live, the results will update in real time until the component invoking the hook is unmounted.
+ *
+ * @param options - Options for narrowing and sorting the document collection
+ * @returns The collection of documents matching the provided options (if any), as well as properties describing the collection and a function to load more.
+ *
+ * @example Retrieving all documents of type 'movie'
+ * ```
+ * const { results, isPending } = useDocuments({ filter: '_type == "movie"' })
+ *
+ * return (
+ *   <div>
+ *     <h1>Movies</h1>
+ *     {results && (
+ *       <ul>
+ *         {results.map(movie => (<li key={movie._id}>…</li>))}
+ *       </ul>
+ *     )}
+ *     {isPending && <div>Loading movies…</div>}
+ *   </div>
+ * )
+ * ```
+ *
+ * @example Retrieving all movies released since 1980, sorted by release date
+ * ```
+ * const { results } = useDocuments({
+ *   filter: '_type == "movie" && releaseDate >= "1980-01-01"',
+ *   sort: [
+ *     {
+ *       field: 'releaseDate',
+ *       sort: 'asc',
+ *     },
+ *   ],
+ * })
+ *
+ * return (
+ *   <div>
+ *      <h1>Movies released since 1980</h1>
+ *      {results && (
+ *        <ol>
+ *          {results.map(movie => (<li key={movie._id}>…</li>))}
+ *        </ol>
+ *     )}
+ *   </div>
+ * )
+ * ```
  */
-export function useDocuments(options: DocumentListOptions = {}): UseDocuments {
+export function useDocuments(options: DocumentListOptions = {}): DocumentCollection {
   const instance = useSanityInstance()
 
   // NOTE: useState is used because it guaranteed to return a stable reference
