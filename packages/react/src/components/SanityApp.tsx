@@ -4,6 +4,11 @@ import {type JSX} from 'react'
 import {SanityProvider} from '../context/SanityProvider'
 import {AuthBoundary} from './auth/AuthBoundary'
 
+/**
+ * @public
+ *
+ * @returns Rendered child component wrapped in a SanityProvider and AuthBoundary
+ */
 export function SanityApp({
   sanityConfig,
   children,

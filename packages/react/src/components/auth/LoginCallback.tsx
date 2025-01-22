@@ -1,6 +1,6 @@
-import {useHandleCallback} from '@sanity/sdk-react/hooks'
 import {useEffect} from 'react'
 
+import {useHandleCallback} from '../../hooks/auth/useHandleCallback'
 import {LoginLayout, type LoginLayoutProps} from './LoginLayout'
 
 /**
