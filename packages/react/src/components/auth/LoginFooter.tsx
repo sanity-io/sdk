@@ -35,19 +35,17 @@ export function LoginFooter(): React.ReactNode {
     <div className="sc-login-footer">
       <SanityLogo className="sc-login-footer__logo" />
 
-      <div className="sc-login-footer__links">
-        {LINKS.map((link, index) => (
+      <ul className="sc-login-footer__links">
+        {LINKS.map((link) => (
           <Fragment key={link.title}>
-            <p className="sc-login-footer__link">
+            <li className="sc-login-footer__link">
               <a href={link.url} target="_blank" rel="noopener noreferrer">
                 {link.title}
               </a>
-            </p>
-
-            {index < LINKS.length - 1 && <p className="sc-login-footer__separator">•</p>}
+            </li>
           </Fragment>
         ))}
-      </div>
+      </ul>
     </div>
   )
 }
