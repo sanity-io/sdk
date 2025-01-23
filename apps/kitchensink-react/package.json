@@ -15,7 +15,6 @@
   "dependencies": {
     "@paramour/css": "1.0.0-rc.2",
     "@sanity/icons": "^3.5.2",
-    "@sanity/logos": "^2.1.13",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
     "@sanity/types": "^3.67.1",
@@ -31,8 +30,6 @@
     "@repo/config-eslint": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/prettier-config": "^1.0.3",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.1.0",
     "@types/react": "^19.0.3",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^4.3.4",
