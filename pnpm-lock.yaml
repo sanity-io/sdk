@@ -126,6 +126,9 @@ importers:
       '@sanity/prettier-config':
         specifier: ^1.0.3
         version: 1.0.3(prettier@3.4.2)
+      '@testing-library/jest-dom':
+        specifier: ^6.6.3
+        version: 6.6.3
       '@types/react':
         specifier: ^19.0.3
         version: 19.0.3
