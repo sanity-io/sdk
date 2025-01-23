@@ -86,9 +86,6 @@ importers:
       '@sanity/icons':
         specifier: ^3.5.2
         version: 3.5.6(react@19.0.0)
-      '@sanity/logos':
-        specifier: ^2.1.13
-        version: 2.1.13(@sanity/color@3.0.6)(react@19.0.0)
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../../packages/core
@@ -129,12 +126,6 @@ importers:
       '@sanity/prettier-config':
         specifier: ^1.0.3
         version: 1.0.3(prettier@3.4.2)
-      '@testing-library/jest-dom':
-        specifier: ^6.6.3
-        version: 6.6.3
-      '@testing-library/react':
-        specifier: ^16.1.0
-        version: 16.1.0(@testing-library/dom@10.4.0)(@types/react-dom@19.0.2(@types/react@19.0.3))(@types/react@19.0.3)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       '@types/react':
         specifier: ^19.0.3
         version: 19.0.3
