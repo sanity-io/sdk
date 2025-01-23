@@ -39,7 +39,6 @@ export const LoginLinks = (): ReactElement => {
 
   /**
    * Render provider selection UI
-   * Uses Sanity UI components for consistent styling
    */
   return (
     <div className="sc-login-links">
