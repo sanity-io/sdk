@@ -1,8 +1,6 @@
 import {AuthStateType, createSanityInstance} from '@sanity/sdk'
 import {SanityProvider} from '@sanity/sdk-react/context'
 import {useAuthState, useLoginUrls} from '@sanity/sdk-react/hooks'
-import {ThemeProvider} from '@sanity/ui'
-import {buildTheme} from '@sanity/ui/theme'
 import {render, screen} from '@testing-library/react'
 import React from 'react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
@@ -43,8 +41,6 @@ vi.mock('../../hooks/auth/useHandleCallback', () => ({
   useHandleCallback: vi.fn(),
 }))
 
-const theme = buildTheme({})
-
 describe('LoginLinks', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -52,11 +48,7 @@ describe('LoginLinks', () => {
 
   const sanityInstance = createSanityInstance({projectId: 'test-project-id', dataset: 'production'})
   const renderWithWrappers = (ui: React.ReactElement) => {
-    return render(
-      <ThemeProvider theme={theme}>
-        <SanityProvider sanityInstance={sanityInstance}>{ui}</SanityProvider>
-      </ThemeProvider>,
-    )
+    return render(<SanityProvider sanityInstance={sanityInstance}>{ui}</SanityProvider>)
   }
 
   it('renders auth provider links correctly when not authenticated', () => {

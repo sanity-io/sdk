@@ -1,7 +1,6 @@
-import {useLoginUrls} from '@sanity/sdk-react/hooks'
-import {Button, Flex, Heading, Spinner} from '@sanity/ui'
 import {type JSX, Suspense} from 'react'
 
+import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
 import {LoginLayout, type LoginLayoutProps} from './LoginLayout'
 
 /**
@@ -13,21 +12,13 @@ import {LoginLayout, type LoginLayoutProps} from './LoginLayout'
 export function Login({header, footer}: LoginLayoutProps): JSX.Element {
   return (
     <LoginLayout header={header} footer={footer}>
-      <Flex direction="column" gap={4}>
-        <Heading as="h1" size={1} align="center">
-          Choose login provider
-        </Heading>
+      <div className="sc-login">
+        <h1 className="sc-login__title">Choose login provider</h1>
 
-        <Suspense
-          fallback={
-            <Flex align="center" justify="center" style={{height: '123px'}}>
-              <Spinner />
-            </Flex>
-          }
-        >
+        <Suspense fallback={<div className="sc-login__loading">Loading…</div>}>
           <Providers />
         </Suspense>
-      </Flex>
+      </div>
     </LoginLayout>
   )
 }
@@ -36,10 +27,12 @@ function Providers() {
   const loginUrls = useLoginUrls()
 
   return (
-    <Flex direction="column" gap={3}>
+    <div className="sc-login-providers">
       {loginUrls.map(({title, url}) => (
-        <Button key={url} text={title} as="a" href={url} mode="ghost" />
+        <a key={url} href={url}>
+          {title}
+        </a>
       ))}
-    </Flex>
+    </div>
   )
 }

@@ -1,4 +1,4 @@
-import type {ChannelInstance, Controller} from '@sanity/comlink'
+import {type ChannelInstance, type Controller} from '@sanity/comlink'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'

@@ -1,5 +1,3 @@
-import {Card, Flex} from '@sanity/ui'
-
 import {LoginFooter} from './LoginFooter'
 
 /**
@@ -56,26 +54,16 @@ export function LoginLayout({
   header,
 }: LoginLayoutProps): React.ReactNode {
   return (
-    <div style={{width: '100%', display: 'flex'}}>
-      <Flex direction="column" gap={4} style={{width: '320px', margin: 'auto', display: 'flex'}}>
-        <Card border radius={2} paddingY={4}>
-          <Flex direction="column" gap={4}>
-            {header && (
-              <Card borderBottom paddingX={4} paddingBottom={3}>
-                {header}
-              </Card>
-            )}
+    <div className="sc-login-layout">
+      <div className="sc-login-layout__container">
+        <div className="sc-login-layout__card">
+          {header && <div className="sc-login-layout__card-header">{header}</div>}
 
-            {children && (
-              <Flex paddingX={4} direction="column" style={{minHeight: '154px'}}>
-                {children}
-              </Flex>
-            )}
-          </Flex>
-        </Card>
+          {children && <div className="sc-login-layout__card-body">{children}</div>}
+        </div>
 
         {footer}
-      </Flex>
+      </div>
     </div>
   )
 }

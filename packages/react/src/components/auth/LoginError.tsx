@@ -1,8 +1,7 @@
-import {useLogOut} from '@sanity/sdk-react/hooks'
-import {Button, Flex, Text} from '@sanity/ui'
 import {useCallback} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
+import {useLogOut} from '../../hooks/auth/useLogOut'
 import {AuthError} from './AuthError'
 import {LoginLayout, type LoginLayoutProps} from './LoginLayout'
 
@@ -33,17 +32,18 @@ export function LoginError({
 
   return (
     <LoginLayout header={header} footer={footer}>
-      <Flex direction="column" gap={4} style={{margin: 'auto'}}>
-        <Flex direction="column" gap={3}>
-          <Text as="h2" align="center" weight="bold" size={3}>
-            Authentication Error
-          </Text>
-          <Text size={1} align="center">
+      <div className="sc-login-error">
+        <div className="sc-login-error__content">
+          <h2 className="sc-login-error__title">Authentication Error</h2>
+          <p className="sc-login-error__description">
             Please try again or contact support if the problem persists.
-          </Text>
-        </Flex>
-        <Button text="Retry" tone="primary" onClick={handleRetry} />
-      </Flex>
+          </p>
+        </div>
+
+        <button className="sc-login-error__button" onClick={handleRetry}>
+          Retry
+        </button>
+      </div>
     </LoginLayout>
   )
 }

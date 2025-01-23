@@ -1,20 +1,13 @@
 import {createSanityInstance} from '@sanity/sdk'
 import {SanityProvider} from '@sanity/sdk-react/context'
-import {ThemeProvider} from '@sanity/ui'
-import {buildTheme} from '@sanity/ui/theme'
 import {render, screen, waitFor} from '@testing-library/react'
 import React from 'react'
 import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest'
 
-const theme = buildTheme({})
 const sanityInstance = createSanityInstance({projectId: 'test-project-id', dataset: 'production'})
 
 const renderWithWrappers = (ui: React.ReactElement) => {
-  return render(
-    <ThemeProvider theme={theme}>
-      <SanityProvider sanityInstance={sanityInstance}>{ui}</SanityProvider>
-    </ThemeProvider>,
-  )
+  return render(<SanityProvider sanityInstance={sanityInstance}>{ui}</SanityProvider>)
 }
 
 // Mock `useHandleCallback`

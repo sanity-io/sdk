@@ -1,8 +1,6 @@
 import {AuthStateType, createSanityInstance} from '@sanity/sdk'
 import {SanityProvider} from '@sanity/sdk-react/context'
 import {useAuthState} from '@sanity/sdk-react/hooks'
-import {ThemeProvider} from '@sanity/ui'
-import {buildTheme} from '@sanity/ui/theme'
 import {render, screen, waitFor} from '@testing-library/react'
 import React from 'react'
 import {beforeEach, describe, expect, it, type MockInstance, vi} from 'vitest'
@@ -38,14 +36,9 @@ vi.mock('./AuthError', async (importOriginal) => {
   }
 })
 
-const theme = buildTheme({})
 const sanityInstance = createSanityInstance({projectId: 'test-project-id', dataset: 'production'})
 const renderWithWrappers = (ui: React.ReactElement) => {
-  return render(
-    <ThemeProvider theme={theme}>
-      <SanityProvider sanityInstance={sanityInstance}>{ui}</SanityProvider>
-    </ThemeProvider>,
-  )
+  return render(<SanityProvider sanityInstance={sanityInstance}>{ui}</SanityProvider>)
 }
 
 describe('AuthBoundary', () => {
