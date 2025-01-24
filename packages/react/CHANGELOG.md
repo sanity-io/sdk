@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.4](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.3...sdk-react-v0.0.0-alpha.4) (2025-01-23)
+
+
+### Features
+
+* **react:** create React hooks for comlink store ([#153](https://github.com/sanity-io/sdk/issues/153)) ([7055347](https://github.com/sanity-io/sdk/commit/7055347160f7d3734c361d182b686e2f835e1846))
+
 ## [0.0.0-alpha.3](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.2...sdk-react-v0.0.0-alpha.3) (2025-01-09)
 
 

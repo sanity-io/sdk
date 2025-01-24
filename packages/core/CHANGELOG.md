@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.0-alpha.4](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.3...sdk-v0.0.0-alpha.4) (2025-01-23)
+
+
+### Features
+
+* **core:** add comlink controller and channel store ([#141](https://github.com/sanity-io/sdk/issues/141)) ([cf1e5d5](https://github.com/sanity-io/sdk/commit/cf1e5d5a8cbcb27beacba2362b462176071200e4))
+* **core:** add comlink node store ([#156](https://github.com/sanity-io/sdk/issues/156)) ([a080357](https://github.com/sanity-io/sdk/commit/a0803574dacbe86455fc60b1b9f3775ea33e7a89))
+
 ## [0.0.0-alpha.3](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.2...sdk-v0.0.0-alpha.3) (2025-01-09)
 
 
