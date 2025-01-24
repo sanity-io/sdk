@@ -1,5 +1,5 @@
 import {Schema as SchemaConstructor} from '@sanity/schema'
-import {assert, describe, expect, it} from 'vitest'
+import {describe, expect, it} from 'vitest'
 
 import {
   createPreviewQuery,
@@ -157,13 +157,12 @@ describe('processPreviewQuery', () => {
     })
 
     const val = processed['person1']
-    assert(Array.isArray(val))
-    expect(val[0]).toEqual({
+    expect(val?.results).toEqual({
       title: 'John',
       media: null,
       status: {lastEditedPublishedAt: '2021-01-01'},
     })
-    expect(val[1]).toBe(false)
+    expect(val?.isPending).toBe(false)
   })
 
   it('resolves status preferring draft over published when available', () => {
@@ -204,8 +203,7 @@ describe('processPreviewQuery', () => {
     })
 
     const val = processed['article1']
-    assert(Array.isArray(val))
-    expect(val[0]).toEqual({
+    expect(val?.results).toEqual({
       title: 'Draft Title',
       media: null,
       status: {
@@ -213,7 +211,7 @@ describe('processPreviewQuery', () => {
         lastEditedPublishedAt: '2023-12-15T12:00:00Z',
       },
     })
-    expect(val[1]).toBe(false)
+    expect(val?.isPending).toBe(false)
   })
 })
 

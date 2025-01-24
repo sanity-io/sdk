@@ -45,13 +45,13 @@ const mockDocument: DocumentHandle = {
 
 function TestComponent({document}: {document: DocumentHandle}) {
   const [ref, setRef] = useState<HTMLElement | null>(null)
-  const [previewValue, pending] = usePreview({document, ref})
+  const {results, isPending} = usePreview({document, ref})
 
   return (
     <div ref={setRef}>
-      <h1>{previewValue.title}</h1>
-      <p>{previewValue.subtitle}</p>
-      {pending && <div>Pending...</div>}
+      <h1>{results?.title}</h1>
+      <p>{results?.subtitle}</p>
+      {isPending && <div>Pending...</div>}
     </div>
   )
 }
@@ -74,7 +74,10 @@ describe('usePreview', () => {
 
   test('it only subscribes when element is visible', async () => {
     // Setup initial state
-    getCurrent.mockReturnValue([{title: 'Initial Title', subtitle: 'Initial Subtitle'}, false])
+    getCurrent.mockReturnValue({
+      results: {title: 'Initial Title', subtitle: 'Initial Subtitle'},
+      isPending: false,
+    })
     const eventsUnsubscribe = vi.fn()
     subscribe.mockImplementation(() => eventsUnsubscribe)
 
@@ -135,7 +138,10 @@ describe('usePreview', () => {
     await act(async () => {
       intersectionObserverCallback([{isIntersecting: true} as IntersectionObserverEntry])
       await resolvePromise
-      getCurrent.mockReturnValue([{title: 'Resolved Title', subtitle: 'Resolved Subtitle'}, false])
+      getCurrent.mockReturnValue({
+        results: {title: 'Resolved Title', subtitle: 'Resolved Subtitle'},
+        isPending: false,
+      })
       subscriber?.()
     })
 
@@ -149,7 +155,10 @@ describe('usePreview', () => {
     // @ts-expect-error - Intentionally removing IntersectionObserver
     delete window.IntersectionObserver
 
-    getCurrent.mockReturnValue([{title: 'Fallback Title', subtitle: 'Fallback Subtitle'}, false])
+    getCurrent.mockReturnValue({
+      results: {title: 'Fallback Title', subtitle: 'Fallback Subtitle'},
+      isPending: false,
+    })
     subscribe.mockImplementation(() => vi.fn())
 
     render(

@@ -12,13 +12,55 @@ export interface UsePreviewOptions {
   ref: HTMLElement | null
 }
 
+export interface UsePreviewResults {
+  /** The results of resolving the document’s preview values */
+  results: PreviewValue
+  /** Whether the resolution of the preview values is pending */
+  isPending: boolean
+}
+
 /**
  * @alpha
+ *
+ * The `usePreview` hook takes a document (via a `DocumentHandle`) and returns its resolved preview values,
+ * including the document’s `title`, `subtitle`, `media`, and `status`. These values are live and will update in realtime.
+ * To reduce unnecessary network requests for resolving the preview values, an optional `ref` can be passed to the hook so that preview
+ * resolution will only occur if the `ref` is intersecting the current viewport.
+ *
+ * @param options - The document handle for the document you want to resolve preview values for, and an optional ref
+ * @returns The preview values for the given document and a boolean to indicate whether the resolution is pending
+ *
+ * @example Combining with useDocuments to render a collection of document previews
+ * ```
+ * // PreviewComponent.jsx
+ * export default function PreviewComponent({ document }) {
+ *   const { results: { title, subtitle, media }, isPending } = usePreview({ document })
+ *   return isPending ? 'Loading…' : (
+ *     <article>
+ *       {media?.type === 'image-asset' ? <img src={media.url} alt='' /> : ''}
+ *       <h2>{title}</h2>
+ *       <p>{subtitle}</p>
+ *     </article>
+ *   )
+ * }
+ *
+ * // DocumentList.jsx
+ * const { results, isPending } = useDocuments({ filter: '_type == "movie"' })
+ * return (
+ *   <div>
+ *     <h1>Movies</h1>
+ *     <ul>
+ *       {isPending ? 'Loading…' : results.map(movie => (
+ *         <li key={movie._id}>
+ *           <PreviewComponent document={movie} />
+ *         </li>
+ *       ))}
+ *     </ul>
+ *   </div>
+ * )
+ * ```
  */
-export function usePreview({
-  document: {_id, _type},
-  ref,
-}: UsePreviewOptions): [PreviewValue, boolean] {
+export function usePreview({document: {_id, _type}, ref}: UsePreviewOptions): UsePreviewResults {
   const instance = useSanityInstance()
 
   const stateSource = useMemo(
@@ -60,9 +102,9 @@ export function usePreview({
 
   // Create getSnapshot function to return current state
   const getSnapshot = useCallback(() => {
-    const previewTuple = stateSource.getCurrent()
-    if (!previewTuple[0]) throw resolvePreview(instance, {document: {_id, _type}})
-    return previewTuple as [PreviewValue, boolean]
+    const currentState = stateSource.getCurrent()
+    if (currentState.results === null) throw resolvePreview(instance, {document: {_id, _type}})
+    return currentState as UsePreviewResults
   }, [_id, _type, instance, stateSource])
 
   return useSyncExternalStore(subscribe, getSnapshot)

@@ -18,4 +18,8 @@ export {
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {type DocumentCollection, useDocuments} from '../hooks/documentCollection/useDocuments'
-export {usePreview, type UsePreviewOptions} from '../hooks/preview/usePreview'
+export {
+  usePreview,
+  type UsePreviewOptions,
+  type UsePreviewResults,
+} from '../hooks/preview/usePreview'

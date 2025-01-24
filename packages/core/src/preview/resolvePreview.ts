@@ -20,7 +20,7 @@ export const resolvePreview = createAction(previewStore, () => {
     return new Promise<ValuePending<PreviewValue>>((resolve) => {
       const unsubscribe = subscribe(() => {
         const current = getCurrent()
-        if (current[0]) {
+        if (current?.results) {
           resolve(current)
           unsubscribe()
         }
