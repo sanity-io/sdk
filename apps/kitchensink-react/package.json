@@ -6,7 +6,9 @@
   "scripts": {
     "build": "pnpm tsc && vite build",
     "clean": "rimraf dist",
-    "dev": "vite",
+    "coreui": "pnpx @sanity/os-cli run --url=http://localhost:5173",
+    "dev": "concurrently \"npm:dev:standalone\" \"npm:coreui\" \"sleep 2 && open http://localhost:3000\" --names \"kitchensink,coreui,browser\"",
+    "dev:standalone": "vite --port 5173",
     "lint": "eslint .",
     "paramour": "npx paramour --config=./src/css/css.config.js --output=./src/css/paramour.css",
     "tsc": "tsc --noEmit"
@@ -29,12 +31,14 @@
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
     "@repo/tsconfig": "workspace:*",
+    "@sanity/os-cli": "^0.2.0",
     "@sanity/prettier-config": "^1.0.3",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/react": "^19.0.3",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
     "eslint": "^9.17.0",
     "prettier": "^3.4.2",
     "typescript": "^5.7.2",
