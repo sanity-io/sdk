@@ -25,7 +25,9 @@ export function DocumentPreview(props: DocumentPreviewProps): React.ReactNode {
 
 function DocumentPreviewResolved({document}: DocumentPreviewProps): React.ReactNode {
   const [ref, setRef] = useState<HTMLElement | null>(null)
-  const [{title, subtitle, media, status}] = usePreview({document, ref})
+  const {
+    results: {title, subtitle, media, status},
+  } = usePreview({document, ref})
 
   let statusLabel
   if (status?.lastEditedPublishedAt && status?.lastEditedDraftAt) {
