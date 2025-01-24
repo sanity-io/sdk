@@ -12,6 +12,9 @@ export interface UsePreviewOptions {
   ref: HTMLElement | null
 }
 
+/**
+ * @alpha
+ */
 export interface UsePreviewResults {
   /** The results of resolving the document’s preview values */
   results: PreviewValue
