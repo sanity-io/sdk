@@ -29,6 +29,8 @@ cd my-content-os-app
 npm i @sanity/sdk-react @sanity/sdk
 # Run the app
 npm run dev
+# In another terminal, run the Sanity CoreUI
+npx @sanity/os-cli run --url=http://localhost:5173/
 ```
 
 ```tsx
