@@ -26,6 +26,7 @@ export const clientStore: Resource<ClientState> = createResource({
       token: config?.auth?.token,
       useCdn: false,
       apiVersion: DEFAULT_API_VERSION,
+      ...(config?.auth?.apiHost ? {apiHost: config.auth.apiHost} : {}),
     })
 
     const clients = new Map<string, SanityClient>()
