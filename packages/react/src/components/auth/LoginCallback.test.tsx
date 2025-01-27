@@ -1,14 +1,7 @@
-import {createSanityInstance} from '@sanity/sdk'
-import {SanityProvider} from '@sanity/sdk-react/context'
-import {render, screen, waitFor} from '@testing-library/react'
-import React from 'react'
+import {screen, waitFor} from '@testing-library/react'
 import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest'
 
-const sanityInstance = createSanityInstance({projectId: 'test-project-id', dataset: 'production'})
-
-const renderWithWrappers = (ui: React.ReactElement) => {
-  return render(<SanityProvider sanityInstance={sanityInstance}>{ui}</SanityProvider>)
-}
+import {renderWithWrappers} from './authTestHelpers'
 
 // Mock `useHandleCallback`
 vi.mock('../../hooks/auth/useHandleCallback', () => ({

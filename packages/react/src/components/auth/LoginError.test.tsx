@@ -1,21 +1,13 @@
-import {createSanityInstance} from '@sanity/sdk'
-import {SanityProvider} from '@sanity/sdk-react/context'
-import {fireEvent, render, screen, waitFor} from '@testing-library/react'
-import React from 'react'
+import {fireEvent, screen, waitFor} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
 import {AuthError} from './AuthError'
+import {renderWithWrappers} from './authTestHelpers'
 import {LoginError} from './LoginError'
 
 vi.mock('../../hooks/auth/useLogOut', () => ({
   useLogOut: vi.fn(() => async () => {}),
 }))
-
-const sanityInstance = createSanityInstance({projectId: 'test-project-id', dataset: 'production'})
-
-const renderWithWrappers = (ui: React.ReactElement) => {
-  return render(<SanityProvider sanityInstance={sanityInstance}>{ui}</SanityProvider>)
-}
 
 describe('LoginError', () => {
   it('shows authentication error and retry button', async () => {

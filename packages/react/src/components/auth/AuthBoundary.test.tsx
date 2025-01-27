@@ -1,11 +1,10 @@
-import {AuthStateType, createSanityInstance} from '@sanity/sdk'
-import {SanityProvider} from '@sanity/sdk-react/context'
+import {AuthStateType} from '@sanity/sdk'
 import {useAuthState} from '@sanity/sdk-react/hooks'
-import {render, screen, waitFor} from '@testing-library/react'
-import React from 'react'
+import {screen, waitFor} from '@testing-library/react'
 import {beforeEach, describe, expect, it, type MockInstance, vi} from 'vitest'
 
 import {AuthBoundary} from './AuthBoundary'
+import {renderWithWrappers} from './authTestHelpers'
 
 // Mock hooks
 vi.mock('../../hooks/auth/useAuthState', () => ({
@@ -36,11 +35,6 @@ vi.mock('./AuthError', async (importOriginal) => {
   }
 })
 
-const sanityInstance = createSanityInstance({projectId: 'test-project-id', dataset: 'production'})
-const renderWithWrappers = (ui: React.ReactElement) => {
-  return render(<SanityProvider sanityInstance={sanityInstance}>{ui}</SanityProvider>)
-}
-
 describe('AuthBoundary', () => {
   let consoleErrorSpy: MockInstance
   beforeEach(() => {
@@ -60,7 +54,7 @@ describe('AuthBoundary', () => {
     renderWithWrappers(<AuthBoundary>Protected Content</AuthBoundary>)
 
     // The login screen should show "Choose login provider" by default
-    expect(screen.getByText('Choose login provider')).toBeInTheDocument()
+    expect(screen.getByText('Choose login provider:')).toBeInTheDocument()
     expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
   })
 
