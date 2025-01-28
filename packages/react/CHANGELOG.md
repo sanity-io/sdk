@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.5](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.4...sdk-react-v0.0.0-alpha.5) (2025-01-28)
+
+
+### Features
+
+* render AuthProvider components w/ Sanity UI ([#189](https://github.com/sanity-io/sdk/issues/189)) ([a4ab4c3](https://github.com/sanity-io/sdk/commit/a4ab4c35519417bdd92c75f935479fb834f9af18))
+
 ## [0.0.0-alpha.4](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.3...sdk-react-v0.0.0-alpha.4) (2025-01-23)
 
 
