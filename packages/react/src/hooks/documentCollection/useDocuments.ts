@@ -54,13 +54,14 @@ const STABLE_EMPTY = {
  * )
  * ```
  *
- * @example Retrieving all movies released since 1980, sorted by release date
+ * @example Retrieving all movies released since 1980, sorted by director’s last name
  * ```
  * const { results } = useDocuments({
  *   filter: '_type == "movie" && releaseDate >= "1980-01-01"',
  *   sort: [
  *     {
- *       field: 'releaseDate',
+ *       // Expand the `director` reference field with the dereferencing operator `->`
+ *       field: 'director->lastName',
  *       sort: 'asc',
  *     },
  *   ],
