@@ -1,15 +1,8 @@
-import {createSanityInstance} from '@sanity/sdk'
-import {SanityProvider} from '@sanity/sdk-react/context'
-import {render, screen} from '@testing-library/react'
-import React from 'react'
+import {screen} from '@testing-library/react'
 import {describe, expect, it} from 'vitest'
 
+import {renderWithWrappers} from './authTestHelpers'
 import {LoginLayout} from './LoginLayout'
-
-const sanityInstance = createSanityInstance({projectId: 'test-project-id', dataset: 'production'})
-const renderWithWrappers = (ui: React.ReactElement) => {
-  return render(<SanityProvider sanityInstance={sanityInstance}>{ui}</SanityProvider>)
-}
 
 describe('LoginLayout', () => {
   it('renders header, children, and footer', () => {
