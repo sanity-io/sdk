@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.5](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.4...sdk-v0.0.0-alpha.5) (2025-01-28)
+
+
+### Bug Fixes
+
+* initialize client with configured apiHost ([#186](https://github.com/sanity-io/sdk/issues/186)) ([13c72cb](https://github.com/sanity-io/sdk/commit/13c72cbb0dc9aa2fe1b4c0384f1cf28eb7f40d2e))
+
 ## [0.0.0-alpha.4](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.3...sdk-v0.0.0-alpha.4) (2025-01-23)
 
 
