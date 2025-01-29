@@ -1,6 +1,6 @@
 import {type DocumentHandle, getPreviewState, type PreviewValue, resolvePreview} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
-import {Suspense, useState} from 'react'
+import {Suspense, useRef} from 'react'
 import {type Mock} from 'vitest'
 
 import {usePreview} from './usePreview'
@@ -44,11 +44,11 @@ const mockDocument: DocumentHandle = {
 }
 
 function TestComponent({document}: {document: DocumentHandle}) {
-  const [ref, setRef] = useState<HTMLElement | null>(null)
+  const ref = useRef(null)
   const {results, isPending} = usePreview({document, ref})
 
   return (
-    <div ref={setRef}>
+    <div ref={ref}>
       <h1>{results?.title}</h1>
       <p>{results?.subtitle}</p>
       {isPending && <div>Pending...</div>}
