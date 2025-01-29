@@ -91,7 +91,7 @@
     "@repo/config-test": "workspace:*",
     "@repo/package.config": "workspace:*",
     "@repo/tsconfig": "workspace:*",
-    "@sanity/client": "^6.24.1",
+    "@sanity/client": "^6.27.2",
     "@sanity/comlink": "^2.0.2",
     "@sanity/pkg-utils": "^6.12.2",
     "@sanity/prettier-config": "^1.0.3",

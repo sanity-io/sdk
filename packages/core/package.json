@@ -55,7 +55,7 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
-    "@sanity/client": "^6.22.3",
+    "@sanity/client": "^6.27.2",
     "@sanity/comlink": "^2.0.2",
     "@sanity/schema": "^3.67.1",
     "@sanity/types": "^3.67.1",

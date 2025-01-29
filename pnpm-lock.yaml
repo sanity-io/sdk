@@ -291,8 +291,8 @@ importers:
   packages/core:
     dependencies:
       '@sanity/client':
-        specifier: ^6.22.3
-        version: 6.24.1
+        specifier: ^6.27.2
+        version: 6.27.2
       '@sanity/comlink':
         specifier: ^2.0.2
         version: 2.0.3
@@ -386,8 +386,8 @@ importers:
         specifier: workspace:*
         version: link:../@repo/tsconfig
       '@sanity/client':
-        specifier: ^6.24.1
-        version: 6.24.1
+        specifier: ^6.27.2
+        version: 6.27.2
       '@sanity/comlink':
         specifier: ^2.0.2
         version: 2.0.3
@@ -1343,6 +1343,10 @@ packages:
 
   '@sanity/client@6.24.1':
     resolution: {integrity: sha512-k5aW5C8RdqVGnvuX0KZ+AAIlhYueb6sx3edhKkIMmr2UfD8vSTSW3oAXVt+/WlBstlMIqvkc5RCLLWZQcF3gaA==}
+    engines: {node: '>=14.18'}
+
+  '@sanity/client@6.27.2':
+    resolution: {integrity: sha512-x5KaN5atPnEFa3GGSH3YKSAYh1MAECvEs9o+NSLd5W19imxvSxPquQBv0Q60Zdsg6iaTJPAAa79Ak5Xyg2FHvA==}
     engines: {node: '>=14.18'}
 
   '@sanity/color@3.0.6':
@@ -2734,6 +2738,10 @@ packages:
 
   get-it@8.6.5:
     resolution: {integrity: sha512-o1hjPwrb/icm3WJbCweTSq8mKuDfJlqwbFauI+Pdgid99at/BFaBXFBJZE+uqvHyOVARE4z680S44vrDm8SsCw==}
+    engines: {node: '>=14.0.0'}
+
+  get-it@8.6.7:
+    resolution: {integrity: sha512-AMEotvykAlcEPTPmYeZPqr9w3K53Ni8z1tplo1mwNS8T4i/gr5T7mSfvaLhhIQhF+0thIH901kLdDA5d5bvDGA==}
     engines: {node: '>=14.0.0'}
 
   get-latest-version@5.1.0:
@@ -5601,6 +5609,14 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
+  '@sanity/client@6.27.2':
+    dependencies:
+      '@sanity/eventsource': 5.0.2
+      get-it: 8.6.7
+      rxjs: 7.8.1
+    transitivePeerDependencies:
+      - debug
+
   '@sanity/color@3.0.6': {}
 
   '@sanity/comlink@2.0.3':
@@ -7326,6 +7342,18 @@ snapshots:
       math-intrinsics: 1.1.0
 
   get-it@8.6.5:
+    dependencies:
+      '@types/follow-redirects': 1.14.4
+      '@types/progress-stream': 2.0.5
+      decompress-response: 7.0.0
+      follow-redirects: 1.15.9
+      is-retry-allowed: 2.2.0
+      progress-stream: 2.0.0
+      tunnel-agent: 0.6.0
+    transitivePeerDependencies:
+      - debug
+
+  get-it@8.6.7:
     dependencies:
       '@types/follow-redirects': 1.14.4
       '@types/progress-stream': 2.0.5
