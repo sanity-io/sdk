@@ -9,7 +9,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  */
 export interface UsePreviewOptions {
   document: DocumentHandle
-  ref: HTMLElement | null
+  ref?: React.RefObject<unknown>
 }
 
 /**
@@ -18,7 +18,7 @@ export interface UsePreviewOptions {
 export interface UsePreviewResults {
   /** The results of resolving the document’s preview values */
   results: PreviewValue
-  /** Whether the resolution of the preview values is pending */
+  /** True when preview values are being refreshed */
   isPending: boolean
 }
 
@@ -55,7 +55,9 @@ export interface UsePreviewResults {
  *     <ul>
  *       {isPending ? 'Loading…' : results.map(movie => (
  *         <li key={movie._id}>
- *           <PreviewComponent document={movie} />
+ *           <Suspense fallback='Loading…'>
+ *             <PreviewComponent document={movie} />
+ *           </Suspense>
  *         </li>
  *       ))}
  *     </ul>
@@ -76,13 +78,17 @@ export function usePreview({document: {_id, _type}, ref}: UsePreviewOptions): Us
     (onStoreChanged: () => void) => {
       const subscription = new Observable<boolean>((observer) => {
         // for environments that don't have an intersection observer
-        if (typeof IntersectionObserver === 'undefined') return
+        if (typeof IntersectionObserver === 'undefined' || typeof HTMLElement === 'undefined') {
+          return
+        }
 
         const intersectionObserver = new IntersectionObserver(
           ([entry]) => observer.next(entry.isIntersecting),
           {rootMargin: '0px', threshold: 0},
         )
-        if (ref) intersectionObserver.observe(ref)
+        if (ref?.current && ref.current instanceof HTMLElement) {
+          intersectionObserver.observe(ref.current)
+        }
         return () => intersectionObserver.disconnect()
       })
         .pipe(
