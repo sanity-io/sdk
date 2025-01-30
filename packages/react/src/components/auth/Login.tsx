@@ -1,3 +1,4 @@
+import {Box, Button, Flex, Heading, Spinner, Stack} from '@sanity/ui'
 import {type JSX, Suspense} from 'react'
 
 import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
@@ -8,17 +9,26 @@ import {LoginLayout, type LoginLayoutProps} from './LoginLayout'
  * Renders a list of login options with a loading fallback while providers load.
  *
  * @alpha
+ * @internal
  */
 export function Login({header, footer}: LoginLayoutProps): JSX.Element {
   return (
     <LoginLayout header={header} footer={footer}>
-      <div className="sc-login">
-        <h1 className="sc-login__title">Choose login provider</h1>
+      <Heading as="h6" align="center">
+        Choose login provider:
+      </Heading>
 
-        <Suspense fallback={<div className="sc-login__loading">Loading…</div>}>
-          <Providers />
-        </Suspense>
-      </div>
+      <Suspense
+        fallback={
+          <Box padding={5}>
+            <Flex align="center" justify="center">
+              <Spinner />
+            </Flex>
+          </Box>
+        }
+      >
+        <Providers />
+      </Suspense>
     </LoginLayout>
   )
 }
@@ -27,12 +37,18 @@ function Providers() {
   const loginUrls = useLoginUrls()
 
   return (
-    <div className="sc-login-providers">
+    <Stack space={3} marginY={5}>
       {loginUrls.map(({title, url}) => (
-        <a key={url} href={url}>
-          {title}
-        </a>
+        <Button
+          key={url}
+          as="a"
+          href={url}
+          mode="ghost"
+          text={title}
+          textAlign="center"
+          fontSize={2}
+        ></Button>
       ))}
-    </div>
+    </Stack>
   )
 }

@@ -1,3 +1,4 @@
+import {Button, Heading, Stack, Text} from '@sanity/ui'
 import {useCallback} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
@@ -32,18 +33,13 @@ export function LoginError({
 
   return (
     <LoginLayout header={header} footer={footer}>
-      <div className="sc-login-error">
-        <div className="sc-login-error__content">
-          <h2 className="sc-login-error__title">Authentication Error</h2>
-          <p className="sc-login-error__description">
-            Please try again or contact support if the problem persists.
-          </p>
-        </div>
-
-        <button className="sc-login-error__button" onClick={handleRetry}>
-          Retry
-        </button>
-      </div>
+      <Stack space={5} marginBottom={5}>
+        <Heading as="h6" align="center">
+          Authentication Error
+        </Heading>
+        <Text align="center">Please try again or contact support if the problem persists.</Text>
+        <Button mode="ghost" onClick={handleRetry} text="Retry" fontSize={2} />
+      </Stack>
     </LoginLayout>
   )
 }
