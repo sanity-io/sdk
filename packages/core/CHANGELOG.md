@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.0-alpha.6](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.5...sdk-v0.0.0-alpha.6) (2025-01-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* renames `org` auth scope to `global` ([#187](https://github.com/sanity-io/sdk/issues/187))
+
+### Miscellaneous Chores
+
+* renames `org` auth scope to `global` ([#187](https://github.com/sanity-io/sdk/issues/187)) ([3220d57](https://github.com/sanity-io/sdk/commit/3220d5729c8012ffc47bfa2d75bfca1f2642df76))
+
 ## [0.0.0-alpha.5](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.4...sdk-v0.0.0-alpha.5) (2025-01-28)
 
 ### Bug Fixes
