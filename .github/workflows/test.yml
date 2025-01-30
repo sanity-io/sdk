@@ -43,6 +43,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
+      - name: Configure npm authentication
+        run: echo "${{ secrets.NPMRC }}" > ~/.npmrc
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
