@@ -44,7 +44,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Configure npm authentication
-        run: echo "${{ secrets.NPMRC }}" > ~/.npmrc
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPMRC }}" > ~/.npmrc
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
