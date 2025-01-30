@@ -81,6 +81,7 @@
   "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@sanity/logos": "^2.1.13",
+    "@sanity/os": "^0.2.0",
     "@sanity/sdk": "workspace:*",
     "@sanity/ui": "^2.8.19",
     "react-error-boundary": "^4.1.2",

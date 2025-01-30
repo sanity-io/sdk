@@ -9,6 +9,12 @@ import {LoginCallback} from './LoginCallback'
 import {LoginError, type LoginErrorProps} from './LoginError'
 import {type LoginLayoutProps} from './LoginLayout'
 
+// Only import bridge if we're in an iframe. This assumes that the app is
+// running withing SanityOS if it is in an iframe.
+if (typeof window !== 'undefined' && window.self !== window.top) {
+  import('@sanity/os/bridge')
+}
+
 /**
  * @alpha
  */

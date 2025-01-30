@@ -360,6 +360,9 @@ importers:
       '@sanity/logos':
         specifier: ^2.1.13
         version: 2.1.13(@sanity/color@3.0.6)(react@19.0.0)
+      '@sanity/os':
+        specifier: ^0.2.0
+        version: 0.2.0
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../core
@@ -1372,6 +1375,10 @@ packages:
       '@sanity/color': ^2.0 || ^3.0 || ^3.0.0-beta
       react: ^18.3 || >=19.0.0-rc
 
+  '@sanity/os@0.2.0':
+    resolution: {integrity: sha512-wh/YackZYRtm/UWK73Wx7E4uDxqeet5eDPBdiMrMTdaxwA6S+kS/wO2PAgU5i+hUXNmIACaUoQxqd85H4UhJ4A==}
+    engines: {node: '>=20.0.0'}
+
   '@sanity/pkg-utils@6.12.2':
     resolution: {integrity: sha512-jLy9m5aPQUW7g8PuH5FYZJ8i5vE2s9Bv1aTdFoMFrfNaBYG9TpgoDUT2JlrTS1oFSv2CJz6JIcHylsulqCrF3w==}
     engines: {node: '>=18.17.0'}
@@ -2223,6 +2230,15 @@ packages:
 
   debug@4.3.7:
     resolution: {integrity: sha512-Er2nc/H7RrMXZBFCEim6TCmMk02Z8vLC2Rbi1KEBggpo0fS6l0S1nnapwmIi3yW/+GOJap1Krg4w0Hg80oCqgQ==}
+    engines: {node: '>=6.0'}
+    peerDependencies:
+      supports-color: '*'
+    peerDependenciesMeta:
+      supports-color:
+        optional: true
+
+  debug@4.4.0:
+    resolution: {integrity: sha512-6WTZ/IxCY/T6BALoZHaE4ctp9xm+Z5kY/pzYaCHRFeyVhojxlrm+46y68HA6hr0TcwEssoxNiDEUJQjfPZ/RYA==}
     engines: {node: '>=6.0'}
     peerDependencies:
       supports-color: '*'
@@ -5628,6 +5644,14 @@ snapshots:
       '@sanity/color': 3.0.6
       react: 19.0.0
 
+  '@sanity/os@0.2.0':
+    dependencies:
+      '@sanity/comlink': 2.0.3
+      debug: 4.4.0
+      lodash-es: 4.17.21
+    transitivePeerDependencies:
+      - supports-color
+
   '@sanity/pkg-utils@6.12.2(@types/babel__core@7.20.5)(@types/node@22.12.0)(typescript@5.7.2)':
     dependencies:
       '@babel/core': 7.26.0
@@ -6696,6 +6720,10 @@ snapshots:
     dependencies:
       ms: 2.1.3
 
+  debug@4.4.0:
+    dependencies:
+      ms: 2.1.3
+
   decimal.js@10.4.3: {}
 
   decompress-response@7.0.0:
@@ -6988,7 +7016,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.0(@typescript-eslint/parser@8.18.2(eslint@9.17.0(jiti@2.4.2))(typescript@5.7.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.7.0)(eslint@9.17.0(jiti@2.4.2)):
+  eslint-module-utils@2.12.0(@typescript-eslint/parser@8.18.2(eslint@9.17.0(jiti@2.4.2))(typescript@5.7.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.7.0(eslint-plugin-import@2.31.0)(eslint@9.17.0(jiti@2.4.2)))(eslint@9.17.0(jiti@2.4.2)):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
@@ -7010,7 +7038,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.17.0(jiti@2.4.2)
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.0(@typescript-eslint/parser@8.18.2(eslint@9.17.0(jiti@2.4.2))(typescript@5.7.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.7.0)(eslint@9.17.0(jiti@2.4.2))
+      eslint-module-utils: 2.12.0(@typescript-eslint/parser@8.18.2(eslint@9.17.0(jiti@2.4.2))(typescript@5.7.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.7.0(eslint-plugin-import@2.31.0)(eslint@9.17.0(jiti@2.4.2)))(eslint@9.17.0(jiti@2.4.2))
       hasown: 2.0.2
       is-core-module: 2.15.1
       is-glob: 4.0.3
