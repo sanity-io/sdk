@@ -5,17 +5,17 @@ import {Link} from 'react-router'
 
 import {PageLayout} from '../components/PageLayout'
 
-export function OrgAuthHome({
+export function GlobalAuthHome({
   routes,
 }: {
   routes: {path: string; element: JSX.Element}[]
 }): JSX.Element {
   return (
     <PageLayout
-      title="(WIP) Org Level Authentication"
-      subtitle="Explore organization-level authentication examples"
-      homePath="/org-auth"
-      homeText="Org Auth Home"
+      title="(WIP) Global Level Authentication"
+      subtitle="Explore global-level authentication examples"
+      homePath="/global-auth"
+      homeText="Global Auth Home"
     >
       <AuthBoundary>
         <Flex direction="column" gap={3}>

@@ -123,10 +123,10 @@ export interface AuthConfig {
   /**
    * The authentication scope.
    * If set to 'project', requests are scoped to the project-level.
-   * If set to 'org', requests are scoped to the organization-level.
+   * If set to 'global', requests are scoped to the user access level.
    * Defaults to 'project'.
    */
-  authScope?: 'project' | 'org'
+  authScope?: 'project' | 'global'
 }
 
 /**
@@ -139,7 +139,7 @@ export interface AuthStoreState {
     initialLocationHref: string
     clientFactory: (config: ClientConfig) => SanityClient
     customProviders: AuthConfig['providers']
-    authScope: 'project' | 'org'
+    authScope: 'project' | 'global'
     storageKey: string
     storageArea: Storage | undefined
     apiHost: string | undefined

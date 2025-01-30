@@ -6,9 +6,9 @@ import Frame from './Comlink/Frame'
 import ParentApp from './Comlink/ParentApp'
 import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
 import {DocumentListRoute} from './DocumentCollection/DocumentListRoute'
+import {GlobalAuthHome} from './GlobalAuthentication/GlobalAuthHome'
+import {GlobalInstanceWrapper} from './GlobalAuthentication/GlobalInstanceWrapper'
 import Home from './Home'
-import {OrgAuthHome} from './OrgAuthentication/OrgAuthHome'
-import {OrgInstanceWrapper} from './OrgAuthentication/OrgInstanceWrapper'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProjectInstanceWrapper} from './ProjectAuthentication/ProjectInstanceWrapper'
 import {ProtectedRoute} from './ProtectedRoute'
@@ -45,16 +45,16 @@ export function AppRoutes(): JSX.Element {
         </Route>
       </Route>
 
-      <Route path="/comlink-demo" element={<OrgInstanceWrapper />}>
+      <Route path="/comlink-demo" element={<GlobalInstanceWrapper />}>
         <Route index element={<ParentApp />} />
         {frameRoutes.map((route) => (
           <Route key={route.path} path={route.path} element={route.element} />
         ))}
       </Route>
 
-      <Route path="/org-auth" element={<OrgInstanceWrapper />}>
-        <Route index element={<OrgAuthHome routes={documentCollectionRoutes} />} />
-        <Route element={<ProtectedRoute subPath="/org-auth" />}>
+      <Route path="/global-auth" element={<GlobalInstanceWrapper />}>
+        <Route index element={<GlobalAuthHome routes={documentCollectionRoutes} />} />
+        <Route element={<ProtectedRoute subPath="/global-auth" />}>
           {documentCollectionRoutes.map((route) => (
             <Route key={route.path} path={route.path} element={route.element} />
           ))}
