@@ -22,11 +22,7 @@ export function getDraftId(id: string): string {
 }
 
 export function randomId(): string {
-  return Array.from({length: 8}, () =>
-    Math.floor(Math.random() * 16)
-      .toString(16)
-      .padStart(2, '0'),
-  ).join('')
+  return Array.from({length: 8}, () => Math.floor(Math.random() * 16).toString(16)).join('')
 }
 
 export function hashString(str: string): string {

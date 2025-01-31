@@ -18,6 +18,11 @@ export {
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
+export {useApplyActions} from '../hooks/document/useApplyActions'
+export {useDocument} from '../hooks/document/useDocument'
+export {useDocumentConsistencyStatus} from '../hooks/document/useDocumentConsistencyStatus'
+export {useDocumentEvent} from '../hooks/document/useDocumentEvent'
+export {useEditDocument} from '../hooks/document/useEditDocument'
 export {type DocumentCollection, useDocuments} from '../hooks/documentCollection/useDocuments'
 export {
   usePreview,

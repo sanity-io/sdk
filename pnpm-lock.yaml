@@ -296,6 +296,9 @@ importers:
       '@sanity/comlink':
         specifier: ^2.0.2
         version: 2.0.5
+      '@sanity/diff-match-patch':
+        specifier: ^3.2.0
+        version: 3.2.0
       '@sanity/schema':
         specifier: ^3.67.1
         version: 3.68.3(@types/react@19.0.8)
@@ -366,6 +369,9 @@ importers:
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../core
+      '@sanity/types':
+        specifier: ^3.67.1
+        version: 3.68.3(@types/react@19.0.8)
       '@sanity/ui':
         specifier: ^2.8.19
         version: 2.10.12(@emotion/is-prop-valid@1.2.2)(react-dom@19.0.0(react@19.0.0))(react-is@18.3.1)(react@19.0.0)(styled-components@6.1.13(react-dom@19.0.0(react@19.0.0))(react@19.0.0))
@@ -1236,6 +1242,10 @@ packages:
   '@sanity/comlink@2.0.5':
     resolution: {integrity: sha512-6Rbg71hkeoGInk/9hBsCUBCZ33IHSs2fZynAR85ANkXDM+WYiwRDlker7OngBkfbK8TF9+G797VjNMQQgJINiQ==}
     engines: {node: '>=18'}
+
+  '@sanity/diff-match-patch@3.2.0':
+    resolution: {integrity: sha512-4hPADs0qUThFZkBK/crnfKKHg71qkRowfktBljH2UIxGHHTxIzt8g8fBiXItyCjxkuNy+zpYOdRMifQNv8+Yww==}
+    engines: {node: '>=18.18'}
 
   '@sanity/eventsource@5.0.2':
     resolution: {integrity: sha512-/B9PMkUvAlUrpRq0y+NzXgRv5lYCLxZNsBJD2WXVnqZYOfByL9oQBV7KiTaARuObp5hcQYuPfOAVjgXe3hrixA==}
@@ -5469,6 +5479,8 @@ snapshots:
       rxjs: 7.8.1
       uuid: 11.0.5
       xstate: 5.19.2
+
+  '@sanity/diff-match-patch@3.2.0': {}
 
   '@sanity/eventsource@5.0.2':
     dependencies:

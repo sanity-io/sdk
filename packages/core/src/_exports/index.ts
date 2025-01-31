@@ -45,7 +45,7 @@ export {fetchLoginUrls} from '../auth/fetchLoginUrls'
 export {handleCallback} from '../auth/handleCallback'
 export {logout} from '../auth/logout'
 export {type SchemaConfig} from '../schema/schemaManager'
-export type {CurrentUser, Role} from '@sanity/types'
+export type {CurrentUser, Role, SanityDocumentLike} from '@sanity/types'
 
 /** PREVIEW */
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
@@ -62,3 +62,38 @@ export {getOrCreateNode} from '../comlink/node/actions/getOrCreateNode'
 export {releaseNode} from '../comlink/node/actions/releaseNode'
 export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'
+
+/** DOCUMENT */
+export {
+  createDocument,
+  type CreateDocumentAction,
+  deleteDocument,
+  type DeleteDocumentAction,
+  discardDocument,
+  type DiscardDocumentAction,
+  type DocumentAction,
+  editDocument,
+  type EditDocumentAction,
+  publishDocument,
+  type PublishDocumentAction,
+  unpublishDocument,
+  type UnpublishDocumentAction,
+} from '../document/actions'
+export {type ActionResult, applyActions} from '../document/applyActions'
+export {createPatchFromDiff} from '../document/createPatchFromDiff'
+export {
+  type ActionErrorEvent,
+  type DocumentCreatedEvent,
+  type DocumentDeletedEvent,
+  type DocumentDiscardedEvent,
+  type DocumentEditedEvent,
+  type DocumentEvent,
+  type DocumentPublishedEvent,
+  type DocumentUnpublishedEvent,
+  getDocumentConsistencyStatus,
+  getDocumentState,
+  resolveDocument,
+  type TransactionRevertedEvent,
+  type TransactionSubmittedEvent,
+} from '../document/documentStore'
+export {subscribeDocumentEvents} from '../document/subscribeDocumentEvents'
