@@ -16,6 +16,12 @@ import {
   unset,
 } from './patchOperations'
 
+/**
+ * Represents a set of document that will go into `applyMutations`. Before
+ * applying a mutation, it's expected that all relevant documents that the
+ * mutations affect are included, including those that do not exist yet.
+ * Documents that don't exist have a `null` value.
+ */
 export type DocumentSet = {[TDocumentId in string]?: SanityDocument | null}
 
 type SupportPatchOperation = Exclude<keyof PatchOperations, 'merge'>
@@ -57,13 +63,31 @@ export function getId(id?: string): string {
 }
 
 export interface ApplyMutationsOptions {
+  /**
+   * The transaction ID that will become the next `_rev` for documents mutated
+   * by the given mutations.
+   */
   transactionId: string
+  /**
+   * The input document set that the mutations will be applied to.
+   */
   documents: DocumentSet
+  /**
+   * A list of mutations to apply to the given document set.
+   */
   mutations: Mutation[]
+  /**
+   * An optional timestamp that will be used for `_createdAt` and `_updatedAt`
+   * timestamp when applicable.
+   */
+  timestamp?: string
 }
 
-function getDocumentIds(selection: MutationSelection) {
+export function getDocumentIds(selection: MutationSelection): string[] {
   if ('id' in selection) {
+    // NOTE: the `MutationSelection` type within `@sanity/client` (instead of
+    // `@sanity/types`) allows for the ID field to be an array of strings so we
+    // support that as well
     const array = Array.isArray(selection.id) ? selection.id : [selection.id]
     const ids = array.filter((id): id is string => typeof id === 'string')
     return Array.from(new Set(ids))
@@ -76,26 +100,53 @@ function getDocumentIds(selection: MutationSelection) {
   return []
 }
 
+/**
+ * Applies the given mutation to the given document set. Note, it is expected
+ * that all relevant documents that the mutations affect should be within the
+ * given `document` set. If a document does not exist, it should have the value
+ * `null`. If a document is deleted as a result of the mutations, it will still
+ * have its document ID present in the returns documents, but it will have a
+ * value of `null`.
+ *
+ * The given `transactionId` will be used as the resulting `_rev` for documents
+ * affected by the given set of mutations.
+ *
+ * If a `timestamp` is given, that will be used as for the relevant `_updatedAt`
+ * and `_createdAt` timestamps.
+ */
 export function applyMutations({
   documents,
   mutations,
   transactionId,
+  timestamp,
 }: ApplyMutationsOptions): DocumentSet {
+  // early return if there are no mutations given
+  if (!mutations.length) return documents
   // early return if there are no documents in the set
   if (!Object.keys(documents).length) return documents
 
   const dataset = {...documents}
+  const now = timestamp || new Date().toISOString()
 
   for (const mutation of mutations) {
     if ('create' in mutation) {
       const id = getId(mutation.create._id)
 
+      if (dataset[id]) {
+        throw new Error(
+          `Cannot create document with \`_id\` \`${id}\` because another document with the same ID already exists.`,
+        )
+      }
+
       const document: SanityDocument = {
-        // we use the `_createdAt` provided by the user if present
-        // abd fallback to these if not present.
-        _createdAt: new Date().toISOString(),
-        _updatedAt: new Date().toISOString(),
-        ...mutation.create,
+        // > `_createdAt` and `_updatedAt` may be submitted and will override
+        // > the default which is of course the current time. This can be used
+        // > to reconstruct a data-set with its timestamp structure intact.
+        // >
+        // > [- source](https://www.sanity.io/docs/http-mutations#c732f27330a4)
+        _createdAt: now,
+        _updatedAt: now,
+        ...mutation.create, // prefer the user's `_createdAt` and `_updatedAt`
         _rev: transactionId,
         _id: id,
       }
@@ -110,11 +161,33 @@ export function applyMutations({
       const prev = dataset[id]
 
       const document: SanityDocument = {
-        // we use the `_createdAt` provided by the user if present
-        // abd fallback to these if not present.
-        _createdAt: prev?._createdAt || new Date().toISOString(),
-        _updatedAt: new Date().toISOString(),
         ...mutation.createOrReplace,
+        // otherwise, if the mutation provided, a `_createdAt` time, use it,
+        // otherwise default to now
+        _createdAt:
+          // if there was an existing document, use the previous `_createdAt`
+          // since we're replacing the current document
+          prev?._createdAt ||
+          // if there was no previous document, then we're creating this
+          // document for the first time so we should use the `_createdAt` from
+          // the mutation if the user included it
+          (typeof mutation.createOrReplace['_createdAt'] === 'string' &&
+            mutation.createOrReplace['_createdAt']) ||
+          // otherwise, default to now
+          now,
+
+        _updatedAt:
+          // if there was an existing document, then set the `_updatedAt` to now
+          // since we're replacing the current document
+          prev
+            ? now
+            : // otherwise, we're creating this document for the first time,
+              // in that case, use the user's `_updatedAt` if included in the
+              // mutation
+              (typeof mutation.createOrReplace['_updatedAt'] === 'string' &&
+                mutation.createOrReplace['_updatedAt']) ||
+              // otherwise default to now
+              now,
         _rev: transactionId,
         _id: id,
       }
@@ -130,10 +203,10 @@ export function applyMutations({
       if (prev) continue
 
       const document: SanityDocument = {
-        // we use the `_createdAt` provided by the user if present
-        // abd fallback to these if not present.
-        _createdAt: new Date().toISOString(),
-        _updatedAt: new Date().toISOString(),
+        // same logic as `create`:
+        // prefer the user's `_createdAt` and `_updatedAt`
+        _createdAt: now,
+        _updatedAt: now,
         ...mutation.createIfNotExists,
         _rev: transactionId,
         _id: id,
@@ -180,7 +253,7 @@ export function applyMutations({
         dataset[result._id] = {
           ...result,
           _rev: transactionId,
-          _updatedAt: new Date().toISOString(),
+          _updatedAt: now,
         }
       }
 
