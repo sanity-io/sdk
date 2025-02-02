@@ -1,3 +1,4 @@
+import {applyPatches, parsePatch} from '@sanity/diff-match-patch'
 import {
   type IndexTuple,
   isKeySegment,
@@ -616,6 +617,51 @@ export function dec({pathExpressionValues, ...restOfOptions}: IncDecOptions): un
         .map(([key, value]) => [key, -value]),
     ),
   })
+}
+
+export interface DiffMatchPatchOptions {
+  input: unknown
+  pathExpressionValues: Record<string, string>
+}
+
+/**
+ * Given an input object and a record of paths to [diff match patches][0], this
+ * function will apply the diff match patch for the string at each match.
+ *
+ * [0]: https://www.sanity.io/docs/http-patches#aTbJhlAJ
+ *
+ * ```js
+ * const output = diffMatchPatch({
+ *   input: { foo: 'the quick brown fox' },
+ *   pathExpressionValues: {
+ *     'foo': '@@ -13,7 +13,7 @@\n own \n-fox\n+cat\n',
+ *   },
+ * });
+ *
+ * // { foo: 'the quick brown cat' }
+ * console.log(output);
+ * ```
+ */
+export function diffMatchPatch<R>(options: DiffMatchPatchOptions): R
+export function diffMatchPatch({input, pathExpressionValues}: DiffMatchPatchOptions): unknown {
+  return Object.entries(pathExpressionValues)
+    .flatMap(([pathExpression, dmp]) =>
+      jsonMatch({input, pathExpression}).map((m) => ({...m, dmp})),
+    )
+    .filter((i) => i.value !== undefined)
+    .map(({path, value, dmp}) => {
+      if (typeof value !== 'string') {
+        throw new Error(
+          `Can't diff-match-patch \`${JSON.stringify(value)}\` at path \`${stringifyPath(path)}\`, because it is not a string`,
+        )
+      }
+
+      return {
+        path,
+        value: applyPatches(parsePatch(dmp), value)[0],
+      }
+    })
+    .reduce((acc, {path, value}) => setDeep({input: acc, path, value}), input)
 }
 
 function isNonNullable<T>(t: T): t is NonNullable<T> {

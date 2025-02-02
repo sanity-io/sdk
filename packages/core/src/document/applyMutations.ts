@@ -1,17 +1,31 @@
-import {applyPatches, parsePatch} from '@sanity/diff-match-patch'
 import {type Mutation, type MutationSelection, type SanityDocument} from '@sanity/types'
 
-import {dec, inc, insert, jsonMatch, set, setDeep, setIfMissing, unset} from './patchOperations'
+import {dec, diffMatchPatch, inc, insert, set, setIfMissing, unset} from './patchOperations'
 
 export type DocumentSet = {[TDocumentId in string]?: SanityDocument | null}
 
-function getId(id?: string) {
+/**
+ * Implements ID generation:
+ *
+ * A create mutation creates a new document. It takes the literal document
+ * content as its argument. The rules for the new document's identifier are as
+ * follows:
+ *
+ * - If the `_id` attribute is missing, then a new, random, unique ID is
+ *   generated.
+ * - If the `_id` attribute is present but ends with `.`, then it is used as a
+ *   prefix for a new, random, unique ID.
+ * - If the _id attribute is present, it is used as-is.
+ *
+ * [- source](https://www.sanity.io/docs/http-mutations#c732f27330a4)
+ */
+export function getId(id?: string): string {
   if (typeof id !== 'string') return crypto.randomUUID()
   if (id.endsWith('.')) return `${id}${crypto.randomUUID()}`
   return id
 }
 
-interface ApplyMutationsOptions {
+export interface ApplyMutationsOptions {
   transactionId: string
   documents: DocumentSet
   mutations: Mutation[]
@@ -148,26 +162,7 @@ export function applyMutations({
         }
 
         if (patch.diffMatchPatch) {
-          input = Object.entries(patch.diffMatchPatch)
-            .flatMap(([pathExpression, dmp]) =>
-              jsonMatch({input, pathExpression}).map((m) => ({
-                ...m,
-                dmp,
-              })),
-            )
-            .map(({path, value, dmp}) => {
-              if (typeof value !== 'string') {
-                throw new Error(
-                  `Can't diff-match-patch \`${JSON.stringify(path)}\`, because it is not a string`,
-                )
-              }
-
-              return {
-                path,
-                value: applyPatches(parsePatch(dmp), value)[0],
-              }
-            })
-            .reduce((acc, {path, value}) => setDeep({input: acc, path, value}), input)
+          input = diffMatchPatch({input, pathExpressionValues: patch.diffMatchPatch})
         }
 
         input = {

@@ -3,6 +3,7 @@ import {describe, expect, it} from 'vitest'
 
 import {
   dec,
+  diffMatchPatch,
   getDeep,
   getIndexForKey,
   inc,
@@ -1028,5 +1029,73 @@ describe('insert', () => {
       items: ['!'],
     })
     expect(output).toEqual(input)
+  })
+})
+
+describe('diffMatchPatch', () => {
+  it('applies a diff-match-patch to a string property', () => {
+    const input = {foo: 'the quick brown fox'}
+    const patch = '@@ -13,7 +13,7 @@\n own \n-fox\n+cat\n'
+    const output = diffMatchPatch({
+      input,
+      pathExpressionValues: {
+        foo: patch,
+      },
+    })
+    expect(output).toEqual({foo: 'the quick brown cat'})
+  })
+
+  it('throws an error when the matched value is not a string', () => {
+    const input = {foo: 123}
+    const patch = '@@ -1,3 +1,3 @@\n-123\n+456\n'
+    expect(() =>
+      diffMatchPatch({
+        input,
+        pathExpressionValues: {foo: patch},
+      }),
+    ).toThrowError(/Can't diff-match-patch/)
+  })
+
+  it('applies a diff-match-patch to multiple array elements', () => {
+    // Given an array with two identical strings ("cat"),
+    // change them both to "dog" using a patch applied via a wildcard path.
+    const input = {foo: ['cat', 'cat']}
+    const patch = '@@ -1,3 +1,3 @@\n-cat\n+dog\n'
+    const output = diffMatchPatch({
+      input,
+      pathExpressionValues: {
+        'foo[:]': patch,
+      },
+    })
+    expect(output).toEqual({foo: ['dog', 'dog']})
+  })
+
+  it('returns the input unchanged if no match is found', () => {
+    const input = {foo: 'hello'}
+    const patch = '@@ -1,5 +1,5 @@\n hello\n'
+    // "bar" does not match any property in the input.
+    const output = diffMatchPatch({
+      input,
+      pathExpressionValues: {
+        bar: patch,
+      },
+    })
+    expect(output).toEqual(input)
+  })
+
+  it('applies a diff-match-patch that makes no changes', () => {
+    // Even if the patch is applied, if it does not change the content,
+    // the original string should remain.
+    const input = {foo: 'unchanged'}
+    // This patch is constructed so that the diff yields no changes.
+    // (Depending on the diff-match-patch library, an identity patch might be produced.)
+    const patch = '@@ -1,9 +1,9 @@\n unchanged\n'
+    const output = diffMatchPatch({
+      input,
+      pathExpressionValues: {
+        foo: patch,
+      },
+    })
+    expect(output).toEqual({foo: 'unchanged'})
   })
 })
