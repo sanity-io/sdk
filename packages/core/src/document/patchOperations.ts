@@ -8,16 +8,6 @@ import {
 
 export type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
 
-export interface MatchOptions {
-  input: unknown
-  pathExpression: string
-}
-
-export interface MatchEntry {
-  value: unknown
-  path: SingleValuePath
-}
-
 function parseBracketContent(content: string): PathSegment {
   // 1) Range match:  ^(\d*):(\d*)$
   //    - start or end can be empty (meaning "start" or "end" of array)
@@ -158,6 +148,16 @@ export function stringifyPath(path: Path): string {
   return result
 }
 
+export interface MatchOptions {
+  input: unknown
+  pathExpression: string
+}
+
+export interface MatchEntry {
+  value: unknown
+  path: SingleValuePath
+}
+
 /**
  * A very simplified implementation of [JSONMatch][0] that only supports:
  * - descent e.g. `friend.name`
@@ -253,13 +253,13 @@ export interface SetOptions {
  *
  * ```js
  * const output = set({
- *   input: { name: { first: '', last: '' } },
+ *   input: { name: { first: 'initial', last: 'initial' } },
  *   pathExpressionValues: {
- *     'name.*': 'changed',
+ *     'name.first': 'changed',
  *   },
  * });
  *
- * // { name: { first: 'changed', second: 'changed' } }
+ * // { name: { first: 'changed', second: 'initial' } }
  * console.log(output);
  * ```
  */
@@ -298,13 +298,13 @@ export interface SetIfMissingOptions {
  *
  * ```js
  * const output = setIfMissing({
- *   input: { name: { first: 'same', last: null } },
+ *   input: { items: [null, 'initial'] },
  *   pathExpressionValues: {
- *     'name.*': 'changed',
+ *     'items[:]': 'changed',
  *   },
  * });
  *
- * // { name: { first: 'same', second: 'changed' } }
+ * // { items: ['changed', 'initial'] }
  * console.log(output);
  * ```
  */
@@ -341,10 +341,10 @@ export interface UnsetOptions {
  * ```js
  * const output = unset({
  *   input: { name: { first: 'one', last: 'two' } },
- *   pathExpressions: ['name.*'],
+ *   pathExpressions: ['name.last'],
  * });
  *
- * // { name: { } }
+ * // { name: { first: 'one' } }
  * console.log(output);
  * ```
  */
@@ -370,44 +370,48 @@ export type InsertOptions = {
  * Given an input object, a path expression, and an array of items, this
  * function will either insert or replace the matched items.
  *
- * ```js
- * // insert before
- * const output = insert({
- *   input: { some: { array: ['a', 'b', 'c'] } },
- *   before: 'some.array[2]',
- *   items: ['!'],
- * });
+ * Insert before:
  *
+ * ```js
+ * const input = {some: {array: ['a', 'b', 'c']}}
+ * const output = insert({
+ *   input,
+ *   before: 'some.array[1]',
+ *   items: ['!'],
+ * })
+ * // { some: { array: ['a', '!', 'b', 'c'] } }
+ * console.log(output)
+ * ```
+ *
+ * Insert before with negative index (append):
+ *
+ * ```js
+ * const input = {some: {array: ['a', 'b', 'c']}}
+ * const output = insert({
+ *   input,
+ *   before: 'some.array[-1]',
+ *   items: ['!'],
+ * })
  * // { some: { array: ['a', 'b', 'c', '!'] } }
- * console.log(output);
+ * console.log(output)
  * ```
  *
+ * Insert after:
+ *
  * ```js
- * // append
+ * const input = {some: {array: ['a', 'b', 'c']}}
  * const output = insert({
- *   input: { some: { array: ['a', 'b', 'c'] } },
- *   before: 'some.array[-1]', // negative index for add to the end
+ *   input,
+ *   after: 'some.array[1]',
  *   items: ['!'],
- * });
- *
- * // { some: { array: ['a', 'b', 'c', '!'] } }
- * console.log(output);
+ * })
+ * // { some: { array: ['a', 'b', '!', 'c'] } }
+ * console.log(output)
  * ```
  *
- * ```js
- * // prepend
- * const output = insert({
- *   input: { some: { array: ['a', 'b', 'c'] } },
- *   before: 'some.array[0]',
- *   items: ['!'],
- * });
- *
- * // { some: { array: ['!', 'a', 'b', 'c'] } }
- * console.log(output);
- * ```
+ * Replace:
  *
  * ```js
- * // replace
  * const output = insert({
  *   input: { some: { array: ['a', 'b', 'c'] } },
  *   replace: 'some.array[1]',
@@ -417,6 +421,20 @@ export type InsertOptions = {
  * // { some: { array: ['a', '!', 'c'] } }
  * console.log(output);
  * ```
+ *
+ * Replace many:
+ *
+ * ```js
+ * const input = {some: {array: ['a', 'b', 'c', 'd']}}
+ * const output = insert({
+ *   input,
+ *   // Using a range expression that matches indices 1 and 2.
+ *   replace: 'some.array[1:3]',
+ *   items: ['!', '?'],
+ * })
+ * // { some: { array: ['a', '!', '?', 'd'] } }
+ * console.log(output)
+ * ```
  */
 export function insert<R>(options: InsertOptions): R
 export function insert({input, items, ...restOfInsertOptions}: InsertOptions): unknown {
@@ -425,100 +443,98 @@ export function insert({input, items, ...restOfInsertOptions}: InsertOptions): u
 
   const pathExpression = (restOfInsertOptions as {[P in Operation]: string})[operation]
 
-  interface ArrayMatchEntry {
+  // Helper to normalize a matched index given the parent array’s length.
+  function normalizeIndex(index: number, parentLength: number): number {
+    switch (operation) {
+      case 'before':
+        // A negative index means “append” (i.e. insert before a hypothetical element
+        // beyond the end of the array).
+        return index < 0 ? parentLength : index
+      case 'after':
+        // For "after", if the matched index is negative, we treat it as “prepend”:
+        // by convention, we convert it to -1 so that later adding 1 produces 0.
+        return index < 0 ? -1 : index
+      default: // default to 'replace'
+        // For replace, convert a negative index to the corresponding positive one.
+        return index < 0 ? parentLength + index : index
+    }
+  }
+
+  // Group the matched array entries by their parent array.
+  interface GroupEntry {
     array: unknown[]
     pathToArray: SingleValuePath
     indexes: number[]
   }
+  const grouped = new Map<unknown, GroupEntry>()
+  jsonMatch({input, pathExpression})
+    .map(({path}) => {
+      const segment = path[path.length - 1]
+      let index: number | undefined
+      if (isKeySegment(segment)) {
+        index = getIndexForKey(input, segment._key)
+      } else if (typeof segment === 'number') {
+        index = segment
+      }
+      if (typeof index !== 'number') return null
 
-  const arrayMatchEntries = Array.from(
-    jsonMatch({input, pathExpression})
-      .map(({path}) => {
-        const segment = path[path.length - 1]
-        let index
-        if (isKeySegment(segment)) {
-          index = getIndexForKey(input, segment._key)
-        } else if (typeof segment === 'number') {
-          index = segment
-        }
-        if (typeof index !== 'number') return null
+      const parentPath = path.slice(0, path.length - 1)
+      const parent = getDeep({input, path: parentPath})
+      if (!Array.isArray(parent)) return null
 
-        const parentPath = path.slice(0, path.length - 1)
-        const parent = getDeep({input, path: parentPath})
-        if (!Array.isArray(parent)) return null
+      const normalizedIndex = normalizeIndex(index, parent.length)
+      return {parent, parentPath, normalizedIndex}
+    })
+    .filter(isNonNullable)
+    .forEach(({parent, parentPath, normalizedIndex}) => {
+      if (grouped.has(parent)) {
+        grouped.get(parent)!.indexes.push(normalizedIndex)
+      } else {
+        grouped.set(parent, {array: parent, pathToArray: parentPath, indexes: [normalizedIndex]})
+      }
+    })
 
-        return {
-          array: parent,
-          pathToArray: parentPath,
-          index,
-        }
-      })
-      .filter(isNonNullable)
-      // group all matches by their parent array, aggregating indexes
-      .reduce<Map<unknown, ArrayMatchEntry>>((acc, next) => {
-        const key = next.array
-        const prev = acc.get(key)
-
-        acc.set(key, {
-          array: next.array,
-          indexes: [...(prev?.indexes || []), next.index],
-          pathToArray: next.pathToArray,
-        })
-
-        return acc
-      }, new Map())
-      .values(),
-  ).map((entry) => ({
+  // Sort the indexes for each grouped entry.
+  const groupEntries = Array.from(grouped.values()).map((entry) => ({
     ...entry,
-    // ensure sorted
-    indexes: entry.indexes.sort(),
+    indexes: entry.indexes.sort((a, b) => a - b),
   }))
 
-  return arrayMatchEntries.reduce<unknown>((acc, {array, indexes, pathToArray}) => {
+  // For each group, update the parent array using setDeep.
+  return groupEntries.reduce<unknown>((acc, {array, indexes, pathToArray}) => {
     switch (operation) {
       case 'before': {
+        // Insert items before the first matched index.
         const firstIndex = indexes[0]
-        const indexBeforeFirstIndex = firstIndex
-
         return setDeep({
           input: acc,
           path: pathToArray,
-          value: [
-            ...array.slice(0, indexBeforeFirstIndex),
-            ...items,
-            ...array.slice(indexBeforeFirstIndex),
-          ],
+          value: [...array.slice(0, firstIndex), ...items, ...array.slice(firstIndex)],
         })
       }
       case 'after': {
+        // Insert items after the last matched index.
         const lastIndex = indexes[indexes.length - 1] + 1
-
         return setDeep({
           input: acc,
           path: pathToArray,
           value: [...array.slice(0, lastIndex), ...items, ...array.slice(lastIndex)],
         })
       }
-      case 'replace': {
-        // replace is interesting because the indexes don't have to be
-        // consecutive. the behavior is then defined as:
-        // 1. delete all matching items in the array
-        // 2. insert the rest of the items at the first matching index
+      // default to 'replace' behavior
+      default: {
+        // Remove all matched items then insert the new items at the first match.
         const firstIndex = indexes[0]
         const indexSet = new Set(indexes)
-
         return setDeep({
           input: acc,
           path: pathToArray,
           value: [
             ...array.slice(0, firstIndex),
             ...items,
-            ...array.slice(firstIndex).filter((_, index) => !indexSet.has(index + firstIndex)),
+            ...array.slice(firstIndex).filter((_, idx) => !indexSet.has(idx + firstIndex)),
           ],
         })
-      }
-      default: {
-        return acc
       }
     }
   }, input)
@@ -537,11 +553,12 @@ export interface IncDecOptions {
  * const output = inc({
  *   input: { foo: { first: 3, second: 4.5 } },
  *   pathExpressionValues: {
- *     'foo.*': 3,
+ *     'foo.first': 3,
+ *     'foo.second': 4,
  *   },
  * });
  *
- * // { foo: { first: 6, second: 7.5 } }
+ * // { foo: { first: 6, second: 8.5 } }
  * console.log(output);
  * ```
  */
@@ -580,11 +597,12 @@ export function inc({input, pathExpressionValues}: IncDecOptions): unknown {
  * const output = dec({
  *   input: { foo: { first: 3, second: 4.5 } },
  *   pathExpressionValues: {
- *     'foo.*': 3,
+ *     'foo.first': 3,
+ *     'foo.second': 4,
  *   },
  * });
  *
- * // { foo: { first: 0, second: 1.5 } }
+ * // { foo: { first: 0, second: 0.5 } }
  * console.log(output);
  * ```
  */
@@ -598,11 +616,6 @@ export function dec({pathExpressionValues, ...restOfOptions}: IncDecOptions): un
         .map(([key, value]) => [key, -value]),
     ),
   })
-}
-
-export interface GetDeepOptions {
-  input: unknown
-  path: SingleValuePath
 }
 
 function isNonNullable<T>(t: T): t is NonNullable<T> {
@@ -624,16 +637,20 @@ export function getIndexForKey(input: unknown, key: string): number | undefined 
   return lookup[key]
 }
 
+export interface GetDeepOptions {
+  input: unknown
+  path: SingleValuePath
+}
+
 /**
  * Gets a value deep inside of an object given a path. If the path does not
- * exist in the object, `undefined` will be returned
+ * exist in the object, `undefined` will be returned.
  */
 export function getDeep<R>(options: GetDeepOptions): R
 export function getDeep({input, path}: GetDeepOptions): unknown {
   const [currentSegment, ...restOfPath] = path
   if (currentSegment === undefined) return input
-  if (typeof input !== 'object') return undefined
-  if (input === null) return undefined
+  if (typeof input !== 'object' || input === null) return undefined
 
   let key
   if (isKeySegment(currentSegment)) {
@@ -645,7 +662,13 @@ export function getDeep({input, path}: GetDeepOptions): unknown {
   }
 
   if (key === undefined) return undefined
-  const nestedInput = (input as Record<string, unknown>)[key]
+
+  // Use .at() to support negative indexes on arrays.
+  const nestedInput =
+    typeof key === 'number' && Array.isArray(input)
+      ? input.at(key)
+      : (input as Record<string, unknown>)[key]
+
   return getDeep({input: nestedInput, path: restOfPath})
 }
 
@@ -664,6 +687,7 @@ export function setDeep({input, path, value}: SetDeepOptions): unknown {
   const [currentSegment, ...restOfPath] = path
   if (currentSegment === undefined) return value
 
+  // If the current input is not an object, create a new container.
   if (typeof input !== 'object' || input === null) {
     if (typeof currentSegment === 'string') {
       return {
@@ -675,23 +699,19 @@ export function setDeep({input, path, value}: SetDeepOptions): unknown {
       }
     }
 
-    let index
+    let index: number | undefined
     if (isKeySegment(currentSegment)) {
-      // if our input is not an array and our path segment is a keyed segment
-      // set the index to 0
+      // When creating a new array via a keyed segment, use index 0.
       index = 0
     } else if (typeof currentSegment === 'number' && currentSegment >= 0) {
       index = currentSegment
     } else {
+      // For negative numbers in a non‐object we simply return input.
       return input
     }
 
     return [
-      // fill the start of this array with null values
-      ...Array.from({
-        length: index,
-      }).fill(null),
-      // then set the index of the currentSegment with the new value
+      ...Array.from({length: index}).fill(null),
       setDeep({
         input: null,
         path: restOfPath,
@@ -700,22 +720,21 @@ export function setDeep({input, path, value}: SetDeepOptions): unknown {
     ]
   }
 
+  // When input is an array…
   if (Array.isArray(input)) {
-    let index
+    let index: number | undefined
     if (isKeySegment(currentSegment)) {
       index = getIndexForKey(input, currentSegment._key)
     } else if (typeof currentSegment === 'number') {
-      index = currentSegment
+      // Support negative indexes by computing the proper positive index.
+      index = currentSegment < 0 ? input.length + currentSegment : currentSegment
     }
     if (index === undefined) return input
 
-    // TODO: support negative indexes
-    // e.g. to get the last value
-    if (index < 0) return input
-
     if (index in input) {
+      // Update the element at the resolved index.
       return input.map((nestedInput, i) =>
-        currentSegment === i
+        i === index
           ? setDeep({
               input: nestedInput,
               path: restOfPath,
@@ -725,14 +744,10 @@ export function setDeep({input, path, value}: SetDeepOptions): unknown {
       )
     }
 
+    // Expand the array if needed.
     return [
-      // copy the values from the current array
       ...input,
-      // then fill with null values up until the index
-      ...Array.from({
-        length: index - input.length,
-      }).fill(null),
-      // then set the index with the new value
+      ...Array.from({length: index - input.length}).fill(null),
       setDeep({
         input: null,
         path: restOfPath,
@@ -741,10 +756,10 @@ export function setDeep({input, path, value}: SetDeepOptions): unknown {
     ]
   }
 
-  // at this point, it's not valid input if the segment is a keyed segment
+  // For keyed segments that aren’t arrays, do nothing.
   if (typeof currentSegment === 'object') return input
 
-  // the current segment exists in the object so reuse it
+  // For plain objects, update an existing property if it exists…
   if (currentSegment in input) {
     return Object.fromEntries(
       Object.entries(input).map(([key, nestedInput]) =>
@@ -755,7 +770,7 @@ export function setDeep({input, path, value}: SetDeepOptions): unknown {
     )
   }
 
-  // the current segment doesn't exist in the object so create the path
+  // ...otherwise create the new nested path.
   return {
     ...input,
     [currentSegment]: setDeep({
@@ -778,22 +793,25 @@ export interface UnsetDeepOptions {
 export function unsetDeep<R>(options: UnsetDeepOptions): R
 export function unsetDeep({input, path}: UnsetDeepOptions): unknown {
   const [currentSegment, ...restOfPath] = path
-
   if (currentSegment === undefined) return input
-  if (typeof input !== 'object') return input
-  if (input === null) return input
+  if (typeof input !== 'object' || input === null) return input
 
-  let _segment
+  let _segment: string | number | undefined
   if (isKeySegment(currentSegment)) {
     _segment = getIndexForKey(input, currentSegment._key)
   } else if (typeof currentSegment === 'string' || typeof currentSegment === 'number') {
     _segment = currentSegment
   }
   if (_segment === undefined) return input
-  // TODO: support negative indexes
-  if (!(_segment in input)) return input
-  const segment = _segment
 
+  // For numeric segments in arrays, compute the positive index.
+  let segment: string | number = _segment
+  if (typeof segment === 'number' && Array.isArray(input)) {
+    segment = segment < 0 ? input.length + segment : segment
+  }
+  if (!(segment in input)) return input
+
+  // If we're at the final segment, remove the property/element.
   if (!restOfPath.length) {
     if (Array.isArray(input)) {
       return input.filter((_nestedInput, index) => index !== segment)
@@ -801,6 +819,7 @@ export function unsetDeep({input, path}: UnsetDeepOptions): unknown {
     return Object.fromEntries(Object.entries(input).filter(([key]) => key !== segment.toString()))
   }
 
+  // Otherwise, recurse into the nested value.
   if (Array.isArray(input)) {
     return input.map((nestedInput, index) =>
       index === segment ? unsetDeep({input: nestedInput, path: restOfPath}) : nestedInput,
