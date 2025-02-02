@@ -1,8 +1,39 @@
-import {type Mutation, type MutationSelection, type SanityDocument} from '@sanity/types'
+import {
+  type Mutation,
+  type MutationSelection,
+  type PatchOperations,
+  type SanityDocument,
+} from '@sanity/types'
 
-import {dec, diffMatchPatch, inc, insert, set, setIfMissing, unset} from './patchOperations'
+import {
+  dec,
+  diffMatchPatch,
+  ifRevisionID,
+  inc,
+  insert,
+  set,
+  setIfMissing,
+  unset,
+} from './patchOperations'
 
 export type DocumentSet = {[TDocumentId in string]?: SanityDocument | null}
+
+type SupportPatchOperation = Exclude<keyof PatchOperations, 'merge'>
+const patchOperations = {
+  dec,
+  diffMatchPatch,
+  inc,
+  insert,
+  set,
+  setIfMissing,
+  unset,
+  ifRevisionID,
+} satisfies {
+  [K in SupportPatchOperation]: (
+    input: unknown,
+    pathExpressions: NonNullable<PatchOperations[K]>,
+  ) => unknown
+}
 
 /**
  * Implements ID generation:
@@ -60,11 +91,13 @@ export function applyMutations({
       const id = getId(mutation.create._id)
 
       const document: SanityDocument = {
+        // we use the `_createdAt` provided by the user if present
+        // abd fallback to these if not present.
+        _createdAt: new Date().toISOString(),
+        _updatedAt: new Date().toISOString(),
         ...mutation.create,
         _rev: transactionId,
         _id: id,
-        _createdAt: new Date().toISOString(),
-        _updatedAt: new Date().toISOString(),
       }
 
       dataset[id] = document
@@ -77,11 +110,13 @@ export function applyMutations({
       const prev = dataset[id]
 
       const document: SanityDocument = {
+        // we use the `_createdAt` provided by the user if present
+        // abd fallback to these if not present.
+        _createdAt: prev?._createdAt || new Date().toISOString(),
+        _updatedAt: new Date().toISOString(),
         ...mutation.createOrReplace,
         _rev: transactionId,
         _id: id,
-        _createdAt: prev?._createdAt || new Date().toISOString(),
-        _updatedAt: new Date().toISOString(),
       }
 
       dataset[id] = document
@@ -95,11 +130,13 @@ export function applyMutations({
       if (prev) continue
 
       const document: SanityDocument = {
+        // we use the `_createdAt` provided by the user if present
+        // abd fallback to these if not present.
+        _createdAt: new Date().toISOString(),
+        _updatedAt: new Date().toISOString(),
         ...mutation.createIfNotExists,
         _rev: transactionId,
         _id: id,
-        _createdAt: new Date().toISOString(),
-        _updatedAt: new Date().toISOString(),
       }
 
       dataset[id] = document
@@ -124,58 +161,27 @@ export function applyMutations({
           throw new Error(`Cannot patch document with ID \`${id}\` because it was not found.`)
         }
 
-        let input = dataset[id]
+        type Entries<T> = {[K in keyof T]: [K, T[K]]}[keyof T][]
+        const entries = Object.entries(patchOperations) as Entries<typeof patchOperations>
 
-        if (patch.ifRevisionID) {
-          if (patch.ifRevisionID !== input._rev) {
-            throw new Error(
-              `Patch's revision ID \`${patch.ifRevisionID}\` does not match document's revision ID \`${input._rev}\``,
+        return entries.reduce((acc, [type, operation]) => {
+          if (patch[type]) {
+            return operation(
+              acc,
+              // @ts-expect-error TS doesn't handle this union very well
+              patch[type],
             )
           }
-        }
-
-        if (patch.inc) {
-          input = inc({input, pathExpressionValues: patch.inc})
-        }
-
-        if (patch.dec) {
-          input = dec({input, pathExpressionValues: patch.dec})
-        }
-
-        if (patch.insert) {
-          input = insert({input, ...patch.insert})
-        }
-
-        if (patch.set) {
-          input = set({input, pathExpressionValues: patch.set})
-        }
-
-        if (patch.setIfMissing) {
-          input = setIfMissing({
-            input,
-            pathExpressionValues: patch.setIfMissing,
-          })
-        }
-
-        if (patch.unset) {
-          input = unset({input, pathExpressions: patch.unset})
-        }
-
-        if (patch.diffMatchPatch) {
-          input = diffMatchPatch({input, pathExpressionValues: patch.diffMatchPatch})
-        }
-
-        input = {
-          ...input,
-          _updatedAt: new Date().toISOString(),
-          _rev: transactionId,
-        }
-
-        return input
+          return acc
+        }, dataset[id])
       })
 
       for (const result of patched) {
-        dataset[result._id] = result
+        dataset[result._id] = {
+          ...result,
+          _rev: transactionId,
+          _updatedAt: new Date().toISOString(),
+        }
       }
 
       continue

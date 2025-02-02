@@ -1,6 +1,7 @@
 import {applyPatches, parsePatch} from '@sanity/diff-match-patch'
 import {
   type IndexTuple,
+  type InsertPatch,
   isKeySegment,
   type KeyedSegment,
   type Path,
@@ -149,12 +150,7 @@ export function stringifyPath(path: Path): string {
   return result
 }
 
-export interface MatchOptions {
-  input: unknown
-  pathExpression: string
-}
-
-export interface MatchEntry {
+export type MatchEntry = {
   value: unknown
   path: SingleValuePath
 }
@@ -170,8 +166,7 @@ export interface MatchEntry {
  *
  * [0]: https://www.sanity.io/docs/json-match
  */
-
-export function jsonMatch({input, pathExpression}: MatchOptions): MatchEntry[] {
+export function jsonMatch(input: unknown, pathExpression: string): MatchEntry[] {
   return matchRecursive(input, parsePath(pathExpression), [])
 }
 
@@ -243,96 +238,61 @@ function matchRecursive(value: unknown, path: Path, currentPath: SingleValuePath
   return matchRecursive(nextVal, rest, [...currentPath, arrIndex])
 }
 
-export interface SetOptions {
-  input: unknown
-  pathExpressionValues: Record<string, unknown>
-}
-
 /**
  * Given an input object and a record of path expressions to values, this
  * function will set each match with the given value.
  *
  * ```js
- * const output = set({
- *   input: { name: { first: 'initial', last: 'initial' } },
- *   pathExpressionValues: {
- *     'name.first': 'changed',
- *   },
- * });
+ * const output = set(
+ *   {name: {first: 'initial', last: 'initial'}},
+ *   {'name.first': 'changed'}
+ * );
  *
- * // { name: { first: 'changed', second: 'initial' } }
+ * // { name: { first: 'changed', last: 'initial' } }
  * console.log(output);
  * ```
  */
-export function set<R>(options: SetOptions): R
-export function set({input, pathExpressionValues}: SetOptions): unknown {
+export function set<R>(input: unknown, pathExpressionValues: Record<string, unknown>): R
+export function set(input: unknown, pathExpressionValues: Record<string, unknown>): unknown {
   return Object.entries(pathExpressionValues)
     .flatMap(([pathExpression, replacementValue]) =>
-      jsonMatch({
-        input: input,
-        pathExpression,
-      }).map((matchEntry) => ({
+      jsonMatch(input, pathExpression).map((matchEntry) => ({
         ...matchEntry,
         replacementValue,
       })),
     )
-    .reduce(
-      (acc, {path, replacementValue}) =>
-        setDeep({
-          input: acc,
-          path,
-          value: replacementValue,
-        }),
-      input,
-    )
-}
-
-export interface SetIfMissingOptions {
-  input: unknown
-  pathExpressionValues: Record<string, unknown>
+    .reduce((acc, {path, replacementValue}) => setDeep(acc, path, replacementValue), input)
 }
 
 /**
  * Given an input object and a record of path expressions to values, this
- * function will set each match with the given value if the value at the current
- * path is missing. A missing value is either `null` or `undefined`.
+ * function will set each match with the given value **if the value at the current
+ * path is missing** (i.e. `null` or `undefined`).
  *
  * ```js
- * const output = setIfMissing({
- *   input: { items: [null, 'initial'] },
- *   pathExpressionValues: {
- *     'items[:]': 'changed',
- *   },
- * });
+ * const output = setIfMissing(
+ *   {items: [null, 'initial']},
+ *   {'items[:]': 'changed'}
+ * );
  *
  * // { items: ['changed', 'initial'] }
  * console.log(output);
  * ```
  */
-export function setIfMissing<R>(options: SetIfMissingOptions): R
-export function setIfMissing({input, pathExpressionValues}: SetIfMissingOptions): unknown {
+export function setIfMissing<R>(input: unknown, pathExpressionValues: Record<string, unknown>): R
+export function setIfMissing(
+  input: unknown,
+  pathExpressionValues: Record<string, unknown>,
+): unknown {
   return Object.entries(pathExpressionValues)
     .flatMap(([pathExpression, replacementValue]) => {
-      return jsonMatch({input, pathExpression}).map((matchEntry) => ({
+      return jsonMatch(input, pathExpression).map((matchEntry) => ({
         ...matchEntry,
         replacementValue,
       }))
     })
     .filter((matchEntry) => matchEntry.value === null || matchEntry.value === undefined)
-    .reduce(
-      (acc, {path, replacementValue}) =>
-        setDeep({
-          input: acc,
-          path,
-          value: replacementValue,
-        }),
-      input,
-    )
-}
-
-export interface UnsetOptions {
-  input: unknown
-  pathExpressions: string[]
+    .reduce((acc, {path, replacementValue}) => setDeep(acc, path, replacementValue), input)
 }
 
 /**
@@ -340,20 +300,20 @@ export interface UnsetOptions {
  * remove each match from the input object.
  *
  * ```js
- * const output = unset({
- *   input: { name: { first: 'one', last: 'two' } },
- *   pathExpressions: ['name.last'],
- * });
+ * const output = unset(
+ *   {name: {first: 'one', last: 'two'}},
+ *   ['name.last']
+ * );
  *
  * // { name: { first: 'one' } }
  * console.log(output);
  * ```
  */
-export function unset<R>(options: UnsetOptions): R
-export function unset({input, pathExpressions}: UnsetOptions): unknown {
+export function unset<R>(input: unknown, pathExpressions: string[]): R
+export function unset(input: unknown, pathExpressions: string[]): unknown {
   return pathExpressions
-    .flatMap((pathExpression) => jsonMatch({input, pathExpression}))
-    .reduce((acc, {path}) => unsetDeep({input: acc, path}), input)
+    .flatMap((pathExpression) => jsonMatch(input, pathExpression))
+    .reduce((acc, {path}) => unsetDeep(acc, path), input)
 }
 
 const operations = ['before', 'after', 'replace'] as const
@@ -368,81 +328,91 @@ export type InsertOptions = {
 } & OperationEntryObject
 
 /**
- * Given an input object, a path expression, and an array of items, this
- * function will either insert or replace the matched items.
+ * Given an input object, a path expression (inside the insert patch object), and an array of items,
+ * this function will insert or replace the matched items.
  *
- * Insert before:
+ * **Insert before:**
  *
  * ```js
  * const input = {some: {array: ['a', 'b', 'c']}}
- * const output = insert({
+ * const output = insert(
  *   input,
- *   before: 'some.array[1]',
- *   items: ['!'],
- * })
+ *   {
+ *     before: 'some.array[1]',
+ *     items: ['!']
+ *   }
+ * );
  * // { some: { array: ['a', '!', 'b', 'c'] } }
- * console.log(output)
+ * console.log(output);
  * ```
  *
- * Insert before with negative index (append):
+ * **Insert before with negative index (append):**
  *
  * ```js
  * const input = {some: {array: ['a', 'b', 'c']}}
- * const output = insert({
+ * const output = insert(
  *   input,
- *   before: 'some.array[-1]',
- *   items: ['!'],
- * })
+ *   {
+ *     before: 'some.array[-1]',
+ *     items: ['!']
+ *   }
+ * );
  * // { some: { array: ['a', 'b', 'c', '!'] } }
- * console.log(output)
+ * console.log(output);
  * ```
  *
- * Insert after:
+ * **Insert after:**
  *
  * ```js
  * const input = {some: {array: ['a', 'b', 'c']}}
- * const output = insert({
+ * const output = insert(
  *   input,
- *   after: 'some.array[1]',
- *   items: ['!'],
- * })
+ *   {
+ *     after: 'some.array[1]',
+ *     items: ['!']
+ *   }
+ * );
  * // { some: { array: ['a', 'b', '!', 'c'] } }
- * console.log(output)
+ * console.log(output);
  * ```
  *
- * Replace:
+ * **Replace:**
  *
  * ```js
- * const output = insert({
- *   input: { some: { array: ['a', 'b', 'c'] } },
- *   replace: 'some.array[1]',
- *   items: ['!'],
- * });
- *
+ * const output = insert(
+ *   { some: { array: ['a', 'b', 'c'] } },
+ *   {
+ *     replace: 'some.array[1]',
+ *     items: ['!']
+ *   }
+ * );
  * // { some: { array: ['a', '!', 'c'] } }
  * console.log(output);
  * ```
  *
- * Replace many:
+ * **Replace many:**
  *
  * ```js
  * const input = {some: {array: ['a', 'b', 'c', 'd']}}
- * const output = insert({
+ * const output = insert(
  *   input,
- *   // Using a range expression that matches indices 1 and 2.
- *   replace: 'some.array[1:3]',
- *   items: ['!', '?'],
- * })
+ *   {
+ *     replace: 'some.array[1:3]',
+ *     items: ['!', '?']
+ *   }
+ * );
  * // { some: { array: ['a', '!', '?', 'd'] } }
- * console.log(output)
+ * console.log(output);
  * ```
  */
-export function insert<R>(options: InsertOptions): R
-export function insert({input, items, ...restOfInsertOptions}: InsertOptions): unknown {
-  const operation = operations.find((op) => op in restOfInsertOptions)
+export function insert<R>(input: unknown, insertPatch: InsertPatch): R
+export function insert(input: unknown, insertPatch: InsertPatch): unknown {
+  const operation = operations.find((op) => op in insertPatch)
   if (!operation) return input
 
-  const pathExpression = (restOfInsertOptions as {[P in Operation]: string})[operation]
+  const {items} = insertPatch
+  const pathExpression = (insertPatch as {[K in Operation]?: string} & {items: unknown})[operation]
+  if (typeof pathExpression !== 'string') return input
 
   // Helper to normalize a matched index given the parent array’s length.
   function normalizeIndex(index: number, parentLength: number): number {
@@ -468,7 +438,7 @@ export function insert({input, items, ...restOfInsertOptions}: InsertOptions): u
     indexes: number[]
   }
   const grouped = new Map<unknown, GroupEntry>()
-  jsonMatch({input, pathExpression})
+  jsonMatch(input, pathExpression)
     .map(({path}) => {
       const segment = path[path.length - 1]
       let index: number | undefined
@@ -480,7 +450,7 @@ export function insert({input, items, ...restOfInsertOptions}: InsertOptions): u
       if (typeof index !== 'number') return null
 
       const parentPath = path.slice(0, path.length - 1)
-      const parent = getDeep({input, path: parentPath})
+      const parent = getDeep(input, parentPath)
       if (!Array.isArray(parent)) return null
 
       const normalizedIndex = normalizeIndex(index, parent.length)
@@ -507,43 +477,34 @@ export function insert({input, items, ...restOfInsertOptions}: InsertOptions): u
       case 'before': {
         // Insert items before the first matched index.
         const firstIndex = indexes[0]
-        return setDeep({
-          input: acc,
-          path: pathToArray,
-          value: [...array.slice(0, firstIndex), ...items, ...array.slice(firstIndex)],
-        })
+        return setDeep(acc, pathToArray, [
+          ...array.slice(0, firstIndex),
+          ...items,
+          ...array.slice(firstIndex),
+        ])
       }
       case 'after': {
         // Insert items after the last matched index.
         const lastIndex = indexes[indexes.length - 1] + 1
-        return setDeep({
-          input: acc,
-          path: pathToArray,
-          value: [...array.slice(0, lastIndex), ...items, ...array.slice(lastIndex)],
-        })
+        return setDeep(acc, pathToArray, [
+          ...array.slice(0, lastIndex),
+          ...items,
+          ...array.slice(lastIndex),
+        ])
       }
       // default to 'replace' behavior
       default: {
         // Remove all matched items then insert the new items at the first match.
         const firstIndex = indexes[0]
         const indexSet = new Set(indexes)
-        return setDeep({
-          input: acc,
-          path: pathToArray,
-          value: [
-            ...array.slice(0, firstIndex),
-            ...items,
-            ...array.slice(firstIndex).filter((_, idx) => !indexSet.has(idx + firstIndex)),
-          ],
-        })
+        return setDeep(acc, pathToArray, [
+          ...array.slice(0, firstIndex),
+          ...items,
+          ...array.slice(firstIndex).filter((_, idx) => !indexSet.has(idx + firstIndex)),
+        ])
       }
     }
   }, input)
-}
-
-export interface IncDecOptions {
-  input: unknown
-  pathExpressionValues: Record<string, number>
 }
 
 /**
@@ -551,26 +512,20 @@ export interface IncDecOptions {
  * this function will increment each match with the given value.
  *
  * ```js
- * const output = inc({
- *   input: { foo: { first: 3, second: 4.5 } },
- *   pathExpressionValues: {
- *     'foo.first': 3,
- *     'foo.second': 4,
- *   },
- * });
+ * const output = inc(
+ *   {foo: {first: 3, second: 4.5}},
+ *   {'foo.first': 3, 'foo.second': 4}
+ * );
  *
  * // { foo: { first: 6, second: 8.5 } }
  * console.log(output);
  * ```
  */
-export function inc<R>(options: IncDecOptions): R
-export function inc({input, pathExpressionValues}: IncDecOptions): unknown {
+export function inc<R>(input: unknown, pathExpressionValues: Record<string, number>): R
+export function inc(input: unknown, pathExpressionValues: Record<string, number>): unknown {
   return Object.entries(pathExpressionValues)
     .flatMap(([pathExpression, valueToAdd]) =>
-      jsonMatch({
-        input: input,
-        pathExpression,
-      }).map((matchEntry) => ({
+      jsonMatch(input, pathExpression).map((matchEntry) => ({
         ...matchEntry,
         valueToAdd,
       })),
@@ -579,15 +534,7 @@ export function inc({input, pathExpressionValues}: IncDecOptions): unknown {
       <T extends {value: unknown}>(matchEntry: T): matchEntry is T & {value: number} =>
         typeof matchEntry.value === 'number',
     )
-    .reduce(
-      (acc, {path, value, valueToAdd}) =>
-        setDeep({
-          input: acc,
-          path,
-          value: value + valueToAdd,
-        }),
-      input,
-    )
+    .reduce((acc, {path, value, valueToAdd}) => setDeep(acc, path, value + valueToAdd), input)
 }
 
 /**
@@ -595,33 +542,25 @@ export function inc({input, pathExpressionValues}: IncDecOptions): unknown {
  * this function will decrement each match with the given value.
  *
  * ```js
- * const output = dec({
- *   input: { foo: { first: 3, second: 4.5 } },
- *   pathExpressionValues: {
- *     'foo.first': 3,
- *     'foo.second': 4,
- *   },
- * });
+ * const output = dec(
+ *   {foo: {first: 3, second: 4.5}},
+ *   {'foo.first': 3, 'foo.second': 4}
+ * );
  *
  * // { foo: { first: 0, second: 0.5 } }
  * console.log(output);
  * ```
  */
-export function dec<R>(options: IncDecOptions): R
-export function dec({pathExpressionValues, ...restOfOptions}: IncDecOptions): unknown {
-  return inc({
-    ...restOfOptions,
-    pathExpressionValues: Object.fromEntries(
+export function dec<R>(input: unknown, pathExpressionValues: Record<string, number>): R
+export function dec(input: unknown, pathExpressionValues: Record<string, number>): unknown {
+  return inc(
+    input,
+    Object.fromEntries(
       Object.entries(pathExpressionValues)
         .filter(([, value]) => typeof value === 'number')
         .map(([key, value]) => [key, -value]),
     ),
-  })
-}
-
-export interface DiffMatchPatchOptions {
-  input: unknown
-  pathExpressionValues: Record<string, string>
+  )
 }
 
 /**
@@ -631,23 +570,22 @@ export interface DiffMatchPatchOptions {
  * [0]: https://www.sanity.io/docs/http-patches#aTbJhlAJ
  *
  * ```js
- * const output = diffMatchPatch({
- *   input: { foo: 'the quick brown fox' },
- *   pathExpressionValues: {
- *     'foo': '@@ -13,7 +13,7 @@\n own \n-fox\n+cat\n',
- *   },
- * });
+ * const output = diffMatchPatch(
+ *   {foo: 'the quick brown fox'},
+ *   {'foo': '@@ -13,7 +13,7 @@\n own \n-fox\n+cat\n'}
+ * );
  *
  * // { foo: 'the quick brown cat' }
  * console.log(output);
  * ```
  */
-export function diffMatchPatch<R>(options: DiffMatchPatchOptions): R
-export function diffMatchPatch({input, pathExpressionValues}: DiffMatchPatchOptions): unknown {
+export function diffMatchPatch<R>(input: unknown, pathExpressionValues: Record<string, string>): R
+export function diffMatchPatch(
+  input: unknown,
+  pathExpressionValues: Record<string, string>,
+): unknown {
   return Object.entries(pathExpressionValues)
-    .flatMap(([pathExpression, dmp]) =>
-      jsonMatch({input, pathExpression}).map((m) => ({...m, dmp})),
-    )
+    .flatMap(([pathExpression, dmp]) => jsonMatch(input, pathExpression).map((m) => ({...m, dmp})))
     .filter((i) => i.value !== undefined)
     .map(({path, value, dmp}) => {
       if (typeof value !== 'string') {
@@ -656,12 +594,36 @@ export function diffMatchPatch({input, pathExpressionValues}: DiffMatchPatchOpti
         )
       }
 
-      return {
-        path,
-        value: applyPatches(parsePatch(dmp), value)[0],
-      }
+      const [nextValue] = applyPatches(parsePatch(dmp), value)
+      return {path, value: nextValue}
     })
-    .reduce((acc, {path, value}) => setDeep({input: acc, path, value}), input)
+    .reduce((acc, {path, value}) => setDeep(acc, path, value), input)
+}
+
+/**
+ * Simply checks if the given document input has a `_rev` that matches the given
+ * `revisionId` and throws otherwise.
+ *
+ * (No code example provided.)
+ */
+export function ifRevisionID<R>(input: unknown, revisionId: string): R
+export function ifRevisionID(input: unknown, revisionId: string): unknown {
+  const inputRev =
+    typeof input === 'object' && !!input && '_rev' in input && typeof input._rev === 'string'
+      ? input._rev
+      : undefined
+
+  if (typeof inputRev !== 'string') {
+    throw new Error(`Patch specified \`ifRevisionID\` but could not find document's revision ID.`)
+  }
+
+  if (revisionId !== inputRev) {
+    throw new Error(
+      `Patch's \`ifRevisionID\` \`${revisionId}\` does not match document's revision ID \`${inputRev}\``,
+    )
+  }
+
+  return input
 }
 
 function isNonNullable<T>(t: T): t is NonNullable<T> {
@@ -692,8 +654,8 @@ export interface GetDeepOptions {
  * Gets a value deep inside of an object given a path. If the path does not
  * exist in the object, `undefined` will be returned.
  */
-export function getDeep<R>(options: GetDeepOptions): R
-export function getDeep({input, path}: GetDeepOptions): unknown {
+export function getDeep<R>(input: unknown, path: SingleValuePath): R
+export function getDeep(input: unknown, path: SingleValuePath): unknown {
   const [currentSegment, ...restOfPath] = path
   if (currentSegment === undefined) return input
   if (typeof input !== 'object' || input === null) return undefined
@@ -715,34 +677,22 @@ export function getDeep({input, path}: GetDeepOptions): unknown {
       ? input.at(key)
       : (input as Record<string, unknown>)[key]
 
-  return getDeep({input: nestedInput, path: restOfPath})
-}
-
-export interface SetDeepOptions {
-  input: unknown
-  path: SingleValuePath
-  value: unknown
+  return getDeep(nestedInput, restOfPath)
 }
 
 /**
  * Sets a value deep inside of an object given a path. If the path does not
  * exist in the object, it will be created.
  */
-export function setDeep<R>(options: SetDeepOptions): R
-export function setDeep({input, path, value}: SetDeepOptions): unknown {
+export function setDeep<R>(input: unknown, path: SingleValuePath, value: unknown): R
+export function setDeep(input: unknown, path: SingleValuePath, value: unknown): unknown {
   const [currentSegment, ...restOfPath] = path
   if (currentSegment === undefined) return value
 
   // If the current input is not an object, create a new container.
   if (typeof input !== 'object' || input === null) {
     if (typeof currentSegment === 'string') {
-      return {
-        [currentSegment]: setDeep({
-          input: null,
-          path: restOfPath,
-          value,
-        }),
-      }
+      return {[currentSegment]: setDeep(null, restOfPath, value)}
     }
 
     let index: number | undefined
@@ -757,12 +707,10 @@ export function setDeep({input, path, value}: SetDeepOptions): unknown {
     }
 
     return [
+      // fill until index
       ...Array.from({length: index}).fill(null),
-      setDeep({
-        input: null,
-        path: restOfPath,
-        value,
-      }),
+      // then set deep here
+      setDeep(null, restOfPath, value),
     ]
   }
 
@@ -780,13 +728,7 @@ export function setDeep({input, path, value}: SetDeepOptions): unknown {
     if (index in input) {
       // Update the element at the resolved index.
       return input.map((nestedInput, i) =>
-        i === index
-          ? setDeep({
-              input: nestedInput,
-              path: restOfPath,
-              value,
-            })
-          : nestedInput,
+        i === index ? setDeep(nestedInput, restOfPath, value) : nestedInput,
       )
     }
 
@@ -794,11 +736,7 @@ export function setDeep({input, path, value}: SetDeepOptions): unknown {
     return [
       ...input,
       ...Array.from({length: index - input.length}).fill(null),
-      setDeep({
-        input: null,
-        path: restOfPath,
-        value,
-      }),
+      setDeep(null, restOfPath, value),
     ]
   }
 
@@ -810,34 +748,22 @@ export function setDeep({input, path, value}: SetDeepOptions): unknown {
     return Object.fromEntries(
       Object.entries(input).map(([key, nestedInput]) =>
         key === currentSegment
-          ? [key, setDeep({input: nestedInput, path: restOfPath, value})]
+          ? [key, setDeep(nestedInput, restOfPath, value)]
           : [key, nestedInput],
       ),
     )
   }
 
   // ...otherwise create the new nested path.
-  return {
-    ...input,
-    [currentSegment]: setDeep({
-      input: null,
-      path: restOfPath,
-      value,
-    }),
-  }
-}
-
-export interface UnsetDeepOptions {
-  input: unknown
-  path: SingleValuePath
+  return {...input, [currentSegment]: setDeep(null, restOfPath, value)}
 }
 
 /**
  * Given an object and an exact path as an array, this unsets the value at the
  * given path.
  */
-export function unsetDeep<R>(options: UnsetDeepOptions): R
-export function unsetDeep({input, path}: UnsetDeepOptions): unknown {
+export function unsetDeep<R>(input: unknown, path: SingleValuePath): R
+export function unsetDeep(input: unknown, path: SingleValuePath): unknown {
   const [currentSegment, ...restOfPath] = path
   if (currentSegment === undefined) return input
   if (typeof input !== 'object' || input === null) return input
@@ -868,13 +794,13 @@ export function unsetDeep({input, path}: UnsetDeepOptions): unknown {
   // Otherwise, recurse into the nested value.
   if (Array.isArray(input)) {
     return input.map((nestedInput, index) =>
-      index === segment ? unsetDeep({input: nestedInput, path: restOfPath}) : nestedInput,
+      index === segment ? unsetDeep(nestedInput, restOfPath) : nestedInput,
     )
   }
 
   return Object.fromEntries(
     Object.entries(input).map(([key, value]) =>
-      key === segment ? [key, unsetDeep({input: value, path: restOfPath})] : [key, value],
+      key === segment ? [key, unsetDeep(value, restOfPath)] : [key, value],
     ),
   )
 }
