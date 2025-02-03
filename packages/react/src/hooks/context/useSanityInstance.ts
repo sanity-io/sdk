@@ -4,10 +4,10 @@ import {useContext} from 'react'
 import {SanityInstanceContext} from '../../context/SanityProvider'
 
 /**
- * Hook that provides the current Sanity instance from the context.
+ * `useSanityInstance` returns the current Sanity instance from the application context.
  * This must be called from within a `SanityProvider` component.
  * @public
- * @returns the current Sanity instance
+ * @returns The current Sanity instance
  * @example
  * ```tsx
  * const instance = useSanityInstance()

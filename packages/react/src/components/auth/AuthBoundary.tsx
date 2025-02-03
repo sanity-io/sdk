@@ -16,7 +16,7 @@ if (typeof window !== 'undefined' && window.self !== window.top) {
 }
 
 /**
- * @alpha
+ * @internal
  */
 interface AuthBoundaryProps extends LoginLayoutProps {
   /**
@@ -58,7 +58,7 @@ interface AuthBoundaryProps extends LoginLayoutProps {
  * }
  * ```
  *
- * @alpha
+ * @internal
  */
 export function AuthBoundary({
   LoginErrorComponent = LoginError,

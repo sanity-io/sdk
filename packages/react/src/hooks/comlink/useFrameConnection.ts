@@ -10,14 +10,14 @@ import {useCallback, useEffect, useMemo} from 'react'
 import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
- * @public
+ * @internal
  */
 export type FrameMessageHandler<TWindowMessage extends WindowMessage> = (
   event: TWindowMessage['data'],
 ) => TWindowMessage['response'] | Promise<TWindowMessage['response']>
 
 /**
- * @public
+ * @internal
  */
 export interface UseFrameConnectionOptions<TWindowMessage extends WindowMessage> {
   name: string
@@ -27,7 +27,7 @@ export interface UseFrameConnectionOptions<TWindowMessage extends WindowMessage>
 }
 
 /**
- * @public
+ * @internal
  */
 export interface FrameConnection<TFrameMessage extends FrameMessage> {
   connect: (frameWindow: Window) => () => void // Return cleanup function
@@ -39,7 +39,7 @@ export interface FrameConnection<TFrameMessage extends FrameMessage> {
 }
 
 /**
- * @public
+ * @internal
  */
 export function useFrameConnection<
   TFrameMessage extends FrameMessage,

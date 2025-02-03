@@ -5,5 +5,6 @@
    * Path to the project's README file
    * Will be included as the documentation homepage
    */
-  "readme": "README.md"
+  "readme": "README.md",
+  "excludeExternals": false
 }

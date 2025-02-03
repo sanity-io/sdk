@@ -12,22 +12,27 @@ export interface SanityProviderProps {
 export const SanityInstanceContext = createContext<SanityInstance | null>(null)
 
 /**
- * Top-level context provider that provides a Sanity configuration instance.
- * This must wrap any Sanity SDK React component.
- * @public
+ * Top-level context provider that provides access to your Sanity configuration instance.
+ * This must wrap any components making use of the Sanity SDK React hooks.
+ * @internal
  * @param props - Sanity project and dataset configuration
  * @returns Rendered component
  * @example
  * ```tsx
  * import {createSanityInstance} from '@sanity/sdk'
- * import {ExampleComponent, SanityProvider} from '@sanity/sdk-react'
+ * import {SanityProvider} from '@sanity/sdk-react'
  *
- * const sanityInstance = createSanityInstance({projectId: 'your-project-id', dataset: 'production'})
+ * import MyAppRoot from './Root'
+ *
+ * const sanityInstance = createSanityInstance({
+ *   projectId: 'your-project-id',
+ *   dataset: 'production',
+ * })
  *
  * export default function MyApp() {
  *   return (
  *     <SanityProvider sanityInstance={sanityInstance}>
- *      <ExampleComponent />
+ *       <MyAppRoot />
  *     </SanityProvider>
  *   )
  * }
