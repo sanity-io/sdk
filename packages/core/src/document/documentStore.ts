@@ -314,11 +314,7 @@ export const getDocumentState = createStateSourceAction(documentStore, {
 
     const document = draft ?? published
     if (document === undefined) return undefined
-
-    if (path) {
-      return jsonMatch({input: document, pathExpression: path}).at(0)?.value
-    }
-
+    if (path) return jsonMatch(document, path).at(0)?.value
     return document
   },
   onSubscribe: handleSubscribe,

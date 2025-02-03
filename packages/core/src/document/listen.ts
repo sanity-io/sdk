@@ -301,6 +301,7 @@ export const listen = createInternalAction(({state}: ActionContext<DocumentStore
             documents: {[documentId]: documentState!.base},
             mutations: next.mutations as Mutation[],
             transactionId: next.transactionId,
+            timestamp: next.timestamp,
           }),
         )
 

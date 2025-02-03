@@ -1,10 +1,5 @@
-import {
-  type ActionResult,
-  createPatchFromDiff,
-  editDocument,
-  getDocumentState,
-  resolveDocument,
-} from '@sanity/sdk'
+import {type ActionResult, editDocument, getDocumentState, resolveDocument} from '@sanity/sdk'
+import {type SanityDocument} from '@sanity/types'
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -23,14 +18,25 @@ export function useEditDocument(
   if (!isDocumentReady()) throw resolveDocument(instance, documentId)
 
   return useCallback(
-    (nextValue: unknown) => {
+    (next: unknown) => {
       if (path) {
-        return apply(editDocument(documentId, {set: {[path]: nextValue}}))
+        return apply(editDocument(documentId, {set: {[path]: next}}))
       }
 
-      const currentValue = getDocumentState(instance, documentId).getCurrent()
-      const patches = createPatchFromDiff(currentValue, nextValue)
-      return apply(patches.map((patch) => editDocument(documentId, patch)))
+      const current = getDocumentState(instance, documentId).getCurrent() as SanityDocument | null
+
+      if (typeof next !== 'object' || !next) {
+        throw new Error(
+          `No path was provided to \`useEditDocument\` and the value provided was not a document object.`,
+        )
+      }
+
+      const editActions = Object.entries(next)
+        .filter(([key]) => !key.startsWith('_'))
+        .filter(([key, value]) => current?.[key] !== value)
+        .map(([key, value]) => editDocument(documentId, {set: {[key]: value}}))
+
+      return apply(editActions)
     },
     [apply, documentId, instance, path],
   )

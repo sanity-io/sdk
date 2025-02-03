@@ -1,8 +1,8 @@
-/* eslint-disable tsdoc/syntax */
 import {type PatchOperations} from '@sanity/types'
 
 import {type DocumentHandle} from '../documentList/documentListStore'
 import {getPublishedId} from '../preview/util'
+import {getId} from './applyMutations'
 
 export interface CreateDocumentAction {
   type: 'document.create'
@@ -44,28 +44,6 @@ export type DocumentAction =
   | PublishDocumentAction
   | UnpublishDocumentAction
   | DiscardDocumentAction
-
-/**
- * Implements ID generation:
- *
- * > A create mutation creates a new document. It takes the literal document
- * > content as its argument. The rules for the new document's identifier are as
- * > follows:
- * >
- * > - If the `_id` attribute is missing, then a new, random, unique ID is
- * >   generated.
- * > - If the `_id` attribute is present but ends with `.`, then it is used as a
- * >   prefix for a new, random, unique ID.
- * > - If the _id attribute is present, it is used as-is.
- * >
- * > [- source](https://www.sanity.io/docs/http-mutations#c732f27330a4)
- */
-function getId(id?: string) {
-  if (typeof id !== 'string') return crypto.randomUUID()
-  //
-  if (id.endsWith('.')) return `${id}${crypto.randomUUID()}`
-  return id
-}
 
 export const createDocument = (input: string | DocumentHandle): CreateDocumentAction => ({
   type: 'document.create',
