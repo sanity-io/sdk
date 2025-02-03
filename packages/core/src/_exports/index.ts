@@ -80,7 +80,6 @@ export {
   type UnpublishDocumentAction,
 } from '../document/actions'
 export {type ActionResult, applyActions} from '../document/applyActions'
-export {createPatchFromDiff} from '../document/createPatchFromDiff'
 export {
   type ActionErrorEvent,
   type DocumentCreatedEvent,

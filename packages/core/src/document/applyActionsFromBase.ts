@@ -1,9 +1,10 @@
-import {type Mutation, type PatchMutation} from '@sanity/types'
+import {type Mutation, type PatchOperations, type SanityDocument} from '@sanity/types'
+import {isEqual} from 'lodash-es'
 
 import {getDraftId, getPublishedId} from '../preview/util'
 import {type DocumentAction} from './actions'
 import {applyMutations, type DocumentSet} from './applyMutations'
-import {createPatchFromDiff} from './createPatchFromDiff'
+import {diffPatch} from './diffPatch'
 import {type HttpAction} from './documentStore'
 
 interface ApplyActionsOptions {
@@ -32,6 +33,8 @@ interface ApplyActionsOptions {
    * set.
    */
   working: DocumentSet
+
+  timestamp?: string
 
   // // TODO: implement initial values from the schema?
   // initialValues?: {[TDocumentType in string]?: {_type: string}}
@@ -95,10 +98,11 @@ export function applyActionsFromBase({
   actions,
   transactionId,
   working: initialWorking,
-  base: initialIntended,
+  base: initialBase,
+  timestamp,
 }: ApplyActionsOptions): ApplyActionsResult {
-  let working = {...initialWorking}
-  let base = {...initialIntended}
+  let working: DocumentSet = {...initialWorking}
+  let base: DocumentSet = {...initialBase}
 
   const outgoingActions: HttpAction[] = []
   const outgoingMutations: Mutation[] = []
@@ -113,23 +117,26 @@ export function applyActionsFromBase({
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Could not create draft document because a document with ID \`${draftId}\` already exists.`,
+            message: `Cannot create draft document: document with ID "${draftId}" already exists.`,
           })
         }
 
+        // Spread the (possibly undefined) published version directly.
         const newDocBase = {...base[publishedId], _type: action.documentType, _id: draftId}
         const newDocWorking = {...working[publishedId], _type: action.documentType, _id: draftId}
-        const mutations = [{create: newDocWorking}]
+        const mutations: Mutation[] = [{create: newDocWorking}]
 
         base = applyMutations({
           documents: base,
           transactionId,
           mutations: [{create: newDocBase}],
+          timestamp,
         })
         working = applyMutations({
           documents: working,
           transactionId,
           mutations,
+          timestamp,
         })
 
         outgoingMutations.push(...mutations)
@@ -138,128 +145,135 @@ export function applyActionsFromBase({
           publishedId,
           attributes: newDocWorking,
         })
-
-        continue
+        break
       }
+
       case 'document.delete': {
-        const mutations = [publishedId, draftId].map((id) => ({delete: {id}}))
+        const mutations: Mutation[] = [{delete: {id: publishedId}}, {delete: {id: draftId}}]
+        const includeDrafts = working[draftId] ? [draftId] : undefined
 
-        base = applyMutations({documents: base, transactionId, mutations})
-        working = applyMutations({documents: working, transactionId, mutations})
+        base = applyMutations({documents: base, transactionId, mutations, timestamp})
+        working = applyMutations({documents: working, transactionId, mutations, timestamp})
 
-        const includeDrafts = working[draftId] && [draftId]
         outgoingMutations.push(...mutations)
         outgoingActions.push({
           actionType: 'sanity.action.document.delete',
           publishedId,
-          // NOTE: this will currently fail if there are versions of this
-          // document that belong to a release. this will be fixed when support
-          // for releases is added
-          ...(includeDrafts && {includeDrafts}),
+          ...(includeDrafts ? {includeDrafts} : {}),
         })
-
-        continue
+        break
       }
-      case 'document.discard': {
-        const mutations = [{delete: {id: draftId}}]
 
-        base = applyMutations({documents: base, transactionId, mutations})
-        working = applyMutations({documents: working, transactionId, mutations})
+      case 'document.discard': {
+        const mutations: Mutation[] = [{delete: {id: draftId}}]
+
+        base = applyMutations({documents: base, transactionId, mutations, timestamp})
+        working = applyMutations({documents: working, transactionId, mutations, timestamp})
 
         outgoingMutations.push(...mutations)
         outgoingActions.push({
           actionType: 'sanity.action.document.version.discard',
           versionId: draftId,
         })
-
-        continue
+        break
       }
+
       case 'document.edit': {
-        if (!working[draftId] && !working[publishedId]) {
+        if (
+          (!working[draftId] && !working[publishedId]) ||
+          (!base[draftId] && !base[publishedId])
+        ) {
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Could not edit document with ID \`${publishedId}\` because it does not exist.`,
+            message: `Cannot edit document: neither draft "${draftId}" nor published "${publishedId}" exists.`,
           })
         }
 
-        const before = base[draftId]
-        base = applyMutations({
-          documents: base,
-          transactionId,
-          mutations: [
-            ...(!base[draftId] && base[publishedId]
-              ? [{createIfNotExists: {...base[publishedId], _id: draftId}}]
-              : []),
-            {patch: {id: draftId, ...action.patch}},
-          ],
-        })
-        const after = base[draftId]
-        const patches = createPatchFromDiff(before, after)
+        const baseMutations: Mutation[] = []
+        if (!base[draftId] && base[publishedId]) {
+          baseMutations.push({
+            createIfNotExists: {...base[publishedId], _id: draftId},
+          })
+        }
 
-        const mutations = [
-          ...(!working[draftId] && working[publishedId]
-            ? [{createIfNotExists: {...working[publishedId], _id: draftId}}]
-            : []),
-          ...patches.map((patch): PatchMutation => ({patch: {id: draftId, ...patch}})),
-        ]
+        // the above if statement should make this never be null or undefined
+        const baseBefore = (base[draftId] ?? base[publishedId]) as SanityDocument
+        baseMutations.push({patch: {id: draftId, ...action.patch}})
+        base = applyMutations({documents: base, transactionId, mutations: baseMutations, timestamp})
+        // this one will always be defined because a patch mutation will never
+        // delete an input document
+        const baseAfter = base[draftId] as SanityDocument
+
+        // TODO: consider replacing with `sanity-diff-patch`. There seems to be
+        // bug in `sanity-diff-patch` where differing strings are not creating
+        // diff-match patches.
+        const patches = diffPatch(baseBefore, baseAfter)
+
+        const workingMutations: Mutation[] = []
+        if (!working[draftId] && working[publishedId]) {
+          workingMutations.push({
+            createIfNotExists: {...working[publishedId], _id: draftId},
+          })
+        }
+        workingMutations.push(...patches.map((patch) => ({patch: {id: draftId, ...patch}})))
         working = applyMutations({
           documents: working,
           transactionId,
-          mutations,
+          mutations: workingMutations,
+          timestamp,
         })
 
-        outgoingMutations.push(...mutations)
+        outgoingMutations.push(...workingMutations)
         outgoingActions.push(
           ...patches.map(
-            (patch): Extract<HttpAction, {actionType: 'sanity.action.document.edit'}> => ({
+            (patch): HttpAction => ({
               actionType: 'sanity.action.document.edit',
               draftId,
               publishedId,
-              patch,
+              patch: patch as PatchOperations,
             }),
           ),
         )
 
-        continue
+        break
       }
+
       case 'document.publish': {
-        if (!working[draftId] && !base[draftId]) {
+        const workingDraft = working[draftId]
+        const baseDraft = base[draftId]
+        if (!workingDraft || !baseDraft) {
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Could not publish document with ID \`${publishedId}\` because a draft document with ID \`${draftId}\` was not found.`,
+            message: `Cannot publish: draft document "${draftId}" not found.`,
           })
         }
 
-        const mutations = [
+        // Before proceeding, verify that the working draft is identical to the base draft.
+        if (!isEqual(workingDraft, baseDraft)) {
+          throw new ActionError({
+            documentId,
+            transactionId,
+            message: `Publish aborted: detected remote changes since published was scheduled. Please try again.`,
+          })
+        }
+
+        const mutations: Mutation[] = [
           {delete: {id: draftId}},
-          {createOrReplace: {...(working[draftId] ?? base[draftId])!, _id: publishedId}},
+          {createOrReplace: {...baseDraft, _id: publishedId}},
         ]
-        base = applyMutations({
-          documents: base,
-          transactionId,
-          mutations: [
-            {delete: {id: draftId}},
-            {createOrReplace: {...(base[draftId] ?? working[draftId])!, _id: publishedId}},
-          ],
-        })
-        working = applyMutations({
-          documents: working,
-          transactionId,
-          mutations,
-        })
+
+        base = applyMutations({documents: base, transactionId, mutations, timestamp})
+        working = applyMutations({documents: working, transactionId, mutations, timestamp})
+
         outgoingMutations.push(...mutations)
         outgoingActions.push({
           actionType: 'sanity.action.document.publish',
           draftId,
           publishedId,
-          // // TODO:
-          // ...(draftRevision && {ifDraftRevisionId: draftRevision}),
-          // ...(publishedRevision && {ifPublishedRevisionId: publishedRevision}),
         })
-
-        continue
+        break
       }
 
       case 'document.unpublish': {
@@ -267,23 +281,26 @@ export function applyActionsFromBase({
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Could not unpublished document with ID \`${publishedId}\` because the published document was not found.`,
+            message: `Cannot unpublish: published document "${publishedId}" not found.`,
           })
         }
 
-        const mutations = [
+        const sourceDoc = working[publishedId] ?? (base[publishedId] as SanityDocument)
+        const mutations: Mutation[] = [
           {delete: {id: publishedId}},
-          {createIfNotExists: {...(working[publishedId] ?? base[publishedId])!, _id: draftId}},
+          {createIfNotExists: {...sourceDoc, _id: draftId}},
         ]
+
         base = applyMutations({
           documents: base,
           transactionId,
           mutations: [
             {delete: {id: publishedId}},
-            {createIfNotExists: {...(base[publishedId] ?? working[publishedId])!, _id: draftId}},
+            {createIfNotExists: {...(base[publishedId] ?? sourceDoc), _id: draftId}},
           ],
+          timestamp,
         })
-        working = applyMutations({documents: working, transactionId, mutations})
+        working = applyMutations({documents: working, transactionId, mutations, timestamp})
 
         outgoingMutations.push(...mutations)
         outgoingActions.push({
@@ -291,18 +308,28 @@ export function applyActionsFromBase({
           draftId,
           publishedId,
         })
+        break
+      }
 
-        continue
+      default: {
+        throw new Error(
+          `Unknown action type: ${
+            // @ts-expect-error invalid input
+            action.type
+          }`,
+        )
       }
     }
   }
+
+  const previousRevs = Object.fromEntries(
+    Object.entries(initialWorking).map(([id, doc]) => [id, doc?._rev]),
+  )
 
   return {
     working,
     outgoingActions,
     outgoingMutations,
-    previousRevs: Object.fromEntries(
-      Object.entries(initialWorking).map(([id, doc]) => [id, doc?._rev]),
-    ),
+    previousRevs,
   }
 }
