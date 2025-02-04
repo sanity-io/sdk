@@ -2,13 +2,15 @@ import {type Action, type SanityClient} from '@sanity/client'
 import {
   catchError,
   concatMap,
+  delay,
   distinctUntilChanged,
   EMPTY,
   filter,
+  first,
   map,
   Observable,
   tap,
-  throttleTime,
+  throttle,
   withLatestFrom,
 } from 'rxjs'
 
@@ -21,7 +23,6 @@ import {type DocumentEvent, type DocumentStoreState} from './documentStore'
 import {revertOutgoingTransaction} from './revertOutgoingTransaction'
 
 const API_VERSION = 'vX'
-const SUBMIT_THROTTLE_TIME = 2000
 
 function createDocumentEvents(transactionId: string, actions: DocumentAction[]) {
   const documentIdsByAction = Object.entries(
@@ -63,7 +64,18 @@ export const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
       const outgoing$ = state.observable.pipe(
         map((s) => s.applied),
         distinctUntilChanged(),
-        throttleTime(SUBMIT_THROTTLE_TIME, undefined, {trailing: true, leading: false}),
+        // throttles applied transactions at the rate of outgoing transactions
+        throttle(
+          () =>
+            state.observable.pipe(
+              first((s) => !s.outgoing.length),
+              // need a delay for test env because applied transactions needs to
+              // be transitioned an outgoing transaction before the next throttle
+              // observable input fires else this will stall
+              delay(0),
+            ),
+          {leading: false, trailing: true},
+        ),
         map(createOutgoingTransaction),
         filter(Boolean),
         distinctUntilChanged((a, b) => a.transactionId === b.transactionId),
