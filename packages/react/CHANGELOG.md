@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.7](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.6...sdk-react-v0.0.0-alpha.7) (2025-02-04)
+
+
+### Features
+
+* **react:** add sanity os bridge script to AuthBoundary ([#196](https://github.com/sanity-io/sdk/issues/196)) ([1fb064d](https://github.com/sanity-io/sdk/commit/1fb064d111541bf93c8933920d7bce00a9c454ef))
+
 ## [0.0.0-alpha.6](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.5...sdk-react-v0.0.0-alpha.6) (2025-01-30)
 
 
