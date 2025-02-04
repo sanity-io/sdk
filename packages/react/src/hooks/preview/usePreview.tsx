@@ -38,8 +38,8 @@ export interface UsePreviewResults {
  * // PreviewComponent.jsx
  * export default function PreviewComponent({ document }) {
  *   const { results: { title, subtitle, media }, isPending } = usePreview({ document })
- *   return isPending ? 'Loading…' : (
- *     <article>
+ *   return (
+ *     <article style={{ opacity: isPending ? 0.5 : 1}}>
  *       {media?.type === 'image-asset' ? <img src={media.url} alt='' /> : ''}
  *       <h2>{title}</h2>
  *       <p>{subtitle}</p>
