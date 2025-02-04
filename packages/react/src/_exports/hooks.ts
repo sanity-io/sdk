@@ -23,3 +23,4 @@ export {
   type UsePreviewOptions,
   type UsePreviewResults,
 } from '../hooks/preview/usePreview'
+export {type CurrentUser} from '@sanity/sdk'
