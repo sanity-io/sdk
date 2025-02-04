@@ -28,18 +28,19 @@ export function addOutgoingTransaction({
             documentState: prev.documents[documentId],
           }))
           .filter(
-            (e): e is {documentId: string; documentState: DocumentState; previousRev: string} =>
-              !!e.documentState && !!e.previousRev,
+            (
+              e,
+            ): e is {
+              documentId: string
+              documentState: DocumentState
+              previousRev: string | undefined
+            } => !!e.documentState,
           )
           .map(({documentId, documentState, previousRev}): [string, DocumentState] => {
             const unverifiedTransaction: UnverifiedDocumentTransaction = {
               documentId,
               previousRev,
               transactionId,
-            }
-
-            if (documentState.local?._rev === previousRev) {
-              return [documentId, documentState]
             }
 
             return [

@@ -122,8 +122,6 @@ export function applyMutations({
 }: ApplyMutationsOptions): DocumentSet {
   // early return if there are no mutations given
   if (!mutations.length) return documents
-  // early return if there are no documents in the set
-  if (!Object.keys(documents).length) return documents
 
   const dataset = {...documents}
   const now = timestamp || new Date().toISOString()

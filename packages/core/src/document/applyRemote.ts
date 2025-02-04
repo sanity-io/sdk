@@ -32,7 +32,7 @@ export function applyRemote({
   // if there is a transaction to verify and the previous revision from remote
   // matches the previous revision we expected, we can "fast-forward" and skip
   // rebasing local changes on top of this new base
-  if (revision && transactionToVerify && transactionToVerify?.previousRev === previousRev) {
+  if (transactionToVerify && transactionToVerify.previousRev === previousRev) {
     return {
       ...prev,
       applied: prev.applied,
@@ -43,7 +43,9 @@ export function applyRemote({
           ...prevDocumentState,
           base: document,
           baseRev: revision,
-          unverifiedTransactions: omit(prevDocumentState.unverifiedTransactions, revision),
+          unverifiedTransactions: revision
+            ? omit(prevDocumentState.unverifiedTransactions, revision)
+            : prevDocumentState.unverifiedTransactions,
           local:
             prevDocumentState.local &&
             timestamp &&

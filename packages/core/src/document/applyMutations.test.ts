@@ -613,21 +613,6 @@ describe('applyMutations', () => {
     })
   })
 
-  describe('empty document set', () => {
-    it('should return the input documents if there are no keys', () => {
-      const emptyDocs: DocumentSet = {}
-      const mutation = {create: {_id: 'test', _type: 'test', title: 'Test'}}
-      const result = applyMutations({
-        documents: emptyDocs,
-        mutations: [mutation],
-        transactionId,
-        timestamp,
-      })
-      // Since there are no keys, the mutation is not applied and the same object is returned.
-      expect(result).toBe(emptyDocs)
-    })
-  })
-
   describe('empty mutations array', () => {
     it('should return the input documents if there are no mutations', () => {
       const result = applyMutations({

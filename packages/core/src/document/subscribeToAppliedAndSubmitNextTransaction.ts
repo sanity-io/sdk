@@ -74,7 +74,7 @@ export const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
           state.set('addOutgoing', (prev) => addOutgoingTransaction({...prev, transaction}))
         }),
         withLatestFrom(client$),
-        concatMap(([{outgoingActions, transactionId, actions}, client]) =>
+        concatMap(([{outgoingActions, transactionId, actions, consumedTransactions}, client]) =>
           client.observable
             .action(outgoingActions as Action[], {
               transactionId,
@@ -86,6 +86,7 @@ export const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
                   type: 'reverted',
                   message: error.message,
                   transactionId,
+                  consumedTransactions,
                   error,
                 })
                 state.set('revertOutgoingTransaction', (prev) =>
@@ -93,10 +94,10 @@ export const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
                 )
                 return EMPTY
               }),
-              map((result) => ({result, transactionId, actions})),
+              map((result) => ({result, transactionId, consumedTransactions, actions})),
             ),
         ),
-        tap(({actions, transactionId, result}) => {
+        tap(({actions, transactionId, consumedTransactions, result}) => {
           state.set('removeOutgoing', (prev) => ({
             outgoing: prev.outgoing.filter((i) => transactionId !== i.transactionId),
           }))
@@ -104,7 +105,7 @@ export const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
           for (const event of createDocumentEvents(result.transactionId, actions)) {
             events.next(event)
           }
-          events.next({type: 'submitted', transactionId, result})
+          events.next({type: 'submitted', transactionId, consumedTransactions, result})
         }),
       )
 

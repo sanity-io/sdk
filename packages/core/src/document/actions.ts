@@ -1,6 +1,5 @@
 import {type PatchOperations} from '@sanity/types'
 
-import {type DocumentHandle} from '../documentList/documentListStore'
 import {getPublishedId} from '../preview/util'
 import {getId} from './applyMutations'
 
@@ -45,9 +44,11 @@ export type DocumentAction =
   | UnpublishDocumentAction
   | DiscardDocumentAction
 
-export const createDocument = (input: string | DocumentHandle): CreateDocumentAction => ({
+export const createDocument = (
+  input: string | {_id?: string; _type: string},
+): CreateDocumentAction => ({
   type: 'document.create',
-  documentId: getPublishedId(typeof input === 'object' ? getId(input._id) : getId(input)),
+  documentId: getPublishedId(typeof input === 'object' ? getId(input._id) : getId()),
   documentType: typeof input === 'object' ? input._type : input,
 })
 

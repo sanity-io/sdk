@@ -140,7 +140,7 @@ export interface OutgoingTransaction {
 export interface UnverifiedDocumentTransaction {
   transactionId: string
   documentId: string
-  previousRev: string
+  previousRev: string | undefined
 }
 
 export type DocumentEvent =
@@ -164,11 +164,13 @@ export interface ActionErrorEvent {
 export interface TransactionSubmittedEvent {
   type: 'submitted'
   transactionId: string
+  consumedTransactions: string[]
   result: Awaited<ReturnType<SanityClient['action']>>
 }
 export interface TransactionRevertedEvent {
   type: 'reverted'
   transactionId: string
+  consumedTransactions: string[]
   message: string
   error: unknown
 }
@@ -321,7 +323,7 @@ export const getDocumentState = createStateSourceAction(documentStore, {
 })
 
 export const getDocumentConsistencyStatus = createStateSourceAction(documentStore, {
-  selector: ({error, documents, outgoing}, documentId: string) => {
+  selector: ({error, documents, outgoing, applied}, documentId: string) => {
     if (error) throw error
     const draftId = getDraftId(documentId)
     const publishedId = getPublishedId(documentId)
@@ -330,7 +332,7 @@ export const getDocumentConsistencyStatus = createStateSourceAction(documentStor
     const published = documents[publishedId]
 
     if (draft === undefined || published === undefined) return undefined
-    return draft.local === draft.base && published.local === published.base && !outgoing.length
+    return !applied.length && !outgoing.length
   },
   onSubscribe: handleSubscribe,
 })

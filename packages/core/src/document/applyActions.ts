@@ -1,5 +1,5 @@
 import {type SanityClient} from '@sanity/client'
-import {filter, firstValueFrom, map} from 'rxjs'
+import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
 
 import {createAction} from '../resources/createAction'
 import {type DocumentAction} from './actions'
@@ -25,47 +25,49 @@ export const applyActions = createAction(documentStore, ({state}) => {
       actions,
     }
 
+    const transactionError$ = events.pipe(
+      filter((e) => e.transactionId === transactionId),
+      filter((e) => e.type === 'error'),
+      first(),
+    )
+
+    const appliedTransaction$ = state.observable.pipe(
+      map((s) => s.applied),
+      distinctUntilChanged(),
+      map((applied) => applied.find((t) => t.transactionId === transactionId)),
+      filter(Boolean),
+      first(),
+    )
+
+    const successfulTransaction$ = events.pipe(
+      filter((e) => e.type === 'submitted'),
+      filter((e) => e.consumedTransactions.includes(transactionId)),
+      first(),
+    )
+
+    const rejectedTransaction$ = events.pipe(
+      filter((e) => e.type === 'reverted'),
+      filter((e) => e.consumedTransactions.includes(transactionId)),
+      first(),
+    )
+
+    const appliedTransactionOrError = firstValueFrom(race([transactionError$, appliedTransaction$]))
+    const acceptedOrRejectedTransaction = firstValueFrom(
+      race([successfulTransaction$, rejectedTransaction$, transactionError$]),
+    )
+
     state.set('queueTransaction', (prev) => ({
       queued: [...prev.queued, transaction],
     }))
 
-    const transactionFailed = firstValueFrom(
-      events.pipe(
-        filter((e) => e.transactionId === transactionId),
-        filter((e) => e.type === 'error'),
-      ),
-    )
-
-    const transactionApplied = firstValueFrom(
-      state.observable.pipe(
-        map((s) => s.applied[0]),
-        filter(Boolean),
-        filter((t) => t.transactionId === transactionId),
-      ),
-    )
-
-    const result = await Promise.race([transactionFailed, transactionApplied])
+    const result = await appliedTransactionOrError
     if ('type' in result && result.type === 'error') throw result.error
 
     const {working: documents, previous, previousRevs} = result as AppliedTransaction
 
-    const accepted = firstValueFrom(
-      events.pipe(
-        filter((e) => e.transactionId === transactionId),
-        filter((e) => e.type === 'submitted'),
-      ),
-    )
-
-    const rejected = firstValueFrom(
-      events.pipe(
-        filter((e) => e.transactionId === transactionId),
-        filter((e) => e.type === 'reverted'),
-      ),
-    )
-
     async function submitted() {
-      const raceResult = await Promise.race([accepted, rejected])
-      if (raceResult.type === 'reverted') throw raceResult.error
+      const raceResult = await acceptedOrRejectedTransaction
+      if (raceResult.type !== 'submitted') throw raceResult.error
       return raceResult.result
     }
 
