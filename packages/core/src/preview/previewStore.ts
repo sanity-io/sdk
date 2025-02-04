@@ -51,7 +51,10 @@ export interface PreviewValue {
  *
  * @public
  */
-export type ValuePending<T> = [T | null, boolean]
+export type ValuePending<T> = {
+  results: T | null
+  isPending: boolean
+}
 
 /**
  * @public

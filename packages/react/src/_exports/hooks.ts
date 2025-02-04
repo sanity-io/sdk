@@ -17,5 +17,10 @@ export {
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
-export {type UseDocuments, useDocuments} from '../hooks/documentCollection/useDocuments'
-export {usePreview, type UsePreviewOptions} from '../hooks/preview/usePreview'
+export {type DocumentCollection, useDocuments} from '../hooks/documentCollection/useDocuments'
+export {
+  usePreview,
+  type UsePreviewOptions,
+  type UsePreviewResults,
+} from '../hooks/preview/usePreview'
+export {type CurrentUser} from '@sanity/sdk'

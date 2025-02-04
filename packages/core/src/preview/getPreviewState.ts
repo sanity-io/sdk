@@ -60,7 +60,7 @@ export const getPreviewState = createAction(previewStore, ({state}) => {
             const documentSubscriptions = omit(prev.subscriptions[documentId], subscriptionId)
             const hasSubscribers = !!Object.keys(documentSubscriptions).length
             const prevValue = prev.values[documentId]
-            const previewValue = Array.isArray(prevValue) ? prevValue[0] : null
+            const previewValue = prevValue?.results ? prevValue.results : null
 
             return {
               subscriptions: hasSubscribers
@@ -68,7 +68,7 @@ export const getPreviewState = createAction(previewStore, ({state}) => {
                 : omit(prev.subscriptions, documentId),
               values: hasSubscribers
                 ? prev.values
-                : {...prev.values, [documentId]: [previewValue, false]},
+                : {...prev.values, [documentId]: {results: previewValue, isPending: false}},
             }
           })
         }

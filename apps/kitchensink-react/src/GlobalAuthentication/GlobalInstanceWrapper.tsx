@@ -9,12 +9,12 @@ const sanityInstance = createSanityInstance({
   projectId: '',
   dataset: '',
   auth: {
-    authScope: 'org',
+    authScope: 'global',
   },
   schema,
 })
 
-export function OrgInstanceWrapper(): JSX.Element {
+export function GlobalInstanceWrapper(): JSX.Element {
   return (
     <SanityProvider sanityInstance={sanityInstance}>
       <Outlet />

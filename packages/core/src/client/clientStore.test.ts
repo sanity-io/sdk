@@ -41,6 +41,16 @@ describe('clientStore', () => {
       expect(state.defaultClient.config().token).toBe('foo')
     })
 
+    it('creates initial state with apiHost', () => {
+      const instance = createSanityInstance({
+        ...config,
+        auth: {apiHost: 'https://api.sanity.work'},
+      })
+      const store = getOrCreateResource(instance, clientStore)
+      const state = store.state.get()
+      expect(state.defaultClient.config().apiHost).toBe('https://api.sanity.work')
+    })
+
     it('initializes clients Map with default client', () => {
       const instance = createSanityInstance(config)
       const store = getOrCreateResource(instance, clientStore)

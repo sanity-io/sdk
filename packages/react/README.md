@@ -26,59 +26,113 @@ Here's how to implement your Sanity application:
 npm create vite@latest my-content-os-app -- --template react-ts -y
 cd my-content-os-app
 # Install Sanity dependencies
-npm i @sanity/sdk-react @sanity/sdk @sanity/ui
+npm i @sanity/sdk-react @sanity/sdk
 # Run the app
 npm run dev
+# In another terminal, run the Sanity CoreUI
+npx @sanity/os-cli run --url=http://localhost:5173/
 ```
 
 ```tsx
 // src/App.tsx
-import {createSanityInstance} from '@sanity/sdk'
-import {SanityProvider} from '@sanity/sdk-react/context'
+import {SanityConfig} from '@sanity/sdk'
+import {SanityApp} from '@sanity/sdk-react/components'
 import {useCurrentUser, useLogOut} from '@sanity/sdk-react/hooks'
-import {Button, Flex, Spinner, Text, ThemeProvider} from '@sanity/ui'
-import {buildTheme} from '@sanity/ui/theme'
-import {Suspense} from 'react'
 
-const theme = buildTheme({})
-const sanityInstance = createSanityInstance({
+import './App.css'
+
+const sanityConfig: SanityConfig = {
   projectId: '<your-project-id>',
   dataset: '<your-dataset>',
-  // optional auth config set projectId and dataset to '' and authScope to 'org' for a global token
+  // optional auth config set projectId and dataset to '' and authScope to 'global' for a global token
   // auth: {
-  //   authScope: 'org',
+  //   authScope: 'global',
   //   ...
   // },
-})
+}
 
 export function App(): JSX.Element {
   return (
-    <ThemeProvider theme={theme}>
-      <Suspense fallback={<Spinner />}>
-        <SanityProvider sanityInstance={sanityInstance}>
-          {/* You will need to implement an auth boundary */}
-          <AuthBoundary header={<Text>My Sanity App</Text>}>
-            <Authenticated />
-          </AuthBoundary>
-        </SanityProvider>
-      </Suspense>
-    </ThemeProvider>
+    <SanityApp sanityConfig={sanityConfig}>
+      <MyApp />
+    </SanityApp>
   )
 }
 
-function Authenticated() {
+function MyApp() {
   const currentUser = useCurrentUser()
   const logout = useLogOut()
 
   return (
-    <Flex direction="column" gap={2}>
-      <Text>Hello, {currentUser?.name}!</Text>
-      <Button text="Logout" onClick={logout} mode="ghost" />
-    </Flex>
+    <div>
+      <h1>Hello, {currentUser?.name}!</h1>
+      <button onClick={logout}>Logout</button>
+    </div>
   )
 }
 
 export default App
+```
+
+```css
+/* src/App.css */
+#root {
+  margin: auto;
+}
+
+.sc-login-layout {
+  min-height: 100vh;
+  display: flex;
+  background: #f3f3f3;
+}
+
+.sc-login-layout__container {
+  margin: auto;
+  padding: 2rem;
+}
+
+.sc-login-layout__card {
+  background: white;
+  padding: 2rem;
+}
+
+.sc-login__title,
+.sc-login-callback {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #333;
+}
+
+.sc-login-providers {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sc-login-providers a {
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  text-decoration: none;
+  color: #333;
+  text-align: center;
+}
+
+.sc-login-footer {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.sc-login-footer__links {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.sc-login-footer__link a {
+  font-size: 0.9rem;
+}
 ```
 
 ## Available Hooks

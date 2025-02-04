@@ -4,7 +4,7 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
 /**
  * Hook to get the currently logged in user
- * @public
+ * @internal
  * @returns The current user or null if not authenticated
  */
 export const useAuthToken = createStateSourceHook(getTokenState)
