@@ -62,11 +62,3 @@ export {getOrCreateNode} from '../comlink/node/actions/getOrCreateNode'
 export {releaseNode} from '../comlink/node/actions/releaseNode'
 export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'
-
-/** PERMISSIONS */
-export {
-  getPermissionsState,
-  type Permission,
-  type PermissionsState,
-  type permissionsStore,
-} from '../permissions/permissionsStore'
