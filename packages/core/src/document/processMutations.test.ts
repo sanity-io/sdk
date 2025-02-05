@@ -1,7 +1,6 @@
-// applyMutations.test.ts
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {applyMutations, type DocumentSet, getDocumentIds, getId} from './applyMutations'
+import {type DocumentSet, getDocumentIds, getId, processMutations} from './processMutations'
 
 // A base document set that is not empty (so applyMutations will run)
 const baseDocs: DocumentSet = {
@@ -86,7 +85,7 @@ describe('applyMutations', () => {
           title: 'Inception',
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -115,7 +114,7 @@ describe('applyMutations', () => {
           _updatedAt: '2021-01-02T00:00:00Z',
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -139,7 +138,7 @@ describe('applyMutations', () => {
           content: 'Test note',
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -165,7 +164,7 @@ describe('applyMutations', () => {
         },
       }
       expect(() =>
-        applyMutations({documents: docs, mutations: [mutation], transactionId, timestamp}),
+        processMutations({documents: docs, mutations: [mutation], transactionId, timestamp}),
       ).toThrow(
         /Cannot create document with `_id` `existingDoc` because another document with the same ID already exists./,
       )
@@ -180,7 +179,7 @@ describe('applyMutations', () => {
           _updatedAt: '2022-05-06T00:00:00Z',
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -197,7 +196,7 @@ describe('applyMutations', () => {
           title: 'Default Now',
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -217,7 +216,7 @@ describe('applyMutations', () => {
           title: 'Created',
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -241,7 +240,7 @@ describe('applyMutations', () => {
           title: 'Should Not Replace',
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -260,7 +259,7 @@ describe('applyMutations', () => {
           _updatedAt: '2023-01-01T00:00:00Z',
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -278,7 +277,7 @@ describe('applyMutations', () => {
           title: 'Default Now',
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -300,7 +299,7 @@ describe('applyMutations', () => {
           _updatedAt: '2022-01-02T00:00:00Z',
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -326,7 +325,7 @@ describe('applyMutations', () => {
           _updatedAt: 'ignored-date',
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -347,7 +346,7 @@ describe('applyMutations', () => {
           title: 'New Replace No Times',
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -365,7 +364,7 @@ describe('applyMutations', () => {
           id: 'existingDoc',
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -385,7 +384,7 @@ describe('applyMutations', () => {
         title: 'Another',
       }
       const mutations = ['existingDoc', 'anotherDoc', 'nonexistent'].map((id) => ({delete: {id}}))
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations,
         transactionId,
@@ -406,7 +405,7 @@ describe('applyMutations', () => {
           set: {title: 'Updated Title'},
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -425,7 +424,7 @@ describe('applyMutations', () => {
           setIfMissing: {subtitle: 'Default Subtitle'},
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -435,7 +434,7 @@ describe('applyMutations', () => {
 
       // When the field already exists, it should not be overwritten.
       docs['existingDoc']!['subtitle'] = 'Already set'
-      const result2 = applyMutations({
+      const result2 = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -451,7 +450,7 @@ describe('applyMutations', () => {
           unset: ['title'],
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -467,7 +466,7 @@ describe('applyMutations', () => {
           inc: {value: 5},
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -483,7 +482,7 @@ describe('applyMutations', () => {
           dec: {value: 3},
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -500,7 +499,7 @@ describe('applyMutations', () => {
           diffMatchPatch: {description: patchStr},
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -516,7 +515,7 @@ describe('applyMutations', () => {
           insert: {before: 'arrayField[1]', items: ['x']},
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -532,7 +531,7 @@ describe('applyMutations', () => {
           insert: {after: 'arrayField[1]', items: ['y']},
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -548,7 +547,7 @@ describe('applyMutations', () => {
           insert: {replace: 'arrayField[1]', items: ['z']},
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -565,7 +564,7 @@ describe('applyMutations', () => {
           set: {title: 'Revision OK'},
         },
       }
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [mutation],
         transactionId,
@@ -582,7 +581,7 @@ describe('applyMutations', () => {
         },
       }
       expect(() =>
-        applyMutations({documents: docs, mutations: [mutation], transactionId, timestamp}),
+        processMutations({documents: docs, mutations: [mutation], transactionId, timestamp}),
       ).toThrow(/Cannot patch document with ID `nonexistent` because it was not found/)
     })
 
@@ -595,7 +594,7 @@ describe('applyMutations', () => {
         },
       }
       expect(() =>
-        applyMutations({documents: docs, mutations: [mutation], transactionId, timestamp}),
+        processMutations({documents: docs, mutations: [mutation], transactionId, timestamp}),
       ).toThrow(/does not match document's revision ID/)
     })
   })
@@ -606,7 +605,7 @@ describe('applyMutations', () => {
       vi.useFakeTimers()
       vi.setSystemTime(new Date('2000-01-01T00:00:00Z'))
       const mutation = {create: {_type: 'test', title: 'No Timestamp'}}
-      const result = applyMutations({documents: docs, mutations: [mutation], transactionId})
+      const result = processMutations({documents: docs, mutations: [mutation], transactionId})
       expect(result['fixed-uuid']?._createdAt).toBe('2000-01-01T00:00:00.000Z')
       expect(result['fixed-uuid']?._updatedAt).toBe('2000-01-01T00:00:00.000Z')
       vi.useRealTimers()
@@ -615,7 +614,7 @@ describe('applyMutations', () => {
 
   describe('empty mutations array', () => {
     it('should return the input documents if there are no mutations', () => {
-      const result = applyMutations({
+      const result = processMutations({
         documents: docs,
         mutations: [],
         transactionId,

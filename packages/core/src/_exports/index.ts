@@ -81,6 +81,12 @@ export {
 } from '../document/actions'
 export {type ActionResult, applyActions} from '../document/applyActions'
 export {
+  getDocumentConsistencyStatus,
+  getDocumentState,
+  resolveDocument,
+  subscribeDocumentEvents,
+} from '../document/documentStore'
+export {
   type ActionErrorEvent,
   type DocumentCreatedEvent,
   type DocumentDeletedEvent,
@@ -89,10 +95,6 @@ export {
   type DocumentEvent,
   type DocumentPublishedEvent,
   type DocumentUnpublishedEvent,
-  getDocumentConsistencyStatus,
-  getDocumentState,
-  resolveDocument,
+  type TransactionAcceptedEvent,
   type TransactionRevertedEvent,
-  type TransactionSubmittedEvent,
-} from '../document/documentStore'
-export {subscribeDocumentEvents} from '../document/subscribeDocumentEvents'
+} from '../document/events'

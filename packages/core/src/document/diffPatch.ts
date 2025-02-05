@@ -16,6 +16,8 @@ export type PatchOperations = Pick<
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && !!value && !Array.isArray(value)
 
+const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
+
 export function diffPatch(before: SanityDocument, after: SanityDocument): PatchOperations[] {
   return diffRecursive(before, after, [])
 }
@@ -84,9 +86,8 @@ function diffRecursive(before: unknown, after: unknown, path: Path): PatchOperat
   if (!isRecord(after) || !isRecord(before)) return patches
 
   // Both are plain objects.
-  // (Skip system keys that begin with an underscore.)
-  const beforeKeys = Object.keys(before).filter((k) => !k.startsWith('_'))
-  const afterKeys = Object.keys(after).filter((k) => !k.startsWith('_'))
+  const beforeKeys = Object.keys(before).filter((k) => !ignoredKeys.includes(k))
+  const afterKeys = Object.keys(after).filter((k) => !ignoredKeys.includes(k))
   const allKeys = new Set([...beforeKeys, ...afterKeys])
   for (const key of allKeys) {
     const subPath = [...path, key]
@@ -97,6 +98,7 @@ function diffRecursive(before: unknown, after: unknown, path: Path): PatchOperat
       // Field added – set it.
       patches.push({set: {[stringifyPath(subPath)]: after[key]}})
     } else {
+      // TODO: may not want to create a DMP for keys that start with an underscore
       // Field exists in both – recursively diff.
       patches.push(...diffRecursive(before[key], after[key], subPath))
     }

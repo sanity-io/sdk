@@ -1,10 +1,9 @@
-// applyActionsFromBase.test.ts
 import {type SanityDocument} from '@sanity/types'
 import {describe, expect, it} from 'vitest'
 
 import {type DocumentAction} from './actions'
-import {ActionError, applyActionsFromBase} from './applyActionsFromBase'
-import {type DocumentSet} from './applyMutations'
+import {ActionError, processActions} from './processActions'
+import {type DocumentSet} from './processMutations'
 
 // Helper: Create a sample document that conforms to SanityDocument.
 const createDoc = (id: string, title: string, rev: string = 'initial'): SanityDocument => ({
@@ -19,7 +18,7 @@ const createDoc = (id: string, title: string, rev: string = 'initial'): SanityDo
 const transactionId = 'txn-123'
 const timestamp = '2025-02-02T00:00:00.000Z'
 
-describe('applyActionsFromBase', () => {
+describe('processActions', () => {
   describe('document.create', () => {
     it('should create a new draft document from a published document', () => {
       const published = createDoc('doc1', 'Original Title')
@@ -32,7 +31,7 @@ describe('applyActionsFromBase', () => {
           documentType: 'article',
         },
       ]
-      const result = applyActionsFromBase({
+      const result = processActions({
         actions,
         transactionId,
         base,
@@ -77,9 +76,9 @@ describe('applyActionsFromBase', () => {
           documentType: 'article',
         },
       ]
-      expect(() =>
-        applyActionsFromBase({actions, transactionId, base, working, timestamp}),
-      ).toThrow(ActionError)
+      expect(() => processActions({actions, transactionId, base, working, timestamp})).toThrow(
+        ActionError,
+      )
     })
 
     it('should create a draft document using the working published version when base and working differ', () => {
@@ -94,7 +93,7 @@ describe('applyActionsFromBase', () => {
           documentType: 'article',
         },
       ]
-      const result = applyActionsFromBase({
+      const result = processActions({
         actions,
         transactionId,
         base,
@@ -123,7 +122,7 @@ describe('applyActionsFromBase', () => {
           type: 'document.delete',
         },
       ]
-      const result = applyActionsFromBase({
+      const result = processActions({
         actions,
         transactionId,
         base,
@@ -158,7 +157,7 @@ describe('applyActionsFromBase', () => {
         },
       ]
 
-      const result = applyActionsFromBase({
+      const result = processActions({
         actions,
         transactionId,
         base,
@@ -189,7 +188,7 @@ describe('applyActionsFromBase', () => {
           type: 'document.discard',
         },
       ]
-      const result = applyActionsFromBase({
+      const result = processActions({
         actions,
         transactionId,
         base,
@@ -219,7 +218,7 @@ describe('applyActionsFromBase', () => {
           patch: {set: {title: 'Edited Title'}},
         },
       ]
-      const result = applyActionsFromBase({
+      const result = processActions({
         actions,
         transactionId,
         base,
@@ -249,7 +248,7 @@ describe('applyActionsFromBase', () => {
           patch: {set: {title: 'New Draft Title'}},
         },
       ]
-      const result = applyActionsFromBase({
+      const result = processActions({
         actions,
         transactionId,
         base,
@@ -275,7 +274,7 @@ describe('applyActionsFromBase', () => {
           patch: {set: {title: 'Original Cool Title'}},
         },
       ]
-      const result = applyActionsFromBase({
+      const result = processActions({
         actions,
         transactionId,
         base,
@@ -302,9 +301,9 @@ describe('applyActionsFromBase', () => {
           patch: {set: {title: 'Should Fail'}},
         },
       ]
-      expect(() =>
-        applyActionsFromBase({actions, transactionId, base, working, timestamp}),
-      ).toThrow(ActionError)
+      expect(() => processActions({actions, transactionId, base, working, timestamp})).toThrow(
+        ActionError,
+      )
     })
   })
 
@@ -319,7 +318,7 @@ describe('applyActionsFromBase', () => {
           type: 'document.publish',
         },
       ]
-      const result = applyActionsFromBase({
+      const result = processActions({
         actions,
         transactionId,
         base,
@@ -352,9 +351,9 @@ describe('applyActionsFromBase', () => {
           type: 'document.publish',
         },
       ]
-      expect(() =>
-        applyActionsFromBase({actions, transactionId, base, working, timestamp}),
-      ).toThrow(ActionError)
+      expect(() => processActions({actions, transactionId, base, working, timestamp})).toThrow(
+        ActionError,
+      )
     })
 
     it('should throw when base and working drafts differ', () => {
@@ -370,7 +369,7 @@ describe('applyActionsFromBase', () => {
         },
       ]
       expect(() =>
-        applyActionsFromBase({
+        processActions({
           actions,
           transactionId,
           base,
@@ -394,7 +393,7 @@ describe('applyActionsFromBase', () => {
           type: 'document.unpublish',
         },
       ]
-      const result = applyActionsFromBase({
+      const result = processActions({
         actions,
         transactionId,
         base,
@@ -426,9 +425,9 @@ describe('applyActionsFromBase', () => {
           type: 'document.unpublish',
         },
       ]
-      expect(() =>
-        applyActionsFromBase({actions, transactionId, base, working, timestamp}),
-      ).toThrow(ActionError)
+      expect(() => processActions({actions, transactionId, base, working, timestamp})).toThrow(
+        ActionError,
+      )
     })
 
     it('should unpublish using the working published document when base and working differ', () => {
@@ -443,7 +442,7 @@ describe('applyActionsFromBase', () => {
           type: 'document.unpublish',
         },
       ]
-      const result = applyActionsFromBase({
+      const result = processActions({
         actions,
         transactionId,
         base,
@@ -477,7 +476,7 @@ describe('applyActionsFromBase', () => {
         {documentId: 'doc1', type: 'document.edit', patch: {set: {title: 'Edited Title'}}},
         {documentId: 'doc1', type: 'document.publish'},
       ]
-      const result = applyActionsFromBase({
+      const result = processActions({
         actions,
         transactionId,
         base,
@@ -504,7 +503,7 @@ describe('applyActionsFromBase', () => {
         },
       ]
 
-      expect(() => applyActionsFromBase({actions, transactionId, base, working})).toThrow(
+      expect(() => processActions({actions, transactionId, base, working})).toThrow(
         /Unknown action type: document.unrecognizedAction/,
       )
     })

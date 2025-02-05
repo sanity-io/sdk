@@ -13,39 +13,69 @@ import {
 } from '@sanity/client'
 import {type Mutation, type SanityDocument} from '@sanity/types'
 import {evaluate, parse} from 'groq-js'
-import {buffer, firstValueFrom, from, Observable, of, ReplaySubject, Subject} from 'rxjs'
+import {from, Observable, of, ReplaySubject, Subject} from 'rxjs'
 import {beforeEach, it, vi} from 'vitest'
 
 import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {createSanityInstance} from '../instance/sanityInstance'
-import {type SanityInstance} from '../instance/types'
-import {type StateSource} from '../resources/createStateSourceAction'
-import {createDocument, editDocument, publishDocument} from './actions'
+import {getDraftId, getPublishedId} from '../preview/util'
+import {
+  createDocument,
+  deleteDocument,
+  discardDocument,
+  editDocument,
+  publishDocument,
+  unpublishDocument,
+} from './actions'
 import {applyActions} from './applyActions'
-import {applyMutations, type DocumentSet} from './applyMutations'
 import {diffPatch} from './diffPatch'
-import {getDocumentState, type HttpAction} from './documentStore'
+import {getDocumentState} from './documentStore'
+import {type DocumentSet, processMutations} from './processMutations'
+import {type HttpAction} from './reducers'
 import {createFetchDocument, createSharedListener} from './sharedListener'
 
-let instance: SanityInstance
+vi.mock('../client/actions/getSubscribableClient', () => ({
+  getSubscribableClient: vi.fn().mockReturnValue(new ReplaySubject(1)),
+}))
+
+vi.mock('./sharedListener.ts', () => {
+  const sharedListener = new Subject<ListenEvent<SanityDocument>>()
+  const welcomeEvent: WelcomeEvent = {type: 'welcome', listenerName: 'mock-listener'}
+
+  return {
+    createFetchDocument: vi.fn(),
+    createSharedListener: vi.fn().mockReturnValue(
+      Object.assign(
+        new Observable((observer) => {
+          observer.next(welcomeEvent)
+          sharedListener.subscribe(observer)
+        }),
+        {
+          next: sharedListener.next.bind(sharedListener),
+          complete: sharedListener.complete.bind(sharedListener),
+        },
+      ),
+    ),
+  }
+})
+
+vi.mock('./documentConstants.ts', async (importOriginal) => {
+  const {
+    INITIAL_OUTGOING_THROTTLE_TIME: _unused,
+    DOCUMENT_STATE_CLEAR_DELAY: _alsoUnused,
+    ...rest
+  } = await importOriginal<typeof import('./documentConstants')>()
+
+  return {
+    INITIAL_OUTGOING_THROTTLE_TIME: 0,
+    DOCUMENT_STATE_CLEAR_DELAY: 100,
+    ...rest,
+  }
+})
 
 beforeEach(() => {
-  // vi.useFakeTimers()
-  // setTimeout(async () => {
-  //   while (true) {
-  //     await vi.advanceTimersToNextTimerAsync()
-  //   }
-  // }, 0)
-  // vi.advanceTimersToNextTimer()
-
-  instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-
-  const client$ = vi.mocked<() => ReplaySubject<SanityClient>>(
-    getSubscribableClient as () => ReplaySubject<SanityClient>,
-  )()
-  const sharedListener = vi.mocked<() => Subject<ListenEvent<SanityDocument>>>(
-    createSharedListener as () => Subject<ListenEvent<SanityDocument>>,
-  )()
+  const client$ = (getSubscribableClient as () => ReplaySubject<SanityClient>)()
+  const sharedListener = (createSharedListener as () => Subject<ListenEvent<SanityDocument>>)()
 
   let documents: DocumentSet = {}
 
@@ -121,7 +151,7 @@ beforeEach(() => {
               )
             }
 
-            next = applyMutations({
+            next = processMutations({
               documents: next,
               mutations: allIds.map((id) => ({delete: {id}})),
               transactionId,
@@ -138,7 +168,7 @@ beforeEach(() => {
               )
             }
 
-            next = applyMutations({
+            next = processMutations({
               documents: next,
               mutations: [
                 {createIfNotExists: {...source, _id: i.draftId}},
@@ -158,7 +188,7 @@ beforeEach(() => {
               )
             }
 
-            next = applyMutations({
+            next = processMutations({
               documents: next,
               mutations: [
                 {delete: {id: i.draftId}},
@@ -178,7 +208,7 @@ beforeEach(() => {
               )
             }
 
-            next = applyMutations({
+            next = processMutations({
               documents: next,
               mutations: [
                 {delete: {id: i.publishedId}},
@@ -197,7 +227,7 @@ beforeEach(() => {
               )
             }
 
-            next = applyMutations({
+            next = processMutations({
               documents: next,
               mutations: [{create: i.attributes}],
               transactionId,
@@ -213,7 +243,7 @@ beforeEach(() => {
               )
             }
 
-            next = applyMutations({
+            next = processMutations({
               documents: next,
               mutations: [{delete: {id: i.versionId}}],
               transactionId,
@@ -353,57 +383,201 @@ beforeEach(() => {
   client$.next(client)
 })
 
-vi.mock('../client/actions/getSubscribableClient', () => ({
-  getSubscribableClient: vi.fn().mockReturnValue(new ReplaySubject(1)),
-}))
+/**
+ * These tests verify the collaborative editing lifecycle using the public APIs.
+ * We simulate:
+ * - A simple create–edit–publish flow on one instance.
+ * - Two instances that share a listener so that an edit on one instance is
+ *   reflected in the other.
+ * - Conflict resolution in a concurrent editing scenario.
+ * - The unpublish/discard/delete flows.
+ * - Cleanup of document state when there are no more subscriptions.
+ */
+describe('DocumentStore integration tests', () => {
+  it('should create, edit, and publish a document (single instance)', async () => {
+    const instance1 = createSanityInstance({projectId: 'p', dataset: 'd'})
 
-vi.mock('./sharedListener.ts', () => {
-  const sharedListener = new Subject<ListenEvent<SanityDocument>>()
-  const welcomeEvent: WelcomeEvent = {type: 'welcome', listenerName: 'mock-listener'}
+    const docId = 'doc-single'
+    const documentState = getDocumentState(instance1, docId)
 
-  return {
-    createFetchDocument: vi.fn(),
-    createSharedListener: vi.fn().mockReturnValue(
-      Object.assign(
-        new Observable((observer) => {
-          observer.next(welcomeEvent)
-          sharedListener.subscribe(observer)
-        }),
-        {
-          next: sharedListener.next.bind(sharedListener),
-          complete: sharedListener.complete.bind(sharedListener),
-        },
-      ),
-    ),
-  }
-})
+    const unsubscribe = documentState.subscribe()
 
-function promiseWithResolvers<T = void>() {
-  let resolve!: (t: T) => void
-  let reject!: (err: unknown) => void
-  const promise = new Promise((res, rej) => {
-    resolve = res
-    reject = rej
+    // Initially the document is undefined
+    expect(documentState.getCurrent()).toBe(null)
+
+    // Create a new document
+    await applyActions(instance1, createDocument({_id: docId, _type: 'article'}))
+    let currentDoc = documentState.getCurrent()
+    expect(currentDoc?._id).toEqual(getDraftId(docId))
+
+    // Edit the document – add a title
+    await applyActions(instance1, editDocument(docId, {set: {title: 'My First Article'}}))
+    currentDoc = documentState.getCurrent()
+    expect(currentDoc?.title).toEqual('My First Article')
+
+    // Publish the document; the resulting transactionId is used as the new _rev
+    const {transactionId, submitted} = await applyActions(instance1, publishDocument(docId))
+    await submitted()
+    currentDoc = documentState.getCurrent()
+
+    expect(currentDoc).toMatchObject({
+      _id: docId,
+      _rev: transactionId,
+    })
+
+    unsubscribe()
   })
 
-  return {resolve, reject, promise}
-}
+  it('should propagate changes between two instances', async () => {
+    const instance1 = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance2 = createSanityInstance({projectId: 'p', dataset: 'd'})
 
-it('works', async () => {
-  const documentState = getDocumentState(instance, 'foo') as StateSource<
-    SanityDocument | null | undefined
-  >
+    const docId = 'doc-collab'
+    const state1 = getDocumentState(instance1, docId)
+    const state2 = getDocumentState(instance2, docId)
 
-  const done = promiseWithResolvers()
-  const states = firstValueFrom(documentState.observable.pipe(buffer(from(done.promise))))
+    const state1Unsubscribe = state1.subscribe()
+    const state2Unsubscribe = state2.subscribe()
 
-  await applyActions(instance, [createDocument({_type: 'author', _id: 'foo'})])
-  await applyActions(instance, [editDocument('foo', {set: {name: 'updated again!'}})])
-  await applyActions(instance, editDocument('foo', {set: {name: 'updated again!!'}}))
-  const result = await applyActions(instance, publishDocument('foo'))
-  await result.submitted()
-  done.resolve()
+    // Create the document from instance1.
+    await applyActions(instance1, createDocument({_id: docId, _type: 'blog'})).then((r) =>
+      r.submitted(),
+    )
 
-  // eslint-disable-next-line no-console
-  console.log(await states)
+    const doc1 = state1.getCurrent()
+    const doc2 = state2.getCurrent()
+    expect(doc1?._id).toEqual(getDraftId(docId))
+    expect(doc2?._id).toEqual(getDraftId(docId))
+
+    // Now, edit the document from instance2.
+    await applyActions(instance2, editDocument(docId, {set: {content: 'Hello world!'}})).then((r) =>
+      r.submitted(),
+    )
+
+    const updated1 = state1.getCurrent()
+    const updated2 = state2.getCurrent()
+    expect(updated1?.content).toEqual('Hello world!')
+    expect(updated2?.content).toEqual('Hello world!')
+
+    state1Unsubscribe()
+    state2Unsubscribe()
+  })
+
+  it('should handle concurrent edits and resolve conflicts', async () => {
+    const instance1 = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance2 = createSanityInstance({projectId: 'p', dataset: 'd'})
+
+    const docId = 'doc-concurrent'
+    const state1 = getDocumentState(instance1, docId)
+    const state2 = getDocumentState(instance2, docId)
+
+    const state1Unsubscribe = state1.subscribe()
+    const state2Unsubscribe = state2.subscribe()
+
+    // Create the document from instance1.
+    await applyActions(instance1, createDocument({_id: docId, _type: 'note'})).then((res) =>
+      res.submitted(),
+    )
+
+    await applyActions(
+      instance1,
+      editDocument(docId, {set: {text: 'The quick brown fox jumps over the lazy dog'}}),
+    ).then((res) => res.submitted())
+
+    // Both instances now issue an edit simultaneously.
+    const p1 = applyActions(
+      instance1,
+      editDocument(docId, {set: {text: 'The quick brown fox jumps over the lazy cat'}}),
+    )
+    const p2 = applyActions(
+      instance2,
+      editDocument(docId, {set: {text: 'The quick brown elephant jumps over the lazy dog'}}),
+    )
+
+    // Wait for both actions to complete (or reject).
+    await Promise.allSettled([p1.then((r) => r.submitted()), p2.then((r) => r.submitted())])
+
+    // In a real conflict, one edit may “win” or the conflict resolution may merge.
+    // Here we check that both instances eventually agree on the final text.
+    const finalDoc1 = state1.getCurrent()
+    const finalDoc2 = state2.getCurrent()
+    expect(finalDoc1?.text).toEqual(finalDoc2?.text)
+    // Accept that the text is one of the two possible edits.
+    expect(finalDoc1?.text).toBe('The quick brown elephant jumps over the lazy cat')
+
+    state1Unsubscribe()
+    state2Unsubscribe()
+  })
+
+  it('should unpublish and discard a document', async () => {
+    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+
+    const docId = 'doc-pub-unpub'
+    const documentState = getDocumentState(instance, docId)
+    const unsubscribe = documentState.subscribe()
+
+    // Create and publish the document.
+    await applyActions(instance, createDocument({_id: docId, _type: 'post'}))
+    const afterPublish = await applyActions(instance, publishDocument(docId))
+    const publishedDoc = documentState.getCurrent()
+    expect(publishedDoc).toMatchObject({
+      _id: getPublishedId(docId),
+      _rev: afterPublish.transactionId,
+    })
+
+    // Unpublish the document (which should delete the published version and create a draft).
+    await applyActions(instance, unpublishDocument(docId))
+    const afterUnpublish = documentState.getCurrent()
+    // In our mock implementation the _id remains the same but the published copy is removed.
+    expect(afterUnpublish?._id).toEqual(getDraftId(docId))
+
+    // Discard the draft (which deletes the draft version).
+    await applyActions(instance, discardDocument(docId))
+    const afterDiscard = documentState.getCurrent()
+    expect(afterDiscard).toBeNull()
+
+    unsubscribe()
+  })
+
+  it('should delete a document', async () => {
+    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const docId = 'doc-delete'
+
+    const documentState = getDocumentState(instance, docId)
+    const unsubscribe = documentState.subscribe()
+
+    await applyActions(instance, createDocument({_id: docId, _type: 'task'}))
+    const doc = documentState.getCurrent()
+    expect(doc).toBeDefined()
+
+    // Delete the document.
+    await applyActions(instance, deleteDocument(docId))
+    const afterDelete = documentState.getCurrent()
+    expect(afterDelete).toBeNull()
+
+    unsubscribe()
+  })
+
+  it('should clean up document state when there are no subscribers', async () => {
+    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const docId = 'doc-cleanup'
+    const documentState = getDocumentState(instance, docId)
+
+    // Subscribe to the document state.
+    const unsubscribe = documentState.subscribe()
+
+    // Create a document.
+    await applyActions(instance, createDocument({_id: docId, _type: 'event'}))
+    expect(documentState.getCurrent()).toBeDefined()
+
+    // Unsubscribe from the document.
+    unsubscribe()
+
+    // Wait longer than DOCUMENT_STATE_CLEAR_DELAY (set to 1000ms normally; our mocks set it to 100)
+    await new Promise((resolve) => setTimeout(resolve, 110))
+
+    // When a new subscriber is created, if the state was cleared it should return undefined.
+    const newDocumentState = getDocumentState(instance, docId)
+    expect(newDocumentState.getCurrent()).toBeUndefined()
+  })
 })

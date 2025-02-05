@@ -2,8 +2,8 @@ import {makePatches, stringifyPatches} from '@sanity/diff-match-patch'
 import {type Mutation, type SanityDocument} from '@sanity/types'
 import {describe, expect, it} from 'vitest'
 
-import {applyMutations} from './applyMutations'
 import {diffPatch, type PatchOperations} from './diffPatch'
+import {processMutations} from './processMutations'
 
 // A helper “document” that contains the system fields (which will be ignored)
 const timestamp = '2025-02-02T00:00:00Z'
@@ -16,7 +16,7 @@ const docInfo = {
 }
 
 function applyPatches(before: SanityDocument, patches: PatchOperations[]) {
-  const documents = applyMutations({
+  const documents = processMutations({
     documents: {[before._id]: before},
     transactionId: 'tx1',
     mutations: patches.map((patch): Mutation => ({patch: {id: before._id, ...patch}})),
@@ -97,9 +97,9 @@ describe('diffPatch', () => {
   })
 
   // Test that changes on keys starting with an underscore are ignored.
-  it('ignores fields with keys starting with an underscore', () => {
-    const before = {...docInfo, _ignored: 'foo', a: 1}
-    const after = {...docInfo, _ignored: 'bar', a: 1}
+  it('ignores internal system fields', () => {
+    const before = {...docInfo, _rev: 'foo', a: 1}
+    const after = {...docInfo, _rev: 'bar', a: 1}
     const patches = diffPatch(before, after)
     expect(patches).toEqual([])
   })

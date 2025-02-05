@@ -1,7 +1,7 @@
 import {type PatchOperations} from '@sanity/types'
 
 import {getPublishedId} from '../preview/util'
-import {getId} from './applyMutations'
+import {getId} from './processMutations'
 
 export interface CreateDocumentAction {
   type: 'document.create'

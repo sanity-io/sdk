@@ -18,8 +18,8 @@ import {
 import {mergeMap, scan} from 'rxjs/operators'
 
 import {type ActionContext, createInternalAction} from '../resources/createAction'
-import {applyMutations} from './applyMutations'
 import {type DocumentStoreState} from './documentStore'
+import {processMutations} from './processMutations'
 
 const DEFAULT_MAX_BUFFER_SIZE = 20
 const DEFAULT_DEADLINE_MS = 30000
@@ -280,7 +280,7 @@ export const listen = createInternalAction(({state}: ActionContext<DocumentStore
       sortListenerEvents(),
       withLatestFrom(
         state.observable.pipe(
-          map((s) => s.documents[documentId]),
+          map((s) => s.documentStates[documentId]),
           filter(Boolean),
           distinctUntilChanged(),
         ),
@@ -297,8 +297,8 @@ export const listen = createInternalAction(({state}: ActionContext<DocumentStore
 
         // else next.type === 'mutation'
         const [document] = Object.values(
-          applyMutations({
-            documents: {[documentId]: documentState!.base},
+          processMutations({
+            documents: {[documentId]: documentState!.remote},
             mutations: next.mutations as Mutation[],
             transactionId: next.transactionId,
             timestamp: next.timestamp,

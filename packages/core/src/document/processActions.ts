@@ -3,9 +3,9 @@ import {isEqual} from 'lodash-es'
 
 import {getDraftId, getPublishedId} from '../preview/util'
 import {type DocumentAction} from './actions'
-import {applyMutations, type DocumentSet} from './applyMutations'
 import {diffPatch} from './diffPatch'
-import {type HttpAction} from './documentStore'
+import {type DocumentSet, processMutations} from './processMutations'
+import {type HttpAction} from './reducers'
 
 interface ApplyActionsOptions {
   /**
@@ -94,7 +94,7 @@ export class ActionError extends Error implements ActionErrorOptions {
  * then applied to the working set of documents and is set as the outgoing patch
  * sent to the server.
  */
-export function applyActionsFromBase({
+export function processActions({
   actions,
   transactionId,
   working: initialWorking,
@@ -126,13 +126,13 @@ export function applyActionsFromBase({
         const newDocWorking = {...working[publishedId], _type: action.documentType, _id: draftId}
         const mutations: Mutation[] = [{create: newDocWorking}]
 
-        base = applyMutations({
+        base = processMutations({
           documents: base,
           transactionId,
           mutations: [{create: newDocBase}],
           timestamp,
         })
-        working = applyMutations({
+        working = processMutations({
           documents: working,
           transactionId,
           mutations,
@@ -152,8 +152,8 @@ export function applyActionsFromBase({
         const mutations: Mutation[] = [{delete: {id: publishedId}}, {delete: {id: draftId}}]
         const includeDrafts = working[draftId] ? [draftId] : undefined
 
-        base = applyMutations({documents: base, transactionId, mutations, timestamp})
-        working = applyMutations({documents: working, transactionId, mutations, timestamp})
+        base = processMutations({documents: base, transactionId, mutations, timestamp})
+        working = processMutations({documents: working, transactionId, mutations, timestamp})
 
         outgoingMutations.push(...mutations)
         outgoingActions.push({
@@ -167,8 +167,8 @@ export function applyActionsFromBase({
       case 'document.discard': {
         const mutations: Mutation[] = [{delete: {id: draftId}}]
 
-        base = applyMutations({documents: base, transactionId, mutations, timestamp})
-        working = applyMutations({documents: working, transactionId, mutations, timestamp})
+        base = processMutations({documents: base, transactionId, mutations, timestamp})
+        working = processMutations({documents: working, transactionId, mutations, timestamp})
 
         outgoingMutations.push(...mutations)
         outgoingActions.push({
@@ -200,7 +200,12 @@ export function applyActionsFromBase({
         // the above if statement should make this never be null or undefined
         const baseBefore = (base[draftId] ?? base[publishedId]) as SanityDocument
         baseMutations.push({patch: {id: draftId, ...action.patch}})
-        base = applyMutations({documents: base, transactionId, mutations: baseMutations, timestamp})
+        base = processMutations({
+          documents: base,
+          transactionId,
+          mutations: baseMutations,
+          timestamp,
+        })
         // this one will always be defined because a patch mutation will never
         // delete an input document
         const baseAfter = base[draftId] as SanityDocument
@@ -217,7 +222,7 @@ export function applyActionsFromBase({
           })
         }
         workingMutations.push(...patches.map((patch) => ({patch: {id: draftId, ...patch}})))
-        working = applyMutations({
+        working = processMutations({
           documents: working,
           transactionId,
           mutations: workingMutations,
@@ -264,8 +269,8 @@ export function applyActionsFromBase({
           {createOrReplace: {...baseDraft, _id: publishedId}},
         ]
 
-        base = applyMutations({documents: base, transactionId, mutations, timestamp})
-        working = applyMutations({documents: working, transactionId, mutations, timestamp})
+        base = processMutations({documents: base, transactionId, mutations, timestamp})
+        working = processMutations({documents: working, transactionId, mutations, timestamp})
 
         outgoingMutations.push(...mutations)
         outgoingActions.push({
@@ -291,7 +296,7 @@ export function applyActionsFromBase({
           {createIfNotExists: {...sourceDoc, _id: draftId}},
         ]
 
-        base = applyMutations({
+        base = processMutations({
           documents: base,
           transactionId,
           mutations: [
@@ -300,7 +305,7 @@ export function applyActionsFromBase({
           ],
           timestamp,
         })
-        working = applyMutations({documents: working, transactionId, mutations, timestamp})
+        working = processMutations({documents: working, transactionId, mutations, timestamp})
 
         outgoingMutations.push(...mutations)
         outgoingActions.push({

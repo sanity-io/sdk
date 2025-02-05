@@ -62,7 +62,7 @@ export function getId(id?: string): string {
   return id
 }
 
-export interface ApplyMutationsOptions {
+export interface ProcessMutationsOptions {
   /**
    * The transaction ID that will become the next `_rev` for documents mutated
    * by the given mutations.
@@ -114,12 +114,12 @@ export function getDocumentIds(selection: MutationSelection): string[] {
  * If a `timestamp` is given, that will be used as for the relevant `_updatedAt`
  * and `_createdAt` timestamps.
  */
-export function applyMutations({
+export function processMutations({
   documents,
   mutations,
   transactionId,
   timestamp,
-}: ApplyMutationsOptions): DocumentSet {
+}: ProcessMutationsOptions): DocumentSet {
   // early return if there are no mutations given
   if (!mutations.length) return documents
 

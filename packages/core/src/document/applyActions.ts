@@ -3,10 +3,12 @@ import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rx
 
 import {createAction} from '../resources/createAction'
 import {type DocumentAction} from './actions'
-import {type DocumentSet} from './applyMutations'
-import {type AppliedTransaction, documentStore, type QueuedTransaction} from './documentStore'
+import {documentStore} from './documentStore'
+import {type DocumentSet} from './processMutations'
+import {type AppliedTransaction, type QueuedTransaction, queueTransaction} from './reducers'
 
 export interface ActionResult {
+  transactionId: string
   documents: DocumentSet
   previous: DocumentSet
   previousRevs: {[TDocumentId in string]?: string}
@@ -26,8 +28,8 @@ export const applyActions = createAction(documentStore, ({state}) => {
     }
 
     const transactionError$ = events.pipe(
-      filter((e) => e.transactionId === transactionId),
       filter((e) => e.type === 'error'),
+      filter((e) => e.transactionId === transactionId),
       first(),
     )
 
@@ -40,14 +42,14 @@ export const applyActions = createAction(documentStore, ({state}) => {
     )
 
     const successfulTransaction$ = events.pipe(
-      filter((e) => e.type === 'submitted'),
-      filter((e) => e.consumedTransactions.includes(transactionId)),
+      filter((e) => e.type === 'accepted'),
+      filter((e) => e.outgoing.consumedTransactions.includes(transactionId)),
       first(),
     )
 
     const rejectedTransaction$ = events.pipe(
       filter((e) => e.type === 'reverted'),
-      filter((e) => e.consumedTransactions.includes(transactionId)),
+      filter((e) => e.outgoing.consumedTransactions.includes(transactionId)),
       first(),
     )
 
@@ -56,9 +58,7 @@ export const applyActions = createAction(documentStore, ({state}) => {
       race([successfulTransaction$, rejectedTransaction$, transactionError$]),
     )
 
-    state.set('queueTransaction', (prev) => ({
-      queued: [...prev.queued, transaction],
-    }))
+    state.set('queueTransaction', (prev) => queueTransaction(prev, transaction))
 
     const result = await appliedTransactionOrError
     if ('type' in result && result.type === 'error') throw result.error
@@ -67,11 +67,12 @@ export const applyActions = createAction(documentStore, ({state}) => {
 
     async function submitted() {
       const raceResult = await acceptedOrRejectedTransaction
-      if (raceResult.type !== 'submitted') throw raceResult.error
+      if (raceResult.type !== 'accepted') throw raceResult.error
       return raceResult.result
     }
 
     return {
+      transactionId,
       documents,
       previous,
       previousRevs,
