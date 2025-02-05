@@ -1,14 +1,35 @@
-import {type ActionResult, editDocument, getDocumentState, resolveDocument} from '@sanity/sdk'
+import {
+  type ActionResult,
+  type DocumentHandle,
+  editDocument,
+  getDocumentState,
+  type JsonMatch,
+  type JsonMatchPath,
+  resolveDocument,
+} from '@sanity/sdk'
 import {type SanityDocument} from '@sanity/types'
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useApplyActions} from './useApplyActions'
 
+const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
+
+export function useEditDocument<
+  TDocument extends SanityDocument,
+  TPath extends JsonMatchPath<TDocument>,
+>(
+  doc: string | DocumentHandle<TDocument>,
+  path: TPath,
+): (nextValue: JsonMatch<TDocument, TPath>) => Promise<ActionResult>
+export function useEditDocument<TDocument extends SanityDocument>(
+  doc: string | DocumentHandle<TDocument>,
+): (nextValue: Partial<TDocument>) => Promise<ActionResult>
 export function useEditDocument(
-  documentId: string,
+  doc: string | DocumentHandle,
   path?: string,
 ): (nextValue: unknown) => Promise<ActionResult> {
+  const documentId = typeof doc === 'string' ? doc : doc._id
   const instance = useSanityInstance()
   const apply = useApplyActions()
   const isDocumentReady = useCallback(
@@ -23,7 +44,7 @@ export function useEditDocument(
         return apply(editDocument(documentId, {set: {[path]: next}}))
       }
 
-      const current = getDocumentState(instance, documentId).getCurrent() as SanityDocument | null
+      const current = getDocumentState(instance, documentId).getCurrent()
 
       if (typeof next !== 'object' || !next) {
         throw new Error(
@@ -32,7 +53,7 @@ export function useEditDocument(
       }
 
       const editActions = Object.entries(next)
-        .filter(([key]) => !key.startsWith('_'))
+        .filter(([key]) => !ignoredKeys.includes(key))
         .filter(([key, value]) => current?.[key] !== value)
         .map(([key, value]) => editDocument(documentId, {set: {[key]: value}}))
 

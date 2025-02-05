@@ -18,11 +18,7 @@ export {getSubscribableClient} from '../client/actions/getSubscribableClient'
 export type {ClientState} from '../client/clientStore'
 
 /** DOCUMENT LIST */
-export type {
-  DocumentHandle,
-  DocumentListOptions,
-  DocumentListState,
-} from '../documentList/documentListStore'
+export type {DocumentListOptions, DocumentListState} from '../documentList/documentListStore'
 export {createDocumentListStore} from '../documentList/documentListStore'
 
 /** AUTH */
@@ -98,3 +94,9 @@ export {
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,
 } from '../document/events'
+export {
+  type DocumentHandle,
+  type JsonMatch,
+  jsonMatch,
+  type JsonMatchPath,
+} from '../document/patchOperations'

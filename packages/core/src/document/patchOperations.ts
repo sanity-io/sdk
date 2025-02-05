@@ -6,9 +6,114 @@ import {
   type KeyedSegment,
   type Path,
   type PathSegment,
+  type SanityDocumentLike,
 } from '@sanity/types'
 
 export type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
+
+export interface DocumentHandle<TDocument extends SanityDocumentLike = SanityDocumentLike> {
+  _id: string
+  _type: TDocument['_type']
+}
+
+type ToNumber<TInput extends string> = TInput extends `${infer TNumber extends number}`
+  ? TNumber
+  : TInput
+
+/**
+ * Parse a single “segment” that may include bracket parts.
+ *
+ * For example, the literal
+ *
+ * ```
+ * "friends[0][1]"
+ * ```
+ *
+ * is parsed as:
+ *
+ * ```
+ * ["friends", 0, 1]
+ * ```
+ */
+type ParseSegment<TInput extends string> = TInput extends `${infer TProp}[${infer TRest}`
+  ? TProp extends ''
+    ? [...ParseBracket<`[${TRest}`>] // no property name before '['
+    : [TProp, ...ParseBracket<`[${TRest}`>]
+  : TInput extends ''
+    ? []
+    : [TInput]
+
+/**
+ * Parse one or more bracketed parts from a segment.
+ *
+ * It recursively “peels off” a bracketed part and then continues.
+ *
+ * For example, given the string:
+ *
+ * ```
+ * "[0][foo]"
+ * ```
+ *
+ * it produces:
+ *
+ * ```
+ * [ToNumber<"0">, "foo"]
+ * ```
+ */
+type ParseBracket<TInput extends string> = TInput extends `[${infer TPart}]${infer TRest}`
+  ? [ToNumber<TPart>, ...ParseSegment<TRest>]
+  : [] // no leading bracket → end of this segment
+
+/**
+ * Split the entire path string on dots “outside” of any brackets.
+ *
+ * For example:
+ * ```
+ * "friends[0].name"
+ * ```
+ *
+ * becomes:
+ *
+ * ```
+ * [...ParseSegment<"friends[0]">, ...ParseSegment<"name">]
+ * ```
+ *
+ * (We use a simple recursion that splits on the first dot.)
+ */
+type PathParts<TPath extends string> = TPath extends `${infer TLeft}.${infer TRight}`
+  ? [...ParseSegment<TLeft>, ...PathParts<TRight>]
+  : ParseSegment<TPath>
+
+/**
+ * Given a type T and an array of “access keys” Parts, recursively index into T.
+ *
+ * If a part is a key, it looks up that property.
+ * If T is an array and the part is a number, it “indexes” into the element type.
+ */
+type DeepGet<T, TParts extends readonly unknown[]> = TParts extends [infer Head, ...infer Tail]
+  ? Head extends keyof T
+    ? DeepGet<T[Head], Tail>
+    : T extends Array<infer U>
+      ? Head extends number
+        ? DeepGet<U, Tail>
+        : never
+      : never
+  : T
+
+/**
+ * Given a document type TDocument and a JSON Match path string TPath,
+ * compute the type found at that path.
+ */
+export type JsonMatch<TDocument extends SanityDocumentLike, TPath extends string> = DeepGet<
+  TDocument,
+  PathParts<TPath>
+>
+
+/**
+ * Computing the full possible paths may be possible but is hard to compute
+ * within the type system for complex document types so we use string.
+ */
+export type JsonMatchPath<_TDocument extends SanityDocumentLike> = string
 
 function parseBracketContent(content: string): PathSegment {
   // 1) Range match:  ^(\d*):(\d*)$
@@ -150,8 +255,8 @@ export function stringifyPath(path: Path): string {
   return result
 }
 
-export type MatchEntry = {
-  value: unknown
+export type MatchEntry<T = unknown> = {
+  value: T
   path: SingleValuePath
 }
 
@@ -166,6 +271,11 @@ export type MatchEntry = {
  *
  * [0]: https://www.sanity.io/docs/json-match
  */
+export function jsonMatch<
+  TDocument extends SanityDocumentLike,
+  TPath extends JsonMatchPath<TDocument>,
+>(input: TDocument, path: TPath): MatchEntry<JsonMatch<TDocument, TPath>>[]
+export function jsonMatch<TValue>(input: unknown, path: string): MatchEntry<TValue>[]
 export function jsonMatch(input: unknown, pathExpression: string): MatchEntry[] {
   return matchRecursive(input, parsePath(pathExpression), [])
 }

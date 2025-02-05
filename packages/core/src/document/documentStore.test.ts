@@ -30,6 +30,7 @@ import {
 import {applyActions} from './applyActions'
 import {diffPatch} from './diffPatch'
 import {getDocumentState} from './documentStore'
+import {type DocumentHandle} from './patchOperations'
 import {type DocumentSet, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
 import {createFetchDocument, createSharedListener} from './sharedListener'
@@ -395,10 +396,15 @@ beforeEach(() => {
  */
 describe('DocumentStore integration tests', () => {
   it('should create, edit, and publish a document (single instance)', async () => {
-    const instance1 = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
-    const docId = 'doc-single'
-    const documentState = getDocumentState(instance1, docId)
+    interface Article extends SanityDocument {
+      title?: string
+      _type: 'article'
+    }
+
+    const doc: DocumentHandle<Article> = {_id: 'doc-single', _type: 'article'}
+    const documentState = getDocumentState(instance, doc)
 
     const unsubscribe = documentState.subscribe()
 
@@ -406,22 +412,22 @@ describe('DocumentStore integration tests', () => {
     expect(documentState.getCurrent()).toBe(null)
 
     // Create a new document
-    await applyActions(instance1, createDocument({_id: docId, _type: 'article'}))
+    await applyActions(instance, createDocument(doc))
     let currentDoc = documentState.getCurrent()
-    expect(currentDoc?._id).toEqual(getDraftId(docId))
+    expect(currentDoc?._id).toEqual(getDraftId(doc._id))
 
     // Edit the document – add a title
-    await applyActions(instance1, editDocument(docId, {set: {title: 'My First Article'}}))
+    await applyActions(instance, editDocument(doc, {set: {title: 'My First Article'}}))
     currentDoc = documentState.getCurrent()
     expect(currentDoc?.title).toEqual('My First Article')
 
     // Publish the document; the resulting transactionId is used as the new _rev
-    const {transactionId, submitted} = await applyActions(instance1, publishDocument(docId))
+    const {transactionId, submitted} = await applyActions(instance, publishDocument(doc))
     await submitted()
     currentDoc = documentState.getCurrent()
 
     expect(currentDoc).toMatchObject({
-      _id: docId,
+      _id: doc._id,
       _rev: transactionId,
     })
 
@@ -432,25 +438,27 @@ describe('DocumentStore integration tests', () => {
     const instance1 = createSanityInstance({projectId: 'p', dataset: 'd'})
     const instance2 = createSanityInstance({projectId: 'p', dataset: 'd'})
 
-    const docId = 'doc-collab'
-    const state1 = getDocumentState(instance1, docId)
-    const state2 = getDocumentState(instance2, docId)
+    interface Blog extends SanityDocument {
+      _type: 'blog'
+      content?: string
+    }
+    const doc: DocumentHandle<Blog> = {_id: 'doc-collab', _type: 'blog'}
+    const state1 = getDocumentState(instance1, doc)
+    const state2 = getDocumentState(instance2, doc)
 
     const state1Unsubscribe = state1.subscribe()
     const state2Unsubscribe = state2.subscribe()
 
     // Create the document from instance1.
-    await applyActions(instance1, createDocument({_id: docId, _type: 'blog'})).then((r) =>
-      r.submitted(),
-    )
+    await applyActions(instance1, createDocument(doc)).then((r) => r.submitted())
 
     const doc1 = state1.getCurrent()
     const doc2 = state2.getCurrent()
-    expect(doc1?._id).toEqual(getDraftId(docId))
-    expect(doc2?._id).toEqual(getDraftId(docId))
+    expect(doc1?._id).toEqual(getDraftId(doc._id))
+    expect(doc2?._id).toEqual(getDraftId(doc._id))
 
     // Now, edit the document from instance2.
-    await applyActions(instance2, editDocument(docId, {set: {content: 'Hello world!'}})).then((r) =>
+    await applyActions(instance2, editDocument(doc, {set: {content: 'Hello world!'}})).then((r) =>
       r.submitted(),
     )
 
@@ -467,35 +475,38 @@ describe('DocumentStore integration tests', () => {
     const instance1 = createSanityInstance({projectId: 'p', dataset: 'd'})
     const instance2 = createSanityInstance({projectId: 'p', dataset: 'd'})
 
-    const docId = 'doc-concurrent'
-    const state1 = getDocumentState(instance1, docId)
-    const state2 = getDocumentState(instance2, docId)
+    interface Note extends SanityDocument {
+      _type: 'note'
+      text?: string
+    }
+
+    const doc: DocumentHandle<Note> = {_id: 'doc-concurrent', _type: 'note'}
+    const state1 = getDocumentState(instance1, doc)
+    const state2 = getDocumentState(instance2, doc)
 
     const state1Unsubscribe = state1.subscribe()
     const state2Unsubscribe = state2.subscribe()
 
     // Create the document from instance1.
-    await applyActions(instance1, createDocument({_id: docId, _type: 'note'})).then((res) =>
-      res.submitted(),
-    )
+    await applyActions(instance1, createDocument(doc)).then((res) => res.submitted())
 
     await applyActions(
       instance1,
-      editDocument(docId, {set: {text: 'The quick brown fox jumps over the lazy dog'}}),
+      editDocument(doc, {set: {text: 'The quick brown fox jumps over the lazy dog'}}),
     ).then((res) => res.submitted())
 
     // Both instances now issue an edit simultaneously.
     const p1 = applyActions(
       instance1,
-      editDocument(docId, {set: {text: 'The quick brown fox jumps over the lazy cat'}}),
-    )
+      editDocument(doc, {set: {text: 'The quick brown fox jumps over the lazy cat'}}),
+    ).then((r) => r.submitted())
     const p2 = applyActions(
       instance2,
-      editDocument(docId, {set: {text: 'The quick brown elephant jumps over the lazy dog'}}),
-    )
+      editDocument(doc, {set: {text: 'The quick brown elephant jumps over the lazy dog'}}),
+    ).then((r) => r.submitted())
 
     // Wait for both actions to complete (or reject).
-    await Promise.allSettled([p1.then((r) => r.submitted()), p2.then((r) => r.submitted())])
+    await Promise.allSettled([p1, p2])
 
     // In a real conflict, one edit may “win” or the conflict resolution may merge.
     // Here we check that both instances eventually agree on the final text.
@@ -512,27 +523,31 @@ describe('DocumentStore integration tests', () => {
   it('should unpublish and discard a document', async () => {
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
-    const docId = 'doc-pub-unpub'
-    const documentState = getDocumentState(instance, docId)
+    interface Post extends SanityDocument {
+      _type: 'post'
+    }
+
+    const doc: DocumentHandle<Post> = {_id: 'doc-pub-unpub', _type: 'post'}
+    const documentState = getDocumentState(instance, doc)
     const unsubscribe = documentState.subscribe()
 
     // Create and publish the document.
-    await applyActions(instance, createDocument({_id: docId, _type: 'post'}))
-    const afterPublish = await applyActions(instance, publishDocument(docId))
+    await applyActions(instance, createDocument(doc))
+    const afterPublish = await applyActions(instance, publishDocument(doc))
     const publishedDoc = documentState.getCurrent()
     expect(publishedDoc).toMatchObject({
-      _id: getPublishedId(docId),
+      _id: getPublishedId(doc._id),
       _rev: afterPublish.transactionId,
     })
 
     // Unpublish the document (which should delete the published version and create a draft).
-    await applyActions(instance, unpublishDocument(docId))
+    await applyActions(instance, unpublishDocument(doc))
     const afterUnpublish = documentState.getCurrent()
     // In our mock implementation the _id remains the same but the published copy is removed.
-    expect(afterUnpublish?._id).toEqual(getDraftId(docId))
+    expect(afterUnpublish?._id).toEqual(getDraftId(doc._id))
 
     // Discard the draft (which deletes the draft version).
-    await applyActions(instance, discardDocument(docId))
+    await applyActions(instance, discardDocument(doc))
     const afterDiscard = documentState.getCurrent()
     expect(afterDiscard).toBeNull()
 
@@ -541,17 +556,22 @@ describe('DocumentStore integration tests', () => {
 
   it('should delete a document', async () => {
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    const docId = 'doc-delete'
 
-    const documentState = getDocumentState(instance, docId)
+    interface Task extends SanityDocument {
+      _type: 'task'
+    }
+
+    const doc: DocumentHandle<Task> = {_id: 'doc-delete', _type: 'task'}
+
+    const documentState = getDocumentState(instance, doc)
     const unsubscribe = documentState.subscribe()
 
-    await applyActions(instance, createDocument({_id: docId, _type: 'task'}))
-    const doc = documentState.getCurrent()
-    expect(doc).toBeDefined()
+    await applyActions(instance, createDocument(doc))
+    const docValue = documentState.getCurrent()
+    expect(docValue).toBeDefined()
 
     // Delete the document.
-    await applyActions(instance, deleteDocument(docId))
+    await applyActions(instance, deleteDocument(doc))
     const afterDelete = documentState.getCurrent()
     expect(afterDelete).toBeNull()
 
@@ -560,14 +580,19 @@ describe('DocumentStore integration tests', () => {
 
   it('should clean up document state when there are no subscribers', async () => {
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    const docId = 'doc-cleanup'
-    const documentState = getDocumentState(instance, docId)
+
+    interface Event extends SanityDocument {
+      _type: 'event'
+    }
+
+    const doc: DocumentHandle<Event> = {_id: 'doc-cleanup', _type: 'event'}
+    const documentState = getDocumentState(instance, doc)
 
     // Subscribe to the document state.
     const unsubscribe = documentState.subscribe()
 
     // Create a document.
-    await applyActions(instance, createDocument({_id: docId, _type: 'event'}))
+    await applyActions(instance, createDocument(doc))
     expect(documentState.getCurrent()).toBeDefined()
 
     // Unsubscribe from the document.
@@ -577,7 +602,7 @@ describe('DocumentStore integration tests', () => {
     await new Promise((resolve) => setTimeout(resolve, 110))
 
     // When a new subscriber is created, if the state was cleared it should return undefined.
-    const newDocumentState = getDocumentState(instance, docId)
+    const newDocumentState = getDocumentState(instance, doc)
     expect(newDocumentState.getCurrent()).toBeUndefined()
   })
 })

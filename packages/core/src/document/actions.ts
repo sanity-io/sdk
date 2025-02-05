@@ -1,6 +1,7 @@
 import {type PatchOperations} from '@sanity/types'
 
 import {getPublishedId} from '../preview/util'
+import {type DocumentHandle} from './patchOperations'
 import {getId} from './processMutations'
 
 export interface CreateDocumentAction {
@@ -52,28 +53,31 @@ export const createDocument = (
   documentType: typeof input === 'object' ? input._type : input,
 })
 
-export const deleteDocument = (documentId: string): DeleteDocumentAction => ({
+export const deleteDocument = (doc: string | DocumentHandle): DeleteDocumentAction => ({
   type: 'document.delete',
-  documentId: getPublishedId(documentId),
+  documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
 })
 
-export const editDocument = (documentId: string, patch: PatchOperations): EditDocumentAction => ({
+export const editDocument = (
+  doc: string | DocumentHandle,
+  patch: PatchOperations,
+): EditDocumentAction => ({
   type: 'document.edit',
-  documentId: getPublishedId(documentId),
+  documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
   patch,
 })
 
-export const publishDocument = (documentId: string): PublishDocumentAction => ({
+export const publishDocument = (doc: string | DocumentHandle): PublishDocumentAction => ({
   type: 'document.publish',
-  documentId: getPublishedId(documentId),
+  documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
 })
 
-export const unpublishDocument = (documentId: string): UnpublishDocumentAction => ({
+export const unpublishDocument = (doc: string | DocumentHandle): UnpublishDocumentAction => ({
   type: 'document.unpublish',
-  documentId: getPublishedId(documentId),
+  documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
 })
 
-export const discardDocument = (documentId: string): DiscardDocumentAction => ({
+export const discardDocument = (doc: string | DocumentHandle): DiscardDocumentAction => ({
   type: 'document.discard',
-  documentId: getPublishedId(documentId),
+  documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
 })

@@ -25,14 +25,15 @@ import {
 
 import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {API_VERSION} from '../documentList/documentListConstants'
+import {type SanityInstance} from '../instance/types'
 import {getDraftId, randomId} from '../preview/util'
 import {type ActionContext, createAction, createInternalAction} from '../resources/createAction'
 import {createResource} from '../resources/createResource'
-import {createStateSourceAction} from '../resources/createStateSourceAction'
+import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
 import {DOCUMENT_STATE_CLEAR_DELAY, INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
 import {type DocumentEvent, getDocumentEvents} from './events'
 import {listen} from './listen'
-import {jsonMatch} from './patchOperations'
+import {type DocumentHandle, type JsonMatch, jsonMatch, type JsonMatchPath} from './patchOperations'
 import {ActionError} from './processActions'
 import {
   addSubscriptionIdToDocument,
@@ -122,9 +123,10 @@ export const documentStore = createResource<DocumentStoreState>({
 
 function addPairSubscriptionIds(
   {state}: ActionContext<DocumentStoreState>,
-  documentId: string,
+  doc: string | DocumentHandle,
   _path?: string,
 ): () => void {
+  const documentId = typeof doc === 'string' ? doc : doc._id
   const subscriptionId = randomId()
   state.set('addSubscribers', (prev) =>
     [getPublishedId(documentId), getDraftId(documentId)].reduce(
@@ -145,12 +147,12 @@ function addPairSubscriptionIds(
   }
 }
 
-export const getDocumentState = createStateSourceAction(documentStore, {
-  selector: ({error, documentStates: documents}, documentId, path?: string) => {
+const _getDocumentState = createStateSourceAction(documentStore, {
+  selector: ({error, documentStates: documents}, doc, path?: string) => {
+    const documentId = typeof doc === 'string' ? doc : doc._id
     if (error) throw error
     const draftId = getDraftId(documentId)
     const publishedId = getPublishedId(documentId)
-
     const draft = documents[draftId]?.local
     const published = documents[publishedId]?.local
 
@@ -162,8 +164,35 @@ export const getDocumentState = createStateSourceAction(documentStore, {
   onSubscribe: addPairSubscriptionIds,
 })
 
+export function getDocumentState<
+  TDocument extends SanityDocument,
+  TPath extends JsonMatchPath<TDocument>,
+>(
+  instance: SanityInstance | ActionContext<DocumentStoreState>,
+  doc: string | DocumentHandle<TDocument>,
+  path: TPath,
+): StateSource<JsonMatch<TDocument, TPath> | undefined>
+export function getDocumentState<TDocument extends SanityDocument>(
+  instance: SanityInstance | ActionContext<DocumentStoreState>,
+  doc: string | DocumentHandle<TDocument>,
+): StateSource<TDocument | null>
+export function getDocumentState(
+  instance: SanityInstance | ActionContext<DocumentStoreState>,
+  doc: string | DocumentHandle,
+  path?: string,
+): StateSource<unknown>
+export function getDocumentState(
+  ...args: Parameters<typeof _getDocumentState>
+): StateSource<unknown> {
+  return _getDocumentState(...args)
+}
+
 export const getDocumentConsistencyStatus = createStateSourceAction(documentStore, {
-  selector: ({error, documentStates: documents, outgoing, applied}, documentId: string) => {
+  selector: (
+    {error, documentStates: documents, outgoing, applied},
+    doc: string | DocumentHandle,
+  ) => {
+    const documentId = typeof doc === 'string' ? doc : doc._id
     if (error) throw error
     const draftId = getDraftId(documentId)
     const publishedId = getPublishedId(documentId)
@@ -178,9 +207,10 @@ export const getDocumentConsistencyStatus = createStateSourceAction(documentStor
 })
 
 export const resolveDocument = createAction(documentStore, () => {
-  return function (documentId: string) {
+  return function (doc: string | DocumentHandle) {
+    const documentId = typeof doc === 'string' ? doc : doc._id
     return firstValueFrom(
-      getDocumentState(this, documentId).observable.pipe(filter((doc) => doc !== undefined)),
+      getDocumentState(this, documentId).observable.pipe(filter((i) => i !== undefined)),
     )
   }
 })
