@@ -1,22 +1,27 @@
 # Changelog
 
-## [0.0.0-alpha.7](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.6...sdk-react-v0.0.0-alpha.7) (2025-02-04)
+## [0.0.0-alpha.7](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.6...sdk-react-v0.0.0-alpha.7) (2025-02-05)
 
 
 ### Features
 
 * **react:** add sanity os bridge script to AuthBoundary ([#196](https://github.com/sanity-io/sdk/issues/196)) ([1fb064d](https://github.com/sanity-io/sdk/commit/1fb064d111541bf93c8933920d7bce00a9c454ef))
 
-## [0.0.0-alpha.6](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.5...sdk-react-v0.0.0-alpha.6) (2025-01-30)
 
+### Bug Fixes
+
+* adjust incorrect release back to alpha.6 ([#212](https://github.com/sanity-io/sdk/issues/212)) ([a946853](https://github.com/sanity-io/sdk/commit/a9468530e16ee056d972d913e4f046ceb0610134))
+* trigger release ([#210](https://github.com/sanity-io/sdk/issues/210)) ([2b36c98](https://github.com/sanity-io/sdk/commit/2b36c985a91d44be95a9e6c8446e9a11ffa59d61))
+
+## [0.0.0-alpha.6](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.5...sdk-react-v0.0.0-alpha.6) (2025-01-30)
 
 ### ⚠ BREAKING CHANGES
 
-* renames `org` auth scope to `global` ([#187](https://github.com/sanity-io/sdk/issues/187))
+- renames `org` auth scope to `global` ([#187](https://github.com/sanity-io/sdk/issues/187))
 
 ### Miscellaneous Chores
 
-* renames `org` auth scope to `global` ([#187](https://github.com/sanity-io/sdk/issues/187)) ([3220d57](https://github.com/sanity-io/sdk/commit/3220d5729c8012ffc47bfa2d75bfca1f2642df76))
+- renames `org` auth scope to `global` ([#187](https://github.com/sanity-io/sdk/issues/187)) ([3220d57](https://github.com/sanity-io/sdk/commit/3220d5729c8012ffc47bfa2d75bfca1f2642df76))
 
 ## [0.0.0-alpha.5](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.4...sdk-react-v0.0.0-alpha.5) (2025-01-28)
 
