@@ -12,6 +12,7 @@ export type {StateSource} from '../resources/createStateSourceAction'
 /** CLIENT */
 // Utils
 export {type ClientOptions, getClient} from '../client/actions/getClient'
+export {getGlobalClient} from '../client/actions/getGlobalClient'
 export {getSubscribableClient} from '../client/actions/getSubscribableClient'
 // Types
 export type {ClientState} from '../client/clientStore'
@@ -61,3 +62,11 @@ export {getOrCreateNode} from '../comlink/node/actions/getOrCreateNode'
 export {releaseNode} from '../comlink/node/actions/releaseNode'
 export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'
+
+/** PERMISSIONS */
+export {
+  getPermissionsState,
+  type Permission,
+  type PermissionsState,
+  type permissionsStore,
+} from '../permissions/permissionsStore'
