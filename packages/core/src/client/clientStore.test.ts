@@ -51,13 +51,14 @@ describe('clientStore', () => {
       expect(state.defaultClient.config().apiHost).toBe('https://api.sanity.work')
     })
 
-    it('initializes clients Map with default client', () => {
+    it('initializes clients Map with default clients', () => {
       const instance = createSanityInstance(config)
       const store = getOrCreateResource(instance, clientStore)
       const state = store.state.get()
 
-      expect(state.clients.size).toBe(1)
+      expect(state.clients.size).toBe(2)
       expect(state.clients.get('2024-11-12')).toBe(state.defaultClient)
+      expect(state.clients.get('global-vX')).toBe(state.defaultGlobalClient)
     })
 
     it('maintains separate stores for different instances', () => {
