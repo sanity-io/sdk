@@ -4,6 +4,7 @@ export {useCurrentUser} from '../hooks/auth/useCurrentUser'
 export {useHandleCallback} from '../hooks/auth/useHandleCallback'
 export {useLoginUrls} from '../hooks/auth/useLoginUrls'
 export {useLogOut} from '../hooks/auth/useLogOut'
+export {useClient} from '../hooks/client/useClient'
 export {
   type FrameConnection,
   type FrameMessageHandler as MessageHandler,
