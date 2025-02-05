@@ -24,7 +24,7 @@
     "react-dom": "^19.0.0",
     "react-error-boundary": "^4.1.2",
     "react-router": "^7.0.2",
-    "vitest": "^2.1.8"
+    "vitest": "^3.0.5"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
