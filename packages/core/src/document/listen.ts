@@ -242,10 +242,15 @@ export const listen = createInternalAction(({state}: ActionContext<DocumentStore
           }
         }
 
-        // else next.type === 'mutation'
+        // TODO: from manual testing, mendoza patches seem to be applying
+        // let document
+        // if (next.effects?.apply) {
+        //   document = applyPatch(omit(documentState.remote, '_rev'), next.effects?.apply)
+        // }
+
         const [document] = Object.values(
           processMutations({
-            documents: {[documentId]: documentState!.remote},
+            documents: {[documentId]: documentState.remote},
             mutations: next.mutations as Mutation[],
             transactionId: next.transactionId,
             timestamp: next.timestamp,

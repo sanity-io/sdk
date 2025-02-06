@@ -23,10 +23,13 @@ export function createSharedListener(
         '*',
         {},
         {
-          // effectFormat: 'mendoza',
           events: ['mutation', 'welcome', 'reconnect'],
           includeResult: false,
           tag: 'sdk.document-listener',
+          // // from manual testing, it seems like mendoza patches may be
+          // // causing some ambiguity/wonkiness
+          // includeMutations: false,
+          // effectFormat: 'mendoza',
         },
       ),
     ),
