@@ -251,6 +251,7 @@ export const subscribeToQueuedAndApplyNextTransaction = createInternalAction(
       return state.observable
         .pipe(
           map(applyFirstQueuedTransaction),
+          distinctUntilChanged(),
           tap((next) => state.set('applyFirstQueuedTransaction', next)),
           catchError((error, caught) => {
             if (error instanceof ActionError) {
@@ -289,14 +290,15 @@ export const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
           throttle(
             (s) =>
               // if there is no outgoing transaction, we can throttle by the
-              // initial outgoing throttle time
+              // initial outgoing throttle time…
               !s.outgoing
                 ? timer(INITIAL_OUTGOING_THROTTLE_TIME)
-                : // otherwise, wait until the outgoing has been cleared
+                : // …otherwise, wait until the outgoing has been cleared
                   state.observable.pipe(first(({outgoing}) => !outgoing)),
             {leading: false, trailing: true},
           ),
           map(transitionAppliedTransactionsToOutgoing),
+          distinctUntilChanged((a, b) => a.outgoing?.transactionId === b.outgoing?.transactionId),
           tap((next) => state.set('transitionAppliedTransactionsToOutgoing', next)),
           map((s) => s.outgoing),
           distinctUntilChanged(),
