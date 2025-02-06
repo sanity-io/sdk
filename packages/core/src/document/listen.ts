@@ -88,8 +88,6 @@ export class MaxBufferExceededError extends OutOfSyncError {
 export interface SortListenerEventsOptions {
   maxBufferSize?: number
   resolveChainDeadline?: number
-  onDiscard?: (discarded: MutationEvent[]) => void
-  onBrokenChain?: (discarded: MutationEvent[]) => void
 }
 
 /**
@@ -103,12 +101,8 @@ export interface SortListenerEventsOptions {
  * @internal
  */
 export function sortListenerEvents(options?: SortListenerEventsOptions) {
-  const {
-    resolveChainDeadline = DEFAULT_DEADLINE_MS,
-    maxBufferSize = DEFAULT_MAX_BUFFER_SIZE,
-    onBrokenChain,
-    onDiscard,
-  } = options || {}
+  const {resolveChainDeadline = DEFAULT_DEADLINE_MS, maxBufferSize = DEFAULT_MAX_BUFFER_SIZE} =
+    options || {}
 
   return (input$: Observable<ListenerEvent>): Observable<ListenerEvent> => {
     return input$.pipe(
@@ -152,13 +146,6 @@ export function sortListenerEvents(options?: SortListenerEventsOptions) {
               }
             }
 
-            // Optionally signal if we’re discarding some mutations that now are unreachable.
-            // (In this simplified implementation we don’t try to “chain” together broken sub-sequences.)
-            if (onDiscard && state.buffer.length > buffer.length) {
-              const discarded = state.buffer.filter((e) => !buffer.includes(e))
-              onDiscard(discarded)
-            }
-
             if (buffer.length >= maxBufferSize) {
               throw new MaxBufferExceededError(
                 `Too many unchainable mutation events (${buffer.length}) waiting to resolve.`,
@@ -181,11 +168,8 @@ export function sortListenerEvents(options?: SortListenerEventsOptions) {
           emitEvents: [] as ListenerEvent[],
         },
       ),
-      // If there is a pending chain in the buffer that isn’t resolved,
-      // signal a broken chain (and eventually error if nothing resolves in time)
       switchMap((state) => {
         if (state.buffer.length > 0) {
-          onBrokenChain?.(state.buffer)
           return concat(
             of(state),
             timer(resolveChainDeadline).pipe(

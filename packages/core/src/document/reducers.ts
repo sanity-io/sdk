@@ -335,10 +335,13 @@ export function applyRemoteDocument(
   }
 
   if (type === 'sync') {
+    // remove unverified revisions that are older than our sync time. we don't
+    // need to verify them for a rebase anymore because we synced and grabbed
+    // the latest document
     unverifiedRevisions = Object.fromEntries(
       Object.entries(unverifiedRevisions).filter(([, unverifiedRevision]) => {
         if (!unverifiedRevision) return false
-        return new Date(timestamp).getTime() > new Date(unverifiedRevision.timestamp).getTime()
+        return new Date(timestamp).getTime() <= new Date(unverifiedRevision.timestamp).getTime()
       }),
     )
   }
