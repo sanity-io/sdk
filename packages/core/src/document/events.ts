@@ -7,6 +7,7 @@ export type DocumentEvent =
   | ActionErrorEvent
   | TransactionRevertedEvent
   | TransactionAcceptedEvent
+  | DocumentRebaseErrorEvent
   | DocumentEditedEvent
   | DocumentCreatedEvent
   | DocumentDeletedEvent
@@ -32,41 +33,48 @@ export interface TransactionRevertedEvent {
   error: unknown
   outgoing: OutgoingTransaction
 }
+export interface DocumentRebaseErrorEvent {
+  type: 'rebase-error'
+  documentId: string
+  transactionId: string
+  message: string
+  error: unknown
+}
 
 export interface DocumentEditedEvent {
   type: 'edited'
   documentId: string
-  transactionId: string
+  outgoing: OutgoingTransaction
 }
 export interface DocumentCreatedEvent {
   type: 'created'
   documentId: string
-  transactionId: string
+  outgoing: OutgoingTransaction
 }
 export interface DocumentDeletedEvent {
   type: 'deleted'
   documentId: string
-  transactionId: string
+  outgoing: OutgoingTransaction
 }
 export interface DocumentPublishedEvent {
   type: 'published'
   documentId: string
-  transactionId: string
+  outgoing: OutgoingTransaction
 }
 export interface DocumentUnpublishedEvent {
   type: 'unpublished'
   documentId: string
-  transactionId: string
+  outgoing: OutgoingTransaction
 }
 export interface DocumentDiscardedEvent {
   type: 'discarded'
   documentId: string
-  transactionId: string
+  outgoing: OutgoingTransaction
 }
 
-export function getDocumentEvents({actions, transactionId}: OutgoingTransaction): DocumentEvent[] {
+export function getDocumentEvents(outgoing: OutgoingTransaction): DocumentEvent[] {
   const documentIdsByAction = Object.entries(
-    actions.reduce(
+    outgoing.actions.reduce(
       (acc, {type, documentId}) => {
         const ids = acc[type] || new Set()
         ids.add(documentId)
@@ -88,7 +96,7 @@ export function getDocumentEvents({actions, transactionId}: OutgoingTransaction)
 
   return documentIdsByAction.flatMap(([actionType, documentIds]) =>
     Array.from(documentIds).map(
-      (documentId): DocumentEvent => ({type: actionMap[actionType], documentId, transactionId}),
+      (documentId): DocumentEvent => ({type: actionMap[actionType], documentId, outgoing}),
     ),
   )
 }

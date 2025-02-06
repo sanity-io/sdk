@@ -7,7 +7,7 @@ import {diffPatch} from './diffPatch'
 import {type DocumentSet, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
 
-interface ApplyActionsOptions {
+interface ProcessActionsOptions {
   /**
    * The ID of this transaction. This will become the resulting `_rev` for all
    * documents affected by changes derived from the current set of actions.
@@ -34,13 +34,13 @@ interface ApplyActionsOptions {
    */
   working: DocumentSet
 
-  timestamp?: string
+  timestamp: string
 
   // // TODO: implement initial values from the schema?
   // initialValues?: {[TDocumentType in string]?: {_type: string}}
 }
 
-interface ApplyActionsResult {
+interface ProcessActionsResult {
   /**
    * The resulting document set after the actions have been applied. This is
    * derived from the working documents.
@@ -100,7 +100,7 @@ export function processActions({
   working: initialWorking,
   base: initialBase,
   timestamp,
-}: ApplyActionsOptions): ApplyActionsResult {
+}: ProcessActionsOptions): ProcessActionsResult {
   let working: DocumentSet = {...initialWorking}
   let base: DocumentSet = {...initialBase}
 
@@ -256,6 +256,7 @@ export function processActions({
         }
 
         // Before proceeding, verify that the working draft is identical to the base draft.
+        // TODO: is it enough just to check for the _rev or nah?
         if (!isEqual(workingDraft, baseDraft)) {
           throw new ActionError({
             documentId,

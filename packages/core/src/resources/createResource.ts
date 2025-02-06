@@ -43,7 +43,13 @@ export function createResourceState<TState>(
   const store = createStore<TState>()(devtools(() => initialState, devToolsOptions))
   return {
     get: store.getState,
-    set: (actionKey, updatedState) => store.setState(updatedState, false, actionKey),
+    set: (actionKey, updatedState) => {
+      // avoids unnecessary updates if the state remains unchanged. since we
+      // use immutable data, this is safe and aligns with React's approach
+      if (store.getState() !== updatedState) {
+        store.setState(updatedState, false, actionKey)
+      }
+    },
     observable: new Observable((observer) => {
       const emit = () => observer.next(store.getState())
       emit()

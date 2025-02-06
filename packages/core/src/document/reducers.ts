@@ -6,7 +6,7 @@ import {getDraftId} from '../preview/util'
 import {type DocumentAction} from './actions'
 import {type DocumentState, type DocumentStoreState} from './documentStore'
 import {type RemoteDocument} from './listen'
-import {processActions} from './processActions'
+import {ActionError, processActions} from './processActions'
 import {type DocumentSet} from './processMutations'
 
 export type SyncTransactionState = Pick<
@@ -39,36 +39,32 @@ export type HttpAction =
 export interface QueuedTransaction {
   transactionId: string
   actions: DocumentAction[]
+  disableBatching?: boolean
 }
 
-export interface AppliedTransaction {
-  transactionId: string
-  actions: DocumentAction[]
+export interface AppliedTransaction extends QueuedTransaction {
   outgoingActions: HttpAction[]
   outgoingMutations: Mutation[]
   base: DocumentSet
   working: DocumentSet
   previous: DocumentSet
   previousRevs: {[TDocumentId in string]?: string}
+  /**
+   * a timestamp for when this transaction was applied locally
+   */
+  timestamp: string
 }
 
-export interface OutgoingTransaction {
-  transactionId: string
-  actions: DocumentAction[]
-  outgoingActions: HttpAction[]
-  outgoingMutations: Mutation[]
-  shouldBatch: boolean
-  consumedTransactions: string[]
-  previousRevs: {[TDocumentId in string]?: string}
-  previous: DocumentSet
-  base: DocumentSet
-  working: DocumentSet
+export interface OutgoingTransaction extends AppliedTransaction {
+  disableBatching: boolean
+  batchedTransactionIds: string[]
 }
 
 export interface UnverifiedDocumentRevision {
   transactionId: string
   documentId: string
   previousRev: string | undefined
+  timestamp: string
 }
 
 export function queueTransaction(
@@ -76,7 +72,9 @@ export function queueTransaction(
   transaction: QueuedTransaction,
 ): SyncTransactionState {
   const {transactionId, actions} = transaction
-  const ids = Array.from(new Set(actions.map((i) => i.documentId)))
+  const ids = Array.from(
+    new Set(actions.flatMap((i) => [getDraftId(i.documentId), getPublishedId(i.documentId)])),
+  )
 
   const prevWithSubscriptionIds = ids.reduce(
     (acc, id) => addSubscriptionIdToDocument(acc, id, transactionId),
@@ -89,13 +87,36 @@ export function queueTransaction(
   }
 }
 
+export function removeQueuedTransaction(
+  prev: SyncTransactionState,
+  transactionId: string,
+): SyncTransactionState {
+  const transaction = prev.queued.find((t) => t.transactionId === transactionId)
+  if (!transaction) return prev
+
+  const ids = Array.from(
+    new Set(
+      transaction.actions.flatMap((i) => [getDraftId(i.documentId), getPublishedId(i.documentId)]),
+    ),
+  )
+  const prevWithSubscriptionIds = ids.reduce(
+    (acc, id) => removeSubscriptionIdFromDocument(acc, id, transactionId),
+    prev,
+  )
+
+  return {
+    ...prevWithSubscriptionIds,
+    queued: prev.queued.filter((t) => transactionId !== t.transactionId),
+  }
+}
+
 export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTransactionState {
   const queued = prev.queued.at(0)
   if (!queued) return prev
 
   const ids = Array.from(
     new Set(
-      queued.actions.map((i) => i.documentId).flatMap((i) => [getDraftId(i), getPublishedId(i)]),
+      queued.actions.flatMap((i) => [getDraftId(i.documentId), getPublishedId(i.documentId)]),
     ),
   )
 
@@ -108,25 +129,24 @@ export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTra
     return acc
   }, {})
 
+  const timestamp = new Date().toISOString()
+
   const result = processActions({
     ...queued,
     working,
     base: working,
+    timestamp,
   })
   const applied: AppliedTransaction = {
     base: working,
     previous: working,
+    timestamp,
     ...queued,
     ...result,
   }
 
-  const prevWithoutSubscriptionsIds = ids.reduce(
-    (acc, id) => removeSubscriptionIdFromDocument(acc, id, queued.transactionId),
-    prev,
-  )
-
   return {
-    ...prevWithoutSubscriptionsIds,
+    ...prev,
     applied: [...prev.applied, applied],
     queued: prev.queued.filter((t) => t.transactionId !== queued.transactionId),
     documentStates: Object.entries(result.working).reduce(
@@ -136,7 +156,7 @@ export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTra
         acc[id] = {...prevDoc, local: next}
         return acc
       },
-      {...prevWithoutSubscriptionsIds.documentStates},
+      {...prev.documentStates},
     ),
   }
 }
@@ -149,64 +169,45 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
 
   if (curr.actions.length > 1) {
     return {
-      transactionId: curr.transactionId,
-      actions: curr.actions,
-      outgoingActions: curr.outgoingActions,
-      shouldBatch: false,
-      consumedTransactions: [curr.transactionId],
-      previousRevs: curr.previousRevs,
-      outgoingMutations: curr.outgoingMutations,
-      base: curr.base,
-      working: curr.working,
-      previous: curr.previous,
+      ...curr,
+      disableBatching: true,
+      batchedTransactionIds: [curr.transactionId],
     }
   }
 
   const [action] = curr.actions
-  if (action.type !== 'document.edit') {
+  if (action.type !== 'document.edit' || curr.disableBatching) {
     return {
-      transactionId: curr.transactionId,
-      actions: curr.actions,
-      outgoingActions: curr.outgoingActions,
-      shouldBatch: false,
-      consumedTransactions: [curr.transactionId],
-      previousRevs: curr.previousRevs,
-      outgoingMutations: curr.outgoingMutations,
-      base: curr.base,
-      working: curr.working,
-      previous: curr.previous,
+      ...curr,
+      disableBatching: true,
+      batchedTransactionIds: [curr.transactionId],
     }
   }
 
   const editAction: OutgoingTransaction = {
-    transactionId: curr.transactionId,
+    ...curr,
     actions: [action],
-    outgoingActions: curr.outgoingActions,
-    shouldBatch: true,
-    consumedTransactions: [curr.transactionId],
-    previousRevs: curr.previousRevs,
-    outgoingMutations: curr.outgoingMutations,
-    base: curr.base,
-    working: curr.working,
-    previous: curr.previous,
+    disableBatching: false,
+    batchedTransactionIds: [curr.transactionId],
   }
   if (!rest.length) return editAction
 
-  const tFirst = batchAppliedTransactions(rest)
-  if (!tFirst) return undefined
-  if (!tFirst.shouldBatch) return editAction
+  const next = batchAppliedTransactions(rest)
+  if (!next) return undefined
+  if (next.disableBatching) return editAction
 
   return {
-    shouldBatch: true,
-    transactionId: tFirst.transactionId,
-    actions: [action, ...tFirst.actions],
-    outgoingActions: [...curr.outgoingActions, ...tFirst.outgoingActions],
-    consumedTransactions: [curr.transactionId, ...tFirst.consumedTransactions],
-    outgoingMutations: [...curr.outgoingMutations, ...tFirst.outgoingMutations],
-    working: {...curr.working, ...tFirst.working},
-    previousRevs: {...tFirst.previousRevs, ...curr.previousRevs},
-    previous: {...tFirst.previous, ...curr.previous},
-    base: {...tFirst.base, ...curr.base},
+    disableBatching: false,
+    transactionId: next.transactionId,
+    actions: [action, ...next.actions],
+    outgoingActions: [...curr.outgoingActions, ...next.outgoingActions],
+    batchedTransactionIds: [curr.transactionId, ...next.batchedTransactionIds],
+    outgoingMutations: [...curr.outgoingMutations, ...next.outgoingMutations],
+    working: {...curr.working, ...next.working},
+    previousRevs: {...next.previousRevs, ...curr.previousRevs},
+    previous: {...next.previous, ...curr.previous},
+    base: {...next.base, ...curr.base},
+    timestamp: curr.timestamp ?? next.timestamp,
   }
 }
 
@@ -218,7 +219,13 @@ export function transitionAppliedTransactionsToOutgoing(
   const transaction = batchAppliedTransactions(prev.applied)
   if (!transaction) return prev
 
-  const {transactionId, previousRevs, consumedTransactions} = transaction
+  const {
+    transactionId,
+    previousRevs,
+    working,
+    batchedTransactionIds: consumedTransactions,
+  } = transaction
+  const timestamp = new Date().toISOString()
 
   return {
     ...prev,
@@ -226,6 +233,8 @@ export function transitionAppliedTransactionsToOutgoing(
     applied: prev.applied.filter((i) => !consumedTransactions.includes(i.transactionId)),
     documentStates: Object.entries(previousRevs).reduce(
       (acc, [documentId, previousRev]) => {
+        if (working[documentId]?._rev === previousRev) return acc
+
         const documentState = prev.documentStates[documentId]
         if (!documentState) return acc
 
@@ -234,7 +243,7 @@ export function transitionAppliedTransactionsToOutgoing(
           unverifiedRevisions: {
             ...documentState.unverifiedRevisions,
             // add unverified revision
-            [transactionId]: {documentId, previousRev, transactionId},
+            [transactionId]: {documentId, previousRev, transactionId, timestamp},
           },
         }
 
@@ -243,6 +252,24 @@ export function transitionAppliedTransactionsToOutgoing(
       {...prev.documentStates},
     ),
   }
+}
+
+export function cleanupOutgoingTransaction(prev: SyncTransactionState): SyncTransactionState {
+  const {outgoing} = prev
+  if (!outgoing) return prev
+
+  let next = prev
+  const documentIds = new Set(
+    outgoing.actions.flatMap((i) => [getDraftId(i.documentId), getPublishedId(i.documentId)]),
+  )
+
+  for (const transactionId of outgoing.batchedTransactionIds) {
+    for (const documentId of documentIds) {
+      next = removeSubscriptionIdFromDocument(next, documentId, transactionId)
+    }
+  }
+
+  return {...next, outgoing: undefined}
 }
 
 export function revertOutgoingTransaction(prev: SyncTransactionState): SyncTransactionState {
@@ -282,9 +309,12 @@ export function revertOutgoingTransaction(prev: SyncTransactionState): SyncTrans
   }
 }
 
+const EMPTY_REVISIONS: NonNullable<Required<DocumentState['unverifiedRevisions']>> = {}
+
 export function applyRemoteDocument(
   prev: SyncTransactionState,
-  {document, documentId, previousRev, revision, timestamp}: RemoteDocument,
+  {document, documentId, previousRev, revision, timestamp, type}: RemoteDocument,
+  events: DocumentStoreState['events'],
 ): SyncTransactionState {
   const prevDocState = prev.documentStates[documentId]
 
@@ -292,13 +322,26 @@ export function applyRemoteDocument(
   // simply skip if there is no state
   if (!prevDocState) return prev
 
+  const prevUnverifiedRevisions = prevDocState.unverifiedRevisions
   // we send out transactions with IDs generated client-side to identify them
   // when they are observed through the listener. here we can check if this
   // incoming remote document is the result of one of our transactions
-  const transactionToVerify = revision
-    ? prev.documentStates[documentId]?.unverifiedRevisions?.[revision]
-    : undefined
+  const transactionToVerify = revision ? prevUnverifiedRevisions?.[revision] : undefined
 
+  let unverifiedRevisions = prevUnverifiedRevisions ?? EMPTY_REVISIONS
+
+  if (revision && transactionToVerify) {
+    unverifiedRevisions = omit(prevUnverifiedRevisions, revision)
+  }
+
+  if (type === 'sync') {
+    unverifiedRevisions = Object.fromEntries(
+      Object.entries(unverifiedRevisions).filter(([, unverifiedRevision]) => {
+        if (!unverifiedRevision) return false
+        return new Date(timestamp).getTime() > new Date(unverifiedRevision.timestamp).getTime()
+      }),
+    )
+  }
   // if there is a transaction to verify and the previous revision from remote
   // matches the previous revision we expected, we can "fast-forward" and skip
   // rebasing local changes on top of this new base
@@ -313,15 +356,7 @@ export function applyRemoteDocument(
           ...prevDocState,
           remote: document,
           remoteRev: revision,
-          unverifiedRevisions: revision
-            ? omit(prevDocState.unverifiedRevisions, revision)
-            : prevDocState.unverifiedRevisions,
-          local:
-            prevDocState.local &&
-            timestamp &&
-            new Date(timestamp).getTime() > new Date(prevDocState.local._updatedAt).getTime()
-              ? Object.assign({...prevDocState.local}, {_updatedAt: timestamp})
-              : prevDocState.local,
+          unverifiedRevisions,
         },
       },
     }
@@ -336,14 +371,42 @@ export function applyRemoteDocument(
   let nextOutgoing: OutgoingTransaction | undefined = prev.outgoing
 
   for (const t of prev.applied) {
-    const next = processActions({...t, working})
-    working = next.working
-    nextApplied.push({...t, ...next})
+    try {
+      const next = processActions({...t, working})
+      working = next.working
+      nextApplied.push({...t, ...next})
+    } catch (error) {
+      if (error instanceof ActionError) {
+        events.next({
+          type: 'rebase-error',
+          transactionId: error.transactionId,
+          documentId: error.documentId,
+          message: error.message,
+          error,
+        })
+        continue
+      }
+      throw error
+    }
   }
+
   if (prev.outgoing) {
-    const next = processActions({...prev.outgoing, working})
-    working = next.working
-    nextOutgoing = {...prev.outgoing, ...next}
+    try {
+      const next = processActions({...prev.outgoing, working})
+      working = next.working
+      nextOutgoing = {...prev.outgoing, ...next}
+    } catch (error) {
+      if (!(error instanceof ActionError)) throw error
+
+      events.next({
+        type: 'rebase-error',
+        transactionId: error.transactionId,
+        documentId: error.documentId,
+        message: error.message,
+        error,
+      })
+      nextOutgoing = undefined
+    }
   }
 
   return {
@@ -357,10 +420,7 @@ export function applyRemoteDocument(
         remote: document,
         remoteRev: revision,
         local: working[documentId],
-        unverifiedRevisions:
-          revision && transactionToVerify
-            ? omit(prevDocState.unverifiedRevisions, revision)
-            : prevDocState.unverifiedRevisions,
+        unverifiedRevisions,
       },
     },
   }

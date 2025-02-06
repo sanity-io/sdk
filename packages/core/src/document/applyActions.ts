@@ -15,16 +15,27 @@ export interface ActionResult {
   submitted: () => ReturnType<SanityClient['action']>
 }
 
+export interface ApplyActionsOptions {
+  /**
+   * Optionally provide an ID to be used as this transaction ID
+   */
+  transactionId?: string
+  disableBatching?: boolean
+}
+
 export const applyActions = createAction(documentStore, ({state}) => {
   const {events} = state.get()
 
-  return async function (action: DocumentAction | DocumentAction[]): Promise<ActionResult> {
+  return async function (
+    action: DocumentAction | DocumentAction[],
+    {transactionId = crypto.randomUUID(), disableBatching}: ApplyActionsOptions = {},
+  ): Promise<ActionResult> {
     const actions = Array.isArray(action) ? action : [action]
 
-    const transactionId = crypto.randomUUID()
     const transaction: QueuedTransaction = {
       transactionId,
       actions,
+      ...(disableBatching && {disableBatching}),
     }
 
     const transactionError$ = events.pipe(
@@ -43,13 +54,13 @@ export const applyActions = createAction(documentStore, ({state}) => {
 
     const successfulTransaction$ = events.pipe(
       filter((e) => e.type === 'accepted'),
-      filter((e) => e.outgoing.consumedTransactions.includes(transactionId)),
+      filter((e) => e.outgoing.batchedTransactionIds.includes(transactionId)),
       first(),
     )
 
     const rejectedTransaction$ = events.pipe(
       filter((e) => e.type === 'reverted'),
-      filter((e) => e.outgoing.consumedTransactions.includes(transactionId)),
+      filter((e) => e.outgoing.batchedTransactionIds.includes(transactionId)),
       first(),
     )
 

@@ -32,7 +32,7 @@ import {createResource} from '../resources/createResource'
 import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
 import {DOCUMENT_STATE_CLEAR_DELAY, INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
 import {type DocumentEvent, getDocumentEvents} from './events'
-import {listen} from './listen'
+import {listen, OutOfSyncError} from './listen'
 import {type DocumentHandle, type JsonMatch, jsonMatch, type JsonMatchPath} from './patchOperations'
 import {ActionError} from './processActions'
 import {
@@ -40,8 +40,10 @@ import {
   type AppliedTransaction,
   applyFirstQueuedTransaction,
   applyRemoteDocument,
+  cleanupOutgoingTransaction,
   type OutgoingTransaction,
   type QueuedTransaction,
+  removeQueuedTransaction,
   removeSubscriptionIdFromDocument,
   revertOutgoingTransaction,
   type SyncTransactionState,
@@ -129,6 +131,11 @@ function addPairSubscriptionIds(
   const documentId = typeof doc === 'string' ? doc : doc._id
   const subscriptionId = randomId()
   state.set('addSubscribers', (prev) =>
+    // NOTE: the order of document IDs in this array somewhat matters here as it
+    // determines the order `applyRemoteDocument` gets calls. because we prefer
+    // the draft versions over the published, that should be first in this array
+    // otherwise it may cause a the published document to appear for one tick
+    // when the correct behavior is to prefer the
     [getPublishedId(documentId), getDraftId(documentId)].reduce(
       (acc, id) => addSubscriptionIdToDocument(acc, id, subscriptionId),
       prev as SyncTransactionState,
@@ -138,7 +145,7 @@ function addPairSubscriptionIds(
   return () => {
     setTimeout(() => {
       state.set('removeSubscribers', (prev) =>
-        [getPublishedId(documentId), getDraftId(documentId)].reduce(
+        [getDraftId(documentId), getPublishedId(documentId)].reduce(
           (acc, id) => removeSubscriptionIdFromDocument(acc, id, subscriptionId),
           prev as SyncTransactionState,
         ),
@@ -146,23 +153,6 @@ function addPairSubscriptionIds(
     }, DOCUMENT_STATE_CLEAR_DELAY)
   }
 }
-
-const _getDocumentState = createStateSourceAction(documentStore, {
-  selector: ({error, documentStates: documents}, doc, path?: string) => {
-    const documentId = typeof doc === 'string' ? doc : doc._id
-    if (error) throw error
-    const draftId = getDraftId(documentId)
-    const publishedId = getPublishedId(documentId)
-    const draft = documents[draftId]?.local
-    const published = documents[publishedId]?.local
-
-    const document = draft ?? published
-    if (document === undefined) return undefined
-    if (path) return jsonMatch(document, path).at(0)?.value
-    return document
-  },
-  onSubscribe: addPairSubscriptionIds,
-})
 
 export function getDocumentState<
   TDocument extends SanityDocument,
@@ -186,6 +176,22 @@ export function getDocumentState(
 ): StateSource<unknown> {
   return _getDocumentState(...args)
 }
+const _getDocumentState = createStateSourceAction(documentStore, {
+  selector: ({error, documentStates: documents}, doc, path?: string) => {
+    const documentId = typeof doc === 'string' ? doc : doc._id
+    if (error) throw error
+    const draftId = getDraftId(documentId)
+    const publishedId = getPublishedId(documentId)
+    const draft = documents[draftId]?.local
+    const published = documents[publishedId]?.local
+
+    const document = draft ?? published
+    if (document === undefined) return undefined
+    if (path) return jsonMatch(document, path).at(0)?.value
+    return document
+  },
+  onSubscribe: addPairSubscriptionIds,
+})
 
 export const getDocumentConsistencyStatus = createStateSourceAction(documentStore, {
   selector: (
@@ -206,7 +212,20 @@ export const getDocumentConsistencyStatus = createStateSourceAction(documentStor
   onSubscribe: addPairSubscriptionIds,
 })
 
-export const resolveDocument = createAction(documentStore, () => {
+export function resolveDocument<TDocument extends SanityDocument>(
+  instance: SanityInstance | ActionContext<DocumentStoreState>,
+  doc: string | DocumentHandle<TDocument>,
+): Promise<TDocument | null>
+export function resolveDocument(
+  instance: SanityInstance | ActionContext<DocumentStoreState>,
+  doc: string | DocumentHandle,
+): Promise<SanityDocument | null>
+export function resolveDocument(
+  ...args: Parameters<typeof _resolveDocument>
+): Promise<SanityDocument | null> {
+  return _resolveDocument(...args)
+}
+const _resolveDocument = createAction(documentStore, () => {
   return function (doc: string | DocumentHandle) {
     const documentId = typeof doc === 'string' ? doc : doc._id
     return firstValueFrom(
@@ -233,8 +252,11 @@ export const subscribeToQueuedAndApplyNextTransaction = createInternalAction(
         .pipe(
           map(applyFirstQueuedTransaction),
           tap((next) => state.set('applyFirstQueuedTransaction', next)),
-          catchError((error) => {
+          catchError((error, caught) => {
             if (error instanceof ActionError) {
+              state.set('removeQueuedTransaction', (prev) =>
+                removeQueuedTransaction(prev, error.transactionId),
+              )
               events.next({
                 type: 'error',
                 message: error.message,
@@ -242,8 +264,7 @@ export const subscribeToQueuedAndApplyNextTransaction = createInternalAction(
                 transactionId: error.transactionId,
                 error,
               })
-              state.set('removeFailedAction', (prev) => ({queued: prev.queued.slice(1)}))
-              return EMPTY
+              return caught
             }
 
             throw error
@@ -297,7 +318,7 @@ export const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
               )
           }),
           tap(({outgoing, result}) => {
-            state.set('removeOutgoing', {outgoing: undefined})
+            state.set('cleanupOutgoingTransaction', cleanupOutgoingTransaction)
             for (const e of getDocumentEvents(outgoing)) events.next(e)
             events.next({type: 'accepted', outgoing, result})
           }),
@@ -309,6 +330,8 @@ export const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
 
 export const subscribeToSubscriptionsAndListenToDocuments = createInternalAction(
   ({state}: ActionContext<DocumentStoreState>) => {
+    const {events} = state.get()
+
     return function () {
       return state.observable
         .pipe(
@@ -324,15 +347,45 @@ export const subscribeToSubscriptionsAndListenToDocuments = createInternalAction
             const added = Array.from(next).filter((i) => !curr.has(i))
             const removed = Array.from(curr).filter((i) => !next.has(i))
 
-            return of<{id: string; add: boolean}[]>(
-              ...added.map((id) => ({id, add: true}) as const),
-              ...removed.map((id) => ({id, add: false}) as const),
-            )
+            // NOTE: the order of which these go out is somewhat important
+            // because that determines the order `applyRemoteDocument` is called
+            // which in turn determines which document version get populated
+            // first. because we prefer drafts, it's better to have those go out
+            // first so that the published document doesn't flash for a frame
+            const changes = [
+              ...added.map((id) => ({id, add: true})),
+              ...removed.map((id) => ({id, add: false})),
+            ].sort((a, b) => {
+              const aIsDraft = a.id === getDraftId(a.id)
+              const bIsDraft = b.id === getDraftId(b.id)
+
+              if (aIsDraft && bIsDraft) return a.id.localeCompare(b.id, 'en-US')
+              if (aIsDraft) return -1
+              if (bIsDraft) return 1
+              return a.id.localeCompare(b.id, 'en-US')
+            })
+
+            return of<{id: string; add: boolean}[]>(...changes)
           }),
           groupBy((i) => i.id),
-          mergeMap((group) => group.pipe(switchMap((e) => (e.add ? listen(this, e.id) : EMPTY)))),
-          tap((remote) =>
-            state.set('applyRemoteDocument', (prev) => applyRemoteDocument(prev, remote)),
+          mergeMap((group) =>
+            group.pipe(
+              switchMap((e) => {
+                if (!e.add) return EMPTY
+                return listen(this, e.id).pipe(
+                  catchError((error) => {
+                    // retry on `OutOfSyncError`
+                    if (error instanceof OutOfSyncError) listen(this, e.id)
+                    throw error
+                  }),
+                  tap((remote) =>
+                    state.set('applyRemoteDocument', (prev) =>
+                      applyRemoteDocument(prev, remote, events),
+                    ),
+                  ),
+                )
+              }),
+            ),
           ),
         )
         .subscribe({error: (error) => state.set('setError', {error})})

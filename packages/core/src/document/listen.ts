@@ -1,6 +1,5 @@
 import {type MutationEvent} from '@sanity/client'
 import {type Mutation, type SanityDocument} from '@sanity/types'
-import {partition} from 'lodash-es'
 import {
   concat,
   concatMap,
@@ -23,14 +22,14 @@ import {processMutations} from './processMutations'
 
 const DEFAULT_MAX_BUFFER_SIZE = 20
 const DEFAULT_DEADLINE_MS = 30000
-const EMPTY_ARRAY: never[] = []
 
 export interface RemoteDocument {
+  type: 'sync' | 'mutation'
   documentId: string
   document: SanityDocument | null
   revision?: string
   previousRev?: string
-  timestamp?: string
+  timestamp: string
 }
 
 export interface SyncEvent {
@@ -93,48 +92,6 @@ export interface SortListenerEventsOptions {
   onBrokenChain?: (discarded: MutationEvent[]) => void
 }
 
-function discardChainTo<T extends {resultRev?: string}>(chain: T[], revision: string | undefined) {
-  const revisionIndex = chain.findIndex((event) => event.resultRev === revision)
-
-  return split(chain, revisionIndex + 1)
-}
-
-function split<T>(array: T[], index: number): [T[], T[]] {
-  if (index < 0) {
-    return [[], array]
-  }
-  return [array.slice(0, index), array.slice(index)]
-}
-
-function toOrderedChains<T extends {previousRev?: string; resultRev?: string}>(events: T[]) {
-  const parents: Record<string, T | undefined> = {}
-
-  events.forEach((event) => {
-    parents[event.resultRev || 'undefined'] = events.find(
-      (other) => other.resultRev === event.previousRev,
-    )
-  })
-
-  // get entries without a parent (if there's more than one, we have a problem)
-  const orphans = Object.entries(parents).filter(([, parent]) => {
-    return !parent
-  })!
-
-  return orphans.map((orphan) => {
-    const [headRev] = orphan
-
-    let current = events.find((event) => event.resultRev === headRev)
-
-    const sortedList: T[] = []
-    while (current) {
-      sortedList.push(current)
-
-      current = events.find((event) => event.previousRev === current?.resultRev)
-    }
-    return sortedList
-  })
-}
-
 /**
  * Takes an input observable of listener events that might arrive out of order, and emits them in sequence
  * If we receive mutation events that doesn't line up in [previousRev, resultRev] pairs we'll put them in a buffer and
@@ -155,110 +112,99 @@ export function sortListenerEvents(options?: SortListenerEventsOptions) {
 
   return (input$: Observable<ListenerEvent>): Observable<ListenerEvent> => {
     return input$.pipe(
+      // Maintain state: current base revision, a buffer of pending mutation events,
+      // and a list of events to emit.
       scan(
         (state: ListenerSequenceState, event: ListenerEvent): ListenerSequenceState => {
-          if (event.type === 'mutation' && !state.base) {
-            throw new Error('Invalid state. Cannot create a sequence without a base')
-          }
+          // When a sync event is received, reset the base and clear any pending mutations.
           if (event.type === 'sync') {
-            // When receiving a new snapshot, we can safely discard the current orphaned and chainable buffers
             return {
               base: {revision: event.document?._rev},
-              buffer: EMPTY_ARRAY,
+              buffer: [],
               emitEvents: [event],
             }
           }
-
+          // For mutation events we must have a base revision (from a prior sync event)
           if (event.type === 'mutation') {
-            if (!event.resultRev && !event.previousRev) {
+            if (!state.base) {
               throw new Error(
-                'Invalid mutation event: Events must have either resultRev or previousRev',
+                'Invalid state. Cannot process mutation event without a base sync event',
               )
             }
-            // Note: the buffer may have multiple holes in it (this is a worst case scenario, and probably not likely, but still),
-            // so we need to consider all possible chains
-            // `toOrderedChains` will return all detected chains and each of the returned chains will be ordered
-            // Once we have a list of chains, we can then discard any chain that leads up to the current revision
-            // since they are already applied on the document
-            const orderedChains = toOrderedChains(state.buffer.concat(event)).map((chain) => {
-              // in case the chain leads up to the current revision
-              const [discarded, rest] = discardChainTo(chain, state.base!.revision)
-              if (onDiscard && discarded.length > 0) {
-                onDiscard(discarded)
-              }
-              return rest
-            })
+            // Add the new mutation event into the buffer
+            const buffer = state.buffer.concat(event)
+            const emitEvents: MutationEvent[] = []
+            let baseRevision = state.base.revision
+            let progress = true
 
-            const [applicableChains, _nextBuffer] = partition(orderedChains, (chain) => {
-              // note: there can be at most one applicable chain
-              return state.base!.revision === chain[0]?.previousRev
-            })
-
-            const nextBuffer = _nextBuffer.flat()
-            if (applicableChains.length > 1) {
-              throw new Error('Expected at most one applicable chain')
-            }
-            if (applicableChains.length > 0 && applicableChains[0]!.length > 0) {
-              // we now have a continuous chain that can apply on the base revision
-              // Move current base revision to the last mutation event in the applicable chain
-              const lastMutation = applicableChains[0]!.at(-1)!
-              const nextBaseRevision =
-                // special case: if the mutation deletes the document it technically has  no revision, despite
-                // resultRev pointing at a transaction id.
-                lastMutation.transition === 'disappear' ? undefined : lastMutation?.resultRev
-              return {
-                base: {revision: nextBaseRevision},
-                emitEvents: applicableChains[0]!,
-                buffer: nextBuffer,
+            // Try to apply as many buffered mutations as possible.
+            while (progress) {
+              progress = false
+              // Look for a mutation whose previousRev matches the current base.
+              const idx = buffer.findIndex((e) => e.previousRev === baseRevision)
+              if (idx !== -1) {
+                // Remove the event from the buffer and “apply” it.
+                const [next] = buffer.splice(idx, 1)
+                emitEvents.push(next)
+                // If the mutation is a deletion, the new base revision is undefined.
+                baseRevision = next.transition === 'disappear' ? undefined : next.resultRev
+                progress = true
               }
             }
 
-            if (nextBuffer.length >= maxBufferSize) {
+            // Optionally signal if we’re discarding some mutations that now are unreachable.
+            // (In this simplified implementation we don’t try to “chain” together broken sub-sequences.)
+            if (onDiscard && state.buffer.length > buffer.length) {
+              const discarded = state.buffer.filter((e) => !buffer.includes(e))
+              onDiscard(discarded)
+            }
+
+            if (buffer.length >= maxBufferSize) {
               throw new MaxBufferExceededError(
-                `Too many unchainable mutation events: ${state.buffer.length}`,
-                state,
+                `Too many unchainable mutation events (${buffer.length}) waiting to resolve.`,
+                {base: {revision: baseRevision}, buffer, emitEvents},
               )
             }
+
             return {
-              ...state,
-              buffer: nextBuffer,
-              emitEvents: EMPTY_ARRAY,
+              base: {revision: baseRevision},
+              buffer,
+              emitEvents,
             }
           }
-          // Any other event (e.g. 'reconnect' is passed on verbatim)
+          // Any other event is simply forwarded.
           return {...state, emitEvents: [event]}
         },
         {
-          emitEvents: EMPTY_ARRAY,
           base: undefined,
-          buffer: EMPTY_ARRAY,
+          buffer: [] as MutationEvent[],
+          emitEvents: [] as ListenerEvent[],
         },
       ),
+      // If there is a pending chain in the buffer that isn’t resolved,
+      // signal a broken chain (and eventually error if nothing resolves in time)
       switchMap((state) => {
         if (state.buffer.length > 0) {
           onBrokenChain?.(state.buffer)
-
           return concat(
             of(state),
             timer(resolveChainDeadline).pipe(
               mergeMap(() =>
-                throwError(() => {
-                  return new DeadlineExceededError(
-                    `Did not resolve chain within a deadline of ${resolveChainDeadline}ms`,
-                    state,
-                  )
-                }),
+                throwError(
+                  () =>
+                    new DeadlineExceededError(
+                      `Did not resolve chain within a deadline of ${resolveChainDeadline}ms`,
+                      state,
+                    ),
+                ),
               ),
             ),
           )
         }
         return of(state)
       }),
-      mergeMap((state) => {
-        // this will simply flatten the list of events into individual emissions
-        // if the flushEvents array is empty, nothing will be emitted
-        return state.emitEvents
-      }),
+      // Emit all events that are ready to be applied.
+      mergeMap((state) => of(...state.emitEvents)),
     )
   }
 }
@@ -288,10 +234,11 @@ export const listen = createInternalAction(({state}: ActionContext<DocumentStore
       map(([next, documentState]): RemoteDocument => {
         if (next.type === 'sync') {
           return {
+            type: 'sync',
             documentId,
             document: next.document,
             revision: next.document?._rev,
-            timestamp: next.document?._updatedAt,
+            timestamp: next.document?._updatedAt ?? new Date().toISOString(),
           }
         }
 
@@ -308,6 +255,7 @@ export const listen = createInternalAction(({state}: ActionContext<DocumentStore
         const {previousRev, transactionId, timestamp} = next
 
         return {
+          type: 'mutation',
           documentId,
           document: document ?? null,
           revision: transactionId,
