@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.8](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.7...sdk-react-v0.0.0-alpha.8) (2025-02-06)
+
+
+### Features
+
+* export useClient ([#213](https://github.com/sanity-io/sdk/issues/213)) ([0e79002](https://github.com/sanity-io/sdk/commit/0e790020ee0f688e6f07243c5605b5cbffe4b1c5))
+
 ## [0.0.0-alpha.7](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.6...sdk-react-v0.0.0-alpha.7) (2025-02-05)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.8](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.7...sdk-v0.0.0-alpha.8) (2025-02-06)
+
+
+### Features
+
+* **client:** add a global api client ([#209](https://github.com/sanity-io/sdk/issues/209)) ([5898b1d](https://github.com/sanity-io/sdk/commit/5898b1d82fc07d12f736d1361e48287e41ae0608))
+
 ## [0.0.0-alpha.7](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.6...sdk-v0.0.0-alpha.7) (2025-02-05)
 
 
