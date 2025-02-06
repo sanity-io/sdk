@@ -1,17 +1,22 @@
 import {type SanityClient} from '@sanity/client'
+import {type SanityDocument} from '@sanity/types'
 import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
 
-import {createAction} from '../resources/createAction'
+import {type SanityInstance} from '../instance/types'
+import {type ActionContext, createAction} from '../resources/createAction'
 import {type DocumentAction} from './actions'
-import {documentStore} from './documentStore'
+import {documentStore, type DocumentStoreState} from './documentStore'
 import {type DocumentSet} from './processMutations'
 import {type AppliedTransaction, type QueuedTransaction, queueTransaction} from './reducers'
 
-export interface ActionResult {
+export interface ActionResult<TDocument extends SanityDocument = SanityDocument> {
   transactionId: string
-  documents: DocumentSet
-  previous: DocumentSet
-  previousRevs: {[TDocumentId in string]?: string}
+  documents: DocumentSet<TDocument>
+  previous: DocumentSet<TDocument>
+  previousRevs: {[documentId: string]: string | undefined}
+  appeared: string[]
+  updated: string[]
+  disappeared: string[]
   submitted: () => ReturnType<SanityClient['action']>
 }
 
@@ -23,7 +28,7 @@ export interface ApplyActionsOptions {
   disableBatching?: boolean
 }
 
-export const applyActions = createAction(documentStore, ({state}) => {
+const _applyActions = createAction(documentStore, ({state}) => {
   const {events} = state.get()
 
   return async function (
@@ -75,6 +80,31 @@ export const applyActions = createAction(documentStore, ({state}) => {
     if ('type' in result && result.type === 'error') throw result.error
 
     const {working: documents, previous, previousRevs} = result as AppliedTransaction
+    const existingIds = new Set(
+      Object.entries(previous)
+        .filter(([, value]) => !!value)
+        .map(([key]) => key),
+    )
+    const resultingIds = new Set(
+      Object.entries(documents)
+        .filter(([, value]) => !!value)
+        .map(([key]) => key),
+    )
+    const allIds = new Set([...existingIds, ...resultingIds])
+
+    const updated: string[] = []
+    const appeared: string[] = []
+    const disappeared: string[] = []
+
+    for (const id of allIds) {
+      if (existingIds.has(id) && resultingIds.has(id)) {
+        updated.push(id)
+      } else if (!existingIds.has(id) && resultingIds.has(id)) {
+        appeared.push(id)
+      } else if (!resultingIds.has(id) && existingIds.has(id)) {
+        disappeared.push(id)
+      }
+    }
 
     async function submitted() {
       const raceResult = await acceptedOrRejectedTransaction
@@ -87,7 +117,26 @@ export const applyActions = createAction(documentStore, ({state}) => {
       documents,
       previous,
       previousRevs,
+      appeared,
+      updated,
+      disappeared,
       submitted,
     }
   }
 })
+
+export function applyActions<TDocument extends SanityDocument>(
+  instance: SanityInstance | ActionContext<DocumentStoreState>,
+  action: DocumentAction<TDocument> | DocumentAction<TDocument>[],
+  options?: ApplyActionsOptions,
+): Promise<ActionResult<TDocument>>
+export function applyActions(
+  instance: SanityInstance | ActionContext<DocumentStoreState>,
+  action: DocumentAction | DocumentAction[],
+  options?: ApplyActionsOptions,
+): Promise<ActionResult>
+export function applyActions(
+  ...args: Parameters<typeof _applyActions>
+): ReturnType<typeof _applyActions> {
+  return _applyActions(...args)
+}

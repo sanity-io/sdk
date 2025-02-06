@@ -96,6 +96,7 @@ export {
 } from '../document/events'
 export {
   type DocumentHandle,
+  type DocumentTypeHandle,
   type JsonMatch,
   jsonMatch,
   type JsonMatchPath,

@@ -1,83 +1,106 @@
-import {type PatchOperations} from '@sanity/types'
+import {type PatchOperations, type SanityDocumentLike} from '@sanity/types'
 
 import {getPublishedId} from '../preview/util'
-import {type DocumentHandle} from './patchOperations'
+import {type DocumentHandle, type DocumentTypeHandle} from './patchOperations'
 import {getId} from './processMutations'
 
-export interface CreateDocumentAction {
+export interface CreateDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.create'
   documentId: string
-  // TODO: should this support templates and params?
-  documentType: string
+  documentType: TDocument['_type']
 }
 
-export interface DeleteDocumentAction {
+// the unused `_TDocument` is primarily for typescript meta-programming to
+// capture and preserve the document type as best as possible
+export interface DeleteDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.delete'
   documentId: string
 }
 
-export interface EditDocumentAction {
+export interface EditDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.edit'
   documentId: string
   patch: PatchOperations
 }
 
-export interface PublishDocumentAction {
+export interface PublishDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.publish'
   documentId: string
 }
 
-export interface UnpublishDocumentAction {
+export interface UnpublishDocumentAction<
+  _TDocument extends SanityDocumentLike = SanityDocumentLike,
+> {
   type: 'document.unpublish'
   documentId: string
 }
 
-export interface DiscardDocumentAction {
+export interface DiscardDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.discard'
   documentId: string
 }
 
-export type DocumentAction =
-  | CreateDocumentAction
-  | DeleteDocumentAction
-  | EditDocumentAction
-  | PublishDocumentAction
-  | UnpublishDocumentAction
-  | DiscardDocumentAction
+export type DocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike> =
+  | CreateDocumentAction<TDocument>
+  | DeleteDocumentAction<TDocument>
+  | EditDocumentAction<TDocument>
+  | PublishDocumentAction<TDocument>
+  | UnpublishDocumentAction<TDocument>
+  | DiscardDocumentAction<TDocument>
 
-export const createDocument = (
-  input: string | {_id?: string; _type: string},
-): CreateDocumentAction => ({
-  type: 'document.create',
-  documentId: getPublishedId(typeof input === 'object' ? getId(input._id) : getId()),
-  documentType: typeof input === 'object' ? input._type : input,
-})
+export function createDocument<TDocument extends SanityDocumentLike>(
+  doc: DocumentTypeHandle<TDocument> | DocumentHandle<TDocument>,
+): CreateDocumentAction<TDocument> {
+  return {
+    type: 'document.create',
+    documentId: getId(doc._id) ?? getId(),
+    documentType: doc._type,
+  }
+}
 
-export const deleteDocument = (doc: string | DocumentHandle): DeleteDocumentAction => ({
-  type: 'document.delete',
-  documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
-})
+export function deleteDocument<TDocument extends SanityDocumentLike>(
+  doc: string | DocumentHandle<TDocument>,
+): DeleteDocumentAction<TDocument> {
+  return {
+    type: 'document.delete',
+    documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
+  }
+}
 
-export const editDocument = (
-  doc: string | DocumentHandle,
+export function editDocument<TDocument extends SanityDocumentLike>(
+  doc: string | DocumentHandle<TDocument>,
   patch: PatchOperations,
-): EditDocumentAction => ({
-  type: 'document.edit',
-  documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
-  patch,
-})
+): EditDocumentAction<TDocument> {
+  return {
+    type: 'document.edit',
+    documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
+    patch,
+  }
+}
 
-export const publishDocument = (doc: string | DocumentHandle): PublishDocumentAction => ({
-  type: 'document.publish',
-  documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
-})
+export function publishDocument<TDocument extends SanityDocumentLike>(
+  doc: string | DocumentHandle<TDocument>,
+): PublishDocumentAction<TDocument> {
+  return {
+    type: 'document.publish',
+    documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
+  }
+}
 
-export const unpublishDocument = (doc: string | DocumentHandle): UnpublishDocumentAction => ({
-  type: 'document.unpublish',
-  documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
-})
+export function unpublishDocument<TDocument extends SanityDocumentLike>(
+  doc: string | DocumentHandle<TDocument>,
+): UnpublishDocumentAction<TDocument> {
+  return {
+    type: 'document.unpublish',
+    documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
+  }
+}
 
-export const discardDocument = (doc: string | DocumentHandle): DiscardDocumentAction => ({
-  type: 'document.discard',
-  documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
-})
+export function discardDocument<TDocument extends SanityDocumentLike>(
+  doc: string | DocumentHandle<TDocument>,
+): DiscardDocumentAction<TDocument> {
+  return {
+    type: 'document.discard',
+    documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
+  }
+}

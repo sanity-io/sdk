@@ -22,7 +22,9 @@ import {
  * mutations affect are included, including those that do not exist yet.
  * Documents that don't exist have a `null` value.
  */
-export type DocumentSet = {[TDocumentId in string]?: SanityDocument | null}
+export type DocumentSet<TDocument extends SanityDocument = SanityDocument> = {
+  [TDocumentId in string]?: TDocument | null
+}
 
 type SupportPatchOperation = Exclude<keyof PatchOperations, 'merge'>
 const patchOperations = {
@@ -57,7 +59,7 @@ const patchOperations = {
  * [- source](https://www.sanity.io/docs/http-mutations#c732f27330a4)
  */
 export function getId(id?: string): string {
-  if (typeof id !== 'string') return crypto.randomUUID()
+  if (!id || typeof id !== 'string') return crypto.randomUUID()
   if (id.endsWith('.')) return `${id}${crypto.randomUUID()}`
   return id
 }

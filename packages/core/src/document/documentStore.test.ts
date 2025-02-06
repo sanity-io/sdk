@@ -433,7 +433,9 @@ describe('documentStore', () => {
     const unsubscribe = documentState.subscribe()
 
     // Create a new document
-    await applyActions(instance, createDocument(doc))
+    const {appeared} = await applyActions(instance, createDocument(doc))
+    expect(appeared).toContain(doc._id)
+
     let currentDoc = documentState.getCurrent()
     expect(currentDoc?._id).toEqual(getDraftId(doc._id))
 

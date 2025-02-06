@@ -16,6 +16,11 @@ export interface DocumentHandle<TDocument extends SanityDocumentLike = SanityDoc
   _type: TDocument['_type']
 }
 
+export interface DocumentTypeHandle<TDocument extends SanityDocumentLike = SanityDocumentLike> {
+  _id?: string
+  _type: TDocument['_type']
+}
+
 type ToNumber<TInput extends string> = TInput extends `${infer TNumber extends number}`
   ? TNumber
   : TInput
