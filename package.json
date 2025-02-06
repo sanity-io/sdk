@@ -60,7 +60,7 @@
     "typedoc": "^0.27.6",
     "typedoc-github-theme": "^0.2.1",
     "typescript": "^5.7.2",
-    "vite": "^5.4.14",
+    "vite": "^6.1.0",
     "vitest": "^3.0.5"
   },
   "packageManager": "pnpm@9.15.5",
