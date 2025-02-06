@@ -34,6 +34,7 @@ import {diffPatch} from './diffPatch'
 import {
   documentStore,
   getDocumentState,
+  getDocumentSyncStatus,
   resolveDocument,
   subscribeDocumentEvents,
 } from './documentStore'
@@ -71,7 +72,7 @@ vi.mock('./sharedListener.ts', () => {
 
 vi.mock('./documentConstants.ts', () => ({
   INITIAL_OUTGOING_THROTTLE_TIME: 0,
-  DOCUMENT_STATE_CLEAR_DELAY: 100,
+  DOCUMENT_STATE_CLEAR_DELAY: 25,
 }))
 
 let client: SanityClient
@@ -618,8 +619,6 @@ describe('documentStore', () => {
       editDocument(doc, {set: {text: 'The quick brown fox jumps over the lazy dog'}}),
     ]).then((res) => res.submitted())
 
-    await new Promise((resolve) => setTimeout(resolve, 100))
-
     // Both instances now issue an edit simultaneously.
     const p1 = applyActions(
       instance1,
@@ -733,8 +732,8 @@ describe('documentStore', () => {
     checkUnverified(instance, doc._id)
     unsubscribe()
 
-    // Wait longer than DOCUMENT_STATE_CLEAR_DELAY (set to 1000ms normally; our mocks set it to 100)
-    await new Promise((resolve) => setTimeout(resolve, 110))
+    // Wait longer than DOCUMENT_STATE_CLEAR_DELAY (set to 1000ms normally; our mocks set it to 25)
+    await new Promise((resolve) => setTimeout(resolve, 30))
 
     // When a new subscriber is created, if the state was cleared it should return undefined.
     const newDocumentState = getDocumentState(instance, doc)
@@ -820,6 +819,42 @@ describe('documentStore', () => {
     checkUnverified(instance, doc._id)
 
     instance.dispose()
+  })
+
+  it('provides the consistency status via `getDocumentSyncStatus`', async () => {
+    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+
+    interface Author extends SanityDocument {
+      _type: 'author'
+      name?: string
+    }
+    const doc: DocumentHandle<Author> = {_id: crypto.randomUUID(), _type: 'author'}
+
+    const syncStatus = getDocumentSyncStatus(instance, doc)
+    expect(syncStatus.getCurrent()).toBeUndefined()
+
+    const unsubscribe = syncStatus.subscribe()
+    expect(syncStatus.getCurrent()).toBe(true)
+
+    const applied = applyActions(instance, createDocument(doc))
+    expect(syncStatus.getCurrent()).toBe(false)
+
+    const createResult = await applied
+    expect(syncStatus.getCurrent()).toBe(false)
+
+    await createResult.submitted()
+    expect(syncStatus.getCurrent()).toBe(true)
+
+    applyActions(instance, editDocument(doc, {set: {name: 'initial name'}}))
+    expect(syncStatus.getCurrent()).toBe(false)
+
+    applyActions(instance, editDocument(doc, {set: {name: 'updated name'}}))
+    const publishResult = applyActions(instance, publishDocument(doc))
+    expect(syncStatus.getCurrent()).toBe(false)
+    await publishResult.then((res) => res.submitted())
+    expect(syncStatus.getCurrent()).toBe(true)
+
+    unsubscribe()
   })
 
   it('reverts failed outgoing transaction locally', async () => {

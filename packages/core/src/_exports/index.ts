@@ -77,8 +77,8 @@ export {
 } from '../document/actions'
 export {type ActionResult, applyActions} from '../document/applyActions'
 export {
-  getDocumentConsistencyStatus,
   getDocumentState,
+  getDocumentSyncStatus,
   resolveDocument,
   subscribeDocumentEvents,
 } from '../document/documentStore'

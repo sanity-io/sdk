@@ -193,9 +193,9 @@ const _getDocumentState = createStateSourceAction(documentStore, {
   onSubscribe: addPairSubscriptionIds,
 })
 
-export const getDocumentConsistencyStatus = createStateSourceAction(documentStore, {
+export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
   selector: (
-    {error, documentStates: documents, outgoing, applied},
+    {error, documentStates: documents, outgoing, applied, queued},
     doc: string | DocumentHandle,
   ) => {
     const documentId = typeof doc === 'string' ? doc : doc._id
@@ -207,7 +207,7 @@ export const getDocumentConsistencyStatus = createStateSourceAction(documentStor
     const published = documents[publishedId]
 
     if (draft === undefined || published === undefined) return undefined
-    return !applied.length && !outgoing
+    return !queued.length && !applied.length && !outgoing
   },
   onSubscribe: addPairSubscriptionIds,
 })
