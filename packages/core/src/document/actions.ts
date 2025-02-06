@@ -1,9 +1,10 @@
 import {type PatchOperations, type SanityDocumentLike} from '@sanity/types'
 
-import {getPublishedId} from '../preview/util'
+import {getPublishedId} from '../utils/ids'
 import {type DocumentHandle, type DocumentTypeHandle} from './patchOperations'
 import {getId} from './processMutations'
 
+/** @beta */
 export interface CreateDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.create'
   documentId: string
@@ -12,22 +13,26 @@ export interface CreateDocumentAction<TDocument extends SanityDocumentLike = San
 
 // the unused `_TDocument` is primarily for typescript meta-programming to
 // capture and preserve the document type as best as possible
+/** @beta */
 export interface DeleteDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.delete'
   documentId: string
 }
 
+/** @beta */
 export interface EditDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.edit'
   documentId: string
   patch: PatchOperations
 }
 
+/** @beta */
 export interface PublishDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.publish'
   documentId: string
 }
 
+/** @beta */
 export interface UnpublishDocumentAction<
   _TDocument extends SanityDocumentLike = SanityDocumentLike,
 > {
@@ -35,11 +40,13 @@ export interface UnpublishDocumentAction<
   documentId: string
 }
 
+/** @beta */
 export interface DiscardDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.discard'
   documentId: string
 }
 
+/** @beta */
 export type DocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike> =
   | CreateDocumentAction<TDocument>
   | DeleteDocumentAction<TDocument>
@@ -48,6 +55,7 @@ export type DocumentAction<TDocument extends SanityDocumentLike = SanityDocument
   | UnpublishDocumentAction<TDocument>
   | DiscardDocumentAction<TDocument>
 
+/** @beta */
 export function createDocument<TDocument extends SanityDocumentLike>(
   doc: DocumentTypeHandle<TDocument> | DocumentHandle<TDocument>,
 ): CreateDocumentAction<TDocument> {
@@ -58,6 +66,7 @@ export function createDocument<TDocument extends SanityDocumentLike>(
   }
 }
 
+/** @beta */
 export function deleteDocument<TDocument extends SanityDocumentLike>(
   doc: string | DocumentHandle<TDocument>,
 ): DeleteDocumentAction<TDocument> {
@@ -67,6 +76,7 @@ export function deleteDocument<TDocument extends SanityDocumentLike>(
   }
 }
 
+/** @beta */
 export function editDocument<TDocument extends SanityDocumentLike>(
   doc: string | DocumentHandle<TDocument>,
   patch: PatchOperations,
@@ -78,6 +88,7 @@ export function editDocument<TDocument extends SanityDocumentLike>(
   }
 }
 
+/** @beta */
 export function publishDocument<TDocument extends SanityDocumentLike>(
   doc: string | DocumentHandle<TDocument>,
 ): PublishDocumentAction<TDocument> {
@@ -87,6 +98,7 @@ export function publishDocument<TDocument extends SanityDocumentLike>(
   }
 }
 
+/** @beta */
 export function unpublishDocument<TDocument extends SanityDocumentLike>(
   doc: string | DocumentHandle<TDocument>,
 ): UnpublishDocumentAction<TDocument> {
@@ -96,6 +108,7 @@ export function unpublishDocument<TDocument extends SanityDocumentLike>(
   }
 }
 
+/** @beta */
 export function discardDocument<TDocument extends SanityDocumentLike>(
   doc: string | DocumentHandle<TDocument>,
 ): DiscardDocumentAction<TDocument> {

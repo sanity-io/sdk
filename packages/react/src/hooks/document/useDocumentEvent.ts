@@ -3,6 +3,7 @@ import {useCallback, useEffect, useInsertionEffect, useRef} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
+/** @beta */
 export function useDocumentEvent(handler: (documentEvent: DocumentEvent) => void): void {
   const ref = useRef(handler)
 

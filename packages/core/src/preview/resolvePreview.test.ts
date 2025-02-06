@@ -4,8 +4,10 @@ import {createSanityInstance} from '../instance/sanityInstance'
 import {
   createResourceState,
   getOrCreateResource,
+  type InitializedResource,
   type ResourceState,
 } from '../resources/createResource'
+import {randomId} from '../utils/ids'
 import {
   previewStore,
   type PreviewStoreState,
@@ -13,10 +15,9 @@ import {
   type ValuePending,
 } from './previewStore'
 import {resolvePreview} from './resolvePreview'
-import {randomId} from './util'
 
-vi.mock('./util', async (importOriginal) => {
-  const util = await importOriginal<typeof import('./util')>()
+vi.mock('../utils/ids', async (importOriginal) => {
+  const util = await importOriginal<typeof import('../utils/ids')>()
   return {...util, randomId: vi.fn(util.randomId)}
 })
 
@@ -82,7 +83,7 @@ describe('resolvePreview', () => {
     state.set('setInitialDocument', (prev) => ({
       values: {...prev.values, exampleId: currentValue},
     }))
-    ;(randomId as Mock).mockImplementationOnce(() => 'pseudoRandomId')
+    vi.mocked(randomId).mockImplementationOnce(() => 'pseudoRandomId')
     expect(state.get().subscriptions).toEqual({})
 
     const previewPromise = resolvePreview({state, instance}, {document})
@@ -111,7 +112,7 @@ describe('resolvePreview', () => {
   })
 
   it('calls getOrCreateResource if no state is provided', () => {
-    ;(getOrCreateResource as Mock).mockReturnValue({state})
+    vi.mocked(getOrCreateResource).mockReturnValue({state} as InitializedResource<unknown>)
     resolvePreview(instance, {document})
     expect(getOrCreateResource).toHaveBeenCalledWith(instance, previewStore)
   })

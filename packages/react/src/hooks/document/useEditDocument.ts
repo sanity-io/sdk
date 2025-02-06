@@ -1,5 +1,5 @@
 import {
-  type ActionResult,
+  type ActionsResult,
   type DocumentHandle,
   editDocument,
   getDocumentState,
@@ -15,20 +15,23 @@ import {useApplyActions} from './useApplyActions'
 
 const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
 
+/** @beta */
 export function useEditDocument<
   TDocument extends SanityDocument,
   TPath extends JsonMatchPath<TDocument>,
 >(
   doc: string | DocumentHandle<TDocument>,
   path: TPath,
-): (nextValue: JsonMatch<TDocument, TPath>) => Promise<ActionResult>
+): (nextValue: JsonMatch<TDocument, TPath>) => Promise<ActionsResult<TDocument>>
+/** @beta */
 export function useEditDocument<TDocument extends SanityDocument>(
   doc: string | DocumentHandle<TDocument>,
-): (nextValue: Partial<TDocument>) => Promise<ActionResult>
+): (nextValue: Partial<TDocument>) => Promise<ActionsResult<TDocument>>
+/** @beta */
 export function useEditDocument(
   doc: string | DocumentHandle,
   path?: string,
-): (nextValue: unknown) => Promise<ActionResult> {
+): (nextValue: unknown) => Promise<ActionsResult> {
   const documentId = typeof doc === 'string' ? doc : doc._id
   const instance = useSanityInstance()
   const apply = useApplyActions()

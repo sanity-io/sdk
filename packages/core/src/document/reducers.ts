@@ -2,12 +2,14 @@ import {getPublishedId} from '@sanity/client/csm'
 import {type Mutation, type PatchOperations, type SanityDocumentLike} from '@sanity/types'
 import {omit} from 'lodash-es'
 
-import {getDraftId} from '../preview/util'
+import {getDraftId} from '../utils/ids'
 import {type DocumentAction} from './actions'
 import {type DocumentState, type DocumentStoreState} from './documentStore'
 import {type RemoteDocument} from './listen'
 import {ActionError, processActions} from './processActions'
 import {type DocumentSet} from './processMutations'
+
+const EMPTY_REVISIONS: NonNullable<Required<DocumentState['unverifiedRevisions']>> = {}
 
 export type SyncTransactionState = Pick<
   DocumentStoreState,
@@ -308,8 +310,6 @@ export function revertOutgoingTransaction(prev: SyncTransactionState): SyncTrans
     ),
   }
 }
-
-const EMPTY_REVISIONS: NonNullable<Required<DocumentState['unverifiedRevisions']>> = {}
 
 export function applyRemoteDocument(
   prev: SyncTransactionState,

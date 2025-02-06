@@ -3,8 +3,8 @@ import {deleteDocument, DocumentHandle, publishDocument, unpublishDocument} from
 import {
   useApplyActions,
   useDocument,
-  useDocumentConsistencyStatus,
   useDocumentEvent,
+  useDocumentSyncStatus,
   useEditDocument,
 } from '@sanity/sdk-react/hooks'
 import {SanityDocument} from '@sanity/types'
@@ -25,7 +25,7 @@ function Editor() {
   const apply = useApplyActions()
 
   useDocumentEvent((e) => console.log(e))
-  const synced = useDocumentConsistencyStatus(doc)
+  const synced = useDocumentSyncStatus(doc)
 
   return (
     <Box padding={4}>

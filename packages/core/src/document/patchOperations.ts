@@ -11,11 +11,13 @@ import {
 
 export type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
 
+/** @beta */
 export interface DocumentHandle<TDocument extends SanityDocumentLike = SanityDocumentLike> {
   _id: string
   _type: TDocument['_type']
 }
 
+/** @beta */
 export interface DocumentTypeHandle<TDocument extends SanityDocumentLike = SanityDocumentLike> {
   _id?: string
   _type: TDocument['_type']
@@ -108,6 +110,7 @@ type DeepGet<T, TParts extends readonly unknown[]> = TParts extends [infer Head,
 /**
  * Given a document type TDocument and a JSON Match path string TPath,
  * compute the type found at that path.
+ * @beta
  */
 export type JsonMatch<TDocument extends SanityDocumentLike, TPath extends string> = DeepGet<
   TDocument,
@@ -117,6 +120,7 @@ export type JsonMatch<TDocument extends SanityDocumentLike, TPath extends string
 /**
  * Computing the full possible paths may be possible but is hard to compute
  * within the type system for complex document types so we use string.
+ * @beta
  */
 export type JsonMatchPath<_TDocument extends SanityDocumentLike> = string
 
@@ -275,12 +279,16 @@ export type MatchEntry<T = unknown> = {
  * E.g. `friends[_key=="dd9efe09"].address.zip`
  *
  * [0]: https://www.sanity.io/docs/json-match
+ *
+ * @beta
  */
 export function jsonMatch<
   TDocument extends SanityDocumentLike,
   TPath extends JsonMatchPath<TDocument>,
 >(input: TDocument, path: TPath): MatchEntry<JsonMatch<TDocument, TPath>>[]
+/** @beta */
 export function jsonMatch<TValue>(input: unknown, path: string): MatchEntry<TValue>[]
+/** @beta */
 export function jsonMatch(input: unknown, pathExpression: string): MatchEntry[] {
   return matchRecursive(input, parsePath(pathExpression), [])
 }

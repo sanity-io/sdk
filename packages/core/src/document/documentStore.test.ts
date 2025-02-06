@@ -19,8 +19,8 @@ import {beforeEach, it, vi} from 'vitest'
 import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {createSanityInstance} from '../instance/sanityInstance'
 import {type SanityInstance} from '../instance/types'
-import {getDraftId, getPublishedId} from '../preview/util'
 import {getOrCreateResource} from '../resources/createResource'
+import {getDraftId, getPublishedId} from '../utils/ids'
 import {
   createDocument,
   deleteDocument,
@@ -434,7 +434,7 @@ describe('documentStore', () => {
 
     // Create a new document
     const {appeared} = await applyActions(instance, createDocument(doc))
-    expect(appeared).toContain(doc._id)
+    expect(appeared).toContain(getDraftId(doc._id))
 
     let currentDoc = documentState.getCurrent()
     expect(currentDoc?._id).toEqual(getDraftId(doc._id))

@@ -6,12 +6,13 @@ import {
   getOrCreateResource,
   type ResourceState,
 } from '../resources/createResource'
+import {randomId} from '../utils/ids'
 import {getPreviewState} from './getPreviewState'
 import {previewStore, type PreviewStoreState} from './previewStore'
-import {randomId, STABLE_EMPTY_PREVIEW} from './util'
+import {STABLE_EMPTY_PREVIEW} from './util'
 
-vi.mock('./util', async (importOriginal) => {
-  const util = await importOriginal<typeof import('./util')>()
+vi.mock('../utils/ids', async (importOriginal) => {
+  const util = await importOriginal<typeof import('../utils/ids')>()
   return {...util, randomId: vi.fn(util.randomId)}
 })
 
@@ -70,7 +71,7 @@ describe('getPreviewState', () => {
     const previewState = getPreviewState({state, instance}, {document})
 
     expect(state.get().subscriptions).toEqual({})
-    ;(randomId as Mock)
+    vi.mocked(randomId)
       .mockImplementationOnce(() => 'pseudoRandomId1')
       .mockImplementationOnce(() => 'pseudoRandomId2')
 

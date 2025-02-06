@@ -3,6 +3,7 @@ import {type SanityClient} from '@sanity/client'
 import {type DocumentAction} from './actions'
 import {type OutgoingTransaction} from './reducers'
 
+/** @beta */
 export type DocumentEvent =
   | ActionErrorEvent
   | TransactionRevertedEvent
@@ -15,6 +16,7 @@ export type DocumentEvent =
   | DocumentUnpublishedEvent
   | DocumentDiscardedEvent
 
+/** @beta */
 export interface ActionErrorEvent {
   type: 'error'
   documentId: string
@@ -22,17 +24,20 @@ export interface ActionErrorEvent {
   message: string
   error: unknown
 }
+/** @beta */
 export interface TransactionAcceptedEvent {
   type: 'accepted'
   outgoing: OutgoingTransaction
   result: Awaited<ReturnType<SanityClient['action']>>
 }
+/** @beta */
 export interface TransactionRevertedEvent {
   type: 'reverted'
   message: string
   error: unknown
   outgoing: OutgoingTransaction
 }
+/** @beta */
 export interface DocumentRebaseErrorEvent {
   type: 'rebase-error'
   documentId: string
@@ -40,32 +45,37 @@ export interface DocumentRebaseErrorEvent {
   message: string
   error: unknown
 }
-
+/** @beta */
 export interface DocumentEditedEvent {
   type: 'edited'
   documentId: string
   outgoing: OutgoingTransaction
 }
+/** @beta */
 export interface DocumentCreatedEvent {
   type: 'created'
   documentId: string
   outgoing: OutgoingTransaction
 }
+/** @beta */
 export interface DocumentDeletedEvent {
   type: 'deleted'
   documentId: string
   outgoing: OutgoingTransaction
 }
+/** @beta */
 export interface DocumentPublishedEvent {
   type: 'published'
   documentId: string
   outgoing: OutgoingTransaction
 }
+/** @beta */
 export interface DocumentUnpublishedEvent {
   type: 'unpublished'
   documentId: string
   outgoing: OutgoingTransaction
 }
+/** @beta */
 export interface DocumentDiscardedEvent {
   type: 'discarded'
   documentId: string

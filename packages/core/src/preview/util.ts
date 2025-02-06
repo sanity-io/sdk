@@ -11,20 +11,6 @@ export const STABLE_ERROR_PREVIEW: ValuePending<PreviewValue> = {
   isPending: false,
 }
 
-export function getPublishedId(id: string): string {
-  const draftsPrefix = 'drafts.'
-  return id.startsWith(draftsPrefix) ? id.slice(draftsPrefix.length) : id
-}
-
-export function getDraftId(id: string): string {
-  const draftsPrefix = 'drafts.'
-  return id.startsWith(draftsPrefix) ? id : `${draftsPrefix}${id}`
-}
-
-export function randomId(): string {
-  return Array.from({length: 8}, () => Math.floor(Math.random() * 16).toString(16)).join('')
-}
-
 export function hashString(str: string): string {
   // Using a large prime number for the hash
   const PRIME = 31

@@ -1,7 +1,7 @@
 import {type Mutation, type PatchOperations, type SanityDocument} from '@sanity/types'
 import {isEqual} from 'lodash-es'
 
-import {getDraftId, getPublishedId} from '../preview/util'
+import {getDraftId, getPublishedId} from '../utils/ids'
 import {type DocumentAction} from './actions'
 import {diffPatch} from './diffPatch'
 import {type DocumentSet, processMutations} from './processMutations'

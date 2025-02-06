@@ -31,7 +31,7 @@ export type ResourceState<TState> = {
   observable: Observable<TState>
 }
 
-interface InitializedResource<TState> {
+export interface InitializedResource<TState> {
   state: ResourceState<TState>
   dispose: () => void
 }

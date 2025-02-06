@@ -75,7 +75,7 @@ export {
   unpublishDocument,
   type UnpublishDocumentAction,
 } from '../document/actions'
-export {type ActionResult, applyActions} from '../document/applyActions'
+export {type ActionsResult, applyActions, type ApplyActionsOptions} from '../document/applyActions'
 export {
   getDocumentState,
   getDocumentSyncStatus,

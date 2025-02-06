@@ -26,10 +26,10 @@ import {
 import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {API_VERSION} from '../documentList/documentListConstants'
 import {type SanityInstance} from '../instance/types'
-import {getDraftId, randomId} from '../preview/util'
 import {type ActionContext, createAction, createInternalAction} from '../resources/createAction'
 import {createResource} from '../resources/createResource'
 import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
+import {getDraftId, randomId} from '../utils/ids'
 import {DOCUMENT_STATE_CLEAR_DELAY, INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
 import {type DocumentEvent, getDocumentEvents} from './events'
 import {listen, OutOfSyncError} from './listen'
@@ -154,6 +154,7 @@ function addPairSubscriptionIds(
   }
 }
 
+/** @beta */
 export function getDocumentState<
   TDocument extends SanityDocument,
   TPath extends JsonMatchPath<TDocument>,
@@ -162,15 +163,18 @@ export function getDocumentState<
   doc: string | DocumentHandle<TDocument>,
   path: TPath,
 ): StateSource<JsonMatch<TDocument, TPath> | undefined>
+/** @beta */
 export function getDocumentState<TDocument extends SanityDocument>(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
   doc: string | DocumentHandle<TDocument>,
 ): StateSource<TDocument | null>
+/** @beta */
 export function getDocumentState(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
   doc: string | DocumentHandle,
   path?: string,
 ): StateSource<unknown>
+/** @beta */
 export function getDocumentState(
   ...args: Parameters<typeof _getDocumentState>
 ): StateSource<unknown> {
@@ -193,6 +197,7 @@ const _getDocumentState = createStateSourceAction(documentStore, {
   onSubscribe: addPairSubscriptionIds,
 })
 
+/** @beta */
 export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
   selector: (
     {error, documentStates: documents, outgoing, applied, queued},
@@ -212,14 +217,17 @@ export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
   onSubscribe: addPairSubscriptionIds,
 })
 
+/** @beta */
 export function resolveDocument<TDocument extends SanityDocument>(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
   doc: string | DocumentHandle<TDocument>,
 ): Promise<TDocument | null>
+/** @beta */
 export function resolveDocument(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
   doc: string | DocumentHandle,
 ): Promise<SanityDocument | null>
+/** @beta */
 export function resolveDocument(
   ...args: Parameters<typeof _resolveDocument>
 ): Promise<SanityDocument | null> {
@@ -234,6 +242,7 @@ const _resolveDocument = createAction(documentStore, () => {
   }
 })
 
+/** @beta */
 export const subscribeDocumentEvents = createAction(documentStore, ({state}) => {
   const {events} = state.get()
 

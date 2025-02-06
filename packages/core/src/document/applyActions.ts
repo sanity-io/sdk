@@ -9,7 +9,8 @@ import {documentStore, type DocumentStoreState} from './documentStore'
 import {type DocumentSet} from './processMutations'
 import {type AppliedTransaction, type QueuedTransaction, queueTransaction} from './reducers'
 
-export interface ActionResult<TDocument extends SanityDocument = SanityDocument> {
+/** @beta */
+export interface ActionsResult<TDocument extends SanityDocument = SanityDocument> {
   transactionId: string
   documents: DocumentSet<TDocument>
   previous: DocumentSet<TDocument>
@@ -20,12 +21,35 @@ export interface ActionResult<TDocument extends SanityDocument = SanityDocument>
   submitted: () => ReturnType<SanityClient['action']>
 }
 
+/** @beta */
 export interface ApplyActionsOptions {
   /**
    * Optionally provide an ID to be used as this transaction ID
    */
   transactionId?: string
+  /**
+   * Set this to true to prevent this action from being batched with others.
+   */
   disableBatching?: boolean
+}
+
+/** @beta */
+export function applyActions<TDocument extends SanityDocument>(
+  instance: SanityInstance | ActionContext<DocumentStoreState>,
+  action: DocumentAction<TDocument> | DocumentAction<TDocument>[],
+  options?: ApplyActionsOptions,
+): Promise<ActionsResult<TDocument>>
+/** @beta */
+export function applyActions(
+  instance: SanityInstance | ActionContext<DocumentStoreState>,
+  action: DocumentAction | DocumentAction[],
+  options?: ApplyActionsOptions,
+): Promise<ActionsResult>
+/** @beta */
+export function applyActions(
+  ...args: Parameters<typeof _applyActions>
+): ReturnType<typeof _applyActions> {
+  return _applyActions(...args)
 }
 
 const _applyActions = createAction(documentStore, ({state}) => {
@@ -34,7 +58,7 @@ const _applyActions = createAction(documentStore, ({state}) => {
   return async function (
     action: DocumentAction | DocumentAction[],
     {transactionId = crypto.randomUUID(), disableBatching}: ApplyActionsOptions = {},
-  ): Promise<ActionResult> {
+  ): Promise<ActionsResult> {
     const actions = Array.isArray(action) ? action : [action]
 
     const transaction: QueuedTransaction = {
@@ -124,19 +148,3 @@ const _applyActions = createAction(documentStore, ({state}) => {
     }
   }
 })
-
-export function applyActions<TDocument extends SanityDocument>(
-  instance: SanityInstance | ActionContext<DocumentStoreState>,
-  action: DocumentAction<TDocument> | DocumentAction<TDocument>[],
-  options?: ApplyActionsOptions,
-): Promise<ActionResult<TDocument>>
-export function applyActions(
-  instance: SanityInstance | ActionContext<DocumentStoreState>,
-  action: DocumentAction | DocumentAction[],
-  options?: ApplyActionsOptions,
-): Promise<ActionResult>
-export function applyActions(
-  ...args: Parameters<typeof _applyActions>
-): ReturnType<typeof _applyActions> {
-  return _applyActions(...args)
-}
