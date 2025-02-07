@@ -503,7 +503,7 @@ describe('processActions', () => {
         },
       ]
 
-      expect(() => processActions({actions, transactionId, base, working})).toThrow(
+      expect(() => processActions({actions, transactionId, base, working, timestamp})).toThrow(
         /Unknown action type: document.unrecognizedAction/,
       )
     })
