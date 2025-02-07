@@ -27,15 +27,19 @@ export type DocumentSet<TDocument extends SanityDocument = SanityDocument> = {
 }
 
 type SupportPatchOperation = Exclude<keyof PatchOperations, 'merge'>
+
+// > If multiple patches are included, then the order of execution is as follows:
+// > - set, setIfMissing, unset, inc, dec, insert.
+// > https://www.sanity.io/docs/http-mutations#5b4db1396e56
 const patchOperations = {
-  dec,
-  diffMatchPatch,
-  inc,
-  insert,
+  ifRevisionID,
   set,
   setIfMissing,
   unset,
-  ifRevisionID,
+  inc,
+  dec,
+  insert,
+  diffMatchPatch,
 } satisfies {
   [K in SupportPatchOperation]: (
     input: unknown,
