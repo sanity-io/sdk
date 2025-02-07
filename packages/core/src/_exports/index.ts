@@ -73,4 +73,4 @@ export {getPermissionsResourceTypes} from '../permissions/actions/getPermissions
 export {hasPermission} from '../permissions/actions/hasPermission'
 export {hasPermissionCategory} from '../permissions/actions/hasPermissionCategory'
 export {hasPermissionForResource} from '../permissions/actions/hasPermissionForResource'
-export {type Permission, type PermissionsState} from '../permissions/permissionsStore'
+export {type Permission} from '../permissions/permissionsStore'
