@@ -38,25 +38,92 @@ export type HttpAction =
   | {actionType: ActionMap['edit']; draftId: string; publishedId: string; patch: PatchOperations}
   | ({actionType: ActionMap['publish']; draftId: string; publishedId: string} & OptimisticLock)
 
+/**
+ * Represents a transaction that is queued to be applied but has not yet been
+ * applied. A transaction will remain in a queued state until all required
+ * documents for the transactions are available locally.
+ */
 export interface QueuedTransaction {
+  /**
+   * the ID of this transaction. this is generated client-side.
+   */
   transactionId: string
+  /**
+   * the high-level actions associated with this transaction. note that these
+   * actions don't mention draft IDs and is meant to abstract away the draft
+   * model from users.
+   */
   actions: DocumentAction[]
+  /**
+   * An optional flag set to disable this transaction from being batched with
+   * other transactions.
+   */
   disableBatching?: boolean
 }
 
+/**
+ * Represents a transaction that has been applied locally but has not been
+ * committed/transitioned-to-outgoing. These transactions are visible to the
+ * user but may be rebased upon a new working document set. Applied transactions
+ * also contain the resulting `outgoingActions` that will be submitted to
+ * Content Lake. These `outgoingActions` depend on the state of the working
+ * documents so they are recomputed on rebase and are only relevant to applied
+ * actions (we cannot compute `outgoingActions` for queued transactions because
+ * we haven't resolved the set of documents the actions are dependent on yet).
+ *
+ * In order to support better conflict resolution, the original `previous` set
+ * is saved as the `base` set.
+ */
 export interface AppliedTransaction extends QueuedTransaction {
-  outgoingActions: HttpAction[]
-  outgoingMutations: Mutation[]
-  base: DocumentSet
+  /**
+   * the resulting set of documents after the actions have been applied
+   */
   working: DocumentSet
+
+  /**
+   * the previous set of documents before the action was applied
+   */
   previous: DocumentSet
+
+  /**
+   * the original `previous` document set captured when this action was
+   * originally applied. this is used as a reference point to do a 3-way merge
+   * if this applied transaction ever needs to be reapplied on a different
+   * set of documents.
+   */
+  base: DocumentSet
+
+  /**
+   * the `_rev`s from `previous` document set
+   */
   previousRevs: {[TDocumentId in string]?: string}
+
   /**
    * a timestamp for when this transaction was applied locally
    */
   timestamp: string
+
+  /**
+   * the resulting HTTP actions derived from the state of the `working` document
+   * set. these are sent to Content Lake as-is when this transaction is batched
+   * and transitioned into an outgoing transaction.
+   */
+  outgoingActions: HttpAction[]
+
+  /**
+   * similar to `outgoingActions` but comprised of mutations instead of action.
+   * this left here for debugging purposes but could be used to send mutations
+   * to Content Lake instead of actions.
+   */
+  outgoingMutations: Mutation[]
 }
 
+/**
+ * Represents a set of applied transactions batched into a single outgoing
+ * transaction. An outgoing transaction is the result of batching many applied
+ * actions. An outgoing transaction may be reverted locally if the server
+ * does not accept it.
+ */
 export interface OutgoingTransaction extends AppliedTransaction {
   disableBatching: boolean
   batchedTransactionIds: string[]
