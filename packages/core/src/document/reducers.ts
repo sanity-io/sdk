@@ -403,7 +403,10 @@ export function applyRemoteDocument(
     try {
       const next = processActions({...curr, working})
       working = next.working
-      // next includes an updated
+      // next includes an updated `previous` set and `working` set and updates
+      // the `outgoingAction` and `outgoingMutations`. the `base` set from the
+      // original applied transaction gets put back into the updated transaction
+      // as-is to preserve the intended base for a 3-way merge
       nextApplied.push({...curr, ...next})
     } catch (error) {
       // if processing the action ever throws a related error, we can skip this

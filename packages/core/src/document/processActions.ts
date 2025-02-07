@@ -92,7 +92,7 @@ export class ActionError extends Error implements ActionErrorOptions {
  * the current state of the working documents.
  *
  * Supports a "base" and "working" set of documents to allow actions to be
- * applied on top of a different working set of documents.
+ * applied on top of a different working set of documents in a 3-way merge
  *
  * Actions are applied to the base set of documents first. The difference
  * between the base before and after is used to create a patch. This patch is

@@ -158,8 +158,6 @@ beforeEach(() => {
       let next: DocumentSet = {...documents}
       const timestamp = new Date().toISOString()
 
-      // add a tick for realism
-
       for (const i of actions) {
         switch (i.actionType) {
           case 'sanity.action.document.delete': {
