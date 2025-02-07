@@ -166,9 +166,13 @@ export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTra
 export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
   | OutgoingTransaction
   | undefined {
+  // No transactions? Nothing to batch.
   if (!curr) return undefined
+
+  // Skip transactions with no actions.
   if (!curr.actions.length) return batchAppliedTransactions(rest)
 
+  // If there are multiple actions, we cannot batch further.
   if (curr.actions.length > 1) {
     return {
       ...curr,
@@ -178,6 +182,9 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
   }
 
   const [action] = curr.actions
+
+  // If the single action isn't a document.edit or batching is disabled,
+  // mark this transaction as non-batchable.
   if (action.type !== 'document.edit' || curr.disableBatching) {
     return {
       ...curr,
@@ -186,6 +193,8 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
     }
   }
 
+  // Create an outgoing transaction for the single edit action.
+  // At this point, batching is allowed.
   const editAction: OutgoingTransaction = {
     ...curr,
     actions: [action],
@@ -200,15 +209,24 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
 
   return {
     disableBatching: false,
+    // Use the transactionId from the later (next) transaction.
     transactionId: next.transactionId,
+    // Accumulate actions: current action first, then later ones.
     actions: [action, ...next.actions],
+    // Merge outgoingActions in order.
     outgoingActions: [...curr.outgoingActions, ...next.outgoingActions],
+    // Batched transaction IDs: preserve order by placing curr first.
     batchedTransactionIds: [curr.transactionId, ...next.batchedTransactionIds],
+    // Merge outgoingMutations in order.
     outgoingMutations: [...curr.outgoingMutations, ...next.outgoingMutations],
+    // Working state reflects the latest optimistic changes: later transactions override earlier.
     working: {...curr.working, ...next.working},
+    // Base state (base, previous, previousRevs) must reflect the original state.
+    // Use curr values (the earliest transaction) to override later ones.
     previousRevs: {...next.previousRevs, ...curr.previousRevs},
     previous: {...next.previous, ...curr.previous},
     base: {...next.base, ...curr.base},
+    // Use the earliest timestamp from curr.
     timestamp: curr.timestamp ?? next.timestamp,
   }
 }
