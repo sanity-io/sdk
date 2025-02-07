@@ -68,7 +68,7 @@ export function getId(id?: string): string {
   return id
 }
 
-export interface ProcessMutationsOptions {
+interface ProcessMutationsOptions {
   /**
    * The transaction ID that will become the next `_rev` for documents mutated
    * by the given mutations.

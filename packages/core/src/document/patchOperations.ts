@@ -9,7 +9,7 @@ import {
   type SanityDocumentLike,
 } from '@sanity/types'
 
-export type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
+type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
 
 /** @beta */
 export interface DocumentHandle<TDocument extends SanityDocumentLike = SanityDocumentLike> {
@@ -264,7 +264,7 @@ export function stringifyPath(path: Path): string {
   return result
 }
 
-export type MatchEntry<T = unknown> = {
+type MatchEntry<T = unknown> = {
   value: T
   path: SingleValuePath
 }
@@ -441,14 +441,6 @@ export function unset(input: unknown, pathExpressions: string[]): unknown {
 
 const operations = ['before', 'after', 'replace'] as const
 type Operation = (typeof operations)[number]
-type OperationEntryObject = {
-  [P in Operation]: {[K in P]: string}
-}[Operation]
-
-export type InsertOptions = {
-  input: unknown
-  items: unknown[]
-} & OperationEntryObject
 
 /**
  * Given an input object, a path expression (inside the insert patch object), and an array of items,
@@ -766,11 +758,6 @@ export function getIndexForKey(input: unknown, key: string): number | undefined 
 
   indexCache.set(input, lookup)
   return lookup[key]
-}
-
-export interface GetDeepOptions {
-  input: unknown
-  path: SingleValuePath
 }
 
 /**

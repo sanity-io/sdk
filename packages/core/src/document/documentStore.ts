@@ -253,7 +253,7 @@ export const subscribeDocumentEvents = createAction(documentStore, ({state}) => 
   }
 })
 
-export const subscribeToQueuedAndApplyNextTransaction = createInternalAction(
+const subscribeToQueuedAndApplyNextTransaction = createInternalAction(
   ({state}: ActionContext<DocumentStoreState>) => {
     const {events} = state.get()
 
@@ -286,7 +286,7 @@ export const subscribeToQueuedAndApplyNextTransaction = createInternalAction(
   },
 )
 
-export const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
+const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
   ({state, instance}: ActionContext<DocumentStoreState>) => {
     const {events} = state.get()
 
@@ -340,7 +340,7 @@ export const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
   },
 )
 
-export const subscribeToSubscriptionsAndListenToDocuments = createInternalAction(
+const subscribeToSubscriptionsAndListenToDocuments = createInternalAction(
   ({state}: ActionContext<DocumentStoreState>) => {
     const {events} = state.get()
 

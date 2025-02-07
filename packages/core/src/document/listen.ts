@@ -39,7 +39,7 @@ export interface SyncEvent {
 
 export type ListenerEvent = SyncEvent | MutationEvent
 
-export interface ListenerSequenceState {
+interface ListenerSequenceState {
   /**
    * Tracks the latest revision from the server that can be applied locally
    * Once we receive a mutation event that has a `previousRev` that equals `base.revision`
@@ -85,7 +85,7 @@ export class MaxBufferExceededError extends OutOfSyncError {
   }
 }
 
-export interface SortListenerEventsOptions {
+interface SortListenerEventsOptions {
   maxBufferSize?: number
   resolveChainDeadline?: number
 }
