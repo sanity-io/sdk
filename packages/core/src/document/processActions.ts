@@ -47,6 +47,11 @@ interface ProcessActionsResult {
    */
   working: DocumentSet
   /**
+   * The document set before the actions have been applied. This is simply the
+   * input of the `working` document set.
+   */
+  previous: DocumentSet
+  /**
    * The outgoing action that were collected when applying the actions. These
    * are sent to the Actions HTTP API
    */
@@ -336,6 +341,7 @@ export function processActions({
     working,
     outgoingActions,
     outgoingMutations,
+    previous: initialWorking,
     previousRevs,
   }
 }

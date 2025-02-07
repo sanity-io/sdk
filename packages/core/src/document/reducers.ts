@@ -127,7 +127,7 @@ export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTra
   if (ids.some((id) => prev.documentStates[id]?.local === undefined)) return prev
 
   const working = ids.reduce<DocumentSet>((acc, id) => {
-    acc[id] = prev.documentStates[id]?.local ?? null
+    acc[id] = prev.documentStates[id]?.local
     return acc
   }, {})
 
@@ -140,11 +140,10 @@ export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTra
     timestamp,
   })
   const applied: AppliedTransaction = {
-    base: working,
-    previous: working,
-    timestamp,
     ...queued,
     ...result,
+    base: result.previous,
+    timestamp,
   }
 
   return {
@@ -340,22 +339,22 @@ export function applyRemoteDocument(
   // simply skip if there is no state
   if (!prevDocState) return prev
 
-  const prevUnverifiedRevisions = prevDocState.unverifiedRevisions
   // we send out transactions with IDs generated client-side to identify them
   // when they are observed through the listener. here we can check if this
   // incoming remote document is the result of one of our transactions
-  const transactionToVerify = revision ? prevUnverifiedRevisions?.[revision] : undefined
-
+  const prevUnverifiedRevisions = prevDocState.unverifiedRevisions
+  const revisionToVerify = revision ? prevUnverifiedRevisions?.[revision] : undefined
   let unverifiedRevisions = prevUnverifiedRevisions ?? EMPTY_REVISIONS
-
-  if (revision && transactionToVerify) {
+  if (revision && revisionToVerify) {
     unverifiedRevisions = omit(prevUnverifiedRevisions, revision)
   }
 
+  // if this remote document is from a `'sync'` event (meaning that the whole
+  // thing was just fetched and not re-created from mutations)
   if (type === 'sync') {
-    // remove unverified revisions that are older than our sync time. we don't
-    // need to verify them for a rebase anymore because we synced and grabbed
-    // the latest document
+    // then remove unverified revisions that are older than our sync time. we
+    // don't need to verify them for a rebase any more because we synced and
+    // grabbed the latest document
     unverifiedRevisions = Object.fromEntries(
       Object.entries(unverifiedRevisions).filter(([, unverifiedRevision]) => {
         if (!unverifiedRevision) return false
@@ -363,14 +362,13 @@ export function applyRemoteDocument(
       }),
     )
   }
-  // if there is a transaction to verify and the previous revision from remote
+
+  // if there is a revision to verify and the previous revision from remote
   // matches the previous revision we expected, we can "fast-forward" and skip
   // rebasing local changes on top of this new base
-  if (transactionToVerify && transactionToVerify.previousRev === previousRev) {
+  if (revisionToVerify && revisionToVerify.previousRev === previousRev) {
     return {
       ...prev,
-      applied: prev.applied,
-      outgoing: prev.outgoing,
       documentStates: {
         ...prev.documentStates,
         [documentId]: {
@@ -383,20 +381,33 @@ export function applyRemoteDocument(
     }
   }
 
-  let working = {
-    ...prev.applied[0]?.working,
-    ...prev.outgoing?.working,
-    [documentId]: document,
-  }
+  // if we got this far, this means that we could not fast-forward this revision
+  // for this document. now we can rebase our local changes (if any) on top of
+  // this new base from remote. in order to do that we grab the set of documents
+  // captured before the earliest local transaction
+  const previous = prev.applied.at(0)?.previous
+  // our initial working set now is the state of the documents before any of our
+  // local transactions plus the newly updated document from remote
+  let working = {...previous, [documentId]: document}
   const nextApplied: AppliedTransaction[] = []
-  let nextOutgoing: OutgoingTransaction | undefined = prev.outgoing
 
-  for (const t of prev.applied) {
+  // now we can iterate through our applied (but not yet committed) transactions
+  // starting with the updated working set and re-apply each transaction in
+  // order creating a new set of applied transactions as we go.
+  //
+  // NOTE: we don't want to rebase over the outgoing transaction because that
+  // transaction is already on its way to the server. if an outgoing transaction
+  // needs to be rebased, then it eventually will be when we see that
+  // transaction again through the listener and this same flow will run then
+  for (const curr of prev.applied) {
     try {
-      const next = processActions({...t, working})
+      const next = processActions({...curr, working})
       working = next.working
-      nextApplied.push({...t, ...next})
+      // next includes an updated
+      nextApplied.push({...curr, ...next})
     } catch (error) {
+      // if processing the action ever throws a related error, we can skip this
+      // local transaction and report the error to the user
       if (error instanceof ActionError) {
         events.next({
           type: 'rebase-error',
@@ -411,29 +422,9 @@ export function applyRemoteDocument(
     }
   }
 
-  if (prev.outgoing) {
-    try {
-      const next = processActions({...prev.outgoing, working})
-      working = next.working
-      nextOutgoing = {...prev.outgoing, ...next}
-    } catch (error) {
-      if (!(error instanceof ActionError)) throw error
-
-      events.next({
-        type: 'rebase-error',
-        transactionId: error.transactionId,
-        documentId: error.documentId,
-        message: error.message,
-        error,
-      })
-      nextOutgoing = undefined
-    }
-  }
-
   return {
     ...prev,
     applied: nextApplied,
-    outgoing: nextOutgoing,
     documentStates: {
       ...prev.documentStates,
       [documentId]: {
