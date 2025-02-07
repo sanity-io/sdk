@@ -29,7 +29,7 @@ import {type SanityInstance} from '../instance/types'
 import {type ActionContext, createAction, createInternalAction} from '../resources/createAction'
 import {createResource} from '../resources/createResource'
 import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
-import {getDraftId, randomId} from '../utils/ids'
+import {getDraftId, insecureRandomId} from '../utils/ids'
 import {DOCUMENT_STATE_CLEAR_DELAY, INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
 import {type DocumentEvent, getDocumentEvents} from './events'
 import {listen, OutOfSyncError} from './listen'
@@ -129,7 +129,7 @@ function addPairSubscriptionIds(
   _path?: string,
 ): () => void {
   const documentId = typeof doc === 'string' ? doc : doc._id
-  const subscriptionId = randomId()
+  const subscriptionId = insecureRandomId()
   state.set('addSubscribers', (prev) =>
     // NOTE: the order of document IDs in this array somewhat matters here as it
     // determines the order `applyRemoteDocument` gets calls. because we prefer

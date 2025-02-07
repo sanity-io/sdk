@@ -7,7 +7,7 @@ import {
   type InitializedResource,
   type ResourceState,
 } from '../resources/createResource'
-import {randomId} from '../utils/ids'
+import {insecureRandomId} from '../utils/ids'
 import {
   previewStore,
   type PreviewStoreState,
@@ -18,7 +18,7 @@ import {resolvePreview} from './resolvePreview'
 
 vi.mock('../utils/ids', async (importOriginal) => {
   const util = await importOriginal<typeof import('../utils/ids')>()
-  return {...util, randomId: vi.fn(util.randomId)}
+  return {...util, insecureRandomId: vi.fn(util.insecureRandomId)}
 })
 
 vi.mock('../resources/createResource', async (importOriginal) => {
@@ -44,7 +44,7 @@ describe('resolvePreview', () => {
 
   it('subscribes and resolves when the preview value is non-null', async () => {
     expect(state.get().subscriptions).toEqual({})
-    ;(randomId as Mock).mockImplementationOnce(() => 'pseudoRandomId')
+    ;(insecureRandomId as Mock).mockImplementationOnce(() => 'pseudoRandomId')
 
     const previewPromise = resolvePreview({state, instance}, {document})
     expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
@@ -83,7 +83,7 @@ describe('resolvePreview', () => {
     state.set('setInitialDocument', (prev) => ({
       values: {...prev.values, exampleId: currentValue},
     }))
-    vi.mocked(randomId).mockImplementationOnce(() => 'pseudoRandomId')
+    vi.mocked(insecureRandomId).mockImplementationOnce(() => 'pseudoRandomId')
     expect(state.get().subscriptions).toEqual({})
 
     const previewPromise = resolvePreview({state, instance}, {document})

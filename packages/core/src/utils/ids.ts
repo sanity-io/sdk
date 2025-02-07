@@ -8,6 +8,6 @@ export function getDraftId(id: string): string {
   return id.startsWith(draftsPrefix) ? id : `${draftsPrefix}${id}`
 }
 
-export function randomId(): string {
+export function insecureRandomId(): string {
   return Array.from({length: 16}, () => Math.floor(Math.random() * 16).toString(16)).join('')
 }
