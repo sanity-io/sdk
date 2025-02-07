@@ -15,6 +15,7 @@ import {
   Observable,
   of,
   pairwise,
+  startWith,
   Subject,
   switchMap,
   tap,
@@ -352,6 +353,7 @@ export const subscribeToSubscriptionsAndListenToDocuments = createInternalAction
             const currSet = new Set(curr)
             return next.every((i) => currSet.has(i))
           }),
+          startWith(new Set<string>()),
           pairwise(),
           switchMap((pair) => {
             const [curr, next] = pair.map((ids) => new Set(ids))
