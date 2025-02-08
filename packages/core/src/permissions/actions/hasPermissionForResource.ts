@@ -50,6 +50,8 @@ const selectHasPermissionForResource = createSelector(
   ],
   (permissions, {permissionName, resourceId}) =>
     permissions.some(
-      (permission) => permission.name === permissionName && permission.resourceId === resourceId,
+      (permission) =>
+        permission.name === permissionName &&
+        (permission.resourceId === resourceId || permission.resourceId === '*'),
     ),
 )
