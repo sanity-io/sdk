@@ -1,8 +1,18 @@
-import {type PatchOperations, type SanityDocumentLike} from '@sanity/types'
+import {SanityEncoder} from '@sanity/mutate'
+import {type PatchMutation as SanityMutatePatchMutation} from '@sanity/mutate/_unstable_store'
+import {type PatchMutation, type PatchOperations, type SanityDocumentLike} from '@sanity/types'
 
 import {getPublishedId} from '../utils/ids'
 import {type DocumentHandle, type DocumentTypeHandle} from './patchOperations'
 import {getId} from './processMutations'
+
+const isSanityMutatePatch = (value: unknown): value is SanityMutatePatchMutation => {
+  if (typeof value !== 'object' || !value) return false
+  if (!('type' in value) || typeof value.type !== 'string' || value.type !== 'patch') return false
+  if (!('id' in value) || typeof value.id !== 'string') return false
+  if (!('patches' in value) || !Array.isArray(value.patches)) return false
+  return true
+}
 
 /** @beta */
 export interface CreateDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike> {
@@ -23,7 +33,7 @@ export interface DeleteDocumentAction<_TDocument extends SanityDocumentLike = Sa
 export interface EditDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.edit'
   documentId: string
-  patch: PatchOperations
+  patches: PatchOperations[]
 }
 
 /** @beta */
@@ -76,15 +86,43 @@ export function deleteDocument<TDocument extends SanityDocumentLike>(
   }
 }
 
+function convertSanityMutatePatch(
+  sanityPatchMutation: SanityMutatePatchMutation,
+): EditDocumentAction {
+  const encoded = SanityEncoder.encode(sanityPatchMutation) as PatchMutation[]
+
+  return {
+    documentId: sanityPatchMutation.id,
+    type: 'document.edit',
+    patches: encoded.map((i) => {
+      const copy: PatchOperations = {...i.patch}
+      if ('id' in copy) delete copy.id
+      return copy
+    }),
+  }
+}
+
+/** @beta */
+export function editDocument<TDocument extends SanityDocumentLike>(
+  sanityMutatePatch: SanityMutatePatchMutation,
+): EditDocumentAction<TDocument>
 /** @beta */
 export function editDocument<TDocument extends SanityDocumentLike>(
   doc: string | DocumentHandle<TDocument>,
-  patch: PatchOperations,
+  patches: PatchOperations | PatchOperations[],
+): EditDocumentAction<TDocument>
+/** @beta */
+export function editDocument<TDocument extends SanityDocumentLike>(
+  doc: string | SanityMutatePatchMutation | DocumentHandle<TDocument>,
+  patches?: PatchOperations | PatchOperations[],
 ): EditDocumentAction<TDocument> {
+  if (isSanityMutatePatch(doc)) return convertSanityMutatePatch(doc)
+  if (!patches) throw new Error(`No patches were passed into \`editDocument\``)
+
   return {
     type: 'document.edit',
     documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
-    patch,
+    patches: Array.isArray(patches) ? patches : [patches],
   }
 }
 

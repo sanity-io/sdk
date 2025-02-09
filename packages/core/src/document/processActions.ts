@@ -204,7 +204,8 @@ export function processActions({
 
         // the above if statement should make this never be null or undefined
         const baseBefore = (base[draftId] ?? base[publishedId]) as SanityDocument
-        baseMutations.push({patch: {id: draftId, ...action.patch}})
+        baseMutations.push(...action.patches.map((patch) => ({patch: {id: draftId, ...patch}})))
+
         base = processMutations({
           documents: base,
           transactionId,

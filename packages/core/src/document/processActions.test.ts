@@ -215,7 +215,7 @@ describe('processActions', () => {
         {
           documentId: 'doc1',
           type: 'document.edit',
-          patch: {set: {title: 'Edited Title'}},
+          patches: [{set: {title: 'Edited Title'}}],
         },
       ]
       const result = processActions({
@@ -245,7 +245,7 @@ describe('processActions', () => {
         {
           documentId: 'doc1',
           type: 'document.edit',
-          patch: {set: {title: 'New Draft Title'}},
+          patches: [{set: {title: 'New Draft Title'}}],
         },
       ]
       const result = processActions({
@@ -271,7 +271,7 @@ describe('processActions', () => {
         {
           documentId: 'doc1',
           type: 'document.edit',
-          patch: {set: {title: 'Original Cool Title'}},
+          patches: [{set: {title: 'Original Cool Title'}}],
         },
       ]
       const result = processActions({
@@ -298,7 +298,7 @@ describe('processActions', () => {
         {
           documentId: 'doc1',
           type: 'document.edit',
-          patch: {set: {title: 'Should Fail'}},
+          patches: [{set: {title: 'Should Fail'}}],
         },
       ]
       expect(() => processActions({actions, transactionId, base, working, timestamp})).toThrow(
@@ -473,7 +473,7 @@ describe('processActions', () => {
       const working: DocumentSet = {doc1: published}
       const actions: DocumentAction[] = [
         {documentId: 'doc1', type: 'document.create', documentType: 'article'},
-        {documentId: 'doc1', type: 'document.edit', patch: {set: {title: 'Edited Title'}}},
+        {documentId: 'doc1', type: 'document.edit', patches: [{set: {title: 'Edited Title'}}]},
         {documentId: 'doc1', type: 'document.publish'},
       ]
       const result = processActions({

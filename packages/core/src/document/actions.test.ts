@@ -1,4 +1,4 @@
-// tests/documentActions.test.ts
+import {at, patch, set, setIfMissing} from '@sanity/mutate'
 import {type PatchOperations} from '@sanity/types'
 import {describe, expect, it} from 'vitest'
 
@@ -69,7 +69,7 @@ describe('document actions', () => {
       expect(action).toEqual({
         type: 'document.edit',
         documentId: 'abc123',
-        patch: dummyPatch,
+        patches: [dummyPatch],
       })
     })
 
@@ -78,7 +78,31 @@ describe('document actions', () => {
       expect(action).toEqual({
         type: 'document.edit',
         documentId: 'abc123',
-        patch: dummyPatch,
+        patches: [dummyPatch],
+      })
+    })
+
+    it('allows @sanity/mutate-style patches', () => {
+      const action = editDocument(
+        patch(
+          dummyDocString,
+          [
+            at('published', set(true)),
+            at('address', setIfMissing({_type: 'address'})),
+            at('address.city', set('Oslo')),
+          ],
+          {ifRevision: 'txn0'},
+        ),
+      )
+
+      expect(action).toEqual({
+        documentId: 'drafts.abc123',
+        patches: [
+          {ifRevisionID: 'txn0', set: {published: true}},
+          {ifRevisionID: 'txn0', setIfMissing: {address: {_type: 'address'}}},
+          {ifRevisionID: 'txn0', set: {'address.city': 'Oslo'}},
+        ],
+        type: 'document.edit',
       })
     })
   })

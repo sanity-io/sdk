@@ -43,7 +43,7 @@ describe('applyActions', () => {
     const action: DocumentAction = {
       type: 'document.edit',
       documentId: 'doc1',
-      patch: {set: {foo: 'bar'}},
+      patches: [{set: {foo: 'bar'}}],
     }
 
     // Call applyActions with a fixed transactionId for reproducibility.
@@ -111,7 +111,7 @@ describe('applyActions', () => {
     const action: DocumentAction = {
       type: 'document.edit',
       documentId: 'doc1',
-      patch: {set: {foo: 'error'}},
+      patches: [{set: {foo: 'error'}}],
     }
 
     // Call applyActions with a fixed transactionId.

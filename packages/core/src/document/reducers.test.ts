@@ -42,7 +42,7 @@ describe('reducers', () => {
 
       const transaction: QueuedTransaction = {
         transactionId: 'txn1',
-        actions: [{type: 'document.edit', documentId: 'doc1', patch: {set: {foo: 'bar'}}}],
+        actions: [{type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'bar'}}]}],
       }
 
       const newState = queueTransaction(initialState, transaction)
@@ -69,7 +69,7 @@ describe('reducers', () => {
         queued: [
           {
             transactionId: 'txn1',
-            actions: [{type: 'document.edit', documentId: 'doc1', patch: {set: {foo: 'bar'}}}],
+            actions: [{type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'bar'}}]}],
           },
         ],
         applied: [],
@@ -175,8 +175,8 @@ describe('reducers', () => {
       const appliedTx: AppliedTransaction = {
         transactionId: 'txn4',
         actions: [
-          {type: 'document.edit', documentId: 'doc1', patch: {set: {foo: 'a'}}},
-          {type: 'document.edit', documentId: 'doc1', patch: {set: {bar: 'b'}}},
+          {type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'a'}}]},
+          {type: 'document.edit', documentId: 'doc1', patches: [{set: {bar: 'b'}}]},
         ],
         disableBatching: false,
         outgoingActions: [],
@@ -205,7 +205,7 @@ describe('reducers', () => {
       const draftId = getDraftId('doc1')
       const appliedTx1: AppliedTransaction = {
         transactionId: 'txn5',
-        actions: [{type: 'document.edit', documentId: 'doc1', patch: {set: {foo: 'a'}}}],
+        actions: [{type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'a'}}]}],
         disableBatching: false,
         outgoingActions: [
           {
@@ -224,7 +224,7 @@ describe('reducers', () => {
       }
       const appliedTx2: AppliedTransaction = {
         transactionId: 'txn6',
-        actions: [{type: 'document.edit', documentId: 'doc1', patch: {set: {bar: 'b'}}}],
+        actions: [{type: 'document.edit', documentId: 'doc1', patches: [{set: {bar: 'b'}}]}],
         disableBatching: false,
         outgoingActions: [
           {
@@ -257,7 +257,7 @@ describe('reducers', () => {
       const draftId = getDraftId('docA')
       const appliedTx: AppliedTransaction = {
         transactionId: 'txn-disable',
-        actions: [{type: 'document.edit', documentId: 'docA', patch: {set: {foo: 'a'}}}],
+        actions: [{type: 'document.edit', documentId: 'docA', patches: [{set: {foo: 'a'}}]}],
         disableBatching: true, // already set to true
         outgoingActions: [],
         outgoingMutations: [],
@@ -297,7 +297,7 @@ describe('reducers', () => {
         applied: [
           {
             transactionId: 'txn7',
-            actions: [{type: 'document.edit', documentId: 'doc1', patch: {set: {foo: 'new'}}}],
+            actions: [{type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'new'}}]}],
             disableBatching: false,
             outgoingActions: [],
             outgoingMutations: [],
@@ -348,7 +348,7 @@ describe('reducers', () => {
         applied: [],
         outgoing: {
           transactionId: 'txn8',
-          actions: [{type: 'document.edit', documentId: 'doc1', patch: {set: {foo: 'x'}}}],
+          actions: [{type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'x'}}]}],
           disableBatching: false,
           batchedTransactionIds: ['txn8'],
           outgoingActions: [],
@@ -382,7 +382,9 @@ describe('reducers', () => {
         applied: [
           {
             transactionId: 'txn9',
-            actions: [{type: 'document.edit', documentId: 'doc1', patch: {set: {foo: 'reverted'}}}],
+            actions: [
+              {type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'reverted'}}]},
+            ],
             disableBatching: false,
             outgoingActions: [],
             outgoingMutations: [],
@@ -395,7 +397,9 @@ describe('reducers', () => {
         ],
         outgoing: {
           transactionId: 'txnOut',
-          actions: [{type: 'document.edit', documentId: 'doc1', patch: {set: {foo: 'changed'}}}],
+          actions: [
+            {type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'changed'}}]},
+          ],
           disableBatching: false,
           batchedTransactionIds: ['txnOut'],
           outgoingActions: [],
