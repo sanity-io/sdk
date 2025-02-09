@@ -2,6 +2,7 @@ import {applyPatches, parsePatch} from '@sanity/diff-match-patch'
 import {
   type IndexTuple,
   type InsertPatch,
+  isKeyedObject,
   isKeySegment,
   type KeyedSegment,
   type Path,
@@ -361,6 +362,69 @@ function matchRecursive(value: unknown, path: Path, currentPath: SingleValuePath
   return matchRecursive(nextVal, rest, [...currentPath, arrIndex])
 }
 
+// this is a similar array key to the studio:
+// https://github.com/sanity-io/sanity/blob/v3.74.1/packages/sanity/src/core/form/inputs/arrays/ArrayOfObjectsInput/createProtoArrayValue.ts
+function generateArrayKey(length: number = 12): string {
+  // Each byte gives two hex characters, so generate enough bytes.
+  const numBytes = Math.ceil(length / 2)
+  const bytes = crypto.getRandomValues(new Uint8Array(numBytes))
+  // Convert each byte to a 2-digit hex string and join them.
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, length)
+}
+
+function memoize<TFunction extends (input: unknown) => unknown>(fn: TFunction): TFunction {
+  const cache = new WeakMap<object, unknown>()
+  return ((input) => {
+    if (!input || typeof input !== 'object') return fn(input)
+
+    const cached = cache.get(input)
+    if (cached) return cached
+
+    const result = fn(input)
+    cache.set(input, result)
+    return result
+  }) as TFunction
+}
+
+/**
+ * Recursively traverse a value. When an array is encountered, ensure that
+ * each object item has a _key property. Memoized such that sub-objects that
+ * have not changed aren't re-computed.
+ */
+export const ensureArrayKeysDeep = memoize(<R>(input: R): R => {
+  if (!input || typeof input !== 'object') return input
+
+  if (Array.isArray(input)) {
+    // if the array is empty then just return the input
+    if (!input.length) return input
+    const first = input[0]
+    // if the first input in the array isn't an object (null is allowed) then
+    // assume that this is an array of primitives, just return the input
+    if (typeof first !== 'object') return input
+
+    // if all the items already have a key, then return the input
+    if (input.every(isKeyedObject)) return input
+
+    // otherwise return a new object item with a new key
+    return input.map((item: unknown) => {
+      if (!item || typeof item !== 'object') return item
+      if (isKeyedObject(item)) return ensureArrayKeysDeep(item)
+      const next = ensureArrayKeysDeep(item)
+      return {...next, _key: generateArrayKey()}
+    }) as R
+  }
+
+  const entries = Object.entries(input).map(([key, value]) => [key, ensureArrayKeysDeep(value)])
+
+  if (entries.every(([key, value]) => input[key as keyof typeof input] === value)) {
+    return input
+  }
+
+  return Object.fromEntries(entries) as R
+})
+
 /**
  * Given an input object and a record of path expressions to values, this
  * function will set each match with the given value.
@@ -377,7 +441,7 @@ function matchRecursive(value: unknown, path: Path, currentPath: SingleValuePath
  */
 export function set<R>(input: unknown, pathExpressionValues: Record<string, unknown>): R
 export function set(input: unknown, pathExpressionValues: Record<string, unknown>): unknown {
-  return Object.entries(pathExpressionValues)
+  const result = Object.entries(pathExpressionValues)
     .flatMap(([pathExpression, replacementValue]) =>
       jsonMatch(input, pathExpression).map((matchEntry) => ({
         ...matchEntry,
@@ -385,6 +449,8 @@ export function set(input: unknown, pathExpressionValues: Record<string, unknown
       })),
     )
     .reduce((acc, {path, replacementValue}) => setDeep(acc, path, replacementValue), input)
+
+  return ensureArrayKeysDeep(result)
 }
 
 /**
@@ -407,7 +473,7 @@ export function setIfMissing(
   input: unknown,
   pathExpressionValues: Record<string, unknown>,
 ): unknown {
-  return Object.entries(pathExpressionValues)
+  const result = Object.entries(pathExpressionValues)
     .flatMap(([pathExpression, replacementValue]) => {
       return jsonMatch(input, pathExpression).map((matchEntry) => ({
         ...matchEntry,
@@ -416,6 +482,8 @@ export function setIfMissing(
     })
     .filter((matchEntry) => matchEntry.value === null || matchEntry.value === undefined)
     .reduce((acc, {path, replacementValue}) => setDeep(acc, path, replacementValue), input)
+
+  return ensureArrayKeysDeep(result)
 }
 
 /**
@@ -434,9 +502,11 @@ export function setIfMissing(
  */
 export function unset<R>(input: unknown, pathExpressions: string[]): R
 export function unset(input: unknown, pathExpressions: string[]): unknown {
-  return pathExpressions
+  const result = pathExpressions
     .flatMap((pathExpression) => jsonMatch(input, pathExpression))
     .reduce((acc, {path}) => unsetDeep(acc, path), input)
+
+  return ensureArrayKeysDeep(result)
 }
 
 const operations = ['before', 'after', 'replace'] as const
@@ -587,7 +657,7 @@ export function insert(input: unknown, insertPatch: InsertPatch): unknown {
   }))
 
   // For each group, update the parent array using setDeep.
-  return groupEntries.reduce<unknown>((acc, {array, indexes, pathToArray}) => {
+  const result = groupEntries.reduce<unknown>((acc, {array, indexes, pathToArray}) => {
     switch (operation) {
       case 'before': {
         // Insert items before the first matched index.
@@ -620,6 +690,8 @@ export function insert(input: unknown, insertPatch: InsertPatch): unknown {
       }
     }
   }, input)
+
+  return ensureArrayKeysDeep(result)
 }
 
 /**
@@ -638,7 +710,7 @@ export function insert(input: unknown, insertPatch: InsertPatch): unknown {
  */
 export function inc<R>(input: unknown, pathExpressionValues: Record<string, number>): R
 export function inc(input: unknown, pathExpressionValues: Record<string, number>): unknown {
-  return Object.entries(pathExpressionValues)
+  const result = Object.entries(pathExpressionValues)
     .flatMap(([pathExpression, valueToAdd]) =>
       jsonMatch(input, pathExpression).map((matchEntry) => ({
         ...matchEntry,
@@ -650,6 +722,8 @@ export function inc(input: unknown, pathExpressionValues: Record<string, number>
         typeof matchEntry.value === 'number',
     )
     .reduce((acc, {path, value, valueToAdd}) => setDeep(acc, path, value + valueToAdd), input)
+
+  return ensureArrayKeysDeep(result)
 }
 
 /**
@@ -668,7 +742,7 @@ export function inc(input: unknown, pathExpressionValues: Record<string, number>
  */
 export function dec<R>(input: unknown, pathExpressionValues: Record<string, number>): R
 export function dec(input: unknown, pathExpressionValues: Record<string, number>): unknown {
-  return inc(
+  const result = inc(
     input,
     Object.fromEntries(
       Object.entries(pathExpressionValues)
@@ -676,6 +750,8 @@ export function dec(input: unknown, pathExpressionValues: Record<string, number>
         .map(([key, value]) => [key, -value]),
     ),
   )
+
+  return ensureArrayKeysDeep(result)
 }
 
 /**
@@ -699,7 +775,7 @@ export function diffMatchPatch(
   input: unknown,
   pathExpressionValues: Record<string, string>,
 ): unknown {
-  return Object.entries(pathExpressionValues)
+  const result = Object.entries(pathExpressionValues)
     .flatMap(([pathExpression, dmp]) => jsonMatch(input, pathExpression).map((m) => ({...m, dmp})))
     .filter((i) => i.value !== undefined)
     .map(({path, value, dmp}) => {
@@ -713,6 +789,8 @@ export function diffMatchPatch(
       return {path, value: nextValue}
     })
     .reduce((acc, {path, value}) => setDeep(acc, path, value), input)
+
+  return ensureArrayKeysDeep(result)
 }
 
 /**

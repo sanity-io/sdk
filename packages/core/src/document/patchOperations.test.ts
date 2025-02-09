@@ -3,6 +3,7 @@ import {describe, expect, it} from 'vitest'
 import {
   dec,
   diffMatchPatch,
+  ensureArrayKeysDeep,
   getDeep,
   getIndexForKey,
   ifRevisionID,
@@ -877,5 +878,92 @@ describe('ifRevisionID', () => {
     expect(() => ifRevisionID(input, 'xyz789')).toThrowError(
       /Patch's `ifRevisionID` `xyz789` does not match document's revision ID `abc123`/,
     )
+  })
+})
+
+describe('ensureArrayKeysDeep', () => {
+  it('ensures all object within arrays have a `_key` property.', () => {
+    const input = {
+      _id: '123',
+      _type: 'book',
+      items: [
+        {name: 'no key yet'},
+        {name: 'has nested array', nestedArray: [{name: 'also no key yet'}]},
+      ],
+    }
+
+    expect(ensureArrayKeysDeep(input)).toMatchObject({
+      _id: '123',
+      _type: 'book',
+      items: [
+        {_key: expect.stringMatching(/\w{12}/), name: 'no key yet'},
+        {
+          _key: expect.stringMatching(/\w{12}/),
+          name: 'has nested array',
+          nestedArray: [{_key: expect.stringMatching(/\w{12}/), name: 'also no key yet'}],
+        },
+      ],
+    })
+  })
+
+  it('returns the original object if no keys were changed', () => {
+    const input = {
+      _id: '123',
+      _type: 'book',
+      items: [{_key: 'already has key'}],
+    }
+
+    expect(ensureArrayKeysDeep(input)).toBe(input)
+  })
+
+  it('returns the original array if the array is empty', () => {
+    const input: never[] = []
+    expect(ensureArrayKeysDeep(input)).toBe(input)
+  })
+
+  it('returns the original array if the array is a primitive array', () => {
+    const input = ['a', 'b', 'c']
+    expect(ensureArrayKeysDeep(input)).toBe(input)
+  })
+
+  it('returns the same item if not an object', () => {
+    // this is mostly invalid input but we can test the branch
+    const input = [{_key: 'has key'}, function notAnObject() {}]
+    const result = ensureArrayKeysDeep(input)
+    expect(result[1]).toBe(input[1])
+  })
+
+  it('memoizes over previous values', () => {
+    const input = {
+      allItemsAlreadyHaveKeys: [
+        {_key: 'a', name: 'a'},
+        {_key: 'b', name: 'b'},
+      ],
+      noKeysYet: [{name: 'c'}, {name: 'd'}],
+      nestedObject: {
+        allItemsAlreadyHaveKeys: [
+          {_key: 'a', name: 'a'},
+          {_key: 'b', name: 'b'},
+        ],
+        noKeysYet: [{name: 'c'}, {name: 'd'}],
+      },
+    }
+
+    const result1 = ensureArrayKeysDeep(input)
+    const result2 = ensureArrayKeysDeep(input)
+
+    expect(result1).toBe(result2)
+    expect(input.allItemsAlreadyHaveKeys).toBe(result1.allItemsAlreadyHaveKeys)
+
+    expect(input.noKeysYet).not.toBe(result1.noKeysYet)
+    expect(result1.noKeysYet).toMatchObject([
+      {name: 'c', _key: expect.stringMatching(/\w{12}/)},
+      {name: 'd', _key: expect.stringMatching(/\w{12}/)},
+    ])
+
+    expect(input.nestedObject.allItemsAlreadyHaveKeys).toBe(
+      result2.nestedObject.allItemsAlreadyHaveKeys,
+    )
+    expect(input.nestedObject.noKeysYet).not.toBe(result2.nestedObject.noKeysYet)
   })
 })
