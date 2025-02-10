@@ -1,4 +1,4 @@
-import {type SanityDocument} from '@sanity/types'
+import {type Reference, type SanityDocument} from '@sanity/types'
 import {describe, expect, it} from 'vitest'
 
 import {type DocumentAction} from './actions'
@@ -379,6 +379,53 @@ describe('processActions', () => {
       ).toThrow(
         /Publish aborted: detected remote changes since published was scheduled. Please try again./,
       )
+    })
+
+    it('should strengthen `_strengthenOnPublish` references', () => {
+      const _ref = crypto.randomUUID()
+      const referenceToStrength: Reference = {
+        _ref,
+        _type: 'reference',
+        _weak: true,
+        _strengthenOnPublish: {
+          type: 'author',
+        },
+      }
+      const strengthenedReference: Reference = {
+        _ref,
+        _type: 'reference',
+      }
+
+      const draft = {
+        ...createDoc('drafts.doc1', 'Draft Title', '1'),
+        referenceToStrength,
+        nestedObject: {referenceToStrength},
+        items: [referenceToStrength],
+      }
+      const base: DocumentSet = {'drafts.doc1': draft}
+      const working: DocumentSet = {'drafts.doc1': draft}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          type: 'document.publish',
+        },
+      ]
+      const result = processActions({
+        actions,
+        transactionId,
+        base,
+        working,
+        timestamp,
+      })
+
+      // After publishing, the draft should be deleted and a published document created.
+      expect(result.working['drafts.doc1']).toBeNull()
+      const published = result.working['doc1'] as typeof draft
+      expect(published).toBeDefined()
+      expect(published?._id).toBe('doc1')
+      expect(published.referenceToStrength).toEqual(strengthenedReference)
+      expect(published.nestedObject.referenceToStrength).toEqual(strengthenedReference)
+      expect(published.items.at(0)).toEqual(strengthenedReference)
     })
   })
 

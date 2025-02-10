@@ -1,4 +1,9 @@
-import {type Mutation, type PatchOperations, type SanityDocument} from '@sanity/types'
+import {
+  type Mutation,
+  type PatchOperations,
+  type Reference,
+  type SanityDocument,
+} from '@sanity/types'
 import {isEqual} from 'lodash-es'
 
 import {getDraftId, getPublishedId} from '../utils/ids'
@@ -270,10 +275,9 @@ export function processActions({
             message: `Publish aborted: detected remote changes since published was scheduled. Please try again.`,
           })
         }
-
         const mutations: Mutation[] = [
           {delete: {id: draftId}},
-          {createOrReplace: {...baseDraft, _id: publishedId}},
+          {createOrReplace: {...strengthenOnPublish(baseDraft), _id: publishedId}},
         ]
 
         base = processMutations({documents: base, transactionId, mutations, timestamp})
@@ -345,4 +349,31 @@ export function processActions({
     previous: initialWorking,
     previousRevs,
   }
+}
+
+function strengthenOnPublish(draft: SanityDocument): SanityDocument {
+  const isStrengthenReference = (
+    value: object,
+  ): value is Reference & Required<Pick<Reference, '_strengthenOnPublish'>> =>
+    '_strengthenOnPublish' in value
+
+  function strengthen(value: unknown): unknown {
+    if (typeof value !== 'object' || !value) return value
+
+    if (isStrengthenReference(value)) {
+      const {_strengthenOnPublish, _weak, ...rest} = value
+      return {
+        ...rest,
+        ...(_strengthenOnPublish.weak && {_weak: true}),
+      }
+    }
+
+    if (Array.isArray(value)) {
+      return value.map(strengthen)
+    }
+
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, strengthen(v)]))
+  }
+
+  return strengthen(draft) as SanityDocument
 }
