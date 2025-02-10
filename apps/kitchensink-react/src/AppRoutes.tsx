@@ -9,6 +9,7 @@ import {DocumentListRoute} from './DocumentCollection/DocumentListRoute'
 import {GlobalAuthHome} from './GlobalAuthentication/GlobalAuthHome'
 import {GlobalInstanceWrapper} from './GlobalAuthentication/GlobalInstanceWrapper'
 import Home from './Home'
+import {PermissionsHome} from './PermissionsHome'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProjectInstanceWrapper} from './ProjectAuthentication/ProjectInstanceWrapper'
 import {ProtectedRoute} from './ProtectedRoute'
@@ -26,6 +27,13 @@ const documentCollectionRoutes = [
   },
 ]
 
+const permissionsRoutes = [
+  {
+    path: 'permissions',
+    element: <PermissionsHome />,
+  },
+]
+
 const frameRoutes = [1, 2, 3].map((frameNum) => ({
   path: `frame${frameNum}`,
   element: <Frame />,
@@ -37,9 +45,12 @@ export function AppRoutes(): JSX.Element {
       <Route path="/" element={<Home />} />
 
       <Route path="/project-auth" element={<ProjectInstanceWrapper />}>
-        <Route index element={<ProjectAuthHome routes={documentCollectionRoutes} />} />
+        <Route
+          index
+          element={<ProjectAuthHome routes={[...documentCollectionRoutes, ...permissionsRoutes]} />}
+        />
         <Route element={<ProtectedRoute subPath="/project-auth" />}>
-          {documentCollectionRoutes.map((route) => (
+          {[...documentCollectionRoutes, ...permissionsRoutes].map((route) => (
             <Route key={route.path} path={route.path} element={route.element} />
           ))}
         </Route>
@@ -53,9 +64,12 @@ export function AppRoutes(): JSX.Element {
       </Route>
 
       <Route path="/global-auth" element={<GlobalInstanceWrapper />}>
-        <Route index element={<GlobalAuthHome routes={documentCollectionRoutes} />} />
+        <Route
+          index
+          element={<GlobalAuthHome routes={[...documentCollectionRoutes, ...permissionsRoutes]} />}
+        />
         <Route element={<ProtectedRoute subPath="/global-auth" />}>
-          {documentCollectionRoutes.map((route) => (
+          {[...documentCollectionRoutes, ...permissionsRoutes].map((route) => (
             <Route key={route.path} path={route.path} element={route.element} />
           ))}
         </Route>

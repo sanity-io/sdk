@@ -39,7 +39,6 @@ export {type CurrentUser} from '@sanity/sdk'
 
 // Permissions
 export {useHasPermission} from '../hooks/permissions/useHasPermission'
-export {useHasPermissionCategory} from '../hooks/permissions/useHasPermissionCategory'
 export {useHasPermissionForResource} from '../hooks/permissions/useHasPermissionForResource'
 export {usePermissions} from '../hooks/permissions/usePermissions'
 export {usePermissionsByAction} from '../hooks/permissions/usePermissionsByAction'
