@@ -79,9 +79,8 @@ describe('getPermissionsByType', () => {
     expect(result1).toBe(result2)
   })
 
-  it('returns new result when permissions change', () => {
+  it('returns new result when permissions change', async () => {
     const store = getOrCreateResource(instance, permissionsStore)
-
     const initialPermissions: Permission[] = [
       {
         type: 'sanity.project',
@@ -95,11 +94,14 @@ describe('getPermissionsByType', () => {
       },
     ]
 
+    // Set initial permissions and verify
     store.state.set('updatePermissions', {permissions: initialPermissions})
-    const result1 = getPermissionsByType(instance, {type: 'sanity.project'})
+    const initialResult = getPermissionsByType(instance, {type: 'sanity.project'}).getCurrent()
+    expect(initialResult).toEqual([initialPermissions[0]])
 
-    const subscription = store.state.observable.subscribe(() => {
-      const updatedPermissions: Permission[] = [
+    // Create a promise that resolves when the state updates
+    const stateUpdatePromise = new Promise<void>((resolve) => {
+      const updatedPermissions = [
         ...initialPermissions,
         {
           type: 'sanity.project',
@@ -113,14 +115,21 @@ describe('getPermissionsByType', () => {
         },
       ]
 
+      const subscription = store.state.observable.subscribe((state) => {
+        if (state.permissions?.length === 2) {
+          const newValue = getPermissionsByType(instance, {type: 'sanity.project'}).getCurrent()
+          expect(newValue).not.toEqual(initialResult)
+          expect(newValue).toHaveLength(2)
+          subscription.unsubscribe()
+          resolve()
+        }
+      })
+
+      // Update permissions after subscription is set up
       store.state.set('updatePermissions', {permissions: updatedPermissions})
-      const result2 = getPermissionsByType(instance, {type: 'sanity.project'})
-
-      expect(result1.getCurrent()).not.toBe(result2.getCurrent())
-      expect(result2.getCurrent()).toHaveLength(2)
-
-      subscription.unsubscribe()
     })
+
+    await stateUpdatePromise
   })
 
   it('handles partial type matches', () => {

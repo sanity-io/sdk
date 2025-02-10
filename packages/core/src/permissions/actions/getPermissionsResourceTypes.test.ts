@@ -86,9 +86,8 @@ describe('getPermissionsResourceTypes', () => {
     expect(result1).toBe(result2)
   })
 
-  it('returns new result when permissions change', () => {
+  it('returns new result when permissions change', async () => {
     const store = getOrCreateResource(instance, permissionsStore)
-
     const initialPermissions: Permission[] = [
       {
         type: 'grant',
@@ -102,11 +101,14 @@ describe('getPermissionsResourceTypes', () => {
       },
     ]
 
+    // Set initial permissions and verify
     store.state.set('updatePermissions', {permissions: initialPermissions})
-    const result1 = getPermissionsResourceTypes(instance)
+    const initialResult = getPermissionsResourceTypes(instance).getCurrent()
+    expect(initialResult).toEqual(new Set(['project']))
 
-    const subscription = store.state.observable.subscribe(() => {
-      const updatedPermissions: Permission[] = [
+    // Create a promise that resolves when the state updates
+    const stateUpdatePromise = new Promise<void>((resolve) => {
+      const updatedPermissions = [
         ...initialPermissions,
         {
           type: 'grant',
@@ -120,14 +122,21 @@ describe('getPermissionsResourceTypes', () => {
         },
       ]
 
+      const subscription = store.state.observable.subscribe((state) => {
+        if (state.permissions?.length === 2) {
+          const newValue = getPermissionsResourceTypes(instance).getCurrent()
+          expect(newValue).not.toEqual(initialResult)
+          expect(newValue).toEqual(new Set(['project', 'organization']))
+          subscription.unsubscribe()
+          resolve()
+        }
+      })
+
+      // Update permissions after subscription is set up
       store.state.set('updatePermissions', {permissions: updatedPermissions})
-      const result2 = getPermissionsResourceTypes(instance)
-
-      expect(result1.getCurrent()).not.toBe(result2.getCurrent())
-      expect(result2.getCurrent()).toEqual(new Set(['project', 'organization']))
-
-      subscription.unsubscribe()
     })
+
+    await stateUpdatePromise
   })
 
   it('handles empty resource types', () => {

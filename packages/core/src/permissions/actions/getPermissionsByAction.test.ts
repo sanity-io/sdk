@@ -79,9 +79,8 @@ describe('getPermissionsByAction', () => {
     expect(result1).toBe(result2)
   })
 
-  it('returns new result when permissions change', () => {
+  it('returns new result when permissions change', async () => {
     const store = getOrCreateResource(instance, permissionsStore)
-
     const initialPermissions: Permission[] = [
       {
         type: 'grant',
@@ -95,11 +94,14 @@ describe('getPermissionsByAction', () => {
       },
     ]
 
+    // Set initial permissions and verify
     store.state.set('updatePermissions', {permissions: initialPermissions})
-    const result1 = getPermissionsByAction(instance, {action: 'read'})
+    const initialResult = getPermissionsByAction(instance, {action: 'read'}).getCurrent()
+    expect(initialResult).toEqual([initialPermissions[0]])
 
-    const subscription = store.state.observable.subscribe(() => {
-      const updatedPermissions: Permission[] = [
+    // Create a promise that resolves when the state updates
+    const stateUpdatePromise = new Promise<void>((resolve) => {
+      const updatedPermissions = [
         ...initialPermissions,
         {
           type: 'grant',
@@ -113,13 +115,20 @@ describe('getPermissionsByAction', () => {
         },
       ]
 
+      const subscription = store.state.observable.subscribe((state) => {
+        if (state.permissions?.length === 2) {
+          const newValue = getPermissionsByAction(instance, {action: 'read'}).getCurrent()
+          expect(newValue).toHaveLength(2)
+          expect(newValue).not.toEqual(initialResult)
+          subscription.unsubscribe()
+          resolve()
+        }
+      })
+
+      // Update permissions after subscription is set up
       store.state.set('updatePermissions', {permissions: updatedPermissions})
-      const result2 = getPermissionsByAction(instance, {action: 'read'})
-
-      expect(result1.getCurrent()).not.toBe(result2.getCurrent())
-      expect(result2.getCurrent()).toHaveLength(2)
-
-      subscription.unsubscribe()
     })
+
+    await stateUpdatePromise
   })
 })

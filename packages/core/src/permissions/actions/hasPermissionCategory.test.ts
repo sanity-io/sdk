@@ -87,14 +87,17 @@ describe('hasPermissionCategory', () => {
     expect(result1).toBe(result2)
   })
 
-  it('returns new result when permissions change', () => {
+  it('returns new result when permissions change', async () => {
     const store = getOrCreateResource(instance, permissionsStore)
-
     const initialPermissions: Permission[] = []
-    store.state.set('updatePermissions', {permissions: initialPermissions})
-    const result1 = hasPermissionCategory(instance, {category: 'sanity.project'})
 
-    const subscription = store.state.observable.subscribe(() => {
+    // Set initial permissions and verify
+    store.state.set('updatePermissions', {permissions: initialPermissions})
+    const initialResult = hasPermissionCategory(instance, {category: 'sanity.project'}).getCurrent()
+    expect(initialResult).toBe(false)
+
+    // Create a promise that resolves when the state updates
+    const stateUpdatePromise = new Promise<void>((resolve) => {
       const updatedPermissions: Permission[] = [
         {
           type: 'grant',
@@ -108,14 +111,22 @@ describe('hasPermissionCategory', () => {
         },
       ]
 
+      const subscription = store.state.observable.subscribe((state) => {
+        if (state.permissions?.length === 1) {
+          const newValue = hasPermissionCategory(instance, {
+            category: 'sanity.project',
+          }).getCurrent()
+          expect(newValue).toBe(true)
+          subscription.unsubscribe()
+          resolve()
+        }
+      })
+
+      // Update permissions after subscription is set up
       store.state.set('updatePermissions', {permissions: updatedPermissions})
-      const result2 = hasPermissionCategory(instance, {category: 'sanity.project'})
-
-      expect(result1.getCurrent()).toBe(false)
-      expect(result2.getCurrent()).toBe(true)
-
-      subscription.unsubscribe()
     })
+
+    await stateUpdatePromise
   })
 
   it('matches permissions using startsWith', () => {

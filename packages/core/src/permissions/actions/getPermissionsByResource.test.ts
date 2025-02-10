@@ -101,9 +101,8 @@ describe('getPermissionsByResource', () => {
     expect(result1).toBe(result2)
   })
 
-  it('returns new result when permissions change', () => {
+  it('returns new result when permissions change', async () => {
     const store = getOrCreateResource(instance, permissionsStore)
-
     const initialPermissions: Permission[] = [
       {
         type: 'grant',
@@ -117,11 +116,16 @@ describe('getPermissionsByResource', () => {
       },
     ]
 
+    // Set initial permissions and verify
     store.state.set('updatePermissions', {permissions: initialPermissions})
-    const result1 = getPermissionsByResource(instance)
+    const initialResult = getPermissionsByResource(instance).getCurrent()
+    expect(initialResult).toEqual({
+      proj1: initialPermissions,
+    })
 
-    const subscription = store.state.observable.subscribe(() => {
-      const updatedPermissions: Permission[] = [
+    // Create a promise that resolves when the state updates
+    const stateUpdatePromise = new Promise<void>((resolve) => {
+      const updatedPermissions = [
         ...initialPermissions,
         {
           type: 'grant',
@@ -135,13 +139,20 @@ describe('getPermissionsByResource', () => {
         },
       ]
 
+      const subscription = store.state.observable.subscribe((state) => {
+        if (state.permissions?.length === 2) {
+          const newValue = getPermissionsByResource(instance).getCurrent()
+          expect(newValue).not.toEqual(initialResult)
+          expect(newValue['proj1']).toHaveLength(2)
+          subscription.unsubscribe()
+          resolve()
+        }
+      })
+
+      // Update permissions after subscription is set up
       store.state.set('updatePermissions', {permissions: updatedPermissions})
-      const result2 = getPermissionsByResource(instance)
-
-      expect(result1.getCurrent()).not.toBe(result2.getCurrent())
-      expect(result2.getCurrent()['proj1']).toHaveLength(2)
-
-      subscription.unsubscribe()
     })
+
+    await stateUpdatePromise
   })
 })

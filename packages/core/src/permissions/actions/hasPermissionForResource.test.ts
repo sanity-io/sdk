@@ -102,17 +102,20 @@ describe('hasPermissionForResource', () => {
     expect(result1).toBe(result2)
   })
 
-  it('returns new result when permissions change', () => {
+  it('returns new result when permissions change', async () => {
     const store = getOrCreateResource(instance, permissionsStore)
-
     const initialPermissions: Permission[] = []
+
+    // Set initial permissions and verify
     store.state.set('updatePermissions', {permissions: initialPermissions})
-    const result1 = hasPermissionForResource(instance, {
+    const initialResult = hasPermissionForResource(instance, {
       permissionName: 'sanity.project.read',
       resourceId: 'proj1',
-    })
+    }).getCurrent()
+    expect(initialResult).toBe(false)
 
-    const subscription = store.state.observable.subscribe(() => {
+    // Create a promise that resolves when the state updates
+    const stateUpdatePromise = new Promise<void>((resolve) => {
       const updatedPermissions: Permission[] = [
         {
           type: 'grant',
@@ -126,17 +129,23 @@ describe('hasPermissionForResource', () => {
         },
       ]
 
-      store.state.set('updatePermissions', {permissions: updatedPermissions})
-      const result2 = hasPermissionForResource(instance, {
-        permissionName: 'sanity.project.read',
-        resourceId: 'proj1',
+      const subscription = store.state.observable.subscribe((state) => {
+        if (state.permissions?.length === 1) {
+          const newValue = hasPermissionForResource(instance, {
+            permissionName: 'sanity.project.read',
+            resourceId: 'proj1',
+          }).getCurrent()
+          expect(newValue).toBe(true)
+          subscription.unsubscribe()
+          resolve()
+        }
       })
 
-      expect(result1.getCurrent()).toBe(false)
-      expect(result2.getCurrent()).toBe(true)
-
-      subscription.unsubscribe()
+      // Update permissions after subscription is set up
+      store.state.set('updatePermissions', {permissions: updatedPermissions})
     })
+
+    await stateUpdatePromise
   })
 
   it('handles wildcard resource permissions', () => {

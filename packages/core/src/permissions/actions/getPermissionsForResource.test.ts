@@ -108,9 +108,8 @@ describe('getPermissionsForResource', () => {
     expect(result1).toBe(result2)
   })
 
-  it('returns new result when permissions change', () => {
+  it('returns new result when permissions change', async () => {
     const store = getOrCreateResource(instance, permissionsStore)
-
     const initialPermissions: Permission[] = [
       {
         type: 'grant',
@@ -124,11 +123,14 @@ describe('getPermissionsForResource', () => {
       },
     ]
 
+    // Set initial permissions and verify
     store.state.set('updatePermissions', {permissions: initialPermissions})
-    const result1 = getPermissionsForResource(instance, {resourceId: 'proj1'})
+    const initialResult = getPermissionsForResource(instance, {resourceId: 'proj1'}).getCurrent()
+    expect(initialResult).toEqual([initialPermissions[0]])
 
-    const subscription = store.state.observable.subscribe(() => {
-      const updatedPermissions: Permission[] = [
+    // Create a promise that resolves when the state updates
+    const stateUpdatePromise = new Promise<void>((resolve) => {
+      const updatedPermissions = [
         ...initialPermissions,
         {
           type: 'grant',
@@ -142,13 +144,20 @@ describe('getPermissionsForResource', () => {
         },
       ]
 
+      const subscription = store.state.observable.subscribe((state) => {
+        if (state.permissions?.length === 2) {
+          const newValue = getPermissionsForResource(instance, {resourceId: 'proj1'}).getCurrent()
+          expect(newValue).not.toEqual(initialResult)
+          expect(newValue).toHaveLength(2)
+          subscription.unsubscribe()
+          resolve()
+        }
+      })
+
+      // Update permissions after subscription is set up
       store.state.set('updatePermissions', {permissions: updatedPermissions})
-      const result2 = getPermissionsForResource(instance, {resourceId: 'proj1'})
-
-      expect(result1.getCurrent()).not.toBe(result2.getCurrent())
-      expect(result2.getCurrent()).toHaveLength(2)
-
-      subscription.unsubscribe()
     })
+
+    await stateUpdatePromise
   })
 })

@@ -93,9 +93,8 @@ describe('getPermissions', () => {
     expect(result1).toBe(result2)
   })
 
-  it('returns new result when permissions change', () => {
+  it('returns new result when permissions change', async () => {
     const store = getOrCreateResource(instance, permissionsStore)
-
     const initialPermissions: Permission[] = [
       {
         type: 'grant',
@@ -109,12 +108,18 @@ describe('getPermissions', () => {
       },
     ]
 
+    // Set initial permissions and verify
     store.state.set('updatePermissions', {permissions: initialPermissions})
-    const result1 = getPermissions(instance)
+    const initialResult = getPermissions(instance).getCurrent()
+    expect(initialResult).toEqual({
+      project: {
+        proj1: ['sanity.project.read'],
+      },
+    })
 
-    // Subscribe to get the next value
-    const subscription = store.state.observable.subscribe(() => {
-      const updatedPermissions: Permission[] = [
+    // Create a promise that resolves when the state updates
+    const stateUpdatePromise = new Promise<void>((resolve) => {
+      const updatedPermissions = [
         ...initialPermissions,
         {
           type: 'grant',
@@ -128,17 +133,23 @@ describe('getPermissions', () => {
         },
       ]
 
-      store.state.set('updatePermissions', {permissions: updatedPermissions})
-      const result2 = getPermissions(instance)
-
-      expect(result1.getCurrent()).not.toBe(result2.getCurrent())
-      expect(result2.getCurrent()).toEqual({
-        project: {
-          proj1: ['sanity.project.read', 'sanity.project.write'],
-        },
+      const subscription = store.state.observable.subscribe((state) => {
+        if (state.permissions?.length === 2) {
+          const newValue = getPermissions(instance).getCurrent()
+          expect(newValue).toEqual({
+            project: {
+              proj1: ['sanity.project.read', 'sanity.project.write'],
+            },
+          })
+          subscription.unsubscribe()
+          resolve()
+        }
       })
 
-      subscription.unsubscribe()
+      // Update permissions after subscription is set up
+      store.state.set('updatePermissions', {permissions: updatedPermissions})
     })
+
+    await stateUpdatePromise
   })
 })
