@@ -98,7 +98,6 @@ function diffRecursive(before: unknown, after: unknown, path: Path): PatchOperat
       // Field added – set it.
       patches.push({set: {[stringifyPath(subPath)]: after[key]}})
     } else {
-      // TODO: may not want to create a DMP for keys that start with an underscore
       // Field exists in both – recursively diff.
       patches.push(...diffRecursive(before[key], after[key], subPath))
     }
@@ -127,6 +126,18 @@ function diffArray(beforeArr: unknown[], afterArr: unknown[], path: Path): Patch
 
   // For keyed arrays, we collect patches in three buckets.
   if (isKeyedArray(beforeArr) && isKeyedArray(afterArr)) {
+    // SPECIAL FIX: If the array is empty, produce an insert patch that prepends the new items.
+    if (beforeArr.length === 0 && afterArr.length > 0) {
+      return [
+        {
+          insert: {
+            before: stringifyPath([...path, 0]),
+            items: afterArr,
+          },
+        },
+      ]
+    }
+
     const unsetPatches: PatchOperations[] = []
     const diffPatches: PatchOperations[] = []
     const insertPatches: PatchOperations[] = []

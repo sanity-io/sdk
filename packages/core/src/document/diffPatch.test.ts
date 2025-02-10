@@ -153,6 +153,20 @@ describe('diffPatch', () => {
     expect(applyPatches(before, patches)).toEqual(after)
   })
 
+  it('returns an `insert` patch if an object item is added in a keyed array with no items', () => {
+    const before = {
+      ...docInfo,
+      items: [],
+    }
+    const after = {
+      ...docInfo,
+      _rev: 'tx1',
+      items: [{_key: 'a', val: 1}],
+    }
+    const patches = diffPatch(before, after)
+    expect(applyPatches(before, patches)).toEqual(after)
+  })
+
   it('returns an `insert` patch if an object item is added in a keyed array (insert after)', () => {
     const before = {
       ...docInfo,
