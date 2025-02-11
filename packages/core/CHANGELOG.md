@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.9](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.8...sdk-v0.0.0-alpha.9) (2025-02-11)
+
+
+### Features
+
+* document store ([#197](https://github.com/sanity-io/sdk/issues/197)) ([497bb26](https://github.com/sanity-io/sdk/commit/497bb2641d5766128dfca4db8247f2f9555b83b1))
+
 ## [0.0.0-alpha.8](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.7...sdk-v0.0.0-alpha.8) (2025-02-06)
 
 
