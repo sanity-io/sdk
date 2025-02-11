@@ -1,2 +1,2 @@
 export {AuthBoundary} from '../components/auth/AuthBoundary'
-export {SanityApp} from '../components/SanityApp'
+export {SanityApp, type SanityAppProps} from '../components/SanityApp'

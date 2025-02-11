@@ -3,6 +3,7 @@ import {handleCallback} from '@sanity/sdk'
 import {createCallbackHook} from '../helpers/createCallbackHook'
 
 /**
+ * @internal
  * A React hook that returns a function for handling authentication callbacks.
  *
  * @remarks

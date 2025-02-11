@@ -1,12 +1,13 @@
-import {getAuthState} from '@sanity/sdk'
+import {type AuthState, getAuthState} from '@sanity/sdk'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
 /**
+ * @internal
  * A React hook that subscribes to authentication state changes.
  *
  * This hook provides access to the current authentication state type from the Sanity auth store.
- * It automatically re-renders the component when the authentication state changes.
+ * It automatically re-renders when the authentication state changes.
  *
  * @remarks
  * The hook uses `useSyncExternalStore` to safely subscribe to auth state changes
@@ -24,4 +25,4 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  *
  * @public
  */
-export const useAuthState = createStateSourceHook(getAuthState)
+export const useAuthState: () => AuthState = createStateSourceHook(getAuthState)

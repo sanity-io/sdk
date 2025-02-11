@@ -44,9 +44,10 @@ import './App.css'
 const sanityConfig: SanityConfig = {
   projectId: '<your-project-id>',
   dataset: '<your-dataset>',
-  // optional auth config set projectId and dataset to '' and authScope to 'org' for a global token
+  // optional auth config set projectId and dataset to '' and authScope to 'global' for a global token
   // auth: {
-  //   authScope: "org",
+  //   authScope: 'global',
+  //   ...
   // },
 }
 

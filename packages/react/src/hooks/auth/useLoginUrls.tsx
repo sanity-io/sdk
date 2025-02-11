@@ -4,6 +4,7 @@ import {useMemo, useSyncExternalStore} from 'react'
 import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
+ * @internal
  * A React hook that retrieves the available authentication provider URLs for login.
  *
  * @remarks

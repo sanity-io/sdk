@@ -30,7 +30,7 @@ describe('authStore', () => {
   describe('getInitialState', () => {
     it('sets initial options onto state', () => {
       const apiHost = 'test-api-host'
-      const authScope = 'org'
+      const authScope = 'global'
       const callbackUrl = '/login/callback'
       const providers = [
         {name: 'test-provider', id: 'test', title: 'Test', url: 'https://example.com'},
