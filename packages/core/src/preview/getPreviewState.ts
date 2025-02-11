@@ -3,13 +3,14 @@ import {omit} from 'lodash-es'
 import {type DocumentHandle} from '../documentList/documentListStore'
 import {createAction} from '../resources/createAction'
 import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
+import {getPublishedId, insecureRandomId} from '../utils/ids'
 import {
   previewStore,
   type PreviewStoreState,
   type PreviewValue,
   type ValuePending,
 } from './previewStore'
-import {getPublishedId, randomId, STABLE_EMPTY_PREVIEW} from './util'
+import {STABLE_EMPTY_PREVIEW} from './util'
 
 /**
  * @public
@@ -35,7 +36,7 @@ export const getPreviewState = createAction(previewStore, ({state}) => {
     return {
       ...previewState,
       subscribe: (subscriber) => {
-        const subscriptionId = randomId()
+        const subscriptionId = insecureRandomId()
 
         state.set('addSubscription', (prev) => ({
           documentTypes: {
