@@ -14,7 +14,7 @@ vi.mock('../../hooks/auth/useLoginUrls', () => ({
 describe('Login', () => {
   it('renders login providers', () => {
     renderWithWrappers(<Login />)
-    expect(screen.getByText('Choose login provider:')).toBeInTheDocument()
+    expect(screen.getByText('Choose login provider')).toBeInTheDocument()
     expect(screen.getByRole('link', {name: 'Provider A'})).toHaveAttribute(
       'href',
       'https://provider-a.com/auth',

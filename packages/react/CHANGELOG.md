@@ -1,11 +1,33 @@
 # Changelog
 
-## [0.0.0-alpha.7](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.6...sdk-react-v0.0.0-alpha.7) (2025-02-04)
-
+## [0.0.0-alpha.10](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.9...sdk-react-v0.0.0-alpha.10) (2025-02-12)
 
 ### Features
 
-* **react:** add sanity os bridge script to AuthBoundary ([#196](https://github.com/sanity-io/sdk/issues/196)) ([1fb064d](https://github.com/sanity-io/sdk/commit/1fb064d111541bf93c8933920d7bce00a9c454ef))
+- allow useEditDocument to take an updater function ([#218](https://github.com/sanity-io/sdk/issues/218)) ([85b3440](https://github.com/sanity-io/sdk/commit/85b344007df3fd66ce7dae94df8f6b8a81f54574))
+
+## [0.0.0-alpha.9](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.8...sdk-react-v0.0.0-alpha.9) (2025-02-11)
+
+### Features
+
+- document store ([#197](https://github.com/sanity-io/sdk/issues/197)) ([497bb26](https://github.com/sanity-io/sdk/commit/497bb2641d5766128dfca4db8247f2f9555b83b1))
+
+## [0.0.0-alpha.8](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.7...sdk-react-v0.0.0-alpha.8) (2025-02-06)
+
+### Features
+
+- export useClient ([#213](https://github.com/sanity-io/sdk/issues/213)) ([0e79002](https://github.com/sanity-io/sdk/commit/0e790020ee0f688e6f07243c5605b5cbffe4b1c5))
+
+## [0.0.0-alpha.7](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.6...sdk-react-v0.0.0-alpha.7) (2025-02-05)
+
+### Features
+
+- **react:** add sanity os bridge script to AuthBoundary ([#196](https://github.com/sanity-io/sdk/issues/196)) ([1fb064d](https://github.com/sanity-io/sdk/commit/1fb064d111541bf93c8933920d7bce00a9c454ef))
+
+### Bug Fixes
+
+- adjust incorrect release back to alpha.6 ([#212](https://github.com/sanity-io/sdk/issues/212)) ([a946853](https://github.com/sanity-io/sdk/commit/a9468530e16ee056d972d913e4f046ceb0610134))
+- trigger release ([#210](https://github.com/sanity-io/sdk/issues/210)) ([2b36c98](https://github.com/sanity-io/sdk/commit/2b36c985a91d44be95a9e6c8446e9a11ffa59d61))
 
 ## [0.0.0-alpha.6](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.5...sdk-react-v0.0.0-alpha.6) (2025-01-30)
 

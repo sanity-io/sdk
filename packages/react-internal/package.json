@@ -1,0 +1,102 @@
+{
+  "name": "@sanity/sdk-react-internal",
+  "version": "0.0.0-alpha.1",
+  "private": false,
+  "description": "Sanity SDK React toolkit for Content OS",
+  "keywords": [
+    "sanity",
+    "sdk",
+    "content operating system",
+    "cms",
+    "headless",
+    "realtime",
+    "content"
+  ],
+  "homepage": "https://github.com/sanity-io/sdk/tree/main/packages/react-internal/README.md",
+  "bugs": {
+    "url": "https://github.com/sanity-io/sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/sanity-io/sdk.git"
+  },
+  "license": "MIT",
+  "author": "Sanity <developers@sanity.io>",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/_exports/index.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./components": {
+      "source": "./src/_exports/components.ts",
+      "import": "./dist/components.js",
+      "default": "./dist/components.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "pkg build --strict --clean --check",
+    "clean": "rimraf dist",
+    "dev": "pkg watch",
+    "docs": "typedoc --out docs --tsconfig ../../tsconfig.tsdoc.json",
+    "format": "prettier --write --cache --ignore-unknown .",
+    "lint": "eslint .",
+    "prepublishOnly": "pnpm run build",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "ts:check": "tsc --noEmit"
+  },
+  "browserslist": "extends @sanity/browserslist-config",
+  "prettier": "@sanity/prettier-config",
+  "dependencies": {
+    "@sanity/logos": "^2.1.13",
+    "@sanity/sdk": "workspace:*",
+    "@sanity/sdk-react": "workspace:*",
+    "@sanity/ui": "^2.8.19",
+    "react-error-boundary": "^4.1.2"
+  },
+  "devDependencies": {
+    "@repo/config-eslint": "workspace:*",
+    "@repo/config-test": "workspace:*",
+    "@repo/package.config": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
+    "@sanity/pkg-utils": "^6.12.2",
+    "@sanity/prettier-config": "^1.0.3",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "^19.0.3",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "2.1.8",
+    "eslint": "^9.17.0",
+    "jsdom": "^25.0.1",
+    "prettier": "^3.4.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "packageManager": "pnpm@9.15.2",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}

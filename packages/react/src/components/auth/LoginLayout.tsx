@@ -1,10 +1,7 @@
-import {Card, Container} from '@sanity/ui'
-
 import {LoginFooter} from './LoginFooter'
 
 /**
  * @alpha
- * @internal
  */
 export interface LoginLayoutProps {
   /** Optional header content rendered at top of card */
@@ -57,14 +54,16 @@ export function LoginLayout({
   header,
 }: LoginLayoutProps): React.ReactNode {
   return (
-    <Container width={0}>
-      <Card shadow={1} radius={2} padding={4}>
-        {header && header}
+    <div className="sc-login-layout">
+      <div className="sc-login-layout__container">
+        <div className="sc-login-layout__card">
+          {header && <div className="sc-login-layout__card-header">{header}</div>}
 
-        {children && children}
+          {children && <div className="sc-login-layout__card-body">{children}</div>}
+        </div>
 
         {footer}
-      </Card>
-    </Container>
+      </div>
+    </div>
   )
 }
