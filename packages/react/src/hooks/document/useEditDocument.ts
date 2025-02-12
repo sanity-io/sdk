@@ -15,6 +15,8 @@ import {useApplyActions} from './useApplyActions'
 
 const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
 
+type Updater<TValue> = TValue | ((nextValue: TValue) => TValue)
+
 /** @beta */
 export function useEditDocument<
   TDocument extends SanityDocument,
@@ -22,16 +24,16 @@ export function useEditDocument<
 >(
   doc: string | DocumentHandle<TDocument>,
   path: TPath,
-): (nextValue: JsonMatch<TDocument, TPath>) => Promise<ActionsResult<TDocument>>
+): (nextValue: Updater<JsonMatch<TDocument, TPath>>) => Promise<ActionsResult<TDocument>>
 /** @beta */
 export function useEditDocument<TDocument extends SanityDocument>(
   doc: string | DocumentHandle<TDocument>,
-): (nextValue: Partial<TDocument>) => Promise<ActionsResult<TDocument>>
+): (nextValue: Updater<TDocument>) => Promise<ActionsResult<TDocument>>
 /** @beta */
 export function useEditDocument(
   doc: string | DocumentHandle,
   path?: string,
-): (nextValue: unknown) => Promise<ActionsResult> {
+): (updater: Updater<unknown>) => Promise<ActionsResult> {
   const documentId = typeof doc === 'string' ? doc : doc._id
   const instance = useSanityInstance()
   const apply = useApplyActions()
@@ -42,23 +44,34 @@ export function useEditDocument(
   if (!isDocumentReady()) throw resolveDocument(instance, documentId)
 
   return useCallback(
-    (next: unknown) => {
+    (updater: Updater<unknown>) => {
       if (path) {
-        return apply(editDocument(documentId, {set: {[path]: next}}))
+        const nextValue =
+          typeof updater === 'function'
+            ? updater(getDocumentState(instance, documentId, path).getCurrent())
+            : updater
+
+        return apply(editDocument(documentId, {set: {[path]: nextValue}}))
       }
 
       const current = getDocumentState(instance, documentId).getCurrent()
+      const nextValue = typeof updater === 'function' ? updater(current) : updater
 
-      if (typeof next !== 'object' || !next) {
+      if (typeof nextValue !== 'object' || !nextValue) {
         throw new Error(
           `No path was provided to \`useEditDocument\` and the value provided was not a document object.`,
         )
       }
 
-      const editActions = Object.entries(next)
-        .filter(([key]) => !ignoredKeys.includes(key))
-        .filter(([key, value]) => current?.[key] !== value)
-        .map(([key, value]) => editDocument(documentId, {set: {[key]: value}}))
+      const allKeys = Object.keys({...current, ...nextValue})
+      const editActions = allKeys
+        .filter((key) => !ignoredKeys.includes(key))
+        .filter((key) => current?.[key] !== nextValue[key])
+        .map((key) =>
+          key in nextValue
+            ? editDocument(documentId, {set: {[key]: nextValue[key]}})
+            : editDocument(documentId, {unset: [key]}),
+        )
 
       return apply(editActions)
     },

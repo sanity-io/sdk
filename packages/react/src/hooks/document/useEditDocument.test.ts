@@ -35,14 +35,14 @@ vi.mock('./useApplyActions', () => ({
 // Create a fake instance to be returned by useSanityInstance.
 const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
-const doc: SanityDocument = {
+const doc = {
   _id: 'doc1',
   foo: 'bar',
   _type: 'book',
   _rev: 'tx0',
   _createdAt: '2025-02-06T00:11:00.000Z',
   _updatedAt: '2025-02-06T00:11:00.000Z',
-}
+} satisfies SanityDocument
 
 describe('useEditDocument hook', () => {
   beforeEach(() => {
@@ -83,10 +83,48 @@ describe('useEditDocument hook', () => {
     vi.mocked(useApplyActions).mockReturnValue(apply)
 
     const {result} = renderHook(() => useEditDocument('doc1'))
-    const promise = result.current({foo: 'baz', extra: 'old', _id: 'doc1'})
+    const promise = result.current({...doc, foo: 'baz', extra: 'old', _id: 'doc1'})
     expect(apply).toHaveBeenCalledWith([editDocument('doc1', {set: {foo: 'baz'}})])
     const actionsResult = await promise
     expect(actionsResult).toEqual({transactionId: 'tx2'})
+  })
+
+  it('applies a single edit action using an updater function for the given path', async () => {
+    const getCurrent = vi.fn().mockReturnValue(doc.foo)
+    const subscribe = vi.fn().mockReturnValue(vi.fn())
+    vi.mocked(getDocumentState).mockReturnValue({
+      getCurrent,
+      subscribe,
+    } as unknown as StateSource<SanityDocument>)
+
+    const apply = vi.fn().mockResolvedValue({transactionId: 'tx3'})
+    vi.mocked(useApplyActions).mockReturnValue(apply)
+
+    const {result} = renderHook(() => useEditDocument('doc1', 'foo'))
+    const promise = result.current((prev: unknown) => `${prev}Updated`) // 'bar' becomes 'barUpdated'
+    expect(editDocument).toHaveBeenCalledWith('doc1', {set: {foo: 'barUpdated'}})
+    expect(apply).toHaveBeenCalledWith(editDocument('doc1', {set: {foo: 'barUpdated'}}))
+    const actionsResult = await promise
+    expect(actionsResult).toEqual({transactionId: 'tx3'})
+  })
+
+  it('applies edit actions using an updater function for the entire document', async () => {
+    const currentDoc = {...doc, foo: 'bar', extra: 'old'}
+    const getCurrent = vi.fn().mockReturnValue(currentDoc)
+    const subscribe = vi.fn().mockReturnValue(vi.fn())
+    vi.mocked(getDocumentState).mockReturnValue({
+      getCurrent,
+      subscribe,
+    } as unknown as StateSource<SanityDocument>)
+
+    const apply = vi.fn().mockResolvedValue({transactionId: 'tx4'})
+    vi.mocked(useApplyActions).mockReturnValue(apply)
+
+    const {result} = renderHook(() => useEditDocument('doc1'))
+    const promise = result.current((prevDoc) => ({...prevDoc, foo: 'baz'}))
+    expect(apply).toHaveBeenCalledWith([editDocument('doc1', {set: {foo: 'baz'}})])
+    const actionsResult = await promise
+    expect(actionsResult).toEqual({transactionId: 'tx4'})
   })
 
   it('throws an error if next value is not an object', () => {
@@ -101,7 +139,7 @@ describe('useEditDocument hook', () => {
     vi.mocked(useApplyActions).mockReturnValue(fakeApply)
 
     const {result} = renderHook(() => useEditDocument('doc1'))
-    expect(() => result.current('notAnObject' as unknown as Partial<SanityDocument>)).toThrowError(
+    expect(() => result.current('notAnObject' as unknown as SanityDocument)).toThrowError(
       'No path was provided to `useEditDocument` and the value provided was not a document object.',
     )
   })
