@@ -2,31 +2,35 @@
 
 ## [0.0.0-alpha.9](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.8...sdk-v0.0.0-alpha.9) (2025-02-11)
 
+
 ### Features
 
-- document store ([#197](https://github.com/sanity-io/sdk/issues/197)) ([497bb26](https://github.com/sanity-io/sdk/commit/497bb2641d5766128dfca4db8247f2f9555b83b1))
+* document store ([#197](https://github.com/sanity-io/sdk/issues/197)) ([497bb26](https://github.com/sanity-io/sdk/commit/497bb2641d5766128dfca4db8247f2f9555b83b1))
 
 ## [0.0.0-alpha.8](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.7...sdk-v0.0.0-alpha.8) (2025-02-06)
 
+
 ### Features
 
-- **client:** add a global api client ([#209](https://github.com/sanity-io/sdk/issues/209)) ([5898b1d](https://github.com/sanity-io/sdk/commit/5898b1d82fc07d12f736d1361e48287e41ae0608))
+* **client:** add a global api client ([#209](https://github.com/sanity-io/sdk/issues/209)) ([5898b1d](https://github.com/sanity-io/sdk/commit/5898b1d82fc07d12f736d1361e48287e41ae0608))
 
 ## [0.0.0-alpha.7](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.6...sdk-v0.0.0-alpha.7) (2025-02-05)
 
+
 ### Bug Fixes
 
-- trigger release ([#210](https://github.com/sanity-io/sdk/issues/210)) ([2b36c98](https://github.com/sanity-io/sdk/commit/2b36c985a91d44be95a9e6c8446e9a11ffa59d61))
+* trigger release ([#210](https://github.com/sanity-io/sdk/issues/210)) ([2b36c98](https://github.com/sanity-io/sdk/commit/2b36c985a91d44be95a9e6c8446e9a11ffa59d61))
 
 ## [0.0.0-alpha.6](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.5...sdk-v0.0.0-alpha.6) (2025-01-30)
 
+
 ### ⚠ BREAKING CHANGES
 
-- renames `org` auth scope to `global` ([#187](https://github.com/sanity-io/sdk/issues/187))
+* renames `org` auth scope to `global` ([#187](https://github.com/sanity-io/sdk/issues/187))
 
 ### Miscellaneous Chores
 
-- renames `org` auth scope to `global` ([#187](https://github.com/sanity-io/sdk/issues/187)) ([3220d57](https://github.com/sanity-io/sdk/commit/3220d5729c8012ffc47bfa2d75bfca1f2642df76))
+* renames `org` auth scope to `global` ([#187](https://github.com/sanity-io/sdk/issues/187)) ([3220d57](https://github.com/sanity-io/sdk/commit/3220d5729c8012ffc47bfa2d75bfca1f2642df76))
 
 ## [0.0.0-alpha.5](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.4...sdk-v0.0.0-alpha.5) (2025-01-28)
 
