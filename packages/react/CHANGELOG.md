@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.0.0-alpha.10](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.9...sdk-react-v0.0.0-alpha.10) (2025-02-12)
+
+
+### Features
+
+* allow useEditDocument to take an updater function ([#218](https://github.com/sanity-io/sdk/issues/218)) ([85b3440](https://github.com/sanity-io/sdk/commit/85b344007df3fd66ce7dae94df8f6b8a81f54574))
+
+## [0.0.0-alpha.9](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.8...sdk-react-v0.0.0-alpha.9) (2025-02-11)
+
+
+### Features
+
+* document store ([#197](https://github.com/sanity-io/sdk/issues/197)) ([497bb26](https://github.com/sanity-io/sdk/commit/497bb2641d5766128dfca4db8247f2f9555b83b1))
+
 ## [0.0.0-alpha.8](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.7...sdk-react-v0.0.0-alpha.8) (2025-02-06)
 
 

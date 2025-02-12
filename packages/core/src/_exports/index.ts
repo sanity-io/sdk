@@ -18,11 +18,7 @@ export {getSubscribableClient} from '../client/actions/getSubscribableClient'
 export type {ClientState} from '../client/clientStore'
 
 /** DOCUMENT LIST */
-export type {
-  DocumentHandle,
-  DocumentListOptions,
-  DocumentListState,
-} from '../documentList/documentListStore'
+export type {DocumentListOptions, DocumentListState} from '../documentList/documentListStore'
 export {createDocumentListStore} from '../documentList/documentListStore'
 
 /** AUTH */
@@ -45,7 +41,7 @@ export {fetchLoginUrls} from '../auth/fetchLoginUrls'
 export {handleCallback} from '../auth/handleCallback'
 export {logout} from '../auth/logout'
 export {type SchemaConfig} from '../schema/schemaManager'
-export type {CurrentUser, Role} from '@sanity/types'
+export type {CurrentUser, Role, SanityDocumentLike} from '@sanity/types'
 
 /** PREVIEW */
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
@@ -62,3 +58,46 @@ export {getOrCreateNode} from '../comlink/node/actions/getOrCreateNode'
 export {releaseNode} from '../comlink/node/actions/releaseNode'
 export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'
+
+/** DOCUMENT */
+export {
+  createDocument,
+  type CreateDocumentAction,
+  deleteDocument,
+  type DeleteDocumentAction,
+  discardDocument,
+  type DiscardDocumentAction,
+  type DocumentAction,
+  editDocument,
+  type EditDocumentAction,
+  publishDocument,
+  type PublishDocumentAction,
+  unpublishDocument,
+  type UnpublishDocumentAction,
+} from '../document/actions'
+export {type ActionsResult, applyActions, type ApplyActionsOptions} from '../document/applyActions'
+export {
+  getDocumentState,
+  getDocumentSyncStatus,
+  resolveDocument,
+  subscribeDocumentEvents,
+} from '../document/documentStore'
+export {
+  type ActionErrorEvent,
+  type DocumentCreatedEvent,
+  type DocumentDeletedEvent,
+  type DocumentDiscardedEvent,
+  type DocumentEditedEvent,
+  type DocumentEvent,
+  type DocumentPublishedEvent,
+  type DocumentUnpublishedEvent,
+  type TransactionAcceptedEvent,
+  type TransactionRevertedEvent,
+} from '../document/events'
+export {
+  type DocumentHandle,
+  type DocumentTypeHandle,
+  type JsonMatch,
+  jsonMatch,
+  type JsonMatchPath,
+} from '../document/patchOperations'
