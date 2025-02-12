@@ -1,6 +1,6 @@
 export {AuthError} from '../components/auth/AuthError'
 export {Login} from '../components/auth/Login'
 export {LoginCallback} from '../components/auth/LoginCallback'
-export {LoginError} from '../components/auth/LoginError'
+export {LoginError, type LoginErrorProps} from '../components/auth/LoginError'
 export {LoginFooter} from '../components/auth/LoginFooter'
 export {LoginLayout} from '../components/auth/LoginLayout'
