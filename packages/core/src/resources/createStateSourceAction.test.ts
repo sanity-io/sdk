@@ -8,7 +8,7 @@ import {createStateSourceAction} from './createStateSourceAction'
 describe('createStateSourceAction', () => {
   const resource = createResource({
     name: 'testResource',
-    getInitialState: () => ({value: 10}),
+    getInitialState: () => ({value: 10, subscribed: false}),
   })
 
   const setValue = createAction(resource, ({state}) => {
@@ -17,7 +17,22 @@ describe('createStateSourceAction', () => {
     }
   })
 
-  const getValueState = createStateSourceAction(resource, (state) => state.value)
+  const getValueState = createStateSourceAction(resource, {
+    selector: (state) => state.value,
+    onSubscribe: ({state}) => {
+      state.set('setSubscribedTrue', {subscribed: true})
+
+      return () => {
+        state.set('setSubscribedFalse', {subscribed: false})
+      }
+    },
+  })
+
+  const getSubscribed = createAction(resource, ({state}) => {
+    return function () {
+      return state.get().subscribed
+    }
+  })
 
   it('should return the current value', () => {
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
@@ -83,5 +98,17 @@ describe('createStateSourceAction', () => {
     expect(observer).toHaveBeenCalledTimes(2)
 
     subscription.unsubscribe()
+  })
+
+  it('allows providing an `onSubscribe` handler', () => {
+    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const valueState = getValueState(instance)
+
+    expect(getSubscribed(instance)).toBe(false)
+    const unsubscribe = valueState.subscribe()
+    expect(getSubscribed(instance)).toBe(true)
+
+    unsubscribe()
+    expect(getSubscribed(instance)).toBe(false)
   })
 })

@@ -4,6 +4,7 @@ import {Route, Routes} from 'react-router'
 
 import Frame from './Comlink/Frame'
 import ParentApp from './Comlink/ParentApp'
+import {DocumentEditorRoute} from './DocumentCollection/DocumentEditorRoute'
 import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
 import {DocumentListRoute} from './DocumentCollection/DocumentListRoute'
 import {GlobalAuthHome} from './GlobalAuthentication/GlobalAuthHome'
@@ -24,6 +25,10 @@ const documentCollectionRoutes = [
   {
     path: 'document-grid',
     element: <DocumentGridRoute />,
+  },
+  {
+    path: 'document-editor',
+    element: <DocumentEditorRoute />,
   },
 ]
 
