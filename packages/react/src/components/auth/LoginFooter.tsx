@@ -1,5 +1,5 @@
 import {SanityLogo} from '@sanity/logos'
-import {Box, Flex, Inline, Text} from '@sanity/ui'
+import {Fragment} from 'react'
 
 const LINKS = [
   {
@@ -32,27 +32,20 @@ const LINKS = [
  */
 export function LoginFooter(): React.ReactNode {
   return (
-    <Box>
-      <Flex justify="center">
-        <SanityLogo />
-      </Flex>
+    <div className="sc-login-footer">
+      <SanityLogo className="sc-login-footer__logo" />
 
-      <Flex justify="center">
-        <Inline space={2} paddingY={3}>
-          {LINKS.map((link) => (
-            <Text size={0} key={link.url}>
-              <a
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{color: 'inherit'}}
-              >
+      <ul className="sc-login-footer__links">
+        {LINKS.map((link) => (
+          <Fragment key={link.title}>
+            <li className="sc-login-footer__link">
+              <a href={link.url} target="_blank" rel="noopener noreferrer">
                 {link.title}
               </a>
-            </Text>
-          ))}
-        </Inline>
-      </Flex>
-    </Box>
+            </li>
+          </Fragment>
+        ))}
+      </ul>
+    </div>
   )
 }

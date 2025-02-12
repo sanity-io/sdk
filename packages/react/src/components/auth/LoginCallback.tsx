@@ -1,4 +1,3 @@
-import {Flex, Heading, Spinner} from '@sanity/ui'
 import {useEffect} from 'react'
 
 import {useHandleCallback} from '../../hooks/auth/useHandleCallback'
@@ -28,12 +27,10 @@ export function LoginCallback({header, footer}: LoginLayoutProps): React.ReactNo
 
   return (
     <LoginLayout header={header} footer={footer}>
-      <Heading as="h6" align="center">
-        Logging you in…
-      </Heading>
-      <Flex paddingY={5} align="center" justify="center">
-        <Spinner />
-      </Flex>
+      <div className="sc-login-callback">
+        <h1 className="sc-login-callback__title">Logging you in…</h1>
+        <div className="sc-login-callback__loading">Loading…</div>
+      </div>
     </LoginLayout>
   )
 }
