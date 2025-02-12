@@ -54,7 +54,7 @@ describe('AuthBoundary', () => {
     renderWithWrappers(<AuthBoundary>Protected Content</AuthBoundary>)
 
     // The login screen should show "Choose login provider" by default
-    expect(screen.getByText('Choose login provider:')).toBeInTheDocument()
+    expect(screen.getByText('Choose login provider')).toBeInTheDocument()
     expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
   })
 

@@ -4,7 +4,7 @@ import {describe, expect, it, vi} from 'vitest'
 import {renderWithWrappers} from './authTestHelpers'
 import {Login} from './Login'
 
-vi.mock('../../hooks/auth/useLoginUrls', () => ({
+vi.mock('@sanity/sdk-react/hooks', () => ({
   useLoginUrls: vi.fn(() => [
     {title: 'Provider A', url: 'https://provider-a.com/auth'},
     {title: 'Provider B', url: 'https://provider-b.com/auth'},
@@ -14,7 +14,7 @@ vi.mock('../../hooks/auth/useLoginUrls', () => ({
 describe('Login', () => {
   it('renders login providers', () => {
     renderWithWrappers(<Login />)
-    expect(screen.getByText('Choose login provider')).toBeInTheDocument()
+    expect(screen.getByText('Choose login provider:')).toBeInTheDocument()
     expect(screen.getByRole('link', {name: 'Provider A'})).toHaveAttribute(
       'href',
       'https://provider-a.com/auth',
