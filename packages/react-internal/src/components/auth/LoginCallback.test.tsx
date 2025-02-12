@@ -4,7 +4,7 @@ import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest'
 import {renderWithWrappers} from './authTestHelpers'
 
 // Mock `useHandleCallback`
-vi.mock('../../hooks/auth/useHandleCallback', () => ({
+vi.mock('@sanity/sdk-react/hooks', () => ({
   useHandleCallback: vi.fn(() => async (url: string) => {
     const parsedUrl = new URL(url)
     const sid = new URLSearchParams(parsedUrl.hash.slice(1)).get('sid')
