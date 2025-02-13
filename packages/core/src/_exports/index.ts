@@ -41,7 +41,7 @@ export {fetchLoginUrls} from '../auth/fetchLoginUrls'
 export {handleCallback} from '../auth/handleCallback'
 export {logout} from '../auth/logout'
 export {type SchemaConfig} from '../schema/schemaManager'
-export type {CurrentUser, Role, SanityDocumentLike} from '@sanity/types'
+export type {CurrentUser, Role, SanityDocument, SanityDocumentLike} from '@sanity/types'
 
 /** PREVIEW */
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
