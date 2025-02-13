@@ -6,7 +6,7 @@
   "scripts": {
     "build": "pnpm tsc && vite build",
     "clean": "rimraf dist",
-    "coreui": "pnpx @sanity/os-cli run --url=http://localhost:5173",
+    "coreui": "pnpx @sanity/core-cli run --url=http://localhost:5173/sanity-app",
     "dev": "concurrently \"npm:dev:standalone\" \"npm:coreui\" \"sleep 2 && open http://localhost:3000\" --names \"kitchensink,coreui,browser\"",
     "dev:standalone": "vite --port 5173",
     "lint": "eslint .",
@@ -31,7 +31,7 @@
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
     "@repo/tsconfig": "workspace:*",
-    "@sanity/os-cli": "^0.2.0",
+    "@sanity/core-cli": "^0.7.0",
     "@sanity/prettier-config": "^1.0.3",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
