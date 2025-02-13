@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.11](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.10...sdk-react-v0.0.0-alpha.11) (2025-02-13)
+
+
+### Features
+
+* add sdk-react-internal package and remove @sanity/ui package ([#193](https://github.com/sanity-io/sdk/issues/193)) ([7fa201e](https://github.com/sanity-io/sdk/commit/7fa201ee49b75bbc71a741503ed0336f94785201))
+
 ## [0.0.0-alpha.10](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.9...sdk-react-v0.0.0-alpha.10) (2025-02-12)
 
 

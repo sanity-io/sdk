@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.10](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.9...sdk-v0.0.0-alpha.10) (2025-02-13)
+
+
+### Features
+
+* export the SanityDocument type ([#221](https://github.com/sanity-io/sdk/issues/221)) ([dc6dbc8](https://github.com/sanity-io/sdk/commit/dc6dbc85fe6d80c6e3b08de76e666da340aa62f6))
+
 ## [0.0.0-alpha.9](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.8...sdk-v0.0.0-alpha.9) (2025-02-11)
 
 
