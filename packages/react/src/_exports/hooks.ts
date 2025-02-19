@@ -29,4 +29,7 @@ export {
   type UsePreviewOptions,
   type UsePreviewResults,
 } from '../hooks/preview/usePreview'
+export {useProject} from '../hooks/project/useProject'
+export {useProjects} from '../hooks/project/useProjects'
+export {type SanityProject} from '@sanity/sdk'
 export {type CurrentUser} from '@sanity/sdk'

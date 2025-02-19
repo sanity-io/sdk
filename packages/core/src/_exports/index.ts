@@ -101,3 +101,9 @@ export {
   jsonMatch,
   type JsonMatchPath,
 } from '../document/patchOperations'
+
+/** PROJECT */
+export {getProject} from '../project/actions/getProject'
+export {getProjects} from '../project/actions/getProjects'
+export {getProjectState} from '../project/actions/getProjectState'
+export {type SanityProject} from '@sanity/client'
