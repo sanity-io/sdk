@@ -1,5 +1,8 @@
 /** MAIN INSTANCE */
 // Utils
+// Use import type to access the internal type and re-export it
+import {type SanityProject as _SanityProject} from '@sanity/client'
+
 export {createSanityInstance} from '../instance/sanityInstance'
 export {type ActionContext, type ResourceAction} from '../resources/createAction'
 export {type ResourceState} from '../resources/createResource'
@@ -106,4 +109,5 @@ export {
 export {getProject} from '../project/actions/getProject'
 export {getProjects} from '../project/actions/getProjects'
 export {getProjectState} from '../project/actions/getProjectState'
-export {type SanityProject} from '@sanity/client'
+/** @public */
+export type SanityProject = _SanityProject

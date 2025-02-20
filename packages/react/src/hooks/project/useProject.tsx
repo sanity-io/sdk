@@ -4,7 +4,7 @@ import {useCallback, useEffect, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
-/** @beta */
+/** @public */
 export function useProject(projectId: string): SanityProject {
   const instance = useSanityInstance()
   const {projects, subscribe} = getProjectState(instance)
