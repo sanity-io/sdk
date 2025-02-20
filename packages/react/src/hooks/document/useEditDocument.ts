@@ -17,8 +17,10 @@ const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
 
 type Updater<TValue> = TValue | ((nextValue: TValue) => TValue)
 
-/** @beta */
 /**
+ *
+ * @beta
+ *
  * ## useEditDocument(doc, path)
  * Edit a nested value within a document
  * @param doc - The document to be edited; either as a document handle or the document’s ID a string
@@ -67,8 +69,10 @@ export function useEditDocument<
   path: TPath,
 ): (nextValue: Updater<JsonMatch<TDocument, TPath>>) => Promise<ActionsResult<TDocument>>
 
-/** @beta */
 /**
+ *
+ * @beta
+ *
  * ## useEditDocument(doc)
  * Edit an entire document
  * @param doc - The document to be edited; either as a document handle or the document’s ID a string
@@ -127,13 +131,14 @@ export function useEditDocument<
  * )
  * ```
  */
-
 export function useEditDocument<TDocument extends SanityDocument>(
   doc: string | DocumentHandle<TDocument>,
 ): (nextValue: Updater<TDocument>) => Promise<ActionsResult<TDocument>>
 
-/** @beta */
 /**
+ *
+ * @beta
+ *
  * Enables editing of a document’s state.
  * When called with a `path` argument, the hook will return a function for updating a nested value.
  * When called without a `path` argument, the hook will return a function for updating the entire document.
