@@ -4,7 +4,49 @@ import {getGlobalClient} from '../../client/actions/getGlobalClient'
 import {createAction} from '../../resources/createAction'
 import {projectStore} from '../projectStore'
 
-/** @public */
+/**
+ * Fetches a Sanity project by its ID, with caching and loading state management.
+ *
+ * This action will:
+ * 1. Return cached project data if available and not forcing a refetch
+ * 2. Return a loading placeholder if the project is currently being fetched
+ * 3. Fetch the project from Sanity if needed
+ *
+ * @public
+ *
+ * @param projectId - The ID of the Sanity project to fetch
+ * @param forceRefetch - Optional boolean to force a new fetch, ignoring cache. Defaults to false
+ * @returns Promise resolving to the Sanity project data
+ *
+ * @throws Will throw an error if the project fetch fails
+ *
+ * @example
+ * ```typescript
+ * // Fetch a project using cached data if available
+ * const project = await getProject('your-project-id')
+ * console.log(project.id, project.displayName)
+ *
+ * // Force a fresh fetch from Sanity
+ * const freshProject = await getProject('your-project-id', true)
+ *
+ * // Handle potential errors
+ * try {
+ *   const project = await getProject('invalid-id')
+ * } catch (err) {
+ *   console.error('Failed to fetch project:', err)
+ * }
+ * ```
+ *
+ * The action manages several states in the project store:
+ * - `projectRequested`: Initial loading state
+ * - `projectLoaded`: Successful fetch state
+ * - `projectRequestedError`: Error state
+ *
+ * Each project's status includes:
+ * - `isPending`: Whether the project is currently being fetched
+ * - `initialLoadComplete`: Whether the project has been successfully loaded at least once
+ * - `error`: Any error that occurred during fetching
+ */
 export const getProject = createAction(
   projectStore,
   ({state, instance}) =>

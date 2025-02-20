@@ -4,7 +4,49 @@ import {getGlobalClient} from '../../client/actions/getGlobalClient'
 import {createAction} from '../../resources/createAction'
 import {projectStore} from '../projectStore'
 
-/** @public */
+/**
+ * Fetches a list of Sanity projects associated with the current credentials.
+ *
+ * This action manages the loading state and caching of projects in the project store.
+ * It will return cached projects unless a force refresh is requested or no projects
+ * are currently loaded.
+ *
+ * @public
+ *
+ * @param forceRefetch - When true, bypasses the cache and fetches fresh data from the API
+ * @returns Promise that resolves to an array of Sanity projects
+ *
+ * @throws Error When the API request fails
+ *
+ * @example
+ * ```typescript
+ * // Get projects from cache (if available)
+ * const projects = await getProjects()
+ *
+ * // Force a fresh fetch from the API
+ * const freshProjects = await getProjects(true)
+ *
+ * // Example project response
+ * const project = {
+ *   id: 'project-id',
+ *   name: 'My Project',
+ *   organizationId: 'org-id',
+ *   // ... other project properties
+ * }
+ * ```
+ *
+ * @remarks
+ * The action maintains loading and error states in the project store under `projectStatus`.
+ * Each project gets its own status entry, and there's a special `__all__` status that
+ * tracks the overall loading state.
+ *
+ * The store state includes:
+ * - `projects`: Array of {@link SanityProject} objects
+ * - `projectStatus`: Record of loading states for each project
+ *   - `isPending`: Whether the project is currently loading
+ *   - `error`: Error object if the fetch failed
+ *   - `initialLoadComplete`: Whether the first load has completed
+ */
 export const getProjects = createAction(
   projectStore,
   ({state, instance}) =>
@@ -65,6 +107,14 @@ export const getProjects = createAction(
             }
           >,
         )
+
+        // Add individual project statuses
+        projectsResponse.forEach((project) => {
+          newProjectStatus[project.id] = {
+            isPending: false,
+            initialLoadComplete: true,
+          }
+        })
 
         state.set('projectsLoaded', {
           projects: projectsResponse,

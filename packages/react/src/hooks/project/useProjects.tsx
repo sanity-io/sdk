@@ -4,7 +4,49 @@ import {useCallback, useEffect, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
-/** @public */
+/**
+ * React hook that provides access to Sanity projects associated with the current instance.
+ *
+ * This hook implements a stale-while-revalidate caching strategy and integrates with React Suspense
+ * for loading states. It will automatically fetch projects when mounted and keep the data in sync
+ * with the server.
+ *
+ * @public
+ *
+ * @returns An array of Sanity projects
+ *
+ * @throws Promise when projects are being loaded initially, throws a promise for React Suspense
+ *
+ * @example
+ * ```tsx
+ * // Basic usage
+ * function ProjectList() {
+ *   const projects = useProjects()
+ *
+ *   return (
+ *     <ul>
+ *       {projects.map((project) => (
+ *         <li key={project.id}>{project.displayName}</li>
+ *       ))}
+ *     </ul>
+ *   )
+ * }
+ *
+ * // Usage with Suspense
+ * function App() {
+ *   return (
+ *     <Suspense fallback={<div>Loading projects...</div>}>
+ *       <ProjectList />
+ *     </Suspense>
+ *   )
+ * }
+ * ```
+ *
+ * @remarks
+ * - Initial data fetching will trigger React Suspense
+ * - Subsequent updates will happen in the background without triggering Suspense
+ * - If an error occurs during background revalidation, it will be handled internally
+ */
 export function useProjects(): SanityProject[] {
   const instance = useSanityInstance()
   const {projects, subscribe} = getProjectState(instance)
