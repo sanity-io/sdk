@@ -31,7 +31,8 @@ const STABLE_EMPTY = {
 /**
  * @public
  *
- * The `useDocuments` hook retrieves and provides access to a live collection of documents, optionally filtered, sorted, and matched to a given Content Lake perspective.
+ * Retrieves and provides access to a live collection of documents, with an optional filter and sort applied.
+ * The returned document handles are canonical — that is, the document in its current state, whether draft, published, or within a release or perspective.
  * Because the returned document collection is live, the results will update in real time until the component invoking the hook is unmounted.
  *
  * @param options - Options for narrowing and sorting the document collection

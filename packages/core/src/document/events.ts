@@ -16,7 +16,11 @@ export type DocumentEvent =
   | DocumentUnpublishedEvent
   | DocumentDiscardedEvent
 
-/** @beta */
+/**
+ * @beta
+ * Event emitted when a precondition to applying an action fails.
+ * (For example: when trying to edit a document that no longer exists.)
+ */
 export interface ActionErrorEvent {
   type: 'error'
   documentId: string
@@ -24,20 +28,29 @@ export interface ActionErrorEvent {
   message: string
   error: unknown
 }
-/** @beta */
+/**
+ * @beta
+ * Event emitted when a transaction is accepted.
+ */
 export interface TransactionAcceptedEvent {
   type: 'accepted'
   outgoing: OutgoingTransaction
   result: Awaited<ReturnType<SanityClient['action']>>
 }
-/** @beta */
+/**
+ * @beta
+ * Event emitted when a transaction is reverted.
+ */
 export interface TransactionRevertedEvent {
   type: 'reverted'
   message: string
   error: unknown
   outgoing: OutgoingTransaction
 }
-/** @beta */
+/**
+ * @beta
+ * Event emitted when an attempt to apply local changes to a modified remote document fails.
+ */
 export interface DocumentRebaseErrorEvent {
   type: 'rebase-error'
   documentId: string
@@ -45,37 +58,55 @@ export interface DocumentRebaseErrorEvent {
   message: string
   error: unknown
 }
-/** @beta */
+/**
+ * @beta
+ * Event emitted when a document is edited.
+ */
 export interface DocumentEditedEvent {
   type: 'edited'
   documentId: string
   outgoing: OutgoingTransaction
 }
-/** @beta */
+/**
+ * @beta
+ * Event emitted when a document is created.
+ */
 export interface DocumentCreatedEvent {
   type: 'created'
   documentId: string
   outgoing: OutgoingTransaction
 }
-/** @beta */
+/**
+ * @beta
+ * Event emitted when a document is deleted.
+ */
 export interface DocumentDeletedEvent {
   type: 'deleted'
   documentId: string
   outgoing: OutgoingTransaction
 }
-/** @beta */
+/**
+ * @beta
+ * Event emitted when a document is published.
+ */
 export interface DocumentPublishedEvent {
   type: 'published'
   documentId: string
   outgoing: OutgoingTransaction
 }
-/** @beta */
+/**
+ * @beta
+ * Event emitted when a document is unpublished.
+ */
 export interface DocumentUnpublishedEvent {
   type: 'unpublished'
   documentId: string
   outgoing: OutgoingTransaction
 }
-/** @beta */
+/**
+ * @beta
+ * Event emitted when a document version is discarded.
+ */
 export interface DocumentDiscardedEvent {
   type: 'discarded'
   documentId: string
