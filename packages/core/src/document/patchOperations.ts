@@ -12,7 +12,12 @@ import {
 
 type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
 
-/** @beta */
+/**
+ * @beta
+ * A minimal set of metadata for a given document, comprising the document's ID and type.
+ * Used by most document-related hooks (such as {@link usePreview}, {@link useDocument}, and {@link useEditDocument})
+ * to reference a particular document without fetching the entire document upfront.
+ */
 export interface DocumentHandle<TDocument extends SanityDocumentLike = SanityDocumentLike> {
   _id: string
   _type: TDocument['_type']

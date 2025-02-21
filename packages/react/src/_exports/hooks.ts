@@ -23,11 +23,11 @@ export {useDocument} from '../hooks/document/useDocument'
 export {useDocumentEvent} from '../hooks/document/useDocumentEvent'
 export {useDocumentSyncStatus} from '../hooks/document/useDocumentSyncStatus'
 export {useEditDocument} from '../hooks/document/useEditDocument'
-export {type DocumentCollection, useDocuments} from '../hooks/documentCollection/useDocuments'
+export {type DocumentHandleCollection, useDocuments} from '../hooks/documentCollection/useDocuments'
 export {
   usePreview,
   type UsePreviewOptions,
   type UsePreviewResults,
 } from '../hooks/preview/usePreview'
-export {type CurrentUser} from '@sanity/sdk'
+export {type CurrentUser, type DocumentHandle} from '@sanity/sdk'
 export {type SanityDocument} from '@sanity/types'
