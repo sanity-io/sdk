@@ -3,6 +3,7 @@ import {useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
 import {useAuthState} from '../../hooks/auth/useAuthState'
+import {isInIframe} from '../utils'
 import {AuthError} from './AuthError'
 import {Login} from './Login'
 import {LoginCallback} from './LoginCallback'
@@ -10,8 +11,8 @@ import {LoginError, type LoginErrorProps} from './LoginError'
 import {type LoginLayoutProps} from './LoginLayout'
 
 // Only import bridge if we're in an iframe. This assumes that the app is
-// running withing SanityOS if it is in an iframe.
-if (typeof window !== 'undefined' && window.self !== window.top) {
+// running within SanityOS if it is in an iframe.
+if (isInIframe()) {
   import('@sanity/os/bridge')
 }
 
