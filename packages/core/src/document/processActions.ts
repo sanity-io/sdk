@@ -4,13 +4,19 @@ import {
   type Reference,
   type SanityDocument,
 } from '@sanity/types'
+import {evaluateSync, type ExprNode} from 'groq-js'
 import {isEqual} from 'lodash-es'
 
 import {getDraftId, getPublishedId} from '../utils/ids'
 import {type DocumentAction} from './actions'
 import {diffPatch} from './diffPatch'
-import {type DocumentSet, processMutations} from './processMutations'
+import {type Grant} from './permissions'
+import {type DocumentSet, getId, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
+
+function checkGrant(grantExpr: ExprNode, document: SanityDocument): boolean {
+  return evaluateSync(grantExpr, {params: {document}}).get()
+}
 
 interface ProcessActionsOptions {
   /**
@@ -39,7 +45,13 @@ interface ProcessActionsOptions {
    */
   working: DocumentSet
 
+  /**
+   * The timestamp to use for `_updateAt` and other similar timestamps for this
+   * transaction
+   */
   timestamp: string
+
+  grants: Record<Grant, ExprNode>
 
   // // TODO: implement initial values from the schema?
   // initialValues?: {[TDocumentType in string]?: {_type: string}}
@@ -91,6 +103,8 @@ export class ActionError extends Error implements ActionErrorOptions {
   }
 }
 
+export class PermissionActionError extends ActionError {}
+
 /**
  * Applies the given set of actions to the working set of documents and converts
  * high-level actions into lower-level outgoing mutations/actions that respect
@@ -110,6 +124,7 @@ export function processActions({
   working: initialWorking,
   base: initialBase,
   timestamp,
+  grants,
 }: ProcessActionsOptions): ProcessActionsResult {
   let working: DocumentSet = {...initialWorking}
   let base: DocumentSet = {...initialBase}
@@ -117,17 +132,18 @@ export function processActions({
   const outgoingActions: HttpAction[] = []
   const outgoingMutations: Mutation[] = []
 
-  for (const {documentId, ...action} of actions) {
-    const draftId = getDraftId(documentId)
-    const publishedId = getPublishedId(documentId)
-
+  for (const action of actions) {
     switch (action.type) {
       case 'document.create': {
+        const documentId = getId(action.documentId)
+        const draftId = getDraftId(documentId)
+        const publishedId = getPublishedId(documentId)
+
         if (working[draftId]) {
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Cannot create draft document: document with ID "${draftId}" already exists.`,
+            message: `A draft version of this document already exists. Please use or discard the existing draft before creating a new one.`,
           })
         }
 
@@ -149,16 +165,48 @@ export function processActions({
           timestamp,
         })
 
+        if (!checkGrant(grants.create, working[draftId] as SanityDocument)) {
+          throw new PermissionActionError({
+            documentId,
+            transactionId,
+            message: `You do not have permission to create a draft for document "${documentId}".`,
+          })
+        }
+
         outgoingMutations.push(...mutations)
         outgoingActions.push({
           actionType: 'sanity.action.document.version.create',
           publishedId,
           attributes: newDocWorking,
         })
-        break
+        continue
       }
 
       case 'document.delete': {
+        const documentId = action.documentId
+        const draftId = getDraftId(documentId)
+        const publishedId = getPublishedId(documentId)
+
+        if (!working[publishedId]) {
+          throw new ActionError({
+            documentId,
+            transactionId,
+            message: `The document you are trying to delete does not exist.`,
+          })
+        }
+
+        const cantDeleteDraft = working[draftId] && !checkGrant(grants.update, working[draftId])
+        const cantDeletePublished =
+          working[publishedId] && !checkGrant(grants.update, working[publishedId])
+
+        if (cantDeleteDraft || cantDeletePublished) {
+          throw new PermissionActionError({
+            documentId,
+            transactionId,
+            message: `You do not have permission to delete this document.`,
+          })
+        }
+
         const mutations: Mutation[] = [{delete: {id: publishedId}}, {delete: {id: draftId}}]
         const includeDrafts = working[draftId] ? [draftId] : undefined
 
@@ -171,11 +219,29 @@ export function processActions({
           publishedId,
           ...(includeDrafts ? {includeDrafts} : {}),
         })
-        break
+        continue
       }
 
       case 'document.discard': {
+        const documentId = getId(action.documentId)
+        const draftId = getDraftId(documentId)
         const mutations: Mutation[] = [{delete: {id: draftId}}]
+
+        if (!working[draftId]) {
+          throw new ActionError({
+            documentId,
+            transactionId,
+            message: `There is no draft available to discard for document "${documentId}".`,
+          })
+        }
+
+        if (!checkGrant(grants.update, working[draftId])) {
+          throw new PermissionActionError({
+            documentId,
+            transactionId,
+            message: `You do not have permission to discard changes for document "${documentId}".`,
+          })
+        }
 
         base = processMutations({documents: base, transactionId, mutations, timestamp})
         working = processMutations({documents: working, transactionId, mutations, timestamp})
@@ -185,10 +251,18 @@ export function processActions({
           actionType: 'sanity.action.document.version.discard',
           versionId: draftId,
         })
-        break
+        continue
       }
 
       case 'document.edit': {
+        const documentId = getId(action.documentId)
+        const draftId = getDraftId(documentId)
+        const publishedId = getPublishedId(documentId)
+        const userPatches = action.patches?.map((patch) => ({patch: {id: draftId, ...patch}}))
+
+        // skip this action if there are no associated patches
+        if (!userPatches?.length) continue
+
         if (
           (!working[draftId] && !working[publishedId]) ||
           (!base[draftId] && !base[publishedId])
@@ -196,20 +270,20 @@ export function processActions({
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Cannot edit document: neither draft "${draftId}" nor published "${publishedId}" exists.`,
+            message: `Cannot edit document because it does not exist in draft or published form.`,
           })
         }
 
         const baseMutations: Mutation[] = []
         if (!base[draftId] && base[publishedId]) {
-          baseMutations.push({
-            createIfNotExists: {...base[publishedId], _id: draftId},
-          })
+          baseMutations.push({create: {...base[publishedId], _id: draftId}})
         }
 
-        // the above if statement should make this never be null or undefined
+        // the first if statement should make this never be null or undefined
         const baseBefore = (base[draftId] ?? base[publishedId]) as SanityDocument
-        baseMutations.push(...action.patches.map((patch) => ({patch: {id: draftId, ...patch}})))
+        if (userPatches) {
+          baseMutations.push(...userPatches)
+        }
 
         base = processMutations({
           documents: base,
@@ -228,11 +302,30 @@ export function processActions({
 
         const workingMutations: Mutation[] = []
         if (!working[draftId] && working[publishedId]) {
-          workingMutations.push({
-            createIfNotExists: {...working[publishedId], _id: draftId},
+          const newDraftFromPublished = {...working[publishedId], _id: draftId}
+
+          if (!checkGrant(grants.create, newDraftFromPublished)) {
+            throw new PermissionActionError({
+              documentId,
+              transactionId,
+              message: `You do not have permission to create a draft for editing this document.`,
+            })
+          }
+
+          workingMutations.push({create: newDraftFromPublished})
+        }
+
+        // the first if statement should make this never be null or undefined
+        const workingBefore = (working[draftId] ?? working[publishedId]) as SanityDocument
+        if (!checkGrant(grants.update, workingBefore)) {
+          throw new PermissionActionError({
+            documentId,
+            transactionId,
+            message: `You do not have permission to edit document "${documentId}".`,
           })
         }
         workingMutations.push(...patches.map((patch) => ({patch: {id: draftId, ...patch}})))
+
         working = processMutations({
           documents: working,
           transactionId,
@@ -252,17 +345,21 @@ export function processActions({
           ),
         )
 
-        break
+        continue
       }
 
       case 'document.publish': {
+        const documentId = getId(action.documentId)
+        const draftId = getDraftId(documentId)
+        const publishedId = getPublishedId(documentId)
+
         const workingDraft = working[draftId]
         const baseDraft = base[draftId]
         if (!workingDraft || !baseDraft) {
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Cannot publish: draft document "${draftId}" not found.`,
+            message: `Cannot publish because no draft version was found for document "${documentId}".`,
           })
         }
 
@@ -272,13 +369,38 @@ export function processActions({
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Publish aborted: detected remote changes since published was scheduled. Please try again.`,
+            message: `Publish aborted: The document has changed elsewhere. Please try again.`,
           })
         }
+
+        const newPublishedFromDraft = {...strengthenOnPublish(workingDraft), _id: publishedId}
+
         const mutations: Mutation[] = [
           {delete: {id: draftId}},
-          {createOrReplace: {...strengthenOnPublish(baseDraft), _id: publishedId}},
+          {createOrReplace: newPublishedFromDraft},
         ]
+
+        if (working[draftId] && !checkGrant(grants.update, working[draftId])) {
+          throw new PermissionActionError({
+            documentId,
+            transactionId,
+            message: `Publish failed: You do not have permission to update the draft for "${documentId}".`,
+          })
+        }
+
+        if (working[publishedId] && !checkGrant(grants.update, newPublishedFromDraft)) {
+          throw new PermissionActionError({
+            documentId,
+            transactionId,
+            message: `Publish failed: You do not have permission to update the published version of "${documentId}".`,
+          })
+        } else if (!working[publishedId] && !checkGrant(grants.create, newPublishedFromDraft)) {
+          throw new PermissionActionError({
+            documentId,
+            transactionId,
+            message: `Publish failed: You do not have permission to publish a new version of "${documentId}".`,
+          })
+        }
 
         base = processMutations({documents: base, transactionId, mutations, timestamp})
         working = processMutations({documents: working, transactionId, mutations, timestamp})
@@ -289,23 +411,44 @@ export function processActions({
           draftId,
           publishedId,
         })
-        break
+        continue
       }
 
       case 'document.unpublish': {
+        const documentId = getId(action.documentId)
+        const draftId = getDraftId(documentId)
+        const publishedId = getPublishedId(documentId)
+
         if (!working[publishedId] && !base[publishedId]) {
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Cannot unpublish: published document "${publishedId}" not found.`,
+            message: `Cannot unpublish because the document "${documentId}" is not currently published.`,
           })
         }
 
         const sourceDoc = working[publishedId] ?? (base[publishedId] as SanityDocument)
+        const newDraftFromPublished = {...sourceDoc, _id: draftId}
         const mutations: Mutation[] = [
           {delete: {id: publishedId}},
-          {createIfNotExists: {...sourceDoc, _id: draftId}},
+          {createIfNotExists: newDraftFromPublished},
         ]
+
+        if (!checkGrant(grants.update, sourceDoc)) {
+          throw new PermissionActionError({
+            documentId,
+            transactionId,
+            message: `You do not have permission to unpublish the document "${documentId}".`,
+          })
+        }
+
+        if (!working[draftId] && !checkGrant(grants.create, newDraftFromPublished)) {
+          throw new PermissionActionError({
+            documentId,
+            transactionId,
+            message: `You do not have permission to create a draft from the published version of "${documentId}".`,
+          })
+        }
 
         base = processMutations({
           documents: base,
@@ -324,15 +467,20 @@ export function processActions({
           draftId,
           publishedId,
         })
-        break
+        continue
+      }
+
+      case 'document.read': {
+        // no-op
+        continue
       }
 
       default: {
         throw new Error(
-          `Unknown action type: ${
+          `Unknown action type: "${
             // @ts-expect-error invalid input
             action.type
-          }`,
+          }". Please contact support if this issue persists.`,
         )
       }
     }

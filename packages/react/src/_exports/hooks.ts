@@ -23,6 +23,7 @@ export {useDocument} from '../hooks/document/useDocument'
 export {useDocumentEvent} from '../hooks/document/useDocumentEvent'
 export {useDocumentSyncStatus} from '../hooks/document/useDocumentSyncStatus'
 export {useEditDocument} from '../hooks/document/useEditDocument'
+export {usePermissions} from '../hooks/document/usePermissions'
 export {type DocumentHandleCollection, useDocuments} from '../hooks/documentCollection/useDocuments'
 export {
   usePreview,

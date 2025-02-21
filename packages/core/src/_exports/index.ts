@@ -72,6 +72,8 @@ export {
   type EditDocumentAction,
   publishDocument,
   type PublishDocumentAction,
+  readDocument,
+  type ReadDocumentAction,
   unpublishDocument,
   type UnpublishDocumentAction,
 } from '../document/actions'
@@ -79,6 +81,7 @@ export {type ActionsResult, applyActions, type ApplyActionsOptions} from '../doc
 export {
   getDocumentState,
   getDocumentSyncStatus,
+  getPermissionsState,
   resolveDocument,
   subscribeDocumentEvents,
 } from '../document/documentStore'
@@ -102,3 +105,4 @@ export {
   jsonMatch,
   type JsonMatchPath,
 } from '../document/patchOperations'
+export {type PermissionDeniedReason, type PermissionsResult} from '../document/permissions'
