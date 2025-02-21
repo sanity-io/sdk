@@ -25,7 +25,7 @@ export interface UsePreviewResults {
 /**
  * @alpha
  *
- * The `usePreview` hook takes a document (via a `DocumentHandle`) and returns its resolved preview values,
+ * Returns the preview values of a document (specified via a `DocumentHandle`),
  * including the document’s `title`, `subtitle`, `media`, and `status`. These values are live and will update in realtime.
  * To reduce unnecessary network requests for resolving the preview values, an optional `ref` can be passed to the hook so that preview
  * resolution will only occur if the `ref` is intersecting the current viewport.
