@@ -1,7 +1,7 @@
 import {type ClientConfig, createClient} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
 import {type Subscription} from 'rxjs'
-import {describe, it} from 'vitest'
+import {beforeEach, describe, it} from 'vitest'
 
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState, getOrCreateResource} from '../resources/createResource'
@@ -123,10 +123,32 @@ describe('authStore', () => {
   })
 
   describe('initialize', () => {
+    let mockLocalStorage: Storage
+
+    beforeEach(() => {
+      vi.clearAllMocks()
+      // Create fresh mock localStorage for each test
+      mockLocalStorage = {
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+        key: vi.fn(),
+        length: 0,
+        // Define getter to match real Storage objects
+        get constructor() {
+          return Storage
+        },
+      } as unknown as Storage
+    })
+
     it('subscribes to state and storage events and unsubscribes on dispose', () => {
       const instance = createSanityInstance({
-        projectId: 'p',
-        dataset: 'd',
+        projectId: 'p123abc',
+        dataset: 'production',
+        auth: {
+          storageArea: mockLocalStorage,
+        },
       })
 
       const stateUnsubscribe = vi.fn()
@@ -138,6 +160,10 @@ describe('authStore', () => {
       vi.mocked(subscribeToStorageEventsAndSetToken).mockReturnValue({
         unsubscribe: storageEventsUnsubscribe,
       } as unknown as Subscription)
+
+      Object.defineProperty(mockLocalStorage, 'constructor', {
+        get: () => Storage,
+      })
 
       expect(subscribeToStateAndFetchCurrentUser).not.toHaveBeenCalled()
       expect(subscribeToStorageEventsAndSetToken).not.toHaveBeenCalled()
@@ -151,6 +177,36 @@ describe('authStore', () => {
 
       expect(stateUnsubscribe).toHaveBeenCalled()
       expect(storageEventsUnsubscribe).toHaveBeenCalled()
+    })
+
+    it('does not subscribe to storage events when not using storage area', () => {
+      const instance = createSanityInstance({
+        projectId: 'p123abc',
+        dataset: 'production',
+        auth: {
+          storageArea: undefined,
+        },
+      })
+
+      const stateUnsubscribe = vi.fn()
+      vi.mocked(subscribeToStateAndFetchCurrentUser).mockReturnValue({
+        unsubscribe: stateUnsubscribe,
+      } as unknown as Subscription)
+
+      const storageEventsUnsubscribe = vi.fn()
+      vi.mocked(subscribeToStorageEventsAndSetToken).mockReturnValue({
+        unsubscribe: storageEventsUnsubscribe,
+      } as unknown as Subscription)
+
+      getOrCreateResource(instance, authStore)
+
+      expect(subscribeToStateAndFetchCurrentUser).toHaveBeenCalled()
+      expect(subscribeToStorageEventsAndSetToken).not.toHaveBeenCalled()
+
+      instance.dispose()
+
+      expect(stateUnsubscribe).toHaveBeenCalled()
+      expect(storageEventsUnsubscribe).not.toHaveBeenCalled()
     })
   })
 

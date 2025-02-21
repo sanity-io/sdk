@@ -199,7 +199,7 @@ export const authStore = createResource<AuthStoreState>({
   initialize() {
     const stateSubscription = subscribeToStateAndFetchCurrentUser(this)
     let storageEventsSubscription: Subscription | undefined
-    if (this.state.get().options.storageArea === localStorage) {
+    if (this.state.get().options?.storageArea) {
       storageEventsSubscription = subscribeToStorageEventsAndSetToken(this)
     }
     const refreshStampedTokenSubscription = refreshStampedToken(this)
