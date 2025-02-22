@@ -6,7 +6,7 @@ import {SanityInstanceContext} from '../../context/SanityProvider'
 /**
  * `useSanityInstance` returns the current Sanity instance from the application context.
  * This must be called from within a `SanityProvider` component.
- * @public
+ * @internal
  * @returns The current Sanity instance
  * @example
  * ```tsx

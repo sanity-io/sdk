@@ -13,8 +13,8 @@ export interface PreviewQueryResult {
 
 /**
  * Represents the set of values displayed as a preview for a given Sanity document.
- * This includes a primary title, a secondary subtitle, and optional media associated
- * with the document.
+ * This includes a primary title, a secondary subtitle, an optional piece of media associated
+ * with the document, and the document’s status.
  *
  * @public
  */
@@ -30,13 +30,18 @@ export interface PreviewValue {
   subtitle?: string
 
   /**
-   * An optional media object, commonly representing an image, that is associated
-   * with the document and displayed as part of the preview.
+   * An optional piece of media representing the document within its preview.
+   * Currently, only image assets are available.
    */
   media?: {type: 'image-asset'; url: string} | null
 
+  /**
+   * The status of the document.
+   */
   status?: {
+    /** The date of the last published edit */
     lastEditedPublishedAt?: string
+    /** The date of the last draft edit */
     lastEditedDraftAt?: string
   }
 }
