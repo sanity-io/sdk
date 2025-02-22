@@ -185,40 +185,6 @@ export const calculatePermissions = createSelector(
     }
 
     for (const action of actions) {
-      // Check read actions
-      if (action.type === 'document.read') {
-        if (action.documentId) {
-          const doc = documents[action.documentId]
-          if (!doc) {
-            reasons.push({
-              type: 'precondition',
-              message: `The document with ID "${action.documentId}" could not be found. Please ensure it exists before attempting to read it.`,
-              documentId: action.documentId,
-            })
-          } else if (!checkGrant(grants.read, doc)) {
-            reasons.push({
-              type: 'access',
-              message: `You are not allowed to view the document with ID "${action.documentId}".`,
-              documentId: action.documentId,
-            })
-          }
-        } else {
-          const dummyDoc: SanityDocument = {
-            _id: getDraftId(crypto.randomUUID()),
-            _type: action.documentType,
-            _rev: 'dummy-rev',
-            _createdAt: timestamp,
-            _updatedAt: timestamp,
-          }
-          if (!checkGrant(grants.read, dummyDoc)) {
-            reasons.push({
-              type: 'access',
-              message: `You do not have permission to view documents of type "${action.documentType}".`,
-            })
-          }
-        }
-      }
-
       // Check edit actions with no patches
       if (action.type === 'document.edit' && !action.patches?.length) {
         const docId = action.documentId

@@ -470,11 +470,6 @@ export function processActions({
         continue
       }
 
-      case 'document.read': {
-        // no-op
-        continue
-      }
-
       default: {
         throw new Error(
           `Unknown action type: "${

@@ -72,8 +72,6 @@ export {
   type EditDocumentAction,
   publishDocument,
   type PublishDocumentAction,
-  readDocument,
-  type ReadDocumentAction,
   unpublishDocument,
   type UnpublishDocumentAction,
 } from '../document/actions'

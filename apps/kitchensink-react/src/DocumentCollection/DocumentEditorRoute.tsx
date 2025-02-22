@@ -6,7 +6,6 @@ import {
   DocumentHandle,
   editDocument,
   publishDocument,
-  readDocument,
   unpublishDocument,
 } from '@sanity/sdk'
 import {
@@ -33,7 +32,6 @@ function Editor() {
   const synced = useDocumentSyncStatus(doc)
   const apply = useApplyActions()
 
-  const canRead = usePermissions(readDocument(doc))
   const canEdit = usePermissions(editDocument(doc))
   const canCreate = usePermissions(createDocument(doc))
   const canPublish = usePermissions(publishDocument(doc))
@@ -57,9 +55,6 @@ function Editor() {
       {document && <JsonEditor data={document} setData={setDocument as (data: JsonData) => void} />}
 
       <div>
-        <Tooltip content={canRead.message}>
-          <span>Read permissions</span>
-        </Tooltip>
         <Tooltip content={canEdit.message}>
           <span>Edit permissions</span>
         </Tooltip>

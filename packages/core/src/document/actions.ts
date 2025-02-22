@@ -28,12 +28,6 @@ export interface DeleteDocumentAction<_TDocument extends SanityDocumentLike = Sa
   documentId: string
 }
 
-export interface ReadDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike> {
-  type: 'document.read'
-  documentId?: string
-  documentType: TDocument['_type']
-}
-
 /** @beta */
 export interface EditDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.edit'
@@ -63,7 +57,6 @@ export interface DiscardDocumentAction<_TDocument extends SanityDocumentLike = S
 
 /** @beta */
 export type DocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike> =
-  | ReadDocumentAction<TDocument>
   | CreateDocumentAction<TDocument>
   | DeleteDocumentAction<TDocument>
   | EditDocumentAction<TDocument>
@@ -105,17 +98,6 @@ function convertSanityMutatePatch(
       if ('id' in copy) delete copy.id
       return copy
     }),
-  }
-}
-
-/** @beta */
-export function readDocument<TDocument extends SanityDocumentLike>(
-  doc: DocumentTypeHandle<TDocument>,
-): ReadDocumentAction<TDocument> {
-  return {
-    type: 'document.read',
-    ...(doc._id && {documentId: doc._id}),
-    documentType: doc._type,
   }
 }
 
