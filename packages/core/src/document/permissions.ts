@@ -38,7 +38,7 @@ export function createGrantsLookup(datasetAcl: DatasetAcl): Record<Grant, ExprNo
         .map((i) => `(${i})`)
         .join('||')
 
-      if (!combinedFilter) return [grant]
+      if (!combinedFilter) return [grant, parse('false')]
       return [grant, parse(`$document {"_": ${combinedFilter}}._`)]
     }),
   ) as Record<Grant, ExprNode>
