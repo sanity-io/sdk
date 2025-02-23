@@ -67,33 +67,37 @@ const _applyActions = createAction(documentStore, ({state}) => {
       ...(disableBatching && {disableBatching}),
     }
 
+    const fatalError$ = state.observable.pipe(
+      map((s) => s.error),
+      first(Boolean),
+      map((error) => ({type: 'fatal', error}) as const),
+    )
+
     const transactionError$ = events.pipe(
       filter((e) => e.type === 'error'),
-      filter((e) => e.transactionId === transactionId),
-      first(),
+      first((e) => e.transactionId === transactionId),
     )
 
     const appliedTransaction$ = state.observable.pipe(
       map((s) => s.applied),
       distinctUntilChanged(),
       map((applied) => applied.find((t) => t.transactionId === transactionId)),
-      filter(Boolean),
-      first(),
+      first(Boolean),
     )
 
     const successfulTransaction$ = events.pipe(
       filter((e) => e.type === 'accepted'),
-      filter((e) => e.outgoing.batchedTransactionIds.includes(transactionId)),
-      first(),
+      first((e) => e.outgoing.batchedTransactionIds.includes(transactionId)),
     )
 
     const rejectedTransaction$ = events.pipe(
       filter((e) => e.type === 'reverted'),
-      filter((e) => e.outgoing.batchedTransactionIds.includes(transactionId)),
-      first(),
+      first((e) => e.outgoing.batchedTransactionIds.includes(transactionId)),
     )
 
-    const appliedTransactionOrError = firstValueFrom(race([transactionError$, appliedTransaction$]))
+    const appliedTransactionOrError = firstValueFrom(
+      race([fatalError$, transactionError$, appliedTransaction$]),
+    )
     const acceptedOrRejectedTransaction = firstValueFrom(
       race([successfulTransaction$, rejectedTransaction$, transactionError$]),
     )
