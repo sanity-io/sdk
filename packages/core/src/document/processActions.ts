@@ -51,6 +51,9 @@ interface ProcessActionsOptions {
    */
   timestamp: string
 
+  /**
+   * the lookup with pre-parsed GROQ expressions
+   */
   grants: Record<Grant, ExprNode>
 
   // // TODO: implement initial values from the schema?
@@ -191,7 +194,9 @@ export function processActions({
           throw new ActionError({
             documentId,
             transactionId,
-            message: `The document you are trying to delete does not exist.`,
+            message: working[draftId]
+              ? 'Cannot delete a document without a published version.'
+              : 'The document you are trying to delete does not exist.',
           })
         }
 
