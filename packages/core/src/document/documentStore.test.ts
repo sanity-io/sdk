@@ -868,7 +868,7 @@ beforeEach(() => {
 
       return result
     },
-  )
+  ) as SanityClient['fetch']
 
   const action = vi.fn(
     async (
@@ -1114,17 +1114,21 @@ beforeEach(() => {
 
       return {transactionId}
     },
-  )
+  ) as SanityClient['action']
 
   const datasetAcl: DatasetAcl = [
     {filter: 'true', permissions: ['create', 'history', 'read', 'update']},
   ]
-  const request = vi.fn().mockResolvedValue(datasetAcl)
+  const request = vi.fn(async () => {
+    // add a bit of delay to simulate race conditions
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    return datasetAcl
+  }) as SanityClient['request']
 
   client = {
-    action: action as SanityClient['action'],
-    fetch: fetch as SanityClient['fetch'],
-    request: request as SanityClient['request'],
+    action,
+    fetch,
+    request,
     observable: {
       action: (...args: Parameters<typeof action>) => from(action(...args)),
       fetch: (...args: Parameters<typeof fetch>) => from(fetch(...args)),

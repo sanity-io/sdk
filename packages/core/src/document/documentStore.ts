@@ -337,6 +337,7 @@ const subscribeToSubscriptionsAndListenToDocuments = createInternalAction(
     return function () {
       return state.observable
         .pipe(
+          filter((s) => !!s.grants),
           map((s) => Object.keys(s.documentStates)),
           distinctUntilChanged((curr, next) => {
             if (curr.length !== next.length) return false
