@@ -81,6 +81,7 @@ export {
   getDocumentSyncStatus,
   getPermissionsState,
   resolveDocument,
+  resolvePermissions,
   subscribeDocumentEvents,
 } from '../document/documentStore'
 export {

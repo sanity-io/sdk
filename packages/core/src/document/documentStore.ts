@@ -32,6 +32,7 @@ import {type ActionContext, createAction, createInternalAction} from '../resourc
 import {createResource} from '../resources/createResource'
 import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
 import {getDraftId} from '../utils/ids'
+import {type DocumentAction} from './actions'
 import {INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
 import {type DocumentEvent, getDocumentEvents} from './events'
 import {listen, OutOfSyncError} from './listen'
@@ -172,6 +173,31 @@ const _getDocumentState = createStateSourceAction(documentStore, {
 })
 
 /** @beta */
+export function resolveDocument<TDocument extends SanityDocument>(
+  instance: SanityInstance | ActionContext<DocumentStoreState>,
+  doc: string | DocumentHandle<TDocument>,
+): Promise<TDocument | null>
+/** @beta */
+export function resolveDocument(
+  instance: SanityInstance | ActionContext<DocumentStoreState>,
+  doc: string | DocumentHandle,
+): Promise<SanityDocument | null>
+/** @beta */
+export function resolveDocument(
+  ...args: Parameters<typeof _resolveDocument>
+): Promise<SanityDocument | null> {
+  return _resolveDocument(...args)
+}
+const _resolveDocument = createAction(documentStore, () => {
+  return function (doc: string | DocumentHandle) {
+    const documentId = typeof doc === 'string' ? doc : doc._id
+    return firstValueFrom(
+      getDocumentState(this, documentId).observable.pipe(filter((i) => i !== undefined)),
+    )
+  }
+})
+
+/** @beta */
 export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
   selector: (
     {error, documentStates: documents, outgoing, applied, queued},
@@ -198,26 +224,10 @@ export const getPermissionsState = createStateSourceAction(documentStore, {
 })
 
 /** @beta */
-export function resolveDocument<TDocument extends SanityDocument>(
-  instance: SanityInstance | ActionContext<DocumentStoreState>,
-  doc: string | DocumentHandle<TDocument>,
-): Promise<TDocument | null>
-/** @beta */
-export function resolveDocument(
-  instance: SanityInstance | ActionContext<DocumentStoreState>,
-  doc: string | DocumentHandle,
-): Promise<SanityDocument | null>
-/** @beta */
-export function resolveDocument(
-  ...args: Parameters<typeof _resolveDocument>
-): Promise<SanityDocument | null> {
-  return _resolveDocument(...args)
-}
-const _resolveDocument = createAction(documentStore, () => {
-  return function (doc: string | DocumentHandle) {
-    const documentId = typeof doc === 'string' ? doc : doc._id
+export const resolvePermissions = createAction(documentStore, () => {
+  return function (actions: DocumentAction | DocumentAction[]) {
     return firstValueFrom(
-      getDocumentState(this, documentId).observable.pipe(filter((i) => i !== undefined)),
+      getPermissionsState(this, actions).observable.pipe(filter((i) => i !== undefined)),
     )
   }
 })
