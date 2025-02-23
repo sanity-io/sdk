@@ -218,6 +218,7 @@ export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
     manageSubscriberIds(state, typeof doc === 'string' ? doc : doc._id),
 })
 
+/** @beta */
 export const getPermissionsState = createStateSourceAction(documentStore, {
   selector: calculatePermissions,
   onSubscribe: ({state}, actions) => manageSubscriberIds(state, getDocumentIdsFromActions(actions)),

@@ -126,12 +126,14 @@ function checkGrant(grantExpr: ExprNode, document: SanityDocument): boolean {
   return evaluateSync(grantExpr, {params: {document}}).get()
 }
 
+/** @beta */
 export interface PermissionDeniedReason {
   type: 'precondition' | 'access'
   message: string
   documentId?: string
 }
 
+/** @beta */
 export type PermissionsResult =
   | {
       allowed: false
