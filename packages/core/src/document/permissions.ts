@@ -172,8 +172,7 @@ export const calculatePermissions = createSelector(
           documentId: error.documentId,
           type: 'access',
         })
-      }
-      if (error instanceof ActionError) {
+      } else if (error instanceof ActionError) {
         reasons.push({
           message: error.message,
           documentId: error.documentId,
