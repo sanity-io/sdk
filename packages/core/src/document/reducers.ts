@@ -551,7 +551,14 @@ export function manageSubscriberIds(
   state: ResourceState<SyncTransactionState>,
   documentId: string | string[],
 ): () => void {
-  const documentIds = Array.isArray(documentId) ? documentId : [documentId]
+  const documentIds = Array.from(
+    new Set(
+      (Array.isArray(documentId) ? documentId : [documentId]).flatMap((id) => [
+        getPublishedId(id),
+        getDraftId(id),
+      ]),
+    ),
+  )
   const subscriptionId = insecureRandomId()
   state.set('addSubscribers', (prev) =>
     documentIds.reduce(
@@ -579,11 +586,6 @@ export function getDocumentIdsFromActions(action: DocumentAction | DocumentActio
       actions
         .map((i) => i.documentId)
         .filter((i) => typeof i === 'string')
-        // NOTE: the order of document IDs in this array somewhat matters here as it
-        // determines the order `applyRemoteDocument` gets calls. because we prefer
-        // the draft versions over the published, that should be first in this array
-        // otherwise it may cause a the published document to appear for one tick
-        // when the correct behavior is to prefer the
         .flatMap((documentId) => [getPublishedId(documentId), getDraftId(documentId)]),
     ),
   )
