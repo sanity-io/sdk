@@ -70,7 +70,7 @@ const _applyActions = createAction(documentStore, ({state}) => {
     const fatalError$ = state.observable.pipe(
       map((s) => s.error),
       first(Boolean),
-      map((error) => ({type: 'fatal', error}) as const),
+      map((error) => ({type: 'error', error}) as const),
     )
 
     const transactionError$ = events.pipe(
