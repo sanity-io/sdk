@@ -59,6 +59,10 @@ export {releaseNode} from '../comlink/node/actions/releaseNode'
 export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'
 
+/** DATASETS */
+export {getDatasets} from '../datasets/actions/getDatasets'
+export {getDatasetsState} from '../datasets/actions/getDatasetsState'
+
 /** DOCUMENT */
 export {
   createDocument,

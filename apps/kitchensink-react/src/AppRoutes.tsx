@@ -4,6 +4,7 @@ import {Route, Routes} from 'react-router'
 
 import Frame from './Comlink/Frame'
 import ParentApp from './Comlink/ParentApp'
+import {DatasetsRoute} from './DatasetsRoute'
 import {DocumentEditorRoute} from './DocumentCollection/DocumentEditorRoute'
 import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
 import {DocumentListRoute} from './DocumentCollection/DocumentListRoute'
@@ -17,6 +18,10 @@ import {UnauthenticatedHome} from './Unauthenticated/UnauthenticatedHome'
 import {UnauthenticatedInstanceWrapper} from './Unauthenticated/UnauthenticatedInstanceWrapper'
 
 const documentCollectionRoutes = [
+  {
+    path: 'datasets',
+    element: <DatasetsRoute />,
+  },
   {
     path: 'document-list',
     element: <DocumentListRoute />,

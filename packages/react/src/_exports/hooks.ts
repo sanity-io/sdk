@@ -18,6 +18,7 @@ export {
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
+export {useDatasets} from '../hooks/datasets/useDatasets'
 export {useApplyActions} from '../hooks/document/useApplyActions'
 export {useDocument} from '../hooks/document/useDocument'
 export {useDocumentEvent} from '../hooks/document/useDocumentEvent'
