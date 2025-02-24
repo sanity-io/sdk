@@ -135,16 +135,6 @@ export default App
 }
 ```
 
-## Available Hooks
-
-- `useAuthState` - Get current authentication state
-- `useCurrentUser` - Access the currently authenticated user
-- `useAuthToken` - Access the authentication token
-- `useLoginUrls` - Get OAuth login URLs
-- `useLogOut` - Handle user logout
-- `useSanityInstance` - Access the Sanity client instance
-- and more...
-
 ## TypeScript Support
 
 This package includes TypeScript definitions. You can import types like:

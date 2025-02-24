@@ -6,6 +6,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
 /**
  * @public
  * A live collection of {@link DocumentHandle}s, along with metadata about the collection and a function for loading more of them.
+ * @category Types
  */
 export interface DocumentHandleCollection {
   /** Retrieve more documents matching the provided options */
@@ -40,6 +41,7 @@ const STABLE_EMPTY = {
  * {@link DocumentHandle}s are used by many other hooks (such as {@link usePreview}, {@link useDocument}, and {@link useEditDocument})
  * to work with documents in various ways without the entire document needing to be fetched upfront.
  *
+ * @category Documents
  * @param options - Options for narrowing and sorting the document collection
  * @returns The collection of document handles matching the provided options (if any), as well as properties describing the collection and a function to load more.
  *

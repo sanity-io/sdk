@@ -23,6 +23,8 @@ type Updater<TValue> = TValue | ((nextValue: TValue) => TValue)
  *
  * ## useEditDocument(doc, path)
  * Edit a nested value within a document
+ *
+ * @category Documents
  * @param doc - The document to be edited; either as a document handle or the document’s ID a string
  * @param path - The path to the nested value to be edited
  * @returns A function to update the nested value. Accepts either a new value, or an updater function that exposes the previous value and returns a new value.

@@ -5,6 +5,8 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
 type UseDocumentSyncStatus = {
   /**
    * Exposes the document’s sync status between local and remote document states.
+   *
+   * @category Documents
    * @param doc - The document handle to get sync status for
    * @returns `true` if local changes are synced with remote, `false` if the changes are not synced, and `undefined` if the document is not found
    * @example Disable a Save button when there are no changes to sync

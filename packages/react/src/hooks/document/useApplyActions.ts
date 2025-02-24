@@ -14,8 +14,8 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  *
  * Provides a callback for applying one or more actions to a document.
  *
+ * @category Documents
  * @returns A function that takes one more more {@link DocumentAction}s and returns a promise that resolves to an {@link ActionsResult}.
- *
  * @example Publish or unpublish a document
  * ```
  * import { publishDocument, unpublishDocument } from '@sanity/sdk'

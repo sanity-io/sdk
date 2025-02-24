@@ -1,6 +1,6 @@
 /**
  * An example function that will be removed.
- * @public
+ * @internal
  */
 export function main(): void {
   //

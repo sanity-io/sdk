@@ -13,6 +13,12 @@
    * Includes core SDK exports and React hooks/context
    */
   "entryPoints": ["packages/*"],
+  "exclude": ["packages/react-internal"],
   "entryPointStrategy": "packages",
-  "includeVersion": false
+  "includeVersion": false,
+  "navigation": {
+    "includeCategories": true,
+    "includeFolders": false
+  },
+  "categorizeByGroup": false
 }

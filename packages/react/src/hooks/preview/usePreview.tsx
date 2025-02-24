@@ -5,7 +5,8 @@ import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxj
 import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
- * @alpha
+ * @beta
+ * @category Types
  */
 export interface UsePreviewOptions {
   document: DocumentHandle
@@ -13,7 +14,8 @@ export interface UsePreviewOptions {
 }
 
 /**
- * @alpha
+ * @beta
+ * @category Types
  */
 export interface UsePreviewResults {
   /** The results of resolving the document’s preview values */
@@ -23,13 +25,14 @@ export interface UsePreviewResults {
 }
 
 /**
- * @alpha
+ * @beta
  *
  * Returns the preview values of a document (specified via a `DocumentHandle`),
  * including the document’s `title`, `subtitle`, `media`, and `status`. These values are live and will update in realtime.
  * To reduce unnecessary network requests for resolving the preview values, an optional `ref` can be passed to the hook so that preview
  * resolution will only occur if the `ref` is intersecting the current viewport.
  *
+ * @category Documents
  * @param options - The document handle for the document you want to resolve preview values for, and an optional ref
  * @returns The preview values for the given document and a boolean to indicate whether the resolution is pending
  *
