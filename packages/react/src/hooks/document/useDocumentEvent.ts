@@ -10,8 +10,8 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * Subscribes an event handler to events in your application’s document store, such as document
  * creation, deletion, and updates.
  *
+ * @category Documents
  * @param handler - The event handler to register.
- *
  * @example
  * ```
  * import {useDocumentEvent} from '@sanity/sdk-react'

@@ -12,6 +12,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * The hook uses `useSyncExternalStore` to safely subscribe to changes
  * and ensure consistency between server and client rendering.
  *
+ * @category Platform
  * @returns A Sanity client
  *
  * @example

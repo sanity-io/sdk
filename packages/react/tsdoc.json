@@ -10,6 +10,11 @@
       "tagName": "@todo",
       "syntaxKind": "block",
       "allowMultiple": true
+    },
+    {
+      "tagName": "@category",
+      "syntaxKind": "block",
+      "allowMultiple": true
     }
   ],
   "supportForTags": {
@@ -28,6 +33,7 @@
     "@remarks": true,
     "@throws": true,
     "@defaultValue": true,
-    "@todo": true
+    "@todo": true,
+    "@category": true
   }
 }

@@ -12,8 +12,10 @@ import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
  * @beta
+ *
  * ## useDocument(doc, path)
  * Read and subscribe to nested values in a document
+ * @category Documents
  * @param doc - The document to read state from
  * @param path - The path to the nested value to read from
  * @returns The value at the specified path
