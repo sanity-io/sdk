@@ -1,8 +1,8 @@
-import {type Message, type Node} from '@sanity/comlink'
+import {type Message, type Node, type Status} from '@sanity/comlink'
 import {getOrCreateNode, releaseNode} from '@sanity/sdk'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {renderHook} from '../../../test/test-utils'
+import {act, renderHook} from '../../../test/test-utils'
 import {useWindowConnection} from './useWindowConnection'
 
 vi.mock(import('@sanity/sdk'), async (importOriginal) => {
@@ -26,22 +26,53 @@ interface AnotherMessage {
 
 type TestMessages = TestMessage | AnotherMessage
 
-function createMockNode() {
-  return {
-    // return unsubscribe function
-    on: vi.fn(() => () => {}),
-    post: vi.fn(),
-    stop: vi.fn(),
-  } as unknown as Node<Message, Message>
-}
-
 describe('useWindowConnection', () => {
   let node: Node<Message, Message>
+  let statusCallback: ((status: Status) => void) | null = null
+
+  function createMockNode() {
+    return {
+      // return unsubscribe function
+      on: vi.fn(() => () => {}),
+      post: vi.fn(),
+      stop: vi.fn(),
+      onStatus: vi.fn((callback) => {
+        statusCallback = callback
+        return () => {}
+      }),
+    } as unknown as Node<Message, Message>
+  }
 
   beforeEach(() => {
+    statusCallback = null
     node = createMockNode()
-
     vi.mocked(getOrCreateNode).mockReturnValue(node as unknown as Node<Message, Message>)
+  })
+
+  it('should initialize with idle status', () => {
+    const {result} = renderHook(() =>
+      useWindowConnection<TestMessages, TestMessages>({
+        name: 'test',
+        connectTo: 'window',
+      }),
+    )
+
+    expect(result.current.status).toBe('idle')
+  })
+
+  it('should update status to connected when node connects', async () => {
+    const {result} = renderHook(() =>
+      useWindowConnection<TestMessages, TestMessages>({
+        name: 'test',
+        connectTo: 'window',
+      }),
+    )
+
+    expect(result.current.status).toBe('idle')
+    act(() => {
+      statusCallback?.('connected')
+    })
+    expect(result.current.status).toBe('connected')
   })
 
   it('should register message handlers', () => {

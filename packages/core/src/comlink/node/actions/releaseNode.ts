@@ -12,14 +12,18 @@ export const releaseNode = createAction(comlinkNodeStore, ({state}) => {
 
     if (nodeEntry) {
       const newRefCount = nodeEntry.refCount === 0 ? 0 : nodeEntry.refCount - 1
-      state.set('releaseNode', {
-        nodes: new Map(nodes).set(name, {
-          ...nodeEntry,
-          refCount: newRefCount,
-        }),
-      })
+
       if (newRefCount === 0) {
         nodeEntry.node.stop()
+        nodes.delete(name)
+        state.set('releaseNode', {nodes: new Map(nodes)})
+      } else {
+        state.set('releaseNode', {
+          nodes: new Map(nodes).set(name, {
+            ...nodeEntry,
+            refCount: newRefCount,
+          }),
+        })
       }
     }
   }

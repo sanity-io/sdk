@@ -23,23 +23,31 @@ describe('releaseChannel', () => {
     vi.clearAllMocks()
   })
 
-  it('should decrement refCount when channel is released', () => {
+  it('should remove channel when released', () => {
     // Create a channel
     getOrCreateChannel(instance, channelConfig)
 
     // Get store state
     const store = getOrCreateResource(instance, comlinkControllerStore)
-    const channelEntry = store.state.get().channels.get('test')
-
-    // Initial refCount should be 1
-    expect(channelEntry?.refCount).toBe(1)
+    expect(store.state.get().channels.has('test')).toBe(true)
 
     // Release the channel
     releaseChannel(instance, 'test')
 
-    // Check refCount is decremented
-    const updatedEntry = store.state.get().channels.get('test')
-    expect(updatedEntry?.refCount).toBe(0)
+    // Check channel is removed
+    expect(store.state.get().channels.has('test')).toBe(false)
+  })
+
+  it('should stop the channel when released', () => {
+    // Create a channel
+    const channel = getOrCreateChannel(instance, channelConfig)
+    const stopSpy = vi.spyOn(channel, 'stop')
+
+    // Release the channel
+    releaseChannel(instance, 'test')
+
+    // Verify channel was stopped
+    expect(stopSpy).toHaveBeenCalled()
   })
 
   it('should stop the channel when refCount reaches 0', () => {
@@ -81,10 +89,8 @@ describe('releaseChannel', () => {
     releaseChannel(instance, 'test')
     releaseChannel(instance, 'test')
 
-    // Verify refCount doesn't go below 0
     const store = getOrCreateResource(instance, comlinkControllerStore)
-    const channelEntry = store.state.get().channels.get('test')
-    expect(channelEntry?.refCount).toBe(0)
+    expect(store.state.get().channels.has('test')).toBe(false)
   })
 
   it('should handle releasing non-existent channels', () => {
@@ -121,7 +127,6 @@ describe('releaseChannel', () => {
     // Verify channel was stopped
     expect(stopSpy).toHaveBeenCalled()
 
-    channelEntry = store.state.get().channels.get('test')
-    expect(channelEntry?.refCount).toBe(0)
+    expect(store.state.get().channels.has('test')).toBe(false)
   })
 })
