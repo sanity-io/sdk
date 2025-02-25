@@ -5,7 +5,7 @@ import {config} from '../../../test/fixtures'
 import {getTokenState} from '../../auth/authStore'
 import {createSanityInstance} from '../../instance/sanityInstance'
 import {type SanityInstance} from '../../instance/types'
-import {getClient} from './getClient'
+import {type ClientOptions, getClient} from './getClient'
 
 vi.mock('../../auth/authStore', async (importOriginal) => {
   const original = importOriginal<typeof import('../../auth/authStore')>()
@@ -33,7 +33,9 @@ describe('getClient', () => {
   })
 
   it('throws error when apiVersion is missing', () => {
-    expect(() => getClient(instance, {})).toThrow('Missing required `apiVersion` option')
+    expect(() => getClient(instance, {} as ClientOptions)).toThrow(
+      'Missing required `apiVersion` option',
+    )
   })
 
   it('creates new client with correct apiVersion', () => {

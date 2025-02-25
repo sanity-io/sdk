@@ -8,7 +8,7 @@ import {clientStore} from '../clientStore'
  * @public
  */
 export interface ClientOptions {
-  apiVersion?: string
+  apiVersion: string
 }
 
 /**
@@ -17,7 +17,7 @@ export interface ClientOptions {
  * @public
  */
 export const getClient = createAction(clientStore, ({state}) => {
-  return (options: ClientOptions = {}): SanityClient => {
+  return (options: ClientOptions): SanityClient => {
     const {apiVersion} = options
 
     if (!apiVersion) {
