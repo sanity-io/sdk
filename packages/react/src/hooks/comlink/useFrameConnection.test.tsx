@@ -1,7 +1,7 @@
-import {type ChannelInstance, type Controller} from '@sanity/comlink'
+import {type ChannelInstance, type Controller, type Status} from '@sanity/comlink'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {renderHook} from '../../../test/test-utils'
+import {act, renderHook} from '../../../test/test-utils'
 import {useFrameConnection} from './useFrameConnection'
 
 vi.mock(import('@sanity/sdk'), async (importOriginal) => {
@@ -30,18 +30,25 @@ interface TestNodeMessage {
   }
 }
 
-function createMockChannel() {
-  return {
-    on: vi.fn(() => () => {}),
-    post: vi.fn(),
-    stop: vi.fn(),
-  } as unknown as ChannelInstance<TestControllerMessage, TestNodeMessage>
-}
-
 describe('useFrameController', () => {
   let channel: ChannelInstance<TestControllerMessage, TestNodeMessage>
   let controller: Controller
   let removeTargetMock: ReturnType<typeof vi.fn>
+  let statusCallback:
+    | (({status, connection}: {status: Status; connection: string}) => void)
+    | null = null
+
+  function createMockChannel() {
+    return {
+      on: vi.fn(() => () => {}),
+      post: vi.fn(),
+      stop: vi.fn(),
+      onStatus: vi.fn((callback) => {
+        statusCallback = callback
+        return () => {}
+      }),
+    } as unknown as ChannelInstance<TestControllerMessage, TestNodeMessage>
+  }
 
   beforeEach(() => {
     channel = createMockChannel()
@@ -52,6 +59,34 @@ describe('useFrameController', () => {
     } as unknown as Controller
     vi.mocked(getOrCreateChannel).mockReturnValue(channel)
     vi.mocked(getOrCreateController).mockReturnValue(controller)
+  })
+
+  it('should initialize with idle status', () => {
+    const {result} = renderHook(() =>
+      useFrameConnection({
+        name: 'test',
+        connectTo: 'iframe',
+        targetOrigin: '*',
+      }),
+    )
+
+    expect(result.current.status).toBe('idle')
+  })
+
+  it('should update status to connected when node connects', async () => {
+    const {result} = renderHook(() =>
+      useFrameConnection({
+        name: 'test',
+        connectTo: 'iframe',
+        targetOrigin: '*',
+      }),
+    )
+
+    expect(result.current.status).toBe('idle')
+    act(() => {
+      statusCallback?.({status: 'connected', connection: 'test'})
+    })
+    expect(result.current.status).toBe('connected')
   })
 
   it('should register and execute message handlers', () => {

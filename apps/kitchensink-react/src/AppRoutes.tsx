@@ -2,7 +2,7 @@ import {SanityApp} from '@sanity/sdk-react/components'
 import {type JSX} from 'react'
 import {Route, Routes} from 'react-router'
 
-import Frame from './Comlink/Frame'
+import Framed from './Comlink/Framed'
 import ParentApp from './Comlink/ParentApp'
 import {DocumentEditorRoute} from './DocumentCollection/DocumentEditorRoute'
 import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
@@ -33,7 +33,7 @@ const documentCollectionRoutes = [
 
 const frameRoutes = [1, 2, 3].map((frameNum) => ({
   path: `frame${frameNum}`,
-  element: <Frame />,
+  element: <Framed />,
 }))
 
 export function AppRoutes(): JSX.Element {

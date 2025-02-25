@@ -1,43 +1,29 @@
-import {useFrameConnection} from '@sanity/sdk-react/hooks'
+import {useWindowConnection} from '@sanity/sdk-react/hooks'
 import {Box, Button, Card, Container, Label, Stack, Text, TextInput} from '@sanity/ui'
-import {ReactElement, useEffect, useState} from 'react'
+import {ReactElement, useCallback, useState} from 'react'
 
-type DemoFrameMessage = {
-  type: 'FRAME_MESSAGE'
-  data: {message: string}
-}
+import {FromIFrameMessage, ToIFrameMessage} from './types'
 
-type DemoWindowMessage = {
-  type: 'WINDOW_MESSAGE'
-  data: {message: string}
-}
-
-const Frame = (): ReactElement => {
+const Framed = (): ReactElement => {
   const [message, setMessage] = useState('')
   const [receivedMessages, setReceivedMessages] = useState<string[]>([])
 
-  const frameConnection = useFrameConnection<DemoFrameMessage, DemoWindowMessage>({
+  const {sendMessage, status} = useWindowConnection<FromIFrameMessage, ToIFrameMessage>({
     name: 'frame',
     connectTo: 'main-app',
-    targetOrigin: '*',
     onMessage: {
-      WINDOW_MESSAGE: (data) => {
+      TO_IFRAME: (data: {message: string}) => {
         setReceivedMessages((prev) => [...prev, data.message])
       },
     },
   })
 
-  useEffect(() => {
-    const cleanup = frameConnection.connect(window.parent)
-    return cleanup
-  }, [frameConnection])
-
-  const sendMessage = () => {
+  const sendMessageToParent = useCallback(() => {
     if (message.trim()) {
-      frameConnection.sendMessage('FRAME_MESSAGE', {message})
+      sendMessage('FROM_IFRAME', {message})
       setMessage('')
     }
-  }
+  }, [message, sendMessage])
 
   return (
     <Container height={'fill'}>
@@ -55,10 +41,16 @@ const Frame = (): ReactElement => {
                 <TextInput
                   value={message}
                   onChange={(event) => setMessage(event.currentTarget.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                  onKeyDown={(e) => e.key === 'Enter' && sendMessageToParent()}
+                  disabled={status !== 'connected'}
                 />
               </Box>
-              <Button text="Send" tone="primary" onClick={sendMessage} />
+              <Button
+                text="Send"
+                tone="primary"
+                onClick={sendMessageToParent}
+                disabled={status !== 'connected'}
+              />
             </Box>
           </Stack>
 
@@ -79,4 +71,4 @@ const Frame = (): ReactElement => {
   )
 }
 
-export default Frame
+export default Framed
