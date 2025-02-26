@@ -25,7 +25,7 @@ import {createResource} from '../resources/createResource'
 import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
 import {insecureRandomId} from '../utils/ids'
 
-interface CreateStoreFromPromiseFactoryOptions<TParams extends unknown[], TData> {
+interface CreateFetcherStoreOptions<TParams extends unknown[], TData> {
   /**
    * A unique name for this store (for devtools)
    */
@@ -33,7 +33,7 @@ interface CreateStoreFromPromiseFactoryOptions<TParams extends unknown[], TData>
   /**
    * A function that creates the observable that will be used to fetch the data.
    */
-  getObservable: (instance: SanityInstance) => (...params: TParams) => Observable<TData>
+  fetcher: (instance: SanityInstance) => (...params: TParams) => Observable<TData>
   /**
    * The function used to convert the params into keys that state related to
    * those params will be stored.
@@ -60,19 +60,31 @@ interface StoreEntry<TParams extends unknown[], TData> {
   lastFetchInitiatedAt?: string
 }
 
-interface StoreState<TParams extends unknown[], TData> {
+/**
+ * Internal helper type
+ * @public
+ */
+export interface FetcherStoreState<TParams extends unknown[], TData> {
   stateByParams: {[TSerializedKey in string]?: StoreEntry<TParams, TData>}
   error?: unknown
 }
 
-interface ObservableFactoryStore<TParams extends unknown[], TData> {
-  getState: ResourceAction<StoreState<TParams, TData>, TParams, StateSource<TData | undefined>>
-  resolveState: ResourceAction<StoreState<TParams, TData>, TParams, Promise<TData>>
+/**
+ * Internal helper type
+ * @public
+ */
+export interface FetcherStore<TParams extends unknown[], TData> {
+  getState: ResourceAction<
+    FetcherStoreState<TParams, TData>,
+    TParams,
+    StateSource<TData | undefined>
+  >
+  resolveState: ResourceAction<FetcherStoreState<TParams, TData>, TParams, Promise<TData>>
 }
 
 /**
- * Creates a store from an observable factory that supports parameterized
- * state caching.
+ * Creates a store from a function that returns an observable that fetches data
+ * that supports parameterized state caching.
  *
  * This function creates a resource store keyed by parameter values (using the
  * provided `getKey` function) and returns a state source (via `getState`)
@@ -89,14 +101,14 @@ interface ObservableFactoryStore<TParams extends unknown[], TData> {
  * removed, its state is cleared after `stateExpirationDelay` ms, causing
  * components to suspend until fresh data is fetched.
  */
-export function createStoreFromObservableFactory<TParams extends unknown[], TData>({
+export function createFetcherStore<TParams extends unknown[], TData>({
   name,
-  getObservable,
+  fetcher: getObservable,
   getKey,
   fetchThrottleInternal = 1000,
   stateExpirationDelay = 5000,
-}: CreateStoreFromPromiseFactoryOptions<TParams, TData>): ObservableFactoryStore<TParams, TData> {
-  const store = createResource<StoreState<TParams, TData>>({
+}: CreateFetcherStoreOptions<TParams, TData>): FetcherStore<TParams, TData> {
+  const store = createResource<FetcherStoreState<TParams, TData>>({
     name,
     getInitialState: () => ({
       stateByParams: {},
@@ -114,14 +126,14 @@ export function createStoreFromObservableFactory<TParams extends unknown[], TDat
    * and call the factory function for that key.
    */
   const subscribeToSubscriptionsAndFetch = createInternalAction(
-    ({instance, state}: ActionContext<StoreState<TParams, TData>>) => {
+    ({instance, state}: ActionContext<FetcherStoreState<TParams, TData>>) => {
       return function () {
         const factoryFn = getObservable(instance)
 
         return state.observable
           .pipe(
             // Map the state to an array of [serialized, entry] pairs.
-            switchMap((s: StoreState<TParams, TData>) => {
+            switchMap((s: FetcherStoreState<TParams, TData>) => {
               const entries = Object.entries(s.stateByParams)
               return entries.length > 0 ? from(entries) : EMPTY
             }),
@@ -154,23 +166,26 @@ export function createStoreFromObservableFactory<TParams extends unknown[], TDat
                   if (!entry) return EMPTY
 
                   // Record that a fetch is being initiated.
-                  state.set('setLastFetchInitiatedAt', (prev: StoreState<TParams, TData>) => ({
-                    stateByParams: {
-                      ...prev.stateByParams,
-                      [entry.key]: {
-                        ...entry,
-                        ...prev.stateByParams[entry.key],
-                        lastFetchInitiatedAt: new Date().toISOString(),
+                  state.set(
+                    'setLastFetchInitiatedAt',
+                    (prev: FetcherStoreState<TParams, TData>) => ({
+                      stateByParams: {
+                        ...prev.stateByParams,
+                        [entry.key]: {
+                          ...entry,
+                          ...prev.stateByParams[entry.key],
+                          lastFetchInitiatedAt: new Date().toISOString(),
+                        },
                       },
-                    },
-                  }))
+                    }),
+                  )
 
                   return factoryFn(...entry.params).pipe(
                     // the `createStateSourceAction` util requires the update
                     // to
                     delay(0, asapScheduler),
                     tap((data: TData) =>
-                      state.set('setData', (prev: StoreState<TParams, TData>) => ({
+                      state.set('setData', (prev: FetcherStoreState<TParams, TData>) => ({
                         stateByParams: {
                           ...prev.stateByParams,
                           [entry.key]: {
@@ -208,7 +223,7 @@ export function createStoreFromObservableFactory<TParams extends unknown[], TDat
   )
 
   const getState = createStateSourceAction(store, {
-    selector: ({stateByParams, error}: StoreState<TParams, TData>, ...params: TParams) => {
+    selector: ({stateByParams, error}: FetcherStoreState<TParams, TData>, ...params: TParams) => {
       if (error) throw error
       const key = getKey(...params)
       const entry = stateByParams[key]
@@ -219,7 +234,7 @@ export function createStoreFromObservableFactory<TParams extends unknown[], TDat
       const subscriptionId = insecureRandomId()
       const key = getKey(...params)
 
-      state.set('addSubscription', (prev: StoreState<TParams, TData>) => ({
+      state.set('addSubscription', (prev: FetcherStoreState<TParams, TData>) => ({
         stateByParams: {
           ...prev.stateByParams,
           [key]: {
@@ -233,7 +248,7 @@ export function createStoreFromObservableFactory<TParams extends unknown[], TDat
 
       return () => {
         setTimeout(() => {
-          state.set('removeSubscription', (prev: StoreState<TParams, TData>) => {
+          state.set('removeSubscription', (prev: FetcherStoreState<TParams, TData>) => {
             const entry = prev.stateByParams[key]
             if (!entry) return prev
 

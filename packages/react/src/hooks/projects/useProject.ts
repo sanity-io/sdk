@@ -8,6 +8,7 @@ import {
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
+/** @public */
 export const useProject = createStateSourceHook({
   // remove `undefined` since we're suspending when that is the case
   getState: getProjectState as (

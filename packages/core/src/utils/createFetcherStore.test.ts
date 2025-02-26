@@ -1,14 +1,12 @@
-// src/utils/createStoreFromObservableFactory.test.ts
-
 import {delay, firstValueFrom, of, throwError} from 'rxjs'
 import {filter, skip} from 'rxjs/operators'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance} from '../instance/sanityInstance'
 import {type SanityInstance} from '../instance/types'
-import {createStoreFromObservableFactory} from './createStoreFromObservableFactory'
+import {createFetcherStore} from './createFetcherStore'
 
-describe('createStoreFromObservableFactory', () => {
+describe('createFetcherStore', () => {
   let instance: SanityInstance
 
   beforeEach(() => {
@@ -21,9 +19,9 @@ describe('createStoreFromObservableFactory', () => {
   })
 
   it('should fetch data and update state when subscribed', async () => {
-    const store = createStoreFromObservableFactory({
+    const store = createFetcherStore({
       name: 'test',
-      getObservable: () => (param: number) => of(`data-${param}`).pipe(delay(100)),
+      fetcher: () => (param: number) => of(`data-${param}`).pipe(delay(100)),
       getKey: (param: number) => `key-${param}`,
     })
 
@@ -43,9 +41,9 @@ describe('createStoreFromObservableFactory', () => {
 
   it('should only fetch once for multiple subscriptions within throttle interval', async () => {
     const fetchSpy = vi.fn().mockImplementation((param: number) => of(`data-${param}`))
-    const store = createStoreFromObservableFactory({
+    const store = createFetcherStore({
       name: 'test-throttle',
-      getObservable: () => fetchSpy,
+      fetcher: () => fetchSpy,
       getKey: (param: number) => `key-${param}`,
       fetchThrottleInternal: 1000,
     })
@@ -62,9 +60,9 @@ describe('createStoreFromObservableFactory', () => {
   })
 
   it('should propagate errors correctly', async () => {
-    const store = createStoreFromObservableFactory({
+    const store = createFetcherStore({
       name: 'test-error',
-      getObservable: () => () => throwError(() => new Error('test error')),
+      fetcher: () => () => throwError(() => new Error('test error')),
       getKey: () => 'key',
     })
 
@@ -84,9 +82,9 @@ describe('createStoreFromObservableFactory', () => {
     const fetchSpy = vi
       .fn()
       .mockImplementation((param: number) => of(`data-${param}`).pipe(delay(100)))
-    const store = createStoreFromObservableFactory({
+    const store = createFetcherStore({
       name: 'test-expiration',
-      getObservable: () => fetchSpy,
+      fetcher: () => fetchSpy,
       getKey: (param: number) => `key-${param}`,
       stateExpirationDelay: 1000,
     })
@@ -115,9 +113,9 @@ describe('createStoreFromObservableFactory', () => {
 
   it('should throttle fetches based on fetchThrottleInternal', async () => {
     const fetchSpy = vi.fn().mockImplementation((param: number) => of(`data-${param}`))
-    const store = createStoreFromObservableFactory({
+    const store = createFetcherStore({
       name: 'test-throttle',
-      getObservable: () => fetchSpy,
+      fetcher: () => fetchSpy,
       getKey: (param: number) => `key-${param}`,
       fetchThrottleInternal: 1000,
     })
@@ -150,9 +148,9 @@ describe('createStoreFromObservableFactory', () => {
   })
 
   it('should handle different parameters with different keys', async () => {
-    const store = createStoreFromObservableFactory({
+    const store = createFetcherStore({
       name: 'test-params',
-      getObservable: () => (param: number) => of(`data-${param}`),
+      fetcher: () => (param: number) => of(`data-${param}`),
       getKey: (param: number) => `key-${param}`,
     })
 

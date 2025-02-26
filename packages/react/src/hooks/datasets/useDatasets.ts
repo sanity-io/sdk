@@ -3,6 +3,7 @@ import {getDatasetsState, resolveDatasets, type SanityInstance, type StateSource
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
+/** @public */
 export const useDatasets = createStateSourceHook({
   // remove `undefined` since we're suspending when that is the case
   getState: getDatasetsState as (instance: SanityInstance) => StateSource<DatasetsResponse>,
