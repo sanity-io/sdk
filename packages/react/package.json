@@ -81,6 +81,7 @@
   "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@sanity/logos": "^2.1.13",
+    "@sanity/message-protocol": "^0.1.0",
     "@sanity/sdk": "workspace:*",
     "@sanity/types": "^3.78.1",
     "react-compiler-runtime": "19.0.0-beta-bafa41b-20250307",
