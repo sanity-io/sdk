@@ -110,13 +110,11 @@ export {type PermissionDeniedReason, type PermissionsResult} from '../document/p
 /** USERS */
 export {createUsersStore, type UsersStoreState} from '../users/usersStore'
 
+/** PROJECT */
+export {getProjectState, resolveProject} from '../project/project'
+
 /** PROJECTS */
-export {
-  getProjectsState,
-  getProjectState,
-  resolveProject,
-  resolveProjects,
-} from '../projects/projects'
+export {getProjectsState, resolveProjects} from '../projects/projects'
 
 /** @public */
 export type SanityProject = _SanityProject
