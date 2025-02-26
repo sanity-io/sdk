@@ -378,9 +378,6 @@ importers:
       '@sanity/logos':
         specifier: ^2.1.13
         version: 2.1.13(@sanity/color@3.0.6)(react@19.0.0)
-      '@sanity/os':
-        specifier: ^0.2.0
-        version: 0.2.0
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../core
@@ -1662,11 +1659,6 @@ packages:
   '@sanity/mutate@0.12.1':
     resolution: {integrity: sha512-SuOpMOEwcTcE5fFHpy44qVuGs8NeBAOF8wwN5DYz0Jl4MJZWGsUS81YUeFwQl0XqBZpfiLVzwutp1KYCZPuqUQ==}
     engines: {node: '>=18'}
-
-  '@sanity/os@0.2.0':
-    resolution: {integrity: sha512-wh/YackZYRtm/UWK73Wx7E4uDxqeet5eDPBdiMrMTdaxwA6S+kS/wO2PAgU5i+hUXNmIACaUoQxqd85H4UhJ4A==}
-    engines: {node: '>=20.0.0'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
   '@sanity/pkg-utils@6.12.2':
     resolution: {integrity: sha512-jLy9m5aPQUW7g8PuH5FYZJ8i5vE2s9Bv1aTdFoMFrfNaBYG9TpgoDUT2JlrTS1oFSv2CJz6JIcHylsulqCrF3w==}
@@ -6280,14 +6272,6 @@ snapshots:
       rxjs: 7.8.1
     transitivePeerDependencies:
       - debug
-
-  '@sanity/os@0.2.0':
-    dependencies:
-      '@sanity/comlink': 2.0.5
-      debug: 4.4.0
-      lodash-es: 4.17.21
-    transitivePeerDependencies:
-      - supports-color
 
   '@sanity/pkg-utils@6.12.2(@types/babel__core@7.20.5)(@types/node@22.12.0)(typescript@5.7.2)':
     dependencies:
