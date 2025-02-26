@@ -24,7 +24,9 @@ export {useDocumentEvent} from '../hooks/document/useDocumentEvent'
 export {useDocumentSyncStatus} from '../hooks/document/useDocumentSyncStatus'
 export {useEditDocument} from '../hooks/document/useEditDocument'
 export {usePermissions} from '../hooks/document/usePermissions'
-export {type DocumentHandleCollection, useDocuments} from '../hooks/documentCollection/useDocuments'
+export {useDocuments} from '../hooks/documentCollection/useDocuments'
+export {type DocumentHandleCollection} from '../hooks/documentCollection/types'
+export {useSearch} from '../hooks/documentCollection/useSearch'
 export {
   usePreview,
   type UsePreviewOptions,
