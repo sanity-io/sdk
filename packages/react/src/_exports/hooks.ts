@@ -18,6 +18,7 @@ export {
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
+export {useDatasets} from '../hooks/datasets/useDatasets'
 export {useApplyActions} from '../hooks/document/useApplyActions'
 export {useDocument} from '../hooks/document/useDocument'
 export {useDocumentEvent} from '../hooks/document/useDocumentEvent'
@@ -30,6 +31,8 @@ export {
   type UsePreviewOptions,
   type UsePreviewResults,
 } from '../hooks/preview/usePreview'
+export {useProject} from '../hooks/projects/useProject'
+export {useProjects} from '../hooks/projects/useProjects'
 export {useUsers, type UseUsersResult} from '../hooks/users/useUsers'
 export {type CurrentUser, type DocumentHandle} from '@sanity/sdk'
 export {type SanityDocument} from '@sanity/types'

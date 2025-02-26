@@ -127,4 +127,70 @@ describe('createStateSourceHook', () => {
     expect(result.current).toEqual('test_123')
     expect(stateSourceFactory).toHaveBeenCalledWith(mockInstance, 'test', 123)
   })
+
+  it('should throw suspender promise when shouldSuspend is true', () => {
+    const mockInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
+
+    const mockGetState = vi.fn().mockReturnValue({
+      subscribe: vi.fn(),
+      getCurrent: vi.fn().mockReturnValue('state'),
+      observable: throwError(() => new Error('unexpected usage of observable')),
+    })
+
+    const mockShouldSuspend = vi.fn().mockReturnValue(true)
+    const mockSuspender = vi.fn().mockReturnValue(Promise.resolve())
+
+    const options = {
+      getState: mockGetState,
+      shouldSuspend: mockShouldSuspend,
+      suspender: mockSuspender,
+    }
+
+    const useTestHook = createStateSourceHook(options)
+    const {result} = renderHook(() => {
+      try {
+        useTestHook('param1', 2)
+      } catch (e) {
+        return e
+      }
+    })
+
+    expect(mockShouldSuspend).toHaveBeenCalledWith(mockInstance, 'param1', 2)
+    expect(mockSuspender).toHaveBeenCalledWith(mockInstance, 'param1', 2)
+    expect(result.current).toBe(mockSuspender.mock.results[0].value)
+    expect(mockGetState).not.toHaveBeenCalled()
+  })
+
+  it('should not suspend when shouldSuspend returns false', () => {
+    const mockInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
+
+    const mockState = {value: 'test'}
+    const mockSubscribe = vi.fn()
+    const mockGetCurrent = vi.fn(() => mockState)
+
+    const mockGetState = vi.fn().mockReturnValue({
+      subscribe: mockSubscribe,
+      getCurrent: mockGetCurrent,
+      observable: throwError(() => new Error('unexpected usage of observable')),
+    })
+
+    const mockShouldSuspend = vi.fn().mockReturnValue(false)
+    const mockSuspender = vi.fn()
+
+    const options = {
+      getState: mockGetState,
+      shouldSuspend: mockShouldSuspend,
+      suspender: mockSuspender,
+    }
+
+    const useTestHook = createStateSourceHook(options)
+    const {result} = renderHook(() => useTestHook('param', 123))
+
+    expect(mockShouldSuspend).toHaveBeenCalledWith(mockInstance, 'param', 123)
+    expect(mockSuspender).not.toHaveBeenCalled()
+    expect(mockGetState).toHaveBeenCalledWith(mockInstance, 'param', 123)
+    expect(result.current).toBe(mockState)
+  })
 })

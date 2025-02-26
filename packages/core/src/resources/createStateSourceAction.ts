@@ -1,4 +1,4 @@
-import {filter, map, Observable, pairwise} from 'rxjs'
+import {distinctUntilChanged, map, Observable, share, skip} from 'rxjs'
 
 import {type ActionContext, createAction, type ResourceAction} from './createAction'
 import {type Resource} from './createResource'
@@ -35,18 +35,25 @@ export function createStateSourceAction<TState, TParams extends unknown[], TRetu
       const getCurrent = () => selector(state.get(), ...args)
 
       const subscribe = (onStoreChanged?: () => void) => {
+        const cleanup = subscribeHandler?.(this, ...args)
+
         const subscription = state.observable
           .pipe(
-            // this is similar to `distinctUntilChanged` expect that it doesn't
-            // emit until the first change from `getCurrent`
             map(getCurrent),
-            pairwise(),
-            filter(([prev, curr]) => !isEqual(prev, curr)),
-            map(([_, curr]) => curr),
+            distinctUntilChanged(isEqual),
+            // skip the first emission because we only want to emit when the
+            // value changes. `distinctUntilChanged` will always emit the first
+            // the first value so we skip this emission
+            skip(1),
           )
-          .subscribe({next: onStoreChanged})
-
-        const cleanup = subscribeHandler?.(this, ...args)
+          .subscribe({
+            next: () => onStoreChanged?.(),
+            // the convention is to have the selector throw the error so we
+            // invoke onStoreChanged on error as well. this will cause the
+            // observable code path below to emit an error because the selector
+            // will throw and that will be used to emit an .error on the observer
+            error: () => onStoreChanged?.(),
+          })
 
         return () => {
           subscription.unsubscribe()
@@ -55,10 +62,16 @@ export function createStateSourceAction<TState, TParams extends unknown[], TRetu
       }
 
       const observable = new Observable<TReturn>((observer) => {
-        const emitCurrent = () => observer.next(getCurrent())
+        const emitCurrent = () => {
+          try {
+            observer.next(getCurrent())
+          } catch (error) {
+            observer.error(error)
+          }
+        }
         emitCurrent()
         return subscribe(emitCurrent)
-      })
+      }).pipe(share())
 
       return {
         getCurrent,
