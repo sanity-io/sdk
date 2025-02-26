@@ -1,19 +1,8 @@
-import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
+import {type Events, SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
 import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
 import {useCallback} from 'react'
 
 import {useWindowConnection} from './useWindowConnection'
-
-// should we import this whole type from the message protocol?
-interface HistoryMessage {
-  type: 'HISTORY_UPDATE'
-  data: {
-    version: string
-    eventType: 'viewed' | 'edited' | 'created' | 'deleted'
-    documentId: string
-    documentType: string
-  }
-}
 
 interface DocumentInteractionHistory {
   recordEvent: (eventType: 'viewed' | 'edited' | 'created' | 'deleted') => void
@@ -33,7 +22,7 @@ interface DocumentInteractionHistory {
  * ```tsx
  * function MyDocumentAction(props: DocumentActionProps) {
  *   const {_id, _type} = props
- *   const {recordEvent, isConnected} = useDocumentInteractionHistory({
+ *   const {recordEvent, isConnected} = useRecordDocumentHistoryEvent({
  *     _id,
  *     _type
  *   })
@@ -48,11 +37,11 @@ interface DocumentInteractionHistory {
  * }
  * ```
  */
-export function useDocumentInteractionHistory({
+export function useRecordDocumentHistoryEvent({
   _id,
   _type,
 }: DocumentHandle): DocumentInteractionHistory {
-  const {sendMessage, status} = useWindowConnection<HistoryMessage, FrameMessage>({
+  const {sendMessage, status} = useWindowConnection<Events.HistoryMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
   })
@@ -60,10 +49,9 @@ export function useDocumentInteractionHistory({
   const recordEvent = useCallback(
     (eventType: 'viewed' | 'edited' | 'created' | 'deleted') => {
       try {
-        const message: HistoryMessage = {
-          type: 'HISTORY_UPDATE',
+        const message: Events.HistoryMessage = {
+          type: 'core/v1/events/history',
           data: {
-            version: '1', // Should we import this from the message protocol?
             eventType,
             documentId: _id,
             documentType: _type,

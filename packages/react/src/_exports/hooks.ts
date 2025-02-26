@@ -5,7 +5,6 @@ export {useHandleCallback} from '../hooks/auth/useHandleCallback'
 export {useLoginUrls} from '../hooks/auth/useLoginUrls'
 export {useLogOut} from '../hooks/auth/useLogOut'
 export {useClient} from '../hooks/client/useClient'
-export {useDocumentInteractionHistory} from '../hooks/comlink/useDocumentInteractionHistory'
 export {
   type FrameConnection,
   type FrameMessageHandler as MessageHandler,
@@ -13,6 +12,7 @@ export {
   type UseFrameConnectionOptions,
 } from '../hooks/comlink/useFrameConnection'
 export {useManageFavorite} from '../hooks/comlink/useManageFavorite'
+export {useRecordDocumentHistoryEvent} from '../hooks/comlink/useRecordDocumentHistoryEvent'
 export {
   useWindowConnection,
   type UseWindowConnectionOptions,

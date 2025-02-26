@@ -55,10 +55,10 @@ describe('useManageFavorite', () => {
       result.current.favorite()
     })
 
-    expect(node.post).toHaveBeenCalledWith('ADD_FAVOURITE_ITEM', {
-      version: '1',
+    expect(node.post).toHaveBeenCalledWith('core/v1/events/favorite', {
       documentId: 'mock-id',
       documentType: 'mock-type',
+      eventType: 'added',
     })
     expect(result.current.isFavorited).toBe(true)
   })
@@ -70,10 +70,10 @@ describe('useManageFavorite', () => {
       result.current.unfavorite()
     })
 
-    expect(node.post).toHaveBeenCalledWith('REMOVE_FAVOURITE_ITEM', {
-      version: '1',
+    expect(node.post).toHaveBeenCalledWith('core/v1/events/favorite', {
       documentId: 'mock-id',
       documentType: 'mock-type',
+      eventType: 'removed',
     })
     expect(result.current.isFavorited).toBe(false)
   })

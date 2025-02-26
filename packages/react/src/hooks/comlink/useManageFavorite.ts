@@ -1,18 +1,10 @@
-import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
+import {type Events, SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
 import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
 import {useCallback, useState} from 'react'
 
 import {useWindowConnection} from './useWindowConnection'
 
 // should we import this whole type from the message protocol?
-interface FavoriteMessage {
-  type: 'ADD_FAVOURITE_ITEM' | 'REMOVE_FAVOURITE_ITEM'
-  data: {
-    version: '1'
-    documentId: string
-    documentType: string
-  }
-}
 
 interface ManageFavorite {
   favorite: () => void
@@ -56,20 +48,20 @@ interface ManageFavorite {
  */
 export function useManageFavorite({_id, _type}: DocumentHandle): ManageFavorite {
   const [isFavorited, setIsFavorited] = useState(false) // should load this from a comlink fetch
-  const {sendMessage, status} = useWindowConnection<FavoriteMessage, FrameMessage>({
+  const {sendMessage, status} = useWindowConnection<Events.FavoriteMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
   })
 
   const handleFavoriteAction = useCallback(
-    (action: 'ADD_FAVOURITE_ITEM' | 'REMOVE_FAVOURITE_ITEM', setFavoriteState: boolean) => {
+    (action: 'added' | 'removed', setFavoriteState: boolean) => {
       if (!_id || !_type) return
 
       try {
-        const message: FavoriteMessage = {
-          type: action,
+        const message: Events.FavoriteMessage = {
+          type: 'core/v1/events/favorite',
           data: {
-            version: '1', // should we import this from the message protocol?
+            eventType: action,
             documentId: _id,
             documentType: _type,
           },
@@ -81,7 +73,7 @@ export function useManageFavorite({_id, _type}: DocumentHandle): ManageFavorite 
         const error = err instanceof Error ? err : new Error('Failed to update favorite status')
         // eslint-disable-next-line no-console
         console.error(
-          `Failed to ${action === 'ADD_FAVOURITE_ITEM' ? 'favorite' : 'unfavorite'} document:`,
+          `Failed to ${action === 'added' ? 'favorite' : 'unfavorite'} document:`,
           error,
         )
         throw error
@@ -90,13 +82,10 @@ export function useManageFavorite({_id, _type}: DocumentHandle): ManageFavorite 
     [_id, _type, sendMessage],
   )
 
-  const favorite = useCallback(
-    () => handleFavoriteAction('ADD_FAVOURITE_ITEM', true),
-    [handleFavoriteAction],
-  )
+  const favorite = useCallback(() => handleFavoriteAction('added', true), [handleFavoriteAction])
 
   const unfavorite = useCallback(
-    () => handleFavoriteAction('REMOVE_FAVOURITE_ITEM', false),
+    () => handleFavoriteAction('removed', false),
     [handleFavoriteAction],
   )
 

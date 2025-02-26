@@ -1,7 +1,7 @@
 import {
-  useDocumentInteractionHistory,
-  useDocuments,
+  useInfiniteList,
   useManageFavorite,
+  useRecordDocumentHistoryEvent,
 } from '@sanity/sdk-react/hooks'
 import {Box, Button, Flex, Heading} from '@sanity/ui'
 import {type JSX} from 'react'
@@ -21,7 +21,7 @@ function ActionButtons({document}: ActionButtonsProps) {
     isFavorited,
     isConnected: isFavoriteConnected,
   } = useManageFavorite(document)
-  const {recordEvent, isConnected: isHistoryConnected} = useDocumentInteractionHistory(document)
+  const {recordEvent, isConnected: isHistoryConnected} = useRecordDocumentHistoryEvent(document)
 
   return (
     <Flex gap={2} padding={2}>
@@ -48,9 +48,9 @@ function ActionButtons({document}: ActionButtonsProps) {
 }
 
 export function DocumentCoreInteractionsRoute(): JSX.Element {
-  const {isPending, results, hasMore, loadMore} = useDocuments({
+  const {isPending, data, hasMore, loadMore} = useInfiniteList({
     filter: '_type == "book"',
-    sort: [{field: '_updatedAt', direction: 'desc'}],
+    orderings: [{field: '_updatedAt', direction: 'desc'}],
   })
 
   return (
@@ -60,7 +60,7 @@ export function DocumentCoreInteractionsRoute(): JSX.Element {
       </Heading>
       <Box paddingY={5}>
         <DocumentListLayout>
-          {results.map((doc) => (
+          {data.map((doc) => (
             <Box key={doc._id}>
               <DocumentPreview document={doc} />
               <ActionButtons document={doc} />
