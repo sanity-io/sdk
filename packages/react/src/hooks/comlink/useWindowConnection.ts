@@ -1,5 +1,6 @@
+import {type Status} from '@sanity/comlink'
 import {type FrameMessage, getOrCreateNode, releaseNode, type WindowMessage} from '@sanity/sdk'
-import {useCallback, useEffect, useMemo} from 'react'
+import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -27,6 +28,7 @@ export interface WindowConnection<TMessage extends WindowMessage> {
     type: TType,
     data?: Extract<TMessage, {type: TType}>['data'],
   ) => void
+  status: Status
 }
 
 /**
@@ -38,11 +40,20 @@ export function useWindowConnection<
 >(options: UseWindowConnectionOptions<TFrameMessage>): WindowConnection<TWindowMessage> {
   const {name, onMessage, connectTo} = options
   const instance = useSanityInstance()
+  const [status, setStatus] = useState<Status>('idle')
 
   const node = useMemo(
     () => getOrCreateNode(instance, {name, connectTo}),
     [instance, name, connectTo],
   )
+
+  useEffect(() => {
+    const unsubscribe = node.onStatus((newStatus) => {
+      setStatus(newStatus)
+    })
+
+    return unsubscribe
+  }, [node, instance, name])
 
   useEffect(() => {
     if (!onMessage) return
@@ -78,5 +89,6 @@ export function useWindowConnection<
 
   return {
     sendMessage,
+    status,
   }
 }

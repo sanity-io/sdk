@@ -7,9 +7,10 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  *
  * @public
  *
- * The `useCurrentUser` hook returns the currently authenticated user’s profile information (their name, email, roles, etc).
+ * Provides the currently authenticated user’s profile information (their name, email, roles, etc).
  * If no users are currently logged in, the hook returns null.
  *
+ * @category Authentication
  * @returns The current user data, or `null` if not authenticated
  *
  * @example Rendering a basic user profile

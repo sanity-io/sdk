@@ -7,7 +7,7 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
 vi.mock('../helpers/createStateSourceHook', () => ({createStateSourceHook: vi.fn(identity)}))
 vi.mock('@sanity/sdk', () => ({getDocumentSyncStatus: vi.fn()}))
 
-describe('useAuthToken', () => {
+describe('useDocumentSyncStatus', () => {
   it('calls `createStateSourceHook` with `getTokenState`', async () => {
     const {useDocumentSyncStatus} = await import('./useDocumentSyncStatus')
     expect(createStateSourceHook).toHaveBeenCalledWith(getDocumentSyncStatus)

@@ -90,6 +90,7 @@ export {
   type DocumentEditedEvent,
   type DocumentEvent,
   type DocumentPublishedEvent,
+  type DocumentRebaseErrorEvent,
   type DocumentUnpublishedEvent,
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,

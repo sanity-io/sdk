@@ -22,7 +22,5 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  *   return <div>Current auth state: {authState}</div>
  * }
  * ```
- *
- * @public
  */
 export const useAuthState: () => AuthState = createStateSourceHook(getAuthState)

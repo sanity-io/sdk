@@ -1,3 +1,4 @@
+import {type Status} from '@sanity/comlink'
 import {
   type FrameMessage,
   getOrCreateChannel,
@@ -5,7 +6,7 @@ import {
   releaseChannel,
   type WindowMessage,
 } from '@sanity/sdk'
-import {useCallback, useEffect, useMemo} from 'react'
+import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -23,7 +24,10 @@ export interface UseFrameConnectionOptions<TWindowMessage extends WindowMessage>
   name: string
   connectTo: string
   targetOrigin: string
-  onMessage?: Record<string, FrameMessageHandler<TWindowMessage>>
+  onMessage?: {
+    [K in TWindowMessage['type']]: (data: Extract<TWindowMessage, {type: K}>['data']) => void
+  }
+  heartbeat?: boolean
 }
 
 /**
@@ -36,6 +40,7 @@ export interface FrameConnection<TFrameMessage extends FrameMessage> {
       ? [type: T]
       : [type: T, data: Extract<TFrameMessage, {type: T}>['data']]
   ) => void
+  status: Status
 }
 
 /**
@@ -45,8 +50,9 @@ export function useFrameConnection<
   TFrameMessage extends FrameMessage,
   TWindowMessage extends WindowMessage,
 >(options: UseFrameConnectionOptions<TWindowMessage>): FrameConnection<TFrameMessage> {
-  const {onMessage, targetOrigin, name, connectTo} = options
+  const {onMessage, targetOrigin, name, connectTo, heartbeat} = options
   const instance = useSanityInstance()
+  const [status, setStatus] = useState<Status>('idle')
 
   const controller = useMemo(
     () => getOrCreateController(instance, targetOrigin),
@@ -58,9 +64,20 @@ export function useFrameConnection<
       getOrCreateChannel(instance, {
         name,
         connectTo,
+        heartbeat,
       }),
-    [instance, name, connectTo],
+    [instance, name, connectTo, heartbeat],
   )
+
+  useEffect(() => {
+    if (!channel) return
+
+    const unsubscribe = channel.onStatus((event) => {
+      setStatus(event.status)
+    })
+
+    return unsubscribe
+  }, [channel])
 
   useEffect(() => {
     if (!channel || !onMessage) return
@@ -68,7 +85,8 @@ export function useFrameConnection<
     const unsubscribers: Array<() => void> = []
 
     Object.entries(onMessage).forEach(([type, handler]) => {
-      const unsubscribe = channel.on(type, handler)
+      // type assertion, but we've already constrained onMessage to have the correct handler type
+      const unsubscribe = channel.on(type, handler as FrameMessageHandler<TWindowMessage>)
       unsubscribers.push(unsubscribe)
     })
 
@@ -107,5 +125,6 @@ export function useFrameConnection<
   return {
     connect,
     sendMessage,
+    status,
   }
 }

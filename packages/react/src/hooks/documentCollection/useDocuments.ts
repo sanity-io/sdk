@@ -5,8 +5,10 @@ import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
  * @public
+ * A live collection of {@link DocumentHandle}s, along with metadata about the collection and a function for loading more of them.
+ * @category Types
  */
-export interface DocumentCollection {
+export interface DocumentHandleCollection {
   /** Retrieve more documents matching the provided options */
   loadMore: () => void
   /** The retrieved document handles of the documents matching the provided options */
@@ -31,13 +33,19 @@ const STABLE_EMPTY = {
 /**
  * @public
  *
- * The `useDocuments` hook retrieves and provides access to a live collection of documents, optionally filtered, sorted, and matched to a given Content Lake perspective.
- * Because the returned document collection is live, the results will update in real time until the component invoking the hook is unmounted.
+ * Retrieves and provides access to a live collection of {@link DocumentHandle}s, with an optional filter and sort applied.
+ * The returned document handles are canonical — that is, they refer to the document in its current state, whether draft, published, or within a release or perspective.
+ * Because the returned document handle collection is live, the results will update in real time until the component invoking the hook is unmounted.
  *
+ * @remarks
+ * {@link DocumentHandle}s are used by many other hooks (such as {@link usePreview}, {@link useDocument}, and {@link useEditDocument})
+ * to work with documents in various ways without the entire document needing to be fetched upfront.
+ *
+ * @category Documents
  * @param options - Options for narrowing and sorting the document collection
- * @returns The collection of documents matching the provided options (if any), as well as properties describing the collection and a function to load more.
+ * @returns The collection of document handles matching the provided options (if any), as well as properties describing the collection and a function to load more.
  *
- * @example Retrieving all documents of type 'movie'
+ * @example Retrieving document handles for all documents of type 'movie'
  * ```
  * const { results, isPending } = useDocuments({ filter: '_type == "movie"' })
  *
@@ -54,7 +62,7 @@ const STABLE_EMPTY = {
  * )
  * ```
  *
- * @example Retrieving all movies released since 1980, sorted by director’s last name
+ * @example Retrieving document handles for all movies released since 1980, sorted by director’s last name
  * ```
  * const { results } = useDocuments({
  *   filter: '_type == "movie" && releaseDate >= "1980-01-01"',
@@ -79,7 +87,7 @@ const STABLE_EMPTY = {
  * )
  * ```
  */
-export function useDocuments(options: DocumentListOptions = {}): DocumentCollection {
+export function useDocuments(options: DocumentListOptions = {}): DocumentHandleCollection {
   const instance = useSanityInstance()
 
   // NOTE: useState is used because it guaranteed to return a stable reference

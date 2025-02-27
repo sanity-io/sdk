@@ -1,18 +1,9 @@
-import {useWindowConnection} from '@sanity/sdk-react/hooks'
+import {useFrameConnection} from '@sanity/sdk-react/hooks'
 import {Box, Button, Card, Label, Stack, Text, TextInput} from '@sanity/ui'
-import {ReactElement, useState} from 'react'
+import {ReactElement, useCallback, useEffect, useRef, useState} from 'react'
 
 import {PageLayout} from '../components/PageLayout'
-
-type DemoFrameMessage = {
-  type: 'FRAME_MESSAGE'
-  data: {message: string}
-}
-
-type DemoWindowMessage = {
-  type: 'WINDOW_MESSAGE'
-  data: {message: string}
-}
+import {FromIFrameMessage, ToIFrameMessage} from './types'
 
 const ParentApp = (): ReactElement => {
   const [selectedFrame, setSelectedFrame] = useState<number>(1)
@@ -20,12 +11,14 @@ const ParentApp = (): ReactElement => {
   const [receivedMessages, setReceivedMessages] = useState<Array<{from: string; message: string}>>(
     [],
   )
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  const windowConnection = useWindowConnection<DemoWindowMessage, DemoFrameMessage>({
+  const {sendMessage, connect, status} = useFrameConnection<ToIFrameMessage, FromIFrameMessage>({
     name: 'main-app',
     connectTo: 'frame',
+    targetOrigin: '*',
     onMessage: {
-      FRAME_MESSAGE: (data) => {
+      FROM_IFRAME: (data: {message: string}) => {
         setReceivedMessages((prev) => [
           ...prev,
           {from: `Frame ${selectedFrame}`, message: data.message},
@@ -34,12 +27,40 @@ const ParentApp = (): ReactElement => {
     },
   })
 
-  const sendMessage = () => {
+  useEffect(() => {
+    let cleanupIframeConnection: (() => void) | undefined
+
+    const handleIframeLoad = () => {
+      if (iframeRef.current?.contentWindow) {
+        // Call previous cleanup if it exists for some reason
+        cleanupIframeConnection?.()
+        // Store new cleanup function
+        cleanupIframeConnection = connect(iframeRef.current.contentWindow)
+      }
+    }
+
+    const iframe = iframeRef.current
+    // on a new frame, connect and return a cleanup function
+    if (iframe) {
+      iframe.addEventListener('load', handleIframeLoad)
+
+      return () => {
+        cleanupIframeConnection?.()
+        iframe.removeEventListener('load', handleIframeLoad)
+      }
+    }
+    // on unmount, cleanup the connection
+    return () => {
+      cleanupIframeConnection?.()
+    }
+  }, [connect, selectedFrame])
+
+  const sendMessageToFramedApp = useCallback(() => {
     if (message.trim()) {
-      windowConnection.sendMessage('WINDOW_MESSAGE', {message})
+      sendMessage('TO_IFRAME', {message})
       setMessage('')
     }
-  }
+  }, [message, sendMessage])
 
   const frames = [1, 2, 3]
 
@@ -86,10 +107,16 @@ const ParentApp = (): ReactElement => {
                         <TextInput
                           value={message}
                           onChange={(event) => setMessage(event.currentTarget.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                          onKeyPress={(e) => e.key === 'Enter' && sendMessageToFramedApp()}
+                          disabled={status !== 'connected'}
                         />
                       </Box>
-                      <Button text="Send" tone="primary" onClick={sendMessage} />
+                      <Button
+                        text="Send"
+                        tone="primary"
+                        onClick={sendMessageToFramedApp}
+                        disabled={status !== 'connected'}
+                      />
                     </Box>
                   </Stack>
                 </Card>
@@ -119,6 +146,7 @@ const ParentApp = (): ReactElement => {
         <Box flex={1} height="fill">
           <Card padding={3} height="fill" tone="transparent">
             <iframe
+              ref={iframeRef}
               src={`/comlink-demo/frame${selectedFrame}`}
               style={{width: '100%', height: '600px', border: 'none'}}
               title={`Frame ${selectedFrame}`}

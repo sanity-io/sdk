@@ -1,4 +1,5 @@
 {
+  "name": "sdk",
   "extends": ["../../typedoc.base.json"],
   "entryPoints": ["./src/_exports/*"],
   /**
