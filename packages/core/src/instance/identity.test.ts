@@ -1,11 +1,11 @@
 import {describe, expect, it} from 'vitest'
 
-import {getSdkIdentity} from './identity'
+import {getSdkResources} from './identity'
 
 describe('identity', () => {
   describe('getSdkIdentity', () => {
     it('creates a frozen object with expected properties', () => {
-      const identity = getSdkIdentity({
+      const identity = getSdkResources({
         projectId: 'test-project',
         dataset: 'test-dataset',
       })
@@ -20,12 +20,12 @@ describe('identity', () => {
     })
 
     it('generates unique ids for different instances', () => {
-      const identity1 = getSdkIdentity({
+      const identity1 = getSdkResources({
         projectId: 'test-project',
         dataset: 'test-dataset',
       })
 
-      const identity2 = getSdkIdentity({
+      const identity2 = getSdkResources({
         projectId: 'test-project',
         dataset: 'test-dataset',
       })
@@ -34,7 +34,7 @@ describe('identity', () => {
     })
 
     it('generates id with correct format', () => {
-      const identity = getSdkIdentity({
+      const identity = getSdkResources({
         projectId: 'test-project',
         dataset: 'test-dataset',
       })

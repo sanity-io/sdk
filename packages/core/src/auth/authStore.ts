@@ -161,9 +161,14 @@ export const authStore = createResource<AuthStoreState>({
       initialLocationHref = getDefaultLocation(),
       storageArea = getDefaultStorage(),
     } = instance.config.auth ?? {}
-    const {projectId, dataset} = instance.identity
 
-    const storageKey = `__sanity_auth_token_${projectId}_${dataset}`
+    let storageKey: string
+    if (authScope !== 'global') {
+      const {projectId, dataset} = instance.resources[0] // TODO: Ryan - this is a hack to get the projectId and dataset
+      storageKey = `__sanity_auth_token_${projectId}_${dataset}`
+    } else {
+      storageKey = `__sanity_auth_token_global`
+    }
 
     let authState: AuthState
 

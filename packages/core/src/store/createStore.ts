@@ -24,7 +24,7 @@ export function createStore<S, A extends StoreActionMap<S>>(
   actions: A,
   {name, instance}: StoreOptions,
 ): CurriedActions<S, A> {
-  const uniqueName = `${name}-${instance.identity.id}`
+  const uniqueName = `${name}-${instance.resources[0].id}` // TODO: Ryan - this is a hack to get the id of the instance
   const store = createZustandStore<S>()(devtools(() => ({...initialState}), {name: uniqueName}))
   const context = {store, instance}
   return createCurriedActions(actions, context)

@@ -11,7 +11,6 @@ const DEFAULT_API_VERSION = '2024-11-12'
  * @public
  */
 export interface ClientState {
-  defaultClient: SanityClient
   defaultGlobalClient: SanityClient
   clients: Map<string, SanityClient>
 }
@@ -20,15 +19,7 @@ export const clientStore: Resource<ClientState> = createResource({
   name: 'clientStore',
 
   getInitialState: (instance: SanityInstance) => {
-    const {identity, config} = instance
-    const defaultClient = createClient({
-      projectId: identity.projectId,
-      dataset: identity.dataset,
-      token: config?.auth?.token,
-      useCdn: false,
-      apiVersion: DEFAULT_API_VERSION,
-      ...(config?.auth?.apiHost ? {apiHost: config.auth.apiHost} : {}),
-    })
+    const {resources, config} = instance
 
     const defaultGlobalClient = createClient({
       token: config?.auth?.token,
@@ -39,11 +30,23 @@ export const clientStore: Resource<ClientState> = createResource({
     })
 
     const clients = new Map<string, SanityClient>()
-    clients.set(DEFAULT_API_VERSION, defaultClient)
+
     clients.set('global-vX', defaultGlobalClient)
 
+    resources.map((resource) => {
+      const resourceClient = createClient({
+        projectId: resource.projectId,
+        dataset: resource.dataset,
+        token: config?.auth?.token,
+        useCdn: false,
+        apiVersion: DEFAULT_API_VERSION,
+        useProjectHostname: true,
+        ...(config?.auth?.apiHost ? {apiHost: config.auth.apiHost} : {}),
+      })
+      clients.set(resource.dataset, resourceClient)
+    })
+
     return {
-      defaultClient,
       defaultGlobalClient,
       clients,
     }

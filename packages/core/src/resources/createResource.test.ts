@@ -103,7 +103,7 @@ describe('createResource', () => {
     })
 
     getOrCreateResource(instance, resource)
-    disposeResources(instance.identity)
+    disposeResources(instance.resources)
 
     const {state} = initializeResource(instance, resource)
 

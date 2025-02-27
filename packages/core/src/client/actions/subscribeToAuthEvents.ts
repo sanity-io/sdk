@@ -3,21 +3,21 @@ import {type ActionContext, createInternalAction} from '../../resources/createAc
 import {type ClientState} from '../clientStore'
 
 const receiveToken = (prev: ClientState, token: string | undefined): ClientState => {
-  const newDefaultClient = prev.defaultClient.withConfig({
-    token,
-  })
   const newGlobalClient = prev.defaultGlobalClient.withConfig({
+    ignoreBrowserTokenWarning: true,
     token,
   })
   const updatedClients = new Map(
     Array.from(prev.clients.entries()).map(([version, client]) => [
       version,
-      client.withConfig({token}),
+      client.withConfig({
+        ignoreBrowserTokenWarning: true,
+        token,
+      }),
     ]),
   )
 
   return {
-    defaultClient: newDefaultClient,
     defaultGlobalClient: newGlobalClient,
     clients: updatedClients,
   }

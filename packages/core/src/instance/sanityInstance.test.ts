@@ -20,7 +20,7 @@ describe('sanityInstance', () => {
     test('creates instance with correct configuration', () => {
       const instance = createSanityInstance(config)
 
-      expect(instance.identity).toEqual(
+      expect(instance.resources).toEqual(
         expect.objectContaining({
           projectId: 'test-project',
           dataset: 'test-dataset',

@@ -1,4 +1,10 @@
-import {type DocumentHandle, getPreviewState, type PreviewValue, resolvePreview} from '@sanity/sdk'
+import {
+  type DocumentHandle,
+  type DocumentResourceId,
+  getPreviewState,
+  type PreviewValue,
+  resolvePreview,
+} from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
@@ -9,6 +15,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @category Types
  */
 export interface UsePreviewOptions {
+  resourceId: DocumentResourceId
   document: DocumentHandle
   ref?: React.RefObject<unknown>
 }
@@ -68,12 +75,16 @@ export interface UsePreviewResults {
  * )
  * ```
  */
-export function usePreview({document: {_id, _type}, ref}: UsePreviewOptions): UsePreviewResults {
+export function usePreview({
+  resourceId,
+  document: {_id, _type},
+  ref,
+}: UsePreviewOptions): UsePreviewResults {
   const instance = useSanityInstance()
 
   const stateSource = useMemo(
-    () => getPreviewState(instance, {document: {_id, _type}}),
-    [instance, _id, _type],
+    () => getPreviewState(instance, {document: {_id, _type}, resourceId}),
+    [instance, _id, _type, resourceId],
   )
 
   // Create subscribe function for useSyncExternalStore

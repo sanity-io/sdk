@@ -107,7 +107,11 @@ export const documentStore = createResource<DocumentStoreState>({
     queued: [],
     applied: [],
     outgoing: undefined,
-    sharedListener: createSharedListener(instance),
+    sharedListener: createSharedListener(instance, {
+      apiVersion: API_VERSION,
+      projectId: instance.resources[0].projectId,
+      dataset: instance.resources[0].dataset,
+    }),
     fetchDocument: createFetchDocument(instance),
     events: new Subject(),
   }),
@@ -292,7 +296,11 @@ const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
 
     return function () {
       const client$ = new Observable<SanityClient>((observer) =>
-        getSubscribableClient(instance, {apiVersion: API_VERSION}).subscribe(observer),
+        getSubscribableClient(instance, {
+          apiVersion: API_VERSION,
+          projectId: instance.resources[0].projectId,
+          dataset: instance.resources[0].dataset,
+        }).subscribe(observer),
       )
 
       return state.observable

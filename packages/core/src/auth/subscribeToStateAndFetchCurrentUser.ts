@@ -8,8 +8,9 @@ import {type AuthState, type AuthStoreState} from './authStore'
 
 export const subscribeToStateAndFetchCurrentUser = createInternalAction(
   ({state, instance}: ActionContext<AuthStoreState>) => {
-    const {projectId, dataset} = instance.identity
     const {clientFactory, apiHost, authScope} = state.get().options
+    const {projectId, dataset} =
+      authScope === 'global' ? {projectId: '', dataset: ''} : instance.resources[0] // TODO: Ryan - this is a hack to get the projectId and dataset
 
     const currentUser$ = state.observable
       .pipe(
@@ -31,6 +32,7 @@ export const subscribeToStateAndFetchCurrentUser = createInternalAction(
             useProjectHostname: authScope === 'project',
             token,
             ignoreBrowserTokenWarning: true,
+            useCdn: false,
             ...(apiHost && {apiHost}),
           }),
         ),

@@ -3,6 +3,7 @@ import {usePreview} from '@sanity/sdk-react/hooks'
 import {Suspense, useRef} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 
+import {SANITY_TEST_STUDIO_ID} from '../App'
 import {DocumentPreviewLayout} from '../components/DocumentPreviewLayout/DocumentPreviewLayout'
 
 interface DocumentPreviewProps {
@@ -27,7 +28,7 @@ function DocumentPreviewResolved({document}: DocumentPreviewProps): React.ReactN
   const ref = useRef(null)
   const {
     results: {title, subtitle, media, status},
-  } = usePreview({document, ref})
+  } = usePreview({resourceId: SANITY_TEST_STUDIO_ID, document, ref})
 
   let statusLabel
   if (status?.lastEditedPublishedAt && status?.lastEditedDraftAt) {

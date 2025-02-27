@@ -7,7 +7,7 @@ import {authStore} from './authStore'
  * @public
  */
 export const logout = createAction(authStore, ({state, instance}) => {
-  const {projectId, dataset} = instance.identity
+  const {projectId, dataset} = instance.resources[0] // TODO: Ryan - this is a hack to get the projectId and dataset
   const {clientFactory, apiHost, authScope, providedToken, storageArea, storageKey} =
     state.get().options
 

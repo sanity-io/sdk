@@ -1,6 +1,7 @@
 import {type SyncTag} from '@sanity/client'
 
-import {createResource} from '../resources/createResource'
+import {type DocumentResourceId} from '../_exports'
+import {createResource, type Resource} from '../resources/createResource'
 import {subscribeToLiveAndSetLastLiveEventId} from './subscribeToLiveAndSetLastLiveEventId'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 
@@ -65,6 +66,7 @@ export type ValuePending<T> = {
  * @public
  */
 export interface PreviewStoreState {
+  resourceId: DocumentResourceId
   values: {[TDocumentId in string]?: ValuePending<PreviewValue>}
   documentTypes: {[TDocumentId in string]?: string}
   subscriptions: {[TDocumentId in string]?: {[TSubscriptionId in string]?: true}}
@@ -72,24 +74,27 @@ export interface PreviewStoreState {
   lastLiveEventId: string | null
 }
 
-export const previewStore = createResource<PreviewStoreState>({
-  name: 'Preview',
-  getInitialState() {
-    return {
-      documentTypes: {},
-      lastLiveEventId: null,
-      subscriptions: {},
-      syncTags: {},
-      values: {},
-    }
-  },
-  initialize() {
-    const stateSubscriptionForBatches = subscribeToStateAndFetchBatches(this)
-    const liveSubscription = subscribeToLiveAndSetLastLiveEventId(this)
+export const previewStore = (resourceId: DocumentResourceId): Resource<PreviewStoreState> => {
+  return createResource<PreviewStoreState>({
+    name: `Preview-${resourceId}`,
+    getInitialState() {
+      return {
+        resourceId,
+        documentTypes: {},
+        lastLiveEventId: null,
+        subscriptions: {},
+        syncTags: {},
+        values: {},
+      }
+    },
+    initialize() {
+      const stateSubscriptionForBatches = subscribeToStateAndFetchBatches(this)
+      const liveSubscription = subscribeToLiveAndSetLastLiveEventId(this)
 
-    return () => {
-      stateSubscriptionForBatches.unsubscribe()
-      liveSubscription.unsubscribe()
-    }
-  },
-})
+      return () => {
+        stateSubscriptionForBatches.unsubscribe()
+        liveSubscription.unsubscribe()
+      }
+    },
+  })
+}

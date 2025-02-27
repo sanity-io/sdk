@@ -24,7 +24,11 @@ export const subscribeToStateAndFetchResults = createInternalAction(
   ({state, instance}: ActionContext<DocumentListState>) => {
     return function () {
       const client$ = new Observable<SanityClient>((observer) =>
-        getSubscribableClient(instance, {apiVersion: API_VERSION}).subscribe(observer),
+        getSubscribableClient(instance, {
+          apiVersion: API_VERSION,
+          projectId: state.get().options.resourceId?.split(':')[1] ?? '',
+          dataset: state.get().options.resourceId?.split(':')[2] ?? '',
+        }).subscribe(observer),
       )
 
       const fetchInput$ = state.observable.pipe(

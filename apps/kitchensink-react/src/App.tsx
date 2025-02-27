@@ -7,6 +7,8 @@ import {AppRoutes} from './AppRoutes'
 
 const theme = buildTheme({})
 
+export const SANITY_TEST_STUDIO_ID = 'document:ppsg7ml5:test' as const
+
 export function App(): JSX.Element {
   return (
     <ThemeProvider theme={theme}>

@@ -26,7 +26,11 @@ export const subscribeToStateAndFetchBatches = createInternalAction(
   ({state, instance}: ActionContext<PreviewStoreState>) => {
     return function () {
       const client$ = new Observable<SanityClient>((observer) =>
-        getSubscribableClient(instance, {apiVersion: 'vX'}).subscribe(observer),
+        getSubscribableClient(instance, {
+          apiVersion: 'vX',
+          projectId: 'ppsg7ml5',
+          dataset: 'test',
+        }).subscribe(observer),
       )
       const schema$ = getSchemaState(instance).observable
       const documentTypes$ = state.observable.pipe(
@@ -81,8 +85,8 @@ export const subscribeToStateAndFetchBatches = createInternalAction(
           map(({ids, result, syncTags, documentTypes, schema}) => ({
             syncTags,
             values: processPreviewQuery({
-              projectId: instance.identity.projectId,
-              dataset: instance.identity.dataset,
+              projectId: instance.resources.projectId,
+              dataset: instance.resources.dataset,
               ids,
               documentTypes,
               results: result,

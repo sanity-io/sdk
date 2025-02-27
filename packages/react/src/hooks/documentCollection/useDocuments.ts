@@ -62,7 +62,7 @@ const STABLE_EMPTY = {
  * )
  * ```
  *
- * @example Retrieving document handles for all movies released since 1980, sorted by director’s last name
+ * @example Retrieving document handles for all movies released since 1980, sorted by director's last name
  * ```
  * const { results } = useDocuments({
  *   filter: '_type == "movie" && releaseDate >= "1980-01-01"',
@@ -87,7 +87,7 @@ const STABLE_EMPTY = {
  * )
  * ```
  */
-export function useDocuments(options: DocumentListOptions = {}): DocumentHandleCollection {
+export function useDocuments(options: DocumentListOptions): DocumentHandleCollection {
   const instance = useSanityInstance()
 
   // NOTE: useState is used because it guaranteed to return a stable reference
@@ -106,14 +106,17 @@ export function useDocuments(options: DocumentListOptions = {}): DocumentHandleC
   // themselves changes (in cases where devs put config inline)
   const serializedOptions = JSON.stringify(options)
   useEffect(() => {
-    ref.storeInstance?.setOptions(JSON.parse(serializedOptions))
+    // Ensure setOptions is called only if storeInstance is not null
+    if (ref.storeInstance) {
+      ref.storeInstance.setOptions(JSON.parse(serializedOptions))
+    }
   }, [ref, serializedOptions])
 
   const subscribe = useCallback(
     (onStoreChanged: () => void) => {
       // to match the lifecycle of `useSyncExternalState`, we create the store
       // instance after subscribe and mutate the ref to connect everything
-      ref.storeInstance = createDocumentListStore(instance)
+      ref.storeInstance = createDocumentListStore(instance, options.resourceId)
       ref.storeInstance.setOptions(ref.initialOptions)
       const state = ref.storeInstance.getState()
       ref.getCurrent = state.getCurrent
@@ -126,7 +129,7 @@ export function useDocuments(options: DocumentListOptions = {}): DocumentHandleC
         ref.storeInstance?.dispose()
       }
     },
-    [instance, ref],
+    [instance, ref, options.resourceId],
   )
 
   const getSnapshot = useCallback(() => {

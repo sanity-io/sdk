@@ -4,14 +4,20 @@ import {first, map, merge, Observable, partition, share, shareReplay, switchMap}
 
 import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {type SanityInstance} from '../instance/types'
+import type {ClientOptions} from '../client/actions/getClient'
 
 const API_VERSION = 'vX'
 
 export function createSharedListener(
   instance: SanityInstance,
+  options: ClientOptions,
 ): Observable<ListenEvent<SanityDocument>> {
   const client$ = new Observable<SanityClient>((observer) =>
-    getSubscribableClient(instance, {apiVersion: API_VERSION}).subscribe(observer),
+    getSubscribableClient(instance, {
+      apiVersion: API_VERSION,
+      projectId: options.projectId,
+      dataset: options.dataset,
+    }).subscribe(observer),
   )
 
   // TODO: it seems like the client.listen method is not emitting disconnected
@@ -46,7 +52,11 @@ export function createSharedListener(
 
 export function createFetchDocument(instance: SanityInstance) {
   const client$ = new Observable<SanityClient>((observer) =>
-    getSubscribableClient(instance, {apiVersion: API_VERSION}).subscribe(observer),
+    getSubscribableClient(instance, {
+      apiVersion: API_VERSION,
+      projectId: instance.resources[0].projectId,
+      dataset: instance.resources[0].dataset,
+    }).subscribe(observer),
   )
 
   return function (documentId: string): Observable<SanityDocument | null> {

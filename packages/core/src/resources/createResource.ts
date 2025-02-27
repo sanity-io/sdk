@@ -2,10 +2,13 @@ import {Observable} from 'rxjs'
 import {devtools, type DevtoolsOptions} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
-import {type SanityInstance, type SdkIdentity} from '../instance/types'
+import {type SanityInstance, type SdkResource} from '../instance/types'
 import {getEnv} from '../utils/getEnv'
 
-const resourceCache = new WeakMap<SdkIdentity, Map<string, InitializedResource<unknown>>>()
+const resourceCache = new WeakMap<
+  readonly SdkResource[],
+  Map<string, InitializedResource<unknown>>
+>()
 
 type Teardown = () => void
 
@@ -76,10 +79,14 @@ export function getOrCreateResource<TState>(
   instance: SanityInstance,
   resource: Resource<TState>,
 ): InitializedResource<TState> {
-  if (!resourceCache.has(instance.identity)) {
-    resourceCache.set(instance.identity, new Map())
+  if (!resource.name) {
+    throw new Error('Resource is not defined')
   }
-  const initializedResources = resourceCache.get(instance.identity)!
+
+  if (!resourceCache.has(instance.resources)) {
+    resourceCache.set(instance.resources, new Map())
+  }
+  const initializedResources = resourceCache.get(instance.resources)!
   const cached = initializedResources.get(resource.name)
   if (cached) return cached as InitializedResource<TState>
 
@@ -88,11 +95,11 @@ export function getOrCreateResource<TState>(
   return result
 }
 
-export function disposeResources(identity: SdkIdentity): void {
-  const resources = resourceCache.get(identity)
-  if (!resources) return
+export function disposeResources(resources: SdkResource[]): void {
+  const resourcesMap = resourceCache.get(resources)
+  if (!resourcesMap) return
 
-  for (const resource of resources.values()) {
+  for (const resource of resourcesMap.values()) {
     resource.dispose()
   }
 }

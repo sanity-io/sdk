@@ -19,7 +19,7 @@ beforeEach(() => {
 describe('createStore', () => {
   // Setup mock instance
   const mockInstance = {
-    identity: {
+    resources: {
       id: 'test-id',
     },
   } as SanityInstance

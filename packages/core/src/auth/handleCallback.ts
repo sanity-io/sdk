@@ -8,7 +8,10 @@ import {getAuthCode, getDefaultLocation} from './utils'
  * @public
  */
 export const handleCallback = createAction(authStore, ({state, instance}) => {
-  const {projectId, dataset} = instance.identity
+  const {projectId, dataset} =
+    instance.config.auth?.authScope === 'global'
+      ? {projectId: '', dataset: ''}
+      : instance.resources[0] // TODO: Ryan - this is a hack to get the projectId and dataset
   const {providedToken, callbackUrl, clientFactory, apiHost, authScope, storageArea, storageKey} =
     state.get().options
 

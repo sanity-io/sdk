@@ -9,7 +9,11 @@ import {type DocumentListState} from './documentListStore'
 export const subscribeToLiveClientAndSetLastLiveEventId = createInternalAction(
   ({state, instance}: ActionContext<DocumentListState>) => {
     const liveEventMessage$ = new Observable<SanityClient>((observer) =>
-      getSubscribableClient(instance, {apiVersion: API_VERSION}).subscribe(observer),
+      getSubscribableClient(instance, {
+        apiVersion: API_VERSION,
+        projectId: state.get().options.resourceId?.split(':')[1] ?? '',
+        dataset: state.get().options.resourceId?.split(':')[2] ?? '',
+      }).subscribe(observer),
     ).pipe(
       switchMap((client) =>
         client.live.events({includeDrafts: !!client.config().token, tag: 'sdk.document-list'}),

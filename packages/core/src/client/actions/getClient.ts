@@ -8,6 +8,8 @@ import {clientStore} from '../clientStore'
  * @public
  */
 export interface ClientOptions {
+  projectId: string
+  dataset: string
   apiVersion?: string
 }
 
@@ -17,22 +19,27 @@ export interface ClientOptions {
  * @public
  */
 export const getClient = createAction(clientStore, ({state}) => {
-  return (options: ClientOptions = {}): SanityClient => {
-    const {apiVersion} = options
+  return (options: ClientOptions): SanityClient => {
+    const {apiVersion, projectId, dataset} = options
 
     if (!apiVersion) {
       throw new Error('Missing required `apiVersion` option')
     }
 
-    const cached = state.get().clients.get(apiVersion)
+    const key = `${projectId}-${dataset}-${apiVersion}`
+    const cached = state.get().clients.get(key)
     if (cached) {
       return cached
     }
 
     // Create new client with specified API version
-    const client = state.get().defaultClient.withConfig(options)
+    const client = state.get().defaultGlobalClient.withConfig({
+      ...options,
+      useProjectHostname: true,
+      useCdn: false,
+    })
     const newMap = new Map(state.get().clients)
-    newMap.set(apiVersion, client)
+    newMap.set(key, client)
 
     // Update state with new client
     state.set('createClient', {

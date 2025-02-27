@@ -11,7 +11,7 @@ describe('SanityProvider', () => {
   it('provides instance to nested components', () => {
     const TestComponent = () => {
       const instance = useSanityInstance()
-      return <div data-testid="test">{instance.identity.projectId}</div>
+      return <div data-testid="test">{instance.resources.projectId}</div>
     }
 
     const {getByTestId} = render(
