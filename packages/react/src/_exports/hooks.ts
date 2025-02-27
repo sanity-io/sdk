@@ -36,5 +36,6 @@ export {
 export {useProject} from '../hooks/projects/useProject'
 export {useProjects} from '../hooks/projects/useProjects'
 export {useUsers, type UseUsersParams, type UseUsersResult} from '../hooks/users/useUsers'
+export {useProjection} from '../hooks/projection/useProjection'
 export {type CurrentUser, type DocumentHandle} from '@sanity/sdk'
 export {type SanityDocument} from '@sanity/types'

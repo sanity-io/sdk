@@ -1,5 +1,6 @@
 import {type Schema} from '@sanity/types'
 
+import {hashString} from '../common/util'
 import {getDraftId, getPublishedId} from '../utils/ids'
 import {getProjectionForSchemaType} from './getProjectionForSchemaType'
 import {
@@ -8,7 +9,7 @@ import {
   type PreviewValue,
   type ValuePending,
 } from './previewStore'
-import {hashString, STABLE_EMPTY_PREVIEW, STABLE_ERROR_PREVIEW} from './util'
+import {STABLE_EMPTY_PREVIEW, STABLE_ERROR_PREVIEW} from './util'
 
 interface ProcessPreviewQueryOptions {
   projectId: string

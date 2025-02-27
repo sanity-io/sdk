@@ -6,8 +6,8 @@ import {getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState, type ResourceState} from '../resources/createResource'
 import {type StateSource} from '../resources/createStateSourceAction'
-import {type PreviewStoreState} from './previewStore'
-import {subscribeToLiveAndSetLastLiveEventId} from './subscribeToLiveAndSetLastLiveEventId'
+import {createLiveEventSubscriber} from './createLiveEventSubscriber'
+import {type LiveEventAwareState} from './types'
 
 vi.mock('../client/clientStore.ts', () => ({getClientState: vi.fn()}))
 
@@ -16,16 +16,14 @@ vi.mock('../resources/createResource', async (importOriginal) => {
   return {...original, getOrCreateResource: vi.fn()}
 })
 
-describe('subscribeToLiveAndSetLastLiveEventId', () => {
+describe('createLiveEventSubscriber', () => {
+  const TEST_TAG = 'test-tag'
   const instance = createSanityInstance({projectId: 'exampleProject', dataset: 'exampleDataset'})
-  const initialState: PreviewStoreState = {
-    documentTypes: {},
+  const initialState: LiveEventAwareState = {
     lastLiveEventId: null,
-    subscriptions: {},
     syncTags: {},
-    values: {},
   }
-  let state: ResourceState<PreviewStoreState>
+  let state: ResourceState<LiveEventAwareState>
 
   beforeEach(() => {
     state = createResourceState(initialState)
@@ -60,13 +58,15 @@ describe('subscribeToLiveAndSetLastLiveEventId', () => {
       },
     })
 
-    // Subscribe to live events
+    // Create and subscribe to live events
+    const subscribeToLiveAndSetLastLiveEventId =
+      createLiveEventSubscriber<LiveEventAwareState>(TEST_TAG)
     const subscription = subscribeToLiveAndSetLastLiveEventId({instance, state})
 
     // Verify the client was configured correctly
     expect(mockClient.live.events).toHaveBeenCalledWith({
       includeDrafts: false,
-      tag: expect.any(String),
+      tag: TEST_TAG,
     })
 
     // Verify the state was updated with the new event ID
@@ -102,6 +102,9 @@ describe('subscribeToLiveAndSetLastLiveEventId', () => {
       observable: clientSubject as Observable<SanityClient>,
     } as StateSource<SanityClient>)
 
+    // Create and subscribe to live events
+    const subscribeToLiveAndSetLastLiveEventId =
+      createLiveEventSubscriber<LiveEventAwareState>(TEST_TAG)
     const liveSubscription = subscribeToLiveAndSetLastLiveEventId({instance, state})
     clientSubject.next(mockClient)
 

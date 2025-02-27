@@ -3,9 +3,9 @@ import {describe, expect, it, type Mock, vi} from 'vitest'
 
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState} from '../resources/createResource'
-import {previewStore} from './previewStore'
+import {projectionStore} from './projectionStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
-import {PREVIEW_TAG} from './util'
+import {PROJECTION_TAG} from './util'
 
 // Mock the module with a factory function
 vi.mock('../common/createLiveEventSubscriber', () => {
@@ -19,17 +19,17 @@ vi.mock('./subscribeToStateAndFetchBatches', () => ({
   subscribeToStateAndFetchBatches: vi.fn(),
 }))
 
-describe('previewStore', () => {
+describe('projectionStore', () => {
   it('is a resource that initializes with state and subscriptions', async () => {
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    const initialState = previewStore.getInitialState(instance)
+    const initialState = projectionStore.getInitialState(instance)
 
     expect(initialState).toEqual({
-      documentTypes: {},
-      lastLiveEventId: null,
+      values: {},
+      documentProjections: {},
       subscriptions: {},
       syncTags: {},
-      values: {},
+      lastLiveEventId: null,
     })
 
     const liveUnsubscribe = vi.fn()
@@ -38,15 +38,17 @@ describe('previewStore', () => {
     const {createLiveEventSubscriber} = vi.mocked(
       await import('../common/createLiveEventSubscriber'),
     )
-    const mockLiveSubscriber = vi.mocked(createLiveEventSubscriber(PREVIEW_TAG)).mockReturnValue({
-      unsubscribe: liveUnsubscribe,
-    } as unknown as Subscription)
+    const mockLiveSubscriber = vi
+      .mocked(createLiveEventSubscriber(PROJECTION_TAG))
+      .mockReturnValue({
+        unsubscribe: liveUnsubscribe,
+      } as unknown as Subscription)
 
     ;(subscribeToStateAndFetchBatches as Mock).mockImplementation(() => ({
       unsubscribe: stateUnsubscribe,
     }))
 
-    const dispose = previewStore.initialize!.call(
+    const dispose = projectionStore.initialize!.call(
       {
         instance,
         state: createResourceState(initialState),
@@ -55,7 +57,7 @@ describe('previewStore', () => {
     )
 
     // Verify the factory was called with the correct tag
-    expect(createLiveEventSubscriber).toHaveBeenCalledWith(PREVIEW_TAG)
+    expect(createLiveEventSubscriber).toHaveBeenCalledWith(PROJECTION_TAG)
 
     // Verify the subscriber was called with the correct context
     expect(mockLiveSubscriber).toHaveBeenCalledWith({
