@@ -13,8 +13,13 @@ import {type LoginLayoutProps} from './LoginLayout'
 // Only import bridge if we're in an iframe. This assumes that the app is
 // running within SanityOS if it is in an iframe.
 if (isInIframe()) {
+  const parsedUrl = new URL(window.location.href)
+  const mode = new URLSearchParams(parsedUrl.hash.slice(1)).get('mode')
   const script = document.createElement('script')
-  script.src = 'https://core.sanity-cdn.com/bridge.js'
+  script.src =
+    mode === 'core-ui--staging'
+      ? 'https://core.sanity-cdn.work/bridge.js'
+      : 'https://core.sanity-cdn.com/bridge.js'
   script.type = 'module'
   script.async = true
   document.head.appendChild(script)
