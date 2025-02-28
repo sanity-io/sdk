@@ -24,14 +24,16 @@ describe('subscribeToLiveClientAndSetLastLiveEventId', () => {
     config: vi.fn().mockReturnValue({}),
     live: {events: mockClientLiveEvents},
   }
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [{projectId: 'p', dataset: 'd'}],
+  })
   let state: ResourceState<DocumentListState>
 
   beforeEach(() => {
     vi.mocked(getSubscribableClient).mockReturnValue(of(mockClient as unknown as SanityClient))
     state = createResourceState<DocumentListState>({
       limit: 25,
-      options: {perspective: 'previewDrafts'},
+      options: {resourceId: 'document:p:d', perspective: 'previewDrafts'},
       results: [],
       syncTags: [],
       isPending: false,

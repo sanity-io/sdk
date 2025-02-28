@@ -27,7 +27,9 @@ describe('subscribeToStateAndFetchResults', () => {
       live: {events: vi.fn()},
     },
   }
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [{projectId: 'p', dataset: 'd'}],
+  })
   let state: ResourceState<DocumentListState>
 
   beforeEach(() => {
@@ -35,7 +37,7 @@ describe('subscribeToStateAndFetchResults', () => {
     state = createResourceState<DocumentListState>(
       {
         limit: 25,
-        options: {perspective: 'previewDrafts'},
+        options: {resourceId: 'document:p:d', perspective: 'previewDrafts'},
         results: [],
         syncTags: [],
         isPending: false,

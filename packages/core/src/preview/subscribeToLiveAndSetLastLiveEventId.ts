@@ -8,12 +8,13 @@ import {PREVIEW_TAG} from './util'
 
 export const subscribeToLiveAndSetLastLiveEventId = createInternalAction(
   ({instance, state}: ActionContext<PreviewStoreState>) => {
-    console.log('subscribeToLiveAndSetLastLiveEventId', state.get())
+    const projectId = state.get().resourceId?.split(':')[1]
+    const dataset = state.get().resourceId?.split(':')[2]
     const client$ = new Observable<SanityClient>((observer) =>
       getSubscribableClient(instance, {
         apiVersion: 'vX',
-        projectId: 'ppsg7ml5',
-        dataset: 'test',
+        projectId: projectId || '',
+        dataset: dataset || '',
       }).subscribe(observer),
     )
     const syncTags$ = state.observable.pipe(

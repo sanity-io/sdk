@@ -1,6 +1,6 @@
 import {type SyncTag} from '@sanity/client'
 
-import {type DocumentResourceId} from '../_exports'
+import {type DocumentResourceId} from '../documentList/documentListStore'
 import {createResource, type Resource} from '../resources/createResource'
 import {subscribeToLiveAndSetLastLiveEventId} from './subscribeToLiveAndSetLastLiveEventId'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'

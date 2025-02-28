@@ -45,7 +45,7 @@ const mockDocument: DocumentHandle = {
 
 function TestComponent({document}: {document: DocumentHandle}) {
   const ref = useRef(null)
-  const {results, isPending} = usePreview({document, ref})
+  const {results, isPending} = usePreview({document, ref, resourceId: 'document:p:d'})
 
   return (
     <div ref={ref}>

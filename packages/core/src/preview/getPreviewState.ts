@@ -3,10 +3,14 @@ import {omit} from 'lodash-es'
 import {type DocumentHandle, type DocumentResourceId} from '../documentList/documentListStore'
 import {type SanityInstance} from '../instance/types'
 import {createAction} from '../resources/createAction'
-import {createStateSourceAction} from '../resources/createStateSourceAction'
-import {type StateSource, type ValuePending} from '../resources/types'
+import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
 import {getPublishedId, insecureRandomId} from '../utils/ids'
-import {previewStore, type PreviewStoreState, type PreviewValue} from './previewStore'
+import {
+  previewStore,
+  type PreviewStoreState,
+  type PreviewValue,
+  type ValuePending,
+} from './previewStore'
 import {STABLE_EMPTY_PREVIEW} from './util'
 
 /**
@@ -23,18 +27,19 @@ export interface GetPreviewStateOptions {
 export const getPreviewState = (
   instance: SanityInstance,
   {document, resourceId}: GetPreviewStateOptions,
-): ReturnType<typeof createStateSourceAction> => {
+): StateSource<ValuePending<PreviewValue>> => {
   const _previewStore = previewStore(resourceId)
+  const _getPreviewState = createStateSourceAction(
+    _previewStore,
+    (state, {documentId}: {documentId: string}) => state.values[documentId] ?? STABLE_EMPTY_PREVIEW,
+  )
   return createAction(_previewStore, ({state}) => {
     return function ({
       document: _document,
-    }: GetPreviewStateOptions): ReturnType<typeof createStateSourceAction> {
+    }: GetPreviewStateOptions): StateSource<ValuePending<PreviewValue>> {
       const {_id, _type: documentType} = document
       const documentId = getPublishedId(_id)
-      const previewState = createStateSourceAction(
-        _previewStore,
-        (_state) => _state.values[documentId] ?? STABLE_EMPTY_PREVIEW,
-      )
+      const previewState = _getPreviewState(this, {documentId: _id})
 
       return {
         ...previewState,

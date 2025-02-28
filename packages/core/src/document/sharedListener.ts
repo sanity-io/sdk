@@ -2,9 +2,9 @@ import {type ListenEvent, type SanityClient, type SanityDocument} from '@sanity/
 import {createDocumentLoaderFromClient} from '@sanity/mutate/_unstable_store'
 import {first, map, merge, Observable, partition, share, shareReplay, switchMap} from 'rxjs'
 
+import {type ClientOptions} from '../client/actions/getClient'
 import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {type SanityInstance} from '../instance/types'
-import type {ClientOptions} from '../client/actions/getClient'
 
 const API_VERSION = 'vX'
 
@@ -54,7 +54,7 @@ export function createFetchDocument(instance: SanityInstance) {
   const client$ = new Observable<SanityClient>((observer) =>
     getSubscribableClient(instance, {
       apiVersion: API_VERSION,
-      projectId: instance.resources[0].projectId,
+      projectId: instance.resources[0].projectId, // TODO: support multiple resources
       dataset: instance.resources[0].dataset,
     }).subscribe(observer),
   )

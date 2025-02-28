@@ -126,9 +126,11 @@ export function usePreview({
   // Create getSnapshot function to return current state
   const getSnapshot = useCallback(() => {
     const currentState = stateSource.getCurrent()
-    if (currentState.results === null) throw resolvePreview(instance, {document: {_id, _type}})
+    if (currentState.results === null) {
+      throw resolvePreview(instance, {document: {_id, _type}, resourceId})
+    }
     return currentState as UsePreviewResults
-  }, [_id, _type, instance, stateSource])
+  }, [_id, _type, instance, resourceId, stateSource])
 
   return useSyncExternalStore(subscribe, getSnapshot)
 }

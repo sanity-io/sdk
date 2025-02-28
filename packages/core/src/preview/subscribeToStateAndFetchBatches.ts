@@ -25,11 +25,13 @@ const BATCH_DEBOUNCE_TIME = 50
 export const subscribeToStateAndFetchBatches = createInternalAction(
   ({state, instance}: ActionContext<PreviewStoreState>) => {
     return function () {
+      const projectId = state.get().resourceId?.split(':')[1]
+      const dataset = state.get().resourceId?.split(':')[2]
       const client$ = new Observable<SanityClient>((observer) =>
         getSubscribableClient(instance, {
           apiVersion: 'vX',
-          projectId: 'ppsg7ml5',
-          dataset: 'test',
+          projectId: projectId || '',
+          dataset: dataset || '',
         }).subscribe(observer),
       )
       const schema$ = getSchemaState(instance).observable
@@ -86,8 +88,8 @@ export const subscribeToStateAndFetchBatches = createInternalAction(
           map(({ids, result, syncTags, documentTypes, schema}) => ({
             syncTags,
             values: processPreviewQuery({
-              projectId: instance.resources.projectId,
-              dataset: instance.resources.dataset,
+              projectId: projectId || '',
+              dataset: dataset || '',
               ids,
               documentTypes,
               results: result,
