@@ -6,6 +6,7 @@ const Configuration: UserConfig = {
     'type-enum': [
       RuleConfigSeverity.Error,
       'always',
+      // Should match `.github/workflows/validate-pr-title.yml`
       [
         'build',
         'chore',
