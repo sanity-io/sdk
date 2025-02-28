@@ -15,11 +15,13 @@
   "dependencies": {
     "@paramour/css": "1.0.0-rc.2",
     "@sanity/icons": "^3.5.2",
+    "@sanity/mutate": "^0.12.1",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
     "@sanity/types": "^3.67.1",
     "@sanity/ui": "^2.8.19",
     "inter-ui": "^4.1.0",
+    "json-edit-react": "^1.23.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-error-boundary": "^4.1.2",
