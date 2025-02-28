@@ -1,4 +1,4 @@
-import {distinctUntilChanged, filter, interval, map, switchMap} from 'rxjs'
+import {distinctUntilChanged, filter, interval, map, switchMap, takeWhile} from 'rxjs'
 
 import {type ActionContext, createInternalAction} from '../resources/createAction'
 import {DEFAULT_API_VERSION} from './authConstants'
@@ -18,8 +18,10 @@ export const refreshStampedToken = createInternalAction(
         (authState): authState is Extract<AuthState, {type: AuthStateType.LOGGED_IN}> =>
           authState.type === AuthStateType.LOGGED_IN,
       ),
+      distinctUntilChanged(),
       switchMap((authState) =>
-        interval(10 * 60 * 1000).pipe(
+        interval(3 * 1000).pipe(
+          takeWhile(() => state.get().authState.type === AuthStateType.LOGGED_IN),
           map(() => authState.token),
           distinctUntilChanged(),
           map((token) =>
