@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.0-alpha.13](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.12...sdk-react-v0.0.0-alpha.13) (2025-02-28)
+
+
+### Features
+
+* add useUsers hook ([#239](https://github.com/sanity-io/sdk/issues/239)) ([b89bcf0](https://github.com/sanity-io/sdk/commit/b89bcf00bc4a849409ae80f45b1917cb1e51c66e))
+
+
+### Bug Fixes
+
+* **react:** update bridge script import for AuthBoundary ([#234](https://github.com/sanity-io/sdk/issues/234)) ([fe69106](https://github.com/sanity-io/sdk/commit/fe69106d35f5e1dee9f901ec21424042d7f9dc18))
+
 ## [0.0.0-alpha.12](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.11...sdk-react-v0.0.0-alpha.12) (2025-02-28)
 
 

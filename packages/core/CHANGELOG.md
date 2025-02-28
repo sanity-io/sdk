@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.12](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.11...sdk-v0.0.0-alpha.12) (2025-02-28)
+
+
+### Features
+
+* add useUsers hook ([#239](https://github.com/sanity-io/sdk/issues/239)) ([b89bcf0](https://github.com/sanity-io/sdk/commit/b89bcf00bc4a849409ae80f45b1917cb1e51c66e))
+
 ## [0.0.0-alpha.11](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.10...sdk-v0.0.0-alpha.11) (2025-02-28)
 
 
