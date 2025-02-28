@@ -28,35 +28,20 @@ describe('releaseNode', () => {
     vi.clearAllMocks()
   })
 
-  it('should decrement refCount when node is released', () => {
-    // Create a node
-    getOrCreateNode(instance, nodeConfig)
-
-    // Get store state
+  it('should stop and remove node when released', () => {
     const store = getOrCreateResource(instance, comlinkNodeStore)
-    const nodeEntry = store.state.get().nodes.get('test-node')
-
-    // Initial refCount should be 1
-    expect(nodeEntry?.refCount).toBe(1)
-
-    // Release the node
-    releaseNode(instance, 'test-node')
-
-    // Check refCount is decremented
-    const updatedEntry = store.state.get().nodes.get('test-node')
-    expect(updatedEntry?.refCount).toBe(0)
-  })
-
-  it('should stop the node when refCount reaches 0', () => {
     // Create a node
     const node = getOrCreateNode(instance, nodeConfig)
     const stopSpy = vi.spyOn(node, 'stop')
 
+    expect(store.state.get().nodes.has('test-node')).toBe(true)
+
     // Release the node
     releaseNode(instance, 'test-node')
 
-    // Verify node was stopped
+    // Check node is removed
     expect(stopSpy).toHaveBeenCalled()
+    expect(store.state.get().nodes.has('test-node')).toBe(false)
   })
 
   it('should not stop the node if refCount is still above 0', () => {
@@ -88,8 +73,7 @@ describe('releaseNode', () => {
 
     // Verify refCount doesn't go below 0
     const store = getOrCreateResource(instance, comlinkNodeStore)
-    const nodeEntry = store.state.get().nodes.get('test-node')
-    expect(nodeEntry?.refCount).toBe(0)
+    expect(store.state.get().nodes.has('test-node')).toBe(false)
   })
 
   it('should handle releasing non-existent nodes', () => {
@@ -127,6 +111,6 @@ describe('releaseNode', () => {
     expect(stopSpy).toHaveBeenCalled()
 
     nodeEntry = store.state.get().nodes.get('test-node')
-    expect(nodeEntry?.refCount).toBe(0)
+    expect(store.state.get().nodes.has('test-node')).toBe(false)
   })
 })

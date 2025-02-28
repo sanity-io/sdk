@@ -80,7 +80,9 @@ export {type ActionsResult, applyActions, type ApplyActionsOptions} from '../doc
 export {
   getDocumentState,
   getDocumentSyncStatus,
+  getPermissionsState,
   resolveDocument,
+  resolvePermissions,
   subscribeDocumentEvents,
 } from '../document/documentStore'
 export {
@@ -103,3 +105,4 @@ export {
   jsonMatch,
   type JsonMatchPath,
 } from '../document/patchOperations'
+export {type PermissionDeniedReason, type PermissionsResult} from '../document/permissions'

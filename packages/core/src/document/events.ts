@@ -118,7 +118,7 @@ export function getDocumentEvents(outgoing: OutgoingTransaction): DocumentEvent[
     outgoing.actions.reduce(
       (acc, {type, documentId}) => {
         const ids = acc[type] || new Set()
-        ids.add(documentId)
+        if (documentId) ids.add(documentId)
         acc[type] = ids
         return acc
       },

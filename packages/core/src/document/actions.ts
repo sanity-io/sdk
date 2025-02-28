@@ -4,7 +4,6 @@ import {type PatchMutation, type PatchOperations, type SanityDocumentLike} from 
 
 import {getPublishedId} from '../utils/ids'
 import {type DocumentHandle, type DocumentTypeHandle} from './patchOperations'
-import {getId} from './processMutations'
 
 const isSanityMutatePatch = (value: unknown): value is SanityMutatePatchMutation => {
   if (typeof value !== 'object' || !value) return false
@@ -17,7 +16,7 @@ const isSanityMutatePatch = (value: unknown): value is SanityMutatePatchMutation
 /** @beta */
 export interface CreateDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.create'
-  documentId: string
+  documentId?: string
   documentType: TDocument['_type']
 }
 
@@ -33,7 +32,7 @@ export interface DeleteDocumentAction<_TDocument extends SanityDocumentLike = Sa
 export interface EditDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.edit'
   documentId: string
-  patches: PatchOperations[]
+  patches?: PatchOperations[]
 }
 
 /** @beta */
@@ -71,7 +70,7 @@ export function createDocument<TDocument extends SanityDocumentLike>(
 ): CreateDocumentAction<TDocument> {
   return {
     type: 'document.create',
-    documentId: getId(doc._id) ?? getId(),
+    ...(doc._id && {documentId: doc._id}),
     documentType: doc._type,
   }
 }
@@ -109,7 +108,7 @@ export function editDocument<TDocument extends SanityDocumentLike>(
 /** @beta */
 export function editDocument<TDocument extends SanityDocumentLike>(
   doc: string | DocumentHandle<TDocument>,
-  patches: PatchOperations | PatchOperations[],
+  patches?: PatchOperations | PatchOperations[],
 ): EditDocumentAction<TDocument>
 /** @beta */
 export function editDocument<TDocument extends SanityDocumentLike>(
@@ -117,12 +116,11 @@ export function editDocument<TDocument extends SanityDocumentLike>(
   patches?: PatchOperations | PatchOperations[],
 ): EditDocumentAction<TDocument> {
   if (isSanityMutatePatch(doc)) return convertSanityMutatePatch(doc)
-  if (!patches) throw new Error(`No patches were passed into \`editDocument\``)
 
   return {
     type: 'document.edit',
     documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
-    patches: Array.isArray(patches) ? patches : [patches],
+    ...(patches && {patches: Array.isArray(patches) ? patches : [patches]}),
   }
 }
 

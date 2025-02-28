@@ -1,6 +1,7 @@
 import {type Action, type ListenEvent, SanityClient} from '@sanity/client'
 import {getPublishedId} from '@sanity/client/csm'
 import {type SanityDocument} from '@sanity/types'
+import {type ExprNode} from 'groq-js'
 import {
   catchError,
   concatMap,
@@ -30,24 +31,25 @@ import {type SanityInstance} from '../instance/types'
 import {type ActionContext, createAction, createInternalAction} from '../resources/createAction'
 import {createResource} from '../resources/createResource'
 import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
-import {getDraftId, insecureRandomId} from '../utils/ids'
-import {DOCUMENT_STATE_CLEAR_DELAY, INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
+import {getDraftId} from '../utils/ids'
+import {type DocumentAction} from './actions'
+import {INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
 import {type DocumentEvent, getDocumentEvents} from './events'
 import {listen, OutOfSyncError} from './listen'
 import {type DocumentHandle, type JsonMatch, jsonMatch, type JsonMatchPath} from './patchOperations'
+import {calculatePermissions, createGrantsLookup, type DatasetAcl, type Grant} from './permissions'
 import {ActionError} from './processActions'
 import {
-  addSubscriptionIdToDocument,
   type AppliedTransaction,
   applyFirstQueuedTransaction,
   applyRemoteDocument,
   cleanupOutgoingTransaction,
+  getDocumentIdsFromActions,
+  manageSubscriberIds,
   type OutgoingTransaction,
   type QueuedTransaction,
   removeQueuedTransaction,
-  removeSubscriptionIdFromDocument,
   revertOutgoingTransaction,
-  type SyncTransactionState,
   transitionAppliedTransactionsToOutgoing,
   type UnverifiedDocumentRevision,
 } from './reducers'
@@ -58,6 +60,7 @@ export interface DocumentStoreState {
   queued: QueuedTransaction[]
   applied: AppliedTransaction[]
   outgoing?: OutgoingTransaction
+  grants?: Record<Grant, ExprNode>
   error?: unknown
   sharedListener: Observable<ListenEvent<SanityDocument>>
   fetchDocument: (documentId: string) => Observable<SanityDocument | null>
@@ -106,7 +109,6 @@ export const documentStore = createResource<DocumentStoreState>({
     // these can be emptied on refetch
     queued: [],
     applied: [],
-    outgoing: undefined,
     sharedListener: createSharedListener(instance, {
       apiVersion: API_VERSION,
       projectId: instance.resources[0].projectId,
@@ -119,45 +121,16 @@ export const documentStore = createResource<DocumentStoreState>({
     const queuedTransactionSubscription = subscribeToQueuedAndApplyNextTransaction(this)
     const subscriptionsSubscription = subscribeToSubscriptionsAndListenToDocuments(this)
     const appliedSubscription = subscribeToAppliedAndSubmitNextTransaction(this)
+    const clientSubscription = subscribeToClientAndFetchDatasetAcl(this)
 
     return () => {
       queuedTransactionSubscription.unsubscribe()
       subscriptionsSubscription.unsubscribe()
       appliedSubscription.unsubscribe()
+      clientSubscription.unsubscribe()
     }
   },
 })
-
-function addPairSubscriptionIds(
-  {state}: ActionContext<DocumentStoreState>,
-  doc: string | DocumentHandle,
-  _path?: string,
-): () => void {
-  const documentId = typeof doc === 'string' ? doc : doc._id
-  const subscriptionId = insecureRandomId()
-  state.set('addSubscribers', (prev) =>
-    // NOTE: the order of document IDs in this array somewhat matters here as it
-    // determines the order `applyRemoteDocument` gets calls. because we prefer
-    // the draft versions over the published, that should be first in this array
-    // otherwise it may cause a the published document to appear for one tick
-    // when the correct behavior is to prefer the
-    [getPublishedId(documentId), getDraftId(documentId)].reduce(
-      (acc, id) => addSubscriptionIdToDocument(acc, id, subscriptionId),
-      prev as SyncTransactionState,
-    ),
-  )
-
-  return () => {
-    setTimeout(() => {
-      state.set('removeSubscribers', (prev) =>
-        [getDraftId(documentId), getPublishedId(documentId)].reduce(
-          (acc, id) => removeSubscriptionIdFromDocument(acc, id, subscriptionId),
-          prev as SyncTransactionState,
-        ),
-      )
-    }, DOCUMENT_STATE_CLEAR_DELAY)
-  }
-}
 
 /** @beta */
 export function getDocumentState<
@@ -186,40 +159,21 @@ export function getDocumentState(
   return _getDocumentState(...args)
 }
 const _getDocumentState = createStateSourceAction(documentStore, {
-  selector: ({error, documentStates: documents}, doc, path?: string) => {
+  selector: ({error, documentStates}, doc: string | DocumentHandle, path?: string) => {
     const documentId = typeof doc === 'string' ? doc : doc._id
     if (error) throw error
     const draftId = getDraftId(documentId)
     const publishedId = getPublishedId(documentId)
-    const draft = documents[draftId]?.local
-    const published = documents[publishedId]?.local
+    const draft = documentStates[draftId]?.local
+    const published = documentStates[publishedId]?.local
 
     const document = draft ?? published
     if (document === undefined) return undefined
     if (path) return jsonMatch(document, path).at(0)?.value
     return document
   },
-  onSubscribe: addPairSubscriptionIds,
-})
-
-/** @beta */
-export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
-  selector: (
-    {error, documentStates: documents, outgoing, applied, queued},
-    doc: string | DocumentHandle,
-  ) => {
-    const documentId = typeof doc === 'string' ? doc : doc._id
-    if (error) throw error
-    const draftId = getDraftId(documentId)
-    const publishedId = getPublishedId(documentId)
-
-    const draft = documents[draftId]
-    const published = documents[publishedId]
-
-    if (draft === undefined || published === undefined) return undefined
-    return !queued.length && !applied.length && !outgoing
-  },
-  onSubscribe: addPairSubscriptionIds,
+  onSubscribe: ({state}, doc: string | DocumentHandle) =>
+    manageSubscriberIds(state, typeof doc === 'string' ? doc : doc._id),
 })
 
 /** @beta */
@@ -243,6 +197,42 @@ const _resolveDocument = createAction(documentStore, () => {
     const documentId = typeof doc === 'string' ? doc : doc._id
     return firstValueFrom(
       getDocumentState(this, documentId).observable.pipe(filter((i) => i !== undefined)),
+    )
+  }
+})
+
+/** @beta */
+export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
+  selector: (
+    {error, documentStates: documents, outgoing, applied, queued},
+    doc: string | DocumentHandle,
+  ) => {
+    const documentId = typeof doc === 'string' ? doc : doc._id
+    if (error) throw error
+    const draftId = getDraftId(documentId)
+    const publishedId = getPublishedId(documentId)
+
+    const draft = documents[draftId]
+    const published = documents[publishedId]
+
+    if (draft === undefined || published === undefined) return undefined
+    return !queued.length && !applied.length && !outgoing
+  },
+  onSubscribe: ({state}, doc: string | DocumentHandle) =>
+    manageSubscriberIds(state, typeof doc === 'string' ? doc : doc._id),
+})
+
+/** @beta */
+export const getPermissionsState = createStateSourceAction(documentStore, {
+  selector: calculatePermissions,
+  onSubscribe: ({state}, actions) => manageSubscriberIds(state, getDocumentIdsFromActions(actions)),
+})
+
+/** @beta */
+export const resolvePermissions = createAction(documentStore, () => {
+  return function (actions: DocumentAction | DocumentAction[]) {
+    return firstValueFrom(
+      getPermissionsState(this, actions).observable.pipe(filter((i) => i !== undefined)),
     )
   }
 })
@@ -355,6 +345,7 @@ const subscribeToSubscriptionsAndListenToDocuments = createInternalAction(
     return function () {
       return state.observable
         .pipe(
+          filter((s) => !!s.grants),
           map((s) => Object.keys(s.documentStates)),
           distinctUntilChanged((curr, next) => {
             if (curr.length !== next.length) return false
@@ -410,6 +401,33 @@ const subscribeToSubscriptionsAndListenToDocuments = createInternalAction(
           ),
         )
         .subscribe({error: (error) => state.set('setError', {error})})
+    }
+  },
+)
+
+const subscribeToClientAndFetchDatasetAcl = createInternalAction(
+  ({instance, state}: ActionContext<DocumentStoreState>) => {
+    const {projectId, dataset} = instance.identity
+    const client$ = new Observable<SanityClient>((observer) =>
+      getSubscribableClient(instance, {apiVersion: API_VERSION}).subscribe(observer),
+    )
+
+    return function () {
+      return client$
+        .pipe(
+          switchMap((client) =>
+            client.observable.request<DatasetAcl>({
+              uri: `/projects/${projectId}/datasets/${dataset}/acl`,
+              // TODO: audit tags
+              tag: 'acl.get',
+              withCredentials: true,
+            }),
+          ),
+          tap((datasetAcl) => state.set('setGrants', {grants: createGrantsLookup(datasetAcl)})),
+        )
+        .subscribe({
+          error: (error) => state.set('setError', {error}),
+        })
     }
   },
 )

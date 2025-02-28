@@ -77,6 +77,7 @@ export const subscribeToStateAndFetchBatches = createInternalAction(
               .fetch<PreviewQueryResult[]>(query, params, {
                 filterResponse: false,
                 returnQuery: false,
+                perspective: 'raw',
                 tag: PREVIEW_TAG,
                 lastLiveEventId,
               })

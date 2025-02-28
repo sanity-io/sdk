@@ -2,8 +2,10 @@ import {getPublishedId} from '@sanity/client/csm'
 import {type Mutation, type PatchOperations, type SanityDocumentLike} from '@sanity/types'
 import {omit} from 'lodash-es'
 
-import {getDraftId} from '../utils/ids'
+import {type ResourceState} from '../resources/createResource'
+import {getDraftId, insecureRandomId} from '../utils/ids'
 import {type DocumentAction} from './actions'
+import {DOCUMENT_STATE_CLEAR_DELAY} from './documentConstants'
 import {type DocumentState, type DocumentStoreState} from './documentStore'
 import {type RemoteDocument} from './listen'
 import {ActionError, processActions} from './processActions'
@@ -13,7 +15,7 @@ const EMPTY_REVISIONS: NonNullable<Required<DocumentState['unverifiedRevisions']
 
 export type SyncTransactionState = Pick<
   DocumentStoreState,
-  'queued' | 'applied' | 'documentStates' | 'outgoing'
+  'queued' | 'applied' | 'documentStates' | 'outgoing' | 'grants'
 >
 
 type ActionMap = {
@@ -141,11 +143,7 @@ export function queueTransaction(
   transaction: QueuedTransaction,
 ): SyncTransactionState {
   const {transactionId, actions} = transaction
-  const ids = Array.from(
-    new Set(actions.flatMap((i) => [getDraftId(i.documentId), getPublishedId(i.documentId)])),
-  )
-
-  const prevWithSubscriptionIds = ids.reduce(
+  const prevWithSubscriptionIds = getDocumentIdsFromActions(actions).reduce(
     (acc, id) => addSubscriptionIdToDocument(acc, id, transactionId),
     prev,
   )
@@ -163,12 +161,7 @@ export function removeQueuedTransaction(
   const transaction = prev.queued.find((t) => t.transactionId === transactionId)
   if (!transaction) return prev
 
-  const ids = Array.from(
-    new Set(
-      transaction.actions.flatMap((i) => [getDraftId(i.documentId), getPublishedId(i.documentId)]),
-    ),
-  )
-  const prevWithSubscriptionIds = ids.reduce(
+  const prevWithSubscriptionIds = getDocumentIdsFromActions(transaction.actions).reduce(
     (acc, id) => removeSubscriptionIdFromDocument(acc, id, transactionId),
     prev,
   )
@@ -182,13 +175,9 @@ export function removeQueuedTransaction(
 export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTransactionState {
   const queued = prev.queued.at(0)
   if (!queued) return prev
+  if (!prev.grants) return prev
 
-  const ids = Array.from(
-    new Set(
-      queued.actions.flatMap((i) => [getDraftId(i.documentId), getPublishedId(i.documentId)]),
-    ),
-  )
-
+  const ids = getDocumentIdsFromActions(queued.actions)
   // the local value is only ever `undefined` if it has not been loaded yet
   // we can't get the next applied state unless all relevant documents are ready
   if (ids.some((id) => prev.documentStates[id]?.local === undefined)) return prev
@@ -205,6 +194,7 @@ export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTra
     working,
     base: working,
     timestamp,
+    grants: prev.grants,
   })
   const applied: AppliedTransaction = {
     ...queued,
@@ -345,12 +335,9 @@ export function cleanupOutgoingTransaction(prev: SyncTransactionState): SyncTran
   if (!outgoing) return prev
 
   let next = prev
-  const documentIds = new Set(
-    outgoing.actions.flatMap((i) => [getDraftId(i.documentId), getPublishedId(i.documentId)]),
-  )
-
+  const ids = getDocumentIdsFromActions(outgoing.actions)
   for (const transactionId of outgoing.batchedTransactionIds) {
-    for (const documentId of documentIds) {
+    for (const documentId of ids) {
       next = removeSubscriptionIdFromDocument(next, documentId, transactionId)
     }
   }
@@ -359,6 +346,7 @@ export function cleanupOutgoingTransaction(prev: SyncTransactionState): SyncTran
 }
 
 export function revertOutgoingTransaction(prev: SyncTransactionState): SyncTransactionState {
+  if (!prev.grants) return prev
   let working = Object.fromEntries(
     Object.entries(prev.documentStates).map(([documentId, documentState]) => [
       documentId,
@@ -368,9 +356,16 @@ export function revertOutgoingTransaction(prev: SyncTransactionState): SyncTrans
   const nextApplied: AppliedTransaction[] = []
 
   for (const t of prev.applied) {
-    const next = processActions({...t, working})
-    working = next.working
-    nextApplied.push({...t, ...next})
+    try {
+      const next = processActions({...t, working, grants: prev.grants})
+      working = next.working
+      nextApplied.push({...t, ...next})
+    } catch (error) {
+      // if we're already reverting a transaction, skip any applied actions if
+      // they throw while we rebuild the state
+      if (error instanceof ActionError) continue
+      throw error
+    }
   }
 
   return {
@@ -400,6 +395,7 @@ export function applyRemoteDocument(
   {document, documentId, previousRev, revision, timestamp, type}: RemoteDocument,
   events: DocumentStoreState['events'],
 ): SyncTransactionState {
+  if (!prev.grants) return prev
   const prevDocState = prev.documentStates[documentId]
 
   // document state is deleted when there are no more subscribers so we can
@@ -468,7 +464,7 @@ export function applyRemoteDocument(
   // transaction again through the listener and this same flow will run then
   for (const curr of prev.applied) {
     try {
-      const next = processActions({...curr, working})
+      const next = processActions({...curr, working, grants: prev.grants})
       working = next.working
       // next includes an updated `previous` set and `working` set and updates
       // the `outgoingAction` and `outgoingMutations`. the `base` set from the
@@ -549,4 +545,48 @@ export function removeSubscriptionIdFromDocument(
       [documentId]: {...prevDocState, subscriptions: subscriptions},
     },
   }
+}
+
+export function manageSubscriberIds(
+  state: ResourceState<SyncTransactionState>,
+  documentId: string | string[],
+): () => void {
+  const documentIds = Array.from(
+    new Set(
+      (Array.isArray(documentId) ? documentId : [documentId]).flatMap((id) => [
+        getPublishedId(id),
+        getDraftId(id),
+      ]),
+    ),
+  )
+  const subscriptionId = insecureRandomId()
+  state.set('addSubscribers', (prev) =>
+    documentIds.reduce(
+      (acc, id) => addSubscriptionIdToDocument(acc, id, subscriptionId),
+      prev as SyncTransactionState,
+    ),
+  )
+
+  return () => {
+    setTimeout(() => {
+      state.set('removeSubscribers', (prev) =>
+        documentIds.reduce(
+          (acc, id) => removeSubscriptionIdFromDocument(acc, id, subscriptionId),
+          prev as SyncTransactionState,
+        ),
+      )
+    }, DOCUMENT_STATE_CLEAR_DELAY)
+  }
+}
+
+export function getDocumentIdsFromActions(action: DocumentAction | DocumentAction[]): string[] {
+  const actions = Array.isArray(action) ? action : [action]
+  return Array.from(
+    new Set(
+      actions
+        .map((i) => i.documentId)
+        .filter((i) => typeof i === 'string')
+        .flatMap((documentId) => [getPublishedId(documentId), getDraftId(documentId)]),
+    ),
+  )
 }

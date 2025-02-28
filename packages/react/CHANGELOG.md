@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.0-alpha.12](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.11...sdk-react-v0.0.0-alpha.12) (2025-02-28)
+
+
+### Features
+
+* **auth:** refresh stamped tokens ([#225](https://github.com/sanity-io/sdk/issues/225)) ([10b2745](https://github.com/sanity-io/sdk/commit/10b2745c62f9169b8cd1c66d7fb641d7fda37429))
+* document permissions ([#226](https://github.com/sanity-io/sdk/issues/226)) ([107f434](https://github.com/sanity-io/sdk/commit/107f4349d7defab04d1282ee1ab20766d157eab7))
+
+
+### Bug Fixes
+
+* **comlink:** expose statuses and destroy unused resources ([#233](https://github.com/sanity-io/sdk/issues/233)) ([8b8a40c](https://github.com/sanity-io/sdk/commit/8b8a40c5ac0b5ba76cda043ffc9bc3b740bce5bd))
+
 ## [0.0.0-alpha.11](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.10...sdk-react-v0.0.0-alpha.11) (2025-02-13)
 
 

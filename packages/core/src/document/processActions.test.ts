@@ -1,6 +1,7 @@
 import {type Reference, type SanityDocument} from '@sanity/types'
 import {describe, expect, it} from 'vitest'
 
+import {parse} from './_synchronous-groq-js.mjs'
 import {type DocumentAction} from './actions'
 import {ActionError, processActions} from './processActions'
 import {type DocumentSet} from './processMutations'
@@ -14,6 +15,16 @@ const createDoc = (id: string, title: string, rev: string = 'initial'): SanityDo
   _rev: rev,
   title,
 })
+
+// Define dummy grants using GROQ expressions
+const alwaysAllow = parse('true')
+const alwaysDeny = parse('false')
+const defaultGrants = {
+  create: alwaysAllow,
+  update: alwaysAllow,
+  read: alwaysAllow,
+  history: alwaysAllow,
+}
 
 const transactionId = 'txn-123'
 const timestamp = '2025-02-02T00:00:00.000Z'
@@ -37,6 +48,7 @@ describe('processActions', () => {
         base,
         working,
         timestamp,
+        grants: defaultGrants,
       })
 
       const draftId = 'drafts.doc1'
@@ -76,9 +88,9 @@ describe('processActions', () => {
           documentType: 'article',
         },
       ]
-      expect(() => processActions({actions, transactionId, base, working, timestamp})).toThrow(
-        ActionError,
-      )
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+      ).toThrow(ActionError)
     })
 
     it('should create a draft document using the working published version when base and working differ', () => {
@@ -99,6 +111,7 @@ describe('processActions', () => {
         base,
         working,
         timestamp,
+        grants: defaultGrants,
       })
 
       const draftId = 'drafts.doc1'
@@ -107,6 +120,23 @@ describe('processActions', () => {
       expect(draftDoc?._id).toBe(draftId)
       // Expect that the draft is built from the working version:
       expect(draftDoc?.['title']).toBe('Working Title')
+    })
+
+    it('should throw PermissionActionError if create permission is denied', () => {
+      const published = createDoc('doc1', 'Original Title')
+      const base: DocumentSet = {doc1: published}
+      const working: DocumentSet = {doc1: published}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          type: 'document.create',
+          documentType: 'article',
+        },
+      ]
+      const grants = {...defaultGrants, create: alwaysDeny}
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants}),
+      ).toThrow(/You do not have permission to create a draft for document "doc1"/)
     })
   })
 
@@ -128,6 +158,7 @@ describe('processActions', () => {
         base,
         working,
         timestamp,
+        grants: defaultGrants,
       })
 
       // Both published and draft should be removed (set to null)
@@ -156,13 +187,13 @@ describe('processActions', () => {
           type: 'document.delete',
         },
       ]
-
       const result = processActions({
         actions,
         transactionId,
         base,
         working,
         timestamp,
+        grants: defaultGrants,
       })
 
       expect(result.working['doc1']).toBeNull()
@@ -174,6 +205,23 @@ describe('processActions', () => {
           publishedId: 'doc1',
         },
       ])
+    })
+
+    it('should throw PermissionActionError if update permission is denied for deletion', () => {
+      const published = createDoc('doc1', 'Published Title')
+      const draft = createDoc('drafts.doc1', 'Draft Title')
+      const base: DocumentSet = {'doc1': published, 'drafts.doc1': draft}
+      const working: DocumentSet = {'doc1': published, 'drafts.doc1': draft}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          type: 'document.delete',
+        },
+      ]
+      const grants = {...defaultGrants, update: alwaysDeny}
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants}),
+      ).toThrow(/You do not have permission to delete this document/)
     })
   })
 
@@ -194,6 +242,7 @@ describe('processActions', () => {
         base,
         working,
         timestamp,
+        grants: defaultGrants,
       })
 
       expect(result.working['drafts.doc1']).toBeNull()
@@ -203,6 +252,22 @@ describe('processActions', () => {
           versionId: 'drafts.doc1',
         },
       ])
+    })
+
+    it('should throw PermissionActionError if update permission is denied for discard', () => {
+      const draft = createDoc('drafts.doc1', 'Draft Title', '1')
+      const base: DocumentSet = {'drafts.doc1': draft}
+      const working: DocumentSet = {'drafts.doc1': draft}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          type: 'document.discard',
+        },
+      ]
+      const grants = {...defaultGrants, update: alwaysDeny}
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants}),
+      ).toThrow(/You do not have permission to discard changes for document "doc1"/)
     })
   })
 
@@ -224,6 +289,7 @@ describe('processActions', () => {
         base,
         working,
         timestamp,
+        grants: defaultGrants,
       })
 
       const draftId = 'drafts.doc1'
@@ -254,6 +320,7 @@ describe('processActions', () => {
         base,
         working,
         timestamp,
+        grants: defaultGrants,
       })
 
       const editedDoc = result.working['drafts.doc1']
@@ -280,6 +347,7 @@ describe('processActions', () => {
         base,
         working,
         timestamp,
+        grants: defaultGrants,
       })
 
       const draftId = 'drafts.doc1'
@@ -301,9 +369,43 @@ describe('processActions', () => {
           patches: [{set: {title: 'Should Fail'}}],
         },
       ]
-      expect(() => processActions({actions, transactionId, base, working, timestamp})).toThrow(
-        ActionError,
-      )
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+      ).toThrow(ActionError)
+    })
+
+    it('should throw PermissionActionError if create permission is denied during edit', () => {
+      const published = createDoc('doc1', 'Original Title')
+      const base: DocumentSet = {doc1: published}
+      const working: DocumentSet = {doc1: published}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          type: 'document.edit',
+          patches: [{set: {title: 'Edited Title'}}],
+        },
+      ]
+      const grants = {...defaultGrants, create: alwaysDeny}
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants}),
+      ).toThrow(/You do not have permission to create a draft for editing this document/)
+    })
+
+    it('should throw PermissionActionError if update permission is denied during edit', () => {
+      const draft = createDoc('drafts.doc1', 'Draft Title', '1')
+      const base: DocumentSet = {'drafts.doc1': draft}
+      const working: DocumentSet = {'drafts.doc1': draft}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          type: 'document.edit',
+          patches: [{set: {title: 'New Title'}}],
+        },
+      ]
+      const grants = {...defaultGrants, update: alwaysDeny}
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants}),
+      ).toThrow(/You do not have permission to edit document "doc1"/)
     })
   })
 
@@ -324,6 +426,7 @@ describe('processActions', () => {
         base,
         working,
         timestamp,
+        grants: defaultGrants,
       })
 
       // After publishing, the draft should be deleted and a published document created.
@@ -351,9 +454,9 @@ describe('processActions', () => {
           type: 'document.publish',
         },
       ]
-      expect(() => processActions({actions, transactionId, base, working, timestamp})).toThrow(
-        ActionError,
-      )
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+      ).toThrow(ActionError)
     })
 
     it('should throw when base and working drafts differ', () => {
@@ -369,16 +472,48 @@ describe('processActions', () => {
         },
       ]
       expect(() =>
-        processActions({
-          actions,
-          transactionId,
-          base,
-          working,
-          timestamp,
-        }),
+        processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+      ).toThrow(/Publish aborted: The document has changed elsewhere. Please try again./)
+    })
+
+    it('should throw PermissionActionError if update permission is denied for draft during publish', () => {
+      const draft = createDoc('drafts.doc1', 'Draft Title', '1')
+      const base: DocumentSet = {'drafts.doc1': draft}
+      const working: DocumentSet = {'drafts.doc1': draft}
+      const actions: DocumentAction[] = [{documentId: 'doc1', type: 'document.publish'}]
+      const grants = {...defaultGrants, update: alwaysDeny}
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants}),
+      ).toThrow(/Publish failed: You do not have permission to update the draft for "doc1"/)
+    })
+
+    it('should throw PermissionActionError if update permission is denied for published during publish', () => {
+      const draft = createDoc('drafts.doc1', 'Draft Title', '1')
+      const published = createDoc('doc1', 'Published Title', '1')
+      const base: DocumentSet = {'drafts.doc1': draft, 'doc1': published}
+      const working: DocumentSet = {'drafts.doc1': draft, 'doc1': published}
+      const actions: DocumentAction[] = [{documentId: 'doc1', type: 'document.publish'}]
+      const grants = {
+        ...defaultGrants,
+        update: parse(`$document {"_": _id in path("drafts.**")}._`),
+      }
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants}),
       ).toThrow(
-        /Publish aborted: detected remote changes since published was scheduled. Please try again./,
+        /Publish failed: You do not have permission to update the published version of "doc1"/,
       )
+    })
+
+    it('should throw PermissionActionError if create permission is denied when publishing a new version', () => {
+      const draft = createDoc('drafts.doc1', 'Draft Title', '1')
+      // simulate case where there is no published version
+      const base: DocumentSet = {'drafts.doc1': draft}
+      const working: DocumentSet = {'drafts.doc1': draft}
+      const actions: DocumentAction[] = [{documentId: 'doc1', type: 'document.publish'}]
+      const grants = {...defaultGrants, create: alwaysDeny}
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants}),
+      ).toThrow(/Publish failed: You do not have permission to publish a new version of "doc1"/)
     })
 
     it('should strengthen `_strengthenOnPublish` references', () => {
@@ -416,6 +551,7 @@ describe('processActions', () => {
         base,
         working,
         timestamp,
+        grants: defaultGrants,
       })
 
       // After publishing, the draft should be deleted and a published document created.
@@ -446,6 +582,7 @@ describe('processActions', () => {
         base,
         working,
         timestamp,
+        grants: defaultGrants,
       })
 
       // After unpublishing, the published document should be removed and a draft created.
@@ -472,9 +609,9 @@ describe('processActions', () => {
           type: 'document.unpublish',
         },
       ]
-      expect(() => processActions({actions, transactionId, base, working, timestamp})).toThrow(
-        ActionError,
-      )
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+      ).toThrow(ActionError)
     })
 
     it('should unpublish using the working published document when base and working differ', () => {
@@ -495,6 +632,7 @@ describe('processActions', () => {
         base,
         working,
         timestamp,
+        grants: defaultGrants,
       })
 
       // Expect the published document is removed and a draft is created from the working published doc.
@@ -510,6 +648,28 @@ describe('processActions', () => {
           publishedId: 'doc1',
         },
       ])
+    })
+
+    it('should throw PermissionActionError if update permission is denied during unpublish', () => {
+      const published = createDoc('doc1', 'Published Title')
+      const base: DocumentSet = {doc1: published}
+      const working: DocumentSet = {doc1: published}
+      const actions: DocumentAction[] = [{documentId: 'doc1', type: 'document.unpublish'}]
+      const grants = {...defaultGrants, update: alwaysDeny}
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants}),
+      ).toThrow(/You do not have permission to unpublish the document "doc1"/)
+    })
+
+    it('should throw PermissionActionError if create permission is denied when unpublishing', () => {
+      const published = createDoc('doc1', 'Published Title')
+      const base: DocumentSet = {doc1: published}
+      const working: DocumentSet = {doc1: published}
+      const actions: DocumentAction[] = [{documentId: 'doc1', type: 'document.unpublish'}]
+      const grants = {...defaultGrants, create: alwaysDeny}
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants}),
+      ).toThrow(/You do not have permission to create a draft from the published version of "doc1"/)
     })
   })
 
@@ -529,6 +689,7 @@ describe('processActions', () => {
         base,
         working,
         timestamp,
+        grants: defaultGrants,
       })
       expect(result.previousRevs).toEqual({doc1: 'initial'})
       const publishedDoc = result.working['doc1']
@@ -549,10 +710,9 @@ describe('processActions', () => {
           type: 'document.unrecognizedAction',
         },
       ]
-
-      expect(() => processActions({actions, transactionId, base, working, timestamp})).toThrow(
-        /Unknown action type: document.unrecognizedAction/,
-      )
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+      ).toThrow(/Unknown action type: "document.unrecognizedAction"/)
     })
   })
 })

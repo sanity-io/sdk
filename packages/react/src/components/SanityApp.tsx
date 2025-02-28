@@ -3,6 +3,7 @@ import {type ReactElement} from 'react'
 
 import {SanityProvider} from '../context/SanityProvider'
 import {AuthBoundary} from './auth/AuthBoundary'
+import {isInIframe} from './utils'
 
 /**
  * @public
@@ -43,6 +44,13 @@ export interface SanityAppProps {
  * ```
  */
 export function SanityApp({sanityConfig, children}: SanityAppProps): ReactElement {
+  if (isInIframe()) {
+    // When running in an iframe Content OS, we don't want to store tokens
+    sanityConfig.auth = {
+      ...sanityConfig.auth,
+      storageArea: undefined,
+    }
+  }
   const sanityInstance = createSanityInstance(sanityConfig)
 
   return (

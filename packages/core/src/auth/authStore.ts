@@ -1,9 +1,11 @@
 import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
+import {type Subscription} from 'rxjs'
 
 import {createResource} from '../resources/createResource'
 import {createStateSourceAction} from '../resources/createStateSourceAction'
 import {AuthStateType} from './authStateType'
+import {refreshStampedToken} from './refreshStampedToken'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
 import {getAuthCode, getDefaultLocation, getDefaultStorage, getTokenFromStorage} from './utils'
@@ -201,11 +203,16 @@ export const authStore = createResource<AuthStoreState>({
   },
   initialize() {
     const stateSubscription = subscribeToStateAndFetchCurrentUser(this)
-    const storageEventsSubscription = subscribeToStorageEventsAndSetToken(this)
+    let storageEventsSubscription: Subscription | undefined
+    if (this.state.get().options?.storageArea) {
+      storageEventsSubscription = subscribeToStorageEventsAndSetToken(this)
+    }
+    const refreshStampedTokenSubscription = refreshStampedToken(this)
 
     return () => {
       stateSubscription.unsubscribe()
-      storageEventsSubscription.unsubscribe()
+      storageEventsSubscription?.unsubscribe()
+      refreshStampedTokenSubscription.unsubscribe()
     }
   },
 })
