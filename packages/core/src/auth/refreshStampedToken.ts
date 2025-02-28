@@ -20,7 +20,7 @@ export const refreshStampedToken = createInternalAction(
       ),
       distinctUntilChanged(),
       switchMap((authState) =>
-        interval(3 * 1000).pipe(
+        interval(10 * 60 * 1000).pipe(
           takeWhile(() => state.get().authState.type === AuthStateType.LOGGED_IN),
           map(() => authState.token),
           distinctUntilChanged(),
