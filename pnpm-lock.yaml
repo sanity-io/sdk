@@ -355,8 +355,8 @@ importers:
         specifier: ^9.17.0
         version: 9.17.0(jiti@2.4.2)
       groq-js:
-        specifier: file:groq-js-1.15.0.tgz
-        version: file:packages/core/groq-js-1.15.0.tgz
+        specifier: ^1.15.0
+        version: 1.15.0
       prettier:
         specifier: ^3.4.2
         version: 3.4.2
@@ -3182,11 +3182,6 @@ packages:
 
   groq-js@1.15.0:
     resolution: {integrity: sha512-PB0phOsvoYq6V5G5K5nOUDhzHH6NaqlzSaUmjBNS487kU/CJ0m2xIuvbnZM5nz1oC1jfDpCW3IXh3GKpMpU5Pw==}
-    engines: {node: '>= 14'}
-
-  groq-js@file:packages/core/groq-js-1.15.0.tgz:
-    resolution: {integrity: sha512-HscFE6JQKBsvmWJ28OVgrbLTKHncgX12zd4CssCEUDKMS9tOTTtfKngZjWtVryvpPSyqcSvvunB/JR7l4g0/lg==, tarball: file:packages/core/groq-js-1.15.0.tgz}
-    version: 1.15.0
     engines: {node: '>= 14'}
 
   has-bigints@1.0.2:
@@ -8190,12 +8185,6 @@ snapshots:
   graphemer@1.4.0: {}
 
   groq-js@1.15.0:
-    dependencies:
-      debug: 4.4.0
-    transitivePeerDependencies:
-      - supports-color
-
-  groq-js@file:packages/core/groq-js-1.15.0.tgz:
     dependencies:
       debug: 4.4.0
     transitivePeerDependencies:

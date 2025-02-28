@@ -1,8 +1,9 @@
 import {type SanityDocument} from '@sanity/types'
-import {evaluateSync, type ExprNode, parse} from 'groq-js'
+import {type ExprNode} from 'groq-js'
 import {describe, expect, it} from 'vitest'
 
 import {getDraftId, getPublishedId} from '../utils/ids'
+import {evaluateSync, parse} from './_synchronous-groq-js.mjs'
 import {type DocumentAction} from './actions'
 import {calculatePermissions, createGrantsLookup, type DatasetAcl, type Grant} from './permissions'
 import {type SyncTransactionState} from './reducers'

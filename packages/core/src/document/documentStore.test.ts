@@ -12,7 +12,7 @@ import {
   type WelcomeEvent,
 } from '@sanity/client'
 import {type Mutation, type SanityDocument} from '@sanity/types'
-import {evaluate, evaluateSync, parse} from 'groq-js'
+import {evaluate, parse} from 'groq-js'
 import {delay, first, firstValueFrom, from, map, Observable, of, ReplaySubject, Subject} from 'rxjs'
 import {beforeEach, expect, it, vi} from 'vitest'
 
@@ -21,6 +21,7 @@ import {createSanityInstance} from '../instance/sanityInstance'
 import {type SanityInstance} from '../instance/types'
 import {getOrCreateResource} from '../resources/createResource'
 import {getDraftId, getPublishedId} from '../utils/ids'
+import {evaluateSync} from './_synchronous-groq-js.mjs'
 import {
   createDocument,
   deleteDocument,

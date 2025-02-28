@@ -4,10 +4,11 @@ import {
   type Reference,
   type SanityDocument,
 } from '@sanity/types'
-import {evaluateSync, type ExprNode} from 'groq-js'
+import {type ExprNode} from 'groq-js'
 import {isEqual} from 'lodash-es'
 
 import {getDraftId, getPublishedId} from '../utils/ids'
+import {evaluateSync} from './_synchronous-groq-js.mjs'
 import {type DocumentAction} from './actions'
 import {diffPatch} from './diffPatch'
 import {type Grant} from './permissions'
