@@ -13,10 +13,15 @@ import Home from './Home'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProjectInstanceWrapper} from './ProjectAuthentication/ProjectInstanceWrapper'
 import {ProtectedRoute} from './ProtectedRoute'
+import {UsersRoute} from './routes/UsersRoute'
 import {UnauthenticatedHome} from './Unauthenticated/UnauthenticatedHome'
 import {UnauthenticatedInstanceWrapper} from './Unauthenticated/UnauthenticatedInstanceWrapper'
 
 const documentCollectionRoutes = [
+  {
+    path: 'users',
+    element: <UsersRoute />,
+  },
   {
     path: 'document-list',
     element: <DocumentListRoute />,

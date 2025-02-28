@@ -105,3 +105,6 @@ export {
   type JsonMatchPath,
 } from '../document/patchOperations'
 export {type PermissionDeniedReason, type PermissionsResult} from '../document/permissions'
+
+/** USERS */
+export {createUsersStore, type UsersStoreState} from '../users/usersStore'

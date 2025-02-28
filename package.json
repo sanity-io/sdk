@@ -16,7 +16,7 @@
   "author": "Sanity <developers@sanity.io>",
   "sideEffects": false,
   "scripts": {
-    "all": "turbo run build && turbo run lint && turbo run test:coverage && pnpm build:docs",
+    "all": "turbo run build && turbo run lint && turbo run test:coverage && pnpm build:docs && pnpm depcheck",
     "build": "turbo run build --filter='./packages/*' --filter='./apps/*'",
     "build:docs": "turbo run docs && typedoc --plugin typedoc-github-theme",
     "build:packages": "turbo run build --filter='./packages/*' --filter='!./packages/@repo/*'",

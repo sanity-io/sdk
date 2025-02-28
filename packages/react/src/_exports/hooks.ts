@@ -30,5 +30,6 @@ export {
   type UsePreviewOptions,
   type UsePreviewResults,
 } from '../hooks/preview/usePreview'
+export {useUsers, type UseUsersResult} from '../hooks/users/useUsers'
 export {type CurrentUser, type DocumentHandle} from '@sanity/sdk'
 export {type SanityDocument} from '@sanity/types'

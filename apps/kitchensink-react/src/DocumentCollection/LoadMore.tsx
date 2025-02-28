@@ -2,7 +2,7 @@ import {Flex, Text} from '@sanity/ui'
 import {useEffect, useLayoutEffect, useRef, useState} from 'react'
 
 interface LoadMoreProps {
-  isPending: boolean
+  isPending?: boolean
   hasMore: boolean
   onLoadMore: () => void
 }
