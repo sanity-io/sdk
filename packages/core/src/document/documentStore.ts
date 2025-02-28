@@ -1,4 +1,4 @@
-import {type Action, type ListenEvent, SanityClient} from '@sanity/client'
+import {type Action, type ListenEvent, type SanityClient} from '@sanity/client'
 import {getPublishedId} from '@sanity/client/csm'
 import {type SanityDocument} from '@sanity/types'
 import {type ExprNode} from 'groq-js'
