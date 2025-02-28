@@ -73,7 +73,7 @@ const documentsSelector = createSelector(
     for (const documentId of documentIds) {
       const local = documentStates[documentId]?.local
 
-      // early exist if we don't have all the documents yet
+      // early exit if we don't have all the documents yet
       if (local === undefined) return undefined
       documents[documentId] = local
     }
