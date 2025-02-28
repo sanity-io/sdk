@@ -10,6 +10,10 @@
   ],
   "packageRules": [
     {
+      "matchUpdateTypes": ["major", "minor", "patch", "pin", "digest"],
+      "commitMessagePrefix": "deps:"
+    },
+    {
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["patch", "minor"],
       "groupName": "devDependencies (non-major)"
