@@ -8,11 +8,8 @@
       "token": "{{ secrets.SANITY_NPM_TOKEN }}"
     }
   ],
+  "commitMessagePrefix": "deps:",
   "packageRules": [
-    {
-      "matchUpdateTypes": ["major", "minor", "patch", "pin", "digest"],
-      "commitMessagePrefix": "deps:"
-    },
     {
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["patch", "minor"],
