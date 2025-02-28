@@ -8,6 +8,7 @@
       "token": "{{ secrets.SANITY_NPM_TOKEN }}"
     }
   ],
+  "commitMessagePrefix": "deps:",
   "packageRules": [
     {
       "matchDepTypes": ["devDependencies"],
