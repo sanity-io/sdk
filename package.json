@@ -43,7 +43,7 @@
     "@repo/config-eslint": "workspace:*",
     "@repo/config-test": "workspace:*",
     "@repo/tsconfig": "workspace:*",
-    "@sanity/pkg-utils": "^6.12.2",
+    "@sanity/pkg-utils": "^6.13.4",
     "@sanity/prettier-config": "^1.0.3",
     "@types/node": "^22.10.5",
     "@vitest/coverage-v8": "3.0.5",
@@ -59,7 +59,7 @@
     "turbo": "^2.4.0",
     "typedoc": "^0.27.6",
     "typedoc-github-theme": "^0.2.1",
-    "typescript": "^5.7.2",
+    "typescript": "^5.7.3",
     "vite": "^6.1.0",
     "vitest": "^3.0.5"
   },
