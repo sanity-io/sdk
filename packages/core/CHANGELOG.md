@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.0.0-alpha.11](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.10...sdk-v0.0.0-alpha.11) (2025-02-28)
+
+
+### Features
+
+* **auth:** refresh stamped tokens ([#225](https://github.com/sanity-io/sdk/issues/225)) ([10b2745](https://github.com/sanity-io/sdk/commit/10b2745c62f9169b8cd1c66d7fb641d7fda37429))
+* document permissions ([#226](https://github.com/sanity-io/sdk/issues/226)) ([107f434](https://github.com/sanity-io/sdk/commit/107f4349d7defab04d1282ee1ab20766d157eab7))
+
+
+### Bug Fixes
+
+* **comlink:** expose statuses and destroy unused resources ([#233](https://github.com/sanity-io/sdk/issues/233)) ([8b8a40c](https://github.com/sanity-io/sdk/commit/8b8a40c5ac0b5ba76cda043ffc9bc3b740bce5bd))
+* **core:** add raw perspective to client ([#237](https://github.com/sanity-io/sdk/issues/237)) ([202c4ba](https://github.com/sanity-io/sdk/commit/202c4ba7bb9fdbc7f635ac8691ba840717cafc69))
+* make apiVersion required in getClient ([#230](https://github.com/sanity-io/sdk/issues/230)) ([91458d3](https://github.com/sanity-io/sdk/commit/91458d35251be6cf02592f0d4391f58838921ff8))
+
 ## [0.0.0-alpha.10](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.9...sdk-v0.0.0-alpha.10) (2025-02-13)
 
 
