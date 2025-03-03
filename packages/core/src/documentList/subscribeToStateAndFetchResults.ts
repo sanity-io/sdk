@@ -1,16 +1,7 @@
-import {type SanityClient} from '@sanity/client'
 import {isEqual, pick} from 'lodash-es'
-import {
-  debounceTime,
-  distinctUntilChanged,
-  map,
-  Observable,
-  switchMap,
-  tap,
-  withLatestFrom,
-} from 'rxjs'
+import {debounceTime, distinctUntilChanged, map, switchMap, tap, withLatestFrom} from 'rxjs'
 
-import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {getClientState} from '../client/clientStore'
 import {type ActionContext, createInternalAction} from '../resources/createAction'
 import {API_VERSION} from './documentListConstants'
 import {type DocumentHandle, type DocumentListState} from './documentListStore'
@@ -23,10 +14,6 @@ export interface DocumentListQueryResult {
 export const subscribeToStateAndFetchResults = createInternalAction(
   ({state, instance}: ActionContext<DocumentListState>) => {
     return function () {
-      const client$ = new Observable<SanityClient>((observer) =>
-        getSubscribableClient(instance, {apiVersion: API_VERSION}).subscribe(observer),
-      )
-
       const fetchInput$ = state.observable.pipe(
         map((s) => pick(s, 'options', 'limit', 'lastLiveEventId')),
         distinctUntilChanged(isEqual as <T>(a: T, b: T) => boolean),
@@ -34,7 +21,7 @@ export const subscribeToStateAndFetchResults = createInternalAction(
 
       return fetchInput$
         .pipe(
-          withLatestFrom(client$),
+          withLatestFrom(getClientState(instance, {apiVersion: API_VERSION}).observable),
           debounceTime(0),
           tap(() => {
             state.set('setPending', {isPending: true})

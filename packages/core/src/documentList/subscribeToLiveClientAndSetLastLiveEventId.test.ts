@@ -2,17 +2,14 @@ import {type SanityClient} from '@sanity/client'
 import {debounceTime, filter, firstValueFrom, of, Subject} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
-import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState, type ResourceState} from '../resources/createResource'
+import {type StateSource} from '../resources/createStateSourceAction'
 import {type DocumentListState} from './documentListStore'
 import {subscribeToLiveClientAndSetLastLiveEventId} from './subscribeToLiveClientAndSetLastLiveEventId'
 
-vi.mock('../client/actions/getSubscribableClient', () => {
-  return {
-    getSubscribableClient: vi.fn(),
-  }
-})
+vi.mock('../client/clientStore.ts', () => ({getClientState: vi.fn()}))
 
 describe('subscribeToLiveClientAndSetLastLiveEventId', () => {
   const mockClientLiveEvents = vi.fn()
@@ -28,7 +25,10 @@ describe('subscribeToLiveClientAndSetLastLiveEventId', () => {
   let state: ResourceState<DocumentListState>
 
   beforeEach(() => {
-    vi.mocked(getSubscribableClient).mockReturnValue(of(mockClient as unknown as SanityClient))
+    vi.mocked(getClientState).mockReturnValue({
+      observable: of(mockClient as unknown as SanityClient),
+    } as StateSource<SanityClient>)
+
     state = createResourceState<DocumentListState>({
       limit: 25,
       options: {perspective: 'previewDrafts'},

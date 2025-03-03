@@ -1,8 +1,8 @@
-import {type ListenEvent, type SanityClient, type SanityDocument} from '@sanity/client'
+import {type ListenEvent, type SanityDocument} from '@sanity/client'
 import {createDocumentLoaderFromClient} from '@sanity/mutate/_unstable_store'
 import {first, map, merge, Observable, partition, share, shareReplay, switchMap} from 'rxjs'
 
-import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {getClientState} from '../client/clientStore'
 import {type SanityInstance} from '../instance/types'
 
 const API_VERSION = 'vX'
@@ -10,15 +10,11 @@ const API_VERSION = 'vX'
 export function createSharedListener(
   instance: SanityInstance,
 ): Observable<ListenEvent<SanityDocument>> {
-  const client$ = new Observable<SanityClient>((observer) =>
-    getSubscribableClient(instance, {apiVersion: API_VERSION}).subscribe(observer),
-  )
-
-  // TODO: it seems like the client.listen method is not emitting disconnected
-  // events. this is important to ensure we have an up to date version of the
-  // doc. probably should introduce our own events for when the user goes offline
-  const events$ = client$.pipe(
+  const events$ = getClientState(instance, {apiVersion: API_VERSION}).observable.pipe(
     switchMap((client) =>
+      // TODO: it seems like the client.listen method is not emitting disconnected
+      // events. this is important to ensure we have an up to date version of the
+      // doc. probably should introduce our own events for when the user goes offline
       client.listen(
         '*',
         {},
@@ -45,12 +41,8 @@ export function createSharedListener(
 }
 
 export function createFetchDocument(instance: SanityInstance) {
-  const client$ = new Observable<SanityClient>((observer) =>
-    getSubscribableClient(instance, {apiVersion: API_VERSION}).subscribe(observer),
-  )
-
   return function (documentId: string): Observable<SanityDocument | null> {
-    return client$.pipe(
+    return getClientState(instance, {apiVersion: API_VERSION}).observable.pipe(
       switchMap((client) => {
         const loadDocument = createDocumentLoaderFromClient(client)
         return loadDocument(documentId)

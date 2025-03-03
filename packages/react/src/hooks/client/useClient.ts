@@ -1,8 +1,6 @@
-import {type SanityClient} from '@sanity/client'
-import {type ClientOptions, getClient, getSubscribableClient} from '@sanity/sdk'
-import {useCallback, useSyncExternalStore} from 'react'
+import {getClientState} from '@sanity/sdk'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
 /**
  * A React hook that provides a client that subscribes to changes in your application,
@@ -18,7 +16,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @example
  * ```tsx
  * function MyComponent() {
- *   const client = useClient()
+ *   const client = useClient({apiVersion: '2024-11-12'})
  *   const [document, setDocument] = useState(null)
  *   useEffect(async () => {
  *     const doc = client.fetch('*[_id == "myDocumentId"]')
@@ -30,28 +28,4 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *
  * @public
  */
-export function useClient(options: ClientOptions): SanityClient {
-  const instance = useSanityInstance()
-
-  const subscribe = useCallback(
-    (onStoreChange: () => void) => {
-      const client$ = getSubscribableClient(instance, options)
-      const subscription = client$.subscribe({
-        next: onStoreChange,
-        error: (error) => {
-          // @TODO: We should tackle error handling / error boundaries soon
-          // eslint-disable-next-line no-console
-          console.error('Error in useClient subscription:', error)
-        },
-      })
-      return () => subscription.unsubscribe()
-    },
-    [instance, options],
-  )
-
-  const getSnapshot = useCallback(() => {
-    return getClient(instance, options)
-  }, [instance, options])
-
-  return useSyncExternalStore(subscribe, getSnapshot)
-}
+export const useClient = createStateSourceHook(getClientState)

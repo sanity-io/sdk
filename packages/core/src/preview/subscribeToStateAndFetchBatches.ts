@@ -1,11 +1,10 @@
-import {type SanityClient, type SyncTag} from '@sanity/client'
+import {type SyncTag} from '@sanity/client'
 import {
   combineLatest,
   debounceTime,
   distinctUntilChanged,
   EMPTY,
   map,
-  Observable,
   pairwise,
   startWith,
   switchMap,
@@ -13,7 +12,7 @@ import {
   withLatestFrom,
 } from 'rxjs'
 
-import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {getClientState} from '../client/clientStore'
 import {type ActionContext, createInternalAction} from '../resources/createAction'
 import {getSchemaState} from '../schema/getSchemaState'
 import {createPreviewQuery, processPreviewQuery} from './previewQuery'
@@ -25,9 +24,7 @@ const BATCH_DEBOUNCE_TIME = 50
 export const subscribeToStateAndFetchBatches = createInternalAction(
   ({state, instance}: ActionContext<PreviewStoreState>) => {
     return function () {
-      const client$ = new Observable<SanityClient>((observer) =>
-        getSubscribableClient(instance, {apiVersion: 'vX'}).subscribe(observer),
-      )
+      const client$ = getClientState(instance, {apiVersion: 'vX'}).observable
       const schema$ = getSchemaState(instance).observable
       const documentTypes$ = state.observable.pipe(
         map((i) => i.documentTypes),

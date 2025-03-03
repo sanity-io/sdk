@@ -16,10 +16,11 @@ import {evaluate, parse} from 'groq-js'
 import {delay, first, firstValueFrom, from, map, Observable, of, ReplaySubject, Subject} from 'rxjs'
 import {beforeEach, expect, it, vi} from 'vitest'
 
-import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../instance/sanityInstance'
 import {type SanityInstance} from '../instance/types'
 import {getOrCreateResource} from '../resources/createResource'
+import {type StateSource} from '../resources/createStateSourceAction'
 import {getDraftId, getPublishedId} from '../utils/ids'
 import {evaluateSync} from './_synchronous-groq-js.mjs'
 import {
@@ -766,8 +767,8 @@ function checkUnverified(instance: SanityInstance, docId: string) {
   expect(documentStates[getPublishedId(docId)]?.unverifiedRevisions).toEqual({})
 }
 
-vi.mock('../client/actions/getSubscribableClient', () => ({
-  getSubscribableClient: vi.fn().mockReturnValue(new ReplaySubject(1)),
+vi.mock('../client/clientStore.ts', () => ({
+  getClientState: vi.fn().mockReturnValue({observable: new ReplaySubject(1)}),
 }))
 
 vi.mock('./sharedListener.ts', () => {
@@ -800,7 +801,8 @@ vi.mock('./documentConstants.ts', () => ({
 let client: SanityClient
 
 beforeEach(() => {
-  const client$ = (getSubscribableClient as () => ReplaySubject<SanityClient>)()
+  const client$ = (getClientState as () => StateSource<SanityClient>)()
+    .observable as ReplaySubject<SanityClient>
   const sharedListener = (createSharedListener as () => Subject<ListenEvent<SanityDocument>>)()
 
   let documents: DocumentSet = {
