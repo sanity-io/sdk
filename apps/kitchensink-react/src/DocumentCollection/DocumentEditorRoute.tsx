@@ -20,6 +20,8 @@ import {Box, Button, TextInput, Tooltip} from '@sanity/ui'
 import {JsonData, JsonEditor} from 'json-edit-react'
 import {type JSX, useState} from 'react'
 
+import {SANITY_TEST_STUDIO_ID} from '../consts'
+
 interface Author extends SanityDocument {
   _type: 'author'
   name?: string
@@ -28,7 +30,7 @@ interface Author extends SanityDocument {
 const doc: DocumentHandle<Author> = {
   _id: 'a3217f15-3825-4abc-8efa-90e15e48c656',
   _type: 'author',
-  datasetResourceId: 'ppsg7ml5:test',
+  datasetResourceId: SANITY_TEST_STUDIO_ID,
 }
 
 function Editor() {

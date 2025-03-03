@@ -37,7 +37,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
 export function useDocument<
   TDocument extends SanityDocument,
   TPath extends JsonMatchPath<TDocument>,
->(doc: string | DocumentHandle<TDocument>, path: TPath): JsonMatch<TDocument, TPath> | undefined
+>(doc: DocumentHandle<TDocument>, path: TPath): JsonMatch<TDocument, TPath> | undefined
 
 /**
  * @beta
@@ -75,7 +75,7 @@ export function useDocument<
  *
  */
 export function useDocument<TDocument extends SanityDocument>(
-  doc: string | DocumentHandle<TDocument>,
+  doc: DocumentHandle<TDocument>,
 ): TDocument | null
 
 /**
@@ -94,18 +94,20 @@ export function useDocument<TDocument extends SanityDocument>(
  * consider using `usePreview` or `useQuery` for these use cases instead. These hooks leverage the Sanity
  * Live Content API to provide a more efficient way to read and subscribe to document state.
  */
-export function useDocument(doc: string | DocumentHandle, path?: string): unknown {
-  const documentId = typeof doc === 'string' ? doc : doc._id
+export function useDocument(doc: DocumentHandle, path?: string): unknown {
+  const documentId = doc._id
   const instance = useSanityInstance()
   const isDocumentReady = useCallback(
-    () => getDocumentState(instance, documentId).getCurrent() !== undefined,
+    () => getDocumentState(instance, doc).getCurrent() !== undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [instance, documentId],
   )
-  if (!isDocumentReady()) throw resolveDocument(instance, documentId)
+  if (!isDocumentReady()) throw resolveDocument(instance, doc)
 
   const {subscribe, getCurrent} = useMemo(
-    () => getDocumentState(instance, documentId, path),
-    [documentId, instance, path],
+    () => getDocumentState(instance, doc, path),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [doc._id, instance, path],
   )
 
   return useSyncExternalStore(subscribe, getCurrent)

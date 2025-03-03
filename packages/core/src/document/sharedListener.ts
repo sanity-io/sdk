@@ -4,6 +4,7 @@ import {first, map, merge, Observable, partition, share, shareReplay, switchMap}
 
 import {type ClientOptions} from '../client/actions/getClient'
 import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {type DatasetResourceId} from '../documentList/documentListStore'
 import {type SanityInstance} from '../instance/types'
 
 const API_VERSION = 'vX'
@@ -51,15 +52,34 @@ export function createSharedListener(
 }
 
 export function createFetchDocument(instance: SanityInstance) {
-  const client$ = new Observable<SanityClient>((observer) =>
-    getSubscribableClient(instance, {
-      apiVersion: API_VERSION,
-      projectId: 'ppsg7ml5', // TODO: support multiple resources
-      dataset: 'test',
-    }).subscribe(observer),
-  )
+  const clients = new Map<DatasetResourceId, Observable<SanityClient>>()
+  const getClient = (datasetResourceId: DatasetResourceId) => {
+    if (!clients.has(datasetResourceId)) {
+      const newClient$ = new Observable<SanityClient>((observer) =>
+        getSubscribableClient(instance, {
+          apiVersion: API_VERSION,
+          projectId: 'ppsg7ml5', // TODO: support multiple resources
+          dataset: 'test',
+        }).subscribe(observer),
+      )
+      clients.set(datasetResourceId, newClient$)
+    }
+    return clients.get(datasetResourceId)!
+  }
 
-  return function (documentId: string): Observable<SanityDocument | null> {
+  // const client$ = new Observable<SanityClient>((observer) =>
+  //   getSubscribableClient(instance, {
+  //     apiVersion: API_VERSION,
+  //     projectId: 'ppsg7ml5', // TODO: support multiple resources
+  //     dataset: 'test',
+  //   }).subscribe(observer),
+  // )
+
+  return function (
+    documentId: string,
+    datasetResourceId: DatasetResourceId,
+  ): Observable<SanityDocument | null> {
+    const client$ = getClient(datasetResourceId)
     return client$.pipe(
       switchMap((client) => {
         const loadDocument = createDocumentLoaderFromClient(client)

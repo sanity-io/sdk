@@ -17,7 +17,7 @@ import {
 import {mergeMap, scan} from 'rxjs/operators'
 
 import {type ActionContext, createInternalAction} from '../resources/createAction'
-import {type DocumentStoreState} from './documentStore'
+import {type DocumentStoreState, getSharedListener} from './documentStore'
 import {processMutations} from './processMutations'
 
 const DEFAULT_MAX_BUFFER_SIZE = 20
@@ -193,65 +193,69 @@ export function sortListenerEvents(options?: SortListenerEventsOptions) {
   }
 }
 
-export const listen = createInternalAction(({state}: ActionContext<DocumentStoreState>) => {
-  const {sharedListener, fetchDocument} = state.get()
+export const listen = createInternalAction(
+  ({state, instance}: ActionContext<DocumentStoreState>) => {
+    const {fetchDocument, documentStates} = state.get()
 
-  return function (documentId: string) {
-    return sharedListener.pipe(
-      concatMap((e) => {
-        if (e.type === 'welcome') {
-          return fetchDocument(documentId).pipe(
-            map((document): SyncEvent => ({type: 'sync', document})),
-          )
-        }
-        if (e.type === 'mutation' && e.documentId === documentId) return of(e)
-        return EMPTY
-      }),
-      sortListenerEvents(),
-      withLatestFrom(
-        state.observable.pipe(
-          map((s) => s.documentStates[documentId]),
-          filter(Boolean),
-          distinctUntilChanged(),
-        ),
-      ),
-      map(([next, documentState]): RemoteDocument => {
-        if (next.type === 'sync') {
-          return {
-            type: 'sync',
-            documentId,
-            document: next.document,
-            revision: next.document?._rev,
-            timestamp: next.document?._updatedAt ?? new Date().toISOString(),
+    return function (documentId: string) {
+      const datasetResourceId = documentStates[documentId]?.datasetResourceId
+      const sharedListener = getSharedListener(instance, datasetResourceId)
+      return sharedListener.pipe(
+        concatMap((e) => {
+          if (e.type === 'welcome') {
+            return fetchDocument(documentId, datasetResourceId).pipe(
+              map((document): SyncEvent => ({type: 'sync', document})),
+            )
           }
-        }
+          if (e.type === 'mutation' && e.documentId === documentId) return of(e)
+          return EMPTY
+        }),
+        sortListenerEvents(),
+        withLatestFrom(
+          state.observable.pipe(
+            map((s) => s.documentStates[documentId]),
+            filter(Boolean),
+            distinctUntilChanged(),
+          ),
+        ),
+        map(([next, documentState]): RemoteDocument => {
+          if (next.type === 'sync') {
+            return {
+              type: 'sync',
+              documentId,
+              document: next.document,
+              revision: next.document?._rev,
+              timestamp: next.document?._updatedAt ?? new Date().toISOString(),
+            }
+          }
 
-        // TODO: from manual testing, mendoza patches seem to be applying
-        // let document
-        // if (next.effects?.apply) {
-        //   document = applyPatch(omit(documentState.remote, '_rev'), next.effects?.apply)
-        // }
+          // TODO: from manual testing, mendoza patches seem to be applying
+          // let document
+          // if (next.effects?.apply) {
+          //   document = applyPatch(omit(documentState.remote, '_rev'), next.effects?.apply)
+          // }
 
-        const [document] = Object.values(
-          processMutations({
-            documents: {[documentId]: documentState.remote},
-            mutations: next.mutations as Mutation[],
-            transactionId: next.transactionId,
-            timestamp: next.timestamp,
-          }),
-        )
+          const [document] = Object.values(
+            processMutations({
+              documents: {[documentId]: documentState.remote},
+              mutations: next.mutations as Mutation[],
+              transactionId: next.transactionId,
+              timestamp: next.timestamp,
+            }),
+          )
 
-        const {previousRev, transactionId, timestamp} = next
+          const {previousRev, transactionId, timestamp} = next
 
-        return {
-          type: 'mutation',
-          documentId,
-          document: document ?? null,
-          revision: transactionId,
-          timestamp,
-          ...(previousRev && {previousRev}),
-        }
-      }),
-    )
-  }
-})
+          return {
+            type: 'mutation',
+            documentId,
+            document: document ?? null,
+            revision: transactionId,
+            timestamp,
+            ...(previousRev && {previousRev}),
+          }
+        }),
+      )
+    }
+  },
+)

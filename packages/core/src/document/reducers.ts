@@ -2,6 +2,7 @@ import {getPublishedId} from '@sanity/client/csm'
 import {type Mutation, type PatchOperations, type SanityDocumentLike} from '@sanity/types'
 import {omit} from 'lodash-es'
 
+import {type DatasetResourceId} from '../documentList/documentListStore'
 import {type ResourceState} from '../resources/createResource'
 import {getDraftId, insecureRandomId} from '../utils/ids'
 import {type DocumentAction} from './actions'
@@ -141,10 +142,11 @@ export interface UnverifiedDocumentRevision {
 export function queueTransaction(
   prev: SyncTransactionState,
   transaction: QueuedTransaction,
+  datasetResourceId: DatasetResourceId,
 ): SyncTransactionState {
   const {transactionId, actions} = transaction
   const prevWithSubscriptionIds = getDocumentIdsFromActions(actions).reduce(
-    (acc, id) => addSubscriptionIdToDocument(acc, id, transactionId),
+    (acc, id) => addSubscriptionIdToDocument(acc, id, transactionId, datasetResourceId),
     prev,
   )
 
@@ -508,6 +510,7 @@ export function addSubscriptionIdToDocument(
   prev: SyncTransactionState,
   documentId: string,
   subscriptionId: string,
+  datasetResourceId: DatasetResourceId,
 ): SyncTransactionState {
   const prevDocState = prev.documentStates?.[documentId]
   const prevSubscriptions = prevDocState?.subscriptions ?? []
@@ -519,6 +522,7 @@ export function addSubscriptionIdToDocument(
       [documentId]: {
         ...prevDocState,
         id: documentId,
+        datasetResourceId,
         subscriptions: [...prevSubscriptions, subscriptionId],
       },
     },
@@ -549,6 +553,7 @@ export function removeSubscriptionIdFromDocument(
 
 export function manageSubscriberIds(
   state: ResourceState<SyncTransactionState>,
+  datasetResourceId: DatasetResourceId,
   documentId: string | string[],
 ): () => void {
   const documentIds = Array.from(
@@ -562,7 +567,7 @@ export function manageSubscriberIds(
   const subscriptionId = insecureRandomId()
   state.set('addSubscribers', (prev) =>
     documentIds.reduce(
-      (acc, id) => addSubscriptionIdToDocument(acc, id, subscriptionId),
+      (acc, id) => addSubscriptionIdToDocument(acc, id, subscriptionId, datasetResourceId),
       prev as SyncTransactionState,
     ),
   )

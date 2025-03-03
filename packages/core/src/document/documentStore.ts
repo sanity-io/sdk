@@ -63,13 +63,19 @@ export interface DocumentStoreState {
   outgoing?: OutgoingTransaction
   grants?: Record<Grant, ExprNode>
   error?: unknown
-  sharedListener: Observable<ListenEvent<SanityDocument>>
-  fetchDocument: (documentId: string) => Observable<SanityDocument | null>
+  sharedListeners: Map<DatasetResourceId, Observable<ListenEvent<SanityDocument>>>
+  fetchDocument: (
+    documentId: string,
+    datasetResourceId: DatasetResourceId,
+  ) => Observable<SanityDocument | null>
   events: Subject<DocumentEvent>
 }
 
 export interface DocumentState {
   id: string
+  /**
+   * The dataset resource ID in format 'projectId:datasetId'
+   */
   datasetResourceId: DatasetResourceId
   /**
    * the "remote" local copy that matches the server. represents the last known
@@ -111,11 +117,7 @@ export const documentStore = createResource<DocumentStoreState>({
     // these can be emptied on refetch
     queued: [],
     applied: [],
-    sharedListener: createSharedListener(instance, {
-      apiVersion: API_VERSION,
-      projectId: instance.resources[0].projectId, // TODO: support multiple resources
-      dataset: instance.resources[0].dataset,
-    }),
+    sharedListeners: new Map(),
     fetchDocument: createFetchDocument(instance),
     events: new Subject(),
   }),
@@ -140,18 +142,18 @@ export function getDocumentState<
   TPath extends JsonMatchPath<TDocument>,
 >(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
-  doc: string | DocumentHandle<TDocument>,
+  doc: DocumentHandle<TDocument>,
   path: TPath,
 ): StateSource<JsonMatch<TDocument, TPath> | undefined>
 /** @beta */
 export function getDocumentState<TDocument extends SanityDocument>(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
-  doc: string | DocumentHandle<TDocument>,
+  doc: DocumentHandle<TDocument>,
 ): StateSource<TDocument | null>
 /** @beta */
 export function getDocumentState(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
-  doc: string | DocumentHandle,
+  doc: DocumentHandle,
   path?: string,
 ): StateSource<unknown>
 /** @beta */
@@ -161,7 +163,7 @@ export function getDocumentState(
   return _getDocumentState(...args)
 }
 const _getDocumentState = createStateSourceAction(documentStore, {
-  selector: ({error, documentStates}, doc: string | DocumentHandle, path?: string) => {
+  selector: ({error, documentStates}, doc: DocumentHandle, path?: string) => {
     const documentId = typeof doc === 'string' ? doc : doc._id
     if (error) throw error
     const draftId = getDraftId(documentId)
@@ -174,31 +176,30 @@ const _getDocumentState = createStateSourceAction(documentStore, {
     if (path) return jsonMatch(document, path).at(0)?.value
     return document
   },
-  onSubscribe: ({state}, doc: string | DocumentHandle) =>
-    manageSubscriberIds(state, typeof doc === 'string' ? doc : doc._id),
+  onSubscribe: ({state}, doc: DocumentHandle) =>
+    manageSubscriberIds(state, doc.datasetResourceId, doc._id),
 })
 
 /** @beta */
 export function resolveDocument<TDocument extends SanityDocument>(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
-  doc: string | DocumentHandle<TDocument>,
+  doc: DocumentHandle<TDocument>,
 ): Promise<TDocument | null>
 /** @beta */
 export function resolveDocument(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
-  doc: string | DocumentHandle,
+  doc: DocumentHandle,
 ): Promise<SanityDocument | null>
 /** @beta */
 export function resolveDocument(
   ...args: Parameters<typeof _resolveDocument>
 ): Promise<SanityDocument | null> {
-  return _resolveDocument(...args)
+  return _resolveDocument(...args) as Promise<SanityDocument | null>
 }
 const _resolveDocument = createAction(documentStore, () => {
-  return function (doc: string | DocumentHandle) {
-    const documentId = typeof doc === 'string' ? doc : doc._id
+  return function (doc: DocumentHandle) {
     return firstValueFrom(
-      getDocumentState(this, documentId).observable.pipe(filter((i) => i !== undefined)),
+      getDocumentState(this, doc).observable.pipe(filter((i) => i !== undefined)),
     )
   }
 })
@@ -207,9 +208,9 @@ const _resolveDocument = createAction(documentStore, () => {
 export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
   selector: (
     {error, documentStates: documents, outgoing, applied, queued},
-    doc: string | DocumentHandle,
+    doc: DocumentHandle,
   ) => {
-    const documentId = typeof doc === 'string' ? doc : doc._id
+    const documentId = doc._id
     if (error) throw error
     const draftId = getDraftId(documentId)
     const publishedId = getPublishedId(documentId)
@@ -220,14 +221,18 @@ export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
     if (draft === undefined || published === undefined) return undefined
     return !queued.length && !applied.length && !outgoing
   },
-  onSubscribe: ({state}, doc: string | DocumentHandle) =>
-    manageSubscriberIds(state, typeof doc === 'string' ? doc : doc._id),
+  onSubscribe: ({state}, doc: DocumentHandle) => {
+    const datasetResourceId = doc.datasetResourceId
+    const documentId = doc._id
+    return manageSubscriberIds(state, datasetResourceId, documentId)
+  },
 })
 
 /** @beta */
 export const getPermissionsState = createStateSourceAction(documentStore, {
   selector: calculatePermissions,
-  onSubscribe: ({state}, actions) => manageSubscriberIds(state, getDocumentIdsFromActions(actions)),
+  onSubscribe: ({state}, actions) =>
+    manageSubscriberIds(state, 'ppsg7ml5:test', getDocumentIdsFromActions(actions)),
 })
 
 /** @beta */
@@ -246,6 +251,24 @@ export const subscribeDocumentEvents = createAction(documentStore, ({state}) => 
   return function (eventHandler: (e: DocumentEvent) => void): () => void {
     const subscription = events.subscribe(eventHandler)
     return () => subscription.unsubscribe()
+  }
+})
+
+export const getSharedListener = createAction(documentStore, ({state, instance}) => {
+  return function (datasetResourceId: DatasetResourceId) {
+    const sharedListeners = state.get().sharedListeners
+    let sharedListener: Observable<ListenEvent<SanityDocument>>
+    if (!sharedListeners.has(datasetResourceId)) {
+      sharedListener = createSharedListener(instance, {
+        apiVersion: API_VERSION,
+        projectId: datasetResourceId?.split(':')[0] ?? '',
+        dataset: datasetResourceId?.split(':')[1] ?? '',
+      })
+      sharedListeners.set(datasetResourceId, sharedListener)
+    } else {
+      sharedListener = sharedListeners.get(datasetResourceId)!
+    }
+    return sharedListener
   }
 })
 
