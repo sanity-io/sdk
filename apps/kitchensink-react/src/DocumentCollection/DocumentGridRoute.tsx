@@ -3,10 +3,12 @@ import {Box, Button, Heading} from '@sanity/ui'
 import {type JSX} from 'react'
 
 import {DocumentGridLayout} from '../components/DocumentGridLayout/DocumentGridLayout'
+import {SANITY_TEST_STUDIO_ID} from '../consts'
 import {DocumentPreview} from './DocumentPreview'
 
 export function DocumentGridRoute(): JSX.Element {
   const {isPending, results, hasMore, loadMore} = useDocuments({
+    datasetResourceId: SANITY_TEST_STUDIO_ID,
     filter: '_type == "author"',
     sort: [{field: 'name', direction: 'asc'}],
   })

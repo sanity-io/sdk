@@ -54,8 +54,8 @@ export function createFetchDocument(instance: SanityInstance) {
   const client$ = new Observable<SanityClient>((observer) =>
     getSubscribableClient(instance, {
       apiVersion: API_VERSION,
-      projectId: instance.resources[0].projectId, // TODO: support multiple resources
-      dataset: instance.resources[0].dataset,
+      projectId: 'ppsg7ml5', // TODO: support multiple resources
+      dataset: 'test',
     }).subscribe(observer),
   )
 

@@ -33,7 +33,7 @@ describe('subscribeToLiveClientAndSetLastLiveEventId', () => {
     vi.mocked(getSubscribableClient).mockReturnValue(of(mockClient as unknown as SanityClient))
     state = createResourceState<DocumentListState>({
       limit: 25,
-      options: {resourceId: 'document:p:d', perspective: 'previewDrafts'},
+      options: {datasetResourceId: 'p:d', perspective: 'previewDrafts'},
       results: [],
       syncTags: [],
       isPending: false,

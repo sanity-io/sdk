@@ -10,6 +10,8 @@ import {
   type SanityDocumentLike,
 } from '@sanity/types'
 
+import {type DatasetResourceId} from '../documentList/documentListStore'
+
 type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
 
 /**
@@ -22,6 +24,7 @@ type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
 export interface DocumentHandle<TDocument extends SanityDocumentLike = SanityDocumentLike> {
   _id: string
   _type: TDocument['_type']
+  datasetResourceId: DatasetResourceId
 }
 
 /** @beta */

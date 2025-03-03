@@ -4,11 +4,15 @@ import {type ActionContext, createAction, type ResourceAction} from './createAct
 import {type Resource} from './createResource'
 
 /**
+ * Represents a source of state that can be subscribed to and observed
  * @public
  */
 export interface StateSource<T> {
+  /** Subscribe to state changes */
   subscribe: (onStoreChanged?: () => void) => () => void
+  /** Get the current state value */
   getCurrent: () => T
+  /** Observable stream of state changes */
   observable: Observable<T>
 }
 
@@ -22,6 +26,26 @@ interface StateSourceOptions<TState, TParams extends unknown[], TReturn> {
   isEqual?: (prev: TReturn, curr: TReturn) => boolean
 }
 
+/**
+ * Creates an action that provides a state source with selection and subscription capabilities
+ * @param resource - The resource this state source is associated with
+ * @param options - Either a selector function or an options object with selector and handlers
+ * @returns An action that creates a state source when called
+ *
+ * @example
+ * ```ts
+ * const getUsers = createStateSourceAction(
+ *   userResource,
+ *   {
+ *     selector: (state, filter: string) => state.users.filter(u => u.name.includes(filter)),
+ *     onSubscribe: (context, filter) => {
+ *       // Setup subscription
+ *       return () => { // Cleanup }
+ *     }
+ *   }
+ * )
+ * ```
+ */
 export function createStateSourceAction<TState, TParams extends unknown[], TReturn>(
   resource: Resource<TState>,
   options: Selector<TState, TParams, TReturn> | StateSourceOptions<TState, TParams, TReturn>,

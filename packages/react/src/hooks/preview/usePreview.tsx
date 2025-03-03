@@ -1,6 +1,6 @@
 import {
+  type DatasetResourceId,
   type DocumentHandle,
-  type DocumentResourceId,
   getPreviewState,
   type PreviewValue,
   resolvePreview,
@@ -15,7 +15,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @category Types
  */
 export interface UsePreviewOptions {
-  resourceId: DocumentResourceId
+  datasetResourceId: DatasetResourceId
   document: DocumentHandle
   ref?: React.RefObject<unknown>
 }
@@ -76,15 +76,15 @@ export interface UsePreviewResults {
  * ```
  */
 export function usePreview({
-  resourceId,
+  datasetResourceId,
   document: {_id, _type},
   ref,
 }: UsePreviewOptions): UsePreviewResults {
   const instance = useSanityInstance()
 
   const stateSource = useMemo(
-    () => getPreviewState(instance, {document: {_id, _type}, resourceId}),
-    [instance, _id, _type, resourceId],
+    () => getPreviewState(instance, {document: {_id, _type}, datasetResourceId}),
+    [instance, _id, _type, datasetResourceId],
   )
 
   // Create subscribe function for useSyncExternalStore
@@ -127,10 +127,10 @@ export function usePreview({
   const getSnapshot = useCallback(() => {
     const currentState = stateSource.getCurrent()
     if (currentState.results === null) {
-      throw resolvePreview(instance, {document: {_id, _type}, resourceId})
+      throw resolvePreview(instance, {document: {_id, _type}, datasetResourceId})
     }
     return currentState as UsePreviewResults
-  }, [_id, _type, instance, resourceId, stateSource])
+  }, [_id, _type, instance, datasetResourceId, stateSource])
 
   return useSyncExternalStore(subscribe, getSnapshot)
 }

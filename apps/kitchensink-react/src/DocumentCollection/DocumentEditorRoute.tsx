@@ -25,7 +25,11 @@ interface Author extends SanityDocument {
   name?: string
 }
 
-const doc: DocumentHandle<Author> = {_id: 'db06bc9e-4608-465a-9551-a10cef478037', _type: 'author'}
+const doc: DocumentHandle<Author> = {
+  _id: 'a3217f15-3825-4abc-8efa-90e15e48c656',
+  _type: 'author',
+  datasetResourceId: 'ppsg7ml5:test',
+}
 
 function Editor() {
   // useDocumentEvent((e) => console.log(e))

@@ -1,4 +1,4 @@
-import {type DocumentHandle, type DocumentResourceId} from '../documentList/documentListStore'
+import {type DatasetResourceId, type DocumentHandle} from '../documentList/documentListStore'
 import {type SanityInstance} from '../instance/types'
 import {createAction} from '../resources/createAction'
 import {getPreviewState} from './getPreviewState'
@@ -9,17 +9,17 @@ import {previewStore, type PreviewValue, type ValuePending} from './previewStore
  */
 export interface ResolvePreviewOptions {
   document: DocumentHandle
-  resourceId: DocumentResourceId
+  datasetResourceId: DatasetResourceId
 }
 
 /**
  * @public
  */
-export const resolvePreview = createAction(previewStore('document:ppsg7ml5:test'), () => {
-  return function ({document, resourceId}: ResolvePreviewOptions) {
+export const resolvePreview = createAction(previewStore('ppsg7ml5:test'), () => {
+  return function ({document, datasetResourceId}: ResolvePreviewOptions) {
     const {getCurrent, subscribe} = getPreviewState(this as unknown as SanityInstance, {
       document,
-      resourceId,
+      datasetResourceId,
     })
 
     return new Promise<ValuePending<PreviewValue>>((resolve) => {

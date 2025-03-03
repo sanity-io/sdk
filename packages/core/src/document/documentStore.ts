@@ -27,6 +27,7 @@ import {
 
 import {getSubscribableClient} from '../client/actions/getSubscribableClient'
 import {API_VERSION} from '../documentList/documentListConstants'
+import {type DatasetResourceId} from '../documentList/documentListStore'
 import {type SanityInstance} from '../instance/types'
 import {type ActionContext, createAction, createInternalAction} from '../resources/createAction'
 import {createResource} from '../resources/createResource'
@@ -69,6 +70,7 @@ export interface DocumentStoreState {
 
 export interface DocumentState {
   id: string
+  datasetResourceId: DatasetResourceId
   /**
    * the "remote" local copy that matches the server. represents the last known
    * server state. this gets updated every time we confirm remote patches

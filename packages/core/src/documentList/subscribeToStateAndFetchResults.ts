@@ -26,8 +26,8 @@ export const subscribeToStateAndFetchResults = createInternalAction(
       const client$ = new Observable<SanityClient>((observer) =>
         getSubscribableClient(instance, {
           apiVersion: API_VERSION,
-          projectId: state.get().options.resourceId?.split(':')[1] ?? '',
-          dataset: state.get().options.resourceId?.split(':')[2] ?? '',
+          projectId: state.get().options.datasetResourceId?.split(':')[0] ?? '',
+          dataset: state.get().options.datasetResourceId?.split(':')[1] ?? '',
         }).subscribe(observer),
       )
 

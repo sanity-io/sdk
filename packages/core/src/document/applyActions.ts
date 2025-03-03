@@ -53,6 +53,7 @@ export function applyActions(
 }
 
 const _applyActions = createAction(documentStore, ({state}) => {
+  console.log('applyActions', state.get())
   const {events} = state.get()
 
   return async function (

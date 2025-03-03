@@ -37,7 +37,7 @@ describe('subscribeToStateAndFetchResults', () => {
     state = createResourceState<DocumentListState>(
       {
         limit: 25,
-        options: {resourceId: 'document:p:d', perspective: 'previewDrafts'},
+        options: {datasetResourceId: 'p:d', perspective: 'previewDrafts'},
         results: [],
         syncTags: [],
         isPending: false,

@@ -1,6 +1,6 @@
 import {omit} from 'lodash-es'
 
-import {type DocumentHandle, type DocumentResourceId} from '../documentList/documentListStore'
+import {type DatasetResourceId, type DocumentHandle} from '../documentList/documentListStore'
 import {type SanityInstance} from '../instance/types'
 import {createAction} from '../resources/createAction'
 import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
@@ -18,7 +18,7 @@ import {STABLE_EMPTY_PREVIEW} from './util'
  */
 export interface GetPreviewStateOptions {
   document: DocumentHandle
-  resourceId: DocumentResourceId
+  datasetResourceId: DatasetResourceId
 }
 
 /**
@@ -26,9 +26,9 @@ export interface GetPreviewStateOptions {
  */
 export const getPreviewState = (
   instance: SanityInstance,
-  {document, resourceId}: GetPreviewStateOptions,
+  {document, datasetResourceId}: GetPreviewStateOptions,
 ): StateSource<ValuePending<PreviewValue>> => {
-  const _previewStore = previewStore(resourceId)
+  const _previewStore = previewStore(datasetResourceId)
   const _getPreviewState = createStateSourceAction(
     _previewStore,
     (state, {documentId}: {documentId: string}) => state.values[documentId] ?? STABLE_EMPTY_PREVIEW,
@@ -84,5 +84,5 @@ export const getPreviewState = (
         },
       } as StateSource<ValuePending<PreviewValue>>
     }
-  })(instance, {document, resourceId})
+  })(instance, {document, datasetResourceId})
 }

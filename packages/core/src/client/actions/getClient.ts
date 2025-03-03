@@ -10,7 +10,7 @@ import {clientStore} from '../clientStore'
 export interface ClientOptions {
   projectId: string
   dataset: string
-  apiVersion?: string
+  apiVersion: string
 }
 
 /**

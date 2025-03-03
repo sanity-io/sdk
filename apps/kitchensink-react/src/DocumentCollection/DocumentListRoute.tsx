@@ -2,14 +2,14 @@ import {useDocuments} from '@sanity/sdk-react/hooks'
 import {Box, Heading} from '@sanity/ui'
 import {type JSX} from 'react'
 
-import {SANITY_TEST_STUDIO_ID} from '../App'
 import {DocumentListLayout} from '../components/DocumentListLayout/DocumentListLayout'
+import {SANITY_TEST_STUDIO_ID} from '../consts'
 import {DocumentPreview} from './DocumentPreview'
 import {LoadMore} from './LoadMore'
 
 export function DocumentListRoute(): JSX.Element {
   const {isPending, results, hasMore, loadMore} = useDocuments({
-    resourceId: SANITY_TEST_STUDIO_ID,
+    datasetResourceId: SANITY_TEST_STUDIO_ID,
     filter: '_type == "book"',
     sort: [{field: '_updatedAt', direction: 'desc'}],
   })

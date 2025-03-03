@@ -1,6 +1,6 @@
 import {type SyncTag} from '@sanity/client'
 
-import {type DocumentResourceId} from '../documentList/documentListStore'
+import {type DatasetResourceId} from '../documentList/documentListStore'
 import {createResource, type Resource} from '../resources/createResource'
 import {subscribeToLiveAndSetLastLiveEventId} from './subscribeToLiveAndSetLastLiveEventId'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
@@ -66,7 +66,7 @@ export type ValuePending<T> = {
  * @public
  */
 export interface PreviewStoreState {
-  resourceId: DocumentResourceId
+  datasetResourceId: DatasetResourceId
   values: {[TDocumentId in string]?: ValuePending<PreviewValue>}
   documentTypes: {[TDocumentId in string]?: string}
   subscriptions: {[TDocumentId in string]?: {[TSubscriptionId in string]?: true}}
@@ -74,12 +74,12 @@ export interface PreviewStoreState {
   lastLiveEventId: string | null
 }
 
-export const previewStore = (resourceId: DocumentResourceId): Resource<PreviewStoreState> => {
+export const previewStore = (datasetResourceId: DatasetResourceId): Resource<PreviewStoreState> => {
   return createResource<PreviewStoreState>({
-    name: `Preview-${resourceId}`,
+    name: `Preview-${datasetResourceId}`,
     getInitialState() {
       return {
-        resourceId,
+        datasetResourceId,
         documentTypes: {},
         lastLiveEventId: null,
         subscriptions: {},

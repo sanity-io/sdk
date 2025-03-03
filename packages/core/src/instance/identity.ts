@@ -9,7 +9,7 @@ export function getSdkResources(resources: SdkResource[]): readonly SdkResource[
     resources?.map<SdkResource>(({projectId, dataset}) => {
       return {
         id: generateId(),
-        resourceId: `document:${projectId}:${dataset}`,
+        resourceId: `${projectId}:${dataset}`,
         projectId,
         dataset,
       }

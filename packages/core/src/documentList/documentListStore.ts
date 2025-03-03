@@ -16,8 +16,8 @@ import {subscribeToStateAndFetchResults} from './subscribeToStateAndFetchResults
  * @public
  */
 export interface DocumentListOptions {
-  /** The resource ID in format 'document:projectId:datasetId' */
-  resourceId: DocumentResourceId
+  /** The resource ID in format 'projectId:datasetId' */
+  datasetResourceId: DatasetResourceId
   /** GROQ filter expression to query specific documents */
   filter?: string
   /** Array of sort ordering specifications to determine the order of results */
@@ -27,10 +27,10 @@ export interface DocumentListOptions {
 }
 
 /**
- * The resource ID in format 'document:projectId:datasetId'
+ * The resource ID in format 'projectId:datasetId'
  * @public
  */
-export type DocumentResourceId = `document:${string}:${string}` | undefined
+export type DatasetResourceId = `${string}:${string}` | undefined
 
 /**
  * Represents an identifier to a Sanity document, containing its `_id` to pull
@@ -56,14 +56,14 @@ export interface DocumentListState {
 }
 
 /**
- * Creates a document list store with a specific resourceId
+ * Creates a document list store with a specific datasetResourceId
  * @param instance - The Sanity instance
- * @param resourceId - The resource ID in format 'document:projectId:datasetId'
+ * @param datasetResourceId - The resource ID in format 'projectId:datasetId'
  * @public
  */
 export function createDocumentListStore(
   instance: SanityInstance,
-  resourceId: DocumentResourceId,
+  datasetResourceId: DatasetResourceId,
 ): {
   dispose: () => void
 } & BoundActions<{
@@ -81,11 +81,11 @@ export function createDocumentListStore(
   setOptions: ResourceAction<DocumentListState, [options: DocumentListOptions], void>
 }> {
   const documentList = createResource<DocumentListState>({
-    name: `documentList_${resourceId}`,
+    name: `documentList_${datasetResourceId}`,
     getInitialState: () => ({
       limit: PAGE_SIZE,
       options: {
-        resourceId,
+        datasetResourceId,
         perspective: 'previewDrafts',
       },
       results: [],
@@ -131,7 +131,7 @@ export function createDocumentListStore(
           options: {
             ...prev.options,
             ...options,
-            resourceId, // Always set the resourceId to original resourceId
+            datasetResourceId, // Always set the resourceId to original resourceId
           },
         }))
       }

@@ -19,7 +19,7 @@ export type {ClientState} from '../client/clientStore'
 
 /** DOCUMENT LIST */
 export type {DocumentListOptions, DocumentListState} from '../documentList/documentListStore'
-export type {DocumentResourceId} from '../documentList/documentListStore'
+export type {DatasetResourceId} from '../documentList/documentListStore'
 export {createDocumentListStore} from '../documentList/documentListStore'
 
 /** AUTH */

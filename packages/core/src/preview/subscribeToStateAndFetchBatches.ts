@@ -25,8 +25,8 @@ const BATCH_DEBOUNCE_TIME = 50
 export const subscribeToStateAndFetchBatches = createInternalAction(
   ({state, instance}: ActionContext<PreviewStoreState>) => {
     return function () {
-      const projectId = state.get().resourceId?.split(':')[1]
-      const dataset = state.get().resourceId?.split(':')[2]
+      const projectId = state.get().datasetResourceId?.split(':')[0]
+      const dataset = state.get().datasetResourceId?.split(':')[1]
       const client$ = new Observable<SanityClient>((observer) =>
         getSubscribableClient(instance, {
           apiVersion: 'vX',
