@@ -3,12 +3,10 @@ import {describe, expect, it} from 'vitest'
 
 import {getTokenState} from '../auth/authStore'
 import {createSanityInstance} from '../instance/sanityInstance'
-import {type SanityInstance} from '../instance/types'
 import {type StateSource} from '../resources/createStateSourceAction'
 import {type ClientOptions, getClient, getClientState} from './clientStore'
 
 let token$: ReplaySubject<string>
-let instance: SanityInstance
 
 vi.mock('../auth/authStore', () => {
   const subject = new ReplaySubject(1)
@@ -20,18 +18,33 @@ vi.mock('../auth/authStore', () => {
 })
 
 beforeEach(() => {
-  instance = createSanityInstance({projectId: 'p', dataset: 'd'})
   token$ = (getTokenState as () => StateSource<string>)().observable as ReplaySubject<string>
 })
 
 describe('getClient', () => {
   it('memoizes the resulting client based on current default client', () => {
+    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
     const client1 = getClient(instance, {apiVersion: 'vX'})
     const client2 = getClient(instance, {apiVersion: 'vX'})
     expect(client1).toBe(client2)
   })
 
+  it('configures `apiHost`', () => {
+    const stagingApiHost = 'https://api.sanity.work'
+    const instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      auth: {apiHost: stagingApiHost},
+    })
+    const projectClient = getClient(instance, {apiVersion: 'vX', scope: 'project'})
+    const globalClient = getClient(instance, {apiVersion: 'vX', scope: 'global'})
+
+    expect(projectClient.config().apiHost).toBe(stagingApiHost)
+    expect(globalClient.config().apiHost).toBe(stagingApiHost)
+  })
+
   it('returns a different result if the token is updated', () => {
+    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
     const client1 = getClient(instance, {apiVersion: 'vX'})
     const client2 = getClient(instance, {apiVersion: 'vX'})
     expect(client1).toBe(client2)
@@ -49,6 +62,7 @@ describe('getClient', () => {
 
 describe('getClientState', () => {
   it('returns a state source that updates when `getClient` updates', async () => {
+    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
     const options: ClientOptions = {apiVersion: 'vX', scope: 'global'}
     const clientState = getClientState(instance, options)
 
