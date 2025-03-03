@@ -108,7 +108,7 @@ export {
 export {type PermissionDeniedReason, type PermissionsResult} from '../document/permissions'
 
 /** USERS */
-export {type ResourceType, type SanityUser} from '../users/types'
+export {type Membership, type ResourceType, type SanityUser, type UserProfile} from '../users/types'
 export {createUsersStore, type UsersStoreState} from '../users/usersStore'
 
 /** PROJECT */

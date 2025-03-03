@@ -25,8 +25,8 @@ export {useDocumentEvent} from '../hooks/document/useDocumentEvent'
 export {useDocumentSyncStatus} from '../hooks/document/useDocumentSyncStatus'
 export {useEditDocument} from '../hooks/document/useEditDocument'
 export {usePermissions} from '../hooks/document/usePermissions'
-export {useDocuments} from '../hooks/documentCollection/useDocuments'
 export {type DocumentHandleCollection} from '../hooks/documentCollection/types'
+export {useDocuments} from '../hooks/documentCollection/useDocuments'
 export {useSearch} from '../hooks/documentCollection/useSearch'
 export {
   usePreview,
@@ -35,6 +35,6 @@ export {
 } from '../hooks/preview/usePreview'
 export {useProject} from '../hooks/projects/useProject'
 export {useProjects} from '../hooks/projects/useProjects'
-export {useUsers, type UseUsersResult} from '../hooks/users/useUsers'
+export {useUsers, type UseUsersParams, type UseUsersResult} from '../hooks/users/useUsers'
 export {type CurrentUser, type DocumentHandle} from '@sanity/sdk'
 export {type SanityDocument} from '@sanity/types'
