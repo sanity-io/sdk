@@ -18,7 +18,7 @@ interface SearchOptions extends DocumentListOptions {
  * function SearchResults() {
  *   const [query, setQuery] = useState('')
  *   const {results, isPending} = useSearch({
- *     type: 'book',
+ *     filter: '_type == "book"',
  *     query,
  *     sort: [{field: '_createdAt', direction: 'desc'}]
  *   })
