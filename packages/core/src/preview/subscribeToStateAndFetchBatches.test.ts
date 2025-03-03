@@ -1,17 +1,19 @@
-import {type SyncTag} from '@sanity/client'
+import {SanityClient, type SyncTag} from '@sanity/client'
 import {Schema as SchemaConstructor} from '@sanity/schema'
 import {type Schema} from '@sanity/types'
 import {Observable, of, Subject} from 'rxjs'
 import {describe, expect, it, type Mock, vi} from 'vitest'
 
-import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState, type ResourceState} from '../resources/createResource'
+import {type StateSource} from '../resources/createStateSourceAction'
 import {getSchemaState} from '../schema/getSchemaState'
 import {type PreviewQueryResult, type PreviewStoreState} from './previewStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 
-vi.mock('../client/actions/getSubscribableClient')
+vi.mock('../client/clientStore')
+
 vi.mock('../schema/getSchemaState')
 vi.mock('../resources/createResource', async (importOriginal) => {
   const original = await importOriginal<typeof import('../resources/createResource')>()
@@ -56,7 +58,9 @@ describe('subscribeToStateAndFetchBatches', () => {
           return () => subscription.unsubscribe()
         }),
     )
-    ;(getSubscribableClient as Mock).mockReturnValue(of({observable: {fetch: mockFetch}}))
+    vi.mocked(getClientState).mockReturnValue({
+      observable: of({observable: {fetch: mockFetch}} as unknown as SanityClient),
+    } as StateSource<SanityClient>)
     ;(getSchemaState as Mock).mockImplementation(() => ({
       getCurrent: () => schema,
       subscribe: vi.fn(() => vi.fn()),

@@ -1,22 +1,21 @@
 import {type RawQuerylessQueryResponse, type SanityClient} from '@sanity/client'
 import {pick} from 'lodash-es'
-import {filter, firstValueFrom, map, of, Subject} from 'rxjs'
+import {filter, firstValueFrom, map, ReplaySubject, Subject} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
-import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState, type ResourceState} from '../resources/createResource'
+import {type StateSource} from '../resources/createStateSourceAction'
 import {type DocumentListState} from './documentListStore'
 import {
   type DocumentListQueryResult,
   subscribeToStateAndFetchResults,
 } from './subscribeToStateAndFetchResults'
 
-vi.mock('../client/actions/getSubscribableClient', () => {
-  return {
-    getSubscribableClient: vi.fn(),
-  }
-})
+vi.mock('../client/clientStore.ts', () => ({
+  getClientState: vi.fn().mockReturnValue({observable: new ReplaySubject(1)}),
+}))
 
 describe('subscribeToStateAndFetchResults', () => {
   const mockClientFetch = vi.fn()
@@ -31,7 +30,11 @@ describe('subscribeToStateAndFetchResults', () => {
   let state: ResourceState<DocumentListState>
 
   beforeEach(() => {
-    vi.mocked(getSubscribableClient).mockReturnValue(of(mockClient as unknown as SanityClient))
+    // Make getClientState().observable return an observable that immediately emits fakeClient.
+    const client$ = (getClientState as () => StateSource<SanityClient>)()
+      .observable as ReplaySubject<SanityClient>
+    client$.next(mockClient as unknown as SanityClient)
+
     state = createResourceState<DocumentListState>(
       {
         limit: 25,

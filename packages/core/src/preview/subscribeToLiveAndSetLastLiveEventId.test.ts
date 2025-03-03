@@ -1,16 +1,15 @@
-import {type LiveEventMessage} from '@sanity/client'
+import {type LiveEventMessage, SanityClient} from '@sanity/client'
 import {Observable, of, Subject} from 'rxjs'
-import {describe, it, type Mock, vi} from 'vitest'
+import {describe, it, vi} from 'vitest'
 
-import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState, type ResourceState} from '../resources/createResource'
+import {type StateSource} from '../resources/createStateSourceAction'
 import {type PreviewStoreState} from './previewStore'
 import {subscribeToLiveAndSetLastLiveEventId} from './subscribeToLiveAndSetLastLiveEventId'
 
-vi.mock('../client/actions/getSubscribableClient', () => ({
-  getSubscribableClient: vi.fn(),
-}))
+vi.mock('../client/clientStore.ts', () => ({getClientState: vi.fn()}))
 
 vi.mock('../resources/createResource', async (importOriginal) => {
   const original = await importOriginal<typeof import('../resources/createResource')>()
@@ -50,7 +49,9 @@ describe('subscribeToLiveAndSetLastLiveEventId', () => {
     }
 
     // Mock the getSubscribableClient to emit our mock client
-    ;(getSubscribableClient as Mock).mockReturnValue(of(mockClient))
+    vi.mocked(getClientState).mockReturnValue({
+      observable: of(mockClient as unknown as SanityClient),
+    } as StateSource<SanityClient>)
 
     // Set up initial state with a matching sync tag
     state.set('setSyncTags', {
@@ -96,7 +97,10 @@ describe('subscribeToLiveAndSetLastLiveEventId', () => {
     }
 
     const clientSubject = new Subject()
-    ;(getSubscribableClient as Mock).mockReturnValue(clientSubject)
+
+    vi.mocked(getClientState).mockReturnValue({
+      observable: clientSubject as Observable<SanityClient>,
+    } as StateSource<SanityClient>)
 
     const liveSubscription = subscribeToLiveAndSetLastLiveEventId({instance, state})
     clientSubject.next(mockClient)

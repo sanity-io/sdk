@@ -1,4 +1,4 @@
-import {type Action, type ListenEvent, type SanityClient} from '@sanity/client'
+import {type Action, type ListenEvent} from '@sanity/client'
 import {getPublishedId} from '@sanity/client/csm'
 import {type SanityDocument} from '@sanity/types'
 import {type ExprNode} from 'groq-js'
@@ -25,7 +25,7 @@ import {
   withLatestFrom,
 } from 'rxjs'
 
-import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {getClientState} from '../client/clientStore'
 import {API_VERSION} from '../documentList/documentListConstants'
 import {type SanityInstance} from '../instance/types'
 import {type ActionContext, createAction, createInternalAction} from '../resources/createAction'
@@ -281,10 +281,6 @@ const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
     const {events} = state.get()
 
     return function () {
-      const client$ = new Observable<SanityClient>((observer) =>
-        getSubscribableClient(instance, {apiVersion: API_VERSION}).subscribe(observer),
-      )
-
       return state.observable
         .pipe(
           throttle(
@@ -302,7 +298,7 @@ const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
           tap((next) => state.set('transitionAppliedTransactionsToOutgoing', next)),
           map((s) => s.outgoing),
           distinctUntilChanged(),
-          withLatestFrom(client$),
+          withLatestFrom(getClientState(instance, {apiVersion: API_VERSION}).observable),
           concatMap(([outgoing, client]) => {
             if (!outgoing) return EMPTY
             return client.observable
@@ -400,13 +396,10 @@ const subscribeToSubscriptionsAndListenToDocuments = createInternalAction(
 const subscribeToClientAndFetchDatasetAcl = createInternalAction(
   ({instance, state}: ActionContext<DocumentStoreState>) => {
     const {projectId, dataset} = instance.identity
-    const client$ = new Observable<SanityClient>((observer) =>
-      getSubscribableClient(instance, {apiVersion: API_VERSION}).subscribe(observer),
-    )
 
     return function () {
-      return client$
-        .pipe(
+      return getClientState(instance, {apiVersion: API_VERSION})
+        .observable.pipe(
           switchMap((client) =>
             client.observable.request<DatasetAcl>({
               uri: `/projects/${projectId}/datasets/${dataset}/acl`,

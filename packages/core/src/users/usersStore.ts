@@ -1,12 +1,14 @@
 import {type ResourceType, type User} from '@sanity/access-api'
 import {createSelector} from 'reselect'
 
-import {getGlobalClient} from '../client/actions/getGlobalClient'
+import {getClient} from '../client/clientStore'
 import {type SanityInstance} from '../instance/types'
 import {createAction} from '../resources/createAction'
 import {createResource} from '../resources/createResource'
 import {createStateSourceAction} from '../resources/createStateSourceAction'
 import {createStore} from '../resources/createStore'
+
+const API_VERSION = 'xV'
 
 /**
  * @public
@@ -95,7 +97,7 @@ interface FetchUsersParams {
  */
 const fetchUsers = (instance: SanityInstance, params: FetchUsersParams) => {
   const {resourceType, resourceId, nextCursor, limit = 100} = params
-  const client = getGlobalClient(instance)
+  const client = getClient(instance, {scope: 'global', apiVersion: API_VERSION})
 
   return client.request<SanityUserResponse>({
     method: 'GET',

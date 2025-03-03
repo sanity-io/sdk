@@ -11,13 +11,14 @@ import {forkJoin, lastValueFrom, of, Subject, throwError} from 'rxjs'
 import {bufferTime, catchError, toArray} from 'rxjs/operators'
 import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
-import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../instance/sanityInstance'
+import {type StateSource} from '../resources/createStateSourceAction'
 import {createFetchDocument, createSharedListener} from './sharedListener'
 
 const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
-vi.mock('../client/actions/getSubscribableClient', () => ({getSubscribableClient: vi.fn()}))
+vi.mock('../client/clientStore.ts', () => ({getClientState: vi.fn()}))
 vi.mock('@sanity/mutate/_unstable_store', () => ({createDocumentLoaderFromClient: vi.fn()}))
 
 describe('createSharedListener', () => {
@@ -32,17 +33,13 @@ describe('createSharedListener', () => {
       listen: vi.fn(() => fakeListenSubject.asObservable()),
     } as unknown as SanityClient
     // Make getSubscribableClient return an observable that immediately emits fakeClient.
-    vi.mocked(getSubscribableClient).mockReturnValue(of(fakeClient))
+    vi.mocked(getClientState).mockReturnValue({
+      observable: of(fakeClient),
+    } as StateSource<SanityClient>)
   })
 
   afterEach(() => {
     vi.clearAllMocks()
-  })
-
-  it('should call getSubscribableClient with the correct instance and API version', () => {
-    createSharedListener(instance).subscribe()
-    expect(getSubscribableClient).toHaveBeenCalledTimes(1)
-    expect(getSubscribableClient).toHaveBeenCalledWith(instance, {apiVersion: 'vX'})
   })
 
   it('should call client.listen with the expected parameters', () => {
@@ -157,8 +154,10 @@ describe('createFetchDocument', () => {
   beforeEach(() => {
     // Create a fake client.
     fakeClient = {fetch: vi.fn()} as unknown as SanityClient
-    // getSubscribableClient will emit our fake client.
-    vi.mocked(getSubscribableClient).mockReturnValue(of(fakeClient))
+
+    vi.mocked(getClientState).mockReturnValue({
+      observable: of(fakeClient),
+    } as StateSource<SanityClient>)
 
     // createDocumentLoaderFromClient returns a function (the "loader")
     fakeLoadDocument = vi.fn()

@@ -1,23 +1,19 @@
-import {type SanityClient} from '@sanity/client'
-import {combineLatest, distinctUntilChanged, filter, map, Observable, switchMap} from 'rxjs'
+import {combineLatest, distinctUntilChanged, filter, map, switchMap} from 'rxjs'
 
-import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {getClientState} from '../client/clientStore'
 import {type ActionContext, createInternalAction} from '../resources/createAction'
 import {type PreviewStoreState} from './previewStore'
 import {PREVIEW_TAG} from './util'
 
 export const subscribeToLiveAndSetLastLiveEventId = createInternalAction(
   ({instance, state}: ActionContext<PreviewStoreState>) => {
-    const client$ = new Observable<SanityClient>((observer) =>
-      getSubscribableClient(instance, {apiVersion: 'vX'}).subscribe(observer),
-    )
     const syncTags$ = state.observable.pipe(
       map((i) => i.syncTags),
       distinctUntilChanged(),
     )
 
     return function () {
-      const messageEvents$ = client$.pipe(
+      const messageEvents$ = getClientState(instance, {apiVersion: 'vX'}).observable.pipe(
         switchMap((client) =>
           client.live
             .events({includeDrafts: !!client.config().token, tag: PREVIEW_TAG})

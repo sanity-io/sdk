@@ -1,98 +1,73 @@
-import {type Subscription} from 'rxjs'
+import {first, firstValueFrom, map, ReplaySubject} from 'rxjs'
 import {describe, expect, it} from 'vitest'
 
-import {config} from '../../test/fixtures'
+import {getTokenState} from '../auth/authStore'
 import {createSanityInstance} from '../instance/sanityInstance'
-import {createResourceState, getOrCreateResource} from '../resources/createResource'
-import {subscribeToAuthEvents} from './actions/subscribeToAuthEvents'
-import {clientStore} from './clientStore'
+import {type SanityInstance} from '../instance/types'
+import {type StateSource} from '../resources/createStateSourceAction'
+import {type ClientOptions, getClient, getClientState} from './clientStore'
 
-vi.mock('./actions/subscribeToAuthEvents', () => ({
-  subscribeToAuthEvents: vi.fn(),
-}))
+let token$: ReplaySubject<string>
+let instance: SanityInstance
 
-describe('clientStore', () => {
-  describe('initialization', () => {
-    it('creates initial state without token', () => {
-      const instance = createSanityInstance(config)
-      const store = getOrCreateResource(instance, clientStore)
-      const state = store.state.get()
+vi.mock('../auth/authStore', () => {
+  const subject = new ReplaySubject(1)
+  subject.next('initial-token')
 
-      expect(state.defaultClient.config()).toEqual(
-        expect.objectContaining({
-          projectId: config.projectId,
-          dataset: config.dataset,
-          token: undefined,
-          useCdn: false,
-          apiVersion: '2024-11-12',
-        }),
-      )
-    })
+  return {
+    getTokenState: vi.fn().mockReturnValue({observable: subject}),
+  }
+})
 
-    it('creates initial state with token', () => {
-      const instance = createSanityInstance({
-        ...config,
-        auth: {
-          token: 'foo',
-        },
-      })
-      const store = getOrCreateResource(instance, clientStore)
-      const state = store.state.get()
-      expect(state.defaultClient.config().token).toBe('foo')
-    })
+beforeEach(() => {
+  instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  token$ = (getTokenState as () => StateSource<string>)().observable as ReplaySubject<string>
+})
 
-    it('creates initial state with apiHost', () => {
-      const instance = createSanityInstance({
-        ...config,
-        auth: {apiHost: 'https://api.sanity.work'},
-      })
-      const store = getOrCreateResource(instance, clientStore)
-      const state = store.state.get()
-      expect(state.defaultClient.config().apiHost).toBe('https://api.sanity.work')
-    })
-
-    it('initializes clients Map with default clients', () => {
-      const instance = createSanityInstance(config)
-      const store = getOrCreateResource(instance, clientStore)
-      const state = store.state.get()
-
-      expect(state.clients.size).toBe(2)
-      expect(state.clients.get('2024-11-12')).toBe(state.defaultClient)
-      expect(state.clients.get('global-vX')).toBe(state.defaultGlobalClient)
-    })
-
-    it('maintains separate stores for different instances', () => {
-      const instance1 = createSanityInstance({...config, projectId: 'project1'})
-      const instance2 = createSanityInstance({...config, projectId: 'project2'})
-
-      const store1 = getOrCreateResource(instance1, clientStore)
-      const store2 = getOrCreateResource(instance2, clientStore)
-
-      expect(store1.state.get().defaultClient.config().projectId).toBe('project1')
-      expect(store2.state.get().defaultClient.config().projectId).toBe('project2')
-    })
+describe('getClient', () => {
+  it('memoizes the resulting client based on current default client', () => {
+    const client1 = getClient(instance, {apiVersion: 'vX'})
+    const client2 = getClient(instance, {apiVersion: 'vX'})
+    expect(client1).toBe(client2)
   })
 
-  it('should subscribe to auth events and return cleanup function', () => {
-    const instance = createSanityInstance(config)
-    const unsubscribeSpy = vi.fn()
-    const mockSubscription = {
-      unsubscribe: unsubscribeSpy,
-    } as unknown as Subscription
+  it('returns a different result if the token is updated', () => {
+    const client1 = getClient(instance, {apiVersion: 'vX'})
+    const client2 = getClient(instance, {apiVersion: 'vX'})
+    expect(client1).toBe(client2)
+    expect(client1.config().token).toBe('initial-token')
+    expect(client1.config().token).toBe(client2.config().token)
 
-    vi.mocked(subscribeToAuthEvents).mockImplementation(() => mockSubscription)
-    const initialState = clientStore.getInitialState(instance)
+    token$.next('updated-token')
+    const client3 = getClient(instance, {apiVersion: 'vX'})
+    const client4 = getClient(instance, {apiVersion: 'vX'})
+    expect(client3).toBe(client4)
+    expect(client3.config().token).toBe('updated-token')
+    expect(client3.config().token).toBe(client4.config().token)
+  })
+})
 
-    const dispose = clientStore.initialize!.call(
-      {
-        instance,
-        state: createResourceState(initialState),
-      },
-      instance,
+describe('getClientState', () => {
+  it('returns a state source that updates when `getClient` updates', async () => {
+    const options: ClientOptions = {apiVersion: 'vX', scope: 'global'}
+    const clientState = getClientState(instance, options)
+
+    expect(clientState.getCurrent()).toBe(getClient(instance, options))
+
+    const subscriber = vi.fn()
+    const unsubscribe = clientState.subscribe(subscriber)
+
+    const tokenUpdated = firstValueFrom(
+      clientState.observable.pipe(
+        map((client) => client.config().token),
+        first((token) => token === 'updated-token'),
+      ),
     )
-    expect(subscribeToAuthEvents).toHaveBeenCalled()
 
-    dispose()
-    expect(unsubscribeSpy).toHaveBeenCalled()
+    token$.next('updated-token')
+    await tokenUpdated
+
+    expect(subscriber).toHaveBeenCalledTimes(1)
+    unsubscribe()
   })
 })

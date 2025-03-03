@@ -1,16 +1,13 @@
-import {type SanityClient} from '@sanity/client'
-import {filter, map, Observable, switchMap, withLatestFrom} from 'rxjs'
+import {filter, map, switchMap, withLatestFrom} from 'rxjs'
 
-import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {getClientState} from '../client/clientStore'
 import {type ActionContext, createInternalAction} from '../resources/createAction'
 import {API_VERSION} from './documentListConstants'
 import {type DocumentListState} from './documentListStore'
 
 export const subscribeToLiveClientAndSetLastLiveEventId = createInternalAction(
   ({state, instance}: ActionContext<DocumentListState>) => {
-    const liveEventMessage$ = new Observable<SanityClient>((observer) =>
-      getSubscribableClient(instance, {apiVersion: API_VERSION}).subscribe(observer),
-    ).pipe(
+    const liveEventMessage$ = getClientState(instance, {apiVersion: API_VERSION}).observable.pipe(
       switchMap((client) =>
         client.live.events({includeDrafts: !!client.config().token, tag: 'sdk.document-list'}),
       ),

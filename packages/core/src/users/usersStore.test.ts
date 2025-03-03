@@ -2,13 +2,13 @@ import {type ResourceType, type User} from '@sanity/access-api'
 import {firstValueFrom} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {getGlobalClient} from '../client/actions/getGlobalClient'
+import {getClient} from '../client/clientStore'
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState, type ResourceState} from '../resources/createResource'
 import {createUsersStore, type UsersStoreState} from './usersStore'
 
-vi.mock('../client/actions/getGlobalClient', () => ({
-  getGlobalClient: vi.fn().mockReturnValue({
+vi.mock('../client/clientStore', () => ({
+  getClient: vi.fn().mockReturnValue({
     request: vi.fn().mockImplementation(() => ({
       data: [],
       totalCount: 0,
@@ -107,7 +107,7 @@ describe('usersStore', () => {
         totalCount: 1,
         nextCursor: 'cursor123',
       }
-      vi.mocked(getGlobalClient(instance).request).mockResolvedValueOnce(mockResponse)
+      vi.mocked(getClient(instance, {apiVersion: 'vX'}).request).mockResolvedValueOnce(mockResponse)
 
       const store = createUsersStore({state, instance})
       const result = await store.resolveUsers()
@@ -144,7 +144,7 @@ describe('usersStore', () => {
         initialFetchCompleted: true,
       })
 
-      vi.mocked(getGlobalClient(instance).request).mockResolvedValueOnce({
+      vi.mocked(getClient(instance, {apiVersion: 'xV'}).request).mockResolvedValueOnce({
         data: newUsers,
         totalCount: 15,
         nextCursor: null,
@@ -218,7 +218,7 @@ describe('usersStore', () => {
 
   describe('edge cases', () => {
     it('should handle empty response', async () => {
-      vi.mocked(getGlobalClient(instance).request).mockResolvedValueOnce({
+      vi.mocked(getClient(instance, {apiVersion: 'vX'}).request).mockResolvedValueOnce({
         data: [],
         totalCount: 0,
         nextCursor: null,
