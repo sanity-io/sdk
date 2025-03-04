@@ -1,27 +1,29 @@
 import {type SanityClient} from '@sanity/client'
-import {of, ReplaySubject} from 'rxjs'
+import {of} from 'rxjs'
 import {describe, it} from 'vitest'
 
-import {getSubscribableClient} from '../client/actions/getSubscribableClient'
+import {getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../instance/sanityInstance'
+import {type StateSource} from '../resources/createStateSourceAction'
 import {resolveProjects} from './projects'
 
-vi.mock('../client/actions/getSubscribableClient', () => ({
-  getSubscribableClient: vi.fn().mockReturnValue(new ReplaySubject(1)),
-}))
+vi.mock('../client/clientStore')
 
 describe('projects', () => {
   it('calls the `client.observable.projects.list` method on the client and returns the result', async () => {
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    const client$ = getSubscribableClient(instance, {apiVersion: ''}) as ReplaySubject<SanityClient>
     const projects = [{id: 'a'}, {id: 'b'}]
-
     const list = vi.fn().mockReturnValue(of(projects))
-    client$.next({
+
+    const mockClient = {
       observable: {
         projects: {list} as unknown as SanityClient['observable']['projects'],
       },
-    } as SanityClient)
+    } as SanityClient
+
+    vi.mocked(getClientState).mockReturnValue({
+      observable: of(mockClient),
+    } as StateSource<SanityClient>)
 
     const result = await resolveProjects(instance)
     expect(result).toEqual(projects)
