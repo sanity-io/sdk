@@ -10,7 +10,9 @@ import {
 } from './createResource'
 
 describe('createResource', () => {
-  const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+  const instance = createSanityInstance({
+    resources: [{projectId: 'test', dataset: 'test'}],
+  })
 
   interface TestState {
     value: number
@@ -103,7 +105,7 @@ describe('createResource', () => {
     })
 
     getOrCreateResource(instance, resource)
-    disposeResources(instance.identity)
+    disposeResources(instance.resources)
 
     const {state} = initializeResource(instance, resource)
 

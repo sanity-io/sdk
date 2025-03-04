@@ -23,7 +23,14 @@ beforeEach(() => {
 
 describe('getClient', () => {
   it('memoizes the resulting client based on current default client', () => {
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance({
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
+    })
     const client1 = getClient(instance, {apiVersion: 'vX'})
     const client2 = getClient(instance, {apiVersion: 'vX'})
     expect(client1).toBe(client2)
@@ -32,8 +39,12 @@ describe('getClient', () => {
   it('configures `apiHost`', () => {
     const stagingApiHost = 'https://api.sanity.work'
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {apiHost: stagingApiHost},
     })
     const projectClient = getClient(instance, {apiVersion: 'vX', scope: 'project'})
@@ -44,7 +55,14 @@ describe('getClient', () => {
   })
 
   it('returns a different result if the token is updated', () => {
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance({
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
+    })
     const client1 = getClient(instance, {apiVersion: 'vX'})
     const client2 = getClient(instance, {apiVersion: 'vX'})
     expect(client1).toBe(client2)
@@ -62,7 +80,14 @@ describe('getClient', () => {
 
 describe('getClientState', () => {
   it('returns a state source that updates when `getClient` updates', async () => {
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance({
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
+    })
     const options: ClientOptions = {apiVersion: 'vX', scope: 'global'}
     const clientState = getClientState(instance, options)
 

@@ -163,7 +163,7 @@ export const authStore = createResource<AuthStoreState>({
       initialLocationHref = getDefaultLocation(),
       storageArea = getDefaultStorage(),
     } = instance.config.auth ?? {}
-    const {projectId, dataset} = instance.identity
+    const {projectId, dataset} = instance.resources[0] // TODO: support multiple resources
 
     const storageKey = `__sanity_auth_token_${projectId}_${dataset}`
 

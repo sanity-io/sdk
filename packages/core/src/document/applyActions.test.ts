@@ -37,7 +37,14 @@ describe('applyActions', () => {
       events: eventsSubject,
     }
     const state = createResourceState(initialState)
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance({
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
+    })
     const context: ActionContext<TestState> = {instance, state}
 
     const action: DocumentAction = {
@@ -105,7 +112,14 @@ describe('applyActions', () => {
       events: eventsSubject,
     }
     const state = createResourceState(initialState)
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance({
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
+    })
     const context: ActionContext<TestState> = {instance, state}
 
     const action: DocumentAction = {

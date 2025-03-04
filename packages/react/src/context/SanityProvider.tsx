@@ -28,8 +28,7 @@ export const SanityInstanceContext = createContext<SanityInstance | null>(null)
  * import MyAppRoot from './Root'
  *
  * const sanityInstance = createSanityInstance({
- *   projectId: 'your-project-id',
- *   dataset: 'production',
+ *   resources: [{projectId: 'your-project-id', dataset: 'production'}],
  * })
  *
  * export default function MyApp() {

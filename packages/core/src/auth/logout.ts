@@ -7,7 +7,7 @@ import {authStore} from './authStore'
  * @public
  */
 export const logout = createAction(authStore, ({state, instance}) => {
-  const {projectId, dataset} = instance.identity
+  const {projectId, dataset} = instance.resources[0] // TODO: support multiple resources
   const {clientFactory, apiHost, authScope, providedToken, storageArea, storageKey} =
     state.get().options
 

@@ -6,8 +6,12 @@ import {Outlet} from 'react-router'
 import {schema} from '../schema'
 
 const sanityInstance = createSanityInstance({
-  projectId: 'ppsg7ml5',
-  dataset: 'test',
+  resources: [
+    {
+      projectId: 'ppsg7ml5',
+      dataset: 'test',
+    },
+  ],
   schema,
 })
 

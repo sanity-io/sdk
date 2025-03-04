@@ -15,7 +15,7 @@ vi.mock('../context/useSanityInstance', () => ({
   useSanityInstance: vi.fn(),
 }))
 
-const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+const instance = createSanityInstance({resources: [{projectId: 'p', dataset: 'd'}]})
 
 describe('useDocumentEvent hook', () => {
   beforeEach(() => {

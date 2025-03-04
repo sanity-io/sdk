@@ -395,7 +395,7 @@ const subscribeToSubscriptionsAndListenToDocuments = createInternalAction(
 
 const subscribeToClientAndFetchDatasetAcl = createInternalAction(
   ({instance, state}: ActionContext<DocumentStoreState>) => {
-    const {projectId, dataset} = instance.identity
+    const {projectId, dataset} = instance.resources[0] // TODO: support multiple resources
 
     return function () {
       return getClientState(instance, {apiVersion: API_VERSION})

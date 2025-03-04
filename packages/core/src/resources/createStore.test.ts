@@ -6,7 +6,9 @@ import {createResource, createResourceState} from './createResource'
 import {createStore} from './createStore'
 
 describe('createStore', () => {
-  const mockInstance = createSanityInstance({projectId: 'test', dataset: 'test'})
+  const mockInstance = createSanityInstance({
+    resources: [{projectId: 'test', dataset: 'test'}],
+  })
 
   interface TestState {
     value: number

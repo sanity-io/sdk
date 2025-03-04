@@ -19,7 +19,7 @@ import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
  *
  * @example
  * ```tsx
- * const config = { projectId: 'your-project-id', dataset: 'production' }
+ * const config = { resources: [{projectId: 'your-project-id', dataset: 'production'}] }
  * return <LoginLinks sanityInstance={config} />
  * ```
  */

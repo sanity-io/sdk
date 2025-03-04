@@ -26,8 +26,12 @@ describe('handleCallback', () => {
     vi.mocked(getAuthCode).mockReturnValue(authCode)
 
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {
         clientFactory,
         storageArea: {setItem} as unknown as Storage,
@@ -71,8 +75,12 @@ describe('handleCallback', () => {
     vi.mocked(getAuthCode).mockReturnValue(authCode)
 
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {
         clientFactory,
         storageArea: {setItem} as unknown as Storage,
@@ -96,8 +104,12 @@ describe('handleCallback', () => {
     const setItem = vi.fn()
 
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {
         clientFactory,
         storageArea: {setItem} as unknown as Storage,
@@ -123,8 +135,12 @@ describe('handleCallback', () => {
     const setItem = vi.fn()
 
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {
         clientFactory,
         storageArea: {setItem} as unknown as Storage,
@@ -153,8 +169,12 @@ describe('handleCallback', () => {
     vi.mocked(getAuthCode).mockReturnValue(authCode)
 
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {
         clientFactory,
         storageArea: {setItem} as unknown as Storage,

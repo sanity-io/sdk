@@ -15,10 +15,12 @@ vi.mock('@sanity/sdk', async () => {
         signIn: vi.fn(),
         signOut: vi.fn(),
       },
-      identity: {
-        projectId: 'test-project',
-        dataset: 'test-dataset',
-      },
+      resources: [
+        {
+          projectId: 'test-project',
+          dataset: 'test-dataset',
+        },
+      ],
       dispose: vi.fn(),
     })),
   }
@@ -37,8 +39,7 @@ vi.mock('../hooks/auth/useAuthState', () => ({
 
 describe('SanityApp', () => {
   const mockSanityConfig: SanityConfig = {
-    projectId: 'test-project',
-    dataset: 'test-dataset',
+    resources: [{projectId: 'test-project', dataset: 'test-dataset'}],
   }
 
   it('renders children correctly', async () => {

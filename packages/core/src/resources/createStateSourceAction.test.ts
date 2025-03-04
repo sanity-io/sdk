@@ -35,14 +35,18 @@ describe('createStateSourceAction', () => {
   })
 
   it('should return the current value', () => {
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance({
+      resources: [{projectId: 'p', dataset: 'd'}],
+    })
     const valueState = getValueState(instance)
 
     expect(valueState.getCurrent()).toBe(10)
   })
 
   it('should subscribe to state changes and call the provided function', () => {
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance({
+      resources: [{projectId: 'p', dataset: 'd'}],
+    })
     const valueState = getValueState(instance)
 
     const mockCallback = vi.fn()
@@ -54,7 +58,9 @@ describe('createStateSourceAction', () => {
   })
 
   it('should unsubscribe from the state changes', () => {
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance({
+      resources: [{projectId: 'p', dataset: 'd'}],
+    })
     const valueState = getValueState(instance)
     const mockCallback = vi.fn()
 
@@ -66,7 +72,9 @@ describe('createStateSourceAction', () => {
   })
 
   it('should emit only when the value actually changes', () => {
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance({
+      resources: [{projectId: 'p', dataset: 'd'}],
+    })
     const valueState = getValueState(instance)
 
     const mockCallback = vi.fn()
@@ -80,7 +88,9 @@ describe('createStateSourceAction', () => {
   })
 
   it('returns an observable that emits the current value on subscribe', () => {
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance({
+      resources: [{projectId: 'p', dataset: 'd'}],
+    })
     const valueState = getValueState(instance)
 
     const observer = vi.fn()
@@ -101,7 +111,9 @@ describe('createStateSourceAction', () => {
   })
 
   it('allows providing an `onSubscribe` handler', () => {
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance({
+      resources: [{projectId: 'p', dataset: 'd'}],
+    })
     const valueState = getValueState(instance)
 
     expect(getSubscribed(instance)).toBe(false)

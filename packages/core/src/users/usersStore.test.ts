@@ -19,7 +19,9 @@ vi.mock('../client/clientStore', () => ({
 
 describe('resource initialization', () => {
   it('should have correct default initial state', () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const instance = createSanityInstance({
+      resources: [{projectId: 'test', dataset: 'test'}],
+    })
     const defaultState = createUsersStore(instance)
 
     expect(defaultState.getState().getCurrent()).toEqual({
@@ -42,7 +44,9 @@ describe('usersStore', () => {
   let instance: ReturnType<typeof createSanityInstance>
 
   beforeEach(() => {
-    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    instance = createSanityInstance({
+      resources: [{projectId: 'test', dataset: 'test'}],
+    })
     state = createResourceState<UsersStoreState>(
       {
         users: [],

@@ -79,8 +79,8 @@ export const subscribeToStateAndFetchBatches = createInternalAction(
           map(({ids, result, syncTags, documentTypes, schema}) => ({
             syncTags,
             values: processPreviewQuery({
-              projectId: instance.identity.projectId,
-              dataset: instance.identity.dataset,
+              projectId: instance.resources[0].projectId, // TODO: support multiple resources
+              dataset: instance.resources[0].dataset, // TODO: support multiple resources
               ids,
               documentTypes,
               results: result,

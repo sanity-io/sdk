@@ -50,7 +50,14 @@ import {type HttpAction} from './reducers'
 import {createFetchDocument, createSharedListener} from './sharedListener'
 
 it('creates, edits, and publishes a document', async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   interface Article extends SanityDocument {
     title?: string
@@ -95,7 +102,14 @@ it('edits existing documents', async () => {
     title: string
   }
 
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   const doc: DocumentHandle<Book> = {_id: 'existing-doc', _type: 'book'}
   const state = getDocumentState(instance, doc)
@@ -125,8 +139,22 @@ it('edits existing documents', async () => {
 })
 
 it('sets optimistic changes synchronously', async () => {
-  const instance1 = createSanityInstance({projectId: 'p', dataset: 'd'})
-  const instance2 = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance1 = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
+  const instance2 = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   interface Article extends SanityDocument {
     title?: string
@@ -190,8 +218,22 @@ it('sets optimistic changes synchronously', async () => {
 })
 
 it('propagates changes between two instances', async () => {
-  const instance1 = createSanityInstance({projectId: 'p', dataset: 'd'})
-  const instance2 = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance1 = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
+  const instance2 = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   interface Blog extends SanityDocument {
     _type: 'blog'
@@ -233,8 +275,22 @@ it('propagates changes between two instances', async () => {
 })
 
 it('handles concurrent edits and resolves conflicts', async () => {
-  const instance1 = createSanityInstance({projectId: 'p', dataset: 'd'})
-  const instance2 = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance1 = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
+  const instance2 = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   interface Note extends SanityDocument {
     _type: 'note'
@@ -249,10 +305,20 @@ it('handles concurrent edits and resolves conflicts', async () => {
   const state2Unsubscribe = state2.subscribe()
 
   // Create the initial document from a one-off instance.
-  await applyActions(createSanityInstance({projectId: 'p', dataset: 'd'}), [
-    createDocument(doc),
-    editDocument(doc, {set: {text: 'The quick brown fox jumps over the lazy dog'}}),
-  ]).then((res) => res.submitted())
+  await applyActions(
+    createSanityInstance({
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
+    }),
+    [
+      createDocument(doc),
+      editDocument(doc, {set: {text: 'The quick brown fox jumps over the lazy dog'}}),
+    ],
+  ).then((res) => res.submitted())
 
   // Both instances now issue an edit simultaneously.
   const p1 = applyActions(
@@ -283,7 +349,14 @@ it('handles concurrent edits and resolves conflicts', async () => {
 })
 
 it('unpublishes and discards a document', async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   interface Post extends SanityDocument {
     _type: 'post'
@@ -320,7 +393,14 @@ it('unpublishes and discards a document', async () => {
 })
 
 it('deletes a document', async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   interface Task extends SanityDocument {
     _type: 'task'
@@ -347,7 +427,14 @@ it('deletes a document', async () => {
 })
 
 it('cleans up document state when there are no subscribers', async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   interface Event extends SanityDocument {
     _type: 'event'
@@ -377,7 +464,14 @@ it('cleans up document state when there are no subscribers', async () => {
 })
 
 it('fetches documents if there are no active subscriptions for the actions applied', async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   interface Book extends SanityDocument {
     _type: 'book'
@@ -421,7 +515,14 @@ it('fetches documents if there are no active subscriptions for the actions appli
 })
 
 it('batches edit transaction into one outgoing transaction', async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   interface Author extends SanityDocument {
     _type: 'author'
@@ -454,7 +555,14 @@ it('batches edit transaction into one outgoing transaction', async () => {
 })
 
 it('provides the consistency status via `getDocumentSyncStatus`', async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   interface Author extends SanityDocument {
     _type: 'author'
@@ -497,7 +605,14 @@ it('reverts failed outgoing transaction locally', async () => {
     return await clientActionMockImplementation(...args)
   })
 
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   const revertedEventPromise = new Promise<TransactionRevertedEvent>((resolve) => {
     const unsubscribe = subscribeDocumentEvents(instance, (e) => {
@@ -560,7 +675,14 @@ it('reverts failed outgoing transaction locally', async () => {
 })
 
 it('removes a queued transaction if it fails to apply', async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   const actionErrorEventPromise = new Promise<ActionErrorEvent>((resolve) => {
     const unsubscribe = subscribeDocumentEvents(instance, (e) => {
@@ -600,7 +722,14 @@ it('removes a queued transaction if it fails to apply', async () => {
 })
 
 it('returns allowed true when no permission errors occur', async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
   // Simulate a dataset ACL that allows all permissions.
   const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
   // Override the client mock to return our dataset ACL.
@@ -627,7 +756,14 @@ it('returns allowed true when no permission errors occur', async () => {
 })
 
 it("should reject applying the action if a precondition isn't met", async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
   const doc: DocumentHandle = {_id: 'does-not-exist', _type: 'book'}
 
   await expect(applyActions(instance, deleteDocument(doc))).rejects.toThrow(
@@ -636,7 +772,14 @@ it("should reject applying the action if a precondition isn't met", async () => 
 })
 
 it("should reject applying the action if a permission isn't met", async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
   const doc: DocumentHandle = {_id: 'does-not-exist', _type: 'book'}
 
   const datasetAcl = [{filter: 'false', permissions: ['create']}]
@@ -648,7 +791,14 @@ it("should reject applying the action if a permission isn't met", async () => {
 })
 
 it('returns allowed false with reasons when permission errors occur', async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
   const datasetAcl = [{filter: 'false', permissions: ['create']}]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
@@ -665,7 +815,14 @@ it('returns allowed false with reasons when permission errors occur', async () =
 })
 
 it('fetches dataset ACL and updates grants in the document store state', async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
   // Simulate a dataset ACL response.
   const datasetAcl = [
     {filter: 'true', permissions: ['read', 'update']},
@@ -691,7 +848,14 @@ it('fetches dataset ACL and updates grants in the document store state', async (
 })
 
 it('returns a promise that resolves when a document has been loaded in the store (useful for suspense)', async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   interface Book extends SanityDocument {
     _type: 'book'
@@ -702,10 +866,12 @@ it('returns a promise that resolves when a document has been loaded in the store
   expect(await resolveDocument<Book>(instance, doc)).toBe(null)
 
   // use one-off instance to create the document in the mock backend
-  const result = await applyActions(createSanityInstance({projectId: 'p', dataset: 'd'}), [
-    createDocument(doc),
-    editDocument(doc, {set: {title: 'initial title'}}),
-  ])
+  const result = await applyActions(
+    createSanityInstance({
+      resources: [{projectId: 'p', dataset: 'd'}],
+    }),
+    [createDocument(doc), editDocument(doc, {set: {title: 'initial title'}})],
+  )
   await result.submitted() // wait till submitted to server before resolving
 
   await expect(resolveDocument<Book>(instance, doc)).resolves.toMatchObject({
@@ -716,7 +882,14 @@ it('returns a promise that resolves when a document has been loaded in the store
 })
 
 it('emits an event for each action after an outgoing transaction has been accepted', async () => {
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
 
   const handler = vi.fn()
   const unsubscribe = subscribeDocumentEvents(instance, handler)

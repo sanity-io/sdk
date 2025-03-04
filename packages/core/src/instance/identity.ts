@@ -1,22 +1,19 @@
-import {type SdkIdentity} from './types'
+import {type SdkResource} from './types'
 
 /**
- * thoughtLevel 2 - Primarily what we want is to have an object that we can bind stores/memoizations to, but let the things that depend on it (eg projectId, dataset) be internals that can't be overwritten by accident/intentionally
  * @public
  */
-export function getSdkIdentity({
-  projectId,
-  dataset,
-}: {
-  projectId: string
-  dataset: string
-}): SdkIdentity {
-  const id = generateId()
-  return Object.freeze({
-    id,
-    projectId,
-    dataset,
-  })
+export function getSdkResources(resources: SdkResource[]): readonly SdkResource[] {
+  return Object.freeze(
+    resources?.map<SdkResource>(({projectId, dataset}) => {
+      return {
+        id: generateId(),
+        datasetResourceId: `${projectId}:${dataset}`,
+        projectId,
+        dataset,
+      }
+    }),
+  )
 }
 
 function generateId() {

@@ -17,7 +17,9 @@ vi.mock('../resources/createResource', async (importOriginal) => {
 })
 
 describe('subscribeToLiveAndSetLastLiveEventId', () => {
-  const instance = createSanityInstance({projectId: 'exampleProject', dataset: 'exampleDataset'})
+  const instance = createSanityInstance({
+    resources: [{projectId: 'exampleProject', dataset: 'exampleDataset'}],
+  })
   const initialState: PreviewStoreState = {
     documentTypes: {},
     lastLiveEventId: null,

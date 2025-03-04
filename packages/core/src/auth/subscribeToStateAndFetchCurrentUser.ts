@@ -8,7 +8,7 @@ import {type AuthState, type AuthStoreState} from './authStore'
 
 export const subscribeToStateAndFetchCurrentUser = createInternalAction(
   ({state, instance}: ActionContext<AuthStoreState>) => {
-    const {projectId, dataset} = instance.identity
+    const {projectId, dataset} = instance.resources[0] // TODO: support multiple resources
     const {clientFactory, apiHost, authScope} = state.get().options
 
     const currentUser$ = state.observable

@@ -22,7 +22,7 @@ vi.mock('../context/useSanityInstance', () => ({
 }))
 
 // Create a fake instance to be returned by useSanityInstance.
-const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+const instance = createSanityInstance({resources: [{projectId: 'p', dataset: 'd'}]})
 const doc: SanityDocument = {
   _id: 'doc1',
   foo: 'bar',

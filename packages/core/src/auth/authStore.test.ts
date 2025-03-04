@@ -41,8 +41,12 @@ describe('authStore', () => {
       const storageArea = {} as Storage
 
       const instance = createSanityInstance({
-        projectId: 'p',
-        dataset: 'd',
+        resources: [
+          {
+            projectId: 'p',
+            dataset: 'd',
+          },
+        ],
         auth: {
           apiHost,
           authScope,
@@ -72,8 +76,12 @@ describe('authStore', () => {
 
     it('sets to logged in if provided token is present', () => {
       const instance = createSanityInstance({
-        projectId: 'p',
-        dataset: 'd',
+        resources: [
+          {
+            projectId: 'p',
+            dataset: 'd',
+          },
+        ],
         auth: {
           token: 'provided-token',
         },
@@ -85,8 +93,12 @@ describe('authStore', () => {
 
     it('sets to logging in if `getAuthCode` returns a code', () => {
       const instance = createSanityInstance({
-        projectId: 'p',
-        dataset: 'd',
+        resources: [
+          {
+            projectId: 'p',
+            dataset: 'd',
+          },
+        ],
       })
 
       vi.mocked(getAuthCode).mockReturnValue('auth-code')
@@ -97,8 +109,12 @@ describe('authStore', () => {
 
     it('sets to logged in if `getTokenFromStorage` returns a token', () => {
       const instance = createSanityInstance({
-        projectId: 'p',
-        dataset: 'd',
+        resources: [
+          {
+            projectId: 'p',
+            dataset: 'd',
+          },
+        ],
       })
 
       vi.mocked(getAuthCode).mockReturnValue(null)
@@ -110,8 +126,12 @@ describe('authStore', () => {
 
     it('otherwise it sets the state to logged out', () => {
       const instance = createSanityInstance({
-        projectId: 'p',
-        dataset: 'd',
+        resources: [
+          {
+            projectId: 'p',
+            dataset: 'd',
+          },
+        ],
       })
 
       vi.mocked(getAuthCode).mockReturnValue(null)
@@ -144,8 +164,12 @@ describe('authStore', () => {
 
     it('subscribes to state and storage events and unsubscribes on dispose', () => {
       const instance = createSanityInstance({
-        projectId: 'p123abc',
-        dataset: 'production',
+        resources: [
+          {
+            projectId: 'p123abc',
+            dataset: 'production',
+          },
+        ],
         auth: {
           storageArea: mockLocalStorage,
         },
@@ -181,8 +205,12 @@ describe('authStore', () => {
 
     it('does not subscribe to storage events when not using storage area', () => {
       const instance = createSanityInstance({
-        projectId: 'p123abc',
-        dataset: 'production',
+        resources: [
+          {
+            projectId: 'p123abc',
+            dataset: 'production',
+          },
+        ],
         auth: {
           storageArea: undefined,
         },
@@ -213,7 +241,14 @@ describe('authStore', () => {
   describe('getCurrentUserState', () => {
     it('returns the current user if logged in and current user is non-null', () => {
       const currentUser = {id: 'example-user'} as CurrentUser
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const instance = createSanityInstance({
+        resources: [
+          {
+            projectId: 'p',
+            dataset: 'd',
+          },
+        ],
+      })
       const state = createResourceState<AuthStoreState>({
         authState: {type: AuthStateType.LOGGED_IN, token: 'new-token', currentUser},
       } as AuthStoreState)
@@ -226,7 +261,14 @@ describe('authStore', () => {
     })
 
     it('returns null otherwise', () => {
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const instance = createSanityInstance({
+        resources: [
+          {
+            projectId: 'p',
+            dataset: 'd',
+          },
+        ],
+      })
       const state = createResourceState<AuthStoreState>({
         authState: {type: AuthStateType.LOGGED_OUT},
       } as AuthStoreState)
@@ -241,7 +283,14 @@ describe('authStore', () => {
 
   describe('getTokenState', () => {
     it('returns the token if logged in', () => {
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const instance = createSanityInstance({
+        resources: [
+          {
+            projectId: 'p',
+            dataset: 'd',
+          },
+        ],
+      })
       const token = 'new-token'
       const state = createResourceState<AuthStoreState>({
         authState: {type: AuthStateType.LOGGED_IN, token},
@@ -255,7 +304,14 @@ describe('authStore', () => {
     })
 
     it('returns null otherwise', () => {
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const instance = createSanityInstance({
+        resources: [
+          {
+            projectId: 'p',
+            dataset: 'd',
+          },
+        ],
+      })
       const state = createResourceState<AuthStoreState>({
         authState: {type: AuthStateType.ERROR, error: new Error('test error')},
       } as AuthStoreState)
@@ -270,7 +326,14 @@ describe('authStore', () => {
 
   describe('getLoginUrlsState', () => {
     it('returns the cached auth providers if present', () => {
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const instance = createSanityInstance({
+        resources: [
+          {
+            projectId: 'p',
+            dataset: 'd',
+          },
+        ],
+      })
       const providers = [{name: 'test', title: 'Test', url: 'https://example.com#withSid=true'}]
       const state = createResourceState<AuthStoreState>({providers} as AuthStoreState)
 
@@ -282,7 +345,14 @@ describe('authStore', () => {
     })
 
     it('returns nulls otherwise', () => {
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const instance = createSanityInstance({
+        resources: [
+          {
+            projectId: 'p',
+            dataset: 'd',
+          },
+        ],
+      })
       const state = createResourceState<AuthStoreState>({} as AuthStoreState)
 
       const loginUrlsState = getLoginUrlsState({instance, state})
@@ -295,7 +365,14 @@ describe('authStore', () => {
 
   describe('getAuthState', () => {
     it('returns the current state in `authState`', () => {
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const instance = createSanityInstance({
+        resources: [
+          {
+            projectId: 'p',
+            dataset: 'd',
+          },
+        ],
+      })
       const authState: AuthStoreState['authState'] = {
         type: AuthStateType.LOGGED_OUT,
         isDestroyingSession: false,

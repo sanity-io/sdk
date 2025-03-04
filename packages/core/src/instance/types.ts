@@ -8,8 +8,7 @@ import type {SchemaConfig} from '../schema/schemaManager'
  * @public
  */
 export interface SanityConfig {
-  projectId: string
-  dataset: string
+  resources: SdkResource[]
   auth?: AuthConfig
   schema?: SchemaConfig
 }
@@ -22,16 +21,16 @@ export interface SanityInstance {
    *
    * @public
    */
-  readonly identity: SdkIdentity
+  readonly resources: SdkResource[]
 
-  config: Omit<SanityConfig, 'projectId' | 'dataset'>
+  config: Omit<SanityConfig, 'resources'>
 
   dispose: () => void
 }
 
 /** @public */
-export interface SdkIdentity {
-  readonly id: string
+export interface SdkResource {
+  readonly id?: string
   readonly projectId: string
   readonly dataset: string
 }

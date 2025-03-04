@@ -25,7 +25,14 @@ describe('documentListStore', () => {
   let instance: ReturnType<typeof createSanityInstance>
 
   beforeEach(() => {
-    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    instance = createSanityInstance({
+      resources: [
+        {
+          projectId: 'test',
+          dataset: 'test',
+        },
+      ],
+    })
     state = createResourceState<DocumentListState>(
       {
         limit: PAGE_SIZE,

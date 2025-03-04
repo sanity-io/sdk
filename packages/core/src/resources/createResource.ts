@@ -2,10 +2,10 @@ import {Observable} from 'rxjs'
 import {devtools, type DevtoolsOptions} from 'zustand/middleware'
 import {createStore} from 'zustand/vanilla'
 
-import {type SanityInstance, type SdkIdentity} from '../instance/types'
+import {type SanityInstance} from '../instance/types'
 import {getEnv} from '../utils/getEnv'
 
-const resourceCache = new WeakMap<SdkIdentity, Map<string, InitializedResource<unknown>>>()
+const resourceCache = new WeakMap<SanityInstance, Map<string, InitializedResource<unknown>>>() // TODO: support multiple resources
 
 type Teardown = () => void
 
@@ -76,10 +76,11 @@ export function getOrCreateResource<TState>(
   instance: SanityInstance,
   resource: Resource<TState>,
 ): InitializedResource<TState> {
-  if (!resourceCache.has(instance.identity)) {
-    resourceCache.set(instance.identity, new Map())
+  if (!resourceCache.has(instance)) {
+    // TODO: support multiple resources
+    resourceCache.set(instance, new Map())
   }
-  const initializedResources = resourceCache.get(instance.identity)!
+  const initializedResources = resourceCache.get(instance)! // TODO: support multiple resources
   const cached = initializedResources.get(resource.name)
   if (cached) return cached as InitializedResource<TState>
 
@@ -88,8 +89,8 @@ export function getOrCreateResource<TState>(
   return result
 }
 
-export function disposeResources(identity: SdkIdentity): void {
-  const resources = resourceCache.get(identity)
+export function disposeResources(instance: SanityInstance): void {
+  const resources = resourceCache.get(instance)! // TODO: support multiple resources
   if (!resources) return
 
   for (const resource of resources.values()) {

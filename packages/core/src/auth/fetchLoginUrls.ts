@@ -9,7 +9,7 @@ import {getDefaultLocation} from './utils'
  * @public
  */
 export const fetchLoginUrls = createAction(authStore, ({state, instance}) => {
-  const {projectId, dataset} = instance.identity
+  const {projectId, dataset} = instance.resources[0] // TODO: support multiple resources
   const {callbackUrl, clientFactory, apiHost, authScope, customProviders} = state.get().options
   const client = clientFactory({
     projectId,

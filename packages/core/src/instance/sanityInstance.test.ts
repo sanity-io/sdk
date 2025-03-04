@@ -11,8 +11,12 @@ describe('sanityInstance', () => {
 
   beforeEach(() => {
     config = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
+      resources: [
+        {
+          projectId: 'test-project',
+          dataset: 'test-dataset',
+        },
+      ],
     }
   })
 
@@ -20,11 +24,13 @@ describe('sanityInstance', () => {
     test('creates instance with correct configuration', () => {
       const instance = createSanityInstance(config)
 
-      expect(instance.identity).toEqual(
-        expect.objectContaining({
-          projectId: 'test-project',
-          dataset: 'test-dataset',
-        }),
+      expect(instance.resources).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            projectId: 'test-project',
+            dataset: 'test-dataset',
+          }),
+        ]),
       )
     })
 
@@ -58,8 +64,20 @@ describe('sanityInstance', () => {
     })
 
     test('different instances have separate resource caches', () => {
-      const instance1 = createSanityInstance({...config, projectId: 'project1'})
-      const instance2 = createSanityInstance({...config, projectId: 'project2'})
+      const instance1 = createSanityInstance({
+        ...config,
+        resources: [
+          {projectId: 'project1', dataset: 'dataset1'},
+          {projectId: 'project2', dataset: 'dataset2'},
+        ],
+      })
+      const instance2 = createSanityInstance({
+        ...config,
+        resources: [
+          {projectId: 'project1', dataset: 'dataset1'},
+          {projectId: 'project2', dataset: 'dataset2'},
+        ],
+      })
       let createCount = 0
 
       const creator = () => {

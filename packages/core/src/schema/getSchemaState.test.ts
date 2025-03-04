@@ -6,7 +6,9 @@ import {createResourceState} from '../resources/createResource'
 import {getSchemaState} from './getSchemaState'
 
 describe('getSchemaState', () => {
-  const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+  const instance = createSanityInstance({
+    resources: [{projectId: 'test', dataset: 'test'}],
+  })
 
   it('should return a state source that emits the schema', () => {
     const mockSchema = {name: 'testSchema', types: []} as unknown as Schema

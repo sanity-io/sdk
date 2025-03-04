@@ -16,7 +16,9 @@ vi.mock('./subscribeToStateAndFetchBatches', () => ({
 
 describe('previewStore', () => {
   it('is a resource that initializes with state and subscriptions', () => {
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance({
+      resources: [{projectId: 'p', dataset: 'd'}],
+    })
     const initialState = previewStore.getInitialState(instance)
 
     expect(initialState).toEqual({

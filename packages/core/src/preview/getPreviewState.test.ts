@@ -22,7 +22,9 @@ vi.mock('../resources/createResource', async (importOriginal) => {
 })
 
 describe('getPreviewState', () => {
-  const instance = createSanityInstance({projectId: 'exampleProject', dataset: 'exampleDataset'})
+  const instance = createSanityInstance({
+    resources: [{projectId: 'exampleProject', dataset: 'exampleDataset'}],
+  })
   const document = {_id: 'exampleId', _type: 'exampleType'}
   const initialState: PreviewStoreState = {
     documentTypes: {},

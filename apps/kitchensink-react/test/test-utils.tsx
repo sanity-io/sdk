@@ -17,7 +17,9 @@ import React, {type ReactElement} from 'react'
  */
 export const AppProviders = ({children}: {children: React.ReactNode}): ReactElement => {
   const theme = buildTheme()
-  const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+  const instance = createSanityInstance({
+    resources: [{projectId: 'test', dataset: 'test'}],
+  })
   return (
     <ThemeProvider theme={theme}>
       <SanityProvider sanityInstance={instance}>{children}</SanityProvider>

@@ -7,7 +7,9 @@ import {SanityProvider} from '../../context/SanityProvider'
 import {useSanityInstance} from './useSanityInstance'
 
 describe('useSanityInstance', () => {
-  const sanityInstance = createSanityInstance({projectId: 'test-project', dataset: 'production'})
+  const sanityInstance = createSanityInstance({
+    resources: [{projectId: 'test-project', dataset: 'production'}],
+  })
 
   it('returns sanity instance when used within provider', () => {
     const wrapper = ({children}: {children: React.ReactNode}) => (

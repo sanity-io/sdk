@@ -6,8 +6,12 @@ import {Outlet} from 'react-router'
 import {schema} from '../schema'
 
 const sanityInstance = createSanityInstance({
-  projectId: '',
-  dataset: '',
+  resources: [
+    {
+      projectId: '',
+      dataset: '',
+    },
+  ],
   auth: {
     authScope: 'global',
   },

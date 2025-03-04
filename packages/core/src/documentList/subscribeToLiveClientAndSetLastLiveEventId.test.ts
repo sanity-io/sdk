@@ -21,7 +21,14 @@ describe('subscribeToLiveClientAndSetLastLiveEventId', () => {
     config: vi.fn().mockReturnValue({}),
     live: {events: mockClientLiveEvents},
   }
-  const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const instance = createSanityInstance({
+    resources: [
+      {
+        projectId: 'p',
+        dataset: 'd',
+      },
+    ],
+  })
   let state: ResourceState<DocumentListState>
 
   beforeEach(() => {

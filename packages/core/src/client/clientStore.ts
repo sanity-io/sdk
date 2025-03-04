@@ -51,10 +51,10 @@ const clientStore: Resource<ClientState> = createResource({
   name: 'clientStore',
 
   getInitialState: (instance: SanityInstance) => {
-    const {identity, config} = instance
+    const {resources, config} = instance
     const defaultClient = createClient({
-      projectId: identity.projectId,
-      dataset: identity.dataset,
+      projectId: resources[0].projectId, // TODO: support multiple resources
+      dataset: resources[0].dataset, // TODO: support multiple resources
       token: config?.auth?.token,
       useCdn: false,
       apiVersion: DEFAULT_API_VERSION,

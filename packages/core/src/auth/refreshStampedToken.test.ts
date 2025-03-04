@@ -31,8 +31,12 @@ describe('refreshStampedToken', () => {
 
     // Create an instance (similar to how you do in subscribeToStateAndFetchCurrentUser.test.ts)
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {clientFactory: mockClientFactory},
     })
 
@@ -77,8 +81,12 @@ describe('refreshStampedToken', () => {
     }
     const mockClientFactory = vi.fn().mockReturnValue(mockClient)
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {clientFactory: mockClientFactory},
     })
 
@@ -108,8 +116,12 @@ describe('refreshStampedToken', () => {
   it('does nothing if user is not logged in', () => {
     const mockClientFactory = vi.fn()
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {clientFactory: mockClientFactory},
     })
 

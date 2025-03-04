@@ -13,8 +13,12 @@ describe('fetchLoginUrls', () => {
     })
     const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {clientFactory},
     })
     const state = createResourceState(authStore.getInitialState(instance))
@@ -28,8 +32,12 @@ describe('fetchLoginUrls', () => {
   it('caches the providers and early returns', async () => {
     const clientFactory = vi.fn()
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {clientFactory},
     })
     const state = createResourceState(authStore.getInitialState(instance))
@@ -56,8 +64,12 @@ describe('fetchLoginUrls', () => {
     })
     const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {
         clientFactory,
         providers: [
@@ -85,8 +97,12 @@ describe('fetchLoginUrls', () => {
     })
     const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {
         clientFactory,
         providers: (defaults) => defaults.map((p) => ({...p, title: 'Modified ' + p.title})),
@@ -104,8 +120,12 @@ describe('fetchLoginUrls', () => {
     })
     const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {
         clientFactory,
       },
@@ -123,8 +143,12 @@ describe('fetchLoginUrls', () => {
     })
     const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {
         clientFactory,
         callbackUrl: 'http://localhost/callback',
@@ -141,8 +165,12 @@ describe('fetchLoginUrls', () => {
     })
     const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {
         clientFactory,
         providers: async (defaults) => {

@@ -24,9 +24,13 @@ describe('subscribeToStorageEventsAndSetToken', () => {
     vi.clearAllMocks()
 
     instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
-      auth: {storageArea: storageArea},
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
+      auth: {storageArea},
     })
 
     vi.mocked(getStorageEvents).mockReturnValue(

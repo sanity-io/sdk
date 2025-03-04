@@ -18,7 +18,7 @@ describe('createCallbackHook', () => {
 
   it('should create a hook that provides a memoized callback', () => {
     // Create a mock Sanity instance
-    const mockInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const mockInstance = createSanityInstance({resources: [{projectId: 'p', dataset: 'd'}]})
 
     // Mock the useSanityInstance to return our mock instance
     vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
@@ -49,13 +49,13 @@ describe('createCallbackHook', () => {
 
   it('should create new callback when instance changes', () => {
     // Create two different mock instances
-    const mockInstance1 = createSanityInstance({projectId: 'p1', dataset: 'd'})
-    const mockInstance2 = createSanityInstance({projectId: 'p2', dataset: 'd'})
+    const mockInstance1 = createSanityInstance({resources: [{projectId: 'p1', dataset: 'd'}]})
+    const mockInstance2 = createSanityInstance({resources: [{projectId: 'p2', dataset: 'd'}]})
 
     vi.mocked(useSanityInstance).mockReturnValueOnce(mockInstance1)
 
     // Create a test callback
-    const testCallback = (instance: SanityInstance) => instance.identity.projectId
+    const testCallback = (instance: SanityInstance) => instance.resources[0].projectId // TODO: support multiple resources
 
     // Create and render our hook
     const useTestHook = createCallbackHook(testCallback)
@@ -77,7 +77,7 @@ describe('createCallbackHook', () => {
   })
 
   it('should handle callbacks with multiple parameters', () => {
-    const mockInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const mockInstance = createSanityInstance({resources: [{projectId: 'p', dataset: 'd'}]})
     vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
 
     // Create a callback with multiple parameters
@@ -87,7 +87,7 @@ describe('createCallbackHook', () => {
       method: string,
       data: object,
     ) => ({
-      url: `${instance.identity.projectId}${path}`,
+      url: `${instance.resources[0].projectId}${path}`, // TODO: support multiple resources
       method,
       data,
     })

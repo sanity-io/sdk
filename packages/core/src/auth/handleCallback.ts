@@ -8,7 +8,7 @@ import {getAuthCode, getDefaultLocation} from './utils'
  * @public
  */
 export const handleCallback = createAction(authStore, ({state, instance}) => {
-  const {projectId, dataset} = instance.identity
+  const {projectId, dataset} = instance.resources[0] // TODO: support multiple resources
   const {providedToken, callbackUrl, clientFactory, apiHost, authScope, storageArea, storageKey} =
     state.get().options
 

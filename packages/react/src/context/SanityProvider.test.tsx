@@ -6,12 +6,14 @@ import {useSanityInstance} from '../hooks/context/useSanityInstance'
 import {SanityProvider} from './SanityProvider'
 
 describe('SanityProvider', () => {
-  const sanityInstance = createSanityInstance({projectId: 'test-project', dataset: 'production'})
+  const sanityInstance = createSanityInstance({
+    resources: [{projectId: 'test-project', dataset: 'production'}],
+  })
 
   it('provides instance to nested components', () => {
     const TestComponent = () => {
       const instance = useSanityInstance()
-      return <div data-testid="test">{instance.identity.projectId}</div>
+      return <div data-testid="test">{instance.resources[0].projectId}</div> // TODO: support multiple resources
     }
 
     const {getByTestId} = render(

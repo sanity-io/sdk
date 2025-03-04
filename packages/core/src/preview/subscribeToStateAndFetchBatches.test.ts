@@ -21,7 +21,9 @@ vi.mock('../resources/createResource', async (importOriginal) => {
 })
 
 describe('subscribeToStateAndFetchBatches', () => {
-  const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+  const instance = createSanityInstance({
+    resources: [{projectId: 'test', dataset: 'test'}],
+  })
 
   const schema: Schema = SchemaConstructor.compile({
     name: 'default',

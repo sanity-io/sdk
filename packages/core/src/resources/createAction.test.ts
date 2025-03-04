@@ -4,7 +4,9 @@ import {createSanityInstance} from '../instance/sanityInstance'
 import {type ActionContext, createAction, createInternalAction} from './createAction'
 import {createResource, createResourceState} from './createResource'
 
-const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+const instance = createSanityInstance({
+  resources: [{projectId: 'test', dataset: 'test'}],
+})
 
 interface TestState {
   value: number
@@ -21,10 +23,10 @@ const testResource = createResource<TestState>({
 describe('createAction', () => {
   it('should create an action that can access state and instance', () => {
     // Define an action that accesses state and instance
-    const testAction = createAction(testResource, ({state, instance: {identity}}) => {
+    const testAction = createAction(testResource, ({state, instance: {resources}}) => {
       return function () {
         state.set('increment', (prev) => ({value: prev.value + 1}))
-        return identity.projectId
+        return resources[0].projectId // TODO: support multiple resources
       }
     })
 
@@ -37,10 +39,10 @@ describe('createAction', () => {
   })
 
   it('should correctly update the state using set', () => {
-    const testAction = createAction(testResource, ({state, instance: {identity}}) => {
+    const testAction = createAction(testResource, ({state, instance: {resources}}) => {
       return function () {
         state.set('increment', (prev) => ({value: prev.value + 1}))
-        return identity.projectId
+        return resources[0].projectId // TODO: support multiple resources
       }
     })
 
@@ -49,7 +51,7 @@ describe('createAction', () => {
 
     // call the action with state
     const projectId = testAction(actionContext)
-    expect(projectId).toBe(instance.identity.projectId)
+    expect(projectId).toBe(instance.resources[0].projectId) // TODO: support multiple resources
 
     // Verify that the state has been changed
     expect(state.get()).toEqual({value: 2})
@@ -83,10 +85,10 @@ describe('createInternalAction', () => {
   it('creates an action that requires state and instance', () => {
     // Define an action that accesses state and instance
     const testAction = createInternalAction<TestState, [], string>(
-      ({state, instance: {identity}}) => {
+      ({state, instance: {resources}}) => {
         return function () {
           state.set('increment', (prev) => ({value: prev.value + 1}))
-          return identity.projectId
+          return resources[0].projectId // TODO: support multiple resources
         }
       },
     )

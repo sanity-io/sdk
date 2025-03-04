@@ -20,8 +20,12 @@ describe('logout', () => {
     const clientFactory = vi.fn().mockReturnValue(mockClient)
     const removeItem = vi.fn()
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {
         clientFactory,
         storageArea: {removeItem} as unknown as Storage,
@@ -51,8 +55,12 @@ describe('logout', () => {
     const clientFactory = vi.fn()
     const removeItem = vi.fn()
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {
         token: 'provided-token',
         clientFactory,
@@ -72,8 +80,12 @@ describe('logout', () => {
     const clientFactory = vi.fn()
     const removeItem = vi.fn()
     const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      resources: [
+        {
+          projectId: 'p',
+          dataset: 'd',
+        },
+      ],
       auth: {
         token: 'provided-token',
         clientFactory,

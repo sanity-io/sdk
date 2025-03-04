@@ -46,7 +46,9 @@ describe('LoginLinks', () => {
     vi.clearAllMocks()
   })
 
-  const sanityInstance = createSanityInstance({projectId: 'test-project-id', dataset: 'production'})
+  const sanityInstance = createSanityInstance({
+    resources: [{projectId: 'test-project-id', dataset: 'production'}],
+  })
   const renderWithWrappers = (ui: React.ReactElement) => {
     return render(<SanityProvider sanityInstance={sanityInstance}>{ui}</SanityProvider>)
   }

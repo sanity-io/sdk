@@ -16,8 +16,14 @@ import {createSanityInstance} from '../instance/sanityInstance'
 import {type StateSource} from '../resources/createStateSourceAction'
 import {createFetchDocument, createSharedListener} from './sharedListener'
 
-const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-
+const instance = createSanityInstance({
+  resources: [
+    {
+      projectId: 'p',
+      dataset: 'd',
+    },
+  ],
+})
 vi.mock('../client/clientStore.ts', () => ({getClientState: vi.fn()}))
 vi.mock('@sanity/mutate/_unstable_store', () => ({createDocumentLoaderFromClient: vi.fn()}))
 

@@ -1,6 +1,6 @@
 import {disposeResources} from '../resources/createResource'
-import {getSdkIdentity} from './identity'
-import {type SanityConfig, type SanityInstance, type SdkIdentity} from './types'
+import {getSdkResources} from './identity'
+import {type SanityConfig, type SanityInstance, type SdkResource} from './types'
 
 /**
  * Returns a new instance of dependencies required for SanitySDK.
@@ -12,30 +12,29 @@ import {type SanityConfig, type SanityInstance, type SdkIdentity} from './types'
  * @returns A new "instance" of a Sanity SDK, used to bind resources/configuration to it
  */
 export function createSanityInstance({
-  projectId = '',
-  dataset = '',
+  resources = [{projectId: '', dataset: ''}],
   ...config
 }: SanityConfig): SanityInstance {
-  const identity = getSdkIdentity({projectId, dataset})
+  const _resources = getSdkResources(resources) as SdkResource[]
   return {
-    identity,
+    resources: _resources,
     config,
-    dispose: () => disposeResources(identity),
+    dispose: () => disposeResources(_resources),
   }
 }
 
-const resourceStorage = new WeakMap<SdkIdentity, Map<string, unknown>>()
+const resourceStorage = new WeakMap<SanityInstance, Map<string, unknown>>()
 
 function getResource(instance: SanityInstance, key: string) {
-  const instanceMap = resourceStorage.get(instance.identity)
+  const instanceMap = resourceStorage.get(instance)
   return instanceMap?.get(key)
 }
 
 function setResource(instance: SanityInstance, key: string, value: unknown) {
-  let instanceMap = resourceStorage.get(instance.identity)
+  let instanceMap = resourceStorage.get(instance)
   if (!instanceMap) {
     instanceMap = new Map()
-    resourceStorage.set(instance.identity, instanceMap)
+    resourceStorage.set(instance, instanceMap)
   }
   instanceMap.set(key, value)
 }

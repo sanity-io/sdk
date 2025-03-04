@@ -5,7 +5,9 @@ import {buildTheme} from '@sanity/ui/theme'
 import {render, type RenderResult} from '@testing-library/react'
 import React from 'react'
 
-const sanityInstance = createSanityInstance({projectId: 'test-project-id', dataset: 'production'})
+const sanityInstance = createSanityInstance({
+  resources: [{projectId: 'test-project-id', dataset: 'production'}],
+})
 const theme = buildTheme()
 
 export const renderWithWrappers = (ui: React.ReactElement): RenderResult => {
