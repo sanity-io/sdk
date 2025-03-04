@@ -1,9 +1,13 @@
 /** MAIN INSTANCE */
 // Utils
+// Use import type to access the internal type and re-export it
+import {type SanityProject as _SanityProject} from '@sanity/client'
+
 export {createSanityInstance} from '../instance/sanityInstance'
 export {type ActionContext, type ResourceAction} from '../resources/createAction'
 export {type ResourceState} from '../resources/createResource'
 export {type BoundResourceAction} from '../resources/createStore'
+export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
 
 // Types
 export type {SanityConfig, SanityInstance, SdkIdentity} from '../instance/types'
@@ -90,7 +94,6 @@ export {
   type DocumentEditedEvent,
   type DocumentEvent,
   type DocumentPublishedEvent,
-  type DocumentRebaseErrorEvent,
   type DocumentUnpublishedEvent,
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,
@@ -106,3 +109,15 @@ export {type PermissionDeniedReason, type PermissionsResult} from '../document/p
 
 /** USERS */
 export {createUsersStore, type UsersStoreState} from '../users/usersStore'
+
+/** PROJECT */
+export {getProjectState, resolveProject} from '../project/project'
+
+/** PROJECTS */
+export {getProjectsState, resolveProjects} from '../projects/projects'
+
+/** @public */
+export type SanityProject = _SanityProject
+
+/** DATASETS */
+export {getDatasetsState, resolveDatasets} from '../datasets/datasets'

@@ -6,9 +6,8 @@ import {
   resolveDocument,
 } from '@sanity/sdk'
 import {type SanityDocument} from '@sanity/types'
-import {useCallback, useMemo, useSyncExternalStore} from 'react'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
 /**
  * @beta
@@ -95,18 +94,12 @@ export function useDocument<TDocument extends SanityDocument>(
  * Live Content API to provide a more efficient way to read and subscribe to document state.
  */
 export function useDocument(doc: string | DocumentHandle, path?: string): unknown {
-  const documentId = typeof doc === 'string' ? doc : doc._id
-  const instance = useSanityInstance()
-  const isDocumentReady = useCallback(
-    () => getDocumentState(instance, documentId).getCurrent() !== undefined,
-    [instance, documentId],
-  )
-  if (!isDocumentReady()) throw resolveDocument(instance, documentId)
-
-  const {subscribe, getCurrent} = useMemo(
-    () => getDocumentState(instance, documentId, path),
-    [documentId, instance, path],
-  )
-
-  return useSyncExternalStore(subscribe, getCurrent)
+  return _useDocument(doc, path)
 }
+
+const _useDocument = createStateSourceHook<[doc: string | DocumentHandle, path?: string], unknown>({
+  getState: getDocumentState,
+  shouldSuspend: (instance, doc) =>
+    getDocumentState(instance, typeof doc === 'string' ? doc : doc._id).getCurrent() === undefined,
+  suspender: resolveDocument,
+})

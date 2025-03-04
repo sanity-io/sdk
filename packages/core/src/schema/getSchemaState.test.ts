@@ -21,7 +21,7 @@ describe('getSchemaState', () => {
     const mockSchema2 = {name: 'testSchema2', types: []} as unknown as Schema
     state.set('updateSchema', {schema: mockSchema2})
     expect(next).toHaveBeenCalledTimes(1)
-    expect(next).toHaveBeenLastCalledWith(mockSchema2)
+    expect(source.getCurrent()).toBe(mockSchema2)
   })
 
   it('should return the schema from the state', () => {

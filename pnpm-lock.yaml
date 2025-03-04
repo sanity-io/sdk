@@ -409,6 +409,9 @@ importers:
       '@sanity/access-api':
         specifier: ^2.2.6
         version: 2.2.6
+      '@sanity/client':
+        specifier: ^6.28.1
+        version: 6.28.2
       '@sanity/comlink':
         specifier: ^2.0.5
         version: 2.0.5
