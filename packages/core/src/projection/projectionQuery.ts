@@ -2,7 +2,6 @@ import {hashString} from '../common/util'
 import {getDraftId, getPublishedId} from '../utils/ids'
 import {type ProjectionValuePending} from './projectionStore'
 
-// Should eventually take a generic type
 type ProjectionQueryResult = {
   _id: string
   _type: string

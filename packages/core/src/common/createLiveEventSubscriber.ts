@@ -9,9 +9,9 @@ import {
   switchMap,
 } from 'rxjs'
 
+import {getClientState} from '../client/clientStore'
 import {type ActionContext, createInternalAction} from '../resources/createAction'
 import {type LiveEventAwareState} from './types'
-import {getClientState} from '../client/clientStore'
 
 /*
  * Factory function for creating a subscribeToLiveAndSetLastLiveEventId action.

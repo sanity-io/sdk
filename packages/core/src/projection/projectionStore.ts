@@ -14,13 +14,12 @@ export interface ProjectionQueryResult<TValue = Record<string, unknown>> {
 /**
  * @beta
  */
-export interface ProjectionValuePending<TValue> {
+export interface ProjectionValuePending<TValue extends object> {
   results: TValue | null
   isPending: boolean
 }
 
-export interface ProjectionStoreState<TValue = Record<string, unknown>>
-  extends LiveEventAwareState {
+export interface ProjectionStoreState<TValue extends object = object> extends LiveEventAwareState {
   values: {[TDocumentId in string]?: ProjectionValuePending<TValue>}
   documentProjections: {[TDocumentId in string]?: string}
   subscriptions: {[TDocumentId in string]?: {[TSubscriptionId in string]?: true}}

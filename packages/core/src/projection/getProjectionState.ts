@@ -1,7 +1,8 @@
 import {omit} from 'lodash-es'
 
 import {type DocumentHandle} from '../documentList/documentListStore'
-import {createAction} from '../resources/createAction'
+import {type SanityInstance} from '../instance/types'
+import {type ActionContext, createAction} from '../resources/createAction'
 import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
 import {getPublishedId, insecureRandomId} from '../utils/ids'
 import {
@@ -16,23 +17,46 @@ interface GetProjectionStateOptions {
   projection: string
 }
 
-const _getProjectionState = createStateSourceAction(
+const getProjectStateSourceAction = createStateSourceAction(
   projectionStore,
-  (state, {document}: GetProjectionStateOptions) =>
+  (state, {document}: GetProjectionStateOptions): ProjectionValuePending<object> =>
     state.values[document._id] ?? STABLE_EMPTY_PROJECTION,
 )
 
 /**
  * @beta
  */
-export const getProjectionState = createAction(projectionStore, ({state}) => {
+export function getProjectionState<TResult extends object>(
+  instance: SanityInstance | ActionContext<ProjectionStoreState>,
+  options: GetProjectionStateOptions,
+): StateSource<ProjectionValuePending<TResult>>
+/**
+ * @beta
+ */
+export function getProjectionState(
+  instance: SanityInstance | ActionContext<ProjectionStoreState>,
+  options: GetProjectionStateOptions,
+): StateSource<ProjectionValuePending<Record<string, unknown>>>
+/**
+ * @beta
+ */
+export function getProjectionState(
+  ...args: Parameters<typeof _getProjectionState>
+): StateSource<ProjectionValuePending<object>> {
+  return _getProjectionState(...args)
+}
+
+/**
+ * @beta
+ */
+export const _getProjectionState = createAction(projectionStore, ({state}) => {
   return function ({
     document,
     projection,
-  }: GetProjectionStateOptions): StateSource<ProjectionValuePending<Record<string, unknown>>> {
+  }: GetProjectionStateOptions): StateSource<ProjectionValuePending<object>> {
     const {_id} = document
     const documentId = getPublishedId(_id)
-    const projectionState = _getProjectionState(this, {document, projection})
+    const projectionState = getProjectStateSourceAction(this, {document, projection})
 
     return {
       ...projectionState,

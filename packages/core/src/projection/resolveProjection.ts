@@ -1,7 +1,11 @@
 import {type DocumentHandle} from '../documentList/documentListStore'
-import {createAction} from '../resources/createAction'
+import {type ActionContext, createAction} from '../resources/createAction'
 import {getProjectionState} from './getProjectionState'
-import {projectionStore, type ProjectionValuePending} from './projectionStore'
+import {
+  projectionStore,
+  type ProjectionStoreState,
+  type ProjectionValuePending,
+} from './projectionStore'
 
 interface ResolveProjectionOptions {
   document: DocumentHandle
@@ -12,10 +16,13 @@ interface ResolveProjectionOptions {
  * @beta
  */
 export const resolveProjection = createAction(projectionStore, () => {
-  return function ({document, projection}: ResolveProjectionOptions) {
-    const {getCurrent, subscribe} = getProjectionState(this, {document, projection})
+  return function <TResult extends Record<string, unknown> = Record<string, unknown>>(
+    this: ActionContext<ProjectionStoreState>,
+    {document, projection}: ResolveProjectionOptions,
+  ): Promise<ProjectionValuePending<TResult>> {
+    const {getCurrent, subscribe} = getProjectionState<TResult>(this, {document, projection})
 
-    return new Promise<ProjectionValuePending<Record<string, unknown>>>((resolve) => {
+    return new Promise<ProjectionValuePending<TResult>>((resolve) => {
       const unsubscribe = subscribe(() => {
         const current = getCurrent()
         if (current?.results) {

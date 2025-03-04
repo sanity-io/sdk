@@ -74,11 +74,11 @@ export const previewStore = createResource<PreviewStoreState>({
   name: 'Preview',
   getInitialState() {
     return {
-      values: {},
       documentTypes: {},
+      lastLiveEventId: null,
       subscriptions: {},
       syncTags: {},
-      lastLiveEventId: null,
+      values: {},
     }
   },
   initialize() {

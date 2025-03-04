@@ -31,7 +31,6 @@ describe('previewStore', () => {
       syncTags: {},
       values: {},
     })
-
     const liveUnsubscribe = vi.fn()
     const stateUnsubscribe = vi.fn()
 
@@ -62,6 +61,7 @@ describe('previewStore', () => {
       instance,
       state: expect.any(Object),
     })
+    expect(mockLiveSubscriber).toHaveBeenCalledOnce()
 
     expect(subscribeToStateAndFetchBatches).toHaveBeenCalledOnce()
 

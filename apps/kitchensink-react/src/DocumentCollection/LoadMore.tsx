@@ -5,9 +5,15 @@ interface LoadMoreProps {
   isPending?: boolean
   hasMore: boolean
   onLoadMore: () => void
+  as?: React.ElementType | keyof React.JSX.IntrinsicElements
 }
 
-export function LoadMore({onLoadMore, hasMore, isPending}: LoadMoreProps): React.ReactNode {
+export function LoadMore({
+  onLoadMore,
+  hasMore,
+  isPending,
+  as = 'li',
+}: LoadMoreProps): React.ReactNode {
   const ref = useRef<HTMLDivElement>(null)
   const [isVisible, setIsVisible] = useState(false)
 
@@ -33,7 +39,7 @@ export function LoadMore({onLoadMore, hasMore, isPending}: LoadMoreProps): React
   }, [isVisible])
 
   return (
-    <Flex as="li" style={{height: 12}} ref={ref} flex="auto" justify="center" padding={3}>
+    <Flex as={as} style={{height: 12}} ref={ref} flex="auto" justify="center" padding={3}>
       {isPending && <Text>Loading…</Text>}
     </Flex>
   )
