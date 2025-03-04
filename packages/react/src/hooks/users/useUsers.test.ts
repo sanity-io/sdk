@@ -1,5 +1,4 @@
-import {type ResourceType, type User} from '@sanity/access-api'
-import {createUsersStore} from '@sanity/sdk'
+import {createUsersStore, type ResourceType, type SanityUser} from '@sanity/sdk'
 import {act, renderHook} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
@@ -11,7 +10,7 @@ vi.mock('../context/useSanityInstance')
 
 describe('useUsers', () => {
   const mockInstance = {}
-  const mockUser: User = {
+  const mockUser: SanityUser = {
     profile: {
       id: 'user1',
       displayName: 'Test User',

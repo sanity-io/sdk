@@ -1,4 +1,4 @@
-import {type ResourceType, type User} from '@sanity/access-api'
+import {type ResourceType, type SanityUser} from '@sanity/sdk'
 import {firstValueFrom} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
@@ -80,7 +80,7 @@ describe('usersStore', () => {
     })
 
     it('should return resolved users', async () => {
-      const mockUsers = [{profile: {id: '1', displayName: 'Test User'}}] as unknown as User[]
+      const mockUsers = [{profile: {id: '1', displayName: 'Test User'}}] as unknown as SanityUser[]
       state.set('resolveUsers', {
         users: mockUsers,
         totalCount: 1,
@@ -103,7 +103,7 @@ describe('usersStore', () => {
   describe('resolveUsers', () => {
     it('should fetch and store users', async () => {
       const mockResponse = {
-        data: [{profile: {id: '1'}}] as User[],
+        data: [{profile: {id: '1'}}] as SanityUser[],
         totalCount: 1,
         nextCursor: 'cursor123',
       }
@@ -133,8 +133,8 @@ describe('usersStore', () => {
 
   describe('loadMore', () => {
     it('should fetch and append more users', async () => {
-      const initialUsers = Array(10).fill({profile: {id: '1'}}) as User[]
-      const newUsers = Array(5).fill({profile: {id: '2'}}) as User[]
+      const initialUsers = Array(10).fill({profile: {id: '1'}}) as SanityUser[]
+      const newUsers = Array(5).fill({profile: {id: '2'}}) as SanityUser[]
 
       state.set('resolveUsers', {
         users: initialUsers,

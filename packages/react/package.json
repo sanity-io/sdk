@@ -91,7 +91,6 @@
     "@repo/config-test": "workspace:*",
     "@repo/package.config": "workspace:*",
     "@repo/tsconfig": "workspace:*",
-    "@sanity/access-api": "^2.2.6",
     "@sanity/client": "^6.28.1",
     "@sanity/comlink": "^2.0.5",
     "@sanity/pkg-utils": "^6.13.4",
