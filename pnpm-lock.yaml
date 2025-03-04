@@ -103,7 +103,7 @@ importers:
         version: link:../../packages/react
       '@sanity/types':
         specifier: ^3.67.1
-        version: 3.77.2(@types/react@19.0.10)
+        version: 3.78.0(@types/react@19.0.10)
       '@sanity/ui':
         specifier: ^2.8.19
         version: 2.14.4(@emotion/is-prop-valid@1.2.2)(react-dom@19.0.0(react@19.0.0))(react-is@18.3.1)(react@19.0.0)(styled-components@6.1.13(react-dom@19.0.0(react@19.0.0))(react@19.0.0))
@@ -316,10 +316,10 @@ importers:
         version: 0.12.1
       '@sanity/schema':
         specifier: ^3.67.1
-        version: 3.77.2(@types/react@19.0.10)
+        version: 3.78.0(@types/react@19.0.10)
       '@sanity/types':
         specifier: ^3.67.1
-        version: 3.77.2(@types/react@19.0.10)
+        version: 3.78.0(@types/react@19.0.10)
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -386,7 +386,7 @@ importers:
         version: link:../core
       '@sanity/types':
         specifier: ^3.67.1
-        version: 3.77.2(@types/react@19.0.10)
+        version: 3.78.0(@types/react@19.0.10)
       react-error-boundary:
         specifier: ^4.1.2
         version: 4.1.2(react@19.0.0)
@@ -1537,11 +1537,11 @@ packages:
     peerDependencies:
       prettier: ^3.2.5
 
-  '@sanity/schema@3.77.2':
-    resolution: {integrity: sha512-DaR91g+N5TsuhK2rGgDQV3Sf7Q5wk9psEkiY2FjF/Z5mv2szIY6eQ2zUYOPy826G3WFsDa3EcBAJiRnhgUVv0g==}
+  '@sanity/schema@3.78.0':
+    resolution: {integrity: sha512-1ucrYmIvBcSvLctf4jXaria74DHNTNJ21+8w+TyvGsNjvhSmLPeSXTcm0+oK8sa+OeMjEQQDhRzLnXV2YYfGqw==}
 
-  '@sanity/types@3.77.2':
-    resolution: {integrity: sha512-X8TScOoRZ9vl5tvnPnkTCDXwMIUHegd2AgxxZjdjvkl/L4orHdkUE4Z/4m9WQ9QloxDOLTsZyNLMwf8gHnOOqg==}
+  '@sanity/types@3.78.0':
+    resolution: {integrity: sha512-g+FXuNS49AQNFphZOAzIfgyvygRqTNwDGkELRELLP0GydoF73DB94SbtEMPl9sXxkOc2Dj0UdadSYra41vW7+w==}
     peerDependencies:
       '@types/react': 18 || 19
 
@@ -6007,10 +6007,10 @@ snapshots:
       prettier: 3.5.2
       prettier-plugin-packagejson: 2.5.3(prettier@3.5.2)
 
-  '@sanity/schema@3.77.2(@types/react@19.0.10)':
+  '@sanity/schema@3.78.0(@types/react@19.0.10)':
     dependencies:
       '@sanity/generate-help-url': 3.0.0
-      '@sanity/types': 3.77.2(@types/react@19.0.10)
+      '@sanity/types': 3.78.0(@types/react@19.0.10)
       arrify: 2.0.1
       groq-js: 1.15.0
       humanize-list: 1.0.1
@@ -6022,7 +6022,7 @@ snapshots:
       - debug
       - supports-color
 
-  '@sanity/types@3.77.2(@types/react@19.0.10)':
+  '@sanity/types@3.78.0(@types/react@19.0.10)':
     dependencies:
       '@sanity/client': 6.28.2
       '@types/react': 19.0.10
