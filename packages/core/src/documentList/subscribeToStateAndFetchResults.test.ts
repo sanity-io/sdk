@@ -45,7 +45,7 @@ describe('subscribeToStateAndFetchResults', () => {
     state = createResourceState<DocumentListState>(
       {
         limit: 25,
-        options: {perspective: 'previewDrafts'},
+        options: {perspective: 'previewDrafts', datasetResourceId: 'p:d'},
         results: [],
         syncTags: [],
         isPending: false,
@@ -70,7 +70,7 @@ describe('subscribeToStateAndFetchResults', () => {
 
     await expect(statePromise).resolves.toEqual({
       limit: 25,
-      options: {perspective: 'previewDrafts'},
+      options: {perspective: 'previewDrafts', datasetResourceId: 'p:d'},
       results: mockResults,
       count: 1,
       syncTags: ['s1:initial'],

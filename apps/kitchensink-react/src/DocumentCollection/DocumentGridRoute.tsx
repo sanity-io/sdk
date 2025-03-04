@@ -7,6 +7,7 @@ import {DocumentPreview} from './DocumentPreview'
 
 export function DocumentGridRoute(): JSX.Element {
   const {isPending, results, hasMore, loadMore} = useDocuments({
+    datasetResourceId: 'ppsg7ml5:test',
     filter: '_type == "author"',
     sort: [{field: 'name', direction: 'asc'}],
   })

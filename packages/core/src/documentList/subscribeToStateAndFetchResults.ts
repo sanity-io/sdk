@@ -21,7 +21,13 @@ export const subscribeToStateAndFetchResults = createInternalAction(
 
       return fetchInput$
         .pipe(
-          withLatestFrom(getClientState(instance, {apiVersion: API_VERSION}).observable),
+          withLatestFrom(
+            getClientState(instance, {
+              apiVersion: API_VERSION,
+              projectId: state.get().options.datasetResourceId?.split(':')[0] ?? '',
+              dataset: state.get().options.datasetResourceId?.split(':')[1] ?? '',
+            }).observable,
+          ),
           debounceTime(0),
           tap(() => {
             state.set('setPending', {isPending: true})

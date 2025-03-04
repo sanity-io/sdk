@@ -87,7 +87,7 @@ const STABLE_EMPTY = {
  * )
  * ```
  */
-export function useDocuments(options: DocumentListOptions = {}): DocumentHandleCollection {
+export function useDocuments(options: DocumentListOptions): DocumentHandleCollection {
   const instance = useSanityInstance()
 
   // NOTE: useState is used because it guaranteed to return a stable reference
@@ -113,7 +113,7 @@ export function useDocuments(options: DocumentListOptions = {}): DocumentHandleC
     (onStoreChanged: () => void) => {
       // to match the lifecycle of `useSyncExternalState`, we create the store
       // instance after subscribe and mutate the ref to connect everything
-      ref.storeInstance = createDocumentListStore(instance)
+      ref.storeInstance = createDocumentListStore(instance, options.datasetResourceId)
       ref.storeInstance.setOptions(ref.initialOptions)
       const state = ref.storeInstance.getState()
       ref.getCurrent = state.getCurrent
@@ -126,7 +126,7 @@ export function useDocuments(options: DocumentListOptions = {}): DocumentHandleC
         ref.storeInstance?.dispose()
       }
     },
-    [instance, ref],
+    [instance, options.datasetResourceId, ref],
   )
 
   const getSnapshot = useCallback(() => {

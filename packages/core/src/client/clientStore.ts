@@ -136,7 +136,10 @@ const memoizedOptionsSelector = createSelector(
 
 const clientSelector = createSelector(
   [defaultClientSelector, memoizedOptionsSelector],
-  (client, options) => client.withConfig(options),
+  (client, options) => {
+    client.withConfig(options)
+    return client
+  },
 )
 
 /**

@@ -8,6 +8,7 @@ import {LoadMore} from './LoadMore'
 
 export function DocumentListRoute(): JSX.Element {
   const {isPending, results, hasMore, loadMore} = useDocuments({
+    datasetResourceId: 'ppsg7ml5:test',
     filter: '_type == "book"',
     sort: [{field: '_updatedAt', direction: 'desc'}],
   })

@@ -38,24 +38,29 @@ describe('useDocuments', () => {
 
   it('should initialize with given options', () => {
     const options: DocumentListOptions = {
+      datasetResourceId: 'ppsg7ml5:test',
       filter: 'some-filter',
       sort: [{field: 'name', direction: 'asc'}],
     }
     renderHook(() => useDocuments(options))
 
-    expect(createDocumentListStore).toHaveBeenCalledWith(mockInstance)
+    expect(createDocumentListStore).toHaveBeenCalledWith(mockInstance, 'ppsg7ml5:test')
     expect(mockDocumentListStore.setOptions).toHaveBeenCalledWith(options)
   })
 
   it('should subscribe to document list store changes', () => {
-    const options: DocumentListOptions = {}
+    const options: DocumentListOptions = {
+      datasetResourceId: 'ppsg7ml5:test',
+    }
 
     renderHook(() => useDocuments(options))
     expect(subscribe).toHaveBeenCalledTimes(1)
   })
 
   it('should return the current document list state', () => {
-    const options = {}
+    const options: DocumentListOptions = {
+      datasetResourceId: 'ppsg7ml5:test',
+    }
     const currentState = {result: [], isPending: false}
     getCurrent.mockReturnValue(currentState)
 
@@ -64,7 +69,9 @@ describe('useDocuments', () => {
   })
 
   it('should call loadMore when loadMore is invoked', () => {
-    const options = {}
+    const options: DocumentListOptions = {
+      datasetResourceId: 'ppsg7ml5:test',
+    }
     const {result} = renderHook(() => useDocuments(options))
 
     act(() => {
@@ -96,16 +103,10 @@ describe('useDocuments', () => {
     expect(result.current).toMatchObject(newState)
   })
 
-  it('should handle empty options', () => {
-    const options = {}
-    renderHook(() => useDocuments(options))
-
-    expect(createDocumentListStore).toHaveBeenCalledWith(mockInstance)
-    expect(mockDocumentListStore.setOptions).toHaveBeenCalledWith(options)
-  })
-
   it('should handle null result from document list store', () => {
-    const options = {}
+    const options: DocumentListOptions = {
+      datasetResourceId: 'ppsg7ml5:test',
+    }
     getCurrent.mockReturnValue({result: null, isPending: false})
 
     const {result} = renderHook(() => useDocuments(options))
@@ -117,7 +118,9 @@ describe('useDocuments', () => {
   })
 
   it('should unsubscribe from document list store on unmount', () => {
-    const options = {}
+    const options: DocumentListOptions = {
+      datasetResourceId: 'ppsg7ml5:test',
+    }
     const unsubscribeSpy = vi.fn()
     subscribe.mockReturnValue(unsubscribeSpy)
 

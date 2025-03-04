@@ -7,7 +7,12 @@ import {type DocumentListState} from './documentListStore'
 
 export const subscribeToLiveClientAndSetLastLiveEventId = createInternalAction(
   ({state, instance}: ActionContext<DocumentListState>) => {
-    const liveEventMessage$ = getClientState(instance, {apiVersion: API_VERSION}).observable.pipe(
+    const liveEventMessage$ = getClientState(instance, {
+      apiVersion: API_VERSION,
+      projectId: state.get().options.datasetResourceId?.split(':')[0] ?? '',
+      dataset: state.get().options.datasetResourceId?.split(':')[1] ?? '',
+      useProjectHostname: true,
+    }).observable.pipe(
       switchMap((client) =>
         client.live.events({includeDrafts: !!client.config().token, tag: 'sdk.document-list'}),
       ),

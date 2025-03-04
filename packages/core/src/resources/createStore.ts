@@ -12,7 +12,10 @@ export type BoundResourceAction<TParams extends unknown[], TReturn> = (
   ...params: TParams
 ) => TReturn
 
-type BoundActions<TActions extends {[key: string]: ResourceAction<any, any, any>}> = {
+/**
+ * @internal
+ */
+export type BoundActions<TActions extends {[key: string]: ResourceAction<any, any, any>}> = {
   [K in keyof TActions]: TActions[K] extends ResourceAction<any, infer TParams, infer TReturn>
     ? BoundResourceAction<TParams, TReturn>
     : never
