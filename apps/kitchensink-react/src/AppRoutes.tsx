@@ -7,6 +7,7 @@ import ParentApp from './Comlink/ParentApp'
 import {DocumentEditorRoute} from './DocumentCollection/DocumentEditorRoute'
 import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
 import {DocumentListRoute} from './DocumentCollection/DocumentListRoute'
+import {SearchRoute} from './DocumentCollection/SearchRoute'
 import {GlobalAuthHome} from './GlobalAuthentication/GlobalAuthHome'
 import {GlobalInstanceWrapper} from './GlobalAuthentication/GlobalInstanceWrapper'
 import Home from './Home'
@@ -33,6 +34,10 @@ const documentCollectionRoutes = [
   {
     path: 'document-editor',
     element: <DocumentEditorRoute />,
+  },
+  {
+    path: 'search',
+    element: <SearchRoute />,
   },
 ]
 
