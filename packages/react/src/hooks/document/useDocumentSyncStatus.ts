@@ -1,4 +1,4 @@
-import {type DocumentHandle, getDocumentSyncStatus} from '@sanity/sdk'
+import {type DocumentHandle, getDocumentStore} from '@sanity/sdk'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
@@ -25,5 +25,9 @@ type UseDocumentSyncStatus = {
 }
 
 /** @beta */
-export const useDocumentSyncStatus: UseDocumentSyncStatus =
-  createStateSourceHook(getDocumentSyncStatus)
+export const useDocumentSyncStatus: UseDocumentSyncStatus = createStateSourceHook(
+  (instance, doc) => {
+    const documentStore = getDocumentStore(instance, doc.datasetResourceId)
+    return documentStore.getDocumentSyncStatus(doc)
+  },
+)

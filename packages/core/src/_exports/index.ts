@@ -73,14 +73,17 @@ export {
   unpublishDocument,
   type UnpublishDocumentAction,
 } from '../document/actions'
-export {type ActionsResult, applyActions, type ApplyActionsOptions} from '../document/applyActions'
+export {type ActionsResult, type ApplyActionsOptions} from '../document/applyActions'
 export {
-  getDocumentState,
-  getDocumentSyncStatus,
-  getPermissionsState,
-  resolveDocument,
-  resolvePermissions,
-  subscribeDocumentEvents,
+  createDocumentStore,
+  type DatasetResourceId,
+  getDocumentStore,
+  // getDocumentState,
+  // getDocumentSyncStatus,
+  // getPermissionsState,
+  // resolveDocument,
+  // resolvePermissions,
+  // subscribeDocumentEvents,
 } from '../document/documentStore'
 export {
   type ActionErrorEvent,

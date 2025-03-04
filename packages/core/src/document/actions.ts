@@ -3,6 +3,7 @@ import {type PatchMutation as SanityMutatePatchMutation} from '@sanity/mutate/_u
 import {type PatchMutation, type PatchOperations, type SanityDocumentLike} from '@sanity/types'
 
 import {getPublishedId} from '../utils/ids'
+import {type DatasetResourceId} from './documentStore'
 import {type DocumentHandle, type DocumentTypeHandle} from './patchOperations'
 
 const isSanityMutatePatch = (value: unknown): value is SanityMutatePatchMutation => {
@@ -18,6 +19,7 @@ export interface CreateDocumentAction<TDocument extends SanityDocumentLike = San
   type: 'document.create'
   documentId?: string
   documentType: TDocument['_type']
+  datasetResourceId: DatasetResourceId
 }
 
 // the unused `_TDocument` is primarily for typescript meta-programming to
@@ -26,12 +28,14 @@ export interface CreateDocumentAction<TDocument extends SanityDocumentLike = San
 export interface DeleteDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.delete'
   documentId: string
+  datasetResourceId: DatasetResourceId
 }
 
 /** @beta */
 export interface EditDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.edit'
   documentId: string
+  datasetResourceId: DatasetResourceId
   patches?: PatchOperations[]
 }
 
@@ -39,6 +43,7 @@ export interface EditDocumentAction<_TDocument extends SanityDocumentLike = Sani
 export interface PublishDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.publish'
   documentId: string
+  datasetResourceId: DatasetResourceId
 }
 
 /** @beta */
@@ -47,12 +52,14 @@ export interface UnpublishDocumentAction<
 > {
   type: 'document.unpublish'
   documentId: string
+  datasetResourceId: DatasetResourceId
 }
 
 /** @beta */
 export interface DiscardDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.discard'
   documentId: string
+  datasetResourceId: DatasetResourceId
 }
 
 /** @beta */
@@ -72,16 +79,18 @@ export function createDocument<TDocument extends SanityDocumentLike>(
     type: 'document.create',
     ...(doc._id && {documentId: doc._id}),
     documentType: doc._type,
+    datasetResourceId: doc.datasetResourceId,
   }
 }
 
 /** @beta */
 export function deleteDocument<TDocument extends SanityDocumentLike>(
-  doc: string | DocumentHandle<TDocument>,
+  doc: DocumentHandle<TDocument>,
 ): DeleteDocumentAction<TDocument> {
   return {
     type: 'document.delete',
-    documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
+    documentId: getPublishedId(doc._id),
+    datasetResourceId: doc.datasetResourceId,
   }
 }
 
@@ -98,6 +107,7 @@ function convertSanityMutatePatch(
       if ('id' in copy) delete copy.id
       return copy
     }),
+    datasetResourceId: sanityPatchMutation.datasetResourceId,
   }
 }
 
@@ -107,12 +117,12 @@ export function editDocument<TDocument extends SanityDocumentLike>(
 ): EditDocumentAction<TDocument>
 /** @beta */
 export function editDocument<TDocument extends SanityDocumentLike>(
-  doc: string | DocumentHandle<TDocument>,
+  doc: DocumentHandle<TDocument>,
   patches?: PatchOperations | PatchOperations[],
 ): EditDocumentAction<TDocument>
 /** @beta */
 export function editDocument<TDocument extends SanityDocumentLike>(
-  doc: string | SanityMutatePatchMutation | DocumentHandle<TDocument>,
+  doc: SanityMutatePatchMutation | DocumentHandle<TDocument>,
   patches?: PatchOperations | PatchOperations[],
 ): EditDocumentAction<TDocument> {
   if (isSanityMutatePatch(doc)) return convertSanityMutatePatch(doc)
@@ -120,36 +130,40 @@ export function editDocument<TDocument extends SanityDocumentLike>(
   return {
     type: 'document.edit',
     documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
+    datasetResourceId: doc.datasetResourceId,
     ...(patches && {patches: Array.isArray(patches) ? patches : [patches]}),
   }
 }
 
 /** @beta */
 export function publishDocument<TDocument extends SanityDocumentLike>(
-  doc: string | DocumentHandle<TDocument>,
+  doc: DocumentHandle<TDocument>,
 ): PublishDocumentAction<TDocument> {
   return {
     type: 'document.publish',
     documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
+    datasetResourceId: doc.datasetResourceId,
   }
 }
 
 /** @beta */
 export function unpublishDocument<TDocument extends SanityDocumentLike>(
-  doc: string | DocumentHandle<TDocument>,
+  doc: DocumentHandle<TDocument>,
 ): UnpublishDocumentAction<TDocument> {
   return {
     type: 'document.unpublish',
     documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
+    datasetResourceId: doc.datasetResourceId,
   }
 }
 
 /** @beta */
 export function discardDocument<TDocument extends SanityDocumentLike>(
-  doc: string | DocumentHandle<TDocument>,
+  doc: DocumentHandle<TDocument>,
 ): DiscardDocumentAction<TDocument> {
   return {
     type: 'document.discard',
     documentId: getPublishedId(typeof doc === 'string' ? doc : doc._id),
+    datasetResourceId: doc.datasetResourceId,
   }
 }

@@ -16,6 +16,7 @@ import {
   Observable,
   of,
   pairwise,
+  race,
   startWith,
   Subject,
   switchMap,
@@ -31,8 +32,10 @@ import {type SanityInstance} from '../instance/types'
 import {type ActionContext, createAction, createInternalAction} from '../resources/createAction'
 import {createResource} from '../resources/createResource'
 import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
+import {createStore} from '../resources/createStore'
 import {getDraftId} from '../utils/ids'
 import {type DocumentAction} from './actions'
+import {type ActionsResult, type ApplyActionsOptions} from './applyActions'
 import {INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
 import {type DocumentEvent, getDocumentEvents} from './events'
 import {listen, OutOfSyncError} from './listen'
@@ -48,6 +51,7 @@ import {
   manageSubscriberIds,
   type OutgoingTransaction,
   type QueuedTransaction,
+  queueTransaction,
   removeQueuedTransaction,
   revertOutgoingTransaction,
   transitionAppliedTransactionsToOutgoing,
@@ -66,6 +70,20 @@ export interface DocumentStoreState {
   fetchDocument: (documentId: string) => Observable<SanityDocument | null>
   events: Subject<DocumentEvent>
 }
+
+const documentStores = new Map<DatasetResourceId, ReturnType<typeof createDocumentStore>>()
+
+export function getDocumentStore(
+  instance: SanityInstance,
+  datasetResourceId: DatasetResourceId,
+): ReturnType<typeof createDocumentStore> {
+  if (!documentStores.has(datasetResourceId)) {
+    documentStores.set(datasetResourceId, createDocumentStore(instance, datasetResourceId))
+  }
+  return documentStores.get(datasetResourceId)!
+}
+
+export type DatasetResourceId = `${string}:${string}`
 
 export interface DocumentState {
   id: string
@@ -101,318 +119,911 @@ export interface DocumentState {
    */
   unverifiedRevisions?: {[TTransactionId in string]?: UnverifiedDocumentRevision}
 }
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+export function createDocumentStore(
+  instance: SanityInstance,
+  datasetResourceId: DatasetResourceId,
+) {
+  const documentStore = createResource<DocumentStoreState>({
+    name: `Document_${datasetResourceId}`,
+    getInitialState: () => ({
+      documentStates: {},
+      // these can be emptied on refetch
+      queued: [],
+      applied: [],
+      sharedListener: createSharedListener(instance),
+      fetchDocument: createFetchDocument(instance),
+      events: new Subject(),
+    }),
+    initialize() {
+      const queuedTransactionSubscription = createInternalAction(
+        ({state}: ActionContext<DocumentStoreState>) => {
+          const {events} = state.get()
 
-export const documentStore = createResource<DocumentStoreState>({
-  name: 'Document',
-  getInitialState: (instance) => ({
-    documentStates: {},
-    // these can be emptied on refetch
-    queued: [],
-    applied: [],
-    sharedListener: createSharedListener(instance),
-    fetchDocument: createFetchDocument(instance),
-    events: new Subject(),
-  }),
-  initialize() {
-    const queuedTransactionSubscription = subscribeToQueuedAndApplyNextTransaction(this)
-    const subscriptionsSubscription = subscribeToSubscriptionsAndListenToDocuments(this)
-    const appliedSubscription = subscribeToAppliedAndSubmitNextTransaction(this)
-    const clientSubscription = subscribeToClientAndFetchDatasetAcl(this)
-
-    return () => {
-      queuedTransactionSubscription.unsubscribe()
-      subscriptionsSubscription.unsubscribe()
-      appliedSubscription.unsubscribe()
-      clientSubscription.unsubscribe()
-    }
-  },
-})
-
-/** @beta */
-export function getDocumentState<
-  TDocument extends SanityDocument,
-  TPath extends JsonMatchPath<TDocument>,
->(
-  instance: SanityInstance | ActionContext<DocumentStoreState>,
-  doc: string | DocumentHandle<TDocument>,
-  path: TPath,
-): StateSource<JsonMatch<TDocument, TPath> | undefined>
-/** @beta */
-export function getDocumentState<TDocument extends SanityDocument>(
-  instance: SanityInstance | ActionContext<DocumentStoreState>,
-  doc: string | DocumentHandle<TDocument>,
-): StateSource<TDocument | null>
-/** @beta */
-export function getDocumentState(
-  instance: SanityInstance | ActionContext<DocumentStoreState>,
-  doc: string | DocumentHandle,
-  path?: string,
-): StateSource<unknown>
-/** @beta */
-export function getDocumentState(
-  ...args: Parameters<typeof _getDocumentState>
-): StateSource<unknown> {
-  return _getDocumentState(...args)
-}
-const _getDocumentState = createStateSourceAction(documentStore, {
-  selector: ({error, documentStates}, doc: string | DocumentHandle, path?: string) => {
-    const documentId = typeof doc === 'string' ? doc : doc._id
-    if (error) throw error
-    const draftId = getDraftId(documentId)
-    const publishedId = getPublishedId(documentId)
-    const draft = documentStates[draftId]?.local
-    const published = documentStates[publishedId]?.local
-
-    const document = draft ?? published
-    if (document === undefined) return undefined
-    if (path) return jsonMatch(document, path).at(0)?.value
-    return document
-  },
-  onSubscribe: ({state}, doc: string | DocumentHandle) =>
-    manageSubscriberIds(state, typeof doc === 'string' ? doc : doc._id),
-})
-
-/** @beta */
-export function resolveDocument<TDocument extends SanityDocument>(
-  instance: SanityInstance | ActionContext<DocumentStoreState>,
-  doc: string | DocumentHandle<TDocument>,
-): Promise<TDocument | null>
-/** @beta */
-export function resolveDocument(
-  instance: SanityInstance | ActionContext<DocumentStoreState>,
-  doc: string | DocumentHandle,
-): Promise<SanityDocument | null>
-/** @beta */
-export function resolveDocument(
-  ...args: Parameters<typeof _resolveDocument>
-): Promise<SanityDocument | null> {
-  return _resolveDocument(...args)
-}
-const _resolveDocument = createAction(documentStore, () => {
-  return function (doc: string | DocumentHandle) {
-    const documentId = typeof doc === 'string' ? doc : doc._id
-    return firstValueFrom(
-      getDocumentState(this, documentId).observable.pipe(filter((i) => i !== undefined)),
-    )
-  }
-})
-
-/** @beta */
-export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
-  selector: (
-    {error, documentStates: documents, outgoing, applied, queued},
-    doc: string | DocumentHandle,
-  ) => {
-    const documentId = typeof doc === 'string' ? doc : doc._id
-    if (error) throw error
-    const draftId = getDraftId(documentId)
-    const publishedId = getPublishedId(documentId)
-
-    const draft = documents[draftId]
-    const published = documents[publishedId]
-
-    if (draft === undefined || published === undefined) return undefined
-    return !queued.length && !applied.length && !outgoing
-  },
-  onSubscribe: ({state}, doc: string | DocumentHandle) =>
-    manageSubscriberIds(state, typeof doc === 'string' ? doc : doc._id),
-})
-
-/** @beta */
-export const getPermissionsState = createStateSourceAction(documentStore, {
-  selector: calculatePermissions,
-  onSubscribe: ({state}, actions) => manageSubscriberIds(state, getDocumentIdsFromActions(actions)),
-})
-
-/** @beta */
-export const resolvePermissions = createAction(documentStore, () => {
-  return function (actions: DocumentAction | DocumentAction[]) {
-    return firstValueFrom(
-      getPermissionsState(this, actions).observable.pipe(filter((i) => i !== undefined)),
-    )
-  }
-})
-
-/** @beta */
-export const subscribeDocumentEvents = createAction(documentStore, ({state}) => {
-  const {events} = state.get()
-
-  return function (eventHandler: (e: DocumentEvent) => void): () => void {
-    const subscription = events.subscribe(eventHandler)
-    return () => subscription.unsubscribe()
-  }
-})
-
-const subscribeToQueuedAndApplyNextTransaction = createInternalAction(
-  ({state}: ActionContext<DocumentStoreState>) => {
-    const {events} = state.get()
-
-    return function () {
-      return state.observable
-        .pipe(
-          map(applyFirstQueuedTransaction),
-          distinctUntilChanged(),
-          tap((next) => state.set('applyFirstQueuedTransaction', next)),
-          catchError((error, caught) => {
-            if (error instanceof ActionError) {
-              state.set('removeQueuedTransaction', (prev) =>
-                removeQueuedTransaction(prev, error.transactionId),
-              )
-              events.next({
-                type: 'error',
-                message: error.message,
-                documentId: error.documentId,
-                transactionId: error.transactionId,
-                error,
-              })
-              return caught
-            }
-
-            throw error
-          }),
-        )
-        .subscribe({error: (error) => state.set('setError', {error})})
-    }
-  },
-)
-
-const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
-  ({state, instance}: ActionContext<DocumentStoreState>) => {
-    const {events} = state.get()
-
-    return function () {
-      return state.observable
-        .pipe(
-          throttle(
-            (s) =>
-              // if there is no outgoing transaction, we can throttle by the
-              // initial outgoing throttle time…
-              !s.outgoing
-                ? timer(INITIAL_OUTGOING_THROTTLE_TIME)
-                : // …otherwise, wait until the outgoing has been cleared
-                  state.observable.pipe(first(({outgoing}) => !outgoing)),
-            {leading: false, trailing: true},
-          ),
-          map(transitionAppliedTransactionsToOutgoing),
-          distinctUntilChanged((a, b) => a.outgoing?.transactionId === b.outgoing?.transactionId),
-          tap((next) => state.set('transitionAppliedTransactionsToOutgoing', next)),
-          map((s) => s.outgoing),
-          distinctUntilChanged(),
-          withLatestFrom(getClientState(instance, {apiVersion: API_VERSION}).observable),
-          concatMap(([outgoing, client]) => {
-            if (!outgoing) return EMPTY
-            return client.observable
-              .action(outgoing.outgoingActions as Action[], {
-                transactionId: outgoing.transactionId,
-                skipCrossDatasetReferenceValidation: true,
-              })
+          return function () {
+            return state.observable
               .pipe(
-                catchError((error) => {
-                  state.set('revertOutgoingTransaction', revertOutgoingTransaction)
-                  events.next({type: 'reverted', message: error.message, outgoing, error})
-                  return EMPTY
-                }),
-                map((result) => ({result, outgoing})),
-              )
-          }),
-          tap(({outgoing, result}) => {
-            state.set('cleanupOutgoingTransaction', cleanupOutgoingTransaction)
-            for (const e of getDocumentEvents(outgoing)) events.next(e)
-            events.next({type: 'accepted', outgoing, result})
-          }),
-        )
-        .subscribe({error: (error) => state.set('setError', {error})})
-    }
-  },
-)
+                map(applyFirstQueuedTransaction),
+                distinctUntilChanged(),
+                tap((next) => state.set('applyFirstQueuedTransaction', next)),
+                catchError((error, caught) => {
+                  if (error instanceof ActionError) {
+                    state.set('removeQueuedTransaction', (prev) =>
+                      removeQueuedTransaction(prev, error.transactionId),
+                    )
+                    events.next({
+                      type: 'error',
+                      message: error.message,
+                      documentId: error.documentId,
+                      transactionId: error.transactionId,
+                      error,
+                    })
+                    return caught
+                  }
 
-const subscribeToSubscriptionsAndListenToDocuments = createInternalAction(
-  ({state}: ActionContext<DocumentStoreState>) => {
+                  throw error
+                }),
+              )
+              .subscribe({error: (error) => state.set('setError', {error})})
+          }
+        },
+      )(this)
+      const subscriptionsSubscription = createInternalAction(
+        ({state}: ActionContext<DocumentStoreState>) => {
+          const {events} = state.get()
+
+          return function () {
+            return state.observable
+              .pipe(
+                filter((s) => !!s.grants),
+                map((s) => Object.keys(s.documentStates)),
+                distinctUntilChanged((curr, next) => {
+                  if (curr.length !== next.length) return false
+                  const currSet = new Set(curr)
+                  return next.every((i) => currSet.has(i))
+                }),
+                startWith(new Set<string>()),
+                pairwise(),
+                switchMap((pair) => {
+                  const [curr, next] = pair.map((ids) => new Set(ids))
+                  const added = Array.from(next).filter((i) => !curr.has(i))
+                  const removed = Array.from(curr).filter((i) => !next.has(i))
+
+                  // NOTE: the order of which these go out is somewhat important
+                  // because that determines the order `applyRemoteDocument` is called
+                  // which in turn determines which document version get populated
+                  // first. because we prefer drafts, it's better to have those go out
+                  // first so that the published document doesn't flash for a frame
+                  const changes = [
+                    ...added.map((id) => ({id, add: true})),
+                    ...removed.map((id) => ({id, add: false})),
+                  ].sort((a, b) => {
+                    const aIsDraft = a.id === getDraftId(a.id)
+                    const bIsDraft = b.id === getDraftId(b.id)
+
+                    if (aIsDraft && bIsDraft) return a.id.localeCompare(b.id, 'en-US')
+                    if (aIsDraft) return -1
+                    if (bIsDraft) return 1
+                    return a.id.localeCompare(b.id, 'en-US')
+                  })
+
+                  return of<{id: string; add: boolean}[]>(...changes)
+                }),
+                groupBy((i) => i.id),
+                mergeMap((group) =>
+                  group.pipe(
+                    switchMap((e) => {
+                      if (!e.add) return EMPTY
+                      return listen(this, e.id).pipe(
+                        catchError((error) => {
+                          // retry on `OutOfSyncError`
+                          if (error instanceof OutOfSyncError) listen(this, e.id)
+                          throw error
+                        }),
+                        tap((remote) =>
+                          state.set('applyRemoteDocument', (prev) =>
+                            applyRemoteDocument(prev, remote, events),
+                          ),
+                        ),
+                      )
+                    }),
+                  ),
+                ),
+              )
+              .subscribe({error: (error) => state.set('setError', {error})})
+          }
+        },
+      )(this)
+      const appliedSubscription = createInternalAction(
+        ({state}: ActionContext<DocumentStoreState>) => {
+          const {events} = state.get()
+
+          return function () {
+            return state.observable
+              .pipe(
+                throttle(
+                  (s) =>
+                    // if there is no outgoing transaction, we can throttle by the
+                    // initial outgoing throttle time…
+                    !s.outgoing
+                      ? timer(INITIAL_OUTGOING_THROTTLE_TIME)
+                      : // …otherwise, wait until the outgoing has been cleared
+                        state.observable.pipe(first(({outgoing}) => !outgoing)),
+                  {leading: false, trailing: true},
+                ),
+                map(transitionAppliedTransactionsToOutgoing),
+                distinctUntilChanged(
+                  (a, b) => a.outgoing?.transactionId === b.outgoing?.transactionId,
+                ),
+                tap((next) => state.set('transitionAppliedTransactionsToOutgoing', next)),
+                map((s) => s.outgoing),
+                distinctUntilChanged(),
+                withLatestFrom(getClientState(instance, {apiVersion: API_VERSION}).observable),
+                concatMap(([outgoing, client]) => {
+                  if (!outgoing) return EMPTY
+                  return client.observable
+                    .action(outgoing.outgoingActions as Action[], {
+                      transactionId: outgoing.transactionId,
+                      skipCrossDatasetReferenceValidation: true,
+                    })
+                    .pipe(
+                      catchError((error) => {
+                        state.set('revertOutgoingTransaction', revertOutgoingTransaction)
+                        events.next({type: 'reverted', message: error.message, outgoing, error})
+                        return EMPTY
+                      }),
+                      map((result) => ({result, outgoing})),
+                    )
+                }),
+                tap(({outgoing, result}) => {
+                  state.set('cleanupOutgoingTransaction', cleanupOutgoingTransaction)
+                  for (const e of getDocumentEvents(outgoing)) events.next(e)
+                  events.next({type: 'accepted', outgoing, result})
+                }),
+              )
+              .subscribe({error: (error) => state.set('setError', {error})})
+          }
+        },
+      )(this)
+      const clientSubscription = createInternalAction(
+        ({state}: ActionContext<DocumentStoreState>) => {
+          const {projectId, dataset} = instance.resources[0] // TODO: support multiple resources
+
+          return function () {
+            return getClientState(instance, {apiVersion: API_VERSION})
+              .observable.pipe(
+                switchMap((client) =>
+                  client.observable.request<DatasetAcl>({
+                    uri: `/projects/${projectId}/datasets/${dataset}/acl`,
+                    // TODO: audit tags
+                    tag: 'acl.get',
+                    withCredentials: true,
+                  }),
+                ),
+                tap((datasetAcl) =>
+                  state.set('setGrants', {grants: createGrantsLookup(datasetAcl)}),
+                ),
+              )
+              .subscribe({
+                error: (error) => state.set('setError', {error}),
+              })
+          }
+        },
+      )(this)
+
+      return () => {
+        queuedTransactionSubscription.unsubscribe()
+        subscriptionsSubscription.unsubscribe()
+        appliedSubscription.unsubscribe()
+        clientSubscription.unsubscribe()
+      }
+    },
+  })
+
+  /** @beta */
+  function getDocumentState<
+    TDocument extends SanityDocument,
+    TPath extends JsonMatchPath<TDocument>,
+  >(
+    _instance: SanityInstance | ActionContext<DocumentStoreState>,
+    doc: string | DocumentHandle<TDocument>,
+    path: TPath,
+  ): StateSource<JsonMatch<TDocument, TPath> | undefined>
+  /** @beta */
+  function getDocumentState<TDocument extends SanityDocument>(
+    _instance: SanityInstance | ActionContext<DocumentStoreState>,
+    doc: string | DocumentHandle<TDocument>,
+  ): StateSource<TDocument | null>
+  /** @beta */
+  function getDocumentState(
+    _instance: SanityInstance | ActionContext<DocumentStoreState>,
+    doc: string | DocumentHandle,
+    path?: string,
+  ): StateSource<unknown>
+  /** @beta */
+  function getDocumentState(...args: Parameters<typeof _getDocumentState>): StateSource<unknown> {
+    return _getDocumentState(...args)
+  }
+  const _getDocumentState = createStateSourceAction(documentStore, {
+    selector: ({error, documentStates}, doc: string | DocumentHandle, path?: string) => {
+      const documentId = typeof doc === 'string' ? doc : doc._id
+      if (error) throw error
+      const draftId = getDraftId(documentId)
+      const publishedId = getPublishedId(documentId)
+      const draft = documentStates[draftId]?.local
+      const published = documentStates[publishedId]?.local
+
+      const document = draft ?? published
+      if (document === undefined) return undefined
+      if (path) return jsonMatch(document, path).at(0)?.value
+      return document
+    },
+    onSubscribe: ({state}, doc: string | DocumentHandle) =>
+      manageSubscriberIds(state, typeof doc === 'string' ? doc : doc._id),
+  })
+
+  /** @beta */
+  function resolveDocument<TDocument extends SanityDocument>(
+    _instance: SanityInstance | ActionContext<DocumentStoreState>,
+    doc: string | DocumentHandle<TDocument>,
+  ): Promise<TDocument | null>
+  /** @beta */
+  function resolveDocument(
+    _instance: SanityInstance | ActionContext<DocumentStoreState>,
+    doc: string | DocumentHandle,
+  ): Promise<SanityDocument | null>
+  /** @beta */
+  function resolveDocument(
+    ...args: Parameters<typeof _resolveDocument>
+  ): Promise<SanityDocument | null> {
+    return _resolveDocument(...args)
+  }
+
+  const _resolveDocument = createAction(documentStore, () => {
+    return function (doc: string | DocumentHandle) {
+      const documentId = typeof doc === 'string' ? doc : doc._id
+      return firstValueFrom(
+        getDocumentState(this, documentId).observable.pipe(filter((i) => i !== undefined)),
+      )
+    }
+  })
+
+  const _getPermissionsState = createStateSourceAction(documentStore, {
+    selector: calculatePermissions,
+    onSubscribe: ({state}, actions) => {
+      if (Array.isArray(actions)) {
+        const firstResourceId = actions[0].datasetResourceId
+        if (actions.some((action) => action.datasetResourceId !== firstResourceId)) {
+          throw new Error('All actions must have the same datasetResourceId')
+        }
+      }
+      return manageSubscriberIds(state, getDocumentIdsFromActions(actions))
+    },
+  })
+
+  /** @beta */
+  function applyActions<TDocument extends SanityDocument>(
+    _instance: SanityInstance | ActionContext<DocumentStoreState>,
+    action: DocumentAction<TDocument> | DocumentAction<TDocument>[],
+    options?: ApplyActionsOptions,
+  ): Promise<ActionsResult<TDocument>>
+  /** @beta */
+  function applyActions(
+    _instance: SanityInstance | ActionContext<DocumentStoreState>,
+    action: DocumentAction | DocumentAction[],
+    options?: ApplyActionsOptions,
+  ): Promise<ActionsResult>
+  /** @beta */
+  function applyActions(
+    ...args: Parameters<typeof _applyActions>
+  ): ReturnType<typeof _applyActions> {
+    return _applyActions(...args)
+  }
+
+  const _applyActions = createAction(documentStore, ({state}) => {
     const {events} = state.get()
 
-    return function () {
-      return state.observable
-        .pipe(
-          filter((s) => !!s.grants),
-          map((s) => Object.keys(s.documentStates)),
-          distinctUntilChanged((curr, next) => {
-            if (curr.length !== next.length) return false
-            const currSet = new Set(curr)
-            return next.every((i) => currSet.has(i))
-          }),
-          startWith(new Set<string>()),
-          pairwise(),
-          switchMap((pair) => {
-            const [curr, next] = pair.map((ids) => new Set(ids))
-            const added = Array.from(next).filter((i) => !curr.has(i))
-            const removed = Array.from(curr).filter((i) => !next.has(i))
+    return async function (
+      action: DocumentAction | DocumentAction[],
+      {transactionId = crypto.randomUUID(), disableBatching}: ApplyActionsOptions = {},
+    ): Promise<ActionsResult> {
+      const actions = Array.isArray(action) ? action : [action]
 
-            // NOTE: the order of which these go out is somewhat important
-            // because that determines the order `applyRemoteDocument` is called
-            // which in turn determines which document version get populated
-            // first. because we prefer drafts, it's better to have those go out
-            // first so that the published document doesn't flash for a frame
-            const changes = [
-              ...added.map((id) => ({id, add: true})),
-              ...removed.map((id) => ({id, add: false})),
-            ].sort((a, b) => {
-              const aIsDraft = a.id === getDraftId(a.id)
-              const bIsDraft = b.id === getDraftId(b.id)
+      const transaction: QueuedTransaction = {
+        transactionId,
+        actions,
+        ...(disableBatching && {disableBatching}),
+      }
 
-              if (aIsDraft && bIsDraft) return a.id.localeCompare(b.id, 'en-US')
-              if (aIsDraft) return -1
-              if (bIsDraft) return 1
-              return a.id.localeCompare(b.id, 'en-US')
-            })
+      const fatalError$ = state.observable.pipe(
+        map((s) => s.error),
+        first(Boolean),
+        map((error) => ({type: 'error', error}) as const),
+      )
 
-            return of<{id: string; add: boolean}[]>(...changes)
-          }),
-          groupBy((i) => i.id),
-          mergeMap((group) =>
-            group.pipe(
-              switchMap((e) => {
-                if (!e.add) return EMPTY
-                return listen(this, e.id).pipe(
-                  catchError((error) => {
-                    // retry on `OutOfSyncError`
-                    if (error instanceof OutOfSyncError) listen(this, e.id)
-                    throw error
-                  }),
-                  tap((remote) =>
-                    state.set('applyRemoteDocument', (prev) =>
-                      applyRemoteDocument(prev, remote, events),
-                    ),
-                  ),
-                )
-              }),
-            ),
-          ),
-        )
-        .subscribe({error: (error) => state.set('setError', {error})})
+      const transactionError$ = events.pipe(
+        filter((e) => e.type === 'error'),
+        first((e) => e.transactionId === transactionId),
+      )
+
+      const appliedTransaction$ = state.observable.pipe(
+        map((s) => s.applied),
+        distinctUntilChanged(),
+        map((applied) => applied.find((t) => t.transactionId === transactionId)),
+        first(Boolean),
+      )
+
+      const successfulTransaction$ = events.pipe(
+        filter((e) => e.type === 'accepted'),
+        first((e) => e.outgoing.batchedTransactionIds.includes(transactionId)),
+      )
+
+      const rejectedTransaction$ = events.pipe(
+        filter((e) => e.type === 'reverted'),
+        first((e) => e.outgoing.batchedTransactionIds.includes(transactionId)),
+      )
+
+      const appliedTransactionOrError = firstValueFrom(
+        race([fatalError$, transactionError$, appliedTransaction$]),
+      )
+      const acceptedOrRejectedTransaction = firstValueFrom(
+        race([successfulTransaction$, rejectedTransaction$, transactionError$]),
+      )
+
+      state.set('queueTransaction', (prev) => queueTransaction(prev, transaction))
+
+      const result = await appliedTransactionOrError
+      if ('type' in result && result.type === 'error') throw result.error
+
+      const {working: documents, previous, previousRevs} = result as AppliedTransaction
+      const existingIds = new Set(
+        Object.entries(previous)
+          .filter(([, value]) => !!value)
+          .map(([key]) => key),
+      )
+      const resultingIds = new Set(
+        Object.entries(documents)
+          .filter(([, value]) => !!value)
+          .map(([key]) => key),
+      )
+      const allIds = new Set([...existingIds, ...resultingIds])
+
+      const updated: string[] = []
+      const appeared: string[] = []
+      const disappeared: string[] = []
+
+      for (const id of allIds) {
+        if (existingIds.has(id) && resultingIds.has(id)) {
+          updated.push(id)
+        } else if (!existingIds.has(id) && resultingIds.has(id)) {
+          appeared.push(id)
+        } else if (!resultingIds.has(id) && existingIds.has(id)) {
+          disappeared.push(id)
+        }
+      }
+
+      async function submitted() {
+        const raceResult = await acceptedOrRejectedTransaction
+        if (raceResult.type !== 'accepted') throw raceResult.error
+        return raceResult.result
+      }
+
+      return {
+        transactionId,
+        documents,
+        previous,
+        previousRevs,
+        appeared,
+        updated,
+        disappeared,
+        submitted,
+      }
     }
-  },
-)
+  })
 
-const subscribeToClientAndFetchDatasetAcl = createInternalAction(
-  ({instance, state}: ActionContext<DocumentStoreState>) => {
-    const {projectId, dataset} = instance.resources[0] // TODO: support multiple resources
+  const store = createStore(documentStore, {
+    getDocumentState,
+    resolveDocument,
+    applyActions,
+    getDocumentSyncStatus: createStateSourceAction(documentStore, {
+      selector: (
+        {error, documentStates: documents, outgoing, applied, queued},
+        doc: string | DocumentHandle,
+      ) => {
+        const documentId = typeof doc === 'string' ? doc : doc._id
+        if (error) throw error
+        const draftId = getDraftId(documentId)
+        const publishedId = getPublishedId(documentId)
 
-    return function () {
-      return getClientState(instance, {apiVersion: API_VERSION})
-        .observable.pipe(
-          switchMap((client) =>
-            client.observable.request<DatasetAcl>({
-              uri: `/projects/${projectId}/datasets/${dataset}/acl`,
-              // TODO: audit tags
-              tag: 'acl.get',
-              withCredentials: true,
-            }),
-          ),
-          tap((datasetAcl) => state.set('setGrants', {grants: createGrantsLookup(datasetAcl)})),
+        const draft = documents[draftId]
+        const published = documents[publishedId]
+
+        if (draft === undefined || published === undefined) return undefined
+        return !queued.length && !applied.length && !outgoing
+      },
+      onSubscribe: ({state}, doc: string | DocumentHandle) =>
+        manageSubscriberIds(state, typeof doc === 'string' ? doc : doc._id),
+    }),
+    getPermissionsState: _getPermissionsState,
+    resolvePermissions: createAction(documentStore, () => {
+      return function (actions: DocumentAction | DocumentAction[]) {
+        return firstValueFrom(
+          _getPermissionsState(this, actions).observable.pipe(filter((i) => i !== undefined)),
         )
-        .subscribe({
-          error: (error) => state.set('setError', {error}),
-        })
-    }
-  },
-)
+      }
+    }),
+    subscribeDocumentEvents: createAction(documentStore, ({state}) => {
+      const {events} = state.get()
+
+      return function (eventHandler: (e: DocumentEvent) => void): () => void {
+        const subscription = events.subscribe(eventHandler)
+        return () => subscription.unsubscribe()
+      }
+    }),
+  })(instance)
+
+  // const subscribeToQueuedAndApplyNextTransaction = createInternalAction(
+  //   ({state}: ActionContext<DocumentStoreState>) => {
+  //     const {events} = state.get()
+
+  //     return function () {
+  //       return state.observable
+  //         .pipe(
+  //           map(applyFirstQueuedTransaction),
+  //           distinctUntilChanged(),
+  //           tap((next) => state.set('applyFirstQueuedTransaction', next)),
+  //           catchError((error, caught) => {
+  //             if (error instanceof ActionError) {
+  //               state.set('removeQueuedTransaction', (prev) =>
+  //                 removeQueuedTransaction(prev, error.transactionId),
+  //               )
+  //               events.next({
+  //                 type: 'error',
+  //                 message: error.message,
+  //                 documentId: error.documentId,
+  //                 transactionId: error.transactionId,
+  //                 error,
+  //               })
+  //               return caught
+  //             }
+
+  //             throw error
+  //           }),
+  //         )
+  //         .subscribe({error: (error) => state.set('setError', {error})})
+  //     }
+  //   },
+  // )
+
+  // const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
+  //   ({state}: ActionContext<DocumentStoreState>) => {
+  //     const {events} = state.get()
+
+  //     return function () {
+  //       return state.observable
+  //         .pipe(
+  //           throttle(
+  //             (s) =>
+  //               // if there is no outgoing transaction, we can throttle by the
+  //               // initial outgoing throttle time…
+  //               !s.outgoing
+  //                 ? timer(INITIAL_OUTGOING_THROTTLE_TIME)
+  //                 : // …otherwise, wait until the outgoing has been cleared
+  //                   state.observable.pipe(first(({outgoing}) => !outgoing)),
+  //             {leading: false, trailing: true},
+  //           ),
+  //           map(transitionAppliedTransactionsToOutgoing),
+  //           distinctUntilChanged((a, b) => a.outgoing?.transactionId === b.outgoing?.transactionId),
+  //           tap((next) => state.set('transitionAppliedTransactionsToOutgoing', next)),
+  //           map((s) => s.outgoing),
+  //           distinctUntilChanged(),
+  //           withLatestFrom(getClientState(instance, {apiVersion: API_VERSION}).observable),
+  //           concatMap(([outgoing, client]) => {
+  //             if (!outgoing) return EMPTY
+  //             return client.observable
+  //               .action(outgoing.outgoingActions as Action[], {
+  //                 transactionId: outgoing.transactionId,
+  //                 skipCrossDatasetReferenceValidation: true,
+  //               })
+  //               .pipe(
+  //                 catchError((error) => {
+  //                   state.set('revertOutgoingTransaction', revertOutgoingTransaction)
+  //                   events.next({type: 'reverted', message: error.message, outgoing, error})
+  //                   return EMPTY
+  //                 }),
+  //                 map((result) => ({result, outgoing})),
+  //               )
+  //           }),
+  //           tap(({outgoing, result}) => {
+  //             state.set('cleanupOutgoingTransaction', cleanupOutgoingTransaction)
+  //             for (const e of getDocumentEvents(outgoing)) events.next(e)
+  //             events.next({type: 'accepted', outgoing, result})
+  //           }),
+  //         )
+  //         .subscribe({error: (error) => state.set('setError', {error})})
+  //     }
+  //   },
+  // )
+
+  // const subscribeToSubscriptionsAndListenToDocuments = createInternalAction(
+  //   ({state}: ActionContext<DocumentStoreState>) => {
+  //     const {events} = state.get()
+
+  //     return function () {
+  //       return state.observable
+  //         .pipe(
+  //           filter((s) => !!s.grants),
+  //           map((s) => Object.keys(s.documentStates)),
+  //           distinctUntilChanged((curr, next) => {
+  //             if (curr.length !== next.length) return false
+  //             const currSet = new Set(curr)
+  //             return next.every((i) => currSet.has(i))
+  //           }),
+  //           startWith(new Set<string>()),
+  //           pairwise(),
+  //           switchMap((pair) => {
+  //             const [curr, next] = pair.map((ids) => new Set(ids))
+  //             const added = Array.from(next).filter((i) => !curr.has(i))
+  //             const removed = Array.from(curr).filter((i) => !next.has(i))
+
+  //             // NOTE: the order of which these go out is somewhat important
+  //             // because that determines the order `applyRemoteDocument` is called
+  //             // which in turn determines which document version get populated
+  //             // first. because we prefer drafts, it's better to have those go out
+  //             // first so that the published document doesn't flash for a frame
+  //             const changes = [
+  //               ...added.map((id) => ({id, add: true})),
+  //               ...removed.map((id) => ({id, add: false})),
+  //             ].sort((a, b) => {
+  //               const aIsDraft = a.id === getDraftId(a.id)
+  //               const bIsDraft = b.id === getDraftId(b.id)
+
+  //               if (aIsDraft && bIsDraft) return a.id.localeCompare(b.id, 'en-US')
+  //               if (aIsDraft) return -1
+  //               if (bIsDraft) return 1
+  //               return a.id.localeCompare(b.id, 'en-US')
+  //             })
+
+  //             return of<{id: string; add: boolean}[]>(...changes)
+  //           }),
+  //           groupBy((i) => i.id),
+  //           mergeMap((group) =>
+  //             group.pipe(
+  //               switchMap((e) => {
+  //                 if (!e.add) return EMPTY
+  //                 return listen(this, e.id).pipe(
+  //                   catchError((error) => {
+  //                     // retry on `OutOfSyncError`
+  //                     if (error instanceof OutOfSyncError) listen(this, e.id)
+  //                     throw error
+  //                   }),
+  //                   tap((remote) =>
+  //                     state.set('applyRemoteDocument', (prev) =>
+  //                       applyRemoteDocument(prev, remote, events),
+  //                     ),
+  //                   ),
+  //                 )
+  //               }),
+  //             ),
+  //           ),
+  //         )
+  //         .subscribe({error: (error) => state.set('setError', {error})})
+  //     }
+  //   },
+  // )
+
+  // const subscribeToClientAndFetchDatasetAcl = createInternalAction(
+  //   ({state}: ActionContext<DocumentStoreState>) => {
+  //     const {projectId, dataset} = instance.resources[0] // TODO: support multiple resources
+
+  //     return function () {
+  //       return getClientState(instance, {apiVersion: API_VERSION})
+  //         .observable.pipe(
+  //           switchMap((client) =>
+  //             client.observable.request<DatasetAcl>({
+  //               uri: `/projects/${projectId}/datasets/${dataset}/acl`,
+  //               // TODO: audit tags
+  //               tag: 'acl.get',
+  //               withCredentials: true,
+  //             }),
+  //           ),
+  //           tap((datasetAcl) => state.set('setGrants', {grants: createGrantsLookup(datasetAcl)})),
+  //         )
+  //         .subscribe({
+  //           error: (error) => state.set('setError', {error}),
+  //         })
+  //     }
+  //   },
+  // )
+
+  return store
+}
+
+// /** @beta */
+// export function getDocumentState<
+//   TDocument extends SanityDocument,
+//   TPath extends JsonMatchPath<TDocument>,
+// >(
+//   instance: SanityInstance | ActionContext<DocumentStoreState>,
+//   doc: string | DocumentHandle<TDocument>,
+//   path: TPath,
+// ): StateSource<JsonMatch<TDocument, TPath> | undefined>
+// /** @beta */
+// export function getDocumentState<TDocument extends SanityDocument>(
+//   instance: SanityInstance | ActionContext<DocumentStoreState>,
+//   doc: string | DocumentHandle<TDocument>,
+// ): StateSource<TDocument | null>
+// /** @beta */
+// export function getDocumentState(
+//   instance: SanityInstance | ActionContext<DocumentStoreState>,
+//   doc: string | DocumentHandle,
+//   path?: string,
+// ): StateSource<unknown>
+// /** @beta */
+// export function getDocumentState(
+//   ...args: Parameters<typeof _getDocumentState>
+// ): StateSource<unknown> {
+//   return _getDocumentState(...args)
+// }
+// const _getDocumentState = createStateSourceAction(documentStore, {
+//   selector: ({error, documentStates}, doc: string | DocumentHandle, path?: string) => {
+//     const documentId = typeof doc === 'string' ? doc : doc._id
+//     if (error) throw error
+//     const draftId = getDraftId(documentId)
+//     const publishedId = getPublishedId(documentId)
+//     const draft = documentStates[draftId]?.local
+//     const published = documentStates[publishedId]?.local
+
+//     const document = draft ?? published
+//     if (document === undefined) return undefined
+//     if (path) return jsonMatch(document, path).at(0)?.value
+//     return document
+//   },
+//   onSubscribe: ({state}, doc: string | DocumentHandle) =>
+//     manageSubscriberIds(state, typeof doc === 'string' ? doc : doc._id),
+// })
+
+// /** @beta */
+// export function resolveDocument<TDocument extends SanityDocument>(
+//   instance: SanityInstance | ActionContext<DocumentStoreState>,
+//   doc: string | DocumentHandle<TDocument>,
+// ): Promise<TDocument | null>
+// /** @beta */
+// export function resolveDocument(
+//   instance: SanityInstance | ActionContext<DocumentStoreState>,
+//   doc: string | DocumentHandle,
+// ): Promise<SanityDocument | null>
+// /** @beta */
+// export function resolveDocument(
+//   ...args: Parameters<typeof _resolveDocument>
+// ): Promise<SanityDocument | null> {
+//   return _resolveDocument(...args)
+// }
+// const _resolveDocument = createAction(documentStore, () => {
+//   return function (doc: string | DocumentHandle) {
+//     const documentId = typeof doc === 'string' ? doc : doc._id
+//     return firstValueFrom(
+//       getDocumentState(this, documentId).observable.pipe(filter((i) => i !== undefined)),
+//     )
+//   }
+// })
+
+// /** @beta */
+// export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
+//   selector: (
+//     {error, documentStates: documents, outgoing, applied, queued},
+//     doc: string | DocumentHandle,
+//   ) => {
+//     const documentId = typeof doc === 'string' ? doc : doc._id
+//     if (error) throw error
+//     const draftId = getDraftId(documentId)
+//     const publishedId = getPublishedId(documentId)
+
+//     const draft = documents[draftId]
+//     const published = documents[publishedId]
+
+//     if (draft === undefined || published === undefined) return undefined
+//     return !queued.length && !applied.length && !outgoing
+//   },
+//   onSubscribe: ({state}, doc: string | DocumentHandle) =>
+//     manageSubscriberIds(state, typeof doc === 'string' ? doc : doc._id),
+// })
+
+// /** @beta */
+// export const getPermissionsState = createStateSourceAction(documentStore, {
+//   selector: calculatePermissions,
+//   onSubscribe: ({state}, actions) => manageSubscriberIds(state, getDocumentIdsFromActions(actions)),
+// })
+
+// /** @beta */
+// export const resolvePermissions = createAction(documentStore, () => {
+//   return function (actions: DocumentAction | DocumentAction[]) {
+//     return firstValueFrom(
+//       getPermissionsState(this, actions).observable.pipe(filter((i) => i !== undefined)),
+//     )
+//   }
+// })
+
+// /** @beta */
+// export const subscribeDocumentEvents = createAction(documentStore, ({state}) => {
+//   const {events} = state.get()
+
+//   return function (eventHandler: (e: DocumentEvent) => void): () => void {
+//     const subscription = events.subscribe(eventHandler)
+//     return () => subscription.unsubscribe()
+//   }
+// })
+
+// const subscribeToQueuedAndApplyNextTransaction = createInternalAction(
+//   ({state}: ActionContext<DocumentStoreState>) => {
+//     const {events} = state.get()
+
+//     return function () {
+//       return state.observable
+//         .pipe(
+//           map(applyFirstQueuedTransaction),
+//           distinctUntilChanged(),
+//           tap((next) => state.set('applyFirstQueuedTransaction', next)),
+//           catchError((error, caught) => {
+//             if (error instanceof ActionError) {
+//               state.set('removeQueuedTransaction', (prev) =>
+//                 removeQueuedTransaction(prev, error.transactionId),
+//               )
+//               events.next({
+//                 type: 'error',
+//                 message: error.message,
+//                 documentId: error.documentId,
+//                 transactionId: error.transactionId,
+//                 error,
+//               })
+//               return caught
+//             }
+
+//             throw error
+//           }),
+//         )
+//         .subscribe({error: (error) => state.set('setError', {error})})
+//     }
+//   },
+// )
+
+// const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
+//   ({state, instance}: ActionContext<DocumentStoreState>) => {
+//     const {events} = state.get()
+
+//     return function () {
+//       return state.observable
+//         .pipe(
+//           throttle(
+//             (s) =>
+//               // if there is no outgoing transaction, we can throttle by the
+//               // initial outgoing throttle time…
+//               !s.outgoing
+//                 ? timer(INITIAL_OUTGOING_THROTTLE_TIME)
+//                 : // …otherwise, wait until the outgoing has been cleared
+//                   state.observable.pipe(first(({outgoing}) => !outgoing)),
+//             {leading: false, trailing: true},
+//           ),
+//           map(transitionAppliedTransactionsToOutgoing),
+//           distinctUntilChanged((a, b) => a.outgoing?.transactionId === b.outgoing?.transactionId),
+//           tap((next) => state.set('transitionAppliedTransactionsToOutgoing', next)),
+//           map((s) => s.outgoing),
+//           distinctUntilChanged(),
+//           withLatestFrom(getClientState(instance, {apiVersion: API_VERSION}).observable),
+//           concatMap(([outgoing, client]) => {
+//             if (!outgoing) return EMPTY
+//             return client.observable
+//               .action(outgoing.outgoingActions as Action[], {
+//                 transactionId: outgoing.transactionId,
+//                 skipCrossDatasetReferenceValidation: true,
+//               })
+//               .pipe(
+//                 catchError((error) => {
+//                   state.set('revertOutgoingTransaction', revertOutgoingTransaction)
+//                   events.next({type: 'reverted', message: error.message, outgoing, error})
+//                   return EMPTY
+//                 }),
+//                 map((result) => ({result, outgoing})),
+//               )
+//           }),
+//           tap(({outgoing, result}) => {
+//             state.set('cleanupOutgoingTransaction', cleanupOutgoingTransaction)
+//             for (const e of getDocumentEvents(outgoing)) events.next(e)
+//             events.next({type: 'accepted', outgoing, result})
+//           }),
+//         )
+//         .subscribe({error: (error) => state.set('setError', {error})})
+//     }
+//   },
+// )
+
+// const subscribeToSubscriptionsAndListenToDocuments = createInternalAction(
+//   ({state}: ActionContext<DocumentStoreState>) => {
+//     const {events} = state.get()
+
+//     return function () {
+//       return state.observable
+//         .pipe(
+//           filter((s) => !!s.grants),
+//           map((s) => Object.keys(s.documentStates)),
+//           distinctUntilChanged((curr, next) => {
+//             if (curr.length !== next.length) return false
+//             const currSet = new Set(curr)
+//             return next.every((i) => currSet.has(i))
+//           }),
+//           startWith(new Set<string>()),
+//           pairwise(),
+//           switchMap((pair) => {
+//             const [curr, next] = pair.map((ids) => new Set(ids))
+//             const added = Array.from(next).filter((i) => !curr.has(i))
+//             const removed = Array.from(curr).filter((i) => !next.has(i))
+
+//             // NOTE: the order of which these go out is somewhat important
+//             // because that determines the order `applyRemoteDocument` is called
+//             // which in turn determines which document version get populated
+//             // first. because we prefer drafts, it's better to have those go out
+//             // first so that the published document doesn't flash for a frame
+//             const changes = [
+//               ...added.map((id) => ({id, add: true})),
+//               ...removed.map((id) => ({id, add: false})),
+//             ].sort((a, b) => {
+//               const aIsDraft = a.id === getDraftId(a.id)
+//               const bIsDraft = b.id === getDraftId(b.id)
+
+//               if (aIsDraft && bIsDraft) return a.id.localeCompare(b.id, 'en-US')
+//               if (aIsDraft) return -1
+//               if (bIsDraft) return 1
+//               return a.id.localeCompare(b.id, 'en-US')
+//             })
+
+//             return of<{id: string; add: boolean}[]>(...changes)
+//           }),
+//           groupBy((i) => i.id),
+//           mergeMap((group) =>
+//             group.pipe(
+//               switchMap((e) => {
+//                 if (!e.add) return EMPTY
+//                 return listen(this, e.id).pipe(
+//                   catchError((error) => {
+//                     // retry on `OutOfSyncError`
+//                     if (error instanceof OutOfSyncError) listen(this, e.id)
+//                     throw error
+//                   }),
+//                   tap((remote) =>
+//                     state.set('applyRemoteDocument', (prev) =>
+//                       applyRemoteDocument(prev, remote, events),
+//                     ),
+//                   ),
+//                 )
+//               }),
+//             ),
+//           ),
+//         )
+//         .subscribe({error: (error) => state.set('setError', {error})})
+//     }
+//   },
+// )
+
+// const subscribeToClientAndFetchDatasetAcl = createInternalAction(
+//   ({instance, state}: ActionContext<DocumentStoreState>) => {
+//     const {projectId, dataset} = instance.identity
+
+//     return function () {
+//       return getClientState(instance, {apiVersion: API_VERSION})
+//         .observable.pipe(
+//           switchMap((client) =>
+//             client.observable.request<DatasetAcl>({
+//               uri: `/projects/${projectId}/datasets/${dataset}/acl`,
+//               // TODO: audit tags
+//               tag: 'acl.get',
+//               withCredentials: true,
+//             }),
+//           ),
+//           tap((datasetAcl) => state.set('setGrants', {grants: createGrantsLookup(datasetAcl)})),
+//         )
+//         .subscribe({
+//           error: (error) => state.set('setError', {error}),
+//         })
+//     }
+//   },
+// )

@@ -10,6 +10,8 @@ import {
   type SanityDocumentLike,
 } from '@sanity/types'
 
+import {type DatasetResourceId} from './documentStore'
+
 type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
 
 /**
@@ -22,12 +24,14 @@ type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
 export interface DocumentHandle<TDocument extends SanityDocumentLike = SanityDocumentLike> {
   _id: string
   _type: TDocument['_type']
+  datasetResourceId: DatasetResourceId
 }
 
 /** @beta */
 export interface DocumentTypeHandle<TDocument extends SanityDocumentLike = SanityDocumentLike> {
   _id?: string
   _type: TDocument['_type']
+  datasetResourceId: DatasetResourceId
 }
 
 type ToNumber<TInput extends string> = TInput extends `${infer TNumber extends number}`

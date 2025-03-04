@@ -1,12 +1,13 @@
 import {
   type ActionsResult,
-  applyActions,
   type ApplyActionsOptions,
+  type DatasetResourceId,
   type DocumentAction,
+  getDocumentStore,
 } from '@sanity/sdk'
 import {type SanityDocument} from '@sanity/types'
 
-import {createCallbackHook} from '../helpers/createCallbackHook'
+import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
  *
@@ -14,6 +15,7 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  *
  * Provides a callback for applying one or more actions to a document.
  *
+ * @param datasetResourceId - Optional dataset resource ID to target a specific dataset
  * @category Documents
  * @returns A function that takes one more more {@link DocumentAction}s and returns a promise that resolves to an {@link ActionsResult}.
  * @example Publish or unpublish a document
@@ -47,22 +49,36 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  *
  * return (
  *   <button onClick={handleCreateAndPublish}>
- *     I’m feeling lucky
+ *     I'm feeling lucky
  *   </button>
  * )
  * ```
  */
-export function useApplyActions(): <TDocument extends SanityDocument>(
+export function useApplyActions(
+  datasetResourceId: DatasetResourceId,
+): <TDocument extends SanityDocument>(
   action: DocumentAction<TDocument> | DocumentAction<TDocument>[],
   options?: ApplyActionsOptions,
 ) => Promise<ActionsResult<TDocument>>
 
 /** @beta */
-export function useApplyActions(): (
+export function useApplyActions(
+  datasetResourceId: DatasetResourceId,
+): (
   action: DocumentAction | DocumentAction[],
   options?: ApplyActionsOptions,
 ) => Promise<ActionsResult> {
-  return _useApplyActions()
+  const instance = useSanityInstance()
+  const store = getDocumentStore(instance, datasetResourceId)
+  return _useApplyActions(store.applyActions)
 }
 
-const _useApplyActions = createCallbackHook(applyActions)
+const _useApplyActions =
+  (
+    applyActions: (
+      action: DocumentAction | DocumentAction[],
+      options?: ApplyActionsOptions,
+    ) => Promise<ActionsResult>,
+  ) =>
+  (action: DocumentAction | DocumentAction[], options?: ApplyActionsOptions) =>
+    applyActions(action, options)

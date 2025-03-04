@@ -1,4 +1,4 @@
-import {type DocumentEvent, subscribeDocumentEvents} from '@sanity/sdk'
+import {type DatasetResourceId, type DocumentEvent, getDocumentStore} from '@sanity/sdk'
 import {useCallback, useEffect, useInsertionEffect, useRef} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -26,7 +26,10 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * })
  * ```
  */
-export function useDocumentEvent(handler: (documentEvent: DocumentEvent) => void): void {
+export function useDocumentEvent(
+  datasetResourceId: DatasetResourceId,
+  handler: (documentEvent: DocumentEvent) => void,
+): void {
   const ref = useRef(handler)
 
   useInsertionEffect(() => {
@@ -39,6 +42,7 @@ export function useDocumentEvent(handler: (documentEvent: DocumentEvent) => void
 
   const instance = useSanityInstance()
   useEffect(() => {
-    return subscribeDocumentEvents(instance, stableHandler)
-  }, [instance, stableHandler])
+    const store = getDocumentStore(instance, datasetResourceId)
+    return store.subscribeDocumentEvents(stableHandler)
+  }, [instance, datasetResourceId, stableHandler])
 }

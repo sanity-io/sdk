@@ -2,10 +2,9 @@ import {
   type ActionsResult,
   type DocumentHandle,
   editDocument,
-  getDocumentState,
+  getDocumentStore,
   type JsonMatch,
   type JsonMatchPath,
-  resolveDocument,
 } from '@sanity/sdk'
 import {type SanityDocument} from '@sanity/types'
 import {useCallback} from 'react'
@@ -67,7 +66,7 @@ export function useEditDocument<
   TDocument extends SanityDocument,
   TPath extends JsonMatchPath<TDocument>,
 >(
-  doc: string | DocumentHandle<TDocument>,
+  doc: DocumentHandle<TDocument>,
   path: TPath,
 ): (nextValue: Updater<JsonMatch<TDocument, TPath>>) => Promise<ActionsResult<TDocument>>
 
@@ -134,7 +133,7 @@ export function useEditDocument<
  * ```
  */
 export function useEditDocument<TDocument extends SanityDocument>(
-  doc: string | DocumentHandle<TDocument>,
+  doc: DocumentHandle<TDocument>,
 ): (nextValue: Updater<TDocument>) => Promise<ActionsResult<TDocument>>
 
 /**
@@ -146,30 +145,32 @@ export function useEditDocument<TDocument extends SanityDocument>(
  * When called without a `path` argument, the hook will return a function for updating the entire document.
  */
 export function useEditDocument(
-  doc: string | DocumentHandle,
+  doc: DocumentHandle,
   path?: string,
 ): (updater: Updater<unknown>) => Promise<ActionsResult> {
-  const documentId = typeof doc === 'string' ? doc : doc._id
+  const documentId = doc._id
+  const datasetResourceId = doc.datasetResourceId
   const instance = useSanityInstance()
-  const apply = useApplyActions()
+  const documentStore = getDocumentStore(instance, datasetResourceId)
+  const apply = useApplyActions(doc.datasetResourceId)
   const isDocumentReady = useCallback(
-    () => getDocumentState(instance, documentId).getCurrent() !== undefined,
-    [instance, documentId],
+    () => documentStore.getDocumentState(documentId).getCurrent() !== undefined,
+    [documentId, documentStore],
   )
-  if (!isDocumentReady()) throw resolveDocument(instance, documentId)
+  if (!isDocumentReady()) throw documentStore.resolveDocument(documentId)
 
   return useCallback(
     (updater: Updater<unknown>) => {
       if (path) {
         const nextValue =
           typeof updater === 'function'
-            ? updater(getDocumentState(instance, documentId, path).getCurrent())
+            ? updater(documentStore.getDocumentState(documentId, path).getCurrent())
             : updater
 
-        return apply(editDocument(documentId, {set: {[path]: nextValue}}))
+        return apply(editDocument(doc, {set: {[path]: nextValue}}))
       }
 
-      const current = getDocumentState(instance, documentId).getCurrent()
+      const current = documentStore.getDocumentState(documentId).getCurrent()
       const nextValue = typeof updater === 'function' ? updater(current) : updater
 
       if (typeof nextValue !== 'object' || !nextValue) {
@@ -178,18 +179,26 @@ export function useEditDocument(
         )
       }
 
-      const allKeys = Object.keys({...current, ...nextValue})
+      // const allKeys = Object.keys({...current, ...nextValue})
+      const allKeys = Object.keys({
+        ...(current && typeof current === 'object' ? current : {}),
+        ...(nextValue && typeof nextValue === 'object' ? nextValue : {}),
+      })
       const editActions = allKeys
         .filter((key) => !ignoredKeys.includes(key))
-        .filter((key) => current?.[key] !== nextValue[key])
+        .filter(
+          (key) =>
+            current?.[key as keyof typeof current] !== nextValue?.[key as keyof typeof nextValue],
+        )
         .map((key) =>
           key in nextValue
-            ? editDocument(documentId, {set: {[key]: nextValue[key]}})
-            : editDocument(documentId, {unset: [key]}),
+            ? editDocument(doc, {set: {[key]: nextValue[key]}})
+            : editDocument(doc, {unset: [key]}),
         )
 
       return apply(editActions)
     },
-    [apply, documentId, instance, path],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [apply, documentId, documentStore, path],
   )
 }

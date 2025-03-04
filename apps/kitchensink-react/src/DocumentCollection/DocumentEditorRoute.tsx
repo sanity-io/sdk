@@ -11,6 +11,7 @@ import {
 import {
   useApplyActions,
   useDocument,
+  useDocumentEvent,
   useDocumentSyncStatus,
   useEditDocument,
   usePermissions,
@@ -25,14 +26,20 @@ interface Author extends SanityDocument {
   name?: string
 }
 
-const doc: DocumentHandle<Author> = {_id: 'db06bc9e-4608-465a-9551-a10cef478037', _type: 'author'}
+const doc: DocumentHandle<Author> = {
+  _id: 'db06bc9e-4608-465a-9551-a10cef478037',
+  _type: 'author',
+  datasetResourceId: 'ppsg7ml5:test',
+}
 
 function Editor() {
-  // useDocumentEvent((e) => console.log(e))
-  const synced = useDocumentSyncStatus(doc)
-  const apply = useApplyActions()
-
   const canEdit = usePermissions(editDocument(doc))
+  // eslint-disable-next-line no-console
+  useDocumentEvent(doc.datasetResourceId, (e) => console.log(e))
+  const synced = useDocumentSyncStatus(doc)
+  const apply = useApplyActions(doc.datasetResourceId)
+
+  // const canEdit = usePermissions(doc.datasetResourceId, editDocument(doc))
   const canCreate = usePermissions(createDocument(doc))
   const canPublish = usePermissions(publishDocument(doc))
   const canDelete = usePermissions(deleteDocument(doc))
@@ -44,7 +51,9 @@ function Editor() {
 
   const [value, setValue] = useState('')
 
-  const changeNameToValue = editDocument(patch(doc._id, at('name', set(value))))
+  const changeNameToValue = editDocument(
+    patch(doc._id, doc.datasetResourceId, at('name', set(value))),
+  )
   const canChangeNameToValue = usePermissions(changeNameToValue)
 
   const document = useDocument(doc)
