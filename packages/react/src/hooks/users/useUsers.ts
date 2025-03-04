@@ -1,5 +1,4 @@
-import {type ResourceType, type User} from '@sanity/access-api'
-import {createUsersStore} from '@sanity/sdk'
+import {createUsersStore, type ResourceType, type SanityUser} from '@sanity/sdk'
 import {useCallback, useEffect, useState, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -27,7 +26,7 @@ export interface UseUsersResult {
   /**
    * The users fetched.
    */
-  users: User[]
+  users: SanityUser[]
   /**
    * Whether there are more users to fetch.
    */

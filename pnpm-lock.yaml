@@ -299,9 +299,6 @@ importers:
 
   packages/core:
     dependencies:
-      '@sanity/access-api':
-        specifier: ^2.2.6
-        version: 2.2.6
       '@sanity/client':
         specifier: ^6.28.1
         version: 6.28.2
@@ -406,9 +403,6 @@ importers:
       '@repo/tsconfig':
         specifier: workspace:*
         version: link:../@repo/tsconfig
-      '@sanity/access-api':
-        specifier: ^2.2.6
-        version: 2.2.6
       '@sanity/client':
         specifier: ^6.28.1
         version: 6.28.2
@@ -1474,10 +1468,6 @@ packages:
 
   '@rushstack/ts-command-line@4.23.2':
     resolution: {integrity: sha512-JJ7XZX5K3ThBBva38aomgsPv1L7FV6XmSOcR6HtM7HDFZJkepqT65imw26h9ggGqMjsY0R9jcl30tzKcVj9aOQ==}
-
-  '@sanity/access-api@2.2.6':
-    resolution: {integrity: sha512-ZGefKgKArE4XmtOA3GLCLWsjR1kiTkoDEEvPBiAREYzzMIUL/zQq4ACIcjbBUbm4GR0IebR8bUyB/AK08bH5+Q==}
-    engines: {node: '>=20.0'}
 
   '@sanity/browserslist-config@1.0.5':
     resolution: {integrity: sha512-so+/UtCge8t1jq509hH0otbbptRz0zM/Aa0dh5MhMD7HGT6n2igWIL2VWH/9QR9e77Jn3dJsjz23mW1WCxT+sg==}
@@ -5898,8 +5888,6 @@ snapshots:
       string-argv: 0.3.2
     transitivePeerDependencies:
       - '@types/node'
-
-  '@sanity/access-api@2.2.6': {}
 
   '@sanity/browserslist-config@1.0.5': {}
 

@@ -1,4 +1,3 @@
-import {type ResourceType, type User} from '@sanity/access-api'
 import {createSelector} from 'reselect'
 
 import {getClient} from '../client/clientStore'
@@ -7,6 +6,7 @@ import {createAction} from '../resources/createAction'
 import {createResource} from '../resources/createResource'
 import {createStateSourceAction} from '../resources/createStateSourceAction'
 import {createStore} from '../resources/createStore'
+import {type ResourceType, type SanityUser} from './types'
 
 const API_VERSION = 'vX'
 
@@ -14,7 +14,7 @@ const API_VERSION = 'vX'
  * @public
  */
 export interface SanityUserResponse {
-  data: User[]
+  data: SanityUser[]
   totalCount: number
   nextCursor: string | null
 }
@@ -23,7 +23,7 @@ export interface SanityUserResponse {
  * @public
  */
 export interface UsersStoreState {
-  users: User[]
+  users: SanityUser[]
   totalCount: number
   nextCursor: string | null
   hasMore: boolean
