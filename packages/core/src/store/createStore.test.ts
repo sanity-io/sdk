@@ -19,9 +19,7 @@ beforeEach(() => {
 describe('createStore', () => {
   // Setup mock instance
   const mockInstance = {
-    identity: {
-      id: 'test-id',
-    },
+    resources: [{id: 'test-id'}],
   } as SanityInstance
 
   // Setup types for our test store

@@ -6,7 +6,7 @@ export {type ResourceState} from '../resources/createResource'
 export {type BoundResourceAction} from '../resources/createStore'
 
 // Types
-export type {SanityConfig, SanityInstance, SdkIdentity} from '../instance/types'
+export type {SanityConfig, SanityInstance, SdkResource} from '../instance/types'
 export type {StateSource} from '../resources/createStateSourceAction'
 
 /** CLIENT */

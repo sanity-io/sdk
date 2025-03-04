@@ -16,9 +16,9 @@ describe('identity', () => {
       expect(Object.isFrozen(resources)).toBe(true)
 
       // Check if all expected properties exist
-      expect(resources).toHaveProperty('id')
-      expect(resources).toHaveProperty('projectId', 'test-project')
-      expect(resources).toHaveProperty('dataset', 'test-dataset')
+      expect(resources[0]).toHaveProperty('id') // TODO: support multiple resources
+      expect(resources[0]).toHaveProperty('projectId', 'test-project')
+      expect(resources[0]).toHaveProperty('dataset', 'test-dataset')
     })
 
     it('generates unique ids for different instances', () => {
