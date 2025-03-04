@@ -8,7 +8,7 @@ export const datasets = createFetcherStore({
   name: 'Datasets',
   getKey: () => 'datasets',
   fetcher: (instance) => () =>
-    getClientState(instance, {apiVersion: 'vX', scope: 'global'}).observable.pipe(
+    getClientState(instance, {apiVersion: 'vX', scope: 'project'}).observable.pipe(
       switchMap((client) => client.observable.datasets.list()),
     ),
 })
