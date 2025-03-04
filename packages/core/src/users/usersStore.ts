@@ -8,7 +8,7 @@ import {createResource} from '../resources/createResource'
 import {createStateSourceAction} from '../resources/createStateSourceAction'
 import {createStore} from '../resources/createStore'
 
-const API_VERSION = 'xV'
+const API_VERSION = 'vX'
 
 /**
  * @public
