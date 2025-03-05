@@ -1,8 +1,7 @@
-import {createSanityInstance, type SanityConfig} from '@sanity/sdk'
+import {type SanityConfig} from '@sanity/sdk'
 import {type ReactElement} from 'react'
 
-import {SanityProvider} from '../context/SanityProvider'
-import {AuthBoundary} from './auth/AuthBoundary'
+import {SDKProvider} from './SDKProvider'
 import {isInIframe} from './utils'
 
 /**
@@ -51,11 +50,6 @@ export function SanityApp({sanityConfig, children}: SanityAppProps): ReactElemen
       storageArea: undefined,
     }
   }
-  const sanityInstance = createSanityInstance(sanityConfig)
 
-  return (
-    <SanityProvider sanityInstance={sanityInstance}>
-      <AuthBoundary>{children}</AuthBoundary>
-    </SanityProvider>
-  )
+  return <SDKProvider sanityConfig={sanityConfig}>{children}</SDKProvider>
 }
