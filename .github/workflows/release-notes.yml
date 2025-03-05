@@ -1,0 +1,32 @@
+name: Post Release Notes to Slack
+
+on:
+  release:
+    types: [published] # triggers only when a new release is published
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send release notes to Slack
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            icon_emoji: "ship-it-pirate"
+            blocks:
+              - type: header
+                text:
+                  type: plain_text
+                  text: "New SDK Release Published!"
+              - type: section
+                fields:
+                  - type: mrkdwn
+                    text: "*Name:*\n${{ github.event.release.name }}"
+                  - type: mrkdwn
+                    text: "*Tag:*\n${{ github.event.release.tag_name }}"
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: "*Notes:*\n${{ github.event.release.body }}"
