@@ -15,7 +15,7 @@ export interface SanityUser {
 /**
  * @public
  */
-interface Membership {
+export interface Membership {
   addedAt?: string
   resourceType: string
   resourceId: string
@@ -26,7 +26,7 @@ interface Membership {
 /**
  * @public
  */
-interface UserProfile {
+export interface UserProfile {
   id: string
   displayName: string
   email: string

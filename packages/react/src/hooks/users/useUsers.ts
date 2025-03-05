@@ -5,8 +5,9 @@ import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
  * @public
+ * @category Users
  */
-interface UseUsersParams {
+export interface UseUsersParams {
   /**
    * The type of resource to fetch users for.
    */
@@ -21,7 +22,10 @@ interface UseUsersParams {
   limit?: number
 }
 
-/** @public */
+/**
+ * @public
+ * @category Users
+ */
 export interface UseUsersResult {
   /**
    * The users fetched.
@@ -37,7 +41,38 @@ export interface UseUsersResult {
   loadMore: () => void
 }
 
-/** @public */
+/**
+ *
+ * @public
+ *
+ * Retrieves the users for a given resource (either a project or an organization).
+ *
+ * @category Users
+ * @param params - The resource type and its ID, and the limit of users to fetch
+ * @returns A list of users, a boolean indicating whether there are more users to fetch, and a function to load more users
+ *
+ * @example
+ * ```
+ * const { users, hasMore, loadMore } = useUsers({
+ *   resourceType: 'organization',
+ *   resourceId: 'my-org-id',
+ *   limit: 10,
+ * })
+ *
+ * return (
+ *   <div>
+ *     {users.map(user => (
+ *       <figure key={user.sanityUserId}>
+ *         <img src={user.profile.imageUrl} alt='' />
+ *         <figcaption>{user.profile.displayName}</figcaption>
+ *         <address>{user.profile.email}</address>
+ *       </figure>
+ *     ))}
+ *     {hasMore && <button onClick={loadMore}>Load More</button>}
+ *   </div>
+ * )
+ * ```
+ */
 export function useUsers(params: UseUsersParams): UseUsersResult {
   const instance = useSanityInstance()
   const [store] = useState(() => createUsersStore(instance))
