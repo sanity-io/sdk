@@ -8,6 +8,11 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
+      - name: Convert markdown to slack markdown
+        uses: LoveToKnow/slackify-markdown-action@v1.1.1
+        id: releasemarkdown
+        with:
+          text: "*Notes:*\n${{ github.event.release.body }}"
       - name: Send release notes to Slack
         uses: slackapi/slack-github-action@v2.0.0
         with:
@@ -24,9 +29,7 @@ jobs:
                 fields:
                   - type: mrkdwn
                     text: "*Name:*\n${{ github.event.release.name }}"
-                  - type: mrkdwn
-                    text: "*Tag:*\n${{ github.event.release.tag_name }}"
               - type: section
                 text:
                   type: mrkdwn
-                  text: "*Notes:*\n${{ github.event.release.body }}"
+                  text: ${{steps.releasemarkdown.outputs.text}}
