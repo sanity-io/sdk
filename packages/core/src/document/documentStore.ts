@@ -73,6 +73,9 @@ export interface DocumentStoreState {
 
 const documentStores = new Map<DatasetResourceId, ReturnType<typeof createDocumentStore>>()
 
+/**
+ * @beta
+ */
 export function getDocumentStore(
   instance: SanityInstance,
   datasetResourceId: DatasetResourceId,
@@ -83,6 +86,9 @@ export function getDocumentStore(
   return documentStores.get(datasetResourceId)!
 }
 
+/**
+ * @beta
+ */
 export type DatasetResourceId = `${string}:${string}`
 
 export interface DocumentState {
@@ -119,6 +125,10 @@ export interface DocumentState {
    */
   unverifiedRevisions?: {[TTransactionId in string]?: UnverifiedDocumentRevision}
 }
+
+/**
+ * @beta
+ */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function createDocumentStore(
   instance: SanityInstance,

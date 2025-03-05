@@ -139,5 +139,11 @@ export function useDocuments(options: DocumentListOptions): DocumentHandleCollec
     ref.storeInstance?.loadMore()
   }, [ref])
 
-  return {loadMore, ...state}
+  return {
+    loadMore,
+    results: state.results as DocumentHandle[],
+    isPending: state.isPending,
+    hasMore: state.hasMore,
+    count: state.count,
+  }
 }

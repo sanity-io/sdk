@@ -167,7 +167,7 @@ export function useEditDocument(
             ? updater(documentStore.getDocumentState(documentId, path).getCurrent())
             : updater
 
-        return apply(editDocument(doc, {set: {[path]: nextValue}}))
+        return apply(editDocument(doc, doc.datasetResourceId, {set: {[path]: nextValue}}))
       }
 
       const current = documentStore.getDocumentState(documentId).getCurrent()
@@ -192,8 +192,8 @@ export function useEditDocument(
         )
         .map((key) =>
           key in nextValue
-            ? editDocument(doc, {set: {[key]: nextValue[key]}})
-            : editDocument(doc, {unset: [key]}),
+            ? editDocument(doc, doc.datasetResourceId, {set: {[key]: nextValue[key]}})
+            : editDocument(doc, doc.datasetResourceId, {unset: [key]}),
         )
 
       return apply(editActions)

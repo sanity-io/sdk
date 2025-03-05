@@ -78,12 +78,6 @@ export {
   createDocumentStore,
   type DatasetResourceId,
   getDocumentStore,
-  // getDocumentState,
-  // getDocumentSyncStatus,
-  // getPermissionsState,
-  // resolveDocument,
-  // resolvePermissions,
-  // subscribeDocumentEvents,
 } from '../document/documentStore'
 export {
   type ActionErrorEvent,
