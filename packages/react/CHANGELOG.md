@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.0.0-alpha.14](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.13...sdk-react-v0.0.0-alpha.14) (2025-03-05)
+
+
+### Features
+
+* `useProjects`, `useProject`, `useDatasets` ([#235](https://github.com/sanity-io/sdk/issues/235)) ([cc95dfd](https://github.com/sanity-io/sdk/commit/cc95dfd45a82171fa7ccf05a8ca331e8de97fbee))
+* **react:** add SDKProvider app to use SDK without core ([#263](https://github.com/sanity-io/sdk/issues/263)) ([51e84fc](https://github.com/sanity-io/sdk/commit/51e84fcd7b64558bc108f00d3fb5a98aade25d29))
+* **react:** add useSearch hook ([#258](https://github.com/sanity-io/sdk/issues/258)) ([488317a](https://github.com/sanity-io/sdk/commit/488317a72987daf88385f757a60ffdc191333218))
+
+
+### Bug Fixes
+
+* add access api types inside the SDK ([#261](https://github.com/sanity-io/sdk/issues/261)) ([ff53123](https://github.com/sanity-io/sdk/commit/ff53123f2e01a242c22df22b9dc109d2cbc3b1d4))
+
 ## [0.0.0-alpha.13](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.12...sdk-react-v0.0.0-alpha.13) (2025-02-28)
 
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.0.0-alpha.13](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.12...sdk-v0.0.0-alpha.13) (2025-03-05)
+
+
+### Features
+
+* `useProjects`, `useProject`, `useDatasets` ([#235](https://github.com/sanity-io/sdk/issues/235)) ([cc95dfd](https://github.com/sanity-io/sdk/commit/cc95dfd45a82171fa7ccf05a8ca331e8de97fbee))
+
+
+### Bug Fixes
+
+* add access api types inside the SDK ([#261](https://github.com/sanity-io/sdk/issues/261)) ([ff53123](https://github.com/sanity-io/sdk/commit/ff53123f2e01a242c22df22b9dc109d2cbc3b1d4))
+* **build:** fixes build warning ([#252](https://github.com/sanity-io/sdk/issues/252)) ([bed82f8](https://github.com/sanity-io/sdk/commit/bed82f8d87521dd0cc9d827af5a7f908749ad711))
+* **core:** fixes apiVersion in usersStore ([#262](https://github.com/sanity-io/sdk/issues/262)) ([248eb19](https://github.com/sanity-io/sdk/commit/248eb192dc331ce64c05721172f2855a44dad0ca))
+
 ## [0.0.0-alpha.12](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.11...sdk-v0.0.0-alpha.12) (2025-02-28)
 
 
