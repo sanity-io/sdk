@@ -52,8 +52,10 @@ function Editor() {
   const [value, setValue] = useState('')
 
   const changeNameToValue = editDocument(
-    patch(doc._id, doc.datasetResourceId, at('name', set(value))),
+    patch(doc._id, at('name', set(value))),
+    doc.datasetResourceId,
   )
+
   const canChangeNameToValue = usePermissions(changeNameToValue)
 
   const document = useDocument(doc)

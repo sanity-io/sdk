@@ -96,6 +96,7 @@ export function deleteDocument<TDocument extends SanityDocumentLike>(
 
 function convertSanityMutatePatch(
   sanityPatchMutation: SanityMutatePatchMutation,
+  datasetResourceId: DatasetResourceId,
 ): EditDocumentAction {
   const encoded = SanityEncoder.encode(sanityPatchMutation) as PatchMutation[]
 
@@ -107,25 +108,28 @@ function convertSanityMutatePatch(
       if ('id' in copy) delete copy.id
       return copy
     }),
-    datasetResourceId: sanityPatchMutation.datasetResourceId,
+    datasetResourceId,
   }
 }
 
 /** @beta */
 export function editDocument<TDocument extends SanityDocumentLike>(
   sanityMutatePatch: SanityMutatePatchMutation,
+  datasetResourceId: DatasetResourceId,
 ): EditDocumentAction<TDocument>
 /** @beta */
 export function editDocument<TDocument extends SanityDocumentLike>(
   doc: DocumentHandle<TDocument>,
+  datasetResourceId?: DatasetResourceId,
   patches?: PatchOperations | PatchOperations[],
 ): EditDocumentAction<TDocument>
 /** @beta */
 export function editDocument<TDocument extends SanityDocumentLike>(
   doc: SanityMutatePatchMutation | DocumentHandle<TDocument>,
+  datasetResourceId?: DatasetResourceId,
   patches?: PatchOperations | PatchOperations[],
 ): EditDocumentAction<TDocument> {
-  if (isSanityMutatePatch(doc)) return convertSanityMutatePatch(doc)
+  if (isSanityMutatePatch(doc)) return convertSanityMutatePatch(doc, datasetResourceId!)
 
   return {
     type: 'document.edit',
