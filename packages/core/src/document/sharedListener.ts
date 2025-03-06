@@ -21,7 +21,7 @@ export function createSharedListener(
         {
           events: ['mutation', 'welcome', 'reconnect'],
           includeResult: false,
-          tag: 'sdk.document-listener',
+          tag: 'document-listener',
           // // from manual testing, it seems like mendoza patches may be
           // // causing some ambiguity/wonkiness
           // includeMutations: false,

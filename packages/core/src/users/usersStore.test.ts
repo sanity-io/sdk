@@ -112,6 +112,12 @@ describe('usersStore', () => {
       const store = createUsersStore({state, instance})
       const result = await store.resolveUsers()
 
+      expect(getClient(instance, {apiVersion: 'vX'}).request).toHaveBeenCalledWith({
+        method: 'GET',
+        uri: `access/organization/org123/users`,
+        query: {limit: '100'},
+        tag: 'users',
+      })
       expect(result).toEqual(mockResponse)
       expect(state.get()).toMatchObject({
         users: mockResponse.data,
@@ -250,4 +256,12 @@ describe('usersStore', () => {
       expect(state.get().users.length).toBe(10)
     })
   })
+})
+
+it('should call getClient with proper parameters', () => {
+  const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+  const store = createUsersStore(instance)
+  store.setOptions({resourceType: 'organization', resourceId: 'org123'})
+  store.resolveUsers()
+  expect(getClient).toHaveBeenCalledWith(instance, {apiVersion: 'vX', scope: 'global'})
 })

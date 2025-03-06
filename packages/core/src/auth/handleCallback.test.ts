@@ -48,7 +48,7 @@ describe('handleCallback', () => {
     expect(result).toBe('https://example.com/callback?foo=bar')
     expect(clientFactory).toHaveBeenCalledWith({
       apiVersion: '2021-06-07',
-      requestTagPrefix: 'sdk.auth',
+      requestTagPrefix: 'sanity.sdk.auth',
       useProjectHostname: false,
     })
     expect(mockRequest).toHaveBeenLastCalledWith({
@@ -170,7 +170,7 @@ describe('handleCallback', () => {
 
     expect(clientFactory).toHaveBeenCalledWith({
       apiVersion: '2021-06-07',
-      requestTagPrefix: 'sdk.auth',
+      requestTagPrefix: 'sanity.sdk.auth',
       useProjectHostname: false,
     })
     expect(mockRequest).toHaveBeenLastCalledWith({
