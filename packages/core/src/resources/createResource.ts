@@ -64,7 +64,7 @@ export function initializeResource<TState>(
 ): InitializedResource<TState> {
   const initialState = resource.getInitialState(instance)
   const state = createResourceState(initialState, {
-    name: resource.name,
+    name: `${resource.name}-${instance.identity.resourceId}`,
     enabled: !!getEnv('DEV'),
   })
   const dispose = resource.initialize?.call({instance, state}, instance) ?? (() => {})
