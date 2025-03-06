@@ -28,7 +28,7 @@ vi.mock('../resources/createResource', async (importOriginal) => {
 describe('resolveProjection', () => {
   const instance = createSanityInstance({projectId: 'exampleProject', dataset: 'exampleDataset'})
   const document = {_id: 'exampleId', _type: 'exampleType'}
-  const projectionString = 'title, description'
+  const projectionString = '{title, description}'
   const initialState: ProjectionStoreState = {
     documentProjections: {},
     lastLiveEventId: null,

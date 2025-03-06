@@ -1,6 +1,7 @@
 import {hashString} from '../common/util'
 import {getDraftId, getPublishedId} from '../utils/ids'
-import {type ProjectionValuePending} from './projectionStore'
+import {type ProjectionValuePending, type ValidProjection} from './projectionStore'
+import {validateProjection} from './util'
 
 type ProjectionQueryResult = {
   _id: string
@@ -14,7 +15,7 @@ interface CreateProjectionQueryResult {
   params: Record<string, unknown>
 }
 
-type ProjectionMap = Record<string, {projection: string; documentIds: Set<string>}>
+type ProjectionMap = Record<string, {projection: ValidProjection; documentIds: Set<string>}>
 
 export function createProjectionQuery(
   documentIds: Set<string>,
@@ -23,7 +24,7 @@ export function createProjectionQuery(
   const projections = Array.from(documentIds)
     .filter((id) => documentProjections[id])
     .map((id) => {
-      const projection = documentProjections[id]!
+      const projection = validateProjection(documentProjections[id]!)
       const projectionHash = hashString(projection)
       return {documentId: id, projection, projectionHash}
     })
@@ -37,7 +38,7 @@ export function createProjectionQuery(
 
   const query = `[${Object.entries(projections)
     .map(([projectionHash, {projection}]) => {
-      return `...*[_id in $__ids_${projectionHash}]{_id,_type,_updatedAt,"result":{${projection}}}`
+      return `...*[_id in $__ids_${projectionHash}]{_id,_type,_updatedAt,"result":{...${projection}}}`
     })
     .join(',')}]`
 

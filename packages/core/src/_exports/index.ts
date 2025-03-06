@@ -52,7 +52,7 @@ export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePrev
 
 /** PROJECTION */
 export {getProjectionState} from '../projection/getProjectionState'
-export type {ProjectionValuePending} from '../projection/projectionStore'
+export type {ProjectionValuePending, ValidProjection} from '../projection/projectionStore'
 export {resolveProjection} from '../projection/resolveProjection'
 
 /** COMLINK */

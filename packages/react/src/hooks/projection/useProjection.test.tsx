@@ -1,4 +1,9 @@
-import {type DocumentHandle, getProjectionState, resolveProjection} from '@sanity/sdk'
+import {
+  type DocumentHandle,
+  getProjectionState,
+  resolveProjection,
+  type ValidProjection,
+} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
 import {Suspense, useRef} from 'react'
 import {type Mock} from 'vitest'
@@ -48,7 +53,13 @@ interface ProjectionResult {
   description: string
 }
 
-function TestComponent({document, projection}: {document: DocumentHandle; projection: string}) {
+function TestComponent({
+  document,
+  projection,
+}: {
+  document: DocumentHandle
+  projection: ValidProjection
+}) {
   const ref = useRef(null)
   const {results, isPending} = useProjection<ProjectionResult>({document, projection, ref})
 
@@ -88,7 +99,7 @@ describe('useProjection', () => {
 
     render(
       <Suspense fallback={<div>Loading...</div>}>
-        <TestComponent document={mockDocument} projection="name, description" />
+        <TestComponent document={mockDocument} projection="{name, description}" />
       </Suspense>,
     )
 
@@ -138,7 +149,7 @@ describe('useProjection', () => {
 
     render(
       <Suspense fallback={<div>Loading...</div>}>
-        <TestComponent document={mockDocument} projection="title, description" />
+        <TestComponent document={mockDocument} projection="{title, description}" />
       </Suspense>,
     )
 
@@ -165,7 +176,7 @@ describe('useProjection', () => {
 
     render(
       <Suspense fallback={<div>Loading...</div>}>
-        <TestComponent document={mockDocument} projection="title, description" />
+        <TestComponent document={mockDocument} projection="{title, description}" />
       </Suspense>,
     )
 
@@ -185,7 +196,7 @@ describe('useProjection', () => {
 
     const {rerender} = render(
       <Suspense fallback={<div>Loading...</div>}>
-        <TestComponent document={mockDocument} projection="title" />
+        <TestComponent document={mockDocument} projection="{title}" />
       </Suspense>,
     )
 
@@ -197,7 +208,7 @@ describe('useProjection', () => {
 
     rerender(
       <Suspense fallback={<div>Loading...</div>}>
-        <TestComponent document={mockDocument} projection="title, description" />
+        <TestComponent document={mockDocument} projection="{title, description}" />
       </Suspense>,
     )
 

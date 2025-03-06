@@ -1,4 +1,9 @@
-import {type DocumentHandle, getProjectionState, resolveProjection} from '@sanity/sdk'
+import {
+  type DocumentHandle,
+  getProjectionState,
+  resolveProjection,
+  type ValidProjection,
+} from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
@@ -6,7 +11,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
 
 interface UseProjectionOptions {
   document: DocumentHandle
-  projection: string
+  projection: ValidProjection
   ref?: React.RefObject<unknown>
 }
 
@@ -34,7 +39,7 @@ interface UseProjectionResults<TResult extends object> {
  *   const ref = useRef(null)
  *   const { results: { title, description, authors }, isPending } = useProjection({
  *     document,
- *     projection: 'title, "description": pt::text("description"), "authors": array::join(authors[]->name, ", ")',
+ *     projection: '{title, "description": pt::text("description"), "authors": array::join(authors[]->name, ", ")}',
  *     ref
  *   })
  *

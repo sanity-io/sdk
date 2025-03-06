@@ -6,8 +6,8 @@ describe('createProjectionQuery', () => {
   it('creates a query and params for given ids and projections', () => {
     const ids = new Set(['doc1', 'doc2'])
     const documentProjections = {
-      doc1: 'title, description',
-      doc2: 'title, description',
+      doc1: '{title, description}',
+      doc2: '{title, description}',
     }
 
     const {query, params} = createProjectionQuery(ids, documentProjections)
@@ -18,8 +18,8 @@ describe('createProjectionQuery', () => {
   it('handles multiple different projections', () => {
     const ids = new Set(['doc1', 'doc2'])
     const documentProjections = {
-      doc1: 'title, description',
-      doc2: 'name, age',
+      doc1: '{title, description}',
+      doc2: '{name, age}',
     }
 
     const {query, params} = createProjectionQuery(ids, documentProjections)
@@ -30,9 +30,9 @@ describe('createProjectionQuery', () => {
   it('filters out ids without projections', () => {
     const ids = new Set(['doc1', 'doc2', 'doc3'])
     const documentProjections = {
-      doc1: 'title',
+      doc1: '{title}',
       // doc2 missing intentionally
-      doc3: 'name',
+      doc3: '{name}',
     }
 
     const {query, params} = createProjectionQuery(ids, documentProjections)

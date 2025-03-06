@@ -9,12 +9,13 @@ import {
   projectionStore,
   type ProjectionStoreState,
   type ProjectionValuePending,
+  type ValidProjection,
 } from './projectionStore'
-import {STABLE_EMPTY_PROJECTION} from './util'
+import {STABLE_EMPTY_PROJECTION, validateProjection} from './util'
 
 interface GetProjectionStateOptions {
   document: DocumentHandle
-  projection: string
+  projection: ValidProjection
 }
 
 const getProjectStateSourceAction = createStateSourceAction(
@@ -66,7 +67,7 @@ export const _getProjectionState = createAction(projectionStore, ({state}) => {
         state.set('addSubscription', (prev) => ({
           documentProjections: {
             ...prev.documentProjections,
-            [documentId]: projection,
+            [documentId]: validateProjection(projection),
           },
           subscriptions: {
             ...prev.subscriptions,

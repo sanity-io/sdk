@@ -5,11 +5,12 @@ import {
   projectionStore,
   type ProjectionStoreState,
   type ProjectionValuePending,
+  type ValidProjection,
 } from './projectionStore'
 
 interface ResolveProjectionOptions {
   document: DocumentHandle
-  projection: string
+  projection: ValidProjection
 }
 
 /**

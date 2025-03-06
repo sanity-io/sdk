@@ -4,6 +4,11 @@ import {createResource} from '../resources/createResource'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 import {PROJECTION_TAG} from './util'
 
+/**
+ * @beta
+ */
+export type ValidProjection = `{${string}}`
+
 export interface ProjectionQueryResult<TValue = Record<string, unknown>> {
   _id: string
   _type: string
@@ -21,7 +26,7 @@ export interface ProjectionValuePending<TValue extends object> {
 
 export interface ProjectionStoreState<TValue extends object = object> extends LiveEventAwareState {
   values: {[TDocumentId in string]?: ProjectionValuePending<TValue>}
-  documentProjections: {[TDocumentId in string]?: string}
+  documentProjections: {[TDocumentId in string]?: ValidProjection}
   subscriptions: {[TDocumentId in string]?: {[TSubscriptionId in string]?: true}}
 }
 

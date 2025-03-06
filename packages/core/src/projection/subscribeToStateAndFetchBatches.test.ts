@@ -50,7 +50,7 @@ describe('subscribeToStateAndFetchBatches', () => {
 
   it('batches rapid subscription changes into single requests', async () => {
     const subscription = subscribeToStateAndFetchBatches({instance, state})
-    const projection = 'title, description'
+    const projection = '{title, description}'
     const projectionHash = hashString(projection)
 
     // Add multiple subscriptions rapidly
@@ -80,7 +80,7 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     // Add a subscription
     state.set('addSubscription', {
-      documentProjections: {doc1: 'title, description'},
+      documentProjections: {doc1: '{title, description}'},
       subscriptions: {doc1: {sub1: true}},
     })
 
@@ -103,7 +103,7 @@ describe('subscribeToStateAndFetchBatches', () => {
 
   it('handles new subscriptions optimistically with pending states', async () => {
     state.set('initializeValues', {
-      documentProjections: {doc1: 'title, description', doc2: 'title, description'},
+      documentProjections: {doc1: '{title, description}', doc2: '{title, description}'},
       values: {doc1: {results: {title: 'Doc 1'}, isPending: false}},
       subscriptions: {doc1: {sub1: true}},
     })
@@ -137,7 +137,7 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     // Add initial subscription
     state.set('addSubscription1', {
-      documentProjections: {doc1: 'title, description'},
+      documentProjections: {doc1: '{title, description}'},
       subscriptions: {doc1: {sub1: true}},
     })
 
@@ -145,7 +145,7 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     // Add another subscription before first fetch completes
     state.set('addSubscription2', (prev) => ({
-      documentProjections: {...prev.documentProjections, doc2: 'title, description'},
+      documentProjections: {...prev.documentProjections, doc2: '{title, description}'},
       subscriptions: {...prev.subscriptions, doc2: {sub2: true}},
     }))
 
@@ -161,7 +161,7 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     // Add a subscription
     state.set('addSubscription', {
-      documentProjections: {doc1: 'title, description'},
+      documentProjections: {doc1: '{title, description}'},
       subscriptions: {doc1: {sub1: true}},
     })
 
@@ -184,7 +184,7 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     // Add a subscription
     state.set('addSubscription', {
-      documentProjections: {doc1: 'title, description'},
+      documentProjections: {doc1: '{title, description}'},
       subscriptions: {doc1: {sub1: true}},
     })
 

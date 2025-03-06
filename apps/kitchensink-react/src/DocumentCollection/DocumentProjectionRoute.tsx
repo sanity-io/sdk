@@ -57,11 +57,11 @@ function AuthorRow({document}: {document: DocumentHandle}) {
 
   const {results} = useProjection<AuthorProjection>({
     document,
-    projection: `
+    projection: `{
       name,
       "address": "City: " + address.city + ", Country: " + address.country,
       "favoriteBookTitles": favoriteBooks[]->{title}.title
-    `,
+    }`,
     ref,
   })
 
