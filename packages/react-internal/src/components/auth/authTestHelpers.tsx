@@ -10,7 +10,7 @@ const theme = buildTheme()
 
 export const renderWithWrappers = (ui: React.ReactElement): RenderResult => {
   return render(
-    <SanityProvider sanityInstance={sanityInstance}>
+    <SanityProvider sanityInstances={[sanityInstance]}>
       <ThemeProvider theme={theme}>{ui}</ThemeProvider>
     </SanityProvider>,
   )

@@ -48,7 +48,7 @@ describe('LoginLinks', () => {
 
   const sanityInstance = createSanityInstance({projectId: 'test-project-id', dataset: 'production'})
   const renderWithWrappers = (ui: React.ReactElement) => {
-    return render(<SanityProvider sanityInstance={sanityInstance}>{ui}</SanityProvider>)
+    return render(<SanityProvider sanityInstances={[sanityInstance]}>{ui}</SanityProvider>)
   }
 
   it('renders auth provider links correctly when not authenticated', () => {

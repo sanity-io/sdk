@@ -2,6 +2,7 @@
 // NOTE: These have to be type import because we do not want the side-effect
 // of importing these modules, we just want the types for their configs
 import type {AuthConfig} from '../auth/authStore'
+import type {ResourceId} from '../document/patchOperations'
 import type {SchemaConfig} from '../schema/schemaManager'
 
 /**
@@ -34,4 +35,5 @@ export interface SdkIdentity {
   readonly id: string
   readonly projectId: string
   readonly dataset: string
+  readonly resourceId: ResourceId
 }

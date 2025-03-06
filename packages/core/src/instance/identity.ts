@@ -16,6 +16,7 @@ export function getSdkIdentity({
     id,
     projectId,
     dataset,
+    resourceId: `${projectId}.${dataset}`,
   })
 }
 

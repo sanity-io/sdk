@@ -4,15 +4,22 @@ import {Outlet} from 'react-router'
 
 import {schema} from '../schema'
 
-const sanityConfig = {
-  projectId: 'ppsg7ml5',
-  dataset: 'test',
-  schema,
-}
+const sanityConfigs = [
+  {
+    projectId: 'ppsg7ml5',
+    dataset: 'test',
+    schema,
+  },
+  {
+    projectId: 'ezwd8xes',
+    dataset: 'production',
+    schema,
+  },
+]
 
 export function ProjectInstanceWrapper(): JSX.Element {
   return (
-    <SDKProvider sanityConfig={sanityConfig}>
+    <SDKProvider sanityConfigs={sanityConfigs}>
       <Outlet />
     </SDKProvider>
   )

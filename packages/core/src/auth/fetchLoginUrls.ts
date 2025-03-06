@@ -8,15 +8,12 @@ import {getDefaultLocation} from './utils'
 /**
  * @public
  */
-export const fetchLoginUrls = createAction(authStore, ({state, instance}) => {
-  const {projectId, dataset} = instance.identity
-  const {callbackUrl, clientFactory, apiHost, authScope, customProviders} = state.get().options
+export const fetchLoginUrls = createAction(authStore, ({state}) => {
+  const {callbackUrl, clientFactory, apiHost, customProviders} = state.get().options
   const client = clientFactory({
-    projectId,
-    dataset,
     apiVersion: DEFAULT_API_VERSION,
     requestTagPrefix: REQUEST_TAG_PREFIX,
-    useProjectHostname: authScope === 'project',
+    useProjectHostname: false,
     ...(apiHost && {apiHost}),
   })
 
@@ -66,9 +63,6 @@ export const fetchLoginUrls = createAction(authStore, ({state, instance}) => {
       url.searchParams.set('origin', origin.toString())
       url.searchParams.set('withSid', 'true')
       url.searchParams.set('type', 'stampedToken')
-      if (authScope === 'project') {
-        url.searchParams.set('projectId', projectId)
-      }
 
       return {...provider, url: url.toString()}
     })

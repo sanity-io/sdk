@@ -44,7 +44,7 @@ describe('SanityApp', () => {
   it('renders children correctly', async () => {
     const testMessage = 'Test Child Component'
     render(
-      <SanityApp sanityConfig={mockSanityConfig}>
+      <SanityApp sanityConfigs={[mockSanityConfig]}>
         <div>{testMessage}</div>
       </SanityApp>,
     )

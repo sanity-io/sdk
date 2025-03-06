@@ -16,8 +16,8 @@ vi.mock('@sanity/sdk', () => ({
 
 // Mock the SanityProvider context to verify the instance is passed correctly
 vi.mock('../context/SanityProvider', () => ({
-  SanityProvider: ({children, sanityInstance}: SanityProviderProps) => (
-    <div data-testid="sanity-provider" data-instance={JSON.stringify(sanityInstance)}>
+  SanityProvider: ({children, sanityInstances}: SanityProviderProps) => (
+    <div data-testid="sanity-provider" data-instances={JSON.stringify(sanityInstances)}>
       {children}
     </div>
   ),
@@ -39,7 +39,7 @@ describe('SDKProvider', () => {
 
   it('creates a Sanity instance with the provided config', () => {
     render(
-      <SDKProvider sanityConfig={mockConfig}>
+      <SDKProvider sanityConfigs={[mockConfig]}>
         <div>Test Child</div>
       </SDKProvider>,
     )
@@ -49,7 +49,7 @@ describe('SDKProvider', () => {
 
   it('renders children within SanityProvider and AuthBoundary', () => {
     const {getByText, getByTestId} = render(
-      <SDKProvider sanityConfig={mockConfig}>
+      <SDKProvider sanityConfigs={[mockConfig]}>
         <div>Test Child</div>
       </SDKProvider>,
     )
@@ -66,14 +66,14 @@ describe('SDKProvider', () => {
 
   it('passes the created Sanity instance to SanityProvider', () => {
     const {getByTestId} = render(
-      <SDKProvider sanityConfig={mockConfig}>
+      <SDKProvider sanityConfigs={[mockConfig]}>
         <div>Test Child</div>
       </SDKProvider>,
     )
 
     const sanityProvider = getByTestId('sanity-provider')
-    const passedInstance = JSON.parse(sanityProvider.dataset['instance'] || '{}')
+    const passedInstances = JSON.parse(sanityProvider.dataset['instances'] || '[]')
 
-    expect(passedInstance).toEqual({id: 'mock-instance'})
+    expect(passedInstances).toEqual([{id: 'mock-instance'}])
   })
 })

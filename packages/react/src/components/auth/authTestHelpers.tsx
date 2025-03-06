@@ -7,5 +7,5 @@ import {SanityProvider} from '../../context/SanityProvider'
 const sanityInstance = createSanityInstance({projectId: 'test-project-id', dataset: 'production'})
 
 export const renderWithWrappers = (ui: React.ReactElement): RenderResult => {
-  return render(<SanityProvider sanityInstance={sanityInstance}>{ui}</SanityProvider>)
+  return render(<SanityProvider sanityInstances={[sanityInstance]}>{ui}</SanityProvider>)
 }

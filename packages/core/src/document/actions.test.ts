@@ -17,7 +17,7 @@ const dummyPatch: PatchOperations = {
 }
 
 const dummyDocHandle: DocumentHandle = {_id: 'drafts.abc123', _type: 'testType'}
-const dummyDocString = 'drafts.abc123'
+const dummyDocString = {_id: 'drafts.abc123', _type: 'testType'}
 
 describe('document actions', () => {
   describe('createDocument', () => {
@@ -85,7 +85,7 @@ describe('document actions', () => {
     it('allows @sanity/mutate-style patches', () => {
       const action = editDocument(
         patch(
-          dummyDocString,
+          dummyDocString._id,
           [
             at('published', set(true)),
             at('address', setIfMissing({_type: 'address'})),

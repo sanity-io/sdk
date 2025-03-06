@@ -1,6 +1,7 @@
 // tests/useEditDocument.test.ts
 import {
   createSanityInstance,
+  type DocumentHandle,
   editDocument,
   getDocumentState,
   resolveDocument,
@@ -44,6 +45,12 @@ const doc = {
   _updatedAt: '2025-02-06T00:11:00.000Z',
 } satisfies SanityDocument
 
+const docHandle: DocumentHandle<SanityDocument> = {
+  _id: 'doc1',
+  _type: 'book',
+  resourceId: 'document:p.d:doc1',
+}
+
 describe('useEditDocument hook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -61,10 +68,10 @@ describe('useEditDocument hook', () => {
     const apply = vi.fn().mockResolvedValue({transactionId: 'tx1'})
     vi.mocked(useApplyActions).mockReturnValue(apply)
 
-    const {result} = renderHook(() => useEditDocument('doc1', 'foo'))
+    const {result} = renderHook(() => useEditDocument(docHandle, 'foo'))
     const promise = result.current('newValue')
-    expect(editDocument).toHaveBeenCalledWith('doc1', {set: {foo: 'newValue'}})
-    expect(apply).toHaveBeenCalledWith(editDocument('doc1', {set: {foo: 'newValue'}}))
+    expect(editDocument).toHaveBeenCalledWith(docHandle, {set: {foo: 'newValue'}})
+    expect(apply).toHaveBeenCalledWith(editDocument(docHandle, {set: {foo: 'newValue'}}))
     const actionsResult = await promise
     expect(actionsResult).toEqual({transactionId: 'tx1'})
   })
@@ -82,9 +89,9 @@ describe('useEditDocument hook', () => {
     const apply = vi.fn().mockResolvedValue({transactionId: 'tx2'})
     vi.mocked(useApplyActions).mockReturnValue(apply)
 
-    const {result} = renderHook(() => useEditDocument('doc1'))
+    const {result} = renderHook(() => useEditDocument(docHandle))
     const promise = result.current({...doc, foo: 'baz', extra: 'old', _id: 'doc1'})
-    expect(apply).toHaveBeenCalledWith([editDocument('doc1', {set: {foo: 'baz'}})])
+    expect(apply).toHaveBeenCalledWith([editDocument(docHandle, {set: {foo: 'baz'}})])
     const actionsResult = await promise
     expect(actionsResult).toEqual({transactionId: 'tx2'})
   })
@@ -100,10 +107,10 @@ describe('useEditDocument hook', () => {
     const apply = vi.fn().mockResolvedValue({transactionId: 'tx3'})
     vi.mocked(useApplyActions).mockReturnValue(apply)
 
-    const {result} = renderHook(() => useEditDocument('doc1', 'foo'))
+    const {result} = renderHook(() => useEditDocument(docHandle, 'foo'))
     const promise = result.current((prev: unknown) => `${prev}Updated`) // 'bar' becomes 'barUpdated'
-    expect(editDocument).toHaveBeenCalledWith('doc1', {set: {foo: 'barUpdated'}})
-    expect(apply).toHaveBeenCalledWith(editDocument('doc1', {set: {foo: 'barUpdated'}}))
+    expect(editDocument).toHaveBeenCalledWith(docHandle, {set: {foo: 'barUpdated'}})
+    expect(apply).toHaveBeenCalledWith(editDocument(docHandle, {set: {foo: 'barUpdated'}}))
     const actionsResult = await promise
     expect(actionsResult).toEqual({transactionId: 'tx3'})
   })
@@ -120,9 +127,9 @@ describe('useEditDocument hook', () => {
     const apply = vi.fn().mockResolvedValue({transactionId: 'tx4'})
     vi.mocked(useApplyActions).mockReturnValue(apply)
 
-    const {result} = renderHook(() => useEditDocument('doc1'))
+    const {result} = renderHook(() => useEditDocument(docHandle))
     const promise = result.current((prevDoc) => ({...prevDoc, foo: 'baz'}))
-    expect(apply).toHaveBeenCalledWith([editDocument('doc1', {set: {foo: 'baz'}})])
+    expect(apply).toHaveBeenCalledWith([editDocument(docHandle, {set: {foo: 'baz'}})])
     const actionsResult = await promise
     expect(actionsResult).toEqual({transactionId: 'tx4'})
   })
@@ -138,7 +145,7 @@ describe('useEditDocument hook', () => {
     const fakeApply = vi.fn()
     vi.mocked(useApplyActions).mockReturnValue(fakeApply)
 
-    const {result} = renderHook(() => useEditDocument('doc1'))
+    const {result} = renderHook(() => useEditDocument(docHandle))
     expect(() => result.current('notAnObject' as unknown as SanityDocument)).toThrowError(
       'No path was provided to `useEditDocument` and the value provided was not a document object.',
     )
@@ -160,7 +167,7 @@ describe('useEditDocument hook', () => {
     // Render the hook and capture the thrown promise.
     const {result} = renderHook(() => {
       try {
-        return useEditDocument('doc1')
+        return useEditDocument(docHandle)
       } catch (e) {
         return e
       }

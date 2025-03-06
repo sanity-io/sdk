@@ -15,7 +15,7 @@ describe('SanityProvider', () => {
     }
 
     const {getByTestId} = render(
-      <SanityProvider sanityInstance={sanityInstance}>
+      <SanityProvider sanityInstances={[sanityInstance]}>
         <TestComponent />
       </SanityProvider>,
     )

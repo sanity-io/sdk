@@ -30,7 +30,6 @@ describe('authStore', () => {
   describe('getInitialState', () => {
     it('sets initial options onto state', () => {
       const apiHost = 'test-api-host'
-      const authScope = 'global'
       const callbackUrl = '/login/callback'
       const providers = [
         {name: 'test-provider', id: 'test', title: 'Test', url: 'https://example.com'},
@@ -45,7 +44,6 @@ describe('authStore', () => {
         dataset: 'd',
         auth: {
           apiHost,
-          authScope,
           callbackUrl,
           providers,
           token,
@@ -60,13 +58,12 @@ describe('authStore', () => {
       const {options} = authStore.getInitialState(instance)
 
       expect(options.apiHost).toBe(apiHost)
-      expect(options.authScope).toBe(authScope)
       expect(options.callbackUrl).toBe(callbackUrl)
       expect(options.customProviders).toBe(providers)
       expect(options.providedToken).toBe(token)
       expect(options.clientFactory).toBe(clientFactory)
       expect(options.initialLocationHref).toBe(initialLocationHref)
-      expect(options.storageKey).toBe('__sanity_auth_token_p_d')
+      expect(options.storageKey).toBe('__sanity_auth_token')
       expect(options.storageArea).toBe(storageArea)
     })
 

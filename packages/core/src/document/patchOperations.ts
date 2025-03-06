@@ -22,12 +22,37 @@ type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
 export interface DocumentHandle<TDocument extends SanityDocumentLike = SanityDocumentLike> {
   _id: string
   _type: TDocument['_type']
+  resourceId?: DocumentResourceId
+}
+
+/**
+ * @beta
+ * A resource identifier for a document, in the format of `document:${projectId}.${dataset}:${documentId}`
+ */
+export type DocumentResourceId = `document:${string}.${string}:${string}`
+
+/**
+ * @public
+ * A resource identifier for a document, in the format of `projectId.dataset`
+ */
+export type ResourceId = `${string}.${string}`
+
+/**
+ * @beta
+ * Get the resource ID from a document resource ID
+ */
+export function getResourceId(
+  documentResourceId: DocumentResourceId | undefined,
+): ResourceId | undefined {
+  if (!documentResourceId) return undefined
+  return documentResourceId.split(':')[1] as ResourceId
 }
 
 /** @beta */
 export interface DocumentTypeHandle<TDocument extends SanityDocumentLike = SanityDocumentLike> {
   _id?: string
   _type: TDocument['_type']
+  resourceId?: DocumentResourceId
 }
 
 type ToNumber<TInput extends string> = TInput extends `${infer TNumber extends number}`

@@ -1,4 +1,9 @@
-import {type DocumentAction, getPermissionsState, type PermissionsResult} from '@sanity/sdk'
+import {
+  type DocumentAction,
+  getPermissionsState,
+  getResourceId,
+  type PermissionsResult,
+} from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {filter, firstValueFrom} from 'rxjs'
 
@@ -43,7 +48,19 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * ```
  */
 export function usePermissions(actions: DocumentAction | DocumentAction[]): PermissionsResult {
-  const instance = useSanityInstance()
+  // if actions is an array, we need to check each action to see if the resourceId is the same
+  if (Array.isArray(actions)) {
+    const resourceIds = actions.map((action) => action.resourceId)
+    const uniqueResourceIds = new Set(resourceIds)
+    if (uniqueResourceIds.size !== 1) {
+      throw new Error('All actions must have the same resourceId')
+    }
+  }
+  const resourceId = Array.isArray(actions)
+    ? getResourceId(actions[0].resourceId)
+    : getResourceId(actions.resourceId)
+
+  const instance = useSanityInstance(resourceId)
   const isDocumentReady = useCallback(
     () => getPermissionsState(instance, actions).getCurrent() !== undefined,
     [actions, instance],

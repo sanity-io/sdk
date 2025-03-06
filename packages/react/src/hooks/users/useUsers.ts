@@ -74,7 +74,7 @@ export interface UseUsersResult {
  * ```
  */
 export function useUsers(params: UseUsersParams): UseUsersResult {
-  const instance = useSanityInstance()
+  const instance = useSanityInstance(params.resourceId)
   const [store] = useState(() => createUsersStore(instance))
 
   useEffect(() => {

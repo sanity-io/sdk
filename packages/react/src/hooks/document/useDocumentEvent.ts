@@ -1,4 +1,9 @@
-import {type DocumentEvent, subscribeDocumentEvents} from '@sanity/sdk'
+import {
+  type DocumentEvent,
+  type DocumentHandle,
+  getResourceId,
+  subscribeDocumentEvents,
+} from '@sanity/sdk'
 import {useCallback, useEffect, useInsertionEffect, useRef} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -26,7 +31,10 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * })
  * ```
  */
-export function useDocumentEvent(handler: (documentEvent: DocumentEvent) => void): void {
+export function useDocumentEvent(
+  handler: (documentEvent: DocumentEvent) => void,
+  doc: DocumentHandle,
+): void {
   const ref = useRef(handler)
 
   useInsertionEffect(() => {
@@ -37,7 +45,7 @@ export function useDocumentEvent(handler: (documentEvent: DocumentEvent) => void
     return ref.current(documentEvent)
   }, [])
 
-  const instance = useSanityInstance()
+  const instance = useSanityInstance(getResourceId(doc.resourceId))
   useEffect(() => {
     return subscribeDocumentEvents(instance, stableHandler)
   }, [instance, stableHandler])

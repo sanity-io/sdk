@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import {at, patch, set} from '@sanity/mutate'
 import {
   createDocument,
@@ -11,6 +12,7 @@ import {
 import {
   useApplyActions,
   useDocument,
+  useDocumentEvent,
   useDocumentSyncStatus,
   useEditDocument,
   usePermissions,
@@ -25,10 +27,14 @@ interface Author extends SanityDocument {
   name?: string
 }
 
-const doc: DocumentHandle<Author> = {_id: 'db06bc9e-4608-465a-9551-a10cef478037', _type: 'author'}
+const doc: DocumentHandle<Author> = {
+  _type: 'author',
+  _id: 'db06bc9e-4608-465a-9551-a10cef478037',
+  resourceId: 'document:ppsg7ml5.test:db06bc9e-4608-465a-9551-a10cef478037',
+}
 
 function Editor() {
-  // useDocumentEvent((e) => console.log(e))
+  useDocumentEvent((e) => console.log(e), doc)
   const synced = useDocumentSyncStatus(doc)
   const apply = useApplyActions()
 

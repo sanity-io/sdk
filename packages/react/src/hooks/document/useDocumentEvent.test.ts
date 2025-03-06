@@ -1,5 +1,10 @@
 // tests/useDocumentEvent.test.ts
-import {createSanityInstance, type DocumentEvent, subscribeDocumentEvents} from '@sanity/sdk'
+import {
+  createSanityInstance,
+  type DocumentEvent,
+  type DocumentHandle,
+  subscribeDocumentEvents,
+} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
@@ -16,6 +21,11 @@ vi.mock('../context/useSanityInstance', () => ({
 }))
 
 const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+const docHandle: DocumentHandle = {
+  _id: 'doc1',
+  _type: 'book',
+  resourceId: 'document:p.d:doc1',
+}
 
 describe('useDocumentEvent hook', () => {
   beforeEach(() => {
@@ -28,7 +38,7 @@ describe('useDocumentEvent hook', () => {
     const unsubscribe = vi.fn()
     vi.mocked(subscribeDocumentEvents).mockReturnValue(unsubscribe)
 
-    renderHook(() => useDocumentEvent(handler))
+    renderHook(() => useDocumentEvent(handler, docHandle))
 
     expect(vi.mocked(subscribeDocumentEvents)).toHaveBeenCalledTimes(1)
     expect(vi.mocked(subscribeDocumentEvents).mock.calls[0][0]).toBe(instance)
@@ -46,7 +56,7 @@ describe('useDocumentEvent hook', () => {
     const unsubscribe = vi.fn()
     vi.mocked(subscribeDocumentEvents).mockReturnValue(unsubscribe)
 
-    const {unmount} = renderHook(() => useDocumentEvent(handler))
+    const {unmount} = renderHook(() => useDocumentEvent(handler, docHandle))
     unmount()
     expect(unsubscribe).toHaveBeenCalledTimes(1)
   })

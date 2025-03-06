@@ -105,6 +105,7 @@ export {
   jsonMatch,
   type JsonMatchPath,
 } from '../document/patchOperations'
+export {type DocumentResourceId, getResourceId, type ResourceId} from '../document/patchOperations'
 export {type PermissionDeniedReason, type PermissionsResult} from '../document/permissions'
 
 /** USERS */

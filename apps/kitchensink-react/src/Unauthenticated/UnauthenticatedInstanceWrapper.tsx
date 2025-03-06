@@ -14,7 +14,7 @@ const sanityInstance = createSanityInstance({
 
 export function UnauthenticatedInstanceWrapper(): JSX.Element {
   return (
-    <SanityProvider sanityInstance={sanityInstance}>
+    <SanityProvider sanityInstances={[sanityInstance]}>
       <Box style={{width: '100%'}}>
         <Card shadow={1} padding={3}>
           <Flex as="nav" align="center" justify="space-between" paddingX={4}>

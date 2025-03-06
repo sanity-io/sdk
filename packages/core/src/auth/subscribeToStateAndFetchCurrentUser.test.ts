@@ -34,12 +34,10 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     })
     expect(clientFactory).toHaveBeenCalledWith({
       apiVersion: '2021-06-07',
-      dataset: 'd',
       ignoreBrowserTokenWarning: true,
-      projectId: 'p',
       requestTagPrefix: 'sdk.auth',
       token: 'new-token',
-      useProjectHostname: true,
+      useProjectHostname: false,
     })
     expect(mockRequest).toHaveBeenCalledWith({method: 'GET', uri: '/users/me'})
 
@@ -71,12 +69,10 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
 
     expect(clientFactory).toHaveBeenCalledWith({
       apiVersion: '2021-06-07',
-      dataset: 'd',
       ignoreBrowserTokenWarning: true,
-      projectId: 'p',
       requestTagPrefix: 'sdk.auth',
       token: 'new-token',
-      useProjectHostname: true,
+      useProjectHostname: false,
     })
     expect(mockRequest).toHaveBeenCalledWith({method: 'GET', uri: '/users/me'})
 
