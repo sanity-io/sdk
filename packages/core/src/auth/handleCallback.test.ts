@@ -48,10 +48,8 @@ describe('handleCallback', () => {
     expect(result).toBe('https://example.com/callback?foo=bar')
     expect(clientFactory).toHaveBeenCalledWith({
       apiVersion: '2021-06-07',
-      dataset: 'd',
-      projectId: 'p',
       requestTagPrefix: 'sdk.auth',
-      useProjectHostname: true,
+      useProjectHostname: false,
     })
     expect(mockRequest).toHaveBeenLastCalledWith({
       method: 'GET',
@@ -172,10 +170,8 @@ describe('handleCallback', () => {
 
     expect(clientFactory).toHaveBeenCalledWith({
       apiVersion: '2021-06-07',
-      dataset: 'd',
-      projectId: 'p',
       requestTagPrefix: 'sdk.auth',
-      useProjectHostname: true,
+      useProjectHostname: false,
     })
     expect(mockRequest).toHaveBeenLastCalledWith({
       method: 'GET',

@@ -31,7 +31,7 @@ export const useSanityInstance = (resourceId?: string): SanityInstance => {
     throw new Error('resourceId is required when there are multiple Sanity instances')
   }
 
-  const instance = sanityInstance.find((inst) => inst.identity.id === resourceId)
+  const instance = sanityInstance.find((inst) => inst.identity.resourceId === resourceId)
   if (!instance) {
     throw new Error(`Sanity instance with resourceId ${resourceId} not found`)
   }

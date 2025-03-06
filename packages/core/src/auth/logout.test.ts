@@ -37,11 +37,9 @@ describe('logout', () => {
 
     expect(clientFactory).toHaveBeenCalledWith({
       apiVersion: '2021-06-07',
-      dataset: 'd',
-      projectId: 'p',
       requestTagPrefix: 'sdk.auth',
       token: 'token',
-      useProjectHostname: true,
+      useProjectHostname: false,
     })
     expect(mockRequest).toHaveBeenCalledWith({method: 'POST', uri: '/auth/logout'})
     expect(removeItem).toHaveBeenCalledWith(state.get().options.storageKey)

@@ -34,4 +34,5 @@ export interface SdkIdentity {
   readonly id: string
   readonly projectId: string
   readonly dataset: string
+  readonly resourceId: string
 }

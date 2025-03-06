@@ -30,6 +30,7 @@ export const logout = createAction(authStore, ({state}) => {
           requestTagPrefix: REQUEST_TAG_PREFIX,
           apiVersion: DEFAULT_API_VERSION,
           ...(apiHost && {apiHost}),
+          useProjectHostname: false,
         })
 
         await client.request<void>({uri: '/auth/logout', method: 'POST'})

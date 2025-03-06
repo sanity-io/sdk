@@ -63,7 +63,7 @@ describe('authStore', () => {
       expect(options.providedToken).toBe(token)
       expect(options.clientFactory).toBe(clientFactory)
       expect(options.initialLocationHref).toBe(initialLocationHref)
-      expect(options.storageKey).toBe('__sanity_auth_token_p_d')
+      expect(options.storageKey).toBe('__sanity_auth_token')
       expect(options.storageArea).toBe(storageArea)
     })
 
