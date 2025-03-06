@@ -123,3 +123,4 @@ export type SanityProject = _SanityProject
 
 /** DATASETS */
 export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
+export {CORE_SDK_VERSION} from '../version'
