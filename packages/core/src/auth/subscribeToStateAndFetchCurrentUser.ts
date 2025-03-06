@@ -7,9 +7,8 @@ import {AuthStateType} from './authStateType'
 import {type AuthState, type AuthStoreState} from './authStore'
 
 export const subscribeToStateAndFetchCurrentUser = createInternalAction(
-  ({state, instance}: ActionContext<AuthStoreState>) => {
-    const {projectId, dataset} = instance.identity
-    const {clientFactory, apiHost, authScope} = state.get().options
+  ({state}: ActionContext<AuthStoreState>) => {
+    const {clientFactory, apiHost} = state.get().options
 
     const currentUser$ = state.observable
       .pipe(
@@ -24,13 +23,11 @@ export const subscribeToStateAndFetchCurrentUser = createInternalAction(
       .pipe(
         map((token) =>
           clientFactory({
-            projectId,
-            dataset,
             apiVersion: DEFAULT_API_VERSION,
             requestTagPrefix: REQUEST_TAG_PREFIX,
-            useProjectHostname: authScope === 'project',
             token,
             ignoreBrowserTokenWarning: true,
+            useProjectHostname: false,
             ...(apiHost && {apiHost}),
           }),
         ),

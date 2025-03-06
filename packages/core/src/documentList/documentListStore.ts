@@ -15,6 +15,8 @@ import {subscribeToStateAndFetchResults} from './subscribeToStateAndFetchResults
  * @public
  */
 export interface DocumentListOptions {
+  /** The resourceId of the Sanity instance to use for this list. */
+  resourceId?: string
   /** GROQ filter expression to query specific documents */
   filter?: string
   /** Array of sort ordering specifications to determine the order of results */

@@ -25,8 +25,8 @@ const menuItems = [
     icon: '🌐',
   },
   {
-    title: 'Org Auth',
-    path: '/org-auth',
+    title: 'Global Auth',
+    path: '/global-auth',
     icon: '👷',
   },
   {

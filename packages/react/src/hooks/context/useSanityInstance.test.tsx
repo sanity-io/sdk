@@ -11,7 +11,7 @@ describe('useSanityInstance', () => {
 
   it('returns sanity instance when used within provider', () => {
     const wrapper = ({children}: {children: React.ReactNode}) => (
-      <SanityProvider sanityInstance={sanityInstance}>{children}</SanityProvider>
+      <SanityProvider sanityInstances={[sanityInstance]}>{children}</SanityProvider>
     )
 
     const {result} = renderHook(() => useSanityInstance(), {wrapper})

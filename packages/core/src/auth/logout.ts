@@ -6,10 +6,8 @@ import {authStore} from './authStore'
 /**
  * @public
  */
-export const logout = createAction(authStore, ({state, instance}) => {
-  const {projectId, dataset} = instance.identity
-  const {clientFactory, apiHost, authScope, providedToken, storageArea, storageKey} =
-    state.get().options
+export const logout = createAction(authStore, ({state}) => {
+  const {clientFactory, apiHost, providedToken, storageArea, storageKey} = state.get().options
 
   return async function () {
     // If a token is statically provided, logout does nothing
@@ -29,11 +27,8 @@ export const logout = createAction(authStore, ({state, instance}) => {
 
         const client = clientFactory({
           token,
-          projectId,
-          dataset,
           requestTagPrefix: REQUEST_TAG_PREFIX,
           apiVersion: DEFAULT_API_VERSION,
-          useProjectHostname: authScope === 'project',
           ...(apiHost && {apiHost}),
         })
 

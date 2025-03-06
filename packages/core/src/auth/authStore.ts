@@ -121,14 +121,6 @@ export interface AuthConfig {
    * ignoring any storage or callback handling.
    */
   token?: string
-
-  /**
-   * The authentication scope.
-   * If set to 'project', requests are scoped to the project-level.
-   * If set to 'global', requests are scoped to the user access level.
-   * Defaults to 'project'.
-   */
-  authScope?: 'project' | 'global'
 }
 
 /**
@@ -141,7 +133,6 @@ export interface AuthStoreState {
     initialLocationHref: string
     clientFactory: (config: ClientConfig) => SanityClient
     customProviders: AuthConfig['providers']
-    authScope: 'project' | 'global'
     storageKey: string
     storageArea: Storage | undefined
     apiHost: string | undefined
@@ -157,15 +148,13 @@ export const authStore = createResource<AuthStoreState>({
       apiHost,
       callbackUrl,
       providers: customProviders,
-      authScope = 'project',
       token: providedToken,
       clientFactory = createClient,
       initialLocationHref = getDefaultLocation(),
       storageArea = getDefaultStorage(),
     } = instance.config.auth ?? {}
-    const {projectId, dataset} = instance.identity
 
-    const storageKey = `__sanity_auth_token_${projectId}_${dataset}`
+    const storageKey = `__sanity_auth_token`
 
     let authState: AuthState
 
@@ -185,7 +174,6 @@ export const authStore = createResource<AuthStoreState>({
       authState,
       options: {
         apiHost,
-        authScope,
         callbackUrl,
         customProviders,
         providedToken,

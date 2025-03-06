@@ -8,15 +8,12 @@ import {schema} from '../schema'
 const sanityInstance = createSanityInstance({
   projectId: '',
   dataset: '',
-  auth: {
-    authScope: 'global',
-  },
   schema,
 })
 
 export function GlobalInstanceWrapper(): JSX.Element {
   return (
-    <SanityProvider sanityInstance={sanityInstance}>
+    <SanityProvider sanityInstances={[sanityInstance]}>
       <Outlet />
     </SanityProvider>
   )

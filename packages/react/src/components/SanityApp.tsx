@@ -8,7 +8,7 @@ import {isInIframe} from './utils'
  * @public
  */
 export interface SanityAppProps {
-  sanityConfig: SanityConfig
+  sanityConfigs: SanityConfig[]
   children: React.ReactNode
 }
 
@@ -42,14 +42,16 @@ export interface SanityAppProps {
  * }
  * ```
  */
-export function SanityApp({sanityConfig, children}: SanityAppProps): ReactElement {
+export function SanityApp({sanityConfigs, children}: SanityAppProps): ReactElement {
   if (isInIframe()) {
     // When running in an iframe Content OS, we don't want to store tokens
-    sanityConfig.auth = {
-      ...sanityConfig.auth,
-      storageArea: undefined,
-    }
+    sanityConfigs.forEach((sanityConfig) => {
+      sanityConfig.auth = {
+        ...sanityConfig.auth,
+        storageArea: undefined,
+      }
+    })
   }
 
-  return <SDKProvider sanityConfig={sanityConfig}>{children}</SDKProvider>
+  return <SDKProvider sanityConfigs={sanityConfigs}>{children}</SDKProvider>
 }

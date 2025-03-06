@@ -6,10 +6,10 @@ import {createContext, type ReactElement} from 'react'
  */
 export interface SanityProviderProps {
   children: React.ReactNode
-  sanityInstance: SanityInstance
+  sanityInstances: SanityInstance[]
 }
 
-export const SanityInstanceContext = createContext<SanityInstance | null>(null)
+export const SanityInstanceContext = createContext<SanityInstance[] | null>(null)
 
 /**
  * @internal
@@ -41,9 +41,9 @@ export const SanityInstanceContext = createContext<SanityInstance | null>(null)
  * }
  * ```
  */
-export const SanityProvider = ({children, sanityInstance}: SanityProviderProps): ReactElement => {
+export const SanityProvider = ({children, sanityInstances}: SanityProviderProps): ReactElement => {
   return (
-    <SanityInstanceContext.Provider value={sanityInstance}>
+    <SanityInstanceContext.Provider value={sanityInstances}>
       {children}
     </SanityInstanceContext.Provider>
   )

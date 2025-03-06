@@ -7,9 +7,8 @@ import {getAuthCode, getDefaultLocation} from './utils'
 /**
  * @public
  */
-export const handleCallback = createAction(authStore, ({state, instance}) => {
-  const {projectId, dataset} = instance.identity
-  const {providedToken, callbackUrl, clientFactory, apiHost, authScope, storageArea, storageKey} =
+export const handleCallback = createAction(authStore, ({state}) => {
+  const {providedToken, callbackUrl, clientFactory, apiHost, storageArea, storageKey} =
     state.get().options
 
   return async function (locationHref: string = getDefaultLocation()) {
@@ -31,11 +30,9 @@ export const handleCallback = createAction(authStore, ({state, instance}) => {
 
     try {
       const client = clientFactory({
-        projectId,
-        dataset,
         apiVersion: DEFAULT_API_VERSION,
         requestTagPrefix: REQUEST_TAG_PREFIX,
-        useProjectHostname: authScope === 'project',
+        useProjectHostname: false,
         ...(apiHost && {apiHost}),
       })
 

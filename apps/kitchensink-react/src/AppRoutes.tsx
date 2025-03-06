@@ -87,7 +87,7 @@ export function AppRoutes(): JSX.Element {
         path="/sanity-app"
         index
         element={
-          <SanityApp sanityConfig={{projectId: 'ppsg7ml5', dataset: 'test'}}>
+          <SanityApp sanityConfigs={[{projectId: 'ppsg7ml5', dataset: 'test'}]}>
             <div>Welcome to the Sanity App</div>
           </SanityApp>
         }

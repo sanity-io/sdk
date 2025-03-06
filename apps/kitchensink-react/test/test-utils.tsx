@@ -20,7 +20,7 @@ export const AppProviders = ({children}: {children: React.ReactNode}): ReactElem
   const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
   return (
     <ThemeProvider theme={theme}>
-      <SanityProvider sanityInstance={instance}>{children}</SanityProvider>
+      <SanityProvider sanityInstances={[instance]}>{children}</SanityProvider>
     </ThemeProvider>
   )
 }

@@ -1,4 +1,4 @@
-import {type SanityInstance, type StateSource} from '@sanity/sdk'
+import {type ResourceId, type SanityInstance, type StateSource} from '@sanity/sdk'
 import {useMemo, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -12,16 +12,18 @@ interface CreateStateSourceHookOptions<TParams extends unknown[], TState> {
   getState: StateSourceFactory<TParams, TState>
   shouldSuspend: (instance: SanityInstance, ...params: TParams) => boolean
   suspender: (instance: SanityInstance, ...params: TParams) => Promise<unknown>
+  resourceId?: ResourceId
 }
 
 export function createStateSourceHook<TParams extends unknown[], TState>(
   options: StateSourceFactory<TParams, TState> | CreateStateSourceHookOptions<TParams, TState>,
 ): (...params: TParams) => TState {
   const getState = typeof options === 'function' ? options : options.getState
+  const resourceId = 'resourceId' in options ? options.resourceId : undefined
   const suspense = 'shouldSuspend' in options && 'suspender' in options ? options : undefined
 
   function useHook(...params: TParams) {
-    const instance = useSanityInstance()
+    const instance = useSanityInstance(resourceId)
     if (suspense?.shouldSuspend(instance, ...params)) {
       throw suspense.suspender(instance, ...params)
     }

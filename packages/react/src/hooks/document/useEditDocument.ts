@@ -3,6 +3,7 @@ import {
   type DocumentHandle,
   editDocument,
   getDocumentState,
+  getResourceId,
   type JsonMatch,
   type JsonMatchPath,
   resolveDocument,
@@ -67,7 +68,7 @@ export function useEditDocument<
   TDocument extends SanityDocument,
   TPath extends JsonMatchPath<TDocument>,
 >(
-  doc: string | DocumentHandle<TDocument>,
+  doc: DocumentHandle<TDocument>,
   path: TPath,
 ): (nextValue: Updater<JsonMatch<TDocument, TPath>>) => Promise<ActionsResult<TDocument>>
 
@@ -134,7 +135,7 @@ export function useEditDocument<
  * ```
  */
 export function useEditDocument<TDocument extends SanityDocument>(
-  doc: string | DocumentHandle<TDocument>,
+  doc: DocumentHandle<TDocument>,
 ): (nextValue: Updater<TDocument>) => Promise<ActionsResult<TDocument>>
 
 /**
@@ -146,11 +147,11 @@ export function useEditDocument<TDocument extends SanityDocument>(
  * When called without a `path` argument, the hook will return a function for updating the entire document.
  */
 export function useEditDocument(
-  doc: string | DocumentHandle,
+  doc: DocumentHandle,
   path?: string,
 ): (updater: Updater<unknown>) => Promise<ActionsResult> {
-  const documentId = typeof doc === 'string' ? doc : doc._id
-  const instance = useSanityInstance()
+  const documentId = doc._id
+  const instance = useSanityInstance(getResourceId(doc.resourceId))
   const apply = useApplyActions()
   const isDocumentReady = useCallback(
     () => getDocumentState(instance, documentId).getCurrent() !== undefined,
@@ -166,7 +167,7 @@ export function useEditDocument(
             ? updater(getDocumentState(instance, documentId, path).getCurrent())
             : updater
 
-        return apply(editDocument(documentId, {set: {[path]: nextValue}}))
+        return apply(editDocument(doc, {set: {[path]: nextValue}}))
       }
 
       const current = getDocumentState(instance, documentId).getCurrent()
@@ -184,12 +185,13 @@ export function useEditDocument(
         .filter((key) => current?.[key] !== nextValue[key])
         .map((key) =>
           key in nextValue
-            ? editDocument(documentId, {set: {[key]: nextValue[key]}})
-            : editDocument(documentId, {unset: [key]}),
+            ? editDocument(doc, {set: {[key]: nextValue[key]}})
+            : editDocument(doc, {unset: [key]}),
         )
 
       return apply(editActions)
     },
-    [apply, documentId, instance, path],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [apply, doc._id, instance, path],
   )
 }

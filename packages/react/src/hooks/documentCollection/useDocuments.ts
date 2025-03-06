@@ -71,7 +71,7 @@ const STABLE_EMPTY = {
  * ```
  */
 export function useDocuments(options: DocumentListOptions = {}): DocumentHandleCollection {
-  const instance = useSanityInstance()
+  const instance = useSanityInstance(options.resourceId)
 
   // NOTE: useState is used because it guaranteed to return a stable reference
   // across renders

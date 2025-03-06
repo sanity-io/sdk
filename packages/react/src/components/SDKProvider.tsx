@@ -9,7 +9,7 @@ import {AuthBoundary} from './auth/AuthBoundary'
  */
 export interface SDKProviderProps {
   children: ReactNode
-  sanityConfig: SanityConfig
+  sanityConfigs: SanityConfig[]
 }
 
 // Marking this as internal since this should not be used directly by consumers
@@ -18,11 +18,13 @@ export interface SDKProviderProps {
  *
  * Top-level context provider that provides access to the Sanity SDK.
  */
-export function SDKProvider({children, sanityConfig}: SDKProviderProps): ReactElement {
-  const sanityInstance = createSanityInstance(sanityConfig)
+export function SDKProvider({children, sanityConfigs}: SDKProviderProps): ReactElement {
+  const sanityInstances = sanityConfigs.map((sanityConfig: SanityConfig) =>
+    createSanityInstance(sanityConfig),
+  )
 
   return (
-    <SanityProvider sanityInstance={sanityInstance}>
+    <SanityProvider sanityInstances={sanityInstances}>
       <AuthBoundary>{children}</AuthBoundary>
     </SanityProvider>
   )

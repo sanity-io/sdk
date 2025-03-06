@@ -11,18 +11,18 @@ export function getSdkIdentity({
   projectId: string
   dataset: string
 }): SdkIdentity {
-  const id = generateId()
+  // const id = generateId()
   return Object.freeze({
-    id,
+    id: `${projectId}.${dataset}`,
     projectId,
     dataset,
   })
 }
 
-function generateId() {
-  return Array.from({length: 8}, () =>
-    Math.floor(Math.random() * 16)
-      .toString(16)
-      .padStart(2, '0'),
-  ).join('')
-}
+// function generateId() {
+//   return Array.from({length: 8}, () =>
+//     Math.floor(Math.random() * 16)
+//       .toString(16)
+//       .padStart(2, '0'),
+//   ).join('')
+// }

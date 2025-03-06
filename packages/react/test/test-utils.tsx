@@ -16,7 +16,7 @@ import {SanityProvider} from '../src/context/SanityProvider'
  */
 export const AppProviders = ({children}: {children: React.ReactNode}): ReactElement => {
   const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-  return <SanityProvider sanityInstance={instance}>{children}</SanityProvider>
+  return <SanityProvider sanityInstances={[instance]}>{children}</SanityProvider>
 }
 
 /**
