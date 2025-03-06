@@ -76,15 +76,16 @@ export function getOrCreateResource<TState>(
   instance: SanityInstance,
   resource: Resource<TState>,
 ): InitializedResource<TState> {
+  const fullName = `${resource.name}-${instance.identity.resourceId}`
   if (!resourceCache.has(instance.identity)) {
     resourceCache.set(instance.identity, new Map())
   }
   const initializedResources = resourceCache.get(instance.identity)!
-  const cached = initializedResources.get(resource.name)
+  const cached = initializedResources.get(fullName)
   if (cached) return cached as InitializedResource<TState>
 
   const result = initializeResource(instance, resource)
-  initializedResources.set(resource.name, result)
+  initializedResources.set(fullName, result)
   return result
 }
 
