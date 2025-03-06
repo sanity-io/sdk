@@ -32,8 +32,8 @@ export interface DocumentHandle<TDocument extends SanityDocumentLike = SanityDoc
 export type DocumentResourceId = `document:${string}.${string}:${string}`
 
 /**
- * @beta
- * A resource identifier for a document, in the format of `document:${projectId}.${dataset}:${documentId}`
+ * @public
+ * A resource identifier for a document, in the format of `projectId.dataset`
  */
 export type ResourceId = `${string}.${string}`
 
