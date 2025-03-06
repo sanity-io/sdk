@@ -15,19 +15,14 @@ const styles = {
 
 const menuItems = [
   {
-    title: 'Project Auth',
-    path: '/project-auth',
+    title: 'Authenticated',
+    path: '/authenticated',
     icon: '🔐',
   },
   {
     title: 'Unauthenticated',
     path: '/unauthenticated',
     icon: '🌐',
-  },
-  {
-    title: 'Global Auth',
-    path: '/global-auth',
-    icon: '👷',
   },
   {
     title: 'Comlink Playground',

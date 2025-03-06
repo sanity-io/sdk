@@ -8,8 +8,6 @@ import {DocumentEditorRoute} from './DocumentCollection/DocumentEditorRoute'
 import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
 import {DocumentListRoute} from './DocumentCollection/DocumentListRoute'
 import {SearchRoute} from './DocumentCollection/SearchRoute'
-import {GlobalAuthHome} from './GlobalAuthentication/GlobalAuthHome'
-import {GlobalInstanceWrapper} from './GlobalAuthentication/GlobalInstanceWrapper'
 import Home from './Home'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProjectInstanceWrapper} from './ProjectAuthentication/ProjectInstanceWrapper'
@@ -51,29 +49,20 @@ export function AppRoutes(): JSX.Element {
     <Routes>
       <Route path="/" element={<Home />} />
 
-      <Route path="/project-auth" element={<ProjectInstanceWrapper />}>
+      <Route path="/authenticated" element={<ProjectInstanceWrapper />}>
         <Route index element={<ProjectAuthHome routes={documentCollectionRoutes} />} />
-        <Route element={<ProtectedRoute subPath="/project-auth" />}>
+        <Route element={<ProtectedRoute subPath="/authenticated" />}>
           {documentCollectionRoutes.map((route) => (
             <Route key={route.path} path={route.path} element={route.element} />
           ))}
         </Route>
       </Route>
 
-      <Route path="/comlink-demo" element={<GlobalInstanceWrapper />}>
+      <Route path="/comlink-demo" element={<ProjectInstanceWrapper />}>
         <Route index element={<ParentApp />} />
         {frameRoutes.map((route) => (
           <Route key={route.path} path={route.path} element={route.element} />
         ))}
-      </Route>
-
-      <Route path="/global-auth" element={<GlobalInstanceWrapper />}>
-        <Route index element={<GlobalAuthHome routes={documentCollectionRoutes} />} />
-        <Route element={<ProtectedRoute subPath="/global-auth" />}>
-          {documentCollectionRoutes.map((route) => (
-            <Route key={route.path} path={route.path} element={route.element} />
-          ))}
-        </Route>
       </Route>
 
       <Route path="/unauthenticated" element={<UnauthenticatedInstanceWrapper />}>

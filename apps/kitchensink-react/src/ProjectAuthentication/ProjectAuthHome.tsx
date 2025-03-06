@@ -12,10 +12,10 @@ export function ProjectAuthHome({
 }): JSX.Element {
   return (
     <PageLayout
-      title="Project Level Authentication"
+      title="Authenticated"
       subtitle="Explore authentication examples and components"
       homePath="/project-auth"
-      homeText="Project Auth Home"
+      homeText="Authenticated Home"
     >
       <AuthBoundary>
         <Flex direction="column" gap={3}>
