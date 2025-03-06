@@ -1,13 +1,4 @@
-import {type SanityClient} from '@sanity/client'
-import {
-  combineLatest,
-  distinctUntilChanged,
-  filter,
-  map,
-  Observable,
-  Subscription,
-  switchMap,
-} from 'rxjs'
+import {combineLatest, distinctUntilChanged, filter, map, Subscription, switchMap} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
 import {type ActionContext, createInternalAction} from '../resources/createAction'
@@ -31,9 +22,7 @@ export function createLiveEventSubscriber<TState extends LiveEventAwareState>(
   tag: string,
 ): (actionContext: ActionContext<TState>) => Subscription {
   return createInternalAction(({instance, state}: ActionContext<TState>) => {
-    const client$ = new Observable<SanityClient>((observer) =>
-      getClientState(instance, {apiVersion: 'vX'}).observable.subscribe(observer),
-    )
+    const client$ = getClientState(instance, {apiVersion: 'vX'}).observable
     const syncTags$ = state.observable.pipe(
       map((i) => i.syncTags),
       distinctUntilChanged(),
