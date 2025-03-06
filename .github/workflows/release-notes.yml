@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Convert markdown to slack markdown
-        uses: LoveToKnow/slackify-markdown-action@v1.1.1
+        uses: LoveToKnow/slackify-markdown-action@698a1d4d0ff1794152a93c03ee8ca5e03a310d4e # v1.1.1
         id: releasemarkdown
         with:
           text: "*Notes:*\n${{ github.event.release.body }}"
