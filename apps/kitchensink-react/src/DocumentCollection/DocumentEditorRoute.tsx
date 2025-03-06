@@ -27,22 +27,10 @@ interface Author extends SanityDocument {
   name?: string
 }
 
-interface Dog extends SanityDocument {
-  _type: 'dog'
-  name?: string
-  description?: string
-}
-
 const doc: DocumentHandle<Author> = {
   _type: 'author',
   _id: 'db06bc9e-4608-465a-9551-a10cef478037',
   resourceId: 'document:ppsg7ml5.test:db06bc9e-4608-465a-9551-a10cef478037',
-}
-
-const doc2: DocumentHandle<Dog> = {
-  _type: 'dog',
-  _id: 'acc11e96-1a01-4907-bd0e-e8347217cf2f',
-  resourceId: 'document:ezwd8xes.production:acc11e96-1a01-4907-bd0e-e8347217cf2f',
 }
 
 function Editor() {
@@ -51,8 +39,6 @@ function Editor() {
   const apply = useApplyActions()
 
   const canEdit = usePermissions(editDocument(doc))
-  const canEdit2 = usePermissions(editDocument(doc2))
-  console.log('canEdit2', canEdit2)
   const canCreate = usePermissions(createDocument(doc))
   const canPublish = usePermissions(publishDocument(doc))
   const canDelete = usePermissions(deleteDocument(doc))
@@ -69,9 +55,6 @@ function Editor() {
 
   const document = useDocument(doc)
   const setDocument = useEditDocument(doc)
-
-  const document2 = useDocument(doc2)
-  console.log('document2', document2)
 
   return (
     <Box padding={4}>
