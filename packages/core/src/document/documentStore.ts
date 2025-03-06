@@ -201,9 +201,9 @@ const _resolveDocument = createAction(documentStore, () => {
 export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
   selector: (
     {error, documentStates: documents, outgoing, applied, queued},
-    doc: string | DocumentHandle,
+    doc: DocumentHandle,
   ) => {
-    const documentId = typeof doc === 'string' ? doc : doc._id
+    const documentId = doc._id
     if (error) throw error
     const draftId = getDraftId(documentId)
     const publishedId = getPublishedId(documentId)
@@ -214,8 +214,7 @@ export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
     if (draft === undefined || published === undefined) return undefined
     return !queued.length && !applied.length && !outgoing
   },
-  onSubscribe: ({state}, doc: string | DocumentHandle) =>
-    manageSubscriberIds(state, typeof doc === 'string' ? doc : doc._id),
+  onSubscribe: ({state}, doc: DocumentHandle) => manageSubscriberIds(state, doc._id),
 })
 
 /** @beta */

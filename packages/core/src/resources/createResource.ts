@@ -62,9 +62,11 @@ export function initializeResource<TState>(
   instance: SanityInstance,
   resource: Resource<TState>,
 ): InitializedResource<TState> {
+  const fullName =
+    resource.name === 'Auth' ? 'Auth-global' : `${resource.name}-${instance.identity.resourceId}`
   const initialState = resource.getInitialState(instance)
   const state = createResourceState(initialState, {
-    name: `${resource.name}-${instance.identity.resourceId}`,
+    name: fullName,
     enabled: !!getEnv('DEV'),
   })
   const dispose = resource.initialize?.call({instance, state}, instance) ?? (() => {})
@@ -76,7 +78,8 @@ export function getOrCreateResource<TState>(
   instance: SanityInstance,
   resource: Resource<TState>,
 ): InitializedResource<TState> {
-  const fullName = `${resource.name}-${instance.identity.resourceId}`
+  const fullName =
+    resource.name === 'Auth' ? 'Auth-global' : `${resource.name}-${instance.identity.resourceId}`
   if (!resourceCache.has(instance.identity)) {
     resourceCache.set(instance.identity, new Map())
   }

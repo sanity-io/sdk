@@ -123,6 +123,8 @@ export interface AuthConfig {
   token?: string
 }
 
+let tokenRefresherRunning = false
+
 /**
  * @public
  */
@@ -190,12 +192,16 @@ export const authStore = createResource<AuthStoreState>({
     if (this.state.get().options?.storageArea) {
       storageEventsSubscription = subscribeToStorageEventsAndSetToken(this)
     }
-    const refreshStampedTokenSubscription = refreshStampedToken(this)
+    let refreshStampedTokenSubscription: Subscription | undefined
+    if (!tokenRefresherRunning) {
+      tokenRefresherRunning = true
+      refreshStampedTokenSubscription = refreshStampedToken(this)
+    }
 
     return () => {
       stateSubscription.unsubscribe()
       storageEventsSubscription?.unsubscribe()
-      refreshStampedTokenSubscription.unsubscribe()
+      refreshStampedTokenSubscription?.unsubscribe()
     }
   },
 })

@@ -1,9 +1,11 @@
 import {
   type DocumentHandle,
   getDocumentState,
+  getResourceId,
   type JsonMatch,
   type JsonMatchPath,
   resolveDocument,
+  type ResourceId,
 } from '@sanity/sdk'
 import {type SanityDocument} from '@sanity/types'
 
@@ -36,7 +38,7 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
 export function useDocument<
   TDocument extends SanityDocument,
   TPath extends JsonMatchPath<TDocument>,
->(doc: string | DocumentHandle<TDocument>, path: TPath): JsonMatch<TDocument, TPath> | undefined
+>(doc: DocumentHandle<TDocument>, path: TPath): JsonMatch<TDocument, TPath> | undefined
 
 /**
  * @beta
@@ -74,7 +76,7 @@ export function useDocument<
  *
  */
 export function useDocument<TDocument extends SanityDocument>(
-  doc: string | DocumentHandle<TDocument>,
+  doc: DocumentHandle<TDocument>,
 ): TDocument | null
 
 /**
@@ -93,13 +95,13 @@ export function useDocument<TDocument extends SanityDocument>(
  * consider using `usePreview` or `useQuery` for these use cases instead. These hooks leverage the Sanity
  * Live Content API to provide a more efficient way to read and subscribe to document state.
  */
-export function useDocument(doc: string | DocumentHandle, path?: string): unknown {
+export function useDocument(doc: DocumentHandle, path?: string): unknown {
   return _useDocument(doc, path)
 }
 
-const _useDocument = createStateSourceHook<[doc: string | DocumentHandle, path?: string], unknown>({
+const _useDocument = createStateSourceHook<[doc: DocumentHandle, path?: string], unknown>({
   getState: getDocumentState,
-  shouldSuspend: (instance, doc) =>
-    getDocumentState(instance, typeof doc === 'string' ? doc : doc._id).getCurrent() === undefined,
+  shouldSuspend: (instance, doc) => getDocumentState(instance, doc._id).getCurrent() === undefined,
   suspender: resolveDocument,
+  getResourceId: (doc) => getResourceId(doc.resourceId) as ResourceId,
 })
