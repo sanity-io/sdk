@@ -12,7 +12,7 @@ import {SanityInstanceContext} from '../../context/SanityProvider'
  * @returns The current Sanity instance
  * @example
  * ```tsx
- * const instance = useSanityInstance('abc123:production')
+ * const instance = useSanityInstance('abc123.production')
  * ```
  */
 export const useSanityInstance = (resourceId?: string): SanityInstance => {

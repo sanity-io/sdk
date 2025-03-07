@@ -2,6 +2,7 @@ import {type SyncTag} from '@sanity/client'
 import {type SortOrderingItem} from '@sanity/types'
 import {createSelector} from 'reselect'
 
+import {type ResourceId} from '../document/patchOperations'
 import {createAction} from '../resources/createAction'
 import {createResource} from '../resources/createResource'
 import {createStateSourceAction} from '../resources/createStateSourceAction'
@@ -15,8 +16,8 @@ import {subscribeToStateAndFetchResults} from './subscribeToStateAndFetchResults
  * @public
  */
 export interface DocumentListOptions {
-  /** The resourceId of the Sanity instance to use for this list. */
-  resourceId?: string
+  /** The resourceId of the Sanity instance to use for this list in the format of `projectId.dataset` if resourceId is not provided, the default project and dataset will be used */
+  resourceId?: ResourceId
   /** GROQ filter expression to query specific documents */
   filter?: string
   /** Array of sort ordering specifications to determine the order of results */
