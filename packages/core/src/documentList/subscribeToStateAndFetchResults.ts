@@ -50,7 +50,7 @@ export const subscribeToStateAndFetchResults = createInternalAction(
                 returnQuery: false,
                 lastLiveEventId,
                 tag: 'sdk.document-list',
-                perspective: 'previewDrafts',
+                perspective: 'drafts',
               },
             )
           }),

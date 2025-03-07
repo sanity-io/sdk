@@ -21,7 +21,7 @@ export interface DocumentListOptions {
   filter?: string
   /** Array of sort ordering specifications to determine the order of results */
   sort?: SortOrderingItem[]
-  /** The Content Lake perspective to use for this list. Defaults to `previewDrafts`. */
+  /** The Content Lake perspective to use for this list. Defaults to `drafts`. */
   perspective?: string
 }
 
@@ -52,7 +52,7 @@ const documentList = createResource<DocumentListState>({
   name: 'documentList',
   getInitialState: () => ({
     limit: PAGE_SIZE,
-    options: {perspective: 'previewDrafts'},
+    options: {perspective: 'drafts'},
     results: [],
     syncTags: [],
     isPending: false,
