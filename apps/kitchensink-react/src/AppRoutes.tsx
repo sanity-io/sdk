@@ -9,6 +9,7 @@ import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
 import {DocumentListRoute} from './DocumentCollection/DocumentListRoute'
 import {MultiResourceRoute} from './DocumentCollection/MultiResourceRoute'
 import {SearchRoute} from './DocumentCollection/SearchRoute'
+import DocumentProjectionRoute from './DocumentCollection/DocumentProjectionRoute'
 import Home from './Home'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProjectInstanceWrapper} from './ProjectAuthentication/ProjectInstanceWrapper'
@@ -41,6 +42,10 @@ const documentCollectionRoutes = [
   {
     path: 'search',
     element: <SearchRoute />,
+  },
+  {
+    path: 'document-projection',
+    element: <DocumentProjectionRoute />,
   },
 ]
 

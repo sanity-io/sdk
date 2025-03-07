@@ -1,8 +1,8 @@
-import {type SyncTag} from '@sanity/client'
-
+import {createLiveEventSubscriber} from '../common/createLiveEventSubscriber'
+import {type LiveEventAwareState} from '../common/types'
 import {createResource} from '../resources/createResource'
-import {subscribeToLiveAndSetLastLiveEventId} from './subscribeToLiveAndSetLastLiveEventId'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
+import {PREVIEW_TAG} from './util'
 
 export interface PreviewQueryResult {
   _id: string
@@ -64,12 +64,10 @@ export type ValuePending<T> = {
 /**
  * @public
  */
-export interface PreviewStoreState {
+export interface PreviewStoreState extends LiveEventAwareState {
   values: {[TDocumentId in string]?: ValuePending<PreviewValue>}
   documentTypes: {[TDocumentId in string]?: string}
   subscriptions: {[TDocumentId in string]?: {[TSubscriptionId in string]?: true}}
-  syncTags: Record<SyncTag, true>
-  lastLiveEventId: string | null
 }
 
 export const previewStore = createResource<PreviewStoreState>({
@@ -84,6 +82,8 @@ export const previewStore = createResource<PreviewStoreState>({
     }
   },
   initialize() {
+    const subscribeToLiveAndSetLastLiveEventId =
+      createLiveEventSubscriber<PreviewStoreState>(PREVIEW_TAG)
     const stateSubscriptionForBatches = subscribeToStateAndFetchBatches(this)
     const liveSubscription = subscribeToLiveAndSetLastLiveEventId(this)
 

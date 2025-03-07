@@ -50,6 +50,11 @@ export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPrevie
 export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
 
+/** PROJECTION */
+export {getProjectionState} from '../projection/getProjectionState'
+export type {ProjectionValuePending, ValidProjection} from '../projection/projectionStore'
+export {resolveProjection} from '../projection/resolveProjection'
+
 /** COMLINK */
 export {destroyController} from '../comlink/controller/actions/destroyController'
 export {getOrCreateChannel} from '../comlink/controller/actions/getOrCreateChannel'
