@@ -5,6 +5,7 @@ export const basePackageConfig = defineConfig({
   extract: {
     rules: {
       'ae-forgotten-export': 'off',
+      'ae-internal-missing-underscore': 'off',
     },
     customTags: [
       {

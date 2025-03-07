@@ -1,10 +1,1 @@
-/**
- * An example function that will be removed.
- * @public
- */
-export function main(): void {
-  //
-}
-
-// export * from './components'
-// export * from './hooks'
+export {REACT_INTERNAL_SDK_VERSION} from '../version'
