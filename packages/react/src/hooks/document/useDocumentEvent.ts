@@ -17,6 +17,8 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *
  * @category Documents
  * @param handler - The event handler to register.
+ * @param doc - The document to subscribe to events for. If you pass a `DocumentHandle` with a `resourceId` (in the format of `document:projectId.dataset:documentId`)
+ * the document will be read from the specified Sanity project and dataset that is included in the handle. If no `resourceId` is provided, the default project and dataset from your `SanityApp` configuration will be used.
  * @example
  * ```
  * import {useDocumentEvent} from '@sanity/sdk-react'

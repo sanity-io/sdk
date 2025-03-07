@@ -25,19 +25,41 @@ const CORE_URL = 'https://core.sanity.io'
  * @returns Your Sanity application, integrated with your Sanity configuration and application context
  *
  * @example
- * ```
- * import { SanityApp } from '@sanity/sdk-react
+ * ```tsx
+ * import { SanityApp } from '@sanity/sdk-react'
  *
  * import MyAppRoot from './Root'
  *
- * const mySanityConfig = {
- *   procectId: 'my-project-id',
- *   dataset: 'production',
- * }
+ * // Single project configuration
+ * const mySanityConfigs = [
+ *   {
+ *     projectId: 'my-project-id',
+ *     dataset: 'production',
+ *   },
+ * ]
+ *
+ * // Or multiple project configurations
+ * const multipleConfigs = [
+ *   // Configuration for your main project. This will be used as the default project for all hooks if no resource ID override is provided.
+ *   {
+ *     projectId: 'marketing-website-project',
+ *     dataset: 'production',
+ *   },
+ *   // Configuration for a separate blog project
+ *   {
+ *     projectId: 'blog-project',
+ *     dataset: 'production',
+ *   },
+ *   // Configuration for a separate ecommerce project
+ *   {
+ *     projectId: 'ecommerce-project',
+ *     dataset: 'production',
+ *   }
+ * ]
  *
  * export default function MyApp() {
  *   return (
- *     <SanityApp sanityConfig={mySanityConfig}>
+ *     <SanityApp sanityConfigs={mySanityConfigs}>
  *       <MyAppRoot />
  *     </SanityApp>
  *   )
