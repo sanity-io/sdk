@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.0.0-alpha.14](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.13...sdk-v0.0.0-alpha.14) (2025-03-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* allow multiple resources via instances ([#271](https://github.com/sanity-io/sdk/issues/271))
+
+### Features
+
+* add useProjection hook ([#257](https://github.com/sanity-io/sdk/issues/257)) ([fbaafe0](https://github.com/sanity-io/sdk/commit/fbaafe031e235f61b9d60bf5938f18a4683aafe5))
+* allow multiple resources via instances ([#271](https://github.com/sanity-io/sdk/issues/271)) ([6f4d541](https://github.com/sanity-io/sdk/commit/6f4d5410671e8b75759e33380464656a8c961ad6))
+
+
+### Bug Fixes
+
+* **core:** use drafts instead of previewDrafts ([#279](https://github.com/sanity-io/sdk/issues/279)) ([45305ad](https://github.com/sanity-io/sdk/commit/45305ad0ecc72d60ca1ccba15703bb8a0a6a53f5))
+
 ## [0.0.0-alpha.13](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.12...sdk-v0.0.0-alpha.13) (2025-03-05)
 
 

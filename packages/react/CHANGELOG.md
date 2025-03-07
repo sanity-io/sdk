@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.0-alpha.15](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.14...sdk-react-v0.0.0-alpha.15) (2025-03-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* allow multiple resources via instances ([#271](https://github.com/sanity-io/sdk/issues/271))
+
+### Features
+
+* add useProjection hook ([#257](https://github.com/sanity-io/sdk/issues/257)) ([fbaafe0](https://github.com/sanity-io/sdk/commit/fbaafe031e235f61b9d60bf5938f18a4683aafe5))
+* allow multiple resources via instances ([#271](https://github.com/sanity-io/sdk/issues/271)) ([6f4d541](https://github.com/sanity-io/sdk/commit/6f4d5410671e8b75759e33380464656a8c961ad6))
+* redirect to core if app opened without core ([#268](https://github.com/sanity-io/sdk/issues/268)) ([3f6bb83](https://github.com/sanity-io/sdk/commit/3f6bb8344cee6d582aaee0d7ba64b9cb3035469f))
+
 ## [0.0.0-alpha.14](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.13...sdk-react-v0.0.0-alpha.14) (2025-03-05)
 
 
