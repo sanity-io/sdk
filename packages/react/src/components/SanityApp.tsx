@@ -40,20 +40,20 @@ const CORE_URL = 'https://core.sanity.io'
  *
  * // Or multiple project configurations
  * const multipleConfigs = [
+ *   // Configuration for your main project. This will be used as the default project for all hooks if no resource ID override is provided.
  *   {
  *     projectId: 'marketing-website-project',
  *     dataset: 'production',
- *     // Configuration for your main project. This will be used as the default project for all hooks if no resource override is provided.
  *   },
+ *   // Configuration for a separate blog project
  *   {
  *     projectId: 'blog-project',
  *     dataset: 'production',
- *     // Configuration for a separate blog project
  *   },
+ *   // Configuration for a separate ecommerce project
  *   {
  *     projectId: 'ecommerce-project',
  *     dataset: 'production',
- *     // Configuration for a separate ecommerce project
  *   }
  * ]
  *
