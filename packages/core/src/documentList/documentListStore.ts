@@ -16,7 +16,7 @@ import {subscribeToStateAndFetchResults} from './subscribeToStateAndFetchResults
  * @public
  */
 export interface DocumentListOptions {
-  /** The resourceId of the Sanity instance to use for this list in the format of `projectId.dataset` if resourceId is not provided, the default project and dataset will be used */
+  /** The resourceId of the Sanity instance to use for this list in the format of `projectId.dataset`. If `resourceId` is not provided, the default project and dataset from your `SanityApp` configuration will be used */
   resourceId?: ResourceId
   /** GROQ filter expression to query specific documents */
   filter?: string
