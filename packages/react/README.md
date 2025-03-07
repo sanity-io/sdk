@@ -13,6 +13,8 @@ React hooks for creating Sanity applications.
 npm i @sanity/sdk-react @sanity/sdk
 ```
 
+> 💡 Looking to build a Sanity application? Check out the [Quick Start](#quick-start) section.
+
 ## 📚 SDK Documentation
 
 See the [SDK Documentation](https://sdk-docs.sanity.dev) for more information.
@@ -21,17 +23,17 @@ See the [SDK Documentation](https://sdk-docs.sanity.dev) for more information.
 
 Here's how to implement your Sanity application:
 
-1. Create a new Vite React TypeScript project
+1. Create a new React TypeScript project using the Sanity template
 
 ```bash
-npm create vite@latest my-content-os-app -- --template react-ts -y
+pnpx sanity@latest init --template core-app
 cd my-content-os-app
 ```
 
-2. Install Sanity dependencies
+2. Install dependencies
 
 ```bash
-npm i @sanity/sdk-react @sanity/sdk
+npm i
 ```
 
 3. Run the app
@@ -40,10 +42,10 @@ npm i @sanity/sdk-react @sanity/sdk
 npm run dev
 ```
 
-4. In another terminal, run the Sanity CoreUI
+4. Open the App in Sanity Dashboard with your organization ID
 
-```bash
-npx @sanity/os-cli run --url=http://localhost:5173/
+```
+https://core.sanity.io/<your-organization-id>?dev=localhost:5173
 ```
 
 5. Overwrite the `src/App.tsx` file with the following code:
