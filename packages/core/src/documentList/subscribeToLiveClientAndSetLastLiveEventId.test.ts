@@ -31,7 +31,7 @@ describe('subscribeToLiveClientAndSetLastLiveEventId', () => {
 
     state = createResourceState<DocumentListState>({
       limit: 25,
-      options: {perspective: 'previewDrafts'},
+      options: {perspective: 'drafts'},
       results: [],
       syncTags: [],
       isPending: false,

@@ -29,7 +29,7 @@ describe('documentListStore', () => {
     state = createResourceState<DocumentListState>(
       {
         limit: PAGE_SIZE,
-        options: {perspective: 'previewDrafts'},
+        options: {perspective: 'drafts'},
         results: [],
         syncTags: [],
         isPending: false,
@@ -83,7 +83,7 @@ describe('documentListStore', () => {
 
       await expect(statePromise).resolves.toMatchObject({
         options: {
-          perspective: 'previewDrafts',
+          perspective: 'drafts',
           filter: '_type == "testType"',
         },
       })
@@ -99,7 +99,7 @@ describe('documentListStore', () => {
 
       await expect(statePromise).resolves.toMatchObject({
         options: {
-          perspective: 'previewDrafts',
+          perspective: 'drafts',
           sort: [{field: '_createdAt', direction: 'asc'}],
         },
       })

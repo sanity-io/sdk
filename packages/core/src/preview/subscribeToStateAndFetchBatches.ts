@@ -70,7 +70,7 @@ export const subscribeToStateAndFetchBatches = createInternalAction(
               .fetch<PreviewQueryResult[]>(query, params, {
                 filterResponse: false,
                 returnQuery: false,
-                perspective: 'raw',
+                perspective: 'drafts',
                 tag: PREVIEW_TAG,
                 lastLiveEventId,
               })
