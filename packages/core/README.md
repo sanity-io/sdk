@@ -7,20 +7,20 @@
 
 Core utilities for creating Sanity applications.
 
-## Installation
+## 💻 Installation
 
 ```bash
 npm i @sanity/sdk
 ```
 
-## SDK Documentation
+## 📚 SDK Documentation
 
 See the [SDK Documentation](https://sdk-docs.sanity.dev) for more information.
 
-## Implementations
+## 🧑‍💻 Implementations
 
 - [React](https://www.npmjs.com/package/@sanity/sdk-react)
 
-## License
+## 📄 License
 
 MIT © Sanity.io

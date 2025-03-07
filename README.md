@@ -5,37 +5,18 @@
   <h1 align="center">Sanity SDK</h1>
 </p>
 
-## 💻 About
-
 The Sanity SDK is a bundle of wrappers, helpers, optimizations, and best practices that builds on the existing Sanity client and Live Content API.
 
 The Sanity SDK contains the objects you need to build the user interface for a Sanity Content OS app. In addition to drawing windows, buttons, panels, and text fields, it handles all the event management and interaction between your app, people, and the Sanity platform.
 
-## 🧰 Development
+## 📚 Package READMEs
 
-1. Install dependencies
+- [SDK React](./packages/react/README.md)
+- [SDK Core](./packages/core/README.md)
 
-```bash
-pnpm install
-```
+## 📦 Packages
 
-2. Run the build script
-
-```bash
-pnpm build
-```
-
-3. Run the test script
-
-```bash
-pnpm test
-```
-
-## 🎨 Storybook
-
-We use Storybook for visually testing presentational components and exercising their functionality with hardcoded data.
-
-```bash
-pnpm install
-pnpm dev:storybook
-```
+- `@sanity/sdk-react`: React-specific functionality for building Sanity SDK apps
+  - https://www.npmjs.com/package/@sanity/sdk-react
+- `@sanity/sdk-core`: Core functionality for building Sanity SDK apps
+  - https://www.npmjs.com/package/@sanity/sdk-core
