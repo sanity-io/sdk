@@ -44,7 +44,23 @@
       "semanticCommitType": "chore"
     },
     {
+      "group": {"semanticCommitType": "chore"},
+      "matchDepTypes": [
+        "dependencies",
+        "devDependencies",
+        "engines",
+        "optionalDependencies",
+        "peerDependencies"
+      ],
+      "matchManagers": ["npm"],
+      "semanticCommitType": "chore",
+      "description": "Group all dependencies from the app directory",
+      "matchFileNames": ["apps/**/package.json"],
+      "groupName": "App dependencies"
+    },
+    {
       "matchDepTypes": ["dependencies", "peerDependencies"],
+      "rangeStrategy": "bump",
       "semanticCommitType": "fix"
     }
   ]
