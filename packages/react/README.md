@@ -7,31 +7,46 @@
 
 React hooks for creating Sanity applications.
 
-## Installation
+## 💻 Installation
 
 ```bash
 npm i @sanity/sdk-react @sanity/sdk
 ```
 
-## SDK Documentation
+## 📚 SDK Documentation
 
 See the [SDK Documentation](https://sdk-docs.sanity.dev) for more information.
 
-## Quick Start
+## 🚀 Quick Start
 
 Here's how to implement your Sanity application:
 
+1. Create a new Vite React TypeScript project
+
 ```bash
-# Create a new Vite React TypeScript project
 npm create vite@latest my-content-os-app -- --template react-ts -y
 cd my-content-os-app
-# Install Sanity dependencies
+```
+
+2. Install Sanity dependencies
+
+```bash
 npm i @sanity/sdk-react @sanity/sdk
-# Run the app
+```
+
+3. Run the app
+
+```bash
 npm run dev
-# In another terminal, run the Sanity CoreUI
+```
+
+4. In another terminal, run the Sanity CoreUI
+
+```bash
 npx @sanity/os-cli run --url=http://localhost:5173/
 ```
+
+5. Overwrite the `src/App.tsx` file with the following code:
 
 ```tsx
 // src/App.tsx
@@ -41,19 +56,16 @@ import {useCurrentUser, useLogOut} from '@sanity/sdk-react/hooks'
 
 import './App.css'
 
-const sanityConfig: SanityConfig = {
-  projectId: '<your-project-id>',
-  dataset: '<your-dataset>',
-  // optional auth config set projectId and dataset to '' and authScope to 'global' for a global token
-  // auth: {
-  //   authScope: 'global',
-  //   ...
-  // },
-}
+const sanityConfig: SanityConfigs = [
+  {
+    projectId: '<your-project-id>',
+    dataset: '<your-dataset>',
+  },
+]
 
 export function App(): JSX.Element {
   return (
-    <SanityApp sanityConfig={sanityConfig}>
+    <SanityApp sanityConfigs={sanityConfigs}>
       <MyApp />
     </SanityApp>
   )
@@ -73,6 +85,8 @@ function MyApp() {
 
 export default App
 ```
+
+6. Overwrite the `src/App.css` file with the following code:
 
 ```css
 /* src/App.css */
@@ -133,19 +147,6 @@ export default App
 .sc-login-footer__link a {
   font-size: 0.9rem;
 }
-```
-
-## TypeScript Support
-
-This package includes TypeScript definitions. You can import types like:
-
-```tsx
-import type {
-  SanityProviderProps,
-  AuthBoundaryProps,
-  LoginLayoutProps,
-  LoginErrorProps,
-} from '@sanity/react'
 ```
 
 ## License
