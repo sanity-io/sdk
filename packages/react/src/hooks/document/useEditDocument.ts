@@ -79,7 +79,7 @@ export function useEditDocument<
  * ## useEditDocument(doc)
  * Edit an entire document
  * @param doc - The document to be edited; either as a document handle or the document’s ID a string. If you pass a `DocumentHandle` with a `resourceId` (in the format of `document:projectId.dataset:documentId`)
- * the document will be read from the specified Sanity project and dataset that is included in the handle. If no `resourceId` is provided, the default project and dataset will be used.
+ * the document will be read from the specified Sanity project and dataset that is included in the handle. If no `resourceId` is provided, the default project and dataset from your `SanityApp` configuration will be used.
  * @returns A function to update the document state. Accepts either a new document state, or an updater function that exposes the previous document state and returns the new document state.
  * @example
  * ```
