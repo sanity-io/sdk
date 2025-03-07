@@ -12,7 +12,7 @@ jobs:
         uses: LoveToKnow/slackify-markdown-action@698a1d4d0ff1794152a93c03ee8ca5e03a310d4e # v1.1.1
         id: releasemarkdown
         with:
-          text: "*Notes:*\n${{ github.event.release.body }}"
+          text: "## Notes:\n${{ github.event.release.body }}"
       - name: Send release notes to Slack
         uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
         with:
@@ -32,4 +32,4 @@ jobs:
               - type: section
                 text:
                   type: mrkdwn
-                  text: ${{steps.releasemarkdown.outputs.text}}
+                  text: "${{steps.releasemarkdown.outputs.text}}"
