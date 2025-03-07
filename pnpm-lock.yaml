@@ -300,7 +300,7 @@ importers:
   packages/core:
     dependencies:
       '@sanity/client':
-        specifier: ^6.28.1
+        specifier: ^6.28.3
         version: 6.28.3
       '@sanity/comlink':
         specifier: ^2.0.2
