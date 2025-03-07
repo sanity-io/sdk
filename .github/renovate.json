@@ -8,22 +8,27 @@
       "token": "{{ secrets.SANITY_NPM_TOKEN }}"
     }
   ],
-  "commitMessagePrefix": "fix(deps):",
   "packageRules": [
     {
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["patch", "minor"],
-      "groupName": "devDependencies (non-major)"
+      "groupName": "devDependencies (non-major)",
+      "group": {"semanticCommitType": "chore"},
+      "semanticCommitType": "chore"
     },
     {
       "description": "Group TypeScript related deps in a single PR, as they often have to update together",
       "groupName": "typescript-tooling",
-      "matchPackageNames": ["@sanity/pkg-utils", "@sanity/tsdoc", "typescript"]
+      "matchPackageNames": ["@sanity/pkg-utils", "@sanity/tsdoc", "typescript"],
+      "group": {"semanticCommitType": "chore"},
+      "semanticCommitType": "chore"
     },
     {
       "description": "Group storybook related deps in a single PR, as they often have to update together",
       "groupName": "storybook-tooling",
-      "matchPackageNames": ["@storybook/*", "storybook"]
+      "matchPackageNames": ["@storybook/*", "storybook"],
+      "group": {"semanticCommitType": "chore"},
+      "semanticCommitType": "chore"
     },
     {
       "description": "Group eslint related deps in a single PR, as they often have to update together",
@@ -34,7 +39,13 @@
         "eslint-plugin-*",
         "eslint-config-*",
         "typescript-eslint"
-      ]
+      ],
+      "group": {"semanticCommitType": "chore"},
+      "semanticCommitType": "chore"
+    },
+    {
+      "matchDepTypes": ["dependencies", "peerDependencies"],
+      "semanticCommitType": "fix"
     }
   ]
 }
