@@ -1,5 +1,5 @@
 import {Card, CardProps} from '@sanity/ui'
-import {forwardRef, JSX, PropsWithChildren, Ref} from 'react'
+import {CSSProperties, forwardRef, JSX, PropsWithChildren, Ref} from 'react'
 
 const trStyle = {display: 'table-row'} as const
 const tdStyle = {display: 'table-cell'} as const
@@ -47,12 +47,12 @@ export const TH = forwardRef(function TH(
 })
 
 export const Table = forwardRef(function Table(
-  props: PropsWithChildren<CardProps>,
+  props: PropsWithChildren<CardProps & {style?: CSSProperties}>,
   ref: Ref<HTMLTableElement>,
 ): JSX.Element {
-  const {children, ...rest} = props
+  const {children, style, ...rest} = props
   return (
-    <Card {...rest} style={tableStyle} as="table" ref={ref}>
+    <Card {...rest} style={{...tableStyle, ...style}} as="table" ref={ref}>
       {children}
     </Card>
   )
