@@ -10,6 +10,7 @@ import {isInIframe, isLocalUrl} from './utils'
 export interface SanityAppProps {
   sanityConfigs: SanityConfig[]
   children: React.ReactNode
+  fallback: React.ReactNode
 }
 
 const CORE_URL = 'https://core.sanity.io'
@@ -66,7 +67,7 @@ const CORE_URL = 'https://core.sanity.io'
  * }
  * ```
  */
-export function SanityApp({sanityConfigs, children}: SanityAppProps): ReactElement {
+export function SanityApp({sanityConfigs, children, fallback}: SanityAppProps): ReactElement {
   const [_sanityConfigs, setSanityConfigs] = useState<SanityConfig[]>(sanityConfigs)
 
   useEffect(() => {
@@ -94,5 +95,9 @@ export function SanityApp({sanityConfigs, children}: SanityAppProps): ReactEleme
     return () => clearTimeout(timeout)
   }, [sanityConfigs])
 
-  return <SDKProvider sanityConfigs={_sanityConfigs}>{children}</SDKProvider>
+  return (
+    <SDKProvider sanityConfigs={_sanityConfigs} fallback={fallback}>
+      {children}
+    </SDKProvider>
+  )
 }

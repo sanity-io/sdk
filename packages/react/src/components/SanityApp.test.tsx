@@ -1,6 +1,6 @@
 import {AuthStateType, type SanityConfig} from '@sanity/sdk'
 import {render, screen} from '@testing-library/react'
-import {describe, expect, it} from 'vitest'
+import {describe, expect, it, vi} from 'vitest'
 
 import {SanityApp} from './SanityApp'
 
@@ -44,7 +44,7 @@ describe('SanityApp', () => {
   it('renders children correctly', async () => {
     const testMessage = 'Test Child Component'
     render(
-      <SanityApp sanityConfigs={[mockSanityConfig]}>
+      <SanityApp sanityConfigs={[mockSanityConfig]} fallback={<div>Fallback</div>}>
         <div>{testMessage}</div>
       </SanityApp>,
     )
@@ -68,7 +68,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp sanityConfigs={[mockSanityConfig]}>
+      <SanityApp sanityConfigs={[mockSanityConfig]} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
@@ -104,7 +104,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp sanityConfigs={[mockSanityConfig]}>
+      <SanityApp sanityConfigs={[mockSanityConfig]} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
@@ -136,7 +136,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp sanityConfigs={[mockSanityConfig]}>
+      <SanityApp sanityConfigs={[mockSanityConfig]} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )

@@ -1,4 +1,5 @@
 import {SanityApp} from '@sanity/sdk-react/components'
+import {Spinner} from '@sanity/ui'
 import {type JSX} from 'react'
 import {Route, Routes} from 'react-router'
 
@@ -86,7 +87,10 @@ export function AppRoutes(): JSX.Element {
         path="/sanity-app"
         index
         element={
-          <SanityApp sanityConfigs={[{projectId: 'ppsg7ml5', dataset: 'test'}]}>
+          <SanityApp
+            sanityConfigs={[{projectId: 'ppsg7ml5', dataset: 'test'}]}
+            fallback={<Spinner />}
+          >
             <div>Welcome to the Sanity App</div>
           </SanityApp>
         }
