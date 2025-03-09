@@ -39,7 +39,7 @@ describe('SDKProvider', () => {
 
   it('creates a Sanity instance with the provided config', () => {
     render(
-      <SDKProvider sanityConfigs={[mockConfig]}>
+      <SDKProvider sanityConfigs={[mockConfig]} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SDKProvider>,
     )
@@ -49,7 +49,7 @@ describe('SDKProvider', () => {
 
   it('renders children within SanityProvider and AuthBoundary', () => {
     const {getByText, getByTestId} = render(
-      <SDKProvider sanityConfigs={[mockConfig]}>
+      <SDKProvider sanityConfigs={[mockConfig]} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SDKProvider>,
     )
@@ -66,7 +66,7 @@ describe('SDKProvider', () => {
 
   it('passes the created Sanity instance to SanityProvider', () => {
     const {getByTestId} = render(
-      <SDKProvider sanityConfigs={[mockConfig]}>
+      <SDKProvider sanityConfigs={[mockConfig]} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SDKProvider>,
     )

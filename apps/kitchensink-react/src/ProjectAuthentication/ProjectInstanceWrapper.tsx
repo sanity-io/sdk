@@ -1,4 +1,5 @@
 import {SDKProvider} from '@sanity/sdk-react/components'
+import {Spinner} from '@sanity/ui'
 import {type JSX} from 'react'
 import {Outlet} from 'react-router'
 
@@ -19,7 +20,7 @@ const sanityConfigs = [
 
 export function ProjectInstanceWrapper(): JSX.Element {
   return (
-    <SDKProvider sanityConfigs={sanityConfigs}>
+    <SDKProvider sanityConfigs={sanityConfigs} fallback={<Spinner />}>
       <Outlet />
     </SDKProvider>
   )
