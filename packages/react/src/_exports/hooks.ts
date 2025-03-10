@@ -29,6 +29,16 @@ export {type DocumentHandleCollection} from '../hooks/documentCollection/types'
 export {useDocuments} from '../hooks/documentCollection/useDocuments'
 export {type SearchOptions, useSearch} from '../hooks/documentCollection/useSearch'
 export {
+  type InfiniteList,
+  type InfiniteListOptions,
+  useInfiniteList,
+} from '../hooks/infiniteList/useInfiniteList'
+export {
+  type PaginatedList,
+  type PaginatedListOptions,
+  usePaginatedList,
+} from '../hooks/paginatedList/usePaginatedList'
+export {
   usePreview,
   type UsePreviewOptions,
   type UsePreviewResults,
@@ -36,6 +46,7 @@ export {
 export {useProjection} from '../hooks/projection/useProjection'
 export {useProject} from '../hooks/projects/useProject'
 export {type ProjectWithoutMembers, useProjects} from '../hooks/projects/useProjects'
+export {useQuery} from '../hooks/query/useQuery'
 export {useUsers, type UseUsersParams, type UseUsersResult} from '../hooks/users/useUsers'
 export {type DatasetsResponse, type SanityProject, type SanityProjectMember} from '@sanity/client'
 export {type CurrentUser, type DocumentHandle} from '@sanity/sdk'

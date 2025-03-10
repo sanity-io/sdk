@@ -2,6 +2,7 @@ import {type ClientConfig, createClient, type SanityClient} from '@sanity/client
 import {createSelector} from 'reselect'
 
 import {getTokenState} from '../auth/authStore'
+import {type ResourceId} from '../document/patchOperations'
 import {type SanityInstance} from '../instance/types'
 import {type ActionContext, createAction, createInternalAction} from '../resources/createAction'
 import {createResource, type Resource} from '../resources/createResource'
@@ -45,6 +46,11 @@ export interface ClientOptions extends ClientConfig {
    * A required string indicating the API version for the client.
    */
   apiVersion: string
+
+  /**
+   * A resource identifier for a document, in the format of `projectId.dataset`
+   */
+  resourceId?: ResourceId
 }
 
 const clientStore: Resource<ClientState> = createResource({
