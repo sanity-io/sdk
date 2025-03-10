@@ -4,7 +4,7 @@ type WindowWithEnv = Window &
     ENV?: Record<string, unknown>
   }
 
-type KnownEnvVar = 'DEV'
+type KnownEnvVar = 'DEV' | 'PKG_VERSION'
 
 export function getEnv(key: KnownEnvVar): unknown {
   if (typeof import.meta !== 'undefined' && import.meta.env) {
