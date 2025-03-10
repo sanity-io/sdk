@@ -72,7 +72,7 @@ export const subscribeToStateAndFetchBatches = createInternalAction(
               .fetch<ProjectionQueryResult[]>(query, params, {
                 filterResponse: false,
                 returnQuery: false,
-                perspective: 'raw',
+                perspective: 'drafts',
                 tag: PROJECTION_TAG,
                 lastLiveEventId,
               })
