@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.0.0-alpha.15](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.14...sdk-v0.0.0-alpha.15) (2025-03-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove `useDocuments` and `useSearch` hooks
+
+### Features
+
+* add `useQuery`, `useInfiniteList`, `usePaginatedList` hooks ([1a3f4ad](https://github.com/sanity-io/sdk/commit/1a3f4ad98abf2ab68c552fea20d60639462f3aac))
+* add versions information to all packages ([#275](https://github.com/sanity-io/sdk/issues/275)) ([afb2fec](https://github.com/sanity-io/sdk/commit/afb2fec63ea3bae53cab9d8f05081daf2f3c2733))
+* **document hooks:** update the documentation for the Document hook s an optional resourceId ([#280](https://github.com/sanity-io/sdk/issues/280)) ([eb65378](https://github.com/sanity-io/sdk/commit/eb65378c884f3aaf9b2c0dbc95dd86075c76f9e0))
+* remove `useDocuments` and `useSearch` hooks ([9f37daf](https://github.com/sanity-io/sdk/commit/9f37daf1243ee0fda558ffd7259c45da9e4ba259))
+
+
+### Bug Fixes
+
+* **core:** add correct perspective to useProjection ([#295](https://github.com/sanity-io/sdk/issues/295)) ([8792e00](https://github.com/sanity-io/sdk/commit/8792e00db7f5f5926e5c311e5cf0bf74bc78f041))
+* **core:** determine env for version ([#293](https://github.com/sanity-io/sdk/issues/293)) ([643eac4](https://github.com/sanity-io/sdk/commit/643eac4c69c117c7b08866afb1f92b32010c9a83))
+* **deps:** update dependency @sanity/client to ^6.28.3 ([#287](https://github.com/sanity-io/sdk/issues/287)) ([fc5c5a1](https://github.com/sanity-io/sdk/commit/fc5c5a1fd54bca5b7b7138e4cab49113449eebe2))
+* **deps:** update dependency @sanity/comlink to v3 ([#296](https://github.com/sanity-io/sdk/issues/296)) ([14fbe1b](https://github.com/sanity-io/sdk/commit/14fbe1b89a79d2532e8735a58abbe4a5cff6d635))
+* **deps:** Update sanity monorepo to ^3.78.1 ([#297](https://github.com/sanity-io/sdk/issues/297)) ([835b594](https://github.com/sanity-io/sdk/commit/835b5942d3870a92e0fd1387ab9baa5e555a3ee5))
+
 ## [0.0.0-alpha.14](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.13...sdk-v0.0.0-alpha.14) (2025-03-07)
 
 
