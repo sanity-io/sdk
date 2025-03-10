@@ -19,10 +19,6 @@ export {type ClientOptions, getClient, getClientState} from '../client/clientSto
 // Types
 export type {ClientState} from '../client/clientStore'
 
-/** DOCUMENT LIST */
-export type {DocumentListOptions, DocumentListState} from '../documentList/documentListStore'
-export {createDocumentListStore} from '../documentList/documentListStore'
-
 /** AUTH */
 export {AuthStateType} from '../auth/authStateType'
 export {

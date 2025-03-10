@@ -1,6 +1,6 @@
 import {omit} from 'lodash-es'
 
-import {type DocumentHandle} from '../documentList/documentListStore'
+import {type DocumentHandle} from '../document/patchOperations'
 import {createAction} from '../resources/createAction'
 import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
 import {getPublishedId, insecureRandomId} from '../utils/ids'
@@ -13,7 +13,7 @@ import {
 import {STABLE_EMPTY_PREVIEW} from './util'
 
 /**
- * @public
+ * @beta
  */
 export interface GetPreviewStateOptions {
   document: DocumentHandle
@@ -25,7 +25,7 @@ const _getPreviewState = createStateSourceAction(
 )
 
 /**
- * @public
+ * @beta
  */
 export const getPreviewState = createAction(previewStore, ({state}) => {
   return function ({document}: GetPreviewStateOptions): StateSource<ValuePending<PreviewValue>> {

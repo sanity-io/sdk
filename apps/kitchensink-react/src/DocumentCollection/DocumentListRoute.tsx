@@ -1,4 +1,4 @@
-import {useDocuments} from '@sanity/sdk-react/hooks'
+import {useInfiniteList} from '@sanity/sdk-react/hooks'
 import {Box, Heading} from '@sanity/ui'
 import {type JSX} from 'react'
 
@@ -7,9 +7,9 @@ import {DocumentPreview} from './DocumentPreview'
 import {LoadMore} from './LoadMore'
 
 export function DocumentListRoute(): JSX.Element {
-  const {isPending, results, hasMore, loadMore} = useDocuments({
+  const {isPending, data, hasMore, loadMore} = useInfiniteList({
     filter: '_type == "book"',
-    sort: [{field: '_updatedAt', direction: 'desc'}],
+    orderings: [{field: '_updatedAt', direction: 'desc'}],
   })
 
   return (
@@ -19,7 +19,7 @@ export function DocumentListRoute(): JSX.Element {
       </Heading>
       <Box paddingY={5}>
         <DocumentListLayout>
-          {results.map((doc) => (
+          {data.map((doc) => (
             <DocumentPreview key={doc._id} document={doc} />
           ))}
           <LoadMore hasMore={hasMore} isPending={isPending} onLoadMore={loadMore} />

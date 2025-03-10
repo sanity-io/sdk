@@ -1,4 +1,4 @@
-import {useDocuments} from '@sanity/sdk-react/hooks'
+import {useInfiniteList} from '@sanity/sdk-react/hooks'
 import {Box, Button, Heading} from '@sanity/ui'
 import {type JSX} from 'react'
 
@@ -6,10 +6,9 @@ import {DocumentGridLayout} from '../components/DocumentGridLayout/DocumentGridL
 import {DocumentPreview} from './DocumentPreview'
 
 export function DocumentGridRoute(): JSX.Element {
-  const {isPending, results, hasMore, loadMore} = useDocuments({
-    resourceId: 'ppsg7ml5.test',
+  const {isPending, data, hasMore, loadMore} = useInfiniteList({
     filter: '_type == "author"',
-    sort: [{field: 'name', direction: 'asc'}],
+    orderings: [{field: 'name', direction: 'asc'}],
   })
 
   return (
@@ -19,7 +18,7 @@ export function DocumentGridRoute(): JSX.Element {
       </Heading>
       <Box paddingY={5}>
         <DocumentGridLayout>
-          {results.map((doc) => (
+          {data.map((doc) => (
             <DocumentPreview key={doc._id} document={doc} />
           ))}
         </DocumentGridLayout>
