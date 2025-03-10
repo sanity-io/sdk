@@ -1,5 +1,6 @@
 import {DocumentHandle, SanityDocument} from '@sanity/sdk'
-import {useDocument} from '@sanity/sdk-react/hooks'
+import {useDocument, useEditDocument} from '@sanity/sdk-react/hooks'
+import {TextInput} from '@sanity/ui'
 import {JSX} from 'react'
 
 export function MultiResourceRoute(): JSX.Element {
@@ -44,6 +45,9 @@ export function MultiResourceRoute(): JSX.Element {
     resourceId: 'document:ezwd8xes.production:acc11e96-1a01-4907-bd0e-e8347217cf2f',
   }
 
+  const setAuthorName = useEditDocument(doc, 'name')
+  const setDogName = useEditDocument(doc2, 'name')
+
   const author = useDocument(doc)
   const dog = useDocument(doc2)
 
@@ -77,6 +81,12 @@ export function MultiResourceRoute(): JSX.Element {
             View in Studio →
           </a>
           <h3 style={{fontSize: '1.5rem', marginBottom: '0.5rem'}}>{author?.name}</h3>
+          <TextInput
+            label="Name"
+            type="text"
+            value={author?.name}
+            onChange={(e) => setAuthorName(e.currentTarget.value)}
+          />
           {author?.role && <p style={{color: '#fff', marginBottom: '1rem'}}>Role: {author.role}</p>}
           {author?.awards && author.awards.length > 0 && (
             <div>
@@ -114,6 +124,12 @@ export function MultiResourceRoute(): JSX.Element {
           </a>
 
           <h3 style={{fontSize: '1.5rem', marginBottom: '0.5rem'}}>{dog?.name}</h3>
+          <TextInput
+            label="Name"
+            type="text"
+            value={dog?.name}
+            onChange={(e) => setDogName(e.currentTarget.value)}
+          />
           <div style={{color: '#444', marginBottom: '1rem'}}>
             {dog?.age && <p>Age: {dog.age}</p>}
             {dog?.color && <p>Color: {dog.color}</p>}
