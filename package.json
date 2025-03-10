@@ -24,6 +24,7 @@
     "clean": "run-s clean:build clean:deps",
     "clean:build": "turbo run clean",
     "clean:deps": "rimraf packages/*/node_modules apps/*/node_modules node_modules",
+    "dev": "pnpm dev:kitchensink",
     "dev:kitchensink": "turbo run dev --filter=@sanity/kitchensink-react",
     "dev:storybook": "turbo run dev --filter={@sanity/storybook,@sanity/sdk,@sanity/sdk-react} --parallel",
     "format": "prettier --write --cache --ignore-unknown .",
