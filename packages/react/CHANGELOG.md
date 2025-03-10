@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.0.0-alpha.16](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.15...sdk-react-v0.0.0-alpha.16) (2025-03-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove `useDocuments` and `useSearch` hooks
+
+### Features
+
+* add `useQuery`, `useInfiniteList`, `usePaginatedList` hooks ([1a3f4ad](https://github.com/sanity-io/sdk/commit/1a3f4ad98abf2ab68c552fea20d60639462f3aac))
+* add suspense boundary to prevent recreating instances ([d92e38d](https://github.com/sanity-io/sdk/commit/d92e38d64dfe5c0a35d8de35faa7ecbe5425f023))
+* add versions information to all packages ([#275](https://github.com/sanity-io/sdk/issues/275)) ([afb2fec](https://github.com/sanity-io/sdk/commit/afb2fec63ea3bae53cab9d8f05081daf2f3c2733))
+* **document hooks:** update the documentation for the Document hook s an optional resourceId ([#280](https://github.com/sanity-io/sdk/issues/280)) ([eb65378](https://github.com/sanity-io/sdk/commit/eb65378c884f3aaf9b2c0dbc95dd86075c76f9e0))
+* remove `useDocuments` and `useSearch` hooks ([9f37daf](https://github.com/sanity-io/sdk/commit/9f37daf1243ee0fda558ffd7259c45da9e4ba259))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/comlink to v3 ([#296](https://github.com/sanity-io/sdk/issues/296)) ([14fbe1b](https://github.com/sanity-io/sdk/commit/14fbe1b89a79d2532e8735a58abbe4a5cff6d635))
+* **deps:** Update sanity monorepo to ^3.78.1 ([#297](https://github.com/sanity-io/sdk/issues/297)) ([835b594](https://github.com/sanity-io/sdk/commit/835b5942d3870a92e0fd1387ab9baa5e555a3ee5))
+* handle env variable for react and react-internal ([#294](https://github.com/sanity-io/sdk/issues/294)) ([0b733ff](https://github.com/sanity-io/sdk/commit/0b733ffbe00bbcb8c29fbee6628ba53c704e1c11))
+
 ## [0.0.0-alpha.15](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.14...sdk-react-v0.0.0-alpha.15) (2025-03-07)
 
 
