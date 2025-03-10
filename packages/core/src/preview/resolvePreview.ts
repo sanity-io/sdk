@@ -1,17 +1,17 @@
-import {type DocumentHandle} from '../documentList/documentListStore'
+import {type DocumentHandle} from '../document/patchOperations'
 import {createAction} from '../resources/createAction'
 import {getPreviewState} from './getPreviewState'
 import {previewStore, type PreviewValue, type ValuePending} from './previewStore'
 
 /**
- * @public
+ * @beta
  */
 export interface ResolvePreviewOptions {
   document: DocumentHandle
 }
 
 /**
- * @public
+ * @beta
  */
 export const resolvePreview = createAction(previewStore, () => {
   return function ({document}: ResolvePreviewOptions) {

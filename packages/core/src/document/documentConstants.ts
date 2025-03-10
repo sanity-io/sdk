@@ -7,3 +7,4 @@
  */
 export const DOCUMENT_STATE_CLEAR_DELAY = 1000
 export const INITIAL_OUTGOING_THROTTLE_TIME = 1000
+export const API_VERSION = 'vX'
