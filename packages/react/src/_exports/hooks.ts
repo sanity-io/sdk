@@ -27,15 +27,16 @@ export {useEditDocument} from '../hooks/document/useEditDocument'
 export {usePermissions} from '../hooks/document/usePermissions'
 export {type DocumentHandleCollection} from '../hooks/documentCollection/types'
 export {useDocuments} from '../hooks/documentCollection/useDocuments'
-export {useSearch} from '../hooks/documentCollection/useSearch'
+export {type SearchOptions, useSearch} from '../hooks/documentCollection/useSearch'
 export {
   usePreview,
   type UsePreviewOptions,
   type UsePreviewResults,
 } from '../hooks/preview/usePreview'
-export {useProject} from '../hooks/projects/useProject'
-export {useProjects} from '../hooks/projects/useProjects'
-export {useUsers, type UseUsersParams, type UseUsersResult} from '../hooks/users/useUsers'
 export {useProjection} from '../hooks/projection/useProjection'
+export {useProject} from '../hooks/projects/useProject'
+export {type ProjectWithoutMembers, useProjects} from '../hooks/projects/useProjects'
+export {useUsers, type UseUsersParams, type UseUsersResult} from '../hooks/users/useUsers'
+export {type DatasetsResponse, type SanityProject, type SanityProjectMember} from '@sanity/client'
 export {type CurrentUser, type DocumentHandle} from '@sanity/sdk'
 export {type SanityDocument} from '@sanity/types'

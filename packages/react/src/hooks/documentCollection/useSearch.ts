@@ -4,7 +4,12 @@ import {useMemo} from 'react'
 import {type DocumentHandleCollection} from './types'
 import {useDocuments} from './useDocuments'
 
-interface SearchOptions extends DocumentListOptions {
+/**
+ * @public
+ * @category Types
+ */
+export interface SearchOptions extends DocumentListOptions {
+  /** The string to search the selected documents for */
   query?: string
 }
 
@@ -12,6 +17,7 @@ interface SearchOptions extends DocumentListOptions {
  * @public
  * Hook for searching documents using full-text search.
  *
+ * @category Documents
  * @param options - The options for the search.
  * @example
  * ```tsx

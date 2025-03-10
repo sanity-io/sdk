@@ -5,7 +5,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
  * @public
- * @category Users
+ * @category Types
  */
 export interface UseUsersParams {
   /**
@@ -24,7 +24,7 @@ export interface UseUsersParams {
 
 /**
  * @public
- * @category Users
+ * @category Types
  */
 export interface UseUsersResult {
   /**
