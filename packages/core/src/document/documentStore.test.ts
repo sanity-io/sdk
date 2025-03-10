@@ -793,10 +793,14 @@ vi.mock('./sharedListener.ts', () => {
   }
 })
 
-vi.mock('./documentConstants.ts', () => ({
-  INITIAL_OUTGOING_THROTTLE_TIME: 0,
-  DOCUMENT_STATE_CLEAR_DELAY: 25,
-}))
+vi.mock('./documentConstants.ts', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./documentConstants')>()
+  return {
+    ...original,
+    INITIAL_OUTGOING_THROTTLE_TIME: 0,
+    DOCUMENT_STATE_CLEAR_DELAY: 25,
+  }
+})
 
 let client: SanityClient
 

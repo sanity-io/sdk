@@ -10,9 +10,9 @@ type StateSourceFactory<TParams extends unknown[], TState> = (
 
 interface CreateStateSourceHookOptions<TParams extends unknown[], TState> {
   getState: StateSourceFactory<TParams, TState>
-  shouldSuspend: (instance: SanityInstance, ...params: TParams) => boolean
-  suspender: (instance: SanityInstance, ...params: TParams) => Promise<unknown>
-  getResourceId?: (...params: TParams) => ResourceId
+  shouldSuspend?: (instance: SanityInstance, ...params: TParams) => boolean
+  suspender?: (instance: SanityInstance, ...params: TParams) => Promise<unknown>
+  getResourceId?: (...params: TParams) => ResourceId | undefined
 }
 
 export function createStateSourceHook<TParams extends unknown[], TState>(
@@ -28,7 +28,7 @@ export function createStateSourceHook<TParams extends unknown[], TState>(
       resourceId = getResourceId(...params)
     }
     const instance = useSanityInstance(resourceId)
-    if (suspense?.shouldSuspend(instance, ...params)) {
+    if (suspense?.suspender && suspense?.shouldSuspend?.(instance, ...params)) {
       throw suspense.suspender(instance, ...params)
     }
 

@@ -9,7 +9,7 @@ export default defineConfig({
       exclude: [
         '**/*.{test,spec,stories,d}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
         'packages/core/src/_exports/index.ts',
-        'packages/core/src/document/_synchronous-groq-js.mjs',
+        '**/*/_synchronous-groq-js.mjs',
         'packages/react/src/_exports/index.ts',
         'packages/react/src/_exports/hooks.ts',
         'packages/react/src/_exports/components.ts',
