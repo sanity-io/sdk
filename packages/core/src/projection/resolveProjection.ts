@@ -1,4 +1,4 @@
-import {type DocumentHandle} from '../documentList/documentListStore'
+import {type DocumentHandle} from '../document/patchOperations'
 import {type ActionContext, createAction} from '../resources/createAction'
 import {getProjectionState} from './getProjectionState'
 import {

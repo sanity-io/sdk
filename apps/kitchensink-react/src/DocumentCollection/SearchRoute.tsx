@@ -1,4 +1,4 @@
-import {type DocumentHandle, useSearch} from '@sanity/sdk-react/hooks'
+import {type DocumentHandle, useInfiniteList} from '@sanity/sdk-react/hooks'
 import {Box, Heading, Stack, Text, TextInput} from '@sanity/ui'
 import {type JSX, useState} from 'react'
 
@@ -9,10 +9,10 @@ import {LoadMore} from './LoadMore'
 export function SearchRoute(): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('')
 
-  const {isPending, results, hasMore, loadMore, count} = useSearch({
-    query: searchQuery,
+  const {isPending, data, hasMore, loadMore, count} = useInfiniteList({
+    search: searchQuery,
     filter: '_type == "book"',
-    sort: [{field: '_updatedAt', direction: 'desc'}],
+    orderings: [{field: '_updatedAt', direction: 'desc'}],
   })
 
   return (
@@ -39,7 +39,7 @@ export function SearchRoute(): JSX.Element {
         )}
 
         <DocumentListLayout>
-          {results.map((doc: DocumentHandle) => (
+          {data.map((doc: DocumentHandle) => (
             <DocumentPreview document={doc} key={doc._id} />
           ))}
           <LoadMore hasMore={hasMore} isPending={isPending} onLoadMore={loadMore} />
