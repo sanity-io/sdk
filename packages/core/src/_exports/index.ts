@@ -128,4 +128,15 @@ export type SanityProject = _SanityProject
 
 /** DATASETS */
 export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
+
+/** QUERY */
+export {
+  getQueryKey,
+  getQueryState,
+  parseQueryKey,
+  type QueryOptions,
+  resolveQuery,
+} from '../query/queryStore'
+
+/** VERSION */
 export {CORE_SDK_VERSION} from '../version'

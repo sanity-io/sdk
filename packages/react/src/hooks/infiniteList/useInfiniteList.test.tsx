@@ -1,0 +1,152 @@
+import {act, renderHook} from '@testing-library/react'
+import {describe, vi} from 'vitest'
+
+import {evaluateSync, parse} from '../_synchronous-groq-js.mjs'
+import {useQuery} from '../query/useQuery'
+import {useInfiniteList} from './useInfiniteList'
+
+vi.mock('../query/useQuery')
+
+describe('useInfiniteList', () => {
+  beforeEach(() => {
+    const dataset = [
+      {
+        _id: 'movie1',
+        _type: 'movie',
+        title: 'The Matrix',
+        releaseYear: 1999,
+        _createdAt: '2021-03-09T00:00:00.000Z',
+        _updatedAt: '2021-03-09T00:00:00.000Z',
+        _rev: 'tx0',
+      },
+      {
+        _id: 'movie2',
+        _type: 'movie',
+        title: 'Inception',
+        releaseYear: 2010,
+        _createdAt: '2021-03-10T00:00:00.000Z',
+        _updatedAt: '2021-03-10T00:00:00.000Z',
+        _rev: 'tx1',
+      },
+      {
+        _id: 'movie3',
+        _type: 'movie',
+        title: 'Interstellar',
+        releaseYear: 2014,
+        _createdAt: '2021-03-11T00:00:00.000Z',
+        _updatedAt: '2021-03-11T00:00:00.000Z',
+        _rev: 'tx2',
+      },
+      {
+        _id: 'book1',
+        _type: 'book',
+        title: 'Dune',
+        _createdAt: '2021-03-12T00:00:00.000Z',
+        _updatedAt: '2021-03-12T00:00:00.000Z',
+        _rev: 'tx3',
+      },
+      {
+        _id: 'movie4',
+        _type: 'movie',
+        title: 'The Dark Knight',
+        releaseYear: 2008,
+        _createdAt: '2021-03-13T00:00:00.000Z',
+        _updatedAt: '2021-03-13T00:00:00.000Z',
+        _rev: 'tx4',
+      },
+      {
+        _id: 'movie5',
+        _type: 'movie',
+        title: 'Pulp Fiction',
+        releaseYear: 1994,
+        _createdAt: '2021-03-14T00:00:00.000Z',
+        _updatedAt: '2021-03-14T00:00:00.000Z',
+        _rev: 'tx5',
+      },
+    ]
+
+    vi.mocked(useQuery).mockImplementation((query, options) => {
+      const result = evaluateSync(parse(query), {dataset, params: options?.params}).get()
+      return {
+        data: result,
+        isPending: false,
+      }
+    })
+  })
+
+  it('should respect custom page size', () => {
+    const customPageSize = 2
+    const {result} = renderHook(() => useInfiniteList({pageSize: customPageSize}))
+
+    expect(result.current.data.length).toBe(customPageSize)
+  })
+
+  it('should filter by document type', () => {
+    const {result} = renderHook(() => useInfiniteList({filter: '_type == "movie"'}))
+
+    expect(result.current.data.every((doc) => doc._type === 'movie')).toBe(true)
+    expect(result.current.count).toBe(5) // 5 movies in the dataset
+  })
+
+  // groq-js doesn't support search filters yet
+  it.skip('should apply search filter', () => {
+    const {result} = renderHook(() => useInfiniteList({search: 'inter'}))
+
+    // Should match "Interstellar"
+    expect(result.current.data.some((doc) => doc._id === 'movie3')).toBe(true)
+  })
+
+  it('should apply ordering', () => {
+    const {result} = renderHook(() =>
+      useInfiniteList({
+        filter: '_type == "movie"',
+        orderings: [{field: 'releaseYear', direction: 'desc'}],
+      }),
+    )
+
+    // First item should be the most recent movie (Interstellar, 2014)
+    expect(result.current.data[0]._id).toBe('movie3')
+  })
+
+  it('should load more data when loadMore is called', () => {
+    const pageSize = 2
+    const {result} = renderHook(() => useInfiniteList({pageSize}))
+
+    expect(result.current.data.length).toBe(pageSize)
+
+    act(() => {
+      result.current.loadMore()
+    })
+
+    expect(result.current.data.length).toBe(pageSize * 2)
+  })
+
+  it('should indicate when there is more data to load', () => {
+    const {result} = renderHook(() => useInfiniteList({pageSize: 3}))
+    expect(result.current.hasMore).toBe(true)
+    // Load all remaining data
+    act(() => {
+      result.current.loadMore()
+    })
+    expect(result.current.hasMore).toBe(false)
+  })
+
+  // New test case for resetting limit when filter changes
+  it('should reset limit when filter changes', () => {
+    const {result, rerender} = renderHook((props) => useInfiniteList(props), {
+      initialProps: {pageSize: 2, filter: ''},
+    })
+    // Initially, data length equals pageSize (2)
+    expect(result.current.data.length).toBe(2)
+    // Load more to increase limit
+    act(() => {
+      result.current.loadMore()
+    })
+    // After loadMore, data length should be increased (2 + 2 = 4)
+    expect(result.current.data.length).toBe(4)
+    // Now update filter to trigger resetting the limit
+    rerender({pageSize: 2, filter: '_type == "movie"'})
+    // With the filter applied, the limit is reset to pageSize (i.e. 2)
+    expect(result.current.data.length).toBe(2)
+  })
+})

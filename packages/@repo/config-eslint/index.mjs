@@ -109,4 +109,5 @@ export default [
       '@typescript-eslint/no-unused-vars': 'off',
     },
   },
+  {ignores: ['**/_synchronous-groq-js.mjs']},
 ]

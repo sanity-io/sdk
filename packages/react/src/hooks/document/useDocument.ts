@@ -5,7 +5,6 @@ import {
   type JsonMatch,
   type JsonMatchPath,
   resolveDocument,
-  type ResourceId,
 } from '@sanity/sdk'
 import {type SanityDocument} from '@sanity/types'
 
@@ -104,5 +103,5 @@ const _useDocument = createStateSourceHook<[doc: DocumentHandle, path?: string],
   getState: getDocumentState,
   shouldSuspend: (instance, doc) => getDocumentState(instance, doc._id).getCurrent() === undefined,
   suspender: resolveDocument,
-  getResourceId: (doc) => getResourceId(doc.resourceId) as ResourceId,
+  getResourceId: (doc) => getResourceId(doc.resourceId),
 })

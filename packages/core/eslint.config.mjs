@@ -5,8 +5,6 @@ import tsdocConfig from '@repo/config-eslint/tsdoc'
 export default [
   {
     ignores: [
-      '**/_synchronous-groq-js.mjs',
-
       '.DS_Store',
       '**/node_modules',
       '**/build',

@@ -28,4 +28,7 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  *
  * @public
  */
-export const useClient = createStateSourceHook(getClientState)
+export const useClient = createStateSourceHook({
+  getState: getClientState,
+  getResourceId: (e) => e.resourceId,
+})
