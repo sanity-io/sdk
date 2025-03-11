@@ -3,10 +3,7 @@
   "extends": ["../../typedoc.base.json"],
   "entryPoints": ["./src/_exports/*"],
   "exclude": ["./src/_exports/index.ts", "./src/_exports/context.ts"],
-  /**
-   * Path to the project's README file
-   * Will be included as the documentation homepage
-   */
+  "projectDocuments": ["guides/*.md"],
   "readme": "README.md",
   "excludeExternals": false
 }
