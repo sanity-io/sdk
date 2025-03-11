@@ -1,5 +1,5 @@
 import {type ResourceId, type SanityInstance, type StateSource} from '@sanity/sdk'
-import {useMemo, useSyncExternalStore} from 'react'
+import {useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -32,11 +32,7 @@ export function createStateSourceHook<TParams extends unknown[], TState>(
       throw suspense.suspender(instance, ...params)
     }
 
-    const state = useMemo(
-      () => getState(instance, ...params),
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      [instance, ...params],
-    )
+    const state = getState(instance, ...params)
     return useSyncExternalStore(state.subscribe, state.getCurrent)
   }
 

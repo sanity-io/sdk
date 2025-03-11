@@ -161,39 +161,35 @@ export function useEditDocument(
   )
   if (!isDocumentReady()) throw resolveDocument(instance, documentId)
 
-  return useCallback(
-    (updater: Updater<unknown>) => {
-      if (path) {
-        const nextValue =
-          typeof updater === 'function'
-            ? updater(getDocumentState(instance, documentId, path).getCurrent())
-            : updater
+  return (updater: Updater<unknown>) => {
+    if (path) {
+      const nextValue =
+        typeof updater === 'function'
+          ? updater(getDocumentState(instance, documentId, path).getCurrent())
+          : updater
 
-        return apply(editDocument(doc, {set: {[path]: nextValue}}))
-      }
+      return apply(editDocument(doc, {set: {[path]: nextValue}}))
+    }
 
-      const current = getDocumentState(instance, documentId).getCurrent()
-      const nextValue = typeof updater === 'function' ? updater(current) : updater
+    const current = getDocumentState(instance, documentId).getCurrent()
+    const nextValue = typeof updater === 'function' ? updater(current) : updater
 
-      if (typeof nextValue !== 'object' || !nextValue) {
-        throw new Error(
-          `No path was provided to \`useEditDocument\` and the value provided was not a document object.`,
-        )
-      }
+    if (typeof nextValue !== 'object' || !nextValue) {
+      throw new Error(
+        `No path was provided to \`useEditDocument\` and the value provided was not a document object.`,
+      )
+    }
 
-      const allKeys = Object.keys({...current, ...nextValue})
-      const editActions = allKeys
-        .filter((key) => !ignoredKeys.includes(key))
-        .filter((key) => current?.[key] !== nextValue[key])
-        .map((key) =>
-          key in nextValue
-            ? editDocument(doc, {set: {[key]: nextValue[key]}})
-            : editDocument(doc, {unset: [key]}),
-        )
+    const allKeys = Object.keys({...current, ...nextValue})
+    const editActions = allKeys
+      .filter((key) => !ignoredKeys.includes(key))
+      .filter((key) => current?.[key] !== nextValue[key])
+      .map((key) =>
+        key in nextValue
+          ? editDocument(doc, {set: {[key]: nextValue[key]}})
+          : editDocument(doc, {unset: [key]}),
+      )
 
-      return apply(editActions)
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [apply, doc._id, instance, path],
-  )
+    return apply(editActions)
+  }
 }
