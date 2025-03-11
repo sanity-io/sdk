@@ -6,7 +6,6 @@ import {type SanityProject as _SanityProject} from '@sanity/client'
 export {createSanityInstance} from '../instance/sanityInstance'
 export {type ActionContext, type ResourceAction} from '../resources/createAction'
 export {type ResourceState} from '../resources/createResource'
-export {type BoundResourceAction} from '../resources/createStore'
 export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
 
 // Types
