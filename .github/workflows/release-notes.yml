@@ -32,4 +32,4 @@ jobs:
               - type: section
                 text:
                   type: mrkdwn
-                  text: "${{steps.releasemarkdown.outputs.text}}"
+                  text: ${{toJson(steps.releasemarkdown.outputs.text)}}
