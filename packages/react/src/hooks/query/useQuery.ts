@@ -10,38 +10,37 @@ import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransitio
 import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
- * React hook for executing GROQ queries against your Sanity dataset.
+ * Executes GROQ queries against a Sanity dataset.
  *
  * This hook provides a convenient way to fetch and subscribe to real-time updates
- * for your Sanity content. It integrates with React's Suspense and Transitions APIs
- * to provide a smooth user experience.
+ * for your Sanity content. Changes made to the dataset’s content will trigger
+ * automatic updates.
  *
- * Features:
- * - Suspense integration: The hook will suspend rendering until data is available
- * - Real-time updates: Automatically subscribes to live updates when content changes
- * - Transition support: Uses React's useTransition to avoid UI jank when queries change
- * - Automatic cleanup: Properly manages subscriptions and aborts in-flight requests
- *
- * When the query or options change, the hook will:
- * 1. Abort any in-flight requests for the previous query
- * 2. Start a new transition to update the query
- * 3. Suspend rendering until the new data is available
- * 4. Return the new data once it's ready
- *
- * The returned `isPending` flag indicates when a transition is in progress,
+ * @remarks
+ * The returned `isPending` flag indicates when a React transition is in progress,
  * which can be used to show loading states for query changes.
  *
- * @example
- * ```tsx
- * // Basic usage
- * const {data, isPending} = useQuery<Movie[]>('*[_type == "movie"]')
+ * @beta
+ * @category GROQ
+ * @param query - GROQ query string to execute
+ * @param options - Optional configuration for the query
+ * @returns Object containing the query result and a pending state flag
  *
+ * @example Basic usage
+ * ```tsx
+ * const {data, isPending} = useQuery<Movie[]>('*[_type == "movie"]')
+ * ```
+ *
+ * @example Using parameters
+ * ```tsx
  * // With parameters
  * const {data} = useQuery<Movie>('*[_type == "movie" && _id == $id][0]', {
  *   params: { id: 'movie-123' }
  * })
+ * ```
  *
- * // With loading state for transitions
+ * @example With a loading state for transitions
+ * ```tsx
  * const {data, isPending} = useQuery<Movie[]>('*[_type == "movie"]')
  * return (
  *   <div>
@@ -53,11 +52,6 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * )
  * ```
  *
- * @param query - GROQ query string to execute
- * @param options - Optional configuration for the query
- * @returns Object containing the query result and a pending state flag
- *
- * @beta
  */
 export function useQuery<T>(query: string, options?: QueryOptions): {data: T; isPending: boolean} {
   const instance = useSanityInstance(options?.resourceId)

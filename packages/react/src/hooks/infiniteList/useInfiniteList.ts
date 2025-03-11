@@ -4,7 +4,7 @@ import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {useQuery} from '../query/useQuery'
 
-const DEFAULT_PAGE_SIZE = 25
+const DEFAULT_BATCH_SIZE = 25
 const DEFAULT_PERSPECTIVE = 'drafts'
 
 /**
@@ -20,6 +20,7 @@ interface InfiniteListQueryResult {
  * Configuration options for the useInfiniteList hook
  *
  * @beta
+ * @category Types
  */
 export interface InfiniteListOptions extends QueryOptions {
   /**
@@ -27,9 +28,9 @@ export interface InfiniteListOptions extends QueryOptions {
    */
   filter?: string
   /**
-   * Number of items to load per page (defaults to 25)
+   * Number of items to load per batch (defaults to 25)
    */
-  pageSize?: number
+  batchSize?: number
   /**
    * Sorting configuration for the results
    */
@@ -44,10 +45,11 @@ export interface InfiniteListOptions extends QueryOptions {
  * Return value from the useInfiniteList hook
  *
  * @beta
+ * @category Types
  */
 export interface InfiniteList {
   /**
-   * Array of document handles for the current page
+   * Array of document handles for the current batch
    */
   data: DocumentHandle[]
   /**
@@ -63,38 +65,47 @@ export interface InfiniteList {
    */
   isPending: boolean
   /**
-   * Function to load the next page of results
+   * Function to load the next batch of results
    */
   loadMore: () => void
 }
 
 /**
- * React hook for paginated document queries with infinite scrolling support
+ * Retrieves batches of {@link DocumentHandle}s, narrowed by optional filters, text searches, and custom ordering,
+ * with infinite scrolling support. The number of document handles returned per batch is customizable,
+ * and additional batches can be loaded using the supplied `loadMore` function.
  *
- * This hook provides a convenient way to implement infinite scrolling lists of documents
- * with support for filtering, searching, and custom ordering. It handles pagination
- * automatically and provides a simple API for loading more results.
- *
- * The hook constructs and executes GROQ queries based on the provided options,
- * combining search terms, filters, and ordering specifications. It maintains the
- * current page size internally and exposes a function to load additional items.
- *
- * Usage example:
+ * @beta
+ * @category Documents
+ * @param options - Configuration options for the infinite list
+ * @returns An object containing the list of document handles, the loading state, the total count of retrived document handles, and a function to load more
+ * @example
  * ```tsx
  * const {data, hasMore, isPending, loadMore} = useInfiniteList({
  *   filter: '_type == "post"',
  *   search: searchTerm,
- *   pageSize: 10,
+ *   batchSize: 10,
  *   orderings: [{field: '_createdAt', direction: 'desc'}]
  * })
+ *
+ * return (
+ *   <div>
+ *     Total documents: {count}
+ *     <ol>
+ *       {data.map((doc) => (
+ *         <li key={doc._id}>
+ *           <MyDocumentComponent doc={doc} />
+ *         </li>
+ *       ))}
+ *     </ol>
+ *     {hasMore && <button onClick={loadMore}>Load More</button>}
+ *   </div>
+ * )
  * ```
  *
- * @beta
- * @param options - Configuration options for the infinite list
- * @returns An object containing the current data, loading state, and functions to load more
  */
 export function useInfiniteList({
-  pageSize = DEFAULT_PAGE_SIZE,
+  batchSize = DEFAULT_BATCH_SIZE,
   params,
   search,
   filter,
@@ -102,14 +113,14 @@ export function useInfiniteList({
   ...options
 }: InfiniteListOptions): InfiniteList {
   const perspective = options.perspective ?? DEFAULT_PERSPECTIVE
-  const [limit, setLimit] = useState(pageSize)
+  const [limit, setLimit] = useState(batchSize)
 
-  // Reset the limit to the current pageSize whenever any query parameters
-  // (filter, search, params, orderings) or pageSize changes
-  const key = JSON.stringify({filter, search, params, orderings, pageSize})
+  // Reset the limit to the current batchSize whenever any query parameters
+  // (filter, search, params, orderings) or batchSize changes
+  const key = JSON.stringify({filter, search, params, orderings, batchSize})
   useEffect(() => {
-    setLimit(pageSize)
-  }, [key, pageSize])
+    setLimit(batchSize)
+  }, [key, batchSize])
 
   const filterClause = useMemo(() => {
     const conditions: string[] = []
@@ -153,8 +164,8 @@ export function useInfiniteList({
   const hasMore = data.length < count
 
   const loadMore = useCallback(() => {
-    setLimit((prev) => Math.min(prev + pageSize, count))
-  }, [count, pageSize])
+    setLimit((prev) => Math.min(prev + batchSize, count))
+  }, [count, batchSize])
 
   return useMemo(
     () => ({data, hasMore, count, isPending, loadMore}),

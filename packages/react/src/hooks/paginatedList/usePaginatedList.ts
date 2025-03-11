@@ -10,6 +10,7 @@ const DEFAULT_PERSPECTIVE = 'drafts'
  * Configuration options for the usePaginatedList hook
  *
  * @beta
+ * @category Types
  */
 export interface PaginatedListOptions extends QueryOptions {
   /**
@@ -34,6 +35,7 @@ export interface PaginatedListOptions extends QueryOptions {
  * Return value from the usePaginatedList hook
  *
  * @beta
+ * @category Types
  */
 export interface PaginatedList {
   /**
@@ -115,17 +117,15 @@ export interface PaginatedList {
 }
 
 /**
- * React hook for paginated document queries with traditional pagination controls
+ * Retrieves pages of {@link DocumentHandle}s, narrowed by optional filters, text searches, and custom ordering,
+ * with support for traditional paginated interfaces. The number of document handles returned per page is customizable,
+ * while page navigation is handled via the included navigation functions.
  *
- * This hook provides a convenient way to implement paginated lists of documents
- * with support for filtering, searching, and custom ordering. It handles pagination
- * automatically and provides a comprehensive API for navigating between pages.
- *
- * The hook constructs and executes GROQ queries based on the provided options,
- * combining search terms, filters, and ordering specifications. It maintains the
- * current page state internally and exposes functions to navigate between pages.
- *
- * Usage example:
+ * @beta
+ * @category Documents
+ * @param options - Configuration options for the paginated list
+ * @returns An object containing the current page of document handles, the loading and pagination state, and navigation functions
+ * @example
  * ```tsx
  * const {
  *   data,
@@ -142,11 +142,23 @@ export interface PaginatedList {
  *   pageSize: 10,
  *   orderings: [{field: '_createdAt', direction: 'desc'}]
  * })
+ *
+ * return (
+ *   <>
+ *     <table>
+ *       {data.map(doc => (
+ *         <MyTableRowComponent key={doc._id} doc={doc} />
+ *       ))}
+ *     </table>
+ *     <>
+ *       {hasPreviousPage && <button onClick={previousPage}>Previous</button>}
+ *       {currentPage} / {totalPages}
+ *       {hasNextPage && <button onClick={nextPage}>Next</button>}
+ *     </>
+ *   </>
+ * )
  * ```
  *
- * @beta
- * @param options - Configuration options for the paginated list
- * @returns An object containing the current data, pagination state, and navigation functions
  */
 export function usePaginatedList({
   filter = '',
