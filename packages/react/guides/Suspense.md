@@ -79,5 +79,5 @@ export function ProjectsList() {
 
 ## Notes
 
-- The SanityApp component rendered by all Sanity custom apps comes with a root level Suspense boundary baked in. You can (and should!) pass a fallback component to its `fallback` prop to use as fallback content at the root level of your app. We also recommend wrapping all components that make use of our hooks with further Suspense boundaries, since components using those hooks will fall back to the nearest Suspense boundary in the component tree.
+- The SanityApp component rendered by all Sanity custom apps comes with a root level Suspense boundary baked in. You can (and should!) pass a fallback component to its `fallback` prop to use as fallback content at the root level of your app. You may wish to wrap other components which use our hooks in a Suspense boundary. To learn more about how Suspense works, [refer to the React Suspense docs](https://react.dev/reference/react/Suspense).
 - Our hooks also make use of [`useTransition`](https://react.dev/reference/react/useTransition) internally in order to keep UI that has already been rendered responsive and visible during data fetching.
