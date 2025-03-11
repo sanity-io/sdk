@@ -35,7 +35,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     expect(clientFactory).toHaveBeenCalledWith({
       apiVersion: '2021-06-07',
       ignoreBrowserTokenWarning: true,
-      requestTagPrefix: 'sdk.auth',
+      requestTagPrefix: 'sanity.sdk.auth',
       token: 'new-token',
       useProjectHostname: false,
     })
@@ -70,7 +70,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     expect(clientFactory).toHaveBeenCalledWith({
       apiVersion: '2021-06-07',
       ignoreBrowserTokenWarning: true,
-      requestTagPrefix: 'sdk.auth',
+      requestTagPrefix: 'sanity.sdk.auth',
       token: 'new-token',
       useProjectHostname: false,
     })

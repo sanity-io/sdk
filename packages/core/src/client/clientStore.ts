@@ -9,6 +9,7 @@ import {createResource, type Resource} from '../resources/createResource'
 import {createStateSourceAction} from '../resources/createStateSourceAction'
 
 const DEFAULT_API_VERSION = '2024-11-12'
+const DEFAULT_REQUEST_TAG_PREFIX = 'sanity.sdk'
 
 /**
  * States tracked by the client store
@@ -64,6 +65,7 @@ const clientStore: Resource<ClientState> = createResource({
       token: config?.auth?.token,
       useCdn: false,
       apiVersion: DEFAULT_API_VERSION,
+      requestTagPrefix: DEFAULT_REQUEST_TAG_PREFIX,
       ...(config?.auth?.apiHost ? {apiHost: config.auth.apiHost} : {}),
     })
 
@@ -72,6 +74,7 @@ const clientStore: Resource<ClientState> = createResource({
       useCdn: false,
       apiVersion: 'vX', // Many global APIs are only available under this version, we may need to support other versions in the future
       useProjectHostname: false,
+      requestTagPrefix: DEFAULT_REQUEST_TAG_PREFIX,
       ...(config?.auth?.apiHost ? {apiHost: config.auth.apiHost} : {}),
     })
 

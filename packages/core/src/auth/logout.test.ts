@@ -37,7 +37,7 @@ describe('logout', () => {
 
     expect(clientFactory).toHaveBeenCalledWith({
       apiVersion: '2021-06-07',
-      requestTagPrefix: 'sdk.auth',
+      requestTagPrefix: 'sanity.sdk.auth',
       token: 'token',
       useProjectHostname: false,
     })

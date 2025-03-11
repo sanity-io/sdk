@@ -151,7 +151,7 @@ const listenToLiveClientAndSetLastLiveEventIds = createInternalAction(
     return function () {
       const liveMessages$ = getClientState(instance, {apiVersion: 'vX'}).observable.pipe(
         switchMap((client) =>
-          client.live.events({includeDrafts: !!client.config().token, tag: 'TODO_TAG'}),
+          client.live.events({includeDrafts: !!client.config().token, tag: 'query-store'}),
         ),
         share(),
         filter((e) => e.type === 'message'),

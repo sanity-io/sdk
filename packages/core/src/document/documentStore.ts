@@ -401,7 +401,6 @@ const subscribeToClientAndFetchDatasetAcl = createInternalAction(
           switchMap((client) =>
             client.observable.request<DatasetAcl>({
               uri: `/projects/${projectId}/datasets/${dataset}/acl`,
-              // TODO: audit tags
               tag: 'acl.get',
               withCredentials: true,
             }),

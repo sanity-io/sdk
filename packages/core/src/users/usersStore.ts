@@ -103,6 +103,7 @@ const fetchUsers = (instance: SanityInstance, params: FetchUsersParams) => {
     method: 'GET',
     uri: `access/${resourceType}/${resourceId}/users`,
     query: nextCursor ? {nextCursor, limit: limit.toString()} : {limit: limit.toString()},
+    tag: 'users',
   })
 }
 
