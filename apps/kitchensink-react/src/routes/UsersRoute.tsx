@@ -5,7 +5,7 @@ import {type JSX} from 'react'
 import {LoadMore} from '../DocumentCollection/LoadMore'
 
 export function UsersRoute(): JSX.Element {
-  const {users, hasMore, loadMore} = useUsers({
+  const {data, hasMore, isPending, loadMore} = useUsers({
     resourceType: 'organization',
     resourceId: 'oSyH1iET5',
     limit: 10,
@@ -18,7 +18,7 @@ export function UsersRoute(): JSX.Element {
       </Heading>
       <Box paddingY={5}>
         <ol className="DocumentListLayout list-none" style={{gap: 2}}>
-          {users?.map((user) => (
+          {data.map((user) => (
             <li key={user.profile.id}>
               <Card width="fill" marginBottom={2}>
                 <Flex align="center" gap={2} padding={2}>
@@ -33,7 +33,7 @@ export function UsersRoute(): JSX.Element {
               </Card>
             </li>
           ))}
-          <LoadMore hasMore={hasMore} onLoadMore={loadMore} />
+          <LoadMore isPending={isPending} hasMore={hasMore} onLoadMore={loadMore} />
         </ol>
       </Box>
     </Box>

@@ -110,8 +110,16 @@ export {type DocumentResourceId, getResourceId, type ResourceId} from '../docume
 export {type PermissionDeniedReason, type PermissionsResult} from '../document/permissions'
 
 /** USERS */
-export {type Membership, type ResourceType, type SanityUser, type UserProfile} from '../users/types'
-export {createUsersStore, type UsersStoreState} from '../users/usersStore'
+export {getUsersKey, parseUsersKey} from '../users/reducers'
+export {
+  type GetUsersOptions,
+  type Membership,
+  type ResolveUsersOptions,
+  type ResourceType,
+  type SanityUser,
+  type UserProfile,
+} from '../users/types'
+export {getUsersState, loadMoreUsers, resolveUsers} from '../users/usersStore'
 
 /** PROJECT */
 export {getProjectState, resolveProject} from '../project/project'

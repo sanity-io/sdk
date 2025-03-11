@@ -1,267 +1,425 @@
-import {type ResourceType, type SanityUser} from '@sanity/sdk'
-import {firstValueFrom} from 'rxjs'
+import {type SanityClient} from '@sanity/client'
+import {delay, filter, firstValueFrom, Observable, of} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {getClient} from '../client/clientStore'
+import {getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../instance/sanityInstance'
-import {createResourceState, type ResourceState} from '../resources/createResource'
-import {createUsersStore, type UsersStoreState} from './usersStore'
+import {getOrCreateResource, type InitializedResource} from '../resources/createResource'
+import {type StateSource} from '../resources/createStateSourceAction'
+import {
+  type GetUsersOptions,
+  type SanityUser,
+  type SanityUserResponse,
+  type UsersStoreState,
+} from './types'
+import {errorHandler, getUsersState, loadMoreUsers, resolveUsers, usersStore} from './usersStore'
 
-vi.mock('../client/clientStore', () => ({
-  getClient: vi.fn().mockReturnValue({
-    request: vi.fn().mockImplementation(() => ({
-      data: [],
-      totalCount: 0,
-      nextCursor: null,
-    })),
-  }),
+vi.mock('./usersConstants', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./usersConstants')>()),
+  USERS_STATE_CLEAR_DELAY: 10,
 }))
 
-describe('resource initialization', () => {
-  it('should have correct default initial state', () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-    const defaultState = createUsersStore(instance)
-
-    expect(defaultState.getState().getCurrent()).toEqual({
-      users: [],
-      totalCount: 0,
-      nextCursor: null,
-      hasMore: false,
-      initialFetchCompleted: false,
-      options: {
-        resourceType: '',
-        resourceId: '',
-        limit: 100,
-      },
-    })
-  })
-})
+vi.mock('../client/clientStore', () => ({
+  getClientState: vi.fn(),
+}))
 
 describe('usersStore', () => {
-  let state: ResourceState<UsersStoreState>
-  let instance: ReturnType<typeof createSanityInstance>
+  let request: SanityClient['observable']['request']
+
+  const mockUsers: SanityUser[] = [
+    {
+      sanityUserId: 'user1',
+      profile: {
+        id: 'profile1',
+        displayName: 'User 1',
+        email: 'user1@example.com',
+        provider: 'google',
+        createdAt: '2023-01-01T00:00:00Z',
+      },
+      memberships: [
+        {
+          resourceType: 'project',
+          resourceId: 'project1.dataset1',
+          roleNames: ['viewer'],
+        },
+      ],
+    },
+    {
+      sanityUserId: 'user2',
+      profile: {
+        id: 'profile2',
+        displayName: 'User 2',
+        email: 'user2@example.com',
+        provider: 'google',
+        createdAt: '2023-01-02T00:00:00Z',
+      },
+      memberships: [
+        {
+          resourceType: 'project',
+          resourceId: 'project1.dataset1',
+          roleNames: ['editor'],
+        },
+      ],
+    },
+  ]
+
+  const mockResponse: SanityUserResponse = {
+    data: mockUsers,
+    totalCount: 2,
+    nextCursor: null,
+  }
 
   beforeEach(() => {
-    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-    state = createResourceState<UsersStoreState>(
+    request = vi.fn().mockReturnValue(of(mockResponse).pipe(delay(0)))
+
+    vi.mocked(getClientState).mockReturnValue({
+      observable: of({
+        observable: {
+          request,
+        },
+      } as SanityClient),
+    } as StateSource<SanityClient>)
+  })
+
+  it('initializes users state and cleans up after unsubscribe', async () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const state = getUsersState(instance, {
+      resourceType: 'project',
+      resourceId: 'project1.dataset1',
+    })
+
+    // Initially undefined before subscription
+    expect(state.getCurrent()).toBeUndefined()
+
+    // Subscribe to start fetching
+    const unsubscribe = state.subscribe()
+
+    // Wait for data to be fetched
+    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+
+    // Verify data is present
+    expect(state.getCurrent()).toEqual({
+      data: mockUsers,
+      totalCount: 2,
+      hasMore: false,
+    })
+
+    // Unsubscribe to trigger cleanup
+    unsubscribe()
+
+    // Wait for the cleanup delay
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    // Verify state is cleared
+    expect(state.getCurrent()).toBeUndefined()
+
+    instance.dispose()
+  })
+
+  it('maintains state when multiple subscribers exist', async () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const state = getUsersState(instance, {
+      resourceType: 'project',
+      resourceId: 'project1.dataset1',
+    })
+
+    // Add two subscribers
+    const unsubscribe1 = state.subscribe()
+    const unsubscribe2 = state.subscribe()
+
+    // Wait for data to be fetched
+    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+
+    // Verify data is present
+    expect(state.getCurrent()).toEqual({
+      data: mockUsers,
+      totalCount: 2,
+      hasMore: false,
+    })
+
+    // Remove first subscriber
+    unsubscribe1()
+
+    // Data should still be present due to second subscriber
+    expect(state.getCurrent()).toEqual({
+      data: mockUsers,
+      totalCount: 2,
+      hasMore: false,
+    })
+
+    // Remove second subscriber
+    unsubscribe2()
+
+    // Wait for cleanup delay
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    // Verify state is cleared after all subscribers are gone
+    expect(state.getCurrent()).toBeUndefined()
+
+    instance.dispose()
+  })
+
+  it('resolveUsers works without affecting subscriber cleanup', async () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const options: GetUsersOptions = {resourceType: 'project', resourceId: 'project1.dataset1'}
+
+    const state = getUsersState(instance, options)
+
+    // Check that getUsersState starts undefined
+    expect(state.getCurrent()).toBeUndefined()
+
+    // Use resolveUsers which should not add a subscriber
+    const result = await resolveUsers(instance, options)
+    expect(result).toEqual({
+      data: mockUsers,
+      totalCount: 2,
+      hasMore: false,
+    })
+
+    // Check that getUsersState starts resolved now
+    expect(state.getCurrent()).toEqual({
+      data: mockUsers,
+      totalCount: 2,
+      hasMore: false,
+    })
+
+    // Subscribing and unsubscribing should clear the state
+    const unsubscribe = state.subscribe()
+    unsubscribe()
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(state.getCurrent()).toBeUndefined()
+
+    instance.dispose()
+  })
+
+  it('handles abort signal in resolveUsers', async () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const options: GetUsersOptions = {resourceType: 'project', resourceId: 'project1.dataset1'}
+    const abortController = new AbortController()
+
+    // Create a promise that will reject when aborted
+    const usersPromise = resolveUsers(instance, {
+      ...options,
+      signal: abortController.signal,
+    })
+
+    // Abort the request
+    abortController.abort()
+
+    // Verify the promise rejects with AbortError
+    await expect(usersPromise).rejects.toThrow('The operation was aborted.')
+
+    // Verify state is cleared after abort
+    expect(getUsersState(instance, options).getCurrent()).toBeUndefined()
+
+    instance.dispose()
+  })
+
+  it('loads more users when loadMoreUsers is called', async () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const options: GetUsersOptions = {resourceType: 'project', resourceId: 'project1.dataset1'}
+
+    // First response has nextCursor
+    const firstResponse = {
+      ...mockResponse,
+      nextCursor: 'next-page',
+    }
+
+    // Additional users for the second page
+    const additionalUsers: SanityUser[] = [
       {
-        users: [],
-        totalCount: 0,
-        nextCursor: null,
-        hasMore: false,
-        initialFetchCompleted: false,
-        options: {
-          resourceType: 'organization',
-          resourceId: 'org123',
-          limit: 100,
+        sanityUserId: 'user3',
+        profile: {
+          id: 'profile3',
+          displayName: 'User 3',
+          email: 'user3@example.com',
+          provider: 'google',
+          createdAt: '2023-01-03T00:00:00Z',
         },
+        memberships: [
+          {
+            resourceType: 'project',
+            resourceId: 'project1.dataset1',
+            roleNames: ['admin'],
+          },
+        ],
       },
-      {name: 'users'},
+    ]
+
+    // Second response has no nextCursor
+    const secondResponse = {
+      data: additionalUsers,
+      totalCount: 3,
+      nextCursor: null,
+    }
+
+    // Setup request mock to return different responses
+    vi.mocked(request).mockReset()
+    vi.mocked(request).mockImplementationOnce(() => of(firstResponse).pipe(delay(0)))
+    vi.mocked(request).mockImplementationOnce(() => of(secondResponse).pipe(delay(0)))
+
+    const state = getUsersState(instance, options)
+    const unsubscribe = state.subscribe()
+
+    // Wait for initial data
+    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+
+    // Verify initial data
+    expect(state.getCurrent()).toEqual({
+      data: mockUsers,
+      totalCount: 2,
+      hasMore: true,
+    })
+
+    // Load more users
+    await loadMoreUsers(instance, options)
+
+    // Verify updated data includes both pages
+    expect(state.getCurrent()).toEqual({
+      data: [...mockUsers, ...additionalUsers],
+      totalCount: 3,
+      hasMore: false,
+    })
+
+    unsubscribe()
+    instance.dispose()
+  })
+
+  it('throws error when loadMoreUsers is called without initial data', async () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+
+    // Expect loadMoreUsers to throw when no data is loaded
+    await expect(
+      loadMoreUsers(instance, {resourceType: 'project', resourceId: 'project1.dataset1'}),
+    ).rejects.toThrow('Users not loaded for specified resource')
+
+    instance.dispose()
+  })
+
+  it('throws error when loadMoreUsers is called with no more data available', async () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const options: GetUsersOptions = {resourceType: 'project', resourceId: 'project1.dataset1'}
+
+    // Response with no nextCursor
+    vi.mocked(request).mockReset()
+    vi.mocked(request).mockImplementationOnce(() => of(mockResponse).pipe(delay(0)))
+
+    const state = getUsersState(instance, options)
+    const unsubscribe = state.subscribe()
+
+    // Wait for data to be fetched
+    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+
+    // Expect loadMoreUsers to throw when hasMore is false
+    await expect(loadMoreUsers(instance, options)).rejects.toThrow(
+      'No more users available to load for this resource',
     )
+
+    unsubscribe()
+    instance.dispose()
   })
 
-  describe('getState', () => {
-    it('should return initial state', async () => {
-      const store = createUsersStore({state, instance})
-      const state$ = store.getState().observable
+  it('handles errors in users fetching', async () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const errorMessage = 'Failed to fetch users'
 
-      await expect(firstValueFrom(state$)).resolves.toEqual({
-        users: [],
-        totalCount: 0,
-        nextCursor: null,
-        hasMore: false,
-        initialFetchCompleted: false,
-        options: {
-          resourceType: 'organization',
-          resourceId: 'org123',
-          limit: 100,
-        },
-      })
+    // Override request to simulate error
+    vi.mocked(request).mockReset()
+    vi.mocked(request).mockImplementationOnce(
+      () =>
+        new Observable((observer) => {
+          observer.error(new Error(errorMessage))
+        }),
+    )
+
+    const state = getUsersState(instance, {
+      resourceType: 'project',
+      resourceId: 'project1.dataset1',
     })
+    const unsubscribe = state.subscribe()
 
-    it('should return resolved users', async () => {
-      const mockUsers = [{profile: {id: '1', displayName: 'Test User'}}] as unknown as SanityUser[]
-      state.set('resolveUsers', {
-        users: mockUsers,
-        totalCount: 1,
-        nextCursor: null,
-        hasMore: false,
-        initialFetchCompleted: true,
-      })
+    // Verify error is thrown when accessing state
+    expect(() => state.getCurrent()).toThrow(errorMessage)
 
-      const store = createUsersStore({state, instance})
-      const state$ = store.getState().observable
-
-      await expect(firstValueFrom(state$)).resolves.toMatchObject({
-        users: mockUsers,
-        totalCount: 1,
-        initialFetchCompleted: true,
-      })
-    })
+    unsubscribe()
+    instance.dispose()
   })
 
-  describe('resolveUsers', () => {
-    it('should fetch and store users', async () => {
-      const mockResponse = {
-        data: [{profile: {id: '1'}}] as SanityUser[],
-        totalCount: 1,
-        nextCursor: 'cursor123',
-      }
-      vi.mocked(getClient(instance, {apiVersion: 'vX'}).request).mockResolvedValueOnce(mockResponse)
-
-      const store = createUsersStore({state, instance})
-      const result = await store.resolveUsers()
-
-      expect(getClient(instance, {apiVersion: 'vX'}).request).toHaveBeenCalledWith({
-        method: 'GET',
-        uri: `access/organization/org123/users`,
-        query: {limit: '100'},
-        tag: 'users',
-      })
-      expect(result).toEqual(mockResponse)
-      expect(state.get()).toMatchObject({
-        users: mockResponse.data,
-        totalCount: mockResponse.totalCount,
-        nextCursor: mockResponse.nextCursor,
-        initialFetchCompleted: true,
-      })
+  it('throws an error if an errorHandler has been called', () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const state = getUsersState(instance, {
+      resourceType: 'project',
+      resourceId: 'project1.dataset1',
     })
 
-    it('should throw error when missing resource info', async () => {
-      state.set('options', {options: {resourceType: '' as ResourceType, resourceId: ''}})
-      const store = createUsersStore({state, instance})
+    const resource = getOrCreateResource(
+      instance,
+      usersStore,
+    ) as InitializedResource<UsersStoreState>
 
-      await expect(store.resolveUsers()).rejects.toThrow(
-        'Resource type and ID are required to resolve users',
-      )
-    })
+    // Create an error and call the error handler
+    const testError = new Error('Global error from error handler')
+    const handler = errorHandler({state: resource.state, instance})
+    handler(testError)
+
+    // Verify the error is thrown when accessing state
+    expect(() => state.getCurrent()).toThrow('Global error from error handler')
+
+    instance.dispose()
   })
 
-  describe('loadMore', () => {
-    it('should fetch and append more users', async () => {
-      const initialUsers = Array(10).fill({profile: {id: '1'}}) as SanityUser[]
-      const newUsers = Array(5).fill({profile: {id: '2'}}) as SanityUser[]
+  it('delays users state removal after unsubscribe', async () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const options: GetUsersOptions = {resourceType: 'project', resourceId: 'project1.dataset1'}
+    const state = getUsersState(instance, options)
+    const unsubscribe = state.subscribe()
 
-      state.set('resolveUsers', {
-        users: initialUsers,
-        totalCount: 15,
-        nextCursor: 'cursor123',
-        hasMore: true,
-        initialFetchCompleted: true,
-      })
+    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
 
-      vi.mocked(getClient(instance, {apiVersion: 'xV'}).request).mockResolvedValueOnce({
-        data: newUsers,
-        totalCount: 15,
-        nextCursor: null,
-      })
+    unsubscribe()
+    // Immediately after unsubscription, state should still be present due to delay
+    expect(state.getCurrent()).not.toBeUndefined()
 
-      const store = createUsersStore({state, instance})
-      await store.loadMore()
+    // Wait for the cleanup delay and then state should be removed
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(state.getCurrent()).toBeUndefined()
 
-      expect(state.get()).toMatchObject({
-        users: [...initialUsers, ...newUsers],
-        totalCount: 15,
-        nextCursor: null,
-        hasMore: false,
-      })
-    })
-
-    it('should throw error when missing resource info', async () => {
-      state.set('options', {options: {resourceType: '' as ResourceType, resourceId: ''}})
-      const store = createUsersStore({state, instance})
-
-      await expect(store.loadMore()).rejects.toThrow(
-        'Resource type and ID are required to load more users',
-      )
-    })
+    instance.dispose()
   })
 
-  describe('setOptions', () => {
-    it('should update resource options', () => {
-      const store = createUsersStore({state, instance})
-      store.setOptions({
-        resourceType: 'project',
-        resourceId: 'proj456',
-      })
+  it('preserves users state if a new subscriber subscribes before cleanup delay', async () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const state = getUsersState(instance, {
+      resourceType: 'project',
+      resourceId: 'project1.dataset1',
+    })
+    const unsubscribe1 = state.subscribe()
 
-      expect(state.get().options).toMatchObject({
-        resourceType: 'project',
-        resourceId: 'proj456',
-      })
+    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+    expect(state.getCurrent()).toEqual({
+      data: mockUsers,
+      totalCount: 2,
+      hasMore: false,
     })
 
-    it('should reset state when options change', () => {
-      const store = createUsersStore({state, instance})
-      store.setOptions({
-        resourceType: 'project',
-        resourceId: 'proj456',
-      })
+    unsubscribe1()
+    // Wait less than the cleanup delay
+    await new Promise((resolve) => setTimeout(resolve, 5))
 
-      expect(state.get()).toMatchObject({
-        users: [],
-        totalCount: 0,
-        nextCursor: null,
-        hasMore: false,
-        initialFetchCompleted: false,
-      })
+    // Subscribe again before cleanup occurs
+    const unsubscribe2 = state.subscribe()
+
+    // Wait for cleanup delay to pass
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    // Since a subscriber now exists, state should still be present
+    expect(state.getCurrent()).toEqual({
+      data: mockUsers,
+      totalCount: 2,
+      hasMore: false,
     })
 
-    it('should preserve existing limit when updating options', () => {
-      const store = createUsersStore({state, instance})
-      store.setOptions({
-        resourceType: 'project',
-        resourceId: 'proj456',
-      })
-
-      expect(state.get().options).toMatchObject({
-        resourceType: 'project',
-        resourceId: 'proj456',
-        limit: 100, // Preserves original limit from initial state
-      })
-    })
+    unsubscribe2()
+    instance.dispose()
   })
-
-  describe('edge cases', () => {
-    it('should handle empty response', async () => {
-      vi.mocked(getClient(instance, {apiVersion: 'vX'}).request).mockResolvedValueOnce({
-        data: [],
-        totalCount: 0,
-        nextCursor: null,
-      })
-
-      const store = createUsersStore({state, instance})
-      await store.resolveUsers()
-
-      expect(state.get()).toMatchObject({
-        users: [],
-        totalCount: 0,
-        initialFetchCompleted: true,
-      })
-    })
-
-    it('should handle no more results', async () => {
-      state.set('resolveUsers', {
-        users: Array(10).fill({}),
-        totalCount: 10,
-        nextCursor: null,
-        hasMore: false,
-        initialFetchCompleted: true,
-      })
-
-      const store = createUsersStore({state, instance})
-      await store.loadMore()
-
-      // Shouldn't change state
-      expect(state.get().users.length).toBe(10)
-    })
-  })
-})
-
-it('should call getClient with proper parameters', () => {
-  const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-  const store = createUsersStore(instance)
-  store.setOptions({resourceType: 'organization', resourceId: 'org123'})
-  store.resolveUsers()
-  expect(getClient).toHaveBeenCalledWith(instance, {apiVersion: 'vX', scope: 'global'})
 })
