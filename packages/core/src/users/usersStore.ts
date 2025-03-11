@@ -133,8 +133,8 @@ const listenForLoadMoreAndFetch = createInternalAction(
                       method: 'GET',
                       uri: `access/${options.resourceType}/${options.resourceId}/users`,
                       query: cursor
-                        ? {nextCursor: cursor, limit: options.limit.toString()}
-                        : {limit: options.limit.toString()},
+                        ? {nextCursor: cursor, limit: options.batchSize.toString()}
+                        : {limit: options.batchSize.toString()},
                     }),
                   ),
                   catchError((error) => {

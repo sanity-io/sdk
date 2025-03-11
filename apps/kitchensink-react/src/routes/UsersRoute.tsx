@@ -8,7 +8,7 @@ export function UsersRoute(): JSX.Element {
   const {data, hasMore, isPending, loadMore} = useUsers({
     resourceType: 'organization',
     resourceId: 'oSyH1iET5',
-    limit: 10,
+    batchSize: 10,
   })
 
   return (

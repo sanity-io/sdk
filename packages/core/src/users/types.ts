@@ -50,7 +50,7 @@ export interface UserProfile {
 export interface GetUsersOptions {
   resourceType: ResourceType
   resourceId: string | ResourceId
-  limit?: number
+  batchSize?: number
 }
 
 /**

@@ -7,18 +7,19 @@ import {
   type SanityUserResponse,
   type UsersStoreState,
 } from './types'
-import {DEFAULT_USERS_LIMIT} from './usersConstants'
+import {DEFAULT_USERS_BATCH_SIZE} from './usersConstants'
 
 /** @internal */
 export const getUsersKey = ({
   resourceId,
   resourceType,
-  limit = DEFAULT_USERS_LIMIT,
-}: GetUsersOptions): string => JSON.stringify({resourceType, resourceId, limit})
+  batchSize = DEFAULT_USERS_BATCH_SIZE,
+}: GetUsersOptions): string => JSON.stringify({resourceType, resourceId, batchSize})
 /** @internal */
 export const parseUsersKey = (
   key: string,
-): {resourceType: ResourceType; resourceId: string | ResourceId; limit: number} => JSON.parse(key)
+): {resourceType: ResourceType; resourceId: string | ResourceId; batchSize: number} =>
+  JSON.parse(key)
 
 export const addSubscription =
   (subscriptionId: string, options: GetUsersOptions) =>

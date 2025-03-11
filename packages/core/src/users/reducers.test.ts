@@ -12,40 +12,40 @@ import {
   updateLastLoadMoreRequest,
 } from './reducers'
 import {type GetUsersOptions, type SanityUserResponse, type UsersStoreState} from './types'
-import {DEFAULT_USERS_LIMIT} from './usersConstants'
+import {DEFAULT_USERS_BATCH_SIZE} from './usersConstants'
 
 describe('Users Reducers', () => {
   // Sample options for testing
   const sampleOptions: GetUsersOptions = {
     resourceType: 'project',
     resourceId: 'proj123',
-    limit: 50,
+    batchSize: 50,
   }
 
-  const sampleOptionsWithDefaultLimit: GetUsersOptions = {
+  const sampleOptionsWithDefaultBatchSize: GetUsersOptions = {
     resourceType: 'project',
     resourceId: 'proj123',
   }
 
   describe('getUsersKey', () => {
-    it('should generate a key based on resourceType, resourceId and limit', () => {
+    it('should generate a key based on resourceType, resourceId and batchSize', () => {
       const key = getUsersKey(sampleOptions)
       expect(key).toBe(
         JSON.stringify({
           resourceType: 'project',
           resourceId: 'proj123',
-          limit: 50,
+          batchSize: 50,
         }),
       )
     })
 
-    it('should use DEFAULT_USERS_LIMIT when limit is not provided', () => {
-      const key = getUsersKey(sampleOptionsWithDefaultLimit)
+    it('should use DEFAULT_USERS_BATCH_SIZE when batchSize is not provided', () => {
+      const key = getUsersKey(sampleOptionsWithDefaultBatchSize)
       expect(key).toBe(
         JSON.stringify({
           resourceType: 'project',
           resourceId: 'proj123',
-          limit: DEFAULT_USERS_LIMIT,
+          batchSize: DEFAULT_USERS_BATCH_SIZE,
         }),
       )
     })
@@ -56,13 +56,13 @@ describe('Users Reducers', () => {
       const key = JSON.stringify({
         resourceType: 'organization',
         resourceId: 'org456',
-        limit: 25,
+        batchSize: 25,
       })
       const parsed = parseUsersKey(key)
       expect(parsed).toEqual({
         resourceType: 'organization',
         resourceId: 'org456',
-        limit: 25,
+        batchSize: 25,
       })
     })
   })

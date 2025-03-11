@@ -88,7 +88,7 @@ describe('useUsers', () => {
       const {data, hasMore, isPending} = useUsers({
         resourceType: 'organization',
         resourceId: 'test-org',
-        limit: 10,
+        batchSize: 10,
       })
       return (
         <div data-testid="output">
@@ -148,7 +148,7 @@ describe('useUsers', () => {
       const {data} = useUsers({
         resourceType: 'organization',
         resourceId: 'test-org',
-        limit: 10,
+        batchSize: 10,
       })
       return (
         <div data-testid="output">{data.map((user) => user.profile.displayName).join(', ')}</div>
@@ -233,7 +233,7 @@ describe('useUsers', () => {
       const {data, hasMore, isPending} = useUsers({
         resourceType: 'organization',
         resourceId: orgId,
-        limit: 10,
+        batchSize: 10,
       })
       return (
         <div>
@@ -298,7 +298,7 @@ describe('useUsers', () => {
       const {data, hasMore, loadMore} = useUsers({
         resourceType: 'organization',
         resourceId: 'test-org',
-        limit: 10,
+        batchSize: 10,
       })
       return (
         <div>
@@ -325,7 +325,7 @@ describe('useUsers', () => {
     expect(loadMoreUsers).toHaveBeenCalledWith(undefined, {
       resourceType: 'organization',
       resourceId: 'test-org',
-      limit: 10,
+      batchSize: 10,
     })
   })
 })
