@@ -151,9 +151,10 @@ export function useEditDocument(
   doc: DocumentHandle,
   path?: string,
 ): (updater: Updater<unknown>) => Promise<ActionsResult> {
+  const resourceId = getResourceId(doc.resourceId)!
   const documentId = doc._id
-  const instance = useSanityInstance(getResourceId(doc.resourceId))
-  const apply = useApplyActions()
+  const instance = useSanityInstance(resourceId)
+  const apply = useApplyActions(resourceId)
   const isDocumentReady = useCallback(
     () => getDocumentState(instance, documentId).getCurrent() !== undefined,
     [instance, documentId],
