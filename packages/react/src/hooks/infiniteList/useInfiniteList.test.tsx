@@ -75,10 +75,10 @@ describe('useInfiniteList', () => {
   })
 
   it('should respect custom page size', () => {
-    const customPageSize = 2
-    const {result} = renderHook(() => useInfiniteList({pageSize: customPageSize}))
+    const customBatchSize = 2
+    const {result} = renderHook(() => useInfiniteList({batchSize: customBatchSize}))
 
-    expect(result.current.data.length).toBe(customPageSize)
+    expect(result.current.data.length).toBe(customBatchSize)
   })
 
   it('should filter by document type', () => {
@@ -109,20 +109,20 @@ describe('useInfiniteList', () => {
   })
 
   it('should load more data when loadMore is called', () => {
-    const pageSize = 2
-    const {result} = renderHook(() => useInfiniteList({pageSize}))
+    const batchSize = 2
+    const {result} = renderHook(() => useInfiniteList({batchSize: batchSize}))
 
-    expect(result.current.data.length).toBe(pageSize)
+    expect(result.current.data.length).toBe(batchSize)
 
     act(() => {
       result.current.loadMore()
     })
 
-    expect(result.current.data.length).toBe(pageSize * 2)
+    expect(result.current.data.length).toBe(batchSize * 2)
   })
 
   it('should indicate when there is more data to load', () => {
-    const {result} = renderHook(() => useInfiniteList({pageSize: 3}))
+    const {result} = renderHook(() => useInfiniteList({batchSize: 3}))
     expect(result.current.hasMore).toBe(true)
     // Load all remaining data
     act(() => {
@@ -134,7 +134,7 @@ describe('useInfiniteList', () => {
   // New test case for resetting limit when filter changes
   it('should reset limit when filter changes', () => {
     const {result, rerender} = renderHook((props) => useInfiniteList(props), {
-      initialProps: {pageSize: 2, filter: ''},
+      initialProps: {batchSize: 2, filter: ''},
     })
     // Initially, data length equals pageSize (2)
     expect(result.current.data.length).toBe(2)
@@ -145,7 +145,7 @@ describe('useInfiniteList', () => {
     // After loadMore, data length should be increased (2 + 2 = 4)
     expect(result.current.data.length).toBe(4)
     // Now update filter to trigger resetting the limit
-    rerender({pageSize: 2, filter: '_type == "movie"'})
+    rerender({batchSize: 2, filter: '_type == "movie"'})
     // With the filter applied, the limit is reset to pageSize (i.e. 2)
     expect(result.current.data.length).toBe(2)
   })

@@ -53,15 +53,15 @@ interface UseProjectionResults<TResult extends object> {
  * }
  * ```
  *
- * @example Combining with useDocuments to render a collection with specific fields
+ * @example Combining with useInfiniteList to render a collection with specific fields
  * ```
  * // DocumentList.jsx
- * const { results, isPending } = useDocuments({ filter: '_type == "article"' })
+ * const { data } = useInfiniteList({ filter: '_type == "article"' })
  * return (
  *   <div>
  *     <h1>Articles</h1>
  *     <ul>
- *       {isPending ? 'Loading…' : results.map(article => (
+ *       {data.map(article => (
  *         <li key={article._id}>
  *           <Suspense fallback='Loading…'>
  *             <ProjectionComponent
