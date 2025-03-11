@@ -19,6 +19,7 @@ export const refreshStampedToken = createInternalAction(
           authState.type === AuthStateType.LOGGED_IN,
       ),
       distinctUntilChanged(),
+      filter((authState) => authState.token.includes('-st')), // Ensure we only try to refresh stamped tokens
       switchMap((authState) =>
         interval(10 * 60 * 1000).pipe(
           takeWhile(() => state.get().authState.type === AuthStateType.LOGGED_IN),
