@@ -5,7 +5,7 @@ import {
   type QueryOptions,
   resolveQuery,
 } from '@sanity/sdk'
-import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition} from 'react'
+import {useEffect, useMemo, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -66,10 +66,7 @@ export function useQuery<T>(query: string, options?: QueryOptions): {data: T; is
   const deferred = useMemo(() => parseQueryKey(deferredQueryKey), [deferredQueryKey])
 
   // Create an AbortController to cancel in-flight requests when needed
-  const ref = useRef<AbortController | null>(null)
-  if (ref.current === null) {
-    ref.current = new AbortController()
-  }
+  const [ref, setRef] = useState<AbortController>(new AbortController())
 
   // When the query or options change, start a transition to update the query
   useEffect(() => {
@@ -77,14 +74,14 @@ export function useQuery<T>(query: string, options?: QueryOptions): {data: T; is
 
     startTransition(() => {
       // Abort any in-flight requests for the previous query
-      if (ref.current && !ref.current.signal.aborted) {
-        ref.current.abort()
-        ref.current = new AbortController()
+      if (ref && !ref.signal.aborted) {
+        ref.abort()
+        setRef(new AbortController())
       }
 
       setDeferredQueryKey(queryKey)
     })
-  }, [deferredQueryKey, queryKey])
+  }, [deferredQueryKey, queryKey, ref])
 
   // Get the state source for this query from the query store
   const {getCurrent, subscribe} = useMemo(
@@ -96,7 +93,7 @@ export function useQuery<T>(query: string, options?: QueryOptions): {data: T; is
   // This is the React Suspense integration - throwing a promise
   // will cause React to show the nearest Suspense fallback
   if (getCurrent() === undefined) {
-    throw resolveQuery(instance, deferred.query, {...deferred.options, signal: ref.current.signal})
+    throw resolveQuery(instance, deferred.query, {...deferred.options, signal: ref.signal})
   }
 
   // Subscribe to updates and get the current data

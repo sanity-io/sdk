@@ -16,7 +16,6 @@
     },
     "docs": {},
     "lint": {
-      "outputLogs": "errors-only",
       "cache": false
     },
     "test": {

@@ -1,4 +1,4 @@
-import {combineLatest, distinctUntilChanged, filter, map, Subscription, switchMap} from 'rxjs'
+import {combineLatest, distinctUntilChanged, filter, map, type Subscription, switchMap} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
 import {type ActionContext, createInternalAction} from '../resources/createAction'
@@ -10,10 +10,10 @@ import {type LiveEventAwareState} from './types'
  * It listens to events associated with sync tags (also kept internally in the store)
 
  * Usage like:
- * 
+ *
  * const subscribeToLiveAndSetLastLiveEventId = createLiveEventSubscriber<ProjectionStoreState<TValue>>(TAG)
  * const liveSubscription = subscribeToLiveAndSetLastLiveEventId(this)
- * 
+ *
  * return () => {
  *   stateSubscriptionForBatches.unsubscribe()
  *   liveSubscription.unsubscribe()

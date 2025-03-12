@@ -27,11 +27,26 @@ const baseConfig = {
       },
       project,
     },
+    'packages/react': {
+      typescript: {
+        config: 'tsconfig.settings.json',
+      },
+      project,
+      ignoreDependencies: ['@sanity/browserslist-config', 'react-compiler-runtime'],
+    },
+    'packages/react-internal': {
+      typescript: {
+        config: 'tsconfig.settings.json',
+      },
+      project,
+      ignoreDependencies: ['@sanity/browserslist-config', 'react-compiler-runtime'],
+    },
     'packages/*': {
       typescript: {
         config: 'tsconfig.settings.json',
       },
       project,
+      ignoreDependencies: ['@sanity/browserslist-config'],
     },
   },
 } satisfies KnipConfig

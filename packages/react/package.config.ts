@@ -7,6 +7,12 @@ const enableVisualizer = process.env['VISUALIZER'] === 'true'
 export default defineConfig({
   ...basePackageConfig,
   tsconfig: 'tsconfig.dist.json',
+  babel: {
+    reactCompiler: true,
+  },
+  reactCompilerOptions: {
+    target: '19',
+  },
   rollup: {
     plugins: [
       ...(enableVisualizer

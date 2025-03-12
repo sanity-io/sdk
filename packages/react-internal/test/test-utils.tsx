@@ -34,6 +34,9 @@ const customRenderHook = <TProps, TResult>(
   options?: Omit<RenderOptions, 'wrapper'>,
 ): RenderHookResult<TResult, TProps> => renderHook(hook, {wrapper: AppProviders, ...options})
 
+// eslint-disable-next-line react-refresh/only-export-components
 export * from '@testing-library/react'
+// eslint-disable-next-line react-refresh/only-export-components
 export {customRender as render}
+// eslint-disable-next-line react-refresh/only-export-components
 export {customRenderHook as renderHook}
