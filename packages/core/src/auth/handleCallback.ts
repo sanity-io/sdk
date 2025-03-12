@@ -1,7 +1,7 @@
 import {createAction} from '../resources/createAction'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
-import {authStore} from './authStore'
+import {authStore, type AuthStoreState, type DashboardContext} from './authStore'
 import {getAuthCode, getDefaultLocation} from './utils'
 
 /**
@@ -23,10 +23,17 @@ export const handleCallback = createAction(authStore, ({state}) => {
     const authCode = getAuthCode(callbackUrl, locationHref)
     if (!authCode) return false
 
+    // Get the SanityOS dashboard context from the url
+    const parsedUrl = new URL(locationHref)
+    const {mode, env, orgId}: DashboardContext = JSON.parse(
+      parsedUrl.searchParams.get('_context') ?? '{}',
+    )
+
     // Otherwise, start the exchange
     state.set('exchangeSessionForToken', {
       authState: {type: AuthStateType.LOGGING_IN, isExchangingToken: true},
-    })
+      dashboardContext: {mode, env, orgId},
+    } as Partial<AuthStoreState>)
 
     try {
       const client = clientFactory({
