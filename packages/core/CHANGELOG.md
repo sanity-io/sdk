@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.0-alpha.16](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.15...sdk-v0.0.0-alpha.16) (2025-03-12)
+
+
+### Features
+
+* **react:** add react compiler to the build process ([#298](https://github.com/sanity-io/sdk/issues/298)) ([bfb74eb](https://github.com/sanity-io/sdk/commit/bfb74ebe538b1218a980b03493890b70dc1311d2))
+
+
+### Bug Fixes
+
+* all client requests are properly tagged ([#274](https://github.com/sanity-io/sdk/issues/274)) ([6df8938](https://github.com/sanity-io/sdk/commit/6df893891e7b12eff122de5147ab03b65b51bcbe))
+* **auth:** only attempt to refresh stamped tokens ([#304](https://github.com/sanity-io/sdk/issues/304)) ([b08a319](https://github.com/sanity-io/sdk/commit/b08a3194a061031400e2ded654269adf71130ea5))
+
 ## [0.0.0-alpha.15](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.14...sdk-v0.0.0-alpha.15) (2025-03-10)
 
 
