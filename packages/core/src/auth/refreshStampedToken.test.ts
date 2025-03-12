@@ -24,7 +24,7 @@ describe('refreshStampedToken', () => {
     // Mock client so that .request(...) yields a new token
     const mockClient = {
       observable: {
-        request: vi.fn(() => of({token: 'refreshed-token'})),
+        request: vi.fn(() => of({token: 'sk-refreshed-token-st123'})),
       },
     }
     const mockClientFactory = vi.fn().mockReturnValue(mockClient)
@@ -41,7 +41,7 @@ describe('refreshStampedToken', () => {
     // Force it to be logged in from the start
     initialState.authState = {
       type: AuthStateType.LOGGED_IN,
-      token: 'initial-token',
+      token: 'sk-initial-token-st123',
       currentUser: null,
     }
 
@@ -60,7 +60,7 @@ describe('refreshStampedToken', () => {
     // The token in state should now be 'refreshed-token'
     expect(state.get().authState).toEqual({
       type: AuthStateType.LOGGED_IN,
-      token: 'refreshed-token',
+      token: 'sk-refreshed-token-st123',
       currentUser: null,
     })
 
@@ -86,7 +86,7 @@ describe('refreshStampedToken', () => {
     const initialState = authStore.getInitialState(instance)
     initialState.authState = {
       type: AuthStateType.LOGGED_IN,
-      token: 'initial-token',
+      token: 'sk-initial-token-st123',
       currentUser: null,
     }
     const state = createResourceState(initialState)
@@ -131,6 +131,45 @@ describe('refreshStampedToken', () => {
     expect(state.get().authState).toEqual({
       type: AuthStateType.LOGGED_OUT,
       isDestroyingSession: false,
+    })
+
+    subscription.unsubscribe()
+  })
+
+  it('does nothing if token is not stamped', () => {
+    const mockClient = {
+      observable: {
+        request: vi.fn(() => of({token: 'sk-nonstamped-token2'})),
+      },
+    }
+    const mockClientFactory = vi.fn().mockReturnValue(mockClient)
+    const instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      auth: {clientFactory: mockClientFactory},
+    })
+
+    // Start logged in with a non-stamped token
+    const initialState = authStore.getInitialState(instance)
+    initialState.authState = {
+      type: AuthStateType.LOGGED_IN,
+      token: 'sk-nonstamped-token2', // Note: doesn't include '-st'
+      currentUser: null,
+    }
+    const state = createResourceState(initialState)
+
+    const subscription: Subscription = refreshStampedToken({state, instance})
+
+    // Move time forward
+    vi.advanceTimersByTime(10 * 60 * 1000)
+
+    // No refresh should have happened
+    expect(mockClient.observable.request).not.toHaveBeenCalled()
+    // State should remain unchanged
+    expect(state.get().authState).toEqual({
+      type: AuthStateType.LOGGED_IN,
+      token: 'sk-nonstamped-token2',
+      currentUser: null,
     })
 
     subscription.unsubscribe()
