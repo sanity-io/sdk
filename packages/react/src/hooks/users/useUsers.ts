@@ -7,7 +7,7 @@ import {
   resolveUsers,
   type SanityUser,
 } from '@sanity/sdk'
-import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition} from 'react'
+import {useEffect, useMemo, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -82,25 +82,21 @@ export function useUsers(options: GetUsersOptions): UsersResult {
   const deferred = useMemo(() => parseUsersKey(deferredKey), [deferredKey])
 
   // Create an AbortController to cancel in-flight requests when needed
-  const ref = useRef<AbortController | null>(null)
-  if (ref.current === null) {
-    ref.current = new AbortController()
-  }
+  const [ref, setRef] = useState<AbortController>(new AbortController())
 
   // When the users request or options change, start a transition to update the request
   useEffect(() => {
     if (key === deferredKey) return
 
     startTransition(() => {
-      // Abort any in-flight requests for the previous users request
-      if (ref.current && !ref.current.signal.aborted) {
-        ref.current.abort()
-        ref.current = new AbortController()
+      if (!ref.signal.aborted) {
+        ref.abort()
+        setRef(new AbortController())
       }
 
       setDeferredKey(key)
     })
-  }, [deferredKey, key])
+  }, [deferredKey, key, ref])
 
   // Get the state source for this users request from the users store
   const {getCurrent, subscribe} = useMemo(
@@ -112,7 +108,7 @@ export function useUsers(options: GetUsersOptions): UsersResult {
   // This is the React Suspense integration - throwing a promise
   // will cause React to show the nearest Suspense fallback
   if (getCurrent() === undefined) {
-    throw resolveUsers(instance, {...deferred, signal: ref.current.signal})
+    throw resolveUsers(instance, {...deferred, signal: ref.signal})
   }
 
   // Subscribe to updates and get the current data
