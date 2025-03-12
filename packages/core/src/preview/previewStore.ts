@@ -8,7 +8,9 @@ export interface PreviewQueryResult {
   _id: string
   _type: string
   _updatedAt: string
-  select: Record<string, unknown>
+  titleCandidates: Record<string, unknown>
+  subtitleCandidates: Record<string, unknown>
+  media?: {type: 'image-asset'; url: string} | null
 }
 
 /**
