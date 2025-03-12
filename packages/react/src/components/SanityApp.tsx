@@ -1,5 +1,5 @@
 import {type SanityConfig} from '@sanity/sdk'
-import {type ReactElement, useEffect, useState} from 'react'
+import {type ReactElement, useEffect} from 'react'
 
 import {SDKProvider} from './SDKProvider'
 import {isInIframe, isLocalUrl} from './utils'
@@ -68,23 +68,10 @@ const CORE_URL = 'https://core.sanity.io'
  * ```
  */
 export function SanityApp({sanityConfigs, children, fallback}: SanityAppProps): ReactElement {
-  const [_sanityConfigs, setSanityConfigs] = useState<SanityConfig[]>(sanityConfigs)
-
   useEffect(() => {
     let timeout: NodeJS.Timeout | undefined
 
-    if (isInIframe()) {
-      // When running in an iframe Content OS, we don't want to store tokens
-      setSanityConfigs(
-        sanityConfigs.map((sanityConfig) => ({
-          ...sanityConfig,
-          auth: {
-            ...sanityConfig.auth,
-            storageArea: undefined,
-          },
-        })),
-      )
-    } else if (!isLocalUrl(window)) {
+    if (!isInIframe() && !isLocalUrl(window)) {
       // If the app is not running in an iframe and is not a local url, redirect to core.
       timeout = setTimeout(() => {
         // eslint-disable-next-line no-console
@@ -96,7 +83,7 @@ export function SanityApp({sanityConfigs, children, fallback}: SanityAppProps): 
   }, [sanityConfigs])
 
   return (
-    <SDKProvider sanityConfigs={_sanityConfigs} fallback={fallback}>
+    <SDKProvider sanityConfigs={sanityConfigs} fallback={fallback}>
       {children}
     </SDKProvider>
   )
