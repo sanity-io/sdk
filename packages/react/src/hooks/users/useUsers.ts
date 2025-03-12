@@ -7,7 +7,7 @@ import {
   resolveUsers,
   type SanityUser,
 } from '@sanity/sdk'
-import {useEffect, useMemo, useState, useSyncExternalStore, useTransition} from 'react'
+import {useEffect, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -79,7 +79,7 @@ export function useUsers(options: GetUsersOptions): UsersResult {
   // Use a deferred state to avoid immediate re-renders when the users request changes
   const [deferredKey, setDeferredKey] = useState(key)
   // Parse the deferred users key back into users options
-  const deferred = useMemo(() => parseUsersKey(deferredKey), [deferredKey])
+  const deferred = parseUsersKey(deferredKey)
 
   // Create an AbortController to cancel in-flight requests when needed
   const [ref, setRef] = useState<AbortController>(new AbortController())
@@ -99,10 +99,7 @@ export function useUsers(options: GetUsersOptions): UsersResult {
   }, [deferredKey, key, ref])
 
   // Get the state source for this users request from the users store
-  const {getCurrent, subscribe} = useMemo(
-    () => getUsersState(instance, deferred),
-    [instance, deferred],
-  )
+  const {getCurrent, subscribe} = getUsersState(instance, deferred)
 
   // If data isn't available yet, suspend rendering until it is
   // This is the React Suspense integration - throwing a promise
