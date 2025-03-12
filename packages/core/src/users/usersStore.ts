@@ -107,6 +107,7 @@ const listenForLoadMoreAndFetch = createInternalAction(
               switchMap((e) => {
                 if (!e.added) return EMPTY
                 const options = parseUsersKey(group$.key)
+                const {resourceType, resourceId} = options
 
                 const client$ = getClientState(instance, {
                   scope: 'global',
@@ -131,7 +132,7 @@ const listenForLoadMoreAndFetch = createInternalAction(
                   switchMap(([[client], cursor]) =>
                     client.observable.request<SanityUserResponse>({
                       method: 'GET',
-                      uri: `access/${options.resourceType}/${options.resourceId}/users`,
+                      uri: `access/${resourceType}/${resourceType === 'project' && resourceId.includes('.') ? resourceId.split('.')[0] : resourceId}/users`,
                       query: cursor
                         ? {nextCursor: cursor, limit: options.batchSize.toString()}
                         : {limit: options.batchSize.toString()},
