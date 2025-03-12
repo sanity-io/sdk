@@ -1,8 +1,8 @@
-import {type Schema} from '@sanity/types'
+import {isObject} from 'lodash-es'
 
 import {hashString} from '../common/util'
 import {getDraftId, getPublishedId} from '../utils/ids'
-import {getProjectionForSchemaType} from './getProjectionForSchemaType'
+import {getPreviewProjection, SUBTITLE_CANDIDATES, TITLE_CANDIDATES} from './getPreviewProjection'
 import {
   type PreviewQueryResult,
   type PreviewStoreState,
@@ -14,41 +14,15 @@ import {STABLE_EMPTY_PREVIEW, STABLE_ERROR_PREVIEW} from './util'
 interface ProcessPreviewQueryOptions {
   projectId: string
   dataset: string
-  schema: Schema
   ids: Set<string>
-  documentTypes: {[TDocumentId in string]?: string}
   results: PreviewQueryResult[]
 }
 
-function defaultPrepare(value: Record<string, unknown>): PreviewValue {
-  let title
-  let subtitle
-
-  if ('title' in value) {
-    if (typeof value['title'] === 'string') {
-      title = value['title']
-    }
-  }
-
-  if ('subtitle' in value) {
-    if (typeof value['subtitle'] === 'string') {
-      subtitle = value['subtitle']
-    }
-  }
-
-  return {title: title ?? 'Untitled', subtitle}
-}
-
-function hasImageAsset<T>(value: unknown): value is T & {asset: {_ref: string}} {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'asset' in value &&
-    typeof (value as {asset: unknown}).asset === 'object' &&
-    typeof (value as {asset: {_ref: unknown}}).asset?._ref === 'string'
-  )
-}
-
+/**
+ * Converts an asset ID to a URL.
+ *
+ * @internal
+ */
 function assetIdToUrl(assetId: string, projectId: string, dataset: string) {
   const pattern = /^image-(?<assetName>[A-Za-z0-9]+)-(?<dimensions>\d+x\d+)-(?<format>[a-z]+)$/
   const match = assetId.match(pattern)
@@ -62,58 +36,60 @@ function assetIdToUrl(assetId: string, projectId: string, dataset: string) {
   return `https://cdn.sanity.io/images/${projectId}/${dataset}/${assetName}-${dimensions}.${format}`
 }
 
+/**
+ * Checks if the provided value has `_ref` property that is a string and starts with `image-`
+ */
+function hasImageRef<T>(value: unknown): value is T & {_ref: string} {
+  return isObject(value) && '_ref' in value && typeof (value as {_ref: unknown})._ref === 'string'
+}
+
+/**
+ * Normalizes a media asset to a preview value.
+ * Adds a url to a media asset reference.
+ *
+ * @internal
+ */
 export function normalizeMedia(
   media: unknown,
   projectId: string,
   dataset: string,
 ): PreviewValue['media'] {
   if (!media) return null
-  if (!hasImageAsset(media)) return null
-  return {type: 'image-asset', url: assetIdToUrl(media.asset._ref, projectId, dataset)}
+  if (!hasImageRef(media)) return null
+  return {
+    type: 'image-asset',
+    _ref: media._ref,
+    url: assetIdToUrl(media._ref, projectId, dataset),
+  }
 }
 
-interface PreparePreviewForSchemaTypeOptions {
-  projectId: string
-  dataset: string
-  schema: Schema
-  schemaTypeName: string
-  selectResult: PreviewQueryResult['select']
-}
+/**
+ * Finds a single field value from a set of candidates based on a priority list of field names.
+ * Returns the first non-empty string value found from the candidates matching the priority list order.
+ *
+ * @internal
+ */
+function findFirstDefined(
+  fieldsToSearch: string[],
+  candidates: Record<string, unknown>,
+  exclude?: unknown,
+): string | undefined {
+  if (!candidates) return undefined
 
-export function preparePreviewForSchemaType({
-  projectId,
-  dataset,
-  schema,
-  schemaTypeName,
-  selectResult,
-}: PreparePreviewForSchemaTypeOptions): Omit<PreviewValue, 'status'> {
-  const schemaType = schema.get(schemaTypeName)
-  if (!schemaType) {
-    throw new Error(
-      `Could not find schema type \`${schemaTypeName}\` in schema \`${schema.name}\`.`,
-    )
+  for (const field of fieldsToSearch) {
+    const value = candidates[field]
+    if (typeof value === 'string' && value.trim() !== '' && value !== exclude) {
+      return value
+    }
   }
-  const prepare = (schemaType.preview?.prepare ?? defaultPrepare) as (val: unknown) => PreviewValue
 
-  try {
-    const result = prepare(selectResult)
-    return {...result, media: normalizeMedia(result.media, projectId, dataset)}
-  } catch (e) {
-    const message =
-      typeof e === 'object' && e && 'message' in e && typeof e.message === 'string'
-        ? e.message
-        : 'Unknown error.'
-
-    throw new Error(`Failed to prepare preview: ${message}`, {cause: e})
-  }
+  return undefined
 }
 
 export function processPreviewQuery({
   projectId,
   dataset,
-  schema,
   ids,
-  documentTypes,
   results,
 }: ProcessPreviewQueryOptions): PreviewStoreState['values'] {
   const resultMap = results.reduce<{[TDocumentId in string]?: PreviewQueryResult}>((acc, next) => {
@@ -128,20 +104,20 @@ export function processPreviewQuery({
 
       const draftResult = resultMap[draftId]
       const publishedResult = resultMap[publishedId]
-      const documentType = documentTypes[publishedId]
-      if (!documentType) return [id, STABLE_EMPTY_PREVIEW]
 
-      const selectResult = draftResult?.select ?? publishedResult?.select
-      if (!selectResult) return [id, STABLE_EMPTY_PREVIEW]
+      if (!draftResult && !publishedResult) return [id, STABLE_EMPTY_PREVIEW]
 
       try {
-        const preview = preparePreviewForSchemaType({
-          projectId,
-          dataset,
-          schema,
-          schemaTypeName: documentType,
-          selectResult,
-        })
+        const result = draftResult || publishedResult
+        if (!result) return [id, STABLE_EMPTY_PREVIEW]
+        const title = findFirstDefined(TITLE_CANDIDATES, result.titleCandidates)
+        const subtitle = findFirstDefined(SUBTITLE_CANDIDATES, result.subtitleCandidates, title)
+        const preview: Omit<PreviewValue, 'status'> = {
+          title: String(title || `${result._type}: ${result._id}`),
+          subtitle: subtitle || undefined,
+          media: normalizeMedia(result.media, projectId, dataset),
+        }
+
         const status: PreviewValue['status'] = {
           ...(draftResult?._updatedAt && {lastEditedDraftAt: draftResult._updatedAt}),
           ...(publishedResult?._updatedAt && {lastEditedPublishedAt: publishedResult._updatedAt}),
@@ -158,66 +134,21 @@ export function processPreviewQuery({
   )
 }
 
-type ProjectionMap = Record<string, {projection: string; documentTypes: Set<string>}>
-
 interface CreatePreviewQueryResult {
   query: string
   params: Record<string, string[]>
 }
 
-export function createPreviewQuery(
-  documentIds: Set<string>,
-  documentTypes: {[TDocumentId in string]?: string},
-  schema: Schema,
-): CreatePreviewQueryResult {
-  const documentIdsByDocumentType = Array.from(documentIds).reduce<Record<string, Set<string>>>(
-    (acc, id) => {
-      const documentType = documentTypes[id]
-      if (!documentType) return acc
+export function createPreviewQuery(documentIds: Set<string>): CreatePreviewQueryResult {
+  // Create arrays of draft and published IDs
+  const allIds = Array.from(documentIds).flatMap((id) => [getPublishedId(id), getDraftId(id)])
+  const projection = getPreviewProjection()
+  const queryHash = hashString(projection)
 
-      const ids = acc[documentType] ?? new Set()
-      ids.add(id)
-      acc[documentType] = ids
-
-      return acc
+  return {
+    query: `*[_id in $__ids_${queryHash}]${projection}`,
+    params: {
+      [`__ids_${queryHash}`]: allIds,
     },
-    {},
-  )
-
-  const projections = Object.keys(documentIdsByDocumentType)
-    .map((documentType) => {
-      const projection = getProjectionForSchemaType(schema, documentType)
-      const projectionHash = hashString(projection)
-      return {documentType, projection, projectionHash}
-    })
-    .reduce<ProjectionMap>((acc, {documentType, projection, projectionHash}) => {
-      const obj = acc[projectionHash] ?? {documentTypes: new Set(), projection}
-      obj.documentTypes.add(documentType)
-
-      acc[projectionHash] = obj
-      return acc
-    }, {})
-
-  const query = `[${Object.entries(projections)
-    .map(([projectionHash, {projection}]) => {
-      return `...*[_id in $__ids_${projectionHash}]{_id,_type,_updatedAt,"select":${projection}}`
-    })
-    .join(',')}]`
-
-  const params = Object.fromEntries(
-    Object.entries(projections).map(([projectionHash, value]) => {
-      const idsInProjection = Array.from(
-        Array.from(value.documentTypes)
-          .map((documentType) => documentIdsByDocumentType[documentType] ?? new Set<string>())
-          .reduce((acc, next) => {
-            for (const i of next) acc.add(i)
-            return acc
-          }, new Set<string>()),
-      ).flatMap((id) => [getPublishedId(id), getDraftId(id)])
-
-      return [`__ids_${projectionHash}`, Array.from(idsInProjection)]
-    }),
-  )
-
-  return {query, params}
+  }
 }

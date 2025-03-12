@@ -1,7 +1,7 @@
 import {type SanityInstance} from '@sanity/sdk'
 import {useContext} from 'react'
 
-import {SanityInstanceContext} from '../../context/SanityProvider'
+import {SanityInstanceContext} from '../../context/SanityContext'
 
 /**
  * `useSanityInstance` returns the current Sanity instance from the application context.
