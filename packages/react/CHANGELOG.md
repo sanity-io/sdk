@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.0.0-alpha.17](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.16...sdk-react-v0.0.0-alpha.17) (2025-03-12)
+
+
+### Features
+
+* **react:** add react compiler to the build process ([#298](https://github.com/sanity-io/sdk/issues/298)) ([bfb74eb](https://github.com/sanity-io/sdk/commit/bfb74ebe538b1218a980b03493890b70dc1311d2))
+
+
+### Bug Fixes
+
+* **auth:** do not perform multiple sid token exchanges ([#308](https://github.com/sanity-io/sdk/issues/308)) ([18461c6](https://github.com/sanity-io/sdk/commit/18461c6837bf532fb7a303efe3f2a279e8fce26f))
+* **docs:** rename infiniteList pageSize -&gt; batchSize, update reference docs ([#303](https://github.com/sanity-io/sdk/issues/303)) ([953d111](https://github.com/sanity-io/sdk/commit/953d1117d680acf5fc2e4f74350fb8f9fd8a9b1d))
+* route Document edit actions to correct resource instance ([#300](https://github.com/sanity-io/sdk/issues/300)) ([9e8f2ac](https://github.com/sanity-io/sdk/commit/9e8f2ac7de3fa1ec6f9af3cc79e3ec9ab45b3e59))
+
 ## [0.0.0-alpha.16](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.15...sdk-react-v0.0.0-alpha.16) (2025-03-10)
 
 
