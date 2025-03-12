@@ -243,3 +243,11 @@ export const getLoginUrlsState = createStateSourceAction(
  * @public
  */
 export const getAuthState = createStateSourceAction(authStore, ({authState}) => authState)
+
+/**
+ * @public
+ */
+export const getDashboardOrganizationId = createStateSourceAction(
+  authStore,
+  ({dashboardContext}) => dashboardContext?.orgId,
+)
