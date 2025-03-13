@@ -123,6 +123,17 @@ export interface AuthConfig {
   token?: string
 }
 
+/**
+ * Represents the various states the authentication can be in.
+ *
+ * @public
+ */
+export interface DashboardContext {
+  mode?: string
+  env?: string
+  orgId?: string | object
+}
+
 let tokenRefresherRunning = false
 
 /**
@@ -141,6 +152,7 @@ export interface AuthStoreState {
     callbackUrl: string | undefined
     providedToken: string | undefined
   }
+  dashboardContext?: DashboardContext
 }
 
 export const authStore = createResource<AuthStoreState>({
@@ -231,3 +243,11 @@ export const getLoginUrlsState = createStateSourceAction(
  * @public
  */
 export const getAuthState = createStateSourceAction(authStore, ({authState}) => authState)
+
+/**
+ * @public
+ */
+export const getDashboardOrganizationId = createStateSourceAction(
+  authStore,
+  ({dashboardContext}) => dashboardContext?.orgId,
+)

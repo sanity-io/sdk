@@ -11,6 +11,7 @@ import {
   type AuthStoreState,
   getAuthState,
   getCurrentUserState,
+  getDashboardOrganizationId,
   getLoginUrlsState,
   getTokenState,
 } from './authStore'
@@ -304,6 +305,18 @@ describe('authStore', () => {
 
       // pureness check
       expect(authStateSource.getCurrent()).toBe(authStateSource.getCurrent())
+    })
+  })
+
+  describe('getDashboardOrganizationId', () => {
+    it('returns the organization id if present', () => {
+      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const state = createResourceState<AuthStoreState>({
+        dashboardContext: {orgId: 'org-id'},
+      } as AuthStoreState)
+
+      const organizationId = getDashboardOrganizationId({instance, state})
+      expect(organizationId.getCurrent()).toBe('org-id')
     })
   })
 })
