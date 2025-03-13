@@ -11,6 +11,8 @@ export {
   useFrameConnection,
   type UseFrameConnectionOptions,
 } from '../hooks/comlink/useFrameConnection'
+export {useManageFavorite} from '../hooks/comlink/useManageFavorite'
+export {useRecordDocumentHistoryEvent} from '../hooks/comlink/useRecordDocumentHistoryEvent'
 export {
   useWindowConnection,
   type UseWindowConnectionOptions,

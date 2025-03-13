@@ -384,6 +384,9 @@ importers:
       '@sanity/logos':
         specifier: ^2.1.13
         version: 2.1.13(@sanity/color@3.0.6)(react@19.0.0)
+      '@sanity/message-protocol':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../core
@@ -1505,6 +1508,10 @@ packages:
     resolution: {integrity: sha512-2TjYEvOftD0v7ukx3Csdh9QIu44P2z7NDJtlC3qITJRYV36J7R6Vfd3trVhFnN77/7CZrGjqngrtohv8VqO5nw==}
     engines: {node: '>=18.0.0'}
 
+  '@sanity/comlink@2.0.5':
+    resolution: {integrity: sha512-6Rbg71hkeoGInk/9hBsCUBCZ33IHSs2fZynAR85ANkXDM+WYiwRDlker7OngBkfbK8TF9+G797VjNMQQgJINiQ==}
+    engines: {node: '>=18'}
+
   '@sanity/comlink@3.0.1':
     resolution: {integrity: sha512-I1F57GKL69xoJUF9/4XTMvXFJZ7BnaFmTBIaiRvXaovJEZ677p5f+UkURPG/dd9L63+OnTV0SNmhTjIIzNexdw==}
     engines: {node: '>=18'}
@@ -1531,6 +1538,10 @@ packages:
     peerDependencies:
       '@sanity/color': ^2.0 || ^3.0 || ^3.0.0-beta
       react: ^18.3 || >=19.0.0-rc
+
+  '@sanity/message-protocol@0.1.0':
+    resolution: {integrity: sha512-/5Vqu+MU6g2gsrQIsJ20ULPTj2b/1vZsDeVrBGV4n6hCnVQExTVKbcItyCzP4F5cfrXtimU45X8XUmQOIIpS9g==}
+    engines: {node: '>=20.0.0'}
 
   '@sanity/mutate@0.12.1':
     resolution: {integrity: sha512-SuOpMOEwcTcE5fFHpy44qVuGs8NeBAOF8wwN5DYz0Jl4MJZWGsUS81YUeFwQl0XqBZpfiLVzwutp1KYCZPuqUQ==}
@@ -5949,6 +5960,12 @@ snapshots:
 
   '@sanity/color@3.0.6': {}
 
+  '@sanity/comlink@2.0.5':
+    dependencies:
+      rxjs: 7.8.1
+      uuid: 11.0.5
+      xstate: 5.19.2
+
   '@sanity/comlink@3.0.1':
     dependencies:
       rxjs: 7.8.1
@@ -5974,6 +5991,10 @@ snapshots:
     dependencies:
       '@sanity/color': 3.0.6
       react: 19.0.0
+
+  '@sanity/message-protocol@0.1.0':
+    dependencies:
+      '@sanity/comlink': 2.0.5
 
   '@sanity/mutate@0.12.1':
     dependencies:
