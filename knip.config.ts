@@ -54,7 +54,6 @@ export const addBundlerEntries = async (config: KnipConfig): Promise<KnipConfig>
     'packages/core',
     'packages/react',
     'apps/kitchensink-react',
-    'apps/storybook',
   ]
 
   for (const wsDir of dirs) {
