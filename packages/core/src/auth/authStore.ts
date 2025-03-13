@@ -129,9 +129,9 @@ export interface AuthConfig {
  * @public
  */
 export interface DashboardContext {
-  mode: string
-  env: string
-  orgId: string | object
+  mode?: string
+  env?: string
+  orgId?: string | object
 }
 
 let tokenRefresherRunning = false

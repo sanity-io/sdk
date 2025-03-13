@@ -25,9 +25,16 @@ export const handleCallback = createAction(authStore, ({state}) => {
 
     // Get the SanityOS dashboard context from the url
     const parsedUrl = new URL(locationHref)
-    const {mode, env, orgId}: DashboardContext = JSON.parse(
-      parsedUrl.searchParams.get('_context') ?? '{}',
-    )
+    let dashboardContext: DashboardContext = {}
+    try {
+      const contextParam = parsedUrl.searchParams.get('_context') ?? '{}'
+      dashboardContext = JSON.parse(contextParam)
+    } catch (err) {
+      // If JSON parsing fails, use empty context
+      // eslint-disable-next-line no-console
+      console.error('Failed to parse dashboard context:', err)
+    }
+    const {mode, env, orgId} = dashboardContext
 
     // Otherwise, start the exchange
     state.set('exchangeSessionForToken', {
