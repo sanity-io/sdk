@@ -64,7 +64,6 @@
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
     "@sanity/ui": "^2.8.19",
-    "react-compiler-runtime": "19.0.0-beta-bafa41b-20250307",
     "react-error-boundary": "^4.1.2"
   },
   "devDependencies": {
