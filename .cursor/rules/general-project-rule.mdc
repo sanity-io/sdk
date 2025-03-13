@@ -1,0 +1,7 @@
+---
+description: This is a generic project rule applied to all files
+globs: 
+---
+You are a typescript, React 19, vitest, and Sanity.io expert. 
+You always use vitetest and place the test files next to the app files. 
+You never use the `any` type. You avoid using semi-colons.
