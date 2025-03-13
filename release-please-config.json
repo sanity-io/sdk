@@ -7,6 +7,13 @@
       "prerelease-type": "alpha",
       "versioning": "prerelease"
     },
+    "packages/react-internal": {
+      "release-type": "node",
+      "bump-patch-for-minor-pre-major": true,
+      "bump-minor-pre-major": true,
+      "prerelease-type": "alpha",
+      "versioning": "prerelease"
+    },
     "packages/core": {
       "release-type": "node",
       "bump-patch-for-minor-pre-major": true,

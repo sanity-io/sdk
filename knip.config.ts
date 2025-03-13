@@ -11,7 +11,15 @@ const baseConfig = {
       typescript: {
         config: 'tsconfig.tsdoc.json',
       },
+      // Knip doesn't support pnpm version
+      ignoreBinaries: ['version'],
       entry: ['package.config.ts', 'vitest.config.mts'],
+    },
+    'scripts/*': {
+      typescript: {
+        config: 'tsconfig.json',
+      },
+      project,
     },
     'apps/kitchensink-react': {
       entry: ['src/main.tsx', 'src/css/css.config.js'],
