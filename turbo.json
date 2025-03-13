@@ -1,6 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": ["DEV", "VISUALIZER", "PKG_VERSION"],
+  "globalEnv": ["DEV", "VISUALIZER", "PKG_VERSION", "NPM_CONFIG_PROVENANCE"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
