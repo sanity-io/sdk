@@ -1,5 +1,7 @@
 import {type SanityInstance} from '@sanity/sdk'
-import {createContext, type ReactElement} from 'react'
+import {type ReactElement} from 'react'
+
+import {SanityInstanceContext} from './SanityInstanceContext'
 
 /**
  * @internal
@@ -8,8 +10,6 @@ export interface SanityProviderProps {
   children: React.ReactNode
   sanityInstances: SanityInstance[]
 }
-
-export const SanityInstanceContext = createContext<SanityInstance[] | null>(null)
 
 /**
  * @internal
