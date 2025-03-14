@@ -25,23 +25,6 @@ for (const workspace of workspaces) {
 
 await $`pnpm build --output-logs=errors-only`.pipe(process.stdout)
 
-// If provenance isn't enabled, assume we're running locally and need to confirm before publishing
-if (process.env['NPM_CONFIG_PROVENANCE'] !== 'true') {
-  const shouldProceed = await question('Are you sure you want to proceed? (y/n) ')
-  if (shouldProceed.toLowerCase() !== 'y' && shouldProceed.toLowerCase() !== 'yes') {
-    // eslint-disable-next-line no-console
-    console.log('Operation cancelled.')
-    for (const workspace of workspaces) {
-      const {name, ...rest} = await fs.readJson(`./${workspace}/package.json`)
-      if (prev.has(name)) {
-        await fs.writeJson(`./${workspace}/package.json`, {name, ...rest, version: prev.get(name)})
-        await $`prettier --write ./${workspace}/package.json`
-      }
-    }
-    process.exit(0)
-  }
-}
-
 for (const name of next.keys()) {
   await $`pnpm --filter="${name}" publish --tag rc --no-git-checks`.pipe(process.stdout)
 }
