@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.0.0-alpha.18](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.17...sdk-v0.0.0-alpha.18) (2025-03-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **react:** flatten sdk-react imports ([#319](https://github.com/sanity-io/sdk/issues/319))
+
+### Features
+
+* **react:** flatten sdk-react imports ([#319](https://github.com/sanity-io/sdk/issues/319)) ([3922025](https://github.com/sanity-io/sdk/commit/3922025569abfa4cd824e81222495913875246d7))
+
 ## [0.0.0-alpha.17](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.16...sdk-v0.0.0-alpha.17) (2025-03-14)
 
 
