@@ -4,9 +4,7 @@ title: Integrating UI Components
 
 # Integrating UI Components
 
-The Sanity App SDK ships with no styles or markup out of the box. This is intentional, as it allows developers complete control over the look and feel of their applications while leveraging powerful Sanity platform capabilities and functionality via our SDK’s hooks.
-
-Thus, custom applications built with our SDK can be styled with your choice of styling solution or component library.
+The Sanity App SDK gives you complete freedom to craft your application’s design. The SDK empowers you to create exactly the user experience you envision — using your preferred styling solutions or component libraries — all while benefiting from the powerful hooks and functionality of the Sanity platform.
 
 ## Example: Sanity UI
 
