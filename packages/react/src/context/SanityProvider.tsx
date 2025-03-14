@@ -1,7 +1,7 @@
 import {type SanityInstance} from '@sanity/sdk'
 import {type ReactElement} from 'react'
 
-import {SanityInstanceContext} from './SanityContext'
+import {SanityInstanceContext} from './SanityInstanceContext'
 
 /**
  * @internal
