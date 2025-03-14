@@ -6,6 +6,9 @@ import {defineConfig} from 'vite'
 const ReactCompilerConfig = {}
 
 export default defineConfig({
+  server: {
+    port: 3333,
+  },
   plugins: [
     react({
       babel: {

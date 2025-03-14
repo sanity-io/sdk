@@ -1,6 +1,6 @@
 import {useFrameConnection} from '@sanity/sdk-react/hooks'
 import {Box, Button, Card, Label, Stack, Text, TextInput} from '@sanity/ui'
-import {ReactElement, useCallback, useEffect, useRef, useState} from 'react'
+import {ReactElement, useEffect, useRef, useState} from 'react'
 
 import {PageLayout} from '../components/PageLayout'
 import {FromIFrameMessage, ToIFrameMessage} from './types'
@@ -55,12 +55,12 @@ const ParentApp = (): ReactElement => {
     }
   }, [connect, selectedFrame])
 
-  const sendMessageToFramedApp = useCallback(() => {
+  const sendMessageToFramedApp = () => {
     if (message.trim()) {
       sendMessage('TO_IFRAME', {message})
       setMessage('')
     }
-  }, [message, sendMessage])
+  }
 
   const frames = [1, 2, 3]
 

@@ -1,6 +1,6 @@
 import {useWindowConnection} from '@sanity/sdk-react/hooks'
 import {Box, Button, Card, Container, Label, Stack, Text, TextInput} from '@sanity/ui'
-import {ReactElement, useCallback, useState} from 'react'
+import {type ReactElement, useState} from 'react'
 
 import {FromIFrameMessage, ToIFrameMessage} from './types'
 
@@ -18,12 +18,12 @@ const Framed = (): ReactElement => {
     },
   })
 
-  const sendMessageToParent = useCallback(() => {
+  const sendMessageToParent = () => {
     if (message.trim()) {
       sendMessage('FROM_IFRAME', {message})
       setMessage('')
     }
-  }, [message, sendMessage])
+  }
 
   return (
     <Container height={'fill'}>
