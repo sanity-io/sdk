@@ -33,3 +33,19 @@ jobs:
                 text:
                   type: mrkdwn
                   text: ${{toJson(steps.releasemarkdown.outputs.text)}}
+  mark-issues-as-done:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Mark SDK issues as done
+        uses: sanity-io/mark-issues-done-action@main
+        with:
+          linear_api_key: ${{secrets.LINEAR_API_TOKEN}}
+          repository_name: ${{github.event.repository.name}}
+          # Label: In Staging
+          initial_state_id: "c56956cd-c281-4ca5-889f-6189ce231a6d"
+          # Label: Shipped
+          done_state_id: "5a35b7bf-6d37-4cc2-854a-2f18d160e2e5"
