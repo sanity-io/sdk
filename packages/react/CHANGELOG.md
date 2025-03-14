@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.0.0-alpha.18](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.17...sdk-react-v0.0.0-alpha.18) (2025-03-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove `schema` from sanity config
+* remove schema state and schema manager
+
+### Features
+
+* **react:** add interaction history and favorite hooks ([#236](https://github.com/sanity-io/sdk/issues/236)) ([b7cdbd6](https://github.com/sanity-io/sdk/commit/b7cdbd648b81dc46054de0e4c1b864471f2daa30))
+* remove `schema` from sanity config ([6257fe3](https://github.com/sanity-io/sdk/commit/6257fe39b4521ace71db54f1d0d173a6019db38d))
+* remove schema state and schema manager ([6257fe3](https://github.com/sanity-io/sdk/commit/6257fe39b4521ace71db54f1d0d173a6019db38d))
+* use projection for previews and remove schema usage ([6257fe3](https://github.com/sanity-io/sdk/commit/6257fe39b4521ace71db54f1d0d173a6019db38d))
+
+
+### Bug Fixes
+
+* **react:** remove react compiler runtime package ([#311](https://github.com/sanity-io/sdk/issues/311)) ([08046b5](https://github.com/sanity-io/sdk/commit/08046b565b187cad00f45f8790940e5735a77d5a))
+
 ## [0.0.0-alpha.17](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.16...sdk-react-v0.0.0-alpha.17) (2025-03-12)
 
 
