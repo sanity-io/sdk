@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.0.0-alpha.19](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.18...sdk-react-v0.0.0-alpha.19) (2025-03-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **react:** flatten sdk-react imports ([#319](https://github.com/sanity-io/sdk/issues/319))
+
+### Features
+
+* **react:** flatten sdk-react imports ([#319](https://github.com/sanity-io/sdk/issues/319)) ([3922025](https://github.com/sanity-io/sdk/commit/3922025569abfa4cd824e81222495913875246d7))
+
+
+### Bug Fixes
+
+* correct the React SDK quickstart ([#317](https://github.com/sanity-io/sdk/issues/317)) ([df5474f](https://github.com/sanity-io/sdk/commit/df5474f478ca6bbde8b471d1beea34f5916470a5))
+
 ## [0.0.0-alpha.18](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.17...sdk-react-v0.0.0-alpha.18) (2025-03-14)
 
 
