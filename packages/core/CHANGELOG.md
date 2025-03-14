@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.0.0-alpha.17](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.16...sdk-v0.0.0-alpha.17) (2025-03-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove `schema` from sanity config
+* remove schema state and schema manager
+
+### Features
+
+* remove `schema` from sanity config ([6257fe3](https://github.com/sanity-io/sdk/commit/6257fe39b4521ace71db54f1d0d173a6019db38d))
+* remove schema state and schema manager ([6257fe3](https://github.com/sanity-io/sdk/commit/6257fe39b4521ace71db54f1d0d173a6019db38d))
+* store Dashboard context ([#307](https://github.com/sanity-io/sdk/issues/307)) ([a6c454e](https://github.com/sanity-io/sdk/commit/a6c454e33acea6d33d004751615b226bd60c49b3))
+* use projection for previews and remove schema usage ([6257fe3](https://github.com/sanity-io/sdk/commit/6257fe39b4521ace71db54f1d0d173a6019db38d))
+
 ## [0.0.0-alpha.16](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.15...sdk-v0.0.0-alpha.16) (2025-03-12)
 
 
