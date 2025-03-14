@@ -4,7 +4,7 @@ title: Integrating UI Components
 
 # Integrating UI Components
 
-The Sanity App SDK gives you complete freedom to craft your application’s design. The SDK empowers you to create exactly the user experience you envision — using your preferred styling solutions or component libraries — all while benefiting from the powerful hooks and functionality of the Sanity platform.
+The Sanity App SDK gives you complete freedom to craft your application’s design. Whether your preferred styling solution is Sanity UI, Tailwind, vanilla CSS, or something else entirely, the SDK‘s headless approach allows you to style your app with the tools your team knows best, while benefiting from powerful React hooks that unlock Sanity platform capabilities.
 
 ## Example: Sanity UI
 
