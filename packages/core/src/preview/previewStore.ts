@@ -8,7 +8,20 @@ export interface PreviewQueryResult {
   _id: string
   _type: string
   _updatedAt: string
-  select: Record<string, unknown>
+  titleCandidates: Record<string, unknown>
+  subtitleCandidates: Record<string, unknown>
+  media?: PreviewMedia | null
+}
+
+/**
+ * Represents a media asset in a preview.
+ *
+ * @public
+ */
+export interface PreviewMedia {
+  type: 'image-asset'
+  _ref: string
+  url: string
 }
 
 /**
@@ -33,7 +46,7 @@ export interface PreviewValue {
    * An optional piece of media representing the document within its preview.
    * Currently, only image assets are available.
    */
-  media?: {type: 'image-asset'; url: string} | null
+  media?: PreviewMedia | null
 
   /**
    * The status of the document.

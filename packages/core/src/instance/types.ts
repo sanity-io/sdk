@@ -3,7 +3,6 @@
 // of importing these modules, we just want the types for their configs
 import type {AuthConfig} from '../auth/authStore'
 import type {ResourceId} from '../document/patchOperations'
-import type {SchemaConfig} from '../schema/schemaManager'
 
 /**
  * @public
@@ -12,7 +11,6 @@ export interface SanityConfig {
   projectId: string
   dataset: string
   auth?: AuthConfig
-  schema?: SchemaConfig
 }
 
 /** @public */

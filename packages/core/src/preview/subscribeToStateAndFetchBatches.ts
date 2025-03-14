@@ -14,7 +14,6 @@ import {
 
 import {getClientState} from '../client/clientStore'
 import {type ActionContext, createInternalAction} from '../resources/createAction'
-import {getSchemaState} from '../schema/getSchemaState'
 import {createPreviewQuery, processPreviewQuery} from './previewQuery'
 import {type PreviewQueryResult, type PreviewStoreState} from './previewStore'
 import {PREVIEW_TAG} from './util'
@@ -25,7 +24,6 @@ export const subscribeToStateAndFetchBatches = createInternalAction(
   ({state, instance}: ActionContext<PreviewStoreState>) => {
     return function () {
       const client$ = getClientState(instance, {apiVersion: 'vX'}).observable
-      const schema$ = getSchemaState(instance).observable
       const documentTypes$ = state.observable.pipe(
         map((i) => i.documentTypes),
         distinctUntilChanged(),
@@ -60,11 +58,11 @@ export const subscribeToStateAndFetchBatches = createInternalAction(
         map(([[, ids], documentTypes]) => ({ids, documentTypes})),
       )
 
-      return combineLatest([newSubscriberIds$, lastLiveEventId$, client$, schema$])
+      return combineLatest([newSubscriberIds$, lastLiveEventId$, client$])
         .pipe(
-          switchMap(([{ids, documentTypes}, lastLiveEventId, client, schema]) => {
+          switchMap(([{ids}, lastLiveEventId, client]) => {
             if (!ids.size) return EMPTY
-            const {query, params} = createPreviewQuery(ids, documentTypes, schema)
+            const {query, params} = createPreviewQuery(ids)
 
             return client.observable
               .fetch<PreviewQueryResult[]>(query, params, {
@@ -74,17 +72,15 @@ export const subscribeToStateAndFetchBatches = createInternalAction(
                 tag: PREVIEW_TAG,
                 lastLiveEventId,
               })
-              .pipe(map((response) => ({...response, ids, schema, documentTypes})))
+              .pipe(map((response) => ({...response, ids})))
           }),
-          map(({ids, result, syncTags, documentTypes, schema}) => ({
+          map(({ids, result, syncTags}) => ({
             syncTags,
             values: processPreviewQuery({
               projectId: instance.identity.projectId,
               dataset: instance.identity.dataset,
               ids,
-              documentTypes,
               results: result,
-              schema,
             }),
           })),
         )

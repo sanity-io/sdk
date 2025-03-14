@@ -1,6 +1,4 @@
 import {SanityClient, type SyncTag} from '@sanity/client'
-import {Schema as SchemaConstructor} from '@sanity/schema'
-import {type Schema} from '@sanity/types'
 import {Observable, of, Subject} from 'rxjs'
 import {describe, expect, it, type Mock, vi} from 'vitest'
 
@@ -8,13 +6,11 @@ import {getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState, type ResourceState} from '../resources/createResource'
 import {type StateSource} from '../resources/createStateSourceAction'
-import {getSchemaState} from '../schema/getSchemaState'
 import {type PreviewQueryResult, type PreviewStoreState} from './previewStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 
 vi.mock('../client/clientStore')
 
-vi.mock('../schema/getSchemaState')
 vi.mock('../resources/createResource', async (importOriginal) => {
   const original = await importOriginal<typeof import('../resources/createResource')>()
   return {...original, getOrCreateResource: vi.fn()}
@@ -22,17 +18,6 @@ vi.mock('../resources/createResource', async (importOriginal) => {
 
 describe('subscribeToStateAndFetchBatches', () => {
   const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-
-  const schema: Schema = SchemaConstructor.compile({
-    name: 'default',
-    types: [
-      {
-        name: 'test',
-        type: 'document',
-        fields: [{name: 'title', type: 'string'}],
-      },
-    ],
-  })
 
   let state: ResourceState<PreviewStoreState>
   let fetchResults: Subject<{result: PreviewQueryResult[]; syncTags: SyncTag[]}>
@@ -61,11 +46,6 @@ describe('subscribeToStateAndFetchBatches', () => {
     vi.mocked(getClientState).mockReturnValue({
       observable: of({observable: {fetch: mockFetch}} as unknown as SanityClient),
     } as StateSource<SanityClient>)
-    ;(getSchemaState as Mock).mockImplementation(() => ({
-      getCurrent: () => schema,
-      subscribe: vi.fn(() => vi.fn()),
-      observable: of(schema),
-    }))
   })
 
   it('batches rapid subscription changes into single requests', async () => {
@@ -87,7 +67,7 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     expect(mockFetch).toHaveBeenCalledTimes(1)
     expect(mockFetch.mock.calls[0][1]).toMatchObject({
-      __ids_16144029: ['doc1', 'drafts.doc1', 'doc2', 'drafts.doc2'],
+      __ids_0d8f6ec5: ['doc1', 'drafts.doc1', 'doc2', 'drafts.doc2'],
     })
 
     subscription.unsubscribe()
@@ -215,7 +195,8 @@ describe('subscribeToStateAndFetchBatches', () => {
           _id: 'doc1',
           _type: 'test',
           _updatedAt: '2024-01-01T00:00:00Z',
-          select: {title: 'Test Document'},
+          titleCandidates: {title: 'Test Document'},
+          subtitleCandidates: {description: 'Test Description'},
         },
       ],
       syncTags: ['s1:tag1', 's1:tag2'],

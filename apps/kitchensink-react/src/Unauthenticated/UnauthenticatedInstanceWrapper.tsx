@@ -4,12 +4,9 @@ import {Box, Button, Card, Flex} from '@sanity/ui'
 import {type JSX} from 'react'
 import {Link, Outlet} from 'react-router'
 
-import {schema} from '../schema'
-
 const sanityInstance = createSanityInstance({
   projectId: 'ppsg7ml5',
   dataset: 'test',
-  schema,
 })
 
 export function UnauthenticatedInstanceWrapper(): JSX.Element {
