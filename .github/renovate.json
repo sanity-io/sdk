@@ -24,13 +24,6 @@
       "semanticCommitType": "chore"
     },
     {
-      "description": "Group storybook related deps in a single PR, as they often have to update together",
-      "groupName": "storybook-tooling",
-      "matchPackageNames": ["@storybook/*", "storybook"],
-      "group": {"semanticCommitType": "chore"},
-      "semanticCommitType": "chore"
-    },
-    {
       "description": "Group eslint related deps in a single PR, as they often have to update together",
       "groupName": "eslint-tooling",
       "matchPackageNames": [
