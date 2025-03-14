@@ -1,4 +1,4 @@
-import {AuthBoundary} from '@sanity/sdk-react/components'
+import {AuthBoundary} from '@sanity/sdk-react'
 import {Card, Flex, Text} from '@sanity/ui'
 import {type JSX} from 'react'
 import {Link} from 'react-router'

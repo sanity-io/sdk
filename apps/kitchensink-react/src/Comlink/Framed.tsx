@@ -1,4 +1,4 @@
-import {useWindowConnection} from '@sanity/sdk-react/hooks'
+import {useWindowConnection} from '@sanity/sdk-react'
 import {Box, Button, Card, Container, Label, Stack, Text, TextInput} from '@sanity/ui'
 import {type ReactElement, useState} from 'react'
 

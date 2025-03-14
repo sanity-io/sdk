@@ -2,7 +2,6 @@
   "name": "sdk-react",
   "extends": ["../../typedoc.base.json"],
   "entryPoints": ["./src/_exports/*"],
-  "exclude": ["./src/_exports/index.ts", "./src/_exports/context.ts"],
   "projectDocuments": ["guides/*.md"],
   "readme": "README.md",
   "excludeExternals": false

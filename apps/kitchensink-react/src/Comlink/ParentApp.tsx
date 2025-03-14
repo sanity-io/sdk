@@ -1,4 +1,4 @@
-import {useFrameConnection} from '@sanity/sdk-react/hooks'
+import {useFrameConnection} from '@sanity/sdk-react'
 import {Box, Button, Card, Label, Stack, Text, TextInput} from '@sanity/ui'
 import {ReactElement, useEffect, useRef, useState} from 'react'
 

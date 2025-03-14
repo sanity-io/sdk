@@ -1,8 +1,4 @@
-import {
-  useInfiniteList,
-  useManageFavorite,
-  useRecordDocumentHistoryEvent,
-} from '@sanity/sdk-react/hooks'
+import {useInfiniteList, useManageFavorite, useRecordDocumentHistoryEvent} from '@sanity/sdk-react'
 import {Box, Button, Flex, Heading} from '@sanity/ui'
 import {type JSX} from 'react'
 

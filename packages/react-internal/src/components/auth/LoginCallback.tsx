@@ -1,4 +1,4 @@
-import {useHandleCallback} from '@sanity/sdk-react/hooks'
+import {useHandleCallback} from '@sanity/sdk-react'
 import {Flex, Heading, Spinner} from '@sanity/ui'
 import {useEffect} from 'react'
 

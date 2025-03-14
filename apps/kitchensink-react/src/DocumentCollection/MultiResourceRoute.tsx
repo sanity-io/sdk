@@ -1,5 +1,5 @@
 import {DocumentHandle, SanityDocument} from '@sanity/sdk'
-import {useDocument, useEditDocument} from '@sanity/sdk-react/hooks'
+import {useDocument, useEditDocument} from '@sanity/sdk-react'
 import {TextInput} from '@sanity/ui'
 import {JSX} from 'react'
 

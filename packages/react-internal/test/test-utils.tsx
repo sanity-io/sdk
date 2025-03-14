@@ -1,5 +1,5 @@
 import {createSanityInstance} from '@sanity/sdk'
-import {SanityProvider} from '@sanity/sdk-react/context'
+import {SanityProvider} from '@sanity/sdk-react'
 import {
   render,
   renderHook,

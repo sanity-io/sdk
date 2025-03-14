@@ -1,4 +1,4 @@
-import {useLogOut} from '@sanity/sdk-react/hooks'
+import {useLogOut} from '@sanity/sdk-react'
 import {Button, Heading, Stack, Text} from '@sanity/ui'
 import {useCallback} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
