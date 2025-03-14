@@ -1,4 +1,4 @@
-import {SanityApp} from '@sanity/sdk-react/components'
+import {SanityApp} from '@sanity/sdk-react'
 import {Spinner} from '@sanity/ui'
 import {type JSX} from 'react'
 import {Route, Routes} from 'react-router'

@@ -1,4 +1,4 @@
-import {useInfiniteList} from '@sanity/sdk-react/hooks'
+import {useInfiniteList} from '@sanity/sdk-react'
 import {Box, Heading} from '@sanity/ui'
 import {type JSX} from 'react'
 

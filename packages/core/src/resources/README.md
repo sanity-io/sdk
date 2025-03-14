@@ -277,7 +277,7 @@ By convention, actions that return state sources should end with the `-State` su
 ```ts
 // example usage in a hook
 import {getSchemaState} from '@sanity/sdk'
-import {useSanityInstance} from '@sanity/sdk-react/hooks'
+import {useSanityInstance} from '@sanity/sdk-react'
 
 export function useSchema(): Schema {
   const instance = useSanityInstance()

@@ -1,4 +1,4 @@
-import {useLoginUrls} from '@sanity/sdk-react/hooks'
+import {useLoginUrls} from '@sanity/sdk-react'
 import {Box, Button, Flex, Heading, Spinner, Stack} from '@sanity/ui'
 import {type JSX, Suspense} from 'react'
 

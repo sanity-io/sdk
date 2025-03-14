@@ -30,36 +30,11 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./context": {
-      "source": "./src/_exports/context.ts",
-      "import": "./dist/context.js",
-      "default": "./dist/context.js"
-    },
-    "./hooks": {
-      "source": "./src/_exports/hooks.ts",
-      "import": "./dist/hooks.js",
-      "default": "./dist/hooks.js"
-    },
-    "./components": {
-      "source": "./src/_exports/components.ts",
-      "import": "./dist/components.js",
-      "default": "./dist/components.js"
-    },
     "./package.json": "./package.json"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "typesVersions": {
-    "*": {
-      "context": [
-        "./dist/context.d.ts"
-      ],
-      "hooks": [
-        "./dist/hooks.d.ts"
-      ]
-    }
-  },
   "files": [
     "dist",
     "src"

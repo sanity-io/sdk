@@ -1,25 +1,11 @@
-/** MAIN INSTANCE */
-// Utils
 // Use import type to access the internal type and re-export it
 import {type SanityProject as _SanityProject} from '@sanity/client'
 
-export {createSanityInstance} from '../instance/sanityInstance'
-export {type ActionContext, type ResourceAction} from '../resources/createAction'
-export {type ResourceState} from '../resources/createResource'
-export {type BoundResourceAction} from '../resources/createStore'
-export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
+/**
+ * @public
+ */
+export type SanityProject = _SanityProject
 
-// Types
-export type {SanityConfig, SanityInstance, SdkIdentity} from '../instance/types'
-export type {StateSource} from '../resources/createStateSourceAction'
-
-/** CLIENT */
-// Utils
-export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
-// Types
-export type {ClientState} from '../client/clientStore'
-
-/** AUTH */
 export {AuthStateType} from '../auth/authStateType'
 export {
   type AuthConfig,
@@ -38,19 +24,8 @@ export {
 export {fetchLoginUrls} from '../auth/fetchLoginUrls'
 export {handleCallback} from '../auth/handleCallback'
 export {logout} from '../auth/logout'
-export type {CurrentUser, Role, SanityDocument, SanityDocumentLike} from '@sanity/types'
-
-/** PREVIEW */
-export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
-export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
-export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
-
-/** PROJECTION */
-export {getProjectionState} from '../projection/getProjectionState'
-export type {ProjectionValuePending, ValidProjection} from '../projection/projectionStore'
-export {resolveProjection} from '../projection/resolveProjection'
-
-/** COMLINK */
+export type {ClientState} from '../client/clientStore'
+export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
 export {destroyController} from '../comlink/controller/actions/destroyController'
 export {getOrCreateChannel} from '../comlink/controller/actions/getOrCreateChannel'
 export {getOrCreateController} from '../comlink/controller/actions/getOrCreateController'
@@ -60,8 +35,7 @@ export {getOrCreateNode} from '../comlink/node/actions/getOrCreateNode'
 export {releaseNode} from '../comlink/node/actions/releaseNode'
 export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'
-
-/** DOCUMENT */
+export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
 export {
   createDocument,
   type CreateDocumentAction,
@@ -107,24 +81,16 @@ export {
 } from '../document/patchOperations'
 export {type DocumentResourceId, getResourceId, type ResourceId} from '../document/patchOperations'
 export {type PermissionDeniedReason, type PermissionsResult} from '../document/permissions'
-
-/** USERS */
-export {type Membership, type ResourceType, type SanityUser, type UserProfile} from '../users/types'
-export {createUsersStore, type UsersStoreState} from '../users/usersStore'
-
-/** PROJECT */
+export {createSanityInstance} from '../instance/sanityInstance'
+export type {SanityConfig, SanityInstance, SdkIdentity} from '../instance/types'
+export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
+export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
+export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
 export {getProjectState, resolveProject} from '../project/project'
-
-/** PROJECTS */
+export {getProjectionState} from '../projection/getProjectionState'
+export type {ProjectionValuePending, ValidProjection} from '../projection/projectionStore'
+export {resolveProjection} from '../projection/resolveProjection'
 export {getProjectsState, resolveProjects} from '../projects/projects'
-
-/** @public */
-export type SanityProject = _SanityProject
-
-/** DATASETS */
-export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
-
-/** QUERY */
 export {
   getQueryKey,
   getQueryState,
@@ -132,6 +98,12 @@ export {
   type QueryOptions,
   resolveQuery,
 } from '../query/queryStore'
-
-/** VERSION */
+export {type ActionContext, type ResourceAction} from '../resources/createAction'
+export {type ResourceState} from '../resources/createResource'
+export type {StateSource} from '../resources/createStateSourceAction'
+export {type BoundResourceAction} from '../resources/createStore'
+export {type Membership, type ResourceType, type SanityUser, type UserProfile} from '../users/types'
+export {createUsersStore, type UsersStoreState} from '../users/usersStore'
+export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
 export {CORE_SDK_VERSION} from '../version'
+export type {CurrentUser, Role, SanityDocument, SanityDocumentLike} from '@sanity/types'

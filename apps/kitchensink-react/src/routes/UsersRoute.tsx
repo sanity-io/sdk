@@ -1,4 +1,4 @@
-import {useUsers} from '@sanity/sdk-react/hooks'
+import {useUsers} from '@sanity/sdk-react'
 import {Avatar, Box, Card, Flex, Heading, Text} from '@sanity/ui'
 import {type JSX} from 'react'
 

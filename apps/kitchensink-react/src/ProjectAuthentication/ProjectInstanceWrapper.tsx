@@ -1,4 +1,4 @@
-import {SDKProvider} from '@sanity/sdk-react/components'
+import {SDKProvider} from '@sanity/sdk-react'
 import {Spinner} from '@sanity/ui'
 import {type JSX} from 'react'
 import {Outlet} from 'react-router'

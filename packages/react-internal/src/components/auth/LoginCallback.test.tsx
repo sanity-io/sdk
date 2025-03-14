@@ -4,16 +4,20 @@ import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest'
 import {renderWithWrappers} from './authTestHelpers'
 
 // Mock `useHandleCallback`
-vi.mock('@sanity/sdk-react/hooks', () => ({
-  useHandleCallback: vi.fn(() => async (url: string) => {
-    const parsedUrl = new URL(url)
-    const sid = new URLSearchParams(parsedUrl.hash.slice(1)).get('sid')
-    if (sid === 'valid') {
-      return 'https://example.com/new-location'
-    }
-    return false
-  }),
-}))
+vi.mock('@sanity/sdk-react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@sanity/sdk-react')>()
+  return {
+    ...actual,
+    useHandleCallback: vi.fn(() => async (url: string) => {
+      const parsedUrl = new URL(url)
+      const sid = new URLSearchParams(parsedUrl.hash.slice(1)).get('sid')
+      if (sid === 'valid') {
+        return 'https://example.com/new-location'
+      }
+      return false
+    }),
+  }
+})
 
 describe('LoginCallback', () => {
   beforeAll(() => {

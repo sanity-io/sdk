@@ -4,12 +4,16 @@ import {describe, expect, it, vi} from 'vitest'
 import {renderWithWrappers} from './authTestHelpers'
 import {Login} from './Login'
 
-vi.mock('@sanity/sdk-react/hooks', () => ({
-  useLoginUrls: vi.fn(() => [
-    {title: 'Provider A', url: 'https://provider-a.com/auth'},
-    {title: 'Provider B', url: 'https://provider-b.com/auth'},
-  ]),
-}))
+vi.mock('@sanity/sdk-react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@sanity/sdk-react')>()
+  return {
+    ...actual,
+    useLoginUrls: vi.fn(() => [
+      {title: 'Provider A', url: 'https://provider-a.com/auth'},
+      {title: 'Provider B', url: 'https://provider-b.com/auth'},
+    ]),
+  }
+})
 
 describe('Login', () => {
   it('renders login providers', () => {

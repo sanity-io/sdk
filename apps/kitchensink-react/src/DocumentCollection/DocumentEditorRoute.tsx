@@ -16,7 +16,7 @@ import {
   useDocumentSyncStatus,
   useEditDocument,
   usePermissions,
-} from '@sanity/sdk-react/hooks'
+} from '@sanity/sdk-react'
 import {SanityDocument} from '@sanity/types'
 import {Box, Button, TextInput, Tooltip} from '@sanity/ui'
 import {JsonData, JsonEditor} from 'json-edit-react'

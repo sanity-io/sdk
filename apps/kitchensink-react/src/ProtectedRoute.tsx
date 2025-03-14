@@ -1,4 +1,4 @@
-import {useAuthState, useCurrentUser, useLogOut} from '@sanity/sdk-react/hooks'
+import {useAuthState, useCurrentUser, useLogOut} from '@sanity/sdk-react'
 import {Avatar, Box, Button, Card, Flex} from '@sanity/ui'
 import {type JSX} from 'react'
 import {Link, Navigate, Outlet} from 'react-router'

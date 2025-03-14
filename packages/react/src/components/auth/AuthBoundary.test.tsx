@@ -1,5 +1,5 @@
 import {AuthStateType} from '@sanity/sdk'
-import {useAuthState} from '@sanity/sdk-react/hooks'
+import {useAuthState} from '@sanity/sdk-react'
 import {screen, waitFor} from '@testing-library/react'
 import {beforeEach, describe, expect, it, type MockInstance, vi} from 'vitest'
 

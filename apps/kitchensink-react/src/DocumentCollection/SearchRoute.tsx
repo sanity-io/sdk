@@ -1,4 +1,4 @@
-import {type DocumentHandle, useInfiniteList} from '@sanity/sdk-react/hooks'
+import {type DocumentHandle, useInfiniteList} from '@sanity/sdk-react'
 import {Box, Heading, Stack, Text, TextInput} from '@sanity/ui'
 import {type JSX, useState} from 'react'
 
