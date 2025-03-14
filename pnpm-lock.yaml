@@ -320,9 +320,6 @@ importers:
       '@sanity/mutate':
         specifier: ^0.12.1
         version: 0.12.1
-      '@sanity/schema':
-        specifier: ^3.78.1
-        version: 3.78.1(@types/react@19.0.10)
       '@sanity/types':
         specifier: ^3.78.1
         version: 3.78.1(@types/react@19.0.10)
@@ -1529,9 +1526,6 @@ packages:
   '@sanity/eventsource@5.0.2':
     resolution: {integrity: sha512-/B9PMkUvAlUrpRq0y+NzXgRv5lYCLxZNsBJD2WXVnqZYOfByL9oQBV7KiTaARuObp5hcQYuPfOAVjgXe3hrixA==}
 
-  '@sanity/generate-help-url@3.0.0':
-    resolution: {integrity: sha512-wtMYcV5GIDIhVyF/jjmdwq1GdlK07dRL40XMns73VbrFI7FteRltxv48bhYVZPcLkRXb0SHjpDS/icj9/yzbVA==}
-
   '@sanity/icons@3.7.0':
     resolution: {integrity: sha512-MVh5C55X8Vn2oIsraSPVx4MkHvkqUimkmv7yP++IfJBCLgb38/7G2CM+GB95GTpLPRdF2m3QEwwXcaeljjqKOQ==}
     engines: {node: '>=14.0.0'}
@@ -1568,9 +1562,6 @@ packages:
     resolution: {integrity: sha512-daeoWaW67I2t3yIV1s3PI2o8+A7jZnucFQzaIphpFDhHYM/mqjNvEROka300TcZ1Csm4VyPBSvx1IQQ/FkqA5Q==}
     peerDependencies:
       prettier: ^3.2.5
-
-  '@sanity/schema@3.78.1':
-    resolution: {integrity: sha512-bljxrDEf6FprD1Gy3YqC0vACcDYCukMj1rpMdlACH+MQ0Z+5SexP86sYVgc9W2xdofUzANBQfDl6pIX0CL8DjA==}
 
   '@sanity/types@3.78.1':
     resolution: {integrity: sha512-/T7VD+XWYWrpMa0eogeaRTe1BZwW0kcWQb+FXYN3Fu9tSSkM/Q1VW6W0HBcJZcCkK2RzVBqy43bWKbsLgC0iZw==}
@@ -2143,10 +2134,6 @@ packages:
   arraybuffer.prototype.slice@1.0.4:
     resolution: {integrity: sha512-BNoCY6SXXPQ7gF2opIP4GBE+Xw7U+pHMYKuzjgCN3GwiaIR09UUeKfheyIry77QtrCBlC0KK0q5/TER/tYh3PQ==}
     engines: {node: '>= 0.4'}
-
-  arrify@2.0.1:
-    resolution: {integrity: sha512-3duEwti880xqi4eAMN8AyR4a0ByT90zoYdLlevfrvU43vb0YZwZVfxOgxWrLXXXpyugL0hNZc9G6BiB5B3nUug==}
-    engines: {node: '>=8'}
 
   assertion-error@2.0.1:
     resolution: {integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==}
@@ -3122,9 +3109,6 @@ packages:
     resolution: {integrity: sha512-AXcZb6vzzrFAUE61HnN4mpLqd/cSIwNQjtNWR0euPm6y0iqx3G4gOXaIDdtdDwZmhwe82LA6+zinmW4UBWVePQ==}
     engines: {node: '>=16.17.0'}
 
-  humanize-list@1.0.1:
-    resolution: {integrity: sha512-4+p3fCRF21oUqxhK0yZ6yaSP/H5/wZumc7q1fH99RkW7Q13aAxDeP78BKjoR+6y+kaHqKF/JWuQhsNuuI2NKtA==}
-
   husky@9.1.6:
     resolution: {integrity: sha512-sqbjZKK7kf44hfdE94EoX8MZNk0n7HeW37O4YrVGCF4wzgQjp+akPAkfUK5LZ6KuR/6sqeAVuXHji+RzQgOn5A==}
     engines: {node: '>=18'}
@@ -3485,10 +3469,6 @@ packages:
     peerDependencies:
       '@types/node': '>=18'
       typescript: '>=5.0.4'
-
-  leven@3.1.0:
-    resolution: {integrity: sha512-qsda+H8jTaUaN/x5vzW2rzc+8Rw4TAQ/4KjB46IwK5VH+IlVeeeje/EoZRpiXvIqjFgK84QffqPztGI3VBLG1A==}
-    engines: {node: '>=6'}
 
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
@@ -5997,8 +5977,6 @@ snapshots:
       event-source-polyfill: 1.0.31
       eventsource: 2.0.2
 
-  '@sanity/generate-help-url@3.0.0': {}
-
   '@sanity/icons@3.7.0(react@19.0.0)':
     dependencies:
       react: 19.0.0
@@ -6081,21 +6059,6 @@ snapshots:
     dependencies:
       prettier: 3.5.2
       prettier-plugin-packagejson: 2.5.3(prettier@3.5.2)
-
-  '@sanity/schema@3.78.1(@types/react@19.0.10)':
-    dependencies:
-      '@sanity/generate-help-url': 3.0.0
-      '@sanity/types': 3.78.1(@types/react@19.0.10)
-      arrify: 2.0.1
-      groq-js: 1.15.0
-      humanize-list: 1.0.1
-      leven: 3.1.0
-      lodash: 4.17.21
-      object-inspect: 1.13.4
-    transitivePeerDependencies:
-      - '@types/react'
-      - debug
-      - supports-color
 
   '@sanity/types@3.78.1(@types/react@19.0.10)':
     dependencies:
@@ -6853,8 +6816,6 @@ snapshots:
       es-errors: 1.3.0
       get-intrinsic: 1.2.6
       is-array-buffer: 3.0.5
-
-  arrify@2.0.1: {}
 
   assertion-error@2.0.1: {}
 
@@ -7965,8 +7926,6 @@ snapshots:
 
   human-signals@5.0.0: {}
 
-  humanize-list@1.0.1: {}
-
   husky@9.1.6: {}
 
   iconv-lite@0.6.3:
@@ -8324,8 +8283,6 @@ snapshots:
       typescript: 5.7.3
       zod: 3.24.1
       zod-validation-error: 3.4.0(zod@3.24.1)
-
-  leven@3.1.0: {}
 
   levn@0.4.1:
     dependencies:

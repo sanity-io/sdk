@@ -8,8 +8,8 @@ import {LoadMore} from './LoadMore'
 
 export function DocumentListRoute(): JSX.Element {
   const {isPending, data, hasMore, loadMore} = useInfiniteList({
-    filter: '_type == "book"',
-    orderings: [{field: '_updatedAt', direction: 'desc'}],
+    filter: '_type == "author"',
+    orderings: [{field: '_updatedAt', direction: 'asc'}],
   })
 
   return (
