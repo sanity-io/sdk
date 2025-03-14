@@ -22,10 +22,14 @@ import {type SanityConfig} from '@sanity/sdk'
 import {SanityApp} from '@sanity/sdk-react'
 
 // Sanity UI
-import {ThemeProvider, studioTheme} from '@sanity/ui'
+import {ThemeProvider} from '@sanity/ui'
+import {buildTheme} from '@sanity/ui/theme'
 
 import {ExampleComponent} from './ExampleComponent'
 import './App.css'
+
+// Build the Sanity UI theme
+const theme = buildTheme()
 
 export function App() {
   // apps can access many different projects or other sources of data
@@ -39,7 +43,7 @@ export function App() {
   return (
     <div className="app-container">
       <SanityApp sanityConfigs={sanityConfigs} fallback={<div>Loading...</div>}>
-        <ThemeProvider theme={studioTheme}>
+        <ThemeProvider theme={theme}>
           {/* add your own components here! */}
           <ExampleComponent />
         </ThemeProvider>
