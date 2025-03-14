@@ -11,10 +11,7 @@ The Sanity App SDK gives you complete freedom to craft your application’s desi
 First, begin by installing Sanity UI:
 
 ```shell
-npm install @sanity/ui
-
-# install peer dependencies
-npm install styled-components
+npm install @sanity/ui styled-components
 ```
 
 Then, in your custom application’s `src/App.tsx`, instantiate Sanity UI’s ThemeProvider as usual (within the `SanityApp` component):
