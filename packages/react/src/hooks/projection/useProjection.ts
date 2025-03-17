@@ -9,13 +9,21 @@ import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxj
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
-interface UseProjectionOptions {
+/**
+ * @public
+ * @category Types
+ */
+export interface UseProjectionOptions {
   document: DocumentHandle
   projection: ValidProjection
   ref?: React.RefObject<unknown>
 }
 
-interface UseProjectionResults<TResult extends object> {
+/**
+ * @public
+ * @category Types
+ */
+export interface UseProjectionResults<TResult extends object> {
   results: TResult
   isPending: boolean
 }
@@ -32,21 +40,25 @@ interface UseProjectionResults<TResult extends object> {
  * @param options - The document handle for the document you want to project values from, the projection string, and an optional ref
  * @returns The projection values for the given document and a boolean to indicate whether the resolution is pending
  *
- * @example Using a projection to display specific document fields
+ * @example Using a projection to render a preview of document
  * ```
  * // ProjectionComponent.jsx
  * export default function ProjectionComponent({ document }) {
  *   const ref = useRef(null)
- *   const { results: { title, description, authors }, isPending } = useProjection({
+ *   const { results: { title, coverImage, authors }, isPending } = useProjection({
  *     document,
- *     projection: '{title, "description": pt::text("description"), "authors": array::join(authors[]->name, ", ")}',
- *     ref
+ *     ref,
+ *     projection: `{
+ *       title,
+ *       'coverImage': cover.asset->url,
+ *       'authors': array::join(authors[]->{'name': firstName + ' ' + lastName + ' '}.name, ', ')
+ *     }`,
  *   })
  *
  *   return (
  *     <article ref={ref} style={{ opacity: isPending ? 0.5 : 1}}>
  *       <h2>{title}</h2>
- *       <p>{description}</p>
+ *       <img src={coverImage} alt={title} />
  *       <p>{authors}</p>
  *     </article>
  *   )
@@ -59,13 +71,13 @@ interface UseProjectionResults<TResult extends object> {
  * const { data } = useInfiniteList({ filter: '_type == "article"' })
  * return (
  *   <div>
- *     <h1>Articles</h1>
+ *     <h1>Books</h1>
  *     <ul>
- *       {data.map(article => (
- *         <li key={article._id}>
+ *       {data.map(book => (
+ *         <li key={book._id}>
  *           <Suspense fallback='Loading…'>
  *             <ProjectionComponent
- *               document={article}
+ *               document={book}
  *             />
  *           </Suspense>
  *         </li>

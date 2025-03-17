@@ -5,9 +5,11 @@
   <h1 align="center">Sanity SDK</h1>
 </p>
 
-The Sanity SDK is a bundle of wrappers, helpers, optimizations, and best practices that builds on the existing Sanity client and Live Content API.
+The Sanity App SDK is a suite of developer tools that enable the rapid creation, development, testing, and deployment of custom applications that run on the Sanity Content Operating System.
 
-The Sanity SDK contains the objects you need to build the user interface for a Sanity Content OS app. In addition to drawing windows, buttons, panels, and text fields, it handles all the event management and interaction between your app, people, and the Sanity platform.
+Developers can use the SDK to harness enterprise-grade platform capabilities — such as real-time content synchronization, document versioning, collaborative editing, and permissions management — out of the box and with minimal complexity, unlocking powerful new workflows across their organization.
+
+The Sanity App SDK exposes these platform capabilities via a set of concise, composable React hooks. These programmable building blocks can be used to build out entire custom applications (backed by your choice of UI components or styling solution), while the Sanity CLI makes the creation and deployment of these applications fast and effortless.
 
 ## 📚 Package READMEs
 

@@ -13,8 +13,9 @@
    * Includes core SDK exports and React hooks/context
    */
   "entryPoints": ["packages/*"],
-  "exclude": ["packages/react-internal"],
   "entryPointStrategy": "packages",
+  "alwaysCreateEntryPointModule": false,
+  "exclude": ["packages/react-internal"],
   "includeVersion": false,
   "navigation": {
     "includeCategories": true,
