@@ -13,6 +13,6 @@
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
     "@repo/dev-aliases": "workspace:*",
-    "vitest": "^3.0.7"
+    "vitest": "^3.0.9"
   }
 }
