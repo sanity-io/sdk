@@ -13,7 +13,7 @@ import {
 import {STABLE_EMPTY_PREVIEW} from './util'
 
 /**
- * @beta
+ * @public
  */
 export interface GetPreviewStateOptions {
   document: DocumentHandle
@@ -25,7 +25,7 @@ const _getPreviewState = createStateSourceAction(
 )
 
 /**
- * @beta
+ * @public
  */
 export const getPreviewState = createAction(previewStore, ({state}) => {
   return function ({document}: GetPreviewStateOptions): StateSource<ValuePending<PreviewValue>> {

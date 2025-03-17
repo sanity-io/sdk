@@ -5,7 +5,7 @@ import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxj
 import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
- * @beta
+ * @public
  * @category Types
  */
 export interface UsePreviewOptions {
@@ -14,7 +14,7 @@ export interface UsePreviewOptions {
 }
 
 /**
- * @beta
+ * @public
  * @category Types
  */
 export interface UsePreviewResults {
@@ -25,7 +25,7 @@ export interface UsePreviewResults {
 }
 
 /**
- * @beta
+ * @public
  *
  * Returns the preview values of a document (specified via a `DocumentHandle`),
  * including the document’s `title`, `subtitle`, `media`, and `status`. These values are live and will update in realtime.

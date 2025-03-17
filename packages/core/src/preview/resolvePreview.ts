@@ -4,14 +4,14 @@ import {getPreviewState} from './getPreviewState'
 import {previewStore, type PreviewValue, type ValuePending} from './previewStore'
 
 /**
- * @beta
+ * @public
  */
 export interface ResolvePreviewOptions {
   document: DocumentHandle
 }
 
 /**
- * @beta
+ * @public
  */
 export const resolvePreview = createAction(previewStore, () => {
   return function ({document}: ResolvePreviewOptions) {

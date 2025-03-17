@@ -3,7 +3,7 @@ import {type DocumentHandle, getDocumentSyncStatus} from '@sanity/sdk'
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
 /**
- * @beta
+ * @public
  */
 export interface UseDocumentSyncStatus {
   /**
@@ -28,6 +28,6 @@ export interface UseDocumentSyncStatus {
   (doc: DocumentHandle): boolean | undefined
 }
 
-/** @beta */
+/** @public */
 export const useDocumentSyncStatus: UseDocumentSyncStatus =
   createStateSourceHook(getDocumentSyncStatus)

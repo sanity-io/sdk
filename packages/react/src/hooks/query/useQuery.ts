@@ -20,7 +20,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * The returned `isPending` flag indicates when a React transition is in progress,
  * which can be used to show loading states for query changes.
  *
- * @beta
+ * @public
  * @category GROQ
  * @param query - GROQ query string to execute
  * @param options - Optional configuration for the query

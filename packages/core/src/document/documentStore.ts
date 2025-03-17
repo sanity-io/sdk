@@ -55,7 +55,7 @@ import {
 import {createFetchDocument, createSharedListener} from './sharedListener'
 
 /**
- * @beta
+ * @public
  */
 export interface DocumentStoreState {
   documentStates: {[TDocumentId in string]?: DocumentState}
@@ -70,7 +70,7 @@ export interface DocumentStoreState {
 }
 
 /**
- * @beta
+ * @public
  */
 export interface DocumentState {
   id: string
@@ -133,7 +133,7 @@ export const documentStore = createResource<DocumentStoreState>({
   },
 })
 
-/** @beta */
+/** @public */
 export function getDocumentState<
   TDocument extends SanityDocument,
   TPath extends JsonMatchPath<TDocument>,
@@ -142,18 +142,18 @@ export function getDocumentState<
   doc: string | DocumentHandle<TDocument>,
   path: TPath,
 ): StateSource<JsonMatch<TDocument, TPath> | undefined>
-/** @beta */
+/** @public */
 export function getDocumentState<TDocument extends SanityDocument>(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
   doc: string | DocumentHandle<TDocument>,
 ): StateSource<TDocument | null>
-/** @beta */
+/** @public */
 export function getDocumentState(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
   doc: string | DocumentHandle,
   path?: string,
 ): StateSource<unknown>
-/** @beta */
+/** @public */
 export function getDocumentState(
   ...args: Parameters<typeof _getDocumentState>
 ): StateSource<unknown> {
@@ -177,17 +177,17 @@ const _getDocumentState = createStateSourceAction(documentStore, {
     manageSubscriberIds(state, typeof doc === 'string' ? doc : doc._id),
 })
 
-/** @beta */
+/** @public */
 export function resolveDocument<TDocument extends SanityDocument>(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
   doc: string | DocumentHandle<TDocument>,
 ): Promise<TDocument | null>
-/** @beta */
+/** @public */
 export function resolveDocument(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
   doc: string | DocumentHandle,
 ): Promise<SanityDocument | null>
-/** @beta */
+/** @public */
 export function resolveDocument(
   ...args: Parameters<typeof _resolveDocument>
 ): Promise<SanityDocument | null> {
@@ -202,7 +202,7 @@ const _resolveDocument = createAction(documentStore, () => {
   }
 })
 
-/** @beta */
+/** @public */
 export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
   selector: (
     {error, documentStates: documents, outgoing, applied, queued},
@@ -222,13 +222,13 @@ export const getDocumentSyncStatus = createStateSourceAction(documentStore, {
   onSubscribe: ({state}, doc: DocumentHandle) => manageSubscriberIds(state, doc._id),
 })
 
-/** @beta */
+/** @public */
 export const getPermissionsState = createStateSourceAction(documentStore, {
   selector: calculatePermissions,
   onSubscribe: ({state}, actions) => manageSubscriberIds(state, getDocumentIdsFromActions(actions)),
 })
 
-/** @beta */
+/** @public */
 export const resolvePermissions = createAction(documentStore, () => {
   return function (actions: DocumentAction | DocumentAction[]) {
     return firstValueFrom(
@@ -237,7 +237,7 @@ export const resolvePermissions = createAction(documentStore, () => {
   }
 })
 
-/** @beta */
+/** @public */
 export const subscribeDocumentEvents = createAction(documentStore, ({state}) => {
   const {events} = state.get()
 

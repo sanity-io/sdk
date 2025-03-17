@@ -39,7 +39,7 @@ import {
 } from './reducers'
 
 /**
- * @beta
+ * @public
  */
 export interface QueryOptions
   extends Pick<ResponseQueryOptions, 'perspective' | 'useCdn' | 'cache' | 'next' | 'cacheMode'>,
@@ -48,7 +48,7 @@ export interface QueryOptions
 }
 
 /**
- * @beta
+ * @public
  */
 export interface ResolveQueryOptions extends QueryOptions {
   signal?: AbortSignal
@@ -56,10 +56,10 @@ export interface ResolveQueryOptions extends QueryOptions {
 
 const EMPTY_ARRAY: never[] = []
 
-/** @beta */
+/** @public */
 export const getQueryKey = (query: string, options: QueryOptions = {}): string =>
   JSON.stringify({query, options})
-/** @beta */
+/** @public */
 export const parseQueryKey = (key: string): {query: string; options: QueryOptions} =>
   JSON.parse(key)
 
@@ -195,20 +195,20 @@ const listenToLiveClientAndSetLastLiveEventIds = createInternalAction(
  * Note: Automatic cleanup can interfere with React Suspense because if a component suspends while being the only subscriber,
  * cleanup might occur unexpectedly. In such cases, consider using `resolveQuery` instead.
  *
- * @beta
+ * @public
  */
 export function getQueryState<T>(
   instance: SanityInstance | ActionContext<QueryStoreState>,
   query: string,
   options?: QueryOptions,
 ): StateSource<T | undefined>
-/** @beta */
+/** @public */
 export function getQueryState(
   instance: SanityInstance | ActionContext<QueryStoreState>,
   query: string,
   options?: QueryOptions,
 ): StateSource<unknown>
-/** @beta */
+/** @public */
 export function getQueryState(...args: Parameters<typeof _getQueryState>): StateSource<unknown> {
   return _getQueryState(...args)
 }
@@ -248,20 +248,20 @@ const _getQueryState = createStateSourceAction(queryStore, {
  * Additionally, an optional AbortSignal can be provided to cancel the query and immediately clear the associated state
  * if there are no active subscribers.
  *
- * @beta
+ * @public
  */
 export function resolveQuery<T>(
   instance: SanityInstance | ActionContext<QueryStoreState>,
   query: string,
   options?: ResolveQueryOptions,
 ): Promise<T>
-/** @beta */
+/** @public */
 export function resolveQuery(
   instance: SanityInstance | ActionContext<QueryStoreState>,
   query: string,
   options?: ResolveQueryOptions,
 ): Promise<unknown>
-/** @beta */
+/** @public */
 export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise<unknown> {
   return _resolveQuery(...args)
 }

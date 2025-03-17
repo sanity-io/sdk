@@ -5,7 +5,7 @@ import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches
 import {PROJECTION_TAG} from './util'
 
 /**
- * @beta
+ * @public
  */
 export type ValidProjection = `{${string}}`
 
@@ -17,7 +17,7 @@ export interface ProjectionQueryResult<TValue = Record<string, unknown>> {
 }
 
 /**
- * @beta
+ * @public
  */
 export interface ProjectionValuePending<TValue extends object> {
   results: TValue | null
@@ -25,7 +25,7 @@ export interface ProjectionValuePending<TValue extends object> {
 }
 
 /**
- * @beta
+ * @public
  */
 export interface ProjectionStoreState<TValue extends object = object> extends LiveEventAwareState {
   values: {[TDocumentId in string]?: ProjectionValuePending<TValue>}

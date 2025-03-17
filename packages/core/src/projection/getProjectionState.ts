@@ -14,7 +14,7 @@ import {
 import {STABLE_EMPTY_PROJECTION, validateProjection} from './util'
 
 /**
- * @beta
+ * @public
  */
 export interface GetProjectionStateOptions {
   document: DocumentHandle
@@ -28,21 +28,21 @@ const getProjectStateSourceAction = createStateSourceAction(
 )
 
 /**
- * @beta
+ * @public
  */
 export function getProjectionState<TResult extends object>(
   instance: SanityInstance | ActionContext<ProjectionStoreState>,
   options: GetProjectionStateOptions,
 ): StateSource<ProjectionValuePending<TResult>>
 /**
- * @beta
+ * @public
  */
 export function getProjectionState(
   instance: SanityInstance | ActionContext<ProjectionStoreState>,
   options: GetProjectionStateOptions,
 ): StateSource<ProjectionValuePending<Record<string, unknown>>>
 /**
- * @beta
+ * @public
  */
 export function getProjectionState(
   ...args: Parameters<typeof _getProjectionState>
@@ -51,7 +51,7 @@ export function getProjectionState(
 }
 
 /**
- * @beta
+ * @public
  */
 export const _getProjectionState = createAction(projectionStore, ({state}) => {
   return function ({

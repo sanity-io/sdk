@@ -9,7 +9,7 @@ import {documentStore, type DocumentStoreState} from './documentStore'
 import {type DocumentSet} from './processMutations'
 import {type AppliedTransaction, type QueuedTransaction, queueTransaction} from './reducers'
 
-/** @beta */
+/** @public */
 export interface ActionsResult<TDocument extends SanityDocument = SanityDocument> {
   transactionId: string
   documents: DocumentSet<TDocument>
@@ -21,7 +21,7 @@ export interface ActionsResult<TDocument extends SanityDocument = SanityDocument
   submitted: () => ReturnType<SanityClient['action']>
 }
 
-/** @beta */
+/** @public */
 export interface ApplyActionsOptions {
   /**
    * Optionally provide an ID to be used as this transaction ID
@@ -33,19 +33,19 @@ export interface ApplyActionsOptions {
   disableBatching?: boolean
 }
 
-/** @beta */
+/** @public */
 export function applyActions<TDocument extends SanityDocument>(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
   action: DocumentAction<TDocument> | DocumentAction<TDocument>[],
   options?: ApplyActionsOptions,
 ): Promise<ActionsResult<TDocument>>
-/** @beta */
+/** @public */
 export function applyActions(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
   action: DocumentAction | DocumentAction[],
   options?: ApplyActionsOptions,
 ): Promise<ActionsResult>
-/** @beta */
+/** @public */
 export function applyActions(
   ...args: Parameters<typeof _applyActions>
 ): ReturnType<typeof _applyActions> {

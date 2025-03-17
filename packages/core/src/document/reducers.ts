@@ -19,7 +19,7 @@ export type SyncTransactionState = Pick<
 >
 
 /**
- * @beta
+ * @public
  */
 export interface ActionMap {
   create: 'sanity.action.document.version.create'
@@ -31,7 +31,7 @@ export interface ActionMap {
 }
 
 /**
- * @beta
+ * @public
  */
 export interface OptimisticLock {
   ifDraftRevisionId?: string
@@ -39,7 +39,7 @@ export interface OptimisticLock {
 }
 
 /**
- * @beta
+ * @public
  */
 export type HttpAction =
   | {actionType: ActionMap['create']; publishedId: string; attributes: SanityDocumentLike}
@@ -50,7 +50,7 @@ export type HttpAction =
   | ({actionType: ActionMap['publish']; draftId: string; publishedId: string} & OptimisticLock)
 
 /**
- * @beta
+ * @public
  *
  * Represents a transaction that is queued to be applied but has not yet been
  * applied. A transaction will remain in a queued state until all required
@@ -75,7 +75,7 @@ export interface QueuedTransaction {
 }
 
 /**
- * @beta
+ * @public
  *
  * Represents a transaction that has been applied locally but has not been
  * committed/transitioned-to-outgoing. These transactions are visible to the
@@ -134,7 +134,7 @@ export interface AppliedTransaction extends QueuedTransaction {
 }
 
 /**
- * @beta
+ * @public
  *
  * Represents a set of applied transactions batched into a single outgoing
  * transaction. An outgoing transaction is the result of batching many applied
@@ -147,7 +147,7 @@ export interface OutgoingTransaction extends AppliedTransaction {
 }
 
 /**
- * @beta
+ * @public
  */
 export interface UnverifiedDocumentRevision {
   transactionId: string

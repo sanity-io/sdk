@@ -11,7 +11,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
  *
- * @beta
+ * @public
  *
  * Check if the current user has the specified permissions for the given document actions.
  *

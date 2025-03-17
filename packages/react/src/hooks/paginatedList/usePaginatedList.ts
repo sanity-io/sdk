@@ -9,7 +9,7 @@ const DEFAULT_PERSPECTIVE = 'drafts'
 /**
  * Configuration options for the usePaginatedList hook
  *
- * @beta
+ * @public
  * @category Types
  */
 export interface PaginatedListOptions extends QueryOptions {
@@ -34,7 +34,7 @@ export interface PaginatedListOptions extends QueryOptions {
 /**
  * Return value from the usePaginatedList hook
  *
- * @beta
+ * @public
  * @category Types
  */
 export interface PaginatedList {
@@ -121,7 +121,7 @@ export interface PaginatedList {
  * with support for traditional paginated interfaces. The number of document handles returned per page is customizable,
  * while page navigation is handled via the included navigation functions.
  *
- * @beta
+ * @public
  * @category Documents
  * @param options - Configuration options for the paginated list
  * @returns An object containing the current page of document handles, the loading and pagination state, and navigation functions

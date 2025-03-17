@@ -1,7 +1,7 @@
 import {omit} from 'lodash-es'
 
 /**
- * @beta
+ * @public
  */
 export interface QueryState {
   syncTags?: string[]
@@ -12,7 +12,7 @@ export interface QueryState {
 }
 
 /**
- * @beta
+ * @public
  */
 export interface QueryStoreState {
   queries: {[key: string]: QueryState | undefined}

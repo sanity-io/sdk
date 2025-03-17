@@ -11,12 +11,12 @@ import {
 } from '@sanity/types'
 
 /**
- * @beta
+ * @public
  */
 export type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
 
 /**
- * @beta
+ * @public
  * A minimal set of metadata for a given document, comprising the document's ID and type.
  * Used by most document-related hooks (such as {@link usePreview}, {@link useDocument}, and {@link useEditDocument})
  * to reference a particular document without fetching the entire document upfront.
@@ -29,7 +29,7 @@ export interface DocumentHandle<TDocument extends SanityDocumentLike = SanityDoc
 }
 
 /**
- * @beta
+ * @public
  * A resource identifier for a document, in the format of `document:${projectId}.${dataset}:${documentId}`
  */
 export type DocumentResourceId = `document:${string}.${string}:${string}`
@@ -41,7 +41,7 @@ export type DocumentResourceId = `document:${string}.${string}:${string}`
 export type ResourceId = `${string}.${string}`
 
 /**
- * @beta
+ * @public
  * Get the resource ID from a document resource ID
  */
 export function getResourceId(
@@ -51,7 +51,7 @@ export function getResourceId(
   return documentResourceId.split(':')[1] as ResourceId
 }
 
-/** @beta */
+/** @public */
 export interface DocumentTypeHandle<TDocument extends SanityDocumentLike = SanityDocumentLike> {
   _id?: string
   _type: TDocument['_type']
@@ -59,14 +59,14 @@ export interface DocumentTypeHandle<TDocument extends SanityDocumentLike = Sanit
 }
 
 /**
- * @beta
+ * @public
  */
 export type ToNumber<TInput extends string> = TInput extends `${infer TNumber extends number}`
   ? TNumber
   : TInput
 
 /**
- * @beta
+ * @public
  *
  * Parse a single “segment” that may include bracket parts.
  *
@@ -91,7 +91,7 @@ export type ParseSegment<TInput extends string> = TInput extends `${infer TProp}
     : [TInput]
 
 /**
- * @beta
+ * @public
  *
  * Parse one or more bracketed parts from a segment.
  *
@@ -114,7 +114,7 @@ export type ParseBracket<TInput extends string> = TInput extends `[${infer TPart
   : [] // no leading bracket → end of this segment
 
 /**
- * @beta
+ * @public
  *
  * Split the entire path string on dots “outside” of any brackets.
  *
@@ -136,7 +136,7 @@ export type PathParts<TPath extends string> = TPath extends `${infer TLeft}.${in
   : ParseSegment<TPath>
 
 /**
- * @beta
+ * @public
  *
  * Given a type T and an array of “access keys” Parts, recursively index into T.
  *
@@ -159,7 +159,7 @@ export type DeepGet<T, TParts extends readonly unknown[]> = TParts extends [
 /**
  * Given a document type TDocument and a JSON Match path string TPath,
  * compute the type found at that path.
- * @beta
+ * @public
  */
 export type JsonMatch<TDocument extends SanityDocumentLike, TPath extends string> = DeepGet<
   TDocument,
@@ -169,7 +169,7 @@ export type JsonMatch<TDocument extends SanityDocumentLike, TPath extends string
 /**
  * Computing the full possible paths may be possible but is hard to compute
  * within the type system for complex document types so we use string.
- * @beta
+ * @public
  */
 export type JsonMatchPath<_TDocument extends SanityDocumentLike> = string
 
@@ -314,7 +314,7 @@ export function stringifyPath(path: Path): string {
 }
 
 /**
- * @beta
+ * @public
  */
 export interface MatchEntry<T = unknown> {
   value: T
@@ -332,15 +332,15 @@ export interface MatchEntry<T = unknown> {
  *
  * [0]: https://www.sanity.io/docs/json-match
  *
- * @beta
+ * @public
  */
 export function jsonMatch<
   TDocument extends SanityDocumentLike,
   TPath extends JsonMatchPath<TDocument>,
 >(input: TDocument, path: TPath): MatchEntry<JsonMatch<TDocument, TPath>>[]
-/** @beta */
+/** @public */
 export function jsonMatch<TValue>(input: unknown, path: string): MatchEntry<TValue>[]
-/** @beta */
+/** @public */
 export function jsonMatch(input: unknown, pathExpression: string): MatchEntry[] {
   return matchRecursive(input, parsePath(pathExpression), [])
 }

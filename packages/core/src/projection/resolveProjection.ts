@@ -9,7 +9,7 @@ import {
 } from './projectionStore'
 
 /**
- * @beta
+ * @public
  */
 export interface ResolveProjectionOptions {
   document: DocumentHandle
@@ -17,7 +17,7 @@ export interface ResolveProjectionOptions {
 }
 
 /**
- * @beta
+ * @public
  */
 export const resolveProjection = createAction(projectionStore, () => {
   return function <TResult extends Record<string, unknown> = Record<string, unknown>>(

@@ -11,7 +11,7 @@ import {type SanityDocument} from '@sanity/types'
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
 /**
- * @beta
+ * @public
  *
  * ## useDocument(doc, path)
  * Read and subscribe to nested values in a document
@@ -41,7 +41,7 @@ export function useDocument<
 >(doc: DocumentHandle<TDocument>, path: TPath): JsonMatch<TDocument, TPath> | undefined
 
 /**
- * @beta
+ * @public
  * ## useDocument(doc)
  * Read and subscribe to an entire document
  * @param doc - The document to read state from
@@ -80,7 +80,7 @@ export function useDocument<TDocument extends SanityDocument>(
 ): TDocument | null
 
 /**
- * @beta
+ * @public
  * Reads and subscribes to a document’s realtime state, incorporating both local and remote changes.
  * When called with a `path` argument, the hook will return the nested value’s state.
  * When called without a `path` argument, the entire document’s state will be returned.

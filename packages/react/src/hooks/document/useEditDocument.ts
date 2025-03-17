@@ -17,13 +17,13 @@ import {useApplyActions} from './useApplyActions'
 const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
 
 /**
- * @beta
+ * @public
  */
 export type Updater<TValue> = TValue | ((nextValue: TValue) => TValue)
 
 /**
  *
- * @beta
+ * @public
  *
  * ## useEditDocument(doc, path)
  * Edit a nested value within a document
@@ -77,7 +77,7 @@ export function useEditDocument<
 
 /**
  *
- * @beta
+ * @public
  *
  * ## useEditDocument(doc)
  * Edit an entire document
@@ -144,7 +144,7 @@ export function useEditDocument<TDocument extends SanityDocument>(
 
 /**
  *
- * @beta
+ * @public
  *
  * Enables editing of a document’s state.
  * When called with a `path` argument, the hook will return a function for updating a nested value.

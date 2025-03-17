@@ -11,7 +11,7 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
 
 /**
  *
- * @beta
+ * @public
  *
  * Provides a callback for applying one or more actions to a document.
  *
@@ -61,7 +61,7 @@ export function useApplyActions(
   options?: ApplyActionsOptions,
 ) => Promise<ActionsResult<TDocument>>
 
-/** @beta */
+/** @public */
 export function useApplyActions(
   resourceId?: ResourceId,
 ): (

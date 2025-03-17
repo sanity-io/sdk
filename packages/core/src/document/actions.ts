@@ -17,7 +17,7 @@ const isSanityMutatePatch = (value: unknown): value is SanityMutatePatchMutation
   return true
 }
 
-/** @beta */
+/** @public */
 export interface CreateDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.create'
   documentId?: string
@@ -27,14 +27,14 @@ export interface CreateDocumentAction<TDocument extends SanityDocumentLike = San
 
 // the unused `_TDocument` is primarily for typescript meta-programming to
 // capture and preserve the document type as best as possible
-/** @beta */
+/** @public */
 export interface DeleteDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.delete'
   documentId: string
   resourceId?: DocumentResourceId
 }
 
-/** @beta */
+/** @public */
 export interface EditDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.edit'
   documentId: string
@@ -42,14 +42,14 @@ export interface EditDocumentAction<_TDocument extends SanityDocumentLike = Sani
   patches?: PatchOperations[]
 }
 
-/** @beta */
+/** @public */
 export interface PublishDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.publish'
   documentId: string
   resourceId?: DocumentResourceId
 }
 
-/** @beta */
+/** @public */
 export interface UnpublishDocumentAction<
   _TDocument extends SanityDocumentLike = SanityDocumentLike,
 > {
@@ -58,14 +58,14 @@ export interface UnpublishDocumentAction<
   resourceId?: DocumentResourceId
 }
 
-/** @beta */
+/** @public */
 export interface DiscardDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
   type: 'document.discard'
   documentId: string
   resourceId?: DocumentResourceId
 }
 
-/** @beta */
+/** @public */
 export type DocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike> =
   | CreateDocumentAction<TDocument>
   | DeleteDocumentAction<TDocument>
@@ -74,7 +74,7 @@ export type DocumentAction<TDocument extends SanityDocumentLike = SanityDocument
   | UnpublishDocumentAction<TDocument>
   | DiscardDocumentAction<TDocument>
 
-/** @beta */
+/** @public */
 export function createDocument<TDocument extends SanityDocumentLike>(
   doc: DocumentTypeHandle<TDocument> | DocumentHandle<TDocument>,
 ): CreateDocumentAction<TDocument> {
@@ -86,7 +86,7 @@ export function createDocument<TDocument extends SanityDocumentLike>(
   }
 }
 
-/** @beta */
+/** @public */
 export function deleteDocument<TDocument extends SanityDocumentLike>(
   doc: DocumentHandle<TDocument>,
 ): DeleteDocumentAction<TDocument> {
@@ -113,16 +113,16 @@ function convertSanityMutatePatch(
   }
 }
 
-/** @beta */
+/** @public */
 export function editDocument<TDocument extends SanityDocumentLike>(
   sanityMutatePatch: SanityMutatePatchMutation,
 ): EditDocumentAction<TDocument>
-/** @beta */
+/** @public */
 export function editDocument<TDocument extends SanityDocumentLike>(
   doc: DocumentHandle<TDocument>,
   patches?: PatchOperations | PatchOperations[],
 ): EditDocumentAction<TDocument>
-/** @beta */
+/** @public */
 export function editDocument<TDocument extends SanityDocumentLike>(
   doc: SanityMutatePatchMutation | DocumentHandle<TDocument>,
   patches?: PatchOperations | PatchOperations[],
@@ -137,7 +137,7 @@ export function editDocument<TDocument extends SanityDocumentLike>(
   }
 }
 
-/** @beta */
+/** @public */
 export function publishDocument<TDocument extends SanityDocumentLike>(
   doc: DocumentHandle<TDocument>,
 ): PublishDocumentAction<TDocument> {
@@ -148,7 +148,7 @@ export function publishDocument<TDocument extends SanityDocumentLike>(
   }
 }
 
-/** @beta */
+/** @public */
 export function unpublishDocument<TDocument extends SanityDocumentLike>(
   doc: DocumentHandle<TDocument>,
 ): UnpublishDocumentAction<TDocument> {
@@ -159,7 +159,7 @@ export function unpublishDocument<TDocument extends SanityDocumentLike>(
   }
 }
 
-/** @beta */
+/** @public */
 export function discardDocument<TDocument extends SanityDocumentLike>(
   doc: DocumentHandle<TDocument>,
 ): DiscardDocumentAction<TDocument> {

@@ -22,7 +22,7 @@ import {
  * mutations affect are included, including those that do not exist yet.
  * Documents that don't exist have a `null` value.
  *
- * @beta
+ * @public
  */
 export type DocumentSet<TDocument extends SanityDocument = SanityDocument> = {
   [TDocumentId in string]?: TDocument | null

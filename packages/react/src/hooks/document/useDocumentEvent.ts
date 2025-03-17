@@ -10,7 +10,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
  *
- * @beta
+ * @public
  *
  * Subscribes an event handler to events in your application’s document store, such as document
  * creation, deletion, and updates.

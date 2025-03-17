@@ -3,7 +3,7 @@ import {type SanityClient} from '@sanity/client'
 import {type DocumentAction} from './actions'
 import {type OutgoingTransaction} from './reducers'
 
-/** @beta */
+/** @public */
 export type DocumentEvent =
   | ActionErrorEvent
   | TransactionRevertedEvent
@@ -17,7 +17,7 @@ export type DocumentEvent =
   | DocumentDiscardedEvent
 
 /**
- * @beta
+ * @public
  * Event emitted when a precondition to applying an action fails.
  * (For example: when trying to edit a document that no longer exists.)
  */
@@ -29,7 +29,7 @@ export interface ActionErrorEvent {
   error: unknown
 }
 /**
- * @beta
+ * @public
  * Event emitted when a transaction is accepted.
  */
 export interface TransactionAcceptedEvent {
@@ -38,7 +38,7 @@ export interface TransactionAcceptedEvent {
   result: Awaited<ReturnType<SanityClient['action']>>
 }
 /**
- * @beta
+ * @public
  * Event emitted when a transaction is reverted.
  */
 export interface TransactionRevertedEvent {
@@ -48,7 +48,7 @@ export interface TransactionRevertedEvent {
   outgoing: OutgoingTransaction
 }
 /**
- * @beta
+ * @public
  * Event emitted when an attempt to apply local changes to a modified remote document fails.
  */
 export interface DocumentRebaseErrorEvent {
@@ -59,7 +59,7 @@ export interface DocumentRebaseErrorEvent {
   error: unknown
 }
 /**
- * @beta
+ * @public
  * Event emitted when a document is edited.
  */
 export interface DocumentEditedEvent {
@@ -68,7 +68,7 @@ export interface DocumentEditedEvent {
   outgoing: OutgoingTransaction
 }
 /**
- * @beta
+ * @public
  * Event emitted when a document is created.
  */
 export interface DocumentCreatedEvent {
@@ -77,7 +77,7 @@ export interface DocumentCreatedEvent {
   outgoing: OutgoingTransaction
 }
 /**
- * @beta
+ * @public
  * Event emitted when a document is deleted.
  */
 export interface DocumentDeletedEvent {
@@ -86,7 +86,7 @@ export interface DocumentDeletedEvent {
   outgoing: OutgoingTransaction
 }
 /**
- * @beta
+ * @public
  * Event emitted when a document is published.
  */
 export interface DocumentPublishedEvent {
@@ -95,7 +95,7 @@ export interface DocumentPublishedEvent {
   outgoing: OutgoingTransaction
 }
 /**
- * @beta
+ * @public
  * Event emitted when a document is unpublished.
  */
 export interface DocumentUnpublishedEvent {
@@ -104,7 +104,7 @@ export interface DocumentUnpublishedEvent {
   outgoing: OutgoingTransaction
 }
 /**
- * @beta
+ * @public
  * Event emitted when a document version is discarded.
  */
 export interface DocumentDiscardedEvent {

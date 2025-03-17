@@ -7,7 +7,7 @@ import {useWindowConnection} from './useWindowConnection'
 // should we import this whole type from the message protocol?
 
 /**
- * @beta
+ * @public
  */
 export interface ManageFavorite {
   favorite: () => void
@@ -17,7 +17,7 @@ export interface ManageFavorite {
 }
 
 /**
- * @beta
+ * @public
  *
  * ## useManageFavorite
  * This hook provides functionality to add and remove documents from favorites,

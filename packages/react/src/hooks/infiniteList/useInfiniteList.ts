@@ -19,7 +19,7 @@ interface InfiniteListQueryResult {
 /**
  * Configuration options for the useInfiniteList hook
  *
- * @beta
+ * @public
  * @category Types
  */
 export interface InfiniteListOptions extends QueryOptions {
@@ -44,7 +44,7 @@ export interface InfiniteListOptions extends QueryOptions {
 /**
  * Return value from the useInfiniteList hook
  *
- * @beta
+ * @public
  * @category Types
  */
 export interface InfiniteList {
@@ -75,7 +75,7 @@ export interface InfiniteList {
  * with infinite scrolling support. The number of document handles returned per batch is customizable,
  * and additional batches can be loaded using the supplied `loadMore` function.
  *
- * @beta
+ * @public
  * @category Documents
  * @param options - Configuration options for the infinite list
  * @returns An object containing the list of document handles, the loading state, the total count of retrived document handles, and a function to load more

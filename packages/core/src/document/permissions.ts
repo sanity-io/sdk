@@ -11,7 +11,7 @@ import {type DocumentSet} from './processMutations'
 import {type SyncTransactionState} from './reducers'
 
 /**
- * @beta
+ * @public
  */
 export type Grant = 'read' | 'update' | 'create' | 'history'
 
@@ -130,14 +130,14 @@ function checkGrant(grantExpr: ExprNode, document: SanityDocument): boolean {
   return evaluateSync(grantExpr, {params: {document}}).get()
 }
 
-/** @beta */
+/** @public */
 export interface PermissionDeniedReason {
   type: 'precondition' | 'access'
   message: string
   documentId?: string
 }
 
-/** @beta */
+/** @public */
 export type PermissionsResult =
   | {
       allowed: false
