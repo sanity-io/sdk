@@ -24,6 +24,9 @@ export interface ProjectionValuePending<TValue extends object> {
   isPending: boolean
 }
 
+/**
+ * @beta
+ */
 export interface ProjectionStoreState<TValue extends object = object> extends LiveEventAwareState {
   values: {[TDocumentId in string]?: ProjectionValuePending<TValue>}
   documentProjections: {[TDocumentId in string]?: ValidProjection}

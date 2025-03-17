@@ -6,7 +6,10 @@ import {useWindowConnection} from './useWindowConnection'
 
 // should we import this whole type from the message protocol?
 
-interface ManageFavorite {
+/**
+ * @beta
+ */
+export interface ManageFavorite {
   favorite: () => void
   unfavorite: () => void
   isFavorited: boolean

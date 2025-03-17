@@ -54,6 +54,9 @@ import {
 } from './reducers'
 import {createFetchDocument, createSharedListener} from './sharedListener'
 
+/**
+ * @beta
+ */
 export interface DocumentStoreState {
   documentStates: {[TDocumentId in string]?: DocumentState}
   queued: QueuedTransaction[]
@@ -66,6 +69,9 @@ export interface DocumentStoreState {
   events: Subject<DocumentEvent>
 }
 
+/**
+ * @beta
+ */
 export interface DocumentState {
   id: string
   /**

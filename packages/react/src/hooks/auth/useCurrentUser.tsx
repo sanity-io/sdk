@@ -2,7 +2,10 @@ import {type CurrentUser, getCurrentUserState} from '@sanity/sdk'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
-type UseCurrentUser = {
+/**
+ * @public
+ */
+export interface UseCurrentUser {
   /**
    * @public
    *
@@ -28,6 +31,6 @@ type UseCurrentUser = {
 
 /**
  * @public
- * @TODO This should not return null — users of a custom app will always be authenticated via Core
+ * @todo This should not return null — users of a custom app will always be authenticated via Core
  */
 export const useCurrentUser: UseCurrentUser = createStateSourceHook(getCurrentUserState)

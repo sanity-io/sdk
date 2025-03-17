@@ -51,7 +51,10 @@ interface CreateFetcherStoreOptions<TParams extends unknown[], TData> {
   fetchThrottleInternal?: number
 }
 
-interface StoreEntry<TParams extends unknown[], TData> {
+/**
+ * @public
+ */
+export interface StoreEntry<TParams extends unknown[], TData> {
   params: TParams
   key: string
   data?: TData

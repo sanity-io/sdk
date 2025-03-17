@@ -3,7 +3,10 @@ import {getDatasetsState, resolveDatasets, type SanityInstance, type StateSource
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
-type UseDatasets = {
+/**
+ * @public
+ */
+export interface UseDatasets {
   /**
    *
    * Returns metadata for each dataset in your organization.

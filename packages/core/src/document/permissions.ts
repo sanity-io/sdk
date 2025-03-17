@@ -10,6 +10,9 @@ import {ActionError, PermissionActionError, processActions} from './processActio
 import {type DocumentSet} from './processMutations'
 import {type SyncTransactionState} from './reducers'
 
+/**
+ * @beta
+ */
 export type Grant = 'read' | 'update' | 'create' | 'history'
 
 export type DatasetAcl = {

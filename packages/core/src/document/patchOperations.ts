@@ -10,7 +10,10 @@ import {
   type SanityDocumentLike,
 } from '@sanity/types'
 
-type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
+/**
+ * @beta
+ */
+export type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
 
 /**
  * @beta
@@ -55,11 +58,16 @@ export interface DocumentTypeHandle<TDocument extends SanityDocumentLike = Sanit
   resourceId?: DocumentResourceId
 }
 
-type ToNumber<TInput extends string> = TInput extends `${infer TNumber extends number}`
+/**
+ * @beta
+ */
+export type ToNumber<TInput extends string> = TInput extends `${infer TNumber extends number}`
   ? TNumber
   : TInput
 
 /**
+ * @beta
+ *
  * Parse a single “segment” that may include bracket parts.
  *
  * For example, the literal
@@ -74,7 +82,7 @@ type ToNumber<TInput extends string> = TInput extends `${infer TNumber extends n
  * ["friends", 0, 1]
  * ```
  */
-type ParseSegment<TInput extends string> = TInput extends `${infer TProp}[${infer TRest}`
+export type ParseSegment<TInput extends string> = TInput extends `${infer TProp}[${infer TRest}`
   ? TProp extends ''
     ? [...ParseBracket<`[${TRest}`>] // no property name before '['
     : [TProp, ...ParseBracket<`[${TRest}`>]
@@ -83,6 +91,8 @@ type ParseSegment<TInput extends string> = TInput extends `${infer TProp}[${infe
     : [TInput]
 
 /**
+ * @beta
+ *
  * Parse one or more bracketed parts from a segment.
  *
  * It recursively “peels off” a bracketed part and then continues.
@@ -99,11 +109,13 @@ type ParseSegment<TInput extends string> = TInput extends `${infer TProp}[${infe
  * [ToNumber<"0">, "foo"]
  * ```
  */
-type ParseBracket<TInput extends string> = TInput extends `[${infer TPart}]${infer TRest}`
+export type ParseBracket<TInput extends string> = TInput extends `[${infer TPart}]${infer TRest}`
   ? [ToNumber<TPart>, ...ParseSegment<TRest>]
   : [] // no leading bracket → end of this segment
 
 /**
+ * @beta
+ *
  * Split the entire path string on dots “outside” of any brackets.
  *
  * For example:
@@ -119,17 +131,22 @@ type ParseBracket<TInput extends string> = TInput extends `[${infer TPart}]${inf
  *
  * (We use a simple recursion that splits on the first dot.)
  */
-type PathParts<TPath extends string> = TPath extends `${infer TLeft}.${infer TRight}`
+export type PathParts<TPath extends string> = TPath extends `${infer TLeft}.${infer TRight}`
   ? [...ParseSegment<TLeft>, ...PathParts<TRight>]
   : ParseSegment<TPath>
 
 /**
+ * @beta
+ *
  * Given a type T and an array of “access keys” Parts, recursively index into T.
  *
  * If a part is a key, it looks up that property.
  * If T is an array and the part is a number, it “indexes” into the element type.
  */
-type DeepGet<T, TParts extends readonly unknown[]> = TParts extends [infer Head, ...infer Tail]
+export type DeepGet<T, TParts extends readonly unknown[]> = TParts extends [
+  infer Head,
+  ...infer Tail,
+]
   ? Head extends keyof T
     ? DeepGet<T[Head], Tail>
     : T extends Array<infer U>
@@ -296,7 +313,10 @@ export function stringifyPath(path: Path): string {
   return result
 }
 
-type MatchEntry<T = unknown> = {
+/**
+ * @beta
+ */
+export interface MatchEntry<T = unknown> {
   value: T
   path: SingleValuePath
 }

@@ -21,6 +21,8 @@ import {
  * applying a mutation, it's expected that all relevant documents that the
  * mutations affect are included, including those that do not exist yet.
  * Documents that don't exist have a `null` value.
+ *
+ * @beta
  */
 export type DocumentSet<TDocument extends SanityDocument = SanityDocument> = {
   [TDocumentId in string]?: TDocument | null

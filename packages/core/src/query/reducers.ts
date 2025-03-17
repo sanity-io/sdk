@@ -1,6 +1,9 @@
 import {omit} from 'lodash-es'
 
-interface QueryState {
+/**
+ * @beta
+ */
+export interface QueryState {
   syncTags?: string[]
   result?: unknown
   error?: unknown
@@ -8,6 +11,9 @@ interface QueryState {
   subscribers: string[]
 }
 
+/**
+ * @beta
+ */
 export interface QueryStoreState {
   queries: {[key: string]: QueryState | undefined}
   error?: unknown

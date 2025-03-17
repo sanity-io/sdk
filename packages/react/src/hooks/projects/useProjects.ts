@@ -9,7 +9,10 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  */
 export type ProjectWithoutMembers = Omit<SanityProject, 'members'>
 
-type UseProjects = {
+/**
+ * @public
+ */
+export interface UseProjects {
   /**
    *
    * Returns metadata for each project in your organization.

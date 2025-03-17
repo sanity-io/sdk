@@ -18,7 +18,10 @@ export type SyncTransactionState = Pick<
   'queued' | 'applied' | 'documentStates' | 'outgoing' | 'grants'
 >
 
-type ActionMap = {
+/**
+ * @beta
+ */
+export interface ActionMap {
   create: 'sanity.action.document.version.create'
   discard: 'sanity.action.document.version.discard'
   unpublish: 'sanity.action.document.unpublish'
@@ -27,11 +30,17 @@ type ActionMap = {
   publish: 'sanity.action.document.publish'
 }
 
-type OptimisticLock = {
+/**
+ * @beta
+ */
+export interface OptimisticLock {
   ifDraftRevisionId?: string
   ifPublishedRevisionId?: string
 }
 
+/**
+ * @beta
+ */
 export type HttpAction =
   | {actionType: ActionMap['create']; publishedId: string; attributes: SanityDocumentLike}
   | {actionType: ActionMap['discard']; versionId: string; purge?: boolean}
@@ -41,6 +50,8 @@ export type HttpAction =
   | ({actionType: ActionMap['publish']; draftId: string; publishedId: string} & OptimisticLock)
 
 /**
+ * @beta
+ *
  * Represents a transaction that is queued to be applied but has not yet been
  * applied. A transaction will remain in a queued state until all required
  * documents for the transactions are available locally.
@@ -64,6 +75,8 @@ export interface QueuedTransaction {
 }
 
 /**
+ * @beta
+ *
  * Represents a transaction that has been applied locally but has not been
  * committed/transitioned-to-outgoing. These transactions are visible to the
  * user but may be rebased upon a new working document set. Applied transactions
@@ -121,6 +134,8 @@ export interface AppliedTransaction extends QueuedTransaction {
 }
 
 /**
+ * @beta
+ *
  * Represents a set of applied transactions batched into a single outgoing
  * transaction. An outgoing transaction is the result of batching many applied
  * actions. An outgoing transaction may be reverted locally if the server
@@ -131,6 +146,9 @@ export interface OutgoingTransaction extends AppliedTransaction {
   batchedTransactionIds: string[]
 }
 
+/**
+ * @beta
+ */
 export interface UnverifiedDocumentRevision {
   transactionId: string
   documentId: string

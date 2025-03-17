@@ -16,7 +16,10 @@ import {useApplyActions} from './useApplyActions'
 
 const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
 
-type Updater<TValue> = TValue | ((nextValue: TValue) => TValue)
+/**
+ * @beta
+ */
+export type Updater<TValue> = TValue | ((nextValue: TValue) => TValue)
 
 /**
  *

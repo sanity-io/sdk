@@ -8,7 +8,10 @@ import {
   type ValidProjection,
 } from './projectionStore'
 
-interface ResolveProjectionOptions {
+/**
+ * @beta
+ */
+export interface ResolveProjectionOptions {
   document: DocumentHandle
   projection: ValidProjection
 }

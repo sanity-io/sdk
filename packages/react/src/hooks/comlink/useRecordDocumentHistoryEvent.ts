@@ -4,7 +4,10 @@ import {useCallback} from 'react'
 
 import {useWindowConnection} from './useWindowConnection'
 
-interface DocumentInteractionHistory {
+/**
+ * @public
+ */
+export interface DocumentInteractionHistory {
   recordEvent: (eventType: 'viewed' | 'edited' | 'created' | 'deleted') => void
   isConnected: boolean
 }

@@ -29,7 +29,7 @@ export interface UseProjectionResults<TResult extends object> {
 }
 
 /**
- * @beta
+ * @public
  *
  * Returns the projection values of a document (specified via a `DocumentHandle`),
  * based on the provided projection string. These values are live and will update in realtime.

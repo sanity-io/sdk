@@ -2,7 +2,10 @@ import {type DocumentHandle, getDocumentSyncStatus} from '@sanity/sdk'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
-type UseDocumentSyncStatus = {
+/**
+ * @beta
+ */
+export interface UseDocumentSyncStatus {
   /**
    * Exposes the document’s sync status between local and remote document states.
    *

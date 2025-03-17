@@ -13,7 +13,10 @@ import {
 } from './projectionStore'
 import {STABLE_EMPTY_PROJECTION, validateProjection} from './util'
 
-interface GetProjectionStateOptions {
+/**
+ * @beta
+ */
+export interface GetProjectionStateOptions {
   document: DocumentHandle
   projection: ValidProjection
 }
