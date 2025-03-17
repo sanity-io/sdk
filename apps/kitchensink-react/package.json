@@ -14,18 +14,18 @@
   "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@paramour/css": "1.0.0-rc.2",
-    "@sanity/icons": "^3.5.2",
-    "@sanity/mutate": "^0.12.1",
+    "@sanity/icons": "^3.7.0",
+    "@sanity/mutate": "^0.12.3",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
-    "@sanity/types": "^3.67.1",
-    "@sanity/ui": "^2.8.19",
+    "@sanity/types": "^3.79.0",
+    "@sanity/ui": "^2.15.7",
     "inter-ui": "^4.1.0",
-    "json-edit-react": "^1.23.0",
+    "json-edit-react": "^1.23.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-error-boundary": "^4.1.2",
-    "react-router": "^7.0.2"
+    "react-router": "^7.3.0"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
@@ -36,10 +36,10 @@
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.21.0",
-    "prettier": "^3.5.2",
-    "typescript": "^5.7.3",
-    "vite": "^6.2.0",
-    "vitest": "^3.0.0"
+    "eslint": "^9.22.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.2",
+    "vitest": "^3.0.9"
   }
 }
