@@ -13,6 +13,7 @@ interface DocumentInteractionHistory {
  * @public
  * Hook for managing document interaction history in Sanity Studio.
  * This hook provides functionality to record document interactions.
+ * @category History
  * @param documentHandle - The document handle containing document ID and type, like `{_id: '123', _type: 'book'}`
  * @returns An object containing:
  * - `recordEvent` - Function to record document interactions

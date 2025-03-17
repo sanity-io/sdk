@@ -18,7 +18,7 @@
   "scripts": {
     "all": "turbo run build && turbo run lint && turbo run test:coverage && pnpm build:docs && pnpm depcheck",
     "build": "turbo run build --filter='./packages/*' --filter='./apps/*'",
-    "build:docs": "turbo run docs && typedoc --plugin typedoc-github-theme",
+    "build:docs": "turbo run docs && typedoc",
     "build:packages": "turbo run build --filter='./packages/*' --filter='!./packages/@repo/*'",
     "build:visualizer": "VISUALIZER=true turbo run build --filter='./packages/*'",
     "clean": "run-s clean:build clean:deps",
@@ -61,7 +61,6 @@
     "tsx": "^4.19.3",
     "turbo": "^2.4.4",
     "typedoc": "^0.27.9",
-    "typedoc-github-theme": "^0.2.1",
     "typescript": "^5.7.3",
     "vite": "^6.2.0",
     "vitest": "^3.0.7",

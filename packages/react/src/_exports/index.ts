@@ -47,7 +47,11 @@ export {
   type UsePreviewOptions,
   type UsePreviewResults,
 } from '../hooks/preview/usePreview'
-export {useProjection} from '../hooks/projection/useProjection'
+export {
+  useProjection,
+  type UseProjectionOptions,
+  type UseProjectionResults,
+} from '../hooks/projection/useProjection'
 export {useProject} from '../hooks/projects/useProject'
 export {type ProjectWithoutMembers, useProjects} from '../hooks/projects/useProjects'
 export {useQuery} from '../hooks/query/useQuery'

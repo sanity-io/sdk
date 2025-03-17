@@ -8,5 +8,9 @@
   "excludePrivate": true,
   "excludeProtected": true,
   "excludeExternals": true,
-  "excludeInternal": true
+  "excludeInternal": true,
+  "navigation": {
+    "includeCategories": true,
+    "includeFolders": false
+  }
 }
