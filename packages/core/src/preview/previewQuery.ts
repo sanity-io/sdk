@@ -123,7 +123,7 @@ export function processPreviewQuery({
           ...(publishedResult?._updatedAt && {lastEditedPublishedAt: publishedResult._updatedAt}),
         }
 
-        return [id, {results: {...preview, status}, isPending: false}]
+        return [id, {data: {...preview, status}, isPending: false}]
       } catch (e) {
         // TODO: replace this with bubbling the error
         // eslint-disable-next-line no-console

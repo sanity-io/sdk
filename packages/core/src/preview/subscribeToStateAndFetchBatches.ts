@@ -47,8 +47,8 @@ export const subscribeToStateAndFetchBatches = createInternalAction(
           state.set('updatingPending', (prev) => {
             const pendingValues = newIds.reduce<PreviewStoreState['values']>((acc, id) => {
               const prevValue = prev.values[id]
-              const value = prevValue?.results ? prevValue.results : null
-              acc[id] = {results: value, isPending: true}
+              const value = prevValue?.data ? prevValue.data : null
+              acc[id] = {data: value, isPending: true}
               return acc
             }, {})
             return {values: {...prev.values, ...pendingValues}}

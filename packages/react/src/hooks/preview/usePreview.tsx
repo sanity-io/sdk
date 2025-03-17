@@ -19,7 +19,7 @@ export interface UsePreviewOptions {
  */
 export interface UsePreviewResults {
   /** The results of resolving the document’s preview values */
-  results: PreviewValue
+  data: PreviewValue
   /** True when preview values are being refreshed */
   isPending: boolean
 }
@@ -40,7 +40,7 @@ export interface UsePreviewResults {
  * ```
  * // PreviewComponent.jsx
  * export default function PreviewComponent({ document }) {
- *   const { results: { title, subtitle, media }, isPending } = usePreview({ document })
+ *   const { data: { title, subtitle, media }, isPending } = usePreview({ document })
  *   return (
  *     <article style={{ opacity: isPending ? 0.5 : 1}}>
  *       {media?.type === 'image-asset' ? <img src={media.url} alt='' /> : ''}
@@ -51,12 +51,12 @@ export interface UsePreviewResults {
  * }
  *
  * // DocumentList.jsx
- * const { results, isPending } = useDocuments({ filter: '_type == "movie"' })
+ * const { data, isPending } = useDocuments({ filter: '_type == "movie"' })
  * return (
  *   <div>
  *     <h1>Movies</h1>
  *     <ul>
- *       {isPending ? 'Loading…' : results.map(movie => (
+ *       {isPending ? 'Loading…' : data.map(movie => (
  *         <li key={movie._id}>
  *           <Suspense fallback='Loading…'>
  *             <PreviewComponent document={movie} />
@@ -115,7 +115,7 @@ export function usePreview({document: {_id, _type}, ref}: UsePreviewOptions): Us
   // Create getSnapshot function to return current state
   const getSnapshot = useCallback(() => {
     const currentState = stateSource.getCurrent()
-    if (currentState.results === null) throw resolvePreview(instance, {document: {_id, _type}})
+    if (currentState.data === null) throw resolvePreview(instance, {document: {_id, _type}})
     return currentState as UsePreviewResults
   }, [_id, _type, instance, stateSource])
 

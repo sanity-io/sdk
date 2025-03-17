@@ -49,20 +49,20 @@ describe('getPreviewState', () => {
     expect(subscriber).toHaveBeenCalledTimes(0)
 
     state.set('relatedChange', (prev) => ({
-      values: {...prev.values, exampleId: {results: {title: 'Changed!'}, isPending: false}},
+      values: {...prev.values, exampleId: {data: {title: 'Changed!'}, isPending: false}},
     }))
     expect(subscriber).toHaveBeenCalledTimes(1)
 
     state.set('unrelatedChange', (prev) => ({
       values: {
         ...prev.values,
-        unrelatedId: {results: {title: 'Unrelated Document'}, isPending: false},
+        unrelatedId: {data: {title: 'Unrelated Document'}, isPending: false},
       },
     }))
     expect(subscriber).toHaveBeenCalledTimes(1)
 
     state.set('relatedChange', (prev) => ({
-      values: {...prev.values, exampleId: {results: {title: 'Changed again!'}, isPending: false}},
+      values: {...prev.values, exampleId: {data: {title: 'Changed again!'}, isPending: false}},
     }))
     expect(subscriber).toHaveBeenCalledTimes(2)
   })
@@ -93,7 +93,7 @@ describe('getPreviewState', () => {
 
   it('resets to pending false on unsubscribe if the subscription is the last one', () => {
     state.set('presetValueToPending', (prev) => ({
-      values: {...prev.values, [document._id]: {results: {title: 'Foo'}, isPending: true}},
+      values: {...prev.values, [document._id]: {data: {title: 'Foo'}, isPending: true}},
     }))
 
     const previewState = getPreviewState({state, instance}, {document})
@@ -101,14 +101,14 @@ describe('getPreviewState', () => {
     const unsubscribe1 = previewState.subscribe(vi.fn())
     const unsubscribe2 = previewState.subscribe(vi.fn())
 
-    expect(state.get().values[document._id]).toEqual({results: {title: 'Foo'}, isPending: true})
+    expect(state.get().values[document._id]).toEqual({data: {title: 'Foo'}, isPending: true})
 
     unsubscribe1()
-    expect(state.get().values[document._id]).toEqual({results: {title: 'Foo'}, isPending: true})
+    expect(state.get().values[document._id]).toEqual({data: {title: 'Foo'}, isPending: true})
 
     unsubscribe2()
     expect(state.get().subscriptions).toEqual({})
-    expect(state.get().values[document._id]).toEqual({results: {title: 'Foo'}, isPending: false})
+    expect(state.get().values[document._id]).toEqual({data: {title: 'Foo'}, isPending: false})
   })
 
   it('calls getOrCreateResource if no state is provided', () => {

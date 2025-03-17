@@ -52,24 +52,24 @@ describe('resolvePreview', () => {
     state.set('updateDifferentDocument', (prev) => ({
       values: {
         ...prev.values,
-        differentId: {results: {title: 'Different Document'}, isPending: false},
+        differentId: {data: {title: 'Different Document'}, isPending: false},
       },
     }))
 
     expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
 
     state.set('updateCorrectDocumentButNull', (prev) => ({
-      values: {...prev.values, exampleId: {results: null, isPending: true}},
+      values: {...prev.values, exampleId: {data: null, isPending: true}},
     }))
 
     expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
 
     state.set('updateCorrectDocument', (prev) => ({
-      values: {...prev.values, exampleId: {results: {title: 'Correct Document'}, isPending: false}},
+      values: {...prev.values, exampleId: {data: {title: 'Correct Document'}, isPending: false}},
     }))
 
     const preview = await previewPromise
-    expect(preview).toEqual({results: {title: 'Correct Document'}, isPending: false})
+    expect(preview).toEqual({data: {title: 'Correct Document'}, isPending: false})
 
     // subscription is removed after
     expect(state.get().subscriptions).toEqual({})
@@ -77,7 +77,7 @@ describe('resolvePreview', () => {
 
   it('resolves with the next emitted state (not current state)', async () => {
     const currentValue: ValuePending<PreviewValue> = {
-      results: {title: 'Correct Document'},
+      data: {title: 'Correct Document'},
       isPending: false,
     }
     state.set('setInitialDocument', (prev) => ({
@@ -92,7 +92,7 @@ describe('resolvePreview', () => {
     state.set('updateDifferentDocument', (prev) => ({
       values: {
         ...prev.values,
-        differentId: {results: {title: 'Different Document'}, isPending: false},
+        differentId: {data: {title: 'Different Document'}, isPending: false},
       },
     }))
     expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
@@ -103,12 +103,12 @@ describe('resolvePreview', () => {
     expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
 
     state.set('updateWithNewValue', (prev) => ({
-      values: {...prev.values, exampleId: {results: {title: 'New Value'}, isPending: false}},
+      values: {...prev.values, exampleId: {data: {title: 'New Value'}, isPending: false}},
     }))
     expect(state.get().subscriptions).toEqual({})
 
     const preview = await previewPromise
-    expect(preview).toEqual({results: {title: 'New Value'}, isPending: false})
+    expect(preview).toEqual({data: {title: 'New Value'}, isPending: false})
   })
 
   it('calls getOrCreateResource if no state is provided', () => {
