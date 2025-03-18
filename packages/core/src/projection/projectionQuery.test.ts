@@ -51,7 +51,7 @@ describe('processProjectionQuery', () => {
       results: [], // no results
     })
 
-    expect(result['doc1']).toEqual({results: null, isPending: false})
+    expect(result['doc1']).toEqual({data: null, isPending: false})
   })
 
   it('processes query results into projection values', () => {
@@ -72,7 +72,7 @@ describe('processProjectionQuery', () => {
     })
 
     expect(processed['doc1']).toEqual({
-      results: {
+      data: {
         title: 'Hello',
         description: 'World',
         status: {
@@ -107,7 +107,7 @@ describe('processProjectionQuery', () => {
     })
 
     expect(processed['doc1']).toEqual({
-      results: {
+      data: {
         title: 'Draft',
         status: {
           lastEditedDraftAt: '2021-01-02',
@@ -136,7 +136,7 @@ describe('processProjectionQuery', () => {
     })
 
     expect(processed['doc1']).toEqual({
-      results: {
+      data: {
         title: 'Published',
         status: {
           lastEditedPublishedAt: '2021-01-01',

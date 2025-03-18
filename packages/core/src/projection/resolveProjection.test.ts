@@ -56,14 +56,14 @@ describe('resolveProjection', () => {
     state.set('updateDifferentDocument', (prev) => ({
       values: {
         ...prev.values,
-        differentId: {results: {title: 'Different Document'}, isPending: false},
+        differentId: {data: {title: 'Different Document'}, isPending: false},
       },
     }))
 
     expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
 
     state.set('updateCorrectDocumentButNull', (prev) => ({
-      values: {...prev.values, exampleId: {results: null, isPending: true}},
+      values: {...prev.values, exampleId: {data: null, isPending: true}},
     }))
 
     expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
@@ -72,7 +72,7 @@ describe('resolveProjection', () => {
       values: {
         ...prev.values,
         exampleId: {
-          results: {title: 'Correct Document', description: 'Test'},
+          data: {title: 'Correct Document', description: 'Test'},
           isPending: false,
         },
       },
@@ -80,7 +80,7 @@ describe('resolveProjection', () => {
 
     const projectionResult = await projectionPromise
     expect(projectionResult).toEqual({
-      results: {title: 'Correct Document', description: 'Test'},
+      data: {title: 'Correct Document', description: 'Test'},
       isPending: false,
     })
 
@@ -90,7 +90,7 @@ describe('resolveProjection', () => {
 
   it('resolves with the next emitted state (not current state)', async () => {
     const currentValue: ProjectionValuePending<Record<string, unknown>> = {
-      results: {title: 'Current Document', description: 'Test'},
+      data: {title: 'Current Document', description: 'Test'},
       isPending: false,
     }
     state.set('setInitialDocument', (prev) => ({
@@ -108,7 +108,7 @@ describe('resolveProjection', () => {
     state.set('updateDifferentDocument', (prev) => ({
       values: {
         ...prev.values,
-        differentId: {results: {title: 'Different Document'}, isPending: false},
+        differentId: {data: {title: 'Different Document'}, isPending: false},
       },
     }))
     expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
@@ -122,7 +122,7 @@ describe('resolveProjection', () => {
       values: {
         ...prev.values,
         exampleId: {
-          results: {title: 'New Value', description: 'Updated'},
+          data: {title: 'New Value', description: 'Updated'},
           isPending: false,
         },
       },
@@ -131,7 +131,7 @@ describe('resolveProjection', () => {
 
     const projectionResult = await projectionPromise
     expect(projectionResult).toEqual({
-      results: {title: 'New Value', description: 'Updated'},
+      data: {title: 'New Value', description: 'Updated'},
       isPending: false,
     })
   })

@@ -61,12 +61,12 @@ function TestComponent({
   projection: ValidProjection
 }) {
   const ref = useRef(null)
-  const {results, isPending} = useProjection<ProjectionResult>({document, projection, ref})
+  const {data, isPending} = useProjection<ProjectionResult>({document, projection, ref})
 
   return (
     <div ref={ref}>
-      <h1>{results.title}</h1>
-      <p>{results.description}</p>
+      <h1>{data.title}</h1>
+      <p>{data.description}</p>
       {isPending && <div>Pending...</div>}
     </div>
   )
@@ -91,7 +91,7 @@ describe('useProjection', () => {
   test('it only subscribes when element is visible', async () => {
     // Setup initial state
     getCurrent.mockReturnValue({
-      results: {title: 'Initial Title', description: 'Initial Description'},
+      data: {title: 'Initial Title', description: 'Initial Description'},
       isPending: false,
     })
     const eventsUnsubscribe = vi.fn()
@@ -129,12 +129,12 @@ describe('useProjection', () => {
   test('it suspends and resolves data when element becomes visible', async () => {
     // Mock the initial state to trigger suspense
     getCurrent.mockReturnValueOnce({
-      results: null,
+      data: null,
       isPending: true,
     })
 
     const resolvedData = {
-      results: {title: 'Resolved Title', description: 'Resolved Description'},
+      data: {title: 'Resolved Title', description: 'Resolved Description'},
       isPending: false,
     }
 
@@ -169,7 +169,7 @@ describe('useProjection', () => {
     delete window.IntersectionObserver
 
     getCurrent.mockReturnValue({
-      results: {title: 'Fallback Title', description: 'Fallback Description'},
+      data: {title: 'Fallback Title', description: 'Fallback Description'},
       isPending: false,
     })
     subscribe.mockImplementation(() => vi.fn())
@@ -188,7 +188,7 @@ describe('useProjection', () => {
 
   test('it updates when projection changes', async () => {
     getCurrent.mockReturnValue({
-      results: {title: 'Initial Title'},
+      data: {title: 'Initial Title'},
       isPending: false,
     })
     const eventsUnsubscribe = vi.fn()
@@ -202,7 +202,7 @@ describe('useProjection', () => {
 
     // Change projection
     getCurrent.mockReturnValue({
-      results: {title: 'Updated Title', description: 'Added Description'},
+      data: {title: 'Updated Title', description: 'Added Description'},
       isPending: false,
     })
 

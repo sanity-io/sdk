@@ -26,7 +26,7 @@ export const resolveProjection = createAction(projectionStore, () => {
     return new Promise<ProjectionValuePending<TResult>>((resolve) => {
       const unsubscribe = subscribe(() => {
         const current = getCurrent()
-        if (current?.results) {
+        if (current?.data) {
           resolve(current)
           unsubscribe()
         }

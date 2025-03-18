@@ -87,7 +87,7 @@ export const _getProjectionState = createAction(projectionStore, ({state}) => {
             const documentSubscriptions = omit(prev.subscriptions[documentId], subscriptionId)
             const hasSubscribers = !!Object.keys(documentSubscriptions).length
             const prevValue = prev.values[documentId]
-            const projectionValue = prevValue?.results ? prevValue.results : null
+            const projectionValue = prevValue?.data ? prevValue.data : null
 
             return {
               subscriptions: hasSubscribers
@@ -95,7 +95,7 @@ export const _getProjectionState = createAction(projectionStore, ({state}) => {
                 : omit(prev.subscriptions, documentId),
               values: hasSubscribers
                 ? prev.values
-                : {...prev.values, [documentId]: {results: projectionValue, isPending: false}},
+                : {...prev.values, [documentId]: {data: projectionValue, isPending: false}},
             }
           })
         }

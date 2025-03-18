@@ -104,7 +104,7 @@ describe('subscribeToStateAndFetchBatches', () => {
   it('handles new subscriptions optimistically with pending states', async () => {
     state.set('initializeValues', {
       documentProjections: {doc1: '{title, description}', doc2: '{title, description}'},
-      values: {doc1: {results: {title: 'Doc 1'}, isPending: false}},
+      values: {doc1: {data: {title: 'Doc 1'}, isPending: false}},
       subscriptions: {doc1: {sub1: true}},
     })
 
@@ -117,7 +117,7 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     // this isn't a new subscription so it isn't pending by design.
     // the pending state is intended to only appear for new documents
-    expect(state.get().values['doc1']).toEqual({results: {title: 'Doc 1'}, isPending: false})
+    expect(state.get().values['doc1']).toEqual({data: {title: 'Doc 1'}, isPending: false})
 
     expect(state.get().values['doc2']).toBeUndefined()
 
@@ -127,7 +127,7 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    expect(state.get().values['doc2']).toEqual({results: null, isPending: true})
+    expect(state.get().values['doc2']).toEqual({data: null, isPending: true})
 
     subscription.unsubscribe()
   })
@@ -205,7 +205,7 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     // Check that the state was updated
     expect(state.get().values['doc1']).toEqual({
-      results: expect.objectContaining({
+      data: expect.objectContaining({
         title: 'Test Document',
         description: 'Test Description',
         status: {
