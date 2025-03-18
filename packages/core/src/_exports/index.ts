@@ -15,6 +15,7 @@ export {
   type ErrorAuthState,
   getAuthState,
   getCurrentUserState,
+  getDashboardOrganizationId,
   getLoginUrlsState,
   getTokenState,
   type LoggedInAuthState,
