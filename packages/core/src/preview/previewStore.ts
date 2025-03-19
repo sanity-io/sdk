@@ -70,7 +70,7 @@ export interface PreviewValue {
  * @public
  */
 export type ValuePending<T> = {
-  results: T | null
+  data: T | null
   isPending: boolean
 }
 

@@ -77,7 +77,7 @@ describe('processPreviewQuery', () => {
     })
 
     const val = processed['person1']
-    expect(val?.results).toEqual({
+    expect(val?.data).toEqual({
       title: 'John',
       media: null,
       status: {lastEditedPublishedAt: '2021-01-01'},
@@ -123,7 +123,7 @@ describe('processPreviewQuery', () => {
     })
 
     const val = processed['article1']
-    expect(val?.results).toEqual({
+    expect(val?.data).toEqual({
       title: 'Draft Title',
       media: null,
       status: {
@@ -172,7 +172,7 @@ describe('processPreviewQuery', () => {
     })
 
     const val = processed['article1']
-    expect(val?.results).toEqual({
+    expect(val?.data).toEqual({
       title: titleCandidates[TITLE_CANDIDATES[0] as keyof typeof titleCandidates],
       subtitle: subtitleCandidates[SUBTITLE_CANDIDATES[0] as keyof typeof subtitleCandidates],
       media: null,

@@ -26,7 +26,7 @@ export function DocumentPreview(props: DocumentPreviewProps): React.ReactNode {
 function DocumentPreviewResolved({document}: DocumentPreviewProps): React.ReactNode {
   const ref = useRef(null)
   const {
-    results: {title, subtitle, media, status},
+    data: {title, subtitle, media, status},
   } = usePreview({document, ref})
 
   let statusLabel
