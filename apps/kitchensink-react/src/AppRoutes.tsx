@@ -16,6 +16,7 @@ import Home from './Home'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProjectInstanceWrapper} from './ProjectAuthentication/ProjectInstanceWrapper'
 import {ProtectedRoute} from './ProtectedRoute'
+import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {UsersRoute} from './routes/UsersRoute'
 import {UnauthenticatedHome} from './Unauthenticated/UnauthenticatedHome'
 import {UnauthenticatedInstanceWrapper} from './Unauthenticated/UnauthenticatedInstanceWrapper'
@@ -52,6 +53,10 @@ const documentCollectionRoutes = [
   {
     path: 'document-core-interactions',
     element: <DocumentCoreInteractionsRoute />,
+  },
+  {
+    path: 'dashboard-context',
+    element: <DashboardContextRoute />,
   },
 ]
 
