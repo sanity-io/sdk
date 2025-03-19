@@ -83,14 +83,14 @@ export function processProjectionQuery({ids, results}: ProcessProjectionQueryOpt
       const publishedResult = resultMap[publishedId]
 
       const projectionResult = draftResult?.result ?? publishedResult?.result
-      if (!projectionResult) return [id, {results: null, isPending: false}]
+      if (!projectionResult) return [id, {data: null, isPending: false}]
 
       const status = {
         ...(draftResult?._updatedAt && {lastEditedDraftAt: draftResult._updatedAt}),
         ...(publishedResult?._updatedAt && {lastEditedPublishedAt: publishedResult._updatedAt}),
       }
 
-      return [id, {results: {...projectionResult, status}, isPending: false}]
+      return [id, {data: {...projectionResult, status}, isPending: false}]
     }),
   )
 }

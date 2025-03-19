@@ -14,13 +14,13 @@ interface AuthorProjection {
 }
 
 // Component for displaying projection data with proper error handling
-function ProjectionData({results}: {results: AuthorProjection}) {
+function ProjectionData({data}: {data: AuthorProjection}) {
   return (
     <>
-      <TD padding={2}>{results.name || 'Untitled'}</TD>
-      <TD padding={2}>{results.address || 'No address'}</TD>
+      <TD padding={2}>{data.name || 'Untitled'}</TD>
+      <TD padding={2}>{data.address || 'No address'}</TD>
       <TD padding={2}>
-        {results.favoriteBookTitles.filter(Boolean).join(', ') || 'No favorite books'}
+        {data.favoriteBookTitles.filter(Boolean).join(', ') || 'No favorite books'}
       </TD>
     </>
   )
@@ -56,7 +56,7 @@ function ProjectionError({error}: {error: Error}): ReactNode {
 function AuthorRow({document}: {document: DocumentHandle}) {
   const ref = useRef<HTMLTableRowElement>(null)
 
-  const {results} = useProjection<AuthorProjection>({
+  const {data} = useProjection<AuthorProjection>({
     document,
     projection: `{
       name,
@@ -70,7 +70,7 @@ function AuthorRow({document}: {document: DocumentHandle}) {
     <TR ref={ref}>
       <ErrorBoundary fallbackRender={({error}) => <ProjectionError error={error} />}>
         <Suspense fallback={<ProjectionFallback />}>
-          <ProjectionData results={results} />
+          <ProjectionData data={data} />
         </Suspense>
       </ErrorBoundary>
     </TR>

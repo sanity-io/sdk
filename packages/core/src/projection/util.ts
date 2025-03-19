@@ -3,7 +3,7 @@ import {type ValidProjection} from './projectionStore'
 export const PROJECTION_TAG = 'sdk.projection'
 
 export const STABLE_EMPTY_PROJECTION = {
-  results: null,
+  data: null,
   isPending: false,
 }
 

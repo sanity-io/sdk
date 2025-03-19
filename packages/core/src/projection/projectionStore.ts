@@ -20,7 +20,7 @@ export interface ProjectionQueryResult<TValue = Record<string, unknown>> {
  * @beta
  */
 export interface ProjectionValuePending<TValue extends object> {
-  results: TValue | null
+  data: TValue | null
   isPending: boolean
 }
 

@@ -24,7 +24,7 @@ export interface UseProjectionOptions {
  * @category Types
  */
 export interface UseProjectionResults<TResult extends object> {
-  results: TResult
+  data: TResult
   isPending: boolean
 }
 
@@ -138,7 +138,7 @@ export function useProjection<TResult extends object>({
   // Create getSnapshot function to return current state
   const getSnapshot = useCallback(() => {
     const currentState = stateSource.getCurrent()
-    if (currentState.results === null)
+    if (currentState.data === null)
       throw resolveProjection(instance, {document: {_id, _type}, projection})
     return currentState as UseProjectionResults<TResult>
   }, [_id, _type, projection, instance, stateSource])
