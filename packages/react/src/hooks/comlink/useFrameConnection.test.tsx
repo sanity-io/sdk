@@ -61,32 +61,42 @@ describe('useFrameController', () => {
     vi.mocked(getOrCreateController).mockReturnValue(controller)
   })
 
-  it('should initialize with idle status', () => {
-    const {result} = renderHook(() =>
+  it('should call onStatus callback when status changes', () => {
+    const onStatusMock = vi.fn()
+    renderHook(() =>
       useFrameConnection({
         name: 'test',
         connectTo: 'iframe',
         targetOrigin: '*',
+        onStatus: onStatusMock,
       }),
     )
 
-    expect(result.current.status).toBe('idle')
-  })
-
-  it('should update status to connected when node connects', async () => {
-    const {result} = renderHook(() =>
-      useFrameConnection({
-        name: 'test',
-        connectTo: 'iframe',
-        targetOrigin: '*',
-      }),
-    )
-
-    expect(result.current.status).toBe('idle')
     act(() => {
       statusCallback?.({status: 'connected', connection: 'test'})
     })
-    expect(result.current.status).toBe('connected')
+    expect(onStatusMock).toHaveBeenCalledWith('connected')
+
+    act(() => {
+      statusCallback?.({status: 'disconnected', connection: 'test'})
+    })
+    expect(onStatusMock).toHaveBeenCalledWith('disconnected')
+  })
+
+  it('should not throw if onStatus is not provided', () => {
+    renderHook(() =>
+      useFrameConnection({
+        name: 'test',
+        connectTo: 'iframe',
+        targetOrigin: '*',
+      }),
+    )
+
+    expect(() => {
+      act(() => {
+        statusCallback?.({status: 'connected', connection: 'test'})
+      })
+    }).not.toThrow()
   })
 
   it('should register and execute message handlers', () => {

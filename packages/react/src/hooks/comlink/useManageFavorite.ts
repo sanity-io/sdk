@@ -1,3 +1,4 @@
+import {type Status} from '@sanity/comlink'
 import {type Events, SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
 import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
 import {useCallback, useState} from 'react'
@@ -48,9 +49,11 @@ interface ManageFavorite {
  */
 export function useManageFavorite({_id, _type}: DocumentHandle): ManageFavorite {
   const [isFavorited, setIsFavorited] = useState(false) // should load this from a comlink fetch
-  const {sendMessage, status} = useWindowConnection<Events.FavoriteMessage, FrameMessage>({
+  const [status, setStatus] = useState<Status>('idle')
+  const {sendMessage} = useWindowConnection<Events.FavoriteMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
+    onStatus: setStatus,
   })
 
   const handleFavoriteAction = useCallback(

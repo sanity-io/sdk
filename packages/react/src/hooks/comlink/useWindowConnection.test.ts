@@ -49,30 +49,40 @@ describe('useWindowConnection', () => {
     vi.mocked(getOrCreateNode).mockReturnValue(node as unknown as Node<Message, Message>)
   })
 
-  it('should initialize with idle status', () => {
-    const {result} = renderHook(() =>
+  it('should call onStatus callback when status changes', () => {
+    const onStatusMock = vi.fn()
+    renderHook(() =>
       useWindowConnection<TestMessages, TestMessages>({
         name: 'test',
         connectTo: 'window',
+        onStatus: onStatusMock,
       }),
     )
 
-    expect(result.current.status).toBe('idle')
-  })
-
-  it('should update status to connected when node connects', async () => {
-    const {result} = renderHook(() =>
-      useWindowConnection<TestMessages, TestMessages>({
-        name: 'test',
-        connectTo: 'window',
-      }),
-    )
-
-    expect(result.current.status).toBe('idle')
     act(() => {
       statusCallback?.('connected')
     })
-    expect(result.current.status).toBe('connected')
+    expect(onStatusMock).toHaveBeenCalledWith('connected')
+
+    act(() => {
+      statusCallback?.('disconnected')
+    })
+    expect(onStatusMock).toHaveBeenCalledWith('disconnected')
+  })
+
+  it('should not throw if onStatus is not provided', () => {
+    renderHook(() =>
+      useWindowConnection<TestMessages, TestMessages>({
+        name: 'test',
+        connectTo: 'window',
+      }),
+    )
+
+    expect(() => {
+      act(() => {
+        statusCallback?.('connected')
+      })
+    }).not.toThrow()
   })
 
   it('should register message handlers', () => {
