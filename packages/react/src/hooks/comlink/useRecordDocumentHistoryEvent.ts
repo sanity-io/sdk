@@ -1,6 +1,7 @@
+import {type Status} from '@sanity/comlink'
 import {type Events, SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
 import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
-import {useCallback} from 'react'
+import {useCallback, useState} from 'react'
 
 import {useWindowConnection} from './useWindowConnection'
 
@@ -42,9 +43,11 @@ export function useRecordDocumentHistoryEvent({
   _id,
   _type,
 }: DocumentHandle): DocumentInteractionHistory {
-  const {sendMessage, status} = useWindowConnection<Events.HistoryMessage, FrameMessage>({
+  const [status, setStatus] = useState<Status>('idle')
+  const {sendMessage} = useWindowConnection<Events.HistoryMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
+    onStatus: setStatus,
   })
 
   const recordEvent = useCallback(

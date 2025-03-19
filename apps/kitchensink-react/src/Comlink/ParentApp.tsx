@@ -1,4 +1,4 @@
-import {useFrameConnection} from '@sanity/sdk-react'
+import {type ComlinkStatus, useFrameConnection} from '@sanity/sdk-react'
 import {Box, Button, Card, Label, Stack, Text, TextInput} from '@sanity/ui'
 import {ReactElement, useEffect, useRef, useState} from 'react'
 
@@ -8,15 +8,17 @@ import {FromIFrameMessage, ToIFrameMessage} from './types'
 const ParentApp = (): ReactElement => {
   const [selectedFrame, setSelectedFrame] = useState<number>(1)
   const [message, setMessage] = useState('')
+  const [status, setStatus] = useState<ComlinkStatus>('idle')
   const [receivedMessages, setReceivedMessages] = useState<Array<{from: string; message: string}>>(
     [],
   )
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  const {sendMessage, connect, status} = useFrameConnection<ToIFrameMessage, FromIFrameMessage>({
+  const {sendMessage, connect} = useFrameConnection<ToIFrameMessage, FromIFrameMessage>({
     name: 'main-app',
     connectTo: 'frame',
     targetOrigin: '*',
+    onStatus: setStatus,
     onMessage: {
       FROM_IFRAME: (data: {message: string}) => {
         setReceivedMessages((prev) => [
