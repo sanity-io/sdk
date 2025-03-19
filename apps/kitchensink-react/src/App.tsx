@@ -20,7 +20,7 @@ const sanityConfigs: SanityConfig[] = [
   },
 ]
 
-export function App(): JSX.Element {
+export default function App(): JSX.Element {
   return (
     <ThemeProvider theme={theme}>
       <SanityApp fallback={<Spinner />} config={sanityConfigs}>

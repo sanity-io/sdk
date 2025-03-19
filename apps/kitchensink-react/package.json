@@ -4,11 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "pnpm tsc && vite build",
+    "build": "pnpm tsc && sanity build",
     "clean": "rimraf dist",
-    "dev": "vite",
+    "deploy": "sanity deploy",
+    "dev": "sanity dev",
+    "dev:vite": "vite",
     "lint": "eslint .",
     "paramour": "npx paramour --config=./src/css/css.config.js --output=./src/css/paramour.css",
+    "preview": "sanity preview",
     "tsc": "tsc --noEmit"
   },
   "prettier": "@sanity/prettier-config",
@@ -37,6 +40,8 @@
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.22.0",
     "prettier": "^3.5.3",
+    "sanity": "^3.80.1",
+    "styled-components": "^6.1.16",
     "typescript": "^5.8.2",
     "vite": "^6.2.2",
     "vitest": "^3.0.9"
