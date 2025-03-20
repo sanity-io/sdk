@@ -1,8 +1,8 @@
 import {isObject} from 'lodash-es'
 
-import {hashString} from '../common/util'
+import {hashString} from '../utils/hashString'
 import {getDraftId, getPublishedId} from '../utils/ids'
-import {getPreviewProjection, SUBTITLE_CANDIDATES, TITLE_CANDIDATES} from './getPreviewProjection'
+import {PREVIEW_PROJECTION, SUBTITLE_CANDIDATES, TITLE_CANDIDATES} from './previewConstants'
 import {
   type PreviewQueryResult,
   type PreviewStoreState,
@@ -142,11 +142,10 @@ interface CreatePreviewQueryResult {
 export function createPreviewQuery(documentIds: Set<string>): CreatePreviewQueryResult {
   // Create arrays of draft and published IDs
   const allIds = Array.from(documentIds).flatMap((id) => [getPublishedId(id), getDraftId(id)])
-  const projection = getPreviewProjection()
-  const queryHash = hashString(projection)
+  const queryHash = hashString(PREVIEW_PROJECTION)
 
   return {
-    query: `*[_id in $__ids_${queryHash}]${projection}`,
+    query: `*[_id in $__ids_${queryHash}]${PREVIEW_PROJECTION}`,
     params: {
       [`__ids_${queryHash}`]: allIds,
     },

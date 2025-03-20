@@ -14,15 +14,14 @@ import {
   tap,
 } from 'rxjs/operators'
 
-import {type SanityInstance} from '../instance/types'
+import {bindActionGlobally, type BoundStoreAction} from '../store/createActionBinder'
+import {type SanityInstance} from '../store/createSanityInstance'
 import {
-  type ActionContext,
-  createAction,
-  createInternalAction,
-  type ResourceAction,
-} from '../resources/createAction'
-import {createResource} from '../resources/createResource'
-import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
+  createStateSourceAction,
+  type SelectorContext,
+  type StateSource,
+} from '../store/createStateSourceAction'
+import {defineStore, type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
 
 interface CreateFetcherStoreOptions<TParams extends unknown[], TData> {
@@ -38,7 +37,7 @@ interface CreateFetcherStoreOptions<TParams extends unknown[], TData> {
    * The function used to convert the params into keys that state related to
    * those params will be stored.
    */
-  getKey: (...params: TParams) => string
+  getKey: (instance: SanityInstance, ...params: TParams) => string
   /**
    * Delay in ms before clearing state after the last subscription is removed.
    * This results in react components suspending again due to no previous state
@@ -74,12 +73,12 @@ export interface FetcherStoreState<TParams extends unknown[], TData> {
  * @public
  */
 export interface FetcherStore<TParams extends unknown[], TData> {
-  getState: ResourceAction<
+  getState: BoundStoreAction<
     FetcherStoreState<TParams, TData>,
     TParams,
     StateSource<TData | undefined>
   >
-  resolveState: ResourceAction<FetcherStoreState<TParams, TData>, TParams, Promise<TData>>
+  resolveState: BoundStoreAction<FetcherStoreState<TParams, TData>, TParams, Promise<TData>>
 }
 
 /**
@@ -108,13 +107,13 @@ export function createFetcherStore<TParams extends unknown[], TData>({
   fetchThrottleInternal = 1000,
   stateExpirationDelay = 5000,
 }: CreateFetcherStoreOptions<TParams, TData>): FetcherStore<TParams, TData> {
-  const store = createResource<FetcherStoreState<TParams, TData>>({
+  const store = defineStore<FetcherStoreState<TParams, TData>>({
     name,
     getInitialState: () => ({
       stateByParams: {},
     }),
-    initialize() {
-      const subscription = subscribeToSubscriptionsAndFetch(this)
+    initialize(context) {
+      const subscription = subscribeToSubscriptionsAndFetch(context)
       return () => subscription.unsubscribe()
     },
   })
@@ -125,160 +124,158 @@ export function createFetcherStore<TParams extends unknown[], TData>({
    * and if enough time has elapsed since the last fetch, we update the timestamp
    * and call the factory function for that key.
    */
-  const subscribeToSubscriptionsAndFetch = createInternalAction(
-    ({instance, state}: ActionContext<FetcherStoreState<TParams, TData>>) => {
-      return function () {
-        const factoryFn = getObservable(instance)
+  const subscribeToSubscriptionsAndFetch = ({
+    instance,
+    state,
+  }: StoreContext<FetcherStoreState<TParams, TData>>) => {
+    const factoryFn = getObservable(instance)
 
-        return state.observable
-          .pipe(
-            // Map the state to an array of [serialized, entry] pairs.
-            switchMap((s: FetcherStoreState<TParams, TData>) => {
-              const entries = Object.entries(s.stateByParams)
-              return entries.length > 0 ? from(entries) : EMPTY
+    return state.observable
+      .pipe(
+        // Map the state to an array of [serialized, entry] pairs.
+        switchMap((s: FetcherStoreState<TParams, TData>) => {
+          const entries = Object.entries(s.stateByParams)
+          return entries.length > 0 ? from(entries) : EMPTY
+        }),
+        // Group by the serialized key.
+        groupBy(([key]) => key),
+        mergeMap((group$) =>
+          group$.pipe(
+            // Emit an initial value for pairwise comparisons.
+            startWith<[string, StoreEntry<TParams, TData> | undefined]>([group$.key, undefined]),
+            pairwise(),
+            // Trigger only when the subscriptions array grows.
+            filter(([[, prevEntry], [, currEntry]]) => {
+              const prevSubs = prevEntry?.subscriptions ?? []
+              const currSubs = currEntry?.subscriptions ?? []
+              return currSubs.length > prevSubs.length
             }),
-            // Group by the serialized key.
-            groupBy(([key]) => key),
-            mergeMap((group$) =>
-              group$.pipe(
-                // Emit an initial value for pairwise comparisons.
-                startWith<[string, StoreEntry<TParams, TData> | undefined]>([
-                  group$.key,
-                  undefined,
-                ]),
-                pairwise(),
-                // Trigger only when the subscriptions array grows.
-                filter(([[, prevEntry], [, currEntry]]) => {
-                  const prevSubs = prevEntry?.subscriptions ?? []
-                  const currSubs = currEntry?.subscriptions ?? []
-                  return currSubs.length > prevSubs.length
-                }),
-                map(([, [, currEntry]]) => currEntry),
+            map(([, [, currEntry]]) => currEntry),
 
-                // Only trigger if we haven't fetched recently.
-                filter((entry) => {
-                  const lastFetch = entry?.lastFetchInitiatedAt
-                  if (!lastFetch) return true
-                  return Date.now() - new Date(lastFetch).getTime() >= fetchThrottleInternal
-                }),
-                switchMap((entry) => {
-                  // Retrieve params from the entry
-                  if (!entry) return EMPTY
+            // Only trigger if we haven't fetched recently.
+            filter((entry) => {
+              const lastFetch = entry?.lastFetchInitiatedAt
+              if (!lastFetch) return true
+              return Date.now() - new Date(lastFetch).getTime() >= fetchThrottleInternal
+            }),
+            switchMap((entry) => {
+              // Retrieve params from the entry
+              if (!entry) return EMPTY
 
-                  // Record that a fetch is being initiated.
-                  state.set(
-                    'setLastFetchInitiatedAt',
-                    (prev: FetcherStoreState<TParams, TData>) => ({
-                      stateByParams: {
-                        ...prev.stateByParams,
-                        [entry.key]: {
-                          ...entry,
-                          ...prev.stateByParams[entry.key],
-                          lastFetchInitiatedAt: new Date().toISOString(),
-                        },
+              // Record that a fetch is being initiated.
+              state.set('setLastFetchInitiatedAt', (prev: FetcherStoreState<TParams, TData>) => ({
+                stateByParams: {
+                  ...prev.stateByParams,
+                  [entry.key]: {
+                    ...entry,
+                    ...prev.stateByParams[entry.key],
+                    lastFetchInitiatedAt: new Date().toISOString(),
+                  },
+                },
+              }))
+
+              return factoryFn(...entry.params).pipe(
+                // the `createStateSourceAction` util requires the update
+                // to
+                delay(0, asapScheduler),
+                tap((data: TData) =>
+                  state.set('setData', (prev: FetcherStoreState<TParams, TData>) => ({
+                    stateByParams: {
+                      ...prev.stateByParams,
+                      [entry.key]: {
+                        ...omit(entry, 'error'),
+                        ...omit(prev.stateByParams[entry.key], 'error'),
+                        data,
                       },
-                    }),
-                  )
+                    },
+                  })),
+                ),
+                catchError((error) => {
+                  state.set('setError', (prev) => ({
+                    stateByParams: {
+                      ...prev.stateByParams,
+                      [entry.key]: {
+                        ...entry,
+                        ...prev.stateByParams[entry.key],
+                        error,
+                      },
+                    },
+                  }))
 
-                  return factoryFn(...entry.params).pipe(
-                    // the `createStateSourceAction` util requires the update
-                    // to
-                    delay(0, asapScheduler),
-                    tap((data: TData) =>
-                      state.set('setData', (prev: FetcherStoreState<TParams, TData>) => ({
-                        stateByParams: {
-                          ...prev.stateByParams,
-                          [entry.key]: {
-                            ...omit(entry, 'error'),
-                            ...omit(prev.stateByParams[entry.key], 'error'),
-                            data,
-                          },
-                        },
-                      })),
-                    ),
-                    catchError((error) => {
-                      state.set('setError', (prev) => ({
-                        stateByParams: {
-                          ...prev.stateByParams,
-                          [entry.key]: {
-                            ...entry,
-                            ...prev.stateByParams[entry.key],
-                            error,
-                          },
-                        },
-                      }))
-
-                      return EMPTY
-                    }),
-                  )
+                  return EMPTY
                 }),
-              ),
-            ),
-          )
-          .subscribe({
-            error: (error) => state.set('setError', {error}),
-          })
-      }
-    },
+              )
+            }),
+          ),
+        ),
+      )
+      .subscribe({
+        error: (error) => state.set('setError', {error}),
+      })
+  }
+
+  const getState = bindActionGlobally(
+    store,
+    createStateSourceAction({
+      selector: (
+        {
+          instance,
+          state: {stateByParams, error},
+        }: SelectorContext<FetcherStoreState<TParams, TData>>,
+        ...params: TParams
+      ) => {
+        if (error) throw error
+        const key = getKey(instance, ...params)
+        const entry = stateByParams[key]
+        if (entry?.error) throw entry.error
+        return entry?.data
+      },
+      onSubscribe: ({instance, state}, ...params: TParams) => {
+        const subscriptionId = insecureRandomId()
+        const key = getKey(instance, ...params)
+
+        state.set('addSubscription', (prev: FetcherStoreState<TParams, TData>) => ({
+          stateByParams: {
+            ...prev.stateByParams,
+            [key]: {
+              ...prev.stateByParams[key],
+              key,
+              params: prev.stateByParams[key]?.params || params,
+              subscriptions: [...(prev.stateByParams[key]?.subscriptions || []), subscriptionId],
+            },
+          },
+        }))
+
+        return () => {
+          setTimeout(() => {
+            state.set('removeSubscription', (prev: FetcherStoreState<TParams, TData>) => {
+              const entry = prev.stateByParams[key]
+              if (!entry) return prev
+
+              const newSubs = (entry.subscriptions || []).filter((id) => id !== subscriptionId)
+              if (newSubs.length === 0) {
+                return {stateByParams: omit(prev.stateByParams, key)}
+              }
+
+              return {
+                stateByParams: {
+                  ...prev.stateByParams,
+                  [key]: {
+                    ...entry,
+                    subscriptions: newSubs,
+                  },
+                },
+              }
+            })
+          }, stateExpirationDelay)
+        }
+      },
+    }),
   )
 
-  const getState = createStateSourceAction(store, {
-    selector: ({stateByParams, error}: FetcherStoreState<TParams, TData>, ...params: TParams) => {
-      if (error) throw error
-      const key = getKey(...params)
-      const entry = stateByParams[key]
-      if (entry?.error) throw entry.error
-      return entry?.data
-    },
-    onSubscribe: ({state}, ...params: TParams) => {
-      const subscriptionId = insecureRandomId()
-      const key = getKey(...params)
-
-      state.set('addSubscription', (prev: FetcherStoreState<TParams, TData>) => ({
-        stateByParams: {
-          ...prev.stateByParams,
-          [key]: {
-            ...prev.stateByParams[key],
-            key,
-            params: prev.stateByParams[key]?.params || params,
-            subscriptions: [...(prev.stateByParams[key]?.subscriptions || []), subscriptionId],
-          },
-        },
-      }))
-
-      return () => {
-        setTimeout(() => {
-          state.set('removeSubscription', (prev: FetcherStoreState<TParams, TData>) => {
-            const entry = prev.stateByParams[key]
-            if (!entry) return prev
-
-            const newSubs = (entry.subscriptions || []).filter((id) => id !== subscriptionId)
-            if (newSubs.length === 0) {
-              return {stateByParams: omit(prev.stateByParams, key)}
-            }
-
-            return {
-              stateByParams: {
-                ...prev.stateByParams,
-                [key]: {
-                  ...entry,
-                  subscriptions: newSubs,
-                },
-              },
-            }
-          })
-        }, stateExpirationDelay)
-      }
-    },
-  })
-
-  const resolveState = createAction(store, () => {
-    return function (...params: TParams) {
-      return firstValueFrom(
-        getState(this, ...params).observable.pipe(first((i) => i !== undefined)),
-      )
-    }
-  })
+  const resolveState = bindActionGlobally(store, ({instance}, ...params: TParams) =>
+    firstValueFrom(getState(instance, ...params).observable.pipe(first((i) => i !== undefined))),
+  )
 
   return {getState, resolveState}
 }

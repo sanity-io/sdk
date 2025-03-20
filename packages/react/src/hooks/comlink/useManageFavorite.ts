@@ -47,7 +47,7 @@ interface ManageFavorite {
  * }
  * ```
  */
-export function useManageFavorite({_id, _type}: DocumentHandle): ManageFavorite {
+export function useManageFavorite({documentId, documentType}: DocumentHandle): ManageFavorite {
   const [isFavorited, setIsFavorited] = useState(false) // should load this from a comlink fetch
   const [status, setStatus] = useState<Status>('idle')
   const {sendMessage} = useWindowConnection<Events.FavoriteMessage, FrameMessage>({
@@ -58,15 +58,15 @@ export function useManageFavorite({_id, _type}: DocumentHandle): ManageFavorite 
 
   const handleFavoriteAction = useCallback(
     (action: 'added' | 'removed', setFavoriteState: boolean) => {
-      if (!_id || !_type) return
+      if (!documentId || !documentType) return
 
       try {
         const message: Events.FavoriteMessage = {
           type: 'core/v1/events/favorite',
           data: {
             eventType: action,
-            documentId: _id,
-            documentType: _type,
+            documentId,
+            documentType,
           },
         }
 
@@ -82,7 +82,7 @@ export function useManageFavorite({_id, _type}: DocumentHandle): ManageFavorite 
         throw error
       }
     },
-    [_id, _type, sendMessage],
+    [documentId, documentType, sendMessage],
   )
 
   const favorite = useCallback(() => handleFavoriteAction('added', true), [handleFavoriteAction])

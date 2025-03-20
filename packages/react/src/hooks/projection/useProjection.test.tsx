@@ -44,8 +44,8 @@ vi.mock('../context/useSanityInstance', () => ({
 }))
 
 const mockDocument: DocumentHandle = {
-  _id: 'doc1',
-  _type: 'exampleType',
+  documentId: 'doc1',
+  documentType: 'exampleType',
 }
 
 interface ProjectionResult {
@@ -61,7 +61,7 @@ function TestComponent({
   projection: ValidProjection
 }) {
   const ref = useRef(null)
-  const {data, isPending} = useProjection<ProjectionResult>({document, projection, ref})
+  const {data, isPending} = useProjection<ProjectionResult>({...document, projection, ref})
 
   return (
     <div ref={ref}>

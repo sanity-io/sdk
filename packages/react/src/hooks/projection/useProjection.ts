@@ -13,18 +13,22 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @public
  * @category Types
  */
-export interface UseProjectionOptions {
-  document: DocumentHandle
-  projection: ValidProjection
+export interface UseProjectionOptions extends DocumentHandle {
   ref?: React.RefObject<unknown>
+  projection: ValidProjection
+  /**
+   * @deprecated This property is redundant since the interface now extends DocumentHandle.
+   * Use the properties inherited from DocumentHandle instead.
+   */
+  document?: DocumentHandle
 }
 
 /**
  * @public
  * @category Types
  */
-export interface UseProjectionResults<TResult extends object> {
-  data: TResult
+export interface UseProjectionResults<TData extends object> {
+  data: TData
   isPending: boolean
 }
 
@@ -87,17 +91,22 @@ export interface UseProjectionResults<TResult extends object> {
  * )
  * ```
  */
-export function useProjection<TResult extends object>({
-  document: {_id, _type},
-  projection,
+export function useProjection<TData extends object>({
   ref,
-}: UseProjectionOptions): UseProjectionResults<TResult> {
+  projection,
+  document,
+  ..._docHandle
+}: UseProjectionOptions): UseProjectionResults<TData> {
   const instance = useSanityInstance()
-
+  const docHandle = useMemo(() => ({...document, ..._docHandle}), [document, _docHandle])
   const stateSource = useMemo(
-    () => getProjectionState<TResult>(instance, {document: {_id, _type}, projection}),
-    [instance, _id, _type, projection],
+    () => getProjectionState<TData>(instance, {...docHandle, projection}),
+    [instance, docHandle, projection],
   )
+
+  if (stateSource.getCurrent().data === null) {
+    throw resolveProjection(instance, {...docHandle, projection})
+  }
 
   // Create subscribe function for useSyncExternalStore
   const subscribe = useCallback(
@@ -135,13 +144,5 @@ export function useProjection<TResult extends object>({
     [stateSource, ref],
   )
 
-  // Create getSnapshot function to return current state
-  const getSnapshot = useCallback(() => {
-    const currentState = stateSource.getCurrent()
-    if (currentState.data === null)
-      throw resolveProjection(instance, {document: {_id, _type}, projection})
-    return currentState as UseProjectionResults<TResult>
-  }, [_id, _type, projection, instance, stateSource])
-
-  return useSyncExternalStore(subscribe, getSnapshot)
+  return useSyncExternalStore(subscribe, stateSource.getCurrent) as UseProjectionResults<TData>
 }

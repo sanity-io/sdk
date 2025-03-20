@@ -11,6 +11,7 @@ import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
 import {DocumentListRoute} from './DocumentCollection/DocumentListRoute'
 import {DocumentProjectionRoute} from './DocumentCollection/DocumentProjectionRoute'
 import {MultiResourceRoute} from './DocumentCollection/MultiResourceRoute'
+import {OrgDocumentExplorerRoute} from './DocumentCollection/OrgDocumentExplorerRoute'
 import {SearchRoute} from './DocumentCollection/SearchRoute'
 import Home from './Home'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
@@ -41,6 +42,10 @@ const documentCollectionRoutes = [
   {
     path: 'multi-resource',
     element: <MultiResourceRoute />,
+  },
+  {
+    path: 'org-document-explorer',
+    element: <OrgDocumentExplorerRoute />,
   },
   {
     path: 'search',
@@ -97,10 +102,7 @@ export function AppRoutes(): JSX.Element {
         path="/sanity-app"
         index
         element={
-          <SanityApp
-            sanityConfigs={[{projectId: 'ppsg7ml5', dataset: 'test'}]}
-            fallback={<Spinner />}
-          >
+          <SanityApp config={{projectId: 'ppsg7ml5', dataset: 'test'}} fallback={<Spinner />}>
             <div>Welcome to the Sanity App</div>
           </SanityApp>
         }

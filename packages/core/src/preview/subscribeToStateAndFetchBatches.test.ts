@@ -1,51 +1,35 @@
-import {SanityClient, type SyncTag} from '@sanity/client'
-import {Observable, of, Subject} from 'rxjs'
-import {describe, expect, it, type Mock, vi} from 'vitest'
+import {NEVER, Observable, type Observer} from 'rxjs'
+import {describe, expect, it, vi} from 'vitest'
 
-import {getClientState} from '../client/clientStore'
-import {createSanityInstance} from '../instance/sanityInstance'
-import {createResourceState, type ResourceState} from '../resources/createResource'
-import {type StateSource} from '../resources/createStateSourceAction'
+import {getQueryState} from '../query/queryStore'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+import {type StateSource} from '../store/createStateSourceAction'
+import {createStoreState, type StoreState} from '../store/createStoreState'
 import {type PreviewQueryResult, type PreviewStoreState} from './previewStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 
-vi.mock('../client/clientStore')
-
-vi.mock('../resources/createResource', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../resources/createResource')>()
-  return {...original, getOrCreateResource: vi.fn()}
-})
+vi.mock('../query/queryStore')
 
 describe('subscribeToStateAndFetchBatches', () => {
-  const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-
-  let state: ResourceState<PreviewStoreState>
-  let fetchResults: Subject<{result: PreviewQueryResult[]; syncTags: SyncTag[]}>
-  let mockFetch: Mock
+  let instance: SanityInstance
+  let state: StoreState<PreviewStoreState>
 
   beforeEach(() => {
-    state = createResourceState<PreviewStoreState>({
+    vi.clearAllMocks()
+    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    state = createStoreState<PreviewStoreState>({
       documentTypes: {},
-      lastLiveEventId: null,
       subscriptions: {},
-      syncTags: {},
       values: {},
     })
-    fetchResults = new Subject()
 
-    mockFetch = vi.fn().mockImplementation(
-      () =>
-        new Observable((subscriber) => {
-          const subscription = fetchResults.subscribe({
-            next: (val) => subscriber.next(val),
-            complete: () => subscriber.complete(),
-          })
-          return () => subscription.unsubscribe()
-        }),
-    )
-    vi.mocked(getClientState).mockReturnValue({
-      observable: of({observable: {fetch: mockFetch}} as unknown as SanityClient),
-    } as StateSource<SanityClient>)
+    vi.mocked(getQueryState).mockReturnValue({
+      observable: NEVER as Observable<PreviewQueryResult[] | undefined>,
+    } as StateSource<PreviewQueryResult[] | undefined>)
+  })
+
+  afterEach(() => {
+    instance.dispose()
   })
 
   it('batches rapid subscription changes into single requests', async () => {
@@ -65,16 +49,33 @@ describe('subscribeToStateAndFetchBatches', () => {
     // Wait for debounce
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    expect(mockFetch).toHaveBeenCalledTimes(1)
-    expect(mockFetch.mock.calls[0][1]).toMatchObject({
-      __ids_0d8f6ec5: ['doc1', 'drafts.doc1', 'doc2', 'drafts.doc2'],
-    })
+    expect(getQueryState).toHaveBeenCalledTimes(1)
+    expect(getQueryState).toHaveBeenCalledWith(
+      instance,
+      expect.any(String),
+      expect.objectContaining({
+        params: expect.objectContaining({
+          __ids_71322c7a: ['doc1', 'drafts.doc1', 'doc2', 'drafts.doc2'],
+        }),
+      }),
+    )
 
     subscription.unsubscribe()
   })
 
-  it('always uses latest client/schema/eventId state when fetching', async () => {
+  it('processes query results and updates state with resolved values', async () => {
+    const teardown = vi.fn()
+    const subscriber = vi
+      .fn<(observer: Observer<PreviewQueryResult[] | undefined>) => () => void>()
+      .mockReturnValue(teardown)
+
+    vi.mocked(getQueryState).mockReturnValue({
+      observable: new Observable(subscriber),
+    } as StateSource<PreviewQueryResult[] | undefined>)
+
     const subscription = subscribeToStateAndFetchBatches({instance, state})
+
+    expect(subscriber).not.toHaveBeenCalled()
 
     // Add a subscription
     state.set('addSubscription', {
@@ -82,21 +83,38 @@ describe('subscribeToStateAndFetchBatches', () => {
       subscriptions: {doc1: {sub1: true}},
     })
 
-    // Update lastLiveEventId
-    state.set('updateEventId', {lastLiveEventId: 'event1'})
+    expect(subscriber).not.toHaveBeenCalled()
 
     // Wait for debounce
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(Object),
-      expect.objectContaining({
-        lastLiveEventId: 'event1',
+    expect(subscriber).toHaveBeenCalled()
+    expect(teardown).not.toHaveBeenCalled()
+
+    const [observer] = subscriber.mock.lastCall!
+
+    const timestamp = new Date().toISOString()
+
+    observer.next([
+      {
+        _id: 'doc1',
+        _type: 'test',
+        _updatedAt: timestamp,
+        titleCandidates: {title: 'Test Document'},
+        subtitleCandidates: {description: 'Test Description'},
+      },
+    ])
+
+    const {values} = state.get()
+    expect(values['doc1']).toEqual({
+      isPending: false,
+      data: expect.objectContaining({
+        title: 'Test Document',
       }),
-    )
+    })
 
     subscription.unsubscribe()
+    expect(teardown).toHaveBeenCalled()
   })
 
   it('handles new subscriptions optimistically with pending states', async () => {
@@ -149,35 +167,18 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    expect(mockFetch).toHaveBeenCalledTimes(2)
-
-    subscription.unsubscribe()
-  })
-
-  it('only refetches when actually needed due to distinctUntilChanged() usage', async () => {
-    const subscription = subscribeToStateAndFetchBatches({instance, state})
-
-    // Add a subscription
-    state.set('addSubscription', {
-      documentTypes: {doc1: 'test'},
-      subscriptions: {doc1: {sub1: true}},
-    })
-
-    await new Promise((resolve) => setTimeout(resolve, 100))
-
-    // Update state but don't change subscriptions
-    state.set('unrelatedChange', {
-      syncTags: {'s1:tag1': true},
-    })
-
-    await new Promise((resolve) => setTimeout(resolve, 100))
-
-    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(getQueryState).toHaveBeenCalledTimes(2)
 
     subscription.unsubscribe()
   })
 
   it('processes and applies fetch results correctly', async () => {
+    const subscriber = vi.fn<(observer: Observer<PreviewQueryResult[] | undefined>) => () => void>()
+
+    vi.mocked(getQueryState).mockReturnValue({
+      observable: new Observable(subscriber),
+    } as StateSource<PreviewQueryResult[] | undefined>)
+
     const subscription = subscribeToStateAndFetchBatches({instance, state})
 
     // Add a subscription
@@ -188,19 +189,19 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 100))
 
+    expect(subscriber).toHaveBeenCalled()
+    const [observer] = subscriber.mock.lastCall!
+
     // Emit fetch results
-    fetchResults.next({
-      result: [
-        {
-          _id: 'doc1',
-          _type: 'test',
-          _updatedAt: '2024-01-01T00:00:00Z',
-          titleCandidates: {title: 'Test Document'},
-          subtitleCandidates: {description: 'Test Description'},
-        },
-      ],
-      syncTags: ['s1:tag1', 's1:tag2'],
-    })
+    observer.next([
+      {
+        _id: 'doc1',
+        _type: 'test',
+        _updatedAt: '2024-01-01T00:00:00Z',
+        titleCandidates: {title: 'Test Document'},
+        subtitleCandidates: {description: 'Test Description'},
+      },
+    ])
 
     // Check that the state was updated
     expect(state.get().values['doc1']).toEqual({
@@ -208,10 +209,6 @@ describe('subscribeToStateAndFetchBatches', () => {
         title: 'Test Document',
       }),
       isPending: false,
-    })
-    expect(state.get().syncTags).toEqual({
-      's1:tag1': true,
-      's1:tag2': true,
     })
 
     subscription.unsubscribe()

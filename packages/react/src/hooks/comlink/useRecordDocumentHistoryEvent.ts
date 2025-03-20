@@ -40,8 +40,8 @@ interface DocumentInteractionHistory {
  * ```
  */
 export function useRecordDocumentHistoryEvent({
-  _id,
-  _type,
+  documentId,
+  documentType,
 }: DocumentHandle): DocumentInteractionHistory {
   const [status, setStatus] = useState<Status>('idle')
   const {sendMessage} = useWindowConnection<Events.HistoryMessage, FrameMessage>({
@@ -57,8 +57,8 @@ export function useRecordDocumentHistoryEvent({
           type: 'core/v1/events/history',
           data: {
             eventType,
-            documentId: _id,
-            documentType: _type,
+            documentId,
+            documentType,
           },
         }
 
@@ -69,7 +69,7 @@ export function useRecordDocumentHistoryEvent({
         throw error
       }
     },
-    [_id, _type, sendMessage],
+    [documentId, documentType, sendMessage],
   )
 
   return {

@@ -1,32 +1,57 @@
-import {beforeEach, describe, expect, it} from 'vitest'
+import {type Controller} from '@sanity/comlink'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {config} from '../../../../test/fixtures'
-import {createSanityInstance} from '../../../instance/sanityInstance'
-import {type SanityInstance} from '../../../instance/types'
-import {createResourceState} from '../../../resources/createResource'
-import {comlinkControllerStore} from '../comlinkControllerStore'
+import {createSanityInstance} from '../../../store/createSanityInstance'
+import {createStoreState} from '../../../store/createStoreState'
+import {type ComlinkControllerState} from '../comlinkControllerStore'
 import {destroyController} from './destroyController'
-import {getOrCreateController} from './getOrCreateController'
 
 describe('destroyController', () => {
-  let instance: SanityInstance
+  const instance = createSanityInstance({
+    projectId: 'test-project-id',
+    dataset: 'test-dataset',
+  })
+  let state: ReturnType<typeof createStoreState<ComlinkControllerState>>
+  let mockController: {destroy: ReturnType<typeof vi.fn>}
 
   beforeEach(() => {
-    instance = createSanityInstance(config)
+    mockController = {
+      destroy: vi.fn(),
+    }
+
+    // Initialize test store state
+    state = createStoreState<ComlinkControllerState>({
+      controller: null,
+      controllerOrigin: null,
+      channels: new Map(),
+    })
+  })
+
+  afterEach(() => {
+    instance.dispose()
   })
 
   it('should destroy controller and clear state', () => {
-    const state = createResourceState(comlinkControllerStore.getInitialState(instance))
-    getOrCreateController(instance, 'https://test.sanity.dev')!
+    // Set up test state with a controller
+    state.set('setup', {
+      controller: mockController as unknown as Controller,
+      controllerOrigin: 'https://test.sanity.dev',
+    })
+
+    // Execute action
     destroyController({state, instance})
 
+    // Verify controller was destroyed and state was cleared
+    expect(mockController.destroy).toHaveBeenCalled()
     expect(state.get().controller).toBeNull()
     expect(state.get().channels.size).toBe(0)
   })
 
   it('should do nothing if no controller exists', () => {
-    const state = createResourceState(comlinkControllerStore.getInitialState(instance))
-
+    // State already has null controller, so just execute action
     expect(() => destroyController({state, instance})).not.toThrow()
+
+    // State should remain unchanged
+    expect(state.get().controller).toBeNull()
   })
 })

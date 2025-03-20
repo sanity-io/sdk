@@ -1,9 +1,10 @@
-import {AuthStateType, createSanityInstance} from '@sanity/sdk'
-import {SanityProvider, useAuthState, useLoginUrls} from '@sanity/sdk-react'
+import {AuthStateType} from '@sanity/sdk'
 import {render, screen} from '@testing-library/react'
-import React from 'react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {ResourceProvider} from '../../context/ResourceProvider'
+import {useAuthState} from '../../hooks/auth/useAuthState'
+import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
 import {LoginLinks} from './LoginLinks'
 
 // Mock the hooks and SDK functions
@@ -45,17 +46,16 @@ describe('LoginLinks', () => {
     vi.clearAllMocks()
   })
 
-  const sanityInstance = createSanityInstance({projectId: 'test-project-id', dataset: 'production'})
-  const renderWithWrappers = (ui: React.ReactElement) => {
-    return render(<SanityProvider sanityInstances={[sanityInstance]}>{ui}</SanityProvider>)
-  }
-
   it('renders auth provider links correctly when not authenticated', () => {
     vi.mocked(useAuthState).mockReturnValue({
       type: AuthStateType.LOGGED_OUT,
       isDestroyingSession: false,
     })
-    renderWithWrappers(<LoginLinks />)
+    render(
+      <ResourceProvider fallback={null}>
+        <LoginLinks />
+      </ResourceProvider>,
+    )
 
     expect(screen.getByText('Choose login provider')).toBeInTheDocument()
 
@@ -72,7 +72,11 @@ describe('LoginLinks', () => {
       type: AuthStateType.LOGGING_IN,
       isExchangingToken: false,
     })
-    renderWithWrappers(<LoginLinks />)
+    render(
+      <ResourceProvider fallback={null}>
+        <LoginLinks />
+      </ResourceProvider>,
+    )
 
     expect(screen.getByText('Logging in...')).toBeInTheDocument()
   })
@@ -83,7 +87,11 @@ describe('LoginLinks', () => {
       token: 'test-token',
       currentUser: null,
     })
-    renderWithWrappers(<LoginLinks />)
+    render(
+      <ResourceProvider fallback={null}>
+        <LoginLinks />
+      </ResourceProvider>,
+    )
 
     expect(screen.getByText('You are logged in')).toBeInTheDocument()
   })

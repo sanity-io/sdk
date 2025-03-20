@@ -2,6 +2,7 @@ import {type SanityDocument} from '@sanity/types'
 import {type ExprNode} from 'groq-js'
 import {createSelector} from 'reselect'
 
+import {type SelectorContext} from '../store/createStateSourceAction'
 import {getDraftId, getPublishedId} from '../utils/ids'
 import {MultiKeyWeakMap} from '../utils/MultiKeyWeakMap'
 import {evaluateSync, parse} from './_synchronous-groq-js.mjs'
@@ -57,8 +58,9 @@ const nullReplacer: object = {}
 // (If the same documents are computed, the MultiKeyWeakMap will return the same instance.)
 const documentsSelector = createSelector(
   [
-    ({documentStates}: SyncTransactionState) => documentStates,
-    (_state: SyncTransactionState, actions: DocumentAction | DocumentAction[]) => actions,
+    ({state: {documentStates}}: SelectorContext<SyncTransactionState>) => documentStates,
+    (_context: SelectorContext<SyncTransactionState>, actions: DocumentAction | DocumentAction[]) =>
+      actions,
   ],
   (documentStates, actions) => {
     const documentIds = new Set(
@@ -98,7 +100,8 @@ const documentsSelector = createSelector(
 const memoizedActionsSelector = createSelector(
   [
     documentsSelector,
-    (_state: SyncTransactionState, actions: DocumentAction | DocumentAction[]) => actions,
+    (_state: SelectorContext<SyncTransactionState>, actions: DocumentAction | DocumentAction[]) =>
+      actions,
   ],
   (documents, actions) => {
     if (!documents) return undefined
@@ -146,7 +149,11 @@ export type PermissionsResult =
 const enNarrowConjunction = new Intl.ListFormat('en', {style: 'narrow', type: 'conjunction'})
 
 export const calculatePermissions = createSelector(
-  [({grants}: SyncTransactionState) => grants, documentsSelector, memoizedActionsSelector],
+  [
+    ({state: {grants}}: SelectorContext<SyncTransactionState>) => grants,
+    documentsSelector,
+    memoizedActionsSelector,
+  ],
   (
     grants: Record<Grant, ExprNode> | undefined,
     documents: DocumentSet | undefined,

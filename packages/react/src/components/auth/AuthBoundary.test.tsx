@@ -1,10 +1,10 @@
 import {AuthStateType} from '@sanity/sdk'
-import {useAuthState} from '@sanity/sdk-react'
-import {screen, waitFor} from '@testing-library/react'
+import {render, screen, waitFor} from '@testing-library/react'
 import {beforeEach, describe, expect, it, type MockInstance, vi} from 'vitest'
 
+import {ResourceProvider} from '../../context/ResourceProvider'
+import {useAuthState} from '../../hooks/auth/useAuthState'
 import {AuthBoundary} from './AuthBoundary'
-import {renderWithWrappers} from './authTestHelpers'
 
 // Mock hooks
 vi.mock('../../hooks/auth/useAuthState', () => ({
@@ -51,7 +51,7 @@ describe('AuthBoundary', () => {
       type: AuthStateType.LOGGED_OUT,
       isDestroyingSession: false,
     })
-    renderWithWrappers(<AuthBoundary>Protected Content</AuthBoundary>)
+    render(<AuthBoundary>Protected Content</AuthBoundary>)
 
     // The login screen should show "Choose login provider" by default
     expect(screen.getByText('Choose login provider')).toBeInTheDocument()
@@ -63,7 +63,11 @@ describe('AuthBoundary', () => {
       type: AuthStateType.LOGGING_IN,
       isExchangingToken: false,
     })
-    renderWithWrappers(<AuthBoundary>Protected Content</AuthBoundary>)
+    render(
+      <ResourceProvider fallback={null}>
+        <AuthBoundary>Protected Content</AuthBoundary>
+      </ResourceProvider>,
+    )
 
     // The callback screen shows "Logging you in…"
     expect(screen.getByText('Logging you in…')).toBeInTheDocument()
@@ -75,7 +79,11 @@ describe('AuthBoundary', () => {
       currentUser: null,
       token: 'exampleToken',
     })
-    renderWithWrappers(<AuthBoundary>Protected Content</AuthBoundary>)
+    render(
+      <ResourceProvider fallback={null}>
+        <AuthBoundary>Protected Content</AuthBoundary>
+      </ResourceProvider>,
+    )
 
     expect(screen.getByText('Protected Content')).toBeInTheDocument()
   })
@@ -85,7 +93,11 @@ describe('AuthBoundary', () => {
       type: AuthStateType.ERROR,
       error: new Error('test error'),
     })
-    renderWithWrappers(<AuthBoundary>Protected Content</AuthBoundary>)
+    render(
+      <ResourceProvider fallback={null}>
+        <AuthBoundary>Protected Content</AuthBoundary>
+      </ResourceProvider>,
+    )
 
     // The AuthBoundary should throw an AuthError internally
     // and then display the LoginError component as the fallback.

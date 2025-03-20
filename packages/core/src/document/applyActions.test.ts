@@ -3,14 +3,19 @@ import {type SanityDocument} from '@sanity/types'
 import {Subject} from 'rxjs'
 import {describe, expect, it} from 'vitest'
 
-import {createSanityInstance} from '../instance/sanityInstance'
-import {type ActionContext} from '../resources/createAction'
-import {createResourceState} from '../resources/createResource'
+import {bindActionByDataset} from '../store/createActionBinder'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+import {} from '../store/createStateSourceAction'
+import {createStoreState, type StoreState} from '../store/createStoreState'
 import {type DocumentAction} from './actions'
-import {applyActions} from './applyActions'
 import {type DocumentStoreState} from './documentStore'
 import {type DocumentEvent} from './events'
 import {type AppliedTransaction, type OutgoingTransaction} from './reducers'
+
+vi.mock('../store/createActionBinder', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../store/createActionBinder')>()),
+  bindActionByDataset: vi.fn(),
+}))
 
 type TestState = Pick<
   DocumentStoreState,
@@ -26,8 +31,13 @@ const exampleDoc: SanityDocument = {
 }
 
 describe('applyActions', () => {
-  it('resolves with a successful applied transaction and accepted event', async () => {
-    const eventsSubject = new Subject<DocumentEvent>()
+  let state: StoreState<TestState>
+  let instance: SanityInstance
+  let eventsSubject: Subject<DocumentEvent>
+  let applyActions: typeof import('./applyActions').applyActions
+
+  beforeEach(async () => {
+    eventsSubject = new Subject<DocumentEvent>()
     const initialState: TestState = {
       documentStates: {},
       queued: [],
@@ -36,18 +46,33 @@ describe('applyActions', () => {
       error: undefined,
       events: eventsSubject,
     }
-    const state = createResourceState(initialState)
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    const context: ActionContext<TestState> = {instance, state}
+    state = createStoreState(initialState)
+    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
+    vi.mocked(bindActionByDataset).mockImplementation(
+      (_storeDef, action) =>
+        (instanceParam: SanityInstance, ...params: unknown[]) =>
+          action({instance: instanceParam, state}, ...params),
+    )
+    // Import dynamically to ensure mocks are set up before the module under test is loaded
+    const module = await import('./applyActions')
+    applyActions = module.applyActions
+  })
+
+  afterEach(() => {
+    instance.dispose()
+  })
+
+  it('resolves with a successful applied transaction and accepted event', async () => {
     const action: DocumentAction = {
       type: 'document.edit',
       documentId: 'doc1',
+      documentType: 'example',
       patches: [{set: {foo: 'bar'}}],
     }
 
     // Call applyActions with a fixed transactionId for reproducibility.
-    const applyPromise = applyActions(context as ActionContext<DocumentStoreState>, action, {
+    const applyPromise = applyActions(instance, action, {
       transactionId: 'txn-success',
     })
 
@@ -95,27 +120,15 @@ describe('applyActions', () => {
   })
 
   it('throws an error if a transaction error event is emitted', async () => {
-    const eventsSubject = new Subject<DocumentEvent>()
-    const initialState: TestState = {
-      documentStates: {},
-      queued: [],
-      applied: [],
-      outgoing: undefined,
-      error: undefined,
-      events: eventsSubject,
-    }
-    const state = createResourceState(initialState)
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    const context: ActionContext<TestState> = {instance, state}
-
     const action: DocumentAction = {
       type: 'document.edit',
       documentId: 'doc1',
+      documentType: 'example',
       patches: [{set: {foo: 'error'}}],
     }
 
     // Call applyActions with a fixed transactionId.
-    const applyPromise = applyActions(context as ActionContext<DocumentStoreState>, action, {
+    const applyPromise = applyActions(instance, action, {
       transactionId: 'txn-error',
     })
 
@@ -129,5 +142,60 @@ describe('applyActions', () => {
     eventsSubject.next(errorEvent)
 
     await expect(applyPromise).rejects.toThrow('Simulated error')
+  })
+
+  it('matches parent instance via child when action projectId and dataset do not match child config', async () => {
+    // Create a parent instance
+    const parentInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    // Create a child instance with different config
+    const childInstance = parentInstance.createChild({projectId: 'child-p', dataset: 'child-d'})
+    // Use the child instance in context
+    // Create an action that refers to the parent's configuration
+    const action: DocumentAction = {
+      type: 'document.edit',
+      documentId: 'doc1',
+      documentType: 'example',
+      patches: [{set: {foo: 'childTest'}}],
+      projectId: 'p',
+      dataset: 'd',
+    }
+    // Call applyActions with the context using childInstance, but with action requiring parent's config
+    const applyPromise = applyActions(childInstance, action, {
+      transactionId: 'txn-child-match',
+    })
+
+    // Simulate an applied transaction on the parent's instance
+    const appliedTx: AppliedTransaction = {
+      transactionId: 'txn-child-match',
+      actions: [action],
+      disableBatching: false,
+      outgoingActions: [],
+      outgoingMutations: [],
+      base: {doc1: {...exampleDoc, _id: 'doc1', foo: 'old', _rev: 'rev-old'}},
+      working: {doc1: {...exampleDoc, _id: 'doc1', foo: 'childTest', _rev: 'rev-new'}},
+      previous: {doc1: {...exampleDoc, _id: 'doc1', foo: 'old', _rev: 'rev-old'}},
+      previousRevs: {doc1: 'rev-old'},
+      timestamp: new Date().toISOString(),
+    }
+    state.set('simulateApplied', {applied: [appliedTx]})
+
+    const result = await applyPromise
+    expect(result.transactionId).toEqual('txn-child-match')
+    expect(result.documents).toEqual(appliedTx.working)
+    expect(result.previous).toEqual(appliedTx.previous)
+    expect(result.previousRevs).toEqual(appliedTx.previousRevs)
+
+    const acceptedResult = {transactionId: 'accepted-child'}
+    const acceptedEvent: DocumentEvent = {
+      type: 'accepted',
+      outgoing: {batchedTransactionIds: ['txn-child-match']} as OutgoingTransaction,
+      result: acceptedResult,
+    }
+    eventsSubject.next(acceptedEvent)
+    const submittedResult = await result.submitted()
+    expect(submittedResult).toEqual(acceptedResult)
+
+    childInstance.dispose()
+    parentInstance.dispose()
   })
 })

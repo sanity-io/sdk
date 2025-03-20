@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-import {at, patch, set} from '@sanity/mutate'
 import {
   createDocument,
   deleteDocument,
@@ -27,34 +26,32 @@ interface Author extends SanityDocument {
   name?: string
 }
 
-const doc: DocumentHandle<Author> = {
-  _type: 'author',
-  _id: 'db06bc9e-4608-465a-9551-a10cef478037',
-  resourceId: 'document:ppsg7ml5.test:db06bc9e-4608-465a-9551-a10cef478037',
+const docHandle: DocumentHandle<Author> = {
+  documentType: 'author',
+  documentId: 'db06bc9e-4608-465a-9551-a10cef478037',
+  projectId: 'ppsg7ml5',
+  dataset: 'test',
 }
 
 function Editor() {
-  useDocumentEvent((e) => console.log(e), doc)
-  const synced = useDocumentSyncStatus(doc)
+  useDocumentEvent((e) => console.log(e), docHandle)
+  const synced = useDocumentSyncStatus(docHandle)
   const apply = useApplyActions()
 
-  const canEdit = usePermissions(editDocument(doc))
-  const canCreate = usePermissions(createDocument(doc))
-  const canPublish = usePermissions(publishDocument(doc))
-  const canDelete = usePermissions(deleteDocument(doc))
-  const canUnpublish = usePermissions(unpublishDocument(doc))
-  const canDiscard = usePermissions(discardDocument(doc))
+  const canEdit = usePermissions(editDocument(docHandle))
+  const canCreate = usePermissions(createDocument(docHandle))
+  const canPublish = usePermissions(publishDocument(docHandle))
+  const canDelete = usePermissions(deleteDocument(docHandle))
+  const canUnpublish = usePermissions(unpublishDocument(docHandle))
+  const canDiscard = usePermissions(discardDocument(docHandle))
 
-  const name = useDocument(doc, 'name') ?? ''
-  const setName = useEditDocument(doc, 'name')
+  const name = useDocument(docHandle, 'name') ?? ''
+  const setName = useEditDocument(docHandle, 'name')
 
   const [value, setValue] = useState('')
 
-  const changeNameToValue = editDocument(patch(doc._id, at('name', set(value))))
-  const canChangeNameToValue = usePermissions(changeNameToValue)
-
-  const document = useDocument(doc)
-  const setDocument = useEditDocument(doc)
+  const document = useDocument(docHandle)
+  const setDocument = useEditDocument(docHandle)
 
   return (
     <Box padding={4}>
@@ -69,7 +66,7 @@ function Editor() {
           <span>
             <Button
               disabled={!canCreate.allowed}
-              onClick={() => apply(createDocument(doc))}
+              onClick={() => apply(createDocument(docHandle))}
               text="Create"
             />
           </span>
@@ -78,7 +75,7 @@ function Editor() {
           <span>
             <Button
               disabled={!canDiscard.allowed}
-              onClick={() => apply(discardDocument(doc))}
+              onClick={() => apply(discardDocument(docHandle))}
               text="Discard"
             />
           </span>
@@ -88,7 +85,7 @@ function Editor() {
             <Button
               disabled={!canPublish.allowed}
               onClick={async () => {
-                const response = await apply(publishDocument(doc))
+                const response = await apply(publishDocument(docHandle))
                 await response.submitted()
               }}
               text="Publish"
@@ -99,7 +96,7 @@ function Editor() {
           <span>
             <Button
               disabled={!canUnpublish.allowed}
-              onClick={() => apply(unpublishDocument(doc))}
+              onClick={() => apply(unpublishDocument(docHandle))}
               text="Unpublish"
             />
           </span>
@@ -108,17 +105,8 @@ function Editor() {
           <span>
             <Button
               disabled={!canDelete.allowed}
-              onClick={() => apply(deleteDocument(doc))}
+              onClick={() => apply(deleteDocument(docHandle))}
               text="Delete"
-            />
-          </span>
-        </Tooltip>
-        <Tooltip content={canChangeNameToValue.message}>
-          <span>
-            <Button
-              disabled={!canChangeNameToValue.allowed}
-              onClick={() => apply(changeNameToValue)}
-              text="Change name to value"
             />
           </span>
         </Tooltip>

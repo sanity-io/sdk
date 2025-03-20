@@ -1,4 +1,9 @@
-import {useInfiniteList, useManageFavorite, useRecordDocumentHistoryEvent} from '@sanity/sdk-react'
+import {
+  DocumentHandle,
+  useInfiniteList,
+  useManageFavorite,
+  useRecordDocumentHistoryEvent,
+} from '@sanity/sdk-react'
 import {Box, Button, Flex, Heading} from '@sanity/ui'
 import {type JSX} from 'react'
 
@@ -6,18 +11,14 @@ import {DocumentListLayout} from '../components/DocumentListLayout/DocumentListL
 import {DocumentPreview} from './DocumentPreview'
 import {LoadMore} from './LoadMore'
 
-interface ActionButtonsProps {
-  document: {_id: string; _type: string}
-}
-
-function ActionButtons({document}: ActionButtonsProps) {
+function ActionButtons(docHandle: DocumentHandle) {
   const {
     favorite,
     unfavorite,
     isFavorited,
     isConnected: isFavoriteConnected,
-  } = useManageFavorite(document)
-  const {recordEvent, isConnected: isHistoryConnected} = useRecordDocumentHistoryEvent(document)
+  } = useManageFavorite(docHandle)
+  const {recordEvent, isConnected: isHistoryConnected} = useRecordDocumentHistoryEvent(docHandle)
 
   return (
     <Flex gap={2} padding={2}>
@@ -57,9 +58,9 @@ export function DocumentCoreInteractionsRoute(): JSX.Element {
       <Box paddingY={5}>
         <DocumentListLayout>
           {data.map((doc) => (
-            <Box key={doc._id}>
-              <DocumentPreview document={doc} />
-              <ActionButtons document={doc} />
+            <Box key={doc.documentId}>
+              <DocumentPreview {...doc} />
+              <ActionButtons {...doc} />
             </Box>
           ))}
           <LoadMore hasMore={hasMore} isPending={isPending} onLoadMore={loadMore} />

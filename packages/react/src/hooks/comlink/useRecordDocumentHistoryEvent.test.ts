@@ -19,8 +19,8 @@ describe('useRecordDocumentHistoryEvent', () => {
   let statusCallback: ((status: Status) => void) | null = null
 
   const mockDocumentHandle = {
-    _id: 'mock-id',
-    _type: 'mock-type',
+    documentId: 'mock-id',
+    documentType: 'mock-type',
   }
 
   function createMockNode() {

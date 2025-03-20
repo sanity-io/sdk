@@ -1,14 +1,12 @@
-import {describe, it, type Mock} from 'vitest'
+import {NEVER} from 'rxjs'
+import {describe, it} from 'vitest'
 
-import {createSanityInstance} from '../instance/sanityInstance'
-import {
-  createResourceState,
-  getOrCreateResource,
-  type ResourceState,
-} from '../resources/createResource'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+import {type StoreState} from '../store/createStoreState'
 import {insecureRandomId} from '../utils/ids'
 import {getProjectionState} from './getProjectionState'
-import {projectionStore, type ProjectionStoreState} from './projectionStore'
+import {type ProjectionStoreState} from './projectionStore'
+import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 import {STABLE_EMPTY_PROJECTION} from './util'
 
 vi.mock('../utils/ids', async (importOriginal) => {
@@ -16,37 +14,37 @@ vi.mock('../utils/ids', async (importOriginal) => {
   return {...util, insecureRandomId: vi.fn(util.insecureRandomId)}
 })
 
-vi.mock('../resources/createResource', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../resources/createResource')>()
-  return {...original, getOrCreateResource: vi.fn()}
-})
+vi.mock('./subscribeToStateAndFetchBatches.ts')
 
 describe('getProjectionState', () => {
-  const instance = createSanityInstance({projectId: 'exampleProject', dataset: 'exampleDataset'})
-  const document = {_id: 'exampleId', _type: 'exampleType'}
+  let instance: SanityInstance
+  const docHandle = {documentId: 'exampleId', documentType: 'exampleType'}
   const projection = '{exampleProjection}'
-  const initialState: ProjectionStoreState = {
-    values: {},
-    documentProjections: {},
-    subscriptions: {},
-    syncTags: {},
-    lastLiveEventId: null,
-  }
-  let state: ResourceState<ProjectionStoreState>
+  let state: StoreState<ProjectionStoreState & {extra?: unknown}>
 
   beforeEach(() => {
-    state = createResourceState(initialState)
+    // capture state
+    vi.mocked(subscribeToStateAndFetchBatches).mockImplementation((context) => {
+      state = context.state
+      return NEVER.subscribe()
+    })
+
+    instance = createSanityInstance({projectId: 'exampleProject', dataset: 'exampleDataset'})
+  })
+
+  afterEach(() => {
+    instance.dispose()
   })
 
   it('returns a state source that emits when the projection value changes', () => {
-    const projectionState = getProjectionState({state, instance}, {document, projection})
+    const projectionState = getProjectionState(instance, {projection, ...docHandle})
     expect(projectionState.getCurrent()).toBe(STABLE_EMPTY_PROJECTION)
 
     const subscriber = vi.fn()
     projectionState.subscribe(subscriber)
 
     // emit unrelated state changes
-    state.set('updateLastLiveEventId', {lastLiveEventId: 'newLastLiveEventId'})
+    state.set('updateLastLiveEventId', {extra: 'unrelated change'})
     expect(subscriber).toHaveBeenCalledTimes(0)
 
     state.set('relatedChange', (prev) => ({
@@ -69,7 +67,7 @@ describe('getProjectionState', () => {
   })
 
   it('adds a subscription ID and projection to the state on subscription', () => {
-    const projectionState = getProjectionState({state, instance}, {document, projection})
+    const projectionState = getProjectionState(instance, {projection, ...docHandle})
 
     expect(state.get().subscriptions).toEqual({})
     vi.mocked(insecureRandomId)
@@ -96,28 +94,31 @@ describe('getProjectionState', () => {
   })
 
   it('resets to pending false on unsubscribe if the subscription is the last one', () => {
-    state.set('presetValueToPending', (prev) => ({
-      values: {...prev.values, [document._id]: {data: {field: 'Foo'}, isPending: true}},
-    }))
+    const projectionState = getProjectionState(instance, {projection, ...docHandle})
 
-    const projectionState = getProjectionState({state, instance}, {document, projection})
+    state.set('presetValueToPending', (prev) => ({
+      values: {...prev.values, [docHandle.documentId]: {data: {field: 'Foo'}, isPending: true}},
+    }))
 
     const unsubscribe1 = projectionState.subscribe(vi.fn())
     const unsubscribe2 = projectionState.subscribe(vi.fn())
 
-    expect(state.get().values[document._id]).toEqual({data: {field: 'Foo'}, isPending: true})
+    expect(state.get().values[docHandle.documentId]).toEqual({
+      data: {field: 'Foo'},
+      isPending: true,
+    })
 
     unsubscribe1()
-    expect(state.get().values[document._id]).toEqual({data: {field: 'Foo'}, isPending: true})
+    expect(state.get().values[docHandle.documentId]).toEqual({
+      data: {field: 'Foo'},
+      isPending: true,
+    })
 
     unsubscribe2()
     expect(state.get().subscriptions).toEqual({})
-    expect(state.get().values[document._id]).toEqual({data: {field: 'Foo'}, isPending: false})
-  })
-
-  it('calls getOrCreateResource if no state is provided', () => {
-    ;(getOrCreateResource as Mock).mockReturnValue({state})
-    getProjectionState(instance, {document, projection})
-    expect(getOrCreateResource).toHaveBeenCalledWith(instance, projectionStore)
+    expect(state.get().values[docHandle.documentId]).toEqual({
+      data: {field: 'Foo'},
+      isPending: false,
+    })
   })
 })

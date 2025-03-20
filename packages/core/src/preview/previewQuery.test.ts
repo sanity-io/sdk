@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest'
 
-import {SUBTITLE_CANDIDATES, TITLE_CANDIDATES} from './getPreviewProjection'
+import {SUBTITLE_CANDIDATES, TITLE_CANDIDATES} from './previewConstants'
 import {createPreviewQuery, normalizeMedia, processPreviewQuery} from './previewQuery'
 import {STABLE_EMPTY_PREVIEW} from './util'
 

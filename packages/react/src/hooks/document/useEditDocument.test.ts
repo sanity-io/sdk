@@ -46,9 +46,8 @@ const doc = {
 } satisfies SanityDocument
 
 const docHandle: DocumentHandle<SanityDocument> = {
-  _id: 'doc1',
-  _type: 'book',
-  resourceId: 'document:p.d:doc1',
+  documentId: 'doc1',
+  documentType: 'book',
 }
 
 describe('useEditDocument hook', () => {

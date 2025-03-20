@@ -1,4 +1,5 @@
 import {getClientState} from '@sanity/sdk'
+import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
@@ -30,5 +31,5 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  */
 export const useClient = createStateSourceHook({
   getState: getClientState,
-  getResourceId: (e) => e.resourceId,
+  getConfig: identity,
 })

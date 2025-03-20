@@ -12,8 +12,8 @@ import {bufferTime, catchError, toArray} from 'rxjs/operators'
 import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
-import {createSanityInstance} from '../instance/sanityInstance'
-import {type StateSource} from '../resources/createStateSourceAction'
+import {createSanityInstance} from '../store/createSanityInstance'
+import {type StateSource} from '../store/createStateSourceAction'
 import {createFetchDocument, createSharedListener} from './sharedListener'
 
 const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
@@ -28,7 +28,7 @@ describe('createSharedListener', () => {
   beforeEach(() => {
     // Create a subject to simulate the events coming from client.listen.
     fakeListenSubject = new Subject()
-    // Create a fake client whose listen() method returns our subject’s observable.
+    // Create a fake client whose listen() method returns our subject's observable.
     fakeClient = {
       listen: vi.fn(() => fakeListenSubject.asObservable()),
     } as unknown as SanityClient
@@ -43,7 +43,7 @@ describe('createSharedListener', () => {
   })
 
   it('should call client.listen with the expected parameters', () => {
-    createSharedListener(instance).subscribe()
+    createSharedListener(instance).events.subscribe()
     expect(fakeClient.listen).toHaveBeenCalledTimes(1)
     expect(fakeClient.listen).toHaveBeenCalledWith(
       '*',
@@ -62,9 +62,9 @@ describe('createSharedListener', () => {
     const mutationEvent: MutationEvent = {type: 'mutation'} as MutationEvent
     const reconnectEvent: ReconnectEvent = {type: 'reconnect'} as ReconnectEvent
 
-    const shared$ = createSharedListener(instance)
+    const sharedListener = createSharedListener(instance)
     // Start collecting the emitted events.
-    const eventsPromise = lastValueFrom(shared$.pipe(toArray()))
+    const eventsPromise = lastValueFrom(sharedListener.events.pipe(toArray()))
 
     // Emit events in order.
     fakeListenSubject.next(welcomeEvent)
@@ -80,16 +80,16 @@ describe('createSharedListener', () => {
   it('should replay the welcome event for new subscribers', async () => {
     const welcomeEvent: WelcomeEvent = {type: 'welcome', listenerName: 'listener'}
 
-    const shared$ = createSharedListener(instance)
+    const sharedListener = createSharedListener(instance)
     // First subscription: emit welcome and complete.
-    const firstPromise = lastValueFrom(shared$.pipe(toArray()))
+    const firstPromise = lastValueFrom(sharedListener.events.pipe(toArray()))
     fakeListenSubject.next(welcomeEvent)
     fakeListenSubject.complete()
     const firstEvents = await firstPromise
     expect(firstEvents).toEqual([welcomeEvent])
 
     // New subscriber should immediately receive the replayed welcome event.
-    const secondEvents = await lastValueFrom(shared$.pipe(toArray()))
+    const secondEvents = await lastValueFrom(sharedListener.events.pipe(toArray()))
     expect(secondEvents).toEqual([welcomeEvent])
   })
 
@@ -97,8 +97,8 @@ describe('createSharedListener', () => {
     const mutationEvent = {type: 'mutation'} as MutationEvent
     const reconnectEvent = {type: 'reconnect'} as ReconnectEvent
 
-    const shared$ = createSharedListener(instance)
-    const eventsPromise = lastValueFrom(shared$.pipe(toArray()))
+    const sharedListener = createSharedListener(instance)
+    const eventsPromise = lastValueFrom(sharedListener.events.pipe(toArray()))
     fakeListenSubject.next(mutationEvent)
     fakeListenSubject.next(reconnectEvent)
     fakeListenSubject.complete()
@@ -110,11 +110,11 @@ describe('createSharedListener', () => {
     const welcomeEvent = {type: 'welcome'} as WelcomeEvent
     const mutationEvent = {type: 'mutation'} as MutationEvent
 
-    const shared$ = createSharedListener(instance)
+    const sharedListener = createSharedListener(instance)
 
     // Subscribe two observers concurrently.
-    const subscriber1 = shared$.pipe(bufferTime(0))
-    const subscriber2 = shared$.pipe(bufferTime(0))
+    const subscriber1 = sharedListener.events.pipe(bufferTime(0))
+    const subscriber2 = sharedListener.events.pipe(bufferTime(0))
     const combined = forkJoin([subscriber1, subscriber2])
 
     const result = lastValueFrom(combined)
@@ -133,9 +133,9 @@ describe('createSharedListener', () => {
 
   it('should propagate errors from the underlying client.listen observable', async () => {
     const errorMessage = 'Test error'
-    const shared$ = createSharedListener(instance)
+    const sharedListener = createSharedListener(instance)
 
-    const error$ = shared$.pipe(
+    const error$ = sharedListener.events.pipe(
       toArray(),
       catchError((err) => of(err)),
     )
@@ -144,6 +144,24 @@ describe('createSharedListener', () => {
     const result = await lastValueFrom(error$)
     expect(result).toBeInstanceOf(Error)
     expect(result.message).toBe(errorMessage)
+  })
+
+  it('should stop emitting events after calling dispose', async () => {
+    const welcomeEvent: WelcomeEvent = {type: 'welcome', listenerName: 'listener'}
+    const mutationEvent: MutationEvent = {type: 'mutation'} as MutationEvent
+    const sharedListener = createSharedListener(instance)
+
+    const events: ListenEvent<SanityDocument>[] = []
+    const subscription = sharedListener.events.subscribe((event) => {
+      events.push(event)
+    })
+
+    fakeListenSubject.next(welcomeEvent)
+    sharedListener.dispose()
+    fakeListenSubject.next(mutationEvent)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(events).toEqual([welcomeEvent])
+    subscription.unsubscribe()
   })
 })
 

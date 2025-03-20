@@ -1,11 +1,4 @@
-import {
-  type ActionsResult,
-  applyActions,
-  type ApplyActionsOptions,
-  type DocumentAction,
-  type ResourceId,
-} from '@sanity/sdk'
-import {type SanityDocument} from '@sanity/types'
+import {applyActions} from '@sanity/sdk'
 
 import {createCallbackHook} from '../helpers/createCallbackHook'
 
@@ -16,7 +9,7 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  * Provides a callback for applying one or more actions to a document.
  *
  * @category Documents
- * @param resourceId - The resource ID of the document to apply actions to. If not provided, the document will use the default resource.
+ * @param dataset - An optional dataset handle with projectId and dataset. If not provided, the nearest SanityInstance from context will be used.
  * @returns A function that takes one more more {@link DocumentAction}s and returns a promise that resolves to an {@link ActionsResult}.
  * @example Publish or unpublish a document
  * ```
@@ -24,7 +17,7 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  * import { useApplyActions } from '@sanity/sdk-react'
  *
  * const apply = useApplyActions()
- * const myDocument = { _id: 'my-document-id', _type: 'my-document-type' }
+ * const myDocument = { documentId: 'my-document-id', documentType: 'my-document-type' }
  *
  * return (
  *   <button onClick={() => apply(publishDocument(myDocument))}>Publish</button>
@@ -40,7 +33,7 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  * const apply = useApplyActions()
  *
  * const handleCreateAndPublish = () => {
- *   const handle = { _id: window.crypto.randomUUID(), _type: 'my-document-type' }
+ *   const handle = { documentId: window.crypto.randomUUID(), documentType: 'my-document-type' }
  *   apply([
  *     createDocument(handle),
  *     publishDocument(handle),
@@ -49,26 +42,9 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  *
  * return (
  *   <button onClick={handleCreateAndPublish}>
- *     I’m feeling lucky
+ *     I'm feeling lucky
  *   </button>
  * )
  * ```
  */
-export function useApplyActions(
-  resourceId?: ResourceId,
-): <TDocument extends SanityDocument>(
-  action: DocumentAction<TDocument> | DocumentAction<TDocument>[],
-  options?: ApplyActionsOptions,
-) => Promise<ActionsResult<TDocument>>
-
-/** @beta */
-export function useApplyActions(
-  resourceId?: ResourceId,
-): (
-  action: DocumentAction | DocumentAction[],
-  options?: ApplyActionsOptions,
-) => Promise<ActionsResult> {
-  return _useApplyActions(resourceId)()
-}
-
-const _useApplyActions = (resourceId?: ResourceId) => createCallbackHook(applyActions, resourceId)
+export const useApplyActions = createCallbackHook(applyActions)

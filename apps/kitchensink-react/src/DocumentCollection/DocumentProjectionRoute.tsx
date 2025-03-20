@@ -14,10 +14,23 @@ interface AuthorProjection {
 }
 
 // Component for displaying projection data with proper error handling
-function ProjectionData({data}: {data: AuthorProjection}) {
+function ProjectionData(docHandle: DocumentHandle) {
+  const ref = useRef<HTMLTableCellElement>(null)
+  const {data} = useProjection<AuthorProjection>({
+    ...docHandle,
+    ref,
+    projection: `{
+      name,
+      "address": "City: " + address.city + ", Country: " + address.country,
+      "favoriteBookTitles": favoriteBooks[]->{title}.title
+    }`,
+  })
+
   return (
     <>
-      <TD padding={2}>{data.name || 'Untitled'}</TD>
+      <TD ref={ref} padding={2}>
+        {data.name || 'Untitled'}
+      </TD>
       <TD padding={2}>{data.address || 'No address'}</TD>
       <TD padding={2}>
         {data.favoriteBookTitles.filter(Boolean).join(', ') || 'No favorite books'}
@@ -53,24 +66,12 @@ function ProjectionError({error}: {error: Error}): ReactNode {
 }
 
 // Component for displaying a single author row with projection data
-function AuthorRow({document}: {document: DocumentHandle}) {
-  const ref = useRef<HTMLTableRowElement>(null)
-
-  const {data} = useProjection<AuthorProjection>({
-    document,
-    projection: `{
-      name,
-      "address": "City: " + address.city + ", Country: " + address.country,
-      "favoriteBookTitles": favoriteBooks[]->{title}.title
-    }`,
-    ref,
-  })
-
+function AuthorRow(docHandle: DocumentHandle) {
   return (
-    <TR ref={ref}>
+    <TR>
       <ErrorBoundary fallbackRender={({error}) => <ProjectionError error={error} />}>
         <Suspense fallback={<ProjectionFallback />}>
-          <ProjectionData data={data} />
+          <ProjectionData {...docHandle} />
         </Suspense>
       </ErrorBoundary>
     </TR>
@@ -289,7 +290,7 @@ export function DocumentProjectionRoute(): JSX.Element {
             </thead>
             <tbody>
               {data.length > 0 ? (
-                data.map((doc) => <AuthorRow key={doc._id} document={doc} />)
+                data.map((doc) => <AuthorRow key={doc.documentId} {...doc} />)
               ) : (
                 <TR>
                   <TD padding={2}>
