@@ -72,7 +72,7 @@ describe('createStateSourceHook', () => {
 
     const stateSourceFactory = vi.fn((instance: SanityInstance) => ({
       subscribe: vi.fn(),
-      getCurrent: () => instance.identity.projectId,
+      getCurrent: () => instance.config.projectId,
       observable: throwError(() => new Error('unexpected usage of observable')),
     }))
 

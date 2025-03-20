@@ -55,7 +55,7 @@ describe('createCallbackHook', () => {
     vi.mocked(useSanityInstance).mockReturnValueOnce(mockInstance1)
 
     // Create a test callback
-    const testCallback = (instance: SanityInstance) => instance.identity.projectId
+    const testCallback = (instance: SanityInstance) => instance.config.projectId
 
     // Create and render our hook
     const useTestHook = createCallbackHook(testCallback)
@@ -87,7 +87,7 @@ describe('createCallbackHook', () => {
       method: string,
       data: object,
     ) => ({
-      url: `${instance.identity.projectId}${path}`,
+      url: `${instance.config.projectId}${path}`,
       method,
       data,
     })
