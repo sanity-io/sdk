@@ -17,6 +17,7 @@ import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProjectInstanceWrapper} from './ProjectAuthentication/ProjectInstanceWrapper'
 import {ProtectedRoute} from './ProtectedRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
+import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import {UsersRoute} from './routes/UsersRoute'
 import {UnauthenticatedHome} from './Unauthenticated/UnauthenticatedHome'
 import {UnauthenticatedInstanceWrapper} from './Unauthenticated/UnauthenticatedInstanceWrapper'
@@ -60,6 +61,13 @@ const documentCollectionRoutes = [
   },
 ]
 
+const dashboardInteractionRoutes = [
+  {
+    path: 'workspaces',
+    element: <DashboardWorkspacesRoute />,
+  },
+]
+
 const frameRoutes = [1, 2, 3].map((frameNum) => ({
   path: `frame${frameNum}`,
   element: <Framed />,
@@ -71,7 +79,14 @@ export function AppRoutes(): JSX.Element {
       <Route path="/" element={<Home />} />
 
       <Route path="/authenticated" element={<ProjectInstanceWrapper />}>
-        <Route index element={<ProjectAuthHome routes={documentCollectionRoutes} />} />
+        <Route
+          index
+          element={
+            <ProjectAuthHome
+              routes={[...documentCollectionRoutes, ...dashboardInteractionRoutes]}
+            />
+          }
+        />
         <Route element={<ProtectedRoute subPath="/authenticated" />}>
           {documentCollectionRoutes.map((route) => (
             <Route key={route.path} path={route.path} element={route.element} />
@@ -87,8 +102,18 @@ export function AppRoutes(): JSX.Element {
       </Route>
 
       <Route path="/unauthenticated" element={<UnauthenticatedInstanceWrapper />}>
-        <Route index element={<UnauthenticatedHome routes={documentCollectionRoutes} />} />
+        <Route
+          index
+          element={
+            <UnauthenticatedHome
+              routes={[...documentCollectionRoutes, ...dashboardInteractionRoutes]}
+            />
+          }
+        />
         {documentCollectionRoutes.map((route) => (
+          <Route key={route.path} path={route.path} element={route.element} />
+        ))}
+        {dashboardInteractionRoutes.map((route) => (
           <Route key={route.path} path={route.path} element={route.element} />
         ))}
       </Route>
