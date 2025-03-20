@@ -1,4 +1,10 @@
-import {useInfiniteList, useManageFavorite, useRecordDocumentHistoryEvent} from '@sanity/sdk-react'
+import {
+  DocumentHandle,
+  useInfiniteList,
+  useManageFavorite,
+  useNavigateToStudioDocument,
+  useRecordDocumentHistoryEvent,
+} from '@sanity/sdk-react'
 import {Box, Button, Flex, Heading} from '@sanity/ui'
 import {type JSX} from 'react'
 
@@ -6,11 +12,7 @@ import {DocumentListLayout} from '../components/DocumentListLayout/DocumentListL
 import {DocumentPreview} from './DocumentPreview'
 import {LoadMore} from './LoadMore'
 
-interface ActionButtonsProps {
-  document: {_id: string; _type: string}
-}
-
-function ActionButtons({document}: ActionButtonsProps) {
+function ActionButtons({document}: {document: DocumentHandle}) {
   const {
     favorite,
     unfavorite,
@@ -18,6 +20,8 @@ function ActionButtons({document}: ActionButtonsProps) {
     isConnected: isFavoriteConnected,
   } = useManageFavorite(document)
   const {recordEvent, isConnected: isHistoryConnected} = useRecordDocumentHistoryEvent(document)
+  const {navigateToStudioDocument, isConnected: isNavigateConnected} =
+    useNavigateToStudioDocument(document)
 
   return (
     <Flex gap={2} padding={2}>
@@ -39,6 +43,12 @@ function ActionButtons({document}: ActionButtonsProps) {
         onClick={() => recordEvent('viewed')}
         text="Record view"
       />
+      <Button
+        mode="ghost"
+        disabled={!isNavigateConnected}
+        onClick={navigateToStudioDocument}
+        text="Edit in Studio"
+      />
     </Flex>
   )
 }
@@ -48,6 +58,10 @@ export function DocumentCoreInteractionsRoute(): JSX.Element {
     filter: '_type == "book"',
     orderings: [{field: '_updatedAt', direction: 'desc'}],
   })
+
+  // since resourceIds are being refactored at the moment, hardcode the resourceId for now
+  // (ideally, they come from document handles returned in the "data" param per document)
+  const datasetResourceId = 'document:ppsg7ml5.test:' // Note: each doc._id will be appended to this
 
   return (
     <Box padding={4}>
@@ -59,7 +73,7 @@ export function DocumentCoreInteractionsRoute(): JSX.Element {
           {data.map((doc) => (
             <Box key={doc._id}>
               <DocumentPreview document={doc} />
-              <ActionButtons document={doc} />
+              <ActionButtons document={{...doc, resourceId: `${datasetResourceId}${doc._id}`}} />
             </Box>
           ))}
           <LoadMore hasMore={hasMore} isPending={isPending} onLoadMore={loadMore} />
