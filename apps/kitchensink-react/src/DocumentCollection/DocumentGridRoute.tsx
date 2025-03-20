@@ -19,7 +19,7 @@ export function DocumentGridRoute(): JSX.Element {
       <Box paddingY={5}>
         <DocumentGridLayout>
           {data.map((doc) => (
-            <DocumentPreview key={doc._id} document={doc} />
+            <DocumentPreview key={doc.documentId} {...doc} />
           ))}
         </DocumentGridLayout>
         <Button text="Load more" mode="ghost" disabled={isPending || !hasMore} onClick={loadMore} />

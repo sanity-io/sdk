@@ -12,26 +12,19 @@ import {DocumentListLayout} from '../components/DocumentListLayout/DocumentListL
 import {DocumentPreview} from './DocumentPreview'
 import {LoadMore} from './LoadMore'
 
-function ActionButtons({document}: {document: DocumentHandle}) {
+function ActionButtons(docHandle: DocumentHandle) {
   const {
     favorite,
     unfavorite,
     isFavorited,
     isConnected: isFavoriteConnected,
-  } = useManageFavorite({
-    documentId: document._id,
-    documentType: document._type,
-    resourceType: 'studio',
-    resourceId: document.resourceId,
-  })
+  } = useManageFavorite({...docHandle, resourceType: 'studio'})
   const {recordEvent, isConnected: isHistoryConnected} = useRecordDocumentHistoryEvent({
-    documentId: document._id,
-    documentType: document._type,
+    ...docHandle,
     resourceType: 'studio',
-    resourceId: document.resourceId,
   })
   const {navigateToStudioDocument, isConnected: isNavigateConnected} =
-    useNavigateToStudioDocument(document)
+    useNavigateToStudioDocument(docHandle)
 
   return (
     <Flex gap={2} padding={2}>
@@ -69,10 +62,6 @@ export function DocumentDashboardInteractionsRoute(): JSX.Element {
     orderings: [{field: '_updatedAt', direction: 'desc'}],
   })
 
-  // since resourceIds are being refactored at the moment, hardcode the resourceId for now
-  // (ideally, they come from document handles returned in the "data" param per document)
-  const datasetResourceId = 'document:ppsg7ml5.test:' // Note: each doc._id will be appended to this
-
   return (
     <Box padding={4}>
       <Heading as="h1" size={5}>
@@ -81,9 +70,9 @@ export function DocumentDashboardInteractionsRoute(): JSX.Element {
       <Box paddingY={5}>
         <DocumentListLayout>
           {data.map((doc) => (
-            <Box key={doc._id}>
-              <DocumentPreview document={doc} />
-              <ActionButtons document={{...doc, resourceId: `${datasetResourceId}${doc._id}`}} />
+            <Box key={doc.documentId}>
+              <DocumentPreview {...doc} />
+              <ActionButtons {...doc} />
             </Box>
           ))}
           <LoadMore hasMore={hasMore} isPending={isPending} onLoadMore={loadMore} />
