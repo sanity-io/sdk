@@ -1,11 +1,9 @@
 import * as comlink from '@sanity/comlink'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {config} from '../../../../test/fixtures'
-import {createSanityInstance} from '../../../instance/sanityInstance'
-import {type SanityInstance} from '../../../instance/types'
-import {getOrCreateResource} from '../../../resources/createResource'
-import {comlinkControllerStore} from '../comlinkControllerStore'
+import {createSanityInstance, type SanityInstance} from '../../../store/createSanityInstance'
+import {createStoreState} from '../../../store/createStoreState'
+import {type ComlinkControllerState} from '../comlinkControllerStore'
 import {getOrCreateController} from './getOrCreateController'
 
 vi.mock('@sanity/comlink', () => {
@@ -20,36 +18,46 @@ vi.mock('@sanity/comlink', () => {
 
 describe('getOrCreateController', () => {
   let instance: SanityInstance
+  let state: ReturnType<typeof createStoreState<ComlinkControllerState>>
 
   beforeEach(() => {
-    instance = createSanityInstance(config)
-    const store = getOrCreateResource(instance, comlinkControllerStore)
+    instance = createSanityInstance({
+      projectId: 'test-project-id',
+      dataset: 'test-dataset',
+    })
 
-    // Reset store state
-    store.state.set('test reset', {
+    state = createStoreState<ComlinkControllerState>({
       controller: null,
+      controllerOrigin: null,
       channels: new Map(),
     })
+
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    instance.dispose()
   })
 
   it('should create a new controller if none exists', () => {
     const controllerSpy = vi.spyOn(comlink, 'createController')
     const targetOrigin = 'https://test.sanity.dev'
 
-    const controller = getOrCreateController(instance, targetOrigin)
+    const controller = getOrCreateController({state, instance}, targetOrigin)
 
     expect(controllerSpy).toHaveBeenCalledWith({targetOrigin})
     expect(controller).toBeDefined()
-    expect(controller!.destroy).toBeDefined() // Verify it's a real controller
+    expect(controller.destroy).toBeDefined() // Verify it's a real controller
+    expect(state.get().controller).toBe(controller)
+    expect(state.get().controllerOrigin).toBe(targetOrigin)
   })
 
   it('should return existing controller if one exists', () => {
     const controllerSpy = vi.spyOn(comlink, 'createController')
     const targetOrigin = 'https://test.sanity.dev'
 
-    const firstController = getOrCreateController(instance, targetOrigin)
-    const secondController = getOrCreateController(instance, targetOrigin)
+    const firstController = getOrCreateController({state, instance}, targetOrigin)
+    const secondController = getOrCreateController({state, instance}, targetOrigin)
 
     expect(controllerSpy).toHaveBeenCalledTimes(1)
     expect(firstController).toBe(secondController)
@@ -60,10 +68,13 @@ describe('getOrCreateController', () => {
     const targetOrigin = 'https://test.sanity.dev'
     const targetOrigin2 = 'https://test2.sanity.dev'
 
-    const firstController = getOrCreateController(instance, targetOrigin)
-    const secondController = getOrCreateController(instance, targetOrigin2)
+    const firstController = getOrCreateController({state, instance}, targetOrigin)
+    const destroySpy = vi.spyOn(firstController, 'destroy')
+    const secondController = getOrCreateController({state, instance}, targetOrigin2)
 
     expect(controllerSpy).toHaveBeenCalledTimes(2)
+    expect(destroySpy).toHaveBeenCalled()
     expect(firstController).not.toBe(secondController)
+    expect(state.get().controllerOrigin).toBe(targetOrigin2)
   })
 })

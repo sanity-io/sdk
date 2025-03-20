@@ -7,7 +7,7 @@ import {
   SDK_NODE_NAME,
   type StudioResource,
 } from '@sanity/message-protocol'
-import {type FrameMessage} from '@sanity/sdk'
+import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
 import {useCallback, useState} from 'react'
 
 import {useWindowConnection} from './useWindowConnection'
@@ -21,7 +21,7 @@ interface ManageFavorite {
   isConnected: boolean
 }
 
-interface UseManageFavoriteProps {
+interface UseManageFavoriteProps extends DocumentHandle {
   documentId: string
   documentType: string
   resourceId?: string
@@ -64,8 +64,8 @@ interface UseManageFavoriteProps {
 export function useManageFavorite({
   documentId,
   documentType,
-  resourceId,
   resourceType,
+  resourceId,
 }: UseManageFavoriteProps): ManageFavorite {
   const [isFavorited, setIsFavorited] = useState(false) // should load this from a comlink fetch
   const [status, setStatus] = useState<Status>('idle')
@@ -81,7 +81,7 @@ export function useManageFavorite({
 
   const handleFavoriteAction = useCallback(
     (action: 'added' | 'removed', setFavoriteState: boolean) => {
-      if (!documentId || !documentType || !resourceType) return
+      if (!documentId || !documentType) return
 
       try {
         const message: Events.FavoriteMessage = {
@@ -90,12 +90,6 @@ export function useManageFavorite({
             eventType: action,
             documentId,
             documentType,
-            resourceType,
-            // Resource Id should exist for media-library and canvas resources
-            resourceId: resourceId!,
-          },
-          response: {
-            success: true,
           },
         }
 
@@ -111,7 +105,7 @@ export function useManageFavorite({
         throw error
       }
     },
-    [documentId, documentType, resourceId, resourceType, sendMessage],
+    [documentId, documentType, sendMessage],
   )
 
   const favorite = useCallback(() => handleFavoriteAction('added', true), [handleFavoriteAction])
