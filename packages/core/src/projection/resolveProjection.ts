@@ -1,36 +1,23 @@
-import {type DocumentHandle} from '../document/patchOperations'
-import {type ActionContext, createAction} from '../resources/createAction'
-import {getProjectionState} from './getProjectionState'
-import {
-  projectionStore,
-  type ProjectionStoreState,
-  type ProjectionValuePending,
-  type ValidProjection,
-} from './projectionStore'
+import {filter, firstValueFrom} from 'rxjs'
 
-interface ResolveProjectionOptions {
-  document: DocumentHandle
+import {type DocumentHandle} from '../config/sanityConfig'
+import {bindActionByDataset} from '../store/createActionBinder'
+import {getProjectionState} from './getProjectionState'
+import {projectionStore, type ValidProjection} from './projectionStore'
+
+interface ResolveProjectionOptions extends DocumentHandle {
   projection: ValidProjection
 }
 
 /**
  * @beta
  */
-export const resolveProjection = createAction(projectionStore, () => {
-  return function <TResult extends Record<string, unknown> = Record<string, unknown>>(
-    this: ActionContext<ProjectionStoreState>,
-    {document, projection}: ResolveProjectionOptions,
-  ): Promise<ProjectionValuePending<TResult>> {
-    const {getCurrent, subscribe} = getProjectionState<TResult>(this, {document, projection})
-
-    return new Promise<ProjectionValuePending<TResult>>((resolve) => {
-      const unsubscribe = subscribe(() => {
-        const current = getCurrent()
-        if (current?.data) {
-          resolve(current)
-          unsubscribe()
-        }
-      })
-    })
-  }
-})
+export const resolveProjection = bindActionByDataset(
+  projectionStore,
+  ({instance}, {projection, ...docHandle}: ResolveProjectionOptions) =>
+    firstValueFrom(
+      getProjectionState(instance, {...docHandle, projection}).observable.pipe(
+        filter((i) => !!i.data),
+      ),
+    ),
+)

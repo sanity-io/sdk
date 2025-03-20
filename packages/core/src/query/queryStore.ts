@@ -20,13 +20,19 @@ import {
   tap,
 } from 'rxjs'
 
-import {type ClientOptions, getClientState} from '../client/clientStore'
-import {type SanityInstance} from '../instance/types'
-import {type ActionContext, createAction, createInternalAction} from '../resources/createAction'
-import {createResource} from '../resources/createResource'
-import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
+import {getClientState} from '../client/clientStore'
+import {type DatasetHandle} from '../config/sanityConfig'
+import {bindActionByDataset} from '../store/createActionBinder'
+import {type SanityInstance} from '../store/createSanityInstance'
+import {
+  createStateSourceAction,
+  type SelectorContext,
+  type StateSource,
+} from '../store/createStateSourceAction'
+import {type StoreState} from '../store/createStoreState'
+import {defineStore, type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
-import {QUERY_STATE_CLEAR_DELAY} from './queryStoreConstants'
+import {QUERY_STATE_CLEAR_DELAY, QUERY_STORE_API_VERSION} from './queryStoreConstants'
 import {
   addSubscriber,
   cancelQuery,
@@ -42,8 +48,11 @@ import {
  * @beta
  */
 export interface QueryOptions
-  extends Pick<ResponseQueryOptions, 'perspective' | 'useCdn' | 'cache' | 'next' | 'cacheMode'>,
-    Pick<ClientOptions, 'scope' | 'resourceId'> {
+  extends Pick<
+      ResponseQueryOptions,
+      'perspective' | 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'
+    >,
+    DatasetHandle {
   params?: Record<string, unknown>
 }
 
@@ -63,13 +72,13 @@ export const getQueryKey = (query: string, options: QueryOptions = {}): string =
 export const parseQueryKey = (key: string): {query: string; options: QueryOptions} =>
   JSON.parse(key)
 
-export const queryStore = createResource<QueryStoreState>({
+const queryStore = defineStore<QueryStoreState>({
   name: 'QueryStore',
   getInitialState: () => ({queries: {}}),
-  initialize() {
+  initialize(context) {
     const subscriptions = [
-      listenForNewSubscribersAndFetch(this),
-      listenToLiveClientAndSetLastLiveEventIds(this),
+      listenForNewSubscribersAndFetch(context),
+      listenToLiveClientAndSetLastLiveEventIds(context),
     ]
 
     return () => {
@@ -80,106 +89,107 @@ export const queryStore = createResource<QueryStoreState>({
   },
 })
 
-export const errorHandler = createInternalAction(({state}: ActionContext<{error?: unknown}>) => {
-  return function () {
-    return (error: unknown) => state.set('setError', {error})
-  }
-})
+const errorHandler = (state: StoreState<{error?: unknown}>) => {
+  return (error: unknown): void => state.set('setError', {error})
+}
 
-const listenForNewSubscribersAndFetch = createInternalAction(
-  ({state, instance}: ActionContext<QueryStoreState>) => {
-    return function () {
-      return state.observable
-        .pipe(
-          map((s) => new Set(Object.keys(s.queries))),
-          distinctUntilChanged((curr, next) => {
-            if (curr.size !== next.size) return false
-            return Array.from(next).every((i) => curr.has(i))
-          }),
-          startWith(new Set<string>()),
-          pairwise(),
-          mergeMap(([curr, next]) => {
-            const added = Array.from(next).filter((i) => !curr.has(i))
-            const removed = Array.from(curr).filter((i) => !next.has(i))
+const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QueryStoreState>) => {
+  return state.observable
+    .pipe(
+      map((s) => new Set(Object.keys(s.queries))),
+      distinctUntilChanged((curr, next) => {
+        if (curr.size !== next.size) return false
+        return Array.from(next).every((i) => curr.has(i))
+      }),
+      startWith(new Set<string>()),
+      pairwise(),
+      mergeMap(([curr, next]) => {
+        const added = Array.from(next).filter((i) => !curr.has(i))
+        const removed = Array.from(curr).filter((i) => !next.has(i))
 
-            return [
-              ...added.map((key) => ({key, added: true})),
-              ...removed.map((key) => ({key, added: false})),
-            ]
-          }),
-          groupBy((i) => i.key),
-          mergeMap((group$) =>
-            group$.pipe(
-              switchMap((e) => {
-                if (!e.added) return EMPTY
+        return [
+          ...added.map((key) => ({key, added: true})),
+          ...removed.map((key) => ({key, added: false})),
+        ]
+      }),
+      groupBy((i) => i.key),
+      mergeMap((group$) =>
+        group$.pipe(
+          switchMap((e) => {
+            if (!e.added) return EMPTY
 
-                const lastLiveEventId$ = state.observable.pipe(
-                  map((s) => s.queries[group$.key]?.lastLiveEventId),
-                  distinctUntilChanged(),
-                )
-                const {query, options: {params, scope, ...options} = {}} = parseQueryKey(group$.key)
-                const client$ = getClientState(instance, {apiVersion: 'vX', scope}).observable
-
-                return combineLatest([lastLiveEventId$, client$]).pipe(
-                  switchMap(([lastLiveEventId, client]) =>
-                    client.observable.fetch(query, params, {
-                      ...options,
-                      filterResponse: false,
-                      returnQuery: false,
-                      lastLiveEventId,
-                    }),
-                  ),
-                )
-              }),
-              catchError((error) => {
-                state.set('setQueryError', setQueryError(group$.key, error))
-                return EMPTY
-              }),
-              tap(({result, syncTags}) => {
-                state.set('setQueryData', setQueryData(group$.key, result, syncTags))
-              }),
-            ),
-          ),
-        )
-        .subscribe({error: errorHandler(this)})
-    }
-  },
-)
-
-const listenToLiveClientAndSetLastLiveEventIds = createInternalAction(
-  ({state, instance}: ActionContext<QueryStoreState>) => {
-    return function () {
-      const liveMessages$ = getClientState(instance, {apiVersion: 'vX'}).observable.pipe(
-        switchMap((client) =>
-          client.live.events({includeDrafts: !!client.config().token, tag: 'query-store'}),
-        ),
-        share(),
-        filter((e) => e.type === 'message'),
-      )
-
-      return state.observable
-        .pipe(
-          mergeMap((s) => Object.entries(s.queries)),
-          groupBy(([key]) => key),
-          mergeMap((group$) => {
-            const syncTags$ = group$.pipe(
-              map(([, queryState]) => queryState),
-              map((i) => i?.syncTags ?? EMPTY_ARRAY),
+            const lastLiveEventId$ = state.observable.pipe(
+              map((s) => s.queries[group$.key]?.lastLiveEventId),
               distinctUntilChanged(),
             )
+            const {query, options: {params, projectId, dataset, tag, ...options} = {}} =
+              parseQueryKey(group$.key)
+            const client$ = getClientState(instance, {
+              apiVersion: QUERY_STORE_API_VERSION,
+              projectId,
+              dataset,
+            }).observable
 
-            return combineLatest([liveMessages$, syncTags$]).pipe(
-              filter(([message, syncTags]) => message.tags.some((tag) => syncTags.includes(tag))),
-              tap(([message]) => {
-                state.set('setLastLiveEventId', setLastLiveEventId(group$.key, message.id))
-              }),
+            return combineLatest([lastLiveEventId$, client$]).pipe(
+              switchMap(([lastLiveEventId, client]) =>
+                client.observable.fetch(query, params, {
+                  ...options,
+                  filterResponse: false,
+                  returnQuery: false,
+                  lastLiveEventId,
+                  tag,
+                }),
+              ),
             )
           }),
+          catchError((error) => {
+            state.set('setQueryError', setQueryError(group$.key, error))
+            return EMPTY
+          }),
+          tap(({result, syncTags}) => {
+            state.set('setQueryData', setQueryData(group$.key, result, syncTags))
+          }),
+        ),
+      ),
+    )
+    .subscribe({error: errorHandler(state)})
+}
+
+const listenToLiveClientAndSetLastLiveEventIds = ({
+  state,
+  instance,
+}: StoreContext<QueryStoreState>) => {
+  const liveMessages$ = getClientState(instance, {
+    apiVersion: 'vX',
+  }).observable.pipe(
+    switchMap((client) =>
+      client.live.events({includeDrafts: !!client.config().token, tag: 'query-store'}),
+    ),
+    share(),
+    filter((e) => e.type === 'message'),
+  )
+
+  return state.observable
+    .pipe(
+      mergeMap((s) => Object.entries(s.queries)),
+      groupBy(([key]) => key),
+      mergeMap((group$) => {
+        const syncTags$ = group$.pipe(
+          map(([, queryState]) => queryState),
+          map((i) => i?.syncTags ?? EMPTY_ARRAY),
+          distinctUntilChanged(),
         )
-        .subscribe({error: errorHandler(this)})
-    }
-  },
-)
+
+        return combineLatest([liveMessages$, syncTags$]).pipe(
+          filter(([message, syncTags]) => message.tags.some((tag) => syncTags.includes(tag))),
+          tap(([message]) => {
+            state.set('setLastLiveEventId', setLastLiveEventId(group$.key, message.id))
+          }),
+        )
+      }),
+    )
+    .subscribe({error: errorHandler(state)})
+}
 
 /**
  * Returns the state source for a query.
@@ -198,13 +208,13 @@ const listenToLiveClientAndSetLastLiveEventIds = createInternalAction(
  * @beta
  */
 export function getQueryState<T>(
-  instance: SanityInstance | ActionContext<QueryStoreState>,
+  instance: SanityInstance,
   query: string,
   options?: QueryOptions,
 ): StateSource<T | undefined>
 /** @beta */
 export function getQueryState(
-  instance: SanityInstance | ActionContext<QueryStoreState>,
+  instance: SanityInstance,
   query: string,
   options?: QueryOptions,
 ): StateSource<unknown>
@@ -212,29 +222,36 @@ export function getQueryState(
 export function getQueryState(...args: Parameters<typeof _getQueryState>): StateSource<unknown> {
   return _getQueryState(...args)
 }
-const _getQueryState = createStateSourceAction(queryStore, {
-  selector: (state: QueryStoreState, query: string, options?: QueryOptions) => {
-    if (state.error) throw state.error
-    const key = getQueryKey(query, options)
-    const queryState = state.queries[key]
-    if (queryState?.error) throw queryState.error
-    return queryState?.result
-  },
-  onSubscribe: ({state}, query, options?: QueryOptions) => {
-    const subscriptionId = insecureRandomId()
-    const key = getQueryKey(query, options)
+const _getQueryState = bindActionByDataset(
+  queryStore,
+  createStateSourceAction({
+    selector: (
+      {state}: SelectorContext<QueryStoreState>,
+      query: string,
+      options?: QueryOptions,
+    ) => {
+      if (state.error) throw state.error
+      const key = getQueryKey(query, options)
+      const queryState = state.queries[key]
+      if (queryState?.error) throw queryState.error
+      return queryState?.result
+    },
+    onSubscribe: ({state}, query, options?: QueryOptions) => {
+      const subscriptionId = insecureRandomId()
+      const key = getQueryKey(query, options)
 
-    state.set('addSubscriber', addSubscriber(key, subscriptionId))
+      state.set('addSubscriber', addSubscriber(key, subscriptionId))
 
-    return () => {
-      // this runs on unsubscribe
-      setTimeout(
-        () => state.set('removeSubscriber', removeSubscriber(key, subscriptionId)),
-        QUERY_STATE_CLEAR_DELAY,
-      )
-    }
-  },
-})
+      return () => {
+        // this runs on unsubscribe
+        setTimeout(
+          () => state.set('removeSubscriber', removeSubscriber(key, subscriptionId)),
+          QUERY_STATE_CLEAR_DELAY,
+        )
+      }
+    },
+  }),
+)
 
 /**
  * Resolves the result of a query without registering a lasting subscriber.
@@ -251,13 +268,13 @@ const _getQueryState = createStateSourceAction(queryStore, {
  * @beta
  */
 export function resolveQuery<T>(
-  instance: SanityInstance | ActionContext<QueryStoreState>,
+  instance: SanityInstance,
   query: string,
   options?: ResolveQueryOptions,
 ): Promise<T>
 /** @beta */
 export function resolveQuery(
-  instance: SanityInstance | ActionContext<QueryStoreState>,
+  instance: SanityInstance,
   query: string,
   options?: ResolveQueryOptions,
 ): Promise<unknown>
@@ -265,9 +282,10 @@ export function resolveQuery(
 export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise<unknown> {
   return _resolveQuery(...args)
 }
-const _resolveQuery = createAction(queryStore, ({state}) => {
-  return function (query: string, {signal, ...options}: ResolveQueryOptions = {}) {
-    const {getCurrent} = getQueryState(this, query, options)
+const _resolveQuery = bindActionByDataset(
+  queryStore,
+  ({state, instance}, query: string, {signal, ...options}: ResolveQueryOptions = {}) => {
+    const {getCurrent} = getQueryState(instance, query, options)
     const key = getQueryKey(query, options)
 
     const aborted$ = signal
@@ -302,5 +320,5 @@ const _resolveQuery = createAction(queryStore, ({state}) => {
     )
 
     return firstValueFrom(race([resolved$, aborted$]))
-  }
-})
+  },
+)

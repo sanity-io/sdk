@@ -13,7 +13,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * Executes GROQ queries against a Sanity dataset.
  *
  * This hook provides a convenient way to fetch and subscribe to real-time updates
- * for your Sanity content. Changes made to the dataset’s content will trigger
+ * for your Sanity content. Changes made to the dataset's content will trigger
  * automatic updates.
  *
  * @remarks
@@ -23,7 +23,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @beta
  * @category GROQ
  * @param query - GROQ query string to execute
- * @param options - Optional configuration for the query
+ * @param options - Optional configuration for the query, including projectId and dataset
  * @returns Object containing the query result and a pending state flag
  *
  * @example Basic usage
@@ -36,6 +36,15 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * // With parameters
  * const {data} = useQuery<Movie>('*[_type == "movie" && _id == $id][0]', {
  *   params: { id: 'movie-123' }
+ * })
+ * ```
+ *
+ * @example Query from a specific project/dataset
+ * ```tsx
+ * // Specify which project and dataset to query
+ * const {data} = useQuery<Movie[]>('*[_type == "movie"]', {
+ *   projectId: 'abc123',
+ *   dataset: 'production'
  * })
  * ```
  *
@@ -54,7 +63,8 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *
  */
 export function useQuery<T>(query: string, options?: QueryOptions): {data: T; isPending: boolean} {
-  const instance = useSanityInstance(options?.resourceId)
+  const instance = useSanityInstance(options)
+
   // Use React's useTransition to avoid UI jank when queries change
   const [isPending, startTransition] = useTransition()
 

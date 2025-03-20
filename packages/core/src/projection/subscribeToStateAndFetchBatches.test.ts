@@ -1,51 +1,36 @@
-import {SanityClient, type SyncTag} from '@sanity/client'
-import {Observable, of, Subject} from 'rxjs'
-import {describe, expect, it, type Mock, vi} from 'vitest'
+import {NEVER, Observable, type Observer} from 'rxjs'
+import {describe, expect, it, vi} from 'vitest'
 
-import {getClientState} from '../client/clientStore'
-import {hashString} from '../common/util'
-import {createSanityInstance} from '../instance/sanityInstance'
-import {createResourceState, type ResourceState} from '../resources/createResource'
-import {type StateSource} from '../resources/createStateSourceAction'
+import {getQueryState} from '../query/queryStore'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+import {type StateSource} from '../store/createStateSourceAction'
+import {createStoreState, type StoreState} from '../store/createStoreState'
+import {hashString} from '../utils/hashString'
 import {type ProjectionQueryResult, type ProjectionStoreState} from './projectionStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 
-vi.mock('../client/clientStore.ts', () => ({getClientState: vi.fn()}))
-vi.mock('../resources/createResource', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../resources/createResource')>()
-  return {...original, getOrCreateResource: vi.fn()}
-})
+vi.mock('../query/queryStore')
 
 describe('subscribeToStateAndFetchBatches', () => {
-  const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-
-  let state: ResourceState<ProjectionStoreState>
-  let fetchResults: Subject<{result: ProjectionQueryResult[]; syncTags: SyncTag[]}>
-  let mockFetch: Mock
+  let instance: SanityInstance
+  let state: StoreState<ProjectionStoreState>
 
   beforeEach(() => {
-    state = createResourceState<ProjectionStoreState>({
+    vi.clearAllMocks()
+    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    state = createStoreState<ProjectionStoreState>({
       documentProjections: {},
-      lastLiveEventId: null,
       subscriptions: {},
-      syncTags: {},
       values: {},
     })
-    fetchResults = new Subject()
 
-    mockFetch = vi.fn().mockImplementation(
-      () =>
-        new Observable((subscriber) => {
-          const subscription = fetchResults.subscribe({
-            next: (val) => subscriber.next(val),
-            complete: () => subscriber.complete(),
-          })
-          return () => subscription.unsubscribe()
-        }),
-    )
-    vi.mocked(getClientState).mockReturnValue({
-      observable: of({observable: {fetch: mockFetch}} as unknown as SanityClient),
-    } as StateSource<SanityClient>)
+    vi.mocked(getQueryState).mockReturnValue({
+      observable: NEVER as Observable<ProjectionQueryResult[] | undefined>,
+    } as StateSource<ProjectionQueryResult[] | undefined>)
+  })
+
+  afterEach(() => {
+    instance.dispose()
   })
 
   it('batches rapid subscription changes into single requests', async () => {
@@ -67,38 +52,81 @@ describe('subscribeToStateAndFetchBatches', () => {
     // Wait for debounce
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    expect(mockFetch).toHaveBeenCalledTimes(1)
-    expect(mockFetch.mock.calls[0][1]).toMatchObject({
-      [`__ids_${projectionHash}`]: ['doc1', 'drafts.doc1', 'doc2', 'drafts.doc2'],
-    })
-
-    subscription.unsubscribe()
-  })
-
-  it('always uses latest client/eventId state when fetching', async () => {
-    const subscription = subscribeToStateAndFetchBatches({instance, state})
-
-    // Add a subscription
-    state.set('addSubscription', {
-      documentProjections: {doc1: '{title, description}'},
-      subscriptions: {doc1: {sub1: true}},
-    })
-
-    // Update lastLiveEventId
-    state.set('updateEventId', {lastLiveEventId: 'event1'})
-
-    // Wait for debounce
-    await new Promise((resolve) => setTimeout(resolve, 100))
-
-    expect(mockFetch).toHaveBeenCalledWith(
+    expect(getQueryState).toHaveBeenCalledTimes(1)
+    expect(getQueryState).toHaveBeenCalledWith(
+      instance,
       expect.any(String),
-      expect.any(Object),
       expect.objectContaining({
-        lastLiveEventId: 'event1',
+        params: {
+          [`__ids_${projectionHash}`]: ['doc1', 'drafts.doc1', 'doc2', 'drafts.doc2'],
+        },
       }),
     )
 
     subscription.unsubscribe()
+  })
+
+  it('processes query results and updates state with resolved values', async () => {
+    const teardown = vi.fn()
+    const subscriber = vi
+      .fn<(observer: Observer<ProjectionQueryResult[] | undefined>) => () => void>()
+      .mockReturnValue(teardown)
+
+    vi.mocked(getQueryState).mockReturnValue({
+      observable: new Observable(subscriber),
+    } as StateSource<ProjectionQueryResult[] | undefined>)
+
+    const subscription = subscribeToStateAndFetchBatches({instance, state})
+
+    expect(subscriber).not.toHaveBeenCalled()
+
+    // Add a subscription
+    state.set('addSubscription', {
+      documentProjections: {doc1: '{title}'},
+      subscriptions: {doc1: {sub1: true}},
+    })
+
+    expect(subscriber).not.toHaveBeenCalled()
+
+    // Wait for debounce
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    expect(subscriber).toHaveBeenCalled()
+    expect(teardown).not.toHaveBeenCalled()
+
+    const [observer] = subscriber.mock.lastCall!
+
+    const timestamp = new Date().toISOString()
+
+    observer.next([
+      {
+        _id: 'doc1',
+        _type: 'doc',
+        _updatedAt: timestamp,
+        result: {title: 'resolved'},
+      },
+      {
+        _id: 'drafts.doc1',
+        _type: 'doc',
+        _updatedAt: timestamp,
+        result: {title: 'resolved'},
+      },
+    ])
+
+    const {values} = state.get()
+    expect(values['doc1']).toEqual({
+      isPending: false,
+      data: {
+        title: 'resolved',
+        status: {
+          lastEditedDraftAt: timestamp,
+          lastEditedPublishedAt: timestamp,
+        },
+      },
+    })
+
+    subscription.unsubscribe()
+    expect(teardown).toHaveBeenCalled()
   })
 
   it('handles new subscriptions optimistically with pending states', async () => {
@@ -151,35 +179,19 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    expect(mockFetch).toHaveBeenCalledTimes(2)
-
-    subscription.unsubscribe()
-  })
-
-  it('only refetches when actually needed due to distinctUntilChanged() usage', async () => {
-    const subscription = subscribeToStateAndFetchBatches({instance, state})
-
-    // Add a subscription
-    state.set('addSubscription', {
-      documentProjections: {doc1: '{title, description}'},
-      subscriptions: {doc1: {sub1: true}},
-    })
-
-    await new Promise((resolve) => setTimeout(resolve, 100))
-
-    // Update state but don't change subscriptions
-    state.set('unrelatedChange', {
-      syncTags: {'s1:tag1': true},
-    })
-
-    await new Promise((resolve) => setTimeout(resolve, 100))
-
-    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(getQueryState).toHaveBeenCalledTimes(2)
 
     subscription.unsubscribe()
   })
 
   it('processes and applies fetch results correctly', async () => {
+    const subscriber =
+      vi.fn<(observer: Observer<ProjectionQueryResult[] | undefined>) => () => void>()
+
+    vi.mocked(getQueryState).mockReturnValue({
+      observable: new Observable(subscriber),
+    } as StateSource<ProjectionQueryResult[] | undefined>)
+
     const subscription = subscribeToStateAndFetchBatches({instance, state})
 
     // Add a subscription
@@ -190,18 +202,18 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 100))
 
+    expect(subscriber).toHaveBeenCalled()
+    const [observer] = subscriber.mock.lastCall!
+
     // Emit fetch results
-    fetchResults.next({
-      result: [
-        {
-          _id: 'doc1',
-          _type: 'test',
-          _updatedAt: '2024-01-01T00:00:00Z',
-          result: {title: 'Test Document', description: 'Test Description'},
-        },
-      ],
-      syncTags: ['s1:tag1', 's1:tag2'],
-    })
+    observer.next([
+      {
+        _id: 'doc1',
+        _type: 'test',
+        _updatedAt: '2024-01-01T00:00:00Z',
+        result: {title: 'Test Document', description: 'Test Description'},
+      },
+    ])
 
     // Check that the state was updated
     expect(state.get().values['doc1']).toEqual({
@@ -213,10 +225,6 @@ describe('subscribeToStateAndFetchBatches', () => {
         },
       }),
       isPending: false,
-    })
-    expect(state.get().syncTags).toEqual({
-      's1:tag1': true,
-      's1:tag2': true,
     })
 
     subscription.unsubscribe()
