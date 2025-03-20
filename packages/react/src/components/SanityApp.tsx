@@ -1,14 +1,16 @@
 import {type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, useEffect} from 'react'
 
-import {SDKProvider} from './SDKProvider'
+import {ResourceProvider} from '../context/ResourceProvider'
 import {isInIframe, isLocalUrl} from './utils'
 
 /**
  * @public
  */
 export interface SanityAppProps {
-  sanityConfigs: SanityConfig[]
+  config: SanityConfig | SanityConfig[]
+  /** @deprecated use the `config` prop instead. */
+  sanityConfigs?: SanityConfig[]
   children: React.ReactNode
   fallback: React.ReactNode
 }
@@ -22,6 +24,9 @@ const CORE_URL = 'https://core.sanity.io'
  * as well as application context and state which is used by the Sanity React hooks. Your application
  * must be wrapped with the SanityApp component to function properly.
  *
+ * SanityApp creates a hierarchy of ResourceProviders, each providing a SanityInstance that can be
+ * accessed by hooks. The first configuration in the array becomes the default instance.
+ *
  * @param props - Your Sanity configuration and the React children to render
  * @returns Your Sanity application, integrated with your Sanity configuration and application context
  *
@@ -32,16 +37,14 @@ const CORE_URL = 'https://core.sanity.io'
  * import MyAppRoot from './Root'
  *
  * // Single project configuration
- * const mySanityConfigs = [
- *   {
- *     projectId: 'my-project-id',
- *     dataset: 'production',
- *   },
- * ]
+ * const mySanityConfig = {
+ *   projectId: 'my-project-id',
+ *   dataset: 'production',
+ * }
  *
  * // Or multiple project configurations
  * const multipleConfigs = [
- *   // Configuration for your main project. This will be used as the default project for all hooks if no resource ID override is provided.
+ *   // Configuration for your main project. This will be used as the default project for hooks.
  *   {
  *     projectId: 'marketing-website-project',
  *     dataset: 'production',
@@ -60,14 +63,19 @@ const CORE_URL = 'https://core.sanity.io'
  *
  * export default function MyApp() {
  *   return (
- *     <SanityApp sanityConfigs={mySanityConfigs}>
+ *     <SanityApp config={mySanityConfig} fallback={<LoadingSpinner />}>
  *       <MyAppRoot />
  *     </SanityApp>
  *   )
  * }
  * ```
  */
-export function SanityApp({sanityConfigs, children, fallback}: SanityAppProps): ReactElement {
+export function SanityApp({children, fallback, ...props}: SanityAppProps): ReactElement {
+  const _config = props.config ?? props.sanityConfigs ?? []
+  // reverse because we want the first config to be the default, but the
+  // ResourceProvider nesting makes the last one the default
+  const configs = (Array.isArray(_config) ? _config : [_config]).reverse()
+
   useEffect(() => {
     let timeout: NodeJS.Timeout | undefined
 
@@ -80,11 +88,20 @@ export function SanityApp({sanityConfigs, children, fallback}: SanityAppProps): 
       }, 1000)
     }
     return () => clearTimeout(timeout)
-  }, [sanityConfigs])
+  }, [])
 
-  return (
-    <SDKProvider sanityConfigs={sanityConfigs} fallback={fallback}>
-      {children}
-    </SDKProvider>
-  )
+  // Create a nested structure of ResourceProviders for each config
+  const createNestedProviders = (index: number): ReactElement => {
+    if (index >= configs.length) {
+      return children as ReactElement
+    }
+
+    return (
+      <ResourceProvider {...configs[index]} fallback={fallback}>
+        {createNestedProviders(index + 1)}
+      </ResourceProvider>
+    )
+  }
+
+  return createNestedProviders(0)
 }
