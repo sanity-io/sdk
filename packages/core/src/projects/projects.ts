@@ -7,7 +7,11 @@ const projects = createFetcherStore({
   name: 'Projects',
   getKey: () => 'projects',
   fetcher: (instance) => () =>
-    getClientState(instance, {apiVersion: 'vX', scope: 'global'}).observable.pipe(
+    getClientState(instance, {
+      apiVersion: 'vX',
+      scope: 'global',
+      requestTagPrefix: undefined,
+    }).observable.pipe(
       switchMap((client) => client.observable.projects.list({includeMembers: false})),
     ),
 })
