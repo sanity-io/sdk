@@ -15,15 +15,22 @@ const project = createFetcherStore({
   },
   fetcher:
     (instance) =>
-    ({projectId}: ProjectHandle = {}) =>
-      getClientState(instance, {apiVersion: 'vX', scope: 'global'}).observable.pipe(
+    (options: ProjectHandle = {}) => {
+      const projectId = options.projectId ?? instance.config.projectId
+
+      return getClientState(instance, {
+        apiVersion: 'vX',
+        scope: 'global',
+        projectId,
+      }).observable.pipe(
         switchMap((client) =>
           client.observable.projects.getById(
             // non-null assertion is fine with the above throwing
             (projectId ?? instance.config.projectId)!,
           ),
         ),
-      ),
+      )
+    },
 })
 
 /** @public */

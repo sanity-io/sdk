@@ -52,6 +52,7 @@ interface CreateFetcherStoreOptions<TParams extends unknown[], TData> {
 
 interface StoreEntry<TParams extends unknown[], TData> {
   params: TParams
+  instance: SanityInstance
   key: string
   data?: TData
   error?: unknown
@@ -112,7 +113,7 @@ export function createFetcherStore<TParams extends unknown[], TData>({
     getInitialState: () => ({
       stateByParams: {},
     }),
-    initialize(context) {
+    initialize: (context) => {
       const subscription = subscribeToSubscriptionsAndFetch(context)
       return () => subscription.unsubscribe()
     },
@@ -125,11 +126,8 @@ export function createFetcherStore<TParams extends unknown[], TData>({
    * and call the factory function for that key.
    */
   const subscribeToSubscriptionsAndFetch = ({
-    instance,
     state,
   }: StoreContext<FetcherStoreState<TParams, TData>>) => {
-    const factoryFn = getObservable(instance)
-
     return state.observable
       .pipe(
         // Map the state to an array of [serialized, entry] pairs.
@@ -174,6 +172,7 @@ export function createFetcherStore<TParams extends unknown[], TData>({
                 },
               }))
 
+              const factoryFn = getObservable(entry.instance)
               return factoryFn(...entry.params).pipe(
                 // the `createStateSourceAction` util requires the update
                 // to
@@ -239,6 +238,7 @@ export function createFetcherStore<TParams extends unknown[], TData>({
             ...prev.stateByParams,
             [key]: {
               ...prev.stateByParams[key],
+              instance,
               key,
               params: prev.stateByParams[key]?.params || params,
               subscriptions: [...(prev.stateByParams[key]?.subscriptions || []), subscriptionId],
