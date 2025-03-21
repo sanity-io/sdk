@@ -12,7 +12,11 @@
    * Source files to include in documentation generation
    * Includes core SDK exports and React hooks/context
    */
-  "entryPoints": ["packages/*"],
+  "entryPoints": [
+    "packages/react",
+    "packages/core",
+    "packages/!(react|core|react-internal|@repo)/*"
+  ],
   "entryPointStrategy": "packages",
   "alwaysCreateEntryPointModule": false,
   "exclude": ["packages/react-internal"],
@@ -21,5 +25,6 @@
     "includeCategories": true,
     "includeFolders": false
   },
-  "categorizeByGroup": false
+  "categorizeByGroup": false,
+  "sortEntryPoints": false
 }
