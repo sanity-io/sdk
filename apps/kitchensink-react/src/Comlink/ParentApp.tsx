@@ -3,22 +3,34 @@ import {Box, Button, Card, Label, Stack, Text, TextInput} from '@sanity/ui'
 import {ReactElement, useEffect, useRef, useState} from 'react'
 
 import {PageLayout} from '../components/PageLayout'
-import {FromIFrameMessage, ToIFrameMessage} from './types'
+import {FetchUsersRequest, FromIFrameMessage, ToIFrameMessage, UserData} from './types'
+
+// Add this mock data
+const MOCK_USERS: Record<string, UserData> = {
+  1: {id: '1', name: 'Alice Johnson', email: 'alice@example.com'},
+  2: {id: '2', name: 'Bob Smith', email: 'bob@example.com'},
+  3: {id: '3', name: 'Carol Williams', email: 'carol@example.com'},
+}
 
 const ParentApp = (): ReactElement => {
   const [selectedFrame, setSelectedFrame] = useState<number>(1)
-  const [message, setMessage] = useState('')
   const [status, setStatus] = useState<ComlinkStatus>('idle')
   const [receivedMessages, setReceivedMessages] = useState<Array<{from: string; message: string}>>(
     [],
   )
+
+  const messageInputRef = useRef<HTMLInputElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  const {sendMessage, connect} = useFrameConnection<ToIFrameMessage, FromIFrameMessage>({
+  const {sendMessage, connect} = useFrameConnection<
+    ToIFrameMessage,
+    FromIFrameMessage | FetchUsersRequest
+  >({
     name: 'main-app',
     connectTo: 'frame',
     targetOrigin: '*',
     onStatus: setStatus,
+    heartbeat: true,
     onMessage: {
       FROM_IFRAME: (data: {message: string}) => {
         setReceivedMessages((prev) => [
@@ -26,8 +38,21 @@ const ParentApp = (): ReactElement => {
           {from: `Frame ${selectedFrame}`, message: data.message},
         ])
       },
+      FETCH_USERS: () => {
+        return Object.values(MOCK_USERS)
+      },
     },
   })
+
+  const sendMessageToFramedApp = () => {
+    const message = messageInputRef.current?.value || ''
+    if (message.trim()) {
+      sendMessage('TO_IFRAME', {message})
+      if (messageInputRef.current) {
+        messageInputRef.current.value = ''
+      }
+    }
+  }
 
   useEffect(() => {
     let cleanupIframeConnection: (() => void) | undefined
@@ -57,19 +82,12 @@ const ParentApp = (): ReactElement => {
     }
   }, [connect, selectedFrame])
 
-  const sendMessageToFramedApp = () => {
-    if (message.trim()) {
-      sendMessage('TO_IFRAME', {message})
-      setMessage('')
-    }
-  }
-
   const frames = [1, 2, 3]
 
   return (
     <PageLayout
       title="Comlink demo"
-      subtitle="Explore comlink connections"
+      subtitle="Explore comlink connections and fetch operations"
       homePath="/comlink-demo"
       homeText="Comlink Demo Home"
     >
@@ -107,9 +125,8 @@ const ParentApp = (): ReactElement => {
                     <Box display="flex">
                       <Box flex={1}>
                         <TextInput
-                          value={message}
-                          onChange={(event) => setMessage(event.currentTarget.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && sendMessageToFramedApp()}
+                          ref={messageInputRef}
+                          onKeyDown={(e) => e.key === 'Enter' && sendMessageToFramedApp()}
                           disabled={status !== 'connected'}
                         />
                       </Box>

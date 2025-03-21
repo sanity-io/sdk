@@ -1,4 +1,4 @@
-import {type Node, type Status} from '@sanity/comlink'
+import {type MessageData, type Node, type Status} from '@sanity/comlink'
 import {type FrameMessage, getOrCreateNode, releaseNode, type WindowMessage} from '@sanity/sdk'
 import {useCallback, useEffect, useRef} from 'react'
 
@@ -29,10 +29,25 @@ export interface WindowConnection<TMessage extends WindowMessage> {
     type: TType,
     data?: Extract<TMessage, {type: TType}>['data'],
   ) => void
+  fetch: <TResponse>(
+    type: string,
+    data?: MessageData,
+    options?: {
+      signal?: AbortSignal
+      suppressWarnings?: boolean
+      responseTimeout?: number
+    },
+  ) => Promise<TResponse>
 }
 
 /**
  * @internal
+ * Hook to wrap a Comlink node in a React hook.
+ * Our store functionality takes care of the lifecycle of the node,
+ * as well as sharing a single node between invocations if they share the same name.
+ *
+ * Generally not to be used directly, but to be used as a dependency of
+ * Comlink-powered hooks like `useManageFavorite`.
  */
 export function useWindowConnection<
   TWindowMessage extends WindowMessage,
@@ -86,7 +101,22 @@ export function useWindowConnection<
     [],
   )
 
+  const fetch = useCallback(
+    <TResponse>(
+      type: string,
+      data?: MessageData,
+      fetchOptions?: {
+        responseTimeout?: number
+        signal?: AbortSignal
+        suppressWarnings?: boolean
+      },
+    ): Promise<TResponse> => {
+      return nodeRef.current?.fetch(type, data, fetchOptions ?? {}) as Promise<TResponse>
+    },
+    [],
+  )
   return {
     sendMessage,
+    fetch,
   }
 }
