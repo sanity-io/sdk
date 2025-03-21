@@ -1,5 +1,5 @@
 {
-  "packages/core": "0.0.0-alpha.18",
-  "packages/react": "0.0.0-alpha.19",
-  "packages/react-internal": "0.0.0-alpha.3"
+  "packages/core": "0.0.0-alpha.19",
+  "packages/react": "0.0.0-alpha.20",
+  "packages/react-internal": "0.0.0-alpha.4"
 }

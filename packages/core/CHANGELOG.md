@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.0.0-alpha.19](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.18...sdk-v0.0.0-alpha.19) (2025-03-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename `results` to `data` for useProjection hook ([#335](https://github.com/sanity-io/sdk/issues/335))
+* rename `result` to `data` for usePreview hook ([#325](https://github.com/sanity-io/sdk/issues/325))
+
+### Features
+
+* add useDashboardOrganizationId hook ([#339](https://github.com/sanity-io/sdk/issues/339)) ([401468e](https://github.com/sanity-io/sdk/commit/401468e07b8c74deb02d4b7df78af808bddd9242))
+* make packages public ([#320](https://github.com/sanity-io/sdk/issues/320)) ([8c94c29](https://github.com/sanity-io/sdk/commit/8c94c29b0aadd86273db59da1b0577aad682d6e9))
+* rename `result` to `data` for usePreview hook ([#325](https://github.com/sanity-io/sdk/issues/325)) ([1e5813e](https://github.com/sanity-io/sdk/commit/1e5813e2e26a72c463cafa8c5502043176930a5b))
+* rename `results` to `data` for useProjection hook ([#335](https://github.com/sanity-io/sdk/issues/335)) ([026dd26](https://github.com/sanity-io/sdk/commit/026dd26bffb9fc2a03801ef05a8d075a2968c725))
+
 ## [0.0.0-alpha.18](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.17...sdk-v0.0.0-alpha.18) (2025-03-14)
 
 
