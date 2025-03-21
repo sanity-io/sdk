@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.4](https://github.com/sanity-io/sdk/compare/sdk-react-internal-v0.0.0-alpha.3...sdk-react-internal-v0.0.0-alpha.4) (2025-03-21)
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-error-boundary to v5 ([#334](https://github.com/sanity-io/sdk/issues/334)) ([a128d7c](https://github.com/sanity-io/sdk/commit/a128d7c7a64f0e724028e0a6f0e0e2f17a399f82))
+
 ## [0.0.0-alpha.3](https://github.com/sanity-io/sdk/compare/sdk-react-internal-v0.0.0-alpha.2...sdk-react-internal-v0.0.0-alpha.3) (2025-03-14)
 
 

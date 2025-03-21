@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.0.0-alpha.20](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.19...sdk-react-v0.0.0-alpha.20) (2025-03-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename `results` to `data` for useProjection hook ([#335](https://github.com/sanity-io/sdk/issues/335))
+* rename `result` to `data` for usePreview hook ([#325](https://github.com/sanity-io/sdk/issues/325))
+
+### Features
+
+* add useDashboardOrganizationId hook ([#339](https://github.com/sanity-io/sdk/issues/339)) ([401468e](https://github.com/sanity-io/sdk/commit/401468e07b8c74deb02d4b7df78af808bddd9242))
+* make packages public ([#320](https://github.com/sanity-io/sdk/issues/320)) ([8c94c29](https://github.com/sanity-io/sdk/commit/8c94c29b0aadd86273db59da1b0577aad682d6e9))
+* **react:** add comlink fetch hook ([#338](https://github.com/sanity-io/sdk/issues/338)) ([1a78882](https://github.com/sanity-io/sdk/commit/1a788824a2c83126c1b39318aa05f8c3964cad8e))
+* **react:** add useNavigateToStudioDocument hook ([#352](https://github.com/sanity-io/sdk/issues/352)) ([a00b9fa](https://github.com/sanity-io/sdk/commit/a00b9fa381bd89f42da4ef95d01f6e5e7c5f0511))
+* **react:** create useStudioWorkspaceById hook ([#343](https://github.com/sanity-io/sdk/issues/343)) ([83feb21](https://github.com/sanity-io/sdk/commit/83feb216e13b903a312a5cffd63f793b29570b30))
+* **react:** use refs for nodes and channels ([#341](https://github.com/sanity-io/sdk/issues/341)) ([4a0b763](https://github.com/sanity-io/sdk/commit/4a0b7637463e8808180a2abe091795e1c3bcef1d))
+* rename `result` to `data` for usePreview hook ([#325](https://github.com/sanity-io/sdk/issues/325)) ([1e5813e](https://github.com/sanity-io/sdk/commit/1e5813e2e26a72c463cafa8c5502043176930a5b))
+* rename `results` to `data` for useProjection hook ([#335](https://github.com/sanity-io/sdk/issues/335)) ([026dd26](https://github.com/sanity-io/sdk/commit/026dd26bffb9fc2a03801ef05a8d075a2968c725))
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-error-boundary to v5 ([#334](https://github.com/sanity-io/sdk/issues/334)) ([a128d7c](https://github.com/sanity-io/sdk/commit/a128d7c7a64f0e724028e0a6f0e0e2f17a399f82))
+* update the react README to use the updated app template ([#354](https://github.com/sanity-io/sdk/issues/354)) ([a2a41d0](https://github.com/sanity-io/sdk/commit/a2a41d0bee9128317a0ee4de59008c75988daa74))
+
 ## [0.0.0-alpha.19](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.18...sdk-react-v0.0.0-alpha.19) (2025-03-14)
 
 
