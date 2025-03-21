@@ -1,4 +1,5 @@
 import {type Status} from '@sanity/comlink'
+import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
 import {type DocumentHandle} from '@sanity/sdk'
 import {useCallback, useState} from 'react'
 
@@ -32,10 +33,35 @@ interface NavigateToStudioResult {
 /**
  * @public
  * Hook that provides a function to navigate to a studio document.
+ * Currently, requires a document handle with a resourceId.
+ * That resourceId is currently formatted like: `document:projectId.dataset:documentId`
+ * If the hook you used to retrieve the document handle doesn't provide a resourceId like this,
+ * you can construct it according to the above format with the document handle's _id.
+ *
+ * This will only work if you have deployed a studio with a workspace
+ * with this projectId / dataset combination.
+ * It may be able to take a custom URL in the future.
+ *
+ * This will likely change in the future.
  * @param documentHandle - The document handle containing document ID, type, and resource ID
  * @returns An object containing:
  * - navigateToStudioDocument - Function that when called will navigate to the studio document
- * - isConnected - Boolean indicating if connection to Core UI is established
+ * - isConnected - Boolean indicating if connection to Dashboard is established
+ *
+ * @example
+ * ```ts
+ * import {navigateToStudioDocument, type DocumentHandle} from '@sanity/sdk'
+ *
+ * function MyComponent({documentHandle}: {documentHandle: DocumentHandle}) {
+ *   const {navigateToStudioDocument, isConnected} = useNavigateToStudioDocument(documentHandle)
+ *
+ *   return (
+ *     <button onClick={navigateToStudioDocument} disabled={!isConnected}>
+ *       Navigate to Studio Document
+ *     </button>
+ *   )
+ * }
+ * ```
  */
 export function useNavigateToStudioDocument(
   documentHandle: DocumentHandle,
@@ -44,8 +70,8 @@ export function useNavigateToStudioDocument(
     useStudioWorkspacesByResourceId()
   const [status, setStatus] = useState<Status>('idle')
   const {sendMessage} = useWindowConnection<NavigateToResourceMessage, never>({
-    name: 'core/nodes/sdk',
-    connectTo: 'core/channels/sdk',
+    name: SDK_NODE_NAME,
+    connectTo: SDK_CHANNEL_NAME,
     onStatus: setStatus,
   })
 
