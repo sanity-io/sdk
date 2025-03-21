@@ -26,6 +26,7 @@ export {
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
+export {useNavigateToStudioDocument} from '../hooks/dashboard/useNavigateToStudioDocument'
 export {useStudioWorkspacesByResourceId} from '../hooks/dashboard/useStudioWorkspacesByResourceId'
 export {useDatasets} from '../hooks/datasets/useDatasets'
 export {useApplyActions} from '../hooks/document/useApplyActions'
