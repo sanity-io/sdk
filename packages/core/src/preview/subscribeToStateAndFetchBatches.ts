@@ -1,39 +1,37 @@
 import {
   debounceTime,
+  defer,
   distinctUntilChanged,
   EMPTY,
   filter,
+  from,
   map,
+  Observable,
   pairwise,
   startWith,
   Subscription,
   switchMap,
   tap,
-  withLatestFrom,
 } from 'rxjs'
 
-import {getQueryState} from '../query/queryStore'
+import {getQueryState, resolveQuery} from '../query/queryStore'
 import {type StoreContext} from '../store/defineStore'
 import {createPreviewQuery, processPreviewQuery} from './previewQuery'
 import {type PreviewQueryResult, type PreviewStoreState} from './previewStore'
-import {PREVIEW_TAG} from './util'
+import {PREVIEW_PERSPECTIVE, PREVIEW_TAG} from './util'
 
 const BATCH_DEBOUNCE_TIME = 50
+
+const isSetEqual = <T>(a: Set<T>, b: Set<T>) =>
+  a.size === b.size && Array.from(a).every((i) => b.has(i))
 
 export const subscribeToStateAndFetchBatches = ({
   state,
   instance,
 }: StoreContext<PreviewStoreState>): Subscription => {
-  const documentTypes$ = state.observable.pipe(
-    map((i) => i.documentTypes),
-    distinctUntilChanged(),
-  )
-
   const newSubscriberIds$ = state.observable.pipe(
     map(({subscriptions}) => new Set(Object.keys(subscriptions))),
-    distinctUntilChanged((a, b) =>
-      a.size !== b.size ? false : Array.from(a).every((i) => b.has(i)),
-    ),
+    distinctUntilChanged(isSetEqual),
     debounceTime(BATCH_DEBOUNCE_TIME),
     startWith(new Set<string>()),
     pairwise(),
@@ -50,29 +48,51 @@ export const subscribeToStateAndFetchBatches = ({
         return {values: {...prev.values, ...pendingValues}}
       })
     }),
-    withLatestFrom(documentTypes$),
-    map(([[, ids], documentTypes]) => ({ids, documentTypes})),
+    map(([, ids]) => ids),
+    distinctUntilChanged(isSetEqual),
   )
 
   return newSubscriberIds$
     .pipe(
-      switchMap(({ids}) => {
+      switchMap((ids) => {
         if (!ids.size) return EMPTY
         const {query, params} = createPreviewQuery(ids)
-        return getQueryState<PreviewQueryResult[]>(instance, query, {
-          params,
-          tag: PREVIEW_TAG,
-        }).observable.pipe(
-          filter(Boolean),
-          map((result) => ({result, ids})),
-        )
+        const controller = new AbortController()
+        return new Observable<PreviewQueryResult[]>((observer) => {
+          const {getCurrent, observable} = getQueryState<PreviewQueryResult[]>(instance, query, {
+            params,
+            tag: PREVIEW_TAG,
+            perspective: PREVIEW_PERSPECTIVE,
+          })
+          const source$ = defer(() => {
+            if (getCurrent() === undefined) {
+              return from(
+                resolveQuery<PreviewQueryResult[]>(instance, query, {
+                  params,
+                  tag: PREVIEW_TAG,
+                  perspective: PREVIEW_PERSPECTIVE,
+                  signal: controller.signal,
+                }),
+              ).pipe(switchMap(() => observable))
+            }
+            return observable
+          }).pipe(filter((result) => result !== undefined))
+          const subscription = source$.subscribe(observer)
+          return () => {
+            if (!controller.signal.aborted) {
+              controller.abort()
+            }
+
+            subscription.unsubscribe()
+          }
+        }).pipe(map((data) => ({data, ids})))
       }),
-      map(({ids, result}) => ({
+      map(({ids, data}) => ({
         values: processPreviewQuery({
           projectId: instance.config.projectId!,
           dataset: instance.config.dataset!,
           ids,
-          results: result,
+          results: data,
         }),
       })),
     )

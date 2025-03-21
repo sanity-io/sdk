@@ -58,13 +58,8 @@ export const _getPreviewState = bindActionByDataset(
     onSubscribe: ({state}, docHandle: GetPreviewStateOptions) => {
       const subscriptionId = insecureRandomId()
       const documentId = getPublishedId(docHandle.documentId)
-      const documentType = docHandle.documentType
 
       state.set('addSubscription', (prev) => ({
-        documentTypes: {
-          ...prev.documentTypes,
-          [documentId]: documentType,
-        },
         subscriptions: {
           ...prev.subscriptions,
           [documentId]: {

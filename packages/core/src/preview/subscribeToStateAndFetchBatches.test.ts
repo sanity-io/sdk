@@ -1,12 +1,13 @@
 import {NEVER, Observable, type Observer} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
-import {getQueryState} from '../query/queryStore'
+import {getQueryState, resolveQuery} from '../query/queryStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {createStoreState, type StoreState} from '../store/createStoreState'
 import {type PreviewQueryResult, type PreviewStoreState} from './previewStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
+import {PREVIEW_PERSPECTIVE, PREVIEW_TAG} from './util'
 
 vi.mock('../query/queryStore')
 
@@ -18,14 +19,16 @@ describe('subscribeToStateAndFetchBatches', () => {
     vi.clearAllMocks()
     instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     state = createStoreState<PreviewStoreState>({
-      documentTypes: {},
       subscriptions: {},
       values: {},
     })
 
     vi.mocked(getQueryState).mockReturnValue({
+      getCurrent: () => undefined,
       observable: NEVER as Observable<PreviewQueryResult[] | undefined>,
     } as StateSource<PreviewQueryResult[] | undefined>)
+
+    vi.mocked(resolveQuery).mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -37,12 +40,10 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     // Add multiple subscriptions rapidly
     state.set('addSubscription1', {
-      documentTypes: {doc1: 'test'},
       subscriptions: {doc1: {sub1: true}},
     })
 
     state.set('addSubscription2', (prev) => ({
-      documentTypes: {...prev.documentTypes, doc2: 'test'},
       subscriptions: {...prev.subscriptions, doc2: {sub2: true}},
     }))
 
@@ -57,6 +58,8 @@ describe('subscribeToStateAndFetchBatches', () => {
         params: expect.objectContaining({
           __ids_71322c7a: ['doc1', 'drafts.doc1', 'doc2', 'drafts.doc2'],
         }),
+        perspective: PREVIEW_PERSPECTIVE,
+        tag: PREVIEW_TAG,
       }),
     )
 
@@ -70,6 +73,7 @@ describe('subscribeToStateAndFetchBatches', () => {
       .mockReturnValue(teardown)
 
     vi.mocked(getQueryState).mockReturnValue({
+      getCurrent: () => undefined,
       observable: new Observable(subscriber),
     } as StateSource<PreviewQueryResult[] | undefined>)
 
@@ -79,7 +83,6 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     // Add a subscription
     state.set('addSubscription', {
-      documentTypes: {doc1: 'test'},
       subscriptions: {doc1: {sub1: true}},
     })
 
@@ -119,7 +122,6 @@ describe('subscribeToStateAndFetchBatches', () => {
 
   it('handles new subscriptions optimistically with pending states', async () => {
     state.set('initializeValues', {
-      documentTypes: {doc1: 'test', doc2: 'test'},
       values: {doc1: {data: {title: 'Doc 1'}, isPending: false}},
       subscriptions: {doc1: {sub1: true}},
     })
@@ -149,11 +151,11 @@ describe('subscribeToStateAndFetchBatches', () => {
   })
 
   it('cancels and restarts fetches when subscription set changes', async () => {
+    const abortSpy = vi.spyOn(AbortController.prototype, 'abort')
     const subscription = subscribeToStateAndFetchBatches({instance, state})
 
     // Add initial subscription
     state.set('addSubscription1', {
-      documentTypes: {doc1: 'test'},
       subscriptions: {doc1: {sub1: true}},
     })
 
@@ -161,13 +163,13 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     // Add another subscription before first fetch completes
     state.set('addSubscription2', (prev) => ({
-      documentTypes: {...prev.documentTypes, doc2: 'test'},
       subscriptions: {...prev.subscriptions, doc2: {sub2: true}},
     }))
 
     await new Promise((resolve) => setTimeout(resolve, 100))
 
     expect(getQueryState).toHaveBeenCalledTimes(2)
+    expect(abortSpy).toHaveBeenCalled()
 
     subscription.unsubscribe()
   })
@@ -176,6 +178,7 @@ describe('subscribeToStateAndFetchBatches', () => {
     const subscriber = vi.fn<(observer: Observer<PreviewQueryResult[] | undefined>) => () => void>()
 
     vi.mocked(getQueryState).mockReturnValue({
+      getCurrent: () => undefined,
       observable: new Observable(subscriber),
     } as StateSource<PreviewQueryResult[] | undefined>)
 
@@ -183,7 +186,6 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     // Add a subscription
     state.set('addSubscription', {
-      documentTypes: {doc1: 'test'},
       subscriptions: {doc1: {sub1: true}},
     })
 

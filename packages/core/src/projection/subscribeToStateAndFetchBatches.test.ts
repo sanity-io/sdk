@@ -1,7 +1,7 @@
 import {NEVER, Observable, type Observer} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
-import {getQueryState} from '../query/queryStore'
+import {getQueryState, resolveQuery} from '../query/queryStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {createStoreState, type StoreState} from '../store/createStoreState'
@@ -25,8 +25,11 @@ describe('subscribeToStateAndFetchBatches', () => {
     })
 
     vi.mocked(getQueryState).mockReturnValue({
+      getCurrent: () => undefined,
       observable: NEVER as Observable<ProjectionQueryResult[] | undefined>,
     } as StateSource<ProjectionQueryResult[] | undefined>)
+
+    vi.mocked(resolveQuery).mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -73,6 +76,7 @@ describe('subscribeToStateAndFetchBatches', () => {
       .mockReturnValue(teardown)
 
     vi.mocked(getQueryState).mockReturnValue({
+      getCurrent: () => undefined,
       observable: new Observable(subscriber),
     } as StateSource<ProjectionQueryResult[] | undefined>)
 
@@ -161,6 +165,7 @@ describe('subscribeToStateAndFetchBatches', () => {
   })
 
   it('cancels and restarts fetches when subscription set changes', async () => {
+    const abortSpy = vi.spyOn(AbortController.prototype, 'abort')
     const subscription = subscribeToStateAndFetchBatches({instance, state})
 
     // Add initial subscription
@@ -179,7 +184,8 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    expect(getQueryState).toHaveBeenCalledTimes(2)
+    expect(getQueryState).toHaveBeenCalledTimes(3)
+    expect(abortSpy).toHaveBeenCalled()
 
     subscription.unsubscribe()
   })
@@ -189,6 +195,7 @@ describe('subscribeToStateAndFetchBatches', () => {
       vi.fn<(observer: Observer<ProjectionQueryResult[] | undefined>) => () => void>()
 
     vi.mocked(getQueryState).mockReturnValue({
+      getCurrent: () => undefined,
       observable: new Observable(subscriber),
     } as StateSource<ProjectionQueryResult[] | undefined>)
 

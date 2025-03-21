@@ -20,7 +20,7 @@ function ProjectionData({data}: {data: AuthorProjection}) {
       <TD padding={2}>{data.name || 'Untitled'}</TD>
       <TD padding={2}>{data.address || 'No address'}</TD>
       <TD padding={2}>
-        {data.favoriteBookTitles.filter(Boolean).join(', ') || 'No favorite books'}
+        {data.favoriteBookTitles?.filter(Boolean).join(', ') || 'No favorite books'}
       </TD>
     </>
   )

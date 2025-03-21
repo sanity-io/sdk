@@ -76,7 +76,6 @@ export type ValuePending<T> = {
  */
 export interface PreviewStoreState {
   values: {[TDocumentId in string]?: ValuePending<PreviewValue>}
-  documentTypes: {[TDocumentId in string]?: string}
   subscriptions: {[TDocumentId in string]?: {[TSubscriptionId in string]?: true}}
 }
 
@@ -84,7 +83,6 @@ export const previewStore = defineStore<PreviewStoreState>({
   name: 'Preview',
   getInitialState() {
     return {
-      documentTypes: {},
       subscriptions: {},
       values: {},
     }
