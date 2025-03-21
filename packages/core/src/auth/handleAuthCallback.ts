@@ -7,7 +7,7 @@ import {getAuthCode, getDefaultLocation} from './utils'
 /**
  * @public
  */
-export const handleCallback = createAction(authStore, ({state}) => {
+export const handleAuthCallback = createAction(authStore, ({state}) => {
   const {providedToken, callbackUrl, clientFactory, apiHost, storageArea, storageKey} =
     state.get().options
 

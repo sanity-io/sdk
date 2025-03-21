@@ -1,6 +1,6 @@
 import {useEffect} from 'react'
 
-import {useHandleCallback} from '../../hooks/auth/useHandleCallback'
+import {useHandleAuthCallback} from '../../hooks/auth/useHandleAuthCallback'
 import {LoginLayout, type LoginLayoutProps} from './LoginLayout'
 
 /**
@@ -12,18 +12,18 @@ import {LoginLayout, type LoginLayoutProps} from './LoginLayout'
  * @alpha
  */
 export function LoginCallback({header, footer}: LoginLayoutProps): React.ReactNode {
-  const handleCallback = useHandleCallback()
+  const handleAuthCallback = useHandleAuthCallback()
 
   useEffect(() => {
     const url = new URL(location.href)
-    handleCallback(url.toString()).then((replacementLocation) => {
+    handleAuthCallback(url.toString()).then((replacementLocation) => {
       if (replacementLocation) {
         // history API with `replaceState` is used to prevent a reload but still
         // remove the short-lived token from the URL
         history.replaceState(null, '', replacementLocation)
       }
     })
-  }, [handleCallback])
+  }, [handleAuthCallback])
 
   return (
     <LoginLayout header={header} footer={footer}>
