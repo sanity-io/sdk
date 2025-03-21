@@ -1,4 +1,4 @@
-import {createSanityInstance, type SanityConfig} from '@sanity/sdk'
+import {createSanityInstance, type SanityConfig, type SanityInstance} from '@sanity/sdk'
 import {Suspense, use, useEffect, useMemo, useRef} from 'react'
 
 import {SanityInstanceContext} from './SanityInstanceContext'
@@ -79,21 +79,27 @@ export function ResourceProvider({
   )
 
   // Ref to hold the scheduled disposal timer.
-  const disposalTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const disposal = useRef<{
+    instance: SanityInstance
+    timeoutId: ReturnType<typeof setTimeout>
+  } | null>(null)
 
   useEffect(() => {
     // If the component remounts quickly (as in Strict Mode), cancel any pending disposal.
-    if (disposalTimeout.current !== null) {
-      clearTimeout(disposalTimeout.current)
-      disposalTimeout.current = null
+    if (disposal.current !== null && instance === disposal.current.instance) {
+      clearTimeout(disposal.current.timeoutId)
+      disposal.current = null
     }
 
     return () => {
-      disposalTimeout.current = setTimeout(() => {
-        if (!instance.isDisposed()) {
-          instance.dispose()
-        }
-      }, 0)
+      disposal.current = {
+        instance,
+        timeoutId: setTimeout(() => {
+          if (!instance.isDisposed()) {
+            instance.dispose()
+          }
+        }, 0),
+      }
     }
   }, [instance])
 
