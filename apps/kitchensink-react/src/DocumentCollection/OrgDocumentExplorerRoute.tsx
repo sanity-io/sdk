@@ -5,7 +5,7 @@ import {
   useDocument,
   useDocumentSyncStatus,
   useEditDocument,
-  usePaginatedList,
+  usePaginatedDocuments,
   usePreview,
   useProject,
   useProjects,
@@ -30,7 +30,7 @@ import {
   TextInput,
 } from '@sanity/ui'
 import {type JsonData, JsonEditor} from 'json-edit-react'
-import {JSX, startTransition, Suspense, useCallback, useRef, useState} from 'react'
+import {JSX, startTransition, Suspense, useCallback, useEffect, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 
 // Import the custom table components
@@ -288,11 +288,11 @@ function PaginationControls({
 
 // Component to display documents of a specific type within a dataset
 interface DocumentListProps {
-  dataset: string
   documentType: string
 }
 
-function DocumentList({documentType, dataset}: DocumentListProps) {
+function DocumentList({documentType}: DocumentListProps) {
+  const {config} = useSanityInstance()
   const [searchTerm, setSearchTerm] = useState('')
   const [pageSize, setPageSize] = useState(10)
 
@@ -313,7 +313,7 @@ function DocumentList({documentType, dataset}: DocumentListProps) {
     count,
     startIndex,
     endIndex,
-  } = usePaginatedList({
+  } = usePaginatedDocuments({
     filter: `_type == "${documentType}"`,
     orderings: [{field: '_updatedAt', direction: 'desc'}],
     search: searchTerm,
@@ -332,7 +332,8 @@ function DocumentList({documentType, dataset}: DocumentListProps) {
     return (
       <Card padding={4} tone="caution">
         <Text>
-          No documents found of type &quot;{documentType}&quot; in dataset &quot;{dataset}&quot;
+          No documents found of type &quot;{documentType}&quot; in dataset &quot;{config.dataset}
+          &quot;
         </Text>
       </Card>
     )
@@ -348,14 +349,14 @@ function DocumentList({documentType, dataset}: DocumentListProps) {
         <Flex justify="space-between" align="center">
           <Box style={{width: '300px'}}>
             <Label
-              htmlFor={`search-${dataset}-${documentType}`}
+              htmlFor={`search-${documentType}`}
               size={1}
               style={{marginBottom: '4px', display: 'block'}}
             >
               Search Documents
             </Label>
             <TextInput
-              id={`search-${dataset}-${documentType}`}
+              id={`search--${documentType}`}
               value={searchTerm}
               onChange={handleSearchChange}
               placeholder="Search documents..."
@@ -364,14 +365,14 @@ function DocumentList({documentType, dataset}: DocumentListProps) {
           </Box>
           <Box>
             <Label
-              htmlFor={`pageSize-${dataset}-${documentType}`}
+              htmlFor={`pageSize-${documentType}`}
               size={1}
               style={{marginBottom: '4px', display: 'block'}}
             >
               Items per page
             </Label>
             <select
-              id={`pageSize-${dataset}-${documentType}`}
+              id={`pageSize-${documentType}`}
               value={pageSize}
               onChange={handlePageSizeChange}
               style={{
@@ -483,6 +484,10 @@ function DocumentTypes() {
 
   const [selectedType, setSelectedType] = useState<string | null>(null)
 
+  useEffect(() => {
+    setSelectedType(documentTypes.at(0) ?? null)
+  }, [config, documentTypes])
+
   const handleTypeChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
     startTransition(() => {
       setSelectedType(event.currentTarget.value)
@@ -520,14 +525,14 @@ function DocumentTypes() {
 
       {selectedType && (
         <ErrorBoundary
-          resetKeys={[config.dataset]}
+          resetKeys={[config.dataset, selectedType]}
           fallback={
             <Card padding={4} tone="critical">
               <Text>Error loading documents of type &quot;{selectedType}&quot;</Text>
             </Card>
           }
         >
-          <DocumentList dataset={config.dataset} documentType={selectedType} />
+          <DocumentList documentType={selectedType} />
         </ErrorBoundary>
       )}
     </Stack>
@@ -764,6 +769,7 @@ function ProjectsExplorer() {
       {selectedProject && (
         <Card shadow={1} radius={2}>
           <ErrorBoundary
+            resetKeys={[selectedProject]}
             fallback={
               <Card padding={4} tone="critical">
                 <Text>Error loading project &quot;{selectedProject}&quot;</Text>
