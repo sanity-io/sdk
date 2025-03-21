@@ -25,21 +25,21 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * import {publishDocument} from '@sanity/sdk'
  *
  * export function PublishButton({doc}: {doc: DocumentHandle}) {
- *   const canPublish = usePermissions(publishDocument(doc))
+ *   const publishPermissions = usePermissions(publishDocument(doc))
  *   const applyAction = useApplyActions()
  *
  *   return (
  *     <>
  *       <button
- *         disabled={!canPublish.allowed}
+ *         disabled={!publishPermissions.allowed}
  *         onClick={() => applyAction(publishDocument(doc))}
- *         popoverTarget={`${canPublish.allowed ? undefined : 'publishButtonPopover'}`}
+ *         popoverTarget={`${publishPermissions.allowed ? undefined : 'publishButtonPopover'}`}
  *       >
  *         Publish
  *       </button>
- *       {!canPublish.allowed && (
+ *       {!publishPermissions.allowed && (
  *         <div popover id="publishButtonPopover">
- *           {canPublish.message}
+ *           {publishPermissions.message}
  *         </div>
  *       )}
  *     </>
