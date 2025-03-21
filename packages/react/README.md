@@ -26,7 +26,7 @@ Here's how to implement your Sanity application:
 1. Create a new React TypeScript project using the Sanity template
 
 ```bash
-pnpx sanity@latest init --template core-app
+pnpx sanity@latest init --template app-quickstart
 cd my-content-os-app
 ```
 
