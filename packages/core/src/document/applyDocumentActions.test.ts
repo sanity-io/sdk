@@ -1,4 +1,4 @@
-// applyActions.test.ts
+// applyDocumentActions.test.ts
 import {type SanityDocument} from '@sanity/types'
 import {Subject} from 'rxjs'
 import {describe, expect, it} from 'vitest'
@@ -7,7 +7,7 @@ import {createSanityInstance} from '../instance/sanityInstance'
 import {type ActionContext} from '../resources/createAction'
 import {createResourceState} from '../resources/createResource'
 import {type DocumentAction} from './actions'
-import {applyActions} from './applyActions'
+import {applyDocumentActions} from './applyDocumentActions'
 import {type DocumentStoreState} from './documentStore'
 import {type DocumentEvent} from './events'
 import {type AppliedTransaction, type OutgoingTransaction} from './reducers'
@@ -25,7 +25,7 @@ const exampleDoc: SanityDocument = {
   _rev: 'txn0',
 }
 
-describe('applyActions', () => {
+describe('applyDocumentActions', () => {
   it('resolves with a successful applied transaction and accepted event', async () => {
     const eventsSubject = new Subject<DocumentEvent>()
     const initialState: TestState = {
@@ -46,10 +46,14 @@ describe('applyActions', () => {
       patches: [{set: {foo: 'bar'}}],
     }
 
-    // Call applyActions with a fixed transactionId for reproducibility.
-    const applyPromise = applyActions(context as ActionContext<DocumentStoreState>, action, {
-      transactionId: 'txn-success',
-    })
+    // Call applyDocumentActions with a fixed transactionId for reproducibility.
+    const applyPromise = applyDocumentActions(
+      context as ActionContext<DocumentStoreState>,
+      action,
+      {
+        transactionId: 'txn-success',
+      },
+    )
 
     const appliedTx: AppliedTransaction = {
       transactionId: 'txn-success',
@@ -67,7 +71,7 @@ describe('applyActions', () => {
     // Update the state so that its "applied" array contains our applied transaction.
     state.set('simulateApplied', {applied: [appliedTx]})
 
-    // Await the resolution of applyActions. This should pick up the applied transaction.
+    // Await the resolution of applyDocumentActions. This should pick up the applied transaction.
     const result = await applyPromise
 
     // Check that the result fields match the simulated applied transaction.
@@ -114,10 +118,14 @@ describe('applyActions', () => {
       patches: [{set: {foo: 'error'}}],
     }
 
-    // Call applyActions with a fixed transactionId.
-    const applyPromise = applyActions(context as ActionContext<DocumentStoreState>, action, {
-      transactionId: 'txn-error',
-    })
+    // Call applyDocumentActions with a fixed transactionId.
+    const applyPromise = applyDocumentActions(
+      context as ActionContext<DocumentStoreState>,
+      action,
+      {
+        transactionId: 'txn-error',
+      },
+    )
 
     const errorEvent: DocumentEvent = {
       type: 'error',

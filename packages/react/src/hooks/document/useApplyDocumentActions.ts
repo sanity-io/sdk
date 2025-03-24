@@ -1,7 +1,7 @@
 import {
   type ActionsResult,
-  applyActions,
-  type ApplyActionsOptions,
+  applyDocumentActions,
+  type ApplyDocumentActionsOptions,
   type DocumentAction,
   type ResourceId,
 } from '@sanity/sdk'
@@ -21,9 +21,9 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  * @example Publish or unpublish a document
  * ```
  * import { publishDocument, unpublishDocument } from '@sanity/sdk'
- * import { useApplyActions } from '@sanity/sdk-react'
+ * import { useApplyDocumentActions } from '@sanity/sdk-react'
  *
- * const apply = useApplyActions()
+ * const apply = useApplyDocumentActions()
  * const myDocument = { _id: 'my-document-id', _type: 'my-document-type' }
  *
  * return (
@@ -35,9 +35,9 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  * @example Create and publish a new document
  * ```
  * import { createDocument, publishDocument } from '@sanity/sdk'
- * import { useApplyActions } from '@sanity/sdk-react'
+ * import { useApplyDocumentActions } from '@sanity/sdk-react'
  *
- * const apply = useApplyActions()
+ * const apply = useApplyDocumentActions()
  *
  * const handleCreateAndPublish = () => {
  *   const handle = { _id: window.crypto.randomUUID(), _type: 'my-document-type' }
@@ -54,21 +54,22 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  * )
  * ```
  */
-export function useApplyActions(
+export function useApplyDocumentActions(
   resourceId?: ResourceId,
 ): <TDocument extends SanityDocument>(
   action: DocumentAction<TDocument> | DocumentAction<TDocument>[],
-  options?: ApplyActionsOptions,
+  options?: ApplyDocumentActionsOptions,
 ) => Promise<ActionsResult<TDocument>>
 
 /** @beta */
-export function useApplyActions(
+export function useApplyDocumentActions(
   resourceId?: ResourceId,
 ): (
   action: DocumentAction | DocumentAction[],
-  options?: ApplyActionsOptions,
+  options?: ApplyDocumentActionsOptions,
 ) => Promise<ActionsResult> {
-  return _useApplyActions(resourceId)()
+  return _useApplyDocumentActions(resourceId)()
 }
 
-const _useApplyActions = (resourceId?: ResourceId) => createCallbackHook(applyActions, resourceId)
+const _useApplyDocumentActions = (resourceId?: ResourceId) =>
+  createCallbackHook(applyDocumentActions, resourceId)

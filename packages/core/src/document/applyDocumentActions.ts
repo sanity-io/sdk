@@ -22,7 +22,7 @@ export interface ActionsResult<TDocument extends SanityDocument = SanityDocument
 }
 
 /** @beta */
-export interface ApplyActionsOptions {
+export interface ApplyDocumentActionsOptions {
   /**
    * Optionally provide an ID to be used as this transaction ID
    */
@@ -34,30 +34,30 @@ export interface ApplyActionsOptions {
 }
 
 /** @beta */
-export function applyActions<TDocument extends SanityDocument>(
+export function applyDocumentActions<TDocument extends SanityDocument>(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
   action: DocumentAction<TDocument> | DocumentAction<TDocument>[],
-  options?: ApplyActionsOptions,
+  options?: ApplyDocumentActionsOptions,
 ): Promise<ActionsResult<TDocument>>
 /** @beta */
-export function applyActions(
+export function applyDocumentActions(
   instance: SanityInstance | ActionContext<DocumentStoreState>,
   action: DocumentAction | DocumentAction[],
-  options?: ApplyActionsOptions,
+  options?: ApplyDocumentActionsOptions,
 ): Promise<ActionsResult>
 /** @beta */
-export function applyActions(
-  ...args: Parameters<typeof _applyActions>
-): ReturnType<typeof _applyActions> {
-  return _applyActions(...args)
+export function applyDocumentActions(
+  ...args: Parameters<typeof _applyDocumentActions>
+): ReturnType<typeof _applyDocumentActions> {
+  return _applyDocumentActions(...args)
 }
 
-const _applyActions = createAction(documentStore, ({state}) => {
+const _applyDocumentActions = createAction(documentStore, ({state}) => {
   const {events} = state.get()
 
   return async function (
     action: DocumentAction | DocumentAction[],
-    {transactionId = crypto.randomUUID(), disableBatching}: ApplyActionsOptions = {},
+    {transactionId = crypto.randomUUID(), disableBatching}: ApplyDocumentActionsOptions = {},
   ): Promise<ActionsResult> {
     const actions = Array.isArray(action) ? action : [action]
 
