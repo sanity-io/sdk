@@ -10,7 +10,7 @@ import {
   unpublishDocument,
 } from '@sanity/sdk'
 import {
-  useApplyActions,
+  useApplyDocumentActions,
   useDocument,
   useDocumentEvent,
   useDocumentSyncStatus,
@@ -36,7 +36,7 @@ const doc: DocumentHandle<Author> = {
 function Editor() {
   useDocumentEvent((e) => console.log(e), doc)
   const synced = useDocumentSyncStatus(doc)
-  const apply = useApplyActions()
+  const apply = useApplyDocumentActions()
 
   const canEdit = usePermissions(editDocument(doc))
   const canCreate = usePermissions(createDocument(doc))

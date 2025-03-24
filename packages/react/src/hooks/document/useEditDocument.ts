@@ -12,7 +12,7 @@ import {type SanityDocument} from '@sanity/types'
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useApplyActions} from './useApplyActions'
+import {useApplyDocumentActions} from './useApplyDocumentActions'
 
 const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
 
@@ -154,7 +154,7 @@ export function useEditDocument(
   const resourceId = getResourceId(doc.resourceId)!
   const documentId = doc._id
   const instance = useSanityInstance(resourceId)
-  const apply = useApplyActions(resourceId)
+  const apply = useApplyDocumentActions(resourceId)
   const isDocumentReady = useCallback(
     () => getDocumentState(instance, documentId).getCurrent() !== undefined,
     [instance, documentId],

@@ -25,6 +25,9 @@ type UseDocumentSyncStatus = {
   (doc: DocumentHandle): boolean | undefined
 }
 
-/** @beta */
+/**
+ * @beta
+ * @function
+ */
 export const useDocumentSyncStatus: UseDocumentSyncStatus =
   createStateSourceHook(getDocumentSyncStatus)

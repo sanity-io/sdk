@@ -12,7 +12,7 @@ import {renderHook} from '@testing-library/react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useApplyActions} from './useApplyActions'
+import {useApplyDocumentActions} from './useApplyDocumentActions'
 import {useEditDocument} from './useEditDocument'
 
 vi.mock('@sanity/sdk', async (importOriginal) => {
@@ -29,8 +29,8 @@ vi.mock('../context/useSanityInstance', () => ({
   useSanityInstance: vi.fn(),
 }))
 
-vi.mock('./useApplyActions', () => ({
-  useApplyActions: vi.fn(),
+vi.mock('./useApplyDocumentActions', () => ({
+  useApplyDocumentActions: vi.fn(),
 }))
 
 // Create a fake instance to be returned by useSanityInstance.
@@ -66,7 +66,7 @@ describe('useEditDocument hook', () => {
     } as unknown as StateSource<SanityDocument>)
 
     const apply = vi.fn().mockResolvedValue({transactionId: 'tx1'})
-    vi.mocked(useApplyActions).mockReturnValue(apply)
+    vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
 
     const {result} = renderHook(() => useEditDocument(docHandle, 'foo'))
     const promise = result.current('newValue')
@@ -87,7 +87,7 @@ describe('useEditDocument hook', () => {
     } as unknown as StateSource<SanityDocument>)
 
     const apply = vi.fn().mockResolvedValue({transactionId: 'tx2'})
-    vi.mocked(useApplyActions).mockReturnValue(apply)
+    vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
 
     const {result} = renderHook(() => useEditDocument(docHandle))
     const promise = result.current({...doc, foo: 'baz', extra: 'old', _id: 'doc1'})
@@ -105,7 +105,7 @@ describe('useEditDocument hook', () => {
     } as unknown as StateSource<SanityDocument>)
 
     const apply = vi.fn().mockResolvedValue({transactionId: 'tx3'})
-    vi.mocked(useApplyActions).mockReturnValue(apply)
+    vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
 
     const {result} = renderHook(() => useEditDocument(docHandle, 'foo'))
     const promise = result.current((prev: unknown) => `${prev}Updated`) // 'bar' becomes 'barUpdated'
@@ -125,7 +125,7 @@ describe('useEditDocument hook', () => {
     } as unknown as StateSource<SanityDocument>)
 
     const apply = vi.fn().mockResolvedValue({transactionId: 'tx4'})
-    vi.mocked(useApplyActions).mockReturnValue(apply)
+    vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
 
     const {result} = renderHook(() => useEditDocument(docHandle))
     const promise = result.current((prevDoc) => ({...prevDoc, foo: 'baz'}))
@@ -143,7 +143,7 @@ describe('useEditDocument hook', () => {
     } as unknown as StateSource<SanityDocument>)
 
     const fakeApply = vi.fn()
-    vi.mocked(useApplyActions).mockReturnValue(fakeApply)
+    vi.mocked(useApplyDocumentActions).mockReturnValue(fakeApply)
 
     const {result} = renderHook(() => useEditDocument(docHandle))
     expect(() => result.current('notAnObject' as unknown as SanityDocument)).toThrowError(

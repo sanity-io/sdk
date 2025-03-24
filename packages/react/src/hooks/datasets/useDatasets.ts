@@ -6,10 +6,10 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
 type UseDatasets = {
   /**
    *
-   * Returns metadata for each dataset in your organization.
+   * Returns metadata for each dataset the current user has access to.
    *
    * @category Datasets
-   * @returns The metadata for your organization's datasets
+   * @returns The metadata for your the datasets
    *
    * @example
    * ```tsx
@@ -28,7 +28,10 @@ type UseDatasets = {
   (): DatasetsResponse
 }
 
-/** @public */
+/**
+ * @public
+ * @function
+ */
 export const useDatasets: UseDatasets = createStateSourceHook({
   // remove `undefined` since we're suspending when that is the case
   getState: getDatasetsState as (instance: SanityInstance) => StateSource<DatasetsResponse>,

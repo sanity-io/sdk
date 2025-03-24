@@ -27,6 +27,7 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  * ```
  *
  * @public
+ * @function
  */
 export const useClient = createStateSourceHook({
   getState: getClientState,
