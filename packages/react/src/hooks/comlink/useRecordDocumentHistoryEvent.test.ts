@@ -58,7 +58,7 @@ describe('useRecordDocumentHistoryEvent', () => {
 
     result.current.recordEvent('viewed')
 
-    expect(node.post).toHaveBeenCalledWith('core/v1/events/history', {
+    expect(node.post).toHaveBeenCalledWith('dashboard/v1/events/history', {
       eventType: 'viewed',
       documentId: 'mock-id',
       documentType: 'mock-type',

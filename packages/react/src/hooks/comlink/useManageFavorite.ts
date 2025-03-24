@@ -62,7 +62,7 @@ export function useManageFavorite({_id, _type}: DocumentHandle): ManageFavorite 
 
       try {
         const message: Events.FavoriteMessage = {
-          type: 'core/v1/events/favorite',
+          type: 'dashboard/v1/events/favorite',
           data: {
             eventType: action,
             documentId: _id,

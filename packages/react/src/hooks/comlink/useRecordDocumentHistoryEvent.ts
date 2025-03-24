@@ -54,7 +54,7 @@ export function useRecordDocumentHistoryEvent({
     (eventType: 'viewed' | 'edited' | 'created' | 'deleted') => {
       try {
         const message: Events.HistoryMessage = {
-          type: 'core/v1/events/history',
+          type: 'dashboard/v1/events/history',
           data: {
             eventType,
             documentId: _id,

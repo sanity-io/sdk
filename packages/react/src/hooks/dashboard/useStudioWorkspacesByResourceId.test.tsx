@@ -140,7 +140,11 @@ describe('useStudioWorkspacesByResourceId', () => {
       expect(result.current.isConnected).toBe(true)
     })
 
-    expect(mockFetch).toHaveBeenCalledWith('core/v1/bridge/context', undefined, expect.any(Object))
+    expect(mockFetch).toHaveBeenCalledWith(
+      'dashboard/v1/bridge/context',
+      undefined,
+      expect.any(Object),
+    )
   })
 
   it('should handle fetch errors', async () => {

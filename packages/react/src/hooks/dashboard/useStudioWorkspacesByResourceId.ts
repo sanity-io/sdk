@@ -47,7 +47,7 @@ export function useStudioWorkspacesByResourceId(): StudioWorkspacesResult {
       try {
         const data = await fetch<{
           context: {availableResources: Array<{projectId: string; workspaces: Workspace[]}>}
-        }>('core/v1/bridge/context', undefined, {signal})
+        }>('dashboard/v1/bridge/context', undefined, {signal})
 
         const workspaceMap: WorkspacesByResourceId = {}
 

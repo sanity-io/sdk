@@ -55,7 +55,7 @@ describe('useManageFavorite', () => {
       result.current.favorite()
     })
 
-    expect(node.post).toHaveBeenCalledWith('core/v1/events/favorite', {
+    expect(node.post).toHaveBeenCalledWith('dashboard/v1/events/favorite', {
       documentId: 'mock-id',
       documentType: 'mock-type',
       eventType: 'added',
@@ -70,7 +70,7 @@ describe('useManageFavorite', () => {
       result.current.unfavorite()
     })
 
-    expect(node.post).toHaveBeenCalledWith('core/v1/events/favorite', {
+    expect(node.post).toHaveBeenCalledWith('dashboard/v1/events/favorite', {
       documentId: 'mock-id',
       documentType: 'mock-type',
       eventType: 'removed',
