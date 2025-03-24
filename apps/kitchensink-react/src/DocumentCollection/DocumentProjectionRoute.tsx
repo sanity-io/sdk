@@ -1,5 +1,5 @@
 import {DocumentHandle} from '@sanity/sdk'
-import {usePaginatedList, useProjection} from '@sanity/sdk-react'
+import {usePaginatedDocuments, useProjection} from '@sanity/sdk-react'
 import {Box, Button, Card, Flex, Label, Spinner, Stack, Text, TextInput} from '@sanity/ui'
 import {JSX, ReactNode, Suspense, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
@@ -204,7 +204,7 @@ export function DocumentProjectionRoute(): JSX.Element {
     count,
     startIndex,
     endIndex,
-  } = usePaginatedList({
+  } = usePaginatedDocuments({
     filter: '_type == "author" && count(favoriteBooks) > 0',
     orderings: [{field: 'name', direction: 'asc'}],
     search: searchTerm,

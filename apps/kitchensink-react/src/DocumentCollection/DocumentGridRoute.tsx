@@ -1,4 +1,4 @@
-import {useInfiniteList} from '@sanity/sdk-react'
+import {useDocuments} from '@sanity/sdk-react'
 import {Box, Button, Heading} from '@sanity/ui'
 import {type JSX} from 'react'
 
@@ -6,7 +6,7 @@ import {DocumentGridLayout} from '../components/DocumentGridLayout/DocumentGridL
 import {DocumentPreview} from './DocumentPreview'
 
 export function DocumentGridRoute(): JSX.Element {
-  const {isPending, data, hasMore, loadMore} = useInfiniteList({
+  const {isPending, data, hasMore, loadMore} = useDocuments({
     filter: '_type == "author"',
     orderings: [{field: 'name', direction: 'asc'}],
   })

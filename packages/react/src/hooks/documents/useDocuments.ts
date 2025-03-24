@@ -11,18 +11,18 @@ const DEFAULT_PERSPECTIVE = 'drafts'
  * Result structure returned from the infinite list query
  * @internal
  */
-interface InfiniteListQueryResult {
+interface UseDocumentsQueryResult {
   count: number
   data: DocumentHandle[]
 }
 
 /**
- * Configuration options for the useInfiniteList hook
+ * Configuration options for the useDocuments hook
  *
  * @beta
  * @category Types
  */
-export interface InfiniteListOptions extends QueryOptions {
+export interface DocumentsOptions extends QueryOptions {
   /**
    * GROQ filter expression to apply to the query
    */
@@ -42,12 +42,12 @@ export interface InfiniteListOptions extends QueryOptions {
 }
 
 /**
- * Return value from the useInfiniteList hook
+ * Return value from the useDocuments hook
  *
  * @beta
  * @category Types
  */
-export interface InfiniteList {
+export interface DocumentsResponse {
   /**
    * Array of document handles for the current batch
    */
@@ -78,10 +78,10 @@ export interface InfiniteList {
  * @beta
  * @category Documents
  * @param options - Configuration options for the infinite list
- * @returns An object containing the list of document handles, the loading state, the total count of retrived document handles, and a function to load more
+ * @returns An object containing the list of document handles, the loading state, the total count of retrieved document handles, and a function to load more
  * @example
  * ```tsx
- * const {data, hasMore, isPending, loadMore} = useInfiniteList({
+ * const {data, hasMore, isPending, loadMore} = useDocuments({
  *   filter: '_type == "post"',
  *   search: searchTerm,
  *   batchSize: 10,
@@ -104,14 +104,14 @@ export interface InfiniteList {
  * ```
  *
  */
-export function useInfiniteList({
+export function useDocuments({
   batchSize = DEFAULT_BATCH_SIZE,
   params,
   search,
   filter,
   orderings,
   ...options
-}: InfiniteListOptions): InfiniteList {
+}: DocumentsOptions): DocumentsResponse {
   const perspective = options.perspective ?? DEFAULT_PERSPECTIVE
   const [limit, setLimit] = useState(batchSize)
 
@@ -155,7 +155,7 @@ export function useInfiniteList({
   const {
     data: {count, data},
     isPending,
-  } = useQuery<InfiniteListQueryResult>(`{"count":${countQuery},"data":${dataQuery}}`, {
+  } = useQuery<UseDocumentsQueryResult>(`{"count":${countQuery},"data":${dataQuery}}`, {
     ...options,
     params,
     perspective,

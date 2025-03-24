@@ -36,15 +36,15 @@ export {useDocumentPermissions} from '../hooks/document/useDocumentPermissions'
 export {useDocumentSyncStatus} from '../hooks/document/useDocumentSyncStatus'
 export {useEditDocument} from '../hooks/document/useEditDocument'
 export {
-  type InfiniteList,
-  type InfiniteListOptions,
-  useInfiniteList,
-} from '../hooks/infiniteList/useInfiniteList'
+  type DocumentsOptions,
+  type DocumentsResponse,
+  useDocuments,
+} from '../hooks/documents/useDocuments'
 export {
-  type PaginatedList,
-  type PaginatedListOptions,
-  usePaginatedList,
-} from '../hooks/paginatedList/usePaginatedList'
+  type PaginatedDocumentsOptions,
+  type PaginatedDocumentsResponse,
+  usePaginatedDocuments,
+} from '../hooks/paginatedDocuments/usePaginatedDocuments'
 export {
   usePreview,
   type UsePreviewOptions,

@@ -1,6 +1,6 @@
 import {
   DocumentHandle,
-  useInfiniteList,
+  useDocuments,
   useManageFavorite,
   useNavigateToStudioDocument,
   useRecordDocumentHistoryEvent,
@@ -54,7 +54,7 @@ function ActionButtons({document}: {document: DocumentHandle}) {
 }
 
 export function DocumentCoreInteractionsRoute(): JSX.Element {
-  const {isPending, data, hasMore, loadMore} = useInfiniteList({
+  const {isPending, data, hasMore, loadMore} = useDocuments({
     filter: '_type == "book"',
     orderings: [{field: '_updatedAt', direction: 'desc'}],
   })
