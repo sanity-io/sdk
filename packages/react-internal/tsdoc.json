@@ -10,6 +10,16 @@
       "tagName": "@todo",
       "syntaxKind": "block",
       "allowMultiple": true
+    },
+    {
+      "tagName": "@function",
+      "syntaxKind": "modifier",
+      "allowMultiple": false
+    },
+    {
+      "tagName": "@interface",
+      "syntaxKind": "modifier",
+      "allowMultiple": false
     }
   ],
   "supportForTags": {
@@ -28,6 +38,8 @@
     "@remarks": true,
     "@throws": true,
     "@defaultValue": true,
-    "@todo": true
+    "@todo": true,
+    "@function": true,
+    "@interface": true
   }
 }

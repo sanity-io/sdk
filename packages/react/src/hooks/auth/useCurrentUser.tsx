@@ -28,6 +28,7 @@ type UseCurrentUser = {
 
 /**
  * @public
+ * @function
  * @TODO This should not return null — users of a custom app will always be authenticated via Core
  */
 export const useCurrentUser: UseCurrentUser = createStateSourceHook(getCurrentUserState)

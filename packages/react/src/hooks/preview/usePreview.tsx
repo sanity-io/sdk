@@ -36,7 +36,7 @@ export interface UsePreviewResults {
  * @param options - The document handle for the document you want to resolve preview values for, and an optional ref
  * @returns The preview values for the given document and a boolean to indicate whether the resolution is pending
  *
- * @example Combining with useDocuments to render a collection of document previews
+ * @example Combining with useInfiniteList to render a collection of document previews
  * ```
  * // PreviewComponent.jsx
  * export default function PreviewComponent({ document }) {
@@ -51,12 +51,12 @@ export interface UsePreviewResults {
  * }
  *
  * // DocumentList.jsx
- * const { data, isPending } = useDocuments({ filter: '_type == "movie"' })
+ * const { data } = useInfiniteList({ filter: '_type == "movie"' })
  * return (
  *   <div>
  *     <h1>Movies</h1>
  *     <ul>
- *       {isPending ? 'Loading…' : data.map(movie => (
+ *       {data.map(movie => (
  *         <li key={movie._id}>
  *           <Suspense fallback='Loading…'>
  *             <PreviewComponent document={movie} />

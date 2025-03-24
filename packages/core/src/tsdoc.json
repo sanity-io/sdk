@@ -15,6 +15,16 @@
       "tagName": "@thoughtLevel",
       "syntaxKind": "block",
       "allowMultiple": true
+    },
+    {
+      "tagName": "@interface",
+      "syntaxKind": "modifier",
+      "allowMultiple": false
+    },
+    {
+      "tagName": "@function",
+      "syntaxKind": "modifier",
+      "allowMultiple": false
     }
   ],
   "supportForTags": {
@@ -34,6 +44,8 @@
     "@see": true,
     "@thoughtLevel": true,
     "@throws": true,
-    "@todo": true
+    "@todo": true,
+    "@interface": true,
+    "@function": true
   }
 }
