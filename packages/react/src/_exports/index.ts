@@ -41,10 +41,10 @@ export {
   useDocuments,
 } from '../hooks/documents/useDocuments'
 export {
-  type PaginatedList,
-  type PaginatedListOptions,
-  usePaginatedList,
-} from '../hooks/paginatedList/usePaginatedList'
+  type PaginatedDocumentsOptions,
+  type PaginatedDocumentsResponse,
+  usePaginatedDocuments,
+} from '../hooks/paginatedDocuments/usePaginatedDocuments'
 export {
   usePreview,
   type UsePreviewOptions,

@@ -3,11 +3,11 @@ import {describe, vi} from 'vitest'
 
 import {evaluateSync, parse} from '../_synchronous-groq-js.mjs'
 import {useQuery} from '../query/useQuery'
-import {usePaginatedList} from './usePaginatedList'
+import {usePaginatedDocuments} from './usePaginatedDocuments'
 
 vi.mock('../query/useQuery')
 
-describe('usePaginatedList', () => {
+describe('usePaginatedDocuments', () => {
   beforeEach(() => {
     const dataset = [
       {
@@ -76,14 +76,14 @@ describe('usePaginatedList', () => {
 
   it('should respect custom page size', () => {
     const customPageSize = 2
-    const {result} = renderHook(() => usePaginatedList({pageSize: customPageSize}))
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize: customPageSize}))
 
     expect(result.current.pageSize).toBe(customPageSize)
     expect(result.current.data.length).toBeLessThanOrEqual(customPageSize)
   })
 
   it('should filter by document type', () => {
-    const {result} = renderHook(() => usePaginatedList({filter: '_type == "movie"'}))
+    const {result} = renderHook(() => usePaginatedDocuments({filter: '_type == "movie"'}))
 
     expect(result.current.data.every((doc) => doc._type === 'movie')).toBe(true)
     expect(result.current.count).toBe(5) // 5 movies in the dataset
@@ -91,7 +91,7 @@ describe('usePaginatedList', () => {
 
   // groq-js doesn't support search filters yet
   it.skip('should apply search filter', () => {
-    const {result} = renderHook(() => usePaginatedList({search: 'inter'}))
+    const {result} = renderHook(() => usePaginatedDocuments({search: 'inter'}))
 
     // Should match "Interstellar"
     expect(result.current.data.some((doc) => doc._id === 'movie3')).toBe(true)
@@ -99,7 +99,7 @@ describe('usePaginatedList', () => {
 
   it('should apply ordering', () => {
     const {result} = renderHook(() =>
-      usePaginatedList({
+      usePaginatedDocuments({
         filter: '_type == "movie"',
         orderings: [{field: 'releaseYear', direction: 'desc'}],
       }),
@@ -111,7 +111,7 @@ describe('usePaginatedList', () => {
 
   it('should calculate pagination values correctly', () => {
     const pageSize = 2
-    const {result} = renderHook(() => usePaginatedList({pageSize}))
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize}))
 
     expect(result.current.currentPage).toBe(1)
     expect(result.current.totalPages).toBe(3) // 6 items with page size 2
@@ -122,7 +122,7 @@ describe('usePaginatedList', () => {
 
   it('should navigate to next page', () => {
     const pageSize = 2
-    const {result} = renderHook(() => usePaginatedList({pageSize}))
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize}))
 
     expect(result.current.currentPage).toBe(1)
     expect(result.current.data.length).toBe(pageSize)
@@ -138,7 +138,7 @@ describe('usePaginatedList', () => {
 
   it('should navigate to previous page', () => {
     const pageSize = 2
-    const {result} = renderHook(() => usePaginatedList({pageSize}))
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize}))
 
     // Go to page 2 first
     act(() => {
@@ -158,7 +158,7 @@ describe('usePaginatedList', () => {
 
   it('should navigate to first page', () => {
     const pageSize = 2
-    const {result} = renderHook(() => usePaginatedList({pageSize}))
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize}))
 
     // Go to last page first
     act(() => {
@@ -178,7 +178,7 @@ describe('usePaginatedList', () => {
 
   it('should navigate to last page', () => {
     const pageSize = 2
-    const {result} = renderHook(() => usePaginatedList({pageSize}))
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize}))
 
     act(() => {
       result.current.lastPage()
@@ -190,7 +190,7 @@ describe('usePaginatedList', () => {
 
   it('should navigate to specific page', () => {
     const pageSize = 2
-    const {result} = renderHook(() => usePaginatedList({pageSize}))
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize}))
 
     act(() => {
       result.current.goToPage(2) // Go to page 2
@@ -215,7 +215,7 @@ describe('usePaginatedList', () => {
 
   it('should set page availability flags correctly', () => {
     const pageSize = 2
-    const {result} = renderHook(() => usePaginatedList({pageSize}))
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize}))
     // On first page
     expect(result.current.hasFirstPage).toBe(false)
     expect(result.current.hasPreviousPage).toBe(false)
@@ -241,7 +241,7 @@ describe('usePaginatedList', () => {
 
   // New test case for resetting the current page when filter changes
   it('should reset current page when filter changes', () => {
-    const {result, rerender} = renderHook((props) => usePaginatedList(props), {
+    const {result, rerender} = renderHook((props) => usePaginatedDocuments(props), {
       initialProps: {pageSize: 2, filter: ''},
     })
     // Initially, current page should be 1
