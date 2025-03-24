@@ -52,7 +52,11 @@ export {
   unpublishDocument,
   type UnpublishDocumentAction,
 } from '../document/actions'
-export {type ActionsResult, applyActions, type ApplyActionsOptions} from '../document/applyActions'
+export {
+  type ActionsResult,
+  applyDocumentActions,
+  type ApplyDocumentActionsOptions,
+} from '../document/applyDocumentActions'
 export {
   getDocumentState,
   getDocumentSyncStatus,

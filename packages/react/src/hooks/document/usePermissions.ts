@@ -21,12 +21,12 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *
  * @example Checking for permission to publish a document
  * ```ts
- * import {usePermissions, useApplyActions} from '@sanity/sdk-react'
+ * import {usePermissions, useApplyDocumentActions} from '@sanity/sdk-react'
  * import {publishDocument} from '@sanity/sdk'
  *
  * export function PublishButton({doc}: {doc: DocumentHandle}) {
  *   const publishPermissions = usePermissions(publishDocument(doc))
- *   const applyAction = useApplyActions()
+ *   const applyAction = useApplyDocumentActions()
  *
  *   return (
  *     <>
