@@ -28,6 +28,16 @@ export const basePackageConfig = defineConfig({
         allowMultiple: true,
         syntaxKind: 'block',
       },
+      {
+        name: 'function',
+        allowMultiple: false,
+        syntaxKind: 'modifier',
+      },
+      {
+        name: 'interface',
+        syntaxKind: 'modifier',
+        allowMultiple: false,
+      },
     ],
   },
 })
