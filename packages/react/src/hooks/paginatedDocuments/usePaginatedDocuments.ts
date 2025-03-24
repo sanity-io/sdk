@@ -12,7 +12,7 @@ const DEFAULT_PERSPECTIVE = 'drafts'
  * @beta
  * @category Types
  */
-export interface PaginatedListOptions extends QueryOptions {
+export interface PaginatedDocumentsOptions extends QueryOptions {
   /**
    * GROQ filter expression to apply to the query
    */
@@ -167,7 +167,7 @@ export function usePaginatedDocuments({
   orderings,
   search,
   ...options
-}: PaginatedListOptions = {}): PaginatedDocumentsResponse {
+}: PaginatedDocumentsOptions = {}): PaginatedDocumentsResponse {
   const [pageIndex, setPageIndex] = useState(0)
   const key = JSON.stringify({filter, search, params, orderings, pageSize})
   // Reset the pageIndex to 0 whenever any query parameters (filter, search,

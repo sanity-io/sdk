@@ -41,8 +41,8 @@ export {
   useInfiniteList,
 } from '../hooks/infiniteList/useInfiniteList'
 export {
+  type PaginatedDocumentsOptions,
   type PaginatedDocumentsResponse,
-  type PaginatedListOptions,
   usePaginatedDocuments,
 } from '../hooks/paginatedDocuments/usePaginatedDocuments'
 export {
