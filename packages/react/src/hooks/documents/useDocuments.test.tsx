@@ -3,7 +3,7 @@ import {describe, vi} from 'vitest'
 
 import {evaluateSync, parse} from '../_synchronous-groq-js.mjs'
 import {useQuery} from '../query/useQuery'
-import {useInfiniteList} from './useInfiniteList'
+import {useDocuments} from './useDocuments'
 
 vi.mock('../query/useQuery')
 
@@ -76,13 +76,13 @@ describe('useInfiniteList', () => {
 
   it('should respect custom page size', () => {
     const customBatchSize = 2
-    const {result} = renderHook(() => useInfiniteList({batchSize: customBatchSize}))
+    const {result} = renderHook(() => useDocuments({batchSize: customBatchSize}))
 
     expect(result.current.data.length).toBe(customBatchSize)
   })
 
   it('should filter by document type', () => {
-    const {result} = renderHook(() => useInfiniteList({filter: '_type == "movie"'}))
+    const {result} = renderHook(() => useDocuments({filter: '_type == "movie"'}))
 
     expect(result.current.data.every((doc) => doc._type === 'movie')).toBe(true)
     expect(result.current.count).toBe(5) // 5 movies in the dataset
@@ -90,7 +90,7 @@ describe('useInfiniteList', () => {
 
   // groq-js doesn't support search filters yet
   it.skip('should apply search filter', () => {
-    const {result} = renderHook(() => useInfiniteList({search: 'inter'}))
+    const {result} = renderHook(() => useDocuments({search: 'inter'}))
 
     // Should match "Interstellar"
     expect(result.current.data.some((doc) => doc._id === 'movie3')).toBe(true)
@@ -98,7 +98,7 @@ describe('useInfiniteList', () => {
 
   it('should apply ordering', () => {
     const {result} = renderHook(() =>
-      useInfiniteList({
+      useDocuments({
         filter: '_type == "movie"',
         orderings: [{field: 'releaseYear', direction: 'desc'}],
       }),
@@ -110,7 +110,7 @@ describe('useInfiniteList', () => {
 
   it('should load more data when loadMore is called', () => {
     const batchSize = 2
-    const {result} = renderHook(() => useInfiniteList({batchSize: batchSize}))
+    const {result} = renderHook(() => useDocuments({batchSize: batchSize}))
 
     expect(result.current.data.length).toBe(batchSize)
 
@@ -122,7 +122,7 @@ describe('useInfiniteList', () => {
   })
 
   it('should indicate when there is more data to load', () => {
-    const {result} = renderHook(() => useInfiniteList({batchSize: 3}))
+    const {result} = renderHook(() => useDocuments({batchSize: 3}))
     expect(result.current.hasMore).toBe(true)
     // Load all remaining data
     act(() => {
@@ -133,7 +133,7 @@ describe('useInfiniteList', () => {
 
   // New test case for resetting limit when filter changes
   it('should reset limit when filter changes', () => {
-    const {result, rerender} = renderHook((props) => useInfiniteList(props), {
+    const {result, rerender} = renderHook((props) => useDocuments(props), {
       initialProps: {batchSize: 2, filter: ''},
     })
     // Initially, data length equals pageSize (2)
