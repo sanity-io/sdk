@@ -17,7 +17,7 @@ interface UseDocumentsQueryResult {
 }
 
 /**
- * Configuration options for the useInfiniteList hook
+ * Configuration options for the useDocuments hook
  *
  * @beta
  * @category Types
@@ -42,7 +42,7 @@ export interface DocumentsOptions extends QueryOptions {
 }
 
 /**
- * Return value from the useInfiniteList hook
+ * Return value from the useDocuments hook
  *
  * @beta
  * @category Types

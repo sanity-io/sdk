@@ -7,7 +7,7 @@ import {useDocuments} from './useDocuments'
 
 vi.mock('../query/useQuery')
 
-describe('useInfiniteList', () => {
+describe('useDocuments', () => {
   beforeEach(() => {
     const dataset = [
       {
