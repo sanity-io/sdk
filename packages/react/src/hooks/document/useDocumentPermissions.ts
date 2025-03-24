@@ -21,11 +21,11 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *
  * @example Checking for permission to publish a document
  * ```ts
- * import {usePermissions, useApplyDocumentActions} from '@sanity/sdk-react'
+ * import {useDocumentPermissions, useApplyDocumentActions} from '@sanity/sdk-react'
  * import {publishDocument} from '@sanity/sdk'
  *
  * export function PublishButton({doc}: {doc: DocumentHandle}) {
- *   const publishPermissions = usePermissions(publishDocument(doc))
+ *   const publishPermissions = useDocumentPermissions(publishDocument(doc))
  *   const applyAction = useApplyDocumentActions()
  *
  *   return (
@@ -47,7 +47,9 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * }
  * ```
  */
-export function usePermissions(actions: DocumentAction | DocumentAction[]): PermissionsResult {
+export function useDocumentPermissions(
+  actions: DocumentAction | DocumentAction[],
+): PermissionsResult {
   // if actions is an array, we need to check each action to see if the resourceId is the same
   if (Array.isArray(actions)) {
     const resourceIds = actions.map((action) => action.resourceId)

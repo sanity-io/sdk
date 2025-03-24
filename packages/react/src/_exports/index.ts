@@ -32,9 +32,9 @@ export {useDatasets} from '../hooks/datasets/useDatasets'
 export {useApplyDocumentActions} from '../hooks/document/useApplyDocumentActions'
 export {useDocument} from '../hooks/document/useDocument'
 export {useDocumentEvent} from '../hooks/document/useDocumentEvent'
+export {useDocumentPermissions} from '../hooks/document/useDocumentPermissions'
 export {useDocumentSyncStatus} from '../hooks/document/useDocumentSyncStatus'
 export {useEditDocument} from '../hooks/document/useEditDocument'
-export {usePermissions} from '../hooks/document/usePermissions'
 export {
   type InfiniteList,
   type InfiniteListOptions,
