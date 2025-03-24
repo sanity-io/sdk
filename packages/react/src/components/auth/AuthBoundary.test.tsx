@@ -13,8 +13,8 @@ vi.mock('../../hooks/auth/useAuthState', () => ({
 vi.mock('../../hooks/auth/useLoginUrls', () => ({
   useLoginUrls: vi.fn(() => [{title: 'Provider A', url: 'https://provider-a.com/auth'}]),
 }))
-vi.mock('../../hooks/auth/useHandleCallback', () => ({
-  useHandleCallback: vi.fn(() => async () => {}),
+vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
+  useHandleAuthCallback: vi.fn(() => async () => {}),
 }))
 vi.mock('../../hooks/auth/useLogOut', () => ({
   useLogOut: vi.fn(() => async () => {}),

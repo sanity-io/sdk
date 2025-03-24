@@ -1,7 +1,7 @@
 import {type ReactElement} from 'react'
 
 import {useAuthState} from '../../hooks/auth/useAuthState'
-import {useHandleCallback} from '../../hooks/auth/useHandleCallback'
+import {useHandleAuthCallback} from '../../hooks/auth/useHandleAuthCallback'
 import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
 
 /**
@@ -26,7 +26,7 @@ import {useLoginUrls} from '../../hooks/auth/useLoginUrls'
 export const LoginLinks = (): ReactElement => {
   const loginUrls = useLoginUrls()
   const authState = useAuthState()
-  useHandleCallback()
+  useHandleAuthCallback()
 
   if (authState.type === 'logging-in') {
     return <div className="sc-login-links__logging-in">Logging in...</div>

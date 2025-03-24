@@ -4,7 +4,7 @@ import {createSanityInstance} from '../instance/sanityInstance'
 import {createResourceState} from '../resources/createResource'
 import {AuthStateType} from './authStateType'
 import {authStore} from './authStore'
-import {handleCallback} from './handleCallback'
+import {handleAuthCallback} from './handleAuthCallback'
 import {getAuthCode, getTokenFromStorage} from './utils'
 
 vi.mock('./utils', async (importOriginal) => {
@@ -12,7 +12,7 @@ vi.mock('./utils', async (importOriginal) => {
   return {...original, getTokenFromStorage: vi.fn(), getAuthCode: vi.fn()}
 })
 
-describe('handleCallback', () => {
+describe('handleAuthCallback', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -37,7 +37,7 @@ describe('handleCallback', () => {
     const state = createResourceState(authStore.getInitialState(instance))
     expect(state.get()).toMatchObject({authState: {isExchangingToken: false}})
 
-    const resultPromise = handleCallback(
+    const resultPromise = handleAuthCallback(
       {instance, state},
       'https://example.com/callback?foo=bar#withSid=code',
     )
@@ -79,7 +79,7 @@ describe('handleCallback', () => {
     })
 
     const state = createResourceState(authStore.getInitialState(instance))
-    const result = await handleCallback(
+    const result = await handleAuthCallback(
       {instance, state},
       'https://example.com/callback?foo=bar#withSid=code',
     )
@@ -106,7 +106,7 @@ describe('handleCallback', () => {
     state.set('setAlreadyExchanging', {
       authState: {type: AuthStateType.LOGGING_IN, isExchangingToken: true},
     })
-    const result = await handleCallback(
+    const result = await handleAuthCallback(
       {instance, state},
       'https://example.com/callback?foo=bar#withSid=code',
     )
@@ -131,7 +131,7 @@ describe('handleCallback', () => {
     vi.mocked(getAuthCode).mockReturnValue(null)
 
     const state = createResourceState(authStore.getInitialState(instance))
-    const result = await handleCallback(
+    const result = await handleAuthCallback(
       {instance, state},
       'https://example.com/callback?foo=bar#withSid=code',
     )
@@ -160,7 +160,7 @@ describe('handleCallback', () => {
     })
 
     const state = createResourceState(authStore.getInitialState(instance))
-    const result = await handleCallback(
+    const result = await handleAuthCallback(
       {instance, state},
       'https://example.com/callback?foo=bar#withSid=code',
     )

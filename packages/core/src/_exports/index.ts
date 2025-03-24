@@ -23,7 +23,7 @@ export {
   type LoggingInAuthState,
 } from '../auth/authStore'
 export {fetchLoginUrls} from '../auth/fetchLoginUrls'
-export {handleCallback} from '../auth/handleCallback'
+export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
 export type {ClientState} from '../client/clientStore'
 export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
