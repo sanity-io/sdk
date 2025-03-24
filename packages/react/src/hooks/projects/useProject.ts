@@ -32,7 +32,10 @@ type UseProject = {
   (projectId: string): SanityProject
 }
 
-/** @public */
+/**
+ * @public
+ * @function
+ */
 export const useProject: UseProject = createStateSourceHook({
   // remove `undefined` since we're suspending when that is the case
   getState: getProjectState as (
