@@ -13,9 +13,9 @@ import {
   useApplyDocumentActions,
   useDocument,
   useDocumentEvent,
+  useDocumentPermissions,
   useDocumentSyncStatus,
   useEditDocument,
-  usePermissions,
 } from '@sanity/sdk-react'
 import {SanityDocument} from '@sanity/types'
 import {Box, Button, TextInput, Tooltip} from '@sanity/ui'
@@ -38,12 +38,12 @@ function Editor() {
   const synced = useDocumentSyncStatus(doc)
   const apply = useApplyDocumentActions()
 
-  const canEdit = usePermissions(editDocument(doc))
-  const canCreate = usePermissions(createDocument(doc))
-  const canPublish = usePermissions(publishDocument(doc))
-  const canDelete = usePermissions(deleteDocument(doc))
-  const canUnpublish = usePermissions(unpublishDocument(doc))
-  const canDiscard = usePermissions(discardDocument(doc))
+  const canEdit = useDocumentPermissions(editDocument(doc))
+  const canCreate = useDocumentPermissions(createDocument(doc))
+  const canPublish = useDocumentPermissions(publishDocument(doc))
+  const canDelete = useDocumentPermissions(deleteDocument(doc))
+  const canUnpublish = useDocumentPermissions(unpublishDocument(doc))
+  const canDiscard = useDocumentPermissions(discardDocument(doc))
 
   const name = useDocument(doc, 'name') ?? ''
   const setName = useEditDocument(doc, 'name')
@@ -51,7 +51,7 @@ function Editor() {
   const [value, setValue] = useState('')
 
   const changeNameToValue = editDocument(patch(doc._id, at('name', set(value))))
-  const canChangeNameToValue = usePermissions(changeNameToValue)
+  const canChangeNameToValue = useDocumentPermissions(changeNameToValue)
 
   const document = useDocument(doc)
   const setDocument = useEditDocument(doc)

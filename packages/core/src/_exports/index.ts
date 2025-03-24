@@ -85,7 +85,7 @@ export {
   type JsonMatchPath,
 } from '../document/patchOperations'
 export {type DocumentResourceId, getResourceId, type ResourceId} from '../document/patchOperations'
-export {type PermissionDeniedReason, type PermissionsResult} from '../document/permissions'
+export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export {createSanityInstance} from '../instance/sanityInstance'
 export type {SanityConfig, SanityInstance, SdkIdentity} from '../instance/types'
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'

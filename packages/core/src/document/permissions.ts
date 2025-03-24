@@ -135,7 +135,7 @@ export interface PermissionDeniedReason {
 }
 
 /** @beta */
-export type PermissionsResult =
+export type DocumentPermissionsResult =
   | {
       allowed: false
       message: string
@@ -151,7 +151,7 @@ export const calculatePermissions = createSelector(
     grants: Record<Grant, ExprNode> | undefined,
     documents: DocumentSet | undefined,
     actions: DocumentAction[] | undefined,
-  ): PermissionsResult | undefined => {
+  ): DocumentPermissionsResult | undefined => {
     if (!documents) return undefined
     if (!grants) return undefined
     if (!actions) return undefined

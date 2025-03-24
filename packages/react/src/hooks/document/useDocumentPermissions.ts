@@ -1,8 +1,8 @@
 import {
   type DocumentAction,
+  type DocumentPermissionsResult,
   getPermissionsState,
   getResourceId,
-  type PermissionsResult,
 } from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {filter, firstValueFrom} from 'rxjs'
@@ -21,11 +21,11 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *
  * @example Checking for permission to publish a document
  * ```ts
- * import {usePermissions, useApplyDocumentActions} from '@sanity/sdk-react'
+ * import {useDocumentPermissions, useApplyDocumentActions} from '@sanity/sdk-react'
  * import {publishDocument} from '@sanity/sdk'
  *
  * export function PublishButton({doc}: {doc: DocumentHandle}) {
- *   const publishPermissions = usePermissions(publishDocument(doc))
+ *   const publishPermissions = useDocumentPermissions(publishDocument(doc))
  *   const applyAction = useApplyDocumentActions()
  *
  *   return (
@@ -47,7 +47,9 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * }
  * ```
  */
-export function usePermissions(actions: DocumentAction | DocumentAction[]): PermissionsResult {
+export function useDocumentPermissions(
+  actions: DocumentAction | DocumentAction[],
+): DocumentPermissionsResult {
   // if actions is an array, we need to check each action to see if the resourceId is the same
   if (Array.isArray(actions)) {
     const resourceIds = actions.map((action) => action.resourceId)
@@ -78,5 +80,5 @@ export function usePermissions(actions: DocumentAction | DocumentAction[]): Perm
     [actions, instance],
   )
 
-  return useSyncExternalStore(subscribe, getCurrent) as PermissionsResult
+  return useSyncExternalStore(subscribe, getCurrent) as DocumentPermissionsResult
 }
