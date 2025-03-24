@@ -1,4 +1,4 @@
-import {useInfiniteList} from '@sanity/sdk-react'
+import {useDocuments} from '@sanity/sdk-react'
 import {Box, Heading} from '@sanity/ui'
 import {type JSX} from 'react'
 
@@ -7,7 +7,7 @@ import {DocumentPreview} from './DocumentPreview'
 import {LoadMore} from './LoadMore'
 
 export function DocumentListRoute(): JSX.Element {
-  const {isPending, data, hasMore, loadMore} = useInfiniteList({
+  const {isPending, data, hasMore, loadMore} = useDocuments({
     filter: '_type == "author"',
     orderings: [{field: '_updatedAt', direction: 'asc'}],
   })
