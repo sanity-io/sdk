@@ -143,8 +143,9 @@ interface PreviewProps extends DocumentHandle {
 }
 
 function Preview({showExtra, ...docHandle}: PreviewProps) {
-  const {data} = useProjection({...docHandle, projection: '{title}'})
-  const {data: preview} = usePreview({...docHandle, ref: someRef})
+  const ref = useRef<HTMLElement>(null)
+  const {data} = useProjection({...docHandle, ref, projection: '{title}'})
+  const {data: preview} = usePreview({...docHandle, ref})
   return // ...
 }
 ```
@@ -156,11 +157,9 @@ All query-based hooks now accept `DatasetHandle` for configuration:
 ```tsx
 // useQuery with optional project/dataset override
 const {data} = useQuery('*[_type == $type][0...10]', {
-  params: {
-    type: 'author',
-    projectId: 'abc12345', // Optional - inherits from ResourceProvider
-    dataset: 'production', // Optional - inherits from ResourceProvider
-  },
+  params: {type: 'author'},
+  projectId: 'abc12345', // Optional - inherits from ResourceProvider
+  dataset: 'production', // Optional - inherits from ResourceProvider
 })
 
 // List hooks with configuration
