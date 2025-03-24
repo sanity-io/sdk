@@ -7,7 +7,7 @@ import {useQuery} from '../query/useQuery'
 const DEFAULT_PERSPECTIVE = 'drafts'
 
 /**
- * Configuration options for the usePaginatedList hook
+ * Configuration options for the usePaginatedDocuments hook
  *
  * @beta
  * @category Types
@@ -32,12 +32,12 @@ export interface PaginatedListOptions extends QueryOptions {
 }
 
 /**
- * Return value from the usePaginatedList hook
+ * Return value from the usePaginatedDocuments hook
  *
  * @beta
  * @category Types
  */
-export interface PaginatedList {
+export interface PaginatedDocumentsResponse {
   /**
    * Array of document handles for the current page
    */
@@ -136,7 +136,7 @@ export interface PaginatedList {
  *   previousPage,
  *   hasNextPage,
  *   hasPreviousPage
- * } = usePaginatedList({
+ * } = usePaginatedDocuments({
  *   filter: '_type == "post"',
  *   search: searchTerm,
  *   pageSize: 10,
@@ -160,14 +160,14 @@ export interface PaginatedList {
  * ```
  *
  */
-export function usePaginatedList({
+export function usePaginatedDocuments({
   filter = '',
   pageSize = 25,
   params = {},
   orderings,
   search,
   ...options
-}: PaginatedListOptions = {}): PaginatedList {
+}: PaginatedListOptions = {}): PaginatedDocumentsResponse {
   const [pageIndex, setPageIndex] = useState(0)
   const key = JSON.stringify({filter, search, params, orderings, pageSize})
   // Reset the pageIndex to 0 whenever any query parameters (filter, search,
