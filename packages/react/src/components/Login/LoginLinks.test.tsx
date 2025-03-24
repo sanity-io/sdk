@@ -36,8 +36,8 @@ vi.mock('../../hooks/auth/useAuthState', () => ({
   useAuthState: vi.fn(() => 'logged-out'),
 }))
 
-vi.mock('../../hooks/auth/useHandleCallback', () => ({
-  useHandleCallback: vi.fn(),
+vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
+  useHandleAuthCallback: vi.fn(),
 }))
 
 describe('LoginLinks', () => {

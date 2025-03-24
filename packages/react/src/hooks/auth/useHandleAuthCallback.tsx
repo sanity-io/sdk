@@ -1,4 +1,4 @@
-import {handleCallback} from '@sanity/sdk'
+import {handleAuthCallback} from '@sanity/sdk'
 
 import {createCallbackHook} from '../helpers/createCallbackHook'
 
@@ -10,7 +10,7 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  * This hook provides access to the authentication store's callback handler,
  * which processes auth redirects by extracting the session ID and fetching the
  * authentication token. If fetching the long-lived token is successful,
- * `handleCallback` will return a Promise that resolves a new location that
+ * `handleAuthCallback` will return a Promise that resolves a new location that
  * removes the short-lived token from the URL. Use this in combination with
  * `history.replaceState` or your own router's `replace` function to update the
  * current location without triggering a reload.
@@ -18,13 +18,13 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  * @example
  * ```tsx
  * function AuthCallback() {
- *   const handleCallback = useHandleCallback()
+ *   const handleAuthCallback = useHandleAuthCallback()
  *   const router = useRouter() // Example router
  *
  *   useEffect(() => {
  *     async function processCallback() {
  *       // Handle the callback and get the cleaned URL
- *       const newUrl = await handleCallback(window.location.href)
+ *       const newUrl = await handleAuthCallback(window.location.href)
  *
  *       if (newUrl) {
  *         // Replace URL without triggering navigation
@@ -33,7 +33,7 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  *     }
  *
  *     processCallback().catch(console.error)
- *   }, [handleCallback, router])
+ *   }, [handleAuthCallback, router])
  *
  *   return <div>Completing login...</div>
  * }
@@ -42,4 +42,4 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  * @returns A callback handler function that processes OAuth redirects
  * @public
  */
-export const useHandleCallback = createCallbackHook(handleCallback)
+export const useHandleAuthCallback = createCallbackHook(handleAuthCallback)
