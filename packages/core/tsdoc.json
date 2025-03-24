@@ -15,6 +15,16 @@
       "tagName": "@category",
       "syntaxKind": "block",
       "allowMultiple": true
+    },
+    {
+      "tagName": "@function",
+      "syntaxKind": "modifier",
+      "allowMultiple": false
+    },
+    {
+      "tagName": "@interface",
+      "syntaxKind": "modifier",
+      "allowMultiple": false
     }
   ],
   "supportForTags": {
@@ -34,6 +44,8 @@
     "@throws": true,
     "@defaultValue": true,
     "@todo": true,
-    "@category": true
+    "@category": true,
+    "@function": true,
+    "@interface": true
   }
 }
