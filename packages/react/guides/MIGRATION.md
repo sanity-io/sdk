@@ -1,4 +1,227 @@
-# Migration guide
+# Migration Guide
+
+## Migrating to @sanity/sdk-react@0.0.0-rc.3
+
+This guide covers the key changes in the latest SDK version and how to update your code.
+
+### Key Changes Overview
+
+1. `<SDKProvider />` replaced by `<ResourceProvider />` for better resource management
+2. Simplified document references with explicit `projectId` + `dataset` fields
+3. Standardized property names across the SDK
+4. Unified hook interfaces with the handle pattern
+
+### 1. Resource Provider Changes
+
+We've replaced `<SDKProvider />` with the more flexible `<ResourceProvider />` component.
+
+> 💡 **Tip**: For most Sanity Dashboard applications, we recommend using the simpler `<SanityApp />` component. See our [Advanced Resource Management Guide](./Advanced-Resource-Management.md) for more complex use cases.
+
+#### Provider Migration
+
+**Before:**
+
+```tsx
+<SDKProvider
+  sanityConfigs={[
+    {projectId: 'acb12345', dataset: 'production'},
+    {projectId: 'xyz12345', dataset: 'production'},
+  ]}
+  fallback={<>Loading…</>}
+>
+  <App />
+</SDKProvider>
+```
+
+**After:**
+
+```tsx
+// This is only necessary if making something that's not a dashboard app
+// We recommend most users use the `<SanityApp />` component instead
+<ResourceProvider projectId="xyz12345" dataset="production">
+  <ResourceProvider projectId="acb12345" dataset="production">
+    <App />
+  </ResourceProvider>
+</ResourceProvider>
+```
+
+#### `<SanityApp />` Updates
+
+The `sanityConfigs` prop has been renamed to `config` and supports both single and multiple configurations:
+
+```tsx
+// Single project configuration
+<SanityApp
+  config={{projectId: 'abc1235', dataset: 'production'}}
+  fallback={<>Loading…</>}
+>
+  <App />
+</SanityApp>
+
+// Multiple project configuration
+<SanityApp
+  config={[
+    {projectId: 'abc1235', dataset: 'production'},
+    {projectId: 'xyz1235', dataset: 'production'},
+  ]}
+  fallback={<>Loading…</>}
+>
+  <App />
+</SanityApp>
+```
+
+### 2. Document Handle Pattern
+
+We've introduced a consistent "handle" pattern across the SDK for working with documents and configuration. This replaces the previous `resourceId` concept with more explicit fields.
+
+#### Document References
+
+**Before:**
+
+```ts
+const doc: DocumentHandle<Author> = {
+  _type: 'author',
+  _id: 'db06bc9e-4608-465a-9551-a10cef478037',
+  resourceId: 'document:ppsg7ml5.test:db06bc9e-4608-465a-9551-a10cef478037',
+}
+```
+
+**After:**
+
+```ts
+const doc: DocumentHandle<Author> = {
+  documentType: 'author', // Previously _type
+  documentId: 'db06bc9e-4608-465a-9551-a10cef478037', // Previously _id
+  projectId: 'ppsg7ml5', // From resourceId
+  dataset: 'test', // From resourceId
+}
+```
+
+#### Handle Interfaces
+
+The SDK now uses three main handle types:
+
+```ts
+// For project-level operations
+interface ProjectHandle {
+  projectId?: string
+}
+
+// For dataset-level operations
+interface DatasetHandle extends ProjectHandle {
+  dataset?: string
+}
+
+// For document operations
+interface DocumentHandle extends DatasetHandle {
+  documentId: string
+  documentType: string
+}
+```
+
+### 3. Hook Updates
+
+Many hooks have been updated to use the handle pattern consistently.
+
+#### Document Hooks
+
+**Before:**
+
+```ts
+function Preview({document}: {document: DocumentHandle}) {
+  const {data} = useProjection({document, projection: '{title}'})
+  const {data: preview} = usePreview({document, ref: someRef})
+  return // ...
+}
+```
+
+**After:**
+
+```ts
+interface PreviewProps extends DocumentHandle {
+  showExtra?: boolean
+}
+
+function Preview({showExtra, ...docHandle}: PreviewProps) {
+  const {data} = useProjection({...docHandle, projection: '{title}'})
+  const {data: preview} = usePreview({...docHandle, ref: someRef})
+  return // ...
+}
+```
+
+#### Query and List Hooks
+
+All query-based hooks now accept `DatasetHandle` for configuration:
+
+```tsx
+// useQuery with optional project/dataset override
+const {data} = useQuery('*[_type == $type][0...10]', {
+  params: {
+    type: 'author',
+    projectId: 'abc12345', // Optional - inherits from ResourceProvider
+    dataset: 'production', // Optional - inherits from ResourceProvider
+  },
+})
+
+// List hooks with configuration
+const {data: documents} = useInfiniteList({
+  filter: '_type == "product"',
+  projectId: 'xyz12345', // Optional
+  dataset: 'staging', // Optional
+  pageSize: 20,
+})
+
+// Returned documents include full context
+documents.map((docHandle) => (
+  <DocumentPreview
+    key={docHandle.documentId}
+    {...docHandle} // Includes projectId, dataset, etc.
+  />
+))
+```
+
+#### Project and Dataset Hooks
+
+Project and dataset hooks now use the handle pattern:
+
+```ts
+// Before
+const project = useProject('abc12345')
+
+// After
+const project = useProject({projectId: 'abc12345'})
+const datasets = useDatasets({projectId: 'abc12345'})
+```
+
+> 🔄 **Coming Soon**: We're continuing to refine our APIs. Future releases will include:
+>
+> - Further unification of hook signatures
+> - More consistent parameter naming
+> - Additional handle pattern improvements
+> - Enhanced TypeScript types and validations
+
+### Breaking Changes Summary
+
+1. Component Changes:
+
+   - `<SDKProvider />` → `<ResourceProvider />`
+   - `<SanityProvider />` removed
+   - `sanityConfigs` → `config` in `<SanityApp />`
+
+2. Property Renames:
+
+   - `_type` → `documentType`
+   - `_id` → `documentId`
+   - `results` → `data` (in hook returns)
+   - Removed `resourceId` concept
+
+3. Interface Updates:
+   - All document hooks use `DocumentHandle`
+   - Query hooks accept `DatasetHandle`
+   - Project hooks use `ProjectHandle`
+   - Consistent handle pattern across SDK
+
+---
 
 ## Migrating to @sanity/sdk-react@0.0.0-rc.2
 
@@ -56,5 +279,5 @@ const {recordEvent} = useRecordDocumentHistoryEvent({
 
 ### `results` -> `data`
 
-- rename `results` to `data` for `useProjection` hook
-- rename `result` to `data` for `usePreview` hook
+- Renamed `results` to `data` in `useProjection`
+- Renamed `result` to `data` in `usePreview`
