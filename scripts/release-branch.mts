@@ -2,7 +2,7 @@
 import 'zx/globals'
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 
-// Creates a new version based on the current branch name and commit
+// Creates a new version based on the current branch name
 
 const {packages} = await fs.readJson('./release-please-config.json')
 const workspaces = Object.keys(packages)
@@ -33,7 +33,27 @@ for (const workspace of workspaces) {
 await $`pnpm build --output-logs=errors-only`.pipe(process.stdout)
 
 for (const name of next.keys()) {
-  await $`pnpm --filter="${name}" publish --tag ${tag} --no-git-checks`.pipe(process.stdout)
+  try {
+    const otp = await question('Enter OTP: ')
+    await $`pnpm --filter="${name}" publish --tag ${tag} --no-git-checks --otp=${otp}`.pipe(
+      process.stdout,
+    )
+  } catch (error) {
+    if (error.message.includes('EOTP')) {
+      // If OTP is invalid or expired, try again
+      const newOtp = await question('Invalid OTP. Please enter again: ')
+      await $`pnpm --filter="${name}" publish --tag ${tag} --no-git-checks --otp=${newOtp}`.pipe(
+        process.stdout,
+      )
+    } else {
+      throw error
+    }
+  }
 }
 
 echo`published versions for ${chalk.blue(workspaces.length)} workspaces`
+
+// Revert the version bumps, just do git checkout <package>/package.json
+for (const name of workspaces) {
+  await $`git checkout ./${name}/package.json`
+}
