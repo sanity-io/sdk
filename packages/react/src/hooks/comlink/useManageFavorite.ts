@@ -1,6 +1,13 @@
 import {type Status} from '@sanity/comlink'
-import {type Events, SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
-import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
+import {
+  type CanvasResource,
+  type Events,
+  type MediaResource,
+  SDK_CHANNEL_NAME,
+  SDK_NODE_NAME,
+  type StudioResource,
+} from '@sanity/message-protocol'
+import {type FrameMessage} from '@sanity/sdk'
 import {useCallback, useState} from 'react'
 
 import {useWindowConnection} from './useWindowConnection'
@@ -14,27 +21,34 @@ interface ManageFavorite {
   isConnected: boolean
 }
 
+interface UseManageFavoriteProps {
+  documentId: string
+  documentType: string
+  resourceId?: string
+  resourceType: StudioResource['type'] | MediaResource['type'] | CanvasResource['type']
+}
+
 /**
  * @beta
  *
  * ## useManageFavorite
  * This hook provides functionality to add and remove documents from favorites,
  * and tracks the current favorite status of the document.
- * @category Core UI Communication
+ * @category Dashboard Communication
  * @param documentHandle - The document handle containing document ID and type, like `{_id: '123', _type: 'book'}`
  * @returns An object containing:
  * - `favorite` - Function to add document to favorites
  * - `unfavorite` - Function to remove document from favorites
  * - `isFavorited` - Boolean indicating if document is currently favorited
- * - `isConnected` - Boolean indicating if connection to Core UI is established
+ * - `isConnected` - Boolean indicating if connection to Dashboard UI is established
  *
  * @example
  * ```tsx
  * function MyDocumentAction(props: DocumentActionProps) {
- *   const {_id, _type} = props
+ *   const {documentId, documentType} = props
  *   const {favorite, unfavorite, isFavorited, isConnected} = useManageFavorite({
- *     _id,
- *     _type
+ *     documentId,
+ *     documentType
  *   })
  *
  *   return (
@@ -47,7 +61,12 @@ interface ManageFavorite {
  * }
  * ```
  */
-export function useManageFavorite({_id, _type}: DocumentHandle): ManageFavorite {
+export function useManageFavorite({
+  documentId,
+  documentType,
+  resourceId,
+  resourceType,
+}: UseManageFavoriteProps): ManageFavorite {
   const [isFavorited, setIsFavorited] = useState(false) // should load this from a comlink fetch
   const [status, setStatus] = useState<Status>('idle')
   const {sendMessage} = useWindowConnection<Events.FavoriteMessage, FrameMessage>({
@@ -56,17 +75,27 @@ export function useManageFavorite({_id, _type}: DocumentHandle): ManageFavorite 
     onStatus: setStatus,
   })
 
+  if (resourceType !== 'studio' && !resourceId) {
+    throw new Error('resourceId is required for media-library and canvas resources')
+  }
+
   const handleFavoriteAction = useCallback(
     (action: 'added' | 'removed', setFavoriteState: boolean) => {
-      if (!_id || !_type) return
+      if (!documentId || !documentType || !resourceType) return
 
       try {
         const message: Events.FavoriteMessage = {
-          type: 'dashboard/v1/events/favorite',
+          type: 'dashboard/v1/events/favorite/mutate',
           data: {
             eventType: action,
-            documentId: _id,
-            documentType: _type,
+            documentId,
+            documentType,
+            resourceType,
+            // Resource Id should exist for media-library and canvas resources
+            resourceId: resourceId!,
+          },
+          response: {
+            success: true,
           },
         }
 
@@ -82,7 +111,7 @@ export function useManageFavorite({_id, _type}: DocumentHandle): ManageFavorite 
         throw error
       }
     },
-    [_id, _type, sendMessage],
+    [documentId, documentType, resourceId, resourceType, sendMessage],
   )
 
   const favorite = useCallback(() => handleFavoriteAction('added', true), [handleFavoriteAction])
