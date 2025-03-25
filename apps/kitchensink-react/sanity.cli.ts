@@ -8,5 +8,6 @@ export default defineCliConfig({
   __experimental_appConfiguration: {
     appLocation: './src/App.tsx',
     organizationId: process.env['SANITY_ORG_ID'],
+    appId: process.env['SANITY_APP_ID'],
   },
 })
