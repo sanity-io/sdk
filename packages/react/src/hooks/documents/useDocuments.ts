@@ -1,7 +1,9 @@
 import {type DocumentHandle, type QueryOptions} from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
+import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
+import {useSanityInstance} from '../context/useSanityInstance'
 import {useQuery} from '../query/useQuery'
 
 const DEFAULT_BATCH_SIZE = 25
@@ -79,9 +81,15 @@ export interface DocumentsResponse {
  * @category Documents
  * @param options - Configuration options for the infinite list
  * @returns An object containing the list of document handles, the loading state, the total count of retrieved document handles, and a function to load more
- * @example
+ *
+ * @remarks
+ * - The returned document handles include projectId and dataset information from the current Sanity instance
+ * - This makes them ready to use with document operations and other document hooks
+ * - The hook automatically uses the correct Sanity instance based on the projectId and dataset in the options
+ *
+ * @example Basic infinite list with loading more
  * ```tsx
- * const {data, hasMore, isPending, loadMore} = useDocuments({
+ * const { data, hasMore, isPending, loadMore, count } = useDocuments({
  *   filter: '_type == "post"',
  *   search: searchTerm,
  *   batchSize: 10,
@@ -93,16 +101,17 @@ export interface DocumentsResponse {
  *     Total documents: {count}
  *     <ol>
  *       {data.map((doc) => (
- *         <li key={doc._id}>
+ *         <li key={doc.documentId}>
  *           <MyDocumentComponent doc={doc} />
  *         </li>
  *       ))}
  *     </ol>
- *     {hasMore && <button onClick={loadMore}>Load More</button>}
+ *     {hasMore && <button onClick={loadMore} disabled={isPending}>
+ *       {isPending ? 'Loading...' : 'Load More'}
+ *     </button>}
  *   </div>
  * )
  * ```
- *
  */
 export function useDocuments({
   batchSize = DEFAULT_BATCH_SIZE,
@@ -112,6 +121,7 @@ export function useDocuments({
   orderings,
   ...options
 }: DocumentsOptions): DocumentsResponse {
+  const instance = useSanityInstance(options)
   const perspective = options.perspective ?? DEFAULT_PERSPECTIVE
   const [limit, setLimit] = useState(batchSize)
 
@@ -149,7 +159,7 @@ export function useDocuments({
         .join(',')})`
     : ''
 
-  const dataQuery = `*${filterClause}${orderClause}[0...${limit}]{_id,_type}`
+  const dataQuery = `*${filterClause}${orderClause}[0...${limit}]{"documentId":_id,"documentType":_type,...$__dataset}`
   const countQuery = `count(*${filterClause})`
 
   const {
@@ -157,7 +167,10 @@ export function useDocuments({
     isPending,
   } = useQuery<UseDocumentsQueryResult>(`{"count":${countQuery},"data":${dataQuery}}`, {
     ...options,
-    params,
+    params: {
+      ...params,
+      __dataset: pick(instance.config, 'projectId', 'dataset'),
+    },
     perspective,
   })
 

@@ -92,17 +92,8 @@ export {
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,
 } from '../document/events'
-export {
-  type DocumentHandle,
-  type DocumentTypeHandle,
-  type JsonMatch,
-  jsonMatch,
-  type JsonMatchPath,
-} from '../document/patchOperations'
-export {type DocumentResourceId, getResourceId, type ResourceId} from '../document/patchOperations'
+export {type JsonMatch, jsonMatch, type JsonMatchPath} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
-export {createSanityInstance} from '../instance/sanityInstance'
-export type {SanityConfig, SanityInstance, SdkIdentity} from '../instance/types'
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
 export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'

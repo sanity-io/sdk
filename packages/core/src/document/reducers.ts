@@ -2,7 +2,7 @@ import {getPublishedId} from '@sanity/client/csm'
 import {type Mutation, type PatchOperations, type SanityDocumentLike} from '@sanity/types'
 import {omit} from 'lodash-es'
 
-import {type ResourceState} from '../resources/createResource'
+import {type StoreContext} from '../store/defineStore'
 import {getDraftId, insecureRandomId} from '../utils/ids'
 import {type DocumentAction} from './actions'
 import {DOCUMENT_STATE_CLEAR_DELAY} from './documentConstants'
@@ -548,7 +548,7 @@ export function removeSubscriptionIdFromDocument(
 }
 
 export function manageSubscriberIds(
-  state: ResourceState<SyncTransactionState>,
+  {state}: StoreContext<SyncTransactionState>,
   documentId: string | string[],
 ): () => void {
   const documentIds = Array.from(
