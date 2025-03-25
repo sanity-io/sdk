@@ -22,8 +22,6 @@ interface ManageFavorite {
 }
 
 interface UseManageFavoriteProps extends DocumentHandle {
-  documentId: string
-  documentType: string
   resourceId?: string
   resourceType: StudioResource['type'] | MediaResource['type'] | CanvasResource['type']
 }
@@ -81,7 +79,7 @@ export function useManageFavorite({
 
   const handleFavoriteAction = useCallback(
     (action: 'added' | 'removed', setFavoriteState: boolean) => {
-      if (!documentId || !documentType) return
+      if (!documentId || !documentType || !resourceType) return
 
       try {
         const message: Events.FavoriteMessage = {
@@ -90,6 +88,12 @@ export function useManageFavorite({
             eventType: action,
             documentId,
             documentType,
+            resourceType,
+            // Resource Id should exist for media-library and canvas resources
+            resourceId: resourceId!,
+          },
+          response: {
+            success: true,
           },
         }
 
@@ -105,7 +109,7 @@ export function useManageFavorite({
         throw error
       }
     },
-    [documentId, documentType, sendMessage],
+    [documentId, documentType, resourceId, resourceType, sendMessage],
   )
 
   const favorite = useCallback(() => handleFavoriteAction('added', true), [handleFavoriteAction])

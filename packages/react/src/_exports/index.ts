@@ -27,7 +27,7 @@ export {
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useNavigateToStudioDocument} from '../hooks/dashboard/useNavigateToStudioDocument'
-export {useStudioWorkspacesByResourceId} from '../hooks/dashboard/useStudioWorkspacesByResourceId'
+export {useStudioWorkspacesByProjectIdDataset} from '../hooks/dashboard/useStudioWorkspacesByProjectIdDataset'
 export {useDatasets} from '../hooks/datasets/useDatasets'
 export {useApplyDocumentActions} from '../hooks/document/useApplyDocumentActions'
 export {useDocument} from '../hooks/document/useDocument'

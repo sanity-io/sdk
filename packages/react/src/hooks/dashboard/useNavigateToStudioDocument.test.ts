@@ -8,7 +8,7 @@ import {useNavigateToStudioDocument} from './useNavigateToStudioDocument'
 // Mock dependencies
 const mockSendMessage = vi.fn()
 const mockFetch = vi.fn()
-let mockWorkspacesByResourceId = {}
+let mockWorkspacesByProjectIdAndDataset = {}
 let mockWorkspacesIsConnected = true
 let mockStatusCallback: ((status: Status) => void) | null = null
 
@@ -24,10 +24,10 @@ vi.mock('../comlink/useWindowConnection', () => {
   }
 })
 
-vi.mock('./useStudioWorkspacesByResourceId', () => {
+vi.mock('./useStudioWorkspacesByProjectIdDataset', () => {
   return {
-    useStudioWorkspacesByResourceId: () => ({
-      workspacesByResourceId: mockWorkspacesByResourceId,
+    useStudioWorkspacesByProjectIdDataset: () => ({
+      workspacesByProjectIdAndDataset: mockWorkspacesByProjectIdAndDataset,
       error: null,
       isConnected: mockWorkspacesIsConnected,
     }),
@@ -36,9 +36,10 @@ vi.mock('./useStudioWorkspacesByResourceId', () => {
 
 describe('useNavigateToStudioDocument', () => {
   const mockDocumentHandle: DocumentHandle = {
-    _id: 'doc123',
-    _type: 'article',
-    resourceId: 'document:project1.dataset1:doc123',
+    documentId: 'doc123',
+    documentType: 'article',
+    projectId: 'project1',
+    dataset: 'dataset1',
   }
 
   const mockWorkspace = {
@@ -53,7 +54,7 @@ describe('useNavigateToStudioDocument', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    mockWorkspacesByResourceId = {
+    mockWorkspacesByProjectIdAndDataset = {
       'project1:dataset1': [mockWorkspace],
     }
     mockWorkspacesIsConnected = true
@@ -95,7 +96,7 @@ describe('useNavigateToStudioDocument', () => {
   })
 
   it('does not send message when not connected', () => {
-    mockWorkspacesByResourceId = {}
+    mockWorkspacesByProjectIdAndDataset = {}
     mockWorkspacesIsConnected = false
 
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
@@ -111,29 +112,10 @@ describe('useNavigateToStudioDocument', () => {
   })
 
   it('does not send message when no workspace is found', () => {
-    mockWorkspacesByResourceId = {}
+    mockWorkspacesByProjectIdAndDataset = {}
     mockWorkspacesIsConnected = true
 
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
-
-    // Simulate connection
-    act(() => {
-      mockStatusCallback?.('connected')
-    })
-
-    result.current.navigateToStudioDocument()
-
-    expect(mockSendMessage).not.toHaveBeenCalled()
-  })
-
-  it('handles invalid resourceId format', () => {
-    const invalidDocHandle: DocumentHandle = {
-      _id: 'doc123',
-      _type: 'article',
-      resourceId: 'document:project1.invalid:doc123' as `document:${string}.${string}:${string}`,
-    }
-
-    const {result} = renderHook(() => useNavigateToStudioDocument(invalidDocHandle))
 
     // Simulate connection
     act(() => {
@@ -149,7 +131,7 @@ describe('useNavigateToStudioDocument', () => {
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const mockWorkspace2 = {...mockWorkspace, _ref: 'workspace2'}
 
-    mockWorkspacesByResourceId = {
+    mockWorkspacesByProjectIdAndDataset = {
       'project1:dataset1': [mockWorkspace, mockWorkspace2],
     }
 
@@ -164,7 +146,7 @@ describe('useNavigateToStudioDocument', () => {
 
     expect(consoleSpy).toHaveBeenCalledWith(
       'Multiple workspaces found for document',
-      mockDocumentHandle.resourceId,
+      mockDocumentHandle,
     )
     expect(mockSendMessage).toHaveBeenCalledWith(
       'dashboard/v1/bridge/navigate-to-resource',

@@ -79,9 +79,6 @@ describe('getPreviewState', () => {
     expect(state.get().subscriptions).toEqual({
       exampleId: {pseudoRandomId1: true, pseudoRandomId2: true},
     })
-    expect(state.get().documentTypes).toEqual({
-      exampleId: 'exampleType',
-    })
 
     unsubscribe2()
     expect(state.get().subscriptions).toEqual({
