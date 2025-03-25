@@ -6,4 +6,5 @@
  * different views quickly.
  */
 export const QUERY_STATE_CLEAR_DELAY = 1000
-export const QUERY_STORE_API_VERSION = 'v2025-02-19'
+// NOTE: Have to use vX for the text::query groq function
+export const QUERY_STORE_API_VERSION = 'vX'
