@@ -1,5 +1,5 @@
 import {type DocumentHandle, getPreviewState, type PreviewValue, resolvePreview} from '@sanity/sdk'
-import {useCallback, useMemo, useSyncExternalStore} from 'react'
+import {useCallback, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -9,12 +9,6 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @category Types
  */
 export interface UsePreviewOptions extends DocumentHandle {
-  /**
-   * @deprecated This property is redundant since the interface now extends DocumentHandle.
-   * Use the properties inherited from DocumentHandle instead.
-   */
-  document?: DocumentHandle
-
   /**
    * Optional ref object to track visibility. When provided, preview resolution
    * only occurs when the referenced element is visible in the viewport.
@@ -77,10 +71,9 @@ export interface UsePreviewResults {
  * )
  * ```
  */
-export function usePreview({ref, document, ..._docHandle}: UsePreviewOptions): UsePreviewResults {
+export function usePreview({ref, ...docHandle}: UsePreviewOptions): UsePreviewResults {
   const instance = useSanityInstance()
-  const docHandle = useMemo(() => ({...document, ..._docHandle}), [document, _docHandle])
-  const stateSource = useMemo(() => getPreviewState(instance, docHandle), [instance, docHandle])
+  const stateSource = getPreviewState(instance, docHandle)
 
   // Create subscribe function for useSyncExternalStore
   const subscribe = useCallback(

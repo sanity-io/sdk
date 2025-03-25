@@ -4,7 +4,7 @@ import {
   resolveProjection,
   type ValidProjection,
 } from '@sanity/sdk'
-import {useCallback, useMemo, useSyncExternalStore} from 'react'
+import {useCallback, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -16,11 +16,6 @@ import {useSanityInstance} from '../context/useSanityInstance'
 export interface UseProjectionOptions extends DocumentHandle {
   ref?: React.RefObject<unknown>
   projection: ValidProjection
-  /**
-   * @deprecated This property is redundant since the interface now extends DocumentHandle.
-   * Use the properties inherited from DocumentHandle instead.
-   */
-  document?: DocumentHandle
 }
 
 /**
@@ -94,15 +89,10 @@ export interface UseProjectionResults<TData extends object> {
 export function useProjection<TData extends object>({
   ref,
   projection,
-  document,
-  ..._docHandle
+  ...docHandle
 }: UseProjectionOptions): UseProjectionResults<TData> {
   const instance = useSanityInstance()
-  const docHandle = useMemo(() => ({...document, ..._docHandle}), [document, _docHandle])
-  const stateSource = useMemo(
-    () => getProjectionState<TData>(instance, {...docHandle, projection}),
-    [instance, docHandle, projection],
-  )
+  const stateSource = getProjectionState<TData>(instance, {...docHandle, projection})
 
   if (stateSource.getCurrent().data === null) {
     throw resolveProjection(instance, {...docHandle, projection})
