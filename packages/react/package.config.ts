@@ -11,7 +11,7 @@ export default defineConfig({
     reactCompiler: true,
   },
   reactCompilerOptions: {
-    target: '19',
+    target: '18',
   },
   rollup: {
     plugins: [

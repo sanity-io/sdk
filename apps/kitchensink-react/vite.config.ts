@@ -3,7 +3,9 @@ import {resolve} from 'node:path'
 import react from '@vitejs/plugin-react'
 import {defineConfig} from 'vite'
 
-const ReactCompilerConfig = {}
+const ReactCompilerConfig = {
+  target: '18',
+}
 
 export default defineConfig({
   server: {
