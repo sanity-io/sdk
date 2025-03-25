@@ -1,9 +1,8 @@
 import {Observable, Subject} from 'rxjs'
 import {beforeEach, describe, it} from 'vitest'
 
-import {createSanityInstance} from '../instance/sanityInstance'
-import {type SanityInstance} from '../instance/types'
-import {createResourceState} from '../resources/createResource'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+import {createStoreState} from '../store/createStoreState'
 import {AuthStateType} from './authStateType'
 import {authStore} from './authStore'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
@@ -35,7 +34,7 @@ describe('subscribeToStorageEventsAndSetToken', () => {
   })
 
   it('sets the state to logged in when a matching storage event returns a token', () => {
-    const state = createResourceState(authStore.getInitialState(instance))
+    const state = createStoreState(authStore.getInitialState(instance))
     const {storageKey} = state.get().options
     const subscription = subscribeToStorageEventsAndSetToken({state, instance})
 
@@ -55,7 +54,7 @@ describe('subscribeToStorageEventsAndSetToken', () => {
 
   it('sets the state to logged in when a matching storage event returns null', () => {
     vi.mocked(getTokenFromStorage).mockReturnValue('existing-token')
-    const state = createResourceState(authStore.getInitialState(instance))
+    const state = createStoreState(authStore.getInitialState(instance))
     const {storageKey} = state.get().options
 
     const subscription = subscribeToStorageEventsAndSetToken({state, instance})
