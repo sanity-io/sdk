@@ -12,12 +12,10 @@ echo`found ${chalk.blue(workspaces.length)} workspaces to publish canaries for`
 const prev = new Map()
 const next = new Map()
 
-// Get current commit SHA (short version)
-const commitSha = (await $`git rev-parse --short HEAD`).stdout.trim()
 // Get current branch name (replace / with _ for valid npm version)
 const branch = (await $`git rev-parse --abbrev-ref HEAD | sed 's/\\//\\_/g'`).stdout.trim()
 
-const tag = `${branch === 'main' ? 'next' : branch}+${commitSha}`
+const tag = `${branch === 'main' ? 'next' : branch}`
 
 for (const workspace of workspaces) {
   const {name, version, private: isPrivate} = await fs.readJson(`./${workspace}/package.json`)
