@@ -5,7 +5,7 @@ import {Route, Routes} from 'react-router'
 
 import Framed from './Comlink/Framed'
 import ParentApp from './Comlink/ParentApp'
-import {DocumentCoreInteractionsRoute} from './DocumentCollection/DocumentCoreInteractionsRoute'
+import {DocumentDashboardInteractionsRoute} from './DocumentCollection/DocumentDashboardInteractionsRoute'
 import {DocumentEditorRoute} from './DocumentCollection/DocumentEditorRoute'
 import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
 import {DocumentListRoute} from './DocumentCollection/DocumentListRoute'
@@ -52,8 +52,8 @@ const documentCollectionRoutes = [
     element: <DocumentProjectionRoute />,
   },
   {
-    path: 'document-core-interactions',
-    element: <DocumentCoreInteractionsRoute />,
+    path: 'document-dashboard-interactions',
+    element: <DocumentDashboardInteractionsRoute />,
   },
   {
     path: 'dashboard-context',

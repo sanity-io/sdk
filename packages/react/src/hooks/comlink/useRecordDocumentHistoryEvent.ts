@@ -1,6 +1,13 @@
 import {type Status} from '@sanity/comlink'
-import {type Events, SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
-import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
+import {
+  type CanvasResource,
+  type Events,
+  type MediaResource,
+  SDK_CHANNEL_NAME,
+  SDK_NODE_NAME,
+  type StudioResource,
+} from '@sanity/message-protocol'
+import {type FrameMessage} from '@sanity/sdk'
 import {useCallback, useState} from 'react'
 
 import {useWindowConnection} from './useWindowConnection'
@@ -8,6 +15,16 @@ import {useWindowConnection} from './useWindowConnection'
 interface DocumentInteractionHistory {
   recordEvent: (eventType: 'viewed' | 'edited' | 'created' | 'deleted') => void
   isConnected: boolean
+}
+
+/**
+ * @public
+ */
+interface UseRecordDocumentHistoryEventProps {
+  documentId: string
+  documentType: string
+  resourceType: StudioResource['type'] | MediaResource['type'] | CanvasResource['type']
+  resourceId?: string
 }
 
 /**
@@ -23,10 +40,12 @@ interface DocumentInteractionHistory {
  * @example
  * ```tsx
  * function MyDocumentAction(props: DocumentActionProps) {
- *   const {_id, _type} = props
+ *   const {documentId, documentType, resourceType, resourceId} = props
  *   const {recordEvent, isConnected} = useRecordDocumentHistoryEvent({
- *     _id,
- *     _type
+ *     documentId,
+ *     documentType,
+ *     resourceType,
+ *     resourceId,
  *   })
  *
  *   return (
@@ -40,9 +59,11 @@ interface DocumentInteractionHistory {
  * ```
  */
 export function useRecordDocumentHistoryEvent({
-  _id,
-  _type,
-}: DocumentHandle): DocumentInteractionHistory {
+  documentId,
+  documentType,
+  resourceType,
+  resourceId,
+}: UseRecordDocumentHistoryEventProps): DocumentInteractionHistory {
   const [status, setStatus] = useState<Status>('idle')
   const {sendMessage} = useWindowConnection<Events.HistoryMessage, FrameMessage>({
     name: SDK_NODE_NAME,
@@ -50,15 +71,21 @@ export function useRecordDocumentHistoryEvent({
     onStatus: setStatus,
   })
 
+  if (resourceType !== 'studio' && !resourceId) {
+    throw new Error('resourceId is required for media-library and canvas resources')
+  }
+
   const recordEvent = useCallback(
     (eventType: 'viewed' | 'edited' | 'created' | 'deleted') => {
       try {
         const message: Events.HistoryMessage = {
-          type: 'core/v1/events/history',
+          type: 'dashboard/v1/events/history',
           data: {
             eventType,
-            documentId: _id,
-            documentType: _type,
+            documentId,
+            documentType,
+            resourceType,
+            resourceId: resourceId!,
           },
         }
 
@@ -69,7 +96,7 @@ export function useRecordDocumentHistoryEvent({
         throw error
       }
     },
-    [_id, _type, sendMessage],
+    [documentId, documentType, resourceId, resourceType, sendMessage],
   )
 
   return {

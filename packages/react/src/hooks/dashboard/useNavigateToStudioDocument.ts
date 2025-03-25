@@ -7,7 +7,7 @@ import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useStudioWorkspacesByResourceId} from './useStudioWorkspacesByResourceId'
 
 interface NavigateToResourceMessage {
-  type: 'core/v1/bridge/navigate-to-resource'
+  type: 'dashboard/v1/bridge/navigate-to-resource'
   data: {
     /**
      * Resource ID
@@ -105,7 +105,7 @@ export function useNavigateToStudioDocument(
     const workspace = workspaces[0]
 
     const message: NavigateToResourceMessage = {
-      type: 'core/v1/bridge/navigate-to-resource',
+      type: 'dashboard/v1/bridge/navigate-to-resource',
       data: {
         resourceId: workspace._ref,
         resourceType: 'studio',

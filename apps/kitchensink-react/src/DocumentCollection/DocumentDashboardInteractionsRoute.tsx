@@ -18,8 +18,18 @@ function ActionButtons({document}: {document: DocumentHandle}) {
     unfavorite,
     isFavorited,
     isConnected: isFavoriteConnected,
-  } = useManageFavorite(document)
-  const {recordEvent, isConnected: isHistoryConnected} = useRecordDocumentHistoryEvent(document)
+  } = useManageFavorite({
+    documentId: document._id,
+    documentType: document._type,
+    resourceType: 'studio',
+    resourceId: document.resourceId,
+  })
+  const {recordEvent, isConnected: isHistoryConnected} = useRecordDocumentHistoryEvent({
+    documentId: document._id,
+    documentType: document._type,
+    resourceType: 'studio',
+    resourceId: document.resourceId,
+  })
   const {navigateToStudioDocument, isConnected: isNavigateConnected} =
     useNavigateToStudioDocument(document)
 
@@ -53,7 +63,7 @@ function ActionButtons({document}: {document: DocumentHandle}) {
   )
 }
 
-export function DocumentCoreInteractionsRoute(): JSX.Element {
+export function DocumentDashboardInteractionsRoute(): JSX.Element {
   const {isPending, data, hasMore, loadMore} = useDocuments({
     filter: '_type == "book"',
     orderings: [{field: '_updatedAt', direction: 'desc'}],

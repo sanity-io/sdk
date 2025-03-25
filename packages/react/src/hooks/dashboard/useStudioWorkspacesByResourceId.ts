@@ -1,4 +1,5 @@
 import {type Status} from '@sanity/comlink'
+import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
 import {useEffect, useState} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
@@ -33,8 +34,8 @@ export function useStudioWorkspacesByResourceId(): StudioWorkspacesResult {
   const [error, setError] = useState<string | null>(null)
 
   const {fetch} = useWindowConnection({
-    name: 'core/nodes/sdk',
-    connectTo: 'core/channels/sdk',
+    name: SDK_NODE_NAME,
+    connectTo: SDK_CHANNEL_NAME,
     onStatus: setStatus,
   })
 
@@ -47,7 +48,7 @@ export function useStudioWorkspacesByResourceId(): StudioWorkspacesResult {
       try {
         const data = await fetch<{
           context: {availableResources: Array<{projectId: string; workspaces: Workspace[]}>}
-        }>('core/v1/bridge/context', undefined, {signal})
+        }>('dashboard/v1/bridge/context', undefined, {signal})
 
         const workspaceMap: WorkspacesByResourceId = {}
 

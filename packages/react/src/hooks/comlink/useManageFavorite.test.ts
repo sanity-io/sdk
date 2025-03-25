@@ -19,8 +19,9 @@ describe('useManageFavorite', () => {
   let statusCallback: ((status: Status) => void) | null = null
 
   const mockDocumentHandle = {
-    _id: 'mock-id',
-    _type: 'mock-type',
+    documentId: 'mock-id',
+    documentType: 'mock-type',
+    resourceType: 'studio' as const,
   }
 
   function createMockNode() {
@@ -55,10 +56,12 @@ describe('useManageFavorite', () => {
       result.current.favorite()
     })
 
-    expect(node.post).toHaveBeenCalledWith('core/v1/events/favorite', {
+    expect(node.post).toHaveBeenCalledWith('dashboard/v1/events/favorite/mutate', {
       documentId: 'mock-id',
       documentType: 'mock-type',
       eventType: 'added',
+      resourceType: 'studio',
+      resourceId: undefined,
     })
     expect(result.current.isFavorited).toBe(true)
   })
@@ -70,10 +73,12 @@ describe('useManageFavorite', () => {
       result.current.unfavorite()
     })
 
-    expect(node.post).toHaveBeenCalledWith('core/v1/events/favorite', {
+    expect(node.post).toHaveBeenCalledWith('dashboard/v1/events/favorite/mutate', {
       documentId: 'mock-id',
       documentType: 'mock-type',
       eventType: 'removed',
+      resourceType: 'studio',
+      resourceId: undefined,
     })
     expect(result.current.isFavorited).toBe(false)
   })

@@ -19,8 +19,10 @@ describe('useRecordDocumentHistoryEvent', () => {
   let statusCallback: ((status: Status) => void) | null = null
 
   const mockDocumentHandle = {
-    _id: 'mock-id',
-    _type: 'mock-type',
+    documentId: 'mock-id',
+    documentType: 'mock-type',
+    resourceType: 'studio' as const,
+    resourceId: 'mock-resource-id',
   }
 
   function createMockNode() {
@@ -58,10 +60,12 @@ describe('useRecordDocumentHistoryEvent', () => {
 
     result.current.recordEvent('viewed')
 
-    expect(node.post).toHaveBeenCalledWith('core/v1/events/history', {
+    expect(node.post).toHaveBeenCalledWith('dashboard/v1/events/history', {
       eventType: 'viewed',
       documentId: 'mock-id',
       documentType: 'mock-type',
+      resourceType: 'studio',
+      resourceId: 'mock-resource-id',
     })
   })
 

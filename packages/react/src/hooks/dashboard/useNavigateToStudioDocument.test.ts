@@ -87,7 +87,7 @@ describe('useNavigateToStudioDocument', () => {
 
     result.current.navigateToStudioDocument()
 
-    expect(mockSendMessage).toHaveBeenCalledWith('core/v1/bridge/navigate-to-resource', {
+    expect(mockSendMessage).toHaveBeenCalledWith('dashboard/v1/bridge/navigate-to-resource', {
       resourceId: 'workspace123',
       resourceType: 'studio',
       path: '/intent/edit/id=doc123;type=article',
@@ -167,7 +167,7 @@ describe('useNavigateToStudioDocument', () => {
       mockDocumentHandle.resourceId,
     )
     expect(mockSendMessage).toHaveBeenCalledWith(
-      'core/v1/bridge/navigate-to-resource',
+      'dashboard/v1/bridge/navigate-to-resource',
       expect.objectContaining({
         resourceId: mockWorkspace._ref,
       }),
