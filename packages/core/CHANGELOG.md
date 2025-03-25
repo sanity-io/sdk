@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.0.0-alpha.20](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.19...sdk-v0.0.0-alpha.20) (2025-03-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename usePermissions → useDocumentPermissions ([#365](https://github.com/sanity-io/sdk/issues/365))
+* rename useActions → useDocumentActions and useActions → useDocumentActions ([#362](https://github.com/sanity-io/sdk/issues/362))
+* rename useHandleCallback → useHandleAuthCallback and HandleCallback → HandleAuthCallback ([#358](https://github.com/sanity-io/sdk/issues/358))
+
+### Features
+
+* rename useActions → useDocumentActions and useActions → useDocumentActions ([#362](https://github.com/sanity-io/sdk/issues/362)) ([c753897](https://github.com/sanity-io/sdk/commit/c75389759a57c6da5ad306dbac46c6d58b4f8dda))
+* rename usePermissions → useDocumentPermissions ([#365](https://github.com/sanity-io/sdk/issues/365)) ([6ca2ada](https://github.com/sanity-io/sdk/commit/6ca2ada0b0d9a0633d46ccf8c0170c1712a3afb4))
+
+
+### Bug Fixes
+
+* fix typedoc annotations for hooks ([#361](https://github.com/sanity-io/sdk/issues/361)) ([778a63a](https://github.com/sanity-io/sdk/commit/778a63ac5cb52ed6c1e28b1ff22605caad54db33))
+
+
+### Code Refactoring
+
+* rename useHandleCallback → useHandleAuthCallback and HandleCallback → HandleAuthCallback ([#358](https://github.com/sanity-io/sdk/issues/358)) ([014dc69](https://github.com/sanity-io/sdk/commit/014dc695320273b4e166d946753e851c9701d159))
+
 ## [0.0.0-alpha.19](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.18...sdk-v0.0.0-alpha.19) (2025-03-21)
 
 

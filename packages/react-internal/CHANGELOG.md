@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.0.0-alpha.5](https://github.com/sanity-io/sdk/compare/sdk-react-internal-v0.0.0-alpha.4...sdk-react-internal-v0.0.0-alpha.5) (2025-03-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename useHandleCallback → useHandleAuthCallback and HandleCallback → HandleAuthCallback ([#358](https://github.com/sanity-io/sdk/issues/358))
+
+### Bug Fixes
+
+* fix typedoc annotations for hooks ([#361](https://github.com/sanity-io/sdk/issues/361)) ([778a63a](https://github.com/sanity-io/sdk/commit/778a63ac5cb52ed6c1e28b1ff22605caad54db33))
+
+
+### Code Refactoring
+
+* rename useHandleCallback → useHandleAuthCallback and HandleCallback → HandleAuthCallback ([#358](https://github.com/sanity-io/sdk/issues/358)) ([014dc69](https://github.com/sanity-io/sdk/commit/014dc695320273b4e166d946753e851c9701d159))
+
 ## [0.0.0-alpha.4](https://github.com/sanity-io/sdk/compare/sdk-react-internal-v0.0.0-alpha.3...sdk-react-internal-v0.0.0-alpha.4) (2025-03-21)
 
 

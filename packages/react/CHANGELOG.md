@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.0.0-alpha.21](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.20...sdk-react-v0.0.0-alpha.21) (2025-03-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* update `useManageFavorite` signature ([#360](https://github.com/sanity-io/sdk/issues/360))
+* rename usePermissions → useDocumentPermissions ([#365](https://github.com/sanity-io/sdk/issues/365))
+* rename useInfiniteList → useDocuments ([#363](https://github.com/sanity-io/sdk/issues/363))
+* rename usePaginatedList → usePaginatedDocuments ([#364](https://github.com/sanity-io/sdk/issues/364))
+* rename useActions → useDocumentActions and useActions → useDocumentActions ([#362](https://github.com/sanity-io/sdk/issues/362))
+* rename useHandleCallback → useHandleAuthCallback and HandleCallback → HandleAuthCallback ([#358](https://github.com/sanity-io/sdk/issues/358))
+
+### Features
+
+* **docs:** add a migration guide ([#357](https://github.com/sanity-io/sdk/issues/357)) ([47ef529](https://github.com/sanity-io/sdk/commit/47ef529e7d4c9f4453451ac6141d28a81a1dfbfe))
+* rename useActions → useDocumentActions and useActions → useDocumentActions ([#362](https://github.com/sanity-io/sdk/issues/362)) ([c753897](https://github.com/sanity-io/sdk/commit/c75389759a57c6da5ad306dbac46c6d58b4f8dda))
+* rename useInfiniteList → useDocuments ([#363](https://github.com/sanity-io/sdk/issues/363)) ([8e51dcc](https://github.com/sanity-io/sdk/commit/8e51dcc99bfcb84f59dd43f3b7d877daba158fa3))
+* rename usePaginatedList → usePaginatedDocuments ([#364](https://github.com/sanity-io/sdk/issues/364)) ([544019d](https://github.com/sanity-io/sdk/commit/544019d5c85d2c695848dcb6ea089cc84b7fbbcd))
+* rename usePermissions → useDocumentPermissions ([#365](https://github.com/sanity-io/sdk/issues/365)) ([6ca2ada](https://github.com/sanity-io/sdk/commit/6ca2ada0b0d9a0633d46ccf8c0170c1712a3afb4))
+* update `useManageFavorite` signature ([#360](https://github.com/sanity-io/sdk/issues/360)) ([f1617da](https://github.com/sanity-io/sdk/commit/f1617da31ddcb2d0595877f402a6a1ec82c1d0ab))
+
+
+### Bug Fixes
+
+* fix typedoc annotations for hooks ([#361](https://github.com/sanity-io/sdk/issues/361)) ([778a63a](https://github.com/sanity-io/sdk/commit/778a63ac5cb52ed6c1e28b1ff22605caad54db33))
+
+
+### Code Refactoring
+
+* rename useHandleCallback → useHandleAuthCallback and HandleCallback → HandleAuthCallback ([#358](https://github.com/sanity-io/sdk/issues/358)) ([014dc69](https://github.com/sanity-io/sdk/commit/014dc695320273b4e166d946753e851c9701d159))
+
 ## [0.0.0-alpha.20](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.19...sdk-react-v0.0.0-alpha.20) (2025-03-21)
 
 
