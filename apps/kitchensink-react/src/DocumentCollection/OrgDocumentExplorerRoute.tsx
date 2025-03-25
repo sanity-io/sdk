@@ -481,12 +481,12 @@ function DocumentTypes() {
 
   // Use GROQ with array::unique to get all document types in the dataset
   const {data: documentTypes} = useQuery<string[]>('array::unique(*[]._type)')
-
-  const [selectedType, setSelectedType] = useState<string | null>(null)
+  const firstDocumentType = documentTypes.at(0)
+  const [selectedType, setSelectedType] = useState<string | null>(firstDocumentType ?? null)
 
   useEffect(() => {
-    setSelectedType(documentTypes.at(0) ?? null)
-  }, [config, documentTypes])
+    setSelectedType(firstDocumentType ?? null)
+  }, [config, firstDocumentType])
 
   const handleTypeChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
     startTransition(() => {
