@@ -160,7 +160,7 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
   instance,
 }: StoreContext<QueryStoreState>) => {
   const liveMessages$ = getClientState(instance, {
-    apiVersion: 'vX',
+    apiVersion: QUERY_STORE_API_VERSION,
   }).observable.pipe(
     switchMap((client) =>
       client.live.events({includeDrafts: !!client.config().token, tag: 'query-store'}),
