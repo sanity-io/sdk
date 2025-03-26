@@ -7,5 +7,5 @@
     "allowJs": true,
     "skipLibCheck": true
   },
-  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "release-rc.mts"]
+  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.mts"]
 }

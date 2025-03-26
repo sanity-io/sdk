@@ -35,7 +35,8 @@
     "ts:check": "tsc --noEmit",
     "depcheck": "knip",
     "test:kitchensink": "turbo run test --filter=@sanity/kitchensink-react",
-    "release:rc": "tsx scripts/release-rc.mts"
+    "release:rc": "tsx scripts/release-rc.mts",
+    "release:current-branch": "tsx scripts/release-branch.mts"
   },
   "prettier": "@sanity/prettier-config",
   "devDependencies": {
