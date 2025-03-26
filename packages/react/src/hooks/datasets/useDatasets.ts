@@ -36,6 +36,7 @@ type UseDatasets = {
 
 /**
  * @public
+ * @function
  */
 export const useDatasets: UseDatasets = createStateSourceHook({
   getState: getDatasetsState as (
