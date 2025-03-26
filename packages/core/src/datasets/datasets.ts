@@ -4,6 +4,8 @@ import {getClientState} from '../client/clientStore'
 import {type ProjectHandle} from '../config/sanityConfig'
 import {createFetcherStore} from '../utils/createFetcherStore'
 
+const API_VERSION = 'v2025-02-19'
+
 /** @public */
 export const datasets = createFetcherStore({
   name: 'Datasets',
@@ -16,7 +18,7 @@ export const datasets = createFetcherStore({
   },
   fetcher: (instance) => (options?: ProjectHandle) => {
     return getClientState(instance, {
-      apiVersion: 'vX',
+      apiVersion: API_VERSION,
       // non-null assertion is fine because we check above
       projectId: (options?.projectId ?? instance.config.projectId)!,
       useProjectHostname: true,

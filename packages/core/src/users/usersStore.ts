@@ -131,8 +131,6 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
             const client$ = getClientState(instance, {
               scope: 'global',
               apiVersion: API_VERSION,
-              // TODO: looks like this endpoint doesn't accept tags
-              requestTagPrefix: undefined,
             }).observable
 
             const loadMore$ = state.observable.pipe(

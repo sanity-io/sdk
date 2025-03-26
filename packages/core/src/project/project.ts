@@ -4,6 +4,8 @@ import {getClientState} from '../client/clientStore'
 import {type ProjectHandle} from '../config/sanityConfig'
 import {createFetcherStore} from '../utils/createFetcherStore'
 
+const API_VERSION = 'v2025-02-19'
+
 const project = createFetcherStore({
   name: 'Project',
   getKey: (instance, options?: ProjectHandle) => {
@@ -19,7 +21,7 @@ const project = createFetcherStore({
       const projectId = options.projectId ?? instance.config.projectId
 
       return getClientState(instance, {
-        apiVersion: 'vX',
+        apiVersion: API_VERSION,
         scope: 'global',
         projectId,
       }).observable.pipe(
