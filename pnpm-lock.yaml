@@ -245,8 +245,8 @@ importers:
   packages/core:
     dependencies:
       '@sanity/client':
-        specifier: ^6.28.3
-        version: 6.28.3
+        specifier: ^6.28.4
+        version: 6.28.4
       '@sanity/comlink':
         specifier: ^3.0.1
         version: 3.0.1
@@ -355,8 +355,8 @@ importers:
         specifier: ^1.0.5
         version: 1.0.5
       '@sanity/client':
-        specifier: ^6.28.3
-        version: 6.28.3
+        specifier: ^6.28.4
+        version: 6.28.4
       '@sanity/comlink':
         specifier: ^3.0.1
         version: 3.0.1
@@ -1434,8 +1434,8 @@ packages:
   '@sanity/browserslist-config@1.0.5':
     resolution: {integrity: sha512-so+/UtCge8t1jq509hH0otbbptRz0zM/Aa0dh5MhMD7HGT6n2igWIL2VWH/9QR9e77Jn3dJsjz23mW1WCxT+sg==}
 
-  '@sanity/client@6.28.3':
-    resolution: {integrity: sha512-/W/w0pl0wx1vn6RKUaOTNHVcBDvBcjZk6agpl4vwTCxvNQhh74nY9xk+/heap3KriSHp95ilChv/qVYMz2/l3w==}
+  '@sanity/client@6.28.4':
+    resolution: {integrity: sha512-xUv+Mzqv1JvzWgpNE+DDUPjsvImOEuwxHwOQZijX3+eqOBuRnqmlk7XtYIIw5NsDg6lE0b+uQ0wE5in9/JhYjw==}
     engines: {node: '>=14.18'}
 
   '@sanity/color@3.0.6':
@@ -5577,7 +5577,7 @@ snapshots:
 
   '@sanity/browserslist-config@1.0.5': {}
 
-  '@sanity/client@6.28.3':
+  '@sanity/client@6.28.4':
     dependencies:
       '@sanity/eventsource': 5.0.2
       get-it: 8.6.7
@@ -5623,7 +5623,7 @@ snapshots:
 
   '@sanity/mutate@0.12.3':
     dependencies:
-      '@sanity/client': 6.28.3
+      '@sanity/client': 6.28.4
       '@sanity/diff-match-patch': 3.2.0
       '@sanity/uuid': 3.0.2
       hotscript: 1.0.13
@@ -5693,7 +5693,7 @@ snapshots:
 
   '@sanity/types@3.79.0(@types/react@19.0.10)':
     dependencies:
-      '@sanity/client': 6.28.3
+      '@sanity/client': 6.28.4
       '@types/react': 19.0.10
     transitivePeerDependencies:
       - debug

@@ -68,7 +68,7 @@
     "@repo/package.config": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/browserslist-config": "^1.0.5",
-    "@sanity/client": "^6.28.3",
+    "@sanity/client": "^6.28.4",
     "@sanity/comlink": "^3.0.1",
     "@sanity/pkg-utils": "^6.13.4",
     "@sanity/prettier-config": "^1.0.3",

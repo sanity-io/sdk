@@ -402,7 +402,6 @@ const subscribeToClientAndFetchDatasetAcl = createInternalAction(
             client.observable.request<DatasetAcl>({
               uri: `/projects/${projectId}/datasets/${dataset}/acl`,
               tag: 'acl.get',
-              withCredentials: true,
             }),
           ),
           tap((datasetAcl) => state.set('setGrants', {grants: createGrantsLookup(datasetAcl)})),
