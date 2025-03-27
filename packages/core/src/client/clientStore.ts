@@ -92,6 +92,8 @@ const clientStore: Resource<ClientState> = createResource({
   },
 })
 
+const optionsCache = new WeakMap<SanityClient, Map<string, ClientOptions>>()
+
 const receiveToken = (prev: ClientState, token: string | undefined): ClientState => {
   const newDefaultClient = prev.defaultClient.withConfig({
     token,
@@ -99,6 +101,10 @@ const receiveToken = (prev: ClientState, token: string | undefined): ClientState
   const newGlobalClient = prev.defaultGlobalClient.withConfig({
     token,
   })
+
+  // Clear the options cache when token changes to prevent stale client instances
+  optionsCache.delete(prev.defaultClient)
+  optionsCache.delete(prev.defaultGlobalClient)
 
   return {
     defaultClient: newDefaultClient,
@@ -119,8 +125,6 @@ const subscribeToAuthEvents = createInternalAction(
     }
   },
 )
-
-const optionsCache = new WeakMap<SanityClient, Map<string, ClientOptions>>()
 
 const defaultClientSelector = (state: ClientState, options: ClientOptions) =>
   options?.scope === 'global' ? state.defaultGlobalClient : state.defaultClient

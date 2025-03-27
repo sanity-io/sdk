@@ -5,6 +5,7 @@ import {type ActionContext, createInternalAction} from '../resources/createActio
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
 import {type AuthState, type AuthStoreState} from './authStore'
+import {setAuthError} from './utils'
 
 export const subscribeToStateAndFetchCurrentUser = createInternalAction(
   ({state}: ActionContext<AuthStoreState>) => {
@@ -47,7 +48,7 @@ export const subscribeToStateAndFetchCurrentUser = createInternalAction(
           }))
         },
         error: (error) => {
-          state.set('setError', {authState: {type: AuthStateType.ERROR, error}})
+          state.set('setError', setAuthError(error))
         },
       })
     }

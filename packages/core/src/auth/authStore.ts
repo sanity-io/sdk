@@ -213,7 +213,10 @@ export const authStore = createResource<AuthStoreState>({
     return () => {
       stateSubscription.unsubscribe()
       storageEventsSubscription?.unsubscribe()
-      refreshStampedTokenSubscription?.unsubscribe()
+      if (refreshStampedTokenSubscription) {
+        refreshStampedTokenSubscription.unsubscribe()
+        tokenRefresherRunning = false
+      }
     }
   },
 })

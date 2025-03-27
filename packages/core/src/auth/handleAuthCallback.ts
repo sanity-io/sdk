@@ -2,7 +2,7 @@ import {createAction} from '../resources/createAction'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
 import {authStore, type AuthStoreState, type DashboardContext} from './authStore'
-import {getAuthCode, getDefaultLocation} from './utils'
+import {getAuthCode, getDefaultLocation, setAuthError} from './utils'
 
 /**
  * @public
@@ -66,7 +66,7 @@ export const handleAuthCallback = createAction(authStore, ({state}) => {
       loc.searchParams.delete('url')
       return loc.toString()
     } catch (error) {
-      state.set('exchangeSessionForTokenError', {authState: {type: AuthStateType.ERROR, error}})
+      state.set('exchangeSessionForTokenError', setAuthError(error))
       return false
     }
   }

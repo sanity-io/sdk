@@ -22,7 +22,6 @@ import {
   tap,
   throttle,
   timer,
-  withLatestFrom,
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
@@ -296,9 +295,15 @@ const subscribeToAppliedAndSubmitNextTransaction = createInternalAction(
           tap((next) => state.set('transitionAppliedTransactionsToOutgoing', next)),
           map((s) => s.outgoing),
           distinctUntilChanged(),
-          withLatestFrom(getClientState(instance, {apiVersion: API_VERSION}).observable),
-          concatMap(([outgoing, client]) => {
+          // Get a fresh client instance for each transaction so that we don't use stale tokens
+          switchMap((outgoing) => {
             if (!outgoing) return EMPTY
+            return getClientState(instance, {apiVersion: API_VERSION}).observable.pipe(
+              first(),
+              map((client) => ({outgoing, client})),
+            )
+          }),
+          concatMap(({outgoing, client}) => {
             return client.observable
               .action(outgoing.outgoingActions as Action[], {
                 transactionId: outgoing.transactionId,

@@ -4,6 +4,7 @@ import {type ActionContext, createInternalAction} from '../resources/createActio
 import {DEFAULT_API_VERSION} from './authConstants'
 import {AuthStateType} from './authStateType'
 import {type AuthState, type AuthStoreState} from './authStore'
+import {setAuthError} from './utils'
 
 /**
  * @internal
@@ -21,7 +22,7 @@ export const refreshStampedToken = createInternalAction(
       distinctUntilChanged(),
       filter((authState) => authState.token.includes('-st')), // Ensure we only try to refresh stamped tokens
       switchMap((authState) =>
-        interval(10 * 60 * 1000).pipe(
+        interval(10 * 1000).pipe(
           takeWhile(() => state.get().authState.type === AuthStateType.LOGGED_IN),
           map(() => authState.token),
           distinctUntilChanged(),
@@ -60,7 +61,7 @@ export const refreshStampedToken = createInternalAction(
           storageArea?.setItem(storageKey, JSON.stringify({token: response.token}))
         },
         error: (error) => {
-          state.set('setRefreshStampedTokenError', {authState: {type: AuthStateType.ERROR, error}})
+          state.set('setRefreshStampedTokenError', setAuthError(error))
         },
       })
     }

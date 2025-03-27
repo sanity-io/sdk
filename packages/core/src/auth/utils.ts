@@ -1,6 +1,8 @@
 import {EMPTY, fromEvent, Observable} from 'rxjs'
 
 import {AUTH_CODE_PARAM, DEFAULT_BASE} from './authConstants'
+import {AuthStateType} from './authStateType'
+import {type AuthStoreState} from './authStore'
 
 export function getAuthCode(callbackUrl: string | undefined, locationHref: string): string | null {
   const loc = new URL(locationHref, DEFAULT_BASE)
@@ -88,3 +90,16 @@ export function getDefaultLocation(): string {
     return DEFAULT_BASE
   }
 }
+
+/**
+ * Sets the auth error state and removes the token from storage.
+ */
+export const setAuthError =
+  (error: unknown) =>
+  (prev: AuthStoreState): AuthStoreState => {
+    // TODO: Remove the token from storage in the future
+    return {
+      ...prev,
+      authState: {type: AuthStateType.ERROR, error},
+    }
+  }
