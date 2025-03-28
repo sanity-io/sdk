@@ -2,12 +2,8 @@ import {SanityEncoder} from '@sanity/mutate'
 import {type PatchMutation as SanityMutatePatchMutation} from '@sanity/mutate/_unstable_store'
 import {type PatchMutation, type PatchOperations, type SanityDocumentLike} from '@sanity/types'
 
+import {type DocumentHandle, type DocumentTypeHandle} from '../config/sanityConfig'
 import {getPublishedId} from '../utils/ids'
-import {
-  type DocumentHandle,
-  type DocumentResourceId,
-  type DocumentTypeHandle,
-} from './patchOperations'
 
 const isSanityMutatePatch = (value: unknown): value is SanityMutatePatchMutation => {
   if (typeof value !== 'object' || !value) return false
@@ -18,51 +14,40 @@ const isSanityMutatePatch = (value: unknown): value is SanityMutatePatchMutation
 }
 
 /** @beta */
-export interface CreateDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike> {
+export interface CreateDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike>
+  extends DocumentTypeHandle<TDocument> {
   type: 'document.create'
-  documentId?: string
-  resourceId?: DocumentResourceId
-  documentType: TDocument['_type']
 }
 
-// the unused `_TDocument` is primarily for typescript meta-programming to
-// capture and preserve the document type as best as possible
 /** @beta */
-export interface DeleteDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
+export interface DeleteDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike>
+  extends DocumentHandle<TDocument> {
   type: 'document.delete'
-  documentId: string
-  resourceId?: DocumentResourceId
 }
 
 /** @beta */
-export interface EditDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
+export interface EditDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike>
+  extends DocumentHandle<TDocument> {
   type: 'document.edit'
-  documentId: string
-  resourceId?: DocumentResourceId
   patches?: PatchOperations[]
 }
 
 /** @beta */
-export interface PublishDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
+export interface PublishDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike>
+  extends DocumentHandle<TDocument> {
   type: 'document.publish'
-  documentId: string
-  resourceId?: DocumentResourceId
 }
 
 /** @beta */
-export interface UnpublishDocumentAction<
-  _TDocument extends SanityDocumentLike = SanityDocumentLike,
-> {
+export interface UnpublishDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike>
+  extends DocumentHandle<TDocument> {
   type: 'document.unpublish'
-  documentId: string
-  resourceId?: DocumentResourceId
 }
 
 /** @beta */
-export interface DiscardDocumentAction<_TDocument extends SanityDocumentLike = SanityDocumentLike> {
+export interface DiscardDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike>
+  extends DocumentHandle<TDocument> {
   type: 'document.discard'
-  documentId: string
-  resourceId?: DocumentResourceId
 }
 
 /** @beta */
@@ -76,13 +61,12 @@ export type DocumentAction<TDocument extends SanityDocumentLike = SanityDocument
 
 /** @beta */
 export function createDocument<TDocument extends SanityDocumentLike>(
-  doc: DocumentTypeHandle<TDocument> | DocumentHandle<TDocument>,
+  doc: DocumentTypeHandle<TDocument>,
 ): CreateDocumentAction<TDocument> {
   return {
     type: 'document.create',
-    ...(doc._id && {documentId: doc._id}),
-    documentType: doc._type,
-    ...(doc.resourceId && {resourceId: doc.resourceId}),
+    ...doc,
+    ...(doc.documentId && {documentId: getPublishedId(doc.documentId)}),
   }
 }
 
@@ -92,29 +76,25 @@ export function deleteDocument<TDocument extends SanityDocumentLike>(
 ): DeleteDocumentAction<TDocument> {
   return {
     type: 'document.delete',
-    documentId: getPublishedId(doc._id),
-    ...(doc.resourceId && {resourceId: doc.resourceId}),
+    ...doc,
+    documentId: getPublishedId(doc.documentId),
   }
 }
 
 function convertSanityMutatePatch(
   sanityPatchMutation: SanityMutatePatchMutation,
-): EditDocumentAction {
+): EditDocumentAction['patches'] {
   const encoded = SanityEncoder.encode(sanityPatchMutation) as PatchMutation[]
-
-  return {
-    documentId: sanityPatchMutation.id,
-    type: 'document.edit',
-    patches: encoded.map((i) => {
-      const copy: PatchOperations = {...i.patch}
-      if ('id' in copy) delete copy.id
-      return copy
-    }),
-  }
+  return encoded.map((i) => {
+    const copy: PatchOperations = {...i.patch}
+    if ('id' in copy) delete copy.id
+    return copy
+  })
 }
 
 /** @beta */
 export function editDocument<TDocument extends SanityDocumentLike>(
+  doc: DocumentHandle<TDocument>,
   sanityMutatePatch: SanityMutatePatchMutation,
 ): EditDocumentAction<TDocument>
 /** @beta */
@@ -124,16 +104,24 @@ export function editDocument<TDocument extends SanityDocumentLike>(
 ): EditDocumentAction<TDocument>
 /** @beta */
 export function editDocument<TDocument extends SanityDocumentLike>(
-  doc: SanityMutatePatchMutation | DocumentHandle<TDocument>,
-  patches?: PatchOperations | PatchOperations[],
+  doc: DocumentHandle<TDocument>,
+  patches?: PatchOperations | PatchOperations[] | SanityMutatePatchMutation,
 ): EditDocumentAction<TDocument> {
-  if (isSanityMutatePatch(doc)) return convertSanityMutatePatch(doc)
+  if (isSanityMutatePatch(patches)) {
+    const converted = convertSanityMutatePatch(patches) ?? []
+    return {
+      ...doc,
+      type: 'document.edit',
+      documentId: getPublishedId(doc.documentId),
+      patches: converted,
+    }
+  }
 
   return {
+    ...doc,
     type: 'document.edit',
-    documentId: getPublishedId(doc._id),
+    documentId: getPublishedId(doc.documentId),
     ...(patches && {patches: Array.isArray(patches) ? patches : [patches]}),
-    ...(doc.resourceId && {resourceId: doc.resourceId}),
   }
 }
 
@@ -143,8 +131,8 @@ export function publishDocument<TDocument extends SanityDocumentLike>(
 ): PublishDocumentAction<TDocument> {
   return {
     type: 'document.publish',
-    documentId: getPublishedId(doc._id),
-    ...(doc.resourceId && {resourceId: doc.resourceId}),
+    ...doc,
+    documentId: getPublishedId(doc.documentId),
   }
 }
 
@@ -154,8 +142,8 @@ export function unpublishDocument<TDocument extends SanityDocumentLike>(
 ): UnpublishDocumentAction<TDocument> {
   return {
     type: 'document.unpublish',
-    documentId: getPublishedId(doc._id),
-    ...(doc.resourceId && {resourceId: doc.resourceId}),
+    ...doc,
+    documentId: getPublishedId(doc.documentId),
   }
 }
 
@@ -165,7 +153,7 @@ export function discardDocument<TDocument extends SanityDocumentLike>(
 ): DiscardDocumentAction<TDocument> {
   return {
     type: 'document.discard',
-    documentId: getPublishedId(doc._id),
-    ...(doc.resourceId && {resourceId: doc.resourceId}),
+    ...doc,
+    documentId: getPublishedId(doc.documentId),
   }
 }

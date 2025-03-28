@@ -1,6 +1,7 @@
 import {type ValidProjection} from './projectionStore'
 
 export const PROJECTION_TAG = 'sdk.projection'
+export const PROJECTION_PERSPECTIVE = 'drafts'
 
 export const STABLE_EMPTY_PROJECTION = {
   data: null,

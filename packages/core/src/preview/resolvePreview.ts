@@ -1,30 +1,20 @@
-import {type DocumentHandle} from '../document/patchOperations'
-import {createAction} from '../resources/createAction'
+import {filter, firstValueFrom} from 'rxjs'
+
+import {type DocumentHandle} from '../config/sanityConfig'
+import {bindActionByDataset} from '../store/createActionBinder'
 import {getPreviewState} from './getPreviewState'
-import {previewStore, type PreviewValue, type ValuePending} from './previewStore'
+import {previewStore} from './previewStore'
 
 /**
  * @beta
  */
-export interface ResolvePreviewOptions {
-  document: DocumentHandle
-}
+export type ResolvePreviewOptions = DocumentHandle
 
 /**
  * @beta
  */
-export const resolvePreview = createAction(previewStore, () => {
-  return function ({document}: ResolvePreviewOptions) {
-    const {getCurrent, subscribe} = getPreviewState(this, {document})
-
-    return new Promise<ValuePending<PreviewValue>>((resolve) => {
-      const unsubscribe = subscribe(() => {
-        const current = getCurrent()
-        if (current?.data) {
-          resolve(current)
-          unsubscribe()
-        }
-      })
-    })
-  }
-})
+export const resolvePreview = bindActionByDataset(
+  previewStore,
+  ({instance}, docHandle: ResolvePreviewOptions) =>
+    firstValueFrom(getPreviewState(instance, docHandle).observable.pipe(filter((i) => !!i.data))),
+)

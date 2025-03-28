@@ -1,144 +1,49 @@
-import {describe, it, type Mock} from 'vitest'
+import {type SanityDocumentLike} from '@sanity/types'
+import {of} from 'rxjs'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {createSanityInstance} from '../instance/sanityInstance'
-import {
-  createResourceState,
-  getOrCreateResource,
-  type InitializedResource,
-  type ResourceState,
-} from '../resources/createResource'
-import {insecureRandomId} from '../utils/ids'
-import {
-  projectionStore,
-  type ProjectionStoreState,
-  type ProjectionValuePending,
-} from './projectionStore'
+import {type DocumentHandle} from '../config/sanityConfig'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+import {type StateSource} from '../store/createStateSourceAction'
+import {getProjectionState} from './getProjectionState'
+import {type ProjectionValuePending, type ValidProjection} from './projectionStore'
 import {resolveProjection} from './resolveProjection'
 
-vi.mock('../utils/ids', async (importOriginal) => {
-  const util = await importOriginal<typeof import('../utils/ids')>()
-  return {...util, insecureRandomId: vi.fn(util.insecureRandomId)}
-})
-
-vi.mock('../resources/createResource', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../resources/createResource')>()
-  return {...original, getOrCreateResource: vi.fn()}
-})
+vi.mock('./getProjectionState')
 
 describe('resolveProjection', () => {
-  const instance = createSanityInstance({projectId: 'exampleProject', dataset: 'exampleDataset'})
-  const document = {_id: 'exampleId', _type: 'exampleType'}
-  const projectionString = '{title, description}'
-  const initialState: ProjectionStoreState = {
-    documentProjections: {},
-    lastLiveEventId: null,
-    subscriptions: {},
-    syncTags: {},
-    values: {},
-  }
-  let state: ResourceState<ProjectionStoreState>
+  let instance: SanityInstance
 
   beforeEach(() => {
-    state = createResourceState(initialState)
+    vi.resetAllMocks()
+    // Create a mock that returns the correct ProjectionValuePending type
+    vi.mocked(getProjectionState).mockReturnValue({
+      observable: of({
+        data: {title: 'test'},
+        isPending: false,
+      } as ProjectionValuePending<Record<string, unknown>>),
+    } as StateSource<ProjectionValuePending<Record<string, unknown>>>)
+
+    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
   })
 
-  it('subscribes and resolves when the projection value is non-null', async () => {
-    expect(state.get().subscriptions).toEqual({})
-    ;(insecureRandomId as Mock).mockImplementationOnce(() => 'pseudoRandomId')
-
-    const projectionPromise = resolveProjection(
-      {state, instance},
-      {document, projection: projectionString},
-    )
-    expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
-    expect(state.get().documentProjections).toEqual({exampleId: projectionString})
-
-    state.set('updateDifferentDocument', (prev) => ({
-      values: {
-        ...prev.values,
-        differentId: {data: {title: 'Different Document'}, isPending: false},
-      },
-    }))
-
-    expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
-
-    state.set('updateCorrectDocumentButNull', (prev) => ({
-      values: {...prev.values, exampleId: {data: null, isPending: true}},
-    }))
-
-    expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
-
-    state.set('updateCorrectDocument', (prev) => ({
-      values: {
-        ...prev.values,
-        exampleId: {
-          data: {title: 'Correct Document', description: 'Test'},
-          isPending: false,
-        },
-      },
-    }))
-
-    const projectionResult = await projectionPromise
-    expect(projectionResult).toEqual({
-      data: {title: 'Correct Document', description: 'Test'},
-      isPending: false,
-    })
-
-    // subscription is removed after
-    expect(state.get().subscriptions).toEqual({})
+  afterEach(() => {
+    instance.dispose()
   })
 
-  it('resolves with the next emitted state (not current state)', async () => {
-    const currentValue: ProjectionValuePending<Record<string, unknown>> = {
-      data: {title: 'Current Document', description: 'Test'},
-      isPending: false,
+  it('resolves a projection and returns the first emitted value with results', async () => {
+    const docHandle: DocumentHandle<SanityDocumentLike> = {
+      documentId: 'doc123',
+      documentType: 'movie',
     }
-    state.set('setInitialDocument', (prev) => ({
-      values: {...prev.values, exampleId: currentValue},
-    }))
-    vi.mocked(insecureRandomId).mockImplementationOnce(() => 'pseudoRandomId')
-    expect(state.get().subscriptions).toEqual({})
+    const projection = '{title}' as ValidProjection
 
-    const projectionPromise = resolveProjection(
-      {state, instance},
-      {document, projection: projectionString},
-    )
-    expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
+    const result = await resolveProjection(instance, {...docHandle, projection})
 
-    state.set('updateDifferentDocument', (prev) => ({
-      values: {
-        ...prev.values,
-        differentId: {data: {title: 'Different Document'}, isPending: false},
-      },
-    }))
-    expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
-
-    state.set('updateWithCurrentValue', (prev) => ({
-      values: {...prev.values, exampleId: currentValue},
-    }))
-    expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
-
-    state.set('updateWithNewValue', (prev) => ({
-      values: {
-        ...prev.values,
-        exampleId: {
-          data: {title: 'New Value', description: 'Updated'},
-          isPending: false,
-        },
-      },
-    }))
-    expect(state.get().subscriptions).toEqual({})
-
-    const projectionResult = await projectionPromise
-    expect(projectionResult).toEqual({
-      data: {title: 'New Value', description: 'Updated'},
+    expect(getProjectionState).toHaveBeenCalledWith(instance, {...docHandle, projection})
+    expect(result).toEqual({
+      data: {title: 'test'},
       isPending: false,
     })
-  })
-
-  it('calls getOrCreateResource if no state is provided', () => {
-    vi.mocked(getOrCreateResource).mockReturnValue({state} as InitializedResource<unknown>)
-    resolveProjection(instance, {document, projection: projectionString})
-    expect(getOrCreateResource).toHaveBeenCalledWith(instance, projectionStore)
   })
 })

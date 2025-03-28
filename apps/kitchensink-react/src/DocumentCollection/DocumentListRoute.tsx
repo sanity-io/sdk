@@ -19,8 +19,8 @@ export function DocumentListRoute(): JSX.Element {
       </Heading>
       <Box paddingY={5}>
         <DocumentListLayout>
-          {data.map((doc) => (
-            <DocumentPreview key={doc._id} document={doc} />
+          {data.map((docHandle) => (
+            <DocumentPreview key={docHandle.documentId} {...docHandle} />
           ))}
           <LoadMore hasMore={hasMore} isPending={isPending} onLoadMore={loadMore} />
         </DocumentListLayout>

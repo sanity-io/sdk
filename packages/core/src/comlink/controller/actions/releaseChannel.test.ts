@@ -1,13 +1,15 @@
+import {type ChannelInput, type ChannelInstance, type Controller} from '@sanity/comlink'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {config} from '../../../../test/fixtures'
-import {createSanityInstance} from '../../../instance/sanityInstance'
-import {type SanityInstance} from '../../../instance/types'
-import {getOrCreateResource} from '../../../resources/createResource'
-import {comlinkControllerStore} from '../comlinkControllerStore'
-import {getOrCreateChannel} from './getOrCreateChannel'
-import {getOrCreateController} from './getOrCreateController'
-import {releaseChannel} from './releaseChannel'
+import {type StoreAction} from '../../../store/createActionBinder'
+import {createSanityInstance, type SanityInstance} from '../../../store/createSanityInstance'
+import {} from '../../../store/createStateSourceAction'
+import {createStoreInstance, type StoreInstance} from '../../../store/createStoreInstance'
+import {type FrameMessage, type WindowMessage} from '../../types'
+import {type ComlinkControllerState, comlinkControllerStore} from '../comlinkControllerStore'
+import {getOrCreateChannel as unboundGetOrCreateChannel} from './getOrCreateChannel'
+import {getOrCreateController as unboundGetOrCreateController} from './getOrCreateController'
+import {releaseChannel as unboundReleaseChannel} from './releaseChannel'
 
 const channelConfig = {
   name: 'test',
@@ -16,11 +18,37 @@ const channelConfig = {
 
 describe('releaseChannel', () => {
   let instance: SanityInstance
+  let store: StoreInstance<ComlinkControllerState>
+
+  let getOrCreateChannel: (
+    inst: SanityInstance,
+    options: ChannelInput,
+  ) => ChannelInstance<FrameMessage, WindowMessage>
+  let getOrCreateController: (inst: SanityInstance, targetOrigin: string) => Controller
+  let releaseChannel: (inst: SanityInstance, channelName: string) => void
 
   beforeEach(() => {
-    instance = createSanityInstance(config)
+    instance = createSanityInstance({projectId: 'test-project-id', dataset: 'test-dataset'})
+    store = createStoreInstance(instance, comlinkControllerStore)
+
+    const bind =
+      <TParams extends unknown[], TReturn>(
+        action: StoreAction<ComlinkControllerState, TParams, TReturn>,
+      ) =>
+      (inst: SanityInstance, ...params: TParams) =>
+        action({instance: inst, state: store.state}, ...params)
+
+    getOrCreateChannel = bind(unboundGetOrCreateChannel)
+    getOrCreateController = bind(unboundGetOrCreateController)
+    releaseChannel = bind(unboundReleaseChannel)
+
     getOrCreateController(instance, 'https://test.sanity.dev')!
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    instance.dispose()
+    store.dispose()
   })
 
   it('should remove channel when released', () => {
@@ -28,7 +56,6 @@ describe('releaseChannel', () => {
     getOrCreateChannel(instance, channelConfig)
 
     // Get store state
-    const store = getOrCreateResource(instance, comlinkControllerStore)
     expect(store.state.get().channels.has('test')).toBe(true)
 
     // Release the channel
@@ -75,7 +102,6 @@ describe('releaseChannel', () => {
     expect(stopSpy).not.toHaveBeenCalled()
 
     // Verify refCount is 1
-    const store = getOrCreateResource(instance, comlinkControllerStore)
     const channelEntry = store.state.get().channels.get('test')
     expect(channelEntry?.refCount).toBe(1)
   })
@@ -89,7 +115,6 @@ describe('releaseChannel', () => {
     releaseChannel(instance, 'test')
     releaseChannel(instance, 'test')
 
-    const store = getOrCreateResource(instance, comlinkControllerStore)
     expect(store.state.get().channels.has('test')).toBe(false)
   })
 
@@ -104,7 +129,6 @@ describe('releaseChannel', () => {
     getOrCreateChannel(instance, channelConfig)
     getOrCreateChannel(instance, channelConfig)
 
-    const store = getOrCreateResource(instance, comlinkControllerStore)
     let channelEntry = store.state.get().channels.get('test')
 
     // Initial refCount should be 3

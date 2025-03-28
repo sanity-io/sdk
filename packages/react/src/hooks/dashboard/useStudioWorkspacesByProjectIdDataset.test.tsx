@@ -3,7 +3,7 @@ import {renderHook, waitFor} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
 import {useWindowConnection, type WindowConnection} from '../comlink/useWindowConnection'
-import {useStudioWorkspacesByResourceId} from './useStudioWorkspacesByResourceId'
+import {useStudioWorkspacesByProjectIdDataset} from './useStudioWorkspacesByProjectIdDataset'
 
 vi.mock('../comlink/useWindowConnection', () => ({
   useWindowConnection: vi.fn(),
@@ -72,13 +72,13 @@ describe('useStudioWorkspacesByResourceId', () => {
       } as unknown as WindowConnection<Message>
     })
 
-    const {result} = renderHook(() => useStudioWorkspacesByResourceId())
+    const {result} = renderHook(() => useStudioWorkspacesByProjectIdDataset())
 
     // Call onStatus with 'idle' to simulate not connected
     if (capturedOnStatus) capturedOnStatus('idle')
 
     expect(result.current).toEqual({
-      workspacesByResourceId: {},
+      workspacesByProjectIdAndDataset: {},
       error: null,
       isConnected: false,
     })
@@ -97,13 +97,13 @@ describe('useStudioWorkspacesByResourceId', () => {
       } as unknown as WindowConnection<Message>
     })
 
-    const {result} = renderHook(() => useStudioWorkspacesByResourceId())
+    const {result} = renderHook(() => useStudioWorkspacesByProjectIdDataset())
 
     // Call onStatus with 'connected' to simulate connected state
     if (capturedOnStatus) capturedOnStatus('connected')
 
     await waitFor(() => {
-      expect(result.current.workspacesByResourceId).toEqual({
+      expect(result.current.workspacesByProjectIdAndDataset).toEqual({
         'project1:dataset1': [
           {
             name: 'workspace1',
@@ -160,13 +160,13 @@ describe('useStudioWorkspacesByResourceId', () => {
       } as unknown as WindowConnection<Message>
     })
 
-    const {result} = renderHook(() => useStudioWorkspacesByResourceId())
+    const {result} = renderHook(() => useStudioWorkspacesByProjectIdDataset())
 
     // Call onStatus with 'connected' to simulate connected state
     if (capturedOnStatus) capturedOnStatus('connected')
 
     await waitFor(() => {
-      expect(result.current.workspacesByResourceId).toEqual({})
+      expect(result.current.workspacesByProjectIdAndDataset).toEqual({})
       expect(result.current.error).toBe('Failed to fetch workspaces')
       expect(result.current.isConnected).toBe(true)
     })
@@ -187,13 +187,13 @@ describe('useStudioWorkspacesByResourceId', () => {
       } as unknown as WindowConnection<Message>
     })
 
-    const {result} = renderHook(() => useStudioWorkspacesByResourceId())
+    const {result} = renderHook(() => useStudioWorkspacesByProjectIdDataset())
 
     // Call onStatus with 'connected' to simulate connected state
     if (capturedOnStatus) capturedOnStatus('connected')
 
     await waitFor(() => {
-      expect(result.current.workspacesByResourceId).toEqual({})
+      expect(result.current.workspacesByProjectIdAndDataset).toEqual({})
       expect(result.current.error).toBeNull()
       expect(result.current.isConnected).toBe(true)
     })
@@ -221,13 +221,13 @@ describe('useStudioWorkspacesByResourceId', () => {
       } as unknown as WindowConnection<Message>
     })
 
-    const {result} = renderHook(() => useStudioWorkspacesByResourceId())
+    const {result} = renderHook(() => useStudioWorkspacesByProjectIdDataset())
 
     // Call onStatus with 'connected' to simulate connected state
     if (capturedOnStatus) capturedOnStatus('connected')
 
     await waitFor(() => {
-      expect(result.current.workspacesByResourceId).toEqual({})
+      expect(result.current.workspacesByProjectIdAndDataset).toEqual({})
       expect(result.current.error).toBeNull()
       expect(result.current.isConnected).toBe(true)
     })
@@ -264,13 +264,13 @@ describe('useStudioWorkspacesByResourceId', () => {
       } as unknown as WindowConnection<Message>
     })
 
-    const {result} = renderHook(() => useStudioWorkspacesByResourceId())
+    const {result} = renderHook(() => useStudioWorkspacesByProjectIdDataset())
 
     // Call onStatus with 'connected' to simulate connected state
     if (capturedOnStatus) capturedOnStatus('connected')
 
     await waitFor(() => {
-      expect(result.current.workspacesByResourceId).toEqual({})
+      expect(result.current.workspacesByProjectIdAndDataset).toEqual({})
       expect(result.current.error).toBeNull()
       expect(result.current.isConnected).toBe(true)
     })

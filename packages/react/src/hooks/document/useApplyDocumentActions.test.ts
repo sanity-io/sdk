@@ -1,4 +1,4 @@
-import {applyDocumentActions, createDocument, type ResourceId} from '@sanity/sdk'
+import {applyDocumentActions} from '@sanity/sdk'
 import {describe, it} from 'vitest'
 
 import {createCallbackHook} from '../helpers/createCallbackHook'
@@ -12,14 +12,9 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
 })
 
 describe('useApplyDocumentActions', () => {
-  it('calls `createCallbackHook` with `applyDocumentActions`', async () => {
-    const {useApplyDocumentActions} = await import('./useApplyDocumentActions')
-    const resourceId: ResourceId = 'project1.dataset1'
+  it('calls `createCallbackHook` with `applyActions`', async () => {
     expect(createCallbackHook).not.toHaveBeenCalled()
-
-    expect(applyDocumentActions).not.toHaveBeenCalled()
-    const apply = useApplyDocumentActions(resourceId)
-    apply(createDocument({_type: 'author'}))
-    expect(applyDocumentActions).toHaveBeenCalledWith(createDocument({_type: 'author'}))
+    await import('./useApplyDocumentActions')
+    expect(createCallbackHook).toHaveBeenCalledWith(applyDocumentActions)
   })
 })

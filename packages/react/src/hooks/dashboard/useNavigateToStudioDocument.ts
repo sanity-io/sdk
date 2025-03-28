@@ -4,7 +4,7 @@ import {type DocumentHandle} from '@sanity/sdk'
 import {useCallback, useState} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
-import {useStudioWorkspacesByResourceId} from './useStudioWorkspacesByResourceId'
+import {useStudioWorkspacesByProjectIdDataset} from './useStudioWorkspacesByProjectIdDataset'
 
 interface NavigateToResourceMessage {
   type: 'dashboard/v1/bridge/navigate-to-resource'
@@ -66,8 +66,8 @@ interface NavigateToStudioResult {
 export function useNavigateToStudioDocument(
   documentHandle: DocumentHandle,
 ): NavigateToStudioResult {
-  const {workspacesByResourceId, isConnected: workspacesConnected} =
-    useStudioWorkspacesByResourceId()
+  const {workspacesByProjectIdAndDataset, isConnected: workspacesConnected} =
+    useStudioWorkspacesByProjectIdDataset()
   const [status, setStatus] = useState<Status>('idle')
   const {sendMessage} = useWindowConnection<NavigateToResourceMessage, never>({
     name: SDK_NODE_NAME,
@@ -76,28 +76,25 @@ export function useNavigateToStudioDocument(
   })
 
   const navigateToStudioDocument = useCallback(() => {
-    if (!workspacesConnected || status !== 'connected' || !documentHandle.resourceId) {
-      return
-    }
+    const {projectId, dataset} = documentHandle
 
-    // Extract projectId and dataset from the resourceId (current format: document:projectId.dataset:documentId)
-    const [, projectAndDataset] = documentHandle.resourceId.split(':')
-    const [projectId, dataset] = projectAndDataset.split('.')
-    if (!projectId || !dataset) {
+    if (!workspacesConnected || status !== 'connected' || !projectId || !dataset) {
       return
     }
 
     // Find the workspace for this document
-    const workspaces = workspacesByResourceId[`${projectId}:${dataset}`]
+    const workspaces = workspacesByProjectIdAndDataset[`${projectId}:${dataset}`]
     if (!workspaces?.length) {
       // eslint-disable-next-line no-console
-      console.warn('No workspace found for document', documentHandle.resourceId)
+      console.warn(
+        `No workspace found for document with projectId: ${projectId} and dataset: ${dataset}`,
+      )
       return
     }
 
     if (workspaces.length > 1) {
       // eslint-disable-next-line no-console
-      console.warn('Multiple workspaces found for document', documentHandle.resourceId)
+      console.warn('Multiple workspaces found for document', documentHandle)
       // eslint-disable-next-line no-console
       console.warn('Using the first one', workspaces[0])
     }
@@ -109,12 +106,12 @@ export function useNavigateToStudioDocument(
       data: {
         resourceId: workspace._ref,
         resourceType: 'studio',
-        path: `/intent/edit/id=${documentHandle._id};type=${documentHandle._type}`,
+        path: `/intent/edit/id=${documentHandle.documentId};type=${documentHandle.documentType}`,
       },
     }
 
     sendMessage(message.type, message.data)
-  }, [documentHandle, workspacesConnected, status, sendMessage, workspacesByResourceId])
+  }, [documentHandle, workspacesConnected, status, workspacesByProjectIdAndDataset, sendMessage])
 
   return {
     navigateToStudioDocument,

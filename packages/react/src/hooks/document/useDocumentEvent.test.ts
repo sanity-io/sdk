@@ -22,9 +22,8 @@ vi.mock('../context/useSanityInstance', () => ({
 
 const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 const docHandle: DocumentHandle = {
-  _id: 'doc1',
-  _type: 'book',
-  resourceId: 'document:p.d:doc1',
+  documentId: 'doc1',
+  documentType: 'book',
 }
 
 describe('useDocumentEvent hook', () => {

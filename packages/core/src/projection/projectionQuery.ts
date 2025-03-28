@@ -1,4 +1,4 @@
-import {hashString} from '../common/util'
+import {hashString} from '../utils/hashString'
 import {getDraftId, getPublishedId} from '../utils/ids'
 import {type ProjectionValuePending, type ValidProjection} from './projectionStore'
 import {validateProjection} from './util'

@@ -3,7 +3,6 @@ import {
   type DocumentHandle,
   editDocument,
   getDocumentState,
-  getResourceId,
   type JsonMatch,
   type JsonMatchPath,
   resolveDocument,
@@ -26,12 +25,18 @@ type Updater<TValue> = TValue | ((nextValue: TValue) => TValue)
  * Edit a nested value within a document
  *
  * @category Documents
- * @param doc - The document to be edited; either as a document handle or the document’s ID a string
+ * @param docHandle - The document to be edited, specified as a DocumentHandle
  * @param path - The path to the nested value to be edited
  * @returns A function to update the nested value. Accepts either a new value, or an updater function that exposes the previous value and returns a new value.
- * @example Update a document’s name by providing the new value directly
- * ```
- * const handle = { _id: 'documentId', _type: 'documentType' }
+ * @example Update a document's name by providing the new value directly
+ * ```tsx
+ * const handle = {
+ *   documentId: 'movie-123',
+ *   documentType: 'movie',
+ *   projectId: 'abc123',
+ *   dataset: 'production'
+ * }
+ *
  * const name = useDocument(handle, 'name')
  * const editName = useEditDocument(handle, 'name')
  *
@@ -45,8 +50,14 @@ type Updater<TValue> = TValue | ((nextValue: TValue) => TValue)
  * ```
  *
  * @example Update a count on a document by providing an updater function
- * ```
- * const handle = { _id: 'documentId', _type: 'documentType' }
+ * ```tsx
+ * const handle = {
+ *   documentId: 'counter-123',
+ *   documentType: 'counter',
+ *   projectId: 'abc123',
+ *   dataset: 'production'
+ * }
+ *
  * const count = useDocument(handle, 'count')
  * const editCount = useEditDocument(handle, 'count')
  *
@@ -68,7 +79,7 @@ export function useEditDocument<
   TDocument extends SanityDocument,
   TPath extends JsonMatchPath<TDocument>,
 >(
-  doc: DocumentHandle<TDocument>,
+  docHandle: DocumentHandle<TDocument>,
   path: TPath,
 ): (nextValue: Updater<JsonMatch<TDocument, TPath>>) => Promise<ActionsResult<TDocument>>
 
@@ -78,15 +89,20 @@ export function useEditDocument<
  *
  * ## useEditDocument(doc)
  * Edit an entire document
- * @param doc - The document to be edited; either as a document handle or the document’s ID a string. If you pass a `DocumentHandle` with a `resourceId` (in the format of `document:projectId.dataset:documentId`)
- * the document will be read from the specified Sanity project and dataset that is included in the handle. If no `resourceId` is provided, the default project and dataset from your `SanityApp` configuration will be used.
+ * @param docHandle - The document to be edited, specified as a DocumentHandle.
+ * The hook will automatically use the Sanity instance that matches the project and dataset specified in the handle.
  * @returns A function to update the document state. Accepts either a new document state, or an updater function that exposes the previous document state and returns the new document state.
  * @example
- * ```
- * const myDocumentHandle = { _id: 'documentId', _type: 'documentType' }
+ * ```tsx
+ * const myDocumentHandle = {
+ *   documentId: 'product-123',
+ *   documentType: 'product',
+ *   projectId: 'abc123',
+ *   dataset: 'production'
+ * }
  *
  * const myDocument = useDocument(myDocumentHandle)
- * const { title, price } = myDocument
+ * const { title, price } = myDocument ?? {}
  *
  * const editMyDocument = useEditDocument(myDocumentHandle)
  *
@@ -124,7 +140,7 @@ export function useEditDocument<
  *       <input
  *         name='salePrice'
  *         type='checkbox'
- *         checked={Object(myDocument).hasOwnProperty('salePrice')}
+ *         checked={myDocument && 'salePrice' in myDocument}
  *         onChange={handleSaleChange}
  *       />
  *     </form>
@@ -136,7 +152,7 @@ export function useEditDocument<
  * ```
  */
 export function useEditDocument<TDocument extends SanityDocument>(
-  doc: DocumentHandle<TDocument>,
+  docHandle: DocumentHandle<TDocument>,
 ): (nextValue: Updater<TDocument>) => Promise<ActionsResult<TDocument>>
 
 /**
@@ -148,30 +164,28 @@ export function useEditDocument<TDocument extends SanityDocument>(
  * When called without a `path` argument, the hook will return a function for updating the entire document.
  */
 export function useEditDocument(
-  doc: DocumentHandle,
+  docHandle: DocumentHandle,
   path?: string,
 ): (updater: Updater<unknown>) => Promise<ActionsResult> {
-  const resourceId = getResourceId(doc.resourceId)!
-  const documentId = doc._id
-  const instance = useSanityInstance(resourceId)
-  const apply = useApplyDocumentActions(resourceId)
+  const instance = useSanityInstance(docHandle)
+  const apply = useApplyDocumentActions()
   const isDocumentReady = useCallback(
-    () => getDocumentState(instance, documentId).getCurrent() !== undefined,
-    [instance, documentId],
+    () => getDocumentState(instance, docHandle).getCurrent() !== undefined,
+    [instance, docHandle],
   )
-  if (!isDocumentReady()) throw resolveDocument(instance, documentId)
+  if (!isDocumentReady()) throw resolveDocument(instance, docHandle)
 
   return (updater: Updater<unknown>) => {
     if (path) {
       const nextValue =
         typeof updater === 'function'
-          ? updater(getDocumentState(instance, documentId, path).getCurrent())
+          ? updater(getDocumentState(instance, docHandle, path).getCurrent())
           : updater
 
-      return apply(editDocument(doc, {set: {[path]: nextValue}}))
+      return apply(editDocument(docHandle, {set: {[path]: nextValue}}))
     }
 
-    const current = getDocumentState(instance, documentId).getCurrent()
+    const current = getDocumentState(instance, docHandle).getCurrent() as object | null | undefined
     const nextValue = typeof updater === 'function' ? updater(current) : updater
 
     if (typeof nextValue !== 'object' || !nextValue) {
@@ -183,11 +197,11 @@ export function useEditDocument(
     const allKeys = Object.keys({...current, ...nextValue})
     const editActions = allKeys
       .filter((key) => !ignoredKeys.includes(key))
-      .filter((key) => current?.[key] !== nextValue[key])
+      .filter((key) => current?.[key as keyof typeof current] !== nextValue[key])
       .map((key) =>
         key in nextValue
-          ? editDocument(doc, {set: {[key]: nextValue[key]}})
-          : editDocument(doc, {unset: [key]}),
+          ? editDocument(docHandle, {set: {[key]: nextValue[key]}})
+          : editDocument(docHandle, {unset: [key]}),
       )
 
     return apply(editActions)
