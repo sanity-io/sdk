@@ -1,19 +1,13 @@
-import {render} from '@testing-library/react'
+import {AuthStateType} from '@sanity/sdk'
+import {render, screen} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
-import {type ResourceProviderProps} from '../context/ResourceProvider'
 import {SanityApp} from './SanityApp'
+import {SDKProvider} from './SDKProvider'
 
-// Mock ResourceProvider to verify the nested structure
-vi.mock('../context/ResourceProvider', () => ({
-  ResourceProvider: ({children, fallback: _fallback, ...config}: ResourceProviderProps) => {
-    // Save the config in a data attribute for testing
-    return (
-      <div data-testid="resource-provider" data-config={JSON.stringify(config)}>
-        {children}
-      </div>
-    )
-  },
+// Mock SDKProvider to verify it's being used correctly
+vi.mock('./SDKProvider', () => ({
+  SDKProvider: vi.fn(() => <div data-testid="sdk-provider">SDKProvider</div>),
 }))
 
 // Mock useEffect to prevent redirect logic from running in tests
@@ -21,30 +15,66 @@ vi.mock('react', async () => {
   const actual = await vi.importActual('react')
   return {
     ...actual,
-    useEffect: vi.fn((fn) => fn()),
+    createSanityInstance: vi.fn(() => ({
+      config: {},
+      auth: {
+        getSession: vi.fn(),
+        signIn: vi.fn(),
+        signOut: vi.fn(),
+      },
+      identity: {
+        projectId: 'test-project',
+        dataset: 'test-dataset',
+      },
+      dispose: vi.fn(),
+    })),
   }
 })
 
+vi.mock('../hooks/auth/useAuthState', () => ({
+  useAuthState: () => ({
+    type: AuthStateType.LOGGED_IN,
+    session: {
+      user: {
+        id: 'test-user',
+      },
+    },
+  }),
+}))
+
 describe('SanityApp', () => {
-  it('renders a single ResourceProvider for a single config', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders SDKProvider with a single config', () => {
     const singleConfig = {
       projectId: 'test-project',
       dataset: 'production',
     }
 
-    const {getAllByTestId} = render(
+    render(
       <SanityApp config={singleConfig} fallback={<div>Loading...</div>}>
-        <div>Child content</div>
+        <div>Child Content</div>
       </SanityApp>,
     )
 
-    // Should render one ResourceProvider
-    const providers = getAllByTestId('resource-provider')
-    expect(providers).toHaveLength(1)
-    expect(JSON.parse(providers[0].getAttribute('data-config') || '{}')).toEqual(singleConfig)
+    // Check that the SDKProvider is rendered
+    expect(screen.getByTestId('sdk-provider')).toBeInTheDocument()
+
+    // Verify SDKProvider was called with the correct props
+    const sdkProviderCalls = vi.mocked(SDKProvider).mock.calls
+    expect(sdkProviderCalls.length).toBe(1)
+
+    const [props] = sdkProviderCalls[0]
+    const {config} = props
+
+    // Config is now passed directly as an object for single configs
+    expect(config).toEqual(singleConfig)
+    expect(props.fallback).toBeTruthy()
   })
 
-  it('renders nested ResourceProviders for multiple configs', () => {
+  it('renders SDKProvider with multiple configs in original order', () => {
     const multipleConfigs = [
       {
         projectId: 'project-1',
@@ -60,20 +90,24 @@ describe('SanityApp', () => {
       },
     ]
 
-    const {getAllByTestId} = render(
+    render(
       <SanityApp config={multipleConfigs} fallback={<div>Loading...</div>}>
-        <div>Child content</div>
+        <div>Child Content</div>
       </SanityApp>,
     )
 
-    // Should render three nested ResourceProviders
-    const providers = getAllByTestId('resource-provider')
-    expect(providers).toHaveLength(3)
+    // Check that the SDKProvider is rendered
+    expect(screen.getByTestId('sdk-provider')).toBeInTheDocument()
 
-    // Verify each provider has the correct config
-    expect(JSON.parse(providers[0].getAttribute('data-config') || '{}')).toEqual(multipleConfigs[0])
-    expect(JSON.parse(providers[1].getAttribute('data-config') || '{}')).toEqual(multipleConfigs[1])
-    expect(JSON.parse(providers[2].getAttribute('data-config') || '{}')).toEqual(multipleConfigs[2])
+    // Verify SDKProvider was called with the correct props
+    const sdkProviderCalls = vi.mocked(SDKProvider).mock.calls
+    expect(sdkProviderCalls.length).toBe(1)
+
+    const [props] = sdkProviderCalls[0]
+    const {config} = props
+
+    // Config should be passed directly to SDKProvider
+    expect(config).toEqual(multipleConfigs)
   })
 
   it('supports legacy sanityConfigs prop', () => {
@@ -88,19 +122,24 @@ describe('SanityApp', () => {
       },
     ]
 
-    const {getAllByTestId} = render(
+    render(
       // @ts-expect-error purposefully using the deprecated prop
       <SanityApp sanityConfigs={legacyConfigs} fallback={<div>Loading...</div>}>
-        <div>Child content</div>
+        <div>Child Content</div>
       </SanityApp>,
     )
 
-    // Should render two nested ResourceProviders
-    const providers = getAllByTestId('resource-provider')
-    expect(providers).toHaveLength(2)
+    // Check that the SDKProvider is rendered
+    expect(screen.getByTestId('sdk-provider')).toBeInTheDocument()
 
-    // Verify each provider has the correct config
-    expect(JSON.parse(providers[0].getAttribute('data-config') || '{}')).toEqual(legacyConfigs[0])
-    expect(JSON.parse(providers[1].getAttribute('data-config') || '{}')).toEqual(legacyConfigs[1])
+    // Verify SDKProvider was called with the correct props
+    const sdkProviderCalls = vi.mocked(SDKProvider).mock.calls
+    expect(sdkProviderCalls.length).toBe(1)
+
+    const [props] = sdkProviderCalls[0]
+    const {config} = props
+
+    // Config should be passed to SDKProvider in the same order
+    expect(config).toEqual(legacyConfigs)
   })
 })

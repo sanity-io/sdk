@@ -1,5 +1,6 @@
 export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBoundary'
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
+export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
 export {useAuthState} from '../hooks/auth/useAuthState'
 export {useAuthToken} from '../hooks/auth/useAuthToken'

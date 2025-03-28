@@ -81,7 +81,6 @@ export interface AuthStoreState {
 
 export const authStore = defineStore<AuthStoreState>({
   name: 'Auth',
-  isShared: true,
   getInitialState(instance) {
     const {
       apiHost,

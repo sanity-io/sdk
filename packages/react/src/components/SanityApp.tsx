@@ -1,7 +1,7 @@
 import {type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, useEffect} from 'react'
 
-import {ResourceProvider} from '../context/ResourceProvider'
+import {SDKProvider} from './SDKProvider'
 import {isInIframe, isLocalUrl} from './utils'
 
 /**
@@ -70,11 +70,14 @@ const CORE_URL = 'https://core.sanity.io'
  * }
  * ```
  */
-export function SanityApp({children, fallback, ...props}: SanityAppProps): ReactElement {
-  const _config = props.config ?? props.sanityConfigs ?? []
-  // reverse because we want the first config to be the default, but the
-  // ResourceProvider nesting makes the last one the default
-  const configs = (Array.isArray(_config) ? _config : [_config]).reverse()
+export function SanityApp({
+  children,
+  fallback,
+  config,
+  sanityConfigs,
+  ...props
+}: SanityAppProps): ReactElement {
+  const configs = config ?? sanityConfigs ?? []
 
   useEffect(() => {
     let timeout: NodeJS.Timeout | undefined
@@ -90,18 +93,9 @@ export function SanityApp({children, fallback, ...props}: SanityAppProps): React
     return () => clearTimeout(timeout)
   }, [])
 
-  // Create a nested structure of ResourceProviders for each config
-  const createNestedProviders = (index: number): ReactElement => {
-    if (index >= configs.length) {
-      return children as ReactElement
-    }
-
-    return (
-      <ResourceProvider {...configs[index]} fallback={fallback}>
-        {createNestedProviders(index + 1)}
-      </ResourceProvider>
-    )
-  }
-
-  return createNestedProviders(0)
+  return (
+    <SDKProvider {...props} fallback={fallback} config={configs}>
+      {children}
+    </SDKProvider>
+  )
 }

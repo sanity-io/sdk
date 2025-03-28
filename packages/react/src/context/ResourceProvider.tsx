@@ -11,7 +11,7 @@ const DEFAULT_FALLBACK = (
 
 /**
  * Props for the ResourceProvider component
- * @public
+ * @internal
  */
 export interface ResourceProviderProps extends SanityConfig {
   /**
@@ -25,7 +25,7 @@ export interface ResourceProviderProps extends SanityConfig {
 /**
  * Provides a Sanity instance to child components through React Context
  *
- * @public
+ * @internal
  *
  * @remarks
  * The ResourceProvider creates a hierarchical structure of Sanity instances:

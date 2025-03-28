@@ -6,48 +6,22 @@ This guide covers the key changes in the latest SDK version and how to update yo
 
 ### Key Changes Overview
 
-1. `<SDKProvider />` replaced by `<ResourceProvider />` for better resource management
+1. Improved component hierarchy with `<SanityApp />`, `<SDKProvider />`, and `<ResourceProvider />`
 2. Simplified document references with explicit `projectId` + `dataset` fields
 3. Standardized property names across the SDK
 4. Unified hook interfaces with the handle pattern
 
-### 1. Resource Provider Changes
+### 1. Provider Components
 
-We've replaced `<SDKProvider />` with the more flexible `<ResourceProvider />` component.
+We've updated our component hierarchy to provide better flexibility and control over resource management:
 
-> 💡 **Tip**: For most Sanity Dashboard applications, we recommend using the simpler `<SanityApp />` component. See our [Advanced Resource Management Guide](./Advanced-Resource-Management.md) for more complex use cases.
+- `<SanityApp />`: The recommended top-level component for most applications
+- `<SDKProvider />`: An intermediate component with authentication boundaries (for advanced use cases)
+- `<ResourceProvider />`: The foundational component for individual resource configurations
 
-#### Provider Migration
+#### Using `<SanityApp />`
 
-**Before:**
-
-```tsx
-<SDKProvider
-  sanityConfigs={[
-    {projectId: 'acb12345', dataset: 'production'},
-    {projectId: 'xyz12345', dataset: 'production'},
-  ]}
-  fallback={<>Loading…</>}
->
-  <App />
-</SDKProvider>
-```
-
-**After:**
-
-```tsx
-// This is only necessary if making something that's not a dashboard app
-// We recommend most users use the `<SanityApp />` component instead
-<ResourceProvider projectId="xyz12345" dataset="production">
-  <ResourceProvider projectId="acb12345" dataset="production">
-    <App />
-  </ResourceProvider>
-</ResourceProvider>
-```
-
-#### `<SanityApp />` Updates
-
-The `sanityConfigs` prop has been renamed to `config` and supports both single and multiple configurations:
+For most applications, particularly dashboard applications, we recommend using the `<SanityApp />` component:
 
 ```tsx
 // Single project configuration
@@ -69,6 +43,34 @@ The `sanityConfigs` prop has been renamed to `config` and supports both single a
   <App />
 </SanityApp>
 ```
+
+The `config` prop replaces the previous `sanityConfigs` prop and supports both single and multiple configurations. When providing multiple configurations, the first one in the array will be the default instance.
+
+#### For Advanced Use Cases
+
+For more complex applications that need finer control, you can use `<SDKProvider />` or `<ResourceProvider />` directly:
+
+```tsx
+// Using SDKProvider directly
+<SDKProvider
+  config={[
+    {projectId: 'abc12345', dataset: 'production'},
+    {projectId: 'xyz12345', dataset: 'production'},
+  ]}
+  fallback={<>Loading…</>}
+>
+  <App />
+</SDKProvider>
+
+// Using ResourceProvider for full control
+<ResourceProvider projectId="xyz12345" dataset="production">
+  <ResourceProvider projectId="abc12345" dataset="production">
+    <App />
+  </ResourceProvider>
+</ResourceProvider>
+```
+
+> 💡 **Tip**: See our [Advanced Resource Management Guide](../internal-guides/Advanced-Resource-Management.md) for more details on these components and when to use each one.
 
 ### 2. Document Handle Pattern
 
@@ -203,9 +205,10 @@ const datasets = useDatasets({projectId: 'abc12345'})
 
 1. Component Changes:
 
-   - `<SDKProvider />` → `<ResourceProvider />`
+   - `<SanityApp />` now uses `config` instead of `sanityConfigs`
+   - `<SDKProvider />` now uses `config` prop for multiple configurations
+   - `<ResourceProvider />` provides granular control for single configuration
    - `<SanityProvider />` removed
-   - `sanityConfigs` → `config` in `<SanityApp />`
 
 2. Property Renames:
 
@@ -229,10 +232,10 @@ const datasets = useDatasets({projectId: 'abc12345'})
 ### Core to Dashboard Namespace Changes (Internal)
 
 - All Core-related endpoints have been renamed to use the Dashboard namespace
-- `core/v1/events/favorite` -> `dashboard/v1/events/favorite/mutate`
-- `core/v1/events/history` -> `dashboard/v1/events/history`
-- `core/v1/bridge/navigate-to-resource` -> `dashboard/v1/bridge/navigate-to-resource`
-- `core/v1/bridge/context` -> `dashboard/v1/bridge/context`
+- `core/v1/events/favorite` → `dashboard/v1/events/favorite/mutate`
+- `core/v1/events/history` → `dashboard/v1/events/history`
+- `core/v1/bridge/navigate-to-resource` → `dashboard/v1/bridge/navigate-to-resource`
+- `core/v1/bridge/context` → `dashboard/v1/bridge/context`
 
 ### Hook Parameter Changes
 
