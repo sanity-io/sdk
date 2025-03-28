@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.22](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.21...sdk-v0.0.0-alpha.22) (2025-03-28)
+
+
+### Bug Fixes
+
+* **auth:** ensure that authStore is a true shared resource store ([#371](https://github.com/sanity-io/sdk/issues/371)) ([1709d95](https://github.com/sanity-io/sdk/commit/1709d95dd62082b5e46ae909e2531448ff979074))
+
 ## [0.0.0-alpha.21](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.20...sdk-v0.0.0-alpha.21) (2025-03-27)
 
 
