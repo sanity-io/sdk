@@ -157,6 +157,7 @@ export interface AuthStoreState {
 
 export const authStore = createResource<AuthStoreState>({
   name: 'Auth',
+  isShared: true,
   getInitialState(instance) {
     const {
       apiHost,
