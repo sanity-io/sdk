@@ -1,119 +1,48 @@
-import {describe, it, type Mock} from 'vitest'
+import {type SanityDocumentLike} from '@sanity/types'
+import {of} from 'rxjs'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {createSanityInstance} from '../instance/sanityInstance'
-import {
-  createResourceState,
-  getOrCreateResource,
-  type InitializedResource,
-  type ResourceState,
-} from '../resources/createResource'
-import {insecureRandomId} from '../utils/ids'
-import {
-  previewStore,
-  type PreviewStoreState,
-  type PreviewValue,
-  type ValuePending,
-} from './previewStore'
+import {type DocumentHandle} from '../config/sanityConfig'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+import {type StateSource} from '../store/createStateSourceAction'
+import {getPreviewState} from './getPreviewState'
+import {type PreviewValue, type ValuePending} from './previewStore'
 import {resolvePreview} from './resolvePreview'
 
-vi.mock('../utils/ids', async (importOriginal) => {
-  const util = await importOriginal<typeof import('../utils/ids')>()
-  return {...util, insecureRandomId: vi.fn(util.insecureRandomId)}
-})
-
-vi.mock('../resources/createResource', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../resources/createResource')>()
-  return {...original, getOrCreateResource: vi.fn()}
-})
+vi.mock('./getPreviewState')
 
 describe('resolvePreview', () => {
-  const instance = createSanityInstance({projectId: 'exampleProject', dataset: 'exampleDataset'})
-  const document = {_id: 'exampleId', _type: 'exampleType'}
-  const initialState: PreviewStoreState = {
-    documentTypes: {},
-    lastLiveEventId: null,
-    subscriptions: {},
-    syncTags: {},
-    values: {},
-  }
-  let state: ResourceState<PreviewStoreState>
+  let instance: SanityInstance
 
   beforeEach(() => {
-    state = createResourceState(initialState)
+    vi.resetAllMocks()
+    // Create a mock that returns the correct ValuePending type
+    vi.mocked(getPreviewState).mockReturnValue({
+      observable: of({
+        data: {title: 'test'},
+        isPending: false,
+      } as ValuePending<PreviewValue>),
+    } as StateSource<ValuePending<PreviewValue>>)
+
+    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
   })
 
-  it('subscribes and resolves when the preview value is non-null', async () => {
-    expect(state.get().subscriptions).toEqual({})
-    ;(insecureRandomId as Mock).mockImplementationOnce(() => 'pseudoRandomId')
-
-    const previewPromise = resolvePreview({state, instance}, {document})
-    expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
-
-    state.set('updateDifferentDocument', (prev) => ({
-      values: {
-        ...prev.values,
-        differentId: {data: {title: 'Different Document'}, isPending: false},
-      },
-    }))
-
-    expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
-
-    state.set('updateCorrectDocumentButNull', (prev) => ({
-      values: {...prev.values, exampleId: {data: null, isPending: true}},
-    }))
-
-    expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
-
-    state.set('updateCorrectDocument', (prev) => ({
-      values: {...prev.values, exampleId: {data: {title: 'Correct Document'}, isPending: false}},
-    }))
-
-    const preview = await previewPromise
-    expect(preview).toEqual({data: {title: 'Correct Document'}, isPending: false})
-
-    // subscription is removed after
-    expect(state.get().subscriptions).toEqual({})
+  afterEach(() => {
+    instance.dispose()
   })
 
-  it('resolves with the next emitted state (not current state)', async () => {
-    const currentValue: ValuePending<PreviewValue> = {
-      data: {title: 'Correct Document'},
-      isPending: false,
+  it('resolves a preview and returns the first emitted value with results', async () => {
+    const docHandle: DocumentHandle<SanityDocumentLike> = {
+      documentId: 'doc123',
+      documentType: 'movie',
     }
-    state.set('setInitialDocument', (prev) => ({
-      values: {...prev.values, exampleId: currentValue},
-    }))
-    vi.mocked(insecureRandomId).mockImplementationOnce(() => 'pseudoRandomId')
-    expect(state.get().subscriptions).toEqual({})
 
-    const previewPromise = resolvePreview({state, instance}, {document})
-    expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
+    const result = await resolvePreview(instance, docHandle)
 
-    state.set('updateDifferentDocument', (prev) => ({
-      values: {
-        ...prev.values,
-        differentId: {data: {title: 'Different Document'}, isPending: false},
-      },
-    }))
-    expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
-
-    state.set('updateWithCurrentValue', (prev) => ({
-      values: {...prev.values, exampleId: currentValue},
-    }))
-    expect(state.get().subscriptions).toEqual({exampleId: {pseudoRandomId: true}})
-
-    state.set('updateWithNewValue', (prev) => ({
-      values: {...prev.values, exampleId: {data: {title: 'New Value'}, isPending: false}},
-    }))
-    expect(state.get().subscriptions).toEqual({})
-
-    const preview = await previewPromise
-    expect(preview).toEqual({data: {title: 'New Value'}, isPending: false})
-  })
-
-  it('calls getOrCreateResource if no state is provided', () => {
-    vi.mocked(getOrCreateResource).mockReturnValue({state} as InitializedResource<unknown>)
-    resolvePreview(instance, {document})
-    expect(getOrCreateResource).toHaveBeenCalledWith(instance, previewStore)
+    expect(getPreviewState).toHaveBeenCalledWith(instance, docHandle)
+    expect(result).toEqual({
+      data: {title: 'test'},
+      isPending: false,
+    })
   })
 })

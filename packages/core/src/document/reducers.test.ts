@@ -50,7 +50,14 @@ describe('queueTransaction', () => {
 
     const transaction: QueuedTransaction = {
       transactionId: 'txn1',
-      actions: [{type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'bar'}}]}],
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'book',
+          patches: [{set: {foo: 'bar'}}],
+        },
+      ],
     }
 
     const newState = queueTransaction(initialState, transaction)
@@ -77,7 +84,14 @@ describe('removeQueuedTransaction', () => {
       queued: [
         {
           transactionId: 'txn1',
-          actions: [{type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'bar'}}]}],
+          actions: [
+            {
+              type: 'document.edit',
+              documentId: 'doc1',
+              documentType: 'book',
+              patches: [{set: {foo: 'bar'}}],
+            },
+          ],
         },
       ],
       applied: [],
@@ -123,13 +137,13 @@ describe('applyFirstQueuedTransaction', () => {
   })
 
   it('returns unchanged state if any required document is not yet loaded', () => {
-    // If a document’s local value is undefined, the reducer should do nothing.
+    // If a document's local value is undefined, the reducer should do nothing.
     const draftId = getDraftId('doc1')
     const state: SyncTransactionState = {
       queued: [
         {
           transactionId: 'txn2',
-          actions: [{type: 'document.discard', documentId: 'doc1'}],
+          actions: [{type: 'document.discard', documentId: 'doc1', documentType: 'book'}],
         },
       ],
       applied: [],
@@ -148,7 +162,7 @@ describe('applyFirstQueuedTransaction', () => {
       queued: [
         {
           transactionId: 'txn-missing-grants',
-          actions: [{type: 'document.discard', documentId: 'doc1'}],
+          actions: [{type: 'document.discard', documentId: 'doc1', documentType: 'book'}],
         },
       ],
       applied: [],
@@ -171,7 +185,7 @@ describe('applyFirstQueuedTransaction', () => {
       queued: [
         {
           transactionId: 'txn3',
-          actions: [{type: 'document.discard', documentId: 'doc1'}],
+          actions: [{type: 'document.discard', documentId: 'doc1', documentType: 'book'}],
         },
       ],
       applied: [],
@@ -188,7 +202,7 @@ describe('applyFirstQueuedTransaction', () => {
     expect(newState.queued).toHaveLength(0)
     // One applied transaction should have been added.
     expect(newState.applied).toHaveLength(1)
-    // For a discard action, the draft’s local value becomes null.
+    // For a discard action, the draft's local value becomes null.
     expect(newState.documentStates[draftId]?.local).toBeNull()
     // The published version remains unchanged.
     expect(newState.documentStates[pubId]?.local).toEqual(initialPub)
@@ -205,8 +219,18 @@ describe('batchAppliedTransactions', () => {
     const appliedTx: AppliedTransaction = {
       transactionId: 'txn4',
       actions: [
-        {type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'a'}}]},
-        {type: 'document.edit', documentId: 'doc1', patches: [{set: {bar: 'b'}}]},
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'book',
+          patches: [{set: {foo: 'a'}}],
+        },
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'book',
+          patches: [{set: {bar: 'b'}}],
+        },
       ],
       disableBatching: false,
       outgoingActions: [],
@@ -235,7 +259,14 @@ describe('batchAppliedTransactions', () => {
     const draftId = getDraftId('doc1')
     const appliedTx1: AppliedTransaction = {
       transactionId: 'txn5',
-      actions: [{type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'a'}}]}],
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'book',
+          patches: [{set: {foo: 'a'}}],
+        },
+      ],
       disableBatching: false,
       outgoingActions: [
         {
@@ -254,7 +285,14 @@ describe('batchAppliedTransactions', () => {
     }
     const appliedTx2: AppliedTransaction = {
       transactionId: 'txn6',
-      actions: [{type: 'document.edit', documentId: 'doc1', patches: [{set: {bar: 'b'}}]}],
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'book',
+          patches: [{set: {bar: 'b'}}],
+        },
+      ],
       disableBatching: false,
       outgoingActions: [
         {
@@ -287,7 +325,14 @@ describe('batchAppliedTransactions', () => {
     const draftId = getDraftId('docA')
     const appliedTx: AppliedTransaction = {
       transactionId: 'txn-disable',
-      actions: [{type: 'document.edit', documentId: 'docA', patches: [{set: {foo: 'a'}}]}],
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'docA',
+          documentType: 'book',
+          patches: [{set: {foo: 'a'}}],
+        },
+      ],
       disableBatching: true, // already set to true
       outgoingActions: [],
       outgoingMutations: [],
@@ -328,7 +373,14 @@ describe('transitionAppliedTransactionsToOutgoing', () => {
       applied: [
         {
           transactionId: 'txn7',
-          actions: [{type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'new'}}]}],
+          actions: [
+            {
+              type: 'document.edit',
+              documentId: 'doc1',
+              documentType: 'book',
+              patches: [{set: {foo: 'new'}}],
+            },
+          ],
           disableBatching: false,
           outgoingActions: [],
           outgoingMutations: [],
@@ -381,7 +433,14 @@ describe('cleanupOutgoingTransaction', () => {
       applied: [],
       outgoing: {
         transactionId: 'txn8',
-        actions: [{type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'x'}}]}],
+        actions: [
+          {
+            type: 'document.edit',
+            documentId: 'doc1',
+            documentType: 'book',
+            patches: [{set: {foo: 'x'}}],
+          },
+        ],
         disableBatching: false,
         batchedTransactionIds: ['txn8'],
         outgoingActions: [],
@@ -417,7 +476,12 @@ describe('revertOutgoingTransaction', () => {
         {
           transactionId: 'txn9',
           actions: [
-            {type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'reverted'}}]},
+            {
+              type: 'document.edit',
+              documentId: 'doc1',
+              documentType: 'book',
+              patches: [{set: {foo: 'reverted'}}],
+            },
           ],
           disableBatching: false,
           outgoingActions: [],
@@ -431,7 +495,14 @@ describe('revertOutgoingTransaction', () => {
       ],
       outgoing: {
         transactionId: 'txnOut',
-        actions: [{type: 'document.edit', documentId: 'doc1', patches: [{set: {foo: 'changed'}}]}],
+        actions: [
+          {
+            type: 'document.edit',
+            documentId: 'doc1',
+            documentType: 'book',
+            patches: [{set: {foo: 'changed'}}],
+          },
+        ],
         disableBatching: false,
         batchedTransactionIds: ['txnOut'],
         outgoingActions: [],

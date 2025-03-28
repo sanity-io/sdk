@@ -1,16 +1,33 @@
 import {type ListenEvent, type SanityDocument} from '@sanity/client'
 import {createDocumentLoaderFromClient} from '@sanity/mutate/_unstable_store'
-import {first, map, merge, Observable, partition, share, shareReplay, switchMap} from 'rxjs'
+import {
+  first,
+  map,
+  merge,
+  Observable,
+  partition,
+  share,
+  shareReplay,
+  Subject,
+  switchMap,
+  takeUntil,
+} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type SanityInstance} from '../instance/types'
+import {type SanityInstance} from '../store/createSanityInstance'
 
 const API_VERSION = 'vX'
 
-export function createSharedListener(
-  instance: SanityInstance,
-): Observable<ListenEvent<SanityDocument>> {
-  const events$ = getClientState(instance, {apiVersion: API_VERSION}).observable.pipe(
+export interface SharedListener {
+  events: Observable<ListenEvent<SanityDocument>>
+  dispose: () => void
+}
+
+export function createSharedListener(instance: SanityInstance): SharedListener {
+  const dispose$ = new Subject<void>()
+  const events$ = getClientState(instance, {
+    apiVersion: API_VERSION,
+  }).observable.pipe(
     switchMap((client) =>
       // TODO: it seems like the client.listen method is not emitting disconnected
       // events. this is important to ensure we have an up to date version of the
@@ -29,15 +46,20 @@ export function createSharedListener(
         },
       ),
     ),
+    takeUntil(dispose$),
     share(),
   )
 
   const [welcome$, mutation$] = partition(events$, (e) => e.type === 'welcome')
-  return merge(
-    // we replay the welcome event because that event kicks off fetching the document
-    welcome$.pipe(shareReplay(1)),
-    mutation$,
-  )
+
+  return {
+    events: merge(
+      // we replay the welcome event because that event kicks off fetching the document
+      welcome$.pipe(shareReplay(1)),
+      mutation$,
+    ),
+    dispose: () => dispose$.next(),
+  }
 }
 
 export function createFetchDocument(instance: SanityInstance) {

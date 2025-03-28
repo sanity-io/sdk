@@ -1,10 +1,12 @@
 import {
   getProjectState,
+  type ProjectHandle,
   resolveProject,
   type SanityInstance,
   type SanityProject,
   type StateSource,
 } from '@sanity/sdk'
+import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
@@ -29,7 +31,7 @@ type UseProject = {
    *  }
    * ```
    */
-  (projectId: string): SanityProject
+  (projectHandle?: ProjectHandle): SanityProject
 }
 
 /**
@@ -40,9 +42,10 @@ export const useProject: UseProject = createStateSourceHook({
   // remove `undefined` since we're suspending when that is the case
   getState: getProjectState as (
     instance: SanityInstance,
-    projectId: string,
+    projectHandle?: ProjectHandle,
   ) => StateSource<SanityProject>,
-  shouldSuspend: (instance, projectId) =>
-    getProjectState(instance, projectId).getCurrent() === undefined,
+  shouldSuspend: (instance, projectHandle) =>
+    getProjectState(instance, projectHandle).getCurrent() === undefined,
   suspender: resolveProject,
+  getConfig: identity,
 })

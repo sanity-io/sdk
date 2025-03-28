@@ -1,8 +1,8 @@
 import {of, Subscription, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {createSanityInstance} from '../instance/sanityInstance'
-import {createResourceState} from '../resources/createResource'
+import {createSanityInstance} from '../store/createSanityInstance'
+import {createStoreState} from '../store/createStoreState'
 import {AuthStateType} from './authStateType'
 import {type AuthState, authStore} from './authStore'
 import {refreshStampedToken} from './refreshStampedToken'
@@ -46,7 +46,7 @@ describe('refreshStampedToken', () => {
     }
 
     // Create the resource state
-    const state = createResourceState(initialState)
+    const state = createStoreState(initialState)
 
     // Call refreshStampedToken ONCE
     // Because TParams is [], createInternalAction will call the inner function for us
@@ -89,7 +89,7 @@ describe('refreshStampedToken', () => {
       token: 'sk-initial-token-st123',
       currentUser: null,
     }
-    const state = createResourceState(initialState)
+    const state = createStoreState(initialState)
 
     const subscription: Subscription = refreshStampedToken({state, instance})
 
@@ -119,7 +119,7 @@ describe('refreshStampedToken', () => {
       type: AuthStateType.LOGGED_OUT,
       isDestroyingSession: false,
     } as AuthState
-    const state = createResourceState(initialState)
+    const state = createStoreState(initialState)
 
     const subscription: Subscription = refreshStampedToken({state, instance})
 
@@ -156,7 +156,7 @@ describe('refreshStampedToken', () => {
       token: 'sk-nonstamped-token2', // Note: doesn't include '-st'
       currentUser: null,
     }
-    const state = createResourceState(initialState)
+    const state = createStoreState(initialState)
 
     const subscription: Subscription = refreshStampedToken({state, instance})
 

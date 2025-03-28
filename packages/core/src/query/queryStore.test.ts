@@ -3,10 +3,9 @@ import {delay, filter, firstValueFrom, Observable, of, Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
-import {createSanityInstance} from '../instance/sanityInstance'
-import {getOrCreateResource} from '../resources/createResource'
-import {type StateSource} from '../resources/createStateSourceAction'
-import {errorHandler, getQueryState, queryStore, resolveQuery} from './queryStore'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+import {type StateSource} from '../store/createStateSourceAction'
+import {getQueryState, resolveQuery} from './queryStore'
 
 vi.mock('./queryStoreConstants', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./queryStoreConstants')>()),
@@ -18,6 +17,7 @@ vi.mock('../client/clientStore', () => ({
 }))
 
 describe('queryStore', () => {
+  let instance: SanityInstance
   let liveEvents: Subject<LiveEvent>
   let fetch: SanityClient['observable']['fetch']
   // Mock data for testing
@@ -29,6 +29,8 @@ describe('queryStore', () => {
   }
 
   beforeEach(() => {
+    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+
     fetch = vi
       .fn()
       .mockReturnValue(
@@ -50,8 +52,11 @@ describe('queryStore', () => {
     } as StateSource<SanityClient>)
   })
 
+  afterEach(() => {
+    instance.dispose()
+  })
+
   it('initializes query state and cleans up after unsubscribe', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const query = '*[_type == "movie"]'
     const state = getQueryState(instance, query)
 
@@ -78,12 +83,9 @@ describe('queryStore', () => {
 
     // Verify state is cleared
     expect(state.getCurrent()).toBeUndefined()
-
-    instance.dispose()
   })
 
   it('maintains state when multiple subscribers exist', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const query = '*[_type == "movie"]'
     const state = getQueryState(instance, query)
 
@@ -117,12 +119,9 @@ describe('queryStore', () => {
 
     // Verify state is cleared after all subscribers are gone
     expect(state.getCurrent()).toBeUndefined()
-
-    instance.dispose()
   })
 
   it('resolveQuery works without affecting subscriber cleanup', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const query = '*[_type == "movie"]'
 
     const state = getQueryState(instance, query)
@@ -151,12 +150,9 @@ describe('queryStore', () => {
     unsubscribe()
     await new Promise((resolve) => setTimeout(resolve, 20))
     expect(state.getCurrent()).toBeUndefined()
-
-    instance.dispose()
   })
 
   it('handles abort signal in resolveQuery', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const query = '*[_type == "movie"]'
     const abortController = new AbortController()
 
@@ -171,8 +167,6 @@ describe('queryStore', () => {
 
     // Verify state is cleared after abort
     expect(getQueryState(instance, query).getCurrent()).toBeUndefined()
-
-    instance.dispose()
   })
 
   it('refetches query when receiving live event with matching sync tag', async () => {
@@ -190,7 +184,6 @@ describe('queryStore', () => {
       ),
     )
 
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const query = '*[_type == "movie"]'
     const state = getQueryState<{_id: string; _type: string; title: string}[]>(instance, query)
 
@@ -214,7 +207,6 @@ describe('queryStore', () => {
     expect(result).toContainEqual(updatedMovie)
 
     unsubscribe()
-    instance.dispose()
   })
 
   it('does not refetch for non-matching sync tags', async () => {
@@ -223,7 +215,6 @@ describe('queryStore', () => {
       of({result: mockData.movies, syncTags: mockSyncTags, ms: 0}).pipe(delay(0)),
     )
 
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const query = '*[_type == "movie"]'
     const state = getQueryState(instance, query)
 
@@ -243,7 +234,6 @@ describe('queryStore', () => {
     expect(fetch).toHaveBeenCalledTimes(1)
 
     unsubscribe()
-    instance.dispose()
   })
 
   it('handles multiple live events with same sync tag', async () => {
@@ -258,7 +248,6 @@ describe('queryStore', () => {
       of({result: mockData.movies, syncTags: mockSyncTags, ms: 0}).pipe(delay(0)),
     )
 
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const query = '*[_type == "movie"]'
     const state = getQueryState(instance, query)
 
@@ -284,11 +273,9 @@ describe('queryStore', () => {
     expect(vi.mocked(fetch).mock.calls[2][2]?.lastLiveEventId).toBe('event2')
 
     unsubscribe()
-    instance.dispose()
   })
 
   it('handles errors in query fetching', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const errorMessage = 'Query failed'
 
     // Override fetch to simulate error
@@ -306,29 +293,9 @@ describe('queryStore', () => {
     expect(() => state.getCurrent()).toThrow(errorMessage)
 
     unsubscribe()
-    instance.dispose()
-  })
-
-  it('throws an error if an errorHandler has been called', () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
-    const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, query)
-
-    const resource = getOrCreateResource(instance, queryStore)
-
-    // Create an error and call the error handler
-    const testError = new Error('Global error from error handler')
-    const handler = errorHandler({state: resource.state, instance})
-    handler(testError)
-
-    // Verify the error is thrown when accessing state
-    expect(() => state.getCurrent()).toThrow('Global error from error handler')
-
-    instance.dispose()
   })
 
   it('delays query state removal after unsubscribe', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const query = '*[_type == "movie"]'
     const state = getQueryState(instance, query)
     const unsubscribe = state.subscribe()
@@ -342,12 +309,9 @@ describe('queryStore', () => {
     // Wait for the cleanup delay and then state should be removed
     await new Promise((resolve) => setTimeout(resolve, 20))
     expect(state.getCurrent()).toBeUndefined()
-
-    instance.dispose()
   })
 
   it('preserves query state if a new subscriber subscribes before cleanup delay', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const query = '*[_type == "movie"]'
     const state = getQueryState(instance, query)
     const unsubscribe1 = state.subscribe()
@@ -374,6 +338,5 @@ describe('queryStore', () => {
       {_id: 'movie2', _type: 'movie', title: 'Movie 2'},
     ])
     unsubscribe2()
-    instance.dispose()
   })
 })

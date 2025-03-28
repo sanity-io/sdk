@@ -1,11 +1,14 @@
+import {type SanityInstance} from '@sanity/sdk'
 import {act, renderHook} from '@testing-library/react'
 import {describe, vi} from 'vitest'
 
 import {evaluateSync, parse} from '../_synchronous-groq-js.mjs'
+import {useSanityInstance} from '../context/useSanityInstance'
 import {useQuery} from '../query/useQuery'
 import {useDocuments} from './useDocuments'
 
 vi.mock('../query/useQuery')
+vi.mock('../context/useSanityInstance')
 
 describe('useDocuments', () => {
   beforeEach(() => {
@@ -72,6 +75,7 @@ describe('useDocuments', () => {
         isPending: false,
       }
     })
+    vi.mocked(useSanityInstance).mockReturnValue({config: {}} as SanityInstance)
   })
 
   it('should respect custom page size', () => {
@@ -84,7 +88,7 @@ describe('useDocuments', () => {
   it('should filter by document type', () => {
     const {result} = renderHook(() => useDocuments({filter: '_type == "movie"'}))
 
-    expect(result.current.data.every((doc) => doc._type === 'movie')).toBe(true)
+    expect(result.current.data.every((doc) => doc.documentType === 'movie')).toBe(true)
     expect(result.current.count).toBe(5) // 5 movies in the dataset
   })
 
@@ -93,7 +97,7 @@ describe('useDocuments', () => {
     const {result} = renderHook(() => useDocuments({search: 'inter'}))
 
     // Should match "Interstellar"
-    expect(result.current.data.some((doc) => doc._id === 'movie3')).toBe(true)
+    expect(result.current.data.some((doc) => doc.documentId === 'movie3')).toBe(true)
   })
 
   it('should apply ordering', () => {
@@ -105,7 +109,7 @@ describe('useDocuments', () => {
     )
 
     // First item should be the most recent movie (Interstellar, 2014)
-    expect(result.current.data[0]._id).toBe('movie3')
+    expect(result.current.data[0].documentId).toBe('movie3')
   })
 
   it('should load more data when loadMore is called', () => {
@@ -148,5 +152,28 @@ describe('useDocuments', () => {
     rerender({batchSize: 2, filter: '_type == "movie"'})
     // With the filter applied, the limit is reset to pageSize (i.e. 2)
     expect(result.current.data.length).toBe(2)
+  })
+
+  it('should add projectId and dataset to document handles', () => {
+    // Update the mock to include specific projectId and dataset
+    vi.mocked(useSanityInstance).mockReturnValue({
+      config: {
+        projectId: 'test-project',
+        dataset: 'test-dataset',
+      },
+    } as SanityInstance)
+
+    const {result} = renderHook(() => useDocuments({}))
+
+    // Check that the first document handle has the projectId and dataset
+    expect(result.current.data[0].projectId).toBe('test-project')
+    expect(result.current.data[0].dataset).toBe('test-dataset')
+
+    // Verify all document handles have these properties
+    expect(
+      result.current.data.every(
+        (doc) => doc.projectId === 'test-project' && doc.dataset === 'test-dataset',
+      ),
+    ).toBe(true)
   })
 })

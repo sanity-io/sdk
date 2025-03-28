@@ -1,9 +1,10 @@
-import {useStudioWorkspacesByResourceId} from '@sanity/sdk-react'
+import {useStudioWorkspacesByProjectIdDataset} from '@sanity/sdk-react'
 import {Card, Code, Container, Flex, Heading, Stack, Text} from '@sanity/ui'
 import {type ReactElement} from 'react'
 
 export function DashboardWorkspacesRoute(): ReactElement {
-  const {workspacesByResourceId, error, isConnected} = useStudioWorkspacesByResourceId()
+  const {workspacesByProjectIdAndDataset, error, isConnected} =
+    useStudioWorkspacesByProjectIdDataset()
 
   return (
     <Container width={2}>
@@ -26,7 +27,9 @@ export function DashboardWorkspacesRoute(): ReactElement {
 
             <Flex direction="column" gap={2}>
               <Text weight="semibold">Workspaces by Resource ID:</Text>
-              <Code language="json">{JSON.stringify(workspacesByResourceId, null, 2)}</Code>
+              <Code language="json">
+                {JSON.stringify(workspacesByProjectIdAndDataset, null, 2)}
+              </Code>
             </Flex>
           </Stack>
         </Card>

@@ -28,7 +28,7 @@ if (isInIframe()) {
 /**
  * @internal
  */
-interface AuthBoundaryProps extends LoginLayoutProps {
+export interface AuthBoundaryProps extends LoginLayoutProps {
   /**
    * Custom component to render the login screen.
    * Receives all login layout props. Defaults to {@link Login}.

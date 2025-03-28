@@ -1,8 +1,5 @@
-import {createLiveEventSubscriber} from '../common/createLiveEventSubscriber'
-import {type LiveEventAwareState} from '../common/types'
-import {createResource} from '../resources/createResource'
+import {defineStore} from '../store/defineStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
-import {PREVIEW_TAG} from './util'
 
 export interface PreviewQueryResult {
   _id: string
@@ -27,7 +24,7 @@ export interface PreviewMedia {
 /**
  * Represents the set of values displayed as a preview for a given Sanity document.
  * This includes a primary title, a secondary subtitle, an optional piece of media associated
- * with the document, and the document’s status.
+ * with the document, and the document's status.
  *
  * @public
  */
@@ -77,32 +74,21 @@ export type ValuePending<T> = {
 /**
  * @public
  */
-export interface PreviewStoreState extends LiveEventAwareState {
+export interface PreviewStoreState {
   values: {[TDocumentId in string]?: ValuePending<PreviewValue>}
-  documentTypes: {[TDocumentId in string]?: string}
   subscriptions: {[TDocumentId in string]?: {[TSubscriptionId in string]?: true}}
 }
 
-export const previewStore = createResource<PreviewStoreState>({
+export const previewStore = defineStore<PreviewStoreState>({
   name: 'Preview',
   getInitialState() {
     return {
-      documentTypes: {},
-      lastLiveEventId: null,
       subscriptions: {},
-      syncTags: {},
       values: {},
     }
   },
-  initialize() {
-    const subscribeToLiveAndSetLastLiveEventId =
-      createLiveEventSubscriber<PreviewStoreState>(PREVIEW_TAG)
-    const stateSubscriptionForBatches = subscribeToStateAndFetchBatches(this)
-    const liveSubscription = subscribeToLiveAndSetLastLiveEventId(this)
-
-    return () => {
-      stateSubscriptionForBatches.unsubscribe()
-      liveSubscription.unsubscribe()
-    }
+  initialize: (context) => {
+    const subscription = subscribeToStateAndFetchBatches(context)
+    return () => subscription.unsubscribe
   },
 })

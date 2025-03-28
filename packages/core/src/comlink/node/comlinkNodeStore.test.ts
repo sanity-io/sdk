@@ -1,10 +1,8 @@
 import {type Node} from '@sanity/comlink'
 import {beforeEach, describe, expect, it} from 'vitest'
 
-import {config} from '../../../test/fixtures'
-import {createSanityInstance} from '../../instance/sanityInstance'
-import {type SanityInstance} from '../../instance/types'
-import {createResourceState} from '../../resources/createResource'
+import {createSanityInstance, type SanityInstance} from '../../store/createSanityInstance'
+import {createStoreState} from '../../store/createStoreState'
 import {type FrameMessage, type WindowMessage} from '../types'
 import {comlinkNodeStore} from './comlinkNodeStore'
 
@@ -12,7 +10,7 @@ describe('nodeStore', () => {
   let instance: SanityInstance
 
   beforeEach(() => {
-    instance = createSanityInstance(config)
+    instance = createSanityInstance({projectId: 'test-project-id', dataset: 'test-dataset'})
   })
 
   it('should have correct initial state', () => {
@@ -34,13 +32,10 @@ describe('nodeStore', () => {
       refCount: 1,
     })
 
-    const cleanup = comlinkNodeStore.initialize!.call(
-      {
-        instance,
-        state: createResourceState(initialState),
-      },
+    const cleanup = comlinkNodeStore.initialize?.({
       instance,
-    )
+      state: createStoreState(initialState),
+    })
 
     cleanup?.()
     expect(mockNode.stop).toHaveBeenCalled()

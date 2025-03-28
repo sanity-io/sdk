@@ -3,8 +3,8 @@ import {of} from 'rxjs'
 import {describe, it} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
-import {createSanityInstance} from '../instance/sanityInstance'
-import {type StateSource} from '../resources/createStateSourceAction'
+import {createSanityInstance} from '../store/createSanityInstance'
+import {type StateSource} from '../store/createStateSourceAction'
 import {resolveDatasets} from './datasets'
 
 vi.mock('../client/clientStore')

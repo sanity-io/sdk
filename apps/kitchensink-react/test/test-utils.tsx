@@ -1,5 +1,4 @@
-import {createSanityInstance} from '@sanity/sdk'
-import {SanityProvider} from '@sanity/sdk-react'
+import {ResourceProvider} from '@sanity/sdk-react'
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {
@@ -17,10 +16,11 @@ import React, {type ReactElement} from 'react'
  */
 export const AppProviders = ({children}: {children: React.ReactNode}): ReactElement => {
   const theme = buildTheme()
-  const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
   return (
     <ThemeProvider theme={theme}>
-      <SanityProvider sanityInstances={[instance]}>{children}</SanityProvider>
+      <ResourceProvider projectId="test" dataset="test" fallback={null}>
+        {children}
+      </ResourceProvider>
     </ThemeProvider>
   )
 }

@@ -1,8 +1,8 @@
-import {fireEvent, screen, waitFor} from '@testing-library/react'
+import {fireEvent, render, screen, waitFor} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {AuthError} from './AuthError'
-import {renderWithWrappers} from './authTestHelpers'
 import {LoginError} from './LoginError'
 
 vi.mock('../../hooks/auth/useLogOut', () => ({
@@ -14,7 +14,11 @@ describe('LoginError', () => {
     const mockReset = vi.fn()
     const error = new AuthError(new Error('Test error'))
 
-    renderWithWrappers(<LoginError error={error} resetErrorBoundary={mockReset} />)
+    render(
+      <ResourceProvider fallback={null}>
+        <LoginError error={error} resetErrorBoundary={mockReset} />
+      </ResourceProvider>,
+    )
 
     expect(screen.getByText('Authentication Error')).toBeInTheDocument()
     const retryButton = screen.getByRole('button', {name: 'Retry'})
@@ -33,7 +37,11 @@ describe('LoginError', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     expect(() => {
-      renderWithWrappers(<LoginError error={nonAuthError} resetErrorBoundary={mockReset} />)
+      render(
+        <ResourceProvider fallback={null}>
+          <LoginError error={nonAuthError} resetErrorBoundary={mockReset} />
+        </ResourceProvider>,
+      )
     }).toThrow('Non-auth error')
 
     consoleErrorSpy.mockRestore() // Restore original console.error behavior

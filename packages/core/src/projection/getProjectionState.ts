@@ -1,9 +1,13 @@
 import {omit} from 'lodash-es'
 
-import {type DocumentHandle} from '../document/patchOperations'
-import {type SanityInstance} from '../instance/types'
-import {type ActionContext, createAction} from '../resources/createAction'
-import {createStateSourceAction, type StateSource} from '../resources/createStateSourceAction'
+import {type DocumentHandle} from '../config/sanityConfig'
+import {bindActionByDataset} from '../store/createActionBinder'
+import {type SanityInstance} from '../store/createSanityInstance'
+import {
+  createStateSourceAction,
+  type SelectorContext,
+  type StateSource,
+} from '../store/createStateSourceAction'
 import {getPublishedId, insecureRandomId} from '../utils/ids'
 import {
   projectionStore,
@@ -13,29 +17,22 @@ import {
 } from './projectionStore'
 import {STABLE_EMPTY_PROJECTION, validateProjection} from './util'
 
-interface GetProjectionStateOptions {
-  document: DocumentHandle
+interface GetProjectionStateOptions extends DocumentHandle {
   projection: ValidProjection
 }
-
-const getProjectStateSourceAction = createStateSourceAction(
-  projectionStore,
-  (state, {document}: GetProjectionStateOptions): ProjectionValuePending<object> =>
-    state.values[document._id] ?? STABLE_EMPTY_PROJECTION,
-)
 
 /**
  * @beta
  */
 export function getProjectionState<TResult extends object>(
-  instance: SanityInstance | ActionContext<ProjectionStoreState>,
+  instance: SanityInstance,
   options: GetProjectionStateOptions,
 ): StateSource<ProjectionValuePending<TResult>>
 /**
  * @beta
  */
 export function getProjectionState(
-  instance: SanityInstance | ActionContext<ProjectionStoreState>,
+  instance: SanityInstance,
   options: GetProjectionStateOptions,
 ): StateSource<ProjectionValuePending<Record<string, unknown>>>
 /**
@@ -50,56 +47,49 @@ export function getProjectionState(
 /**
  * @beta
  */
-export const _getProjectionState = createAction(projectionStore, ({state}) => {
-  return function ({
-    document,
-    projection,
-  }: GetProjectionStateOptions): StateSource<ProjectionValuePending<object>> {
-    const {_id} = document
-    const documentId = getPublishedId(_id)
-    const projectionState = getProjectStateSourceAction(this, {document, projection})
+export const _getProjectionState = bindActionByDataset(
+  projectionStore,
+  createStateSourceAction({
+    selector: (
+      {state}: SelectorContext<ProjectionStoreState>,
+      options: GetProjectionStateOptions,
+    ): ProjectionValuePending<object> =>
+      state.values[options.documentId] ?? STABLE_EMPTY_PROJECTION,
+    onSubscribe: ({state}, {projection, ...docHandle}: GetProjectionStateOptions) => {
+      const subscriptionId = insecureRandomId()
+      const documentId = getPublishedId(docHandle.documentId)
 
-    return {
-      ...projectionState,
-      subscribe: (subscriber) => {
-        const subscriptionId = insecureRandomId()
-
-        state.set('addSubscription', (prev) => ({
-          documentProjections: {
-            ...prev.documentProjections,
-            [documentId]: validateProjection(projection),
+      state.set('addSubscription', (prev) => ({
+        documentProjections: {
+          ...prev.documentProjections,
+          [documentId]: validateProjection(projection),
+        },
+        subscriptions: {
+          ...prev.subscriptions,
+          [documentId]: {
+            ...prev.subscriptions[documentId],
+            [subscriptionId]: true,
           },
-          subscriptions: {
-            ...prev.subscriptions,
-            [documentId]: {
-              ...prev.subscriptions[documentId],
-              [subscriptionId]: true,
-            },
-          },
-        }))
+        },
+      }))
 
-        const unsubscribe = projectionState.subscribe(subscriber)
+      return () => {
+        state.set('removeSubscription', (prev): Partial<ProjectionStoreState> => {
+          const documentSubscriptions = omit(prev.subscriptions[documentId], subscriptionId)
+          const hasSubscribers = !!Object.keys(documentSubscriptions).length
+          const prevValue = prev.values[documentId]
+          const projectionValue = prevValue?.data ? prevValue.data : null
 
-        return () => {
-          unsubscribe()
-
-          state.set('removeSubscription', (prev): Partial<ProjectionStoreState> => {
-            const documentSubscriptions = omit(prev.subscriptions[documentId], subscriptionId)
-            const hasSubscribers = !!Object.keys(documentSubscriptions).length
-            const prevValue = prev.values[documentId]
-            const projectionValue = prevValue?.data ? prevValue.data : null
-
-            return {
-              subscriptions: hasSubscribers
-                ? {...prev.subscriptions, [documentId]: documentSubscriptions}
-                : omit(prev.subscriptions, documentId),
-              values: hasSubscribers
-                ? prev.values
-                : {...prev.values, [documentId]: {data: projectionValue, isPending: false}},
-            }
-          })
-        }
-      },
-    }
-  }
-})
+          return {
+            subscriptions: hasSubscribers
+              ? {...prev.subscriptions, [documentId]: documentSubscriptions}
+              : omit(prev.subscriptions, documentId),
+            values: hasSubscribers
+              ? prev.values
+              : {...prev.values, [documentId]: {data: projectionValue, isPending: false}},
+          }
+        })
+      }
+    },
+  }),
+)

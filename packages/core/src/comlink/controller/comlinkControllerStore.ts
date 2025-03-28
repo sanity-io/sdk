@@ -1,8 +1,12 @@
 import {type ChannelInput, type ChannelInstance, type Controller} from '@sanity/comlink'
 
-import {createResource} from '../../resources/createResource'
+import {bindActionGlobally} from '../../store/createActionBinder'
+import {defineStore} from '../../store/defineStore'
 import {type FrameMessage, type WindowMessage} from '../types'
-import {destroyController} from './actions/destroyController'
+import {destroyController as unboundDestroyController} from './actions/destroyController'
+import {getOrCreateChannel as unboundGetOrCreateChannel} from './actions/getOrCreateChannel'
+import {getOrCreateController as unboundGetOrCreateController} from './actions/getOrCreateController'
+import {releaseChannel as unboundReleaseChannel} from './actions/releaseChannel'
 
 /**
  * Individual channel with its relevant options
@@ -26,7 +30,7 @@ export interface ComlinkControllerState {
   channels: Map<string, ChannelEntry>
 }
 
-export const comlinkControllerStore = createResource<ComlinkControllerState>({
+export const comlinkControllerStore = defineStore<ComlinkControllerState>({
   name: 'connectionStore',
   getInitialState: () => {
     const initialState = {
@@ -36,10 +40,45 @@ export const comlinkControllerStore = createResource<ComlinkControllerState>({
     }
     return initialState
   },
-  initialize() {
+  initialize({instance}) {
     return () => {
       // destroying controller also destroys channels
-      destroyController(this)
+      destroyController(instance)
     }
   },
 })
+
+/**
+ * Calls the destroy method on the controller and resets the controller state.
+ * @public
+ */
+export const destroyController = bindActionGlobally(
+  comlinkControllerStore,
+  unboundDestroyController,
+)
+
+/**
+ * Retrieve or create a channel to be used for communication between
+ * an application and the controller.
+ * @public
+ */
+export const getOrCreateChannel = bindActionGlobally(
+  comlinkControllerStore,
+  unboundGetOrCreateChannel,
+)
+
+/**
+ * Initializes or fetches a controller to handle communication
+ * between an application and iframes.
+ * @public
+ */
+export const getOrCreateController = bindActionGlobally(
+  comlinkControllerStore,
+  unboundGetOrCreateController,
+)
+
+/**
+ * Signals to the store that the consumer has stopped using the channel
+ * @public
+ */
+export const releaseChannel = bindActionGlobally(comlinkControllerStore, unboundReleaseChannel)

@@ -7,7 +7,7 @@ import {
   SDK_NODE_NAME,
   type StudioResource,
 } from '@sanity/message-protocol'
-import {type FrameMessage} from '@sanity/sdk'
+import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
 import {useCallback, useState} from 'react'
 
 import {useWindowConnection} from './useWindowConnection'
@@ -21,9 +21,7 @@ interface ManageFavorite {
   isConnected: boolean
 }
 
-interface UseManageFavoriteProps {
-  documentId: string
-  documentType: string
+interface UseManageFavoriteProps extends DocumentHandle {
   resourceId?: string
   resourceType: StudioResource['type'] | MediaResource['type'] | CanvasResource['type']
 }

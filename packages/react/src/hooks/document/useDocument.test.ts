@@ -46,7 +46,7 @@ describe('useDocument hook', () => {
       subscribe,
     } as unknown as StateSource<unknown>)
 
-    const {result} = renderHook(() => useDocument({_id: 'doc1', _type: 'book'}))
+    const {result} = renderHook(() => useDocument({documentId: 'doc1', documentType: 'book'}))
 
     expect(result.current).toEqual(doc)
     expect(getCurrent).toHaveBeenCalled()
@@ -69,7 +69,7 @@ describe('useDocument hook', () => {
     // Render the hook and capture the thrown promise.
     const {result} = renderHook(() => {
       try {
-        return useDocument({_id: 'doc1', _type: 'book'})
+        return useDocument({documentId: 'doc1', documentType: 'book'})
       } catch (e) {
         return e
       }
