@@ -15,7 +15,6 @@
   "dependencies": {
     "@paramour/css": "1.0.0-rc.2",
     "@sanity/icons": "^3.7.0",
-    "@sanity/mutate": "^0.12.3",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
     "@sanity/types": "^3.79.0",
