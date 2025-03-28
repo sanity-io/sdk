@@ -1,8 +1,5 @@
-import {createLiveEventSubscriber} from '../common/createLiveEventSubscriber'
-import {type LiveEventAwareState} from '../common/types'
-import {createResource} from '../resources/createResource'
+import {defineStore} from '../store/defineStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
-import {PROJECTION_TAG} from './util'
 
 /**
  * @beta
@@ -24,32 +21,23 @@ export interface ProjectionValuePending<TValue extends object> {
   isPending: boolean
 }
 
-export interface ProjectionStoreState<TValue extends object = object> extends LiveEventAwareState {
+export interface ProjectionStoreState<TValue extends object = object> {
   values: {[TDocumentId in string]?: ProjectionValuePending<TValue>}
   documentProjections: {[TDocumentId in string]?: ValidProjection}
   subscriptions: {[TDocumentId in string]?: {[TSubscriptionId in string]?: true}}
 }
 
-export const projectionStore = createResource<ProjectionStoreState>({
+export const projectionStore = defineStore<ProjectionStoreState>({
   name: 'Projection',
   getInitialState() {
     return {
       values: {},
       documentProjections: {},
       subscriptions: {},
-      syncTags: {},
-      lastLiveEventId: null,
     }
   },
-  initialize() {
-    const subscribeToLiveAndSetLastLiveEventId =
-      createLiveEventSubscriber<ProjectionStoreState>(PROJECTION_TAG)
-    const liveSubscription = subscribeToLiveAndSetLastLiveEventId(this)
-    const batchSubscription = subscribeToStateAndFetchBatches(this)
-
-    return () => {
-      liveSubscription.unsubscribe()
-      batchSubscription.unsubscribe()
-    }
+  initialize(context) {
+    const batchSubscription = subscribeToStateAndFetchBatches(context)
+    return () => batchSubscription.unsubscribe()
   },
 })

@@ -1,10 +1,12 @@
+import {NEVER} from 'rxjs'
 import {beforeEach, describe, it} from 'vitest'
 
-import {createSanityInstance} from '../instance/sanityInstance'
-import {createResourceState} from '../resources/createResource'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {AuthStateType} from './authStateType'
-import {authStore} from './authStore'
+import {getAuthState} from './authStore'
 import {handleAuthCallback} from './handleAuthCallback'
+import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
+import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
 import {getAuthCode, getTokenFromStorage} from './utils'
 
 vi.mock('./utils', async (importOriginal) => {
@@ -12,20 +14,31 @@ vi.mock('./utils', async (importOriginal) => {
   return {...original, getTokenFromStorage: vi.fn(), getAuthCode: vi.fn()}
 })
 
-describe('handleAuthCallback', () => {
+vi.mock('./subscribeToStateAndFetchCurrentUser')
+vi.mock('./subscribeToStorageEventsAndSetToken')
+
+let instance: SanityInstance | undefined
+
+describe('handleCallback', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(subscribeToStateAndFetchCurrentUser).mockImplementation(() => NEVER.subscribe())
+    vi.mocked(subscribeToStorageEventsAndSetToken).mockImplementation(() => NEVER.subscribe())
+  })
+
+  afterEach(() => {
+    instance?.dispose()
   })
 
   it('trades the auth code for a token, sets the state to logged in, and sets the token in storage', async () => {
-    const mockRequest = vi.fn().mockResolvedValue({token: 'new-token'})
-    const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
+    const request = vi.fn().mockResolvedValue({token: 'new-token'})
+    const clientFactory = vi.fn().mockReturnValue({request})
     const setItem = vi.fn()
     vi.mocked(getTokenFromStorage).mockReturnValue(null)
     const authCode = 'auth-code'
     vi.mocked(getAuthCode).mockReturnValue(authCode)
 
-    const instance = createSanityInstance({
+    instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
       auth: {
@@ -34,15 +47,16 @@ describe('handleAuthCallback', () => {
       },
     })
 
-    const state = createResourceState(authStore.getInitialState(instance))
-    expect(state.get()).toMatchObject({authState: {isExchangingToken: false}})
+    const authState = getAuthState(instance)
+
+    expect(authState.getCurrent()).toMatchObject({isExchangingToken: false})
 
     const resultPromise = handleAuthCallback(
-      {instance, state},
+      instance,
       'https://example.com/callback?foo=bar#withSid=code',
     )
 
-    expect(state.get()).toMatchObject({authState: {isExchangingToken: true}})
+    expect(authState.getCurrent()).toMatchObject({isExchangingToken: true})
     const result = await resultPromise
 
     expect(result).toBe('https://example.com/callback?foo=bar')
@@ -51,13 +65,13 @@ describe('handleAuthCallback', () => {
       requestTagPrefix: 'sanity.sdk.auth',
       useProjectHostname: false,
     })
-    expect(mockRequest).toHaveBeenLastCalledWith({
+    expect(request).toHaveBeenLastCalledWith({
       method: 'GET',
       query: {sid: authCode},
       tag: 'fetch-token',
       uri: '/auth/fetch',
     })
-    expect(setItem).toHaveBeenCalledWith(state.get().options.storageKey, '{"token":"new-token"}')
+    expect(setItem).toHaveBeenCalledWith('__sanity_auth_token', '{"token":"new-token"}')
   })
 
   it('returns early if there is a provided token', async () => {
@@ -68,7 +82,7 @@ describe('handleAuthCallback', () => {
     const authCode = 'auth-code'
     vi.mocked(getAuthCode).mockReturnValue(authCode)
 
-    const instance = createSanityInstance({
+    instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
       auth: {
@@ -78,9 +92,8 @@ describe('handleAuthCallback', () => {
       },
     })
 
-    const state = createResourceState(authStore.getInitialState(instance))
     const result = await handleAuthCallback(
-      {instance, state},
+      instance,
       'https://example.com/callback?foo=bar#withSid=code',
     )
 
@@ -90,37 +103,58 @@ describe('handleAuthCallback', () => {
   })
 
   it('returns early if already exchanging the the token', async () => {
-    const clientFactory = vi.fn()
+    let resolveRequest!: (value: {token: string; label: string}) => void
+    const requestPromise = new Promise<{token: string; label: string}>((resolve) => {
+      resolveRequest = resolve
+    })
+    vi.mocked(getAuthCode).mockReturnValue('code')
+    const request = vi.fn().mockReturnValue(requestPromise)
+    const clientFactory = vi.fn().mockReturnValue({request})
     const setItem = vi.fn()
 
-    const instance = createSanityInstance({
+    instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
       auth: {
         clientFactory,
-        storageArea: {setItem} as unknown as Storage,
+        storageArea: {setItem: setItem as Storage['setItem']} as Storage,
       },
     })
 
-    const state = createResourceState(authStore.getInitialState(instance))
-    state.set('setAlreadyExchanging', {
-      authState: {type: AuthStateType.LOGGING_IN, isExchangingToken: true},
-    })
-    const result = await handleAuthCallback(
-      {instance, state},
-      'https://example.com/callback?foo=bar#withSid=code',
-    )
+    const authState = getAuthState(instance)
+    expect(authState.getCurrent()).toMatchObject({type: AuthStateType.LOGGING_IN})
 
-    expect(result).toBe(false)
+    const locationHref = 'https://example.com/callback?foo=bar#withSid=code'
+    const originalResultPromise = handleAuthCallback(instance, locationHref)
+
+    expect(authState.getCurrent()).toMatchObject({
+      type: AuthStateType.LOGGING_IN,
+      isExchangingToken: true,
+    })
+
+    // ensures mock calls are reset to zero
+    clientFactory.mockClear()
+    setItem.mockClear()
+
+    // notice how this resolves first
+    const earlyResult = await handleAuthCallback(instance, locationHref)
+    expect(earlyResult).toBe(false)
+
     expect(clientFactory).not.toHaveBeenCalled()
     expect(setItem).not.toHaveBeenCalled()
+
+    // this will resolve
+    resolveRequest({token: 'token', label: 'label'})
+    expect(await originalResultPromise).toBe('https://example.com/callback?foo=bar')
+
+    // expect(result).toBe(false)
   })
 
   it('returns early if there is no auth code present', async () => {
     const clientFactory = vi.fn()
     const setItem = vi.fn()
 
-    const instance = createSanityInstance({
+    instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
       auth: {
@@ -130,9 +164,8 @@ describe('handleAuthCallback', () => {
     })
     vi.mocked(getAuthCode).mockReturnValue(null)
 
-    const state = createResourceState(authStore.getInitialState(instance))
     const result = await handleAuthCallback(
-      {instance, state},
+      instance,
       'https://example.com/callback?foo=bar#withSid=code',
     )
 
@@ -150,7 +183,7 @@ describe('handleAuthCallback', () => {
     const authCode = 'auth-code'
     vi.mocked(getAuthCode).mockReturnValue(authCode)
 
-    const instance = createSanityInstance({
+    instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
       auth: {
@@ -159,14 +192,14 @@ describe('handleAuthCallback', () => {
       },
     })
 
-    const state = createResourceState(authStore.getInitialState(instance))
+    const authState = getAuthState(instance)
     const result = await handleAuthCallback(
-      {instance, state},
+      instance,
       'https://example.com/callback?foo=bar#withSid=code',
     )
 
     expect(result).toBe(false)
-    expect(state.get()).toMatchObject({authState: {type: AuthStateType.ERROR, error}})
+    expect(authState.getCurrent()).toMatchObject({type: AuthStateType.ERROR, error})
 
     expect(clientFactory).toHaveBeenCalledWith({
       apiVersion: '2021-06-07',

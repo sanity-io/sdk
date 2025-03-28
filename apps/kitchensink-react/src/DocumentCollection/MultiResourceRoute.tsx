@@ -34,15 +34,17 @@ export function MultiResourceRoute(): JSX.Element {
     }[]
   }
   const doc: DocumentHandle<Author> = {
-    _type: 'author',
-    _id: 'db06bc9e-4608-465a-9551-a10cef478037',
-    resourceId: 'document:ppsg7ml5.test:db06bc9e-4608-465a-9551-a10cef478037',
+    documentType: 'author',
+    documentId: 'db06bc9e-4608-465a-9551-a10cef478037',
+    projectId: 'ppsg7ml5',
+    dataset: 'test',
   }
 
   const doc2: DocumentHandle<Dog> = {
-    _type: 'dog',
-    _id: 'acc11e96-1a01-4907-bd0e-e8347217cf2f',
-    resourceId: 'document:ezwd8xes.production:acc11e96-1a01-4907-bd0e-e8347217cf2f',
+    documentType: 'dog',
+    documentId: 'acc11e96-1a01-4907-bd0e-e8347217cf2f',
+    projectId: 'ezwd8xes',
+    dataset: 'production',
   }
 
   const setAuthorName = useEditDocument(doc, 'name')

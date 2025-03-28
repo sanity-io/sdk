@@ -1,17 +1,26 @@
 import {type SanityClient} from '@sanity/client'
 import {of} from 'rxjs'
-import {describe, it} from 'vitest'
+import {afterEach, beforeEach, describe, it} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
-import {createSanityInstance} from '../instance/sanityInstance'
-import {type StateSource} from '../resources/createStateSourceAction'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+import {type StateSource} from '../store/createStateSourceAction'
 import {resolveProjects} from './projects'
 
 vi.mock('../client/clientStore')
 
 describe('projects', () => {
+  let instance: SanityInstance
+
+  beforeEach(() => {
+    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  })
+
+  afterEach(() => {
+    instance.dispose()
+  })
+
   it('calls the `client.observable.projects.list` method on the client and returns the result', async () => {
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
     const projects = [{id: 'a'}, {id: 'b'}]
     const list = vi.fn().mockReturnValue(of(projects))
 

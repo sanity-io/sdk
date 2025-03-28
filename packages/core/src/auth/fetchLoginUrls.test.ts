@@ -1,24 +1,32 @@
-import {createSanityInstance} from '../instance/sanityInstance'
-import {createResourceState} from '../resources/createResource'
-import {authStore} from './authStore'
+import {type AuthProvider} from '../config/authConfig'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {fetchLoginUrls} from './fetchLoginUrls'
+
+let instance: SanityInstance | undefined
+
+beforeEach(() => {
+  vi.resetAllMocks()
+})
+
+afterEach(() => {
+  instance?.dispose()
+})
 
 describe('fetchLoginUrls', () => {
   it('returns providers with updated URLs', async () => {
-    const mockRequest = vi.fn().mockResolvedValue({
+    const request = vi.fn().mockResolvedValue({
       providers: [
-        {title: 'Provider A', url: 'https://auth.example.com/a'},
-        {title: 'Provider B', url: 'https://auth.example.com/b'},
-      ],
+        {title: 'Provider A', name: 'a', url: 'https://auth.example.com/a'},
+        {title: 'Provider B', name: 'b', url: 'https://auth.example.com/b'},
+      ] satisfies AuthProvider[],
     })
-    const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
-    const instance = createSanityInstance({
+    const clientFactory = vi.fn().mockReturnValue({request})
+    instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
       auth: {clientFactory},
     })
-    const state = createResourceState(authStore.getInitialState(instance))
-    const providers = await fetchLoginUrls({instance, state})
+    const providers = await fetchLoginUrls(instance)
 
     expect(providers.length).toBe(2)
     expect(providers[0].url).toContain('withSid=true')
@@ -26,36 +34,37 @@ describe('fetchLoginUrls', () => {
   })
 
   it('caches the providers and early returns', async () => {
-    const clientFactory = vi.fn()
-    const instance = createSanityInstance({
+    const provider: AuthProvider = {
+      name: 'cached-provided',
+      title: 'cached provider',
+      url: 'https://auth.example.com',
+    }
+    const request = vi.fn().mockResolvedValue({providers: [provider]})
+    const clientFactory = vi.fn().mockReturnValue({request})
+    instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
       auth: {clientFactory},
     })
-    const state = createResourceState(authStore.getInitialState(instance))
 
-    const provider = {
-      name: 'cached-provided',
-      title: 'cached provider',
-      url: 'https://auth.example.com#withSid=true',
-    }
-    state.set('setInitialProviders', {providers: [provider]})
-
-    const providers = await fetchLoginUrls({instance, state})
+    const providers = await fetchLoginUrls(instance)
 
     expect(providers.length).toBe(1)
-    expect(providers[0].url).toContain('https://auth.example.com#withSid=true')
+    expect(providers[0].url.startsWith(provider.url)).toBe(true)
+
+    expect(await fetchLoginUrls(instance)).toBe(providers)
+    expect(request).toHaveBeenCalledOnce()
   })
 
   it('handles providers as a static array and merges/replaces accordingly', async () => {
-    const mockRequest = vi.fn().mockResolvedValue({
+    const request = vi.fn().mockResolvedValue({
       providers: [
-        {title: 'Provider A', name: 'provider-a', url: 'https://auth.example.com/a'},
-        {title: 'Provider B', name: 'provider-b', url: 'https://auth.example.com/b'},
+        {title: 'Provider A', name: 'a', url: 'https://auth.example.com/a'},
+        {title: 'Provider B', name: 'b', url: 'https://auth.example.com/b'},
       ],
     })
-    const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
-    const instance = createSanityInstance({
+    const clientFactory = vi.fn().mockReturnValue({request})
+    instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
       auth: {
@@ -70,8 +79,7 @@ describe('fetchLoginUrls', () => {
         ],
       },
     })
-    const state = createResourceState(authStore.getInitialState(instance))
-    const providers = await fetchLoginUrls({instance, state})
+    const providers = await fetchLoginUrls(instance)
 
     expect(providers.find((p) => p.title === 'Provider A')).toBeTruthy()
     expect(providers.find((p) => p.title === 'Custom Provider B')).toBeTruthy()
@@ -84,7 +92,7 @@ describe('fetchLoginUrls', () => {
       providers: [{title: 'Provider A', url: 'https://auth.example.com/a'}],
     })
     const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
-    const instance = createSanityInstance({
+    instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
       auth: {
@@ -92,8 +100,7 @@ describe('fetchLoginUrls', () => {
         providers: (defaults) => defaults.map((p) => ({...p, title: 'Modified ' + p.title})),
       },
     })
-    const state = createResourceState(authStore.getInitialState(instance))
-    const providers = await fetchLoginUrls({instance, state})
+    const providers = await fetchLoginUrls(instance)
 
     expect(providers[0].title).toBe('Modified Provider A')
   })
@@ -103,15 +110,14 @@ describe('fetchLoginUrls', () => {
       providers: [{title: 'Provider A', url: 'https://auth.example.com/a'}],
     })
     const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
-    const instance = createSanityInstance({
+    instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
       auth: {
         clientFactory,
       },
     })
-    const state = createResourceState(authStore.getInitialState(instance))
-    const providers = await fetchLoginUrls({instance, state})
+    const providers = await fetchLoginUrls(instance)
 
     expect(providers.length).toBe(1)
     expect(providers[0].title).toBe('Provider A')
@@ -122,7 +128,7 @@ describe('fetchLoginUrls', () => {
       providers: [{title: 'Provider A', url: 'https://auth.example.com/a'}],
     })
     const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
-    const instance = createSanityInstance({
+    instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
       auth: {
@@ -130,8 +136,7 @@ describe('fetchLoginUrls', () => {
         callbackUrl: 'http://localhost/callback',
       },
     })
-    const state = createResourceState(authStore.getInitialState(instance))
-    const providers = await fetchLoginUrls({instance, state})
+    const providers = await fetchLoginUrls(instance)
     expect(providers[0].url).toContain('origin=http%3A%2F%2Flocalhost%2Fcallback')
   })
 
@@ -140,7 +145,7 @@ describe('fetchLoginUrls', () => {
       providers: [{title: 'Provider A', url: 'https://auth.example.com/a'}],
     })
     const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
-    const instance = createSanityInstance({
+    instance = createSanityInstance({
       projectId: 'p',
       dataset: 'd',
       auth: {
@@ -153,9 +158,8 @@ describe('fetchLoginUrls', () => {
         },
       },
     })
-    const state = createResourceState(authStore.getInitialState(instance))
 
-    const providers = await fetchLoginUrls({instance, state})
+    const providers = await fetchLoginUrls(instance)
 
     expect(providers.length).toBe(2)
     expect(providers.some((p) => p.title === 'Provider C')).toBe(true)

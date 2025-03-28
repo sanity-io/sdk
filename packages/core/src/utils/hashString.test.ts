@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest'
 
-import {hashString} from './util'
+import {hashString} from './hashString'
 
 describe('hashString', () => {
   it('should generate consistent hashes for the same input', () => {

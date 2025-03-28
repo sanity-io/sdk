@@ -1,7 +1,10 @@
 import {type Node, type NodeInput} from '@sanity/comlink'
 
-import {createResource} from '../../resources/createResource'
+import {bindActionGlobally} from '../../store/createActionBinder'
+import {defineStore} from '../../store/defineStore'
 import {type FrameMessage, type WindowMessage} from '../types'
+import {getOrCreateNode as unboundGetOrCreateNode} from './actions/getOrCreateNode'
+import {releaseNode as unboundReleaseNode} from './actions/releaseNode'
 
 /**
  * Individual node with its relevant options
@@ -23,17 +26,31 @@ export interface ComlinkNodeState {
   nodes: Map<string, NodeEntry>
 }
 
-export const comlinkNodeStore = createResource<ComlinkNodeState>({
+export const comlinkNodeStore = defineStore<ComlinkNodeState>({
   name: 'nodeStore',
   getInitialState: () => ({
     nodes: new Map(),
   }),
-  initialize() {
+
+  initialize({state}) {
     return () => {
-      const state = this.state.get()
-      state.nodes.forEach(({node}) => {
+      state.get().nodes.forEach(({node}) => {
         node.stop()
       })
     }
   },
 })
+
+/**
+ * Signals to the store that the consumer has stopped using the node
+ * @public
+ */
+export const releaseNode = bindActionGlobally(comlinkNodeStore, unboundReleaseNode)
+
+/**
+ * Retrieve or create a node to be used for communication between
+ * an application and the controller -- specifically, a node should
+ * be created within a frame / window to communicate with the controller.
+ * @public
+ */
+export const getOrCreateNode = bindActionGlobally(comlinkNodeStore, unboundGetOrCreateNode)

@@ -1,4 +1,3 @@
-// Use import type to access the internal type and re-export it
 import {type SanityProject as _SanityProject} from '@sanity/client'
 
 /**
@@ -8,8 +7,6 @@ export type SanityProject = _SanityProject
 
 export {AuthStateType} from '../auth/authStateType'
 export {
-  type AuthConfig,
-  type AuthProvider,
   type AuthState,
   type AuthStoreState,
   type ErrorAuthState,
@@ -25,17 +22,26 @@ export {
 export {fetchLoginUrls} from '../auth/fetchLoginUrls'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
-export type {ClientState} from '../client/clientStore'
+export type {ClientStoreState as ClientState} from '../client/clientStore'
 export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
-export {destroyController} from '../comlink/controller/actions/destroyController'
-export {getOrCreateChannel} from '../comlink/controller/actions/getOrCreateChannel'
-export {getOrCreateController} from '../comlink/controller/actions/getOrCreateController'
-export {releaseChannel} from '../comlink/controller/actions/releaseChannel'
-export type {ComlinkControllerState} from '../comlink/controller/comlinkControllerStore'
-export {getOrCreateNode} from '../comlink/node/actions/getOrCreateNode'
-export {releaseNode} from '../comlink/node/actions/releaseNode'
+export {
+  type ComlinkControllerState,
+  destroyController,
+  getOrCreateChannel,
+  getOrCreateController,
+  releaseChannel,
+} from '../comlink/controller/comlinkControllerStore'
 export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
+export {getOrCreateNode, releaseNode} from '../comlink/node/comlinkNodeStore'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'
+export {type AuthConfig, type AuthProvider} from '../config/authConfig'
+export {
+  type DatasetHandle,
+  type DocumentHandle,
+  type DocumentTypeHandle,
+  type ProjectHandle,
+  type SanityConfig,
+} from '../config/sanityConfig'
 export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
 export {
   createDocument,
@@ -77,23 +83,14 @@ export {
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,
 } from '../document/events'
-export {
-  type DocumentHandle,
-  type DocumentTypeHandle,
-  type JsonMatch,
-  jsonMatch,
-  type JsonMatchPath,
-} from '../document/patchOperations'
-export {type DocumentResourceId, getResourceId, type ResourceId} from '../document/patchOperations'
+export {type JsonMatch, jsonMatch, type JsonMatchPath} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
-export {createSanityInstance} from '../instance/sanityInstance'
-export type {SanityConfig, SanityInstance, SdkIdentity} from '../instance/types'
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
 export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
 export {getProjectState, resolveProject} from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
-export type {ProjectionValuePending, ValidProjection} from '../projection/projectionStore'
+export {type ProjectionValuePending, type ValidProjection} from '../projection/projectionStore'
 export {resolveProjection} from '../projection/resolveProjection'
 export {getProjectsState, resolveProjects} from '../projects/projects'
 export {
@@ -103,12 +100,17 @@ export {
   type QueryOptions,
   resolveQuery,
 } from '../query/queryStore'
-export {type ActionContext, type ResourceAction} from '../resources/createAction'
-export {type ResourceState} from '../resources/createResource'
-export type {StateSource} from '../resources/createStateSourceAction'
-export {type BoundResourceAction} from '../resources/createStore'
-export {type Membership, type ResourceType, type SanityUser, type UserProfile} from '../users/types'
-export {createUsersStore, type UsersStoreState} from '../users/usersStore'
+export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+export {type Selector, type StateSource} from '../store/createStateSourceAction'
+export {getUsersKey, parseUsersKey} from '../users/reducers'
+export {
+  type GetUsersOptions,
+  type Membership,
+  type ResolveUsersOptions,
+  type SanityUser,
+  type UserProfile,
+} from '../users/types'
+export {getUsersState, loadMoreUsers, resolveUsers} from '../users/usersStore'
 export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
 export {CORE_SDK_VERSION} from '../version'
 export type {CurrentUser, Role, SanityDocument, SanityDocumentLike} from '@sanity/types'

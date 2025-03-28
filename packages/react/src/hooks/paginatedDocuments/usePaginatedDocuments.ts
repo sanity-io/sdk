@@ -1,7 +1,9 @@
 import {type DocumentHandle, type QueryOptions} from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
+import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
+import {useSanityInstance} from '../context/useSanityInstance'
 import {useQuery} from '../query/useQuery'
 
 const DEFAULT_PERSPECTIVE = 'drafts'
@@ -125,7 +127,13 @@ export interface PaginatedDocumentsResponse {
  * @category Documents
  * @param options - Configuration options for the paginated list
  * @returns An object containing the current page of document handles, the loading and pagination state, and navigation functions
- * @example
+ *
+ * @remarks
+ * - The returned document handles include projectId and dataset information from the current Sanity instance
+ * - This makes them ready to use with document operations and other document hooks
+ * - The hook automatically uses the correct Sanity instance based on the projectId and dataset in the options
+ *
+ * @example Basic usage
  * ```tsx
  * const {
  *   data,
@@ -147,7 +155,7 @@ export interface PaginatedDocumentsResponse {
  *   <>
  *     <table>
  *       {data.map(doc => (
- *         <MyTableRowComponent key={doc._id} doc={doc} />
+ *         <MyTableRowComponent key={doc.documentId} doc={doc} />
  *       ))}
  *     </table>
  *     <>
@@ -167,7 +175,8 @@ export function usePaginatedDocuments({
   orderings,
   search,
   ...options
-}: PaginatedDocumentsOptions = {}): PaginatedDocumentsResponse {
+}: PaginatedDocumentsOptions): PaginatedDocumentsResponse {
+  const instance = useSanityInstance(options)
   const [pageIndex, setPageIndex] = useState(0)
   const key = JSON.stringify({filter, search, params, orderings, pageSize})
   // Reset the pageIndex to 0 whenever any query parameters (filter, search,
@@ -207,7 +216,7 @@ export function usePaginatedDocuments({
         .join(',')})`
     : ''
 
-  const dataQuery = `*${filterClause}${orderClause}[${startIndex}...${endIndex}]{_id,_type}`
+  const dataQuery = `*${filterClause}${orderClause}[${startIndex}...${endIndex}]{"documentId":_id,"documentType":_type,...$__dataset}`
   const countQuery = `count(*${filterClause})`
 
   const {
@@ -218,7 +227,7 @@ export function usePaginatedDocuments({
     {
       ...options,
       perspective,
-      params,
+      params: {...params, __dataset: pick(instance.config, 'projectId', 'dataset')},
     },
   )
 
@@ -247,44 +256,23 @@ export function usePaginatedDocuments({
   const hasNextPage = pageIndex < totalPages - 1
   const hasLastPage = pageIndex < totalPages - 1
 
-  return useMemo(
-    () => ({
-      data,
-      isPending,
-      pageSize,
-      currentPage,
-      totalPages,
-      startIndex,
-      endIndex,
-      count,
-      firstPage,
-      hasFirstPage,
-      previousPage,
-      hasPreviousPage,
-      nextPage,
-      hasNextPage,
-      lastPage,
-      hasLastPage,
-      goToPage,
-    }),
-    [
-      data,
-      isPending,
-      pageSize,
-      currentPage,
-      totalPages,
-      startIndex,
-      endIndex,
-      count,
-      firstPage,
-      hasFirstPage,
-      previousPage,
-      hasPreviousPage,
-      nextPage,
-      hasNextPage,
-      lastPage,
-      hasLastPage,
-      goToPage,
-    ],
-  )
+  return {
+    data,
+    isPending,
+    pageSize,
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    count,
+    firstPage,
+    hasFirstPage,
+    previousPage,
+    hasPreviousPage,
+    nextPage,
+    hasNextPage,
+    lastPage,
+    hasLastPage,
+    goToPage,
+  }
 }

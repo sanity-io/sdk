@@ -1,4 +1,4 @@
-import {createAction} from '../resources/createAction'
+import {bindActionGlobally} from '../store/createActionBinder'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
 import {authStore, type AuthStoreState, type DashboardContext} from './authStore'
@@ -7,11 +7,12 @@ import {getAuthCode, getDefaultLocation} from './utils'
 /**
  * @public
  */
-export const handleAuthCallback = createAction(authStore, ({state}) => {
-  const {providedToken, callbackUrl, clientFactory, apiHost, storageArea, storageKey} =
-    state.get().options
+export const handleAuthCallback = bindActionGlobally(
+  authStore,
+  async ({state}, locationHref: string = getDefaultLocation()) => {
+    const {providedToken, callbackUrl, clientFactory, apiHost, storageArea, storageKey} =
+      state.get().options
 
-  return async function (locationHref: string = getDefaultLocation()) {
     // If a token is provided, no need to handle callback
     if (providedToken) return false
 
@@ -69,5 +70,5 @@ export const handleAuthCallback = createAction(authStore, ({state}) => {
       state.set('exchangeSessionForTokenError', {authState: {type: AuthStateType.ERROR, error}})
       return false
     }
-  }
-})
+  },
+)

@@ -39,13 +39,13 @@ vi.mock('../context/useSanityInstance', () => ({
 }))
 
 const mockDocument: DocumentHandle = {
-  _id: 'doc1',
-  _type: 'exampleType',
+  documentId: 'doc1',
+  documentType: 'exampleType',
 }
 
-function TestComponent({document}: {document: DocumentHandle}) {
+function TestComponent(docHandle: DocumentHandle) {
   const ref = useRef(null)
-  const {data, isPending} = usePreview({document, ref})
+  const {data, isPending} = usePreview({...docHandle, ref})
 
   return (
     <div ref={ref}>
@@ -83,7 +83,7 @@ describe('usePreview', () => {
 
     render(
       <Suspense fallback={<div>Loading...</div>}>
-        <TestComponent document={mockDocument} />
+        <TestComponent {...mockDocument} />
       </Suspense>,
     )
 
@@ -128,7 +128,7 @@ describe('usePreview', () => {
 
     render(
       <Suspense fallback={<div>Loading...</div>}>
-        <TestComponent document={mockDocument} />
+        <TestComponent {...mockDocument} />
       </Suspense>,
     )
 
@@ -163,7 +163,7 @@ describe('usePreview', () => {
 
     render(
       <Suspense fallback={<div>Loading...</div>}>
-        <TestComponent document={mockDocument} />
+        <TestComponent {...mockDocument} />
       </Suspense>,
     )
 

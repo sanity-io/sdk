@@ -1,23 +1,61 @@
 import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
-import {createSelector} from 'reselect'
+import {pick} from 'lodash-es'
 
 import {getTokenState} from '../auth/authStore'
-import {type ResourceId} from '../document/patchOperations'
-import {type SanityInstance} from '../instance/types'
-import {type ActionContext, createAction, createInternalAction} from '../resources/createAction'
-import {createResource, type Resource} from '../resources/createResource'
-import {createStateSourceAction} from '../resources/createStateSourceAction'
+import {type DatasetHandle} from '../config/sanityConfig'
+import {bindActionGlobally} from '../store/createActionBinder'
+import {createStateSourceAction} from '../store/createStateSourceAction'
+import {defineStore, type StoreContext} from '../store/defineStore'
 
 const DEFAULT_API_VERSION = '2024-11-12'
 const DEFAULT_REQUEST_TAG_PREFIX = 'sanity.sdk'
+
+type AllowedClientConfigKey =
+  | 'useCdn'
+  | 'token'
+  | 'perspective'
+  | 'apiHost'
+  | 'proxy'
+  | 'withCredentials'
+  | 'timeout'
+  | 'maxRetries'
+  | 'dataset'
+  | 'projectId'
+  | 'requestTagPrefix'
+  | 'useProjectHostname'
+
+const allowedKeys = Object.keys({
+  apiHost: null,
+  useCdn: null,
+  token: null,
+  perspective: null,
+  proxy: null,
+  withCredentials: null,
+  timeout: null,
+  maxRetries: null,
+  dataset: null,
+  projectId: null,
+  scope: null,
+  apiVersion: null,
+  requestTagPrefix: null,
+  useProjectHostname: null,
+} satisfies Record<keyof ClientOptions, null>) as (keyof ClientOptions)[]
+
+const DEFAULT_CLIENT_CONFIG: ClientConfig = {
+  apiVersion: DEFAULT_API_VERSION,
+  useCdn: false,
+  ignoreBrowserTokenWarning: true,
+  allowReconfigure: false,
+  requestTagPrefix: DEFAULT_REQUEST_TAG_PREFIX,
+}
 
 /**
  * States tracked by the client store
  * @public
  */
-export interface ClientState {
-  defaultClient: SanityClient
-  defaultGlobalClient: SanityClient
+export interface ClientStoreState {
+  token: string | null
+  clients: {[TKey in string]?: SanityClient}
 }
 
 /**
@@ -30,150 +68,113 @@ export interface ClientState {
  *   ('project') and the global client ('global'). When set to `'global'`, the
  *   global client is used.
  *
- * These options are utilized by `getClient` and `getClientState` to return a memoized
- * client instance, ensuring that clients are reused for identical configurations and that
- * updates (such as auth token changes) propagate correctly.
+ * These options are utilized by `getClient` and `getClientState` to configure and
+ * return appropriate client instances that automatically handle authentication
+ * updates and configuration changes.
  *
  * @public
  */
-export interface ClientOptions extends ClientConfig {
+export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey>, DatasetHandle {
   /**
-   * An optional flag to choose between the project-specific client ('project')
+   * An optional flag to choose between the default client (typically project-level)
    * and the global client ('global'). When set to `'global'`, the global client
    * is used.
    */
-  scope?: 'project' | 'global'
+  scope?: 'default' | 'global'
   /**
    * A required string indicating the API version for the client.
    */
   apiVersion: string
-
-  /**
-   * A resource identifier for a document, in the format of `projectId.dataset`
-   */
-  resourceId?: ResourceId
 }
 
-const clientStore: Resource<ClientState> = createResource({
+const clientStore = defineStore<ClientStoreState>({
   name: 'clientStore',
 
-  getInitialState: (instance: SanityInstance) => {
-    const {identity, config} = instance
-    const defaultClient = createClient({
-      projectId: identity.projectId,
-      dataset: identity.dataset,
-      token: config?.auth?.token,
-      useCdn: false,
-      apiVersion: DEFAULT_API_VERSION,
-      requestTagPrefix: DEFAULT_REQUEST_TAG_PREFIX,
-      ...(config?.auth?.apiHost ? {apiHost: config.auth.apiHost} : {}),
-    })
+  getInitialState: (instance) => ({
+    clients: {},
+    token: getTokenState(instance).getCurrent(),
+  }),
 
-    const defaultGlobalClient = createClient({
-      token: config?.auth?.token,
-      useCdn: false,
-      apiVersion: 'vX', // Many global APIs are only available under this version, we may need to support other versions in the future
-      useProjectHostname: false,
-      requestTagPrefix: DEFAULT_REQUEST_TAG_PREFIX,
-      ...(config?.auth?.apiHost ? {apiHost: config.auth.apiHost} : {}),
-    })
-
-    return {
-      defaultClient,
-      defaultGlobalClient,
-    }
-  },
-
-  initialize() {
-    const authEventSubscription = subscribeToAuthEvents(this)
-    return () => {
-      authEventSubscription.unsubscribe()
-    }
+  initialize(context) {
+    const subscription = listenToToken(context)
+    return () => subscription.unsubscribe()
   },
 })
-
-const receiveToken = (prev: ClientState, token: string | undefined): ClientState => {
-  const newDefaultClient = prev.defaultClient.withConfig({
-    token,
-  })
-  const newGlobalClient = prev.defaultGlobalClient.withConfig({
-    token,
-  })
-
-  return {
-    defaultClient: newDefaultClient,
-    defaultGlobalClient: newGlobalClient,
-  }
-}
 
 /**
  * Updates the client store state when a token is received.
  * @internal
  */
-const subscribeToAuthEvents = createInternalAction(
-  ({instance, state}: ActionContext<ClientState>) => {
-    return () => {
-      return getTokenState(instance).observable.subscribe((newToken) => {
-        state.set('receiveToken', (prev) => receiveToken(prev, newToken ?? undefined))
-      })
-    }
-  },
-)
+const listenToToken = ({instance, state}: StoreContext<ClientStoreState>) => {
+  return getTokenState(instance).observable.subscribe((token) => {
+    state.set('setTokenAndResetClients', {token, clients: {}})
+  })
+}
 
-const optionsCache = new WeakMap<SanityClient, Map<string, ClientOptions>>()
-
-const defaultClientSelector = (state: ClientState, options: ClientOptions) =>
-  options?.scope === 'global' ? state.defaultGlobalClient : state.defaultClient
-
-const memoizedOptionsSelector = createSelector(
-  [defaultClientSelector, (_state: ClientState, options: ClientOptions) => options],
-  (client, options) => {
-    let nestedCache = optionsCache.get(client)
-    if (!nestedCache) {
-      nestedCache = new Map<string, ClientOptions>()
-      optionsCache.set(client, nestedCache)
-    }
-
-    const key = JSON.stringify(options)
-    const cached = nestedCache.get(key)
-    if (cached) return cached
-
-    nestedCache.set(key, options)
-    return options
-  },
-)
-
-const clientSelector = createSelector(
-  [defaultClientSelector, memoizedOptionsSelector],
-  (client, options) => client.withConfig(options),
-)
+const getClientConfigKey = (options: ClientOptions) => JSON.stringify(pick(options, ...allowedKeys))
 
 /**
- * Retrieves a memoized Sanity client instance configured with the provided options.
+ * Retrieves a Sanity client instance configured with the provided options.
  *
- * This function uses a memoized selector to return a client instance from the
- * client store, based on the default project or global client. The selector
- * leverages a WeakMap-based cache and reselect to ensure that clients with the
- * same configuration are reused, and that updates, such as authentication token
- * changes, propagate automatically.
+ * This function returns a client instance configured for the project or as a
+ * global client based on the options provided. It ensures efficient reuse of
+ * client instances by returning the same instance for the same options.
+ * For automatic handling of authentication token updates, consider using
+ * `getClientState`.
  *
  * @public
  */
-export const getClient = createAction(
+export const getClient = bindActionGlobally(
   clientStore,
-  ({state}) =>
-    (options: ClientOptions) =>
-      clientSelector(state.get(), options),
+  ({state, instance}, options: ClientOptions) => {
+    // Check for disallowed keys
+    const providedKeys = Object.keys(options) as (keyof ClientOptions)[]
+    const disallowedKeys = providedKeys.filter((key) => !allowedKeys.includes(key))
+
+    if (disallowedKeys.length > 0) {
+      const listFormatter = new Intl.ListFormat('en', {style: 'long', type: 'conjunction'})
+      throw new Error(
+        `The client options provided contains unsupported properties: ${listFormatter.format(disallowedKeys)}. ` +
+          `Allowed keys are: ${listFormatter.format(allowedKeys)}.`,
+      )
+    }
+
+    const {token, clients} = state.get()
+    const projectId = options.projectId ?? instance.config.projectId
+    const dataset = options.dataset ?? instance.config.dataset
+    const apiHost = options.apiHost ?? instance.config.auth?.apiHost
+
+    const effectiveOptions: ClientOptions = {
+      ...DEFAULT_CLIENT_CONFIG,
+      ...((options.scope === 'global' || !projectId) && {useProjectHostname: false}),
+      ...(token && {token}),
+      ...options,
+      ...(projectId && {projectId}),
+      ...(dataset && {dataset}),
+      ...(apiHost && {apiHost}),
+    }
+
+    const key = getClientConfigKey(effectiveOptions)
+
+    if (clients[key]) return clients[key]
+
+    const client = createClient(effectiveOptions)
+    state.set('addClient', (prev) => ({clients: {...prev.clients, [key]: client}}))
+
+    return client
+  },
 )
 
 /**
  * Returns a state source for the Sanity client instance.
  *
  * This function provides a subscribable state source that emits updated client
- * instances whenever the client configuration changes (for example, due to
- * token updates). It leverages the underlying client store and memoized selector
- * to ensure that subscribers receive the most current client configuration.
+ * instances whenever relevant configurations change (such as authentication tokens).
+ * Use this when you need to react to client configuration changes in your application.
  *
  * @public
  */
-export const getClientState = createStateSourceAction(clientStore, clientSelector)
+export const getClientState = bindActionGlobally(
+  clientStore,
+  createStateSourceAction(({instance}, options: ClientOptions) => getClient(instance, options)),
+)

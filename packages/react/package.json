@@ -59,6 +59,8 @@
     "@sanity/message-protocol": "^0.6.0",
     "@sanity/sdk": "workspace:*",
     "@sanity/types": "^3.78.1",
+    "@types/lodash-es": "^4.17.12",
+    "lodash-es": "^4.17.21",
     "react-error-boundary": "^5.0.0",
     "rxjs": "^7.8.1"
   },

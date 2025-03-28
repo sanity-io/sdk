@@ -1,14 +1,12 @@
-import {describe, it, type Mock} from 'vitest'
+import {NEVER} from 'rxjs'
+import {describe, it} from 'vitest'
 
-import {createSanityInstance} from '../instance/sanityInstance'
-import {
-  createResourceState,
-  getOrCreateResource,
-  type ResourceState,
-} from '../resources/createResource'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+import {type StoreState} from '../store/createStoreState'
 import {insecureRandomId} from '../utils/ids'
 import {getPreviewState} from './getPreviewState'
-import {previewStore, type PreviewStoreState} from './previewStore'
+import {type PreviewStoreState} from './previewStore'
+import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 import {STABLE_EMPTY_PREVIEW} from './util'
 
 vi.mock('../utils/ids', async (importOriginal) => {
@@ -16,36 +14,36 @@ vi.mock('../utils/ids', async (importOriginal) => {
   return {...util, insecureRandomId: vi.fn(util.insecureRandomId)}
 })
 
-vi.mock('../resources/createResource', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../resources/createResource')>()
-  return {...original, getOrCreateResource: vi.fn()}
-})
+vi.mock('./subscribeToStateAndFetchBatches.ts')
 
 describe('getPreviewState', () => {
-  const instance = createSanityInstance({projectId: 'exampleProject', dataset: 'exampleDataset'})
-  const document = {_id: 'exampleId', _type: 'exampleType'}
-  const initialState: PreviewStoreState = {
-    documentTypes: {},
-    lastLiveEventId: null,
-    subscriptions: {},
-    syncTags: {},
-    values: {},
-  }
-  let state: ResourceState<PreviewStoreState>
+  let instance: SanityInstance
+  const docHandle = {documentId: 'exampleId', documentType: 'exampleType'}
+  let state: StoreState<PreviewStoreState & {extra?: unknown}>
 
   beforeEach(() => {
-    state = createResourceState(initialState)
+    // capture state
+    vi.mocked(subscribeToStateAndFetchBatches).mockImplementation((context) => {
+      state = context.state
+      return NEVER.subscribe()
+    })
+
+    instance = createSanityInstance({projectId: 'exampleProject', dataset: 'exampleDataset'})
+  })
+
+  afterEach(() => {
+    instance.dispose()
   })
 
   it('returns a state source that emits when the preview value changes', () => {
-    const previewState = getPreviewState({state, instance}, {document})
+    const previewState = getPreviewState(instance, docHandle)
     expect(previewState.getCurrent()).toBe(STABLE_EMPTY_PREVIEW)
 
     const subscriber = vi.fn()
     previewState.subscribe(subscriber)
 
     // emit unrelated state changes
-    state.set('updateLastLiveEventId', {lastLiveEventId: 'newLastLiveEventId'})
+    state.set('updateLastLiveEventId', {extra: 'unrelated change'})
     expect(subscriber).toHaveBeenCalledTimes(0)
 
     state.set('relatedChange', (prev) => ({
@@ -68,7 +66,7 @@ describe('getPreviewState', () => {
   })
 
   it('adds a subscription ID and document type to the state on subscription', () => {
-    const previewState = getPreviewState({state, instance}, {document})
+    const previewState = getPreviewState(instance, docHandle)
 
     expect(state.get().subscriptions).toEqual({})
     vi.mocked(insecureRandomId)
@@ -92,28 +90,31 @@ describe('getPreviewState', () => {
   })
 
   it('resets to pending false on unsubscribe if the subscription is the last one', () => {
-    state.set('presetValueToPending', (prev) => ({
-      values: {...prev.values, [document._id]: {data: {title: 'Foo'}, isPending: true}},
-    }))
+    const previewState = getPreviewState(instance, docHandle)
 
-    const previewState = getPreviewState({state, instance}, {document})
+    state.set('presetValueToPending', (prev) => ({
+      values: {...prev.values, [docHandle.documentId]: {data: {title: 'Foo'}, isPending: true}},
+    }))
 
     const unsubscribe1 = previewState.subscribe(vi.fn())
     const unsubscribe2 = previewState.subscribe(vi.fn())
 
-    expect(state.get().values[document._id]).toEqual({data: {title: 'Foo'}, isPending: true})
+    expect(state.get().values[docHandle.documentId]).toEqual({
+      data: {title: 'Foo'},
+      isPending: true,
+    })
 
     unsubscribe1()
-    expect(state.get().values[document._id]).toEqual({data: {title: 'Foo'}, isPending: true})
+    expect(state.get().values[docHandle.documentId]).toEqual({
+      data: {title: 'Foo'},
+      isPending: true,
+    })
 
     unsubscribe2()
     expect(state.get().subscriptions).toEqual({})
-    expect(state.get().values[document._id]).toEqual({data: {title: 'Foo'}, isPending: false})
-  })
-
-  it('calls getOrCreateResource if no state is provided', () => {
-    ;(getOrCreateResource as Mock).mockReturnValue({state})
-    getPreviewState(instance, {document})
-    expect(getOrCreateResource).toHaveBeenCalledWith(instance, previewStore)
+    expect(state.get().values[docHandle.documentId]).toEqual({
+      data: {title: 'Foo'},
+      isPending: false,
+    })
   })
 })

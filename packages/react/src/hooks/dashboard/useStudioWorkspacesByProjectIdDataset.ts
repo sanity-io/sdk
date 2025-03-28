@@ -14,12 +14,12 @@ interface Workspace {
   _ref: string
 }
 
-interface WorkspacesByResourceId {
-  [key: string]: Workspace[] // key format: `${projectId}:${dataset}`
+interface WorkspacesByProjectIdDataset {
+  [key: `${string}:${string}`]: Workspace[] // key format: `${projectId}:${dataset}`
 }
 
 interface StudioWorkspacesResult {
-  workspacesByResourceId: WorkspacesByResourceId
+  workspacesByProjectIdAndDataset: WorkspacesByProjectIdDataset
   error: string | null
   isConnected: boolean
 }
@@ -28,8 +28,9 @@ interface StudioWorkspacesResult {
  * Hook that fetches studio workspaces and organizes them by projectId:dataset
  * @internal
  */
-export function useStudioWorkspacesByResourceId(): StudioWorkspacesResult {
-  const [workspacesByResourceId, setWorkspacesByResourceId] = useState<WorkspacesByResourceId>({})
+export function useStudioWorkspacesByProjectIdDataset(): StudioWorkspacesResult {
+  const [workspacesByProjectIdAndDataset, setWorkspacesByProjectIdAndDataset] =
+    useState<WorkspacesByProjectIdDataset>({})
   const [status, setStatus] = useState<Status>('idle')
   const [error, setError] = useState<string | null>(null)
 
@@ -50,13 +51,13 @@ export function useStudioWorkspacesByResourceId(): StudioWorkspacesResult {
           context: {availableResources: Array<{projectId: string; workspaces: Workspace[]}>}
         }>('dashboard/v1/bridge/context', undefined, {signal})
 
-        const workspaceMap: WorkspacesByResourceId = {}
+        const workspaceMap: WorkspacesByProjectIdDataset = {}
 
         data.context.availableResources.forEach((resource) => {
           if (!resource.projectId || !resource.workspaces?.length) return
 
           resource.workspaces.forEach((workspace) => {
-            const key = `${resource.projectId}:${workspace.dataset}`
+            const key = `${resource.projectId}:${workspace.dataset}` as const
             if (!workspaceMap[key]) {
               workspaceMap[key] = []
             }
@@ -64,7 +65,7 @@ export function useStudioWorkspacesByResourceId(): StudioWorkspacesResult {
           })
         })
 
-        setWorkspacesByResourceId(workspaceMap)
+        setWorkspacesByProjectIdAndDataset(workspaceMap)
         setError(null)
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -85,7 +86,7 @@ export function useStudioWorkspacesByResourceId(): StudioWorkspacesResult {
   }, [fetch, status])
 
   return {
-    workspacesByResourceId,
+    workspacesByProjectIdAndDataset,
     error,
     isConnected: status === 'connected',
   }

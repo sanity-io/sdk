@@ -2,8 +2,7 @@ import {delay, firstValueFrom, of, throwError} from 'rxjs'
 import {filter, skip} from 'rxjs/operators'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {createSanityInstance} from '../instance/sanityInstance'
-import {type SanityInstance} from '../instance/types'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {createFetcherStore} from './createFetcherStore'
 
 describe('createFetcherStore', () => {
@@ -22,7 +21,7 @@ describe('createFetcherStore', () => {
     const store = createFetcherStore({
       name: 'test',
       fetcher: () => (param: number) => of(`data-${param}`).pipe(delay(100)),
-      getKey: (param: number) => `key-${param}`,
+      getKey: (_instance, param: number) => `key-${param}`,
     })
 
     const stateSource = store.getState(instance, 1)
@@ -44,7 +43,7 @@ describe('createFetcherStore', () => {
     const store = createFetcherStore({
       name: 'test-throttle',
       fetcher: () => fetchSpy,
-      getKey: (param: number) => `key-${param}`,
+      getKey: (_instance, param: number) => `key-${param}`,
       fetchThrottleInternal: 1000,
     })
 
@@ -85,7 +84,7 @@ describe('createFetcherStore', () => {
     const store = createFetcherStore({
       name: 'test-expiration',
       fetcher: () => fetchSpy,
-      getKey: (param: number) => `key-${param}`,
+      getKey: (_instance, param: number) => `key-${param}`,
       stateExpirationDelay: 1000,
     })
 
@@ -116,7 +115,7 @@ describe('createFetcherStore', () => {
     const store = createFetcherStore({
       name: 'test-throttle',
       fetcher: () => fetchSpy,
-      getKey: (param: number) => `key-${param}`,
+      getKey: (_instance, param: number) => `key-${param}`,
       fetchThrottleInternal: 1000,
     })
 
@@ -151,7 +150,7 @@ describe('createFetcherStore', () => {
     const store = createFetcherStore({
       name: 'test-params',
       fetcher: () => (param: number) => of(`data-${param}`),
-      getKey: (param: number) => `key-${param}`,
+      getKey: (_instance, param: number) => `key-${param}`,
     })
 
     const stateSource1 = store.getState(instance, 1)

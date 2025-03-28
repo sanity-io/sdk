@@ -1,5 +1,5 @@
 import {type DocumentHandle, getPreviewState, type PreviewValue, resolvePreview} from '@sanity/sdk'
-import {useCallback, useMemo, useSyncExternalStore} from 'react'
+import {useCallback, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -8,8 +8,11 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @beta
  * @category Types
  */
-export interface UsePreviewOptions {
-  document: DocumentHandle
+export interface UsePreviewOptions extends DocumentHandle {
+  /**
+   * Optional ref object to track visibility. When provided, preview resolution
+   * only occurs when the referenced element is visible in the viewport.
+   */
   ref?: React.RefObject<unknown>
 }
 
@@ -68,13 +71,9 @@ export interface UsePreviewResults {
  * )
  * ```
  */
-export function usePreview({document: {_id, _type}, ref}: UsePreviewOptions): UsePreviewResults {
+export function usePreview({ref, ...docHandle}: UsePreviewOptions): UsePreviewResults {
   const instance = useSanityInstance()
-
-  const stateSource = useMemo(
-    () => getPreviewState(instance, {document: {_id, _type}}),
-    [instance, _id, _type],
-  )
+  const stateSource = getPreviewState(instance, docHandle)
 
   // Create subscribe function for useSyncExternalStore
   const subscribe = useCallback(
@@ -115,9 +114,9 @@ export function usePreview({document: {_id, _type}, ref}: UsePreviewOptions): Us
   // Create getSnapshot function to return current state
   const getSnapshot = useCallback(() => {
     const currentState = stateSource.getCurrent()
-    if (currentState.data === null) throw resolvePreview(instance, {document: {_id, _type}})
+    if (currentState.data === null) throw resolvePreview(instance, docHandle)
     return currentState as UsePreviewResults
-  }, [_id, _type, instance, stateSource])
+  }, [docHandle, instance, stateSource])
 
   return useSyncExternalStore(subscribe, getSnapshot)
 }

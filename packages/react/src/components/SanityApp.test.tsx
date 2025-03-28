@@ -1,156 +1,106 @@
-import {AuthStateType, type SanityConfig} from '@sanity/sdk'
-import {render, screen} from '@testing-library/react'
+import {render} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
+import {type ResourceProviderProps} from '../context/ResourceProvider'
 import {SanityApp} from './SanityApp'
 
-vi.mock('@sanity/sdk', async () => {
-  const actual = await vi.importActual('@sanity/sdk')
+// Mock ResourceProvider to verify the nested structure
+vi.mock('../context/ResourceProvider', () => ({
+  ResourceProvider: ({children, fallback: _fallback, ...config}: ResourceProviderProps) => {
+    // Save the config in a data attribute for testing
+    return (
+      <div data-testid="resource-provider" data-config={JSON.stringify(config)}>
+        {children}
+      </div>
+    )
+  },
+}))
+
+// Mock useEffect to prevent redirect logic from running in tests
+vi.mock('react', async () => {
+  const actual = await vi.importActual('react')
   return {
     ...actual,
-    createSanityInstance: vi.fn(() => ({
-      config: {},
-      auth: {
-        getSession: vi.fn(),
-        signIn: vi.fn(),
-        signOut: vi.fn(),
-      },
-      identity: {
-        projectId: 'test-project',
-        dataset: 'test-dataset',
-      },
-      dispose: vi.fn(),
-    })),
+    useEffect: vi.fn((fn) => fn()),
   }
 })
 
-vi.mock('../hooks/auth/useAuthState', () => ({
-  useAuthState: () => ({
-    type: AuthStateType.LOGGED_IN,
-    session: {
-      user: {
-        id: 'test-user',
-      },
-    },
-  }),
-}))
-
 describe('SanityApp', () => {
-  const mockSanityConfig: SanityConfig = {
-    projectId: 'test-project',
-    dataset: 'test-dataset',
-  }
-
-  it('renders children correctly', async () => {
-    const testMessage = 'Test Child Component'
-    render(
-      <SanityApp sanityConfigs={[mockSanityConfig]} fallback={<div>Fallback</div>}>
-        <div>{testMessage}</div>
-      </SanityApp>,
-    )
-
-    expect(await screen.findByText(testMessage)).toBeInTheDocument()
-  })
-
-  it('handles iframe environment correctly', async () => {
-    // Mock window.self and window.top to simulate iframe environment
-    const originalTop = window.top
-    const originalSelf = window.self
-
-    const mockTop = {}
-    Object.defineProperty(window, 'top', {
-      value: mockTop,
-      writable: true,
-    })
-    Object.defineProperty(window, 'self', {
-      value: window,
-      writable: true,
-    })
-
-    render(
-      <SanityApp sanityConfigs={[mockSanityConfig]} fallback={<div>Fallback</div>}>
-        <div>Test Child</div>
-      </SanityApp>,
-    )
-
-    // Wait for 1 second
-    await new Promise((resolve) => setTimeout(resolve, 1010))
-
-    // Add assertions based on your iframe-specific behavior
-    expect(window.location.href).toBe('http://localhost:3000/')
-
-    // Clean up the mock
-    Object.defineProperty(window, 'top', {
-      value: originalTop,
-      writable: true,
-    })
-    Object.defineProperty(window, 'self', {
-      value: originalSelf,
-      writable: true,
-    })
-  })
-
-  it('redirects to core if not inside iframe and not local url', async () => {
-    const originalLocation = window.location
-
-    const mockLocation = {
-      replace: vi.fn(),
-      href: 'http://sanity-test.app',
+  it('renders a single ResourceProvider for a single config', () => {
+    const singleConfig = {
+      projectId: 'test-project',
+      dataset: 'production',
     }
 
-    Object.defineProperty(window, 'location', {
-      value: mockLocation,
-      writable: true,
-    })
-
-    render(
-      <SanityApp sanityConfigs={[mockSanityConfig]} fallback={<div>Fallback</div>}>
-        <div>Test Child</div>
+    const {getAllByTestId} = render(
+      <SanityApp config={singleConfig} fallback={<div>Loading...</div>}>
+        <div>Child content</div>
       </SanityApp>,
     )
 
-    // Wait for 1 second
-    await new Promise((resolve) => setTimeout(resolve, 1010))
-
-    // Add assertions based on your iframe-specific behavior
-    expect(mockLocation.replace).toHaveBeenCalledWith('https://core.sanity.io')
-
-    // Clean up the mock
-    Object.defineProperty(window, 'location', {
-      value: originalLocation,
-      writable: true,
-    })
+    // Should render one ResourceProvider
+    const providers = getAllByTestId('resource-provider')
+    expect(providers).toHaveLength(1)
+    expect(JSON.parse(providers[0].getAttribute('data-config') || '{}')).toEqual(singleConfig)
   })
 
-  it('does not redirect to core if not inside iframe and local url', async () => {
-    const originalLocation = window.location
+  it('renders nested ResourceProviders for multiple configs', () => {
+    const multipleConfigs = [
+      {
+        projectId: 'project-1',
+        dataset: 'production',
+      },
+      {
+        projectId: 'project-2',
+        dataset: 'staging',
+      },
+      {
+        projectId: 'project-3',
+        dataset: 'development',
+      },
+    ]
 
-    const mockLocation = {
-      replace: vi.fn(),
-      href: 'http://localhost:3000',
-    }
-
-    Object.defineProperty(window, 'location', {
-      value: mockLocation,
-      writable: true,
-    })
-
-    render(
-      <SanityApp sanityConfigs={[mockSanityConfig]} fallback={<div>Fallback</div>}>
-        <div>Test Child</div>
+    const {getAllByTestId} = render(
+      <SanityApp config={multipleConfigs} fallback={<div>Loading...</div>}>
+        <div>Child content</div>
       </SanityApp>,
     )
 
-    // Wait for 1 second
-    await new Promise((resolve) => setTimeout(resolve, 1010))
+    // Should render three nested ResourceProviders
+    const providers = getAllByTestId('resource-provider')
+    expect(providers).toHaveLength(3)
 
-    // Add assertions based on your iframe-specific behavior
-    expect(mockLocation.replace).not.toHaveBeenCalled()
+    // Verify each provider has the correct config
+    expect(JSON.parse(providers[0].getAttribute('data-config') || '{}')).toEqual(multipleConfigs[0])
+    expect(JSON.parse(providers[1].getAttribute('data-config') || '{}')).toEqual(multipleConfigs[1])
+    expect(JSON.parse(providers[2].getAttribute('data-config') || '{}')).toEqual(multipleConfigs[2])
+  })
 
-    // Clean up the mock
-    Object.defineProperty(window, 'location', {
-      value: originalLocation,
-      writable: true,
-    })
+  it('supports legacy sanityConfigs prop', () => {
+    const legacyConfigs = [
+      {
+        projectId: 'legacy-project-1',
+        dataset: 'production',
+      },
+      {
+        projectId: 'legacy-project-2',
+        dataset: 'staging',
+      },
+    ]
+
+    const {getAllByTestId} = render(
+      // @ts-expect-error purposefully using the deprecated prop
+      <SanityApp sanityConfigs={legacyConfigs} fallback={<div>Loading...</div>}>
+        <div>Child content</div>
+      </SanityApp>,
+    )
+
+    // Should render two nested ResourceProviders
+    const providers = getAllByTestId('resource-provider')
+    expect(providers).toHaveLength(2)
+
+    // Verify each provider has the correct config
+    expect(JSON.parse(providers[0].getAttribute('data-config') || '{}')).toEqual(legacyConfigs[0])
+    expect(JSON.parse(providers[1].getAttribute('data-config') || '{}')).toEqual(legacyConfigs[1])
   })
 })

@@ -7,7 +7,7 @@ import {
   SDK_NODE_NAME,
   type StudioResource,
 } from '@sanity/message-protocol'
-import {type FrameMessage} from '@sanity/sdk'
+import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
 import {useCallback, useState} from 'react'
 
 import {useWindowConnection} from './useWindowConnection'
@@ -20,9 +20,7 @@ interface DocumentInteractionHistory {
 /**
  * @public
  */
-interface UseRecordDocumentHistoryEventProps {
-  documentId: string
-  documentType: string
+interface UseRecordDocumentHistoryEventProps extends DocumentHandle {
   resourceType: StudioResource['type'] | MediaResource['type'] | CanvasResource['type']
   resourceId?: string
 }
