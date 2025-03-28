@@ -5,25 +5,6 @@ import {type SanityProject as _SanityProject} from '@sanity/client'
  */
 export type SanityProject = _SanityProject
 
-// Types
-export {type AuthConfig, type AuthProvider} from '../config/authConfig'
-export {
-  type DatasetHandle,
-  type DocumentHandle,
-  type DocumentTypeHandle,
-  type ProjectHandle,
-  type SanityConfig,
-} from '../config/sanityConfig'
-export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
-export {type Selector, type StateSource} from '../store/createStateSourceAction'
-
-/** CLIENT */
-// Utils
-export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
-// Types
-export type {ClientStoreState as ClientState} from '../client/clientStore'
-
-/** AUTH */
 export {AuthStateType} from '../auth/authStateType'
 export {
   type AuthState,
@@ -41,6 +22,8 @@ export {
 export {fetchLoginUrls} from '../auth/fetchLoginUrls'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
+export type {ClientStoreState as ClientState} from '../client/clientStore'
+export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
 export {
   type ComlinkControllerState,
   destroyController,
@@ -51,6 +34,14 @@ export {
 export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
 export {getOrCreateNode, releaseNode} from '../comlink/node/comlinkNodeStore'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'
+export {type AuthConfig, type AuthProvider} from '../config/authConfig'
+export {
+  type DatasetHandle,
+  type DocumentHandle,
+  type DocumentTypeHandle,
+  type ProjectHandle,
+  type SanityConfig,
+} from '../config/sanityConfig'
 export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
 export {
   createDocument,
@@ -92,17 +83,8 @@ export {
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,
 } from '../document/events'
-export {
-  type DocumentHandle,
-  type DocumentTypeHandle,
-  type JsonMatch,
-  jsonMatch,
-  type JsonMatchPath,
-} from '../document/patchOperations'
-export {type DocumentResourceId, getResourceId, type ResourceId} from '../document/patchOperations'
+export {type JsonMatch, jsonMatch, type JsonMatchPath} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
-export {createSanityInstance} from '../instance/sanityInstance'
-export type {SanityConfig, SanityInstance, SdkIdentity} from '../instance/types'
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
 export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
@@ -118,6 +100,8 @@ export {
   type QueryOptions,
   resolveQuery,
 } from '../query/queryStore'
+export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
+export {type Selector, type StateSource} from '../store/createStateSourceAction'
 export {getUsersKey, parseUsersKey} from '../users/reducers'
 export {
   type GetUsersOptions,

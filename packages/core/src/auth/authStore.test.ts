@@ -1,20 +1,20 @@
 import {type ClientConfig, createClient} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
-import {type Subscription} from 'rxjs'
-import {beforeEach, describe, it} from 'vitest'
+import {NEVER, type Subscription} from 'rxjs'
+import {afterEach, beforeEach, describe, it} from 'vitest'
 
-import {createSanityInstance} from '../instance/sanityInstance'
-import {createResourceState, getOrCreateResource} from '../resources/createResource'
+import {createSanityInstance} from '../store/createSanityInstance'
 import {AuthStateType} from './authStateType'
 import {
   authStore,
-  type AuthStoreState,
   getAuthState,
   getCurrentUserState,
   getDashboardOrganizationId,
   getLoginUrlsState,
   getTokenState,
 } from './authStore'
+import {fetchLoginUrls} from './fetchLoginUrls'
+import {handleAuthCallback} from './handleAuthCallback'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
 import {getAuthCode, getTokenFromStorage} from './utils'
@@ -28,7 +28,25 @@ vi.mock('./subscribeToStateAndFetchCurrentUser')
 vi.mock('./subscribeToStorageEventsAndSetToken')
 
 describe('authStore', () => {
+  // Global beforeEach and afterEach for all tests
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.mocked(subscribeToStateAndFetchCurrentUser).mockImplementation(() => NEVER.subscribe())
+    vi.mocked(subscribeToStorageEventsAndSetToken).mockImplementation(() => NEVER.subscribe())
+  })
+
   describe('getInitialState', () => {
+    let instance: ReturnType<typeof createSanityInstance>
+
+    beforeEach(() => {
+      vi.mocked(getTokenFromStorage).mockReturnValue(null)
+      vi.mocked(getAuthCode).mockReturnValue(null)
+    })
+
+    afterEach(() => {
+      instance?.dispose()
+    })
+
     it('sets initial options onto state', () => {
       const apiHost = 'test-api-host'
       const callbackUrl = '/login/callback'
@@ -40,7 +58,7 @@ describe('authStore', () => {
       const initialLocationHref = 'https://example.com'
       const storageArea = {} as Storage
 
-      const instance = createSanityInstance({
+      instance = createSanityInstance({
         projectId: 'p',
         dataset: 'd',
         auth: {
@@ -53,8 +71,6 @@ describe('authStore', () => {
           storageArea,
         },
       })
-
-      vi.mocked(getTokenFromStorage).mockReturnValue(null)
 
       const {options} = authStore.getInitialState(instance)
 
@@ -69,7 +85,7 @@ describe('authStore', () => {
     })
 
     it('sets to logged in if provided token is present', () => {
-      const instance = createSanityInstance({
+      instance = createSanityInstance({
         projectId: 'p',
         dataset: 'd',
         auth: {
@@ -82,7 +98,7 @@ describe('authStore', () => {
     })
 
     it('sets to logging in if `getAuthCode` returns a code', () => {
-      const instance = createSanityInstance({
+      instance = createSanityInstance({
         projectId: 'p',
         dataset: 'd',
       })
@@ -94,7 +110,7 @@ describe('authStore', () => {
     })
 
     it('sets to logged in if `getTokenFromStorage` returns a token', () => {
-      const instance = createSanityInstance({
+      instance = createSanityInstance({
         projectId: 'p',
         dataset: 'd',
       })
@@ -107,7 +123,7 @@ describe('authStore', () => {
     })
 
     it('otherwise it sets the state to logged out', () => {
-      const instance = createSanityInstance({
+      instance = createSanityInstance({
         projectId: 'p',
         dataset: 'd',
       })
@@ -122,9 +138,11 @@ describe('authStore', () => {
 
   describe('initialize', () => {
     let mockLocalStorage: Storage
+    let instance: ReturnType<typeof createSanityInstance>
+    let stateUnsubscribe: ReturnType<typeof vi.fn>
+    let storageEventsUnsubscribe: ReturnType<typeof vi.fn>
 
     beforeEach(() => {
-      vi.clearAllMocks()
       // Create fresh mock localStorage for each test
       mockLocalStorage = {
         getItem: vi.fn(),
@@ -138,26 +156,29 @@ describe('authStore', () => {
           return Storage
         },
       } as unknown as Storage
-    })
 
-    it('subscribes to state and storage events and unsubscribes on dispose', () => {
-      const instance = createSanityInstance({
-        projectId: 'p123abc',
-        dataset: 'production',
-        auth: {
-          storageArea: mockLocalStorage,
-        },
-      })
+      stateUnsubscribe = vi.fn()
+      storageEventsUnsubscribe = vi.fn()
 
-      const stateUnsubscribe = vi.fn()
       vi.mocked(subscribeToStateAndFetchCurrentUser).mockReturnValue({
         unsubscribe: stateUnsubscribe,
       } as unknown as Subscription)
 
-      const storageEventsUnsubscribe = vi.fn()
       vi.mocked(subscribeToStorageEventsAndSetToken).mockReturnValue({
         unsubscribe: storageEventsUnsubscribe,
       } as unknown as Subscription)
+    })
+
+    afterEach(() => {
+      instance?.dispose()
+    })
+
+    it('subscribes to state and storage events and unsubscribes on dispose', () => {
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {storageArea: mockLocalStorage},
+      })
 
       Object.defineProperty(mockLocalStorage, 'constructor', {
         get: () => Storage,
@@ -166,7 +187,8 @@ describe('authStore', () => {
       expect(subscribeToStateAndFetchCurrentUser).not.toHaveBeenCalled()
       expect(subscribeToStorageEventsAndSetToken).not.toHaveBeenCalled()
 
-      getOrCreateResource(instance, authStore)
+      // call a bound action to lazily create the store
+      getAuthState(instance)
 
       expect(subscribeToStateAndFetchCurrentUser).toHaveBeenCalled()
       expect(subscribeToStorageEventsAndSetToken).toHaveBeenCalled()
@@ -178,25 +200,13 @@ describe('authStore', () => {
     })
 
     it('does not subscribe to storage events when not using storage area', () => {
-      const instance = createSanityInstance({
-        projectId: 'p123abc',
-        dataset: 'production',
-        auth: {
-          storageArea: undefined,
-        },
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {storageArea: undefined},
       })
 
-      const stateUnsubscribe = vi.fn()
-      vi.mocked(subscribeToStateAndFetchCurrentUser).mockReturnValue({
-        unsubscribe: stateUnsubscribe,
-      } as unknown as Subscription)
-
-      const storageEventsUnsubscribe = vi.fn()
-      vi.mocked(subscribeToStorageEventsAndSetToken).mockReturnValue({
-        unsubscribe: storageEventsUnsubscribe,
-      } as unknown as Subscription)
-
-      getOrCreateResource(instance, authStore)
+      getAuthState(instance)
 
       expect(subscribeToStateAndFetchCurrentUser).toHaveBeenCalled()
       expect(subscribeToStorageEventsAndSetToken).not.toHaveBeenCalled()
@@ -209,43 +219,60 @@ describe('authStore', () => {
   })
 
   describe('getCurrentUserState', () => {
-    it('returns the current user if logged in and current user is non-null', () => {
-      const currentUser = {id: 'example-user'} as CurrentUser
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-      const state = createResourceState<AuthStoreState>({
-        authState: {type: AuthStateType.LOGGED_IN, token: 'new-token', currentUser},
-      } as AuthStoreState)
+    let instance: ReturnType<typeof createSanityInstance>
+    let currentUser: CurrentUser
 
-      const currentUserState = getCurrentUserState({instance, state})
-      expect(currentUserState.getCurrent()).toBe(currentUser)
+    beforeEach(() => {
+      currentUser = {id: 'example-user'} as CurrentUser
+    })
+
+    afterEach(() => {
+      instance?.dispose()
+    })
+
+    it('returns the current user if logged in and current user is non-null', () => {
+      vi.mocked(subscribeToStateAndFetchCurrentUser).mockImplementation(({state}) => {
+        state.set('setCurrentUser', {
+          authState: {
+            type: AuthStateType.LOGGED_IN,
+            token: 'token',
+            currentUser,
+          },
+        })
+
+        return NEVER.subscribe()
+      })
+
+      instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+
+      const {getCurrent} = getCurrentUserState(instance)
 
       // pureness check
-      expect(currentUserState.getCurrent()).toBe(currentUserState.getCurrent())
+      expect(getCurrent()).toBe(getCurrent())
     })
 
     it('returns null otherwise', () => {
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-      const state = createResourceState<AuthStoreState>({
-        authState: {type: AuthStateType.LOGGED_OUT},
-      } as AuthStoreState)
-
-      const currentUserState = getCurrentUserState({instance, state})
-      expect(currentUserState.getCurrent()).toBe(null)
-
-      // pureness check
-      expect(currentUserState.getCurrent()).toBe(currentUserState.getCurrent())
+      instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      const {getCurrent} = getCurrentUserState(instance)
+      expect(getCurrent()).toBe(null)
     })
   })
 
   describe('getTokenState', () => {
-    it('returns the token if logged in', () => {
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-      const token = 'new-token'
-      const state = createResourceState<AuthStoreState>({
-        authState: {type: AuthStateType.LOGGED_IN, token},
-      } as AuthStoreState)
+    let instance: ReturnType<typeof createSanityInstance>
 
-      const tokenState = getTokenState({instance, state})
+    afterEach(() => {
+      instance?.dispose()
+    })
+
+    it('returns the token if logged in', () => {
+      const token = 'hard-coded-token'
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {token},
+      })
+      const tokenState = getTokenState(instance)
       expect(tokenState.getCurrent()).toBe(token)
 
       // pureness check
@@ -253,12 +280,9 @@ describe('authStore', () => {
     })
 
     it('returns null otherwise', () => {
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-      const state = createResourceState<AuthStoreState>({
-        authState: {type: AuthStateType.ERROR, error: new Error('test error')},
-      } as AuthStoreState)
+      instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
-      const tokenState = getTokenState({instance, state})
+      const tokenState = getTokenState(instance)
       expect(tokenState.getCurrent()).toBe(null)
 
       // pureness check
@@ -267,55 +291,102 @@ describe('authStore', () => {
   })
 
   describe('getLoginUrlsState', () => {
-    it('returns the cached auth providers if present', () => {
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-      const providers = [{name: 'test', title: 'Test', url: 'https://example.com#withSid=true'}]
-      const state = createResourceState<AuthStoreState>({providers} as AuthStoreState)
+    let instance: ReturnType<typeof createSanityInstance>
 
-      const loginUrlsState = getLoginUrlsState({instance, state})
-      expect(loginUrlsState.getCurrent()).toBe(providers)
+    afterEach(() => {
+      instance?.dispose()
+    })
+
+    it('returns the cached auth providers if present', async () => {
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {
+          providers: [{name: 'test', title: 'Test', url: 'https://example.com'}],
+          clientFactory: vi.fn().mockReturnValue({
+            request: vi.fn().mockResolvedValue({providers: []}),
+          }),
+        },
+      })
+
+      await fetchLoginUrls(instance)
+
+      const {getCurrent} = getLoginUrlsState(instance)
+      expect(getCurrent()).toEqual([
+        {
+          name: 'test',
+          title: 'Test',
+          url: 'https://example.com/?origin=http%3A%2F%2Flocalhost%2F&withSid=true&type=stampedToken',
+        },
+      ])
 
       // pureness check
-      expect(loginUrlsState.getCurrent()).toBe(loginUrlsState.getCurrent())
+      expect(getCurrent()).toBe(getCurrent())
     })
 
     it('returns nulls otherwise', () => {
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-      const state = createResourceState<AuthStoreState>({} as AuthStoreState)
+      instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
-      const loginUrlsState = getLoginUrlsState({instance, state})
+      const loginUrlsState = getLoginUrlsState(instance)
       expect(loginUrlsState.getCurrent()).toBe(null)
-
-      // pureness check
-      expect(loginUrlsState.getCurrent()).toBe(loginUrlsState.getCurrent())
     })
   })
 
   describe('getAuthState', () => {
-    it('returns the current state in `authState`', () => {
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-      const authState: AuthStoreState['authState'] = {
-        type: AuthStateType.LOGGED_OUT,
-        isDestroyingSession: false,
-      }
-      const state = createResourceState<AuthStoreState>({authState} as AuthStoreState)
+    let instance: ReturnType<typeof createSanityInstance>
 
-      const authStateSource = getAuthState({instance, state})
-      expect(authStateSource.getCurrent()).toBe(authState)
+    afterEach(() => {
+      instance?.dispose()
+    })
+
+    it('returns the current state in `authState`', () => {
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {token: 'hard-coded-token'},
+      })
+
+      const {getCurrent} = getAuthState(instance)
+      expect(getCurrent()).toEqual({
+        currentUser: null,
+        token: 'hard-coded-token',
+        type: 'logged-in',
+      })
 
       // pureness check
-      expect(authStateSource.getCurrent()).toBe(authStateSource.getCurrent())
+      expect(getCurrent()).toBe(getCurrent())
     })
   })
 
   describe('getDashboardOrganizationId', () => {
-    it('returns the organization id if present', () => {
-      const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-      const state = createResourceState<AuthStoreState>({
-        dashboardContext: {orgId: 'org-id'},
-      } as AuthStoreState)
+    let instance: ReturnType<typeof createSanityInstance>
 
-      const organizationId = getDashboardOrganizationId({instance, state})
+    beforeEach(() => {
+      vi.mocked(getAuthCode).mockReturnValue('test-auth-code')
+    })
+
+    afterEach(() => {
+      instance?.dispose()
+    })
+
+    it('returns the organization id if present', () => {
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {
+          clientFactory: vi.fn().mockReturnValue({
+            request: vi.fn().mockResolvedValue({token: 'test-token', label: 'tes'}),
+          }),
+        },
+      })
+
+      // Create a URL with an organization ID in the _context parameter
+      const callbackUrl = `https://example.com/login/callback?sid=test-auth-code&_context=${encodeURIComponent(JSON.stringify({orgId: 'org-id'}))}`
+
+      // Call handleCallback with the URL to set the organization ID in the state
+      handleAuthCallback(instance, callbackUrl)
+
+      const organizationId = getDashboardOrganizationId(instance)
       expect(organizationId.getCurrent()).toBe('org-id')
     })
   })

@@ -1,5 +1,13 @@
-import {createUsersStore, type ResourceType, type SanityUser} from '@sanity/sdk'
-import {useCallback, useEffect, useState, useSyncExternalStore} from 'react'
+import {
+  getUsersKey,
+  type GetUsersOptions,
+  getUsersState,
+  loadMoreUsers,
+  parseUsersKey,
+  resolveUsers,
+  type SanityUser,
+} from '@sanity/sdk'
+import {useCallback, useEffect, useMemo, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -7,34 +15,20 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @public
  * @category Types
  */
-export interface UseUsersParams {
-  /**
-   * The type of resource to fetch users for.
-   */
-  resourceType: ResourceType
-  /**
-   * The ID of the resource to fetch users for.
-   */
-  resourceId: string
-  /**
-   * The limit of users to fetch.
-   */
-  limit?: number
-}
-
-/**
- * @public
- * @category Types
- */
-export interface UseUsersResult {
+export interface UsersResult {
   /**
    * The users fetched.
    */
-  users: SanityUser[]
+  data: SanityUser[]
   /**
    * Whether there are more users to fetch.
    */
   hasMore: boolean
+
+  /**
+   * Whether a users request is currently in progress
+   */
+  isPending: boolean
   /**
    * Load more users.
    */
@@ -48,60 +42,79 @@ export interface UseUsersResult {
  * Retrieves the users for a given resource (either a project or an organization).
  *
  * @category Users
- * @param params - The resource type and its ID, and the limit of users to fetch
+ * @param params - The resource type, project ID, and the limit of users to fetch
  * @returns A list of users, a boolean indicating whether there are more users to fetch, and a function to load more users
  *
  * @example
  * ```
- * const { users, hasMore, loadMore } = useUsers({
+ * const { data, hasMore, loadMore, isPending } = useUsers({
  *   resourceType: 'organization',
- *   resourceId: 'my-org-id',
- *   limit: 10,
+ *   organizationId: 'my-org-id',
+ *   batchSize: 10,
  * })
  *
  * return (
  *   <div>
- *     {users.map(user => (
+ *     {data.map(user => (
  *       <figure key={user.sanityUserId}>
  *         <img src={user.profile.imageUrl} alt='' />
  *         <figcaption>{user.profile.displayName}</figcaption>
  *         <address>{user.profile.email}</address>
  *       </figure>
  *     ))}
- *     {hasMore && <button onClick={loadMore}>Load More</button>}
+ *     {hasMore && <button onClick={loadMore}>{isPending ? 'Loading...' : 'Load More'</button>}
  *   </div>
  * )
  * ```
  */
-export function useUsers(params: UseUsersParams): UseUsersResult {
-  const instance = useSanityInstance(params.resourceId)
-  const [store] = useState(() => createUsersStore(instance))
+export function useUsers(options?: GetUsersOptions): UsersResult {
+  const instance = useSanityInstance(options)
+  // Use React's useTransition to avoid UI jank when user options change
+  const [isPending, startTransition] = useTransition()
 
+  // Get the unique key for this users request and its options
+  const key = getUsersKey(instance, options)
+  // Use a deferred state to avoid immediate re-renders when the users request changes
+  const [deferredKey, setDeferredKey] = useState(key)
+  // Parse the deferred users key back into users options
+  const deferred = useMemo(() => parseUsersKey(deferredKey), [deferredKey])
+
+  // Create an AbortController to cancel in-flight requests when needed
+  const [ref, setRef] = useState<AbortController>(new AbortController())
+
+  // When the users request or options change, start a transition to update the request
   useEffect(() => {
-    store.setOptions({
-      resourceType: params.resourceType,
-      resourceId: params.resourceId,
+    if (key === deferredKey) return
+
+    startTransition(() => {
+      if (!ref.signal.aborted) {
+        ref.abort()
+        setRef(new AbortController())
+      }
+
+      setDeferredKey(key)
     })
-  }, [params.resourceType, params.resourceId, store])
+  }, [deferredKey, key, ref])
 
-  const subscribe = useCallback(
-    (onStoreChanged: () => void) => {
-      if (store.getState().getCurrent().initialFetchCompleted === false) {
-        store.resolveUsers()
-      }
-      const unsubscribe = store.getState().subscribe(onStoreChanged)
+  // Get the state source for this users request from the users store
+  const {getCurrent, subscribe} = useMemo(() => {
+    return getUsersState(instance, deferred)
+  }, [instance, deferred])
 
-      return () => {
-        unsubscribe()
-        store.dispose()
-      }
-    },
-    [store],
-  )
+  // If data isn't available yet, suspend rendering until it is
+  // This is the React Suspense integration - throwing a promise
+  // will cause React to show the nearest Suspense fallback
+  if (getCurrent() === undefined) {
+    throw resolveUsers(instance, {...deferred, signal: ref.signal})
+  }
 
-  const getSnapshot = useCallback(() => store.getState().getCurrent(), [store])
+  // Subscribe to updates and get the current data
+  // useSyncExternalStore ensures the component re-renders when the data changes
+  const {data, hasMore} = useSyncExternalStore(subscribe, getCurrent)!
 
-  const {users, hasMore} = useSyncExternalStore(subscribe, getSnapshot) || {}
+  const loadMore = useCallback(() => {
+    loadMoreUsers(instance, options)
+  }, [instance, options])
 
-  return {users, hasMore, loadMore: store.loadMore}
+  return {data, hasMore, isPending, loadMore}
 }

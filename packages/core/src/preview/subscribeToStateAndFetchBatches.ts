@@ -1,100 +1,104 @@
-import {type SyncTag} from '@sanity/client'
 import {
-  combineLatest,
   debounceTime,
+  defer,
   distinctUntilChanged,
   EMPTY,
+  filter,
+  from,
   map,
+  Observable,
   pairwise,
   startWith,
+  Subscription,
   switchMap,
   tap,
-  withLatestFrom,
 } from 'rxjs'
 
-import {getClientState} from '../client/clientStore'
-import {type ActionContext, createInternalAction} from '../resources/createAction'
+import {getQueryState, resolveQuery} from '../query/queryStore'
+import {type StoreContext} from '../store/defineStore'
 import {createPreviewQuery, processPreviewQuery} from './previewQuery'
 import {type PreviewQueryResult, type PreviewStoreState} from './previewStore'
-import {PREVIEW_TAG} from './util'
+import {PREVIEW_PERSPECTIVE, PREVIEW_TAG} from './util'
 
 const BATCH_DEBOUNCE_TIME = 50
 
-export const subscribeToStateAndFetchBatches = createInternalAction(
-  ({state, instance}: ActionContext<PreviewStoreState>) => {
-    return function () {
-      const client$ = getClientState(instance, {apiVersion: 'vX'}).observable
-      const documentTypes$ = state.observable.pipe(
-        map((i) => i.documentTypes),
-        distinctUntilChanged(),
-      )
-      const lastLiveEventId$ = state.observable.pipe(
-        map((i) => i.lastLiveEventId),
-        distinctUntilChanged(),
-      )
+const isSetEqual = <T>(a: Set<T>, b: Set<T>) =>
+  a.size === b.size && Array.from(a).every((i) => b.has(i))
 
-      const newSubscriberIds$ = state.observable.pipe(
-        map(({subscriptions}) => new Set(Object.keys(subscriptions))),
-        distinctUntilChanged((a, b) =>
-          a.size !== b.size ? false : Array.from(a).every((i) => b.has(i)),
-        ),
-        debounceTime(BATCH_DEBOUNCE_TIME),
-        startWith(new Set<string>()),
-        pairwise(),
-        tap(([prevIds, currIds]) => {
-          // for all new subscriptions, set their values to pending
-          const newIds = [...currIds].filter((element) => !prevIds.has(element))
-          state.set('updatingPending', (prev) => {
-            const pendingValues = newIds.reduce<PreviewStoreState['values']>((acc, id) => {
-              const prevValue = prev.values[id]
-              const value = prevValue?.data ? prevValue.data : null
-              acc[id] = {data: value, isPending: true}
-              return acc
-            }, {})
-            return {values: {...prev.values, ...pendingValues}}
+export const subscribeToStateAndFetchBatches = ({
+  state,
+  instance,
+}: StoreContext<PreviewStoreState>): Subscription => {
+  const newSubscriberIds$ = state.observable.pipe(
+    map(({subscriptions}) => new Set(Object.keys(subscriptions))),
+    distinctUntilChanged(isSetEqual),
+    debounceTime(BATCH_DEBOUNCE_TIME),
+    startWith(new Set<string>()),
+    pairwise(),
+    tap(([prevIds, currIds]) => {
+      // for all new subscriptions, set their values to pending
+      const newIds = [...currIds].filter((element) => !prevIds.has(element))
+      state.set('updatingPending', (prev) => {
+        const pendingValues = newIds.reduce<PreviewStoreState['values']>((acc, id) => {
+          const prevValue = prev.values[id]
+          const value = prevValue?.data ? prevValue.data : null
+          acc[id] = {data: value, isPending: true}
+          return acc
+        }, {})
+        return {values: {...prev.values, ...pendingValues}}
+      })
+    }),
+    map(([, ids]) => ids),
+    distinctUntilChanged(isSetEqual),
+  )
+
+  return newSubscriberIds$
+    .pipe(
+      switchMap((ids) => {
+        if (!ids.size) return EMPTY
+        const {query, params} = createPreviewQuery(ids)
+        const controller = new AbortController()
+        return new Observable<PreviewQueryResult[]>((observer) => {
+          const {getCurrent, observable} = getQueryState<PreviewQueryResult[]>(instance, query, {
+            params,
+            tag: PREVIEW_TAG,
+            perspective: PREVIEW_PERSPECTIVE,
           })
+          const source$ = defer(() => {
+            if (getCurrent() === undefined) {
+              return from(
+                resolveQuery<PreviewQueryResult[]>(instance, query, {
+                  params,
+                  tag: PREVIEW_TAG,
+                  perspective: PREVIEW_PERSPECTIVE,
+                  signal: controller.signal,
+                }),
+              ).pipe(switchMap(() => observable))
+            }
+            return observable
+          }).pipe(filter((result) => result !== undefined))
+          const subscription = source$.subscribe(observer)
+          return () => {
+            if (!controller.signal.aborted) {
+              controller.abort()
+            }
+
+            subscription.unsubscribe()
+          }
+        }).pipe(map((data) => ({data, ids})))
+      }),
+      map(({ids, data}) => ({
+        values: processPreviewQuery({
+          projectId: instance.config.projectId!,
+          dataset: instance.config.dataset!,
+          ids,
+          results: data,
         }),
-        withLatestFrom(documentTypes$),
-        map(([[, ids], documentTypes]) => ({ids, documentTypes})),
-      )
-
-      return combineLatest([newSubscriberIds$, lastLiveEventId$, client$])
-        .pipe(
-          switchMap(([{ids}, lastLiveEventId, client]) => {
-            if (!ids.size) return EMPTY
-            const {query, params} = createPreviewQuery(ids)
-
-            return client.observable
-              .fetch<PreviewQueryResult[]>(query, params, {
-                filterResponse: false,
-                returnQuery: false,
-                perspective: 'drafts',
-                tag: PREVIEW_TAG,
-                lastLiveEventId,
-              })
-              .pipe(map((response) => ({...response, ids})))
-          }),
-          map(({ids, result, syncTags}) => ({
-            syncTags,
-            values: processPreviewQuery({
-              projectId: instance.identity.projectId,
-              dataset: instance.identity.dataset,
-              ids,
-              results: result,
-            }),
-          })),
-        )
-        .subscribe({
-          next: ({syncTags = [], values}) => {
-            state.set('updateResult', (prev) => ({
-              values: {...prev.values, ...values},
-              syncTags: syncTags.reduce<Record<SyncTag, true>>((acc, next) => {
-                acc[next] = true
-                return acc
-              }, {}),
-            }))
-          },
-        })
-    }
-  },
-)
+      })),
+    )
+    .subscribe({
+      next: ({values}) => {
+        state.set('updateResult', (prev) => ({values: {...prev.values, ...values}}))
+      },
+    })
+}

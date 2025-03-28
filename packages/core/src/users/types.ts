@@ -1,7 +1,4 @@
-/**
- * @public
- */
-export type ResourceType = 'organization' | 'project'
+import {type ProjectHandle} from '../config/sanityConfig'
 
 /**
  * @public
@@ -40,4 +37,49 @@ export interface UserProfile {
   updatedAt?: string
   isCurrentUser?: boolean
   providerId?: string
+}
+
+/**
+ * @public
+ */
+export interface GetUsersOptions extends ProjectHandle {
+  resourceType?: 'organization' | 'project'
+  batchSize?: number
+  organizationId?: string
+}
+
+/**
+ * @public
+ */
+export interface UsersGroupState {
+  subscriptions: string[]
+  totalCount?: number
+  nextCursor?: string | null
+  lastLoadMoreRequest?: string
+  users?: SanityUser[]
+  error?: unknown
+}
+
+/**
+ * @public
+ */
+export interface SanityUserResponse {
+  data: SanityUser[]
+  totalCount: number
+  nextCursor: string | null
+}
+
+/**
+ * @public
+ */
+export interface UsersStoreState {
+  users: {[TUsersKey in string]?: UsersGroupState}
+  error?: unknown
+}
+
+/**
+ * @public
+ */
+export interface ResolveUsersOptions extends GetUsersOptions {
+  signal?: AbortSignal
 }

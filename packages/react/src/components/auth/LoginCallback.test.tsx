@@ -1,7 +1,7 @@
-import {screen, waitFor} from '@testing-library/react'
+import {render, screen, waitFor} from '@testing-library/react'
 import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {renderWithWrappers} from './authTestHelpers'
+import {ResourceProvider} from '../../context/ResourceProvider'
 
 // Mock `useHandleAuthCallback`
 vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
@@ -37,7 +37,11 @@ describe('LoginCallback', () => {
 
   it('renders a loading message', async () => {
     const {LoginCallback} = await import('./LoginCallback') // Reload after resetModules
-    renderWithWrappers(<LoginCallback />)
+    render(
+      <ResourceProvider fallback={null}>
+        <LoginCallback />
+      </ResourceProvider>,
+    )
     expect(screen.getByText('Logging you in…')).toBeInTheDocument()
   })
 
@@ -46,7 +50,11 @@ describe('LoginCallback', () => {
     vi.stubGlobal('location', {href: 'http://localhost#sid=valid'})
     const {LoginCallback} = await import('./LoginCallback') // Reload after resetModules
 
-    renderWithWrappers(<LoginCallback />)
+    render(
+      <ResourceProvider fallback={null}>
+        <LoginCallback />
+      </ResourceProvider>,
+    )
 
     await waitFor(() => {
       expect(history.replaceState).toHaveBeenCalledWith(
@@ -62,7 +70,11 @@ describe('LoginCallback', () => {
     vi.stubGlobal('location', {href: 'http://localhost#sid=invalid'})
     const {LoginCallback} = await import('./LoginCallback') // Reload after resetModules
 
-    renderWithWrappers(<LoginCallback />)
+    render(
+      <ResourceProvider fallback={null}>
+        <LoginCallback />
+      </ResourceProvider>,
+    )
 
     await waitFor(() => {
       expect(history.replaceState).not.toHaveBeenCalled()
