@@ -29,6 +29,28 @@ const myDocumentHandle = {
 }
 ```
 
+Therefore, for a document in a given dataset that looks (in part) like this:
+
+```JSON
+{
+  "_id": "123456-abcdef",
+  "_type": "book",
+  "title": "Into the Cool",
+  "publisher": "The University of Chicago Press",
+  "pages": 378,
+  "…": "…"
+}
+```
+
+…the corresponding Document Handle would look like this:
+
+```JavaScript
+{
+  _id: "123456-abcdef",
+  _type: "book"
+}
+```
+
 ## Why are Document Handles used?
 
 Hooks like {@link useDocuments} and {@link usePaginatedDocuments} can return potentially large numbers of documents matching your specified parameters. If these hooks were to return every matching document in its entirety, this could end up being a potentially performance heavy operation, which could thus slow down your application and result in a poor user experience. Additionally, you may not need each returned document in its entirety to begin with — perhaps, for example, you just want to render a document preview, or one or two arbitrary fields of a document, or to simply get a count of documents matching your parameters.
@@ -160,3 +182,7 @@ export function AuthorList() {
 ```
 
 We’ve now both retrieved a list of Document Handles, and used each of them in a dedicated component with a hook that consumes Document Handles. No matter how many authors there are in our dataset, nor how many fields might exist on our author type, this will keep our application performing as fast as possible by separating the concerns of retrieving author type documents (or rather, Document Handles) and retrieving data from those documents.
+
+```
+
+```
