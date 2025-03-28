@@ -1,4 +1,6 @@
-# Migration guide
+---
+title: Migration guide
+---
 
 ## Migrating to @sanity/sdk-react@0.0.0-rc.2
 
