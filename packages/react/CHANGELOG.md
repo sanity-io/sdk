@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.22](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.21...sdk-react-v0.0.0-alpha.22) (2025-03-27)
+
+
+### Bug Fixes
+
+* **deps:** upgrade `@sanity/client`, do not use `withCredentials` ([#368](https://github.com/sanity-io/sdk/issues/368)) ([8e1cbd9](https://github.com/sanity-io/sdk/commit/8e1cbd92501892bf116c3a3473ae693062518f89))
+
 ## [0.0.0-alpha.21](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.20...sdk-react-v0.0.0-alpha.21) (2025-03-25)
 
 
