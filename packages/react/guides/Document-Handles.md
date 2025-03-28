@@ -96,10 +96,10 @@ For example:
 ```tsx
 import {useDocumentSyncStatus, type DocumentHandle} from '@sanity/sdk-react'
 
-const myDocumentHandle = {
+const myDocumentHandle: DocumentHandle = {
   _id: 'my-document-id',
   _type: 'book',
-} as DocumentHandle
+}
 
 const documentSynced = useDocumentSyncStatus(myDocumentHandle)
 ```
