@@ -1,17 +1,11 @@
-import {createSanityInstance} from '@sanity/sdk'
-import {SanityProvider} from '@sanity/sdk-react'
-import {Box, Button, Card, Flex} from '@sanity/ui'
+import {ResourceProvider} from '@sanity/sdk-react'
+import {Box, Button, Card, Flex, Spinner} from '@sanity/ui'
 import {type JSX} from 'react'
 import {Link, Outlet} from 'react-router'
 
-const sanityInstance = createSanityInstance({
-  projectId: 'ppsg7ml5',
-  dataset: 'test',
-})
-
 export function UnauthenticatedInstanceWrapper(): JSX.Element {
   return (
-    <SanityProvider sanityInstances={[sanityInstance]}>
+    <ResourceProvider projectId="ppsg7ml5" dataset="test" fallback={<Spinner />}>
       <Box style={{width: '100%'}}>
         <Card shadow={1} padding={3}>
           <Flex as="nav" align="center" justify="space-between" paddingX={4}>
@@ -28,6 +22,6 @@ export function UnauthenticatedInstanceWrapper(): JSX.Element {
           <Outlet />
         </Box>
       </Box>
-    </SanityProvider>
+    </ResourceProvider>
   )
 }

@@ -62,8 +62,8 @@ interface UseManageFavoriteProps extends DocumentHandle {
 export function useManageFavorite({
   documentId,
   documentType,
-  resourceType,
   resourceId,
+  resourceType,
 }: UseManageFavoriteProps): ManageFavorite {
   const [isFavorited, setIsFavorited] = useState(false) // should load this from a comlink fetch
   const [status, setStatus] = useState<Status>('idle')
