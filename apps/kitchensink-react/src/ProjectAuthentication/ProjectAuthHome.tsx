@@ -11,12 +11,7 @@ export function ProjectAuthHome({
   routes: {path: string; element: JSX.Element}[]
 }): JSX.Element {
   return (
-    <PageLayout
-      title="Authenticated"
-      subtitle="Explore authentication examples and components"
-      homePath="/project-auth"
-      homeText="Authenticated Home"
-    >
+    <PageLayout title="Authenticated" subtitle="Explore authentication examples and components">
       <AuthBoundary>
         <Flex direction="column" gap={3}>
           {routes.map((route) => (
