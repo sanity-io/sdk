@@ -149,6 +149,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.delete',
         },
       ]
@@ -184,6 +185,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.delete',
         },
       ]
@@ -215,6 +217,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.delete',
         },
       ]
@@ -233,6 +236,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.discard',
         },
       ]
@@ -261,6 +265,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.discard',
         },
       ]
@@ -279,6 +284,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.edit',
           patches: [{set: {title: 'Edited Title'}}],
         },
@@ -310,6 +316,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.edit',
           patches: [{set: {title: 'New Draft Title'}}],
         },
@@ -337,6 +344,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.edit',
           patches: [{set: {title: 'Original Cool Title'}}],
         },
@@ -365,6 +373,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.edit',
           patches: [{set: {title: 'Should Fail'}}],
         },
@@ -381,6 +390,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.edit',
           patches: [{set: {title: 'Edited Title'}}],
         },
@@ -398,6 +408,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.edit',
           patches: [{set: {title: 'New Title'}}],
         },
@@ -417,6 +428,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.publish',
         },
       ]
@@ -451,6 +463,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.publish',
         },
       ]
@@ -468,6 +481,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.publish',
         },
       ]
@@ -480,7 +494,9 @@ describe('processActions', () => {
       const draft = createDoc('drafts.doc1', 'Draft Title', '1')
       const base: DocumentSet = {'drafts.doc1': draft}
       const working: DocumentSet = {'drafts.doc1': draft}
-      const actions: DocumentAction[] = [{documentId: 'doc1', type: 'document.publish'}]
+      const actions: DocumentAction[] = [
+        {documentId: 'doc1', documentType: 'article', type: 'document.publish'},
+      ]
       const grants = {...defaultGrants, update: alwaysDeny}
       expect(() =>
         processActions({actions, transactionId, base, working, timestamp, grants}),
@@ -492,7 +508,9 @@ describe('processActions', () => {
       const published = createDoc('doc1', 'Published Title', '1')
       const base: DocumentSet = {'drafts.doc1': draft, 'doc1': published}
       const working: DocumentSet = {'drafts.doc1': draft, 'doc1': published}
-      const actions: DocumentAction[] = [{documentId: 'doc1', type: 'document.publish'}]
+      const actions: DocumentAction[] = [
+        {documentId: 'doc1', documentType: 'article', type: 'document.publish'},
+      ]
       const grants = {
         ...defaultGrants,
         update: parse(`$document {"_": _id in path("drafts.**")}._`),
@@ -509,7 +527,9 @@ describe('processActions', () => {
       // simulate case where there is no published version
       const base: DocumentSet = {'drafts.doc1': draft}
       const working: DocumentSet = {'drafts.doc1': draft}
-      const actions: DocumentAction[] = [{documentId: 'doc1', type: 'document.publish'}]
+      const actions: DocumentAction[] = [
+        {documentId: 'doc1', documentType: 'article', type: 'document.publish'},
+      ]
       const grants = {...defaultGrants, create: alwaysDeny}
       expect(() =>
         processActions({actions, transactionId, base, working, timestamp, grants}),
@@ -542,6 +562,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.publish',
         },
       ]
@@ -573,6 +594,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.unpublish',
         },
       ]
@@ -606,6 +628,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.unpublish',
         },
       ]
@@ -623,6 +646,7 @@ describe('processActions', () => {
       const actions: DocumentAction[] = [
         {
           documentId: 'doc1',
+          documentType: 'article',
           type: 'document.unpublish',
         },
       ]
@@ -654,7 +678,9 @@ describe('processActions', () => {
       const published = createDoc('doc1', 'Published Title')
       const base: DocumentSet = {doc1: published}
       const working: DocumentSet = {doc1: published}
-      const actions: DocumentAction[] = [{documentId: 'doc1', type: 'document.unpublish'}]
+      const actions: DocumentAction[] = [
+        {documentId: 'doc1', documentType: 'article', type: 'document.unpublish'},
+      ]
       const grants = {...defaultGrants, update: alwaysDeny}
       expect(() =>
         processActions({actions, transactionId, base, working, timestamp, grants}),
@@ -665,7 +691,9 @@ describe('processActions', () => {
       const published = createDoc('doc1', 'Published Title')
       const base: DocumentSet = {doc1: published}
       const working: DocumentSet = {doc1: published}
-      const actions: DocumentAction[] = [{documentId: 'doc1', type: 'document.unpublish'}]
+      const actions: DocumentAction[] = [
+        {documentId: 'doc1', documentType: 'article', type: 'document.unpublish'},
+      ]
       const grants = {...defaultGrants, create: alwaysDeny}
       expect(() =>
         processActions({actions, transactionId, base, working, timestamp, grants}),
@@ -679,9 +707,14 @@ describe('processActions', () => {
       const base: DocumentSet = {doc1: published}
       const working: DocumentSet = {doc1: published}
       const actions: DocumentAction[] = [
-        {documentId: 'doc1', type: 'document.create', documentType: 'article'},
-        {documentId: 'doc1', type: 'document.edit', patches: [{set: {title: 'Edited Title'}}]},
-        {documentId: 'doc1', type: 'document.publish'},
+        {documentId: 'doc1', documentType: 'article', type: 'document.create'},
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.edit',
+          patches: [{set: {title: 'Edited Title'}}],
+        },
+        {documentId: 'doc1', documentType: 'article', type: 'document.publish'},
       ]
       const result = processActions({
         actions,

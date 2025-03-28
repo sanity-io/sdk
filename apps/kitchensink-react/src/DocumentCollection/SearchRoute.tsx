@@ -39,8 +39,8 @@ export function SearchRoute(): JSX.Element {
         )}
 
         <DocumentListLayout>
-          {data.map((doc: DocumentHandle) => (
-            <DocumentPreview document={doc} key={doc._id} />
+          {data.map((docHandle: DocumentHandle) => (
+            <DocumentPreview {...docHandle} key={docHandle.documentId} />
           ))}
           <LoadMore hasMore={hasMore} isPending={isPending} onLoadMore={loadMore} />
         </DocumentListLayout>
