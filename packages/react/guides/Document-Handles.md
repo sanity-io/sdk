@@ -4,7 +4,7 @@ title: Introducing Document Handles
 
 # Introducing Document Handles
 
-Document Handles ({@link DocumentHandle see their type definition here}) are a new concept introduced by the Sanity App SDK, and are important to understand when working with many of the SDK’s React hooks. In this guide, we’ll describe what a Document Handle is, why it’s useful, and how to work with them.
+Document Handles ({@link DocumentHandle see their type definition here}) are a new concept introduced by the Sanity App SDK, and are important to understand when working with many of the SDK’s React hooks. In this guide, we’ll describe what Document Handles are, why they’re useful, and how to work with them.
 
 ## What is a Document Handle?
 
