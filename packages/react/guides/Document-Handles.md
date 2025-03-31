@@ -61,32 +61,6 @@ Of course, unless you’re just looking to get a count of documents matching the
 
 In short, Document Handles promote deferring the retrieval of document contents until such time as those contents are actually needed by your application.
 
-## Which hooks return Document Handles?
-
-The following hooks return Document Handles as part of their results:
-
-- {@link useDocuments}
-- {@link usePaginatedDocuments}
-
-## Which hooks consume Document Handles?
-
-The following hooks consume Document Handles in order to retrieve document content or perform actions on a document:
-
-- {@link useDocument}
-- {@link useDocumentEvent}
-- {@link useDocumentSyncStatus}
-- {@link usePreview}
-- {@link useProjection}
-
-Additionally, document action functions which are passed to functions returned by hooks such as {@link useApplyDocumentActions} and {@link useDocumentPermissions} also consume Document Handles, e.g.:
-
-```tsx
-import {useDocumentPermissions} from '@sanity/sdk-react'
-import {publishDocument} from '@sanity/sdk'
-
-const publishPermissions = useDocumentPermissions(publishDocument(myDocumentHandle)))
-```
-
 ## Using your own Document Handles
 
 You’re not limited to using Document Handles returned by hooks like {@link useDocuments} — if it suits your use case (for example: if you know the document ID and type of the document you want to reference), you can certainly write and use your own Document Handles.
