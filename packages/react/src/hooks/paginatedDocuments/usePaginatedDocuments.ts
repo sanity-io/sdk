@@ -150,11 +150,9 @@ export interface PaginatedDocumentsResponse {
  *         <MyTableRowComponent key={doc._id} doc={doc} />
  *       ))}
  *     </table>
- *     <>
- *       {hasPreviousPage && <button onClick={previousPage}>Previous</button>}
- *       {currentPage} / {totalPages}
- *       {hasNextPage && <button onClick={nextPage}>Next</button>}
- *     </>
+ *     {hasPreviousPage && <button onClick={previousPage}>Previous</button>}
+ *     {currentPage} / {totalPages}
+ *     {hasNextPage && <button onClick={nextPage}>Next</button>}
  *   </>
  * )
  * ```

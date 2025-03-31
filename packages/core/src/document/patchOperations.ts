@@ -20,7 +20,9 @@ type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
  * @category Types
  */
 export interface DocumentHandle<TDocument extends SanityDocumentLike = SanityDocumentLike> {
+  /** The Sanity document ID */
   _id: string
+  /** The type of document, for example 'post' or 'author' */
   _type: TDocument['_type']
   resourceId?: DocumentResourceId
 }
