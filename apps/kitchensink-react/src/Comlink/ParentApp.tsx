@@ -85,12 +85,7 @@ const ParentApp = (): ReactElement => {
   const frames = [1, 2, 3]
 
   return (
-    <PageLayout
-      title="Comlink demo"
-      subtitle="Explore comlink connections and fetch operations"
-      homePath="/comlink-demo"
-      homeText="Comlink Demo Home"
-    >
+    <PageLayout title="Comlink demo" subtitle="Explore comlink connections and fetch operations">
       <Stack space={4} height="fill">
         <Box flex={1}>
           <Box display="flex" height="fill">

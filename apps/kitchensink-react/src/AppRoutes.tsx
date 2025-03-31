@@ -1,5 +1,3 @@
-import {SanityApp} from '@sanity/sdk-react'
-import {Spinner} from '@sanity/ui'
 import {type JSX} from 'react'
 import {Route, Routes} from 'react-router'
 
@@ -13,15 +11,11 @@ import {DocumentProjectionRoute} from './DocumentCollection/DocumentProjectionRo
 import {MultiResourceRoute} from './DocumentCollection/MultiResourceRoute'
 import {OrgDocumentExplorerRoute} from './DocumentCollection/OrgDocumentExplorerRoute'
 import {SearchRoute} from './DocumentCollection/SearchRoute'
-import Home from './Home'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
-import {ProjectInstanceWrapper} from './ProjectAuthentication/ProjectInstanceWrapper'
 import {ProtectedRoute} from './ProtectedRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import {UsersRoute} from './routes/UsersRoute'
-import {UnauthenticatedHome} from './Unauthenticated/UnauthenticatedHome'
-import {UnauthenticatedInstanceWrapper} from './Unauthenticated/UnauthenticatedInstanceWrapper'
 
 const documentCollectionRoutes = [
   {
@@ -81,57 +75,34 @@ const frameRoutes = [1, 2, 3].map((frameNum) => ({
 export function AppRoutes(): JSX.Element {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-
-      <Route path="/authenticated" element={<ProjectInstanceWrapper />}>
-        <Route
-          index
-          element={
-            <ProjectAuthHome
-              routes={[...documentCollectionRoutes, ...dashboardInteractionRoutes]}
-            />
-          }
-        />
-        <Route element={<ProtectedRoute subPath="/authenticated" />}>
+      <Route path="/">
+        <Route element={<ProtectedRoute subPath="/" />}>
+          <Route
+            index
+            element={
+              <ProjectAuthHome
+                routes={[
+                  ...documentCollectionRoutes,
+                  ...dashboardInteractionRoutes,
+                  {
+                    path: 'comlink-demo',
+                    element: <ParentApp />,
+                  },
+                ]}
+              />
+            }
+          />
           {documentCollectionRoutes.map((route) => (
+            <Route key={route.path} path={route.path} element={route.element} />
+          ))}
+          <Route path="comlink-demo" element={<ParentApp />} />
+        </Route>
+        <Route path="comlink-demo">
+          {frameRoutes.map((route) => (
             <Route key={route.path} path={route.path} element={route.element} />
           ))}
         </Route>
       </Route>
-
-      <Route path="/comlink-demo" element={<ProjectInstanceWrapper />}>
-        <Route index element={<ParentApp />} />
-        {frameRoutes.map((route) => (
-          <Route key={route.path} path={route.path} element={route.element} />
-        ))}
-      </Route>
-
-      <Route path="/unauthenticated" element={<UnauthenticatedInstanceWrapper />}>
-        <Route
-          index
-          element={
-            <UnauthenticatedHome
-              routes={[...documentCollectionRoutes, ...dashboardInteractionRoutes]}
-            />
-          }
-        />
-        {documentCollectionRoutes.map((route) => (
-          <Route key={route.path} path={route.path} element={route.element} />
-        ))}
-        {dashboardInteractionRoutes.map((route) => (
-          <Route key={route.path} path={route.path} element={route.element} />
-        ))}
-      </Route>
-
-      <Route
-        path="/sanity-app"
-        index
-        element={
-          <SanityApp config={{projectId: 'ppsg7ml5', dataset: 'test'}} fallback={<Spinner />}>
-            <div>Welcome to the Sanity App</div>
-          </SanityApp>
-        }
-      />
     </Routes>
   )
 }

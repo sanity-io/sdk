@@ -1,4 +1,6 @@
-# Migration Guide
+---
+title: Migration guide
+---
 
 ## Migrating to @sanity/sdk-react@0.0.0-rc.3
 
@@ -222,8 +224,6 @@ const datasets = useDatasets({projectId: 'abc12345'})
    - Query hooks accept `DatasetHandle`
    - Project hooks use `ProjectHandle`
    - Consistent handle pattern across SDK
-
----
 
 ## Migrating to @sanity/sdk-react@0.0.0-rc.2
 
