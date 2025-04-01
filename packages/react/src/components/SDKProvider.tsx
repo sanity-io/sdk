@@ -1,21 +1,15 @@
-import {createSanityInstance, type SanityConfig} from '@sanity/sdk'
-import {type ReactElement, type ReactNode, Suspense, useMemo} from 'react'
+import {type SanityConfig} from '@sanity/sdk'
+import {type ReactElement, type ReactNode} from 'react'
 
-import {SanityProvider} from '../context/SanityProvider'
-import {AuthBoundary} from './auth/AuthBoundary'
-
-const DEFAULT_FALLBACK = (
-  <>
-    Warning: No fallback provided. Please supply a fallback prop to ensure proper Suspense handling.
-  </>
-)
+import {ResourceProvider} from '../context/ResourceProvider'
+import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
 
 /**
  * @internal
  */
-export interface SDKProviderProps {
+export interface SDKProviderProps extends AuthBoundaryProps {
   children: ReactNode
-  sanityConfigs: SanityConfig[]
+  config: SanityConfig | SanityConfig[]
   fallback: ReactNode
 }
 
@@ -23,20 +17,31 @@ export interface SDKProviderProps {
  * @internal
  *
  * Top-level context provider that provides access to the Sanity SDK.
+ * Creates a hierarchy of ResourceProviders, each providing a SanityInstance that can be
+ * accessed by hooks. The first configuration in the array becomes the default instance.
  */
-export function SDKProvider({children, sanityConfigs, fallback}: SDKProviderProps): ReactElement {
-  const sanityInstances = useMemo(() => {
-    return sanityConfigs.map((sanityConfig: SanityConfig) => createSanityInstance(sanityConfig))
-  }, [sanityConfigs])
+export function SDKProvider({
+  children,
+  config,
+  fallback,
+  ...props
+}: SDKProviderProps): ReactElement {
+  // reverse because we want the first config to be the default, but the
+  // ResourceProvider nesting makes the last one the default
+  const configs = (Array.isArray(config) ? config : [config]).slice().reverse()
 
-  return (
-    <SanityProvider sanityInstances={sanityInstances}>
-      {/* This Suspense boundary is necessary because some hooks may suspend.
-      It ensures that the Sanity instance state created above remains stable
-      before rendering the AuthBoundary and its children. */}
-      <Suspense fallback={fallback ?? DEFAULT_FALLBACK}>
-        <AuthBoundary>{children}</AuthBoundary>
-      </Suspense>
-    </SanityProvider>
-  )
+  // Create a nested structure of ResourceProviders for each config
+  const createNestedProviders = (index: number): ReactElement => {
+    if (index >= configs.length) {
+      return <AuthBoundary {...props}>{children}</AuthBoundary>
+    }
+
+    return (
+      <ResourceProvider {...configs[index]} fallback={fallback}>
+        {createNestedProviders(index + 1)}
+      </ResourceProvider>
+    )
+  }
+
+  return createNestedProviders(0)
 }

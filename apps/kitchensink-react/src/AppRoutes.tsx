@@ -9,6 +9,7 @@ import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
 import {DocumentListRoute} from './DocumentCollection/DocumentListRoute'
 import {DocumentProjectionRoute} from './DocumentCollection/DocumentProjectionRoute'
 import {MultiResourceRoute} from './DocumentCollection/MultiResourceRoute'
+import {OrgDocumentExplorerRoute} from './DocumentCollection/OrgDocumentExplorerRoute'
 import {SearchRoute} from './DocumentCollection/SearchRoute'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProtectedRoute} from './ProtectedRoute'
@@ -36,6 +37,10 @@ const documentCollectionRoutes = [
   {
     path: 'multi-resource',
     element: <MultiResourceRoute />,
+  },
+  {
+    path: 'org-document-explorer',
+    element: <OrgDocumentExplorerRoute />,
   },
   {
     path: 'search',

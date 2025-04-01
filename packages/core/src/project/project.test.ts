@@ -3,8 +3,8 @@ import {of} from 'rxjs'
 import {describe, it} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
-import {createSanityInstance} from '../instance/sanityInstance'
-import {type StateSource} from '../resources/createStateSourceAction'
+import {createSanityInstance} from '../store/createSanityInstance'
+import {type StateSource} from '../store/createStateSourceAction'
 import {resolveProject} from './project'
 
 vi.mock('../client/clientStore')
@@ -26,7 +26,7 @@ describe('project', () => {
       observable: of(mockClient),
     } as StateSource<SanityClient>)
 
-    const result = await resolveProject(instance, 'a')
+    const result = await resolveProject(instance, {projectId: 'a'})
     expect(result).toEqual(project)
     expect(getById).toHaveBeenCalledWith('a')
   })

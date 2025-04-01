@@ -2,8 +2,8 @@ import {type CurrentUser} from '@sanity/types'
 import {delay, of, throwError} from 'rxjs'
 import {beforeEach, describe, it} from 'vitest'
 
-import {createSanityInstance} from '../instance/sanityInstance'
-import {createResourceState} from '../resources/createResource'
+import {createSanityInstance} from '../store/createSanityInstance'
+import {createStoreState} from '../store/createStoreState'
 import {AuthStateType} from './authStateType'
 import {authStore} from './authStore'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
@@ -20,7 +20,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     const clientFactory = vi.fn().mockReturnValue(mockClient)
     const instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {clientFactory}})
 
-    const state = createResourceState(authStore.getInitialState(instance))
+    const state = createStoreState(authStore.getInitialState(instance))
     const subscription = subscribeToStateAndFetchCurrentUser({state, instance})
 
     expect(state.get()).toMatchObject({authState: {type: AuthStateType.LOGGED_OUT}})
@@ -51,7 +51,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     const clientFactory = vi.fn().mockReturnValue(mockClient)
     const instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {clientFactory}})
 
-    const state = createResourceState(authStore.getInitialState(instance))
+    const state = createStoreState(authStore.getInitialState(instance))
     const subscription = subscribeToStateAndFetchCurrentUser({state, instance})
 
     expect(state.get()).toMatchObject({authState: {type: AuthStateType.LOGGED_OUT}})
@@ -86,7 +86,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     const clientFactory = vi.fn().mockReturnValue(mockClient)
     const instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {clientFactory}})
 
-    const state = createResourceState(authStore.getInitialState(instance))
+    const state = createStoreState(authStore.getInitialState(instance))
     const subscription = subscribeToStateAndFetchCurrentUser({state, instance})
 
     expect(state.get()).toMatchObject({authState: {type: AuthStateType.LOGGED_OUT}})

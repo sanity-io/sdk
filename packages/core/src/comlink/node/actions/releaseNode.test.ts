@@ -1,11 +1,10 @@
+import {type Node} from '@sanity/comlink'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {config} from '../../../../test/fixtures'
-import {createSanityInstance} from '../../../instance/sanityInstance'
-import {type SanityInstance} from '../../../instance/types'
-import {getOrCreateResource} from '../../../resources/createResource'
-import {comlinkNodeStore} from '../comlinkNodeStore'
-import {getOrCreateNode} from './getOrCreateNode'
+import {createSanityInstance, type SanityInstance} from '../../../store/createSanityInstance'
+import {createStoreState} from '../../../store/createStoreState'
+import {type FrameMessage, type WindowMessage} from '../../types'
+import {type ComlinkNodeState, type NodeEntry} from '../comlinkNodeStore'
 import {releaseNode} from './releaseNode'
 
 const nodeConfig = {
@@ -13,104 +12,125 @@ const nodeConfig = {
   connectTo: 'parent',
 }
 
-vi.mock('@sanity/comlink', () => ({
-  createNode: vi.fn(() => ({
-    start: vi.fn(),
-    stop: vi.fn(),
-  })),
-}))
-
 describe('releaseNode', () => {
   let instance: SanityInstance
+  let state: ReturnType<typeof createStoreState<ComlinkNodeState>>
+  let mockNode: Partial<Node<WindowMessage, FrameMessage>> & {
+    start: ReturnType<typeof vi.fn>
+    stop: ReturnType<typeof vi.fn>
+  }
 
   beforeEach(() => {
-    instance = createSanityInstance(config)
+    instance = createSanityInstance({
+      projectId: 'test-project-id',
+      dataset: 'test-dataset',
+    })
+    mockNode = {start: vi.fn(), stop: vi.fn()}
+    state = createStoreState<ComlinkNodeState>({nodes: new Map()})
     vi.clearAllMocks()
   })
 
-  it('should stop and remove node when released', () => {
-    const store = getOrCreateResource(instance, comlinkNodeStore)
-    // Create a node
-    const node = getOrCreateNode(instance, nodeConfig)
-    const stopSpy = vi.spyOn(node, 'stop')
+  afterEach(() => {
+    instance.dispose()
+  })
 
-    expect(store.state.get().nodes.has('test-node')).toBe(true)
+  it('should stop and remove node when released', () => {
+    // Set up a node in the state
+    const nodes = new Map()
+    nodes.set('test-node', {
+      node: mockNode as Node<WindowMessage, FrameMessage>,
+      options: nodeConfig,
+      refCount: 1,
+    })
+    state.set('setup', {nodes})
+
+    expect(state.get().nodes.has('test-node')).toBe(true)
 
     // Release the node
-    releaseNode(instance, 'test-node')
+    releaseNode({state, instance}, 'test-node')
 
     // Check node is removed
-    expect(stopSpy).toHaveBeenCalled()
-    expect(store.state.get().nodes.has('test-node')).toBe(false)
+    expect(mockNode.stop).toHaveBeenCalled()
+    expect(state.get().nodes.has('test-node')).toBe(false)
   })
 
   it('should not stop the node if refCount is still above 0', () => {
     // Create a node twice to increment refCount
-    const node = getOrCreateNode(instance, nodeConfig)
-    getOrCreateNode(instance, nodeConfig)
-    const stopSpy = vi.spyOn(node, 'stop')
+    const nodes = new Map()
+    nodes.set('test-node', {
+      node: mockNode as Node<WindowMessage, FrameMessage>,
+      options: nodeConfig,
+      refCount: 2,
+    })
+    state.set('setup', {nodes})
 
     // Release once
-    releaseNode(instance, 'test-node')
+    releaseNode({state, instance}, 'test-node')
 
     // Node should not be stopped
-    expect(stopSpy).not.toHaveBeenCalled()
+    expect(mockNode.stop).not.toHaveBeenCalled()
 
     // Verify refCount is 1
-    const store = getOrCreateResource(instance, comlinkNodeStore)
-    const nodeEntry = store.state.get().nodes.get('test-node')
+    const nodeEntry = state.get().nodes.get('test-node') as NodeEntry
     expect(nodeEntry?.refCount).toBe(1)
   })
 
   it('should handle multiple releases gracefully', () => {
-    // Create a node
-    getOrCreateNode(instance, nodeConfig)
+    // Set up a node in the state
+    const nodes = new Map()
+    nodes.set('test-node', {
+      node: mockNode as Node<WindowMessage, FrameMessage>,
+      options: nodeConfig,
+      refCount: 1,
+    })
+    state.set('setup', {nodes})
 
     // Release multiple times
-    releaseNode(instance, 'test-node')
-    releaseNode(instance, 'test-node')
-    releaseNode(instance, 'test-node')
+    releaseNode({state, instance}, 'test-node')
+    releaseNode({state, instance}, 'test-node')
+    releaseNode({state, instance}, 'test-node')
 
-    // Verify refCount doesn't go below 0
-    const store = getOrCreateResource(instance, comlinkNodeStore)
-    expect(store.state.get().nodes.has('test-node')).toBe(false)
+    // Verify node is removed after first release
+    expect(state.get().nodes.has('test-node')).toBe(false)
+    // Stop should be called exactly once
+    expect(mockNode.stop).toHaveBeenCalledTimes(1)
   })
 
   it('should handle releasing non-existent nodes', () => {
     // Should not throw when releasing non-existent node
-    expect(() => releaseNode(instance, 'non-existent')).not.toThrow()
+    expect(() => releaseNode({state, instance}, 'non-existent')).not.toThrow()
   })
 
   it('should maintain correct state after complex operations', () => {
-    // Create node multiple times
-    const node = getOrCreateNode(instance, nodeConfig)
-    getOrCreateNode(instance, nodeConfig)
-    getOrCreateNode(instance, nodeConfig)
-
-    const store = getOrCreateResource(instance, comlinkNodeStore)
-    let nodeEntry = store.state.get().nodes.get('test-node')
+    // Set up a node with refCount = 3
+    const nodes = new Map()
+    nodes.set('test-node', {
+      node: mockNode as Node<WindowMessage, FrameMessage>,
+      options: nodeConfig,
+      refCount: 3,
+    })
+    state.set('setup', {nodes})
 
     // Initial refCount should be 3
+    let nodeEntry = state.get().nodes.get('test-node') as NodeEntry
     expect(nodeEntry?.refCount).toBe(3)
 
     // Release twice
-    releaseNode(instance, 'test-node')
-    releaseNode(instance, 'test-node')
+    releaseNode({state, instance}, 'test-node')
+    releaseNode({state, instance}, 'test-node')
 
-    nodeEntry = store.state.get().nodes.get('test-node')
+    nodeEntry = state.get().nodes.get('test-node') as NodeEntry
     expect(nodeEntry?.refCount).toBe(1)
 
     // Verify node hasn't been stopped yet
-    const stopSpy = vi.spyOn(node, 'stop')
-    expect(stopSpy).not.toHaveBeenCalled()
+    expect(mockNode.stop).not.toHaveBeenCalled()
 
     // Release final reference
-    releaseNode(instance, 'test-node')
+    releaseNode({state, instance}, 'test-node')
 
     // Verify node was stopped
-    expect(stopSpy).toHaveBeenCalled()
+    expect(mockNode.stop).toHaveBeenCalled()
 
-    nodeEntry = store.state.get().nodes.get('test-node')
-    expect(store.state.get().nodes.has('test-node')).toBe(false)
+    expect(state.get().nodes.has('test-node')).toBe(false)
   })
 })

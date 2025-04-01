@@ -16,7 +16,7 @@ import {
 } from 'rxjs'
 import {mergeMap, scan} from 'rxjs/operators'
 
-import {type ActionContext, createInternalAction} from '../resources/createAction'
+import {type StoreContext} from '../store/defineStore'
 import {type DocumentStoreState} from './documentStore'
 import {processMutations} from './processMutations'
 
@@ -193,65 +193,66 @@ export function sortListenerEvents(options?: SortListenerEventsOptions) {
   }
 }
 
-export const listen = createInternalAction(({state}: ActionContext<DocumentStoreState>) => {
+export const listen = (
+  {state}: StoreContext<DocumentStoreState>,
+  documentId: string,
+): Observable<RemoteDocument> => {
   const {sharedListener, fetchDocument} = state.get()
 
-  return function (documentId: string) {
-    return sharedListener.pipe(
-      concatMap((e) => {
-        if (e.type === 'welcome') {
-          return fetchDocument(documentId).pipe(
-            map((document): SyncEvent => ({type: 'sync', document})),
-          )
-        }
-        if (e.type === 'mutation' && e.documentId === documentId) return of(e)
-        return EMPTY
-      }),
-      sortListenerEvents(),
-      withLatestFrom(
-        state.observable.pipe(
-          map((s) => s.documentStates[documentId]),
-          filter(Boolean),
-          distinctUntilChanged(),
-        ),
-      ),
-      map(([next, documentState]): RemoteDocument => {
-        if (next.type === 'sync') {
-          return {
-            type: 'sync',
-            documentId,
-            document: next.document,
-            revision: next.document?._rev,
-            timestamp: next.document?._updatedAt ?? new Date().toISOString(),
-          }
-        }
-
-        // TODO: from manual testing, mendoza patches seem to be applying
-        // let document
-        // if (next.effects?.apply) {
-        //   document = applyPatch(omit(documentState.remote, '_rev'), next.effects?.apply)
-        // }
-
-        const [document] = Object.values(
-          processMutations({
-            documents: {[documentId]: documentState.remote},
-            mutations: next.mutations as Mutation[],
-            transactionId: next.transactionId,
-            timestamp: next.timestamp,
-          }),
+  return sharedListener.events.pipe(
+    concatMap((e) => {
+      if (e.type === 'welcome') {
+        return fetchDocument(documentId).pipe(
+          map((document): SyncEvent => ({type: 'sync', document})),
         )
-
-        const {previousRev, transactionId, timestamp} = next
-
+      }
+      if (e.type === 'mutation' && e.documentId === documentId) return of(e)
+      return EMPTY
+    }),
+    sortListenerEvents(),
+    withLatestFrom(
+      state.observable.pipe(
+        map((s) => s.documentStates[documentId]),
+        filter(Boolean),
+        distinctUntilChanged(),
+      ),
+    ),
+    map(([next, documentState]): RemoteDocument => {
+      if (next.type === 'sync') {
         return {
-          type: 'mutation',
+          type: 'sync',
           documentId,
-          document: document ?? null,
-          revision: transactionId,
-          timestamp,
-          ...(previousRev && {previousRev}),
+          document: next.document,
+          revision: next.document?._rev,
+          timestamp: next.document?._updatedAt ?? new Date().toISOString(),
         }
-      }),
-    )
-  }
-})
+      }
+
+      // TODO: from manual testing, mendoza patches seem to be applying
+      // let document
+      // if (next.effects?.apply) {
+      //   document = applyPatch(omit(documentState.remote, '_rev'), next.effects?.apply)
+      // }
+
+      const [document] = Object.values(
+        processMutations({
+          documents: {[documentId]: documentState.remote},
+          mutations: next.mutations as Mutation[],
+          transactionId: next.transactionId,
+          timestamp: next.timestamp,
+        }),
+      )
+
+      const {previousRev, transactionId, timestamp} = next
+
+      return {
+        type: 'mutation',
+        documentId,
+        document: document ?? null,
+        revision: transactionId,
+        timestamp,
+        ...(previousRev && {previousRev}),
+      }
+    }),
+  )
+}

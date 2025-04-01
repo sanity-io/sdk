@@ -2,8 +2,10 @@ import {type ClientConfig, createClient, type SanityClient} from '@sanity/client
 import {type CurrentUser} from '@sanity/types'
 import {type Subscription} from 'rxjs'
 
-import {createResource} from '../resources/createResource'
-import {createStateSourceAction} from '../resources/createStateSourceAction'
+import {type AuthConfig, type AuthProvider} from '../config/authConfig'
+import {bindActionGlobally} from '../store/createActionBinder'
+import {createStateSourceAction} from '../store/createStateSourceAction'
+import {defineStore} from '../store/defineStore'
 import {AuthStateType} from './authStateType'
 import {refreshStampedToken} from './refreshStampedToken'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
@@ -46,84 +48,6 @@ export type LoggingInAuthState = {type: AuthStateType.LOGGING_IN; isExchangingTo
 export type ErrorAuthState = {type: AuthStateType.ERROR; error: unknown}
 
 /**
- * Configuration for an authentication provider
- * @public
- */
-export interface AuthProvider {
-  /**
-   * Unique identifier for the auth provider (e.g., 'google', 'github')
-   */
-  name: string
-
-  /**
-   * Display name for the auth provider in the UI
-   */
-  title: string
-
-  /**
-   * Complete authentication URL including callback and token parameters
-   */
-  url: string
-
-  /**
-   * Optional URL for direct sign-up flow
-   */
-  signUpUrl?: string
-}
-
-/**
- * Configuration options for creating an auth store.
- *
- * @public
- */
-export interface AuthConfig {
-  /**
-   * The initial location href to use when handling auth callbacks.
-   * Defaults to the current window location if available.
-   */
-  initialLocationHref?: string
-
-  /**
-   * Factory function to create a SanityClient instance.
-   * Defaults to the standard Sanity client factory if not provided.
-   */
-  clientFactory?: (config: ClientConfig) => SanityClient
-
-  /**
-   * Custom authentication providers to use instead of or in addition to the default ones.
-   * Can be an array of providers or a function that takes the default providers and returns
-   * a modified array or a Promise resolving to one.
-   */
-  providers?: AuthProvider[] | ((prev: AuthProvider[]) => AuthProvider[] | Promise<AuthProvider[]>)
-
-  /**
-   * The API hostname for requests. Usually leave this undefined, but it can be set
-   * if using a custom domain or CNAME for the API endpoint.
-   */
-  apiHost?: string
-
-  /**
-   * Storage implementation to persist authentication state.
-   * Defaults to `localStorage` if available.
-   */
-  storageArea?: Storage
-
-  /**
-   * A callback URL for your application.
-   * If none is provided, the auth API will redirect back to the current location (`location.href`).
-   * When handling callbacks, this URL's pathname is checked to ensure it matches the callback.
-   */
-  callbackUrl?: string
-
-  /**
-   * A static authentication token to use instead of handling the OAuth flow.
-   * When provided, the auth store will remain in a logged-in state with this token,
-   * ignoring any storage or callback handling.
-   */
-  token?: string
-}
-
-/**
  * Represents the various states the authentication can be in.
  *
  * @public
@@ -155,9 +79,8 @@ export interface AuthStoreState {
   dashboardContext?: DashboardContext
 }
 
-export const authStore = createResource<AuthStoreState>({
+export const authStore = defineStore<AuthStoreState>({
   name: 'Auth',
-  isShared: true,
   getInitialState(instance) {
     const {
       apiHost,
@@ -199,22 +122,23 @@ export const authStore = createResource<AuthStoreState>({
       },
     }
   },
-  initialize() {
-    const stateSubscription = subscribeToStateAndFetchCurrentUser(this)
-    let storageEventsSubscription: Subscription | undefined
-    if (this.state.get().options?.storageArea) {
-      storageEventsSubscription = subscribeToStorageEventsAndSetToken(this)
+  initialize(context) {
+    const subscriptions: Subscription[] = []
+    subscriptions.push(subscribeToStateAndFetchCurrentUser(context))
+
+    if (context.state.get().options?.storageArea) {
+      subscriptions.push(subscribeToStorageEventsAndSetToken(context))
     }
-    let refreshStampedTokenSubscription: Subscription | undefined
+
     if (!tokenRefresherRunning) {
       tokenRefresherRunning = true
-      refreshStampedTokenSubscription = refreshStampedToken(this)
+      subscriptions.push(refreshStampedToken(context))
     }
 
     return () => {
-      stateSubscription.unsubscribe()
-      storageEventsSubscription?.unsubscribe()
-      refreshStampedTokenSubscription?.unsubscribe()
+      for (const subscription of subscriptions) {
+        subscription.unsubscribe()
+      }
     }
   },
 })
@@ -222,33 +146,43 @@ export const authStore = createResource<AuthStoreState>({
 /**
  * @public
  */
-export const getCurrentUserState = createStateSourceAction(authStore, ({authState}) =>
-  authState.type === AuthStateType.LOGGED_IN ? authState.currentUser : null,
-)
-
-/**
- * @public
- */
-export const getTokenState = createStateSourceAction(authStore, ({authState}) =>
-  authState.type === AuthStateType.LOGGED_IN ? authState.token : null,
-)
-/**
- * @public
- */
-export const getLoginUrlsState = createStateSourceAction(
+export const getCurrentUserState = bindActionGlobally(
   authStore,
-  ({providers}) => providers ?? null,
+  createStateSourceAction(({state: {authState}}) =>
+    authState.type === AuthStateType.LOGGED_IN ? authState.currentUser : null,
+  ),
 )
 
 /**
  * @public
  */
-export const getAuthState = createStateSourceAction(authStore, ({authState}) => authState)
+export const getTokenState = bindActionGlobally(
+  authStore,
+  createStateSourceAction(({state: {authState}}) =>
+    authState.type === AuthStateType.LOGGED_IN ? authState.token : null,
+  ),
+)
 
 /**
  * @public
  */
-export const getDashboardOrganizationId = createStateSourceAction(
+export const getLoginUrlsState = bindActionGlobally(
   authStore,
-  ({dashboardContext}) => dashboardContext?.orgId,
+  createStateSourceAction(({state: {providers}}) => providers ?? null),
+)
+
+/**
+ * @public
+ */
+export const getAuthState = bindActionGlobally(
+  authStore,
+  createStateSourceAction(({state: {authState}}) => authState),
+)
+
+/**
+ * @public
+ */
+export const getDashboardOrganizationId = bindActionGlobally(
+  authStore,
+  createStateSourceAction(({state: {dashboardContext}}) => dashboardContext?.orgId),
 )

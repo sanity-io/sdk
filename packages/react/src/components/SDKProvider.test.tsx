@@ -1,79 +1,103 @@
-import * as SanitySDK from '@sanity/sdk'
 import {render} from '@testing-library/react'
-import {type ReactNode} from 'react'
+import React from 'react'
 import {describe, expect, it, vi} from 'vitest'
 
-import {type SanityProviderProps} from '../context/SanityProvider'
 import {SDKProvider} from './SDKProvider'
 
-// Mock the SDK module
-vi.mock('@sanity/sdk', () => ({
-  createSanityInstance: vi.fn(() => ({
-    // Mock return value of createSanityInstance
-    id: 'mock-instance',
-  })),
+// Mock ResourceProvider to test nesting behavior
+vi.mock('../context/ResourceProvider', () => ({
+  ResourceProvider: ({
+    children,
+    ...props
+  }: {
+    children: React.ReactNode
+    projectId?: string
+    dataset?: string
+  }) => {
+    return (
+      <div
+        data-testid="resource-provider"
+        data-config={JSON.stringify({
+          projectId: props.projectId,
+          dataset: props.dataset,
+        })}
+      >
+        {children}
+      </div>
+    )
+  },
 }))
 
-// Mock the SanityProvider context to verify the instance is passed correctly
-vi.mock('../context/SanityProvider', () => ({
-  SanityProvider: ({children, sanityInstances}: SanityProviderProps) => (
-    <div data-testid="sanity-provider" data-instances={JSON.stringify(sanityInstances)}>
-      {children}
-    </div>
-  ),
-  useSanity: vi.fn(),
-}))
-
-// Mock the AuthBoundary component
+// Mock AuthBoundary
 vi.mock('./auth/AuthBoundary', () => ({
-  AuthBoundary: ({children}: {children: ReactNode}) => (
-    <div data-testid="auth-boundary">{children}</div>
-  ),
+  AuthBoundary: ({children}: {children: React.ReactNode}) => {
+    return <div data-testid="auth-boundary">{children}</div>
+  },
 }))
 
 describe('SDKProvider', () => {
-  const mockConfig = {
-    projectId: 'test-project',
-    dataset: 'test-dataset',
-  }
+  it('renders single ResourceProvider with AuthBoundary for a single config', () => {
+    const config = {
+      projectId: 'test-project',
+      dataset: 'production',
+    }
 
-  it('creates a Sanity instance with the provided config', () => {
-    render(
-      <SDKProvider sanityConfigs={[mockConfig]} fallback={<div>Fallback</div>}>
-        <div>Test Child</div>
+    const {getAllByTestId, getByTestId} = render(
+      <SDKProvider config={[config]} fallback={<div>Loading...</div>}>
+        <div>Child Content</div>
       </SDKProvider>,
     )
 
-    expect(SanitySDK.createSanityInstance).toHaveBeenCalledWith(mockConfig)
+    // Should create a single ResourceProvider
+    const providers = getAllByTestId('resource-provider')
+    expect(providers.length).toBe(1)
+
+    // Should create an AuthBoundary inside
+    expect(getByTestId('auth-boundary')).toBeInTheDocument()
+
+    // Verify provider has the correct config
+    expect(JSON.parse(providers[0].getAttribute('data-config') || '{}')).toEqual({
+      projectId: 'test-project',
+      dataset: 'production',
+    })
   })
 
-  it('renders children within SanityProvider and AuthBoundary', () => {
-    const {getByText, getByTestId} = render(
-      <SDKProvider sanityConfigs={[mockConfig]} fallback={<div>Fallback</div>}>
-        <div>Test Child</div>
+  it('renders nested ResourceProviders with AuthBoundary for multiple configs', () => {
+    const configs = [
+      {
+        projectId: 'project-1',
+        dataset: 'production',
+      },
+      {
+        projectId: 'project-2',
+        dataset: 'staging',
+      },
+    ]
+
+    const {getAllByTestId, getByTestId} = render(
+      <SDKProvider config={configs} fallback={<div>Loading...</div>}>
+        <div>Child Content</div>
       </SDKProvider>,
     )
 
-    // Verify the component hierarchy
-    const sanityProvider = getByTestId('sanity-provider')
-    const authBoundary = getByTestId('auth-boundary')
-    const childElement = getByText('Test Child')
+    // Should create two nested ResourceProviders
+    const providers = getAllByTestId('resource-provider')
+    expect(providers.length).toBe(2)
 
-    expect(sanityProvider).toBeInTheDocument()
-    expect(authBoundary).toBeInTheDocument()
-    expect(childElement).toBeInTheDocument()
-  })
+    // Should create an AuthBoundary inside the innermost provider
+    expect(getByTestId('auth-boundary')).toBeInTheDocument()
 
-  it('passes the created Sanity instance to SanityProvider', () => {
-    const {getByTestId} = render(
-      <SDKProvider sanityConfigs={[mockConfig]} fallback={<div>Fallback</div>}>
-        <div>Test Child</div>
-      </SDKProvider>,
-    )
+    // Verify each provider has the correct config - order is based on how SDKProvider creates nestings
+    // The first provider contains config[1]
+    expect(JSON.parse(providers[0].getAttribute('data-config') || '{}')).toEqual({
+      projectId: 'project-2',
+      dataset: 'staging',
+    })
 
-    const sanityProvider = getByTestId('sanity-provider')
-    const passedInstances = JSON.parse(sanityProvider.dataset['instances'] || '[]')
-
-    expect(passedInstances).toEqual([{id: 'mock-instance'}])
+    // The second provider contains config[0]
+    expect(JSON.parse(providers[1].getAttribute('data-config') || '{}')).toEqual({
+      projectId: 'project-1',
+      dataset: 'production',
+    })
   })
 })

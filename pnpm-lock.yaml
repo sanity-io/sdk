@@ -95,9 +95,6 @@ importers:
       '@sanity/icons':
         specifier: ^3.7.0
         version: 3.7.0(react@19.0.0)
-      '@sanity/mutate':
-        specifier: ^0.12.3
-        version: 0.12.3
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../../packages/core
@@ -332,6 +329,12 @@ importers:
       '@sanity/types':
         specifier: ^3.78.1
         version: 3.79.0(@types/react@19.0.10)
+      '@types/lodash-es':
+        specifier: ^4.17.12
+        version: 4.17.12
+      lodash-es:
+        specifier: ^4.17.21
+        version: 4.17.21
       react-error-boundary:
         specifier: ^5.0.0
         version: 5.0.0(react@19.0.0)
@@ -417,9 +420,6 @@ importers:
       '@sanity/logos':
         specifier: ^2.1.13
         version: 2.1.13(@sanity/color@3.0.6)(react@19.0.0)
-      '@sanity/sdk':
-        specifier: workspace:*
-        version: link:../core
       '@sanity/sdk-react':
         specifier: workspace:*
         version: link:../react

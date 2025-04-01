@@ -23,7 +23,7 @@ const sanityConfigs: SanityConfig[] = [
 export function App(): JSX.Element {
   return (
     <ThemeProvider theme={theme}>
-      <SanityApp sanityConfigs={sanityConfigs} fallback={<Spinner />}>
+      <SanityApp fallback={<Spinner />} config={sanityConfigs}>
         <BrowserRouter>
           <AppRoutes />
         </BrowserRouter>
