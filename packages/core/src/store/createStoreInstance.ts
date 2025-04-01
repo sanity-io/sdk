@@ -63,7 +63,7 @@ export function createStoreInstance<TState>(
 ): StoreInstance<TState> {
   const state = createStoreState(getInitialState(instance), {
     enabled: !!getEnv('DEV'),
-    name: `${name}-${instance.instanceId}`,
+    name: `${name}-${instance.config.projectId}.${instance.config.dataset}`,
   })
   const dispose = initialize?.({state, instance})
   const disposed = {current: false}
