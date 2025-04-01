@@ -79,8 +79,10 @@ export function usePreview({ref, ...docHandle}: UsePreviewOptions): UsePreviewRe
   const subscribe = useCallback(
     (onStoreChanged: () => void) => {
       const subscription = new Observable<boolean>((observer) => {
-        // for environments that don't have an intersection observer
+        // For environments that don't have an intersection observer (e.g. server-side),
+        // we pass true to always subscribe since we can't detect visibility
         if (typeof IntersectionObserver === 'undefined' || typeof HTMLElement === 'undefined') {
+          observer.next(true)
           return
         }
 
@@ -90,6 +92,10 @@ export function usePreview({ref, ...docHandle}: UsePreviewOptions): UsePreviewRe
         )
         if (ref?.current && ref.current instanceof HTMLElement) {
           intersectionObserver.observe(ref.current)
+        } else {
+          // If no ref is provided or ref.current isn't an HTML element,
+          // pass true to always subscribe since we can't track visibility
+          observer.next(true)
         }
         return () => intersectionObserver.disconnect()
       })
