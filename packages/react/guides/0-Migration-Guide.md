@@ -72,8 +72,6 @@ For more complex applications that need finer control, you can use `<SDKProvider
 </ResourceProvider>
 ```
 
-> 💡 **Tip**: See our [Advanced Resource Management Guide](../internal-guides/Advanced-Resource-Management.md) for more details on these components and when to use each one.
-
 ### 2. Document Handle Pattern
 
 We've introduced a consistent "handle" pattern across the SDK for working with documents and configuration. This replaces the previous `resourceId` concept with more explicit fields.
