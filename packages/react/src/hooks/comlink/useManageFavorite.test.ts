@@ -57,11 +57,15 @@ describe('useManageFavorite', () => {
     })
 
     expect(node.post).toHaveBeenCalledWith('dashboard/v1/events/favorite/mutate', {
-      documentId: 'mock-id',
-      documentType: 'mock-type',
+      document: {
+        id: 'mock-id',
+        type: 'mock-type',
+        resource: {
+          id: undefined,
+          type: 'studio',
+        },
+      },
       eventType: 'added',
-      resourceType: 'studio',
-      resourceId: undefined,
     })
     expect(result.current.isFavorited).toBe(true)
   })
@@ -74,11 +78,15 @@ describe('useManageFavorite', () => {
     })
 
     expect(node.post).toHaveBeenCalledWith('dashboard/v1/events/favorite/mutate', {
-      documentId: 'mock-id',
-      documentType: 'mock-type',
+      document: {
+        id: 'mock-id',
+        type: 'mock-type',
+        resource: {
+          id: undefined,
+          type: 'studio',
+        },
+      },
       eventType: 'removed',
-      resourceType: 'studio',
-      resourceId: undefined,
     })
     expect(result.current.isFavorited).toBe(false)
   })

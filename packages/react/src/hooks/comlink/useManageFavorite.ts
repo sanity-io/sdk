@@ -86,11 +86,14 @@ export function useManageFavorite({
           type: 'dashboard/v1/events/favorite/mutate',
           data: {
             eventType: action,
-            documentId,
-            documentType,
-            resourceType,
-            // Resource Id should exist for media-library and canvas resources
-            resourceId: resourceId!,
+            document: {
+              id: documentId,
+              type: documentType,
+              resource: {
+                id: resourceId!,
+                type: resourceType,
+              },
+            },
           },
           response: {
             success: true,
