@@ -15,7 +15,7 @@ export interface SanityAppProps {
   fallback: React.ReactNode
 }
 
-const CORE_URL = 'https://core.sanity.io'
+const REDIRECT_URL = 'https://sanity.io/welcome'
 
 /**
  * @public
@@ -86,8 +86,8 @@ export function SanityApp({
       // If the app is not running in an iframe and is not a local url, redirect to core.
       timeout = setTimeout(() => {
         // eslint-disable-next-line no-console
-        console.warn('Redirecting to core', CORE_URL)
-        window.location.replace(CORE_URL)
+        console.warn('Redirecting to core', REDIRECT_URL)
+        window.location.replace(REDIRECT_URL)
       }, 1000)
     }
     return () => clearTimeout(timeout)
