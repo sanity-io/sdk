@@ -61,7 +61,7 @@ describe('useManageFavorite', () => {
         id: 'mock-id',
         type: 'mock-type',
         resource: {
-          id: undefined,
+          id: 'test.test',
           type: 'studio',
         },
       },
@@ -82,7 +82,7 @@ describe('useManageFavorite', () => {
         id: 'mock-id',
         type: 'mock-type',
         resource: {
-          id: undefined,
+          id: 'test.test',
           type: 'studio',
         },
       },
