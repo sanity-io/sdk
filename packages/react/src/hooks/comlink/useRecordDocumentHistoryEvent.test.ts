@@ -62,10 +62,14 @@ describe('useRecordDocumentHistoryEvent', () => {
 
     expect(node.post).toHaveBeenCalledWith('dashboard/v1/events/history', {
       eventType: 'viewed',
-      documentId: 'mock-id',
-      documentType: 'mock-type',
-      resourceType: 'studio',
-      resourceId: 'mock-resource-id',
+      document: {
+        id: 'mock-id',
+        type: 'mock-type',
+        resource: {
+          id: 'mock-resource-id',
+          type: 'studio',
+        },
+      },
     })
   })
 

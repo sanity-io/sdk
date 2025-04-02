@@ -8,8 +8,9 @@ import {
   type StudioResource,
 } from '@sanity/message-protocol'
 import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
-import {useCallback, useState} from 'react'
+import {useCallback, useEffect, useState} from 'react'
 
+import {useSanityInstance} from '../context/useSanityInstance'
 import {useWindowConnection} from './useWindowConnection'
 
 // should we import this whole type from the message protocol?
@@ -62,20 +63,42 @@ interface UseManageFavoriteProps extends DocumentHandle {
 export function useManageFavorite({
   documentId,
   documentType,
-  resourceId,
+  projectId: paramProjectId,
+  dataset: paramDataset,
+  resourceId: paramResourceId,
   resourceType,
 }: UseManageFavoriteProps): ManageFavorite {
   const [isFavorited, setIsFavorited] = useState(false) // should load this from a comlink fetch
   const [status, setStatus] = useState<Status>('idle')
+  const [resourceId, setResourceId] = useState<string>(paramResourceId || '')
   const {sendMessage} = useWindowConnection<Events.FavoriteMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
     onStatus: setStatus,
   })
+  const instance = useSanityInstance()
+  const {config} = instance
+  const instanceProjectId = config?.projectId
+  const instanceDataset = config?.dataset
+  const projectId = paramProjectId ?? instanceProjectId
+  const dataset = paramDataset ?? instanceDataset
 
-  if (resourceType !== 'studio' && !resourceId) {
-    throw new Error('resourceId is required for media-library and canvas resources')
+  if (resourceType === 'studio' && (!projectId || !dataset)) {
+    throw new Error('projectId and dataset are required for studio resources')
   }
+
+  useEffect(() => {
+    // If resourceType is studio and the resourceId is not provided,
+    // use the projectId and dataset to generate a resourceId
+    if (resourceType === 'studio' && !paramResourceId) {
+      setResourceId(`${projectId}.${dataset}`)
+    } else if (paramResourceId) {
+      setResourceId(paramResourceId)
+    } else {
+      // For other resource types, resourceId is required
+      throw new Error('resourceId is required for media-library and canvas resources')
+    }
+  }, [resourceType, paramResourceId, projectId, dataset])
 
   const handleFavoriteAction = useCallback(
     (action: 'added' | 'removed', setFavoriteState: boolean) => {
@@ -86,11 +109,14 @@ export function useManageFavorite({
           type: 'dashboard/v1/events/favorite/mutate',
           data: {
             eventType: action,
-            documentId,
-            documentType,
-            resourceType,
-            // Resource Id should exist for media-library and canvas resources
-            resourceId: resourceId!,
+            document: {
+              id: documentId,
+              type: documentType,
+              resource: {
+                id: resourceId,
+                type: resourceType,
+              },
+            },
           },
           response: {
             success: true,

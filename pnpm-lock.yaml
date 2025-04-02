@@ -321,8 +321,8 @@ importers:
         specifier: ^2.1.13
         version: 2.1.13(@sanity/color@3.0.6)(react@19.0.0)
       '@sanity/message-protocol':
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.7.0
+        version: 0.7.0
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../core
@@ -1470,8 +1470,8 @@ packages:
       '@sanity/color': ^2.0 || ^3.0 || ^3.0.0-beta
       react: ^18.3 || >=19.0.0-rc
 
-  '@sanity/message-protocol@0.6.0':
-    resolution: {integrity: sha512-Mogc+S1AwLAmb3LGyovjQ7dfp5ZXqQCVbi/IliHWKQy3gVO2xWo4sNTtk8+yxCMAJykUbXOAehNoVG77zC2nlw==}
+  '@sanity/message-protocol@0.7.0':
+    resolution: {integrity: sha512-rG0NlMVXcre9xzv13/YbDtE8z9HRUdPcFmJPOyXVhn564myT44kCQYn6VFa9qq8nKk407WJs+Q+ECcwobyrdDg==}
     engines: {node: '>=20.0.0'}
 
   '@sanity/mutate@0.12.3':
@@ -5617,7 +5617,7 @@ snapshots:
       '@sanity/color': 3.0.6
       react: 19.0.0
 
-  '@sanity/message-protocol@0.6.0':
+  '@sanity/message-protocol@0.7.0':
     dependencies:
       '@sanity/comlink': 2.0.5
 

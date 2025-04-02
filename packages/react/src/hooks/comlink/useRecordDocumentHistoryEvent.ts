@@ -80,10 +80,14 @@ export function useRecordDocumentHistoryEvent({
           type: 'dashboard/v1/events/history',
           data: {
             eventType,
-            documentId,
-            documentType,
-            resourceType,
-            resourceId: resourceId!,
+            document: {
+              id: documentId,
+              type: documentType,
+              resource: {
+                id: resourceId!,
+                type: resourceType,
+              },
+            },
           },
         }
 
