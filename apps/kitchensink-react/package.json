@@ -17,28 +17,28 @@
     "@sanity/icons": "^3.7.0",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
-    "@sanity/types": "^3.79.0",
-    "@sanity/ui": "^2.15.7",
+    "@sanity/types": "^3.82.0",
+    "@sanity/ui": "^2.15.12",
     "inter-ui": "^4.1.0",
-    "json-edit-react": "^1.23.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "json-edit-react": "^1.25.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "react-error-boundary": "^5.0.0",
-    "react-router": "^7.3.0"
+    "react-router": "^7.4.1"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/prettier-config": "^1.0.3",
     "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.2.0",
-    "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4",
+    "@testing-library/react": "^16.3.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.1",
     "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.22.0",
+    "eslint": "^9.23.0",
     "prettier": "^3.5.3",
     "typescript": "^5.8.2",
-    "vite": "^6.2.2",
-    "vitest": "^3.0.9"
+    "vite": "^6.2.4",
+    "vitest": "^3.1.1"
   }
 }
