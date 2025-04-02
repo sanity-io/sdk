@@ -215,4 +215,69 @@ describe('useProjection', () => {
     expect(screen.getByText('Updated Title')).toBeInTheDocument()
     expect(screen.getByText('Added Description')).toBeInTheDocument()
   })
+
+  test('it subscribes immediately when no ref is provided', async () => {
+    getCurrent.mockReturnValue({
+      data: {title: 'Title', description: 'Description'},
+      isPending: false,
+    })
+    const eventsUnsubscribe = vi.fn()
+    subscribe.mockImplementation(() => eventsUnsubscribe)
+
+    function NoRefComponent({
+      projection,
+      ...docHandle
+    }: DocumentHandle & {projection: ValidProjection}) {
+      const {data} = useProjection<ProjectionResult>({...docHandle, projection}) // No ref provided
+      return (
+        <div>
+          <h1>{data.title}</h1>
+          <p>{data.description}</p>
+        </div>
+      )
+    }
+
+    render(
+      <Suspense fallback={<div>Loading...</div>}>
+        <NoRefComponent {...mockDocument} projection="{title, description}" />
+      </Suspense>,
+    )
+
+    // Should subscribe immediately without waiting for intersection
+    expect(subscribe).toHaveBeenCalled()
+    expect(screen.getByText('Title')).toBeInTheDocument()
+  })
+
+  test('it subscribes immediately when ref.current is not an HTML element', async () => {
+    getCurrent.mockReturnValue({
+      data: {title: 'Title', description: 'Description'},
+      isPending: false,
+    })
+    const eventsUnsubscribe = vi.fn()
+    subscribe.mockImplementation(() => eventsUnsubscribe)
+
+    function NonHtmlRefComponent({
+      projection,
+      ...docHandle
+    }: DocumentHandle & {projection: ValidProjection}) {
+      const ref = useRef({}) // ref.current is not an HTML element
+      const {data} = useProjection<ProjectionResult>({...docHandle, projection, ref})
+      return (
+        <div>
+          <h1>{data.title}</h1>
+          <p>{data.description}</p>
+        </div>
+      )
+    }
+
+    render(
+      <Suspense fallback={<div>Loading...</div>}>
+        <NonHtmlRefComponent {...mockDocument} projection="{title, description}" />
+      </Suspense>,
+    )
+
+    // Should subscribe immediately without waiting for intersection
+    expect(subscribe).toHaveBeenCalled()
+    expect(screen.getByText('Title')).toBeInTheDocument()
+  })
 })

@@ -172,4 +172,63 @@ describe('usePreview', () => {
     // Restore IntersectionObserver
     window.IntersectionObserver = originalIntersectionObserver
   })
+
+  test('it subscribes immediately when no ref is provided', async () => {
+    getCurrent.mockReturnValue({
+      data: {title: 'Title', subtitle: 'Subtitle'},
+      isPending: false,
+    })
+    const eventsUnsubscribe = vi.fn()
+    subscribe.mockImplementation(() => eventsUnsubscribe)
+
+    function NoRefComponent(docHandle: DocumentHandle) {
+      const {data} = usePreview(docHandle) // No ref provided
+      return (
+        <div>
+          <h1>{data?.title}</h1>
+          <p>{data?.subtitle}</p>
+        </div>
+      )
+    }
+
+    render(
+      <Suspense fallback={<div>Loading...</div>}>
+        <NoRefComponent {...mockDocument} />
+      </Suspense>,
+    )
+
+    // Should subscribe immediately without waiting for intersection
+    expect(subscribe).toHaveBeenCalled()
+    expect(screen.getByText('Title')).toBeInTheDocument()
+  })
+
+  test('it subscribes immediately when ref.current is not an HTML element', async () => {
+    getCurrent.mockReturnValue({
+      data: {title: 'Title', subtitle: 'Subtitle'},
+      isPending: false,
+    })
+    const eventsUnsubscribe = vi.fn()
+    subscribe.mockImplementation(() => eventsUnsubscribe)
+
+    function NonHtmlRefComponent(docHandle: DocumentHandle) {
+      const ref = useRef({}) // ref.current is not an HTML element
+      const {data} = usePreview({...docHandle, ref})
+      return (
+        <div>
+          <h1>{data?.title}</h1>
+          <p>{data?.subtitle}</p>
+        </div>
+      )
+    }
+
+    render(
+      <Suspense fallback={<div>Loading...</div>}>
+        <NonHtmlRefComponent {...mockDocument} />
+      </Suspense>,
+    )
+
+    // Should subscribe immediately without waiting for intersection
+    expect(subscribe).toHaveBeenCalled()
+    expect(screen.getByText('Title')).toBeInTheDocument()
+  })
 })
