@@ -2,12 +2,6 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["local>sanity-io/renovate-config", ":dependencyDashboardApproval"],
   "ignorePresets": ["github>sanity-io/renovate-config:group-non-major"],
-  "hostRules": [
-    {
-      "matchHost": "registry.npmjs.org",
-      "token": "{{ secrets.SANITY_NPM_TOKEN }}"
-    }
-  ],
   "packageRules": [
     {
       "matchDepTypes": ["devDependencies"],
