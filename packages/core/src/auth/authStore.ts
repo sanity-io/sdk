@@ -73,6 +73,7 @@ export interface AuthStoreState {
     storageKey: string
     storageArea: Storage | undefined
     apiHost: string | undefined
+    loginUrl: string
     callbackUrl: string | undefined
     providedToken: string | undefined
   }
@@ -94,6 +95,20 @@ export const authStore = defineStore<AuthStoreState>({
 
     const storageKey = `__sanity_auth_token`
 
+    // This login URL will only be used for local development
+    let loginDomain = 'https://www.sanity.io'
+    try {
+      if (apiHost && new URL(apiHost).hostname.endsWith('.sanity.work')) {
+        loginDomain = 'https://www.sanity.work'
+      }
+    } catch {
+      /* empty */
+    }
+    const loginUrl = new URL('/login', loginDomain)
+    loginUrl.searchParams.set('origin', initialLocationHref)
+    loginUrl.searchParams.set('type', 'stampedToken') // Token must be stamped to have an sid passed back
+    loginUrl.searchParams.set('withSid', 'true')
+
     let authState: AuthState
 
     const token = getTokenFromStorage(storageArea, storageKey)
@@ -112,6 +127,7 @@ export const authStore = defineStore<AuthStoreState>({
       authState,
       options: {
         apiHost,
+        loginUrl: loginUrl.toString(),
         callbackUrl,
         customProviders,
         providedToken,
@@ -166,9 +182,9 @@ export const getTokenState = bindActionGlobally(
 /**
  * @public
  */
-export const getLoginUrlsState = bindActionGlobally(
+export const getLoginUrlState = bindActionGlobally(
   authStore,
-  createStateSourceAction(({state: {providers}}) => providers ?? null),
+  createStateSourceAction(({state: {options}}) => options.loginUrl),
 )
 
 /**

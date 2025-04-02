@@ -1,4 +1,4 @@
-import {render, screen, waitFor} from '@testing-library/react'
+import {render, waitFor} from '@testing-library/react'
 import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
@@ -37,12 +37,13 @@ describe('LoginCallback', () => {
 
   it('renders a loading message', async () => {
     const {LoginCallback} = await import('./LoginCallback') // Reload after resetModules
-    render(
+    const {container} = render(
       <ResourceProvider fallback={null}>
         <LoginCallback />
       </ResourceProvider>,
     )
-    expect(screen.getByText('Logging you in…')).toBeInTheDocument()
+    // The callback screen renders null check that it renders nothing
+    expect(container.innerHTML).toBe('')
   })
 
   it('handles a successful callback and calls history.replaceState', async () => {

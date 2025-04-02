@@ -12,12 +12,17 @@ import {type StoreContext} from '../store/defineStore'
 import {DEFAULT_API_VERSION} from './authConstants'
 import {AuthStateType} from './authStateType'
 import {type AuthState, type AuthStoreState} from './authStore'
+import {isLocalUrl} from './utils'
 
 /**
  * @internal
  */
 export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subscription => {
   const {clientFactory, apiHost, storageArea, storageKey} = state.get().options
+
+  // If authState.options.initialLocationHref is a local URL, we need to refresh the token every 24 hours
+  const isLocal = isLocalUrl(state.get().options.initialLocationHref)
+  const refreshInterval = isLocal ? 24 * 60 * 60 * 1000 : 10 * 60 * 1000
 
   const refreshToken$ = state.observable.pipe(
     map(({authState}) => authState),
@@ -28,7 +33,7 @@ export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subs
     distinctUntilChanged(),
     filter((authState) => authState.token.includes('-st')), // Ensure we only try to refresh stamped tokens
     switchMap((authState) =>
-      interval(10 * 60 * 1000).pipe(
+      interval(refreshInterval).pipe(
         takeWhile(() => state.get().authState.type === AuthStateType.LOGGED_IN),
         map(() => authState.token),
         distinctUntilChanged(),
