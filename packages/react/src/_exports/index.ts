@@ -1,4 +1,8 @@
 export {AuthBoundary} from '../components/auth/AuthBoundary'
+export {
+  PortableTextEditorProvider,
+  type PortableTextEditorProviderProps,
+} from '../components/PortableTextEditorProvider'
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'

@@ -55,6 +55,7 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
+    "@portabletext/editor": "^1.44.10",
     "@sanity/logos": "^2.1.13",
     "@sanity/message-protocol": "^0.7.0",
     "@sanity/sdk": "workspace:*",
@@ -91,6 +92,7 @@
     "vitest": "^3.1.1"
   },
   "peerDependencies": {
+    "@portabletext/editor": "^1.44.10",
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"
   },

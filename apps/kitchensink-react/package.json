@@ -14,6 +14,7 @@
   "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@paramour/css": "1.0.0-rc.2",
+    "@portabletext/editor": "^1.44.10",
     "@sanity/icons": "^3.7.0",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
