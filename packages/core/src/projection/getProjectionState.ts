@@ -15,7 +15,7 @@ import {
   type ProjectionValuePending,
   type ValidProjection,
 } from './projectionStore'
-import {STABLE_EMPTY_PROJECTION, validateProjection} from './util'
+import {PROJECTION_STATE_CLEAR_DELAY, STABLE_EMPTY_PROJECTION, validateProjection} from './util'
 
 interface GetProjectionStateOptions extends DocumentHandle {
   projection: ValidProjection
@@ -74,21 +74,23 @@ export const _getProjectionState = bindActionByDataset(
       }))
 
       return () => {
-        state.set('removeSubscription', (prev): Partial<ProjectionStoreState> => {
-          const documentSubscriptions = omit(prev.subscriptions[documentId], subscriptionId)
-          const hasSubscribers = !!Object.keys(documentSubscriptions).length
-          const prevValue = prev.values[documentId]
-          const projectionValue = prevValue?.data ? prevValue.data : null
+        setTimeout(() => {
+          state.set('removeSubscription', (prev): Partial<ProjectionStoreState> => {
+            const documentSubscriptions = omit(prev.subscriptions[documentId], subscriptionId)
+            const hasSubscribers = !!Object.keys(documentSubscriptions).length
+            const prevValue = prev.values[documentId]
+            const projectionValue = prevValue?.data ? prevValue.data : null
 
-          return {
-            subscriptions: hasSubscribers
-              ? {...prev.subscriptions, [documentId]: documentSubscriptions}
-              : omit(prev.subscriptions, documentId),
-            values: hasSubscribers
-              ? prev.values
-              : {...prev.values, [documentId]: {data: projectionValue, isPending: false}},
-          }
-        })
+            return {
+              subscriptions: hasSubscribers
+                ? {...prev.subscriptions, [documentId]: documentSubscriptions}
+                : omit(prev.subscriptions, documentId),
+              values: hasSubscribers
+                ? prev.values
+                : {...prev.values, [documentId]: {data: projectionValue, isPending: false}},
+            }
+          })
+        }, PROJECTION_STATE_CLEAR_DELAY)
       }
     },
   }),
