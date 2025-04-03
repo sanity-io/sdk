@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.0.0-alpha.23](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.22...sdk-v0.0.0-alpha.23) (2025-04-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* use hosted login for standalone apps ([#386](https://github.com/sanity-io/sdk/issues/386))
+* replace `sanityConfigs` prop with `config` prop in `<SanityApp />` and `<SDKProvider />`
+* replace `resourceId` concept with explicit `projectId` and `dataset` fields in handles
+* rename `_type` to `documentType` in DocumentHandle interface and related usages
+* rename `_id` to `documentId` in DocumentHandle interface and related usages
+* update document hooks and actions to expect `DocumentHandle` props
+* update project and dataset hooks to use `ProjectHandle` or `DatasetHandle`
+* remove `<SanityProvider />`, introduce `<ResourceProvider />` for configuration
+
+### Features
+
+* introduce consistent Handle pattern (`ProjectHandle`, `DatasetHandle`, `DocumentHandle`) across the SDK ([969d70e](https://github.com/sanity-io/sdk/commit/969d70e41f6987234323f99753f5cf937469532b))
+* remove `<SanityProvider />`, introduce `<ResourceProvider />` for configuration ([969d70e](https://github.com/sanity-io/sdk/commit/969d70e41f6987234323f99753f5cf937469532b))
+* rename `_id` to `documentId` in DocumentHandle interface and related usages ([969d70e](https://github.com/sanity-io/sdk/commit/969d70e41f6987234323f99753f5cf937469532b))
+* rename `_type` to `documentType` in DocumentHandle interface and related usages ([969d70e](https://github.com/sanity-io/sdk/commit/969d70e41f6987234323f99753f5cf937469532b))
+* replace `resourceId` concept with explicit `projectId` and `dataset` fields in handles ([969d70e](https://github.com/sanity-io/sdk/commit/969d70e41f6987234323f99753f5cf937469532b))
+* replace `sanityConfigs` prop with `config` prop in `<SanityApp />` and `<SDKProvider />` ([969d70e](https://github.com/sanity-io/sdk/commit/969d70e41f6987234323f99753f5cf937469532b))
+* update document hooks and actions to expect `DocumentHandle` props ([969d70e](https://github.com/sanity-io/sdk/commit/969d70e41f6987234323f99753f5cf937469532b))
+* update project and dataset hooks to use `ProjectHandle` or `DatasetHandle` ([969d70e](https://github.com/sanity-io/sdk/commit/969d70e41f6987234323f99753f5cf937469532b))
+* update query and list hooks to accept optional `DatasetHandle` for configuration ([969d70e](https://github.com/sanity-io/sdk/commit/969d70e41f6987234323f99753f5cf937469532b))
+* use hosted login for standalone apps ([#386](https://github.com/sanity-io/sdk/issues/386)) ([9c1ad58](https://github.com/sanity-io/sdk/commit/9c1ad58bc0b302073c90dd6e584f566eba3d0d17))
+
+
+### Bug Fixes
+
+* **deps:** update pkg-utils to v7 ([#384](https://github.com/sanity-io/sdk/issues/384)) ([ce9a952](https://github.com/sanity-io/sdk/commit/ce9a952a295a32ec86c12cbf9b967128ba5eaf4f))
+
 ## [0.0.0-alpha.22](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.21...sdk-v0.0.0-alpha.22) (2025-03-28)
 
 
