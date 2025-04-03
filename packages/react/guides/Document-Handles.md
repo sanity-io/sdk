@@ -156,7 +156,3 @@ export function AuthorList() {
 ```
 
 We’ve now both retrieved a list of Document Handles, and used each of them in a dedicated component with a hook that consumes Document Handles. No matter how many authors there are in our dataset, nor how many fields might exist on our author type, this will keep our application performing as fast as possible by separating the concerns of retrieving author type documents (or rather, Document Handles) and retrieving data from those documents.
-
-```
-
-```
