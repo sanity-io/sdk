@@ -1,7 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["local>sanity-io/renovate-config", ":dependencyDashboardApproval"],
+  "extends": ["local>sanity-io/renovate-config"],
   "ignorePresets": ["github>sanity-io/renovate-config:group-non-major"],
+  "schedule": ["before 5am"],
+  "prConcurrentLimit": 3,
+  "automerge": true,
   "packageRules": [
     {
       "matchDepTypes": ["devDependencies"],
