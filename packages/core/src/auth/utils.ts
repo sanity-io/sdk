@@ -88,15 +88,3 @@ export function getDefaultLocation(): string {
     return DEFAULT_BASE
   }
 }
-
-/**
- * @internal
- */
-export function isLocalUrl(url: string): boolean {
-  return (
-    url.startsWith('http://localhost') ||
-    url.startsWith('https://localhost') ||
-    url.startsWith('http://127.0.0.1') ||
-    url.startsWith('https://127.0.0.1')
-  )
-}
