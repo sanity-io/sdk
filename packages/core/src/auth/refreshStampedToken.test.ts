@@ -52,8 +52,8 @@ describe('refreshStampedToken', () => {
     // Because TParams is [], createInternalAction will call the inner function for us
     const subscription: Subscription = refreshStampedToken({state, instance})
 
-    // Advance time by 10 minutes so the interval fires
-    vi.advanceTimersByTime(10 * 60 * 1000)
+    // Advance time by 12 hours so the interval fires
+    vi.advanceTimersByTime(12 * 60 * 60 * 1000)
 
     // The client request should have been called once
     expect(mockClient.observable.request).toHaveBeenCalledTimes(1)
@@ -94,7 +94,7 @@ describe('refreshStampedToken', () => {
     const subscription: Subscription = refreshStampedToken({state, instance})
 
     // Move time forward to trigger the interval
-    vi.advanceTimersByTime(10 * 60 * 1000)
+    vi.advanceTimersByTime(12 * 60 * 60 * 1000)
 
     // Should have set an error state
     expect(state.get().authState).toEqual({

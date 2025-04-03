@@ -13,13 +13,12 @@ export {
   getAuthState,
   getCurrentUserState,
   getDashboardOrganizationId,
-  getLoginUrlsState,
+  getLoginUrlState,
   getTokenState,
   type LoggedInAuthState,
   type LoggedOutAuthState,
   type LoggingInAuthState,
 } from '../auth/authStore'
-export {fetchLoginUrls} from '../auth/fetchLoginUrls'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
 export type {ClientStoreState as ClientState} from '../client/clientStore'

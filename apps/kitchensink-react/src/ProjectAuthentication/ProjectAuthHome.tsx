@@ -1,5 +1,5 @@
-import {AuthBoundary} from '@sanity/sdk-react'
-import {Card, Flex, Text} from '@sanity/ui'
+import {AuthBoundary, useLogOut} from '@sanity/sdk-react'
+import {Button, Card, Flex, Text} from '@sanity/ui'
 import {type JSX} from 'react'
 import {Link} from 'react-router'
 
@@ -10,6 +10,7 @@ export function ProjectAuthHome({
 }: {
   routes: {path: string; element: JSX.Element}[]
 }): JSX.Element {
+  const logout = useLogOut()
   return (
     <PageLayout title="Authenticated" subtitle="Explore authentication examples and components">
       <AuthBoundary>
@@ -25,6 +26,9 @@ export function ProjectAuthHome({
               </Card>
             </Link>
           ))}
+          <Button mode="ghost" onClick={() => logout()}>
+            Logout
+          </Button>
         </Flex>
       </AuthBoundary>
     </PageLayout>

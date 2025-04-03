@@ -2,6 +2,22 @@
 title: Migration guide
 ---
 
+## Migrating to @sanity/sdk-react@0.0.0-rc.4
+
+### Breaking Changes
+
+1. Removed Authentication Components and Hooks:
+
+   - Removed `<Login />` component - authentication now redirects to sanity.io/login
+   - Removed `<LoginLayout />` component and its related props
+   - Removed `useLoginUrls` hook - replaced with `useLoginUrl` hook that returns a single login URL
+   - `<AuthBoundary />` now automatically redirects to sanity.io/login when logged out
+   - `<LoginCallback />` now renders null during the callback process
+
+2. Authentication Flow Changes:
+   - Authentication now uses a centralized login page at sanity.io/login
+   - Token refresh interval is now consistently set to 12 hours for all environments
+
 ## Migrating to @sanity/sdk-react@0.0.0-rc.3
 
 This guide covers the key changes in the latest SDK version and how to update your code.

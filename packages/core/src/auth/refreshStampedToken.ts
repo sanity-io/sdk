@@ -19,6 +19,8 @@ import {type AuthState, type AuthStoreState} from './authStore'
 export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subscription => {
   const {clientFactory, apiHost, storageArea, storageKey} = state.get().options
 
+  const refreshInterval = 12 * 60 * 60 * 1000 // refresh the token every 12 hours
+
   const refreshToken$ = state.observable.pipe(
     map(({authState}) => authState),
     filter(
@@ -28,7 +30,7 @@ export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subs
     distinctUntilChanged(),
     filter((authState) => authState.token.includes('-st')), // Ensure we only try to refresh stamped tokens
     switchMap((authState) =>
-      interval(10 * 60 * 1000).pipe(
+      interval(refreshInterval).pipe(
         takeWhile(() => state.get().authState.type === AuthStateType.LOGGED_IN),
         map(() => authState.token),
         distinctUntilChanged(),

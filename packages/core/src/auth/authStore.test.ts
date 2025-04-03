@@ -10,10 +10,9 @@ import {
   getAuthState,
   getCurrentUserState,
   getDashboardOrganizationId,
-  getLoginUrlsState,
+  getLoginUrlState,
   getTokenState,
 } from './authStore'
-import {fetchLoginUrls} from './fetchLoginUrls'
 import {handleAuthCallback} from './handleAuthCallback'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
@@ -297,38 +296,13 @@ describe('authStore', () => {
       instance?.dispose()
     })
 
-    it('returns the cached auth providers if present', async () => {
-      instance = createSanityInstance({
-        projectId: 'p',
-        dataset: 'd',
-        auth: {
-          providers: [{name: 'test', title: 'Test', url: 'https://example.com'}],
-          clientFactory: vi.fn().mockReturnValue({
-            request: vi.fn().mockResolvedValue({providers: []}),
-          }),
-        },
-      })
-
-      await fetchLoginUrls(instance)
-
-      const {getCurrent} = getLoginUrlsState(instance)
-      expect(getCurrent()).toEqual([
-        {
-          name: 'test',
-          title: 'Test',
-          url: 'https://example.com/?origin=http%3A%2F%2Flocalhost%2F&withSid=true&type=stampedToken',
-        },
-      ])
-
-      // pureness check
-      expect(getCurrent()).toBe(getCurrent())
-    })
-
-    it('returns nulls otherwise', () => {
+    it('returns the default login url', () => {
       instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
-      const loginUrlsState = getLoginUrlsState(instance)
-      expect(loginUrlsState.getCurrent()).toBe(null)
+      const loginUrlState = getLoginUrlState(instance)
+      expect(loginUrlState.getCurrent()).toBe(
+        'https://www.sanity.io/login?origin=http%3A%2F%2Flocalhost&type=stampedToken&withSid=true',
+      )
     })
   })
 

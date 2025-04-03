@@ -1,14 +1,13 @@
 import {AuthStateType} from '@sanity/sdk'
-import {useMemo} from 'react'
+import {useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
 import {useAuthState} from '../../hooks/auth/useAuthState'
+import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {isInIframe} from '../utils'
 import {AuthError} from './AuthError'
-import {Login} from './Login'
 import {LoginCallback} from './LoginCallback'
 import {LoginError, type LoginErrorProps} from './LoginError'
-import {type LoginLayoutProps} from './LoginLayout'
 
 // Only import bridge if we're in an iframe. This assumes that the app is
 // running within SanityOS if it is in an iframe.
@@ -26,27 +25,42 @@ if (isInIframe()) {
 }
 
 /**
- * @internal
+ * @public
  */
-export interface AuthBoundaryProps extends LoginLayoutProps {
+export interface AuthBoundaryProps {
   /**
    * Custom component to render the login screen.
-   * Receives all login layout props. Defaults to {@link Login}.
+   * Receives all props. Defaults to {@link Login}.
    */
-  LoginComponent?: React.ComponentType<LoginLayoutProps>
+  LoginComponent?: React.ComponentType<{
+    header?: React.ReactNode
+    footer?: React.ReactNode
+  }>
 
   /**
    * Custom component to render during OAuth callback processing.
-   * Receives all login layout props. Defaults to {@link LoginCallback}.
+   * Receives all props. Defaults to {@link LoginCallback}.
    */
-  CallbackComponent?: React.ComponentType<LoginLayoutProps>
+  CallbackComponent?: React.ComponentType<{
+    header?: React.ReactNode
+    footer?: React.ReactNode
+  }>
 
   /**
    * Custom component to render when authentication errors occur.
-   * Receives login layout props and error boundary props. Defaults to
+   * Receives error boundary props and layout props. Defaults to
    * {@link LoginError}
    */
   LoginErrorComponent?: React.ComponentType<LoginErrorProps>
+
+  /** Header content to display */
+  header?: React.ReactNode
+
+  /** Footer content to display */
+  footer?: React.ReactNode
+
+  /** Protected content to render when authenticated */
+  children?: React.ReactNode
 }
 
 /**
@@ -74,12 +88,11 @@ export function AuthBoundary({
   LoginErrorComponent = LoginError,
   ...props
 }: AuthBoundaryProps): React.ReactNode {
-  const {header, footer} = props
   const FallbackComponent = useMemo(() => {
     return function LoginComponentWithLayoutProps(fallbackProps: FallbackProps) {
-      return <LoginErrorComponent {...fallbackProps} header={header} footer={footer} />
+      return <LoginErrorComponent {...fallbackProps} />
     }
-  }, [header, footer, LoginErrorComponent])
+  }, [LoginErrorComponent])
 
   return (
     <ErrorBoundary FallbackComponent={FallbackComponent}>
@@ -88,18 +101,31 @@ export function AuthBoundary({
   )
 }
 
-interface AuthSwitchProps extends LoginLayoutProps {
-  LoginComponent?: React.ComponentType<LoginLayoutProps>
-  CallbackComponent?: React.ComponentType<LoginLayoutProps>
+interface AuthSwitchProps {
+  LoginComponent?: React.ComponentType<{
+    header?: React.ReactNode
+    footer?: React.ReactNode
+  }>
+  CallbackComponent?: React.ComponentType<{
+    header?: React.ReactNode
+    footer?: React.ReactNode
+  }>
+  header?: React.ReactNode
+  footer?: React.ReactNode
+  children?: React.ReactNode
 }
 
-function AuthSwitch({
-  LoginComponent = Login,
-  CallbackComponent = LoginCallback,
-  children,
-  ...props
-}: AuthSwitchProps) {
+function AuthSwitch({CallbackComponent = LoginCallback, children, ...props}: AuthSwitchProps) {
   const authState = useAuthState()
+
+  const isLoggedOut = authState.type === AuthStateType.LOGGED_OUT && !authState.isDestroyingSession
+  const loginUrl = useLoginUrl()
+
+  useEffect(() => {
+    if (isLoggedOut) {
+      window.location.href = loginUrl
+    }
+  }, [isLoggedOut, loginUrl])
 
   switch (authState.type) {
     case AuthStateType.ERROR: {
@@ -111,8 +137,12 @@ function AuthSwitch({
     case AuthStateType.LOGGED_IN: {
       return children
     }
+    case AuthStateType.LOGGED_OUT: {
+      return null
+    }
     default: {
-      return <LoginComponent {...props} />
+      // @ts-expect-error - This state should never happen
+      throw new Error(`Invalid auth state: ${authState.type}`)
     }
   }
 }
