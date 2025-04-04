@@ -1,5 +1,4 @@
-import {DocumentHandle} from '@sanity/sdk'
-import {usePaginatedDocuments, useProjection} from '@sanity/sdk-react'
+import {DocumentHandle, usePaginatedDocuments, useProjection} from '@sanity/sdk-react'
 import {Box, Button, Card, Flex, Label, Spinner, Stack, Text, TextInput} from '@sanity/ui'
 import {JSX, ReactNode, Suspense, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
