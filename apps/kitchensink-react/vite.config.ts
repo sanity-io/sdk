@@ -8,6 +8,9 @@ const ReactCompilerConfig = {}
 export default defineConfig({
   server: {
     port: 3333,
+    fs: {
+      strict: false,
+    },
   },
   plugins: [
     react({
