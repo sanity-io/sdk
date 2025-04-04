@@ -15,21 +15,16 @@ title: Migration guide
    - `<LoginCallback />` now renders null during the callback process
 
 2. Authentication Flow Changes:
+
    - Authentication now uses a centralized login page at sanity.io/login
    - Token refresh interval is now consistently set to 12 hours for all environments
 
-## Migrating to @sanity/sdk-react@0.0.0-rc.3
+3. Improved component hierarchy with `<SanityApp />`, `<SDKProvider />`, and `<ResourceProvider />`
+4. Simplified document references with explicit `projectId` + `dataset` fields
+5. Standardized property names across the SDK
+6. Unified hook interfaces with the handle pattern
 
-This guide covers the key changes in the latest SDK version and how to update your code.
-
-### Key Changes Overview
-
-1. Improved component hierarchy with `<SanityApp />`, `<SDKProvider />`, and `<ResourceProvider />`
-2. Simplified document references with explicit `projectId` + `dataset` fields
-3. Standardized property names across the SDK
-4. Unified hook interfaces with the handle pattern
-
-### 1. Provider Components
+### Provider Components
 
 We've updated our component hierarchy to provide better flexibility and control over resource management:
 
@@ -88,7 +83,7 @@ For more complex applications that need finer control, you can use `<SDKProvider
 </ResourceProvider>
 ```
 
-### 2. Document Handle Pattern
+### Document Handle Pattern
 
 We've introduced a consistent "handle" pattern across the SDK for working with documents and configuration. This replaces the previous `resourceId` concept with more explicit fields.
 
@@ -137,7 +132,7 @@ interface DocumentHandle extends DatasetHandle {
 }
 ```
 
-### 3. Hook Updates
+### Hook Updates
 
 Many hooks have been updated to use the handle pattern consistently.
 
@@ -219,21 +214,28 @@ const datasets = useDatasets({projectId: 'abc12345'})
 
 ### Breaking Changes Summary
 
-1. Component Changes:
+1. Authentication Changes:
+
+   - Removed `<Login />`, `<LoginLayout />`, and `useLoginUrls`
+   - `<AuthBoundary />` and `<LoginCallback />` behavior changes
+   - Centralized login at sanity.io/login
+   - 12-hour token refresh interval
+
+2. Component Changes:
 
    - `<SanityApp />` now uses `config` instead of `sanityConfigs`
    - `<SDKProvider />` now uses `config` prop for multiple configurations
    - `<ResourceProvider />` provides granular control for single configuration
    - `<SanityProvider />` removed
 
-2. Property Renames:
+3. Property Renames:
 
    - `_type` → `documentType`
    - `_id` → `documentId`
    - `results` → `data` (in hook returns)
    - Removed `resourceId` concept
 
-3. Interface Updates:
+4. Interface Updates:
    - All document hooks use `DocumentHandle`
    - Query hooks accept `DatasetHandle`
    - Project hooks use `ProjectHandle`
