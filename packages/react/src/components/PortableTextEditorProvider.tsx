@@ -5,7 +5,6 @@ import {
   useEditor,
 } from '@portabletext/editor'
 import {type DocumentHandle, getDocumentState, type SanityDocument} from '@sanity/sdk'
-import {cloneDeep} from 'lodash-es'
 import {useEffect, useState} from 'react'
 
 import {useSanityInstance} from '../hooks/context/useSanityInstance'
@@ -23,12 +22,7 @@ function UpdateValuePlugin({path, ...docHandle}: DocumentHandle & {path: string}
     >(instance, docHandle, path)
 
     subscribe(() => {
-      editor.send({
-        type: 'update value',
-        // TODO: this is here temporarily due to a bug in PTE. remove when fixed.
-        // https://github.com/portabletext/editor/pull/980
-        value: cloneDeep(getCurrent()),
-      })
+      editor.send({type: 'update value', value: getCurrent()})
     })
   }, [docHandle, editor, instance, path])
 

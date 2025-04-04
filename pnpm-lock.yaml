@@ -93,8 +93,8 @@ importers:
         specifier: 1.0.0-rc.2
         version: 1.0.0-rc.2
       '@portabletext/editor':
-        specifier: ^1.44.10
-        version: 1.44.10(@sanity/schema@3.82.0(@types/react@19.1.0))(@sanity/types@3.82.0(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(rxjs@7.8.2)
+        specifier: ^1.44.13
+        version: 1.44.13(@sanity/schema@3.82.0(@types/react@19.1.0))(@sanity/types@3.82.0(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(rxjs@7.8.2)
       '@sanity/icons':
         specifier: ^3.7.0
         version: 3.7.0(react@19.1.0)
@@ -320,9 +320,6 @@ importers:
 
   packages/react:
     dependencies:
-      '@portabletext/editor':
-        specifier: ^1.44.10
-        version: 1.44.10(@sanity/schema@3.82.0(@types/react@19.1.0))(@sanity/types@3.79.0(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(rxjs@7.8.1)
       '@sanity/logos':
         specifier: ^2.1.13
         version: 2.1.13(@sanity/color@3.0.6)(react@19.1.0)
@@ -348,6 +345,9 @@ importers:
         specifier: ^7.8.1
         version: 7.8.1
     devDependencies:
+      '@portabletext/editor':
+        specifier: ^1.44.13
+        version: 1.44.13(@sanity/schema@3.82.0(@types/react@19.1.0))(@sanity/types@3.79.0(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(rxjs@7.8.1)
       '@repo/config-eslint':
         specifier: workspace:*
         version: link:../@repo/config-eslint
@@ -1288,8 +1288,8 @@ packages:
       '@sanity/types': ^3.81.0
       '@types/react': 18 || 19
 
-  '@portabletext/editor@1.44.10':
-    resolution: {integrity: sha512-MKTNbxb02Q+vJC6d5qTFh8MDMQneqZWusRhuzeCP+7OWLc5CAjMvIb0giiJkXVPc7hgT/MITKjuJo2y5qnRjIQ==}
+  '@portabletext/editor@1.44.13':
+    resolution: {integrity: sha512-4EBryMql8gmPfSI3feLgXJDHcRLj57/7xuIB5viwMshOYttQCur1GVPp+z99dgXjLxTA6oS1YchURe72Zy8Yrg==}
     engines: {node: '>=18'}
     peerDependencies:
       '@sanity/schema': ^3.82.0
@@ -5972,7 +5972,7 @@ snapshots:
       get-random-values-esm: 1.0.2
       lodash: 4.17.21
 
-  '@portabletext/editor@1.44.10(@sanity/schema@3.82.0(@types/react@19.1.0))(@sanity/types@3.79.0(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(rxjs@7.8.1)':
+  '@portabletext/editor@1.44.13(@sanity/schema@3.82.0(@types/react@19.1.0))(@sanity/types@3.79.0(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(rxjs@7.8.1)':
     dependencies:
       '@portabletext/block-tools': 1.1.16(@sanity/types@3.79.0(@types/react@19.1.0))(@types/react@19.1.0)
       '@portabletext/patches': 1.1.3
@@ -5997,7 +5997,7 @@ snapshots:
       - react-dom
       - supports-color
 
-  '@portabletext/editor@1.44.10(@sanity/schema@3.82.0(@types/react@19.1.0))(@sanity/types@3.82.0(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(rxjs@7.8.2)':
+  '@portabletext/editor@1.44.13(@sanity/schema@3.82.0(@types/react@19.1.0))(@sanity/types@3.82.0(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(rxjs@7.8.2)':
     dependencies:
       '@portabletext/block-tools': 1.1.16(@sanity/types@3.82.0(@types/react@19.1.0))(@types/react@19.1.0)
       '@portabletext/patches': 1.1.3

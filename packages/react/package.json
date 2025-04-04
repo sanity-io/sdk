@@ -55,7 +55,6 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
-    "@portabletext/editor": "^1.44.10",
     "@sanity/logos": "^2.1.13",
     "@sanity/message-protocol": "^0.7.0",
     "@sanity/sdk": "workspace:*",
@@ -66,6 +65,7 @@
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
+    "@portabletext/editor": "^1.44.13",
     "@repo/config-eslint": "workspace:*",
     "@repo/config-test": "workspace:*",
     "@repo/package.config": "workspace:*",
@@ -92,7 +92,7 @@
     "vitest": "^3.1.1"
   },
   "peerDependencies": {
-    "@portabletext/editor": "^1.44.10",
+    "@portabletext/editor": "^1.44.13",
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"
   },
