@@ -1,6 +1,20 @@
 {
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "include-component-in-tag": false,
+  "plugins": [
+    {
+      "type": "node-workspace",
+      "merge": false
+    },
+    {
+      "type": "linked-versions",
+      "groupName": "sdk",
+      "components": ["core", "react", "react-internal"]
+    }
+  ],
   "packages": {
     "packages/react": {
+      "component": "react",
       "release-type": "node",
       "bump-patch-for-minor-pre-major": true,
       "bump-minor-pre-major": true,
@@ -8,6 +22,7 @@
       "versioning": "prerelease"
     },
     "packages/react-internal": {
+      "component": "react-internal",
       "release-type": "node",
       "bump-patch-for-minor-pre-major": true,
       "bump-minor-pre-major": true,
@@ -15,6 +30,7 @@
       "versioning": "prerelease"
     },
     "packages/core": {
+      "component": "core",
       "release-type": "node",
       "bump-patch-for-minor-pre-major": true,
       "bump-minor-pre-major": true,
