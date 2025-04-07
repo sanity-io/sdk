@@ -58,7 +58,7 @@
     "@sanity/client": "^6.28.4",
     "@sanity/comlink": "^3.0.1",
     "@sanity/diff-match-patch": "^3.2.0",
-    "@sanity/mutate": "^0.12.1",
+    "@sanity/mutate": "^0.12.4",
     "@sanity/types": "^3.78.1",
     "@types/lodash-es": "^4.17.12",
     "lodash-es": "^4.17.21",
