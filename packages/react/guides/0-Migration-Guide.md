@@ -176,11 +176,11 @@ const {data} = useQuery('*[_type == $type][0...10]', {
 })
 
 // List hooks with configuration
-const {data: documents} = useInfiniteList({
+const {data: documents} = useDocuments({
   filter: '_type == "product"',
   projectId: 'xyz12345', // Optional
   dataset: 'staging', // Optional
-  pageSize: 20,
+  batchSize: 20,
 })
 
 // Returned documents include full context
