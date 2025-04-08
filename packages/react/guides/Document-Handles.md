@@ -14,18 +14,19 @@ It looks like this:
 
 ```JavaScript
 const myDocumentHandle = {
-  _id: 'my-document-id',
-  _type: 'article'
+  documentId: 'my-document-id',
+  documentType: 'article'
 }
 ```
 
-A Document Handle may also contain a resource ID; in that case, it would look like this:
+A Document Handle may also contain optional information about the project and dataset it originates from; in that case, it would look like this:
 
 ```JavaScript
 const myDocumentHandle = {
-  _id: 'my-document-id',
-  _type: 'author',
-  resourceId: `document:${projectId}.${dataset}:${documentId}`
+  documentId: 'my-document-id',
+  documentType: 'author',
+  dataset: 'dataset-name',
+  projectId: 'my-project-id'
 }
 ```
 
@@ -46,8 +47,8 @@ Therefore, for a document in a given dataset that looks (in part) like this:
 
 ```JavaScript
 {
-  _id: "123456-abcdef",
-  _type: "book"
+  documentId: "123456-abcdef",
+  documentType: "book"
 }
 ```
 
@@ -71,8 +72,8 @@ For example:
 import {useDocumentSyncStatus, type DocumentHandle} from '@sanity/sdk-react'
 
 const myDocumentHandle: DocumentHandle = {
-  _id: 'my-document-id',
-  _type: 'book',
+  documentId: 'my-document-id',
+  documentType: 'book',
 }
 
 const documentSynced = useDocumentSyncStatus(myDocumentHandle)
@@ -93,7 +94,7 @@ export function AuthorList() {
 At this point, the `authors` variable contains an array of Document Handles, which, because we’re filtering for only the `author` content type, will look like this:
 
 ```tsx
-{ _id: 'the-document-id', _type: 'author' }
+{ documentId: 'the-document-id', documentType: 'author' }
 ```
 
 With this information, we could render the number of authors in the dataset — for example:
@@ -108,29 +109,27 @@ export function AuthorList() {
 }
 ```
 
-If we wanted to instead render content from each of these documents — for example, the author’s name — we’d then need to pass each Document Handle to a different hook — for example, {@link useProjection}:
+If we wanted to instead render content from each of these documents — for example, the author’s name — we’d then need to provide each Document Handle to a different hook — for example, {@link useProjection}. Note how the document handle is [spread](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax) in the arguments to the `useProjection` hook below:
 
 ```tsx
-import {useProjection, type DocumentHandle} from '@sanity/sdk'
+import {useProjection, type DocumentHandle, type UseProjectionResults} from '@sanity/sdk'
 
-interface ProjectionResult {
-  results: {
-    name: string
-  }
+interface NameProjection {
+  name: string
 }
 
 // The AuthorDetails component will accept a Document Handle for its `document` prop
 export function AuthorDetails({document}: {document: DocumentHandle}) {
-  const {results}: ProjectionResult = useProjection({
-    document,
+  const {data}: UseProjectionResults<NameProjection> = useProjection({
+    ...document,
     projection: '{ name }',
   })
 
-  return <p>The author's name is {results.name}</p>
+  return <p>The author's name is {data.name}</p>
 }
 ```
 
-We can then use our `AuthorDetails` component with our previously created `AuthorList` component, and pass along the Document Handles to each instance of the `AuthorDetails` component:
+With this in place, we can then use our `AuthorDetails` component with our previously created `AuthorList` component, and pass along the Document Handles to each instance of the `AuthorDetails` component:
 
 ```tsx
 import {useDocuments} from '@sanity/sdk'
@@ -145,7 +144,7 @@ export function AuthorList() {
       <p>There are {authors.length} authors in our dataset! Here they are:</p>
       <ul>
         {authors.map(author => (
-          <li key={author._id}>
+          <li key={author.documentId}>
             <AuthorDetails document={author} />
           </li>
         )}
