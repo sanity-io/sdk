@@ -1,5 +1,29 @@
-import {useActiveReleases, usePerspective} from '@sanity/sdk-react'
+import {PerspectiveHandle, useActiveReleases, useDocuments, usePerspective} from '@sanity/sdk-react'
 import {type JSX, useState} from 'react'
+
+import {DocumentPreview} from '../DocumentCollection/DocumentPreview'
+
+function DocumentList(perspectiveHandle: PerspectiveHandle) {
+  const perspective = usePerspective(perspectiveHandle)
+  const {data} = useDocuments({
+    ...perspectiveHandle,
+    filter: '_type==$type',
+    params: {type: 'author'},
+    orderings: [{field: '_updatedAt', direction: 'desc'}],
+    batchSize: 5,
+  })
+
+  return (
+    <div>
+      <p>Documents in perspective: {JSON.stringify(perspective)}</p>
+      <ul>
+        {data.map((i) => (
+          <DocumentPreview key={i.documentId} {...i} />
+        ))}
+      </ul>
+    </div>
+  )
+}
 
 export function ReleasesRoute(): JSX.Element {
   const [selectedRelease, setSelectedRelease] = useState('')
@@ -38,6 +62,8 @@ export function ReleasesRoute(): JSX.Element {
         <h2>Calculated Perspective</h2>
         <pre>{JSON.stringify(calculatedPerspective, null, 2)}</pre>
       </div>
+
+      <DocumentList perspective={selectedRelease ? {releaseName: selectedRelease} : undefined} />
     </div>
   )
 }
