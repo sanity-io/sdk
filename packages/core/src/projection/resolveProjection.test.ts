@@ -6,8 +6,8 @@ import {type DocumentHandle} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {getProjectionState} from './getProjectionState'
-import {type ProjectionValuePending, type ValidProjection} from './projectionStore'
 import {resolveProjection} from './resolveProjection'
+import {type ProjectionValuePending, type ValidProjection} from './types'
 
 vi.mock('./getProjectionState')
 

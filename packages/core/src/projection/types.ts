@@ -1,5 +1,12 @@
-import {type ValidProjection} from './projectionStore'
+/**
+ * @public
+ */
+export type ValidProjection = `{${string}}`
 
+/**
+ * @public
+ * The result of a projection query
+ */
 export interface ProjectionValuePending<TValue extends object> {
   data: TValue | null
   isPending: boolean
@@ -13,7 +20,7 @@ export interface DocumentProjections {
   [projectionHash: string]: ValidProjection
 }
 
-export interface DocumentProjectionSubscriptions {
+interface DocumentProjectionSubscriptions {
   [projectionHash: string]: {
     [subscriptionId: string]: true
   }

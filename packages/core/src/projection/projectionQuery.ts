@@ -1,13 +1,16 @@
-import {hashString} from '../utils/hashString'
 import {getDraftId, getPublishedId} from '../utils/ids'
-import {type ProjectionValuePending, type ValidProjection} from './projectionStore'
-import {validateProjection} from './util'
+import {
+  type DocumentProjections,
+  type DocumentProjectionValues,
+  type ValidProjection,
+} from './types'
 
-type ProjectionQueryResult = {
+export type ProjectionQueryResult = {
   _id: string
   _type: string
   _updatedAt: string
   result: Record<string, unknown>
+  __projectionHash: string
 }
 
 interface CreateProjectionQueryResult {
@@ -19,14 +22,18 @@ type ProjectionMap = Record<string, {projection: ValidProjection; documentIds: S
 
 export function createProjectionQuery(
   documentIds: Set<string>,
-  documentProjections: {[TDocumentId in string]?: string},
+  documentProjections: {[TDocumentId in string]?: DocumentProjections},
 ): CreateProjectionQueryResult {
   const projections = Array.from(documentIds)
-    .filter((id) => documentProjections[id])
-    .map((id) => {
-      const projection = validateProjection(documentProjections[id]!)
-      const projectionHash = hashString(projection)
-      return {documentId: id, projection, projectionHash}
+    .flatMap((id) => {
+      const projectionsForDoc = documentProjections[id]
+      if (!projectionsForDoc) return []
+
+      return Object.entries(projectionsForDoc).map(([projectionHash, projection]) => ({
+        documentId: id,
+        projection,
+        projectionHash,
+      }))
     })
     .reduce<ProjectionMap>((acc, {documentId, projection, projectionHash}) => {
       const obj = acc[projectionHash] ?? {documentIds: new Set(), projection}
@@ -38,7 +45,7 @@ export function createProjectionQuery(
 
   const query = `[${Object.entries(projections)
     .map(([projectionHash, {projection}]) => {
-      return `...*[_id in $__ids_${projectionHash}]{_id,_type,_updatedAt,"result":{...${projection}}}`
+      return `...*[_id in $__ids_${projectionHash}]{_id,_type,_updatedAt,"__projectionHash":"${projectionHash}","result":{...${projection}}}`
     })
     .join(',')}]`
 
@@ -64,33 +71,69 @@ interface ProcessProjectionQueryOptions {
 }
 
 export function processProjectionQuery({ids, results}: ProcessProjectionQueryOptions): {
-  [TDocumentId in string]?: ProjectionValuePending<Record<string, unknown>>
+  [TDocumentId in string]?: DocumentProjectionValues<Record<string, unknown>>
 } {
-  const resultMap = results.reduce<{[TDocumentId in string]?: ProjectionQueryResult}>(
-    (acc, next) => {
-      acc[next._id] = next
-      return acc
-    },
-    {},
-  )
+  const groupedResults: {
+    [docId: string]: {
+      [hash: string]: {
+        draft?: ProjectionQueryResult
+        published?: ProjectionQueryResult
+      }
+    }
+  } = {}
 
-  return Object.fromEntries(
-    Array.from(ids).map((id): [string, ProjectionValuePending<Record<string, unknown>>] => {
-      const publishedId = getPublishedId(id)
-      const draftId = getDraftId(id)
+  for (const result of results) {
+    const originalId = getPublishedId(result._id)
+    const hash = result.__projectionHash
+    const isDraft = result._id.startsWith('drafts.')
 
-      const draftResult = resultMap[draftId]
-      const publishedResult = resultMap[publishedId]
+    if (!ids.has(originalId)) continue
 
-      const projectionResult = draftResult?.result ?? publishedResult?.result
-      if (!projectionResult) return [id, {data: null, isPending: false}]
+    if (!groupedResults[originalId]) {
+      groupedResults[originalId] = {}
+    }
+    if (!groupedResults[originalId][hash]) {
+      groupedResults[originalId][hash] = {}
+    }
 
-      const status = {
-        ...(draftResult?._updatedAt && {lastEditedDraftAt: draftResult._updatedAt}),
-        ...(publishedResult?._updatedAt && {lastEditedPublishedAt: publishedResult._updatedAt}),
+    if (isDraft) {
+      groupedResults[originalId][hash].draft = result
+    } else {
+      groupedResults[originalId][hash].published = result
+    }
+  }
+
+  const finalValues: {
+    [docId: string]: DocumentProjectionValues<Record<string, unknown>>
+  } = {}
+
+  for (const originalId of ids) {
+    finalValues[originalId] = {}
+
+    const projectionsForDoc = groupedResults[originalId]
+    if (!projectionsForDoc) continue
+
+    for (const hash in projectionsForDoc) {
+      const {draft, published} = projectionsForDoc[hash]
+
+      const projectionResultData = draft?.result ?? published?.result
+
+      if (!projectionResultData) {
+        finalValues[originalId][hash] = {data: null, isPending: false}
+        continue
       }
 
-      return [id, {data: {...projectionResult, status}, isPending: false}]
-    }),
-  )
+      const status = {
+        ...(draft?._updatedAt && {lastEditedDraftAt: draft._updatedAt}),
+        ...(published?._updatedAt && {lastEditedPublishedAt: published._updatedAt}),
+      }
+
+      finalValues[originalId][hash] = {
+        data: {...projectionResultData, status},
+        isPending: false,
+      }
+    }
+  }
+
+  return finalValues
 }

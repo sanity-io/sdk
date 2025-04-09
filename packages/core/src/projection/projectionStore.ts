@@ -1,27 +1,6 @@
 import {defineStore} from '../store/defineStore'
-import {type ProjectionStoreState} from './projectionStoreTypes'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
-
-/**
- * @beta
- */
-export type ValidProjection = `{${string}}`
-
-export interface ProjectionQueryResult<TValue = Record<string, unknown>> {
-  _id: string
-  _type: string
-  _updatedAt: string
-  result: TValue
-}
-
-// Re-export types from projectionStoreTypes
-export type {
-  DocumentProjections,
-  DocumentProjectionSubscriptions,
-  DocumentProjectionValues,
-  ProjectionStoreState,
-  ProjectionValuePending,
-} from './projectionStoreTypes'
+import {type ProjectionStoreState} from './types'
 
 export const projectionStore = defineStore<ProjectionStoreState>({
   name: 'Projection',

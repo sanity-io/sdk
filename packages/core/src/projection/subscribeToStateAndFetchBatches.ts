@@ -18,8 +18,12 @@ import {
 
 import {getQueryState, resolveQuery} from '../query/queryStore'
 import {type StoreContext} from '../store/defineStore'
-import {createProjectionQuery, processProjectionQuery} from './projectionQuery'
-import {type ProjectionQueryResult, type ProjectionStoreState} from './projectionStore'
+import {
+  createProjectionQuery,
+  processProjectionQuery,
+  type ProjectionQueryResult,
+} from './projectionQuery'
+import {type ProjectionStoreState} from './types'
 import {PROJECTION_PERSPECTIVE, PROJECTION_TAG} from './util'
 
 const BATCH_DEBOUNCE_TIME = 50
@@ -32,36 +36,55 @@ export const subscribeToStateAndFetchBatches = ({
   instance,
 }: StoreContext<ProjectionStoreState>): Subscription => {
   const documentProjections$ = state.observable.pipe(
-    map((i) => i.documentProjections),
-    distinctUntilChanged(),
+    map((s) => s.documentProjections),
+    distinctUntilChanged(isEqual),
   )
 
-  const newSubscriberIds$ = state.observable.pipe(
+  const activeDocumentIds$ = state.observable.pipe(
     map(({subscriptions}) => new Set(Object.keys(subscriptions))),
     distinctUntilChanged(isSetEqual),
-    debounceTime(BATCH_DEBOUNCE_TIME),
-    startWith(new Set<string>()),
-    pairwise(),
-    tap(([prevIds, currIds]) => {
-      // for all new subscriptions, set their values to pending
-      const newIds = [...currIds].filter((element) => !prevIds.has(element))
-      state.set('updatingPending', (prev) => {
-        const pendingValues = newIds.reduce<ProjectionStoreState['values']>((acc, id) => {
-          const prevValue = prev.values[id]
-          const value = prevValue?.data ? prevValue.data : null
-          acc[id] = {data: value, isPending: true}
-          return acc
-        }, {})
-        return {values: {...prev.values, ...pendingValues}}
-      })
-    }),
-    map(([, ids]) => ids),
-    distinctUntilChanged(isSetEqual),
   )
 
-  return combineLatest([newSubscriberIds$, documentProjections$])
+  const pendingUpdateSubscription = activeDocumentIds$
     .pipe(
-      distinctUntilChanged(isEqual),
+      debounceTime(BATCH_DEBOUNCE_TIME),
+      startWith(new Set<string>()),
+      pairwise(),
+      tap(([prevIds, currIds]) => {
+        const newIds = [...currIds].filter((id) => !prevIds.has(id))
+        if (newIds.length === 0) return
+
+        state.set('updatingPending', (prev) => {
+          const nextValues = {...prev.values}
+          for (const id of newIds) {
+            const projectionsForDoc = prev.documentProjections[id]
+            if (!projectionsForDoc) continue
+
+            const currentValuesForDoc = prev.values[id] ?? {}
+            const updatedValuesForDoc = {...currentValuesForDoc}
+
+            for (const hash in projectionsForDoc) {
+              const currentValue = updatedValuesForDoc[hash]
+              updatedValuesForDoc[hash] = {
+                data: currentValue?.data ?? null,
+                isPending: true,
+              }
+            }
+            nextValues[id] = updatedValuesForDoc
+          }
+          return {values: nextValues}
+        })
+      }),
+    )
+    .subscribe()
+
+  const queryTrigger$ = combineLatest([activeDocumentIds$, documentProjections$]).pipe(
+    debounceTime(BATCH_DEBOUNCE_TIME),
+    distinctUntilChanged(isEqual),
+  )
+
+  const queryExecutionSubscription = queryTrigger$
+    .pipe(
       switchMap(([ids, documentProjections]) => {
         if (!ids.size) return EMPTY
         const {query, params} = createProjectionQuery(ids, documentProjections)
@@ -86,7 +109,7 @@ export const subscribeToStateAndFetchBatches = ({
               ).pipe(switchMap(() => observable))
             }
             return observable
-          }).pipe(filter((result) => result !== undefined))
+          }).pipe(filter((result): result is ProjectionQueryResult[] => result !== undefined))
 
           const subscription = source$.subscribe(observer)
 
@@ -98,20 +121,39 @@ export const subscribeToStateAndFetchBatches = ({
           }
         }).pipe(map((data) => ({data, ids})))
       }),
-      map(({ids, data}) => ({
-        values: processProjectionQuery({
+      map(({ids, data}) =>
+        processProjectionQuery({
           projectId: instance.config.projectId!,
           dataset: instance.config.dataset!,
           ids,
           results: data,
         }),
-      })),
+      ),
     )
     .subscribe({
-      next: ({values}) => {
-        state.set('updateResult', (prev) => ({
-          values: {...prev.values, ...values},
-        }))
+      next: (processedValues) => {
+        state.set('updateResult', (prev) => {
+          const nextValues = {...prev.values}
+          for (const docId in processedValues) {
+            if (processedValues[docId]) {
+              nextValues[docId] = {
+                ...(prev.values[docId] ?? {}),
+                ...processedValues[docId],
+              }
+            }
+          }
+          return {values: nextValues}
+        })
+      },
+      error: (err) => {
+        // eslint-disable-next-line no-console
+        console.error('Error fetching projection batches:', err)
+        // TODO: Potentially update state to reflect error state for affected projections?
       },
     })
+
+  return new Subscription(() => {
+    pendingUpdateSubscription.unsubscribe()
+    queryExecutionSubscription.unsubscribe()
+  })
 }
