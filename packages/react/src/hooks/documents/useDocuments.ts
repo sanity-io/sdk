@@ -1,4 +1,4 @@
-import {type DocumentHandle, type QueryOptions} from '@sanity/sdk'
+import {createGroqSearchFilter, type DocumentHandle, type QueryOptions} from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
 import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
@@ -134,10 +134,14 @@ export function useDocuments({
 
   const filterClause = useMemo(() => {
     const conditions: string[] = []
+    const trimmedSearch = search?.trim()
 
-    // Add search query if specified
-    if (search?.trim()) {
-      conditions.push(`[@] match text::query("${search.trim()}")`)
+    // Add search query filter if specified
+    if (trimmedSearch) {
+      const searchFilter = createGroqSearchFilter(trimmedSearch)
+      if (searchFilter) {
+        conditions.push(searchFilter)
+      }
     }
 
     // Add additional filter if specified
