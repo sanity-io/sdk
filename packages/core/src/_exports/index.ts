@@ -111,5 +111,6 @@ export {
 } from '../users/types'
 export {getUsersState, loadMoreUsers, resolveUsers} from '../users/usersStore'
 export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
+export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {CORE_SDK_VERSION} from '../version'
 export type {CurrentUser, Role, SanityDocument, SanityDocumentLike} from '@sanity/types'
