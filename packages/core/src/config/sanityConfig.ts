@@ -1,3 +1,4 @@
+import {type ClientPerspective, type StackablePerspective} from '@sanity/client'
 import {type SanityDocumentLike} from '@sanity/types'
 
 import {type AuthConfig} from './authConfig'
@@ -12,7 +13,22 @@ export interface ProjectHandle {
 /**
  * @public
  */
-export interface DatasetHandle extends ProjectHandle {
+export type ReleasePerspective = {
+  releaseName: string
+  excludedPerspectives?: StackablePerspective
+}
+
+/**
+ * @public
+ */
+export interface PerspectiveHandle {
+  perspective?: ClientPerspective | ReleasePerspective
+}
+
+/**
+ * @public
+ */
+export interface DatasetHandle extends ProjectHandle, PerspectiveHandle {
   dataset?: string | undefined
 }
 
@@ -39,7 +55,7 @@ export interface DocumentHandle<TDocument extends SanityDocumentLike = SanityDoc
  * Represents the complete configuration for a Sanity SDK instance
  * @public
  */
-export interface SanityConfig extends DatasetHandle {
+export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
   /**
    * Authentication configuration for the instance
    * @remarks Merged with parent configurations when using createChild

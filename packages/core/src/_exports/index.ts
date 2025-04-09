@@ -38,6 +38,7 @@ export {
   type DatasetHandle,
   type DocumentHandle,
   type DocumentTypeHandle,
+  type PerspectiveHandle,
   type ProjectHandle,
   type SanityConfig,
 } from '../config/sanityConfig'
@@ -99,6 +100,7 @@ export {
   type QueryOptions,
   resolveQuery,
 } from '../query/queryStore'
+export {getActiveReleasesState, getPerspectiveState} from '../releases/releasesStore'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
 export {getUsersKey, parseUsersKey} from '../users/reducers'
