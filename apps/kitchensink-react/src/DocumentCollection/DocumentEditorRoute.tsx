@@ -7,8 +7,6 @@ import {
   editDocument,
   publishDocument,
   unpublishDocument,
-} from '@sanity/sdk'
-import {
   useApplyDocumentActions,
   useDocument,
   useDocumentEvent,
