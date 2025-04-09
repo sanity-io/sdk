@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.0-alpha.25](https://github.com/sanity-io/sdk/compare/v0.0.0-alpha.24...v0.0.0-alpha.25) (2025-04-09)
+
+
+### Features
+
+* **core, react:** introduce createGroqSearchFilter utility for search ([#407](https://github.com/sanity-io/sdk/issues/407)) ([77766bb](https://github.com/sanity-io/sdk/commit/77766bbf3fdc7efef4cd8a24f0ca206bef3179ec))
+
+
+### Bug Fixes
+
+* **deps:** update dependency zustand to ^5.0.3 ([#404](https://github.com/sanity-io/sdk/issues/404)) ([a1ff448](https://github.com/sanity-io/sdk/commit/a1ff448d4fd5370d9d868e5da19348247fc30ddc))
+
 ## [0.0.0-alpha.24](https://github.com/sanity-io/sdk/compare/v0.0.0-alpha.23...v0.0.0-alpha.24) (2025-04-09)
 
 
