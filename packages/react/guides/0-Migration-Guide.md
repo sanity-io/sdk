@@ -19,12 +19,20 @@ title: Migration guide
    - Authentication now uses a centralized login page at sanity.io/login
    - Token refresh interval is now consistently set to 12 hours for all environments
 
-3. Re-exported core SDK: The `@sanity/sdk` package is now fully re-exported from `@sanity/sdk-react`. This means you only need to install and import from `@sanity/sdk-react` to access both React-specific hooks/components and core SDK functions/types. You should update your imports accordingly and remove `@sanity/sdk` as a direct dependency if it's no longer needed.
+3. Renamed hooks:
 
-4. Improved component hierarchy with `<SanityApp />`, `<SDKProvider />`, and `<ResourceProvider />`
-5. Simplified document references with explicit `projectId` + `dataset` fields
-6. Standardized property names across the SDK
-7. Unified hook interfaces with the handle pattern
+   - `useInfiniteList` is now `useDocuments`
+   - `usePaginatedList` is now `usePaginatedDocuments`
+   - `usePermissions` is now `useDocumentPermissions`
+   - `useApplyActions` is now `useApplyDocumentActions` (and the `applyActions` function is now `applyDocumentActions`)
+   - related types have been renamed; this is documented in full below
+
+4. Re-exported core SDK: The `@sanity/sdk` package is now fully re-exported from `@sanity/sdk-react`. This means you only need to install and import from `@sanity/sdk-react` to access both React-specific hooks/components and core SDK functions/types. You should update your imports accordingly and remove `@sanity/sdk` as a direct dependency if it's no longer needed.
+
+5. Improved component hierarchy with `<SanityApp />`, `<SDKProvider />`, and `<ResourceProvider />`
+6. Simplified document references with explicit `projectId` + `dataset` fields
+7. Standardized property names across the SDK
+8. Unified hook interfaces with the handle pattern
 
 ### Provider Components
 
@@ -134,7 +142,23 @@ interface DocumentHandle extends DatasetHandle {
 }
 ```
 
-### Hook Updates
+### Hook Updates: Renaming
+
+Various hooks and associated types have been renamed for clarity. Their signatures remain the same, aside from the use of document handles, which is covered in the next section.
+
+- `useInfiniteList` is now `useDocuments`
+- type `InfiniteListOptions` is now `DocumentsOptions`
+- type `InfiniteList` is now `DocumentsResponse`
+- `usePaginatedList` is now `usePaginatedDocuments`
+- type `PaginatedListOptions` is now `PaginatedDocumentsOptions`
+- type `PaginatedList` is now `PaginatedDocumentsResponse`
+- `useApplyActions` is now `useApplyDocumentActions`
+- function `applyActions` is now `applyDocumentActions`
+- type `ApplyActionsOptions` is now `ApplyDocumentActionsOptions`
+- `usePermissions` is now `useDocumentPermissions`
+- type `PermissionsResult` is now `DocumentPermissionsResult`
+
+### Hook Updates: Document Handles
 
 Many hooks have been updated to use the handle pattern consistently.
 
@@ -230,14 +254,22 @@ const datasets = useDatasets({projectId: 'abc12345'})
    - `<ResourceProvider />` provides granular control for single configuration
    - `<SanityProvider />` removed
 
-3. `@sanity/sdk` Re-exported: All exports from `@sanity/sdk` are now available directly from `@sanity/sdk-react`.
+3. Hook Renames:
 
-4. Property Renames:
+   - `useInfiniteList` is now `useDocuments`
+   - `usePaginatedList` is now `usePaginatedDocuments`
+   - `usePermissions` is now `useDocumentPermissions`
+   - `useApplyActions` is now `useApplyDocumentActions` (and the `applyActions` function is now `applyDocumentActions`)
+   - related types have been renamed (see related section above)
+
+4. `@sanity/sdk` Re-exported: All exports from `@sanity/sdk` are now available directly from `@sanity/sdk-react`.
+
+5. Property Renames:
 
    - `_type` → `documentType`
    - `_id` → `documentId`
    - `results` → `data` (in hook returns)
    - Removed `resourceId` concept
 
-5. Interface Updates:
+6. Interface Updates:
    - All document hooks use `DocumentHandle`
