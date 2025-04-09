@@ -1,5 +1,4 @@
-import {SanityConfig} from '@sanity/sdk'
-import {SanityApp} from '@sanity/sdk-react'
+import {SanityApp, SanityConfig} from '@sanity/sdk-react'
 import {Spinner, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {type JSX} from 'react'

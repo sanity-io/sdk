@@ -1,5 +1,5 @@
-import {DocumentHandle} from '@sanity/sdk'
 import {
+  DocumentHandle,
   ResourceProvider,
   useDatasets,
   useDocument,

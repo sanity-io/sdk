@@ -19,10 +19,12 @@ title: Migration guide
    - Authentication now uses a centralized login page at sanity.io/login
    - Token refresh interval is now consistently set to 12 hours for all environments
 
-3. Improved component hierarchy with `<SanityApp />`, `<SDKProvider />`, and `<ResourceProvider />`
-4. Simplified document references with explicit `projectId` + `dataset` fields
-5. Standardized property names across the SDK
-6. Unified hook interfaces with the handle pattern
+3. Re-exported core SDK: The `@sanity/sdk` package is now fully re-exported from `@sanity/sdk-react`. This means you only need to install and import from `@sanity/sdk-react` to access both React-specific hooks/components and core SDK functions/types. You should update your imports accordingly and remove `@sanity/sdk` as a direct dependency if it's no longer needed.
+
+4. Improved component hierarchy with `<SanityApp />`, `<SDKProvider />`, and `<ResourceProvider />`
+5. Simplified document references with explicit `projectId` + `dataset` fields
+6. Standardized property names across the SDK
+7. Unified hook interfaces with the handle pattern
 
 ### Provider Components
 
@@ -176,11 +178,11 @@ const {data} = useQuery('*[_type == $type][0...10]', {
 })
 
 // List hooks with configuration
-const {data: documents} = useInfiniteList({
+const {data: documents} = useDocuments({
   filter: '_type == "product"',
   projectId: 'xyz12345', // Optional
   dataset: 'staging', // Optional
-  pageSize: 20,
+  batchSize: 20,
 })
 
 // Returned documents include full context
@@ -228,74 +230,14 @@ const datasets = useDatasets({projectId: 'abc12345'})
    - `<ResourceProvider />` provides granular control for single configuration
    - `<SanityProvider />` removed
 
-3. Property Renames:
+3. `@sanity/sdk` Re-exported: All exports from `@sanity/sdk` are now available directly from `@sanity/sdk-react`.
+
+4. Property Renames:
 
    - `_type` → `documentType`
    - `_id` → `documentId`
    - `results` → `data` (in hook returns)
    - Removed `resourceId` concept
 
-4. Interface Updates:
+5. Interface Updates:
    - All document hooks use `DocumentHandle`
-   - Query hooks accept `DatasetHandle`
-   - Project hooks use `ProjectHandle`
-   - Consistent handle pattern across SDK
-
-## Migrating to @sanity/sdk-react@0.0.0-rc.2
-
-⚠️ Breaking Changes
-
-### Core to Dashboard Namespace Changes (Internal)
-
-- All Core-related endpoints have been renamed to use the Dashboard namespace
-- `core/v1/events/favorite` → `dashboard/v1/events/favorite/mutate`
-- `core/v1/events/history` → `dashboard/v1/events/history`
-- `core/v1/bridge/navigate-to-resource` → `dashboard/v1/bridge/navigate-to-resource`
-- `core/v1/bridge/context` → `dashboard/v1/bridge/context`
-
-### Hook Parameter Changes
-
-#### `useManageFavorite`
-
-```typescript
-// Before
-const {favorite, unfavorite, isFavorited} = useManageFavorite({
-  _id: 'doc123',
-  _type: 'book',
-})
-
-// After
-const {favorite, unfavorite, isFavorited} = useManageFavorite({
-  documentId: 'doc123',
-  documentType: 'book',
-  resourceType: 'studio', // Required
-  resourceId: 'resource123', // Required for non-studio resources
-})
-```
-
-#### `useRecordDocumentHistoryEvent`
-
-```typescript
-// Before
-const {recordEvent} = useRecordDocumentHistoryEvent({
-  _id: 'doc123',
-  _type: 'book',
-})
-
-// After
-const {recordEvent} = useRecordDocumentHistoryEvent({
-  documentId: 'doc123',
-  documentType: 'book',
-  resourceType: 'studio', // Required
-  resourceId: 'resource123', // Required for non-studio resources
-})
-```
-
----
-
-## Migrating to @sanity/sdk-react@0.0.0-rc.1
-
-### `results` -> `data`
-
-- Renamed `results` to `data` in `useProjection`
-- Renamed `result` to `data` in `usePreview`

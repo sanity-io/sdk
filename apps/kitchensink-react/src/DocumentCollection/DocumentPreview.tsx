@@ -1,5 +1,4 @@
-import {DocumentHandle} from '@sanity/sdk'
-import {usePreview} from '@sanity/sdk-react'
+import {DocumentHandle, usePreview} from '@sanity/sdk-react'
 import {Suspense, useRef} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 
