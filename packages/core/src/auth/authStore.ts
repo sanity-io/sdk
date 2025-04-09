@@ -90,8 +90,8 @@ export const authStore = defineStore<AuthStoreState>({
       token: providedToken,
       clientFactory = createClient,
       initialLocationHref = getDefaultLocation(),
-      storageArea = getDefaultStorage(),
     } = instance.config.auth ?? {}
+    let storageArea = instance.config.auth?.storageArea
 
     const storageKey = `__sanity_auth_token`
 
@@ -109,22 +109,58 @@ export const authStore = defineStore<AuthStoreState>({
     loginUrl.searchParams.set('type', 'stampedToken') // Token must be stamped to have an sid passed back
     loginUrl.searchParams.set('withSid', 'true')
 
-    let authState: AuthState
+    // Check if running in dashboard context by parsing initialLocationHref
+    let dashboardContext: DashboardContext = {}
+    let isInDashboard = false
+    try {
+      const parsedUrl = new URL(initialLocationHref)
+      const contextParam = parsedUrl.searchParams.get('_context')
+      if (contextParam) {
+        const parsedContext = JSON.parse(contextParam)
 
+        // Consider it in dashboard if context is present and an object
+        if (
+          parsedContext &&
+          typeof parsedContext === 'object' &&
+          Object.keys(parsedContext).length > 0
+        ) {
+          // Explicitly remove the 'sid' property from the parsed object *before* assigning
+          delete parsedContext.sid
+
+          // Now assign the potentially modified object to dashboardContext
+          dashboardContext = parsedContext
+          isInDashboard = true
+        }
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to parse dashboard context from initial location:', err)
+    }
+
+    if (!isInDashboard) {
+      // If not in dashboard, use the storage area from the config
+      storageArea = storageArea ?? getDefaultStorage()
+    }
     const token = getTokenFromStorage(storageArea, storageKey)
 
+    let authState: AuthState
     if (providedToken) {
       authState = {type: AuthStateType.LOGGED_IN, token: providedToken, currentUser: null}
     } else if (getAuthCode(callbackUrl, initialLocationHref)) {
       authState = {type: AuthStateType.LOGGING_IN, isExchangingToken: false}
-    } else if (token) {
+      // Note: dashboardContext from the callback URL can be set later in handleAuthCallback too
+    } else if (token && !isInDashboard) {
+      // Only use token from storage if NOT running in dashboard
       authState = {type: AuthStateType.LOGGED_IN, token, currentUser: null}
     } else {
+      // Default to logged out if no provided token, not handling callback,
+      // or if token exists but we ARE in dashboard mode.
       authState = {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false}
     }
 
     return {
       authState,
+      dashboardContext,
       options: {
         apiHost,
         loginUrl: loginUrl.toString(),
