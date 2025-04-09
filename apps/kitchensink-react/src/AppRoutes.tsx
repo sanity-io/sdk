@@ -15,6 +15,7 @@ import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProtectedRoute} from './ProtectedRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
+import {MultiProjectionRoute} from './routes/MultiProjectionRoute'
 import {UsersRoute} from './routes/UsersRoute'
 
 const documentCollectionRoutes = [
@@ -57,6 +58,10 @@ const documentCollectionRoutes = [
   {
     path: 'dashboard-context',
     element: <DashboardContextRoute />,
+  },
+  {
+    path: 'multi-projection',
+    element: <MultiProjectionRoute />,
   },
 ]
 
