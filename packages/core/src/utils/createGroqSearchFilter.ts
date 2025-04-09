@@ -40,7 +40,7 @@ function isExactMatchToken(token: string | undefined): boolean {
  *
  * @param query - The raw input search string.
  * @returns The GROQ search filter string, or an empty string.
- * @public
+ * @internal
  */
 export function createGroqSearchFilter(query: string): string {
   // Trim leading/trailing whitespace from the overall query first
