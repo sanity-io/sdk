@@ -5,6 +5,7 @@
   "schedule": ["before 5am"],
   "prConcurrentLimit": 3,
   "automerge": true,
+  "dependencyDashboardApproval": false,
   "packageRules": [
     {
       "matchDepTypes": ["devDependencies"],
