@@ -23,6 +23,11 @@ interface DocumentInteractionHistory {
 interface UseRecordDocumentHistoryEventProps extends DocumentHandle {
   resourceType: StudioResource['type'] | MediaResource['type'] | CanvasResource['type']
   resourceId?: string
+  /**
+   * The name of the schema collection this document belongs to.
+   * Typically is the name of the workspace when used in the context of a studio.
+   */
+  schemaName?: string
 }
 
 /**
@@ -61,6 +66,7 @@ export function useRecordDocumentHistoryEvent({
   documentType,
   resourceType,
   resourceId,
+  schemaName,
 }: UseRecordDocumentHistoryEventProps): DocumentInteractionHistory {
   const [status, setStatus] = useState<Status>('idle')
   const {sendMessage} = useWindowConnection<Events.HistoryMessage, FrameMessage>({
@@ -86,6 +92,7 @@ export function useRecordDocumentHistoryEvent({
               resource: {
                 id: resourceId!,
                 type: resourceType,
+                schemaName,
               },
             },
           },
@@ -98,7 +105,7 @@ export function useRecordDocumentHistoryEvent({
         throw error
       }
     },
-    [documentId, documentType, resourceId, resourceType, sendMessage],
+    [documentId, documentType, resourceId, resourceType, sendMessage, schemaName],
   )
 
   return {

@@ -25,6 +25,11 @@ interface ManageFavorite {
 interface UseManageFavoriteProps extends DocumentHandle {
   resourceId?: string
   resourceType: StudioResource['type'] | MediaResource['type'] | CanvasResource['type']
+  /**
+   * The name of the schema collection this document belongs to.
+   * Typically is the name of the workspace when used in the context of a studio.
+   */
+  schemaName?: string
 }
 
 /**
@@ -67,6 +72,7 @@ export function useManageFavorite({
   dataset: paramDataset,
   resourceId: paramResourceId,
   resourceType,
+  schemaName,
 }: UseManageFavoriteProps): ManageFavorite {
   const [isFavorited, setIsFavorited] = useState(false) // should load this from a comlink fetch
   const [status, setStatus] = useState<Status>('idle')
@@ -115,6 +121,7 @@ export function useManageFavorite({
               resource: {
                 id: resourceId,
                 type: resourceType,
+                schemaName,
               },
             },
           },
@@ -135,7 +142,7 @@ export function useManageFavorite({
         throw error
       }
     },
-    [documentId, documentType, resourceId, resourceType, sendMessage],
+    [documentId, documentType, resourceId, resourceType, sendMessage, schemaName],
   )
 
   const favorite = useCallback(() => handleFavoriteAction('added', true), [handleFavoriteAction])
