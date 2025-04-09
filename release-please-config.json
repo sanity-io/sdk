@@ -1,6 +1,16 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "include-component-in-tag": false,
+  "always-link-local": true,
+  "changelog-path": "CHANGELOG.md",
+  "changelog-sections": [
+    {"type": "feat", "section": "Features", "hidden": false},
+    {"type": "fix", "section": "Bug Fixes", "hidden": false},
+    {"type": "perf", "section": "Performance Improvements", "hidden": false},
+    {"type": "revert", "section": "Reverts", "hidden": false},
+    {"type": "docs", "section": "Documentation", "hidden": false},
+    {"type": "chore", "section": "Miscellaneous", "hidden": true}
+  ],
   "plugins": [
     {
       "type": "node-workspace",
@@ -9,12 +19,12 @@
     {
       "type": "linked-versions",
       "groupName": "sdk",
-      "components": ["core", "react", "react-internal"]
+      "components": ["sdk", "sdk-react", "sdk-react-internal"]
     }
   ],
   "packages": {
     "packages/react": {
-      "component": "react",
+      "component": "sdk-react",
       "release-type": "node",
       "bump-patch-for-minor-pre-major": true,
       "bump-minor-pre-major": true,
@@ -22,7 +32,7 @@
       "versioning": "prerelease"
     },
     "packages/react-internal": {
-      "component": "react-internal",
+      "component": "sdk-react-internal",
       "release-type": "node",
       "bump-patch-for-minor-pre-major": true,
       "bump-minor-pre-major": true,
@@ -30,7 +40,7 @@
       "versioning": "prerelease"
     },
     "packages/core": {
-      "component": "core",
+      "component": "sdk",
       "release-type": "node",
       "bump-patch-for-minor-pre-major": true,
       "bump-minor-pre-major": true,
