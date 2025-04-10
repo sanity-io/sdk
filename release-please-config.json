@@ -1,8 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "include-component-in-tag": false,
   "always-link-local": true,
-  "changelog-path": "CHANGELOG.md",
   "changelog-sections": [
     {"type": "feat", "section": "Features", "hidden": false},
     {"type": "fix", "section": "Bug Fixes", "hidden": false},
@@ -11,7 +9,6 @@
     {"type": "docs", "section": "Documentation", "hidden": false},
     {"type": "chore", "section": "Miscellaneous", "hidden": true}
   ],
-  "changelog-type": "github",
   "plugins": [
     {
       "type": "node-workspace",
