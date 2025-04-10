@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.0-alpha.25](https://github.com/sanity-io/sdk/compare/v0.0.0-alpha.24...v0.0.0-alpha.25) (2025-04-09)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk-react bumped to 0.0.0-alpha.25
+
 ## [0.0.0-alpha.24](https://github.com/sanity-io/sdk/compare/v0.0.0-alpha.23...v0.0.0-alpha.24) (2025-04-09)
 
 

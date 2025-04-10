@@ -3,7 +3,8 @@ import {filter, firstValueFrom} from 'rxjs'
 import {type DocumentHandle} from '../config/sanityConfig'
 import {bindActionByDataset} from '../store/createActionBinder'
 import {getProjectionState} from './getProjectionState'
-import {projectionStore, type ValidProjection} from './projectionStore'
+import {projectionStore} from './projectionStore'
+import {type ValidProjection} from './types'
 
 interface ResolveProjectionOptions extends DocumentHandle {
   projection: ValidProjection

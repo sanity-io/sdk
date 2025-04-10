@@ -1,17 +1,29 @@
 import {NEVER} from 'rxjs'
-import {describe, it} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StoreState} from '../store/createStoreState'
+import {hashString} from '../utils/hashString'
 import {insecureRandomId} from '../utils/ids'
 import {getProjectionState} from './getProjectionState'
-import {type ProjectionStoreState} from './projectionStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
+import {type ProjectionStoreState} from './types'
 import {PROJECTION_STATE_CLEAR_DELAY, STABLE_EMPTY_PROJECTION} from './util'
+// mocking subscription counts is a little tricky.
+// all test ids in this file start at 2 because the first call to onSubscribe
+// happens within createStateSourceAction
+let mockIdCounter = 0
 
 vi.mock('../utils/ids', async (importOriginal) => {
   const util = await importOriginal<typeof import('../utils/ids')>()
-  return {...util, insecureRandomId: vi.fn(util.insecureRandomId)}
+  // Mock implementation uses the external counter
+  return {
+    ...util,
+    insecureRandomId: vi.fn(() => {
+      const id = `testSubId_${++mockIdCounter}`
+      return id
+    }),
+  }
 })
 
 vi.mock('./subscribeToStateAndFetchBatches.ts')
@@ -19,11 +31,18 @@ vi.mock('./subscribeToStateAndFetchBatches.ts')
 describe('getProjectionState', () => {
   let instance: SanityInstance
   const docHandle = {documentId: 'exampleId', documentType: 'exampleType'}
-  const projection = '{exampleProjection}'
+  const projection1 = '{exampleProjection1}'
+  const hash1 = hashString(projection1)
+  const projection2 = '{exampleProjection2}'
+  const hash2 = hashString(projection2)
+
   let state: StoreState<ProjectionStoreState & {extra?: unknown}>
 
   beforeEach(() => {
-    // capture state
+    mockIdCounter = 0
+    vi.mocked(insecureRandomId).mockClear()
+
+    // Capture state
     vi.mocked(subscribeToStateAndFetchBatches).mockImplementation((context) => {
       state = context.state
       return NEVER.subscribe()
@@ -35,109 +54,186 @@ describe('getProjectionState', () => {
 
   afterEach(() => {
     instance.dispose()
-    vi.useRealTimers() // Restore real timers after each test
+    vi.useRealTimers() // Restore real timers
   })
 
-  it('returns a state source that emits when the projection value changes', () => {
-    const projectionState = getProjectionState(instance, {projection, ...docHandle})
-    expect(projectionState.getCurrent()).toBe(STABLE_EMPTY_PROJECTION)
+  it('returns a state source that emits when the specific projection value changes', () => {
+    const projectionState = getProjectionState(instance, {projection: projection1, ...docHandle})
+    expect(projectionState.getCurrent()).toEqual(STABLE_EMPTY_PROJECTION)
 
     const subscriber = vi.fn()
-    projectionState.subscribe(subscriber)
+    const unsubscribe = projectionState.subscribe(subscriber)
 
-    // emit unrelated state changes
-    state.set('updateLastLiveEventId', {extra: 'unrelated change'})
-    expect(subscriber).toHaveBeenCalledTimes(0)
-
-    state.set('relatedChange', (prev) => ({
-      values: {...prev.values, exampleId: {data: {field: 'Changed!'}, isPending: false}},
-    }))
-    expect(subscriber).toHaveBeenCalledTimes(1)
-
-    state.set('unrelatedChange', (prev) => ({
+    // 1. Update the specific projection
+    state.set('update_doc1_proj1', (prev: ProjectionStoreState) => ({
       values: {
         ...prev.values,
-        unrelatedId: {data: {field: 'Unrelated Document'}, isPending: false},
+        [docHandle.documentId]: {
+          ...prev.values[docHandle.documentId],
+          [hash1]: {data: {name: 'Update 1'}, isPending: false},
+        },
       },
     }))
     expect(subscriber).toHaveBeenCalledTimes(1)
+    expect(projectionState.getCurrent()).toEqual({data: {name: 'Update 1'}, isPending: false})
 
-    state.set('relatedChange', (prev) => ({
-      values: {...prev.values, exampleId: {data: {field: 'Changed again!'}, isPending: false}},
+    // 2. Update a different projection for the same document
+    state.set('update_doc1_proj2', (prev: ProjectionStoreState) => ({
+      values: {
+        ...prev.values,
+        [docHandle.documentId]: {
+          ...prev.values[docHandle.documentId],
+          [hash2]: {data: {_type: 'type1'}, isPending: false},
+        },
+      },
+    }))
+    // Should NOT trigger the subscriber for projection1
+    expect(subscriber).toHaveBeenCalledTimes(1)
+    expect(projectionState.getCurrent()).toEqual({data: {name: 'Update 1'}, isPending: false})
+
+    // 3. Update a different document
+    state.set('update_doc2', (prev: ProjectionStoreState) => ({
+      values: {
+        ...prev.values,
+        doc2: {
+          [hash1]: {data: {name: 'Other Doc'}, isPending: false},
+        },
+      },
+    }))
+    // Should NOT trigger the subscriber for doc1/projection1
+    expect(subscriber).toHaveBeenCalledTimes(1)
+
+    // 4. Update the specific projection again
+    state.set('update_doc1_proj1_again', (prev: ProjectionStoreState) => ({
+      values: {
+        ...prev.values,
+        [docHandle.documentId]: {
+          ...prev.values[docHandle.documentId],
+          [hash1]: {data: {name: 'Update 2'}, isPending: false},
+        },
+      },
     }))
     expect(subscriber).toHaveBeenCalledTimes(2)
+    expect(projectionState.getCurrent()).toEqual({data: {name: 'Update 2'}, isPending: false})
+
+    unsubscribe()
   })
 
-  it('adds a subscription ID and projection to the state on subscription', () => {
-    const projectionState = getProjectionState(instance, {projection, ...docHandle})
+  it('adds a subscription ID and projection to the correct hash on subscription and cleans up', () => {
+    const projectionState1 = getProjectionState(instance, {projection: projection1, ...docHandle})
+    const projectionState2 = getProjectionState(instance, {projection: projection2, ...docHandle})
 
     expect(state.get().subscriptions).toEqual({})
-    vi.mocked(insecureRandomId).mockImplementationOnce(() => 'pseudoRandomId1')
+    expect(state.get().documentProjections).toEqual({})
 
-    const unsubscribe1 = projectionState.subscribe(vi.fn())
-
+    const unsubscribe1 = projectionState1.subscribe(vi.fn()) // Should use ID 3
     expect(state.get().subscriptions).toEqual({
-      exampleId: {pseudoRandomId1: true},
+      [docHandle.documentId]: {[hash1]: {testSubId_2: true}},
     })
     expect(state.get().documentProjections).toEqual({
-      exampleId: projection,
+      [docHandle.documentId]: {[hash1]: projection1},
     })
 
-    // Unsubscribe the last one - state should NOT clear immediately
-    unsubscribe1()
+    const unsubscribe2 = projectionState2.subscribe(vi.fn()) // Should use ID 4
     expect(state.get().subscriptions).toEqual({
-      exampleId: {pseudoRandomId1: true},
+      [docHandle.documentId]: {
+        [hash1]: {testSubId_2: true},
+        [hash2]: {testSubId_3: true},
+      },
     })
-    // Projection data might also remain initially
     expect(state.get().documentProjections).toEqual({
-      exampleId: projection,
+      [docHandle.documentId]: {
+        [hash1]: projection1,
+        [hash2]: projection2,
+      },
     })
 
-    // Advance timers past the clear delay
+    const unsubscribe3 = projectionState1.subscribe(vi.fn()) // Should use ID 5
+    expect(state.get().subscriptions).toEqual({
+      [docHandle.documentId]: {
+        [hash1]: {testSubId_2: true, testSubId_4: true},
+        [hash2]: {testSubId_3: true},
+      },
+    })
+
+    // projections state should remain the same, even with multiple subscribers
+    expect(state.get().documentProjections).toEqual({
+      [docHandle.documentId]: {
+        [hash1]: projection1,
+        [hash2]: projection2,
+      },
+    })
+
+    // --- Test Unsubscribe ---
+    unsubscribe1() // Unsubscribes ID 3
+    expect(state.get().subscriptions[docHandle.documentId]?.[hash1]).toEqual({
+      testSubId_2: true,
+      testSubId_4: true,
+    })
     vi.advanceTimersByTime(PROJECTION_STATE_CLEAR_DELAY)
+    expect(state.get().subscriptions[docHandle.documentId]?.[hash1]).toEqual({testSubId_4: true})
+    expect(state.get().documentProjections[docHandle.documentId]?.[hash1]).toEqual(projection1)
 
-    // NOW the state related to this document should be cleared
-    expect(state.get().subscriptions).toEqual({})
-    expect(state.get().documentProjections).toEqual({exampleId: projection})
+    unsubscribe3() // Unsubscribes ID 5
+    vi.advanceTimersByTime(PROJECTION_STATE_CLEAR_DELAY)
+    expect(state.get().subscriptions[docHandle.documentId]?.[hash1]).toBeUndefined()
+    expect(state.get().documentProjections[docHandle.documentId]?.[hash1]).toBeUndefined()
+    expect(state.get().subscriptions[docHandle.documentId]?.[hash2]).toEqual({testSubId_3: true})
+    expect(state.get().documentProjections[docHandle.documentId]?.[hash2]).toEqual(projection2)
+
+    unsubscribe2() // Unsubscribes ID 4
+    vi.advanceTimersByTime(PROJECTION_STATE_CLEAR_DELAY)
+    expect(state.get().subscriptions[docHandle.documentId]).toBeUndefined()
+    expect(state.get().documentProjections[docHandle.documentId]).toBeUndefined()
   })
 
-  it('resets to pending false on unsubscribe if the subscription is the last one', () => {
-    const projectionState = getProjectionState(instance, {projection, ...docHandle})
+  it('resets isPending to false for the specific projection on final unsubscribe for that projection', () => {
+    const projectionState = getProjectionState(instance, {projection: projection1, ...docHandle})
+    const initialData = {name: 'Initial Name'}
+    const hash = hashString(projection1)
 
-    state.set('presetValueToPending', (prev) => ({
-      values: {...prev.values, [docHandle.documentId]: {data: {field: 'Foo'}, isPending: true}},
+    state.set('presetValueToPending', (prev: ProjectionStoreState) => ({
+      values: {
+        ...prev.values,
+        [docHandle.documentId]: {
+          ...prev.values[docHandle.documentId],
+          [hash]: {data: initialData, isPending: true},
+        },
+      },
     }))
 
-    const unsubscribe1 = projectionState.subscribe(vi.fn())
+    const unsubscribe1 = projectionState.subscribe(vi.fn()) // Should use ID 2
+    const unsubscribe2 = projectionState.subscribe(vi.fn()) // Should use ID 3
 
-    expect(state.get().values[docHandle.documentId]).toEqual({
-      data: {field: 'Foo'},
+    expect(state.get().values[docHandle.documentId]?.[hash]).toEqual({
+      data: initialData,
       isPending: true,
     })
 
-    // Unsubscribe one - pending state remains
-    unsubscribe1()
-    expect(state.get().values[docHandle.documentId]).toEqual({
-      data: {field: 'Foo'},
+    unsubscribe1() // Unsubscribes ID 2
+    vi.advanceTimersByTime(PROJECTION_STATE_CLEAR_DELAY)
+    expect(state.get().values[docHandle.documentId]?.[hash]).toEqual({
+      data: initialData,
       isPending: true,
     })
+    expect(Object.keys(state.get().subscriptions[docHandle.documentId]?.[hash] ?? {}).length).toBe(
+      1,
+    )
+    expect(state.get().subscriptions[docHandle.documentId]?.[hash]).toEqual({testSubId_3: true})
 
-    // Unsubscribe the last one - pending state should NOT reset immediately
-    expect(Object.keys(state.get().subscriptions['exampleId'] || {}).length).toBeGreaterThan(0)
-    expect(state.get().values[docHandle.documentId]).toEqual({
-      data: {field: 'Foo'},
-      isPending: true, // Still pending
+    unsubscribe2() // Unsubscribes ID 3
+    expect(state.get().values[docHandle.documentId]?.[hash]).toEqual({
+      data: initialData,
+      isPending: true,
     })
-
-    // Advance timers past the clear delay
     vi.advanceTimersByTime(PROJECTION_STATE_CLEAR_DELAY)
 
-    // NOW the pending state should be reset
-    expect(state.get().values[docHandle.documentId]).toEqual({
-      data: {field: 'Foo'},
-      isPending: false, // Reset to false
+    // NOW the pending state should be reset for this specific projection
+    expect(state.get().values[docHandle.documentId]?.[hash]).toEqual({
+      data: initialData,
+      isPending: false,
     })
-    // And subscriptions should be cleared now
-    expect(state.get().subscriptions).toEqual({})
+    expect(state.get().subscriptions[docHandle.documentId]?.[hash]).toBeUndefined()
+    expect(state.get().documentProjections[docHandle.documentId]?.[hash]).toBeUndefined()
   })
 })
