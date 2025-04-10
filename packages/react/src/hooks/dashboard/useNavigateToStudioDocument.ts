@@ -29,7 +29,7 @@ export interface NavigateToStudioResult {
  *
  * @example
  * ```ts
- * import {navigateToStudioDocument, type DocumentHandle} from '@sanity/sdk'
+ * import {useNavigateToStudioDocument, type DocumentHandle} from '@sanity/sdk-react'
  *
  * function MyComponent({documentHandle}: {documentHandle: DocumentHandle}) {
  *   const {navigateToStudioDocument, isConnected} = useNavigateToStudioDocument(documentHandle)
