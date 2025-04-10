@@ -1,6 +1,9 @@
 packages:
-  - 'examples'
-  - 'packages/@repo/*'
-  - 'packages/*'
-  - 'apps/*'
+  - examples
+  - packages/@repo/*
+  - packages/*
+  - apps/*
   - '@repo/package.config'
+
+onlyBuiltDependencies:
+  - esbuild
