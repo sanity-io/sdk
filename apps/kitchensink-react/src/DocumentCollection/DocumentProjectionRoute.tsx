@@ -10,19 +10,34 @@ interface AuthorProjection {
   name: string
   address: string
   favoriteBookTitles: string[]
+  bestFriendName?: string
+  role?: string
 }
 
 // Component for displaying projection data with proper error handling
-function ProjectionData(docHandle: DocumentHandle) {
+function ProjectionData({
+  docHandle,
+  useFirstProjection,
+}: {
+  docHandle: DocumentHandle
+  useFirstProjection: boolean
+}) {
   const ref = useRef<HTMLTableCellElement>(null)
+  const projection = useFirstProjection
+    ? `{
+        name,
+        "address": "City: " + address.city + ", Country: " + address.country,
+        "favoriteBookTitles": favoriteBooks[]->{title}.title
+      }`
+    : `{
+        name,
+        'bestFriendName': bestFriend->{name}.name,
+        role
+      }`
   const {data} = useProjection<AuthorProjection>({
     ...docHandle,
     ref,
-    projection: `{
-      name,
-      "address": "City: " + address.city + ", Country: " + address.country,
-      "favoriteBookTitles": favoriteBooks[]->{title}.title
-    }`,
+    projection,
   })
 
   return (
@@ -30,10 +45,19 @@ function ProjectionData(docHandle: DocumentHandle) {
       <TD ref={ref} padding={2}>
         {data.name || 'Untitled'}
       </TD>
-      <TD padding={2}>{data.address || 'No address'}</TD>
-      <TD padding={2}>
-        {data.favoriteBookTitles?.filter(Boolean).join(', ') || 'No favorite books'}
-      </TD>
+      {useFirstProjection ? (
+        <>
+          <TD padding={2}>{data.address || 'No address'}</TD>
+          <TD padding={2}>
+            {data.favoriteBookTitles?.filter(Boolean).join(', ') || 'No favorite books'}
+          </TD>
+        </>
+      ) : (
+        <>
+          <TD padding={2}>{data.bestFriendName || 'No best friend'}</TD>
+          <TD padding={2}>{data.role || 'No role'}</TD>
+        </>
+      )}
     </>
   )
 }
@@ -65,12 +89,18 @@ function ProjectionError({error}: {error: Error}): ReactNode {
 }
 
 // Component for displaying a single author row with projection data
-function AuthorRow(docHandle: DocumentHandle) {
+function AuthorRow({
+  docHandle,
+  useFirstProjection,
+}: {
+  docHandle: DocumentHandle
+  useFirstProjection: boolean
+}) {
   return (
     <TR>
       <ErrorBoundary fallbackRender={({error}) => <ProjectionError error={error} />}>
         <Suspense fallback={<ProjectionFallback />}>
-          <ProjectionData {...docHandle} />
+          <ProjectionData docHandle={docHandle} useFirstProjection={useFirstProjection} />
         </Suspense>
       </ErrorBoundary>
     </TR>
@@ -186,6 +216,7 @@ function PaginationControls({
 export function DocumentProjectionRoute(): JSX.Element {
   const [searchTerm, setSearchTerm] = useState('')
   const [pageSize, setPageSize] = useState(5)
+  const [useFirstProjection, setUseFirstProjection] = useState(true)
 
   const {
     data,
@@ -279,17 +310,43 @@ export function DocumentProjectionRoute(): JSX.Element {
             isPending={isPending}
           />
 
+          <Box padding={4}>
+            <Button
+              onClick={() => setUseFirstProjection(!useFirstProjection)}
+              text={
+                useFirstProjection
+                  ? 'Switch to Best Friend Projection'
+                  : 'Switch to First Author Projection'
+              }
+            />
+          </Box>
+
           <Table style={{opacity: isPending ? 0.5 : 1}}>
             <thead>
               <TR>
                 <TH padding={2}>Name</TH>
-                <TH padding={2}>Address</TH>
-                <TH padding={2}>Favorite Books</TH>
+                {useFirstProjection ? (
+                  <>
+                    <TH padding={2}>Address</TH>
+                    <TH padding={2}>Favorite Books</TH>
+                  </>
+                ) : (
+                  <>
+                    <TH padding={2}>Best Friend</TH>
+                    <TH padding={2}>Role</TH>
+                  </>
+                )}
               </TR>
             </thead>
             <tbody>
               {data.length > 0 ? (
-                data.map((doc) => <AuthorRow key={doc.documentId} {...doc} />)
+                data.map((doc) => (
+                  <AuthorRow
+                    key={doc.documentId}
+                    docHandle={doc}
+                    useFirstProjection={useFirstProjection}
+                  />
+                ))
               ) : (
                 <TR>
                   <TD padding={2}>

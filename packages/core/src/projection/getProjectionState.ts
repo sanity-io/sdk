@@ -8,13 +8,10 @@ import {
   type SelectorContext,
   type StateSource,
 } from '../store/createStateSourceAction'
+import {hashString} from '../utils/hashString'
 import {getPublishedId, insecureRandomId} from '../utils/ids'
-import {
-  projectionStore,
-  type ProjectionStoreState,
-  type ProjectionValuePending,
-  type ValidProjection,
-} from './projectionStore'
+import {projectionStore} from './projectionStore'
+import {type ProjectionStoreState, type ProjectionValuePending, type ValidProjection} from './types'
 import {PROJECTION_STATE_CLEAR_DELAY, STABLE_EMPTY_PROJECTION, validateProjection} from './util'
 
 interface GetProjectionStateOptions extends DocumentHandle {
@@ -53,22 +50,33 @@ export const _getProjectionState = bindActionByDataset(
     selector: (
       {state}: SelectorContext<ProjectionStoreState>,
       options: GetProjectionStateOptions,
-    ): ProjectionValuePending<object> =>
-      state.values[options.documentId] ?? STABLE_EMPTY_PROJECTION,
+    ): ProjectionValuePending<object> => {
+      const documentId = getPublishedId(options.documentId)
+      const projectionHash = hashString(options.projection)
+      return state.values[documentId]?.[projectionHash] ?? STABLE_EMPTY_PROJECTION
+    },
     onSubscribe: ({state}, {projection, ...docHandle}: GetProjectionStateOptions) => {
       const subscriptionId = insecureRandomId()
       const documentId = getPublishedId(docHandle.documentId)
+      const validProjection = validateProjection(projection)
+      const projectionHash = hashString(validProjection)
 
       state.set('addSubscription', (prev) => ({
         documentProjections: {
           ...prev.documentProjections,
-          [documentId]: validateProjection(projection),
+          [documentId]: {
+            ...prev.documentProjections[documentId],
+            [projectionHash]: validProjection,
+          },
         },
         subscriptions: {
           ...prev.subscriptions,
           [documentId]: {
             ...prev.subscriptions[documentId],
-            [subscriptionId]: true,
+            [projectionHash]: {
+              ...prev.subscriptions[documentId]?.[projectionHash],
+              [subscriptionId]: true,
+            },
           },
         },
       }))
@@ -76,18 +84,48 @@ export const _getProjectionState = bindActionByDataset(
       return () => {
         setTimeout(() => {
           state.set('removeSubscription', (prev): Partial<ProjectionStoreState> => {
-            const documentSubscriptions = omit(prev.subscriptions[documentId], subscriptionId)
-            const hasSubscribers = !!Object.keys(documentSubscriptions).length
-            const prevValue = prev.values[documentId]
-            const projectionValue = prevValue?.data ? prevValue.data : null
+            const documentSubscriptionsForHash = omit(
+              prev.subscriptions[documentId]?.[projectionHash],
+              subscriptionId,
+            )
+            const hasSubscribersForProjection = !!Object.keys(documentSubscriptionsForHash).length
+
+            const nextSubscriptions = {...prev.subscriptions}
+            const nextDocumentProjections = {...prev.documentProjections}
+            const nextValues = {...prev.values}
+
+            // clean up the subscription and documentProjection if there are no subscribers
+            if (!hasSubscribersForProjection) {
+              delete nextSubscriptions[documentId]![projectionHash]
+              delete nextDocumentProjections[documentId]![projectionHash]
+
+              const currentProjectionValue = prev.values[documentId]?.[projectionHash]
+              if (currentProjectionValue && nextValues[documentId]) {
+                nextValues[documentId]![projectionHash] = {
+                  data: currentProjectionValue.data,
+                  isPending: false,
+                }
+              }
+            } else {
+              if (nextSubscriptions[documentId]) {
+                nextSubscriptions[documentId]![projectionHash] = documentSubscriptionsForHash
+              }
+            }
+
+            const hasAnySubscribersForDocument = Object.values(
+              nextSubscriptions[documentId] ?? {},
+            ).some((subs) => Object.keys(subs).length > 0)
+
+            if (!hasAnySubscribersForDocument) {
+              delete nextSubscriptions[documentId]
+              delete nextDocumentProjections[documentId]
+              // Keep nextValues[documentId] as cache
+            }
 
             return {
-              subscriptions: hasSubscribers
-                ? {...prev.subscriptions, [documentId]: documentSubscriptions}
-                : omit(prev.subscriptions, documentId),
-              values: hasSubscribers
-                ? prev.values
-                : {...prev.values, [documentId]: {data: projectionValue, isPending: false}},
+              subscriptions: nextSubscriptions,
+              documentProjections: nextDocumentProjections,
+              values: nextValues,
             }
           })
         }, PROJECTION_STATE_CLEAR_DELAY)

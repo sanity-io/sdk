@@ -1,4 +1,4 @@
-import {type ValidProjection} from './projectionStore'
+import {type ValidProjection} from './types'
 
 export const PROJECTION_TAG = 'sdk.projection'
 export const PROJECTION_PERSPECTIVE = 'drafts'
