@@ -11,6 +11,7 @@
     {"type": "docs", "section": "Documentation", "hidden": false},
     {"type": "chore", "section": "Miscellaneous", "hidden": true}
   ],
+  "changelog-type": "github",
   "plugins": [
     {
       "type": "node-workspace",
