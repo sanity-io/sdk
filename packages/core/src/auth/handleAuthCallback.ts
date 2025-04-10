@@ -2,7 +2,7 @@ import {bindActionGlobally} from '../store/createActionBinder'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
 import {authStore, type AuthStoreState, type DashboardContext} from './authStore'
-import {getAuthCode, getDefaultLocation} from './utils'
+import {getAuthCode, getCleanedUrl, getDefaultLocation} from './utils'
 
 /**
  * @public
@@ -23,6 +23,9 @@ export const handleAuthCallback = bindActionGlobally(
     // If there is no matching `authCode` then we can't handle the callback
     const authCode = getAuthCode(callbackUrl, locationHref)
     if (!authCode) return false
+
+    // Prepare the cleaned-up URL early. It will be returned on both success and error if an authCode was processed.
+    const cleanedUrl = getCleanedUrl(locationHref)
 
     // Get the SanityOS dashboard context from the url
     const parsedUrl = new URL(locationHref)
@@ -61,14 +64,10 @@ export const handleAuthCallback = bindActionGlobally(
       storageArea?.setItem(storageKey, JSON.stringify({token}))
       state.set('setToken', {authState: {type: AuthStateType.LOGGED_IN, token, currentUser: null}})
 
-      const loc = new URL(locationHref)
-      loc.hash = ''
-      loc.searchParams.delete('sid')
-      loc.searchParams.delete('url')
-      return loc.toString()
+      return cleanedUrl
     } catch (error) {
       state.set('exchangeSessionForTokenError', {authState: {type: AuthStateType.ERROR, error}})
-      return false
+      return cleanedUrl
     }
   },
 )

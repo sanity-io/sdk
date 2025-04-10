@@ -1,9 +1,11 @@
-import {useCallback} from 'react'
+import {ClientError} from '@sanity/client'
+import {useCallback, useEffect, useState} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
+import {AuthStateType} from '../../../../core/src/auth/authStateType'
+import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLogOut} from '../../hooks/auth/useLogOut'
 import {AuthError} from './AuthError'
-
 /**
  * @alpha
  */
@@ -18,19 +20,37 @@ export type LoginErrorProps = FallbackProps
 export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.ReactNode {
   if (!(error instanceof AuthError)) throw error
   const logout = useLogOut()
+  const authState = useAuthState()
+
+  const [authErrorMessage, setAuthErrorMessage] = useState(
+    'Please try again or contact support if the problem persists.',
+  )
 
   const handleRetry = useCallback(async () => {
     await logout()
     resetErrorBoundary()
   }, [logout, resetErrorBoundary])
 
+  useEffect(() => {
+    if (authState.type === AuthStateType.ERROR && authState.error instanceof ClientError) {
+      if (authState.error.statusCode === 401) {
+        handleRetry()
+      } else if (authState.error.statusCode === 404) {
+        const errorMessage = authState.error.response.body.message || ''
+        if (errorMessage.startsWith('Session with sid') && errorMessage.endsWith('not found')) {
+          setAuthErrorMessage('The session ID is invalid or expired.')
+        } else {
+          setAuthErrorMessage('The login link is invalid or expired. Please try again.')
+        }
+      }
+    }
+  }, [authState, handleRetry])
+
   return (
     <div className="sc-login-error">
       <div className="sc-login-error__content">
         <h2 className="sc-login-error__title">Authentication Error</h2>
-        <p className="sc-login-error__description">
-          Please try again or contact support if the problem persists.
-        </p>
+        <p className="sc-login-error__description">{authErrorMessage}</p>
       </div>
 
       <button className="sc-login-error__button" onClick={handleRetry}>
