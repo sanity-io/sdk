@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk-react",
-  "version": "0.0.0-alpha.24",
+  "version": "0.0.0-alpha.25",
   "private": false,
   "description": "Sanity SDK React toolkit for Content OS",
   "keywords": [
@@ -58,7 +58,7 @@
     "@sanity/logos": "^2.1.13",
     "@sanity/message-protocol": "^0.8.0",
     "@sanity/sdk": "workspace:*",
-    "@sanity/types": "^3.78.1",
+    "@sanity/types": "^3.83.0",
     "@types/lodash-es": "^4.17.12",
     "lodash-es": "^4.17.21",
     "react-error-boundary": "^5.0.0",

@@ -89,8 +89,8 @@ export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/pre
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
 export {getProjectState, resolveProject} from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
-export {type ProjectionValuePending, type ValidProjection} from '../projection/projectionStore'
 export {resolveProjection} from '../projection/resolveProjection'
+export {type ProjectionValuePending, type ValidProjection} from '../projection/types'
 export {getProjectsState, resolveProjects} from '../projects/projects'
 export {
   getQueryKey,
