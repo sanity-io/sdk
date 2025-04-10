@@ -100,7 +100,7 @@ importers:
         version: link:../../packages/react
       '@sanity/types':
         specifier: ^3.82.0
-        version: 3.82.0(@types/react@19.1.0)
+        version: 3.83.0(@types/react@19.1.0)
       '@sanity/ui':
         specifier: ^2.15.12
         version: 2.15.12(@emotion/is-prop-valid@1.2.2)(react-dom@19.1.0(react@19.1.0))(react-is@18.3.1)(react@19.1.0)(styled-components@6.1.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))
@@ -251,8 +251,8 @@ importers:
         specifier: ^0.12.4
         version: 0.12.4
       '@sanity/types':
-        specifier: ^3.78.1
-        version: 3.82.0(@types/react@19.1.0)
+        specifier: ^3.83.0
+        version: 3.83.0(@types/react@19.1.0)
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -324,8 +324,8 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@sanity/types':
-        specifier: ^3.78.1
-        version: 3.82.0(@types/react@19.1.0)
+        specifier: ^3.83.0
+        version: 3.83.0(@types/react@19.1.0)
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -1342,8 +1342,8 @@ packages:
     peerDependencies:
       prettier: ^3.2.5
 
-  '@sanity/types@3.82.0':
-    resolution: {integrity: sha512-YUVHc6XXApZYYds3AuIhxM9Nx0ncAQ7t5XPSRv8ZOUvSRdFPtbMysXN9V+CW5yFrvWpJ05aEgn9EjlKVSLU+kw==}
+  '@sanity/types@3.83.0':
+    resolution: {integrity: sha512-QsVanHZ1BstRWk5z0eZlVxoelj6AjRpNotePHEuP31y9tOh0xnOlagZmRIC215Ec4nD+4RO4HXvRN/vOO8xKNA==}
     peerDependencies:
       '@types/react': 18 || 19
 
@@ -5464,7 +5464,7 @@ snapshots:
       prettier: 3.5.3
       prettier-plugin-packagejson: 2.5.3(prettier@3.5.3)
 
-  '@sanity/types@3.82.0(@types/react@19.1.0)':
+  '@sanity/types@3.83.0(@types/react@19.1.0)':
     dependencies:
       '@sanity/client': 6.28.4
       '@types/react': 19.1.0
