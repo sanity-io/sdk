@@ -23,6 +23,7 @@ jobs:
         with:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+          node-version: 20
 
       - name: Lint
         run: pnpm lint

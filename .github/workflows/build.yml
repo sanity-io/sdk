@@ -15,6 +15,11 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+      fail-fast: false
+
     steps:
       - uses: actions/checkout@v4
 
@@ -23,6 +28,7 @@ jobs:
         with:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+          node-version: ${{ matrix.node-version }}
 
       - name: Build
         run: pnpm build
