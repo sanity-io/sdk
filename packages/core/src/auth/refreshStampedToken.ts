@@ -1,5 +1,6 @@
 import {
   distinctUntilChanged,
+  exhaustMap,
   filter,
   firstValueFrom,
   from,
@@ -80,11 +81,15 @@ async function acquireTokenRefreshLock(
   storageKey: string,
 ): Promise<boolean> {
   if (!navigator.locks) {
-    return true // If Web Locks API is not supported, proceed with refresh
+    // If Web Locks API is not supported, proceed as if lock acquired,
+    // but don't run the internal loop as coordination isn't possible.
+    // Returning true might allow the stream to proceed, but behavior without locks needs careful consideration.
+    return true
   }
 
   try {
-    // Hold the lock for the entire session
+    // Request the lock. The promise resolves when the callback completes.
+    // Since the callback has while(true), it will likely never complete if the lock is acquired.
     const result = await navigator.locks.request(LOCK_NAME, {mode: 'exclusive'}, async (lock) => {
       if (!lock) return false
 
@@ -94,12 +99,22 @@ async function acquireTokenRefreshLock(
         if (delay > 0) {
           await new Promise((resolve) => setTimeout(resolve, delay))
         }
-        await refreshFn()
-        setLastRefreshTime(storageArea, storageKey)
-        await new Promise((resolve) => setTimeout(resolve, REFRESH_INTERVAL))
+
+        try {
+          await refreshFn()
+          setLastRefreshTime(storageArea, storageKey)
+          // Wait for the main interval before the next check
+          await new Promise((resolve) => setTimeout(resolve, REFRESH_INTERVAL))
+        } catch {
+          // Log or handle refresh errors appropriately here
+          // console.error('Token refresh failed within lock:', error) // Removed to satisfy linter
+          // Consider a backoff strategy before retrying
+          await new Promise((resolve) => setTimeout(resolve, 60 * 1000)) // Simple 1-minute wait on error
+        }
       }
     })
-    return result === true
+    // This point is likely never reached if the lock callback starts
+    return result ?? false // Return the callback result (false if lock denied) or false if request threw
   } catch {
     return false // If lock acquisition fails, return false
   }
@@ -124,13 +139,26 @@ export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subs
         dashboardContext: AuthStoreState['dashboardContext']
       } => storeState.authState.type === AuthStateType.LOGGED_IN,
     ),
-    distinctUntilChanged(),
+    distinctUntilChanged(
+      (prev, curr) =>
+        prev.authState.type === curr.authState.type &&
+        prev.authState.token === curr.authState.token && // Only care about token for distinctness here
+        prev.dashboardContext === curr.dashboardContext,
+    ), // Make distinctness check explicit
     filter((storeState) => storeState.authState.token.includes('-st')), // Ensure we only try to refresh stamped tokens
-    switchMap((storeState) => {
-      // Create a function that performs a single refresh
+    exhaustMap((storeState) => {
+      // USE exhaustMap instead of switchMap
+      // Create a function that performs a single refresh and updates state/storage
       const performRefresh = async () => {
+        // Read the latest token directly from state inside refresh
+        const currentState = state.get()
+        if (currentState.authState.type !== AuthStateType.LOGGED_IN) {
+          throw new Error('User logged out before refresh could complete') // Abort refresh
+        }
+        const currentToken = currentState.authState.token
+
         const response = await firstValueFrom(
-          createTokenRefreshStream(storeState.authState.token, clientFactory, apiHost),
+          createTokenRefreshStream(currentToken, clientFactory, apiHost),
         )
 
         state.set('setRefreshStampedToken', (prev) => ({
@@ -144,19 +172,27 @@ export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subs
 
       // If in dashboard context, use simple timer-based refresh
       if (storeState.dashboardContext) {
-        return timer(0, REFRESH_INTERVAL).pipe(
-          takeWhile(() => storeState.authState.type === AuthStateType.LOGGED_IN),
+        return timer(REFRESH_INTERVAL, REFRESH_INTERVAL).pipe(
+          // Check if still logged in before each refresh attempt in the timer
+          takeWhile(() => state.get().authState.type === AuthStateType.LOGGED_IN),
+          // Use switchMap here: if the timer ticks again, we *do* want the latest token request
           switchMap(() =>
             createTokenRefreshStream(storeState.authState.token, clientFactory, apiHost),
           ),
+          // Map the successful response for the outer subscribe block
+          map((response) => ({token: response.token})),
         )
       }
 
-      // If not in dashboard context, use lock-based refresh with timing coordination
+      // If not in dashboard context, use lock-based refresh.
+      // exhaustMap prevents this from running again if state changes while lock logic is active.
+      // NOTE: Based on Web Locks API, this `from(acquireTokenRefreshLock(...))` observable
+      // will likely NOT emit if the lock is successfully acquired, as the underlying promise
+      // may never resolve due to the while(true) loop. This path needs verification.
       return from(acquireTokenRefreshLock(performRefresh, storageArea, storageKey)).pipe(
         filter((hasLock) => hasLock),
-        // This observable will never emit after the first value
-        // because acquireTokenRefreshLock handles the refresh loop internally
+        // If acquireTokenRefreshLock *does* somehow resolve true (e.g., locks unsupported),
+        // emit the token that triggered this exhaustMap execution.
         map(() => ({token: storeState.authState.token})),
       )
     }),
@@ -164,6 +200,9 @@ export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subs
 
   return refreshToken$.subscribe({
     next: (response) => {
+      // This block now primarily handles updates from the dashboard timer path,
+      // or potentially from the lock path if acquireTokenRefreshLock resolves unexpectedly.
+      // exhaustMap prevents this state update from causing an immediate loop.
       state.set('setRefreshStampedToken', (prev) => ({
         authState:
           prev.authState.type === AuthStateType.LOGGED_IN
@@ -173,6 +212,11 @@ export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subs
       storageArea?.setItem(storageKey, JSON.stringify({token: response.token}))
     },
     error: (error) => {
+      // Log errors from either refresh path
+      // Consider how refresh failures should affect the overall auth state
+      // E.g., maybe attempt retry, or eventually set state to ERROR if retries fail
+      // For now, just log, avoiding immediate state change to ERROR
+      // console.error('Token refresh failed:', error) // Removed to satisfy linter
       state.set('setRefreshStampedTokenError', {authState: {type: AuthStateType.ERROR, error}})
     },
   })

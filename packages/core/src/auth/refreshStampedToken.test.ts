@@ -72,39 +72,53 @@ describe('refreshStampedToken', () => {
   })
 
   describe('dashboard context', () => {
-    it('refreshes the token immediately without using locks', async () => {
-      const mockClient = {
-        observable: {
-          request: vi.fn(() => of({token: 'sk-refreshed-token-st123'})),
-        },
-      }
-      const mockClientFactory = vi.fn().mockReturnValue(mockClient)
-      const instance = createSanityInstance({
-        projectId: 'p',
-        dataset: 'd',
-        auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
-      })
-      const initialState = authStore.getInitialState(instance)
-      initialState.authState = {
-        type: AuthStateType.LOGGED_IN,
-        token: 'sk-initial-token-st123',
-        currentUser: null,
-      }
-      initialState.dashboardContext = {mode: 'test'}
-      const state = createStoreState(initialState)
-      const subscription = refreshStampedToken({state, instance})
-      subscriptions.push(subscription)
+    it('refreshes the token after REFRESH_INTERVAL without using locks', async () => {
+      vi.useFakeTimers()
+      try {
+        const mockClient = {
+          observable: {
+            request: vi.fn(() => of({token: 'sk-refreshed-token-st123'})),
+          },
+        }
+        const mockClientFactory = vi.fn().mockReturnValue(mockClient)
+        const instance = createSanityInstance({
+          projectId: 'p',
+          dataset: 'd',
+          auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
+        })
+        const initialState = authStore.getInitialState(instance)
+        initialState.authState = {
+          type: AuthStateType.LOGGED_IN,
+          token: 'sk-initial-token-st123',
+          currentUser: null,
+        }
+        initialState.dashboardContext = {mode: 'test'}
+        const state = createStoreState(initialState)
+        const subscription = refreshStampedToken({state, instance})
+        subscriptions.push(subscription)
 
-      // Wait briefly for state to settle
-      await new Promise((resolve) => setTimeout(resolve, 10))
+        // Assert refresh doesn't happen immediately
+        expect(mockClient.observable.request).not.toHaveBeenCalled()
+        const intermediateAuthState = state.get().authState
+        expect(intermediateAuthState.type).toBe(AuthStateType.LOGGED_IN)
+        if (intermediateAuthState.type === AuthStateType.LOGGED_IN) {
+          expect(intermediateAuthState.token).toBe('sk-initial-token-st123')
+        }
 
-      // Check final state and essential negative assertions
-      const finalAuthStateDash = state.get().authState
-      expect(finalAuthStateDash.type).toBe(AuthStateType.LOGGED_IN)
-      if (finalAuthStateDash.type === AuthStateType.LOGGED_IN) {
-        expect(finalAuthStateDash.token).toBe('sk-refreshed-token-st123')
+        // Run pending timers (should trigger the refresh after the interval)
+        vi.runOnlyPendingTimers()
+
+        // Check refresh happened now
+        expect(mockClient.observable.request).toHaveBeenCalledTimes(1)
+        const finalAuthStateDash = state.get().authState
+        expect(finalAuthStateDash.type).toBe(AuthStateType.LOGGED_IN)
+        if (finalAuthStateDash.type === AuthStateType.LOGGED_IN) {
+          expect(finalAuthStateDash.token).toBe('sk-refreshed-token-st123')
+        }
+        expect(navigator.locks.request).not.toHaveBeenCalled() // Still shouldn't use locks
+      } finally {
+        vi.useRealTimers()
       }
-      expect(navigator.locks.request).not.toHaveBeenCalled()
     })
   })
 
@@ -186,39 +200,44 @@ describe('refreshStampedToken', () => {
   })
 
   it('sets an error state when token refresh fails', async () => {
-    const error = new Error('Refresh failed')
-    const mockClient = {
-      observable: {
-        request: vi.fn(() => throwError(() => error)),
-      },
-    }
-    const mockClientFactory = vi.fn().mockReturnValue(mockClient)
-    const instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
-      auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
-    })
-    const initialState = authStore.getInitialState(instance)
-    initialState.authState = {
-      type: AuthStateType.LOGGED_IN,
-      token: 'sk-initial-token-st123',
-      currentUser: null,
-    }
-    initialState.dashboardContext = {mode: 'test'}
-    const state = createStoreState(initialState)
-    const subscription = refreshStampedToken({state, instance})
-    subscriptions.push(subscription)
+    vi.useFakeTimers()
+    try {
+      const error = new Error('Refresh failed')
+      const mockClient = {
+        observable: {
+          request: vi.fn(() => throwError(() => error)),
+        },
+      }
+      const mockClientFactory = vi.fn().mockReturnValue(mockClient)
+      const instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
+      })
+      const initialState = authStore.getInitialState(instance)
+      initialState.authState = {
+        type: AuthStateType.LOGGED_IN,
+        token: 'sk-initial-token-st123',
+        currentUser: null,
+      }
+      initialState.dashboardContext = {mode: 'test'}
+      const state = createStoreState(initialState)
+      const subscription = refreshStampedToken({state, instance})
+      subscriptions.push(subscription)
 
-    // Wait briefly for state to settle
-    await new Promise((resolve) => setTimeout(resolve, 10))
+      // Run timers and allow error propagation
+      vi.runOnlyPendingTimers()
 
-    // Check final state IS error
-    const finalAuthStateError = state.get().authState
-    expect(finalAuthStateError.type).toBe(AuthStateType.ERROR)
-    if (finalAuthStateError.type === AuthStateType.ERROR) {
-      expect(finalAuthStateError.error).toBe(error)
-    } else {
-      expect.fail('Expected authState type to be ERROR')
+      // Check final state IS error
+      const finalAuthStateError = state.get().authState
+      expect(finalAuthStateError.type).toBe(AuthStateType.ERROR)
+      if (finalAuthStateError.type === AuthStateType.ERROR) {
+        expect(finalAuthStateError.error).toBe(error)
+      } else {
+        expect.fail('Expected authState type to be ERROR')
+      }
+    } finally {
+      vi.useRealTimers()
     }
   })
 
