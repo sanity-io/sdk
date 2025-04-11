@@ -101,6 +101,7 @@ export {
   resolveQuery,
 } from '../query/queryStore'
 export {getPerspectiveState} from '../releases/getPerspectiveState'
+export type {ReleaseDocument} from '../releases/releasesStore'
 export {getActiveReleasesState} from '../releases/releasesStore'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'

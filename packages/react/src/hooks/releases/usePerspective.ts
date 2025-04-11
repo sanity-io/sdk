@@ -8,7 +8,35 @@ import {filter, firstValueFrom} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
-export const usePerspective = createStateSourceHook({
+/**
+ * @public
+ */
+type UsePerspective = {
+  (perspectiveHandle: PerspectiveHandle): string | string[] | undefined
+}
+
+/**
+ * @public
+ *
+ * Returns a single or stack of perspectives for the given perspective handle,
+ * which can then be used to correctly query the documents
+ * via the `perspective` parameter in the client.
+ *
+ * @param perspectiveHandle - The perspective handle to get the perspective for.
+ *
+ * @example
+ * ```tsx
+ * import {usePerspective, useQuery} from '@sanity/sdk-react'
+
+ * const perspective = usePerspective({perspective: 'rxg1346', projectId: 'abc123', dataset: 'production'})
+ * const {data} = useQuery<Movie[]>('*[_type == "movie"]', {
+ *   perspective: perspective,
+ * })
+ * ```
+ *
+ * @returns The perspective for the given perspective handle.
+ */
+export const usePerspective: UsePerspective = createStateSourceHook({
   getState: getPerspectiveState,
   shouldSuspend: (instance: SanityInstance, options?: PerspectiveHandle): boolean =>
     getPerspectiveState(instance, options).getCurrent() === undefined,

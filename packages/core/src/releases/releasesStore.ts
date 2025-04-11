@@ -1,15 +1,24 @@
+import {type SanityClient} from '@sanity/client'
 import {type SanityDocument} from '@sanity/types'
-import {catchError, EMPTY, tap} from 'rxjs'
+import {catchError, EMPTY, retry, switchMap, timer} from 'rxjs'
 
-import {getQueryState} from '../query/queryStore'
+import {getClientState} from '../client/clientStore'
 import {bindActionByDataset} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
+import {listenQuery} from '../utils/listenQuery'
 
+/**
+ * Represents a document in a Sanity dataset that represents release options.
+ * @internal
+ */
 export type ReleaseDocument = SanityDocument & {
   name: string
+  publishAt?: string
   metadata: {
+    title: string
     releaseType: 'asap' | 'scheduled' | 'undecided'
+    intendedPublishAt?: string
   }
 }
 
@@ -29,6 +38,10 @@ export const releasesStore = defineStore<ReleasesStoreState>({
   },
 })
 
+/**
+ * Get the active releases from the store.
+ * @internal
+ */
 export const getActiveReleasesState = bindActionByDataset(
   releasesStore,
   createStateSourceAction({
@@ -36,21 +49,40 @@ export const getActiveReleasesState = bindActionByDataset(
   }),
 )
 
+const RELEASES_QUERY = 'releases::all()[state == "active"]'
+const QUERY_PARAMS = {}
+
 const subscribeToReleases = ({instance, state}: StoreContext<ReleasesStoreState>) => {
-  return getQueryState<ReleaseDocument[]>(instance, 'releases::all()[state == "active"]', {
+  return getClientState(instance, {
+    apiVersion: '2025-04-10',
     perspective: 'raw',
   })
     .observable.pipe(
-      tap((result) => {
-        if (result !== undefined) {
-          // TODO: sort these releases
-          state.set('setActiveReleases', {activeReleases: result})
-        }
-      }),
-      catchError((error) => {
-        state.set('setError', {error})
-        return EMPTY
-      }),
+      switchMap((client: SanityClient) =>
+        // releases are system documents, and are not supported by useQueryState
+        listenQuery<ReleaseDocument[]>(client, RELEASES_QUERY, QUERY_PARAMS, {
+          tag: 'releases-listener',
+          throttleTime: 1000,
+          transitions: ['update', 'appear', 'disappear'],
+        }).pipe(
+          retry({
+            count: 3,
+            delay: (error, retryCount) => {
+              // eslint-disable-next-line no-console
+              console.error('[releases] Error in subscription:', error, 'Retry count:', retryCount)
+              return timer(Math.min(1000 * Math.pow(2, retryCount), 10000))
+            },
+          }),
+          catchError((error) => {
+            state.set('setError', {error})
+            return EMPTY
+          }),
+        ),
+      ),
     )
-    .subscribe()
+    .subscribe({
+      next: (releases) => {
+        state.set('setActiveReleases', {activeReleases: releases ?? []})
+      },
+    })
 }

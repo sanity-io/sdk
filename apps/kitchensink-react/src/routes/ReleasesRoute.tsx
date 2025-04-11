@@ -28,11 +28,11 @@ function DocumentList(perspectiveHandle: PerspectiveHandle) {
 export function ReleasesRoute(): JSX.Element {
   const [selectedRelease, setSelectedRelease] = useState('')
 
-  // TODO: types should be fixed to assert that these don't return null (they suspend)
-  const activeReleases = useActiveReleases()!
+  const activeReleases = useActiveReleases()
+
   const calculatedPerspective = usePerspective({
     perspective: selectedRelease ? {releaseName: selectedRelease} : undefined,
-  })!
+  })
   const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedRelease(event.target.value)
   }
@@ -49,7 +49,7 @@ export function ReleasesRoute(): JSX.Element {
             <option value="">Select a release</option>
             {activeReleases.map((release) => (
               <option key={release.name} value={release.name}>
-                {release.name}
+                {release.metadata.title} ({release.name})
               </option>
             ))}
           </select>

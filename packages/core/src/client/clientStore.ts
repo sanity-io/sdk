@@ -2,7 +2,6 @@ import {type ClientConfig, createClient, type SanityClient} from '@sanity/client
 import {pick} from 'lodash-es'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
-import {type DatasetHandle} from '../config/sanityConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
@@ -75,7 +74,8 @@ export interface ClientStoreState {
  *
  * @public
  */
-export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey>, DatasetHandle {
+export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey> {
+  // use
   /**
    * An optional flag to choose between the default client (typically project-level)
    * and the global client ('global'). When set to `'global'`, the global client

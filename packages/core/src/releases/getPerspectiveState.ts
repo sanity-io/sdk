@@ -47,6 +47,18 @@ const memoizedOptionsSelector = createSelector(
   },
 )
 
+/**
+ * Provides a subscribable state source for a "perspective" for the Sanity client,
+ * which is used to fetch documents as though certain Content Releases are active.
+ *
+ * @param instance - The Sanity instance to get the perspective for
+ * @param options - The options for the perspective -- usually a release name
+ *
+ * @returns A subscribable perspective value, usually a list of applicable release names,
+ * or a single release name / default perspective (such as 'drafts').
+ *
+ * @public
+ */
 export const getPerspectiveState = bindActionByDataset(
   releasesStore,
   createStateSourceAction({
