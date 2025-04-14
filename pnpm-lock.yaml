@@ -103,7 +103,7 @@ importers:
         version: 3.83.0(@types/react@19.1.0)
       '@sanity/ui':
         specifier: ^2.15.12
-        version: 2.15.12(@emotion/is-prop-valid@1.2.2)(react-dom@19.1.0(react@19.1.0))(react-is@18.3.1)(react@19.1.0)(styled-components@6.1.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))
+        version: 2.15.13(@emotion/is-prop-valid@1.2.2)(react-dom@19.1.0(react@19.1.0))(react-is@18.3.1)(react@19.1.0)(styled-components@6.1.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))
       inter-ui:
         specifier: ^4.1.0
         version: 4.1.0
@@ -263,7 +263,7 @@ importers:
         specifier: ^5.1.1
         version: 5.1.1
       rxjs:
-        specifier: ^7.8.1
+        specifier: ^7.8.2
         version: 7.8.2
       zustand:
         specifier: ^5.0.3
@@ -336,7 +336,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0(react@19.1.0)
       rxjs:
-        specifier: ^7.8.1
+        specifier: ^7.8.2
         version: 7.8.2
     devDependencies:
       '@repo/config-eslint':
@@ -421,8 +421,8 @@ importers:
         specifier: workspace:*
         version: link:../react
       '@sanity/ui':
-        specifier: ^2.8.19
-        version: 2.15.12(@emotion/is-prop-valid@1.2.2)(react-dom@19.1.0(react@19.1.0))(react-is@18.3.1)(react@19.1.0)(styled-components@6.1.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))
+        specifier: ^2.15.13
+        version: 2.15.13(@emotion/is-prop-valid@1.2.2)(react-dom@19.1.0(react@19.1.0))(react-is@18.3.1)(react@19.1.0)(styled-components@6.1.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))
       react-error-boundary:
         specifier: ^5.0.0
         version: 5.0.0(react@19.1.0)
@@ -1347,8 +1347,8 @@ packages:
     peerDependencies:
       '@types/react': 18 || 19
 
-  '@sanity/ui@2.15.12':
-    resolution: {integrity: sha512-Lrt13qoDCOKtOetSqusYXrhDXuxQQw3BcYrJMZwYych6fR4BDk/+9namJTHJZIx2M12uc6W9nheAYywr+eP0PQ==}
+  '@sanity/ui@2.15.13':
+    resolution: {integrity: sha512-L/vk5j/GH1scRWkTL4JWfN6HN5e9yWLbDKcjl9QVQdNQnK/tCZjg44n/uE4agIJiOa0P0UVl4IsdzwLLfcZeig==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: ^18 || >=19.0.0-0
@@ -3636,8 +3636,8 @@ packages:
     resolution: {integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==}
     hasBin: true
 
-  react-compiler-runtime@19.0.0-beta-e993439-20250328:
-    resolution: {integrity: sha512-bdLTxDSnjHb8iwkAal+vNb1NK1l7MlsG02/Kc47AkQL0lmszOHRSV5wkeprCVnT2pYAI8721TOeO6e1/Wfgvuw==}
+  react-compiler-runtime@19.0.0-beta-e993439-20250405:
+    resolution: {integrity: sha512-uTvtVgJR21Xy7XAthYbC3R9V00V/U7xP3BWrwpSvcmHgtar8+TweghRIankQJLps/g7HIYxy+dnXCGBy0cKv5w==}
     peerDependencies:
       react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
 
@@ -5471,7 +5471,7 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  '@sanity/ui@2.15.12(@emotion/is-prop-valid@1.2.2)(react-dom@19.1.0(react@19.1.0))(react-is@18.3.1)(react@19.1.0)(styled-components@6.1.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))':
+  '@sanity/ui@2.15.13(@emotion/is-prop-valid@1.2.2)(react-dom@19.1.0(react@19.1.0))(react-is@18.3.1)(react@19.1.0)(styled-components@6.1.13(react-dom@19.1.0(react@19.1.0))(react@19.1.0))':
     dependencies:
       '@floating-ui/react-dom': 2.1.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@juggle/resize-observer': 3.4.0
@@ -5480,7 +5480,7 @@ snapshots:
       csstype: 3.1.3
       framer-motion: 12.6.3(@emotion/is-prop-valid@1.2.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react: 19.1.0
-      react-compiler-runtime: 19.0.0-beta-e993439-20250328(react@19.1.0)
+      react-compiler-runtime: 19.0.0-beta-e993439-20250405(react@19.1.0)
       react-dom: 19.1.0(react@19.1.0)
       react-is: 18.3.1
       react-refractor: 2.2.0(react@19.1.0)
@@ -7910,7 +7910,7 @@ snapshots:
       minimist: 1.2.8
       strip-json-comments: 2.0.1
 
-  react-compiler-runtime@19.0.0-beta-e993439-20250328(react@19.1.0):
+  react-compiler-runtime@19.0.0-beta-e993439-20250405(react@19.1.0):
     dependencies:
       react: 19.1.0
 

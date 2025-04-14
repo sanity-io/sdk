@@ -1,0 +1,44 @@
+name: "Setup Environment"
+description: "Sets up Node.js, pnpm, and dependencies"
+
+inputs:
+  TURBO_TOKEN:
+    description: "Turbo token for authentication"
+    required: true
+  TURBO_TEAM:
+    description: "Turbo team identifier"
+    required: true
+  node-version:
+    description: "Node.js version to use"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Get pnpm store directory
+      run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Cache pnpm store
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-node-${{ inputs.node-version }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-node-${{ inputs.node-version }}-
+          ${{ runner.os }}-pnpm-store-
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+      shell: bash
+      env:
+        TURBO_TOKEN: ${{ inputs.TURBO_TOKEN }}
+        TURBO_TEAM: ${{ inputs.TURBO_TEAM }}
