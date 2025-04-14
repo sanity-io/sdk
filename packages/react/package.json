@@ -62,7 +62,7 @@
     "@types/lodash-es": "^4.17.12",
     "lodash-es": "^4.17.21",
     "react-error-boundary": "^5.0.0",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
