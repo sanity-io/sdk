@@ -28,19 +28,24 @@ export const handleAuthCallback = bindActionGlobally(
     const parsedUrl = new URL(locationHref)
     let dashboardContext: DashboardContext = {}
     try {
-      const contextParam = parsedUrl.searchParams.get('_context') ?? '{}'
-      dashboardContext = JSON.parse(contextParam)
+      const contextParam = parsedUrl.searchParams.get('_context')
+      if (contextParam) {
+        const parsedContext = JSON.parse(contextParam)
+        if (parsedContext && typeof parsedContext === 'object') {
+          delete parsedContext.sid
+          dashboardContext = parsedContext
+        }
+      }
     } catch (err) {
       // If JSON parsing fails, use empty context
       // eslint-disable-next-line no-console
       console.error('Failed to parse dashboard context:', err)
     }
-    const {mode, env, orgId} = dashboardContext
 
     // Otherwise, start the exchange
     state.set('exchangeSessionForToken', {
       authState: {type: AuthStateType.LOGGING_IN, isExchangingToken: true},
-      dashboardContext: {mode, env, orgId},
+      dashboardContext,
     } as Partial<AuthStoreState>)
 
     try {
