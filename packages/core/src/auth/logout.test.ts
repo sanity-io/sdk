@@ -118,6 +118,6 @@ describe('logout', () => {
     resolveRequest()
 
     await originalLogout
-    expect(removeItem).toHaveBeenCalledOnce()
+    expect(removeItem).toHaveBeenCalledTimes(2)
   })
 })

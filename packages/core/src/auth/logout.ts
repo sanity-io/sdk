@@ -39,5 +39,6 @@ export const logout = bindActionGlobally(authStore, async ({state}) => {
       authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
     })
     storageArea?.removeItem(storageKey)
+    storageArea?.removeItem(`${storageKey}_last_refresh`)
   }
 })
