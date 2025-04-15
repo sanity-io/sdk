@@ -1,7 +1,7 @@
-import {type ClientConfig, createClient} from '@sanity/client'
+import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
 import {NEVER, type Subscription} from 'rxjs'
-import {afterEach, beforeEach, describe, it} from 'vitest'
+import {afterEach, beforeEach, describe, it, vi} from 'vitest'
 
 import {createSanityInstance} from '../store/createSanityInstance'
 import {AuthStateType} from './authStateType'
@@ -36,6 +36,7 @@ describe('authStore', () => {
 
   describe('getInitialState', () => {
     let instance: ReturnType<typeof createSanityInstance>
+    const storageKey = '__sanity_auth_token'
 
     beforeEach(() => {
       vi.mocked(getTokenFromStorage).mockReturnValue(null)
@@ -71,7 +72,7 @@ describe('authStore', () => {
         },
       })
 
-      const {options} = authStore.getInitialState(instance)
+      const {options, dashboardContext} = authStore.getInitialState(instance)
 
       expect(options.apiHost).toBe(apiHost)
       expect(options.callbackUrl).toBe(callbackUrl)
@@ -79,49 +80,127 @@ describe('authStore', () => {
       expect(options.providedToken).toBe(token)
       expect(options.clientFactory).toBe(clientFactory)
       expect(options.initialLocationHref).toBe(initialLocationHref)
-      expect(options.storageKey).toBe('__sanity_auth_token')
+      expect(options.storageKey).toBe(storageKey)
       expect(options.storageArea).toBe(storageArea)
+      expect(dashboardContext).toStrictEqual({})
     })
 
-    it('sets to logged in if provided token is present', () => {
+    it('parses dashboardContext from initialLocationHref', () => {
+      const context = {mode: 'test', env: 'staging', orgId: 'abc'}
+      const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(context))}`
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {initialLocationHref},
+      })
+
+      const {dashboardContext, authState} = authStore.getInitialState(instance)
+      expect(dashboardContext).toEqual(context)
+      expect(authState.type).toBe(AuthStateType.LOGGED_OUT)
+    })
+
+    it('parses dashboardContext and removes sid property', () => {
+      const context = {mode: 'test', env: 'staging', orgId: 'abc', sid: 'ignore-me'}
+      const expectedContext = {mode: 'test', env: 'staging', orgId: 'abc'}
+      const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(context))}`
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {initialLocationHref},
+      })
+
+      const {dashboardContext, authState} = authStore.getInitialState(instance)
+      expect(dashboardContext).toEqual(expectedContext)
+      expect(authState.type).toBe(AuthStateType.LOGGED_OUT)
+    })
+
+    it('handles invalid JSON in _context gracefully', () => {
+      const initialLocationHref = `https://example.com/?_context=invalid-json`
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {initialLocationHref},
+      })
+
+      const {dashboardContext, authState} = authStore.getInitialState(instance)
+      expect(dashboardContext).toStrictEqual({})
+      expect(authState.type).toBe(AuthStateType.LOGGED_OUT)
+      expect(errorSpy).toHaveBeenCalledWith(
+        'Failed to parse dashboard context from initial location:',
+        expect.any(Error),
+      )
+      errorSpy.mockRestore()
+    })
+
+    it('sets to logged in if provided token is present (even in dashboard)', () => {
+      const token = 'provided-token'
+      const context = {mode: 'dashboard'}
+      const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(context))}`
       instance = createSanityInstance({
         projectId: 'p',
         dataset: 'd',
         auth: {
-          token: 'provided-token',
+          token,
+          initialLocationHref,
         },
       })
 
-      const {authState} = authStore.getInitialState(instance)
-      expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN})
+      const {authState, dashboardContext} = authStore.getInitialState(instance)
+      expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN, token})
+      expect(dashboardContext).toEqual(context)
     })
 
-    it('sets to logging in if `getAuthCode` returns a code', () => {
+    it('sets to logging in if `getAuthCode` returns a code (even in dashboard)', () => {
+      const context = {orgId: 'org1'}
+      const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(context))}`
       instance = createSanityInstance({
         projectId: 'p',
         dataset: 'd',
+        auth: {initialLocationHref},
       })
 
       vi.mocked(getAuthCode).mockReturnValue('auth-code')
 
-      const {authState} = authStore.getInitialState(instance)
+      const {authState, dashboardContext} = authStore.getInitialState(instance)
       expect(authState).toMatchObject({type: AuthStateType.LOGGING_IN})
+      expect(dashboardContext).toEqual(context)
     })
 
-    it('sets to logged in if `getTokenFromStorage` returns a token', () => {
+    it('sets to logged in from storage token when NOT in dashboard', () => {
+      const storageToken = 'storage-token'
       instance = createSanityInstance({
         projectId: 'p',
         dataset: 'd',
       })
 
       vi.mocked(getAuthCode).mockReturnValue(null)
-      vi.mocked(getTokenFromStorage).mockReturnValue('new-token')
+      vi.mocked(getTokenFromStorage).mockReturnValue(storageToken)
 
-      const {authState} = authStore.getInitialState(instance)
-      expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN, token: 'new-token'})
+      const {authState, dashboardContext} = authStore.getInitialState(instance)
+      expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN, token: storageToken})
+      expect(dashboardContext).toStrictEqual({})
     })
 
-    it('otherwise it sets the state to logged out', () => {
+    it('sets to logged out (ignores storage token) when IN dashboard', () => {
+      const storageToken = 'storage-token'
+      const context = {mode: 'dashboard'}
+      const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(context))}`
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {initialLocationHref},
+      })
+
+      vi.mocked(getAuthCode).mockReturnValue(null)
+      vi.mocked(getTokenFromStorage).mockReturnValue(storageToken)
+
+      const {authState, dashboardContext} = authStore.getInitialState(instance)
+      expect(authState).toMatchObject({type: AuthStateType.LOGGED_OUT})
+      expect(dashboardContext).toEqual(context)
+    })
+
+    it('sets the state to logged out when no token, code, or context', () => {
       instance = createSanityInstance({
         projectId: 'p',
         dataset: 'd',
@@ -130,8 +209,9 @@ describe('authStore', () => {
       vi.mocked(getAuthCode).mockReturnValue(null)
       vi.mocked(getTokenFromStorage).mockReturnValue(null)
 
-      const {authState} = authStore.getInitialState(instance)
+      const {authState, dashboardContext} = authStore.getInitialState(instance)
       expect(authState).toMatchObject({type: AuthStateType.LOGGED_OUT})
+      expect(dashboardContext).toStrictEqual({})
     })
   })
 
@@ -343,25 +423,72 @@ describe('authStore', () => {
       instance?.dispose()
     })
 
-    it('returns the organization id if present', () => {
+    it('returns the organization id if present in initial context', () => {
+      const context = {orgId: 'initial-org-id'}
+      const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(context))}`
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {initialLocationHref},
+      })
+
+      // No callback needed, check initial state
+      const organizationId = getDashboardOrganizationId(instance)
+      expect(organizationId.getCurrent()).toBe('initial-org-id')
+    })
+
+    it('returns the organization id from callback context if handling callback', async () => {
+      const initialContext = {orgId: 'initial-org-id'}
+      const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(initialContext))}`
+      const callbackContext = {orgId: 'callback-org-id', mode: 'test'} // Context from callback URL
+      const mockClient = {request: vi.fn().mockResolvedValue({token: 'test-token', label: 'tes'})}
+      const authCode = 'test-auth-code'
+
       instance = createSanityInstance({
         projectId: 'p',
         dataset: 'd',
         auth: {
-          clientFactory: vi.fn().mockReturnValue({
-            request: vi.fn().mockResolvedValue({token: 'test-token', label: 'tes'}),
-          }),
+          clientFactory: () => mockClient as unknown as SanityClient,
+          initialLocationHref, // Set initial context
         },
       })
 
-      // Create a URL with an organization ID in the _context parameter
-      const callbackUrl = `https://example.com/login/callback?sid=test-auth-code&_context=${encodeURIComponent(JSON.stringify({orgId: 'org-id'}))}`
+      // Mock getAuthCode to return a code for the callback URL
+      vi.mocked(getAuthCode).mockReturnValue(authCode)
 
-      // Call handleCallback with the URL to set the organization ID in the state
-      handleAuthCallback(instance, callbackUrl)
+      // Create a callback URL with the different _context and the sid
+      const callbackUrl = `https://example.com/login/callback?sid=${authCode}&_context=${encodeURIComponent(JSON.stringify(callbackContext))}`
+
+      // Ensure initial state has initial orgId
+      const initialOrgId = getDashboardOrganizationId(instance)
+      expect(initialOrgId.getCurrent()).toBe('initial-org-id')
+
+      // Call handleCallback with the callback URL
+      await handleAuthCallback(instance, callbackUrl) // Use await as handleAuthCallback is async
+
+      // Wait for the state update to be reflected in the selector
+      await vi.waitUntil(
+        () => getDashboardOrganizationId(instance).getCurrent() === 'callback-org-id',
+      )
+      // Add a microtask yield just in case
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      // Check that the orgId from the callback context is now set
+      const finalOrgId = getDashboardOrganizationId(instance)
+      expect(finalOrgId.getCurrent()).toBe('callback-org-id')
+    })
+
+    it('returns undefined orgId if not present', () => {
+      const context = {mode: 'test'} // No orgId
+      const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(context))}`
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {initialLocationHref},
+      })
 
       const organizationId = getDashboardOrganizationId(instance)
-      expect(organizationId.getCurrent()).toBe('org-id')
+      expect(organizationId.getCurrent()).toBeUndefined()
     })
   })
 })

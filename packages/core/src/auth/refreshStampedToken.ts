@@ -81,42 +81,48 @@ async function acquireTokenRefreshLock(
   storageKey: string,
 ): Promise<boolean> {
   if (!navigator.locks) {
-    // If Web Locks API is not supported, proceed as if lock acquired,
-    // but don't run the internal loop as coordination isn't possible.
-    // Returning true might allow the stream to proceed, but behavior without locks needs careful consideration.
-    return true
+    // If Web Locks API is not supported, perform an immediate, uncoordinated refresh.
+    // eslint-disable-next-line no-console
+    console.warn('Web Locks API not supported. Proceeding with uncoordinated refresh.')
+    await refreshFn()
+    setLastRefreshTime(storageArea, storageKey)
+    return true // Indicate success to allow stream processing, though it won't loop.
   }
 
   try {
-    // Request the lock. The promise resolves when the callback completes.
-    // Since the callback has while(true), it will likely never complete if the lock is acquired.
+    // Attempt to acquire an exclusive lock for token refresh coordination.
+    // The callback handles the continuous refresh cycle while the lock is held.
     const result = await navigator.locks.request(LOCK_NAME, {mode: 'exclusive'}, async (lock) => {
-      if (!lock) return false
+      if (!lock) return false // Lock not granted
 
-      // Start a continuous refresh cycle while we hold the lock
+      // Problematic infinite loop - needs redesign for graceful termination.
+      // This loop continuously refreshes the token at REFRESH_INTERVAL.
       while (true) {
         const delay = getNextRefreshDelay(storageArea, storageKey)
         if (delay > 0) {
           await new Promise((resolve) => setTimeout(resolve, delay))
         }
-
         try {
           await refreshFn()
           setLastRefreshTime(storageArea, storageKey)
-          // Wait for the main interval before the next check
-          await new Promise((resolve) => setTimeout(resolve, REFRESH_INTERVAL))
-        } catch {
-          // Log or handle refresh errors appropriately here
-          // console.error('Token refresh failed within lock:', error) // Removed to satisfy linter
-          // Consider a backoff strategy before retrying
-          await new Promise((resolve) => setTimeout(resolve, 60 * 1000)) // Simple 1-minute wait on error
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error('Token refresh failed within lock:', error)
+          // Decide how to handle errors - break, retry, etc.? Currently logs and continues.
         }
+        // Wait for the next interval
+        await new Promise((resolve) => setTimeout(resolve, REFRESH_INTERVAL))
       }
+      // Unreachable due to while(true)
     })
-    // This point is likely never reached if the lock callback starts
-    return result ?? false // Return the callback result (false if lock denied) or false if request threw
-  } catch {
-    return false // If lock acquisition fails, return false
+    // The promise from navigator.locks.request resolves with the callback's return value,
+    // but only if the callback finishes. The infinite loop prevents this.
+    return result === true
+  } catch (error) {
+    // Handle potential errors during the initial lock request itself.
+    // eslint-disable-next-line no-console
+    console.error('Failed to request token refresh lock:', error)
+    return false // Indicate lock acquisition failure.
   }
 }
 
@@ -170,7 +176,6 @@ export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subs
         storageArea?.setItem(storageKey, JSON.stringify({token: response.token}))
       }
 
-      // If in dashboard context, use simple timer-based refresh
       if (storeState.dashboardContext) {
         return timer(REFRESH_INTERVAL, REFRESH_INTERVAL).pipe(
           // Check if still logged in before each refresh attempt in the timer

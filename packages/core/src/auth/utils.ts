@@ -9,10 +9,30 @@ export function getAuthCode(callbackUrl: string | undefined, locationHref: strin
     ? loc.pathname.toLowerCase().startsWith(callbackLocation.pathname.toLowerCase())
     : true
 
-  // for stamped tokens, the authCode is not in the hash, it is in the query params
-  const authCode =
+  // First, try getting the auth code (sid) from hash or search params directly
+  let authCode =
     new URLSearchParams(loc.hash.slice(1)).get(AUTH_CODE_PARAM) ||
     new URLSearchParams(loc.search).get(AUTH_CODE_PARAM)
+
+  // If not found directly, try extracting it from the _context parameter as a fallback
+  if (!authCode) {
+    const contextParam = new URLSearchParams(loc.search).get('_context')
+    if (contextParam) {
+      try {
+        const parsedContext = JSON.parse(contextParam)
+        if (
+          parsedContext &&
+          typeof parsedContext === 'object' &&
+          typeof parsedContext.sid === 'string' &&
+          parsedContext.sid // Ensure it's not an empty string
+        ) {
+          authCode = parsedContext.sid
+        }
+      } catch {
+        // Silently ignore _context JSON parsing errors; authCode remains null/empty
+      }
+    }
+  }
 
   return authCode && callbackLocationMatches ? authCode : null
 }
