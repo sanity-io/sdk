@@ -80,28 +80,48 @@ async function acquireTokenRefreshLock(
   storageKey: string,
 ): Promise<boolean> {
   if (!navigator.locks) {
-    return true // If Web Locks API is not supported, proceed with refresh
+    // If Web Locks API is not supported, perform an immediate, uncoordinated refresh.
+    // eslint-disable-next-line no-console
+    console.warn('Web Locks API not supported. Proceeding with uncoordinated refresh.')
+    await refreshFn()
+    setLastRefreshTime(storageArea, storageKey)
+    return true // Indicate success to allow stream processing, though it won't loop.
   }
 
   try {
-    // Hold the lock for the entire session
+    // Attempt to acquire an exclusive lock for token refresh coordination.
+    // The callback handles the continuous refresh cycle while the lock is held.
     const result = await navigator.locks.request(LOCK_NAME, {mode: 'exclusive'}, async (lock) => {
-      if (!lock) return false
+      if (!lock) return false // Lock not granted
 
-      // Start a continuous refresh cycle while we hold the lock
+      // Problematic infinite loop - needs redesign for graceful termination.
+      // This loop continuously refreshes the token at REFRESH_INTERVAL.
       while (true) {
         const delay = getNextRefreshDelay(storageArea, storageKey)
         if (delay > 0) {
           await new Promise((resolve) => setTimeout(resolve, delay))
         }
-        await refreshFn()
-        setLastRefreshTime(storageArea, storageKey)
+        try {
+          await refreshFn()
+          setLastRefreshTime(storageArea, storageKey)
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error('Token refresh failed within lock:', error)
+          // Decide how to handle errors - break, retry, etc.? Currently logs and continues.
+        }
+        // Wait for the next interval
         await new Promise((resolve) => setTimeout(resolve, REFRESH_INTERVAL))
       }
+      // Unreachable due to while(true)
     })
+    // The promise from navigator.locks.request resolves with the callback's return value,
+    // but only if the callback finishes. The infinite loop prevents this.
     return result === true
-  } catch {
-    return false // If lock acquisition fails, return false
+  } catch (error) {
+    // Handle potential errors during the initial lock request itself.
+    // eslint-disable-next-line no-console
+    console.error('Failed to request token refresh lock:', error)
+    return false // Indicate lock acquisition failure.
   }
 }
 
@@ -125,9 +145,8 @@ export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subs
       } => storeState.authState.type === AuthStateType.LOGGED_IN,
     ),
     distinctUntilChanged(),
-    filter((storeState) => storeState.authState.token.includes('-st')), // Ensure we only try to refresh stamped tokens
+    filter((storeState) => storeState.authState.token.includes('-st')),
     switchMap((storeState) => {
-      // Create a function that performs a single refresh
       const performRefresh = async () => {
         const response = await firstValueFrom(
           createTokenRefreshStream(storeState.authState.token, clientFactory, apiHost),
@@ -142,7 +161,6 @@ export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subs
         storageArea?.setItem(storageKey, JSON.stringify({token: response.token}))
       }
 
-      // If in dashboard context, use simple timer-based refresh
       if (storeState.dashboardContext) {
         return timer(0, REFRESH_INTERVAL).pipe(
           takeWhile(() => storeState.authState.type === AuthStateType.LOGGED_IN),
@@ -152,11 +170,8 @@ export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subs
         )
       }
 
-      // If not in dashboard context, use lock-based refresh with timing coordination
       return from(acquireTokenRefreshLock(performRefresh, storageArea, storageKey)).pipe(
         filter((hasLock) => hasLock),
-        // This observable will never emit after the first value
-        // because acquireTokenRefreshLock handles the refresh loop internally
         map(() => ({token: storeState.authState.token})),
       )
     }),
