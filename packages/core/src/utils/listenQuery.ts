@@ -2,21 +2,13 @@ import {type SanityClient} from '@sanity/client'
 import {defer, merge, Observable, of, partition, switchMap, throwError} from 'rxjs'
 import {debounceTime, filter, mergeMap, share, take} from 'rxjs/operators'
 
-/**
- * Event types from Sanity real-time listening API
- * @internal
- */
-export interface ListenEvent {
+interface ListenEvent {
   type: 'welcome' | 'mutation' | 'reconnect'
   documentId?: string
   transition?: 'update' | 'appear' | 'disappear'
 }
 
-/**
- * Parameters that can be passed to a listening query
- * @internal
- */
-export type ListenQueryParams = Record<string, string | number | boolean | string[]>
+type ListenQueryParams = Record<string, string | number | boolean | string[]>
 
 /**
  * Options for configuring a listening query

@@ -15,7 +15,7 @@ export interface ProjectHandle {
  */
 export type ReleasePerspective = {
   releaseName: string
-  excludedPerspectives?: StackablePerspective
+  excludedPerspectives?: StackablePerspective[]
 }
 
 /**

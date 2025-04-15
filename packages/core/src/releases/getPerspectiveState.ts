@@ -71,7 +71,7 @@ export const getPerspectiveState = bindActionByDataset(
         if (!isReleasePerspective(perspective)) return perspective
 
         // if there are no active releases we can't compute the release perspective
-        if (!activeReleases) return undefined
+        if (!activeReleases || activeReleases.length === 0) return undefined
 
         const releaseNames = activeReleases.map((release) => release.name)
         const index = releaseNames.findIndex((name) => name === perspective.releaseName)

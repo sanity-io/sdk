@@ -15,9 +15,15 @@ type UseActiveReleases = {
 
  * Returns the active releases for the current project,
  * represented as a list of release documents.
- * 
+ *
  * @returns The active releases for the current project.
  *
+ * @example
+ * ```tsx
+ * import {useActiveReleases} from '@sanity/sdk-react'
+ *
+ * const activeReleases = useActiveReleases()
+ * ```
  */
 export const useActiveReleases: UseActiveReleases = createStateSourceHook({
   getState: getActiveReleasesState,
