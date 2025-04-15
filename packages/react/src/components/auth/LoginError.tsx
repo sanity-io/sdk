@@ -1,8 +1,8 @@
 import {ClientError} from '@sanity/client'
+import {AuthStateType} from '@sanity/sdk'
 import {useCallback, useEffect, useState} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
-import {AuthStateType} from '../../../../core/src/auth/authStateType'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLogOut} from '../../hooks/auth/useLogOut'
 import {AuthError} from './AuthError'

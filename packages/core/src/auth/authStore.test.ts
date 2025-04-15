@@ -381,7 +381,7 @@ describe('authStore', () => {
 
       const loginUrlState = getLoginUrlState(instance)
       expect(loginUrlState.getCurrent()).toBe(
-        'https://www.sanity.io/login?origin=http%3A%2F%2Flocalhost&type=stampedToken&withSid=true',
+        'https://www.sanity.io/login?origin=http%3A%2F%2Flocalhost%2F&type=stampedToken&withSid=true',
       )
     })
   })
