@@ -10,8 +10,8 @@ import {LoginCallback} from './LoginCallback'
 import {LoginError, type LoginErrorProps} from './LoginError'
 
 // Only import bridge if we're in an iframe. This assumes that the app is
-// running within SanityOS if it is in an iframe.
-if (isInIframe()) {
+// running within SanityOS if it is in an iframe and that the bridge hasn't already been loaded
+if (isInIframe() && !document.querySelector('[data-sanity-core]')) {
   const parsedUrl = new URL(window.location.href)
   const mode = new URLSearchParams(parsedUrl.hash.slice(1)).get('mode')
   const script = document.createElement('script')
@@ -122,7 +122,8 @@ function AuthSwitch({CallbackComponent = LoginCallback, children, ...props}: Aut
   const loginUrl = useLoginUrl()
 
   useEffect(() => {
-    if (isLoggedOut) {
+    if (isLoggedOut && !isInIframe()) {
+      // We don't want to redirect to login if we're in the Dashboard
       window.location.href = loginUrl
     }
   }, [isLoggedOut, loginUrl])
