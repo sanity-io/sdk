@@ -65,7 +65,7 @@ export interface DashboardContext {
   orgId?: string
 }
 
-export type AuthMethodOptions = 'localstorage' | 'cookie' | undefined
+type AuthMethodOptions = 'localstorage' | 'cookie' | undefined
 
 let tokenRefresherRunning = false
 
