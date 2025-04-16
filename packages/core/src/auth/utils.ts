@@ -108,3 +108,15 @@ export function getDefaultLocation(): string {
     return DEFAULT_BASE
   }
 }
+
+/**
+ * Cleans up the URL by removing the hash and the sid and url parameters.
+ * @internal
+ */
+export function getCleanedUrl(locationUrl: string): string {
+  const loc = new URL(locationUrl)
+  loc.hash = ''
+  loc.searchParams.delete('sid')
+  loc.searchParams.delete('url')
+  return loc.toString()
+}

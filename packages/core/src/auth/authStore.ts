@@ -10,7 +10,13 @@ import {AuthStateType} from './authStateType'
 import {refreshStampedToken} from './refreshStampedToken'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
-import {getAuthCode, getDefaultLocation, getDefaultStorage, getTokenFromStorage} from './utils'
+import {
+  getAuthCode,
+  getCleanedUrl,
+  getDefaultLocation,
+  getDefaultStorage,
+  getTokenFromStorage,
+} from './utils'
 
 /**
  * Represents the various states the authentication can be in.
@@ -105,7 +111,7 @@ export const authStore = defineStore<AuthStoreState>({
       /* empty */
     }
     const loginUrl = new URL('/login', loginDomain)
-    loginUrl.searchParams.set('origin', initialLocationHref)
+    loginUrl.searchParams.set('origin', getCleanedUrl(initialLocationHref))
     loginUrl.searchParams.set('type', 'stampedToken') // Token must be stamped to have an sid passed back
     loginUrl.searchParams.set('withSid', 'true')
 
