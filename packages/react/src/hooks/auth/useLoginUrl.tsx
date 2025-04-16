@@ -4,7 +4,7 @@ import {useMemo, useSyncExternalStore} from 'react'
 import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
- * @public
+ * @internal
  */
 export function useLoginUrl(): string {
   const instance = useSanityInstance()

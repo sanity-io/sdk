@@ -1,6 +1,5 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "includeVersion": true,
   /**
    * Documentation visibility filters
    * Excludes internal implementation details from public documentation
