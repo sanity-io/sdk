@@ -6,6 +6,10 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
+    "build:bundle": {
+      "dependsOn": ["^build:bundle"],
+      "outputs": ["lib/**"]
+    },
     "check-types": {
       "dependsOn": ["^check-types"]
     },

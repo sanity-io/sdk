@@ -40,6 +40,7 @@ const baseConfig = {
         config: 'tsconfig.settings.json',
       },
       project,
+      entry: ['package.bundle.ts'],
       ignoreDependencies: ['@sanity/browserslist-config'],
     },
   },
