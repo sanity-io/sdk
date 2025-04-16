@@ -11,6 +11,26 @@ import globals from 'globals'
 import tsLint from 'typescript-eslint'
 
 export default [
+  {
+    ignores: [
+      '.DS_Store',
+      '**/node_modules',
+      '**/build',
+      '**/dist',
+      '**/lib',
+      '**/coverage',
+      '**/public',
+      '**/docs',
+      '.env',
+      '.env.*',
+      '!.env.example',
+
+      // Ignore files for PNPM, NPM and YARN
+      'pnpm-lock.yaml',
+      'package-lock.json',
+      'yarn.lock',
+    ],
+  },
   js.configs.recommended,
   eslintConfigPrettier,
   importPlugin.flatConfigs?.typescript,
