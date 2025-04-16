@@ -72,16 +72,17 @@ describe('getStudioTokenFromLocalStorage', () => {
   const studioStorageKey = `__studio_auth_token_${projectId}`
   const mockToken = 'mock-auth-token'
 
-  let getTokenFromStorageSpy: MockInstance // Use simpler type first
+  // Define the function signature type
+  type GetTokenFromStorageFn = (
+    _storageArea: Storage | undefined,
+    _storageKey: string,
+  ) => string | null
+  // Declare the spy using the function signature type
+  let getTokenFromStorageSpy: MockInstance<GetTokenFromStorageFn>
 
   beforeEach(() => {
     // Spy on the imported utility function
     getTokenFromStorageSpy = vi.spyOn(utils, 'getTokenFromStorage')
-    // Assert the specific type after assignment
-    getTokenFromStorageSpy = getTokenFromStorageSpy as MockInstance<
-      [storageArea: Storage | undefined, storageKey: string], // Arguments tuple
-      string | null // Return type
-    >
   })
 
   afterEach(() => {
