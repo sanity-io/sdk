@@ -174,7 +174,7 @@ describe('handleCallback', () => {
     expect(setItem).not.toHaveBeenCalled()
   })
 
-  it('sets an auth error if exchanging the token fails', async () => {
+  it('sets an auth error and returns the cleaned URL if exchanging the token fails', async () => {
     const error = new Error('test error')
     const mockRequest = vi.fn().mockRejectedValue(error)
     const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
@@ -198,7 +198,7 @@ describe('handleCallback', () => {
       'https://example.com/callback?foo=bar#withSid=code',
     )
 
-    expect(result).toBe(false)
+    expect(result).toBe('https://example.com/callback?foo=bar')
     expect(authState.getCurrent()).toMatchObject({type: AuthStateType.ERROR, error})
 
     expect(clientFactory).toHaveBeenCalledWith({

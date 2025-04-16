@@ -1,0 +1,10 @@
+---
+name: core-package-conventions
+glob: packages/core/src/**/*.ts
+description: Conventions and guidelines specific to the `packages/core` package.
+---
+
+- Follow all `general-monorepo-guidelines`.
+- This package provides core, framework-agnostic logic and utilities. Do **not** introduce React-specific dependencies or concepts here.
+- Ensure code is well-documented with TSDoc comments.
+- Tests utilize Vitest. Focus on unit testing individual functions and classes.

@@ -4,6 +4,7 @@
 
 .DS_Store
 dist
+lib
 etc
 node_modules
 
