@@ -19,6 +19,7 @@
     "all": "turbo run build && turbo run lint && turbo run test:coverage && pnpm build:docs && pnpm depcheck",
     "build": "turbo run build --filter='./packages/*' --filter='./apps/*'",
     "build:docs": "turbo run docs && typedoc",
+    "build:bundle": "turbo run build:bundle --filter='./packages/*' --filter='!./packages/@repo/*'",
     "build:packages": "turbo run build --filter='./packages/*' --filter='!./packages/@repo/*'",
     "build:visualizer": "VISUALIZER=true turbo run build --filter='./packages/*'",
     "clean": "run-s clean:build clean:deps",
@@ -63,7 +64,7 @@
     "turbo": "^2.4.4",
     "typedoc": "^0.28.1",
     "typescript": "^5.7.3",
-    "vite": "^6.2.4",
+    "vite": "^6.2.5",
     "vitest": "^3.1.1",
     "zx": "^8.5.0"
   },
