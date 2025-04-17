@@ -72,10 +72,10 @@ export function useManageFavorite({
   resourceType,
   schemaName,
 }: UseManageFavoriteProps): ManageFavorite {
-  const [isFavorited, setIsFavorited] = useState(false) // should load this from a comlink fetch
+  const [isFavorited, setIsFavorited] = useState<boolean>(false)
   const [status, setStatus] = useState<Status>('idle')
   const [resourceId, setResourceId] = useState<string>(paramResourceId || '')
-  const {sendMessage} = useWindowConnection<Events.FavoriteMessage, FrameMessage>({
+  const {fetch} = useWindowConnection<Events.FavoriteMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
     onStatus: setStatus,
@@ -92,63 +92,85 @@ export function useManageFavorite({
   }
 
   useEffect(() => {
-    // If resourceType is studio and the resourceId is not provided,
-    // use the projectId and dataset to generate a resourceId
     if (resourceType === 'studio' && !paramResourceId) {
       setResourceId(`${projectId}.${dataset}`)
     } else if (paramResourceId) {
       setResourceId(paramResourceId)
     } else {
-      // For other resource types, resourceId is required
       throw new Error('resourceId is required for media-library and canvas resources')
     }
   }, [resourceType, paramResourceId, projectId, dataset])
 
-  const handleFavoriteAction = useCallback(
-    (action: 'added' | 'removed', setFavoriteState: boolean) => {
-      if (!documentId || !documentType || !resourceType) return
+  // Fetch the initial state when connected
+  useEffect(() => {
+    if (status !== 'connected' || !fetch || !documentId || !documentType || !resourceId) {
+      return
+    }
 
+    const fetchInitialState = async () => {
       try {
-        const message: Events.FavoriteMessage = {
-          type: 'dashboard/v1/events/favorite/mutate',
-          data: {
-            eventType: action,
-            document: {
-              id: documentId,
-              type: documentType,
-              resource: {
-                id: resourceId,
-                type: resourceType,
-                schemaName,
-              },
+        const payload = {
+          document: {
+            id: documentId,
+            type: documentType,
+            resource: {
+              id: resourceId,
+              type: resourceType,
+              schemaName,
             },
           },
-          response: {
-            success: true,
+        }
+        const response = await fetch<{isFavorited: boolean}>(
+          'dashboard/v1/events/favorite/query',
+          payload,
+        )
+        setIsFavorited(response.isFavorited)
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to fetch favorite status:', err)
+      }
+    }
+
+    fetchInitialState()
+  }, [status, fetch, documentId, documentType, resourceId, resourceType, schemaName])
+
+  const handleFavoriteAction = useCallback(
+    async (action: 'added' | 'removed') => {
+      if (!fetch || !documentId || !documentType || !resourceType) return
+
+      try {
+        const payload = {
+          eventType: action,
+          document: {
+            id: documentId,
+            type: documentType,
+            resource: {
+              id: resourceId,
+              type: resourceType,
+              schemaName,
+            },
           },
         }
 
-        sendMessage(message.type, message.data)
-        setIsFavorited(setFavoriteState)
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error('Failed to update favorite status')
-        // eslint-disable-next-line no-console
-        console.error(
-          `Failed to ${action === 'added' ? 'favorite' : 'unfavorite'} document:`,
-          error,
+        const response = await fetch<{success: boolean}>(
+          'dashboard/v1/events/favorite/mutate',
+          payload,
         )
-        throw error
+
+        if (response.success) {
+          setIsFavorited(action === 'added')
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(`Failed to ${action === 'added' ? 'favorite' : 'unfavorite'} document:`, err)
+        throw err
       }
     },
-    [documentId, documentType, resourceId, resourceType, sendMessage, schemaName],
+    [fetch, documentId, documentType, resourceId, resourceType, schemaName],
   )
 
-  const favorite = useCallback(() => handleFavoriteAction('added', true), [handleFavoriteAction])
-
-  const unfavorite = useCallback(
-    () => handleFavoriteAction('removed', false),
-    [handleFavoriteAction],
-  )
+  const favorite = useCallback(() => handleFavoriteAction('added'), [handleFavoriteAction])
+  const unfavorite = useCallback(() => handleFavoriteAction('removed'), [handleFavoriteAction])
 
   return {
     favorite,
