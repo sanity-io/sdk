@@ -1,5 +1,5 @@
 {
-  "name": "React hooks",
+  "name": "React SDK",
   "extends": ["../../typedoc.base.json"],
   "entryPoints": ["./src/_exports/sdk-react.ts"],
   "projectDocuments": ["guides/*.md"],
