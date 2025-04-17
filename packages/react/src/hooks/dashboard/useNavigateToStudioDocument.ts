@@ -4,7 +4,10 @@ import {type DocumentHandle} from '@sanity/sdk'
 import {useCallback, useState} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
-import {useStudioWorkspacesByProjectIdDataset} from './useStudioWorkspacesByProjectIdDataset'
+import {
+  type DashboardResource,
+  useStudioWorkspacesByProjectIdDataset,
+} from './useStudioWorkspacesByProjectIdDataset'
 
 /** @public */
 export interface NavigateToStudioResult {
@@ -23,6 +26,8 @@ export interface NavigateToStudioResult {
  * it must include values for `documentId`, `documentType`, `projectId`, and `dataset`.
  *
  * @param documentHandle - The document handle for the document to navigate to
+ * @param preferredStudioUrl - The preferred studio url to navigate to if you have multiple
+ * studios with the same projectId and dataset
  * @returns An object containing:
  * - `navigateToStudioDocument` - Function that when called will navigate to the studio document
  * - `isConnected` - Boolean indicating if connection to Dashboard is established
@@ -44,6 +49,7 @@ export interface NavigateToStudioResult {
  */
 export function useNavigateToStudioDocument(
   documentHandle: DocumentHandle,
+  preferredStudioUrl?: string,
 ): NavigateToStudioResult {
   const {workspacesByProjectIdAndDataset, isConnected: workspacesConnected} =
     useStudioWorkspacesByProjectIdDataset()
@@ -57,40 +63,69 @@ export function useNavigateToStudioDocument(
   const navigateToStudioDocument = useCallback(() => {
     const {projectId, dataset} = documentHandle
 
-    if (!workspacesConnected || status !== 'connected' || !projectId || !dataset) {
+    if (!workspacesConnected || status !== 'connected') {
+      // eslint-disable-next-line no-console
+      console.warn('Not connected to Dashboard')
       return
     }
 
-    // Find the workspace for this document
-    const workspaces = workspacesByProjectIdAndDataset[`${projectId}:${dataset}`]
-    if (!workspaces?.length) {
+    if (!projectId || !dataset) {
+      // eslint-disable-next-line no-console
+      console.warn('Project ID and dataset are required to navigate to a studio document')
+      return
+    }
+
+    let workspace: DashboardResource | undefined
+
+    if (preferredStudioUrl) {
+      // Get workspaces matching the projectId:dataset and any workspaces without projectId/dataset,
+      // in case there hasn't been a manifest loaded yet
+      const allWorkspaces = [
+        ...(workspacesByProjectIdAndDataset[`${projectId}:${dataset}`] || []),
+        ...(workspacesByProjectIdAndDataset['NO_PROJECT_ID:NO_DATASET'] || []),
+      ]
+      workspace = allWorkspaces.find((w) => w.url === preferredStudioUrl)
+    } else {
+      const workspaces = workspacesByProjectIdAndDataset[`${projectId}:${dataset}`]
+      if (workspaces?.length > 1) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          'Multiple workspaces found for document and no preferred studio url',
+          documentHandle,
+        )
+        // eslint-disable-next-line no-console
+        console.warn('Using the first one', workspaces[0])
+      }
+
+      workspace = workspaces?.[0]
+    }
+
+    if (!workspace) {
       // eslint-disable-next-line no-console
       console.warn(
-        `No workspace found for document with projectId: ${projectId} and dataset: ${dataset}`,
+        `No workspace found for document with projectId: ${projectId} and dataset: ${dataset}${preferredStudioUrl ? ` or with preferred studio url: ${preferredStudioUrl}` : ''}`,
       )
       return
     }
 
-    if (workspaces.length > 1) {
-      // eslint-disable-next-line no-console
-      console.warn('Multiple workspaces found for document', documentHandle)
-      // eslint-disable-next-line no-console
-      console.warn('Using the first one', workspaces[0])
-    }
-
-    const workspace = workspaces[0]
-
     const message: Bridge.Navigation.NavigateToResourceMessage = {
       type: 'dashboard/v1/bridge/navigate-to-resource',
       data: {
-        resourceId: workspace._ref,
+        resourceId: workspace.id,
         resourceType: 'studio',
         path: `/intent/edit/id=${documentHandle.documentId};type=${documentHandle.documentType}`,
       },
     }
 
     sendMessage(message.type, message.data)
-  }, [documentHandle, workspacesConnected, status, workspacesByProjectIdAndDataset, sendMessage])
+  }, [
+    documentHandle,
+    workspacesConnected,
+    status,
+    workspacesByProjectIdAndDataset,
+    sendMessage,
+    preferredStudioUrl,
+  ])
 
   return {
     navigateToStudioDocument,
