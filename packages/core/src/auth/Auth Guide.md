@@ -164,4 +164,4 @@ The primary interactive authentication flow involves redirecting the user to `sa
       unavailable.
 
   - When running inside the dashboard context, it uses a simpler timer mechanism
-    as coordination is not needed because each tab/host will have it's own `sid` and therefore it's own stamped token.
+    as coordination is not needed because each tab/host will have its own `sid` and therefore its own stamped token.
