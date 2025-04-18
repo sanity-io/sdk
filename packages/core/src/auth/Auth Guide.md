@@ -62,7 +62,7 @@ The primary interactive authentication flow involves redirecting the user to `sa
 
   - **Studio Token (localStorage):** The primary method. `authStore` looks for a token specific to the Studio session stored in `localStorage` under the key `__sanity_auth_token_${projectId}`. This token is project-specific.
 
-  - **Studio Cookie Auth:** As a fallback, if the `localStorage` token is not found, `checkForCookieAuth` is called . This function likely attempts a request (`withCredentials: true`) to a Studio backend endpoint to verify if a valid HTTP-only session cookie exists. If so, subsequent API requests managed by the SDK client will rely on this cookie for authentication.
+  - **Studio Cookie Auth:** As a fallback, if the `localStorage` token is not found, `checkForCookieAuth` is called. This function likely attempts a request (`withCredentials: true`) to a Studio backend endpoint to verify if a valid HTTP-only session cookie exists. If so, subsequent API requests managed by the SDK client will rely on this cookie for authentication.
 
 - 🚧 **Limitations:**
 
