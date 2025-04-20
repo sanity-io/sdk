@@ -4,21 +4,76 @@ import {
   useManageFavorite,
   useNavigateToStudioDocument,
   useRecordDocumentHistoryEvent,
+  useSanityInstance,
 } from '@sanity/sdk-react'
-import {Box, Button, Flex, Heading} from '@sanity/ui'
-import {type JSX} from 'react'
+import {Box, Button, Flex, Heading, Spinner} from '@sanity/ui'
+import {type JSX, Suspense} from 'react'
+import {ErrorBoundary} from 'react-error-boundary'
 
 import {DocumentListLayout} from '../components/DocumentListLayout/DocumentListLayout'
 import {DocumentPreview} from './DocumentPreview'
 import {LoadMore} from './LoadMore'
 
+function useStudioResource<T extends DocumentHandle>(docHandle: T) {
+  const {config} = useSanityInstance()
+  const {projectId, dataset} = config
+
+  if (!projectId || !dataset) {
+    throw new Error('projectId and dataset are required for studio resources')
+  }
+
+  return {
+    ...docHandle,
+    resourceId: `${projectId}.${dataset}`,
+    resourceType: 'studio' as const,
+  }
+}
+
+// Loading fallback for Suspense
+function FavoriteStatusFallback() {
+  return (
+    <Flex align="center" justify="center">
+      <Spinner />
+    </Flex>
+  )
+}
+
+// Error fallback for ErrorBoundary
+function FavoriteStatusError({error}: {error: Error}) {
+  return <span style={{color: 'red'}}>Error: {error.message}</span>
+}
+
+function FavoriteStatus({isFavorited}: {isFavorited: boolean}) {
+  return <>{isFavorited ? 'Remove from favorites' : 'Add to favorites'}</>
+}
+
+function FavoriteButton({docHandle}: {docHandle: DocumentHandle}) {
+  const studioResource = useStudioResource(docHandle)
+  const {favorite, unfavorite, isConnected, isFavorited} = useManageFavorite(studioResource)
+
+  return (
+    <ErrorBoundary fallbackRender={({error}) => <FavoriteStatusError error={error} />}>
+      <Button
+        mode="ghost"
+        disabled={!isConnected}
+        onClick={() => {
+          if (isFavorited) {
+            unfavorite()
+          } else {
+            favorite()
+          }
+        }}
+        text={
+          <Suspense fallback={<FavoriteStatusFallback />}>
+            <FavoriteStatus isFavorited={isFavorited} />
+          </Suspense>
+        }
+      />
+    </ErrorBoundary>
+  )
+}
+
 function ActionButtons(docHandle: DocumentHandle) {
-  const {
-    favorite,
-    unfavorite,
-    isFavorited,
-    isConnected: isFavoriteConnected,
-  } = useManageFavorite({...docHandle, resourceType: 'studio'})
   const {recordEvent, isConnected: isHistoryConnected} = useRecordDocumentHistoryEvent({
     ...docHandle,
     resourceType: 'studio',
@@ -30,18 +85,7 @@ function ActionButtons(docHandle: DocumentHandle) {
 
   return (
     <Flex gap={2} padding={2}>
-      <Button
-        mode="ghost"
-        disabled={!isFavoriteConnected}
-        onClick={() => {
-          if (isFavorited) {
-            unfavorite()
-          } else {
-            favorite()
-          }
-        }}
-        text={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-      />
+      <FavoriteButton docHandle={docHandle} />
       <Button
         mode="ghost"
         disabled={!isHistoryConnected}

@@ -63,8 +63,6 @@ export function useWindowConnection<
   const instance = useSanityInstance()
 
   useEffect(() => {
-    // the type cast is unfortunate, but the generic type of the node is not known here.
-    // We know that the node is a WindowMessage node, but not the generic types.
     const node = getOrCreateNode(instance, {
       name,
       connectTo,
@@ -111,6 +109,9 @@ export function useWindowConnection<
         suppressWarnings?: boolean
       },
     ): Promise<TResponse> => {
+      if (!nodeRef.current) {
+        throw new Error('Cannot fetch before connection is established')
+      }
       return nodeRef.current?.fetch(type, data, fetchOptions ?? {}) as Promise<TResponse>
     },
     [],

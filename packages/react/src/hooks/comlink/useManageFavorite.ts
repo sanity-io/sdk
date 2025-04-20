@@ -7,18 +7,21 @@ import {
   SDK_NODE_NAME,
   type StudioResource,
 } from '@sanity/message-protocol'
-import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
-import {useCallback, useEffect, useState} from 'react'
+import {
+  type DocumentHandle,
+  type FavoriteStatusResponse,
+  type FrameMessage,
+  getFavoritesState,
+  resolveFavoritesState,
+} from '@sanity/sdk'
+import {useCallback, useMemo, useState, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useWindowConnection} from './useWindowConnection'
 
-// should we import this whole type from the message protocol?
-
-interface ManageFavorite {
-  favorite: () => void
-  unfavorite: () => void
-  isFavorited: boolean
+interface ManageFavorite extends FavoriteStatusResponse {
+  favorite: () => Promise<void>
+  unfavorite: () => Promise<void>
   isConnected: boolean
 }
 
@@ -72,9 +75,7 @@ export function useManageFavorite({
   resourceType,
   schemaName,
 }: UseManageFavoriteProps): ManageFavorite {
-  const [isFavorited, setIsFavorited] = useState<boolean>(false)
   const [status, setStatus] = useState<Status>('idle')
-  const [resourceId, setResourceId] = useState<string>(paramResourceId || '')
   const {fetch} = useWindowConnection<Events.FavoriteMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
@@ -90,49 +91,37 @@ export function useManageFavorite({
   if (resourceType === 'studio' && (!projectId || !dataset)) {
     throw new Error('projectId and dataset are required for studio resources')
   }
+  // Compute the final resourceId
+  const resourceId =
+    resourceType === 'studio' && !paramResourceId ? `${projectId}.${dataset}` : paramResourceId
 
-  useEffect(() => {
-    if (resourceType === 'studio' && !paramResourceId) {
-      setResourceId(`${projectId}.${dataset}`)
-    } else if (paramResourceId) {
-      setResourceId(paramResourceId)
-    } else {
-      throw new Error('resourceId is required for media-library and canvas resources')
-    }
-  }, [resourceType, paramResourceId, projectId, dataset])
+  if (!resourceId) {
+    throw new Error('resourceId is required for media-library and canvas resources')
+  }
 
-  // Fetch the initial state when connected
-  useEffect(() => {
-    if (status !== 'connected' || !fetch || !documentId || !documentType || !resourceId) {
-      return
-    }
+  // used for favoriteStore functions like getFavoritesState and resolveFavoritesState
+  const context = useMemo(
+    () => ({
+      documentId,
+      documentType,
+      resourceId,
+      resourceType,
+      schemaName,
+    }),
+    [documentId, documentType, resourceId, resourceType, schemaName],
+  )
 
-    const fetchInitialState = async () => {
-      try {
-        const payload = {
-          document: {
-            id: documentId,
-            type: documentType,
-            resource: {
-              id: resourceId,
-              type: resourceType,
-              schemaName,
-            },
-          },
-        }
-        const response = await fetch<{isFavorited: boolean}>(
-          'dashboard/v1/events/favorite/query',
-          payload,
-        )
-        setIsFavorited(response.isFavorited)
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to fetch favorite status:', err)
-      }
-    }
+  // Get favorite status using StateSource
+  const favoriteState = getFavoritesState(instance, context)
+  const state = useSyncExternalStore(favoriteState.subscribe, favoriteState.getCurrent)
 
-    fetchInitialState()
-  }, [status, fetch, documentId, documentType, resourceId, resourceType, schemaName])
+  // if state is undefined, we should suspend
+  if (!state) {
+    const promise = resolveFavoritesState(instance, context)
+    throw promise
+  }
+
+  const isFavorited = state.isFavorited ?? false
 
   const handleFavoriteAction = useCallback(
     async (action: 'added' | 'removed') => {
@@ -145,20 +134,19 @@ export function useManageFavorite({
             id: documentId,
             type: documentType,
             resource: {
-              id: resourceId,
-              type: resourceType,
-              schemaName,
+              ...{
+                id: resourceId,
+                type: resourceType,
+              },
+              ...(schemaName ? {schemaName} : {}),
             },
           },
         }
 
-        const response = await fetch<{success: boolean}>(
-          'dashboard/v1/events/favorite/mutate',
-          payload,
-        )
-
-        if (response.success) {
-          setIsFavorited(action === 'added')
+        const res = await fetch<{success: boolean}>('dashboard/v1/events/favorite/mutate', payload)
+        if (res.success) {
+          // Force a re-fetch of the favorite status after successful mutation
+          await resolveFavoritesState(instance, context)
         }
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -166,7 +154,7 @@ export function useManageFavorite({
         throw err
       }
     },
-    [fetch, documentId, documentType, resourceId, resourceType, schemaName],
+    [fetch, documentId, documentType, resourceId, resourceType, schemaName, instance, context],
   )
 
   const favorite = useCallback(() => handleFavoriteAction('added'), [handleFavoriteAction])
