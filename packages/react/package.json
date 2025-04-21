@@ -56,12 +56,14 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
+    "@sanity/client": "^6.28.4",
     "@sanity/logos": "^2.1.13",
     "@sanity/message-protocol": "^0.8.0",
     "@sanity/sdk": "workspace:*",
     "@sanity/types": "^3.83.0",
     "@types/lodash-es": "^4.17.12",
     "lodash-es": "^4.17.21",
+    "react-compiler-runtime": "19.0.0-beta-e993439-20250328",
     "react-error-boundary": "^5.0.0",
     "rxjs": "^7.8.2"
   },
@@ -72,7 +74,6 @@
     "@repo/package.config": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/browserslist-config": "^1.0.5",
-    "@sanity/client": "^6.28.4",
     "@sanity/comlink": "^3.0.1",
     "@sanity/pkg-utils": "^7.2.2",
     "@sanity/prettier-config": "^1.0.3",
