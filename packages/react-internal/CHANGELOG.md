@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.0.0-alpha.26](https://github.com/sanity-io/sdk/compare/sdk-react-internal-v0.0.0-alpha.25...sdk-react-internal-v0.0.0-alpha.26) (2025-04-21)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/ui to ^2.15.13 ([#426](https://github.com/sanity-io/sdk/issues/426)) ([ec2cbc5](https://github.com/sanity-io/sdk/commit/ec2cbc569b05c1b980bbd4ffe61994872bf1ec4f))
+
+
+### Documentation
+
+* fix duplication/entrypoints; add SDK Core note ([#430](https://github.com/sanity-io/sdk/issues/430)) ([f1046fa](https://github.com/sanity-io/sdk/commit/f1046faec1c70d3690ddc9b4d4f92d7c433178a2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk-react bumped to 0.0.0-alpha.26
+
 ## [0.0.0-alpha.25](https://github.com/sanity-io/sdk/compare/v0.0.0-alpha.24...v0.0.0-alpha.25) (2025-04-09)
 
 

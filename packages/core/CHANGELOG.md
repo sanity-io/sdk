@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.0.0-alpha.26](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.25...sdk-v0.0.0-alpha.26) (2025-04-21)
+
+
+### Features
+
+* **auth:** don't store tokens in localstorage if running in dashboard ([#409](https://github.com/sanity-io/sdk/issues/409)) ([637f17c](https://github.com/sanity-io/sdk/commit/637f17cc3d38037a0fbc3020173ef619c24acbc1))
+
+
+### Bug Fixes
+
+* **auth:** ensure initial url does not contain an sid and improve error handling ([#418](https://github.com/sanity-io/sdk/issues/418)) ([4d76bfc](https://github.com/sanity-io/sdk/commit/4d76bfc52542896128efd7cbd6d5342f1c275cd5))
+* **authentication:** use web lock to ensure only one token refresh process runs over multiple tabs ([#398](https://github.com/sanity-io/sdk/issues/398)) ([64aa9fa](https://github.com/sanity-io/sdk/commit/64aa9fa0ecd4efeda8dd6ff7277a272d7e0945a8))
+* **auth:** fix bug with incorrect refreshing with newly acquired tokens ([#422](https://github.com/sanity-io/sdk/issues/422)) ([1218361](https://github.com/sanity-io/sdk/commit/121836143486c7c40d770ed5748d9c09b4911e9f))
+* **core:** allow multiple projections per doc ([#403](https://github.com/sanity-io/sdk/issues/403)) ([d30c5ae](https://github.com/sanity-io/sdk/commit/d30c5ae58de5710cd6ed6bbcaa83fb02c29b7e6c))
+* **deps:** update dependency @sanity/client to ^6.29.0 ([#435](https://github.com/sanity-io/sdk/issues/435)) ([c6c7b35](https://github.com/sanity-io/sdk/commit/c6c7b35f0e71c5e40747866704b7b16ebf10e4fb))
+* **deps:** update dependency @sanity/types to ^3.83.0 ([#412](https://github.com/sanity-io/sdk/issues/412)) ([b40b289](https://github.com/sanity-io/sdk/commit/b40b289ea67026e7f0a0b7a2f95486e7a27a71c1))
+* **deps:** update dependency rxjs to ^7.8.2 ([#427](https://github.com/sanity-io/sdk/issues/427)) ([cbbf964](https://github.com/sanity-io/sdk/commit/cbbf9645eb2b4d43746d6283e237fbdfd5068080))
+
+
+### Documentation
+
+* fix duplication/entrypoints; add SDK Core note ([#430](https://github.com/sanity-io/sdk/issues/430)) ([f1046fa](https://github.com/sanity-io/sdk/commit/f1046faec1c70d3690ddc9b4d4f92d7c433178a2))
+
 ## [0.0.0-alpha.25](https://github.com/sanity-io/sdk/compare/v0.0.0-alpha.24...v0.0.0-alpha.25) (2025-04-09)
 
 

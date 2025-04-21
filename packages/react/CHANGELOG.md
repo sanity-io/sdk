@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.0.0-alpha.26](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.25...sdk-react-v0.0.0-alpha.26) (2025-04-21)
+
+
+### Bug Fixes
+
+* **auth:** ensure initial url does not contain an sid and improve error handling ([#418](https://github.com/sanity-io/sdk/issues/418)) ([4d76bfc](https://github.com/sanity-io/sdk/commit/4d76bfc52542896128efd7cbd6d5342f1c275cd5))
+* **deps:** update dependency @sanity/types to ^3.83.0 ([#412](https://github.com/sanity-io/sdk/issues/412)) ([b40b289](https://github.com/sanity-io/sdk/commit/b40b289ea67026e7f0a0b7a2f95486e7a27a71c1))
+* **deps:** update dependency rxjs to ^7.8.2 ([#427](https://github.com/sanity-io/sdk/issues/427)) ([cbbf964](https://github.com/sanity-io/sdk/commit/cbbf9645eb2b4d43746d6283e237fbdfd5068080))
+* **docs:** fix navigateToStudioDocument doc & type ([#417](https://github.com/sanity-io/sdk/issues/417)) ([e49e799](https://github.com/sanity-io/sdk/commit/e49e799632f0d569a126ed9f7986d6b51f829da3))
+* prevent bridge script addition if already loaded ([#428](https://github.com/sanity-io/sdk/issues/428)) ([7425a97](https://github.com/sanity-io/sdk/commit/7425a9794d357074ff433b051871dd9eaf454572))
+
+
+### Documentation
+
+* fix duplication/entrypoints; add SDK Core note ([#430](https://github.com/sanity-io/sdk/issues/430)) ([f1046fa](https://github.com/sanity-io/sdk/commit/f1046faec1c70d3690ddc9b4d4f92d7c433178a2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 0.0.0-alpha.26
+
 ## [0.0.0-alpha.25](https://github.com/sanity-io/sdk/compare/v0.0.0-alpha.24...v0.0.0-alpha.25) (2025-04-09)
 
 
