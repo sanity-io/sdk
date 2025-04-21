@@ -6,7 +6,7 @@ import {
   useRecordDocumentHistoryEvent,
   useSanityInstance,
 } from '@sanity/sdk-react'
-import {Box, Button, Flex, Heading, Spinner} from '@sanity/ui'
+import {Box, Button, Flex, Heading} from '@sanity/ui'
 import {type JSX, Suspense} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 
@@ -18,10 +18,6 @@ function useStudioResource<T extends DocumentHandle>(docHandle: T) {
   const {config} = useSanityInstance()
   const {projectId, dataset} = config
 
-  if (!projectId || !dataset) {
-    throw new Error('projectId and dataset are required for studio resources')
-  }
-
   return {
     ...docHandle,
     resourceId: `${projectId}.${dataset}`,
@@ -31,11 +27,7 @@ function useStudioResource<T extends DocumentHandle>(docHandle: T) {
 
 // Loading fallback for Suspense
 function FavoriteStatusFallback() {
-  return (
-    <Flex align="center" justify="center">
-      <Spinner />
-    </Flex>
-  )
+  return <Button mode="ghost" disabled text="Loading..." />
 }
 
 // Error fallback for ErrorBoundary
@@ -63,11 +55,7 @@ function FavoriteButton({docHandle}: {docHandle: DocumentHandle}) {
             favorite()
           }
         }}
-        text={
-          <Suspense fallback={<FavoriteStatusFallback />}>
-            <FavoriteStatus isFavorited={isFavorited} />
-          </Suspense>
-        }
+        text={<FavoriteStatus isFavorited={isFavorited} />}
       />
     </ErrorBoundary>
   )
@@ -85,7 +73,9 @@ function ActionButtons(docHandle: DocumentHandle) {
 
   return (
     <Flex gap={2} padding={2}>
-      <FavoriteButton docHandle={docHandle} />
+      <Suspense fallback={<FavoriteStatusFallback />}>
+        <FavoriteButton docHandle={docHandle} />
+      </Suspense>
       <Button
         mode="ghost"
         disabled={!isHistoryConnected}

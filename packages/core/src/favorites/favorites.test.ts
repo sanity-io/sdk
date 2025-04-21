@@ -162,5 +162,76 @@ describe('favoritesStore', () => {
 
       expect(vi.mocked(releaseNode)).toHaveBeenCalledWith(instance, 'dashboard/nodes/sdk')
     })
+
+    it('reuses active fetch via createFetcherStore/shareReplay when called again while pending', async () => {
+      vi.useFakeTimers()
+
+      let resolveFetch: (value: {isFavorited: boolean}) => void
+      const fetchPromise = new Promise<{isFavorited: boolean}>((resolve) => {
+        resolveFetch = resolve
+      })
+      const mockFetch = vi.fn().mockReturnValue(fetchPromise) // Mocks node.fetch
+      const mockNode = {fetch: mockFetch}
+      vi.mocked(getOrCreateNode).mockReturnValue(
+        mockNode as unknown as Node<WindowMessage, FrameMessage>,
+      )
+
+      // Call 1: Triggers the actual fetch
+      const promise1 = resolveFavoritesState(instance!, mockContext)
+      // Allow fetcher to run and call node.fetch
+      await vi.advanceTimersByTimeAsync(1)
+      expect(mockFetch).toHaveBeenCalledTimes(1) // node.fetch called once
+
+      // Call 2: Should reuse the pending fetch via createFetcherStore/shareReplay
+      const promise2 = resolveFavoritesState(instance!, mockContext)
+      await vi.advanceTimersByTimeAsync(1)
+
+      // Verify node.fetch was NOT called again
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+
+      // Resolve the underlying fetch
+      resolveFetch!({isFavorited: true})
+      await vi.advanceTimersByTimeAsync(1) // Allow promises to resolve
+
+      // Check results
+      const result1 = await promise1
+      const result2 = await promise2
+      expect(result1).toEqual({isFavorited: true})
+      expect(result2).toEqual({isFavorited: true})
+
+      // Allow cleanup timers
+      await vi.advanceTimersByTimeAsync(5001) // stateExpirationDelay
+      expect(vi.mocked(releaseNode)).toHaveBeenCalled()
+
+      vi.useRealTimers()
+    })
+
+    it('handles timeout and returns default response', async () => {
+      vi.useFakeTimers()
+
+      const mockFetch = vi.fn().mockReturnValue(new Promise(() => {})) // Promise that never resolves
+      const mockNode = {fetch: mockFetch}
+
+      vi.mocked(getOrCreateNode).mockReturnValue(
+        mockNode as unknown as Node<WindowMessage, FrameMessage>,
+      )
+
+      const resultPromise = resolveFavoritesState(instance!, mockContext)
+
+      // Advance time past the timeout threshold (3000ms)
+      await vi.advanceTimersByTimeAsync(3001)
+
+      const result = await resultPromise
+
+      expect(result).toEqual({isFavorited: false})
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+
+      // Ensure releaseNode is still called even on timeout/error path
+      // Need to wait for the catchError and cleanup logic
+      await vi.advanceTimersByTimeAsync(1) // Allow microtasks to run
+      expect(vi.mocked(releaseNode)).toHaveBeenCalledWith(instance, 'dashboard/nodes/sdk')
+
+      vi.useRealTimers()
+    })
   })
 })

@@ -5,17 +5,29 @@ import {
   SDK_NODE_NAME,
   type StudioResource,
 } from '@sanity/message-protocol'
-import {catchError, from, map, Observable, of, shareReplay} from 'rxjs'
+import {catchError, from, map, Observable, of, shareReplay, throwError, timeout} from 'rxjs'
 
 import {getOrCreateNode, releaseNode} from '../comlink/node/comlinkNodeStore'
 import {type DocumentHandle} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {createFetcherStore} from '../utils/createFetcherStore'
 
+// Users may, in many situations, be developing
+// without a connection to the Dashboard UI.
+// This timeout allows us to return a fallback state
+// instead of suspending.
+const FAVORITES_FETCH_TIMEOUT = 3000
+
+/**
+ * @public
+ */
 export interface FavoriteStatusResponse {
   isFavorited: boolean
 }
 
+/**
+ * @public
+ */
 interface FavoriteDocumentContext extends DocumentHandle {
   resourceId: string
   resourceType: StudioResource['type'] | MediaResource['type'] | CanvasResource['type']
@@ -29,8 +41,6 @@ function createFavoriteKey(context: FavoriteDocumentContext): string {
   }`
 }
 
-const activeFetches = new Map<string, Observable<FavoriteStatusResponse>>()
-
 const favorites = createFetcherStore<[FavoriteDocumentContext], FavoriteStatusResponse>({
   name: 'Favorites',
   getKey: (_instance: SanityInstance, context: FavoriteDocumentContext) => {
@@ -38,14 +48,6 @@ const favorites = createFetcherStore<[FavoriteDocumentContext], FavoriteStatusRe
   },
   fetcher: (instance: SanityInstance) => {
     return (context: FavoriteDocumentContext): Observable<FavoriteStatusResponse> => {
-      const key = createFavoriteKey(context)
-
-      // Check if we already have an active fetch for this key
-      const existingFetch = activeFetches.get(key)
-      if (existingFetch) {
-        return existingFetch
-      }
-
       const node = getOrCreateNode(instance, {
         name: SDK_NODE_NAME,
         connectTo: SDK_CHANNEL_NAME,
@@ -63,36 +65,36 @@ const favorites = createFetcherStore<[FavoriteDocumentContext], FavoriteStatusRe
         },
       }
 
-      // Create a shared observable that will be reused for the same key
-      const sharedFetch = from(
+      const dashboardFetch = from(
         node.fetch(
           // @ts-expect-error -- getOrCreateNode should be refactored to take type arguments
           'dashboard/v1/events/favorite/query',
           payload,
         ) as Promise<FavoriteStatusResponse>,
       ).pipe(
+        timeout({
+          first: FAVORITES_FETCH_TIMEOUT,
+          with: () => throwError(() => new Error('Favorites service connection timeout')),
+        }),
         map((response) => {
           return {isFavorited: response.isFavorited}
         }),
-        catchError(() => {
-          activeFetches.delete(key)
+        catchError((err) => {
+          // eslint-disable-next-line no-console
+          console.error('Favorites service connection error', err)
           return of({isFavorited: false})
         }),
         // Share the same subscription between multiple subscribers
         shareReplay(1),
       )
 
-      // Store the fetch for reuse
-      activeFetches.set(key, sharedFetch)
-
       // Clean up when all subscribers are gone
       return new Observable<FavoriteStatusResponse>((subscriber) => {
-        const subscription = sharedFetch.subscribe(subscriber)
+        const subscription = dashboardFetch.subscribe(subscriber)
         return () => {
           subscription.unsubscribe()
           // If this was the last subscriber, clean up
           if (subscription.closed) {
-            activeFetches.delete(key)
             releaseNode(instance, SDK_NODE_NAME)
           }
         }

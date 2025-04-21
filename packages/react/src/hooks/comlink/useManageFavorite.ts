@@ -49,7 +49,7 @@ interface UseManageFavoriteProps extends DocumentHandle {
  *
  * @example
  * ```tsx
- * function MyDocumentAction(props: DocumentActionProps) {
+ * function FavoriteButton(props: DocumentActionProps) {
  *   const {documentId, documentType} = props
  *   const {favorite, unfavorite, isFavorited, isConnected} = useManageFavorite({
  *     documentId,
@@ -62,6 +62,22 @@ interface UseManageFavoriteProps extends DocumentHandle {
  *       onClick={() => isFavorited ? unfavorite() : favorite()}
  *       text={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
  *     />
+ *   )
+ * }
+ *
+ * // Wrap the component with Suspense since the hook may suspend
+ * function MyDocumentAction(props: DocumentActionProps) {
+ *   return (
+ *     <Suspense
+ *       fallback={
+ *         <Button
+ *           text="Loading..."
+ *           disabled
+ *         />
+ *       }
+ *     >
+ *       <FavoriteButton {...props} />
+ *     </Suspense>
  *   )
  * }
  * ```
@@ -115,17 +131,11 @@ export function useManageFavorite({
   const favoriteState = getFavoritesState(instance, context)
   const state = useSyncExternalStore(favoriteState.subscribe, favoriteState.getCurrent)
 
-  // if state is undefined, we should suspend
-  if (!state) {
-    const promise = resolveFavoritesState(instance, context)
-    throw promise
-  }
-
-  const isFavorited = state.isFavorited ?? false
+  const isFavorited = state?.isFavorited ?? false
 
   const handleFavoriteAction = useCallback(
     async (action: 'added' | 'removed') => {
-      if (!fetch || !documentId || !documentType || !resourceType) return
+      if (status !== 'connected' || !fetch || !documentId || !documentType || !resourceType) return
 
       try {
         const payload = {
@@ -154,11 +164,41 @@ export function useManageFavorite({
         throw err
       }
     },
-    [fetch, documentId, documentType, resourceId, resourceType, schemaName, instance, context],
+    [
+      fetch,
+      documentId,
+      documentType,
+      resourceId,
+      resourceType,
+      schemaName,
+      instance,
+      context,
+      status,
+    ],
   )
 
   const favorite = useCallback(() => handleFavoriteAction('added'), [handleFavoriteAction])
   const unfavorite = useCallback(() => handleFavoriteAction('removed'), [handleFavoriteAction])
+
+  // if state is undefined, we should suspend
+  if (!state) {
+    try {
+      const promise = resolveFavoritesState(instance, context)
+      throw promise
+    } catch (err) {
+      // If we get a timeout error, return a fallback state instead of suspending
+      if (err instanceof Error && err.message === 'Favorites service connection timeout') {
+        return {
+          favorite: async () => {},
+          unfavorite: async () => {},
+          isFavorited: false,
+          isConnected: false,
+        }
+      }
+      // For other errors, continue with suspension
+      throw err
+    }
+  }
 
   return {
     favorite,
