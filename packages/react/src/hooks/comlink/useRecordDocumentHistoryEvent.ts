@@ -18,7 +18,7 @@ interface DocumentInteractionHistory {
 }
 
 /**
- * @public
+ * @internal
  */
 interface UseRecordDocumentHistoryEventProps extends DocumentHandle {
   resourceType: StudioResource['type'] | MediaResource['type'] | CanvasResource['type']
@@ -31,7 +31,7 @@ interface UseRecordDocumentHistoryEventProps extends DocumentHandle {
 }
 
 /**
- * @public
+ * @internal
  * Hook for managing document interaction history in Sanity Studio.
  * This hook provides functionality to record document interactions.
  * @category History
