@@ -1,4 +1,7 @@
 name: Release Please
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.DOCS_VERCEL_PRODUCTION_PROJECT_ID }}
 
 on:
   push:
@@ -17,6 +20,8 @@ permissions:
 
 jobs:
   release-please:
+    outputs:
+      command: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
     permissions:
       contents: read # for checkout
       id-token: write # to enable use of OIDC for npm provenance
@@ -58,3 +63,31 @@ jobs:
       # need to publish all unpublished versions to NPM here
       - run: pnpm -r publish
         if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
+
+  post-release-steps:
+    runs-on: ubuntu-latest
+    needs: release-please
+    if: ${{ needs.release-please.outputs.command == true }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: pnpm install --global vercel@latest
+
+      - name: Prepare vercel.json
+        run: pnpm docs:prepare
+
+      - name: Deploy Docs to Vercel
+        run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Mark SDK issues as done
+        uses: sanity-io/mark-issues-done-action@main
+        if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
+        with:
+          linear_api_key: ${{secrets.LINEAR_API_TOKEN}}
+          repository_name: ${{github.event.repository.name}}
+          # Label: In Staging
+          initial_state_id: "c56956cd-c281-4ca5-889f-6189ce231a6d"
+          # Label: Shipped
+          done_state_id: "5a35b7bf-6d37-4cc2-854a-2f18d160e2e5"
