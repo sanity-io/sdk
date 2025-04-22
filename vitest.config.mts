@@ -15,7 +15,9 @@ export default defineConfig({
         'packages/react/src/_exports/components.ts',
         'packages/react/src/_exports/context.ts',
         'packages/react-internal/src/_exports/index.ts',
+        'packages/react-internal/src/version.ts',
         'packages/react-internal/src/_exports/components.ts',
+        '**/getEnv.ts',
       ],
       thresholds: {
         // We should adjust these thresholds as we see what a reasonable coverage is
