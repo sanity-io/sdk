@@ -26,7 +26,12 @@ const baseConfig = {
       typescript: {
         config: 'tsconfig.json',
       },
-      ignoreDependencies: ['@repo/tsconfig', '@testing-library/jest-dom', '@testing-library/react'],
+      ignoreDependencies: [
+        '@repo/tsconfig',
+        '@testing-library/jest-dom',
+        '@testing-library/react',
+        'react-compiler-runtime',
+      ],
       project,
     },
     'apps/*': {
@@ -42,6 +47,14 @@ const baseConfig = {
       project,
       entry: ['package.bundle.ts'],
       ignoreDependencies: ['@sanity/browserslist-config'],
+    },
+    'packages/react': {
+      typescript: {
+        config: 'tsconfig.settings.json',
+      },
+      project,
+      entry: ['package.bundle.ts'],
+      ignoreDependencies: ['@sanity/browserslist-config', 'react-compiler-runtime'],
     },
   },
 } satisfies KnipConfig
