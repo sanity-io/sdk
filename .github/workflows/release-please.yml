@@ -75,9 +75,6 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
-      - name: Prepare vercel.json
-        run: npm run docs:prepare
-
       - name: Deploy Docs to Vercel
         run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
 
