@@ -1,7 +1,7 @@
 import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
 import {pick} from 'lodash-es'
 
-import {getTokenState} from '../auth/authStore'
+import {getAuthMethodState, getTokenState} from '../auth/authStore'
 import {type DatasetHandle} from '../config/sanityConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
@@ -56,6 +56,7 @@ const DEFAULT_CLIENT_CONFIG: ClientConfig = {
 export interface ClientStoreState {
   token: string | null
   clients: {[TKey in string]?: SanityClient}
+  authMethod?: 'localstorage' | 'cookie'
 }
 
 /**
@@ -97,7 +98,11 @@ const clientStore = defineStore<ClientStoreState>({
 
   initialize(context) {
     const subscription = listenToToken(context)
-    return () => subscription.unsubscribe()
+    const authMethodSubscription = listenToAuthMethod(context)
+    return () => {
+      subscription.unsubscribe()
+      authMethodSubscription.unsubscribe()
+    }
   },
 })
 
@@ -108,6 +113,12 @@ const clientStore = defineStore<ClientStoreState>({
 const listenToToken = ({instance, state}: StoreContext<ClientStoreState>) => {
   return getTokenState(instance).observable.subscribe((token) => {
     state.set('setTokenAndResetClients', {token, clients: {}})
+  })
+}
+
+const listenToAuthMethod = ({instance, state}: StoreContext<ClientStoreState>) => {
+  return getAuthMethodState(instance).observable.subscribe((authMethod) => {
+    state.set('setAuthMethod', {authMethod})
   })
 }
 
@@ -139,7 +150,8 @@ export const getClient = bindActionGlobally(
       )
     }
 
-    const {token, clients} = state.get()
+    const tokenFromState = state.get().token
+    const {clients, authMethod} = state.get()
     const projectId = options.projectId ?? instance.config.projectId
     const dataset = options.dataset ?? instance.config.dataset
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost
@@ -147,11 +159,20 @@ export const getClient = bindActionGlobally(
     const effectiveOptions: ClientOptions = {
       ...DEFAULT_CLIENT_CONFIG,
       ...((options.scope === 'global' || !projectId) && {useProjectHostname: false}),
-      ...(token && {token}),
+      token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
       ...options,
       ...(projectId && {projectId}),
       ...(dataset && {dataset}),
       ...(apiHost && {apiHost}),
+    }
+
+    if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {
+      delete effectiveOptions.token
+      if (authMethod === 'cookie') {
+        effectiveOptions.withCredentials = true
+      }
+    } else {
+      delete effectiveOptions.withCredentials
     }
 
     const key = getClientConfigKey(effectiveOptions)

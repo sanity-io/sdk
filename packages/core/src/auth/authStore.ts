@@ -246,6 +246,14 @@ export const getTokenState = bindActionGlobally(
 )
 
 /**
+ * @internal
+ */
+export const getAuthMethodState = bindActionGlobally(
+  authStore,
+  createStateSourceAction(({state: {options}}) => options.authMethod),
+)
+
+/**
  * @public
  */
 export const getLoginUrlState = bindActionGlobally(
