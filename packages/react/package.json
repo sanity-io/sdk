@@ -90,8 +90,8 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "typescript": "^5.7.3",
-    "vite": "^6.2.5",
-    "vitest": "^3.1.1"
+    "vite": "^6.3.2",
+    "vitest": "^3.1.2"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
