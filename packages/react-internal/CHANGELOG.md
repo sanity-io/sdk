@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.0.0-alpha.27](https://github.com/sanity-io/sdk/compare/sdk-react-internal-v0.0.0-alpha.26...sdk-react-internal-v0.0.0-alpha.27) (2025-04-22)
+
+
+### Miscellaneous
+
+* **sdk-react-internal:** Synchronize sdk versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk-react bumped to 0.0.0-alpha.27
+
 ## [0.0.0-alpha.26](https://github.com/sanity-io/sdk/compare/sdk-react-internal-v0.0.0-alpha.25...sdk-react-internal-v0.0.0-alpha.26) (2025-04-21)
 
 
