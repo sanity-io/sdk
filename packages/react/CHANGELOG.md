@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.0.0-alpha.27](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.26...sdk-react-v0.0.0-alpha.27) (2025-04-22)
+
+
+### Bug Fixes
+
+* **react:** allow sdk-react to work in react 18 ([#389](https://github.com/sanity-io/sdk/issues/389)) ([783b2f9](https://github.com/sanity-io/sdk/commit/783b2f9bce5bf2731e2518bf6a21ccdd3a4a6749))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 0.0.0-alpha.27
+
 ## [0.0.0-alpha.26](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.25...sdk-react-v0.0.0-alpha.26) (2025-04-21)
 
 
