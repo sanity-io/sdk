@@ -67,16 +67,16 @@ jobs:
   post-release-steps:
     runs-on: ubuntu-latest
     needs: release-please
-    if: ${{ needs.release-please.outputs.command }}
+    if: ${{ needs.release-please.outputs.command == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install Vercel CLI
-        run: pnpm install --global vercel@latest
+        run: npm install --global vercel@latest
 
       - name: Prepare vercel.json
-        run: pnpm docs:prepare
+        run: npm run docs:prepare
 
       - name: Deploy Docs to Vercel
         run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
