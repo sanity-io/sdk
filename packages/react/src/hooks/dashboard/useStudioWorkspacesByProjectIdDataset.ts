@@ -4,18 +4,20 @@ import {useEffect, useState} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
 
-interface Workspace {
+export interface DashboardResource {
+  id: string
   name: string
   title: string
   basePath: string
+  projectId: string
   dataset: string
+  type: string
   userApplicationId: string
   url: string
-  _ref: string
 }
 
 interface WorkspacesByProjectIdDataset {
-  [key: `${string}:${string}`]: Workspace[] // key format: `${projectId}:${dataset}`
+  [key: `${string}:${string}`]: DashboardResource[] // key format: `${projectId}:${dataset}`
 }
 
 interface StudioWorkspacesResult {
@@ -48,22 +50,28 @@ export function useStudioWorkspacesByProjectIdDataset(): StudioWorkspacesResult 
     async function fetchWorkspaces(signal: AbortSignal) {
       try {
         const data = await fetch<{
-          context: {availableResources: Array<{projectId: string; workspaces: Workspace[]}>}
+          context: {availableResources: Array<DashboardResource>}
         }>('dashboard/v1/bridge/context', undefined, {signal})
 
         const workspaceMap: WorkspacesByProjectIdDataset = {}
+        const noProjectIdAndDataset: DashboardResource[] = []
 
         data.context.availableResources.forEach((resource) => {
-          if (!resource.projectId || !resource.workspaces?.length) return
-
-          resource.workspaces.forEach((workspace) => {
-            const key = `${resource.projectId}:${workspace.dataset}` as const
-            if (!workspaceMap[key]) {
-              workspaceMap[key] = []
-            }
-            workspaceMap[key].push(workspace)
-          })
+          if (resource.type !== 'studio') return
+          if (!resource.projectId || !resource.dataset) {
+            noProjectIdAndDataset.push(resource)
+            return
+          }
+          const key = `${resource.projectId}:${resource.dataset}` as const
+          if (!workspaceMap[key]) {
+            workspaceMap[key] = []
+          }
+          workspaceMap[key].push(resource)
         })
+
+        if (noProjectIdAndDataset.length > 0) {
+          workspaceMap['NO_PROJECT_ID:NO_DATASET'] = noProjectIdAndDataset
+        }
 
         setWorkspacesByProjectIdAndDataset(workspaceMap)
         setError(null)
