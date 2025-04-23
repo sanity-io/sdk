@@ -6,12 +6,15 @@ import {isInIframe, isLocalUrl} from './utils'
 
 /**
  * @public
+ * @category Types
  */
 export interface SanityAppProps {
+  /* One or more SanityConfig objects providing a project ID and dataset name */
   config: SanityConfig | SanityConfig[]
   /** @deprecated use the `config` prop instead. */
   sanityConfigs?: SanityConfig[]
   children: React.ReactNode
+  /* Fallback content to show when child components are suspending. Same as the `fallback` prop for React Suspense. */
   fallback: React.ReactNode
 }
 
@@ -27,6 +30,7 @@ const REDIRECT_URL = 'https://sanity.io/welcome'
  * SanityApp creates a hierarchy of ResourceProviders, each providing a SanityInstance that can be
  * accessed by hooks. The first configuration in the array becomes the default instance.
  *
+ * @category Components
  * @param props - Your Sanity configuration and the React children to render
  * @returns Your Sanity application, integrated with your Sanity configuration and application context
  *

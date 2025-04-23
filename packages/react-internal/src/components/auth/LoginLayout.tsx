@@ -3,7 +3,6 @@ import {Card, Container} from '@sanity/ui'
 import {LoginFooter} from './LoginFooter'
 
 /**
- * @alpha
  * @internal
  */
 export interface LoginLayoutProps {

@@ -8,6 +8,7 @@ import {SanityInstanceContext} from '../../context/SanityInstanceContext'
  *
  * @public
  *
+ * @category Platform
  * @param config - Optional configuration to match against when finding an instance
  * @returns The current or matching Sanity instance
  *
