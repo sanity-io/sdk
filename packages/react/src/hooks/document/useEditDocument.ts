@@ -7,6 +7,7 @@ import {
   resolveDocument,
 } from '@sanity/sdk'
 import {type SanityDocumentResult} from 'groq'
+import {omit} from 'lodash-es'
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -193,7 +194,7 @@ export function useEditDocument(
           ? (updater as (prev: typeof currentValue) => typeof currentValue)(currentValue)
           : updater
 
-      return apply(editDocument(options, {set: {[currentPath]: nextValue}}))
+      return apply(editDocument(omit(options, 'path'), {set: {[currentPath]: nextValue}}))
     }
 
     const fullDocState = getDocumentState(instance, options)
