@@ -20,7 +20,9 @@ import {type AuthState, type AuthStoreState} from './authStore'
 const REFRESH_INTERVAL = 12 * 60 * 60 * 1000 // 12 hours in milliseconds
 const LOCK_NAME = 'sanity-token-refresh-lock'
 
-function getLastRefreshTime(storageArea: Storage | undefined, storageKey: string): number {
+// Exported for testing
+// @internal
+export function getLastRefreshTime(storageArea: Storage | undefined, storageKey: string): number {
   try {
     const data = storageArea?.getItem(`${storageKey}_last_refresh`)
     return data ? parseInt(data, 10) : 0
@@ -29,7 +31,9 @@ function getLastRefreshTime(storageArea: Storage | undefined, storageKey: string
   }
 }
 
-function setLastRefreshTime(storageArea: Storage | undefined, storageKey: string): void {
+// Exported for testing
+// @internal
+export function setLastRefreshTime(storageArea: Storage | undefined, storageKey: string): void {
   try {
     storageArea?.setItem(`${storageKey}_last_refresh`, Date.now().toString())
   } catch {
@@ -37,7 +41,8 @@ function setLastRefreshTime(storageArea: Storage | undefined, storageKey: string
   }
 }
 
-function getNextRefreshDelay(storageArea: Storage | undefined, storageKey: string): number {
+// Exported for testing
+export function getNextRefreshDelay(storageArea: Storage | undefined, storageKey: string): number {
   const lastRefresh = getLastRefreshTime(storageArea, storageKey)
   if (!lastRefresh) return 0
 
@@ -46,7 +51,8 @@ function getNextRefreshDelay(storageArea: Storage | undefined, storageKey: strin
   return Math.max(0, nextRefreshTime - now)
 }
 
-function createTokenRefreshStream(
+// Exported for testing
+export function createTokenRefreshStream(
   token: string,
   clientFactory: AuthStoreState['options']['clientFactory'],
   apiHost: string | undefined,
@@ -75,7 +81,8 @@ function createTokenRefreshStream(
   })
 }
 
-async function acquireTokenRefreshLock(
+// Exported for testing
+export async function acquireTokenRefreshLock(
   refreshFn: () => Promise<void>,
   storageArea: Storage | undefined,
   storageKey: string,
