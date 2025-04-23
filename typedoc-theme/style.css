@@ -1,6 +1,6 @@
 /* Inter font family */
 @import url('https://rsms.me/inter/inter.css');
-@import url('https://fonts.googleapis.com/css2?family=family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 
 :root {
   --gray50: #f6f6f8;
@@ -39,7 +39,7 @@ body {
   font-weight: var(--body-font-weight);
   line-height: var(--body-line-height);
   -webkit-font-smoothing: antialiased;
-  -moz-box-sizing: grayscale;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1,
