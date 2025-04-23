@@ -30,8 +30,6 @@ The primary interactive authentication flow involves redirecting the user to `sa
 
 - 🎯 **Use Case:** This is the **primary intended use case** for the SDK — that is, applications built to run embedded within an `iframe` in the Sanity Dashboard environment. This includes both customer-built Sanity Apps and internally developed applications like Canvas and Media Library.
 
-  - 📝 This category includes **internal Sanity applications** (like Canvas, Media Library, etc.) which should be provided in the Dashboard and therefore leverage this same host-provided authentication mechanism.
-
 - ⚙️ **Mechanism:**
 
   - **Host-Provided Auth:** Authentication is managed **by the host Dashboard environment**. The Dashboard loads the app's iframe with specific URL parameters. The SDK's `getAuthCode` function looks for the session identifier (`sid`) in the following order: first in the **URL hash** (`#sid=...`), then in the **URL search parameters** (`?sid=...`), and finally as a fallback within the `_context` query parameter (`?_context={"sid":"..."}`). The `_context` parameter is a URL-encoded JSON object that may also contain other context (`orgId`, `mode`, etc.).
@@ -62,7 +60,7 @@ The primary interactive authentication flow involves redirecting the user to `sa
 
   - **Studio Token (localStorage):** The primary method. `authStore` looks for a token specific to the Studio session stored in `localStorage` under the key `__sanity_auth_token_${projectId}`. This token is project-specific.
 
-  - **Studio Cookie Auth:** As a fallback, if the `localStorage` token is not found, `checkForCookieAuth` is called. This function likely attempts a request (`withCredentials: true`) to a Studio backend endpoint to verify if a valid HTTP-only session cookie exists. If so, subsequent API requests managed by the SDK client will rely on this cookie for authentication.
+  - **Studio Cookie Auth:** As a fallback, if the `localStorage` token is not found, `checkForCookieAuth` is called. This function attempts a request (`withCredentials: true`) to a Studio backend endpoint to verify if a valid HTTP-only session cookie exists. If so, subsequent API requests managed by the SDK client will rely on this cookie for authentication.
 
 - 🚧 **Limitations:**
 
@@ -122,7 +120,7 @@ The primary interactive authentication flow involves redirecting the user to `sa
 
   - **Storage:** Primarily `localStorage` (`storageKey` in `authStore` defaults to `__sanity_auth_token`, or `__sanity_auth_token_${projectId}` in Studio mode).
 
-    - **Dashboard Context:** When running within the **Dashboard iframe context (Channel 1)**, the SDK does **not** store the obtained token in its own `localStorage`. Authentication relies on the initial `sid` exchange and potential host-managed sessions. The resulting token will be refreshed by the SDK's internal refresh mechanism.
+    - **Dashboard Context:** When running within the **Dashboard iframe context (section 1 above)**, the SDK does **not** store the obtained token in its own `localStorage`. Authentication relies on the initial `sid` exchange and potential host-managed sessions. The resulting token will be refreshed by the SDK's internal refresh mechanism.
 
 - **Login Flow (`sanity.io/login`)**
 
