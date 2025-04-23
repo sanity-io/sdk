@@ -4,7 +4,7 @@ This document outlines the various authentication mechanisms supported by the Sa
 
 ## ✨ High-Level Overview
 
-Authentication in the SDK is primarily managed by the `authStore`, which tracks the user's authentication state (`LoggedIn`, `LoggedOut`, `LoggingIn`, `Error`). It determines the initial state based on the environment (dashboard iframe, Studio mode, presence of a provided token, or auth callback URL parameters).
+Authentication in the SDK is primarily managed by the `authStore`, which tracks the user's authentication state (`LoggedIn`, `LoggedOut`, `LoggingIn`, `Error`). It determines the initial state based on the environment (Dashboard iframe, Studio mode, presence of a provided token, or auth callback URL parameters).
 
 API client instances, managed by `clientStore`, automatically utilize the current authentication token from `authStore` for making requests. The `clientStore` also handles differentiating between clients configured for 'global' endpoints (like `api.sanity.io`) and 'default' (project-specific) endpoints (like `<projectId>.api.sanity.io`).
 
