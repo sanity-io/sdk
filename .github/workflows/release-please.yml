@@ -80,7 +80,6 @@ jobs:
 
       - name: Mark SDK issues as done
         uses: sanity-io/mark-issues-done-action@main
-        if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
         with:
           linear_api_key: ${{secrets.LINEAR_API_TOKEN}}
           repository_name: ${{github.event.repository.name}}
