@@ -1,5 +1,5 @@
 {
-  "packages/core": "0.0.0-alpha.26",
-  "packages/react": "0.0.0-alpha.26",
-  "packages/react-internal": "0.0.0-alpha.26"
+  "packages/core": "0.0.0-alpha.28",
+  "packages/react": "0.0.0-alpha.28",
+  "packages/react-internal": "0.0.0-alpha.28"
 }
