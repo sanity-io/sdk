@@ -57,11 +57,16 @@ h6 {
 }
 
 pre,
-code {
-  color: light-dark(var(--gray900), var(--gray50));
+code,
+.tsd-signature {
   font-family:
     JetBrains Mono,
     monospace;
+}
+
+pre,
+code {
+  color: light-dark(var(--gray900), var(--gray50));
   font-weight: 400;
 }
 
