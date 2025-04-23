@@ -28,7 +28,7 @@ The primary interactive authentication flow involves redirecting the user to `sa
 
 ### 1. Dashboard Apps (Running inside Sanity Dashboard iframe)
 
-- 🎯 **Use Case:** This is the **primary intended use case** for the SDK. Applications built to run embedded within an `iframe` in the Sanity Dashboard environment. Customer Sanity Apps and internally developed applications like Canvas, Media Library.
+- 🎯 **Use Case:** This is the **primary intended use case** for the SDK — that is, applications built to run embedded within an `iframe` in the Sanity Dashboard environment. This includes both customer-built Sanity Apps and internally developed applications like Canvas and Media Library.
 
   - 📝 This category includes **internal Sanity applications** (like Canvas, Media Library, etc.) which should be provided in the Dashboard and therefore leverage this same host-provided authentication mechanism.
 
