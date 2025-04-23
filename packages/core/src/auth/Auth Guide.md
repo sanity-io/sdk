@@ -56,7 +56,7 @@ The primary interactive authentication flow involves redirecting the user to `sa
 
 ### 2. Sanity Studio Mode (👷 Under construction)
 
-- 🎯 **Use Case:** Using the SDK _within_ the Sanity Studio V3 codebase itself (not running in the dashboard iframe), for instance, in custom input components, tools, or plugins integrated directly into the Studio application.
+- 🎯 **Use Case:** Using the SDK _within_ the Sanity Studio V3 codebase itself (not running in the dashboard iframe). For instance: in custom input components, tools, or plugins integrated directly into the Studio application.
 
 - ⚙️ **Mechanism:** Enabled by setting `studioMode.enabled: true` in the SDK configuration.
 
