@@ -1,0 +1,153 @@
+/* Inter font family */
+@import url('https://rsms.me/inter/inter.css');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+
+:root {
+  --gray50: #f6f6f8;
+  --gray200: #e3e4e8;
+  --gray400: #9499ad;
+  --gray600: #515870;
+  --gray700: #383d51;
+  --gray800: #252837;
+  --gray900: #1b1d27;
+  --gray950: #13141b;
+  --red500: #ef4434;
+  --body-line-height: 1.5;
+  --body-font-weight: 425;
+  --details-feature-settings: 'cv01' on, 'cv11' on;
+  --details-font-size: calc(1rem * 13 / 16);
+  --heading-color: light-dark(black, white);
+  --heading-font-weight: 500;
+  --heading-font-feature-settings:
+    'liga' 1, 'calt' 1, 'ss07' on, 'ss08' on, 'cv01' on, 'cv11' on, 'cv12' on, 'cv13' on;
+  --heading-letter-spacing: -0.025em;
+  --heading-line-height: 1.125;
+}
+
+/* Typedoc default theme overrides */
+:root {
+  --code-background: light-dark(var(--gray50), var(--gray900));
+  --color-accent: var(--gray200);
+  --color-background-secondary: light-dark(var(--gray50), var(--gray950));
+  --light-color-background: white;
+  --color-text: light-dark(var(--gray600), var(--gray400));
+}
+
+body {
+  background: var(--color-background-secondary);
+  font-family: InterVariable, sans-serif;
+  font-weight: var(--body-font-weight);
+  line-height: var(--body-line-height);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--heading-color);
+  font-feature-settings: var(--heading-font-feature-settings);
+  font-weight: var(--heading-font-weight);
+  font-variation-settings: normal;
+  letter-spacing: var(--heading-letter-spacing);
+  line-height: var(--heading-line-height);
+}
+
+pre,
+code,
+.tsd-signature {
+  font-family:
+    JetBrains Mono,
+    monospace;
+}
+
+pre,
+code {
+  color: light-dark(var(--gray900), var(--gray50));
+  font-weight: 400;
+}
+
+pre {
+  border-color: light-dark(var(--gray200), var(--gray800));
+}
+
+:not(pre) > code {
+  border-radius: 0.25rem;
+  border: 1px solid light-dark(var(--gray200), var(--gray800));
+}
+
+.container-main {
+  --dim-container-main-margin-y: 1rem;
+  gap: 1rem;
+}
+
+.col-content {
+  background: light-dark(white, black);
+  border-radius: 8px;
+  border: 1px solid light-dark(var(--gray200), var(--gray800));
+  padding: 1.5rem;
+}
+
+@media (min-width: 770px) {
+  .col-content {
+    padding: 3vw;
+  }
+}
+
+.tsd-page-toolbar {
+  border-bottom: none;
+}
+
+/* Site title in toolbar */
+.tsd-toolbar-contents > .title {
+  color: light-dark(var(--gray900), var(--gray50));
+  font-feature-settings: var(--heading-font-feature-settings);
+  font-size: 0.875em;
+  font-weight: 600;
+  letter-spacing: var(--heading-letter-spacing);
+}
+
+/* .tsd-navigation: The left hand sidebar */
+/* .tsd-accordion-details: Used in both the left hand sidebar and right hand sidebar */
+.tsd-navigation,
+.tsd-accordion-details {
+  font-feature-settings: var(--details-feature-settings);
+  font-size: var(--details-font-size);
+}
+
+.tsd-kind-icon ~ span {
+  transition: color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tsd-navigation a:hover {
+  text-decoration: none;
+}
+
+.tsd-navigation a:hover .tsd-kind-icon ~ span {
+  color: var(--red500);
+}
+
+/* Current item in the navigation sidebar */
+.tsd-navigation a.current {
+  background: transparent;
+  border-inline-start: 2px solid var(--red500);
+  padding-inline-start: 0.5rem;
+  translate: calc((0.5rem - 2px) * -1) 0;
+}
+
+.tsd-navigation a.current .tsd-kind-icon ~ span {
+  color: var(--red500);
+}
+
+/* Right hand navigation/page summary */
+.tsd-accordion h3 {
+  font-size: 1rem;
+}
+
+.tsd-breadcrumb {
+  color: var(--gray600);
+  font-size: var(--details-font-size);
+}
