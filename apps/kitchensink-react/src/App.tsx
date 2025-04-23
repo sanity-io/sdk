@@ -12,9 +12,6 @@ const sanityConfigs: SanityConfig[] = [
   {
     projectId: 'ppsg7ml5',
     dataset: 'test',
-    // studioMode: {
-    //   enabled: true,
-    // },
   },
   {
     projectId: 'ezwd8xes',
