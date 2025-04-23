@@ -17,7 +17,7 @@ import {handleAuthCallback} from './handleAuthCallback'
 import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
-import {getAuthCode, getTokenFromStorage} from './utils'
+import {getAuthCode, getTokenFromLocation, getTokenFromStorage} from './utils'
 
 vi.mock('./utils', async (importOriginal) => {
   const original = await importOriginal<typeof import('./utils')>()
@@ -25,6 +25,7 @@ vi.mock('./utils', async (importOriginal) => {
     ...original,
     getAuthCode: vi.fn(),
     getTokenFromStorage: vi.fn(),
+    getTokenFromLocation: vi.fn(),
   }
 })
 
@@ -59,6 +60,7 @@ describe('authStore', () => {
     beforeEach(() => {
       vi.mocked(getTokenFromStorage).mockReturnValue(null)
       vi.mocked(getAuthCode).mockReturnValue(null)
+      vi.mocked(getTokenFromLocation).mockReturnValue(null)
     })
 
     afterEach(() => {
@@ -301,6 +303,24 @@ describe('authStore', () => {
       expect(getTokenFromStorage).toHaveBeenCalled()
       expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN, token: storageToken})
       expect(options.authMethod).toBe('localstorage')
+    })
+    it('sets to logging in if getTokenFromLocation returns a token', () => {
+      const initialLocationHref = 'https://example.com/#token=hash-token'
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {initialLocationHref},
+      })
+
+      vi.mocked(getAuthCode).mockReturnValue(null)
+      vi.mocked(getTokenFromLocation).mockReturnValue('hash-token')
+
+      const {authState} = authStore.getInitialState(instance)
+      expect(authState).toMatchObject({
+        type: AuthStateType.LOGGING_IN,
+        isExchangingToken: false,
+      })
+      expect(getTokenFromLocation).toHaveBeenCalledWith(initialLocationHref)
     })
   })
 

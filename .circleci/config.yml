@@ -14,7 +14,7 @@ workflows:
 jobs:
   build:
     docker:
-      - image: cimg/node:22.14.0
+      - image: cimg/node:22.15.0
     steps:
       - checkout
       - restore_cache:

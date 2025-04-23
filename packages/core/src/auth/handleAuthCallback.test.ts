@@ -7,11 +7,16 @@ import {getAuthState} from './authStore'
 import {handleAuthCallback} from './handleAuthCallback'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
-import {getAuthCode, getTokenFromStorage} from './utils'
+import {getAuthCode, getTokenFromLocation, getTokenFromStorage} from './utils'
 
 vi.mock('./utils', async (importOriginal) => {
   const original = await importOriginal<typeof import('./utils')>()
-  return {...original, getTokenFromStorage: vi.fn(), getAuthCode: vi.fn()}
+  return {
+    ...original,
+    getTokenFromStorage: vi.fn(),
+    getAuthCode: vi.fn(),
+    getTokenFromLocation: vi.fn(),
+  }
 })
 
 vi.mock('./subscribeToStateAndFetchCurrentUser')
@@ -212,5 +217,40 @@ describe('handleCallback', () => {
       tag: 'fetch-token',
       uri: '/auth/fetch',
     })
+  })
+
+  it('sets the auth state to logged in when token is found in URL hash', async () => {
+    const clientFactory = vi.fn()
+    const setItem = vi.fn()
+    vi.mocked(getTokenFromStorage).mockReturnValue(null)
+    vi.mocked(getAuthCode).mockReturnValue(null)
+    vi.mocked(getTokenFromLocation).mockReturnValue('hash-token')
+
+    instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      auth: {
+        clientFactory,
+        storageArea: {setItem} as unknown as Storage,
+      },
+    })
+
+    const authState = getAuthState(instance)
+    const result = await handleAuthCallback(
+      instance,
+      'https://example.com/callback?foo=bar#token=hash-token',
+    )
+
+    expect(result).toBe('https://example.com/callback?foo=bar')
+    expect(getTokenFromLocation).toHaveBeenCalledWith(
+      'https://example.com/callback?foo=bar#token=hash-token',
+    )
+    expect(authState.getCurrent()).toMatchObject({
+      type: AuthStateType.LOGGED_IN,
+      token: 'hash-token',
+      currentUser: null,
+    })
+    expect(clientFactory).not.toHaveBeenCalled()
+    expect(setItem).not.toHaveBeenCalled()
   })
 })

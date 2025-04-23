@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk",
-  "version": "0.0.0-alpha.28",
+  "version": "0.0.0-alpha.29",
   "private": false,
   "description": "Sanity SDK",
   "keywords": [
@@ -80,6 +80,7 @@
     "eslint": "^9.22.0",
     "groq-js": "^1.16.1",
     "prettier": "^3.5.3",
+    "rollup-plugin-visualizer": "^5.14.0",
     "typescript": "^5.7.3",
     "vite": "^6.3.2",
     "vitest": "^3.1.2"
