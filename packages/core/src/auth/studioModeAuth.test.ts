@@ -1,8 +1,8 @@
 import {type SanityClient} from '@sanity/client'
 import {describe, expect, it, type MockInstance, vi} from 'vitest'
 
-import {checkForCookieAuth, getStudioTokenFromLocalStorage} from '../studioModeAuth'
-import * as utils from '../utils'
+import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
+import * as utils from './utils'
 
 describe('checkForCookieAuth', () => {
   it('should return false if projectId is undefined', async () => {
