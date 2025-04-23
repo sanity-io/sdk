@@ -45,6 +45,10 @@ export interface SanityConfig extends DatasetHandle {
    * @remarks Merged with parent configurations when using createChild
    */
   auth?: AuthConfig
+  /**
+   * Studio mode configuration for use of the SDK in a Sanity Studio
+   * @remarks Controls whether studio mode features are enabled
+   */
   studioMode?: {
     enabled: boolean
   }
