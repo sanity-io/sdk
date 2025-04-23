@@ -45,6 +45,8 @@ export const defaultConfig: UserConfig = {
         exports: 'named',
         dir: 'lib',
         format: 'es',
+        entryFileNames: `[name].mjs`,
+        chunkFileNames: `[name].[hash].mjs`,
       },
       treeshake: {
         preset: 'recommended',
