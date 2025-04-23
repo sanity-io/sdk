@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk-react",
-  "version": "0.0.0-alpha.28",
+  "version": "0.0.0-alpha.29",
   "private": false,
   "description": "Sanity SDK React toolkit for Content OS",
   "keywords": [
