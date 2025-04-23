@@ -7,6 +7,7 @@ import {
   getDefaultLocation,
   getDefaultStorage,
   getStorageEvents,
+  getTokenFromLocation,
   getTokenFromStorage,
 } from './utils'
 
@@ -199,5 +200,33 @@ describe('getDefaultLocation', () => {
 
     const result = getDefaultLocation()
     expect(result).toBe(DEFAULT_BASE)
+  })
+})
+
+describe('getTokenFromLocation', () => {
+  it('returns token when present in hash', () => {
+    const testToken = 'test-token-123'
+    const testUrl = `http://example.com/page#token=${testToken}`
+    const result = getTokenFromLocation(testUrl)
+    expect(result).toBe(testToken)
+  })
+
+  it('returns null when token is not present in hash', () => {
+    const testUrl = 'http://example.com/page#other=value'
+    const result = getTokenFromLocation(testUrl)
+    expect(result).toBe(null)
+  })
+
+  it('returns null when hash is empty', () => {
+    const testUrl = 'http://example.com/page'
+    const result = getTokenFromLocation(testUrl)
+    expect(result).toBe(null)
+  })
+
+  it('handles complex URLs correctly', () => {
+    const testToken = 'complex-token-with-special-chars'
+    const testUrl = `http://example.com/page?query=param#other=value&token=${testToken}`
+    const result = getTokenFromLocation(testUrl)
+    expect(result).toBe(testToken)
   })
 })

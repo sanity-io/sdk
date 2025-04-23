@@ -2,7 +2,7 @@ import {bindActionGlobally} from '../store/createActionBinder'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
 import {authStore, type AuthStoreState, type DashboardContext} from './authStore'
-import {getAuthCode, getCleanedUrl, getDefaultLocation} from './utils'
+import {getAuthCode, getCleanedUrl, getDefaultLocation, getTokenFromLocation} from './utils'
 
 /**
  * @public
@@ -20,12 +20,21 @@ export const handleAuthCallback = bindActionGlobally(
     const {authState} = state.get()
     if (authState.type === AuthStateType.LOGGING_IN && authState.isExchangingToken) return false
 
+    // Prepare the cleaned-up URL early. It will be returned on both success and error if an authCode/token was processed.
+    const cleanedUrl = getCleanedUrl(locationHref)
+
+    // Check if there is a token in the is in the Dashboard iframe url hash
+    const tokenFromUrl = getTokenFromLocation(locationHref)
+    if (tokenFromUrl) {
+      state.set('setTokenFromUrl', {
+        authState: {type: AuthStateType.LOGGED_IN, token: tokenFromUrl, currentUser: null},
+      })
+      return cleanedUrl
+    }
+
     // If there is no matching `authCode` then we can't handle the callback
     const authCode = getAuthCode(callbackUrl, locationHref)
     if (!authCode) return false
-
-    // Prepare the cleaned-up URL early. It will be returned on both success and error if an authCode was processed.
-    const cleanedUrl = getCleanedUrl(locationHref)
 
     // Get the SanityOS dashboard context from the url
     const parsedUrl = new URL(locationHref)
