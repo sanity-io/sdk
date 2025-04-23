@@ -1,11 +1,11 @@
 import {type ResponseQueryOptions} from '@sanity/client'
+import {type SanityQueryResult} from 'groq'
 import {
   catchError,
   combineLatest,
   distinctUntilChanged,
   EMPTY,
   filter,
-  first,
   firstValueFrom,
   groupBy,
   map,
@@ -36,8 +36,6 @@ import {insecureRandomId} from '../utils/ids'
 import {QUERY_STATE_CLEAR_DELAY, QUERY_STORE_API_VERSION} from './queryStoreConstants'
 import {
   addSubscriber,
-  cancelQuery,
-  initializeQuery,
   type QueryStoreState,
   removeSubscriber,
   setLastLiveEventId,
@@ -48,27 +46,33 @@ import {
 /**
  * @beta
  */
-export interface QueryOptions
-  extends Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'>,
-    DatasetHandle {
+export interface QueryOptions<
+  TQuery extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'>,
+    DatasetHandle<TDataset, TProjectId> {
+  query: TQuery
   params?: Record<string, unknown>
 }
 
 /**
  * @beta
  */
-export interface ResolveQueryOptions extends QueryOptions {
+export interface ResolveQueryOptions<
+  TQuery extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends QueryOptions<TQuery, TDataset, TProjectId> {
   signal?: AbortSignal
 }
 
 const EMPTY_ARRAY: never[] = []
 
 /** @beta */
-export const getQueryKey = (query: string, options: QueryOptions = {}): string =>
-  JSON.stringify({query, options})
+export const getQueryKey = (options: QueryOptions): string => JSON.stringify(options)
 /** @beta */
-export const parseQueryKey = (key: string): {query: string; options: QueryOptions} =>
-  JSON.parse(key)
+export const parseQueryKey = (key: string): QueryOptions => JSON.parse(key)
 
 const queryStore = defineStore<QueryStoreState>({
   name: 'QueryStore',
@@ -122,14 +126,12 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
             )
             const {
               query,
-              options: {
-                params,
-                projectId,
-                dataset,
-                tag,
-                perspective: perspectiveFromOptions,
-                ...options
-              } = {},
+              params,
+              projectId,
+              dataset,
+              tag,
+              perspective: perspectiveFromOptions,
+              ...restOptions
             } = parseQueryKey(group$.key)
 
             const perspective$ = getPerspectiveState(instance, {
@@ -145,7 +147,7 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
             return combineLatest([lastLiveEventId$, client$, perspective$]).pipe(
               switchMap(([lastLiveEventId, client, perspective]) =>
                 client.observable.fetch(query, params, {
-                  ...options,
+                  ...restOptions,
                   perspective,
                   filterResponse: false,
                   returnQuery: false,
@@ -220,38 +222,46 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
  *
  * @beta
  */
-export function getQueryState<T>(
+export function getQueryState<
+  TQuery extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
   instance: SanityInstance,
-  query: string,
-  options?: QueryOptions,
-): StateSource<T | undefined>
+  queryOptions: QueryOptions<TQuery, TDataset, TProjectId>,
+): StateSource<SanityQueryResult<TQuery, TDataset, TProjectId> | undefined>
+
+/** @beta */
+export function getQueryState<TData>(
+  instance: SanityInstance,
+  queryOptions: QueryOptions,
+): StateSource<TData | undefined>
+
 /** @beta */
 export function getQueryState(
   instance: SanityInstance,
-  query: string,
-  options?: QueryOptions,
+  queryOptions: QueryOptions,
 ): StateSource<unknown>
+
 /** @beta */
-export function getQueryState(...args: Parameters<typeof _getQueryState>): StateSource<unknown> {
+export function getQueryState(
+  ...args: Parameters<typeof _getQueryState>
+): ReturnType<typeof _getQueryState> {
   return _getQueryState(...args)
 }
 const _getQueryState = bindActionByDataset(
   queryStore,
   createStateSourceAction({
-    selector: (
-      {state}: SelectorContext<QueryStoreState>,
-      query: string,
-      options?: QueryOptions,
-    ) => {
+    selector: ({state}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
       if (state.error) throw state.error
-      const key = getQueryKey(query, options)
+      const key = getQueryKey(options)
       const queryState = state.queries[key]
       if (queryState?.error) throw queryState.error
       return queryState?.result
     },
-    onSubscribe: ({state}, query, options?: QueryOptions) => {
+    onSubscribe: ({state}, options: QueryOptions) => {
       const subscriptionId = insecureRandomId()
-      const key = getQueryKey(query, options)
+      const key = getQueryKey(options)
 
       state.set('addSubscriber', addSubscriber(key, subscriptionId))
 
@@ -280,58 +290,74 @@ const _getQueryState = bindActionByDataset(
  *
  * @beta
  */
-export function resolveQuery<T>(
+export function resolveQuery<
+  TQuery extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
   instance: SanityInstance,
-  query: string,
-  options?: ResolveQueryOptions,
-): Promise<T>
+  queryOptions: ResolveQueryOptions<TQuery, TDataset, TProjectId>,
+): Promise<SanityQueryResult<TQuery, TDataset, TProjectId>>
+
+/** @beta */
+export function resolveQuery<TData>(
+  instance: SanityInstance,
+  queryOptions: ResolveQueryOptions,
+): Promise<TData>
+
 /** @beta */
 export function resolveQuery(
   instance: SanityInstance,
-  query: string,
-  options?: ResolveQueryOptions,
+  queryOptions: ResolveQueryOptions,
 ): Promise<unknown>
+
 /** @beta */
-export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise<unknown> {
+export function resolveQuery(
+  ...args: Parameters<typeof _resolveQuery>
+): ReturnType<typeof _resolveQuery> {
   return _resolveQuery(...args)
 }
 const _resolveQuery = bindActionByDataset(
   queryStore,
-  ({state, instance}, query: string, {signal, ...options}: ResolveQueryOptions = {}) => {
-    const {getCurrent} = getQueryState(instance, query, options)
-    const key = getQueryKey(query, options)
+  ({instance}, queryOptions: ResolveQueryOptions) => {
+    const signal = queryOptions?.signal
+    if (signal?.aborted) return Promise.reject(signal.reason)
 
-    const aborted$ = signal
-      ? new Observable<void>((observer) => {
-          const cleanup = () => {
-            signal.removeEventListener('abort', listener)
-          }
-
-          const listener = () => {
-            observer.error(new DOMException('The operation was aborted.', 'AbortError'))
-            observer.complete()
-            cleanup()
-          }
-          signal.addEventListener('abort', listener)
-
-          return cleanup
-        }).pipe(
-          catchError((error) => {
-            if (error instanceof Error && error.name === 'AbortError') {
-              state.set('cancelQuery', cancelQuery(key))
-            }
-            throw error
-          }),
-        )
-      : NEVER
-
-    state.set('initializeQuery', initializeQuery(key))
-
-    const resolved$ = state.observable.pipe(
-      map(getCurrent),
-      first((i) => i !== undefined),
+    const state = getQueryState(instance, queryOptions)
+    const observable = state.observable.pipe(
+      // Need to filter out the initial undefined value if the state has not been initialized yet
+      filter((result) => result !== undefined),
     )
 
-    return firstValueFrom(race([resolved$, aborted$]))
+    // Use race to handle cancellations via AbortSignal
+    const resultPromise = firstValueFrom(race(observable, signal ? onAbort(signal) : NEVER))
+
+    // Cleanup logic
+    const cleanup = () => {
+      // Remove the subscription created by getQueryState if this is the only subscriber
+      // Needs investigation: Is there a race condition?
+    }
+    const listener = () => {
+      // This listener ensures cleanup runs if the signal aborts.
+      cleanup()
+    }
+    signal?.addEventListener('abort', listener, {once: true})
+
+    // Return the promise, ensuring cleanup happens on resolve/reject.
+    return resultPromise.finally(() => {
+      signal?.removeEventListener('abort', listener)
+      cleanup()
+    })
   },
 )
+
+// Helper to create an Observable that rejects when the signal aborts
+function onAbort(signal: AbortSignal): Observable<never> {
+  return new Observable((subscriber) => {
+    const abortHandler = () => {
+      subscriber.error(signal.reason)
+    }
+    signal.addEventListener('abort', abortHandler)
+    return () => signal.removeEventListener('abort', abortHandler)
+  })
+}

@@ -1,6 +1,7 @@
 import {type Action} from '@sanity/client'
 import {getPublishedId} from '@sanity/client/csm'
 import {type SanityDocument} from '@sanity/types'
+import {type SanityDocumentResult} from 'groq'
 import {type ExprNode} from 'groq-js'
 import {
   catchError,
@@ -36,7 +37,7 @@ import {type DocumentAction} from './actions'
 import {API_VERSION, INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
 import {type DocumentEvent, getDocumentEvents} from './events'
 import {listen, OutOfSyncError} from './listen'
-import {type JsonMatch, jsonMatch, type JsonMatchPath} from './patchOperations'
+import {type JsonMatch, jsonMatch} from './patchOperations'
 import {calculatePermissions, createGrantsLookup, type DatasetAcl, type Grant} from './permissions'
 import {ActionError} from './processActions'
 import {
@@ -129,37 +130,60 @@ export const documentStore = defineStore<DocumentStoreState>({
   },
 })
 
+/**
+ * @beta
+ * Options for specifying a document and optionally a path within it.
+ */
+export interface DocumentOptions<
+  TPath extends string | undefined = undefined,
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
+  path?: TPath
+}
+
 /** @beta */
 export function getDocumentState<
-  TDocument extends SanityDocument,
-  TPath extends JsonMatchPath<TDocument>,
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
 >(
   instance: SanityInstance,
-  doc: string | DocumentHandle<TDocument>,
-  path: TPath,
-): StateSource<JsonMatch<TDocument, TPath> | undefined>
+  options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
+): StateSource<SanityDocumentResult<TDocumentType, TDataset, TProjectId> | undefined | null>
+
 /** @beta */
-export function getDocumentState<TDocument extends SanityDocument>(
+export function getDocumentState<
+  TPath extends string = string,
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
   instance: SanityInstance,
-  doc: string | DocumentHandle<TDocument>,
-): StateSource<TDocument | null>
+  options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
+): StateSource<
+  JsonMatch<SanityDocumentResult<TDocumentType, TDataset, TProjectId>, TPath> | undefined
+>
+
 /** @beta */
-export function getDocumentState(
+export function getDocumentState<TData>(
   instance: SanityInstance,
-  doc: string | DocumentHandle,
-  path?: string,
-): StateSource<unknown>
+  options: DocumentOptions<string | undefined>,
+): StateSource<TData | undefined | null>
+
 /** @beta */
 export function getDocumentState(
   ...args: Parameters<typeof _getDocumentState>
 ): StateSource<unknown> {
   return _getDocumentState(...args)
 }
+
 const _getDocumentState = bindActionByDataset(
   documentStore,
   createStateSourceAction({
-    selector: ({state: {error, documentStates}}, doc: string | DocumentHandle, path?: string) => {
-      const documentId = typeof doc === 'string' ? doc : doc.documentId
+    selector: ({state: {error, documentStates}}, options: DocumentOptions<string | undefined>) => {
+      const {documentId, path} = options
       if (error) throw error
       const draftId = getDraftId(documentId)
       const publishedId = getPublishedId(documentId)
@@ -171,21 +195,25 @@ const _getDocumentState = bindActionByDataset(
       if (path) return jsonMatch(document, path).at(0)?.value
       return document
     },
-    onSubscribe: (context, doc: string | DocumentHandle) =>
-      manageSubscriberIds(context, typeof doc === 'string' ? doc : doc.documentId),
+    onSubscribe: (context, options: DocumentOptions<string | undefined>) =>
+      manageSubscriberIds(context, options.documentId),
   }),
 )
 
 /** @beta */
-export function resolveDocument<TDocument extends SanityDocument>(
+export function resolveDocument<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
   instance: SanityInstance,
-  doc: string | DocumentHandle<TDocument>,
-): Promise<TDocument | null>
+  docHandle: DocumentHandle<TDocumentType, TDataset, TProjectId>,
+): Promise<SanityDocumentResult<TDocumentType, TDataset, TProjectId> | null>
 /** @beta */
-export function resolveDocument(
+export function resolveDocument<TData extends SanityDocument>(
   instance: SanityInstance,
-  doc: string | DocumentHandle,
-): Promise<SanityDocument | null>
+  docHandle: DocumentHandle<string, string, string>,
+): Promise<TData | null>
 /** @beta */
 export function resolveDocument(
   ...args: Parameters<typeof _resolveDocument>
@@ -194,11 +222,13 @@ export function resolveDocument(
 }
 const _resolveDocument = bindActionByDataset(
   documentStore,
-  ({instance}, doc: string | DocumentHandle) => {
-    const documentId = typeof doc === 'string' ? doc : doc.documentId
+  ({instance}, docHandle: DocumentHandle<string, string, string>) => {
     return firstValueFrom(
-      getDocumentState(instance, documentId).observable.pipe(filter((i) => i !== undefined)),
-    )
+      getDocumentState(instance, {
+        ...docHandle,
+        path: undefined,
+      }).observable.pipe(filter((i) => i !== undefined)),
+    ) as Promise<SanityDocument | null>
   },
 )
 

@@ -1,9 +1,9 @@
 /* eslint-disable no-console */
 import {
   createDocument,
+  createDocumentHandle,
   deleteDocument,
   discardDocument,
-  DocumentHandle,
   editDocument,
   publishDocument,
   unpublishDocument,
@@ -14,25 +14,19 @@ import {
   useDocumentSyncStatus,
   useEditDocument,
 } from '@sanity/sdk-react'
-import {SanityDocument} from '@sanity/types'
 import {Box, Button, TextInput, Tooltip} from '@sanity/ui'
 import {JsonData, JsonEditor} from 'json-edit-react'
 import {type JSX, useState} from 'react'
 
-interface Author extends SanityDocument {
-  _type: 'author'
-  name?: string
-}
-
-const docHandle: DocumentHandle<Author> = {
+const docHandle = createDocumentHandle({
   documentType: 'author',
   documentId: 'db06bc9e-4608-465a-9551-a10cef478037',
   projectId: 'ppsg7ml5',
   dataset: 'test',
-}
+})
 
 function Editor() {
-  useDocumentEvent((e) => console.log(e), docHandle)
+  useDocumentEvent({...docHandle, onEvent: (e) => console.log(e)})
   const synced = useDocumentSyncStatus(docHandle)
   const apply = useApplyDocumentActions()
 
@@ -43,12 +37,12 @@ function Editor() {
   const canUnpublish = useDocumentPermissions(unpublishDocument(docHandle))
   const canDiscard = useDocumentPermissions(discardDocument(docHandle))
 
-  const name = useDocument(docHandle, 'name') ?? ''
-  const setName = useEditDocument(docHandle, 'name')
+  const name = useDocument({...docHandle, path: 'name'}) ?? ''
+  const setName = useEditDocument({...docHandle, path: 'name'})
 
   const [value, setValue] = useState('')
 
-  const document = useDocument(docHandle)
+  const document = useDocument({...docHandle})
   const setDocument = useEditDocument(docHandle)
 
   return (

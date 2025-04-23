@@ -59,7 +59,8 @@ export const subscribeToStateAndFetchBatches = ({
         const {query, params} = createPreviewQuery(ids)
         const controller = new AbortController()
         return new Observable<PreviewQueryResult[]>((observer) => {
-          const {getCurrent, observable} = getQueryState<PreviewQueryResult[]>(instance, query, {
+          const {getCurrent, observable} = getQueryState<PreviewQueryResult[]>(instance, {
+            query,
             params,
             tag: PREVIEW_TAG,
             perspective: PREVIEW_PERSPECTIVE,
@@ -67,7 +68,8 @@ export const subscribeToStateAndFetchBatches = ({
           const source$ = defer(() => {
             if (getCurrent() === undefined) {
               return from(
-                resolveQuery<PreviewQueryResult[]>(instance, query, {
+                resolveQuery<PreviewQueryResult[]>(instance, {
+                  query,
                   params,
                   tag: PREVIEW_TAG,
                   perspective: PREVIEW_PERSPECTIVE,

@@ -1,4 +1,9 @@
-import {createGroqSearchFilter, type DocumentHandle, type QueryOptions} from '@sanity/sdk'
+import {
+  createGroqSearchFilter,
+  type DatasetHandle,
+  type DocumentHandle,
+  type QueryOptions,
+} from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
 import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
@@ -9,21 +14,21 @@ import {useQuery} from '../query/useQuery'
 const DEFAULT_BATCH_SIZE = 25
 
 /**
- * Result structure returned from the infinite list query
- * @internal
- */
-interface UseDocumentsQueryResult {
-  count: number
-  data: DocumentHandle[]
-}
-
-/**
  * Configuration options for the useDocuments hook
  *
  * @beta
  * @category Types
  */
-export interface DocumentsOptions extends QueryOptions {
+export interface DocumentsOptions<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends DatasetHandle<TDataset, TProjectId>,
+    Pick<QueryOptions, 'perspective' | 'params'> {
+  /**
+   * Filter documents by their `_type`. Can be a single type or an array of types.
+   */
+  documentType?: TDocumentType | TDocumentType[]
   /**
    * GROQ filter expression to apply to the query
    */
@@ -48,11 +53,15 @@ export interface DocumentsOptions extends QueryOptions {
  * @beta
  * @category Types
  */
-export interface DocumentsResponse {
+export interface DocumentsResponse<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> {
   /**
    * Array of document handles for the current batch
    */
-  data: DocumentHandle[]
+  data: DocumentHandle<TDocumentType, TDataset, TProjectId>[]
   /**
    * Whether there are more items available to load
    */
@@ -88,44 +97,105 @@ export interface DocumentsResponse {
  *
  * @example Basic infinite list with loading more
  * ```tsx
- * const { data, hasMore, isPending, loadMore, count } = useDocuments({
- *   filter: '_type == "post"',
- *   search: searchTerm,
- *   batchSize: 10,
- *   orderings: [{field: '_createdAt', direction: 'desc'}]
- * })
+ * import {
+ *   useDocuments,
+ *   createDatasetHandle,
+ *   type DatasetHandle,
+ *   type DocumentHandle,
+ *   type SortOrderingItem
+ * } from '@sanity/sdk-react'
+ * import {Suspense} from 'react'
  *
- * return (
- *   <div>
- *     Total documents: {count}
- *     <ol>
- *       {data.map((doc) => (
- *         <li key={doc.documentId}>
- *           <MyDocumentComponent doc={doc} />
- *         </li>
- *       ))}
- *     </ol>
- *     {hasMore && <button onClick={loadMore} disabled={isPending}>
- *       {isPending ? 'Loading...' : 'Load More'}
- *     </button>}
- *   </div>
- * )
+ * // Define a component to display a single document (using useProjection for efficiency)
+ * function MyDocumentComponent({doc}: {doc: DocumentHandle}) {
+ *   const {data} = useProjection<{title?: string}>({
+ *     ...doc, // Pass the full handle
+ *     projection: '{title}'
+ *   })
+ *
+ *   return <>{data?.title || 'Untitled'}</>
+ * }
+ *
+ * // Define props for the list component
+ * interface DocumentListProps {
+ *   dataset: DatasetHandle
+ *   documentType: string
+ *   search?: string
+ * }
+ *
+ * function DocumentList({dataset, documentType, search}: DocumentListProps) {
+ *   const { data, hasMore, isPending, loadMore, count } = useDocuments({
+ *     ...dataset,
+ *     documentType,
+ *     search,
+ *     batchSize: 10,
+ *     orderings: [{field: '_createdAt', direction: 'desc'}],
+ *   })
+ *
+ *   return (
+ *     <div>
+ *       <p>Total documents: {count}</p>
+ *       <ol>
+ *         {data.map((docHandle) => (
+ *           <li key={docHandle.documentId}>
+ *            <Suspense fallback="Loading…">
+ *              <MyDocumentComponent docHandle={docHandle} />
+ *            </Suspense>
+ *           </li>
+ *         ))}
+ *       </ol>
+ *       {hasMore && (
+ *         <button onClick={loadMore}>
+ *           {isPending ? 'Loading...' : 'Load More'}
+ *         </button>
+ *       )}
+ *     </div>
+ *   )
+ * }
+ *
+ * // Usage:
+ * // const myDatasetHandle = createDatasetHandle({ projectId: 'p1', dataset: 'production' })
+ * // <DocumentList dataset={myDatasetHandle} documentType="post" search="Sanity" />
  * ```
  */
-export function useDocuments({
+export function useDocuments<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>({
   batchSize = DEFAULT_BATCH_SIZE,
   params,
   search,
   filter,
   orderings,
+  documentType,
   ...options
-}: DocumentsOptions): DocumentsResponse {
+}: DocumentsOptions<TDocumentType, TDataset, TProjectId>): DocumentsResponse<
+  TDocumentType,
+  TDataset,
+  TProjectId
+> {
   const instance = useSanityInstance(options)
   const [limit, setLimit] = useState(batchSize)
+  const documentTypes = useMemo(
+    () =>
+      (Array.isArray(documentType) ? documentType : [documentType]).filter(
+        (i): i is TDocumentType => typeof i === 'string',
+      ),
+    [documentType],
+  )
 
   // Reset the limit to the current batchSize whenever any query parameters
   // (filter, search, params, orderings) or batchSize changes
-  const key = JSON.stringify({filter, search, params, orderings, batchSize})
+  const key = JSON.stringify({
+    filter,
+    search,
+    params,
+    orderings,
+    batchSize,
+    types: documentTypes,
+    ...options,
+  })
   useEffect(() => {
     setLimit(batchSize)
   }, [key, batchSize])
@@ -142,13 +212,18 @@ export function useDocuments({
       }
     }
 
+    // Add type filter if specified
+    if (documentTypes?.length) {
+      conditions.push(`(_type in $__types)`)
+    }
+
     // Add additional filter if specified
     if (filter) {
       conditions.push(`(${filter})`)
     }
 
     return conditions.length ? `[${conditions.join(' && ')}]` : ''
-  }, [filter, search])
+  }, [filter, search, documentTypes])
 
   const orderClause = orderings
     ? `| order(${orderings
@@ -167,17 +242,20 @@ export function useDocuments({
   const {
     data: {count, data},
     isPending,
-  } = useQuery<UseDocumentsQueryResult>(`{"count":${countQuery},"data":${dataQuery}}`, {
+  } = useQuery<{count: number; data: DocumentHandle<TDocumentType, TDataset, TProjectId>[]}>({
     ...options,
+    query: `{"count":${countQuery},"data":${dataQuery}}`,
     params: {
       ...params,
       __handle: {
-        ...pick(instance.config, 'perspective', 'projectId', 'dataset'),
-        ...pick(options, 'perspective', 'projectId', 'dataset'),
+        ...pick(instance.config, 'projectId', 'dataset', 'perspective'),
+        ...pick(options, 'projectId', 'dataset', 'perspective'),
       },
+      __types: documentTypes,
     },
   })
 
+  // Now use the correctly typed variables
   const hasMore = data.length < count
 
   const loadMore = useCallback(() => {
@@ -186,6 +264,6 @@ export function useDocuments({
 
   return useMemo(
     () => ({data, hasMore, count, isPending, loadMore}),
-    [data, hasMore, count, isPending, loadMore],
+    [count, data, hasMore, isPending, loadMore],
   )
 }

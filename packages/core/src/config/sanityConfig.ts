@@ -1,13 +1,13 @@
 import {type ClientPerspective, type StackablePerspective} from '@sanity/client'
-import {type SanityDocumentLike} from '@sanity/types'
 
 import {type AuthConfig} from './authConfig'
 
 /**
+ * Represents the minimal configuration required to identify a Sanity project.
  * @public
  */
-export interface ProjectHandle {
-  projectId?: string | undefined
+export interface ProjectHandle<TProjectId extends string = string> {
+  projectId?: TProjectId
 }
 
 /**
@@ -28,26 +28,38 @@ export interface PerspectiveHandle {
 /**
  * @public
  */
-export interface DatasetHandle extends ProjectHandle, PerspectiveHandle {
-  dataset?: string | undefined
-}
-
-/** @public */
-export interface DocumentTypeHandle<TDocument extends SanityDocumentLike = SanityDocumentLike>
-  extends DatasetHandle {
-  documentId?: string
-  documentType: TDocument['_type']
+export interface DatasetHandle<TDataset extends string = string, TProjectId extends string = string>
+  extends ProjectHandle<TProjectId>,
+    PerspectiveHandle {
+  dataset?: TDataset
 }
 
 /**
+ * Identifies a specific document type within a Sanity dataset and project.
+ * Includes `projectId`, `dataset`, and `documentType`.
+ * Optionally includes a `documentId`, useful for referencing a specific document type context, potentially without a specific document ID.
  * @public
- * A minimal set of metadata for a given document, comprising the document's ID and type.
- * Used by most document-related hooks (such as {@link usePreview}, {@link useDocument}, and {@link useEditDocument})
- * to reference a particular document without fetching the entire document upfront.
- * @category Types
  */
-export interface DocumentHandle<TDocument extends SanityDocumentLike = SanityDocumentLike>
-  extends DocumentTypeHandle<TDocument> {
+export interface DocumentTypeHandle<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends DatasetHandle<TDataset, TProjectId> {
+  documentId?: string
+  documentType: TDocumentType
+}
+
+/**
+ * Uniquely identifies a specific document within a Sanity dataset and project.
+ * Includes `projectId`, `dataset`, `documentType`, and the required `documentId`.
+ * Commonly used by document-related hooks and components to reference a document without fetching its full content initially.
+ * @public
+ */
+export interface DocumentHandle<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends DocumentTypeHandle<TDocumentType, TDataset, TProjectId> {
   documentId: string
 }
 

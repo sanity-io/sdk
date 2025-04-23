@@ -94,7 +94,7 @@ function ActionButtons(docHandle: DocumentHandle) {
 
 export function DocumentDashboardInteractionsRoute(): JSX.Element {
   const {isPending, data, hasMore, loadMore} = useDocuments({
-    filter: '_type == "book"',
+    documentType: 'book',
     orderings: [{field: '_updatedAt', direction: 'desc'}],
   })
 

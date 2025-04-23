@@ -29,6 +29,7 @@ import {
   Text,
   TextInput,
 } from '@sanity/ui'
+import {defineQuery} from 'groq'
 import {type JsonData, JsonEditor} from 'json-edit-react'
 import {JSX, startTransition, Suspense, useCallback, useEffect, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
@@ -475,12 +476,14 @@ function DocumentList({documentType}: DocumentListProps) {
   )
 }
 
+const allTypes = defineQuery(`array::unique(*[]._type)`)
+
 function DocumentTypes() {
   const {config} = useSanityInstance()
   if (!config.dataset) throw new Error('Dataset required for this component')
 
   // Use GROQ with array::unique to get all document types in the dataset
-  const {data: documentTypes} = useQuery<string[]>('array::unique(*[]._type)')
+  const {data: documentTypes} = useQuery({query: allTypes})
   const firstDocumentType = documentTypes.at(0)
   const [selectedType, setSelectedType] = useState<string | null>(firstDocumentType ?? null)
 

@@ -58,7 +58,7 @@ describe('queryStore', () => {
 
   it('initializes query state and cleans up after unsubscribe', async () => {
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, query)
+    const state = getQueryState(instance, {query})
 
     // Initially undefined before subscription
     expect(state.getCurrent()).toBeUndefined()
@@ -87,7 +87,7 @@ describe('queryStore', () => {
 
   it('maintains state when multiple subscribers exist', async () => {
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, query)
+    const state = getQueryState(instance, {query})
 
     // Add two subscribers
     const unsubscribe1 = state.subscribe()
@@ -124,13 +124,13 @@ describe('queryStore', () => {
   it('resolveQuery works without affecting subscriber cleanup', async () => {
     const query = '*[_type == "movie"]'
 
-    const state = getQueryState(instance, query)
+    const state = getQueryState(instance, {query})
 
     // Check that getQueryState starts undefined
     expect(state.getCurrent()).toBeUndefined()
 
     // Use resolveQuery which should not add a subscriber
-    const result = await resolveQuery(instance, query)
+    const result = await resolveQuery(instance, {query})
     expect(result).toEqual([
       {_id: 'movie1', _type: 'movie', title: 'Movie 1'},
       {_id: 'movie2', _type: 'movie', title: 'Movie 2'},
@@ -157,16 +157,16 @@ describe('queryStore', () => {
     const abortController = new AbortController()
 
     // Create a promise that will reject when aborted
-    const queryPromise = resolveQuery(instance, query, {signal: abortController.signal})
+    const queryPromise = resolveQuery(instance, {query, signal: abortController.signal})
 
     // Abort the request
     abortController.abort()
 
     // Verify the promise rejects with AbortError
-    await expect(queryPromise).rejects.toThrow('The operation was aborted.')
+    await expect(queryPromise).rejects.toThrow('This operation was aborted')
 
     // Verify state is cleared after abort
-    expect(getQueryState(instance, query).getCurrent()).toBeUndefined()
+    expect(getQueryState(instance, {query}).getCurrent()).toBeUndefined()
   })
 
   it('refetches query when receiving live event with matching sync tag', async () => {
@@ -185,7 +185,7 @@ describe('queryStore', () => {
     )
 
     const query = '*[_type == "movie"]'
-    const state = getQueryState<{_id: string; _type: string; title: string}[]>(instance, query)
+    const state = getQueryState<{_id: string; _type: string; title: string}[]>(instance, {query})
 
     const unsubscribe = state.subscribe()
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -216,7 +216,7 @@ describe('queryStore', () => {
     )
 
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, query)
+    const state = getQueryState(instance, {query})
 
     const unsubscribe = state.subscribe()
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -249,7 +249,7 @@ describe('queryStore', () => {
     )
 
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, query)
+    const state = getQueryState(instance, {query})
 
     const unsubscribe = state.subscribe()
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -286,7 +286,7 @@ describe('queryStore', () => {
     )
 
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, query)
+    const state = getQueryState(instance, {query})
     const unsubscribe = state.subscribe()
 
     // Verify error is thrown when accessing state
@@ -297,7 +297,7 @@ describe('queryStore', () => {
 
   it('delays query state removal after unsubscribe', async () => {
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, query)
+    const state = getQueryState(instance, {query})
     const unsubscribe = state.subscribe()
 
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -313,7 +313,7 @@ describe('queryStore', () => {
 
   it('preserves query state if a new subscriber subscribes before cleanup delay', async () => {
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, query)
+    const state = getQueryState(instance, {query})
     const unsubscribe1 = state.subscribe()
 
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))

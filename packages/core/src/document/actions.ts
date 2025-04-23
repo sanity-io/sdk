@@ -1,6 +1,6 @@
 import {SanityEncoder} from '@sanity/mutate'
 import {type PatchMutation as SanityMutatePatchMutation} from '@sanity/mutate/_unstable_store'
-import {type PatchMutation, type PatchOperations, type SanityDocumentLike} from '@sanity/types'
+import {type PatchMutation, type PatchOperations} from '@sanity/types'
 
 import {type DocumentHandle, type DocumentTypeHandle} from '../config/sanityConfig'
 import {getPublishedId} from '../utils/ids'
@@ -13,56 +13,114 @@ const isSanityMutatePatch = (value: unknown): value is SanityMutatePatchMutation
   return true
 }
 
-/** @beta */
-export interface CreateDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike>
-  extends DocumentTypeHandle<TDocument> {
+/**
+ * Represents an action to create a new document.
+ * Specifies the document type and optionally a document ID (which will be treated as the published ID).
+ * @beta
+ */
+export interface CreateDocumentAction<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends DocumentTypeHandle<TDocumentType, TDataset, TProjectId> {
   type: 'document.create'
 }
 
-/** @beta */
-export interface DeleteDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike>
-  extends DocumentHandle<TDocument> {
+/**
+ * Represents an action to delete an existing document.
+ * Requires the full document handle including the document ID.
+ * @beta
+ */
+export interface DeleteDocumentAction<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
   type: 'document.delete'
 }
 
-/** @beta */
-export interface EditDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike>
-  extends DocumentHandle<TDocument> {
+/**
+ * Represents an action to edit an existing document using patches.
+ * Requires the full document handle and an array of patch operations.
+ * @beta
+ */
+export interface EditDocumentAction<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
   type: 'document.edit'
   patches?: PatchOperations[]
 }
 
-/** @beta */
-export interface PublishDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike>
-  extends DocumentHandle<TDocument> {
+/**
+ * Represents an action to publish the draft version of a document.
+ * Requires the full document handle.
+ * @beta
+ */
+export interface PublishDocumentAction<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
   type: 'document.publish'
 }
 
-/** @beta */
-export interface UnpublishDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike>
-  extends DocumentHandle<TDocument> {
+/**
+ * Represents an action to unpublish a document, moving its published content to a draft.
+ * Requires the full document handle.
+ * @beta
+ */
+export interface UnpublishDocumentAction<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
   type: 'document.unpublish'
 }
 
-/** @beta */
-export interface DiscardDocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike>
-  extends DocumentHandle<TDocument> {
+/**
+ * Represents an action to discard the draft changes of a document.
+ * Requires the full document handle.
+ * @beta
+ */
+export interface DiscardDocumentAction<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
   type: 'document.discard'
 }
 
-/** @beta */
-export type DocumentAction<TDocument extends SanityDocumentLike = SanityDocumentLike> =
-  | CreateDocumentAction<TDocument>
-  | DeleteDocumentAction<TDocument>
-  | EditDocumentAction<TDocument>
-  | PublishDocumentAction<TDocument>
-  | UnpublishDocumentAction<TDocument>
-  | DiscardDocumentAction<TDocument>
+/**
+ * Union type representing all possible document actions within the SDK.
+ * @beta
+ */
+export type DocumentAction<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> =
+  | CreateDocumentAction<TDocumentType, TDataset, TProjectId>
+  | DeleteDocumentAction<TDocumentType, TDataset, TProjectId>
+  | EditDocumentAction<TDocumentType, TDataset, TProjectId>
+  | PublishDocumentAction<TDocumentType, TDataset, TProjectId>
+  | UnpublishDocumentAction<TDocumentType, TDataset, TProjectId>
+  | DiscardDocumentAction<TDocumentType, TDataset, TProjectId>
 
-/** @beta */
-export function createDocument<TDocument extends SanityDocumentLike>(
-  doc: DocumentTypeHandle<TDocument>,
-): CreateDocumentAction<TDocument> {
+/**
+ * Creates a `CreateDocumentAction` object.
+ * @param doc - A handle identifying the document type, dataset, and project. An optional `documentId` can be provided.
+ * @returns A `CreateDocumentAction` object ready for dispatch.
+ * @beta
+ */
+export function createDocument<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
+  doc: DocumentTypeHandle<TDocumentType, TDataset, TProjectId>,
+): CreateDocumentAction<TDocumentType, TDataset, TProjectId> {
   return {
     type: 'document.create',
     ...doc,
@@ -70,10 +128,19 @@ export function createDocument<TDocument extends SanityDocumentLike>(
   }
 }
 
-/** @beta */
-export function deleteDocument<TDocument extends SanityDocumentLike>(
-  doc: DocumentHandle<TDocument>,
-): DeleteDocumentAction<TDocument> {
+/**
+ * Creates a `DeleteDocumentAction` object.
+ * @param doc - A handle uniquely identifying the document to be deleted.
+ * @returns A `DeleteDocumentAction` object ready for dispatch.
+ * @beta
+ */
+export function deleteDocument<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
+  doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
+): DeleteDocumentAction<TDocumentType, TDataset, TProjectId> {
   return {
     type: 'document.delete',
     ...doc,
@@ -92,21 +159,56 @@ function convertSanityMutatePatch(
   })
 }
 
-/** @beta */
-export function editDocument<TDocument extends SanityDocumentLike>(
-  doc: DocumentHandle<TDocument>,
+/**
+ * Creates an `EditDocumentAction` object with patches for modifying a document.
+ * Accepts patches in either the standard `PatchOperations` format or as a `SanityMutatePatchMutation` from `@sanity/mutate`.
+ *
+ * @param doc - A handle uniquely identifying the document to be edited.
+ * @param sanityMutatePatch - A patch mutation object from `@sanity/mutate`.
+ * @returns An `EditDocumentAction` object ready for dispatch.
+ * @beta
+ */
+export function editDocument<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
+  doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
   sanityMutatePatch: SanityMutatePatchMutation,
-): EditDocumentAction<TDocument>
-/** @beta */
-export function editDocument<TDocument extends SanityDocumentLike>(
-  doc: DocumentHandle<TDocument>,
+): EditDocumentAction<TDocumentType, TDataset, TProjectId>
+/**
+ * Creates an `EditDocumentAction` object with patches for modifying a document.
+ *
+ * @param doc - A handle uniquely identifying the document to be edited.
+ * @param patches - A single patch operation or an array of patch operations.
+ * @returns An `EditDocumentAction` object ready for dispatch.
+ * @beta
+ */
+export function editDocument<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
+  doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
   patches?: PatchOperations | PatchOperations[],
-): EditDocumentAction<TDocument>
-/** @beta */
-export function editDocument<TDocument extends SanityDocumentLike>(
-  doc: DocumentHandle<TDocument>,
+): EditDocumentAction<TDocumentType, TDataset, TProjectId>
+/**
+ * Creates an `EditDocumentAction` object with patches for modifying a document.
+ * This is the implementation signature and handles the different patch input types.
+ *
+ * @param doc - A handle uniquely identifying the document to be edited.
+ * @param patches - Patches in various formats (`PatchOperations`, `PatchOperations[]`, or `SanityMutatePatchMutation`).
+ * @returns An `EditDocumentAction` object ready for dispatch.
+ * @internal
+ */
+export function editDocument<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
+  doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
   patches?: PatchOperations | PatchOperations[] | SanityMutatePatchMutation,
-): EditDocumentAction<TDocument> {
+): EditDocumentAction<TDocumentType, TDataset, TProjectId> {
   if (isSanityMutatePatch(patches)) {
     const converted = convertSanityMutatePatch(patches) ?? []
     return {
@@ -125,10 +227,19 @@ export function editDocument<TDocument extends SanityDocumentLike>(
   }
 }
 
-/** @beta */
-export function publishDocument<TDocument extends SanityDocumentLike>(
-  doc: DocumentHandle<TDocument>,
-): PublishDocumentAction<TDocument> {
+/**
+ * Creates a `PublishDocumentAction` object.
+ * @param doc - A handle uniquely identifying the document to be published.
+ * @returns A `PublishDocumentAction` object ready for dispatch.
+ * @beta
+ */
+export function publishDocument<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
+  doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
+): PublishDocumentAction<TDocumentType, TDataset, TProjectId> {
   return {
     type: 'document.publish',
     ...doc,
@@ -136,10 +247,19 @@ export function publishDocument<TDocument extends SanityDocumentLike>(
   }
 }
 
-/** @beta */
-export function unpublishDocument<TDocument extends SanityDocumentLike>(
-  doc: DocumentHandle<TDocument>,
-): UnpublishDocumentAction<TDocument> {
+/**
+ * Creates an `UnpublishDocumentAction` object.
+ * @param doc - A handle uniquely identifying the document to be unpublished.
+ * @returns An `UnpublishDocumentAction` object ready for dispatch.
+ * @beta
+ */
+export function unpublishDocument<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
+  doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
+): UnpublishDocumentAction<TDocumentType, TDataset, TProjectId> {
   return {
     type: 'document.unpublish',
     ...doc,
@@ -147,10 +267,19 @@ export function unpublishDocument<TDocument extends SanityDocumentLike>(
   }
 }
 
-/** @beta */
-export function discardDocument<TDocument extends SanityDocumentLike>(
-  doc: DocumentHandle<TDocument>,
-): DiscardDocumentAction<TDocument> {
+/**
+ * Creates a `DiscardDocumentAction` object.
+ * @param doc - A handle uniquely identifying the document whose draft changes are to be discarded.
+ * @returns A `DiscardDocumentAction` object ready for dispatch.
+ * @beta
+ */
+export function discardDocument<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
+  doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
+): DiscardDocumentAction<TDocumentType, TDataset, TProjectId> {
   return {
     type: 'document.discard',
     ...doc,

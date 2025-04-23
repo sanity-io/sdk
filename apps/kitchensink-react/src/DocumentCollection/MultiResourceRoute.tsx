@@ -1,56 +1,26 @@
-import {DocumentHandle, SanityDocument, useDocument, useEditDocument} from '@sanity/sdk-react'
+import {createDocumentHandle, useDocument, useEditDocument} from '@sanity/sdk-react'
 import {TextInput} from '@sanity/ui'
 import {JSX} from 'react'
 
+const doc = createDocumentHandle({
+  documentType: 'author',
+  documentId: 'db06bc9e-4608-465a-9551-a10cef478037',
+  projectId: 'ppsg7ml5',
+  dataset: 'test',
+})
+
+const doc2 = createDocumentHandle({
+  documentType: 'dog',
+  documentId: 'acc11e96-1a01-4907-bd0e-e8347217cf2f',
+  projectId: 'ezwd8xes',
+  dataset: 'production',
+})
+
 export function MultiResourceRoute(): JSX.Element {
-  interface Author extends SanityDocument {
-    _type: 'author'
-    name?: string
-    role?: string
-    awards?: string[]
-    image?: {
-      asset: {
-        _ref: string
-        _type: string
-      }
-    }
-  }
-
-  interface Dog extends SanityDocument {
-    _type: 'dog'
-    name?: string
-    age?: string
-    color?: string
-    ears?: string
-    status?: string
-    weight?: string
-    description?: string
-    images?: {
-      asset: {
-        _ref: string
-        _type: string
-      }
-    }[]
-  }
-  const doc: DocumentHandle<Author> = {
-    documentType: 'author',
-    documentId: 'db06bc9e-4608-465a-9551-a10cef478037',
-    projectId: 'ppsg7ml5',
-    dataset: 'test',
-  }
-
-  const doc2: DocumentHandle<Dog> = {
-    documentType: 'dog',
-    documentId: 'acc11e96-1a01-4907-bd0e-e8347217cf2f',
-    projectId: 'ezwd8xes',
-    dataset: 'production',
-  }
-
-  const setAuthorName = useEditDocument(doc, 'name')
-  const setDogName = useEditDocument(doc2, 'name')
-
   const author = useDocument(doc)
   const dog = useDocument(doc2)
+  const setAuthorName = useEditDocument({...doc, path: 'name'})
+  const setDogName = useEditDocument({...doc2, path: 'name'})
 
   return (
     <div>

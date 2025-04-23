@@ -1,40 +1,34 @@
 import {DocumentHandle, usePaginatedDocuments, useProjection} from '@sanity/sdk-react'
 import {Box, Button, Card, Flex, Label, Spinner, Stack, Text, TextInput} from '@sanity/ui'
+import {defineProjection} from 'groq'
 import {JSX, ReactNode, Suspense, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 
 // Import the custom table components
 import {Table, TD, TH, TR} from '../components/TableElements'
 
-interface AuthorProjection {
-  name: string
-  address: string
-  favoriteBookTitles: string[]
-  bestFriendName?: string
-  role?: string
-}
-
 // Component for displaying projection data with proper error handling
 function ProjectionData({
   docHandle,
   useFirstProjection,
 }: {
-  docHandle: DocumentHandle
+  docHandle: DocumentHandle<'author'>
   useFirstProjection: boolean
 }) {
+  const authorProjection = defineProjection(`{
+    name,
+    "favoriteBookTitles": favoriteBooks[]->{title}.title
+  }`)
+
+  const bestFriendProjection = defineProjection(`{
+    name,
+    'bestFriendName': bestFriend->{name}.name,
+    role
+  }`)
+
   const ref = useRef<HTMLTableCellElement>(null)
-  const projection = useFirstProjection
-    ? `{
-        name,
-        "address": "City: " + address.city + ", Country: " + address.country,
-        "favoriteBookTitles": favoriteBooks[]->{title}.title
-      }`
-    : `{
-        name,
-        'bestFriendName': bestFriend->{name}.name,
-        role
-      }`
-  const {data} = useProjection<AuthorProjection>({
+  const projection = useFirstProjection ? authorProjection : bestFriendProjection
+  const {data} = useProjection({
     ...docHandle,
     ref,
     projection,
@@ -45,9 +39,8 @@ function ProjectionData({
       <TD ref={ref} padding={2}>
         {data.name || 'Untitled'}
       </TD>
-      {useFirstProjection ? (
+      {'favoriteBookTitles' in data ? (
         <>
-          <TD padding={2}>{data.address || 'No address'}</TD>
           <TD padding={2}>
             {data.favoriteBookTitles?.filter(Boolean).join(', ') || 'No favorite books'}
           </TD>
@@ -93,7 +86,7 @@ function AuthorRow({
   docHandle,
   useFirstProjection,
 }: {
-  docHandle: DocumentHandle
+  docHandle: DocumentHandle<'author'>
   useFirstProjection: boolean
 }) {
   return (
@@ -236,7 +229,8 @@ export function DocumentProjectionRoute(): JSX.Element {
     startIndex,
     endIndex,
   } = usePaginatedDocuments({
-    filter: '_type == "author" && count(favoriteBooks) > 0',
+    documentType: 'author',
+    filter: 'count(favoriteBooks) > 0',
     orderings: [{field: 'name', direction: 'asc'}],
     search: searchTerm,
     pageSize,

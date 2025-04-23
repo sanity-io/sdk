@@ -63,6 +63,7 @@
     "@sanity/mutate": "^0.12.4",
     "@sanity/types": "^3.83.0",
     "@types/lodash-es": "^4.17.12",
+    "groq": "file:../../groq-3.82.0.tgz",
     "lodash-es": "^4.17.21",
     "reselect": "^5.1.1",
     "rxjs": "^7.8.2",
