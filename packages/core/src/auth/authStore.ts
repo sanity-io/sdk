@@ -15,6 +15,7 @@ import {
   getCleanedUrl,
   getDefaultLocation,
   getDefaultStorage,
+  getTokenFromLocation,
   getTokenFromStorage,
 } from './utils'
 
@@ -152,7 +153,10 @@ export const authStore = defineStore<AuthStoreState>({
     let authState: AuthState
     if (providedToken) {
       authState = {type: AuthStateType.LOGGED_IN, token: providedToken, currentUser: null}
-    } else if (getAuthCode(callbackUrl, initialLocationHref)) {
+    } else if (
+      getAuthCode(callbackUrl, initialLocationHref) ||
+      getTokenFromLocation(initialLocationHref)
+    ) {
       authState = {type: AuthStateType.LOGGING_IN, isExchangingToken: false}
       // Note: dashboardContext from the callback URL can be set later in handleAuthCallback too
     } else if (token && !isInDashboard) {
