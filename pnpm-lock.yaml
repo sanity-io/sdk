@@ -350,9 +350,6 @@ importers:
       '@sanity/client':
         specifier: ^6.28.4
         version: 6.29.0
-      '@sanity/logos':
-        specifier: ^2.1.13
-        version: 2.1.13(@sanity/color@3.0.6)(react@19.1.0)
       '@sanity/message-protocol':
         specifier: ^0.8.0
         version: 0.8.0

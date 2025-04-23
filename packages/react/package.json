@@ -57,7 +57,6 @@
   "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@sanity/client": "^6.28.4",
-    "@sanity/logos": "^2.1.13",
     "@sanity/message-protocol": "^0.8.0",
     "@sanity/sdk": "workspace:*",
     "@sanity/types": "^3.83.0",
