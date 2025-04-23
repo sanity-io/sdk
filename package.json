@@ -73,13 +73,5 @@
   "packageManager": "pnpm@10.8.0",
   "engines": {
     "node": ">=20.0.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "@sanity/cli": "file:sanity-cli-3.85.1.tgz",
-      "@sanity/codegen": "file:sanity-codegen-3.85.1.tgz",
-      "groq": "file:groq-3.85.1.tgz",
-      "sanity": "file:sanity-3.85.1.tgz"
-    }
   }
 }

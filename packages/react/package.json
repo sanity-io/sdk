@@ -61,7 +61,7 @@
     "@sanity/sdk": "workspace:*",
     "@sanity/types": "^3.83.0",
     "@types/lodash-es": "^4.17.12",
-    "groq": "file:../../groq-3.82.0.tgz",
+    "groq": "3.86.2-experimental.0",
     "lodash-es": "^4.17.21",
     "react-compiler-runtime": "19.0.0-beta-ebf51a3-20250411",
     "react-error-boundary": "^5.0.0",
