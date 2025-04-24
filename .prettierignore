@@ -3,3 +3,5 @@ pnpm-lock.yaml
 .gitignore
 .prettierignore
 .cursor/**/*
+CHANGELOG.md
+**/CHANGELOG.md
