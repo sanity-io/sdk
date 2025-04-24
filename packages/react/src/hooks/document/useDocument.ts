@@ -2,6 +2,11 @@ import {type DocumentOptions, getDocumentState, type JsonMatch, resolveDocument}
 import {type SanityDocumentResult} from 'groq'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
+// used in an `{@link useProjection}` and `{@link useQuery}`
+// eslint-disable-next-line import/consistent-type-specifier-style, unused-imports/no-unused-imports
+import type {useProjection} from '../projection/useProjection'
+// eslint-disable-next-line import/consistent-type-specifier-style, unused-imports/no-unused-imports
+import type {useQuery} from '../query/useQuery'
 
 interface UseDocument {
   /** @internal */
@@ -29,8 +34,7 @@ interface UseDocument {
    *
    * @beta
    *
-   * The preferred way to use this hook when working with Sanity Typegen. Automatically infers
-   * document types based on your schema and provides type-safe access to documents and their fields.
+   * The preferred way to use this hook when working with Sanity Typegen.
    *
    * Features:
    * - Automatically infers document types from your schema
@@ -179,12 +183,15 @@ interface UseDocument {
  *
  * @remarks
  * `useDocument` is ideal for realtime editing interfaces where you need immediate feedback on changes.
- * However, it can be resource-intensive since it maintains a realtime connection. For simpler cases where:
+ * However, it can be resource-intensive since it maintains a realtime connection.
+ *
+ * For simpler cases where:
  * - You only need to display content
  * - Realtime updates aren't critical
  * - You want better performance
  *
- * Consider using `useProjection` or `useQuery` instead. These hooks are more efficient for read-heavy applications.
+ * …consider using {@link useProjection} or {@link useQuery} instead. These hooks are more efficient
+ * for read-heavy applications.
  *
  * @function
  */
