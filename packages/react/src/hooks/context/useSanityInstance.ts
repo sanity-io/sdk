@@ -1,5 +1,5 @@
 import {type SanityConfig, type SanityInstance} from '@sanity/sdk'
-import {use} from 'react'
+import {useContext} from 'react'
 
 import {SanityInstanceContext} from '../../context/SanityInstanceContext'
 
@@ -8,6 +8,7 @@ import {SanityInstanceContext} from '../../context/SanityInstanceContext'
  *
  * @public
  *
+ * @category Platform
  * @param config - Optional configuration to match against when finding an instance
  * @returns The current or matching Sanity instance
  *
@@ -57,7 +58,7 @@ import {SanityInstanceContext} from '../../context/SanityInstanceContext'
  * @throws Error if no matching instance is found for the provided config
  */
 export const useSanityInstance = (config?: SanityConfig): SanityInstance => {
-  const instance = use(SanityInstanceContext)
+  const instance = useContext(SanityInstanceContext)
 
   if (!instance) {
     throw new Error(

@@ -25,6 +25,11 @@
       "tagName": "@interface",
       "syntaxKind": "modifier",
       "allowMultiple": false
+    },
+    {
+      "tagName": "@module",
+      "syntaxKind": "block",
+      "allowMultiple": false
     }
   ],
   "supportForTags": {
@@ -46,6 +51,7 @@
     "@todo": true,
     "@category": true,
     "@function": true,
-    "@interface": true
+    "@interface": true,
+    "@module": true
   }
 }

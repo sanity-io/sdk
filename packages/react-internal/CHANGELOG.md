@@ -1,5 +1,66 @@
 # Changelog
 
+## [0.0.0-alpha.29](https://github.com/sanity-io/sdk/compare/sdk-react-internal-v0.0.0-alpha.28...sdk-react-internal-v0.0.0-alpha.29) (2025-04-23)
+
+
+### Bug Fixes
+
+* **build:** fixes build to not include node libraries ([#456](https://github.com/sanity-io/sdk/issues/456)) ([11a8d8a](https://github.com/sanity-io/sdk/commit/11a8d8a6c35dcfd0eeba3f5ca926b5e263aa56e8))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk-react bumped to 0.0.0-alpha.29
+
+## [0.0.0-alpha.28](https://github.com/sanity-io/sdk/compare/sdk-react-internal-v0.0.0-alpha.27...sdk-react-internal-v0.0.0-alpha.28) (2025-04-22)
+
+
+### Bug Fixes
+
+* **core:** refactor calculatePermissions to fix initialization error ([#443](https://github.com/sanity-io/sdk/issues/443)) ([e59d6e5](https://github.com/sanity-io/sdk/commit/e59d6e54b1da22194446ffffc747ddbf0711f134))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk-react bumped to 0.0.0-alpha.28
+
+## [0.0.0-alpha.27](https://github.com/sanity-io/sdk/compare/sdk-react-internal-v0.0.0-alpha.26...sdk-react-internal-v0.0.0-alpha.27) (2025-04-22)
+
+
+### Miscellaneous
+
+* **sdk-react-internal:** Synchronize sdk versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk-react bumped to 0.0.0-alpha.27
+
+## [0.0.0-alpha.26](https://github.com/sanity-io/sdk/compare/sdk-react-internal-v0.0.0-alpha.25...sdk-react-internal-v0.0.0-alpha.26) (2025-04-21)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/ui to ^2.15.13 ([#426](https://github.com/sanity-io/sdk/issues/426)) ([ec2cbc5](https://github.com/sanity-io/sdk/commit/ec2cbc569b05c1b980bbd4ffe61994872bf1ec4f))
+
+
+### Documentation
+
+* fix duplication/entrypoints; add SDK Core note ([#430](https://github.com/sanity-io/sdk/issues/430)) ([f1046fa](https://github.com/sanity-io/sdk/commit/f1046faec1c70d3690ddc9b4d4f92d7c433178a2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk-react bumped to 0.0.0-alpha.26
+
 ## [0.0.0-alpha.25](https://github.com/sanity-io/sdk/compare/v0.0.0-alpha.24...v0.0.0-alpha.25) (2025-04-09)
 
 

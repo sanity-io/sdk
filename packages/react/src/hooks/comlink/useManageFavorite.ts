@@ -33,12 +33,10 @@ interface UseManageFavoriteProps extends DocumentHandle {
 }
 
 /**
- * @beta
+ * @internal
  *
- * ## useManageFavorite
  * This hook provides functionality to add and remove documents from favorites,
  * and tracks the current favorite status of the document.
- * @category Dashboard Communication
  * @param documentHandle - The document handle containing document ID and type, like `{_id: '123', _type: 'book'}`
  * @returns An object containing:
  * - `favorite` - Function to add document to favorites

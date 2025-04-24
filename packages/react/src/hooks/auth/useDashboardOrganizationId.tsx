@@ -4,7 +4,8 @@ import {useMemo, useSyncExternalStore} from 'react'
 import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
- * @remarks
+ * @public
+ *
  * A React hook that retrieves the dashboard organization ID that is currently selected in the Sanity Dashboard.
  *
  * @example
@@ -18,8 +19,8 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * }
  * ```
  *
+ * @category Dashboard
  * @returns The dashboard organization ID (string | undefined)
- * @public
  */
 export function useDashboardOrganizationId(): string | undefined {
   const instance = useSanityInstance()

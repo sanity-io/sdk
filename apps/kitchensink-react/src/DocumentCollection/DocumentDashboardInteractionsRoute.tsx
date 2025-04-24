@@ -23,8 +23,10 @@ function ActionButtons(docHandle: DocumentHandle) {
     ...docHandle,
     resourceType: 'studio',
   })
-  const {navigateToStudioDocument, isConnected: isNavigateConnected} =
-    useNavigateToStudioDocument(docHandle)
+  const {navigateToStudioDocument, isConnected: isNavigateConnected} = useNavigateToStudioDocument(
+    docHandle,
+    'https://test-studio.sanity.build',
+  )
 
   return (
     <Flex gap={2} padding={2}>

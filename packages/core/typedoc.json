@@ -1,7 +1,9 @@
 {
-  "name": "sdk",
+  "name": "Core SDK",
   "extends": ["../../typedoc.base.json"],
   "entryPoints": ["./src/_exports/*"],
+  "projectDocuments": ["./guides/*.md"],
+  "defaultCategory": "none",
   /**
    * Path to the project's README file
    * Will be included as the documentation homepage

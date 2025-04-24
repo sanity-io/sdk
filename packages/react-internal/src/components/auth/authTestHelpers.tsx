@@ -1,6 +1,7 @@
 import {ResourceProvider} from '@sanity/sdk-react'
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
+// eslint-disable-next-line import/no-extraneous-dependencies
 import {render, type RenderResult} from '@testing-library/react'
 import React from 'react'
 

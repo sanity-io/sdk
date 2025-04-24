@@ -148,7 +148,13 @@ export type DocumentPermissionsResult =
 
 const enNarrowConjunction = new Intl.ListFormat('en', {style: 'narrow', type: 'conjunction'})
 
-export const calculatePermissions = createSelector(
+export function calculatePermissions(
+  ...args: Parameters<typeof _calculatePermissions>
+): ReturnType<typeof _calculatePermissions> {
+  return _calculatePermissions(...args)
+}
+
+const _calculatePermissions = createSelector(
   [
     ({state: {grants}}: SelectorContext<SyncTransactionState>) => grants,
     documentsSelector,
