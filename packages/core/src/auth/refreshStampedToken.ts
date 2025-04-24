@@ -51,8 +51,7 @@ export function getNextRefreshDelay(storageArea: Storage | undefined, storageKey
   return Math.max(0, nextRefreshTime - now)
 }
 
-// Exported for testing
-export function createTokenRefreshStream(
+function createTokenRefreshStream(
   token: string,
   clientFactory: AuthStoreState['options']['clientFactory'],
   apiHost: string | undefined,
