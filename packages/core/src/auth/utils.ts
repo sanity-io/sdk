@@ -37,6 +37,12 @@ export function getAuthCode(callbackUrl: string | undefined, locationHref: strin
   return authCode && callbackLocationMatches ? authCode : null
 }
 
+export function getTokenFromLocation(locationHref: string): string | null {
+  const loc = new URL(locationHref)
+  const token = new URLSearchParams(loc.hash.slice(1)).get('token')
+  return token ? token : null
+}
+
 /**
  * Attempts to retrieve a token from the configured storage.
  * If invalid or not present, returns null.

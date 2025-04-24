@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.0-alpha.29](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.28...sdk-v0.0.0-alpha.29) (2025-04-23)
+
+
+### Features
+
+* **auth:** check for a token being passed into the url hash from the dashboard ([#451](https://github.com/sanity-io/sdk/issues/451)) ([59893e2](https://github.com/sanity-io/sdk/commit/59893e2216acdf01f5187617cd42b2bc3760a068))
+
+
+### Bug Fixes
+
+* **build:** fixes build to not include node libraries ([#456](https://github.com/sanity-io/sdk/issues/456)) ([11a8d8a](https://github.com/sanity-io/sdk/commit/11a8d8a6c35dcfd0eeba3f5ca926b5e263aa56e8))
+
 ## [0.0.0-alpha.28](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.27...sdk-v0.0.0-alpha.28) (2025-04-22)
 
 

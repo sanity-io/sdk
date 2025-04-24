@@ -62,9 +62,6 @@ importers:
       rimraf:
         specifier: ^6.0.1
         version: 6.0.1
-      rollup-plugin-visualizer:
-        specifier: ^5.13.1
-        version: 5.14.0(rollup@4.40.0)
       tsx:
         specifier: ^4.19.3
         version: 4.19.3
@@ -335,6 +332,9 @@ importers:
       prettier:
         specifier: ^3.5.3
         version: 3.5.3
+      rollup-plugin-visualizer:
+        specifier: ^5.14.0
+        version: 5.14.0(rollup@4.40.0)
       typescript:
         specifier: ^5.7.3
         version: 5.8.3
@@ -347,9 +347,9 @@ importers:
 
   packages/react:
     dependencies:
-      '@sanity/logos':
-        specifier: ^2.1.13
-        version: 2.1.13(@sanity/color@3.0.6)(react@19.1.0)
+      '@sanity/client':
+        specifier: ^6.28.4
+        version: 6.29.0
       '@sanity/message-protocol':
         specifier: ^0.8.0
         version: 0.8.0
@@ -393,9 +393,6 @@ importers:
       '@sanity/browserslist-config':
         specifier: ^1.0.5
         version: 1.0.5
-      '@sanity/client':
-        specifier: ^6.28.4
-        version: 6.29.0
       '@sanity/comlink':
         specifier: ^3.0.1
         version: 3.0.1
@@ -441,6 +438,9 @@ importers:
       react-dom:
         specifier: ^19.1.0
         version: 19.1.0(react@19.1.0)
+      rollup-plugin-visualizer:
+        specifier: ^5.14.0
+        version: 5.14.0(rollup@4.40.0)
       typescript:
         specifier: ^5.7.3
         version: 5.8.3
@@ -523,6 +523,9 @@ importers:
       react-dom:
         specifier: ^19.1.0
         version: 19.1.0(react@19.1.0)
+      rollup-plugin-visualizer:
+        specifier: ^5.14.0
+        version: 5.14.0(rollup@4.40.0)
       typescript:
         specifier: ^5.7.3
         version: 5.8.3
