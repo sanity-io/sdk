@@ -28,10 +28,10 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *
  * function MovieList() {
  *   // Typegen infers the return type for data
- *   const {data, isPending} = useQuery({ query: myQuery })
+ *   const {data} = useQuery({ query: myQuery })
  *
  *   return (
- *     <div style={{ opacity: isPending ? 0.5 : 1 }}>
+ *     <div>
  *       <h2>Movies</h2>
  *       <ul>
  *         {data.map(movie => <li key={movie._id}>{movie.title}</li>)}
@@ -57,6 +57,8 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *   })
  *
  *   return (
+ *     // utilize `isPending` to signal to users that new data is coming in
+ *     // (e.g. the `movieId` changed and we're loading in the new one)
  *     <div style={{ opacity: isPending ? 0.5 : 1 }}>
  *       {data ? <h1>{data.title}</h1> : <p>Movie not found</p>}
  *     </div>
