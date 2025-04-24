@@ -44,7 +44,7 @@ export interface UseProjectionResults<TData extends object> {
  * // ProjectionComponent.jsx
  * export default function ProjectionComponent({ document }) {
  *   const ref = useRef(null)
- *   const { results: { title, coverImage, authors }, isPending } = useProjection({
+ *   const { data: { title, coverImage, authors }, isPending } = useProjection({
  *     document,
  *     ref,
  *     projection: `{
