@@ -7,6 +7,9 @@ import {
 import {type SanityDocumentResult} from 'groq'
 
 import {createCallbackHook} from '../helpers/createCallbackHook'
+// this import is used in an `{@link useEditDocument}`
+// eslint-disable-next-line unused-imports/no-unused-imports, import/consistent-type-specifier-style
+import type {useEditDocument} from './useEditDocument'
 
 /**
  * @beta
@@ -49,7 +52,7 @@ interface UseApplyDocumentActions {
  * @remarks
  * This hook is a fundamental part of interacting with document state programmatically.
  * It operates within the same unified pipeline as other document hooks like `useDocument` (for reading state)
- * and `useEditDocument` (a higher-level hook specifically for edits).
+ * and {@link useEditDocument} (a higher-level hook specifically for edits).
  *
  * When multiple actions are provided in a single call, they are guaranteed to be submitted
  * as a single transaction to Content Lake. This ensures atomicity for related operations (e.g., creating and publishing a document).
