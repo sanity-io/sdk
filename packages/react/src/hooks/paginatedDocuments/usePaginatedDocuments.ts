@@ -126,7 +126,9 @@ export interface PaginatedDocumentsResponse<
 }
 
 /**
- * Retrieves a paginated list of {@link DocumentHandle}s, narrowed by optional filters, text searches, and custom ordering.
+ * Retrieves pages of {@link DocumentHandle}s, narrowed by optional filters, text searches, and custom ordering,
+ * with support for traditional paginated interfaces. The number of document handles returned per page is customizable,
+ * while page navigation is handled via the included navigation functions.
  *
  * @beta
  * @category Documents

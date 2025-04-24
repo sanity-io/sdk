@@ -83,8 +83,7 @@ export function useQuery<
  * Executes a GROQ query with an explicitly provided result type `TData`.
  *
  * @param options - Configuration for the query, including `query`, optional `params`, `projectId`, `dataset`, etc.
- * @returns An object containing `data` (cast to `TData`) and `isPending` (for transitions).
- *
+ * @returns An object containing `data` (cast to `TData`) and `isPending` (indicates whether a query resolution is pending; note that Suspense handles initial loading states). *
  * @example Manually typed query result
  * ```tsx
  * import {useQuery} from '@sanity/sdk-react'
@@ -110,7 +109,7 @@ export function useQuery<
 export function useQuery<TData>(options: QueryOptions): {
   /** The query result, cast to the provided type TData */
   data: TData
-  /** True if a query transition is in progress */
+  /** True if another query is resolving in the background (suspense handles the initial loading state) */
   isPending: boolean
 }
 
