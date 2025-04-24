@@ -6,6 +6,7 @@ import {
   distinctUntilChanged,
   EMPTY,
   filter,
+  first,
   firstValueFrom,
   groupBy,
   map,
@@ -36,6 +37,8 @@ import {insecureRandomId} from '../utils/ids'
 import {QUERY_STATE_CLEAR_DELAY, QUERY_STORE_API_VERSION} from './queryStoreConstants'
 import {
   addSubscriber,
+  cancelQuery,
+  initializeQuery,
   type QueryStoreState,
   removeSubscriber,
   setLastLiveEventId,
@@ -304,60 +307,47 @@ export function resolveQuery<TData>(
   instance: SanityInstance,
   queryOptions: ResolveQueryOptions,
 ): Promise<TData>
-
 /** @beta */
-export function resolveQuery(
-  instance: SanityInstance,
-  queryOptions: ResolveQueryOptions,
-): Promise<unknown>
-
-/** @beta */
-export function resolveQuery(
-  ...args: Parameters<typeof _resolveQuery>
-): ReturnType<typeof _resolveQuery> {
+export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise<unknown> {
   return _resolveQuery(...args)
 }
 const _resolveQuery = bindActionByDataset(
   queryStore,
-  ({instance}, queryOptions: ResolveQueryOptions) => {
-    const signal = queryOptions?.signal
-    if (signal?.aborted) return Promise.reject(signal.reason)
+  ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
+    const {getCurrent} = getQueryState(instance, options)
+    const key = getQueryKey(options)
 
-    const state = getQueryState(instance, queryOptions)
-    const observable = state.observable.pipe(
-      // Need to filter out the initial undefined value if the state has not been initialized yet
-      filter((result) => result !== undefined),
+    const aborted$ = signal
+      ? new Observable<void>((observer) => {
+          const cleanup = () => {
+            signal.removeEventListener('abort', listener)
+          }
+
+          const listener = () => {
+            observer.error(new DOMException('The operation was aborted.', 'AbortError'))
+            observer.complete()
+            cleanup()
+          }
+          signal.addEventListener('abort', listener)
+
+          return cleanup
+        }).pipe(
+          catchError((error) => {
+            if (error instanceof Error && error.name === 'AbortError') {
+              state.set('cancelQuery', cancelQuery(key))
+            }
+            throw error
+          }),
+        )
+      : NEVER
+
+    state.set('initializeQuery', initializeQuery(key))
+
+    const resolved$ = state.observable.pipe(
+      map(getCurrent),
+      first((i) => i !== undefined),
     )
 
-    // Use race to handle cancellations via AbortSignal
-    const resultPromise = firstValueFrom(race(observable, signal ? onAbort(signal) : NEVER))
-
-    // Cleanup logic
-    const cleanup = () => {
-      // Remove the subscription created by getQueryState if this is the only subscriber
-      // Needs investigation: Is there a race condition?
-    }
-    const listener = () => {
-      // This listener ensures cleanup runs if the signal aborts.
-      cleanup()
-    }
-    signal?.addEventListener('abort', listener, {once: true})
-
-    // Return the promise, ensuring cleanup happens on resolve/reject.
-    return resultPromise.finally(() => {
-      signal?.removeEventListener('abort', listener)
-      cleanup()
-    })
+    return firstValueFrom(race([resolved$, aborted$]))
   },
 )
-
-// Helper to create an Observable that rejects when the signal aborts
-function onAbort(signal: AbortSignal): Observable<never> {
-  return new Observable((subscriber) => {
-    const abortHandler = () => {
-      subscriber.error(signal.reason)
-    }
-    signal.addEventListener('abort', abortHandler)
-    return () => signal.removeEventListener('abort', abortHandler)
-  })
-}

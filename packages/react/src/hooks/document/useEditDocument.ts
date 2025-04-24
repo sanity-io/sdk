@@ -7,7 +7,6 @@ import {
   resolveDocument,
 } from '@sanity/sdk'
 import {type SanityDocumentResult} from 'groq'
-import {omit} from 'lodash-es'
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -171,22 +170,23 @@ export function useEditDocument<TData>(
  * }
  * ```
  */
-export function useEditDocument(
-  options: DocumentOptions<string | undefined>,
-): (updater: Updater<unknown>) => Promise<ActionsResult> {
-  const instance = useSanityInstance(options)
+export function useEditDocument({
+  path,
+  ...doc
+}: DocumentOptions<string | undefined>): (updater: Updater<unknown>) => Promise<ActionsResult> {
+  const instance = useSanityInstance(doc)
   const apply = useApplyDocumentActions()
   const isDocumentReady = useCallback(
-    () => getDocumentState(instance, options).getCurrent() !== undefined,
-    [instance, options],
+    () => getDocumentState(instance, doc).getCurrent() !== undefined,
+    [instance, doc],
   )
-  if (!isDocumentReady()) throw resolveDocument(instance, options)
+  if (!isDocumentReady()) throw resolveDocument(instance, doc)
 
   return (updater: Updater<unknown>) => {
-    const currentPath = options.path
+    const currentPath = path
 
     if (currentPath) {
-      const stateWithOptions = getDocumentState(instance, options)
+      const stateWithOptions = getDocumentState(instance, {...doc, path})
       const currentValue = stateWithOptions.getCurrent()
 
       const nextValue =
@@ -194,10 +194,10 @@ export function useEditDocument(
           ? (updater as (prev: typeof currentValue) => typeof currentValue)(currentValue)
           : updater
 
-      return apply(editDocument(omit(options, 'path'), {set: {[currentPath]: nextValue}}))
+      return apply(editDocument(doc, {set: {[currentPath]: nextValue}}))
     }
 
-    const fullDocState = getDocumentState(instance, options)
+    const fullDocState = getDocumentState(instance, {...doc, path})
     const current = fullDocState.getCurrent() as object | null | undefined
     const nextValue =
       typeof updater === 'function'
@@ -219,8 +219,8 @@ export function useEditDocument(
       )
       .map((key) =>
         key in nextValue
-          ? editDocument(options, {set: {[key]: (nextValue as Record<string, unknown>)[key]}})
-          : editDocument(options, {unset: [key]}),
+          ? editDocument(doc, {set: {[key]: (nextValue as Record<string, unknown>)[key]}})
+          : editDocument(doc, {unset: [key]}),
       )
 
     return apply(editActions)
