@@ -1,5 +1,6 @@
 import {type DocumentOptions, getDocumentState, type JsonMatch, resolveDocument} from '@sanity/sdk'
 import {type SanityDocumentResult} from 'groq'
+import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 // used in an `{@link useProjection}` and `{@link useQuery}`
@@ -205,5 +206,7 @@ export const useDocument = createStateSourceHook({
   // Extract handle part for resolveDocument
   suspender: (instance, options: DocumentOptions<string | undefined>) =>
     resolveDocument(instance, options),
-  getConfig: (options: DocumentOptions<string | undefined>) => options,
+  getConfig: identity as (
+    options: DocumentOptions<string | undefined>,
+  ) => DocumentOptions<string | undefined>,
 }) as UseDocument
