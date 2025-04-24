@@ -88,7 +88,7 @@ export function useEditDocument<TData>(
  * @category Documents
  * @remarks
  * This hook simplifies editing documents by automatically:
- * - Determining the necessary `editDocument` actions based on the changes provided.
+ * - Comparing the current and next states to determine the minimal set of `set` and `unset` operations required for the update via `editDocument`.
  * - Handling both full document updates and specific path updates.
  * - Supporting functional updates (e.g., `edit(prev => ({...prev, title: 'New'}))`).
  * - Integrating with the active {@link SanityInstance} context.
@@ -105,69 +105,155 @@ export function useEditDocument<TData>(
  *
  * @example Basic Usage (Typegen, Full Document)
  * ```tsx
- * import {useEditDocument, type DocumentHandle} from '@sanity/sdk-react'
+ * import {useCallback} from 'react';
+ * import {useEditDocument, useDocument, type DocumentHandle} from '@sanity/sdk-react'
  *
+ * // Assume 'product' schema has a 'title' field (string)
  * interface ProductEditorProps {
- *   doc: DocumentHandle<'product'> // Typegen infers 'product' type
+ *   productHandle: DocumentHandle<'product'> // Typegen infers 'product' type
  * }
  *
- * function ProductEditor({doc}: ProductEditorProps) {
- *   // Pass the document handle directly
- *   const editProduct = useEditDocument(doc)
+ * function ProductEditor({ productHandle }: ProductEditorProps) {
+ *   // Fetch the document to display its current state (optional)
+ *   const product = useDocument(productHandle);
+ *   // Get the edit function for the full document
+ *   const editProduct = useEditDocument(productHandle);
  *
- *   const handleTitleUpdate = (newTitle: string) => {
+ *   // Use useCallback for stable event handlers
+ *   const handleTitleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+ *     const newTitle = event.target.value;
  *     // Use the functional updater for safe partial updates
  *     editProduct(prev => ({
  *       ...prev,
  *       title: newTitle,
- *     }))
- *   }
+ *     })).
+ *   }, [editProduct]);
  *
- *   // ... render input and call handleTitleUpdate
+ *   return (
+ *     <div>
+ *       <label>
+ *         Product Title:
+ *         <input
+ *           type="text"
+ *           value={product?.title ?? ''}
+ *           onChange={handleTitleChange}
+ *         />
+ *       </label>
+ *     </div>
+ *   );
  * }
  * ```
  *
  * @example Editing a Specific Path (Typegen)
  * ```tsx
- * import {useEditDocument, type DocumentOptions} from '@sanity/sdk-react'
+ * import React, { useCallback } from 'react';
+ * import {useEditDocument, useDocument, type DocumentHandle, type DocumentOptions} from '@sanity/sdk-react'
  *
- * interface PriceEditorProps {
- *   // Use DocumentOptions when specifying a path
- *   doc: DocumentOptions<'price', 'product'>
+ * // Assume 'product' schema has a 'price' field (number)
+ * interface ProductPriceEditorProps {
+ *   productHandle: DocumentHandle<'product'>;
  * }
  *
- * function PriceEditor({doc}: PriceEditorProps) {
- *   // Pass the DocumentOptions including the path
- *   const editPrice = useEditDocument(doc)
+ * function ProductPriceEditor({ productHandle }: ProductPriceEditorProps) {
+ *   // Construct DocumentOptions internally, combining the handle and a hardcoded path
+ *   const priceOptions {
+ *     ...productHandle,
+ *     path: 'price', // Hardcode the path to edit
+ *   };
  *
- *   const handleUpdate = (newPrice: number) => {
- *     // Pass the new value directly when editing a specific path
- *     editPrice(newPrice)
- *   }
+ *   // Fetch the current price to display it
+ *   const currentPrice = useDocument(priceOptions);
+ *   // Get the edit function for the specific path 'price'
+ *   const editPrice = useEditDocument(priceOptions);
  *
- *   // ... render input and call handleUpdate
+ *   const handleSetFixedPrice = useCallback(() => {
+ *     // Update the price directly to a hardcoded value
+ *     editPrice(99.99)
+ *   }, [editPrice]);
+ *
+ *   return (
+ *     <div>
+ *       <p>Current Price: {currentPrice}</p>
+ *       <button onClick={handleSetFixedPrice}>
+ *         Set Price to $99.99
+ *       </button>
+ *     </div>
+ *   );
  * }
+ *
  * ```
  *
  * @example Usage with Explicit Types (Full Document)
  * ```tsx
- * import {useEditDocument, type DocumentHandle, type SanityDocument} from '@sanity/sdk-react'
+ * import React, { useCallback } from 'react';
+ * import {useEditDocument, useDocument, type DocumentHandle, type SanityDocument} from '@sanity/sdk-react'
  *
  * interface Book extends SanityDocument { _type: 'book', title: string, author: string }
  *
  * interface BookEditorProps {
- *   doc: DocumentHandle // No documentType needed if providing TData
+ *   bookHandle: DocumentHandle // No documentType needed if providing TData
  * }
  *
- * function BookEditor({doc}: BookEditorProps) {
- *   const editBook = useEditDocument<Book>(doc)
+ * function BookEditor({ bookHandle }: BookEditorProps) {
+ *   const book = useDocument<Book>(bookHandle);
+ *   // Provide the explicit type <Book>
+ *   const editBook = useEditDocument<Book>(bookHandle);
  *
- *   const handleAuthorUpdate = (newAuthor: string) => {
- *     editBook(prev => ({ ...prev, author: newAuthor }))
- *   }
+ *   const handleAuthorChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+ *     const newAuthor = event.target.value;
+ *     editBook(prev => ({
+ *       ...prev,
+ *       author: newAuthor
+ *     }))
+ *   }, [editBook]);
  *
- *   // ... render input and call handleAuthorUpdate
+ *   return (
+ *      <div>
+ *       <label>
+ *         Book Author:
+ *         <input
+ *           type="text"
+ *           value={book?.author ?? ''}
+ *           onChange={handleAuthorChange}
+ *         />
+ *       </label>
+ *     </div>
+ *   );
  * }
+ *
+ * ```
+ *
+ * @example Usage with Explicit Types (Specific Path)
+ * ```tsx
+ * import React, { useCallback } from 'react';
+ * import {useEditDocument, useDocument, type DocumentHandle, type DocumentOptions} from '@sanity/sdk-react'
+ *
+ * // Assume 'book' has 'author.name' (string)
+ * interface AuthorNameEditorProps {
+ *   bookHandle: DocumentHandle; // No documentType needed if providing TData for path
+ * }
+ *
+ * function AuthorNameEditor({ bookHandle }: AuthorNameEditorProps) {*
+ *   // Fetch current value
+ *   const currentName = useDocument<string>({...bookHandle, path: 'author.name'});
+ *   // Provide the explicit type <string> for the path's value
+ *   const editAuthorName = useEditDocument<string>({...bookHandle, 'author.name'});
+ *
+ *   const handleUpdate = useCallback(() => {
+ *     // Update with a hardcoded string directly
+ *     editAuthorName('Jane Doe')
+ *   }, [editAuthorName]);
+ *
+ *   return (
+ *     <div>
+ *       <p>Current Author Name: {currentName}</p>
+ *       <button onClick={handleUpdate} disabled={currentName === undefined}>
+ *         Set Author Name to Jane Doe
+ *       </button>
+ *     </div>
+ *   );
+ * }
+ *
  * ```
  */
 export function useEditDocument({
