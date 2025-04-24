@@ -163,7 +163,7 @@ describe('queryStore', () => {
     abortController.abort()
 
     // Verify the promise rejects with AbortError
-    await expect(queryPromise).rejects.toThrow('This operation was aborted')
+    await expect(queryPromise).rejects.toThrow('The operation was aborted.')
 
     // Verify state is cleared after abort
     expect(getQueryState(instance, {query}).getCurrent()).toBeUndefined()
