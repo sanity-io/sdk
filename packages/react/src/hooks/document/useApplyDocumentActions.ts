@@ -57,8 +57,6 @@ interface UseApplyDocumentActions {
  * When multiple actions are provided in a single call, they are guaranteed to be submitted
  * as a single transaction to Content Lake. This ensures atomicity for related operations (e.g., creating and publishing a document).
  *
- * The hook provides optimistic updates locally while managing the transaction lifecycle (queueing, applying, sending to the server, handling conflicts/rebasing) behind the scenes.
- *
  * @function
  *
  * @example Publish or unpublish a document
@@ -66,7 +64,6 @@ interface UseApplyDocumentActions {
  * import {
  *   publishDocument,
  *   unpublishDocument,
- *   createDocumentHandle,
  *   useApplyDocumentActions,
  *   type DocumentHandle
  * } from '@sanity/sdk-react'
