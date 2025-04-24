@@ -177,48 +177,47 @@ export function useProjection<TData extends object>(
 export function useProjection<TData extends object>({
   ref,
   projection,
-  ...options
+  ...docHandle
 }: UseProjectionOptions): UseProjectionResults<TData> {
-  const instance = useSanityInstance(options)
-  // Use the core options type here which might be slightly different
-  const stateSource = getProjectionState<TData>(instance, {projection, ...options})
+  const instance = useSanityInstance()
+  const stateSource = getProjectionState<TData>(instance, {...docHandle, projection})
 
-  // Throw promise for Suspense if initial data is not available (null indicates it resolved but found nothing)
-  if (stateSource.getCurrent()?.data === undefined) {
-    throw resolveProjection(instance, {projection, ...options})
+  if (stateSource.getCurrent()?.data === null) {
+    throw resolveProjection(instance, {...docHandle, projection})
   }
 
   // Create subscribe function for useSyncExternalStore
   const subscribe = useCallback(
     (onStoreChanged: () => void) => {
-      const isVisible$ = new Observable<boolean>((observer) => {
+      const subscription = new Observable<boolean>((observer) => {
         // For environments that don't have an intersection observer (e.g. server-side),
-        // always subscribe.
-        if (
-          typeof IntersectionObserver === 'undefined' ||
-          typeof HTMLElement === 'undefined' ||
-          !ref?.current ||
-          !(ref.current instanceof HTMLElement)
-        ) {
+        // we pass true to always subscribe since we can't detect visibility
+        if (typeof IntersectionObserver === 'undefined' || typeof HTMLElement === 'undefined') {
           observer.next(true)
           return
         }
 
-        const targetElement = ref.current
         const intersectionObserver = new IntersectionObserver(
           ([entry]) => observer.next(entry.isIntersecting),
           {rootMargin: '0px', threshold: 0},
         )
-        intersectionObserver.observe(targetElement)
+        if (ref?.current && ref.current instanceof HTMLElement) {
+          intersectionObserver.observe(ref.current)
+        } else {
+          // If no ref is provided or ref.current isn't an HTML element,
+          // pass true to always subscribe since we can't track visibility
+          observer.next(true)
+        }
         return () => intersectionObserver.disconnect()
-      }).pipe(startWith(false), distinctUntilChanged()) // Start inactive, only emit changes
-
-      const subscription = isVisible$
+      })
         .pipe(
-          // Switch to the stateSource only when visible, otherwise switch to EMPTY
+          startWith(false),
+          distinctUntilChanged(),
           switchMap((isVisible) =>
             isVisible
-              ? new Observable<void>((obs) => stateSource.subscribe(() => obs.next())) // Wrap subscribe
+              ? new Observable<void>((obs) => {
+                  return stateSource.subscribe(() => obs.next())
+                })
               : EMPTY,
           ),
         )
@@ -229,12 +228,5 @@ export function useProjection<TData extends object>({
     [stateSource, ref],
   )
 
-  // Get current state and memoize result (though useSyncExternalStore handles memoization)
-  const currentState = useSyncExternalStore(subscribe, stateSource.getCurrent)
-
-  // Return the data and pending status
-  return {
-    data: currentState?.data as TData,
-    isPending: currentState?.isPending ?? true, // Consider pending if state is somehow undefined
-  }
+  return useSyncExternalStore(subscribe, stateSource.getCurrent) as UseProjectionResults<TData>
 }
