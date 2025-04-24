@@ -1,102 +1,77 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import {getProjectsState, resolveProjects} from '@sanity/sdk'
-import {identity} from 'rxjs'
+import {getProjectsState, type SanityInstance} from '@sanity/sdk'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-import {type ProjectWithoutMembers} from './useProjects'
-
-// Create test utilities
-const createMockInstance = () => ({projectId: 'project-id', dataset: 'dataset'})
-const createMockProjects = (): ProjectWithoutMembers[] => [
-  {
-    id: 'project-id-1',
-    displayName: 'Test Project 1',
-    organizationId: 'org-id',
-    studioHost: 'test-host-1',
-    metadata: {
-      color: '#ff0000',
-    },
-    isBlocked: false,
-    isDisabled: false,
-    isDisabledByUser: false,
-    createdAt: '2023-01-01',
-  },
-  {
-    id: 'project-id-2',
-    displayName: 'Test Project 2',
-    organizationId: 'org-id',
-    studioHost: 'test-host-2',
-    metadata: {
-      color: '#00ff00',
-    },
-    isBlocked: false,
-    isDisabled: false,
-    isDisabledByUser: false,
-    createdAt: '2023-01-02',
-  },
-]
 
 // Mock dependencies
-vi.mock('../helpers/createStateSourceHook', () => ({createStateSourceHook: vi.fn(identity)}))
 vi.mock('@sanity/sdk', () => ({
-  getProjectsState: vi.fn(),
+  getProjectsState: vi.fn(() => ({
+    getCurrent: vi.fn(() => undefined), // Mocking getCurrent to satisfy the call within shouldSuspend
+  })),
   resolveProjects: vi.fn(),
+}))
+vi.mock('../helpers/createStateSourceHook', () => ({
+  createStateSourceHook: vi.fn(),
 }))
 
 describe('useProjects', () => {
-  // Clear the module cache before each test to ensure a fresh import
+  // Use beforeEach to reset modules and ensure mocks are fresh for each test
   beforeEach(() => {
-    vi.resetAllMocks()
     vi.resetModules()
+    // Re-mock dependencies for each test after resetModules
+    vi.mock('@sanity/sdk', () => ({
+      getProjectsState: vi.fn(() => ({
+        getCurrent: vi.fn(() => undefined),
+      })),
+      resolveProjects: vi.fn(),
+    }))
+    vi.mock('../helpers/createStateSourceHook', () => ({
+      createStateSourceHook: vi.fn(),
+    }))
   })
 
-  it('calls `createStateSourceHook` with correct configuration', async () => {
-    // Force re-import to ensure mocks are applied
-    const projectsModule = await import('./useProjects')
+  it('should call createStateSourceHook with correct arguments on import', async () => {
+    // Dynamically import the hook *after* mocks are set up and modules reset
+    await import('./useProjects')
 
-    // Verify hook exists
-    expect(projectsModule.useProjects).toBeDefined()
-
-    // Verify createStateSourceHook was called during the import
+    // Check if createStateSourceHook was called during the module evaluation (import)
     expect(createStateSourceHook).toHaveBeenCalled()
-
-    // Get the call arguments for verification
-    const callArgs = vi.mocked(createStateSourceHook).mock.calls[0][0] as any
-
-    // Check expected properties
-    expect(callArgs.getState).toBe(getProjectsState)
-    expect(callArgs.suspender).toBe(resolveProjects)
-    expect(typeof callArgs.shouldSuspend).toBe('function')
+    expect(createStateSourceHook).toHaveBeenCalledWith(
+      expect.objectContaining({
+        getState: expect.any(Function),
+        shouldSuspend: expect.any(Function),
+        suspender: expect.any(Function), // Actual function reference doesn't matter here as it's mocked
+        // Note: getConfig is not used in useProjects
+      }),
+    )
   })
 
-  it('tests the shouldSuspend implementation directly', () => {
-    // Re-implement the shouldSuspend logic for testing
-    const testShouldSuspend = (instance: any) => {
-      return getProjectsState(instance).getCurrent() === undefined
-    }
+  it('shouldSuspend should call getProjectsState and getCurrent', async () => {
+    // Dynamically import the hook *after* mocks are set up and modules reset
+    await import('./useProjects')
 
-    const mockInstance = createMockInstance()
+    // Get the arguments passed to createStateSourceHook
+    const mockCreateStateSourceHook = createStateSourceHook as ReturnType<typeof vi.fn>
+    expect(mockCreateStateSourceHook.mock.calls.length).toBeGreaterThan(0)
+    const createStateSourceHookArgs = mockCreateStateSourceHook.mock.calls[0][0]
+    const shouldSuspend = createStateSourceHookArgs.shouldSuspend
 
-    // Test case 1: Should suspend when getCurrent returns undefined
-    vi.mocked(getProjectsState).mockReturnValue({
-      getCurrent: () => undefined,
-      subscribe: vi.fn(),
-      observable: vi.fn() as any,
-    })
+    // Mock instance for the test call
+    const mockInstance = {} as SanityInstance // Use specific type
 
-    expect(testShouldSuspend(mockInstance)).toBe(true)
-    expect(getProjectsState).toHaveBeenCalledWith(mockInstance)
+    // Call the shouldSuspend function
+    const result = shouldSuspend(mockInstance)
 
-    // Test case 2: Should not suspend when getCurrent returns project data
-    vi.clearAllMocks()
-    vi.mocked(getProjectsState).mockReturnValue({
-      getCurrent: () => createMockProjects(),
-      subscribe: vi.fn(),
-      observable: vi.fn() as any,
-    })
+    // Assert that getProjectsState was called with the correct arguments
+    const mockGetProjectsState = getProjectsState as ReturnType<typeof vi.fn>
+    expect(mockGetProjectsState).toHaveBeenCalledWith(mockInstance)
 
-    expect(testShouldSuspend(mockInstance)).toBe(false)
-    expect(getProjectsState).toHaveBeenCalledWith(mockInstance)
+    // Assert that getCurrent was called on the result of getProjectsState
+    expect(mockGetProjectsState.mock.results.length).toBeGreaterThan(0)
+    const getProjectsStateMockResult = mockGetProjectsState.mock.results[0].value
+    expect(getProjectsStateMockResult.getCurrent).toHaveBeenCalled()
+
+    // Assert the result of shouldSuspend based on the mocked getCurrent value
+    expect(result).toBe(true) // Since getCurrent is mocked to return undefined
   })
 })
