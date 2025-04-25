@@ -19,6 +19,7 @@ export {
   type LoggedOutAuthState,
   type LoggingInAuthState,
 } from '../auth/authStore'
+export {observeOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
@@ -87,6 +88,7 @@ export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../do
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
 export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
+export {type OrgVerificationResult} from '../project/organizationVerification'
 export {getProjectState, resolveProject} from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'

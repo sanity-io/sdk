@@ -4,6 +4,7 @@ import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
+import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
 import {isInIframe} from '../utils'
 import {AuthError} from './AuthError'
 import {LoginCallback} from './LoginCallback'
@@ -61,6 +62,15 @@ export interface AuthBoundaryProps {
 
   /** Protected content to render when authenticated */
   children?: React.ReactNode
+
+  /**
+   * Whether to verify that the project belongs to the organization specified in the dashboard context.
+   * By default, organization verification is enabled when running in a dashboard context.
+   *
+   * WARNING: Disabling organization verification is NOT RECOMMENDED and may cause your application
+   * to break in the future. This should never be disabled in production environments.
+   */
+  verifyOrganization?: boolean
 }
 
 /**
@@ -113,10 +123,17 @@ interface AuthSwitchProps {
   header?: React.ReactNode
   footer?: React.ReactNode
   children?: React.ReactNode
+  verifyOrganization?: boolean
 }
 
-function AuthSwitch({CallbackComponent = LoginCallback, children, ...props}: AuthSwitchProps) {
+function AuthSwitch({
+  CallbackComponent = LoginCallback,
+  children,
+  verifyOrganization = true,
+  ...props
+}: AuthSwitchProps) {
   const authState = useAuthState()
+  const orgError = useVerifyOrgProjects(!verifyOrganization)
 
   const isLoggedOut = authState.type === AuthStateType.LOGGED_OUT && !authState.isDestroyingSession
   const loginUrl = useLoginUrl()
@@ -127,6 +144,11 @@ function AuthSwitch({CallbackComponent = LoginCallback, children, ...props}: Aut
       window.location.href = loginUrl
     }
   }, [isLoggedOut, loginUrl])
+
+  // Only check the error if verification is enabled
+  if (verifyOrganization && orgError) {
+    throw new AuthError(orgError)
+  }
 
   switch (authState.type) {
     case AuthStateType.ERROR: {
