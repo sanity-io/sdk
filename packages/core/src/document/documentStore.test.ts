@@ -844,7 +844,7 @@ beforeEach(() => {
       for (const i of actions) {
         switch (i.actionType) {
           case 'sanity.action.document.delete': {
-            const allIds: string[] = await fetch('sanity::versionsOf($id)', {id: i.publishedId})
+            const allIds: string[] = await fetch('sanity::versionOf($id)', {id: i.publishedId})
             const draftIds = allIds.filter((id) => id !== i.publishedId)
             const draftsToDelete = new Set(i.includeDrafts)
 
