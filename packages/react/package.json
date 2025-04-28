@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk-react",
-  "version": "0.0.0-alpha.26",
+  "version": "0.0.0-alpha.29",
   "private": false,
   "description": "Sanity SDK React toolkit for Content OS",
   "keywords": [
@@ -56,12 +56,13 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
-    "@sanity/logos": "^2.1.13",
+    "@sanity/client": "^6.29.1",
     "@sanity/message-protocol": "^0.8.0",
     "@sanity/sdk": "workspace:*",
     "@sanity/types": "^3.83.0",
     "@types/lodash-es": "^4.17.12",
     "lodash-es": "^4.17.21",
+    "react-compiler-runtime": "19.0.0-beta-ebf51a3-20250411",
     "react-error-boundary": "^5.0.0",
     "rxjs": "^7.8.2"
   },
@@ -72,7 +73,6 @@
     "@repo/package.config": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/browserslist-config": "^1.0.5",
-    "@sanity/client": "^6.28.4",
     "@sanity/comlink": "^3.0.1",
     "@sanity/pkg-utils": "^7.2.2",
     "@sanity/prettier-config": "^1.0.3",
@@ -82,15 +82,16 @@
     "@types/react-dom": "^19.1.1",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "3.1.1",
-    "babel-plugin-react-compiler": "19.0.0-beta-e993439-20250328",
+    "babel-plugin-react-compiler": "19.0.0-beta-ebf51a3-20250411",
     "eslint": "^9.22.0",
     "jsdom": "^25.0.1",
     "prettier": "^3.5.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "rollup-plugin-visualizer": "^5.14.0",
     "typescript": "^5.7.3",
-    "vite": "^6.2.5",
-    "vitest": "^3.1.1"
+    "vite": "^6.3.2",
+    "vitest": "^3.1.2"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

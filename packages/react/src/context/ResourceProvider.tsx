@@ -1,5 +1,5 @@
 import {createSanityInstance, type SanityConfig, type SanityInstance} from '@sanity/sdk'
-import {Suspense, use, useEffect, useMemo, useRef} from 'react'
+import {Suspense, useContext, useEffect, useMemo, useRef} from 'react'
 
 import {SanityInstanceContext} from './SanityInstanceContext'
 
@@ -72,7 +72,7 @@ export function ResourceProvider({
   fallback,
   ...config
 }: ResourceProviderProps): React.ReactNode {
-  const parent = use(SanityInstanceContext)
+  const parent = useContext(SanityInstanceContext)
   const instance = useMemo(
     () => (parent ? parent.createChild(config) : createSanityInstance(config)),
     [config, parent],

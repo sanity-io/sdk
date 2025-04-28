@@ -1,5 +1,54 @@
 # Changelog
 
+## [0.0.0-alpha.29](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.28...sdk-react-v0.0.0-alpha.29) (2025-04-23)
+
+
+### Bug Fixes
+
+* **build:** fixes build to not include node libraries ([#456](https://github.com/sanity-io/sdk/issues/456)) ([11a8d8a](https://github.com/sanity-io/sdk/commit/11a8d8a6c35dcfd0eeba3f5ca926b5e263aa56e8))
+
+
+### Documentation
+
+* mark useDocumentPermissions as public ([#449](https://github.com/sanity-io/sdk/issues/449)) ([089798b](https://github.com/sanity-io/sdk/commit/089798bc5f714279ba6148ed8eb5f9ee116b6af4))
+* mark useProjection as public ([#447](https://github.com/sanity-io/sdk/issues/447)) ([ae0661b](https://github.com/sanity-io/sdk/commit/ae0661b1ae4d04d1dac3044e730c36066cc06094))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 0.0.0-alpha.29
+
+## [0.0.0-alpha.28](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.27...sdk-react-v0.0.0-alpha.28) (2025-04-22)
+
+
+### Bug Fixes
+
+* **core:** refactor calculatePermissions to fix initialization error ([#443](https://github.com/sanity-io/sdk/issues/443)) ([e59d6e5](https://github.com/sanity-io/sdk/commit/e59d6e54b1da22194446ffffc747ddbf0711f134))
+* update useNavigateToStudioDocument for new dashboard context ([#436](https://github.com/sanity-io/sdk/issues/436)) ([7d7bbd4](https://github.com/sanity-io/sdk/commit/7d7bbd401942aa2839479f5698be53c0af178017))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 0.0.0-alpha.28
+
+## [0.0.0-alpha.27](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.26...sdk-react-v0.0.0-alpha.27) (2025-04-22)
+
+
+### Bug Fixes
+
+* **react:** allow sdk-react to work in react 18 ([#389](https://github.com/sanity-io/sdk/issues/389)) ([783b2f9](https://github.com/sanity-io/sdk/commit/783b2f9bce5bf2731e2518bf6a21ccdd3a4a6749))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 0.0.0-alpha.27
+
 ## [0.0.0-alpha.26](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.25...sdk-react-v0.0.0-alpha.26) (2025-04-21)
 
 

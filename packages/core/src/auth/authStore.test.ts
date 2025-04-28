@@ -14,13 +14,28 @@ import {
   getTokenState,
 } from './authStore'
 import {handleAuthCallback} from './handleAuthCallback'
+import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
-import {getAuthCode, getTokenFromStorage} from './utils'
+import {getAuthCode, getTokenFromLocation, getTokenFromStorage} from './utils'
 
 vi.mock('./utils', async (importOriginal) => {
   const original = await importOriginal<typeof import('./utils')>()
-  return {...original, getAuthCode: vi.fn(), getTokenFromStorage: vi.fn()}
+  return {
+    ...original,
+    getAuthCode: vi.fn(),
+    getTokenFromStorage: vi.fn(),
+    getTokenFromLocation: vi.fn(),
+  }
+})
+
+vi.mock('./studioModeAuth', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./studioModeAuth')>()
+  return {
+    ...original,
+    getStudioTokenFromLocalStorage: vi.fn(),
+    checkForCookieAuth: vi.fn(),
+  }
 })
 
 vi.mock('./subscribeToStateAndFetchCurrentUser')
@@ -32,6 +47,10 @@ describe('authStore', () => {
     vi.resetAllMocks()
     vi.mocked(subscribeToStateAndFetchCurrentUser).mockImplementation(() => NEVER.subscribe())
     vi.mocked(subscribeToStorageEventsAndSetToken).mockImplementation(() => NEVER.subscribe())
+    vi.mocked(getStudioTokenFromLocalStorage).mockReturnValue(null)
+    vi.mocked(checkForCookieAuth).mockResolvedValue(false)
+    vi.mocked(getTokenFromStorage).mockReturnValue(null)
+    vi.mocked(getAuthCode).mockReturnValue(null)
   })
 
   describe('getInitialState', () => {
@@ -41,6 +60,7 @@ describe('authStore', () => {
     beforeEach(() => {
       vi.mocked(getTokenFromStorage).mockReturnValue(null)
       vi.mocked(getAuthCode).mockReturnValue(null)
+      vi.mocked(getTokenFromLocation).mockReturnValue(null)
     })
 
     afterEach(() => {
@@ -212,6 +232,95 @@ describe('authStore', () => {
       const {authState, dashboardContext} = authStore.getInitialState(instance)
       expect(authState).toMatchObject({type: AuthStateType.LOGGED_OUT})
       expect(dashboardContext).toStrictEqual({})
+    })
+
+    it('sets to logged in using studio token when studio mode is enabled and token exists', () => {
+      const studioToken = 'studio-token'
+      const projectId = 'studio-project'
+      const mockStorage = {
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      } as unknown as Storage // Mock storage
+      vi.mocked(getStudioTokenFromLocalStorage).mockReturnValue(studioToken)
+
+      instance = createSanityInstance({
+        projectId,
+        dataset: 'd',
+        studioMode: {enabled: true},
+        auth: {storageArea: mockStorage}, // Provide mock storage
+      })
+
+      const {authState, options} = authStore.getInitialState(instance)
+      expect(getStudioTokenFromLocalStorage).toHaveBeenCalledWith(mockStorage, projectId)
+      expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN, token: studioToken})
+      expect(options.authMethod).toBe('localstorage')
+    })
+
+    it('checks for cookie auth when studio mode is enabled and no studio token exists', async () => {
+      vi.useFakeTimers()
+      const projectId = 'studio-project'
+      const mockStorage = {
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      } as unknown as Storage // Mock storage
+      vi.mocked(getStudioTokenFromLocalStorage).mockReturnValue(null)
+      // Mock cookie check to return true asynchronously
+      vi.mocked(checkForCookieAuth).mockResolvedValue(true)
+
+      instance = createSanityInstance({
+        projectId,
+        dataset: 'd',
+        studioMode: {enabled: true},
+        auth: {storageArea: mockStorage}, // Provide mock storage
+      })
+
+      // Initial state might be logged out before the async check completes
+      const {authState: initialAuthState} = authStore.getInitialState(instance)
+      expect(initialAuthState.type).toBe(AuthStateType.LOGGED_OUT) // Or potentially logging in depending on other factors
+      expect(getStudioTokenFromLocalStorage).toHaveBeenCalledWith(mockStorage, projectId)
+      expect(checkForCookieAuth).toHaveBeenCalledWith(projectId, expect.any(Function))
+
+      // Wait for the promise in getInitialState to resolve
+      await vi.runAllTimersAsync()
+
+      vi.useRealTimers()
+    })
+
+    it('falls back to default auth (storage token) when studio mode is disabled', () => {
+      const storageToken = 'regular-storage-token'
+      vi.mocked(getTokenFromStorage).mockReturnValue(storageToken)
+
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+      })
+
+      const {authState, options} = authStore.getInitialState(instance)
+      expect(getStudioTokenFromLocalStorage).not.toHaveBeenCalled()
+      expect(checkForCookieAuth).not.toHaveBeenCalled()
+      expect(getTokenFromStorage).toHaveBeenCalled()
+      expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN, token: storageToken})
+      expect(options.authMethod).toBe('localstorage')
+    })
+    it('sets to logging in if getTokenFromLocation returns a token', () => {
+      const initialLocationHref = 'https://example.com/#token=hash-token'
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {initialLocationHref},
+      })
+
+      vi.mocked(getAuthCode).mockReturnValue(null)
+      vi.mocked(getTokenFromLocation).mockReturnValue('hash-token')
+
+      const {authState} = authStore.getInitialState(instance)
+      expect(authState).toMatchObject({
+        type: AuthStateType.LOGGING_IN,
+        isExchangingToken: false,
+      })
+      expect(getTokenFromLocation).toHaveBeenCalledWith(initialLocationHref)
     })
   })
 

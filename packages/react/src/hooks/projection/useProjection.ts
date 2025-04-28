@@ -28,7 +28,7 @@ export interface UseProjectionResults<TData extends object> {
 }
 
 /**
- * @beta
+ * @public
  *
  * Returns the projection values of a document (specified via a `DocumentHandle`),
  * based on the provided projection string. These values are live and will update in realtime.
@@ -44,8 +44,8 @@ export interface UseProjectionResults<TData extends object> {
  * // ProjectionComponent.jsx
  * export default function ProjectionComponent({ document }) {
  *   const ref = useRef(null)
- *   const { results: { title, coverImage, authors }, isPending } = useProjection({
- *     document,
+ *   const { data: { title, coverImage, authors }, isPending } = useProjection({
+ *     ...document,
  *     ref,
  *     projection: `{
  *       title,

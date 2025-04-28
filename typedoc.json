@@ -20,6 +20,7 @@
   "entryPointStrategy": "packages",
   "alwaysCreateEntryPointModule": false,
   "exclude": ["packages/react-internal"],
+  "customCss": "./typedoc-theme/style.css",
   "includeVersion": false,
   "navigation": {
     "includeCategories": true,

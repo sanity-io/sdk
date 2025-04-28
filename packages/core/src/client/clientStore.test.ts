@@ -2,7 +2,7 @@ import {createClient, type SanityClient} from '@sanity/client'
 import {Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {getTokenState} from '../auth/authStore'
+import {getAuthMethodState, getTokenState} from '../auth/authStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {getClient, getClientState} from './clientStore'
 
@@ -12,13 +12,23 @@ vi.mock('@sanity/client')
 vi.mock('../auth/authStore')
 
 let instance: SanityInstance
-
+let authMethod$: Subject<'cookie' | 'localstorage' | undefined>
 beforeEach(() => {
   vi.resetAllMocks()
+
+  // Initialize Subjects ONCE per test run before mocks use them
+  authMethod$ = new Subject<'cookie' | 'localstorage' | undefined>()
+
   vi.mocked(getTokenState).mockReturnValue({
     getCurrent: vi.fn().mockReturnValue('initial-token'),
     subscribe: vi.fn(),
     observable: new Subject(),
+  })
+  vi.mocked(getAuthMethodState).mockReturnValue({
+    // Mock initial state value if needed by other parts of setup
+    getCurrent: vi.fn().mockReturnValue(undefined),
+    subscribe: vi.fn(),
+    observable: authMethod$, // Consistently return the module-scope Subject
   })
   vi.mocked(createClient).mockImplementation(
     (clientConfig) => ({config: () => clientConfig}) as SanityClient,
