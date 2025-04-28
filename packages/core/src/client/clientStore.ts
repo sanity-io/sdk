@@ -75,7 +75,6 @@ export interface ClientStoreState {
  * @public
  */
 export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey> {
-  // use
   /**
    * An optional flag to choose between the default client (typically project-level)
    * and the global client ('global'). When set to `'global'`, the global client

@@ -3,7 +3,7 @@ import {createSelector} from 'reselect'
 import {type PerspectiveHandle, type ReleasePerspective} from '../config/sanityConfig'
 import {bindActionByDataset} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
-import {type ReleaseDocument, releasesStore, type ReleasesStoreState} from './releasesStore'
+import {releasesStore, type ReleasesStoreState} from './releasesStore'
 
 function isReleasePerspective(
   perspective: PerspectiveHandle['perspective'],
@@ -14,7 +14,7 @@ function isReleasePerspective(
 const DEFAULT_PERSPECTIVE = 'drafts'
 
 // Cache for options
-const optionsCache = new WeakMap<ReleaseDocument[], Map<string, PerspectiveHandle>>()
+const optionsCache = new Map<string, Map<string, PerspectiveHandle>>()
 
 const selectInstancePerspective = (context: SelectorContext<ReleasesStoreState>) =>
   context.instance.config.perspective
@@ -30,10 +30,12 @@ const memoizedOptionsSelector = createSelector(
   (activeReleases, options) => {
     if (!options || !activeReleases) return options
 
-    let nestedCache = optionsCache.get(activeReleases)
+    // Use release document IDs as the cache key
+    const releaseIds = activeReleases.map((release) => release._id).join(',')
+    let nestedCache = optionsCache.get(releaseIds)
     if (!nestedCache) {
       nestedCache = new Map<string, PerspectiveHandle>()
-      optionsCache.set(activeReleases, nestedCache)
+      optionsCache.set(releaseIds, nestedCache)
     }
 
     const optionsKey = JSON.stringify(options)
