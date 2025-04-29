@@ -3,6 +3,7 @@ import {
   getPerspectiveState,
   type PerspectiveHandle,
   type SanityInstance,
+  type StateSource,
 } from '@sanity/sdk'
 import {filter, firstValueFrom} from 'rxjs'
 
@@ -12,7 +13,7 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  * @public
  */
 type UsePerspective = {
-  (perspectiveHandle: PerspectiveHandle): string | string[] | undefined
+  (perspectiveHandle: PerspectiveHandle): string | string[]
 }
 
 /**
@@ -37,7 +38,10 @@ type UsePerspective = {
  * @returns The perspective for the given perspective handle.
  */
 export const usePerspective: UsePerspective = createStateSourceHook({
-  getState: getPerspectiveState,
+  getState: getPerspectiveState as (
+    instance: SanityInstance,
+    perspectiveHandle?: PerspectiveHandle,
+  ) => StateSource<string | string[]>,
   shouldSuspend: (instance: SanityInstance, options?: PerspectiveHandle): boolean =>
     getPerspectiveState(instance, options).getCurrent() === undefined,
   suspender: (instance: SanityInstance, _options?: PerspectiveHandle) =>

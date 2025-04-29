@@ -1,4 +1,9 @@
-import {getActiveReleasesState, type ReleaseDocument, type SanityInstance} from '@sanity/sdk'
+import {
+  getActiveReleasesState,
+  type ReleaseDocument,
+  type SanityInstance,
+  type StateSource,
+} from '@sanity/sdk'
 import {filter, firstValueFrom} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
@@ -7,7 +12,7 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  * @public
  */
 type UseActiveReleases = {
-  (): ReleaseDocument[] | undefined
+  (): ReleaseDocument[]
 }
 
 /**
@@ -26,7 +31,7 @@ type UseActiveReleases = {
  * ```
  */
 export const useActiveReleases: UseActiveReleases = createStateSourceHook({
-  getState: getActiveReleasesState,
+  getState: getActiveReleasesState as (instance: SanityInstance) => StateSource<ReleaseDocument[]>,
   shouldSuspend: (instance: SanityInstance) =>
     getActiveReleasesState(instance).getCurrent() === undefined,
   suspender: (instance: SanityInstance) =>
