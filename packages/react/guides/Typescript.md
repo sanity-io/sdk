@@ -114,7 +114,8 @@ By default, Typegen works seamlessly for the common single-schema setup without 
 Now, with the necessary packages installed and your schema(s) extracted (and optionally configured in `sanity-typegen.json`), you can run the `sanity typegen generate` command:
 
 ```bash
-npx sanity typegen generate
+# use `@sanity/cli` package directly for now
+./node_modules/@sanity/cli/bin/sanity typegen generate
 ```
 
 This command reads your configuration (either `sanity-typegen.json` or the default `schema.json`), processes the specified schemas, and generates `sanity.types.ts` containing your types. It's recommended to add this command to your `package.json` scripts.
@@ -122,7 +123,7 @@ This command reads your configuration (either `sanity-typegen.json` or the defau
 ```json
 {
   "scripts": {
-    "typegen": "sanity typegen generate"
+    "typegen": "./node_modules/@sanity/cli/bin/sanity typegen generate"
   }
 }
 ```

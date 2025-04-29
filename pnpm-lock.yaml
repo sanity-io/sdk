@@ -14141,7 +14141,7 @@ snapshots:
   through2@3.0.2:
     dependencies:
       inherits: 2.0.4
-      readable-stream: 3.6.2
+      readable-stream: 2.3.8
 
   through@2.3.8: {}
 
