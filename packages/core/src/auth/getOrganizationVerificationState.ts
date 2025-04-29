@@ -38,9 +38,6 @@ export function observeOrganizationVerificationState(
   // Combine the sources
   return combineLatest([dashboardOrgId$, allProjectOrgIds$]).pipe(
     switchMap(([dashboardOrgId, projectOrgDataArray]) => {
-      dashboardOrgId = 'oSyH1iET5' // TODO: remove hardcoding
-      // console.log('dashboardOrgId$', dashboardOrgId, projectOrgDataArray)
-
       // If no dashboard org ID is set, or no project IDs provided, verification isn't applicable/possible
       if (!dashboardOrgId || projectOrgDataArray.length === 0) {
         return of<OrgVerificationResult>({error: null}) // Return success (no error)
