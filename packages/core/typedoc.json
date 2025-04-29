@@ -1,5 +1,5 @@
 {
-  "name": "Core SDK",
+  "name": "Core App SDK",
   "extends": ["../../typedoc.base.json"],
   "entryPoints": ["./src/_exports/*"],
   "projectDocuments": ["./guides/*.md"],
