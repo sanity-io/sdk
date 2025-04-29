@@ -242,7 +242,7 @@ export const allBooksQuery = defineQuery('*[_type == "book"]{ _id, title }')
 
 function BookList() {
   // Type of `data` is inferred from `allBooksQuery`
-  const {data} = useQuery(allBooksQuery)
+  const {data} = useQuery({query: allBooksQuery})
 
   // data is typed as Array<{_id: string, title: string}> (or similar)
   return (
