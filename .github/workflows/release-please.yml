@@ -87,3 +87,8 @@ jobs:
           initial_state_id: "c56956cd-c281-4ca5-889f-6189ce231a6d"
           # Label: Shipped
           done_state_id: "5a35b7bf-6d37-4cc2-854a-2f18d160e2e5"
+
+      - name: Trigger CircleCI Pipeline
+        uses: CircleCI-Public/trigger-circleci-pipeline-action@v1.0.5
+        env:
+          CCI_TOKEN: ${{ secrets.CCI_TOKEN }}
