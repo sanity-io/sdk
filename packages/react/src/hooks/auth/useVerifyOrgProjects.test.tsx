@@ -21,6 +21,7 @@ describe('useVerifyOrgProjects', () => {
   const mockInstance = {config: {}} as any // Dummy instance
   const mockObserve = vi.mocked(observeOrganizationVerificationState)
   const mockUseInstance = vi.mocked(useSanityInstance)
+  const testProjectIds = ['proj-1']
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -28,27 +29,37 @@ describe('useVerifyOrgProjects', () => {
   })
 
   it('should return null and not observe state if disabled', () => {
-    const {result} = renderHook(() => useVerifyOrgProjects(true))
+    const {result} = renderHook(() => useVerifyOrgProjects(true, testProjectIds))
 
     expect(result.current).toBeNull()
     expect(mockObserve).not.toHaveBeenCalled()
   })
 
-  it('should return null initially when not disabled', () => {
+  it('should return null and not observe state if projectIds is missing or empty', () => {
+    const {result: resultUndefined} = renderHook(() => useVerifyOrgProjects(false, undefined))
+    expect(resultUndefined.current).toBeNull()
+    expect(mockObserve).not.toHaveBeenCalled()
+
+    const {result: resultEmpty} = renderHook(() => useVerifyOrgProjects(false, []))
+    expect(resultEmpty.current).toBeNull()
+    expect(mockObserve).not.toHaveBeenCalled()
+  })
+
+  it('should return null initially when not disabled and projectIds provided', () => {
     const subject = new Subject<OrgVerificationResult>()
     mockObserve.mockReturnValue(subject.asObservable())
 
-    const {result} = renderHook(() => useVerifyOrgProjects(false))
+    const {result} = renderHook(() => useVerifyOrgProjects(false, testProjectIds))
 
     expect(result.current).toBeNull()
-    expect(mockObserve).toHaveBeenCalledWith(mockInstance)
+    expect(mockObserve).toHaveBeenCalledWith(mockInstance, testProjectIds)
   })
 
   it('should return null if observable emits { error: null }', async () => {
     const subject = new Subject<OrgVerificationResult>()
     mockObserve.mockReturnValue(subject.asObservable())
 
-    const {result} = renderHook(() => useVerifyOrgProjects(false))
+    const {result} = renderHook(() => useVerifyOrgProjects(false, testProjectIds))
 
     act(() => {
       subject.next({error: null})
@@ -64,7 +75,7 @@ describe('useVerifyOrgProjects', () => {
     const errorMessage = 'Org mismatch'
     mockObserve.mockReturnValue(subject.asObservable())
 
-    const {result} = renderHook(() => useVerifyOrgProjects(false))
+    const {result} = renderHook(() => useVerifyOrgProjects(false, testProjectIds))
 
     act(() => {
       subject.next({error: errorMessage})
@@ -80,7 +91,7 @@ describe('useVerifyOrgProjects', () => {
     const unsubscribeSpy = vi.spyOn(subject, 'unsubscribe')
     mockObserve.mockReturnValue(subject)
 
-    const {unmount} = renderHook(() => useVerifyOrgProjects(false))
+    const {unmount} = renderHook(() => useVerifyOrgProjects(false, testProjectIds))
 
     expect(unsubscribeSpy).not.toHaveBeenCalled()
     unmount()
@@ -99,9 +110,12 @@ describe('useVerifyOrgProjects', () => {
     const errorMessage = 'Org mismatch'
     mockObserve.mockReturnValue(subject.asObservable())
 
-    const {result, rerender} = renderHook(({disabled}) => useVerifyOrgProjects(disabled), {
-      initialProps: {disabled: false},
-    })
+    const {result, rerender} = renderHook(
+      ({disabled, pIds}) => useVerifyOrgProjects(disabled, pIds),
+      {
+        initialProps: {disabled: false, pIds: testProjectIds},
+      },
+    )
 
     // Set initial error
     act(() => {
@@ -112,7 +126,7 @@ describe('useVerifyOrgProjects', () => {
     })
 
     // Disable the hook
-    rerender({disabled: true})
+    rerender({disabled: true, pIds: testProjectIds})
 
     // Error should be cleared
     await waitFor(() => {

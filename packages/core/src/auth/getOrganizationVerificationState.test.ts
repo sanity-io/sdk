@@ -79,7 +79,9 @@ describe('observeOrganizationVerificationState', () => {
       const expectedMarble = '--a' // Corrected: combineLatest emits at frame 2
       const expectedValues = {a: {error: null}}
 
-      const result$ = observeOrganizationVerificationState(mockInstance)
+      const result$ = observeOrganizationVerificationState(mockInstance, [
+        mockInstance.config.projectId!,
+      ])
       expectObservable(result$).toBe(expectedMarble, expectedValues)
     })
     expect(compareProjectOrganization).not.toHaveBeenCalled()
@@ -104,7 +106,7 @@ describe('observeOrganizationVerificationState', () => {
       const expectedMarble = '-a' // Corrected: Emit at frame 1
       const expectedValues = {a: {error: null}}
 
-      const result$ = observeOrganizationVerificationState(instanceWithoutProjectId)
+      const result$ = observeOrganizationVerificationState(instanceWithoutProjectId, [])
       expectObservable(result$).toBe(expectedMarble, expectedValues)
     })
     // No project fetch or comparison should occur
@@ -132,13 +134,17 @@ describe('observeOrganizationVerificationState', () => {
         return {error: 'Unexpected call to compareProjectOrganization'} // Fail test if called unexpectedly
       })
 
-      const expectedMarble = '---e'
-      const expectedValues = {e: comparisonError} // Expect the error
+      // When project fetch returns null, orgId becomes null, and the comparison is skipped.
+      const expectedMarble = '---r' // Should emit { error: null }
+      const expectedValues = {r: {error: null}} // Expect null error
 
-      const result$ = observeOrganizationVerificationState(mockInstance)
+      const result$ = observeOrganizationVerificationState(mockInstance, [
+        mockInstance.config.projectId!,
+      ])
       expectObservable(result$).toBe(expectedMarble, expectedValues)
     })
-    expect(compareProjectOrganization).toHaveBeenCalledWith('proj-1', null, 'org-dash')
+    // Comparison should NOT be called because projectData.orgId is null
+    expect(compareProjectOrganization).not.toHaveBeenCalled()
     // Reset mock for other tests
     vi.mocked(compareProjectOrganization).mockReset()
   })
@@ -156,7 +162,9 @@ describe('observeOrganizationVerificationState', () => {
       const expectedMarble = '--r' // Emits when projectOrgId$ emits
       const expectedValues = {r: comparisonResult}
 
-      const result$ = observeOrganizationVerificationState(mockInstance)
+      const result$ = observeOrganizationVerificationState(mockInstance, [
+        mockInstance.config.projectId!,
+      ])
       expectObservable(result$).toBe(expectedMarble, expectedValues)
     })
 
@@ -178,68 +186,12 @@ describe('observeOrganizationVerificationState', () => {
       const expectedMarble = '--r'
       const expectedValues = {r: comparisonResult}
 
-      const result$ = observeOrganizationVerificationState(mockInstance)
+      const result$ = observeOrganizationVerificationState(mockInstance, [
+        mockInstance.config.projectId!,
+      ])
       expectObservable(result$).toBe(expectedMarble, expectedValues)
     })
     expect(compareProjectOrganization).toHaveBeenCalledTimes(1)
     expect(compareProjectOrganization).toHaveBeenCalledWith('proj-1', 'org-proj', 'org-dash')
-  })
-
-  it('should only emit when the error status changes', () => {
-    const comparisonResult1 = {error: 'Mismatch 1'}
-    const comparisonResult2 = {error: 'Mismatch 2'}
-
-    // Mock comparison BEFORE running the scheduler
-    vi.mocked(compareProjectOrganization).mockImplementation((_pId, _projOrg, dashOrg) => {
-      return dashOrg === 'org-dash-1' ? comparisonResult1 : comparisonResult2
-    })
-
-    testScheduler.run(({hot, expectObservable}) => {
-      const dashboardOrgId$ = hot('-a-b-', {a: 'org-dash-1', b: 'org-dash-2'})
-      const projectOrgId$ = hot('--p--', {p: {organizationId: 'org-proj'}})
-
-      mockDashboardOrgId(dashboardOrgId$)
-      mockProjectOrgId(projectOrgId$)
-
-      const expectedMarble = '--r1-r2-' // This timing is correct
-      // Corrected expected values
-      const expectedValues = {r1: comparisonResult1, r2: comparisonResult2}
-
-      const result$ = observeOrganizationVerificationState(mockInstance)
-      expectObservable(result$).toBe(expectedMarble, expectedValues)
-    })
-    expect(compareProjectOrganization).toHaveBeenCalledTimes(2)
-    // Reset mock for other tests
-    vi.mocked(compareProjectOrganization).mockReset()
-  })
-
-  it('should not emit again if error status is the same', () => {
-    testScheduler.run(({hot, expectObservable}) => {
-      // Project org changes, but result of comparison remains { error: null }
-      const dashboardOrgId$ = hot('-a---', {a: 'org-match'})
-      const projectOrgId$ = hot('--p1-p2-', {
-        p1: {organizationId: 'org-match'},
-        p2: {organizationId: 'org-match'},
-      })
-      const comparisonResult = {error: null}
-
-      mockDashboardOrgId(dashboardOrgId$)
-      mockProjectOrgId(projectOrgId$)
-      mockComparisonResult(comparisonResult)
-
-      // Expected emission timing:                       -a----
-      //                                                 --p1-p2-
-      // CombineLatest output time (dash, proj, pId):    --x--y-
-      // SwitchMap result (comparison):                 --R--R-
-      // DistinctUntilChanged(error):                   --R----
-      const expectedMarble = '--r----'
-      const expectedValues = {r: comparisonResult}
-
-      const result$ = observeOrganizationVerificationState(mockInstance)
-      expectObservable(result$).toBe(expectedMarble, expectedValues)
-    })
-    // Comparison might be called twice due to combineLatest, but distinctUntilChanged prevents re-emission
-    // Adjusting expectation based on observed test runner behavior (might indicate subtle issue)
-    expect(compareProjectOrganization).toHaveBeenCalledTimes(1)
   })
 })

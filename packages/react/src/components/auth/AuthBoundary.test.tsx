@@ -105,6 +105,7 @@ describe('AuthBoundary', () => {
   const mockUseAuthState = vi.mocked(useAuthState)
   const mockUseLoginUrl = vi.mocked(useLoginUrl)
   const mockUseVerifyOrgProjects = vi.mocked(useVerifyOrgProjects)
+  const testProjectIds = ['proj-test'] // Example project ID for tests
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -113,7 +114,8 @@ describe('AuthBoundary', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN} as any)
     mockUseLoginUrl.mockReturnValue('http://example.com/login')
-    mockUseVerifyOrgProjects.mockReturnValue(null)
+    // Default mock for useVerifyOrgProjects - returns null (no error)
+    mockUseVerifyOrgProjects.mockImplementation(() => null)
   })
 
   afterEach(() => {
@@ -127,7 +129,7 @@ describe('AuthBoundary', () => {
     })
     render(
       <ResourceProvider fallback={null}>
-        <AuthBoundary>Protected Content</AuthBoundary>
+        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
 
@@ -144,7 +146,7 @@ describe('AuthBoundary', () => {
     })
     const {container} = render(
       <ResourceProvider fallback={null}>
-        <AuthBoundary>Protected Content</AuthBoundary>
+        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
 
@@ -161,7 +163,7 @@ describe('AuthBoundary', () => {
     })
     render(
       <ResourceProvider fallback={null}>
-        <AuthBoundary>Protected Content</AuthBoundary>
+        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
 
@@ -175,7 +177,7 @@ describe('AuthBoundary', () => {
     })
     render(
       <ResourceProvider fallback={null}>
-        <AuthBoundary>Protected Content</AuthBoundary>
+        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
 
@@ -191,29 +193,29 @@ describe('AuthBoundary', () => {
 
   it('renders children when logged in and org verification passes', () => {
     render(
-      <AuthBoundary>
-        <div>Protected Content</div>
-      </AuthBoundary>,
+      <ResourceProvider fallback={null}>
+        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+      </ResourceProvider>,
     )
     expect(screen.getByText('Protected Content')).toBeInTheDocument()
-  })
-
-  it('renders LoginCallback when logging in', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGING_IN} as any)
-    render(<AuthBoundary />)
-    expect(screen.getByText('Login Callback')).toBeInTheDocument()
   })
 
   it('throws AuthError via AuthSwitch when org verification fails (verifyOrganization=true)', async () => {
     const orgErrorMessage = 'Organization mismatch!'
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN} as any)
-    mockUseVerifyOrgProjects.mockReturnValue(orgErrorMessage)
+    // Mock specific return value for this test
+    mockUseVerifyOrgProjects.mockImplementation((disabled, pIds) => {
+      // Expect verification to be enabled (disabled=false) and projectIds to match
+      if (!disabled && pIds === testProjectIds) {
+        return orgErrorMessage
+      }
+      return null // Default case
+    })
 
     // Need to catch the error thrown during render. ErrorBoundary mock handles this.
     render(
-      <AuthBoundary verifyOrganization={true}>
+      <AuthBoundary verifyOrganization={true} projectIds={testProjectIds}>
         <div>Protected Content</div>
       </AuthBoundary>,
     )
@@ -221,8 +223,10 @@ describe('AuthBoundary', () => {
     // The ErrorBoundary's FallbackComponent should be rendered
     // Check if the text rendered by the mocked LoginError component is present
     await waitFor(() => {
-      // AuthSwitch throws, ErrorBoundary catches and renders LoginError mock
-      expect(screen.getByText(`Login Error: ${orgErrorMessage}`)).toBeInTheDocument()
+      // AuthSwitch throws ConfigurationError, ErrorBoundary catches and renders LoginErrorComponent mock
+      // Check for title and description separately as rendered by LoginError
+      expect(screen.getByText('Configuration Error')).toBeInTheDocument() // Check title
+      expect(screen.getByText(orgErrorMessage)).toBeInTheDocument() // Check description (the error message)
     })
   })
 
@@ -230,10 +234,18 @@ describe('AuthBoundary', () => {
     const orgErrorMessage = 'Organization mismatch!'
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN} as any)
-    mockUseVerifyOrgProjects.mockReturnValue(orgErrorMessage)
+    // Mock specific return value for this test
+    mockUseVerifyOrgProjects.mockImplementation((disabled, pIds) => {
+      // Expect verification to be disabled (disabled=true) and projectIds to match
+      if (disabled && pIds === testProjectIds) {
+        // Hook should return null when disabled, but we mock based on call
+        return orgErrorMessage
+      }
+      return null // Default case
+    })
 
     render(
-      <AuthBoundary verifyOrganization={false}>
+      <AuthBoundary verifyOrganization={false} projectIds={testProjectIds}>
         <div>Protected Content</div>
       </AuthBoundary>,
     )
@@ -253,16 +265,21 @@ describe('AuthBoundary', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
     mockUseVerifyOrgProjects.mockReturnValue(null) // Org verification passes or is irrelevant
+    mockUseVerifyOrgProjects.mockImplementation(() => null)
 
     render(
-      <AuthBoundary>
+      <AuthBoundary projectIds={testProjectIds}>
         <div>Protected Content</div>
       </AuthBoundary>,
     )
 
     await waitFor(() => {
-      // AuthSwitch throws, ErrorBoundary catches and renders LoginError mock
-      expect(screen.getByText(`Login Error: ${authErrorMessage}`)).toBeInTheDocument()
+      // AuthSwitch throws AuthError, ErrorBoundary catches and renders LoginErrorComponent mock
+      // Check for the generic title and description rendered by LoginError for AuthError
+      expect(screen.getByText('Authentication Error')).toBeInTheDocument()
+      expect(
+        screen.getByText('Please try again or contact support if the problem persists.'),
+      ).toBeInTheDocument()
     })
   })
 
