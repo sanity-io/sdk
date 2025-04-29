@@ -11,6 +11,7 @@ React hooks for creating Sanity applications.
 
 - Familiarize yourself with the App SDK via a conceptual overview, a quickstart guide, and a step by step walkthrough on **[the Sanity Docs site](https://sanity.io/docs/app-sdk)**
 - Go in depth with the **[App SDK reference docs](https://sdk-docs.sanity.dev)**
+- View example implementations on the **[SDK Explorer](https://sdk-examples.sanity.dev)**
 
 ## License
 
