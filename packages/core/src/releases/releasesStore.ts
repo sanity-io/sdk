@@ -7,6 +7,7 @@ import {bindActionByDataset} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {listenQuery} from '../utils/listenQuery'
+import {sortReleases} from './utils/sortReleases'
 
 /**
  * Represents a document in a Sanity dataset that represents release options.
@@ -82,7 +83,7 @@ const subscribeToReleases = ({instance, state}: StoreContext<ReleasesStoreState>
     )
     .subscribe({
       next: (releases) => {
-        state.set('setActiveReleases', {activeReleases: releases ?? []})
+        state.set('setActiveReleases', {activeReleases: sortReleases(releases ?? [])})
       },
     })
 }

@@ -39,18 +39,19 @@ describe('releasesStore', () => {
   })
 
   it('should set active releases state when listenQuery succeeds', async () => {
+    // note that the order of the releases is important here -- they get sorted
     const mockReleases: ReleaseDocument[] = [
-      {
-        _id: 'r1',
-        _type: 'system.release',
-        name: 'Release 1',
-        metadata: {title: 'R1', releaseType: 'asap'},
-      } as ReleaseDocument,
       {
         _id: 'r2',
         _type: 'system.release',
         name: 'Release 2',
         metadata: {title: 'R2', releaseType: 'scheduled'},
+      } as ReleaseDocument,
+      {
+        _id: 'r1',
+        _type: 'system.release',
+        name: 'Release 1',
+        metadata: {title: 'R1', releaseType: 'asap'},
       } as ReleaseDocument,
     ]
 
@@ -89,16 +90,16 @@ describe('releasesStore', () => {
 
     const updatedReleases: ReleaseDocument[] = [
       {
-        _id: 'r1',
-        _type: 'system.release',
-        name: 'Updated Release 1',
-        metadata: {title: 'UR1', releaseType: 'asap'},
-      } as ReleaseDocument,
-      {
         _id: 'r2',
         _type: 'system.release',
         name: 'New Release 2',
         metadata: {title: 'NR2', releaseType: 'scheduled'},
+      } as ReleaseDocument,
+      {
+        _id: 'r1',
+        _type: 'system.release',
+        name: 'Updated Release 1',
+        metadata: {title: 'UR1', releaseType: 'asap'},
       } as ReleaseDocument,
     ]
     releasesSubject.next(updatedReleases)

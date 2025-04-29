@@ -6,8 +6,6 @@ import {useCallback, useEffect, useMemo, useState} from 'react'
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useQuery} from '../query/useQuery'
 
-const DEFAULT_PERSPECTIVE = 'drafts'
-
 /**
  * Configuration options for the usePaginatedDocuments hook
  *
@@ -185,7 +183,6 @@ export function usePaginatedDocuments({
 
   const startIndex = pageIndex * pageSize
   const endIndex = (pageIndex + 1) * pageSize
-  const perspective = options.perspective ?? DEFAULT_PERSPECTIVE
 
   const filterClause = useMemo(() => {
     const conditions: string[] = []
@@ -218,7 +215,7 @@ export function usePaginatedDocuments({
         .join(',')})`
     : ''
 
-  const dataQuery = `*${filterClause}${orderClause}[${startIndex}...${endIndex}]{"documentId":_id,"documentType":_type,...$__dataset}`
+  const dataQuery = `*${filterClause}${orderClause}[${startIndex}...${endIndex}]{"documentId":_id,"documentType":_type,...$__handle}`
   const countQuery = `count(*${filterClause})`
 
   const {
@@ -228,8 +225,13 @@ export function usePaginatedDocuments({
     `{"data":${dataQuery},"count":${countQuery}}`,
     {
       ...options,
-      perspective,
-      params: {...params, __dataset: pick(instance.config, 'projectId', 'dataset')},
+      params: {
+        ...params,
+        __handle: {
+          ...pick(instance.config, 'perspective', 'projectId', 'dataset'),
+          ...pick(options, 'perspective', 'projectId', 'dataset'),
+        },
+      },
     },
   )
 
