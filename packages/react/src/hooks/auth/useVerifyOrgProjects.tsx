@@ -23,17 +23,17 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * }
  * ```
  */
-export function useVerifyOrgProjects(disabled = false): string | null {
+export function useVerifyOrgProjects(disabled = false, projectIds?: string[]): string | null {
   const instance = useSanityInstance()
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (disabled) {
+    if (disabled || !projectIds || projectIds.length === 0) {
       if (error !== null) setError(null)
       return
     }
 
-    const verificationObservable$ = observeOrganizationVerificationState(instance)
+    const verificationObservable$ = observeOrganizationVerificationState(instance, projectIds)
 
     const subscription = verificationObservable$.subscribe((result: OrgVerificationResult) => {
       setError(result.error)
@@ -42,7 +42,7 @@ export function useVerifyOrgProjects(disabled = false): string | null {
     return () => {
       subscription.unsubscribe()
     }
-  }, [instance, disabled, error])
+  }, [instance, disabled, error, projectIds])
 
   return error
 }

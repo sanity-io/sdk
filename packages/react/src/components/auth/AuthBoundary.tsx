@@ -7,6 +7,7 @@ import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
 import {isInIframe} from '../utils'
 import {AuthError} from './AuthError'
+import {ConfigurationError} from './ConfigurationError'
 import {LoginCallback} from './LoginCallback'
 import {LoginError, type LoginErrorProps} from './LoginError'
 
@@ -56,6 +57,11 @@ export interface AuthBoundaryProps {
 
   /** Header content to display */
   header?: React.ReactNode
+
+  /**
+   * The project IDs to use for organization verification.
+   */
+  projectIds?: string[]
 
   /** Footer content to display */
   footer?: React.ReactNode
@@ -124,16 +130,18 @@ interface AuthSwitchProps {
   footer?: React.ReactNode
   children?: React.ReactNode
   verifyOrganization?: boolean
+  projectIds?: string[]
 }
 
 function AuthSwitch({
   CallbackComponent = LoginCallback,
   children,
   verifyOrganization = true,
+  projectIds,
   ...props
 }: AuthSwitchProps) {
   const authState = useAuthState()
-  const orgError = useVerifyOrgProjects(!verifyOrganization)
+  const orgError = useVerifyOrgProjects(!verifyOrganization, projectIds)
 
   const isLoggedOut = authState.type === AuthStateType.LOGGED_OUT && !authState.isDestroyingSession
   const loginUrl = useLoginUrl()
@@ -147,7 +155,7 @@ function AuthSwitch({
 
   // Only check the error if verification is enabled
   if (verifyOrganization && orgError) {
-    throw new AuthError(orgError)
+    throw new ConfigurationError({message: orgError})
   }
 
   switch (authState.type) {
