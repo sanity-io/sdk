@@ -2,25 +2,16 @@
   <a href="https://sanity.io">
     <img src="https://cdn.sanity.io/images/3do82whm/next/1dfce9dde7a62ccaa8e8377254a1e919f6c07ad3-128x128.svg" />
   </a>
-  <h1 align="center">Sanity SDK</h1>
+  <h1 align="center">Sanity SDK - Core</h1>
 </p>
 
-Core utilities for creating Sanity applications.
+Core functionality powering the React SDK.
 
-## 💻 Installation
+## Documentation
 
-```bash
-npm i @sanity/sdk
-```
+- Familiarize yourself with the App SDK via a conceptual overview, a quickstart guide, and a step by step walkthrough on **[the Sanity Docs site](https://sanity.io/docs/app-sdk)**
+- Go in depth with the **[App SDK reference docs](https://sdk-docs.sanity.dev)**
 
-## 📚 SDK Documentation
-
-See the [SDK Documentation](https://sdk-docs.sanity.dev) for more information.
-
-## 🧑‍💻 Implementations
-
-- [React](https://www.npmjs.com/package/@sanity/sdk-react)
-
-## 📄 License
+## License
 
 MIT © Sanity.io
