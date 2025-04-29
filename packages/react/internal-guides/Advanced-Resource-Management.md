@@ -369,7 +369,9 @@ This handle-based approach gives you:
 - **Flexibility**: Components can work with partial configuration
 - **Context Preservation**: Configuration flows naturally through your component tree
 
-To further improve type safety and facilitate integration with tools like Sanity Typegen, the SDK provides helper functions like `createDocumentHandle`, `createDocumentTypeHandle`, `createProjectHandle`, and `createDatasetHandle` (defined in `@sanity/core`). These functions act primarily as identity functions at runtime but provide stronger type guarantees in TypeScript. They help capture literal types (e.g., `{ documentType: 'author' }` instead of `{ documentType: string }`) without requiring the use of `as const` on the handle object literal. While you can still create handles using plain objects (especially with `as const` if needed), using these helper functions is recommended, particularly when leveraging Typegen, as it ensures the necessary type information is preserved for accurate type inference downstream in hooks like `useDocument`.
+To further improve type safety and facilitate integration with tools like Sanity Typegen, the SDK provides helper functions like `createDocumentHandle`, `createDocumentTypeHandle`, `createProjectHandle`, and `createDatasetHandle` (defined in `@sanity/core`). These functions act primarily as identity functions at runtime but provide stronger type guarantees in TypeScript. They help capture literal types (e.g., `{ documentType: 'author' }` instead of `{ documentType: string }`) without requiring the use of `as const` on the handle object literal.
+
+While you can still create handles using plain objects (especially with `as const` if needed for Typescript), using these helper functions is recommended, particularly when leveraging Typegen, as it ensures the necessary type information is preserved for accurate type inference downstream in hooks like `useDocument`.
 
 ## Implementation Deep Dive: Store Architecture
 

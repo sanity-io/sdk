@@ -23,7 +23,9 @@ Using Typegen involves two main steps: extracting your schema(s) and then genera
 
 First, you need to extract your Sanity schema(s) into a JSON format that Typegen can understand. **Currently, this step relies on the full `sanity` package**, typically used within your Sanity Studio project, as Typegen needs access to the complete schema definition to generate accurate types.
 
-While this temporarily links schema extraction to your Studio setup, the generated `schema.json` file can then be used independently in your Sanity app. We're actively working on improving this workflow in future SDK updates to make the process more self-contained.
+Schema extraction is performed within your Studio setup to generate the `schema.json` file. Once created, this file can be used independently by other tools or parts of your workflow.
+
+**Note:** We recognize that requiring the Studio environment solely for this generation step isn't ideal, and we're actively working on improving this workflow in future SDK updates to make the process more self-contained.
 
 Use the `sanity schema extract` command within your Studio project or a project that has the `sanity` package installed:
 
@@ -32,9 +34,9 @@ Use the `sanity schema extract` command within your Studio project or a project 
 npx sanity schema extract --workspace <workspace-name> --output-path <path/to/schema.json>
 ```
 
-Once generated, this `schema.json` file can be copied or output directly into your Sanity app's repository. Your application itself does _not_ need the full `sanity` package as a dependency to use the generated types; it only needs the `schema.json` file for the `typegen generate` step.
+This `schema.json` file can be copied to (or the `--output-path` can be set directly to) your Sanity app's repository. Your application itself does _not_ need the full `sanity` package as a dependency to use the generated types; it only needs the `schema.json` file for the `typegen generate` step.
 
-- **Multiple Schemas/Workspaces:** If your `sanity.config.ts` defines multiple workspaces or you need types for different schemas (e.g., for different datasets), run the `extract` command for each one, outputting to separate JSON files.
+- **Multiple Schemas/Workspaces:** If your Studio project defines multiple workspaces or you need types for different schemas (e.g., for different datasets), run the `extract` command for each one, outputting to separate JSON files.
 
 Example `package.json` script within a Studio project for extracting two schemas:
 
@@ -48,11 +50,11 @@ Example `package.json` script within a Studio project for extracting two schemas
 }
 ```
 
-> **Note:** We plan to improve this schema extraction process as the SDK matures to potentially reduce the dependencies and improve overall developer experience.
+**Note:** We plan to improve this schema extraction process as the SDK matures to potentially reduce the dependencies and improve overall developer experience.
 
 ### 2. Installing Experimental Packages
 
-To use the Typegen features described in this guide, your Sanity app project needs specific experimental versions of `@sanity/cli` and `groq`:
+To use the Typegen features described in this guide, your Sanity app needs specific experimental versions of `@sanity/cli` and `groq` installed:
 
 ```bash
 # Using npm
@@ -64,56 +66,48 @@ pnpm add groq@typegen-experimental-2025-04-23
 pnpm add @sanity/cli@typegen-experimental-2025-04-23 --save-dev
 ```
 
-> **Note:** These are experimental pre-release versions. The package names and installation process may change as these features stabilize.
+**Note:** These are experimental pre-release versions. The package names and installation process may change as these features stabilize.
 
 ### 3. Configuring Typegen (Optional)
 
 For the most common use case – a single Sanity schema for your project – **no configuration file is needed**.
+However, you’ll need to create a Typegen configuration file for more complex use cases, such as:
 
-- **Default Behavior (Single Schema):**
+- Using multiple schemas (e.g., from different workspaces or for different datasets).
+- Needing to explicitly map a single schema to a specific `projectId` and `dataset` for accurate type scoping (instead of using `'default'`).
+- Using a different name or location for your schema file(s).
+- Specifying a custom output path for the generated types file.
 
-  1.  Ensure your extracted schema file (from Step 1) is named exactly `schema.json`.
-  2.  Place this `schema.json` file in the root directory of your project (where you run `npx sanity typegen generate`).
-  3.  When you run `npx sanity typegen generate`, the command will automatically find `schema.json`.
-  4.  The generated types will implicitly use `'default'` for both the `projectId` and `dataset` scopes.
+If you need this level of configuration, create a Typegen configuration file (`sanity-typegen.json` ) and use the `schemas` array:
 
-- **Advanced Configuration (`sanity-typegen.json`):**
-  You only need to create a `sanity-typegen.json` file in your project root if you need to handle more complex scenarios, such as:
+```json
+// sanity-typegen.json
+{
+  "schemas": [
+    {
+      "projectId": "your-project-id", // Explicit project ID
+      "dataset": "test", // Explicit dataset name
+      "schemaPath": "./schemas/test-schema.json" // Path to this schema
+    },
+    {
+      "projectId": "your-project-id",
+      "dataset": "production",
+      "schemaPath": "./schemas/prod-schema.json"
+    }
+    // Add more schema objects if needed
+  ]
+  // Optional: Specify output path for generated types
+  // "outputPath": "./src/generated/sanity-types.ts"
+}
+```
 
-  - Using multiple schemas (e.g., from different workspaces or for different datasets).
-  - Needing to explicitly map a single schema to a specific `projectId` and `dataset` for accurate type scoping (instead of using `'default'`).
-  - Using a different name or location for your schema file(s).
-  - Specifying a custom output path for the generated types file.
+Objects in the `schemas` array each consist of the following properties:
 
-  If you need this level of configuration, create `sanity-typegen.json` and use the `schemas` array:
+- **`projectId`:** Required to map the schema to the correct project for type generation. The extracted `schema.json` doesn't contain this info itself.
+- **`dataset`:** Required to map the schema to the correct dataset for type generation. The extracted `schema.json` doesn't contain this info itself.
+- **`schemaPath`:** The path (relative to the project root) to the corresponding extracted schema JSON file.
 
-  ```json
-  // sanity-typegen.json
-  {
-    "schemas": [
-      {
-        "projectId": "your-project-id", // Explicit project ID
-        "dataset": "test", // Explicit dataset name
-        "schemaPath": "./schemas/test-schema.json" // Path to this schema
-      },
-      {
-        "projectId": "your-project-id",
-        "dataset": "production",
-        "schemaPath": "./schemas/prod-schema.json"
-      }
-      // Add more schema objects if needed
-    ]
-    // Optional: Specify output path for generated types
-    // "outputPath": "./src/generated/sanity-types.ts"
-  }
-  ```
-
-  - **`schemas` Array:** Define one or more schema source objects here.
-  - **`projectId` & `dataset`:** Required within each object in the `schemas` array to map the schema to the correct scope for type generation. The extracted `schema.json` doesn't contain this info itself.
-  - **`schemaPath`:** The path (relative to the project root) to the corresponding extracted schema JSON file.
-  - **`outputPath` (Optional):** Specify where to write the generated `sanity.types.ts` file. Defaults to the project root.
-
-By default, Typegen works seamlessly for the common single-schema setup without extra configuration. Use `sanity-typegen.json` only when your needs require more explicit control.
+By default, Typegen works seamlessly for the common single-schema setup without extra configuration. Use `sanity-typegen.json` only when your needs require more explicit control. The optional **`outputPath`** property specifies where to write the generated `sanity.types.ts` file. It defaults to the project root.
 
 ### 4. Generating Types
 
@@ -232,7 +226,7 @@ function AuthorDetails({doc}: {doc: DocumentHandle<'author'>}) {
 
 - The generated type (e.g., `AuthorSummaryProjectionResult`) includes a `DocumentTypeScoped` brand, allowing unions of projection results if a projection applies to multiple document types.
 - Typegen intelligently removes types from the projection result if all fields in the projection evaluate to `null` for a given document type.
-- You **cannot** pass raw projection strings to `useProjection` and get type inference; you must use `defineProjection`.
+- When using Typegen, you **cannot** pass raw projection strings to `useProjection` and get type inference; you must use `defineProjection`.
 
 ### Queries: `defineQuery`
 
@@ -268,7 +262,7 @@ function BookList() {
 
 ### List Hooks: `useDocuments` & `usePaginatedDocuments`
 
-These hooks benefit from Typegen through dataset scoping (as shown earlier) and have an updated API to improve type inference further. Use the `documentType` option to specify the document type(s) you are querying:
+These hooks benefit from Typegen through dataset scoping (as shown earlier). Use the `documentType` option to specify the document type(s) you are querying:
 
 ```tsx
 import {usePaginatedDocuments} from '@sanity/sdk-react'
@@ -285,7 +279,8 @@ function MixedList() {
   })
 
   // `data` is an array of DocumentHandles, correctly scoped.
-  // If used with useDocument later, types will be Author | Book.
+  // If used with `useDocument` (and other hooks) later, types will be scoped
+  // appropriately (e.g. Author | Book).
   return (
     <ul>
       {docHandles.map((doc) => (
@@ -305,10 +300,10 @@ When you know the specific document type you're dealing with, you can make your 
 
 #### Parameterizing `DocumentHandle`
 
-The `DocumentHandle` type itself, is a generic type that accept type parameters. You can provide a specific document type literal (like `'book'`) as a type argument. This is useful for typing function props or variables that should only reference a handle for a specific document type:
+`DocumentHandle` is a generic type that accept type parameters. You can provide a specific document type literal (like `'book'`) as a type argument. This is useful for typing props or variables that should only reference a handle for a specific document type:
 
 ```typescript
-import {type DocumentHandle} from '@sanity/sdk' // Or specific package import
+import {type DocumentHandle} from '@sanity/sdk-react'
 
 // This function expects a handle that *must* reference a 'book' document
 function BookComponent({doc}: {doc: DocumentHandle<'book'>}) {
@@ -339,16 +334,31 @@ function processBook(book: BookData) {
 
 In summary:
 
-- Use `DocumentHandle<'yourType'>` to type references (handles) to documents of a specific type.
+- Use `DocumentHandle<'yourType'>` to constrain a document handle to documents of a specific type.
 - Use `SanityDocumentResult<'yourType'>` to type the actual data structure of a document of a specific type.
 
 ## Workflow Considerations
 
-- **Re-run `generate`:** You need to re-run `npx sanity typegen generate` whenever you:
-  - Change your Sanity schemas.
-  - Add or modify queries/projections defined with `defineQuery` or `defineProjection`.
-  - Consider integrating this into your `dev` script or a file watcher.
-- **Additive Nature:** Typegen is designed to enhance the SDK experience. If you don't use it, the SDK hooks will still work, but data types will often default to `any` or `unknown`, losing the benefits of TypeScript. Adopting Typegen later should be a non-breaking change that simply adds type safety.
-- **JavaScript Projects:** Even if your project doesn't use TypeScript for its main codebase, you can still leverage Typegen to enhance your JavaScript development experience. By following the steps in this guide – extracting your schema, installing the necessary packages, using helpers like `createDocumentHandle`, `defineProjection`, and `defineQuery`, and running `npx sanity typegen generate` – you create a `sanity.types.ts` file. While your JavaScript code won't undergo compile-time type checking, modern code editors (like VS Code) that use the TypeScript language service can read this generated file. This often results in significantly better autocompletion and intellisense within your JavaScript files when interacting with SDK hooks and data, compared to working without Typegen. **Remember,** using `defineProjection` and `defineQuery` is still required for Typegen to generate types for those specific artifacts.
-
 By integrating Sanity TypeGen into your workflow, you can leverage the full power of TypeScript with the Sanity SDK, leading to more robust, maintainable, and developer-friendly applications.
+
+### Regeneration
+
+You’ll need to re-run `npx sanity typegen generate` whenever you:
+
+- Change your Sanity schemas.
+- Add or modify queries/projections defined with `defineQuery` or `defineProjection`.
+- Consider integrating this into your `dev` script or a file watcher.
+
+### Typegen is additive
+
+Typegen is designed to enhance the SDK experience. If you don't use it, the SDK hooks will still work, but data types will often default to `any` or `unknown`, losing the benefits of TypeScript. Adopting Typegen later should be a non-breaking change that simply adds type safety.
+
+### JavaScript Projects
+
+Even if your project doesn't use TypeScript, you can still leverage Typegen to enhance your JavaScript development experience.
+
+By following the steps in this guide – extracting your schema, installing the necessary packages, using helpers like `createDocumentHandle`, `defineProjection`, and `defineQuery`, and running `npx sanity typegen generate` – you create a `sanity.types.ts` file.
+
+While your JavaScript code won't undergo compile-time type checking, modern code editors (like VS Code) that use the TypeScript language service can read this generated file.
+
+This often results in significantly better autocompletion and Intellisense within your JavaScript files when interacting with SDK hooks and data, compared to working without Typegen. Remember, using `defineProjection` and `defineQuery` is still required for Typegen to generate types for those specific artifacts.
