@@ -280,6 +280,9 @@ importers:
       '@sanity/diff-match-patch':
         specifier: ^3.2.0
         version: 3.2.0
+      '@sanity/message-protocol':
+        specifier: ^0.8.0
+        version: 0.8.0
       '@sanity/mutate':
         specifier: ^0.12.4
         version: 0.12.4
