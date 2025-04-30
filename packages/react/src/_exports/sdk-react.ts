@@ -64,6 +64,8 @@ export {
 export {useProject} from '../hooks/projects/useProject'
 export {type ProjectWithoutMembers, useProjects} from '../hooks/projects/useProjects'
 export {useQuery} from '../hooks/query/useQuery'
+export {useActiveReleases} from '../hooks/releases/useActiveReleases'
+export {usePerspective} from '../hooks/releases/usePerspective'
 export {type UsersResult, useUsers} from '../hooks/users/useUsers'
 export {REACT_SDK_VERSION} from '../version'
 export {type DatasetsResponse, type SanityProjectMember} from '@sanity/client'
