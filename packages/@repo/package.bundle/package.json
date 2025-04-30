@@ -12,11 +12,11 @@
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
     "@types/lodash-es": "^4.17.12",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^4.4.1",
     "eslint": "^9.23.0",
     "lodash-es": "^4.17.21",
     "typescript": "^5.7.3",
-    "vite": "^6.3.2",
+    "vite": "^6.3.4",
     "vite-tsconfig-paths": "^5.1.4"
   }
 }
