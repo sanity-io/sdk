@@ -16,7 +16,7 @@ See the [TypeScript guide](./Typescript.md) for full setup and usage details.
 
 ### Handle Creation Helpers
 
-While literal objects still work, using helpers like `createDocumentHandle` (imported from `@sanity/sdk` or `@sanity/sdk-react`) is recommended, especially with TypeScript, to ensure literal types are captured correctly for Typegen.
+While literal objects still work, using helpers like `createDocumentHandle` (imported from `@sanity/sdk-react`) is recommended, especially with TypeScript, to ensure literal types are captured correctly for Typegen.
 
 **Before:**
 
