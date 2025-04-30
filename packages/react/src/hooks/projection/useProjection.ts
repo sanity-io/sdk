@@ -4,6 +4,7 @@ import {
   resolveProjection,
   type ValidProjection,
 } from '@sanity/sdk'
+import {type SanityProjectionResult} from 'groq'
 import {useCallback, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
@@ -13,79 +14,166 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @public
  * @category Types
  */
-export interface UseProjectionOptions extends DocumentHandle {
+export interface UseProjectionOptions<
+  TProjection extends ValidProjection = ValidProjection,
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
+  /** The GROQ projection string */
+  projection: TProjection
+  /** Optional parameters for the projection query */
+  params?: Record<string, unknown>
+  /** Optional ref to track viewport intersection for lazy loading */
   ref?: React.RefObject<unknown>
-  projection: ValidProjection
 }
 
 /**
  * @public
  * @category Types
  */
-export interface UseProjectionResults<TData extends object> {
+export interface UseProjectionResults<TData> {
+  /** The projected data */
   data: TData
+  /** True if the projection is currently being resolved */
   isPending: boolean
 }
 
 /**
  * @public
  *
- * Returns the projection values of a document (specified via a `DocumentHandle`),
- * based on the provided projection string. These values are live and will update in realtime.
- * To reduce unnecessary network requests for resolving the projection values, an optional `ref` can be passed to the hook so that projection
- * resolution will only occur if the `ref` is intersecting the current viewport.
+ * Returns the projected values of a document based on the provided projection string.
+ * These values are live and will update in realtime.
+ * To optimize network requests, an optional `ref` can be passed to only resolve the projection
+ * when the referenced element is intersecting the viewport.
  *
  * @category Documents
- * @param options - The document handle for the document you want to project values from, the projection string, and an optional ref
- * @returns The projection values for the given document and a boolean to indicate whether the resolution is pending
+ * @remarks
+ * This hook has multiple signatures allowing for fine-grained control over type inference:
+ * - Using Typegen: Infers the return type based on the `documentType`, `dataset`, `projectId`, and `projection`.
+ * - Using explicit type parameter: Allows specifying a custom return type `TData`.
  *
- * @example Using a projection to render a preview of document
- * ```
- * // ProjectionComponent.jsx
- * export default function ProjectionComponent({ document }) {
- *   const ref = useRef(null)
- *   const { data: { title, coverImage, authors }, isPending } = useProjection({
- *     ...document,
+ * @param options - An object containing the `DocumentHandle` properties (`documentId`, `documentType`, etc.), the `projection` string, optional `params`, and an optional `ref`.
+ * @returns An object containing the projection results (`data`) and a boolean indicating whether the resolution is pending (`isPending`). Note: Suspense handles initial loading states; `data` being `undefined` after initial loading means the document doesn't exist or the projection yielded no result.
+ */
+
+// Overload 1: Relies on Typegen
+/**
+ * @beta
+ * Fetch a projection, relying on Typegen for the return type based on the handle and projection.
+ *
+ * @category Documents
+ * @param options - Options including the document handle properties (`documentId`, `documentType`, etc.) and the `projection`.
+ * @returns The projected data, typed based on Typegen.
+ *
+ * @example Using Typegen for a book preview
+ * ```tsx
+ * // ProjectionComponent.tsx
+ * import {useProjection, type DocumentHandle} from '@sanity/sdk-react'
+ * import {useRef} from 'react'
+ * import {defineProjection} from 'groq'
+ *
+ * // Define props using DocumentHandle with the specific document type
+ * type ProjectionComponentProps = {
+ *   doc: DocumentHandle<'book'> // Typegen knows 'book'
+ * }
+ *
+ * // This is required for typegen to generate the correct return type
+ * const myProjection = defineProjection(`{
+ *   title,
+ *   'coverImage': cover.asset->url,
+ *   'authors': array::join(authors[]->{'name': firstName + ' ' + lastName}.name, ', ')
+ * }`)
+ *
+ * export default function ProjectionComponent({ doc }: ProjectionComponentProps) {
+ *   const ref = useRef(null) // Optional ref to track viewport intersection for lazy loading
+ *
+ *   // Spread the doc handle into the options
+ *   // Typegen infers the return type based on 'book' and the projection
+ *   const { data } = useProjection({
+ *     ...doc, // Pass the handle properties
  *     ref,
- *     projection: `{
- *       title,
- *       'coverImage': cover.asset->url,
- *       'authors': array::join(authors[]->{'name': firstName + ' ' + lastName + ' '}.name, ', ')
- *     }`,
+ *     projection: myProjection,
  *   })
  *
+ *   // Suspense handles initial load, check for data existence after
  *   return (
- *     <article ref={ref} style={{ opacity: isPending ? 0.5 : 1}}>
- *       <h2>{title}</h2>
- *       <img src={coverImage} alt={title} />
- *       <p>{authors}</p>
+ *     <article ref={ref}>
+ *       <h2>{data.title ?? 'Untitled'}</h2>
+ *       {data.coverImage && <img src={data.coverImage} alt={data.title} />}
+ *       <p>{data.authors ?? 'Unknown authors'}</p>
  *     </article>
  *   )
  * }
- * ```
  *
- * @example Combining with useDocuments to render a collection with specific fields
- * ```
- * // DocumentList.jsx
- * const { data } = useDocuments({ filter: '_type == "article"' })
- * return (
- *   <div>
- *     <h1>Books</h1>
- *     <ul>
- *       {data.map(book => (
- *         <li key={book._id}>
- *           <Suspense fallback='Loading…'>
- *             <ProjectionComponent
- *               document={book}
- *             />
- *           </Suspense>
- *         </li>
- *       ))}
- *     </ul>
- *   </div>
- * )
+ * // Usage:
+ * // import {createDocumentHandle} from '@sanity/sdk-react'
+ * // const myDocHandle = createDocumentHandle({ documentId: 'book123', documentType: 'book' })
+ * // <Suspense fallback='Loading preview...'>
+ * //   <ProjectionComponent doc={myDocHandle} />
+ * // </Suspense>
  * ```
  */
+export function useProjection<
+  TProjection extends ValidProjection = ValidProjection,
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
+  options: UseProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
+): UseProjectionResults<SanityProjectionResult<TProjection, TDocumentType, TDataset, TProjectId>>
+
+// Overload 2: Explicit type provided
+/**
+ * @beta
+ * Fetch a projection with an explicitly defined return type `TData`.
+ *
+ * @param options - Options including the document handle properties (`documentId`, etc.) and the `projection`.
+ * @returns The projected data, cast to the explicit type `TData`.
+ *
+ * @example Explicitly typing the projection result
+ * ```tsx
+ * import {useProjection, type DocumentHandle} from '@sanity/sdk-react'
+ * import {useRef} from 'react'
+ *
+ * interface SimpleBookPreview {
+ *   title?: string;
+ *   authorName?: string;
+ * }
+ *
+ * type BookPreviewProps = {
+ *   doc: DocumentHandle
+ * }
+ *
+ * function BookPreview({ doc }: BookPreviewProps) {
+ *   const ref = useRef(null)
+ *   const { data } = useProjection<SimpleBookPreview>({
+ *     ...doc,
+ *     ref,
+ *     projection: `{ title, 'authorName': author->name }`
+ *   })
+ *
+ *   return (
+ *     <div ref={ref}>
+ *       <h3>{data.title ?? 'No Title'}</h3>
+ *       <p>By: {data.authorName ?? 'Unknown'}</p>
+ *     </div>
+ *   )
+ * }
+ *
+ * // Usage:
+ * // import {createDocumentHandle} from '@sanity/sdk-react'
+ * // const doc = createDocumentHandle({ documentId: 'abc', documentType: 'book' })
+ * // <Suspense fallback='Loading...'>
+ * //   <BookPreview doc={doc} />
+ * // </Suspense>
+ * ```
+ */
+export function useProjection<TData extends object>(
+  options: UseProjectionOptions, // Uses base options type
+): UseProjectionResults<TData>
+
+// Implementation (no JSDoc needed here as it's covered by overloads)
 export function useProjection<TData extends object>({
   ref,
   projection,
@@ -94,7 +182,7 @@ export function useProjection<TData extends object>({
   const instance = useSanityInstance()
   const stateSource = getProjectionState<TData>(instance, {...docHandle, projection})
 
-  if (stateSource.getCurrent().data === null) {
+  if (stateSource.getCurrent()?.data === null) {
     throw resolveProjection(instance, {...docHandle, projection})
   }
 

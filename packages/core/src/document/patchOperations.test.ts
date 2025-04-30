@@ -102,7 +102,7 @@ describe('parsePath', () => {
   })
 
   it('throws an error when bracket content is invalid', () => {
-    expect(() => parsePath('a[invalid]')).toThrowError('Invalid bracket content: “[invalid]”')
+    expect(() => parsePath('a[invalid]')).toThrowError('Invalid bracket content: "[invalid]"')
   })
 })
 

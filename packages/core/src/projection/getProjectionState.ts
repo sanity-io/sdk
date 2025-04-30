@@ -1,3 +1,4 @@
+import {type SanityProjectionResult} from 'groq'
 import {omit} from 'lodash-es'
 
 import {type DocumentHandle} from '../config/sanityConfig'
@@ -14,30 +15,53 @@ import {projectionStore} from './projectionStore'
 import {type ProjectionStoreState, type ProjectionValuePending, type ValidProjection} from './types'
 import {PROJECTION_STATE_CLEAR_DELAY, STABLE_EMPTY_PROJECTION, validateProjection} from './util'
 
-interface GetProjectionStateOptions extends DocumentHandle {
-  projection: ValidProjection
+export interface ProjectionOptions<
+  TProjection extends ValidProjection = ValidProjection,
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
+  projection: TProjection
 }
 
 /**
  * @beta
  */
-export function getProjectionState<TResult extends object>(
+export function getProjectionState<
+  TProjection extends ValidProjection = ValidProjection,
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
   instance: SanityInstance,
-  options: GetProjectionStateOptions,
-): StateSource<ProjectionValuePending<TResult>>
+  options: ProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
+): StateSource<
+  | ProjectionValuePending<SanityProjectionResult<TProjection, TDocumentType, TDataset, TProjectId>>
+  | undefined
+>
+
+/**
+ * @beta
+ */
+export function getProjectionState<TData extends object>(
+  instance: SanityInstance,
+  options: ProjectionOptions,
+): StateSource<ProjectionValuePending<TData> | undefined>
+
 /**
  * @beta
  */
 export function getProjectionState(
   instance: SanityInstance,
-  options: GetProjectionStateOptions,
-): StateSource<ProjectionValuePending<Record<string, unknown>>>
+  options: ProjectionOptions,
+): StateSource<ProjectionValuePending<Record<string, unknown>> | undefined>
+
 /**
  * @beta
  */
 export function getProjectionState(
   ...args: Parameters<typeof _getProjectionState>
-): StateSource<ProjectionValuePending<object>> {
+): ReturnType<typeof _getProjectionState> {
   return _getProjectionState(...args)
 }
 
@@ -49,13 +73,14 @@ export const _getProjectionState = bindActionByDataset(
   createStateSourceAction({
     selector: (
       {state}: SelectorContext<ProjectionStoreState>,
-      options: GetProjectionStateOptions,
-    ): ProjectionValuePending<object> => {
+      options: ProjectionOptions<ValidProjection, string, string, string>,
+    ): ProjectionValuePending<object> | undefined => {
       const documentId = getPublishedId(options.documentId)
       const projectionHash = hashString(options.projection)
       return state.values[documentId]?.[projectionHash] ?? STABLE_EMPTY_PROJECTION
     },
-    onSubscribe: ({state}, {projection, ...docHandle}: GetProjectionStateOptions) => {
+    onSubscribe: ({state}, options: ProjectionOptions<ValidProjection, string, string, string>) => {
+      const {projection, ...docHandle} = options
       const subscriptionId = insecureRandomId()
       const documentId = getPublishedId(docHandle.documentId)
       const validProjection = validateProjection(projection)

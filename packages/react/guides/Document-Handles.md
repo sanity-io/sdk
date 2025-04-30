@@ -66,7 +66,9 @@ In short, Document Handles promote deferring the retrieval of document contents 
 
 You’re not limited to using Document Handles returned by hooks like {@link useDocuments} — if it suits your use case (for example: if you know the document ID and type of the document you want to reference), you can certainly write and use your own Document Handles.
 
-For example:
+### Creating Handles Manually
+
+You can create a handle simply by defining an object that matches the {@link DocumentHandle} interface:
 
 ```tsx
 import {useDocumentSyncStatus, type DocumentHandle} from '@sanity/sdk-react'
@@ -78,6 +80,38 @@ const myDocumentHandle: DocumentHandle = {
 
 const documentSynced = useDocumentSyncStatus(myDocumentHandle)
 ```
+
+### Using the `createDocumentHandle` Helper (Recommended with Typegen)
+
+The SDK also provides helper functions like `createDocumentHandle` for creating handles.
+
+```typescript
+import {createDocumentHandle} from '@sanity/sdk' // Or specific package import
+
+const myDocumentHandle = createDocumentHandle({
+  documentId: 'my-document-id',
+  documentType: 'book',
+})
+```
+
+While creating handles as plain objects works fine, using the `createDocumentHandle` helper (or similar helpers like `createDatasetHandle`) is recommended, **especially if you are using `sanity-typegen`**.
+
+Why? When using Typegen, the SDK hooks can provide much richer type information if they know the _specific_ literal type of the `documentType` (e.g., knowing it's exactly `'book'`, not just any `string`). The `createDocumentHandle` function helps TypeScript capture this literal type automatically.
+
+If you prefer not to use the helper function when working with Typegen, you can achieve the same result by using `as const` when defining the handle object:
+
+```typescript
+import {type DocumentHandle} from '@sanity/sdk' // Or specific package import
+
+const myDocumentHandle = {
+  documentId: 'my-document-id',
+  documentType: 'book',
+} as const // <-- Using 'as const' captures the literal type 'book'
+
+// Now, myDocumentHandle.documentType is typed as 'book', not string
+```
+
+Using either `createDocumentHandle` or `as const` ensures that subsequent hooks like `useDocument` or `useProjection` can correctly infer types based on the specific `documentType` provided in the handle when Typegen is enabled.
 
 ## A quick example
 

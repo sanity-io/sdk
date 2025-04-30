@@ -36,6 +36,12 @@ export {getOrCreateNode, releaseNode} from '../comlink/node/comlinkNodeStore'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
 export {
+  createDatasetHandle,
+  createDocumentHandle,
+  createDocumentTypeHandle,
+  createProjectHandle,
+} from '../config/handles'
+export {
   type DatasetHandle,
   type DocumentHandle,
   type DocumentTypeHandle,
@@ -65,6 +71,7 @@ export {
   type ApplyDocumentActionsOptions,
 } from '../document/applyDocumentActions'
 export {
+  type DocumentOptions,
   getDocumentState,
   getDocumentSyncStatus,
   getPermissionsState,
@@ -84,7 +91,7 @@ export {
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,
 } from '../document/events'
-export {type JsonMatch, jsonMatch, type JsonMatchPath} from '../document/patchOperations'
+export {type JsonMatch, jsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export type {FavoriteStatusResponse} from '../favorites/favorites'
 export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
@@ -121,4 +128,4 @@ export {getUsersState, loadMoreUsers, resolveUsers} from '../users/usersStore'
 export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {CORE_SDK_VERSION} from '../version'
-export type {CurrentUser, Role, SanityDocument, SanityDocumentLike} from '@sanity/types'
+export type {CurrentUser, Role, SanityDocument} from '@sanity/types'

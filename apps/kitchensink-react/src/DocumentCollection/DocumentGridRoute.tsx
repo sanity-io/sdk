@@ -7,7 +7,7 @@ import {DocumentPreview} from './DocumentPreview'
 
 export function DocumentGridRoute(): JSX.Element {
   const {isPending, data, hasMore, loadMore} = useDocuments({
-    filter: '_type == "author"',
+    documentType: 'author',
     orderings: [{field: 'name', direction: 'asc'}],
   })
 

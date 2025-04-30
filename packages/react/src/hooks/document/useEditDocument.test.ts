@@ -1,7 +1,7 @@
 // tests/useEditDocument.test.ts
 import {
+  createDocumentHandle,
   createSanityInstance,
-  type DocumentHandle,
   editDocument,
   getDocumentState,
   resolveDocument,
@@ -43,11 +43,29 @@ const doc = {
   _rev: 'tx0',
   _createdAt: '2025-02-06T00:11:00.000Z',
   _updatedAt: '2025-02-06T00:11:00.000Z',
-} satisfies SanityDocument
+} satisfies Book
 
-const docHandle: DocumentHandle<SanityDocument> = {
+const docHandle = createDocumentHandle({
   documentId: 'doc1',
   documentType: 'book',
+})
+
+// Define a single generic TestDocument type
+interface Book extends SanityDocument {
+  _type: 'book'
+  foo?: string
+  extra?: string
+  title?: string
+}
+
+// Scope the TestDocument type to the project/datasets used in tests
+type AllTestSchemaTypes = Book
+
+// Augment the 'groq' module
+declare module 'groq' {
+  interface SanitySchemas {
+    'default:default': AllTestSchemaTypes
+  }
 }
 
 describe('useEditDocument hook', () => {
@@ -67,7 +85,7 @@ describe('useEditDocument hook', () => {
     const apply = vi.fn().mockResolvedValue({transactionId: 'tx1'})
     vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
 
-    const {result} = renderHook(() => useEditDocument(docHandle, 'foo'))
+    const {result} = renderHook(() => useEditDocument<string>({...docHandle, path: 'foo'}))
     const promise = result.current('newValue')
     expect(editDocument).toHaveBeenCalledWith(docHandle, {set: {foo: 'newValue'}})
     expect(apply).toHaveBeenCalledWith(editDocument(docHandle, {set: {foo: 'newValue'}}))
@@ -106,7 +124,7 @@ describe('useEditDocument hook', () => {
     const apply = vi.fn().mockResolvedValue({transactionId: 'tx3'})
     vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
 
-    const {result} = renderHook(() => useEditDocument(docHandle, 'foo'))
+    const {result} = renderHook(() => useEditDocument<string>({...docHandle, path: 'foo'}))
     const promise = result.current((prev: unknown) => `${prev}Updated`) // 'bar' becomes 'barUpdated'
     expect(editDocument).toHaveBeenCalledWith(docHandle, {set: {foo: 'barUpdated'}})
     expect(apply).toHaveBeenCalledWith(editDocument(docHandle, {set: {foo: 'barUpdated'}}))
@@ -145,7 +163,7 @@ describe('useEditDocument hook', () => {
     vi.mocked(useApplyDocumentActions).mockReturnValue(fakeApply)
 
     const {result} = renderHook(() => useEditDocument(docHandle))
-    expect(() => result.current('notAnObject' as unknown as SanityDocument)).toThrowError(
+    expect(() => result.current('notAnObject' as unknown as Book)).toThrowError(
       'No path was provided to `useEditDocument` and the value provided was not a document object.',
     )
   })

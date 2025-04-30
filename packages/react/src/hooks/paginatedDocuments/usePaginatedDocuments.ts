@@ -12,7 +12,12 @@ import {useQuery} from '../query/useQuery'
  * @beta
  * @category Types
  */
-export interface PaginatedDocumentsOptions extends QueryOptions {
+export interface PaginatedDocumentsOptions<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends Omit<QueryOptions<TDocumentType, TDataset, TProjectId>, 'query'> {
+  documentType?: TDocumentType | TDocumentType[]
   /**
    * GROQ filter expression to apply to the query
    */
@@ -37,11 +42,15 @@ export interface PaginatedDocumentsOptions extends QueryOptions {
  * @beta
  * @category Types
  */
-export interface PaginatedDocumentsResponse {
+export interface PaginatedDocumentsResponse<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> {
   /**
    * Array of document handles for the current page
    */
-  data: DocumentHandle[]
+  data: DocumentHandle<TDocumentType, TDataset, TProjectId>[]
   /**
    * Whether a query is currently in progress
    */
@@ -124,54 +133,110 @@ export interface PaginatedDocumentsResponse {
  * @beta
  * @category Documents
  * @param options - Configuration options for the paginated list
- * @returns An object containing the current page of document handles, the loading and pagination state, and navigation functions
+ * @returns An object containing the list of document handles, pagination details, and functions to navigate between pages
  *
  * @remarks
  * - The returned document handles include projectId and dataset information from the current Sanity instance
  * - This makes them ready to use with document operations and other document hooks
  * - The hook automatically uses the correct Sanity instance based on the projectId and dataset in the options
  *
- * @example Basic usage
+ * @example Paginated list of documents with navigation
  * ```tsx
- * const {
- *   data,
- *   isPending,
- *   currentPage,
- *   totalPages,
- *   nextPage,
- *   previousPage,
- *   hasNextPage,
- *   hasPreviousPage
- * } = usePaginatedDocuments({
- *   filter: '_type == "post"',
- *   search: searchTerm,
- *   pageSize: 10,
- *   orderings: [{field: '_createdAt', direction: 'desc'}]
- * })
+ * import {
+ *   usePaginatedDocuments,
+ *   createDatasetHandle,
+ *   type DatasetHandle,
+ *   type DocumentHandle,
+ *   type SortOrderingItem,
+ *   useProjection
+ * } from '@sanity/sdk-react'
+ * import {Suspense} from 'react'
+ * import {ErrorBoundary} from 'react-error-boundary'
  *
- * return (
- *   <>
- *     <table>
- *       {data.map(doc => (
- *         <MyTableRowComponent key={doc.documentId} doc={doc} />
- *       ))}
- *     </table>
- *     {hasPreviousPage && <button onClick={previousPage}>Previous</button>}
- *     {currentPage} / {totalPages}
- *     {hasNextPage && <button onClick={nextPage}>Next</button>}
- *   </>
- * )
+ * // Define a component to display a single document row
+ * function MyTableRowComponent({doc}: {doc: DocumentHandle}) {
+ *   const {data} = useProjection<{title?: string}>({
+ *     ...doc,
+ *     projection: '{title}',
+ *   })
+ *
+ *   return (
+ *     <tr>
+ *       <td>{data?.title ?? 'Untitled'}</td>
+ *     </tr>
+ *   )
+ * }
+ *
+ * // Define props for the list component
+ * interface PaginatedDocumentListProps {
+ *   documentType: string
+ *   dataset?: DatasetHandle
+ * }
+ *
+ * function PaginatedDocumentList({documentType, dataset}: PaginatedDocumentListProps) {
+ *   const {
+ *     data,
+ *     isPending,
+ *     currentPage,
+ *     totalPages,
+ *     nextPage,
+ *     previousPage,
+ *     hasNextPage,
+ *     hasPreviousPage
+ *   } = usePaginatedDocuments({
+ *     ...dataset,
+ *     documentType,
+ *     pageSize: 10,
+ *     orderings: [{field: '_createdAt', direction: 'desc'}],
+ *   })
+ *
+ *   return (
+ *     <div>
+ *       <table>
+ *         <thead>
+ *           <tr><th>Title</th></tr>
+ *         </thead>
+ *         <tbody>
+ *           {data.map(doc => (
+ *             <ErrorBoundary key={doc.documentId} fallback={<tr><td>Error loading document</td></tr>}>
+ *               <Suspense fallback={<tr><td>Loading...</td></tr>}>
+ *                 <MyTableRowComponent doc={doc} />
+ *               </Suspense>
+ *             </ErrorBoundary>
+ *           ))}
+ *         </tbody>
+ *       </table>
+ *       <div style={{opacity: isPending ? 0.5 : 1}}>
+ *         <button onClick={previousPage} disabled={!hasPreviousPage || isPending}>Previous</button>
+ *         <span>Page {currentPage} / {totalPages}</span>
+ *         <button onClick={nextPage} disabled={!hasNextPage || isPending}>Next</button>
+ *       </div>
+ *     </div>
+ *   )
+ * }
+ *
+ * // Usage:
+ * // const myDatasetHandle = createDatasetHandle({ projectId: 'p1', dataset: 'production' })
+ * // <PaginatedDocumentList dataset={myDatasetHandle} documentType="post" />
  * ```
- *
  */
-export function usePaginatedDocuments({
+export function usePaginatedDocuments<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>({
+  documentType,
   filter = '',
   pageSize = 25,
   params = {},
   orderings,
   search,
   ...options
-}: PaginatedDocumentsOptions): PaginatedDocumentsResponse {
+}: PaginatedDocumentsOptions<TDocumentType, TDataset, TProjectId>): PaginatedDocumentsResponse<
+  TDocumentType,
+  TDataset,
+  TProjectId
+> {
   const instance = useSanityInstance(options)
   const [pageIndex, setPageIndex] = useState(0)
   const key = JSON.stringify({filter, search, params, orderings, pageSize})
@@ -183,6 +248,9 @@ export function usePaginatedDocuments({
 
   const startIndex = pageIndex * pageSize
   const endIndex = (pageIndex + 1) * pageSize
+  const documentTypes = (Array.isArray(documentType) ? documentType : [documentType]).filter(
+    (i) => typeof i === 'string',
+  )
 
   const filterClause = useMemo(() => {
     const conditions: string[] = []
@@ -196,13 +264,17 @@ export function usePaginatedDocuments({
       }
     }
 
+    if (documentTypes?.length) {
+      conditions.push(`(_type in $__types)`)
+    }
+
     // Add additional filter if specified
     if (filter) {
       conditions.push(`(${filter})`)
     }
 
     return conditions.length ? `[${conditions.join(' && ')}]` : ''
-  }, [filter, search])
+  }, [filter, search, documentTypes?.length])
 
   const orderClause = orderings
     ? `| order(${orderings
@@ -221,19 +293,18 @@ export function usePaginatedDocuments({
   const {
     data: {data, count},
     isPending,
-  } = useQuery<{data: DocumentHandle[]; count: number}>(
-    `{"data":${dataQuery},"count":${countQuery}}`,
-    {
-      ...options,
-      params: {
-        ...params,
-        __handle: {
-          ...pick(instance.config, 'perspective', 'projectId', 'dataset'),
-          ...pick(options, 'perspective', 'projectId', 'dataset'),
-        },
+  } = useQuery<{data: DocumentHandle<TDocumentType, TDataset, TProjectId>[]; count: number}>({
+    ...options,
+    query: `{"data":${dataQuery},"count":${countQuery}}`,
+    params: {
+      ...params,
+      __types: documentTypes,
+      __handle: {
+        ...pick(instance.config, 'projectId', 'dataset', 'perspective'),
+        ...pick(options, 'projectId', 'dataset', 'perspective'),
       },
     },
-  )
+  })
 
   const totalPages = Math.ceil(count / pageSize)
   const currentPage = pageIndex + 1

@@ -68,8 +68,8 @@ describe('subscribeToStateAndFetchBatches', () => {
     expect(getQueryState).toHaveBeenCalledTimes(1)
     expect(getQueryState).toHaveBeenCalledWith(
       instance,
-      expect.any(String),
       expect.objectContaining({
+        query: expect.any(String),
         params: {
           [`__ids_${projectionHash}`]: expect.arrayContaining([
             'doc1',

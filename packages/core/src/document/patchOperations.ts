@@ -7,7 +7,6 @@ import {
   type KeyedSegment,
   type Path,
   type PathSegment,
-  type SanityDocumentLike,
 } from '@sanity/types'
 
 type SingleValuePath = Exclude<PathSegment, IndexTuple>[]
@@ -17,7 +16,7 @@ type ToNumber<TInput extends string> = TInput extends `${infer TNumber extends n
   : TInput
 
 /**
- * Parse a single “segment” that may include bracket parts.
+ * Parse a single "segment" that may include bracket parts.
  *
  * For example, the literal
  *
@@ -42,7 +41,7 @@ type ParseSegment<TInput extends string> = TInput extends `${infer TProp}[${infe
 /**
  * Parse one or more bracketed parts from a segment.
  *
- * It recursively “peels off” a bracketed part and then continues.
+ * It recursively "peels off" a bracketed part and then continues.
  *
  * For example, given the string:
  *
@@ -61,7 +60,7 @@ type ParseBracket<TInput extends string> = TInput extends `[${infer TPart}]${inf
   : [] // no leading bracket → end of this segment
 
 /**
- * Split the entire path string on dots “outside” of any brackets.
+ * Split the entire path string on dots "outside" of any brackets.
  *
  * For example:
  * ```
@@ -76,42 +75,43 @@ type ParseBracket<TInput extends string> = TInput extends `[${infer TPart}]${inf
  *
  * (We use a simple recursion that splits on the first dot.)
  */
-type PathParts<TPath extends string> = TPath extends `${infer TLeft}.${infer TRight}`
-  ? [...ParseSegment<TLeft>, ...PathParts<TRight>]
-  : ParseSegment<TPath>
+type PathParts<TPath extends string> = TPath extends `${infer Head}.${infer Tail}`
+  ? [Head, ...PathParts<Tail>]
+  : TPath extends ''
+    ? []
+    : [TPath]
 
 /**
- * Given a type T and an array of “access keys” Parts, recursively index into T.
+ * Given a type T and an array of "access keys" Parts, recursively index into T.
  *
  * If a part is a key, it looks up that property.
- * If T is an array and the part is a number, it “indexes” into the element type.
+ * If T is an array and the part is a number, it "indexes" into the element type.
  */
-type DeepGet<T, TParts extends readonly unknown[]> = TParts extends [infer Head, ...infer Tail]
-  ? Head extends keyof T
-    ? DeepGet<T[Head], Tail>
-    : T extends Array<infer U>
-      ? Head extends number
-        ? DeepGet<U, Tail>
-        : never
-      : never
-  : T
+type DeepGet<TValue, TPath extends readonly (string | number)[]> = TPath extends []
+  ? TValue
+  : TPath extends readonly [infer THead, ...infer TTail]
+    ? // Handle traversing into optional properties
+      DeepGet<
+        TValue extends undefined | null
+          ? undefined // Stop traversal if current value is null/undefined
+          : THead extends keyof TValue // Access property if key exists
+            ? TValue[THead]
+            : // Handle array indexing
+              THead extends number
+              ? TValue extends readonly (infer TElement)[]
+                ? TElement | undefined // Array element or undefined if out of bounds
+                : undefined // Cannot index non-array with number
+              : undefined, // Key/index doesn't exist
+        TTail extends readonly (string | number)[] ? TTail : [] // Continue with the rest of the path
+      >
+    : never // Should be unreachable
 
 /**
  * Given a document type TDocument and a JSON Match path string TPath,
  * compute the type found at that path.
  * @beta
  */
-export type JsonMatch<TDocument extends SanityDocumentLike, TPath extends string> = DeepGet<
-  TDocument,
-  PathParts<TPath>
->
-
-/**
- * Computing the full possible paths may be possible but is hard to compute
- * within the type system for complex document types so we use string.
- * @beta
- */
-export type JsonMatchPath<_TDocument extends SanityDocumentLike> = string
+export type JsonMatch<TDocument, TPath extends string> = DeepGet<TDocument, PathParts<TPath>>
 
 function parseBracketContent(content: string): PathSegment {
   // 1) Range match:  ^(\d*):(\d*)$
@@ -138,7 +138,7 @@ function parseBracketContent(content: string): PathSegment {
     return index
   }
 
-  throw new Error(`Invalid bracket content: “[${content}]”`)
+  throw new Error(`Invalid bracket content: "[${content}]"`)
 }
 
 function parseSegment(segment: string): PathSegment[] {
@@ -271,10 +271,10 @@ type MatchEntry<T = unknown> = {
  *
  * @beta
  */
-export function jsonMatch<
-  TDocument extends SanityDocumentLike,
-  TPath extends JsonMatchPath<TDocument>,
->(input: TDocument, path: TPath): MatchEntry<JsonMatch<TDocument, TPath>>[]
+export function jsonMatch<TDocument, TPath extends string>(
+  input: TDocument,
+  path: TPath,
+): MatchEntry<JsonMatch<TDocument, TPath>>[]
 /** @beta */
 export function jsonMatch<TValue>(input: unknown, path: string): MatchEntry<TValue>[]
 /** @beta */
@@ -324,7 +324,7 @@ function matchRecursive(value: unknown, path: Path, currentPath: SingleValuePath
     const startIndex = start === '' ? 0 : start
     const endIndex = end === '' ? value.length : end
 
-    // We’ll accumulate all matches from each index in the range
+    // We'll accumulate all matches from each index in the range
     let results: MatchEntry[] = []
 
     // Decide whether the range is exclusive or inclusive. The example in
@@ -587,15 +587,15 @@ export function insert(input: unknown, insertPatch: InsertPatch): unknown {
   const pathExpression = (insertPatch as {[K in Operation]?: string} & {items: unknown})[operation]
   if (typeof pathExpression !== 'string') return input
 
-  // Helper to normalize a matched index given the parent array’s length.
+  // Helper to normalize a matched index given the parent array's length.
   function normalizeIndex(index: number, parentLength: number): number {
     switch (operation) {
       case 'before':
-        // A negative index means “append” (i.e. insert before a hypothetical element
+        // A negative index means "append" (i.e. insert before a hypothetical element
         // beyond the end of the array).
         return index < 0 ? parentLength : index
       case 'after':
-        // For "after", if the matched index is negative, we treat it as “prepend”:
+        // For "after", if the matched index is negative, we treat it as "prepend":
         // by convention, we convert it to -1 so that later adding 1 produces 0.
         return index < 0 ? -1 : index
       default: // default to 'replace'
@@ -916,7 +916,7 @@ export function setDeep(input: unknown, path: SingleValuePath, value: unknown): 
     ]
   }
 
-  // For keyed segments that aren’t arrays, do nothing.
+  // For keyed segments that aren't arrays, do nothing.
   if (typeof currentSegment === 'object') return input
 
   // For plain objects, update an existing property if it exists…

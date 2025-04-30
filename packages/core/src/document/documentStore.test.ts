@@ -14,10 +14,10 @@ import {
 import {type Mutation, type SanityDocument} from '@sanity/types'
 import {evaluate, parse} from 'groq-js'
 import {delay, first, firstValueFrom, from, Observable, of, ReplaySubject, Subject} from 'rxjs'
-import {beforeEach, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
-import {type DocumentHandle} from '../config/sanityConfig'
+import {createDocumentHandle} from '../config/handles'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {getDraftId, getPublishedId} from '../utils/ids'
@@ -45,6 +45,22 @@ import {type DocumentSet, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
 import {createFetchDocument, createSharedListener} from './sharedListener'
 
+// Define a single generic TestDocument type
+interface TestDocument extends SanityDocument {
+  _type: 'article'
+  title?: string
+}
+
+// Scope the TestDocument type to the project/datasets used in tests
+type AllTestSchemaTypes = TestDocument
+
+// Augment the 'groq' module
+declare module 'groq' {
+  interface SanitySchemas {
+    'default:default': AllTestSchemaTypes
+  }
+}
+
 let instance: SanityInstance
 let instance1: SanityInstance
 let instance2: SanityInstance
@@ -65,12 +81,7 @@ afterEach(() => {
 })
 
 it('creates, edits, and publishes a document', async () => {
-  interface Article extends SanityDocument {
-    title?: string
-    _type: 'article'
-  }
-
-  const doc: DocumentHandle<Article> = {documentId: 'doc-single', documentType: 'article'}
+  const doc = createDocumentHandle({documentId: 'doc-single', documentType: 'article'})
   const documentState = getDocumentState(instance, doc)
 
   // Initially the document is undefined
@@ -100,12 +111,7 @@ it('creates, edits, and publishes a document', async () => {
 })
 
 it('edits existing documents', async () => {
-  interface Book extends SanityDocument {
-    _type: 'book'
-    title: string
-  }
-
-  const doc: DocumentHandle<Book> = {documentId: 'existing-doc', documentType: 'book'}
+  const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article'})
   const state = getDocumentState(instance, doc)
 
   // not subscribed yet so the value is undefined
@@ -131,12 +137,7 @@ it('edits existing documents', async () => {
 })
 
 it('sets optimistic changes synchronously', async () => {
-  interface Article extends SanityDocument {
-    title?: string
-    _type: 'article'
-  }
-
-  const doc: DocumentHandle<Article> = {documentId: 'optimistic', documentType: 'article'}
+  const doc = createDocumentHandle({documentId: 'optimistic', documentType: 'article'})
 
   const state1 = getDocumentState(instance1, doc)
   const state2 = getDocumentState(instance2, doc)
@@ -189,11 +190,7 @@ it('sets optimistic changes synchronously', async () => {
 })
 
 it('propagates changes between two instances', async () => {
-  interface Blog extends SanityDocument {
-    _type: 'blog'
-    content?: string
-  }
-  const doc: DocumentHandle<Blog> = {documentId: 'doc-collab', documentType: 'blog'}
+  const doc = createDocumentHandle({documentId: 'doc-collab', documentType: 'article'})
   const state1 = getDocumentState(instance1, doc)
   const state2 = getDocumentState(instance2, doc)
 
@@ -209,26 +206,21 @@ it('propagates changes between two instances', async () => {
   expect(doc2?._id).toEqual(getDraftId(doc.documentId))
 
   // Now, edit the document from instance2.
-  await applyDocumentActions(instance2, editDocument(doc, {set: {content: 'Hello world!'}})).then(
+  await applyDocumentActions(instance2, editDocument(doc, {set: {title: 'Hello world!'}})).then(
     (r) => r.submitted(),
   )
 
   const updated1 = state1.getCurrent()
   const updated2 = state2.getCurrent()
-  expect(updated1?.content).toEqual('Hello world!')
-  expect(updated2?.content).toEqual('Hello world!')
+  expect(updated1?.title).toEqual('Hello world!')
+  expect(updated2?.title).toEqual('Hello world!')
 
   state1Unsubscribe()
   state2Unsubscribe()
 })
 
 it('handles concurrent edits and resolves conflicts', async () => {
-  interface Note extends SanityDocument {
-    _type: 'note'
-    text?: string
-  }
-
-  const doc: DocumentHandle<Note> = {documentId: 'doc-concurrent', documentType: 'note'}
+  const doc = createDocumentHandle({documentId: 'doc-concurrent', documentType: 'article'})
   const state1 = getDocumentState(instance1, doc)
   const state2 = getDocumentState(instance2, doc)
 
@@ -240,17 +232,17 @@ it('handles concurrent edits and resolves conflicts', async () => {
   // Create the initial document from a one-off instance.
   await applyDocumentActions(oneOffInstance, [
     createDocument(doc),
-    editDocument(doc, {set: {text: 'The quick brown fox jumps over the lazy dog'}}),
+    editDocument(doc, {set: {title: 'The quick brown fox jumps over the lazy dog'}}),
   ]).then((res) => res.submitted())
 
   // Both instances now issue an edit simultaneously.
   const p1 = applyDocumentActions(
     instance1,
-    editDocument(doc, {set: {text: 'The quick brown fox jumps over the lazy cat'}}),
+    editDocument(doc, {set: {title: 'The quick brown fox jumps over the lazy cat'}}),
   ).then((r) => r.submitted())
   const p2 = applyDocumentActions(
     instance2,
-    editDocument(doc, {set: {text: 'The quick brown elephant jumps over the lazy dog'}}),
+    editDocument(doc, {set: {title: 'The quick brown elephant jumps over the lazy dog'}}),
   ).then((r) => r.submitted())
 
   // Wait for both actions to complete (or reject).
@@ -258,8 +250,8 @@ it('handles concurrent edits and resolves conflicts', async () => {
 
   const finalDoc1 = state1.getCurrent()
   const finalDoc2 = state2.getCurrent()
-  expect(finalDoc1?.text).toEqual(finalDoc2?.text)
-  expect(finalDoc1?.text).toBe('The quick brown elephant jumps over the lazy cat')
+  expect(finalDoc1?.title).toEqual(finalDoc2?.title)
+  expect(finalDoc1?.title).toBe('The quick brown elephant jumps over the lazy cat')
 
   state1Unsubscribe()
   state2Unsubscribe()
@@ -267,11 +259,7 @@ it('handles concurrent edits and resolves conflicts', async () => {
 })
 
 it('unpublishes and discards a document', async () => {
-  interface Post extends SanityDocument {
-    _type: 'post'
-  }
-
-  const doc: DocumentHandle<Post> = {documentId: 'doc-pub-unpub', documentType: 'post'}
+  const doc = createDocumentHandle({documentId: 'doc-pub-unpub', documentType: 'article'})
   const documentState = getDocumentState(instance, doc)
   const unsubscribe = documentState.subscribe()
 
@@ -299,11 +287,7 @@ it('unpublishes and discards a document', async () => {
 })
 
 it('deletes a document', async () => {
-  interface Task extends SanityDocument {
-    _type: 'task'
-  }
-
-  const doc: DocumentHandle<Task> = {documentId: 'doc-delete', documentType: 'task'}
+  const doc = createDocumentHandle({documentId: 'doc-delete', documentType: 'article'})
 
   const documentState = getDocumentState(instance, doc)
   const unsubscribe = documentState.subscribe()
@@ -321,11 +305,7 @@ it('deletes a document', async () => {
 })
 
 it('cleans up document state when there are no subscribers', async () => {
-  interface Event extends SanityDocument {
-    _type: 'event'
-  }
-
-  const doc: DocumentHandle<Event> = {documentId: 'doc-cleanup', documentType: 'event'}
+  const doc = createDocumentHandle({documentId: 'doc-cleanup', documentType: 'article'})
   const documentState = getDocumentState(instance, doc)
 
   // Subscribe to the document state.
@@ -348,11 +328,7 @@ it('cleans up document state when there are no subscribers', async () => {
 })
 
 it('fetches documents if there are no active subscriptions for the actions applied', async () => {
-  interface Book extends SanityDocument {
-    _type: 'book'
-    title?: string
-  }
-  const doc: DocumentHandle<Book> = {documentId: 'existing-doc', documentType: 'book'}
+  const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article'})
 
   const {getCurrent} = getDocumentState(instance, doc)
   expect(getCurrent()).toBeUndefined()
@@ -398,11 +374,7 @@ it('fetches documents if there are no active subscriptions for the actions appli
 })
 
 it('batches edit transaction into one outgoing transaction', async () => {
-  interface Author extends SanityDocument {
-    _type: 'author'
-    name?: string
-  }
-  const doc: DocumentHandle<Author> = {documentId: crypto.randomUUID(), documentType: 'author'}
+  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
 
   const unsubscribe = getDocumentState(instance, doc).subscribe()
 
@@ -410,10 +382,10 @@ it('batches edit transaction into one outgoing transaction', async () => {
   applyDocumentActions(instance, createDocument(doc))
 
   // these get batched into one
-  applyDocumentActions(instance, editDocument(doc, {set: {name: 'name!'}}))
-  applyDocumentActions(instance, editDocument(doc, {set: {name: 'name!!'}}))
-  applyDocumentActions(instance, editDocument(doc, {set: {name: 'name!!!'}}))
-  const res = await applyDocumentActions(instance, editDocument(doc, {set: {name: 'name!!!!'}}))
+  applyDocumentActions(instance, editDocument(doc, {set: {title: 'name!'}}))
+  applyDocumentActions(instance, editDocument(doc, {set: {title: 'name!!'}}))
+  applyDocumentActions(instance, editDocument(doc, {set: {title: 'name!!!'}}))
+  const res = await applyDocumentActions(instance, editDocument(doc, {set: {title: 'name!!!!'}}))
   await res.submitted()
 
   expect(client.action).toHaveBeenCalledTimes(2)
@@ -426,11 +398,7 @@ it('batches edit transaction into one outgoing transaction', async () => {
 })
 
 it('provides the consistency status via `getDocumentSyncStatus`', async () => {
-  interface Author extends SanityDocument {
-    _type: 'author'
-    name?: string
-  }
-  const doc: DocumentHandle<Author> = {documentId: crypto.randomUUID(), documentType: 'author'}
+  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
 
   const syncStatus = getDocumentSyncStatus(instance, doc)
   expect(syncStatus.getCurrent()).toBeUndefined()
@@ -447,10 +415,10 @@ it('provides the consistency status via `getDocumentSyncStatus`', async () => {
   await createResult.submitted()
   expect(syncStatus.getCurrent()).toBe(true)
 
-  applyDocumentActions(instance, editDocument(doc, {set: {name: 'initial name'}}))
+  applyDocumentActions(instance, editDocument(doc, {set: {title: 'initial name'}}))
   expect(syncStatus.getCurrent()).toBe(false)
 
-  applyDocumentActions(instance, editDocument(doc, {set: {name: 'updated name'}}))
+  applyDocumentActions(instance, editDocument(doc, {set: {title: 'updated name'}}))
   const publishResult = applyDocumentActions(instance, publishDocument(doc))
   expect(syncStatus.getCurrent()).toBe(false)
   await publishResult.then((res) => res.submitted())
@@ -476,33 +444,29 @@ it('reverts failed outgoing transaction locally', async () => {
     })
   })
 
-  interface Author extends SanityDocument {
-    _type: 'author'
-    name?: string
-  }
-  const doc: DocumentHandle<Author> = {documentId: crypto.randomUUID(), documentType: 'author'}
+  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
 
   const {getCurrent, subscribe} = getDocumentState(instance, doc)
   const unsubscribe = subscribe()
 
   await applyDocumentActions(instance, createDocument(doc))
-  applyDocumentActions(instance, editDocument(doc, {set: {name: 'the'}}))
-  applyDocumentActions(instance, editDocument(doc, {set: {name: 'the quick'}}))
+  applyDocumentActions(instance, editDocument(doc, {set: {title: 'the'}}))
+  applyDocumentActions(instance, editDocument(doc, {set: {title: 'the quick'}}))
 
   // this edit action is simulated to fail from the backend and will be reverted
   const revertedActionResult = applyDocumentActions(
     instance,
-    editDocument(doc, {set: {name: 'the quick brown'}}),
+    editDocument(doc, {set: {title: 'the quick brown'}}),
     {
       transactionId: 'force-revert',
       disableBatching: true,
     },
   )
 
-  applyDocumentActions(instance, editDocument(doc, {set: {name: 'the quick brown fox'}}))
+  applyDocumentActions(instance, editDocument(doc, {set: {title: 'the quick brown fox'}}))
   await applyDocumentActions(
     instance,
-    editDocument(doc, {set: {name: 'the quick brown fox jumps'}}),
+    editDocument(doc, {set: {title: 'the quick brown fox jumps'}}),
   ).then((e) => e.submitted())
 
   await expect(revertedEventPromise).resolves.toMatchObject({
@@ -517,11 +481,11 @@ it('reverts failed outgoing transaction locally', async () => {
   )
 
   // notice how `brown ` is gone
-  expect(getCurrent()?.name).toBe('the quick fox jumps')
+  expect(getCurrent()?.title).toBe('the quick fox jumps')
 
   // check that we can still edit after recovering from the error
-  applyDocumentActions(instance, editDocument(doc, {set: {name: 'TEST the quick fox jumps'}}))
-  expect(getCurrent()?.name).toBe('TEST the quick fox jumps')
+  applyDocumentActions(instance, editDocument(doc, {set: {title: 'TEST the quick fox jumps'}}))
+  expect(getCurrent()?.title).toBe('TEST the quick fox jumps')
 
   unsubscribe()
   vi.mocked(client.action).mockImplementation(clientActionMockImplementation)
@@ -537,17 +501,12 @@ it('removes a queued transaction if it fails to apply', async () => {
     })
   })
 
-  interface Author extends SanityDocument {
-    _type: 'author'
-    name?: string
-  }
-
-  const doc: DocumentHandle<Author> = {documentId: crypto.randomUUID(), documentType: 'author'}
+  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
   const state = getDocumentState(instance, doc)
   const unsubscribe = state.subscribe()
 
   await expect(
-    applyDocumentActions(instance, editDocument(doc, {set: {name: "can't set"}})),
+    applyDocumentActions(instance, editDocument(doc, {set: {title: "can't set"}})),
   ).rejects.toThrowError(/Cannot edit document/)
 
   await expect(actionErrorEventPromise).resolves.toMatchObject({
@@ -558,9 +517,9 @@ it('removes a queued transaction if it fails to apply', async () => {
 
   // editing should still work after though (no crashing)
   await applyDocumentActions(instance, createDocument(doc))
-  applyDocumentActions(instance, editDocument(doc, {set: {name: 'can set!'}}))
+  applyDocumentActions(instance, editDocument(doc, {set: {title: 'can set!'}}))
 
-  expect(state.getCurrent()?.name).toBe('can set!')
+  expect(state.getCurrent()?.title).toBe('can set!')
 
   unsubscribe()
 })
@@ -572,10 +531,10 @@ it('returns allowed true when no permission errors occur', async () => {
   client.observable.request = vi.fn().mockReturnValue(of(datasetAcl))
 
   // Create a document and subscribe to it.
-  const doc: DocumentHandle<SanityDocument> = {
+  const doc = createDocumentHandle({
     documentId: 'doc-perm-allowed',
     documentType: 'article',
-  }
+  })
   const state = getDocumentState(instance, doc)
   const unsubscribe = state.subscribe()
   await applyDocumentActions(instance, createDocument(doc)).then((r) => r.submitted())
@@ -594,7 +553,7 @@ it('returns allowed true when no permission errors occur', async () => {
 })
 
 it("should reject applying the action if a precondition isn't met", async () => {
-  const doc: DocumentHandle = {documentId: 'does-not-exist', documentType: 'book'}
+  const doc = createDocumentHandle({documentId: 'does-not-exist', documentType: 'article'})
 
   await expect(applyDocumentActions(instance, deleteDocument(doc))).rejects.toThrow(
     'The document you are trying to delete does not exist.',
@@ -602,7 +561,7 @@ it("should reject applying the action if a precondition isn't met", async () => 
 })
 
 it("should reject applying the action if a permission isn't met", async () => {
-  const doc: DocumentHandle = {documentId: 'does-not-exist', documentType: 'book'}
+  const doc = createDocumentHandle({documentId: 'does-not-exist', documentType: 'article'})
 
   const datasetAcl = [{filter: 'false', permissions: ['create']}]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
@@ -616,7 +575,7 @@ it('returns allowed false with reasons when permission errors occur', async () =
   const datasetAcl = [{filter: 'false', permissions: ['create']}]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
-  const doc: DocumentHandle = {documentId: 'doc-perm-denied', documentType: 'article'}
+  const doc = createDocumentHandle({documentId: 'doc-perm-denied', documentType: 'article'})
   const result = await resolvePermissions(instance, createDocument(doc))
 
   const message = 'You do not have permission to create a draft for document "doc-perm-denied".'
@@ -634,11 +593,9 @@ it('fetches dataset ACL and updates grants in the document store state', async (
     {filter: '_type=="author"', permissions: ['update']},
   ]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
-  type Book = {_type: 'book'} & SanityDocument
-  type Author = {_type: 'author'} & SanityDocument
 
-  const book: DocumentHandle<Book> = {documentId: crypto.randomUUID(), documentType: 'book'}
-  const author: DocumentHandle<Author> = {documentId: crypto.randomUUID(), documentType: 'author'}
+  const book = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'book'})
+  const author = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'author'})
 
   expect(await resolvePermissions(instance, createDocument(book))).toEqual({allowed: true})
   expect(await resolvePermissions(instance, createDocument(author))).toMatchObject({
@@ -648,13 +605,9 @@ it('fetches dataset ACL and updates grants in the document store state', async (
 })
 
 it('returns a promise that resolves when a document has been loaded in the store (useful for suspense)', async () => {
-  interface Book extends SanityDocument {
-    _type: 'book'
-    title?: string
-  }
-  const doc: DocumentHandle<Book> = {documentId: crypto.randomUUID(), documentType: 'book'}
+  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
 
-  expect(await resolveDocument<Book>(instance, doc)).toBe(null)
+  expect(await resolveDocument(instance, doc)).toBe(null)
 
   // use one-off instance to create the document in the mock backend
   const oneOffInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
@@ -664,9 +617,9 @@ it('returns a promise that resolves when a document has been loaded in the store
   ])
   await result.submitted() // wait till submitted to server before resolving
 
-  await expect(resolveDocument<Book>(instance, doc)).resolves.toMatchObject({
+  await expect(resolveDocument(instance, doc)).resolves.toMatchObject({
     _id: getDraftId(doc.documentId),
-    _type: 'book',
+    _type: 'article',
     title: 'initial title',
   })
   oneOffInstance.dispose()
@@ -676,17 +629,13 @@ it('emits an event for each action after an outgoing transaction has been accept
   const handler = vi.fn()
   const unsubscribe = subscribeDocumentEvents(instance, handler)
 
-  interface Author extends SanityDocument {
-    _type: 'author'
-    name?: string
-  }
   const documentId = crypto.randomUUID()
-  const doc: DocumentHandle<Author> = {documentId, documentType: 'author'}
+  const doc = createDocumentHandle({documentId, documentType: 'article'})
   expect(handler).toHaveBeenCalledTimes(0)
 
   const tnx1 = await applyDocumentActions(instance, [
     createDocument(doc),
-    editDocument(doc, {set: {name: 'new name'}}),
+    editDocument(doc, {set: {title: 'new name'}}),
     publishDocument(doc),
   ]).then((e) => e.submitted())
   expect(handler).toHaveBeenCalledTimes(4)
@@ -694,7 +643,7 @@ it('emits an event for each action after an outgoing transaction has been accept
   const tnx2 = await applyDocumentActions(instance, [
     unpublishDocument(doc),
     publishDocument(doc),
-    editDocument(doc, {set: {name: 'updated name'}}),
+    editDocument(doc, {set: {title: 'updated name'}}),
     discardDocument(doc),
   ]).then((e) => e.submitted())
   expect(handler).toHaveBeenCalledTimes(9)

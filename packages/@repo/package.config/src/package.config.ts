@@ -36,6 +36,11 @@ export const basePackageConfig = defineConfig({
         syntaxKind: 'modifier',
         allowMultiple: false,
       },
+      {
+        name: 'inlineType',
+        syntaxKind: 'block',
+        allowMultiple: true,
+      },
     ],
   },
 })

@@ -11,23 +11,37 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * Check if the current user has the specified permissions for the given document actions.
  *
  * @category Permissions
- * @param actionOrActions - One more more calls to a particular document action function for a given document
+ * @param actionOrActions - One or more document action functions (e.g., `publishDocument(handle)`) for the same document handle. All actions must belong to the same project and dataset.
  * @returns An object that specifies whether the action is allowed; if the action is not allowed, an explanatory message and list of reasons is also provided.
  *
  * @example Checking for permission to publish a document
- * ```ts
- * import {useDocumentPermissions, useApplyDocumentActions} from '@sanity/sdk-react'
- * import {publishDocument} from '@sanity/sdk'
+ * ```tsx
+ * import {
+ *   useDocumentPermissions,
+ *   useApplyDocumentActions,
+ *   publishDocument,
+ *   createDocumentHandle,
+ *   type DocumentHandle
+ * } from '@sanity/sdk-react'
  *
- * export function PublishButton({doc}: {doc: DocumentHandle}) {
- *   const publishPermissions = useDocumentPermissions(publishDocument(doc))
- *   const applyAction = useApplyDocumentActions()
+ * // Define props using the DocumentHandle type
+ * interface PublishButtonProps {
+ *   doc: DocumentHandle
+ * }
+ *
+ * function PublishButton({doc}: PublishButtonProps) {
+ *   const publishAction = publishDocument(doc)
+ *
+ *   // Pass the same action call to check permissions
+ *   const publishPermissions = useDocumentPermissions(publishAction)
+ *   const apply = useApplyDocumentActions()
  *
  *   return (
  *     <>
  *       <button
  *         disabled={!publishPermissions.allowed}
- *         onClick={() => applyAction(publishDocument(doc))}
+ *         // Pass the same action call to apply the action
+ *         onClick={() => apply(publishAction)}
  *         popoverTarget={`${publishPermissions.allowed ? undefined : 'publishButtonPopover'}`}
  *       >
  *         Publish
@@ -40,6 +54,10 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *     </>
  *   )
  * }
+ *
+ * // Usage:
+ * // const doc = createDocumentHandle({ documentId: 'doc1', documentType: 'myType' })
+ * // <PublishButton doc={doc} />
  * ```
  */
 export function useDocumentPermissions(

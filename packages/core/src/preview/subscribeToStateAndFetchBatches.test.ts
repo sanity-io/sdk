@@ -53,13 +53,13 @@ describe('subscribeToStateAndFetchBatches', () => {
     expect(getQueryState).toHaveBeenCalledTimes(1)
     expect(getQueryState).toHaveBeenCalledWith(
       instance,
-      expect.any(String),
       expect.objectContaining({
         params: expect.objectContaining({
           __ids_71322c7a: ['doc1', 'drafts.doc1', 'doc2', 'drafts.doc2'],
         }),
         perspective: PREVIEW_PERSPECTIVE,
         tag: PREVIEW_TAG,
+        query: expect.any(String),
       }),
     )
 

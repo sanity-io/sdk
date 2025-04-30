@@ -11,7 +11,7 @@ export function SearchRoute(): JSX.Element {
 
   const {isPending, data, hasMore, loadMore, count} = useDocuments({
     search: searchQuery,
-    filter: '_type == "book"',
+    documentType: 'book',
     orderings: [{field: '_updatedAt', direction: 'desc'}],
   })
 

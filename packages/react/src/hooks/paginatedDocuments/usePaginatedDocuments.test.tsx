@@ -72,7 +72,7 @@ describe('usePaginatedDocuments', () => {
       },
     ]
 
-    vi.mocked(useQuery).mockImplementation((query, options) => {
+    vi.mocked(useQuery).mockImplementation(({query, ...options}) => {
       const result = evaluateSync(parse(query), {dataset, params: options?.params}).get()
       return {
         data: result,
