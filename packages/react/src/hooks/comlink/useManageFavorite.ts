@@ -22,6 +22,7 @@ import {useWindowConnection} from './useWindowConnection'
 interface ManageFavorite extends FavoriteStatusResponse {
   favorite: () => Promise<void>
   unfavorite: () => Promise<void>
+  isFavorited: boolean
   isConnected: boolean
 }
 
