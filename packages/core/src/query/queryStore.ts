@@ -22,6 +22,7 @@ import {
 
 import {getClientState} from '../client/clientStore'
 import {type DatasetHandle} from '../config/sanityConfig'
+import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {bindActionByDataset} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
@@ -48,10 +49,7 @@ import {
  * @beta
  */
 export interface QueryOptions
-  extends Pick<
-      ResponseQueryOptions,
-      'perspective' | 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'
-    >,
+  extends Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'>,
     DatasetHandle {
   params?: Record<string, unknown>
 }
@@ -122,18 +120,33 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
               map((s) => s.queries[group$.key]?.lastLiveEventId),
               distinctUntilChanged(),
             )
-            const {query, options: {params, projectId, dataset, tag, ...options} = {}} =
-              parseQueryKey(group$.key)
+            const {
+              query,
+              options: {
+                params,
+                projectId,
+                dataset,
+                tag,
+                perspective: perspectiveFromOptions,
+                ...options
+              } = {},
+            } = parseQueryKey(group$.key)
+
+            const perspective$ = getPerspectiveState(instance, {
+              perspective: perspectiveFromOptions,
+            }).observable.pipe(filter(Boolean))
+
             const client$ = getClientState(instance, {
               apiVersion: QUERY_STORE_API_VERSION,
               projectId,
               dataset,
             }).observable
 
-            return combineLatest([lastLiveEventId$, client$]).pipe(
-              switchMap(([lastLiveEventId, client]) =>
+            return combineLatest([lastLiveEventId$, client$, perspective$]).pipe(
+              switchMap(([lastLiveEventId, client, perspective]) =>
                 client.observable.fetch(query, params, {
                   ...options,
+                  perspective,
                   filterResponse: false,
                   returnQuery: false,
                   lastLiveEventId,

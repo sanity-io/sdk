@@ -7,7 +7,6 @@ import {useSanityInstance} from '../context/useSanityInstance'
 import {useQuery} from '../query/useQuery'
 
 const DEFAULT_BATCH_SIZE = 25
-const DEFAULT_PERSPECTIVE = 'drafts'
 
 /**
  * Result structure returned from the infinite list query
@@ -122,7 +121,6 @@ export function useDocuments({
   ...options
 }: DocumentsOptions): DocumentsResponse {
   const instance = useSanityInstance(options)
-  const perspective = options.perspective ?? DEFAULT_PERSPECTIVE
   const [limit, setLimit] = useState(batchSize)
 
   // Reset the limit to the current batchSize whenever any query parameters
@@ -163,7 +161,7 @@ export function useDocuments({
         .join(',')})`
     : ''
 
-  const dataQuery = `*${filterClause}${orderClause}[0...${limit}]{"documentId":_id,"documentType":_type,...$__dataset}`
+  const dataQuery = `*${filterClause}${orderClause}[0...${limit}]{"documentId":_id,"documentType":_type,...$__handle}`
   const countQuery = `count(*${filterClause})`
 
   const {
@@ -173,9 +171,11 @@ export function useDocuments({
     ...options,
     params: {
       ...params,
-      __dataset: pick(instance.config, 'projectId', 'dataset'),
+      __handle: {
+        ...pick(instance.config, 'perspective', 'projectId', 'dataset'),
+        ...pick(options, 'perspective', 'projectId', 'dataset'),
+      },
     },
-    perspective,
   })
 
   const hasMore = data.length < count
