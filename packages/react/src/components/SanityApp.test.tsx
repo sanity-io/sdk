@@ -3,11 +3,20 @@ import {render, screen} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
 import {SanityApp} from './SanityApp'
-import {SDKProvider} from './SDKProvider'
+import {type SDKProviderProps} from './SDKProvider'
 
-// Mock SDKProvider to verify it's being used correctly
+// Hoist the mock function definition
+// Rely on vi.fn type inference
+const mockSDKProviderComponent = vi.hoisted(() =>
+  vi.fn((_props: SDKProviderProps) => (
+    // Simplified mock, doesn't access config directly to avoid type issues
+    <div data-testid="sdk-provider">SDKProvider Mock</div>
+  )),
+)
+
+// Use the hoisted mock in the factory
 vi.mock('./SDKProvider', () => ({
-  SDKProvider: vi.fn(() => <div data-testid="sdk-provider">SDKProvider</div>),
+  SDKProvider: mockSDKProviderComponent,
 }))
 
 // Mock useEffect to prevent redirect logic from running in tests
@@ -45,6 +54,8 @@ vi.mock('../hooks/auth/useAuthState', () => ({
 describe('SanityApp', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Access the mock instance correctly
+    mockSDKProviderComponent.mockClear()
   })
 
   it('renders SDKProvider with a single config', () => {
@@ -63,11 +74,13 @@ describe('SanityApp', () => {
     expect(screen.getByTestId('sdk-provider')).toBeInTheDocument()
 
     // Verify SDKProvider was called with the correct props
-    const sdkProviderCalls = vi.mocked(SDKProvider).mock.calls
-    expect(sdkProviderCalls.length).toBe(1)
-
-    const [props] = sdkProviderCalls[0]
-    const {config} = props
+    expect(mockSDKProviderComponent).toHaveBeenCalledTimes(1)
+    const sdkProviderCalls = mockSDKProviderComponent.mock.calls
+    const firstCallArgs1 = sdkProviderCalls[0]
+    expect(firstCallArgs1).toBeDefined()
+    expect(firstCallArgs1.length).toBeGreaterThan(0)
+    const props = firstCallArgs1[0] as unknown as SDKProviderProps
+    const config = props?.config
 
     // Config is now passed directly as an object for single configs
     expect(config).toEqual(singleConfig)
@@ -100,47 +113,16 @@ describe('SanityApp', () => {
     expect(screen.getByTestId('sdk-provider')).toBeInTheDocument()
 
     // Verify SDKProvider was called with the correct props
-    const sdkProviderCalls = vi.mocked(SDKProvider).mock.calls
-    expect(sdkProviderCalls.length).toBe(1)
-
-    const [props] = sdkProviderCalls[0]
-    const {config} = props
+    expect(mockSDKProviderComponent).toHaveBeenCalledTimes(1)
+    const sdkProviderCalls = mockSDKProviderComponent.mock.calls
+    const firstCallArgs2 = sdkProviderCalls[0]
+    expect(firstCallArgs2).toBeDefined()
+    expect(firstCallArgs2.length).toBeGreaterThan(0)
+    const props = firstCallArgs2[0] as unknown as SDKProviderProps
+    const config = props?.config
 
     // Config should be passed directly to SDKProvider
     expect(config).toEqual(multipleConfigs)
-  })
-
-  it('supports legacy sanityConfigs prop', () => {
-    const legacyConfigs = [
-      {
-        projectId: 'legacy-project-1',
-        dataset: 'production',
-      },
-      {
-        projectId: 'legacy-project-2',
-        dataset: 'staging',
-      },
-    ]
-
-    render(
-      // @ts-expect-error purposefully using the deprecated prop
-      <SanityApp sanityConfigs={legacyConfigs} fallback={<div>Loading...</div>}>
-        <div>Child Content</div>
-      </SanityApp>,
-    )
-
-    // Check that the SDKProvider is rendered
-    expect(screen.getByTestId('sdk-provider')).toBeInTheDocument()
-
-    // Verify SDKProvider was called with the correct props
-    const sdkProviderCalls = vi.mocked(SDKProvider).mock.calls
-    expect(sdkProviderCalls.length).toBe(1)
-
-    const [props] = sdkProviderCalls[0]
-    const {config} = props
-
-    // Config should be passed to SDKProvider in the same order
-    expect(config).toEqual(legacyConfigs)
   })
 
   it('handles iframe environment correctly', async () => {

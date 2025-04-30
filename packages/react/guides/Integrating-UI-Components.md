@@ -42,7 +42,7 @@ export function App() {
 
   return (
     <div className="app-container">
-      <SanityApp sanityConfigs={sanityConfigs} fallback={<div>Loading...</div>}>
+      <SanityApp config={sanityConfigs} fallback={<div>Loading...</div>}>
         <ThemeProvider theme={theme}>
           {/* add your own components here! */}
           <ExampleComponent />

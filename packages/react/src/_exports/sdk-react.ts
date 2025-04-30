@@ -1,7 +1,7 @@
 /**
  * @module exports
  */
-export {AuthBoundary} from '../components/auth/AuthBoundary'
+export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBoundary'
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
@@ -12,6 +12,7 @@ export {useDashboardOrganizationId} from '../hooks/auth/useDashboardOrganization
 export {useHandleAuthCallback} from '../hooks/auth/useHandleAuthCallback'
 export {useLoginUrl} from '../hooks/auth/useLoginUrl'
 export {useLogOut} from '../hooks/auth/useLogOut'
+export {useVerifyOrgProjects} from '../hooks/auth/useVerifyOrgProjects'
 export {useClient} from '../hooks/client/useClient'
 export {
   type FrameConnection,

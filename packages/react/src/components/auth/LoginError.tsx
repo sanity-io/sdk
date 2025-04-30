@@ -6,6 +6,7 @@ import {type FallbackProps} from 'react-error-boundary'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLogOut} from '../../hooks/auth/useLogOut'
 import {AuthError} from './AuthError'
+import {ConfigurationError} from './ConfigurationError'
 /**
  * @alpha
  */
@@ -18,7 +19,7 @@ export type LoginErrorProps = FallbackProps
  * @alpha
  */
 export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.ReactNode {
-  if (!(error instanceof AuthError)) throw error
+  if (!(error instanceof AuthError || error instanceof ConfigurationError)) throw error
   const logout = useLogOut()
   const authState = useAuthState()
 
@@ -44,12 +45,17 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
         }
       }
     }
-  }, [authState, handleRetry])
+    if (authState.type !== AuthStateType.ERROR && error instanceof ConfigurationError) {
+      setAuthErrorMessage(error.message)
+    }
+  }, [authState, handleRetry, error])
 
   return (
     <div className="sc-login-error">
       <div className="sc-login-error__content">
-        <h2 className="sc-login-error__title">Authentication Error</h2>
+        <h2 className="sc-login-error__title">
+          {error instanceof AuthError ? 'Authentication Error' : 'Configuration Error'}
+        </h2>
         <p className="sc-login-error__description">{authErrorMessage}</p>
       </div>
 

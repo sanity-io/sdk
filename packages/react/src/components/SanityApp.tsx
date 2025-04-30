@@ -77,12 +77,9 @@ const REDIRECT_URL = 'https://sanity.io/welcome'
 export function SanityApp({
   children,
   fallback,
-  config,
-  sanityConfigs,
+  config = [],
   ...props
 }: SanityAppProps): ReactElement {
-  const configs = config ?? sanityConfigs ?? []
-
   useEffect(() => {
     let timeout: NodeJS.Timeout | undefined
 
@@ -98,7 +95,7 @@ export function SanityApp({
   }, [])
 
   return (
-    <SDKProvider {...props} fallback={fallback} config={configs}>
+    <SDKProvider {...props} fallback={fallback} config={config}>
       {children}
     </SDKProvider>
   )
