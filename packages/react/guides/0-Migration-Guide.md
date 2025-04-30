@@ -212,6 +212,68 @@ useDocumentEvent({...docHandle, onEvent: onEventCallback})
 
 By adopting these changes, especially `defineQuery` and `defineProjection`, you enable the SDK to leverage Typegen for a much safer and more productive development experience, particularly in TypeScript projects.
 
+### Other Breaking Changes
+
+1. `useManageFavorite` should now have a Suspense boundary.
+
+**Before:**
+
+```typescript
+function MyDocumentAction(props: DocumentActionProps) {
+  const {documentId, documentType, resourceId} = props
+  const {favorite, unfavorite, isFavorited, isConnected} = useManageFavorite({
+    _id,
+    _type,
+    resourceId
+  })
+
+  return (
+    <Button
+      disabled={!isConnected}
+      onClick={() => isFavorited ? unfavorite() : favorite()}
+      text={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+    />
+  )
+}
+```
+
+**After:**
+
+```typescript
+ function FavoriteButton(props: DocumentActionProps) {
+   const {documentId, documentType, resourceId} = props
+   const {favorite, unfavorite, isFavorited, isConnected} = useManageFavorite({
+     documentId,
+     documentType,
+     resourceId
+   })
+
+   return (
+     <Button
+       disabled={!isConnected}
+       onClick={() => isFavorited ? unfavorite() : favorite()}
+       text={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+     />
+   )
+ }
+
+ // Wrap the component with Suspense since the hook may suspend
+ function MyDocumentAction(props: DocumentActionProps) {
+   return (
+     <Suspense
+       fallback={
+         <Button
+           text="Loading..."
+           disabled
+         />
+       }
+     >
+       <FavoriteButton {...props} />
+     </Suspense>
+   )
+ }
+```
+
 ## Migrating to @sanity/sdk-react@0.0.0-rc.4
 
 ### Breaking Changes
