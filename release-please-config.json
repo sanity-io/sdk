@@ -18,20 +18,12 @@
     {
       "type": "linked-versions",
       "groupName": "sdk",
-      "components": ["sdk", "sdk-react", "sdk-react-internal"]
+      "components": ["sdk", "sdk-react"]
     }
   ],
   "packages": {
     "packages/react": {
       "component": "sdk-react",
-      "release-type": "node",
-      "bump-patch-for-minor-pre-major": true,
-      "bump-minor-pre-major": true,
-      "prerelease-type": "alpha",
-      "versioning": "prerelease"
-    },
-    "packages/react-internal": {
-      "component": "sdk-react-internal",
       "release-type": "node",
       "bump-patch-for-minor-pre-major": true,
       "bump-minor-pre-major": true,

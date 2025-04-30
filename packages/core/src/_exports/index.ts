@@ -86,6 +86,8 @@ export {
 } from '../document/events'
 export {type JsonMatch, jsonMatch, type JsonMatchPath} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
+export type {FavoriteStatusResponse} from '../favorites/favorites'
+export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
 export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
