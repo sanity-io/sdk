@@ -38,7 +38,10 @@ const allowedKeys = Object.keys({
   apiVersion: null,
   requestTagPrefix: null,
   useProjectHostname: null,
-} satisfies Record<keyof ClientOptions, null>) as (keyof ClientOptions)[]
+} satisfies Record<keyof Omit<ClientOptions, 'middleware'>, null>) as (keyof Omit<
+  ClientOptions,
+  'middleware'
+>)[]
 
 const DEFAULT_CLIENT_CONFIG: ClientConfig = {
   apiVersion: DEFAULT_API_VERSION,
@@ -136,8 +139,8 @@ const getClientConfigKey = (options: ClientOptions) => JSON.stringify(pick(optio
  */
 export const getClient = bindActionGlobally(
   clientStore,
-  ({state, instance}, options: ClientOptions) => {
-    // Check for disallowed keys
+  ({state, instance}, options: ClientOptions, middleware?: unknown[]) => {
+    // Check for disallowed keys (excluding middleware)
     const providedKeys = Object.keys(options) as (keyof ClientOptions)[]
     const disallowedKeys = providedKeys.filter((key) => !allowedKeys.includes(key))
 
@@ -155,7 +158,7 @@ export const getClient = bindActionGlobally(
     const dataset = options.dataset ?? instance.config.dataset
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost
 
-    const effectiveOptions: ClientOptions = {
+    const effectiveOptions: ClientConfig = {
       ...DEFAULT_CLIENT_CONFIG,
       ...((options.scope === 'global' || !projectId) && {useProjectHostname: false}),
       token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
@@ -163,6 +166,8 @@ export const getClient = bindActionGlobally(
       ...(projectId && {projectId}),
       ...(dataset && {dataset}),
       ...(apiHost && {apiHost}),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(middleware && {middleware: middleware as any}),
     }
 
     if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {
@@ -174,11 +179,12 @@ export const getClient = bindActionGlobally(
       delete effectiveOptions.withCredentials
     }
 
-    const key = getClientConfigKey(effectiveOptions)
+    // Key generation uses only standard options passed to getClient
+    const key = getClientConfigKey(options) // Use original options for key
 
     if (clients[key]) return clients[key]
 
-    const client = createClient(effectiveOptions)
+    const client = createClient(effectiveOptions) // Pass options including middleware here
     state.set('addClient', (prev) => ({clients: {...prev.clients, [key]: client}}))
 
     return client

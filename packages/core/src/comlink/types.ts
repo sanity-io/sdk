@@ -11,3 +11,18 @@ export type FrameMessage = Message
  * @public
  */
 export type WindowMessage = Message
+
+/**
+ * @internal
+ */
+/** Message from SDK (iframe) to Parent (dashboard) to request a new token */
+export type RequestNewTokenMessage = {
+  type: 'dashboard/v1/auth/tokens/create'
+  payload?: undefined
+}
+
+/** Message from Parent (dashboard) to SDK (iframe) with the new token */
+export type NewTokenResponseMessage = {
+  type: 'dashboard/v1/auth/tokens/create'
+  payload: {token: string | null; error?: string}
+}
