@@ -1,0 +1,54 @@
+name: Upload Docs
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 20
+
+      - name: Build Docs
+        run: pnpm build:docs
+
+      - name: Extract package info
+        id: package_info
+        run: |
+          # Extract package name (before colon)
+          PACKAGE_NAME=$(echo "${{ github.ref_name }}" | cut -d':' -f1)
+
+          # Set package name and docs path based on input
+          if [ "$PACKAGE_NAME" = "sdk" ]; then
+            echo "package_name=@sanity/sdk" >> $GITHUB_OUTPUT
+            echo "typedoc_path=packages/core/docs/typedoc.json" >> $GITHUB_OUTPUT
+          elif [ "$PACKAGE_NAME" = "sdk-react" ]; then
+            echo "package_name=@sanity/sdk-react" >> $GITHUB_OUTPUT
+            echo "typedoc_path=packages/react/docs/typedoc.json" >> $GITHUB_OUTPUT
+          fi
+
+          # Extract version (after v)
+          VERSION=$(echo "${{ github.ref_name }}" | sed 's/^.*: v//')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Upload Docs
+        uses: sanity-io/reference-api-typedoc/.github/actions/typedoc-upload@main
+        with:
+          packageName: ${{ steps.package_info.outputs.package_name }}
+          version: ${{ steps.package_info.outputs.version }}
+          typedocJsonPath: ${{ steps.package_info.outputs.typedoc_path }}
+        env:
+          SANITY_DOCS_API_TOKEN: ${{ secrets.SANITY_DOCS_API_TOKEN }}
