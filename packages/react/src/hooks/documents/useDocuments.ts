@@ -164,7 +164,7 @@ export interface DocumentsResponse<
  * import {useDocuments} from '@sanity/sdk-react'
  *
  * export default function FilteredAuthors() {
- *   const {max, setMax} = useState(2)
+ *   const [max, setMax] = useState(2)
  *   const {data} = useDocuments({
  *     documentType: 'author',
  *     filter: 'length(books) <= $max',
