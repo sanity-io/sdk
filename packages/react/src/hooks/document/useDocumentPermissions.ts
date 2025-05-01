@@ -11,8 +11,12 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * Check if the current user has the specified permissions for the given document actions.
  *
  * @category Permissions
- * @param actionOrActions - One or more document action functions (e.g., `publishDocument(handle)`) for the same document handle. All actions must belong to the same project and dataset.
+ * @param actionOrActions - One or more document action functions (e.g., `publishDocument(handle)`).
  * @returns An object that specifies whether the action is allowed; if the action is not allowed, an explanatory message and list of reasons is also provided.
+ *
+ * @remarks
+ * When passing multiple actions, all actions must belong to the same project and dataset.
+ * Note, however, that you can check permissions on multiple documents from the same project and dataset (as in the second example below).
  *
  * @example Checking for permission to publish a document
  * ```tsx
@@ -58,6 +62,23 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * // Usage:
  * // const doc = createDocumentHandle({ documentId: 'doc1', documentType: 'myType' })
  * // <PublishButton doc={doc} />
+ * ```
+ *
+ * @example Checking for permissions to edit multiple documents
+ * ```tsx
+ * import {
+ *   useDocumentPermissions,
+ *   editDocument,
+ *   type DocumentHandle
+ * } from '@sanity/sdk-react'
+ *
+ * export default function canEditMultiple(docHandles: DocumentHandle[]) {
+ *   // Create an array containing an editDocument action for each of the document handles
+ *   const editActions = docHandles.map(doc => editDocument(doc))
+ *
+ *   // Return the result of checking for edit permissions on all of the document handles
+ *   return useDocumentPermissions(editActions)
+ * }
  * ```
  */
 export function useDocumentPermissions(
