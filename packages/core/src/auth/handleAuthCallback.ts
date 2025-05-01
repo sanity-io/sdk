@@ -65,6 +65,7 @@ export const handleAuthCallback = bindActionGlobally(
         apiVersion: DEFAULT_API_VERSION,
         requestTagPrefix: REQUEST_TAG_PREFIX,
         useProjectHostname: false,
+        useCdn: false,
         ...(apiHost && {apiHost}),
       })
 
