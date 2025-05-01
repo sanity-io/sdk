@@ -21,7 +21,7 @@ describe('checkForCookieAuth', () => {
 
     await checkForCookieAuth(projectId, clientFactory)
 
-    expect(clientFactory).toHaveBeenCalledWith({projectId})
+    expect(clientFactory).toHaveBeenCalledWith({projectId, useCdn: false})
   })
 
   it('should return true if client request returns a user with id', async () => {

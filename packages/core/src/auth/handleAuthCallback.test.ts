@@ -69,6 +69,7 @@ describe('handleCallback', () => {
       apiVersion: '2021-06-07',
       requestTagPrefix: 'sanity.sdk.auth',
       useProjectHostname: false,
+      useCdn: false,
     })
     expect(request).toHaveBeenLastCalledWith({
       method: 'GET',
@@ -210,6 +211,7 @@ describe('handleCallback', () => {
       apiVersion: '2021-06-07',
       requestTagPrefix: 'sanity.sdk.auth',
       useProjectHostname: false,
+      useCdn: false,
     })
     expect(mockRequest).toHaveBeenLastCalledWith({
       method: 'GET',
