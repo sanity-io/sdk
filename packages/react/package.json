@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk-react",
-  "version": "0.0.0-alpha.29",
+  "version": "0.0.0-alpha.31",
   "private": false,
   "description": "Sanity SDK React toolkit for Content OS",
   "keywords": [
@@ -44,7 +44,7 @@
     "build:bundle": "vite build --configLoader runner --config package.bundle.ts",
     "clean": "rimraf dist",
     "dev": "pkg watch",
-    "docs": "typedoc --out docs --tsconfig ./tsconfig.dist.json",
+    "docs": "typedoc --json docs/typedoc.json --tsconfig ./tsconfig.dist.json",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "eslint .",
     "prepublishOnly": "pnpm run build",

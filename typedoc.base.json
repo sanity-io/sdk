@@ -1,9 +1,5 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  /**
-   * Documentation visibility filters
-   * Excludes internal implementation details from public documentation
-   */
   "excludePrivate": true,
   "excludeProtected": true,
   "excludeExternals": true,

@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.0.0-alpha.31](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.30...sdk-v0.0.0-alpha.31) (2025-05-01)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/comlink to ^3.0.2 ([#482](https://github.com/sanity-io/sdk/issues/482)) ([f9b3eca](https://github.com/sanity-io/sdk/commit/f9b3eca4a0a21a456ebda46b42b836efd9f7718f))
+
+## [0.0.0-alpha.30](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.29...sdk-v0.0.0-alpha.30) (2025-05-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* fetch favorites from dashboard ([#437](https://github.com/sanity-io/sdk/issues/437))
+
+### Features
+
+* add releases store ([#420](https://github.com/sanity-io/sdk/issues/420)) ([b5a376c](https://github.com/sanity-io/sdk/commit/b5a376c86e700031fe1700fb55b7f0d1236aaea3))
+* **auth:** add studio mode ([#429](https://github.com/sanity-io/sdk/issues/429)) ([cef0f72](https://github.com/sanity-io/sdk/commit/cef0f7229d519709b4f069b982110c32a4d23217))
+* fetch favorites from dashboard ([#437](https://github.com/sanity-io/sdk/issues/437)) ([1a8ecb8](https://github.com/sanity-io/sdk/commit/1a8ecb89217b05c6ed90699c7ee162592cedb896))
+* integrate typegen ([#452](https://github.com/sanity-io/sdk/issues/452)) ([8416864](https://github.com/sanity-io/sdk/commit/8416864533f0f14851e8e71c15be4a1596711b52))
+* verify projects match current org for dashboard apps ([#464](https://github.com/sanity-io/sdk/issues/464)) ([52c8c76](https://github.com/sanity-io/sdk/commit/52c8c7668f09b119d6ca618381e1a44d134612a3))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/client to ^6.29.1 ([#466](https://github.com/sanity-io/sdk/issues/466)) ([f25ba2b](https://github.com/sanity-io/sdk/commit/f25ba2b2aa32e3c010a6adf5658367c6fa3e149e))
+* **deps:** update dependency @sanity/client to v7 ([#478](https://github.com/sanity-io/sdk/issues/478)) ([e5ed504](https://github.com/sanity-io/sdk/commit/e5ed5047c84c3864cdbebd2c158184d57dfdaff9))
+
+
+### Documentation
+
+* cleanup for Apr 30 ([#479](https://github.com/sanity-io/sdk/issues/479)) ([8793c1e](https://github.com/sanity-io/sdk/commit/8793c1e0d93bc9184d9a65f6e11d35dc148e4ac5))
+* update readmes ([#474](https://github.com/sanity-io/sdk/issues/474)) ([042a853](https://github.com/sanity-io/sdk/commit/042a85316c8179b8a135abbae4d66a4e467f5ee0))
+
 ## [0.0.0-alpha.29](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.28...sdk-v0.0.0-alpha.29) (2025-04-23)
 
 

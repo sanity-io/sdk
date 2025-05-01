@@ -199,7 +199,6 @@ export function editDocument<
  * @param doc - A handle uniquely identifying the document to be edited.
  * @param patches - Patches in various formats (`PatchOperations`, `PatchOperations[]`, or `SanityMutatePatchMutation`).
  * @returns An `EditDocumentAction` object ready for dispatch.
- * @internal
  */
 export function editDocument<
   TDocumentType extends string = string,

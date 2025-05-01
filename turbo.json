@@ -10,6 +10,10 @@
       "dependsOn": ["^build:bundle"],
       "outputs": ["lib/**"]
     },
+    "build:docs": {
+      "dependsOn": ["^build"],
+      "outputs": ["docs/**"]
+    },
     "check-types": {
       "dependsOn": ["^check-types"]
     },
@@ -18,7 +22,10 @@
       "persistent": true,
       "cache": false
     },
-    "docs": {},
+    "docs": {
+      "dependsOn": ["^build"],
+      "outputs": ["docs/**"]
+    },
     "lint": {
       "cache": false
     },

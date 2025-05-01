@@ -157,6 +157,37 @@ export interface DocumentsResponse<
  * // const myDatasetHandle = createDatasetHandle({ projectId: 'p1', dataset: 'production' })
  * // <DocumentList dataset={myDatasetHandle} documentType="post" search="Sanity" />
  * ```
+ *
+ * @example Using `filter` and `params` options for narrowing a collection
+ * ```tsx
+ * import {useState} from 'react'
+ * import {useDocuments} from '@sanity/sdk-react'
+ *
+ * export default function FilteredAuthors() {
+ *   const [max, setMax] = useState(2)
+ *   const {data} = useDocuments({
+ *     documentType: 'author',
+ *     filter: 'length(books) <= $max',
+ *     params: {max},
+ *   })
+ *
+ *   return (
+ *     <>
+ *       <input
+ *         id="maxBooks"
+ *         type="number"
+ *         value={max}
+ *         onChange={e => setMax(e.currentTarget.value)}
+ *       />
+ *       {data.map(author => (
+ *         <Suspense key={author.documentId}>
+ *           <MyAuthorComponent documentHandle={author} />
+ *         </Suspense>
+ *       ))}
+ *     </>
+ *   )
+ * }
+ * ```
  */
 export function useDocuments<
   TDocumentType extends string = string,

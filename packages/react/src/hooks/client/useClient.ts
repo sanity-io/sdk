@@ -5,11 +5,11 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
 /**
  * A React hook that provides a client that subscribes to changes in your application,
- * such as user authentication changes.
  *
  * @remarks
- * The hook uses `useSyncExternalStore` to safely subscribe to changes
- * and ensure consistency between server and client rendering.
+ * This hook is intended for advanced use cases and special API calls that the React SDK
+ * does not yet provide hooks for. We welcome you to get in touch with us to let us know
+ * your use cases for this!
  *
  * @category Platform
  * @returns A Sanity client
