@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.0-alpha.31](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.30...sdk-v0.0.0-alpha.31) (2025-05-01)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/comlink to ^3.0.2 ([#482](https://github.com/sanity-io/sdk/issues/482)) ([f9b3eca](https://github.com/sanity-io/sdk/commit/f9b3eca4a0a21a456ebda46b42b836efd9f7718f))
+
 ## [0.0.0-alpha.30](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.29...sdk-v0.0.0-alpha.30) (2025-05-01)
 
 
