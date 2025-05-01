@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk-react",
-  "version": "0.0.0-alpha.29",
+  "version": "0.0.0-alpha.31",
   "private": false,
   "description": "Sanity SDK React toolkit for Content OS",
   "keywords": [
@@ -44,7 +44,7 @@
     "build:bundle": "vite build --configLoader runner --config package.bundle.ts",
     "clean": "rimraf dist",
     "dev": "pkg watch",
-    "docs": "typedoc --out docs --tsconfig ./tsconfig.dist.json",
+    "docs": "typedoc --json docs/typedoc.json --tsconfig ./tsconfig.dist.json",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "eslint .",
     "prepublishOnly": "pnpm run build",
@@ -56,7 +56,7 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
-    "@sanity/client": "^6.29.1",
+    "@sanity/client": "^7.0.0",
     "@sanity/message-protocol": "^0.8.0",
     "@sanity/sdk": "workspace:*",
     "@sanity/types": "^3.83.0",
@@ -74,7 +74,7 @@
     "@repo/package.config": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/browserslist-config": "^1.0.5",
-    "@sanity/comlink": "^3.0.1",
+    "@sanity/comlink": "^3.0.2",
     "@sanity/pkg-utils": "^7.2.2",
     "@sanity/prettier-config": "^1.0.3",
     "@testing-library/jest-dom": "^6.6.3",
@@ -90,7 +90,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "rollup-plugin-visualizer": "^5.14.0",
-    "typescript": "^5.7.3",
+    "typescript": "^5.8.3",
     "vite": "^6.3.4",
     "vitest": "^3.1.2"
   },

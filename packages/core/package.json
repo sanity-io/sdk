@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk",
-  "version": "0.0.0-alpha.29",
+  "version": "0.0.0-alpha.31",
   "private": false,
   "description": "Sanity SDK",
   "keywords": [
@@ -44,7 +44,7 @@
     "build:bundle": "vite build --configLoader runner --config package.bundle.ts",
     "clean": "rimraf dist",
     "dev": "pkg watch",
-    "docs": "typedoc --out docs --tsconfig ./tsconfig.dist.json",
+    "docs": "typedoc --json docs/typedoc.json --tsconfig ./tsconfig.dist.json",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "eslint .",
     "prepublishOnly": "pnpm run build",
@@ -56,8 +56,8 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
-    "@sanity/client": "^6.29.1",
-    "@sanity/comlink": "^3.0.1",
+    "@sanity/client": "^7.0.0",
+    "@sanity/comlink": "^3.0.2",
     "@sanity/diff-match-patch": "^3.2.0",
     "@sanity/message-protocol": "^0.8.0",
     "@sanity/mutate": "^0.12.4",
@@ -83,7 +83,7 @@
     "groq-js": "^1.16.1",
     "prettier": "^3.5.3",
     "rollup-plugin-visualizer": "^5.14.0",
-    "typescript": "^5.7.3",
+    "typescript": "^5.8.3",
     "vite": "^6.3.4",
     "vitest": "^3.1.2"
   },
