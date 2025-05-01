@@ -278,8 +278,8 @@ importers:
   packages/core:
     dependencies:
       '@sanity/client':
-        specifier: ^6.29.1
-        version: 6.29.1(debug@4.4.0)
+        specifier: ^7.0.0
+        version: 7.0.0
       '@sanity/comlink':
         specifier: ^3.0.1
         version: 3.0.2
@@ -366,8 +366,8 @@ importers:
   packages/react:
     dependencies:
       '@sanity/client':
-        specifier: ^6.29.1
-        version: 6.29.1(debug@4.4.0)
+        specifier: ^7.0.0
+        version: 7.0.0
       '@sanity/message-protocol':
         specifier: ^0.8.0
         version: 0.8.0
@@ -2141,6 +2141,10 @@ packages:
   '@sanity/client@6.29.1':
     resolution: {integrity: sha512-BQRCMeDlBxwnMbFtB61HUxFf9aSb4HNVrpfrC7IFVqFf4cwcc3o5H8/nlrL9U3cDFedbe4W0AXt1mQzwbY/ljw==}
     engines: {node: '>=14.18'}
+
+  '@sanity/client@7.0.0':
+    resolution: {integrity: sha512-Kr96rYNJpA/zSyYhio9tx3SvID1ew2Y4mICzHYe81xF1MdjZLdUf0BudRv+wSa1QxtQdBnY4hDZKA96BAYo5ng==}
+    engines: {node: '>=20'}
 
   '@sanity/codegen@3.86.2-experimental.0':
     resolution: {integrity: sha512-l7t3tqoOGSVA7IQFe4tBysxJxZqOO5t6CO4ef6oPwSKy20YnSKmH6jDO0hzljGPlo8HiSJ4wpkKb8tMZCJfX8Q==}
@@ -8956,6 +8960,14 @@ snapshots:
       - supports-color
 
   '@sanity/client@6.29.1(debug@4.4.0)':
+    dependencies:
+      '@sanity/eventsource': 5.0.2
+      get-it: 8.6.7(debug@4.4.0)
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - debug
+
+  '@sanity/client@7.0.0':
     dependencies:
       '@sanity/eventsource': 5.0.2
       get-it: 8.6.7(debug@4.4.0)
