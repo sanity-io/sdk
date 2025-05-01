@@ -57,7 +57,7 @@
   "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@sanity/client": "^7.0.0",
-    "@sanity/comlink": "^3.0.1",
+    "@sanity/comlink": "^3.0.2",
     "@sanity/diff-match-patch": "^3.2.0",
     "@sanity/message-protocol": "^0.8.0",
     "@sanity/mutate": "^0.12.4",
