@@ -163,26 +163,28 @@ export interface DocumentsResponse<
  * import {useState} from 'react'
  * import {useDocuments} from '@sanity/sdk-react'
  *
- * export default component FilteredAuthors() {
+ * export default function FilteredAuthors() {
  *   const {max, setMax} = useState(2)
  *   const {data} = useDocuments({
- *     documentType: 'author'
+ *     documentType: 'author',
  *     filter: 'length(books) <= $max',
  *     params: {max},
  *   })
  *
  *   return (
- *     <input
- *       id="maxBooks"
- *       type="number"
- *       value={max}
- *       onChange={e => setMax(e.currentTarget.value)}
- *     />
- *     {data.map(author => (
- *       <Suspense key={author.documentId}>
- *         <MyAuthorComponent documentHandle={author} />
- *       </Suspense>
- *     ))}
+ *     <>
+ *       <input
+ *         id="maxBooks"
+ *         type="number"
+ *         value={max}
+ *         onChange={e => setMax(e.currentTarget.value)}
+ *       />
+ *       {data.map(author => (
+ *         <Suspense key={author.documentId}>
+ *           <MyAuthorComponent documentHandle={author} />
+ *         </Suspense>
+ *       ))}
+ *     </>
  *   )
  * }
  * ```
