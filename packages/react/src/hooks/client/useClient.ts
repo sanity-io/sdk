@@ -8,7 +8,7 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  *
  * @remarks
  * This hook is intended for advanced use cases and special API calls that the React SDK
- * does not yet provide hooks for. We welcome to you get in touch with us to let us know
+ * does not yet provide hooks for. We welcome you to get in touch with us to let us know
  * your use cases for this!
  *
  * @category Platform
