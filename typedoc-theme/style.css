@@ -31,6 +31,14 @@
   --color-background-secondary: light-dark(var(--gray50), var(--gray950));
   --light-color-background: white;
   --color-text: light-dark(var(--gray600), var(--gray400));
+  --color-icon-background: transparent;
+  --color-document: light-dark(var(--gray600), var(--gray400));
+  --color-icon-text: light-dark(var(--gray600), var(--gray400));
+}
+
+/* Override for style configured in default Typedoc theme*/
+* {
+  scrollbar-color: light-dark(var(--gray200), var(--gray700)) transparent;
 }
 
 body {
@@ -62,6 +70,7 @@ code,
   font-family:
     JetBrains Mono,
     monospace;
+  font-variant: none; /* Disable ligatures in code for clarity */
 }
 
 pre,
