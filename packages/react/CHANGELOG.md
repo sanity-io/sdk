@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.0.0-alpha.31](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.30...sdk-react-v0.0.0-alpha.31) (2025-05-01)
+
+
+### Miscellaneous
+
+* **sdk-react:** Synchronize sdk versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 0.0.0-alpha.31
+
 ## [0.0.0-alpha.30](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.29...sdk-react-v0.0.0-alpha.30) (2025-05-01)
 
 
