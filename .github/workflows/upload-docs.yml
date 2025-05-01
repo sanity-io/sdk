@@ -28,8 +28,11 @@ jobs:
       - name: Extract package info
         id: package_info
         run: |
-          # Extract package name (before colon)
-          PACKAGE_NAME=$(echo "${{ github.ref_name }}" | cut -d':' -f1)
+          # Extract package name (everything before -v)
+          PACKAGE_NAME=$(echo "${{ github.ref_name }}" | sed 's/-v.*//')
+
+          # Extract version (everything after -v)
+          VERSION=$(echo "${{ github.ref_name }}" | sed 's/.*-v//')
 
           # Set package name and docs path based on input
           if [ "$PACKAGE_NAME" = "sdk" ]; then
@@ -40,8 +43,6 @@ jobs:
             echo "typedoc_path=packages/react/docs/typedoc.json" >> $GITHUB_OUTPUT
           fi
 
-          # Extract version (after v)
-          VERSION=$(echo "${{ github.ref_name }}" | sed 's/^.*: v//')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Upload Docs
