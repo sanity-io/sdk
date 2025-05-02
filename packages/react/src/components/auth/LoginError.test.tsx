@@ -44,7 +44,7 @@ describe('LoginError', () => {
     })
   })
 
-  it.only('automatically retries on 401 Unauthorized error', async () => {
+  it('automatically retries on 401 Unauthorized error', async () => {
     const mockLogout = vi.fn().mockResolvedValue(undefined)
     const mockReset = vi.fn()
     const error = new AuthError(new Error('Test error'))
