@@ -1,0 +1,21 @@
+name: Mark YOUR_TEAM_NAME Issues Done on Release
+
+on:
+  pull_request:
+
+jobs:
+  mark-issues-done:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Mark Linear issues Done
+        id: mark-issues-done
+        uses: sanity-io/mark-issues-done-action
+        with:
+          linear_api_key: ${{secrets.LINEAR_API_TOKEN}}
+          repository_name: ${{GitHub.event.repository.name}}
+          initial_state_id: "YOUR_MERGED_STATE_ID"
+          done_state_id: "YOUR_DONE_STATE_ID"
