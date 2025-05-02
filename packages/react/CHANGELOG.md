@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.0.1](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0...sdk-react-v0.0.1) (2025-05-02)
+
+
+### Bug Fixes
+
+* **docs:** remove custom docs entrypoint names ([#498](https://github.com/sanity-io/sdk/issues/498)) ([4499e85](https://github.com/sanity-io/sdk/commit/4499e85a3a30a5086bceb164c19cb18c71376471))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 0.0.1
+
 ## 0.0.0 (2025-05-02)
 
 
