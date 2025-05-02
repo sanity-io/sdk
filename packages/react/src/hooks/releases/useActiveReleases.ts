@@ -22,7 +22,7 @@ type UseActiveReleases = {
  * represented as a list of release documents.
  *
  * @returns The active releases for the current project.
- *
+ * @category Projects
  * @example
  * ```tsx
  * import {useActiveReleases} from '@sanity/sdk-react'

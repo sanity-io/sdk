@@ -27,7 +27,7 @@ if (isInIframe() && !document.querySelector('[data-sanity-core]')) {
 }
 
 /**
- * @public
+ * @internal
  */
 export interface AuthBoundaryProps {
   /**
