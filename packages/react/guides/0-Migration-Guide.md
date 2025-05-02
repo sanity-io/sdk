@@ -341,30 +341,6 @@ For most applications, particularly dashboard applications, we recommend using t
 
 The `config` prop replaces the previous `sanityConfigs` prop and supports both single and multiple configurations. When providing multiple configurations, the first one in the array will be the default instance.
 
-#### For Advanced Use Cases
-
-For more complex applications that need finer control, you can use `<SDKProvider />` or `<ResourceProvider />` directly:
-
-```tsx
-// Using SDKProvider directly
-<SDKProvider
-  config={[
-    {projectId: 'abc12345', dataset: 'production'},
-    {projectId: 'xyz12345', dataset: 'production'},
-  ]}
-  fallback={<>Loading…</>}
->
-  <App />
-</SDKProvider>
-
-// Using ResourceProvider for full control
-<ResourceProvider projectId="xyz12345" dataset="production">
-  <ResourceProvider projectId="abc12345" dataset="production">
-    <App />
-  </ResourceProvider>
-</ResourceProvider>
-```
-
 ### Document Handle Pattern
 
 We've introduced a consistent "handle" pattern across the SDK for working with documents and configuration. This replaces the previous `resourceId` concept with more explicit fields.
