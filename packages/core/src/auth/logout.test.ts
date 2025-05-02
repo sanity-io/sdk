@@ -57,6 +57,7 @@ describe('logout', () => {
       requestTagPrefix: 'sanity.sdk.auth',
       token: 'token',
       useProjectHostname: false,
+      useCdn: false,
     })
     expect(mockRequest).toHaveBeenCalledWith({method: 'POST', uri: '/auth/logout'})
     expect(removeItem).toHaveBeenCalledWith('__sanity_auth_token')

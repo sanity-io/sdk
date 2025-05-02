@@ -30,6 +30,7 @@ export const logout = bindActionGlobally(authStore, async ({state}) => {
         apiVersion: DEFAULT_API_VERSION,
         ...(apiHost && {apiHost}),
         useProjectHostname: false,
+        useCdn: false,
       })
 
       await client.request<void>({uri: '/auth/logout', method: 'POST'})
