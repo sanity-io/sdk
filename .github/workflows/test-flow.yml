@@ -3,8 +3,6 @@ name: Mark YOUR_TEAM_NAME Issues Done on Release
 on:
   pull_request:
 
-permissions: rep
-
 jobs:
   mark-issues-done:
     runs-on: ubuntu-latest
