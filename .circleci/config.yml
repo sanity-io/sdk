@@ -19,7 +19,10 @@ workflows:
   # If not the job will be marked as failed for skipped
   noopworkflow:
     jobs:
-      - noop
+      - noop:
+          filters:
+            branches:
+              only: main
   build-and-deploy:
     when:
       equal: ["push", << pipeline.parameters.GHA_Event >>]
@@ -33,10 +36,12 @@ jobs:
   # Needed for https://github.com/CircleCI-Public/circleci-cli/issues/577
   # If not the job will be marked as failed for skipped
   noop:
+    docker:
+      - image: cimg/base:current
     steps:
       - run:
-        command: |
-          echo "do nothing"
+          command: |
+            echo "do nothing"
   build:
     docker:
       - image: cimg/node:22.15.0
