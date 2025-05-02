@@ -13,7 +13,7 @@ jobs:
 
       - name: Mark Linear issues Done
         id: mark-issues-done
-        uses: sanity-io/mark-issues-done-action
+        uses: sanity-io/mark-issues-done-action@main
         with:
           linear_api_key: ${{secrets.LINEAR_API_TOKEN}}
           repository_name: ${{GitHub.event.repository.name}}
