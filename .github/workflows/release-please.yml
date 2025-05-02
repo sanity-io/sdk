@@ -63,6 +63,8 @@ jobs:
       # need to publish all unpublished versions to NPM here
       - run: pnpm -r publish
         if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
+        env:
+          NPM_CONFIG_PROVENANCE: true
 
   post-release-steps:
     runs-on: ubuntu-latest
