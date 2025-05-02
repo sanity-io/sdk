@@ -1,0 +1,15 @@
+{
+  "schemas": [
+    {
+      "schemaPath": "./schema.ppsg7ml5.test.json",
+      "projectId": "ppsg7ml5",
+      "dataset": "test"
+    },
+    {
+      "schemaPath": "./schema.ezwd8xes.production.json",
+      "projectId": "ezwd8xes",
+      "dataset": "production"
+    }
+  ],
+  "overloadClientMethods": false
+}

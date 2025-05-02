@@ -19,6 +19,7 @@ export {
   type LoggedOutAuthState,
   type LoggingInAuthState,
 } from '../auth/authStore'
+export {observeOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
@@ -35,9 +36,16 @@ export {getOrCreateNode, releaseNode} from '../comlink/node/comlinkNodeStore'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
 export {
+  createDatasetHandle,
+  createDocumentHandle,
+  createDocumentTypeHandle,
+  createProjectHandle,
+} from '../config/handles'
+export {
   type DatasetHandle,
   type DocumentHandle,
   type DocumentTypeHandle,
+  type PerspectiveHandle,
   type ProjectHandle,
   type SanityConfig,
 } from '../config/sanityConfig'
@@ -63,6 +71,7 @@ export {
   type ApplyDocumentActionsOptions,
 } from '../document/applyDocumentActions'
 export {
+  type DocumentOptions,
   getDocumentState,
   getDocumentSyncStatus,
   getPermissionsState,
@@ -82,11 +91,14 @@ export {
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,
 } from '../document/events'
-export {type JsonMatch, jsonMatch, type JsonMatchPath} from '../document/patchOperations'
+export {type JsonMatch, jsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
+export type {FavoriteStatusResponse} from '../favorites/favorites'
+export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
 export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
+export {type OrgVerificationResult} from '../project/organizationVerification'
 export {getProjectState, resolveProject} from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'
@@ -99,6 +111,9 @@ export {
   type QueryOptions,
   resolveQuery,
 } from '../query/queryStore'
+export {getPerspectiveState} from '../releases/getPerspectiveState'
+export type {ReleaseDocument} from '../releases/releasesStore'
+export {getActiveReleasesState} from '../releases/releasesStore'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
 export {getUsersKey, parseUsersKey} from '../users/reducers'
@@ -113,4 +128,4 @@ export {getUsersState, loadMoreUsers, resolveUsers} from '../users/usersStore'
 export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {CORE_SDK_VERSION} from '../version'
-export type {CurrentUser, Role, SanityDocument, SanityDocumentLike} from '@sanity/types'
+export type {CurrentUser, Role, SanityDocument} from '@sanity/types'

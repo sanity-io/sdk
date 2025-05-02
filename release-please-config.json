@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "last-release-sha": "ccabf2422346ba442f15327acda7634f28a46811",
+  "bootstrap-sha": "35d1e6f8d26725ee0088991c5e301745ee88dea8",
   "always-link-local": true,
   "changelog-sections": [
     {"type": "feat", "section": "Features", "hidden": false},
@@ -18,7 +18,7 @@
     {
       "type": "linked-versions",
       "groupName": "sdk",
-      "components": ["sdk", "sdk-react", "sdk-react-internal"]
+      "components": ["sdk", "sdk-react"]
     }
   ],
   "packages": {
@@ -27,24 +27,14 @@
       "release-type": "node",
       "bump-patch-for-minor-pre-major": true,
       "bump-minor-pre-major": true,
-      "prerelease-type": "alpha",
-      "versioning": "prerelease"
-    },
-    "packages/react-internal": {
-      "component": "sdk-react-internal",
-      "release-type": "node",
-      "bump-patch-for-minor-pre-major": true,
-      "bump-minor-pre-major": true,
-      "prerelease-type": "alpha",
-      "versioning": "prerelease"
+      "versioning": "always-bump-patch"
     },
     "packages/core": {
       "component": "sdk",
       "release-type": "node",
       "bump-patch-for-minor-pre-major": true,
       "bump-minor-pre-major": true,
-      "prerelease-type": "alpha",
-      "versioning": "prerelease"
+      "versioning": "always-bump-patch"
     }
   }
 }

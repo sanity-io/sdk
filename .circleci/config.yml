@@ -1,17 +1,47 @@
 version: 2.1
 
+parameters:
+  GHA_Actor:
+    type: string
+    default: ""
+  GHA_Action:
+    type: string
+    default: ""
+  GHA_Event:
+    type: string
+    default: ""
+  GHA_Meta:
+    type: string
+    default: ""
+
 workflows:
-  version: 2
+  # Needed for https://github.com/CircleCI-Public/circleci-cli/issues/577
+  # If not the job will be marked as failed for skipped
+  noopworkflow:
+    jobs:
+      - noop:
+          filters:
+            branches:
+              only: main
   build-and-deploy:
+    when:
+      equal: ["push", << pipeline.parameters.GHA_Event >>]
     jobs:
       - build:
           filters:
-            tags:
-              only: /^v.*/
             branches:
-              # Jobs will run each commit unless explicitly told to ignore branches
-              ignore: /.*/
+              only: main
+
 jobs:
+  # Needed for https://github.com/CircleCI-Public/circleci-cli/issues/577
+  # If not the job will be marked as failed for skipped
+  noop:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - run:
+          command: |
+            echo "do nothing"
   build:
     docker:
       - image: cimg/node:22.15.0

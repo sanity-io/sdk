@@ -11,23 +11,41 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * Check if the current user has the specified permissions for the given document actions.
  *
  * @category Permissions
- * @param actionOrActions - One more more calls to a particular document action function for a given document
+ * @param actionOrActions - One or more document action functions (e.g., `publishDocument(handle)`).
  * @returns An object that specifies whether the action is allowed; if the action is not allowed, an explanatory message and list of reasons is also provided.
  *
- * @example Checking for permission to publish a document
- * ```ts
- * import {useDocumentPermissions, useApplyDocumentActions} from '@sanity/sdk-react'
- * import {publishDocument} from '@sanity/sdk'
+ * @remarks
+ * When passing multiple actions, all actions must belong to the same project and dataset.
+ * Note, however, that you can check permissions on multiple documents from the same project and dataset (as in the second example below).
  *
- * export function PublishButton({doc}: {doc: DocumentHandle}) {
- *   const publishPermissions = useDocumentPermissions(publishDocument(doc))
- *   const applyAction = useApplyDocumentActions()
+ * @example Checking for permission to publish a document
+ * ```tsx
+ * import {
+ *   useDocumentPermissions,
+ *   useApplyDocumentActions,
+ *   publishDocument,
+ *   createDocumentHandle,
+ *   type DocumentHandle
+ * } from '@sanity/sdk-react'
+ *
+ * // Define props using the DocumentHandle type
+ * interface PublishButtonProps {
+ *   doc: DocumentHandle
+ * }
+ *
+ * function PublishButton({doc}: PublishButtonProps) {
+ *   const publishAction = publishDocument(doc)
+ *
+ *   // Pass the same action call to check permissions
+ *   const publishPermissions = useDocumentPermissions(publishAction)
+ *   const apply = useApplyDocumentActions()
  *
  *   return (
  *     <>
  *       <button
  *         disabled={!publishPermissions.allowed}
- *         onClick={() => applyAction(publishDocument(doc))}
+ *         // Pass the same action call to apply the action
+ *         onClick={() => apply(publishAction)}
  *         popoverTarget={`${publishPermissions.allowed ? undefined : 'publishButtonPopover'}`}
  *       >
  *         Publish
@@ -39,6 +57,27 @@ import {useSanityInstance} from '../context/useSanityInstance'
  *       )}
  *     </>
  *   )
+ * }
+ *
+ * // Usage:
+ * // const doc = createDocumentHandle({ documentId: 'doc1', documentType: 'myType' })
+ * // <PublishButton doc={doc} />
+ * ```
+ *
+ * @example Checking for permissions to edit multiple documents
+ * ```tsx
+ * import {
+ *   useDocumentPermissions,
+ *   editDocument,
+ *   type DocumentHandle
+ * } from '@sanity/sdk-react'
+ *
+ * export default function canEditMultiple(docHandles: DocumentHandle[]) {
+ *   // Create an array containing an editDocument action for each of the document handles
+ *   const editActions = docHandles.map(doc => editDocument(doc))
+ *
+ *   // Return the result of checking for edit permissions on all of the document handles
+ *   return useDocumentPermissions(editActions)
  * }
  * ```
  */

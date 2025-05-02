@@ -8,6 +8,7 @@ import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore} from '../store/defineStore'
 import {AuthStateType} from './authStateType'
 import {refreshStampedToken} from './refreshStampedToken'
+import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
 import {
@@ -65,6 +66,8 @@ export interface DashboardContext {
   orgId?: string
 }
 
+type AuthMethodOptions = 'localstorage' | 'cookie' | undefined
+
 let tokenRefresherRunning = false
 
 /**
@@ -83,6 +86,7 @@ export interface AuthStoreState {
     loginUrl: string
     callbackUrl: string | undefined
     providedToken: string | undefined
+    authMethod: AuthMethodOptions
   }
   dashboardContext?: DashboardContext
 }
@@ -148,7 +152,26 @@ export const authStore = defineStore<AuthStoreState>({
       // If not in dashboard, use the storage area from the config
       storageArea = storageArea ?? getDefaultStorage()
     }
-    const token = getTokenFromStorage(storageArea, storageKey)
+
+    let token: string | null
+    let authMethod: AuthMethodOptions
+    if (instance.config.studioMode?.enabled) {
+      token = getStudioTokenFromLocalStorage(storageArea, instance.config.projectId)
+      if (token) {
+        authMethod = 'localstorage'
+      } else {
+        checkForCookieAuth(instance.config.projectId, clientFactory).then((isCookieAuthEnabled) => {
+          if (isCookieAuthEnabled) {
+            authMethod = 'cookie'
+          }
+        })
+      }
+    } else {
+      token = getTokenFromStorage(storageArea, storageKey)
+      if (token) {
+        authMethod = 'localstorage'
+      }
+    }
 
     let authState: AuthState
     if (providedToken) {
@@ -181,6 +204,7 @@ export const authStore = defineStore<AuthStoreState>({
         initialLocationHref,
         storageKey,
         storageArea,
+        authMethod,
       },
     }
   },
@@ -223,6 +247,14 @@ export const getTokenState = bindActionGlobally(
   createStateSourceAction(({state: {authState}}) =>
     authState.type === AuthStateType.LOGGED_IN ? authState.token : null,
   ),
+)
+
+/**
+ * @internal
+ */
+export const getAuthMethodState = bindActionGlobally(
+  authStore,
+  createStateSourceAction(({state: {options}}) => options.authMethod),
 )
 
 /**

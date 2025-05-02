@@ -2,12 +2,6 @@ name: "Setup Environment"
 description: "Sets up Node.js, pnpm, and dependencies"
 
 inputs:
-  TURBO_TOKEN:
-    description: "Turbo token for authentication"
-    required: true
-  TURBO_TEAM:
-    description: "Turbo team identifier"
-    required: true
   node-version:
     description: "Node.js version to use"
     required: true
@@ -39,6 +33,3 @@ runs:
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
       shell: bash
-      env:
-        TURBO_TOKEN: ${{ inputs.TURBO_TOKEN }}
-        TURBO_TEAM: ${{ inputs.TURBO_TEAM }}

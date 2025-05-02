@@ -7,28 +7,34 @@
     "build": "pnpm tsc && vite build",
     "clean": "rimraf dist",
     "dev": "vite",
+    "install": "npm run schema:extract && npm run types:generate",
     "lint": "eslint .",
     "paramour": "npx paramour --config=./src/css/css.config.js --output=./src/css/paramour.css",
-    "tsc": "tsc --noEmit"
+    "schema:extract": "sanity schema extract --workspace ppsg7ml5-test --path schema.ppsg7ml5.test.json && sanity schema extract --workspace ezwd8xes-production --path schema.ezwd8xes.production.json",
+    "tsc": "tsc --noEmit",
+    "types:generate": "./node_modules/@sanity/cli/bin/sanity typegen generate"
   },
   "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@paramour/css": "1.0.0-rc.2",
     "@sanity/icons": "^3.7.0",
     "@sanity/sdk-react": "workspace:*",
-    "@sanity/types": "^3.86.0",
     "@sanity/ui": "^2.15.13",
+    "groq": "3.86.2-experimental.0",
     "inter-ui": "^4.1.0",
-    "json-edit-react": "^1.26.0",
+    "json-edit-react": "^1.26.2",
     "react": "^18.3.1",
     "react-compiler-runtime": "19.0.0-beta-ebf51a3-20250411",
     "react-dom": "^18.3.1",
     "react-error-boundary": "^5.0.0",
-    "react-router": "^7.5.1"
+    "react-router": "^7.5.2",
+    "sanity": "^3.86.1",
+    "typescript": "^5.8.3"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
     "@repo/tsconfig": "workspace:*",
+    "@sanity/cli": "3.86.2-experimental.0",
     "@sanity/prettier-config": "^1.0.3",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -37,8 +43,7 @@
     "@vitejs/plugin-react": "^4.4.1",
     "eslint": "^9.25.1",
     "prettier": "^3.5.3",
-    "typescript": "^5.8.3",
-    "vite": "^6.3.2",
+    "vite": "^6.3.3",
     "vitest": "^3.1.2"
   }
 }

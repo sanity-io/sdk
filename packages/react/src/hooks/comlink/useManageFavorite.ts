@@ -7,17 +7,21 @@ import {
   SDK_NODE_NAME,
   type StudioResource,
 } from '@sanity/message-protocol'
-import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
-import {useCallback, useEffect, useState} from 'react'
+import {
+  type DocumentHandle,
+  type FavoriteStatusResponse,
+  type FrameMessage,
+  getFavoritesState,
+  resolveFavoritesState,
+} from '@sanity/sdk'
+import {useCallback, useMemo, useState, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useWindowConnection} from './useWindowConnection'
 
-// should we import this whole type from the message protocol?
-
-interface ManageFavorite {
-  favorite: () => void
-  unfavorite: () => void
+interface ManageFavorite extends FavoriteStatusResponse {
+  favorite: () => Promise<void>
+  unfavorite: () => Promise<void>
   isFavorited: boolean
   isConnected: boolean
 }
@@ -46,7 +50,7 @@ interface UseManageFavoriteProps extends DocumentHandle {
  *
  * @example
  * ```tsx
- * function MyDocumentAction(props: DocumentActionProps) {
+ * function FavoriteButton(props: DocumentActionProps) {
  *   const {documentId, documentType} = props
  *   const {favorite, unfavorite, isFavorited, isConnected} = useManageFavorite({
  *     documentId,
@@ -61,6 +65,22 @@ interface UseManageFavoriteProps extends DocumentHandle {
  *     />
  *   )
  * }
+ *
+ * // Wrap the component with Suspense since the hook may suspend
+ * function MyDocumentAction(props: DocumentActionProps) {
+ *   return (
+ *     <Suspense
+ *       fallback={
+ *         <Button
+ *           text="Loading..."
+ *           disabled
+ *         />
+ *       }
+ *     >
+ *       <FavoriteButton {...props} />
+ *     </Suspense>
+ *   )
+ * }
  * ```
  */
 export function useManageFavorite({
@@ -72,10 +92,8 @@ export function useManageFavorite({
   resourceType,
   schemaName,
 }: UseManageFavoriteProps): ManageFavorite {
-  const [isFavorited, setIsFavorited] = useState(false) // should load this from a comlink fetch
   const [status, setStatus] = useState<Status>('idle')
-  const [resourceId, setResourceId] = useState<string>(paramResourceId || '')
-  const {sendMessage} = useWindowConnection<Events.FavoriteMessage, FrameMessage>({
+  const {fetch} = useWindowConnection<Events.FavoriteMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
     onStatus: setStatus,
@@ -90,65 +108,98 @@ export function useManageFavorite({
   if (resourceType === 'studio' && (!projectId || !dataset)) {
     throw new Error('projectId and dataset are required for studio resources')
   }
+  // Compute the final resourceId
+  const resourceId =
+    resourceType === 'studio' && !paramResourceId ? `${projectId}.${dataset}` : paramResourceId
 
-  useEffect(() => {
-    // If resourceType is studio and the resourceId is not provided,
-    // use the projectId and dataset to generate a resourceId
-    if (resourceType === 'studio' && !paramResourceId) {
-      setResourceId(`${projectId}.${dataset}`)
-    } else if (paramResourceId) {
-      setResourceId(paramResourceId)
-    } else {
-      // For other resource types, resourceId is required
-      throw new Error('resourceId is required for media-library and canvas resources')
-    }
-  }, [resourceType, paramResourceId, projectId, dataset])
+  if (!resourceId) {
+    throw new Error('resourceId is required for media-library and canvas resources')
+  }
+
+  // used for favoriteStore functions like getFavoritesState and resolveFavoritesState
+  const context = useMemo(
+    () => ({
+      documentId,
+      documentType,
+      resourceId,
+      resourceType,
+      schemaName,
+    }),
+    [documentId, documentType, resourceId, resourceType, schemaName],
+  )
+
+  // Get favorite status using StateSource
+  const favoriteState = getFavoritesState(instance, context)
+  const state = useSyncExternalStore(favoriteState.subscribe, favoriteState.getCurrent)
+
+  const isFavorited = state?.isFavorited ?? false
 
   const handleFavoriteAction = useCallback(
-    (action: 'added' | 'removed', setFavoriteState: boolean) => {
-      if (!documentId || !documentType || !resourceType) return
+    async (action: 'added' | 'removed') => {
+      if (status !== 'connected' || !fetch || !documentId || !documentType || !resourceType) return
 
       try {
-        const message: Events.FavoriteMessage = {
-          type: 'dashboard/v1/events/favorite/mutate',
-          data: {
-            eventType: action,
-            document: {
-              id: documentId,
-              type: documentType,
-              resource: {
+        const payload = {
+          eventType: action,
+          document: {
+            id: documentId,
+            type: documentType,
+            resource: {
+              ...{
                 id: resourceId,
                 type: resourceType,
-                schemaName,
               },
+              ...(schemaName ? {schemaName} : {}),
             },
-          },
-          response: {
-            success: true,
           },
         }
 
-        sendMessage(message.type, message.data)
-        setIsFavorited(setFavoriteState)
+        const res = await fetch<{success: boolean}>('dashboard/v1/events/favorite/mutate', payload)
+        if (res.success) {
+          // Force a re-fetch of the favorite status after successful mutation
+          await resolveFavoritesState(instance, context)
+        }
       } catch (err) {
-        const error = err instanceof Error ? err : new Error('Failed to update favorite status')
         // eslint-disable-next-line no-console
-        console.error(
-          `Failed to ${action === 'added' ? 'favorite' : 'unfavorite'} document:`,
-          error,
-        )
-        throw error
+        console.error(`Failed to ${action === 'added' ? 'favorite' : 'unfavorite'} document:`, err)
+        throw err
       }
     },
-    [documentId, documentType, resourceId, resourceType, sendMessage, schemaName],
+    [
+      fetch,
+      documentId,
+      documentType,
+      resourceId,
+      resourceType,
+      schemaName,
+      instance,
+      context,
+      status,
+    ],
   )
 
-  const favorite = useCallback(() => handleFavoriteAction('added', true), [handleFavoriteAction])
+  const favorite = useCallback(() => handleFavoriteAction('added'), [handleFavoriteAction])
+  const unfavorite = useCallback(() => handleFavoriteAction('removed'), [handleFavoriteAction])
 
-  const unfavorite = useCallback(
-    () => handleFavoriteAction('removed', false),
-    [handleFavoriteAction],
-  )
+  // if state is undefined, we should suspend
+  if (!state) {
+    try {
+      const promise = resolveFavoritesState(instance, context)
+      throw promise
+    } catch (err) {
+      // If we get a timeout error, return a fallback state instead of suspending
+      if (err instanceof Error && err.message === 'Favorites service connection timeout') {
+        return {
+          favorite: async () => {},
+          unfavorite: async () => {},
+          isFavorited: false,
+          isConnected: false,
+        }
+      }
+      // For other errors, continue with suspension
+      throw err
+    }
+  }
 
   return {
     favorite,

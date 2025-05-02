@@ -38,6 +38,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
       requestTagPrefix: 'sanity.sdk.auth',
       token: 'new-token',
       useProjectHostname: false,
+      useCdn: false,
     })
     expect(mockRequest).toHaveBeenCalledWith({method: 'GET', uri: '/users/me'})
 
@@ -73,6 +74,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
       requestTagPrefix: 'sanity.sdk.auth',
       token: 'new-token',
       useProjectHostname: false,
+      useCdn: false,
     })
     expect(mockRequest).toHaveBeenCalledWith({method: 'GET', uri: '/users/me'})
 

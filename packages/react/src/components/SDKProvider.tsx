@@ -29,11 +29,16 @@ export function SDKProvider({
   // reverse because we want the first config to be the default, but the
   // ResourceProvider nesting makes the last one the default
   const configs = (Array.isArray(config) ? config : [config]).slice().reverse()
+  const projectIds = configs.map((c) => c.projectId).filter((id): id is string => !!id)
 
   // Create a nested structure of ResourceProviders for each config
   const createNestedProviders = (index: number): ReactElement => {
     if (index >= configs.length) {
-      return <AuthBoundary {...props}>{children}</AuthBoundary>
+      return (
+        <AuthBoundary {...props} projectIds={projectIds}>
+          {children}
+        </AuthBoundary>
+      )
     }
 
     return (

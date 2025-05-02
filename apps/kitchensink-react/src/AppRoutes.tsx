@@ -15,6 +15,8 @@ import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProtectedRoute} from './ProtectedRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
+import ExperimentalResourceClientRoute from './routes/ExperimentalResourceClientRoute'
+import {ReleasesRoute} from './routes/ReleasesRoute'
 import {UsersRoute} from './routes/UsersRoute'
 
 const documentCollectionRoutes = [
@@ -58,6 +60,10 @@ const documentCollectionRoutes = [
     path: 'dashboard-context',
     element: <DashboardContextRoute />,
   },
+  {
+    path: 'experimental-resource-client',
+    element: <ExperimentalResourceClientRoute />,
+  },
 ]
 
 const dashboardInteractionRoutes = [
@@ -88,6 +94,10 @@ export function AppRoutes(): JSX.Element {
                     path: 'comlink-demo',
                     element: <ParentApp />,
                   },
+                  {
+                    path: 'releases',
+                    element: <ReleasesRoute />,
+                  },
                 ]}
               />
             }
@@ -96,6 +106,7 @@ export function AppRoutes(): JSX.Element {
             <Route key={route.path} path={route.path} element={route.element} />
           ))}
           <Route path="comlink-demo" element={<ParentApp />} />
+          <Route path="releases" element={<ReleasesRoute />} />
         </Route>
         <Route path="comlink-demo">
           {frameRoutes.map((route) => (

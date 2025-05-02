@@ -27,8 +27,12 @@ const REDIRECT_URL = 'https://sanity.io/welcome'
  * as well as application context and state which is used by the Sanity React hooks. Your application
  * must be wrapped with the SanityApp component to function properly.
  *
- * SanityApp creates a hierarchy of ResourceProviders, each providing a SanityInstance that can be
- * accessed by hooks. The first configuration in the array becomes the default instance.
+ * The `config` prop on the SanityApp component accepts either a single {@link SanityConfig} object, or an array of them.
+ * This allows your app to work with one or more of your organization’s datasets.
+ *
+ * @remarks
+ * When passing multiple SanityConfig objects to the `config` prop, the first configuration in the array becomes the default
+ * configuration used by the App SDK Hooks.
  *
  * @category Components
  * @param props - Your Sanity configuration and the React children to render
@@ -36,18 +40,18 @@ const REDIRECT_URL = 'https://sanity.io/welcome'
  *
  * @example
  * ```tsx
- * import { SanityApp } from '@sanity/sdk-react'
+ * import { SanityApp, type SanityConfig } from '@sanity/sdk-react'
  *
  * import MyAppRoot from './Root'
  *
  * // Single project configuration
- * const mySanityConfig = {
+ * const mySanityConfig: SanityConfig = {
  *   projectId: 'my-project-id',
  *   dataset: 'production',
  * }
  *
  * // Or multiple project configurations
- * const multipleConfigs = [
+ * const multipleConfigs: SanityConfig[] = [
  *   // Configuration for your main project. This will be used as the default project for hooks.
  *   {
  *     projectId: 'marketing-website-project',
@@ -67,7 +71,7 @@ const REDIRECT_URL = 'https://sanity.io/welcome'
  *
  * export default function MyApp() {
  *   return (
- *     <SanityApp config={mySanityConfig} fallback={<LoadingSpinner />}>
+ *     <SanityApp config={mySanityConfig} fallback={<div>Loading…</div>}>
  *       <MyAppRoot />
  *     </SanityApp>
  *   )
@@ -77,12 +81,9 @@ const REDIRECT_URL = 'https://sanity.io/welcome'
 export function SanityApp({
   children,
   fallback,
-  config,
-  sanityConfigs,
+  config = [],
   ...props
 }: SanityAppProps): ReactElement {
-  const configs = config ?? sanityConfigs ?? []
-
   useEffect(() => {
     let timeout: NodeJS.Timeout | undefined
 
@@ -98,7 +99,7 @@ export function SanityApp({
   }, [])
 
   return (
-    <SDKProvider {...props} fallback={fallback} config={configs}>
+    <SDKProvider {...props} fallback={fallback} config={config}>
       {children}
     </SDKProvider>
   )

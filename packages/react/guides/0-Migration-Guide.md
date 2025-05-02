@@ -2,6 +2,278 @@
 title: Migration guide
 ---
 
+## Migrating to @sanity/sdk-react@0.0.0-rc.7
+
+This version introduces significant improvements for TypeScript users by integrating [Sanity TypeGen](https://www.sanity.io/docs/sanity-typegen). While Typegen is optional, using it unlocks strong type safety for documents, queries, and projections. These changes also refine hook signatures for better consistency, even for JavaScript users.
+
+See the [TypeScript guide](./Typescript.md) for full setup and usage details.
+
+### Key Changes & Requirements
+
+1.  **Typegen Setup (Recommended for TypeScript):** Refer to the [TypeScript guide](./Typescript.md) for detailed setup instructions.
+2.  **Consistent Hook Options Pattern:** Most hooks now accept a single options object, often allowing you to spread a `DocumentHandle` or `DatasetHandle`.
+3.  **Handle Creation Helpers:** See below for details.
+
+### Handle Creation Helpers
+
+While literal objects still work, using helpers like `createDocumentHandle` (imported from `@sanity/sdk-react`) is recommended, especially with TypeScript, to ensure literal types are captured correctly for Typegen.
+
+**Before:**
+
+```typescript
+// === 🛑 BEFORE ===
+// Using literal object
+const handle = {
+  documentId: '123',
+  documentType: 'book',
+  dataset: 'production',
+  projectId: 'abc',
+}
+```
+
+**After:**
+
+```typescript
+// === ✅ AFTER ✨ ===
+import {createDocumentHandle} from '@sanity/sdk-react'
+
+// Using helper - recommended
+const handle = createDocumentHandle({
+  documentId: '123',
+  documentType: 'book',
+  dataset: 'production',
+  projectId: 'abc',
+})
+```
+
+### Hook Signature Changes
+
+#### `useQuery`
+
+Accepts a single options object containing `query` (defined with `defineQuery`), `params`, and optional `projectId`, `dataset`, etc.
+
+**Before:**
+
+```typescript
+// 🛑 BEFORE (does not work)
+const {data} = useQuery(
+  '*[_type == $type]', // Raw query string
+  {type: 'book'}, // Params
+  {
+    // Options object (separate)
+    projectId: 'abc',
+    dataset: 'production',
+    perspective: 'published',
+  },
+)
+```
+
+**After:**
+
+```typescript
+// === ✅ AFTER ✨ ===
+import {defineQuery} from 'groq'
+
+const query = defineQuery('*[_type == $type]') // Defined query
+
+const {data} = useQuery({
+  // Single options object
+  query: query,
+  params: {type: 'book'},
+  projectId: 'abc', // Optional override
+  dataset: 'production', // Optional override
+  perspective: 'published',
+})
+```
+
+#### `useDocument`
+
+Accepts a single options object, spreading the handle and adding `path` if needed.
+
+**Before:**
+
+```typescript
+// === 🛑 BEFORE ===
+// Fetching the whole document
+const document = useDocument(docHandle)
+
+// Fetching a specific path
+const name = useDocument(docHandle, 'name')
+```
+
+**After:**
+
+```typescript
+// === ✅ AFTER ✨ ===
+// Fetching the whole document
+const document = useDocument(docHandle)
+// const document = useDocument({...docHandle}) // Or spread handle
+
+// Fetching a specific path
+const name = useDocument({...docHandle, path: 'name'}) // Spread handle and add path
+```
+
+#### `useEditDocument`
+
+Accepts a single options object, spreading the handle and adding `path` if needed.
+
+**Before:**
+
+```typescript
+// === 🛑 BEFORE ===
+// Get setter for the whole document
+const setDocument = useEditDocument(docHandle)
+
+// Get setter for a specific path
+const setName = useEditDocument(docHandle, 'name')
+```
+
+**After:**
+
+```typescript
+// === ✅ AFTER ✨ ===
+// Get setter for the whole document
+const setDocument = useEditDocument(docHandle)
+// const setDocument = useEditDocument({...docHandle}) // Or spread handle
+
+// Get setter for a specific path
+const setName = useEditDocument({...docHandle, path: 'name'}) // Spread handle and add path
+```
+
+#### `useDocuments` / `usePaginatedDocuments`
+
+The `filter` option can still be used for complex GROQ filters. However, for simple filtering by type, the `documentType` option is preferred and aligns better with Typegen scoping.
+
+**Before (Simple type filter):**
+
+```typescript
+// === 🛑 BEFORE ===
+const {data} = useDocuments({
+  filter: '_type == "author"',
+  orderings: [{field: 'name', direction: 'asc'}],
+})
+```
+
+**After (Simple type filter):**
+
+```typescript
+// === ✅ AFTER ✨ ===
+const {data} = useDocuments({
+  documentType: 'author', // Use documentType for simple type filtering
+  orderings: [{field: 'name', direction: 'asc'}],
+})
+```
+
+**Complex Filter (Remains similar):**
+
+**Before:**
+
+```typescript
+// === 🛑 BEFORE === (Complex filter)
+const {data} = usePaginatedDocuments({
+  filter: '_type == "author" && count(favoriteBooks) > 0',
+  // ... other options
+})
+```
+
+**After:**
+
+```typescript
+// === ✅ AFTER ✨ === (Complex filter - use filter)
+const {data} = usePaginatedDocuments({
+  documentType: 'author', // Can still specify type
+  filter: 'count(favoriteBooks) > 0', // Add additional filter logic
+  // ... other options
+})
+```
+
+#### `useDocumentEvent`
+
+Accepts a single options object, spreading the handle and adding the `onEvent` callback.
+
+**Before:**
+
+```typescript
+// === 🛑 BEFORE ===
+useDocumentEvent(onEventCallback, docHandle)
+```
+
+**After:**
+
+```typescript
+// === ✅ AFTER ✨ ===
+useDocumentEvent({...docHandle, onEvent: onEventCallback})
+```
+
+### Action Creators & Types
+
+- Action creators (`createDocument`, `editDocument`, `publishDocument`, etc.) and types (`DocumentHandle`, `DatasetHandle`, `DocumentAction`) now use generic type parameters (`<TDocumentType, TDataset, TProjectId>`) for better type safety with Typegen. Usage generally remains the same, but TypeScript users will see improved type checking.
+- `applyDocumentActions` similarly uses these generic types and its return type reflects the potentially typed document result (`SanityDocumentResult`).
+
+By adopting these changes, especially `defineQuery` and `defineProjection`, you enable the SDK to leverage Typegen for a much safer and more productive development experience, particularly in TypeScript projects.
+
+### Other Breaking Changes
+
+1. `useManageFavorite` should now have a Suspense boundary.
+
+**Before:**
+
+```typescript
+function MyDocumentAction(props: DocumentActionProps) {
+  const {documentId, documentType, resourceId} = props
+  const {favorite, unfavorite, isFavorited, isConnected} = useManageFavorite({
+    _id,
+    _type,
+    resourceId
+  })
+
+  return (
+    <Button
+      disabled={!isConnected}
+      onClick={() => isFavorited ? unfavorite() : favorite()}
+      text={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+    />
+  )
+}
+```
+
+**After:**
+
+```typescript
+ function FavoriteButton(props: DocumentActionProps) {
+   const {documentId, documentType, resourceId} = props
+   const {favorite, unfavorite, isFavorited, isConnected} = useManageFavorite({
+     documentId,
+     documentType,
+     resourceId
+   })
+
+   return (
+     <Button
+       disabled={!isConnected}
+       onClick={() => isFavorited ? unfavorite() : favorite()}
+       text={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+     />
+   )
+ }
+
+ // Wrap the component with Suspense since the hook may suspend
+ function MyDocumentAction(props: DocumentActionProps) {
+   return (
+     <Suspense
+       fallback={
+         <Button
+           text="Loading..."
+           disabled
+         />
+       }
+     >
+       <FavoriteButton {...props} />
+     </Suspense>
+   )
+ }
+```
+
 ## Migrating to @sanity/sdk-react@0.0.0-rc.4
 
 ### Breaking Changes

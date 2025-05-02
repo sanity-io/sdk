@@ -1,8 +1,7 @@
-import {type SanityDocumentLike} from '@sanity/types'
 import {of} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {type DocumentHandle} from '../config/sanityConfig'
+import {createDocumentHandle} from '../config/handles'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {getPreviewState} from './getPreviewState'
@@ -32,10 +31,10 @@ describe('resolvePreview', () => {
   })
 
   it('resolves a preview and returns the first emitted value with results', async () => {
-    const docHandle: DocumentHandle<SanityDocumentLike> = {
+    const docHandle = createDocumentHandle({
       documentId: 'doc123',
       documentType: 'movie',
-    }
+    })
 
     const result = await resolvePreview(instance, docHandle)
 

@@ -33,11 +33,11 @@ describe('useDocumentEvent hook', () => {
   })
 
   it('calls subscribeDocumentEvents with instance and a stable handler', () => {
-    const handler = vi.fn()
+    const handleEvent = vi.fn()
     const unsubscribe = vi.fn()
     vi.mocked(subscribeDocumentEvents).mockReturnValue(unsubscribe)
 
-    renderHook(() => useDocumentEvent(handler, docHandle))
+    renderHook(() => useDocumentEvent({...docHandle, onEvent: handleEvent}))
 
     expect(vi.mocked(subscribeDocumentEvents)).toHaveBeenCalledTimes(1)
     expect(vi.mocked(subscribeDocumentEvents).mock.calls[0][0]).toBe(instance)
@@ -47,15 +47,15 @@ describe('useDocumentEvent hook', () => {
 
     const event = {type: 'edited', documentId: 'doc1', outgoing: {}} as DocumentEvent
     stableHandler(event)
-    expect(handler).toHaveBeenCalledWith(event)
+    expect(handleEvent).toHaveBeenCalledWith(event)
   })
 
   it('calls the unsubscribe function on unmount', () => {
-    const handler = vi.fn()
+    const handleEvent = vi.fn()
     const unsubscribe = vi.fn()
     vi.mocked(subscribeDocumentEvents).mockReturnValue(unsubscribe)
 
-    const {unmount} = renderHook(() => useDocumentEvent(handler, docHandle))
+    const {unmount} = renderHook(() => useDocumentEvent({...docHandle, onEvent: handleEvent}))
     unmount()
     expect(unsubscribe).toHaveBeenCalledTimes(1)
   })

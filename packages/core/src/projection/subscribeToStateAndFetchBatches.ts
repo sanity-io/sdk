@@ -91,7 +91,8 @@ export const subscribeToStateAndFetchBatches = ({
         const controller = new AbortController()
 
         return new Observable<ProjectionQueryResult[]>((observer) => {
-          const {getCurrent, observable} = getQueryState<ProjectionQueryResult[]>(instance, query, {
+          const {getCurrent, observable} = getQueryState<ProjectionQueryResult[]>(instance, {
+            query,
             params,
             tag: PROJECTION_TAG,
             perspective: PROJECTION_PERSPECTIVE,
@@ -100,7 +101,8 @@ export const subscribeToStateAndFetchBatches = ({
           const source$ = defer(() => {
             if (getCurrent() === undefined) {
               return from(
-                resolveQuery<ProjectionQueryResult[]>(instance, query, {
+                resolveQuery<ProjectionQueryResult[]>(instance, {
+                  query,
                   params,
                   tag: PROJECTION_TAG,
                   perspective: PROJECTION_PERSPECTIVE,

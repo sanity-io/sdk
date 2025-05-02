@@ -1,7 +1,7 @@
 /**
  * @module exports
  */
-export {AuthBoundary} from '../components/auth/AuthBoundary'
+export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBoundary'
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
@@ -12,6 +12,7 @@ export {useDashboardOrganizationId} from '../hooks/auth/useDashboardOrganization
 export {useHandleAuthCallback} from '../hooks/auth/useHandleAuthCallback'
 export {useLoginUrl} from '../hooks/auth/useLoginUrl'
 export {useLogOut} from '../hooks/auth/useLogOut'
+export {useVerifyOrgProjects} from '../hooks/auth/useVerifyOrgProjects'
 export {useClient} from '../hooks/client/useClient'
 export {
   type FrameConnection,
@@ -63,6 +64,8 @@ export {
 export {useProject} from '../hooks/projects/useProject'
 export {type ProjectWithoutMembers, useProjects} from '../hooks/projects/useProjects'
 export {useQuery} from '../hooks/query/useQuery'
+export {useActiveReleases} from '../hooks/releases/useActiveReleases'
+export {usePerspective} from '../hooks/releases/usePerspective'
 export {type UsersResult, useUsers} from '../hooks/users/useUsers'
 export {REACT_SDK_VERSION} from '../version'
 export {type DatasetsResponse, type SanityProjectMember} from '@sanity/client'

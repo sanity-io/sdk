@@ -29,6 +29,7 @@ export const subscribeToStateAndFetchCurrentUser = ({
           token,
           ignoreBrowserTokenWarning: true,
           useProjectHostname: false,
+          useCdn: false,
           ...(apiHost && {apiHost}),
         }),
       ),

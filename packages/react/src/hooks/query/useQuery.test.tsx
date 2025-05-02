@@ -37,7 +37,7 @@ describe('useQuery', () => {
     } as StateSource<unknown>)
 
     function TestComponent() {
-      const {data, isPending} = useQuery<string>('test query')
+      const {data, isPending} = useQuery({query: 'test query'})
       return (
         <div data-testid="output">
           {data} - {isPending ? 'pending' : 'not pending'}
@@ -82,7 +82,7 @@ describe('useQuery', () => {
     )
 
     function TestComponent() {
-      const {data} = useQuery<string>('test query')
+      const {data} = useQuery({query: 'test query'})
       return <div data-testid="output">{data}</div>
     }
 
@@ -108,7 +108,7 @@ describe('useQuery', () => {
     const getCurrent = vi.fn(() => ref.current)
     const storeChanged$ = new Subject<void>()
 
-    vi.mocked(getQueryState).mockImplementation((_instance, query) => {
+    vi.mocked(getQueryState).mockImplementation((_instance, {query}) => {
       if (query === 'query1') {
         return {
           getCurrent: vi.fn().mockReturnValue('data1'),
@@ -146,7 +146,7 @@ describe('useQuery', () => {
 
     function WrapperComponent() {
       const [query, setQuery] = useState('query1')
-      const {data, isPending} = useQuery<string>(query)
+      const {data, isPending} = useQuery<string>({query})
       return (
         <div>
           <div data-testid="output">
