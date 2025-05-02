@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.1](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0...sdk-v0.0.1) (2025-05-02)
+
+
+### Bug Fixes
+
+* **docs:** remove custom docs entrypoint names ([#498](https://github.com/sanity-io/sdk/issues/498)) ([4499e85](https://github.com/sanity-io/sdk/commit/4499e85a3a30a5086bceb164c19cb18c71376471))
+
 ## 0.0.0 (2025-05-02)
 
 
