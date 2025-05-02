@@ -17,12 +17,14 @@ parameters:
 workflows:
   version: 2
   build-and-deploy:
+    when:
+      equal: ["push", << pipeline.parameters.GHA_Event >>]
     jobs:
       - build:
           filters:
             branches:
-              # Jobs will only run when manually triggered
-              ignore: /.*/
+              only: main
+
 jobs:
   build:
     docker:
