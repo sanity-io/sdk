@@ -12,6 +12,7 @@ vi.mock('@sanity/comlink', () => ({
   createNode: vi.fn(() => ({
     start: vi.fn(),
     stop: vi.fn(),
+    onStatus: vi.fn(),
   })),
 }))
 
@@ -32,9 +33,9 @@ describe('getOrCreateNode', () => {
   }
 
   beforeEach(() => {
-    mockNode = {start: vi.fn(), stop: vi.fn()}
+    mockNode = {start: vi.fn(), stop: vi.fn(), onStatus: vi.fn()}
     vi.mocked(comlink.createNode).mockReturnValue(mockNode as Node<WindowMessage, FrameMessage>)
-    state = createStoreState<ComlinkNodeState>({nodes: new Map()})
+    state = createStoreState<ComlinkNodeState>({nodes: new Map(), subscriptions: new Map()})
     vi.clearAllMocks()
   })
 
@@ -45,7 +46,7 @@ describe('getOrCreateNode', () => {
     expect(node.start).toHaveBeenCalled()
   })
 
-  it('sshould store the node in nodeStore', () => {
+  it('should store the node in nodeStore', () => {
     const node = getOrCreateNode({state, instance}, nodeConfig)
 
     expect(getOrCreateNode({state, instance}, nodeConfig)).toBe(node)
@@ -63,5 +64,44 @@ describe('getOrCreateNode', () => {
         },
       ),
     ).toThrow('Node "test-node" already exists with different options')
+  })
+
+  it('should subscribe to status changes and update state', () => {
+    let statusCallback: ((status: string) => void) | undefined
+    const statusUnsubMock = vi.fn()
+    mockNode.onStatus = vi.fn((cb) => {
+      statusCallback = cb
+      return statusUnsubMock
+    })
+
+    getOrCreateNode({state, instance}, nodeConfig)
+
+    expect(mockNode.onStatus).toHaveBeenCalled()
+    expect(typeof statusCallback).toBe('function')
+    expect(state.get().nodes.get(nodeConfig.name)?.statusUnsub).toBe(statusUnsubMock)
+
+    statusCallback?.('connected')
+
+    expect(state.get().nodes.get(nodeConfig.name)?.status).toBe('connected')
+  })
+
+  it('should not update state if node entry is missing when status changes', () => {
+    let statusCallback: ((status: string) => void) | undefined
+    const statusUnsubMock = vi.fn()
+    mockNode.onStatus = vi.fn((cb) => {
+      statusCallback = cb
+      return statusUnsubMock
+    })
+
+    getOrCreateNode({state, instance}, nodeConfig)
+
+    // Remove the node entry before triggering the status callback
+    state.get().nodes.delete(nodeConfig.name)
+
+    // Simulate a status change
+    statusCallback?.('connected')
+
+    // Assert: node entry is still missing, so no update occurred
+    expect(state.get().nodes.has(nodeConfig.name)).toBe(false)
   })
 })
