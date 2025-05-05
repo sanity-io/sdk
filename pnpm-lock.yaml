@@ -293,14 +293,14 @@ importers:
         specifier: ^0.12.4
         version: 0.12.4(debug@4.4.0)
       '@sanity/types':
-        specifier: ^3.83.0
-        version: 3.87.0(@types/react@19.1.2)(debug@4.4.0)
+        specifier: ^3.87.1
+        version: 3.87.1(@types/react@19.1.2)(debug@4.4.0)
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
       groq:
-        specifier: 3.86.2-experimental.0
-        version: 3.86.2-experimental.0
+        specifier: 3.87.1
+        version: 3.87.1
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21
@@ -375,14 +375,14 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@sanity/types':
-        specifier: ^3.83.0
-        version: 3.87.0(@types/react@19.1.2)(debug@4.4.0)
+        specifier: ^3.87.1
+        version: 3.87.1(@types/react@19.1.2)(debug@4.4.0)
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
       groq:
-        specifier: 3.86.2-experimental.0
-        version: 3.86.2-experimental.0
+        specifier: 3.87.1
+        version: 3.87.1
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21
@@ -4212,6 +4212,10 @@ packages:
 
   groq@3.87.0:
     resolution: {integrity: sha512-d8RDHFXTln2ieeeTfT68JDvwRT5w07U7GJL/DRYdJnhiVNA8kAs0hbvfFVjQUQRwyMYPZvOw/EMwjh++ISbvkQ==}
+    engines: {node: '>=18'}
+
+  groq@3.87.1:
+    resolution: {integrity: sha512-CBiLFCw9b8/OpYiCkFWGJKHPGnd1I1WniNAZPRpC3K4/06+waa2wolO9BJyW/hG9dq4KHtJw1EzsGf7NO/M14A==}
     engines: {node: '>=18'}
 
   gtoken@7.1.0:
@@ -9287,7 +9291,7 @@ snapshots:
       '@sanity/comlink': 3.0.2
       '@sanity/diff-match-patch': 3.2.0
       '@sanity/mutate': 0.12.4(debug@4.4.0)
-      '@sanity/types': 3.87.0(@types/react@19.1.2)(debug@4.4.0)
+      '@sanity/types': 3.87.1(@types/react@19.1.2)(debug@4.4.0)
       '@types/lodash-es': 4.17.12
       lodash-es: 4.17.21
       reselect: 5.1.1
@@ -11577,6 +11581,8 @@ snapshots:
   groq@3.86.2-experimental.0: {}
 
   groq@3.87.0: {}
+
+  groq@3.87.1: {}
 
   gtoken@7.1.0:
     dependencies:
