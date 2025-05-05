@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.0.1](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0...sdk-react-v0.0.1) (2025-05-02)
+
+
+### Bug Fixes
+
+* **docs:** remove custom docs entrypoint names ([#498](https://github.com/sanity-io/sdk/issues/498)) ([4499e85](https://github.com/sanity-io/sdk/commit/4499e85a3a30a5086bceb164c19cb18c71376471))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 0.0.1
+
+## 0.0.0 (2025-05-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove reference to SDKProvider and ResourceProvider in migration guide ([#493](https://github.com/sanity-io/sdk/issues/493))
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/message-protocol to ^0.12.0 ([#484](https://github.com/sanity-io/sdk/issues/484)) ([f3beb42](https://github.com/sanity-io/sdk/commit/f3beb42ddad7ad9bf7826783602d57be006c15ee))
+
+
+### Documentation
+
+* correct categories for new hooks ([#494](https://github.com/sanity-io/sdk/issues/494)) ([96da771](https://github.com/sanity-io/sdk/commit/96da771e061df6fef1570907275c6c7d1d760269))
+* remove reference to SDKProvider and ResourceProvider in migration guide ([#493](https://github.com/sanity-io/sdk/issues/493)) ([0c1bb0e](https://github.com/sanity-io/sdk/commit/0c1bb0e385f177ced9350c927617b0e37d8743fe))
+
+
+### Miscellaneous
+
+* release 0.0.0 ([08c9acc](https://github.com/sanity-io/sdk/commit/08c9acc0a34954cd611a53753fac2b788b61da9b))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 0.0.0
+
 ## [0.0.0-alpha.31](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0-alpha.30...sdk-react-v0.0.0-alpha.31) (2025-05-01)
 
 

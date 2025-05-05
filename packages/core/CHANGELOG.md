@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.0.1](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0...sdk-v0.0.1) (2025-05-02)
+
+
+### Bug Fixes
+
+* **docs:** remove custom docs entrypoint names ([#498](https://github.com/sanity-io/sdk/issues/498)) ([4499e85](https://github.com/sanity-io/sdk/commit/4499e85a3a30a5086bceb164c19cb18c71376471))
+
+## 0.0.0 (2025-05-02)
+
+
+### Features
+
+* allow ~experimental_resource client option ([08b4582](https://github.com/sanity-io/sdk/commit/08b4582840ddbd39e1343b07704dfb758a4e988d))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/message-protocol to ^0.12.0 ([#484](https://github.com/sanity-io/sdk/issues/484)) ([f3beb42](https://github.com/sanity-io/sdk/commit/f3beb42ddad7ad9bf7826783602d57be006c15ee))
+
+
+### Miscellaneous
+
+* release 0.0.0 ([08c9acc](https://github.com/sanity-io/sdk/commit/08c9acc0a34954cd611a53753fac2b788b61da9b))
+
 ## [0.0.0-alpha.31](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0-alpha.30...sdk-v0.0.0-alpha.31) (2025-05-01)
 
 

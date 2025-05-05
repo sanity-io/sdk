@@ -9,7 +9,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @public
  * @param disabled - When true, disables verification and skips project verification API calls
  * @returns Error message if the project doesn't match the organization ID, or null if all match or verification isn't needed
- *
+ * @category Projects
  * @example
  * ```tsx
  * function OrgVerifier() {
