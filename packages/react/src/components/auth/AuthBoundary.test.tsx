@@ -6,8 +6,8 @@ import {beforeEach, describe, expect, it, type MockInstance, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useAuthState} from '../../hooks/auth/useAuthState'
-import * as utils from '../utils'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
+import * as utils from '../utils'
 import {AuthBoundary} from './AuthBoundary'
 
 // Mock hooks
@@ -183,7 +183,9 @@ describe('AuthBoundary', () => {
 
     // Wait for the redirect to happen
     await waitFor(() => {
-      expect(window.location.href).toBe('https://sanity.io/login')
+      expect(window.location.href).toBe(
+        'https://www.sanity.io/login?origin=https%3A%2F%2Fexample.com%2F&type=stampedToken&withSid=true',
+      )
     })
   })
 
@@ -301,9 +303,11 @@ describe('AuthBoundary', () => {
 
     // Need to catch the error thrown during render. ErrorBoundary mock handles this.
     render(
-      <AuthBoundary verifyOrganization={true} projectIds={testProjectIds}>
-        <div>Protected Content</div>
-      </AuthBoundary>,
+      <ResourceProvider fallback={null}>
+        <AuthBoundary verifyOrganization={true} projectIds={testProjectIds}>
+          <div>Protected Content</div>
+        </AuthBoundary>
+      </ResourceProvider>,
     )
 
     // The ErrorBoundary's FallbackComponent should be rendered
@@ -331,9 +335,11 @@ describe('AuthBoundary', () => {
     })
 
     render(
-      <AuthBoundary verifyOrganization={false} projectIds={testProjectIds}>
-        <div>Protected Content</div>
-      </AuthBoundary>,
+      <ResourceProvider fallback={null}>
+        <AuthBoundary verifyOrganization={false} projectIds={testProjectIds}>
+          <div>Protected Content</div>
+        </AuthBoundary>
+      </ResourceProvider>,
     )
 
     // Should render children because verification is disabled
@@ -354,9 +360,11 @@ describe('AuthBoundary', () => {
     mockUseVerifyOrgProjects.mockImplementation(() => null)
 
     render(
-      <AuthBoundary projectIds={testProjectIds}>
-        <div>Protected Content</div>
-      </AuthBoundary>,
+      <ResourceProvider fallback={null}>
+        <AuthBoundary projectIds={testProjectIds}>
+          <div>Protected Content</div>
+        </AuthBoundary>
+      </ResourceProvider>,
     )
 
     await waitFor(() => {
