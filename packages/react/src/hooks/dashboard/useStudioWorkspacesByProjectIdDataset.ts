@@ -1,4 +1,3 @@
-import {type Status} from '@sanity/comlink'
 import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
 import {useEffect, useState} from 'react'
 
@@ -23,7 +22,6 @@ interface WorkspacesByProjectIdDataset {
 interface StudioWorkspacesResult {
   workspacesByProjectIdAndDataset: WorkspacesByProjectIdDataset
   error: string | null
-  isConnected: boolean
 }
 
 /**
@@ -33,19 +31,17 @@ interface StudioWorkspacesResult {
 export function useStudioWorkspacesByProjectIdDataset(): StudioWorkspacesResult {
   const [workspacesByProjectIdAndDataset, setWorkspacesByProjectIdAndDataset] =
     useState<WorkspacesByProjectIdDataset>({})
-  const [status, setStatus] = useState<Status>('idle')
   const [error, setError] = useState<string | null>(null)
 
   const {fetch} = useWindowConnection({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
-    onStatus: setStatus,
   })
 
   // Once computed, this should probably be in a store and poll for changes
   // However, our stores are currently being refactored
   useEffect(() => {
-    if (!fetch || status !== 'connected') return
+    if (!fetch) return
 
     async function fetchWorkspaces(signal: AbortSignal) {
       try {
@@ -91,11 +87,10 @@ export function useStudioWorkspacesByProjectIdDataset(): StudioWorkspacesResult 
     return () => {
       controller.abort()
     }
-  }, [fetch, status])
+  }, [fetch])
 
   return {
     workspacesByProjectIdAndDataset,
     error,
-    isConnected: status === 'connected',
   }
 }

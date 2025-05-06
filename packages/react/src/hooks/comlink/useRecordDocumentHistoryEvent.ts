@@ -1,4 +1,3 @@
-import {type Status} from '@sanity/comlink'
 import {
   type CanvasResource,
   type Events,
@@ -8,13 +7,12 @@ import {
   type StudioResource,
 } from '@sanity/message-protocol'
 import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
-import {useCallback, useState} from 'react'
+import {useCallback} from 'react'
 
 import {useWindowConnection} from './useWindowConnection'
 
 interface DocumentInteractionHistory {
   recordEvent: (eventType: 'viewed' | 'edited' | 'created' | 'deleted') => void
-  isConnected: boolean
 }
 
 /**
@@ -68,11 +66,9 @@ export function useRecordDocumentHistoryEvent({
   resourceId,
   schemaName,
 }: UseRecordDocumentHistoryEventProps): DocumentInteractionHistory {
-  const [status, setStatus] = useState<Status>('idle')
   const {sendMessage} = useWindowConnection<Events.HistoryMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
-    onStatus: setStatus,
   })
 
   if (resourceType !== 'studio' && !resourceId) {
@@ -110,6 +106,5 @@ export function useRecordDocumentHistoryEvent({
 
   return {
     recordEvent,
-    isConnected: status === 'connected',
   }
 }

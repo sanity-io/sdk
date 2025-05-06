@@ -1,6 +1,5 @@
-import {type Status} from '@sanity/comlink'
 import {type DocumentHandle} from '@sanity/sdk'
-import {act, renderHook} from '@testing-library/react'
+import {renderHook} from '@testing-library/react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {useNavigateToStudioDocument} from './useNavigateToStudioDocument'
@@ -9,13 +8,10 @@ import {useNavigateToStudioDocument} from './useNavigateToStudioDocument'
 const mockSendMessage = vi.fn()
 const mockFetch = vi.fn()
 let mockWorkspacesByProjectIdAndDataset = {}
-let mockWorkspacesIsConnected = true
-let mockStatusCallback: ((status: Status) => void) | null = null
 
 vi.mock('../comlink/useWindowConnection', () => {
   return {
-    useWindowConnection: ({onStatus}: {onStatus?: (status: Status) => void}) => {
-      mockStatusCallback = onStatus || null
+    useWindowConnection: () => {
       return {
         sendMessage: mockSendMessage,
         fetch: mockFetch,
@@ -29,7 +25,6 @@ vi.mock('./useStudioWorkspacesByProjectIdDataset', () => {
     useStudioWorkspacesByProjectIdDataset: () => ({
       workspacesByProjectIdAndDataset: mockWorkspacesByProjectIdAndDataset,
       error: null,
-      isConnected: mockWorkspacesIsConnected,
     }),
   }
 })
@@ -57,34 +52,18 @@ describe('useNavigateToStudioDocument', () => {
     mockWorkspacesByProjectIdAndDataset = {
       'project1:dataset1': [mockWorkspace],
     }
-    mockWorkspacesIsConnected = true
-    mockStatusCallback = null
   })
 
   it('returns a function and connection status', () => {
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
 
-    // Initially not connected
-    expect(result.current.isConnected).toBe(false)
-
-    // Simulate connection
-    act(() => {
-      mockStatusCallback?.('connected')
-    })
-
     expect(result.current).toEqual({
       navigateToStudioDocument: expect.any(Function),
-      isConnected: true,
     })
   })
 
   it('sends correct navigation message when called', () => {
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
-
-    // Simulate connection
-    act(() => {
-      mockStatusCallback?.('connected')
-    })
 
     result.current.navigateToStudioDocument()
 
@@ -95,35 +74,10 @@ describe('useNavigateToStudioDocument', () => {
     })
   })
 
-  it('does not send message when not connected', () => {
-    mockWorkspacesByProjectIdAndDataset = {}
-    mockWorkspacesIsConnected = false
-
-    const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
-
-    // Simulate connection
-    act(() => {
-      mockStatusCallback?.('connected')
-    })
-
-    result.current.navigateToStudioDocument()
-
-    expect(mockSendMessage).not.toHaveBeenCalled()
-  })
-
   it('does not send message when no workspace is found', () => {
     mockWorkspacesByProjectIdAndDataset = {}
-    mockWorkspacesIsConnected = true
-
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
-
-    // Simulate connection
-    act(() => {
-      mockStatusCallback?.('connected')
-    })
-
     result.current.navigateToStudioDocument()
-
     expect(mockSendMessage).not.toHaveBeenCalled()
   })
 
@@ -136,11 +90,6 @@ describe('useNavigateToStudioDocument', () => {
     }
 
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
-
-    // Simulate connection
-    act(() => {
-      mockStatusCallback?.('connected')
-    })
 
     result.current.navigateToStudioDocument()
 
@@ -169,11 +118,6 @@ describe('useNavigateToStudioDocument', () => {
 
     const {result} = renderHook(() => useNavigateToStudioDocument(incompleteDocumentHandle))
 
-    // Simulate connection
-    act(() => {
-      mockStatusCallback?.('connected')
-    })
-
     result.current.navigateToStudioDocument()
 
     expect(consoleSpy).toHaveBeenCalledWith(
@@ -193,11 +137,6 @@ describe('useNavigateToStudioDocument', () => {
     }
 
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle, preferredUrl))
-
-    // Simulate connection
-    act(() => {
-      mockStatusCallback?.('connected')
-    })
 
     result.current.navigateToStudioDocument()
 
@@ -227,11 +166,6 @@ describe('useNavigateToStudioDocument', () => {
 
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle, preferredUrl))
 
-    // Simulate connection
-    act(() => {
-      mockStatusCallback?.('connected')
-    })
-
     result.current.navigateToStudioDocument()
 
     // Should choose the NO_PROJECT_ID:NO_DATASET workspace because it matches the preferred URL
@@ -258,11 +192,6 @@ describe('useNavigateToStudioDocument', () => {
     }
 
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle, preferredUrl))
-
-    // Simulate connection
-    act(() => {
-      mockStatusCallback?.('connected')
-    })
 
     result.current.navigateToStudioDocument()
 

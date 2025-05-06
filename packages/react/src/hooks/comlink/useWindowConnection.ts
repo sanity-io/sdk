@@ -1,8 +1,10 @@
-import {type MessageData, type Node, type Status} from '@sanity/comlink'
-import {type FrameMessage, getOrCreateNode, releaseNode, type WindowMessage} from '@sanity/sdk'
+import {type MessageData, type NodeInput} from '@sanity/comlink'
+import {type FrameMessage, getNodeState, type SanityInstance, type WindowMessage} from '@sanity/sdk'
 import {useCallback, useEffect, useRef} from 'react'
+import {filter, firstValueFrom} from 'rxjs'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
 /**
  * @internal
@@ -18,7 +20,6 @@ export interface UseWindowConnectionOptions<TMessage extends FrameMessage> {
   name: string
   connectTo: string
   onMessage?: Record<TMessage['type'], WindowMessageHandler<TMessage>>
-  onStatus?: (status: Status) => void
 }
 
 /**
@@ -40,6 +41,15 @@ export interface WindowConnection<TMessage extends WindowMessage> {
   ) => Promise<TResponse>
 }
 
+const useNodeState = createStateSourceHook({
+  getState: getNodeState,
+  shouldSuspend: (instance: SanityInstance, nodeInput: NodeInput) =>
+    getNodeState(instance, nodeInput).getCurrent() === undefined,
+  suspender: (instance: SanityInstance, nodeInput: NodeInput) => {
+    return firstValueFrom(getNodeState(instance, nodeInput).observable.pipe(filter(Boolean)))
+  },
+})
+
 /**
  * @internal
  * Hook to wrap a Comlink node in a React hook.
@@ -56,47 +66,40 @@ export function useWindowConnection<
   name,
   connectTo,
   onMessage,
-  onStatus,
 }: UseWindowConnectionOptions<TFrameMessage>): WindowConnection<TWindowMessage> {
-  const nodeRef = useRef<Node<TWindowMessage, TFrameMessage> | null>(null)
+  const nodeEntry = useNodeState({name, connectTo})
   const messageUnsubscribers = useRef<(() => void)[]>([])
   const instance = useSanityInstance()
 
   useEffect(() => {
-    const node = getOrCreateNode(instance, {
-      name,
-      connectTo,
-    }) as unknown as Node<TWindowMessage, TFrameMessage>
-    nodeRef.current = node
-
-    const statusUnsubscribe = node.onStatus((eventStatus) => {
-      onStatus?.(eventStatus)
-    })
+    if (!nodeEntry) return
 
     if (onMessage) {
       Object.entries(onMessage).forEach(([type, handler]) => {
-        const messageUnsubscribe = node.on(type, handler as WindowMessageHandler<TFrameMessage>)
-        messageUnsubscribers.current.push(messageUnsubscribe)
+        const messageUnsubscribe = nodeEntry.node?.on(
+          type,
+          handler as WindowMessageHandler<TFrameMessage>,
+        )
+        if (messageUnsubscribe) {
+          messageUnsubscribers.current.push(messageUnsubscribe)
+        }
       })
     }
 
     return () => {
-      statusUnsubscribe()
       messageUnsubscribers.current.forEach((unsubscribe) => unsubscribe())
       messageUnsubscribers.current = []
-      releaseNode(instance, name)
-      nodeRef.current = null
     }
-  }, [instance, name, connectTo, onMessage, onStatus])
+  }, [instance, name, onMessage, nodeEntry])
 
   const sendMessage = useCallback(
     (type: TWindowMessage['type'], data?: Extract<TWindowMessage, {type: typeof type}>['data']) => {
-      if (!nodeRef.current) {
+      if (!nodeEntry) {
         throw new Error('Cannot send message before connection is established')
       }
-      nodeRef.current.post(type, data)
+      nodeEntry.node?.post(type, data)
     },
-    [],
+    [nodeEntry],
   )
 
   const fetch = useCallback(
@@ -109,12 +112,12 @@ export function useWindowConnection<
         suppressWarnings?: boolean
       },
     ): Promise<TResponse> => {
-      if (!nodeRef.current) {
+      if (!nodeEntry) {
         throw new Error('Cannot fetch before connection is established')
       }
-      return nodeRef.current?.fetch(type, data, fetchOptions ?? {}) as Promise<TResponse>
+      return nodeEntry.node?.fetch(type, data, fetchOptions ?? {}) as Promise<TResponse>
     },
-    [],
+    [nodeEntry],
   )
   return {
     sendMessage,

@@ -1,7 +1,6 @@
-import {type Status} from '@sanity/comlink'
 import {type Bridge, SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
 import {type DocumentHandle} from '@sanity/sdk'
-import {useCallback, useState} from 'react'
+import {useCallback} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
 import {
@@ -15,7 +14,6 @@ import {
  */
 export interface NavigateToStudioResult {
   navigateToStudioDocument: () => void
-  isConnected: boolean
 }
 
 /**
@@ -56,23 +54,14 @@ export function useNavigateToStudioDocument(
   documentHandle: DocumentHandle,
   preferredStudioUrl?: string,
 ): NavigateToStudioResult {
-  const {workspacesByProjectIdAndDataset, isConnected: workspacesConnected} =
-    useStudioWorkspacesByProjectIdDataset()
-  const [status, setStatus] = useState<Status>('idle')
+  const {workspacesByProjectIdAndDataset} = useStudioWorkspacesByProjectIdDataset()
   const {sendMessage} = useWindowConnection<Bridge.Navigation.NavigateToResourceMessage, never>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
-    onStatus: setStatus,
   })
 
   const navigateToStudioDocument = useCallback(() => {
     const {projectId, dataset} = documentHandle
-
-    if (!workspacesConnected || status !== 'connected') {
-      // eslint-disable-next-line no-console
-      console.warn('Not connected to Dashboard')
-      return
-    }
 
     if (!projectId || !dataset) {
       // eslint-disable-next-line no-console
@@ -123,17 +112,9 @@ export function useNavigateToStudioDocument(
     }
 
     sendMessage(message.type, message.data)
-  }, [
-    documentHandle,
-    workspacesConnected,
-    status,
-    workspacesByProjectIdAndDataset,
-    sendMessage,
-    preferredStudioUrl,
-  ])
+  }, [documentHandle, workspacesByProjectIdAndDataset, sendMessage, preferredStudioUrl])
 
   return {
     navigateToStudioDocument,
-    isConnected: workspacesConnected && status === 'connected',
   }
 }

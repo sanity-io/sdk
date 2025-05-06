@@ -1,19 +1,18 @@
-import {type Message, type Node, type Status} from '@sanity/comlink'
-import {getOrCreateNode, releaseNode} from '@sanity/sdk'
+import {type Message, type Node} from '@sanity/comlink'
+import {getNodeState, type NodeState, type StateSource} from '@sanity/sdk'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {act, renderHook} from '../../../test/test-utils'
+import {renderHook} from '../../../test/test-utils'
 import {useWindowConnection} from './useWindowConnection'
 
-vi.mock(import('@sanity/sdk'), async (importOriginal) => {
-  const actual = await importOriginal()
+vi.mock('@sanity/sdk', async () => {
+  const actual = await vi.importActual('@sanity/sdk')
   return {
     ...actual,
-    getOrCreateNode: vi.fn(),
-    createNode: vi.fn(),
-    releaseNode: vi.fn(),
+    getNodeState: vi.fn(),
   }
 })
+
 interface TestMessage {
   type: 'TEST_MESSAGE'
   data: {someData: string}
@@ -28,61 +27,29 @@ type TestMessages = TestMessage | AnotherMessage
 
 describe('useWindowConnection', () => {
   let node: Node<Message, Message>
-  let statusCallback: ((status: Status) => void) | null = null
+  let mockStateSource: StateSource<NodeState>
+  let stableNodeEntry: NodeState
 
   function createMockNode() {
     return {
-      // return unsubscribe function
       on: vi.fn(() => () => {}),
       post: vi.fn(),
       stop: vi.fn(),
-      onStatus: vi.fn((callback) => {
-        statusCallback = callback
-        return () => {}
-      }),
     } as unknown as Node<Message, Message>
   }
 
   beforeEach(() => {
-    statusCallback = null
     node = createMockNode()
-    vi.mocked(getOrCreateNode).mockReturnValue(node as unknown as Node<Message, Message>)
-  })
-
-  it('should call onStatus callback when status changes', () => {
-    const onStatusMock = vi.fn()
-    renderHook(() =>
-      useWindowConnection<TestMessages, TestMessages>({
-        name: 'test',
-        connectTo: 'window',
-        onStatus: onStatusMock,
+    stableNodeEntry = {node, status: 'connected'}
+    mockStateSource = {
+      subscribe: vi.fn((callback) => {
+        callback?.(stableNodeEntry)
+        return () => {}
       }),
-    )
-
-    act(() => {
-      statusCallback?.('connected')
-    })
-    expect(onStatusMock).toHaveBeenCalledWith('connected')
-
-    act(() => {
-      statusCallback?.('disconnected')
-    })
-    expect(onStatusMock).toHaveBeenCalledWith('disconnected')
-  })
-
-  it('should not throw if onStatus is not provided', () => {
-    renderHook(() =>
-      useWindowConnection<TestMessages, TestMessages>({
-        name: 'test',
-        connectTo: 'window',
-      }),
-    )
-
-    expect(() => {
-      act(() => {
-        statusCallback?.('connected')
-      })
-    }).not.toThrow()
+      getCurrent: vi.fn(() => stableNodeEntry),
+      observable: {subscribe: vi.fn(() => ({unsubscribe: () => {}}))},
+    } as unknown as StateSource<NodeState>
+    vi.mocked(getNodeState).mockReturnValue(mockStateSource)
   })
 
   it('should register message handlers', () => {
@@ -119,17 +86,5 @@ describe('useWindowConnection', () => {
 
     result.current.sendMessage('ANOTHER_MESSAGE', {otherData: 123})
     expect(node.post).toHaveBeenCalledWith('ANOTHER_MESSAGE', {otherData: 123})
-  })
-
-  it('should cleanup on unmount', () => {
-    const {unmount} = renderHook(() =>
-      useWindowConnection<TestMessages, TestMessages>({
-        name: 'test',
-        connectTo: 'window',
-      }),
-    )
-
-    unmount()
-    expect(releaseNode).toHaveBeenCalled()
   })
 })

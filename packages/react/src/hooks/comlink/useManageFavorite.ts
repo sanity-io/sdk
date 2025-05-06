@@ -1,4 +1,3 @@
-import {type Status} from '@sanity/comlink'
 import {
   type CanvasResource,
   type Events,
@@ -14,7 +13,7 @@ import {
   getFavoritesState,
   resolveFavoritesState,
 } from '@sanity/sdk'
-import {useCallback, useMemo, useState, useSyncExternalStore} from 'react'
+import {useCallback, useMemo, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useWindowConnection} from './useWindowConnection'
@@ -23,7 +22,6 @@ interface ManageFavorite extends FavoriteStatusResponse {
   favorite: () => Promise<void>
   unfavorite: () => Promise<void>
   isFavorited: boolean
-  isConnected: boolean
 }
 
 interface UseManageFavoriteProps extends DocumentHandle {
@@ -92,11 +90,9 @@ export function useManageFavorite({
   resourceType,
   schemaName,
 }: UseManageFavoriteProps): ManageFavorite {
-  const [status, setStatus] = useState<Status>('idle')
   const {fetch} = useWindowConnection<Events.FavoriteMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
-    onStatus: setStatus,
   })
   const instance = useSanityInstance()
   const {config} = instance
@@ -136,7 +132,7 @@ export function useManageFavorite({
 
   const handleFavoriteAction = useCallback(
     async (action: 'added' | 'removed') => {
-      if (status !== 'connected' || !fetch || !documentId || !documentType || !resourceType) return
+      if (!fetch || !documentId || !documentType || !resourceType) return
 
       try {
         const payload = {
@@ -165,17 +161,7 @@ export function useManageFavorite({
         throw err
       }
     },
-    [
-      fetch,
-      documentId,
-      documentType,
-      resourceId,
-      resourceType,
-      schemaName,
-      instance,
-      context,
-      status,
-    ],
+    [fetch, documentId, documentType, resourceId, resourceType, schemaName, instance, context],
   )
 
   const favorite = useCallback(() => handleFavoriteAction('added'), [handleFavoriteAction])
@@ -193,7 +179,6 @@ export function useManageFavorite({
           favorite: async () => {},
           unfavorite: async () => {},
           isFavorited: false,
-          isConnected: false,
         }
       }
       // For other errors, continue with suspension
@@ -205,6 +190,5 @@ export function useManageFavorite({
     favorite,
     unfavorite,
     isFavorited,
-    isConnected: status === 'connected',
   }
 }

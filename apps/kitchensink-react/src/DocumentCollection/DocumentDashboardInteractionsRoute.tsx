@@ -41,13 +41,12 @@ function FavoriteStatus({isFavorited}: {isFavorited: boolean}) {
 
 function FavoriteButton({docHandle}: {docHandle: DocumentHandle}) {
   const studioResource = useStudioResource(docHandle)
-  const {favorite, unfavorite, isConnected, isFavorited} = useManageFavorite(studioResource)
+  const {favorite, unfavorite, isFavorited} = useManageFavorite(studioResource)
 
   return (
     <ErrorBoundary fallbackRender={({error}) => <FavoriteStatusError error={error} />}>
       <Button
         mode="ghost"
-        disabled={!isConnected}
         onClick={() => {
           if (isFavorited) {
             unfavorite()
@@ -62,11 +61,11 @@ function FavoriteButton({docHandle}: {docHandle: DocumentHandle}) {
 }
 
 function ActionButtons(docHandle: DocumentHandle) {
-  const {recordEvent, isConnected: isHistoryConnected} = useRecordDocumentHistoryEvent({
+  const {recordEvent} = useRecordDocumentHistoryEvent({
     ...docHandle,
     resourceType: 'studio',
   })
-  const {navigateToStudioDocument, isConnected: isNavigateConnected} = useNavigateToStudioDocument(
+  const {navigateToStudioDocument} = useNavigateToStudioDocument(
     docHandle,
     'https://test-studio.sanity.build',
   )
@@ -76,18 +75,8 @@ function ActionButtons(docHandle: DocumentHandle) {
       <Suspense fallback={<FavoriteStatusFallback />}>
         <FavoriteButton docHandle={docHandle} />
       </Suspense>
-      <Button
-        mode="ghost"
-        disabled={!isHistoryConnected}
-        onClick={() => recordEvent('viewed')}
-        text="Record view"
-      />
-      <Button
-        mode="ghost"
-        disabled={!isNavigateConnected}
-        onClick={navigateToStudioDocument}
-        text="Edit in Studio"
-      />
+      <Button mode="ghost" onClick={() => recordEvent('viewed')} text="Record view" />
+      <Button mode="ghost" onClick={navigateToStudioDocument} text="Edit in Studio" />
     </Flex>
   )
 }
