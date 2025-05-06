@@ -17,8 +17,8 @@ const doc2 = createDocumentHandle({
 })
 
 export function MultiResourceRoute(): JSX.Element {
-  const author = useDocument(doc)
-  const dog = useDocument(doc2)
+  const {data: author} = useDocument(doc)
+  const {data: dog} = useDocument(doc2)
   const setAuthorName = useEditDocument({...doc, path: 'name'})
   const setDogName = useEditDocument({...doc2, path: 'name'})
 
