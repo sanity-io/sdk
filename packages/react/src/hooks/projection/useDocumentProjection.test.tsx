@@ -8,7 +8,7 @@ import {act, render, screen} from '@testing-library/react'
 import {Suspense, useRef} from 'react'
 import {type Mock} from 'vitest'
 
-import {useProjection} from './useProjection'
+import {useDocumentProjection} from './useDocumentProjection'
 
 // Mock IntersectionObserver
 const mockIntersectionObserver = vi.fn()
@@ -61,7 +61,7 @@ function TestComponent({
   projection: ValidProjection
 }) {
   const ref = useRef(null)
-  const {data, isPending} = useProjection<ProjectionResult>({...document, projection, ref})
+  const {data, isPending} = useDocumentProjection<ProjectionResult>({...document, projection, ref})
 
   return (
     <div ref={ref}>
@@ -72,7 +72,7 @@ function TestComponent({
   )
 }
 
-describe('useProjection', () => {
+describe('useDocumentProjection', () => {
   let getCurrent: Mock
   let subscribe: Mock
 
@@ -228,7 +228,7 @@ describe('useProjection', () => {
       projection,
       ...docHandle
     }: DocumentHandle & {projection: ValidProjection}) {
-      const {data} = useProjection<ProjectionResult>({...docHandle, projection}) // No ref provided
+      const {data} = useDocumentProjection<ProjectionResult>({...docHandle, projection}) // No ref provided
       return (
         <div>
           <h1>{data.title}</h1>
@@ -261,7 +261,7 @@ describe('useProjection', () => {
       ...docHandle
     }: DocumentHandle & {projection: ValidProjection}) {
       const ref = useRef({}) // ref.current is not an HTML element
-      const {data} = useProjection<ProjectionResult>({...docHandle, projection, ref})
+      const {data} = useDocumentProjection<ProjectionResult>({...docHandle, projection, ref})
       return (
         <div>
           <h1>{data.title}</h1>

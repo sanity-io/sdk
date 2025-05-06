@@ -200,11 +200,11 @@ const handle = {
 
 ### Projections: `defineProjection`
 
-To get types for GROQ projections used with `useProjection`, you **must** define them using the `defineProjection` helper from `groq`. Typegen scans your code for these definitions.
+To get types for GROQ projections used with `useDocumentProjection`, you **must** define them using the `defineProjection` helper from `groq`. Typegen scans your code for these definitions.
 
 ```typescript
 import {defineProjection} from 'groq'
-import {useProjection, type DocumentHandle} from '@sanity/sdk-react'
+import {useDocumentProjection, type DocumentHandle} from '@sanity/sdk-react'
 
 // Typegen derives the type name (AuthorSummaryProjectionResult) from the variable name
 export const authorSummary = defineProjection({
@@ -214,7 +214,7 @@ export const authorSummary = defineProjection({
 
 function AuthorDetails({doc}: {doc: DocumentHandle<'author'>}) {
   // The type of `data` is inferred from `authorProjection`
-  const {data} = useProjection({
+  const {data} = useDocumentProjection({
     ...doc, // Spread the handle containing documentId, type, etc.
     projection: authorProjection,
   })
@@ -227,7 +227,7 @@ function AuthorDetails({doc}: {doc: DocumentHandle<'author'>}) {
 
 - The generated type (e.g., `AuthorSummaryProjectionResult`) includes a `DocumentTypeScoped` brand, allowing unions of projection results if a projection applies to multiple document types.
 - Typegen intelligently removes types from the projection result if all fields in the projection evaluate to `null` for a given document type.
-- When using Typegen, you **cannot** pass raw projection strings to `useProjection` and get type inference; you must use `defineProjection`.
+- When using Typegen, you **cannot** pass raw projection strings to `useDocumentProjection` and get type inference; you must use `defineProjection`.
 
 ### Queries: `defineQuery`
 

@@ -14,7 +14,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @public
  * @category Types
  */
-export interface UseProjectionOptions<
+export interface useDocumentProjectionOptions<
   TProjection extends ValidProjection = ValidProjection,
   TDocumentType extends string = string,
   TDataset extends string = string,
@@ -32,7 +32,7 @@ export interface UseProjectionOptions<
  * @public
  * @category Types
  */
-export interface UseProjectionResults<TData> {
+export interface useDocumentProjectionResults<TData> {
   /** The projected data */
   data: TData
   /** True if the projection is currently being resolved */
@@ -69,7 +69,7 @@ export interface UseProjectionResults<TData> {
  * @example Using Typegen for a book preview
  * ```tsx
  * // ProjectionComponent.tsx
- * import {useProjection, type DocumentHandle} from '@sanity/sdk-react'
+ * import {useDocumentProjection, type DocumentHandle} from '@sanity/sdk-react'
  * import {useRef} from 'react'
  * import {defineProjection} from 'groq'
  *
@@ -90,7 +90,7 @@ export interface UseProjectionResults<TData> {
  *
  *   // Spread the doc handle into the options
  *   // Typegen infers the return type based on 'book' and the projection
- *   const { data } = useProjection({
+ *   const { data } = useDocumentProjection({
  *     ...doc, // Pass the handle properties
  *     ref,
  *     projection: myProjection,
@@ -114,14 +114,16 @@ export interface UseProjectionResults<TData> {
  * // </Suspense>
  * ```
  */
-export function useProjection<
+export function useDocumentProjection<
   TProjection extends ValidProjection = ValidProjection,
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
 >(
-  options: UseProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
-): UseProjectionResults<SanityProjectionResult<TProjection, TDocumentType, TDataset, TProjectId>>
+  options: useDocumentProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
+): useDocumentProjectionResults<
+  SanityProjectionResult<TProjection, TDocumentType, TDataset, TProjectId>
+>
 
 // Overload 2: Explicit type provided
 /**
@@ -133,7 +135,7 @@ export function useProjection<
  *
  * @example Explicitly typing the projection result
  * ```tsx
- * import {useProjection, type DocumentHandle} from '@sanity/sdk-react'
+ * import {useDocumentProjection, type DocumentHandle} from '@sanity/sdk-react'
  * import {useRef} from 'react'
  *
  * interface SimpleBookPreview {
@@ -147,7 +149,7 @@ export function useProjection<
  *
  * function BookPreview({ doc }: BookPreviewProps) {
  *   const ref = useRef(null)
- *   const { data } = useProjection<SimpleBookPreview>({
+ *   const { data } = useDocumentProjection<SimpleBookPreview>({
  *     ...doc,
  *     ref,
  *     projection: `{ title, 'authorName': author->name }`
@@ -169,16 +171,16 @@ export function useProjection<
  * // </Suspense>
  * ```
  */
-export function useProjection<TData extends object>(
-  options: UseProjectionOptions, // Uses base options type
-): UseProjectionResults<TData>
+export function useDocumentProjection<TData extends object>(
+  options: useDocumentProjectionOptions, // Uses base options type
+): useDocumentProjectionResults<TData>
 
 // Implementation (no JSDoc needed here as it's covered by overloads)
-export function useProjection<TData extends object>({
+export function useDocumentProjection<TData extends object>({
   ref,
   projection,
   ...docHandle
-}: UseProjectionOptions): UseProjectionResults<TData> {
+}: useDocumentProjectionOptions): useDocumentProjectionResults<TData> {
   const instance = useSanityInstance()
   const stateSource = getProjectionState<TData>(instance, {...docHandle, projection})
 
@@ -228,5 +230,8 @@ export function useProjection<TData extends object>({
     [stateSource, ref],
   )
 
-  return useSyncExternalStore(subscribe, stateSource.getCurrent) as UseProjectionResults<TData>
+  return useSyncExternalStore(
+    subscribe,
+    stateSource.getCurrent,
+  ) as useDocumentProjectionResults<TData>
 }

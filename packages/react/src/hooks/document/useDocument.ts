@@ -3,9 +3,9 @@ import {type SanityDocumentResult} from 'groq'
 import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-// used in an `{@link useProjection}` and `{@link useQuery}`
+// used in an `{@link useDocumentProjection}` and `{@link useQuery}`
 // eslint-disable-next-line import/consistent-type-specifier-style, unused-imports/no-unused-imports
-import type {useProjection} from '../projection/useProjection'
+import type {useDocumentProjection} from '../projection/useDocumentProjection'
 // eslint-disable-next-line import/consistent-type-specifier-style, unused-imports/no-unused-imports
 import type {useQuery} from '../query/useQuery'
 
@@ -191,7 +191,7 @@ interface UseDocument {
  * - Realtime updates aren't critical
  * - You want better performance
  *
- * …consider using {@link useProjection} or {@link useQuery} instead. These hooks are more efficient
+ * …consider using {@link useDocumentProjection} or {@link useQuery} instead. These hooks are more efficient
  * for read-heavy applications.
  *
  * @function

@@ -148,14 +148,14 @@ export interface PaginatedDocumentsResponse<
  *   type DatasetHandle,
  *   type DocumentHandle,
  *   type SortOrderingItem,
- *   useProjection
+ *   useDocumentProjection
  * } from '@sanity/sdk-react'
  * import {Suspense} from 'react'
  * import {ErrorBoundary} from 'react-error-boundary'
  *
  * // Define a component to display a single document row
  * function MyTableRowComponent({doc}: {doc: DocumentHandle}) {
- *   const {data} = useProjection<{title?: string}>({
+ *   const {data} = useDocumentProjection<{title?: string}>({
  *     ...doc,
  *     projection: '{title}',
  *   })
