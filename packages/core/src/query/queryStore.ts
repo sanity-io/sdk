@@ -179,6 +179,7 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
 }: StoreContext<QueryStoreState>) => {
   const liveMessages$ = getClientState(instance, {
     apiVersion: QUERY_STORE_API_VERSION,
+    useProjectHostname: true, // TODO: remove this once we've confirmed that the live events endpoint is not using the experimental resource
   }).observable.pipe(
     switchMap((client) =>
       client.live.events({includeDrafts: !!client.config().token, tag: 'query-store'}),

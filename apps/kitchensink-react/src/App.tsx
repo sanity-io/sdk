@@ -12,10 +12,12 @@ const sanityConfigs: SanityConfig[] = [
   {
     projectId: 'ppsg7ml5',
     dataset: 'test',
+    useExperimentalResource: true,
   },
   {
     projectId: 'ezwd8xes',
     dataset: 'production',
+    useExperimentalResource: true,
   },
 ]
 
