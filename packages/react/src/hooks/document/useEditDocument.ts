@@ -237,7 +237,7 @@ export function useEditDocument<TData>(
  *   // Fetch current value
  *   const {data: currentName} = useDocument<string>({...bookHandle, path: 'author.name'});
  *   // Provide the explicit type <string> for the path's value
- *   const editAuthorName = useEditDocument<string>({...bookHandle, 'author.name'});
+ *   const editAuthorName = useEditDocument<string>({...bookHandle, path: 'author.name'});
  *
  *   const handleUpdate = useCallback(() => {
  *     // Update with a hardcoded string directly
