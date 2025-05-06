@@ -52,15 +52,15 @@ export {
   usePaginatedDocuments,
 } from '../hooks/paginatedDocuments/usePaginatedDocuments'
 export {
-  usePreview,
-  type UsePreviewOptions,
-  type UsePreviewResults,
-} from '../hooks/preview/usePreview'
+  useDocumentPreview,
+  type useDocumentPreviewOptions,
+  type useDocumentPreviewResults,
+} from '../hooks/preview/useDocumentPreview'
 export {
-  useProjection,
-  type UseProjectionOptions,
-  type UseProjectionResults,
-} from '../hooks/projection/useProjection'
+  useDocumentProjection,
+  type useDocumentProjectionOptions,
+  type useDocumentProjectionResults,
+} from '../hooks/projection/useDocumentProjection'
 export {useProject} from '../hooks/projects/useProject'
 export {type ProjectWithoutMembers, useProjects} from '../hooks/projects/useProjects'
 export {useQuery} from '../hooks/query/useQuery'

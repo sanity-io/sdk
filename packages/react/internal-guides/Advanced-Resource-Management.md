@@ -297,7 +297,7 @@ For example, here's a component that works with document handles:
 // A component that works with any document with address fields
 function Address(docHandle: DocumentHandle) {
   // Get address fields from the document
-  const {data} = useProjection({
+  const {data} = useDocumentProjection({
     ...docHandle, // Pass along all the handle properties
     projection: '{address1, address2, city, state, "zipCode": zip}',
   })
@@ -324,7 +324,7 @@ interface DocumentPreviewProps extends DocumentHandle {
 
 function DocumentPreview({showDescription, ...docHandle}: DocumentPreviewProps) {
   // Use the handle properties plus your own custom ones
-  const {data} = useProjection({
+  const {data} = useDocumentProjection({
     ...docHandle,
     projection: showDescription ? '{name,description}' : '{name}',
   })
@@ -548,7 +548,7 @@ import {
   ResourceProvider,
   useDatasets,
   usePaginatedList,
-  useProjection,
+  useDocumentProjection,
   useProjects,
   useQuery,
 } from '@sanity/sdk-react'
@@ -678,7 +678,7 @@ function DocumentList({type}) {
 
 function DocumentPreview(docHandle: DocumentHandle) {
   // Get just the title field from the document
-  const {data} = useProjection<{title?: string}>({
+  const {data} = useDocumentProjection<{title?: string}>({
     ...docHandle,
     projection: '{title}',
   })

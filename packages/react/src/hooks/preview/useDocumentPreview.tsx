@@ -8,7 +8,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @beta
  * @category Types
  */
-export interface UsePreviewOptions extends DocumentHandle {
+export interface useDocumentPreviewOptions extends DocumentHandle {
   /**
    * Optional ref object to track visibility. When provided, preview resolution
    * only occurs when the referenced element is visible in the viewport.
@@ -20,7 +20,7 @@ export interface UsePreviewOptions extends DocumentHandle {
  * @beta
  * @category Types
  */
-export interface UsePreviewResults {
+export interface useDocumentPreviewResults {
   /** The results of resolving the document’s preview values */
   data: PreviewValue
   /** True when preview values are being refreshed */
@@ -43,7 +43,7 @@ export interface UsePreviewResults {
  * ```
  * // PreviewComponent.jsx
  * export default function PreviewComponent({ document }) {
- *   const { data: { title, subtitle, media }, isPending } = usePreview({ document })
+ *   const { data: { title, subtitle, media }, isPending } = useDocumentPreview({ document })
  *   return (
  *     <article style={{ opacity: isPending ? 0.5 : 1}}>
  *       {media?.type === 'image-asset' ? <img src={media.url} alt='' /> : ''}
@@ -71,7 +71,10 @@ export interface UsePreviewResults {
  * )
  * ```
  */
-export function usePreview({ref, ...docHandle}: UsePreviewOptions): UsePreviewResults {
+export function useDocumentPreview({
+  ref,
+  ...docHandle
+}: useDocumentPreviewOptions): useDocumentPreviewResults {
   const instance = useSanityInstance()
   const stateSource = getPreviewState(instance, docHandle)
 
@@ -121,7 +124,7 @@ export function usePreview({ref, ...docHandle}: UsePreviewOptions): UsePreviewRe
   const getSnapshot = useCallback(() => {
     const currentState = stateSource.getCurrent()
     if (currentState.data === null) throw resolvePreview(instance, docHandle)
-    return currentState as UsePreviewResults
+    return currentState as useDocumentPreviewResults
   }, [docHandle, instance, stateSource])
 
   return useSyncExternalStore(subscribe, getSnapshot)

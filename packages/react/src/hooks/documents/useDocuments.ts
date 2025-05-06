@@ -106,9 +106,9 @@ export interface DocumentsResponse<
  * } from '@sanity/sdk-react'
  * import {Suspense} from 'react'
  *
- * // Define a component to display a single document (using useProjection for efficiency)
+ * // Define a component to display a single document (using useDocumentProjection for efficiency)
  * function MyDocumentComponent({doc}: {doc: DocumentHandle}) {
- *   const {data} = useProjection<{title?: string}>({
+ *   const {data} = useDocumentProjection<{title?: string}>({
  *     ...doc, // Pass the full handle
  *     projection: '{title}'
  *   })
