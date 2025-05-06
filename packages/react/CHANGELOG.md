@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.0.2](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.1...sdk-react-v0.0.2) (2025-05-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* make all comlink hooks suspend ([#504](https://github.com/sanity-io/sdk/issues/504))
+
+### Features
+
+* make all comlink hooks suspend ([#504](https://github.com/sanity-io/sdk/issues/504)) ([d49bf0e](https://github.com/sanity-io/sdk/commit/d49bf0e4be9268d68dbec186ed3ba6afc075bedb))
+
+
+### Bug Fixes
+
+* **deps:** move react compiler to RC ([#505](https://github.com/sanity-io/sdk/issues/505)) ([217e0a2](https://github.com/sanity-io/sdk/commit/217e0a2fb31731c4f485a2d8eba9f7ebacedcba5))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 0.0.2
+
 ## [0.0.1](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.0...sdk-react-v0.0.1) (2025-05-02)
 
 

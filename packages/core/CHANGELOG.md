@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.0.2](https://github.com/sanity-io/sdk/compare/sdk-v0.0.1...sdk-v0.0.2) (2025-05-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* make all comlink hooks suspend ([#504](https://github.com/sanity-io/sdk/issues/504))
+
+### Features
+
+* make all comlink hooks suspend ([#504](https://github.com/sanity-io/sdk/issues/504)) ([d49bf0e](https://github.com/sanity-io/sdk/commit/d49bf0e4be9268d68dbec186ed3ba6afc075bedb))
+
+
+### Bug Fixes
+
+* **core:** bump default api versions ([#507](https://github.com/sanity-io/sdk/issues/507)) ([dc4f6f6](https://github.com/sanity-io/sdk/commit/dc4f6f67a1c86e0a30cb69ebc23c11ca06ff4ac2))
+* **deps:** update dependency zustand to ^5.0.4 ([#500](https://github.com/sanity-io/sdk/issues/500)) ([0847430](https://github.com/sanity-io/sdk/commit/0847430c57d170ccbecd853f0e9621ccc74664d7))
+
 ## [0.0.1](https://github.com/sanity-io/sdk/compare/sdk-v0.0.0...sdk-v0.0.1) (2025-05-02)
 
 
