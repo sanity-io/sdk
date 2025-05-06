@@ -63,7 +63,7 @@
     "@types/lodash-es": "^4.17.12",
     "groq": "3.86.2-experimental.0",
     "lodash-es": "^4.17.21",
-    "react-compiler-runtime": "19.0.0-beta-ebf51a3-20250411",
+    "react-compiler-runtime": "19.1.0-rc.1",
     "react-error-boundary": "^5.0.0",
     "rxjs": "^7.8.2"
   },
