@@ -154,6 +154,18 @@ function MyDocumentAction(props: DocumentActionProps) {
 }
 ```
 
+2. Renamed hooks for better clarity and consistency:
+
+   - `usePreview` → `useDocumentPreview`
+   - `useProjection` → `useDocumentProjection`
+
+Also renamed associated types to match:
+
+- `UsePreviewOptions` → `useDocumentPreviewOptions`
+- `UsePreviewResults` → `useDocumentPreviewResults`
+- `UseProjectionOptions` → `useDocumentProjectionOptions`
+- `UseProjectionResults` → `useDocumentProjectionResults`
+
 ## Migrating to @sanity/sdk-react@0.0.0-rc.7
 
 This version introduces significant improvements for TypeScript users by integrating [Sanity TypeGen](https://www.sanity.io/docs/sanity-typegen). While Typegen is optional, using it unlocks strong type safety for documents, queries, and projections. These changes also refine hook signatures for better consistency, even for JavaScript users.
