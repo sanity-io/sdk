@@ -3,7 +3,7 @@ import {act, render, screen} from '@testing-library/react'
 import {Suspense, useRef} from 'react'
 import {type Mock} from 'vitest'
 
-import {usePreview} from './usePreview'
+import {useDocumentPreview} from './useDocumentPreview'
 
 // Mock IntersectionObserver
 const mockIntersectionObserver = vi.fn()
@@ -45,7 +45,7 @@ const mockDocument: DocumentHandle = {
 
 function TestComponent(docHandle: DocumentHandle) {
   const ref = useRef(null)
-  const {data, isPending} = usePreview({...docHandle, ref})
+  const {data, isPending} = useDocumentPreview({...docHandle, ref})
 
   return (
     <div ref={ref}>
@@ -56,7 +56,7 @@ function TestComponent(docHandle: DocumentHandle) {
   )
 }
 
-describe('usePreview', () => {
+describe('useDocumentPreview', () => {
   let getCurrent: Mock
   let subscribe: Mock
 
@@ -182,7 +182,7 @@ describe('usePreview', () => {
     subscribe.mockImplementation(() => eventsUnsubscribe)
 
     function NoRefComponent(docHandle: DocumentHandle) {
-      const {data} = usePreview(docHandle) // No ref provided
+      const {data} = useDocumentPreview(docHandle) // No ref provided
       return (
         <div>
           <h1>{data?.title}</h1>
@@ -212,7 +212,7 @@ describe('usePreview', () => {
 
     function NonHtmlRefComponent(docHandle: DocumentHandle) {
       const ref = useRef({}) // ref.current is not an HTML element
-      const {data} = usePreview({...docHandle, ref})
+      const {data} = useDocumentPreview({...docHandle, ref})
       return (
         <div>
           <h1>{data?.title}</h1>

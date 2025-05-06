@@ -52,10 +52,10 @@ export {
   usePaginatedDocuments,
 } from '../hooks/paginatedDocuments/usePaginatedDocuments'
 export {
-  usePreview,
-  type UsePreviewOptions,
-  type UsePreviewResults,
-} from '../hooks/preview/usePreview'
+  useDocumentPreview,
+  type useDocumentPreviewOptions,
+  type useDocumentPreviewResults,
+} from '../hooks/preview/useDocumentPreview'
 export {
   useDocumentProjection,
   type useDocumentProjectionOptions,
