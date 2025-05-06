@@ -1,8 +1,7 @@
-import {type Message, type Node, type Status} from '@sanity/comlink'
+import {type Message} from '@sanity/comlink'
 import {
   type FavoriteStatusResponse,
   getFavoritesState,
-  getOrCreateNode,
   resolveFavoritesState,
   type SanityInstance,
 } from '@sanity/sdk'
@@ -10,6 +9,7 @@ import {BehaviorSubject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {act, renderHook} from '../../../test/test-utils'
+import {useWindowConnection, type WindowConnection} from '../comlink/useWindowConnection'
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useManageFavorite} from './useManageFavorite'
 
@@ -17,8 +17,6 @@ vi.mock(import('@sanity/sdk'), async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    getOrCreateNode: vi.fn(),
-    releaseNode: vi.fn(),
     getFavoritesState: vi.fn(),
     resolveFavoritesState: vi.fn(),
   }
@@ -26,10 +24,14 @@ vi.mock(import('@sanity/sdk'), async (importOriginal) => {
 
 vi.mock('../context/useSanityInstance')
 
+vi.mock('../comlink/useWindowConnection', () => ({
+  useWindowConnection: vi.fn(),
+}))
+
 describe('useManageFavorite', () => {
-  let node: Node<Message, Message>
-  let statusCallback: ((status: Status) => void) | null = null
   let favoriteStatusSubject: BehaviorSubject<FavoriteStatusResponse>
+  let mockFetch: ReturnType<typeof vi.fn>
+  let mockSendMessage: ReturnType<typeof vi.fn>
 
   const mockDocumentHandle = {
     documentId: 'mock-id',
@@ -37,23 +39,8 @@ describe('useManageFavorite', () => {
     resourceType: 'studio' as const,
   }
 
-  function createMockNode() {
-    return {
-      on: vi.fn(() => () => {}),
-      fetch: vi.fn().mockImplementation(() => Promise.resolve({success: true})),
-      stop: vi.fn(),
-      onStatus: vi.fn((callback) => {
-        statusCallback = callback
-        return () => {}
-      }),
-    } as unknown as Node<Message, Message>
-  }
-
   beforeEach(() => {
-    statusCallback = null
     favoriteStatusSubject = new BehaviorSubject<FavoriteStatusResponse>({isFavorited: false})
-    node = createMockNode()
-    vi.mocked(getOrCreateNode).mockReturnValue(node)
 
     // Mock getFavoritesState
     vi.mocked(getFavoritesState).mockImplementation(() => ({
@@ -82,6 +69,17 @@ describe('useManageFavorite', () => {
         dataset: 'test',
       },
     } as unknown as SanityInstance)
+
+    // Mock useWindowConnection
+    mockFetch = vi.fn().mockResolvedValue({success: true})
+    mockSendMessage = vi.fn()
+    vi.mocked(useWindowConnection).mockImplementation(() => {
+      return {
+        fetch: (type: string, data?: unknown, options: unknown = {}) =>
+          mockFetch(type, data, options),
+        sendMessage: mockSendMessage,
+      }
+    })
   })
 
   afterEach(() => {
@@ -93,7 +91,6 @@ describe('useManageFavorite', () => {
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
 
     expect(result.current.isFavorited).toBe(false)
-    expect(result.current.isConnected).toBe(false)
   })
 
   it('should handle favorite action and update state', async () => {
@@ -101,16 +98,11 @@ describe('useManageFavorite', () => {
 
     expect(result.current.isFavorited).toBe(false)
 
-    // Simulate connection first
-    act(() => {
-      statusCallback?.('connected')
-    })
-
     await act(async () => {
       await result.current.favorite()
     })
 
-    expect(node.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       'dashboard/v1/events/favorite/mutate',
       {
         document: {
@@ -140,16 +132,11 @@ describe('useManageFavorite', () => {
 
     expect(result.current.isFavorited).toBe(true)
 
-    // Simulate connection first
-    act(() => {
-      statusCallback?.('connected')
-    })
-
     await act(async () => {
       await result.current.unfavorite()
     })
 
-    expect(node.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       'dashboard/v1/events/favorite/mutate',
       {
         document: {
@@ -169,7 +156,7 @@ describe('useManageFavorite', () => {
   })
 
   it('should not update state if favorite action fails', async () => {
-    vi.mocked(node.fetch).mockImplementationOnce(() => Promise.resolve({success: false}))
+    mockFetch.mockResolvedValueOnce({success: false})
 
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
 
@@ -186,15 +173,11 @@ describe('useManageFavorite', () => {
   it('should throw error during favorite/unfavorite actions', async () => {
     const errorMessage = 'Failed to update favorite status'
 
-    vi.mocked(node.fetch).mockImplementation(() => {
+    mockFetch.mockImplementation(() => {
       throw new Error(errorMessage)
     })
 
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
-
-    await act(async () => {
-      statusCallback?.('connected')
-    })
 
     await act(async () => {
       await expect(result.current.favorite()).rejects.toThrow(errorMessage)
@@ -208,18 +191,6 @@ describe('useManageFavorite', () => {
     })
 
     expect(resolveFavoritesState).not.toHaveBeenCalled()
-  })
-
-  it('should update connection status', () => {
-    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
-
-    expect(result.current.isConnected).toBe(false)
-
-    act(() => {
-      statusCallback?.('connected')
-    })
-
-    expect(result.current.isConnected).toBe(true)
   })
 
   it('should throw error when studio resource is missing projectId or dataset', () => {
@@ -255,83 +226,6 @@ describe('useManageFavorite', () => {
     )
   })
 
-  it('should handle favorites service timeout gracefully', async () => {
-    // Mock both state functions for timeout scenario
-    vi.mocked(getFavoritesState).mockImplementationOnce(() => ({
-      subscribe: () => () => {},
-      getCurrent: () => undefined, // This will trigger the resolveFavoritesState call
-      observable: favoriteStatusSubject.asObservable(),
-    }))
-
-    vi.mocked(resolveFavoritesState).mockImplementationOnce(() => {
-      throw new Error('Favorites service connection timeout')
-    })
-
-    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
-
-    // Should return fallback state instead of suspending
-    expect(result.current).toEqual({
-      favorite: expect.any(Function),
-      unfavorite: expect.any(Function),
-      isFavorited: false,
-      isConnected: false,
-    })
-
-    // Favorite and unfavorite actions should be a no-op
-    await act(async () => {
-      await result.current.favorite()
-    })
-
-    expect(node.fetch).not.toHaveBeenCalled()
-
-    await act(async () => {
-      await result.current.unfavorite()
-    })
-
-    expect(node.fetch).not.toHaveBeenCalled()
-  })
-
-  it('should still throw non-timeout errors for suspension', async () => {
-    vi.mocked(getFavoritesState).mockImplementation(() => ({
-      subscribe: () => () => {},
-      getCurrent: () => undefined, // This will trigger the resolveFavoritesState call
-      observable: favoriteStatusSubject.asObservable(),
-    }))
-
-    // Mock resolveFavoritesState to throw
-    const error = new Error('Some other error')
-    vi.mocked(resolveFavoritesState).mockImplementation(() => {
-      throw error
-    })
-
-    expect(() => {
-      renderHook(() => useManageFavorite(mockDocumentHandle))
-    }).toThrow(error)
-  })
-
-  it('should not call fetch if connection is not established', async () => {
-    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
-
-    // Ensure connection is not established
-    expect(result.current.isConnected).toBe(false)
-
-    // Try to favorite
-    await act(async () => {
-      await result.current.favorite()
-    })
-
-    // Fetch should not have been called due to the new status check
-    expect(node.fetch).not.toHaveBeenCalled()
-
-    // Try to unfavorite
-    await act(async () => {
-      await result.current.unfavorite()
-    })
-
-    // Fetch should still not have been called
-    expect(node.fetch).not.toHaveBeenCalled()
-  })
-
   it('should include schemaName in payload when provided', async () => {
     const mockDocumentHandleWithSchema = {
       ...mockDocumentHandle,
@@ -339,16 +233,11 @@ describe('useManageFavorite', () => {
     }
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandleWithSchema))
 
-    // Simulate connection first
-    act(() => {
-      statusCallback?.('connected')
-    })
-
     await act(async () => {
       await result.current.favorite()
     })
 
-    expect(node.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       'dashboard/v1/events/favorite/mutate',
       {
         document: {
@@ -357,12 +246,73 @@ describe('useManageFavorite', () => {
           resource: {
             id: 'test.test',
             type: 'studio',
-            schemaName: 'testSchema', // <-- Expect schemaName here
+            schemaName: 'testSchema',
           },
         },
         eventType: 'added',
       },
       {},
     )
+  })
+
+  it('should default isFavorited to false if state is undefined', () => {
+    // Mock getFavoritesState to return undefined for getCurrent
+    vi.mocked(getFavoritesState).mockImplementation(() => ({
+      subscribe: (callback?: () => void) => {
+        if (!callback) return () => {}
+        callback()
+        return () => {}
+      },
+      getCurrent: () => undefined,
+      observable: favoriteStatusSubject.asObservable(),
+    }))
+    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
+    expect(result.current.isFavorited).toBe(false)
+  })
+
+  it('should do nothing if fetch is missing', async () => {
+    vi.mocked(useWindowConnection).mockReturnValue({
+      fetch: undefined,
+      sendMessage: mockSendMessage,
+    } as unknown as WindowConnection<Message>)
+    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
+    await act(async () => {
+      await result.current.favorite()
+      await result.current.unfavorite()
+    })
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('should do nothing if documentId is missing', async () => {
+    const handle = {...mockDocumentHandle, documentId: undefined}
+    // @ts-expect-error -- no access to ManageFavorite props type
+    const {result} = renderHook(() => useManageFavorite(handle))
+    await act(async () => {
+      await result.current.favorite()
+      await result.current.unfavorite()
+    })
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('should do nothing if documentType is missing', async () => {
+    const handle = {...mockDocumentHandle, documentType: undefined}
+    // @ts-expect-error -- no access to ManageFavorite props type
+    const {result} = renderHook(() => useManageFavorite(handle))
+    await act(async () => {
+      await result.current.favorite()
+      await result.current.unfavorite()
+    })
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('should do nothing if resourceType is missing', async () => {
+    const handle = {...mockDocumentHandle, resourceType: undefined, resourceId: 'studio'}
+    // @ts-expect-error -- no access to ManageFavorite props type
+    const {result} = renderHook(() => useManageFavorite(handle))
+    await act(async () => {
+      await result.current.favorite()
+      await result.current.unfavorite()
+    })
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 })

@@ -1,4 +1,3 @@
-import {type Status} from '@sanity/comlink'
 import {
   type CanvasResource,
   type Events,
@@ -8,13 +7,12 @@ import {
   type StudioResource,
 } from '@sanity/message-protocol'
 import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
-import {useCallback, useState} from 'react'
+import {useCallback} from 'react'
 
-import {useWindowConnection} from './useWindowConnection'
+import {useWindowConnection} from '../comlink/useWindowConnection'
 
 interface DocumentInteractionHistory {
   recordEvent: (eventType: 'viewed' | 'edited' | 'created' | 'deleted') => void
-  isConnected: boolean
 }
 
 /**
@@ -42,7 +40,11 @@ interface UseRecordDocumentHistoryEventProps extends DocumentHandle {
  *
  * @example
  * ```tsx
- * function MyDocumentAction(props: DocumentActionProps) {
+ * import {useRecordDocumentHistoryEvent} from '@sanity/sdk-react'
+ * import {Button} from '@sanity/ui'
+ * import {Suspense} from 'react'
+ *
+ * function RecordEventButton(props: DocumentActionProps) {
  *   const {documentId, documentType, resourceType, resourceId} = props
  *   const {recordEvent, isConnected} = useRecordDocumentHistoryEvent({
  *     documentId,
@@ -50,13 +52,21 @@ interface UseRecordDocumentHistoryEventProps extends DocumentHandle {
  *     resourceType,
  *     resourceId,
  *   })
- *
  *   return (
  *     <Button
  *       disabled={!isConnected}
  *       onClick={() => recordEvent('viewed')}
- *       text={'Viewed'}
+ *       text="Viewed"
  *     />
+ *   )
+ * }
+ *
+ * // Wrap the component with Suspense since the hook may suspend
+ * function MyDocumentAction(props: DocumentActionProps) {
+ *   return (
+ *     <Suspense fallback={<Button text="Loading..." disabled />}>
+ *       <RecordEventButton {...props} />
+ *     </Suspense>
  *   )
  * }
  * ```
@@ -68,11 +78,9 @@ export function useRecordDocumentHistoryEvent({
   resourceId,
   schemaName,
 }: UseRecordDocumentHistoryEventProps): DocumentInteractionHistory {
-  const [status, setStatus] = useState<Status>('idle')
   const {sendMessage} = useWindowConnection<Events.HistoryMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
-    onStatus: setStatus,
   })
 
   if (resourceType !== 'studio' && !resourceId) {
@@ -110,6 +118,5 @@ export function useRecordDocumentHistoryEvent({
 
   return {
     recordEvent,
-    isConnected: status === 'connected',
   }
 }

@@ -1,10 +1,9 @@
 import {useStudioWorkspacesByProjectIdDataset} from '@sanity/sdk-react'
 import {Card, Code, Container, Flex, Heading, Stack, Text} from '@sanity/ui'
-import {type ReactElement} from 'react'
+import {type ReactElement, Suspense} from 'react'
 
-export function DashboardWorkspacesRoute(): ReactElement {
-  const {workspacesByProjectIdAndDataset, error, isConnected} =
-    useStudioWorkspacesByProjectIdDataset()
+function DashboardWorkspacesContent() {
+  const {workspacesByProjectIdAndDataset, error} = useStudioWorkspacesByProjectIdDataset()
 
   return (
     <Container width={2}>
@@ -13,11 +12,6 @@ export function DashboardWorkspacesRoute(): ReactElement {
 
         <Card padding={4} radius={2} shadow={1}>
           <Stack space={4}>
-            <Flex direction="column" gap={2}>
-              <Text weight="semibold">Connection Status:</Text>
-              <Text>{isConnected ? 'Connected' : 'Not Connected'}</Text>
-            </Flex>
-
             {error && (
               <Flex direction="column" gap={2}>
                 <Text weight="semibold">Error:</Text>
@@ -35,5 +29,21 @@ export function DashboardWorkspacesRoute(): ReactElement {
         </Card>
       </Stack>
     </Container>
+  )
+}
+
+export function DashboardWorkspacesRoute(): ReactElement {
+  return (
+    <Suspense
+      fallback={
+        <Container width={2}>
+          <Card padding={4} radius={2} shadow={1}>
+            <Text>Loading workspaces…</Text>
+          </Card>
+        </Container>
+      }
+    >
+      <DashboardWorkspacesContent />
+    </Suspense>
   )
 }

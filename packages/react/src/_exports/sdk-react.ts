@@ -20,8 +20,6 @@ export {
   useFrameConnection,
   type UseFrameConnectionOptions,
 } from '../hooks/comlink/useFrameConnection'
-export {useManageFavorite} from '../hooks/comlink/useManageFavorite'
-export {useRecordDocumentHistoryEvent} from '../hooks/comlink/useRecordDocumentHistoryEvent'
 export {
   useWindowConnection,
   type UseWindowConnectionOptions,
@@ -29,10 +27,12 @@ export {
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
+export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
 export {
   type NavigateToStudioResult,
   useNavigateToStudioDocument,
 } from '../hooks/dashboard/useNavigateToStudioDocument'
+export {useRecordDocumentHistoryEvent} from '../hooks/dashboard/useRecordDocumentHistoryEvent'
 export {useStudioWorkspacesByProjectIdDataset} from '../hooks/dashboard/useStudioWorkspacesByProjectIdDataset'
 export {useDatasets} from '../hooks/datasets/useDatasets'
 export {useApplyDocumentActions} from '../hooks/document/useApplyDocumentActions'
