@@ -77,7 +77,6 @@ describe('getOrCreateNode', () => {
     getOrCreateNode({state, instance}, nodeConfig)
 
     expect(mockNode.onStatus).toHaveBeenCalled()
-    expect(typeof statusCallback).toBe('function')
     expect(state.get().nodes.get(nodeConfig.name)?.statusUnsub).toBe(statusUnsubMock)
 
     statusCallback?.('connected')

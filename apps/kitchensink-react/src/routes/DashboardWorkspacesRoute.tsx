@@ -1,8 +1,8 @@
 import {useStudioWorkspacesByProjectIdDataset} from '@sanity/sdk-react'
 import {Card, Code, Container, Flex, Heading, Stack, Text} from '@sanity/ui'
-import {type ReactElement} from 'react'
+import {type ReactElement, Suspense} from 'react'
 
-export function DashboardWorkspacesRoute(): ReactElement {
+function DashboardWorkspacesContent() {
   const {workspacesByProjectIdAndDataset, error} = useStudioWorkspacesByProjectIdDataset()
 
   return (
@@ -29,5 +29,21 @@ export function DashboardWorkspacesRoute(): ReactElement {
         </Card>
       </Stack>
     </Container>
+  )
+}
+
+export function DashboardWorkspacesRoute(): ReactElement {
+  return (
+    <Suspense
+      fallback={
+        <Container width={2}>
+          <Card padding={4} radius={2} shadow={1}>
+            <Text>Loading workspaces…</Text>
+          </Card>
+        </Container>
+      }
+    >
+      <DashboardWorkspacesContent />
+    </Suspense>
   )
 }

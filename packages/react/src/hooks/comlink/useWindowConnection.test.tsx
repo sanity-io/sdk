@@ -1,8 +1,10 @@
 import {type Message, type Node} from '@sanity/comlink'
 import {getNodeState, type NodeState, type StateSource} from '@sanity/sdk'
+import {screen} from '@testing-library/react'
+import {Suspense} from 'react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {renderHook} from '../../../test/test-utils'
+import {render, renderHook} from '../../../test/test-utils'
 import {useWindowConnection} from './useWindowConnection'
 
 vi.mock('@sanity/sdk', async () => {
@@ -86,5 +88,58 @@ describe('useWindowConnection', () => {
 
     result.current.sendMessage('ANOTHER_MESSAGE', {otherData: 123})
     expect(node.post).toHaveBeenCalledWith('ANOTHER_MESSAGE', {otherData: 123})
+  })
+
+  it('should suspend and render fallback when node state is undefined', () => {
+    const suspenderPromise = Promise.resolve('resolved')
+    const mockStateSourceWithUndefined = {
+      subscribe: vi.fn(),
+      getCurrent: vi.fn(() => undefined),
+      observable: {
+        pipe: vi.fn(() => ({
+          subscribe: vi.fn(() => ({unsubscribe: () => {}})),
+          toPromise: () => suspenderPromise,
+        })),
+        subscribe: vi.fn(() => ({unsubscribe: () => {}})),
+      },
+    } as unknown as StateSource<NodeState>
+
+    vi.mocked(getNodeState).mockReturnValue(mockStateSourceWithUndefined)
+
+    function TestComponent() {
+      useWindowConnection<TestMessages, TestMessages>({
+        name: 'test',
+        connectTo: 'window',
+      })
+      return <div>Loaded</div>
+    }
+
+    render(
+      <Suspense fallback={<div>Loading...</div>}>
+        <TestComponent />
+      </Suspense>,
+    )
+
+    expect(screen.getByText('Loading...')).toBeInTheDocument()
+  })
+
+  it('should call node.fetch with correct arguments and return its result', async () => {
+    const mockFetch = vi.fn().mockResolvedValue('fetch-result')
+    node.fetch = mockFetch
+
+    const {result} = renderHook(() =>
+      useWindowConnection<TestMessages, TestMessages>({
+        name: 'test',
+        connectTo: 'window',
+      }),
+    )
+
+    const response = await result.current.fetch('TYPE', {foo: 'bar'}, {responseTimeout: 123})
+    expect(mockFetch).toHaveBeenCalledWith('TYPE', {foo: 'bar'}, {responseTimeout: 123})
+    expect(response).toBe('fetch-result')
+
+    const responseNoArgs = await result.current.fetch('TYPE')
+    expect(mockFetch).toHaveBeenCalledWith('TYPE', undefined, {})
+    expect(responseNoArgs).toBe('fetch-result')
   })
 })

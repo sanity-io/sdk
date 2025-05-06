@@ -27,6 +27,36 @@ interface StudioWorkspacesResult {
 /**
  * Hook that fetches studio workspaces and organizes them by projectId:dataset
  * @internal
+ *
+ * @example
+ * ```tsx
+ * import {useStudioWorkspacesByProjectIdDataset} from '@sanity/sdk-react'
+ * import {Card, Code, Button} from '@sanity/ui'
+ * import {Suspense} from 'react'
+ *
+ * function WorkspacesCard() {
+ *   const {workspacesByProjectIdAndDataset, error} = useStudioWorkspacesByProjectIdDataset()
+ *   if (error) {
+ *     return <div>Error: {error}</div>
+ *   }
+ *   return (
+ *     <Card padding={4} radius={2} shadow={1}>
+ *       <Code language="json">
+ *         {JSON.stringify(workspacesByProjectIdAndDataset, null, 2)}
+ *       </Code>
+ *     </Card>
+ *   )
+ * }
+ *
+ * // Wrap the component with Suspense since the hook may suspend
+ * function DashboardWorkspaces() {
+ *   return (
+ *     <Suspense fallback={<Button text="Loading..." disabled />}>
+ *       <WorkspacesCard />
+ *     </Suspense>
+ *   )
+ * }
+ * ```
  */
 export function useStudioWorkspacesByProjectIdDataset(): StudioWorkspacesResult {
   const [workspacesByProjectIdAndDataset, setWorkspacesByProjectIdAndDataset] =
@@ -47,7 +77,7 @@ export function useStudioWorkspacesByProjectIdDataset(): StudioWorkspacesResult 
       try {
         const data = await fetch<{
           context: {availableResources: Array<DashboardResource>}
-        }>('dashboard/v1/bridge/context', undefined, {signal})
+        }>('dashboard/v1/context', undefined, {signal})
 
         const workspaceMap: WorkspacesByProjectIdDataset = {}
         const noProjectIdAndDataset: DashboardResource[] = []

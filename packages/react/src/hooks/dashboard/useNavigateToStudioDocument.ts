@@ -36,16 +36,28 @@ export interface NavigateToStudioResult {
  * - `isConnected` - Boolean indicating if connection to Dashboard is established
  *
  * @example
- * ```ts
+ * ```tsx
  * import {useNavigateToStudioDocument, type DocumentHandle} from '@sanity/sdk-react'
+ * import {Button} from '@sanity/ui'
+ * import {Suspense} from 'react'
  *
- * function MyComponent({documentHandle}: {documentHandle: DocumentHandle}) {
+ * function NavigateButton({documentHandle}: {documentHandle: DocumentHandle}) {
  *   const {navigateToStudioDocument, isConnected} = useNavigateToStudioDocument(documentHandle)
- *
  *   return (
- *     <button onClick={navigateToStudioDocument} disabled={!isConnected}>
- *       Navigate to Studio Document
- *     </button>
+ *     <Button
+ *       disabled={!isConnected}
+ *       onClick={navigateToStudioDocument}
+ *       text="Navigate to Studio Document"
+ *     />
+ *   )
+ * }
+ *
+ * // Wrap the component with Suspense since the hook may suspend
+ * function MyDocumentAction({documentHandle}: {documentHandle: DocumentHandle}) {
+ *   return (
+ *     <Suspense fallback={<Button text="Loading..." disabled />}>
+ *       <NavigateButton documentHandle={documentHandle} />
+ *     </Suspense>
  *   )
  * }
  * ```

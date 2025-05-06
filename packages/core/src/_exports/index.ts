@@ -32,8 +32,7 @@ export {
   releaseChannel,
 } from '../comlink/controller/comlinkControllerStore'
 export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
-export {getNodeState} from '../comlink/node/getNodeState'
-export {type NodeState} from '../comlink/node/getNodeState'
+export {getNodeState, type NodeState} from '../comlink/node/getNodeState'
 export {type FrameMessage, type WindowMessage} from '../comlink/types'
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
 export {

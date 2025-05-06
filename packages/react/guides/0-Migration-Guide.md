@@ -2,6 +2,161 @@
 title: Migration guide
 ---
 
+## Migrating to @sanity/sdk-react@1.0.0
+
+### Breaking Changes
+
+1. `useManageFavorite`, `useNavigateToStudioDocument`, and `useRecordDocumentHistoryEvent` now all require a Suspense boundary.
+
+**Before:**
+
+```typescript
+function MyDocumentAction(props: DocumentActionProps) {
+  const {documentId, documentType, resourceId} = props
+  const {favorite, unfavorite, isFavorited, isConnected} = useManageFavorite({
+    documentId,
+    documentType,
+    resourceId
+  })
+
+  return (
+    <Button
+      disabled={!isConnected}
+      onClick={() => isFavorited ? unfavorite() : favorite()}
+      text={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+    />
+  )
+}
+```
+
+**After:**
+
+```typescript
+function FavoriteButton(props: DocumentActionProps) {
+  const {documentId, documentType, resourceId} = props
+  const {favorite, unfavorite, isFavorited, isConnected} = useManageFavorite({
+    documentId,
+    documentType,
+    resourceId
+  })
+
+  return (
+    <Button
+      disabled={!isConnected}
+      onClick={() => isFavorited ? unfavorite() : favorite()}
+      text={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+    />
+  )
+}
+
+// Wrap the component with Suspense since the hook may suspend
+function MyDocumentAction(props: DocumentActionProps) {
+  return (
+    <Suspense fallback={<Button text="Loading..." disabled />}>
+      <FavoriteButton {...props} />
+    </Suspense>
+  )
+}
+```
+
+---
+
+**The following hooks now also suspend and must be wrapped in `<Suspense>`:**
+
+### `useNavigateToStudioDocument`
+
+**Before:**
+
+```typescript
+function NavigateButton({documentHandle}: {documentHandle: DocumentHandle}) {
+  const {navigateToStudioDocument, isConnected} = useNavigateToStudioDocument(documentHandle)
+  return (
+    <Button
+      disabled={!isConnected}
+      onClick={navigateToStudioDocument}
+      text="Navigate to Studio Document"
+    />
+  )
+}
+```
+
+**After:**
+
+```typescript
+function NavigateButton({documentHandle}: {documentHandle: DocumentHandle}) {
+  const {navigateToStudioDocument, isConnected} = useNavigateToStudioDocument(documentHandle)
+  return (
+    <Button
+      disabled={!isConnected}
+      onClick={navigateToStudioDocument}
+      text="Navigate to Studio Document"
+    />
+  )
+}
+
+// Wrap the component with Suspense since the hook may suspend
+function MyDocumentAction({documentHandle}: {documentHandle: DocumentHandle}) {
+  return (
+    <Suspense fallback={<Button text="Loading..." disabled />}>
+      <NavigateButton documentHandle={documentHandle} />
+    </Suspense>
+  )
+}
+```
+
+### `useRecordDocumentHistoryEvent`
+
+**Before:**
+
+```typescript
+function RecordEventButton(props: DocumentActionProps) {
+  const {documentId, documentType, resourceType, resourceId} = props
+  const {recordEvent, isConnected} = useRecordDocumentHistoryEvent({
+    documentId,
+    documentType,
+    resourceType,
+    resourceId,
+  })
+  return (
+    <Button
+      disabled={!isConnected}
+      onClick={() => recordEvent('viewed')}
+      text="Viewed"
+    />
+  )
+}
+```
+
+**After:**
+
+```typescript
+function RecordEventButton(props: DocumentActionProps) {
+  const {documentId, documentType, resourceType, resourceId} = props
+  const {recordEvent, isConnected} = useRecordDocumentHistoryEvent({
+    documentId,
+    documentType,
+    resourceType,
+    resourceId,
+  })
+  return (
+    <Button
+      disabled={!isConnected}
+      onClick={() => recordEvent('viewed')}
+      text="Viewed"
+    />
+  )
+}
+
+// Wrap the component with Suspense since the hook may suspend
+function MyDocumentAction(props: DocumentActionProps) {
+  return (
+    <Suspense fallback={<Button text="Loading..." disabled />}>
+      <RecordEventButton {...props} />
+    </Suspense>
+  )
+}
+```
+
 ## Migrating to @sanity/sdk-react@0.0.0-rc.7
 
 This version introduces significant improvements for TypeScript users by integrating [Sanity TypeGen](https://www.sanity.io/docs/sanity-typegen). While Typegen is optional, using it unlocks strong type safety for documents, queries, and projections. These changes also refine hook signatures for better consistency, even for JavaScript users.
@@ -211,68 +366,6 @@ useDocumentEvent({...docHandle, onEvent: onEventCallback})
 - `applyDocumentActions` similarly uses these generic types and its return type reflects the potentially typed document result (`SanityDocumentResult`).
 
 By adopting these changes, especially `defineQuery` and `defineProjection`, you enable the SDK to leverage Typegen for a much safer and more productive development experience, particularly in TypeScript projects.
-
-### Other Breaking Changes
-
-1. `useManageFavorite` should now have a Suspense boundary.
-
-**Before:**
-
-```typescript
-function MyDocumentAction(props: DocumentActionProps) {
-  const {documentId, documentType, resourceId} = props
-  const {favorite, unfavorite, isFavorited, isConnected} = useManageFavorite({
-    _id,
-    _type,
-    resourceId
-  })
-
-  return (
-    <Button
-      disabled={!isConnected}
-      onClick={() => isFavorited ? unfavorite() : favorite()}
-      text={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-    />
-  )
-}
-```
-
-**After:**
-
-```typescript
- function FavoriteButton(props: DocumentActionProps) {
-   const {documentId, documentType, resourceId} = props
-   const {favorite, unfavorite, isFavorited, isConnected} = useManageFavorite({
-     documentId,
-     documentType,
-     resourceId
-   })
-
-   return (
-     <Button
-       disabled={!isConnected}
-       onClick={() => isFavorited ? unfavorite() : favorite()}
-       text={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-     />
-   )
- }
-
- // Wrap the component with Suspense since the hook may suspend
- function MyDocumentAction(props: DocumentActionProps) {
-   return (
-     <Suspense
-       fallback={
-         <Button
-           text="Loading..."
-           disabled
-         />
-       }
-     >
-       <FavoriteButton {...props} />
-     </Suspense>
-   )
- }
-```
 
 ## Migrating to @sanity/sdk-react@0.0.0-rc.4
 

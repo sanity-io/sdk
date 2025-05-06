@@ -15,8 +15,8 @@ import {
 } from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 
+import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useWindowConnection} from './useWindowConnection'
 
 interface ManageFavorite extends FavoriteStatusResponse {
   favorite: () => Promise<void>
@@ -166,25 +166,6 @@ export function useManageFavorite({
 
   const favorite = useCallback(() => handleFavoriteAction('added'), [handleFavoriteAction])
   const unfavorite = useCallback(() => handleFavoriteAction('removed'), [handleFavoriteAction])
-
-  // if state is undefined, we should suspend
-  if (!state) {
-    try {
-      const promise = resolveFavoritesState(instance, context)
-      throw promise
-    } catch (err) {
-      // If we get a timeout error, return a fallback state instead of suspending
-      if (err instanceof Error && err.message === 'Favorites service connection timeout') {
-        return {
-          favorite: async () => {},
-          unfavorite: async () => {},
-          isFavorited: false,
-        }
-      }
-      // For other errors, continue with suspension
-      throw err
-    }
-  }
 
   return {
     favorite,

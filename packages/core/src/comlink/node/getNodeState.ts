@@ -18,7 +18,7 @@ const NODE_RELEASE_TIME = 5000
  * @public
  */
 export interface NodeState {
-  node: Node<WindowMessage, FrameMessage> | undefined
+  node: Node<WindowMessage, FrameMessage>
   status: Status | undefined
 }
 const selectNode = (context: SelectorContext<ComlinkNodeState>, nodeInput: NodeInput) =>

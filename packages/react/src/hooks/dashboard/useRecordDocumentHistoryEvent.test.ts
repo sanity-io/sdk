@@ -1,10 +1,10 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'
+import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useRecordDocumentHistoryEvent} from './useRecordDocumentHistoryEvent'
-import {useWindowConnection} from './useWindowConnection'
 
-vi.mock('./useWindowConnection', () => ({
+vi.mock('../comlink/useWindowConnection', () => ({
   useWindowConnection: vi.fn(),
 }))
 
@@ -52,5 +52,18 @@ describe('useRecordDocumentHistoryEvent', () => {
     const {result} = renderHook(() => useRecordDocumentHistoryEvent(mockDocumentHandle))
 
     expect(() => result.current.recordEvent('viewed')).toThrow('Failed to send message')
+  })
+
+  it('should throw error when resourceId is missing for non-studio resources', () => {
+    const mockMediaDocumentHandle = {
+      documentId: 'mock-id',
+      documentType: 'mock-type',
+      resourceType: 'media-library' as const,
+      resourceId: undefined,
+    }
+
+    expect(() => renderHook(() => useRecordDocumentHistoryEvent(mockMediaDocumentHandle))).toThrow(
+      'resourceId is required for media-library and canvas resources',
+    )
   })
 })

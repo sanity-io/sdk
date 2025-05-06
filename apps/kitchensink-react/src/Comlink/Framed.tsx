@@ -4,7 +4,6 @@ import {type ReactElement, Suspense, useEffect, useRef, useState} from 'react'
 
 import {FromIFrameMessage, ToIFrameMessage, UserData} from './types'
 
-// Extracted connection-dependent content
 function FramedContent() {
   const [receivedMessages, setReceivedMessages] = useState<string[]>([])
   const [users, setUsers] = useState<UserData[]>([])
@@ -22,10 +21,7 @@ function FramedContent() {
     },
   })
 
-  // Fetch all users when connected
   useEffect(() => {
-    if (!fetch) return
-
     async function fetchUsers(signal: AbortSignal) {
       try {
         const data = await fetch<UserData[]>('FETCH_USERS', undefined, {signal})

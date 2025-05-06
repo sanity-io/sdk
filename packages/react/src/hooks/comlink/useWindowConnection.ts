@@ -1,5 +1,12 @@
 import {type MessageData, type NodeInput} from '@sanity/comlink'
-import {type FrameMessage, getNodeState, type SanityInstance, type WindowMessage} from '@sanity/sdk'
+import {
+  type FrameMessage,
+  getNodeState,
+  type NodeState,
+  type SanityInstance,
+  type StateSource,
+  type WindowMessage,
+} from '@sanity/sdk'
 import {useCallback, useEffect, useRef} from 'react'
 import {filter, firstValueFrom} from 'rxjs'
 
@@ -42,7 +49,10 @@ export interface WindowConnection<TMessage extends WindowMessage> {
 }
 
 const useNodeState = createStateSourceHook({
-  getState: getNodeState,
+  getState: getNodeState as (
+    instance: SanityInstance,
+    nodeInput: NodeInput,
+  ) => StateSource<NodeState>,
   shouldSuspend: (instance: SanityInstance, nodeInput: NodeInput) =>
     getNodeState(instance, nodeInput).getCurrent() === undefined,
   suspender: (instance: SanityInstance, nodeInput: NodeInput) => {
@@ -67,19 +77,14 @@ export function useWindowConnection<
   connectTo,
   onMessage,
 }: UseWindowConnectionOptions<TFrameMessage>): WindowConnection<TWindowMessage> {
-  const nodeEntry = useNodeState({name, connectTo})
+  const {node} = useNodeState({name, connectTo})
   const messageUnsubscribers = useRef<(() => void)[]>([])
   const instance = useSanityInstance()
 
   useEffect(() => {
-    if (!nodeEntry) return
-
     if (onMessage) {
       Object.entries(onMessage).forEach(([type, handler]) => {
-        const messageUnsubscribe = nodeEntry.node?.on(
-          type,
-          handler as WindowMessageHandler<TFrameMessage>,
-        )
+        const messageUnsubscribe = node.on(type, handler as WindowMessageHandler<TFrameMessage>)
         if (messageUnsubscribe) {
           messageUnsubscribers.current.push(messageUnsubscribe)
         }
@@ -90,16 +95,13 @@ export function useWindowConnection<
       messageUnsubscribers.current.forEach((unsubscribe) => unsubscribe())
       messageUnsubscribers.current = []
     }
-  }, [instance, name, onMessage, nodeEntry])
+  }, [instance, name, onMessage, node])
 
   const sendMessage = useCallback(
     (type: TWindowMessage['type'], data?: Extract<TWindowMessage, {type: typeof type}>['data']) => {
-      if (!nodeEntry) {
-        throw new Error('Cannot send message before connection is established')
-      }
-      nodeEntry.node?.post(type, data)
+      node.post(type, data)
     },
-    [nodeEntry],
+    [node],
   )
 
   const fetch = useCallback(
@@ -112,12 +114,9 @@ export function useWindowConnection<
         suppressWarnings?: boolean
       },
     ): Promise<TResponse> => {
-      if (!nodeEntry) {
-        throw new Error('Cannot fetch before connection is established')
-      }
-      return nodeEntry.node?.fetch(type, data, fetchOptions ?? {}) as Promise<TResponse>
+      return node.fetch(type, data, fetchOptions ?? {}) as Promise<TResponse>
     },
-    [nodeEntry],
+    [node],
   )
   return {
     sendMessage,

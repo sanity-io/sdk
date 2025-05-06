@@ -33,7 +33,6 @@ export const getOrCreateNode = (
     const updatedEntry = {
       ...currentEntry,
       status,
-      statusUnsub: currentEntry.statusUnsub,
     }
     state.set('updateNodeStatus', {
       nodes: new Map(currentNodes).set(options.name, updatedEntry),

@@ -26,12 +26,12 @@ function useStudioResource<T extends DocumentHandle>(docHandle: T) {
 }
 
 // Loading fallback for Suspense
-function FavoriteStatusFallback() {
+function ButtonFallback() {
   return <Button mode="ghost" disabled text="Loading..." />
 }
 
 // Error fallback for ErrorBoundary
-function FavoriteStatusError({error}: {error: Error}) {
+function ButtonError({error}: {error: Error}) {
   return <span style={{color: 'red'}}>Error: {error.message}</span>
 }
 
@@ -44,7 +44,7 @@ function FavoriteButton({docHandle}: {docHandle: DocumentHandle}) {
   const {favorite, unfavorite, isFavorited} = useManageFavorite(studioResource)
 
   return (
-    <ErrorBoundary fallbackRender={({error}) => <FavoriteStatusError error={error} />}>
+    <ErrorBoundary fallbackRender={({error}) => <ButtonError error={error} />}>
       <Button
         mode="ghost"
         onClick={() => {
@@ -60,23 +60,42 @@ function FavoriteButton({docHandle}: {docHandle: DocumentHandle}) {
   )
 }
 
-function ActionButtons(docHandle: DocumentHandle) {
+const ViewButton = ({docHandle}: {docHandle: DocumentHandle}) => {
   const {recordEvent} = useRecordDocumentHistoryEvent({
     ...docHandle,
     resourceType: 'studio',
   })
+  return (
+    <ErrorBoundary fallbackRender={({error}) => <ButtonError error={error} />}>
+      <Button mode="ghost" onClick={() => recordEvent('viewed')} text="Record view" />
+    </ErrorBoundary>
+  )
+}
+
+const NavigateToStudioButton = ({docHandle}: {docHandle: DocumentHandle}) => {
   const {navigateToStudioDocument} = useNavigateToStudioDocument(
     docHandle,
     'https://test-studio.sanity.build',
   )
+  return (
+    <ErrorBoundary fallbackRender={({error}) => <ButtonError error={error} />}>
+      <Button mode="ghost" onClick={navigateToStudioDocument} text="Edit in Studio" />
+    </ErrorBoundary>
+  )
+}
 
+function ActionButtons(docHandle: DocumentHandle) {
   return (
     <Flex gap={2} padding={2}>
-      <Suspense fallback={<FavoriteStatusFallback />}>
+      <Suspense fallback={<ButtonFallback />}>
         <FavoriteButton docHandle={docHandle} />
       </Suspense>
-      <Button mode="ghost" onClick={() => recordEvent('viewed')} text="Record view" />
-      <Button mode="ghost" onClick={navigateToStudioDocument} text="Edit in Studio" />
+      <Suspense fallback={<ButtonFallback />}>
+        <ViewButton docHandle={docHandle} />
+      </Suspense>
+      <Suspense fallback={<ButtonFallback />}>
+        <NavigateToStudioButton docHandle={docHandle} />
+      </Suspense>
     </Flex>
   )
 }
