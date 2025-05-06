@@ -6,7 +6,7 @@ title: Migration guide
 
 ### Breaking Changes
 
-1. `useManageFavorite`, `useNavigateToStudioDocument`, and `useRecordDocumentHistoryEvent` now all require a Suspense boundary.
+1. `useManageFavorite`, `useNavigateToStudioDocument`, and `useRecordDocumentHistoryEvent` now all suspend.
 
 **Before:**
 
@@ -34,7 +34,7 @@ function MyDocumentAction(props: DocumentActionProps) {
 ```typescript
 function FavoriteButton(props: DocumentActionProps) {
   const {documentId, documentType, resourceId} = props
-  const {favorite, unfavorite, isFavorited, isConnected} = useManageFavorite({
+  const {favorite, unfavorite, isFavorited} = useManageFavorite({
     documentId,
     documentType,
     resourceId
@@ -42,7 +42,6 @@ function FavoriteButton(props: DocumentActionProps) {
 
   return (
     <Button
-      disabled={!isConnected}
       onClick={() => isFavorited ? unfavorite() : favorite()}
       text={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
     />
@@ -84,10 +83,9 @@ function NavigateButton({documentHandle}: {documentHandle: DocumentHandle}) {
 
 ```typescript
 function NavigateButton({documentHandle}: {documentHandle: DocumentHandle}) {
-  const {navigateToStudioDocument, isConnected} = useNavigateToStudioDocument(documentHandle)
+  const {navigateToStudioDocument} = useNavigateToStudioDocument(documentHandle)
   return (
     <Button
-      disabled={!isConnected}
       onClick={navigateToStudioDocument}
       text="Navigate to Studio Document"
     />
@@ -132,7 +130,7 @@ function RecordEventButton(props: DocumentActionProps) {
 ```typescript
 function RecordEventButton(props: DocumentActionProps) {
   const {documentId, documentType, resourceType, resourceId} = props
-  const {recordEvent, isConnected} = useRecordDocumentHistoryEvent({
+  const {recordEvent} = useRecordDocumentHistoryEvent({
     documentId,
     documentType,
     resourceType,
@@ -140,7 +138,6 @@ function RecordEventButton(props: DocumentActionProps) {
   })
   return (
     <Button
-      disabled={!isConnected}
       onClick={() => recordEvent('viewed')}
       text="Viewed"
     />
