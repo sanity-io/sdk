@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.0.3](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.2...sdk-react-v0.0.3) (2025-05-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* bump versions ([#516](https://github.com/sanity-io/sdk/issues/516))
+* remove redundant guides: ([#511](https://github.com/sanity-io/sdk/issues/511))
+* rename useProjection to useDocumentProjection & rename usePreview to useDocumentPreview ([#508](https://github.com/sanity-io/sdk/issues/508))
+
+### Bug Fixes
+
+* bump versions ([#516](https://github.com/sanity-io/sdk/issues/516)) ([3601ade](https://github.com/sanity-io/sdk/commit/3601adeebe986af4102f639500a754d585694d9e))
+
+
+### Documentation
+
+* remove redundant guides: ([#511](https://github.com/sanity-io/sdk/issues/511)) ([c7be7ac](https://github.com/sanity-io/sdk/commit/c7be7ac1170727496fdb725265bd3d51e02101f3))
+* update package readmes ([#513](https://github.com/sanity-io/sdk/issues/513)) ([aa79bc7](https://github.com/sanity-io/sdk/commit/aa79bc74e904cfcac119be415d871fc71fe17277))
+
+
+### Miscellaneous
+
+* rename useProjection to useDocumentProjection & rename usePreview to useDocumentPreview ([#508](https://github.com/sanity-io/sdk/issues/508)) ([324aec7](https://github.com/sanity-io/sdk/commit/324aec74f69b42bfca3b44934130eeb91f013528))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 0.0.3
+
 ## [0.0.2](https://github.com/sanity-io/sdk/compare/sdk-react-v0.0.1...sdk-react-v0.0.2) (2025-05-06)
 
 
