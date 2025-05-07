@@ -36,7 +36,9 @@ export function getProjectionState<
   instance: SanityInstance,
   options: ProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
 ): StateSource<
-  | ProjectionValuePending<SanityProjectionResult<TProjection, TDocumentType, TDataset, TProjectId>>
+  | ProjectionValuePending<
+      SanityProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
+    >
   | undefined
 >
 

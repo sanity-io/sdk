@@ -74,7 +74,7 @@ export function useQuery<
   options: QueryOptions<TQuery, TDataset, TProjectId>,
 ): {
   /** The query result, typed based on the GROQ query string */
-  data: SanityQueryResult<TQuery, TDataset, TProjectId>
+  data: SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>
   /** True if a query transition is in progress */
   isPending: boolean
 }
@@ -182,7 +182,7 @@ export function useQuery(options: QueryOptions): {data: unknown; isPending: bool
     //    the captured signal remains unchanged for this suspended render.
     // Thus, the promise thrown here uses a stable abort signal, ensuring correct behavior.
     const currentSignal = ref.current.signal
-    // eslint-disable-next-line react-compiler/react-compiler
+
     throw resolveQuery(instance, {...deferred, signal: currentSignal})
   }
 

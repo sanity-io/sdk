@@ -1,5 +1,5 @@
 import {type DocumentOptions, getDocumentState, type JsonMatch, resolveDocument} from '@sanity/sdk'
-import {type SanityDocumentResult} from 'groq'
+import {type SanityDocument} from 'groq'
 import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
@@ -37,7 +37,7 @@ interface UseDocument {
   /** @internal */
   <TDocumentType extends string, TDataset extends string, TProjectId extends string = string>(
     options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
-  ): {data: SanityDocumentResult<TDocumentType, TDataset, TProjectId> | null}
+  ): {data: SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`> | null}
 
   /** @internal */
   <
@@ -47,7 +47,9 @@ interface UseDocument {
     TProjectId extends string = string,
   >(
     options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
-  ): {data: JsonMatch<SanityDocumentResult<TDocumentType, TDataset, TProjectId>, TPath> | undefined}
+  ): {
+    data: JsonMatch<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath> | undefined
+  }
 
   /** @internal */
   <TData>(options: DocumentOptions<undefined>): {data: TData | null}
@@ -126,10 +128,10 @@ interface UseDocument {
   ): TPath extends string
     ? {
         data:
-          | JsonMatch<SanityDocumentResult<TDocumentType, TDataset, TProjectId>, TPath>
+          | JsonMatch<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath>
           | undefined
       }
-    : {data: SanityDocumentResult<TDocumentType, TDataset, TProjectId> | null}
+    : {data: SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`> | null}
 
   /**
    * @public
