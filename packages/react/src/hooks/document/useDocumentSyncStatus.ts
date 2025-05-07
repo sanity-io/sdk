@@ -46,7 +46,7 @@ type UseDocumentSyncStatus = {
 }
 
 /**
- * @beta
+ * @public
  * @function
  */
 export const useDocumentSyncStatus: UseDocumentSyncStatus = createStateSourceHook({

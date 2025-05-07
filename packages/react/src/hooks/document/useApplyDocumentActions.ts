@@ -12,7 +12,7 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
 import type {useEditDocument} from './useEditDocument'
 
 /**
- * @beta
+ * @public
  */
 interface UseApplyDocumentActions {
   (): <
@@ -28,7 +28,7 @@ interface UseApplyDocumentActions {
 }
 
 /**
- * @beta
+ * @public
  *
  * Provides a stable callback function for applying one or more document actions.
  *

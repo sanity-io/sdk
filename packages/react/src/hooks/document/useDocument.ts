@@ -57,7 +57,7 @@ interface UseDocument {
   /**
    * ## useDocument via Type Inference (Recommended)
    *
-   * @beta
+   * @public
    *
    * The preferred way to use this hook when working with Sanity Typegen.
    *
@@ -132,7 +132,7 @@ interface UseDocument {
     : {data: SanityDocumentResult<TDocumentType, TDataset, TProjectId> | null}
 
   /**
-   * @beta
+   * @public
    *
    * ## useDocument via Explicit Types
    *
@@ -202,7 +202,7 @@ interface UseDocument {
 }
 
 /**
- * @beta
+ * @public
  * Reads and subscribes to a document's realtime state, incorporating both local and remote changes.
  *
  * This hook comes in two main flavors to suit your needs:
