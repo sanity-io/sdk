@@ -51,7 +51,7 @@ function DocumentEditorDialog({
   open,
 }: DocumentEditorDialogProps) {
   const handle = {documentId, documentType}
-  const document = useDocument(handle)
+  const {data: document} = useDocument(handle)
   const editDocument = useEditDocument(handle)
   const isSaving = useDocumentSyncStatus(handle)
 

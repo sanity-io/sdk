@@ -85,7 +85,7 @@ describe('useDocument hook', () => {
 
     const {result} = renderHook(() => useDocument({documentId: 'doc1', documentType: 'book'}))
 
-    expect(result.current).toEqual(book)
+    expect(result.current.data).toEqual(book)
     expect(getCurrent).toHaveBeenCalled()
     expect(subscribe).toHaveBeenCalled()
   })

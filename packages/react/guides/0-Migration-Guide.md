@@ -166,6 +166,42 @@ Also renamed associated types to match:
 - `UseProjectionOptions` → `useDocumentProjectionOptions`
 - `UseProjectionResults` → `useDocumentProjectionResults`
 
+3. Updated `useDocument` return structure
+
+The `useDocument` hook now returns its data under a `data` property for consistency with other hooks in the SDK.
+
+**Before:**
+
+```typescript
+// Full document
+const product = useDocument({documentId: '123', documentType: 'product'})
+console.log(product?.title)
+
+// Path selection
+const title = useDocument({
+  documentId: '123',
+  documentType: 'product',
+  path: 'title',
+})
+console.log(title)
+```
+
+**After:**
+
+```typescript
+// Full document - now returns {data: T | null}
+const {data: product} = useDocument({documentId: '123', documentType: 'product'})
+console.log(product?.title) // product is possibly null
+
+// Path selection - now returns {data: T | undefined}
+const {data: title} = useDocument({
+  documentId: '123',
+  documentType: 'product',
+  path: 'title',
+})
+console.log(title) // title is possibly undefined
+```
+
 ## Migrating to @sanity/sdk-react@0.0.0-rc.7
 
 This version introduces significant improvements for TypeScript users by integrating [Sanity TypeGen](https://www.sanity.io/docs/sanity-typegen). While Typegen is optional, using it unlocks strong type safety for documents, queries, and projections. These changes also refine hook signatures for better consistency, even for JavaScript users.
