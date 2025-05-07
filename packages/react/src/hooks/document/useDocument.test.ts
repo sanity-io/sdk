@@ -33,7 +33,7 @@ type UseDocumentTestType = SchemaOrigin<
       value?: number
     }
   },
-  'p:use-document-test-dataset'
+  'p.use-document-test-dataset'
 >
 
 type UseDocumentTestTypeAlt = SchemaOrigin<
@@ -44,15 +44,15 @@ type UseDocumentTestTypeAlt = SchemaOrigin<
       value?: number
     }
   },
-  'p:use-document-test-alt-dataset'
+  'p.use-document-test-alt-dataset'
 >
 
 // Scope the TestDocument type to the project/datasets used in tests
 
 declare module 'groq' {
   interface SanitySchemas {
-    'p:use-document-test-dataset': UseDocumentTestType
-    'p:use-document-test-alt-dataset': UseDocumentTestTypeAlt
+    'p.use-document-test-dataset': UseDocumentTestType
+    'p.use-document-test-alt-dataset': UseDocumentTestTypeAlt
   }
 }
 

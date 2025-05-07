@@ -57,7 +57,7 @@ type AllTestSchemaTypes = TestDocument
 // Augment the 'groq' module
 declare module 'groq' {
   interface SanitySchemas {
-    'default:default': AllTestSchemaTypes
+    default: AllTestSchemaTypes
   }
 }
 
