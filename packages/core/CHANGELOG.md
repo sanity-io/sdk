@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0](https://github.com/sanity-io/sdk/compare/sdk-v1.0.0...sdk-v1.0.0) (2025-05-07)
+
+
+### Miscellaneous
+
+* release 1.0.0 ([#517](https://github.com/sanity-io/sdk/issues/517)) ([52c00a1](https://github.com/sanity-io/sdk/commit/52c00a1eb99a6a34681bba363207ebcf4a9b5371))
+
 ## [0.0.3](https://github.com/sanity-io/sdk/compare/sdk-v0.0.2...sdk-v0.0.3) (2025-05-07)
 
 
