@@ -80,7 +80,7 @@ However, you'll need to create a Typegen configuration file for more complex use
 
 If you need this level of configuration, create a Typegen configuration file (`sanity-typegen.json` ) and use the `unstable_schemas` array:
 
-```json
+```jsonc
 // sanity-typegen.json
 {
   "unstable_schemas": [
