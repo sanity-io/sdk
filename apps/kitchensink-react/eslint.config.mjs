@@ -17,6 +17,9 @@ export default [
       'pnpm-lock.yaml',
       'package-lock.json',
       'yarn.lock',
+
+      // Ignore files for Sanity TypeGen
+      'sanity.types.ts',
     ],
   },
   ...baseESLintConfig,
