@@ -18,7 +18,7 @@ type Updater<TValue> = TValue | ((currentValue: TValue) => TValue)
 
 // Overload 1: No path, relies on Typegen
 /**
- * @beta
+ * @public
  * Edit an entire document, relying on Typegen for the type.
  *
  * @param options - Document options including `documentId`, `documentType`, and optionally `projectId`/`dataset`.
@@ -37,7 +37,7 @@ export function useEditDocument<
 
 // Overload 2: Path provided, relies on Typegen
 /**
- * @beta
+ * @public
  * Edit a specific path within a document, relying on Typegen for the type.
  *
  * @param options - Document options including `documentId`, `documentType`, `path`, and optionally `projectId`/`dataset`.
@@ -57,7 +57,7 @@ export function useEditDocument<
 
 // Overload 3: Explicit type, no path
 /**
- * @beta
+ * @public
  * Edit an entire document with an explicit type `TData`.
  *
  * @param options - Document options including `documentId` and optionally `projectId`/`dataset`.
@@ -70,7 +70,7 @@ export function useEditDocument<TData>(
 
 // Overload 4: Explicit type, path provided
 /**
- * @beta
+ * @public
  * Edit a specific path within a document with an explicit type `TData`.
  *
  * @param options - Document options including `documentId`, `path`, and optionally `projectId`/`dataset`.
@@ -82,7 +82,7 @@ export function useEditDocument<TData>(
 ): (nextValue: Updater<TData>) => Promise<ActionsResult>
 
 /**
- * @beta
+ * @public
  * Provides a stable function to apply edits to a document or a specific path within it.
  *
  * @category Documents

@@ -59,7 +59,7 @@ export interface useDocumentProjectionResults<TData> {
 
 // Overload 1: Relies on Typegen
 /**
- * @beta
+ * @public
  * Fetch a projection, relying on Typegen for the return type based on the handle and projection.
  *
  * @category Documents
@@ -127,7 +127,7 @@ export function useDocumentProjection<
 
 // Overload 2: Explicit type provided
 /**
- * @beta
+ * @public
  * Fetch a projection with an explicitly defined return type `TData`.
  *
  * @param options - Options including the document handle properties (`documentId`, etc.) and the `projection`.

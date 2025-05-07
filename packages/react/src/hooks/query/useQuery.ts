@@ -12,7 +12,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
 
 // Overload 1: Inferred Type (using Typegen)
 /**
- * @beta
+ * @public
  * Executes a GROQ query, inferring the result type from the query string and options.
  * Leverages Sanity Typegen if configured for enhanced type safety.
  *
@@ -81,7 +81,7 @@ export function useQuery<
 
 // Overload 2: Explicit Type Provided
 /**
- * @beta
+ * @public
  * Executes a GROQ query with an explicitly provided result type `TData`.
  *
  * @param options - Configuration for the query, including `query`, optional `params`, `projectId`, `dataset`, etc.
@@ -116,7 +116,7 @@ export function useQuery<TData>(options: QueryOptions): {
 }
 
 /**
- * @beta
+ * @public
  * Fetches data and subscribes to real-time updates using a GROQ query.
  *
  * @remarks

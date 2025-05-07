@@ -4,7 +4,7 @@ import {useCallback, useEffect, useInsertionEffect, useRef} from 'react'
 import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
- * @beta
+ * @public
  */
 export interface UseDocumentEventOptions<
   TDataset extends string = string,
@@ -15,7 +15,7 @@ export interface UseDocumentEventOptions<
 
 /**
  *
- * @beta
+ * @public
  *
  * Subscribes an event handler to events in your application's document store.
  *
