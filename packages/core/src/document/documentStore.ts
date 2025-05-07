@@ -1,7 +1,6 @@
 import {type Action} from '@sanity/client'
 import {getPublishedId} from '@sanity/client/csm'
-import {type SanityDocument} from '@sanity/types'
-import {type SanityDocumentResult} from 'groq'
+import {type SanityDocument} from 'groq'
 import {type ExprNode} from 'groq-js'
 import {
   catchError,
@@ -151,7 +150,7 @@ export function getDocumentState<
 >(
   instance: SanityInstance,
   options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
-): StateSource<SanityDocumentResult<TDocumentType, TDataset, TProjectId> | undefined | null>
+): StateSource<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`> | undefined | null>
 
 /** @beta */
 export function getDocumentState<
@@ -163,7 +162,7 @@ export function getDocumentState<
   instance: SanityInstance,
   options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
 ): StateSource<
-  JsonMatch<SanityDocumentResult<TDocumentType, TDataset, TProjectId>, TPath> | undefined
+  JsonMatch<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath> | undefined
 >
 
 /** @beta */
@@ -208,7 +207,7 @@ export function resolveDocument<
 >(
   instance: SanityInstance,
   docHandle: DocumentHandle<TDocumentType, TDataset, TProjectId>,
-): Promise<SanityDocumentResult<TDocumentType, TDataset, TProjectId> | null>
+): Promise<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`> | null>
 /** @beta */
 export function resolveDocument<TData extends SanityDocument>(
   instance: SanityInstance,

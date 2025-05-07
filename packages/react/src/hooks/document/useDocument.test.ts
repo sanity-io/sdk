@@ -7,7 +7,7 @@ import {
 } from '@sanity/sdk'
 import {type SanityDocument} from '@sanity/types'
 import {renderHook} from '@testing-library/react'
-import {type DatasetScoped} from 'groq'
+import {type SchemaOrigin} from 'groq'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -23,7 +23,7 @@ vi.mock('../context/useSanityInstance', () => ({
 }))
 
 // Define a single generic TestDocument type
-type UseDocumentTestType = DatasetScoped<
+type UseDocumentTestType = SchemaOrigin<
   SanityDocument & {
     _type: 'use-document-test-type'
     foo?: string
@@ -33,11 +33,10 @@ type UseDocumentTestType = DatasetScoped<
       value?: number
     }
   },
-  'use-document-test-dataset',
-  'p'
+  'p:use-document-test-dataset'
 >
 
-type UseDocumentTestTypeAlt = DatasetScoped<
+type UseDocumentTestTypeAlt = SchemaOrigin<
   SanityDocument & {
     _type: 'use-document-test-type'
     bar: string[]
@@ -45,8 +44,7 @@ type UseDocumentTestTypeAlt = DatasetScoped<
       value?: number
     }
   },
-  'use-document-test-alt-dataset',
-  'p'
+  'p:use-document-test-alt-dataset'
 >
 
 // Scope the TestDocument type to the project/datasets used in tests

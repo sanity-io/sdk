@@ -232,7 +232,7 @@ export function getQueryState<
 >(
   instance: SanityInstance,
   queryOptions: QueryOptions<TQuery, TDataset, TProjectId>,
-): StateSource<SanityQueryResult<TQuery, TDataset, TProjectId> | undefined>
+): StateSource<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`> | undefined>
 
 /** @beta */
 export function getQueryState<TData>(
@@ -300,7 +300,7 @@ export function resolveQuery<
 >(
   instance: SanityInstance,
   queryOptions: ResolveQueryOptions<TQuery, TDataset, TProjectId>,
-): Promise<SanityQueryResult<TQuery, TDataset, TProjectId>>
+): Promise<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>>
 
 /** @beta */
 export function resolveQuery<TData>(

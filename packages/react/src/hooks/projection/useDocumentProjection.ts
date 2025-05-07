@@ -122,7 +122,7 @@ export function useDocumentProjection<
 >(
   options: useDocumentProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
 ): useDocumentProjectionResults<
-  SanityProjectionResult<TProjection, TDocumentType, TDataset, TProjectId>
+  SanityProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
 >
 
 // Overload 2: Explicit type provided
