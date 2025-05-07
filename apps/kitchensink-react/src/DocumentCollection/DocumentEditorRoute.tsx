@@ -37,12 +37,12 @@ function Editor() {
   const canUnpublish = useDocumentPermissions(unpublishDocument(docHandle))
   const canDiscard = useDocumentPermissions(discardDocument(docHandle))
 
-  const name = useDocument({...docHandle, path: 'name'}) ?? ''
+  const {data: name = ''} = useDocument({...docHandle, path: 'name'})
   const setName = useEditDocument({...docHandle, path: 'name'})
 
   const [value, setValue] = useState('')
 
-  const document = useDocument({...docHandle})
+  const {data: document} = useDocument({...docHandle})
   const setDocument = useEditDocument(docHandle)
 
   return (

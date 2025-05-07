@@ -1,4 +1,4 @@
-import {DocumentHandle, usePreview} from '@sanity/sdk-react'
+import {DocumentHandle, useDocumentPreview} from '@sanity/sdk-react'
 import {Suspense, useRef} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 
@@ -22,7 +22,7 @@ function DocumentPreviewResolved(docHandle: DocumentHandle): React.ReactNode {
   const ref = useRef(null)
   const {
     data: {title, subtitle, media, status},
-  } = usePreview({...docHandle, ref})
+  } = useDocumentPreview({...docHandle, ref})
 
   let statusLabel
   if (status?.lastEditedPublishedAt && status?.lastEditedDraftAt) {

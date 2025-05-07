@@ -117,8 +117,8 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1
       react-compiler-runtime:
-        specifier: 19.0.0-beta-ebf51a3-20250411
-        version: 19.0.0-beta-ebf51a3-20250411(react@18.3.1)
+        specifier: 19.1.0-rc.1
+        version: 19.1.0-rc.1(react@18.3.1)
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
@@ -202,8 +202,8 @@ importers:
         specifier: ^7.37.4
         version: 7.37.4(eslint@9.25.1(jiti@2.4.2))
       eslint-plugin-react-compiler:
-        specifier: 19.0.0-beta-bafa41b-20250307
-        version: 19.0.0-beta-bafa41b-20250307(eslint@9.25.1(jiti@2.4.2))
+        specifier: 19.1.0-rc.1
+        version: 19.1.0-rc.1(eslint@9.25.1(jiti@2.4.2))
       eslint-plugin-react-hooks:
         specifier: ^5.2.0
         version: 5.2.0(eslint@9.25.1(jiti@2.4.2))
@@ -387,8 +387,8 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
       react-compiler-runtime:
-        specifier: 19.0.0-beta-ebf51a3-20250411
-        version: 19.0.0-beta-ebf51a3-20250411(react@19.1.0)
+        specifier: 19.1.0-rc.1
+        version: 19.1.0-rc.1(react@19.1.0)
       react-error-boundary:
         specifier: ^5.0.0
         version: 5.0.0(react@19.1.0)
@@ -3714,8 +3714,8 @@ packages:
       eslint-config-prettier:
         optional: true
 
-  eslint-plugin-react-compiler@19.0.0-beta-bafa41b-20250307:
-    resolution: {integrity: sha512-6q5FGhEh52dM2f6aqZcPWj1tlsc+3V2V1DrIxLiqJ0r3I2aivVXDf/TBZ3Bsqe6YDvdpaVDCg+bX9lv0QMn5PQ==}
+  eslint-plugin-react-compiler@19.1.0-rc.1:
+    resolution: {integrity: sha512-3umw5eqZXapBl7aQGmvcjheKhUbsElb9jTETxRZg371e1LG4EPs/zCHt2JzP+wNcdaZWzjU/R730zPUJblY2zw==}
     engines: {node: ^14.17.0 || ^16.0.0 || >= 18.0.0}
     peerDependencies:
       eslint: '>=7'
@@ -5695,11 +5695,6 @@ packages:
 
   react-compiler-runtime@19.0.0-beta-e993439-20250405:
     resolution: {integrity: sha512-uTvtVgJR21Xy7XAthYbC3R9V00V/U7xP3BWrwpSvcmHgtar8+TweghRIankQJLps/g7HIYxy+dnXCGBy0cKv5w==}
-    peerDependencies:
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
-
-  react-compiler-runtime@19.0.0-beta-ebf51a3-20250411:
-    resolution: {integrity: sha512-CetwBv7Wny+4Re6TZRPtVbNMx65CvLNDMkMp2KJ/pRmEc6WLPUoSSBuyY0bML9GPWiO/3LcWQ4iDGKitFU0qng==}
     peerDependencies:
       react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
 
@@ -10982,7 +10977,7 @@ snapshots:
     optionalDependencies:
       eslint-config-prettier: 10.1.1(eslint@9.25.1(jiti@2.4.2))
 
-  eslint-plugin-react-compiler@19.0.0-beta-bafa41b-20250307(eslint@9.25.1(jiti@2.4.2)):
+  eslint-plugin-react-compiler@19.1.0-rc.1(eslint@9.25.1(jiti@2.4.2)):
     dependencies:
       '@babel/core': 7.26.10
       '@babel/parser': 7.27.0
@@ -13030,17 +13025,13 @@ snapshots:
     dependencies:
       react: 18.3.1
 
-  react-compiler-runtime@19.0.0-beta-ebf51a3-20250411(react@18.3.1):
-    dependencies:
-      react: 18.3.1
-
-  react-compiler-runtime@19.0.0-beta-ebf51a3-20250411(react@19.1.0):
-    dependencies:
-      react: 19.1.0
-
   react-compiler-runtime@19.1.0-rc.1(react@18.3.1):
     dependencies:
       react: 18.3.1
+
+  react-compiler-runtime@19.1.0-rc.1(react@19.1.0):
+    dependencies:
+      react: 19.1.0
 
   react-dom@18.3.1(react@18.3.1):
     dependencies:

@@ -1,4 +1,4 @@
-import {DocumentHandle, usePaginatedDocuments, useProjection} from '@sanity/sdk-react'
+import {DocumentHandle, useDocumentProjection, usePaginatedDocuments} from '@sanity/sdk-react'
 import {Box, Button, Card, Flex, Label, Spinner, Stack, Text, TextInput} from '@sanity/ui'
 import {defineProjection} from 'groq'
 import {JSX, ReactNode, Suspense, useRef, useState} from 'react'
@@ -28,7 +28,7 @@ function ProjectionData({
 
   const ref = useRef<HTMLTableCellElement>(null)
   const projection = useFirstProjection ? authorProjection : bestFriendProjection
-  const {data} = useProjection({
+  const {data} = useDocumentProjection({
     ...docHandle,
     ref,
     projection,

@@ -1,4 +1,3 @@
-import {type Status} from '@sanity/comlink'
 import {
   type CanvasResource,
   type Events,
@@ -14,16 +13,15 @@ import {
   getFavoritesState,
   resolveFavoritesState,
 } from '@sanity/sdk'
-import {useCallback, useMemo, useState, useSyncExternalStore} from 'react'
+import {useCallback, useMemo, useSyncExternalStore} from 'react'
 
+import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useWindowConnection} from './useWindowConnection'
 
 interface ManageFavorite extends FavoriteStatusResponse {
   favorite: () => Promise<void>
   unfavorite: () => Promise<void>
   isFavorited: boolean
-  isConnected: boolean
 }
 
 interface UseManageFavoriteProps extends DocumentHandle {
@@ -92,11 +90,9 @@ export function useManageFavorite({
   resourceType,
   schemaName,
 }: UseManageFavoriteProps): ManageFavorite {
-  const [status, setStatus] = useState<Status>('idle')
   const {fetch} = useWindowConnection<Events.FavoriteMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
-    onStatus: setStatus,
   })
   const instance = useSanityInstance()
   const {config} = instance
@@ -136,7 +132,7 @@ export function useManageFavorite({
 
   const handleFavoriteAction = useCallback(
     async (action: 'added' | 'removed') => {
-      if (status !== 'connected' || !fetch || !documentId || !documentType || !resourceType) return
+      if (!fetch || !documentId || !documentType || !resourceType) return
 
       try {
         const payload = {
@@ -165,46 +161,15 @@ export function useManageFavorite({
         throw err
       }
     },
-    [
-      fetch,
-      documentId,
-      documentType,
-      resourceId,
-      resourceType,
-      schemaName,
-      instance,
-      context,
-      status,
-    ],
+    [fetch, documentId, documentType, resourceId, resourceType, schemaName, instance, context],
   )
 
   const favorite = useCallback(() => handleFavoriteAction('added'), [handleFavoriteAction])
   const unfavorite = useCallback(() => handleFavoriteAction('removed'), [handleFavoriteAction])
 
-  // if state is undefined, we should suspend
-  if (!state) {
-    try {
-      const promise = resolveFavoritesState(instance, context)
-      throw promise
-    } catch (err) {
-      // If we get a timeout error, return a fallback state instead of suspending
-      if (err instanceof Error && err.message === 'Favorites service connection timeout') {
-        return {
-          favorite: async () => {},
-          unfavorite: async () => {},
-          isFavorited: false,
-          isConnected: false,
-        }
-      }
-      // For other errors, continue with suspension
-      throw err
-    }
-  }
-
   return {
     favorite,
     unfavorite,
     isFavorited,
-    isConnected: status === 'connected',
   }
 }

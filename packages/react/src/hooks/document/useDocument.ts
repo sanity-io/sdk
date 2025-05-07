@@ -3,17 +3,41 @@ import {type SanityDocumentResult} from 'groq'
 import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-// used in an `{@link useProjection}` and `{@link useQuery}`
+// used in an `{@link useDocumentProjection}` and `{@link useQuery}`
 // eslint-disable-next-line import/consistent-type-specifier-style, unused-imports/no-unused-imports
-import type {useProjection} from '../projection/useProjection'
+import type {useDocumentProjection} from '../projection/useDocumentProjection'
 // eslint-disable-next-line import/consistent-type-specifier-style, unused-imports/no-unused-imports
 import type {useQuery} from '../query/useQuery'
+
+const useDocumentValue = createStateSourceHook({
+  // Pass options directly to getDocumentState
+  getState: (instance, options: DocumentOptions<string | undefined>) =>
+    getDocumentState(instance, options),
+  // Pass options directly to getDocumentState for checking current value
+  shouldSuspend: (instance, {path: _path, ...options}: DocumentOptions<string | undefined>) =>
+    getDocumentState(instance, options).getCurrent() === undefined,
+  // Extract handle part for resolveDocument
+  suspender: (instance, options: DocumentOptions<string | undefined>) =>
+    resolveDocument(instance, options),
+  getConfig: identity as (
+    options: DocumentOptions<string | undefined>,
+  ) => DocumentOptions<string | undefined>,
+})
+
+const wrapHookWithData = <TParams extends unknown[], TReturn>(
+  useValue: (...params: TParams) => TReturn,
+) => {
+  function useHook(...params: TParams) {
+    return {data: useValue(...params)}
+  }
+  return useHook
+}
 
 interface UseDocument {
   /** @internal */
   <TDocumentType extends string, TDataset extends string, TProjectId extends string = string>(
     options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
-  ): SanityDocumentResult<TDocumentType, TDataset, TProjectId> | null
+  ): {data: SanityDocumentResult<TDocumentType, TDataset, TProjectId> | null}
 
   /** @internal */
   <
@@ -23,12 +47,12 @@ interface UseDocument {
     TProjectId extends string = string,
   >(
     options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
-  ): JsonMatch<SanityDocumentResult<TDocumentType, TDataset, TProjectId>, TPath> | undefined
+  ): {data: JsonMatch<SanityDocumentResult<TDocumentType, TDataset, TProjectId>, TPath> | undefined}
 
   /** @internal */
-  <TData>(options: DocumentOptions<undefined>): TData | null
+  <TData>(options: DocumentOptions<undefined>): {data: TData | null}
   /** @internal */
-  <TData>(options: DocumentOptions<string>): TData | undefined
+  <TData>(options: DocumentOptions<string>): {data: TData | undefined}
 
   /**
    * ## useDocument via Type Inference (Recommended)
@@ -68,7 +92,7 @@ interface UseDocument {
    * }
    *
    * function ProductView({doc}: ProductViewProps) {
-   *   const product = useDocument({...doc}) // Fully typed product
+   *   const {data: product} = useDocument({...doc}) // Fully typed product
    *   return <h1>{product.title ?? 'Untitled'}</h1>
    * }
    * ```
@@ -82,7 +106,7 @@ interface UseDocument {
    * }
    *
    * function ProductTitle({doc}: ProductTitleProps) {
-   *   const title = useDocument({
+   *   const {data: title} = useDocument({
    *     ...doc,
    *     path: 'title' // Returns just the title field
    *   })
@@ -100,8 +124,12 @@ interface UseDocument {
   >(
     options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
   ): TPath extends string
-    ? JsonMatch<SanityDocumentResult<TDocumentType, TDataset, TProjectId>, TPath> | undefined
-    : SanityDocumentResult<TDocumentType, TDataset, TProjectId> | null
+    ? {
+        data:
+          | JsonMatch<SanityDocumentResult<TDocumentType, TDataset, TProjectId>, TPath>
+          | undefined
+      }
+    : {data: SanityDocumentResult<TDocumentType, TDataset, TProjectId> | null}
 
   /**
    * @beta
@@ -142,7 +170,7 @@ interface UseDocument {
    * }
    *
    * function BookView({doc}: BookViewProps) {
-   *   const book = useDocument<Book>({...doc})
+   *   const {data: book} = useDocument<Book>({...doc})
    *   return <h1>{book?.title ?? 'Untitled'} by {book?.author ?? 'Unknown'}</h1>
    * }
    * ```
@@ -156,7 +184,7 @@ interface UseDocument {
    * }
    *
    * function BookTitle({doc}: BookTitleProps) {
-   *   const title = useDocument<string>({...doc, path: 'title'})
+   *   const {data: title} = useDocument<string>({...doc, path: 'title'})
    *   return <h1>{title ?? 'Untitled'}</h1>
    * }
    * ```
@@ -165,12 +193,12 @@ interface UseDocument {
    */
   <TData, TPath extends string>(
     options: DocumentOptions<TPath>,
-  ): TPath extends string ? TData | undefined : TData | null
+  ): TPath extends string ? {data: TData | undefined} : {data: TData | null}
 
   /**
    * @internal
    */
-  (options: DocumentOptions): unknown
+  (options: DocumentOptions): {data: unknown}
 }
 
 /**
@@ -191,22 +219,9 @@ interface UseDocument {
  * - Realtime updates aren't critical
  * - You want better performance
  *
- * …consider using {@link useProjection} or {@link useQuery} instead. These hooks are more efficient
+ * …consider using {@link useDocumentProjection} or {@link useQuery} instead. These hooks are more efficient
  * for read-heavy applications.
  *
  * @function
  */
-export const useDocument = createStateSourceHook({
-  // Pass options directly to getDocumentState
-  getState: (instance, options: DocumentOptions<string | undefined>) =>
-    getDocumentState(instance, options),
-  // Pass options directly to getDocumentState for checking current value
-  shouldSuspend: (instance, {path: _path, ...options}: DocumentOptions<string | undefined>) =>
-    getDocumentState(instance, options).getCurrent() === undefined,
-  // Extract handle part for resolveDocument
-  suspender: (instance, options: DocumentOptions<string | undefined>) =>
-    resolveDocument(instance, options),
-  getConfig: identity as (
-    options: DocumentOptions<string | undefined>,
-  ) => DocumentOptions<string | undefined>,
-}) as UseDocument
+export const useDocument = wrapHookWithData(useDocumentValue) as UseDocument

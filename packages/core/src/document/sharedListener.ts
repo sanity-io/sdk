@@ -16,7 +16,7 @@ import {
 import {getClientState} from '../client/clientStore'
 import {type SanityInstance} from '../store/createSanityInstance'
 
-const API_VERSION = 'vX'
+const API_VERSION = 'v2025-05-06'
 
 export interface SharedListener {
   events: Observable<ListenEvent<SanityDocument>>

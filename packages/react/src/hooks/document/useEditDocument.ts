@@ -115,7 +115,7 @@ export function useEditDocument<TData>(
  *
  * function ProductEditor({ productHandle }: ProductEditorProps) {
  *   // Fetch the document to display its current state (optional)
- *   const product = useDocument(productHandle);
+ *   const {data: product} = useDocument(productHandle);
  *   // Get the edit function for the full document
  *   const editProduct = useEditDocument(productHandle);
  *
@@ -162,7 +162,7 @@ export function useEditDocument<TData>(
  *   };
  *
  *   // Fetch the current price to display it
- *   const currentPrice = useDocument(priceOptions);
+ *   const {data: currentPrice} = useDocument(priceOptions);
  *   // Get the edit function for the specific path 'price'
  *   const editPrice = useEditDocument(priceOptions);
  *
@@ -195,7 +195,7 @@ export function useEditDocument<TData>(
  * }
  *
  * function BookEditor({ bookHandle }: BookEditorProps) {
- *   const book = useDocument<Book>(bookHandle);
+ *   const {data: book} = useDocument<Book>(bookHandle);
  *   // Provide the explicit type <Book>
  *   const editBook = useEditDocument<Book>(bookHandle);
  *
@@ -235,9 +235,9 @@ export function useEditDocument<TData>(
  *
  * function AuthorNameEditor({ bookHandle }: AuthorNameEditorProps) {*
  *   // Fetch current value
- *   const currentName = useDocument<string>({...bookHandle, path: 'author.name'});
+ *   const {data: currentName} = useDocument<string>({...bookHandle, path: 'author.name'});
  *   // Provide the explicit type <string> for the path's value
- *   const editAuthorName = useEditDocument<string>({...bookHandle, 'author.name'});
+ *   const editAuthorName = useEditDocument<string>({...bookHandle, path: 'author.name'});
  *
  *   const handleUpdate = useCallback(() => {
  *     // Update with a hardcoded string directly
