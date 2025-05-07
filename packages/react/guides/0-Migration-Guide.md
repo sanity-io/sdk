@@ -168,7 +168,7 @@ Also renamed associated types to match:
 
 3. Updated `useDocument` return structure
 
-All `useDocument` hooks now return their data under a `data` property for consistency with other hooks in the SDK.
+The `useDocument` hook now returns its data under a `data` property for consistency with other hooks in the SDK.
 
 **Before:**
 
