@@ -44,20 +44,18 @@ interface UseManageFavoriteProps extends DocumentHandle {
  * - `favorite` - Function to add document to favorites
  * - `unfavorite` - Function to remove document from favorites
  * - `isFavorited` - Boolean indicating if document is currently favorited
- * - `isConnected` - Boolean indicating if connection to Dashboard UI is established
  *
  * @example
  * ```tsx
  * function FavoriteButton(props: DocumentActionProps) {
  *   const {documentId, documentType} = props
- *   const {favorite, unfavorite, isFavorited, isConnected} = useManageFavorite({
+ *   const {favorite, unfavorite, isFavorited} = useManageFavorite({
  *     documentId,
  *     documentType
  *   })
  *
  *   return (
  *     <Button
- *       disabled={!isConnected}
  *       onClick={() => isFavorited ? unfavorite() : favorite()}
  *       text={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
  *     />
