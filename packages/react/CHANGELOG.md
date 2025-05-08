@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.0.1](https://github.com/sanity-io/sdk/compare/sdk-react-v1.0.0...sdk-react-v1.0.1) (2025-05-08)
+
+
+### Bug Fixes
+
+* **docs:** use correct hook in TS doc ([#523](https://github.com/sanity-io/sdk/issues/523)) ([fe25a11](https://github.com/sanity-io/sdk/commit/fe25a1109a5a4c6a271645ce5cd978572a09b685))
+
+
+### Documentation
+
+* **react:** fix isConnected mentions in comink hook docs ([#521](https://github.com/sanity-io/sdk/issues/521)) ([2cc1bf1](https://github.com/sanity-io/sdk/commit/2cc1bf141cecba6ee6757e472ed65a73ad590cce))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 1.0.1
+
 ## [1.0.0](https://github.com/sanity-io/sdk/compare/sdk-react-v1.0.0...sdk-react-v1.0.0) (2025-05-07)
 
 
