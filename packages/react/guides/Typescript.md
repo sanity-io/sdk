@@ -88,15 +88,15 @@ If you need this level of configuration, create a Typegen configuration file (`s
       // Path to this schema
       "schemaPath": "./schemas/products-schema.json",
       // The schema ID is a combination of your `projectId.datasetName`
-      "schemaId": "your-project-id.products"
+      "schemaId": "your-project-id.products",
     },
     {
       "schemaPath": "./schemas/authors-schema.json",
-      "schemaId": "your-project-id.authors"
-    }
+      "schemaId": "your-project-id.authors",
+    },
     // Add more schema objects if needed
   ],
-  "overloadClientMethods": false // client methods are not needed for the SDK
+  "overloadClientMethods": false, // client methods are not needed for the SDK
   // Optional: Specify output path for generated types
   // "outputPath": "./src/generated/sanity-types.ts"
 }
@@ -137,17 +137,17 @@ The generated file contains types for your schema documents, projections, and qu
 Typegen generates interfaces for each document type defined in your schemas. For projects using multiple schemas/datasets defined in `sanity-typegen.json`, it utilizes a helper type `SchemaOrigin` (imported from `groq`) to brand the types. This allows TypeScript to narrow down the possible document types based on the dataset context provided via a `DocumentHandle`.
 
 ```typescript
-import {useDocument, createDatasetHandle} from '@sanity/sdk-react'
+import {useDocument, createDocumentHandle} from '@sanity/sdk-react'
 
 // Assuming 'book' is only in 'test' dataset, 'dog' only in 'production'
-const testHandle = createDatasetHandle({
+const testHandle = createDocumentHandle({
   projectId: 'your-project-id',
   dataset: 'test',
   documentId: 'some-id',
   documentType: 'book', // Type narrowed to 'book'
 })
 
-const prodHandle = createDatasetHandle({
+const prodHandle = createDocumentHandle({
   projectId: 'your-project-id',
   dataset: 'production',
   documentId: 'another-id',
