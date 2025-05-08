@@ -33,7 +33,6 @@ export interface NavigateToStudioResult {
  * studios with the same projectId and dataset
  * @returns An object containing:
  * - `navigateToStudioDocument` - Function that when called will navigate to the studio document
- * - `isConnected` - Boolean indicating if connection to Dashboard is established
  *
  * @example
  * ```tsx
@@ -42,10 +41,9 @@ export interface NavigateToStudioResult {
  * import {Suspense} from 'react'
  *
  * function NavigateButton({documentHandle}: {documentHandle: DocumentHandle}) {
- *   const {navigateToStudioDocument, isConnected} = useNavigateToStudioDocument(documentHandle)
+ *   const {navigateToStudioDocument} = useNavigateToStudioDocument(documentHandle)
  *   return (
  *     <Button
- *       disabled={!isConnected}
  *       onClick={navigateToStudioDocument}
  *       text="Navigate to Studio Document"
  *     />

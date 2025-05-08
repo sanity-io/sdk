@@ -36,7 +36,6 @@ interface UseRecordDocumentHistoryEventProps extends DocumentHandle {
  * @param documentHandle - The document handle containing document ID and type, like `{_id: '123', _type: 'book'}`
  * @returns An object containing:
  * - `recordEvent` - Function to record document interactions
- * - `isConnected` - Boolean indicating if connection to Studio is established
  *
  * @example
  * ```tsx
@@ -46,7 +45,7 @@ interface UseRecordDocumentHistoryEventProps extends DocumentHandle {
  *
  * function RecordEventButton(props: DocumentActionProps) {
  *   const {documentId, documentType, resourceType, resourceId} = props
- *   const {recordEvent, isConnected} = useRecordDocumentHistoryEvent({
+ *   const {recordEvent} = useRecordDocumentHistoryEvent({
  *     documentId,
  *     documentType,
  *     resourceType,
@@ -54,7 +53,6 @@ interface UseRecordDocumentHistoryEventProps extends DocumentHandle {
  *   })
  *   return (
  *     <Button
- *       disabled={!isConnected}
  *       onClick={() => recordEvent('viewed')}
  *       text="Viewed"
  *     />
