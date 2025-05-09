@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.0.0](https://github.com/sanity-io/sdk/compare/sdk-v1.0.0...sdk-v1.0.0) (2025-05-07)
+
+
+### Miscellaneous
+
+* release 1.0.0 ([#517](https://github.com/sanity-io/sdk/issues/517)) ([52c00a1](https://github.com/sanity-io/sdk/commit/52c00a1eb99a6a34681bba363207ebcf4a9b5371))
+
+## [0.0.3](https://github.com/sanity-io/sdk/compare/sdk-v0.0.2...sdk-v0.0.3) (2025-05-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* bump versions ([#516](https://github.com/sanity-io/sdk/issues/516))
+
+### Bug Fixes
+
+* bump versions ([#516](https://github.com/sanity-io/sdk/issues/516)) ([3601ade](https://github.com/sanity-io/sdk/commit/3601adeebe986af4102f639500a754d585694d9e))
+* **core:** use raw perspective for functions that coalesce drafts and published ([#503](https://github.com/sanity-io/sdk/issues/503)) ([0bf6c57](https://github.com/sanity-io/sdk/commit/0bf6c577183fd0796fa9c00347af258cbb9b607c))
+
+
+### Documentation
+
+* update package readmes ([#513](https://github.com/sanity-io/sdk/issues/513)) ([aa79bc7](https://github.com/sanity-io/sdk/commit/aa79bc74e904cfcac119be415d871fc71fe17277))
+
 ## [0.0.2](https://github.com/sanity-io/sdk/compare/sdk-v0.0.1...sdk-v0.0.2) (2025-05-06)
 
 

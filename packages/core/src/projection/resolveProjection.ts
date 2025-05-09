@@ -17,7 +17,9 @@ export function resolveProjection<
   instance: SanityInstance,
   options: ProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
 ): Promise<
-  ProjectionValuePending<SanityProjectionResult<TProjection, TDocumentType, TDataset, TProjectId>>
+  ProjectionValuePending<
+    SanityProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
+  >
 >
 
 /** @beta */

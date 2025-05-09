@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "private": false,
   "description": "Sanity SDK",
   "keywords": [
@@ -63,7 +63,7 @@
     "@sanity/mutate": "^0.12.4",
     "@sanity/types": "^3.83.0",
     "@types/lodash-es": "^4.17.12",
-    "groq": "3.86.2-experimental.0",
+    "groq": "3.88.1-typegen-experimental.0",
     "lodash-es": "^4.17.21",
     "reselect": "^5.1.1",
     "rxjs": "^7.8.2",

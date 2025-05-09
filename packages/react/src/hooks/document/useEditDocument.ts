@@ -6,7 +6,7 @@ import {
   type JsonMatch,
   resolveDocument,
 } from '@sanity/sdk'
-import {type SanityDocumentResult} from 'groq'
+import {type SanityDocument} from 'groq'
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -18,7 +18,7 @@ type Updater<TValue> = TValue | ((currentValue: TValue) => TValue)
 
 // Overload 1: No path, relies on Typegen
 /**
- * @beta
+ * @public
  * Edit an entire document, relying on Typegen for the type.
  *
  * @param options - Document options including `documentId`, `documentType`, and optionally `projectId`/`dataset`.
@@ -32,12 +32,12 @@ export function useEditDocument<
 >(
   options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
 ): (
-  nextValue: Updater<SanityDocumentResult<TDocumentType, TDataset, TProjectId>>,
-) => Promise<ActionsResult<SanityDocumentResult<TDocumentType, TDataset, TProjectId>>>
+  nextValue: Updater<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>,
+) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 
 // Overload 2: Path provided, relies on Typegen
 /**
- * @beta
+ * @public
  * Edit a specific path within a document, relying on Typegen for the type.
  *
  * @param options - Document options including `documentId`, `documentType`, `path`, and optionally `projectId`/`dataset`.
@@ -52,12 +52,12 @@ export function useEditDocument<
 >(
   options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
 ): (
-  nextValue: Updater<JsonMatch<SanityDocumentResult<TDocumentType, TDataset, TProjectId>, TPath>>,
-) => Promise<ActionsResult<SanityDocumentResult<TDocumentType, TDataset, TProjectId>>>
+  nextValue: Updater<JsonMatch<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath>>,
+) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 
 // Overload 3: Explicit type, no path
 /**
- * @beta
+ * @public
  * Edit an entire document with an explicit type `TData`.
  *
  * @param options - Document options including `documentId` and optionally `projectId`/`dataset`.
@@ -70,7 +70,7 @@ export function useEditDocument<TData>(
 
 // Overload 4: Explicit type, path provided
 /**
- * @beta
+ * @public
  * Edit a specific path within a document with an explicit type `TData`.
  *
  * @param options - Document options including `documentId`, `path`, and optionally `projectId`/`dataset`.
@@ -82,7 +82,7 @@ export function useEditDocument<TData>(
 ): (nextValue: Updater<TData>) => Promise<ActionsResult>
 
 /**
- * @beta
+ * @public
  * Provides a stable function to apply edits to a document or a specific path within it.
  *
  * @category Documents
