@@ -1,5 +1,6 @@
-import {switchMap} from 'rxjs'
+import {catchError, switchMap} from 'rxjs'
 
+import {ConfigurationError} from '../_exports'
 import {getClientState} from '../client/clientStore'
 import {type ProjectHandle} from '../config/sanityConfig'
 import {createFetcherStore} from '../utils/createFetcherStore'
@@ -31,6 +32,9 @@ const project = createFetcherStore({
             (projectId ?? instance.config.projectId)!,
           ),
         ),
+        catchError((error) => {
+          throw new ConfigurationError(error)
+        }),
       )
     },
 })

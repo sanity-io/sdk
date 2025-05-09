@@ -26,6 +26,10 @@ import {useSanityInstance} from '../context/useSanityInstance'
 export function useVerifyOrgProjects(disabled = false, projectIds?: string[]): string | null {
   const instance = useSanityInstance()
   const [error, setError] = useState<string | null>(null)
+  if (error) {
+    console.error('AHHH', error)
+    throw error
+  }
 
   useEffect(() => {
     if (disabled || !projectIds || projectIds.length === 0) {
@@ -35,8 +39,11 @@ export function useVerifyOrgProjects(disabled = false, projectIds?: string[]): s
 
     const verificationObservable$ = observeOrganizationVerificationState(instance, projectIds)
 
-    const subscription = verificationObservable$.subscribe((result: OrgVerificationResult) => {
-      setError(result.error)
+    const subscription = verificationObservable$.subscribe({
+      next: (result: OrgVerificationResult) => {
+        setError(result.error)
+      },
+      error: setError,
     })
 
     return () => {

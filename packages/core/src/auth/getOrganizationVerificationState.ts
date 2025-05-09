@@ -60,7 +60,7 @@ export function observeOrganizationVerificationState(
 
         // If any project fails verification, immediately return the error
         if (result.error) {
-          return of(result)
+          throw result.error
         }
       }
 
