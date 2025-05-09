@@ -1,12 +1,15 @@
 import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
-import {type Subscription} from 'rxjs'
+import {combineLatest, filter, map, type Subscription} from 'rxjs'
 
 import {type AuthConfig, type AuthProvider} from '../config/authConfig'
+import {getProjectState} from '../project/project'
 import {bindActionGlobally} from '../store/createActionBinder'
+import {type SanityInstance} from '../store/createSanityInstance'
 import {createStateSourceAction} from '../store/createStateSourceAction'
-import {defineStore} from '../store/defineStore'
+import {defineStore, type StoreContext} from '../store/defineStore'
 import {AuthStateType} from './authStateType'
+import {ConfigurationError} from './ConfigurationError'
 import {refreshStampedToken} from './refreshStampedToken'
 import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
@@ -89,6 +92,7 @@ export interface AuthStoreState {
     authMethod: AuthMethodOptions
   }
   dashboardContext?: DashboardContext
+  error?: unknown
 }
 
 export const authStore = defineStore<AuthStoreState>({
@@ -211,6 +215,7 @@ export const authStore = defineStore<AuthStoreState>({
   initialize(context) {
     const subscriptions: Subscription[] = []
     subscriptions.push(subscribeToStateAndFetchCurrentUser(context))
+    subscriptions.push(listenToProjectIdsAndDashboard(context))
 
     if (context.state.get().options?.storageArea) {
       subscriptions.push(subscribeToStorageEventsAndSetToken(context))
@@ -228,6 +233,55 @@ export const authStore = defineStore<AuthStoreState>({
     }
   },
 })
+
+function getProjectIdsFromInstanceAndParents(instance: SanityInstance | undefined): string[] {
+  if (!instance) return []
+
+  const projectIds: string[] = []
+  if (instance.config?.projectId) {
+    projectIds.push(instance.config.projectId)
+  }
+
+  const parentProjectIds = getProjectIdsFromInstanceAndParents(instance.getParent())
+  return projectIds.concat(parentProjectIds)
+}
+
+const listenToProjectIdsAndDashboard = ({instance, state}: StoreContext<AuthStoreState>) => {
+  const projectIds = getProjectIdsFromInstanceAndParents(instance)
+
+  const orgId$ = state.observable.pipe(
+    map((i) => i.dashboardContext?.orgId),
+    filter(Boolean),
+  )
+
+  const organizationIdsFromProjects$ = combineLatest(
+    projectIds.map((projectId) =>
+      getProjectState(instance, {projectId}).observable.pipe(
+        filter(Boolean),
+        map((i) => ({projectId: i.id, organizationId: i.organizationId})),
+      ),
+    ),
+  )
+
+  return combineLatest([orgId$, organizationIdsFromProjects$])
+    .pipe(
+      map(([orgId, orgIdsFromProjects]) => {
+        for (const {organizationId, projectId} of orgIdsFromProjects) {
+          if (orgId !== organizationId) {
+            throw new ConfigurationError(
+              new Error(
+                `Project ${projectId} is not part of organization ${orgId}. ` +
+                  `The project belongs to organization ${organizationId} instead.`,
+              ),
+            )
+          }
+        }
+      }),
+    )
+    .subscribe({
+      error: (error) => state.set('setError', {authState: {error, type: AuthStateType.ERROR}}),
+    })
+}
 
 /**
  * @public
@@ -270,7 +324,10 @@ export const getLoginUrlState = bindActionGlobally(
  */
 export const getAuthState = bindActionGlobally(
   authStore,
-  createStateSourceAction(({state: {authState}}) => authState),
+  createStateSourceAction(({state: {authState}}) => {
+    if (authState.type === AuthStateType.ERROR) throw authState.error
+    return authState
+  }),
 )
 
 /**
