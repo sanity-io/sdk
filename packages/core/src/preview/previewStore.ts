@@ -48,7 +48,7 @@ export interface PreviewValue {
   /**
    * The status of the document.
    */
-  status?: {
+  _status?: {
     /** The date of the last published edit */
     lastEditedPublishedAt?: string
     /** The date of the last draft edit */
