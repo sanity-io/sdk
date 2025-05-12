@@ -14,12 +14,12 @@ const sanityConfigs: SanityConfig[] = [
     dataset: 'test',
   },
   {
-    projectId: 'ezwd8xes',
+    projectId: 'd45jg133',
     dataset: 'production',
   },
 ]
 
-export function App(): JSX.Element {
+export default function App(): JSX.Element {
   return (
     <ThemeProvider theme={theme}>
       <SanityApp fallback={<Spinner />} config={sanityConfigs}>
