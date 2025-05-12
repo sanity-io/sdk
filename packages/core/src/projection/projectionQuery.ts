@@ -123,13 +123,13 @@ export function processProjectionQuery({ids, results}: ProcessProjectionQueryOpt
         continue
       }
 
-      const status = {
+      const _status = {
         ...(draft?._updatedAt && {lastEditedDraftAt: draft._updatedAt}),
         ...(published?._updatedAt && {lastEditedPublishedAt: published._updatedAt}),
       }
 
       finalValues[originalId][hash] = {
-        data: {...projectionResultData, status},
+        data: {...projectionResultData, _status},
         isPending: false,
       }
     }

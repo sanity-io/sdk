@@ -2,6 +2,34 @@
 title: Migration guide
 ---
 
+## Migrating to @sanity/sdk-react@2.0.0
+
+### Breaking Changes
+
+1. Changed `status` to `_status` in preview and projection results
+
+The `status` field in preview and projection results has been renamed to `_status` to prevent collisions with user-defined `status` fields and to follow the convention of using underscore prefix for system attributes.
+
+**Before:**
+
+```typescript
+const {data} = useDocumentPreview({documentId: '123', documentType: 'product'})
+console.log(data?.status?.lastEditedPublishedAt)
+```
+
+**After:**
+
+```typescript
+const {data} = useDocumentPreview({documentId: '123', documentType: 'product'})
+console.log(data?._status?.lastEditedPublishedAt)
+```
+
+This change affects:
+
+- `PreviewValue` interface
+- Projection results
+- Preview results
+
 ## Migrating to @sanity/sdk-react@1.0.0
 
 ### Breaking Changes
