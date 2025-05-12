@@ -281,8 +281,8 @@ importers:
   packages/core:
     dependencies:
       '@sanity/client':
-        specifier: ^7.0.0
-        version: 7.0.0
+        specifier: ^7.2.1
+        version: 7.2.1(debug@4.4.0)
       '@sanity/comlink':
         specifier: ^3.0.2
         version: 3.0.2
@@ -297,7 +297,7 @@ importers:
         version: 0.12.4(debug@4.4.0)
       '@sanity/types':
         specifier: ^3.83.0
-        version: 3.87.0(@types/react@19.1.2)(debug@4.4.0)
+        version: 3.88.1(@types/react@19.1.2)(debug@4.4.0)
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -369,8 +369,8 @@ importers:
   packages/react:
     dependencies:
       '@sanity/client':
-        specifier: ^7.0.0
-        version: 7.0.0
+        specifier: ^7.2.1
+        version: 7.2.1(debug@4.4.0)
       '@sanity/message-protocol':
         specifier: ^0.12.0
         version: 0.12.0
@@ -379,7 +379,7 @@ importers:
         version: link:../core
       '@sanity/types':
         specifier: ^3.83.0
-        version: 3.87.0(@types/react@19.1.2)(debug@4.4.0)
+        version: 3.88.1(@types/react@19.1.2)(debug@4.4.0)
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -2145,12 +2145,8 @@ packages:
     resolution: {integrity: sha512-BQRCMeDlBxwnMbFtB61HUxFf9aSb4HNVrpfrC7IFVqFf4cwcc3o5H8/nlrL9U3cDFedbe4W0AXt1mQzwbY/ljw==}
     engines: {node: '>=14.18'}
 
-  '@sanity/client@7.0.0':
-    resolution: {integrity: sha512-Kr96rYNJpA/zSyYhio9tx3SvID1ew2Y4mICzHYe81xF1MdjZLdUf0BudRv+wSa1QxtQdBnY4hDZKA96BAYo5ng==}
-    engines: {node: '>=20'}
-
-  '@sanity/client@7.1.0':
-    resolution: {integrity: sha512-AQ9NV2iXSGKlWFywxT1bnLKUfyq6GnZvY0KJLZiob/12faOoWHXYOF/m1qevpahXaw0le2ytUfCbvwZMYZfH4g==}
+  '@sanity/client@7.2.1':
+    resolution: {integrity: sha512-BJ3RddlStGc+PjwBwhJIvWgXJbt3+TdWm/ywWWCNruqS5aqOSvvLUFjaAXp5ci4Wy8BL/RnZ60WIeqPi67+5xw==}
     engines: {node: '>=20'}
 
   '@sanity/codegen@3.87.0':
@@ -8952,7 +8948,7 @@ snapshots:
   '@sanity/cli@3.88.1-typegen-experimental.0(@types/node@22.13.9)(@types/react@19.1.2)(jiti@2.4.2)(lightningcss@1.29.1)(react@18.3.1)(terser@5.36.0)(tsx@4.19.4)(typescript@5.8.3)(yaml@2.7.1)':
     dependencies:
       '@babel/traverse': 7.27.0
-      '@sanity/client': 7.1.0(debug@4.4.0)
+      '@sanity/client': 7.2.1(debug@4.4.0)
       '@sanity/codegen': 3.88.1-typegen-experimental.0
       '@sanity/runtime-cli': 6.1.1(@types/node@22.13.9)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(typescript@5.8.3)(yaml@2.7.1)
       '@sanity/telemetry': 0.8.1(react@18.3.1)
@@ -8994,18 +8990,11 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  '@sanity/client@7.0.0':
+  '@sanity/client@7.2.1(debug@4.4.0)':
     dependencies:
       '@sanity/eventsource': 5.0.2
       get-it: 8.6.7(debug@4.4.0)
-      rxjs: 7.8.2
-    transitivePeerDependencies:
-      - debug
-
-  '@sanity/client@7.1.0(debug@4.4.0)':
-    dependencies:
-      '@sanity/eventsource': 5.0.2
-      get-it: 8.6.7(debug@4.4.0)
+      nanoid: 3.3.11
       rxjs: 7.8.2
     transitivePeerDependencies:
       - debug
@@ -9344,7 +9333,7 @@ snapshots:
       '@sanity/comlink': 3.0.2
       '@sanity/diff-match-patch': 3.2.0
       '@sanity/mutate': 0.12.4(debug@4.4.0)
-      '@sanity/types': 3.87.0(@types/react@19.1.2)(debug@4.4.0)
+      '@sanity/types': 3.88.1(@types/react@19.1.2)(debug@4.4.0)
       '@types/lodash-es': 4.17.12
       lodash-es: 4.17.21
       reselect: 5.1.1
@@ -9386,7 +9375,7 @@ snapshots:
 
   '@sanity/types@3.88.1(@types/react@19.1.2)(debug@4.4.0)':
     dependencies:
-      '@sanity/client': 7.1.0(debug@4.4.0)
+      '@sanity/client': 7.2.1(debug@4.4.0)
       '@types/react': 19.1.2
     transitivePeerDependencies:
       - debug
@@ -9433,7 +9422,7 @@ snapshots:
 
   '@sanity/util@3.88.1(@types/react@19.1.2)(debug@4.4.0)':
     dependencies:
-      '@sanity/client': 7.1.0(debug@4.4.0)
+      '@sanity/client': 7.2.1(debug@4.4.0)
       '@sanity/types': 3.88.1(@types/react@19.1.2)(debug@4.4.0)
       get-random-values-esm: 1.0.2
       moment: 2.30.1
