@@ -1,12 +1,46 @@
-import {PerspectiveHandle, useActiveReleases, useDocuments, usePerspective} from '@sanity/sdk-react'
+import {
+  type DocumentHandle,
+  PerspectiveHandle,
+  ReleaseDocument,
+  useActiveReleases,
+  useDocuments,
+  useDocumentsInRelease,
+  usePerspective,
+} from '@sanity/sdk-react'
+import {Box, Card, Flex, Heading, Stack, Text} from '@sanity/ui'
+import {ReleasePerspective} from 'packages/core/src/config/sanityConfig'
 import {type JSX, useState} from 'react'
 
 import {DocumentPreview} from '../DocumentCollection/DocumentPreview'
 
-function DocumentList(perspectiveHandle: PerspectiveHandle) {
-  const perspective = usePerspective(perspectiveHandle)
-  const {data} = useDocuments({
-    ...perspectiveHandle,
+const DEFAULT_PERSPECTIVES = [
+  {name: 'raw', title: 'Raw', description: 'View all document versions'},
+  {name: 'published', title: 'Published', description: 'View published content'},
+  {name: 'drafts', title: 'Drafts', description: 'View draft content'},
+] as const
+
+const isReleasePerspective = (
+  perspective: PerspectiveHandle['perspective'],
+): perspective is ReleasePerspective => {
+  return typeof perspective === 'object' && perspective !== null && 'releaseName' in perspective
+}
+
+function ReleaseDocumentList({releasePerspective}: {releasePerspective: ReleasePerspective}) {
+  const {data} = useDocumentsInRelease({perspective: releasePerspective})
+
+  return (
+    <ul>
+      {data.map((doc: DocumentHandle) => (
+        <DocumentPreview key={doc.documentId} {...doc} />
+      ))}
+    </ul>
+  )
+}
+
+function DocumentList({perspective}: {perspective: PerspectiveHandle}) {
+  const perspectiveData = usePerspective(perspective)
+  const {data: regularData} = useDocuments({
+    ...perspective,
     filter: '_type==$type',
     params: {type: 'author'},
     orderings: [{field: '_updatedAt', direction: 'desc'}],
@@ -15,55 +49,194 @@ function DocumentList(perspectiveHandle: PerspectiveHandle) {
 
   return (
     <div>
-      <p>Documents in perspective: {JSON.stringify(perspective)}</p>
-      <ul>
-        {data.map((i) => (
-          <DocumentPreview key={i.documentId} {...i} />
-        ))}
-      </ul>
+      <p>Documents in perspective: {JSON.stringify(perspectiveData)}</p>
+      {isReleasePerspective(perspective.perspective) ? (
+        <ReleaseDocumentList releasePerspective={perspective.perspective} />
+      ) : (
+        <ul>
+          {regularData.map((doc: DocumentHandle) => (
+            <DocumentPreview key={doc.documentId} {...doc} />
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
 
-export function ReleasesRoute(): JSX.Element {
-  const [selectedRelease, setSelectedRelease] = useState('')
+function DefaultPerspectiveCard({
+  perspective,
+  isSelected,
+  onClick,
+}: {
+  perspective: (typeof DEFAULT_PERSPECTIVES)[number]
+  isSelected: boolean
+  onClick: () => void
+}) {
+  return (
+    <Card
+      padding={3}
+      radius={2}
+      shadow={1}
+      tone="default"
+      style={{cursor: 'pointer'}}
+      onClick={onClick}
+      border={isSelected}
+    >
+      <Flex align="center" gap={3}>
+        <Box flex={1}>
+          <Text size={1} weight="semibold">
+            {perspective.title}
+          </Text>
+          <Box paddingTop={1}>
+            <Text size={0} muted>
+              {perspective.description}
+            </Text>
+          </Box>
+        </Box>
+      </Flex>
+    </Card>
+  )
+}
 
-  const activeReleases = useActiveReleases()
-
-  const calculatedPerspective = usePerspective({
-    perspective: selectedRelease ? {releaseName: selectedRelease} : undefined,
-  })
-  const handleSelectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedRelease(event.target.value)
-  }
+function ReleaseCard({
+  release,
+  isSelected,
+  onClick,
+}: {
+  release: ReleaseDocument
+  isSelected: boolean
+  onClick: () => void
+}) {
+  const publishDate = release.publishAt || release.metadata?.intendedPublishAt
+  const formattedDate = publishDate ? new Date(publishDate).toLocaleString() : null
 
   return (
-    <div>
-      <h1>Releases Test Page</h1>
-      <pre>{JSON.stringify(activeReleases, null, 2)}</pre>
+    <Card
+      padding={4}
+      radius={2}
+      shadow={1}
+      tone={release['state'] === 'scheduled' ? 'primary' : 'default'}
+      style={{cursor: 'pointer'}}
+      onClick={onClick}
+      border={isSelected}
+    >
+      <Stack space={3}>
+        <Stack space={1}>
+          <Heading size={3}>{release.metadata.title}</Heading>
+          <Text size={1} muted>
+            Release ID: {release.name}
+          </Text>
+        </Stack>
+        <Flex gap={3}>
+          <Text size={1} weight="semibold">
+            Release Type:
+          </Text>
+          <Text size={1}>{release.metadata.releaseType}</Text>
+        </Flex>
+        <Flex gap={3}>
+          <Text size={1} weight="semibold">
+            State:
+          </Text>
+          <Text size={1}>{release['state']}</Text>
+        </Flex>
+        {formattedDate && (
+          <Flex gap={3}>
+            <Text size={1} weight="semibold">
+              Publish Date:
+            </Text>
+            <Text size={1}>{formattedDate}</Text>
+          </Flex>
+        )}
+        {release.metadata['description'] && (
+          <Text size={1} muted>
+            {release.metadata['description']}
+          </Text>
+        )}
+      </Stack>
+    </Card>
+  )
+}
 
-      {activeReleases && activeReleases.length > 0 && (
-        <div>
-          <label htmlFor="release-select">Select a release:</label>
-          <select id="release-select" value={selectedRelease} onChange={handleSelectChange}>
-            <option value="">Select a release</option>
-            {activeReleases.map((release) => (
-              <option key={release.name} value={release.name}>
-                {release.metadata.title} ({release.name})
-              </option>
+export function ReleasesRoute(): JSX.Element {
+  const [selectedPerspective, setSelectedPerspective] = useState<PerspectiveHandle>({
+    perspective: 'drafts',
+  })
+  const activeReleases = useActiveReleases()
+
+  const calculatedPerspective = usePerspective(selectedPerspective)
+
+  const handlePerspectiveSelect = (perspective: PerspectiveHandle) => {
+    setSelectedPerspective(perspective)
+  }
+  return (
+    <Box padding={4}>
+      <Stack space={4}>
+        <Heading as="h1" size={5}>
+          Perspectives
+        </Heading>
+
+        <Box>
+          <Text size={1} weight="semibold" style={{marginBottom: '8px'}}>
+            Default Perspectives
+          </Text>
+          <Stack space={2}>
+            {DEFAULT_PERSPECTIVES.map((perspective) => (
+              <DefaultPerspectiveCard
+                key={perspective.name}
+                perspective={perspective}
+                isSelected={
+                  !isReleasePerspective(selectedPerspective.perspective) &&
+                  selectedPerspective.perspective === perspective.name
+                }
+                onClick={() => handlePerspectiveSelect({perspective: perspective.name})}
+              />
             ))}
-          </select>
-        </div>
-      )}
+          </Stack>
+        </Box>
 
-      {/* TODO: Add release testing components here */}
-      {selectedRelease && <p>Selected Release: {selectedRelease}</p>}
-      <div>
-        <h2>Calculated Perspective</h2>
-        <pre>{JSON.stringify(calculatedPerspective, null, 2)}</pre>
-      </div>
+        <Box>
+          <Text size={1} weight="semibold" style={{marginBottom: '8px'}}>
+            Releases
+          </Text>
+          {activeReleases && activeReleases.length > 0 && (
+            <Stack space={4}>
+              {activeReleases.map((release) => (
+                <ReleaseCard
+                  key={release.name}
+                  release={release}
+                  isSelected={
+                    isReleasePerspective(selectedPerspective.perspective) &&
+                    selectedPerspective.perspective?.releaseName === release.name
+                  }
+                  onClick={() =>
+                    handlePerspectiveSelect({perspective: {releaseName: release.name}})
+                  }
+                />
+              ))}
+            </Stack>
+          )}
+        </Box>
 
-      <DocumentList perspective={selectedRelease ? {releaseName: selectedRelease} : undefined} />
-    </div>
+        {selectedPerspective && (
+          <Box>
+            <Heading as="h2" size={3}>
+              Selected Perspective
+            </Heading>
+            <Card padding={4} radius={2} shadow={1}>
+              <pre>{JSON.stringify(calculatedPerspective, null, 2)}</pre>
+            </Card>
+          </Box>
+        )}
+
+        {selectedPerspective && (
+          <Box>
+            <Heading as="h2" size={3}>
+              Documents in Selected Perspective
+            </Heading>
+            <DocumentList perspective={selectedPerspective} />
+          </Box>
+        )}
+      </Stack>
+    </Box>
   )
 }

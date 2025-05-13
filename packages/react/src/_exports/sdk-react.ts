@@ -47,6 +47,7 @@ export {
   type DocumentsResponse,
   useDocuments,
 } from '../hooks/documents/useDocuments'
+export {useDocumentsInRelease} from '../hooks/documents/useDocumentsInRelease'
 export {
   type PaginatedDocumentsOptions,
   type PaginatedDocumentsResponse,
