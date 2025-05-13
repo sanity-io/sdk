@@ -27,6 +27,7 @@ export {
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
+export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
 export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
 export {
   type NavigateToStudioResult,
