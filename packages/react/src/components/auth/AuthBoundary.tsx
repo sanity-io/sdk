@@ -139,7 +139,6 @@ function AuthSwitch({
   ...props
 }: AuthSwitchProps) {
   const authState = useAuthState()
-  // const orgError = useVerifyOrgProjects(!verifyOrganization, projectIds)
 
   const isLoggedOut = authState.type === AuthStateType.LOGGED_OUT && !authState.isDestroyingSession
   const loginUrl = useLoginUrl()

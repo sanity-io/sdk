@@ -1,6 +1,7 @@
 import {catchError, switchMap} from 'rxjs'
 
-import {ConfigurationError} from '../_exports'
+import {ConfigurationError} from '../auth/ConfigurationError'
+// eslint-disable-next-line import/no-cycle
 import {getClientState} from '../client/clientStore'
 import {type ProjectHandle} from '../config/sanityConfig'
 import {createFetcherStore} from '../utils/createFetcherStore'
