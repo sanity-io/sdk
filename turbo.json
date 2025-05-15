@@ -26,6 +26,9 @@
       "dependsOn": ["^build"],
       "outputs": ["docs/**"]
     },
+    "e2e": {
+      "dependsOn": ["^e2e"]
+    },
     "lint": {
       "cache": false
     },
