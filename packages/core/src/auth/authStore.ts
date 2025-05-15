@@ -1,13 +1,13 @@
 import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
-import {combineLatest, filter, map, type Subscription} from 'rxjs'
+import {combineLatest, filter, map, type Subscription, switchMap} from 'rxjs'
 
 import {type AuthConfig, type AuthProvider} from '../config/authConfig'
-import {getProjectState} from '../project/project'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
+import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
 import {ConfigurationError} from './ConfigurationError'
 import {refreshStampedToken} from './refreshStampedToken'
@@ -247,7 +247,28 @@ function getProjectIdsFromInstanceAndParents(instance: SanityInstance | undefine
 }
 
 const listenToProjectIdsAndDashboard = ({instance, state}: StoreContext<AuthStoreState>) => {
+  const {
+    options: {clientFactory, apiHost},
+  } = state.get()
   const projectIds = getProjectIdsFromInstanceAndParents(instance)
+
+  const token$ = state.observable.pipe(
+    map((i) => i.authState.type === AuthStateType.LOGGED_IN && i.authState.token),
+    filter((i) => typeof i === 'string'),
+  )
+
+  const client$ = token$.pipe(
+    map((token) =>
+      clientFactory({
+        apiVersion: DEFAULT_API_VERSION,
+        requestTagPrefix: REQUEST_TAG_PREFIX,
+        useProjectHostname: false,
+        useCdn: false,
+        token,
+        ...(apiHost && {apiHost}),
+      }),
+    ),
+  )
 
   const orgId$ = state.observable.pipe(
     map((i) => i.dashboardContext?.orgId),
@@ -256,8 +277,8 @@ const listenToProjectIdsAndDashboard = ({instance, state}: StoreContext<AuthStor
 
   const organizationIdsFromProjects$ = combineLatest(
     projectIds.map((projectId) =>
-      getProjectState(instance, {projectId}).observable.pipe(
-        filter(Boolean),
+      client$.pipe(
+        switchMap((client) => client.observable.projects.getById(projectId)),
         map((i) => ({projectId: i.id, organizationId: i.organizationId})),
       ),
     ),
