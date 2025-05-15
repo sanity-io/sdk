@@ -1,5 +1,6 @@
 import {createSanityInstance, type SanityConfig, type SanityInstance} from '@sanity/sdk'
 import {Suspense, useContext, useEffect, useMemo, useRef} from 'react'
+import {ErrorBoundary} from 'react-error-boundary'
 
 import {SanityInstanceContext} from './SanityInstanceContext'
 
@@ -70,6 +71,7 @@ export interface ResourceProviderProps extends SanityConfig {
 export function ResourceProvider({
   children,
   fallback,
+  ErrorComponent = SDKError,
   ...config
 }: ResourceProviderProps): React.ReactNode {
   const parent = useContext(SanityInstanceContext)
@@ -105,7 +107,9 @@ export function ResourceProvider({
 
   return (
     <SanityInstanceContext.Provider value={instance}>
-      <Suspense fallback={fallback ?? DEFAULT_FALLBACK}>{children}</Suspense>
+      <ErrorBoundary FallbackComponent={ErrorComponent}>
+        <Suspense fallback={fallback ?? DEFAULT_FALLBACK}>{children}</Suspense>
+      </ErrorBoundary>
     </SanityInstanceContext.Provider>
   )
 }

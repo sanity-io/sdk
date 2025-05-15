@@ -1,5 +1,6 @@
+import {ClientError} from '@sanity/client'
 import {ConfigurationError} from '@sanity/sdk'
-import {useCallback} from 'react'
+import {useCallback, useEffect, useMemo} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
 import {useLogOut} from '../../hooks/auth/useLogOut'
@@ -16,37 +17,45 @@ export type LoginErrorProps = FallbackProps
  * @alpha
  */
 export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.ReactNode {
-  if (!(error instanceof AuthError || error instanceof ConfigurationError)) {
+  if (!(error instanceof ClientError || error instanceof ConfigurationError)) {
     throw error
   }
 
   const logout = useLogOut()
-  // useAuthState()
+  // const authState = useAuthState()
 
-  const authErrorMessage = error.message
+  // const authErrorMessage = error.message
+  // const [authErrorMessage, setAuthErrorMessage] = useState(error.message)
 
   const handleRetry = useCallback(async () => {
     await logout()
     resetErrorBoundary()
   }, [logout, resetErrorBoundary])
 
-  // useEffect(() => {
-  //   if (authState.type === AuthStateType.ERROR && authState.error instanceof ClientError) {
-  //     if (authState.error.statusCode === 401) {
-  //       handleRetry()
-  //     } else if (authState.error.statusCode === 404) {
-  //       const errorMessage = authState.error.response.body.message || ''
-  //       if (errorMessage.startsWith('Session with sid') && errorMessage.endsWith('not found')) {
-  //         setAuthErrorMessage('The session ID is invalid or expired.')
-  //       } else {
-  //         setAuthErrorMessage('The login link is invalid or expired. Please try again.')
-  //       }
-  //     }
-  //   }
-  //   if (authState.type !== AuthStateType.ERROR && error instanceof ConfigurationError) {
-  //     setAuthErrorMessage(error.message)
-  //   }
-  // }, [authState, handleRetry, error])
+  const shouldHandleRetry = useMemo(() => {
+    if (error instanceof ClientError) {
+      return error.statusCode === 401
+    }
+    return false
+  }, [error])
+
+  useEffect(() => {
+    if (shouldHandleRetry) {
+      handleRetry()
+    }
+  }, [shouldHandleRetry, handleRetry])
+
+  const authErrorMessage = useMemo(() => {
+    if (!(error instanceof ClientError)) {
+      return error.message
+    }
+    const errMess = error.response.body.message || ''
+    if (errMess.startsWith('Session with sid') && errMess.endsWith('not found')) {
+      return 'The session ID is invalid or expired.'
+    } else {
+      return 'The login link is invalid or expired. Please try again.'
+    }
+  }, [error])
 
   return (
     <div className="sc-login-error">
