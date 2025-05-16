@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.0.1](https://github.com/sanity-io/sdk/compare/sdk-react-v1.0.0...sdk-react-v1.0.1) (2025-05-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* change `status` to `_status` in projection and preview ([#527](https://github.com/sanity-io/sdk/issues/527))
+
+### Features
+
+* **react:** add navigate function ([#529](https://github.com/sanity-io/sdk/issues/529)) ([8a5bcfc](https://github.com/sanity-io/sdk/commit/8a5bcfc570cf59c73579d3be16f5bef5abc65da7))
+
+
+### Bug Fixes
+
+* change `status` to `_status` in projection and preview ([#527](https://github.com/sanity-io/sdk/issues/527)) ([79f6df6](https://github.com/sanity-io/sdk/commit/79f6df6fcf5479bb144447c246e093551ed8c865))
+* **deps:** update dependency @sanity/client to ^7.2.1 ([#526](https://github.com/sanity-io/sdk/issues/526)) ([34b4f26](https://github.com/sanity-io/sdk/commit/34b4f260c1d639414908dd2f1dd8f375e7d1b73e))
+* **docs:** use correct hook in TS doc ([#523](https://github.com/sanity-io/sdk/issues/523)) ([fe25a11](https://github.com/sanity-io/sdk/commit/fe25a1109a5a4c6a271645ce5cd978572a09b685))
+
+
+### Documentation
+
+* **react:** fix isConnected mentions in comink hook docs ([#521](https://github.com/sanity-io/sdk/issues/521)) ([2cc1bf1](https://github.com/sanity-io/sdk/commit/2cc1bf141cecba6ee6757e472ed65a73ad590cce))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 1.0.1
+
 ## [1.0.0](https://github.com/sanity-io/sdk/compare/sdk-react-v1.0.0...sdk-react-v1.0.0) (2025-05-07)
 
 
