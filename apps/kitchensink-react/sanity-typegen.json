@@ -5,8 +5,8 @@
       "schemaId": "ppsg7ml5.test"
     },
     {
-      "schemaPath": "./schema.ezwd8xes.production.json",
-      "schemaId": "ezwd8xes.production"
+      "schemaPath": "./schema.d45jg133.production.json",
+      "schemaId": "d45jg133.production"
     }
   ],
   "overloadClientMethods": false

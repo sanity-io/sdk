@@ -21,20 +21,20 @@ export function DocumentPreview(docHandle: DocumentHandle): React.ReactNode {
 function DocumentPreviewResolved(docHandle: DocumentHandle): React.ReactNode {
   const ref = useRef(null)
   const {
-    data: {title, subtitle, media, status},
+    data: {title, subtitle, media, _status},
   } = useDocumentPreview({...docHandle, ref})
 
   let statusLabel
-  if (status?.lastEditedPublishedAt && status?.lastEditedDraftAt) {
-    const published = new Date(status.lastEditedPublishedAt)
-    const draft = new Date(status.lastEditedDraftAt)
+  if (_status?.lastEditedPublishedAt && _status?.lastEditedDraftAt) {
+    const published = new Date(_status.lastEditedPublishedAt)
+    const draft = new Date(_status.lastEditedDraftAt)
 
     if (published.getTime() > draft.getTime()) {
       statusLabel = 'published'
     } else {
       statusLabel = 'draft'
     }
-  } else if (status?.lastEditedPublishedAt) {
+  } else if (_status?.lastEditedPublishedAt) {
     statusLabel = 'published'
   } else {
     statusLabel = 'draft'

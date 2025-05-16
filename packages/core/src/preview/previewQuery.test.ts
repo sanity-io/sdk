@@ -80,7 +80,7 @@ describe('processPreviewQuery', () => {
     expect(val?.data).toEqual({
       title: 'John',
       media: null,
-      status: {lastEditedPublishedAt: '2021-01-01'},
+      _status: {lastEditedPublishedAt: '2021-01-01'},
     })
     expect(val?.isPending).toBe(false)
   })
@@ -126,7 +126,7 @@ describe('processPreviewQuery', () => {
     expect(val?.data).toEqual({
       title: 'Draft Title',
       media: null,
-      status: {
+      _status: {
         lastEditedDraftAt: '2023-12-16T12:00:00Z',
         lastEditedPublishedAt: '2023-12-15T12:00:00Z',
       },
@@ -176,7 +176,7 @@ describe('processPreviewQuery', () => {
       title: titleCandidates[TITLE_CANDIDATES[0] as keyof typeof titleCandidates],
       subtitle: subtitleCandidates[SUBTITLE_CANDIDATES[0] as keyof typeof subtitleCandidates],
       media: null,
-      status: {lastEditedPublishedAt: '2023-12-15T12:00:00Z'},
+      _status: {lastEditedPublishedAt: '2023-12-15T12:00:00Z'},
     })
     expect(val?.isPending).toBe(false)
   })
