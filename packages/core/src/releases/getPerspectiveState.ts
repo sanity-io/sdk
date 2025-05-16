@@ -4,6 +4,7 @@ import {type PerspectiveHandle, type ReleasePerspective} from '../config/sanityC
 import {bindActionByDataset} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 import {releasesStore, type ReleasesStoreState} from './releasesStore'
+import {sortReleases} from './utils/sortReleases'
 
 function isReleasePerspective(
   perspective: PerspectiveHandle['perspective'],
@@ -75,7 +76,7 @@ export const getPerspectiveState = bindActionByDataset(
         // if there are no active releases we can't compute the release perspective
         if (!activeReleases || activeReleases.length === 0) return undefined
 
-        const releaseNames = activeReleases.map((release) => release.name)
+        const releaseNames = sortReleases(activeReleases).map((release) => release.name)
         const index = releaseNames.findIndex((name) => name === perspective.releaseName)
 
         if (index < 0) {
