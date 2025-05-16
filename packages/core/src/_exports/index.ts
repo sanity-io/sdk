@@ -47,6 +47,7 @@ export {
   type DocumentTypeHandle,
   type PerspectiveHandle,
   type ProjectHandle,
+  type ReleasePerspective,
   type SanityConfig,
 } from '../config/sanityConfig'
 export {getDatasetsState, resolveDatasets} from '../datasets/datasets'

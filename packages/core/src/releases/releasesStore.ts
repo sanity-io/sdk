@@ -9,6 +9,8 @@ import {defineStore, type StoreContext} from '../store/defineStore'
 import {listenQuery} from '../utils/listenQuery'
 import {sortReleases} from './utils/sortReleases'
 
+const ARCHIVED_RELEASE_STATES = ['archived', 'published']
+
 /**
  * Represents a document in a Sanity dataset that represents release options.
  * @internal
@@ -16,10 +18,12 @@ import {sortReleases} from './utils/sortReleases'
 export type ReleaseDocument = SanityDocument & {
   name: string
   publishAt?: string
+  state: 'active' | 'scheduled'
   metadata: {
     title: string
     releaseType: 'asap' | 'scheduled' | 'undecided'
     intendedPublishAt?: string
+    description?: string
   }
 }
 
@@ -50,7 +54,7 @@ export const getActiveReleasesState = bindActionByDataset(
   }),
 )
 
-const RELEASES_QUERY = 'releases::all()[state == "active"]'
+const RELEASES_QUERY = 'releases::all()'
 const QUERY_PARAMS = {}
 
 const subscribeToReleases = ({instance, state}: StoreContext<ReleasesStoreState>) => {
@@ -83,7 +87,13 @@ const subscribeToReleases = ({instance, state}: StoreContext<ReleasesStoreState>
     )
     .subscribe({
       next: (releases) => {
-        state.set('setActiveReleases', {activeReleases: sortReleases(releases ?? [])})
+        // logic here mirrors that of studio:
+        // https://github.com/sanity-io/sanity/blob/156e8fa482703d99219f08da7bacb384517f1513/packages/sanity/src/core/releases/store/useActiveReleases.ts#L29
+        state.set('setActiveReleases', {
+          activeReleases: sortReleases(releases ?? [])
+            .filter((release) => !ARCHIVED_RELEASE_STATES.includes(release.state))
+            .reverse(),
+        })
       },
     })
 }
