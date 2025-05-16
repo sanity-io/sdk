@@ -123,14 +123,20 @@ export const subscribeToStateAndFetchBatches = ({
           }
         }).pipe(map((data) => ({data, ids})))
       }),
-      map(({ids, data}) =>
-        processProjectionQuery({
-          projectId: instance.config.projectId!,
-          dataset: instance.config.dataset!,
+      map(({ids, data}) => {
+        const documentId = ids.values().next().value
+        const projectionHash = Object.keys(state.get().documentProjections[documentId] || {})[0]
+        return processProjectionQuery({
+          projectId:
+            state.get().configs[documentId]?.[projectionHash]?.projectId ??
+            instance.config.projectId!,
+          dataset:
+            state.get().configs[documentId]?.[projectionHash]?.dataset ?? instance.config.dataset!,
           ids,
           results: data,
-        }),
-      ),
+          perspective: state.get().configs[documentId]?.[projectionHash]?.perspective,
+        })
+      }),
     )
     .subscribe({
       next: (processedValues) => {

@@ -6,6 +6,7 @@ export const projectionStore = defineStore<ProjectionStoreState>({
   name: 'Projection',
   getInitialState() {
     return {
+      configs: {},
       values: {},
       documentProjections: {},
       subscriptions: {},

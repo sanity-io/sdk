@@ -1,4 +1,6 @@
-import {getDraftId, getPublishedId} from '../utils/ids'
+import {type DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
+
+import {type PerspectiveHandle} from '../config/sanityConfig'
 import {
   type DocumentProjections,
   type DocumentProjectionValues,
@@ -6,7 +8,7 @@ import {
 } from './types'
 
 export type ProjectionQueryResult = {
-  _id: string
+  _id: DocumentId
   _type: string
   _updatedAt: string
   result: Record<string, unknown>
@@ -18,11 +20,12 @@ interface CreateProjectionQueryResult {
   params: Record<string, unknown>
 }
 
-type ProjectionMap = Record<string, {projection: ValidProjection; documentIds: Set<string>}>
+type ProjectionMap = Record<string, {projection: ValidProjection; documentIds: Set<DocumentId>}>
 
 export function createProjectionQuery(
-  documentIds: Set<string>,
-  documentProjections: {[TDocumentId in string]?: DocumentProjections},
+  documentIds: Set<DocumentId>,
+  documentProjections: {[TDocumentId in DocumentId]?: DocumentProjections},
+  perspective?: PerspectiveHandle['perspective'],
 ): CreateProjectionQueryResult {
   const projections = Array.from(documentIds)
     .flatMap((id) => {
@@ -51,10 +54,24 @@ export function createProjectionQuery(
 
   const params = Object.fromEntries(
     Object.entries(projections).map(([projectionHash, value]) => {
-      const idsInProjection = Array.from(value.documentIds).flatMap((id) => [
-        getPublishedId(id),
-        getDraftId(id),
-      ])
+      const idsInProjection = Array.from(value.documentIds).flatMap((id) => {
+        const publishedId = getPublishedId(id)
+        const draftId = getDraftId(id)
+        const ids: string[] = [publishedId.toString(), draftId.toString()]
+
+        // If we're in a release perspective, add the version ID
+        if (
+          typeof perspective === 'object' &&
+          perspective !== null &&
+          'releaseName' in perspective
+        ) {
+          const versionId = getVersionId(id, perspective.releaseName)
+          // Add the version ID as a string since it's a valid ID in the query
+          ids.push(versionId)
+        }
+
+        return ids
+      })
 
       return [`__ids_${projectionHash}`, Array.from(idsInProjection)]
     }),
@@ -68,9 +85,14 @@ interface ProcessProjectionQueryOptions {
   dataset: string
   ids: Set<string>
   results: ProjectionQueryResult[]
+  perspective?: PerspectiveHandle['perspective']
 }
 
-export function processProjectionQuery({ids, results}: ProcessProjectionQueryOptions): {
+export function processProjectionQuery({
+  ids,
+  results,
+  perspective,
+}: ProcessProjectionQueryOptions): {
   [TDocumentId in string]?: DocumentProjectionValues<Record<string, unknown>>
 } {
   const groupedResults: {
@@ -78,6 +100,7 @@ export function processProjectionQuery({ids, results}: ProcessProjectionQueryOpt
       [hash: string]: {
         draft?: ProjectionQueryResult
         published?: ProjectionQueryResult
+        releaseVersion?: ProjectionQueryResult
       }
     }
   } = {}
@@ -85,7 +108,12 @@ export function processProjectionQuery({ids, results}: ProcessProjectionQueryOpt
   for (const result of results) {
     const originalId = getPublishedId(result._id)
     const hash = result.__projectionHash
-    const isDraft = result._id.startsWith('drafts.')
+    const isDraft = result._id === getDraftId(result._id)
+    const isVersion =
+      typeof perspective === 'object' &&
+      perspective !== null &&
+      'releaseName' in perspective &&
+      getVersionId(result._id, perspective.releaseName) === result._id
 
     if (!ids.has(originalId)) continue
 
@@ -96,7 +124,9 @@ export function processProjectionQuery({ids, results}: ProcessProjectionQueryOpt
       groupedResults[originalId][hash] = {}
     }
 
-    if (isDraft) {
+    if (isVersion) {
+      groupedResults[originalId][hash].releaseVersion = result
+    } else if (isDraft) {
       groupedResults[originalId][hash].draft = result
     } else {
       groupedResults[originalId][hash].published = result
@@ -114,9 +144,10 @@ export function processProjectionQuery({ids, results}: ProcessProjectionQueryOpt
     if (!projectionsForDoc) continue
 
     for (const hash in projectionsForDoc) {
-      const {draft, published} = projectionsForDoc[hash]
+      const {draft, published, releaseVersion} = projectionsForDoc[hash]
 
-      const projectionResultData = draft?.result ?? published?.result
+      // Layer the results according to priority: releaseVersion ?? draftVersion ?? publishedVersion
+      const projectionResultData = releaseVersion?.result ?? draft?.result ?? published?.result
 
       if (!projectionResultData) {
         finalValues[originalId][hash] = {data: null, isPending: false}
@@ -124,6 +155,7 @@ export function processProjectionQuery({ids, results}: ProcessProjectionQueryOpt
       }
 
       const _status = {
+        ...(releaseVersion?._updatedAt && {lastEditedReleaseVersionAt: releaseVersion._updatedAt}),
         ...(draft?._updatedAt && {lastEditedDraftAt: draft._updatedAt}),
         ...(published?._updatedAt && {lastEditedPublishedAt: published._updatedAt}),
       }
