@@ -1,4 +1,5 @@
 import {type ClientPerspective, type StackablePerspective} from '@sanity/client'
+import {type DocumentId} from '@sanity/id-utils'
 
 import {type AuthConfig} from './authConfig'
 
@@ -60,7 +61,7 @@ export interface DocumentHandle<
   TDataset extends string = string,
   TProjectId extends string = string,
 > extends DocumentTypeHandle<TDocumentType, TDataset, TProjectId> {
-  documentId: string
+  documentId: DocumentId
 }
 
 /**
