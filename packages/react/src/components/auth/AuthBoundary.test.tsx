@@ -7,7 +7,6 @@ import {beforeEach, describe, expect, it, type MockInstance, vi} from 'vitest'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
-import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
 import {AuthBoundary} from './AuthBoundary'
 
 // Mock hooks
@@ -104,7 +103,6 @@ describe('AuthBoundary', () => {
   let consoleErrorSpy: MockInstance
   const mockUseAuthState = vi.mocked(useAuthState)
   const mockUseLoginUrl = vi.mocked(useLoginUrl)
-  const mockUseVerifyOrgProjects = vi.mocked(useVerifyOrgProjects)
   const testProjectIds = ['proj-test'] // Example project ID for tests
 
   beforeEach(() => {
@@ -114,8 +112,6 @@ describe('AuthBoundary', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN} as any)
     mockUseLoginUrl.mockReturnValue('http://example.com/login')
-    // Default mock for useVerifyOrgProjects - returns null (no error)
-    mockUseVerifyOrgProjects.mockImplementation(() => null)
   })
 
   afterEach(() => {
@@ -129,7 +125,7 @@ describe('AuthBoundary', () => {
     })
     render(
       <ResourceProvider fallback={null}>
-        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        <AuthBoundary>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
 
@@ -146,7 +142,7 @@ describe('AuthBoundary', () => {
     })
     const {container} = render(
       <ResourceProvider fallback={null}>
-        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        <AuthBoundary>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
 
@@ -163,7 +159,7 @@ describe('AuthBoundary', () => {
     })
     render(
       <ResourceProvider fallback={null}>
-        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        <AuthBoundary>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
 
@@ -177,7 +173,7 @@ describe('AuthBoundary', () => {
     })
     render(
       <ResourceProvider fallback={null}>
-        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        <AuthBoundary>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
 
@@ -194,7 +190,7 @@ describe('AuthBoundary', () => {
   it('renders children when logged in and org verification passes', () => {
     render(
       <ResourceProvider fallback={null}>
-        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+        <AuthBoundary>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
     expect(screen.getByText('Protected Content')).toBeInTheDocument()
@@ -204,18 +200,10 @@ describe('AuthBoundary', () => {
     const orgErrorMessage = 'Organization mismatch!'
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN} as any)
-    // Mock specific return value for this test
-    mockUseVerifyOrgProjects.mockImplementation((disabled, pIds) => {
-      // Expect verification to be enabled (disabled=false) and projectIds to match
-      if (!disabled && pIds === testProjectIds) {
-        return orgErrorMessage
-      }
-      return null // Default case
-    })
 
     // Need to catch the error thrown during render. ErrorBoundary mock handles this.
     render(
-      <AuthBoundary verifyOrganization={true} projectIds={testProjectIds}>
+      <AuthBoundary>
         <div>Protected Content</div>
       </AuthBoundary>,
     )
@@ -245,7 +233,7 @@ describe('AuthBoundary', () => {
     })
 
     render(
-      <AuthBoundary verifyOrganization={false} projectIds={testProjectIds}>
+      <AuthBoundary>
         <div>Protected Content</div>
       </AuthBoundary>,
     )
@@ -264,11 +252,9 @@ describe('AuthBoundary', () => {
       error: new Error(authErrorMessage),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
-    mockUseVerifyOrgProjects.mockReturnValue(null) // Org verification passes or is irrelevant
-    mockUseVerifyOrgProjects.mockImplementation(() => null)
 
     render(
-      <AuthBoundary projectIds={testProjectIds}>
+      <AuthBoundary>
         <div>Protected Content</div>
       </AuthBoundary>,
     )

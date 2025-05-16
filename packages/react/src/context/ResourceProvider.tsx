@@ -1,7 +1,8 @@
 import {createSanityInstance, type SanityConfig, type SanityInstance} from '@sanity/sdk'
 import {Suspense, useContext, useEffect, useMemo, useRef} from 'react'
-import {ErrorBoundary} from 'react-error-boundary'
+import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
+import {SDKError} from '../components/SDKError'
 import {SanityInstanceContext} from './SanityInstanceContext'
 
 const DEFAULT_FALLBACK = (
@@ -21,6 +22,7 @@ export interface ResourceProviderProps extends SanityConfig {
    */
   fallback: React.ReactNode
   children: React.ReactNode
+  ErrorComponent?: React.ComponentType<FallbackProps>
 }
 
 /**

@@ -4,6 +4,7 @@ import {useCallback, useEffect, useMemo} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
 import {useLogOut} from '../../hooks/auth/useLogOut'
+import {isAuthError} from '../utils'
 import {AuthError} from './AuthError'
 /**
  * @alpha
@@ -32,18 +33,12 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
     resetErrorBoundary()
   }, [logout, resetErrorBoundary])
 
-  const shouldHandleRetry = useMemo(() => {
-    if (error instanceof ClientError) {
-      return error.statusCode === 401
-    }
-    return false
-  }, [error])
-
   useEffect(() => {
-    if (shouldHandleRetry) {
+    const needsRetry = error instanceof ClientError && isAuthError(error)
+    if (needsRetry) {
       handleRetry()
     }
-  }, [shouldHandleRetry, handleRetry])
+  }, [error, handleRetry])
 
   const authErrorMessage = useMemo(() => {
     if (!(error instanceof ClientError)) {
