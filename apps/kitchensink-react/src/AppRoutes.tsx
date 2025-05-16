@@ -16,7 +16,7 @@ import {ProtectedRoute} from './ProtectedRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import ExperimentalResourceClientRoute from './routes/ExperimentalResourceClientRoute'
-import {ReleasesRoute} from './routes/ReleasesRoute'
+import {ReleasesRoute} from './routes/releases/ReleasesRoute'
 import {UsersRoute} from './routes/UsersRoute'
 
 const documentCollectionRoutes = [
