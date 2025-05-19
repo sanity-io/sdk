@@ -2,17 +2,17 @@ import {
   type DocumentHandle,
   PerspectiveHandle,
   useActiveReleases,
-  // useDocument,
-  // useDocumentPreview,
+  useDocument,
+  useDocumentPreview,
   useDocumentProjection,
-  // useDocuments,
+  useDocuments,
   usePerspective,
 } from '@sanity/sdk-react'
 import {Box, Button, Card, Flex, Heading, Stack, Text, TextInput} from '@sanity/ui'
 import {type JSX, useMemo, useState} from 'react'
 
-// import {DocumentListLayout} from '../../components/DocumentListLayout/DocumentListLayout'
-// import {DocumentPreview} from '../../DocumentCollection/DocumentPreview'
+import {DocumentListLayout} from '../../components/DocumentListLayout/DocumentListLayout'
+import {DocumentPreview} from '../../DocumentCollection/DocumentPreview'
 import {ReleasesAutocomplete} from './ReleasesAutocomplete'
 import {isReleasePerspective} from './util'
 
@@ -22,38 +22,38 @@ const DEFAULT_PERSPECTIVES = [
   {name: 'drafts', title: 'Drafts', description: 'View draft content'},
 ] as const
 
-// function DocumentList({
-//   perspective,
-//   onSelectDocument,
-// }: {
-//   perspective: PerspectiveHandle
-//   onSelectDocument: (doc: DocumentHandle) => void
-//   selectedDocumentId?: string
-// }) {
-//   const perspectiveData = usePerspective(perspective)
-//   const {data} = useDocuments({
-//     ...perspective,
-//     filter: '_type==$type',
-//     params: {type: 'author'},
-//     orderings: [{field: '_updatedAt', direction: 'desc'}],
-//     batchSize: 5,
-//   })
+function DocumentList({
+  perspective,
+  onSelectDocument,
+}: {
+  perspective: PerspectiveHandle
+  onSelectDocument: (doc: DocumentHandle) => void
+  selectedDocumentId?: string
+}) {
+  const perspectiveData = usePerspective(perspective)
+  const {data} = useDocuments({
+    ...perspective,
+    filter: '_type==$type',
+    params: {type: 'author'},
+    orderings: [{field: '_updatedAt', direction: 'desc'}],
+    batchSize: 5,
+  })
 
-//   return (
-//     <div>
-//       <p>Documents in perspective: {JSON.stringify(perspectiveData)}</p>
-//       <DocumentListLayout>
-//         {data.map((docHandle: DocumentHandle) => (
-//           <DocumentPreview
-//             {...docHandle}
-//             key={docHandle.documentId}
-//             onClick={() => onSelectDocument(docHandle)}
-//           />
-//         ))}
-//       </DocumentListLayout>
-//     </div>
-//   )
-// }
+  return (
+    <div>
+      <p>Documents in perspective: {JSON.stringify(perspectiveData)}</p>
+      <DocumentListLayout>
+        {data.map((docHandle: DocumentHandle) => (
+          <DocumentPreview
+            {...docHandle}
+            key={docHandle.documentId}
+            onClick={() => onSelectDocument(docHandle)}
+          />
+        ))}
+      </DocumentListLayout>
+    </div>
+  )
+}
 
 function DefaultPerspectiveCard({
   perspective,
@@ -115,8 +115,8 @@ export function ReleasesRoute(): JSX.Element {
     [selectedDocument, selectedPerspective],
   )
 
-  // const documentResult = useDocument(documentOptions)
-  // const previewResult = useDocumentPreview(documentOptions)
+  const documentResult = useDocument(documentOptions)
+  const previewResult = useDocumentPreview(documentOptions)
   const projectionResult = useDocumentProjection({
     ...documentOptions,
     projection: `{
@@ -180,15 +180,15 @@ export function ReleasesRoute(): JSX.Element {
 
         {selectedPerspective && (
           <Box>
-            {/* <Heading as="h2" size={3}>
+            <Heading as="h2" size={3}>
               Documents in Selected{' '}
               {isReleasePerspective(selectedPerspective.perspective) ? 'Release' : 'Perspective'}
-            </Heading> */}
-            {/* <DocumentList
+            </Heading>
+            <DocumentList
               perspective={selectedPerspective}
               onSelectDocument={setSelectedDocument}
               selectedDocumentId={selectedDocument?.documentId}
-            /> */}
+            />
           </Box>
         )}
 
@@ -214,27 +214,27 @@ export function ReleasesRoute(): JSX.Element {
         {selectedDocument && (
           <Box paddingTop={4}>
             <Stack space={4}>
-              {/* <Card padding={4} radius={2} shadow={1} tone="primary">
+              <Card padding={4} radius={2} shadow={1} tone="primary">
                 <Heading as="h3" size={2} style={{marginBottom: 8}}>
                   Selected Document Data
                 </Heading>
                 <pre style={{whiteSpace: 'pre-wrap', wordBreak: 'break-all'}}>
                   {JSON.stringify(documentResult.data, null, 2)}
                 </pre>
-              </Card> */}
+              </Card>
 
-              {/* <Card padding={4} radius={2} shadow={1} tone="primary">
+              <Card padding={4} radius={2} shadow={1} tone="primary">
                 <Heading as="h3" size={2} style={{marginBottom: 8}}>
-                  Selected Document Preview
+                  Document Preview
                 </Heading>
                 <pre style={{whiteSpace: 'pre-wrap', wordBreak: 'break-all'}}>
                   {JSON.stringify(previewResult.data, null, 2)}
                 </pre>
-              </Card> */}
+              </Card>
 
               <Card padding={4} radius={2} shadow={1} tone="primary">
                 <Heading as="h3" size={2} style={{marginBottom: 8}}>
-                  Selected Document Projection
+                  Document Projection
                 </Heading>
                 <pre style={{whiteSpace: 'pre-wrap', wordBreak: 'break-all'}}>
                   {JSON.stringify(projectionResult.data, null, 2)}
