@@ -52,6 +52,7 @@ export const subscribeToStateAndFetchBatches = ({
       pairwise(),
       tap(([prevIds, currIds]) => {
         const newIds = [...currIds].filter((id) => !prevIds.has(id))
+        // console.log('newIds', newIds)
         if (newIds.length === 0) return
 
         state.set('updatingPending', (prev) => {
@@ -79,6 +80,9 @@ export const subscribeToStateAndFetchBatches = ({
     .subscribe()
 
   const queryTrigger$ = combineLatest([activeDocumentIds$, documentProjections$]).pipe(
+    // tap(([ids, documentProjections]) => {
+    //   console.log('queryTrigger$', ids, documentProjections)
+    // }),
     debounceTime(BATCH_DEBOUNCE_TIME),
     distinctUntilChanged(isEqual),
   )
@@ -123,20 +127,14 @@ export const subscribeToStateAndFetchBatches = ({
           }
         }).pipe(map((data) => ({data, ids})))
       }),
-      map(({ids, data}) => {
-        const documentId = ids.values().next().value
-        const projectionHash = Object.keys(state.get().documentProjections[documentId] || {})[0]
-        return processProjectionQuery({
-          projectId:
-            state.get().configs[documentId]?.[projectionHash]?.projectId ??
-            instance.config.projectId!,
-          dataset:
-            state.get().configs[documentId]?.[projectionHash]?.dataset ?? instance.config.dataset!,
+      map(({ids, data}) =>
+        processProjectionQuery({
+          projectId: instance.config.projectId!,
+          dataset: instance.config.dataset!,
           ids,
           results: data,
-          perspective: state.get().configs[documentId]?.[projectionHash]?.perspective,
-        })
-      }),
+        }),
+      ),
     )
     .subscribe({
       next: (processedValues) => {
