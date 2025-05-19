@@ -79,13 +79,8 @@ export const _getProjectionState = bindActionByDataset(
       options: ProjectionOptions<ValidProjection, string, string, string>,
     ): ProjectionValuePending<object> | undefined => {
       const documentId = getPublishedId(options.documentId as DocumentId)
-      const configString = JSON.stringify({
-        projection: options.projection,
-        projectId: options.projectId,
-        dataset: options.dataset,
-        perspective: options.perspective,
-      })
-      const projectionHash = hashString(configString)
+      // used to batch docs with the same projection in a query
+      const projectionHash = hashString(options.projection)
       return state.values[documentId]?.[projectionHash] ?? STABLE_EMPTY_PROJECTION
     },
     onSubscribe: ({state}, options: ProjectionOptions<ValidProjection, string, string, string>) => {
@@ -93,15 +88,7 @@ export const _getProjectionState = bindActionByDataset(
       const subscriptionId = insecureRandomId()
       const documentId = getPublishedId(docHandle.documentId as DocumentId)
       const validProjection = validateProjection(projection)
-
-      // Create a configuration string that includes all relevant options
-      const configString = JSON.stringify({
-        projection: validProjection,
-        projectId: docHandle.projectId,
-        dataset: docHandle.dataset,
-        perspective: docHandle.perspective,
-      })
-      const projectionHash = hashString(configString)
+      const projectionHash = hashString(validProjection)
 
       state.set('addSubscription', (prev) => {
         const existingConfigs = prev.configs[documentId] || {}
@@ -127,6 +114,8 @@ export const _getProjectionState = bindActionByDataset(
               },
             },
           },
+          // track configs to see if we need to add version IDs to the query,
+          // or batch to different projects / datasets
           configs: {
             ...prev.configs,
             [documentId]: {

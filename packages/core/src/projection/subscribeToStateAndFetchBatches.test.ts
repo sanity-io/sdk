@@ -1,3 +1,4 @@
+import {type DocumentId} from '@sanity/id-utils'
 import {NEVER, Observable, type Observer} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
@@ -23,6 +24,7 @@ describe('subscribeToStateAndFetchBatches', () => {
       documentProjections: {},
       subscriptions: {},
       values: {},
+      configs: {},
     })
 
     vi.mocked(getQueryState).mockReturnValue({
@@ -47,6 +49,7 @@ describe('subscribeToStateAndFetchBatches', () => {
       documentProjections: {doc1: {[projectionHash]: projection}},
       // Add projectionHash level to subscriptions
       subscriptions: {doc1: {[projectionHash]: {sub1: true}}},
+      configs: {doc1: {[projectionHash]: {perspective: 'drafts'}}},
     })
 
     state.set('addSubscription2', (prev) => ({
@@ -59,6 +62,7 @@ describe('subscribeToStateAndFetchBatches', () => {
         ...prev.subscriptions,
         doc2: {[projectionHash]: {sub2: true}},
       },
+      configs: {...prev.configs, doc2: {[projectionHash]: {perspective: 'drafts'}}},
     }))
 
     // Wait for debounce
@@ -121,14 +125,14 @@ describe('subscribeToStateAndFetchBatches', () => {
 
     observer.next([
       {
-        _id: 'doc1',
+        _id: 'doc1' as DocumentId,
         _type: 'doc',
         _updatedAt: timestamp,
         result: {title: 'resolved'},
         __projectionHash: projectionHash,
       },
       {
-        _id: 'drafts.doc1',
+        _id: 'drafts.doc1' as DocumentId,
         _type: 'doc',
         _updatedAt: timestamp,
         result: {title: 'resolved'},
@@ -286,7 +290,7 @@ describe('subscribeToStateAndFetchBatches', () => {
     const timestamp = '2024-01-01T00:00:00Z'
     observer.next([
       {
-        _id: 'doc1',
+        _id: 'doc1' as DocumentId,
         _type: 'test',
         _updatedAt: timestamp,
         result: {title: 'Test Document', description: 'Test Description'},
