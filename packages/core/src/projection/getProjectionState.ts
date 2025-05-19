@@ -1,4 +1,4 @@
-import {getPublishedId} from '@sanity/id-utils'
+import {DocumentId, getPublishedId} from '@sanity/id-utils'
 import {type SanityProjectionResult} from 'groq'
 import {omit} from 'lodash-es'
 
@@ -78,16 +78,30 @@ export const _getProjectionState = bindActionByDataset(
       {state}: SelectorContext<ProjectionStoreState>,
       options: ProjectionOptions<ValidProjection, string, string, string>,
     ): ProjectionValuePending<object> | undefined => {
-      const documentId = getPublishedId(options.documentId)
-      const projectionHash = hashString(options.projection)
+      const documentId = getPublishedId(options.documentId as DocumentId)
+      const configString = JSON.stringify({
+        projection: options.projection,
+        projectId: options.projectId,
+        dataset: options.dataset,
+        perspective: options.perspective,
+      })
+      const projectionHash = hashString(configString)
       return state.values[documentId]?.[projectionHash] ?? STABLE_EMPTY_PROJECTION
     },
     onSubscribe: ({state}, options: ProjectionOptions<ValidProjection, string, string, string>) => {
       const {projection, ...docHandle} = options
       const subscriptionId = insecureRandomId()
-      const documentId = getPublishedId(docHandle.documentId)
+      const documentId = getPublishedId(docHandle.documentId as DocumentId)
       const validProjection = validateProjection(projection)
-      const projectionHash = hashString(validProjection)
+
+      // Create a configuration string that includes all relevant options
+      const configString = JSON.stringify({
+        projection: validProjection,
+        projectId: docHandle.projectId,
+        dataset: docHandle.dataset,
+        perspective: docHandle.perspective,
+      })
+      const projectionHash = hashString(configString)
 
       state.set('addSubscription', (prev) => {
         const existingConfigs = prev.configs[documentId] || {}
