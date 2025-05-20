@@ -21,7 +21,7 @@ export const datasets = createFetcherStore({
       apiVersion: API_VERSION,
       // non-null assertion is fine because we check above
       projectId: (options?.projectId ?? instance.config.projectId)!,
-      useProjectHostname: true,
+      useProjectHostname: true, // TODO: remove this once we've confirmed that the datasets endpoint is not using the experimental resource
     }).observable.pipe(switchMap((client) => client.observable.datasets.list()))
   },
 })

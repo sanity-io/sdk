@@ -9,7 +9,8 @@ import {defineStore, type StoreContext} from '../store/defineStore'
 const DEFAULT_API_VERSION = '2024-11-12'
 const DEFAULT_REQUEST_TAG_PREFIX = 'sanity.sdk'
 
-type AllowedClientConfigKey =
+// Keys that are valid for the underlying @sanity/client ClientConfig
+type AllowedSanityClientConfigKey =
   | 'useCdn'
   | 'token'
   | 'perspective'
@@ -22,8 +23,9 @@ type AllowedClientConfigKey =
   | 'projectId'
   | 'requestTagPrefix'
   | 'useProjectHostname'
+  | '~experimental_resource' // ~experimental_resource is part of ClientConfig
 
-const allowedKeys = Object.keys({
+const allowedClientOptionKeys = Object.keys({
   'apiHost': null,
   'useCdn': null,
   'token': null,
@@ -75,21 +77,17 @@ export interface ClientStoreState {
  *
  * @public
  */
-export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey> {
+export interface ClientOptions extends Pick<ClientConfig, AllowedSanityClientConfigKey> {
   /**
    * An optional flag to choose between the default client (typically project-level)
    * and the global client ('global'). When set to `'global'`, the global client
    * is used.
    */
-  'scope'?: 'default' | 'global'
+  scope?: 'default' | 'global'
   /**
    * A required string indicating the API version for the client.
    */
-  'apiVersion': string
-  /**
-   * @internal
-   */
-  '~experimental_resource'?: ClientConfig['~experimental_resource']
+  apiVersion: string
 }
 
 const clientStore = defineStore<ClientStoreState>({
@@ -126,7 +124,8 @@ const listenToAuthMethod = ({instance, state}: StoreContext<ClientStoreState>) =
   })
 }
 
-const getClientConfigKey = (options: ClientOptions) => JSON.stringify(pick(options, ...allowedKeys))
+const getClientConfigKey = (options: ClientOptions) =>
+  JSON.stringify(pick(options, ...allowedClientOptionKeys))
 
 /**
  * Retrieves a Sanity client instance configured with the provided options.
@@ -144,13 +143,13 @@ export const getClient = bindActionGlobally(
   ({state, instance}, options: ClientOptions) => {
     // Check for disallowed keys
     const providedKeys = Object.keys(options) as (keyof ClientOptions)[]
-    const disallowedKeys = providedKeys.filter((key) => !allowedKeys.includes(key))
+    const disallowedKeys = providedKeys.filter((key) => !allowedClientOptionKeys.includes(key))
 
     if (disallowedKeys.length > 0) {
       const listFormatter = new Intl.ListFormat('en', {style: 'long', type: 'conjunction'})
       throw new Error(
         `The client options provided contains unsupported properties: ${listFormatter.format(disallowedKeys)}. ` +
-          `Allowed keys are: ${listFormatter.format(allowedKeys)}.`,
+          `Allowed keys are: ${listFormatter.format(allowedClientOptionKeys)}.`,
       )
     }
 
@@ -160,14 +159,47 @@ export const getClient = bindActionGlobally(
     const dataset = options.dataset ?? instance.config.dataset
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost
 
+    // Determine if experimental resource should be used, respecting useProjectHostname
+    let experimentalResourceSettingsToAdd = null
+    const intentToUseExperimentalResourceFromOptions =
+      typeof options['~experimental_resource'] !== 'undefined'
+    const intentToUseExperimentalResourceFromConfig =
+      instance.config.useExperimentalResource === true
+
+    if (
+      options.useProjectHostname !== true &&
+      (intentToUseExperimentalResourceFromOptions || intentToUseExperimentalResourceFromConfig)
+    ) {
+      if (projectId && dataset) {
+        if (intentToUseExperimentalResourceFromOptions) {
+          experimentalResourceSettingsToAdd = {
+            '~experimental_resource': options['~experimental_resource'],
+            'apiVersion': 'vX',
+            'useProjectHostname': false,
+          }
+        } else {
+          // implies intentToUseExperimentalResourceFromConfig was true
+          experimentalResourceSettingsToAdd = {
+            '~experimental_resource': {
+              type: 'dataset' as const,
+              id: `${projectId}.${dataset}`,
+            },
+            'apiVersion': 'vX',
+            'useProjectHostname': false,
+          }
+        }
+      }
+    }
+
     const effectiveOptions: ClientOptions = {
       ...DEFAULT_CLIENT_CONFIG,
       ...((options.scope === 'global' || !projectId) && {useProjectHostname: false}),
       token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
       ...options,
-      ...(projectId && {projectId}),
-      ...(dataset && {dataset}),
+      ...(projectId && !experimentalResourceSettingsToAdd && {projectId}),
+      ...(dataset && !experimentalResourceSettingsToAdd && {dataset}),
       ...(apiHost && {apiHost}),
+      ...(experimentalResourceSettingsToAdd || {}),
     }
 
     if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {
