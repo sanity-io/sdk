@@ -1,6 +1,6 @@
 # SDK Authentication Guide
 
-This document outlines the various authentication mechanisms supported by the Sanity SDK, catering to different usage contexts like embedded dashboard apps, Studio integrations, and standalone applications.
+This document outlines the various authentication types supported by the Sanity SDK, catering to different usage contexts like embedded dashboard apps, Studio integrations, and standalone applications.
 
 ## ✨ High-Level Overview
 
@@ -10,7 +10,7 @@ API client instances, managed by `clientStore`, automatically utilize the curren
 
 The primary interactive authentication flow involves redirecting the user to `sanity.io/login` (or `sanity.work/login` for staging environments) and handling the callback, which returns an `authCode` (`sid`) exchanged for a session token.
 
-### Authentication Channels Overview
+### Authentication Types Overview
 
 - **Dashboard (Primary):** Relies on the host environment providing
   authentication context (`sid`) via URL parameters. Seamless for the end-user.
@@ -20,11 +20,11 @@ The primary interactive authentication flow involves redirecting the user to `sa
 - **Studio Mode:** Leverages Studio's own auth context (token or cookie)
   when the SDK is used within the Studio application.
 
-- **Standalone:** Supports manually provided tokens (secure for backends,
-  requires care for frontends). The built-in web login flow (`sanity.io/login`) has
+- **Standalone:** Supports manually provided tokens (stable for backends,
+  requires care for stamped tokens on frontends). ⚠️ The built-in web login flow (`sanity.io/login`) has
   significant limitations for apps on custom domains due to origin restrictions.
 
-## 🚦 Authentication Channels
+## 🚦 Authentication Types
 
 ### 1. Dashboard Apps (Running inside Sanity Dashboard iframe)
 
@@ -52,7 +52,7 @@ The primary interactive authentication flow involves redirecting the user to `sa
 
   - `AuthBoundary.tsx` detects iframe context (`isInIframe()`) and prevents the SDK's own redirect-based login flow when embedded.
 
-### 2. Sanity Studio Mode (👷 Under construction)
+### 2. Sanity Studio Mode
 
 - 🎯 **Use Case:** Using the SDK _within_ the Sanity Studio V3 codebase itself (not running in the dashboard iframe). For instance: in custom input components, tools, or plugins integrated directly into the Studio application.
 
