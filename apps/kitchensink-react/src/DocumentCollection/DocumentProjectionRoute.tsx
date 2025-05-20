@@ -100,6 +100,118 @@ function AuthorRow({
   )
 }
 
+const renderTable = (
+  data: DocumentHandle<'author'>[],
+  isPending: boolean,
+  currentPage: number,
+  totalPages: number,
+  hasFirstPage: boolean,
+  hasPreviousPage: boolean,
+  hasNextPage: boolean,
+  hasLastPage: boolean,
+  firstPage: () => void,
+  previousPage: () => void,
+  nextPage: () => void,
+  lastPage: () => void,
+  goToPage: (page: number) => void,
+  count: number,
+  startIndex: number,
+  endIndex: number,
+  title: string,
+  useFirstProjection: boolean,
+) => (
+  <Card padding={4}>
+    <Stack space={4}>
+      <Text size={2} weight="semibold">
+        {title}
+      </Text>
+
+      <Box style={{borderRadius: '4px', border: '1px solid #eee', padding: '8px'}}>
+        <Text size={1}>
+          Showing {startIndex + 1}-{Math.min(endIndex, count)} of {count} authors
+        </Text>
+      </Box>
+
+      <PaginationControls
+        currentPage={currentPage}
+        totalPages={totalPages}
+        hasFirstPage={hasFirstPage}
+        hasPreviousPage={hasPreviousPage}
+        hasNextPage={hasNextPage}
+        hasLastPage={hasLastPage}
+        firstPage={firstPage}
+        previousPage={previousPage}
+        nextPage={nextPage}
+        lastPage={lastPage}
+        goToPage={goToPage}
+        isPending={isPending}
+      />
+
+      <Table style={{opacity: isPending ? 0.5 : 1}}>
+        <thead>
+          <TR>
+            <TH padding={2}>Name</TH>
+            {useFirstProjection ? (
+              <>
+                <TH padding={2}>Address</TH>
+                <TH padding={2}>Favorite Books</TH>
+              </>
+            ) : (
+              <>
+                <TH padding={2}>Best Friend</TH>
+                <TH padding={2}>Role</TH>
+              </>
+            )}
+          </TR>
+        </thead>
+        <tbody>
+          {data.length > 0 ? (
+            data.map((doc) => (
+              <AuthorRow
+                key={doc.documentId}
+                docHandle={doc}
+                useFirstProjection={useFirstProjection}
+              />
+            ))
+          ) : (
+            <TR>
+              <TD padding={2}>
+                <div style={{gridColumn: 'span 3', textAlign: 'center', width: '100%'}}>
+                  {isPending ? (
+                    <Flex justify="center" align="center">
+                      <Spinner />
+                      <Text size={2} style={{marginLeft: '8px'}}>
+                        Loading authors...
+                      </Text>
+                    </Flex>
+                  ) : (
+                    <Text>No authors found</Text>
+                  )}
+                </div>
+              </TD>
+            </TR>
+          )}
+        </tbody>
+      </Table>
+
+      <PaginationControls
+        currentPage={currentPage}
+        totalPages={totalPages}
+        hasFirstPage={hasFirstPage}
+        hasPreviousPage={hasPreviousPage}
+        hasNextPage={hasNextPage}
+        hasLastPage={hasLastPage}
+        firstPage={firstPage}
+        previousPage={previousPage}
+        nextPage={nextPage}
+        lastPage={lastPage}
+        goToPage={goToPage}
+        isPending={isPending}
+      />
+    </Stack>
+  </Card>
+)
+
 // Define interface for pagination controls props
 interface PaginationControlsProps {
   currentPage: number
@@ -236,6 +348,32 @@ export function DocumentProjectionRoute(): JSX.Element {
     pageSize,
   })
 
+  const {
+    data: playgroundData,
+    isPending: isPlaygroundPending,
+    currentPage: playgroundCurrentPage,
+    totalPages: playgroundTotalPages,
+    hasFirstPage: hasPlaygroundFirstPage,
+    hasPreviousPage: hasPlaygroundPreviousPage,
+    hasNextPage: hasPlaygroundNextPage,
+    hasLastPage: hasPlaygroundLastPage,
+    firstPage: playgroundFirstPage,
+    previousPage: playgroundPreviousPage,
+    nextPage: playgroundNextPage,
+    lastPage: playgroundLastPage,
+    goToPage: playgroundGoToPage,
+    count: playgroundCount,
+    startIndex: playgroundStartIndex,
+    endIndex: playgroundEndIndex,
+  } = usePaginatedDocuments({
+    documentType: 'author',
+    dataset: 'playground',
+    filter: 'count(favoriteBooks) > 0',
+    orderings: [{field: 'name', direction: 'asc'}],
+    search: searchTerm,
+    pageSize,
+  })
+
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.currentTarget.value)
   }
@@ -283,27 +421,6 @@ export function DocumentProjectionRoute(): JSX.Element {
             </Box>
           </Flex>
 
-          <Box style={{borderRadius: '4px', border: '1px solid #eee', padding: '8px'}}>
-            <Text size={1}>
-              Showing {startIndex + 1}-{Math.min(endIndex, count)} of {count} authors
-            </Text>
-          </Box>
-
-          <PaginationControls
-            currentPage={currentPage}
-            totalPages={totalPages}
-            hasFirstPage={hasFirstPage}
-            hasPreviousPage={hasPreviousPage}
-            hasNextPage={hasNextPage}
-            hasLastPage={hasLastPage}
-            firstPage={firstPage}
-            previousPage={previousPage}
-            nextPage={nextPage}
-            lastPage={lastPage}
-            goToPage={goToPage}
-            isPending={isPending}
-          />
-
           <Box padding={4}>
             <Button
               onClick={() => setUseFirstProjection(!useFirstProjection)}
@@ -314,70 +431,50 @@ export function DocumentProjectionRoute(): JSX.Element {
               }
             />
           </Box>
-
-          <Table style={{opacity: isPending ? 0.5 : 1}}>
-            <thead>
-              <TR>
-                <TH padding={2}>Name</TH>
-                {useFirstProjection ? (
-                  <>
-                    <TH padding={2}>Address</TH>
-                    <TH padding={2}>Favorite Books</TH>
-                  </>
-                ) : (
-                  <>
-                    <TH padding={2}>Best Friend</TH>
-                    <TH padding={2}>Role</TH>
-                  </>
-                )}
-              </TR>
-            </thead>
-            <tbody>
-              {data.length > 0 ? (
-                data.map((doc) => (
-                  <AuthorRow
-                    key={doc.documentId}
-                    docHandle={doc}
-                    useFirstProjection={useFirstProjection}
-                  />
-                ))
-              ) : (
-                <TR>
-                  <TD padding={2}>
-                    <div style={{gridColumn: 'span 3', textAlign: 'center', width: '100%'}}>
-                      {isPending ? (
-                        <Flex justify="center" align="center">
-                          <Spinner />
-                          <Text size={2} style={{marginLeft: '8px'}}>
-                            Loading authors...
-                          </Text>
-                        </Flex>
-                      ) : (
-                        <Text>No authors found</Text>
-                      )}
-                    </div>
-                  </TD>
-                </TR>
-              )}
-            </tbody>
-          </Table>
-
-          <PaginationControls
-            currentPage={currentPage}
-            totalPages={totalPages}
-            hasFirstPage={hasFirstPage}
-            hasPreviousPage={hasPreviousPage}
-            hasNextPage={hasNextPage}
-            hasLastPage={hasLastPage}
-            firstPage={firstPage}
-            previousPage={previousPage}
-            nextPage={nextPage}
-            lastPage={lastPage}
-            goToPage={goToPage}
-            isPending={isPending}
-          />
         </Stack>
       </Card>
+
+      {renderTable(
+        data,
+        isPending,
+        currentPage,
+        totalPages,
+        hasFirstPage,
+        hasPreviousPage,
+        hasNextPage,
+        hasLastPage,
+        firstPage,
+        previousPage,
+        nextPage,
+        lastPage,
+        goToPage,
+        count,
+        startIndex,
+        endIndex,
+        'Production Dataset',
+        useFirstProjection,
+      )}
+
+      {renderTable(
+        playgroundData,
+        isPlaygroundPending,
+        playgroundCurrentPage,
+        playgroundTotalPages,
+        hasPlaygroundFirstPage,
+        hasPlaygroundPreviousPage,
+        hasPlaygroundNextPage,
+        hasPlaygroundLastPage,
+        playgroundFirstPage,
+        playgroundPreviousPage,
+        playgroundNextPage,
+        playgroundLastPage,
+        playgroundGoToPage,
+        playgroundCount,
+        playgroundStartIndex,
+        playgroundEndIndex,
+        'Playground Dataset',
+        useFirstProjection,
+      )}
     </Stack>
   )
 }
