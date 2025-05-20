@@ -1,11 +1,9 @@
 import {ClientError} from '@sanity/client'
-import {ConfigurationError} from '@sanity/sdk'
 import {useCallback, useEffect, useMemo} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
 import {useLogOut} from '../../hooks/auth/useLogOut'
 import {isAuthError} from '../utils'
-import {AuthError} from './AuthError'
 /**
  * @alpha
  */
@@ -18,7 +16,7 @@ export type LoginErrorProps = FallbackProps
  * @alpha
  */
 export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.ReactNode {
-  if (!(error instanceof ClientError || error instanceof ConfigurationError)) {
+  if (!(error instanceof ClientError)) {
     throw error
   }
 
@@ -41,23 +39,18 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
   }, [error, handleRetry])
 
   const authErrorMessage = useMemo(() => {
-    if (!(error instanceof ClientError)) {
-      return error.message
-    }
     const errMess = error.response.body.message || ''
     if (errMess.startsWith('Session with sid') && errMess.endsWith('not found')) {
       return 'The session ID is invalid or expired.'
     } else {
-      return 'The login link is invalid or expired. Please try again.'
+      return errMess
     }
   }, [error])
 
   return (
     <div className="sc-login-error">
       <div className="sc-login-error__content">
-        <h2 className="sc-login-error__title">
-          {error instanceof AuthError ? 'Authentication Error' : 'Configuration Error'}
-        </h2>
+        <h2 className="sc-login-error__title">Authentication Error</h2>
         <p className="sc-login-error__description">{authErrorMessage}</p>
       </div>
 

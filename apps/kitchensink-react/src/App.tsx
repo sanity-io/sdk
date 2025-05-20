@@ -9,10 +9,10 @@ import {AppRoutes} from './AppRoutes'
 const theme = buildTheme({})
 
 const sanityConfigs: SanityConfig[] = [
-  // {
-  //   projectId: 'project-id',
-  //   dataset: 'data-set',
-  // },
+  {
+    projectId: 'project-id',
+    dataset: 'data-set',
+  },
   {
     projectId: 'ppsg7ml5',
     dataset: 'test',
