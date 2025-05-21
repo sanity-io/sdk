@@ -26,8 +26,9 @@
       "dependsOn": ["^build"],
       "outputs": ["docs/**"]
     },
-    "e2e": {
-      "dependsOn": ["^e2e"]
+    "e2e:dev": {
+      "persistent": true,
+      "cache": false
     },
     "lint": {
       "cache": false
@@ -41,6 +42,9 @@
     },
     "test:coverage": {
       "outputs": ["coverage/**"]
+    },
+    "test:e2e": {
+      "cache": false
     }
   }
 }

@@ -8,7 +8,11 @@
   "author": "",
   "main": "index.js",
   "scripts": {
-    "e2e": "playwright test --config playwright.config.ts"
+    "e2e:dev": "pnpm -w e2e:dev",
+    "test:e2e": "playwright test --config playwright.config.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
