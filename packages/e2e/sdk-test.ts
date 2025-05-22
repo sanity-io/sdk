@@ -1,4 +1,5 @@
 import {test as base} from '@playwright/test'
+
 import {getE2EEnv} from './env'
 
 export const test = base.extend({

@@ -9,7 +9,7 @@ import dotenv from 'dotenv'
  * @returns Array of environment file paths loaded.
  */
 export function loadEnvFiles(): string[] {
-  const mode = process.env.NODE_ENV || 'development'
+  const mode = process.env['NODE_ENV'] || 'development'
   const envFiles = ['.env', '.env.local', `.env.${mode}`, `.env.${mode}.local`]
   const loaded: string[] = []
 
@@ -20,6 +20,7 @@ export function loadEnvFiles(): string[] {
     }
     const {error} = dotenv.config({path: envFilePath})
     if (error) {
+      // eslint-disable-next-line no-console
       console.warn(`Failed to load environment variables from ${envFilePath}: ${error.message}`)
     }
 

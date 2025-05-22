@@ -56,6 +56,13 @@ const baseConfig = {
       entry: ['package.bundle.ts'],
       ignoreDependencies: ['@sanity/browserslist-config', 'react-compiler-runtime'],
     },
+    'packages/e2e': {
+      typescript: {
+        config: 'tsconfig.json',
+      },
+      project,
+      ignoreDependencies: ['dotenv', '@repo/tsconfig'],
+    },
   },
 } satisfies KnipConfig
 

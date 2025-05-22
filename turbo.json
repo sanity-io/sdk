@@ -44,7 +44,8 @@
       "outputs": ["coverage/**"]
     },
     "test:e2e": {
-      "cache": false
+      "cache": false,
+      "env": ["CI", "SDK_E2E_SESSION_TOKEN", "NODE_ENV"]
     }
   }
 }

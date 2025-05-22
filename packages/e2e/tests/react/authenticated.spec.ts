@@ -1,7 +1,7 @@
-import {clearAuth} from '../../helpers/clearAuth'
-import {test, expect} from '../../sdk-test'
 // we may want to have our own unauthenticated fixture in the future.
 import {test as baseTest} from '@playwright/test'
+
+import {expect, test} from '../../sdk-test'
 
 test.describe('Authenticated', () => {
   // This test isn't relevant for most public uses of the SDK,
@@ -16,7 +16,7 @@ test.describe('Authenticated', () => {
   })
 
   baseTest('Can test unauthenticated state', async ({page}) => {
-    await clearAuth(page)
+    await page.goto('/')
     // The sign in link should be visible when not authenticated
     await expect(page.getByRole('link', {name: 'Sign in with email'})).toBeVisible()
   })
