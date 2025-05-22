@@ -61,7 +61,7 @@ describe('releasesStore', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(state.getCurrent()).toEqual(mockReleases)
+    expect(state.getCurrent()).toEqual(mockReleases.reverse())
     expect(consoleErrorSpy).not.toHaveBeenCalled()
   })
 
@@ -105,7 +105,7 @@ describe('releasesStore', () => {
     releasesSubject.next(updatedReleases)
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(state.getCurrent()).toEqual(updatedReleases)
+    expect(state.getCurrent()).toEqual(updatedReleases.reverse())
     expect(consoleErrorSpy).not.toHaveBeenCalled()
   })
 

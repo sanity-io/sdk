@@ -38,6 +38,7 @@
     "@repo/tsconfig": "workspace:*",
     "@sanity/cli": "3.88.1-typegen-experimental.0",
     "@sanity/prettier-config": "^1.0.3",
+    "@sanity/sdk": "workspace:*",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/react": "^19.1.2",

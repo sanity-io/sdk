@@ -27,6 +27,7 @@
     "clean:deps": "rimraf packages/*/node_modules apps/*/node_modules node_modules",
     "dev": "pnpm dev:kitchensink",
     "dev:kitchensink": "turbo run dev --filter=@sanity/kitchensink-react",
+    "e2e": "turbo run e2e --filter='./packages/e2e'",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "turbo run lint -- --fix && eslint . --fix",
     "prepare": "husky",

@@ -4,21 +4,25 @@ import {ErrorBoundary} from 'react-error-boundary'
 
 import {DocumentPreviewLayout} from '../components/DocumentPreviewLayout/DocumentPreviewLayout'
 
-export function DocumentPreview(docHandle: DocumentHandle): React.ReactNode {
+type DocumentPreviewProps = DocumentHandle & {
+  onClick?: () => void
+}
+
+export function DocumentPreview(documentPreviewProps: DocumentPreviewProps): React.ReactNode {
   return (
     <li>
       <ErrorBoundary
         fallback={<DocumentPreviewLayout title="Error" subtitle="This preview failed to render." />}
       >
         <Suspense fallback={<DocumentPreviewLayout title="Loading" />}>
-          <DocumentPreviewResolved {...docHandle} />
+          <DocumentPreviewResolved {...documentPreviewProps} />
         </Suspense>
       </ErrorBoundary>
     </li>
   )
 }
 
-function DocumentPreviewResolved(docHandle: DocumentHandle): React.ReactNode {
+function DocumentPreviewResolved({onClick, ...docHandle}: DocumentPreviewProps): React.ReactNode {
   const ref = useRef(null)
   const {
     data: {title, subtitle, media, _status},
@@ -48,7 +52,7 @@ function DocumentPreviewResolved(docHandle: DocumentHandle): React.ReactNode {
       docType={docHandle.documentType}
       media={media}
       status={statusLabel}
-      onClick={() => alert(`Hello from ${title}`)}
+      onClick={() => (onClick ? onClick() : alert(`Hello from ${title}`))}
     />
   )
 }
