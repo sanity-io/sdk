@@ -14,7 +14,7 @@ export function ProjectAuthHome({
   return (
     <PageLayout title="Authenticated" subtitle="Explore authentication examples and components">
       <AuthBoundary>
-        <Flex direction="column" gap={3}>
+        <Flex direction="column" gap={3} data-testid="project-auth-home">
           {routes.map((route) => (
             <Link key={route.path} to={route.path} style={{textDecoration: 'none'}}>
               <Card padding={4} radius={3} tone="default" className="hover-card">

@@ -138,9 +138,15 @@ importers:
         specifier: ^5.8.3
         version: 5.8.3
     devDependencies:
+      '@playwright/test':
+        specifier: ^1.52.0
+        version: 1.52.0
       '@repo/config-eslint':
         specifier: workspace:*
         version: link:../../packages/@repo/config-eslint
+      '@repo/e2e':
+        specifier: workspace:*
+        version: link:../../packages/@repo/e2e
       '@repo/tsconfig':
         specifier: workspace:*
         version: link:../../packages/@repo/tsconfig
@@ -249,6 +255,34 @@ importers:
       '@repo/config-eslint':
         specifier: workspace:*
         version: link:../config-eslint
+
+  packages/@repo/e2e:
+    dependencies:
+      dotenv:
+        specifier: ^16.5.0
+        version: 16.5.0
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.52.0
+        version: 1.52.0
+      '@repo/config-eslint':
+        specifier: workspace:*
+        version: link:../config-eslint
+      '@repo/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@sanity/pkg-utils':
+        specifier: ^7.2.2
+        version: 7.2.2(@types/babel__core@7.20.5)(@types/node@22.13.9)(babel-plugin-react-compiler@19.1.0-rc.1)(typescript@5.8.3)
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.13.9
+      eslint:
+        specifier: ^9.22.0
+        version: 9.25.1(jiti@2.4.2)
+      typescript:
+        specifier: ^5.0.0
+        version: 5.8.3
 
   packages/@repo/package.bundle:
     devDependencies:
@@ -368,15 +402,6 @@ importers:
       vitest:
         specifier: ^3.1.2
         version: 3.1.2(@types/node@22.13.9)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1)
-
-  packages/e2e:
-    devDependencies:
-      '@playwright/test':
-        specifier: ^1.52.0
-        version: 1.52.0
-      '@types/node':
-        specifier: ^22.10.5
-        version: 22.13.9
 
   packages/react:
     dependencies:
@@ -3548,6 +3573,10 @@ packages:
 
   dotenv@16.0.3:
     resolution: {integrity: sha512-7GO6HghkA5fYG9TYnNxi14/7K9f5occMlp3zXAuSxn7CKCxt9xbNWG7yF8hTCSUchlfWSe3uLmlPfigevRItzQ==}
+    engines: {node: '>=12'}
+
+  dotenv@16.5.0:
+    resolution: {integrity: sha512-m/C+AwOAr9/W1UOIZUo232ejMNnJAJtYQjUbHoNTBNTJSvqzzDh7vnrei3o3r3m9blf6ZoDkvcw0VmozNRFJxg==}
     engines: {node: '>=12'}
 
   dunder-proto@1.0.1:
@@ -10754,6 +10783,8 @@ snapshots:
       is-obj: 2.0.0
 
   dotenv@16.0.3: {}
+
+  dotenv@16.5.0: {}
 
   dunder-proto@1.0.1:
     dependencies:

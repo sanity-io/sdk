@@ -26,8 +26,9 @@
       "dependsOn": ["^build"],
       "outputs": ["docs/**"]
     },
-    "e2e": {
-      "dependsOn": ["^e2e"]
+    "e2e:dev": {
+      "persistent": true,
+      "cache": false
     },
     "lint": {
       "cache": false
@@ -41,6 +42,12 @@
     },
     "test:coverage": {
       "outputs": ["coverage/**"]
+    },
+    "test:e2e": {
+      "env": ["CI", "SDK_E2E_SESSION_TOKEN", "NODE_ENV"],
+      "dependsOn": ["@repo/e2e#build"],
+      "outputs": ["e2e/test-results/**", "e2e/test-report/**"],
+      "cache": true
     }
   }
 }
