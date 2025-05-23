@@ -1,3 +1,4 @@
+import {DocumentId, getPublishedId} from '@sanity/id-utils'
 import {type SanityProjectionResult} from 'groq'
 import {omit} from 'lodash-es'
 
@@ -10,7 +11,7 @@ import {
   type StateSource,
 } from '../store/createStateSourceAction'
 import {hashString} from '../utils/hashString'
-import {getPublishedId, insecureRandomId} from '../utils/ids'
+import {insecureRandomId} from '../utils/ids'
 import {projectionStore} from './projectionStore'
 import {type ProjectionStoreState, type ProjectionValuePending, type ValidProjection} from './types'
 import {PROJECTION_STATE_CLEAR_DELAY, STABLE_EMPTY_PROJECTION, validateProjection} from './util'
@@ -77,36 +78,59 @@ export const _getProjectionState = bindActionByDataset(
       {state}: SelectorContext<ProjectionStoreState>,
       options: ProjectionOptions<ValidProjection, string, string, string>,
     ): ProjectionValuePending<object> | undefined => {
-      const documentId = getPublishedId(options.documentId)
+      const documentId = getPublishedId(options.documentId as DocumentId)
+      // used to batch docs with the same projection in a query
       const projectionHash = hashString(options.projection)
       return state.values[documentId]?.[projectionHash] ?? STABLE_EMPTY_PROJECTION
     },
     onSubscribe: ({state}, options: ProjectionOptions<ValidProjection, string, string, string>) => {
       const {projection, ...docHandle} = options
       const subscriptionId = insecureRandomId()
-      const documentId = getPublishedId(docHandle.documentId)
+      const documentId = getPublishedId(docHandle.documentId as DocumentId)
       const validProjection = validateProjection(projection)
       const projectionHash = hashString(validProjection)
 
-      state.set('addSubscription', (prev) => ({
-        documentProjections: {
-          ...prev.documentProjections,
-          [documentId]: {
-            ...prev.documentProjections[documentId],
-            [projectionHash]: validProjection,
-          },
-        },
-        subscriptions: {
-          ...prev.subscriptions,
-          [documentId]: {
-            ...prev.subscriptions[documentId],
-            [projectionHash]: {
-              ...prev.subscriptions[documentId]?.[projectionHash],
-              [subscriptionId]: true,
+      state.set('addSubscription', (prev) => {
+        const existingConfigs = prev.configs[documentId] || {}
+        const existingProjections = prev.documentProjections[documentId] || {}
+        const existingSubscriptions = prev.subscriptions[documentId] || {}
+        const existingSubscriptionsForHash = existingSubscriptions[projectionHash] || {}
+
+        const nextState = {
+          documentProjections: {
+            ...prev.documentProjections,
+            [documentId]: {
+              ...existingProjections,
+              [projectionHash]: validProjection,
             },
           },
-        },
-      }))
+          subscriptions: {
+            ...prev.subscriptions,
+            [documentId]: {
+              ...existingSubscriptions,
+              [projectionHash]: {
+                ...existingSubscriptionsForHash,
+                [subscriptionId]: true,
+              },
+            },
+          },
+          // track configs to see if we need to add version IDs to the query,
+          // or batch to different projects / datasets
+          configs: {
+            ...prev.configs,
+            [documentId]: {
+              ...existingConfigs,
+              [projectionHash]: {
+                projectId: docHandle.projectId,
+                dataset: docHandle.dataset,
+                perspective: docHandle.perspective,
+              },
+            },
+          },
+        } as const
+
+        return nextState as Partial<ProjectionStoreState>
+      })
 
       return () => {
         setTimeout(() => {

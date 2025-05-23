@@ -45,6 +45,10 @@ export const subscribeToStateAndFetchBatches = ({
     distinctUntilChanged(isSetEqual),
   )
 
+  const projectionConfig$ = state.observable.pipe(
+    map(({configs}) => configs),
+    distinctUntilChanged(isEqual),
+  )
   const pendingUpdateSubscription = activeDocumentIds$
     .pipe(
       debounceTime(BATCH_DEBOUNCE_TIME),
@@ -78,16 +82,17 @@ export const subscribeToStateAndFetchBatches = ({
     )
     .subscribe()
 
-  const queryTrigger$ = combineLatest([activeDocumentIds$, documentProjections$]).pipe(
-    debounceTime(BATCH_DEBOUNCE_TIME),
-    distinctUntilChanged(isEqual),
-  )
+  const queryTrigger$ = combineLatest([
+    activeDocumentIds$,
+    documentProjections$,
+    projectionConfig$,
+  ]).pipe(debounceTime(BATCH_DEBOUNCE_TIME), distinctUntilChanged(isEqual))
 
   const queryExecutionSubscription = queryTrigger$
     .pipe(
-      switchMap(([ids, documentProjections]) => {
+      switchMap(([ids, documentProjections, projectionConfigs]) => {
         if (!ids.size) return EMPTY
-        const {query, params} = createProjectionQuery(ids, documentProjections)
+        const {query, params} = createProjectionQuery(ids, documentProjections, projectionConfigs)
         const controller = new AbortController()
 
         return new Observable<ProjectionQueryResult[]>((observer) => {
@@ -95,6 +100,9 @@ export const subscribeToStateAndFetchBatches = ({
             query,
             params,
             tag: PROJECTION_TAG,
+            // although the config may have a perspective,
+            // we use the raw perspective for the query
+            // to capture draft, published and versioned documents
             perspective: PROJECTION_PERSPECTIVE,
           })
 
