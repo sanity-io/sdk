@@ -5,8 +5,6 @@
 The tests expect to find the below env variables. Either define them in your shell, or add them to the `.env.local` file in the repository root.
 
 - `SDK_E2E_SESSION_TOKEN`: As a developer running locally, you should use a user token. Running `sanity debug --secrets` will give you your token provided you are logged in (`sanity login`).
-- `SANITY_E2E_PROJECT_ID`: Project ID of the studio
-- `SANITY_E2E_DATASET`: Dataset name of the studio
 
 ## Running tests
 
