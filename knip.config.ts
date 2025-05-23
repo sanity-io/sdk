@@ -61,6 +61,7 @@ const baseConfig = {
         config: 'tsconfig.json',
       },
       project,
+      entry: ['src/index.ts', 'src/setup/**/*.ts', 'src/teardown/**/*.ts'],
       ignoreDependencies: ['@repo/tsconfig'],
     },
   },
