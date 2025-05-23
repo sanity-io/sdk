@@ -287,8 +287,8 @@ importers:
         specifier: ^7.2.1
         version: 7.2.1(debug@4.4.0)
       '@sanity/comlink':
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.0.4
+        version: 3.0.4
       '@sanity/diff-match-patch':
         specifier: ^3.2.0
         version: 3.2.0
@@ -431,7 +431,7 @@ importers:
         version: 1.0.5
       '@sanity/comlink':
         specifier: ^3.0.2
-        version: 3.0.3
+        version: 3.0.4
       '@sanity/pkg-utils':
         specifier: ^7.2.2
         version: 7.2.2(@types/babel__core@7.20.5)(@types/node@22.13.9)(babel-plugin-react-compiler@19.1.0-rc.1)(typescript@5.8.3)
@@ -2182,8 +2182,8 @@ packages:
     resolution: {integrity: sha512-6Rbg71hkeoGInk/9hBsCUBCZ33IHSs2fZynAR85ANkXDM+WYiwRDlker7OngBkfbK8TF9+G797VjNMQQgJINiQ==}
     engines: {node: '>=18'}
 
-  '@sanity/comlink@3.0.3':
-    resolution: {integrity: sha512-Nk9f2R+Ss7NGPHIjx6sXO3XVDYh/5EcO5ODy4mKRniks9O5t3ZhCDZoOaZtrudYKZbFTACDfEul53MzPT4JoHA==}
+  '@sanity/comlink@3.0.4':
+    resolution: {integrity: sha512-2yXb7xKOkR0xW1/5/oEuPFPlitmHbdOxskDI7g/MgiezfcWaotAmAqmv9S4vugd1Z8URjWN1FAh0vL67iZowKA==}
     engines: {node: '>=18'}
 
   '@sanity/diff-match-patch@3.2.0':
@@ -9083,7 +9083,7 @@ snapshots:
       uuid: 11.1.0
       xstate: 5.19.2
 
-  '@sanity/comlink@3.0.3':
+  '@sanity/comlink@3.0.4':
     dependencies:
       rxjs: 7.8.2
       uuid: 11.1.0
@@ -9286,7 +9286,7 @@ snapshots:
   '@sanity/presentation-comlink@1.0.16(@sanity/client@6.29.1(debug@4.4.0))(@sanity/types@3.87.0(@types/react@19.1.2)(debug@4.4.0))':
     dependencies:
       '@sanity/client': 6.29.1(debug@4.4.0)
-      '@sanity/comlink': 3.0.3
+      '@sanity/comlink': 3.0.4
       '@sanity/visual-editing-types': 1.0.15(@sanity/client@6.29.1(debug@4.4.0))(@sanity/types@3.87.0(@types/react@19.1.2)(debug@4.4.0))
     transitivePeerDependencies:
       - '@sanity/types'
@@ -9366,7 +9366,7 @@ snapshots:
   '@sanity/sdk@0.0.0-alpha.25(@types/react@19.1.2)(debug@4.4.0)(immer@10.1.1)(react@18.3.1)(use-sync-external-store@1.5.0(react@18.3.1))':
     dependencies:
       '@sanity/client': 6.29.1(debug@4.4.0)
-      '@sanity/comlink': 3.0.3
+      '@sanity/comlink': 3.0.4
       '@sanity/diff-match-patch': 3.2.0
       '@sanity/mutate': 0.12.4(debug@4.4.0)
       '@sanity/types': 3.88.1(@types/react@19.1.2)(debug@4.4.0)
@@ -13531,7 +13531,7 @@ snapshots:
       '@sanity/cli': 3.87.0(@types/node@22.13.9)(@types/react@19.1.2)(react@18.3.1)
       '@sanity/client': 6.29.1(debug@4.4.0)
       '@sanity/color': 3.0.6
-      '@sanity/comlink': 3.0.3
+      '@sanity/comlink': 3.0.4
       '@sanity/diff': 3.87.0
       '@sanity/diff-match-patch': 3.2.0
       '@sanity/diff-patch': 5.0.0
