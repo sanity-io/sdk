@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.0.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.0.0...sdk-react-v2.0.1) (2025-05-23)
+
+
+### Documentation
+
+* update readme logos ([#549](https://github.com/sanity-io/sdk/issues/549)) ([857f8ee](https://github.com/sanity-io/sdk/commit/857f8eec2811f411e7ff21668ef12853730c4368))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.0.1
+
 ## [2.0.0](https://github.com/sanity-io/sdk/compare/sdk-react-v1.0.0...sdk-react-v2.0.0) (2025-05-23)
 
 
