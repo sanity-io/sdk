@@ -24,24 +24,22 @@ type AllowedClientConfigKey =
   | 'useProjectHostname'
 
 const allowedKeys = Object.keys({
-  apiHost: null,
-  useCdn: null,
-  token: null,
-  perspective: null,
-  proxy: null,
-  withCredentials: null,
-  timeout: null,
-  maxRetries: null,
-  dataset: null,
-  projectId: null,
-  scope: null,
-  apiVersion: null,
-  requestTagPrefix: null,
-  useProjectHostname: null,
-} satisfies Record<keyof Omit<ClientOptions, 'middleware'>, null>) as (keyof Omit<
-  ClientOptions,
-  'middleware'
->)[]
+  'apiHost': null,
+  'useCdn': null,
+  'token': null,
+  'perspective': null,
+  'proxy': null,
+  'withCredentials': null,
+  'timeout': null,
+  'maxRetries': null,
+  'dataset': null,
+  'projectId': null,
+  'scope': null,
+  'apiVersion': null,
+  'requestTagPrefix': null,
+  'useProjectHostname': null,
+  '~experimental_resource': null,
+} satisfies Record<keyof ClientOptions, null>) as (keyof ClientOptions)[]
 
 const DEFAULT_CLIENT_CONFIG: ClientConfig = {
   apiVersion: DEFAULT_API_VERSION,
@@ -83,11 +81,15 @@ export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey
    * and the global client ('global'). When set to `'global'`, the global client
    * is used.
    */
-  scope?: 'default' | 'global'
+  'scope'?: 'default' | 'global'
   /**
    * A required string indicating the API version for the client.
    */
-  apiVersion: string
+  'apiVersion': string
+  /**
+   * @internal
+   */
+  '~experimental_resource'?: ClientConfig['~experimental_resource']
 }
 
 const clientStore = defineStore<ClientStoreState>({

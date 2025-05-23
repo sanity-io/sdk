@@ -17,6 +17,7 @@ export async function checkForCookieAuth(
   try {
     const client = clientFactory({
       projectId,
+      useCdn: false,
     })
     const user = await client.request({
       uri: '/users/me',

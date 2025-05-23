@@ -18,13 +18,14 @@ type UsePerspective = {
 
 /**
  * @public
+ * @function
  *
  * Returns a single or stack of perspectives for the given perspective handle,
  * which can then be used to correctly query the documents
  * via the `perspective` parameter in the client.
  *
  * @param perspectiveHandle - The perspective handle to get the perspective for.
- *
+ * @category Documents
  * @example
  * ```tsx
  * import {usePerspective, useQuery} from '@sanity/sdk-react'

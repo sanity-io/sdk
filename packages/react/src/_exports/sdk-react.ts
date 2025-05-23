@@ -20,8 +20,6 @@ export {
   useFrameConnection,
   type UseFrameConnectionOptions,
 } from '../hooks/comlink/useFrameConnection'
-export {useManageFavorite} from '../hooks/comlink/useManageFavorite'
-export {useRecordDocumentHistoryEvent} from '../hooks/comlink/useRecordDocumentHistoryEvent'
 export {
   useWindowConnection,
   type UseWindowConnectionOptions,
@@ -29,10 +27,13 @@ export {
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
+export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
+export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
 export {
   type NavigateToStudioResult,
   useNavigateToStudioDocument,
 } from '../hooks/dashboard/useNavigateToStudioDocument'
+export {useRecordDocumentHistoryEvent} from '../hooks/dashboard/useRecordDocumentHistoryEvent'
 export {useStudioWorkspacesByProjectIdDataset} from '../hooks/dashboard/useStudioWorkspacesByProjectIdDataset'
 export {useDatasets} from '../hooks/datasets/useDatasets'
 export {useApplyDocumentActions} from '../hooks/document/useApplyDocumentActions'
@@ -52,15 +53,15 @@ export {
   usePaginatedDocuments,
 } from '../hooks/paginatedDocuments/usePaginatedDocuments'
 export {
-  usePreview,
-  type UsePreviewOptions,
-  type UsePreviewResults,
-} from '../hooks/preview/usePreview'
+  useDocumentPreview,
+  type useDocumentPreviewOptions,
+  type useDocumentPreviewResults,
+} from '../hooks/preview/useDocumentPreview'
 export {
-  useProjection,
-  type UseProjectionOptions,
-  type UseProjectionResults,
-} from '../hooks/projection/useProjection'
+  useDocumentProjection,
+  type useDocumentProjectionOptions,
+  type useDocumentProjectionResults,
+} from '../hooks/projection/useDocumentProjection'
 export {useProject} from '../hooks/projects/useProject'
 export {type ProjectWithoutMembers, useProjects} from '../hooks/projects/useProjects'
 export {useQuery} from '../hooks/query/useQuery'

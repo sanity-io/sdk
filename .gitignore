@@ -21,3 +21,4 @@ stats
 .swo
 
 docs
+.vitest-reports

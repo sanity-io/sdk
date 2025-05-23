@@ -15,18 +15,36 @@ parameters:
     default: ""
 
 workflows:
-  version: 2
+  # Needed for https://github.com/CircleCI-Public/circleci-cli/issues/577
+  # If not the job will be marked as failed for skipped
+  noopworkflow:
+    jobs:
+      - noop:
+          filters:
+            branches:
+              only: main
   build-and-deploy:
+    when:
+      equal: ["push", << pipeline.parameters.GHA_Event >>]
     jobs:
       - build:
           filters:
             branches:
-              # Jobs will only run when manually triggered
-              ignore: /.*/
+              only: main
+
 jobs:
+  # Needed for https://github.com/CircleCI-Public/circleci-cli/issues/577
+  # If not the job will be marked as failed for skipped
+  noop:
+    docker:
+      - image: cimg/base:current
+    steps:
+      - run:
+          command: |
+            echo "do nothing"
   build:
     docker:
-      - image: cimg/node:22.15.0
+      - image: cimg/node:22.15.1
     steps:
       - checkout
       - restore_cache:
@@ -51,6 +69,18 @@ jobs:
       - run:
           name: Build bundle
           command: pnpm run build:bundle
-      # - run:
-      #     name: Copy to bucket
-      #     command: npm run bundle:upload
+      - run:
+          name: Copy to staging bucket
+          command: |
+            export GOOGLE_PROJECT_ID=$GCS_STAGING_PROJECT_ID
+            export GCLOUD_SERVICE_KEY=$GCS_STAGING_SERVICE_KEY
+            export GCLOUD_BUCKET=$GCS_STAGING_BUCKET
+            pnpm run upload:bundles
+
+      - run:
+          name: Copy to production bucket
+          command: |
+            export GOOGLE_PROJECT_ID=$GCS_PRODUCTION_PROJECT_ID
+            export GCLOUD_SERVICE_KEY=$GCS_PRODUCTION_SERVICE_KEY
+            export GCLOUD_BUCKET=$GCS_PRODUCTION_BUCKET
+            pnpm run upload:bundles

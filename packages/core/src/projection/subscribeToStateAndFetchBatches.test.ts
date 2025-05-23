@@ -141,7 +141,7 @@ describe('subscribeToStateAndFetchBatches', () => {
       isPending: false,
       data: {
         title: 'resolved',
-        status: {
+        _status: {
           lastEditedDraftAt: timestamp,
           lastEditedPublishedAt: timestamp,
         },
@@ -299,7 +299,7 @@ describe('subscribeToStateAndFetchBatches', () => {
       data: expect.objectContaining({
         title: 'Test Document',
         description: 'Test Description',
-        status: {
+        _status: {
           lastEditedPublishedAt: timestamp,
         },
       }),

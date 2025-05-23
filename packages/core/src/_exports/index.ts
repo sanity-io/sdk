@@ -35,6 +35,7 @@ export {
 } from '../comlink/controller/comlinkControllerStore'
 export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
 export {getOrCreateNode, releaseNode} from '../comlink/node/comlinkNodeStore'
+export {getNodeState, type NodeState} from '../comlink/node/getNodeState'
 export {
   type FrameMessage,
   type NewTokenResponseMessage,
@@ -54,6 +55,7 @@ export {
   type DocumentTypeHandle,
   type PerspectiveHandle,
   type ProjectHandle,
+  type ReleasePerspective,
   type SanityConfig,
 } from '../config/sanityConfig'
 export {getDatasetsState, resolveDatasets} from '../datasets/datasets'

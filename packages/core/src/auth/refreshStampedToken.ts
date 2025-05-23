@@ -56,6 +56,7 @@ function createTokenRefreshStream(
       apiVersion: DEFAULT_API_VERSION,
       requestTagPrefix: 'sdk.token-refresh',
       useProjectHostname: false,
+      useCdn: false,
       token,
       ignoreBrowserTokenWarning: true,
       ...(apiHost && {apiHost}),

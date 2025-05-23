@@ -10,24 +10,24 @@ const doc = createDocumentHandle({
 })
 
 const doc2 = createDocumentHandle({
-  documentType: 'dog',
-  documentId: 'acc11e96-1a01-4907-bd0e-e8347217cf2f',
-  projectId: 'ezwd8xes',
+  documentType: 'player',
+  documentId: 'a1b3019b-a0e0-49d5-8212-9d85b9661202',
+  projectId: 'd45jg133',
   dataset: 'production',
 })
 
 export function MultiResourceRoute(): JSX.Element {
-  const author = useDocument(doc)
-  const dog = useDocument(doc2)
+  const {data: author} = useDocument(doc)
+  const {data: player} = useDocument(doc2)
   const setAuthorName = useEditDocument({...doc, path: 'name'})
-  const setDogName = useEditDocument({...doc2, path: 'name'})
+  const setPlayerName = useEditDocument({...doc2, path: 'name'})
 
   return (
     <div>
       <p style={{marginBottom: '2rem'}}>
         This route demonstrates how to use multiple resources in a single page.
         <br />
-        Note you must have access to both resources (ppsg7ml5.test and ezwd8xes.production) to see
+        Note you must have access to both resources (ppsg7ml5.test and d45jg133.production) to see
         the documents.
       </p>
       <div style={{display: 'flex', gap: '2rem', flexWrap: 'wrap'}}>
@@ -83,37 +83,27 @@ export function MultiResourceRoute(): JSX.Element {
           }}
         >
           <h2 style={{marginBottom: '1rem', color: '#2a2a2a'}}>
-            Dog Document (ezwd8xes.production)
+            Player Document (d45jg133.production)
           </h2>
           <a
             style={{display: 'block', marginBottom: '1rem', color: '#3e41e7'}}
-            href={`https://bella.sanity.studio/structure/dog;${dog?._id}`}
+            href={`https://autofoos.com/structure/player;${player?._id}`}
             target="_blank"
             rel="noopener noreferrer"
           >
             View in Studio →
           </a>
 
-          <h3 style={{fontSize: '1.5rem', marginBottom: '0.5rem'}}>{dog?.name}</h3>
+          <h3 style={{fontSize: '1.5rem', marginBottom: '0.5rem'}}>{player?.name}</h3>
           <TextInput
             label="Name"
             type="text"
-            value={dog?.name}
-            onChange={(e) => setDogName(e.currentTarget.value)}
+            value={player?.name}
+            onChange={(e) => setPlayerName(e.currentTarget.value)}
           />
           <div style={{color: '#444', marginBottom: '1rem'}}>
-            {dog?.age && <p>Age: {dog.age}</p>}
-            {dog?.color && <p>Color: {dog.color}</p>}
-            {dog?.weight && <p>Weight: {dog.weight}</p>}
-            {dog?.ears && <p>Ears: {dog.ears}</p>}
-            {dog?.status && <p>Status: {dog.status}</p>}
+            {player?.slackUserId && `Slack User ID: ${player.slackUserId}`}
           </div>
-          {dog?.description && (
-            <div>
-              <h4 style={{marginBottom: '0.5rem'}}>About</h4>
-              <p style={{color: '#444'}}>{dog.description}</p>
-            </div>
-          )}
         </div>
       </div>
     </div>

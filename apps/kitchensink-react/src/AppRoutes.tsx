@@ -15,7 +15,8 @@ import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProtectedRoute} from './ProtectedRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
-import {ReleasesRoute} from './routes/ReleasesRoute'
+import ExperimentalResourceClientRoute from './routes/ExperimentalResourceClientRoute'
+import {ReleasesRoute} from './routes/releases/ReleasesRoute'
 import {UsersRoute} from './routes/UsersRoute'
 
 const documentCollectionRoutes = [
@@ -58,6 +59,10 @@ const documentCollectionRoutes = [
   {
     path: 'dashboard-context',
     element: <DashboardContextRoute />,
+  },
+  {
+    path: 'experimental-resource-client',
+    element: <ExperimentalResourceClientRoute />,
   },
 ]
 

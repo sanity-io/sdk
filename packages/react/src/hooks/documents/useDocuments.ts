@@ -16,7 +16,7 @@ const DEFAULT_BATCH_SIZE = 25
 /**
  * Configuration options for the useDocuments hook
  *
- * @beta
+ * @public
  * @category Types
  */
 export interface DocumentsOptions<
@@ -50,7 +50,7 @@ export interface DocumentsOptions<
 /**
  * Return value from the useDocuments hook
  *
- * @beta
+ * @public
  * @category Types
  */
 export interface DocumentsResponse<
@@ -85,7 +85,7 @@ export interface DocumentsResponse<
  * with infinite scrolling support. The number of document handles returned per batch is customizable,
  * and additional batches can be loaded using the supplied `loadMore` function.
  *
- * @beta
+ * @public
  * @category Documents
  * @param options - Configuration options for the infinite list
  * @returns An object containing the list of document handles, the loading state, the total count of retrieved document handles, and a function to load more
@@ -106,9 +106,9 @@ export interface DocumentsResponse<
  * } from '@sanity/sdk-react'
  * import {Suspense} from 'react'
  *
- * // Define a component to display a single document (using useProjection for efficiency)
+ * // Define a component to display a single document (using useDocumentProjection for efficiency)
  * function MyDocumentComponent({doc}: {doc: DocumentHandle}) {
- *   const {data} = useProjection<{title?: string}>({
+ *   const {data} = useDocumentProjection<{title?: string}>({
  *     ...doc, // Pass the full handle
  *     projection: '{title}'
  *   })

@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "last-release-sha": "ccabf2422346ba442f15327acda7634f28a46811",
+  "bootstrap-sha": "a077f3907000535b74f6cebb32585d857776d029",
   "always-link-local": true,
   "changelog-sections": [
     {"type": "feat", "section": "Features", "hidden": false},
@@ -27,14 +27,14 @@
       "release-type": "node",
       "bump-patch-for-minor-pre-major": true,
       "bump-minor-pre-major": true,
-      "versioning": "default"
+      "versioning": "always-bump-patch"
     },
     "packages/core": {
       "component": "sdk",
       "release-type": "node",
       "bump-patch-for-minor-pre-major": true,
       "bump-minor-pre-major": true,
-      "versioning": "default"
+      "versioning": "always-bump-patch"
     }
   }
 }
