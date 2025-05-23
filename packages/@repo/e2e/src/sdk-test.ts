@@ -2,6 +2,11 @@ import {test as base} from '@playwright/test'
 
 import {getE2EEnv} from './env'
 
+/**
+ * @internal
+ * Playwright test configuration for SDK E2E tests
+ * (If different apps diverge dramatically, we can move this logic)
+ */
 export const test = base.extend({
   // for most tests, ensure the page fixture has auth for local development
   // in CI we'll use  global setup file to do a full login

@@ -1,6 +1,6 @@
 import {defineConfig} from '@playwright/test'
 
-import {getE2EEnv} from './env'
+import {getE2EEnv} from './src/env'
 
 /**
  * Read environment variables from file.

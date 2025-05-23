@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import {fileURLToPath} from 'node:url'
 
 import dotenv from 'dotenv'
 
@@ -13,8 +14,12 @@ export function loadEnvFiles(): string[] {
   const envFiles = ['.env', '.env.local', `.env.${mode}`, `.env.${mode}.local`]
   const loaded: string[] = []
 
+  // Get the directory path using import.meta.url
+  const __filename = fileURLToPath(import.meta.url)
+  const __dirname = path.dirname(__filename)
+
   for (const file of envFiles) {
-    const envFilePath = path.join(__dirname, '..', '..', '..', file)
+    const envFilePath = path.join(__dirname, '..', '..', '..', '..', file)
     if (!fs.existsSync(envFilePath)) {
       continue
     }

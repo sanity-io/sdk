@@ -1,7 +1,6 @@
 // we may want to have our own unauthenticated fixture in the future.
 import {test as baseTest} from '@playwright/test'
-
-import {expect, test} from '../../sdk-test'
+import {expect, test} from '@repo/e2e'
 
 test.describe('Authenticated', () => {
   // This test isn't relevant for most public uses of the SDK,

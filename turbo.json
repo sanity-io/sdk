@@ -44,8 +44,10 @@
       "outputs": ["coverage/**"]
     },
     "test:e2e": {
-      "cache": false,
-      "env": ["CI", "SDK_E2E_SESSION_TOKEN", "NODE_ENV"]
+      "env": ["CI", "SDK_E2E_SESSION_TOKEN", "NODE_ENV"],
+      "dependsOn": ["@repo/e2e#build"],
+      "outputs": ["e2e/test-results/**", "e2e/test-report/**"],
+      "cache": true
     }
   }
 }

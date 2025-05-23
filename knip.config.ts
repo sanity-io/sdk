@@ -56,12 +56,12 @@ const baseConfig = {
       entry: ['package.bundle.ts'],
       ignoreDependencies: ['@sanity/browserslist-config', 'react-compiler-runtime'],
     },
-    'packages/e2e': {
+    'packages/@repo/e2e': {
       typescript: {
         config: 'tsconfig.json',
       },
       project,
-      ignoreDependencies: ['dotenv', '@repo/tsconfig'],
+      ignoreDependencies: ['@repo/tsconfig'],
     },
   },
 } satisfies KnipConfig
@@ -70,6 +70,7 @@ export const addBundlerEntries = async (config: KnipConfig): Promise<KnipConfig>
   const dirs = [
     'packages/@repo/config-eslint',
     'packages/@repo/config-test',
+    'packages/@repo/e2e',
     'packages/@repo/tsconfig',
     'packages/@repo/package.config',
     'packages/core',

@@ -1,0 +1,56 @@
+{
+  "name": "@repo/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared Playwright configuration for the monorepo",
+  "keywords": [
+    "playwright",
+    "testing",
+    "e2e"
+  ],
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "pkg build --strict --clean --check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "prepare": "pnpm build"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@repo/config-eslint": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
+    "@sanity/pkg-utils": "^7.2.2",
+    "@types/node": "^22.10.5",
+    "eslint": "^9.22.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@playwright/test": "^1.52.0"
+  },
+  "peerDependenciesMeta": {
+    "@playwright/test": {
+      "optional": false
+    }
+  },
+  "packageManager": "pnpm@10.8.0"
+}
