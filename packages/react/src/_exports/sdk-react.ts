@@ -12,7 +12,6 @@ export {useDashboardOrganizationId} from '../hooks/auth/useDashboardOrganization
 export {useHandleAuthCallback} from '../hooks/auth/useHandleAuthCallback'
 export {useLoginUrl} from '../hooks/auth/useLoginUrl'
 export {useLogOut} from '../hooks/auth/useLogOut'
-export {useVerifyOrgProjects} from '../hooks/auth/useVerifyOrgProjects'
 export {useClient} from '../hooks/client/useClient'
 export {
   type FrameConnection,

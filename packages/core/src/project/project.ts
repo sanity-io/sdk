@@ -1,5 +1,6 @@
-import {switchMap} from 'rxjs'
+import {catchError, switchMap} from 'rxjs'
 
+import {ConfigurationError} from '../auth/ConfigurationError'
 import {getClientState} from '../client/clientStore'
 import {type ProjectHandle} from '../config/sanityConfig'
 import {createFetcherStore} from '../utils/createFetcherStore'
@@ -11,7 +12,7 @@ const project = createFetcherStore({
   getKey: (instance, options?: ProjectHandle) => {
     const projectId = options?.projectId ?? instance.config.projectId
     if (!projectId) {
-      throw new Error('A projectId is required to use the project API.')
+      throw new ConfigurationError(new Error('A projectId is required to use the project API.'))
     }
     return projectId
   },
@@ -31,6 +32,9 @@ const project = createFetcherStore({
             (projectId ?? instance.config.projectId)!,
           ),
         ),
+        catchError((error) => {
+          throw new ConfigurationError(error)
+        }),
       )
     },
 })

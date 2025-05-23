@@ -1,12 +1,15 @@
 import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
-import {type Subscription} from 'rxjs'
+import {combineLatest, filter, map, type Subscription, switchMap} from 'rxjs'
 
 import {type AuthConfig, type AuthProvider} from '../config/authConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
+import {type SanityInstance} from '../store/createSanityInstance'
 import {createStateSourceAction} from '../store/createStateSourceAction'
-import {defineStore} from '../store/defineStore'
+import {defineStore, type StoreContext} from '../store/defineStore'
+import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
+import {ConfigurationError} from './ConfigurationError'
 import {refreshStampedToken} from './refreshStampedToken'
 import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
@@ -89,6 +92,7 @@ export interface AuthStoreState {
     authMethod: AuthMethodOptions
   }
   dashboardContext?: DashboardContext
+  error?: unknown
 }
 
 export const authStore = defineStore<AuthStoreState>({
@@ -211,6 +215,7 @@ export const authStore = defineStore<AuthStoreState>({
   initialize(context) {
     const subscriptions: Subscription[] = []
     subscriptions.push(subscribeToStateAndFetchCurrentUser(context))
+    subscriptions.push(listenToProjectIdsAndDashboard(context))
 
     if (context.state.get().options?.storageArea) {
       subscriptions.push(subscribeToStorageEventsAndSetToken(context))
@@ -228,6 +233,77 @@ export const authStore = defineStore<AuthStoreState>({
     }
   },
 })
+
+function getProjectIdsFromInstanceAndParents(instance: SanityInstance | undefined): string[] {
+  if (!instance) return []
+
+  const projectIds: string[] = []
+  if (instance.config?.projectId) {
+    projectIds.push(instance.config.projectId)
+  }
+
+  const parentProjectIds = getProjectIdsFromInstanceAndParents(instance.getParent())
+  return projectIds.concat(parentProjectIds)
+}
+
+const listenToProjectIdsAndDashboard = ({instance, state}: StoreContext<AuthStoreState>) => {
+  const {
+    options: {clientFactory, apiHost},
+  } = state.get()
+
+  const projectIds = getProjectIdsFromInstanceAndParents(instance)
+
+  const token$ = state.observable.pipe(
+    map((i) => i.authState.type === AuthStateType.LOGGED_IN && i.authState.token),
+    filter((i) => typeof i === 'string'),
+  )
+
+  const client$ = token$.pipe(
+    map((token) =>
+      clientFactory({
+        apiVersion: DEFAULT_API_VERSION,
+        requestTagPrefix: REQUEST_TAG_PREFIX,
+        useProjectHostname: false,
+        useCdn: false,
+        token,
+        ...(apiHost && {apiHost}),
+      }),
+    ),
+  )
+
+  const orgId$ = state.observable.pipe(
+    map((i) => i.dashboardContext?.orgId),
+    filter(Boolean),
+  )
+
+  const organizationIdsFromProjects$ = combineLatest(
+    projectIds.map((projectId) =>
+      client$.pipe(
+        switchMap((client) => client.observable.projects.getById(projectId)),
+        map((i) => ({projectId: i.id, organizationId: i.organizationId})),
+      ),
+    ),
+  )
+
+  return combineLatest([orgId$, organizationIdsFromProjects$])
+    .pipe(
+      map(([orgId, orgIdsFromProjects]) => {
+        for (const {organizationId, projectId} of orgIdsFromProjects) {
+          if (orgId !== organizationId) {
+            throw new ConfigurationError(
+              new Error(
+                `Project ${projectId} is not part of organization ${orgId}. ` +
+                  `The project belongs to organization ${organizationId} instead.`,
+              ),
+            )
+          }
+        }
+      }),
+    )
+    .subscribe({
+      error: (error) => state.set('setError', {authState: {error, type: AuthStateType.ERROR}}),
+    })
+}
 
 /**
  * @public
@@ -270,7 +346,10 @@ export const getLoginUrlState = bindActionGlobally(
  */
 export const getAuthState = bindActionGlobally(
   authStore,
-  createStateSourceAction(({state: {authState}}) => authState),
+  createStateSourceAction(({state: {authState}}) => {
+    if (authState.type === AuthStateType.ERROR) throw authState.error
+    return authState
+  }),
 )
 
 /**
