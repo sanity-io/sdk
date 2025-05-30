@@ -28,6 +28,11 @@ import {useSanityInstance} from '../hooks/context/useSanityInstance'
 type SdkParentComlinkMessage = NewTokenResponseMessage | WindowMessage // Messages received by SDK
 type SdkChildComlinkMessage = RequestNewTokenMessage | FrameMessage // Messages sent by SDK
 
+/**
+ * This config is used to configure the Comlink token refresh feature.
+ * It is used to automatically request a new token on 401 error if enabled.
+ * @public
+ */
 export type ComlinkTokenRefreshConfig = {
   /** Enable the Comlink token refresh feature. Defaults to false */
   enabled?: boolean
@@ -52,6 +57,11 @@ const DEFAULT_COMLINK_NAME = 'sanity-sdk-iframe'
 const DEFAULT_PARENT_NAME = 'sanity-dashboard-parent'
 const DEFAULT_RESPONSE_TIMEOUT = 15000 // 15 seconds
 
+/**
+ * This provider is used to provide the Comlink token refresh feature.
+ * It is used to automatically request a new token on 401 error if enabled.
+ * @public
+ */
 export const ComlinkTokenRefreshProvider: React.FC<
   PropsWithChildren<ComlinkTokenRefreshConfig>
 > = ({
@@ -199,6 +209,11 @@ export const ComlinkTokenRefreshProvider: React.FC<
   )
 }
 
+/**
+ * This hook is used to request a new token from the parent window.
+ * It is used to automatically request a new token on 401 error if enabled.
+ * @public
+ */
 export const useComlinkTokenRefresh = (): ComlinkTokenRefreshContextValue => {
   const context = useContext(ComlinkTokenRefreshContext)
   if (!context) {
