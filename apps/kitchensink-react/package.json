@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "paramour": "npx paramour --config=./src/css/css.config.js --output=./src/css/paramour.css",
     "schema:extract": "sanity schema extract --workspace ppsg7ml5-test --path schema.ppsg7ml5.test.json && sanity schema extract --workspace d45jg133-production --path schema.d45jg133.production.json",
+    "test:e2e": "playwright test",
     "tsc": "tsc --noEmit",
     "types:generate": "./node_modules/@sanity/cli/bin/sanity typegen generate"
   },
@@ -34,7 +35,9 @@
     "typescript": "^5.8.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@repo/config-eslint": "workspace:*",
+    "@repo/e2e": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/cli": "3.88.1-typegen-experimental.0",
     "@sanity/prettier-config": "^1.0.3",
