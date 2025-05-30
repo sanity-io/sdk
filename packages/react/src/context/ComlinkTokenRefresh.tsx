@@ -1,7 +1,9 @@
-import {type Status as ComlinkStatus} from '@sanity/comlink' // Import Status as ComlinkStatus
+import {type ClientError} from '@sanity/client'
+import {type Status as ComlinkStatus} from '@sanity/comlink'
 import {
+  AuthStateType,
   type FrameMessage,
-  getIsInDashboardState, // <-- Import the new selector
+  getIsInDashboardState,
   type NewTokenResponseMessage,
   type RequestNewTokenMessage,
   setAuthToken,
@@ -18,8 +20,9 @@ import React, {
   useState,
 } from 'react'
 
-import {useWindowConnection} from '../hooks/comlink/useWindowConnection' // <-- Correct path to useWindowConnection
-import {useSanityInstance} from '../hooks/context/useSanityInstance' // Import the instance hook
+import {useAuthState} from '../hooks/auth/useAuthState'
+import {useWindowConnection} from '../hooks/comlink/useWindowConnection'
+import {useSanityInstance} from '../hooks/context/useSanityInstance'
 
 // Define specific message types extending the base types for clarity
 type SdkParentComlinkMessage = NewTokenResponseMessage | WindowMessage // Messages received by SDK
@@ -58,15 +61,15 @@ export const ComlinkTokenRefreshProvider: React.FC<
   parentName = DEFAULT_PARENT_NAME,
   responseTimeout = DEFAULT_RESPONSE_TIMEOUT,
 }) => {
-  const instance = useSanityInstance() // Get the instance
+  const instance = useSanityInstance()
   const [comlinkStatus, setComlinkStatus] = useState<ComlinkStatus>('idle')
   const isTokenRefreshInProgress = useRef(false)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const processed401ErrorRef = useRef<unknown | null>(null) // Ref to track processed 401 error
 
-  // Get the dashboard status value once
+  const authState = useAuthState()
+
   const isInDashboard = useMemo(() => getIsInDashboardState(instance).getCurrent(), [instance])
-
-  // Determine if the feature should be active
   const isDashboardComlinkEnabled = enabled && isInDashboard
 
   const clearRefreshTimeout = useCallback(() => {
@@ -76,7 +79,6 @@ export const ComlinkTokenRefreshProvider: React.FC<
     }
   }, [])
 
-  // Conditionally connect only if operational
   const connectionOptions = useMemo(
     () =>
       isDashboardComlinkEnabled
@@ -115,7 +117,6 @@ export const ComlinkTokenRefreshProvider: React.FC<
   )
 
   const requestNewToken = useCallback(() => {
-    // Check if operational before proceeding
     if (!isDashboardComlinkEnabled) {
       return
     }
@@ -163,6 +164,34 @@ export const ComlinkTokenRefreshProvider: React.FC<
     }
   }, [clearRefreshTimeout])
 
+  // Effect to automatically request a new token on 401 error if enabled
+  useEffect(() => {
+    if (
+      isDashboardComlinkEnabled &&
+      authState.type === AuthStateType.ERROR &&
+      authState.error &&
+      (authState.error as ClientError)?.statusCode === 401 &&
+      !isTokenRefreshInProgress.current &&
+      processed401ErrorRef.current !== authState.error // Check if this specific error instance has been processed
+    ) {
+      // Mark this error instance as processed before requesting token
+      processed401ErrorRef.current = authState.error
+      requestNewToken()
+    } else if (
+      authState.type !== AuthStateType.ERROR ||
+      processed401ErrorRef.current !== authState.error
+    ) {
+      // Reset if the error is no longer a 401 or a different error occurs
+      processed401ErrorRef.current = null
+    }
+  }, [
+    authState,
+    isDashboardComlinkEnabled,
+    requestNewToken,
+    // Dependency: isTokenRefreshInProgress.current won't trigger effect, use the ref itself
+    isTokenRefreshInProgress,
+  ])
+
   return (
     <ComlinkTokenRefreshContext.Provider value={contextValue}>
       {children}
@@ -175,7 +204,10 @@ export const useComlinkTokenRefresh = (): ComlinkTokenRefreshContextValue => {
   if (!context) {
     return {
       requestNewToken: () => {
-        /* console.warn(...) */
+        // eslint-disable-next-line no-console
+        console.warn(
+          'useComlinkTokenRefresh must be used within a ComlinkTokenRefreshProvider with the feature enabled.',
+        )
       },
       isTokenRefreshInProgress: {current: false},
       comlinkStatus: 'idle',
