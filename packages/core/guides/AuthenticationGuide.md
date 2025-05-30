@@ -1,6 +1,6 @@
 # SDK Authentication Guide
 
-This document outlines the various authentication types supported by the Sanity SDK, catering to different usage contexts like embedded dashboard apps, Studio integrations, and standalone applications.
+This document outlines the various authentication types supported by the Sanity SDK, catering to different usage contexts like embedded dashboard apps, Studio integrations, and in very limited cases, standalone applications.
 
 ## ✨ High-Level Overview
 
@@ -17,12 +17,21 @@ The primary interactive authentication flow involves redirecting the user to `sa
   This mechanism applies to both third-party Sanity Apps and internal Sanity
   applications (e.g., Canvas, Media Library).
 
+  - **When should you use this?** Most of the time this is the best option. It is for building a Sanity App that is running in the Sanity Dashboard.
+
 - **Studio Mode:** Leverages Studio's own auth context (token or cookie)
   when the SDK is used within the Studio application.
 
-- **Standalone:** Supports manually provided tokens (stable for backends,
-  requires care for stamped tokens on frontends). ⚠️ The built-in web login flow (`sanity.io/login`) has
-  significant limitations for apps on custom domains due to origin restrictions.
+  - **When should you use this?** This is only for using the SDK within the Sanity Studio application.
+
+- **Standalone (Experimental):** Supports manually provided tokens (stable for backends,
+  requires care for stamped tokens on frontends).
+
+  - **When should you use this?** For most developers, this is not the best option. It is only for using the SDK within a standalone application that is not running in the Sanity Dashboard and is not part of the Studio. It likely requires you to write custom code to handle the login flow and the callback.
+
+  - ⚠️ The built-in web login flow (`sanity.io/login`) has significant limitations for apps on custom domains due to origin restrictions.
+
+## 🔑 Key Concepts & Technical Details
 
 ## 🚦 Authentication Types
 
@@ -78,7 +87,7 @@ The primary interactive authentication flow involves redirecting the user to `sa
 
   - `clientStore` will configure clients based on the available token or implicitly rely on cookies if `withCredentials` is set appropriately. Clients are only configured for the project-specific endpoint.
 
-### 3. Standalone Applications
+### 3. Standalone Applications (Experimental)
 
 - 🎯 **Use Case:** External web applications using the SDK that operate independently of the Sanity Dashboard or Studio (e.g., SDK Explorer, custom internal dashboards). These applications are **not** running inside the Dashboard iframe or as part of the Studio build and they are not hosted on Sanity's domains.
 
