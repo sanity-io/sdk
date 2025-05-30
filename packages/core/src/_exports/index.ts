@@ -19,7 +19,7 @@ export {
   type LoggedOutAuthState,
   type LoggingInAuthState,
 } from '../auth/authStore'
-export {observeOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
+export {ConfigurationError} from '../auth/ConfigurationError'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
