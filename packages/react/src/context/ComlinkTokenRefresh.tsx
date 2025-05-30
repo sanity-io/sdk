@@ -99,7 +99,6 @@ export const ComlinkTokenRefreshProvider: React.FC<
             onMessage: {
               'dashboard/v1/auth/tokens/create': (data: NewTokenResponseMessage['payload']) => {
                 clearRefreshTimeout()
-                // Re-check isDashboardComlinkEnabled in case props/context changed
                 if (!isDashboardComlinkEnabled) return
 
                 if (data.token) {
@@ -110,7 +109,6 @@ export const ComlinkTokenRefreshProvider: React.FC<
             },
           }
         : undefined,
-    // Add isDashboardComlinkEnabled to dependency array
     [
       isDashboardComlinkEnabled,
       comlinkName,
@@ -161,8 +159,6 @@ export const ComlinkTokenRefreshProvider: React.FC<
       requestNewToken,
       isTokenRefreshInProgress,
       comlinkStatus,
-      // Expose isDashboardComlinkEnabled instead of isEnabled?
-      // Let's stick to isEnabled prop for clarity, checks happen internally.
       isEnabled: enabled,
     }),
     [requestNewToken, isTokenRefreshInProgress, comlinkStatus, enabled],
@@ -182,25 +178,18 @@ export const ComlinkTokenRefreshProvider: React.FC<
       authState.error &&
       (authState.error as ClientError)?.statusCode === 401 &&
       !isTokenRefreshInProgress.current &&
-      processed401ErrorRef.current !== authState.error // Check if this specific error instance has been processed
+      processed401ErrorRef.current !== authState.error
     ) {
-      // Mark this error instance as processed before requesting token
       processed401ErrorRef.current = authState.error
       requestNewToken()
     } else if (
       authState.type !== AuthStateType.ERROR ||
-      processed401ErrorRef.current !== authState.error
+      processed401ErrorRef.current !==
+        (authState.type === AuthStateType.ERROR ? authState.error : undefined)
     ) {
-      // Reset if the error is no longer a 401 or a different error occurs
       processed401ErrorRef.current = null
     }
-  }, [
-    authState,
-    isDashboardComlinkEnabled,
-    requestNewToken,
-    // Dependency: isTokenRefreshInProgress.current won't trigger effect, use the ref itself
-    isTokenRefreshInProgress,
-  ])
+  }, [authState, isDashboardComlinkEnabled, requestNewToken])
 
   return (
     <ComlinkTokenRefreshContext.Provider value={contextValue}>
