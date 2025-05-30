@@ -138,9 +138,15 @@ importers:
         specifier: ^5.8.3
         version: 5.8.3
     devDependencies:
+      '@playwright/test':
+        specifier: ^1.52.0
+        version: 1.52.0
       '@repo/config-eslint':
         specifier: workspace:*
         version: link:../../packages/@repo/config-eslint
+      '@repo/e2e':
+        specifier: workspace:*
+        version: link:../../packages/@repo/e2e
       '@repo/tsconfig':
         specifier: workspace:*
         version: link:../../packages/@repo/tsconfig
@@ -250,6 +256,34 @@ importers:
         specifier: workspace:*
         version: link:../config-eslint
 
+  packages/@repo/e2e:
+    dependencies:
+      dotenv:
+        specifier: ^16.5.0
+        version: 16.5.0
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.52.0
+        version: 1.52.0
+      '@repo/config-eslint':
+        specifier: workspace:*
+        version: link:../config-eslint
+      '@repo/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@sanity/pkg-utils':
+        specifier: ^7.2.2
+        version: 7.2.2(@types/babel__core@7.20.5)(@types/node@22.13.9)(babel-plugin-react-compiler@19.1.0-rc.1)(typescript@5.8.3)
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.13.9
+      eslint:
+        specifier: ^9.22.0
+        version: 9.25.1(jiti@2.4.2)
+      typescript:
+        specifier: ^5.0.0
+        version: 5.8.3
+
   packages/@repo/package.bundle:
     devDependencies:
       '@repo/config-eslint':
@@ -287,8 +321,8 @@ importers:
         specifier: ^7.2.1
         version: 7.2.1(debug@4.4.0)
       '@sanity/comlink':
-        specifier: ^3.0.3
-        version: 3.0.3
+        specifier: ^3.0.4
+        version: 3.0.4
       '@sanity/diff-match-patch':
         specifier: ^3.2.0
         version: 3.2.0
@@ -369,15 +403,6 @@ importers:
         specifier: ^3.1.2
         version: 3.1.2(@types/node@22.13.9)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1)
 
-  packages/e2e:
-    devDependencies:
-      '@playwright/test':
-        specifier: ^1.52.0
-        version: 1.52.0
-      '@types/node':
-        specifier: ^22.10.5
-        version: 22.13.9
-
   packages/react:
     dependencies:
       '@sanity/client':
@@ -430,8 +455,8 @@ importers:
         specifier: ^1.0.5
         version: 1.0.5
       '@sanity/comlink':
-        specifier: ^3.0.2
-        version: 3.0.3
+        specifier: ^3.0.4
+        version: 3.0.4
       '@sanity/pkg-utils':
         specifier: ^7.2.2
         version: 7.2.2(@types/babel__core@7.20.5)(@types/node@22.13.9)(babel-plugin-react-compiler@19.1.0-rc.1)(typescript@5.8.3)
@@ -2182,8 +2207,8 @@ packages:
     resolution: {integrity: sha512-6Rbg71hkeoGInk/9hBsCUBCZ33IHSs2fZynAR85ANkXDM+WYiwRDlker7OngBkfbK8TF9+G797VjNMQQgJINiQ==}
     engines: {node: '>=18'}
 
-  '@sanity/comlink@3.0.3':
-    resolution: {integrity: sha512-Nk9f2R+Ss7NGPHIjx6sXO3XVDYh/5EcO5ODy4mKRniks9O5t3ZhCDZoOaZtrudYKZbFTACDfEul53MzPT4JoHA==}
+  '@sanity/comlink@3.0.4':
+    resolution: {integrity: sha512-2yXb7xKOkR0xW1/5/oEuPFPlitmHbdOxskDI7g/MgiezfcWaotAmAqmv9S4vugd1Z8URjWN1FAh0vL67iZowKA==}
     engines: {node: '>=18'}
 
   '@sanity/diff-match-patch@3.2.0':
@@ -3548,6 +3573,10 @@ packages:
 
   dotenv@16.0.3:
     resolution: {integrity: sha512-7GO6HghkA5fYG9TYnNxi14/7K9f5occMlp3zXAuSxn7CKCxt9xbNWG7yF8hTCSUchlfWSe3uLmlPfigevRItzQ==}
+    engines: {node: '>=12'}
+
+  dotenv@16.5.0:
+    resolution: {integrity: sha512-m/C+AwOAr9/W1UOIZUo232ejMNnJAJtYQjUbHoNTBNTJSvqzzDh7vnrei3o3r3m9blf6ZoDkvcw0VmozNRFJxg==}
     engines: {node: '>=12'}
 
   dunder-proto@1.0.1:
@@ -9083,7 +9112,7 @@ snapshots:
       uuid: 11.1.0
       xstate: 5.19.2
 
-  '@sanity/comlink@3.0.3':
+  '@sanity/comlink@3.0.4':
     dependencies:
       rxjs: 7.8.2
       uuid: 11.1.0
@@ -9286,7 +9315,7 @@ snapshots:
   '@sanity/presentation-comlink@1.0.16(@sanity/client@6.29.1(debug@4.4.0))(@sanity/types@3.87.0(@types/react@19.1.2)(debug@4.4.0))':
     dependencies:
       '@sanity/client': 6.29.1(debug@4.4.0)
-      '@sanity/comlink': 3.0.3
+      '@sanity/comlink': 3.0.4
       '@sanity/visual-editing-types': 1.0.15(@sanity/client@6.29.1(debug@4.4.0))(@sanity/types@3.87.0(@types/react@19.1.2)(debug@4.4.0))
     transitivePeerDependencies:
       - '@sanity/types'
@@ -9366,7 +9395,7 @@ snapshots:
   '@sanity/sdk@0.0.0-alpha.25(@types/react@19.1.2)(debug@4.4.0)(immer@10.1.1)(react@18.3.1)(use-sync-external-store@1.5.0(react@18.3.1))':
     dependencies:
       '@sanity/client': 6.29.1(debug@4.4.0)
-      '@sanity/comlink': 3.0.3
+      '@sanity/comlink': 3.0.4
       '@sanity/diff-match-patch': 3.2.0
       '@sanity/mutate': 0.12.4(debug@4.4.0)
       '@sanity/types': 3.88.1(@types/react@19.1.2)(debug@4.4.0)
@@ -10755,6 +10784,8 @@ snapshots:
 
   dotenv@16.0.3: {}
 
+  dotenv@16.5.0: {}
+
   dunder-proto@1.0.1:
     dependencies:
       call-bind-apply-helpers: 1.0.1
@@ -11015,7 +11046,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.25.1(jiti@2.4.2)):
+  eslint-module-utils@2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.31.0)(eslint@9.25.1(jiti@2.4.2)))(eslint@9.25.1(jiti@2.4.2)):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
@@ -11037,7 +11068,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.25.1(jiti@2.4.2)
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.25.1(jiti@2.4.2))
+      eslint-module-utils: 2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.31.0)(eslint@9.25.1(jiti@2.4.2)))(eslint@9.25.1(jiti@2.4.2))
       hasown: 2.0.2
       is-core-module: 2.15.1
       is-glob: 4.0.3
@@ -13531,7 +13562,7 @@ snapshots:
       '@sanity/cli': 3.87.0(@types/node@22.13.9)(@types/react@19.1.2)(react@18.3.1)
       '@sanity/client': 6.29.1(debug@4.4.0)
       '@sanity/color': 3.0.6
-      '@sanity/comlink': 3.0.3
+      '@sanity/comlink': 3.0.4
       '@sanity/diff': 3.87.0
       '@sanity/diff-match-patch': 3.2.0
       '@sanity/diff-patch': 5.0.0
