@@ -189,8 +189,9 @@ const _getDocumentState = bindActionByDataset(
       const draft = documentStates[draftId]?.local
       const published = documentStates[publishedId]?.local
 
+      // wait for draft and published to be loaded before returning a value
+      if (draft === undefined || published === undefined) return undefined
       const document = draft ?? published
-      if (document === undefined) return undefined
       if (path) return jsonMatch(document, path).at(0)?.value
       return document
     },
