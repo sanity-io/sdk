@@ -6,15 +6,14 @@ import {beforeEach, describe, expect, it, type MockInstance, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useAuthState} from '../../hooks/auth/useAuthState'
-import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
+import * as utils from '../utils'
 import {AuthBoundary} from './AuthBoundary'
 
 // Mock hooks
 vi.mock('../../hooks/auth/useAuthState', () => ({
   useAuthState: vi.fn(() => 'logged-out'),
 }))
-vi.mock('../../hooks/auth/useLoginUrl')
 vi.mock('../../hooks/auth/useVerifyOrgProjects')
 vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
   useHandleAuthCallback: vi.fn(() => async () => {}),
@@ -102,31 +101,80 @@ vi.mock('../utils', () => ({
 
 describe('AuthBoundary', () => {
   let consoleErrorSpy: MockInstance
+  let originalLocation: Location
   const mockUseAuthState = vi.mocked(useAuthState)
-  const mockUseLoginUrl = vi.mocked(useLoginUrl)
   const mockUseVerifyOrgProjects = vi.mocked(useVerifyOrgProjects)
   const testProjectIds = ['proj-test'] // Example project ID for tests
 
   beforeEach(() => {
     vi.clearAllMocks()
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    // Save original location and mock it
+    originalLocation = window.location
+    // @ts-expect-error - partial implementation
+    delete window.location
+    window.location = new URL('https://example.com') as unknown as Location
     // Default mocks
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN} as any)
-    mockUseLoginUrl.mockReturnValue('http://example.com/login')
     // Default mock for useVerifyOrgProjects - returns null (no error)
     mockUseVerifyOrgProjects.mockImplementation(() => null)
   })
 
   afterEach(() => {
     consoleErrorSpy?.mockRestore()
+    // Restore original location
+    window.location = originalLocation
+    vi.restoreAllMocks()
   })
 
-  it.skip('redirects to the sanity.io/login url when authState="logged-out"', async () => {
+  describe('bridge script loading', () => {
+    it('does not load bridge script when not in iframe', async () => {
+      // Reset modules to ensure a fresh module environment
+      vi.resetModules()
+
+      // Mock document methods
+      const appendChildSpy = vi.spyOn(document.head, 'appendChild')
+
+      // Mock conditions to prevent script loading
+      vi.spyOn(utils, 'isInIframe').mockReturnValue(false)
+
+      // Import the module to trigger the code
+      await import('./AuthBoundary')
+
+      // Verify no script was added
+      expect(appendChildSpy).not.toHaveBeenCalled()
+    })
+
+    it('does not load bridge script when core script is already loaded', async () => {
+      // Reset modules to ensure a fresh module environment
+      vi.resetModules()
+
+      // Mock document methods
+      const appendChildSpy = vi.spyOn(document.head, 'appendChild')
+
+      // Mock conditions to prevent script loading (in iframe but script already loaded)
+      vi.spyOn(utils, 'isInIframe').mockReturnValue(true)
+      vi.spyOn(document, 'querySelector').mockReturnValue(document.createElement('div'))
+
+      // Import the module to trigger the code
+      await import('./AuthBoundary')
+
+      // Verify no script was added
+      expect(appendChildSpy).not.toHaveBeenCalled()
+    })
+  })
+
+  it('redirects to the sanity.io/login url when authState="logged-out" and not in iframe', async () => {
+    // Mock isInIframe to return false
+    vi.spyOn(utils, 'isInIframe').mockReturnValue(false)
+
     vi.mocked(useAuthState).mockReturnValue({
       type: AuthStateType.LOGGED_OUT,
       isDestroyingSession: false,
     })
+
     render(
       <ResourceProvider fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
@@ -135,8 +183,31 @@ describe('AuthBoundary', () => {
 
     // Wait for the redirect to happen
     await waitFor(() => {
-      expect(window.location.href).toBe('https://sanity.io/login')
+      expect(window.location.href).toBe(
+        'https://www.sanity.io/login?origin=https%3A%2F%2Fexample.com%2F&type=stampedToken&withSid=true',
+      )
     })
+  })
+
+  it('does not redirect when authState="logged-out" and in iframe', async () => {
+    // Mock isInIframe to return true
+    vi.spyOn(utils, 'isInIframe').mockReturnValue(true)
+
+    vi.mocked(useAuthState).mockReturnValue({
+      type: AuthStateType.LOGGED_OUT,
+      isDestroyingSession: false,
+    })
+
+    const {container} = render(
+      <ResourceProvider fallback={null}>
+        <AuthBoundary>Protected Content</AuthBoundary>
+      </ResourceProvider>,
+    )
+
+    // Ensure no redirect happened
+    expect(window.location.href).toBe('https://example.com/')
+    // Should render null for logged-out state
+    expect(container.innerHTML).toBe('')
   })
 
   it('renders the empty LoginCallback component when authState="logging-in"', () => {
@@ -191,6 +262,23 @@ describe('AuthBoundary', () => {
     })
   })
 
+  it('throws error for invalid auth state', () => {
+    // Create a mock with an invalid auth state type that will trigger the default case
+    vi.mocked(useAuthState).mockReturnValue({
+      // @ts-expect-error - intentionally creating an invalid state to test error handling
+      type: 'INVALID_STATE',
+    })
+
+    // Capture and verify the error
+    expect(() => {
+      render(
+        <ResourceProvider fallback={null}>
+          <AuthBoundary>Protected Content</AuthBoundary>
+        </ResourceProvider>,
+      )
+    }).toThrow('Invalid auth state: INVALID_STATE')
+  })
+
   it('renders children when logged in and org verification passes', () => {
     render(
       <ResourceProvider fallback={null}>
@@ -215,9 +303,11 @@ describe('AuthBoundary', () => {
 
     // Need to catch the error thrown during render. ErrorBoundary mock handles this.
     render(
-      <AuthBoundary verifyOrganization={true} projectIds={testProjectIds}>
-        <div>Protected Content</div>
-      </AuthBoundary>,
+      <ResourceProvider fallback={null}>
+        <AuthBoundary verifyOrganization={true} projectIds={testProjectIds}>
+          <div>Protected Content</div>
+        </AuthBoundary>
+      </ResourceProvider>,
     )
 
     // The ErrorBoundary's FallbackComponent should be rendered
@@ -245,9 +335,11 @@ describe('AuthBoundary', () => {
     })
 
     render(
-      <AuthBoundary verifyOrganization={false} projectIds={testProjectIds}>
-        <div>Protected Content</div>
-      </AuthBoundary>,
+      <ResourceProvider fallback={null}>
+        <AuthBoundary verifyOrganization={false} projectIds={testProjectIds}>
+          <div>Protected Content</div>
+        </AuthBoundary>
+      </ResourceProvider>,
     )
 
     // Should render children because verification is disabled
@@ -268,9 +360,11 @@ describe('AuthBoundary', () => {
     mockUseVerifyOrgProjects.mockImplementation(() => null)
 
     render(
-      <AuthBoundary projectIds={testProjectIds}>
-        <div>Protected Content</div>
-      </AuthBoundary>,
+      <ResourceProvider fallback={null}>
+        <AuthBoundary projectIds={testProjectIds}>
+          <div>Protected Content</div>
+        </AuthBoundary>
+      </ResourceProvider>,
     )
 
     await waitFor(() => {
