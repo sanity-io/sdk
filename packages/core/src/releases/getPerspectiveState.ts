@@ -1,16 +1,11 @@
 import {createSelector} from 'reselect'
 
-import {type PerspectiveHandle, type ReleasePerspective} from '../config/sanityConfig'
+import {type PerspectiveHandle} from '../config/sanityConfig'
 import {bindActionByDataset} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 import {releasesStore, type ReleasesStoreState} from './releasesStore'
+import {isReleasePerspective} from './utils/isReleasePerspective'
 import {sortReleases} from './utils/sortReleases'
-
-function isReleasePerspective(
-  perspective: PerspectiveHandle['perspective'],
-): perspective is ReleasePerspective {
-  return typeof perspective === 'object' && perspective !== null && 'releaseName' in perspective
-}
 
 const DEFAULT_PERSPECTIVE = 'drafts'
 

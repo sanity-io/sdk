@@ -5,7 +5,7 @@ import {
   type ValidProjection,
 } from '@sanity/sdk'
 import {type SanityProjectionResult} from 'groq'
-import {useCallback, useSyncExternalStore} from 'react'
+import {useCallback, useRef, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -183,6 +183,7 @@ export function useDocumentProjection<TData extends object>({
 }: useDocumentProjectionOptions): useDocumentProjectionResults<TData> {
   const instance = useSanityInstance()
   const stateSource = getProjectionState<TData>(instance, {...docHandle, projection})
+  const currentProjection = useRef<ValidProjection | null>(projection)
 
   if (stateSource.getCurrent()?.data === null) {
     throw resolveProjection(instance, {...docHandle, projection})
@@ -225,7 +226,10 @@ export function useDocumentProjection<TData extends object>({
         )
         .subscribe({next: onStoreChanged})
 
-      return () => subscription.unsubscribe()
+      return () => {
+        subscription.unsubscribe()
+        currentProjection.current = null
+      }
     },
     [stateSource, ref],
   )

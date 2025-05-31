@@ -1,3 +1,5 @@
+import {type DatasetHandle} from '../config/sanityConfig'
+
 /**
  * @public
  */
@@ -18,6 +20,10 @@ export interface DocumentProjectionValues<TValue extends object = object> {
 
 export interface DocumentProjections {
   [projectionHash: string]: ValidProjection
+}
+
+export interface DocumentConfigs {
+  [projectionHash: string]: DatasetHandle
 }
 
 interface DocumentProjectionSubscriptions {
@@ -46,5 +52,12 @@ export interface ProjectionStoreState<TValue extends object = object> {
    */
   subscriptions: {
     [documentId: string]: DocumentProjectionSubscriptions
+  }
+
+  /**
+   * Configuration for each document's projections
+   */
+  configs: {
+    [documentId: string]: DocumentConfigs
   }
 }
