@@ -301,7 +301,7 @@ describe('jsonMatch', () => {
   it('matches an element in an array by keyed segment', () => {
     const input = [{_key: 'bar'}, {_key: 'foo'}, {_key: 'baz'}]
     const result = jsonMatch(input, '[_key=="foo"]')
-    expect(result).toEqual([{value: {_key: 'foo'}, path: [1]}])
+    expect(result).toEqual([{value: {_key: 'foo'}, path: [{_key: 'foo'}]}])
   })
 
   it('returns no match for a keyed segment when the input is not an array', () => {

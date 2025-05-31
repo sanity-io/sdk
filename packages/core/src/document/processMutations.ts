@@ -26,7 +26,7 @@ export type DocumentSet<TDocument extends SanityDocument = SanityDocument> = {
   [TDocumentId in string]?: TDocument | null
 }
 
-type SupportPatchOperation = Exclude<keyof PatchOperations, 'merge'>
+type SupportedPatchOperation = Exclude<keyof PatchOperations, 'merge'>
 
 // > If multiple patches are included, then the order of execution is as follows:
 // > - set, setIfMissing, unset, inc, dec, insert.
@@ -41,7 +41,7 @@ const patchOperations = {
   insert,
   diffMatchPatch,
 } satisfies {
-  [K in SupportPatchOperation]: (
+  [K in SupportedPatchOperation]: (
     input: unknown,
     pathExpressions: NonNullable<PatchOperations[K]>,
   ) => unknown
