@@ -13,6 +13,8 @@ const AUTH_FILE = path.join(path.dirname(__filename), '..', '..', '.auth', 'user
  */
 const authenticateUser = async (browser: Browser) => {
   const env = getE2EEnv()
+
+  // get a clean, isolated browser context to isolate this auth flow from other logic
   const context = await browser.newContext()
 
   const response = await context.request.post('https://accounts.sanity.work/api/v1/login', {
@@ -30,6 +32,8 @@ const authenticateUser = async (browser: Browser) => {
     throw new Error(`Failed to authenticate: ${response.statusText()}`)
   }
 
+  // the previous request has set a connect.sid cookie
+  // we can use that to get a session token
   const page = await context.newPage()
 
   const loginUrl = new URL('https://api.sanity.work/v1/auth/login/sanity')
@@ -38,15 +42,20 @@ const authenticateUser = async (browser: Browser) => {
 
   await page.goto(loginUrl.toString())
 
+  // the /auth/login/sanity endpoint will redirect to the origin we set above
+  // our own site / SDK will receive the token it sent in the request
+  // and set it to be used by every other request
   await Promise.all([
     page.waitForURL('http://localhost:3333'),
     page.waitForLoadState('networkidle'),
   ])
 
-  await page.waitForTimeout(1000)
-
+  // get the "state" of the current browser we used to do the auth flow
   const state = await context.storageState()
   await context.close()
+  // return it to be saved as a static file in a hidden directory
+  // this will be used by the next tests as though we were logged in
+  // and be destroyed when the tests are done
   return state
 }
 
@@ -54,6 +63,7 @@ const authenticateUser = async (browser: Browser) => {
  * Used in local development to inject the token into the local storage
  */
 const injectLocalStorageToken = async (browser: Browser, e2eSessionToken: string) => {
+  // get a clean, isolated browser context to isolate this auth flow from other logic
   const context = await browser.newContext()
   const page = await context.newPage()
 
