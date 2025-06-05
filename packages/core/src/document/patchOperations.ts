@@ -621,6 +621,7 @@ export function insert(input: unknown, {items, ...insertPatch}: InsertPatch): un
           let index
 
           if (typeof segment === 'number') index = segment
+          if (typeof index === 'number' && index < 0) index = arr.length + index
           if (isKeySegment(segment)) index = getIndexForKey(arr, segment._key)
           if (typeof index !== 'number') continue
           if (index < 0) index = arr.length + index
@@ -654,6 +655,7 @@ export function insert(input: unknown, {items, ...insertPatch}: InsertPatch): un
           let index
 
           if (typeof segment === 'number') index = segment
+          if (typeof index === 'number' && index < 0) index = arr.length + index
           if (isKeySegment(segment)) index = getIndexForKey(arr, segment._key)
           if (typeof index !== 'number') continue
           if (index < 0) index = arr.length - index
@@ -678,6 +680,7 @@ export function insert(input: unknown, {items, ...insertPatch}: InsertPatch): un
           let index
 
           if (typeof segment === 'number') index = segment
+          if (typeof index === 'number' && index < 0) index = arr.length + index
           if (isKeySegment(segment)) index = getIndexForKey(arr, segment._key)
           if (typeof index !== 'number') continue
           if (index > position) position = index
