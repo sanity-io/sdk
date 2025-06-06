@@ -1,6 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": ["DEV", "VISUALIZER", "PKG_VERSION", "NPM_CONFIG_PROVENANCE"],
+  "globalEnv": ["DEV", "VISUALIZER", "PKG_VERSION", "NPM_CONFIG_PROVENANCE", "CI"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -44,10 +44,16 @@
       "outputs": ["coverage/**"]
     },
     "test:e2e": {
-      "env": ["CI", "SDK_E2E_SESSION_TOKEN", "NODE_ENV"],
+      "cache": false,
+      "env": [
+        "SDK_E2E_SESSION_TOKEN",
+        "NODE_ENV",
+        "SDK_E2E_USER_ID",
+        "SDK_E2E_USER_PASSWORD",
+        "RECAPTCHA_E2E_STAGING_KEY"
+      ],
       "dependsOn": ["@repo/e2e#build"],
-      "outputs": ["e2e/test-results/**", "e2e/test-report/**"],
-      "cache": true
+      "outputs": ["e2e/test-results/**", "e2e/test-report/**"]
     }
   }
 }
