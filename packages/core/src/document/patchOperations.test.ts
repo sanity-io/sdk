@@ -668,7 +668,7 @@ describe('unset', () => {
   it('unsets multiple array elements when using a range', () => {
     const input = {items: [1, 2, 3, 4, 5]}
     const output = unset(input, ['items[1:3]'])
-    expect(output).toEqual({items: [1, 3, 5]})
+    expect(output).toEqual({items: [1, 4, 5]})
   })
 
   it('leaves input unchanged if no path expression matches', () => {

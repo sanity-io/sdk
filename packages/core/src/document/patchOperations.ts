@@ -484,6 +484,9 @@ export function unset<R>(input: unknown, pathExpressions: string[]): R
 export function unset(input: unknown, pathExpressions: string[]): unknown {
   const result = pathExpressions
     .flatMap((pathExpression) => jsonMatch(input, pathExpression))
+    // ensure that we remove in the reverse order the paths were found in
+    // this is necessary for array unsets so the indexes don't change as we unset
+    .reverse()
     .reduce((acc, {path}) => unsetDeep(acc, path), input)
 
   return ensureArrayKeysDeep(result)
