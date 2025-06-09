@@ -301,7 +301,7 @@ describe('jsonMatch', () => {
   it('matches an element in an array by keyed segment', () => {
     const input = [{_key: 'bar'}, {_key: 'foo'}, {_key: 'baz'}]
     const result = jsonMatch(input, '[_key=="foo"]')
-    expect(result).toEqual([{value: {_key: 'foo'}, path: [1]}])
+    expect(result).toEqual([{value: {_key: 'foo'}, path: [{_key: 'foo'}]}])
   })
 
   it('returns no match for a keyed segment when the input is not an array', () => {
@@ -758,10 +758,10 @@ describe('insert', () => {
     expect(output).toEqual({some: {array: ['a', '!', 'b', 'c']}})
   })
 
-  it('interprets a negative index for "before" as append', () => {
+  it('interprets a negative index for "before"', () => {
     const input = {some: {array: ['a', 'b', 'c']}}
     const output = insert(input, {before: 'some.array[-1]', items: ['!']})
-    expect(output).toEqual({some: {array: ['a', 'b', 'c', '!']}})
+    expect(output).toEqual({some: {array: ['a', 'b', '!', 'c']}})
   })
 
   it('inserts items after a given positive index ("after" operation)', () => {
@@ -793,10 +793,10 @@ describe('insert', () => {
     })
   })
 
-  it('inserts items after a negative index ("after" operation with negative index interpreted as prepend)', () => {
+  it('inserts items after a negative index ("after" operation with negative index interpreted as append)', () => {
     const input = {some: {array: ['a', 'b', 'c']}}
     const output = insert(input, {after: 'some.array[-1]', items: ['!']})
-    expect(output).toEqual({some: {array: ['!', 'a', 'b', 'c']}})
+    expect(output).toEqual({some: {array: ['a', 'b', 'c', '!']}})
   })
 
   it('replaces a single matched element ("replace" operation, single match)', () => {

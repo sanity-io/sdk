@@ -1,8 +1,15 @@
-import {defineConfig} from '@playwright/test'
+import {defineConfig, devices} from '@playwright/test'
 import type {PlaywrightTestConfig} from '@playwright/test'
+import path from 'node:path'
+import {fileURLToPath} from 'node:url'
 import {getE2EEnv} from './env'
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const SETUP_DIR = path.join(path.dirname(__dirname), 'src', 'setup')
+const TEARDOWN_DIR = path.join(path.dirname(__dirname), 'src', 'teardown')
+const AUTH_FILE = path.join(path.dirname(__dirname), '.auth', 'user.json')
 const BASE_URL = 'http://localhost:3333'
+
 const {CI} = getE2EEnv()
 
 /**
@@ -32,6 +39,26 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
   },
   /* Configure output directory for test results */
   outputDir: './e2e/test-results',
+  /* Projects configuration */
+  projects: [
+    {
+      name: 'setup',
+      testDir: SETUP_DIR,
+      testMatch: /.*\.setup\.ts/,
+      teardown: 'cleanup',
+    },
+    {
+      name: 'cleanup',
+      testDir: TEARDOWN_DIR,
+      testMatch: /.*\.teardown\.ts/,
+    },
+    // we can add as many different projects as we like here
+    {
+      name: 'chromium',
+      use: {...devices['Desktop Chrome'], storageState: AUTH_FILE},
+      dependencies: ['setup'],
+    },
+  ],
 }
 
 /**
@@ -49,4 +76,5 @@ export const createPlaywrightConfig = (
   })
 }
 
-export {expect, test} from './sdk-test'
+// Export test fixtures
+export {test, expect} from './fixtures'

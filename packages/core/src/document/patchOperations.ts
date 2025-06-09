@@ -325,17 +325,9 @@ function matchRecursive(value: unknown, path: Path, currentPath: SingleValuePath
     const endIndex = end === '' ? value.length : end
 
     // We'll accumulate all matches from each index in the range
-    let results: MatchEntry[] = []
-
-    // Decide whether the range is exclusive or inclusive. The example in
-    // the doc says "array[1:9]" => element 1 through 9 (non-inclusive?).
-    // Typically, in slice terms, that is `array.slice(1, 9)` → includes
-    // indices 1..8. If that's your intention, do i < endIndex.
-    for (let i = startIndex; i < endIndex; i++) {
-      results = results.concat(matchRecursive(value[i], rest, [...currentPath, i]))
-    }
-
-    return results
+    return value
+      .slice(startIndex, endIndex)
+      .flatMap((item, i) => matchRecursive(item, rest, [...currentPath, i + startIndex]))
   }
 
   // 4) Keyed segment => find index in array
@@ -347,7 +339,7 @@ function matchRecursive(value: unknown, path: Path, currentPath: SingleValuePath
   }
 
   const nextVal = value[arrIndex]
-  return matchRecursive(nextVal, rest, [...currentPath, arrIndex])
+  return matchRecursive(nextVal, rest, [...currentPath, {_key: keyed._key}])
 }
 
 // this is a similar array key to the studio:
@@ -497,9 +489,6 @@ export function unset(input: unknown, pathExpressions: string[]): unknown {
   return ensureArrayKeysDeep(result)
 }
 
-const operations = ['before', 'after', 'replace'] as const
-type Operation = (typeof operations)[number]
-
 /**
  * Given an input object, a path expression (inside the insert patch object), and an array of items,
  * this function will insert or replace the matched items.
@@ -579,105 +568,138 @@ type Operation = (typeof operations)[number]
  * ```
  */
 export function insert<R>(input: unknown, insertPatch: InsertPatch): R
-export function insert(input: unknown, insertPatch: InsertPatch): unknown {
-  const operation = operations.find((op) => op in insertPatch)
-  if (!operation) return input
+export function insert(input: unknown, {items, ...insertPatch}: InsertPatch): unknown {
+  let operation
+  let pathExpression
 
-  const {items} = insertPatch
-  const pathExpression = (insertPatch as {[K in Operation]?: string} & {items: unknown})[operation]
+  // behavior observed from content-lake when inserting:
+  // 1. if the operation is before, out of all the matches, it will use the
+  //    insert the items before the first match that appears in the array
+  // 2. if the operation is after, it will insert the items after the first
+  //    match that appears in the array
+  // 3. if the operation is replace, then insert the items before the first
+  //    match and then delete the rest
+  if ('before' in insertPatch) {
+    operation = 'before' as const
+    pathExpression = insertPatch.before
+  } else if ('after' in insertPatch) {
+    operation = 'after' as const
+    pathExpression = insertPatch.after
+  } else if ('replace' in insertPatch) {
+    operation = 'replace' as const
+    pathExpression = insertPatch.replace
+  }
+  if (!operation) return input
   if (typeof pathExpression !== 'string') return input
 
-  // Helper to normalize a matched index given the parent array's length.
-  function normalizeIndex(index: number, parentLength: number): number {
+  const parsedPath = parsePath(pathExpression)
+  // in order to do an insert patch, you need to provide at least one path segment
+  if (!parsedPath.length) return input
+
+  const arrayPath = stringifyPath(parsedPath.slice(0, -1))
+  const positionPath = stringifyPath(parsedPath.slice(-1))
+
+  const arrayMatches = jsonMatch<unknown[]>(input, arrayPath)
+
+  let result = input
+
+  for (const {path, value} of arrayMatches) {
+    if (!Array.isArray(value)) continue
+    let arr = value
+
     switch (operation) {
-      case 'before':
-        // A negative index means "append" (i.e. insert before a hypothetical element
-        // beyond the end of the array).
-        return index < 0 ? parentLength : index
-      case 'after':
-        // For "after", if the matched index is negative, we treat it as "prepend":
-        // by convention, we convert it to -1 so that later adding 1 produces 0.
-        return index < 0 ? -1 : index
-      default: // default to 'replace'
-        // For replace, convert a negative index to the corresponding positive one.
-        return index < 0 ? parentLength + index : index
-    }
-  }
+      case 'replace': {
+        const indexesToRemove = new Set<number>()
+        let position = Infinity
 
-  // Group the matched array entries by their parent array.
-  interface GroupEntry {
-    array: unknown[]
-    pathToArray: SingleValuePath
-    indexes: number[]
-  }
-  const grouped = new Map<unknown, GroupEntry>()
-  jsonMatch(input, pathExpression)
-    .map(({path}) => {
-      const segment = path[path.length - 1]
-      let index: number | undefined
-      if (isKeySegment(segment)) {
-        index = getIndexForKey(input, segment._key)
-      } else if (typeof segment === 'number') {
-        index = segment
+        for (const itemMatch of jsonMatch(arr, positionPath)) {
+          // there should only be one path segment for an insert patch, invalid otherwise
+          if (itemMatch.path.length !== 1) continue
+          const [segment] = itemMatch.path
+          if (typeof segment === 'string') continue
+
+          let index
+
+          if (typeof segment === 'number') index = segment
+          if (typeof index === 'number' && index < 0) index = arr.length + index
+          if (isKeySegment(segment)) index = getIndexForKey(arr, segment._key)
+          if (typeof index !== 'number') continue
+          if (index < 0) index = arr.length + index
+
+          indexesToRemove.add(index)
+          if (index < position) position = index
+        }
+
+        if (position === Infinity) continue
+
+        // remove all other indexes
+        arr = arr
+          .map((item, index) => ({item, index}))
+          .filter(({index}) => !indexesToRemove.has(index))
+          .map(({item}) => item)
+
+        // insert at the min index
+        arr = [...arr.slice(0, position), ...items, ...arr.slice(position, arr.length)]
+
+        break
       }
-      if (typeof index !== 'number') return null
-
-      const parentPath = path.slice(0, path.length - 1)
-      const parent = getDeep(input, parentPath)
-      if (!Array.isArray(parent)) return null
-
-      const normalizedIndex = normalizeIndex(index, parent.length)
-      return {parent, parentPath, normalizedIndex}
-    })
-    .filter(isNonNullable)
-    .forEach(({parent, parentPath, normalizedIndex}) => {
-      if (grouped.has(parent)) {
-        grouped.get(parent)!.indexes.push(normalizedIndex)
-      } else {
-        grouped.set(parent, {array: parent, pathToArray: parentPath, indexes: [normalizedIndex]})
-      }
-    })
-
-  // Sort the indexes for each grouped entry.
-  const groupEntries = Array.from(grouped.values()).map((entry) => ({
-    ...entry,
-    indexes: entry.indexes.sort((a, b) => a - b),
-  }))
-
-  // For each group, update the parent array using setDeep.
-  const result = groupEntries.reduce<unknown>((acc, {array, indexes, pathToArray}) => {
-    switch (operation) {
       case 'before': {
-        // Insert items before the first matched index.
-        const firstIndex = indexes[0]
-        return setDeep(acc, pathToArray, [
-          ...array.slice(0, firstIndex),
-          ...items,
-          ...array.slice(firstIndex),
-        ])
+        let position = Infinity
+
+        for (const itemMatch of jsonMatch(arr, positionPath)) {
+          if (itemMatch.path.length !== 1) continue
+          const [segment] = itemMatch.path
+
+          if (typeof segment === 'string') continue
+
+          let index
+
+          if (typeof segment === 'number') index = segment
+          if (typeof index === 'number' && index < 0) index = arr.length + index
+          if (isKeySegment(segment)) index = getIndexForKey(arr, segment._key)
+          if (typeof index !== 'number') continue
+          if (index < 0) index = arr.length - index
+          if (index < position) position = index
+        }
+
+        if (position === Infinity) continue
+
+        arr = [...arr.slice(0, position), ...items, ...arr.slice(position, arr.length)]
+
+        break
       }
       case 'after': {
-        // Insert items after the last matched index.
-        const lastIndex = indexes[indexes.length - 1] + 1
-        return setDeep(acc, pathToArray, [
-          ...array.slice(0, lastIndex),
-          ...items,
-          ...array.slice(lastIndex),
-        ])
+        let position = -Infinity
+
+        for (const itemMatch of jsonMatch(arr, positionPath)) {
+          if (itemMatch.path.length !== 1) continue
+          const [segment] = itemMatch.path
+
+          if (typeof segment === 'string') continue
+
+          let index
+
+          if (typeof segment === 'number') index = segment
+          if (typeof index === 'number' && index < 0) index = arr.length + index
+          if (isKeySegment(segment)) index = getIndexForKey(arr, segment._key)
+          if (typeof index !== 'number') continue
+          if (index > position) position = index
+        }
+
+        if (position === -Infinity) continue
+
+        arr = [...arr.slice(0, position + 1), ...items, ...arr.slice(position + 1, arr.length)]
+
+        break
       }
-      // default to 'replace' behavior
+
       default: {
-        // Remove all matched items then insert the new items at the first match.
-        const firstIndex = indexes[0]
-        const indexSet = new Set(indexes)
-        return setDeep(acc, pathToArray, [
-          ...array.slice(0, firstIndex),
-          ...items,
-          ...array.slice(firstIndex).filter((_, idx) => !indexSet.has(idx + firstIndex)),
-        ])
+        continue
       }
     }
-  }, input)
+
+    result = setDeep(result, path, arr)
+  }
 
   return ensureArrayKeysDeep(result)
 }
@@ -805,10 +827,6 @@ export function ifRevisionID(input: unknown, revisionId: string): unknown {
   }
 
   return input
-}
-
-function isNonNullable<T>(t: T): t is NonNullable<T> {
-  return t !== null && t !== undefined
 }
 
 const indexCache = new WeakMap<KeyedSegment[], Record<string, number | undefined>>()
