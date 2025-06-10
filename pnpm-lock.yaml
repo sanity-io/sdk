@@ -318,8 +318,8 @@ importers:
   packages/core:
     dependencies:
       '@sanity/client':
-        specifier: ^7.2.1
-        version: 7.2.1(debug@4.4.0)
+        specifier: ^7.5.0-live-cors.3
+        version: 7.5.0-live-cors.3
       '@sanity/comlink':
         specifier: ^3.0.4
         version: 3.0.4
@@ -406,8 +406,8 @@ importers:
   packages/react:
     dependencies:
       '@sanity/client':
-        specifier: ^7.2.1
-        version: 7.2.1(debug@4.4.0)
+        specifier: 7.5.0-live-cors.3
+        version: 7.5.0-live-cors.3
       '@sanity/message-protocol':
         specifier: ^0.12.0
         version: 0.12.0
@@ -2189,6 +2189,14 @@ packages:
 
   '@sanity/client@7.2.1':
     resolution: {integrity: sha512-BJ3RddlStGc+PjwBwhJIvWgXJbt3+TdWm/ywWWCNruqS5aqOSvvLUFjaAXp5ci4Wy8BL/RnZ60WIeqPi67+5xw==}
+    engines: {node: '>=20'}
+
+  '@sanity/client@7.5.0':
+    resolution: {integrity: sha512-Hy5jru/ePBlwTjc6dDxq8kqwiDbHb1l01WOQxRDITyqF8/ksa5fDcfmwjfhIBcFKkC222POd5UZ2vBsS4PSu/w==}
+    engines: {node: '>=20'}
+
+  '@sanity/client@7.5.0-live-cors.3':
+    resolution: {integrity: sha512-iGA50StUbY2q669kvUsTNvH2Cm/1Y/yXIbXQEvFY3DN64UujwYbl7A7WHuCc4WK4Y81lI4T2skUIhSepYX5NYg==}
     engines: {node: '>=20'}
 
   '@sanity/codegen@3.87.0':
@@ -4128,6 +4136,10 @@ packages:
 
   get-it@8.6.7:
     resolution: {integrity: sha512-AMEotvykAlcEPTPmYeZPqr9w3K53Ni8z1tplo1mwNS8T4i/gr5T7mSfvaLhhIQhF+0thIH901kLdDA5d5bvDGA==}
+    engines: {node: '>=14.0.0'}
+
+  get-it@8.6.9:
+    resolution: {integrity: sha512-CSUbVbfTZZbRrPqiMPaV3mWw+3MDgRPANtqBxLSp94cUUUZVAZfjGDwArvu5z2bx5ABW2MNB5kdT3PTOxe3cTw==}
     engines: {node: '>=14.0.0'}
 
   get-latest-version@5.1.0:
@@ -6491,6 +6503,9 @@ packages:
 
   through2@3.0.2:
     resolution: {integrity: sha512-enaDQ4MUyP2W6ZyT6EsMzqBPZaM/avg8iuo+l2d3QCs0J+6RaqkHV/2/lOwDTueBHeJ/2LG9lrLW3d5rWPucuQ==}
+
+  through2@4.0.2:
+    resolution: {integrity: sha512-iOqSav00cVxEEICeD7TjLB1sueEL+81Wpzp2bY17uZjZN0pWZPuo4suZ/61VujxmqSGFfgOcNuTZ85QJwNZQpw==}
 
   through@2.3.8:
     resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
@@ -8998,7 +9013,7 @@ snapshots:
       decompress: 4.2.1
       esbuild: 0.21.5
       esbuild-register: 3.6.0(esbuild@0.21.5)
-      get-it: 8.6.7(debug@4.4.0)
+      get-it: 8.6.9(debug@4.4.0)
       groq-js: 1.16.1
       pkg-dir: 5.0.0
       prettier: 3.5.3
@@ -9059,6 +9074,24 @@ snapshots:
     dependencies:
       '@sanity/eventsource': 5.0.2
       get-it: 8.6.7(debug@4.4.0)
+      nanoid: 3.3.11
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - debug
+
+  '@sanity/client@7.5.0(debug@4.4.0)':
+    dependencies:
+      '@sanity/eventsource': 5.0.2
+      get-it: 8.6.9(debug@4.4.0)
+      nanoid: 3.3.11
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - debug
+
+  '@sanity/client@7.5.0-live-cors.3':
+    dependencies:
+      '@sanity/eventsource': 5.0.2
+      get-it: 8.6.9(debug@4.4.0)
       nanoid: 3.3.11
       rxjs: 7.8.2
     transitivePeerDependencies:
@@ -9141,7 +9174,7 @@ snapshots:
       '@sanity/util': 3.68.3(@types/react@19.1.2)(debug@4.4.0)
       archiver: 7.0.1
       debug: 4.4.0(supports-color@8.1.1)
-      get-it: 8.6.7(debug@4.4.0)
+      get-it: 8.6.9(debug@4.4.0)
       json-stream-stringify: 2.0.4
       lodash: 4.17.21
       mississippi: 4.0.0
@@ -9176,7 +9209,7 @@ snapshots:
       '@sanity/uuid': 3.0.2
       debug: 4.4.0(supports-color@8.1.1)
       file-url: 2.0.2
-      get-it: 8.6.7(debug@4.4.0)
+      get-it: 8.6.9(debug@4.4.0)
       get-uri: 2.0.4
       gunzip-maybe: 1.4.2
       is-tar: 1.0.0
@@ -9440,7 +9473,7 @@ snapshots:
 
   '@sanity/types@3.88.1(@types/react@19.1.2)(debug@4.4.0)':
     dependencies:
-      '@sanity/client': 7.2.1(debug@4.4.0)
+      '@sanity/client': 7.5.0(debug@4.4.0)
       '@types/react': 19.1.2
     transitivePeerDependencies:
       - debug
@@ -9487,7 +9520,7 @@ snapshots:
 
   '@sanity/util@3.88.1(@types/react@19.1.2)(debug@4.4.0)':
     dependencies:
-      '@sanity/client': 7.2.1(debug@4.4.0)
+      '@sanity/client': 7.5.0(debug@4.4.0)
       '@sanity/types': 3.88.1(@types/react@19.1.2)(debug@4.4.0)
       get-random-values-esm: 1.0.2
       moment: 2.30.1
@@ -11046,7 +11079,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.31.0)(eslint@9.25.1(jiti@2.4.2)))(eslint@9.25.1(jiti@2.4.2)):
+  eslint-module-utils@2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.25.1(jiti@2.4.2)):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
@@ -11068,7 +11101,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.25.1(jiti@2.4.2)
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.31.0)(eslint@9.25.1(jiti@2.4.2)))(eslint@9.25.1(jiti@2.4.2))
+      eslint-module-utils: 2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.4.2))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.25.1(jiti@2.4.2))
       hasown: 2.0.2
       is-core-module: 2.15.1
       is-glob: 4.0.3
@@ -11516,6 +11549,17 @@ snapshots:
       follow-redirects: 1.15.9(debug@4.4.0)
       is-retry-allowed: 2.2.0
       progress-stream: 2.0.0
+      tunnel-agent: 0.6.0
+    transitivePeerDependencies:
+      - debug
+
+  get-it@8.6.9(debug@4.4.0):
+    dependencies:
+      '@types/follow-redirects': 1.14.4
+      decompress-response: 7.0.0
+      follow-redirects: 1.15.9(debug@4.4.0)
+      is-retry-allowed: 2.2.0
+      through2: 4.0.2
       tunnel-agent: 0.6.0
     transitivePeerDependencies:
       - debug
@@ -14151,6 +14195,10 @@ snapshots:
   through2@3.0.2:
     dependencies:
       inherits: 2.0.4
+      readable-stream: 3.6.2
+
+  through2@4.0.2:
+    dependencies:
       readable-stream: 3.6.2
 
   through@2.3.8: {}

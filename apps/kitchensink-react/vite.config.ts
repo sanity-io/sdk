@@ -14,7 +14,7 @@ export default defineConfig(({mode}) => {
 
   return {
     server: {
-      port: 3333,
+      port: 5555,
       fs: {
         strict: false,
       },
