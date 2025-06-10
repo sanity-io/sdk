@@ -1,9 +1,9 @@
 import path from 'node:path'
-import {test as setup} from '@playwright/test'
 import {fileURLToPath} from 'node:url'
-import type {Browser} from '@playwright/test'
-import {getE2EEnv} from '../env'
-import fs from 'node:fs/promises'
+
+import {type Browser, test as setup} from '@playwright/test'
+
+import {getE2EEnv} from '../helpers/getE2EEnv'
 
 const __filename = fileURLToPath(import.meta.url)
 const AUTH_FILE = path.join(path.dirname(__filename), '..', '..', '.auth', 'user.json')
@@ -51,12 +51,11 @@ const authenticateUser = async (browser: Browser) => {
   ])
 
   // get the "state" of the current browser we used to do the auth flow
-  const state = await context.storageState()
-  await context.close()
-  // return it to be saved as a static file in a hidden directory
+  // and save it to a file
   // this will be used by the next tests as though we were logged in
   // and be destroyed when the tests are done
-  return state
+  await context.storageState({path: AUTH_FILE})
+  await context.close()
 }
 
 /**
@@ -75,17 +74,16 @@ const injectLocalStorageToken = async (browser: Browser, e2eSessionToken: string
 
   await page.goto('http://localhost:3333')
 
-  const state = await context.storageState()
+  // as above, save the state to a file
+  await context.storageState({path: AUTH_FILE})
   await context.close()
-  return state
 }
 
 setup('setup authentication', async ({browser}) => {
   const {CI, SDK_E2E_SESSION_TOKEN} = getE2EEnv()
-  const state = CI
-    ? await authenticateUser(browser)
-    : await injectLocalStorageToken(browser, SDK_E2E_SESSION_TOKEN!)
-
-  await fs.mkdir(path.dirname(AUTH_FILE), {recursive: true})
-  await fs.writeFile(AUTH_FILE, JSON.stringify(state, null, 2))
+  if (CI) {
+    await authenticateUser(browser)
+  } else {
+    await injectLocalStorageToken(browser, SDK_E2E_SESSION_TOKEN!)
+  }
 })

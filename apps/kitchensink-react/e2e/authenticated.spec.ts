@@ -5,6 +5,9 @@ test.describe('Authenticated', () => {
   test('Kitchen sink loads when authenticated', async ({page}) => {
     await page.goto('/')
 
+    // wait a bit -- the redirect can happen too quickly and then be misleading
+    await page.waitForTimeout(1000)
+
     // should be able to see the component beneath the AuthBoundary
     await expect(page.getByTestId('project-auth-home')).toBeVisible()
     // Verify we're authenticated by checking for the absence of the sign-in link

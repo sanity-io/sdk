@@ -28,8 +28,3 @@ jobs:
 
       - name: Depcheck
         run: pnpm depcheck
-        env:
-          CI: true
-          SDK_E2E_USER_ID: ${{ secrets.SDK_E2E_USER_ID }}
-          SDK_E2E_USER_PASSWORD: ${{ secrets.SDK_E2E_USER_PASSWORD }}
-          RECAPTCHA_E2E_STAGING_KEY: ${{ secrets.RECAPTCHA_E2E_STAGING_KEY }}
