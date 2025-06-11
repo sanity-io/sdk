@@ -15,6 +15,7 @@ export interface DocumentPreviewLayoutProps {
   status?: string
   subtitle?: string
   title: string
+  documentId?: string
 }
 
 /**
@@ -35,6 +36,7 @@ export const DocumentPreviewLayout = forwardRef(
       status = '',
       subtitle = '',
       title,
+      documentId,
     }: DocumentPreviewLayoutProps,
     ref: React.Ref<HTMLElement>,
   ): JSX.Element => {
@@ -131,6 +133,7 @@ export const DocumentPreviewLayout = forwardRef(
           onClick={onClick}
           ref={ref as React.Ref<HTMLButtonElement>}
           className={`DocumentPreviewLayout block si-100 text-start p-1 radius1 ${selected ? 'selected' : ''}`}
+          data-testid={`document-preview-${documentId || 'unknown'}`}
         >
           <div className="container-inline flex align-items-center gap-2 font-sans">
             <figure className="Media border0 border-solid flex-none flex align-items-center justify-content-center object-cover">
@@ -138,8 +141,14 @@ export const DocumentPreviewLayout = forwardRef(
             </figure>
 
             <div className="leading2 flex-grow overflow-hidden">
-              <p className="Title text-1 font-medium truncate">{title}</p>
-              {subtitle && <p className="Subtitle text-1 truncate">{subtitle}</p>}
+              <p className="Title text-1 font-medium truncate" data-testid="document-title">
+                {title}
+              </p>
+              {subtitle && (
+                <p className="Subtitle text-1 truncate" data-testid="document-subtitle">
+                  {subtitle}
+                </p>
+              )}
             </div>
 
             {docType && (

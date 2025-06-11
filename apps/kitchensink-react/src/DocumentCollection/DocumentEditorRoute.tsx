@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import {
   createDocument,
+  createDocumentHandle,
   deleteDocument,
   discardDocument,
   type DocumentHandle,
@@ -19,9 +20,9 @@ import {Box, Button, TextInput, Tooltip} from '@sanity/ui'
 import {JsonData, JsonEditor} from 'json-edit-react'
 import {type JSX, useState} from 'react'
 
-function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
-  const [value, setValue] = useState('')
+import {devConfigs, e2eConfigs} from '../sanityConfigs'
 
+function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   useDocumentEvent({...docHandle, onEvent: (e) => console.log(e)})
   const synced = useDocumentSyncStatus(docHandle)
   const apply = useApplyDocumentActions()
@@ -102,18 +103,13 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
 
       <Box paddingY={5}>
         <TextInput
-          label="Value"
-          type="text"
-          value={value}
-          onChange={(e) => setValue(e.currentTarget.value)}
-        />
-        <TextInput
           label="Name"
           type="text"
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
+          data-testid="name-input"
         />
-        <pre>{JSON.stringify(document, null, 2)}</pre>
+        <pre data-testid="document-content">{JSON.stringify(document, null, 2)}</pre>
       </Box>
     </Box>
   )
@@ -125,17 +121,55 @@ function Editor() {
     batchSize: 1,
   })
 
-  const docHandle = documents[0] ?? null
+  const [docHandle, setDocHandle] = useState<DocumentHandle<'author'> | null>(documents[0] ?? null)
+  const [newDocumentId, setNewDocumentId] = useState<string>('')
+  const {projectId, dataset} = import.meta.env['VITE_IS_E2E'] ? e2eConfigs[0] : devConfigs[0]
 
-  if (!docHandle) {
+  const handleLoadDocument = () => {
+    if (newDocumentId) {
+      setDocHandle(
+        createDocumentHandle({
+          documentType: 'author',
+          documentId: newDocumentId,
+          projectId,
+          dataset,
+        }),
+      )
+    }
+  }
+
+  const updateDocHandle = (newValue: string) => {
+    setNewDocumentId(newValue)
+  }
+
+  if (!documents.length) {
     return <Box padding={4}>No documents found</Box>
   }
 
-  if (!docHandle) {
-    return <Box padding={4}>Loading...</Box>
-  }
-
-  return <DocumentEditor docHandle={docHandle} />
+  return (
+    <Box padding={4}>
+      <Box paddingY={4}>
+        <Box style={{display: 'flex', gap: '8px', alignItems: 'flex-end'}}>
+          <Box style={{flex: 1}}>
+            <TextInput
+              label="Document ID"
+              type="text"
+              value={newDocumentId || docHandle?.documentId || ''}
+              placeholder="Enter document ID"
+              data-testid="document-id-input"
+              onChange={(e) => updateDocHandle(e.currentTarget.value)}
+            />
+          </Box>
+          <Button
+            text="Load"
+            onClick={() => handleLoadDocument()}
+            data-testid="load-document-button"
+          />
+        </Box>
+      </Box>
+      {!docHandle ? <Box padding={4}>Loading...</Box> : <DocumentEditor docHandle={docHandle} />}
+    </Box>
+  )
 }
 
 export function DocumentEditorRoute(): JSX.Element {
