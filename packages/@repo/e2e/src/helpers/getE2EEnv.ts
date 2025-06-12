@@ -10,7 +10,7 @@ interface E2EEnv {
   /** The session token for authenticated tests */
   SDK_E2E_SESSION_TOKEN: string
   /** Whether we're running in CI */
-  CI?: string
+  CI?: boolean
   /** E2E test user ID */
   SDK_E2E_USER_ID?: string
   /** E2E test user password */
@@ -48,7 +48,7 @@ function findEnv(name: KnownEnvVar): string | undefined {
  * Get the E2E environment variables
  */
 export function getE2EEnv(): E2EEnv {
-  const CI = findEnv('CI')
+  const CI = findEnv('CI') === 'true'
   const SDK_E2E_PROJECT_ID = readEnv('SDK_E2E_PROJECT_ID')
   const SDK_E2E_DATASET_0 = readEnv('SDK_E2E_DATASET_0')
   const SDK_E2E_DATASET_1 = readEnv('SDK_E2E_DATASET_1')

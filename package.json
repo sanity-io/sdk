@@ -25,6 +25,7 @@
     "clean": "run-s clean:build clean:deps",
     "clean:build": "turbo run clean",
     "clean:deps": "rimraf packages/*/node_modules apps/*/node_modules node_modules",
+    "cleanup:e2e": "turbo run cleanup --filter=@repo/e2e",
     "dev": "pnpm dev:kitchensink",
     "dev:kitchensink": "turbo run dev --filter=@sanity/kitchensink-react",
     "dev:e2e": "turbo run dev --filter=@sanity/kitchensink-react -- --mode=e2e",
