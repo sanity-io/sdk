@@ -18,8 +18,8 @@
   "scripts": {
     "all": "turbo run build && turbo run lint && turbo run test:coverage && pnpm build:docs && pnpm depcheck",
     "build": "turbo run build --filter='./packages/*' --filter='./apps/*'",
-    "build:docs": "turbo run docs && typedoc",
     "build:bundle": "turbo run build:bundle --filter='./packages/*' --filter='!./packages/@repo/*'",
+    "build:docs": "turbo run docs && typedoc",
     "build:packages": "turbo run build --filter='./packages/*' --filter='!./packages/@repo/*'",
     "build:visualizer": "VISUALIZER=true turbo run build --filter='./packages/*'",
     "clean": "run-s clean:build clean:deps",
@@ -49,6 +49,7 @@
     "@commitlint/config-conventional": "^19.8.0",
     "@commitlint/types": "^19.8.0",
     "@google-cloud/storage": "^7.16.0",
+    "@playwright/test": "^1.52.0",
     "@repo/config-eslint": "workspace:*",
     "@repo/config-test": "workspace:*",
     "@repo/tsconfig": "workspace:*",

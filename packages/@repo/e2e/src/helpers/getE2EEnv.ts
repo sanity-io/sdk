@@ -33,6 +33,11 @@ function readEnv(name: KnownEnvVar): string {
   }
   const val = findEnv(name)
   if (val === undefined) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `Environment variable "${name}" not found. Available env vars:`,
+      Object.keys(process.env),
+    )
     throw new Error(
       `Missing required environment variable "${name}". Make sure to copy \`.env.example\` to \`.env.local\``,
     )

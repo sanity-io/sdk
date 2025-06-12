@@ -12,8 +12,13 @@ const env = getE2EEnv()
 async function cleanupDatasets() {
   const primaryDataset = sanitizeDatasetName(env.SDK_E2E_DATASET_0)
   const secondaryDataset = sanitizeDatasetName(env.SDK_E2E_DATASET_1)
+  if (!env.CI) {
+    console.log('Skipping cleanup in non-CI environment')
+    return
+  }
 
   const client = getClient()
+
   const timer = startTimer('Cleaning up test datasets')
 
   try {

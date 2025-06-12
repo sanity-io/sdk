@@ -53,10 +53,19 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
       testDir: TEARDOWN_DIR,
       testMatch: /.*\.teardown\.ts/,
     },
-    // we can add as many different projects as we like here
     {
       name: 'chromium',
       use: {...devices['Desktop Chrome'], storageState: AUTH_FILE},
+      dependencies: ['setup'],
+    },
+    {
+      name: 'firefox',
+      use: {...devices['Desktop Firefox'], storageState: AUTH_FILE},
+      dependencies: ['setup'],
+    },
+    {
+      name: 'webkit',
+      use: {...devices['Desktop Safari'], storageState: AUTH_FILE},
       dependencies: ['setup'],
     },
   ],
