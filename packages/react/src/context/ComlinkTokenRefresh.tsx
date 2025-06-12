@@ -1,5 +1,5 @@
 import {type ClientError} from '@sanity/client'
-import {type Status as ComlinkStatus} from '@sanity/comlink'
+import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
 import {
   AuthStateType,
   type FrameMessage,
@@ -17,7 +17,6 @@ import React, {
   useEffect,
   useMemo,
   useRef,
-  useState,
 } from 'react'
 
 import {useAuthState} from '../hooks/auth/useAuthState'
@@ -36,25 +35,16 @@ type SdkChildComlinkMessage = RequestNewTokenMessage | FrameMessage // Messages 
 export type ComlinkTokenRefreshConfig = {
   /** Enable the Comlink token refresh feature. Defaults to false */
   enabled?: boolean
-  /** Unique name for this SDK iframe instance's Comlink endpoint. Defaults to 'sanity-sdk-iframe' */
-  comlinkName?: string
-  /** The name of the parent window's Comlink endpoint to connect to. Defaults to 'sanity-dashboard-parent' */
-  parentName?: string
-  /** Timeout in ms for waiting for a token response from the parent. Defaults to 15000ms */
-  responseTimeout?: number
 }
 
 interface ComlinkTokenRefreshContextValue {
   requestNewToken: () => void
   isTokenRefreshInProgress: React.MutableRefObject<boolean>
-  comlinkStatus: ComlinkStatus
   isEnabled: boolean
 }
 
 const ComlinkTokenRefreshContext = createContext<ComlinkTokenRefreshContextValue | null>(null)
 
-export const DEFAULT_COMLINK_NAME = 'dashboard/nodes/sdk'
-export const DEFAULT_PARENT_NAME = 'dashboard/channels/sdk'
 const DEFAULT_RESPONSE_TIMEOUT = 10000 // 10 seconds
 
 /**
@@ -67,22 +57,19 @@ export const ComlinkTokenRefreshProvider: React.FC<
 > = ({
   children,
   enabled = true, // Default to enabled
-  comlinkName = DEFAULT_COMLINK_NAME,
-  parentName = DEFAULT_PARENT_NAME,
-  responseTimeout = DEFAULT_RESPONSE_TIMEOUT,
 }) => {
   // console.log('ComlinkTokenRefreshProvider', {enabled, comlinkName, parentName, responseTimeout})
   const instance = useSanityInstance()
-  const [comlinkStatus, setComlinkStatus] = useState<ComlinkStatus>('idle')
   const isTokenRefreshInProgress = useRef(false)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const processed401ErrorRef = useRef<unknown | null>(null) // Ref to track processed 401 error
 
   const authState = useAuthState()
+  // console.log('[++++] authState type', authState.type)
 
   const isInDashboard = useMemo(() => getIsInDashboardState(instance).getCurrent(), [instance])
-  // const isDashboardComlinkEnabled = enabled && isInDashboard
-  const isDashboardComlinkEnabled = enabled || isInDashboard
+  const isDashboardComlinkEnabled = enabled && isInDashboard
+  // const isDashboardComlinkEnabled = enabled
   // console.log('isDashboardComlinkEnabled:', isDashboardComlinkEnabled)
 
   const clearRefreshTimeout = useCallback(() => {
@@ -92,65 +79,18 @@ export const ComlinkTokenRefreshProvider: React.FC<
     }
   }, [])
 
-  const connectionOptions = useMemo(
-    () => ({
-      name: comlinkName,
-      connectTo: parentName,
-      onStatus: setComlinkStatus,
-      onMessage: isDashboardComlinkEnabled
-        ? {
-            'dashboard/v1/auth/tokens/create': (data: NewTokenResponseMessage['payload']) => {
-              clearRefreshTimeout()
-              if (!isDashboardComlinkEnabled) return
+  const windowConnection = useWindowConnection<SdkParentComlinkMessage, SdkChildComlinkMessage>({
+    name: SDK_NODE_NAME,
+    connectTo: SDK_CHANNEL_NAME,
+  })
 
-              if (data.token) {
-                // console.log('Received new token via comlink')
-                setAuthToken(instance, data.token)
-              }
-              isTokenRefreshInProgress.current = false
-            },
-          }
-        : {},
-    }),
-    [
-      isDashboardComlinkEnabled,
-      comlinkName,
-      parentName,
-      setComlinkStatus,
-      clearRefreshTimeout,
-      instance,
-    ],
-  )
-
-  const windowConnection = useWindowConnection<SdkParentComlinkMessage, SdkChildComlinkMessage>(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    connectionOptions as any,
-  )
-
-  const sendMessage = useMemo(() => {
-    if (isDashboardComlinkEnabled && windowConnection?.sendMessage) {
-      return (messageType: string) => {
-        // console.log('Sending comlink message:', messageType)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        windowConnection.sendMessage(messageType as any)
-      }
-    }
-    return () => {
-      // console.log('sendMessage called but comlink is not available')
-    }
-  }, [isDashboardComlinkEnabled, windowConnection])
-
-  const requestNewToken = useCallback(() => {
+  const requestNewToken = useCallback(async () => {
     // console.log('[++++] requestNewToken', {
     //   isDashboardComlinkEnabled,
     //   comlinkStatus,
     //   isTokenRefreshInProgress,
     // })
     if (!isDashboardComlinkEnabled) {
-      return
-    }
-    // console.log('[++++] requestNewToken: comlinkStatus', comlinkStatus)
-    if (comlinkStatus !== 'idle') {
       return
     }
     // console.log(
@@ -169,25 +109,34 @@ export const ComlinkTokenRefreshProvider: React.FC<
         isTokenRefreshInProgress.current = false
       }
       timeoutRef.current = null
-    }, responseTimeout)
+    }, DEFAULT_RESPONSE_TIMEOUT)
 
     try {
-      const messageType = 'dashboard/v1/auth/tokens/create' as const
-      sendMessage(messageType)
+      // const messageType = 'dashboard/v1/auth/tokens/create' as const
+      const res = await windowConnection.fetch<{token: string | null; error?: string}>(
+        'dashboard/v1/auth/tokens/create',
+      )
+      // console.log('[&&&&++++] requestNewToken: res', res)
+      clearRefreshTimeout()
+
+      if (res.token) {
+        // console.log('Received new token via comlink', res.token)
+        setAuthToken(instance, res.token)
+      }
+      isTokenRefreshInProgress.current = false
     } catch {
       isTokenRefreshInProgress.current = false
       clearRefreshTimeout()
     }
-  }, [isDashboardComlinkEnabled, sendMessage, comlinkStatus, responseTimeout, clearRefreshTimeout])
+  }, [isDashboardComlinkEnabled, windowConnection, clearRefreshTimeout, instance])
 
   const contextValue = useMemo(
     () => ({
       requestNewToken,
       isTokenRefreshInProgress,
-      comlinkStatus,
       isEnabled: enabled,
     }),
-    [requestNewToken, isTokenRefreshInProgress, comlinkStatus, enabled],
+    [requestNewToken, isTokenRefreshInProgress, enabled],
   )
 
   useEffect(() => {
@@ -198,7 +147,7 @@ export const ComlinkTokenRefreshProvider: React.FC<
 
   // Effect to automatically request a new token on 401 error if enabled
   useEffect(() => {
-    // console.log('[++++] authState', authState)
+    // console.log('[-----++++] authState', authState)
     const has401Error =
       isDashboardComlinkEnabled &&
       authState.type === AuthStateType.ERROR &&
@@ -251,7 +200,6 @@ export const useComlinkTokenRefresh = (): ComlinkTokenRefreshContextValue => {
         )
       },
       isTokenRefreshInProgress: {current: false},
-      comlinkStatus: 'idle',
       isEnabled: false,
     }
   }
