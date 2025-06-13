@@ -1,0 +1,125 @@
+name: End-to-End Tests
+permissions:
+  contents: read # allow checkout
+  pull-requests: write # allow commenting later if desired
+
+  # note: should we have env datasets declared like in monorepoe2e.yml?
+
+on:
+  # run on PRs, even drafts
+  pull_request:
+  # run on main branch when it changes
+  push:
+    branches: [main]
+
+# Cancel in-progress runs from the same PR/branch
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  # run / share the same install step for all browsers
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🧰 Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: 🛠️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          cache: "pnpm"
+          node-version: "lts/*"
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # see if the Playwright version we're using is already cached -- skip download if so
+      - name: 🔍 Determine Playwright version
+        id: pw-version
+        run: echo "version=$(npx playwright --version | sed 's/Version //')" >> "$GITHUB_OUTPUT"
+
+      - name: 💾 Cache Playwright browsers
+        id: cache-playwright-browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-${{ steps.pw-version.outputs.version }}-playwright-browsers
+
+      - name: Install Playwright browsers
+        if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps
+
+  playwright-tests:
+    needs: install
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+
+    # Browser matrix to parallelise executions.
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+
+    # Shared env required by the SDK E2E helpers. Configure these in the repo → Settings → Secrets / Variables
+    env:
+      SDK_E2E_PROJECT_ID: ${{ secrets.SDK_E2E_PROJECT_ID }}
+      SDK_E2E_DATASET_0: ${{ github.event_name == 'pull_request' && format('pr-{0}-{1}-{2}', github.event.number, matrix.browser, github.run_id) || format('main-{0}-{1}', matrix.browser, github.run_id) }}
+      SDK_E2E_DATASET_1: ${{ github.event_name == 'pull_request' && format('pr-{0}-{1}-secondary-{2}', github.event.number, matrix.browser, github.run_id) || format('main-{0}-secondary-{1}', matrix.browser, github.run_id) }}
+      SDK_E2E_SESSION_TOKEN: ${{ secrets.SDK_E2E_SESSION_TOKEN }}
+      SDK_E2E_USER_ID: ${{ secrets.SDK_E2E_USER_ID }}
+      SDK_E2E_USER_PASSWORD: ${{ secrets.SDK_E2E_USER_PASSWORD }}
+      RECAPTCHA_E2E_STAGING_KEY: ${{ secrets.RECAPTCHA_E2E_STAGING_KEY }}
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🧰 Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: 🛠️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          cache: "pnpm"
+          node-version: "lts/*"
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔍 Determine Playwright version
+        id: pw-version
+        run: echo "version=$(npx playwright --version | sed 's/Version //')" >> "$GITHUB_OUTPUT"
+
+      - name: 💾 Restore cached Playwright browsers
+        id: cache-playwright-browsers
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-${{ steps.pw-version.outputs.version }}-playwright-browsers
+
+      - name: Install Playwright browsers
+        if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps
+
+      - name: Install WebKit Dependencies
+        if: matrix.browser == 'webkit'
+        run: pnpm exec playwright install-deps webkit
+
+      - name: 🧪 Run E2E tests
+        run: pnpm test:e2e -- --project ${{ matrix.browser }}
+
+      - name: 📤 Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: apps/kitchensink-react/e2e/test-report
+          retention-days: 30
+
+      - name: 🧹 Cleanup E2E datasets
+        if: always()
+        run: pnpm cleanup:e2e

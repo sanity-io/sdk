@@ -1,8 +1,24 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import {fileURLToPath} from 'node:url'
 
 import dotenv from 'dotenv'
+
+/**
+ * Find the monorepo root directory by looking for the root package.json
+ */
+function findMonorepoRoot(): string {
+  let currentDir = process.cwd()
+  while (currentDir !== '/') {
+    if (fs.existsSync(path.join(currentDir, 'package.json'))) {
+      const pkg = JSON.parse(fs.readFileSync(path.join(currentDir, 'package.json'), 'utf-8'))
+      if (pkg.name === 'sdk-root') {
+        return currentDir
+      }
+    }
+    currentDir = path.dirname(currentDir)
+  }
+  throw new Error('Could not find monorepo root directory')
+}
 
 /**
  * Load environment variables from .env files, mirroring the behavior of Vite.
@@ -14,12 +30,10 @@ export function loadEnvFiles(): string[] {
   const envFiles = ['.env', '.env.local', `.env.${mode}`, `.env.${mode}.local`]
   const loaded: string[] = []
 
-  // Get the directory path using import.meta.url
-  const __filename = fileURLToPath(import.meta.url)
-  const __dirname = path.dirname(__filename)
-
+  // Load from monorepo root directory
+  const rootDir = findMonorepoRoot()
   for (const file of envFiles) {
-    const envFilePath = path.join(__dirname, '..', '..', '..', '..', file)
+    const envFilePath = path.join(rootDir, file)
     if (!fs.existsSync(envFilePath)) {
       continue
     }
