@@ -1,9 +1,9 @@
 /* eslint-disable no-console */
 import {
   createDocument,
-  createDocumentHandle,
   deleteDocument,
   discardDocument,
+  type DocumentHandle,
   editDocument,
   publishDocument,
   unpublishDocument,
@@ -11,6 +11,7 @@ import {
   useDocument,
   useDocumentEvent,
   useDocumentPermissions,
+  useDocuments,
   useDocumentSyncStatus,
   useEditDocument,
 } from '@sanity/sdk-react'
@@ -18,14 +19,9 @@ import {Box, Button, TextInput, Tooltip} from '@sanity/ui'
 import {JsonData, JsonEditor} from 'json-edit-react'
 import {type JSX, useState} from 'react'
 
-const docHandle = createDocumentHandle({
-  documentType: 'author',
-  documentId: 'db06bc9e-4608-465a-9551-a10cef478037',
-  projectId: 'ppsg7ml5',
-  dataset: 'test',
-})
+function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
+  const [value, setValue] = useState('')
 
-function Editor() {
   useDocumentEvent({...docHandle, onEvent: (e) => console.log(e)})
   const synced = useDocumentSyncStatus(docHandle)
   const apply = useApplyDocumentActions()
@@ -40,9 +36,7 @@ function Editor() {
   const {data: name = ''} = useDocument({...docHandle, path: 'name'})
   const setName = useEditDocument({...docHandle, path: 'name'})
 
-  const [value, setValue] = useState('')
-
-  const {data: document} = useDocument({...docHandle})
+  const {data: document} = useDocument(docHandle)
   const setDocument = useEditDocument(docHandle)
 
   return (
@@ -123,6 +117,25 @@ function Editor() {
       </Box>
     </Box>
   )
+}
+
+function Editor() {
+  const {data: documents} = useDocuments({
+    documentType: 'author',
+    batchSize: 1,
+  })
+
+  const docHandle = documents[0] ?? null
+
+  if (!docHandle) {
+    return <Box padding={4}>No documents found</Box>
+  }
+
+  if (!docHandle) {
+    return <Box padding={4}>Loading...</Box>
+  }
+
+  return <DocumentEditor docHandle={docHandle} />
 }
 
 export function DocumentEditorRoute(): JSX.Element {
