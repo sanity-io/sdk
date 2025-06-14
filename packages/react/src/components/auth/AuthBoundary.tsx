@@ -2,6 +2,10 @@ import {AuthStateType} from '@sanity/sdk'
 import {useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
+import {
+  ComlinkTokenRefreshProvider,
+  useComlinkTokenRefresh,
+} from '../../context/ComlinkTokenRefresh'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
@@ -111,9 +115,11 @@ export function AuthBoundary({
   }, [LoginErrorComponent])
 
   return (
-    <ErrorBoundary FallbackComponent={FallbackComponent}>
-      <AuthSwitch {...props} />
-    </ErrorBoundary>
+    <ComlinkTokenRefreshProvider>
+      <ErrorBoundary FallbackComponent={FallbackComponent}>
+        <AuthSwitch {...props} />
+      </ErrorBoundary>
+    </ComlinkTokenRefreshProvider>
   )
 }
 
@@ -145,6 +151,7 @@ function AuthSwitch({
 
   const isLoggedOut = authState.type === AuthStateType.LOGGED_OUT && !authState.isDestroyingSession
   const loginUrl = useLoginUrl()
+  useComlinkTokenRefresh() // Initialize the comlink token refresh context for Dashboard Comlink
 
   useEffect(() => {
     if (isLoggedOut && !isInIframe()) {
