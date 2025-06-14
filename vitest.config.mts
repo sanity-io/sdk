@@ -11,6 +11,7 @@ export default defineConfig({
         'packages/core/src/_exports/*.ts',
         'packages/react/src/_exports/*.ts',
         '**/*/_synchronous-groq-js.mjs',
+        '**/getEnv.ts',
       ],
       thresholds: {
         // We should adjust these thresholds as we see what a reasonable coverage is
