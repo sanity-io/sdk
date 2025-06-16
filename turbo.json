@@ -1,19 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": [
-    "DEV",
-    "VISUALIZER",
-    "PKG_VERSION",
-    "NPM_CONFIG_PROVENANCE",
-    "CI",
-    "SDK_E2E_PROJECT_ID",
-    "SDK_E2E_DATASET_0",
-    "SDK_E2E_DATASET_1",
-    "SDK_E2E_SESSION_TOKEN",
-    "SDK_E2E_USER_ID",
-    "SDK_E2E_USER_PASSWORD",
-    "RECAPTCHA_E2E_STAGING_KEY"
-  ],
+  "globalEnv": ["DEV", "VISUALIZER", "PKG_VERSION", "NPM_CONFIG_PROVENANCE"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -32,13 +19,7 @@
     },
     "clean": {},
     "cleanup": {
-      "cache": false,
-      "env": [
-        "SDK_E2E_PROJECT_ID",
-        "SDK_E2E_DATASET_0",
-        "SDK_E2E_DATASET_1",
-        "SDK_E2E_SESSION_TOKEN"
-      ]
+      "cache": false
     },
     "depcheck": {
       "env": ["DEPCHECK"]
@@ -53,8 +34,7 @@
     },
     "dev:e2e": {
       "persistent": true,
-      "cache": false,
-      "env": ["SDK_E2E_PROJECT_ID", "SDK_E2E_DATASET_0", "SDK_E2E_DATASET_1"]
+      "cache": false
     },
     "lint": {
       "cache": false
@@ -71,16 +51,6 @@
     },
     "test:e2e": {
       "cache": false,
-      "env": [
-        "SDK_E2E_PROJECT_ID",
-        "SDK_E2E_DATASET_0",
-        "SDK_E2E_DATASET_1",
-        "SDK_E2E_SESSION_TOKEN",
-        "NODE_ENV",
-        "SDK_E2E_USER_ID",
-        "SDK_E2E_USER_PASSWORD",
-        "RECAPTCHA_E2E_STAGING_KEY"
-      ],
       "dependsOn": ["@repo/e2e#build"],
       "outputs": ["e2e/test-results/**", "e2e/test-report/**"]
     },

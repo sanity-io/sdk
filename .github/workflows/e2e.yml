@@ -3,8 +3,6 @@ permissions:
   contents: read # allow checkout
   pull-requests: write # allow commenting later if desired
 
-  # note: should we have env datasets declared like in monorepoe2e.yml?
-
 on:
   # run on PRs, even drafts
   pull_request:

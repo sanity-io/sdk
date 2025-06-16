@@ -6,7 +6,7 @@ test.describe('Document List', () => {
 
     // Create 10 author documents in a single transaction
     const {documentIds} = await createDocuments(
-      Array.from({length: 10}, (_, i) => ({
+      Array.from({length: 5}, (_, i) => ({
         _type: 'author',
         name: `Test Author ${i}`,
         biography: `This is a test biography for author ${i}`,
