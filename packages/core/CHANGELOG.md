@@ -2,23 +2,21 @@
 
 ## [2.0.0](https://github.com/sanity-io/sdk/compare/sdk-v1.0.0...sdk-v2.0.0) (2025-05-23)
 
-
 ### ⚠ BREAKING CHANGES
 
-* change `status` to `_status` in projection and preview ([#527](https://github.com/sanity-io/sdk/issues/527))
+- change `status` to `_status` in projection and preview ([#527](https://github.com/sanity-io/sdk/issues/527))
 
 ### Bug Fixes
 
-* change `status` to `_status` in projection and preview ([#527](https://github.com/sanity-io/sdk/issues/527)) ([79f6df6](https://github.com/sanity-io/sdk/commit/79f6df6fcf5479bb144447c246e093551ed8c865))
-* **core:** align release order with studio release order ([#534](https://github.com/sanity-io/sdk/issues/534)) ([afd4b2c](https://github.com/sanity-io/sdk/commit/afd4b2cd9242763403d30796afd8ad73a45dd075))
-* **deps:** update dependency @sanity/client to ^7.2.1 ([#526](https://github.com/sanity-io/sdk/issues/526)) ([34b4f26](https://github.com/sanity-io/sdk/commit/34b4f260c1d639414908dd2f1dd8f375e7d1b73e))
-* **deps:** update dependency @sanity/comlink to ^3.0.3 ([#525](https://github.com/sanity-io/sdk/issues/525)) ([e0599ea](https://github.com/sanity-io/sdk/commit/e0599ea7965555b16a4ae4e9b45a91a91ae94b13))
-* **deps:** update dependency @sanity/comlink to ^3.0.4 ([#542](https://github.com/sanity-io/sdk/issues/542)) ([7365c97](https://github.com/sanity-io/sdk/commit/7365c97f2100367cbdc9eaa7adebdeee9f596733))
-
+- change `status` to `_status` in projection and preview ([#527](https://github.com/sanity-io/sdk/issues/527)) ([79f6df6](https://github.com/sanity-io/sdk/commit/79f6df6fcf5479bb144447c246e093551ed8c865))
+- **core:** align release order with studio release order ([#534](https://github.com/sanity-io/sdk/issues/534)) ([afd4b2c](https://github.com/sanity-io/sdk/commit/afd4b2cd9242763403d30796afd8ad73a45dd075))
+- **deps:** update dependency @sanity/client to ^7.2.1 ([#526](https://github.com/sanity-io/sdk/issues/526)) ([34b4f26](https://github.com/sanity-io/sdk/commit/34b4f260c1d639414908dd2f1dd8f375e7d1b73e))
+- **deps:** update dependency @sanity/comlink to ^3.0.3 ([#525](https://github.com/sanity-io/sdk/issues/525)) ([e0599ea](https://github.com/sanity-io/sdk/commit/e0599ea7965555b16a4ae4e9b45a91a91ae94b13))
+- **deps:** update dependency @sanity/comlink to ^3.0.4 ([#542](https://github.com/sanity-io/sdk/issues/542)) ([7365c97](https://github.com/sanity-io/sdk/commit/7365c97f2100367cbdc9eaa7adebdeee9f596733))
 
 ### Miscellaneous
 
-* release 2.0.0 ([#544](https://github.com/sanity-io/sdk/issues/544)) ([048cb50](https://github.com/sanity-io/sdk/commit/048cb503ea2e7852c984c376e48ff74d2a7023be))
+- release 2.0.0 ([#544](https://github.com/sanity-io/sdk/issues/544)) ([048cb50](https://github.com/sanity-io/sdk/commit/048cb503ea2e7852c984c376e48ff74d2a7023be))
 
 ## [1.0.0](https://github.com/sanity-io/sdk/compare/sdk-v1.0.0...sdk-v1.0.0) (2025-05-07)
 
