@@ -1,3 +1,4 @@
+import {diffValue} from '@sanity/diff-patch'
 import {
   type Mutation,
   type PatchOperations,
@@ -10,7 +11,6 @@ import {isEqual} from 'lodash-es'
 import {getDraftId, getPublishedId} from '../utils/ids'
 import {evaluateSync} from './_synchronous-groq-js.mjs'
 import {type DocumentAction} from './actions'
-import {diffPatch} from './diffPatch'
 import {type Grant} from './permissions'
 import {type DocumentSet, getId, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
@@ -300,11 +300,7 @@ export function processActions({
         // this one will always be defined because a patch mutation will never
         // delete an input document
         const baseAfter = base[draftId] as SanityDocument
-
-        // TODO: consider replacing with `sanity-diff-patch`. There seems to be
-        // bug in `sanity-diff-patch` where differing strings are not creating
-        // diff-match patches.
-        const patches = diffPatch(baseBefore, baseAfter)
+        const patches = diffValue(baseBefore, baseAfter)
 
         const workingMutations: Mutation[] = []
         if (!working[draftId] && working[publishedId]) {

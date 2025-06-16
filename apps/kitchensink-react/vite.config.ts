@@ -12,6 +12,8 @@ export default defineConfig(({mode}) => {
   const rootDir = resolve(process.cwd(), '../..')
   const env = loadEnv(mode, rootDir, '')
 
+  const isE2E = mode === 'e2e'
+
   return {
     server: {
       port: 3333,
@@ -34,8 +36,15 @@ export default defineConfig(({mode}) => {
       },
     },
     define: {
-      'import.meta.env.VITE_IS_CI': JSON.stringify(
-        process.env['CI'] === 'true' || env['CI'] === 'true',
+      'import.meta.env.VITE_IS_E2E': JSON.stringify(isE2E),
+      'import.meta.env.VITE_E2E_PROJECT_ID': JSON.stringify(
+        process.env['SDK_E2E_PROJECT_ID'] || env['SDK_E2E_PROJECT_ID'],
+      ),
+      'import.meta.env.VITE_E2E_DATASET_0': JSON.stringify(
+        process.env['SDK_E2E_DATASET_0'] || env['SDK_E2E_DATASET_0'],
+      ),
+      'import.meta.env.VITE_E2E_DATASET_1': JSON.stringify(
+        process.env['SDK_E2E_DATASET_1'] || env['SDK_E2E_DATASET_1'],
       ),
     },
   }

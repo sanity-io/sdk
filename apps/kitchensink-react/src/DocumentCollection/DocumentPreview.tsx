@@ -52,6 +52,7 @@ function DocumentPreviewResolved({onClick, ...docHandle}: DocumentPreviewProps):
       docType={docHandle.documentType}
       media={media}
       status={statusLabel}
+      documentId={docHandle.documentId}
       onClick={() => (onClick ? onClick() : alert(`Hello from ${title}`))}
     />
   )

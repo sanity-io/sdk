@@ -1,8 +1,9 @@
-import {defineConfig, devices} from '@playwright/test'
-import type {PlaywrightTestConfig} from '@playwright/test'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {getE2EEnv} from './env'
+
+import {defineConfig, devices, type PlaywrightTestConfig} from '@playwright/test'
+
+import {getE2EEnv} from './helpers/getE2EEnv'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const SETUP_DIR = path.join(path.dirname(__dirname), 'src', 'setup')
@@ -52,10 +53,19 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
       testDir: TEARDOWN_DIR,
       testMatch: /.*\.teardown\.ts/,
     },
-    // we can add as many different projects as we like here
     {
       name: 'chromium',
       use: {...devices['Desktop Chrome'], storageState: AUTH_FILE},
+      dependencies: ['setup'],
+    },
+    {
+      name: 'firefox',
+      use: {...devices['Desktop Firefox'], storageState: AUTH_FILE},
+      dependencies: ['setup'],
+    },
+    {
+      name: 'webkit',
+      use: {...devices['Desktop Safari'], storageState: AUTH_FILE},
       dependencies: ['setup'],
     },
   ],
@@ -77,4 +87,4 @@ export const createPlaywrightConfig = (
 }
 
 // Export test fixtures
-export {test, expect} from './fixtures'
+export {expect, test} from './fixtures'

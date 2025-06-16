@@ -4,7 +4,10 @@
 
 The tests expect to find the below env variables. Either define them in your shell, or add them to the `.env.local` file in the repository root.
 
-- `SDK_E2E_SESSION_TOKEN`: As a developer running locally, you should use a user token. Running `sanity debug --secrets` will give you your token provided you are logged in (`sanity login`).
+- `SDK_E2E_SESSION_TOKEN`: As a developer running locally, you should use a user token. The client fixture also needs to use this token. Running `SANITY_INTERNAL_ENV=staging sanity debug --secrets` will give you your token provided you are logged in (`sanity login`).
+- `SDK_E2E_PROJECT_ID`: We use 3j6vt2rg internally
+- `SDK_E2E_DATASET_0`=production
+- `SDK_E2E_DATASET_1`=testing
 
 ## Running tests
 
@@ -29,7 +32,7 @@ To run E2E tests run the following commands from the root of the project
 
 Other useful helper commands
 
-- "e2e:dev": Starts the Kitchensink as the E2E tests expect using the dev process.
+- "dev:e2e": Starts the Kitchensink pointing to the E2E project and dataset. This server can be used by both you as a developer and the e2e tests at the same time for debugging purposes.
 
 For more useful commands, see the [Playwright Command Line](https://playwright.dev/docs/test-cli) documentation.
 
