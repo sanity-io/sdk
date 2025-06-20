@@ -451,8 +451,8 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
       react-compiler-runtime:
-        specifier: 19.1.0-rc.1
-        version: 19.1.0-rc.1(react@19.1.0)
+        specifier: 19.1.0-rc.2
+        version: 19.1.0-rc.2(react@19.1.0)
       react-error-boundary:
         specifier: ^5.0.0
         version: 5.0.0(react@19.1.0)
@@ -5820,6 +5820,11 @@ packages:
 
   react-compiler-runtime@19.1.0-rc.1:
     resolution: {integrity: sha512-wCt6g+cRh8g32QT18/9blfQHywGjYu+4FlEc3CW1mx3pPxYzZZl1y+VtqxRgnKKBCFLIGUYxog4j4rs5YS86hw==}
+    peerDependencies:
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
+
+  react-compiler-runtime@19.1.0-rc.2:
+    resolution: {integrity: sha512-852AwyIsbWJ5o1LkQVAZsVK3iLjMxOfKZuxqeGd/RfD+j1GqHb6j3DSHLtpu4HhFbQHsP2DzxjJyKR6luv4D8w==}
     peerDependencies:
       react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
 
@@ -13256,7 +13261,7 @@ snapshots:
     dependencies:
       react: 18.3.1
 
-  react-compiler-runtime@19.1.0-rc.1(react@19.1.0):
+  react-compiler-runtime@19.1.0-rc.2(react@19.1.0):
     dependencies:
       react: 19.1.0
 
