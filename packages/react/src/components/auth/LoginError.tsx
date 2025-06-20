@@ -41,10 +41,7 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
   }, [logout, resetErrorBoundary])
 
   useEffect(() => {
-    if (
-      // (authState.type === AuthStateType.ERROR || authState.type === AuthStateType.LOGGED_IN) &&
-      error instanceof ClientError
-    ) {
+    if (error instanceof ClientError) {
       if (error.statusCode === 401) {
         handleRetry()
       } else if (error.statusCode === 404) {

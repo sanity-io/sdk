@@ -9,14 +9,7 @@ import {
   setAuthToken,
   type WindowMessage,
 } from '@sanity/sdk'
-import React, {
-  createContext,
-  type PropsWithChildren,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from 'react'
+import React, {type PropsWithChildren, useCallback, useEffect, useMemo, useRef} from 'react'
 
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useWindowConnection} from '../hooks/comlink/useWindowConnection'
@@ -25,13 +18,6 @@ import {useSanityInstance} from '../hooks/context/useSanityInstance'
 // Define specific message types extending the base types for clarity
 type SdkParentComlinkMessage = NewTokenResponseMessage | WindowMessage // Messages received by SDK
 type SdkChildComlinkMessage = RequestNewTokenMessage | FrameMessage // Messages sent by SDK
-
-interface ComlinkTokenRefreshContextValue {
-  requestNewToken: () => void
-  isTokenRefreshInProgress: React.MutableRefObject<boolean>
-}
-
-const ComlinkTokenRefreshContext = createContext<ComlinkTokenRefreshContextValue | null>(null)
 
 const DEFAULT_RESPONSE_TIMEOUT = 10000 // 10 seconds
 
@@ -88,14 +74,6 @@ function DashboardTokenRefresh({children}: PropsWithChildren) {
     }
   }, [windowConnection, clearRefreshTimeout, instance])
 
-  const contextValue = useMemo(
-    () => ({
-      requestNewToken,
-      isTokenRefreshInProgress,
-    }),
-    [requestNewToken],
-  )
-
   useEffect(() => {
     return () => {
       clearRefreshTimeout()
@@ -126,30 +104,7 @@ function DashboardTokenRefresh({children}: PropsWithChildren) {
     }
   }, [authState, requestNewToken])
 
-  return (
-    <ComlinkTokenRefreshContext.Provider value={contextValue}>
-      {children}
-    </ComlinkTokenRefreshContext.Provider>
-  )
-}
-
-/**
- * Component that provides a no-op token refresh outside of dashboard
- */
-function NoOpTokenRefresh({children}: PropsWithChildren) {
-  const contextValue = useMemo(
-    () => ({
-      requestNewToken: () => {},
-      isTokenRefreshInProgress: {current: false},
-    }),
-    [],
-  )
-
-  return (
-    <ComlinkTokenRefreshContext.Provider value={contextValue}>
-      {children}
-    </ComlinkTokenRefreshContext.Provider>
-  )
+  return children
 }
 
 /**
@@ -166,5 +121,5 @@ export const ComlinkTokenRefreshProvider: React.FC<PropsWithChildren> = ({childr
   }
 
   // If we're not in the dashboard, we don't need to do anything
-  return <NoOpTokenRefresh>{children}</NoOpTokenRefresh>
+  return children
 }
