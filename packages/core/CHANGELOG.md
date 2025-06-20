@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.0.1](https://github.com/sanity-io/sdk/compare/sdk-v2.0.0...sdk-v2.0.1) (2025-06-20)
+
+
+### Features
+
+* add new token fetching via comlink ([#475](https://github.com/sanity-io/sdk/issues/475)) ([f646d53](https://github.com/sanity-io/sdk/commit/f646d5309deabec57ebb9bc561ed1849987db5b7))
+
+
+### Bug Fixes
+
+* **core:** consider negative indexes for inserts ([#555](https://github.com/sanity-io/sdk/issues/555)) ([7a0e07a](https://github.com/sanity-io/sdk/commit/7a0e07a922b2303ffc2476d9a6712a32ded14abd))
+* **core:** correct element removal order in `unset`s ([#556](https://github.com/sanity-io/sdk/issues/556)) ([7978b17](https://github.com/sanity-io/sdk/commit/7978b1709ca36334b73cb71eb898649424ebcfbf))
+* **core:** correct keyed segment path representation and insert operation behavior ([#552](https://github.com/sanity-io/sdk/issues/552)) ([d8a7968](https://github.com/sanity-io/sdk/commit/d8a7968eb8544aea5280e87c524614213c406af4))
+* **core:** prevent race condition in document store ([#551](https://github.com/sanity-io/sdk/issues/551)) ([d88dc29](https://github.com/sanity-io/sdk/commit/d88dc29b30562b791e3288d4d2a373919b7f6134))
+
+
+### Documentation
+
+* update readme logos ([#549](https://github.com/sanity-io/sdk/issues/549)) ([857f8ee](https://github.com/sanity-io/sdk/commit/857f8eec2811f411e7ff21668ef12853730c4368))
+
 ## [2.0.0](https://github.com/sanity-io/sdk/compare/sdk-v1.0.0...sdk-v2.0.0) (2025-05-23)
 
 
