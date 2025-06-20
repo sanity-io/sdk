@@ -280,3 +280,48 @@ export const getDashboardOrganizationId = bindActionGlobally(
   authStore,
   createStateSourceAction(({state: {dashboardContext}}) => dashboardContext?.orgId),
 )
+
+/**
+ * Returns a state source indicating if the SDK is running within a dashboard context.
+ * @public
+ */
+export const getIsInDashboardState = bindActionGlobally(
+  authStore,
+  createStateSourceAction(
+    ({state: {dashboardContext}}) =>
+      // Check if dashboardContext exists and is not empty
+      !!dashboardContext && Object.keys(dashboardContext).length > 0,
+  ),
+)
+
+/**
+ * Action to explicitly set the authentication token.
+ * Used internally by the Comlink token refresh.
+ * @internal
+ */
+export const setAuthToken = bindActionGlobally(authStore, ({state}, token: string | null) => {
+  const currentAuthState = state.get().authState
+  if (token) {
+    // Update state only if the new token is different or currently logged out
+    if (currentAuthState.type !== AuthStateType.LOGGED_IN || currentAuthState.token !== token) {
+      // This state update structure should trigger listeners in clientStore
+      state.set('setToken', {
+        authState: {
+          type: AuthStateType.LOGGED_IN,
+          token: token,
+          // Keep existing user or set to null? Setting to null forces refetch.
+          // Keep existing user to avoid unnecessary refetches if user data is still valid.
+          currentUser:
+            currentAuthState.type === AuthStateType.LOGGED_IN ? currentAuthState.currentUser : null,
+        },
+      })
+    }
+  } else {
+    // Handle setting token to null (logging out)
+    if (currentAuthState.type !== AuthStateType.LOGGED_OUT) {
+      state.set('setToken', {
+        authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
+      })
+    }
+  }
+})

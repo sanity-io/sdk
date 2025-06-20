@@ -13,11 +13,13 @@ export {
   getAuthState,
   getCurrentUserState,
   getDashboardOrganizationId,
+  getIsInDashboardState,
   getLoginUrlState,
   getTokenState,
   type LoggedInAuthState,
   type LoggedOutAuthState,
   type LoggingInAuthState,
+  setAuthToken,
 } from '../auth/authStore'
 export {observeOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
@@ -32,8 +34,14 @@ export {
   releaseChannel,
 } from '../comlink/controller/comlinkControllerStore'
 export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
+export {getOrCreateNode, releaseNode} from '../comlink/node/comlinkNodeStore'
 export {getNodeState, type NodeState} from '../comlink/node/getNodeState'
-export {type FrameMessage, type WindowMessage} from '../comlink/types'
+export {
+  type FrameMessage,
+  type NewTokenResponseMessage,
+  type RequestNewTokenMessage,
+  type WindowMessage,
+} from '../comlink/types'
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
 export {
   createDatasetHandle,
