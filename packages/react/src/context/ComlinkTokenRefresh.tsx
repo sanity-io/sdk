@@ -13,7 +13,6 @@ import React, {
   createContext,
   type PropsWithChildren,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -168,23 +167,4 @@ export const ComlinkTokenRefreshProvider: React.FC<PropsWithChildren> = ({childr
 
   // If we're not in the dashboard, we don't need to do anything
   return <NoOpTokenRefresh>{children}</NoOpTokenRefresh>
-}
-
-/**
- * This hook is used to request a new token from the parent window.
- * It is used to automatically request a new token on 401 error if enabled.
- * @public
- */
-export const useComlinkTokenRefresh = (): ComlinkTokenRefreshContextValue => {
-  const context = useContext(ComlinkTokenRefreshContext)
-  if (!context) {
-    return {
-      requestNewToken: () => {
-        // eslint-disable-next-line no-console
-        console.warn('useComlinkTokenRefresh must be used within a ComlinkTokenRefreshProvider.')
-      },
-      isTokenRefreshInProgress: {current: false},
-    }
-  }
-  return context
 }
