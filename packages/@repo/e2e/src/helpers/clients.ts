@@ -8,7 +8,7 @@ const baseConfig = {
   projectId: env.SDK_E2E_PROJECT_ID,
   token: env.SDK_E2E_SESSION_TOKEN,
   useCdn: false,
-  apiVersion: '2021-08-31',
+  apiVersion: '2025-06-01',
   apiHost: 'https://api.sanity.work',
 }
 
