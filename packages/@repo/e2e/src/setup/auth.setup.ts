@@ -82,6 +82,8 @@ const injectLocalStorageToken = async (browser: Browser, e2eSessionToken: string
 setup('setup authentication', async ({browser}) => {
   const {CI, SDK_E2E_SESSION_TOKEN} = getE2EEnv()
   if (CI) {
+    // eslint-disable-next-line no-console
+    console.log('Authenticating user in CI')
     await authenticateUser(browser)
   } else {
     await injectLocalStorageToken(browser, SDK_E2E_SESSION_TOKEN!)
