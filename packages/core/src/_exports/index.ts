@@ -115,6 +115,17 @@ export type {
   TransportEvent,
   UserPresence,
 } from '../presence/types'
+export {
+  checkAndHandleCurrentIntent,
+  handleIntentUrl,
+  type IntentHandlingOptions,
+  type ParsedIntent,
+} from '../intents/intentHandling'
+export {
+  startIntentListener,
+  stopAllIntentListeners,
+  stopIntentListener,
+} from '../intents/intentListener'
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
 export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
