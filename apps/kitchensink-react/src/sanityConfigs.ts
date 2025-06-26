@@ -1,4 +1,4 @@
-import {type SanityConfig} from '@sanity/sdk'
+import {type IntentHandlers, type SanityConfig} from '@sanity/sdk'
 
 // Example payload types for different intents
 interface TranslationPayload {
@@ -28,22 +28,20 @@ const handlePreview = async (payload: PreviewPayload): Promise<void> => {
   // For example: window.open(`/preview/${payload.documentType}/${payload.documentId}`)
 }
 
+// Export intent handlers separately
+export const intentHandlers: IntentHandlers = {
+  handleTranslation,
+  handlePreview,
+}
+
 export const devConfigs: SanityConfig[] = [
   {
     projectId: 'ppsg7ml5',
     dataset: 'test',
-    intentHandlers: {
-      handleTranslation,
-      handlePreview,
-    },
   },
   {
     projectId: 'vo1ysemo',
     dataset: 'production',
-    intentHandlers: {
-      handleTranslation,
-      handlePreview,
-    },
   },
   {
     projectId: 'v28v5k8m',
