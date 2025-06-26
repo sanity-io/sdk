@@ -53,6 +53,8 @@ export {
   type DatasetHandle,
   type DocumentHandle,
   type DocumentTypeHandle,
+  type IntentHandler,
+  type IntentHandlers,
   type PerspectiveHandle,
   type ProjectHandle,
   type ReleasePerspective,

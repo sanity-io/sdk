@@ -3,6 +3,21 @@ import {type ClientPerspective, type StackablePerspective} from '@sanity/client'
 import {type AuthConfig} from './authConfig'
 
 /**
+ * Type for intent handler functions that process specific intent payloads
+ * @public
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type IntentHandler<TPayload = any> = (payload: TPayload) => Promise<void>
+
+/**
+ * Configuration for intent handlers that process various intent types
+ * @public
+ */
+export interface IntentHandlers {
+  [key: string]: IntentHandler
+}
+
+/**
  * Represents the minimal configuration required to identify a Sanity project.
  * @public
  */
@@ -80,4 +95,20 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
   studioMode?: {
     enabled: boolean
   }
+  /**
+   * Intent handlers for processing various intent types
+   * @remarks Object where keys are intent names and values are async handler functions
+   * @example
+   * ```typescript
+   * {
+   *   handleTranslation: async (payload: TranslationPayload) => {
+   *     // Handle translation intent
+   *   },
+   *   handlePreview: async (payload: PreviewPayload) => {
+   *     // Handle preview intent
+   *   }
+   * }
+   * ```
+   */
+  intentHandlers?: IntentHandlers
 }
