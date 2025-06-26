@@ -1,6 +1,7 @@
 import {pick} from 'lodash-es'
 
 import {type SanityConfig} from '../config/sanityConfig'
+import {startIntentListener, stopIntentListener} from '../intents/intentListener'
 import {insecureRandomId} from '../utils/ids'
 
 /**
@@ -83,6 +84,8 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
     dispose: () => {
       if (disposed.current) return
       disposed.current = true
+      // Stop intent listener when instance is disposed
+      stopIntentListener(instance)
       disposeListeners.forEach((listener) => listener())
       disposeListeners.clear()
     },
@@ -119,6 +122,9 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
       return undefined
     },
   }
+
+  // Automatically start intent listening if intent handlers are defined
+  startIntentListener(instance)
 
   return instance
 }
