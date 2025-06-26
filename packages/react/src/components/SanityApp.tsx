@@ -1,6 +1,7 @@
-import {type IntentHandlers, type SanityConfig} from '@sanity/sdk'
+import {type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, useEffect} from 'react'
 
+import {type IntentHandlers} from './IntentResolver'
 import {SDKProvider} from './SDKProvider'
 import {isInIframe, isLocalUrl} from './utils'
 
