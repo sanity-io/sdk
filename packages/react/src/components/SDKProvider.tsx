@@ -1,4 +1,4 @@
-import {type SanityConfig} from '@sanity/sdk'
+import {type IntentHandlers, type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, type ReactNode} from 'react'
 
 import {ResourceProvider} from '../context/ResourceProvider'
@@ -11,6 +11,7 @@ export interface SDKProviderProps extends AuthBoundaryProps {
   children: ReactNode
   config: SanityConfig | SanityConfig[]
   fallback: ReactNode
+  handlers?: IntentHandlers
 }
 
 /**
@@ -24,6 +25,8 @@ export function SDKProvider({
   children,
   config,
   fallback,
+  // // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Will be implemented in next step
+  // handlers,
   ...props
 }: SDKProviderProps): ReactElement {
   // reverse because we want the first config to be the default, but the

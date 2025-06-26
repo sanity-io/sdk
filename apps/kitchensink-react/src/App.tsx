@@ -5,7 +5,7 @@ import {type JSX, Suspense} from 'react'
 import {BrowserRouter, useNavigate} from 'react-router'
 
 import {AppRoutes} from './AppRoutes'
-import {devConfigs, e2eConfigs} from './sanityConfigs'
+import {devConfigs, e2eConfigs, intentHandlers} from './sanityConfigs'
 
 const theme = buildTheme({})
 
@@ -24,6 +24,7 @@ export default function App(): JSX.Element {
       <SanityApp
         fallback={<Spinner />}
         config={import.meta.env['VITE_IS_E2E'] ? e2eConfigs : devConfigs}
+        handlers={intentHandlers}
       >
         <BrowserRouter>
           <Suspense>
