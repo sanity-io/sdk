@@ -1,8 +1,9 @@
-import {type IntentHandlers, type SanityConfig} from '@sanity/sdk'
+import {type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, type ReactNode} from 'react'
 
 import {ResourceProvider} from '../context/ResourceProvider'
 import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
+import {type EnhancedIntentHandlers, IntentResolver} from './IntentResolver'
 
 /**
  * @internal
@@ -11,7 +12,7 @@ export interface SDKProviderProps extends AuthBoundaryProps {
   children: ReactNode
   config: SanityConfig | SanityConfig[]
   fallback: ReactNode
-  handlers?: IntentHandlers
+  handlers?: EnhancedIntentHandlers
 }
 
 /**
@@ -25,8 +26,7 @@ export function SDKProvider({
   children,
   config,
   fallback,
-  // // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Will be implemented in next step
-  // handlers,
+  handlers,
   ...props
 }: SDKProviderProps): ReactElement {
   // reverse because we want the first config to be the default, but the
@@ -39,13 +39,18 @@ export function SDKProvider({
     if (index >= configs.length) {
       return (
         <AuthBoundary {...props} projectIds={projectIds}>
-          {children}
+          <IntentResolver handlers={handlers}>{children}</IntentResolver>
         </AuthBoundary>
       )
     }
 
     return (
-      <ResourceProvider {...configs[index]} fallback={fallback}>
+      <ResourceProvider
+        {...configs[index]}
+        fallback={fallback}
+        // better architecture?
+        //handlers={handlers}
+      >
         {createNestedProviders(index + 1)}
       </ResourceProvider>
     )

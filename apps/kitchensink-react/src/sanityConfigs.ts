@@ -1,4 +1,5 @@
-import {type IntentHandlers, type SanityConfig} from '@sanity/sdk'
+import {type SanityConfig} from '@sanity/sdk'
+import {type EnhancedIntentHandlers, useDocumentPreview, useDocuments} from '@sanity/sdk-react'
 
 // Example payload types for different intents
 interface TranslationPayload {
@@ -13,35 +14,47 @@ interface PreviewPayload {
   revisionId?: string
 }
 
-// Example intent handlers
-const handleTranslation = async (payload: TranslationPayload): Promise<void> => {
+// React component-based intent handlers that can use hooks
+function HandleTranslation(payload: TranslationPayload): null {
   // eslint-disable-next-line no-console
   console.log('Handling translation intent:', payload)
-  // In a real app, this would integrate with a translation service
-  // For example: await translateDocument(payload.documentId, payload.targetLanguage)
+
+  const {data: documents} = useDocuments({batchSize: 1})
+  const firstDocument = documents?.[0]
+  const preview = useDocumentPreview(firstDocument)
+  // eslint-disable-next-line no-console
+  console.log('First document preview:', preview)
+  return null
 }
 
-const handlePreview = async (payload: PreviewPayload): Promise<void> => {
+// Traditional async intent handler
+async function handlePreviewAsync(payload: PreviewPayload): Promise<void> {
   // eslint-disable-next-line no-console
   console.log('Handling preview intent:', payload)
   // In a real app, this would open a preview window or navigate to a preview route
-  // For example: window.open(`/preview/${payload.documentType}/${payload.documentId}`)
+  // For example: navigate(`/preview/${payload.documentType}/${payload.documentId}`)
 }
 
-// Export intent handlers separately
-export const intentHandlers: IntentHandlers = {
-  handleTranslation,
-  handlePreview,
+// Export intent handlers with explicit type discrimination
+export const intentHandlers: EnhancedIntentHandlers = {
+  handleTranslation: {
+    type: 'component',
+    handler: HandleTranslation,
+  },
+  handlePreview: {
+    type: 'async',
+    handler: handlePreviewAsync,
+  },
 }
 
 export const devConfigs: SanityConfig[] = [
   {
     projectId: 'ppsg7ml5',
-    dataset: 'test',
+    dataset: 'test', // has movie types, but it's a scifi dataset
   },
   {
     projectId: 'd45jg133',
-    dataset: 'production',
+    dataset: 'production', // has movie types, but it's a documentary dataset
   },
 ]
 

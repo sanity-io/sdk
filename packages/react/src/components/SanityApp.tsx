@@ -1,6 +1,7 @@
-import {type IntentHandlers, type SanityConfig} from '@sanity/sdk'
+import {type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, useEffect} from 'react'
 
+import {type EnhancedIntentHandlers} from './IntentResolver'
 import {SDKProvider} from './SDKProvider'
 import {isInIframe, isLocalUrl} from './utils'
 
@@ -17,7 +18,7 @@ export interface SanityAppProps {
   /* Fallback content to show when child components are suspending. Same as the `fallback` prop for React Suspense. */
   fallback: React.ReactNode
   /* Intent handlers for processing various intent types */
-  handlers?: IntentHandlers
+  handlers?: EnhancedIntentHandlers
 }
 
 const REDIRECT_URL = 'https://sanity.io/welcome'
