@@ -2,6 +2,7 @@
  * @module exports
  */
 export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBoundary'
+export {type IntentHandlerPayload, type IntentHandlers} from '../components/IntentResolver'
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
 export {ComlinkTokenRefreshProvider} from '../context/ComlinkTokenRefresh'

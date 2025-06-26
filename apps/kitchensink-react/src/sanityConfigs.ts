@@ -1,38 +1,4 @@
-import {type IntentHandlers, type SanityConfig} from '@sanity/sdk'
-
-// Example payload types for different intents
-interface TranslationPayload {
-  text: string
-  targetLanguage: string
-  documentId?: string
-}
-
-interface PreviewPayload {
-  documentId: string
-  documentType: string
-  revisionId?: string
-}
-
-// Example intent handlers
-const handleTranslation = async (payload: TranslationPayload): Promise<void> => {
-  // eslint-disable-next-line no-console
-  console.log('Handling translation intent:', payload)
-  // In a real app, this would integrate with a translation service
-  // For example: await translateDocument(payload.documentId, payload.targetLanguage)
-}
-
-const handlePreview = async (payload: PreviewPayload): Promise<void> => {
-  // eslint-disable-next-line no-console
-  console.log('Handling preview intent:', payload)
-  // In a real app, this would open a preview window or navigate to a preview route
-  // For example: window.open(`/preview/${payload.documentType}/${payload.documentId}`)
-}
-
-// Export intent handlers separately
-export const intentHandlers: IntentHandlers = {
-  handleTranslation,
-  handlePreview,
-}
+import {type SanityConfig} from '@sanity/sdk'
 
 export const devConfigs: SanityConfig[] = [
   {
