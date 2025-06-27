@@ -66,6 +66,21 @@ function DashboardTokenRefresh({children}: PropsWithChildren) {
 
       if (res.token) {
         setAuthToken(instance, res.token)
+
+        // Remove the unauthorized error from the error container
+        const errorContainer = document.getElementById('__sanityError')
+        if (errorContainer) {
+          const hasUnauthorizedError = Array.from(errorContainer.getElementsByTagName('div')).some(
+            (div) =>
+              div.textContent?.includes(
+                'Uncaught error: Unauthorized - A valid session is required for this endpoint',
+              ),
+          )
+
+          if (hasUnauthorizedError) {
+            errorContainer.remove()
+          }
+        }
       }
       isTokenRefreshInProgress.current = false
     } catch {
