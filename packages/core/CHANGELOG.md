@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.2](https://github.com/sanity-io/sdk/compare/sdk-v2.0.1...sdk-v2.0.2) (2025-06-27)
+
+
+### Miscellaneous
+
+* **sdk:** Synchronize sdk versions
+
 ## [2.0.1](https://github.com/sanity-io/sdk/compare/sdk-v2.0.0...sdk-v2.0.1) (2025-06-20)
 
 

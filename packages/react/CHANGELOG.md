@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.0.2](https://github.com/sanity-io/sdk/compare/sdk-react-v2.0.1...sdk-react-v2.0.2) (2025-06-27)
+
+
+### Bug Fixes
+
+* clear error overlay on successful comlink token creation ([#572](https://github.com/sanity-io/sdk/issues/572)) ([32eca80](https://github.com/sanity-io/sdk/commit/32eca804d9397d4b45de5fb86833de22cbc0920b))
+
+
+### Documentation
+
+* update useDocumentPreview reference doc ([#566](https://github.com/sanity-io/sdk/issues/566)) ([4c6afb2](https://github.com/sanity-io/sdk/commit/4c6afb2fb619e2b0868a837a5683ad84a811d597))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.0.2
+
 ## [2.0.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.0.0...sdk-react-v2.0.1) (2025-06-20)
 
 
