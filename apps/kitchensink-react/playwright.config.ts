@@ -7,8 +7,7 @@ export default createPlaywrightConfig({
     command: process.env['CI']
       ? 'pnpm build --mode e2e && pnpm preview --mode e2e --port 3333'
       : 'pnpm dev --mode e2e',
-    url: 'http://localhost:3333',
-    reuseExistingServer: !process.env['CI'],
+    reuseExistingServer: true,
     stdout: 'pipe',
   },
 })

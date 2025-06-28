@@ -7,6 +7,7 @@
     "NPM_CONFIG_PROVENANCE",
     "CI",
     "SDK_E2E_PROJECT_ID",
+    "SDK_E2E_ORGANIZATION_ID",
     "SDK_E2E_DATASET_0",
     "SDK_E2E_DATASET_1",
     "SDK_E2E_SESSION_TOKEN",
@@ -73,6 +74,7 @@
       "cache": false,
       "env": [
         "SDK_E2E_PROJECT_ID",
+        "SDK_E2E_ORGANIZATION_ID",
         "SDK_E2E_DATASET_0",
         "SDK_E2E_DATASET_1",
         "SDK_E2E_SESSION_TOKEN",

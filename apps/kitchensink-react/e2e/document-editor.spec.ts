@@ -1,7 +1,7 @@
 import {expect, test} from '@repo/e2e'
 
 test.describe('Document Editor', () => {
-  test('can edit an author document', async ({page, createDocuments}) => {
+  test('can edit an author document', async ({page, createDocuments, getPageContext}) => {
     // Create an author document
     const {
       documentIds: [id],
@@ -14,26 +14,29 @@ test.describe('Document Editor', () => {
     ])
 
     // Navigate to the document editor
-    await page.goto('/document-editor')
+    await page.goto('./document-editor')
+
+    // we may be in an iframe or just a page -- get the right locators
+    const pageContext = await getPageContext(page)
 
     // Wait for the document to load
-    await page.getByTestId('document-id-input').fill(id.replace('drafts.', ''))
-    await page.getByTestId('load-document-button').click()
+    await pageContext.getByTestId('document-id-input').fill(id.replace('drafts.', ''))
+    await pageContext.getByTestId('load-document-button').click()
 
     // Wait for the document to be loaded and match expected initial values
     await expect(async () => {
-      const content = await page.getByTestId('document-content').textContent()
+      const content = await pageContext.getByTestId('document-content').textContent()
       const document = JSON.parse(content || '{}')
       expect(document.name).toBe('Test Author for document editor')
       expect(document.biography).toBe('This is a test biography')
     }).toPass({timeout: 5000})
 
     // Update content
-    await page.getByTestId('name-input').fill('Updated Author Name')
-    await page.getByTestId('name-input').press('Enter')
+    await pageContext.getByTestId('name-input').fill('Updated Author Name')
+    await pageContext.getByTestId('name-input').press('Enter')
 
     // Verify the changes are reflected
-    const updatedContent = await page.getByTestId('document-content').textContent()
+    const updatedContent = await pageContext.getByTestId('document-content').textContent()
     const updatedDocument = JSON.parse(updatedContent || '{}')
     expect(updatedDocument.name).toBe('Updated Author Name')
     expect(updatedDocument.biography).toBe('This is a test biography')

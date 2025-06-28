@@ -9,9 +9,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const SETUP_DIR = path.join(path.dirname(__dirname), 'src', 'setup')
 const TEARDOWN_DIR = path.join(path.dirname(__dirname), 'src', 'teardown')
 const AUTH_FILE = path.join(path.dirname(__dirname), '.auth', 'user.json')
-const BASE_URL = 'http://localhost:3333'
+const BASE_URL = 'http://localhost:3333/'
 
-const {CI} = getE2EEnv()
+const {CI, SDK_E2E_ORGANIZATION_ID} = getE2EEnv()
 
 /**
  * @internal
@@ -55,17 +55,26 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
     },
     {
       name: 'chromium',
-      use: {...devices['Desktop Chrome'], storageState: AUTH_FILE},
+      use: {...devices['Desktop Chrome'], storageState: AUTH_FILE, baseURL: BASE_URL},
       dependencies: ['setup'],
     },
     {
       name: 'firefox',
-      use: {...devices['Desktop Firefox'], storageState: AUTH_FILE},
+      use: {...devices['Desktop Firefox'], storageState: AUTH_FILE, baseURL: BASE_URL},
       dependencies: ['setup'],
     },
     {
       name: 'webkit',
-      use: {...devices['Desktop Safari'], storageState: AUTH_FILE},
+      use: {...devices['Desktop Safari'], storageState: AUTH_FILE, baseURL: BASE_URL},
+      dependencies: ['setup'],
+    },
+    {
+      name: 'dashboard-chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: AUTH_FILE,
+        baseURL: `https://www.sanity.work/@${SDK_E2E_ORGANIZATION_ID}/application/__dev/`,
+      },
       dependencies: ['setup'],
     },
   ],
