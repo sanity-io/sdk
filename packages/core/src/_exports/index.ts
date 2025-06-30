@@ -100,7 +100,7 @@ export {
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,
 } from '../document/events'
-export {type JsonMatch, jsonMatch} from '../document/patchOperations'
+export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export type {FavoriteStatusResponse} from '../favorites/favorites'
 export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
@@ -137,4 +137,12 @@ export {getUsersState, loadMoreUsers, resolveUsers} from '../users/usersStore'
 export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {CORE_SDK_VERSION} from '../version'
+export {
+  getIndexForKey,
+  getPathDepth,
+  joinPaths,
+  jsonMatch,
+  slicePath,
+  stringifyPath,
+} from '@sanity/json-match'
 export type {CurrentUser, Role, SanityDocument} from '@sanity/types'
