@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0](https://github.com/sanity-io/sdk/compare/sdk-v2.0.2...sdk-v2.1.0) (2025-06-30)
+
+
+### Features
+
+* **core:** full JSONMatch support w/ path helpers ([#573](https://github.com/sanity-io/sdk/issues/573)) ([5d5f569](https://github.com/sanity-io/sdk/commit/5d5f56987e96fcc9b06d7ee779bb6d0db68ec449))
+
+
+### Miscellaneous
+
+* release 2.1.0 ([bbc53ee](https://github.com/sanity-io/sdk/commit/bbc53ee9bf9707d82a89657f35a2114a3245cadf))
+
 ## [2.0.2](https://github.com/sanity-io/sdk/compare/sdk-v2.0.1...sdk-v2.0.2) (2025-06-27)
 
 
