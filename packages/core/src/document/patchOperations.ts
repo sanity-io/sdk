@@ -669,7 +669,7 @@ export function setDeep(input: unknown, path: SingleValuePath, value: unknown): 
   if (Array.isArray(input)) {
     let index: number | undefined
     if (isKeySegment(currentSegment)) {
-      index = getIndexForKey(input, currentSegment._key)
+      index = getIndexForKey(input, currentSegment._key) ?? input.length
     } else if (typeof currentSegment === 'number') {
       // Support negative indexes by computing the proper positive index.
       index = currentSegment < 0 ? input.length + currentSegment : currentSegment

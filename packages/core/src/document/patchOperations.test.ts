@@ -273,6 +273,12 @@ describe('set', () => {
     const output = set(input, {'nonexistent.path': 999})
     expect(output).toEqual({a: 1, nonexistent: {path: 999}})
   })
+
+  it('creates an item from a key constraint if the key is not present', () => {
+    const input = {items: [{_key: 'item1'}]}
+    const output = set(input, {'items[_key=="item2"]': {_key: 'item2'}})
+    expect(output).toEqual({items: [{_key: 'item1'}, {_key: 'item2'}]})
+  })
 })
 
 describe('setIfMissing', () => {

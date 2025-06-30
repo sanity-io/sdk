@@ -60,7 +60,7 @@
     "@sanity/comlink": "^3.0.4",
     "@sanity/diff-match-patch": "^3.2.0",
     "@sanity/diff-patch": "^6.0.0",
-    "@sanity/json-match": "^1.0.4",
+    "@sanity/json-match": "^1.0.5",
     "@sanity/message-protocol": "^0.12.0",
     "@sanity/mutate": "^0.12.4",
     "@sanity/types": "^3.83.0",
