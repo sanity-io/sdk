@@ -4,10 +4,37 @@
 
 The tests expect to find the below env variables. Either define them in your shell, or add them to the `.env.local` file in the repository root.
 
-- `SDK_E2E_SESSION_TOKEN`: As a developer running locally, you should use a user token. The client fixture also needs to use this token. Running `SANITY_INTERNAL_ENV=staging sanity debug --secrets` will give you your token provided you are logged in (`sanity login`).
+-- `SDK_E2E_SESSION_TOKEN`: The client fixture needs to use this token. Running `SANITY_INTERNAL_ENV=staging sanity debug --secrets` will give you your token provided you are logged in (`SANITY_INTERNAL_ENV=staging sanity login`).
+
 - `SDK_E2E_PROJECT_ID`: We use 3j6vt2rg internally
+- `SDK_E2E_ORGANIZATION_ID`: We use oFvj4MZWQ internally
+- `SDK_E2E_USER_ID`: sdk+e2e@sanity.io
+- `SDK_E2E_USER_PASSWORD`: found in 1Password
+- `RECAPTCHA_E2E_STAGING_KEY`: found in 1Password
 - `SDK_E2E_DATASET_0`=production
 - `SDK_E2E_DATASET_1`=testing
+
+## Writing tests
+
+@repo/e2e provides a specialized fixture for your tests, called `getPageContext`. This is because the tests run both standalone and in the Dashboard, meaning locators work a bit differently. Please use this fixture to ensure your tests work well in both environments. To do so, you should write your tests so that they do the following:
+
+1. Navigate to the route you intend to test on, i.e., `await page.goto('./my-route')` (otherwise Playwright will be at about:blank and not know anything about iframes or not)
+2. Use the `getPageContext` function with your page, like `const pageContext = await getPageContext(page)`
+3. Use the locators provided by `pageContext`, like `const button = pageContext.getByTestId('my-button')
+
+Here is a full example:
+
+```ts
+import {expect, test} from '@repo/e2e'
+
+test('can click a button', async ({page, getPageContext}) => {
+  await page.goto('./button-test-page')
+
+  const pageContext = await getPageContext(page)
+
+  await pageContext.getByTestId('my-button').click()
+})
+```
 
 ## Running tests
 
@@ -27,7 +54,7 @@ To run E2E tests run the following commands from the root of the project
 
 - For help, run
   ```sh
-  pnpm test:e2e --help
+  pnpm test:e2e -- --help
   ```
 
 Other useful helper commands
@@ -42,9 +69,6 @@ You can run your tests in your editor with the help of some useful editor plugin
 
 ### Running in CI mode
 
-These tests run in CI with a dedicated e2e test user. If you'd like to replicate that, you should add the following variables to your .env.local file:
+These tests run in CI with a built application (rather than dev server). It also runs its tests in the Dashboard. If you'd like to replicate that, you should add the following variables to your .env.local file:
 
 - `CI`: true
-- `SDK_E2E_USER_ID`: sdk+e2e@sanity.io
-- `SDK_E2E_USER_PASSWORD` (found in 1Password under "SDK e2e user Sanity login")
-- `RECAPTCHA_E2E_STAGING_KEY` (found in 1Password under "Legion E2E staging reCAPTCHA bypass token")
