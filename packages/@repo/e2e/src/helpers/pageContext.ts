@@ -1,21 +1,11 @@
-import {type FrameLocator, type Locator, type Page} from '@playwright/test'
+import {type FrameLocator, type Page} from '@playwright/test'
 
 /**
  * Unified interface for detecting elements in pages whether in iframe or not
  * (this might get lengthy with time but hopefully what we've provided here is sufficient)
  */
-export interface PageContext {
-  getByTestId: (testId: string) => Locator
-  getByText: (text: string | RegExp) => Locator
-  getByRole: (
-    role: Parameters<Page['getByRole']>[0],
-    options?: Parameters<Page['getByRole']>[1],
-  ) => Locator
-  /** Get a locator by any selector */
-  locator: (selector: string) => Locator
-  /** Whether we're running in dashboard context */
+export type PageContext = Pick<Page, 'getByTestId' | 'getByText' | 'getByRole' | 'locator'> & {
   isDashboard: boolean
-  /** The underlying page or frame */
   context: Page | FrameLocator
 }
 
