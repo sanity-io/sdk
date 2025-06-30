@@ -14,6 +14,28 @@ The tests expect to find the below env variables. Either define them in your she
 - `SDK_E2E_DATASET_0`=production
 - `SDK_E2E_DATASET_1`=testing
 
+## Writing tests
+
+@repo/e2e provides a specialized fixture for your tests, called `getPageContext`. This is because the tests run both standalone and in the Dashboard, meaning locators work a bit differently. Please use this fixture to ensure your tests work well in both environments. To do so, you should write your tests so that they do the following:
+
+1. Navigate to the route you intend to test on, i.e., `await page.goto('./my-route')` (otherwise Playwright will be at about:blank and not know anything about iframes or not)
+2. Use the `getPageContext` function with your page, like `const pageContext = await getPageContext(page)`
+3. Use the locators provided by `pageContext`, like `const button = pageContext.getByTestId('my-button')
+
+Here is a full example:
+
+```ts
+import {expect, test} from '@repo/e2e'
+
+test('can click a button', async ({page, getPageContext}) => {
+  await page.goto('./button-test-page')
+
+  const pageContext = await getPageContext(page)
+
+  await pageContext.getByTestId('my-button').click()
+})
+```
+
 ## Running tests
 
 To run E2E tests run the following commands from the root of the project
@@ -32,7 +54,7 @@ To run E2E tests run the following commands from the root of the project
 
 - For help, run
   ```sh
-  pnpm test:e2e --help
+  pnpm test:e2e -- --help
   ```
 
 Other useful helper commands
