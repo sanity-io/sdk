@@ -8,7 +8,12 @@ import {createStoreState} from '../store/createStoreState'
 import {AuthStateType} from './authStateType'
 import {type AuthState, authStore} from './authStore'
 // Import only the public function
-import {refreshStampedToken} from './refreshStampedToken'
+import {
+  getLastRefreshTime,
+  getNextRefreshDelay,
+  refreshStampedToken,
+  setLastRefreshTime,
+} from './refreshStampedToken'
 
 // Type definitions for Web Locks (can be kept if needed for context)
 // ... (Lock, LockOptions, LockGrantedCallback types)
@@ -141,6 +146,49 @@ describe('refreshStampedToken', () => {
       const locksRequest = navigator.locks.request as ReturnType<typeof vi.fn>
       expect(locksRequest).not.toHaveBeenCalled()
     })
+
+    it('does not refresh when tab is not visible', async () => {
+      // Set visibility to hidden
+      Object.defineProperty(global, 'document', {
+        value: {
+          visibilityState: 'hidden',
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        },
+        writable: true,
+        configurable: true,
+      })
+
+      const mockClient = {
+        observable: {request: vi.fn(() => of({token: 'sk-refreshed-token-st123'}))},
+      }
+      const mockClientFactory = vi.fn().mockReturnValue(mockClient)
+      const instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
+      })
+      const initialState = authStore.getInitialState(instance)
+      initialState.authState = {
+        type: AuthStateType.LOGGED_IN,
+        token: 'sk-initial-token-st123',
+        currentUser: null,
+      }
+      initialState.dashboardContext = {mode: 'test'}
+      const state = createStoreState(initialState)
+
+      const subscription = refreshStampedToken({state, instance})
+      subscriptions.push(subscription)
+
+      await vi.advanceTimersToNextTimerAsync()
+
+      // Verify that no refresh occurred
+      expect(mockClient.observable.request).not.toHaveBeenCalled()
+      const finalAuthState = state.get().authState
+      if (finalAuthState.type === AuthStateType.LOGGED_IN) {
+        expect(finalAuthState.token).toBe('sk-initial-token-st123')
+      }
+    })
   })
 
   describe('non-dashboard context', () => {
@@ -169,11 +217,19 @@ describe('refreshStampedToken', () => {
         subscriptions.push(subscription!)
       }).not.toThrow()
 
-      // Avoid advancing timers here, as it would trigger the infinite loop
-      // await vi.advanceTimersByTimeAsync(0)
+      // DO NOT advance timers or yield here - focus on immediate observable logic
+      // We cannot reliably test that failingLocksRequest is called due to async/timer issues,
+      // but we *can* test the consequence of it resolving to false.
 
-      // No assertions about navigator.locks.request call
-      // No assertions about final token state (due to infinite loop in source)
+      // VERIFY THE OUTCOME:
+      // Check client request was NOT made (because filter(hasLock => hasLock) receives false)
+      expect(mockClient.observable.request).not.toHaveBeenCalled()
+      // Check state remains unchanged
+      const finalAuthState = state.get().authState
+      expect(finalAuthState.type).toBe(AuthStateType.LOGGED_IN)
+      if (finalAuthState.type === AuthStateType.LOGGED_IN) {
+        expect(finalAuthState.token).toBe('sk-initial-token-st123')
+      }
     })
 
     it('skips refresh if lock request returns false', async () => {
@@ -224,6 +280,61 @@ describe('refreshStampedToken', () => {
       } finally {
         // Restore original navigator.locks
         Object.defineProperty(global, 'navigator', {value: {locks: originalLocks}, writable: true})
+      }
+    })
+  })
+
+  describe('unsupported environments', () => {
+    it('falls back to immediate refresh if Web Locks API is not supported', async () => {
+      // Temporarily remove navigator.locks for this test
+      const originalLocks = navigator.locks
+      Object.defineProperty(global.navigator, 'locks', {
+        value: undefined,
+        writable: true,
+      })
+
+      try {
+        const mockClient = {
+          observable: {request: vi.fn(() => of({token: 'sk-refreshed-immediately-st123'}))},
+        }
+        const mockClientFactory = vi.fn().mockReturnValue(mockClient)
+        const instance = createSanityInstance({
+          projectId: 'p',
+          dataset: 'd',
+          auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
+        })
+        const initialState = authStore.getInitialState(instance)
+        initialState.authState = {
+          type: AuthStateType.LOGGED_IN,
+          token: 'sk-initial-token-st123',
+          currentUser: null,
+        }
+        const state = createStoreState(initialState)
+
+        const subscription = refreshStampedToken({state, instance})
+        subscriptions.push(subscription)
+
+        // Advance timers to allow the async `performRefresh` to execute
+        await vi.advanceTimersToNextTimerAsync()
+
+        // Verify the refresh was performed and state was updated
+        expect(mockClient.observable.request).toHaveBeenCalled()
+        const finalAuthState = state.get().authState
+        expect(finalAuthState.type).toBe(AuthStateType.LOGGED_IN)
+        if (finalAuthState.type === AuthStateType.LOGGED_IN) {
+          expect(finalAuthState.token).toBe('sk-refreshed-immediately-st123')
+        }
+        // Verify token was set in storage
+        expect(mockStorage.setItem).toHaveBeenCalledWith(
+          initialState.options.storageKey,
+          JSON.stringify({token: 'sk-refreshed-immediately-st123'}),
+        )
+      } finally {
+        // Restore navigator.locks
+        Object.defineProperty(global.navigator, 'locks', {
+          value: originalLocks,
+          writable: true,
+        })
       }
     })
   })
@@ -315,5 +426,94 @@ describe('refreshStampedToken', () => {
     if (finalAuthState.type === AuthStateType.LOGGED_IN) {
       expect(finalAuthState.token).toBe('sk-nonstamped-token')
     }
+  })
+})
+
+describe('time-based refresh helpers', () => {
+  let mockStorage: Storage
+  const storageKey = 'my-test-key'
+
+  beforeEach(() => {
+    mockStorage = {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+      key: vi.fn(),
+      length: 0,
+    }
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  describe('getLastRefreshTime', () => {
+    it('returns 0 if storage is undefined', () => {
+      expect(getLastRefreshTime(undefined, storageKey)).toBe(0)
+    })
+
+    it('returns 0 if item is not in storage', () => {
+      vi.spyOn(mockStorage, 'getItem').mockReturnValue(null)
+      expect(getLastRefreshTime(mockStorage, storageKey)).toBe(0)
+      expect(mockStorage.getItem).toHaveBeenCalledWith(`${storageKey}_last_refresh`)
+    })
+
+    it('returns the parsed timestamp from storage', () => {
+      const now = Date.now()
+      vi.spyOn(mockStorage, 'getItem').mockReturnValue(now.toString())
+      expect(getLastRefreshTime(mockStorage, storageKey)).toBe(now)
+    })
+
+    it('returns 0 if stored data is malformed', () => {
+      vi.spyOn(mockStorage, 'getItem').mockReturnValue('not a number')
+      expect(getLastRefreshTime(mockStorage, storageKey)).toBe(0)
+    })
+
+    it('returns 0 on storage access error', () => {
+      vi.spyOn(mockStorage, 'getItem').mockImplementation(() => {
+        throw new Error('Storage access failed')
+      })
+      expect(getLastRefreshTime(mockStorage, storageKey)).toBe(0)
+    })
+  })
+
+  describe('setLastRefreshTime', () => {
+    it('sets the current timestamp in storage', () => {
+      const now = Date.now()
+      setLastRefreshTime(mockStorage, storageKey)
+      expect(mockStorage.setItem).toHaveBeenCalledWith(`${storageKey}_last_refresh`, now.toString())
+    })
+
+    it('does not throw on storage access error', () => {
+      vi.spyOn(mockStorage, 'setItem').mockImplementation(() => {
+        throw new Error('Storage access failed')
+      })
+      expect(() => setLastRefreshTime(mockStorage, storageKey)).not.toThrow()
+    })
+  })
+
+  describe('getNextRefreshDelay', () => {
+    const REFRESH_INTERVAL = 12 * 60 * 60 * 1000
+
+    it('returns 0 if last refresh time is not available', () => {
+      vi.spyOn(mockStorage, 'getItem').mockReturnValue(null)
+      expect(getNextRefreshDelay(mockStorage, storageKey)).toBe(0)
+    })
+
+    it('returns the remaining time until the next refresh', () => {
+      const lastRefresh = Date.now() - 10000 // 10 seconds ago
+      vi.spyOn(mockStorage, 'getItem').mockReturnValue(lastRefresh.toString())
+
+      const delay = getNextRefreshDelay(mockStorage, storageKey)
+      expect(delay).toBeCloseTo(REFRESH_INTERVAL - 10000, -2)
+    })
+
+    it('returns 0 if the refresh interval has passed', () => {
+      const lastRefresh = Date.now() - REFRESH_INTERVAL - 5000 // 5 seconds past due
+      vi.spyOn(mockStorage, 'getItem').mockReturnValue(lastRefresh.toString())
+      expect(getNextRefreshDelay(mockStorage, storageKey)).toBe(0)
+    })
   })
 })
