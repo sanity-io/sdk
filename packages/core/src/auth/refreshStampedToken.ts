@@ -127,6 +127,12 @@ async function acquireTokenRefreshLock(
   }
 }
 
+function shouldRefreshToken(lastRefresh: number | undefined): boolean {
+  if (!lastRefresh) return true
+  const timeSinceLastRefresh = Date.now() - lastRefresh
+  return timeSinceLastRefresh >= REFRESH_INTERVAL
+}
+
 /**
  * @internal
  */
@@ -178,51 +184,106 @@ export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subs
       }
 
       if (storeState.dashboardContext) {
-        return timer(REFRESH_INTERVAL, REFRESH_INTERVAL).pipe(
-          // Check if still logged in before each refresh attempt in the timer
+        return new Observable<{token: string}>((subscriber) => {
+          const visibilityHandler = () => {
+            const currentState = state.get()
+            if (
+              document.visibilityState === 'visible' &&
+              currentState.authState.type === AuthStateType.LOGGED_IN &&
+              shouldRefreshToken(currentState.authState.lastTokenRefresh)
+            ) {
+              createTokenRefreshStream(
+                currentState.authState.token,
+                clientFactory,
+                apiHost,
+              ).subscribe({
+                next: (response) => {
+                  state.set('setRefreshStampedToken', (prev) => ({
+                    authState:
+                      prev.authState.type === AuthStateType.LOGGED_IN
+                        ? {
+                            ...prev.authState,
+                            token: response.token,
+                            lastTokenRefresh: Date.now(),
+                          }
+                        : prev.authState,
+                  }))
+                  subscriber.next(response)
+                },
+                error: (error) => subscriber.error(error),
+              })
+            }
+          }
+
+          const timerSubscription = timer(REFRESH_INTERVAL, REFRESH_INTERVAL)
+            .pipe(
+              filter(() => document.visibilityState === 'visible'),
+              switchMap(() => {
+                const currentState = state.get().authState
+                if (currentState.type !== AuthStateType.LOGGED_IN) {
+                  throw new Error('User logged out before refresh could complete')
+                }
+                return createTokenRefreshStream(currentState.token, clientFactory, apiHost)
+              }),
+            )
+            .subscribe({
+              next: (response) => {
+                state.set('setRefreshStampedToken', (prev) => ({
+                  authState:
+                    prev.authState.type === AuthStateType.LOGGED_IN
+                      ? {
+                          ...prev.authState,
+                          token: response.token,
+                          lastTokenRefresh: Date.now(),
+                        }
+                      : prev.authState,
+                }))
+                subscriber.next(response)
+              },
+              error: (error) => subscriber.error(error),
+            })
+
+          document.addEventListener('visibilitychange', visibilityHandler)
+
+          return () => {
+            document.removeEventListener('visibilitychange', visibilityHandler)
+            timerSubscription.unsubscribe()
+          }
+        }).pipe(
           takeWhile(() => state.get().authState.type === AuthStateType.LOGGED_IN),
-          // Use switchMap here: if the timer ticks again, we *do* want the latest token request
-          switchMap(() =>
-            createTokenRefreshStream(storeState.authState.token, clientFactory, apiHost),
-          ),
-          // Map the successful response for the outer subscribe block
-          map((response) => ({token: response.token})),
+          map((response: {token: string}) => ({token: response.token})),
         )
       }
 
-      // If not in dashboard context, use lock-based refresh.
-      // exhaustMap prevents this from running again if state changes while lock logic is active.
-      // NOTE: Based on Web Locks API, this `from(acquireTokenRefreshLock(...))` observable
-      // will likely NOT emit if the lock is successfully acquired, as the underlying promise
-      // may never resolve due to the while(true) loop. This path needs verification.
+      // If not in dashboard context, use lock-based refresh
       return from(acquireTokenRefreshLock(performRefresh, storageArea, storageKey)).pipe(
         filter((hasLock) => hasLock),
-        // If acquireTokenRefreshLock *does* somehow resolve true (e.g., locks unsupported),
-        // emit the token that triggered this exhaustMap execution.
-        map(() => ({token: storeState.authState.token})),
+        map(() => {
+          const currentState = state.get().authState
+          if (currentState.type !== AuthStateType.LOGGED_IN) {
+            throw new Error('User logged out before refresh could complete')
+          }
+          return {token: currentState.token} as const
+        }),
       )
     }),
   )
 
   return refreshToken$.subscribe({
-    next: (response) => {
-      // This block now primarily handles updates from the dashboard timer path,
-      // or potentially from the lock path if acquireTokenRefreshLock resolves unexpectedly.
-      // exhaustMap prevents this state update from causing an immediate loop.
+    next: (response: {token: string}) => {
       state.set('setRefreshStampedToken', (prev) => ({
         authState:
           prev.authState.type === AuthStateType.LOGGED_IN
-            ? {...prev.authState, token: response.token}
+            ? {
+                ...prev.authState,
+                token: response.token,
+                lastTokenRefresh: Date.now(),
+              }
             : prev.authState,
       }))
       storageArea?.setItem(storageKey, JSON.stringify({token: response.token}))
     },
     error: (error) => {
-      // Log errors from either refresh path
-      // Consider how refresh failures should affect the overall auth state
-      // E.g., maybe attempt retry, or eventually set state to ERROR if retries fail
-      // For now, just log, avoiding immediate state change to ERROR
-      // console.error('Token refresh failed:', error) // Removed to satisfy linter
       state.set('setRefreshStampedTokenError', {authState: {type: AuthStateType.ERROR, error}})
     },
   })
