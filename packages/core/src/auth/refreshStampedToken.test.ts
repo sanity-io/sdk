@@ -16,6 +16,7 @@ import {refreshStampedToken} from './refreshStampedToken'
 describe('refreshStampedToken', () => {
   let mockStorage: Storage
   let originalNavigator: typeof navigator // Restored
+  let originalDocument: Document
   let subscriptions: Subscription[]
   // mockLocksRequest removed
 
@@ -25,6 +26,19 @@ describe('refreshStampedToken', () => {
     vi.useFakeTimers()
 
     originalNavigator = global.navigator // Restore original navigator setup
+
+    // Mock document for visibility API
+    originalDocument = global.document
+    Object.defineProperty(global, 'document', {
+      value: {
+        visibilityState: 'visible',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      },
+      writable: true,
+      configurable: true,
+    })
+
     mockStorage = {
       getItem: vi.fn(),
       setItem: vi.fn(),
@@ -74,6 +88,11 @@ describe('refreshStampedToken', () => {
     // Restore original navigator
     Object.defineProperty(global, 'navigator', {
       value: originalNavigator,
+      writable: true,
+    })
+    // Restore original document
+    Object.defineProperty(global, 'document', {
+      value: originalDocument,
       writable: true,
     })
     // Restore real timers
