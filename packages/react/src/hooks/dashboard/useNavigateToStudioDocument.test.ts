@@ -75,10 +75,12 @@ describe('useNavigateToStudioDocument', () => {
   })
 
   it('does not send message when no workspace is found', () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     mockWorkspacesByProjectIdAndDataset = {}
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
     result.current.navigateToStudioDocument()
     expect(mockSendMessage).not.toHaveBeenCalled()
+    consoleSpy.mockRestore()
   })
 
   it('warns when multiple workspaces are found', () => {

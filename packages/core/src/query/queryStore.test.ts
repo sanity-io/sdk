@@ -20,6 +20,7 @@ describe('queryStore', () => {
   let instance: SanityInstance
   let liveEvents: Subject<LiveEvent>
   let fetch: SanityClient['observable']['fetch']
+  let listen: SanityClient['observable']['listen']
   // Mock data for testing
   const mockData = {
     movies: [
@@ -37,6 +38,8 @@ describe('queryStore', () => {
         of({result: mockData.movies, syncTags: []}).pipe(delay(0)),
       ) as SanityClient['observable']['fetch']
 
+    listen = vi.fn().mockReturnValue(of(mockData.movies))
+
     liveEvents = new Subject<LiveEvent>()
 
     const events = vi.fn().mockReturnValue(liveEvents) as SanityClient['live']['events']
@@ -47,7 +50,7 @@ describe('queryStore', () => {
       observable: of({
         config,
         live: {events},
-        observable: {fetch},
+        observable: {fetch, listen},
       } as SanityClient),
     } as StateSource<SanityClient>)
   })

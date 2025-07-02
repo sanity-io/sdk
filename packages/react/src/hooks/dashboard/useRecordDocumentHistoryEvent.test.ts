@@ -45,6 +45,7 @@ describe('useRecordDocumentHistoryEvent', () => {
   })
 
   it('should handle errors when sending messages', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     mockSendMessage.mockImplementation(() => {
       throw new Error('Failed to send message')
     })
@@ -52,6 +53,7 @@ describe('useRecordDocumentHistoryEvent', () => {
     const {result} = renderHook(() => useRecordDocumentHistoryEvent(mockDocumentHandle))
 
     expect(() => result.current.recordEvent('viewed')).toThrow('Failed to send message')
+    consoleErrorSpy.mockRestore()
   })
 
   it('should throw error when resourceId is missing for non-studio resources', () => {

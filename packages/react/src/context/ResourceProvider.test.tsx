@@ -1,5 +1,5 @@
 import {type SanityConfig, type SanityInstance} from '@sanity/sdk'
-import {render, screen} from '@testing-library/react'
+import {act, render, screen} from '@testing-library/react'
 import {StrictMode, use, useEffect} from 'react'
 import {describe, expect, it} from 'vitest'
 
@@ -36,7 +36,7 @@ describe('ResourceProvider', () => {
     expect(screen.getByTestId('test-child')).toBeInTheDocument()
   })
 
-  it('shows fallback during loading', () => {
+  it('shows fallback during loading', async () => {
     const {promise, resolve} = promiseWithResolvers()
     function SuspendingChild(): React.ReactNode {
       throw promise
@@ -49,7 +49,9 @@ describe('ResourceProvider', () => {
     )
 
     expect(screen.getByTestId('fallback')).toBeInTheDocument()
-    resolve()
+    act(() => {
+      resolve()
+    })
   })
 
   it('creates root instance when no parent context exists', async () => {
@@ -138,7 +140,7 @@ describe('ResourceProvider', () => {
     expect(instance?.isDisposed()).toBe(false)
   })
 
-  it('uses default fallback when none provided', () => {
+  it('uses default fallback when none provided', async () => {
     const {promise, resolve} = promiseWithResolvers()
     function SuspendingChild(): React.ReactNode {
       throw promise
@@ -152,6 +154,8 @@ describe('ResourceProvider', () => {
     )
 
     expect(screen.getByText(/Warning: No fallback provided/)).toBeInTheDocument()
-    resolve()
+    act(() => {
+      resolve()
+    })
   })
 })

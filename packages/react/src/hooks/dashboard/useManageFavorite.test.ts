@@ -172,6 +172,7 @@ describe('useManageFavorite', () => {
 
   it('should throw error during favorite/unfavorite actions', async () => {
     const errorMessage = 'Failed to update favorite status'
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     mockFetch.mockImplementation(() => {
       throw new Error(errorMessage)
@@ -191,6 +192,7 @@ describe('useManageFavorite', () => {
     })
 
     expect(resolveFavoritesState).not.toHaveBeenCalled()
+    consoleErrorSpy.mockRestore()
   })
 
   it('should throw error when studio resource is missing projectId or dataset', () => {

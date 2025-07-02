@@ -170,6 +170,7 @@ describe('SanityApp', () => {
 
   it('redirects to core if not inside iframe and not local url', async () => {
     const originalLocation = window.location
+    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
 
     const mockLocation = {
       replace: vi.fn(),
@@ -203,6 +204,7 @@ describe('SanityApp', () => {
       value: originalLocation,
       writable: true,
     })
+    consoleLogSpy.mockRestore()
   })
 
   it('does not redirect to core if not inside iframe and local url', async () => {
