@@ -1,6 +1,7 @@
 import {type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, useEffect} from 'react'
 
+import {type EnhancedIntentHandlers} from './IntentResolver'
 import {SDKProvider} from './SDKProvider'
 import {isInIframe, isLocalUrl} from './utils'
 
@@ -16,6 +17,8 @@ export interface SanityAppProps {
   children: React.ReactNode
   /* Fallback content to show when child components are suspending. Same as the `fallback` prop for React Suspense. */
   fallback: React.ReactNode
+  /* Intent handlers for processing various intent types */
+  handlers?: EnhancedIntentHandlers
 }
 
 const REDIRECT_URL = 'https://sanity.io/welcome'
@@ -28,7 +31,7 @@ const REDIRECT_URL = 'https://sanity.io/welcome'
  * must be wrapped with the SanityApp component to function properly.
  *
  * The `config` prop on the SanityApp component accepts either a single {@link SanityConfig} object, or an array of them.
- * This allows your app to work with one or more of your organization’s datasets.
+ * This allows your app to work with one or more of your organization's datasets.
  *
  * @remarks
  * When passing multiple SanityConfig objects to the `config` prop, the first configuration in the array becomes the default
@@ -82,6 +85,7 @@ export function SanityApp({
   children,
   fallback,
   config = [],
+  handlers,
   ...props
 }: SanityAppProps): ReactElement {
   useEffect(() => {
@@ -99,7 +103,7 @@ export function SanityApp({
   }, [])
 
   return (
-    <SDKProvider {...props} fallback={fallback} config={config}>
+    <SDKProvider {...props} fallback={fallback} config={config} handlers={handlers}>
       {children}
     </SDKProvider>
   )
