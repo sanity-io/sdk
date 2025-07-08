@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.1.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.1.0...sdk-react-v2.1.1) (2025-07-08)
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-compiler-runtime to v19.1.0-rc.2 ([#536](https://github.com/sanity-io/sdk/issues/536)) ([27df27b](https://github.com/sanity-io/sdk/commit/27df27b7fae387d6b00b4773ce8402524c36e3e5))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.1.1
+
 ## [2.1.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.0.2...sdk-react-v2.1.0) (2025-06-30)
 
 

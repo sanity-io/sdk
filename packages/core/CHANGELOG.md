@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/sanity-io/sdk/compare/sdk-v2.1.0...sdk-v2.1.1) (2025-07-08)
+
+
+### Features
+
+* add bifur dependency and presence events ([#577](https://github.com/sanity-io/sdk/issues/577)) ([2bd70c1](https://github.com/sanity-io/sdk/commit/2bd70c1e70fb25b3d5665729c0d3e20b04fbaea8))
+
 ## [2.1.0](https://github.com/sanity-io/sdk/compare/sdk-v2.0.2...sdk-v2.1.0) (2025-06-30)
 
 
