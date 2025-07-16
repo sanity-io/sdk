@@ -46,6 +46,7 @@ export interface GetUsersOptions extends ProjectHandle {
   resourceType?: 'organization' | 'project'
   batchSize?: number
   organizationId?: string
+  userId?: string
 }
 
 /**
