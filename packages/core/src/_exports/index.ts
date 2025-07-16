@@ -127,13 +127,24 @@ export {createSanityInstance, type SanityInstance} from '../store/createSanityIn
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
 export {getUsersKey, parseUsersKey} from '../users/reducers'
 export {
+  type GetUserOptions,
   type GetUsersOptions,
   type Membership,
+  type ResolveUserOptions,
   type ResolveUsersOptions,
   type SanityUser,
+  type SanityUserResponse,
   type UserProfile,
+  type UsersGroupState,
+  type UsersStoreState,
 } from '../users/types'
-export {getUsersState, loadMoreUsers, resolveUsers} from '../users/usersStore'
+export {
+  getUsersState,
+  getUserState,
+  loadMoreUsers,
+  resolveUser,
+  resolveUsers,
+} from '../users/usersStore'
 export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {CORE_SDK_VERSION} from '../version'

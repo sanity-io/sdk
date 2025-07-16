@@ -84,3 +84,19 @@ export interface UsersStoreState {
 export interface ResolveUsersOptions extends GetUsersOptions {
   signal?: AbortSignal
 }
+
+/**
+ * @public
+ */
+export interface GetUserOptions extends ProjectHandle {
+  userId: string
+  resourceType?: 'organization' | 'project'
+  organizationId?: string
+}
+
+/**
+ * @public
+ */
+export interface ResolveUserOptions extends GetUserOptions {
+  signal?: AbortSignal
+}

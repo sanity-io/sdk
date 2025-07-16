@@ -43,7 +43,9 @@ import {
   updateLastLoadMoreRequest,
 } from './reducers'
 import {
+  type GetUserOptions,
   type GetUsersOptions,
+  type ResolveUserOptions,
   type ResolveUsersOptions,
   type SanityUser,
   type SanityUserResponse,
@@ -407,5 +409,32 @@ export const loadMoreUsers = bindActionGlobally(
     state.set('updateLastLoadMoreRequest', updateLastLoadMoreRequest(timestamp, key))
 
     return await promise
+  },
+)
+
+/**
+ * @beta
+ */
+export const getUserState = bindActionGlobally(
+  usersStore,
+  ({instance}, {userId, ...options}: GetUserOptions) => {
+    return getUsersState(instance, {userId, ...options}).observable.pipe(
+      map((res) => res?.data[0]),
+      distinctUntilChanged((a, b) => a?.profile.updatedAt === b?.profile.updatedAt),
+    )
+  },
+)
+
+/**
+ * @beta
+ */
+export const resolveUser = bindActionGlobally(
+  usersStore,
+  async ({instance}, {signal, ...options}: ResolveUserOptions) => {
+    const result = await resolveUsers(instance, {
+      signal,
+      ...options,
+    })
+    return result?.data[0]
   },
 )
