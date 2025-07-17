@@ -53,6 +53,7 @@ export {
   type PaginatedDocumentsResponse,
   usePaginatedDocuments,
 } from '../hooks/paginatedDocuments/usePaginatedDocuments'
+export {usePresence} from '../hooks/presence/usePresence'
 export {
   useDocumentPreview,
   type useDocumentPreviewOptions,
