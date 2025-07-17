@@ -172,11 +172,22 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                 return throwError(() => new Error('An organizationId or a projectId is required'))
               }
               return client.observable
-                .request<SanityUserResponse>({
+                .request<SanityUser | SanityUserResponse>({
                   method: 'GET',
                   uri: `access/${resourceType}/${resourceId}/users/${userId}`,
                 })
                 .pipe(
+                  map((response) => {
+                    // If the response is a single user object (has sanityUserId), wrap it in the expected format
+                    if ('sanityUserId' in response) {
+                      return {
+                        data: [response],
+                        totalCount: 1,
+                        nextCursor: null,
+                      } as SanityUserResponse
+                    }
+                    return response as SanityUserResponse
+                  }),
                   catchError((error) => {
                     state.set('setUsersError', setUsersError(group$.key, error))
                     return EMPTY
