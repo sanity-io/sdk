@@ -12,7 +12,7 @@ import {getUserState} from '../users/usersStore'
 import {createBifurTransport} from './bifurTransport'
 import {type PresenceLocation, type TransportEvent, type UserPresence} from './types'
 
-export type PresenceStoreState = {
+type PresenceStoreState = {
   locations: Map<string, {userId: string; locations: PresenceLocation[]}>
   users: Record<string, SanityUser | undefined>
 }
