@@ -1,4 +1,4 @@
-import {type SanityClient, type SanityUser as SanityUserFromClient} from '@sanity/client'
+import {type SanityClient} from '@sanity/client'
 import {delay, filter, firstValueFrom, Observable, of} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
@@ -6,7 +6,14 @@ import {getClient, getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {type GetUsersOptions, type SanityUser, type SanityUserResponse} from './types'
-import {getUsersState, getUserState, loadMoreUsers, resolveUser, resolveUsers} from './usersStore'
+import {
+  getUsersState,
+  getUserState,
+  loadMoreUsers,
+  type PatchedSanityUserFromClient,
+  resolveUser,
+  resolveUsers,
+} from './usersStore'
 
 vi.mock('./usersConstants', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./usersConstants')>()),
@@ -407,8 +414,9 @@ describe('usersStore', () => {
     it('fetches a single user with a project-scoped ID', async () => {
       const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
       const projectUserId = 'p12345'
-      const mockProjectUser: SanityUserFromClient = {
+      const mockProjectUser: PatchedSanityUserFromClient = {
         id: projectUserId,
+        sanityUserId: projectUserId,
         displayName: 'Project User',
         createdAt: '2023-01-01T00:00:00Z',
         updatedAt: '2023-01-01T00:00:00Z',
@@ -418,6 +426,8 @@ describe('usersStore', () => {
         givenName: null,
         middleName: null,
         imageUrl: null,
+        email: 'project@example.com',
+        provider: 'google',
       }
 
       const specificRequest = vi.fn().mockReturnValue(of(mockProjectUser).pipe(delay(0)))
@@ -455,8 +465,8 @@ describe('usersStore', () => {
           createdAt: '2023-01-01T00:00:00Z',
           updatedAt: '2023-01-01T00:00:00Z',
           isCurrentUser: false,
-          email: '',
-          provider: '',
+          email: 'project@example.com',
+          provider: 'google',
         },
         memberships: [],
       }

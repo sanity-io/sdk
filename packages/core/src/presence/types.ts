@@ -1,12 +1,21 @@
 import {type SanityClient} from '@sanity/client'
 import {type Observable} from 'rxjs'
 
+import {type SanityUser} from '../users/types'
+
 /** @public */
 export interface PresenceLocation {
   type: 'document'
   documentId: string
   path: string[]
   lastActiveAt: string
+}
+
+/** @public */
+export interface UserPresence {
+  user: SanityUser
+  locations: PresenceLocation[]
+  sessionId: string
 }
 
 /** @public */
@@ -58,5 +67,4 @@ export interface BifurTransportOptions {
 /** @public */
 export interface PresenceStore {
   locations$: Observable<PresenceLocation[]>
-  reportPresence: (locations: PresenceLocation[]) => void
 }

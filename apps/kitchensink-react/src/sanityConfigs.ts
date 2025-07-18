@@ -9,6 +9,10 @@ export const devConfigs: SanityConfig[] = [
     projectId: 'd45jg133',
     dataset: 'production',
   },
+  {
+    projectId: 'v28v5k8m',
+    dataset: 'production',
+  },
 ]
 
 export const e2eConfigs: SanityConfig[] = [

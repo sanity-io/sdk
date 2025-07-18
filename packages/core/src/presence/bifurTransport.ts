@@ -1,7 +1,7 @@
 import {type BifurClient, fromUrl} from '@sanity/bifur-client'
 import {type SanityClient} from '@sanity/client'
-import {EMPTY, type Observable} from 'rxjs'
-import {map, share} from 'rxjs/operators'
+import {EMPTY, fromEvent, type Observable} from 'rxjs'
+import {map, share, switchMap} from 'rxjs/operators'
 
 import {
   type BifurTransportOptions,
@@ -96,6 +96,12 @@ export const createBifurTransport = (options: BifurTransportOptions): PresenceTr
         return EMPTY
       }
     }
+  }
+
+  if (typeof window !== 'undefined') {
+    fromEvent(window, 'beforeunload')
+      .pipe(switchMap(() => dispatchMessage({type: 'disconnect'})))
+      .subscribe()
   }
 
   return [incomingEvents$.pipe(share()), dispatchMessage]

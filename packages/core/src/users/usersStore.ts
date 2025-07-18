@@ -53,6 +53,14 @@ import {
 } from './types'
 import {API_VERSION, PROJECT_API_VERSION, USERS_STATE_CLEAR_DELAY} from './usersConstants'
 
+/** @internal */
+export type PatchedSanityUserFromClient = Omit<SanityUserFromClient, 'id'> & {
+  id: string
+  sanityUserId: string
+  email: string
+  provider: string
+}
+
 /**
  * The users store resource that manages user data fetching and state.
  *
@@ -119,7 +127,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                 })
 
                 return client.observable
-                  .request<SanityUserFromClient>({
+                  .request<PatchedSanityUserFromClient>({
                     method: 'GET',
                     uri: `/users/${userId}`,
                   })
@@ -127,7 +135,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                     map((user) => {
                       // We need to convert the user to the format we expect
                       const convertedUser: SanityUser = {
-                        sanityUserId: user.id,
+                        sanityUserId: user.sanityUserId,
                         profile: {
                           id: user.id,
                           displayName: user.displayName,
@@ -138,8 +146,8 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                           createdAt: user.createdAt,
                           updatedAt: user.updatedAt,
                           isCurrentUser: user.isCurrentUser,
-                          email: '',
-                          provider: '',
+                          email: user.email,
+                          provider: user.provider,
                         },
                         memberships: [],
                       }
