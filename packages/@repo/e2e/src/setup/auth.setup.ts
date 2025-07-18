@@ -44,10 +44,7 @@ const authenticateUser = async (context: BrowserContext, config: AuthConfig) => 
   await page.goto(loginUrl.toString())
 
   // Wait for the redirect to complete AND network to be idle
-  await Promise.all([
-    page.waitForURL(config.expectedRedirectUrl),
-    page.waitForLoadState('networkidle'),
-  ])
+  await Promise.all([page.waitForURL(config.expectedRedirectUrl)])
 
   await page.close()
 }
