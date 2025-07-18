@@ -237,22 +237,6 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
               filter((cursor) => cursor !== null),
             )
 
-            if (userId) {
-              return combineLatest([resource$, client$]).pipe(
-                switchMap(([resource, client]) =>
-                  client.observable.request<SanityUserResponse>({
-                    method: 'GET',
-                    uri: `access/${resource.type}/${resource.id}/users/${userId}`,
-                  }),
-                ),
-                catchError((error) => {
-                  state.set('setUsersError', setUsersError(group$.key, error))
-                  return EMPTY
-                }),
-                tap((response) => state.set('setUsersData', setUsersData(group$.key, response))),
-              )
-            }
-
             return combineLatest([resource$, client$, loadMore$]).pipe(
               withLatestFrom(cursor$),
               switchMap(([[resource, client], cursor]) =>
