@@ -108,7 +108,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
 
             if (userId) {
               // In the future we will be able to fetch a user from the global API using the resourceUserId,
-              // but for now we need to use the project subdomain to fetch a user
+              // but for now we need to use the project subdomain to fetch a user if the userId is a project user (starts with "p")
               if (userId.startsWith('p')) {
                 const client = getClient(instance, {
                   apiVersion: PROJECT_API_VERSION,
