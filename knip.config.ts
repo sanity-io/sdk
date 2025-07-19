@@ -12,7 +12,7 @@ const baseConfig = {
         config: 'tsconfig.tsdoc.json',
       },
       // Knip doesn't support pnpm version
-      ignoreBinaries: ['version', 'sed'],
+      ignoreBinaries: ['version', 'sed', 'open'],
       entry: ['package.config.ts', 'vitest.config.mts'],
     },
     'scripts/*': {

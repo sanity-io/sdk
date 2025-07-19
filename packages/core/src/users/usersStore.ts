@@ -1,3 +1,4 @@
+import {type SanityUser as SanityUserFromClient} from '@sanity/client'
 import {createSelector} from 'reselect'
 import {
   catchError,
@@ -24,7 +25,7 @@ import {
 } from 'rxjs'
 
 import {getDashboardOrganizationId} from '../auth/authStore'
-import {getClientState} from '../client/clientStore'
+import {getClient, getClientState} from '../client/clientStore'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 import {type StoreState} from '../store/createStoreState'
@@ -42,12 +43,15 @@ import {
   updateLastLoadMoreRequest,
 } from './reducers'
 import {
+  type GetUserOptions,
   type GetUsersOptions,
+  type ResolveUserOptions,
   type ResolveUsersOptions,
+  type SanityUser,
   type SanityUserResponse,
   type UsersStoreState,
 } from './types'
-import {API_VERSION, USERS_STATE_CLEAR_DELAY} from './usersConstants'
+import {API_VERSION, PROJECT_API_VERSION, USERS_STATE_CLEAR_DELAY} from './usersConstants'
 
 /**
  * The users store resource that manages user data fetching and state.
@@ -100,9 +104,98 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
         group$.pipe(
           switchMap((e) => {
             if (!e.added) return EMPTY
-            const {batchSize, ...options} = parseUsersKey(group$.key)
+            const {userId, batchSize, ...options} = parseUsersKey(group$.key)
 
-            const projectId = options.projectId ?? instance.config.projectId
+            if (userId) {
+              // In the future we will be able to fetch a user from the global API using the resourceUserId,
+              // but for now we need to use the project subdomain to fetch a user if the userId is a project user (starts with "p")
+              if (userId.startsWith('p')) {
+                const client = getClient(instance, {
+                  apiVersion: PROJECT_API_VERSION,
+                  // this is a global store, so we need to use the projectId from the options when we're fetching
+                  // users from a project subdomain
+                  projectId: options.projectId,
+                  useProjectHostname: true,
+                })
+
+                return client.observable
+                  .request<SanityUserFromClient>({
+                    method: 'GET',
+                    uri: `/users/${userId}`,
+                  })
+                  .pipe(
+                    map((user) => {
+                      // We need to convert the user to the format we expect
+                      const convertedUser: SanityUser = {
+                        sanityUserId: user.id,
+                        profile: {
+                          id: user.id,
+                          displayName: user.displayName,
+                          familyName: user.familyName ?? undefined,
+                          givenName: user.givenName ?? undefined,
+                          middleName: user.middleName ?? undefined,
+                          imageUrl: user.imageUrl ?? undefined,
+                          createdAt: user.createdAt,
+                          updatedAt: user.updatedAt,
+                          isCurrentUser: user.isCurrentUser,
+                          email: '',
+                          provider: '',
+                        },
+                        memberships: [],
+                      }
+                      return {
+                        data: [convertedUser],
+                        totalCount: 1,
+                        nextCursor: null,
+                      }
+                    }),
+                    catchError((error) => {
+                      state.set('setUsersError', setUsersError(group$.key, error))
+                      return EMPTY
+                    }),
+                    tap((response) =>
+                      state.set('setUsersData', setUsersData(group$.key, response)),
+                    ),
+                  )
+              }
+
+              // Fetch the user from the global API
+              const scope = userId.startsWith('g') ? 'global' : undefined
+              const client = getClient(instance, {
+                scope,
+                apiVersion: API_VERSION,
+              })
+              const resourceType = options.resourceType || 'project'
+              const resourceId =
+                resourceType === 'organization' ? options.organizationId : options.projectId
+              if (!resourceId) {
+                return throwError(() => new Error('An organizationId or a projectId is required'))
+              }
+              return client.observable
+                .request<SanityUser | SanityUserResponse>({
+                  method: 'GET',
+                  uri: `access/${resourceType}/${resourceId}/users/${userId}`,
+                })
+                .pipe(
+                  map((response) => {
+                    // If the response is a single user object (has sanityUserId), wrap it in the expected format
+                    if ('sanityUserId' in response) {
+                      return {
+                        data: [response],
+                        totalCount: 1,
+                        nextCursor: null,
+                      } as SanityUserResponse
+                    }
+                    return response as SanityUserResponse
+                  }),
+                  catchError((error) => {
+                    state.set('setUsersError', setUsersError(group$.key, error))
+                    return EMPTY
+                  }),
+                  tap((response) => state.set('setUsersData', setUsersData(group$.key, response))),
+                )
+            }
+            const projectId = options.projectId
 
             // the resource type this request will use
             // If resourceType is explicitly provided, use it
@@ -311,5 +404,32 @@ export const loadMoreUsers = bindActionGlobally(
     state.set('updateLastLoadMoreRequest', updateLastLoadMoreRequest(timestamp, key))
 
     return await promise
+  },
+)
+
+/**
+ * @beta
+ */
+export const getUserState = bindActionGlobally(
+  usersStore,
+  ({instance}, {userId, ...options}: GetUserOptions) => {
+    return getUsersState(instance, {userId, ...options}).observable.pipe(
+      map((res) => res?.data[0]),
+      distinctUntilChanged((a, b) => a?.profile.updatedAt === b?.profile.updatedAt),
+    )
+  },
+)
+
+/**
+ * @beta
+ */
+export const resolveUser = bindActionGlobally(
+  usersStore,
+  async ({instance}, {signal, ...options}: ResolveUserOptions) => {
+    const result = await resolveUsers(instance, {
+      signal,
+      ...options,
+    })
+    return result?.data[0]
   },
 )
