@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.1.1](https://github.com/sanity-io/sdk/compare/sdk-v2.1.0...sdk-v2.1.1) (2025-07-19)
+
+
+### Features
+
+* add bifur dependency and presence events ([#577](https://github.com/sanity-io/sdk/issues/577)) ([2bd70c1](https://github.com/sanity-io/sdk/commit/2bd70c1e70fb25b3d5665729c0d3e20b04fbaea8))
+* **core:** allow a userId option for the user store ([#580](https://github.com/sanity-io/sdk/issues/580)) ([210d48e](https://github.com/sanity-io/sdk/commit/210d48eca72c846b47923e551295f3a18d1174fd))
+
+
+### Bug Fixes
+
+* use `rolldown` to generate dts ([#582](https://github.com/sanity-io/sdk/issues/582)) ([be0211b](https://github.com/sanity-io/sdk/commit/be0211b52a66d6479693c44c6763b3f8cae7d0ab))
+
 ## [2.1.0](https://github.com/sanity-io/sdk/compare/sdk-v2.0.2...sdk-v2.1.0) (2025-06-30)
 
 
