@@ -17,6 +17,7 @@ import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import ExperimentalResourceClientRoute from './routes/ExperimentalResourceClientRoute'
 import {ReleasesRoute} from './routes/releases/ReleasesRoute'
+import {UserDetailRoute} from './routes/UserDetailRoute'
 import {UsersRoute} from './routes/UsersRoute'
 
 const documentCollectionRoutes = [
@@ -105,6 +106,7 @@ export function AppRoutes(): JSX.Element {
           {documentCollectionRoutes.map((route) => (
             <Route key={route.path} path={route.path} element={route.element} />
           ))}
+          <Route path="users/:userId" element={<UserDetailRoute />} />
           <Route path="comlink-demo" element={<ParentApp />} />
           <Route path="releases" element={<ReleasesRoute />} />
         </Route>
