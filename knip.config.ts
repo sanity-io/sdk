@@ -56,6 +56,15 @@ const baseConfig = {
       entry: ['package.bundle.ts'],
       ignoreDependencies: ['@sanity/browserslist-config', 'react-compiler-runtime'],
     },
+    'packages/react-internal': {
+      typescript: {
+        config: 'tsconfig.settings.json',
+      },
+      project,
+      entry: ['package.bundle.ts'],
+      // for now -- will be removed once actual hooks are added
+      ignoreDependencies: ['@sanity/sdk', '@sanity/sdk-react', '@sanity/browserslist-config'],
+    },
     'packages/@repo/e2e': {
       typescript: {
         config: 'tsconfig.json',
@@ -86,6 +95,7 @@ export const addBundlerEntries = async (config: KnipConfig): Promise<KnipConfig>
     'packages/@repo/package.config',
     'packages/core',
     'packages/react',
+    'packages/react-internal',
     'apps/kitchensink-react',
   ]
 

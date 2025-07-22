@@ -35,6 +35,13 @@
       "bump-patch-for-minor-pre-major": true,
       "bump-minor-pre-major": true,
       "versioning": "always-bump-patch"
+    },
+    "packages/react-internal": {
+      "component": "sdk-react-internal",
+      "release-type": "node",
+      "prerelease": true,
+      "prerelease-type": "alpha",
+      "versioning": "prerelease"
     }
   }
 }
