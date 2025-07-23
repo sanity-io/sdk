@@ -170,7 +170,7 @@ describe('SanityApp', () => {
 
   it('redirects to core if not inside iframe and not local url', async () => {
     const originalLocation = window.location
-    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     const mockLocation = {
       replace: vi.fn(),
@@ -204,7 +204,7 @@ describe('SanityApp', () => {
       value: originalLocation,
       writable: true,
     })
-    consoleLogSpy.mockRestore()
+    consoleWarnSpy.mockRestore()
   })
 
   it('does not redirect to core if not inside iframe and local url', async () => {
@@ -242,5 +242,45 @@ describe('SanityApp', () => {
       value: originalLocation,
       writable: true,
     })
+  })
+
+  it('does not redirect to core if studioMode is enabled', async () => {
+    const originalLocation = window.location
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const mockLocation = {
+      replace: vi.fn(),
+      href: 'http://sanity-test.app',
+    }
+
+    const mockSanityConfig: SanityConfig = {
+      projectId: 'test-project',
+      dataset: 'test-dataset',
+      studioMode: {enabled: true},
+    }
+
+    Object.defineProperty(window, 'location', {
+      value: mockLocation,
+      writable: true,
+    })
+
+    render(
+      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+        <div>Test Child</div>
+      </SanityApp>,
+    )
+
+    // Wait for 1 second
+    await new Promise((resolve) => setTimeout(resolve, 1010))
+
+    // Add assertions based on your iframe-specific behavior
+    expect(mockLocation.replace).not.toHaveBeenCalled()
+
+    // Clean up the mock
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+    })
+    consoleWarnSpy.mockRestore()
   })
 })
