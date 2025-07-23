@@ -17,7 +17,7 @@ vi.mock('../utils/listenQuery', () => ({
 }))
 
 // Mock console.error to prevent test runner noise and allow verification
-const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+let consoleErrorSpy: ReturnType<typeof vi.spyOn>
 
 describe('releasesStore', () => {
   let instance: SanityInstance
@@ -25,7 +25,7 @@ describe('releasesStore', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
-    consoleErrorSpy.mockClear()
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     instance = createSanityInstance({projectId: 'test', dataset: 'test'})
 
@@ -36,6 +36,7 @@ describe('releasesStore', () => {
 
   afterEach(() => {
     instance.dispose()
+    consoleErrorSpy.mockRestore()
   })
 
   it('should set active releases state when listenQuery succeeds', async () => {
@@ -63,6 +64,8 @@ describe('releasesStore', () => {
 
     expect(state.getCurrent()).toEqual(mockReleases.reverse())
     expect(consoleErrorSpy).not.toHaveBeenCalled()
+
+    vi.useRealTimers()
   })
 
   it('should update active releases state when listenQuery emits new data', async () => {

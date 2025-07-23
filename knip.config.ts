@@ -12,7 +12,7 @@ const baseConfig = {
         config: 'tsconfig.tsdoc.json',
       },
       // Knip doesn't support pnpm version
-      ignoreBinaries: ['version', 'sed'],
+      ignoreBinaries: ['version', 'sed', 'open'],
       entry: ['package.config.ts', 'vitest.config.mts'],
     },
     'scripts/*': {
@@ -63,6 +63,16 @@ const baseConfig = {
       project,
       entry: ['src/index.ts', 'src/setup/**/*.ts', 'src/teardown/**/*.ts'],
       ignoreDependencies: ['@repo/tsconfig'],
+    },
+    // TODO: Remove this once we have presence fully implemented in the SDK
+    'packages/core': {
+      typescript: {
+        config: 'tsconfig.settings.json',
+      },
+      project,
+      entry: ['package.bundle.ts'],
+      ignore: ['src/presence/bifurTransport.ts', 'src/presence/types.ts'],
+      ignoreDependencies: ['@sanity/bifur-client', '@sanity/browserslist-config'],
     },
   },
 } satisfies KnipConfig

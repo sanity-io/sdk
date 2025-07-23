@@ -46,6 +46,7 @@ export interface GetUsersOptions extends ProjectHandle {
   resourceType?: 'organization' | 'project'
   batchSize?: number
   organizationId?: string
+  userId?: string
 }
 
 /**
@@ -81,5 +82,21 @@ export interface UsersStoreState {
  * @public
  */
 export interface ResolveUsersOptions extends GetUsersOptions {
+  signal?: AbortSignal
+}
+
+/**
+ * @public
+ */
+export interface GetUserOptions extends ProjectHandle {
+  userId: string
+  resourceType?: 'organization' | 'project'
+  organizationId?: string
+}
+
+/**
+ * @public
+ */
+export interface ResolveUserOptions extends GetUserOptions {
   signal?: AbortSignal
 }
