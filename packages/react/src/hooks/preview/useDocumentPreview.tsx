@@ -83,7 +83,7 @@ export function useDocumentPreview({
   ref,
   ...docHandle
 }: useDocumentPreviewOptions): useDocumentPreviewResults {
-  const instance = useSanityInstance()
+  const instance = useSanityInstance(docHandle)
   const stateSource = getPreviewState(instance, docHandle)
 
   // Create subscribe function for useSyncExternalStore

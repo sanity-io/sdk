@@ -181,7 +181,7 @@ export function useDocumentProjection<TData extends object>({
   projection,
   ...docHandle
 }: useDocumentProjectionOptions): useDocumentProjectionResults<TData> {
-  const instance = useSanityInstance()
+  const instance = useSanityInstance(docHandle)
   const stateSource = getProjectionState<TData>(instance, {...docHandle, projection})
 
   if (stateSource.getCurrent()?.data === null) {
