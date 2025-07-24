@@ -66,7 +66,7 @@ describe('defineIntent', () => {
       filters: [
         {
           projectId: 'some-project',
-          // No dataset or types specified
+          types: ['*'], // Add required types
         },
         {
           types: ['document'],
@@ -207,16 +207,16 @@ describe('defineIntent', () => {
 
   // Filter validation tests
   test('should throw error for empty filter object', () => {
-    const intent: Intent = {
+    const intent = {
       id: 'test',
       action: 'view',
       title: 'Test Intent',
       description: 'Test description',
       filters: [{}],
-    }
+    } as unknown as Intent
 
     expect(() => defineIntent(intent)).toThrow(
-      'Filter at index 0 must have at least one property (projectId, dataset, or types)',
+      "Filter at index 0 must have a types property. Use ['*'] to match all document types.",
     )
   })
 
@@ -238,7 +238,7 @@ describe('defineIntent', () => {
       action: 'view',
       title: 'Test Intent',
       description: 'Test description',
-      filters: [{projectId: 123}],
+      filters: [{projectId: 123, types: ['*']}],
     } as unknown as Intent
 
     expect(() => defineIntent(intent)).toThrow('Filter at index 0: projectId must be a string')
@@ -250,7 +250,7 @@ describe('defineIntent', () => {
       action: 'view',
       title: 'Test Intent',
       description: 'Test description',
-      filters: [{projectId: ''}],
+      filters: [{projectId: '', types: ['*']}],
     }
 
     expect(() => defineIntent(intent)).toThrow('Filter at index 0: projectId cannot be empty')
@@ -262,7 +262,7 @@ describe('defineIntent', () => {
       action: 'view',
       title: 'Test Intent',
       description: 'Test description',
-      filters: [{projectId: '   '}],
+      filters: [{projectId: '   ', types: ['*']}],
     }
 
     expect(() => defineIntent(intent)).toThrow('Filter at index 0: projectId cannot be empty')
@@ -274,7 +274,7 @@ describe('defineIntent', () => {
       action: 'view',
       title: 'Test Intent',
       description: 'Test description',
-      filters: [{dataset: 123}],
+      filters: [{projectId: 'test', dataset: 123, types: ['*']}],
     } as unknown as Intent
 
     expect(() => defineIntent(intent)).toThrow('Filter at index 0: dataset must be a string')
@@ -286,7 +286,7 @@ describe('defineIntent', () => {
       action: 'view',
       title: 'Test Intent',
       description: 'Test description',
-      filters: [{dataset: ''}],
+      filters: [{dataset: '', types: ['*']}],
     }
 
     expect(() => defineIntent(intent)).toThrow('Filter at index 0: dataset cannot be empty')
@@ -298,7 +298,7 @@ describe('defineIntent', () => {
       action: 'view',
       title: 'Test Intent',
       description: 'Test description',
-      filters: [{dataset: 'production'}],
+      filters: [{dataset: 'production', types: ['*']}],
     }
 
     expect(() => defineIntent(intent)).toThrow(
@@ -312,7 +312,7 @@ describe('defineIntent', () => {
       action: 'view',
       title: 'Test Intent',
       description: 'Test description',
-      filters: [{projectId: '', dataset: 'production'}],
+      filters: [{projectId: '', dataset: 'production', types: ['*']}],
     }
 
     expect(() => defineIntent(intent)).toThrow('Filter at index 0: projectId cannot be empty')
@@ -324,7 +324,7 @@ describe('defineIntent', () => {
       action: 'view',
       title: 'Test Intent',
       description: 'Test description',
-      filters: [{projectId: 'my-project', dataset: 'production'}],
+      filters: [{projectId: 'my-project', dataset: 'production', types: ['*']}],
     }
 
     const result = defineIntent(intent)
@@ -426,8 +426,8 @@ describe('defineIntent', () => {
       title: 'Test Intent',
       description: 'Test description',
       filters: [
-        {projectId: 'my-project'},
-        {projectId: 'my-project', dataset: 'production'}, // Dataset with projectId
+        {projectId: 'my-project', types: ['*']},
+        {projectId: 'my-project', dataset: 'production', types: ['*']},
         {types: ['document']},
         {types: ['*']}, // Valid wildcard usage
       ],
@@ -444,8 +444,8 @@ describe('defineIntent', () => {
       title: 'Test Intent',
       description: 'Test description',
       filters: [
-        {projectId: 'valid-project'},
-        {projectId: ''}, // This should be filter at index 1
+        {projectId: 'valid-project', types: ['*']},
+        {projectId: '', types: ['*']},
       ],
     }
 
@@ -454,12 +454,12 @@ describe('defineIntent', () => {
 })
 
 describe('IntentFilter interface', () => {
-  test('should allow all optional properties', () => {
+  test('should require types property', () => {
     // This is more of a TypeScript compile-time test
     // but we can verify the structure is as expected
-    const filter1: IntentFilter = {}
-    const filter2: IntentFilter = {projectId: 'test'}
-    const filter3: IntentFilter = {dataset: 'test'}
+    const filter1: IntentFilter = {types: ['*']} // types is now required
+    const filter2: IntentFilter = {projectId: 'test', types: ['*']} // types is now required
+    const filter3: IntentFilter = {dataset: 'test', types: ['*']} // types is now required
     const filter4: IntentFilter = {types: ['test']}
     const filter5: IntentFilter = {
       projectId: 'test',

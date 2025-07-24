@@ -45,10 +45,9 @@ export interface IntentFilter {
 
   /**
    * Document types that this intent can handle
-   * @remarks When specified, the intent will only match for documents of these types.
-   * Use ['*'] to match all document types.
+   * @remarks This is required for all filters. Use ['*'] to match all document types.
    */
-  types?: string[]
+  types: string[]
 }
 
 /**
@@ -88,9 +87,10 @@ export interface Intent {
 }
 
 /**
- * Creates a properly typed intent definition for registration with the backend
+ * Creates a properly typed intent definition for registration with the backend.
  *
  * This utility function provides TypeScript support and validation for intent declarations.
+ * It is also used in the CLI if intents are declared as bare objects in an intents file.
  *
  * @param intent - The intent definition object
  * @returns The same intent object with proper typing
@@ -185,13 +185,10 @@ function validateFilter(filter: IntentFilter, index: number): void {
     throw new Error(`${filterContext} must be an object`)
   }
 
-  // Check that filter has at least one property
-  const hasProperties =
-    filter.projectId !== undefined || filter.dataset !== undefined || filter.types !== undefined
-
-  if (!hasProperties) {
+  // Check that types is required
+  if (filter.types === undefined) {
     throw new Error(
-      `${filterContext} must have at least one property (projectId, dataset, or types)`,
+      `${filterContext} must have a types property. Use ['*'] to match all document types.`,
     )
   }
 
@@ -219,31 +216,29 @@ function validateFilter(filter: IntentFilter, index: number): void {
     }
   }
 
-  // Validate types
-  if (filter.types !== undefined) {
-    if (!Array.isArray(filter.types)) {
-      throw new Error(`${filterContext}: types must be an array`)
-    }
-    if (filter.types.length === 0) {
-      throw new Error(`${filterContext}: types array cannot be empty`)
-    }
+  // Validate types (now required)
+  if (!Array.isArray(filter.types)) {
+    throw new Error(`${filterContext}: types must be an array`)
+  }
+  if (filter.types.length === 0) {
+    throw new Error(`${filterContext}: types array cannot be empty`)
+  }
 
-    // Validate each type
-    filter.types.forEach((type, typeIndex) => {
-      if (typeof type !== 'string') {
-        throw new Error(`${filterContext}: types[${typeIndex}] must be a string`)
-      }
-      if (type.trim() === '') {
-        throw new Error(`${filterContext}: types[${typeIndex}] cannot be empty`)
-      }
-    })
-
-    // Check for wildcard exclusivity
-    const hasWildcard = filter.types.includes('*')
-    if (hasWildcard && filter.types.length > 1) {
-      throw new Error(
-        `${filterContext}: when using wildcard '*', it must be the only type in the array`,
-      )
+  // Validate each type
+  filter.types.forEach((type, typeIndex) => {
+    if (typeof type !== 'string') {
+      throw new Error(`${filterContext}: types[${typeIndex}] must be a string`)
     }
+    if (type.trim() === '') {
+      throw new Error(`${filterContext}: types[${typeIndex}] cannot be empty`)
+    }
+  })
+
+  // Check for wildcard exclusivity
+  const hasWildcard = filter.types.includes('*')
+  if (hasWildcard && filter.types.length > 1) {
+    throw new Error(
+      `${filterContext}: when using wildcard '*', it must be the only type in the array`,
+    )
   }
 }
