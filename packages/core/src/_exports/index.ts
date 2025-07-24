@@ -147,6 +147,7 @@ export {
 } from '../users/usersStore'
 export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
+export {defineIntent, type Intent, type IntentFilter} from '../utils/defineIntent'
 export {CORE_SDK_VERSION} from '../version'
 export {
   getIndexForKey,
