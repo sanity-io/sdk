@@ -35,6 +35,7 @@ export type LoggedInAuthState = {
   type: AuthStateType.LOGGED_IN
   token: string
   currentUser: CurrentUser | null
+  lastTokenRefresh?: number
 }
 
 /**
