@@ -11,6 +11,7 @@ import {DocumentProjectionRoute} from './DocumentCollection/DocumentProjectionRo
 import {MultiResourceRoute} from './DocumentCollection/MultiResourceRoute'
 import {OrgDocumentExplorerRoute} from './DocumentCollection/OrgDocumentExplorerRoute'
 import {SearchRoute} from './DocumentCollection/SearchRoute'
+import {PresenceRoute} from './Presence/PresenceRoute'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProtectedRoute} from './ProtectedRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
@@ -64,6 +65,10 @@ const documentCollectionRoutes = [
   {
     path: 'experimental-resource-client',
     element: <ExperimentalResourceClientRoute />,
+  },
+  {
+    path: 'presence',
+    element: <PresenceRoute />,
   },
 ]
 
