@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.1.1](https://github.com/sanity-io/sdk/compare/sdk-v2.1.0...sdk-v2.1.1) (2025-07-24)
+
+
+### Features
+
+* add bifur dependency and presence events ([#577](https://github.com/sanity-io/sdk/issues/577)) ([2bd70c1](https://github.com/sanity-io/sdk/commit/2bd70c1e70fb25b3d5665729c0d3e20b04fbaea8))
+* **auth:** check for stamped token expiration after browser idle ([#575](https://github.com/sanity-io/sdk/issues/575)) ([ba4cc58](https://github.com/sanity-io/sdk/commit/ba4cc58bf81a0cb81e34a0b4c6e30561e7199aae))
+* **core:** add defineIntent ([#585](https://github.com/sanity-io/sdk/issues/585)) ([214e0fd](https://github.com/sanity-io/sdk/commit/214e0fdbe1e9fe88f33888d48857f9c1f6918caa))
+* **core:** allow a userId option for the user store ([#580](https://github.com/sanity-io/sdk/issues/580)) ([210d48e](https://github.com/sanity-io/sdk/commit/210d48eca72c846b47923e551295f3a18d1174fd))
+* **presence:** add user presence events ([#583](https://github.com/sanity-io/sdk/issues/583)) ([9ed405c](https://github.com/sanity-io/sdk/commit/9ed405c8d2d551d53d4e72b79b159d9496407fc3))
+
+
+### Bug Fixes
+
+* use `rolldown` to generate dts ([#582](https://github.com/sanity-io/sdk/issues/582)) ([be0211b](https://github.com/sanity-io/sdk/commit/be0211b52a66d6479693c44c6763b3f8cae7d0ab))
+
 ## [2.1.0](https://github.com/sanity-io/sdk/compare/sdk-v2.0.2...sdk-v2.1.0) (2025-06-30)
 
 
