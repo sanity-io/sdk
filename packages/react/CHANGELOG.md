@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.1.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.1.0...sdk-react-v2.1.1) (2025-07-24)
+
+
+### Features
+
+* **hook:** add getUser hook ([#581](https://github.com/sanity-io/sdk/issues/581)) ([8c36794](https://github.com/sanity-io/sdk/commit/8c36794ee41d0934d9337d32c46cb87c5c3445de))
+* **presence:** add user presence events ([#583](https://github.com/sanity-io/sdk/issues/583)) ([9ed405c](https://github.com/sanity-io/sdk/commit/9ed405c8d2d551d53d4e72b79b159d9496407fc3))
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-compiler-runtime to v19.1.0-rc.2 ([#536](https://github.com/sanity-io/sdk/issues/536)) ([27df27b](https://github.com/sanity-io/sdk/commit/27df27b7fae387d6b00b4773ce8402524c36e3e5))
+* do not redirect to the Dashboard if studioMode is specified ([#588](https://github.com/sanity-io/sdk/issues/588)) ([731b146](https://github.com/sanity-io/sdk/commit/731b146c35ca3becd40255c86db4b10c9bc2a4a9))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.1.1
+
 ## [2.1.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.0.2...sdk-react-v2.1.0) (2025-06-30)
 
 
