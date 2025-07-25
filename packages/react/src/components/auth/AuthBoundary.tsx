@@ -2,6 +2,7 @@ import {AuthStateType} from '@sanity/sdk'
 import {useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
+import {ComlinkTokenRefreshProvider} from '../../context/ComlinkTokenRefresh'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
@@ -111,9 +112,11 @@ export function AuthBoundary({
   }, [LoginErrorComponent])
 
   return (
-    <ErrorBoundary FallbackComponent={FallbackComponent}>
-      <AuthSwitch {...props} />
-    </ErrorBoundary>
+    <ComlinkTokenRefreshProvider>
+      <ErrorBoundary FallbackComponent={FallbackComponent}>
+        <AuthSwitch {...props} />
+      </ErrorBoundary>
+    </ComlinkTokenRefreshProvider>
   )
 }
 

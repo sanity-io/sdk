@@ -1,5 +1,78 @@
 # Changelog
 
+## [2.1.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.1.0...sdk-react-v2.1.1) (2025-07-24)
+
+
+### Features
+
+* **hook:** add getUser hook ([#581](https://github.com/sanity-io/sdk/issues/581)) ([8c36794](https://github.com/sanity-io/sdk/commit/8c36794ee41d0934d9337d32c46cb87c5c3445de))
+* **presence:** add user presence events ([#583](https://github.com/sanity-io/sdk/issues/583)) ([9ed405c](https://github.com/sanity-io/sdk/commit/9ed405c8d2d551d53d4e72b79b159d9496407fc3))
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-compiler-runtime to v19.1.0-rc.2 ([#536](https://github.com/sanity-io/sdk/issues/536)) ([27df27b](https://github.com/sanity-io/sdk/commit/27df27b7fae387d6b00b4773ce8402524c36e3e5))
+* do not redirect to the Dashboard if studioMode is specified ([#588](https://github.com/sanity-io/sdk/issues/588)) ([731b146](https://github.com/sanity-io/sdk/commit/731b146c35ca3becd40255c86db4b10c9bc2a4a9))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.1.1
+
+## [2.1.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.0.2...sdk-react-v2.1.0) (2025-06-30)
+
+
+### Miscellaneous
+
+* release 2.1.0 ([bbc53ee](https://github.com/sanity-io/sdk/commit/bbc53ee9bf9707d82a89657f35a2114a3245cadf))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.1.0
+
+## [2.0.2](https://github.com/sanity-io/sdk/compare/sdk-react-v2.0.1...sdk-react-v2.0.2) (2025-06-27)
+
+
+### Bug Fixes
+
+* clear error overlay on successful comlink token creation ([#572](https://github.com/sanity-io/sdk/issues/572)) ([32eca80](https://github.com/sanity-io/sdk/commit/32eca804d9397d4b45de5fb86833de22cbc0920b))
+
+
+### Documentation
+
+* update useDocumentPreview reference doc ([#566](https://github.com/sanity-io/sdk/issues/566)) ([4c6afb2](https://github.com/sanity-io/sdk/commit/4c6afb2fb619e2b0868a837a5683ad84a811d597))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.0.2
+
+## [2.0.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.0.0...sdk-react-v2.0.1) (2025-06-20)
+
+
+### Features
+
+* add new token fetching via comlink ([#475](https://github.com/sanity-io/sdk/issues/475)) ([f646d53](https://github.com/sanity-io/sdk/commit/f646d5309deabec57ebb9bc561ed1849987db5b7))
+
+
+### Documentation
+
+* update readme logos ([#549](https://github.com/sanity-io/sdk/issues/549)) ([857f8ee](https://github.com/sanity-io/sdk/commit/857f8eec2811f411e7ff21668ef12853730c4368))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.0.1
+
 ## [2.0.0](https://github.com/sanity-io/sdk/compare/sdk-react-v1.0.0...sdk-react-v2.0.0) (2025-05-23)
 
 

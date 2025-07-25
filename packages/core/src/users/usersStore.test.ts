@@ -2,11 +2,18 @@ import {type SanityClient} from '@sanity/client'
 import {delay, filter, firstValueFrom, Observable, of} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {getClientState} from '../client/clientStore'
+import {getClient, getClientState} from '../client/clientStore'
 import {createSanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {type GetUsersOptions, type SanityUser, type SanityUserResponse} from './types'
-import {getUsersState, loadMoreUsers, resolveUsers} from './usersStore'
+import {
+  getUsersState,
+  getUserState,
+  loadMoreUsers,
+  type PatchedSanityUserFromClient,
+  resolveUser,
+  resolveUsers,
+} from './usersStore'
 
 vi.mock('./usersConstants', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./usersConstants')>()),
@@ -64,13 +71,19 @@ describe('usersStore', () => {
   beforeEach(() => {
     request = vi.fn().mockReturnValue(of(mockResponse).pipe(delay(0)))
 
-    vi.mocked(getClientState).mockReturnValue({
-      observable: of({
-        observable: {
-          request,
-        },
-      } as SanityClient),
-    } as StateSource<SanityClient>)
+    vi.mocked(getClientState).mockImplementation(() => {
+      const client = {
+        observable: {request},
+      } as unknown as SanityClient
+      return {
+        observable: of(client),
+      } as StateSource<SanityClient>
+    })
+    vi.mocked(getClient).mockReturnValue({
+      observable: {
+        request,
+      },
+    } as unknown as SanityClient)
   })
 
   it('initializes users state and cleans up after unsubscribe', async () => {
@@ -390,5 +403,112 @@ describe('usersStore', () => {
 
     unsubscribe2()
     instance.dispose()
+  })
+
+  describe('getUserState', () => {
+    beforeEach(() => {
+      // Clear all mocks between tests
+      vi.clearAllMocks()
+    })
+
+    it('fetches a single user with a project-scoped ID', async () => {
+      const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+      const projectUserId = 'p12345'
+      const mockProjectUser: PatchedSanityUserFromClient = {
+        id: projectUserId,
+        sanityUserId: projectUserId,
+        displayName: 'Project User',
+        createdAt: '2023-01-01T00:00:00Z',
+        updatedAt: '2023-01-01T00:00:00Z',
+        isCurrentUser: false,
+        projectId: 'project1',
+        familyName: null,
+        givenName: null,
+        middleName: null,
+        imageUrl: null,
+        email: 'project@example.com',
+        provider: 'google',
+      }
+
+      const specificRequest = vi.fn().mockReturnValue(of(mockProjectUser).pipe(delay(0)))
+      vi.mocked(getClient).mockReturnValue({
+        observable: {
+          request: specificRequest,
+        },
+      } as unknown as SanityClient)
+
+      const user$ = getUserState(instance, {userId: projectUserId, projectId: 'project1'})
+
+      const result = await firstValueFrom(user$.pipe(filter((i) => i !== undefined)))
+
+      expect(getClient).toHaveBeenCalledWith(
+        instance,
+        expect.objectContaining({
+          projectId: 'project1',
+          useProjectHostname: true,
+        }),
+      )
+      expect(specificRequest).toHaveBeenCalledWith({
+        method: 'GET',
+        uri: `/users/${projectUserId}`,
+      })
+
+      const expectedUser: SanityUser = {
+        sanityUserId: projectUserId,
+        profile: {
+          id: projectUserId,
+          displayName: 'Project User',
+          familyName: undefined,
+          givenName: undefined,
+          middleName: undefined,
+          imageUrl: undefined,
+          createdAt: '2023-01-01T00:00:00Z',
+          updatedAt: '2023-01-01T00:00:00Z',
+          isCurrentUser: false,
+          email: 'project@example.com',
+          provider: 'google',
+        },
+        memberships: [],
+      }
+      expect(result).toEqual(expectedUser)
+
+      instance.dispose()
+    })
+
+    it('fetches a single user with a global-scoped ID', async () => {
+      const instance = createSanityInstance({
+        projectId: 'test',
+        dataset: 'test',
+      })
+      const globalUserId = 'g12345'
+      const mockGlobalUser: SanityUser = {
+        sanityUserId: globalUserId,
+        profile: {
+          id: 'profile-g1',
+          displayName: 'Global User',
+          email: 'global@example.com',
+          provider: 'google',
+          createdAt: '2023-01-01T00:00:00Z',
+        },
+        memberships: [],
+      }
+      const mockGlobalUserResponse: SanityUserResponse = {
+        data: [mockGlobalUser],
+        totalCount: 1,
+        nextCursor: null,
+      }
+
+      // Mock the request to return the global user response
+      vi.mocked(request).mockReturnValue(of(mockGlobalUserResponse))
+
+      const result = await resolveUser(instance, {
+        userId: globalUserId,
+        projectId: 'project1',
+      })
+
+      expect(result).toEqual(mockGlobalUser)
+
+      instance.dispose()
+    })
   })
 })

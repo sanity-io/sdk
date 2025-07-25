@@ -1,22 +1,25 @@
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 
-import {type Browser, test as setup} from '@playwright/test'
+import {type BrowserContext, test as setup} from '@playwright/test'
 
 import {getE2EEnv} from '../helpers/getE2EEnv'
 
 const __filename = fileURLToPath(import.meta.url)
 const AUTH_FILE = path.join(path.dirname(__filename), '..', '..', '.auth', 'user.json')
+const env = getE2EEnv()
+
+interface AuthConfig {
+  origin: string
+  expectedRedirectUrl: string
+}
 
 /**
- * Used in CI to authenticate the user with the Sanity API
+ * Used to authenticate the user with the Sanity API
+ * @param context - The browser context to use for authentication
+ * @param config - Configuration for the authentication flow
  */
-const authenticateUser = async (browser: Browser) => {
-  const env = getE2EEnv()
-
-  // get a clean, isolated browser context to isolate this auth flow from other logic
-  const context = await browser.newContext()
-
+const authenticateUser = async (context: BrowserContext, config: AuthConfig) => {
   const response = await context.request.post('https://accounts.sanity.work/api/v1/login', {
     headers: {
       'Content-Type': 'application/json',
@@ -32,58 +35,59 @@ const authenticateUser = async (browser: Browser) => {
     throw new Error(`Failed to authenticate: ${response.statusText()}`)
   }
 
-  // the previous request has set a connect.sid cookie
-  // we can use that to get a session token
   const page = await context.newPage()
 
   const loginUrl = new URL('https://api.sanity.work/v1/auth/login/sanity')
-  loginUrl.searchParams.set('origin', 'http://localhost:3333')
+  loginUrl.searchParams.set('origin', config.origin)
   loginUrl.searchParams.set('type', 'token')
 
   await page.goto(loginUrl.toString())
 
-  // the /auth/login/sanity endpoint will redirect to the origin we set above
-  // our own site / SDK will receive the token it sent in the request
-  // and set it to be used by every other request
-  await Promise.all([
-    page.waitForURL('http://localhost:3333'),
-    page.waitForLoadState('networkidle'),
-  ])
+  // Wait for the redirect to complete AND network to be idle
+  await Promise.all([page.waitForURL(config.expectedRedirectUrl)])
 
-  // get the "state" of the current browser we used to do the auth flow
-  // and save it to a file
-  // this will be used by the next tests as though we were logged in
-  // and be destroyed when the tests are done
-  await context.storageState({path: AUTH_FILE})
-  await context.close()
+  await page.close()
 }
 
-/**
- * Used in local development to inject the token into the local storage
- */
-const injectLocalStorageToken = async (browser: Browser, e2eSessionToken: string) => {
-  // get a clean, isolated browser context to isolate this auth flow from other logic
-  const context = await browser.newContext()
+const setDashboardRedirectCookie = async (context: BrowserContext) => {
   const page = await context.newPage()
 
-  await page.addInitScript((token) => {
-    window.addEventListener('load', () => {
-      window.localStorage.setItem('__sanity_auth_token', JSON.stringify({token}))
-    })
-  }, e2eSessionToken)
+  // visit the dashboard url to set the redirect cookie
+  await page.goto(
+    `https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}?dev=http://localhost:3333`,
+  )
 
-  await page.goto('http://localhost:3333')
+  // wait until the url is /application/__dev (indicating the redirect cookie was set)
+  await page.waitForURL(`https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}/application/__dev`)
 
-  // as above, save the state to a file
-  await context.storageState({path: AUTH_FILE})
-  await context.close()
+  await page.close()
 }
 
 setup('setup authentication', async ({browser}) => {
-  const {CI, SDK_E2E_SESSION_TOKEN} = getE2EEnv()
-  if (CI) {
-    await authenticateUser(browser)
-  } else {
-    await injectLocalStorageToken(browser, SDK_E2E_SESSION_TOKEN!)
+  // Create a single browser context that will be used for all authentication operations
+  const context = await browser.newContext()
+
+  try {
+    // Authenticate for standalone apps
+    await authenticateUser(context, {
+      origin: 'http://localhost:3333',
+      expectedRedirectUrl: 'http://localhost:3333',
+    })
+
+    // Authenticate for embedded apps (Dashboard)
+    await authenticateUser(context, {
+      origin: 'https://www.sanity.work/api/dashboard/authenticate',
+      expectedRedirectUrl: `https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}`,
+    })
+
+    // Set the dashboard redirect cookie
+    await setDashboardRedirectCookie(context)
+
+    // Save the combined context state to the auth file
+    // This will contain all cookies, localStorage, and sessionStorage from all operations
+    await context.storageState({path: AUTH_FILE})
+  } finally {
+    // close the context to clean up resources
+    await context.close()
   }
 })

@@ -10,6 +10,10 @@ export default defineConfig({
         '**/*.{test,spec,stories,d}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
         'packages/core/src/_exports/*.ts',
         'packages/react/src/_exports/*.ts',
+        'packages/core/src/utils/getEnv.ts',
+        'packages/react/src/utils/getEnv.ts',
+        'packages/core/src/version.ts',
+        'packages/react/src/version.ts',
         '**/*/_synchronous-groq-js.mjs',
       ],
       thresholds: {

@@ -86,8 +86,9 @@ export function SanityApp({
 }: SanityAppProps): ReactElement {
   useEffect(() => {
     let timeout: NodeJS.Timeout | undefined
+    const primaryConfig = Array.isArray(config) ? config[0] : config
 
-    if (!isInIframe() && !isLocalUrl(window)) {
+    if (!isInIframe() && !isLocalUrl(window) && !primaryConfig?.studioMode?.enabled) {
       // If the app is not running in an iframe and is not a local url, redirect to core.
       timeout = setTimeout(() => {
         // eslint-disable-next-line no-console
@@ -96,7 +97,7 @@ export function SanityApp({
       }, 1000)
     }
     return () => clearTimeout(timeout)
-  }, [])
+  }, [config])
 
   return (
     <SDKProvider {...props} fallback={fallback} config={config}>

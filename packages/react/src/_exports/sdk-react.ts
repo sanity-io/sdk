@@ -4,6 +4,7 @@
 export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBoundary'
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
+export {ComlinkTokenRefreshProvider} from '../context/ComlinkTokenRefresh'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
 export {useAuthState} from '../hooks/auth/useAuthState'
 export {useAuthToken} from '../hooks/auth/useAuthToken'
@@ -52,6 +53,7 @@ export {
   type PaginatedDocumentsResponse,
   usePaginatedDocuments,
 } from '../hooks/paginatedDocuments/usePaginatedDocuments'
+export {usePresence} from '../hooks/presence/usePresence'
 export {
   useDocumentPreview,
   type useDocumentPreviewOptions,
@@ -67,6 +69,7 @@ export {type ProjectWithoutMembers, useProjects} from '../hooks/projects/useProj
 export {useQuery} from '../hooks/query/useQuery'
 export {useActiveReleases} from '../hooks/releases/useActiveReleases'
 export {usePerspective} from '../hooks/releases/usePerspective'
+export {type UserResult, useUser} from '../hooks/users/useUser'
 export {type UsersResult, useUsers} from '../hooks/users/useUsers'
 export {REACT_SDK_VERSION} from '../version'
 export {type DatasetsResponse, type SanityProjectMember} from '@sanity/client'

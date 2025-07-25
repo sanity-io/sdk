@@ -21,23 +21,31 @@ export interface useDocumentPreviewOptions extends DocumentHandle {
  * @category Types
  */
 export interface useDocumentPreviewResults {
-  /** The results of resolving the document’s preview values */
+  /** The results of inferring the document’s preview values */
   data: PreviewValue
-  /** True when preview values are being refreshed */
+  /** True when inferred preview values are being refreshed */
   isPending: boolean
 }
 
 /**
  * @public
  *
- * Returns the preview values of a document (specified via a `DocumentHandle`),
+ * Attempts to infer preview values of a document (specified via a `DocumentHandle`),
  * including the document’s `title`, `subtitle`, `media`, and `status`. These values are live and will update in realtime.
  * To reduce unnecessary network requests for resolving the preview values, an optional `ref` can be passed to the hook so that preview
  * resolution will only occur if the `ref` is intersecting the current viewport.
  *
+ * See remarks below for futher information.
+ *
+ * @remarks
+ * Values returned by this hook may not be as expected. It is currently unable to read preview values as defined in your schema;
+ * instead, it attempts to infer these preview values by checking against a basic set of potential fields on your document.
+ * We are anticipating being able to significantly improve this hook’s functionality and output in a future release.
+ * For now, we recommend using {@link useDocumentProjection} for rendering individual document fields (or projections of those fields).
+ *
  * @category Documents
- * @param options - The document handle for the document you want to resolve preview values for, and an optional ref
- * @returns The preview values for the given document and a boolean to indicate whether the resolution is pending
+ * @param options - The document handle for the document you want to infer preview values for, and an optional ref
+ * @returns The inferred values for the given document and a boolean to indicate whether the resolution is pending
  *
  * @example Combining with useDocuments to render a collection of document previews
  * ```
