@@ -1,4 +1,4 @@
-import {AuthStateType} from '@sanity/sdk'
+import {AuthStateType, type SanityConfig} from '@sanity/sdk'
 import {render, screen, waitFor} from '@testing-library/react'
 import React from 'react'
 import {type FallbackProps} from 'react-error-boundary'
@@ -8,6 +8,7 @@ import {ResourceProvider} from '../../context/ResourceProvider'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
+import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 import {AuthBoundary} from './AuthBoundary'
 
 // Mock hooks
@@ -21,6 +22,9 @@ vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
 }))
 vi.mock('../../hooks/auth/useLogOut', () => ({
   useLogOut: vi.fn(() => async () => {}),
+}))
+vi.mock('../../hooks/context/useSanityInstance', () => ({
+  useSanityInstance: vi.fn(),
 }))
 
 // Mock AuthError throwing scenario
@@ -105,7 +109,26 @@ describe('AuthBoundary', () => {
   const mockUseAuthState = vi.mocked(useAuthState)
   const mockUseLoginUrl = vi.mocked(useLoginUrl)
   const mockUseVerifyOrgProjects = vi.mocked(useVerifyOrgProjects)
+  const mockUseSanityInstance = vi.mocked(useSanityInstance)
   const testProjectIds = ['proj-test'] // Example project ID for tests
+
+  // Mock Sanity instance
+  const mockSanityInstance = {
+    instanceId: 'test-instance-id',
+    config: {
+      projectId: 'test-project',
+      dataset: 'test-dataset',
+    },
+    isDisposed: () => false,
+    dispose: () => {},
+    onDispose: () => () => {},
+    getParent: () => undefined,
+    createChild: (config: SanityConfig) => ({
+      ...mockSanityInstance,
+      config: {...mockSanityInstance.config, ...config},
+    }),
+    match: () => undefined,
+  }
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -116,6 +139,8 @@ describe('AuthBoundary', () => {
     mockUseLoginUrl.mockReturnValue('http://example.com/login')
     // Default mock for useVerifyOrgProjects - returns null (no error)
     mockUseVerifyOrgProjects.mockImplementation(() => null)
+    // Mock useSanityInstance to return our mock instance
+    mockUseSanityInstance.mockReturnValue(mockSanityInstance)
   })
 
   afterEach(() => {
@@ -145,9 +170,7 @@ describe('AuthBoundary', () => {
       isExchangingToken: false,
     })
     const {container} = render(
-      <ResourceProvider fallback={null}>
-        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
-      </ResourceProvider>,
+      <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>,
     )
 
     // The callback screen renders null check that it renders nothing
@@ -161,11 +184,7 @@ describe('AuthBoundary', () => {
       currentUser: null,
       token: 'exampleToken',
     })
-    render(
-      <ResourceProvider fallback={null}>
-        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
-      </ResourceProvider>,
-    )
+    render(<AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>)
 
     expect(screen.getByText('Protected Content')).toBeInTheDocument()
   })
@@ -175,11 +194,7 @@ describe('AuthBoundary', () => {
       type: AuthStateType.ERROR,
       error: new Error('test error'),
     })
-    render(
-      <ResourceProvider fallback={null}>
-        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
-      </ResourceProvider>,
-    )
+    render(<AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>)
 
     // The AuthBoundary should throw an AuthError internally
     // and then display the LoginError component as the fallback.
@@ -192,11 +207,7 @@ describe('AuthBoundary', () => {
   })
 
   it('renders children when logged in and org verification passes', () => {
-    render(
-      <ResourceProvider fallback={null}>
-        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
-      </ResourceProvider>,
-    )
+    render(<AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>)
     expect(screen.getByText('Protected Content')).toBeInTheDocument()
   })
 

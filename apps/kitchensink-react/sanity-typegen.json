@@ -1,14 +1,12 @@
 {
-  "schemas": [
+  "unstable_schemas": [
     {
       "schemaPath": "./schema.ppsg7ml5.test.json",
-      "projectId": "ppsg7ml5",
-      "dataset": "test"
+      "schemaId": "ppsg7ml5.test"
     },
     {
-      "schemaPath": "./schema.ezwd8xes.production.json",
-      "projectId": "ezwd8xes",
-      "dataset": "production"
+      "schemaPath": "./schema.d45jg133.production.json",
+      "schemaId": "d45jg133.production"
     }
   ],
   "overloadClientMethods": false

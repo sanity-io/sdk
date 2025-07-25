@@ -1,7 +1,7 @@
 import {type Action} from '@sanity/client'
 import {getPublishedId} from '@sanity/client/csm'
-import {type SanityDocument} from '@sanity/types'
-import {type SanityDocumentResult} from 'groq'
+import {jsonMatch} from '@sanity/json-match'
+import {type SanityDocument} from 'groq'
 import {type ExprNode} from 'groq-js'
 import {
   catchError,
@@ -37,7 +37,7 @@ import {type DocumentAction} from './actions'
 import {API_VERSION, INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
 import {type DocumentEvent, getDocumentEvents} from './events'
 import {listen, OutOfSyncError} from './listen'
-import {type JsonMatch, jsonMatch} from './patchOperations'
+import {type JsonMatch} from './patchOperations'
 import {calculatePermissions, createGrantsLookup, type DatasetAcl, type Grant} from './permissions'
 import {ActionError} from './processActions'
 import {
@@ -151,7 +151,7 @@ export function getDocumentState<
 >(
   instance: SanityInstance,
   options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
-): StateSource<SanityDocumentResult<TDocumentType, TDataset, TProjectId> | undefined | null>
+): StateSource<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`> | undefined | null>
 
 /** @beta */
 export function getDocumentState<
@@ -163,7 +163,7 @@ export function getDocumentState<
   instance: SanityInstance,
   options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
 ): StateSource<
-  JsonMatch<SanityDocumentResult<TDocumentType, TDataset, TProjectId>, TPath> | undefined
+  JsonMatch<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath> | undefined
 >
 
 /** @beta */
@@ -190,10 +190,14 @@ const _getDocumentState = bindActionByDataset(
       const draft = documentStates[draftId]?.local
       const published = documentStates[publishedId]?.local
 
+      // wait for draft and published to be loaded before returning a value
+      if (draft === undefined || published === undefined) return undefined
       const document = draft ?? published
-      if (document === undefined) return undefined
-      if (path) return jsonMatch(document, path).at(0)?.value
-      return document
+      if (!path) return document
+      const result = jsonMatch(document, path).next()
+      if (result.done) return undefined
+      const {value} = result.value
+      return value
     },
     onSubscribe: (context, options: DocumentOptions<string | undefined>) =>
       manageSubscriberIds(context, options.documentId),
@@ -208,7 +212,7 @@ export function resolveDocument<
 >(
   instance: SanityInstance,
   docHandle: DocumentHandle<TDocumentType, TDataset, TProjectId>,
-): Promise<SanityDocumentResult<TDocumentType, TDataset, TProjectId> | null>
+): Promise<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`> | null>
 /** @beta */
 export function resolveDocument<TData extends SanityDocument>(
   instance: SanityInstance,

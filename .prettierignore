@@ -5,3 +5,4 @@ pnpm-lock.yaml
 .cursor/**/*
 CHANGELOG.md
 **/CHANGELOG.md
+.env.example

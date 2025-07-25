@@ -1,11 +1,10 @@
 import {applyPatches, parsePatch} from '@sanity/diff-match-patch'
+import {getIndexForKey, jsonMatch, slicePath, stringifyPath} from '@sanity/json-match'
 import {
   type IndexTuple,
   type InsertPatch,
   isKeyedObject,
   isKeySegment,
-  type KeyedSegment,
-  type Path,
   type PathSegment,
 } from '@sanity/types'
 
@@ -113,243 +112,6 @@ type DeepGet<TValue, TPath extends readonly (string | number)[]> = TPath extends
  */
 export type JsonMatch<TDocument, TPath extends string> = DeepGet<TDocument, PathParts<TPath>>
 
-function parseBracketContent(content: string): PathSegment {
-  // 1) Range match:  ^(\d*):(\d*)$
-  //    - start or end can be empty (meaning "start" or "end" of array)
-  const rangeMatch = content.match(/^(\d*):(\d*)$/)
-  if (rangeMatch) {
-    const startStr = rangeMatch[1]
-    const endStr = rangeMatch[2]
-    const start: number | '' = startStr === '' ? '' : parseInt(startStr, 10)
-    const end: number | '' = endStr === '' ? '' : parseInt(endStr, 10)
-    return [start, end]
-  }
-
-  // 2) Keyed segment match:  ^_key==["'](.*)["']$
-  //    (We allow either double or single quotes for the value)
-  const keyedMatch = content.match(/^_key==["'](.+)["']$/)
-  if (keyedMatch) {
-    return {_key: keyedMatch[1]}
-  }
-
-  // 3) Single index (positive or negative)
-  const index = parseInt(content, 10)
-  if (!isNaN(index)) {
-    return index
-  }
-
-  throw new Error(`Invalid bracket content: "[${content}]"`)
-}
-
-function parseSegment(segment: string): PathSegment[] {
-  // Each "segment" can contain:
-  // - A leading property name (optional).
-  // - Followed by zero or more bracket expressions, e.g. foo[1][_key=="bar"][2:9].
-  //
-  // We'll collect these into an array of path segments.
-
-  const segments: PathSegment[] = []
-  let idx = 0
-
-  // Helper to push a string if it's not empty
-  function pushIfNotEmpty(text: string) {
-    if (text) {
-      segments.push(text)
-    }
-  }
-
-  while (idx < segment.length) {
-    // Look for the next '['
-    const openIndex = segment.indexOf('[', idx)
-    if (openIndex === -1) {
-      // No more brackets – whatever remains is a plain string key
-      const remaining = segment.slice(idx)
-      pushIfNotEmpty(remaining)
-      break
-    }
-
-    // Push text before this bracket (as a string key) if not empty
-    const before = segment.slice(idx, openIndex)
-    pushIfNotEmpty(before)
-
-    // Find the closing bracket
-    const closeIndex = segment.indexOf(']', openIndex)
-    if (closeIndex === -1) {
-      throw new Error(`Unmatched "[" in segment: "${segment}"`)
-    }
-
-    // Extract the bracket content
-    const bracketContent = segment.slice(openIndex + 1, closeIndex)
-    segments.push(parseBracketContent(bracketContent))
-
-    // Move past the bracket
-    idx = closeIndex + 1
-  }
-
-  return segments
-}
-
-export function parsePath(path: string): Path {
-  // We want to split on '.' outside of brackets. A simple approach is
-  // to track "are we in bracket or not?" while scanning.
-  const result: Path = []
-  let buffer = ''
-  let bracketDepth = 0
-
-  for (let i = 0; i < path.length; i++) {
-    const ch = path[i]
-    if (ch === '[') {
-      bracketDepth++
-      buffer += ch
-    } else if (ch === ']') {
-      bracketDepth--
-      buffer += ch
-    } else if (ch === '.' && bracketDepth === 0) {
-      // We hit a dot at the top level → this ends one segment
-      if (buffer) {
-        result.push(...parseSegment(buffer))
-        buffer = ''
-      }
-    } else {
-      buffer += ch
-    }
-  }
-
-  // If there's anything left in the buffer, parse it
-  if (buffer) {
-    result.push(...parseSegment(buffer))
-  }
-
-  return result
-}
-
-export function stringifyPath(path: Path): string {
-  let result = ''
-  for (let i = 0; i < path.length; i++) {
-    const segment = path[i]
-
-    if (typeof segment === 'string') {
-      // If not the first segment and the previous segment was
-      // not a bracket form, we add a dot
-      if (result) {
-        result += '.'
-      }
-      result += segment
-    } else if (typeof segment === 'number') {
-      // Single index
-      result += `[${segment}]`
-    } else if (Array.isArray(segment)) {
-      // Index tuple
-      const [start, end] = segment
-      const startStr = start === '' ? '' : String(start)
-      const endStr = end === '' ? '' : String(end)
-      result += `[${startStr}:${endStr}]`
-    } else {
-      // Keyed segment
-      // e.g. {_key: "someValue"} => [_key=="someValue"]
-      result += `[_key=="${segment._key}"]`
-    }
-  }
-  return result
-}
-
-type MatchEntry<T = unknown> = {
-  value: T
-  path: SingleValuePath
-}
-
-/**
- * A very simplified implementation of [JSONMatch][0] that only supports:
- * - descent e.g. `friend.name`
- * - array index e.g. `items[-1]`
- * - array matching with `_key` e.g. `items[_key=="dd9efe09"]`
- * - array matching with a range e.g. `items[4:]`
- *
- * E.g. `friends[_key=="dd9efe09"].address.zip`
- *
- * [0]: https://www.sanity.io/docs/json-match
- *
- * @beta
- */
-export function jsonMatch<TDocument, TPath extends string>(
-  input: TDocument,
-  path: TPath,
-): MatchEntry<JsonMatch<TDocument, TPath>>[]
-/** @beta */
-export function jsonMatch<TValue>(input: unknown, path: string): MatchEntry<TValue>[]
-/** @beta */
-export function jsonMatch(input: unknown, pathExpression: string): MatchEntry[] {
-  return matchRecursive(input, parsePath(pathExpression), [])
-}
-
-function matchRecursive(value: unknown, path: Path, currentPath: SingleValuePath): MatchEntry[] {
-  // If we've consumed the entire path, return the final match
-  if (path.length === 0) {
-    return [{value, path: currentPath}]
-  }
-
-  const [head, ...rest] = path
-
-  // 1) String segment => object property
-  if (typeof head === 'string') {
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      const obj = value as Record<string, unknown>
-      const nextValue = obj[head]
-      return matchRecursive(nextValue, rest, [...currentPath, head])
-    }
-    // If not an object with that property, no match
-    return []
-  }
-
-  // 2) Numeric segment => array index
-  if (typeof head === 'number') {
-    if (Array.isArray(value)) {
-      const nextValue = value.at(head)
-      return matchRecursive(nextValue, rest, [...currentPath, head])
-    }
-    // If not an array, no match
-    return []
-  }
-
-  // 3) Index tuple => multiple indices
-  if (Array.isArray(head)) {
-    // This is a range: [start, end]
-    if (!Array.isArray(value)) {
-      // If not an array, no match
-      return []
-    }
-
-    const [start, end] = head
-    // Convert empty strings '' to the start/end of the array
-    const startIndex = start === '' ? 0 : start
-    const endIndex = end === '' ? value.length : end
-
-    // We'll accumulate all matches from each index in the range
-    let results: MatchEntry[] = []
-
-    // Decide whether the range is exclusive or inclusive. The example in
-    // the doc says "array[1:9]" => element 1 through 9 (non-inclusive?).
-    // Typically, in slice terms, that is `array.slice(1, 9)` → includes
-    // indices 1..8. If that's your intention, do i < endIndex.
-    for (let i = startIndex; i < endIndex; i++) {
-      results = results.concat(matchRecursive(value[i], rest, [...currentPath, i]))
-    }
-
-    return results
-  }
-
-  // 4) Keyed segment => find index in array
-  //    e.g. {_key: 'foo'}
-  const keyed = head as KeyedSegment
-  const arrIndex = getIndexForKey(value, keyed._key)
-  if (arrIndex === undefined || !Array.isArray(value)) {
-    return []
-  }
-
-  const nextVal = value[arrIndex]
-  return matchRecursive(nextVal, rest, [...currentPath, arrIndex])
-}
-
 // this is a similar array key to the studio:
 // https://github.com/sanity-io/sanity/blob/v3.74.1/packages/sanity/src/core/form/inputs/arrays/ArrayOfObjectsInput/createProtoArrayValue.ts
 function generateArrayKey(length: number = 12): string {
@@ -431,7 +193,7 @@ export function set<R>(input: unknown, pathExpressionValues: Record<string, unkn
 export function set(input: unknown, pathExpressionValues: Record<string, unknown>): unknown {
   const result = Object.entries(pathExpressionValues)
     .flatMap(([pathExpression, replacementValue]) =>
-      jsonMatch(input, pathExpression).map((matchEntry) => ({
+      Array.from(jsonMatch(input, pathExpression)).map((matchEntry) => ({
         ...matchEntry,
         replacementValue,
       })),
@@ -463,7 +225,7 @@ export function setIfMissing(
 ): unknown {
   const result = Object.entries(pathExpressionValues)
     .flatMap(([pathExpression, replacementValue]) => {
-      return jsonMatch(input, pathExpression).map((matchEntry) => ({
+      return Array.from(jsonMatch(input, pathExpression)).map((matchEntry) => ({
         ...matchEntry,
         replacementValue,
       }))
@@ -491,14 +253,14 @@ export function setIfMissing(
 export function unset<R>(input: unknown, pathExpressions: string[]): R
 export function unset(input: unknown, pathExpressions: string[]): unknown {
   const result = pathExpressions
-    .flatMap((pathExpression) => jsonMatch(input, pathExpression))
+    .flatMap((pathExpression) => Array.from(jsonMatch(input, pathExpression)))
+    // ensure that we remove in the reverse order the paths were found in
+    // this is necessary for array unsets so the indexes don't change as we unset
+    .reverse()
     .reduce((acc, {path}) => unsetDeep(acc, path), input)
 
   return ensureArrayKeysDeep(result)
 }
-
-const operations = ['before', 'after', 'replace'] as const
-type Operation = (typeof operations)[number]
 
 /**
  * Given an input object, a path expression (inside the insert patch object), and an array of items,
@@ -579,105 +341,135 @@ type Operation = (typeof operations)[number]
  * ```
  */
 export function insert<R>(input: unknown, insertPatch: InsertPatch): R
-export function insert(input: unknown, insertPatch: InsertPatch): unknown {
-  const operation = operations.find((op) => op in insertPatch)
-  if (!operation) return input
+export function insert(input: unknown, {items, ...insertPatch}: InsertPatch): unknown {
+  let operation
+  let pathExpression
 
-  const {items} = insertPatch
-  const pathExpression = (insertPatch as {[K in Operation]?: string} & {items: unknown})[operation]
+  // behavior observed from content-lake when inserting:
+  // 1. if the operation is before, out of all the matches, it will use the
+  //    insert the items before the first match that appears in the array
+  // 2. if the operation is after, it will insert the items after the first
+  //    match that appears in the array
+  // 3. if the operation is replace, then insert the items before the first
+  //    match and then delete the rest
+  if ('before' in insertPatch) {
+    operation = 'before' as const
+    pathExpression = insertPatch.before
+  } else if ('after' in insertPatch) {
+    operation = 'after' as const
+    pathExpression = insertPatch.after
+  } else if ('replace' in insertPatch) {
+    operation = 'replace' as const
+    pathExpression = insertPatch.replace
+  }
+  if (!operation) return input
   if (typeof pathExpression !== 'string') return input
 
-  // Helper to normalize a matched index given the parent array's length.
-  function normalizeIndex(index: number, parentLength: number): number {
+  // in order to do an insert patch, you need to provide at least one path segment
+  if (!pathExpression.length) return input
+
+  const arrayPath = slicePath(pathExpression, 0, -1)
+  const positionPath = slicePath(pathExpression, -1)
+
+  let result = input
+
+  for (const {path, value} of jsonMatch(input, arrayPath)) {
+    if (!Array.isArray(value)) continue
+    let arr = value
+
     switch (operation) {
-      case 'before':
-        // A negative index means "append" (i.e. insert before a hypothetical element
-        // beyond the end of the array).
-        return index < 0 ? parentLength : index
-      case 'after':
-        // For "after", if the matched index is negative, we treat it as "prepend":
-        // by convention, we convert it to -1 so that later adding 1 produces 0.
-        return index < 0 ? -1 : index
-      default: // default to 'replace'
-        // For replace, convert a negative index to the corresponding positive one.
-        return index < 0 ? parentLength + index : index
-    }
-  }
+      case 'replace': {
+        const indexesToRemove = new Set<number>()
+        let position = Infinity
 
-  // Group the matched array entries by their parent array.
-  interface GroupEntry {
-    array: unknown[]
-    pathToArray: SingleValuePath
-    indexes: number[]
-  }
-  const grouped = new Map<unknown, GroupEntry>()
-  jsonMatch(input, pathExpression)
-    .map(({path}) => {
-      const segment = path[path.length - 1]
-      let index: number | undefined
-      if (isKeySegment(segment)) {
-        index = getIndexForKey(input, segment._key)
-      } else if (typeof segment === 'number') {
-        index = segment
+        for (const itemMatch of jsonMatch(arr, positionPath)) {
+          // there should only be one path segment for an insert patch, invalid otherwise
+          if (itemMatch.path.length !== 1) continue
+          const [segment] = itemMatch.path
+          if (typeof segment === 'string') continue
+
+          let index
+
+          if (typeof segment === 'number') index = segment
+          if (typeof index === 'number' && index < 0) index = arr.length + index
+          if (isKeySegment(segment)) index = getIndexForKey(arr, segment._key)
+          if (typeof index !== 'number') continue
+          if (index < 0) index = arr.length + index
+
+          indexesToRemove.add(index)
+          if (index < position) position = index
+        }
+
+        if (position === Infinity) continue
+
+        // remove all other indexes
+        arr = arr
+          .map((item, index) => ({item, index}))
+          .filter(({index}) => !indexesToRemove.has(index))
+          .map(({item}) => item)
+
+        // insert at the min index
+        arr = [...arr.slice(0, position), ...items, ...arr.slice(position, arr.length)]
+
+        break
       }
-      if (typeof index !== 'number') return null
-
-      const parentPath = path.slice(0, path.length - 1)
-      const parent = getDeep(input, parentPath)
-      if (!Array.isArray(parent)) return null
-
-      const normalizedIndex = normalizeIndex(index, parent.length)
-      return {parent, parentPath, normalizedIndex}
-    })
-    .filter(isNonNullable)
-    .forEach(({parent, parentPath, normalizedIndex}) => {
-      if (grouped.has(parent)) {
-        grouped.get(parent)!.indexes.push(normalizedIndex)
-      } else {
-        grouped.set(parent, {array: parent, pathToArray: parentPath, indexes: [normalizedIndex]})
-      }
-    })
-
-  // Sort the indexes for each grouped entry.
-  const groupEntries = Array.from(grouped.values()).map((entry) => ({
-    ...entry,
-    indexes: entry.indexes.sort((a, b) => a - b),
-  }))
-
-  // For each group, update the parent array using setDeep.
-  const result = groupEntries.reduce<unknown>((acc, {array, indexes, pathToArray}) => {
-    switch (operation) {
       case 'before': {
-        // Insert items before the first matched index.
-        const firstIndex = indexes[0]
-        return setDeep(acc, pathToArray, [
-          ...array.slice(0, firstIndex),
-          ...items,
-          ...array.slice(firstIndex),
-        ])
+        let position = Infinity
+
+        for (const itemMatch of jsonMatch(arr, positionPath)) {
+          if (itemMatch.path.length !== 1) continue
+          const [segment] = itemMatch.path
+
+          if (typeof segment === 'string') continue
+
+          let index
+
+          if (typeof segment === 'number') index = segment
+          if (typeof index === 'number' && index < 0) index = arr.length + index
+          if (isKeySegment(segment)) index = getIndexForKey(arr, segment._key)
+          if (typeof index !== 'number') continue
+          if (index < 0) index = arr.length - index
+          if (index < position) position = index
+        }
+
+        if (position === Infinity) continue
+
+        arr = [...arr.slice(0, position), ...items, ...arr.slice(position, arr.length)]
+
+        break
       }
       case 'after': {
-        // Insert items after the last matched index.
-        const lastIndex = indexes[indexes.length - 1] + 1
-        return setDeep(acc, pathToArray, [
-          ...array.slice(0, lastIndex),
-          ...items,
-          ...array.slice(lastIndex),
-        ])
+        let position = -Infinity
+
+        for (const itemMatch of jsonMatch(arr, positionPath)) {
+          if (itemMatch.path.length !== 1) continue
+          const [segment] = itemMatch.path
+
+          if (typeof segment === 'string') continue
+
+          let index
+
+          if (typeof segment === 'number') index = segment
+          if (typeof index === 'number' && index < 0) index = arr.length + index
+          if (isKeySegment(segment)) index = getIndexForKey(arr, segment._key)
+          if (typeof index !== 'number') continue
+          if (index > position) position = index
+        }
+
+        if (position === -Infinity) continue
+
+        arr = [...arr.slice(0, position + 1), ...items, ...arr.slice(position + 1, arr.length)]
+
+        break
       }
-      // default to 'replace' behavior
+
       default: {
-        // Remove all matched items then insert the new items at the first match.
-        const firstIndex = indexes[0]
-        const indexSet = new Set(indexes)
-        return setDeep(acc, pathToArray, [
-          ...array.slice(0, firstIndex),
-          ...items,
-          ...array.slice(firstIndex).filter((_, idx) => !indexSet.has(idx + firstIndex)),
-        ])
+        continue
       }
     }
-  }, input)
+
+    result = setDeep(result, path, arr)
+  }
 
   return ensureArrayKeysDeep(result)
 }
@@ -700,7 +492,7 @@ export function inc<R>(input: unknown, pathExpressionValues: Record<string, numb
 export function inc(input: unknown, pathExpressionValues: Record<string, number>): unknown {
   const result = Object.entries(pathExpressionValues)
     .flatMap(([pathExpression, valueToAdd]) =>
-      jsonMatch(input, pathExpression).map((matchEntry) => ({
+      Array.from(jsonMatch(input, pathExpression)).map((matchEntry) => ({
         ...matchEntry,
         valueToAdd,
       })),
@@ -764,7 +556,9 @@ export function diffMatchPatch(
   pathExpressionValues: Record<string, string>,
 ): unknown {
   const result = Object.entries(pathExpressionValues)
-    .flatMap(([pathExpression, dmp]) => jsonMatch(input, pathExpression).map((m) => ({...m, dmp})))
+    .flatMap(([pathExpression, dmp]) =>
+      Array.from(jsonMatch(input, pathExpression)).map((m) => ({...m, dmp})),
+    )
     .filter((i) => i.value !== undefined)
     .map(({path, value, dmp}) => {
       if (typeof value !== 'string') {
@@ -805,25 +599,6 @@ export function ifRevisionID(input: unknown, revisionId: string): unknown {
   }
 
   return input
-}
-
-function isNonNullable<T>(t: T): t is NonNullable<T> {
-  return t !== null && t !== undefined
-}
-
-const indexCache = new WeakMap<KeyedSegment[], Record<string, number | undefined>>()
-export function getIndexForKey(input: unknown, key: string): number | undefined {
-  if (!Array.isArray(input)) return undefined
-  const cached = indexCache.get(input)
-  if (cached) return cached[key]
-
-  const lookup = input.reduce<Record<string, number | undefined>>((acc, next, index) => {
-    if (typeof next?._key === 'string') acc[next._key] = index
-    return acc
-  }, {})
-
-  indexCache.set(input, lookup)
-  return lookup[key]
 }
 
 /**
@@ -894,7 +669,7 @@ export function setDeep(input: unknown, path: SingleValuePath, value: unknown): 
   if (Array.isArray(input)) {
     let index: number | undefined
     if (isKeySegment(currentSegment)) {
-      index = getIndexForKey(input, currentSegment._key)
+      index = getIndexForKey(input, currentSegment._key) ?? input.length
     } else if (typeof currentSegment === 'number') {
       // Support negative indexes by computing the proper positive index.
       index = currentSegment < 0 ? input.length + currentSegment : currentSegment

@@ -96,7 +96,7 @@ describe('processProjectionQuery', () => {
       data: {
         title: 'Hello',
         description: 'World',
-        status: {
+        _status: {
           lastEditedPublishedAt: '2021-01-01',
         },
       },
@@ -127,7 +127,7 @@ describe('processProjectionQuery', () => {
       data: {
         title: 'Hello',
         description: 'World',
-        status: {
+        _status: {
           lastEditedPublishedAt: '2021-01-01',
         },
       },
@@ -163,7 +163,7 @@ describe('processProjectionQuery', () => {
     expect(processed['doc1']?.[testProjectionHash]).toEqual({
       data: {
         title: 'Draft',
-        status: {
+        _status: {
           lastEditedDraftAt: '2021-01-02',
           lastEditedPublishedAt: '2021-01-01',
         },
@@ -193,7 +193,7 @@ describe('processProjectionQuery', () => {
     expect(processed['doc1']?.[testProjectionHash]).toEqual({
       data: {
         title: 'Published',
-        status: {
+        _status: {
           lastEditedPublishedAt: '2021-01-01',
         },
       },
@@ -231,7 +231,7 @@ describe('processProjectionQuery', () => {
     expect(processed['doc1']?.[hash1]).toEqual({
       data: {
         title: 'Published Title',
-        status: {
+        _status: {
           lastEditedPublishedAt: '2021-01-01',
         },
       },
@@ -240,7 +240,7 @@ describe('processProjectionQuery', () => {
     expect(processed['doc1']?.[hash2]).toEqual({
       data: {
         description: 'Published Desc',
-        status: {
+        _status: {
           lastEditedPublishedAt: '2021-01-01',
         },
       },

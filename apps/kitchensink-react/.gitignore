@@ -1,2 +1,5 @@
 /schema.*.json
 /sanity.types.ts
+.sanity
+e2e/test-results
+e2e/test-report

@@ -11,12 +11,14 @@ import {DocumentProjectionRoute} from './DocumentCollection/DocumentProjectionRo
 import {MultiResourceRoute} from './DocumentCollection/MultiResourceRoute'
 import {OrgDocumentExplorerRoute} from './DocumentCollection/OrgDocumentExplorerRoute'
 import {SearchRoute} from './DocumentCollection/SearchRoute'
+import {PresenceRoute} from './Presence/PresenceRoute'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProtectedRoute} from './ProtectedRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import ExperimentalResourceClientRoute from './routes/ExperimentalResourceClientRoute'
-import {ReleasesRoute} from './routes/ReleasesRoute'
+import {ReleasesRoute} from './routes/releases/ReleasesRoute'
+import {UserDetailRoute} from './routes/UserDetailRoute'
 import {UsersRoute} from './routes/UsersRoute'
 
 const documentCollectionRoutes = [
@@ -64,6 +66,10 @@ const documentCollectionRoutes = [
     path: 'experimental-resource-client',
     element: <ExperimentalResourceClientRoute />,
   },
+  {
+    path: 'presence',
+    element: <PresenceRoute />,
+  },
 ]
 
 const dashboardInteractionRoutes = [
@@ -105,6 +111,7 @@ export function AppRoutes(): JSX.Element {
           {documentCollectionRoutes.map((route) => (
             <Route key={route.path} path={route.path} element={route.element} />
           ))}
+          <Route path="users/:userId" element={<UserDetailRoute />} />
           <Route path="comlink-demo" element={<ParentApp />} />
           <Route path="releases" element={<ReleasesRoute />} />
         </Route>

@@ -1,14 +1,38 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "bootstrap-sha": "35d1e6f8d26725ee0088991c5e301745ee88dea8",
+  "bootstrap-sha": "a077f3907000535b74f6cebb32585d857776d029",
   "always-link-local": true,
   "changelog-sections": [
-    {"type": "feat", "section": "Features", "hidden": false},
-    {"type": "fix", "section": "Bug Fixes", "hidden": false},
-    {"type": "perf", "section": "Performance Improvements", "hidden": false},
-    {"type": "revert", "section": "Reverts", "hidden": false},
-    {"type": "docs", "section": "Documentation", "hidden": false},
-    {"type": "chore", "section": "Miscellaneous", "hidden": true}
+    {
+      "type": "feat",
+      "section": "Features",
+      "hidden": false
+    },
+    {
+      "type": "fix",
+      "section": "Bug Fixes",
+      "hidden": false
+    },
+    {
+      "type": "perf",
+      "section": "Performance Improvements",
+      "hidden": false
+    },
+    {
+      "type": "revert",
+      "section": "Reverts",
+      "hidden": false
+    },
+    {
+      "type": "docs",
+      "section": "Documentation",
+      "hidden": false
+    },
+    {
+      "type": "chore",
+      "section": "Miscellaneous",
+      "hidden": true
+    }
   ],
   "plugins": [
     {
@@ -27,14 +51,14 @@
       "release-type": "node",
       "bump-patch-for-minor-pre-major": true,
       "bump-minor-pre-major": true,
-      "versioning": "always-bump-patch"
+      "versioning": "default"
     },
     "packages/core": {
       "component": "sdk",
       "release-type": "node",
       "bump-patch-for-minor-pre-major": true,
       "bump-minor-pre-major": true,
-      "versioning": "always-bump-patch"
+      "versioning": "default"
     }
   }
 }

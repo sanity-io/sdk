@@ -9,7 +9,7 @@ import {useQuery} from '../query/useQuery'
 /**
  * Configuration options for the usePaginatedDocuments hook
  *
- * @beta
+ * @public
  * @category Types
  */
 export interface PaginatedDocumentsOptions<
@@ -39,7 +39,7 @@ export interface PaginatedDocumentsOptions<
 /**
  * Return value from the usePaginatedDocuments hook
  *
- * @beta
+ * @public
  * @category Types
  */
 export interface PaginatedDocumentsResponse<
@@ -130,7 +130,7 @@ export interface PaginatedDocumentsResponse<
  * with support for traditional paginated interfaces. The number of document handles returned per page is customizable,
  * while page navigation is handled via the included navigation functions.
  *
- * @beta
+ * @public
  * @category Documents
  * @param options - Configuration options for the paginated list
  * @returns An object containing the list of document handles, pagination details, and functions to navigate between pages
@@ -148,14 +148,14 @@ export interface PaginatedDocumentsResponse<
  *   type DatasetHandle,
  *   type DocumentHandle,
  *   type SortOrderingItem,
- *   useProjection
+ *   useDocumentProjection
  * } from '@sanity/sdk-react'
  * import {Suspense} from 'react'
  * import {ErrorBoundary} from 'react-error-boundary'
  *
  * // Define a component to display a single document row
  * function MyTableRowComponent({doc}: {doc: DocumentHandle}) {
- *   const {data} = useProjection<{title?: string}>({
+ *   const {data} = useDocumentProjection<{title?: string}>({
  *     ...doc,
  *     projection: '{title}',
  *   })

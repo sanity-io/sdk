@@ -1,5 +1,5 @@
 import {type SanityClient} from '@sanity/client'
-import {type SanityDocumentResult} from 'groq'
+import {type SanityDocument} from 'groq'
 import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
 
 import {bindActionByDataset} from '../store/createActionBinder'
@@ -11,7 +11,7 @@ import {type DocumentSet} from './processMutations'
 import {type AppliedTransaction, type QueuedTransaction, queueTransaction} from './reducers'
 
 /** @beta */
-export interface ActionsResult<TDocument extends SanityDocumentResult = SanityDocumentResult> {
+export interface ActionsResult<TDocument extends SanityDocument = SanityDocument> {
   transactionId: string
   documents: DocumentSet<TDocument>
   previous: DocumentSet<TDocument>
@@ -45,7 +45,7 @@ export function applyDocumentActions<
     | DocumentAction<TDocumentType, TDataset, TProjectId>
     | DocumentAction<TDocumentType, TDataset, TProjectId>[],
   options?: ApplyDocumentActionsOptions,
-): Promise<ActionsResult<SanityDocumentResult<TDocumentType, TDataset, TProjectId>>>
+): Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 /** @beta */
 export function applyDocumentActions(
   instance: SanityInstance,

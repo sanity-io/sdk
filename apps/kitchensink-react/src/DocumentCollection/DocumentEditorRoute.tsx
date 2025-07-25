@@ -4,6 +4,7 @@ import {
   createDocumentHandle,
   deleteDocument,
   discardDocument,
+  type DocumentHandle,
   editDocument,
   publishDocument,
   unpublishDocument,
@@ -11,6 +12,7 @@ import {
   useDocument,
   useDocumentEvent,
   useDocumentPermissions,
+  useDocuments,
   useDocumentSyncStatus,
   useEditDocument,
 } from '@sanity/sdk-react'
@@ -18,14 +20,9 @@ import {Box, Button, TextInput, Tooltip} from '@sanity/ui'
 import {JsonData, JsonEditor} from 'json-edit-react'
 import {type JSX, useState} from 'react'
 
-const docHandle = createDocumentHandle({
-  documentType: 'author',
-  documentId: 'db06bc9e-4608-465a-9551-a10cef478037',
-  projectId: 'ppsg7ml5',
-  dataset: 'test',
-})
+import {devConfigs, e2eConfigs} from '../sanityConfigs'
 
-function Editor() {
+function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   useDocumentEvent({...docHandle, onEvent: (e) => console.log(e)})
   const synced = useDocumentSyncStatus(docHandle)
   const apply = useApplyDocumentActions()
@@ -37,12 +34,10 @@ function Editor() {
   const canUnpublish = useDocumentPermissions(unpublishDocument(docHandle))
   const canDiscard = useDocumentPermissions(discardDocument(docHandle))
 
-  const name = useDocument({...docHandle, path: 'name'}) ?? ''
+  const {data: name = ''} = useDocument({...docHandle, path: 'name'})
   const setName = useEditDocument({...docHandle, path: 'name'})
 
-  const [value, setValue] = useState('')
-
-  const document = useDocument({...docHandle})
+  const {data: document} = useDocument(docHandle)
   const setDocument = useEditDocument(docHandle)
 
   return (
@@ -108,19 +103,71 @@ function Editor() {
 
       <Box paddingY={5}>
         <TextInput
-          label="Value"
-          type="text"
-          value={value}
-          onChange={(e) => setValue(e.currentTarget.value)}
-        />
-        <TextInput
           label="Name"
           type="text"
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
+          data-testid="name-input"
         />
-        <pre>{JSON.stringify(document, null, 2)}</pre>
+        <pre data-testid="document-content">{JSON.stringify(document, null, 2)}</pre>
       </Box>
+    </Box>
+  )
+}
+
+function Editor() {
+  const {data: documents} = useDocuments({
+    documentType: 'author',
+    batchSize: 1,
+  })
+
+  const [docHandle, setDocHandle] = useState<DocumentHandle<'author'> | null>(documents[0] ?? null)
+  const [newDocumentId, setNewDocumentId] = useState<string>('')
+  const {projectId, dataset} = import.meta.env['VITE_IS_E2E'] ? e2eConfigs[0] : devConfigs[0]
+
+  const handleLoadDocument = () => {
+    if (newDocumentId) {
+      setDocHandle(
+        createDocumentHandle({
+          documentType: 'author',
+          documentId: newDocumentId,
+          projectId,
+          dataset,
+        }),
+      )
+    }
+  }
+
+  const updateDocHandle = (newValue: string) => {
+    setNewDocumentId(newValue)
+  }
+
+  if (!documents.length) {
+    return <Box padding={4}>No documents found</Box>
+  }
+
+  return (
+    <Box padding={4}>
+      <Box paddingY={4}>
+        <Box style={{display: 'flex', gap: '8px', alignItems: 'flex-end'}}>
+          <Box style={{flex: 1}}>
+            <TextInput
+              label="Document ID"
+              type="text"
+              value={newDocumentId || docHandle?.documentId || ''}
+              placeholder="Enter document ID"
+              data-testid="document-id-input"
+              onChange={(e) => updateDocHandle(e.currentTarget.value)}
+            />
+          </Box>
+          <Button
+            text="Load"
+            onClick={() => handleLoadDocument()}
+            data-testid="load-document-button"
+          />
+        </Box>
+      </Box>
+      {!docHandle ? <Box padding={4}>Loading...</Box> : <DocumentEditor docHandle={docHandle} />}
     </Box>
   )
 }

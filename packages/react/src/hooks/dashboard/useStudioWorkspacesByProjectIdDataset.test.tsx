@@ -1,8 +1,7 @@
-import {type Message, type Status} from '@sanity/comlink'
 import {renderHook, waitFor} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
-import {useWindowConnection, type WindowConnection} from '../comlink/useWindowConnection'
+import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useStudioWorkspacesByProjectIdDataset} from './useStudioWorkspacesByProjectIdDataset'
 
 vi.mock('../comlink/useWindowConnection', () => ({
@@ -54,48 +53,14 @@ describe('useStudioWorkspacesByResourceId', () => {
     vi.clearAllMocks()
   })
 
-  it('should return empty workspaces and connected=false when not connected', async () => {
-    // Create a mock that captures the onStatus callback
-    let capturedOnStatus: ((status: Status) => void) | undefined
-
-    vi.mocked(useWindowConnection).mockImplementation(({onStatus}) => {
-      capturedOnStatus = onStatus
-
-      return {
-        fetch: undefined,
-        sendMessage: vi.fn(),
-      } as unknown as WindowConnection<Message>
-    })
-
-    const {result} = renderHook(() => useStudioWorkspacesByProjectIdDataset())
-
-    // Call onStatus with 'idle' to simulate not connected
-    if (capturedOnStatus) capturedOnStatus('idle')
-
-    expect(result.current).toEqual({
-      workspacesByProjectIdAndDataset: {},
-      error: null,
-      isConnected: false,
-    })
-  })
-
   it('should process workspaces into lookup by projectId:dataset', async () => {
     const mockFetch = vi.fn().mockResolvedValue(mockWorkspaceData)
-    let capturedOnStatus: ((status: Status) => void) | undefined
-
-    vi.mocked(useWindowConnection).mockImplementation(({onStatus}) => {
-      capturedOnStatus = onStatus
-
-      return {
-        fetch: mockFetch,
-        sendMessage: vi.fn(),
-      } as unknown as WindowConnection<Message>
+    vi.mocked(useWindowConnection).mockReturnValue({
+      fetch: mockFetch,
+      sendMessage: vi.fn(),
     })
 
     const {result} = renderHook(() => useStudioWorkspacesByProjectIdDataset())
-
-    // Call onStatus with 'connected' to simulate connected state
-    if (capturedOnStatus) capturedOnStatus('connected')
 
     await waitFor(() => {
       expect(result.current.workspacesByProjectIdAndDataset).toEqual({
@@ -138,38 +103,23 @@ describe('useStudioWorkspacesByResourceId', () => {
         ],
       })
       expect(result.current.error).toBeNull()
-      expect(result.current.isConnected).toBe(true)
     })
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      'dashboard/v1/bridge/context',
-      undefined,
-      expect.any(Object),
-    )
+    expect(mockFetch).toHaveBeenCalledWith('dashboard/v1/context', undefined, expect.any(Object))
   })
 
   it('should handle fetch errors', async () => {
     const mockFetch = vi.fn().mockRejectedValue(new Error('Failed to fetch'))
-    let capturedOnStatus: ((status: Status) => void) | undefined
-
-    vi.mocked(useWindowConnection).mockImplementation(({onStatus}) => {
-      capturedOnStatus = onStatus
-
-      return {
-        fetch: mockFetch,
-        sendMessage: vi.fn(),
-      } as unknown as WindowConnection<Message>
+    vi.mocked(useWindowConnection).mockReturnValue({
+      fetch: mockFetch,
+      sendMessage: vi.fn(),
     })
 
     const {result} = renderHook(() => useStudioWorkspacesByProjectIdDataset())
 
-    // Call onStatus with 'connected' to simulate connected state
-    if (capturedOnStatus) capturedOnStatus('connected')
-
     await waitFor(() => {
       expect(result.current.workspacesByProjectIdAndDataset).toEqual({})
       expect(result.current.error).toBe('Failed to fetch workspaces')
-      expect(result.current.isConnected).toBe(true)
     })
   })
 
@@ -177,26 +127,16 @@ describe('useStudioWorkspacesByResourceId', () => {
     const abortError = new Error('Aborted')
     abortError.name = 'AbortError'
     const mockFetch = vi.fn().mockRejectedValue(abortError)
-    let capturedOnStatus: ((status: Status) => void) | undefined
-
-    vi.mocked(useWindowConnection).mockImplementation(({onStatus}) => {
-      capturedOnStatus = onStatus
-
-      return {
-        fetch: mockFetch,
-        sendMessage: vi.fn(),
-      } as unknown as WindowConnection<Message>
+    vi.mocked(useWindowConnection).mockReturnValue({
+      fetch: mockFetch,
+      sendMessage: vi.fn(),
     })
 
     const {result} = renderHook(() => useStudioWorkspacesByProjectIdDataset())
 
-    // Call onStatus with 'connected' to simulate connected state
-    if (capturedOnStatus) capturedOnStatus('connected')
-
     await waitFor(() => {
       expect(result.current.workspacesByProjectIdAndDataset).toEqual({})
       expect(result.current.error).toBeNull()
-      expect(result.current.isConnected).toBe(true)
     })
   })
 
@@ -248,23 +188,13 @@ describe('useStudioWorkspacesByResourceId', () => {
         ],
       },
     }
-
     const mockFetch = vi.fn().mockResolvedValue(mockDataWithMixedResources)
-    let capturedOnStatus: ((status: Status) => void) | undefined
-
-    vi.mocked(useWindowConnection).mockImplementation(({onStatus}) => {
-      capturedOnStatus = onStatus
-
-      return {
-        fetch: mockFetch,
-        sendMessage: vi.fn(),
-      } as unknown as WindowConnection<Message>
+    vi.mocked(useWindowConnection).mockReturnValue({
+      fetch: mockFetch,
+      sendMessage: vi.fn(),
     })
 
     const {result} = renderHook(() => useStudioWorkspacesByProjectIdDataset())
-
-    // Call onStatus with 'connected' to simulate connected state
-    if (capturedOnStatus) capturedOnStatus('connected')
 
     await waitFor(() => {
       // Should only include the studio resource with valid projectId and dataset
@@ -285,7 +215,6 @@ describe('useStudioWorkspacesByResourceId', () => {
       ).toEqual(['studio-no-project', 'studio-no-dataset'])
 
       expect(result.current.error).toBeNull()
-      expect(result.current.isConnected).toBe(true)
     })
   })
 })

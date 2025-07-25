@@ -12,7 +12,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
 
 // Overload 1: Inferred Type (using Typegen)
 /**
- * @beta
+ * @public
  * Executes a GROQ query, inferring the result type from the query string and options.
  * Leverages Sanity Typegen if configured for enhanced type safety.
  *
@@ -74,14 +74,14 @@ export function useQuery<
   options: QueryOptions<TQuery, TDataset, TProjectId>,
 ): {
   /** The query result, typed based on the GROQ query string */
-  data: SanityQueryResult<TQuery, TDataset, TProjectId>
+  data: SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>
   /** True if a query transition is in progress */
   isPending: boolean
 }
 
 // Overload 2: Explicit Type Provided
 /**
- * @beta
+ * @public
  * Executes a GROQ query with an explicitly provided result type `TData`.
  *
  * @param options - Configuration for the query, including `query`, optional `params`, `projectId`, `dataset`, etc.
@@ -116,7 +116,7 @@ export function useQuery<TData>(options: QueryOptions): {
 }
 
 /**
- * @beta
+ * @public
  * Fetches data and subscribes to real-time updates using a GROQ query.
  *
  * @remarks
@@ -182,7 +182,7 @@ export function useQuery(options: QueryOptions): {data: unknown; isPending: bool
     //    the captured signal remains unchanged for this suspended render.
     // Thus, the promise thrown here uses a stable abort signal, ensuring correct behavior.
     const currentSignal = ref.current.signal
-    // eslint-disable-next-line react-compiler/react-compiler
+
     throw resolveQuery(instance, {...deferred, signal: currentSignal})
   }
 

@@ -4,7 +4,7 @@ import {
   type ApplyDocumentActionsOptions,
   type DocumentAction,
 } from '@sanity/sdk'
-import {type SanityDocumentResult} from 'groq'
+import {type SanityDocument} from 'groq'
 
 import {createCallbackHook} from '../helpers/createCallbackHook'
 // this import is used in an `{@link useEditDocument}`
@@ -12,7 +12,7 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
 import type {useEditDocument} from './useEditDocument'
 
 /**
- * @beta
+ * @public
  */
 interface UseApplyDocumentActions {
   (): <
@@ -24,11 +24,11 @@ interface UseApplyDocumentActions {
       | DocumentAction<TDocumentType, TDataset, TProjectId>
       | DocumentAction<TDocumentType, TDataset, TProjectId>[],
     options?: ApplyDocumentActionsOptions,
-  ) => Promise<ActionsResult<SanityDocumentResult<TDocumentType, TDataset, TProjectId>>>
+  ) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 }
 
 /**
- * @beta
+ * @public
  *
  * Provides a stable callback function for applying one or more document actions.
  *

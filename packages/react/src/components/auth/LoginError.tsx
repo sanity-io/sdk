@@ -19,7 +19,15 @@ export type LoginErrorProps = FallbackProps
  * @alpha
  */
 export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.ReactNode {
-  if (!(error instanceof AuthError || error instanceof ConfigurationError)) throw error
+  if (
+    !(
+      error instanceof AuthError ||
+      error instanceof ConfigurationError ||
+      error instanceof ClientError
+    )
+  )
+    throw error
+
   const logout = useLogOut()
   const authState = useAuthState()
 
@@ -33,11 +41,11 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
   }, [logout, resetErrorBoundary])
 
   useEffect(() => {
-    if (authState.type === AuthStateType.ERROR && authState.error instanceof ClientError) {
-      if (authState.error.statusCode === 401) {
+    if (error instanceof ClientError) {
+      if (error.statusCode === 401) {
         handleRetry()
-      } else if (authState.error.statusCode === 404) {
-        const errorMessage = authState.error.response.body.message || ''
+      } else if (error.statusCode === 404) {
+        const errorMessage = error.response.body.message || ''
         if (errorMessage.startsWith('Session with sid') && errorMessage.endsWith('not found')) {
           setAuthErrorMessage('The session ID is invalid or expired.')
         } else {

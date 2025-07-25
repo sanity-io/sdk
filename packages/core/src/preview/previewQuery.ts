@@ -118,12 +118,12 @@ export function processPreviewQuery({
           media: normalizeMedia(result.media, projectId, dataset),
         }
 
-        const status: PreviewValue['status'] = {
+        const _status: PreviewValue['_status'] = {
           ...(draftResult?._updatedAt && {lastEditedDraftAt: draftResult._updatedAt}),
           ...(publishedResult?._updatedAt && {lastEditedPublishedAt: publishedResult._updatedAt}),
         }
 
-        return [id, {data: {...preview, status}, isPending: false}]
+        return [id, {data: {...preview, _status}, isPending: false}]
       } catch (e) {
         // TODO: replace this with bubbling the error
         // eslint-disable-next-line no-console

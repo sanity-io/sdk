@@ -12,7 +12,7 @@ const baseConfig = {
         config: 'tsconfig.tsdoc.json',
       },
       // Knip doesn't support pnpm version
-      ignoreBinaries: ['version', 'sed'],
+      ignoreBinaries: ['version', 'sed', 'open'],
       entry: ['package.config.ts', 'vitest.config.mts'],
     },
     'scripts/*': {
@@ -56,6 +56,24 @@ const baseConfig = {
       entry: ['package.bundle.ts'],
       ignoreDependencies: ['@sanity/browserslist-config', 'react-compiler-runtime'],
     },
+    'packages/@repo/e2e': {
+      typescript: {
+        config: 'tsconfig.json',
+      },
+      project,
+      entry: ['src/index.ts', 'src/setup/**/*.ts', 'src/teardown/**/*.ts'],
+      ignoreDependencies: ['@repo/tsconfig'],
+    },
+    // TODO: Remove this once we have presence fully implemented in the SDK
+    'packages/core': {
+      typescript: {
+        config: 'tsconfig.settings.json',
+      },
+      project,
+      entry: ['package.bundle.ts'],
+      ignore: ['src/presence/bifurTransport.ts', 'src/presence/types.ts'],
+      ignoreDependencies: ['@sanity/bifur-client', '@sanity/browserslist-config'],
+    },
   },
 } satisfies KnipConfig
 
@@ -63,6 +81,7 @@ export const addBundlerEntries = async (config: KnipConfig): Promise<KnipConfig>
   const dirs = [
     'packages/@repo/config-eslint',
     'packages/@repo/config-test',
+    'packages/@repo/e2e',
     'packages/@repo/tsconfig',
     'packages/@repo/package.config',
     'packages/core',

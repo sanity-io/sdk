@@ -5,12 +5,6 @@ import {type StoreContext} from '../../../store/defineStore'
 import {type FrameMessage, type WindowMessage} from '../../types'
 import {type ComlinkNodeState} from '../comlinkNodeStore'
 
-/**
- * Retrieve or create a node to be used for communication between
- * an application and the controller -- specifically, a node should
- * be created within a frame / window to communicate with the controller.
- * @public
- */
 export const getOrCreateNode = (
   {state}: StoreContext<ComlinkNodeState>,
   options: NodeInput,
@@ -24,13 +18,6 @@ export const getOrCreateNode = (
       throw new Error(`Node "${options.name}" already exists with different options`)
     }
 
-    state.set('incrementNodeRefCount', {
-      nodes: new Map(nodes).set(options.name, {
-        ...existing,
-        refCount: existing.refCount + 1,
-      }),
-    })
-
     existing.node.start()
     return existing.node
   }
@@ -38,7 +25,29 @@ export const getOrCreateNode = (
   const node: Node<WindowMessage, FrameMessage> = createNode(options)
   node.start()
 
-  nodes.set(options.name, {node, options, refCount: 1})
+  // Subscribe to status changes
+  const statusUnsub = node.onStatus((status) => {
+    const currentNodes = state.get().nodes
+    const currentEntry = currentNodes.get(options.name)
+    if (!currentEntry) return
+    const updatedEntry = {
+      ...currentEntry,
+      status,
+    }
+    state.set('updateNodeStatus', {
+      nodes: new Map(currentNodes).set(options.name, updatedEntry),
+    })
+  })
+
+  // Set up initial entry with status, error, and statusUnsub
+  const entry = {
+    node,
+    options,
+    status: 'idle' as const,
+    statusUnsub,
+  }
+
+  nodes.set(options.name, entry)
 
   state.set('createNode', {nodes})
 

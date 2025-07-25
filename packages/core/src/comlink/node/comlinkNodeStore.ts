@@ -1,4 +1,4 @@
-import {type Node, type NodeInput} from '@sanity/comlink'
+import {type Node, type NodeInput, type Status} from '@sanity/comlink'
 
 import {bindActionGlobally} from '../../store/createActionBinder'
 import {defineStore} from '../../store/defineStore'
@@ -14,8 +14,9 @@ export interface NodeEntry {
   node: Node<WindowMessage, FrameMessage>
   // we store options to ensure that channels remain as unique / consistent as possible
   options: NodeInput
-  // we store refCount to ensure nodes are running only as long as they are in use
-  refCount: number
+  // status of the node connection
+  status: Status
+  statusUnsub?: () => void
 }
 
 /**
@@ -24,12 +25,15 @@ export interface NodeEntry {
  */
 export interface ComlinkNodeState {
   nodes: Map<string, NodeEntry>
+  // Map of node name to set of active subscriber symbols
+  subscriptions: Map<string, Set<symbol>>
 }
 
 export const comlinkNodeStore = defineStore<ComlinkNodeState>({
   name: 'nodeStore',
   getInitialState: () => ({
     nodes: new Map(),
+    subscriptions: new Map(),
   }),
 
   initialize({state}) {

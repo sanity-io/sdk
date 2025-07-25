@@ -3,10 +3,10 @@ import {
   ResourceProvider,
   useDatasets,
   useDocument,
+  useDocumentPreview,
   useDocumentSyncStatus,
   useEditDocument,
   usePaginatedDocuments,
-  usePreview,
   useProject,
   useProjects,
   useQuery,
@@ -51,7 +51,7 @@ function DocumentEditorDialog({
   open,
 }: DocumentEditorDialogProps) {
   const handle = {documentId, documentType}
-  const document = useDocument(handle)
+  const {data: document} = useDocument(handle)
   const editDocument = useEditDocument(handle)
   const isSaving = useDocumentSyncStatus(handle)
 
@@ -112,7 +112,7 @@ function DocumentEditorDialog({
 function DocumentTableRow(doc: DocumentHandle) {
   const ref = useRef<HTMLTableRowElement>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const {data} = usePreview(doc)
+  const {data} = useDocumentPreview(doc)
 
   const handleOpenDialog = () => setIsDialogOpen(true)
   const handleCloseDialog = () => setIsDialogOpen(false)

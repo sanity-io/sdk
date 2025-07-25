@@ -4,6 +4,7 @@
 export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBoundary'
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
+export {ComlinkTokenRefreshProvider} from '../context/ComlinkTokenRefresh'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
 export {useAuthState} from '../hooks/auth/useAuthState'
 export {useAuthToken} from '../hooks/auth/useAuthToken'
@@ -20,8 +21,6 @@ export {
   useFrameConnection,
   type UseFrameConnectionOptions,
 } from '../hooks/comlink/useFrameConnection'
-export {useManageFavorite} from '../hooks/comlink/useManageFavorite'
-export {useRecordDocumentHistoryEvent} from '../hooks/comlink/useRecordDocumentHistoryEvent'
 export {
   useWindowConnection,
   type UseWindowConnectionOptions,
@@ -29,10 +28,13 @@ export {
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
+export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
+export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
 export {
   type NavigateToStudioResult,
   useNavigateToStudioDocument,
 } from '../hooks/dashboard/useNavigateToStudioDocument'
+export {useRecordDocumentHistoryEvent} from '../hooks/dashboard/useRecordDocumentHistoryEvent'
 export {useStudioWorkspacesByProjectIdDataset} from '../hooks/dashboard/useStudioWorkspacesByProjectIdDataset'
 export {useDatasets} from '../hooks/datasets/useDatasets'
 export {useApplyDocumentActions} from '../hooks/document/useApplyDocumentActions'
@@ -51,21 +53,23 @@ export {
   type PaginatedDocumentsResponse,
   usePaginatedDocuments,
 } from '../hooks/paginatedDocuments/usePaginatedDocuments'
+export {usePresence} from '../hooks/presence/usePresence'
 export {
-  usePreview,
-  type UsePreviewOptions,
-  type UsePreviewResults,
-} from '../hooks/preview/usePreview'
+  useDocumentPreview,
+  type useDocumentPreviewOptions,
+  type useDocumentPreviewResults,
+} from '../hooks/preview/useDocumentPreview'
 export {
-  useProjection,
-  type UseProjectionOptions,
-  type UseProjectionResults,
-} from '../hooks/projection/useProjection'
+  useDocumentProjection,
+  type useDocumentProjectionOptions,
+  type useDocumentProjectionResults,
+} from '../hooks/projection/useDocumentProjection'
 export {useProject} from '../hooks/projects/useProject'
 export {type ProjectWithoutMembers, useProjects} from '../hooks/projects/useProjects'
 export {useQuery} from '../hooks/query/useQuery'
 export {useActiveReleases} from '../hooks/releases/useActiveReleases'
 export {usePerspective} from '../hooks/releases/usePerspective'
+export {type UserResult, useUser} from '../hooks/users/useUser'
 export {type UsersResult, useUsers} from '../hooks/users/useUsers'
 export {REACT_SDK_VERSION} from '../version'
 export {type DatasetsResponse, type SanityProjectMember} from '@sanity/client'

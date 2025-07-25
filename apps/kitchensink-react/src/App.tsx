@@ -1,31 +1,33 @@
-import {SanityApp, SanityConfig} from '@sanity/sdk-react'
+import {SanityApp, useDashboardNavigate} from '@sanity/sdk-react'
 import {Spinner, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
-import {type JSX} from 'react'
-import {BrowserRouter} from 'react-router'
+import {type JSX, Suspense} from 'react'
+import {BrowserRouter, useNavigate} from 'react-router'
 
 import {AppRoutes} from './AppRoutes'
+import {devConfigs, e2eConfigs} from './sanityConfigs'
 
 const theme = buildTheme({})
 
-const sanityConfigs: SanityConfig[] = [
-  {
-    projectId: 'ppsg7ml5',
-    dataset: 'test',
-    useExperimentalResource: true,
-  },
-  {
-    projectId: 'ezwd8xes',
-    dataset: 'production',
-    useExperimentalResource: true,
-  },
-]
+function NavigationHandler() {
+  const navigate = useNavigate()
+  useDashboardNavigate(({path, type}) => {
+    navigate(path, {replace: type === 'replace'})
+  })
+  return null
+}
 
-export function App(): JSX.Element {
+export default function App(): JSX.Element {
   return (
     <ThemeProvider theme={theme}>
-      <SanityApp fallback={<Spinner />} config={sanityConfigs}>
+      <SanityApp
+        fallback={<Spinner />}
+        config={import.meta.env['VITE_IS_E2E'] ? e2eConfigs : devConfigs}
+      >
         <BrowserRouter>
+          <Suspense>
+            <NavigationHandler />
+          </Suspense>
           <AppRoutes />
         </BrowserRouter>
       </SanityApp>

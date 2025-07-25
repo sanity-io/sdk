@@ -1,0 +1,63 @@
+{
+  "name": "@repo/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared Playwright configuration for the monorepo",
+  "keywords": [
+    "playwright",
+    "testing",
+    "e2e"
+  ],
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "pkg build --strict --clean --check",
+    "cleanup": "tsx src/scripts/cleanup-datasets.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "prepare": "pnpm build"
+  },
+  "dependencies": {
+    "@sanity/client": "^6.12.5",
+    "@sanity/uuid": "^3.0.0",
+    "dotenv": "^16.5.0",
+    "lodash-es": "^4.17.21",
+    "ora": "^7.0.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@repo/config-eslint": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
+    "@sanity/pkg-utils": "^7.2.2",
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "^22.10.5",
+    "eslint": "^9.22.0",
+    "tsx": "^4.7.1",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@playwright/test": "^1.52.0"
+  },
+  "peerDependenciesMeta": {
+    "@playwright/test": {
+      "optional": false
+    }
+  },
+  "packageManager": "pnpm@10.8.0"
+}

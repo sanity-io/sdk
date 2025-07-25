@@ -69,20 +69,13 @@ const bookType = defineType({
   ],
 })
 
-// Define a 'dog' schema type based on the Dog interface
-const dogType = defineType({
-  name: 'dog',
-  title: 'Dog',
+const playerType = defineType({
+  name: 'player',
+  title: 'Player',
   type: 'document',
   fields: [
     defineField({name: 'name', title: 'Name', type: 'string'}),
-    defineField({name: 'age', title: 'Age', type: 'string'}), // Assuming age is stored as string per interface
-    defineField({name: 'color', title: 'Color', type: 'string'}),
-    defineField({name: 'ears', title: 'Ears', type: 'string'}),
-    defineField({name: 'status', title: 'Status', type: 'string'}),
-    defineField({name: 'weight', title: 'Weight', type: 'string'}), // Assuming weight is stored as string per interface
-    defineField({name: 'description', title: 'Description', type: 'text'}),
-    defineField({name: 'images', title: 'Images', type: 'array', of: [{type: 'image'}]}),
+    defineField({name: 'slackUserId', title: 'Slack User ID', type: 'string'}),
   ],
 })
 
@@ -97,12 +90,12 @@ export default defineConfig([
     },
   },
   {
-    name: 'ezwd8xes-production',
-    basePath: '/ezwd8xes-production',
-    projectId: 'ezwd8xes',
+    name: 'd45jg133-production',
+    basePath: '/d45jg133-production',
+    projectId: 'd45jg133',
     dataset: 'production',
     schema: {
-      types: [dogType],
+      types: [playerType],
     },
   },
 ])

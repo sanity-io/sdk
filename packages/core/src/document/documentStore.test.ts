@@ -11,6 +11,7 @@ import {
   type UnfilteredResponseQueryOptions,
   type WelcomeEvent,
 } from '@sanity/client'
+import {diffValue} from '@sanity/diff-patch'
 import {type Mutation, type SanityDocument} from '@sanity/types'
 import {evaluate, parse} from 'groq-js'
 import {delay, first, firstValueFrom, from, Observable, of, ReplaySubject, Subject} from 'rxjs'
@@ -30,7 +31,6 @@ import {
   unpublishDocument,
 } from './actions'
 import {applyDocumentActions} from './applyDocumentActions'
-import {diffPatch} from './diffPatch'
 import {
   getDocumentState,
   getDocumentSyncStatus,
@@ -57,7 +57,7 @@ type AllTestSchemaTypes = TestDocument
 // Augment the 'groq' module
 declare module 'groq' {
   interface SanitySchemas {
-    'default:default': AllTestSchemaTypes
+    default: AllTestSchemaTypes
   }
 }
 
@@ -980,7 +980,7 @@ beforeEach(() => {
             documentId: id,
             eventId: `${transactionId}#${id}`,
             identity: 'example-user',
-            mutations: diffPatch(prevDoc, nextDoc).map(
+            mutations: diffValue(prevDoc, nextDoc).map(
               (patch): Mutation => ({patch: {...patch, id}}),
             ),
             timestamp,

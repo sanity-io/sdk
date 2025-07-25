@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk-react",
-  "version": "0.0.1",
+  "version": "2.1.1",
   "private": false,
   "description": "Sanity SDK React toolkit for Content OS",
   "keywords": [
@@ -56,14 +56,14 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
-    "@sanity/client": "^7.0.0",
+    "@sanity/client": "^7.2.1",
     "@sanity/message-protocol": "^0.12.0",
     "@sanity/sdk": "workspace:*",
     "@sanity/types": "^3.83.0",
     "@types/lodash-es": "^4.17.12",
-    "groq": "3.86.2-experimental.0",
+    "groq": "3.88.1-typegen-experimental.0",
     "lodash-es": "^4.17.21",
-    "react-compiler-runtime": "19.1.0-rc.1",
+    "react-compiler-runtime": "19.1.0-rc.2",
     "react-error-boundary": "^5.0.0",
     "rxjs": "^7.8.2"
   },
@@ -74,7 +74,7 @@
     "@repo/package.config": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/browserslist-config": "^1.0.5",
-    "@sanity/comlink": "^3.0.2",
+    "@sanity/comlink": "^3.0.4",
     "@sanity/pkg-utils": "^7.2.2",
     "@sanity/prettier-config": "^1.0.3",
     "@testing-library/jest-dom": "^6.6.3",

@@ -38,7 +38,8 @@ describe('getPerspectiveState', () => {
     metadata: {title: 'Release 2', releaseType: 'asap'},
   }
 
-  const activeReleases = [release1, release2]
+  // the release store is reversed in getActiveReleases to match UI elsewhere
+  const activeReleases = [release2, release1]
 
   beforeEach(() => {
     instance = createSanityInstance({projectId: 'test', dataset: 'test'})
