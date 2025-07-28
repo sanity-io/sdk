@@ -14,6 +14,7 @@ function NavigationHandler() {
   useDashboardNavigate(({path, type}) => {
     navigate(path, {replace: type === 'replace'})
   })
+
   return null
 }
 

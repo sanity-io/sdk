@@ -1,20 +1,338 @@
-/* Container styling for the app */
-.app-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
-    'Helvetica Neue', sans-serif;
-}
-
-/* Basic reset */
+/* Global Styles */
 * {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
 body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background-color: #f5f7fa;
+  color: #333;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Navbar */
+.navbar {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px 24px;
+}
+
+.navbar-brand h1 {
+  color: #333;
+  font-size: 1.5rem;
   margin: 0;
-  padding: 0;
-  background-color: #f9f9f9;
+}
+
+/* Loading States */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  padding: 24px;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 24px;
+  height: calc(100vh - 120px); /* Full height minus navbar and padding */
+  max-width: none; /* Remove max-width to use full screen */
+  margin: 0;
+}
+
+/* Map Section */
+.map-section {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  height: 100%; /* Take full height of grid cell */
+  display: flex;
+  flex-direction: column;
+}
+
+.map-placeholder {
+  flex: 1; /* Take all available height */
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  min-height: 400px; /* Minimum height fallback */
+}
+
+.map-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  text-align: center;
+  padding: 20px;
+}
+
+.map-overlay h2 {
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+}
+
+.property-markers {
+  position: absolute;
+  inset: 20px;
+  pointer-events: none;
+}
+
+.property-marker {
+  position: absolute;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: white;
+  font-weight: 500;
+  transform: translate(-50%, -50%);
+}
+
+.marker-available {
+  background: #28a745;
+}
+
+.marker-occupied {
+  background: #007bff;
+}
+
+.marker-maintenance {
+  background: #ffc107;
+  color: #333;
+}
+
+.marker-default {
+  background: #6c757d;
+}
+
+/* Property List */
+.property-list-section {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  height: 100%; /* Take full height of grid cell */
+  display: flex;
+  flex-direction: column;
+}
+
+.property-list-section h2 {
+  margin-bottom: 16px;
+  color: #333;
+  flex-shrink: 0; /* Don't shrink the header */
+}
+
+.property-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1; /* Take remaining height */
+  overflow-y: auto; /* Enable scrolling when needed */
+  min-height: 0; /* Important for flex children to shrink */
+}
+
+.property-card {
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 16px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.property-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-color: #007bff;
+}
+
+.property-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.property-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1rem;
+}
+
+.property-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.property-detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.property-detail .icon {
+  width: 16px;
+  text-align: center;
+}
+
+/* Badges */
+.badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.badge-success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-secondary {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+.badge-warning {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.badge-info {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.badge-danger {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  padding: 4px;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.property-details-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    height: auto; /* Allow natural height on mobile */
+  }
+
+  .map-section {
+    height: auto; /* Reset height for mobile */
+  }
+
+  .map-placeholder {
+    height: 300px; /* Fixed height on mobile */
+    flex: none; /* Reset flex for mobile */
+  }
+
+  .property-list-section {
+    height: auto; /* Reset height for mobile */
+  }
+
+  .property-list {
+    max-height: 400px; /* Limit height on mobile */
+    flex: none; /* Reset flex for mobile */
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding: 16px;
+  }
+
+  .navbar {
+    padding: 12px 16px;
+  }
+
+  .property-card {
+    padding: 12px;
+  }
 }

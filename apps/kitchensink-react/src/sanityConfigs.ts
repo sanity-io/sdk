@@ -3,11 +3,11 @@ import {type SanityConfig} from '@sanity/sdk'
 export const devConfigs: SanityConfig[] = [
   {
     projectId: 'ppsg7ml5',
-    dataset: 'test',
+    dataset: 'test', // has movie types, but it's a scifi dataset
   },
   {
     projectId: 'd45jg133',
-    dataset: 'production',
+    dataset: 'production', // has movie types, but it's a documentary dataset
   },
   {
     projectId: 'v28v5k8m',
