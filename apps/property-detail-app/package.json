@@ -1,0 +1,37 @@
+{
+  "name": "property-detail-app",
+  "version": "1.0.0",
+  "private": true,
+  "keywords": [
+    "sanity"
+  ],
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "package.json",
+  "scripts": {
+    "build": "sanity build",
+    "dev": "sanity dev",
+    "lint": "eslint .",
+    "start": "sanity start",
+    "tsc": "tsc --noEmit"
+  },
+  "prettier": "@sanity/prettier-config",
+  "dependencies": {
+    "@sanity/sdk-react": "workspace:*",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@repo/config-eslint": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
+    "@sanity/prettier-config": "^1.0.3",
+    "@sanity/sdk": "workspace:*",
+    "@types/react": "^19",
+    "@types/react-dom": "^19.1.2",
+    "eslint": "^9.25.1",
+    "prettier": "^3.5.3",
+    "sanity": "^3",
+    "typescript": "^5.1.6",
+    "vite": "^6.3.3"
+  }
+}
