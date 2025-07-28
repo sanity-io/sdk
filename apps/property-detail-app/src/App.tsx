@@ -1,27 +1,56 @@
 import './App.css'
 
 import {type SanityConfig} from '@sanity/sdk'
-import {SanityApp} from '@sanity/sdk-react'
+import {type IntentHandlerPayload, type IntentHandlers, SanityApp} from '@sanity/sdk-react'
 import React from 'react'
+import {BrowserRouter, useNavigate} from 'react-router'
 
-import {ExampleComponent} from './ExampleComponent'
+import {AppRoutes} from './AppRoutes'
+import {CompleteAllTasks} from './components/CompleteAllTasks'
+import {LoadingFallback} from './components/LoadingFallback'
 
-function App(): React.JSX.Element {
-  // apps can access many different projects or other sources of data
+function AppWithRouter(): React.JSX.Element {
+  const navigate = useNavigate()
+
+  const intentHandlers: IntentHandlers = {
+    maintenanceList: {
+      type: 'async',
+      handler: async (payload: IntentHandlerPayload) => {
+        if (payload.documentHandle) {
+          navigate(`/property/${payload.documentHandle.documentId}`)
+        }
+      },
+    },
+    completeAllTasks: {
+      type: 'component',
+      handler: CompleteAllTasks,
+      // Hide the app completely for this bulk operation - shows only our component
+      hideApp: true,
+    },
+  }
+
   const sanityConfigs: SanityConfig[] = [
     {
-      projectId: '',
-      dataset: '',
+      projectId: '9wmez61s',
+      dataset: 'production',
+      auth: {
+        apiHost: 'https://api.sanity.work',
+      },
     },
   ]
 
   return (
-    <div className="app-container">
-      <SanityApp config={sanityConfigs} fallback={<div>Loading...</div>}>
-        {/* add your own components here! */}
-        <ExampleComponent />
-      </SanityApp>
-    </div>
+    <SanityApp config={sanityConfigs} handlers={intentHandlers} fallback={<LoadingFallback />}>
+      <AppRoutes />
+    </SanityApp>
+  )
+}
+
+function App(): React.JSX.Element {
+  return (
+    <BrowserRouter>
+      <AppWithRouter />
+    </BrowserRouter>
   )
 }
 
