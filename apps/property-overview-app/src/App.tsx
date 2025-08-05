@@ -36,9 +36,6 @@ function AppWithRouter(): React.JSX.Element {
       auth: {
         apiHost: 'https://api.sanity.work',
       },
-      studioMode: {
-        enabled: true, // Prevent redirect to Sanity core
-      },
     },
   ]
 
