@@ -357,6 +357,48 @@
   padding: 1rem 0;
 }
 
+/* Schedule State Dropdown */
+.schedule-state-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.dropdown-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.dropdown-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.state-select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  color: #374151;
+  background-color: white;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.state-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.state-action-button {
+  min-width: 250px;
+}
+
 .btn {
   padding: 0.75rem 1.5rem;
   border: none;

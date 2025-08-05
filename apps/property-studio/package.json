@@ -18,10 +18,10 @@
     "@csstools/css-calc": "^2.1.4",
     "@sanity/client": "^6.0.0",
     "@sanity/google-maps-input": "^4.1.1",
-    "@sanity/vision": "^4.2.0",
+    "@sanity/vision": "^4.3.0",
     "react": "^19.1",
     "react-dom": "^19.1",
-    "sanity": "^4.2.0",
+    "sanity": "^4.3.0",
     "styled-components": "^6.1.18"
   },
   "devDependencies": {
