@@ -6,6 +6,7 @@ import {Link, useParams} from 'react-router'
 
 import {MaintenanceTask} from './components/MaintenanceTask'
 import {MaintenanceTaskSkeleton} from './components/MaintenanceTaskSkeleton'
+import {ScheduleStateDropdown} from './components/ScheduleStateDropdown'
 
 export default function MaintenanceApp(): React.ReactNode {
   const {propertyId} = useParams<{propertyId: string}>()
@@ -171,9 +172,10 @@ export default function MaintenanceApp(): React.ReactNode {
         </div>
 
         <div className="submit-section">
-          <button onClick={() => {}} className="submit-button">
-            Mark all as completed
-          </button>
+          <ScheduleStateDropdown
+            scheduleId={currentSchedule._id}
+            currentState={currentSchedule.status}
+          />
         </div>
       </div>
     </div>

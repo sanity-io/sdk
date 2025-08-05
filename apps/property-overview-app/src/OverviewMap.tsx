@@ -84,7 +84,12 @@ function PropertyCard({doc}: PropertyCardProps) {
   // Get the latest maintenance schedule for this property
   const latestMaintenance = property.maintenanceSchedules?.[0]
 
-  const getMaintenanceStatus = (date: string) => {
+  const getMaintenanceStatus = (date: string, status: string) => {
+    // Don't show overdue badge for completed schedules
+    if (status === 'completed') {
+      return null
+    }
+
     const maintenanceDate = new Date(date)
     maintenanceDate.setHours(0, 0, 0, 0)
 
@@ -111,7 +116,7 @@ function PropertyCard({doc}: PropertyCardProps) {
   }
 
   const maintenanceStatus = latestMaintenance
-    ? getMaintenanceStatus(latestMaintenance.scheduledDate)
+    ? getMaintenanceStatus(latestMaintenance.scheduledDate, latestMaintenance.status)
     : null
 
   const handleCheckMaintenance = (e: React.MouseEvent) => {
