@@ -270,7 +270,7 @@ export default function PropertyManagementApp(): React.JSX.Element {
       <main className="main-content">
         <div className="content-grid">
           {/* Map Section */}
-          <div className="map-section">
+          {/* <div className="map-section">
             <div className="map-placeholder">
               <div className="map-overlay">
                 <h2>Property Locations</h2>
@@ -348,34 +348,34 @@ export default function PropertyManagementApp(): React.JSX.Element {
 }
 
 // Helper component for property markers
-function PropertyMarker({doc}: {doc: DocumentHandle<'property'>}) {
-  const {data: property} = useDocumentProjection<{
-    address: string
-    status: string
-    location: {lat: number; lng: number}
-  }>({
-    ...doc,
-    projection: '{address, status, location}',
-  })
+// function PropertyMarker({doc}: {doc: DocumentHandle<'property'>}) {
+//   const {data: property} = useDocumentProjection<{
+//     address: string
+//     status: string
+//     location: {lat: number; lng: number}
+//   }>({
+//     ...doc,
+//     projection: '{address, status, location}',
+//   })
 
-  if (!property) return null
+//   if (!property) return null
 
-  const getStatusClassName = (status: string) => {
-    switch (status) {
-      case 'available':
-        return 'marker-available'
-      case 'occupied':
-        return 'marker-occupied'
-      case 'maintenance':
-        return 'marker-maintenance'
-      default:
-        return 'marker-default'
-    }
-  }
+//   const getStatusClassName = (status: string) => {
+//     switch (status) {
+//       case 'available':
+//         return 'marker-available'
+//       case 'occupied':
+//         return 'marker-occupied'
+//       case 'maintenance':
+//         return 'marker-maintenance'
+//       default:
+//         return 'marker-default'
+//     }
+//   }
 
-  return (
-    <div className={`property-marker ${getStatusClassName(property.status)}`}>
-      <span className="marker-text">{property.address}</span>
-    </div>
-  )
-}
+//   return (
+//     <div className={`property-marker ${getStatusClassName(property.status)}`}>
+//       <span className="marker-text">{property.address}</span>
+//     </div>
+//   )
+// }
