@@ -58,7 +58,7 @@ function createTokenRefreshStream(
   return new Observable((subscriber) => {
     const client = clientFactory({
       apiVersion: DEFAULT_API_VERSION,
-      requestTagPrefix: 'sdk.token-refresh',
+      requestTagPrefix: 'token-refresh',
       useProjectHostname: false,
       useCdn: false,
       token,
