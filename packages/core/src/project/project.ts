@@ -24,7 +24,6 @@ const project = createFetcherStore({
         apiVersion: API_VERSION,
         scope: 'global',
         projectId,
-        useProjectHostname: true, // TODO: remove this once we've confirmed that the project API is not using the experimental resource
       }).observable.pipe(
         switchMap((client) =>
           client.observable.projects.getById(
