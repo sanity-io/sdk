@@ -80,4 +80,8 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
   studioMode?: {
     enabled: boolean
   }
+  /**
+   * @internal
+   */
+  useExperimentalResource?: boolean
 }
