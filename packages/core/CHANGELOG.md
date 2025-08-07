@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.2](https://github.com/sanity-io/sdk/compare/sdk-v2.1.1...sdk-v2.1.2) (2025-08-05)
+
+
+### Bug Fixes
+
+* fixes request tags ([#593](https://github.com/sanity-io/sdk/issues/593)) ([5fbd500](https://github.com/sanity-io/sdk/commit/5fbd50043976aaea047ddac262a297e93d3b9c56))
+
 ## [2.1.1](https://github.com/sanity-io/sdk/compare/sdk-v2.1.0...sdk-v2.1.1) (2025-07-24)
 
 

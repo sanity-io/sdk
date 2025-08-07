@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.1.2](https://github.com/sanity-io/sdk/compare/sdk-react-v2.1.1...sdk-react-v2.1.2) (2025-08-05)
+
+
+### Miscellaneous
+
+* **sdk-react:** Synchronize sdk versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.1.2
+
 ## [2.1.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.1.0...sdk-react-v2.1.1) (2025-07-24)
 
 
