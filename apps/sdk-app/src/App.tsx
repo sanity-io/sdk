@@ -1,7 +1,7 @@
 import {SanityApp, SanityConfig, useQuery, useWindowConnection} from '@sanity/sdk-react'
 import {Spinner, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
-import {type JSX, useEffect, useRef, useState} from 'react'
+import {type JSX} from 'react'
 
 const theme = buildTheme({})
 
@@ -50,7 +50,7 @@ function QueryTest() {
   })
 
   // This query should be forwarded to Dashboard when in iframe context
-  const {data, isPending} = useQuery({
+  const {data} = useQuery({
     query: '*[_type == "movie"][0...5]{_id, title, releaseYear}',
     projectId: 'ppsg7ml5',
     dataset: 'test',
