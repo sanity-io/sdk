@@ -1,8 +1,8 @@
+import {createSubscriptionRequest, registerSubscription, unregisterSubscription} from '@sanity/sdk'
 import {SanityApp, SanityConfig, useFrameConnection} from '@sanity/sdk-react'
 import {Spinner, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
-import {type JSX, Suspense, useState, useEffect, useRef, useCallback} from 'react'
-import {registerSubscription, unregisterSubscription, createSubscriptionRequest} from '@sanity/sdk'
+import {type JSX, Suspense, useCallback, useEffect, useRef, useState} from 'react'
 
 const theme = buildTheme({})
 
@@ -57,7 +57,7 @@ function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameEle
   // Stable message handler
   const handleQueryRequest = useCallback(async (data: any) => {
     console.log('[Dashboard] Received query request:', data)
-    
+
     try {
       // Create a subscription request from the incoming query data
       const subscription = createSubscriptionRequest({
@@ -93,10 +93,7 @@ function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameEle
     }
   }, [])
 
-  const {connect} = useFrameConnection<
-    QueryResponseMessage,
-    QueryRequestMessage
-  >({
+  const {connect} = useFrameConnection<QueryResponseMessage, QueryRequestMessage>({
     name: 'dashboard',
     connectTo: 'sdk-app',
     targetOrigin: '*',
@@ -132,7 +129,7 @@ function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameEle
     const iframe = iframeRef.current
     if (iframe) {
       iframe.addEventListener('load', handleIframeLoad)
-      
+
       // If iframe is already loaded, connect immediately
       if (iframe.contentDocument?.readyState === 'complete') {
         handleIframeLoad()
