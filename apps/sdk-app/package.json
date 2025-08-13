@@ -1,0 +1,32 @@
+{
+  "name": "@sanity/sdk-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm tsc && vite build",
+    "clean": "rimraf dist",
+    "dev": "vite",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "tsc": "tsc --noEmit"
+  },
+  "prettier": "@sanity/prettier-config",
+  "dependencies": {
+    "@sanity/sdk-react": "workspace:*",
+    "@sanity/ui": "^2.15.13",
+    "react": "^18.3.1",
+    "react-compiler-runtime": "19.1.0-rc.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "@repo/config-eslint": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
+    "eslint": "^9.25.1",
+    "vite": "^6.3.4"
+  }
+}
