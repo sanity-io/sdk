@@ -7,6 +7,7 @@ export default defineConfig(() => {
       lib: {
         entry: {
           index: './src/_exports/index.ts',
+          worker: './src/worker/worker.ts',
         },
       },
     },

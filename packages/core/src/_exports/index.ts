@@ -132,6 +132,25 @@ export {
 export {getPerspectiveState} from '../releases/getPerspectiveState'
 export type {ReleaseDocument} from '../releases/releasesStore'
 export {getActiveReleasesState} from '../releases/releasesStore'
+export {
+  registerSharedWorkerClient,
+  registerSubscription,
+  unregister,
+  unregisterSubscription,
+} from '../sharedWorkerStore/sharedWorkerClient'
+export {type SharedWorkerStore, sharedWorkerStore} from '../sharedWorkerStore/sharedWorkerStore'
+export {
+  type ActiveSubscription,
+  type SharedWorkerStoreActions,
+  type SharedWorkerStoreState,
+  type SubscriptionRequest,
+} from '../sharedWorkerStore/types'
+export {
+  areSubscriptionsEquivalent,
+  createSubscriptionId,
+  createSubscriptionRequest,
+  groupSubscriptionsByParams,
+} from '../sharedWorkerStore/utils/subscriptionManager'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
 export {getUsersKey, parseUsersKey} from '../users/reducers'
