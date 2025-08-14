@@ -20,7 +20,8 @@ async function initializeSharedWorker() {
     })
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.log('[Dashboard] Worker status changed:', error)
+    console.warn('Failed to initialize SharedWorker:', error)
+    // Fallback to local subscription management
   }
 }
 
