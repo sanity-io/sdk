@@ -20,6 +20,7 @@
     "build": "turbo run build --filter='./packages/*' --filter='./apps/*'",
     "build:bundle": "turbo run build:bundle --filter='./packages/*' --filter='!./packages/@repo/*'",
     "build:docs": "turbo run docs && typedoc",
+    "postbuild:docs": "tsx scripts/generate-llms-docs.mts",
     "build:packages": "turbo run build --filter='./packages/*' --filter='!./packages/@repo/*'",
     "build:visualizer": "VISUALIZER=true turbo run build --filter='./packages/*'",
     "clean": "run-s clean:build clean:deps",
