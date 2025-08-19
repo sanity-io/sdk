@@ -1,8 +1,8 @@
-import {createSubscriptionRequest, registerSubscription, unregisterSubscription} from '@sanity/sdk'
-import {SanityApp, SanityConfig} from '@sanity/sdk-react'
+import {SanityApp, SanityConfig, useFrameConnection} from '@sanity/sdk-react'
 import {Spinner, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
-import {type JSX, Suspense, useState} from 'react'
+import {type JSX, Suspense, useState, useEffect, useRef, useCallback} from 'react'
+import {registerSubscription, unregisterSubscription, createSubscriptionRequest} from '@sanity/sdk'
 
 const theme = buildTheme({})
 
@@ -21,10 +21,132 @@ const devConfigs: SanityConfig[] = [
   },
 ]
 
+// Message types for iframe communication
+type QueryRequestMessage = {
+  type: 'dashboard/v1/query/request'
+  data: {
+    queryId: string
+    queryOptions: any
+    requestId: string
+  }
+}
+
+type QueryResponseMessage = {
+  type: 'dashboard/v1/query/response'
+  data: {
+    requestId: string
+    data: unknown
+    error?: string
+    subscriptionId: string
+  }
+}
+
 // SharedWorker test component
-function SharedWorkerTest() {
+function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameElement | null>}) {
   const [subscriptionId, setSubscriptionId] = useState<string | null>(null)
   const [status, setStatus] = useState<string>('Ready to test')
+  const [connectionStatus, setConnectionStatus] = useState<string>('Not connected')
+  const connectionRef = useRef<(() => void) | null>(null)
+
+  // Stable status handler
+  const handleStatus = useCallback((status: string) => {
+    setConnectionStatus(status)
+    console.log('[Dashboard] Connection status:', status)
+  }, [])
+
+  // Stable message handler
+  const handleQueryRequest = useCallback(async (data: any) => {
+    console.log('[Dashboard] Received query request:', data)
+    
+    try {
+      // Create a subscription request from the incoming query data
+      const subscription = createSubscriptionRequest({
+        storeName: 'query',
+        projectId: data.queryOptions.projectId,
+        dataset: data.queryOptions.dataset,
+        params: {
+          query: data.queryOptions.query,
+          options: data.queryOptions.params || {},
+        },
+        appId: 'dashboard-app',
+      })
+
+      console.log('[Dashboard] Creating subscription for query:', subscription)
+
+      // Register the subscription with the SharedWorker (it will handle deduplication)
+      const subscriptionId = await registerSubscription(subscription)
+      console.log('[Dashboard] Subscription registered with ID:', subscriptionId)
+
+      // Return the subscription ID and any initial data
+      return {
+        requestId: data.requestId,
+        subscriptionId,
+        data: {message: 'Query subscription created successfully'},
+      }
+    } catch (error) {
+      console.error('[Dashboard] Error handling query request:', error)
+      return {
+        requestId: data.requestId,
+        error: error instanceof Error ? error.message : String(error),
+        subscriptionId: null,
+      }
+    }
+  }, [])
+
+  const {connect} = useFrameConnection<
+    QueryResponseMessage,
+    QueryRequestMessage
+  >({
+    name: 'dashboard',
+    connectTo: 'sdk-app',
+    targetOrigin: '*',
+    onStatus: handleStatus,
+    heartbeat: false, // Disable heartbeat to reduce cycling
+    onMessage: {
+      'dashboard/v1/query/request': handleQueryRequest,
+    },
+  })
+
+  useEffect(() => {
+    const handleIframeLoad = () => {
+      // Clean up any existing connection
+      if (connectionRef.current) {
+        connectionRef.current()
+        connectionRef.current = null
+      }
+
+      // Wait for iframe to be fully loaded
+      setTimeout(() => {
+        if (iframeRef.current?.contentWindow) {
+          try {
+            const cleanup = connect(iframeRef.current.contentWindow)
+            connectionRef.current = cleanup
+            console.log('[Dashboard] Connected to SDK app iframe')
+          } catch (error) {
+            console.error('[Dashboard] Failed to connect to iframe:', error)
+          }
+        }
+      }, 100)
+    }
+
+    const iframe = iframeRef.current
+    if (iframe) {
+      iframe.addEventListener('load', handleIframeLoad)
+      
+      // If iframe is already loaded, connect immediately
+      if (iframe.contentDocument?.readyState === 'complete') {
+        handleIframeLoad()
+      }
+
+      return () => {
+        if (connectionRef.current) {
+          connectionRef.current()
+          connectionRef.current = null
+        }
+        iframe.removeEventListener('load', handleIframeLoad)
+      }
+    }
+  }, [connect])
 
   const testSubscription = async () => {
     // eslint-disable-next-line no-console
@@ -69,7 +191,8 @@ function SharedWorkerTest() {
     <div style={{padding: 12, borderBottom: '1px solid #eee'}}>
       <div>Dashboard (iframes sdk-app below)</div>
       <div style={{marginTop: 8, fontSize: '14px'}}>
-        <div>SharedWorker Test:</div>
+        <div>Comlink Connection Status: {connectionStatus}</div>
+        <div style={{marginTop: 8}}>SharedWorker Test:</div>
         <div style={{marginTop: 4}}>
           <button onClick={testSubscription} disabled={!!subscriptionId}>
             Test Subscription
@@ -110,7 +233,7 @@ export default function App(): JSX.Element {
               width: '100vw',
             }}
           >
-            <SharedWorkerTest />
+            <SharedWorkerTest iframeRef={iframeRef} />
             <iframe
               ref={iframeRef}
               title="sdk-app"
