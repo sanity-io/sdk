@@ -57,7 +57,6 @@ function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameEle
   // Stable message handler
   const handleQueryRequest = useCallback(async (data: any) => {
     console.log('[Dashboard] Received query request:', data)
-
     try {
       // Create a subscription request from the incoming query data
       const subscription = createSubscriptionRequest({
@@ -129,7 +128,6 @@ function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameEle
     const iframe = iframeRef.current
     if (iframe) {
       iframe.addEventListener('load', handleIframeLoad)
-
       // If iframe is already loaded, connect immediately
       if (iframe.contentDocument?.readyState === 'complete') {
         handleIframeLoad()
@@ -214,6 +212,8 @@ function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameEle
 }
 
 export default function App(): JSX.Element {
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
   return (
     <ThemeProvider theme={theme}>
       <SanityApp fallback={<Spinner />} config={devConfigs}>
@@ -224,16 +224,28 @@ export default function App(): JSX.Element {
               inset: 0,
               display: 'flex',
               flexDirection: 'column',
+              height: '100vh',
+              width: '100vw',
             }}
           >
             <SharedWorkerTest iframeRef={iframeRef} />
             <iframe
+              ref={iframeRef}
               title="sdk-app"
               src="http://localhost:3341/"
               style={{
                 flex: 1,
                 border: 'none',
                 width: '100%',
+                height: '100%',
+                minHeight: '400px',
+                backgroundColor: '#f5f5f5', // Add background to see if iframe is loading
+              }}
+              onLoad={() => {
+                console.log('[Dashboard] Iframe loaded successfully')
+              }}
+              onError={(e) => {
+                console.error('[Dashboard] Iframe failed to load:', e)
               }}
             />
           </div>

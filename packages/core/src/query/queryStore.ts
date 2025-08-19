@@ -24,8 +24,8 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle} from '../config/sanityConfig'
 import {getNodeState} from '../comlink/node/getNodeState'
+import {type DatasetHandle} from '../config/sanityConfig'
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {bindActionByDataset} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
@@ -120,9 +120,12 @@ function isInDashboardContext(): boolean {
  * Forward a query request to Dashboard via comlink node
  * This follows the same pattern as favoritesStore
  */
-function forwardQueryToDashboard(instance: SanityInstance, queryOptions: QueryOptions): StateSource<unknown> {
+function forwardQueryToDashboard(
+  instance: SanityInstance,
+  queryOptions: QueryOptions,
+): StateSource<unknown> {
   console.log('[QueryStore] Forwarding query to Dashboard:', queryOptions)
-  
+
   // Get the node state for communicating with Dashboard
   const nodeStateSource = getNodeState(instance, {
     name: 'sdk-app',
@@ -142,46 +145,45 @@ function forwardQueryToDashboard(instance: SanityInstance, queryOptions: QueryOp
     },
     subscribe: (onStoreChanged?: () => void) => {
       console.log('[QueryStore] Setting up subscription for forwarded query')
-      
-      const subscription = nodeStateSource.observable.pipe(
-        filter((nodeState) => !!nodeState && nodeState.status === 'connected'),
-        switchMap((nodeState) => {
-          const node = nodeState!.node
-          
-          console.log('[QueryStore] Node connected, sending query request to Dashboard')
-          
-          // Send the query request to Dashboard with stable IDs
-          return from(
-            (node.fetch as any)(
-              'dashboard/v1/query/request',
-              {
+
+      const subscription = nodeStateSource.observable
+        .pipe(
+          filter((nodeState) => !!nodeState && nodeState.status === 'connected'),
+          switchMap((nodeState) => {
+            const node = nodeState!.node
+
+            console.log('[QueryStore] Node connected, sending query request to Dashboard')
+
+            // Send the query request to Dashboard with stable IDs
+            return from(
+              (node.fetch as any)('dashboard/v1/query/request', {
                 queryId: queryKey, // Use the stable query key as the queryId
                 queryOptions,
                 requestId,
-              },
-            ) as Promise<unknown>,
-          ).pipe(
-            map((response) => {
-              console.log('[QueryStore] Received response from Dashboard:', response)
-              return response
-            }),
-            catchError((err) => {
-              console.error('[QueryStore] Error forwarding query to Dashboard:', err)
-              // Return a fallback response for now
-              return of({error: 'Query forwarding failed', fallback: true})
-            }),
-          )
-        }),
-      ).subscribe({
-        next: () => {
-          console.log('[QueryStore] Calling subscription callback')
-          onStoreChanged?.()
-        },
-        error: (error) => {
-          console.error('[QueryStore] Subscription error:', error)
-          onStoreChanged?.()
-        },
-      })
+              }) as Promise<unknown>,
+            ).pipe(
+              map((response) => {
+                console.log('[QueryStore] Received response from Dashboard:', response)
+                return response
+              }),
+              catchError((err) => {
+                console.error('[QueryStore] Error forwarding query to Dashboard:', err)
+                // Return a fallback response for now
+                return of({error: 'Query forwarding failed', fallback: true})
+              }),
+            )
+          }),
+        )
+        .subscribe({
+          next: () => {
+            console.log('[QueryStore] Calling subscription callback')
+            onStoreChanged?.()
+          },
+          error: (error) => {
+            console.error('[QueryStore] Subscription error:', error)
+            onStoreChanged?.()
+          },
+        })
 
       return () => {
         console.log('[QueryStore] Cleaning up forwarded query subscription')
@@ -192,19 +194,16 @@ function forwardQueryToDashboard(instance: SanityInstance, queryOptions: QueryOp
       filter((nodeState) => !!nodeState && nodeState.status === 'connected'),
       switchMap((nodeState) => {
         const node = nodeState!.node
-        
+
         console.log('[QueryStore] Node connected, sending query request to Dashboard')
-        
+
         // Send the query request to Dashboard with stable IDs
         return from(
-          (node.fetch as any)(
-            'dashboard/v1/query/request',
-            {
-              queryId: queryKey, // Use the stable query key as the queryId
-              queryOptions,
-              requestId,
-            },
-          ) as Promise<unknown>,
+          (node.fetch as any)('dashboard/v1/query/request', {
+            queryId: queryKey, // Use the stable query key as the queryId
+            queryOptions,
+            requestId,
+          }) as Promise<unknown>,
         ).pipe(
           map((response) => {
             console.log('[QueryStore] Observable received response:', response)
@@ -479,7 +478,7 @@ const _resolveQuery = bindActionByDataset(
     if (isInDashboardContext()) {
       console.log('[QueryStore] resolveQuery: In Dashboard context, using forwarded query')
       const forwardedStateSource = forwardQueryToDashboard(instance, options)
-      
+
       // For forwarded queries, we'll wait for the first value from the observable
       const aborted$ = signal
         ? new Observable<void>((observer) => {
@@ -505,9 +504,7 @@ const _resolveQuery = bindActionByDataset(
           )
         : NEVER
 
-      const resolved$ = forwardedStateSource.observable.pipe(
-        first((i) => i !== undefined),
-      )
+      const resolved$ = forwardedStateSource.observable.pipe(first((i) => i !== undefined))
 
       return firstValueFrom(race([resolved$, aborted$]))
     }
