@@ -5,6 +5,7 @@ import {
   type SharedWorkerStoreActions,
   type SharedWorkerStoreState,
 } from './types'
+import {areSubscriptionsEquivalent} from './utils/subscriptionManager'
 
 /**
  * @internal
@@ -21,6 +22,21 @@ export const sharedWorkerStore = createStore<SharedWorkerStoreState & SharedWork
 
     // Actions
     registerSubscription: (subscription) => {
+      const state = get()
+      
+      // Check if we already have an equivalent subscription
+      const existingSubscriptions = Array.from(state.subscriptions.values())
+      const equivalentSubscription = existingSubscriptions.find(existing => 
+        areSubscriptionsEquivalent(existing, subscription)
+      )
+
+      if (equivalentSubscription) {
+        // Return the existing subscription ID instead of creating a new one
+        console.log('[SharedWorkerStore] Found equivalent subscription, reusing:', equivalentSubscription.subscriptionId)
+        return equivalentSubscription.subscriptionId
+      }
+
+      // Create new subscription
       const activeSubscription: ActiveSubscription = {
         ...subscription,
         isActive: true,
@@ -35,6 +51,9 @@ export const sharedWorkerStore = createStore<SharedWorkerStoreState & SharedWork
           subscriptions: newSubscriptions,
         }
       })
+
+      console.log('[SharedWorkerStore] Created new subscription:', subscription.subscriptionId)
+      return subscription.subscriptionId
     },
 
     unregisterSubscription: (subscriptionId) => {
