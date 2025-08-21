@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.1.3](https://github.com/sanity-io/sdk/compare/sdk-react-v2.1.2...sdk-react-v2.1.3) (2025-08-21)
+
+
+### Bug Fixes
+
+* error message display when a ResourceProvider is missing ([#602](https://github.com/sanity-io/sdk/issues/602)) ([3d7e1fe](https://github.com/sanity-io/sdk/commit/3d7e1fe617b7ad2a0384d731356bfbf894fdea61))
+* **react:** find correct instance for hooks that use config ([#598](https://github.com/sanity-io/sdk/issues/598)) ([3183c23](https://github.com/sanity-io/sdk/commit/3183c234ade23b6f5623a11bae3fa75c418ed657))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.1.3
+
 ## [2.1.2](https://github.com/sanity-io/sdk/compare/sdk-react-v2.1.1...sdk-react-v2.1.2) (2025-08-05)
 
 
