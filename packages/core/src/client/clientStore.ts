@@ -2,12 +2,20 @@ import {type ClientConfig, createClient, type SanityClient} from '@sanity/client
 import {pick} from 'lodash-es'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
+import {startNetProfiler} from '../profiler/netProfiler'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 
 const DEFAULT_API_VERSION = '2024-11-12'
 const DEFAULT_REQUEST_TAG_PREFIX = 'sanity.sdk'
+
+const PROFILER_ON =
+  typeof import.meta !== 'undefined' && import.meta.env?.['VITE_CORE_NET_PROFILER'] === '1'
+if (PROFILER_ON) {
+  // In profiling mode, install a global fetch wrapper so @sanity/client requests are captured
+  startNetProfiler({installGlobalFetch: true})
+}
 
 type AllowedClientConfigKey =
   | 'useCdn'
@@ -183,7 +191,7 @@ export const getClient = bindActionGlobally(
 
     if (clients[key]) return clients[key]
 
-    const client = createClient(effectiveOptions)
+    const client = createClient(effectiveOptions as unknown as ClientConfig)
     state.set('addClient', (prev) => ({clients: {...prev.clients, [key]: client}}))
 
     return client
