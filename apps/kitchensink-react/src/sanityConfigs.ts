@@ -4,14 +4,17 @@ export const devConfigs: SanityConfig[] = [
   {
     projectId: 'ppsg7ml5',
     dataset: 'test',
+    useExperimentalResource: true,
   },
   {
     projectId: 'd45jg133',
     dataset: 'production',
+    useExperimentalResource: true,
   },
   {
     projectId: 'v28v5k8m',
     dataset: 'production',
+    useExperimentalResource: true,
   },
 ]
 
