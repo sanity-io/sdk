@@ -1,4 +1,9 @@
-import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
+import {
+  type ClientConfig,
+  createClient,
+  requester as baseSanityRequester,
+  type SanityClient,
+} from '@sanity/client'
 import {pick} from 'lodash-es'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
@@ -128,6 +133,58 @@ const listenToAuthMethod = ({instance, state}: StoreContext<ClientStoreState>) =
 
 const getClientConfigKey = (options: ClientOptions) => JSON.stringify(pick(options, ...allowedKeys))
 
+// Track request timings per middleware context
+const requestTimings = new WeakMap<object, number>()
+
+// Clone the base requester and attach middleware using hook event signatures
+const customRequester = baseSanityRequester.clone().use({
+  interceptRequest: (prev, {context, adapter}) => {
+    requestTimings.set(context, performance.now())
+    // eslint-disable-next-line no-console
+    console.log('[sanity] interceptRequest prev', prev)
+    // eslint-disable-next-line no-console
+    console.log('[sanity] interceptRequest context', context)
+    // eslint-disable-next-line no-console
+    console.log('[sanity] interceptRequest adapter', adapter)
+
+    // return {
+    //   url,
+    //   method,
+    //   body: [{ displayName: "intercepted", id: "123" }],
+    //   headers: {},
+    //   statusCode: 200,
+    //   statusMessage: "OK",
+    // };
+    return prev
+  },
+  onError: (error, context) => {
+    const start = requestTimings.get(context)
+    if (typeof start === 'number') {
+      const ms = performance.now() - start
+      // eslint-disable-next-line no-console
+      console.log(`[sanity] timing error: ${ms.toFixed(1)}ms`)
+      requestTimings.delete(context)
+    }
+    return error
+  },
+  onResponse: (response, context) => {
+    const start = requestTimings.get(context)
+    let ms = 0
+    if (typeof start === 'number') {
+      ms = performance.now() - start
+      // eslint-disable-next-line no-console
+      console.log(`[sanity] timing: ${ms.toFixed(1)}ms ${response.url} ${response.method}`)
+      requestTimings.delete(context)
+    }
+    response.headers = {
+      ...response.headers,
+      'x-intercepted': 'true',
+      'x-middleware-timing': `${ms.toFixed(1)}ms`,
+    }
+    return response
+  },
+})
+
 /**
  * Retrieves a Sanity client instance configured with the provided options.
  *
@@ -183,7 +240,7 @@ export const getClient = bindActionGlobally(
 
     if (clients[key]) return clients[key]
 
-    const client = createClient(effectiveOptions)
+    const client = createClient({...effectiveOptions, requester: customRequester})
     state.set('addClient', (prev) => ({clients: {...prev.clients, [key]: client}}))
 
     return client
