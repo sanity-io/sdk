@@ -74,4 +74,39 @@ describe('useProjects', () => {
     // Assert the result of shouldSuspend based on the mocked getCurrent value
     expect(result).toBe(true) // Since getCurrent is mocked to return undefined
   })
+
+  it('should call createStateSourceHook with correct getState function signature', async () => {
+    await import('./useProjects')
+
+    const mockCreateStateSourceHook = createStateSourceHook as ReturnType<typeof vi.fn>
+    expect(mockCreateStateSourceHook).toHaveBeenCalled()
+
+    const createStateSourceHookArgs = mockCreateStateSourceHook.mock.calls[0][0]
+    const getState = createStateSourceHookArgs.getState
+
+    // Test that getState can handle the new options parameter
+    const mockInstance = {} as SanityInstance
+    const mockOptions = {organizationId: 'org123', includeMembers: false}
+
+    // This should not throw
+    expect(() => getState(mockInstance, mockOptions)).not.toThrow()
+  })
+
+  it('should handle different parameter combinations in shouldSuspend', async () => {
+    await import('./useProjects')
+
+    const mockCreateStateSourceHook = createStateSourceHook as ReturnType<typeof vi.fn>
+    const createStateSourceHookArgs = mockCreateStateSourceHook.mock.calls[0][0]
+    const shouldSuspend = createStateSourceHookArgs.shouldSuspend
+
+    const mockInstance = {} as SanityInstance
+
+    // Test with different options
+    expect(() => shouldSuspend(mockInstance, undefined)).not.toThrow()
+    expect(() => shouldSuspend(mockInstance, {organizationId: 'org123'})).not.toThrow()
+    expect(() => shouldSuspend(mockInstance, {includeMembers: false})).not.toThrow()
+    expect(() =>
+      shouldSuspend(mockInstance, {organizationId: 'org123', includeMembers: false}),
+    ).not.toThrow()
+  })
 })

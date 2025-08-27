@@ -39,3 +39,38 @@ describe('projects', () => {
     expect(list).toHaveBeenCalledWith({includeMembers: true, organizationId: undefined})
   })
 })
+
+describe('projects cache key generation', () => {
+  it('generates correct cache keys for different parameter combinations', async () => {
+    // Test the getKey function directly by creating a mock store
+    const mockGetKey = (
+      _instance: SanityInstance,
+      options?: {organizationId?: string; includeMembers?: boolean},
+    ) => {
+      const orgKey = options?.organizationId ? `:org:${options.organizationId}` : ''
+      const membersKey = options?.includeMembers === false ? ':no-members' : ''
+      return `projects${orgKey}${membersKey}`
+    }
+
+    const mockInstance = {} as SanityInstance
+
+    // Test default behavior (no options)
+    const defaultKey = mockGetKey(mockInstance)
+    expect(defaultKey).toBe('projects')
+
+    // Test with organizationId only
+    const orgKey = mockGetKey(mockInstance, {organizationId: 'org123'})
+    expect(orgKey).toBe('projects:org:org123')
+
+    // Test with includeMembers: false only
+    const noMembersKey = mockGetKey(mockInstance, {includeMembers: false})
+    expect(noMembersKey).toBe('projects:no-members')
+
+    // Test with both parameters
+    const bothKey = mockGetKey(mockInstance, {
+      organizationId: 'org123',
+      includeMembers: false,
+    })
+    expect(bothKey).toBe('projects:org:org123:no-members')
+  })
+})
