@@ -20,6 +20,10 @@ export interface DocumentProjections {
   [projectionHash: string]: ValidProjection
 }
 
+export interface DocumentProjectionParams {
+  [projectionHash: string]: Record<string, unknown> | undefined
+}
+
 interface DocumentProjectionSubscriptions {
   [projectionHash: string]: {
     [subscriptionId: string]: true
@@ -39,6 +43,13 @@ export interface ProjectionStoreState<TValue extends object = object> {
    */
   documentProjections: {
     [documentId: string]: DocumentProjections
+  }
+
+  /**
+   * A map of document IDs to their projection params, organized by projection hash
+   */
+  projectionParams: {
+    [documentId: string]: DocumentProjectionParams
   }
 
   /**

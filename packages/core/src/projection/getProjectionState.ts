@@ -22,6 +22,7 @@ export interface ProjectionOptions<
   TProjectId extends string = string,
 > extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
   projection: TProjection
+  params?: Record<string, unknown>
 }
 
 /**
@@ -82,11 +83,12 @@ export const _getProjectionState = bindActionByDataset(
       return state.values[documentId]?.[projectionHash] ?? STABLE_EMPTY_PROJECTION
     },
     onSubscribe: ({state}, options: ProjectionOptions<ValidProjection, string, string, string>) => {
-      const {projection, ...docHandle} = options
+      const {projection, params, ...docHandle} = options
       const subscriptionId = insecureRandomId()
       const documentId = getPublishedId(docHandle.documentId)
       const validProjection = validateProjection(projection)
-      const projectionHash = hashString(validProjection)
+      const paramsHash = params ? `:${hashString(JSON.stringify(params))}` : ''
+      const projectionHash = hashString(`${validProjection}${paramsHash}`)
 
       state.set('addSubscription', (prev) => ({
         documentProjections: {
@@ -94,6 +96,13 @@ export const _getProjectionState = bindActionByDataset(
           [documentId]: {
             ...prev.documentProjections[documentId],
             [projectionHash]: validProjection,
+          },
+        },
+        projectionParams: {
+          ...prev.projectionParams,
+          [documentId]: {
+            ...prev.projectionParams[documentId],
+            [projectionHash]: params,
           },
         },
         subscriptions: {
@@ -119,12 +128,14 @@ export const _getProjectionState = bindActionByDataset(
 
             const nextSubscriptions = {...prev.subscriptions}
             const nextDocumentProjections = {...prev.documentProjections}
+            const nextProjectionParams = {...prev.projectionParams}
             const nextValues = {...prev.values}
 
             // clean up the subscription and documentProjection if there are no subscribers
             if (!hasSubscribersForProjection) {
               delete nextSubscriptions[documentId]![projectionHash]
               delete nextDocumentProjections[documentId]![projectionHash]
+              delete nextProjectionParams[documentId]![projectionHash]
 
               const currentProjectionValue = prev.values[documentId]?.[projectionHash]
               if (currentProjectionValue && nextValues[documentId]) {
@@ -146,12 +157,14 @@ export const _getProjectionState = bindActionByDataset(
             if (!hasAnySubscribersForDocument) {
               delete nextSubscriptions[documentId]
               delete nextDocumentProjections[documentId]
+              delete nextProjectionParams[documentId]
               // Keep nextValues[documentId] as cache
             }
 
             return {
               subscriptions: nextSubscriptions,
               documentProjections: nextDocumentProjections,
+              projectionParams: nextProjectionParams,
               values: nextValues,
             }
           })
