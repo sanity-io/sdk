@@ -280,4 +280,91 @@ describe('useDocumentProjection', () => {
     expect(subscribe).toHaveBeenCalled()
     expect(screen.getByText('Title')).toBeInTheDocument()
   })
+
+  test('it forwards params to core when provided', async () => {
+    const params = {q: 'Star'}
+
+    // Trigger suspense first
+    getCurrent.mockReturnValueOnce({
+      data: null,
+      isPending: true,
+    })
+
+    const resolvedData = {
+      data: {title: 'Resolved Title', description: 'Resolved Description'},
+      isPending: false,
+    }
+
+    ;(resolveProjection as Mock).mockReturnValueOnce(Promise.resolve(resolvedData))
+    getCurrent.mockReturnValue(resolvedData)
+    subscribe.mockReturnValue(() => {})
+
+    function WithParamsComponent({
+      projection,
+      ...docHandle
+    }: DocumentHandle & {projection: ValidProjection}) {
+      const ref = useRef(null)
+      const {data} = useDocumentProjection<ProjectionResult>({
+        ...docHandle,
+        projection,
+        params,
+        ref,
+      })
+      return (
+        <div ref={ref}>
+          <h1>{data.title}</h1>
+        </div>
+      )
+    }
+
+    render(
+      <Suspense fallback={<div>Loading...</div>}>
+        <WithParamsComponent {...mockDocument} projection="{title}" />
+      </Suspense>,
+    )
+
+    await act(async () => {
+      intersectionObserverCallback([{isIntersecting: true} as IntersectionObserverEntry])
+      await Promise.resolve()
+    })
+
+    const getProjectionCalls = (getProjectionState as unknown as Mock).mock.calls
+    const getProjectionCall = getProjectionCalls[getProjectionCalls.length - 1]
+    const resolveProjectionCalls = (resolveProjection as Mock).mock.calls
+    const resolveProjectionCall = resolveProjectionCalls[resolveProjectionCalls.length - 1]
+
+    expect(getProjectionCall[1].params).toEqual(params)
+    expect(resolveProjectionCall[1].params).toEqual(params)
+    expect(screen.getByText('Resolved Title')).toBeInTheDocument()
+  })
+
+  test('it works without params and does not set params field', async () => {
+    getCurrent.mockReturnValue({
+      data: {title: 'No Params', description: 'Desc'},
+      isPending: false,
+    })
+    subscribe.mockReturnValue(() => {})
+
+    function NoParamsComponent({
+      projection,
+      ...docHandle
+    }: DocumentHandle & {projection: ValidProjection}) {
+      const {data} = useDocumentProjection<ProjectionResult>({
+        ...docHandle,
+        projection,
+      })
+      return <h1>{data.title}</h1>
+    }
+
+    render(
+      <Suspense fallback={<div>Loading...</div>}>
+        <NoParamsComponent {...mockDocument} projection="{title}" />
+      </Suspense>,
+    )
+
+    const getProjectionCalls = (getProjectionState as unknown as Mock).mock.calls
+    const getProjectionCall = getProjectionCalls[getProjectionCalls.length - 1]
+    expect('params' in getProjectionCall[1]).toBe(false)
+    expect(screen.getByText('No Params')).toBeInTheDocument()
+  })
 })
