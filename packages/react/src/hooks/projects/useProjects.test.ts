@@ -59,12 +59,12 @@ describe('useProjects', () => {
     // Mock instance for the test call
     const mockInstance = {} as SanityInstance // Use specific type
 
-    // Call the shouldSuspend function
-    const result = shouldSuspend(mockInstance)
+    // Call the shouldSuspend function with both required parameters
+    const result = shouldSuspend(mockInstance, undefined) // Pass undefined for options
 
     // Assert that getProjectsState was called with the correct arguments
     const mockGetProjectsState = getProjectsState as ReturnType<typeof vi.fn>
-    expect(mockGetProjectsState).toHaveBeenCalledWith(mockInstance)
+    expect(mockGetProjectsState).toHaveBeenCalledWith(mockInstance, undefined)
 
     // Assert that getCurrent was called on the result of getProjectsState
     expect(mockGetProjectsState.mock.results.length).toBeGreaterThan(0)
