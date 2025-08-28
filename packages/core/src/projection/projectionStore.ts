@@ -8,6 +8,7 @@ export const projectionStore = defineStore<ProjectionStoreState>({
     return {
       values: {},
       documentProjections: {},
+      projectionParams: {},
       subscriptions: {},
     }
   },
