@@ -10,14 +10,29 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  */
 export type ProjectWithoutMembers = Omit<SanityProject, 'members'>
 
-/**
- * @public
- * @category Types
- */
-type UseProjects = <TIncludeMembers extends boolean = false>(options?: {
-  organizationId?: string
-  includeMembers?: TIncludeMembers
-}) => TIncludeMembers extends true ? SanityProject[] : ProjectWithoutMembers[]
+type UseProjects = {
+  /**
+   *
+   * Returns metadata for each project you have access to.
+   *
+   * @category Projects
+   * @returns An array of metadata (minus the projects’ members) for each project
+   * @example
+   * ```tsx
+   * const projects = useProjects()
+   *
+   * return (
+   *   <select>
+   *     {projects.map((project) => (
+   *       <option key={project.id}>{project.displayName}</option>
+   *     ))}
+   *   </select>
+   * )
+   * ```
+   */
+  (options?: {organizationId?: string; includeMembers?: true}): SanityProject[]
+  (options: {organizationId?: string; includeMembers?: false}): ProjectWithoutMembers[]
+}
 
 /**
  * Returns metadata for each project you have access to.
