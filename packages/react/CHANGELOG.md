@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.2.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.1.2...sdk-react-v2.2.0) (2025-08-28)
+
+
+### Features
+
+* **projects:** add organizationId and includeMembers parameters to useProjects hook ([#607](https://github.com/sanity-io/sdk/issues/607)) ([df4f69c](https://github.com/sanity-io/sdk/commit/df4f69cc62d59cf159d4ab8811f994ba84e712d7))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/client to v7.10.0 ([#605](https://github.com/sanity-io/sdk/issues/605)) ([6ef5b6c](https://github.com/sanity-io/sdk/commit/6ef5b6c711d48f8a922c132e2d77442acebb61d7))
+* error message display when a ResourceProvider is missing ([#602](https://github.com/sanity-io/sdk/issues/602)) ([3d7e1fe](https://github.com/sanity-io/sdk/commit/3d7e1fe617b7ad2a0384d731356bfbf894fdea61))
+* **react:** find correct instance for hooks that use config ([#598](https://github.com/sanity-io/sdk/issues/598)) ([3183c23](https://github.com/sanity-io/sdk/commit/3183c234ade23b6f5623a11bae3fa75c418ed657))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.2.0
+
 ## [2.1.2](https://github.com/sanity-io/sdk/compare/sdk-react-v2.1.1...sdk-react-v2.1.2) (2025-08-05)
 
 
