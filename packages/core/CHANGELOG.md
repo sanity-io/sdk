@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.0](https://github.com/sanity-io/sdk/compare/sdk-v2.1.2...sdk-v2.2.0) (2025-08-28)
+
+
+### Features
+
+* **projects:** add organizationId and includeMembers parameters to useProjects hook ([#607](https://github.com/sanity-io/sdk/issues/607)) ([df4f69c](https://github.com/sanity-io/sdk/commit/df4f69cc62d59cf159d4ab8811f994ba84e712d7))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/client to v7.10.0 ([#605](https://github.com/sanity-io/sdk/issues/605)) ([6ef5b6c](https://github.com/sanity-io/sdk/commit/6ef5b6c711d48f8a922c132e2d77442acebb61d7))
+
 ## [2.1.2](https://github.com/sanity-io/sdk/compare/sdk-v2.1.1...sdk-v2.1.2) (2025-08-05)
 
 
