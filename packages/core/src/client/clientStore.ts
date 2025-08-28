@@ -217,7 +217,7 @@ export const getClient = bindActionGlobally(
     const dataset = options.dataset ?? instance.config.dataset
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost
 
-    const effectiveOptions: ClientOptions = {
+    const effectiveOptions: ClientConfig = {
       ...DEFAULT_CLIENT_CONFIG,
       ...((options.scope === 'global' || !projectId) && {useProjectHostname: false}),
       token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
@@ -225,6 +225,7 @@ export const getClient = bindActionGlobally(
       ...(projectId && {projectId}),
       ...(dataset && {dataset}),
       ...(apiHost && {apiHost}),
+      requester: customRequester,
     }
 
     if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {
@@ -236,11 +237,11 @@ export const getClient = bindActionGlobally(
       delete effectiveOptions.withCredentials
     }
 
-    const key = getClientConfigKey(effectiveOptions)
+    const key = getClientConfigKey(effectiveOptions as ClientOptions)
 
     if (clients[key]) return clients[key]
 
-    const client = createClient({...effectiveOptions, requester: customRequester})
+    const client = createClient({...effectiveOptions})
     state.set('addClient', (prev) => ({clients: {...prev.clients, [key]: client}}))
 
     return client
