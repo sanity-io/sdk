@@ -30,7 +30,8 @@ type UseProjects = {
    * )
    * ```
    */
-  (): ProjectWithoutMembers[]
+  (options?: {organizationId?: string; includeMembers?: true}): SanityProject[]
+  (options: {organizationId?: string; includeMembers?: false}): ProjectWithoutMembers[]
 }
 
 /**
@@ -38,8 +39,11 @@ type UseProjects = {
  * @function
  */
 export const useProjects: UseProjects = createStateSourceHook({
-  // remove `undefined` since we're suspending when that is the case
-  getState: getProjectsState as (instance: SanityInstance) => StateSource<ProjectWithoutMembers[]>,
-  shouldSuspend: (instance) => getProjectsState(instance).getCurrent() === undefined,
+  getState: getProjectsState as (
+    instance: SanityInstance,
+    options?: {organizationId?: string; includeMembers?: boolean},
+  ) => StateSource<SanityProject[] | ProjectWithoutMembers[]>,
+  shouldSuspend: (instance, options) =>
+    getProjectsState(instance, options).getCurrent() === undefined,
   suspender: resolveProjects,
-})
+}) as UseProjects
