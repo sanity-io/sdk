@@ -18,20 +18,12 @@ const projects = createFetcherStore({
       scope: 'global',
     }).observable.pipe(
       switchMap((client) => {
-        const includeMembers = options?.includeMembers ?? true
-        // Use conditional logic here because client method has
-        // overloaded types that expect literal true/false
-        if (includeMembers) {
-          return client.observable.projects.list({
-            includeMembers: true,
-            organizationId: options?.organizationId,
-          })
-        } else {
-          return client.observable.projects.list({
-            includeMembers: false,
-            organizationId: options?.organizationId,
-          })
-        }
+        const organizationId = options?.organizationId
+        return client.observable.projects.list({
+          // client method has a type that expects false | undefined
+          includeMembers: !options?.includeMembers ? false : undefined,
+          organizationId,
+        })
       }),
     ),
 })
