@@ -36,7 +36,7 @@ describe('projects', () => {
 
     const result = await resolveProjects(instance)
     expect(result).toEqual(projects)
-    expect(list).toHaveBeenCalledWith({includeMembers: true, organizationId: undefined})
+    expect(list).toHaveBeenCalledWith({includeMembers: false, organizationId: undefined})
   })
 })
 
