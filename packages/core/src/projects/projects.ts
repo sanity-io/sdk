@@ -16,6 +16,7 @@ const projects = createFetcherStore({
     getClientState(instance, {
       apiVersion: API_VERSION,
       scope: 'global',
+      requestTagPrefix: 'sanity.sdk.projects',
     }).observable.pipe(
       switchMap((client) => {
         const organizationId = options?.organizationId
