@@ -5,7 +5,7 @@ import {getAuthMethodState, getTokenState} from '../auth/authStore'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
-import {networkTimingInterceptor} from './networkTimingInterceptor'
+import {sharedWorkerInterceptor} from './sharedWorkerInterceptor'
 
 const DEFAULT_API_VERSION = '2024-11-12'
 const DEFAULT_REQUEST_TAG_PREFIX = 'sanity.sdk'
@@ -169,7 +169,7 @@ export const getClient = bindActionGlobally(
       ...(projectId && {projectId}),
       ...(dataset && {dataset}),
       ...(apiHost && {apiHost}),
-      requester: networkTimingInterceptor,
+      requester: sharedWorkerInterceptor,
     }
 
     if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {
