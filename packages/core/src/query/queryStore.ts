@@ -220,6 +220,28 @@ function forwardQueryToDashboard(instance: SanityInstance, queryOptions: QueryOp
   }
 }
 
+/**
+ * Ensures the query key includes an effective perspective so that
+ * implicit differences (e.g. different instance.config.perspective)
+ * don't collide in the dataset-scoped store.
+ *
+ * Since perspectives are unique, we can depend on the release stacks
+ * to be correct when we retrieve the results.
+ *
+ */
+function normalizeOptionsWithPerspective(
+  instance: SanityInstance,
+  options: QueryOptions,
+): QueryOptions {
+  if (options.perspective !== undefined) return options
+  const instancePerspective = instance.config.perspective
+  return {
+    ...options,
+    perspective:
+      instancePerspective !== undefined ? instancePerspective : QUERY_STORE_DEFAULT_PERSPECTIVE,
+  }
+}
+
 const queryStore = defineStore<QueryStoreState>({
   name: 'QueryStore',
   getInitialState: () => ({queries: {}}),
