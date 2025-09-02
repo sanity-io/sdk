@@ -114,16 +114,16 @@ export function ReleasesRoute(): JSX.Element {
     () => ({...selectedDocument, perspective: selectedPerspective.perspective}),
     [selectedDocument, selectedPerspective],
   )
-
+  const documentProjectionOptions = useMemo(
+    () => ({
+      ...documentOptions,
+      projection: `{name, "bestFriend": bestFriend->name}` as `{${string}}`,
+    }),
+    [documentOptions],
+  )
   const documentResult = useDocument(documentOptions)
   const previewResult = useDocumentPreview(documentOptions)
-  const projectionResult = useDocumentProjection({
-    ...documentOptions,
-    projection: `{
-      name,
-      "bestFriend": bestFriend->name
-    }`,
-  })
+  const projectionResult = useDocumentProjection(documentProjectionOptions)
 
   return (
     <Box padding={4}>
