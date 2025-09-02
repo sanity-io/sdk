@@ -17,7 +17,6 @@ import {ProtectedRoute} from './ProtectedRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import ExperimentalResourceClientRoute from './routes/ExperimentalResourceClientRoute'
-import {PerspectivesRoute} from './routes/PerspectivesRoute'
 import {ProjectsRoute} from './routes/ProjectsRoute'
 import {ReleasesRoute} from './routes/releases/ReleasesRoute'
 import {UserDetailRoute} from './routes/UserDetailRoute'
@@ -110,10 +109,6 @@ export function AppRoutes(): JSX.Element {
                     path: 'projects',
                     element: <ProjectsRoute />,
                   },
-                  {
-                    path: 'perspectives',
-                    element: <PerspectivesRoute />,
-                  },
                 ]}
               />
             }
@@ -125,7 +120,6 @@ export function AppRoutes(): JSX.Element {
           <Route path="comlink-demo" element={<ParentApp />} />
           <Route path="releases" element={<ReleasesRoute />} />
           <Route path="projects" element={<ProjectsRoute />} />
-          <Route path="perspectives" element={<PerspectivesRoute />} />
         </Route>
         <Route path="comlink-demo">
           {frameRoutes.map((route) => (
