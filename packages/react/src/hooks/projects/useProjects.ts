@@ -10,31 +10,38 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  */
 export type ProjectWithoutMembers = Omit<SanityProject, 'members'>
 
-type UseProjects = {
-  /**
-   *
-   * Returns metadata for each project you have access to.
-   *
-   * @category Projects
-   * @returns An array of metadata (minus the projects’ members) for each project
-   * @example
-   * ```tsx
-   * const projects = useProjects()
-   *
-   * return (
-   *   <select>
-   *     {projects.map((project) => (
-   *       <option key={project.id}>{project.displayName}</option>
-   *     ))}
-   *   </select>
-   * )
-   * ```
-   */
-  (options?: {organizationId?: string; includeMembers?: true}): SanityProject[]
-  (options: {organizationId?: string; includeMembers?: false}): ProjectWithoutMembers[]
-}
+/**
+ * @public
+ * @category Types
+ */
+type UseProjects = <TIncludeMembers extends boolean = false>(options?: {
+  organizationId?: string
+  includeMembers?: TIncludeMembers
+}) => TIncludeMembers extends true ? SanityProject[] : ProjectWithoutMembers[]
 
 /**
+ * Returns metadata for each project you have access to.
+ *
+ * @category Projects
+ * @param options - Configuration options
+ * @returns An array of project metadata. If includeMembers is true, returns full SanityProject objects. Otherwise, returns ProjectWithoutMembers objects.
+ * @example
+ * ```tsx
+ * const projects = useProjects()
+ *
+ * return (
+ *   <select>
+ *     {projects.map((project) => (
+ *       <option key={project.id}>{project.displayName}</option>
+ *     ))}
+ *   </select>
+ * )
+ * ```
+ * @example
+ * ```tsx
+ * const projectsWithMembers = useProjects({ includeMembers: true })
+ * const projectsWithoutMembers = useProjects({ includeMembers: false })
+ * ```
  * @public
  * @function
  */
