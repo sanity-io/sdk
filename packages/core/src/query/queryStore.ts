@@ -34,7 +34,11 @@ import {
 import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
-import {QUERY_STATE_CLEAR_DELAY, QUERY_STORE_API_VERSION} from './queryStoreConstants'
+import {
+  QUERY_STATE_CLEAR_DELAY,
+  QUERY_STORE_API_VERSION,
+  QUERY_STORE_DEFAULT_PERSPECTIVE,
+} from './queryStoreConstants'
 import {
   addSubscriber,
   cancelQuery,
@@ -76,6 +80,28 @@ const EMPTY_ARRAY: never[] = []
 export const getQueryKey = (options: QueryOptions): string => JSON.stringify(options)
 /** @beta */
 export const parseQueryKey = (key: string): QueryOptions => JSON.parse(key)
+
+/**
+ * Ensures the query key includes an effective perspective so that
+ * implicit differences (e.g. different instance.config.perspective)
+ * don't collide in the dataset-scoped store.
+ *
+ * Since perspectives are unique, we can depend on the release stacks
+ * to be correct when we retrieve the results.
+ *
+ */
+function normalizeOptionsWithPerspective(
+  instance: SanityInstance,
+  options: QueryOptions,
+): QueryOptions {
+  if (options.perspective !== undefined) return options
+  const instancePerspective = instance.config.perspective
+  return {
+    ...options,
+    perspective:
+      instancePerspective !== undefined ? instancePerspective : QUERY_STORE_DEFAULT_PERSPECTIVE,
+  }
+}
 
 const queryStore = defineStore<QueryStoreState>({
   name: 'QueryStore',
@@ -255,16 +281,16 @@ export function getQueryState(
 const _getQueryState = bindActionByDataset(
   queryStore,
   createStateSourceAction({
-    selector: ({state}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
+    selector: ({state, instance}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
       if (state.error) throw state.error
-      const key = getQueryKey(options)
+      const key = getQueryKey(normalizeOptionsWithPerspective(instance, options))
       const queryState = state.queries[key]
       if (queryState?.error) throw queryState.error
       return queryState?.result
     },
-    onSubscribe: ({state}, options: QueryOptions) => {
+    onSubscribe: ({state, instance}, options: QueryOptions) => {
       const subscriptionId = insecureRandomId()
-      const key = getQueryKey(options)
+      const key = getQueryKey(normalizeOptionsWithPerspective(instance, options))
 
       state.set('addSubscriber', addSubscriber(key, subscriptionId))
 
@@ -314,8 +340,9 @@ export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise
 const _resolveQuery = bindActionByDataset(
   queryStore,
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
-    const {getCurrent} = getQueryState(instance, options)
-    const key = getQueryKey(options)
+    const normalized = normalizeOptionsWithPerspective(instance, options)
+    const {getCurrent} = getQueryState(instance, normalized)
+    const key = getQueryKey(normalized)
 
     const aborted$ = signal
       ? new Observable<void>((observer) => {

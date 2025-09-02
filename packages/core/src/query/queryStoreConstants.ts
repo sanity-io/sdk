@@ -7,3 +7,4 @@
  */
 export const QUERY_STATE_CLEAR_DELAY = 1000
 export const QUERY_STORE_API_VERSION = 'v2025-05-06'
+export const QUERY_STORE_DEFAULT_PERSPECTIVE = 'drafts'

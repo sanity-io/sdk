@@ -342,4 +342,90 @@ describe('queryStore', () => {
     ])
     unsubscribe2()
   })
+
+  it('separates cache entries by implicit perspective (instance.config)', async () => {
+    // Mock fetch to return different results based on perspective option
+    vi.mocked(fetch).mockImplementation(((_q, _p, options) => {
+      const perspective = (options as {perspective?: unknown})?.perspective
+      const result = perspective === 'published' ? [{_id: 'pub'}] : [{_id: 'drafts'}]
+      return of({result, syncTags: []}).pipe(delay(0)) as unknown as ReturnType<
+        SanityClient['observable']['fetch']
+      >
+    }) as SanityClient['observable']['fetch'])
+
+    const draftsInstance = createSanityInstance({
+      projectId: 'test',
+      dataset: 'test',
+      perspective: 'drafts',
+    })
+    const publishedInstance = createSanityInstance({
+      projectId: 'test',
+      dataset: 'test',
+      perspective: 'published',
+    })
+
+    // Same query/options, different implicit perspectives via instance.config
+    const sDrafts = getQueryState<{_id: string}[]>(draftsInstance, {query: '*[_type == "movie"]'})
+    const sPublished = getQueryState<{_id: string}[]>(publishedInstance, {
+      query: '*[_type == "movie"]',
+    })
+
+    const unsubDrafts = sDrafts.subscribe()
+    const unsubPublished = sPublished.subscribe()
+
+    const draftsResult = await firstValueFrom(
+      sDrafts.observable.pipe(filter((i) => i !== undefined)),
+    )
+    const publishedResult = await firstValueFrom(
+      sPublished.observable.pipe(filter((i) => i !== undefined)),
+    )
+
+    expect(draftsResult).toEqual([{_id: 'drafts'}])
+    expect(publishedResult).toEqual([{_id: 'pub'}])
+
+    unsubDrafts()
+    unsubPublished()
+
+    draftsInstance.dispose()
+    publishedInstance.dispose()
+  })
+
+  it('separates cache entries by explicit perspective in options', async () => {
+    vi.mocked(fetch).mockImplementation(((_q, _p, options) => {
+      const perspective = (options as {perspective?: unknown})?.perspective
+      const result = perspective === 'published' ? [{_id: 'pub'}] : [{_id: 'drafts'}]
+      return of({result, syncTags: []}).pipe(delay(0)) as unknown as ReturnType<
+        SanityClient['observable']['fetch']
+      >
+    }) as SanityClient['observable']['fetch'])
+
+    const base = createSanityInstance({projectId: 'test', dataset: 'test'})
+
+    const sDrafts = getQueryState<{_id: string}[]>(base, {
+      query: '*[_type == "movie"]',
+      perspective: 'drafts',
+    })
+    const sPublished = getQueryState<{_id: string}[]>(base, {
+      query: '*[_type == "movie"]',
+      perspective: 'published',
+    })
+
+    const unsubDrafts = sDrafts.subscribe()
+    const unsubPublished = sPublished.subscribe()
+
+    const draftsResult = await firstValueFrom(
+      sDrafts.observable.pipe(filter((i) => i !== undefined)),
+    )
+    const publishedResult = await firstValueFrom(
+      sPublished.observable.pipe(filter((i) => i !== undefined)),
+    )
+
+    expect(draftsResult).toEqual([{_id: 'drafts'}])
+    expect(publishedResult).toEqual([{_id: 'pub'}])
+
+    unsubDrafts()
+    unsubPublished()
+
+    base.dispose()
+  })
 })
