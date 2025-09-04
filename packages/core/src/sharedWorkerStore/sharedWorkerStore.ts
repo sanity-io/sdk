@@ -23,16 +23,20 @@ export const sharedWorkerStore = createStore<SharedWorkerStoreState & SharedWork
     // Actions
     registerSubscription: (subscription) => {
       const state = get()
-      
+
       // Check if we already have an equivalent subscription
       const existingSubscriptions = Array.from(state.subscriptions.values())
-      const equivalentSubscription = existingSubscriptions.find(existing => 
-        areSubscriptionsEquivalent(existing, subscription)
+      const equivalentSubscription = existingSubscriptions.find((existing) =>
+        areSubscriptionsEquivalent(existing, subscription),
       )
 
       if (equivalentSubscription) {
         // Return the existing subscription ID instead of creating a new one
-        console.log('[SharedWorkerStore] Found equivalent subscription, reusing:', equivalentSubscription.subscriptionId)
+        // eslint-disable-next-line no-console
+        console.log(
+          '[SharedWorkerStore] Found equivalent subscription, reusing:',
+          equivalentSubscription.subscriptionId,
+        )
         return equivalentSubscription.subscriptionId
       }
 
@@ -43,8 +47,8 @@ export const sharedWorkerStore = createStore<SharedWorkerStoreState & SharedWork
         lastUpdate: Date.now(),
       }
 
-      set((state) => {
-        const newSubscriptions = new Map(state.subscriptions)
+      set((currentState) => {
+        const newSubscriptions = new Map(currentState.subscriptions)
         newSubscriptions.set(subscription.subscriptionId, activeSubscription)
 
         return {
@@ -52,6 +56,7 @@ export const sharedWorkerStore = createStore<SharedWorkerStoreState & SharedWork
         }
       })
 
+      // eslint-disable-next-line no-console
       console.log('[SharedWorkerStore] Created new subscription:', subscription.subscriptionId)
       return subscription.subscriptionId
     },

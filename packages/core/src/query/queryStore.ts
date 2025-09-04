@@ -106,7 +106,7 @@ function normalizeOptionsWithPerspective(
  */
 function isInDashboardContext(): boolean {
   // For the POC, we'll forward queries when we're in an iframe
-  return window.self !== window.top
+  return globalThis?.window !== undefined && globalThis.window.self !== globalThis.window.top
 }
 
 /**

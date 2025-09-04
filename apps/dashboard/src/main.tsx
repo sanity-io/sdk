@@ -1,7 +1,7 @@
+import {addStatusListener, getSdkWorker, type WorkerStatus} from '@sanity/sdk'
+import sdkWorker from '@sanity/sdk/worker?worker&url'
 import {StrictMode} from 'react'
 import {createRoot} from 'react-dom/client'
-import {getSdkWorker, addStatusListener, type WorkerStatus} from '@sanity/sdk'
-import sdkWorker from '@sanity/sdk/worker?worker&url'
 
 import App from './App'
 
@@ -15,9 +15,11 @@ async function initializeSharedWorker() {
 
     // Add status listener for debugging
     addStatusListener((status: WorkerStatus) => {
+      // eslint-disable-next-line no-console
       console.log('[Dashboard] Worker status changed:', status)
     })
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.warn('Failed to initialize SharedWorker:', error)
     // Fallback to local subscription management
   }
