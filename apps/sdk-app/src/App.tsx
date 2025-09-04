@@ -25,7 +25,7 @@ type QueryRequestMessage = {
   type: 'dashboard/v1/query/request'
   data: {
     queryId: string
-    queryOptions: any
+    queryOptions: unknown
     requestId: string
   }
 }
@@ -49,12 +49,13 @@ function QueryTest() {
   })
 
   // This query should be forwarded to Dashboard when in iframe context
-  const {data, isPending} = useQuery({
+  const {data} = useQuery({
     query: '*[_type == "movie"][0...5]{_id, title, releaseYear}',
     projectId: 'ppsg7ml5',
     dataset: 'test',
   })
 
+  // eslint-disable-next-line no-console
   console.log('data', data)
 
   return (

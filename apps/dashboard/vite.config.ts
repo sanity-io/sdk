@@ -32,6 +32,9 @@ export default defineConfig(({mode}) => {
         '@sanity/sdk-react': resolve(import.meta.dirname, '../../packages/react/src/_exports'),
       },
     },
+    worker: {
+      format: 'es',
+    },
     define: {
       'import.meta.env.VITE_IS_E2E': JSON.stringify(isE2E),
       'import.meta.env.VITE_E2E_PROJECT_ID': JSON.stringify(
