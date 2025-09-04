@@ -24,8 +24,8 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle} from '../config/sanityConfig'
 import {getNodeState} from '../comlink/node/getNodeState'
+import {type DatasetHandle} from '../config/sanityConfig'
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {bindActionByDataset} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
@@ -81,6 +81,26 @@ export const getQueryKey = (options: QueryOptions): string => JSON.stringify(opt
 export const parseQueryKey = (key: string): QueryOptions => JSON.parse(key)
 
 /**
+ * Ensures the query key includes an effective perspective so that
+ * implicit differences (e.g. different instance.config.perspective)
+ * don't collide in the dataset-scoped store.
+ *
+ * Since perspectives are unique, we can depend on the release stacks
+ * to be correct when we retrieve the results.
+ */
+function normalizeOptionsWithPerspective(
+  instance: SanityInstance,
+  options: QueryOptions,
+): QueryOptions {
+  if (options.perspective !== undefined) return options
+  const instancePerspective = instance.config.perspective
+  return {
+    ...options,
+    perspective: instancePerspective !== undefined ? instancePerspective : 'published',
+  }
+}
+
+/**
  * Check if we're in a context where queries should be forwarded to Dashboard
  * We should forward queries when we're in an iframe AND we have a connection to Dashboard
  */
@@ -94,9 +114,14 @@ function isInDashboardContext(): boolean {
  * Forward a query request to Dashboard via comlink node
  * This follows the same pattern as favoritesStore
  */
-function forwardQueryToDashboard(instance: SanityInstance, queryOptions: QueryOptions): StateSource<unknown> {
+/* eslint-disable no-console */
+function forwardQueryToDashboard(
+  instance: SanityInstance,
+  queryOptions: QueryOptions,
+  state: StoreState<QueryStoreState>,
+): StateSource<unknown> {
   console.log('[QueryStore] Forwarding query to Dashboard:', queryOptions)
-  
+
   // Get the node state for communicating with Dashboard
   const nodeStateSource = getNodeState(instance, {
     name: 'sdk-app',
@@ -116,46 +141,54 @@ function forwardQueryToDashboard(instance: SanityInstance, queryOptions: QueryOp
     },
     subscribe: (onStoreChanged?: () => void) => {
       console.log('[QueryStore] Setting up subscription for forwarded query')
-      
-      const subscription = nodeStateSource.observable.pipe(
-        filter((nodeState) => !!nodeState && nodeState.status === 'connected'),
-        switchMap((nodeState) => {
-          const node = nodeState!.node
-          
-          console.log('[QueryStore] Node connected, sending query request to Dashboard')
-          
-          // Send the query request to Dashboard with stable IDs
-          return from(
-            (node.fetch as any)(
-              'dashboard/v1/query/request',
-              {
-                queryId: queryKey, // Use the stable query key as the queryId
-                queryOptions,
-                requestId,
-              },
-            ) as Promise<unknown>,
-          ).pipe(
-            map((response) => {
-              console.log('[QueryStore] Received response from Dashboard:', response)
-              return response
-            }),
-            catchError((err) => {
-              console.error('[QueryStore] Error forwarding query to Dashboard:', err)
-              // Return a fallback response for now
-              return of({error: 'Query forwarding failed', fallback: true})
-            }),
-          )
-        }),
-      ).subscribe({
-        next: () => {
-          console.log('[QueryStore] Calling subscription callback')
-          onStoreChanged?.()
-        },
-        error: (error) => {
-          console.error('[QueryStore] Subscription error:', error)
-          onStoreChanged?.()
-        },
-      })
+
+      const subscription = nodeStateSource.observable
+        .pipe(
+          filter((nodeState) => !!nodeState && nodeState.status === 'connected'),
+          switchMap((nodeState) => {
+            const node = nodeState!.node
+
+            console.log('[QueryStore] Node connected, sending query request to Dashboard')
+
+            // Send the query request to Dashboard with stable IDs
+            return from(
+              (node.fetch as (endpoint: string, data: unknown) => Promise<unknown>)(
+                'dashboard/v1/query/request',
+                {
+                  queryId: queryKey, // Use the stable query key as the queryId
+                  queryOptions,
+                  requestId,
+                },
+              ) as Promise<unknown>,
+            ).pipe(
+              map((response) => {
+                const typedResponse = response as {data?: unknown; error?: string}
+                console.log('[QueryStore] Received response from Dashboard:', typedResponse)
+                // Store the query result in our local query state
+                const queryResult = typedResponse.data
+                if (queryResult && !typedResponse.error) {
+                  state.set('setQueryData', setQueryData(queryKey, queryResult, []))
+                }
+                return queryResult
+              }),
+              catchError((err) => {
+                console.error('[QueryStore] Error forwarding query to Dashboard:', err)
+                // Return a fallback response for now
+                return of({error: 'Query forwarding failed', fallback: true})
+              }),
+            )
+          }),
+        )
+        .subscribe({
+          next: () => {
+            console.log('[QueryStore] Calling subscription callback')
+            onStoreChanged?.()
+          },
+          error: (error) => {
+            console.error('[QueryStore] Subscription error:', error)
+            onStoreChanged?.()
+          },
+        })
 
       return () => {
         console.log('[QueryStore] Cleaning up forwarded query subscription')
@@ -166,12 +199,12 @@ function forwardQueryToDashboard(instance: SanityInstance, queryOptions: QueryOp
       filter((nodeState) => !!nodeState && nodeState.status === 'connected'),
       switchMap((nodeState) => {
         const node = nodeState!.node
-        
+
         console.log('[QueryStore] Node connected, sending query request to Dashboard')
-        
+
         // Send the query request to Dashboard with stable IDs
         return from(
-          (node.fetch as any)(
+          (node.fetch as (endpoint: string, data: unknown) => Promise<unknown>)(
             'dashboard/v1/query/request',
             {
               queryId: queryKey, // Use the stable query key as the queryId
@@ -181,8 +214,14 @@ function forwardQueryToDashboard(instance: SanityInstance, queryOptions: QueryOp
           ) as Promise<unknown>,
         ).pipe(
           map((response) => {
-            console.log('[QueryStore] Observable received response:', response)
-            return response
+            const typedResponse = response as {data?: unknown; error?: string}
+            console.log('[QueryStore] Observable received response:', typedResponse)
+            // Store the query result in our local query state
+            const queryResult = typedResponse.data
+            if (queryResult && !typedResponse.error) {
+              state.set('setQueryData', setQueryData(queryKey, queryResult, []))
+            }
+            return queryResult
           }),
           catchError((err) => {
             console.error('[QueryStore] Observable error:', err)
@@ -193,6 +232,7 @@ function forwardQueryToDashboard(instance: SanityInstance, queryOptions: QueryOp
     ),
   }
 }
+/* eslint-enable no-console */
 
 const queryStore = defineStore<QueryStoreState>({
   name: 'QueryStore',
@@ -372,35 +412,30 @@ export function getQueryState(
 const _getQueryState = bindActionByDataset(
   queryStore,
   createStateSourceAction({
-    selector: ({state}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
-      // Check if we should forward this query to Dashboard
-      if (isInDashboardContext()) {
-        console.log('[QueryStore] In Dashboard context, forwarding query')
-        // Return undefined to indicate no initial data
-        // The onSubscribe will handle setting up the forwarded query
-        return undefined
-      }
-
-      // Normal query execution
+    selector: ({state, instance}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
       if (state.error) throw state.error
-      const key = getQueryKey(options)
+      const key = getQueryKey(normalizeOptionsWithPerspective(instance, options))
       const queryState = state.queries[key]
       if (queryState?.error) throw queryState.error
+
+      // Return the result whether it's from forwarded query or normal execution
       return queryState?.result
     },
+
     onSubscribe: ({state, instance}, options: QueryOptions) => {
+      // eslint-disable-next-line no-console
       console.log('TRYING TO SUBSCRIBE')
+      const normalized = normalizeOptionsWithPerspective(instance, options)
+      const key = getQueryKey(normalized)
+
       if (isInDashboardContext()) {
+        // eslint-disable-next-line no-console
         console.log('[QueryStore] In Dashboard context, setting up forwarded subscription')
-        // For now, this will throw an error since forwarding is not implemented
-        // In the future, this will set up subscription to Dashboard
-        return forwardQueryToDashboard(instance, options).subscribe(() => {})
+        return forwardQueryToDashboard(instance, normalized, state).subscribe(() => {})
       }
 
       // Normal subscription handling
       const subscriptionId = insecureRandomId()
-      const key = getQueryKey(options)
-
       state.set('addSubscriber', addSubscriber(key, subscriptionId))
 
       return () => {
@@ -448,12 +483,14 @@ export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise
 }
 const _resolveQuery = bindActionByDataset(
   queryStore,
+
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
     // Check if we should forward this query to Dashboard
     if (isInDashboardContext()) {
+      // eslint-disable-next-line no-console
       console.log('[QueryStore] resolveQuery: In Dashboard context, using forwarded query')
-      const forwardedStateSource = forwardQueryToDashboard(instance, options)
-      
+      const forwardedStateSource = forwardQueryToDashboard(instance, options, state)
+
       // For forwarded queries, we'll wait for the first value from the observable
       const aborted$ = signal
         ? new Observable<void>((observer) => {
@@ -472,6 +509,7 @@ const _resolveQuery = bindActionByDataset(
           }).pipe(
             catchError((error) => {
               if (error instanceof Error && error.name === 'AbortError') {
+                // eslint-disable-next-line no-console
                 console.log('[QueryStore] resolveQuery: Query aborted')
               }
               throw error
@@ -479,9 +517,7 @@ const _resolveQuery = bindActionByDataset(
           )
         : NEVER
 
-      const resolved$ = forwardedStateSource.observable.pipe(
-        first((i) => i !== undefined),
-      )
+      const resolved$ = forwardedStateSource.observable.pipe(first((i) => i !== undefined))
 
       return firstValueFrom(race([resolved$, aborted$]))
     }
