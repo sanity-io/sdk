@@ -239,11 +239,13 @@ export function disconnectWorker(): void {
  * @param subscription - Subscription to register
  * @returns Promise that resolves when subscription is confirmed
  */
-export async function registerSubscription(subscription: SubscriptionRequest): Promise<string> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function registerSubscription(subscription: SubscriptionRequest): Promise<any> {
   const response = await sendMessage('REGISTER_SUBSCRIPTION', subscription)
 
   if (response.type === 'SUBSCRIPTION_REGISTERED') {
-    return (response.data as {subscriptionId: string}).subscriptionId
+    // Return the full response data which now includes query results for query subscriptions
+    return response.data
   } else if (response.type === 'SUBSCRIPTION_ERROR') {
     throw new Error((response.data as {error: string}).error)
   } else {

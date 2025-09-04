@@ -1,8 +1,14 @@
+/* eslint-disable no-console */
+import {
+  createSubscriptionRequest,
+  registerSubscription,
+  unregisterSubscription,
+  WorkerStatus,
+} from '@sanity/sdk'
 import {SanityApp, SanityConfig, useFrameConnection} from '@sanity/sdk-react'
 import {Spinner, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
-import {type JSX, Suspense, useState, useEffect, useRef, useCallback} from 'react'
-import {registerSubscription, unregisterSubscription, createSubscriptionRequest} from '@sanity/sdk'
+import {type JSX, Suspense, useCallback, useEffect, useRef, useState} from 'react'
 
 const theme = buildTheme({})
 
@@ -26,7 +32,7 @@ type QueryRequestMessage = {
   type: 'dashboard/v1/query/request'
   data: {
     queryId: string
-    queryOptions: any
+    queryOptions: unknown
     requestId: string
   }
 }
@@ -49,58 +55,68 @@ function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameEle
   const connectionRef = useRef<(() => void) | null>(null)
 
   // Stable status handler
-  const handleStatus = useCallback((status: string) => {
-    setConnectionStatus(status)
-    console.log('[Dashboard] Connection status:', status)
+  const handleStatus = useCallback((workerStatus: WorkerStatus) => {
+    setConnectionStatus(workerStatus)
+    console.log('[Dashboard] Connection status:', workerStatus)
   }, [])
 
   // Stable message handler
-  const handleQueryRequest = useCallback(async (data: any) => {
+  const handleQueryRequest = useCallback(async (data: unknown) => {
     console.log('[Dashboard] Received query request:', data)
-    
+
+    // Type assert the data to the expected structure
+    const queryData = data as {
+      queryOptions: {
+        projectId: string
+        dataset: string
+        query: string
+        params?: Record<string, unknown>
+      }
+      requestId: string
+    }
+
     try {
       // Create a subscription request from the incoming query data
       const subscription = createSubscriptionRequest({
         storeName: 'query',
-        projectId: data.queryOptions.projectId,
-        dataset: data.queryOptions.dataset,
+        projectId: queryData.queryOptions.projectId,
+        dataset: queryData.queryOptions.dataset,
         params: {
-          query: data.queryOptions.query,
-          options: data.queryOptions.params || {},
+          query: queryData.queryOptions.query,
+          options: queryData.queryOptions.params || {},
         },
         appId: 'dashboard-app',
       })
 
       console.log('[Dashboard] Creating subscription for query:', subscription)
 
-      // Register the subscription with the SharedWorker (it will handle deduplication)
-      const subscriptionId = await registerSubscription(subscription)
-      console.log('[Dashboard] Subscription registered with ID:', subscriptionId)
+      // Register the subscription with the SharedWorker
+      // The SharedWorker will execute the query and return the result
+      const response = await registerSubscription(subscription)
+      console.log('[Dashboard] Received query response from SharedWorker:', response)
 
-      // Return the subscription ID and any initial data
+      // The SharedWorker now returns the actual query result along with the subscription ID
       return {
-        requestId: data.requestId,
-        subscriptionId,
-        data: {message: 'Query subscription created successfully'},
+        requestId: queryData.requestId,
+        subscriptionId: response.subscriptionId || response, // Handle both old and new format
+        data: response.result || response, // Return the actual query result
+        cached: response.cached || false,
       }
     } catch (error) {
       console.error('[Dashboard] Error handling query request:', error)
       return {
-        requestId: data.requestId,
+        requestId: queryData.requestId,
         error: error instanceof Error ? error.message : String(error),
         subscriptionId: null,
       }
     }
   }, [])
 
-  const {connect} = useFrameConnection<
-    QueryResponseMessage,
-    QueryRequestMessage
-  >({
+  const {connect} = useFrameConnection<QueryResponseMessage, QueryRequestMessage>({
     name: 'dashboard',
     connectTo: 'sdk-app',
     targetOrigin: '*',
-    onStatus: handleStatus,
+    onStatus: (workerStatus) => handleStatus(workerStatus as WorkerStatus),
     heartbeat: false, // Disable heartbeat to reduce cycling
     onMessage: {
       'dashboard/v1/query/request': handleQueryRequest,
@@ -132,7 +148,7 @@ function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameEle
     const iframe = iframeRef.current
     if (iframe) {
       iframe.addEventListener('load', handleIframeLoad)
-      
+
       // If iframe is already loaded, connect immediately
       if (iframe.contentDocument?.readyState === 'complete') {
         handleIframeLoad()
@@ -146,7 +162,10 @@ function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameEle
         iframe.removeEventListener('load', handleIframeLoad)
       }
     }
-  }, [connect])
+
+    // Return empty cleanup function when no iframe
+    return () => {}
+  }, [connect, iframeRef])
 
   const testSubscription = async () => {
     console.log('testSubscription')

@@ -1,7 +1,7 @@
 import {SanityApp, SanityConfig, useQuery, useWindowConnection} from '@sanity/sdk-react'
 import {Spinner, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
-import {type JSX, useEffect, useRef, useState} from 'react'
+import {type JSX} from 'react'
 
 const theme = buildTheme({})
 
@@ -25,7 +25,7 @@ type QueryRequestMessage = {
   type: 'dashboard/v1/query/request'
   data: {
     queryId: string
-    queryOptions: any
+    queryOptions: unknown
     requestId: string
   }
 }
@@ -42,7 +42,6 @@ type QueryResponseMessage = {
 
 // Test component to demonstrate query forwarding
 function QueryTest() {
-
   // hack -- something in the node setup in the query store has a race condition
   useWindowConnection<QueryResponseMessage, QueryRequestMessage>({
     name: 'sdk-app',
@@ -50,12 +49,13 @@ function QueryTest() {
   })
 
   // This query should be forwarded to Dashboard when in iframe context
-  const {data, isPending} = useQuery({
+  const {data} = useQuery({
     query: '*[_type == "movie"][0...5]{_id, title, releaseYear}',
     projectId: 'ppsg7ml5',
     dataset: 'test',
   })
 
+  // eslint-disable-next-line no-console
   console.log('data', data)
 
   return (
@@ -66,7 +66,15 @@ function QueryTest() {
       </div>
       <div style={{marginTop: 8}}>
         <strong>Data:</strong>
-        <pre style={{marginTop: 4, padding: 8, backgroundColor: '#f5f5f5', borderRadius: 4, fontSize: '12px'}}>
+        <pre
+          style={{
+            marginTop: 4,
+            padding: 8,
+            backgroundColor: '#f5f5f5',
+            borderRadius: 4,
+            fontSize: '12px',
+          }}
+        >
           {/* {JSON.stringify(data, null, 2)} */}
         </pre>
       </div>
@@ -81,9 +89,9 @@ export default function App(): JSX.Element {
   return (
     <ThemeProvider theme={theme}>
       <SanityApp fallback={<Spinner />} config={devConfigs}>
-          <div style={{height: '100vh', width: '100vw', overflow: 'auto'}}>
-            <QueryTest />
-          </div>
+        <div style={{height: '100vh', width: '100vw', overflow: 'auto'}}>
+          <QueryTest />
+        </div>
       </SanityApp>
     </ThemeProvider>
   )
