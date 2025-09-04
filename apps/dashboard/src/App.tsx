@@ -64,18 +64,18 @@ function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameEle
   const handleQueryRequest = useCallback(async (data: unknown) => {
     console.log('[Dashboard] Received query request:', data)
 
-    try {
-      // Type assert the data to the expected structure
-      const queryData = data as {
-        queryOptions: {
-          projectId: string
-          dataset: string
-          query: string
-          params?: Record<string, unknown>
-        }
-        requestId: string
+    // Type assert the data to the expected structure
+    const queryData = data as {
+      queryOptions: {
+        projectId: string
+        dataset: string
+        query: string
+        params?: Record<string, unknown>
       }
+      requestId: string
+    }
 
+    try {
       // Create a subscription request from the incoming query data
       const subscription = createSubscriptionRequest({
         storeName: 'query',
@@ -105,6 +105,7 @@ function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameEle
     } catch (error) {
       console.error('[Dashboard] Error handling query request:', error)
       return {
+        requestId: queryData.requestId,
         error: error instanceof Error ? error.message : String(error),
         subscriptionId: null,
       }
@@ -115,7 +116,7 @@ function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameEle
     name: 'dashboard',
     connectTo: 'sdk-app',
     targetOrigin: '*',
-    onStatus: handleStatus,
+    onStatus: (workerStatus) => handleStatus(workerStatus as WorkerStatus),
     heartbeat: false, // Disable heartbeat to reduce cycling
     onMessage: {
       'dashboard/v1/query/request': handleQueryRequest,
@@ -161,7 +162,10 @@ function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameEle
         iframe.removeEventListener('load', handleIframeLoad)
       }
     }
-  }, [connect])
+
+    // Return empty cleanup function when no iframe
+    return () => {}
+  }, [connect, iframeRef])
 
   const testSubscription = async () => {
     console.log('testSubscription')
