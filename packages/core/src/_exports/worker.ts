@@ -6,10 +6,24 @@
  * SharedWorker for managing subscriptions across SDK apps
  */
 
+import {createClient} from '@sanity/client'
 import {sharedWorkerStore} from '../sharedWorkerStore/sharedWorkerStore'
 import {type SubscriptionRequest} from '../sharedWorkerStore/types'
 
 declare const self: SharedWorkerGlobalScope
+
+// Cache to store query results
+const queryCache = new Map<string, {
+  result: unknown
+  timestamp: number
+  subscribers: Set<MessagePort>
+}>()
+
+// Helper to create stable cache keys
+function getCacheKey(subscription: SubscriptionRequest): string {
+  const {projectId, dataset, params} = subscription
+  return JSON.stringify({projectId, dataset, params})
+}
 
 console.log('[SharedWorker] Worker script loaded')
 
@@ -69,13 +83,19 @@ self.onconnect = (event: MessageEvent) => {
  */
 function handleRegisterSubscription(subscription: SubscriptionRequest, port: MessagePort): void {
   try {
+    // Register the subscription in the store
     sharedWorkerStore.getState().registerSubscription(subscription)
-
-    // Send confirmation back to the client
-    port.postMessage({
-      type: 'SUBSCRIPTION_REGISTERED',
-      data: {subscriptionId: subscription.subscriptionId},
-    })
+    
+    // Check if we need to execute a query for this subscription
+    if (subscription.storeName === 'query' && subscription.params?.['query']) {
+      handleQuerySubscription(subscription, port)
+    } else {
+      // For non-query subscriptions, just confirm registration
+      port.postMessage({
+        type: 'SUBSCRIPTION_REGISTERED',
+        data: {subscriptionId: subscription.subscriptionId},
+      })
+    }
 
     console.log('[SharedWorker] Registered subscription:', subscription.subscriptionId)
   } catch (error) {
@@ -87,6 +107,72 @@ function handleRegisterSubscription(subscription: SubscriptionRequest, port: Mes
       data: {error: (error as Error).message, subscriptionId: subscription.subscriptionId},
     })
   }
+}
+
+/**
+ * @internal
+ * Handle query subscription - execute the query and cache results
+ */
+async function handleQuerySubscription(subscription: SubscriptionRequest, port: MessagePort): Promise<void> {
+  const cacheKey = getCacheKey(subscription)
+  
+  // Check if we already have this query result cached
+  let cacheEntry = queryCache.get(cacheKey)
+  
+  if (!cacheEntry) {
+    try {
+      // Create Sanity client for this project/dataset
+      const client = createClient({
+        projectId: subscription.projectId,
+        dataset: subscription.dataset,
+        apiVersion: '2024-01-01',
+        useCdn: true,
+      })
+      
+      // Execute the query
+      console.log('[SharedWorker] Executing query:', subscription.params?.['query'])
+      const result = await client.fetch(
+        subscription.params?.['query'] as string,
+        subscription.params?.['options'] as Record<string, unknown> || {}
+      )
+      
+      // Cache the result
+      cacheEntry = {
+        result,
+        timestamp: Date.now(),
+        subscribers: new Set()
+      }
+      queryCache.set(cacheKey, cacheEntry)
+      
+      console.log('[SharedWorker] Query executed and cached:', cacheKey)
+    } catch (error) {
+      console.error('[SharedWorker] Query execution failed:', error)
+      port.postMessage({
+        type: 'SUBSCRIPTION_ERROR',
+        data: {
+          error: `Query execution failed: ${(error as Error).message}`,
+          subscriptionId: subscription.subscriptionId
+        },
+      })
+      return
+    }
+  }
+  
+  // Add this port as a subscriber to the cache entry
+  cacheEntry.subscribers.add(port)
+  
+  // Send the query result back to the subscriber
+  port.postMessage({
+    type: 'SUBSCRIPTION_REGISTERED',
+    data: {
+      subscriptionId: subscription.subscriptionId,
+      result: cacheEntry.result,
+      cached: cacheEntry.timestamp !== Date.now(),
+      cacheKey
+    },
+  })
+  
+  console.log('[SharedWorker] Query result sent to subscriber:', subscription.subscriptionId)
 }
 
 /**
