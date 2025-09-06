@@ -116,6 +116,15 @@ export type {
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
 export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
+export {
+  type FetchRecord,
+  getNetProfile,
+  type LongTaskRecord,
+  resetNetProfile,
+  type ResourceRecord,
+  startNetProfiler,
+  wrapFetch,
+} from '../profiler/netProfiler'
 export {type OrgVerificationResult} from '../project/organizationVerification'
 export {getProjectState, resolveProject} from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
