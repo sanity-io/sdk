@@ -2,8 +2,8 @@ import {defineCliConfig} from 'sanity/cli'
 
 export default defineCliConfig({
   app: {
-    organizationId: 'oSyH1iET5',
+    organizationId: 'oblZgbTFj',
     entry: './src/App.tsx',
-    id: 'cbhuuqhkp6sevhpreoh0so8s',
+    id: 'wkyoigmzawwnnwx458zgoh46',
   },
 })

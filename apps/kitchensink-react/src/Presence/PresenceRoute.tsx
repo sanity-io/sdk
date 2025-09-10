@@ -20,15 +20,15 @@ export function PresenceRoute(): JSX.Element {
       <h1>Second Project Presence for {devConfigs[1].projectId}</h1>
       <p>
         <a
-          href={`https://sdk-presence-example.sanity.studio/${devConfigs[2].dataset}/structure/`}
-          target={devConfigs[2].dataset}
+          href={`https://sdk-movie-procure-studio.sanity.studio/${devConfigs[1].dataset}/structure/`}
+          target={devConfigs[1].dataset}
         >
           View in Studio →
         </a>
       </p>
       <ResourceProvider
-        projectId={devConfigs[2].projectId}
-        dataset={devConfigs[2].dataset}
+        projectId={devConfigs[1].projectId}
+        dataset={devConfigs[1].dataset}
         fallback={<p>Loading...</p>}
       >
         <PresenceSecondProject />

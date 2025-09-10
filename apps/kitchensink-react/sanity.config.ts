@@ -79,6 +79,46 @@ const playerType = defineType({
   ],
 })
 
+const movieType = defineType({
+  name: 'movie',
+  title: 'Movie',
+  type: 'document',
+  fields: [
+    {
+      name: 'title',
+      title: 'Title',
+      type: 'string',
+      validation: (Rule) => Rule.required(),
+    },
+    {
+      name: 'tmdb_id',
+      title: 'TMDB ID',
+      type: 'number',
+      validation: (Rule) => Rule.required(),
+    },
+    {
+      name: 'poster_path',
+      title: 'Poster Image',
+      type: 'string',
+    },
+    {
+      name: 'hosted_poster_path',
+      title: 'Hosted Poster Image',
+      type: 'url',
+    },
+    {
+      name: 'release_date',
+      title: 'Release Date',
+      type: 'string',
+    },
+    {
+      name: 'overview',
+      title: 'Overview',
+      type: 'text',
+    },
+  ],
+})
+
 export default defineConfig([
   {
     name: 'ppsg7ml5-test',
@@ -96,6 +136,15 @@ export default defineConfig([
     dataset: 'production',
     schema: {
       types: [playerType],
+    },
+  },
+  {
+    name: 'vo1ysemo-production',
+    basePath: '/vo1ysemo-production',
+    projectId: 'vo1ysemo',
+    dataset: 'production',
+    schema: {
+      types: [movieType],
     },
   },
 ])
