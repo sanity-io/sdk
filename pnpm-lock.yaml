@@ -95,6 +95,9 @@ importers:
 
   apps/dashboard:
     dependencies:
+      '@sanity/sdk':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@sanity/sdk-react':
         specifier: workspace:*
         version: link:../../packages/react

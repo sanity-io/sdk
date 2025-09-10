@@ -87,7 +87,7 @@ const baseConfig = {
       },
       project,
       entry: ['package.bundle.ts'],
-      ignore: ['src/presence/bifurTransport.ts', 'src/presence/types.ts'],
+      ignore: ['src/presence/bifurTransport.ts', 'src/presence/types.ts', 'src/_exports/worker.ts'],
       ignoreDependencies: ['@sanity/bifur-client', '@sanity/browserslist-config'],
     },
   },
