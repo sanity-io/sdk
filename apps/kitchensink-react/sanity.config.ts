@@ -69,16 +69,6 @@ const bookType = defineType({
   ],
 })
 
-const playerType = defineType({
-  name: 'player',
-  title: 'Player',
-  type: 'document',
-  fields: [
-    defineField({name: 'name', title: 'Name', type: 'string'}),
-    defineField({name: 'slackUserId', title: 'Slack User ID', type: 'string'}),
-  ],
-})
-
 const movieType = defineType({
   name: 'movie',
   title: 'Movie',
@@ -127,15 +117,6 @@ export default defineConfig([
     dataset: 'test',
     schema: {
       types: [bookType, authorType],
-    },
-  },
-  {
-    name: 'd45jg133-production',
-    basePath: '/d45jg133-production',
-    projectId: 'd45jg133',
-    dataset: 'production',
-    schema: {
-      types: [playerType],
     },
   },
   {
