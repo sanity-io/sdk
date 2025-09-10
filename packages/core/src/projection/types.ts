@@ -1,3 +1,7 @@
+import {type ClientPerspective} from '@sanity/client'
+
+import {type ReleasePerspective} from '../config/sanityConfig'
+
 /**
  * @public
  * The result of a projection query
@@ -50,4 +54,9 @@ export interface ProjectionStoreState<TValue extends object = object> {
   subscriptions: {
     [documentId: string]: DocumentProjectionSubscriptions
   }
+
+  /**
+   * The perspective for this store instance
+   */
+  perspective: ClientPerspective | ReleasePerspective
 }

@@ -2,7 +2,7 @@ import {getDraftId, getPublishedId} from '../utils/ids'
 import {type DocumentProjections, type DocumentProjectionValues} from './types'
 import {validateProjection} from './util'
 
-export type ProjectionQueryResult = {
+export interface ProjectionQueryResult {
   _id: string
   _type: string
   _updatedAt: string
@@ -13,6 +13,17 @@ export type ProjectionQueryResult = {
 interface CreateProjectionQueryResult {
   query: string
   params: Record<string, unknown>
+}
+
+interface ProjectionStatus {
+  _id: string
+  _updatedAt: string
+}
+
+export interface ProjectionStatusQueryResult {
+  published: ProjectionStatus[]
+  drafts: ProjectionStatus[]
+  versions: ProjectionStatus[]
 }
 
 type ProjectionMap = Record<string, {projection: string; documentIds: Set<string>}>
@@ -48,11 +59,8 @@ export function createProjectionQuery(
 
   const params = Object.fromEntries(
     Object.entries(projections).map(([projectionHash, value]) => {
-      const idsInProjection = Array.from(value.documentIds).flatMap((id) => [
-        getPublishedId(id),
-        getDraftId(id),
-      ])
-
+      // Use original (published) ids only; rely on perspective layering in backend
+      const idsInProjection = Array.from(value.documentIds).map((id) => getPublishedId(id))
       return [`__ids_${projectionHash}`, Array.from(idsInProjection)]
     }),
   )
@@ -70,67 +78,47 @@ interface ProcessProjectionQueryOptions {
 export function processProjectionQuery({ids, results}: ProcessProjectionQueryOptions): {
   [TDocumentId in string]?: DocumentProjectionValues<Record<string, unknown>>
 } {
-  const groupedResults: {
-    [docId: string]: {
-      [hash: string]: {
-        draft?: ProjectionQueryResult
-        published?: ProjectionQueryResult
-      }
-    }
-  } = {}
-
-  for (const result of results) {
-    const originalId = getPublishedId(result._id)
-    const hash = result.__projectionHash
-    const isDraft = result._id.startsWith('drafts.')
-
-    if (!ids.has(originalId)) continue
-
-    if (!groupedResults[originalId]) {
-      groupedResults[originalId] = {}
-    }
-    if (!groupedResults[originalId][hash]) {
-      groupedResults[originalId][hash] = {}
-    }
-
-    if (isDraft) {
-      groupedResults[originalId][hash].draft = result
-    } else {
-      groupedResults[originalId][hash].published = result
-    }
-  }
-
   const finalValues: {
     [docId: string]: DocumentProjectionValues<Record<string, unknown>>
   } = {}
 
   for (const originalId of ids) {
     finalValues[originalId] = {}
+  }
 
-    const projectionsForDoc = groupedResults[originalId]
-    if (!projectionsForDoc) continue
-
-    for (const hash in projectionsForDoc) {
-      const {draft, published} = projectionsForDoc[hash]
-
-      const projectionResultData = draft?.result ?? published?.result
-
-      if (!projectionResultData) {
-        finalValues[originalId][hash] = {data: null, isPending: false}
-        continue
-      }
-
-      const _status = {
-        ...(draft?._updatedAt && {lastEditedDraftAt: draft._updatedAt}),
-        ...(published?._updatedAt && {lastEditedPublishedAt: published._updatedAt}),
-      }
-
-      finalValues[originalId][hash] = {
-        data: {...projectionResultData, _status},
-        isPending: false,
-      }
+  for (const result of results) {
+    const originalId = getPublishedId(result._id)
+    if (!ids.has(originalId)) continue
+    const hash = result.__projectionHash
+    const projectionResultData = result.result
+    if (!finalValues[originalId]) finalValues[originalId] = {}
+    finalValues[originalId][hash] = {
+      data: {...projectionResultData, _status: {}},
+      isPending: false,
     }
   }
 
   return finalValues
+}
+
+// Status meta query: returns lastEdited timestamps for published and drafts in a single batch
+export function createProjectionStatusQuery(
+  documentIds: Set<string>,
+  releaseNames?: string[],
+): CreateProjectionQueryResult {
+  const publishedIds = Array.from(documentIds).map((id) => getPublishedId(id))
+  const draftIds = Array.from(documentIds).map((id) => getDraftId(id))
+
+  const versionIds = (releaseNames ?? []).flatMap((releaseName) =>
+    publishedIds.map((baseId) => `versions.${releaseName}.${baseId}`),
+  )
+
+  const query =
+    '{"published": *[_id in $__published]{_id,_updatedAt}, "drafts": *[_id in $__drafts]{_id,_updatedAt}, "versions": *[_id in $__versionIds]{_id,_updatedAt}}'
+  const params = {
+    __published: publishedIds,
+    __drafts: draftIds,
+    __versionIds: versionIds,
+  }
+  return {query, params}
 }

@@ -17,11 +17,15 @@ import {
 } from 'rxjs'
 
 import {getQueryState, resolveQuery} from '../query/queryStore'
+import {getActiveReleasesState} from '../releases/releasesStore'
 import {type StoreContext} from '../store/defineStore'
+import {getPublishedId} from '../utils/ids'
 import {
   createProjectionQuery,
+  createProjectionStatusQuery,
   processProjectionQuery,
   type ProjectionQueryResult,
+  type ProjectionStatusQueryResult,
 } from './projectionQuery'
 import {type ProjectionStoreState} from './types'
 import {PROJECTION_PERSPECTIVE, PROJECTION_TAG} from './util'
@@ -83,19 +87,26 @@ export const subscribeToStateAndFetchBatches = ({
     distinctUntilChanged(isEqual),
   )
 
-  const queryExecutionSubscription = queryTrigger$
+  // React to both document projection changes and active releases changes
+  const activeReleases$ = getActiveReleasesState(instance).observable
+  const queryExecutionSubscription = combineLatest([queryTrigger$, activeReleases$])
     .pipe(
-      switchMap(([ids, documentProjections]) => {
+      switchMap(([[ids, documentProjections], releases]) => {
         if (!ids.size) return EMPTY
         const {query, params} = createProjectionQuery(ids, documentProjections)
+        // Build version IDs from active releases, independent of current perspective
+        const releaseNames = (releases ?? []).map((r) => r.name)
+        const status = createProjectionStatusQuery(ids, releaseNames)
         const controller = new AbortController()
 
         return new Observable<ProjectionQueryResult[]>((observer) => {
+          // Main data query runs with effective perspective for this store instance
+          const perspective = state.get().perspective
           const {getCurrent, observable} = getQueryState<ProjectionQueryResult[]>(instance, {
             query,
             params,
             tag: PROJECTION_TAG,
-            perspective: PROJECTION_PERSPECTIVE,
+            perspective,
           })
 
           const source$ = defer(() => {
@@ -105,7 +116,7 @@ export const subscribeToStateAndFetchBatches = ({
                   query,
                   params,
                   tag: PROJECTION_TAG,
-                  perspective: PROJECTION_PERSPECTIVE,
+                  perspective: perspective,
                   signal: controller.signal,
                 }),
               ).pipe(switchMap(() => observable))
@@ -121,16 +132,88 @@ export const subscribeToStateAndFetchBatches = ({
             }
             subscription.unsubscribe()
           }
-        }).pipe(map((data) => ({data, ids})))
+        }).pipe(
+          // Combine with status meta fetched under raw perspective
+          switchMap((data) => {
+            const statusSource = getQueryState<ProjectionStatusQueryResult>(instance, {
+              query: status.query,
+              params: status.params,
+              tag: PROJECTION_TAG,
+              perspective: PROJECTION_PERSPECTIVE,
+            })
+
+            const resolved$ = defer(() => {
+              if (statusSource.getCurrent() === undefined) {
+                return from(
+                  resolveQuery<ProjectionStatusQueryResult>(instance, {
+                    query: status.query,
+                    params: status.params,
+                    tag: PROJECTION_TAG,
+                    perspective: PROJECTION_PERSPECTIVE,
+                    signal: new AbortController().signal,
+                  }),
+                )
+              }
+              return statusSource.observable
+            })
+
+            return resolved$.pipe(map((statusResult) => ({data, ids, statusResult})))
+          }),
+        )
       }),
-      map(({ids, data}) =>
-        processProjectionQuery({
+      // Merge status timestamps into results
+      map(({ids, data, statusResult}) => {
+        const grouped = processProjectionQuery({
           projectId: instance.config.projectId!,
           dataset: instance.config.dataset!,
           ids,
           results: data,
-        }),
-      ),
+        })
+        // Build quick lookup maps for status
+        const publishedMap = new Map<string, string>()
+        const draftsMap = new Map<string, string>()
+        for (const p of statusResult?.published ?? [])
+          publishedMap.set(getPublishedId(p._id), p._updatedAt)
+        for (const d of statusResult?.drafts ?? [])
+          draftsMap.set(getPublishedId(d._id), d._updatedAt)
+        // Versions: _id = versions.<release>.<baseId>; parse baseId from id
+        const versionsMap = new Map<string, {versionId: string; updatedAt: string}[]>()
+        for (const v of statusResult?.versions ?? []) {
+          const parts = v._id.split('.')
+          const baseId = parts.slice(2).join('.')
+          const normalizedBaseId = getPublishedId(baseId)
+          const arr = versionsMap.get(normalizedBaseId) ?? []
+          arr.push({versionId: v._id, updatedAt: v._updatedAt})
+          versionsMap.set(normalizedBaseId, arr)
+        }
+
+        // Inject status into each projection entry
+        for (const originalId in grouped) {
+          const projectionsForDoc = grouped[originalId]
+          if (!projectionsForDoc) continue
+          const lastEditedPublishedAt = publishedMap.get(originalId)
+          const lastEditedDraftAt = draftsMap.get(originalId)
+          for (const hash in projectionsForDoc) {
+            const curr = projectionsForDoc[hash]
+            const _status = {
+              ...(lastEditedDraftAt && {lastEditedDraftAt}),
+              ...(lastEditedPublishedAt && {lastEditedPublishedAt}),
+              ...(versionsMap.get(originalId) && {
+                versions: versionsMap
+                  .get(originalId)!
+                  .reduce<Record<string, {updatedAt: string}>>((acc, v) => {
+                    acc[v.versionId] = {updatedAt: v.updatedAt}
+                    return acc
+                  }, {}),
+              }),
+            }
+            if (curr?.data) {
+              curr.data = {...(curr.data as object), _status}
+            }
+          }
+        }
+        return grouped
+      }),
     )
     .subscribe({
       next: (processedValues) => {
@@ -150,7 +233,6 @@ export const subscribeToStateAndFetchBatches = ({
       error: (err) => {
         // eslint-disable-next-line no-console
         console.error('Error fetching projection batches:', err)
-        // TODO: Potentially update state to reflect error state for affected projections?
       },
     })
 

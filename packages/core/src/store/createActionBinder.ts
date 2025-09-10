@@ -20,11 +20,20 @@ export type BoundStoreAction<_TState, TParams extends unknown[], TReturn> = (
   ...params: TParams
 ) => TReturn
 
+type KeyFn<TParams extends unknown[]> = (config: SanityConfig, ...params: TParams) => string
+
 /**
- * Creates an action binder function that uses the provided key function
- * to determine how store instances are shared between Sanity instances
+ * Creates an action binder function that uses the provided key functions
+ * to determine how store instances are shared between Sanity instances.
+ * The first key function should be used to determine which instance should be accessed.
+ * This is typically by projectId and dataset.
  *
- * @param keyFn - Function that generates a key from a Sanity config
+ * The second key function should be used to determine which store instance should be accessed.
+ * This is only necessary if there are multiple stores of the same type in the same instance.
+ * (For example, if there are multiple document stores in the same instance separated by perspective.)
+ *
+ * @param instanceKeyFn - Function that generates a key from a Sanity config
+ * @param storeKeyFn - Function that generates a key from a Sanity config
  * @returns A function that binds store actions to Sanity instances
  *
  * @remarks
@@ -43,7 +52,7 @@ export type BoundStoreAction<_TState, TParams extends unknown[], TReturn> = (
  * )
  * ```
  */
-export function createActionBinder(keyFn: (config: SanityConfig) => string) {
+export function createActionBinder(instanceKeyFn: KeyFn<unknown[]>, storeKeyFn?: KeyFn<unknown[]>) {
   const instanceRegistry = new Map<string, Set<string>>()
   const storeRegistry = new Map<string, StoreInstance<unknown>>()
 
@@ -55,18 +64,21 @@ export function createActionBinder(keyFn: (config: SanityConfig) => string) {
    * @returns A function that executes the action with a Sanity instance
    */
   return function bindAction<TState, TParams extends unknown[], TReturn>(
-    storeDefinition: StoreDefinition<TState>,
+    storeDefinition: StoreDefinition<TState, TParams>,
     action: StoreAction<TState, TParams, TReturn>,
   ): BoundStoreAction<TState, TParams, TReturn> {
     return function boundAction(instance: SanityInstance, ...params: TParams) {
-      const keySuffix = keyFn(instance.config)
-      const compositeKey = storeDefinition.name + (keySuffix ? `:${keySuffix}` : '')
+      const instanceKeySuffix = instanceKeyFn(instance.config)
+      const storeKeySuffix = storeKeyFn ? storeKeyFn(instance.config, ...params) : instanceKeySuffix
+      const instanceRegistryKey =
+        storeDefinition.name + (instanceKeySuffix ? `:${instanceKeySuffix}` : '')
+      const storeRegistryKey = storeDefinition.name + (storeKeySuffix ? `:${storeKeySuffix}` : '')
 
       // Get or create instance set for this composite key
-      let instances = instanceRegistry.get(compositeKey)
+      let instances = instanceRegistry.get(instanceRegistryKey)
       if (!instances) {
         instances = new Set<string>()
-        instanceRegistry.set(compositeKey, instances)
+        instanceRegistry.set(instanceRegistryKey, instances)
       }
 
       // Register instance for disposal tracking
@@ -77,24 +89,37 @@ export function createActionBinder(keyFn: (config: SanityConfig) => string) {
 
           // Clean up when last instance is disposed
           if (instances.size === 0) {
-            storeRegistry.get(compositeKey)?.dispose()
-            storeRegistry.delete(compositeKey)
-            instanceRegistry.delete(compositeKey)
+            storeRegistry.get(instanceRegistryKey)?.dispose()
+            storeRegistry.delete(storeRegistryKey)
+            instanceRegistry.delete(instanceRegistryKey)
           }
         })
       }
 
       // Get or create store instance
-      let storeInstance = storeRegistry.get(compositeKey)
+      let storeInstance = storeRegistry.get(storeRegistryKey)
+
       if (!storeInstance) {
-        storeInstance = createStoreInstance(instance, storeDefinition)
-        storeRegistry.set(compositeKey, storeInstance)
+        storeInstance = createStoreInstance(
+          instance,
+          {...storeDefinition, name: storeRegistryKey},
+          // @ts-expect-error - spreading an unknown
+          ...params,
+        )
+        storeRegistry.set(storeRegistryKey, storeInstance)
       }
 
       // Execute action with store context
       return action({instance, state: storeInstance.state as StoreState<TState>}, ...params)
     }
   }
+}
+
+const createProjectDatasetKey = ({projectId, dataset}: SanityConfig) => {
+  if (!projectId || !dataset) {
+    throw new Error('This API requires a project ID and dataset configured.')
+  }
+  return `${projectId}.${dataset}`
 }
 
 /**
@@ -128,12 +153,24 @@ export function createActionBinder(keyFn: (config: SanityConfig) => string) {
  * fetchDocument(sanityInstance, 'doc123')
  * ```
  */
-export const bindActionByDataset = createActionBinder(({projectId, dataset}) => {
-  if (!projectId || !dataset) {
-    throw new Error('This API requires a project ID and dataset configured.')
-  }
-  return `${projectId}.${dataset}`
-})
+export const bindActionByDataset = createActionBinder(createProjectDatasetKey)
+
+export const bindActionByDatasetAndHandleParams = createActionBinder(
+  createProjectDatasetKey,
+  (config, handleParams) => {
+    const {projectId, dataset} = config
+    const initialKey = `${projectId}.${dataset}`
+    const additionalParams: string[] = []
+    const {perspective: perspectiveFromDocumentHandle} = handleParams as {perspective: string}
+    let perspective: string =
+      typeof perspectiveFromDocumentHandle === 'string' ? perspectiveFromDocumentHandle : 'drafts'
+    if (typeof perspectiveFromDocumentHandle === 'object') {
+      perspective = JSON.stringify(perspectiveFromDocumentHandle)
+    }
+    additionalParams.push(`perspective:${perspective}`)
+    return `${initialKey}.${additionalParams.join('.')}`
+  },
+)
 
 /**
  * Binds an action to a global store that's shared across all Sanity instances

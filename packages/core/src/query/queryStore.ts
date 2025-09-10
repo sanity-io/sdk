@@ -175,16 +175,16 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
             }).observable
 
             return combineLatest([lastLiveEventId$, client$, perspective$]).pipe(
-              switchMap(([lastLiveEventId, client, perspective]) =>
-                client.observable.fetch(query, params, {
+              switchMap(([lastLiveEventId, client, perspective]) => {
+                return client.observable.fetch(query, params, {
                   ...restOptions,
-                  perspective,
+                  perspective: perspective,
                   filterResponse: false,
                   returnQuery: false,
                   lastLiveEventId,
                   tag,
-                }),
-              ),
+                })
+              }),
             )
           }),
           catchError((error) => {

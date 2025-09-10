@@ -2,7 +2,7 @@ import {type SanityProjectionResult} from 'groq'
 import {omit} from 'lodash-es'
 
 import {type DocumentHandle} from '../config/sanityConfig'
-import {bindActionByDataset} from '../store/createActionBinder'
+import {bindActionByDatasetAndHandleParams} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -70,7 +70,7 @@ export function getProjectionState(
 /**
  * @beta
  */
-export const _getProjectionState = bindActionByDataset(
+export const _getProjectionState = bindActionByDatasetAndHandleParams(
   projectionStore,
   createStateSourceAction({
     selector: (
@@ -79,7 +79,8 @@ export const _getProjectionState = bindActionByDataset(
     ): ProjectionValuePending<object> | undefined => {
       const documentId = getPublishedId(options.documentId)
       const projectionHash = hashString(options.projection)
-      return state.values[documentId]?.[projectionHash] ?? STABLE_EMPTY_PROJECTION
+      const value = state.values[documentId]?.[projectionHash] ?? STABLE_EMPTY_PROJECTION
+      return value
     },
     onSubscribe: ({state}, options: ProjectionOptions<string, string, string, string>) => {
       const {projection, ...docHandle} = options

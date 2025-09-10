@@ -1,7 +1,7 @@
 import {type SanityProjectionResult} from 'groq'
 import {filter, firstValueFrom} from 'rxjs'
 
-import {bindActionByDataset} from '../store/createActionBinder'
+import {bindActionByDatasetAndHandleParams} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {getProjectionState, type ProjectionOptions} from './getProjectionState'
 import {projectionStore} from './projectionStore'
@@ -38,7 +38,7 @@ export function resolveProjection(
 /**
  * @beta
  */
-const _resolveProjection = bindActionByDataset(
+const _resolveProjection = bindActionByDatasetAndHandleParams(
   projectionStore,
   (
     {instance}: {instance: SanityInstance},
@@ -46,7 +46,9 @@ const _resolveProjection = bindActionByDataset(
   ): Promise<ProjectionValuePending<Record<string, unknown>>> =>
     firstValueFrom(
       getProjectionState<Record<string, unknown>>(instance, options).observable.pipe(
-        filter((state): state is ProjectionValuePending<Record<string, unknown>> => !!state?.data),
+        filter((state): state is ProjectionValuePending<Record<string, unknown>> => {
+          return !!state?.data
+        }),
       ),
     ),
 )

@@ -29,7 +29,7 @@ export interface StoreContext<TState> {
  * Stores are isolated state containers that can be associated with Sanity instances.
  * Each store definition creates a separate state instance per composite key.
  */
-export interface StoreDefinition<TState> {
+export interface StoreDefinition<TState, TParams> {
   /**
    * Unique name for the store
    *
@@ -47,7 +47,7 @@ export interface StoreDefinition<TState> {
    * Called when a new store instance is created. Can use Sanity instance
    * configuration to determine initial state.
    */
-  getInitialState: (instance: SanityInstance) => TState
+  getInitialState: (instance: SanityInstance, params: TParams) => TState
 
   /**
    * Optional initialization function
@@ -74,8 +74,8 @@ export interface StoreDefinition<TState> {
  * @param storeDefinition - Configuration object defining the store
  * @returns The finalized store definition
  */
-export function defineStore<TState>(
-  storeDefinition: StoreDefinition<TState>,
-): StoreDefinition<TState> {
+export function defineStore<TState, TParams = unknown>(
+  storeDefinition: StoreDefinition<TState, TParams>,
+): StoreDefinition<TState, TParams> {
   return storeDefinition
 }
