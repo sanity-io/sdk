@@ -121,8 +121,8 @@ export function ReleasesRoute(): JSX.Element {
     }),
     [documentOptions],
   )
-  const documentResult = useDocument(documentOptions)
-  const previewResult = useDocumentPreview(documentOptions)
+  // const documentResult = useDocument(documentOptions)
+  // const previewResult = useDocumentPreview(documentOptions)
   const projectionResult = useDocumentProjection(documentProjectionOptions)
 
   return (
@@ -184,11 +184,11 @@ export function ReleasesRoute(): JSX.Element {
               Documents in Selected{' '}
               {isReleasePerspective(selectedPerspective.perspective) ? 'Release' : 'Perspective'}
             </Heading>
-            <DocumentList
+            {/* <DocumentList
               perspective={selectedPerspective}
               onSelectDocument={setSelectedDocument}
               selectedDocumentId={selectedDocument?.documentId}
-            />
+            /> */}
           </Box>
         )}
 
@@ -214,7 +214,7 @@ export function ReleasesRoute(): JSX.Element {
         {selectedDocument && (
           <Box paddingTop={4}>
             <Stack space={4}>
-              <Card padding={4} radius={2} shadow={1} tone="primary">
+              {/* <Card padding={4} radius={2} shadow={1} tone="primary">
                 <Heading as="h3" size={2} style={{marginBottom: 8}}>
                   Selected Document Data
                 </Heading>
@@ -230,7 +230,7 @@ export function ReleasesRoute(): JSX.Element {
                 <pre style={{whiteSpace: 'pre-wrap', wordBreak: 'break-all'}}>
                   {JSON.stringify(previewResult.data, null, 2)}
                 </pre>
-              </Card>
+              </Card> */}
 
               <Card padding={4} radius={2} shadow={1} tone="primary">
                 <Heading as="h3" size={2} style={{marginBottom: 8}}>

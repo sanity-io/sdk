@@ -5,7 +5,7 @@ import {
   type ValidProjection,
 } from '@sanity/sdk'
 import {type SanityProjectionResult} from 'groq'
-import {useCallback, useSyncExternalStore} from 'react'
+import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -182,7 +182,10 @@ export function useDocumentProjection<TData extends object>({
   ...docHandle
 }: useDocumentProjectionOptions): useDocumentProjectionResults<TData> {
   const instance = useSanityInstance(docHandle)
-  const stateSource = getProjectionState<TData>(instance, {...docHandle, projection})
+  const stateSource = useMemo(
+    () => getProjectionState<TData>(instance, {...docHandle, projection}),
+    [instance, docHandle, projection],
+  )
 
   if (stateSource.getCurrent()?.data === null) {
     throw resolveProjection(instance, {...docHandle, projection})

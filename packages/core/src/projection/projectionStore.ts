@@ -1,14 +1,16 @@
+import {type PerspectiveHandle} from '../config/sanityConfig'
 import {defineStore} from '../store/defineStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 import {type ProjectionStoreState} from './types'
 
-export const projectionStore = defineStore<ProjectionStoreState>({
+export const projectionStore = defineStore<ProjectionStoreState, PerspectiveHandle>({
   name: 'Projection',
-  getInitialState() {
+  getInitialState(_instance, handle) {
     return {
       values: {},
       documentProjections: {},
       subscriptions: {},
+      perspective: handle.perspective ?? 'drafts',
     }
   },
   initialize(context) {

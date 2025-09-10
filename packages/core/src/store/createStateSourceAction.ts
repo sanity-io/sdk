@@ -189,6 +189,7 @@ export function createStateSourceAction<TState, TParams extends unknown[], TRetu
 
     const getCurrent = () => {
       const currentState = state.get()
+      // console.log('state:', state.get())
       if (typeof currentState !== 'object' || currentState === null) {
         throw new Error(
           `Expected store state to be an object but got "${typeof currentState}" instead`,

@@ -87,7 +87,7 @@ export const getPerspectiveState = bindActionByDataset(
 
         return ['drafts', ...filteredReleases].filter(
           (name) => !perspective.excludedPerspectives?.includes(name),
-        )
+        ).reverse()
       },
     ),
   }),
