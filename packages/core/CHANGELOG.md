@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.2.0](https://github.com/sanity-io/sdk/compare/sdk-v2.1.2...sdk-v2.2.0) (2025-09-03)
+
+
+### Features
+
+* **projects:** add organizationId and includeMembers parameters to useProjects hook ([#607](https://github.com/sanity-io/sdk/issues/607)) ([df4f69c](https://github.com/sanity-io/sdk/commit/df4f69cc62d59cf159d4ab8811f994ba84e712d7))
+
+
+### Bug Fixes
+
+* **core:** add perspective to cache key to avoid collisions ([#609](https://github.com/sanity-io/sdk/issues/609)) ([c68f9b7](https://github.com/sanity-io/sdk/commit/c68f9b79f2b8f2fc4f8ab93385b5bf709b8fd254))
+* **deps:** update dependency @sanity/client to v7.10.0 ([#605](https://github.com/sanity-io/sdk/issues/605)) ([6ef5b6c](https://github.com/sanity-io/sdk/commit/6ef5b6c711d48f8a922c132e2d77442acebb61d7))
+
+## [2.1.2](https://github.com/sanity-io/sdk/compare/sdk-v2.1.1...sdk-v2.1.2) (2025-08-05)
+
+
+### Bug Fixes
+
+* fixes request tags ([#593](https://github.com/sanity-io/sdk/issues/593)) ([5fbd500](https://github.com/sanity-io/sdk/commit/5fbd50043976aaea047ddac262a297e93d3b9c56))
+
 ## [2.1.1](https://github.com/sanity-io/sdk/compare/sdk-v2.1.0...sdk-v2.1.1) (2025-07-24)
 
 

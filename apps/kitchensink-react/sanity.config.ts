@@ -69,13 +69,43 @@ const bookType = defineType({
   ],
 })
 
-const playerType = defineType({
-  name: 'player',
-  title: 'Player',
+const movieType = defineType({
+  name: 'movie',
+  title: 'Movie',
   type: 'document',
   fields: [
-    defineField({name: 'name', title: 'Name', type: 'string'}),
-    defineField({name: 'slackUserId', title: 'Slack User ID', type: 'string'}),
+    {
+      name: 'title',
+      title: 'Title',
+      type: 'string',
+      validation: (Rule) => Rule.required(),
+    },
+    {
+      name: 'tmdb_id',
+      title: 'TMDB ID',
+      type: 'number',
+      validation: (Rule) => Rule.required(),
+    },
+    {
+      name: 'poster_path',
+      title: 'Poster Image',
+      type: 'string',
+    },
+    {
+      name: 'hosted_poster_path',
+      title: 'Hosted Poster Image',
+      type: 'url',
+    },
+    {
+      name: 'release_date',
+      title: 'Release Date',
+      type: 'string',
+    },
+    {
+      name: 'overview',
+      title: 'Overview',
+      type: 'text',
+    },
   ],
 })
 
@@ -90,12 +120,12 @@ export default defineConfig([
     },
   },
   {
-    name: 'd45jg133-production',
-    basePath: '/d45jg133-production',
-    projectId: 'd45jg133',
+    name: 'vo1ysemo-production',
+    basePath: '/vo1ysemo-production',
+    projectId: 'vo1ysemo',
     dataset: 'production',
     schema: {
-      types: [playerType],
+      types: [movieType],
     },
   },
 ])

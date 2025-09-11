@@ -62,7 +62,7 @@ export const useSanityInstance = (config?: SanityConfig): SanityInstance => {
 
   if (!instance) {
     throw new Error(
-      `SanityInstance context not found. ${config ? `Requested config: ${JSON.stringify(config, null, 2)}. ` : ''}Please ensure that your component is wrapped in a <ResourceProvider> or a <SanityApp>.`,
+      `SanityInstance context not found. ${config ? `Requested config: ${JSON.stringify(config, null, 2)}. ` : ''}Please ensure that your component is wrapped in a ResourceProvider or a SanityApp component.`,
     )
   }
 
@@ -72,7 +72,7 @@ export const useSanityInstance = (config?: SanityConfig): SanityInstance => {
   if (!match) {
     throw new Error(
       `Could not find a matching Sanity instance for the requested configuration: ${JSON.stringify(config, null, 2)}.
-Please ensure there is a <ResourceProvider> with a matching configuration in the component hierarchy.`,
+Please ensure there is a ResourceProvider component with a matching configuration in the component hierarchy.`,
     )
   }
 
