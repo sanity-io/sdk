@@ -3,6 +3,9 @@ import {pick} from 'lodash-es'
 import {type SanityConfig} from '../config/sanityConfig'
 import {insecureRandomId} from '../utils/ids'
 
+const isMediaLibrary = (config: SanityConfig) =>
+  config.mediaLibraryId && !config.projectId && !config.dataset
+
 /**
  * Represents a Sanity.io resource instance with its own configuration and lifecycle
  * @remarks Instances form a hierarchy through parent/child relationships
@@ -94,23 +97,35 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
       }
     },
     getParent: () => undefined,
-    createChild: (next) =>
-      Object.assign(
-        createSanityInstance({
+    createChild: (next) => {
+      const shouldMerge = isMediaLibrary(config) === isMediaLibrary(next)
+      let newInstanceConfig = next
+
+      if (shouldMerge) {
+        // For dataset configs, merge with parent as usual
+        newInstanceConfig = {
           ...config,
           ...next,
           ...(config.auth === next.auth
             ? config.auth
             : config.auth && next.auth && {auth: {...config.auth, ...next.auth}}),
-        }),
-        {getParent: () => instance},
-      ),
+        }
+      }
+      return Object.assign(createSanityInstance(newInstanceConfig), {getParent: () => instance})
+    },
     match: (targetConfig) => {
-      if (
-        Object.entries(pick(targetConfig, 'auth', 'projectId', 'dataset')).every(
-          ([key, value]) => config[key as keyof SanityConfig] === value,
-        )
-      ) {
+      // Check if this instance matches the target configuration
+      const targetEntries = Object.entries(
+        pick(targetConfig, 'auth', 'projectId', 'dataset', 'mediaLibraryId'),
+      )
+
+      // Check if all specified properties match
+      const matches = targetEntries.every(([key, value]) => {
+        const instanceValue = config[key as keyof SanityConfig]
+        return instanceValue === value
+      })
+
+      if (matches) {
         return instance
       }
 

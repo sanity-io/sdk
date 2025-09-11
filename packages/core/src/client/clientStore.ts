@@ -34,6 +34,7 @@ const allowedKeys = Object.keys({
   'maxRetries': null,
   'dataset': null,
   'projectId': null,
+  'mediaLibraryId': null,
   'scope': null,
   'apiVersion': null,
   'requestTagPrefix': null,
@@ -86,6 +87,10 @@ export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey
    * A required string indicating the API version for the client.
    */
   'apiVersion': string
+  /**
+   * An optional media library ID for media library queries.
+   */
+  'mediaLibraryId'?: string
   /**
    * @internal
    */
@@ -158,16 +163,33 @@ export const getClient = bindActionGlobally(
     const {clients, authMethod} = state.get()
     const projectId = options.projectId ?? instance.config.projectId
     const dataset = options.dataset ?? instance.config.dataset
+    const mediaLibraryId = options.mediaLibraryId ?? instance.config.mediaLibraryId
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost
+
+    // Check if this is a media library configuration
+    const isMediaLibraryConfig = mediaLibraryId && !projectId && !dataset
 
     const effectiveOptions: ClientOptions = {
       ...DEFAULT_CLIENT_CONFIG,
       ...((options.scope === 'global' || !projectId) && {useProjectHostname: false}),
       token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
       ...options,
-      ...(projectId && {projectId}),
-      ...(dataset && {dataset}),
-      ...(apiHost && {apiHost}),
+      ...(isMediaLibraryConfig
+        ? {
+            // Media library specific configuration
+            'requestTagPrefix': 'sanity.media-library',
+            '~experimental_resource': {
+              type: 'media-library',
+              id: mediaLibraryId as string,
+            },
+            ...(apiHost && {apiHost}),
+          }
+        : {
+            // Dataset specific configuration
+            ...(projectId && {projectId}),
+            ...(dataset && {dataset}),
+            ...(apiHost && {apiHost}),
+          }),
     }
 
     if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {

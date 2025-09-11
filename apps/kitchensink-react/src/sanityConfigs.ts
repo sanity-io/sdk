@@ -13,6 +13,9 @@ export const devConfigs: SanityConfig[] = [
     projectId: 'v28v5k8m',
     dataset: 'production',
   },
+  {
+    mediaLibraryId: 'mlPGY7BEqt52',
+  },
 ]
 
 export const e2eConfigs: SanityConfig[] = [

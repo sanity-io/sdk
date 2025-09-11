@@ -22,9 +22,9 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle} from '../config/sanityConfig'
+import {type DatasetHandle, type MediaLibraryHandle} from '../config/sanityConfig'
 import {getPerspectiveState} from '../releases/getPerspectiveState'
-import {bindActionByDataset} from '../store/createActionBinder'
+import {bindActionByResource} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -66,11 +66,33 @@ export interface QueryOptions<
 /**
  * @beta
  */
+export interface MediaLibraryQueryOptions<
+  TQuery extends string = string,
+  TMediaLibraryId extends string = string,
+> extends Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'>,
+    MediaLibraryHandle<TMediaLibraryId> {
+  query: TQuery
+  params?: Record<string, unknown>
+}
+
+/**
+ * @beta
+ */
 export interface ResolveQueryOptions<
   TQuery extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
 > extends QueryOptions<TQuery, TDataset, TProjectId> {
+  signal?: AbortSignal
+}
+
+/**
+ * @beta
+ */
+export interface MediaLibraryResolveQueryOptions<
+  TQuery extends string = string,
+  TMediaLibraryId extends string = string,
+> extends MediaLibraryQueryOptions<TQuery, TMediaLibraryId> {
   signal?: AbortSignal
 }
 
@@ -206,9 +228,9 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
   const liveMessages$ = getClientState(instance, {
     apiVersion: QUERY_STORE_API_VERSION,
   }).observable.pipe(
-    switchMap((client) =>
-      client.live.events({includeDrafts: !!client.config().token, tag: 'query-store'}),
-    ),
+    switchMap((client) => {
+      return client.live.events({includeDrafts: !!client.config().token, tag: 'query-store'})
+    }),
     share(),
     filter((e) => e.type === 'message'),
   )
@@ -278,7 +300,7 @@ export function getQueryState(
 ): ReturnType<typeof _getQueryState> {
   return _getQueryState(...args)
 }
-const _getQueryState = bindActionByDataset(
+const _getQueryState = bindActionByResource(
   queryStore,
   createStateSourceAction({
     selector: ({state, instance}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
@@ -337,7 +359,7 @@ export function resolveQuery<TData>(
 export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise<unknown> {
   return _resolveQuery(...args)
 }
-const _resolveQuery = bindActionByDataset(
+const _resolveQuery = bindActionByResource(
   queryStore,
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
     const normalized = normalizeOptionsWithPerspective(instance, options)

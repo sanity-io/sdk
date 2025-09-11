@@ -342,8 +342,8 @@ importers:
         specifier: ^0.4.1
         version: 0.4.1
       '@sanity/client':
-        specifier: ^7.10.0
-        version: 7.10.0(debug@4.4.1)
+        specifier: 7.11.1-allow-live.0
+        version: 7.11.1-allow-live.0
       '@sanity/comlink':
         specifier: ^3.0.4
         version: 3.0.4
@@ -436,8 +436,8 @@ importers:
   packages/react:
     dependencies:
       '@sanity/client':
-        specifier: ^7.10.0
-        version: 7.10.0(debug@4.4.1)
+        specifier: 7.11.1-allow-live.0
+        version: 7.11.1-allow-live.0
       '@sanity/message-protocol':
         specifier: ^0.12.0
         version: 0.12.0
@@ -2728,6 +2728,10 @@ packages:
 
   '@sanity/client@7.10.0':
     resolution: {integrity: sha512-3UV6pJupue7UAZh4g5n0lYjuRsIb4c6IoqMywVLMHYoSOeHJfgSzbexOPGMNqvF+KUywUA0GyFi9cAVeMKofvw==}
+    engines: {node: '>=20'}
+
+  '@sanity/client@7.11.1-allow-live.0':
+    resolution: {integrity: sha512-0erApHCvP5+299YggQKg/8CLGXWtYG2oFxXOiHkqwwllkRV2EWSnFGbsWjX5S+Os4IUauZUELL/NeNASYIj3Ug==}
     engines: {node: '>=20'}
 
   '@sanity/client@7.2.1':
@@ -10289,6 +10293,15 @@ snapshots:
       - debug
 
   '@sanity/client@7.10.0(debug@4.4.1)':
+    dependencies:
+      '@sanity/eventsource': 5.0.2
+      get-it: 8.6.10(debug@4.4.1)
+      nanoid: 3.3.11
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - debug
+
+  '@sanity/client@7.11.1-allow-live.0':
     dependencies:
       '@sanity/eventsource': 5.0.2
       get-it: 8.6.10(debug@4.4.1)

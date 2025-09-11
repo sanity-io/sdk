@@ -47,12 +47,14 @@ export {
   createDatasetHandle,
   createDocumentHandle,
   createDocumentTypeHandle,
+  createMediaLibraryHandle,
   createProjectHandle,
 } from '../config/handles'
 export {
   type DatasetHandle,
   type DocumentHandle,
   type DocumentTypeHandle,
+  type MediaLibraryHandle,
   type PerspectiveHandle,
   type ProjectHandle,
   type ReleasePerspective,
@@ -125,6 +127,8 @@ export {getProjectsState, resolveProjects} from '../projects/projects'
 export {
   getQueryKey,
   getQueryState,
+  type MediaLibraryQueryOptions,
+  type MediaLibraryResolveQueryOptions,
   parseQueryKey,
   type QueryOptions,
   resolveQuery,
@@ -132,6 +136,7 @@ export {
 export {getPerspectiveState} from '../releases/getPerspectiveState'
 export type {ReleaseDocument} from '../releases/releasesStore'
 export {getActiveReleasesState} from '../releases/releasesStore'
+export {bindActionByMediaLibrary, bindActionByResource} from '../store/createActionBinder'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
 export {getUsersKey, parseUsersKey} from '../users/reducers'

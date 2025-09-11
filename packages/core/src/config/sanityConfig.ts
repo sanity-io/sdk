@@ -35,6 +35,15 @@ export interface DatasetHandle<TDataset extends string = string, TProjectId exte
 }
 
 /**
+ * Represents the configuration required to identify a Sanity media library.
+ * @public
+ */
+export interface MediaLibraryHandle<TMediaLibraryId extends string = string>
+  extends PerspectiveHandle {
+  mediaLibraryId?: TMediaLibraryId
+}
+
+/**
  * Identifies a specific document type within a Sanity dataset and project.
  * Includes `projectId`, `dataset`, and `documentType`.
  * Optionally includes a `documentId`, useful for referencing a specific document type context, potentially without a specific document ID.
@@ -67,7 +76,12 @@ export interface DocumentHandle<
  * Represents the complete configuration for a Sanity SDK instance
  * @public
  */
-export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
+export interface SanityConfig extends DatasetHandle, PerspectiveHandle, MediaLibraryHandle {
+  /**
+   * Media library ID for media library queries
+   * @remarks When provided, enables media library functionality
+   */
+  mediaLibraryId?: string
   /**
    * Authentication configuration for the instance
    * @remarks Merged with parent configurations when using createChild
@@ -81,3 +95,19 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
     enabled: boolean
   }
 }
+
+// /**
+//  * Configuration for a Sanity SDK instance with dataset support
+//  * @public
+//  */
+// export interface DatasetSanityConfig extends SanityConfig {}
+
+// /**
+//  * Configuration for a Sanity SDK instance with media library support
+//  * @public
+//  */
+// export interface MediaLibrarySanityConfig extends SanityConfig {
+//   mediaLibraryId: string
+//   projectId?: never
+//   dataset?: never
+// }

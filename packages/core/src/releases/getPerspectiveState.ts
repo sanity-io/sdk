@@ -1,7 +1,7 @@
 import {createSelector} from 'reselect'
 
 import {type PerspectiveHandle, type ReleasePerspective} from '../config/sanityConfig'
-import {bindActionByDataset} from '../store/createActionBinder'
+import {bindActionByResource} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 import {releasesStore, type ReleasesStoreState} from './releasesStore'
 import {sortReleases} from './utils/sortReleases'
@@ -62,7 +62,7 @@ const memoizedOptionsSelector = createSelector(
  *
  * @public
  */
-export const getPerspectiveState = bindActionByDataset(
+export const getPerspectiveState = bindActionByResource(
   releasesStore,
   createStateSourceAction({
     selector: createSelector(

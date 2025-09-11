@@ -2,6 +2,7 @@ import {
   type DatasetHandle,
   type DocumentHandle,
   type DocumentTypeHandle,
+  type MediaLibraryHandle,
   type ProjectHandle,
 } from './sanityConfig'
 
@@ -63,5 +64,18 @@ export function createDatasetHandle<
   TDataset extends string = string,
   TProjectId extends string = string,
 >(handle: DatasetHandle<TDataset, TProjectId>): DatasetHandle<TDataset, TProjectId> {
+  return handle
+}
+
+/**
+ * Creates or validates a `MediaLibraryHandle` object.
+ * Ensures the provided object conforms to the `MediaLibraryHandle` interface.
+ * @param handle - The object containing media library identification properties.
+ * @returns The validated `MediaLibraryHandle` object.
+ * @public
+ */
+export function createMediaLibraryHandle<TMediaLibraryId extends string = string>(
+  handle: MediaLibraryHandle<TMediaLibraryId>,
+): MediaLibraryHandle<TMediaLibraryId> {
   return handle
 }

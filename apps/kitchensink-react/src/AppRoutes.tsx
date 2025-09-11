@@ -17,8 +17,9 @@ import {ProtectedRoute} from './ProtectedRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import ExperimentalResourceClientRoute from './routes/ExperimentalResourceClientRoute'
-import {ProjectsRoute} from './routes/ProjectsRoute'
+import MediaLibraryRoute from './routes/MediaLibraryRoute'
 import {PerspectivesRoute} from './routes/PerspectivesRoute'
+import {ProjectsRoute} from './routes/ProjectsRoute'
 import {ReleasesRoute} from './routes/releases/ReleasesRoute'
 import {UserDetailRoute} from './routes/UserDetailRoute'
 import {UsersRoute} from './routes/UsersRoute'
@@ -67,6 +68,10 @@ const documentCollectionRoutes = [
   {
     path: 'experimental-resource-client',
     element: <ExperimentalResourceClientRoute />,
+  },
+  {
+    path: 'media-library',
+    element: <MediaLibraryRoute />,
   },
   {
     path: 'presence',

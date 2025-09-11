@@ -1,6 +1,12 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {bindActionByDataset, bindActionGlobally, createActionBinder} from './createActionBinder'
+import {
+  bindActionByDataset,
+  bindActionByMediaLibrary,
+  bindActionByResource,
+  bindActionGlobally,
+  createActionBinder,
+} from './createActionBinder'
 import {createSanityInstance} from './createSanityInstance'
 import {createStoreInstance} from './createStoreInstance'
 
@@ -112,6 +118,123 @@ describe('bindActionByDataset', () => {
     expect(() => boundAction(instance)).toThrow(
       'This API requires a project ID and dataset configured.',
     )
+  })
+})
+
+describe('bindActionByMediaLibrary', () => {
+  it('should work correctly when mediaLibraryId is provided', () => {
+    const storeDefinition = {
+      name: 'MediaStore',
+      getInitialState: () => ({assets: {}}),
+    }
+    const action = vi.fn((_context, value: string) => value)
+    const boundAction = bindActionByMediaLibrary(storeDefinition, action)
+    const instance = createSanityInstance({mediaLibraryId: 'lib123'})
+    const result = boundAction(instance, 'hello')
+    expect(result).toBe('hello')
+  })
+
+  it('should throw an error if mediaLibraryId is missing', () => {
+    const storeDefinition = {
+      name: 'MediaStore',
+      getInitialState: () => ({assets: {}}),
+    }
+    const action = vi.fn((_context) => 'fail')
+    const boundAction = bindActionByMediaLibrary(storeDefinition, action)
+    // Instance with missing mediaLibraryId
+    const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
+    expect(() => boundAction(instance)).toThrow('This API requires a media library ID configured.')
+  })
+
+  it('should create separate store instances for different media libraries', () => {
+    const storeDefinition = {
+      name: 'MediaStore',
+      getInitialState: () => ({assets: {}}),
+    }
+    const action = vi.fn((context, assetId: string) => {
+      // Initialize assets if not present
+      if (!context.state.assets) {
+        context.state.assets = {}
+      }
+      context.state.assets[assetId] = true
+      return Object.keys(context.state.assets).length
+    })
+    const boundAction = bindActionByMediaLibrary(storeDefinition, action)
+
+    const instance1 = createSanityInstance({mediaLibraryId: 'lib1'})
+    const instance2 = createSanityInstance({mediaLibraryId: 'lib2'})
+
+    const result1 = boundAction(instance1, 'asset1')
+    const result2 = boundAction(instance2, 'asset2')
+
+    expect(result1).toBe(1)
+    expect(result2).toBe(1) // Different media library, so separate state
+    expect(vi.mocked(createStoreInstance)).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('bindActionByResource', () => {
+  it('should work correctly with dataset configuration', () => {
+    const storeDefinition = {
+      name: 'ResourceStore',
+      getInitialState: () => ({data: {}}),
+    }
+    const action = vi.fn((_context, value: string) => value)
+    const boundAction = bindActionByResource(storeDefinition, action)
+    const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
+    const result = boundAction(instance, 'hello')
+    expect(result).toBe('hello')
+  })
+
+  it('should work correctly with media library configuration', () => {
+    const storeDefinition = {
+      name: 'ResourceStore',
+      getInitialState: () => ({data: {}}),
+    }
+    const action = vi.fn((_context, value: string) => value)
+    const boundAction = bindActionByResource(storeDefinition, action)
+    const instance = createSanityInstance({mediaLibraryId: 'lib123'})
+    const result = boundAction(instance, 'hello')
+    expect(result).toBe('hello')
+  })
+
+  it('should throw an error if neither dataset nor media library is configured', () => {
+    const storeDefinition = {
+      name: 'ResourceStore',
+      getInitialState: () => ({data: {}}),
+    }
+    const action = vi.fn((_context) => 'fail')
+    const boundAction = bindActionByResource(storeDefinition, action)
+    // Instance with no valid configuration
+    const instance = createSanityInstance({})
+    expect(() => boundAction(instance)).toThrow(
+      'This API requires either a project ID and dataset, or a media library ID configured.',
+    )
+  })
+
+  it.skip('should create separate store instances for different resource types', () => {
+    const storeDefinition = {
+      name: 'ResourceStore',
+      getInitialState: () => ({data: {}}),
+    }
+    const action = vi.fn((context, key: string) => {
+      if (!context.state.data) {
+        context.state.data = {}
+      }
+      context.state.data[key] = true
+      return Object.keys(context.state.data).length
+    })
+    const boundAction = bindActionByResource(storeDefinition, action)
+
+    const datasetInstance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
+    const mediaLibraryInstance = createSanityInstance({mediaLibraryId: 'lib1'})
+
+    const result1 = boundAction(datasetInstance, 'item1')
+    const result2 = boundAction(mediaLibraryInstance, 'item2')
+
+    expect(result1).toBe(1)
+    expect(result2).toBe(1) // Different resource type, so separate state
+    expect(vi.mocked(createStoreInstance)).toHaveBeenCalledTimes(2)
   })
 })
 

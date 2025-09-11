@@ -22,6 +22,7 @@ import {SanityInstanceContext} from '../../context/SanityInstanceContext'
  * Use this hook when you need to:
  * - Access the current SanityInstance from context
  * - Find a specific instance with matching project/dataset configuration
+ * - Find a specific instance with matching media library configuration
  * - Access a parent instance with specific configuration values
  *
  * @example Get the current instance
@@ -44,6 +45,14 @@ import {SanityInstanceContext} from '../../context/SanityInstanceContext'
  *   // Instance is guaranteed to have the matching config
  *   return client.fetch(`*[_id == $id][0]`, { id: docId })
  * }
+ * ```
+ *
+ * @example Find an instance with media library configuration
+ * ```tsx
+ * // Find an instance matching the given media library
+ * const instance = useSanityInstance({
+ *   mediaLibraryId: 'al34RQcBfuD7'
+ * })
  * ```
  *
  * @example Match partial configuration

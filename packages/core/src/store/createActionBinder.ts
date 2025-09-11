@@ -136,6 +136,93 @@ export const bindActionByDataset = createActionBinder(({projectId, dataset}) => 
 })
 
 /**
+ * @public
+ * Binds an action to a store that's scoped to a specific media library
+ *
+ * @remarks
+ * This creates actions that operate on state isolated to a specific media library.
+ * Different media libraries will have separate states.
+ *
+ * @throws Error if mediaLibraryId is missing from the Sanity instance config
+ *
+ * @example
+ * ```ts
+ * // Define a store
+ * const mediaStore = defineStore<MediaState>({
+ *   name: 'Media',
+ *   getInitialState: () => ({ assets: {} }),
+ *   // ...
+ * })
+ *
+ * // Create media library-specific actions
+ * export const fetchAsset = bindActionByMediaLibrary(
+ *   mediaStore,
+ *   ({instance, state}, assetId) => {
+ *     // This state is isolated to the specific media library
+ *     // ...fetch logic...
+ *   }
+ * )
+ *
+ * // Usage
+ * fetchAsset(sanityInstance, 'asset123')
+ * ```
+ */
+export const bindActionByMediaLibrary = createActionBinder(({mediaLibraryId}) => {
+  if (!mediaLibraryId) {
+    throw new Error('This API requires a media library ID configured.')
+  }
+  return `media-library:${mediaLibraryId}`
+})
+
+/**
+ * @public
+ * Binds an action to a store that's scoped to either a dataset or media library
+ *
+ * @remarks
+ * This creates actions that can operate on state isolated to either a specific project/dataset
+ * combination or a specific media library, depending on the configuration provided.
+ * Different resource types will have separate states.
+ *
+ * @throws Error if neither projectId/dataset nor mediaLibraryId is provided
+ *
+ * @example
+ * ```ts
+ * // Define a store
+ * const queryStore = defineStore<QueryState>({
+ *   name: 'Query',
+ *   getInitialState: () => ({ queries: {} }),
+ *   // ...
+ * })
+ *
+ * // Create universal actions that work with both datasets and media libraries
+ * export const executeQuery = bindActionByResource(
+ *   queryStore,
+ *   ({instance, state}, queryOptions) => {
+ *     // This state is isolated to the specific resource (dataset or media library)
+ *     // ...query logic...
+ *   }
+ * )
+ *
+ * // Usage with dataset
+ * executeQuery(datasetInstance, { projectId: 'proj', dataset: 'ds', query: '*' })
+ *
+ * // Usage with media library
+ * executeQuery(mediaLibraryInstance, { mediaLibraryId: 'lib', query: '*' })
+ * ```
+ */
+export const bindActionByResource = createActionBinder((config) => {
+  if (config.mediaLibraryId && !config.projectId && !config.dataset) {
+    return `media-library:${config.mediaLibraryId}`
+  }
+  if (config.projectId && config.dataset) {
+    return `${config.projectId}.${config.dataset}`
+  }
+  throw new Error(
+    'This API requires either a project ID and dataset, or a media library ID configured.',
+  )
+})
+
+/**
  * Binds an action to a global store that's shared across all Sanity instances
  *
  * @remarks

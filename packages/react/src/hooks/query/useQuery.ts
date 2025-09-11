@@ -1,6 +1,7 @@
 import {
   getQueryKey,
   getQueryState,
+  type MediaLibraryQueryOptions,
   parseQueryKey,
   type QueryOptions,
   resolveQuery,
@@ -117,6 +118,19 @@ export function useQuery<TData>(options: QueryOptions): {
 
 /**
  * @public
+ * Overload for media library queries
+ */
+export function useQuery<TQuery extends string = string, TMediaLibraryId extends string = string>(
+  options: MediaLibraryQueryOptions<TQuery, TMediaLibraryId>,
+): {
+  /** The query result, typed based on the GROQ query string */
+  data: SanityQueryResult<TQuery, TMediaLibraryId>
+  /** True if a query transition is in progress */
+  isPending: boolean
+}
+
+/**
+ * @public
  * Fetches data and subscribes to real-time updates using a GROQ query.
  *
  * @remarks
@@ -133,7 +147,10 @@ export function useQuery<TData>(options: QueryOptions): {
  *
  * @category GROQ
  */
-export function useQuery(options: QueryOptions): {data: unknown; isPending: boolean} {
+export function useQuery(options: QueryOptions | MediaLibraryQueryOptions): {
+  data: unknown
+  isPending: boolean
+} {
   // Implementation returns unknown, overloads define specifics
   const instance = useSanityInstance(options)
 
