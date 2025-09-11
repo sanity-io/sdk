@@ -6,11 +6,7 @@ export const devConfigs: SanityConfig[] = [
     dataset: 'test',
   },
   {
-    projectId: 'd45jg133',
-    dataset: 'production',
-  },
-  {
-    projectId: 'v28v5k8m',
+    projectId: 'vo1ysemo',
     dataset: 'production',
   },
 ]
