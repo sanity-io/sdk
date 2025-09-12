@@ -55,4 +55,4 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Deploy Sanity App
-        run: pnpm run deploy:kitchensink
+        run: SANITY_AUTH_TOKEN="${{ secrets.SANITY_AUTH_TOKEN_DEPLOY }}" pnpm run deploy:kitchensink
