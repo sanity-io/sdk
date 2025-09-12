@@ -37,7 +37,11 @@ import {
 import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
-import {QUERY_STATE_CLEAR_DELAY, QUERY_STORE_API_VERSION} from './queryStoreConstants'
+import {
+  QUERY_STATE_CLEAR_DELAY,
+  QUERY_STORE_API_VERSION,
+  QUERY_STORE_DEFAULT_PERSPECTIVE,
+} from './queryStoreConstants'
 import {
   addSubscriber,
   cancelQuery,
@@ -96,7 +100,8 @@ function normalizeOptionsWithPerspective(
   const instancePerspective = instance.config.perspective
   return {
     ...options,
-    perspective: instancePerspective !== undefined ? instancePerspective : 'published',
+    perspective:
+      instancePerspective !== undefined ? instancePerspective : QUERY_STORE_DEFAULT_PERSPECTIVE,
   }
 }
 
