@@ -2,7 +2,6 @@ name: Deploy Kitchensink
 
 on:
   push:
-    branches: ["main"]
   workflow_dispatch:
 
 concurrency:
@@ -12,6 +11,10 @@ concurrency:
 jobs:
   deploy-kitchensink:
     runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+      SANITY_AUTH_TOKEN_DEPLOY: ${{ secrets.SANITY_AUTH_TOKEN_DEPLOY }}
     permissions:
       contents: read
     steps:
