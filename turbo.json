@@ -93,7 +93,8 @@
     },
     "deploy": {
       "cache": false,
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "env": ["SANITY_AUTH_TOKEN"]
     }
   }
 }
