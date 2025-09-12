@@ -11,12 +11,13 @@ concurrency:
 jobs:
   deploy-kitchensink:
     runs-on: ubuntu-latest
-    env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
-      SANITY_AUTH_TOKEN_DEPLOY: ${{ secrets.SANITY_AUTH_TOKEN_DEPLOY }}
+    # If your secret is in an Environment, uncomment:
+    # environment: production
     permissions:
       contents: read
+    env:
+      SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN_DEPLOY }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,7 +36,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify token is injected
+        run: |
+          if [ -z "${SANITY_AUTH_TOKEN}" ]; then
+            echo "SANITY_AUTH_TOKEN is EMPTY (secret not available to this job)."
+            exit 1
+          else
+            echo "::add-mask::${SANITY_AUTH_TOKEN}"
+            echo "SANITY_AUTH_TOKEN is present."
+          fi
+
       - name: Deploy Sanity App
-        env:
-          SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN_DEPLOY }}
         run: pnpm run deploy:kitchensink
