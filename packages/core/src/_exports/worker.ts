@@ -39,36 +39,45 @@ self.onconnect = (event: MessageEvent) => {
 
   // Set up message handling for this port
   port.onmessage = async (e: MessageEvent) => {
-    const {type, data} = e.data
+    const {type, data, messageId} = e.data as {type: string; data: unknown; messageId?: string}
+    console.log('[SharedWorker] port.onmessage', {type, messageId, data})
 
     console.log('[SharedWorker] Received message:', type, data)
 
     try {
       switch (type) {
         case 'REGISTER_SUBSCRIPTION':
-          handleRegisterSubscription(data, port)
+          console.log('[SharedWorker] Registering subscription:', {messageId, data})
+          handleRegisterSubscription(data as SubscriptionRequest, port, messageId)
           break
         case 'UNREGISTER_SUBSCRIPTION':
-          handleUnregisterSubscription(data.subscriptionId, port)
+          console.log('[SharedWorker] Unregistering subscription:', {messageId, data})
+          handleUnregisterSubscription(
+            (data as {subscriptionId: string}).subscriptionId,
+            port,
+            messageId,
+          )
           break
         case 'GET_SUBSCRIPTION_COUNT':
-          handleGetSubscriptionCount(port)
+          console.log('[SharedWorker] Getting subscription count', {messageId})
+          handleGetSubscriptionCount(port, messageId)
           break
         case 'GET_ALL_SUBSCRIPTIONS':
-          handleGetAllSubscriptions(port)
+          console.log('[SharedWorker] Getting all subscriptions', {messageId})
+          handleGetAllSubscriptions(port, messageId)
           break
         default:
           console.warn('[SharedWorker] Unknown message type:', type)
           port.postMessage({
             type: 'ERROR',
-            data: {error: `Unknown message type: ${type}`},
+            data: {error: `Unknown message type: ${type}`, messageId},
           })
       }
     } catch (error) {
       console.error('[SharedWorker] Error handling message:', error)
       port.postMessage({
         type: 'ERROR',
-        data: {error: (error as Error).message},
+        data: {error: (error as Error).message, messageId},
       })
     }
   }
@@ -85,19 +94,23 @@ self.onconnect = (event: MessageEvent) => {
  * @param subscription - The subscription to register
  * @param port - The port to send the response to
  */
-function handleRegisterSubscription(subscription: SubscriptionRequest, port: MessagePort): void {
+function handleRegisterSubscription(
+  subscription: SubscriptionRequest,
+  port: MessagePort,
+  messageId?: string,
+): void {
   try {
     // Register the subscription in the store
     sharedWorkerStore.getState().registerSubscription(subscription)
 
     // Check if we need to execute a query for this subscription
     if (subscription.storeName === 'query' && subscription.params?.['query']) {
-      handleQuerySubscription(subscription, port)
+      handleQuerySubscription(subscription, port, messageId)
     } else {
       // For non-query subscriptions, just confirm registration
       port.postMessage({
         type: 'SUBSCRIPTION_REGISTERED',
-        data: {subscriptionId: subscription.subscriptionId},
+        data: {subscriptionId: subscription.subscriptionId, messageId},
       })
     }
 
@@ -108,7 +121,11 @@ function handleRegisterSubscription(subscription: SubscriptionRequest, port: Mes
     // Send error back to the client
     port.postMessage({
       type: 'SUBSCRIPTION_ERROR',
-      data: {error: (error as Error).message, subscriptionId: subscription.subscriptionId},
+      data: {
+        error: (error as Error).message,
+        subscriptionId: subscription.subscriptionId,
+        messageId,
+      },
     })
   }
 }
@@ -120,6 +137,7 @@ function handleRegisterSubscription(subscription: SubscriptionRequest, port: Mes
 async function handleQuerySubscription(
   subscription: SubscriptionRequest,
   port: MessagePort,
+  messageId?: string,
 ): Promise<void> {
   const cacheKey = getCacheKey(subscription)
 
@@ -159,6 +177,7 @@ async function handleQuerySubscription(
         data: {
           error: `Query execution failed: ${(error as Error).message}`,
           subscriptionId: subscription.subscriptionId,
+          messageId,
         },
       })
       return
@@ -176,6 +195,7 @@ async function handleQuerySubscription(
       result: cacheEntry.result,
       cached: cacheEntry.timestamp !== Date.now(),
       cacheKey,
+      messageId,
     },
   })
 
@@ -188,14 +208,18 @@ async function handleQuerySubscription(
  * @param subscriptionId - The ID of the subscription to unregister
  * @param port - The port to send the response to
  */
-function handleUnregisterSubscription(subscriptionId: string, port: MessagePort): void {
+function handleUnregisterSubscription(
+  subscriptionId: string,
+  port: MessagePort,
+  messageId?: string,
+): void {
   try {
     sharedWorkerStore.getState().unregisterSubscription(subscriptionId)
 
     // Send confirmation back to the client
     port.postMessage({
       type: 'SUBSCRIPTION_UNREGISTERED',
-      data: {subscriptionId},
+      data: {subscriptionId, messageId},
     })
 
     console.log('[SharedWorker] Unregistered subscription:', subscriptionId)
@@ -205,43 +229,43 @@ function handleUnregisterSubscription(subscriptionId: string, port: MessagePort)
     // Send error back to the client
     port.postMessage({
       type: 'SUBSCRIPTION_ERROR',
-      data: {error: (error as Error).message, subscriptionId},
+      data: {error: (error as Error).message, subscriptionId, messageId},
     })
   }
 }
 
-function handleGetSubscriptionCount(port: MessagePort): void {
+function handleGetSubscriptionCount(port: MessagePort, messageId?: string): void {
   try {
     const count = sharedWorkerStore.getState().getSubscriptionCount()
 
     port.postMessage({
       type: 'SUBSCRIPTION_COUNT',
-      data: {count},
+      data: {count, messageId},
     })
   } catch (error) {
     console.error('[SharedWorker] Failed to get subscription count:', error)
 
     port.postMessage({
       type: 'SUBSCRIPTION_ERROR',
-      data: {error: (error as Error).message},
+      data: {error: (error as Error).message, messageId},
     })
   }
 }
 
-function handleGetAllSubscriptions(port: MessagePort): void {
+function handleGetAllSubscriptions(port: MessagePort, messageId?: string): void {
   try {
     const subscriptions = sharedWorkerStore.getState().getAllSubscriptions()
 
     port.postMessage({
       type: 'ALL_SUBSCRIPTIONS',
-      data: {subscriptions},
+      data: {subscriptions, messageId},
     })
   } catch (error) {
     console.error('[SharedWorker] Failed to get all subscriptions:', error)
 
     port.postMessage({
       type: 'SUBSCRIPTION_ERROR',
-      data: {error: (error as Error).message},
+      data: {error: (error as Error).message, messageId},
     })
   }
 }

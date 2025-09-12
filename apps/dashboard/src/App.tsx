@@ -76,6 +76,7 @@ function SharedWorkerTest({iframeRef}: {iframeRef: React.RefObject<HTMLIFrameEle
     }
 
     try {
+      console.log('[Dashboard] Translating query request to SharedWorker subscription request')
       // Create a subscription request from the incoming query data
       const subscription = createSubscriptionRequest({
         storeName: 'query',

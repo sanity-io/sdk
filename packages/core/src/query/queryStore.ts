@@ -129,8 +129,9 @@ function forwardQueryToDashboard(
 
   // Get the node state for communicating with Dashboard
   const nodeStateSource = getNodeState(instance, {
-    name: 'sdk-app',
-    connectTo: 'dashboard',
+    // Align with the active comlink channel naming observed in logs
+    name: 'dashboard/nodes/sdk',
+    connectTo: 'dashboard/channels/sdk',
   })
 
   // Create a stable query key for this request
@@ -149,7 +150,9 @@ function forwardQueryToDashboard(
 
       const subscription = nodeStateSource.observable
         .pipe(
+          tap((nodeState) => console.log('[QueryStore] nodeState update:', nodeState)),
           filter((nodeState) => !!nodeState && nodeState.status === 'connected'),
+          tap((nodeState) => console.log('[QueryStore] nodeState passed filter:', nodeState)),
           switchMap((nodeState) => {
             const node = nodeState!.node
 
@@ -166,6 +169,7 @@ function forwardQueryToDashboard(
                 },
               ) as Promise<unknown>,
             ).pipe(
+              tap(() => console.log('[QueryStore] node.fetch promise resolved')),
               map((response) => {
                 const typedResponse = response as {data?: unknown; error?: string}
                 console.log('[QueryStore] Received response from Dashboard:', typedResponse)
@@ -201,7 +205,9 @@ function forwardQueryToDashboard(
       }
     },
     observable: nodeStateSource.observable.pipe(
+      tap((nodeState) => console.log('[QueryStore] (obs) nodeState update:', nodeState)),
       filter((nodeState) => !!nodeState && nodeState.status === 'connected'),
+      tap((nodeState) => console.log('[QueryStore] (obs) nodeState passed filter:', nodeState)),
       switchMap((nodeState) => {
         const node = nodeState!.node
 
@@ -218,6 +224,7 @@ function forwardQueryToDashboard(
             },
           ) as Promise<unknown>,
         ).pipe(
+          tap(() => console.log('[QueryStore] (obs) node.fetch promise resolved')),
           map((response) => {
             const typedResponse = response as {data?: unknown; error?: string}
             console.log('[QueryStore] Observable received response:', typedResponse)
@@ -490,6 +497,8 @@ const _resolveQuery = bindActionByDataset(
   queryStore,
 
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
+    // eslint-disable-next-line no-console
+    console.log('[QueryStore] isInDashboardContext:', isInDashboardContext())
     // Check if we should forward this query to Dashboard
     if (isInDashboardContext()) {
       // eslint-disable-next-line no-console
