@@ -90,6 +90,10 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"],
       "cache": true
+    },
+    "deploy": {
+      "cache": false,
+      "dependsOn": ["^build"]
     }
   }
 }
