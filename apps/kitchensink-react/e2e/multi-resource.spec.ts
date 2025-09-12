@@ -23,15 +23,17 @@ test.describe('Multi Resource Route', () => {
       process.env['SDK_E2E_DATASET_0'], // First dataset
     )
 
-    // Create a player document in dataset 1
+    // Create a movie document in dataset 1
     const {
-      documentIds: [playerId],
+      documentIds: [movieId],
     } = await createDocuments(
       [
         {
-          _type: 'player',
-          name: 'Test Player Multi Resource',
-          slackUserId: 'U1234567890',
+          _type: 'movie',
+          title: 'Test Movie Multi Resource',
+          tmdb_id: 123456,
+          release_date: '2021-01-01',
+          hosted_poster_path: 'https://example.com/poster.jpg',
         },
       ],
       {asDraft: false}, // Create as published document
@@ -45,16 +47,16 @@ test.describe('Multi Resource Route', () => {
 
     // Wait for both document cards to be visible
     await expect(pageContext.getByTestId(/^author-document-/)).toBeVisible()
-    await expect(pageContext.getByTestId(/^player-document-/)).toBeVisible()
+    await expect(pageContext.getByTestId(/^movie-document-/)).toBeVisible()
 
     // Verify author document content is displayed
     await expect(pageContext.getByTestId('author-name-display')).toHaveText(
       'Test Author Multi Resource',
     )
 
-    // Verify player document content is displayed
-    await expect(pageContext.getByTestId('player-name-display')).toHaveText(
-      'Test Player Multi Resource',
+    // Verify movie document content is displayed
+    await expect(pageContext.getByTestId('movie-name-display')).toHaveText(
+      'Test Movie Multi Resource',
     )
 
     // Test author projection data
@@ -67,12 +69,14 @@ test.describe('Multi Resource Route', () => {
       'Best Code Award',
     )
 
-    // Test player projection data
-    await expect(pageContext.getByTestId('player-projection-name')).toContainText(
-      'Test Player Multi Resource',
+    // Test movie projection data
+    await expect(pageContext.getByTestId('movie-projection-name')).toContainText(
+      'Test Movie Multi Resource',
     )
-    await expect(pageContext.getByTestId('player-projection-slack-id')).toContainText('U1234567890')
-    await expect(pageContext.getByTestId('player-projection-has-slack')).toContainText('Yes')
+    await expect(pageContext.getByTestId('movie-projection-release-date')).toContainText(
+      '2021-01-01',
+    )
+    await expect(pageContext.getByTestId('movie-projection-has-poster')).toContainText('Yes')
 
     // Test editing the author document
     const authorNameInput = pageContext.getByTestId('author-name-input')
@@ -87,26 +91,26 @@ test.describe('Multi Resource Route', () => {
       'Updated Author Name',
     )
 
-    // Test editing the player document
-    const playerNameInput = pageContext.getByTestId('player-name-input')
-    await playerNameInput.fill('Updated Player Name')
-    await playerNameInput.press('Enter')
+    // Test editing the movie document
+    const movieNameInput = pageContext.getByTestId('movie-name-input')
+    await movieNameInput.fill('Updated Movie Name')
+    await movieNameInput.press('Enter')
 
     // Verify the change is reflected in the display
-    await expect(pageContext.getByTestId('player-name-display')).toHaveText('Updated Player Name')
+    await expect(pageContext.getByTestId('movie-name-display')).toHaveText('Updated Movie Name')
 
     // Verify the change is also reflected in the projection
-    await expect(pageContext.getByTestId('player-projection-name')).toContainText(
-      'Updated Player Name',
+    await expect(pageContext.getByTestId('movie-projection-name')).toContainText(
+      'Updated Movie Name',
     )
 
     // Test that external changes are reflected (simulating real-time updates)
     const authorClient = getClient(process.env['SDK_E2E_DATASET_0'])
     await authorClient.patch(`drafts.${authorId}`).set({name: 'Externally Updated Author'}).commit()
 
-    // Test external change for player
-    const playerClient = getClient(process.env['SDK_E2E_DATASET_1'])
-    await playerClient.patch(`drafts.${playerId}`).set({name: 'Externally Updated Player'}).commit()
+    // Test external change for movie
+    const movieClient = getClient(process.env['SDK_E2E_DATASET_1'])
+    await movieClient.patch(`drafts.${movieId}`).set({title: 'Externally Updated Movie'}).commit()
 
     // Verify external change is reflected
     await expect(async () => {
@@ -118,10 +122,10 @@ test.describe('Multi Resource Route', () => {
 
     // Verify external change is reflected
     await expect(async () => {
-      const playerDisplay = await pageContext.getByTestId('player-name-display').textContent()
-      const playerProjection = await pageContext.getByTestId('player-projection-name').textContent()
-      expect(playerDisplay).toBe('Externally Updated Player')
-      expect(playerProjection).toContain('Externally Updated Player')
+      const movieDisplay = await pageContext.getByTestId('movie-name-display').textContent()
+      const movieProjection = await pageContext.getByTestId('movie-projection-name').textContent()
+      expect(movieDisplay).toBe('Externally Updated Movie')
+      expect(movieProjection).toContain('Externally Updated Movie')
     }).toPass({timeout: 5000})
   })
 })

@@ -12,7 +12,7 @@ import {JSX, Suspense, useRef} from 'react'
 
 import {
   type MultiResourceAuthorProjectionProjectionResult,
-  type MultiResourcePlayerProjectionProjectionResult,
+  MultiResourceMovieProjectionProjectionResult,
 } from '../../sanity.types'
 import {devConfigs, e2eConfigs} from '../sanityConfigs'
 
@@ -41,10 +41,10 @@ const multiResourceAuthorProjection = defineProjection(`{
   "firstAward": awards[0]
 }`)
 
-const multiResourcePlayerProjection = defineProjection(`{
-  name,
-  slackUserId,
-  "hasSlackId": defined(slackUserId)
+const multiResourceMovieProjection = defineProjection(`{
+  title,
+  release_date,
+  "hasPoster": defined(hosted_poster_path)
   }`)
 
 interface ProjectionCardProps<TData = unknown> {
@@ -222,13 +222,13 @@ function AuthorEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   )
 }
 
-function PlayerEditor({docHandle}: {docHandle: DocumentHandle<'player'>}) {
-  const {data: player} = useDocument(docHandle)
-  const setPlayerName = useEditDocument({...docHandle, path: 'name'})
+function MovieEditor({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
+  const {data: movie} = useDocument(docHandle)
+  const setMovieName = useEditDocument({...docHandle, path: 'title'})
 
   return (
     <DemoCard
-      title="Player Document"
+      title="Movie Document"
       projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}
       backgroundColor="#b4e6ef"
       borderColor="#4fb3c0"
@@ -236,25 +236,23 @@ function PlayerEditor({docHandle}: {docHandle: DocumentHandle<'player'>}) {
     >
       <a
         style={{display: 'block', marginBottom: '1rem', color: '#3e41e7'}}
-        href={`https://autofoos.com/structure/player;${player?._id}`}
+        href={`https://sdk-movie-procure-studio.sanity.studio/structure/movie;${movie?._id}`}
         target="_blank"
         rel="noopener noreferrer"
       >
         View in Studio →
       </a>
-      <h4 data-testid="player-name-display" style={{fontSize: '1.5rem', marginBottom: '0.5rem'}}>
-        {player?.name}
+      <h4 data-testid="movie-name-display" style={{fontSize: '1.5rem', marginBottom: '0.5rem'}}>
+        {movie?.title}
       </h4>
       <TextInput
-        data-testid="player-name-input"
+        data-testid="movie-name-input"
         label="Name"
         type="text"
-        value={player?.name}
-        onChange={(e) => setPlayerName(e.currentTarget.value)}
+        value={movie?.title}
+        onChange={(e) => setMovieName(e.currentTarget.value)}
       />
-      <div style={{color: '#444', marginBottom: '1rem'}}>
-        {player?.slackUserId && `Slack User ID: ${player.slackUserId}`}
-      </div>
+      <div style={{color: '#444', marginBottom: '1rem'}}>TMDB ID: {movie?.tmdb_id}</div>
     </DemoCard>
   )
 }
@@ -289,25 +287,25 @@ function AuthorProjection({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   )
 }
 
-function PlayerProjection({docHandle}: {docHandle: DocumentHandle<'player'>}) {
+function MovieProjection({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
   return (
-    <ProjectionCard<MultiResourcePlayerProjectionProjectionResult>
+    <ProjectionCard<MultiResourceMovieProjectionProjectionResult>
       docHandle={docHandle}
-      projection={multiResourcePlayerProjection}
-      title="Player Projection"
+      projection={multiResourceMovieProjection}
+      title="Movie Projection"
       backgroundColor="#7fc7d1"
       borderColor="#4fb3c0"
       textColor="#1a1a1a"
       renderData={(data, isPending) => (
-        <div data-testid="player-projection-data">
-          <p data-testid="player-projection-name" style={{opacity: isPending ? 0.5 : 1}}>
-            <strong>Name:</strong> {data?.name ?? 'No name'}
+        <div data-testid="movie-projection-data">
+          <p data-testid="movie-projection-name" style={{opacity: isPending ? 0.5 : 1}}>
+            <strong>Title:</strong> {data?.title ?? 'No title'}
           </p>
-          <p data-testid="player-projection-slack-id" style={{opacity: isPending ? 0.5 : 1}}>
-            <strong>Slack User ID:</strong> {data?.slackUserId ?? 'Not set'}
+          <p data-testid="movie-projection-release-date" style={{opacity: isPending ? 0.5 : 1}}>
+            <strong>Release Date:</strong> {data?.release_date ?? 'Not set'}
           </p>
-          <p data-testid="player-projection-has-slack" style={{opacity: isPending ? 0.5 : 1}}>
-            <strong>Has Slack ID:</strong> {data?.hasSlackId ? 'Yes' : 'No'}
+          <p data-testid="movie-projection-has-poster" style={{opacity: isPending ? 0.5 : 1}}>
+            <strong>Has Poster:</strong> {data?.hasPoster ? 'Yes' : 'No'}
           </p>
         </div>
       )}
@@ -326,11 +324,11 @@ function AuthorPreview({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   )
 }
 
-function PlayerPreview({docHandle}: {docHandle: DocumentHandle<'player'>}) {
+function MoviePreview({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
   return (
     <PreviewCard
       docHandle={docHandle}
-      title="Player Preview"
+      title="Movie Preview"
       backgroundColor="#5ca8b5"
       borderColor="#4a929e"
       textColor="#1a1a1a"
@@ -347,21 +345,21 @@ export function MultiResourceRoute(): JSX.Element {
     dataset: configs[0].dataset,
   })
 
-  const {data: playerDocuments} = useDocuments({
-    documentType: 'player',
+  const {data: movieDocuments} = useDocuments({
+    documentType: 'movie',
     batchSize: 1,
     projectId: configs[1].projectId,
     dataset: configs[1].dataset,
   })
 
   const authorHandle = authorDocuments[0] ?? null
-  const playerHandle = playerDocuments[0] ?? null
+  const movieHandle = movieDocuments[0] ?? null
 
-  if (!authorDocuments.length || !playerDocuments.length) {
+  if (!authorDocuments.length || !movieDocuments.length) {
     return <Box padding={4}>No documents found in one or both datasets</Box>
   }
 
-  if (!authorHandle || !playerHandle) {
+  if (!authorHandle || !movieHandle) {
     return <Box padding={4}>Loading...</Box>
   }
 
@@ -377,7 +375,7 @@ export function MultiResourceRoute(): JSX.Element {
       <h2 style={{marginBottom: '1rem'}}>Document Editors</h2>
       <div style={{display: 'flex', gap: '2rem', flexWrap: 'wrap', marginBottom: '3rem'}}>
         <AuthorEditor docHandle={authorHandle} />
-        <PlayerEditor docHandle={playerHandle} />
+        <MovieEditor docHandle={movieHandle} />
       </div>
 
       <h2 style={{marginBottom: '1rem'}}>Document Projections</h2>
@@ -385,8 +383,8 @@ export function MultiResourceRoute(): JSX.Element {
         <Suspense fallback={<LoadingFallback message="Loading author projection..." />}>
           <AuthorProjection docHandle={authorHandle} />
         </Suspense>
-        <Suspense fallback={<LoadingFallback message="Loading player projection..." />}>
-          <PlayerProjection docHandle={playerHandle} />
+        <Suspense fallback={<LoadingFallback message="Loading movie projection..." />}>
+          <MovieProjection docHandle={movieHandle} />
         </Suspense>
       </div>
 
@@ -395,8 +393,8 @@ export function MultiResourceRoute(): JSX.Element {
         <Suspense fallback={<LoadingFallback message="Loading author preview..." />}>
           <AuthorPreview docHandle={authorHandle} />
         </Suspense>
-        <Suspense fallback={<LoadingFallback message="Loading player preview..." />}>
-          <PlayerPreview docHandle={playerHandle} />
+        <Suspense fallback={<LoadingFallback message="Loading movie preview..." />}>
+          <MoviePreview docHandle={movieHandle} />
         </Suspense>
       </div>
     </div>
