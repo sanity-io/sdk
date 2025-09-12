@@ -59,6 +59,7 @@ export function getSdkWorker(workerUrl: string): {status: WorkerStatus; sendMess
   try {
     const worker = new SharedWorker(workerUrl, {
       type: 'module',
+      name: 'sanity-sdk-shared-worker',
     })
     console.log('[SharedWorkerClient] SharedWorker created successfully')
 
@@ -67,6 +68,11 @@ export function getSdkWorker(workerUrl: string): {status: WorkerStatus; sendMess
     // Set up port message handling
     worker.port.onmessage = (event) => {
       console.log('[SharedWorkerClient] Received message from worker:', event.data)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const debugData = (event.data?.data ?? {}) as any
+      if (debugData?.messageId) {
+        console.log('[SharedWorkerClient] Response messageId:', debugData.messageId)
+      }
       const response = event.data
 
       // Handle connection status message
@@ -117,22 +123,23 @@ export function getSdkWorker(workerUrl: string): {status: WorkerStatus; sendMess
 
 // Helper function to determine if a response matches a message
 function isResponseForMessage(response: {type: string; data: unknown}, messageId: string): boolean {
-  // Extract the message type from the messageId
-  // messageId format: "REGISTER_SUBSCRIPTION_timestamp_random"
+  // Prefer strict correlation via echoed messageId when available
+  const responseData = response.data as {messageId?: string} | undefined
+  if (responseData && responseData.messageId) {
+    return responseData.messageId === messageId
+  }
+
+  // Fallback: match by message type if worker hasn't been updated to echo messageId
   const parts = messageId.split('_')
   const messageType = parts.slice(0, -2).join('_') // Remove timestamp and random parts
-
-  // A bit hard-coded. We can pass in configuration later
   const responseMap: Record<string, string[]> = {
     REGISTER_SUBSCRIPTION: ['SUBSCRIPTION_REGISTERED', 'SUBSCRIPTION_ERROR'],
     UNREGISTER_SUBSCRIPTION: ['SUBSCRIPTION_UNREGISTERED', 'SUBSCRIPTION_ERROR'],
     GET_SUBSCRIPTION_COUNT: ['SUBSCRIPTION_COUNT', 'SUBSCRIPTION_ERROR'],
     GET_ALL_SUBSCRIPTIONS: ['ALL_SUBSCRIPTIONS', 'SUBSCRIPTION_ERROR'],
   }
-
   const expectedResponses = responseMap[messageType] || []
-  const result = expectedResponses.includes(response.type)
-  return result
+  return expectedResponses.includes(response.type)
 }
 
 // Process any buffered messages once connected
@@ -153,9 +160,8 @@ function sendMessageInternal(message: {type: string; data: unknown; messageId?: 
     return false
   }
 
-  // Remove messageId from the message sent to worker
-  const {messageId: _, ...workerMessage} = message
-  workerInstance.port.postMessage(workerMessage)
+  // Keep messageId so the worker can echo it back for correlation
+  workerInstance.port.postMessage(message)
   return true
 }
 
@@ -178,6 +184,7 @@ function handleMessage(message: {
     setTimeout(() => {
       if (messageHandlers.has(messageId)) {
         messageHandlers.delete(messageId)
+        console.error('[SharedWorkerClient] Message timed out:', {type: message.type, messageId})
         reject(new Error('Message timeout'))
       }
     }, 30000) // 30 second timeout
@@ -195,6 +202,10 @@ function handleMessage(message: {
 
   // If worker is not yet connected, buffer the message
   if (workerStatus !== 'connected') {
+    console.log('[SharedWorkerClient] Buffering message (worker not connected):', {
+      type: message.type,
+      messageId,
+    })
     messageBuffer.push({...message, messageId})
     return promise
   }
@@ -239,11 +250,13 @@ export function disconnectWorker(): void {
  * @param subscription - Subscription to register
  * @returns Promise that resolves when subscription is confirmed
  */
-export async function registerSubscription(subscription: SubscriptionRequest): Promise<string> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function registerSubscription(subscription: SubscriptionRequest): Promise<any> {
   const response = await sendMessage('REGISTER_SUBSCRIPTION', subscription)
 
   if (response.type === 'SUBSCRIPTION_REGISTERED') {
-    return (response.data as {subscriptionId: string}).subscriptionId
+    // Return the full response data which now includes query results for query subscriptions
+    return response.data
   } else if (response.type === 'SUBSCRIPTION_ERROR') {
     throw new Error((response.data as {error: string}).error)
   } else {

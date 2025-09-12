@@ -36,6 +36,8 @@ export const getNodeState = bindActionGlobally(
   comlinkNodeStore,
   createStateSourceAction<ComlinkNodeState, [NodeInput], NodeState | undefined>({
     selector: createSelector([selectNode], (nodeEntry) => {
+      // eslint-disable-next-line no-console
+      console.log('[Comlink] selectNode entry:', nodeEntry)
       return nodeEntry?.status === 'connected'
         ? {
             node: nodeEntry.node,
@@ -46,7 +48,11 @@ export const getNodeState = bindActionGlobally(
     onSubscribe: ({state, instance}, nodeInput) => {
       const nodeName = nodeInput.name
       const subscriberId = Symbol('comlink-node-subscriber')
-      getOrCreateNode(instance, nodeInput)
+      // eslint-disable-next-line no-console
+      console.log('[Comlink] onSubscribe getOrCreateNode:', nodeInput)
+      const node = getOrCreateNode(instance, nodeInput)
+      // eslint-disable-next-line no-console
+      console.log('[Comlink] node.start invoked; node:', node)
 
       // Add subscriber to the set for this node
       let subs = state.get().subscriptions.get(nodeName)

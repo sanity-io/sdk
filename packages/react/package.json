@@ -30,6 +30,11 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./worker": {
+      "source": "./src/_exports/worker.ts",
+      "import": "./dist/worker.js",
+      "default": "./dist/worker.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "./dist/index.js",
