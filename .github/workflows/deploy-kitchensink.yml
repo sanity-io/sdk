@@ -33,26 +33,8 @@ jobs:
       - name: Check pnpm
         run: pnpm -v
 
-      - name: Verify token is injected
-        run: |
-          if [ -z "${SANITY_AUTH_TOKEN}" ]; then
-            echo "SANITY_AUTH_TOKEN is EMPTY (secret not available to this job)."
-            exit 1
-          else
-            echo "::add-mask::${SANITY_AUTH_TOKEN}"
-            echo "SANITY_AUTH_TOKEN is present."
-          fi
-
-      - name: Verify token works against API
-        run: |
-          curl -s -o /dev/null -w "%{http_code}\n" \
-            -H "Authorization: Bearer $SANITY_AUTH_TOKEN" \
-            https://api.sanity.io/v2021-10-21/projects
-        env:
-          SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN_DEPLOY }}
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Deploy Sanity App
-        run: SANITY_AUTH_TOKEN="${{ secrets.SANITY_AUTH_TOKEN_DEPLOY }}" pnpm run deploy:kitchensink
+        run: pnpm run deploy:kitchensink
