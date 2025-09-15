@@ -20,7 +20,8 @@ export default defineCliConfig({
     }
 
     const mode = process.env['NODE_ENV'] === 'production' ? 'production' : 'development'
-    const env: ConfigEnv = {mode, command: 'serve'}
+    const command: ConfigEnv['command'] = mode === 'production' ? 'build' : 'serve'
+    const env: ConfigEnv = {mode, command}
 
     const projectConfigMaybe =
       typeof viteConfigFactory === 'function' ? viteConfigFactory(env) : viteConfigFactory
