@@ -123,6 +123,8 @@ export {resolveProjection} from '../projection/resolveProjection'
 export {type ProjectionValuePending, type ValidProjection} from '../projection/types'
 export {getProjectsState, resolveProjects} from '../projects/projects'
 export {
+  clearQueryError,
+  getQueryErrorState,
   getQueryKey,
   getQueryState,
   parseQueryKey,
@@ -157,6 +159,7 @@ export {
 export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {defineIntent, type Intent, type IntentFilter} from '../utils/defineIntent'
+export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {CORE_SDK_VERSION} from '../version'
 export {
   getIndexForKey,

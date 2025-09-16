@@ -1,4 +1,5 @@
-import {AuthStateType} from '@sanity/sdk'
+import {CorsOriginError} from '@sanity/client'
+import {AuthStateType, getCorsErrorProjectId} from '@sanity/sdk'
 import {useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
@@ -6,6 +7,8 @@ import {ComlinkTokenRefreshProvider} from '../../context/ComlinkTokenRefresh'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
+import {useCorsOriginError} from '../../hooks/errors/useCorsOriginError'
+import {CorsError} from '../errors/CorsError'
 import {isInIframe} from '../utils'
 import {AuthError} from './AuthError'
 import {ConfigurationError} from './ConfigurationError'
@@ -105,16 +108,38 @@ export function AuthBoundary({
   LoginErrorComponent = LoginError,
   ...props
 }: AuthBoundaryProps): React.ReactNode {
+  const {error: corsError, projectId, clear: clearCorsError} = useCorsOriginError()
+
   const FallbackComponent = useMemo(() => {
     return function LoginComponentWithLayoutProps(fallbackProps: FallbackProps) {
+      if (fallbackProps.error instanceof CorsOriginError) {
+        return (
+          <CorsError
+            {...fallbackProps}
+            projectId={getCorsErrorProjectId(fallbackProps.error)}
+            resetErrorBoundary={() => {
+              clearCorsError()
+              fallbackProps.resetErrorBoundary()
+            }}
+          />
+        )
+      }
       return <LoginErrorComponent {...fallbackProps} />
     }
-  }, [LoginErrorComponent])
+  }, [LoginErrorComponent, clearCorsError])
 
   return (
     <ComlinkTokenRefreshProvider>
       <ErrorBoundary FallbackComponent={FallbackComponent}>
-        <AuthSwitch {...props} />
+        {corsError ? (
+          <CorsError
+            error={corsError}
+            resetErrorBoundary={() => clearCorsError()}
+            projectId={projectId}
+          />
+        ) : (
+          <AuthSwitch {...props} />
+        )}
       </ErrorBoundary>
     </ComlinkTokenRefreshProvider>
   )
