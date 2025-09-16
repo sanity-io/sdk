@@ -6,10 +6,12 @@ import {CorsErrorComponent} from './CorsErrorComponent'
 describe('CorsErrorComponent', () => {
   it('shows origin and manage link when projectId is provided', () => {
     const origin = 'https://example.com'
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    delete (window as any).location
-    // @ts-expect-error allow setting minimal location for test
-    window.location = {origin} as Location
+    const originalLocation = window.location
+    // Redefine window.location to control origin in this test
+    Object.defineProperty(window, 'location', {
+      value: {origin},
+      configurable: true,
+    })
 
     render(
       <CorsErrorComponent
@@ -32,8 +34,7 @@ describe('CorsErrorComponent', () => {
     expect(link.href).toContain('credentials=include')
 
     // restore
-    // @ts-expect-error restore
-    window.location = originalLocation
+    Object.defineProperty(window, 'location', {value: originalLocation})
   })
 
   it('shows error message when projectId is null', () => {
