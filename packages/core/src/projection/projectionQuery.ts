@@ -18,11 +18,17 @@ interface CreateProjectionQueryResult {
   params: Record<string, unknown>
 }
 
-type ProjectionMap = Record<string, {projection: ValidProjection; documentIds: Set<string>}>
+type ProjectionMap = Record<
+  string,
+  {projection: ValidProjection; params?: Record<string, unknown>; documentIds: Set<string>}
+>
 
 export function createProjectionQuery(
   documentIds: Set<string>,
   documentProjections: {[TDocumentId in string]?: DocumentProjections},
+  projectionParams?: {
+    [TDocumentId in string]?: {[hash: string]: Record<string, unknown> | undefined}
+  },
 ): CreateProjectionQueryResult {
   const projections = Array.from(documentIds)
     .flatMap((id) => {
@@ -32,11 +38,12 @@ export function createProjectionQuery(
       return Object.entries(projectionsForDoc).map(([projectionHash, projection]) => ({
         documentId: id,
         projection,
+        params: projectionParams?.[id]?.[projectionHash],
         projectionHash,
       }))
     })
-    .reduce<ProjectionMap>((acc, {documentId, projection, projectionHash}) => {
-      const obj = acc[projectionHash] ?? {documentIds: new Set(), projection}
+    .reduce<ProjectionMap>((acc, {documentId, projection, params, projectionHash}) => {
+      const obj = acc[projectionHash] ?? {documentIds: new Set(), projection, params}
       obj.documentIds.add(documentId)
 
       acc[projectionHash] = obj
@@ -45,11 +52,20 @@ export function createProjectionQuery(
 
   const query = `[${Object.entries(projections)
     .map(([projectionHash, {projection}]) => {
-      return `...*[_id in $__ids_${projectionHash}]{_id,_type,_updatedAt,"__projectionHash":"${projectionHash}","result":{...${projection}}}`
+      // Rename parameter references inside the projection to avoid collisions between batches
+      const rewrittenProjection = (projection as ValidProjection).replace(
+        /\$[A-Za-z_][A-Za-z0-9_]*/g,
+        (match) => {
+          const paramName = match.slice(1)
+          return `$__p_${projectionHash}_${paramName}`
+        },
+      )
+
+      return `...*[_id in $__ids_${projectionHash}]{_id,_type,_updatedAt,"__projectionHash":"${projectionHash}","result":{...${rewrittenProjection}}}`
     })
     .join(',')}]`
 
-  const params = Object.fromEntries(
+  const idsParams = Object.fromEntries(
     Object.entries(projections).map(([projectionHash, value]) => {
       const idsInProjection = Array.from(value.documentIds).flatMap((id) => [
         getPublishedId(id),
@@ -59,6 +75,15 @@ export function createProjectionQuery(
       return [`__ids_${projectionHash}`, Array.from(idsInProjection)]
     }),
   )
+
+  // Merge all custom params across unique projection hashes. Since hashes include params hash, keys won't collide between different param sets.
+  const customParams = Object.fromEntries(
+    Object.entries(projections).flatMap(([projectionHash, {params}]) =>
+      Object.entries(params ?? {}).map(([k, v]) => [`__p_${projectionHash}_${k}`, v]),
+    ),
+  )
+
+  const params = {...idsParams, ...customParams}
 
   return {query, params}
 }

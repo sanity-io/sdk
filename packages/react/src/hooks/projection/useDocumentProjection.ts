@@ -179,13 +179,22 @@ export function useDocumentProjection<TData extends object>(
 export function useDocumentProjection<TData extends object>({
   ref,
   projection,
+  params,
   ...docHandle
 }: useDocumentProjectionOptions): useDocumentProjectionResults<TData> {
   const instance = useSanityInstance(docHandle)
-  const stateSource = getProjectionState<TData>(instance, {...docHandle, projection})
+  const stateSource = getProjectionState<TData>(instance, {
+    ...docHandle,
+    projection,
+    ...(params ? {params} : {}),
+  })
 
   if (stateSource.getCurrent()?.data === null) {
-    throw resolveProjection(instance, {...docHandle, projection})
+    throw resolveProjection(instance, {
+      ...docHandle,
+      projection,
+      ...(params ? {params} : {}),
+    })
   }
 
   // Create subscribe function for useSyncExternalStore

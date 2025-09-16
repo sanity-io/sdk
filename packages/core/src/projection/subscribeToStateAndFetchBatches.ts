@@ -87,7 +87,11 @@ export const subscribeToStateAndFetchBatches = ({
     .pipe(
       switchMap(([ids, documentProjections]) => {
         if (!ids.size) return EMPTY
-        const {query, params} = createProjectionQuery(ids, documentProjections)
+        const {query, params} = createProjectionQuery(
+          ids,
+          documentProjections,
+          state.get().projectionParams,
+        )
         const controller = new AbortController()
 
         return new Observable<ProjectionQueryResult[]>((observer) => {
