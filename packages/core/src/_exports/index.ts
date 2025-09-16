@@ -58,8 +58,11 @@ export {
 } from '../config/handles'
 export {
   type DatasetHandle,
+  datasetSource,
   type DocumentHandle,
+  type DocumentSource,
   type DocumentTypeHandle,
+  mediaLibrarySource,
   type PerspectiveHandle,
   type ProjectHandle,
   type ReleasePerspective,

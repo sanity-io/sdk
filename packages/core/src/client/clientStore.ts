@@ -2,6 +2,7 @@ import {type ClientConfig, createClient, type SanityClient} from '@sanity/client
 import {pick} from 'lodash-es'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
+import {type DocumentSource, SOURCE_ID} from '../config/sanityConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
@@ -39,6 +40,7 @@ const allowedKeys = Object.keys({
   'requestTagPrefix': null,
   'useProjectHostname': null,
   '~experimental_resource': null,
+  'source': null,
 } satisfies Record<keyof ClientOptions, null>) as (keyof ClientOptions)[]
 
 const DEFAULT_CLIENT_CONFIG: ClientConfig = {
@@ -90,6 +92,11 @@ export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey
    * @internal
    */
   '~experimental_resource'?: ClientConfig['~experimental_resource']
+
+  /**
+   * @internal
+   */
+  'source'?: DocumentSource
 }
 
 const clientStore = defineStore<ClientStoreState>({
@@ -156,8 +163,16 @@ export const getClient = bindActionGlobally(
 
     const tokenFromState = state.get().token
     const {clients, authMethod} = state.get()
-    const projectId = options.projectId ?? instance.config.projectId
-    const dataset = options.dataset ?? instance.config.dataset
+    let sourceId = options.source?.[SOURCE_ID]
+
+    let resource
+    if (Array.isArray(sourceId)) {
+      resource = {type: sourceId[0], id: sourceId[1]}
+      sourceId = undefined
+    }
+
+    const projectId = options.projectId ?? instance.config.projectId ?? sourceId?.projectId
+    const dataset = options.dataset ?? instance.config.dataset ?? sourceId?.dataset
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost
 
     const effectiveOptions: ClientOptions = {
@@ -168,6 +183,7 @@ export const getClient = bindActionGlobally(
       ...(projectId && {projectId}),
       ...(dataset && {dataset}),
       ...(apiHost && {apiHost}),
+      ...(resource && {'~experimental_resource': resource}),
     }
 
     if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {
