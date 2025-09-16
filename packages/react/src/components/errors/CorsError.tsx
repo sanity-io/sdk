@@ -1,7 +1,7 @@
 import {useMemo} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
-export type CorsErrorProps = FallbackProps & {
+type CorsErrorProps = FallbackProps & {
   projectId: string | null
 }
 
