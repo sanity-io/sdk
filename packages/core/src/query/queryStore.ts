@@ -22,9 +22,9 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle} from '../config/sanityConfig'
+import {type DatasetHandle, type DocumentSource} from '../config/sanityConfig'
 import {getPerspectiveState} from '../releases/getPerspectiveState'
-import {bindActionByDataset} from '../store/createActionBinder'
+import {bindActionBySource} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -61,6 +61,7 @@ export interface QueryOptions<
     DatasetHandle<TDataset, TProjectId> {
   query: TQuery
   params?: Record<string, unknown>
+  source?: DocumentSource
 }
 
 /**
@@ -159,6 +160,7 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
               projectId,
               dataset,
               tag,
+              source,
               perspective: perspectiveFromOptions,
               ...restOptions
             } = parseQueryKey(group$.key)
@@ -171,6 +173,7 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
               apiVersion: QUERY_STORE_API_VERSION,
               projectId,
               dataset,
+              source,
             }).observable
 
             return combineLatest([lastLiveEventId$, client$, perspective$]).pipe(
@@ -278,7 +281,7 @@ export function getQueryState(
 ): ReturnType<typeof _getQueryState> {
   return _getQueryState(...args)
 }
-const _getQueryState = bindActionByDataset(
+const _getQueryState = bindActionBySource(
   queryStore,
   createStateSourceAction({
     selector: ({state, instance}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
@@ -337,7 +340,7 @@ export function resolveQuery<TData>(
 export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise<unknown> {
   return _resolveQuery(...args)
 }
-const _resolveQuery = bindActionByDataset(
+const _resolveQuery = bindActionBySource(
   queryStore,
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
     const normalized = normalizeOptionsWithPerspective(instance, options)
