@@ -6,7 +6,7 @@ import {createSanityInstance, type SanityInstance} from '../store/createSanityIn
 import {type StateSource} from '../store/createStateSourceAction'
 import {getProjectionState} from './getProjectionState'
 import {resolveProjection} from './resolveProjection'
-import {type ProjectionValuePending, type ValidProjection} from './types'
+import {type ProjectionValuePending} from './types'
 
 vi.mock('./getProjectionState')
 
@@ -35,7 +35,7 @@ describe('resolveProjection', () => {
       documentId: 'doc123',
       documentType: 'movie',
     })
-    const projection = '{title}' as ValidProjection
+    const projection = '{title}'
 
     const result = await resolveProjection(instance, {...docHandle, projection})
 

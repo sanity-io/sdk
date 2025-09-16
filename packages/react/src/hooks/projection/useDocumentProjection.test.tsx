@@ -1,9 +1,4 @@
-import {
-  type DocumentHandle,
-  getProjectionState,
-  resolveProjection,
-  type ValidProjection,
-} from '@sanity/sdk'
+import {type DocumentHandle, getProjectionState, resolveProjection} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
 import {Suspense, useRef} from 'react'
 import {type Mock} from 'vitest'
@@ -53,13 +48,7 @@ interface ProjectionResult {
   description: string
 }
 
-function TestComponent({
-  document,
-  projection,
-}: {
-  document: DocumentHandle
-  projection: ValidProjection
-}) {
+function TestComponent({document, projection}: {document: DocumentHandle; projection: string}) {
   const ref = useRef(null)
   const {data, isPending} = useDocumentProjection<ProjectionResult>({...document, projection, ref})
 
@@ -224,10 +213,7 @@ describe('useDocumentProjection', () => {
     const eventsUnsubscribe = vi.fn()
     subscribe.mockImplementation(() => eventsUnsubscribe)
 
-    function NoRefComponent({
-      projection,
-      ...docHandle
-    }: DocumentHandle & {projection: ValidProjection}) {
+    function NoRefComponent({projection, ...docHandle}: DocumentHandle & {projection: string}) {
       const {data} = useDocumentProjection<ProjectionResult>({...docHandle, projection}) // No ref provided
       return (
         <div>
@@ -259,7 +245,7 @@ describe('useDocumentProjection', () => {
     function NonHtmlRefComponent({
       projection,
       ...docHandle
-    }: DocumentHandle & {projection: ValidProjection}) {
+    }: DocumentHandle & {projection: string}) {
       const ref = useRef({}) // ref.current is not an HTML element
       const {data} = useDocumentProjection<ProjectionResult>({...docHandle, projection, ref})
       return (
