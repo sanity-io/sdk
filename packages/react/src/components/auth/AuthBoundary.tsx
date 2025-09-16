@@ -8,7 +8,7 @@ import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
 import {useCorsOriginError} from '../../hooks/errors/useCorsOriginError'
-import {CorsError} from '../errors/CorsError'
+import {CorsErrorComponent} from '../errors/CorsErrorComponent'
 import {isInIframe} from '../utils'
 import {AuthError} from './AuthError'
 import {ConfigurationError} from './ConfigurationError'
@@ -114,7 +114,7 @@ export function AuthBoundary({
     return function LoginComponentWithLayoutProps(fallbackProps: FallbackProps) {
       if (fallbackProps.error instanceof CorsOriginError) {
         return (
-          <CorsError
+          <CorsErrorComponent
             {...fallbackProps}
             projectId={getCorsErrorProjectId(fallbackProps.error)}
             resetErrorBoundary={() => {
@@ -132,7 +132,7 @@ export function AuthBoundary({
     <ComlinkTokenRefreshProvider>
       <ErrorBoundary FallbackComponent={FallbackComponent}>
         {corsError ? (
-          <CorsError
+          <CorsErrorComponent
             error={corsError}
             resetErrorBoundary={() => clearCorsError()}
             projectId={projectId}

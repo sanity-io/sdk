@@ -1,11 +1,11 @@
 import {useMemo} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
-type CorsErrorProps = FallbackProps & {
+type CorsErrorComponentProps = FallbackProps & {
   projectId: string | null
 }
 
-export function CorsError({projectId, error}: CorsErrorProps): React.ReactNode {
+export function CorsErrorComponent({projectId, error}: CorsErrorComponentProps): React.ReactNode {
   const origin = window.location.origin
   const corsUrl = useMemo(() => {
     const url = new URL(`https://sanity.io/manage/project/${projectId}/api`)
