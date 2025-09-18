@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.3.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.2.0...sdk-react-v2.3.0) (2025-09-18)
+
+
+### Features
+
+* present a link to add CORS Manage setting when a CORS error occurs ([#625](https://github.com/sanity-io/sdk/issues/625)) ([7610ec2](https://github.com/sanity-io/sdk/commit/7610ec255c87dc95f27653c8064f63f0b7100f4b))
+
+
+### Bug Fixes
+
+* **core:** change ValidProjection to string type ([#627](https://github.com/sanity-io/sdk/issues/627)) ([2079b36](https://github.com/sanity-io/sdk/commit/2079b36572be0ac15a77a02369048cb077520b45))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.3.0
+
 ## [2.2.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.1.2...sdk-react-v2.2.0) (2025-09-03)
 
 
