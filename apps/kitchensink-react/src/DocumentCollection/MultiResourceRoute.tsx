@@ -70,7 +70,7 @@ function ProjectionCard<TData = unknown>({
   const {data, isPending} = useDocumentProjection({
     ...docHandle,
     ref,
-    projection: projection as `{${string}}`,
+    projection: projection,
   })
 
   return (

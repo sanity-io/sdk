@@ -1,12 +1,11 @@
 import {describe, expect, it} from 'vitest'
 
 import {createProjectionQuery, processProjectionQuery} from './projectionQuery'
-import {type ValidProjection} from './types'
 
 describe('createProjectionQuery', () => {
   it('creates a query and params for given ids and projections', () => {
     const ids = new Set(['doc1', 'doc2'])
-    const projectionHash: ValidProjection = '{title, description}'
+    const projectionHash = '{title, description}'
     const documentProjections = {
       doc1: {[projectionHash]: projectionHash},
       doc2: {[projectionHash]: projectionHash},
@@ -21,8 +20,8 @@ describe('createProjectionQuery', () => {
 
   it('handles multiple different projections', () => {
     const ids = new Set(['doc1', 'doc2'])
-    const projectionHash1: ValidProjection = '{title, description}'
-    const projectionHash2: ValidProjection = '{name, age}'
+    const projectionHash1 = '{title, description}'
+    const projectionHash2 = '{name, age}'
     const documentProjections = {
       doc1: {[projectionHash1]: projectionHash1},
       doc2: {[projectionHash2]: projectionHash2},
@@ -39,9 +38,9 @@ describe('createProjectionQuery', () => {
 
   it('filters out ids without projections', () => {
     const ids = new Set(['doc1', 'doc2', 'doc3'])
-    const projectionHash1: ValidProjection = '{title}'
+    const projectionHash1 = '{title}'
     // projectionHash2 missing intentionally
-    const projectionHash3: ValidProjection = '{name}'
+    const projectionHash3 = '{name}'
 
     const documentProjections = {
       doc1: {[projectionHash1]: projectionHash1},

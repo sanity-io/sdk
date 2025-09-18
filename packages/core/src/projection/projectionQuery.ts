@@ -1,9 +1,6 @@
 import {getDraftId, getPublishedId} from '../utils/ids'
-import {
-  type DocumentProjections,
-  type DocumentProjectionValues,
-  type ValidProjection,
-} from './types'
+import {type DocumentProjections, type DocumentProjectionValues} from './types'
+import {validateProjection} from './util'
 
 export type ProjectionQueryResult = {
   _id: string
@@ -18,7 +15,7 @@ interface CreateProjectionQueryResult {
   params: Record<string, unknown>
 }
 
-type ProjectionMap = Record<string, {projection: ValidProjection; documentIds: Set<string>}>
+type ProjectionMap = Record<string, {projection: string; documentIds: Set<string>}>
 
 export function createProjectionQuery(
   documentIds: Set<string>,
@@ -31,7 +28,7 @@ export function createProjectionQuery(
 
       return Object.entries(projectionsForDoc).map(([projectionHash, projection]) => ({
         documentId: id,
-        projection,
+        projection: validateProjection(projection),
         projectionHash,
       }))
     })

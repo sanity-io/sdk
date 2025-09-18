@@ -5,11 +5,11 @@ import {bindActionByDataset} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {getProjectionState, type ProjectionOptions} from './getProjectionState'
 import {projectionStore} from './projectionStore'
-import {type ProjectionValuePending, type ValidProjection} from './types'
+import {type ProjectionValuePending} from './types'
 
 /** @beta */
 export function resolveProjection<
-  TProjection extends ValidProjection = ValidProjection,
+  TProjection extends string = string,
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
