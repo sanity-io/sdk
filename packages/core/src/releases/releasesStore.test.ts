@@ -1,45 +1,47 @@
-import {type SanityClient} from '@sanity/client'
-import {of, Subject} from 'rxjs'
+import {NEVER, Observable, type Observer, of, Subject} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {getClientState} from '../client/clientStore'
+import {getQueryState, resolveQuery} from '../query/queryStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {listenQuery} from '../utils/listenQuery'
 import {getActiveReleasesState, type ReleaseDocument} from './releasesStore'
 
 // Mock dependencies
-vi.mock('../client/clientStore', () => ({
-  getClientState: vi.fn(),
-}))
-vi.mock('../utils/listenQuery', () => ({
-  listenQuery: vi.fn(),
-}))
-
-// Mock console.error to prevent test runner noise and allow verification
-let consoleErrorSpy: ReturnType<typeof vi.spyOn>
+vi.mock('../query/queryStore')
 
 describe('releasesStore', () => {
   let instance: SanityInstance
-  const mockClient = {} as SanityClient
 
   beforeEach(() => {
-    vi.resetAllMocks()
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.clearAllMocks()
 
     instance = createSanityInstance({projectId: 'test', dataset: 'test'})
 
-    vi.mocked(getClientState).mockReturnValue({
-      observable: of(mockClient),
-    } as StateSource<SanityClient>)
+    vi.mocked(getQueryState).mockReturnValue({
+      subscribe: () => () => {},
+      getCurrent: () => undefined,
+      observable: NEVER as Observable<ReleaseDocument[] | undefined>,
+    } as StateSource<ReleaseDocument[] | undefined>)
+
+    vi.mocked(resolveQuery).mockResolvedValue(undefined)
   })
 
   afterEach(() => {
     instance.dispose()
-    consoleErrorSpy.mockRestore()
   })
 
-  it('should set active releases state when listenQuery succeeds', async () => {
+  it('should set active releases state when the releases query emits', async () => {
+    const teardown = vi.fn()
+    const subscriber = vi
+      .fn<(observer: Observer<ReleaseDocument[] | undefined>) => () => void>()
+      .mockReturnValue(teardown)
+
+    vi.mocked(getQueryState).mockReturnValue({
+      subscribe: () => () => {},
+      getCurrent: () => undefined,
+      observable: new Observable(subscriber),
+    } as StateSource<ReleaseDocument[] | undefined>)
+
     // note that the order of the releases is important here -- they get sorted
     const mockReleases: ReleaseDocument[] = [
       {
@@ -56,21 +58,24 @@ describe('releasesStore', () => {
       } as ReleaseDocument,
     ]
 
-    vi.mocked(listenQuery).mockReturnValue(of(mockReleases))
-
     const state = getActiveReleasesState(instance)
+
+    const [observer] = subscriber.mock.lastCall!
+
+    observer.next(mockReleases)
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(state.getCurrent()).toEqual(mockReleases.reverse())
-    expect(consoleErrorSpy).not.toHaveBeenCalled()
-
-    vi.useRealTimers()
   })
 
-  it('should update active releases state when listenQuery emits new data', async () => {
+  it('should update active releases state when the query emits new data', async () => {
     const releasesSubject = new Subject<ReleaseDocument[]>()
-    vi.mocked(listenQuery).mockReturnValue(releasesSubject.asObservable())
+    vi.mocked(getQueryState).mockReturnValue({
+      subscribe: () => () => {},
+      getCurrent: () => undefined,
+      observable: releasesSubject.asObservable(),
+    } as StateSource<ReleaseDocument[] | undefined>)
 
     const state = getActiveReleasesState(instance)
 
@@ -109,65 +114,58 @@ describe('releasesStore', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(state.getCurrent()).toEqual(updatedReleases.reverse())
-    expect(consoleErrorSpy).not.toHaveBeenCalled()
   })
 
-  it('should handle empty array from listenQuery', async () => {
-    // Configure listenQuery to return an empty array
-    vi.mocked(listenQuery).mockReturnValue(of([]))
+  it('should handle empty array from the query', async () => {
+    // Configure query to return an empty array
+    vi.mocked(getQueryState).mockReturnValue({
+      subscribe: () => () => {},
+      getCurrent: () => [],
+      observable: of([]),
+    } as StateSource<ReleaseDocument[] | undefined>)
 
     const state = getActiveReleasesState(instance)
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(state.getCurrent()).toEqual([]) // Should be set to empty array
-    expect(consoleErrorSpy).not.toHaveBeenCalled()
   })
 
-  it('should handle null/undefined from listenQuery by defaulting to empty array', async () => {
+  it('should handle null/undefined from the query by defaulting to empty array', async () => {
     // Test null case
-    vi.mocked(listenQuery).mockReturnValue(of(null))
+    vi.mocked(getQueryState).mockReturnValue({
+      subscribe: () => () => {},
+      getCurrent: () => null as unknown as ReleaseDocument[] | undefined,
+      observable: of(null as unknown as ReleaseDocument[] | undefined),
+    } as StateSource<ReleaseDocument[] | undefined>)
     const state = getActiveReleasesState(instance)
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(state.getCurrent()).toEqual([])
-    expect(consoleErrorSpy).not.toHaveBeenCalled()
 
     // Test undefined case
-    vi.mocked(listenQuery).mockReturnValue(of(undefined))
+    vi.mocked(getQueryState).mockReturnValue({
+      subscribe: () => () => {},
+      getCurrent: () => undefined,
+      observable: of(undefined),
+    } as StateSource<ReleaseDocument[] | undefined>)
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(state.getCurrent()).toEqual([])
-    expect(consoleErrorSpy).not.toHaveBeenCalled()
   })
 
-  it('should handle errors from listenQuery by retrying and eventually setting error state', async () => {
-    vi.useFakeTimers()
-    const error = new Error('Query failed')
+  it('should not crash when the releases query errors', async () => {
     const subject = new Subject<ReleaseDocument[]>()
-    vi.mocked(listenQuery).mockReturnValue(subject.asObservable())
+    vi.mocked(getQueryState).mockReturnValue({
+      subscribe: () => () => {},
+      getCurrent: () => undefined,
+      observable: subject.asObservable(),
+    } as StateSource<ReleaseDocument[] | undefined>)
 
-    // initialize the store
     const state = getActiveReleasesState(instance)
 
-    // Error the subject
-    subject.error(error)
+    subject.error(new Error('Query failed'))
 
-    // Advance enough to cover the retry attempts (exponential backoff: 1s, 2s, 4s)
-    for (let i = 0; i < 3; i++) {
-      const delay = Math.pow(2, i) * 1000
-      await vi.advanceTimersByTimeAsync(delay)
-    }
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
-    // Verify error was logged at least once during retries
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[releases] Error in subscription:',
-      error,
-      'Retry count:',
-      expect.any(Number),
-    )
-
-    // not sure how to test state.setError()
     expect(state.getCurrent()).toEqual(undefined)
-
-    vi.useRealTimers()
   })
 })
