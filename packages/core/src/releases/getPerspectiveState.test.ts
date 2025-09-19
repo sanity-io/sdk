@@ -2,14 +2,13 @@ import {filter, firstValueFrom, of, Subject, take} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
 import {type PerspectiveHandle, type ReleasePerspective} from '../config/sanityConfig'
+import {getQueryState} from '../query/queryStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
-import {listenQuery as mockListenQuery} from '../utils/listenQuery'
+import {type StateSource} from '../store/createStateSourceAction'
 import {getPerspectiveState} from './getPerspectiveState'
 import {type ReleaseDocument} from './releasesStore'
 
-vi.mock('../utils/listenQuery', () => ({
-  listenQuery: vi.fn(),
-}))
+vi.mock('../query/queryStore')
 
 vi.mock('../client/clientStore', () => ({
   getClientState: vi.fn(() => ({
@@ -21,7 +20,7 @@ vi.mock('../client/clientStore', () => ({
 
 describe('getPerspectiveState', () => {
   let instance: SanityInstance
-  let mockReleasesQuerySubject: Subject<ReleaseDocument[]>
+  let mockReleasesQuerySubject: Subject<ReleaseDocument[] | undefined>
 
   const release1 = {
     _id: 'release-1',
@@ -44,8 +43,12 @@ describe('getPerspectiveState', () => {
   beforeEach(() => {
     instance = createSanityInstance({projectId: 'test', dataset: 'test'})
 
-    mockReleasesQuerySubject = new Subject<ReleaseDocument[]>()
-    vi.mocked(mockListenQuery).mockReturnValue(mockReleasesQuerySubject.asObservable())
+    mockReleasesQuerySubject = new Subject<ReleaseDocument[] | undefined>()
+    vi.mocked(getQueryState).mockReturnValue({
+      subscribe: () => () => {},
+      getCurrent: () => undefined,
+      observable: mockReleasesQuerySubject.asObservable(),
+    } as StateSource<ReleaseDocument[] | undefined>)
   })
 
   afterEach(() => {
