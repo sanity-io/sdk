@@ -92,7 +92,7 @@ describe('authStore', () => {
         },
       })
 
-      const {options, dashboardContext} = authStore.getInitialState(instance)
+      const {options, dashboardContext} = authStore.getInitialState(instance, null)
 
       expect(options.apiHost).toBe(apiHost)
       expect(options.callbackUrl).toBe(callbackUrl)
@@ -114,7 +114,7 @@ describe('authStore', () => {
         auth: {initialLocationHref},
       })
 
-      const {dashboardContext, authState} = authStore.getInitialState(instance)
+      const {dashboardContext, authState} = authStore.getInitialState(instance, null)
       expect(dashboardContext).toEqual(context)
       expect(authState.type).toBe(AuthStateType.LOGGED_OUT)
     })
@@ -129,7 +129,7 @@ describe('authStore', () => {
         auth: {initialLocationHref},
       })
 
-      const {dashboardContext, authState} = authStore.getInitialState(instance)
+      const {dashboardContext, authState} = authStore.getInitialState(instance, null)
       expect(dashboardContext).toEqual(expectedContext)
       expect(authState.type).toBe(AuthStateType.LOGGED_OUT)
     })
@@ -143,7 +143,7 @@ describe('authStore', () => {
         auth: {initialLocationHref},
       })
 
-      const {dashboardContext, authState} = authStore.getInitialState(instance)
+      const {dashboardContext, authState} = authStore.getInitialState(instance, null)
       expect(dashboardContext).toStrictEqual({})
       expect(authState.type).toBe(AuthStateType.LOGGED_OUT)
       expect(errorSpy).toHaveBeenCalledWith(
@@ -166,7 +166,7 @@ describe('authStore', () => {
         },
       })
 
-      const {authState, dashboardContext} = authStore.getInitialState(instance)
+      const {authState, dashboardContext} = authStore.getInitialState(instance, null)
       expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN, token})
       expect(dashboardContext).toEqual(context)
     })
@@ -182,7 +182,7 @@ describe('authStore', () => {
 
       vi.mocked(getAuthCode).mockReturnValue('auth-code')
 
-      const {authState, dashboardContext} = authStore.getInitialState(instance)
+      const {authState, dashboardContext} = authStore.getInitialState(instance, null)
       expect(authState).toMatchObject({type: AuthStateType.LOGGING_IN})
       expect(dashboardContext).toEqual(context)
     })
@@ -197,7 +197,7 @@ describe('authStore', () => {
       vi.mocked(getAuthCode).mockReturnValue(null)
       vi.mocked(getTokenFromStorage).mockReturnValue(storageToken)
 
-      const {authState, dashboardContext} = authStore.getInitialState(instance)
+      const {authState, dashboardContext} = authStore.getInitialState(instance, null)
       expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN, token: storageToken})
       expect(dashboardContext).toStrictEqual({})
     })
@@ -215,7 +215,7 @@ describe('authStore', () => {
       vi.mocked(getAuthCode).mockReturnValue(null)
       vi.mocked(getTokenFromStorage).mockReturnValue(storageToken)
 
-      const {authState, dashboardContext} = authStore.getInitialState(instance)
+      const {authState, dashboardContext} = authStore.getInitialState(instance, null)
       expect(authState).toMatchObject({type: AuthStateType.LOGGED_OUT})
       expect(dashboardContext).toEqual(context)
     })
@@ -229,7 +229,7 @@ describe('authStore', () => {
       vi.mocked(getAuthCode).mockReturnValue(null)
       vi.mocked(getTokenFromStorage).mockReturnValue(null)
 
-      const {authState, dashboardContext} = authStore.getInitialState(instance)
+      const {authState, dashboardContext} = authStore.getInitialState(instance, null)
       expect(authState).toMatchObject({type: AuthStateType.LOGGED_OUT})
       expect(dashboardContext).toStrictEqual({})
     })
@@ -252,7 +252,7 @@ describe('authStore', () => {
         auth: {storageArea: mockStorage}, // Provide mock storage
       })
 
-      const {authState, options} = authStore.getInitialState(instance)
+      const {authState, options} = authStore.getInitialState(instance, null)
       expect(getStudioTokenFromLocalStorage).toHaveBeenCalledWith(mockStorage, studioStorageKey)
       expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN, token: studioToken})
       expect(options.authMethod).toBe('localstorage')
@@ -277,7 +277,7 @@ describe('authStore', () => {
       })
 
       // Verify initial state without async cookie probe
-      const {authState: initialAuthState} = authStore.getInitialState(instance)
+      const {authState: initialAuthState} = authStore.getInitialState(instance, null)
       expect(initialAuthState.type).toBe(AuthStateType.LOGGED_OUT)
       expect(getStudioTokenFromLocalStorage).toHaveBeenCalledWith(mockStorage, studioStorageKey)
 
@@ -296,7 +296,7 @@ describe('authStore', () => {
         dataset: 'd',
       })
 
-      const {authState, options} = authStore.getInitialState(instance)
+      const {authState, options} = authStore.getInitialState(instance, null)
       expect(getStudioTokenFromLocalStorage).not.toHaveBeenCalled()
       expect(checkForCookieAuth).not.toHaveBeenCalled()
       expect(getTokenFromStorage).toHaveBeenCalled()
@@ -314,7 +314,7 @@ describe('authStore', () => {
       vi.mocked(getAuthCode).mockReturnValue(null)
       vi.mocked(getTokenFromLocation).mockReturnValue('hash-token')
 
-      const {authState} = authStore.getInitialState(instance)
+      const {authState} = authStore.getInitialState(instance, null)
       expect(authState).toMatchObject({
         type: AuthStateType.LOGGING_IN,
         isExchangingToken: false,

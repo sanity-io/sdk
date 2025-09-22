@@ -48,11 +48,11 @@ describe('applyDocumentActions', () => {
     }
     state = createStoreState(initialState)
     instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const key = {name: 'p.d', projectId: 'p', dataset: 'd'}
 
     vi.mocked(bindActionByDataset).mockImplementation(
-      (_storeDef, action) =>
-        (instanceParam: SanityInstance, ...params: unknown[]) =>
-          action({instance: instanceParam, state}, ...params),
+      (_storeDef, action) => (instanceParam: SanityInstance, options) =>
+        action({instance: instanceParam, state, key}, options),
     )
     // Import dynamically to ensure mocks are set up before the module under test is loaded
     const module = await import('./applyDocumentActions')
