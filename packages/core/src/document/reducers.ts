@@ -587,8 +587,7 @@ export function manageSubscriberIds(
   }
 }
 
-export function getDocumentIdsFromActions(action: DocumentAction | DocumentAction[]): string[] {
-  const actions = Array.isArray(action) ? action : [action]
+export function getDocumentIdsFromActions(actions: DocumentAction[]): string[] {
   return Array.from(
     new Set(
       actions

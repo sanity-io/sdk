@@ -281,16 +281,20 @@ export const getDocumentSyncStatus = bindActionByDataset(
   }),
 )
 
+type PermissionsStateOptions = {
+  actions: DocumentAction[]
+}
+
 /** @beta */
 export const getPermissionsState = bindActionByDataset(
   documentStore,
   createStateSourceAction({
     selector: calculatePermissions,
-    onSubscribe: (context, actions) =>
+    onSubscribe: (context, {actions}: PermissionsStateOptions) =>
       manageSubscriberIds(context, getDocumentIdsFromActions(actions)),
   }) as StoreAction<
     DocumentStoreState,
-    [DocumentAction | DocumentAction[]],
+    [PermissionsStateOptions],
     StateSource<ReturnType<typeof calculatePermissions>>
   >,
 )
@@ -298,9 +302,9 @@ export const getPermissionsState = bindActionByDataset(
 /** @beta */
 export const resolvePermissions = bindActionByDataset(
   documentStore,
-  ({instance}, actions: DocumentAction | DocumentAction[]) => {
+  ({instance}, options: PermissionsStateOptions) => {
     return firstValueFrom(
-      getPermissionsState(instance, actions).observable.pipe(filter((i) => i !== undefined)),
+      getPermissionsState(instance, options).observable.pipe(filter((i) => i !== undefined)),
     )
   },
 )

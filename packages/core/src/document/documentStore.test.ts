@@ -90,19 +90,23 @@ it('creates, edits, and publishes a document', async () => {
   const unsubscribe = documentState.subscribe()
 
   // Create a new document
-  const {appeared} = await applyDocumentActions(instance, createDocument(doc))
+  const {appeared} = await applyDocumentActions(instance, {actions: [createDocument(doc)]})
   expect(appeared).toContain(getDraftId(doc.documentId))
 
   let currentDoc = documentState.getCurrent()
   expect(currentDoc?._id).toEqual(getDraftId(doc.documentId))
 
   // Edit the document – add a title
-  await applyDocumentActions(instance, editDocument(doc, {set: {title: 'My First Article'}}))
+  await applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'My First Article'}})],
+  })
   currentDoc = documentState.getCurrent()
   expect(currentDoc?.title).toEqual('My First Article')
 
   // Publish the document; the resulting transactionId is used as the new _rev
-  const {transactionId, submitted} = await applyDocumentActions(instance, publishDocument(doc))
+  const {transactionId, submitted} = await applyDocumentActions(instance, {
+    actions: [publishDocument(doc)],
+  })
   await submitted()
   currentDoc = documentState.getCurrent()
 
@@ -119,14 +123,15 @@ it('creates a document with initial values', async () => {
   const unsubscribe = documentState.subscribe()
 
   // Create a new document with initial field values
-  const {appeared} = await applyDocumentActions(
-    instance,
-    createDocument(doc, {
-      title: 'Article with Initial Values',
-      author: 'Jane Doe',
-      count: 42,
-    }),
-  )
+  const {appeared} = await applyDocumentActions(instance, {
+    actions: [
+      createDocument(doc, {
+        title: 'Article with Initial Values',
+        author: 'Jane Doe',
+        count: 42,
+      }),
+    ],
+  })
   expect(appeared).toContain(getDraftId(doc.documentId))
 
   const currentDoc = documentState.getCurrent()
@@ -155,7 +160,9 @@ it('edits existing documents', async () => {
     title: 'existing doc',
   })
 
-  await applyDocumentActions(instance, editDocument(doc, {set: {title: 'updated title'}}))
+  await applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'updated title'}})],
+  })
   expect(state.getCurrent()).toMatchObject({
     _id: getDraftId(doc.documentId),
     title: 'updated title',
@@ -178,12 +185,11 @@ it('sets optimistic changes synchronously', async () => {
 
   // then the actions are synchronous
   expect(state1.getCurrent()).toBeNull()
-  applyDocumentActions(instance1, createDocument(doc))
+  applyDocumentActions(instance1, {actions: [createDocument(doc)]})
   expect(state1.getCurrent()).toMatchObject({_id: getDraftId(doc.documentId)})
-  const actionResult1Promise = applyDocumentActions(
-    instance1,
-    editDocument(doc, {set: {title: 'initial title'}}),
-  )
+  const actionResult1Promise = applyDocumentActions(instance1, {
+    actions: [editDocument(doc, {set: {title: 'initial title'}})],
+  })
   expect(state1.getCurrent()?.title).toBe('initial title')
 
   // notice how state2 doesn't have the value yet because it's a different
@@ -201,10 +207,9 @@ it('sets optimistic changes synchronously', async () => {
   expect(state2.getCurrent()?.title).toBe('initial title')
 
   // synchronous for state 2
-  const actionResult2Promise = applyDocumentActions(
-    instance2,
-    editDocument(doc, {set: {title: 'updated title'}}),
-  )
+  const actionResult2Promise = applyDocumentActions(instance2, {
+    actions: [editDocument(doc, {set: {title: 'updated title'}})],
+  })
   expect(state2.getCurrent()?.title).toBe('updated title')
   // async for state 1
   expect(state1.getCurrent()?.title).toBe('initial title')
@@ -226,7 +231,7 @@ it('propagates changes between two instances', async () => {
   const state2Unsubscribe = state2.subscribe()
 
   // Create the document from instance1.
-  await applyDocumentActions(instance1, createDocument(doc)).then((r) => r.submitted())
+  await applyDocumentActions(instance1, {actions: [createDocument(doc)]}).then((r) => r.submitted())
 
   const doc1 = state1.getCurrent()
   const doc2 = state2.getCurrent()
@@ -234,9 +239,9 @@ it('propagates changes between two instances', async () => {
   expect(doc2?._id).toEqual(getDraftId(doc.documentId))
 
   // Now, edit the document from instance2.
-  await applyDocumentActions(instance2, editDocument(doc, {set: {title: 'Hello world!'}})).then(
-    (r) => r.submitted(),
-  )
+  await applyDocumentActions(instance2, {
+    actions: [editDocument(doc, {set: {title: 'Hello world!'}})],
+  }).then((r) => r.submitted())
 
   const updated1 = state1.getCurrent()
   const updated2 = state2.getCurrent()
@@ -258,20 +263,22 @@ it('handles concurrent edits and resolves conflicts', async () => {
   const oneOffInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
   // Create the initial document from a one-off instance.
-  await applyDocumentActions(oneOffInstance, [
-    createDocument(doc),
-    editDocument(doc, {set: {title: 'The quick brown fox jumps over the lazy dog'}}),
-  ]).then((res) => res.submitted())
+  await applyDocumentActions(oneOffInstance, {
+    actions: [
+      createDocument(doc),
+      editDocument(doc, {set: {title: 'The quick brown fox jumps over the lazy dog'}}),
+    ],
+  }).then((res) => res.submitted())
 
   // Both instances now issue an edit simultaneously.
-  const p1 = applyDocumentActions(
-    instance1,
-    editDocument(doc, {set: {title: 'The quick brown fox jumps over the lazy cat'}}),
-  ).then((r) => r.submitted())
-  const p2 = applyDocumentActions(
-    instance2,
-    editDocument(doc, {set: {title: 'The quick brown elephant jumps over the lazy dog'}}),
-  ).then((r) => r.submitted())
+  const p1 = applyDocumentActions(instance1, {
+    actions: [editDocument(doc, {set: {title: 'The quick brown fox jumps over the lazy cat'}})],
+  }).then((r) => r.submitted())
+  const p2 = applyDocumentActions(instance2, {
+    actions: [
+      editDocument(doc, {set: {title: 'The quick brown elephant jumps over the lazy dog'}}),
+    ],
+  }).then((r) => r.submitted())
 
   // Wait for both actions to complete (or reject).
   await Promise.allSettled([p1, p2])
@@ -292,8 +299,8 @@ it('unpublishes and discards a document', async () => {
   const unsubscribe = documentState.subscribe()
 
   // Create and publish the document.
-  await applyDocumentActions(instance, createDocument(doc))
-  const afterPublish = await applyDocumentActions(instance, publishDocument(doc))
+  await applyDocumentActions(instance, {actions: [createDocument(doc)]})
+  const afterPublish = await applyDocumentActions(instance, {actions: [publishDocument(doc)]})
   const publishedDoc = documentState.getCurrent()
   expect(publishedDoc).toMatchObject({
     _id: getPublishedId(doc.documentId),
@@ -301,13 +308,13 @@ it('unpublishes and discards a document', async () => {
   })
 
   // Unpublish the document (which should delete the published version and create a draft).
-  await applyDocumentActions(instance, unpublishDocument(doc))
+  await applyDocumentActions(instance, {actions: [unpublishDocument(doc)]})
   const afterUnpublish = documentState.getCurrent()
   // In our mock implementation the _id remains the same but the published copy is removed.
   expect(afterUnpublish?._id).toEqual(getDraftId(doc.documentId))
 
   // Discard the draft (which deletes the draft version).
-  await applyDocumentActions(instance, discardDocument(doc))
+  await applyDocumentActions(instance, {actions: [discardDocument(doc)]})
   const afterDiscard = documentState.getCurrent()
   expect(afterDiscard).toBeNull()
 
@@ -320,12 +327,12 @@ it('deletes a document', async () => {
   const documentState = getDocumentState(instance, doc)
   const unsubscribe = documentState.subscribe()
 
-  await applyDocumentActions(instance, [createDocument(doc), publishDocument(doc)])
+  await applyDocumentActions(instance, {actions: [createDocument(doc), publishDocument(doc)]})
   const docValue = documentState.getCurrent()
   expect(docValue).toBeDefined()
 
   // Delete the document.
-  await applyDocumentActions(instance, deleteDocument(doc))
+  await applyDocumentActions(instance, {actions: [deleteDocument(doc)]})
   const afterDelete = documentState.getCurrent()
   expect(afterDelete).toBeNull()
 
@@ -340,7 +347,7 @@ it('cleans up document state when there are no subscribers', async () => {
   const unsubscribe = documentState.subscribe()
 
   // Create a document.
-  await applyDocumentActions(instance, createDocument(doc))
+  await applyDocumentActions(instance, {actions: [createDocument(doc)]})
   expect(documentState.getCurrent()).toBeDefined()
 
   // Unsubscribe from the document.
@@ -365,7 +372,9 @@ it('fetches documents if there are no active subscriptions for the actions appli
   // there are no active subscriptions so applying this action will create one
   // for this action. this subscription will be removed when the outgoing
   // transaction for this action has been accepted by the server
-  const setNewTitle = applyDocumentActions(instance, editDocument(doc, {set: {title: 'new title'}}))
+  const setNewTitle = applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'new title'}})],
+  })
   expect(getCurrent()?.title).toBeUndefined()
   expect(getDocumentSyncStatus(instance, doc).getCurrent()).toBe(false)
 
@@ -373,27 +382,25 @@ it('fetches documents if there are no active subscriptions for the actions appli
   expect(getCurrent()?.title).toBe('new title')
 
   // there is an active subscriber now so the edits are synchronous
-  applyDocumentActions(instance, editDocument(doc, {set: {title: 'updated title'}}))
+  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'updated title'}})]})
   expect(getCurrent()?.title).toBe('updated title')
-  applyDocumentActions(instance, editDocument(doc, {set: {title: 'updated title!'}}))
+  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'updated title!'}})]})
   expect(getCurrent()?.title).toBe('updated title!')
 
   expect(getDocumentSyncStatus(instance, doc).getCurrent()).toBe(false)
 
   // await submitted in order to test that there is no subscriptions
-  const result = await applyDocumentActions(
-    instance,
-    editDocument(doc, {set: {title: 'updated title'}}),
-  )
+  const result = await applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'updated title'}})],
+  })
   await result.submitted()
 
   // test that there isn't any document state
   expect(getDocumentSyncStatus(instance, doc).getCurrent()).toBeUndefined()
 
-  const setNewNewTitle = applyDocumentActions(
-    instance,
-    editDocument(doc, {set: {title: 'new new title'}}),
-  )
+  const setNewNewTitle = applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'new new title'}})],
+  })
   // now we'll have to await again
   expect(getCurrent()?.title).toBe(undefined)
 
@@ -407,13 +414,15 @@ it('batches edit transaction into one outgoing transaction', async () => {
   const unsubscribe = getDocumentState(instance, doc).subscribe()
 
   // this creates its own transaction
-  applyDocumentActions(instance, createDocument(doc))
+  applyDocumentActions(instance, {actions: [createDocument(doc)]})
 
   // these get batched into one
-  applyDocumentActions(instance, editDocument(doc, {set: {title: 'name!'}}))
-  applyDocumentActions(instance, editDocument(doc, {set: {title: 'name!!'}}))
-  applyDocumentActions(instance, editDocument(doc, {set: {title: 'name!!!'}}))
-  const res = await applyDocumentActions(instance, editDocument(doc, {set: {title: 'name!!!!'}}))
+  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'name!'}})]})
+  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'name!!'}})]})
+  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'name!!!'}})]})
+  const res = await applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'name!!!!'}})],
+  })
   await res.submitted()
 
   expect(client.action).toHaveBeenCalledTimes(2)
@@ -434,7 +443,7 @@ it('provides the consistency status via `getDocumentSyncStatus`', async () => {
   const unsubscribe = syncStatus.subscribe()
   expect(syncStatus.getCurrent()).toBe(true)
 
-  const applied = applyDocumentActions(instance, createDocument(doc))
+  const applied = applyDocumentActions(instance, {actions: [createDocument(doc)]})
   expect(syncStatus.getCurrent()).toBe(false)
 
   const createResult = await applied
@@ -443,11 +452,11 @@ it('provides the consistency status via `getDocumentSyncStatus`', async () => {
   await createResult.submitted()
   expect(syncStatus.getCurrent()).toBe(true)
 
-  applyDocumentActions(instance, editDocument(doc, {set: {title: 'initial name'}}))
+  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'initial name'}})]})
   expect(syncStatus.getCurrent()).toBe(false)
 
-  applyDocumentActions(instance, editDocument(doc, {set: {title: 'updated name'}}))
-  const publishResult = applyDocumentActions(instance, publishDocument(doc))
+  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'updated name'}})]})
+  const publishResult = applyDocumentActions(instance, {actions: [publishDocument(doc)]})
   expect(syncStatus.getCurrent()).toBe(false)
   await publishResult.then((res) => res.submitted())
   expect(syncStatus.getCurrent()).toBe(true)
@@ -477,25 +486,23 @@ it('reverts failed outgoing transaction locally', async () => {
   const {getCurrent, subscribe} = getDocumentState(instance, doc)
   const unsubscribe = subscribe()
 
-  await applyDocumentActions(instance, createDocument(doc))
-  applyDocumentActions(instance, editDocument(doc, {set: {title: 'the'}}))
-  applyDocumentActions(instance, editDocument(doc, {set: {title: 'the quick'}}))
+  await applyDocumentActions(instance, {actions: [createDocument(doc)]})
+  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'the'}})]})
+  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'the quick'}})]})
 
   // this edit action is simulated to fail from the backend and will be reverted
-  const revertedActionResult = applyDocumentActions(
-    instance,
-    editDocument(doc, {set: {title: 'the quick brown'}}),
-    {
-      transactionId: 'force-revert',
-      disableBatching: true,
-    },
-  )
+  const revertedActionResult = applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'the quick brown'}})],
+    transactionId: 'force-revert',
+    disableBatching: true,
+  })
 
-  applyDocumentActions(instance, editDocument(doc, {set: {title: 'the quick brown fox'}}))
-  await applyDocumentActions(
-    instance,
-    editDocument(doc, {set: {title: 'the quick brown fox jumps'}}),
-  ).then((e) => e.submitted())
+  applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'the quick brown fox'}})],
+  })
+  await applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'the quick brown fox jumps'}})],
+  }).then((e) => e.submitted())
 
   await expect(revertedEventPromise).resolves.toMatchObject({
     type: 'reverted',
@@ -512,7 +519,9 @@ it('reverts failed outgoing transaction locally', async () => {
   expect(getCurrent()?.title).toBe('the quick fox jumps')
 
   // check that we can still edit after recovering from the error
-  applyDocumentActions(instance, editDocument(doc, {set: {title: 'TEST the quick fox jumps'}}))
+  applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'TEST the quick fox jumps'}})],
+  })
   expect(getCurrent()?.title).toBe('TEST the quick fox jumps')
 
   unsubscribe()
@@ -534,7 +543,7 @@ it('removes a queued transaction if it fails to apply', async () => {
   const unsubscribe = state.subscribe()
 
   await expect(
-    applyDocumentActions(instance, editDocument(doc, {set: {title: "can't set"}})),
+    applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: "can't set"}})]}),
   ).rejects.toThrowError(/Cannot edit document/)
 
   await expect(actionErrorEventPromise).resolves.toMatchObject({
@@ -544,8 +553,8 @@ it('removes a queued transaction if it fails to apply', async () => {
   })
 
   // editing should still work after though (no crashing)
-  await applyDocumentActions(instance, createDocument(doc))
-  applyDocumentActions(instance, editDocument(doc, {set: {title: 'can set!'}}))
+  await applyDocumentActions(instance, {actions: [createDocument(doc)]})
+  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'can set!'}})]})
 
   expect(state.getCurrent()?.title).toBe('can set!')
 
@@ -565,13 +574,17 @@ it('returns allowed true when no permission errors occur', async () => {
   })
   const state = getDocumentState(instance, doc)
   const unsubscribe = state.subscribe()
-  await applyDocumentActions(instance, createDocument(doc)).then((r) => r.submitted())
+  await applyDocumentActions(instance, {actions: [createDocument(doc)]}).then((r) => r.submitted())
 
   // Use an action that includes a patch (so that update permission check is bypassed).
   const permissionsState = getPermissionsState(instance, {
-    ...doc,
-    type: 'document.edit',
-    patches: [{set: {title: 'New Title'}}],
+    actions: [
+      {
+        ...doc,
+        type: 'document.edit',
+        patches: [{set: {title: 'New Title'}}],
+      },
+    ],
   })
   // Wait briefly to allow permissions calculation.
   await new Promise((resolve) => setTimeout(resolve, 10))
@@ -583,7 +596,7 @@ it('returns allowed true when no permission errors occur', async () => {
 it("should reject applying the action if a precondition isn't met", async () => {
   const doc = createDocumentHandle({documentId: 'does-not-exist', documentType: 'article'})
 
-  await expect(applyDocumentActions(instance, deleteDocument(doc))).rejects.toThrow(
+  await expect(applyDocumentActions(instance, {actions: [deleteDocument(doc)]})).rejects.toThrow(
     'The document you are trying to delete does not exist.',
   )
 })
@@ -594,7 +607,7 @@ it("should reject applying the action if a permission isn't met", async () => {
   const datasetAcl = [{filter: 'false', permissions: ['create']}]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
-  await expect(applyDocumentActions(instance, createDocument(doc))).rejects.toThrow(
+  await expect(applyDocumentActions(instance, {actions: [createDocument(doc)]})).rejects.toThrow(
     'You do not have permission to create a draft for document "does-not-exist".',
   )
 })
@@ -604,7 +617,7 @@ it('returns allowed false with reasons when permission errors occur', async () =
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
   const doc = createDocumentHandle({documentId: 'doc-perm-denied', documentType: 'article'})
-  const result = await resolvePermissions(instance, createDocument(doc))
+  const result = await resolvePermissions(instance, {actions: [createDocument(doc)]})
 
   const message = 'You do not have permission to create a draft for document "doc-perm-denied".'
   expect(result).toMatchObject({
@@ -625,8 +638,10 @@ it('fetches dataset ACL and updates grants in the document store state', async (
   const book = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'book'})
   const author = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'author'})
 
-  expect(await resolvePermissions(instance, createDocument(book))).toEqual({allowed: true})
-  expect(await resolvePermissions(instance, createDocument(author))).toMatchObject({
+  expect(await resolvePermissions(instance, {actions: [createDocument(book)]})).toEqual({
+    allowed: true,
+  })
+  expect(await resolvePermissions(instance, {actions: [createDocument(author)]})).toMatchObject({
     allowed: false,
     message: expect.stringContaining('You do not have permission to create a draft for document'),
   })
@@ -639,10 +654,9 @@ it('returns a promise that resolves when a document has been loaded in the store
 
   // use one-off instance to create the document in the mock backend
   const oneOffInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
-  const result = await applyDocumentActions(oneOffInstance, [
-    createDocument(doc),
-    editDocument(doc, {set: {title: 'initial title'}}),
-  ])
+  const result = await applyDocumentActions(oneOffInstance, {
+    actions: [createDocument(doc), editDocument(doc, {set: {title: 'initial title'}})],
+  })
   await result.submitted() // wait till submitted to server before resolving
 
   await expect(resolveDocument(instance, doc)).resolves.toMatchObject({
@@ -661,19 +675,23 @@ it('emits an event for each action after an outgoing transaction has been accept
   const doc = createDocumentHandle({documentId, documentType: 'article'})
   expect(handler).toHaveBeenCalledTimes(0)
 
-  const tnx1 = await applyDocumentActions(instance, [
-    createDocument(doc),
-    editDocument(doc, {set: {title: 'new name'}}),
-    publishDocument(doc),
-  ]).then((e) => e.submitted())
+  const tnx1 = await applyDocumentActions(instance, {
+    actions: [
+      createDocument(doc),
+      editDocument(doc, {set: {title: 'new name'}}),
+      publishDocument(doc),
+    ],
+  }).then((e) => e.submitted())
   expect(handler).toHaveBeenCalledTimes(4)
 
-  const tnx2 = await applyDocumentActions(instance, [
-    unpublishDocument(doc),
-    publishDocument(doc),
-    editDocument(doc, {set: {title: 'updated name'}}),
-    discardDocument(doc),
-  ]).then((e) => e.submitted())
+  const tnx2 = await applyDocumentActions(instance, {
+    actions: [
+      unpublishDocument(doc),
+      publishDocument(doc),
+      editDocument(doc, {set: {title: 'updated name'}}),
+      discardDocument(doc),
+    ],
+  }).then((e) => e.submitted())
   expect(handler).toHaveBeenCalledTimes(9)
 
   expect(handler.mock.calls).toMatchObject([
@@ -688,7 +706,7 @@ it('emits an event for each action after an outgoing transaction has been accept
     [{type: 'accepted', outgoing: {transactionId: tnx2.transactionId}}],
   ])
 
-  await applyDocumentActions(instance, deleteDocument(doc))
+  await applyDocumentActions(instance, {actions: [deleteDocument(doc)]})
 
   unsubscribe()
 })
