@@ -72,7 +72,8 @@ describe('applyDocumentActions', () => {
     }
 
     // Call applyDocumentActions with a fixed transactionId for reproducibility.
-    const applyPromise = applyDocumentActions(instance, action, {
+    const applyPromise = applyDocumentActions(instance, {
+      actions: [action],
       transactionId: 'txn-success',
     })
 
@@ -128,7 +129,8 @@ describe('applyDocumentActions', () => {
     }
 
     // Call applyDocumentActions with a fixed transactionId.
-    const applyPromise = applyDocumentActions(instance, action, {
+    const applyPromise = applyDocumentActions(instance, {
+      actions: [action],
       transactionId: 'txn-error',
     })
 
@@ -160,7 +162,8 @@ describe('applyDocumentActions', () => {
       dataset: 'd',
     }
     // Call applyDocumentActions with the context using childInstance, but with action requiring parent's config
-    const applyPromise = applyDocumentActions(childInstance, action, {
+    const applyPromise = applyDocumentActions(childInstance, {
+      actions: [action],
       transactionId: 'txn-child-match',
     })
 

@@ -99,7 +99,7 @@ describe('usePermissions', () => {
       projectId: mockAction.projectId,
       dataset: mockAction.dataset,
     })
-    expect(getPermissionsState).toHaveBeenCalledWith(mockInstance, mockAction)
+    expect(getPermissionsState).toHaveBeenCalledWith(mockInstance, {actions: [mockAction]})
     expect(result.current).toEqual(mockPermissionAllowed)
   })
 
@@ -122,7 +122,7 @@ describe('usePermissions', () => {
 
     renderHook(() => useDocumentPermissions(actions))
 
-    expect(getPermissionsState).toHaveBeenCalledWith(mockInstance, actions)
+    expect(getPermissionsState).toHaveBeenCalledWith(mockInstance, {actions})
   })
 
   it('should throw an error if actions have mismatched project IDs', () => {
@@ -175,7 +175,7 @@ describe('usePermissions', () => {
 
     // Now it should render properly
     await waitFor(() => {
-      expect(getPermissionsState).toHaveBeenCalledWith(mockInstance, mockAction)
+      expect(getPermissionsState).toHaveBeenCalledWith(mockInstance, {actions: [mockAction]})
     })
   })
 
