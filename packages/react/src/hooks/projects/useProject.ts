@@ -1,14 +1,8 @@
-import {
-  getProjectState,
-  type ProjectHandle,
-  resolveProject,
-  type SanityInstance,
-  type SanityProject,
-  type StateSource,
-} from '@sanity/sdk'
-import {identity} from 'rxjs'
+import {getProjectState, type ProjectHandle, type SanityProject} from '@sanity/sdk'
+import {useMemo} from 'react'
 
-import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {useSanityInstance} from '../context/useSanityInstance'
+import {useStoreState} from '../helpers/useStoreState'
 
 type UseProject = {
   /**
@@ -38,14 +32,10 @@ type UseProject = {
  * @public
  * @function
  */
-export const useProject: UseProject = createStateSourceHook({
-  // remove `undefined` since we're suspending when that is the case
-  getState: getProjectState as (
-    instance: SanityInstance,
-    projectHandle?: ProjectHandle,
-  ) => StateSource<SanityProject>,
-  shouldSuspend: (instance, projectHandle) =>
-    getProjectState(instance, projectHandle).getCurrent() === undefined,
-  suspender: resolveProject,
-  getConfig: identity,
-})
+export const useProject: UseProject = (options) => {
+  const instance = useSanityInstance()
+  const projectId = options?.projectId ?? instance.config.projectId
+  if (!projectId) throw new Error('useProject must be configured with projectId')
+  const state = useMemo(() => getProjectState(instance, {projectId}), [instance, projectId])
+  return useStoreState(state)
+}
