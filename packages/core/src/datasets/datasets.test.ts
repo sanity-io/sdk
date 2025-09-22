@@ -25,7 +25,7 @@ describe('datasets', () => {
       observable: of(mockClient),
     } as StateSource<SanityClient>)
 
-    const result = await resolveDatasets(instance)
+    const result = await resolveDatasets(instance, {projectId: 'p'})
     expect(result).toEqual(datasets)
     expect(list).toHaveBeenCalled()
   })
