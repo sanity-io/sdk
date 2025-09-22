@@ -58,12 +58,12 @@ const nullReplacer: object = {}
 const documentsSelector = createSelector(
   [
     ({state: {documentStates}}: SelectorContext<SyncTransactionState>) => documentStates,
-    (_context: SelectorContext<SyncTransactionState>, actions: DocumentAction | DocumentAction[]) =>
+    (_context: SelectorContext<SyncTransactionState>, {actions}: {actions: DocumentAction[]}) =>
       actions,
   ],
   (documentStates, actions) => {
     const documentIds = new Set(
-      (Array.isArray(actions) ? actions : [actions])
+      actions
         .map((i) => i.documentId)
         .filter((i) => typeof i === 'string')
         .flatMap((documentId) => [getPublishedId(documentId), getDraftId(documentId)]),
@@ -99,7 +99,7 @@ const documentsSelector = createSelector(
 const memoizedActionsSelector = createSelector(
   [
     documentsSelector,
-    (_state: SelectorContext<SyncTransactionState>, actions: DocumentAction | DocumentAction[]) =>
+    (_state: SelectorContext<SyncTransactionState>, {actions}: {actions: DocumentAction[]}) =>
       actions,
   ],
   (documents, actions) => {
