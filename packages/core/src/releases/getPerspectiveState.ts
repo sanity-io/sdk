@@ -23,7 +23,7 @@ const selectActiveReleases = (context: SelectorContext<ReleasesStoreState>) =>
   context.state.activeReleases
 const selectOptions = (
   _context: SelectorContext<ReleasesStoreState>,
-  options?: PerspectiveHandle,
+  options: PerspectiveHandle & {projectId?: string; dataset?: string},
 ) => options
 
 const memoizedOptionsSelector = createSelector(

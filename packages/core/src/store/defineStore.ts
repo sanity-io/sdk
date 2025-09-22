@@ -4,7 +4,7 @@ import {type StoreState} from './createStoreState'
 /**
  * Context object provided to store initialization functions
  */
-export interface StoreContext<TState> {
+export interface StoreContext<TState, TKey = unknown> {
   /**
    * Sanity instance associated with this store
    *
@@ -20,6 +20,11 @@ export interface StoreContext<TState> {
    * Contains methods for getting/setting state and observing changes
    */
   state: StoreState<TState>
+
+  /**
+   * The key used to instantiate the store.
+   */
+  key: TKey
 }
 
 /**
@@ -29,7 +34,7 @@ export interface StoreContext<TState> {
  * Stores are isolated state containers that can be associated with Sanity instances.
  * Each store definition creates a separate state instance per composite key.
  */
-export interface StoreDefinition<TState> {
+export interface StoreDefinition<TState, TKey = unknown> {
   /**
    * Unique name for the store
    *
@@ -47,7 +52,7 @@ export interface StoreDefinition<TState> {
    * Called when a new store instance is created. Can use Sanity instance
    * configuration to determine initial state.
    */
-  getInitialState: (instance: SanityInstance) => TState
+  getInitialState: (instance: SanityInstance, key: TKey) => TState
 
   /**
    * Optional initialization function
@@ -65,7 +70,7 @@ export interface StoreDefinition<TState> {
    * - Cancel pending operations
    * - Dispose external connections
    */
-  initialize?: (context: StoreContext<TState>) => (() => void) | undefined
+  initialize?: (context: StoreContext<TState, TKey>) => (() => void) | undefined
 }
 
 /**
@@ -74,8 +79,8 @@ export interface StoreDefinition<TState> {
  * @param storeDefinition - Configuration object defining the store
  * @returns The finalized store definition
  */
-export function defineStore<TState>(
-  storeDefinition: StoreDefinition<TState>,
-): StoreDefinition<TState> {
+export function defineStore<TState, TKey = unknown>(
+  storeDefinition: StoreDefinition<TState, TKey>,
+): StoreDefinition<TState, TKey> {
   return storeDefinition
 }

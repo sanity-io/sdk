@@ -40,24 +40,24 @@ describe('getOrCreateNode', () => {
   })
 
   it('should create and start a node', () => {
-    const node = getOrCreateNode({state, instance}, nodeConfig)
+    const node = getOrCreateNode({state, instance, key: null}, nodeConfig)
 
     expect(comlink.createNode).toHaveBeenCalledWith(nodeConfig)
     expect(node.start).toHaveBeenCalled()
   })
 
   it('should store the node in nodeStore', () => {
-    const node = getOrCreateNode({state, instance}, nodeConfig)
+    const node = getOrCreateNode({state, instance, key: null}, nodeConfig)
 
-    expect(getOrCreateNode({state, instance}, nodeConfig)).toBe(node)
+    expect(getOrCreateNode({state, instance, key: null}, nodeConfig)).toBe(node)
   })
 
   it('should throw error when trying to create node with different options', () => {
-    getOrCreateNode({state, instance}, nodeConfig)
+    getOrCreateNode({state, instance, key: null}, nodeConfig)
 
     expect(() =>
       getOrCreateNode(
-        {state, instance},
+        {state, instance, key: null},
         {
           ...nodeConfig,
           connectTo: 'window',
@@ -74,7 +74,7 @@ describe('getOrCreateNode', () => {
       return statusUnsubMock
     })
 
-    getOrCreateNode({state, instance}, nodeConfig)
+    getOrCreateNode({state, instance, key: null}, nodeConfig)
 
     expect(mockNode.onStatus).toHaveBeenCalled()
     expect(state.get().nodes.get(nodeConfig.name)?.statusUnsub).toBe(statusUnsubMock)
@@ -92,7 +92,7 @@ describe('getOrCreateNode', () => {
       return statusUnsubMock
     })
 
-    getOrCreateNode({state, instance}, nodeConfig)
+    getOrCreateNode({state, instance, key: null}, nodeConfig)
 
     // Remove the node entry before triggering the status callback
     state.get().nodes.delete(nodeConfig.name)

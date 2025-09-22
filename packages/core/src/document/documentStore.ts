@@ -28,7 +28,11 @@ import {
 
 import {getClientState} from '../client/clientStore'
 import {type DocumentHandle} from '../config/sanityConfig'
-import {bindActionByDataset, type StoreAction} from '../store/createActionBinder'
+import {
+  bindActionByDataset,
+  type BoundDatasetKey,
+  type StoreAction,
+} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {createStateSourceAction, type StateSource} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
@@ -103,7 +107,7 @@ export interface DocumentState {
   unverifiedRevisions?: {[TTransactionId in string]?: UnverifiedDocumentRevision}
 }
 
-export const documentStore = defineStore<DocumentStoreState>({
+export const documentStore = defineStore<DocumentStoreState, BoundDatasetKey>({
   name: 'Document',
   getInitialState: (instance) => ({
     documentStates: {},
@@ -443,8 +447,8 @@ const subscribeToSubscriptionsAndListenToDocuments = (
 const subscribeToClientAndFetchDatasetAcl = ({
   instance,
   state,
-}: StoreContext<DocumentStoreState>) => {
-  const {projectId, dataset} = instance.config
+  key: {projectId, dataset},
+}: StoreContext<DocumentStoreState, BoundDatasetKey>) => {
   return getClientState(instance, {apiVersion: API_VERSION})
     .observable.pipe(
       switchMap((client) =>

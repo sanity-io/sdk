@@ -34,9 +34,9 @@ describe('subscribeToStorageEventsAndSetToken', () => {
   })
 
   it('sets the state to logged in when a matching storage event returns a token', () => {
-    const state = createStoreState(authStore.getInitialState(instance))
+    const state = createStoreState(authStore.getInitialState(instance, null))
     const {storageKey} = state.get().options
-    const subscription = subscribeToStorageEventsAndSetToken({state, instance})
+    const subscription = subscribeToStorageEventsAndSetToken({state, instance, key: null})
 
     expect(state.get()).toMatchObject({
       authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
@@ -54,10 +54,10 @@ describe('subscribeToStorageEventsAndSetToken', () => {
 
   it('sets the state to logged in when a matching storage event returns null', () => {
     vi.mocked(getTokenFromStorage).mockReturnValue('existing-token')
-    const state = createStoreState(authStore.getInitialState(instance))
+    const state = createStoreState(authStore.getInitialState(instance, null))
     const {storageKey} = state.get().options
 
-    const subscription = subscribeToStorageEventsAndSetToken({state, instance})
+    const subscription = subscribeToStorageEventsAndSetToken({state, instance, key: null})
 
     expect(state.get()).toMatchObject({
       authState: {type: AuthStateType.LOGGED_IN, token: 'existing-token', currentUser: null},

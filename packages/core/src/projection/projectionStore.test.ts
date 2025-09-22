@@ -26,10 +26,26 @@ describe('projectionStore', () => {
 
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
-    const {state, dispose} = createStoreInstance(instance, projectionStore)
+    const {state, dispose} = createStoreInstance(
+      instance,
+      {
+        name: 'p.d',
+        projectId: 'p',
+        dataset: 'd',
+      },
+      projectionStore,
+    )
 
     expect(subscribeToStateAndFetchBatches).toHaveBeenCalledOnce()
-    expect(subscribeToStateAndFetchBatches).toHaveBeenCalledWith({instance, state})
+    expect(subscribeToStateAndFetchBatches).toHaveBeenCalledWith({
+      instance,
+      state,
+      key: {
+        name: 'p.d',
+        projectId: 'p',
+        dataset: 'd',
+      },
+    })
 
     dispose()
     instance.dispose()

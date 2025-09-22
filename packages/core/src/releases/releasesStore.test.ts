@@ -58,7 +58,7 @@ describe('releasesStore', () => {
 
     vi.mocked(listenQuery).mockReturnValue(of(mockReleases))
 
-    const state = getActiveReleasesState(instance)
+    const state = getActiveReleasesState(instance, {})
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -72,7 +72,7 @@ describe('releasesStore', () => {
     const releasesSubject = new Subject<ReleaseDocument[]>()
     vi.mocked(listenQuery).mockReturnValue(releasesSubject.asObservable())
 
-    const state = getActiveReleasesState(instance)
+    const state = getActiveReleasesState(instance, {})
 
     // Initial state should be default
     expect(state.getCurrent()).toBeUndefined() // Default initial state
@@ -116,7 +116,7 @@ describe('releasesStore', () => {
     // Configure listenQuery to return an empty array
     vi.mocked(listenQuery).mockReturnValue(of([]))
 
-    const state = getActiveReleasesState(instance)
+    const state = getActiveReleasesState(instance, {})
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -127,7 +127,7 @@ describe('releasesStore', () => {
   it('should handle null/undefined from listenQuery by defaulting to empty array', async () => {
     // Test null case
     vi.mocked(listenQuery).mockReturnValue(of(null))
-    const state = getActiveReleasesState(instance)
+    const state = getActiveReleasesState(instance, {})
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(state.getCurrent()).toEqual([])
     expect(consoleErrorSpy).not.toHaveBeenCalled()
@@ -146,7 +146,7 @@ describe('releasesStore', () => {
     vi.mocked(listenQuery).mockReturnValue(subject.asObservable())
 
     // initialize the store
-    const state = getActiveReleasesState(instance)
+    const state = getActiveReleasesState(instance, {})
 
     // Error the subject
     subject.error(error)

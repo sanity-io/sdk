@@ -54,7 +54,7 @@ describe('getPerspectiveState', () => {
   })
 
   it('should return default perspective if no options or instance perspective is provided', async () => {
-    const state = getPerspectiveState(instance)
+    const state = getPerspectiveState(instance, {})
     mockReleasesQuerySubject.next([])
     const perspective = await firstValueFrom(state.observable)
     expect(perspective).toBe('drafts')
@@ -62,7 +62,7 @@ describe('getPerspectiveState', () => {
 
   it('should return instance perspective if provided and no options perspective', async () => {
     instance.config.perspective = 'published'
-    const state = getPerspectiveState(instance)
+    const state = getPerspectiveState(instance, {})
     mockReleasesQuerySubject.next([])
     const perspective = await firstValueFrom(state.observable)
     expect(perspective).toBe('published')

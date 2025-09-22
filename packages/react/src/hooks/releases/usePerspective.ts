@@ -43,8 +43,8 @@ export const usePerspective: UsePerspective = createStateSourceHook({
     instance: SanityInstance,
     perspectiveHandle?: PerspectiveHandle,
   ) => StateSource<string | string[]>,
-  shouldSuspend: (instance: SanityInstance, options?: PerspectiveHandle): boolean =>
+  shouldSuspend: (instance: SanityInstance, options: PerspectiveHandle): boolean =>
     getPerspectiveState(instance, options).getCurrent() === undefined,
   suspender: (instance: SanityInstance, _options?: PerspectiveHandle) =>
-    firstValueFrom(getActiveReleasesState(instance).observable.pipe(filter(Boolean))),
+    firstValueFrom(getActiveReleasesState(instance, {}).observable.pipe(filter(Boolean))),
 })

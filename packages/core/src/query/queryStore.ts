@@ -25,7 +25,7 @@ import {
 import {getClientState} from '../client/clientStore'
 import {type DatasetHandle} from '../config/sanityConfig'
 import {getPerspectiveState} from '../releases/getPerspectiveState'
-import {bindActionByDataset} from '../store/createActionBinder'
+import {bindActionByDataset, type BoundDatasetKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -104,7 +104,7 @@ function normalizeOptionsWithPerspective(
   }
 }
 
-const queryStore = defineStore<QueryStoreState>({
+const queryStore = defineStore<QueryStoreState, BoundDatasetKey>({
   name: 'QueryStore',
   getInitialState: () => ({queries: {}}),
   initialize(context) {
@@ -125,7 +125,11 @@ const errorHandler = (state: StoreState<{error?: unknown}>) => {
   return (error: unknown): void => state.set('setError', {error})
 }
 
-const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QueryStoreState>) => {
+const listenForNewSubscribersAndFetch = ({
+  state,
+  instance,
+  key: {projectId, dataset},
+}: StoreContext<QueryStoreState, BoundDatasetKey>) => {
   return state.observable
     .pipe(
       map((s) => new Set(Object.keys(s.queries))),
@@ -157,8 +161,6 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
             const {
               query,
               params,
-              projectId,
-              dataset,
               tag,
               perspective: perspectiveFromOptions,
               ...restOptions
@@ -166,6 +168,8 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
 
             const perspective$ = getPerspectiveState(instance, {
               perspective: perspectiveFromOptions,
+              projectId,
+              dataset,
             }).observable.pipe(filter(Boolean))
 
             const client$ = getClientState(instance, {
@@ -203,9 +207,12 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
 const listenToLiveClientAndSetLastLiveEventIds = ({
   state,
   instance,
-}: StoreContext<QueryStoreState>) => {
+  key: {projectId, dataset},
+}: StoreContext<QueryStoreState, BoundDatasetKey>) => {
   const liveMessages$ = getClientState(instance, {
     apiVersion: QUERY_STORE_API_VERSION,
+    projectId,
+    dataset,
   }).observable.pipe(
     switchMap((client) =>
       defer(() =>
@@ -325,8 +332,11 @@ const _getQueryState = bindActionByDataset(
  *
  * @beta
  */
-export function getQueryErrorState(instance: SanityInstance): StateSource<unknown | undefined> {
-  return _getQueryErrorState(instance)
+export function getQueryErrorState(
+  instance: SanityInstance,
+  options: {projectId?: string; dataset?: string} = {},
+): StateSource<unknown | undefined> {
+  return _getQueryErrorState(instance, options)
 }
 
 const _getQueryErrorState = bindActionByDataset(
@@ -418,9 +428,11 @@ const _resolveQuery = bindActionByDataset(
  * Clears the top-level query store error.
  * @beta
  */
-export function clearQueryError(instance: SanityInstance): void
-export function clearQueryError(...args: Parameters<typeof _clearQueryError>): void {
-  return _clearQueryError(...args)
+export function clearQueryError(
+  instance: SanityInstance,
+  options: {projectId?: string; dataset?: string} = {},
+): void {
+  return _clearQueryError(instance, options)
 }
 
 const _clearQueryError = bindActionByDataset(queryStore, ({state}) => {

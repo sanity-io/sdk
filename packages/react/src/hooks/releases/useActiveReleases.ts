@@ -33,7 +33,7 @@ type UseActiveReleases = {
 export const useActiveReleases: UseActiveReleases = createStateSourceHook({
   getState: getActiveReleasesState as (instance: SanityInstance) => StateSource<ReleaseDocument[]>,
   shouldSuspend: (instance: SanityInstance) =>
-    getActiveReleasesState(instance).getCurrent() === undefined,
+    getActiveReleasesState(instance, {}).getCurrent() === undefined,
   suspender: (instance: SanityInstance) =>
-    firstValueFrom(getActiveReleasesState(instance).observable.pipe(filter(Boolean))),
+    firstValueFrom(getActiveReleasesState(instance, {}).observable.pipe(filter(Boolean))),
 })
