@@ -1,13 +1,8 @@
-import {
-  type DocumentHandle,
-  getDocumentSyncStatus,
-  resolveDocument,
-  type SanityInstance,
-  type StateSource,
-} from '@sanity/sdk'
-import {identity} from 'rxjs'
+import {type DocumentSource, getDocumentSyncStatus} from '@sanity/sdk'
+import {useMemo} from 'react'
 
-import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {useSanityInstanceAndSource} from '../context/useSanityInstance'
+import {useStoreState} from '../helpers/useStoreState'
 
 type UseDocumentSyncStatus = {
   /**
@@ -42,20 +37,30 @@ type UseDocumentSyncStatus = {
    * // <SyncIndicator doc={doc} />
    * ```
    */
-  (doc: DocumentHandle): boolean
+  (doc: {
+    documentId: string
+    documentType: string
+
+    projectId?: string
+    dataset?: string
+    source?: DocumentSource
+  }): boolean
 }
 
 /**
  * @public
- * @function
  */
-export const useDocumentSyncStatus: UseDocumentSyncStatus = createStateSourceHook({
-  getState: getDocumentSyncStatus as (
-    instance: SanityInstance,
-    doc: DocumentHandle,
-  ) => StateSource<boolean>,
-  shouldSuspend: (instance, doc: DocumentHandle) =>
-    getDocumentSyncStatus(instance, doc).getCurrent() === undefined,
-  suspender: (instance, doc: DocumentHandle) => resolveDocument(instance, doc),
-  getConfig: identity,
-})
+export const useDocumentSyncStatus: UseDocumentSyncStatus = ({
+  projectId,
+  dataset,
+  source,
+  ...options
+}) => {
+  const [instance, actualSource] = useSanityInstanceAndSource({projectId, dataset, source})
+  const state = useMemo(
+    () => getDocumentSyncStatus(instance, {...options, source: actualSource}),
+    [actualSource, instance, options],
+  )
+
+  return useStoreState(state)
+}

@@ -1,15 +1,13 @@
-import {type DatasetHandle, type DocumentEvent, subscribeDocumentEvents} from '@sanity/sdk'
+import {type DocumentEvent, subscribeDocumentEvents} from '@sanity/sdk'
 import {useCallback, useEffect, useInsertionEffect, useRef} from 'react'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {type SourceOptions} from '../../type'
+import {useSanityInstanceAndSource} from '../context/useSanityInstance'
 
 /**
  * @public
  */
-export interface UseDocumentEventOptions<
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends DatasetHandle<TDataset, TProjectId> {
+export interface UseDocumentEventOptions extends SourceOptions {
   onEvent: (documentEvent: DocumentEvent) => void
 }
 
@@ -68,15 +66,14 @@ export interface UseDocumentEventOptions<
  * }
  * ```
  */
-export function useDocumentEvent<
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  // Single options object parameter
-  options: UseDocumentEventOptions<TDataset, TProjectId>,
-): void {
+export function useDocumentEvent({
+  projectId,
+  dataset,
+  source,
+  onEvent,
+}: UseDocumentEventOptions): void {
   // Destructure handler and datasetHandle from options
-  const {onEvent, ...datasetHandle} = options
+  const [instance, actualSource] = useSanityInstanceAndSource({projectId, dataset, source})
   const ref = useRef(onEvent)
 
   useInsertionEffect(() => {
@@ -87,8 +84,7 @@ export function useDocumentEvent<
     return ref.current(documentEvent)
   }, [])
 
-  const instance = useSanityInstance(datasetHandle)
   useEffect(() => {
-    return subscribeDocumentEvents(instance, stableHandler)
-  }, [instance, stableHandler])
+    return subscribeDocumentEvents(instance, {onEvent, source: actualSource})
+  }, [actualSource, instance, onEvent, stableHandler])
 }

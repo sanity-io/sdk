@@ -1,16 +1,16 @@
 import {
   type ActionsResult,
-  type DocumentOptions,
+  applyDocumentActions,
   editDocument,
   getDocumentState,
   type JsonMatch,
   resolveDocument,
 } from '@sanity/sdk'
 import {type SanityDocument} from 'groq'
-import {useCallback} from 'react'
+import {useCallback, useMemo} from 'react'
 
-import {useSanityInstance} from '../context/useSanityInstance'
-import {useApplyDocumentActions} from './useApplyDocumentActions'
+import {useSanityInstanceAndSource} from '../context/useSanityInstance'
+import {type UseDocumentOptions} from './useDocument'
 
 const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
 
@@ -30,7 +30,7 @@ export function useEditDocument<
   TDataset extends string = string,
   TProjectId extends string = string,
 >(
-  options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
+  options: UseDocumentOptions<undefined, TDocumentType>,
 ): (
   nextValue: Updater<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>,
 ) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
@@ -50,7 +50,7 @@ export function useEditDocument<
   TDataset extends string = string,
   TProjectId extends string = string,
 >(
-  options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
+  options: UseDocumentOptions<TPath, TDocumentType>,
 ): (
   nextValue: Updater<JsonMatch<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath>>,
 ) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
@@ -65,7 +65,7 @@ export function useEditDocument<
  *          Returns a promise resolving to the {@link ActionsResult}.
  */
 export function useEditDocument<TData>(
-  options: DocumentOptions<undefined>,
+  options: UseDocumentOptions<undefined>,
 ): (nextValue: Updater<TData>) => Promise<ActionsResult>
 
 // Overload 4: Explicit type, path provided
@@ -78,7 +78,7 @@ export function useEditDocument<TData>(
  *          Returns a promise resolving to the {@link ActionsResult}.
  */
 export function useEditDocument<TData>(
-  options: DocumentOptions<string>,
+  options: UseDocumentOptions<string>,
 ): (nextValue: Updater<TData>) => Promise<ActionsResult>
 
 /**
@@ -258,10 +258,15 @@ export function useEditDocument<TData>(
  */
 export function useEditDocument({
   path,
-  ...doc
-}: DocumentOptions<string | undefined>): (updater: Updater<unknown>) => Promise<ActionsResult> {
-  const instance = useSanityInstance(doc)
-  const apply = useApplyDocumentActions()
+  projectId,
+  dataset,
+  source,
+  ...options
+}: UseDocumentOptions<string | undefined>): (updater: Updater<unknown>) => Promise<ActionsResult> {
+  const [instance, actualSource] = useSanityInstanceAndSource({projectId, dataset, source})
+
+  const doc = useMemo(() => ({...options, source: actualSource}), [actualSource, options])
+
   const isDocumentReady = useCallback(
     () => getDocumentState(instance, doc).getCurrent() !== undefined,
     [instance, doc],
@@ -280,7 +285,10 @@ export function useEditDocument({
           ? (updater as (prev: typeof currentValue) => typeof currentValue)(currentValue)
           : updater
 
-      return apply(editDocument(doc, {set: {[currentPath]: nextValue}}))
+      return applyDocumentActions(instance, {
+        actions: [editDocument(doc, {set: {[currentPath]: nextValue}})],
+        source: actualSource,
+      })
     }
 
     const fullDocState = getDocumentState(instance, {...doc, path})
@@ -309,6 +317,6 @@ export function useEditDocument({
           : editDocument(doc, {unset: [key]}),
       )
 
-    return apply(editActions)
+    return applyDocumentActions(instance, {actions: editActions, source: actualSource})
   }
 }

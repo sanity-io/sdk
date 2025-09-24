@@ -27,7 +27,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DocumentHandle} from '../config/sanityConfig'
+import {type DocumentHandle, type DocumentSource} from '../config/sanityConfig'
 import {
   bindActionByDataset,
   type BoundDatasetKey,
@@ -141,10 +141,11 @@ export const documentStore = defineStore<DocumentStoreState, BoundDatasetKey>({
 export interface DocumentOptions<
   TPath extends string | undefined = undefined,
   TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
+> {
   path?: TPath
+  documentId: string
+  documentType: TDocumentType
+  source: DocumentSource
 }
 
 /** @beta */
@@ -154,7 +155,7 @@ export function getDocumentState<
   TProjectId extends string = string,
 >(
   instance: SanityInstance,
-  options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
+  options: DocumentOptions<undefined>,
 ): StateSource<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`> | undefined | null>
 
 /** @beta */
@@ -165,7 +166,7 @@ export function getDocumentState<
   TProjectId extends string = string,
 >(
   instance: SanityInstance,
-  options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
+  options: DocumentOptions<TPath>,
 ): StateSource<
   JsonMatch<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath> | undefined
 >
@@ -215,12 +216,12 @@ export function resolveDocument<
   TProjectId extends string = string,
 >(
   instance: SanityInstance,
-  docHandle: DocumentHandle<TDocumentType, TDataset, TProjectId>,
+  docHandle: Omit<DocumentOptions, 'path'>,
 ): Promise<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`> | null>
 /** @beta */
 export function resolveDocument<TData extends SanityDocument>(
   instance: SanityInstance,
-  docHandle: DocumentHandle<string, string, string>,
+  docHandle: Omit<DocumentOptions, 'path'>,
 ): Promise<TData | null>
 /** @beta */
 export function resolveDocument(
@@ -230,12 +231,9 @@ export function resolveDocument(
 }
 const _resolveDocument = bindActionByDataset(
   documentStore,
-  ({instance}, docHandle: DocumentHandle<string, string, string>) => {
+  ({instance}, docHandle: Omit<DocumentOptions, 'path'>) => {
     return firstValueFrom(
-      getDocumentState(instance, {
-        ...docHandle,
-        path: undefined,
-      }).observable.pipe(filter((i) => i !== undefined)),
+      getDocumentState(instance, docHandle).observable.pipe(filter((i) => i !== undefined)),
     ) as Promise<SanityDocument | null>
   },
 )
@@ -246,9 +244,9 @@ export const getDocumentSyncStatus = bindActionByDataset(
   createStateSourceAction({
     selector: (
       {state: {error, documentStates: documents, outgoing, applied, queued}},
-      doc: DocumentHandle,
+      doc: Omit<DocumentOptions, 'path'>,
     ) => {
-      const documentId = typeof doc === 'string' ? doc : doc.documentId
+      const documentId = doc.documentId
       if (error) throw error
       const draftId = getDraftId(documentId)
       const publishedId = getPublishedId(documentId)
@@ -265,6 +263,7 @@ export const getDocumentSyncStatus = bindActionByDataset(
 
 type PermissionsStateOptions = {
   actions: DocumentAction[]
+  source: DocumentSource
 }
 
 /** @beta */
@@ -294,9 +293,9 @@ export const resolvePermissions = bindActionByDataset(
 /** @beta */
 export const subscribeDocumentEvents = bindActionByDataset(
   documentStore,
-  ({state}, eventHandler: (e: DocumentEvent) => void) => {
+  ({state}, {onEvent}: {onEvent: (e: DocumentEvent) => void; source: DocumentSource}) => {
     const {events} = state.get()
-    const subscription = events.subscribe(eventHandler)
+    const subscription = events.subscribe(onEvent)
     return () => subscription.unsubscribe()
   },
 )
