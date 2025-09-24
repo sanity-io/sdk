@@ -1,6 +1,11 @@
+import {type ClientPerspective} from '@sanity/client'
 import {createSelector} from 'reselect'
 
-import {type PerspectiveHandle, type ReleasePerspective} from '../config/sanityConfig'
+import {
+  type DocumentSource,
+  type PerspectiveHandle,
+  type ReleasePerspective,
+} from '../config/sanityConfig'
 import {bindActionByDataset} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 import {releasesStore, type ReleasesStoreState} from './releasesStore'
@@ -12,18 +17,14 @@ function isReleasePerspective(
   return typeof perspective === 'object' && perspective !== null && 'releaseName' in perspective
 }
 
-const DEFAULT_PERSPECTIVE = 'drafts'
-
 // Cache for options
 const optionsCache = new Map<string, Map<string, PerspectiveHandle>>()
 
-const selectInstancePerspective = (context: SelectorContext<ReleasesStoreState>) =>
-  context.instance.config.perspective
 const selectActiveReleases = (context: SelectorContext<ReleasesStoreState>) =>
   context.state.activeReleases
 const selectOptions = (
   _context: SelectorContext<ReleasesStoreState>,
-  options: PerspectiveHandle & {projectId?: string; dataset?: string},
+  options: {perspective: ClientPerspective | ReleasePerspective; source: DocumentSource},
 ) => options
 
 const memoizedOptionsSelector = createSelector(
@@ -66,10 +67,9 @@ export const getPerspectiveState = bindActionByDataset(
   releasesStore,
   createStateSourceAction({
     selector: createSelector(
-      [selectInstancePerspective, selectActiveReleases, memoizedOptionsSelector],
-      (instancePerspective, activeReleases, memoizedOptions) => {
-        const perspective =
-          memoizedOptions?.perspective ?? instancePerspective ?? DEFAULT_PERSPECTIVE
+      [selectActiveReleases, memoizedOptionsSelector],
+      (activeReleases, memoizedOptions) => {
+        const perspective = memoizedOptions.perspective
 
         if (!isReleasePerspective(perspective)) return perspective
 

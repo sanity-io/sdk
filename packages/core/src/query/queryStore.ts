@@ -23,7 +23,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DocumentSource, type ReleasePerspective} from '../config/sanityConfig'
+import {type DocumentSource, type ReleasePerspective, sourceFor} from '../config/sanityConfig'
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {bindActionByDataset, type BoundDatasetKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
@@ -137,8 +137,7 @@ const listenForNewSubscribersAndFetch = ({
 
             const perspective$ = getPerspectiveState(instance, {
               perspective: perspectiveFromOptions,
-              projectId,
-              dataset,
+              source: sourceFor({projectId, dataset}),
             }).observable.pipe(filter(Boolean))
 
             const client$ = getClientState(instance, {
