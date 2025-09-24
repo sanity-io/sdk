@@ -1,6 +1,7 @@
 import {NEVER} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {sourceFor} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StoreState} from '../store/createStoreState'
 import {hashString} from '../utils/hashString'
@@ -30,7 +31,11 @@ vi.mock('./subscribeToStateAndFetchBatches.ts')
 
 describe('getProjectionState', () => {
   let instance: SanityInstance
-  const docHandle = {documentId: 'exampleId', documentType: 'exampleType'}
+  const docHandle = {
+    documentId: 'exampleId',
+    documentType: 'exampleType',
+    source: sourceFor({projectId: 'exampleProject', dataset: 'exampleDataset'}),
+  }
   const projection1 = '{exampleProjection1}'
   const hash1 = hashString(projection1)
   const projection2 = '{exampleProjection2}'

@@ -1,20 +1,19 @@
-import {type DocumentHandle, getProjectionState, resolveProjection} from '@sanity/sdk'
+import {getProjectionState, resolveProjection} from '@sanity/sdk'
 import {type SanityProjectionResult} from 'groq'
 import {useCallback, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {type SourceOptions} from '../../type'
+import {useSanityInstanceAndSource} from '../context/useSanityInstance'
 
 /**
  * @public
  * @category Types
  */
-export interface useDocumentProjectionOptions<
-  TProjection extends string = string,
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
+export interface useDocumentProjectionOptions<TProjection extends string = string>
+  extends SourceOptions {
+  documentId: string
+  documentType: string
   /** The GROQ projection string */
   projection: TProjection
   /** Optional parameters for the projection query */
@@ -115,7 +114,7 @@ export function useDocumentProjection<
   TDataset extends string = string,
   TProjectId extends string = string,
 >(
-  options: useDocumentProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
+  options: useDocumentProjectionOptions<TProjection>,
 ): useDocumentProjectionResults<
   SanityProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
 >
@@ -173,14 +172,17 @@ export function useDocumentProjection<TData extends object>(
 // Implementation (no JSDoc needed here as it's covered by overloads)
 export function useDocumentProjection<TData extends object>({
   ref,
-  projection,
+  projectId,
+  dataset,
+  source,
   ...docHandle
 }: useDocumentProjectionOptions): useDocumentProjectionResults<TData> {
-  const instance = useSanityInstance(docHandle)
-  const stateSource = getProjectionState<TData>(instance, {...docHandle, projection})
+  const [instance, actualSource] = useSanityInstanceAndSource({projectId, dataset, source})
+  const options = {...docHandle, source: actualSource}
+  const stateSource = getProjectionState<TData>(instance, options)
 
   if (stateSource.getCurrent()?.data === null) {
-    throw resolveProjection(instance, {...docHandle, projection})
+    throw resolveProjection(instance, options)
   }
 
   // Create subscribe function for useSyncExternalStore
