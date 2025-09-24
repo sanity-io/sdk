@@ -1,14 +1,22 @@
-import {type DocumentHandle, getPreviewState, type PreviewValue, resolvePreview} from '@sanity/sdk'
-import {useCallback, useSyncExternalStore} from 'react'
+import {
+  getPreviewState,
+  type GetPreviewStateOptions,
+  type PreviewValue,
+  resolvePreview,
+} from '@sanity/sdk'
+import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {type SourceOptions} from '../../type'
+import {useSanityInstanceAndSource} from '../context/useSanityInstance'
 
 /**
  * @public
  * @category Types
  */
-export interface useDocumentPreviewOptions extends DocumentHandle {
+export interface useDocumentPreviewOptions
+  extends Omit<GetPreviewStateOptions, 'source'>,
+    SourceOptions {
   /**
    * Optional ref object to track visibility. When provided, preview resolution
    * only occurs when the referenced element is visible in the viewport.
@@ -81,10 +89,14 @@ export interface useDocumentPreviewResults {
  */
 export function useDocumentPreview({
   ref,
+  projectId,
+  dataset,
+  source,
   ...docHandle
 }: useDocumentPreviewOptions): useDocumentPreviewResults {
-  const instance = useSanityInstance(docHandle)
-  const stateSource = getPreviewState(instance, docHandle)
+  const [instance, actualSource] = useSanityInstanceAndSource({projectId, dataset, source})
+  const options = useMemo(() => ({...docHandle, source: actualSource}), [docHandle, actualSource])
+  const stateSource = getPreviewState(instance, options)
 
   // Create subscribe function for useSyncExternalStore
   const subscribe = useCallback(
@@ -131,9 +143,9 @@ export function useDocumentPreview({
   // Create getSnapshot function to return current state
   const getSnapshot = useCallback(() => {
     const currentState = stateSource.getCurrent()
-    if (currentState.data === null) throw resolvePreview(instance, docHandle)
+    if (currentState.data === null) throw resolvePreview(instance, options)
     return currentState as useDocumentPreviewResults
-  }, [docHandle, instance, stateSource])
+  }, [instance, options, stateSource])
 
   return useSyncExternalStore(subscribe, getSnapshot)
 }

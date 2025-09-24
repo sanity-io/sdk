@@ -1,6 +1,6 @@
 import {omit} from 'lodash-es'
 
-import {type DocumentHandle} from '../config/sanityConfig'
+import {type DocumentSource} from '../config/sanityConfig'
 import {bindActionByDataset} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
@@ -20,7 +20,11 @@ import {STABLE_EMPTY_PREVIEW} from './util'
 /**
  * @beta
  */
-export type GetPreviewStateOptions = DocumentHandle
+export type GetPreviewStateOptions = {
+  documentId: string
+  documentType: string
+  source: DocumentSource
+}
 
 /**
  * @beta

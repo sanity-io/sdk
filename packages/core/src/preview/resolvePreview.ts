@@ -1,14 +1,13 @@
 import {filter, firstValueFrom} from 'rxjs'
 
-import {type DocumentHandle} from '../config/sanityConfig'
 import {bindActionByDataset} from '../store/createActionBinder'
-import {getPreviewState} from './getPreviewState'
+import {getPreviewState, type GetPreviewStateOptions} from './getPreviewState'
 import {previewStore} from './previewStore'
 
 /**
  * @beta
  */
-export type ResolvePreviewOptions = DocumentHandle
+export type ResolvePreviewOptions = GetPreviewStateOptions
 
 /**
  * @beta
