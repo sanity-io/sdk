@@ -1,3 +1,4 @@
+import {__sourceData, type DocumentSource} from '../config/sanityConfig'
 import {type SanityInstance} from './createSanityInstance'
 import {createStoreInstance, type StoreInstance} from './createStoreInstance'
 import {type StoreState} from './createStoreState'
@@ -138,10 +139,11 @@ export function createActionBinder<
  */
 export const bindActionByDataset = createActionBinder<
   BoundDatasetKey,
-  [object & {projectId?: string; dataset?: string}]
+  [object & {projectId?: string; dataset?: string; source?: DocumentSource}]
 >((instance, options) => {
-  const projectId = options.projectId ?? instance.config.projectId
-  const dataset = options.dataset ?? instance.config.dataset
+  const sourceData = options.source?.[__sourceData]
+  const projectId = sourceData?.projectId ?? options.projectId ?? instance.config.projectId
+  const dataset = sourceData?.dataset ?? options.dataset ?? instance.config.dataset
   if (!projectId || !dataset) {
     throw new Error('This API requires a project ID and dataset configured.')
   }

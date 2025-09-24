@@ -14,6 +14,7 @@ import {
   tap,
 } from 'rxjs'
 
+import {sourceFor} from '../config/sanityConfig'
 import {getQueryState, resolveQuery} from '../query/queryStore'
 import {type BoundDatasetKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
@@ -66,8 +67,7 @@ export const subscribeToStateAndFetchBatches = ({
             params,
             tag: PREVIEW_TAG,
             perspective: PREVIEW_PERSPECTIVE,
-            projectId,
-            dataset,
+            source: sourceFor({projectId, dataset}),
           })
           const source$ = defer(() => {
             if (getCurrent() === undefined) {
@@ -78,8 +78,7 @@ export const subscribeToStateAndFetchBatches = ({
                   tag: PREVIEW_TAG,
                   perspective: PREVIEW_PERSPECTIVE,
                   signal: controller.signal,
-                  projectId,
-                  dataset,
+                  source: sourceFor({projectId, dataset}),
                 }),
               ).pipe(switchMap(() => observable))
             }

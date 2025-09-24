@@ -1,4 +1,4 @@
-import {CorsOriginError, type ResponseQueryOptions} from '@sanity/client'
+import {type ClientPerspective, CorsOriginError, type ResponseQueryOptions} from '@sanity/client'
 import {type SanityQueryResult} from 'groq'
 import {
   catchError,
@@ -23,7 +23,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle} from '../config/sanityConfig'
+import {type DocumentSource, type ReleasePerspective} from '../config/sanityConfig'
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {bindActionByDataset, type BoundDatasetKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
@@ -35,11 +35,7 @@ import {
 import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
-import {
-  QUERY_STATE_CLEAR_DELAY,
-  QUERY_STORE_API_VERSION,
-  QUERY_STORE_DEFAULT_PERSPECTIVE,
-} from './queryStoreConstants'
+import {QUERY_STATE_CLEAR_DELAY, QUERY_STORE_API_VERSION} from './queryStoreConstants'
 import {
   addSubscriber,
   cancelQuery,
@@ -54,55 +50,28 @@ import {
 /**
  * @beta
  */
-export interface QueryOptions<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'>,
-    DatasetHandle<TDataset, TProjectId> {
+export interface QueryOptions<TQuery extends string = string>
+  extends Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'> {
   query: TQuery
   params?: Record<string, unknown>
+  source: DocumentSource
+  perspective: ClientPerspective | ReleasePerspective
 }
 
 /**
  * @beta
  */
-export interface ResolveQueryOptions<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends QueryOptions<TQuery, TDataset, TProjectId> {
+export interface ResolveQueryOptions<TQuery extends string = string> extends QueryOptions<TQuery> {
   signal?: AbortSignal
 }
 
 const EMPTY_ARRAY: never[] = []
 
 /** @beta */
-export const getQueryKey = (options: QueryOptions): string => JSON.stringify(options)
+export const getQueryKey = (options: Omit<QueryOptions, 'source'>): string =>
+  JSON.stringify(options)
 /** @beta */
-export const parseQueryKey = (key: string): QueryOptions => JSON.parse(key)
-
-/**
- * Ensures the query key includes an effective perspective so that
- * implicit differences (e.g. different instance.config.perspective)
- * don't collide in the dataset-scoped store.
- *
- * Since perspectives are unique, we can depend on the release stacks
- * to be correct when we retrieve the results.
- *
- */
-function normalizeOptionsWithPerspective(
-  instance: SanityInstance,
-  options: QueryOptions,
-): QueryOptions {
-  if (options.perspective !== undefined) return options
-  const instancePerspective = instance.config.perspective
-  return {
-    ...options,
-    perspective:
-      instancePerspective !== undefined ? instancePerspective : QUERY_STORE_DEFAULT_PERSPECTIVE,
-  }
-}
+export const parseQueryKey = (key: string): Omit<QueryOptions, 'source'> => JSON.parse(key)
 
 const queryStore = defineStore<QueryStoreState, BoundDatasetKey>({
   name: 'QueryStore',
@@ -276,7 +245,7 @@ export function getQueryState<
   TProjectId extends string = string,
 >(
   instance: SanityInstance,
-  queryOptions: QueryOptions<TQuery, TDataset, TProjectId>,
+  queryOptions: QueryOptions<TQuery>,
 ): StateSource<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`> | undefined>
 
 /** @beta */
@@ -300,16 +269,16 @@ export function getQueryState(
 const _getQueryState = bindActionByDataset(
   queryStore,
   createStateSourceAction({
-    selector: ({state, instance}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
+    selector: ({state}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
       if (state.error) throw state.error
-      const key = getQueryKey(normalizeOptionsWithPerspective(instance, options))
+      const key = getQueryKey(options)
       const queryState = state.queries[key]
       if (queryState?.error) throw queryState.error
       return queryState?.result
     },
-    onSubscribe: ({state, instance}, options: QueryOptions) => {
+    onSubscribe: ({state}, options: QueryOptions) => {
       const subscriptionId = insecureRandomId()
-      const key = getQueryKey(normalizeOptionsWithPerspective(instance, options))
+      const key = getQueryKey(options)
 
       state.set('addSubscriber', addSubscriber(key, subscriptionId))
 
@@ -334,7 +303,7 @@ const _getQueryState = bindActionByDataset(
  */
 export function getQueryErrorState(
   instance: SanityInstance,
-  options: {projectId?: string; dataset?: string} = {},
+  options: {source: DocumentSource},
 ): StateSource<unknown | undefined> {
   return _getQueryErrorState(instance, options)
 }
@@ -370,7 +339,7 @@ export function resolveQuery<
   TProjectId extends string = string,
 >(
   instance: SanityInstance,
-  queryOptions: ResolveQueryOptions<TQuery, TDataset, TProjectId>,
+  queryOptions: ResolveQueryOptions<TQuery>,
 ): Promise<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>>
 
 /** @beta */
@@ -385,9 +354,8 @@ export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise
 const _resolveQuery = bindActionByDataset(
   queryStore,
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
-    const normalized = normalizeOptionsWithPerspective(instance, options)
-    const {getCurrent} = getQueryState(instance, normalized)
-    const key = getQueryKey(normalized)
+    const {getCurrent} = getQueryState(instance, options)
+    const key = getQueryKey(options)
 
     const aborted$ = signal
       ? new Observable<void>((observer) => {
@@ -428,10 +396,7 @@ const _resolveQuery = bindActionByDataset(
  * Clears the top-level query store error.
  * @beta
  */
-export function clearQueryError(
-  instance: SanityInstance,
-  options: {projectId?: string; dataset?: string} = {},
-): void {
+export function clearQueryError(instance: SanityInstance, options: {source: DocumentSource}): void {
   return _clearQueryError(instance, options)
 }
 

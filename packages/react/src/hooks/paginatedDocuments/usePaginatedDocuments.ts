@@ -1,10 +1,10 @@
-import {createGroqSearchFilter, type DocumentHandle, type QueryOptions} from '@sanity/sdk'
+import {createGroqSearchFilter, type DocumentHandle} from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
 import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useQuery} from '../query/useQuery'
+import {useQuery, type UseQueryOptions} from '../query/useQuery'
 
 /**
  * Configuration options for the usePaginatedDocuments hook
@@ -12,11 +12,8 @@ import {useQuery} from '../query/useQuery'
  * @public
  * @category Types
  */
-export interface PaginatedDocumentsOptions<
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends Omit<QueryOptions<TDocumentType, TDataset, TProjectId>, 'query'> {
+export interface PaginatedDocumentsOptions<TDocumentType extends string = string>
+  extends Omit<UseQueryOptions<TDocumentType>, 'query'> {
   documentType?: TDocumentType | TDocumentType[]
   /**
    * GROQ filter expression to apply to the query
@@ -232,7 +229,7 @@ export function usePaginatedDocuments<
   orderings,
   search,
   ...options
-}: PaginatedDocumentsOptions<TDocumentType, TDataset, TProjectId>): PaginatedDocumentsResponse<
+}: PaginatedDocumentsOptions<TDocumentType>): PaginatedDocumentsResponse<
   TDocumentType,
   TDataset,
   TProjectId

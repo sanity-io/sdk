@@ -52,11 +52,13 @@ export {
 export {
   type DatasetHandle,
   type DocumentHandle,
+  type DocumentSource,
   type DocumentTypeHandle,
   type PerspectiveHandle,
   type ProjectHandle,
   type ReleasePerspective,
   type SanityConfig,
+  sourceFor,
 } from '../config/sanityConfig'
 export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
 export {

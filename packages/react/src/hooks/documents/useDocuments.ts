@@ -1,9 +1,4 @@
-import {
-  createGroqSearchFilter,
-  type DatasetHandle,
-  type DocumentHandle,
-  type QueryOptions,
-} from '@sanity/sdk'
+import {createGroqSearchFilter, type DatasetHandle, type DocumentHandle} from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
 import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
@@ -23,8 +18,7 @@ export interface DocumentsOptions<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> extends DatasetHandle<TDataset, TProjectId>,
-    Pick<QueryOptions, 'perspective' | 'params'> {
+> extends DatasetHandle<TDataset, TProjectId> {
   /**
    * Filter documents by their `_type`. Can be a single type or an array of types.
    */
@@ -45,6 +39,8 @@ export interface DocumentsOptions<
    * Text search query to filter results
    */
   search?: string
+
+  params?: Record<string, unknown>
 }
 
 /**

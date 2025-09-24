@@ -3,6 +3,7 @@ import {delay, filter, firstValueFrom, Observable, of, Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
+import {sourceFor as getSource} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {getQueryState, resolveQuery} from './queryStore'
@@ -17,6 +18,7 @@ vi.mock('../client/clientStore', () => ({
 }))
 
 describe('queryStore', () => {
+  const source = getSource({projectId: 'test', dataset: 'test'})
   let instance: SanityInstance
   let liveEvents: Subject<LiveEvent>
   let fetch: SanityClient['observable']['fetch']
@@ -61,7 +63,7 @@ describe('queryStore', () => {
 
   it('initializes query state and cleans up after unsubscribe', async () => {
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, source, perspective: 'drafts'})
 
     // Initially undefined before subscription
     expect(state.getCurrent()).toBeUndefined()
@@ -90,7 +92,7 @@ describe('queryStore', () => {
 
   it('maintains state when multiple subscribers exist', async () => {
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, source, perspective: 'drafts'})
 
     // Add two subscribers
     const unsubscribe1 = state.subscribe()
@@ -127,13 +129,13 @@ describe('queryStore', () => {
   it('resolveQuery works without affecting subscriber cleanup', async () => {
     const query = '*[_type == "movie"]'
 
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, source, perspective: 'drafts'})
 
     // Check that getQueryState starts undefined
     expect(state.getCurrent()).toBeUndefined()
 
     // Use resolveQuery which should not add a subscriber
-    const result = await resolveQuery(instance, {query})
+    const result = await resolveQuery(instance, {query, source, perspective: 'drafts'})
     expect(result).toEqual([
       {_id: 'movie1', _type: 'movie', title: 'Movie 1'},
       {_id: 'movie2', _type: 'movie', title: 'Movie 2'},
@@ -160,7 +162,12 @@ describe('queryStore', () => {
     const abortController = new AbortController()
 
     // Create a promise that will reject when aborted
-    const queryPromise = resolveQuery(instance, {query, signal: abortController.signal})
+    const queryPromise = resolveQuery(instance, {
+      query,
+      source,
+      perspective: 'drafts',
+      signal: abortController.signal,
+    })
 
     // Abort the request
     abortController.abort()
@@ -169,7 +176,9 @@ describe('queryStore', () => {
     await expect(queryPromise).rejects.toThrow('The operation was aborted.')
 
     // Verify state is cleared after abort
-    expect(getQueryState(instance, {query}).getCurrent()).toBeUndefined()
+    expect(
+      getQueryState(instance, {query, source, perspective: 'drafts'}).getCurrent(),
+    ).toBeUndefined()
   })
 
   it('refetches query when receiving live event with matching sync tag', async () => {
@@ -188,7 +197,11 @@ describe('queryStore', () => {
     )
 
     const query = '*[_type == "movie"]'
-    const state = getQueryState<{_id: string; _type: string; title: string}[]>(instance, {query})
+    const state = getQueryState<{_id: string; _type: string; title: string}[]>(instance, {
+      query,
+      source,
+      perspective: 'drafts',
+    })
 
     const unsubscribe = state.subscribe()
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -219,7 +232,7 @@ describe('queryStore', () => {
     )
 
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, source, perspective: 'drafts'})
 
     const unsubscribe = state.subscribe()
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -252,7 +265,7 @@ describe('queryStore', () => {
     )
 
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, source, perspective: 'drafts'})
 
     const unsubscribe = state.subscribe()
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -289,7 +302,7 @@ describe('queryStore', () => {
     )
 
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, source, perspective: 'drafts'})
     const unsubscribe = state.subscribe()
 
     // Verify error is thrown when accessing state
@@ -300,7 +313,7 @@ describe('queryStore', () => {
 
   it('delays query state removal after unsubscribe', async () => {
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, source, perspective: 'drafts'})
     const unsubscribe = state.subscribe()
 
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -316,7 +329,7 @@ describe('queryStore', () => {
 
   it('preserves query state if a new subscriber subscribes before cleanup delay', async () => {
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, source, perspective: 'drafts'})
     const unsubscribe1 = state.subscribe()
 
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -352,22 +365,16 @@ describe('queryStore', () => {
         SanityClient['observable']['fetch']
       >
     }) as SanityClient['observable']['fetch'])
-
-    const draftsInstance = createSanityInstance({
-      projectId: 'test',
-      dataset: 'test',
+    // Same query/options, different implicit perspectives via instance.config
+    const sDrafts = getQueryState<{_id: string}[]>(instance, {
+      query: '*[_type == "movie"]',
+      source,
       perspective: 'drafts',
     })
-    const publishedInstance = createSanityInstance({
-      projectId: 'test',
-      dataset: 'test',
-      perspective: 'published',
-    })
-
-    // Same query/options, different implicit perspectives via instance.config
-    const sDrafts = getQueryState<{_id: string}[]>(draftsInstance, {query: '*[_type == "movie"]'})
-    const sPublished = getQueryState<{_id: string}[]>(publishedInstance, {
+    const sPublished = getQueryState<{_id: string}[]>(instance, {
       query: '*[_type == "movie"]',
+      source,
+      perspective: 'published',
     })
 
     const unsubDrafts = sDrafts.subscribe()
@@ -385,9 +392,6 @@ describe('queryStore', () => {
 
     unsubDrafts()
     unsubPublished()
-
-    draftsInstance.dispose()
-    publishedInstance.dispose()
   })
 
   it('separates cache entries by explicit perspective in options', async () => {
@@ -403,10 +407,12 @@ describe('queryStore', () => {
 
     const sDrafts = getQueryState<{_id: string}[]>(base, {
       query: '*[_type == "movie"]',
+      source,
       perspective: 'drafts',
     })
     const sPublished = getQueryState<{_id: string}[]>(base, {
       query: '*[_type == "movie"]',
+      source,
       perspective: 'published',
     })
 
