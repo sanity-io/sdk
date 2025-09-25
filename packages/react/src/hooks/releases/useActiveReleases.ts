@@ -1,12 +1,8 @@
-import {
-  getActiveReleasesState,
-  type ReleaseDocument,
-  type SanityInstance,
-  type StateSource,
-} from '@sanity/sdk'
-import {filter, firstValueFrom} from 'rxjs'
+import {getActiveReleasesState, type ReleaseDocument} from '@sanity/sdk'
+import {useMemo} from 'react'
 
-import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {useSanityInstanceAndSource} from '../context/useSanityInstance'
+import {useStoreState} from '../helpers/useStoreState'
 
 /**
  * @public
@@ -30,10 +26,8 @@ type UseActiveReleases = {
  * const activeReleases = useActiveReleases()
  * ```
  */
-export const useActiveReleases: UseActiveReleases = createStateSourceHook({
-  getState: getActiveReleasesState as (instance: SanityInstance) => StateSource<ReleaseDocument[]>,
-  shouldSuspend: (instance: SanityInstance) =>
-    getActiveReleasesState(instance, {}).getCurrent() === undefined,
-  suspender: (instance: SanityInstance) =>
-    firstValueFrom(getActiveReleasesState(instance, {}).observable.pipe(filter(Boolean))),
-})
+export const useActiveReleases: UseActiveReleases = () => {
+  const [instance, source] = useSanityInstanceAndSource({})
+  const state = useMemo(() => getActiveReleasesState(instance, {source}), [instance, source])
+  return useStoreState(state)
+}
