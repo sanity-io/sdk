@@ -1,8 +1,8 @@
 import {type SanityInstance} from '@sanity/sdk'
 import {act, renderHook} from '@testing-library/react'
+import {evaluateSync, parse, toJS} from 'groq-js'
 import {describe, vi} from 'vitest'
 
-import {evaluateSync, parse} from '../_synchronous-groq-js.mjs'
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useQuery} from '../query/useQuery'
 import {useDocuments} from './useDocuments'
@@ -69,7 +69,7 @@ describe('useDocuments', () => {
     ]
 
     vi.mocked(useQuery).mockImplementation(({query, ...options}) => {
-      const result = evaluateSync(parse(query), {dataset, params: options?.params}).get()
+      const result = toJS(evaluateSync(parse(query), {dataset, params: options?.params}))
       return {
         data: result,
         isPending: false,

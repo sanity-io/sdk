@@ -1,7 +1,7 @@
 import {type Reference, type SanityDocument} from '@sanity/types'
+import {parse} from 'groq-js'
 import {describe, expect, it} from 'vitest'
 
-import {parse} from './_synchronous-groq-js.mjs'
 import {type DocumentAction} from './actions'
 import {ActionError, processActions} from './processActions'
 import {type DocumentSet} from './processMutations'
