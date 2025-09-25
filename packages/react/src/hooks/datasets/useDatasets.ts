@@ -1,14 +1,9 @@
 import {type DatasetsResponse} from '@sanity/client'
-import {
-  getDatasetsState,
-  type ProjectHandle,
-  resolveDatasets,
-  type SanityInstance,
-  type StateSource,
-} from '@sanity/sdk'
-import {identity} from 'rxjs'
+import {getDatasetsState} from '@sanity/sdk'
+import {useMemo} from 'react'
 
-import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {useSanityInstance} from '../context/useSanityInstance'
+import {useStoreState} from '../helpers/useStoreState'
 
 type UseDatasets = {
   /**
@@ -39,14 +34,10 @@ type UseDatasets = {
  * @public
  * @function
  */
-export const useDatasets: UseDatasets = createStateSourceHook({
-  getState: getDatasetsState as (
-    instance: SanityInstance,
-    projectHandle?: ProjectHandle,
-  ) => StateSource<DatasetsResponse>,
-  shouldSuspend: (instance, projectHandle?: ProjectHandle) =>
-    // remove `undefined` since we're suspending when that is the case
-    getDatasetsState(instance, projectHandle).getCurrent() === undefined,
-  suspender: resolveDatasets,
-  getConfig: identity as (projectHandle?: ProjectHandle) => ProjectHandle,
-})
+export const useDatasets: UseDatasets = () => {
+  const instance = useSanityInstance()
+  const {projectId} = instance.config
+  if (!projectId) throw new Error('useDatasets must be configured with projectId')
+  const state = useMemo(() => getDatasetsState(instance, {projectId}), [instance, projectId])
+  return useStoreState(state)
+}

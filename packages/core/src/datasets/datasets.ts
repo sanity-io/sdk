@@ -1,29 +1,28 @@
 import {switchMap} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type ProjectHandle} from '../config/sanityConfig'
 import {createFetcherStore} from '../utils/createFetcherStore'
 
 const API_VERSION = 'v2025-02-19'
 
+type DatasetOptions = {
+  projectId: string
+}
+
 /** @public */
 export const datasets = createFetcherStore({
   name: 'Datasets',
-  getKey: (instance, options?: ProjectHandle) => {
-    const projectId = options?.projectId ?? instance.config.projectId
-    if (!projectId) {
-      throw new Error('A projectId is required to use the project API.')
-    }
-    return projectId
-  },
-  fetcher: (instance) => (options?: ProjectHandle) => {
-    return getClientState(instance, {
-      apiVersion: API_VERSION,
-      // non-null assertion is fine because we check above
-      projectId: (options?.projectId ?? instance.config.projectId)!,
-      useProjectHostname: true,
-    }).observable.pipe(switchMap((client) => client.observable.datasets.list()))
-  },
+  getKey: (_, {projectId}: DatasetOptions) => projectId,
+  fetcher:
+    (instance) =>
+    ({projectId}: DatasetOptions) => {
+      return getClientState(instance, {
+        apiVersion: API_VERSION,
+        // non-null assertion is fine because we check above
+        projectId,
+        useProjectHostname: true,
+      }).observable.pipe(switchMap((client) => client.observable.datasets.list()))
+    },
 })
 
 /** @public */
