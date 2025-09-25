@@ -18,7 +18,7 @@ describe('createCallbackHook', () => {
 
   it('should create a hook that provides a memoized callback', () => {
     // Create a mock Sanity instance
-    const mockInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const mockInstance = createSanityInstance()
 
     // Mock the useSanityInstance to return our mock instance
     vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
@@ -77,7 +77,7 @@ describe('createCallbackHook', () => {
   })
 
   it('should handle callbacks with multiple parameters', () => {
-    const mockInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const mockInstance = createSanityInstance()
     vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
 
     // Create a callback with multiple parameters

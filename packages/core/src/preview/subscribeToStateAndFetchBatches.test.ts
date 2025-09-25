@@ -19,7 +19,7 @@ describe('subscribeToStateAndFetchBatches', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    instance = createSanityInstance()
     state = createStoreState<PreviewStoreState>({
       subscriptions: {},
       values: {},

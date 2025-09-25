@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {bindActionByDataset, bindActionGlobally, createActionBinder} from './createActionBinder'
+import {bindActionGlobally, createActionBinder} from './createActionBinder'
 import {createSanityInstance} from './createSanityInstance'
 import {createStoreInstance} from './createStoreInstance'
 
@@ -86,34 +86,6 @@ describe('createActionBinder', () => {
     // Last disposal should trigger store disposal
     instance2.dispose()
     expect(storeInstance.dispose).toHaveBeenCalledTimes(1)
-  })
-})
-
-describe('bindActionByDataset', () => {
-  it('should work correctly when projectId and dataset are provided', () => {
-    const storeDefinition = {
-      name: 'DSStore',
-      getInitialState: () => ({counter: 0}),
-    }
-    const action = vi.fn((_context, {value}: {value: string}) => value)
-    const boundAction = bindActionByDataset(storeDefinition, action)
-    const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
-    const result = boundAction(instance, {value: 'hello'})
-    expect(result).toBe('hello')
-  })
-
-  it('should throw an error if projectId or dataset is missing', () => {
-    const storeDefinition = {
-      name: 'DSStore',
-      getInitialState: () => ({counter: 0}),
-    }
-    const action = vi.fn((_context) => 'fail')
-    const boundAction = bindActionByDataset(storeDefinition, action)
-    // Instance with missing dataset
-    const instance = createSanityInstance({projectId: 'proj1', dataset: ''})
-    expect(() => boundAction(instance, {})).toThrow(
-      'This API requires a project ID and dataset configured.',
-    )
   })
 })
 

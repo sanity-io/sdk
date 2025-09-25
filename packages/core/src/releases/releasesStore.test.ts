@@ -29,7 +29,7 @@ describe('releasesStore', () => {
     vi.resetAllMocks()
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    instance = createSanityInstance()
 
     vi.mocked(getClientState).mockReturnValue({
       observable: of(mockClient),

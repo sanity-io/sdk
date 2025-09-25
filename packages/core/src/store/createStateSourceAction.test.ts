@@ -14,7 +14,7 @@ describe('createStateSourceAction', () => {
   let instance: SanityInstance
 
   beforeEach(() => {
-    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    instance = createSanityInstance()
     state = createStoreState({count: 0, items: [] as string[]}, {name: 'test-store'})
   })
 

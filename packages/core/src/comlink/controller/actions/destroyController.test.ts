@@ -7,10 +7,7 @@ import {type ComlinkControllerState} from '../comlinkControllerStore'
 import {destroyController} from './destroyController'
 
 describe('destroyController', () => {
-  const instance = createSanityInstance({
-    projectId: 'test-project-id',
-    dataset: 'test-dataset',
-  })
+  const instance = createSanityInstance()
   let state: ReturnType<typeof createStoreState<ComlinkControllerState>>
   let mockController: {destroy: ReturnType<typeof vi.fn>}
 

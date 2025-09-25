@@ -8,7 +8,7 @@ import {type DocumentAction} from './actions'
 import {calculatePermissions, createGrantsLookup, type DatasetAcl, type Grant} from './permissions'
 import {type SyncTransactionState} from './reducers'
 
-const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+const instance = createSanityInstance()
 
 afterAll(() => {
   instance.dispose()

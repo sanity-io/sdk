@@ -13,7 +13,7 @@ describe('createStoreInstance', () => {
       randomUUID: () => 'test-uuid-1234',
     })
 
-    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    instance = createSanityInstance()
   })
 
   const storeDef: StoreDefinition<{count: number}> = {

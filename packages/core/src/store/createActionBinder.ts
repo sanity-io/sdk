@@ -139,14 +139,9 @@ export function createActionBinder<
  */
 export const bindActionByDataset = createActionBinder<
   BoundDatasetKey,
-  [object & {projectId?: string; dataset?: string; source?: DocumentSource}]
->((instance, options) => {
-  const sourceData = options.source?.[__sourceData]
-  const projectId = sourceData?.projectId ?? options.projectId ?? instance.config.projectId
-  const dataset = sourceData?.dataset ?? options.dataset ?? instance.config.dataset
-  if (!projectId || !dataset) {
-    throw new Error('This API requires a project ID and dataset configured.')
-  }
+  [object & {source: DocumentSource}]
+>((_, options) => {
+  const {projectId, dataset} = options.source[__sourceData]
   return {name: `${projectId}.${dataset}`, projectId, dataset}
 })
 

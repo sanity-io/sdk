@@ -87,7 +87,7 @@ describe('usersStore', () => {
   })
 
   it('initializes users state and cleans up after unsubscribe', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const instance = createSanityInstance()
     const state = getUsersState(instance, {
       resourceType: 'project',
       projectId: 'project1',
@@ -122,7 +122,7 @@ describe('usersStore', () => {
   })
 
   it('maintains state when multiple subscribers exist', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const instance = createSanityInstance()
     const state = getUsersState(instance, {
       resourceType: 'project',
       projectId: 'project1',
@@ -165,7 +165,7 @@ describe('usersStore', () => {
   })
 
   it('resolveUsers works without affecting subscriber cleanup', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const instance = createSanityInstance()
     const options: GetUsersOptions = {resourceType: 'project', projectId: 'project1'}
 
     const state = getUsersState(instance, options)
@@ -198,7 +198,7 @@ describe('usersStore', () => {
   })
 
   it('handles abort signal in resolveUsers', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const instance = createSanityInstance()
     const options: GetUsersOptions = {resourceType: 'project', projectId: 'project1'}
     const abortController = new AbortController()
 
@@ -221,7 +221,7 @@ describe('usersStore', () => {
   })
 
   it('loads more users when loadMoreUsers is called', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const instance = createSanityInstance()
     const options: GetUsersOptions = {resourceType: 'project', projectId: 'project1'}
 
     // First response has nextCursor
@@ -291,7 +291,7 @@ describe('usersStore', () => {
   })
 
   it('throws error when loadMoreUsers is called without initial data', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const instance = createSanityInstance()
 
     // Expect loadMoreUsers to throw when no data is loaded
     await expect(
@@ -302,7 +302,7 @@ describe('usersStore', () => {
   })
 
   it('throws error when loadMoreUsers is called with no more data available', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const instance = createSanityInstance()
     const options: GetUsersOptions = {resourceType: 'project', projectId: 'project1'}
 
     // Response with no nextCursor
@@ -325,7 +325,7 @@ describe('usersStore', () => {
   })
 
   it('handles errors in users fetching', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const instance = createSanityInstance()
     const errorMessage = 'Failed to fetch users'
 
     // Override request to simulate error
@@ -351,7 +351,7 @@ describe('usersStore', () => {
   })
 
   it('delays users state removal after unsubscribe', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const instance = createSanityInstance()
     const options: GetUsersOptions = {resourceType: 'project', projectId: 'project1'}
     const state = getUsersState(instance, options)
     const unsubscribe = state.subscribe()
@@ -370,7 +370,7 @@ describe('usersStore', () => {
   })
 
   it('preserves users state if a new subscriber subscribes before cleanup delay', async () => {
-    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const instance = createSanityInstance()
     const state = getUsersState(instance, {
       resourceType: 'project',
       projectId: 'project1',
@@ -412,7 +412,7 @@ describe('usersStore', () => {
     })
 
     it('fetches a single user with a project-scoped ID', async () => {
-      const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+      const instance = createSanityInstance()
       const projectUserId = 'p12345'
       const mockProjectUser: PatchedSanityUserFromClient = {
         id: projectUserId,
@@ -476,10 +476,7 @@ describe('usersStore', () => {
     })
 
     it('fetches a single user with a global-scoped ID', async () => {
-      const instance = createSanityInstance({
-        projectId: 'test',
-        dataset: 'test',
-      })
+      const instance = createSanityInstance()
       const globalUserId = 'g12345'
       const mockGlobalUser: SanityUser = {
         sanityUserId: globalUserId,

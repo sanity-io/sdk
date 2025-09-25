@@ -49,7 +49,7 @@ describe('applyDocumentActions', () => {
       events: eventsSubject,
     }
     state = createStoreState(initialState)
-    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    instance = createSanityInstance()
     const key = {name: 'p.d', projectId: 'p', dataset: 'd'}
 
     vi.mocked(bindActionByDataset).mockImplementation(
@@ -152,7 +152,7 @@ describe('applyDocumentActions', () => {
 
   it('matches parent instance via child when action projectId and dataset do not match child config', async () => {
     // Create a parent instance
-    const parentInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const parentInstance = createSanityInstance()
     // Create a child instance with different config
     const childInstance = parentInstance.createChild({projectId: 'child-p', dataset: 'child-d'})
     // Use the child instance in context

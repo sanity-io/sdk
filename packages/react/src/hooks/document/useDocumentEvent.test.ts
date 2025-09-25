@@ -20,7 +20,7 @@ vi.mock('../context/useSanityInstance', () => ({
   useSanityInstance: vi.fn(),
 }))
 
-const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+const instance = createSanityInstance()
 const docHandle: DocumentHandle = {
   documentId: 'doc1',
   documentType: 'book',

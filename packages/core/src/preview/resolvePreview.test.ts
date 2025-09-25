@@ -23,7 +23,7 @@ describe('resolvePreview', () => {
       } as ValuePending<PreviewValue>),
     } as StateSource<ValuePending<PreviewValue>>)
 
-    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    instance = createSanityInstance()
   })
 
   afterEach(() => {
