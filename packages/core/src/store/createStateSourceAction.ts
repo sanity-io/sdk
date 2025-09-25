@@ -1,4 +1,4 @@
-import {distinctUntilChanged, map, Observable, share, skip} from 'rxjs'
+import {defer, distinctUntilChanged, finalize, map, Observable, share, skip} from 'rxjs'
 
 import {type StoreAction} from './createActionBinder'
 import {type SanityInstance} from './createSanityInstance'
@@ -187,8 +187,7 @@ export function createStateSourceAction<TState, TParams extends unknown[], TRetu
   function stateSourceAction(context: StoreContext<TState>, ...params: TParams) {
     const {state, instance} = context
 
-    const getCurrent = () => {
-      const currentState = state.get()
+    const getCurrent = (currentState: TState) => {
       if (typeof currentState !== 'object' || currentState === null) {
         throw new Error(
           `Expected store state to be an object but got "${typeof currentState}" instead`,
@@ -208,53 +207,43 @@ export function createStateSourceAction<TState, TParams extends unknown[], TRetu
       return selector(selectorContext, ...params)
     }
 
-    // Subscription manager handles both RxJS and direct subscriptions
-    const subscribe = (onStoreChanged?: () => void) => {
-      // Run setup handler if provided
-      const cleanup = subscribeHandler?.(context, ...params)
+    // `state.observable` will emit the current value immediately and
+    // hence we inherit the same behavior here.
+    let values = state.observable.pipe(map(getCurrent), distinctUntilChanged(isEqual))
 
-      // Set up state change subscription
-      const subscription = state.observable
-        .pipe(
-          // Derive value from current state
-          map(getCurrent),
-          // Filter unchanged values using custom equality check
-          distinctUntilChanged(isEqual),
-          // Skip initial emission since we only want changes
-          skip(1),
-        )
-        .subscribe({
-          next: () => onStoreChanged?.(),
-          // Propagate selector errors to both subscription types
-          error: () => onStoreChanged?.(),
-        })
+    if (subscribeHandler) {
+      values = withSubscribeHook(values, () => subscribeHandler(context, ...params))
+    }
+
+    const subscribe = (onStoreChanged?: () => void) => {
+      const subscription = values.pipe(skip(1)).subscribe({
+        next: () => onStoreChanged?.(),
+        // Propagate selector errors to both subscription types
+        error: () => onStoreChanged?.(),
+      })
 
       return () => {
         subscription.unsubscribe()
-        cleanup?.()
       }
     }
 
-    // Create shared observable that handles multiple subscribers efficiently
-    const observable = new Observable<TReturn>((observer) => {
-      const emitCurrent = () => {
-        try {
-          observer.next(getCurrent())
-        } catch (error) {
-          observer.error(error)
-        }
-      }
-      // Emit immediately on subscription
-      emitCurrent()
-      return subscribe(emitCurrent)
-    }).pipe(share())
-
     return {
-      getCurrent,
+      getCurrent: () => getCurrent(state.get()),
       subscribe,
-      observable,
+      observable: values.pipe(share()),
     }
   }
 
   return stateSourceAction
+}
+
+/**
+ * Creates a new Observable which wraps an existing Observable which will invoke
+ * the function when a new subscriber appears.
+ */
+function withSubscribeHook<T>(obs: Observable<T>, fn: () => void | (() => void)): Observable<T> {
+  return defer(() => {
+    const cleanup = fn()
+    return cleanup ? obs.pipe(finalize(() => cleanup())) : obs
+  })
 }
