@@ -2,6 +2,7 @@ import {type SanityClient} from '@sanity/client'
 import {type SanityDocument} from 'groq'
 import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
 
+import {type DocumentSource} from '../config/sanityConfig'
 import {bindActionByDataset} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StoreContext} from '../store/defineStore'
@@ -37,6 +38,11 @@ export interface ApplyDocumentActionsOptions {
    * Set this to true to prevent this action from being batched with others.
    */
   disableBatching?: boolean
+
+  /**
+   * The source to apply to.
+   */
+  source: DocumentSource
 }
 
 /** @beta */

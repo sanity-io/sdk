@@ -3,6 +3,7 @@ import {type SanityDocument} from '@sanity/types'
 import {Subject} from 'rxjs'
 import {describe, expect, it} from 'vitest'
 
+import {sourceFor} from '../config/sanityConfig'
 import {bindActionByDataset} from '../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {} from '../store/createStateSourceAction'
@@ -31,6 +32,7 @@ const exampleDoc: SanityDocument = {
 }
 
 describe('applyDocumentActions', () => {
+  const source = sourceFor({projectId: 'p', dataset: 'd'})
   let state: StoreState<TestState>
   let instance: SanityInstance
   let eventsSubject: Subject<DocumentEvent>
@@ -75,6 +77,7 @@ describe('applyDocumentActions', () => {
     const applyPromise = applyDocumentActions(instance, {
       actions: [action],
       transactionId: 'txn-success',
+      source,
     })
 
     const appliedTx: AppliedTransaction = {
@@ -132,6 +135,7 @@ describe('applyDocumentActions', () => {
     const applyPromise = applyDocumentActions(instance, {
       actions: [action],
       transactionId: 'txn-error',
+      source,
     })
 
     const errorEvent: DocumentEvent = {
@@ -165,6 +169,7 @@ describe('applyDocumentActions', () => {
     const applyPromise = applyDocumentActions(childInstance, {
       actions: [action],
       transactionId: 'txn-child-match',
+      source,
     })
 
     // Simulate an applied transaction on the parent's instance
