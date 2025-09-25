@@ -4,6 +4,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getTokenState} from '../auth/authStore'
 import {getClient} from '../client/clientStore'
+import {sourceFor} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type SanityUser} from '../users/types'
 import {getUserState} from '../users/usersStore'
@@ -17,6 +18,7 @@ vi.mock('../users/usersStore')
 vi.mock('./bifurTransport')
 
 describe('presenceStore', () => {
+  const source = sourceFor({projectId: 'test-project', dataset: 'test-dataset'})
   let instance: SanityInstance
   let mockClient: SanityClient
   let mockTokenState: Subject<string | null>
@@ -78,7 +80,7 @@ describe('presenceStore', () => {
 
   describe('getPresence', () => {
     it('creates bifur transport with correct parameters', () => {
-      getPresence(instance, {})
+      getPresence(instance, {source})
 
       expect(createBifurTransport).toHaveBeenCalledWith({
         client: mockClient,
@@ -88,21 +90,21 @@ describe('presenceStore', () => {
     })
 
     it('sends rollCall message on initialization', () => {
-      getPresence(instance, {})
+      getPresence(instance, {source})
 
       expect(mockDispatchMessage).toHaveBeenCalledWith({type: 'rollCall'})
     })
 
     it('returns empty array when no users present', () => {
-      const source = getPresence(instance, {})
-      expect(source.getCurrent()).toEqual([])
+      const stateSource = getPresence(instance, {source})
+      expect(stateSource.getCurrent()).toEqual([])
     })
 
     it('handles state events from other users', async () => {
-      const source = getPresence(instance, {})
+      const stateSource = getPresence(instance, {source})
 
       // Subscribe to initialize the store
-      const unsubscribe = source.subscribe(() => {})
+      const unsubscribe = stateSource.subscribe(() => {})
 
       // Wait a bit for initialization
       await firstValueFrom(of(null).pipe(delay(10)))
@@ -127,7 +129,7 @@ describe('presenceStore', () => {
       // Wait for processing
       await firstValueFrom(of(null).pipe(delay(20)))
 
-      const presence = source.getCurrent()
+      const presence = stateSource.getCurrent()
       expect(presence).toHaveLength(1)
       expect(presence[0].sessionId).toBe('other-session')
       expect(presence[0].locations).toEqual(locations)
@@ -136,8 +138,8 @@ describe('presenceStore', () => {
     })
 
     it('ignores events from own session', async () => {
-      const source = getPresence(instance, {})
-      const unsubscribe = source.subscribe(() => {})
+      const stateSource = getPresence(instance, {source})
+      const unsubscribe = stateSource.subscribe(() => {})
 
       await firstValueFrom(of(null).pipe(delay(10)))
 
@@ -151,15 +153,15 @@ describe('presenceStore', () => {
 
       await firstValueFrom(of(null).pipe(delay(20)))
 
-      const presence = source.getCurrent()
+      const presence = stateSource.getCurrent()
       expect(presence).toHaveLength(0)
 
       unsubscribe()
     })
 
     it('handles disconnect events', async () => {
-      const source = getPresence(instance, {})
-      const unsubscribe = source.subscribe(() => {})
+      const stateSource = getPresence(instance, {source})
+      const unsubscribe = stateSource.subscribe(() => {})
 
       await firstValueFrom(of(null).pipe(delay(10)))
 
@@ -173,7 +175,7 @@ describe('presenceStore', () => {
       })
 
       await firstValueFrom(of(null).pipe(delay(20)))
-      expect(source.getCurrent()).toHaveLength(1)
+      expect(stateSource.getCurrent()).toHaveLength(1)
 
       // Then disconnect them
       mockIncomingEvents.next({
@@ -184,14 +186,14 @@ describe('presenceStore', () => {
       })
 
       await firstValueFrom(of(null).pipe(delay(20)))
-      expect(source.getCurrent()).toHaveLength(0)
+      expect(stateSource.getCurrent()).toHaveLength(0)
 
       unsubscribe()
     })
 
     it('fetches user data for present users', async () => {
-      const source = getPresence(instance, {})
-      const unsubscribe = source.subscribe(() => {})
+      const stateSource = getPresence(instance, {source})
+      const unsubscribe = stateSource.subscribe(() => {})
 
       await firstValueFrom(of(null).pipe(delay(10)))
 
@@ -222,8 +224,8 @@ describe('presenceStore', () => {
     })
 
     it('handles presence events correctly', async () => {
-      const source = getPresence(instance, {})
-      const unsubscribe = source.subscribe(() => {})
+      const stateSource = getPresence(instance, {source})
+      const unsubscribe = stateSource.subscribe(() => {})
 
       await firstValueFrom(of(null).pipe(delay(10)))
 
@@ -237,7 +239,7 @@ describe('presenceStore', () => {
 
       await firstValueFrom(of(null).pipe(delay(50)))
 
-      const presence = source.getCurrent()
+      const presence = stateSource.getCurrent()
       expect(presence).toHaveLength(1)
       expect(presence[0].sessionId).toBe('other-session')
 
