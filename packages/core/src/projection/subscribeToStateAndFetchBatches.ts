@@ -17,6 +17,7 @@ import {
 } from 'rxjs'
 
 import {getQueryState, resolveQuery} from '../query/queryStore'
+import {type BoundDatasetKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
 import {
   createProjectionQuery,
@@ -34,7 +35,8 @@ const isSetEqual = <T>(a: Set<T>, b: Set<T>) =>
 export const subscribeToStateAndFetchBatches = ({
   state,
   instance,
-}: StoreContext<ProjectionStoreState>): Subscription => {
+  key: {projectId, dataset},
+}: StoreContext<ProjectionStoreState, BoundDatasetKey>): Subscription => {
   const documentProjections$ = state.observable.pipe(
     map((s) => s.documentProjections),
     distinctUntilChanged(isEqual),
@@ -94,6 +96,8 @@ export const subscribeToStateAndFetchBatches = ({
           const {getCurrent, observable} = getQueryState<ProjectionQueryResult[]>(instance, {
             query,
             params,
+            projectId,
+            dataset,
             tag: PROJECTION_TAG,
             perspective: PROJECTION_PERSPECTIVE,
           })
@@ -104,6 +108,8 @@ export const subscribeToStateAndFetchBatches = ({
                 resolveQuery<ProjectionQueryResult[]>(instance, {
                   query,
                   params,
+                  projectId,
+                  dataset,
                   tag: PROJECTION_TAG,
                   perspective: PROJECTION_PERSPECTIVE,
                   signal: controller.signal,
@@ -125,8 +131,8 @@ export const subscribeToStateAndFetchBatches = ({
       }),
       map(({ids, data}) =>
         processProjectionQuery({
-          projectId: instance.config.projectId!,
-          dataset: instance.config.dataset!,
+          projectId,
+          dataset,
           ids,
           results: data,
         }),

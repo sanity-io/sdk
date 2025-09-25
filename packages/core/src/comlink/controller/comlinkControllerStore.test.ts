@@ -31,7 +31,7 @@ describe('comlinkControllerStore', () => {
 
     // Create store state directly
     const state = createStoreState<ComlinkControllerState>(
-      comlinkControllerStore.getInitialState(instance),
+      comlinkControllerStore.getInitialState(instance, null),
     )
 
     const initialState = state.get()
@@ -56,13 +56,13 @@ describe('comlinkControllerStore', () => {
     vi.mocked(bindActionGlobally).mockImplementation(
       (_storeDef, action) =>
         (inst: SanityInstance, ...params: unknown[]) =>
-          action({instance: inst, state}, ...params),
+          action({instance: inst, state, key: {name: 'global'}}, ...params),
     )
 
     const {comlinkControllerStore} = await import('./comlinkControllerStore')
 
     // Get the cleanup function from the store
-    const dispose = comlinkControllerStore.initialize?.({state, instance})
+    const dispose = comlinkControllerStore.initialize?.({state, instance, key: null})
 
     // Run cleanup
     dispose?.()
@@ -82,7 +82,7 @@ describe('comlinkControllerStore', () => {
     })
 
     // Get the cleanup function
-    const cleanup = comlinkControllerStore.initialize?.({state, instance})
+    const cleanup = comlinkControllerStore.initialize?.({state, instance, key: null})
 
     // Should not throw when no controller exists
     expect(() => cleanup?.()).not.toThrow()

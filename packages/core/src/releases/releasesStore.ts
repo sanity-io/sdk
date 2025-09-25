@@ -3,7 +3,7 @@ import {type SanityDocument} from '@sanity/types'
 import {catchError, EMPTY, retry, switchMap, timer} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {bindActionByDataset} from '../store/createActionBinder'
+import {bindActionByDataset, type BoundDatasetKey} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {listenQuery} from '../utils/listenQuery'
@@ -32,7 +32,7 @@ export interface ReleasesStoreState {
   error?: unknown
 }
 
-export const releasesStore = defineStore<ReleasesStoreState>({
+export const releasesStore = defineStore<ReleasesStoreState, BoundDatasetKey>({
   name: 'Releases',
   getInitialState: (): ReleasesStoreState => ({
     activeReleases: undefined,
@@ -57,10 +57,16 @@ export const getActiveReleasesState = bindActionByDataset(
 const RELEASES_QUERY = 'releases::all()'
 const QUERY_PARAMS = {}
 
-const subscribeToReleases = ({instance, state}: StoreContext<ReleasesStoreState>) => {
+const subscribeToReleases = ({
+  instance,
+  state,
+  key: {projectId, dataset},
+}: StoreContext<ReleasesStoreState, BoundDatasetKey>) => {
   return getClientState(instance, {
     apiVersion: '2025-04-10',
     perspective: 'raw',
+    projectId,
+    dataset,
   })
     .observable.pipe(
       switchMap((client: SanityClient) =>

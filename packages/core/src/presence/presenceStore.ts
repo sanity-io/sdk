@@ -4,7 +4,7 @@ import {combineLatest, distinctUntilChanged, filter, map, of, Subscription, swit
 
 import {getTokenState} from '../auth/authStore'
 import {getClient} from '../client/clientStore'
-import {bindActionByDataset} from '../store/createActionBinder'
+import {bindActionByDataset, type BoundDatasetKey} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {type SanityUser} from '../users/types'
@@ -23,15 +23,21 @@ const getInitialState = (): PresenceStoreState => ({
 })
 
 /** @public */
-export const presenceStore = defineStore<PresenceStoreState>({
+export const presenceStore = defineStore<PresenceStoreState, BoundDatasetKey>({
   name: 'presence',
   getInitialState,
-  initialize: (context: StoreContext<PresenceStoreState>) => {
-    const {instance, state} = context
+  initialize: (context: StoreContext<PresenceStoreState, BoundDatasetKey>) => {
+    const {
+      instance,
+      state,
+      key: {projectId, dataset},
+    } = context
     const sessionId = crypto.randomUUID()
 
     const client = getClient(instance, {
       apiVersion: '2022-06-30',
+      projectId,
+      dataset,
     })
 
     const token$ = getTokenState(instance).observable.pipe(distinctUntilChanged())
@@ -114,7 +120,7 @@ export const getPresence = bindActionByDataset(
   createStateSourceAction({
     selector: (context: SelectorContext<PresenceStoreState>): UserPresence[] =>
       selectPresence(context.state),
-    onSubscribe: (context) => {
+    onSubscribe: (context: StoreContext<PresenceStoreState, BoundDatasetKey>) => {
       const userIds$ = context.state.observable.pipe(
         map((state) =>
           Array.from(state.locations.values())
@@ -134,7 +140,7 @@ export const getPresence = bindActionByDataset(
               getUserState(context.instance, {
                 userId,
                 resourceType: 'project',
-                projectId: context.instance.config.projectId,
+                projectId: context.key.projectId,
               }).pipe(filter((v): v is NonNullable<typeof v> => !!v)),
             )
             return combineLatest(userObservables)

@@ -1,3 +1,4 @@
+import {type BoundDatasetKey} from '../store/createActionBinder'
 import {defineStore} from '../store/defineStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 
@@ -79,7 +80,7 @@ export interface PreviewStoreState {
   subscriptions: {[TDocumentId in string]?: {[TSubscriptionId in string]?: true}}
 }
 
-export const previewStore = defineStore<PreviewStoreState>({
+export const previewStore = defineStore<PreviewStoreState, BoundDatasetKey>({
   name: 'Preview',
   getInitialState() {
     return {

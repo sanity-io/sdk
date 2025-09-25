@@ -39,7 +39,7 @@ describe('destroyController', () => {
     })
 
     // Execute action
-    destroyController({state, instance})
+    destroyController({state, instance, key: null})
 
     // Verify controller was destroyed and state was cleared
     expect(mockController.destroy).toHaveBeenCalled()
@@ -49,7 +49,7 @@ describe('destroyController', () => {
 
   it('should do nothing if no controller exists', () => {
     // State already has null controller, so just execute action
-    expect(() => destroyController({state, instance})).not.toThrow()
+    expect(() => destroyController({state, instance, key: null})).not.toThrow()
 
     // State should remain unchanged
     expect(state.get().controller).toBeNull()

@@ -43,7 +43,7 @@ describe('getOrCreateController', () => {
     const controllerSpy = vi.spyOn(comlink, 'createController')
     const targetOrigin = 'https://test.sanity.dev'
 
-    const controller = getOrCreateController({state, instance}, targetOrigin)
+    const controller = getOrCreateController({state, instance, key: null}, targetOrigin)
 
     expect(controllerSpy).toHaveBeenCalledWith({targetOrigin})
     expect(controller).toBeDefined()
@@ -56,8 +56,8 @@ describe('getOrCreateController', () => {
     const controllerSpy = vi.spyOn(comlink, 'createController')
     const targetOrigin = 'https://test.sanity.dev'
 
-    const firstController = getOrCreateController({state, instance}, targetOrigin)
-    const secondController = getOrCreateController({state, instance}, targetOrigin)
+    const firstController = getOrCreateController({state, instance, key: null}, targetOrigin)
+    const secondController = getOrCreateController({state, instance, key: null}, targetOrigin)
 
     expect(controllerSpy).toHaveBeenCalledTimes(1)
     expect(firstController).toBe(secondController)
@@ -68,9 +68,9 @@ describe('getOrCreateController', () => {
     const targetOrigin = 'https://test.sanity.dev'
     const targetOrigin2 = 'https://test2.sanity.dev'
 
-    const firstController = getOrCreateController({state, instance}, targetOrigin)
+    const firstController = getOrCreateController({state, instance, key: null}, targetOrigin)
     const destroySpy = vi.spyOn(firstController, 'destroy')
-    const secondController = getOrCreateController({state, instance}, targetOrigin2)
+    const secondController = getOrCreateController({state, instance, key: null}, targetOrigin2)
 
     expect(controllerSpy).toHaveBeenCalledTimes(2)
     expect(destroySpy).toHaveBeenCalled()

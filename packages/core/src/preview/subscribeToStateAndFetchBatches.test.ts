@@ -2,6 +2,7 @@ import {NEVER, Observable, type Observer} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
 import {getQueryState, resolveQuery} from '../query/queryStore'
+import {type BoundDatasetKey} from '../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {createStoreState, type StoreState} from '../store/createStoreState'
@@ -14,6 +15,7 @@ vi.mock('../query/queryStore')
 describe('subscribeToStateAndFetchBatches', () => {
   let instance: SanityInstance
   let state: StoreState<PreviewStoreState>
+  let key: BoundDatasetKey
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -22,6 +24,7 @@ describe('subscribeToStateAndFetchBatches', () => {
       subscriptions: {},
       values: {},
     })
+    key = {name: 'test.test', projectId: 'test', dataset: 'test'}
 
     vi.mocked(getQueryState).mockReturnValue({
       getCurrent: () => undefined,
@@ -36,7 +39,7 @@ describe('subscribeToStateAndFetchBatches', () => {
   })
 
   it('batches rapid subscription changes into single requests', async () => {
-    const subscription = subscribeToStateAndFetchBatches({instance, state})
+    const subscription = subscribeToStateAndFetchBatches({instance, state, key})
 
     // Add multiple subscriptions rapidly
     state.set('addSubscription1', {
@@ -77,7 +80,7 @@ describe('subscribeToStateAndFetchBatches', () => {
       observable: new Observable(subscriber),
     } as StateSource<PreviewQueryResult[] | undefined>)
 
-    const subscription = subscribeToStateAndFetchBatches({instance, state})
+    const subscription = subscribeToStateAndFetchBatches({instance, state, key})
 
     expect(subscriber).not.toHaveBeenCalled()
 
@@ -126,7 +129,7 @@ describe('subscribeToStateAndFetchBatches', () => {
       subscriptions: {doc1: {sub1: true}},
     })
 
-    const subscription = subscribeToStateAndFetchBatches({instance, state})
+    const subscription = subscribeToStateAndFetchBatches({instance, state, key})
 
     // Add a subscription for a document already in the batch
     state.set('addSubscriptionAlreadyInBatch', (prev) => ({
@@ -152,7 +155,7 @@ describe('subscribeToStateAndFetchBatches', () => {
 
   it('cancels and restarts fetches when subscription set changes', async () => {
     const abortSpy = vi.spyOn(AbortController.prototype, 'abort')
-    const subscription = subscribeToStateAndFetchBatches({instance, state})
+    const subscription = subscribeToStateAndFetchBatches({instance, state, key})
 
     // Add initial subscription
     state.set('addSubscription1', {
@@ -182,7 +185,7 @@ describe('subscribeToStateAndFetchBatches', () => {
       observable: new Observable(subscriber),
     } as StateSource<PreviewQueryResult[] | undefined>)
 
-    const subscription = subscribeToStateAndFetchBatches({instance, state})
+    const subscription = subscribeToStateAndFetchBatches({instance, state, key})
 
     // Add a subscription
     state.set('addSubscription', {

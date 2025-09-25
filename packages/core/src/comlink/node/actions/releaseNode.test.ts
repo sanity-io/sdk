@@ -47,7 +47,7 @@ describe('releaseNode', () => {
     expect(state.get().nodes.has('test-node')).toBe(true)
 
     // Release the node
-    releaseNode({state, instance}, 'test-node')
+    releaseNode({state, instance, key: null}, 'test-node')
 
     // Check node is removed
     expect(mockNode.stop).toHaveBeenCalled()
@@ -64,7 +64,7 @@ describe('releaseNode', () => {
     })
     state.set('setup', {nodes})
 
-    releaseNode({state, instance}, 'test-node')
+    releaseNode({state, instance, key: null}, 'test-node')
 
     expect(statusUnsub).toHaveBeenCalled()
   })

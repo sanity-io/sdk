@@ -21,7 +21,7 @@ describe('createStateSourceAction', () => {
   it('should create a source that provides current state through getCurrent', () => {
     const selector = vi.fn(({state: s}: SelectorContext<CountStoreState>) => s.count)
     const action = createStateSourceAction(selector)
-    const source = action({state, instance})
+    const source = action({state, instance, key: null})
 
     expect(source.getCurrent()).toBe(0)
     state.set('test', {count: 5})
@@ -33,7 +33,7 @@ describe('createStateSourceAction', () => {
     const source = createStateSourceAction({
       selector: ({state: s}: SelectorContext<CountStoreState>) => s.count,
       isEqual: (a, b) => a === b,
-    })({state, instance})
+    })({state, instance, key: null})
 
     const unsubscribe = source.subscribe(onStoreChanged)
 
@@ -53,11 +53,11 @@ describe('createStateSourceAction', () => {
     const source = createStateSourceAction({
       selector: ({state: s}: SelectorContext<CountStoreState>) => s.items,
       onSubscribe,
-    })({state, instance})
+    })({state, instance, key: null})
 
     const unsubscribe = source.subscribe()
     expect(onSubscribe).toHaveBeenCalledWith(
-      expect.objectContaining({state, instance}),
+      expect.objectContaining({state, instance, key: null}),
       // No params in this case
     )
 
@@ -68,7 +68,7 @@ describe('createStateSourceAction', () => {
     const action = createStateSourceAction({
       selector: ({state: s}: SelectorContext<CountStoreState>, index: number) => s.items[index],
     })
-    const source = action({state, instance}, 0)
+    const source = action({state, instance, key: null}, 0)
 
     state.set('add', {items: ['first']})
     expect(source.getCurrent()).toBe('first')
@@ -80,7 +80,7 @@ describe('createStateSourceAction', () => {
       selector: () => {
         throw error
       },
-    })({state, instance})
+    })({state, instance, key: null})
 
     const errorHandler = vi.fn()
     source.observable.subscribe({error: errorHandler})
@@ -94,7 +94,7 @@ describe('createStateSourceAction', () => {
     const source = createStateSourceAction({
       selector: ({state: s}: SelectorContext<CountStoreState>) => s.items.map((i) => i.length),
       isEqual,
-    })({state, instance})
+    })({state, instance, key: null})
 
     const onChange = vi.fn()
     source.subscribe(onChange)
@@ -112,7 +112,7 @@ describe('createStateSourceAction', () => {
     const source = createStateSourceAction({
       selector: ({state: s}: SelectorContext<CountStoreState>) => s.count,
       onSubscribe: () => cleanup,
-    })({state, instance})
+    })({state, instance, key: null})
 
     const unsubscribe = source.subscribe()
     unsubscribe()
@@ -125,6 +125,7 @@ describe('createStateSourceAction', () => {
     )({
       state,
       instance,
+      key: null,
     })
 
     const subscriber1 = vi.fn()
@@ -144,7 +145,7 @@ describe('createStateSourceAction', () => {
 
   it('should cache selector context per state object', () => {
     const selector = vi.fn(({state: s}: SelectorContext<CountStoreState>) => s.count)
-    const source = createStateSourceAction(selector)({state, instance})
+    const source = createStateSourceAction(selector)({state, instance, key: null})
 
     // Initial call creates context
     expect(source.getCurrent()).toBe(0)
@@ -181,10 +182,10 @@ describe('createStateSourceAction', () => {
     const secondInstance = createSanityInstance({projectId: 'test2', dataset: 'test2'})
     const selector = vi.fn(({state: s}: SelectorContext<CountStoreState>) => s.count)
 
-    const source1 = createStateSourceAction(selector)({state, instance})
+    const source1 = createStateSourceAction(selector)({state, instance, key: null})
     source1.getCurrent()
 
-    const source2 = createStateSourceAction(selector)({state, instance: secondInstance})
+    const source2 = createStateSourceAction(selector)({state, instance: secondInstance, key: null})
     source2.getCurrent()
 
     const context1 = selector.mock.calls[0][0]

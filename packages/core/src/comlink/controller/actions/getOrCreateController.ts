@@ -21,7 +21,7 @@ export const getOrCreateController = (
   // if the target origin has changed, we'll create a new controller,
   // but need to clean up first
   if (controller) {
-    destroyController({state, instance})
+    destroyController({state, instance, key: undefined})
   }
 
   const newController = createController({targetOrigin})

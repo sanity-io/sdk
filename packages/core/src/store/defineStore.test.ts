@@ -13,6 +13,6 @@ describe('defineStore', () => {
     const result = defineStore(storeDef)
     expect(result).toBe(storeDef)
     expect(result.name).toBe('TestStore')
-    expect(result.getInitialState({} as SanityInstance)).toBe(42)
+    expect(result.getInitialState({} as SanityInstance, null)).toBe(42)
   })
 })

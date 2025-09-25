@@ -19,6 +19,7 @@ const channelConfig = {
 describe('releaseChannel', () => {
   let instance: SanityInstance
   let store: StoreInstance<ComlinkControllerState>
+  const key = {name: 'global', projectId: 'test-project-id', dataset: 'test-dataset'}
 
   let getOrCreateChannel: (
     inst: SanityInstance,
@@ -29,14 +30,14 @@ describe('releaseChannel', () => {
 
   beforeEach(() => {
     instance = createSanityInstance({projectId: 'test-project-id', dataset: 'test-dataset'})
-    store = createStoreInstance(instance, comlinkControllerStore)
+    store = createStoreInstance(instance, key, comlinkControllerStore)
 
     const bind =
       <TParams extends unknown[], TReturn>(
         action: StoreAction<ComlinkControllerState, TParams, TReturn>,
       ) =>
       (inst: SanityInstance, ...params: TParams) =>
-        action({instance: inst, state: store.state}, ...params)
+        action({instance: inst, state: store.state, key}, ...params)
 
     getOrCreateChannel = bind(unboundGetOrCreateChannel)
     getOrCreateController = bind(unboundGetOrCreateController)

@@ -18,9 +18,17 @@ describe('previewStore', () => {
 
     const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
-    const {state, dispose} = createStoreInstance(instance, previewStore)
+    const {state, dispose} = createStoreInstance(
+      instance,
+      {name: 'p.d', projectId: 'p', dataset: 'd'},
+      previewStore,
+    )
 
-    expect(subscribeToStateAndFetchBatches).toHaveBeenCalledWith({instance, state})
+    expect(subscribeToStateAndFetchBatches).toHaveBeenCalledWith({
+      instance,
+      state,
+      key: {name: 'p.d', projectId: 'p', dataset: 'd'},
+    })
 
     dispose()
     instance.dispose()

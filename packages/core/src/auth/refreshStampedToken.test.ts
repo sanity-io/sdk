@@ -122,7 +122,7 @@ describe('refreshStampedToken', () => {
         dataset: 'd',
         auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
       })
-      const initialState = authStore.getInitialState(instance)
+      const initialState = authStore.getInitialState(instance, null)
       initialState.authState = {
         type: AuthStateType.LOGGED_IN,
         token: 'sk-initial-token-st123',
@@ -131,7 +131,7 @@ describe('refreshStampedToken', () => {
       initialState.dashboardContext = {mode: 'test'}
       const state = createStoreState(initialState)
 
-      const subscription = refreshStampedToken({state, instance})
+      const subscription = refreshStampedToken({state, instance, key: null})
       subscriptions.push(subscription)
 
       await vi.advanceTimersToNextTimerAsync()
@@ -168,7 +168,7 @@ describe('refreshStampedToken', () => {
         dataset: 'd',
         auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
       })
-      const initialState = authStore.getInitialState(instance)
+      const initialState = authStore.getInitialState(instance, null)
       initialState.authState = {
         type: AuthStateType.LOGGED_IN,
         token: 'sk-initial-token-st123',
@@ -177,7 +177,7 @@ describe('refreshStampedToken', () => {
       initialState.dashboardContext = {mode: 'test'}
       const state = createStoreState(initialState)
 
-      const subscription = refreshStampedToken({state, instance})
+      const subscription = refreshStampedToken({state, instance, key: null})
       subscriptions.push(subscription)
 
       await vi.advanceTimersToNextTimerAsync()
@@ -202,7 +202,7 @@ describe('refreshStampedToken', () => {
         dataset: 'd',
         auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
       })
-      const initialState = authStore.getInitialState(instance)
+      const initialState = authStore.getInitialState(instance, null)
       initialState.authState = {
         type: AuthStateType.LOGGED_IN,
         token: 'sk-initial-token-st123',
@@ -213,7 +213,7 @@ describe('refreshStampedToken', () => {
       let subscription: Subscription | undefined
       // We expect this NOT to throw, but accept we can't easily test the lock call or outcome
       expect(() => {
-        subscription = refreshStampedToken({state, instance})
+        subscription = refreshStampedToken({state, instance, key: null})
         subscriptions.push(subscription!)
       }).not.toThrow()
 
@@ -253,7 +253,7 @@ describe('refreshStampedToken', () => {
           dataset: 'd',
           auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
         })
-        const initialState = authStore.getInitialState(instance)
+        const initialState = authStore.getInitialState(instance, null)
         initialState.authState = {
           type: AuthStateType.LOGGED_IN,
           token: 'sk-initial-token-st123',
@@ -261,7 +261,7 @@ describe('refreshStampedToken', () => {
         }
         const state = createStoreState(initialState)
 
-        const subscription = refreshStampedToken({state, instance})
+        const subscription = refreshStampedToken({state, instance, key: null})
         subscriptions.push(subscription)
 
         // DO NOT advance timers or yield here - focus on immediate observable logic
@@ -303,7 +303,7 @@ describe('refreshStampedToken', () => {
           dataset: 'd',
           auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
         })
-        const initialState = authStore.getInitialState(instance)
+        const initialState = authStore.getInitialState(instance, null)
         initialState.authState = {
           type: AuthStateType.LOGGED_IN,
           token: 'sk-initial-token-st123',
@@ -311,7 +311,7 @@ describe('refreshStampedToken', () => {
         }
         const state = createStoreState(initialState)
 
-        const subscription = refreshStampedToken({state, instance})
+        const subscription = refreshStampedToken({state, instance, key: null})
         subscriptions.push(subscription)
 
         // Advance timers to allow the async `performRefresh` to execute
@@ -349,7 +349,7 @@ describe('refreshStampedToken', () => {
       dataset: 'd',
       auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
     })
-    const initialState = authStore.getInitialState(instance)
+    const initialState = authStore.getInitialState(instance, null)
     initialState.authState = {
       type: AuthStateType.LOGGED_IN,
       token: 'sk-initial-token-st123',
@@ -358,7 +358,7 @@ describe('refreshStampedToken', () => {
     initialState.dashboardContext = {mode: 'test'}
     const state = createStoreState(initialState)
 
-    const subscription = refreshStampedToken({state, instance})
+    const subscription = refreshStampedToken({state, instance, key: null})
     subscriptions.push(subscription)
 
     await vi.advanceTimersToNextTimerAsync()
@@ -378,14 +378,14 @@ describe('refreshStampedToken', () => {
       dataset: 'd',
       auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
     })
-    const initialState = authStore.getInitialState(instance)
+    const initialState = authStore.getInitialState(instance, null)
     initialState.authState = {
       type: AuthStateType.LOGGED_OUT,
       isDestroyingSession: false,
     } as AuthState
     const state = createStoreState(initialState)
 
-    const subscription = refreshStampedToken({state, instance})
+    const subscription = refreshStampedToken({state, instance, key: null})
     subscriptions.push(subscription)
 
     await vi.advanceTimersByTimeAsync(0)
@@ -404,7 +404,7 @@ describe('refreshStampedToken', () => {
       dataset: 'd',
       auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
     })
-    const initialState = authStore.getInitialState(instance)
+    const initialState = authStore.getInitialState(instance, null)
     initialState.authState = {
       type: AuthStateType.LOGGED_IN,
       token: 'sk-nonstamped-token',
@@ -412,7 +412,7 @@ describe('refreshStampedToken', () => {
     }
     const state = createStoreState(initialState)
 
-    const subscription = refreshStampedToken({state, instance})
+    const subscription = refreshStampedToken({state, instance, key: null})
     subscriptions.push(subscription)
 
     await vi.advanceTimersByTimeAsync(0)

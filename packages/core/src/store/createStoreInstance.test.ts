@@ -24,36 +24,45 @@ describe('createStoreInstance', () => {
   }
 
   it('should create store instance with initial state', () => {
-    const store = createStoreInstance(instance, storeDef)
+    const store = createStoreInstance(instance, {name: 'store'}, storeDef)
     expect(store.state).toBeDefined()
   })
 
   it('should call getInitialState with Sanity instance', () => {
     const getInitialState = vi.fn(() => ({count: 0}))
-    createStoreInstance(instance, {...storeDef, getInitialState})
-    expect(getInitialState).toHaveBeenCalledWith(instance)
+    createStoreInstance(instance, {name: 'store'}, {...storeDef, getInitialState})
+    expect(getInitialState).toHaveBeenCalledWith(instance, {name: 'store'})
   })
 
   it('should call initialize function with context', () => {
     const initialize = vi.fn()
 
-    const store = createStoreInstance(instance, {
-      ...storeDef,
-      initialize,
-    })
+    const store = createStoreInstance(
+      instance,
+      {name: 'store'},
+      {
+        ...storeDef,
+        initialize,
+      },
+    )
     expect(initialize).toHaveBeenCalledWith({
       state: store.state,
       instance,
+      key: {name: 'store'},
     })
   })
 
   it('should handle store disposal with cleanup function', () => {
     const disposeMock = vi.fn()
 
-    const store = createStoreInstance(instance, {
-      ...storeDef,
-      initialize: () => disposeMock,
-    })
+    const store = createStoreInstance(
+      instance,
+      {name: 'store'},
+      {
+        ...storeDef,
+        initialize: () => disposeMock,
+      },
+    )
     store.dispose()
 
     expect(disposeMock).toHaveBeenCalledTimes(1)
@@ -61,7 +70,7 @@ describe('createStoreInstance', () => {
   })
 
   it('should handle disposal without initialize function', () => {
-    const store = createStoreInstance(instance, storeDef)
+    const store = createStoreInstance(instance, {name: 'store'}, storeDef)
     store.dispose()
     expect(store.isDisposed()).toBe(true)
   })
@@ -69,10 +78,14 @@ describe('createStoreInstance', () => {
   it('should prevent multiple disposals', () => {
     const disposeMock = vi.fn()
 
-    const store = createStoreInstance(instance, {
-      ...storeDef,
-      initialize: () => disposeMock,
-    })
+    const store = createStoreInstance(
+      instance,
+      {name: 'store'},
+      {
+        ...storeDef,
+        initialize: () => disposeMock,
+      },
+    )
     store.dispose()
     store.dispose()
 

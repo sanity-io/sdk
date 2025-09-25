@@ -78,7 +78,7 @@ describe('presenceStore', () => {
 
   describe('getPresence', () => {
     it('creates bifur transport with correct parameters', () => {
-      getPresence(instance)
+      getPresence(instance, {})
 
       expect(createBifurTransport).toHaveBeenCalledWith({
         client: mockClient,
@@ -88,18 +88,18 @@ describe('presenceStore', () => {
     })
 
     it('sends rollCall message on initialization', () => {
-      getPresence(instance)
+      getPresence(instance, {})
 
       expect(mockDispatchMessage).toHaveBeenCalledWith({type: 'rollCall'})
     })
 
     it('returns empty array when no users present', () => {
-      const source = getPresence(instance)
+      const source = getPresence(instance, {})
       expect(source.getCurrent()).toEqual([])
     })
 
     it('handles state events from other users', async () => {
-      const source = getPresence(instance)
+      const source = getPresence(instance, {})
 
       // Subscribe to initialize the store
       const unsubscribe = source.subscribe(() => {})
@@ -136,7 +136,7 @@ describe('presenceStore', () => {
     })
 
     it('ignores events from own session', async () => {
-      const source = getPresence(instance)
+      const source = getPresence(instance, {})
       const unsubscribe = source.subscribe(() => {})
 
       await firstValueFrom(of(null).pipe(delay(10)))
@@ -158,7 +158,7 @@ describe('presenceStore', () => {
     })
 
     it('handles disconnect events', async () => {
-      const source = getPresence(instance)
+      const source = getPresence(instance, {})
       const unsubscribe = source.subscribe(() => {})
 
       await firstValueFrom(of(null).pipe(delay(10)))
@@ -190,7 +190,7 @@ describe('presenceStore', () => {
     })
 
     it('fetches user data for present users', async () => {
-      const source = getPresence(instance)
+      const source = getPresence(instance, {})
       const unsubscribe = source.subscribe(() => {})
 
       await firstValueFrom(of(null).pipe(delay(10)))
@@ -222,7 +222,7 @@ describe('presenceStore', () => {
     })
 
     it('handles presence events correctly', async () => {
-      const source = getPresence(instance)
+      const source = getPresence(instance, {})
       const unsubscribe = source.subscribe(() => {})
 
       await firstValueFrom(of(null).pipe(delay(10)))
