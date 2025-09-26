@@ -1,15 +1,10 @@
-import {getActiveReleasesState, type ReleaseDocument, type SanityInstance} from '@sanity/sdk'
+import {getActiveReleasesState, type ReleaseDocument} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {BehaviorSubject} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {useActiveReleases} from './useActiveReleases'
-
-// Mock the useSanityInstance hook
-vi.mock('../context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn(),
-}))
 
 // Mock the getActiveReleasesState function
 vi.mock('@sanity/sdk', async () => {
@@ -26,9 +21,6 @@ describe('useActiveReleases', () => {
   })
 
   it('should suspend when initial state is undefined', () => {
-    const mockInstance = {} as SanityInstance
-    vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
-
     const mockSubject = new BehaviorSubject<ReleaseDocument[] | undefined>(undefined)
     const mockStateSource = {
       subscribe: vi.fn((callback) => {
@@ -41,13 +33,22 @@ describe('useActiveReleases', () => {
 
     vi.mocked(getActiveReleasesState).mockReturnValue(mockStateSource)
 
-    const {result} = renderHook(() => {
-      try {
-        return useActiveReleases()
-      } catch (e) {
-        return e
-      }
-    })
+    const {result} = renderHook(
+      () => {
+        try {
+          return useActiveReleases()
+        } catch (e) {
+          return e
+        }
+      },
+      {
+        wrapper: ({children}) => (
+          <ResourceProvider projectId="p" dataset="d" fallback={<p>Loading...</p>}>
+            {children}
+          </ResourceProvider>
+        ),
+      },
+    )
 
     // Verify that the hook threw a promise (suspended)
     expect(result.current).toBeInstanceOf(Promise)
@@ -55,9 +56,6 @@ describe('useActiveReleases', () => {
   })
 
   it('should resolve with releases when data is available', () => {
-    const mockInstance = {} as SanityInstance
-    vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
-
     const mockReleases: ReleaseDocument[] = [
       {_id: 'release1', _type: 'release'} as ReleaseDocument,
       {_id: 'release2', _type: 'release'} as ReleaseDocument,
@@ -75,7 +73,13 @@ describe('useActiveReleases', () => {
 
     vi.mocked(getActiveReleasesState).mockReturnValue(mockStateSource)
 
-    const {result} = renderHook(() => useActiveReleases())
+    const {result} = renderHook(() => useActiveReleases(), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="p" dataset="d" fallback={<p>Loading...</p>}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
     // Verify that the hook returned the releases without suspending
     expect(result.current).toEqual(mockReleases)

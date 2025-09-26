@@ -5,8 +5,8 @@ import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest
 
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useWindowConnection} from '../hooks/comlink/useWindowConnection'
-import {useSanityInstance} from '../hooks/context/useSanityInstance'
 import {ComlinkTokenRefreshProvider} from './ComlinkTokenRefresh'
+import {ResourceProvider} from './ResourceProvider'
 
 // Mocks
 vi.mock('@sanity/sdk', async () => {
@@ -26,20 +26,13 @@ vi.mock('../hooks/comlink/useWindowConnection', () => ({
   useWindowConnection: vi.fn(),
 }))
 
-vi.mock('../hooks/context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn(),
-}))
-
 // Use simpler mock typings
 const mockGetIsInDashboardState = getIsInDashboardState as Mock
 const mockSetAuthToken = setAuthToken as Mock
 const mockUseAuthState = useAuthState as Mock
 const mockUseWindowConnection = useWindowConnection as Mock
-const mockUseSanityInstance = useSanityInstance as Mock
 
 const mockFetch = vi.fn()
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockSanityInstance: any = {projectId: 'test', dataset: 'test'}
 
 describe('ComlinkTokenRefresh', () => {
   beforeEach(() => {
@@ -47,7 +40,6 @@ describe('ComlinkTokenRefresh', () => {
     mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => false)})
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN})
     mockUseWindowConnection.mockReturnValue({fetch: mockFetch})
-    mockUseSanityInstance.mockReturnValue(mockSanityInstance)
   })
 
   afterEach(() => {
@@ -64,9 +56,11 @@ describe('ComlinkTokenRefresh', () => {
       it('should not request new token on 401 if not in dashboard', async () => {
         mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN})
         const {rerender} = render(
-          <ComlinkTokenRefreshProvider>
-            <div>Test</div>
-          </ComlinkTokenRefreshProvider>,
+          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+            <ComlinkTokenRefreshProvider>
+              <div>Test</div>
+            </ComlinkTokenRefreshProvider>
+          </ResourceProvider>,
         )
 
         mockUseAuthState.mockReturnValue({
@@ -75,9 +69,11 @@ describe('ComlinkTokenRefresh', () => {
         })
         act(() => {
           rerender(
-            <ComlinkTokenRefreshProvider>
-              <div>Test</div>
-            </ComlinkTokenRefreshProvider>,
+            <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+              <ComlinkTokenRefreshProvider>
+                <div>Test</div>
+              </ComlinkTokenRefreshProvider>
+            </ResourceProvider>,
           )
         })
 
@@ -95,9 +91,11 @@ describe('ComlinkTokenRefresh', () => {
 
       it('should initialize useWindowConnection with correct parameters', () => {
         render(
-          <ComlinkTokenRefreshProvider>
-            <div>Test</div>
-          </ComlinkTokenRefreshProvider>,
+          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+            <ComlinkTokenRefreshProvider>
+              <div>Test</div>
+            </ComlinkTokenRefreshProvider>
+          </ResourceProvider>,
         )
 
         expect(mockUseWindowConnection).toHaveBeenCalledWith(
@@ -116,16 +114,18 @@ describe('ComlinkTokenRefresh', () => {
         mockFetch.mockResolvedValueOnce({token: 'new-token'})
 
         render(
-          <ComlinkTokenRefreshProvider>
-            <div>Test</div>
-          </ComlinkTokenRefreshProvider>,
+          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+            <ComlinkTokenRefreshProvider>
+              <div>Test</div>
+            </ComlinkTokenRefreshProvider>
+          </ResourceProvider>,
         )
 
         await act(async () => {
           await vi.advanceTimersByTimeAsync(100)
         })
 
-        expect(mockSetAuthToken).toHaveBeenCalledWith(mockSanityInstance, 'new-token')
+        expect(mockSetAuthToken).toHaveBeenCalledWith(expect.any(Object), 'new-token')
         expect(mockFetch).toHaveBeenCalledTimes(1)
       })
 
@@ -137,9 +137,11 @@ describe('ComlinkTokenRefresh', () => {
         mockFetch.mockResolvedValueOnce({token: null})
 
         render(
-          <ComlinkTokenRefreshProvider>
-            <div>Test</div>
-          </ComlinkTokenRefreshProvider>,
+          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+            <ComlinkTokenRefreshProvider>
+              <div>Test</div>
+            </ComlinkTokenRefreshProvider>
+          </ResourceProvider>,
         )
 
         await act(async () => {
@@ -157,9 +159,11 @@ describe('ComlinkTokenRefresh', () => {
         mockFetch.mockRejectedValueOnce(new Error('Fetch failed'))
 
         render(
-          <ComlinkTokenRefreshProvider>
-            <div>Test</div>
-          </ComlinkTokenRefreshProvider>,
+          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+            <ComlinkTokenRefreshProvider>
+              <div>Test</div>
+            </ComlinkTokenRefreshProvider>
+          </ResourceProvider>,
         )
 
         await act(async () => {
@@ -173,9 +177,12 @@ describe('ComlinkTokenRefresh', () => {
         it('should not request new token for non-401 errors', async () => {
           mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN})
           const {rerender} = render(
-            <ComlinkTokenRefreshProvider>
-              <div>Test</div>
-            </ComlinkTokenRefreshProvider>,
+            <ResourceProvider fallback={null}>
+              <ComlinkTokenRefreshProvider>
+                <div>Test</div>
+              </ComlinkTokenRefreshProvider>
+              ,
+            </ResourceProvider>,
           )
 
           mockUseAuthState.mockReturnValue({
@@ -184,9 +191,11 @@ describe('ComlinkTokenRefresh', () => {
           })
           act(() => {
             rerender(
-              <ComlinkTokenRefreshProvider>
-                <div>Test</div>
-              </ComlinkTokenRefreshProvider>,
+              <ResourceProvider fallback={null}>
+                <ComlinkTokenRefreshProvider>
+                  <div>Test</div>
+                </ComlinkTokenRefreshProvider>
+              </ResourceProvider>,
             )
           })
 
@@ -199,17 +208,21 @@ describe('ComlinkTokenRefresh', () => {
         it('should request new token on LOGGED_OUT state', async () => {
           mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN})
           const {rerender} = render(
-            <ComlinkTokenRefreshProvider>
-              <div>Test</div>
-            </ComlinkTokenRefreshProvider>,
+            <ResourceProvider fallback={null}>
+              <ComlinkTokenRefreshProvider>
+                <div>Test</div>
+              </ComlinkTokenRefreshProvider>
+            </ResourceProvider>,
           )
 
           mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_OUT})
           act(() => {
             rerender(
-              <ComlinkTokenRefreshProvider>
-                <div>Test</div>
-              </ComlinkTokenRefreshProvider>,
+              <ResourceProvider fallback={null}>
+                <ComlinkTokenRefreshProvider>
+                  <div>Test</div>
+                </ComlinkTokenRefreshProvider>
+              </ResourceProvider>,
             )
           })
 

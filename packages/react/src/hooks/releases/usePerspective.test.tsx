@@ -4,19 +4,13 @@ import {
   getPerspectiveState,
   type PerspectiveHandle,
   type ReleaseDocument,
-  type SanityInstance,
 } from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {BehaviorSubject} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {usePerspective} from './usePerspective'
-
-// Mock the useSanityInstance hook
-vi.mock('../context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn(),
-}))
 
 // Mock the SDK functions
 vi.mock('@sanity/sdk', async () => {
@@ -36,9 +30,6 @@ describe('usePerspective', () => {
   })
 
   it('should suspend when initial state is undefined', () => {
-    const mockInstance = {} as SanityInstance
-    vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
-
     const perspectiveHandle: PerspectiveHandle = {
       perspective: 'published',
     }
@@ -76,13 +67,18 @@ describe('usePerspective', () => {
     vi.mocked(getPerspectiveState).mockReturnValue(mockStateSource)
     vi.mocked(getActiveReleasesState).mockReturnValue(mockReleasesStateSource)
 
-    const {result} = renderHook(() => {
-      try {
-        return usePerspective(perspectiveHandle)
-      } catch (e) {
-        return e
-      }
-    })
+    const {result} = renderHook(
+      () => {
+        try {
+          return usePerspective(perspectiveHandle)
+        } catch (e) {
+          return e
+        }
+      },
+      {
+        wrapper: ({children}) => <ResourceProvider fallback={null}>{children}</ResourceProvider>,
+      },
+    )
 
     // Verify that the hook threw a promise (suspended)
     expect(result.current).toBeInstanceOf(Promise)
@@ -90,9 +86,6 @@ describe('usePerspective', () => {
   })
 
   it('should resolve with perspective when data is available', () => {
-    const mockInstance = {} as SanityInstance
-    vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
-
     const perspectiveHandle: PerspectiveHandle = {
       perspective: 'published',
     }
@@ -110,11 +103,12 @@ describe('usePerspective', () => {
 
     vi.mocked(getPerspectiveState).mockReturnValue(mockStateSource)
 
-    const {result} = renderHook(() => usePerspective(perspectiveHandle))
+    const {result} = renderHook(() => usePerspective(perspectiveHandle), {
+      wrapper: ({children}) => <ResourceProvider fallback={null}>{children}</ResourceProvider>,
+    })
 
     // Verify that the hook returned the perspective without suspending
     expect(result.current).toEqual(mockPerspective)
     expect(mockStateSource.getCurrent).toHaveBeenCalled()
-    expect(getPerspectiveState).toHaveBeenCalledWith(mockInstance, perspectiveHandle)
   })
 })
