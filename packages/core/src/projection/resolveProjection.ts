@@ -15,7 +15,7 @@ export function resolveProjection<
   TProjectId extends string = string,
 >(
   instance: SanityInstance,
-  options: ProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
+  options: ProjectionOptions<TProjection>,
 ): Promise<
   ProjectionValuePending<
     SanityProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
