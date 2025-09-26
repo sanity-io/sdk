@@ -81,3 +81,32 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
     enabled: boolean
   }
 }
+
+/**
+ * Represents a source which can be used by various functionality.
+ *
+ * @see sourceFor For how to initialize a new source for a dataset.
+ * @public
+ */
+export type DocumentSource = {
+  [__sourceData]: {
+    projectId: string
+    dataset: string
+  }
+}
+
+/**
+ * An internal symbol to avoid users to access data inside here.
+ *
+ * @internal
+ */
+export const __sourceData = Symbol('Sanity.DocumentSource')
+
+/**
+ * Creates a new {@link DocumentSource} object based on a projectId and dataset.
+ *
+ * @public
+ */
+export function sourceFor(data: {projectId: string; dataset: string}): DocumentSource {
+  return {[__sourceData]: data}
+}

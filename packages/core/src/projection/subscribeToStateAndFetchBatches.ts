@@ -16,6 +16,7 @@ import {
   tap,
 } from 'rxjs'
 
+import {sourceFor} from '../config/sanityConfig'
 import {getQueryState, resolveQuery} from '../query/queryStore'
 import {type BoundDatasetKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
@@ -96,8 +97,7 @@ export const subscribeToStateAndFetchBatches = ({
           const {getCurrent, observable} = getQueryState<ProjectionQueryResult[]>(instance, {
             query,
             params,
-            projectId,
-            dataset,
+            source: sourceFor({projectId, dataset}),
             tag: PROJECTION_TAG,
             perspective: PROJECTION_PERSPECTIVE,
           })
@@ -108,8 +108,7 @@ export const subscribeToStateAndFetchBatches = ({
                 resolveQuery<ProjectionQueryResult[]>(instance, {
                   query,
                   params,
-                  projectId,
-                  dataset,
+                  source: sourceFor({projectId, dataset}),
                   tag: PROJECTION_TAG,
                   perspective: PROJECTION_PERSPECTIVE,
                   signal: controller.signal,

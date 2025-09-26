@@ -8,7 +8,19 @@ import {
 import {type SanityQueryResult} from 'groq'
 import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition} from 'react'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {type SourceOptions} from '../../type'
+import {useSanityInstanceAndSource} from '../context/useSanityInstance'
+
+export type UseQueryOptions<TQuery extends string = string> = Omit<
+  QueryOptions<TQuery>,
+  'source' | 'perspective'
+> & {
+  /**
+   * The perspective used for this query. If not given, it will use the current perspective
+   * as given by <SDKProvider> or <ResourceProvider>.
+   */
+  perspective?: QueryOptions['perspective']
+} & SourceOptions
 
 // Overload 1: Inferred Type (using Typegen)
 /**
@@ -71,7 +83,7 @@ export function useQuery<
   TDataset extends string = string,
   TProjectId extends string = string,
 >(
-  options: QueryOptions<TQuery, TDataset, TProjectId>,
+  options: UseQueryOptions<TQuery>,
 ): {
   /** The query result, typed based on the GROQ query string */
   data: SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>
@@ -108,7 +120,7 @@ export function useQuery<
  * }
  * ```
  */
-export function useQuery<TData>(options: QueryOptions): {
+export function useQuery<TData>(options: UseQueryOptions): {
   /** The query result, cast to the provided type TData */
   data: TData
   /** True if another query is resolving in the background (suspense handles the initial loading state) */
@@ -133,15 +145,17 @@ export function useQuery<TData>(options: QueryOptions): {
  *
  * @category GROQ
  */
-export function useQuery(options: QueryOptions): {data: unknown; isPending: boolean} {
+export function useQuery(options: UseQueryOptions): {data: unknown; isPending: boolean} {
   // Implementation returns unknown, overloads define specifics
-  const instance = useSanityInstance(options)
+  const [instance, source] = useSanityInstanceAndSource(options)
+
+  const perspective = options.perspective ?? instance.config.perspective ?? 'drafts'
 
   // Use React's useTransition to avoid UI jank when queries change
   const [isPending, startTransition] = useTransition()
 
   // Get the unique key for this query and its options
-  const queryKey = getQueryKey(options)
+  const queryKey = getQueryKey({...options, perspective})
   // Use a deferred state to avoid immediate re-renders when the query changes
   const [deferredQueryKey, setDeferredQueryKey] = useState(queryKey)
   // Parse the deferred query key back into a query and options
@@ -167,8 +181,8 @@ export function useQuery(options: QueryOptions): {data: unknown; isPending: bool
 
   // Get the state source for this query from the query store
   const {getCurrent, subscribe} = useMemo(
-    () => getQueryState(instance, deferred),
-    [instance, deferred],
+    () => getQueryState(instance, {...deferred, source}),
+    [instance, source, deferred],
   )
 
   // If data isn't available yet, suspend rendering
@@ -183,7 +197,7 @@ export function useQuery(options: QueryOptions): {data: unknown; isPending: bool
     // Thus, the promise thrown here uses a stable abort signal, ensuring correct behavior.
     const currentSignal = ref.current.signal
 
-    throw resolveQuery(instance, {...deferred, signal: currentSignal})
+    throw resolveQuery(instance, {...deferred, source, signal: currentSignal})
   }
 
   // Subscribe to updates and get the current data

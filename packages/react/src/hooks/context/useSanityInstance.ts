@@ -1,7 +1,8 @@
-import {type SanityConfig, type SanityInstance} from '@sanity/sdk'
+import {type DocumentSource, type SanityConfig, type SanityInstance, sourceFor} from '@sanity/sdk'
 import {useContext} from 'react'
 
 import {SanityInstanceContext} from '../../context/SanityInstanceContext'
+import {type SourceOptions} from '../../type'
 
 /**
  * Retrieves the current Sanity instance or finds a matching instance from the hierarchy
@@ -77,4 +78,37 @@ Please ensure there is a ResourceProvider component with a matching configuratio
   }
 
   return match
+}
+
+export const useSanityInstanceAndSource = (
+  config: SourceOptions,
+): [SanityInstance, DocumentSource] => {
+  const instance = useContext(SanityInstanceContext)
+
+  if (!instance) {
+    throw new Error(
+      `SanityInstance context not found. ${config ? `Requested config: ${JSON.stringify(config, null, 2)}. ` : ''}Please ensure that your component is wrapped in a ResourceProvider or a SanityApp component.`,
+    )
+  }
+
+  if (config.source) {
+    return [instance, config.source]
+  }
+
+  const match = instance.match(config)
+  if (match) {
+    const {projectId, dataset} = match.config
+    if (!projectId || !dataset) {
+      throw new Error(`Current SanityInstance is missing projectId and dataset`)
+    }
+    return [instance, sourceFor({projectId, dataset})]
+  }
+
+  const {projectId, dataset} = config
+
+  if (projectId && dataset) {
+    return [instance, sourceFor({projectId, dataset})]
+  }
+
+  throw new Error(`Current SanityInstance is missing projectId and dataset`)
 }
