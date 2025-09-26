@@ -1,6 +1,7 @@
 import {NEVER} from 'rxjs'
 import {describe, it} from 'vitest'
 
+import {sourceFor} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StoreState} from '../store/createStoreState'
 import {insecureRandomId} from '../utils/ids'
@@ -18,7 +19,11 @@ vi.mock('./subscribeToStateAndFetchBatches.ts')
 
 describe('getPreviewState', () => {
   let instance: SanityInstance
-  const docHandle = {documentId: 'exampleId', documentType: 'exampleType'}
+  const docHandle = {
+    documentId: 'exampleId',
+    documentType: 'exampleType',
+    source: sourceFor({projectId: 'test', dataset: 'test'}),
+  }
   let state: StoreState<PreviewStoreState & {extra?: unknown}>
 
   beforeEach(() => {
