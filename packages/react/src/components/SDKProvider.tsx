@@ -1,7 +1,9 @@
-import {type SanityConfig} from '@sanity/sdk'
-import {type ReactElement, type ReactNode} from 'react'
+import {createSanityInstance, type SanityConfig, type SanityInstance, sourceFor} from '@sanity/sdk'
+import {type ReactElement, type ReactNode, Suspense, useEffect, useMemo, useRef} from 'react'
 
-import {ResourceProvider} from '../context/ResourceProvider'
+import {DefaultSourceContext} from '../context/DefaultSourceContext'
+import {PerspectiveContext} from '../context/PerspectiveContext'
+import {SanityInstanceContext} from '../context/SanityInstanceContext'
 import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
 
 /**
@@ -26,27 +28,67 @@ export function SDKProvider({
   fallback,
   ...props
 }: SDKProviderProps): ReactElement {
-  // reverse because we want the first config to be the default, but the
-  // ResourceProvider nesting makes the last one the default
-  const configs = (Array.isArray(config) ? config : [config]).slice().reverse()
-  const projectIds = configs.map((c) => c.projectId).filter((id): id is string => !!id)
-
-  // Create a nested structure of ResourceProviders for each config
-  const createNestedProviders = (index: number): ReactElement => {
-    if (index >= configs.length) {
-      return (
-        <AuthBoundary {...props} projectIds={projectIds}>
-          {children}
-        </AuthBoundary>
-      )
-    }
-
-    return (
-      <ResourceProvider {...configs[index]} fallback={fallback}>
-        {createNestedProviders(index + 1)}
-      </ResourceProvider>
+  if (Array.isArray(config)) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '<SDKProvider>: Multiple configs are no longer supported. Only the first one will be used.',
     )
   }
 
-  return createNestedProviders(0)
+  const {projectId, dataset, perspective, ...mainConfig} = Array.isArray(config)
+    ? config[0] || {}
+    : config
+
+  const instance = useMemo(() => createSanityInstance(mainConfig), [mainConfig])
+
+  // Ref to hold the scheduled disposal timer.
+  const disposal = useRef<{
+    instance: SanityInstance
+    timeoutId: ReturnType<typeof setTimeout>
+  } | null>(null)
+
+  useEffect(() => {
+    // If the component remounts quickly (as in Strict Mode), cancel any pending disposal.
+    if (disposal.current !== null && instance === disposal.current.instance) {
+      clearTimeout(disposal.current.timeoutId)
+      disposal.current = null
+    }
+
+    return () => {
+      disposal.current = {
+        instance,
+        timeoutId: setTimeout(() => {
+          if (!instance.isDisposed()) {
+            instance.dispose()
+          }
+        }, 0),
+      }
+    }
+  }, [instance])
+
+  let result = (
+    <SanityInstanceContext.Provider value={instance}>
+      <Suspense fallback={fallback}>
+        <AuthBoundary {...props}>{children}</AuthBoundary>
+      </Suspense>
+    </SanityInstanceContext.Provider>
+  )
+
+  if (perspective) {
+    result = <PerspectiveContext.Provider value={perspective}>{result}</PerspectiveContext.Provider>
+  }
+
+  if (projectId || dataset) {
+    if (!(projectId && dataset)) {
+      throw new Error('SDKProvider requires either both of projectId/dataset or none.')
+    }
+
+    result = (
+      <DefaultSourceContext.Provider value={sourceFor({projectId, dataset})}>
+        {result}
+      </DefaultSourceContext.Provider>
+    )
+  }
+
+  return result
 }

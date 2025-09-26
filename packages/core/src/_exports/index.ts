@@ -50,6 +50,7 @@ export {
   createProjectHandle,
 } from '../config/handles'
 export {
+  childSourceFor,
   type DatasetHandle,
   type DocumentHandle,
   type DocumentSource,

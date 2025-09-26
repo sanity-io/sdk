@@ -1,7 +1,8 @@
-import {createSanityInstance, type SanityConfig, type SanityInstance} from '@sanity/sdk'
-import {Suspense, useContext, useEffect, useMemo, useRef} from 'react'
+import {childSourceFor, type DocumentSource, type SanityConfig, sourceFor} from '@sanity/sdk'
+import {Suspense, useContext} from 'react'
 
-import {SanityInstanceContext} from './SanityInstanceContext'
+import {DefaultSourceContext} from './DefaultSourceContext'
+import {PerspectiveContext} from './PerspectiveContext'
 
 const DEFAULT_FALLBACK = (
   <>
@@ -70,42 +71,49 @@ export interface ResourceProviderProps extends SanityConfig {
 export function ResourceProvider({
   children,
   fallback,
+  perspective,
+  projectId,
+  dataset,
   ...config
 }: ResourceProviderProps): React.ReactNode {
-  const parent = useContext(SanityInstanceContext)
-  const instance = useMemo(
-    () => (parent ? parent.createChild(config) : createSanityInstance(config)),
-    [config, parent],
-  )
+  const restKeys = Object.keys(config)
+  if (restKeys.length > 0) {
+    const listFormatter = new Intl.ListFormat('en', {style: 'long', type: 'conjunction'})
+    // eslint-disable-next-line no-console
+    console.warn(
+      `ResourceProvider contains deprecated props: ${listFormatter.format(restKeys)}. ` +
+        `Allowed keys are: ${listFormatter.format(['projectId', 'dataset', 'perspective', 'fallback'])}.`,
+    )
+  }
 
-  // Ref to hold the scheduled disposal timer.
-  const disposal = useRef<{
-    instance: SanityInstance
-    timeoutId: ReturnType<typeof setTimeout>
-  } | null>(null)
+  const parentSource = useContext(DefaultSourceContext)
 
-  useEffect(() => {
-    // If the component remounts quickly (as in Strict Mode), cancel any pending disposal.
-    if (disposal.current !== null && instance === disposal.current.instance) {
-      clearTimeout(disposal.current.timeoutId)
-      disposal.current = null
-    }
+  let result = <Suspense fallback={fallback ?? DEFAULT_FALLBACK}>{children}</Suspense>
 
-    return () => {
-      disposal.current = {
-        instance,
-        timeoutId: setTimeout(() => {
-          if (!instance.isDisposed()) {
-            instance.dispose()
-          }
-        }, 0),
-      }
-    }
-  }, [instance])
+  if (perspective) {
+    result = <PerspectiveContext.Provider value={perspective}>{result}</PerspectiveContext.Provider>
+  }
 
-  return (
-    <SanityInstanceContext.Provider value={instance}>
-      <Suspense fallback={fallback ?? DEFAULT_FALLBACK}>{children}</Suspense>
-    </SanityInstanceContext.Provider>
-  )
+  let defaultSource: DocumentSource | undefined
+  if (projectId && dataset) {
+    defaultSource = sourceFor({projectId, dataset})
+  } else if (projectId || dataset) {
+    if (!parentSource)
+      throw new Error(
+        `ResourceProvider given one of projectId/dataset, but no default source exists.`,
+      )
+
+    defaultSource = childSourceFor(parentSource, {
+      projectId,
+      dataset,
+    })
+  }
+
+  if (defaultSource) {
+    result = (
+      <DefaultSourceContext.Provider value={defaultSource}>{result}</DefaultSourceContext.Provider>
+    )
+  }
+
+  return result
 }

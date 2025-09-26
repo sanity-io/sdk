@@ -1,6 +1,13 @@
-import {type DocumentSource, type SanityConfig, type SanityInstance, sourceFor} from '@sanity/sdk'
+import {
+  childSourceFor,
+  type DocumentSource,
+  type SanityConfig,
+  type SanityInstance,
+  sourceFor,
+} from '@sanity/sdk'
 import {useContext} from 'react'
 
+import {DefaultSourceContext} from '../../context/DefaultSourceContext'
 import {SanityInstanceContext} from '../../context/SanityInstanceContext'
 import {type SourceOptions} from '../../type'
 
@@ -58,57 +65,45 @@ import {type SourceOptions} from '../../type'
  * @throws Error if no SanityInstance is found in context
  * @throws Error if no matching instance is found for the provided config
  */
-export const useSanityInstance = (config?: SanityConfig): SanityInstance => {
+export const useSanityInstance = (_?: SanityConfig): SanityInstance => {
   const instance = useContext(SanityInstanceContext)
 
   if (!instance) {
-    throw new Error(
-      `SanityInstance context not found. ${config ? `Requested config: ${JSON.stringify(config, null, 2)}. ` : ''}Please ensure that your component is wrapped in a ResourceProvider or a SanityApp component.`,
-    )
+    throw new Error(`SanityInstance context not found.`)
   }
 
-  if (!config) return instance
-
-  const match = instance.match(config)
-  if (!match) {
-    throw new Error(
-      `Could not find a matching Sanity instance for the requested configuration: ${JSON.stringify(config, null, 2)}.
-Please ensure there is a ResourceProvider component with a matching configuration in the component hierarchy.`,
-    )
-  }
-
-  return match
+  return instance
 }
 
-export const useSanityInstanceAndSource = (
-  config: SourceOptions,
-): [SanityInstance, DocumentSource] => {
+export const useSanityInstanceAndSource = ({
+  projectId,
+  dataset,
+  source,
+}: SourceOptions): [SanityInstance, DocumentSource] => {
   const instance = useContext(SanityInstanceContext)
+  const defaultSource = useContext(DefaultSourceContext)
 
   if (!instance) {
-    throw new Error(
-      `SanityInstance context not found. ${config ? `Requested config: ${JSON.stringify(config, null, 2)}. ` : ''}Please ensure that your component is wrapped in a ResourceProvider or a SanityApp component.`,
-    )
+    throw new Error(`SanityInstance context not found.`)
   }
 
-  if (config.source) {
-    return [instance, config.source]
+  if (source) {
+    return [instance, source]
   }
-
-  const match = instance.match(config)
-  if (match) {
-    const {projectId, dataset} = match.config
-    if (!projectId || !dataset) {
-      throw new Error(`Current SanityInstance is missing projectId and dataset`)
-    }
-    return [instance, sourceFor({projectId, dataset})]
-  }
-
-  const {projectId, dataset} = config
 
   if (projectId && dataset) {
     return [instance, sourceFor({projectId, dataset})]
+  } else if (projectId || dataset) {
+    if (!defaultSource) {
+      throw new Error(`Given one of projectId/dataset, but no default source exists.`)
+    }
+
+    return [instance, childSourceFor(defaultSource, {projectId, dataset})]
   }
 
-  throw new Error(`Current SanityInstance is missing projectId and dataset`)
+  if (defaultSource) {
+    return [instance, defaultSource]
+  }
+
+  throw new Error(`No source defined.`)
 }

@@ -110,3 +110,20 @@ export const __sourceData = Symbol('Sanity.DocumentSource')
 export function sourceFor(data: {projectId: string; dataset: string}): DocumentSource {
   return {[__sourceData]: data}
 }
+
+/**
+ * @public
+ */
+export function childSourceFor(
+  parent: DocumentSource,
+  data: {projectId?: string; dataset?: string},
+): DocumentSource {
+  const parentData = parent[__sourceData]
+
+  return {
+    [__sourceData]: {
+      projectId: data.projectId ?? parentData.projectId,
+      dataset: data.dataset ?? parentData.dataset,
+    },
+  }
+}

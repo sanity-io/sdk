@@ -48,26 +48,6 @@ describe('useSanityInstance', () => {
     }).toThrow(JSON.stringify(requestedConfig, null, 2))
   })
 
-  it('should find a matching instance with provided config', () => {
-    // Create a parent instance
-    const parentInstance = createSanityInstance({
-      projectId: 'parent-project',
-      dataset: 'parent-dataset',
-    })
-
-    // Create a child instance
-    const childInstance = parentInstance.createChild({dataset: 'child-dataset'})
-
-    // Render the hook with the child instance and request the parent config
-    const {result} = renderHook(
-      () => useSanityInstance({projectId: 'parent-project', dataset: 'parent-dataset'}),
-      {wrapper: createWrapper(childInstance)},
-    )
-
-    // Should match and return the parent instance
-    expect(result.current).toBe(parentInstance)
-  })
-
   it('should throw an error if no matching instance is found for config', () => {
     // Create an instance
     const instance = createSanityInstance({projectId: 'test-project', dataset: 'test-dataset'})
@@ -98,37 +78,6 @@ describe('useSanityInstance', () => {
     }).toThrow(JSON.stringify(requestedConfig, null, 2))
   })
 
-  it('should return the current instance when no config is provided', () => {
-    // Create a hierarchy of instances
-    const grandparent = createSanityInstance({projectId: 'gp', dataset: 'gp-ds'})
-    const parent = grandparent.createChild({projectId: 'p'})
-    const child = parent.createChild({dataset: 'child-ds'})
-
-    // Render the hook with the child instance and no config
-    const {result} = renderHook(() => useSanityInstance(), {
-      wrapper: createWrapper(child),
-    })
-
-    // Should return the child instance
-    expect(result.current).toBe(child)
-  })
-
-  it('should match child instance when it satisfies the config', () => {
-    // Create a parent instance
-    const parent = createSanityInstance({projectId: 'parent', dataset: 'parent-ds'})
-
-    // Create a child instance that inherits projectId
-    const child = parent.createChild({dataset: 'child-ds'})
-
-    // Render the hook with the child instance and request by the child's dataset
-    const {result} = renderHook(() => useSanityInstance({dataset: 'child-ds'}), {
-      wrapper: createWrapper(child),
-    })
-
-    // Should match and return the child instance
-    expect(result.current).toBe(child)
-  })
-
   it('should match partial config correctly', () => {
     // Create an instance with multiple config values
     const instance = createSanityInstance({
@@ -142,21 +91,6 @@ describe('useSanityInstance', () => {
     })
 
     expect(result.current).toBe(instance)
-  })
-
-  it("should match deeper in hierarchy when current instance doesn't match", () => {
-    // Create a three-level hierarchy
-    const root = createSanityInstance({projectId: 'root', dataset: 'root-ds'})
-    const middle = root.createChild({projectId: 'middle'})
-    const leaf = middle.createChild({dataset: 'leaf-ds'})
-
-    // Request config matching the root from the leaf
-    const {result} = renderHook(() => useSanityInstance({projectId: 'root', dataset: 'root-ds'}), {
-      wrapper: createWrapper(leaf),
-    })
-
-    // Should find and return the root instance
-    expect(result.current).toBe(root)
   })
 
   it('should match undefined values in config', () => {

@@ -1,6 +1,7 @@
 import {type DocumentSource, getPerspectiveState, type PerspectiveHandle} from '@sanity/sdk'
-import {useMemo} from 'react'
+import {useContext, useMemo} from 'react'
 
+import {PerspectiveContext} from '../../context/PerspectiveContext'
 import {useSanityInstanceAndSource} from '../context/useSanityInstance'
 import {useStoreState} from '../helpers/useStoreState'
 
@@ -35,8 +36,9 @@ type UsePerspective = {
  */
 export const usePerspective: UsePerspective = ({perspective, source}) => {
   const [instance, actualSource] = useSanityInstanceAndSource({source})
+  const contextPerspective = useContext(PerspectiveContext)
 
-  const actualPerspective = perspective ?? instance.config.perspective ?? 'drafts'
+  const actualPerspective = perspective ?? contextPerspective ?? 'drafts'
 
   const state = useMemo(
     () => getPerspectiveState(instance, {perspective: actualPerspective, source: actualSource}),
