@@ -2,7 +2,7 @@ import {type DocumentAction, type DocumentPermissionsResult, getPermissionsState
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {filter, firstValueFrom} from 'rxjs'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {useSanityInstanceAndSource} from '../context/useSanityInstance'
 
 /**
  *
@@ -112,22 +112,22 @@ export function useDocumentPermissions(
     }
   }
 
-  const instance = useSanityInstance({projectId, dataset})
+  const [instance, source] = useSanityInstanceAndSource({projectId, dataset})
   const isDocumentReady = useCallback(
-    () => getPermissionsState(instance, {actions}).getCurrent() !== undefined,
-    [actions, instance],
+    () => getPermissionsState(instance, {actions, source}).getCurrent() !== undefined,
+    [actions, instance, source],
   )
   if (!isDocumentReady()) {
     throw firstValueFrom(
-      getPermissionsState(instance, {actions}).observable.pipe(
+      getPermissionsState(instance, {actions, source}).observable.pipe(
         filter((result) => result !== undefined),
       ),
     )
   }
 
   const {subscribe, getCurrent} = useMemo(
-    () => getPermissionsState(instance, {actions}),
-    [actions, instance],
+    () => getPermissionsState(instance, {actions, source}),
+    [actions, instance, source],
   )
 
   return useSyncExternalStore(subscribe, getCurrent) as DocumentPermissionsResult

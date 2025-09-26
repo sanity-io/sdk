@@ -42,7 +42,7 @@ describe('useDocumentEvent hook', () => {
     expect(vi.mocked(subscribeDocumentEvents)).toHaveBeenCalledTimes(1)
     expect(vi.mocked(subscribeDocumentEvents).mock.calls[0][0]).toBe(instance)
 
-    const stableHandler = vi.mocked(subscribeDocumentEvents).mock.calls[0][1]
+    const stableHandler = vi.mocked(subscribeDocumentEvents).mock.calls[0][1].onEvent
     expect(typeof stableHandler).toBe('function')
 
     const event = {type: 'edited', documentId: 'doc1', outgoing: {}} as DocumentEvent

@@ -86,7 +86,7 @@ afterEach(() => {
 })
 
 it('creates, edits, and publishes a document', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-single', documentType: 'article'})
+  const doc = {documentId: 'doc-single', documentType: 'article', source}
   const documentState = getDocumentState(instance, doc)
 
   // Initially the document is undefined
@@ -122,7 +122,7 @@ it('creates, edits, and publishes a document', async () => {
 })
 
 it('edits existing documents', async () => {
-  const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article'})
+  const doc = {documentId: 'existing-doc', documentType: 'article', source}
   const state = getDocumentState(instance, doc)
 
   // not subscribed yet so the value is undefined
@@ -151,16 +151,16 @@ it('edits existing documents', async () => {
 })
 
 it('sets optimistic changes synchronously', async () => {
-  const doc = createDocumentHandle({documentId: 'optimistic', documentType: 'article'})
+  const doc = {documentId: 'optimistic', documentType: 'article'}
 
-  const state1 = getDocumentState(instance1, doc)
-  const state2 = getDocumentState(instance2, doc)
+  const state1 = getDocumentState(instance1, {...doc, source: source1})
+  const state2 = getDocumentState(instance2, {...doc, source: source2})
 
   const unsubscribe1 = state1.subscribe()
   const unsubscribe2 = state2.subscribe()
 
   // wait until the value is primed in the store
-  await resolveDocument(instance1, doc)
+  await resolveDocument(instance1, {...doc, source: source1})
 
   // then the actions are synchronous
   expect(state1.getCurrent()).toBeNull()
@@ -204,9 +204,9 @@ it('sets optimistic changes synchronously', async () => {
 })
 
 it('propagates changes between two instances', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-collab', documentType: 'article'})
-  const state1 = getDocumentState(instance1, doc)
-  const state2 = getDocumentState(instance2, doc)
+  const doc = {documentId: 'doc-collab', documentType: 'article'}
+  const state1 = getDocumentState(instance1, {...doc, source: source1})
+  const state2 = getDocumentState(instance2, {...doc, source: source2})
 
   const state1Unsubscribe = state1.subscribe()
   const state2Unsubscribe = state2.subscribe()
@@ -237,9 +237,9 @@ it('propagates changes between two instances', async () => {
 })
 
 it('handles concurrent edits and resolves conflicts', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-concurrent', documentType: 'article'})
-  const state1 = getDocumentState(instance1, doc)
-  const state2 = getDocumentState(instance2, doc)
+  const doc = {documentId: 'doc-concurrent', documentType: 'article'}
+  const state1 = getDocumentState(instance1, {...doc, source: source1})
+  const state2 = getDocumentState(instance2, {...doc, source: source2})
 
   const state1Unsubscribe = state1.subscribe()
   const state2Unsubscribe = state2.subscribe()
@@ -281,7 +281,7 @@ it('handles concurrent edits and resolves conflicts', async () => {
 })
 
 it('unpublishes and discards a document', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-pub-unpub', documentType: 'article'})
+  const doc = {documentId: 'doc-pub-unpub', documentType: 'article', source}
   const documentState = getDocumentState(instance, doc)
   const unsubscribe = documentState.subscribe()
 
@@ -312,7 +312,7 @@ it('unpublishes and discards a document', async () => {
 })
 
 it('deletes a document', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-delete', documentType: 'article'})
+  const doc = {documentId: 'doc-delete', documentType: 'article', source}
 
   const documentState = getDocumentState(instance, doc)
   const unsubscribe = documentState.subscribe()
@@ -333,7 +333,7 @@ it('deletes a document', async () => {
 })
 
 it('cleans up document state when there are no subscribers', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-cleanup', documentType: 'article'})
+  const doc = {documentId: 'doc-cleanup', documentType: 'article', source}
   const documentState = getDocumentState(instance, doc)
 
   // Subscribe to the document state.
@@ -356,7 +356,7 @@ it('cleans up document state when there are no subscribers', async () => {
 })
 
 it('fetches documents if there are no active subscriptions for the actions applied', async () => {
-  const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article'})
+  const doc = {documentId: 'existing-doc', documentType: 'article', source}
 
   const {getCurrent} = getDocumentState(instance, doc)
   expect(getCurrent()).toBeUndefined()
@@ -411,7 +411,7 @@ it('fetches documents if there are no active subscriptions for the actions appli
 })
 
 it('batches edit transaction into one outgoing transaction', async () => {
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = {documentId: crypto.randomUUID(), documentType: 'article', source}
 
   const unsubscribe = getDocumentState(instance, doc).subscribe()
 
@@ -438,7 +438,7 @@ it('batches edit transaction into one outgoing transaction', async () => {
 })
 
 it('provides the consistency status via `getDocumentSyncStatus`', async () => {
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = {documentId: crypto.randomUUID(), documentType: 'article', source}
 
   const syncStatus = getDocumentSyncStatus(instance, doc)
   expect(syncStatus.getCurrent()).toBeUndefined()
@@ -482,15 +482,18 @@ it('reverts failed outgoing transaction locally', async () => {
   })
 
   const revertedEventPromise = new Promise<TransactionRevertedEvent>((resolve) => {
-    const unsubscribe = subscribeDocumentEvents(instance, (e) => {
-      if (e.type === 'reverted') {
-        resolve(e)
-        unsubscribe()
-      }
+    const unsubscribe = subscribeDocumentEvents(instance, {
+      onEvent: (e) => {
+        if (e.type === 'reverted') {
+          resolve(e)
+          unsubscribe()
+        }
+      },
+      source,
     })
   })
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = {documentId: crypto.randomUUID(), documentType: 'article', source}
 
   const {getCurrent, subscribe} = getDocumentState(instance, doc)
   const unsubscribe = subscribe()
@@ -546,15 +549,18 @@ it('reverts failed outgoing transaction locally', async () => {
 
 it('removes a queued transaction if it fails to apply', async () => {
   const actionErrorEventPromise = new Promise<ActionErrorEvent>((resolve) => {
-    const unsubscribe = subscribeDocumentEvents(instance, (e) => {
-      if (e.type === 'error') {
-        resolve(e)
-        unsubscribe()
-      }
+    const unsubscribe = subscribeDocumentEvents(instance, {
+      onEvent: (e) => {
+        if (e.type === 'error') {
+          resolve(e)
+          unsubscribe()
+        }
+      },
+      source,
     })
   })
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = {documentId: crypto.randomUUID(), documentType: 'article', source}
   const state = getDocumentState(instance, doc)
   const unsubscribe = state.subscribe()
 
@@ -587,10 +593,11 @@ it('returns allowed true when no permission errors occur', async () => {
   client.observable.request = vi.fn().mockReturnValue(of(datasetAcl))
 
   // Create a document and subscribe to it.
-  const doc = createDocumentHandle({
+  const doc = {
     documentId: 'doc-perm-allowed',
     documentType: 'article',
-  })
+    source,
+  }
   const state = getDocumentState(instance, doc)
   const unsubscribe = state.subscribe()
   await applyDocumentActions(instance, {actions: [createDocument(doc)], source}).then((r) =>
@@ -606,6 +613,7 @@ it('returns allowed true when no permission errors occur', async () => {
         patches: [{set: {title: 'New Title'}}],
       },
     ],
+    source,
   })
   // Wait briefly to allow permissions calculation.
   await new Promise((resolve) => setTimeout(resolve, 10))
@@ -638,7 +646,7 @@ it('returns allowed false with reasons when permission errors occur', async () =
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
   const doc = createDocumentHandle({documentId: 'doc-perm-denied', documentType: 'article'})
-  const result = await resolvePermissions(instance, {actions: [createDocument(doc)]})
+  const result = await resolvePermissions(instance, {actions: [createDocument(doc)], source})
 
   const message = 'You do not have permission to create a draft for document "doc-perm-denied".'
   expect(result).toMatchObject({
@@ -659,17 +667,19 @@ it('fetches dataset ACL and updates grants in the document store state', async (
   const book = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'book'})
   const author = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'author'})
 
-  expect(await resolvePermissions(instance, {actions: [createDocument(book)]})).toEqual({
+  expect(await resolvePermissions(instance, {actions: [createDocument(book)], source})).toEqual({
     allowed: true,
   })
-  expect(await resolvePermissions(instance, {actions: [createDocument(author)]})).toMatchObject({
+  expect(
+    await resolvePermissions(instance, {actions: [createDocument(author)], source}),
+  ).toMatchObject({
     allowed: false,
     message: expect.stringContaining('You do not have permission to create a draft for document'),
   })
 })
 
 it('returns a promise that resolves when a document has been loaded in the store (useful for suspense)', async () => {
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = {documentId: crypto.randomUUID(), documentType: 'article', source}
 
   expect(await resolveDocument(instance, doc)).toBe(null)
 
@@ -691,7 +701,7 @@ it('returns a promise that resolves when a document has been loaded in the store
 
 it('emits an event for each action after an outgoing transaction has been accepted', async () => {
   const handler = vi.fn()
-  const unsubscribe = subscribeDocumentEvents(instance, handler)
+  const unsubscribe = subscribeDocumentEvents(instance, {onEvent: handler, source})
 
   const documentId = crypto.randomUUID()
   const doc = createDocumentHandle({documentId, documentType: 'article'})
