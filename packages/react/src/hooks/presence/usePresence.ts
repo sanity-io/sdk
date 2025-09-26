@@ -1,7 +1,7 @@
 import {getPresence, type UserPresence} from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {useSanityInstanceAndSource} from '../context/useSanityInstance'
 
 /**
  * A hook for subscribing to presence information for the current project.
@@ -10,8 +10,11 @@ import {useSanityInstance} from '../context/useSanityInstance'
 export function usePresence(): {
   locations: UserPresence[]
 } {
-  const sanityInstance = useSanityInstance()
-  const source = useMemo(() => getPresence(sanityInstance, {}), [sanityInstance])
+  const [sanityInstance, actualSource] = useSanityInstanceAndSource({})
+  const source = useMemo(
+    () => getPresence(sanityInstance, {source: actualSource}),
+    [sanityInstance, actualSource],
+  )
   const subscribe = useCallback((callback: () => void) => source.subscribe(callback), [source])
   const locations = useSyncExternalStore(
     subscribe,
