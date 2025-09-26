@@ -6,8 +6,17 @@ import {
   resolveQuery,
 } from '@sanity/sdk'
 import {type SanityQueryResult} from 'groq'
-import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition} from 'react'
+import {
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from 'react'
 
+import {PerspectiveContext} from '../../context/PerspectiveContext'
 import {type SourceOptions} from '../../type'
 import {useSanityInstanceAndSource} from '../context/useSanityInstance'
 
@@ -148,8 +157,9 @@ export function useQuery<TData>(options: UseQueryOptions): {
 export function useQuery(options: UseQueryOptions): {data: unknown; isPending: boolean} {
   // Implementation returns unknown, overloads define specifics
   const [instance, source] = useSanityInstanceAndSource(options)
+  const contextPerspective = useContext(PerspectiveContext)
 
-  const perspective = options.perspective ?? instance.config.perspective ?? 'drafts'
+  const perspective = options.perspective ?? contextPerspective ?? 'drafts'
 
   // Use React's useTransition to avoid UI jank when queries change
   const [isPending, startTransition] = useTransition()

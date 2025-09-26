@@ -1,5 +1,3 @@
-import {pick} from 'lodash-es'
-
 import {type SanityConfig} from '../config/sanityConfig'
 import {insecureRandomId} from '../utils/ids'
 
@@ -40,27 +38,6 @@ export interface SanityInstance {
    * @returns Function to unsubscribe the callback
    */
   onDispose(cb: () => void): () => void
-
-  /**
-   * Gets the parent instance in the hierarchy
-   * @returns Parent instance or undefined if this is the root
-   */
-  getParent(): SanityInstance | undefined
-
-  /**
-   * Creates a child instance with merged configuration
-   * @param config - Configuration to merge with parent values
-   * @remarks Child instances inherit parent configuration but can override values
-   */
-  createChild(config: SanityConfig): SanityInstance
-
-  /**
-   * Traverses the instance hierarchy to find the first instance whose configuration
-   * matches the given target config using a shallow comparison.
-   * @param targetConfig - A partial configuration object containing key-value pairs to match.
-   * @returns The first matching instance or undefined if no match is found.
-   */
-  match(targetConfig: Partial<SanityConfig>): SanityInstance | undefined
 }
 
 /**
@@ -92,31 +69,6 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
       return () => {
         disposeListeners.delete(listenerId)
       }
-    },
-    getParent: () => undefined,
-    createChild: (next) =>
-      Object.assign(
-        createSanityInstance({
-          ...config,
-          ...next,
-          ...(config.auth === next.auth
-            ? config.auth
-            : config.auth && next.auth && {auth: {...config.auth, ...next.auth}}),
-        }),
-        {getParent: () => instance},
-      ),
-    match: (targetConfig) => {
-      if (
-        Object.entries(pick(targetConfig, 'auth', 'projectId', 'dataset')).every(
-          ([key, value]) => config[key as keyof SanityConfig] === value,
-        )
-      ) {
-        return instance
-      }
-
-      const parent = instance.getParent()
-      if (parent) return parent.match(targetConfig)
-      return undefined
     },
   }
 
