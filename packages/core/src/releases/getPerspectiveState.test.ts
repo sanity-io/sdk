@@ -1,7 +1,7 @@
 import {filter, firstValueFrom, of, Subject, take} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
-import {type PerspectiveHandle, type ReleasePerspective} from '../config/sanityConfig'
+import {type ReleasePerspective, sourceFor} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {listenQuery as mockListenQuery} from '../utils/listenQuery'
 import {getPerspectiveState} from './getPerspectiveState'
@@ -20,6 +20,7 @@ vi.mock('../client/clientStore', () => ({
 }))
 
 describe('getPerspectiveState', () => {
+  const source = sourceFor({projectId: 'test', dataset: 'test'})
   let instance: SanityInstance
   let mockReleasesQuerySubject: Subject<ReleaseDocument[]>
 
@@ -53,40 +54,22 @@ describe('getPerspectiveState', () => {
     vi.clearAllMocks()
   })
 
-  it('should return default perspective if no options or instance perspective is provided', async () => {
-    const state = getPerspectiveState(instance, {})
-    mockReleasesQuerySubject.next([])
-    const perspective = await firstValueFrom(state.observable)
-    expect(perspective).toBe('drafts')
-  })
-
-  it('should return instance perspective if provided and no options perspective', async () => {
-    instance.config.perspective = 'published'
-    const state = getPerspectiveState(instance, {})
-    mockReleasesQuerySubject.next([])
-    const perspective = await firstValueFrom(state.observable)
-    expect(perspective).toBe('published')
-  })
-
   it('should return options perspective if provided', async () => {
-    const options: PerspectiveHandle = {perspective: 'raw'}
-    const state = getPerspectiveState(instance, options)
+    const state = getPerspectiveState(instance, {perspective: 'raw', source})
     mockReleasesQuerySubject.next([])
     const perspective = await firstValueFrom(state.observable)
     expect(perspective).toBe('raw')
   })
 
   it('should return undefined if release perspective is requested but no active releases', async () => {
-    const options: PerspectiveHandle = {perspective: {releaseName: 'release1'}}
-    const state = getPerspectiveState(instance, options)
+    const state = getPerspectiveState(instance, {perspective: {releaseName: 'release1'}, source})
     mockReleasesQuerySubject.next([])
     const perspective = await firstValueFrom(state.observable)
     expect(perspective).toBeUndefined()
   })
 
   it('should calculate perspective based on active releases and releaseName', async () => {
-    const options: PerspectiveHandle = {perspective: {releaseName: 'release1'}}
-    const state = getPerspectiveState(instance, options)
+    const state = getPerspectiveState(instance, {perspective: {releaseName: 'release1'}, source})
     mockReleasesQuerySubject.next(activeReleases)
 
     const perspective = await firstValueFrom(
@@ -99,8 +82,7 @@ describe('getPerspectiveState', () => {
   })
 
   it('should calculate perspective including multiple releases up to the specified releaseName', async () => {
-    const options: PerspectiveHandle = {perspective: {releaseName: 'release2'}}
-    const state = getPerspectiveState(instance, options)
+    const state = getPerspectiveState(instance, {perspective: {releaseName: 'release2'}, source})
     mockReleasesQuerySubject.next(activeReleases)
     const perspective = await firstValueFrom(
       state.observable.pipe(
@@ -116,8 +98,7 @@ describe('getPerspectiveState', () => {
       releaseName: 'release2',
       excludedPerspectives: ['drafts', 'release1'],
     }
-    const options: PerspectiveHandle = {perspective: perspectiveConfig}
-    const state = getPerspectiveState(instance, options)
+    const state = getPerspectiveState(instance, {perspective: perspectiveConfig, source})
     mockReleasesQuerySubject.next(activeReleases)
     const perspective = await firstValueFrom(
       state.observable.pipe(
@@ -129,8 +110,7 @@ describe('getPerspectiveState', () => {
   })
 
   it('should throw if the specified releaseName is not found in active releases', async () => {
-    const options: PerspectiveHandle = {perspective: {releaseName: 'nonexistent'}}
-    const state = getPerspectiveState(instance, options)
+    const state = getPerspectiveState(instance, {perspective: {releaseName: 'nonexistent'}, source})
     mockReleasesQuerySubject.next(activeReleases)
 
     await expect(
@@ -144,10 +124,10 @@ describe('getPerspectiveState', () => {
   })
 
   it('should reuse the same options object for identical inputs (cache test)', async () => {
-    const options1: PerspectiveHandle = {perspective: {releaseName: 'release1'}}
-    const options2: PerspectiveHandle = {perspective: {releaseName: 'release1'}}
+    const options1 = {perspective: {releaseName: 'release1'}}
+    const options2 = {perspective: {releaseName: 'release1'}}
 
-    const state1 = getPerspectiveState(instance, options1)
+    const state1 = getPerspectiveState(instance, {...options1, source})
     mockReleasesQuerySubject.next(activeReleases)
     await firstValueFrom(
       state1.observable.pipe(
@@ -156,15 +136,14 @@ describe('getPerspectiveState', () => {
       ),
     )
 
-    const state2 = getPerspectiveState(instance, options2)
+    const state2 = getPerspectiveState(instance, {...options2, source})
     const perspective2 = state2.getCurrent()
 
     expect(perspective2).toEqual(['drafts', 'release1'])
   })
 
   it('should handle changes in activeReleases (cache test)', async () => {
-    const options: PerspectiveHandle = {perspective: {releaseName: 'release1'}}
-
+    const options = {perspective: {releaseName: 'release1'}, source}
     const state1 = getPerspectiveState(instance, options)
     mockReleasesQuerySubject.next(activeReleases)
     const perspective1 = await firstValueFrom(

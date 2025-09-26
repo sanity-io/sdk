@@ -1,19 +1,14 @@
-import {
-  getActiveReleasesState,
-  getPerspectiveState,
-  type PerspectiveHandle,
-  type SanityInstance,
-  type StateSource,
-} from '@sanity/sdk'
-import {filter, firstValueFrom} from 'rxjs'
+import {type DocumentSource, getPerspectiveState, type PerspectiveHandle} from '@sanity/sdk'
+import {useMemo} from 'react'
 
-import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {useSanityInstanceAndSource} from '../context/useSanityInstance'
+import {useStoreState} from '../helpers/useStoreState'
 
 /**
  * @public
  */
 type UsePerspective = {
-  (perspectiveHandle: PerspectiveHandle): string | string[]
+  (perspectiveHandle: PerspectiveHandle & {source?: DocumentSource}): string | string[]
 }
 
 /**
@@ -30,7 +25,7 @@ type UsePerspective = {
  * ```tsx
  * import {usePerspective, useQuery} from '@sanity/sdk-react'
 
- * const perspective = usePerspective({perspective: 'rxg1346', projectId: 'abc123', dataset: 'production'})
+ * const perspective = usePerspective({perspective: 'rxg1346'})
  * const {data} = useQuery<Movie[]>('*[_type == "movie"]', {
  *   perspective: perspective,
  * })
@@ -38,13 +33,15 @@ type UsePerspective = {
  *
  * @returns The perspective for the given perspective handle.
  */
-export const usePerspective: UsePerspective = createStateSourceHook({
-  getState: getPerspectiveState as (
-    instance: SanityInstance,
-    perspectiveHandle?: PerspectiveHandle,
-  ) => StateSource<string | string[]>,
-  shouldSuspend: (instance: SanityInstance, options: PerspectiveHandle): boolean =>
-    getPerspectiveState(instance, options).getCurrent() === undefined,
-  suspender: (instance: SanityInstance, _options?: PerspectiveHandle) =>
-    firstValueFrom(getActiveReleasesState(instance, {}).observable.pipe(filter(Boolean))),
-})
+export const usePerspective: UsePerspective = ({perspective, source}) => {
+  const [instance, actualSource] = useSanityInstanceAndSource({source})
+
+  const actualPerspective = perspective ?? instance.config.perspective ?? 'drafts'
+
+  const state = useMemo(
+    () => getPerspectiveState(instance, {perspective: actualPerspective, source: actualSource}),
+    [instance, actualPerspective, actualSource],
+  )
+
+  return useStoreState(state)
+}
