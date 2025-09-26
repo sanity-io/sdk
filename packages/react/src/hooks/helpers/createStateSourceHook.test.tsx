@@ -17,7 +17,7 @@ describe('createStateSourceHook', () => {
   })
 
   it('should create a hook that provides access to state source', () => {
-    const mockInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const mockInstance = createSanityInstance()
     vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
 
     const mockState = {count: 0}
@@ -39,7 +39,7 @@ describe('createStateSourceHook', () => {
   })
 
   it('should recreate state source when params change', () => {
-    const mockInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const mockInstance = createSanityInstance()
     vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
 
     const subscribe = vi.fn()
@@ -89,7 +89,7 @@ describe('createStateSourceHook', () => {
   })
 
   it('should handle subscription functionality', () => {
-    const mockInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const mockInstance = createSanityInstance()
     vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
 
     const mockSubscribe = vi.fn()
@@ -110,7 +110,7 @@ describe('createStateSourceHook', () => {
   })
 
   it('should handle multiple parameters', () => {
-    const mockInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const mockInstance = createSanityInstance()
     vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
 
     const stateSourceFactory = vi.fn(
@@ -129,7 +129,7 @@ describe('createStateSourceHook', () => {
   })
 
   it('should throw suspender promise when shouldSuspend is true', () => {
-    const mockInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const mockInstance = createSanityInstance()
     vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
 
     const mockGetState = vi.fn().mockReturnValue({
@@ -163,7 +163,7 @@ describe('createStateSourceHook', () => {
   })
 
   it('should not suspend when shouldSuspend returns false', () => {
-    const mockInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const mockInstance = createSanityInstance()
     vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
 
     const mockState = {value: 'test'}

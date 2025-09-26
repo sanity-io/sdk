@@ -6,7 +6,7 @@ import {describe, expect, it, vi} from 'vitest'
 import {useDashboardOrganizationId} from './useDashboardOrganizationId'
 
 vi.mock('../context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn().mockReturnValue(createSanityInstance({projectId: 'p', dataset: 'd'})),
+  useSanityInstance: vi.fn().mockReturnValue(createSanityInstance()),
 }))
 
 vi.mock('@sanity/sdk', async (importOriginal) => {

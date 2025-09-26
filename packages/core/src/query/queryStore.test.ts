@@ -32,7 +32,7 @@ describe('queryStore', () => {
   }
 
   beforeEach(() => {
-    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    instance = createSanityInstance()
 
     fetch = vi
       .fn()
@@ -403,7 +403,7 @@ describe('queryStore', () => {
       >
     }) as SanityClient['observable']['fetch'])
 
-    const base = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const base = createSanityInstance()
 
     const sDrafts = getQueryState<{_id: string}[]>(base, {
       query: '*[_type == "movie"]',

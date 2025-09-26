@@ -53,7 +53,7 @@ describe('getProjectionState', () => {
       return NEVER.subscribe()
     })
 
-    instance = createSanityInstance({projectId: 'exampleProject', dataset: 'exampleDataset'})
+    instance = createSanityInstance()
     vi.useFakeTimers() // Enable fake timers for each test
   })
 

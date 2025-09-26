@@ -33,7 +33,7 @@ describe('getPreviewState', () => {
       return NEVER.subscribe()
     })
 
-    instance = createSanityInstance({projectId: 'exampleProject', dataset: 'exampleDataset'})
+    instance = createSanityInstance()
   })
 
   afterEach(() => {

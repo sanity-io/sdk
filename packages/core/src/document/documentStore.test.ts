@@ -71,12 +71,12 @@ const source1 = sourceFor({projectId: 'p', dataset: 'd1'})
 const source2 = sourceFor({projectId: 'p', dataset: 'd2'})
 
 beforeEach(() => {
-  instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  instance = createSanityInstance()
   // test uses two instances that share the same in-memory dataset, but separate
   // store instances. in real scenarios, this would be separate machines but with
   // the same project + dataset
-  instance1 = createSanityInstance({projectId: 'p', dataset: 'd1'})
-  instance2 = createSanityInstance({projectId: 'p', dataset: 'd2'})
+  instance1 = createSanityInstance()
+  instance2 = createSanityInstance()
 })
 
 afterEach(() => {
@@ -244,7 +244,7 @@ it('handles concurrent edits and resolves conflicts', async () => {
   const state1Unsubscribe = state1.subscribe()
   const state2Unsubscribe = state2.subscribe()
 
-  const oneOffInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const oneOffInstance = createSanityInstance()
 
   // Create the initial document from a one-off instance.
   await applyDocumentActions(oneOffInstance, {
@@ -684,7 +684,7 @@ it('returns a promise that resolves when a document has been loaded in the store
   expect(await resolveDocument(instance, doc)).toBe(null)
 
   // use one-off instance to create the document in the mock backend
-  const oneOffInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const oneOffInstance = createSanityInstance()
   const result = await applyDocumentActions(oneOffInstance, {
     actions: [createDocument(doc), editDocument(doc, {set: {title: 'initial title'}})],
     source,
