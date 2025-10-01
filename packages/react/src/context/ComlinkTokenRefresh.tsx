@@ -130,11 +130,12 @@ function DashboardTokenRefresh({children}: PropsWithChildren) {
 export const ComlinkTokenRefreshProvider: React.FC<PropsWithChildren> = ({children}) => {
   const instance = useSanityInstance()
   const isInDashboard = useMemo(() => getIsInDashboardState(instance).getCurrent(), [instance])
+  const studioModeEnabled = instance.config.studioMode?.enabled
 
-  if (isInDashboard) {
+  if (isInDashboard || !studioModeEnabled) {
     return <DashboardTokenRefresh>{children}</DashboardTokenRefresh>
   }
 
-  // If we're not in the dashboard, we don't need to do anything
+  // If we're not in the dashboard or we are relying on studio auth, we don't need to do anything
   return children
 }

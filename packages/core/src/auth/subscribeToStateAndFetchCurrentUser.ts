@@ -8,8 +8,11 @@ import {type AuthState, type AuthStoreState} from './authStore'
 
 export const subscribeToStateAndFetchCurrentUser = ({
   state,
+  instance,
 }: StoreContext<AuthStoreState>): Subscription => {
   const {clientFactory, apiHost} = state.get().options
+  const useProjectHostname = !!instance.config.studioMode?.enabled
+  const projectId = instance.config.projectId
 
   const currentUser$ = state.observable
     .pipe(
@@ -28,8 +31,9 @@ export const subscribeToStateAndFetchCurrentUser = ({
           requestTagPrefix: REQUEST_TAG_PREFIX,
           token,
           ignoreBrowserTokenWarning: true,
-          useProjectHostname: false,
+          useProjectHostname,
           useCdn: false,
+          ...(useProjectHostname && projectId ? {projectId} : {}),
           ...(apiHost && {apiHost}),
         }),
       ),

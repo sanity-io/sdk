@@ -7,6 +7,7 @@ import {ComlinkTokenRefreshProvider} from '../../context/ComlinkTokenRefresh'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
+import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 import {useCorsOriginError} from '../../hooks/errors/useCorsOriginError'
 import {CorsErrorComponent} from '../errors/CorsErrorComponent'
 import {isInIframe} from '../utils'
@@ -169,7 +170,11 @@ function AuthSwitch({
   ...props
 }: AuthSwitchProps) {
   const authState = useAuthState()
-  const orgError = useVerifyOrgProjects(!verifyOrganization, projectIds)
+  const instance = useSanityInstance()
+  const studioModeEnabled = instance.config.studioMode?.enabled
+  const disableVerifyOrg =
+    !verifyOrganization || studioModeEnabled || authState.type !== AuthStateType.LOGGED_IN
+  const orgError = useVerifyOrgProjects(disableVerifyOrg, projectIds)
 
   const isLoggedOut = authState.type === AuthStateType.LOGGED_OUT && !authState.isDestroyingSession
   const loginUrl = useLoginUrl()
