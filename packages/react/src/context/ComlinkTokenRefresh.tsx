@@ -135,6 +135,6 @@ export const ComlinkTokenRefreshProvider: React.FC<PropsWithChildren> = ({childr
     return <DashboardTokenRefresh>{children}</DashboardTokenRefresh>
   }
 
-  // If we're not in the dashboard or we are relying on studio auth, we don't need to do anything
+  // If we're not in the dashboard, we don't need to do anything
   return children
 }
