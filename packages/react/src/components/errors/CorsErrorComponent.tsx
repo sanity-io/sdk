@@ -1,6 +1,8 @@
 import {useMemo} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
+import {Error} from './Error'
+
 type CorsErrorComponentProps = FallbackProps & {
   projectId: string | null
 }
@@ -15,26 +17,15 @@ export function CorsErrorComponent({projectId, error}: CorsErrorComponentProps):
     return url.toString()
   }, [origin, projectId])
   return (
-    <div className="sc-login-error">
-      <div className="sc-login-error__content">
-        <h1>Before you continue...</h1>
-        <p>
-          To access your content, you need to <b>add the following URL as a CORS origin</b> to your
-          Sanity project.
-        </p>
-        <p>
-          <code>{origin}</code>
-        </p>
-        {projectId ? (
-          <p>
-            <a href={corsUrl ?? ''} target="_blank" rel="noopener noreferrer">
-              Manage CORS configuration
-            </a>
-          </p>
-        ) : (
-          <p>{error?.message}</p>
-        )}
-      </div>
-    </div>
+    <Error
+      heading="Before you continue..."
+      description="To access your content, you need to <b>add the following URL as a CORS origin</b> to your Sanity project."
+      code={origin}
+      cta={{
+        text: 'Manage CORS configuration',
+        href: corsUrl,
+      }}
+      message={projectId ? null : error?.message}
+    />
   )
 }

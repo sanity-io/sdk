@@ -5,6 +5,7 @@ import {type FallbackProps} from 'react-error-boundary'
 
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLogOut} from '../../hooks/auth/useLogOut'
+import {Error} from '../errors/Error'
 import {AuthError} from './AuthError'
 import {ConfigurationError} from './ConfigurationError'
 /**
@@ -59,17 +60,13 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
   }, [authState, handleRetry, error])
 
   return (
-    <div className="sc-login-error">
-      <div className="sc-login-error__content">
-        <h2 className="sc-login-error__title">
-          {error instanceof AuthError ? 'Authentication Error' : 'Configuration Error'}
-        </h2>
-        <p className="sc-login-error__description">{authErrorMessage}</p>
-      </div>
-
-      <button className="sc-login-error__button" onClick={handleRetry}>
-        Retry
-      </button>
-    </div>
+    <Error
+      heading={error instanceof AuthError ? 'Authentication Error' : 'Configuration Error'}
+      description={authErrorMessage}
+      cta={{
+        text: 'Retry',
+        onClick: handleRetry,
+      }}
+    />
   )
 }
