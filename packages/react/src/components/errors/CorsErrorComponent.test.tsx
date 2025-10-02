@@ -21,7 +21,7 @@ describe('CorsErrorComponent', () => {
       />,
     )
 
-    expect(screen.getByText('Before you continue...')).toBeInTheDocument()
+    expect(screen.getByText('Before you continue…')).toBeInTheDocument()
     expect(screen.getByText(origin)).toBeInTheDocument()
 
     const link = screen.getByRole('link', {name: 'Manage CORS configuration'}) as HTMLAnchorElement
@@ -41,7 +41,7 @@ describe('CorsErrorComponent', () => {
     const error = new Error('some error message')
     render(<CorsErrorComponent projectId={null} error={error} resetErrorBoundary={() => {}} />)
 
-    expect(screen.getByText('Before you continue...')).toBeInTheDocument()
+    expect(screen.getByText('Before you continue…')).toBeInTheDocument()
     expect(screen.getByText('some error message')).toBeInTheDocument()
     expect(screen.queryByRole('link', {name: 'Manage CORS configuration'})).toBeNull()
   })
