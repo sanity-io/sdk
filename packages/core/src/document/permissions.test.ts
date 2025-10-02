@@ -1,10 +1,9 @@
 import {type SanityDocument} from '@sanity/types'
-import {type ExprNode} from 'groq-js'
+import {evaluateSync, type ExprNode, parse} from 'groq-js'
 import {describe, expect, it} from 'vitest'
 
 import {createSanityInstance} from '../store/createSanityInstance'
 import {getDraftId, getPublishedId} from '../utils/ids'
-import {evaluateSync, parse} from './_synchronous-groq-js.mjs'
 import {type DocumentAction} from './actions'
 import {calculatePermissions, createGrantsLookup, type DatasetAcl, type Grant} from './permissions'
 import {type SyncTransactionState} from './reducers'
@@ -50,7 +49,7 @@ describe('createGrantsLookup', () => {
     ;(['read', 'update', 'create', 'history'] as Grant[]).forEach((key) => {
       expect(grants[key]).toBeDefined()
       // Evaluate the expression for the dummy document.
-      expect(evaluateSync(grants[key], {params: {document: dummyDoc}}).get()).toBe(true)
+      expect(evaluateSync(grants[key], {params: {document: dummyDoc}}).data).toBe(true)
     })
   })
 })

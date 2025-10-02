@@ -1,8 +1,8 @@
 import {act, renderHook} from '@testing-library/react'
+import {evaluateSync, parse, toJS} from 'groq-js'
 import {describe, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
-import {evaluateSync, parse} from '../_synchronous-groq-js.mjs'
 import {useQuery} from '../query/useQuery'
 import {usePaginatedDocuments} from './usePaginatedDocuments'
 
@@ -73,7 +73,7 @@ describe('usePaginatedDocuments', () => {
     ]
 
     vi.mocked(useQuery).mockImplementation(({query, ...options}) => {
-      const result = evaluateSync(parse(query), {dataset, params: options?.params}).get()
+      const result = toJS(evaluateSync(parse(query), {dataset, params: options?.params}))
       return {
         data: result,
         isPending: false,
