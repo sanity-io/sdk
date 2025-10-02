@@ -123,8 +123,6 @@ export {resolveProjection} from '../projection/resolveProjection'
 export {type ProjectionValuePending, type ValidProjection} from '../projection/types'
 export {getProjectsState, resolveProjects} from '../projects/projects'
 export {
-  clearQueryError,
-  getQueryErrorState,
   getQueryKey,
   getQueryState,
   parseQueryKey,

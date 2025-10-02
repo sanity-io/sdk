@@ -318,29 +318,6 @@ const _getQueryState = bindActionByDataset(
 )
 
 /**
- * Returns a state source for the top-level query store error (if any).
- *
- * Unlike {@link getQueryState}, this selector does not throw; it simply returns the error value.
- * Subscribe to this to be notified when a global query error occurs (e.g., CORS failures).
- *
- * @beta
- */
-export function getQueryErrorState(instance: SanityInstance): StateSource<unknown | undefined> {
-  return _getQueryErrorState(instance)
-}
-
-const _getQueryErrorState = bindActionByDataset(
-  queryStore,
-  createStateSourceAction({
-    selector: ({state}: SelectorContext<QueryStoreState>) => state.error,
-    onSubscribe: () => {
-      // No-op subscription as we don't track per-query subscribers here
-      return () => {}
-    },
-  }),
-)
-
-/**
  * Resolves the result of a query without registering a lasting subscriber.
  *
  * This function fetches the result of a GROQ query and returns a promise that resolves with the query result.
@@ -413,16 +390,3 @@ const _resolveQuery = bindActionByDataset(
     return firstValueFrom(race([resolved$, aborted$]))
   },
 )
-
-/**
- * Clears the top-level query store error.
- * @beta
- */
-export function clearQueryError(instance: SanityInstance): void
-export function clearQueryError(...args: Parameters<typeof _clearQueryError>): void {
-  return _clearQueryError(...args)
-}
-
-const _clearQueryError = bindActionByDataset(queryStore, ({state}) => {
-  state.set('setError', {error: undefined})
-})

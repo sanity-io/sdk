@@ -7,7 +7,6 @@ import {ComlinkTokenRefreshProvider} from '../../context/ComlinkTokenRefresh'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
-import {useCorsOriginError} from '../../hooks/errors/useCorsOriginError'
 import {CorsErrorComponent} from '../errors/CorsErrorComponent'
 import {isInIframe} from '../utils'
 import {AuthError} from './AuthError'
@@ -108,8 +107,6 @@ export function AuthBoundary({
   LoginErrorComponent = LoginError,
   ...props
 }: AuthBoundaryProps): React.ReactNode {
-  const {error: corsError, projectId, clear: clearCorsError} = useCorsOriginError()
-
   const FallbackComponent = useMemo(() => {
     return function LoginComponentWithLayoutProps(fallbackProps: FallbackProps) {
       if (fallbackProps.error instanceof CorsOriginError) {
@@ -117,29 +114,17 @@ export function AuthBoundary({
           <CorsErrorComponent
             {...fallbackProps}
             projectId={getCorsErrorProjectId(fallbackProps.error)}
-            resetErrorBoundary={() => {
-              clearCorsError()
-              fallbackProps.resetErrorBoundary()
-            }}
           />
         )
       }
       return <LoginErrorComponent {...fallbackProps} />
     }
-  }, [LoginErrorComponent, clearCorsError])
+  }, [LoginErrorComponent])
 
   return (
     <ComlinkTokenRefreshProvider>
       <ErrorBoundary FallbackComponent={FallbackComponent}>
-        {corsError ? (
-          <CorsErrorComponent
-            error={corsError}
-            resetErrorBoundary={() => clearCorsError()}
-            projectId={projectId}
-          />
-        ) : (
-          <AuthSwitch {...props} />
-        )}
+        <AuthSwitch {...props} />
       </ErrorBoundary>
     </ComlinkTokenRefreshProvider>
   )
