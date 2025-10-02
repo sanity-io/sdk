@@ -9,10 +9,9 @@ type ErrorProps = {
     href?: string
     onClick?: () => void
   }
-  message?: string
 }
 
-export function Error({heading, description, code, cta, message}: ErrorProps): React.ReactNode {
+export function Error({heading, description, code, cta}: ErrorProps): React.ReactNode {
   return (
     <div style={styles['container']}>
       <h1 style={styles['heading']}>{heading}</h1>
@@ -36,8 +35,6 @@ export function Error({heading, description, code, cta, message}: ErrorProps): R
           )}
         </p>
       )}
-
-      {message && <p style={styles['paragraph']}>{message}</p>}
     </div>
   )
 }

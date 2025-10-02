@@ -18,18 +18,20 @@ export function CorsErrorComponent({projectId, error}: CorsErrorComponentProps):
   }, [origin, projectId])
   return (
     <Error
-      heading="Before you continue..."
-      description="To access your content, you need to <b>add the following URL as a CORS origin</b> to your Sanity project."
-      code={origin}
-      cta={
-        projectId
-          ? {
+      heading="Before you continue…"
+      {...(projectId
+        ? {
+            description:
+              'To access your content, you need to <strong>add the following URL as a CORS origin</strong> to your Sanity project.',
+            code: origin,
+            cta: {
               text: 'Manage CORS configuration',
               href: corsUrl,
-            }
-          : undefined
-      }
-      message={projectId ? undefined : error?.message}
+            },
+          }
+        : {
+            description: error?.message,
+          })}
     />
   )
 }
