@@ -96,7 +96,7 @@ describe('getStudioTokenFromLocalStorage', () => {
     expect(getTokenFromStorageSpy).not.toHaveBeenCalled()
   })
 
-  it('should return null if projectId is undefined', () => {
+  it('should return null if storageKey is undefined', () => {
     const result = getStudioTokenFromLocalStorage(storageArea, undefined)
     expect(result).toBeNull()
     expect(getTokenFromStorageSpy).not.toHaveBeenCalled()
@@ -104,19 +104,19 @@ describe('getStudioTokenFromLocalStorage', () => {
 
   it('should call getTokenFromStorage with correct key', () => {
     getTokenFromStorageSpy.mockReturnValue(null) // Assume token not found for this test
-    getStudioTokenFromLocalStorage(storageArea, projectId)
+    getStudioTokenFromLocalStorage(storageArea, studioStorageKey)
     expect(getTokenFromStorageSpy).toHaveBeenCalledWith(storageArea, studioStorageKey)
   })
 
   it('should return the token if found in storage', () => {
     getTokenFromStorageSpy.mockReturnValue(mockToken)
-    const result = getStudioTokenFromLocalStorage(storageArea, projectId)
+    const result = getStudioTokenFromLocalStorage(storageArea, studioStorageKey)
     expect(result).toBe(mockToken)
   })
 
   it('should return null if token is not found in storage', () => {
     getTokenFromStorageSpy.mockReturnValue(null)
-    const result = getStudioTokenFromLocalStorage(storageArea, projectId)
+    const result = getStudioTokenFromLocalStorage(storageArea, studioStorageKey)
     expect(result).toBeNull()
   })
 })

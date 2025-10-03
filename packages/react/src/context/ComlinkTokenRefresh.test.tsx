@@ -39,7 +39,11 @@ const mockUseSanityInstance = useSanityInstance as Mock
 
 const mockFetch = vi.fn()
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockSanityInstance: any = {projectId: 'test', dataset: 'test'}
+const mockSanityInstance: any = {
+  projectId: 'test',
+  dataset: 'test',
+  config: {studioMode: {enabled: false}},
+}
 
 describe('ComlinkTokenRefresh', () => {
   beforeEach(() => {
@@ -93,7 +97,8 @@ describe('ComlinkTokenRefresh', () => {
         mockGetIsInDashboardState.mockReturnValue({getCurrent: () => true})
       })
 
-      it('should initialize useWindowConnection with correct parameters', () => {
+      it('should initialize useWindowConnection with correct parameters when not in studio mode', () => {
+        // Simulate studio mode disabled by default
         render(
           <ComlinkTokenRefreshProvider>
             <div>Test</div>
@@ -108,7 +113,7 @@ describe('ComlinkTokenRefresh', () => {
         )
       })
 
-      it('should handle received token', async () => {
+      it('should handle received token when not in studio mode', async () => {
         mockUseAuthState.mockReturnValue({
           type: AuthStateType.ERROR,
           error: {statusCode: 401, message: 'Unauthorized'},
@@ -129,7 +134,7 @@ describe('ComlinkTokenRefresh', () => {
         expect(mockFetch).toHaveBeenCalledTimes(1)
       })
 
-      it('should not set auth token if received token is null', async () => {
+      it('should not set auth token if received token is null when not in studio mode', async () => {
         mockUseAuthState.mockReturnValue({
           type: AuthStateType.ERROR,
           error: {statusCode: 401, message: 'Unauthorized'},
@@ -149,7 +154,7 @@ describe('ComlinkTokenRefresh', () => {
         expect(mockSetAuthToken).not.toHaveBeenCalled()
       })
 
-      it('should handle fetch errors gracefully', async () => {
+      it('should handle fetch errors gracefully when not in studio mode', async () => {
         mockUseAuthState.mockReturnValue({
           type: AuthStateType.ERROR,
           error: {statusCode: 401, message: 'Unauthorized'},
@@ -170,7 +175,7 @@ describe('ComlinkTokenRefresh', () => {
       })
 
       describe('Automatic token refresh', () => {
-        it('should not request new token for non-401 errors', async () => {
+        it('should not request new token for non-401 errors when not in studio mode', async () => {
           mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN})
           const {rerender} = render(
             <ComlinkTokenRefreshProvider>
@@ -196,7 +201,7 @@ describe('ComlinkTokenRefresh', () => {
           expect(mockFetch).not.toHaveBeenCalled()
         })
 
-        it('should request new token on LOGGED_OUT state', async () => {
+        it('should request new token on LOGGED_OUT state when not in studio mode', async () => {
           mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN})
           const {rerender} = render(
             <ComlinkTokenRefreshProvider>
@@ -214,6 +219,28 @@ describe('ComlinkTokenRefresh', () => {
           })
 
           expect(mockFetch).toHaveBeenCalledWith('dashboard/v1/auth/tokens/create')
+        })
+
+        describe('when in studio mode', () => {
+          beforeEach(() => {
+            // Make the instance report studio mode enabled
+            mockUseSanityInstance.mockReturnValue({
+              ...mockSanityInstance,
+              config: {studioMode: {enabled: true}},
+            })
+          })
+
+          it('should not render DashboardTokenRefresh when studio mode enabled', () => {
+            render(
+              <ComlinkTokenRefreshProvider>
+                <div>Test</div>
+              </ComlinkTokenRefreshProvider>,
+            )
+
+            // In studio mode, provider should return children directly
+            // So window connection should not be initialized
+            expect(mockUseWindowConnection).not.toHaveBeenCalled()
+          })
         })
       })
     })

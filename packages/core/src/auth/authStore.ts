@@ -105,7 +105,8 @@ export const authStore = defineStore<AuthStoreState>({
     } = instance.config.auth ?? {}
     let storageArea = instance.config.auth?.storageArea
 
-    const storageKey = `__sanity_auth_token`
+    let storageKey = `__sanity_auth_token`
+    const studioModeEnabled = instance.config.studioMode?.enabled
 
     // This login URL will only be used for local development
     let loginDomain = 'https://www.sanity.io'
@@ -149,15 +150,19 @@ export const authStore = defineStore<AuthStoreState>({
       console.error('Failed to parse dashboard context from initial location:', err)
     }
 
-    if (!isInDashboard) {
+    if (!isInDashboard || studioModeEnabled) {
       // If not in dashboard, use the storage area from the config
+      // If studio mode is enabled, use the local storage area (default)
       storageArea = storageArea ?? getDefaultStorage()
     }
 
     let token: string | null
     let authMethod: AuthMethodOptions
-    if (instance.config.studioMode?.enabled) {
-      token = getStudioTokenFromLocalStorage(storageArea, instance.config.projectId)
+    if (studioModeEnabled) {
+      // In studio mode, always use the studio-specific storage key and subscribe to it
+      const studioStorageKey = `__studio_auth_token_${instance.config.projectId ?? ''}`
+      storageKey = studioStorageKey
+      token = getStudioTokenFromLocalStorage(storageArea, studioStorageKey)
       if (token) {
         authMethod = 'localstorage'
       } else {
@@ -177,14 +182,16 @@ export const authStore = defineStore<AuthStoreState>({
     let authState: AuthState
     if (providedToken) {
       authState = {type: AuthStateType.LOGGED_IN, token: providedToken, currentUser: null}
+    } else if (token && studioModeEnabled) {
+      authState = {type: AuthStateType.LOGGED_IN, token, currentUser: null}
     } else if (
       getAuthCode(callbackUrl, initialLocationHref) ||
       getTokenFromLocation(initialLocationHref)
     ) {
       authState = {type: AuthStateType.LOGGING_IN, isExchangingToken: false}
       // Note: dashboardContext from the callback URL can be set later in handleAuthCallback too
-    } else if (token && !isInDashboard) {
-      // Only use token from storage if NOT running in dashboard
+    } else if (token && !isInDashboard && !studioModeEnabled) {
+      // Only use token from storage if NOT running in dashboard and studio mode is not enabled
       authState = {type: AuthStateType.LOGGED_IN, token, currentUser: null}
     } else {
       // Default to logged out if no provided token, not handling callback,
@@ -212,8 +219,8 @@ export const authStore = defineStore<AuthStoreState>({
   initialize(context) {
     const subscriptions: Subscription[] = []
     subscriptions.push(subscribeToStateAndFetchCurrentUser(context))
-
-    if (context.state.get().options?.storageArea) {
+    const storageArea = context.state.get().options?.storageArea
+    if (storageArea) {
       subscriptions.push(subscribeToStorageEventsAndSetToken(context))
     }
 
