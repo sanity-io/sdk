@@ -1,0 +1,51 @@
+.app-container {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.intent-disambiguation {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.intent-disambiguation h1 {
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.intent-disambiguation p {
+  color: #666;
+  margin-bottom: 30px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.maintenance-schedule-button {
+  background-color: #0070f3;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.maintenance-schedule-button:hover {
+  background-color: #0051a2;
+}
+
+.maintenance-schedule-button:active {
+  background-color: #003d82;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 16px;
+  color: #666;
+}

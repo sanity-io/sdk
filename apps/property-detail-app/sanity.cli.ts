@@ -1,6 +1,9 @@
 import {defineCliConfig} from 'sanity/cli'
 
 export default defineCliConfig({
+  deployment: {
+    autoUpdates: false,
+  },
   app: {
     organizationId: 'oF5P8QpKU',
     entry: './src/App.tsx',
