@@ -84,7 +84,10 @@ import {useSanityInstance} from '../context/useSanityInstance'
 export function useDocumentPermissions(
   actionOrActions: DocumentAction | DocumentAction[],
 ): DocumentPermissionsResult {
-  const actions = Array.isArray(actionOrActions) ? actionOrActions : [actionOrActions]
+  const actions = useMemo(
+    () => (Array.isArray(actionOrActions) ? actionOrActions : [actionOrActions]),
+    [actionOrActions],
+  )
   // if actions is an array, we need to check that all actions belong to the same project and dataset
   let projectId
   let dataset
@@ -111,20 +114,20 @@ export function useDocumentPermissions(
 
   const instance = useSanityInstance({projectId, dataset})
   const isDocumentReady = useCallback(
-    () => getPermissionsState(instance, actionOrActions).getCurrent() !== undefined,
-    [actionOrActions, instance],
+    () => getPermissionsState(instance, {actions}).getCurrent() !== undefined,
+    [actions, instance],
   )
   if (!isDocumentReady()) {
     throw firstValueFrom(
-      getPermissionsState(instance, actionOrActions).observable.pipe(
+      getPermissionsState(instance, {actions}).observable.pipe(
         filter((result) => result !== undefined),
       ),
     )
   }
 
   const {subscribe, getCurrent} = useMemo(
-    () => getPermissionsState(instance, actionOrActions),
-    [actionOrActions, instance],
+    () => getPermissionsState(instance, {actions}),
+    [actions, instance],
   )
 
   return useSyncExternalStore(subscribe, getCurrent) as DocumentPermissionsResult

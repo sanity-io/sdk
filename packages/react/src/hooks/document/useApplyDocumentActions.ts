@@ -6,7 +6,7 @@ import {
 } from '@sanity/sdk'
 import {type SanityDocument} from 'groq'
 
-import {createCallbackHook} from '../helpers/createCallbackHook'
+import {useSanityInstance} from '../context/useSanityInstance'
 // this import is used in an `{@link useEditDocument}`
 // eslint-disable-next-line unused-imports/no-unused-imports, import/consistent-type-specifier-style
 import type {useEditDocument} from './useEditDocument'
@@ -119,6 +119,46 @@ interface UseApplyDocumentActions {
  * }
  * ```
  */
-export const useApplyDocumentActions = createCallbackHook(
-  applyDocumentActions,
-) as UseApplyDocumentActions
+export const useApplyDocumentActions: UseApplyDocumentActions = () => {
+  const instance = useSanityInstance()
+
+  return (actionOrActions, options) => {
+    const actions = Array.isArray(actionOrActions) ? actionOrActions : [actionOrActions]
+
+    let projectId
+    let dataset
+    for (const action of actions) {
+      if (action.projectId) {
+        if (!projectId) projectId = action.projectId
+        if (action.projectId !== projectId) {
+          throw new Error(
+            `Mismatched project IDs found in actions. All actions must belong to the same project. Found "${action.projectId}" but expected "${projectId}".`,
+          )
+        }
+
+        if (action.dataset) {
+          if (!dataset) dataset = action.dataset
+          if (action.dataset !== dataset) {
+            throw new Error(
+              `Mismatched datasets found in actions. All actions must belong to the same dataset. Found "${action.dataset}" but expected "${dataset}".`,
+            )
+          }
+        }
+      }
+    }
+
+    if (projectId || dataset) {
+      const actualInstance = instance.match({projectId, dataset})
+      if (!actualInstance) {
+        throw new Error(
+          `Could not find a matching Sanity instance for the requested action: ${JSON.stringify({projectId, dataset}, null, 2)}.
+  Please ensure there is a ResourceProvider component with a matching configuration in the component hierarchy.`,
+        )
+      }
+
+      return applyDocumentActions(actualInstance, {actions, ...options})
+    }
+
+    return applyDocumentActions(instance, {actions, ...options})
+  }
+}

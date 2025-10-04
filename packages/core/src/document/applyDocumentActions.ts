@@ -25,6 +25,11 @@ export interface ActionsResult<TDocument extends SanityDocument = SanityDocument
 /** @beta */
 export interface ApplyDocumentActionsOptions {
   /**
+   * List of actions to apply.
+   */
+  actions: DocumentAction[]
+
+  /**
    * Optionally provide an ID to be used as this transaction ID
    */
   transactionId?: string
@@ -41,16 +46,12 @@ export function applyDocumentActions<
   TProjectId extends string = string,
 >(
   instance: SanityInstance,
-  action:
-    | DocumentAction<TDocumentType, TDataset, TProjectId>
-    | DocumentAction<TDocumentType, TDataset, TProjectId>[],
-  options?: ApplyDocumentActionsOptions,
+  options: ApplyDocumentActionsOptions,
 ): Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 /** @beta */
 export function applyDocumentActions(
   instance: SanityInstance,
-  action: DocumentAction | DocumentAction[],
-  options?: ApplyDocumentActionsOptions,
+  options: ApplyDocumentActionsOptions,
 ): Promise<ActionsResult>
 
 /** @beta */
@@ -64,50 +65,9 @@ const boundApplyDocumentActions = bindActionByDataset(documentStore, _applyDocum
 
 /** @internal */
 async function _applyDocumentActions(
-  {instance, state}: StoreContext<DocumentStoreState>,
-  actionOrActions: DocumentAction | DocumentAction[],
-  {transactionId = crypto.randomUUID(), disableBatching}: ApplyDocumentActionsOptions = {},
+  {state}: StoreContext<DocumentStoreState>,
+  {actions, transactionId = crypto.randomUUID(), disableBatching}: ApplyDocumentActionsOptions,
 ): Promise<ActionsResult> {
-  const actions = Array.isArray(actionOrActions) ? actionOrActions : [actionOrActions]
-
-  let projectId
-  let dataset
-  for (const action of actions) {
-    if (action.projectId) {
-      if (!projectId) projectId = action.projectId
-      if (action.projectId !== projectId) {
-        throw new Error(
-          `Mismatched project IDs found in actions. All actions must belong to the same project. Found "${action.projectId}" but expected "${projectId}".`,
-        )
-      }
-
-      if (action.dataset) {
-        if (!dataset) dataset = action.dataset
-        if (action.dataset !== dataset) {
-          throw new Error(
-            `Mismatched datasets found in actions. All actions must belong to the same dataset. Found "${action.dataset}" but expected "${dataset}".`,
-          )
-        }
-      }
-    }
-  }
-
-  if (
-    (projectId && projectId !== instance.config.projectId) ||
-    (dataset && dataset !== instance.config.dataset)
-  ) {
-    const matchedInstance = instance.match({projectId, dataset})
-    if (!matchedInstance) {
-      throw new Error(
-        `Could not find a matching instance for projectId: "${projectId}" and dataset: "${dataset}"`,
-      )
-    }
-    return boundApplyDocumentActions(matchedInstance, actionOrActions, {
-      disableBatching,
-      transactionId,
-    })
-  }
-
   const {events} = state.get()
 
   const transaction: QueuedTransaction = {
