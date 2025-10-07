@@ -1,14 +1,9 @@
-import {createSanityInstance, type SanityInstance} from '@sanity/sdk'
+import {type SanityInstance} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {createCallbackHook} from './createCallbackHook'
-
-// Mock the useSanityInstance hook
-vi.mock('../context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn(),
-}))
 
 describe('createCallbackHook', () => {
   // Reset all mocks before each test
@@ -17,12 +12,6 @@ describe('createCallbackHook', () => {
   })
 
   it('should create a hook that provides a memoized callback', () => {
-    // Create a mock Sanity instance
-    const mockInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
-
-    // Mock the useSanityInstance to return our mock instance
-    vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
-
     // Create a test callback function
     const testCallback = (instance: object, param1: string, param2: number) => {
       return `${param1}-${param2}-${instance ? 'valid' : 'invalid'}`
@@ -32,7 +21,13 @@ describe('createCallbackHook', () => {
     const useTestHook = createCallbackHook(testCallback)
 
     // Render the hook
-    const {result, rerender} = renderHook(() => useTestHook())
+    const {result, rerender} = renderHook(() => useTestHook(), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="p" dataset="d" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
     // Test the callback with parameters
     const result1 = result.current('test', 123)
@@ -48,38 +43,41 @@ describe('createCallbackHook', () => {
   })
 
   it('should create new callback when instance changes', () => {
-    // Create two different mock instances
-    const mockInstance1 = createSanityInstance({projectId: 'p1', dataset: 'd'})
-    const mockInstance2 = createSanityInstance({projectId: 'p2', dataset: 'd'})
-
-    vi.mocked(useSanityInstance).mockReturnValueOnce(mockInstance1)
-
     // Create a test callback
     const testCallback = (instance: SanityInstance) => instance.config.projectId
 
-    // Create and render our hook
+    // Create and render our hook with first provider
     const useTestHook = createCallbackHook(testCallback)
-    const {result, rerender} = renderHook(() => useTestHook())
+    const {result, unmount} = renderHook(() => useTestHook(), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="p1" dataset="d" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
-    // Store the first callback reference
+    // Store the first callback reference and result
     const firstCallback = result.current
+    const firstResult = firstCallback()
+    expect(firstResult).toBe('p1')
 
-    // Change the instance
-    vi.mocked(useSanityInstance).mockReturnValueOnce(mockInstance2)
-    rerender()
+    unmount()
 
-    // Verify the callback reference changed
-    expect(result.current).not.toBe(firstCallback)
+    // Re-render with different provider configuration
+    const {result: result2} = renderHook(() => useTestHook(), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="p2" dataset="d" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
-    // Verify the callbacks return different results
-    expect(firstCallback()).toBe('p1')
-    expect(result.current()).toBe('p2')
+    // Verify the callback reference changed and returns different result
+    expect(result2.current).not.toBe(firstCallback)
+    expect(result2.current()).toBe('p2')
   })
 
   it('should handle callbacks with multiple parameters', () => {
-    const mockInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
-
     // Create a callback with multiple parameters
     const testCallback = (
       instance: SanityInstance,
@@ -93,7 +91,13 @@ describe('createCallbackHook', () => {
     })
 
     const useTestHook = createCallbackHook(testCallback)
-    const {result} = renderHook(() => useTestHook())
+    const {result} = renderHook(() => useTestHook(), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="p" dataset="d" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
     const response = result.current('/users', 'POST', {name: 'Test User'})
 
