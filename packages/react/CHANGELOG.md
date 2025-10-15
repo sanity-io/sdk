@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.3.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.2.0...sdk-react-v2.3.0) (2025-10-15)
+
+
+### Features
+
+* present a link to add CORS Manage setting when a CORS error occurs ([#625](https://github.com/sanity-io/sdk/issues/625)) ([7610ec2](https://github.com/sanity-io/sdk/commit/7610ec255c87dc95f27653c8064f63f0b7100f4b))
+* upgrade groq-js with support for synchronous evaluation ([#637](https://github.com/sanity-io/sdk/issues/637)) ([60996a7](https://github.com/sanity-io/sdk/commit/60996a7c61695ced7c0d37f3c3ee6eff5d772f63))
+
+
+### Bug Fixes
+
+* **core:** change ValidProjection to string type ([#627](https://github.com/sanity-io/sdk/issues/627)) ([2079b36](https://github.com/sanity-io/sdk/commit/2079b36572be0ac15a77a02369048cb077520b45))
+* **deps:** update dependency @sanity/client to ^7.12.0 ([#649](https://github.com/sanity-io/sdk/issues/649)) ([eec856f](https://github.com/sanity-io/sdk/commit/eec856f84c1621785e4f5244c29714a7e05298c3))
+* styling for error messaging ([#647](https://github.com/sanity-io/sdk/issues/647)) ([3bf96f2](https://github.com/sanity-io/sdk/commit/3bf96f23c9dbb580707c3071ec5045f9d20c66b4))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.3.0
+
 ## [2.2.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.1.2...sdk-react-v2.2.0) (2025-09-03)
 
 
