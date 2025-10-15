@@ -116,12 +116,20 @@ export function getDefaultLocation(): string {
 }
 
 /**
- * Cleans up the URL by removing the hash and the sid and url parameters.
+ * Cleans up the URL by removing the `token` from the hash and the `sid` and `url` search params.
  * @internal
  */
 export function getCleanedUrl(locationUrl: string): string {
   const loc = new URL(locationUrl)
-  loc.hash = ''
+  // Remove only the `token` param from the hash while preserving other fragments
+  const rawHash = loc.hash.startsWith('#') ? loc.hash.slice(1) : loc.hash
+  if (rawHash && rawHash.includes('=')) {
+    const hashParams = new URLSearchParams(rawHash)
+    hashParams.delete('token')
+    hashParams.delete('withSid')
+    const nextHash = hashParams.toString()
+    loc.hash = nextHash ? `#${nextHash}` : ''
+  }
   loc.searchParams.delete('sid')
   loc.searchParams.delete('url')
   return loc.toString()
