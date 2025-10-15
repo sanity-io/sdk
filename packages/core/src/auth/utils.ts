@@ -126,6 +126,7 @@ export function getCleanedUrl(locationUrl: string): string {
   if (rawHash && rawHash.includes('=')) {
     const hashParams = new URLSearchParams(rawHash)
     hashParams.delete('token')
+    hashParams.delete('withSid')
     const nextHash = hashParams.toString()
     loc.hash = nextHash ? `#${nextHash}` : ''
   }
