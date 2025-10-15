@@ -4,6 +4,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {AUTH_CODE_PARAM, DEFAULT_BASE} from './authConstants'
 import {
   getAuthCode,
+  getCleanedUrl,
   getDefaultLocation,
   getDefaultStorage,
   getStorageEvents,
@@ -228,5 +229,38 @@ describe('getTokenFromLocation', () => {
     const testUrl = `http://example.com/page?query=param#other=value&token=${testToken}`
     const result = getTokenFromLocation(testUrl)
     expect(result).toBe(testToken)
+  })
+})
+
+describe('getCleanedUrl', () => {
+  it('removes only token from hash when it is the only param', () => {
+    const url = 'http://example.com/page#token=abc'
+    const cleaned = getCleanedUrl(url)
+    expect(cleaned).toBe('http://example.com/page')
+  })
+
+  it('removes only token from hash and preserves other hash params', () => {
+    const url = 'http://example.com/page#token=abc&foo=bar'
+    const cleaned = getCleanedUrl(url)
+    expect(cleaned).toBe('http://example.com/page#foo=bar')
+  })
+
+  it('removes token when it appears among multiple hash params', () => {
+    const url = 'http://example.com/page#foo=bar&token=abc&baz=qux'
+    const cleaned = getCleanedUrl(url)
+    expect(cleaned).toBe('http://example.com/page#foo=bar&baz=qux')
+  })
+
+  it('removes sid and url from query string while preserving others', () => {
+    const url =
+      'http://example.com/callback?sid=s1&url=https%3A%2F%2Freturn.example%2Fdone&x=1#token=abc'
+    const cleaned = getCleanedUrl(url)
+    expect(cleaned).toBe('http://example.com/callback?x=1')
+  })
+
+  it('preserves non key-value hash fragments', () => {
+    const url = 'http://example.com/page#section'
+    const cleaned = getCleanedUrl(url)
+    expect(cleaned).toBe('http://example.com/page#section')
   })
 })
