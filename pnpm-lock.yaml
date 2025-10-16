@@ -262,8 +262,8 @@ importers:
   packages/@repo/e2e:
     dependencies:
       '@sanity/client':
-        specifier: ^7.10.0
-        version: 7.10.0(debug@4.4.1)
+        specifier: ^7.12.0
+        version: 7.12.0(debug@4.4.1)
       '@sanity/uuid':
         specifier: ^3.0.0
         version: 3.0.2
@@ -342,8 +342,8 @@ importers:
         specifier: ^0.4.1
         version: 0.4.1
       '@sanity/client':
-        specifier: ^7.10.0
-        version: 7.10.0(debug@4.4.1)
+        specifier: ^7.12.0
+        version: 7.12.0(debug@4.4.1)
       '@sanity/comlink':
         specifier: ^3.0.4
         version: 3.0.4
@@ -436,8 +436,8 @@ importers:
   packages/react:
     dependencies:
       '@sanity/client':
-        specifier: ^7.10.0
-        version: 7.10.0(debug@4.4.1)
+        specifier: ^7.12.0
+        version: 7.12.0(debug@4.4.1)
       '@sanity/message-protocol':
         specifier: ^0.12.0
         version: 0.12.0
@@ -2729,8 +2729,8 @@ packages:
     resolution: {integrity: sha512-BQRCMeDlBxwnMbFtB61HUxFf9aSb4HNVrpfrC7IFVqFf4cwcc3o5H8/nlrL9U3cDFedbe4W0AXt1mQzwbY/ljw==}
     engines: {node: '>=14.18'}
 
-  '@sanity/client@7.10.0':
-    resolution: {integrity: sha512-3UV6pJupue7UAZh4g5n0lYjuRsIb4c6IoqMywVLMHYoSOeHJfgSzbexOPGMNqvF+KUywUA0GyFi9cAVeMKofvw==}
+  '@sanity/client@7.12.0':
+    resolution: {integrity: sha512-RIQ4JXOpLuc3UkUK34xxYA+n9z6m0RCEbsdloKEbS0areaHymM3144IkzeZGFcIokN1YlNenHfnBHNsMjf3TaQ==}
     engines: {node: '>=20'}
 
   '@sanity/client@7.2.1':
@@ -10295,7 +10295,7 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  '@sanity/client@7.10.0(debug@4.4.1)':
+  '@sanity/client@7.12.0(debug@4.4.1)':
     dependencies:
       '@sanity/eventsource': 5.0.2
       get-it: 8.6.10(debug@4.4.1)
@@ -10749,7 +10749,7 @@ snapshots:
 
   '@sanity/types@3.88.1(@types/react@19.1.2)(debug@4.4.1)':
     dependencies:
-      '@sanity/client': 7.10.0(debug@4.4.1)
+      '@sanity/client': 7.12.0(debug@4.4.1)
       '@types/react': 19.1.2
     transitivePeerDependencies:
       - debug
@@ -10796,7 +10796,7 @@ snapshots:
 
   '@sanity/util@3.88.1(@types/react@19.1.2)(debug@4.4.1)':
     dependencies:
-      '@sanity/client': 7.10.0(debug@4.4.1)
+      '@sanity/client': 7.12.0(debug@4.4.1)
       '@sanity/types': 3.88.1(@types/react@19.1.2)(debug@4.4.1)
       get-random-values-esm: 1.0.2
       moment: 2.30.1

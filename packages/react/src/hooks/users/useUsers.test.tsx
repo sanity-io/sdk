@@ -7,10 +7,11 @@ import {
   type UserProfile,
 } from '@sanity/sdk'
 import {act, fireEvent, render, screen} from '@testing-library/react'
-import {Suspense, useState} from 'react'
+import {useState} from 'react'
 import {type Observable, Subject} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {useUsers} from './useUsers'
 
 // Mock the functions from '@sanity/sdk'
@@ -23,11 +24,6 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
     loadMoreUsers: vi.fn(),
   }
 })
-
-// Mock the Sanity instance hook to return a dummy instance
-vi.mock('../context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn().mockReturnValue({config: {projectId: 'p'}}),
-}))
 
 describe('useUsers', () => {
   // Create mock user profiles with all required fields
@@ -94,7 +90,11 @@ describe('useUsers', () => {
       )
     }
 
-    render(<TestComponent />)
+    render(
+      <ResourceProvider fallback={<p>Loading...</p>}>
+        <TestComponent />
+      </ResourceProvider>,
+    )
 
     // Verify that the output contains the data and that isPending is false
     expect(screen.getByTestId('output').textContent).toContain('2 users')
@@ -152,9 +152,9 @@ describe('useUsers', () => {
     }
 
     render(
-      <Suspense fallback={<div data-testid="fallback">Loading...</div>}>
+      <ResourceProvider fallback={<div data-testid="fallback">Loading...</div>}>
         <TestComponent />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     // Initially, since storeValue is undefined, the component should suspend and fallback is shown
@@ -244,7 +244,11 @@ describe('useUsers', () => {
       )
     }
 
-    render(<WrapperComponent />)
+    render(
+      <ResourceProvider fallback={<div data-testid="fallback">Loading...</div>}>
+        <WrapperComponent />
+      </ResourceProvider>,
+    )
 
     // Initially, should show data for org1 and not pending
     expect(screen.getByTestId('output').textContent).toContain('User One')
@@ -308,7 +312,11 @@ describe('useUsers', () => {
       )
     }
 
-    render(<TestComponent />)
+    render(
+      <ResourceProvider projectId="p" fallback={<div data-testid="fallback">Loading...</div>}>
+        <TestComponent />
+      </ResourceProvider>,
+    )
 
     // Verify initial state
     expect(screen.getByTestId('output').textContent).toContain('2 users')

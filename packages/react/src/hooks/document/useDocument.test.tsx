@@ -1,26 +1,17 @@
 // tests/useDocument.test.ts
-import {
-  createSanityInstance,
-  getDocumentState,
-  resolveDocument,
-  type StateSource,
-} from '@sanity/sdk'
+import {getDocumentState, resolveDocument, type StateSource} from '@sanity/sdk'
 import {type SanityDocument} from '@sanity/types'
 import {renderHook} from '@testing-library/react'
 import {type SchemaOrigin} from 'groq'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {useDocument} from './useDocument'
 
 vi.mock('@sanity/sdk', async (importOriginal) => {
   const original = await importOriginal<typeof import('@sanity/sdk')>()
   return {...original, getDocumentState: vi.fn(), resolveDocument: vi.fn()}
 })
-
-vi.mock('../context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn(),
-}))
 
 // Define a single generic TestDocument type
 type UseDocumentTestType = SchemaOrigin<
@@ -56,8 +47,6 @@ declare module 'groq' {
   }
 }
 
-// Create a fake instance to be returned by useSanityInstance.
-const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 const book: SanityDocument = {
   _id: 'doc1',
   foo: 'bar',
@@ -70,7 +59,6 @@ const book: SanityDocument = {
 describe('useDocument hook', () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    vi.mocked(useSanityInstance).mockReturnValue(instance)
   })
 
   it('returns the current document when ready (without a path)', () => {
@@ -81,7 +69,13 @@ describe('useDocument hook', () => {
       subscribe,
     } as unknown as StateSource<unknown>)
 
-    const {result} = renderHook(() => useDocument({documentId: 'doc1', documentType: 'book'}))
+    const {result} = renderHook(() => useDocument({documentId: 'doc1', documentType: 'book'}), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
     expect(result.current.data).toEqual(book)
     expect(getCurrent).toHaveBeenCalled()
@@ -102,13 +96,22 @@ describe('useDocument hook', () => {
     vi.mocked(resolveDocument).mockReturnValue(resolveDocPromise)
 
     // Render the hook and capture the thrown promise.
-    const {result} = renderHook(() => {
-      try {
-        return useDocument({documentId: 'doc1', documentType: 'book'})
-      } catch (e) {
-        return e
-      }
-    })
+    const {result} = renderHook(
+      () => {
+        try {
+          return useDocument({documentId: 'doc1', documentType: 'book'})
+        } catch (e) {
+          return e
+        }
+      },
+      {
+        wrapper: ({children}) => (
+          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+            {children}
+          </ResourceProvider>
+        ),
+      },
+    )
 
     // When the document is not ready, the hook throws the promise from resolveDocument.
     expect(result.current).toBe(resolveDocPromise)
