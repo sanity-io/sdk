@@ -258,8 +258,7 @@ describe('authStore', () => {
       expect(options.authMethod).toBe('localstorage')
     })
 
-    it('checks for cookie auth when studio mode is enabled and no studio token exists', async () => {
-      vi.useFakeTimers()
+    it('checks for cookie auth during initialize when studio mode is enabled and no studio token exists', () => {
       const projectId = 'studio-project'
       const studioStorageKey = `__studio_auth_token_${projectId}`
       const mockStorage = {
@@ -268,26 +267,24 @@ describe('authStore', () => {
         removeItem: vi.fn(),
       } as unknown as Storage // Mock storage
       vi.mocked(getStudioTokenFromLocalStorage).mockReturnValue(null)
-      // Mock cookie check to return true asynchronously
       vi.mocked(checkForCookieAuth).mockResolvedValue(true)
 
       instance = createSanityInstance({
         projectId,
         dataset: 'd',
         studioMode: {enabled: true},
-        auth: {storageArea: mockStorage}, // Provide mock storage
+        auth: {storageArea: mockStorage},
       })
 
-      // Initial state might be logged out before the async check completes
+      // Verify initial state without async cookie probe
       const {authState: initialAuthState} = authStore.getInitialState(instance)
-      expect(initialAuthState.type).toBe(AuthStateType.LOGGED_OUT) // Or potentially logging in depending on other factors
+      expect(initialAuthState.type).toBe(AuthStateType.LOGGED_OUT)
       expect(getStudioTokenFromLocalStorage).toHaveBeenCalledWith(mockStorage, studioStorageKey)
+
+      // Trigger store creation + initialize
+      getAuthState(instance)
+
       expect(checkForCookieAuth).toHaveBeenCalledWith(projectId, expect.any(Function))
-
-      // Wait for the promise in getInitialState to resolve
-      await vi.runAllTimersAsync()
-
-      vi.useRealTimers()
     })
 
     it('falls back to default auth (storage token) when studio mode is disabled', () => {

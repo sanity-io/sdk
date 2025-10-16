@@ -67,7 +67,11 @@ export interface DashboardContext {
   orgId?: string
 }
 
-type AuthMethodOptions = 'localstorage' | 'cookie' | undefined
+/**
+ * The method of authentication used.
+ * @internal
+ */
+export type AuthMethodOptions = 'localstorage' | 'cookie' | undefined
 
 let tokenRefresherRunning = false
 
@@ -165,12 +169,6 @@ export const authStore = defineStore<AuthStoreState>({
       token = getStudioTokenFromLocalStorage(storageArea, studioStorageKey)
       if (token) {
         authMethod = 'localstorage'
-      } else {
-        checkForCookieAuth(instance.config.projectId, clientFactory).then((isCookieAuthEnabled) => {
-          if (isCookieAuthEnabled) {
-            authMethod = 'cookie'
-          }
-        })
       }
     } else {
       token = getTokenFromStorage(storageArea, storageKey)
@@ -183,7 +181,7 @@ export const authStore = defineStore<AuthStoreState>({
     if (providedToken) {
       authState = {type: AuthStateType.LOGGED_IN, token: providedToken, currentUser: null}
     } else if (token && studioModeEnabled) {
-      authState = {type: AuthStateType.LOGGED_IN, token, currentUser: null}
+      authState = {type: AuthStateType.LOGGED_IN, token: token ?? '', currentUser: null}
     } else if (
       getAuthCode(callbackUrl, initialLocationHref) ||
       getTokenFromLocation(initialLocationHref)
@@ -222,6 +220,32 @@ export const authStore = defineStore<AuthStoreState>({
     const storageArea = context.state.get().options?.storageArea
     if (storageArea) {
       subscriptions.push(subscribeToStorageEventsAndSetToken(context))
+    }
+
+    // If in Studio mode with no local token, resolve cookie auth asynchronously
+    try {
+      const {instance, state} = context
+      const studioModeEnabled = !!instance.config.studioMode?.enabled
+      const token: string | null =
+        state.get().authState?.type === AuthStateType.LOGGED_IN
+          ? (state.get().authState as LoggedInAuthState).token
+          : null
+      if (studioModeEnabled && !token) {
+        const projectId = instance.config.projectId
+        const clientFactory = state.get().options.clientFactory
+        checkForCookieAuth(projectId, clientFactory).then((isCookieAuthEnabled) => {
+          if (!isCookieAuthEnabled) return
+          state.set('enableCookieAuth', (prev) => ({
+            options: {...prev.options, authMethod: 'cookie'},
+            authState:
+              prev.authState.type === AuthStateType.LOGGED_IN
+                ? prev.authState
+                : {type: AuthStateType.LOGGED_IN, token: '', currentUser: null},
+          }))
+        })
+      }
+    } catch {
+      // best-effort cookie detection
     }
 
     if (!tokenRefresherRunning) {
