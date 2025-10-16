@@ -5,6 +5,7 @@ import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest
 
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useWindowConnection} from '../hooks/comlink/useWindowConnection'
+import {useSanityInstance} from '../hooks/context/useSanityInstance'
 import {ComlinkTokenRefreshProvider} from './ComlinkTokenRefresh'
 import {ResourceProvider} from './ResourceProvider'
 
@@ -26,11 +27,16 @@ vi.mock('../hooks/comlink/useWindowConnection', () => ({
   useWindowConnection: vi.fn(),
 }))
 
+vi.mock('../hooks/context/useSanityInstance', () => ({
+  useSanityInstance: vi.fn(),
+}))
+
 // Use simpler mock typings
 const mockGetIsInDashboardState = getIsInDashboardState as Mock
 const mockSetAuthToken = setAuthToken as Mock
 const mockUseAuthState = useAuthState as Mock
 const mockUseWindowConnection = useWindowConnection as Mock
+const mockUseSanityInstance = useSanityInstance as unknown as Mock
 
 const mockFetch = vi.fn()
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -46,6 +52,7 @@ describe('ComlinkTokenRefresh', () => {
     mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => false)})
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN})
     mockUseWindowConnection.mockReturnValue({fetch: mockFetch})
+    mockUseSanityInstance.mockReturnValue(mockSanityInstance)
   })
 
   afterEach(() => {
@@ -239,7 +246,7 @@ describe('ComlinkTokenRefresh', () => {
         describe('when in studio mode', () => {
           beforeEach(() => {
             // Make the instance report studio mode enabled
-            mockSanityInstance.mockReturnValue({
+            mockUseSanityInstance.mockReturnValue({
               ...mockSanityInstance,
               config: {studioMode: {enabled: true}},
             })
