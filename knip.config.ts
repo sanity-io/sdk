@@ -34,6 +34,22 @@ const baseConfig = {
       ],
       project,
     },
+    'apps/dashboard': {
+      entry: ['src/main.tsx'],
+      typescript: {
+        config: 'tsconfig.json',
+      },
+      ignoreDependencies: ['@repo/tsconfig', 'react-compiler-runtime'],
+      project,
+    },
+    'apps/sdk-app': {
+      entry: ['src/main.tsx'],
+      typescript: {
+        config: 'tsconfig.json',
+      },
+      ignoreDependencies: ['@repo/tsconfig', 'react-compiler-runtime'],
+      project,
+    },
     'apps/*': {
       typescript: {
         config: 'tsconfig.json',

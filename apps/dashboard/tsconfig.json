@@ -1,0 +1,18 @@
+{
+  "extends": "@repo/tsconfig/base.json",
+  "compilerOptions": {
+    "rootDir": "../../",
+    "baseUrl": "../../",
+    "verbatimModuleSyntax": false,
+    "noEmit": true,
+    "module": "ESNext",
+    "types": ["vite/client"],
+    "paths": {
+      "@sanity/sdk": ["./packages/core/src/_exports/index.ts"],
+      "@sanity/sdk/*": ["./packages/core/src/_exports/*"],
+      "@sanity/sdk-react": ["./packages/react/src/_exports/index.ts"],
+      "@sanity/sdk-react/*": ["./packages/react/src/_exports/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"]
+}
