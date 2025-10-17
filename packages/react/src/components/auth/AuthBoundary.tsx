@@ -165,11 +165,11 @@ function AuthSwitch({
   const loginUrl = useLoginUrl()
 
   useEffect(() => {
-    if (isLoggedOut && !isInIframe()) {
-      // We don't want to redirect to login if we're in the Dashboard
+    if (isLoggedOut && !isInIframe() && !studioModeEnabled) {
+      // We don't want to redirect to login if we're in the Dashboard nor in studio mode
       window.location.href = loginUrl
     }
-  }, [isLoggedOut, loginUrl])
+  }, [isLoggedOut, loginUrl, studioModeEnabled])
 
   // Only check the error if verification is enabled
   if (verifyOrganization && orgError) {
