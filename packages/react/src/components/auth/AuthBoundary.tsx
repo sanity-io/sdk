@@ -7,6 +7,7 @@ import {ComlinkTokenRefreshProvider} from '../../context/ComlinkTokenRefresh'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
+import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 import {CorsErrorComponent} from '../errors/CorsErrorComponent'
 import {isInIframe} from '../utils'
 import {AuthError} from './AuthError'
@@ -154,17 +155,21 @@ function AuthSwitch({
   ...props
 }: AuthSwitchProps) {
   const authState = useAuthState()
-  const orgError = useVerifyOrgProjects(!verifyOrganization, projectIds)
+  const instance = useSanityInstance()
+  const studioModeEnabled = instance.config.studioMode?.enabled
+  const disableVerifyOrg =
+    !verifyOrganization || studioModeEnabled || authState.type !== AuthStateType.LOGGED_IN
+  const orgError = useVerifyOrgProjects(disableVerifyOrg, projectIds)
 
   const isLoggedOut = authState.type === AuthStateType.LOGGED_OUT && !authState.isDestroyingSession
   const loginUrl = useLoginUrl()
 
   useEffect(() => {
-    if (isLoggedOut && !isInIframe()) {
-      // We don't want to redirect to login if we're in the Dashboard
+    if (isLoggedOut && !isInIframe() && !studioModeEnabled) {
+      // We don't want to redirect to login if we're in the Dashboard nor in studio mode
       window.location.href = loginUrl
     }
-  }, [isLoggedOut, loginUrl])
+  }, [isLoggedOut, loginUrl, studioModeEnabled])
 
   // Only check the error if verification is enabled
   if (verifyOrganization && orgError) {
