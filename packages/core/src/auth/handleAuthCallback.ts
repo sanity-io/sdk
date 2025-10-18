@@ -1,3 +1,4 @@
+import {sharedWorkerInterceptor} from '../client/sharedWorkerInterceptor'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
@@ -67,6 +68,7 @@ export const handleAuthCallback = bindActionGlobally(
         useProjectHostname: false,
         useCdn: false,
         ...(apiHost && {apiHost}),
+        requester: sharedWorkerInterceptor,
       })
 
       const {token} = await client.request<{token: string; label: string}>({
