@@ -16,6 +16,23 @@ vi.mock('../client/clientStore', () => ({
   getClientState: vi.fn(),
 }))
 
+// Avoid initializing releases store/perspectives in these tests to prevent
+// side-effect queries (e.g. releases::all()) that would duplicate fetch calls
+vi.mock('../releases/getPerspectiveState', async () => {
+  const actual = await vi.importActual('../releases/getPerspectiveState')
+  return {
+    ...actual,
+    getPerspectiveState: vi.fn(
+      (_instance, options?: {perspective?: unknown}) =>
+        ({
+          subscribe: () => () => {},
+          getCurrent: () => (options?.perspective ?? 'drafts') as unknown,
+          observable: of((options?.perspective ?? 'drafts') as unknown),
+        }) as unknown as StateSource<unknown>,
+    ),
+  }
+})
+
 describe('queryStore', () => {
   let instance: SanityInstance
   let liveEvents: Subject<LiveEvent>
