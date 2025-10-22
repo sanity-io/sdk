@@ -1,3 +1,4 @@
+import {type ClientError} from '@sanity/client'
 import {EMPTY, fromEvent, Observable} from 'rxjs'
 
 import {AUTH_CODE_PARAM, DEFAULT_BASE} from './authConstants'
@@ -133,4 +134,39 @@ export function getCleanedUrl(locationUrl: string): string {
   loc.searchParams.delete('sid')
   loc.searchParams.delete('url')
   return loc.toString()
+}
+
+// -----------------------------------------------------------------------------
+// ClientError helpers (shared)
+// -----------------------------------------------------------------------------
+
+/** @internal */
+export type ApiErrorBody = {
+  error?: {type?: string; description?: string}
+  type?: string
+  description?: string
+  message?: string
+}
+
+/** @internal Extracts the structured API error body from a ClientError, if present. */
+export function getClientErrorApiBody(error: ClientError): ApiErrorBody | undefined {
+  const body: unknown = (error as ClientError).response?.body
+  return body && typeof body === 'object' ? (body as ApiErrorBody) : undefined
+}
+
+/** @internal Returns the error type string from an API error body, if available. */
+export function getClientErrorApiType(error: ClientError): string | undefined {
+  const body = getClientErrorApiBody(error)
+  return body?.error?.type ?? body?.type
+}
+
+/** @internal Returns the error description string from an API error body, if available. */
+export function getClientErrorApiDescription(error: ClientError): string | undefined {
+  const body = getClientErrorApiBody(error)
+  return body?.error?.description ?? body?.description
+}
+
+/** @internal True if the error represents a projectUserNotFoundError. */
+export function isProjectUserNotFoundClientError(error: ClientError): boolean {
+  return getClientErrorApiType(error) === 'projectUserNotFoundError'
 }
