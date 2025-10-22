@@ -1,5 +1,10 @@
 import {ClientError} from '@sanity/client'
-import {AuthStateType} from '@sanity/sdk'
+import {
+  AuthStateType,
+  getClientErrorApiBody,
+  getClientErrorApiDescription,
+  isProjectUserNotFoundClientError,
+} from '@sanity/sdk'
 import {useCallback, useEffect, useState} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
@@ -35,6 +40,7 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
   const [authErrorMessage, setAuthErrorMessage] = useState(
     'Please try again or contact support if the problem persists.',
   )
+  const [showRetryCta, setShowRetryCta] = useState(true)
 
   const handleRetry = useCallback(async () => {
     await logout()
@@ -44,18 +50,28 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
   useEffect(() => {
     if (error instanceof ClientError) {
       if (error.statusCode === 401) {
-        handleRetry()
+        // Surface a friendly message for projectUserNotFoundError (do not logout/refresh)
+        if (isProjectUserNotFoundClientError(error)) {
+          const description = getClientErrorApiDescription(error)
+          if (description) setAuthErrorMessage(description)
+          setShowRetryCta(false)
+        } else {
+          setShowRetryCta(true)
+          handleRetry()
+        }
       } else if (error.statusCode === 404) {
-        const errorMessage = error.response.body.message || ''
+        const errorMessage = getClientErrorApiBody(error)?.message || ''
         if (errorMessage.startsWith('Session with sid') && errorMessage.endsWith('not found')) {
           setAuthErrorMessage('The session ID is invalid or expired.')
         } else {
           setAuthErrorMessage('The login link is invalid or expired. Please try again.')
         }
+        setShowRetryCta(true)
       }
     }
     if (authState.type !== AuthStateType.ERROR && error instanceof ConfigurationError) {
       setAuthErrorMessage(error.message)
+      setShowRetryCta(true)
     }
   }, [authState, handleRetry, error])
 
@@ -63,10 +79,14 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
     <Error
       heading={error instanceof AuthError ? 'Authentication Error' : 'Configuration Error'}
       description={authErrorMessage}
-      cta={{
-        text: 'Retry',
-        onClick: handleRetry,
-      }}
+      cta={
+        showRetryCta
+          ? {
+              text: 'Retry',
+              onClick: handleRetry,
+            }
+          : undefined
+      }
     />
   )
 }
