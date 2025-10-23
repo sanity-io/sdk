@@ -1,7 +1,9 @@
 import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
 import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
-import {useCallback} from 'react'
+import {useCallback, useMemo} from 'react'
 
+import {getIframeParentUrl, isInIframe} from '../../components/utils'
+import {useDashboardOrganizationId} from '../auth/useDashboardOrganizationId'
 import {useWindowConnection} from '../comlink/useWindowConnection'
 
 /**
@@ -28,7 +30,8 @@ export interface IntentMessage {
  * @public
  */
 interface SendIntent {
-  sendIntent: () => void
+  sendIntent: (e: React.MouseEvent<HTMLElement>) => void
+  href?: string
 }
 
 /**
@@ -90,43 +93,64 @@ interface UseSendIntentParams {
  * }
  * ```
  */
-export function useSendIntent(params: UseSendIntentParams): SendIntent {
-  const {intentName, documentHandle, params: intentParams} = params
+export function useSendIntent({
+  intentName,
+  documentHandle,
+  params,
+}: UseSendIntentParams): SendIntent {
+  const orgId = useDashboardOrganizationId()
+
   const {sendMessage} = useWindowConnection<IntentMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
   })
 
-  const sendIntent = useCallback(() => {
-    try {
-      const {projectId, dataset} = documentHandle
+  const href = useMemo(() => {
+    const {documentId, documentType, projectId, dataset} = documentHandle
 
-      const message: IntentMessage = {
-        type: 'dashboard/v1/events/intents/send-intent',
-        data: {
-          ...(intentName ? {intentName} : {}),
-          ...{
+    if (!orgId || !documentId || !documentType) {
+      return undefined
+    }
+
+    const base = isInIframe() ? getIframeParentUrl() : ''
+    const queryParams = new URLSearchParams(params).toString()
+    return `${base}@${orgId}/intents/${projectId}/${dataset}/${documentId}/${documentType}${intentName ? `/${intentName}` : ''}${queryParams ? `?${queryParams}` : ''}`
+  }, [orgId, documentHandle, intentName, params])
+
+  const sendIntent = useCallback(
+    (e: React.MouseEvent<HTMLElement>) => {
+      e.preventDefault()
+
+      try {
+        const {documentId, documentType, projectId, dataset} = documentHandle
+
+        const message: IntentMessage = {
+          type: 'dashboard/v1/events/intents/send-intent',
+          data: {
             document: {
-              id: documentHandle.documentId,
-              type: documentHandle.documentType,
+              id: documentId,
+              type: documentType,
             },
             resource: {
               id: `${projectId}.${dataset}`,
             },
+            ...(intentName && {intentName}),
+            ...(params && !!Object.keys(params).length && {params}),
           },
-          ...(intentParams && Object.keys(intentParams).length > 0 ? {params: intentParams} : {}),
-        },
-      }
+        }
 
-      sendMessage(message.type, message.data)
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to send intent:', error)
-      throw error
-    }
-  }, [intentName, documentHandle, intentParams, sendMessage])
+        sendMessage(message.type, message.data)
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to send intent:', error)
+        throw error
+      }
+    },
+    [intentName, documentHandle, params, sendMessage],
+  )
 
   return {
     sendIntent,
+    href,
   }
 }

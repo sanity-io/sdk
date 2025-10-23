@@ -1,8 +1,15 @@
 import {useSendIntent} from '@sanity/sdk-react'
 import React, {Suspense} from 'react'
 
-function SendIntentButton(): React.JSX.Element {
-  const {sendIntent} = useSendIntent({
+function SendIntentButton({
+  cta,
+  intentName,
+}: {
+  cta: string
+  intentName?: string
+}): React.JSX.Element {
+  const {sendIntent, href} = useSendIntent({
+    ...(intentName && {intentName}),
     documentHandle: {
       documentId: 'maintenance-schedule-123',
       documentType: 'maintenanceSchedule',
@@ -11,15 +18,15 @@ function SendIntentButton(): React.JSX.Element {
     },
   })
 
-  const handleMaintenanceScheduleClick = () => {
+  const handleMaintenanceScheduleClick = (e: React.MouseEvent<HTMLElement>) => {
     console.log('Sending maintenanceSchedule intent - this should trigger disambiguation')
-    sendIntent()
+    sendIntent(e)
   }
 
   return (
-    <button className="maintenance-schedule-button" onClick={handleMaintenanceScheduleClick}>
-      Send Maintenance Schedule Intent
-    </button>
+    <a className="maintenance-schedule-button" onClick={handleMaintenanceScheduleClick} href={href}>
+      {cta}
+    </a>
   )
 }
 
@@ -33,9 +40,16 @@ export function IntentDisambiguation(): React.JSX.Element {
           property-overview-app can handle this intent, the Dashboard should do something to let you
           choose which app should handle it.
         </p>
-        <Suspense fallback={<div>Loading intent sender...</div>}>
-          <SendIntentButton />
-        </Suspense>
+
+        <p>
+          <Suspense fallback={<span>Loading intent sender...</span>}>
+            <SendIntentButton cta="Send Maintenance Schedule Intent" />
+          </Suspense>
+        </p>
+
+        <p>
+          <SendIntentButton cta="Direct Edit Intent Link" intentName="editScheduleState" />
+        </p>
       </div>
     </div>
   )
