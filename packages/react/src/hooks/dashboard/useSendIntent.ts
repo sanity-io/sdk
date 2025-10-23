@@ -112,6 +112,8 @@ export function useSendIntent({
       return undefined
     }
 
+    // NOTE: Project ID and dataset wouldn't apply to media assets
+
     const base = isInIframe() ? getIframeParentUrl() : ''
     const queryParams = new URLSearchParams(params).toString()
     return `${base}@${orgId}/intents/${projectId}/${dataset}/${documentId}/${documentType}${intentName ? `/${intentName}` : ''}${queryParams ? `?${queryParams}` : ''}`
