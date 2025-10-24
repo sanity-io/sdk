@@ -2,6 +2,10 @@ export function isInIframe(): boolean {
   return typeof window !== 'undefined' && window.self !== window.top
 }
 
+export function getIframeParentUrl(): string {
+  return window.location === window.parent.location ? document.location.origin : document.referrer
+}
+
 /**
  * @internal
  *
