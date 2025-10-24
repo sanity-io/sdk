@@ -11,7 +11,7 @@ function SendIntentButton({
   const {sendIntent, href} = useSendIntent({
     ...(intentName && {intentName}),
     documentHandle: {
-      documentId: 'maintenance-schedule-123',
+      documentId: 'ISWDzt74pwbeI4ifLERDca',
       documentType: 'maintenanceSchedule',
       projectId: '9wmez61s',
       dataset: 'production',
@@ -48,7 +48,10 @@ export function IntentDisambiguation(): React.JSX.Element {
         </p>
 
         <p>
-          <SendIntentButton cta="Direct Edit Intent Link" intentName="editScheduleState" />
+          <SendIntentButton
+            cta="Send Maintenance Schedule Edit Intent"
+            intentName="editScheduleState"
+          />
         </p>
       </div>
     </div>
