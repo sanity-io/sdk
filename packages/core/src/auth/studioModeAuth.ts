@@ -1,5 +1,6 @@
 import {type ClientConfig, type SanityClient} from '@sanity/client'
 
+import {sharedWorkerInterceptor} from '../client/sharedWorkerInterceptor'
 import {getTokenFromStorage} from './utils'
 
 /**
@@ -18,6 +19,7 @@ export async function checkForCookieAuth(
     const client = clientFactory({
       projectId,
       useCdn: false,
+      requester: sharedWorkerInterceptor,
     })
     const user = await client.request({
       uri: '/users/me',

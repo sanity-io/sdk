@@ -12,6 +12,7 @@ import {
   timer,
 } from 'rxjs'
 
+import {sharedWorkerInterceptor} from '../client/sharedWorkerInterceptor'
 import {type StoreContext} from '../store/defineStore'
 import {DEFAULT_API_VERSION} from './authConstants'
 import {AuthStateType} from './authStateType'
@@ -64,6 +65,7 @@ function createTokenRefreshStream(
       token,
       ignoreBrowserTokenWarning: true,
       ...(apiHost && {apiHost}),
+      requester: sharedWorkerInterceptor,
     })
 
     const subscription = client.observable

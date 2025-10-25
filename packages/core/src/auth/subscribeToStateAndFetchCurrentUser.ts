@@ -1,6 +1,7 @@
 import {type CurrentUser} from '@sanity/types'
 import {distinctUntilChanged, filter, map, type Subscription, switchMap} from 'rxjs'
 
+import {sharedWorkerInterceptor} from '../client/sharedWorkerInterceptor'
 import {type StoreContext} from '../store/defineStore'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
@@ -42,6 +43,7 @@ export const subscribeToStateAndFetchCurrentUser = ({
           ...(authMethod === 'cookie' ? {withCredentials: true} : {}),
           ...(useProjectHostname && projectId ? {projectId} : {}),
           ...(apiHost && {apiHost}),
+          requester: sharedWorkerInterceptor,
         }),
       ),
       switchMap((client) =>
