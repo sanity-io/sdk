@@ -4,6 +4,7 @@
     "DEV",
     "VISUALIZER",
     "PKG_VERSION",
+    "VITE_CORE_NET_PROFILER",
     "NPM_CONFIG_PROVENANCE",
     "CI",
     "SDK_E2E_PROJECT_ID",
