@@ -94,6 +94,14 @@ function promptAdapter(
   return firstValueFrom(agentPrompt(instance, options))
 }
 
+/**
+ * @alpha
+ * Prompts the LLM using the same instruction template format as other actions.
+ * - `format`: 'string' or 'json' (instruction must contain the word "json" for JSON responses).
+ * - Optional `temperature`.
+ *
+ * Returns a stable callback that triggers the action and resolves a Promise with the prompt result.
+ */
 export const useAgentPrompt: () => (options: AgentPromptOptions) => Promise<AgentPromptResult> =
   createCallbackHook(promptAdapter)
 
@@ -114,5 +122,15 @@ function patchAdapter(
   return firstValueFrom(agentPatch(instance, options))
 }
 
+/**
+ * @alpha
+ * Schema-aware patching with Sanity Agent Actions.
+ * - Validates provided paths/values against the document schema and merges object values safely.
+ * - Prevents duplicate keys and supports array appends (including after a specific keyed item).
+ * - Accepts `documentId` or `targetDocument` (mutually exclusive).
+ * - Optional `async`, `noWrite`, `conditionalPaths`.
+ *
+ * Returns a stable callback that triggers the action and resolves a Promise with the patch result.
+ */
 export const useAgentPatch: () => (options: AgentPatchOptions) => Promise<AgentPatchResult> =
   createCallbackHook(patchAdapter)
