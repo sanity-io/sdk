@@ -1,7 +1,6 @@
 import {
   agentGenerate,
   type AgentGenerateOptions,
-  type AgentGenerateResult,
   agentPatch,
   type AgentPatchOptions,
   type AgentPatchResult,
@@ -10,14 +9,32 @@ import {
   type AgentPromptResult,
   agentTransform,
   type AgentTransformOptions,
-  type AgentTransformResult,
   agentTranslate,
   type AgentTranslateOptions,
-  type AgentTranslateResult,
+  type SanityInstance,
 } from '@sanity/sdk'
-import {type Observable} from 'rxjs'
+import {firstValueFrom} from 'rxjs'
 
 import {createCallbackHook} from '../helpers/createCallbackHook'
+
+interface Subscription {
+  unsubscribe(): void
+}
+
+interface Observer<T> {
+  next?: (value: T) => void
+  error?: (err: unknown) => void
+  complete?: () => void
+}
+
+export interface Subscribable<T> {
+  subscribe(observer: Observer<T>): Subscription
+  subscribe(
+    next: (value: T) => void,
+    error?: (err: unknown) => void,
+    complete?: () => void,
+  ): Subscription
+}
 
 /**
  * @alpha
@@ -26,10 +43,12 @@ import {createCallbackHook} from '../helpers/createCallbackHook'
  * - Can target specific paths/fields; supports image generation when targeting image fields.
  * - Supports optional `temperature`, `async`, `noWrite`, and `conditionalPaths`.
  *
- * Returns a stable callback that triggers the action and yields an Observable result.
+ * Returns a stable callback that triggers the action and yields a Subscribable stream.
  */
-export const useAgentGenerate: () => (options: AgentGenerateOptions) => AgentGenerateResult =
-  createCallbackHook(agentGenerate)
+export const useAgentGenerate: () => (options: AgentGenerateOptions) => Subscribable<unknown> =
+  createCallbackHook(agentGenerate) as unknown as () => (
+    options: AgentGenerateOptions,
+  ) => Subscribable<unknown>
 
 /**
  * @alpha
@@ -39,10 +58,12 @@ export const useAgentGenerate: () => (options: AgentGenerateOptions) => AgentGen
  * - Supports per-path image transform instructions and image description operations.
  * - Optional `temperature`, `async`, `noWrite`, `conditionalPaths`.
  *
- * Returns a stable callback that triggers the action and yields an Observable result.
+ * Returns a stable callback that triggers the action and yields a Subscribable stream.
  */
-export const useAgentTransform: () => (options: AgentTransformOptions) => AgentTransformResult =
-  createCallbackHook(agentTransform)
+export const useAgentTransform: () => (options: AgentTransformOptions) => Subscribable<unknown> =
+  createCallbackHook(agentTransform) as unknown as () => (
+    options: AgentTransformOptions,
+  ) => Subscribable<unknown>
 
 /**
  * @alpha
@@ -51,10 +72,12 @@ export const useAgentTransform: () => (options: AgentTransformOptions) => AgentT
  * - Can write into a different `targetDocument`, and/or store language in a field.
  * - Optional `temperature`, `async`, `noWrite`, `conditionalPaths`.
  *
- * Returns a stable callback that triggers the action and yields an Observable result.
+ * Returns a stable callback that triggers the action and yields a Subscribable stream.
  */
-export const useAgentTranslate: () => (options: AgentTranslateOptions) => AgentTranslateResult =
-  createCallbackHook(agentTranslate)
+export const useAgentTranslate: () => (options: AgentTranslateOptions) => Subscribable<unknown> =
+  createCallbackHook(agentTranslate) as unknown as () => (
+    options: AgentTranslateOptions,
+  ) => Subscribable<unknown>
 
 /**
  * @alpha
@@ -62,10 +85,17 @@ export const useAgentTranslate: () => (options: AgentTranslateOptions) => AgentT
  * - `format`: 'string' or 'json' (instruction must contain the word "json" for JSON responses).
  * - Optional `temperature`.
  *
- * Returns a stable callback that triggers the action and yields a one-shot Observable of the prompt result.
+ * Returns a stable callback that triggers the action and resolves a Promise with the prompt result.
  */
-export const useAgentPrompt: () => (options: AgentPromptOptions) => Observable<AgentPromptResult> =
-  createCallbackHook(agentPrompt)
+function promptAdapter(
+  instance: SanityInstance,
+  options: AgentPromptOptions,
+): Promise<AgentPromptResult> {
+  return firstValueFrom(agentPrompt(instance, options))
+}
+
+export const useAgentPrompt: () => (options: AgentPromptOptions) => Promise<AgentPromptResult> =
+  createCallbackHook(promptAdapter)
 
 /**
  * @alpha
@@ -75,7 +105,14 @@ export const useAgentPrompt: () => (options: AgentPromptOptions) => Observable<A
  * - Accepts `documentId` or `targetDocument` (mutually exclusive).
  * - Optional `async`, `noWrite`, `conditionalPaths`.
  *
- * Returns a stable callback that triggers the action and yields a one-shot Observable of the patch result.
+ * Returns a stable callback that triggers the action and resolves a Promise with the patch result.
  */
-export const useAgentPatch: () => (options: AgentPatchOptions) => Observable<AgentPatchResult> =
-  createCallbackHook(agentPatch)
+function patchAdapter(
+  instance: SanityInstance,
+  options: AgentPatchOptions,
+): Promise<AgentPatchResult> {
+  return firstValueFrom(agentPatch(instance, options))
+}
+
+export const useAgentPatch: () => (options: AgentPatchOptions) => Promise<AgentPatchResult> =
+  createCallbackHook(patchAdapter)

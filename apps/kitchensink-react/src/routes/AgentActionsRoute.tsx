@@ -6,7 +6,6 @@ import {
 } from '@sanity/sdk-react'
 import {Box, Button, Card, Code, Label, Stack, Text} from '@sanity/ui'
 import {type JSX, useMemo, useState} from 'react'
-import {finalize, take} from 'rxjs'
 
 import {PageLayout} from '../components/PageLayout'
 
@@ -70,14 +69,12 @@ export function AgentActionsRoute(): JSX.Element {
                 onClick={() => {
                   setIsLoadingPrompt(true)
                   prompt(promptOptions)
-                    .pipe(finalize(() => setIsLoadingPrompt(false)))
-                    .subscribe({
-                      next: (value) => setPromptResult(String(value ?? '')),
-                      error: (err) => {
-                        // eslint-disable-next-line no-console
-                        console.error(err)
-                      },
+                    .then((value) => setPromptResult(String(value ?? '')))
+                    .catch((err) => {
+                      // eslint-disable-next-line no-console
+                      console.error(err)
                     })
+                    .finally(() => setIsLoadingPrompt(false))
                 }}
               />
             </Box>
@@ -109,18 +106,18 @@ export function AgentActionsRoute(): JSX.Element {
                 disabled={isLoadingGenerate}
                 onClick={() => {
                   setIsLoadingGenerate(true)
-                  generate(generateOptions)
-                    .pipe(
-                      take(1),
-                      finalize(() => setIsLoadingGenerate(false)),
-                    )
-                    .subscribe({
-                      next: (value) => setGenerateResult(JSON.stringify(value, null, 2)),
-                      error: (err) => {
-                        // eslint-disable-next-line no-console
-                        console.error(err)
-                      },
-                    })
+                  const sub = generate(generateOptions).subscribe({
+                    next: (value) => {
+                      setGenerateResult(JSON.stringify(value, null, 2))
+                      setIsLoadingGenerate(false)
+                      sub.unsubscribe()
+                    },
+                    error: (err) => {
+                      // eslint-disable-next-line no-console
+                      console.error(err)
+                      setIsLoadingGenerate(false)
+                    },
+                  })
                 }}
               />
             </Box>
