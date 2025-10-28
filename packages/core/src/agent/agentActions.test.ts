@@ -41,35 +41,40 @@ describe('agent actions', () => {
 
   it('agentGenerate returns observable from client', async () => {
     mockClient.observable.agent.action.generate.mockReturnValue(of('gen'))
-    const value = await firstValueFrom(agentGenerate({} as any, {foo: 'bar'} as any))
+    const instance = {config: {projectId: 'p', dataset: 'd'}} as any
+    const value = await firstValueFrom(agentGenerate(instance, {foo: 'bar'} as any))
     expect(value).toBe('gen')
     expect(mockClient.observable.agent.action.generate).toHaveBeenCalledWith({foo: 'bar'})
   })
 
   it('agentTransform returns observable from client', async () => {
     mockClient.observable.agent.action.transform.mockReturnValue(of('xform'))
-    const value = await firstValueFrom(agentTransform({} as any, {a: 1} as any))
+    const instance = {config: {projectId: 'p', dataset: 'd'}} as any
+    const value = await firstValueFrom(agentTransform(instance, {a: 1} as any))
     expect(value).toBe('xform')
     expect(mockClient.observable.agent.action.transform).toHaveBeenCalledWith({a: 1})
   })
 
   it('agentTranslate returns observable from client', async () => {
     mockClient.observable.agent.action.translate.mockReturnValue(of('xlate'))
-    const value = await firstValueFrom(agentTranslate({} as any, {b: 2} as any))
+    const instance = {config: {projectId: 'p', dataset: 'd'}} as any
+    const value = await firstValueFrom(agentTranslate(instance, {b: 2} as any))
     expect(value).toBe('xlate')
     expect(mockClient.observable.agent.action.translate).toHaveBeenCalledWith({b: 2})
   })
 
   it('agentPrompt wraps promise into observable', async () => {
     mockClient.agent.action.prompt.mockResolvedValue('prompted')
-    const value = await firstValueFrom(agentPrompt({} as any, {p: true} as any))
+    const instance = {config: {projectId: 'p', dataset: 'd'}} as any
+    const value = await firstValueFrom(agentPrompt(instance, {p: true} as any))
     expect(value).toBe('prompted')
     expect(mockClient.agent.action.prompt).toHaveBeenCalledWith({p: true})
   })
 
   it('agentPatch wraps promise into observable', async () => {
     mockClient.agent.action.patch.mockResolvedValue('patched')
-    const value = await firstValueFrom(agentPatch({} as any, {q: false} as any))
+    const instance = {config: {projectId: 'p', dataset: 'd'}} as any
+    const value = await firstValueFrom(agentPatch(instance, {q: false} as any))
     expect(value).toBe('patched')
     expect(mockClient.agent.action.patch).toHaveBeenCalledWith({q: false})
   })

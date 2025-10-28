@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {renderHook} from '@testing-library/react'
-import {firstValueFrom, of} from 'rxjs'
+import {of} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
@@ -33,31 +33,46 @@ describe('agent action hooks', () => {
 
   it('useAgentGenerate returns a callable that delegates to core', async () => {
     const {result} = renderHook(() => useAgentGenerate(), {wrapper})
-    const value = await firstValueFrom(result.current({} as any))
+    const value = await new Promise<any>((resolve, reject) => {
+      result.current({} as any).subscribe({
+        next: (v) => resolve(v),
+        error: reject,
+      })
+    })
     expect(value).toBe('gen')
   })
 
   it('useAgentTransform returns a callable that delegates to core', async () => {
     const {result} = renderHook(() => useAgentTransform(), {wrapper})
-    const value = await firstValueFrom(result.current({} as any))
+    const value = await new Promise<any>((resolve, reject) => {
+      result.current({} as any).subscribe({
+        next: (v) => resolve(v),
+        error: reject,
+      })
+    })
     expect(value).toBe('xform')
   })
 
   it('useAgentTranslate returns a callable that delegates to core', async () => {
     const {result} = renderHook(() => useAgentTranslate(), {wrapper})
-    const value = await firstValueFrom(result.current({} as any))
+    const value = await new Promise<any>((resolve, reject) => {
+      result.current({} as any).subscribe({
+        next: (v) => resolve(v),
+        error: reject,
+      })
+    })
     expect(value).toBe('xlate')
   })
 
   it('useAgentPrompt returns a callable that delegates to core', async () => {
     const {result} = renderHook(() => useAgentPrompt(), {wrapper})
-    const value = await firstValueFrom(result.current({} as any))
+    const value = await result.current({} as any)
     expect(value).toBe('prompted')
   })
 
   it('useAgentPatch returns a callable that delegates to core', async () => {
     const {result} = renderHook(() => useAgentPatch(), {wrapper})
-    const value = await firstValueFrom(result.current({} as any))
+    const value = await result.current({} as any)
     expect(value).toBe('patched')
   })
 })
