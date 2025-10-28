@@ -27,7 +27,7 @@ interface Observer<T> {
   complete?: () => void
 }
 
-export interface Subscribable<T> {
+interface Subscribable<T> {
   subscribe(observer: Observer<T>): Subscription
   subscribe(
     next: (value: T) => void,
