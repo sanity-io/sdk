@@ -1,15 +1,8 @@
-import {useSendIntent} from '@sanity/sdk-react'
+import {useIntentButton, useIntentLink} from '@sanity/sdk-react'
 import React, {Suspense} from 'react'
 
-function SendIntentButton({
-  cta,
-  intentName,
-}: {
-  cta: string
-  intentName?: string
-}): React.JSX.Element {
-  const {sendIntent, href} = useSendIntent({
-    ...(intentName && {intentName}),
+function SendIntentButton(): React.JSX.Element {
+  const {onClick} = useIntentButton({
     documentHandle: {
       documentId: 'ISWDzt74pwbeI4ifLERDca',
       documentType: 'maintenanceSchedule',
@@ -18,14 +11,35 @@ function SendIntentButton({
     },
   })
 
-  const handleMaintenanceScheduleClick = (e: React.MouseEvent<HTMLElement>) => {
+  const handleMaintenanceScheduleClick = () => {
     console.log('Sending maintenanceSchedule intent - this should trigger disambiguation')
-    sendIntent(e)
+    onClick()
   }
 
   return (
-    <a className="maintenance-schedule-button" onClick={handleMaintenanceScheduleClick} href={href}>
-      {cta}
+    <button className="maintenance-schedule-button" onClick={handleMaintenanceScheduleClick}>
+      Send Maintenance Schedule Intent
+    </button>
+  )
+}
+
+function SendIntentLink(): React.JSX.Element {
+  const intentLink = useIntentLink({
+    intentName: 'editScheduleState',
+    documentHandle: {
+      documentId: 'ISWDzt74pwbeI4ifLERDca',
+      documentType: 'maintenanceSchedule',
+      projectId: '9wmez61s',
+      dataset: 'production',
+    },
+    // params: {
+    //   view: 'grid',
+    // },
+  })
+
+  return (
+    <a className="maintenance-schedule-button" {...intentLink}>
+      Send Maintenance Schedule Edit Intent
     </a>
   )
 }
@@ -43,15 +57,12 @@ export function IntentDisambiguation(): React.JSX.Element {
 
         <p>
           <Suspense fallback={<span>Loading intent sender...</span>}>
-            <SendIntentButton cta="Send Maintenance Schedule Intent" />
+            <SendIntentButton />
           </Suspense>
         </p>
 
         <p>
-          <SendIntentButton
-            cta="Send Maintenance Schedule Edit Intent"
-            intentName="editScheduleState"
-          />
+          <SendIntentLink />
         </p>
       </div>
     </div>
