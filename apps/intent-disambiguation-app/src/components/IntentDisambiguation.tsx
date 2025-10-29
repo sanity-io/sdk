@@ -32,9 +32,9 @@ function SendIntentLink(): React.JSX.Element {
       projectId: '9wmez61s',
       dataset: 'production',
     },
-    // params: {
-    //   view: 'grid',
-    // },
+    params: {
+      view: 'grid',
+    },
   })
 
   return (
