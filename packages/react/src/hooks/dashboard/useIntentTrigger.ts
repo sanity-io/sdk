@@ -1,6 +1,6 @@
 import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
 import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
-import {useCallback, useMemo} from 'react'
+import {useCallback} from 'react'
 
 import {getIframeParentUrl, isInIframe} from '../../components/utils'
 import {useDashboardOrganizationId} from '../auth/useDashboardOrganizationId'
@@ -14,7 +14,7 @@ export interface IntentMessage {
   type: 'dashboard/v1/events/intents/send-intent'
   data: {
     intentName?: string
-    document: {
+    document?: {
       id: string
       type: string
     }
@@ -26,22 +26,44 @@ export interface IntentMessage {
 }
 
 /**
- * Return type for the useSendIntent hook
+ * Parameters for the useIntentTrigger hook
  * @public
  */
-interface SendIntent {
-  sendIntent: (e: React.MouseEvent<HTMLElement>) => void
-  href?: string
+interface IntentTriggerParams {
+  documentHandle?: DocumentHandle
+  params?: Record<string, string>
+}
+
+interface IntentLinkParams extends IntentTriggerParams {
+  intentName: string
 }
 
 /**
- * Parameters for the useSendIntent hook
+ * Return type for the useIntentTrigger hook
  * @public
  */
-interface UseSendIntentParams {
-  intentName?: string
-  documentHandle: DocumentHandle
-  params?: Record<string, string>
+interface IntentTrigger {
+  intentLink: (props: IntentLinkParams) => {
+    href: string
+    onClick: (e: React.MouseEvent<HTMLElement>) => void
+  }
+  intentButton: (props: IntentTriggerParams) => {
+    onClick: () => void
+  }
+}
+
+function getIntentHref(
+  base: string,
+  {intentName, documentHandle, params}: IntentLinkParams,
+): string {
+  const queryParams = documentHandle
+    ? Object.keys(documentHandle)
+        .map((key) => `${key}=${documentHandle[key as keyof DocumentHandle]}`)
+        .join('&')
+    : null
+  const payload = params ? encodeURIComponent(JSON.stringify({params})) : null
+
+  return `${base}/intent/${intentName}${queryParams ? `?${queryParams}` : ''}${payload ? `&payload=${payload}` : ''}`
 }
 
 /**
@@ -93,11 +115,7 @@ interface UseSendIntentParams {
  * }
  * ```
  */
-export function useSendIntent({
-  intentName,
-  documentHandle,
-  params,
-}: UseSendIntentParams): SendIntent {
+export function useIntentTrigger(): IntentTrigger {
   const orgId = useDashboardOrganizationId()
 
   const {sendMessage} = useWindowConnection<IntentMessage, FrameMessage>({
@@ -105,37 +123,21 @@ export function useSendIntent({
     connectTo: SDK_CHANNEL_NAME,
   })
 
-  const href = useMemo(() => {
-    const {documentId, documentType, projectId, dataset} = documentHandle
-
-    if (!orgId || !documentId || !documentType) {
-      return undefined
-    }
-
-    // NOTE: Project ID and dataset wouldn't apply to media assets
-
-    const base = isInIframe() ? getIframeParentUrl() : ''
-    const queryParams = new URLSearchParams(params).toString()
-    return `${base}@${orgId}/intents/${projectId}/${dataset}/${documentId}/${documentType}${intentName ? `/${intentName}` : ''}${queryParams ? `?${queryParams}` : ''}`
-  }, [orgId, documentHandle, intentName, params])
-
-  const sendIntent = useCallback(
-    (e: React.MouseEvent<HTMLElement>) => {
-      e.preventDefault()
-
+  const onClick = useCallback(
+    ({documentHandle, intentName, params}: IntentTriggerParams & {intentName?: string}) => {
       try {
-        const {documentId, documentType, projectId, dataset} = documentHandle
-
         const message: IntentMessage = {
           type: 'dashboard/v1/events/intents/send-intent',
           data: {
-            document: {
-              id: documentId,
-              type: documentType,
-            },
-            resource: {
-              id: `${projectId}.${dataset}`,
-            },
+            ...(documentHandle && {
+              document: {
+                id: documentHandle.documentId,
+                type: documentHandle.documentType,
+              },
+              resource: {
+                id: `${documentHandle.projectId}.${documentHandle.dataset}`,
+              },
+            }),
             ...(intentName && {intentName}),
             ...(params && !!Object.keys(params).length && {params}),
           },
@@ -148,11 +150,33 @@ export function useSendIntent({
         throw error
       }
     },
-    [intentName, documentHandle, params, sendMessage],
+    [sendMessage],
+  )
+
+  const intentLink = useCallback(
+    (params: IntentLinkParams) => {
+      // const href = getHref(params)
+      const hrefBase = `${isInIframe() ? getIframeParentUrl() : ''}@${orgId}`
+
+      return {
+        href: getIntentHref(hrefBase, params),
+        onClick: (e: React.MouseEvent<HTMLElement>) => {
+          if (e.metaKey || e.altKey || e.ctrlKey || e.shiftKey) {
+            return
+          }
+
+          e.preventDefault()
+          onClick(params)
+        },
+      }
+    },
+    [orgId, onClick],
   )
 
   return {
-    sendIntent,
-    href,
+    intentLink,
+    intentButton: (params) => ({
+      onClick: () => onClick(params),
+    }),
   }
 }

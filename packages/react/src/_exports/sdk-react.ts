@@ -30,6 +30,9 @@ export {
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
+export {useIntentButton} from '../hooks/dashboard/useIntentButton'
+export {useIntentLink} from '../hooks/dashboard/useIntentLink'
+export {useIntentTrigger} from '../hooks/dashboard/useIntentTrigger'
 export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
 export {
   type NavigateToStudioResult,
