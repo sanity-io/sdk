@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.3.2](https://github.com/sanity-io/sdk/compare/sdk-react-v2.3.1...sdk-react-v2.3.2) (2025-10-30)
+
+
+### Bug Fixes
+
+* handle projectUserNotFoundErrors and display the error message ([#651](https://github.com/sanity-io/sdk/issues/651)) ([1668657](https://github.com/sanity-io/sdk/commit/1668657109833971aacde582c32fbacd6f1f7085))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.3.2
+
 ## [2.3.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.3.0...sdk-react-v2.3.1) (2025-10-17)
 
 
