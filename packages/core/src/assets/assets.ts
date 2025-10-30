@@ -99,12 +99,14 @@ export async function uploadAsset(
   body: UploadBody,
   options?: UploadAssetOptions,
 ): Promise<SanityImageAssetDocument>
+/** @public */
 export async function uploadAsset(
   instance: SanityInstance,
   kind: 'file',
   body: UploadBody,
   options?: UploadAssetOptions,
 ): Promise<SanityAssetDocument>
+/** @public */
 export async function uploadAsset(
   instance: SanityInstance,
   kind: AssetKind,
@@ -179,6 +181,13 @@ export function buildImageUrlFromId(
   projectId?: string,
   dataset?: string,
 ): string
+/**
+ * Build a CDN URL for an image asset from its asset ID.
+ *
+ * Expects `image-{hash}-{width}x{height}-{format}`. Throws for invalid input.
+ *
+ * @public
+ */
 export function buildImageUrlFromId(
   instance: SanityInstance,
   assetId: string,
