@@ -147,7 +147,7 @@ export {
   type ImageAssetId,
   type LinkMediaLibraryAssetOptions,
   type UploadAssetOptions,
-  buildImageUrlFromId,
+  getImageUrlBuilder,
   deleteAsset,
   getAssetDownloadUrl,
   getAssetsState,

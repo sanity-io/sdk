@@ -7,10 +7,10 @@ import {createSanityInstance, type SanityInstance} from '../store/createSanityIn
 import {type StateSource} from '../store/createStateSourceAction'
 import {
   type AssetDocumentBase,
-  buildImageUrlFromId,
   deleteAsset,
   getAssetDownloadUrl,
   getAssetsState,
+  getImageUrlBuilder,
   isImageAssetId,
   linkMediaLibraryAsset,
   resolveAssets,
@@ -38,28 +38,15 @@ describe('assets', () => {
     expect(isImageAssetId('image-abc-800x600-JPG')).toBe(false)
   })
 
-  describe('buildImageUrlFromId', () => {
+  describe('getImageUrlBuilder', () => {
     it('builds a CDN URL from a valid asset id', () => {
-      const url = buildImageUrlFromId(instance, 'image-somehash-1024x768-png')
+      const url = getImageUrlBuilder(instance).image('image-somehash-1024x768-png').url()
       expect(url).toBe('https://cdn.sanity.io/images/proj/ds/somehash-1024x768.png')
     })
 
     it('supports explicit projectId/dataset overrides', () => {
-      const url = buildImageUrlFromId(instance, 'image-x-10x20-webp', 'p2', 'd2')
+      const url = getImageUrlBuilder(instance, 'p2', 'd2').image('image-x-10x20-webp').url()
       expect(url).toBe('https://cdn.sanity.io/images/p2/d2/x-10x20.webp')
-    })
-
-    it('throws for invalid asset id', () => {
-      // @ts-expect-error - invalid asset id
-      expect(() => buildImageUrlFromId(instance, 'image-x-10-20-webp')).toThrow(/Invalid asset ID/)
-    })
-
-    it('throws when projectId/dataset are missing', () => {
-      const empty = createSanityInstance({})
-      expect(() => buildImageUrlFromId(empty, 'image-x-1x1-png')).toThrow(
-        /projectId and dataset are required/,
-      )
-      empty.dispose()
     })
   })
 

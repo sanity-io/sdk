@@ -4,6 +4,7 @@ import {
   type SanityImageAssetDocument,
   type UploadBody,
 } from '@sanity/client'
+import imageUrlBuilder from '@sanity/image-url'
 import {type SanityDocument} from '@sanity/types'
 
 // rxjs no longer used in this module after refactor
@@ -169,51 +170,22 @@ export function getAssetDownloadUrl(url: string, filename?: string): string {
 }
 
 /**
- * Build a CDN URL for an image asset from its asset ID.
- *
- * Expects `image-{hash}-{width}x{height}-{format}`. Throws for invalid input.
- *
- * @public
- */
-export function buildImageUrlFromId(
-  instance: SanityInstance,
-  assetId: ImageAssetId,
-  projectId?: string,
-  dataset?: string,
-): string
-/**
- * Build a CDN URL for an image asset from its asset ID.
- *
- * Expects `image-{hash}-{width}x{height}-{format}`. Throws for invalid input.
+ * Returns a configured `@sanity/image-url` builder bound to the instance's project/dataset
+ * (or explicit overrides), for generating image URLs with transformations.
  *
  * @public
  */
-export function buildImageUrlFromId(
+export function getImageUrlBuilder(
   instance: SanityInstance,
-  assetId: string,
   projectId?: string,
   dataset?: string,
-): string {
+): ReturnType<typeof imageUrlBuilder> {
   const resolvedProject = projectId ?? instance.config.projectId
   const resolvedDataset = dataset ?? instance.config.dataset
-
   if (!resolvedProject || !resolvedDataset) {
-    throw new Error('A projectId and dataset are required to build an image URL from an asset ID.')
+    throw new Error('A projectId and dataset are required to build image URLs.')
   }
-
-  const match = assetId.match(IMAGE_ASSET_ID_PATTERN)
-  if (!match?.groups) {
-    throw new Error(
-      `Invalid asset ID \`${assetId}\`. Expected: image-{assetName}-{width}x{height}-{format}`,
-    )
-  }
-
-  const {assetName, dimensions, format} = match.groups as {
-    assetName: string
-    dimensions: string
-    format: string
-  }
-  return `https://cdn.sanity.io/images/${resolvedProject}/${resolvedDataset}/${assetName}-${dimensions}.${format}`
+  return imageUrlBuilder({projectId: resolvedProject, dataset: resolvedDataset})
 }
 
 /**
