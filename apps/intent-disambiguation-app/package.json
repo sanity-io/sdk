@@ -18,6 +18,7 @@
   "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@sanity/sdk-react": "workspace:*",
+    "@sanity/ui": "^3.1.11",
     "react": "^19",
     "react-dom": "^19",
     "react-router": "^7.5.2",

@@ -2,11 +2,15 @@ import './App.css'
 
 import {type SanityConfig} from '@sanity/sdk'
 import {SanityApp} from '@sanity/sdk-react'
+import {ThemeProvider} from '@sanity/ui'
+import {buildTheme} from '@sanity/ui/theme'
 import React from 'react'
 import {BrowserRouter} from 'react-router'
 
 import {IntentDisambiguation} from './components/IntentDisambiguation'
 import {LoadingFallback} from './components/LoadingFallback'
+
+const theme = buildTheme()
 
 function AppWithRouter(): React.JSX.Element {
   const sanityConfigs: SanityConfig[] = [
@@ -18,10 +22,11 @@ function AppWithRouter(): React.JSX.Element {
       },
     },
   ]
-
   return (
     <SanityApp config={sanityConfigs} fallback={<LoadingFallback />}>
-      <IntentDisambiguation />
+      <ThemeProvider theme={theme}>
+        <IntentDisambiguation />
+      </ThemeProvider>
     </SanityApp>
   )
 }

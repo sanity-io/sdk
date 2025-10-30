@@ -2,6 +2,7 @@
  * @module exports
  */
 export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBoundary'
+export {IntentLink} from '../components/IntentLink'
 export {type IntentHandlerPayload, type IntentHandlers} from '../components/IntentResolver'
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
@@ -30,6 +31,7 @@ export {
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
+export {useIntentLink} from '../hooks/dashboard/useIntentLink'
 export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
 export {
   type NavigateToStudioResult,
