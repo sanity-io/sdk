@@ -1,3 +1,4 @@
+import {ResourceProvider} from '@sanity/sdk-react'
 import {type JSX} from 'react'
 import {Route, Routes} from 'react-router'
 
@@ -14,6 +15,7 @@ import {SearchRoute} from './DocumentCollection/SearchRoute'
 import {PresenceRoute} from './Presence/PresenceRoute'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProtectedRoute} from './ProtectedRoute'
+import AssetsRoute from './routes/AssetsRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import ExperimentalResourceClientRoute from './routes/ExperimentalResourceClientRoute'
@@ -27,6 +29,14 @@ const documentCollectionRoutes = [
   {
     path: 'users',
     element: <UsersRoute />,
+  },
+  {
+    path: 'assets',
+    element: (
+      <ResourceProvider projectId="vo1ysemo" dataset="production" fallback={null}>
+        <AssetsRoute />
+      </ResourceProvider>
+    ),
   },
   {
     path: 'document-list',
