@@ -179,5 +179,3 @@ export function AssetsRoute(): JSX.Element {
     </div>
   )
 }
-
-export default AssetsRoute
