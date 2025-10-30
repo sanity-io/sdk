@@ -190,12 +190,19 @@ describe('assets', () => {
     })
   })
 
-  describe('assetsStore integration', () => {
+  describe('assets integration', () => {
     it('resolveAssets fetches via client observable when configured', async () => {
       const data: AssetDocumentBase[] = [{_id: 'image-1', _type: 'sanity.imageAsset', url: 'u'}]
-      const fetch = vi.fn().mockReturnValue(of(data))
+      const fetch = vi.fn().mockReturnValue(of({result: data, syncTags: []}))
+
+      const fakeClient = {
+        observable: {fetch},
+        live: {events: vi.fn().mockReturnValue(of())},
+        config: () => ({token: undefined}),
+      } as unknown as SanityClient
+
       vi.mocked(getClientState).mockReturnValue({
-        observable: of({observable: {fetch}} as unknown as SanityClient),
+        observable: of(fakeClient),
       } as StateSource<SanityClient>)
 
       const result = await resolveAssets(instance, {

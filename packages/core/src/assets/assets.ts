@@ -5,13 +5,13 @@ import {
   type UploadBody,
 } from '@sanity/client'
 import {type SanityDocument} from '@sanity/types'
-import {switchMap} from 'rxjs'
 
-import {getClient, getClientState} from '../client/clientStore'
+// rxjs no longer used in this module after refactor
+import {getClient} from '../client/clientStore'
 import {type DatasetHandle} from '../config/sanityConfig'
+import {getQueryState, resolveQuery} from '../query/queryStore'
 import {type SanityInstance} from '../store/createSanityInstance'
-import {createFetcherStore} from '../utils/createFetcherStore'
-import {hashString} from '../utils/hashString'
+import {type StateSource} from '../store/createStateSourceAction'
 
 const API_VERSION = 'v2025-10-29'
 const IMAGE_ASSET_ID_PATTERN =
@@ -272,40 +272,30 @@ function buildAssetsGroq(
   return groq
 }
 
-const assetsStore = createFetcherStore<[AssetQueryOptions], AssetDocumentBase[]>({
-  name: 'Assets',
-  getKey: (instance, options) => {
-    const projectId = options.projectId ?? instance.config.projectId
-    const dataset = options.dataset ?? instance.config.dataset
-    if (!projectId || !dataset) {
-      throw new Error('A projectId and dataset are required to query assets.')
-    }
-    const groq = buildAssetsGroq(options)
-    const paramsKey = hashString(JSON.stringify(options.params || {}))
-    return `${projectId}.${dataset}:assets:${hashString(groq)}:${paramsKey}`
-  },
-  fetcher: (instance) => (options) => {
-    const projectId = options.projectId ?? instance.config.projectId
-    const dataset = options.dataset ?? instance.config.dataset
-    if (!projectId || !dataset) {
-      throw new Error('A projectId and dataset are required to query assets.')
-    }
+/**
+ * Returns a StateSource for an asset query using the centralized query store.
+ *
+ * @public
+ */
+export function getAssetsState(
+  instance: SanityInstance,
+  options: AssetQueryOptions,
+): StateSource<AssetDocumentBase[] | undefined> {
+  const projectId = options.projectId ?? instance.config.projectId
+  const dataset = options.dataset ?? instance.config.dataset
+  if (!projectId || !dataset) {
+    throw new Error('A projectId and dataset are required to query assets.')
+  }
 
-    const groq = buildAssetsGroq(options)
-    return getClientState(instance, {
-      apiVersion: API_VERSION,
-      projectId,
-      dataset,
-      useProjectHostname: true,
-    }).observable.pipe(
-      switchMap((client) =>
-        client.observable.fetch<AssetDocumentBase[]>(groq, options.params ?? {}, {
-          tag: 'sdk.assets',
-        }),
-      ),
-    )
-  },
-})
+  const groq = buildAssetsGroq(options)
+  return getQueryState<AssetDocumentBase[]>(instance, {
+    query: groq,
+    params: options.params,
+    projectId,
+    dataset,
+    tag: 'sdk.assets',
+  })
+}
 
 /**
  * Returns a StateSource for an asset query.
@@ -320,7 +310,7 @@ const assetsStore = createFetcherStore<[AssetQueryOptions], AssetDocumentBase[]>
  *
  * @public
  */
-export const getAssetsState = assetsStore.getState
+// kept for backward-compat in docs (exported above as function)
 /**
  * Resolves an asset query one-time (Promise-based).
  *
@@ -331,7 +321,25 @@ export const getAssetsState = assetsStore.getState
  *
  * @public
  */
-export const resolveAssets = assetsStore.resolveState
+export function resolveAssets(
+  instance: SanityInstance,
+  options: AssetQueryOptions,
+): Promise<AssetDocumentBase[]> {
+  const projectId = options.projectId ?? instance.config.projectId
+  const dataset = options.dataset ?? instance.config.dataset
+  if (!projectId || !dataset) {
+    throw new Error('A projectId and dataset are required to query assets.')
+  }
+
+  const groq = buildAssetsGroq(options)
+  return resolveQuery<AssetDocumentBase[]>(instance, {
+    query: groq,
+    params: options.params,
+    projectId,
+    dataset,
+    tag: 'sdk.assets',
+  })
+}
 
 /**
  * Options for linking a Media Library asset to a dataset
