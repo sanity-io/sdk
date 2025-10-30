@@ -6,7 +6,7 @@ import {
   useUploadAsset,
 } from '@sanity/sdk-react'
 import {Button, Card, Flex, Label, Stack, Text} from '@sanity/ui'
-import {type JSX, useCallback, useMemo, useRef, useState} from 'react'
+import {type JSX, useCallback, useEffect, useMemo, useRef, useState} from 'react'
 
 import {DocumentGridLayout} from '../components/DocumentGridLayout/DocumentGridLayout'
 import {PageLayout} from '../components/PageLayout'
@@ -88,6 +88,7 @@ export function AssetsRoute(): JSX.Element {
   // Bump this to force a re-fetch of assets
   const [refresh, setRefresh] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
+  const requeryTimeoutsRef = useRef<number[]>([])
   const options = useMemo(
     () => ({assetType, order, limit, params: {refresh}}),
     [assetType, order, limit, refresh],
@@ -98,6 +99,21 @@ export function AssetsRoute(): JSX.Element {
   const upload = useUploadAsset()
   const remove = useDeleteAsset()
   const linkML = useLinkMediaLibraryAsset()
+
+  // Cleanup any scheduled re-queries on unmount
+  useEffect(() => {
+    return () => {
+      requeryTimeoutsRef.current.forEach((id) => clearTimeout(id))
+      requeryTimeoutsRef.current = []
+    }
+  }, [])
+
+  const triggerRequeryBurst = useCallback(() => {
+    setRefresh((r) => r + 1)
+    const t1 = window.setTimeout(() => setRefresh((r) => r + 1), 600)
+    const t2 = window.setTimeout(() => setRefresh((r) => r + 1), 1500)
+    requeryTimeoutsRef.current.push(t1, t2)
+  }, [])
 
   // Upload handlers
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -113,24 +129,24 @@ export function AssetsRoute(): JSX.Element {
         } else {
           await upload('file', f, {filename: f.name})
         }
-        // trigger a refresh so the new asset appears
-        setRefresh((r) => r + 1)
+        // trigger re-queries so the new asset appears once indexed
+        triggerRequeryBurst()
       } finally {
         if (fileInputRef.current) fileInputRef.current.value = ''
         setIsUploading(false)
       }
     },
-    [upload],
+    [upload, triggerRequeryBurst],
   )
 
   const onDelete = useCallback(
     async (id: string) => {
       if (!confirm('Delete this asset?')) return
       await remove(id)
-      // refresh after deletion
-      setRefresh((r) => r + 1)
+      // re-query after deletion
+      triggerRequeryBurst()
     },
-    [remove],
+    [remove, triggerRequeryBurst],
   )
 
   // Media Library link form
@@ -143,9 +159,9 @@ export function AssetsRoute(): JSX.Element {
     setMlAssetId('')
     setMlId('')
     setMlInstId('')
-    // refresh after linking
-    setRefresh((r) => r + 1)
-  }, [linkML, mlAssetId, mlId, mlInstId])
+    // re-query after linking
+    triggerRequeryBurst()
+  }, [linkML, mlAssetId, mlId, mlInstId, triggerRequeryBurst])
 
   return (
     <PageLayout title="Assets" subtitle={`${assets.length} assets`}>
