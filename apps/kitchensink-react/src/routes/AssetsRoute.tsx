@@ -5,7 +5,11 @@ import {
   useLinkMediaLibraryAsset,
   useUploadAsset,
 } from '@sanity/sdk-react'
+import {Button, Card, Flex, Label, Stack, Text} from '@sanity/ui'
 import {type JSX, useCallback, useMemo, useRef, useState} from 'react'
+
+import {DocumentGridLayout} from '../components/DocumentGridLayout/DocumentGridLayout'
+import {PageLayout} from '../components/PageLayout'
 
 function AssetList({
   assets,
@@ -14,53 +18,65 @@ function AssetList({
   assets: AssetDocumentBase[]
   onDelete: (id: string) => void
 }) {
-  if (!assets.length) return <p>No assets</p>
+  if (!assets.length)
+    return (
+      <Card padding={4} radius={2} tone="inherit">
+        <Stack space={3}>
+          <Text weight="semibold">No assets</Text>
+          <Text muted size={1}>
+            Upload a file to get started.
+          </Text>
+        </Stack>
+      </Card>
+    )
 
   return (
-    <ul
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-        gap: 12,
-        padding: 0,
-      }}
-    >
+    <DocumentGridLayout>
       {assets.map((a) => (
-        <li
-          key={a._id}
-          style={{listStyle: 'none', border: '1px solid #ddd', borderRadius: 6, padding: 8}}
-        >
-          <div style={{fontSize: 12, opacity: 0.6, marginBottom: 6}}>{a._type}</div>
-          {a.url ? (
-            <img
-              src={a.url}
-              alt={a.originalFilename ?? a._id}
-              style={{width: '100%', height: 140, objectFit: 'cover', borderRadius: 4}}
-            />
-          ) : (
-            <div
-              style={{
-                height: 140,
-                display: 'grid',
-                placeItems: 'center',
-                background: '#fafafa',
-                borderRadius: 4,
-              }}
-            >
-              <span style={{fontSize: 12}}>{a.originalFilename ?? a._id}</span>
-            </div>
-          )}
-          <div style={{display: 'flex', gap: 8, marginTop: 8, alignItems: 'center'}}>
-            <a href={a.url ?? '#'} target="_blank" rel="noreferrer" style={{fontSize: 12}}>
-              Open
-            </a>
-            <button onClick={() => onDelete(a._id)} style={{marginLeft: 'auto'}}>
-              Delete
-            </button>
-          </div>
+        <li key={a._id}>
+          <Card padding={3} radius={2} tone="inherit" style={{height: '100%'}}>
+            <Stack space={3}>
+              <Text size={1} muted>
+                {a._type}
+              </Text>
+              {a.url ? (
+                <img
+                  src={a.url}
+                  alt={a.originalFilename ?? a._id}
+                  style={{width: '100%', height: 180, objectFit: 'cover', borderRadius: 4}}
+                />
+              ) : (
+                <Card
+                  padding={3}
+                  radius={2}
+                  style={{height: 180, display: 'grid', placeItems: 'center'}}
+                >
+                  <Text size={1} muted>
+                    {a.originalFilename ?? a._id}
+                  </Text>
+                </Card>
+              )}
+              <Text size={1} style={{wordBreak: 'break-word'}}>
+                {a.originalFilename ?? a._id}
+              </Text>
+              <Flex gap={2} align="center">
+                <Button
+                  as="a"
+                  href={a.url ?? '#'}
+                  target="_blank"
+                  rel="noreferrer"
+                  text="Open"
+                  mode="bleed"
+                />
+                <Flex style={{marginLeft: 'auto'}}>
+                  <Button tone="critical" text="Delete" onClick={() => onDelete(a._id)} />
+                </Flex>
+              </Flex>
+            </Stack>
+          </Card>
         </li>
       ))}
-    </ul>
+    </DocumentGridLayout>
   )
 }
 
@@ -69,7 +85,13 @@ export function AssetsRoute(): JSX.Element {
   const [assetType, setAssetType] = useState<'all' | 'image' | 'file'>('all')
   const [order, setOrder] = useState<string>('_createdAt desc')
   const [limit, setLimit] = useState<number>(24)
-  const options = useMemo(() => ({assetType, order, limit}), [assetType, order, limit])
+  // Bump this to force a re-fetch of assets
+  const [refresh, setRefresh] = useState(0)
+  const [isUploading, setIsUploading] = useState(false)
+  const options = useMemo(
+    () => ({assetType, order, limit, params: {refresh}}),
+    [assetType, order, limit, refresh],
+  )
 
   // Hooks
   const assets = useAssets(options)
@@ -83,13 +105,20 @@ export function AssetsRoute(): JSX.Element {
     async (ev: React.ChangeEvent<HTMLInputElement>) => {
       const f = ev.target.files?.[0]
       if (!f) return
+      setIsUploading(true)
       const kind = f.type.startsWith('image/') ? 'image' : 'file'
-      if (kind === 'image') {
-        await upload('image', f, {filename: f.name})
-      } else {
-        await upload('file', f, {filename: f.name})
+      try {
+        if (kind === 'image') {
+          await upload('image', f, {filename: f.name})
+        } else {
+          await upload('file', f, {filename: f.name})
+        }
+        // trigger a refresh so the new asset appears
+        setRefresh((r) => r + 1)
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = ''
+        setIsUploading(false)
       }
-      if (fileInputRef.current) fileInputRef.current.value = ''
     },
     [upload],
   )
@@ -98,6 +127,8 @@ export function AssetsRoute(): JSX.Element {
     async (id: string) => {
       if (!confirm('Delete this asset?')) return
       await remove(id)
+      // refresh after deletion
+      setRefresh((r) => r + 1)
     },
     [remove],
   )
@@ -112,70 +143,129 @@ export function AssetsRoute(): JSX.Element {
     setMlAssetId('')
     setMlId('')
     setMlInstId('')
+    // refresh after linking
+    setRefresh((r) => r + 1)
   }, [linkML, mlAssetId, mlId, mlInstId])
 
   return (
-    <div style={{display: 'grid', gap: 16}}>
-      <h1>Assets</h1>
-
-      <section style={{display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap'}}>
-        <label>
-          Type
-          <select
-            value={assetType}
-            onChange={(e) => setAssetType(e.target.value as 'all' | 'image' | 'file')}
-            style={{marginLeft: 8}}
+    <PageLayout title="Assets" subtitle={`${assets.length} assets`}>
+      <Stack space={4}>
+        <Card padding={4} radius={2} tone="inherit">
+          <div
+            className="container-inline"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              gap: 12,
+            }}
           >
-            <option value="all">All</option>
-            <option value="image">Images</option>
-            <option value="file">Files</option>
-          </select>
-        </label>
-        <label>
-          Order
-          <input value={order} onChange={(e) => setOrder(e.target.value)} style={{marginLeft: 8}} />
-        </label>
-        <label>
-          Limit
-          <input
-            type="number"
-            value={limit}
-            onChange={(e) => setLimit(parseInt(e.target.value || '0', 10))}
-            style={{marginLeft: 8, width: 80}}
-          />
-        </label>
-        <label style={{marginLeft: 'auto'}}>
-          Upload
-          <input ref={fileInputRef} onChange={onSelectFile} type="file" style={{marginLeft: 8}} />
-        </label>
-      </section>
+            <div>
+              <Label size={1} htmlFor="assetType">
+                Type
+              </Label>
+              <select
+                id="assetType"
+                value={assetType}
+                onChange={(e) => setAssetType(e.target.value as 'all' | 'image' | 'file')}
+                style={{
+                  width: '100%',
+                  border: '1px solid #ccc',
+                  padding: '8px',
+                  borderRadius: '4px',
+                }}
+              >
+                <option value="all">All</option>
+                <option value="image">Images</option>
+                <option value="file">Files</option>
+              </select>
+            </div>
+            <div>
+              <Label size={1} htmlFor="order">
+                Order
+              </Label>
+              <input
+                id="order"
+                value={order}
+                onChange={(e) => setOrder(e.target.value)}
+                placeholder="_createdAt desc"
+                style={{
+                  width: '100%',
+                  border: '1px solid #ccc',
+                  padding: '8px',
+                  borderRadius: '4px',
+                }}
+              />
+            </div>
+            <div>
+              <Label size={1} htmlFor="limit">
+                Limit
+              </Label>
+              <input
+                id="limit"
+                type="number"
+                value={limit}
+                onChange={(e) => setLimit(parseInt(e.target.value || '0', 10))}
+                style={{
+                  width: '100%',
+                  border: '1px solid #ccc',
+                  padding: '8px',
+                  borderRadius: '4px',
+                }}
+              />
+            </div>
+            <div>
+              <Label size={1} htmlFor="upload">
+                Upload file
+              </Label>
+              <input
+                id="upload"
+                ref={fileInputRef}
+                onChange={onSelectFile}
+                type="file"
+                disabled={isUploading}
+              />
+              {isUploading && (
+                <Text muted size={1} style={{marginTop: 4, display: 'block'}}>
+                  Uploading...
+                </Text>
+              )}
+            </div>
+          </div>
+        </Card>
 
-      <section>
-        <h2 style={{marginTop: 0}}>Browse</h2>
-        <AssetList assets={assets} onDelete={onDelete} />
-      </section>
+        <Stack space={3}>
+          <Text size={2} weight="semibold">
+            Browse
+          </Text>
+          <AssetList assets={assets} onDelete={onDelete} />
+        </Stack>
 
-      <section>
-        <h2 style={{marginTop: 0}}>Link Media Library Asset</h2>
-        <div style={{display: 'flex', gap: 8, flexWrap: 'wrap'}}>
-          <input
-            placeholder="assetId"
-            value={mlAssetId}
-            onChange={(e) => setMlAssetId(e.target.value)}
-          />
-          <input
-            placeholder="mediaLibraryId"
-            value={mlId}
-            onChange={(e) => setMlId(e.target.value)}
-          />
-          <input
-            placeholder="assetInstanceId"
-            value={mlInstId}
-            onChange={(e) => setMlInstId(e.target.value)}
-          />
-          <button onClick={onLinkMl}>Link</button>
-        </div>
-      </section>
-    </div>
+        <Card padding={3} radius={2} tone="inherit">
+          <Stack space={3}>
+            <Text size={2} weight="semibold">
+              Link Media Library Asset
+            </Text>
+            <Flex gap={2} wrap="wrap">
+              <input
+                placeholder="assetId"
+                value={mlAssetId}
+                onChange={(e) => setMlAssetId(e.target.value)}
+              />
+              <input
+                placeholder="mediaLibraryId"
+                value={mlId}
+                onChange={(e) => setMlId(e.target.value)}
+              />
+              <input
+                placeholder="assetInstanceId"
+                value={mlInstId}
+                onChange={(e) => setMlInstId(e.target.value)}
+              />
+              <Button text="Link" onClick={onLinkMl} />
+            </Flex>
+          </Stack>
+        </Card>
+      </Stack>
+    </PageLayout>
   )
 }

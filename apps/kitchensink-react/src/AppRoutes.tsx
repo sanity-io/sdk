@@ -33,7 +33,11 @@ const documentCollectionRoutes = [
   {
     path: 'assets',
     element: (
-      <ResourceProvider projectId="vo1ysemo" dataset="production" fallback={null}>
+      <ResourceProvider
+        projectId="vo1ysemo"
+        dataset="production"
+        fallback={<div>Loading assets...</div>}
+      >
         <AssetsRoute />
       </ResourceProvider>
     ),
