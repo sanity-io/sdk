@@ -53,11 +53,13 @@ export {
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
 export {
   createDatasetHandle,
+  createAssetHandle,
   createDocumentHandle,
   createDocumentTypeHandle,
   createProjectHandle,
 } from '../config/handles'
 export {
+  type AssetHandle,
   type DatasetHandle,
   type DocumentHandle,
   type DocumentTypeHandle,

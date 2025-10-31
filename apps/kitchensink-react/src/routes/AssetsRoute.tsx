@@ -1,5 +1,6 @@
 import {
   type AssetDocumentBase,
+  createAssetHandle,
   useAssets,
   useDeleteAsset,
   useLinkMediaLibraryAsset,
@@ -90,7 +91,14 @@ export function AssetsRoute(): JSX.Element {
   const [isUploading, setIsUploading] = useState(false)
   const requeryTimeoutsRef = useRef<number[]>([])
   const options = useMemo(
-    () => ({assetType, order, limit, params: {refresh}}),
+    () => ({
+      assetType,
+      order,
+      limit,
+      params: {refresh}, // add refresh to params to cache bust
+      projectId: 'vo1ysemo',
+      dataset: 'production',
+    }),
     [assetType, order, limit, refresh],
   )
 
@@ -125,9 +133,17 @@ export function AssetsRoute(): JSX.Element {
       const kind = f.type.startsWith('image/') ? 'image' : 'file'
       try {
         if (kind === 'image') {
-          await upload('image', f, {filename: f.name})
+          await upload('image', f, {
+            filename: f.name,
+            projectId: options.projectId,
+            dataset: options.dataset,
+          })
         } else {
-          await upload('file', f, {filename: f.name})
+          await upload('file', f, {
+            filename: f.name,
+            projectId: options.projectId,
+            dataset: options.dataset,
+          })
         }
         // trigger re-queries so the new asset appears once indexed
         triggerRequeryBurst()
@@ -136,17 +152,19 @@ export function AssetsRoute(): JSX.Element {
         setIsUploading(false)
       }
     },
-    [upload, triggerRequeryBurst],
+    [upload, triggerRequeryBurst, options.projectId, options.dataset],
   )
 
   const onDelete = useCallback(
     async (id: string) => {
       if (!confirm('Delete this asset?')) return
-      await remove(id)
+      await remove(
+        createAssetHandle({assetId: id, projectId: options.projectId, dataset: options.dataset}),
+      )
       // re-query after deletion
       triggerRequeryBurst()
     },
-    [remove, triggerRequeryBurst],
+    [remove, triggerRequeryBurst, options.projectId, options.dataset],
   )
 
   // Media Library link form

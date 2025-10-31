@@ -9,7 +9,7 @@ import {type SanityDocument} from '@sanity/types'
 
 // rxjs no longer used in this module after refactor
 import {getClient} from '../client/clientStore'
-import {type DatasetHandle} from '../config/sanityConfig'
+import {type AssetHandle, type DatasetHandle} from '../config/sanityConfig'
 import {getQueryState, resolveQuery} from '../query/queryStore'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
@@ -69,6 +69,10 @@ export interface UploadAssetOptions {
   sourceId?: string
   /** URL of the asset in the external source */
   sourceUrl?: string
+  /** Optional explicit project to upload the asset to */
+  projectId?: string
+  /** Optional explicit dataset to upload the asset to */
+  dataset?: string
 }
 
 /**
@@ -114,7 +118,12 @@ export async function uploadAsset(
   body: UploadBody,
   options?: UploadAssetOptions,
 ): Promise<SanityAssetDocument | SanityImageAssetDocument> {
-  const client = getClient(instance, {apiVersion: API_VERSION})
+  const client = getClient(instance, {
+    apiVersion: API_VERSION,
+    projectId: options?.projectId ?? instance.config.projectId,
+    dataset: options?.dataset ?? instance.config.dataset,
+    useProjectHostname: true,
+  })
   // Map public options to client upload options
   const clientOptions = {
     filename: options?.filename,
@@ -142,17 +151,35 @@ export async function uploadAsset(
 
 /**
  * Delete an asset by its asset document ID.
- *
  * Pass the asset document `_id` (eg. `image-abc123-2000x1200-jpg`).
- *
  * @public
  */
+export async function deleteAsset(instance: SanityInstance, assetDocumentId: string): Promise<void>
+/** @public */
+export async function deleteAsset(instance: SanityInstance, handle: AssetHandle): Promise<void>
+/** @public */
 export async function deleteAsset(
   instance: SanityInstance,
-  assetDocumentId: string,
+  idOrHandle: string | AssetHandle,
 ): Promise<void> {
-  const client = getClient(instance, {apiVersion: API_VERSION})
-  await client.delete(assetDocumentId)
+  if (typeof idOrHandle === 'string') {
+    const client = getClient(instance, {apiVersion: API_VERSION})
+    await client.delete(idOrHandle)
+    return
+  }
+
+  const projectId = idOrHandle.projectId ?? instance.config.projectId
+  const dataset = idOrHandle.dataset ?? instance.config.dataset
+  if (!projectId || !dataset) {
+    throw new Error('A projectId and dataset are required to delete an asset.')
+  }
+  const client = getClient(instance, {
+    apiVersion: API_VERSION,
+    projectId,
+    dataset,
+    useProjectHostname: true,
+  })
+  await client.delete(idOrHandle.assetId)
 }
 
 /**

@@ -1,4 +1,3 @@
-import {ResourceProvider} from '@sanity/sdk-react'
 import {type JSX} from 'react'
 import {Route, Routes} from 'react-router'
 
@@ -32,15 +31,7 @@ const documentCollectionRoutes = [
   },
   {
     path: 'assets',
-    element: (
-      <ResourceProvider
-        projectId="vo1ysemo"
-        dataset="production"
-        fallback={<div>Loading assets...</div>}
-      >
-        <AssetsRoute />
-      </ResourceProvider>
-    ),
+    element: <AssetsRoute />,
   },
   {
     path: 'document-list',

@@ -69,4 +69,23 @@ describe('useDeleteAsset', () => {
 
     expect(result2.current).not.toBe(first)
   })
+
+  it('calls deleteAsset when given an AssetHandle', async () => {
+    vi.mocked(deleteAsset).mockResolvedValue(undefined)
+
+    const {result} = renderHook(() => useDeleteAsset(), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="p" dataset="d" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
+
+    await result.current({assetId: 'image-abc', projectId: 'p2', dataset: 'd2'})
+
+    expect(deleteAsset).toHaveBeenCalledWith(
+      expect.objectContaining({config: expect.objectContaining({projectId: 'p'})}),
+      {assetId: 'image-abc', projectId: 'p2', dataset: 'd2'},
+    )
+  })
 })

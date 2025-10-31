@@ -133,6 +133,20 @@ describe('assets', () => {
       await deleteAsset(instance, 'image-abc-1x1-png')
       expect(del).toHaveBeenCalledWith('image-abc-1x1-png')
     })
+
+    it('deleteAsset supports AssetHandle with explicit project/dataset', async () => {
+      const del = vi.fn().mockResolvedValue(undefined)
+      const mockedClient = {delete: del} as unknown as SanityClient
+      vi.mocked(getClient).mockReturnValue(mockedClient)
+
+      await deleteAsset(instance, {assetId: 'file-xyz', projectId: 'p9', dataset: 'd9'})
+
+      expect(del).toHaveBeenCalledWith('file-xyz')
+      expect(vi.mocked(getClient)).toHaveBeenCalledWith(
+        instance,
+        expect.objectContaining({projectId: 'p9', dataset: 'd9'}),
+      )
+    })
   })
 
   describe('linkMediaLibraryAsset', () => {

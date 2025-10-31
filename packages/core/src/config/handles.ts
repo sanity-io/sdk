@@ -1,4 +1,5 @@
 import {
+  type AssetHandle,
   type DatasetHandle,
   type DocumentHandle,
   type DocumentTypeHandle,
@@ -63,5 +64,19 @@ export function createDatasetHandle<
   TDataset extends string = string,
   TProjectId extends string = string,
 >(handle: DatasetHandle<TDataset, TProjectId>): DatasetHandle<TDataset, TProjectId> {
+  return handle
+}
+
+/**
+ * Creates or validates an `AssetHandle` object.
+ * Ensures the provided object conforms to the `AssetHandle` interface.
+ * @param handle - The object containing asset identification properties.
+ * @returns The validated `AssetHandle` object.
+ * @public
+ */
+export function createAssetHandle<
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(handle: AssetHandle<TDataset, TProjectId>): AssetHandle<TDataset, TProjectId> {
   return handle
 }
