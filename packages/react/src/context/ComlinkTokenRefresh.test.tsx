@@ -5,7 +5,6 @@ import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest
 
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useWindowConnection} from '../hooks/comlink/useWindowConnection'
-import {useSanityInstance} from '../hooks/context/useSanityInstance'
 import {ComlinkTokenRefreshProvider} from './ComlinkTokenRefresh'
 import {ResourceProvider} from './ResourceProvider'
 
@@ -27,24 +26,13 @@ vi.mock('../hooks/comlink/useWindowConnection', () => ({
   useWindowConnection: vi.fn(),
 }))
 
-vi.mock('../hooks/context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn(),
-}))
-
 // Use simpler mock typings
 const mockGetIsInDashboardState = getIsInDashboardState as Mock
 const mockSetAuthToken = setAuthToken as Mock
 const mockUseAuthState = useAuthState as Mock
 const mockUseWindowConnection = useWindowConnection as Mock
-const mockUseSanityInstance = useSanityInstance as unknown as Mock
 
 const mockFetch = vi.fn()
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockSanityInstance: any = {
-  projectId: 'test',
-  dataset: 'test',
-  config: {studioMode: {enabled: false}},
-}
 
 describe('ComlinkTokenRefresh', () => {
   beforeEach(() => {
@@ -52,7 +40,6 @@ describe('ComlinkTokenRefresh', () => {
     mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => false)})
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN})
     mockUseWindowConnection.mockReturnValue({fetch: mockFetch})
-    mockUseSanityInstance.mockReturnValue(mockSanityInstance)
   })
 
   afterEach(() => {
@@ -127,6 +114,15 @@ describe('ComlinkTokenRefresh', () => {
         })
         mockFetch.mockResolvedValueOnce({token: 'new-token'})
 
+        // Insert an Unauthorized error container that should be removed on success
+        const errorContainer = document.createElement('div')
+        errorContainer.id = '__sanityError'
+        const child = document.createElement('div')
+        child.textContent =
+          'Uncaught error: Unauthorized - A valid session is required for this endpoint'
+        errorContainer.appendChild(child)
+        document.body.appendChild(errorContainer)
+
         render(
           <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
             <ComlinkTokenRefreshProvider>
@@ -141,6 +137,14 @@ describe('ComlinkTokenRefresh', () => {
 
         expect(mockSetAuthToken).toHaveBeenCalledWith(expect.any(Object), 'new-token')
         expect(mockFetch).toHaveBeenCalledTimes(1)
+        expect(mockFetch).toHaveBeenCalledWith('dashboard/v1/auth/tokens/create')
+        // Assert setAuthToken was called with instance matching provider config
+        const instanceArg = mockSetAuthToken.mock.calls[0][0]
+        expect(instanceArg.config).toEqual(
+          expect.objectContaining({projectId: 'test-project', dataset: 'test-dataset'}),
+        )
+        // Unauthorized error container should be removed
+        expect(document.getElementById('__sanityError')).toBeNull()
       })
 
       it('should not set auth token if received token is null when not in studio mode', async () => {
@@ -243,20 +247,100 @@ describe('ComlinkTokenRefresh', () => {
           expect(mockFetch).toHaveBeenCalledWith('dashboard/v1/auth/tokens/create')
         })
 
-        describe('when in studio mode', () => {
-          beforeEach(() => {
-            // Make the instance report studio mode enabled
-            mockUseSanityInstance.mockReturnValue({
-              ...mockSanityInstance,
-              config: {studioMode: {enabled: true}},
-            })
+        it('dedupes multiple 401 errors while a refresh is in progress', async () => {
+          mockUseAuthState.mockReturnValue({
+            type: AuthStateType.ERROR,
+            error: {statusCode: 401, message: 'Unauthorized'},
           })
+          // Return a promise we resolve later to keep in-progress true for a bit
+          let resolveFetch: (v: {token: string | null}) => void
+          mockFetch.mockImplementation(
+            () =>
+              new Promise<{token: string | null}>((resolve) => {
+                resolveFetch = resolve
+              }),
+          )
 
-          it('should not render DashboardTokenRefresh when studio mode enabled', () => {
-            render(
+          const {rerender} = render(
+            <ResourceProvider fallback={null}>
               <ComlinkTokenRefreshProvider>
                 <div>Test</div>
-              </ComlinkTokenRefreshProvider>,
+              </ComlinkTokenRefreshProvider>
+            </ResourceProvider>,
+          )
+
+          // Trigger a second 401 while the first request is still in progress
+          mockUseAuthState.mockReturnValue({
+            type: AuthStateType.ERROR,
+            error: {statusCode: 401, message: 'Unauthorized again'},
+          })
+          act(() => {
+            rerender(
+              <ResourceProvider fallback={null}>
+                <ComlinkTokenRefreshProvider>
+                  <div>Test</div>
+                </ComlinkTokenRefreshProvider>
+              </ResourceProvider>,
+            )
+          })
+
+          // Only one fetch should be in-flight
+          expect(mockFetch).toHaveBeenCalledTimes(1)
+
+          // Finish the first fetch
+          await act(async () => {
+            resolveFetch!({token: null})
+          })
+        })
+
+        it('requests again after timeout if previous request did not resolve', async () => {
+          mockUseAuthState.mockReturnValue({
+            type: AuthStateType.ERROR,
+            error: {statusCode: 401, message: 'Unauthorized'},
+          })
+          // First call never resolves
+          mockFetch.mockImplementationOnce(() => new Promise(() => {}))
+
+          const {rerender} = render(
+            <ResourceProvider fallback={null}>
+              <ComlinkTokenRefreshProvider>
+                <div>Test</div>
+              </ComlinkTokenRefreshProvider>
+            </ResourceProvider>,
+          )
+
+          expect(mockFetch).toHaveBeenCalledTimes(1)
+
+          // After timeout elapses, a subsequent 401 should trigger another fetch
+          await act(async () => {
+            await vi.advanceTimersByTimeAsync(10000)
+          })
+
+          mockUseAuthState.mockReturnValue({
+            type: AuthStateType.ERROR,
+            error: {statusCode: 401, message: 'Unauthorized again'},
+          })
+          act(() => {
+            rerender(
+              <ResourceProvider fallback={null}>
+                <ComlinkTokenRefreshProvider>
+                  <div>Test</div>
+                </ComlinkTokenRefreshProvider>
+              </ResourceProvider>,
+            )
+          })
+
+          expect(mockFetch).toHaveBeenCalledTimes(2)
+        })
+
+        describe('when in studio mode', () => {
+          it('should not render DashboardTokenRefresh when studio mode enabled', () => {
+            render(
+              <ResourceProvider fallback={null} studioMode={{enabled: true}}>
+                <ComlinkTokenRefreshProvider>
+                  <div>Test</div>
+                </ComlinkTokenRefreshProvider>
+              </ResourceProvider>,
             )
 
             // In studio mode, provider should return children directly
