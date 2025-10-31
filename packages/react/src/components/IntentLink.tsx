@@ -6,11 +6,11 @@ export type IntentLinkProps = {
 } & (
   | (Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> & {
       intentName?: undefined
-      intentCategory?: string
+      intentAction?: string
     })
   | (Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'onClick'> & {
       intentName: string
-      intentCategory?: undefined
+      intentAction?: undefined
     })
 )
 
@@ -19,7 +19,6 @@ export type IntentLinkProps = {
  * @public
  */
 export function IntentLink({
-  intentCategory,
   resourceHandle,
   params,
   children,
@@ -27,7 +26,7 @@ export function IntentLink({
 }: IntentLinkProps): React.ReactNode {
   const {href, onClick} = useIntentLink({
     intentName: props.intentName,
-    intentCategory,
+    intentAction: props.intentAction,
     resourceHandle,
     params,
   })
@@ -52,7 +51,7 @@ export function IntentLink({
   }
 
   if (props.intentName === undefined) {
-    const {intentName: _intentName, ...buttonProps} = props
+    const {intentAction: _intentAction, ...buttonProps} = props
 
     return (
       <button onClick={onClick} {...buttonProps}>

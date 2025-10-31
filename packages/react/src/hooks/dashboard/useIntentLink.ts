@@ -47,7 +47,7 @@ export interface IntentMessage {
  */
 interface UseIntentLinkParams {
   intentName?: string
-  intentCategory?: string
+  intentAction?: string
   resourceHandle: ResourceHandle
   params?: Record<string, string>
 }
@@ -103,6 +103,7 @@ interface IntentLink {
  */
 export function useIntentLink({
   intentName,
+  intentAction,
   resourceHandle,
   params,
 }: UseIntentLinkParams): IntentLink {
@@ -115,6 +116,7 @@ export function useIntentLink({
   const data = useMemo(
     () => ({
       ...(intentName && {intentName}),
+      ...(intentAction && {intentAction}),
       document: {
         id: resourceHandle.documentId,
         ...('documentType' in resourceHandle && {type: resourceHandle.documentType}),
@@ -128,7 +130,7 @@ export function useIntentLink({
       },
       ...(params && !!Object.keys(params).length && {params}),
     }),
-    [intentName, resourceHandle, params],
+    [intentName, intentAction, resourceHandle, params],
   )
 
   useEffect(() => {
