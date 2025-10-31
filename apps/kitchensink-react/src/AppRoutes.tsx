@@ -1,3 +1,4 @@
+import {ResourceProvider} from '@sanity/sdk-react'
 import {type JSX} from 'react'
 import {Route, Routes} from 'react-router'
 
@@ -14,6 +15,7 @@ import {SearchRoute} from './DocumentCollection/SearchRoute'
 import {PresenceRoute} from './Presence/PresenceRoute'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProtectedRoute} from './ProtectedRoute'
+import {AgentActionsRoute} from './routes/AgentActionsRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import ExperimentalResourceClientRoute from './routes/ExperimentalResourceClientRoute'
@@ -121,6 +123,14 @@ export function AppRoutes(): JSX.Element {
           {documentCollectionRoutes.map((route) => (
             <Route key={route.path} path={route.path} element={route.element} />
           ))}
+          <Route
+            path="agent-actions"
+            element={
+              <ResourceProvider projectId="vo1ysemo" dataset="production" fallback={null}>
+                <AgentActionsRoute />
+              </ResourceProvider>
+            }
+          />
           <Route path="users/:userId" element={<UserDetailRoute />} />
           <Route path="comlink-demo" element={<ParentApp />} />
           <Route path="releases" element={<ReleasesRoute />} />
