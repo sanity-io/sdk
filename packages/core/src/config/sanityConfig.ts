@@ -64,6 +64,17 @@ export interface DocumentHandle<
 }
 
 /**
+ * Identifies a specific asset within a Sanity project/dataset.
+ * Includes optional `projectId`/`dataset` and the required `assetId` (asset document `_id`).
+ * Useful for cross-instance asset operations without relying on the active ResourceProvider.
+ * @public
+ */
+export interface AssetHandle<TDataset extends string = string, TProjectId extends string = string>
+  extends DatasetHandle<TDataset, TProjectId> {
+  assetId: string
+}
+
+/**
  * Represents the complete configuration for a Sanity SDK instance
  * @public
  */
