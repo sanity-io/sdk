@@ -2,17 +2,15 @@
 
 ## [2.3.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.3.0...sdk-react-v2.3.1) (2025-10-17)
 
-
 ### Bug Fixes
 
-* auth race condition when using the SDK in the Studio structure ([#646](https://github.com/sanity-io/sdk/issues/646)) ([a5d0875](https://github.com/sanity-io/sdk/commit/a5d08752cf24661afdedb8470a3cae11a2e11945))
-
+- auth race condition when using the SDK in the Studio structure ([#646](https://github.com/sanity-io/sdk/issues/646)) ([a5d0875](https://github.com/sanity-io/sdk/commit/a5d08752cf24661afdedb8470a3cae11a2e11945))
 
 ### Dependencies
 
-* The following workspace dependencies were updated
-  * dependencies
-    * @sanity/sdk bumped to 2.3.1
+- The following workspace dependencies were updated
+  - dependencies
+    - @sanity/sdk bumped to 2.3.1
 
 ## [2.3.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.2.0...sdk-react-v2.3.0) (2025-10-15)
 
