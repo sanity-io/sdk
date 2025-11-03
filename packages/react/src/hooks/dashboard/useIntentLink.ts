@@ -26,7 +26,7 @@ export type ResourceHandle = (DocumentHandle & {type: 'document'}) | AssetHandle
  * @internal
  */
 export interface IntentMessage {
-  type: 'dashboard/v1/events/intents/send'
+  type: 'dashboard/v1/events/intents/send-intent'
   data: {
     intentName?: string
     document: {
