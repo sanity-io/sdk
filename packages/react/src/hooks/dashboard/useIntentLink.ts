@@ -157,7 +157,7 @@ export function useIntentLink({
   const onClick = useCallback(() => {
     try {
       const message: IntentMessage = {
-        type: 'dashboard/v1/events/intents/send',
+        type: 'dashboard/v1/events/intents/send-intent',
         data,
       }
 
