@@ -84,8 +84,8 @@ importers:
         specifier: ^5.8.3
         version: 5.8.3
       vite:
-        specifier: ^6.3.4
-        version: 6.3.4(@types/node@22.13.9)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1)
+        specifier: ^6.3.6
+        version: 6.4.1(@types/node@22.13.9)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1)
       vitest:
         specifier: ^3.1.2
         version: 3.1.2(@types/node@22.13.9)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1)
@@ -7654,6 +7654,46 @@ packages:
       yaml:
         optional: true
 
+  vite@6.4.1:
+    resolution: {integrity: sha512-+Oxm7q9hDoLMyJOYfUYBuHQo+dkAloi33apOPP56pzj+vsdJDzr+j1NISE5pyaAuKL4A3UD34qd0lx5+kfKp2g==}
+    engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': ^18.0.0 || ^20.0.0 || >=22.0.0
+      jiti: '>=1.21.0'
+      less: '*'
+      lightningcss: ^1.21.0
+      sass: '*'
+      sass-embedded: '*'
+      stylus: '*'
+      sugarss: '*'
+      terser: ^5.16.0
+      tsx: ^4.8.1
+      yaml: ^2.4.2
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      jiti:
+        optional: true
+      less:
+        optional: true
+      lightningcss:
+        optional: true
+      sass:
+        optional: true
+      sass-embedded:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+      tsx:
+        optional: true
+      yaml:
+        optional: true
+
   vitest@3.1.2:
     resolution: {integrity: sha512-WaxpJe092ID1C0mr+LH9MmNrhfzi8I65EX/NRU/Ld016KqQNRgxSOlGNP1hHN+a/F8L15Mh8klwaF77zR3GeDQ==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
@@ -10676,8 +10716,8 @@ snapshots:
       find-up: 7.0.0
       inquirer: 12.6.0(@types/node@22.13.9)
       mime-types: 3.0.1
-      vite: 6.3.4(@types/node@22.13.9)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1)
-      vite-tsconfig-paths: 5.1.4(typescript@5.8.3)(vite@6.3.4(@types/node@22.13.9)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1))
+      vite: 6.4.1(@types/node@22.13.9)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1)
+      vite-tsconfig-paths: 5.1.4(typescript@5.8.3)(vite@6.4.1(@types/node@22.13.9)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1))
       xdg-basedir: 5.1.0
       yocto-spinner: 0.2.2
     transitivePeerDependencies:
@@ -16091,7 +16131,7 @@ snapshots:
       debug: 4.4.1(supports-color@8.1.1)
       es-module-lexer: 1.6.0
       pathe: 2.0.3
-      vite: 6.3.4(@types/node@22.13.9)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1)
+      vite: 6.4.1(@types/node@22.13.9)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1)
     transitivePeerDependencies:
       - '@types/node'
       - jiti
@@ -16117,6 +16157,17 @@ snapshots:
       - supports-color
       - typescript
 
+  vite-tsconfig-paths@5.1.4(typescript@5.8.3)(vite@6.4.1(@types/node@22.13.9)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1)):
+    dependencies:
+      debug: 4.4.1(supports-color@8.1.1)
+      globrex: 0.1.2
+      tsconfck: 3.1.5(typescript@5.8.3)
+    optionalDependencies:
+      vite: 6.4.1(@types/node@22.13.9)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1)
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
+
   vite@6.3.4(@types/node@22.13.9)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1):
     dependencies:
       esbuild: 0.25.2
@@ -16124,6 +16175,23 @@ snapshots:
       picomatch: 4.0.2
       postcss: 8.5.3
       rollup: 4.40.0
+      tinyglobby: 0.2.13
+    optionalDependencies:
+      '@types/node': 22.13.9
+      fsevents: 2.3.3
+      jiti: 2.4.2
+      lightningcss: 1.29.1
+      terser: 5.36.0
+      tsx: 4.19.4
+      yaml: 2.7.1
+
+  vite@6.4.1(@types/node@22.13.9)(jiti@2.4.2)(lightningcss@1.29.1)(terser@5.36.0)(tsx@4.19.4)(yaml@2.7.1):
+    dependencies:
+      esbuild: 0.25.6
+      fdir: 6.4.4(picomatch@4.0.2)
+      picomatch: 4.0.2
+      postcss: 8.5.3
+      rollup: 4.45.1
       tinyglobby: 0.2.13
     optionalDependencies:
       '@types/node': 22.13.9
