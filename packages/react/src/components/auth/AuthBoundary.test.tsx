@@ -8,7 +8,6 @@ import {ResourceProvider} from '../../context/ResourceProvider'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
-import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 import {AuthBoundary} from './AuthBoundary'
 
 // Mock hooks
@@ -22,9 +21,6 @@ vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
 }))
 vi.mock('../../hooks/auth/useLogOut', () => ({
   useLogOut: vi.fn(() => async () => {}),
-}))
-vi.mock('../../hooks/context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn(),
 }))
 
 // Mock AuthError throwing scenario
@@ -109,7 +105,6 @@ describe('AuthBoundary', () => {
   const mockUseAuthState = vi.mocked(useAuthState)
   const mockUseLoginUrl = vi.mocked(useLoginUrl)
   const mockUseVerifyOrgProjects = vi.mocked(useVerifyOrgProjects)
-  const mockUseSanityInstance = vi.mocked(useSanityInstance)
   const testProjectIds = ['proj-test'] // Example project ID for tests
 
   // Mock Sanity instance
@@ -139,8 +134,6 @@ describe('AuthBoundary', () => {
     mockUseLoginUrl.mockReturnValue('http://example.com/login')
     // Default mock for useVerifyOrgProjects - returns null (no error)
     mockUseVerifyOrgProjects.mockImplementation(() => null)
-    // Mock useSanityInstance to return our mock instance
-    mockUseSanityInstance.mockReturnValue(mockSanityInstance)
   })
 
   afterEach(() => {
@@ -170,7 +163,9 @@ describe('AuthBoundary', () => {
       isExchangingToken: false,
     })
     const {container} = render(
-      <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>,
+      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+      </ResourceProvider>,
     )
 
     // The callback screen renders null check that it renders nothing
@@ -184,7 +179,11 @@ describe('AuthBoundary', () => {
       currentUser: null,
       token: 'exampleToken',
     })
-    render(<AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>)
+    render(
+      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+      </ResourceProvider>,
+    )
 
     expect(screen.getByText('Protected Content')).toBeInTheDocument()
   })
@@ -194,7 +193,11 @@ describe('AuthBoundary', () => {
       type: AuthStateType.ERROR,
       error: new Error('test error'),
     })
-    render(<AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>)
+    render(
+      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+      </ResourceProvider>,
+    )
 
     // The AuthBoundary should throw an AuthError internally
     // and then display the LoginError component as the fallback.
@@ -207,7 +210,11 @@ describe('AuthBoundary', () => {
   })
 
   it('renders children when logged in and org verification passes', () => {
-    render(<AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>)
+    render(
+      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+        <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
+      </ResourceProvider>,
+    )
     expect(screen.getByText('Protected Content')).toBeInTheDocument()
   })
 
@@ -226,9 +233,11 @@ describe('AuthBoundary', () => {
 
     // Need to catch the error thrown during render. ErrorBoundary mock handles this.
     render(
-      <AuthBoundary verifyOrganization={true} projectIds={testProjectIds}>
-        <div>Protected Content</div>
-      </AuthBoundary>,
+      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+        <AuthBoundary verifyOrganization={true} projectIds={testProjectIds}>
+          <div>Protected Content</div>
+        </AuthBoundary>
+      </ResourceProvider>,
     )
 
     // The ErrorBoundary's FallbackComponent should be rendered
@@ -256,9 +265,11 @@ describe('AuthBoundary', () => {
     })
 
     render(
-      <AuthBoundary verifyOrganization={false} projectIds={testProjectIds}>
-        <div>Protected Content</div>
-      </AuthBoundary>,
+      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+        <AuthBoundary verifyOrganization={false} projectIds={testProjectIds}>
+          <div>Protected Content</div>
+        </AuthBoundary>
+      </ResourceProvider>,
     )
 
     // Should render children because verification is disabled
@@ -279,9 +290,11 @@ describe('AuthBoundary', () => {
     mockUseVerifyOrgProjects.mockImplementation(() => null)
 
     render(
-      <AuthBoundary projectIds={testProjectIds}>
-        <div>Protected Content</div>
-      </AuthBoundary>,
+      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+        <AuthBoundary projectIds={testProjectIds}>
+          <div>Protected Content</div>
+        </AuthBoundary>
+      </ResourceProvider>,
     )
 
     await waitFor(() => {

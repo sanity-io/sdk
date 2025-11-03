@@ -117,7 +117,7 @@ export function ReleasesRoute(): JSX.Element {
   const documentProjectionOptions = useMemo(
     () => ({
       ...documentOptions,
-      projection: `{name, "bestFriend": bestFriend->name}` as `{${string}}`,
+      projection: `{name, "bestFriend": bestFriend->name}`,
     }),
     [documentOptions],
   )

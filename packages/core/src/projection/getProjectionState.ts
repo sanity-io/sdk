@@ -12,11 +12,11 @@ import {
 import {hashString} from '../utils/hashString'
 import {getPublishedId, insecureRandomId} from '../utils/ids'
 import {projectionStore} from './projectionStore'
-import {type ProjectionStoreState, type ProjectionValuePending, type ValidProjection} from './types'
+import {type ProjectionStoreState, type ProjectionValuePending} from './types'
 import {PROJECTION_STATE_CLEAR_DELAY, STABLE_EMPTY_PROJECTION, validateProjection} from './util'
 
 export interface ProjectionOptions<
-  TProjection extends ValidProjection = ValidProjection,
+  TProjection extends string = string,
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
@@ -28,7 +28,7 @@ export interface ProjectionOptions<
  * @beta
  */
 export function getProjectionState<
-  TProjection extends ValidProjection = ValidProjection,
+  TProjection extends string = string,
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
@@ -75,13 +75,13 @@ export const _getProjectionState = bindActionByDataset(
   createStateSourceAction({
     selector: (
       {state}: SelectorContext<ProjectionStoreState>,
-      options: ProjectionOptions<ValidProjection, string, string, string>,
+      options: ProjectionOptions<string, string, string, string>,
     ): ProjectionValuePending<object> | undefined => {
       const documentId = getPublishedId(options.documentId)
       const projectionHash = hashString(options.projection)
       return state.values[documentId]?.[projectionHash] ?? STABLE_EMPTY_PROJECTION
     },
-    onSubscribe: ({state}, options: ProjectionOptions<ValidProjection, string, string, string>) => {
+    onSubscribe: ({state}, options: ProjectionOptions<string, string, string, string>) => {
       const {projection, ...docHandle} = options
       const subscriptionId = insecureRandomId()
       const documentId = getPublishedId(docHandle.documentId)

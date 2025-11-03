@@ -1,11 +1,10 @@
 import {type SanityDocument} from '@sanity/types'
-import {type ExprNode} from 'groq-js'
+import {evaluateSync, type ExprNode, parse} from 'groq-js'
 import {createSelector} from 'reselect'
 
 import {type SelectorContext} from '../store/createStateSourceAction'
 import {getDraftId, getPublishedId} from '../utils/ids'
 import {MultiKeyWeakMap} from '../utils/MultiKeyWeakMap'
-import {evaluateSync, parse} from './_synchronous-groq-js.mjs'
 import {type DocumentAction} from './actions'
 import {ActionError, PermissionActionError, processActions} from './processActions'
 import {type DocumentSet} from './processMutations'
@@ -127,7 +126,8 @@ const memoizedActionsSelector = createSelector(
 )
 
 function checkGrant(grantExpr: ExprNode, document: SanityDocument): boolean {
-  return evaluateSync(grantExpr, {params: {document}}).get()
+  const value = evaluateSync(grantExpr, {params: {document}})
+  return value.type === 'boolean' && value.data
 }
 
 /** @beta */

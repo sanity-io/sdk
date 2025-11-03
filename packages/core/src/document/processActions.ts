@@ -5,18 +5,18 @@ import {
   type Reference,
   type SanityDocument,
 } from '@sanity/types'
-import {type ExprNode} from 'groq-js'
+import {evaluateSync, type ExprNode} from 'groq-js'
 import {isEqual} from 'lodash-es'
 
 import {getDraftId, getPublishedId} from '../utils/ids'
-import {evaluateSync} from './_synchronous-groq-js.mjs'
 import {type DocumentAction} from './actions'
 import {type Grant} from './permissions'
 import {type DocumentSet, getId, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
 
 function checkGrant(grantExpr: ExprNode, document: SanityDocument): boolean {
-  return evaluateSync(grantExpr, {params: {document}}).get()
+  const value = evaluateSync(grantExpr, {params: {document}})
+  return value.type === 'boolean' && value.data
 }
 
 interface ProcessActionsOptions {

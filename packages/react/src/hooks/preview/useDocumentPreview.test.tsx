@@ -1,8 +1,9 @@
 import {type DocumentHandle, getPreviewState, type PreviewValue, resolvePreview} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
-import {Suspense, useRef} from 'react'
+import {useRef} from 'react'
 import {type Mock} from 'vitest'
 
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {useDocumentPreview} from './useDocumentPreview'
 
 // Mock IntersectionObserver
@@ -24,19 +25,17 @@ beforeAll(() => {
 })
 
 // Mock the preview store
-vi.mock('@sanity/sdk', () => {
+vi.mock('@sanity/sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@sanity/sdk')>()
   const getCurrent = vi.fn()
   const subscribe = vi.fn()
 
   return {
+    ...actual,
     resolvePreview: vi.fn(),
     getPreviewState: vi.fn().mockReturnValue({getCurrent, subscribe}),
   }
 })
-
-vi.mock('../context/useSanityInstance', () => ({
-  useSanityInstance: () => ({}),
-}))
 
 const mockDocument: DocumentHandle = {
   documentId: 'doc1',
@@ -82,9 +81,9 @@ describe('useDocumentPreview', () => {
     subscribe.mockImplementation(() => eventsUnsubscribe)
 
     render(
-      <Suspense fallback={<div>Loading...</div>}>
+      <ResourceProvider fallback={<div>Loading...</div>}>
         <TestComponent {...mockDocument} />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     // Initially, element is not intersecting
@@ -127,9 +126,9 @@ describe('useDocumentPreview', () => {
     })
 
     render(
-      <Suspense fallback={<div>Loading...</div>}>
+      <ResourceProvider fallback={<div>Loading...</div>}>
         <TestComponent {...mockDocument} />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     expect(screen.getByText('Loading...')).toBeInTheDocument()
@@ -162,9 +161,9 @@ describe('useDocumentPreview', () => {
     subscribe.mockImplementation(() => vi.fn())
 
     render(
-      <Suspense fallback={<div>Loading...</div>}>
+      <ResourceProvider fallback={<div>Loading...</div>}>
         <TestComponent {...mockDocument} />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     expect(screen.getByText('Fallback Title')).toBeInTheDocument()
@@ -192,9 +191,9 @@ describe('useDocumentPreview', () => {
     }
 
     render(
-      <Suspense fallback={<div>Loading...</div>}>
+      <ResourceProvider fallback={<div>Loading...</div>}>
         <NoRefComponent {...mockDocument} />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     // Should subscribe immediately without waiting for intersection
@@ -222,9 +221,9 @@ describe('useDocumentPreview', () => {
     }
 
     render(
-      <Suspense fallback={<div>Loading...</div>}>
+      <ResourceProvider fallback={<div>Loading...</div>}>
         <NonHtmlRefComponent {...mockDocument} />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     // Should subscribe immediately without waiting for intersection

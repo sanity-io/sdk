@@ -24,6 +24,13 @@ export {
 export {observeOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
+export {
+  type ApiErrorBody,
+  getClientErrorApiBody,
+  getClientErrorApiDescription,
+  getClientErrorApiType,
+  isProjectUserNotFoundClientError,
+} from '../auth/utils'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
 export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
 export {
@@ -157,6 +164,7 @@ export {
 export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {defineIntent, type Intent, type IntentFilter} from '../utils/defineIntent'
+export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {CORE_SDK_VERSION} from '../version'
 export {
   getIndexForKey,

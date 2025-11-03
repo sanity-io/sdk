@@ -1,14 +1,12 @@
-import {type SanityInstance} from '@sanity/sdk'
 import {act, renderHook} from '@testing-library/react'
+import {evaluateSync, parse, toJS} from 'groq-js'
 import {describe, vi} from 'vitest'
 
-import {evaluateSync, parse} from '../_synchronous-groq-js.mjs'
-import {useSanityInstance} from '../context/useSanityInstance'
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {useQuery} from '../query/useQuery'
 import {useDocuments} from './useDocuments'
 
 vi.mock('../query/useQuery')
-vi.mock('../context/useSanityInstance')
 
 describe('useDocuments', () => {
   beforeEach(() => {
@@ -69,24 +67,35 @@ describe('useDocuments', () => {
     ]
 
     vi.mocked(useQuery).mockImplementation(({query, ...options}) => {
-      const result = evaluateSync(parse(query), {dataset, params: options?.params}).get()
+      const result = toJS(evaluateSync(parse(query), {dataset, params: options?.params}))
       return {
         data: result,
         isPending: false,
       }
     })
-    vi.mocked(useSanityInstance).mockReturnValue({config: {}} as SanityInstance)
   })
 
   it('should respect custom page size', () => {
     const customBatchSize = 2
-    const {result} = renderHook(() => useDocuments({batchSize: customBatchSize}))
+    const {result} = renderHook(() => useDocuments({batchSize: customBatchSize}), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
     expect(result.current.data.length).toBe(customBatchSize)
   })
 
   it('should filter by document type', () => {
-    const {result} = renderHook(() => useDocuments({filter: '_type == "movie"'}))
+    const {result} = renderHook(() => useDocuments({filter: '_type == "movie"'}), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
     expect(result.current.data.every((doc) => doc.documentType === 'movie')).toBe(true)
     expect(result.current.count).toBe(5) // 5 movies in the dataset
@@ -94,18 +103,32 @@ describe('useDocuments', () => {
 
   // groq-js doesn't support search filters yet
   it.skip('should apply search filter', () => {
-    const {result} = renderHook(() => useDocuments({search: 'inter'}))
+    const {result} = renderHook(() => useDocuments({search: 'inter'}), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
     // Should match "Interstellar"
     expect(result.current.data.some((doc) => doc.documentId === 'movie3')).toBe(true)
   })
 
   it('should apply ordering', () => {
-    const {result} = renderHook(() =>
-      useDocuments({
-        filter: '_type == "movie"',
-        orderings: [{field: 'releaseYear', direction: 'desc'}],
-      }),
+    const {result} = renderHook(
+      () =>
+        useDocuments({
+          filter: '_type == "movie"',
+          orderings: [{field: 'releaseYear', direction: 'desc'}],
+        }),
+      {
+        wrapper: ({children}) => (
+          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+            {children}
+          </ResourceProvider>
+        ),
+      },
     )
 
     // First item should be the most recent movie (Interstellar, 2014)
@@ -114,7 +137,13 @@ describe('useDocuments', () => {
 
   it('should load more data when loadMore is called', () => {
     const batchSize = 2
-    const {result} = renderHook(() => useDocuments({batchSize: batchSize}))
+    const {result} = renderHook(() => useDocuments({batchSize: batchSize}), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
     expect(result.current.data.length).toBe(batchSize)
 
@@ -126,7 +155,13 @@ describe('useDocuments', () => {
   })
 
   it('should indicate when there is more data to load', () => {
-    const {result} = renderHook(() => useDocuments({batchSize: 3}))
+    const {result} = renderHook(() => useDocuments({batchSize: 3}), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
     expect(result.current.hasMore).toBe(true)
     // Load all remaining data
     act(() => {
@@ -139,6 +174,11 @@ describe('useDocuments', () => {
   it('should reset limit when filter changes', () => {
     const {result, rerender} = renderHook((props) => useDocuments(props), {
       initialProps: {batchSize: 2, filter: ''},
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
     })
     // Initially, data length equals pageSize (2)
     expect(result.current.data.length).toBe(2)
@@ -155,15 +195,13 @@ describe('useDocuments', () => {
   })
 
   it('should add projectId and dataset to document handles', () => {
-    // Update the mock to include specific projectId and dataset
-    vi.mocked(useSanityInstance).mockReturnValue({
-      config: {
-        projectId: 'test-project',
-        dataset: 'test-dataset',
-      },
-    } as SanityInstance)
-
-    const {result} = renderHook(() => useDocuments({}))
+    const {result} = renderHook(() => useDocuments({}), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
     // Check that the first document handle has the projectId and dataset
     expect(result.current.data[0].projectId).toBe('test-project')

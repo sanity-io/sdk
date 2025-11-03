@@ -1,4 +1,5 @@
-import {AuthStateType} from '@sanity/sdk'
+import {CorsOriginError} from '@sanity/client'
+import {AuthStateType, getCorsErrorProjectId} from '@sanity/sdk'
 import {useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
@@ -6,6 +7,8 @@ import {ComlinkTokenRefreshProvider} from '../../context/ComlinkTokenRefresh'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
+import {useSanityInstance} from '../../hooks/context/useSanityInstance'
+import {CorsErrorComponent} from '../errors/CorsErrorComponent'
 import {isInIframe} from '../utils'
 import {AuthError} from './AuthError'
 import {ConfigurationError} from './ConfigurationError'
@@ -107,6 +110,14 @@ export function AuthBoundary({
 }: AuthBoundaryProps): React.ReactNode {
   const FallbackComponent = useMemo(() => {
     return function LoginComponentWithLayoutProps(fallbackProps: FallbackProps) {
+      if (fallbackProps.error instanceof CorsOriginError) {
+        return (
+          <CorsErrorComponent
+            {...fallbackProps}
+            projectId={getCorsErrorProjectId(fallbackProps.error)}
+          />
+        )
+      }
       return <LoginErrorComponent {...fallbackProps} />
     }
   }, [LoginErrorComponent])
@@ -144,17 +155,21 @@ function AuthSwitch({
   ...props
 }: AuthSwitchProps) {
   const authState = useAuthState()
-  const orgError = useVerifyOrgProjects(!verifyOrganization, projectIds)
+  const instance = useSanityInstance()
+  const studioModeEnabled = instance.config.studioMode?.enabled
+  const disableVerifyOrg =
+    !verifyOrganization || studioModeEnabled || authState.type !== AuthStateType.LOGGED_IN
+  const orgError = useVerifyOrgProjects(disableVerifyOrg, projectIds)
 
   const isLoggedOut = authState.type === AuthStateType.LOGGED_OUT && !authState.isDestroyingSession
   const loginUrl = useLoginUrl()
 
   useEffect(() => {
-    if (isLoggedOut && !isInIframe()) {
-      // We don't want to redirect to login if we're in the Dashboard
+    if (isLoggedOut && !isInIframe() && !studioModeEnabled) {
+      // We don't want to redirect to login if we're in the Dashboard nor in studio mode
       window.location.href = loginUrl
     }
-  }, [isLoggedOut, loginUrl])
+  }, [isLoggedOut, loginUrl, studioModeEnabled])
 
   // Only check the error if verification is enabled
   if (verifyOrganization && orgError) {

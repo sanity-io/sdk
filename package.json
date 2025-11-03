@@ -29,6 +29,7 @@
     "dev": "pnpm dev:kitchensink",
     "dev:kitchensink": "turbo run dev --filter=@sanity/kitchensink-react",
     "dev:e2e": "turbo run dev --filter=@sanity/kitchensink-react -- --mode=e2e",
+    "deploy:kitchensink": "turbo run deploy --filter=@sanity/kitchensink-react",
     "format": "prettier --write --cache --ignore-unknown .",
     "lint": "turbo run lint -- --fix && eslint . --fix",
     "prepare": "husky",

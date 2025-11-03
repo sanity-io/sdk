@@ -1,9 +1,4 @@
-import {
-  type DocumentHandle,
-  getProjectionState,
-  resolveProjection,
-  type ValidProjection,
-} from '@sanity/sdk'
+import {type DocumentHandle, getProjectionState, resolveProjection} from '@sanity/sdk'
 import {type SanityProjectionResult} from 'groq'
 import {useCallback, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
@@ -15,7 +10,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @category Types
  */
 export interface useDocumentProjectionOptions<
-  TProjection extends ValidProjection = ValidProjection,
+  TProjection extends string = string,
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
@@ -115,7 +110,7 @@ export interface useDocumentProjectionResults<TData> {
  * ```
  */
 export function useDocumentProjection<
-  TProjection extends ValidProjection = ValidProjection,
+  TProjection extends string = string,
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,

@@ -1,8 +1,9 @@
-import {type ResponseQueryOptions} from '@sanity/client'
+import {CorsOriginError, type ResponseQueryOptions} from '@sanity/client'
 import {type SanityQueryResult} from 'groq'
 import {
   catchError,
   combineLatest,
+  defer,
   distinctUntilChanged,
   EMPTY,
   filter,
@@ -207,7 +208,18 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
     apiVersion: QUERY_STORE_API_VERSION,
   }).observable.pipe(
     switchMap((client) =>
-      client.live.events({includeDrafts: !!client.config().token, tag: 'query-store'}),
+      defer(() =>
+        client.live.events({includeDrafts: !!client.config().token, tag: 'query-store'}),
+      ).pipe(
+        catchError((error) => {
+          if (error instanceof CorsOriginError) {
+            // Swallow only CORS errors in store without bubbling up so that they are handled by the Cors Error component
+            state.set('setError', {error})
+            return EMPTY
+          }
+          throw error
+        }),
+      ),
     ),
     share(),
     filter((e) => e.type === 'message'),

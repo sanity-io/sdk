@@ -33,17 +33,16 @@ export async function checkForCookieAuth(
 /**
  * Attempts to retrieve a studio token from local storage.
  * @param storageArea - The storage area to retrieve the token from.
- * @param projectId - The project ID to retrieve the token for.
+ * @param storageKey - The storage key to retrieve the token from.
  * @returns The studio token or null if it does not exist.
  * @internal
  */
 export function getStudioTokenFromLocalStorage(
   storageArea: Storage | undefined,
-  projectId: string | undefined,
+  storageKey: string | undefined,
 ): string | null {
-  if (!storageArea || !projectId) return null
-  const studioStorageKey = `__studio_auth_token_${projectId}`
-  const token = getTokenFromStorage(storageArea, studioStorageKey)
+  if (!storageArea || !storageKey) return null
+  const token = getTokenFromStorage(storageArea, storageKey)
   if (token) {
     return token
   }

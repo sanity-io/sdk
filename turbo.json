@@ -90,6 +90,11 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"],
       "cache": true
+    },
+    "deploy": {
+      "cache": false,
+      "dependsOn": ["^build"],
+      "env": ["SANITY_AUTH_TOKEN"]
     }
   }
 }
