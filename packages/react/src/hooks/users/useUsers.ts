@@ -62,7 +62,7 @@ export interface UsersResult {
  *         <address>{user.profile.email}</address>
  *       </figure>
  *     ))}
- *     {hasMore && <button onClick={loadMore}>{isPending ? 'Loading...' : 'Load More'</button>}
+ *     {hasMore && <button onClick={loadMore}>{isPending ? 'Loading...' : 'Load More'}</button>}
  *   </div>
  * )
  * ```
