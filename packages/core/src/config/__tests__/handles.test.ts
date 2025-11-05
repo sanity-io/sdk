@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest'
 
 import {
+  createAssetHandle,
   createDatasetHandle,
   createDocumentHandle,
   createDocumentTypeHandle,
@@ -26,5 +27,10 @@ describe('handle creation functions', () => {
   it('createDocumentHandle returns input', () => {
     const input = {documentType: 'movie', documentId: '123'}
     expect(createDocumentHandle(input)).toBe(input)
+  })
+
+  it('createAssetHandle returns input', () => {
+    const input = {assetId: 'image-abc-1x1-png', projectId: 'p', dataset: 'd'}
+    expect(createAssetHandle(input)).toBe(input)
   })
 })

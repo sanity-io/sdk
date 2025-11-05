@@ -353,6 +353,9 @@ importers:
       '@sanity/diff-patch':
         specifier: ^6.0.0
         version: 6.0.0
+      '@sanity/image-url':
+        specifier: ^1.2.0
+        version: 1.2.0
       '@sanity/json-match':
         specifier: ^1.0.5
         version: 1.0.5
@@ -2795,6 +2798,10 @@ packages:
 
   '@sanity/image-url@1.1.0':
     resolution: {integrity: sha512-JHumVRxzzaZAJyOimntdukA9TjjzsJiaiq/uUBdTknMLCNvtM6KQ5OCp6W5fIdY78uyFxtQjz+MPXwK8WBIxWg==}
+    engines: {node: '>=10.0.0'}
+
+  '@sanity/image-url@1.2.0':
+    resolution: {integrity: sha512-pYRhti+lDi22it+npWXkEGuYyzbXJLF+d0TYLiyWbKu46JHhYhTDKkp6zmGu4YKF5cXUjT6pnUjFsaf2vlB9nQ==}
     engines: {node: '>=10.0.0'}
 
   '@sanity/import@3.38.2':
@@ -10460,6 +10467,8 @@ snapshots:
       ts-brand: 0.2.0
 
   '@sanity/image-url@1.1.0': {}
+
+  '@sanity/image-url@1.2.0': {}
 
   '@sanity/import@3.38.2(@types/react@19.1.2)':
     dependencies:
