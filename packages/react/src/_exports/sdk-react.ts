@@ -6,6 +6,13 @@ export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
 export {ComlinkTokenRefreshProvider} from '../context/ComlinkTokenRefresh'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
+export {
+  useAgentGenerate,
+  useAgentPatch,
+  useAgentPrompt,
+  useAgentTransform,
+  useAgentTranslate,
+} from '../hooks/agent/agentActions'
 export {useAuthState} from '../hooks/auth/useAuthState'
 export {useAuthToken} from '../hooks/auth/useAuthToken'
 export {useCurrentUser} from '../hooks/auth/useCurrentUser'

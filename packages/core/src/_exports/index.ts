@@ -5,6 +5,25 @@ import {type SanityProject as _SanityProject} from '@sanity/client'
  */
 export type SanityProject = _SanityProject
 
+export type {
+  AgentGenerateOptions,
+  AgentGenerateResult,
+  AgentPatchOptions,
+  AgentPatchResult,
+  AgentPromptOptions,
+  AgentPromptResult,
+  AgentTransformOptions,
+  AgentTransformResult,
+  AgentTranslateOptions,
+  AgentTranslateResult,
+} from '../agent/agentActions'
+export {
+  agentGenerate,
+  agentPatch,
+  agentPrompt,
+  agentTransform,
+  agentTranslate,
+} from '../agent/agentActions'
 export {AuthStateType} from '../auth/authStateType'
 export {
   type AuthState,
