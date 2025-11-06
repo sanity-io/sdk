@@ -1,7 +1,8 @@
-import {type DocumentHandle} from '@sanity/sdk'
+import {type DocumentHandle, mediaLibrarySource} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {type DocumentHandleWithSource} from './types'
 import {useDispatchIntent} from './useDispatchIntent'
 
 // Mock the useWindowConnection hook
@@ -158,6 +159,55 @@ describe('useDispatchIntent', () => {
         id: 'test-project-id.test-dataset',
       },
       params: intentParams,
+    })
+  })
+
+  it('should send intent message with media library source', () => {
+    const mockMediaLibraryHandle: DocumentHandleWithSource = {
+      documentId: 'test-asset-id',
+      documentType: 'sanity.asset',
+      source: mediaLibrarySource('mlPGY7BEqt52'),
+    }
+
+    const {result} = renderHook(() =>
+      useDispatchIntent({
+        action: 'edit',
+        documentHandle: mockMediaLibraryHandle,
+      }),
+    )
+
+    result.current.dispatchIntent()
+
+    expect(mockSendMessage).toHaveBeenCalledWith('dashboard/v1/events/intents/dispatch-intent', {
+      action: 'edit',
+      document: {
+        id: 'test-asset-id',
+        type: 'sanity.asset',
+      },
+      resource: {
+        id: 'mlPGY7BEqt52',
+        type: 'mediaLibrary',
+      },
+    })
+  })
+
+  describe('error handling', () => {
+    it('should throw error when neither source nor projectId/dataset is provided', () => {
+      const invalidHandle = {
+        documentId: 'test-document-id',
+        documentType: 'test-document-type',
+      }
+
+      const {result} = renderHook(() =>
+        useDispatchIntent({
+          action: 'edit',
+          documentHandle: invalidHandle as unknown as DocumentHandleWithSource,
+        }),
+      )
+
+      expect(() => result.current.dispatchIntent()).toThrow(
+        'useDispatchIntent: Either `source` or both `projectId` and `dataset` must be provided in documentHandle.',
+      )
     })
   })
 })

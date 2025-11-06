@@ -1,8 +1,10 @@
 import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
-import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
+import {type FrameMessage} from '@sanity/sdk'
 import {useCallback} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
+import {type DocumentHandleWithSource} from './types'
+import {getResourceIdFromDocumentHandle} from './utils/getResourceIdFromDocumentHandle'
 
 /**
  * Message type for sending intents to the dashboard
@@ -18,6 +20,7 @@ interface IntentMessage {
     }
     resource?: {
       id: string
+      type?: 'mediaLibrary'
     }
     params?: Record<string, string>
   }
@@ -39,13 +42,13 @@ type UseDispatchIntentParams =
   | {
       action: 'edit'
       intentId?: never
-      documentHandle: DocumentHandle
+      documentHandle: DocumentHandleWithSource
       params?: Record<string, string>
     }
   | {
       action?: never
       intentId: string
-      documentHandle: DocumentHandle
+      documentHandle: DocumentHandleWithSource
       params?: Record<string, string>
     }
 
@@ -58,7 +61,9 @@ type UseDispatchIntentParams =
  * @param params - Object containing:
  *   - `action` - Action to perform (currently only 'edit' is supported). Will prompt a picker if multiple handlers are available.
  *   - `intentId` - Specific ID of the intent to dispatch. Either `action` or `intentId` is required.
- *   - `documentHandle` - The document handle containing document ID, type, project ID and dataset, like `{documentId: '123', documentType: 'book', projectId: 'abc123', dataset: 'production'}`
+ *   - `documentHandle` - The document handle containing document ID, type, and either:
+ *     - `projectId` and `dataset` for traditional dataset sources, like `{documentId: '123', documentType: 'book', projectId: 'abc123', dataset: 'production'}`
+ *     - `source` for media library or dataset sources, like `{documentId: '123', documentType: 'asset', source: mediaLibrarySource('ml123')}`
  *   - `params` - Optional parameters to include in the dispatch and passed to the intent handler
  * @returns An object containing:
  * - `dispatchIntent` - Function to dispatch the intent message
@@ -112,7 +117,7 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
         throw new Error('useDispatchIntent: Either `action` or `intentId` must be provided.')
       }
 
-      const {projectId, dataset} = documentHandle
+      const {projectId, dataset, source} = documentHandle
 
       // Warn if both action and intentId are provided (shouldn't happen with TypeScript, but handle runtime case)
       if (action && intentId) {
@@ -121,6 +126,14 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
           'useDispatchIntent: Both `action` and `intentId` were provided. Using `intentId` and ignoring `action`.',
         )
       }
+
+      if (!source && (!projectId || !dataset)) {
+        throw new Error(
+          'useDispatchIntent: Either `source` or both `projectId` and `dataset` must be provided in documentHandle.',
+        )
+      }
+
+      const resource = getResourceIdFromDocumentHandle(documentHandle)
 
       const message: IntentMessage = {
         type: 'dashboard/v1/events/intents/dispatch-intent',
@@ -132,7 +145,8 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
             type: documentHandle.documentType,
           },
           resource: {
-            id: `${projectId}.${dataset}`,
+            id: resource.id,
+            ...(resource.type ? {type: resource.type} : {}),
           },
           ...(intentParams && Object.keys(intentParams).length > 0 ? {params: intentParams} : {}),
         },
