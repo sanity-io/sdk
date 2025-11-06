@@ -36,13 +36,13 @@ export {
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
+export {useDispatchIntent} from '../hooks/dashboard/useDispatchIntent'
 export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
 export {
   type NavigateToStudioResult,
   useNavigateToStudioDocument,
 } from '../hooks/dashboard/useNavigateToStudioDocument'
 export {useRecordDocumentHistoryEvent} from '../hooks/dashboard/useRecordDocumentHistoryEvent'
-export {useSendIntent} from '../hooks/dashboard/useSendIntent'
 export {useStudioWorkspacesByProjectIdDataset} from '../hooks/dashboard/useStudioWorkspacesByProjectIdDataset'
 export {useDatasets} from '../hooks/datasets/useDatasets'
 export {useApplyDocumentActions} from '../hooks/document/useApplyDocumentActions'
