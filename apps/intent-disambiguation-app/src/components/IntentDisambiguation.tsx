@@ -146,7 +146,7 @@ export function IntentDisambiguation(): React.JSX.Element {
             </Flex>
           </Card>
 
-          <Card borderBottom paddingY={4}>
+          {/* <Card borderBottom paddingY={4}>
             <Flex justify="space-between" align="center" gap={5}>
               <Text align="left">
                 Note: due to config issues with the property intents studio and the agent, this
@@ -171,7 +171,7 @@ export function IntentDisambiguation(): React.JSX.Element {
                 />
               </Suspense>
             </Flex>
-          </Card>
+          </Card> */}
         </Stack>
       </Stack>
     </Container>
