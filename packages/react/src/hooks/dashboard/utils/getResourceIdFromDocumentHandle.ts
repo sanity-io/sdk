@@ -18,6 +18,7 @@ const isDocumentHandleWithSource = (
 
 /** Currently only used for dispatching intents to the dashboard,
  * but could easily be extended to other dashboard hooks
+ * @beta
  */
 export function getResourceIdFromDocumentHandle(
   documentHandle: DocumentHandle | DocumentHandleWithSource,

@@ -8,6 +8,7 @@ import {getResourceIdFromDocumentHandle} from './utils/getResourceIdFromDocument
 
 /**
  * Message type for sending intents to the dashboard
+ * @beta
  */
 interface IntentMessage {
   type: 'dashboard/v1/events/intents/dispatch-intent'
@@ -22,7 +23,7 @@ interface IntentMessage {
       id: string
       type?: 'mediaLibrary'
     }
-    params?: Record<string, string>
+    parameters?: Record<string, unknown>
   }
 }
 
@@ -43,13 +44,13 @@ type UseDispatchIntentParams =
       action: 'edit'
       intentId?: never
       documentHandle: DocumentHandleWithSource
-      params?: Record<string, string>
+      parameters?: Record<string, unknown>
     }
   | {
       action?: never
       intentId: string
       documentHandle: DocumentHandleWithSource
-      params?: Record<string, string>
+      parameters?: Record<string, unknown>
     }
 
 /**
@@ -64,7 +65,7 @@ type UseDispatchIntentParams =
  *   - `documentHandle` - The document handle containing document ID, type, and either:
  *     - `projectId` and `dataset` for traditional dataset sources, like `{documentId: '123', documentType: 'book', projectId: 'abc123', dataset: 'production'}`
  *     - `source` for media library or dataset sources, like `{documentId: '123', documentType: 'asset', source: mediaLibrarySource('ml123')}`
- *   - `params` - Optional parameters to include in the dispatch; will be passed to the resolved intent handler
+ *   - `paremeters` - Optional parameters to include in the dispatch; will be passed to the resolved intent handler
  * @returns An object containing:
  * - `dispatchIntent` - Function to dispatch the intent message
  *
@@ -104,7 +105,7 @@ type UseDispatchIntentParams =
  * ```
  */
 export function useDispatchIntent(params: UseDispatchIntentParams): DispatchIntent {
-  const {action, intentId, documentHandle, params: intentParams} = params
+  const {action, intentId, documentHandle, parameters} = params
   const {sendMessage} = useWindowConnection<IntentMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
@@ -148,7 +149,7 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
             id: resource.id,
             ...(resource.type ? {type: resource.type} : {}),
           },
-          ...(intentParams && Object.keys(intentParams).length > 0 ? {params: intentParams} : {}),
+          ...(parameters && Object.keys(parameters).length > 0 ? {parameters} : {}),
         },
       }
 
@@ -158,7 +159,7 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
       console.error('Failed to dispatch intent:', error)
       throw error
     }
-  }, [action, intentId, documentHandle, intentParams, sendMessage])
+  }, [action, intentId, documentHandle, parameters, sendMessage])
 
   return {
     dispatchIntent,

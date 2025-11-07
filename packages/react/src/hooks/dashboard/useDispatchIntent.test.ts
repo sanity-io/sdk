@@ -118,7 +118,7 @@ describe('useDispatchIntent', () => {
       useDispatchIntent({
         action: 'edit',
         documentHandle: mockDocumentHandle,
-        params: intentParams,
+        parameters: intentParams,
       }),
     )
 
@@ -133,7 +133,7 @@ describe('useDispatchIntent', () => {
       resource: {
         id: 'test-project-id.test-dataset',
       },
-      params: intentParams,
+      parameters: intentParams,
     })
   })
 
@@ -143,7 +143,7 @@ describe('useDispatchIntent', () => {
       useDispatchIntent({
         intentId: 'custom-intent',
         documentHandle: mockDocumentHandle,
-        params: intentParams,
+        parameters: intentParams,
       }),
     )
 
@@ -158,7 +158,7 @@ describe('useDispatchIntent', () => {
       resource: {
         id: 'test-project-id.test-dataset',
       },
-      params: intentParams,
+      parameters: intentParams,
     })
   })
 
