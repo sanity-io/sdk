@@ -1,6 +1,6 @@
 import './App.css'
 
-import {createClient} from '@sanity/client'
+// import {createClient} from '@sanity/client'
 import {type SanityConfig} from '@sanity/sdk'
 import {IntentHandlerPayload, IntentHandlers, SanityApp} from '@sanity/sdk-react'
 import React, {useState} from 'react'
@@ -17,18 +17,18 @@ function AppWithRouter(): React.JSX.Element {
       handler: async (payload: IntentHandlerPayload) => {
         setDefaultScheduleId(payload.documentHandle.documentId)
 
-        const client = createClient({
-          projectId: '9wmez61s',
-          dataset: 'production',
-          apiVersion: '2025-08-01',
-          withCredentials: true,
-          useCdn: false,
-          apiHost: 'https://api.sanity.work',
-        })
-        await client
-          .patch(payload.documentHandle.documentId)
-          .set({status: payload.params?.['state']})
-          .commit()
+        // const client = createClient({
+        //   projectId: '9wmez61s',
+        //   dataset: 'production',
+        //   apiVersion: '2025-08-01',
+        //   withCredentials: true,
+        //   useCdn: false,
+        //   apiHost: 'https://api.sanity.work',
+        // })
+        // await client
+        //   .patch(payload.documentHandle.documentId)
+        //   .set({status: payload.params?.['state']})
+        //   .commit()
       },
     },
   }

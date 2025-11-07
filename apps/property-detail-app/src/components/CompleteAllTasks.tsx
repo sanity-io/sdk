@@ -11,7 +11,14 @@ export function CompleteAllTasks({payload}: {payload: IntentHandlerPayload}): Re
   React.useEffect(() => {
     async function completeAllTasks() {
       try {
-        const property = await client.getDocument(payload.documentHandle.documentId)
+        let property
+
+        if (payload.documentHandle.documentType === 'maintenanceSchedule') {
+          const maintenanceSchedule = await client.getDocument(payload.documentHandle.documentId)
+          property = await client.getDocument(maintenanceSchedule?.['property']._ref)
+        } else if (payload.documentHandle.documentType === 'property') {
+          property = await client.getDocument(payload.documentHandle.documentId)
+        }
 
         if (!property?.['maintenanceSchedules'] || property['maintenanceSchedules'].length === 0) {
           throw new Error('No maintenance schedules found for this property')
@@ -59,7 +66,7 @@ export function CompleteAllTasks({payload}: {payload: IntentHandlerPayload}): Re
     }
 
     completeAllTasks()
-  }, [client, payload.documentHandle.documentId])
+  }, [client, payload.documentHandle])
 
   if (status === 'loading') {
     return (
