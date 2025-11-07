@@ -64,7 +64,7 @@ type UseDispatchIntentParams =
  *   - `documentHandle` - The document handle containing document ID, type, and either:
  *     - `projectId` and `dataset` for traditional dataset sources, like `{documentId: '123', documentType: 'book', projectId: 'abc123', dataset: 'production'}`
  *     - `source` for media library or dataset sources, like `{documentId: '123', documentType: 'asset', source: mediaLibrarySource('ml123')}`
- *   - `params` - Optional parameters to include in the dispatch and passed to the intent handler
+ *   - `params` - Optional parameters to include in the dispatch; will be passed to the resolved intent handler
  * @returns An object containing:
  * - `dispatchIntent` - Function to dispatch the intent message
  *
