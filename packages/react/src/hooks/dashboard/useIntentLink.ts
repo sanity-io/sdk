@@ -26,7 +26,7 @@ export type ResourceHandle = (DocumentHandle & {type: 'document'}) | AssetHandle
  * @internal
  */
 export interface IntentMessage {
-  type: 'dashboard/v1/events/intents/send-intent'
+  type: 'dashboard/v1/events/intents/dispatch-intent'
   data: {
     intentName?: string
     document: {
@@ -37,7 +37,7 @@ export interface IntentMessage {
       id?: string
       type: 'document' | 'asset' | 'canvas'
     }
-    params?: Record<string, string>
+    parameters?: Record<string, string>
   }
 }
 
@@ -49,7 +49,7 @@ interface UseIntentLinkParams {
   intentName?: string
   intentAction?: string
   resourceHandle: ResourceHandle
-  params?: Record<string, string>
+  parameters?: Record<string, string>
 }
 
 /**
@@ -105,7 +105,7 @@ export function useIntentLink({
   intentName,
   intentAction,
   resourceHandle,
-  params,
+  parameters,
 }: UseIntentLinkParams): IntentLink {
   const [href, setHref] = useState<string | undefined>()
   const {fetch, sendMessage} = useWindowConnection<IntentMessage, FrameMessage>({
@@ -128,9 +128,9 @@ export function useIntentLink({
           }),
         type: resourceHandle.type,
       },
-      ...(params && !!Object.keys(params).length && {params}),
+      ...(parameters && !!Object.keys(parameters).length && {parameters}),
     }),
-    [intentName, intentAction, resourceHandle, params],
+    [intentName, intentAction, resourceHandle, parameters],
   )
 
   useEffect(() => {
@@ -157,7 +157,7 @@ export function useIntentLink({
   const onClick = useCallback(() => {
     try {
       const message: IntentMessage = {
-        type: 'dashboard/v1/events/intents/send-intent',
+        type: 'dashboard/v1/events/intents/dispatch-intent',
         data,
       }
 

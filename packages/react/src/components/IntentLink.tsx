@@ -2,7 +2,7 @@ import {type ResourceHandle, useIntentLink} from '../hooks/dashboard/useIntentLi
 
 export type IntentLinkProps = {
   resourceHandle: ResourceHandle
-  params?: Record<string, string>
+  parameters?: Record<string, string>
 } & (
   | (Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> & {
       intentName?: undefined
@@ -20,7 +20,7 @@ export type IntentLinkProps = {
  */
 export function IntentLink({
   resourceHandle,
-  params,
+  parameters,
   children,
   ...props
 }: IntentLinkProps): React.ReactNode {
@@ -28,7 +28,7 @@ export function IntentLink({
     intentName: props.intentName,
     intentAction: props.intentAction,
     resourceHandle,
-    params,
+    parameters,
   })
 
   const handleClick = (e: React.MouseEvent<HTMLElement>) => {

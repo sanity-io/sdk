@@ -24,7 +24,7 @@ function SendIntentButton({
   })
 
   const handleClick = () => {
-    console.log(`Sending ${intentAction || intentName} intent - this should trigger disambiguation`)
+    console.log(`Sending ${intentAction || intentName} intent`)
     onClick()
   }
 
@@ -141,6 +141,26 @@ export function IntentDisambiguation(): React.JSX.Element {
                     type: 'document',
                   }}
                   cta="Edit Task"
+                />
+              </Suspense>
+            </Flex>
+          </Card>
+
+          <Card borderBottom paddingY={4}>
+            <Flex justify="space-between" align="center" gap={5}>
+              <Text align="left">
+                Navigate directly to &ldquo;Welcome to Sanity Canvas&rdquo; in Canvas.
+              </Text>
+
+              <Suspense fallback={<div></div>}>
+                <SendIntentButton
+                  intentName="canvas"
+                  resourceHandle={{
+                    documentId: 'TUJo78GZr52XcbxuwWUlzQ',
+                    documentType: 'sanity.canvas.document',
+                    type: 'canvas',
+                  }}
+                  cta="Edit Canvas"
                 />
               </Suspense>
             </Flex>
