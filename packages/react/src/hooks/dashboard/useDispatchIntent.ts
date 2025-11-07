@@ -56,7 +56,7 @@ type UseDispatchIntentParams =
  * @beta
  *
  * A hook for dispatching intent messages to the Dashboard with a document handle.
- * This allows applications to signal intent to navigate to applications that can perform specific actions on a document.
+ * This allows applications to signal their intent to pass the referenced document to other applications that have registered the ability to perform specific actions on that document.
  *
  * @param params - Object containing:
  *   - `action` - Action to perform (currently only 'edit' is supported). Will prompt a picker if multiple handlers are available.
