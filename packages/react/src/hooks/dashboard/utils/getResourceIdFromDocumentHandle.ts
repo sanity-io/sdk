@@ -36,8 +36,8 @@ export function getResourceIdFromDocumentHandle(
     const sourceId = (source as Record<string, unknown>)[SOURCE_ID]
     if (Array.isArray(sourceId)) {
       if (sourceId[0] === 'media-library' || sourceId[0] === 'canvas') {
-        resourceId = sourceId[1] as string
         resourceType = sourceId[0] as 'media-library' | 'canvas'
+        resourceId = sourceId[1] as string
       }
     } else if (sourceId && typeof sourceId === 'object' && 'projectId' in sourceId) {
       const datasetSource = sourceId as {projectId: string; dataset: string}

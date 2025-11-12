@@ -39,19 +39,12 @@ interface DispatchIntent {
  * Parameters for the useDispatchIntent hook
  * @beta
  */
-type UseDispatchIntentParams =
-  | {
-      action: 'edit'
-      intentId?: never
-      documentHandle: DocumentHandleWithSource
-      parameters?: Record<string, unknown>
-    }
-  | {
-      action?: never
-      intentId: string
-      documentHandle: DocumentHandleWithSource
-      parameters?: Record<string, unknown>
-    }
+interface UseDispatchIntentParams {
+  action?: 'edit'
+  intentId?: string
+  documentHandle: DocumentHandleWithSource
+  parameters?: Record<string, unknown>
+}
 
 /**
  * @beta
@@ -113,14 +106,12 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
 
   const dispatchIntent = useCallback(() => {
     try {
-      // Validate that either action or intentId is provided
       if (!action && !intentId) {
         throw new Error('useDispatchIntent: Either `action` or `intentId` must be provided.')
       }
 
       const {projectId, dataset, source} = documentHandle
 
-      // Warn if both action and intentId are provided (shouldn't happen with TypeScript, but handle runtime case)
       if (action && intentId) {
         // eslint-disable-next-line no-console -- warn if both action and intentId are provided
         console.warn(
