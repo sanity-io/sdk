@@ -154,7 +154,7 @@ export function IntentDisambiguation(): React.JSX.Element {
 
               <Suspense fallback={<div></div>}>
                 <SendIntentButton
-                  intentName="canvas"
+                  intentName="canvas.edit"
                   resourceHandle={{
                     documentId: 'TUJo78GZr52XcbxuwWUlzQ',
                     documentType: 'sanity.canvas.document',
@@ -166,7 +166,7 @@ export function IntentDisambiguation(): React.JSX.Element {
             </Flex>
           </Card>
 
-          {/* <Card borderBottom paddingY={4}>
+          <Card borderBottom paddingY={4}>
             <Flex justify="space-between" align="center" gap={5}>
               <Text align="left">
                 Note: due to config issues with the property intents studio and the agent, this
@@ -176,7 +176,7 @@ export function IntentDisambiguation(): React.JSX.Element {
 
               <Suspense fallback={<div></div>}>
                 <SendIntentButton
-                  intentName="agent.z4vzpzd7f3ff7p0vynin2aj6-staging"
+                  intentName="agent.edit"
                   resourceHandle={{
                     documentId: '49d3293d-f656-4f74-95c3-7bc2488442b9',
                     documentType: 'book',
@@ -191,7 +191,7 @@ export function IntentDisambiguation(): React.JSX.Element {
                 />
               </Suspense>
             </Flex>
-          </Card> */}
+          </Card>
         </Stack>
       </Stack>
     </Container>
