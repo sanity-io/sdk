@@ -90,9 +90,10 @@ export const SOURCE_ID = '__sanity_internal_sourceId'
  * @beta
  * @see datasetSource Construct a document source for a given projectId and dataset.
  * @see mediaLibrarySource Construct a document source for a mediaLibraryId.
+ * @see canvasSource Construct a document source for a canvasId.
  */
 export type DocumentSource = {
-  [SOURCE_ID]: ['media-library', string] | {projectId: string; dataset: string}
+  [SOURCE_ID]: ['media-library', string] | ['canvas', string] | {projectId: string; dataset: string}
 }
 
 /**
@@ -111,4 +112,13 @@ export function datasetSource(projectId: string, dataset: string): DocumentSourc
  */
 export function mediaLibrarySource(id: string): DocumentSource {
   return {[SOURCE_ID]: ['media-library', id]}
+}
+
+/**
+ * Returns a document source for a Canvas.
+ *
+ * @beta
+ */
+export function canvasSource(id: string): DocumentSource {
+  return {[SOURCE_ID]: ['canvas', id]}
 }

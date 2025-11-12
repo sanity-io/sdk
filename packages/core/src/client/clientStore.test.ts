@@ -3,7 +3,7 @@ import {Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
-import {datasetSource, mediaLibrarySource} from '../config/sanityConfig'
+import {canvasSource, datasetSource, mediaLibrarySource} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {getClient, getClientState} from './clientStore'
 
@@ -207,6 +207,26 @@ describe('clientStore', () => {
       expect(client.config()).toEqual(
         expect.objectContaining({
           '~experimental_resource': {type: 'media-library', id: 'media-lib-123'},
+        }),
+      )
+    })
+
+    it('should create resource when canvas source is provided and be projectless', () => {
+      const source = canvasSource('canvas-123')
+      const client = getClient(instance, {apiVersion: '2024-11-12', source})
+
+      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          '~experimental_resource': {type: 'canvas', id: 'canvas-123'},
+          'apiVersion': '2024-11-12',
+        }),
+      )
+      // Client should be projectless - no projectId/dataset in config
+      expect(client.config()).not.toHaveProperty('projectId')
+      expect(client.config()).not.toHaveProperty('dataset')
+      expect(client.config()).toEqual(
+        expect.objectContaining({
+          '~experimental_resource': {type: 'canvas', id: 'canvas-123'},
         }),
       )
     })
