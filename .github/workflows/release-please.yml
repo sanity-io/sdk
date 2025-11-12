@@ -91,6 +91,6 @@ jobs:
           done_state_id: "5a35b7bf-6d37-4cc2-854a-2f18d160e2e5"
 
       - name: Trigger CircleCI Pipeline
-        uses: CircleCI-Public/trigger-circleci-pipeline-action@v1.0.5
+        uses: CircleCI-Public/trigger-circleci-pipeline-action@ef1944e67053c1923ad772d2377575f2fd962169 # v1.0.5
         env:
           CCI_TOKEN: ${{ secrets.CCI_TOKEN }}

@@ -7,7 +7,7 @@ import {ComlinkTokenRefreshProvider} from '../../context/ComlinkTokenRefresh'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
-import {useCorsOriginError} from '../../hooks/errors/useCorsOriginError'
+import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 import {CorsErrorComponent} from '../errors/CorsErrorComponent'
 import {isInIframe} from '../utils'
 import {AuthError} from './AuthError'
@@ -108,8 +108,6 @@ export function AuthBoundary({
   LoginErrorComponent = LoginError,
   ...props
 }: AuthBoundaryProps): React.ReactNode {
-  const {error: corsError, projectId, clear: clearCorsError} = useCorsOriginError()
-
   const FallbackComponent = useMemo(() => {
     return function LoginComponentWithLayoutProps(fallbackProps: FallbackProps) {
       if (fallbackProps.error instanceof CorsOriginError) {
@@ -117,29 +115,17 @@ export function AuthBoundary({
           <CorsErrorComponent
             {...fallbackProps}
             projectId={getCorsErrorProjectId(fallbackProps.error)}
-            resetErrorBoundary={() => {
-              clearCorsError()
-              fallbackProps.resetErrorBoundary()
-            }}
           />
         )
       }
       return <LoginErrorComponent {...fallbackProps} />
     }
-  }, [LoginErrorComponent, clearCorsError])
+  }, [LoginErrorComponent])
 
   return (
     <ComlinkTokenRefreshProvider>
       <ErrorBoundary FallbackComponent={FallbackComponent}>
-        {corsError ? (
-          <CorsErrorComponent
-            error={corsError}
-            resetErrorBoundary={() => clearCorsError()}
-            projectId={projectId}
-          />
-        ) : (
-          <AuthSwitch {...props} />
-        )}
+        <AuthSwitch {...props} />
       </ErrorBoundary>
     </ComlinkTokenRefreshProvider>
   )
@@ -169,17 +155,21 @@ function AuthSwitch({
   ...props
 }: AuthSwitchProps) {
   const authState = useAuthState()
-  const orgError = useVerifyOrgProjects(!verifyOrganization, projectIds)
+  const instance = useSanityInstance()
+  const studioModeEnabled = instance.config.studioMode?.enabled
+  const disableVerifyOrg =
+    !verifyOrganization || studioModeEnabled || authState.type !== AuthStateType.LOGGED_IN
+  const orgError = useVerifyOrgProjects(disableVerifyOrg, projectIds)
 
   const isLoggedOut = authState.type === AuthStateType.LOGGED_OUT && !authState.isDestroyingSession
   const loginUrl = useLoginUrl()
 
   useEffect(() => {
-    if (isLoggedOut && !isInIframe()) {
-      // We don't want to redirect to login if we're in the Dashboard
+    if (isLoggedOut && !isInIframe() && !studioModeEnabled) {
+      // We don't want to redirect to login if we're in the Dashboard nor in studio mode
       window.location.href = loginUrl
     }
-  }, [isLoggedOut, loginUrl])
+  }, [isLoggedOut, loginUrl, studioModeEnabled])
 
   // Only check the error if verification is enabled
   if (verifyOrganization && orgError) {

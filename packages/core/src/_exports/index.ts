@@ -5,6 +5,25 @@ import {type SanityProject as _SanityProject} from '@sanity/client'
  */
 export type SanityProject = _SanityProject
 
+export type {
+  AgentGenerateOptions,
+  AgentGenerateResult,
+  AgentPatchOptions,
+  AgentPatchResult,
+  AgentPromptOptions,
+  AgentPromptResult,
+  AgentTransformOptions,
+  AgentTransformResult,
+  AgentTranslateOptions,
+  AgentTranslateResult,
+} from '../agent/agentActions'
+export {
+  agentGenerate,
+  agentPatch,
+  agentPrompt,
+  agentTransform,
+  agentTranslate,
+} from '../agent/agentActions'
 export {AuthStateType} from '../auth/authStateType'
 export {
   type AuthState,
@@ -24,6 +43,13 @@ export {
 export {observeOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
+export {
+  type ApiErrorBody,
+  getClientErrorApiBody,
+  getClientErrorApiDescription,
+  getClientErrorApiType,
+  isProjectUserNotFoundClientError,
+} from '../auth/utils'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
 export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
 export {
@@ -51,8 +77,11 @@ export {
 } from '../config/handles'
 export {
   type DatasetHandle,
+  datasetSource,
   type DocumentHandle,
+  type DocumentSource,
   type DocumentTypeHandle,
+  mediaLibrarySource,
   type PerspectiveHandle,
   type ProjectHandle,
   type ReleasePerspective,
@@ -123,8 +152,6 @@ export {resolveProjection} from '../projection/resolveProjection'
 export {type ProjectionValuePending, type ValidProjection} from '../projection/types'
 export {getProjectsState, resolveProjects} from '../projects/projects'
 export {
-  clearQueryError,
-  getQueryErrorState,
   getQueryKey,
   getQueryState,
   parseQueryKey,

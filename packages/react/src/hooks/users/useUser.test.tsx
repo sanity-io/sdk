@@ -6,10 +6,11 @@ import {
   type UserProfile,
 } from '@sanity/sdk'
 import {act, fireEvent, render, screen} from '@testing-library/react'
-import {Suspense, useState} from 'react'
+import {useState} from 'react'
 import {type Observable, Subject} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {useUser} from './useUser'
 
 // Mock the functions from '@sanity/sdk'
@@ -21,11 +22,6 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
     resolveUsers: vi.fn(),
   }
 })
-
-// Mock the Sanity instance hook to return a dummy instance
-vi.mock('../context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn().mockReturnValue({config: {projectId: 'p'}}),
-}))
 
 describe('useUser', () => {
   // Create mock user profiles with all required fields
@@ -91,7 +87,11 @@ describe('useUser', () => {
       )
     }
 
-    render(<TestComponent />)
+    render(
+      <ResourceProvider projectId="p" fallback={null}>
+        <TestComponent />
+      </ResourceProvider>,
+    )
 
     // Verify that the output contains the user data and that isPending is false
     expect(screen.getByTestId('output').textContent).toContain('John Doe (gabc123)')
@@ -146,9 +146,9 @@ describe('useUser', () => {
     }
 
     render(
-      <Suspense fallback={<div data-testid="fallback">Loading...</div>}>
+      <ResourceProvider fallback={<div data-testid="fallback">Loading...</div>}>
         <TestComponent />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     // Initially, since storeValue is undefined, the component should suspend and fallback is shown
@@ -237,7 +237,11 @@ describe('useUser', () => {
       )
     }
 
-    render(<WrapperComponent />)
+    render(
+      <ResourceProvider fallback={null}>
+        <WrapperComponent />
+      </ResourceProvider>,
+    )
 
     // Initially, should show data for first user and not pending
     expect(screen.getByTestId('output').textContent).toContain('John Doe')
@@ -290,7 +294,11 @@ describe('useUser', () => {
       )
     }
 
-    render(<TestComponent />)
+    render(
+      <ResourceProvider fallback={null}>
+        <TestComponent />
+      </ResourceProvider>,
+    )
 
     expect(screen.getByTestId('output').textContent).toContain('User not found')
     expect(screen.getByTestId('output').textContent).toContain('not pending')
@@ -331,7 +339,11 @@ describe('useUser', () => {
       )
     }
 
-    render(<TestComponent />)
+    render(
+      <ResourceProvider projectId="test-project" fallback={null}>
+        <TestComponent />
+      </ResourceProvider>,
+    )
 
     expect(screen.getByTestId('output').textContent).toContain('John Doe (p12345)')
   })
@@ -360,8 +372,9 @@ describe('useUser', () => {
       const {data} = useUser({
         userId: 'gabc123',
         resourceType,
-        projectId: resourceType === 'project' ? 'test-project' : undefined,
-        organizationId: resourceType === 'organization' ? 'test-org' : undefined,
+        ...(resourceType === 'project'
+          ? {projectId: 'test-project'}
+          : {organizationId: 'test-org'}),
       })
       return (
         <div>
@@ -373,7 +386,11 @@ describe('useUser', () => {
       )
     }
 
-    render(<WrapperComponent />)
+    render(
+      <ResourceProvider projectId="test-project" fallback={null}>
+        <WrapperComponent />
+      </ResourceProvider>,
+    )
 
     // Initially should show project user
     expect(screen.getByTestId('output').textContent).toContain('John Doe')
