@@ -67,7 +67,7 @@ describe('getResourceIdFromDocumentHandle', () => {
     it('should return canvas ID and resourceType when canvas source is provided', () => {
       const documentHandle: DocumentHandleWithSource = {
         documentId: 'test-canvas-document-id',
-        documentType: 'canvas.document',
+        documentType: 'sanity.canvas.document',
         source: canvasSource('canvas123'),
       }
 
