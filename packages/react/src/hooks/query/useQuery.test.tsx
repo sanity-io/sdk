@@ -1,9 +1,10 @@
 import {getQueryState, resolveQuery, type StateSource} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
-import {Suspense, useState} from 'react'
+import {useState} from 'react'
 import {type Observable, Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {useQuery} from './useQuery'
 
 // Mock the functions from '@sanity/sdk'
@@ -15,11 +16,6 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
     resolveQuery: vi.fn(),
   }
 })
-
-// Mock the Sanity instance hook to return a dummy instance
-vi.mock('../context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn().mockReturnValue({}),
-}))
 
 describe('useQuery', () => {
   beforeEach(() => {
@@ -45,7 +41,11 @@ describe('useQuery', () => {
       )
     }
 
-    render(<TestComponent />)
+    render(
+      <ResourceProvider projectId="p" dataset="d" fallback={<p>Loading...</p>}>
+        <TestComponent />
+      </ResourceProvider>,
+    )
 
     // Verify that the output contains the data and that isPending is false
     expect(screen.getByTestId('output').textContent).toContain('test data')
@@ -87,9 +87,13 @@ describe('useQuery', () => {
     }
 
     render(
-      <Suspense fallback={<div data-testid="fallback">Loading...</div>}>
+      <ResourceProvider
+        projectId="p"
+        dataset="d"
+        fallback={<div data-testid="fallback">Loading...</div>}
+      >
         <TestComponent />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     // Initially, since storeValue is undefined, the component should suspend and fallback is shown
@@ -159,7 +163,11 @@ describe('useQuery', () => {
       )
     }
 
-    render(<WrapperComponent />)
+    render(
+      <ResourceProvider projectId="p" dataset="d" fallback={<p>Loading...</p>}>
+        <WrapperComponent />
+      </ResourceProvider>,
+    )
 
     // Initially, should show data1 and not pending
     expect(screen.getByTestId('output').textContent).toContain('data1')

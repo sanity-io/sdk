@@ -1,24 +1,18 @@
-import {
-  type DocumentAction,
-  type DocumentPermissionsResult,
-  getPermissionsState,
-  type SanityInstance,
-} from '@sanity/sdk'
+import {type DocumentAction, type DocumentPermissionsResult, getPermissionsState} from '@sanity/sdk'
 import {act, renderHook, waitFor} from '@testing-library/react'
 import {BehaviorSubject, firstValueFrom} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {useDocumentPermissions} from './useDocumentPermissions'
 
-// Mock dependencies before any imports
-vi.mock('../context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn(),
-}))
-
-vi.mock('@sanity/sdk', () => ({
-  getPermissionsState: vi.fn(),
-}))
+vi.mock('@sanity/sdk', async (importActual) => {
+  const actual = await importActual<typeof import('@sanity/sdk')>()
+  return {
+    ...actual,
+    getPermissionsState: vi.fn(),
+  }
+})
 
 // Move this mock to the top level
 vi.mock('rxjs', async (importOriginal) => {
@@ -30,7 +24,6 @@ vi.mock('rxjs', async (importOriginal) => {
 })
 
 describe('usePermissions', () => {
-  const mockInstance = {id: 'mock-instance'} as unknown as SanityInstance
   const mockAction: DocumentAction = {
     type: 'document.publish',
     documentId: 'doc1',
@@ -58,8 +51,6 @@ describe('usePermissions', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-
-    vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
 
     // Create a subject to simulate permissions state updates
     permissionsSubject = new BehaviorSubject<DocumentPermissionsResult | undefined>(
@@ -93,13 +84,20 @@ describe('usePermissions', () => {
       permissionsSubject.next(mockPermissionAllowed)
     })
 
-    const {result} = renderHook(() => useDocumentPermissions(mockAction))
-
-    expect(useSanityInstance).toHaveBeenCalledWith({
-      projectId: mockAction.projectId,
-      dataset: mockAction.dataset,
+    const {result} = renderHook(() => useDocumentPermissions(mockAction), {
+      wrapper: ({children}) => (
+        <ResourceProvider
+          projectId={mockAction.projectId}
+          dataset={mockAction.dataset}
+          fallback={null}
+        >
+          {children}
+        </ResourceProvider>
+      ),
     })
-    expect(getPermissionsState).toHaveBeenCalledWith(mockInstance, mockAction)
+
+    // ResourceProvider handles the instance configuration
+    expect(getPermissionsState).toHaveBeenCalledWith(expect.any(Object), mockAction)
     expect(result.current).toEqual(mockPermissionAllowed)
   })
 
@@ -109,7 +107,17 @@ describe('usePermissions', () => {
       permissionsSubject.next(mockPermissionDenied)
     })
 
-    const {result} = renderHook(() => useDocumentPermissions(mockAction))
+    const {result} = renderHook(() => useDocumentPermissions(mockAction), {
+      wrapper: ({children}) => (
+        <ResourceProvider
+          projectId={mockAction.projectId}
+          dataset={mockAction.dataset}
+          fallback={null}
+        >
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
     expect(result.current).toEqual(mockPermissionDenied)
     expect(result.current.allowed).toBe(false)
@@ -120,9 +128,19 @@ describe('usePermissions', () => {
   it('should accept an array of actions', () => {
     const actions = [mockAction, {...mockAction, documentId: 'doc2'}]
 
-    renderHook(() => useDocumentPermissions(actions))
+    renderHook(() => useDocumentPermissions(actions), {
+      wrapper: ({children}) => (
+        <ResourceProvider
+          projectId={mockAction.projectId}
+          dataset={mockAction.dataset}
+          fallback={null}
+        >
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
-    expect(getPermissionsState).toHaveBeenCalledWith(mockInstance, actions)
+    expect(getPermissionsState).toHaveBeenCalledWith(expect.any(Object), actions)
   })
 
   it('should throw an error if actions have mismatched project IDs', () => {
@@ -132,7 +150,17 @@ describe('usePermissions', () => {
     ]
 
     expect(() => {
-      renderHook(() => useDocumentPermissions(actions))
+      renderHook(() => useDocumentPermissions(actions), {
+        wrapper: ({children}) => (
+          <ResourceProvider
+            projectId={mockAction.projectId}
+            dataset={mockAction.dataset}
+            fallback={null}
+          >
+            {children}
+          </ResourceProvider>
+        ),
+      })
     }).toThrow(/Mismatched project IDs found in actions/)
   })
 
@@ -140,7 +168,17 @@ describe('usePermissions', () => {
     const actions = [mockAction, {...mockAction, dataset: 'different-dataset', documentId: 'doc2'}]
 
     expect(() => {
-      renderHook(() => useDocumentPermissions(actions))
+      renderHook(() => useDocumentPermissions(actions), {
+        wrapper: ({children}) => (
+          <ResourceProvider
+            projectId={mockAction.projectId}
+            dataset={mockAction.dataset}
+            fallback={null}
+          >
+            {children}
+          </ResourceProvider>
+        ),
+      })
     }).toThrow(/Mismatched datasets found in actions/)
   })
 
@@ -155,16 +193,29 @@ describe('usePermissions', () => {
     vi.mocked(firstValueFrom).mockReturnValueOnce(mockPromise)
 
     // This should throw the promise and suspend
-    const {result} = renderHook(() => {
-      try {
-        return useDocumentPermissions(mockAction)
-      } catch (error) {
-        if (error instanceof Promise) {
-          return 'suspended'
+    const {result} = renderHook(
+      () => {
+        try {
+          return useDocumentPermissions(mockAction)
+        } catch (error) {
+          if (error instanceof Promise) {
+            return 'suspended'
+          }
+          throw error
         }
-        throw error
-      }
-    })
+      },
+      {
+        wrapper: ({children}) => (
+          <ResourceProvider
+            projectId={mockAction.projectId}
+            dataset={mockAction.dataset}
+            fallback={null}
+          >
+            {children}
+          </ResourceProvider>
+        ),
+      },
+    )
 
     expect(result.current).toBe('suspended')
 
@@ -175,7 +226,7 @@ describe('usePermissions', () => {
 
     // Now it should render properly
     await waitFor(() => {
-      expect(getPermissionsState).toHaveBeenCalledWith(mockInstance, mockAction)
+      expect(getPermissionsState).toHaveBeenCalledWith(expect.any(Object), mockAction)
     })
   })
 
@@ -185,7 +236,17 @@ describe('usePermissions', () => {
       permissionsSubject.next(mockPermissionAllowed)
     })
 
-    const {result, rerender} = renderHook(() => useDocumentPermissions(mockAction))
+    const {result, rerender} = renderHook(() => useDocumentPermissions(mockAction), {
+      wrapper: ({children}) => (
+        <ResourceProvider
+          projectId={mockAction.projectId}
+          dataset={mockAction.dataset}
+          fallback={null}
+        >
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
     expect(result.current).toEqual(mockPermissionAllowed)
 

@@ -1,13 +1,10 @@
-import {createSanityInstance, getDashboardOrganizationId} from '@sanity/sdk'
+import {getDashboardOrganizationId} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {throwError} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {useDashboardOrganizationId} from './useDashboardOrganizationId'
-
-vi.mock('../context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn().mockReturnValue(createSanityInstance({projectId: 'p', dataset: 'd'})),
-}))
 
 vi.mock('@sanity/sdk', async (importOriginal) => {
   const actual = await importOriginal()
@@ -23,7 +20,13 @@ describe('useDashboardOrganizationId', () => {
       observable: throwError(() => new Error('Unexpected usage of observable')),
     })
 
-    const {result} = renderHook(() => useDashboardOrganizationId())
+    const {result} = renderHook(() => useDashboardOrganizationId(), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
     expect(result.current).toBeUndefined()
   })
 
@@ -36,7 +39,13 @@ describe('useDashboardOrganizationId', () => {
       observable: throwError(() => new Error('Unexpected usage of observable')),
     })
 
-    const {result} = renderHook(() => useDashboardOrganizationId())
+    const {result} = renderHook(() => useDashboardOrganizationId(), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
     expect(result.current).toBe(mockOrgId)
   })
 })

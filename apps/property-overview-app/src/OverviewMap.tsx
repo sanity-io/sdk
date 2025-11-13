@@ -2,9 +2,9 @@ import './App.css'
 
 import {
   type DocumentHandle,
+  useDispatchIntent,
   useDocumentProjection,
   useDocuments,
-  useIntentLink,
 } from '@sanity/sdk-react'
 import {Suspense, useEffect, useMemo, useState} from 'react'
 
@@ -38,13 +38,13 @@ interface PropertyCardProps {
 }
 
 function PropertyCard({doc, selectedScheduleId}: PropertyCardProps) {
-  const checkMaintenance = useIntentLink({
-    resourceHandle: {...doc, type: 'document'},
-    intentName: 'maintenanceList',
+  const {dispatchIntent: checkMaintenance} = useDispatchIntent({
+    documentHandle: doc,
+    intentId: 'maintenanceList',
   })
-  const completeAllTasks = useIntentLink({
-    resourceHandle: {...doc, type: 'document'},
-    intentName: 'completeAllTasks',
+  const {dispatchIntent: completeAllTasks} = useDispatchIntent({
+    documentHandle: doc,
+    intentId: 'completeAllTasks',
   })
 
   const {data: property} = useDocumentProjection<{

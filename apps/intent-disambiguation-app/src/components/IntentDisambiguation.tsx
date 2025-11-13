@@ -1,31 +1,30 @@
-import {useIntentLink} from '@sanity/sdk-react'
+import {canvasSource, type DocumentHandleWithSource, useDispatchIntent} from '@sanity/sdk-react'
 import {Button, Card, Container, Flex, Heading, Stack, Text} from '@sanity/ui'
-import {ResourceHandle} from 'packages/react/src/hooks/dashboard/useIntentLink'
 import React, {Suspense} from 'react'
 
 function SendIntentButton({
-  intentAction,
-  intentName,
-  resourceHandle,
-  params,
+  action,
+  intentId,
+  documentHandle,
+  parameters,
   cta,
 }: {
-  intentAction?: string
-  intentName?: string
-  resourceHandle: ResourceHandle
-  params?: Record<string, string>
+  action?: 'edit'
+  intentId?: string
+  documentHandle: DocumentHandleWithSource
+  parameters?: Record<string, unknown>
   cta: string
 }): React.JSX.Element {
-  const {onClick} = useIntentLink({
-    ...(intentAction && {intentAction}),
-    ...(intentName && {intentName}),
-    ...(params && {params}),
-    resourceHandle,
+  const {dispatchIntent} = useDispatchIntent({
+    ...(action && {action}),
+    ...(intentId && {intentId}),
+    ...(parameters && {parameters}),
+    documentHandle,
   })
 
   const handleClick = () => {
-    console.log(`Sending ${intentAction || intentName} intent`)
-    onClick()
+    console.log(`Sending ${action || intentId} intent`)
+    dispatchIntent()
   }
 
   return (
@@ -64,13 +63,12 @@ export function IntentDisambiguation(): React.JSX.Element {
 
               <Suspense fallback={<div></div>}>
                 <SendIntentButton
-                  intentAction="edit"
-                  resourceHandle={{
+                  action="edit"
+                  documentHandle={{
                     documentId: 'ISWDzt74pwbeI4ifLERAKF',
                     documentType: 'maintenanceSchedule',
                     projectId: '9wmez61s',
                     dataset: 'production',
-                    type: 'document',
                   }}
                   cta="Edit Schedule"
                 />
@@ -87,13 +85,12 @@ export function IntentDisambiguation(): React.JSX.Element {
 
               <Suspense fallback={<div></div>}>
                 <SendIntentButton
-                  intentName="editScheduleState"
-                  resourceHandle={{
+                  intentId="editScheduleState"
+                  documentHandle={{
                     documentId: 'ISWDzt74pwbeI4ifLERAy7',
                     documentType: 'maintenanceSchedule',
                     projectId: '9wmez61s',
                     dataset: 'production',
-                    type: 'document',
                   }}
                   cta="Edit Schedule"
                 />
@@ -110,12 +107,12 @@ export function IntentDisambiguation(): React.JSX.Element {
 
               <Suspense fallback={<div></div>}>
                 <SendIntentButton
-                  resourceHandle={{
+                  action="edit"
+                  documentHandle={{
                     documentId: 'ISWDzt74pwbeI4ifLER8da',
                     documentType: 'property',
                     projectId: '9wmez61s',
                     dataset: 'production',
-                    type: 'document',
                   }}
                   cta="Edit Schedule"
                 />
@@ -132,13 +129,12 @@ export function IntentDisambiguation(): React.JSX.Element {
 
               <Suspense fallback={<div></div>}>
                 <SendIntentButton
-                  intentName="studio.j8q720b38239y746e1ho73tj-default"
-                  resourceHandle={{
+                  intentId="studio.j8q720b38239y746e1ho73tj-default"
+                  documentHandle={{
                     documentId: 'ISWDzt74pwbeI4ifLERD8g',
                     documentType: 'maintenanceTask',
                     projectId: '9wmez61s',
                     dataset: 'production',
-                    type: 'document',
                   }}
                   cta="Edit Task"
                 />
@@ -154,40 +150,13 @@ export function IntentDisambiguation(): React.JSX.Element {
 
               <Suspense fallback={<div></div>}>
                 <SendIntentButton
-                  intentName="canvas.edit"
-                  resourceHandle={{
+                  intentId="canvas.edit"
+                  documentHandle={{
                     documentId: 'TUJo78GZr52XcbxuwWUlzQ',
                     documentType: 'sanity.canvas.document',
-                    type: 'canvas',
+                    source: canvasSource('TUJo78GZr52XcbxuwWUlzQ'),
                   }}
                   cta="Edit Canvas"
-                />
-              </Suspense>
-            </Flex>
-          </Card>
-
-          <Card borderBottom paddingY={4}>
-            <Flex justify="space-between" align="center" gap={5}>
-              <Text align="left">
-                Note: due to config issues with the property intents studio and the agent, this
-                example uses the staging studio. Navigate directly to the &ldquo;Test Book
-                test!&rdquo; book and open the agent with a prompt.
-              </Text>
-
-              <Suspense fallback={<div></div>}>
-                <SendIntentButton
-                  intentName="agent.edit"
-                  resourceHandle={{
-                    documentId: '49d3293d-f656-4f74-95c3-7bc2488442b9',
-                    documentType: 'book',
-                    projectId: 'exx11uqh',
-                    dataset: 'playground',
-                    type: 'document',
-                  }}
-                  params={{
-                    prompt: 'Show me the genre options for this book.',
-                  }}
-                  cta="Edit Book"
                 />
               </Suspense>
             </Flex>

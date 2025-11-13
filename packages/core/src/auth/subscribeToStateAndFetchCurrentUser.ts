@@ -4,32 +4,43 @@ import {distinctUntilChanged, filter, map, type Subscription, switchMap} from 'r
 import {type StoreContext} from '../store/defineStore'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
-import {type AuthState, type AuthStoreState} from './authStore'
+import {type AuthMethodOptions, type AuthState, type AuthStoreState} from './authStore'
 
 export const subscribeToStateAndFetchCurrentUser = ({
   state,
+  instance,
 }: StoreContext<AuthStoreState>): Subscription => {
   const {clientFactory, apiHost} = state.get().options
+  const useProjectHostname = !!instance.config.studioMode?.enabled
+  const projectId = instance.config.projectId
 
   const currentUser$ = state.observable
     .pipe(
-      map(({authState}) => authState),
+      map(({authState, options}) => ({authState, authMethod: options.authMethod})),
       filter(
-        (authState): authState is Extract<AuthState, {type: AuthStateType.LOGGED_IN}> =>
-          authState.type === AuthStateType.LOGGED_IN && !authState.currentUser,
+        (
+          value,
+        ): value is {
+          authState: Extract<AuthState, {type: AuthStateType.LOGGED_IN}>
+          authMethod: AuthMethodOptions
+        } => value.authState.type === AuthStateType.LOGGED_IN && !value.authState.currentUser,
       ),
-      map((authState) => authState.token),
-      distinctUntilChanged(),
+      map((value) => ({token: value.authState.token, authMethod: value.authMethod})),
+      distinctUntilChanged(
+        (prev, curr) => prev.token === curr.token && prev.authMethod === curr.authMethod,
+      ),
     )
     .pipe(
-      map((token) =>
+      map(({token, authMethod}) =>
         clientFactory({
           apiVersion: DEFAULT_API_VERSION,
           requestTagPrefix: REQUEST_TAG_PREFIX,
-          token,
+          token: authMethod === 'cookie' ? undefined : token,
           ignoreBrowserTokenWarning: true,
-          useProjectHostname: false,
+          useProjectHostname,
           useCdn: false,
+          ...(authMethod === 'cookie' ? {withCredentials: true} : {}),
+          ...(useProjectHostname && projectId ? {projectId} : {}),
           ...(apiHost && {apiHost}),
         }),
       ),
