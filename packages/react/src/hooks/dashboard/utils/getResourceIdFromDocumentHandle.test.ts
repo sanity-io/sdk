@@ -1,4 +1,5 @@
 import {
+  canvasSource,
   datasetSource,
   type DocumentHandle,
   type DocumentSource,
@@ -40,7 +41,7 @@ describe('getResourceIdFromDocumentHandle', () => {
 
       expect(result).toEqual({
         id: 'mlPGY7BEqt52',
-        type: 'mediaLibrary',
+        type: 'media-library',
       })
     })
 
@@ -57,7 +58,24 @@ describe('getResourceIdFromDocumentHandle', () => {
 
       expect(result).toEqual({
         id: 'mlPGY7BEqt52',
-        type: 'mediaLibrary',
+        type: 'media-library',
+      })
+    })
+  })
+
+  describe('with DocumentHandleWithSource - canvas', () => {
+    it('should return canvas ID and resourceType when canvas source is provided', () => {
+      const documentHandle: DocumentHandleWithSource = {
+        documentId: 'test-canvas-document-id',
+        documentType: 'sanity.canvas.document',
+        source: canvasSource('canvas123'),
+      }
+
+      const result = getResourceIdFromDocumentHandle(documentHandle)
+
+      expect(result).toEqual({
+        id: 'canvas123',
+        type: 'canvas',
       })
     })
   })

@@ -1,12 +1,22 @@
-import {mediaLibrarySource, SanityDocument, useDispatchIntent, useQuery} from '@sanity/sdk-react'
+import {
+  canvasSource,
+  mediaLibrarySource,
+  SanityDocument,
+  useDispatchIntent,
+  useQuery,
+} from '@sanity/sdk-react'
 import {Button, Card, Spinner, Text} from '@sanity/ui'
 import {type JSX, Suspense} from 'react'
 
 // Hardcoded for demo - should be inferred from org later on
 const MEDIA_LIBRARY_ID = 'mlPGY7BEqt52'
+const CANVAS_ID = 'cag5gSK37IGV'
 const MEDIA = mediaLibrarySource(MEDIA_LIBRARY_ID)
+const CANVAS = canvasSource(CANVAS_ID)
 const PROJECT_ID = 'ppsg7ml5'
 const DATASET = 'test'
+const MOVIE_PROJECT_ID = 'vo1ysemo'
+const MOVIE_DATASET = 'production'
 
 function DatasetDocumentIntent({document}: {document: SanityDocument}): JSX.Element {
   const {dispatchIntent} = useDispatchIntent({
@@ -21,7 +31,27 @@ function DatasetDocumentIntent({document}: {document: SanityDocument}): JSX.Elem
 
   return (
     <Button
-      text="Dispatch Intent for Dataset Document"
+      text={`Dispatch Intent for Dataset Document (${PROJECT_ID})`}
+      tone="primary"
+      onClick={() => dispatchIntent()}
+    />
+  )
+}
+
+function MovieDocumentIntent({document}: {document: SanityDocument}): JSX.Element {
+  const {dispatchIntent} = useDispatchIntent({
+    action: 'edit',
+    documentHandle: {
+      documentId: document._id,
+      documentType: document._type,
+      projectId: MOVIE_PROJECT_ID,
+      dataset: MOVIE_DATASET,
+    },
+  })
+
+  return (
+    <Button
+      text={`Dispatch Intent for Movie (${MOVIE_PROJECT_ID})`}
       tone="primary"
       onClick={() => dispatchIntent()}
     />
@@ -47,6 +77,24 @@ function MediaLibraryAssetIntent({asset}: {asset: {_id: string; _type: string}})
   )
 }
 
+function CanvasDocumentIntent({document}: {document: SanityDocument}): JSX.Element {
+  const {dispatchIntent} = useDispatchIntent({
+    action: 'edit',
+    documentHandle: {
+      documentId: document._id,
+      documentType: document._type,
+      source: CANVAS,
+    },
+  })
+  return (
+    <Button
+      text="Dispatch Intent for Canvas Document"
+      tone="primary"
+      onClick={() => dispatchIntent()}
+    />
+  )
+}
+
 function IntentsContent(): JSX.Element {
   // Fetch first document from project/dataset
   const {data: firstDocument, isPending: isDocumentPending} = useQuery<SanityDocument>({
@@ -55,13 +103,26 @@ function IntentsContent(): JSX.Element {
     dataset: DATASET,
   })
 
+  // Fetch first movie from vo1ysemo/production
+  const {data: firstMovie, isPending: isMoviePending} = useQuery<SanityDocument>({
+    query: '*[_type == "movie"][0]',
+    projectId: MOVIE_PROJECT_ID,
+    dataset: MOVIE_DATASET,
+  })
+
   // Fetch first asset from media library
   const {data: firstAsset, isPending: isAssetPending} = useQuery<SanityDocument>({
     query: '*[_type == "sanity.asset"][0]',
     source: MEDIA,
   })
 
-  const isLoading = isDocumentPending || isAssetPending
+  // Fetch first canvas document from Sanity Sandbox Org Canvas
+  const {data: firstCanvasDocument, isPending: isCanvasDocumentPending} = useQuery<SanityDocument>({
+    query: '*[_type == "sanity.canvas.document"][0]',
+    source: CANVAS,
+  })
+
+  const isLoading = isDocumentPending || isMoviePending || isAssetPending || isCanvasDocumentPending
 
   return (
     <div style={{padding: '2rem', maxWidth: '800px', margin: '0 auto'}}>
@@ -101,7 +162,25 @@ function IntentsContent(): JSX.Element {
         </div>
       </Card>
 
-      <Card padding={3} style={{backgroundColor: '#1a1a1a'}}>
+      <Card padding={3} style={{marginBottom: '2rem', backgroundColor: '#1a1a1a'}}>
+        <Text size={2} weight="bold" style={{marginBottom: '1rem', color: 'white'}}>
+          Movie Document Intent
+        </Text>
+        <Text size={1} style={{marginBottom: '1rem', color: '#ccc'}}>
+          Project: {MOVIE_PROJECT_ID} | Dataset: {MOVIE_DATASET}
+        </Text>
+        <div>
+          <Text size={1} style={{marginBottom: '0.5rem', color: '#ccc'}}>
+            Document ID: <code>{firstMovie?._id}</code>
+          </Text>
+          <Text size={1} style={{marginBottom: '1rem', color: '#ccc'}}>
+            Document Type: <code>{firstMovie?._type}</code>
+          </Text>
+          <MovieDocumentIntent document={firstMovie} />
+        </div>
+      </Card>
+
+      <Card padding={3} style={{marginBottom: '2rem', backgroundColor: '#1a1a1a'}}>
         <Text size={2} weight="bold" style={{marginBottom: '1rem', color: 'white'}}>
           Media Library Asset Intent
         </Text>
@@ -116,6 +195,24 @@ function IntentsContent(): JSX.Element {
             Asset Type: <code>{firstAsset?._type}</code>
           </Text>
           <MediaLibraryAssetIntent asset={firstAsset} />
+        </div>
+      </Card>
+
+      <Card padding={3} style={{marginBottom: '2rem', backgroundColor: '#1a1a1a'}}>
+        <Text size={2} weight="bold" style={{marginBottom: '1rem', color: 'white'}}>
+          Canvas Document Intent
+        </Text>
+        <Text size={1} style={{marginBottom: '1rem', color: '#ccc'}}>
+          Canvas ID: {CANVAS_ID}
+        </Text>
+        <div>
+          <Text size={1} style={{marginBottom: '0.5rem', color: '#ccc'}}>
+            Document ID: <code>{firstCanvasDocument?._id}</code>
+          </Text>
+          <Text size={1} style={{marginBottom: '1rem', color: '#ccc'}}>
+            Document Type: <code>{firstCanvasDocument?._type}</code>
+          </Text>
+          <CanvasDocumentIntent document={firstCanvasDocument} />
         </div>
       </Card>
     </div>

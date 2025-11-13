@@ -76,6 +76,7 @@ export {
   createProjectHandle,
 } from '../config/handles'
 export {
+  canvasSource,
   type DatasetHandle,
   datasetSource,
   type DocumentHandle,

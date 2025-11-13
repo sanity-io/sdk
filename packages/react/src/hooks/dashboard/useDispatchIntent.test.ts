@@ -1,4 +1,4 @@
-import {type DocumentHandle, mediaLibrarySource} from '@sanity/sdk'
+import {canvasSource, type DocumentHandle, mediaLibrarySource} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
@@ -186,7 +186,36 @@ describe('useDispatchIntent', () => {
       },
       resource: {
         id: 'mlPGY7BEqt52',
-        type: 'mediaLibrary',
+        type: 'media-library',
+      },
+    })
+  })
+
+  it('should send intent message with canvas source', () => {
+    const mockCanvasHandle: DocumentHandleWithSource = {
+      documentId: 'test-canvas-document-id',
+      documentType: 'sanity.canvas.document',
+      source: canvasSource('canvas123'),
+    }
+
+    const {result} = renderHook(() =>
+      useDispatchIntent({
+        action: 'edit',
+        documentHandle: mockCanvasHandle,
+      }),
+    )
+
+    result.current.dispatchIntent()
+
+    expect(mockSendMessage).toHaveBeenCalledWith('dashboard/v1/events/intents/dispatch-intent', {
+      action: 'edit',
+      document: {
+        id: 'test-canvas-document-id',
+        type: 'sanity.canvas.document',
+      },
+      resource: {
+        id: 'canvas123',
+        type: 'canvas',
       },
     })
   })

@@ -7,7 +7,7 @@ const SOURCE_ID = '__sanity_internal_sourceId' as const
 
 interface DashboardMessageResource {
   id: string
-  type?: 'mediaLibrary'
+  type?: 'media-library' | 'canvas'
 }
 
 const isDocumentHandleWithSource = (
@@ -30,14 +30,15 @@ export function getResourceIdFromDocumentHandle(
     source = documentHandle.source
   }
   let resourceId: string = projectId + '.' + dataset
-  let resourceType: 'mediaLibrary' | undefined
+  let resourceType: 'media-library' | 'canvas' | undefined
 
   if (source) {
     const sourceId = (source as Record<string, unknown>)[SOURCE_ID]
-    if (Array.isArray(sourceId) && sourceId[0] === 'media-library') {
-      // Media library source
-      resourceId = sourceId[1] as string
-      resourceType = 'mediaLibrary'
+    if (Array.isArray(sourceId)) {
+      if (sourceId[0] === 'media-library' || sourceId[0] === 'canvas') {
+        resourceType = sourceId[0] as 'media-library' | 'canvas'
+        resourceId = sourceId[1] as string
+      }
     } else if (sourceId && typeof sourceId === 'object' && 'projectId' in sourceId) {
       const datasetSource = sourceId as {projectId: string; dataset: string}
       // don't create type since it's ambiguous for project / dataset docs

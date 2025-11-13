@@ -21,7 +21,7 @@ interface IntentMessage {
     }
     resource?: {
       id: string
-      type?: 'mediaLibrary'
+      type?: 'media-library' | 'canvas'
     }
     parameters?: Record<string, unknown>
   }
@@ -39,19 +39,12 @@ interface DispatchIntent {
  * Parameters for the useDispatchIntent hook
  * @beta
  */
-type UseDispatchIntentParams =
-  | {
-      action: 'edit'
-      intentId?: never
-      documentHandle: DocumentHandleWithSource
-      parameters?: Record<string, unknown>
-    }
-  | {
-      action?: never
-      intentId: string
-      documentHandle: DocumentHandleWithSource
-      parameters?: Record<string, unknown>
-    }
+interface UseDispatchIntentParams {
+  action?: 'edit'
+  intentId?: string
+  documentHandle: DocumentHandleWithSource
+  parameters?: Record<string, unknown>
+}
 
 /**
  * @beta
@@ -64,7 +57,7 @@ type UseDispatchIntentParams =
  *   - `intentId` - Specific ID of the intent to dispatch. Either `action` or `intentId` is required.
  *   - `documentHandle` - The document handle containing document ID, type, and either:
  *     - `projectId` and `dataset` for traditional dataset sources, like `{documentId: '123', documentType: 'book', projectId: 'abc123', dataset: 'production'}`
- *     - `source` for media library or dataset sources, like `{documentId: '123', documentType: 'asset', source: mediaLibrarySource('ml123')}`
+ *     - `source` for media library, canvas, or dataset sources, like `{documentId: '123', documentType: 'sanity.asset', source: mediaLibrarySource('ml123')}` or `{documentId: '123', documentType: 'sanity.canvas.document', source: canvasSource('canvas123')}`
  *   - `paremeters` - Optional parameters to include in the dispatch; will be passed to the resolved intent handler
  * @returns An object containing:
  * - `dispatchIntent` - Function to dispatch the intent message
@@ -113,14 +106,12 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
 
   const dispatchIntent = useCallback(() => {
     try {
-      // Validate that either action or intentId is provided
       if (!action && !intentId) {
         throw new Error('useDispatchIntent: Either `action` or `intentId` must be provided.')
       }
 
       const {projectId, dataset, source} = documentHandle
 
-      // Warn if both action and intentId are provided (shouldn't happen with TypeScript, but handle runtime case)
       if (action && intentId) {
         // eslint-disable-next-line no-console -- warn if both action and intentId are provided
         console.warn(
