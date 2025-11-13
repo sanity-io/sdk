@@ -1,4 +1,4 @@
-import {useSendIntent} from '@sanity/sdk-react'
+import {useDispatchIntent} from '@sanity/sdk-react'
 import React, {useState} from 'react'
 
 interface ScheduleStateDropdownProps {
@@ -19,15 +19,15 @@ export function ScheduleStateDropdown({
 }: ScheduleStateDropdownProps): React.ReactNode {
   const [selectedState, setSelectedState] = useState(currentState)
 
-  const {sendIntent} = useSendIntent({
-    intentName: 'editScheduleState',
+  const {dispatchIntent} = useDispatchIntent({
+    intentId: 'editScheduleState',
     documentHandle: {
       documentId: scheduleId,
       documentType: 'maintenanceSchedule',
       projectId: '9wmez61s',
       dataset: 'production',
     },
-    params: {
+    parameters: {
       state: selectedState,
     },
   })
@@ -39,7 +39,7 @@ export function ScheduleStateDropdown({
   const handleSubmit = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    sendIntent()
+    dispatchIntent()
   }
 
   const selectedStateLabel =

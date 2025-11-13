@@ -23,9 +23,9 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle} from '../config/sanityConfig'
+import {type DatasetHandle, type DocumentSource} from '../config/sanityConfig'
 import {getPerspectiveState} from '../releases/getPerspectiveState'
-import {bindActionByDataset} from '../store/createActionBinder'
+import {bindActionBySource} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -62,6 +62,7 @@ export interface QueryOptions<
     DatasetHandle<TDataset, TProjectId> {
   query: TQuery
   params?: Record<string, unknown>
+  source?: DocumentSource
 }
 
 /**
@@ -160,6 +161,7 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
               projectId,
               dataset,
               tag,
+              source,
               perspective: perspectiveFromOptions,
               ...restOptions
             } = parseQueryKey(group$.key)
@@ -172,6 +174,7 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
               apiVersion: QUERY_STORE_API_VERSION,
               projectId,
               dataset,
+              source,
             }).observable
 
             return combineLatest([lastLiveEventId$, client$, perspective$]).pipe(
@@ -290,7 +293,7 @@ export function getQueryState(
 ): ReturnType<typeof _getQueryState> {
   return _getQueryState(...args)
 }
-const _getQueryState = bindActionByDataset(
+const _getQueryState = bindActionBySource(
   queryStore,
   createStateSourceAction({
     selector: ({state, instance}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
@@ -313,29 +316,6 @@ const _getQueryState = bindActionByDataset(
           QUERY_STATE_CLEAR_DELAY,
         )
       }
-    },
-  }),
-)
-
-/**
- * Returns a state source for the top-level query store error (if any).
- *
- * Unlike {@link getQueryState}, this selector does not throw; it simply returns the error value.
- * Subscribe to this to be notified when a global query error occurs (e.g., CORS failures).
- *
- * @beta
- */
-export function getQueryErrorState(instance: SanityInstance): StateSource<unknown | undefined> {
-  return _getQueryErrorState(instance)
-}
-
-const _getQueryErrorState = bindActionByDataset(
-  queryStore,
-  createStateSourceAction({
-    selector: ({state}: SelectorContext<QueryStoreState>) => state.error,
-    onSubscribe: () => {
-      // No-op subscription as we don't track per-query subscribers here
-      return () => {}
     },
   }),
 )
@@ -372,7 +352,7 @@ export function resolveQuery<TData>(
 export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise<unknown> {
   return _resolveQuery(...args)
 }
-const _resolveQuery = bindActionByDataset(
+const _resolveQuery = bindActionBySource(
   queryStore,
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
     const normalized = normalizeOptionsWithPerspective(instance, options)
@@ -413,16 +393,3 @@ const _resolveQuery = bindActionByDataset(
     return firstValueFrom(race([resolved$, aborted$]))
   },
 )
-
-/**
- * Clears the top-level query store error.
- * @beta
- */
-export function clearQueryError(instance: SanityInstance): void
-export function clearQueryError(...args: Parameters<typeof _clearQueryError>): void {
-  return _clearQueryError(...args)
-}
-
-const _clearQueryError = bindActionByDataset(queryStore, ({state}) => {
-  state.set('setError', {error: undefined})
-})

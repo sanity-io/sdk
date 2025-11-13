@@ -1,8 +1,9 @@
 import {getPresence, type SanityUser, type UserPresence} from '@sanity/sdk'
+import {act, renderHook} from '@testing-library/react'
 import {NEVER} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
-import {act, renderHook} from '../../../test/test-utils'
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {usePresence} from './usePresence'
 
 vi.mock('@sanity/sdk', () => ({
@@ -12,10 +13,6 @@ vi.mock('@sanity/sdk', () => ({
     isDisposed: vi.fn(() => false),
     dispose: vi.fn(),
   })),
-}))
-
-vi.mock('../context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn(() => ({config: {projectId: 'test', dataset: 'test'}})),
 }))
 
 describe('usePresence', () => {
@@ -60,7 +57,13 @@ describe('usePresence', () => {
     }
     vi.mocked(getPresence).mockReturnValue(mockPresenceSource)
 
-    const {result, unmount} = renderHook(() => usePresence())
+    const {result, unmount} = renderHook(() => usePresence(), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
 
     // Initial state should be correct
     expect(result.current.locations).toEqual(initialLocations)

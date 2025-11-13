@@ -1,7 +1,6 @@
 // tests/useEditDocument.test.ts
 import {
   createDocumentHandle,
-  createSanityInstance,
   editDocument,
   getDocumentState,
   resolveDocument,
@@ -11,7 +10,7 @@ import {type SanityDocument} from '@sanity/types'
 import {renderHook} from '@testing-library/react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {useApplyDocumentActions} from './useApplyDocumentActions'
 import {useEditDocument} from './useEditDocument'
 
@@ -25,16 +24,9 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
   }
 })
 
-vi.mock('../context/useSanityInstance', () => ({
-  useSanityInstance: vi.fn(),
-}))
-
 vi.mock('./useApplyDocumentActions', () => ({
   useApplyDocumentActions: vi.fn(),
 }))
-
-// Create a fake instance to be returned by useSanityInstance.
-const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
 const doc = {
   _id: 'doc1',
@@ -71,7 +63,6 @@ declare module 'groq' {
 describe('useEditDocument hook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useSanityInstance).mockReturnValue(instance)
   })
 
   it('applies a single edit action for the given path', async () => {
@@ -85,7 +76,13 @@ describe('useEditDocument hook', () => {
     const apply = vi.fn().mockResolvedValue({transactionId: 'tx1'})
     vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
 
-    const {result} = renderHook(() => useEditDocument<string>({...docHandle, path: 'foo'}))
+    const {result} = renderHook(() => useEditDocument<string>({...docHandle, path: 'foo'}), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
     const promise = result.current('newValue')
     expect(editDocument).toHaveBeenCalledWith(docHandle, {set: {foo: 'newValue'}})
     expect(apply).toHaveBeenCalledWith(editDocument(docHandle, {set: {foo: 'newValue'}}))
@@ -106,7 +103,13 @@ describe('useEditDocument hook', () => {
     const apply = vi.fn().mockResolvedValue({transactionId: 'tx2'})
     vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
 
-    const {result} = renderHook(() => useEditDocument(docHandle))
+    const {result} = renderHook(() => useEditDocument(docHandle), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
     const promise = result.current({...doc, foo: 'baz', extra: 'old', _id: 'doc1'})
     expect(apply).toHaveBeenCalledWith([editDocument(docHandle, {set: {foo: 'baz'}})])
     const actionsResult = await promise
@@ -124,7 +127,13 @@ describe('useEditDocument hook', () => {
     const apply = vi.fn().mockResolvedValue({transactionId: 'tx3'})
     vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
 
-    const {result} = renderHook(() => useEditDocument<string>({...docHandle, path: 'foo'}))
+    const {result} = renderHook(() => useEditDocument<string>({...docHandle, path: 'foo'}), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
     const promise = result.current((prev: unknown) => `${prev}Updated`) // 'bar' becomes 'barUpdated'
     expect(editDocument).toHaveBeenCalledWith(docHandle, {set: {foo: 'barUpdated'}})
     expect(apply).toHaveBeenCalledWith(editDocument(docHandle, {set: {foo: 'barUpdated'}}))
@@ -144,7 +153,13 @@ describe('useEditDocument hook', () => {
     const apply = vi.fn().mockResolvedValue({transactionId: 'tx4'})
     vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
 
-    const {result} = renderHook(() => useEditDocument(docHandle))
+    const {result} = renderHook(() => useEditDocument(docHandle), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
     const promise = result.current((prevDoc) => ({...prevDoc, foo: 'baz'}))
     expect(apply).toHaveBeenCalledWith([editDocument(docHandle, {set: {foo: 'baz'}})])
     const actionsResult = await promise
@@ -162,7 +177,13 @@ describe('useEditDocument hook', () => {
     const fakeApply = vi.fn()
     vi.mocked(useApplyDocumentActions).mockReturnValue(fakeApply)
 
-    const {result} = renderHook(() => useEditDocument(docHandle))
+    const {result} = renderHook(() => useEditDocument(docHandle), {
+      wrapper: ({children}) => (
+        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          {children}
+        </ResourceProvider>
+      ),
+    })
     expect(() => result.current('notAnObject' as unknown as Book)).toThrowError(
       'No path was provided to `useEditDocument` and the value provided was not a document object.',
     )
@@ -182,13 +203,22 @@ describe('useEditDocument hook', () => {
     vi.mocked(resolveDocument).mockReturnValue(resolveDocPromise)
 
     // Render the hook and capture the thrown promise.
-    const {result} = renderHook(() => {
-      try {
-        return useEditDocument(docHandle)
-      } catch (e) {
-        return e
-      }
-    })
+    const {result} = renderHook(
+      () => {
+        try {
+          return useEditDocument(docHandle)
+        } catch (e) {
+          return e
+        }
+      },
+      {
+        wrapper: ({children}) => (
+          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+            {children}
+          </ResourceProvider>
+        ),
+      },
+    )
 
     // When the document is not ready, the hook throws the promise from resolveDocument.
     expect(result.current).toBe(resolveDocPromise)

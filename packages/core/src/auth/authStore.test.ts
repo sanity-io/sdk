@@ -237,6 +237,7 @@ describe('authStore', () => {
     it('sets to logged in using studio token when studio mode is enabled and token exists', () => {
       const studioToken = 'studio-token'
       const projectId = 'studio-project'
+      const studioStorageKey = `__studio_auth_token_${projectId}`
       const mockStorage = {
         getItem: vi.fn(),
         setItem: vi.fn(),
@@ -252,40 +253,38 @@ describe('authStore', () => {
       })
 
       const {authState, options} = authStore.getInitialState(instance)
-      expect(getStudioTokenFromLocalStorage).toHaveBeenCalledWith(mockStorage, projectId)
+      expect(getStudioTokenFromLocalStorage).toHaveBeenCalledWith(mockStorage, studioStorageKey)
       expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN, token: studioToken})
       expect(options.authMethod).toBe('localstorage')
     })
 
-    it('checks for cookie auth when studio mode is enabled and no studio token exists', async () => {
-      vi.useFakeTimers()
+    it('checks for cookie auth during initialize when studio mode is enabled and no studio token exists', () => {
       const projectId = 'studio-project'
+      const studioStorageKey = `__studio_auth_token_${projectId}`
       const mockStorage = {
         getItem: vi.fn(),
         setItem: vi.fn(),
         removeItem: vi.fn(),
       } as unknown as Storage // Mock storage
       vi.mocked(getStudioTokenFromLocalStorage).mockReturnValue(null)
-      // Mock cookie check to return true asynchronously
       vi.mocked(checkForCookieAuth).mockResolvedValue(true)
 
       instance = createSanityInstance({
         projectId,
         dataset: 'd',
         studioMode: {enabled: true},
-        auth: {storageArea: mockStorage}, // Provide mock storage
+        auth: {storageArea: mockStorage},
       })
 
-      // Initial state might be logged out before the async check completes
+      // Verify initial state without async cookie probe
       const {authState: initialAuthState} = authStore.getInitialState(instance)
-      expect(initialAuthState.type).toBe(AuthStateType.LOGGED_OUT) // Or potentially logging in depending on other factors
-      expect(getStudioTokenFromLocalStorage).toHaveBeenCalledWith(mockStorage, projectId)
+      expect(initialAuthState.type).toBe(AuthStateType.LOGGED_OUT)
+      expect(getStudioTokenFromLocalStorage).toHaveBeenCalledWith(mockStorage, studioStorageKey)
+
+      // Trigger store creation + initialize
+      getAuthState(instance)
+
       expect(checkForCookieAuth).toHaveBeenCalledWith(projectId, expect.any(Function))
-
-      // Wait for the promise in getInitialState to resolve
-      await vi.runAllTimersAsync()
-
-      vi.useRealTimers()
     })
 
     it('falls back to default auth (storage token) when studio mode is disabled', () => {
@@ -573,14 +572,7 @@ describe('authStore', () => {
       expect(initialOrgId.getCurrent()).toBe('initial-org-id')
 
       // Call handleCallback with the callback URL
-      await handleAuthCallback(instance, callbackUrl) // Use await as handleAuthCallback is async
-
-      // Wait for the state update to be reflected in the selector
-      await vi.waitUntil(
-        () => getDashboardOrganizationId(instance).getCurrent() === 'callback-org-id',
-      )
-      // Add a microtask yield just in case
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      await handleAuthCallback(instance, callbackUrl)
 
       // Check that the orgId from the callback context is now set
       const finalOrgId = getDashboardOrganizationId(instance)

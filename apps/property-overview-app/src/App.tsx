@@ -1,30 +1,34 @@
 import './App.css'
 
-import {createClient} from '@sanity/client'
+// import {createClient} from '@sanity/client'
 import {type SanityConfig} from '@sanity/sdk'
 import {IntentHandlerPayload, IntentHandlers, SanityApp} from '@sanity/sdk-react'
-import React from 'react'
+import React, {useState} from 'react'
 import {BrowserRouter} from 'react-router'
 
 import OverviewMap from './OverviewMap'
 
 function AppWithRouter(): React.JSX.Element {
+  const [defaultScheduleId, setDefaultScheduleId] = useState<string | undefined>()
+
   const intentHandlers: IntentHandlers = {
     editScheduleState: {
       type: 'async',
       handler: async (payload: IntentHandlerPayload) => {
-        const client = createClient({
-          projectId: '9wmez61s',
-          dataset: 'production',
-          apiVersion: '2025-08-01',
-          withCredentials: true,
-          useCdn: false,
-          apiHost: 'https://api.sanity.work',
-        })
-        await client
-          .patch(payload.documentHandle.documentId)
-          .set({status: payload.params?.['state']})
-          .commit()
+        setDefaultScheduleId(payload.documentHandle.documentId)
+
+        // const client = createClient({
+        //   projectId: '9wmez61s',
+        //   dataset: 'production',
+        //   apiVersion: '2025-08-01',
+        //   withCredentials: true,
+        //   useCdn: false,
+        //   apiHost: 'https://api.sanity.work',
+        // })
+        // await client
+        //   .patch(payload.documentHandle.documentId)
+        //   .set({status: payload.params?.['state']})
+        //   .commit()
       },
     },
   }
@@ -42,7 +46,7 @@ function AppWithRouter(): React.JSX.Element {
   return (
     <div className="app-container">
       <SanityApp config={sanityConfigs} handlers={intentHandlers} fallback={<div>Loading...</div>}>
-        <OverviewMap />
+        <OverviewMap defaultScheduleId={defaultScheduleId} />
       </SanityApp>
     </div>
   )

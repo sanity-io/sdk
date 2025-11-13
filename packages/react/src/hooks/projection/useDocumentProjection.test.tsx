@@ -1,8 +1,9 @@
 import {type DocumentHandle, getProjectionState, resolveProjection} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
-import {Suspense, useRef} from 'react'
+import {useRef} from 'react'
 import {type Mock} from 'vitest'
 
+import {ResourceProvider} from '../../context/ResourceProvider'
 import {useDocumentProjection} from './useDocumentProjection'
 
 // Mock IntersectionObserver
@@ -24,19 +25,17 @@ beforeAll(() => {
 })
 
 // Mock the projection store
-vi.mock('@sanity/sdk', () => {
+vi.mock('@sanity/sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@sanity/sdk')>()
   const getCurrent = vi.fn()
   const subscribe = vi.fn()
 
   return {
+    ...actual,
     resolveProjection: vi.fn(),
     getProjectionState: vi.fn().mockReturnValue({getCurrent, subscribe}),
   }
 })
-
-vi.mock('../context/useSanityInstance', () => ({
-  useSanityInstance: () => ({}),
-}))
 
 const mockDocument: DocumentHandle = {
   documentId: 'doc1',
@@ -87,9 +86,9 @@ describe('useDocumentProjection', () => {
     subscribe.mockImplementation(() => eventsUnsubscribe)
 
     render(
-      <Suspense fallback={<div>Loading...</div>}>
+      <ResourceProvider fallback={<div>Loading...</div>}>
         <TestComponent document={mockDocument} projection="{name, description}" />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     // Initially, element is not intersecting
@@ -137,9 +136,9 @@ describe('useDocumentProjection', () => {
     subscribe.mockReturnValue(() => {})
 
     render(
-      <Suspense fallback={<div>Loading...</div>}>
+      <ResourceProvider fallback={<div>Loading...</div>}>
         <TestComponent document={mockDocument} projection="{title, description}" />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     await act(async () => {
@@ -164,9 +163,9 @@ describe('useDocumentProjection', () => {
     subscribe.mockImplementation(() => vi.fn())
 
     render(
-      <Suspense fallback={<div>Loading...</div>}>
+      <ResourceProvider fallback={<div>Loading...</div>}>
         <TestComponent document={mockDocument} projection="{title, description}" />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     expect(screen.getByText('Fallback Title')).toBeInTheDocument()
@@ -184,9 +183,9 @@ describe('useDocumentProjection', () => {
     subscribe.mockImplementation(() => eventsUnsubscribe)
 
     const {rerender} = render(
-      <Suspense fallback={<div>Loading...</div>}>
+      <ResourceProvider fallback={<div>Loading...</div>}>
         <TestComponent document={mockDocument} projection="{title}" />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     // Change projection
@@ -196,9 +195,9 @@ describe('useDocumentProjection', () => {
     })
 
     rerender(
-      <Suspense fallback={<div>Loading...</div>}>
+      <ResourceProvider fallback={<div>Loading...</div>}>
         <TestComponent document={mockDocument} projection="{title, description}" />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     expect(screen.getByText('Updated Title')).toBeInTheDocument()
@@ -224,9 +223,9 @@ describe('useDocumentProjection', () => {
     }
 
     render(
-      <Suspense fallback={<div>Loading...</div>}>
+      <ResourceProvider fallback={<div>Loading...</div>}>
         <NoRefComponent {...mockDocument} projection="{title, description}" />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     // Should subscribe immediately without waiting for intersection
@@ -257,9 +256,9 @@ describe('useDocumentProjection', () => {
     }
 
     render(
-      <Suspense fallback={<div>Loading...</div>}>
+      <ResourceProvider fallback={<div>Loading...</div>}>
         <NonHtmlRefComponent {...mockDocument} projection="{title, description}" />
-      </Suspense>,
+      </ResourceProvider>,
     )
 
     // Should subscribe immediately without waiting for intersection

@@ -1,12 +1,12 @@
-import './app.css'
+import './App.css'
 
 import {
   type DocumentHandle,
+  useDispatchIntent,
   useDocumentProjection,
   useDocuments,
-  useSendIntent,
 } from '@sanity/sdk-react'
-import {Suspense, useMemo, useState} from 'react'
+import {Suspense, useEffect, useMemo, useState} from 'react'
 
 interface Property {
   _id: string
@@ -34,16 +34,17 @@ interface Property {
 
 interface PropertyCardProps {
   doc: DocumentHandle<'property'>
+  selectedScheduleId?: string
 }
 
-function PropertyCard({doc}: PropertyCardProps) {
-  const {sendIntent: checkMaintenance} = useSendIntent({
+function PropertyCard({doc, selectedScheduleId}: PropertyCardProps) {
+  const {dispatchIntent: checkMaintenance} = useDispatchIntent({
     documentHandle: doc,
-    intentName: 'maintenanceList',
+    intentId: 'maintenanceList',
   })
-  const {sendIntent: completeAllTasks} = useSendIntent({
+  const {dispatchIntent: completeAllTasks} = useDispatchIntent({
     documentHandle: doc,
-    intentName: 'completeAllTasks',
+    intentId: 'completeAllTasks',
   })
 
   const {data: property} = useDocumentProjection<{
@@ -122,13 +123,20 @@ function PropertyCard({doc}: PropertyCardProps) {
   const handleCheckMaintenance = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    checkMaintenance()
+    checkMaintenance.onClick()
   }
 
   const handleCompleteAllTasks = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    completeAllTasks()
+    completeAllTasks.onClick()
+  }
+
+  if (
+    selectedScheduleId &&
+    !property.maintenanceSchedules.map((schedule) => schedule._id).includes(selectedScheduleId)
+  ) {
+    return null
   }
 
   return (
@@ -222,8 +230,13 @@ function PropertyCard({doc}: PropertyCardProps) {
   )
 }
 
-export default function PropertyManagementApp(): React.JSX.Element {
+export default function PropertyManagementApp({
+  defaultScheduleId,
+}: {
+  defaultScheduleId?: string
+}): React.JSX.Element {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null)
+  const [selectedScheduleId, setSelectedScheduleId] = useState<string | undefined>()
 
   const {data: propertyHandles, isPending} = useDocuments({
     documentType: 'property',
@@ -250,6 +263,12 @@ export default function PropertyManagementApp(): React.JSX.Element {
         return 'badge-secondary'
     }
   }
+
+  useEffect(() => {
+    if (defaultScheduleId) {
+      setSelectedScheduleId(defaultScheduleId)
+    }
+  }, [defaultScheduleId])
 
   if (isPending) {
     return (
@@ -292,10 +311,31 @@ export default function PropertyManagementApp(): React.JSX.Element {
           {/* Property List */}
           <div className="property-list-section">
             <h2>Properties</h2>
+            <div>
+              {selectedScheduleId && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedScheduleId(undefined)}
+                  style={{
+                    backgroundColor: '#333',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    marginBottom: '24px',
+                  }}
+                >
+                  Show All
+                </button>
+              )}
+            </div>
             <div className="property-list">
               {filteredProperties.map((propertyHandle) => (
                 <Suspense key={propertyHandle.documentId} fallback={<div>Loading property...</div>}>
-                  <PropertyCard doc={propertyHandle} />
+                  <PropertyCard doc={propertyHandle} selectedScheduleId={selectedScheduleId} />
                 </Suspense>
               ))}
             </div>
