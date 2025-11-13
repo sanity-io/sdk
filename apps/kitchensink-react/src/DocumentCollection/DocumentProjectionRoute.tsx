@@ -53,24 +53,32 @@ function ProjectionData({
 
   return (
     <>
-      <TD ref={ref} padding={2}>
+      <TD ref={ref} padding={2} data-testid={`projection-name-${docHandle.documentId}`}>
         {data.name || 'Untitled'}
       </TD>
       {projectionType === 'favoriteBooks' ? (
         <>
-          <TD padding={2}>
+          <TD padding={2} data-testid={`projection-favorite-books-${docHandle.documentId}`}>
             {data.favoriteBookTitles?.filter(Boolean).join(', ') || 'No favorite books'}
           </TD>
         </>
       ) : projectionType === 'bestFriend' ? (
         <>
-          <TD padding={2}>{data.bestFriend?.name || 'No best friend'}</TD>
-          <TD padding={2}>{data.role || 'No role'}</TD>
+          <TD padding={2} data-testid={`projection-best-friend-${docHandle.documentId}`}>
+            {data.bestFriend?.name || 'No best friend'}
+          </TD>
+          <TD padding={2} data-testid={`projection-role-${docHandle.documentId}`}>
+            {data.role || 'No role'}
+          </TD>
         </>
       ) : (
         <>
-          <TD padding={2}>{data.bookCount ?? 0} books</TD>
-          <TD padding={2}>{data.hasBooks ? 'Yes' : 'No'}</TD>
+          <TD padding={2} data-testid={`projection-book-count-${docHandle.documentId}`}>
+            {data.bookCount ?? 0} books
+          </TD>
+          <TD padding={2} data-testid={`projection-has-books-${docHandle.documentId}`}>
+            {data.hasBooks ? 'Yes' : 'No'}
+          </TD>
         </>
       )}
     </>
@@ -112,7 +120,7 @@ function AuthorRow({
   projectionType: 'favoriteBooks' | 'bestFriend' | 'groqHelper'
 }) {
   return (
-    <TR>
+    <TR data-testid={`author-row-${docHandle.documentId}`}>
       <ErrorBoundary fallbackRender={({error}) => <ProjectionError error={error} />}>
         <Suspense fallback={<ProjectionFallback />}>
           <ProjectionData docHandle={docHandle} projectionType={projectionType} />
@@ -334,21 +342,24 @@ export function DocumentProjectionRoute(): JSX.Element {
                 onClick={() => setProjectionType('favoriteBooks')}
                 mode={projectionType === 'favoriteBooks' ? 'default' : 'ghost'}
                 text="Favorite Books"
+                data-testid="projection-button-favorite-books"
               />
               <Button
                 onClick={() => setProjectionType('bestFriend')}
                 mode={projectionType === 'bestFriend' ? 'default' : 'ghost'}
                 text="Best Friend"
+                data-testid="projection-button-best-friend"
               />
               <Button
                 onClick={() => setProjectionType('groqHelper')}
                 mode={projectionType === 'groqHelper' ? 'default' : 'ghost'}
                 text="Book Count"
+                data-testid="projection-button-book-count"
               />
             </Flex>
           </Box>
 
-          <Table style={{opacity: isPending ? 0.5 : 1}}>
+          <Table style={{opacity: isPending ? 0.5 : 1}} data-testid="projection-table">
             <thead>
               <TR>
                 <TH padding={2}>Name</TH>
