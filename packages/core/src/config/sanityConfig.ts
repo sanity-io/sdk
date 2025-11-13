@@ -81,3 +81,44 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
     enabled: boolean
   }
 }
+
+export const SOURCE_ID = '__sanity_internal_sourceId'
+
+/**
+ * A document source can be used for querying.
+ *
+ * @beta
+ * @see datasetSource Construct a document source for a given projectId and dataset.
+ * @see mediaLibrarySource Construct a document source for a mediaLibraryId.
+ * @see canvasSource Construct a document source for a canvasId.
+ */
+export type DocumentSource = {
+  [SOURCE_ID]: ['media-library', string] | ['canvas', string] | {projectId: string; dataset: string}
+}
+
+/**
+ * Returns a document source for a projectId and dataset.
+ *
+ * @beta
+ */
+export function datasetSource(projectId: string, dataset: string): DocumentSource {
+  return {[SOURCE_ID]: {projectId, dataset}}
+}
+
+/**
+ * Returns a document source for a Media Library.
+ *
+ * @beta
+ */
+export function mediaLibrarySource(id: string): DocumentSource {
+  return {[SOURCE_ID]: ['media-library', id]}
+}
+
+/**
+ * Returns a document source for a Canvas.
+ *
+ * @beta
+ */
+export function canvasSource(id: string): DocumentSource {
+  return {[SOURCE_ID]: ['canvas', id]}
+}

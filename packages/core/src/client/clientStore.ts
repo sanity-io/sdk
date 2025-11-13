@@ -2,6 +2,7 @@ import {type ClientConfig, createClient, type SanityClient} from '@sanity/client
 import {pick} from 'lodash-es'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
+import {type DocumentSource, SOURCE_ID} from '../config/sanityConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
@@ -39,6 +40,7 @@ const allowedKeys = Object.keys({
   'requestTagPrefix': null,
   'useProjectHostname': null,
   '~experimental_resource': null,
+  'source': null,
 } satisfies Record<keyof ClientOptions, null>) as (keyof ClientOptions)[]
 
 const DEFAULT_CLIENT_CONFIG: ClientConfig = {
@@ -90,6 +92,11 @@ export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey
    * @internal
    */
   '~experimental_resource'?: ClientConfig['~experimental_resource']
+
+  /**
+   * @internal
+   */
+  'source'?: DocumentSource
 }
 
 const clientStore = defineStore<ClientStoreState>({
@@ -156,18 +163,42 @@ export const getClient = bindActionGlobally(
 
     const tokenFromState = state.get().token
     const {clients, authMethod} = state.get()
+    const hasSource = !!options.source
+    let sourceId = options.source?.[SOURCE_ID]
+
+    let resource
+    if (Array.isArray(sourceId)) {
+      resource = {type: sourceId[0], id: sourceId[1]}
+      sourceId = undefined
+    }
+
     const projectId = options.projectId ?? instance.config.projectId
     const dataset = options.dataset ?? instance.config.dataset
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost
 
     const effectiveOptions: ClientOptions = {
       ...DEFAULT_CLIENT_CONFIG,
-      ...((options.scope === 'global' || !projectId) && {useProjectHostname: false}),
+      ...((options.scope === 'global' || !projectId || hasSource) && {useProjectHostname: false}),
       token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
       ...options,
       ...(projectId && {projectId}),
       ...(dataset && {dataset}),
       ...(apiHost && {apiHost}),
+      ...(resource && {'~experimental_resource': resource}),
+    }
+
+    // When a source is provided, don't use projectId/dataset - the client should be "projectless"
+    // The client code itself will ignore the non-source config, so we do this to prevent confusing the user.
+    // (ref: https://github.com/sanity-io/client/blob/5c23f81f5ab93a53f5b22b39845c867988508d84/src/data/dataMethods.ts#L691)
+    if (hasSource) {
+      if (options.projectId || options.dataset) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          'Both source and explicit projectId/dataset are provided. The source will be used and projectId/dataset will be ignored.',
+        )
+      }
+      delete effectiveOptions.projectId
+      delete effectiveOptions.dataset
     }
 
     if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {
