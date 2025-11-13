@@ -1,34 +1,51 @@
 import {DocumentHandle, useDocumentProjection, usePaginatedDocuments} from '@sanity/sdk-react'
 import {Box, Button, Card, Flex, Label, Spinner, Stack, Text, TextInput} from '@sanity/ui'
-import {defineProjection} from 'groq'
+import groq, {defineProjection} from 'groq'
 import {JSX, ReactNode, Suspense, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 
 // Import the custom table components
 import {Table, TD, TH, TR} from '../components/TableElements'
 
+interface PossibleAuthorProjections {
+  name?: string
+  favoriteBookTitles: string[]
+  bestFriend?: {
+    name?: string
+  }
+  role?: string
+  bookCount?: number
+  hasBooks?: boolean
+}
+
 // Component for displaying projection data with proper error handling
 function ProjectionData({
   docHandle,
-  useFirstProjection,
+  projectionType,
 }: {
   docHandle: DocumentHandle<'author'>
-  useFirstProjection: boolean
+  projectionType: 'favoriteBooks' | 'bestFriend' | 'groqHelper'
 }) {
-  const authorProjection = defineProjection(`{
+  const projections: Record<string, string> = {
+    favoriteBooks: `{
     name,
     "favoriteBookTitles": favoriteBooks[]->{title}.title
-  }`)
-
-  const bestFriendProjection = defineProjection(`{
+  }`,
+    bestFriend: defineProjection(`{
     name,
     'bestFriendName': bestFriend->{name}.name,
     role
-  }`)
+  }`),
+    groqHelper: groq`{
+    name,
+    "bookCount": count(favoriteBooks),
+    "hasBooks": count(favoriteBooks) > 0
+  }`,
+  }
 
   const ref = useRef<HTMLTableCellElement>(null)
-  const projection = useFirstProjection ? authorProjection : bestFriendProjection
-  const {data} = useDocumentProjection({
+  const projection = projections[projectionType]
+  const {data} = useDocumentProjection<PossibleAuthorProjections>({
     ...docHandle,
     ref,
     projection,
@@ -39,16 +56,21 @@ function ProjectionData({
       <TD ref={ref} padding={2}>
         {data.name || 'Untitled'}
       </TD>
-      {'favoriteBookTitles' in data ? (
+      {projectionType === 'favoriteBooks' ? (
         <>
           <TD padding={2}>
             {data.favoriteBookTitles?.filter(Boolean).join(', ') || 'No favorite books'}
           </TD>
         </>
+      ) : projectionType === 'bestFriend' ? (
+        <>
+          <TD padding={2}>{data.bestFriend?.name || 'No best friend'}</TD>
+          <TD padding={2}>{data.role || 'No role'}</TD>
+        </>
       ) : (
         <>
-          <TD padding={2}>{data.bestFriendName || 'No best friend'}</TD>
-          <TD padding={2}>{data.role || 'No role'}</TD>
+          <TD padding={2}>{data.bookCount ?? 0} books</TD>
+          <TD padding={2}>{data.hasBooks ? 'Yes' : 'No'}</TD>
         </>
       )}
     </>
@@ -84,16 +106,16 @@ function ProjectionError({error}: {error: Error}): ReactNode {
 // Component for displaying a single author row with projection data
 function AuthorRow({
   docHandle,
-  useFirstProjection,
+  projectionType,
 }: {
   docHandle: DocumentHandle<'author'>
-  useFirstProjection: boolean
+  projectionType: 'favoriteBooks' | 'bestFriend' | 'groqHelper'
 }) {
   return (
     <TR>
       <ErrorBoundary fallbackRender={({error}) => <ProjectionError error={error} />}>
         <Suspense fallback={<ProjectionFallback />}>
-          <ProjectionData docHandle={docHandle} useFirstProjection={useFirstProjection} />
+          <ProjectionData docHandle={docHandle} projectionType={projectionType} />
         </Suspense>
       </ErrorBoundary>
     </TR>
@@ -209,7 +231,9 @@ function PaginationControls({
 export function DocumentProjectionRoute(): JSX.Element {
   const [searchTerm, setSearchTerm] = useState('')
   const [pageSize, setPageSize] = useState(5)
-  const [useFirstProjection, setUseFirstProjection] = useState(true)
+  const [projectionType, setProjectionType] = useState<
+    'favoriteBooks' | 'bestFriend' | 'groqHelper'
+  >('favoriteBooks')
 
   const {
     data,
@@ -305,29 +329,42 @@ export function DocumentProjectionRoute(): JSX.Element {
           />
 
           <Box padding={4}>
-            <Button
-              onClick={() => setUseFirstProjection(!useFirstProjection)}
-              text={
-                useFirstProjection
-                  ? 'Switch to Best Friend Projection'
-                  : 'Switch to First Author Projection'
-              }
-            />
+            <Flex gap={2}>
+              <Button
+                onClick={() => setProjectionType('favoriteBooks')}
+                mode={projectionType === 'favoriteBooks' ? 'default' : 'ghost'}
+                text="Favorite Books"
+              />
+              <Button
+                onClick={() => setProjectionType('bestFriend')}
+                mode={projectionType === 'bestFriend' ? 'default' : 'ghost'}
+                text="Best Friend"
+              />
+              <Button
+                onClick={() => setProjectionType('groqHelper')}
+                mode={projectionType === 'groqHelper' ? 'default' : 'ghost'}
+                text="Book Count"
+              />
+            </Flex>
           </Box>
 
           <Table style={{opacity: isPending ? 0.5 : 1}}>
             <thead>
               <TR>
                 <TH padding={2}>Name</TH>
-                {useFirstProjection ? (
+                {projectionType === 'favoriteBooks' ? (
                   <>
-                    <TH padding={2}>Address</TH>
                     <TH padding={2}>Favorite Books</TH>
                   </>
-                ) : (
+                ) : projectionType === 'bestFriend' ? (
                   <>
                     <TH padding={2}>Best Friend</TH>
                     <TH padding={2}>Role</TH>
+                  </>
+                ) : (
+                  <>
+                    <TH padding={2}>Book Count</TH>
+                    <TH padding={2}>Has Books</TH>
                   </>
                 )}
               </TR>
@@ -335,11 +372,7 @@ export function DocumentProjectionRoute(): JSX.Element {
             <tbody>
               {data.length > 0 ? (
                 data.map((doc) => (
-                  <AuthorRow
-                    key={doc.documentId}
-                    docHandle={doc}
-                    useFirstProjection={useFirstProjection}
-                  />
+                  <AuthorRow key={doc.documentId} docHandle={doc} projectionType={projectionType} />
                 ))
               ) : (
                 <TR>
