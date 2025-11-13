@@ -129,7 +129,7 @@ export function IntentDisambiguation(): React.JSX.Element {
 
               <Suspense fallback={<div></div>}>
                 <SendIntentButton
-                  intentId="studio.j8q720b38239y746e1ho73tj-default"
+                  intentId="j8q720b38239y746e1ho73tj-default.edit-workspace-default"
                   documentHandle={{
                     documentId: 'ISWDzt74pwbeI4ifLERD8g',
                     documentType: 'maintenanceTask',
