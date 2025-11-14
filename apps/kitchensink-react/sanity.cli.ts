@@ -9,7 +9,8 @@ import {
 
 export default defineCliConfig({
   app: {
-    organizationId: 'oblZgbTFj',
+    // Use e2e organization ID if provided, otherwise use dev organization ID
+    organizationId: process.env['SDK_E2E_ORGANIZATION_ID'] || 'oblZgbTFj',
     entry: './src/App.tsx',
     id: 'wkyoigmzawwnnwx458zgoh46',
   },
