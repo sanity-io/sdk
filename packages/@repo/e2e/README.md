@@ -38,23 +38,24 @@ test('can click a button', async ({page, getPageContext}) => {
 
 ## Running tests
 
-To run E2E tests run the following commands from the root of the project
+Right now, tests are split into two separate commands to make local testing easier. This is because we run our tests in the Dashboard, and Safari struggles with an iframed app in localhost. To run E2E tests run the following commands from the root of the project
 
 - Run all the tests
 
   ```sh
-  pnpm test:e2e
+  pnpm test:e2e:dashboard
+  pnpm test:e2e:webkit
   ```
 
 - Run files that have my-spec or my-spec-2 in the file name
 
   ```sh
-  pnpm test:e2e -- my-spec my-spec-2
+  pnpm test:e2e:dashboard -- my-spec my-spec-2
   ```
 
 - For help, run
   ```sh
-  pnpm test:e2e -- --help
+  pnpm test:e2e:dashboard -- --help
   ```
 
 Other useful helper commands

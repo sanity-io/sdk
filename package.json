@@ -37,6 +37,8 @@
     "test:coverage": "vitest run --coverage",
     "test:coverage:open": "open coverage/index.html",
     "test:e2e": "turbo run test:e2e",
+    "test:e2e:dashboard": "turbo run test:e2e --filter=@sanity/kitchensink-react -- --project=chromium --project=firefox",
+    "test:e2e:webkit": "turbo run test:e2e --filter=@sanity/kitchensink-react -- --project=webkit",
     "test:watch": "vitest watch",
     "ts:check": "turbo run ts:check --filter='./packages/*' --filter='./apps/*'",
     "depcheck": "DEPCHECK=true knip",
