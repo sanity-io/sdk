@@ -28,8 +28,8 @@
       "dependsOn": ["^build"],
       "outputs": ["docs/**"]
     },
-    "check-types": {
-      "dependsOn": ["^check-types"]
+    "ts:check": {
+      "dependsOn": ["^ts:check"]
     },
     "clean": {},
     "cleanup": {

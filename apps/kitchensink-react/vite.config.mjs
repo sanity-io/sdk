@@ -14,7 +14,8 @@ export default defineConfig(({mode}) => {
   const rootDir = resolve(process.cwd(), '../..')
   const env = loadEnv(mode, rootDir, '')
 
-  const isE2E = mode === 'e2e'
+  // Check if we're in e2e mode - either explicitly set or if SDK_E2E_ORGANIZATION_ID is present
+  const isE2E = mode === 'e2e' || !!process.env['SDK_E2E_ORGANIZATION_ID']
 
   return {
     server: {

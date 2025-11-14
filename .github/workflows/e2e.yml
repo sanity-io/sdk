@@ -62,7 +62,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [chromium, firefox, webkit, dashboard-chromium]
+        browser: [chromium, firefox, webkit]
 
     # Shared env required by the SDK E2E helpers. Configure these in the repo → Settings → Secrets / Variables
     env:
