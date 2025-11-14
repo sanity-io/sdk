@@ -15,5 +15,5 @@
       "@sanity/sdk-react/*": ["./packages/react/src/_exports/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": ["**/*.ts", "**/*.tsx", "vite.config.mjs"]
 }
