@@ -113,7 +113,7 @@ jobs:
       - name: 🚀 Start preview server
         run: |
           cd apps/kitchensink-react
-          pnpm build --mode e2e && pnpm run preview --mode e2e --port 3333 &
+          pnpm build && pnpm run preview --port 3333 &
           timeout 60 bash -c 'until curl -f -s http://localhost:3333 > /dev/null; do echo "Waiting for server..."; sleep 2; done'
           echo "Server is ready!"
 

@@ -14,8 +14,12 @@ export default defineConfig(({mode}) => {
   const rootDir = resolve(process.cwd(), '../..')
   const env = loadEnv(mode, rootDir, '')
 
-  // Check if we're in e2e mode - either explicitly set or if SDK_E2E_ORGANIZATION_ID is present
-  const isE2E = mode === 'e2e' || !!process.env['SDK_E2E_ORGANIZATION_ID']
+  // This variable is usually always going to be present in the user's env files,
+  // but only comes into play when explicitly injected into the env.
+  // (`sanity dev` will otherwise ignore all env variables that don't start with `SANITY_APP_`)
+  // 1. Playwright explicitly injects the env variables
+  // 2. `pnpm dev:e2e` sets it as part of the command in the root package.json
+  const isE2E = !!process.env['SDK_E2E_ORGANIZATION_ID']
 
   return {
     server: {

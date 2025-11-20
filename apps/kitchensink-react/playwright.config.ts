@@ -5,7 +5,6 @@ const isWebkitProject =
 
 export default createPlaywrightConfig({
   testDir: './e2e',
-  /* Run your local dev server before starting the tests */
   ...(process.env['CI']
     ? {} // In CI, don't start a webServer since it's started manually
     : {

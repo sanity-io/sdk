@@ -60,7 +60,9 @@ Right now, tests are split into two separate commands to make local testing easi
 
 Other useful helper commands
 
-- "dev:e2e": Starts the Kitchensink pointing to the E2E project and dataset. This server can be used by both you as a developer and the e2e tests at the same time for debugging purposes.
+- `dev:e2e`: Starts the Kitchensink pointing to the E2E project and dataset. This server can be used by both you as a developer and the e2e tests at the same time for debugging purposes.
+
+NOTE: The `dev:e2e` command hardcodes the Sanity staging environment and the SDK e2e test organization as part of its command. If you'd like to run in a different target organization, you will have to temporarily change the command.
 
 For more useful commands, see the [Playwright Command Line](https://playwright.dev/docs/test-cli) documentation.
 
@@ -70,6 +72,6 @@ You can run your tests in your editor with the help of some useful editor plugin
 
 ### Running in CI mode
 
-These tests run in CI with a built application (rather than dev server). It also runs its tests in the Dashboard. If you'd like to replicate that, you should add the following variables to your .env.local file:
+These tests run in CI with a built application (rather than dev server). It also has more workers and retries. If you'd like to replicate that, you should add the following variables to your .env.local file:
 
 - `CI`: true
