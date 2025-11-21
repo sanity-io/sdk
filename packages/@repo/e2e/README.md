@@ -10,7 +10,7 @@ The tests expect to find the below env variables. Either define them in your she
 - `SDK_E2E_ORGANIZATION_ID`: We use oFvj4MZWQ internally
 - `SDK_E2E_USER_ID`: sdk+e2e@sanity.io
 - `SDK_E2E_USER_PASSWORD`: found in 1Password
-- `RECAPTCHA_E2E_STAGING_KEY`: found in 1Password
+- `RECAPTCHA_E2E_STAGING_KEY`: found in 1Password as "E2E staging reCAPTCHA bypass token" in Dev Secrets
 - `SDK_E2E_DATASET_0`=production
 - `SDK_E2E_DATASET_1`=testing
 
@@ -38,18 +38,19 @@ test('can click a button', async ({page, getPageContext}) => {
 
 ## Running tests
 
-To run E2E tests run the following commands from the root of the project
+Right now, tests are split into two separate commands to make local testing easier. This is because we run our tests in the Dashboard, and Safari struggles with an iframed app in localhost. To run E2E tests run the following commands from the root of the project
 
 - Run all the tests
 
   ```sh
-  pnpm test:e2e
+  pnpm test:e2e:dashboard
+  pnpm test:e2e:webkit
   ```
 
 - Run files that have my-spec or my-spec-2 in the file name
 
   ```sh
-  pnpm test:e2e -- my-spec my-spec-2
+  pnpm test:e2e:dashboard -- my-spec my-spec-2
   ```
 
 - For help, run
@@ -59,7 +60,9 @@ To run E2E tests run the following commands from the root of the project
 
 Other useful helper commands
 
-- "dev:e2e": Starts the Kitchensink pointing to the E2E project and dataset. This server can be used by both you as a developer and the e2e tests at the same time for debugging purposes.
+- `dev:e2e`: Starts the Kitchensink pointing to the E2E project and dataset. This server can be used by both you as a developer and the e2e tests at the same time for debugging purposes.
+
+NOTE: The `dev:e2e` command hardcodes the Sanity staging environment and the SDK e2e test organization as part of its command. If you'd like to run in a different target organization, you will have to temporarily change the command.
 
 For more useful commands, see the [Playwright Command Line](https://playwright.dev/docs/test-cli) documentation.
 
@@ -69,6 +72,6 @@ You can run your tests in your editor with the help of some useful editor plugin
 
 ### Running in CI mode
 
-These tests run in CI with a built application (rather than dev server). It also runs its tests in the Dashboard. If you'd like to replicate that, you should add the following variables to your .env.local file:
+These tests run in CI with a built application (rather than dev server). It also has more workers and retries. If you'd like to replicate that, you should add the following variables to your .env.local file:
 
 - `CI`: true

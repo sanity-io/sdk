@@ -6,13 +6,7 @@
     "PKG_VERSION",
     "NPM_CONFIG_PROVENANCE",
     "CI",
-    "SDK_E2E_PROJECT_ID",
-    "SDK_E2E_ORGANIZATION_ID",
-    "SDK_E2E_DATASET_0",
-    "SDK_E2E_DATASET_1",
-    "SDK_E2E_SESSION_TOKEN",
-    "SDK_E2E_USER_ID",
-    "SDK_E2E_USER_PASSWORD",
+    "SDK_E2E_*",
     "RECAPTCHA_E2E_STAGING_KEY"
   ],
   "tasks": {
@@ -28,25 +22,21 @@
       "dependsOn": ["^build"],
       "outputs": ["docs/**"]
     },
-    "check-types": {
-      "dependsOn": ["^check-types"]
+    "ts:check": {
+      "dependsOn": ["^ts:check"]
     },
     "clean": {},
     "cleanup": {
       "cache": false,
-      "env": [
-        "SDK_E2E_PROJECT_ID",
-        "SDK_E2E_DATASET_0",
-        "SDK_E2E_DATASET_1",
-        "SDK_E2E_SESSION_TOKEN"
-      ]
+      "env": ["SDK_E2E_*"]
     },
     "depcheck": {
       "env": ["DEPCHECK"]
     },
     "dev": {
       "persistent": true,
-      "cache": false
+      "cache": false,
+      "env": ["SANITY_INTERNAL_ENV"]
     },
     "docs": {
       "dependsOn": ["^build"],
@@ -55,7 +45,7 @@
     "dev:e2e": {
       "persistent": true,
       "cache": false,
-      "env": ["SDK_E2E_PROJECT_ID", "SDK_E2E_DATASET_0", "SDK_E2E_DATASET_1"]
+      "env": ["SDK_E2E_*", "SANITY_INTERNAL_ENV"]
     },
     "lint": {
       "cache": false
@@ -72,17 +62,7 @@
     },
     "test:e2e": {
       "cache": false,
-      "env": [
-        "SDK_E2E_PROJECT_ID",
-        "SDK_E2E_ORGANIZATION_ID",
-        "SDK_E2E_DATASET_0",
-        "SDK_E2E_DATASET_1",
-        "SDK_E2E_SESSION_TOKEN",
-        "NODE_ENV",
-        "SDK_E2E_USER_ID",
-        "SDK_E2E_USER_PASSWORD",
-        "RECAPTCHA_E2E_STAGING_KEY"
-      ],
+      "env": ["SDK_E2E_*", "NODE_ENV", "RECAPTCHA_E2E_STAGING_KEY"],
       "dependsOn": ["@repo/e2e#build"],
       "outputs": ["e2e/test-results/**", "e2e/test-report/**"]
     },
