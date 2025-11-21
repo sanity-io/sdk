@@ -1,6 +1,6 @@
 import {type DocumentHandle, getProjectionState, resolveProjection} from '@sanity/sdk'
 import {type SanityProjectionResult} from 'groq'
-import {useCallback, useSyncExternalStore} from 'react'
+import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -177,10 +177,21 @@ export function useDocumentProjection<TData extends object>({
   ...docHandle
 }: useDocumentProjectionOptions): useDocumentProjectionResults<TData> {
   const instance = useSanityInstance(docHandle)
-  const stateSource = getProjectionState<TData>(instance, {...docHandle, projection})
+
+  // Normalize projection string to handle template literals with whitespace
+  // This ensures that the same projection content produces the same state source
+  // even if the string reference changes (e.g., from inline template literals)
+  const normalizedProjection = useMemo(() => projection.trim(), [projection])
+
+  // Memoize stateSource based on normalized projection and docHandle properties
+  // This prevents creating a new StateSource on every render when projection content is the same
+  const stateSource = useMemo(
+    () => getProjectionState<TData>(instance, {...docHandle, projection: normalizedProjection}),
+    [instance, normalizedProjection, docHandle],
+  )
 
   if (stateSource.getCurrent()?.data === null) {
-    throw resolveProjection(instance, {...docHandle, projection})
+    throw resolveProjection(instance, {...docHandle, projection: normalizedProjection})
   }
 
   // Create subscribe function for useSyncExternalStore
