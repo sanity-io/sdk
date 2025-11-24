@@ -72,13 +72,11 @@ export {
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
 export {
   createDatasetHandle,
-  createAssetHandle,
   createDocumentHandle,
   createDocumentTypeHandle,
   createProjectHandle,
 } from '../config/handles'
 export {
-  type AssetHandle,
   canvasSource,
   type DatasetHandle,
   datasetSource,
@@ -166,20 +164,21 @@ export {getPerspectiveState} from '../releases/getPerspectiveState'
 export type {ReleaseDocument} from '../releases/releasesStore'
 export {getActiveReleasesState} from '../releases/releasesStore'
 export {
+  deleteAsset,
+  getAssetDownloadUrl,
+  getAssetsState,
+  getImageUrlBuilder,
+  isAssetDocumentType,
+  isImageAssetId,
+  linkMediaLibraryAsset,
+  resolveAssets,
+  uploadAsset,
   type AssetDocumentBase,
   type AssetKind,
   type AssetQueryOptions,
   type ImageAssetId,
   type LinkMediaLibraryAssetOptions,
   type UploadAssetOptions,
-  getImageUrlBuilder,
-  deleteAsset,
-  getAssetDownloadUrl,
-  getAssetsState,
-  isImageAssetId,
-  linkMediaLibraryAsset,
-  resolveAssets,
-  uploadAsset,
 } from '../assets/assets'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'

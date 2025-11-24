@@ -9,7 +9,7 @@ import {type SanityDocument} from '@sanity/types'
 
 // rxjs no longer used in this module after refactor
 import {getClient} from '../client/clientStore'
-import {type AssetHandle, type DatasetHandle} from '../config/sanityConfig'
+import {type DatasetHandle, type DocumentHandle} from '../config/sanityConfig'
 import {getQueryState, resolveQuery} from '../query/queryStore'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
@@ -39,6 +39,27 @@ export function isImageAssetId(value: string): value is ImageAssetId {
  * @public
  */
 export type AssetKind = 'image' | 'file'
+
+/**
+ * Type guard to check if a document type is an asset document type
+ * @public
+ *
+ * @param documentType - The document type to check
+ * @returns True if the document type is 'sanity.imageAsset' or 'sanity.fileAsset'
+ *
+ * @example
+ * ```ts
+ * if (isAssetDocumentType(doc.documentType)) {
+ *   // TypeScript knows this is an asset
+ *   await deleteAsset(instance, doc)
+ * }
+ * ```
+ */
+export function isAssetDocumentType(
+  documentType: string,
+): documentType is 'sanity.imageAsset' | 'sanity.fileAsset' {
+  return documentType === 'sanity.imageAsset' || documentType === 'sanity.fileAsset'
+}
 
 /**
  * Options when uploading an asset
@@ -150,36 +171,53 @@ export async function uploadAsset(
 }
 
 /**
- * Delete an asset by its asset document ID.
- * Pass the asset document `_id` (eg. `image-abc123-2000x1200-jpg`).
+ * Delete an asset document by its handle.
+ *
+ * This function accepts a document handle for an asset document (sanity.imageAsset or sanity.fileAsset).
+ * It validates that the handle references an asset document type before deletion.
+ *
  * @public
+ *
+ * @param instance - The Sanity instance
+ * @param handle - Document handle for the asset to delete
+ * @throws Error If the document handle doesn't reference an asset document type
+ *
+ * @example
+ * ```ts
+ * await deleteAsset(instance, {
+ *   documentId: 'image-abc123-2000x1200-jpg',
+ *   documentType: 'sanity.imageAsset',
+ *   dataset: 'production'
+ * })
+ * ```
  */
-export async function deleteAsset(instance: SanityInstance, assetDocumentId: string): Promise<void>
-/** @public */
-export async function deleteAsset(instance: SanityInstance, handle: AssetHandle): Promise<void>
-/** @public */
 export async function deleteAsset(
   instance: SanityInstance,
-  idOrHandle: string | AssetHandle,
+  handle: DocumentHandle<'sanity.imageAsset' | 'sanity.fileAsset'>,
 ): Promise<void> {
-  if (typeof idOrHandle === 'string') {
-    const client = getClient(instance, {apiVersion: API_VERSION})
-    await client.delete(idOrHandle)
-    return
+  // Validate that this is actually an asset document
+  if (
+    !handle.documentType ||
+    !['sanity.imageAsset', 'sanity.fileAsset'].includes(handle.documentType)
+  ) {
+    throw new Error(
+      `deleteAsset requires a document handle with documentType 'sanity.imageAsset' or 'sanity.fileAsset'. Got: ${handle.documentType}`,
+    )
   }
 
-  const projectId = idOrHandle.projectId ?? instance.config.projectId
-  const dataset = idOrHandle.dataset ?? instance.config.dataset
+  const projectId = handle.projectId ?? instance.config.projectId
+  const dataset = handle.dataset ?? instance.config.dataset
   if (!projectId || !dataset) {
     throw new Error('A projectId and dataset are required to delete an asset.')
   }
+
   const client = getClient(instance, {
     apiVersion: API_VERSION,
     projectId,
     dataset,
     useProjectHostname: true,
   })
-  await client.delete(idOrHandle.assetId)
+  await client.delete(handle.documentId)
 }
 
 /**
@@ -216,8 +254,18 @@ export function getImageUrlBuilder(
 }
 
 /**
- * Asset document subset returned by default asset queries
+ * Asset document subset returned by default asset queries.
+ *
+ * Note: Asset documents (`sanity.imageAsset` and `sanity.fileAsset`) are regular Sanity documents
+ * that live in datasets and can be queried, subscribed to, and manipulated like any other document.
+ * This interface represents a minimal projection of asset document fields.
+ *
  * @public
+ *
+ * @remarks
+ * For full document operations, use the standard document APIs (e.g., `useDocument`, `getDocumentState`)
+ * with document handles. The asset-specific APIs (`deleteAsset`, `uploadAsset`, `linkMediaLibraryAsset`)
+ * provide convenience methods for common asset operations.
  */
 export interface AssetDocumentBase {
   _id: string
@@ -275,6 +323,29 @@ function buildAssetsGroq(
  * Returns a StateSource for an asset query using the centralized query store.
  *
  * @public
+ *
+ * @remarks
+ * This is a convenience wrapper around `getQueryState` for querying asset documents.
+ * Asset documents (`sanity.imageAsset` and `sanity.fileAsset`) are regular documents,
+ * so you can also use `getQueryState` directly with custom GROQ queries for more control.
+ *
+ * @example Basic usage
+ * ```ts
+ * const state = getAssetsState(instance, {
+ *   assetType: 'image',
+ *   limit: 50
+ * })
+ * state.subscribe(images => {
+ *   // render images
+ * })
+ * ```
+ *
+ * @example Equivalent using getQueryState
+ * ```ts
+ * const state = getQueryState(instance, {
+ *   query: '*[_type == "sanity.imageAsset"][0...50]'
+ * })
+ * ```
  */
 export function getAssetsState(
   instance: SanityInstance,
@@ -297,28 +368,29 @@ export function getAssetsState(
 }
 
 /**
- * Returns a StateSource for an asset query.
+ * Resolves an asset query one-time (Promise-based).
  *
- * Example:
+ * @public
+ *
+ * @remarks
+ * This is a convenience wrapper around `resolveQuery` for querying asset documents.
+ * Asset documents (`sanity.imageAsset` and `sanity.fileAsset`) are regular documents,
+ * so you can also use `resolveQuery` directly with custom GROQ queries for more control.
+ *
+ * @example Basic usage
  * ```ts
- * const state = getAssetsState(instance, {assetType: 'image', limit: 50})
- * state.subscribe(images => {
- *   // render
+ * const files = await resolveAssets(instance, {
+ *   assetType: 'file',
+ *   order: '_createdAt desc'
  * })
  * ```
  *
- * @public
- */
-// kept for backward-compat in docs (exported above as function)
-/**
- * Resolves an asset query one-time (Promise-based).
- *
- * Example:
+ * @example Equivalent using resolveQuery
  * ```ts
- * const files = await resolveAssets(instance, {assetType: 'file', order: '_createdAt desc'})
+ * const files = await resolveQuery(instance, {
+ *   query: '*[_type == "sanity.fileAsset"] | order(_createdAt desc)'
+ * })
  * ```
- *
- * @public
  */
 export function resolveAssets(
   instance: SanityInstance,

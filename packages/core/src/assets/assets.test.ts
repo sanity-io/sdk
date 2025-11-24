@@ -11,6 +11,7 @@ import {
   getAssetDownloadUrl,
   getAssetsState,
   getImageUrlBuilder,
+  isAssetDocumentType,
   isImageAssetId,
   linkMediaLibraryAsset,
   resolveAssets,
@@ -36,6 +37,13 @@ describe('assets', () => {
     expect(isImageAssetId('image-abc-800-600-jpg')).toBe(false)
     expect(isImageAssetId('file-abc-800x600-jpg')).toBe(false)
     expect(isImageAssetId('image-abc-800x600-JPG')).toBe(false)
+  })
+
+  it('isAssetDocumentType validates asset document types', () => {
+    expect(isAssetDocumentType('sanity.imageAsset')).toBe(true)
+    expect(isAssetDocumentType('sanity.fileAsset')).toBe(true)
+    expect(isAssetDocumentType('movie')).toBe(false)
+    expect(isAssetDocumentType('author')).toBe(false)
   })
 
   describe('getImageUrlBuilder', () => {
@@ -126,26 +134,44 @@ describe('assets', () => {
       expect(options.source).toBeUndefined()
     })
 
-    it('deleteAsset forwards to client.delete', async () => {
+    it('deleteAsset forwards to client.delete with DocumentHandle', async () => {
       const del = vi.fn().mockResolvedValue(undefined)
       vi.mocked(getClient).mockReturnValue({delete: del} as unknown as SanityClient)
 
-      await deleteAsset(instance, 'image-abc-1x1-png')
+      await deleteAsset(instance, {
+        documentId: 'image-abc-1x1-png',
+        documentType: 'sanity.imageAsset',
+      })
       expect(del).toHaveBeenCalledWith('image-abc-1x1-png')
     })
 
-    it('deleteAsset supports AssetHandle with explicit project/dataset', async () => {
+    it('deleteAsset supports DocumentHandle with explicit project/dataset', async () => {
       const del = vi.fn().mockResolvedValue(undefined)
       const mockedClient = {delete: del} as unknown as SanityClient
       vi.mocked(getClient).mockReturnValue(mockedClient)
 
-      await deleteAsset(instance, {assetId: 'file-xyz', projectId: 'p9', dataset: 'd9'})
+      await deleteAsset(instance, {
+        documentId: 'file-xyz',
+        documentType: 'sanity.fileAsset',
+        projectId: 'p9',
+        dataset: 'd9',
+      })
 
       expect(del).toHaveBeenCalledWith('file-xyz')
       expect(vi.mocked(getClient)).toHaveBeenCalledWith(
         instance,
         expect.objectContaining({projectId: 'p9', dataset: 'd9'}),
       )
+    })
+
+    it('deleteAsset throws when documentType is not an asset type', async () => {
+      await expect(
+        deleteAsset(instance, {
+          documentId: 'movie-123',
+          // @ts-expect-error - wrong document type
+          documentType: 'movie',
+        }),
+      ).rejects.toThrow(/requires a document handle with documentType/)
     })
   })
 

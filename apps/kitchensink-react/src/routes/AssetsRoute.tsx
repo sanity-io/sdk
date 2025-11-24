@@ -1,6 +1,6 @@
 import {
   type AssetDocumentBase,
-  createAssetHandle,
+  createDocumentHandle,
   useAssets,
   useDeleteAsset,
   useLinkMediaLibraryAsset,
@@ -17,7 +17,7 @@ function AssetList({
   onDelete,
 }: {
   assets: AssetDocumentBase[]
-  onDelete: (id: string) => void
+  onDelete: (asset: AssetDocumentBase) => void
 }) {
   if (!assets.length)
     return (
@@ -70,7 +70,7 @@ function AssetList({
                   mode="bleed"
                 />
                 <Flex style={{marginLeft: 'auto'}}>
-                  <Button tone="critical" text="Delete" onClick={() => onDelete(a._id)} />
+                  <Button tone="critical" text="Delete" onClick={() => onDelete(a)} />
                 </Flex>
               </Flex>
             </Stack>
@@ -156,10 +156,15 @@ export function AssetsRoute(): JSX.Element {
   )
 
   const onDelete = useCallback(
-    async (id: string) => {
+    async (asset: AssetDocumentBase) => {
       if (!confirm('Delete this asset?')) return
       await remove(
-        createAssetHandle({assetId: id, projectId: options.projectId, dataset: options.dataset}),
+        createDocumentHandle({
+          documentId: asset._id,
+          documentType: asset._type,
+          projectId: options.projectId,
+          dataset: options.dataset,
+        }),
       )
       // re-query after deletion
       triggerRequeryBurst()

@@ -1,12 +1,11 @@
 import {describe, expect, it} from 'vitest'
 
 import {
-  createAssetHandle,
   createDatasetHandle,
   createDocumentHandle,
   createDocumentTypeHandle,
   createProjectHandle,
-} from '../handles'
+} from './handles'
 
 describe('handle creation functions', () => {
   it('createProjectHandle returns input', () => {
@@ -29,8 +28,13 @@ describe('handle creation functions', () => {
     expect(createDocumentHandle(input)).toBe(input)
   })
 
-  it('createAssetHandle returns input', () => {
-    const input = {assetId: 'image-abc-1x1-png', projectId: 'p', dataset: 'd'}
-    expect(createAssetHandle(input)).toBe(input)
+  it('createDocumentHandle works for asset documents', () => {
+    const input = {
+      documentType: 'sanity.imageAsset' as const,
+      documentId: 'image-abc-1x1-png',
+      projectId: 'p',
+      dataset: 'd',
+    }
+    expect(createDocumentHandle(input)).toBe(input)
   })
 })
