@@ -9,13 +9,14 @@ import {
 
 export default defineCliConfig({
   app: {
-    organizationId: 'oblZgbTFj',
+    // Use e2e organization ID if provided, otherwise use dev organization ID
+    organizationId: process.env['SDK_E2E_ORGANIZATION_ID'] || 'oblZgbTFj',
     entry: './src/App.tsx',
     id: 'wkyoigmzawwnnwx458zgoh46',
   },
   // Extend Sanity CLI's internal Vite config with the app's Vite config
   vite: async (prev: UserConfig) => {
-    const {default: viteConfigFactory} = (await import('./vite.config.ts')) as {
+    const {default: viteConfigFactory} = (await import('./vite.config.mjs')) as {
       default: UserConfigExport
     }
 

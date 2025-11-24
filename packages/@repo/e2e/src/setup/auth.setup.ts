@@ -44,7 +44,7 @@ const authenticateUser = async (context: BrowserContext, config: AuthConfig) => 
   await page.goto(loginUrl.toString())
 
   // Wait for the redirect to complete AND network to be idle
-  await Promise.all([page.waitForURL(config.expectedRedirectUrl)])
+  await page.waitForURL(config.expectedRedirectUrl)
 
   await page.close()
 }
@@ -68,13 +68,12 @@ setup('setup authentication', async ({browser}) => {
   const context = await browser.newContext()
 
   try {
-    // Authenticate for standalone apps
+    // Authenticate for standalone (webkit)
     await authenticateUser(context, {
       origin: 'http://localhost:3333',
       expectedRedirectUrl: 'http://localhost:3333',
     })
-
-    // Authenticate for embedded apps (Dashboard)
+    // Authenticate for Dashboard (other browsers)
     await authenticateUser(context, {
       origin: 'https://www.sanity.work/api/dashboard/authenticate',
       expectedRedirectUrl: `https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}`,

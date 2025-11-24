@@ -6,6 +6,13 @@ export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
 export {ComlinkTokenRefreshProvider} from '../context/ComlinkTokenRefresh'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
+export {
+  useAgentGenerate,
+  useAgentPatch,
+  useAgentPrompt,
+  useAgentTransform,
+  useAgentTranslate,
+} from '../hooks/agent/agentActions'
 export {useAssets} from '../hooks/assets/useAssets'
 export {useDeleteAsset} from '../hooks/assets/useDeleteAsset'
 export {useLinkMediaLibraryAsset} from '../hooks/assets/useLinkMediaLibraryAsset'
@@ -33,6 +40,7 @@ export {
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
+export {useDispatchIntent} from '../hooks/dashboard/useDispatchIntent'
 export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
 export {
   type NavigateToStudioResult,

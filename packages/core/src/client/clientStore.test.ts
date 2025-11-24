@@ -3,6 +3,7 @@ import {Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
+import {canvasSource, datasetSource, mediaLibrarySource} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {getClient, getClientState} from './clientStore'
 
@@ -156,6 +157,142 @@ describe('clientStore', () => {
 
       // Clean up subscription
       subscription.unsubscribe()
+    })
+  })
+
+  describe('source handling', () => {
+    it('should create client when source is provided', () => {
+      const source = datasetSource('source-project', 'source-dataset')
+      const client = getClient(instance, {apiVersion: '2024-11-12', source})
+
+      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiVersion: '2024-11-12',
+          source: expect.objectContaining({
+            __sanity_internal_sourceId: {
+              projectId: 'source-project',
+              dataset: 'source-dataset',
+            },
+          }),
+        }),
+      )
+      // Client should be projectless - no projectId/dataset in config
+      expect(client.config()).not.toHaveProperty('projectId')
+      expect(client.config()).not.toHaveProperty('dataset')
+      expect(client.config()).toEqual(
+        expect.objectContaining({
+          source: expect.objectContaining({
+            __sanity_internal_sourceId: {
+              projectId: 'source-project',
+              dataset: 'source-dataset',
+            },
+          }),
+        }),
+      )
+    })
+
+    it('should create resource when source has array sourceId and be projectless', () => {
+      const source = mediaLibrarySource('media-lib-123')
+      const client = getClient(instance, {apiVersion: '2024-11-12', source})
+
+      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          '~experimental_resource': {type: 'media-library', id: 'media-lib-123'},
+          'apiVersion': '2024-11-12',
+        }),
+      )
+      // Client should be projectless - no projectId/dataset in config
+      expect(client.config()).not.toHaveProperty('projectId')
+      expect(client.config()).not.toHaveProperty('dataset')
+      expect(client.config()).toEqual(
+        expect.objectContaining({
+          '~experimental_resource': {type: 'media-library', id: 'media-lib-123'},
+        }),
+      )
+    })
+
+    it('should create resource when canvas source is provided and be projectless', () => {
+      const source = canvasSource('canvas-123')
+      const client = getClient(instance, {apiVersion: '2024-11-12', source})
+
+      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          '~experimental_resource': {type: 'canvas', id: 'canvas-123'},
+          'apiVersion': '2024-11-12',
+        }),
+      )
+      // Client should be projectless - no projectId/dataset in config
+      expect(client.config()).not.toHaveProperty('projectId')
+      expect(client.config()).not.toHaveProperty('dataset')
+      expect(client.config()).toEqual(
+        expect.objectContaining({
+          '~experimental_resource': {type: 'canvas', id: 'canvas-123'},
+        }),
+      )
+    })
+
+    it('should create projectless client when source is provided, ignoring instance config', () => {
+      const source = datasetSource('source-project', 'source-dataset')
+      const client = getClient(instance, {apiVersion: '2024-11-12', source})
+
+      // Client should be projectless - source takes precedence, instance config is ignored
+      expect(client.config()).not.toHaveProperty('projectId')
+      expect(client.config()).not.toHaveProperty('dataset')
+      expect(client.config()).toEqual(
+        expect.objectContaining({
+          source: expect.objectContaining({
+            __sanity_internal_sourceId: {
+              projectId: 'source-project',
+              dataset: 'source-dataset',
+            },
+          }),
+        }),
+      )
+    })
+
+    it('should warn when both source and explicit projectId/dataset are provided', () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const source = datasetSource('source-project', 'source-dataset')
+      const client = getClient(instance, {
+        apiVersion: '2024-11-12',
+        source,
+        projectId: 'explicit-project',
+        dataset: 'explicit-dataset',
+      })
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Both source and explicit projectId/dataset are provided. The source will be used and projectId/dataset will be ignored.',
+      )
+      // Client should still be projectless despite explicit projectId/dataset
+      expect(client.config()).not.toHaveProperty('projectId')
+      expect(client.config()).not.toHaveProperty('dataset')
+      consoleSpy.mockRestore()
+    })
+
+    it('should create different clients for different sources', () => {
+      const source1 = datasetSource('project-1', 'dataset-1')
+      const source2 = datasetSource('project-2', 'dataset-2')
+      const source3 = mediaLibrarySource('media-lib-1')
+
+      const client1 = getClient(instance, {apiVersion: '2024-11-12', source: source1})
+      const client2 = getClient(instance, {apiVersion: '2024-11-12', source: source2})
+      const client3 = getClient(instance, {apiVersion: '2024-11-12', source: source3})
+
+      expect(client1).not.toBe(client2)
+      expect(client2).not.toBe(client3)
+      expect(client1).not.toBe(client3)
+      expect(vi.mocked(createClient)).toHaveBeenCalledTimes(3)
+    })
+
+    it('should reuse clients with identical source configurations', () => {
+      const source = datasetSource('same-project', 'same-dataset')
+      const options = {apiVersion: '2024-11-12', source}
+
+      const client1 = getClient(instance, options)
+      const client2 = getClient(instance, options)
+
+      expect(client1).toBe(client2)
+      expect(vi.mocked(createClient)).toHaveBeenCalledTimes(1)
     })
   })
 })
