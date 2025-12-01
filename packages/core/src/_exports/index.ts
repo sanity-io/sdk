@@ -75,6 +75,7 @@ export {
   createDocumentTypeHandle,
   createProjectHandle,
 } from '../config/handles'
+export {configureLogging, type LoggerConfig, type LogLevel} from '../config/loggingConfig'
 export {
   canvasSource,
   type DatasetHandle,
