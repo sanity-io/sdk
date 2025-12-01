@@ -95,6 +95,8 @@ export interface LoggerConfig {
 
 /**
  * Custom log handler interface
+ *
+ * @internal
  */
 export interface LogHandler {
   error: (message: string, context?: LogContext) => void
@@ -323,7 +325,7 @@ function sanitizeContext(context?: LogContext): LogContext | undefined {
  * @param namespace - A string identifier for the logging domain (e.g., 'auth', 'document')
  * @param baseContext - Optional base context to include in all log messages
  * @remarks
- * If baseContext includes an `instance` property (with projectId, dataset, instanceId),
+ * If baseContext includes an `instanceContext` property (with projectId, dataset, instanceId),
  * it will be automatically formatted into the log output for easier debugging of
  * multi-instance scenarios.
  * @public
