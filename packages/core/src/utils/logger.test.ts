@@ -356,6 +356,107 @@ describe('logger', () => {
     })
   })
 
+  describe('production environment detection', () => {
+    const originalEnv = process.env['NODE_ENV']
+
+    afterEach(() => {
+      // Restore original NODE_ENV
+      process.env['NODE_ENV'] = originalEnv
+      resetLogging()
+    })
+
+    it('should disable logging in production by default', () => {
+      process.env['NODE_ENV'] = 'production'
+
+      configureLogging({
+        level: 'info',
+        namespaces: ['*'],
+        handler: mockHandler,
+      })
+
+      const logger = createLogger('auth')
+      logger.info('test message')
+
+      // Should not log in production by default
+      expect(mockHandler.info).not.toHaveBeenCalled()
+    })
+
+    it('should enable logging in production when enableInProduction is true', () => {
+      process.env['NODE_ENV'] = 'production'
+
+      configureLogging({
+        level: 'info',
+        namespaces: ['*'],
+        enableInProduction: true,
+        handler: mockHandler,
+      })
+
+      const logger = createLogger('auth')
+      logger.info('test message')
+
+      // Should log when explicitly enabled
+      expect(mockHandler.info).toHaveBeenCalledWith(
+        expect.stringContaining('[INFO] [auth] test message'),
+        undefined,
+      )
+    })
+
+    it('should enable logging in non-production environments', () => {
+      process.env['NODE_ENV'] = 'development'
+
+      configureLogging({
+        level: 'info',
+        namespaces: ['*'],
+        handler: mockHandler,
+      })
+
+      const logger = createLogger('auth')
+      logger.info('test message')
+
+      // Should log in development
+      expect(mockHandler.info).toHaveBeenCalledWith(
+        expect.stringContaining('[INFO] [auth] test message'),
+        undefined,
+      )
+    })
+
+    it('should enable logging when NODE_ENV is not set', () => {
+      delete process.env['NODE_ENV']
+
+      configureLogging({
+        level: 'info',
+        namespaces: ['*'],
+        handler: mockHandler,
+      })
+
+      const logger = createLogger('auth')
+      logger.info('test message')
+
+      // Should log when NODE_ENV is undefined
+      expect(mockHandler.info).toHaveBeenCalledWith(
+        expect.stringContaining('[INFO] [auth] test message'),
+        undefined,
+      )
+    })
+
+    it('should respect enableInProduction: false in production', () => {
+      process.env['NODE_ENV'] = 'production'
+
+      configureLogging({
+        level: 'info',
+        namespaces: ['*'],
+        enableInProduction: false,
+        handler: mockHandler,
+      })
+
+      const logger = createLogger('auth')
+      logger.info('test message')
+
+      // Should not log when explicitly disabled
+      expect(mockHandler.info).not.toHaveBeenCalled()
+    })
+  })
+
   describe('instance context', () => {
     it('should include instance context in log output', () => {
       configureLogging({

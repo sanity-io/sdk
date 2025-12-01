@@ -163,8 +163,8 @@ const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
   trace: 4,
 }
 
-// Global configuration
-let globalConfig: Required<LoggerConfig> = {
+// Default logging configuration
+const DEFAULT_CONFIG: Required<LoggerConfig> = {
   level: 'warn',
   namespaces: [],
   internal: false,
@@ -183,6 +183,9 @@ let globalConfig: Required<LoggerConfig> = {
     trace: console.debug.bind(console), // trace uses console.debug
   },
 }
+
+// Global configuration
+let globalConfig: Required<LoggerConfig> = {...DEFAULT_CONFIG}
 
 /**
  * Configure the global logging system
@@ -209,25 +212,7 @@ export function getLoggingConfig(): Readonly<Required<LoggerConfig>> {
  * @internal
  */
 export function resetLogging(): void {
-  globalConfig = {
-    level: 'warn',
-    namespaces: [],
-    internal: false,
-    timestamps: true,
-    enableInProduction: false,
-    handler: {
-      // eslint-disable-next-line no-console
-      error: console.error.bind(console),
-      // eslint-disable-next-line no-console
-      warn: console.warn.bind(console),
-      // eslint-disable-next-line no-console
-      info: console.info.bind(console),
-      // eslint-disable-next-line no-console
-      debug: console.debug.bind(console),
-      // eslint-disable-next-line no-console
-      trace: console.debug.bind(console),
-    },
-  }
+  globalConfig = {...DEFAULT_CONFIG}
 }
 
 /**
@@ -303,13 +288,19 @@ function formatMessage(
 /**
  * Sanitize context for logging (remove sensitive data)
  * @internal
+ * @remarks
+ * This performs shallow sanitization only - it redacts top-level keys that contain
+ * sensitive names (token, password, secret, apiKey, authorization).
+ * Nested sensitive data (e.g., `\{auth: \{token: 'secret'\}\}`) will NOT be redacted.
+ * If deep sanitization is needed in the future, this can be enhanced to recursively
+ * traverse nested objects.
  */
 function sanitizeContext(context?: LogContext): LogContext | undefined {
   if (!context || Object.keys(context).length === 0) return undefined
 
   const sanitized = {...context}
 
-  // Remove or redact sensitive fields
+  // Remove or redact sensitive fields at the top level
   const sensitiveKeys = ['token', 'password', 'secret', 'apiKey', 'authorization']
   for (const key of Object.keys(sanitized)) {
     if (sensitiveKeys.some((sensitive) => key.toLowerCase().includes(sensitive))) {

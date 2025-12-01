@@ -4,11 +4,7 @@
  * @module loggingConfig
  */
 
-import {
-  configureLogging as _configureLogging,
-  createLogger,
-  type LoggerConfig,
-} from '../utils/logger'
+import {configureLogging as _configureLogging, type LoggerConfig} from '../utils/logger'
 
 /**
  * Configure logging for the Sanity SDK
@@ -94,13 +90,25 @@ import {
 export function configureLogging(config: LoggerConfig): void {
   _configureLogging(config)
 
-  // Log that logging has been configured
-  const sdkLogger = createLogger('sdk')
-  sdkLogger.info('Logging configured', {
-    level: config.level || 'warn',
-    namespaces: config.namespaces || [],
-    internal: config.internal || false,
-  })
+  // Always log configuration (bypasses namespace filtering)
+  // This ensures users see the message regardless of which namespaces they enable
+  const configLevel = config.level || 'warn'
+  const shouldLog = ['info', 'debug', 'trace'].includes(configLevel) || configLevel === 'warn'
+
+  if (shouldLog && config.handler?.info) {
+    config.handler.info(`[${new Date().toISOString()}] [INFO] [sdk] Logging configured`, {
+      level: configLevel,
+      namespaces: config.namespaces || [],
+      internal: config.internal || false,
+    })
+  } else if (shouldLog) {
+    // eslint-disable-next-line no-console
+    console.info(`[${new Date().toISOString()}] [INFO] [sdk] Logging configured`, {
+      level: configLevel,
+      namespaces: config.namespaces || [],
+      internal: config.internal || false,
+    })
+  }
 }
 
 /**
