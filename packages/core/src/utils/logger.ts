@@ -31,6 +31,7 @@
  * - info: High-level informational messages (SDK user level)
  * - debug: Detailed debugging information (maintainer level)
  * - trace: Very detailed tracing (maintainer level, includes RxJS streams)
+ * @public
  */
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'trace'
 
@@ -46,6 +47,7 @@ export type LogNamespace = string
 
 /**
  * Configuration for the logging system
+ * @public
  */
 export interface LoggerConfig {
   /**
