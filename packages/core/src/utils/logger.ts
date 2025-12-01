@@ -42,6 +42,7 @@ export type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'trace'
  * This is an extensible string type. As logging is added to more modules,
  * additional namespaces will be recognized. Currently implemented namespaces
  * will be documented as they are added.
+ * @internal
  */
 export type LogNamespace = string
 
@@ -105,6 +106,7 @@ export interface LogHandler {
 
 /**
  * Context object attached to log messages
+ * @internal
  */
 export interface LogContext {
   [key: string]: unknown
@@ -133,6 +135,7 @@ export interface InstanceContext {
 
 /**
  * Logger instance for a specific namespace
+ * @internal
  */
 export interface Logger {
   readonly namespace: string
@@ -382,20 +385,22 @@ export function createTimer(
 
 /**
  * Utility to log RxJS operator execution (for maintainers)
+ * Will be exported in future PR when logging is added to stores
  * @internal
  */
-export function logRxJSOperator(namespace: string, operator: string, context?: LogContext): void {
+function logRxJSOperator(namespace: string, operator: string, context?: LogContext): void {
   const logger = createLogger(namespace)
   logger.trace(`RxJS: ${operator}`, {...context, internal: true, operator})
 }
 
 /**
  * Extract instance context from a SanityInstance for logging
+ * Will be exported in future PR when logging is added to stores
  * @param instance - The SanityInstance to extract context from
  * @returns Instance context suitable for logging
  * @internal
  */
-export function getInstanceContext(instance: {
+function getInstanceContext(instance: {
   instanceId?: string
   config?: {projectId?: string; dataset?: string}
 }): InstanceContext {
@@ -405,3 +410,7 @@ export function getInstanceContext(instance: {
     dataset: instance.config?.dataset,
   }
 }
+
+// Prevent unused function warnings - these will be exported and used in future PRs
+void logRxJSOperator
+void getInstanceContext

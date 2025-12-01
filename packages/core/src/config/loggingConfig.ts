@@ -107,4 +107,11 @@ export function configureLogging(config: LoggerConfig): void {
  * Re-export types for public API
  * @public
  */
-export type {LoggerConfig, LogLevel} from '../utils/logger'
+export type {
+  InstanceContext,
+  LogContext,
+  Logger,
+  LoggerConfig,
+  LogLevel,
+  LogNamespace,
+} from '../utils/logger'
