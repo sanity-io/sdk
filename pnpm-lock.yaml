@@ -51,7 +51,7 @@ importers:
         specifier: ^9.1.7
         version: 9.1.7
       knip:
-        specifier: ^5.71.0
+        specifier: ^5.70.2
         version: 5.71.0(@types/node@22.19.1)(typescript@5.8.3)
       lint-staged:
         specifier: ^15.5.2
