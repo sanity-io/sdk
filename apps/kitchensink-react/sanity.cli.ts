@@ -14,6 +14,9 @@ export default defineCliConfig({
     entry: './src/App.tsx',
     id: 'wkyoigmzawwnnwx458zgoh46',
   },
+  typegen: {
+    overloadClientMethods: false,
+  },
   // Extend Sanity CLI's internal Vite config with the app's Vite config
   vite: async (prev: UserConfig) => {
     const {default: viteConfigFactory} = (await import('./vite.config.mjs')) as {
