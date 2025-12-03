@@ -41,7 +41,7 @@
     "ora": "^7.0.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0",
+    "@playwright/test": "^1.57.0",
     "@repo/config-eslint": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/pkg-utils": "^7.2.2",
