@@ -4,7 +4,7 @@
     "rootDir": ".",
     "outDir": "./dist",
     // For import.meta.env/import.meta.hot definitions and similar
-    "types": ["vite/client"],
+    "types": ["vite/client", "node"],
     "paths": {
       "@sanity/sdk": ["./node_modules/@sanity/sdk/src/_exports/index.ts"],
       "@sanity/sdk/*": ["./node_modules/@sanity/sdk/src/_exports/*"]
