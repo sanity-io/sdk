@@ -120,5 +120,8 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
     },
   }
 
+  // TODO: Remove automatic intent listening - now handled by global IntentResolver
+  // startIntentListener(instance)
+
   return instance
 }
