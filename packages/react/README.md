@@ -167,6 +167,116 @@ const {data: canPublish} = useDocumentPermissions({
 
 ---
 
+### Document Actions
+
+The `useApplyDocumentActions` hook is used to perform document lifecycle operations. Actions are created using helper functions and applied through the `apply` function.
+
+#### Available Action Creators
+
+| Function            | Description                                    |
+| ------------------- | ---------------------------------------------- |
+| `createDocument`    | Create a new document                          |
+| `publishDocument`   | Publish a draft (copy draft → published)       |
+| `unpublishDocument` | Unpublish (delete published, keep draft)       |
+| `deleteDocument`    | Delete document entirely (draft and published) |
+| `discardDraft`      | Discard draft changes, revert to published     |
+
+#### Creating Documents
+
+To create a document, you must:
+
+1. Generate your own document ID (using `crypto.randomUUID()`)
+2. Create a document handle with `createDocumentHandle`
+3. Apply the `createDocument` action with initial data
+
+```tsx
+import {useApplyDocumentActions, createDocumentHandle, createDocument} from '@sanity/sdk-react'
+
+function CreateArticleButton() {
+  const apply = useApplyDocumentActions()
+
+  const handleCreate = () => {
+    const newId = crypto.randomUUID()
+    const handle = createDocumentHandle({
+      documentId: newId,
+      documentType: 'article',
+    })
+
+    apply(
+      createDocument(handle, {
+        title: 'New Article',
+        status: 'draft',
+        author: {_type: 'reference', _ref: 'author-123'},
+      }),
+    )
+
+    // Navigate to the new document
+    navigate(`/articles/${newId}`)
+  }
+
+  return <button onClick={handleCreate}>Create Article</button>
+}
+```
+
+#### Publishing Documents
+
+```tsx
+import {useApplyDocumentActions, publishDocument, useDocument} from '@sanity/sdk-react'
+
+function PublishButton({handle}: {handle: DocumentHandle}) {
+  const apply = useApplyDocumentActions()
+  const {data: doc} = useDocument(handle)
+
+  // Check if document has unpublished changes (is a draft)
+  const isDraft = doc?._id?.startsWith('drafts.')
+
+  return (
+    <button disabled={!isDraft} onClick={() => apply(publishDocument(handle))}>
+      Publish
+    </button>
+  )
+}
+```
+
+#### Deleting Documents
+
+```tsx
+import {useApplyDocumentActions, deleteDocument} from '@sanity/sdk-react'
+
+function DeleteButton({handle}: {handle: DocumentHandle}) {
+  const apply = useApplyDocumentActions()
+
+  const handleDelete = () => {
+    if (confirm('Are you sure?')) {
+      apply(deleteDocument(handle))
+    }
+  }
+
+  return <button onClick={handleDelete}>Delete</button>
+}
+```
+
+#### Batch Operations
+
+Apply multiple actions as a single transaction:
+
+```tsx
+const apply = useApplyDocumentActions()
+
+// Create and immediately publish
+const newHandle = createDocumentHandle({
+  documentId: crypto.randomUUID(),
+  documentType: 'article',
+})
+
+apply([createDocument(newHandle, {title: 'Breaking News'}), publishDocument(newHandle)])
+
+// Publish multiple documents at once
+apply([publishDocument(handle1), publishDocument(handle2), publishDocument(handle3)])
+```
+
+---
+
 ### Suspense Pattern
 
 All data hooks use React Suspense. Wrap components that fetch:
