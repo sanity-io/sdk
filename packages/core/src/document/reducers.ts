@@ -552,13 +552,19 @@ export function removeSubscriptionIdFromDocument(
 export function manageSubscriberIds(
   {state}: StoreContext<SyncTransactionState>,
   documentId: string | string[],
+  options?: {expandDraftPublished?: boolean},
 ): () => void {
+  const expandDraftPublished = options?.expandDraftPublished ?? true
   const documentIds = Array.from(
     new Set(
-      (Array.isArray(documentId) ? documentId : [documentId]).flatMap((id) => [
-        getPublishedId(id),
-        getDraftId(id),
-      ]),
+      expandDraftPublished
+        ? (Array.isArray(documentId) ? documentId : [documentId]).flatMap((id) => [
+            getPublishedId(id),
+            getDraftId(id),
+          ])
+        : Array.isArray(documentId)
+          ? documentId
+          : [documentId],
     ),
   )
   const subscriptionId = insecureRandomId()

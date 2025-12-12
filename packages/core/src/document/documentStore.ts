@@ -213,7 +213,7 @@ const _getDocumentState = bindActionByDataset(
       return value
     },
     onSubscribe: (context, options: DocumentOptions<string | undefined>) =>
-      manageSubscriberIds(context, options.documentId),
+      manageSubscriberIds(context, options.documentId, {expandDraftPublished: !options.liveEdit}),
   }),
 )
 

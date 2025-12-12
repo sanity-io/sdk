@@ -183,9 +183,15 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
               Document Content
             </Text>
             {document && (
-              <Box style={{minHeight: '400px'}}>
-                <JsonEditor data={document} setData={setDocument as (data: JsonData) => void} />
-              </Box>
+              <>
+                {/* Hidden element for e2e tests */}
+                <Box style={{display: 'none'}} data-testid="document-content">
+                  {JSON.stringify(document)}
+                </Box>
+                <Box style={{minHeight: '400px'}}>
+                  <JsonEditor data={document} setData={setDocument as (data: JsonData) => void} />
+                </Box>
+              </>
             )}
           </Stack>
         </Card>
@@ -306,7 +312,10 @@ function Editor() {
             </Text>
           </Card>
         ) : (
-          <DocumentEditor docHandle={docHandle} />
+          <DocumentEditor
+            key={`${docHandle.documentId}-${docHandle.liveEdit}`}
+            docHandle={docHandle}
+          />
         )}
       </Stack>
     </Box>
