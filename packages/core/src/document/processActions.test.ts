@@ -849,10 +849,10 @@ describe('processActions', () => {
         expect(editedDoc?.['title']).toBe('Updated Title')
         expect(editedDoc?._id).toBe('live1')
 
-        // Should use document.edit action with same draftId and publishedId
+        // Should use document.edit action with draftId prefixed (for server validation) but publishedId as the actual doc
         expect(result.outgoingActions[0]).toMatchObject({
           actionType: 'sanity.action.document.edit',
-          draftId: 'live1',
+          draftId: 'drafts.live1',
           publishedId: 'live1',
         })
       })

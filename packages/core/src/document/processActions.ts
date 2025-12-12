@@ -403,7 +403,8 @@ export function processActions({
             ...patches.map(
               (patch): HttpAction => ({
                 actionType: 'sanity.action.document.edit',
-                draftId: documentId,
+                // Server requires draftId to have drafts. prefix for validation, even for liveEdit
+                draftId: getDraftId(documentId),
                 publishedId: documentId,
                 patch: patch as PatchOperations,
               }),
