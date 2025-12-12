@@ -206,11 +206,12 @@ function Editor() {
   const {projectId, dataset} = import.meta.env['VITE_IS_E2E'] ? e2eConfigs[0] : devConfigs[0]
 
   const handleLoadDocument = () => {
-    if (newDocumentId) {
+    const documentId = newDocumentId || docHandle?.documentId
+    if (documentId) {
       setDocHandle(
         createDocumentHandle({
           documentType: 'author',
-          documentId: newDocumentId,
+          documentId,
           projectId,
           dataset,
           liveEdit: liveEditMode,
@@ -271,7 +272,7 @@ function Editor() {
                 data-testid="load-document-button"
                 tone="primary"
                 fontSize={2}
-                disabled={!newDocumentId}
+                disabled={!newDocumentId && !docHandle?.documentId}
               />
             </Flex>
             <Card padding={3} tone="transparent" border>
