@@ -42,6 +42,40 @@ describe('document actions', () => {
         documentType: typeHandle.documentType,
       })
     })
+
+    it('creates a document action with initial values', () => {
+      const initialValue = {
+        title: 'Test Title',
+        author: 'John Doe',
+        count: 42,
+      }
+      const action = createDocument(dummyDocHandle, initialValue)
+      expect(action).toEqual({
+        type: 'document.create',
+        documentId: 'abc123',
+        documentType: dummyDocHandle.documentType,
+        initialValue,
+      })
+    })
+
+    it('creates a document action without initialValue when not provided', () => {
+      const action = createDocument(dummyDocHandle, undefined)
+      expect(action).toEqual({
+        type: 'document.create',
+        documentId: 'abc123',
+        documentType: dummyDocHandle.documentType,
+      })
+    })
+
+    it('creates a document action with empty initialValue object', () => {
+      const action = createDocument(dummyDocHandle, {})
+      expect(action).toEqual({
+        type: 'document.create',
+        documentId: 'abc123',
+        documentType: dummyDocHandle.documentType,
+        initialValue: {},
+      })
+    })
   })
 
   describe('deleteDocument', () => {

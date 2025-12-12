@@ -1,6 +1,7 @@
 import {SanityEncoder} from '@sanity/mutate'
 import {type PatchMutation as SanityMutatePatchMutation} from '@sanity/mutate/_unstable_store'
 import {type PatchMutation, type PatchOperations} from '@sanity/types'
+import {type SanityDocument} from 'groq'
 
 import {type DocumentHandle, type DocumentTypeHandle} from '../config/sanityConfig'
 import {getPublishedId} from '../utils/ids'
@@ -24,6 +25,17 @@ export interface CreateDocumentAction<
   TProjectId extends string = string,
 > extends DocumentTypeHandle<TDocumentType, TDataset, TProjectId> {
   type: 'document.create'
+  /**
+   * Optional initial field values for the document.
+   * These values will be set when the document is created.
+   * System fields (_id, _type, _rev, _createdAt, _updatedAt) are omitted as they are set automatically.
+   */
+  initialValue?: Partial<
+    Omit<
+      SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>,
+      '_id' | '_type' | '_rev' | '_createdAt' | '_updatedAt'
+    >
+  >
 }
 
 /**
@@ -111,6 +123,7 @@ export type DocumentAction<
 /**
  * Creates a `CreateDocumentAction` object.
  * @param doc - A handle identifying the document type, dataset, and project. An optional `documentId` can be provided.
+ * @param initialValue - Optional initial field values for the document. (System fields are omitted as they are set automatically.)
  * @returns A `CreateDocumentAction` object ready for dispatch.
  * @beta
  */
@@ -120,11 +133,18 @@ export function createDocument<
   TProjectId extends string = string,
 >(
   doc: DocumentTypeHandle<TDocumentType, TDataset, TProjectId>,
+  initialValue?: Partial<
+    Omit<
+      SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>,
+      '_id' | '_type' | '_rev' | '_createdAt' | '_updatedAt'
+    >
+  >,
 ): CreateDocumentAction<TDocumentType, TDataset, TProjectId> {
   return {
     type: 'document.create',
     ...doc,
     ...(doc.documentId && {documentId: getPublishedId(doc.documentId)}),
+    ...(initialValue && {initialValue}),
   }
 }
 
