@@ -62,11 +62,19 @@ const documentsSelector = createSelector(
       actions,
   ],
   (documentStates, actions) => {
+    const actionArray = Array.isArray(actions) ? actions : [actions]
+    // Collect all document IDs needed for permission checks.
+    // Important: liveEdit documents don't have drafts, so we only fetch the single document to avoid waiting for non-existent draft documents.
     const documentIds = new Set(
-      (Array.isArray(actions) ? actions : [actions])
-        .map((i) => i.documentId)
-        .filter((i) => typeof i === 'string')
-        .flatMap((documentId) => [getPublishedId(documentId), getDraftId(documentId)]),
+      actionArray
+        .map((action) => {
+          if (typeof action.documentId !== 'string') return []
+          // For liveEdit documents, only fetch the single document
+          if (action.liveEdit) return [action.documentId]
+          // For standard documents, fetch both draft and published
+          return [getPublishedId(action.documentId), getDraftId(action.documentId)]
+        })
+        .flat(),
     )
 
     const documents: DocumentSet = {}
@@ -203,7 +211,10 @@ const _calculatePermissions = createSelector(
       // Check edit actions with no patches
       if (action.type === 'document.edit' && !action.patches?.length) {
         const docId = action.documentId
-        const doc = documents[getDraftId(docId)] ?? documents[getPublishedId(docId)]
+        // For liveEdit documents, only check the single document
+        const doc = action.liveEdit
+          ? documents[docId]
+          : (documents[getDraftId(docId)] ?? documents[getPublishedId(docId)])
         if (!doc) {
           reasons.push({
             type: 'precondition',

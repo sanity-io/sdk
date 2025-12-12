@@ -124,7 +124,9 @@ export function createDocument<
   return {
     type: 'document.create',
     ...doc,
-    ...(doc.documentId && {documentId: getPublishedId(doc.documentId)}),
+    ...(doc.documentId && {
+      documentId: doc.liveEdit ? doc.documentId : getPublishedId(doc.documentId),
+    }),
   }
 }
 
@@ -144,7 +146,7 @@ export function deleteDocument<
   return {
     type: 'document.delete',
     ...doc,
-    documentId: getPublishedId(doc.documentId),
+    documentId: doc.liveEdit ? doc.documentId : getPublishedId(doc.documentId),
   }
 }
 
@@ -208,12 +210,14 @@ export function editDocument<
   doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
   patches?: PatchOperations | PatchOperations[] | SanityMutatePatchMutation,
 ): EditDocumentAction<TDocumentType, TDataset, TProjectId> {
+  const documentId = doc.liveEdit ? doc.documentId : getPublishedId(doc.documentId)
+
   if (isSanityMutatePatch(patches)) {
     const converted = convertSanityMutatePatch(patches) ?? []
     return {
       ...doc,
       type: 'document.edit',
-      documentId: getPublishedId(doc.documentId),
+      documentId,
       patches: converted,
     }
   }
@@ -221,7 +225,7 @@ export function editDocument<
   return {
     ...doc,
     type: 'document.edit',
-    documentId: getPublishedId(doc.documentId),
+    documentId,
     ...(patches && {patches: Array.isArray(patches) ? patches : [patches]}),
   }
 }
@@ -242,7 +246,7 @@ export function publishDocument<
   return {
     type: 'document.publish',
     ...doc,
-    documentId: getPublishedId(doc.documentId),
+    documentId: doc.liveEdit ? doc.documentId : getPublishedId(doc.documentId),
   }
 }
 
@@ -262,7 +266,7 @@ export function unpublishDocument<
   return {
     type: 'document.unpublish',
     ...doc,
-    documentId: getPublishedId(doc.documentId),
+    documentId: doc.liveEdit ? doc.documentId : getPublishedId(doc.documentId),
   }
 }
 
@@ -282,6 +286,6 @@ export function discardDocument<
   return {
     type: 'document.discard',
     ...doc,
-    documentId: getPublishedId(doc.documentId),
+    documentId: doc.liveEdit ? doc.documentId : getPublishedId(doc.documentId),
   }
 }
