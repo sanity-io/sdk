@@ -152,8 +152,18 @@ export function processActions({
         }
 
         // Spread the (possibly undefined) published version directly.
-        const newDocBase = {...base[publishedId], _type: action.documentType, _id: draftId}
-        const newDocWorking = {...working[publishedId], _type: action.documentType, _id: draftId}
+        const newDocBase = {
+          ...base[publishedId],
+          _type: action.documentType,
+          _id: draftId,
+          ...action.initialValue,
+        }
+        const newDocWorking = {
+          ...working[publishedId],
+          _type: action.documentType,
+          _id: draftId,
+          ...action.initialValue,
+        }
         const mutations: Mutation[] = [{create: newDocWorking}]
 
         base = processMutations({
