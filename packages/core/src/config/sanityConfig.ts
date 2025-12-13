@@ -29,15 +29,14 @@ export interface PerspectiveHandle {
  * @public
  */
 export interface DatasetHandle<TDataset extends string = string, TProjectId extends string = string>
-  extends ProjectHandle<TProjectId>,
-    PerspectiveHandle {
+  extends ProjectHandle<TProjectId>, PerspectiveHandle {
   dataset?: TDataset
 }
 
 /**
  * Identifies a specific document type within a Sanity dataset and project.
  * Includes `projectId`, `dataset`, and `documentType`.
- * Optionally includes a `documentId`, useful for referencing a specific document type context, potentially without a specific document ID.
+ * Optionally includes a `documentId` and `liveEdit` flag.
  * @public
  */
 export interface DocumentTypeHandle<
@@ -47,6 +46,12 @@ export interface DocumentTypeHandle<
 > extends DatasetHandle<TDataset, TProjectId> {
   documentId?: string
   documentType: TDocumentType
+  /**
+   * Indicates whether this document uses liveEdit mode.
+   * When `true`, the document does not use the draft/published model and edits are applied directly to the document.
+   * @see https://www.sanity.io/docs/content-lake/drafts#ca0663a8f002
+   */
+  liveEdit?: boolean
 }
 
 /**
