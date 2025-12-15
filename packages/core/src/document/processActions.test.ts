@@ -138,6 +138,103 @@ describe('processActions', () => {
         processActions({actions, transactionId, base, working, timestamp, grants}),
       ).toThrow(/You do not have permission to create a draft for document "doc1"/)
     })
+
+    it('should create a draft document with initial values', () => {
+      const base: DocumentSet = {}
+      const working: DocumentSet = {}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          type: 'document.create',
+          documentType: 'article',
+          initialValue: {
+            title: 'New Article',
+            author: 'John Doe',
+            count: 42,
+          },
+        },
+      ]
+      const result = processActions({
+        actions,
+        transactionId,
+        base,
+        working,
+        timestamp,
+        grants: defaultGrants,
+      })
+
+      const draftId = 'drafts.doc1'
+      const draftDoc = result.working[draftId]
+      expect(draftDoc).toBeDefined()
+      expect(draftDoc?._id).toBe(draftId)
+      expect(draftDoc?._type).toBe('article')
+      expect(draftDoc?._rev).toBe(transactionId)
+      // Should have the initial values:
+      expect(draftDoc?.['title']).toBe('New Article')
+      expect(draftDoc?.['author']).toBe('John Doe')
+      expect(draftDoc?.['count']).toBe(42)
+    })
+
+    it('should create a draft with initial values that override published document values', () => {
+      const published = createDoc('doc1', 'Original Title')
+      const base: DocumentSet = {doc1: published}
+      const working: DocumentSet = {doc1: published}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          type: 'document.create',
+          documentType: 'article',
+          initialValue: {
+            title: 'Overridden Title',
+            newField: 'New Value',
+          },
+        },
+      ]
+      const result = processActions({
+        actions,
+        transactionId,
+        base,
+        working,
+        timestamp,
+        grants: defaultGrants,
+      })
+
+      const draftId = 'drafts.doc1'
+      const draftDoc = result.working[draftId]
+      expect(draftDoc).toBeDefined()
+      // Should have the overridden title from initialValue:
+      expect(draftDoc?.['title']).toBe('Overridden Title')
+      // Should have the new field:
+      expect(draftDoc?.['newField']).toBe('New Value')
+    })
+
+    it('should create a draft with empty initial values object', () => {
+      const base: DocumentSet = {}
+      const working: DocumentSet = {}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          type: 'document.create',
+          documentType: 'article',
+          initialValue: {},
+        },
+      ]
+      const result = processActions({
+        actions,
+        transactionId,
+        base,
+        working,
+        timestamp,
+        grants: defaultGrants,
+      })
+
+      const draftId = 'drafts.doc1'
+      const draftDoc = result.working[draftId]
+      expect(draftDoc).toBeDefined()
+      expect(draftDoc?._id).toBe(draftId)
+      expect(draftDoc?._type).toBe('article')
+      expect(draftDoc?._rev).toBe(transactionId)
+    })
   })
 
   describe('document.delete', () => {

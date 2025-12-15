@@ -58,6 +58,23 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
             />
           </span>
         </Tooltip>
+        <Tooltip content={canCreate.message}>
+          <span>
+            <Button
+              disabled={!canCreate.allowed}
+              onClick={() =>
+                apply(
+                  createDocument(docHandle, {
+                    name: 'New Author',
+                    role: 'developer',
+                    awards: ['Quick Creator Award'],
+                  }),
+                )
+              }
+              text="Create with Initial Values"
+            />
+          </span>
+        </Tooltip>
         <Tooltip content={canDiscard.message}>
           <span>
             <Button
