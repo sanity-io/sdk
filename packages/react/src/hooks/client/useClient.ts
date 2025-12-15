@@ -1,5 +1,4 @@
-import {getClientState} from '@sanity/sdk'
-import {identity} from 'rxjs'
+import {type ClientOptions, getClientState, type SanityInstance} from '@sanity/sdk'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
@@ -31,6 +30,14 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  * @function
  */
 export const useClient = createStateSourceHook({
-  getState: getClientState,
-  getConfig: identity,
+  getState: (instance: SanityInstance, options: ClientOptions) => {
+    if (!options || typeof options !== 'object') {
+      throw new Error(
+        'useClient() requires a configuration object with at least an "apiVersion" property. ' +
+          'Example: useClient({ apiVersion: "2024-11-12" })',
+      )
+    }
+    return getClientState(instance, options)
+  },
+  getConfig: (options: ClientOptions) => options,
 })

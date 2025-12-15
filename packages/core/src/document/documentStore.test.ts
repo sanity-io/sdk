@@ -110,6 +110,34 @@ it('creates, edits, and publishes a document', async () => {
   unsubscribe()
 })
 
+it('creates a document with initial values', async () => {
+  const doc = createDocumentHandle({documentId: 'doc-with-initial', documentType: 'article'})
+  const documentState = getDocumentState(instance, doc)
+
+  expect(documentState.getCurrent()).toBeUndefined()
+
+  const unsubscribe = documentState.subscribe()
+
+  // Create a new document with initial field values
+  const {appeared} = await applyDocumentActions(
+    instance,
+    createDocument(doc, {
+      title: 'Article with Initial Values',
+      author: 'Jane Doe',
+      count: 42,
+    }),
+  )
+  expect(appeared).toContain(getDraftId(doc.documentId))
+
+  const currentDoc = documentState.getCurrent()
+  expect(currentDoc?._id).toEqual(getDraftId(doc.documentId))
+  expect(currentDoc?.title).toEqual('Article with Initial Values')
+  expect(currentDoc?.['author']).toEqual('Jane Doe')
+  expect(currentDoc?.['count']).toEqual(42)
+
+  unsubscribe()
+})
+
 it('edits existing documents', async () => {
   const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article'})
   const state = getDocumentState(instance, doc)

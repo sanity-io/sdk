@@ -76,6 +76,20 @@ describe('clientStore', () => {
       ).toThrowError(/unsupported properties: illegalKey/)
     })
 
+    it('should throw a helpful error when called without options', () => {
+      expect(() =>
+        // @ts-expect-error Testing missing options
+        getClient(instance, undefined),
+      ).toThrowError(/requires a configuration object with at least an "apiVersion" property/)
+    })
+
+    it('should throw a helpful error when called with null options', () => {
+      expect(() =>
+        // @ts-expect-error Testing null options
+        getClient(instance, null),
+      ).toThrowError(/requires a configuration object with at least an "apiVersion" property/)
+    })
+
     it('should reuse clients with identical configurations', () => {
       const options = {apiVersion: '2024-11-12', useCdn: true}
       const client1 = getClient(instance, options)

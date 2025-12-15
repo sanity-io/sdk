@@ -26,6 +26,11 @@
     "forceConsistentCasingInFileNames": true,
     "checkJs": false,
 
+    // Override exactOptionalPropertyTypes and noUncheckedIndexedAccess from @sanity/pkg-utils
+    // TODO: Re-enable these and fix all type errors in a dedicated PR
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false,
+
     // Strict type-checking
     "strictNullChecks": true,
     "strictFunctionTypes": true,

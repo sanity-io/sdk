@@ -25,7 +25,7 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
   /* Retry on CI only */
   retries: CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: CI ? 1 : undefined,
+  ...(CI ? {workers: 1} : {}),
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [['html', {outputFolder: './e2e/test-report'}], ['list']],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */

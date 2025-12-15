@@ -149,6 +149,13 @@ const getClientConfigKey = (options: ClientOptions) => JSON.stringify(pick(optio
 export const getClient = bindActionGlobally(
   clientStore,
   ({state, instance}, options: ClientOptions) => {
+    if (!options || typeof options !== 'object') {
+      throw new Error(
+        'getClient() requires a configuration object with at least an "apiVersion" property. ' +
+          'Example: getClient(instance, { apiVersion: "2024-11-12" })',
+      )
+    }
+
     // Check for disallowed keys
     const providedKeys = Object.keys(options) as (keyof ClientOptions)[]
     const disallowedKeys = providedKeys.filter((key) => !allowedKeys.includes(key))

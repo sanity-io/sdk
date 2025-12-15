@@ -118,6 +118,37 @@ interface UseApplyDocumentActions {
  *   )
  * }
  * ```
+ *
+ * @example Create a document with initial field values
+ * ```tsx
+ * import {
+ *   createDocument,
+ *   createDocumentHandle,
+ *   useApplyDocumentActions
+ * } from '@sanity/sdk-react'
+ *
+ * function CreateArticleButton() {
+ *   const apply = useApplyDocumentActions()
+ *
+ *   const handleCreateArticle = () => {
+ *     const newDocHandle = createDocumentHandle({
+ *       documentId: crypto.randomUUID(),
+ *       documentType: 'article'
+ *     })
+ *
+ *     // Create document with initial values in one action
+ *     apply(
+ *       createDocument(newDocHandle, {
+ *         title: 'New Article',
+ *         author: 'John Doe',
+ *         publishedAt: new Date().toISOString(),
+ *       })
+ *     )
+ *   }
+ *
+ *   return <button onClick={handleCreateArticle}>Create Article</button>
+ * }
+ * ```
  */
 export const useApplyDocumentActions = createCallbackHook(
   applyDocumentActions,
