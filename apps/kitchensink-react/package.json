@@ -36,7 +36,7 @@
     "typescript": "^5.8.3"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0",
+    "@playwright/test": "^1.57.0",
     "@repo/config-eslint": "workspace:*",
     "@repo/e2e": "workspace:*",
     "@repo/tsconfig": "workspace:*",
