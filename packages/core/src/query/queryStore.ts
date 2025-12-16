@@ -23,7 +23,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle, type DocumentSource} from '../config/sanityConfig'
+import {type DocumentSource} from '../config/sanityConfig'
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {bindActionBySource} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
@@ -54,25 +54,17 @@ import {
 /**
  * @beta
  */
-export interface QueryOptions<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'>,
-    DatasetHandle<TDataset, TProjectId> {
-  query: TQuery
+export interface QueryOptions
+  extends Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'> {
+  query: string
+  source: DocumentSource
   params?: Record<string, unknown>
-  source?: DocumentSource
 }
 
 /**
  * @beta
  */
-export interface ResolveQueryOptions<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends QueryOptions<TQuery, TDataset, TProjectId> {
+export interface ResolveQueryOptions extends QueryOptions {
   signal?: AbortSignal
 }
 
@@ -266,26 +258,10 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
  *
  * @beta
  */
-export function getQueryState<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  instance: SanityInstance,
-  queryOptions: QueryOptions<TQuery, TDataset, TProjectId>,
-): StateSource<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`> | undefined>
-
-/** @beta */
-export function getQueryState<TData>(
+export function getQueryState<TData = unknown>(
   instance: SanityInstance,
   queryOptions: QueryOptions,
 ): StateSource<TData | undefined>
-
-/** @beta */
-export function getQueryState(
-  instance: SanityInstance,
-  queryOptions: QueryOptions,
-): StateSource<unknown>
 
 /** @beta */
 export function getQueryState(

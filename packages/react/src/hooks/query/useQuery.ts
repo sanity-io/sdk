@@ -9,6 +9,12 @@ import {type SanityQueryResult} from 'groq'
 import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {useSource} from '../context/useSource'
+
+export type UseQueryOptions<
+  TQuery extends string = string,
+  TSourceName extends string = string,
+> = Omit<QueryOptions, 'query' | 'source'> & {query: TQuery; sourceName?: TSourceName}
 
 // Overload 1: Inferred Type (using Typegen)
 /**
@@ -66,15 +72,11 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * }
  * ```
  */
-export function useQuery<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  options: QueryOptions<TQuery, TDataset, TProjectId>,
+export function useQuery<TQuery extends string = string, TSourceName extends string = string>(
+  options: UseQueryOptions<TQuery, TSourceName>,
 ): {
   /** The query result, typed based on the GROQ query string */
-  data: SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>
+  data: SanityQueryResult<TQuery, TSourceName>
   /** True if a query transition is in progress */
   isPending: boolean
 }
@@ -108,12 +110,6 @@ export function useQuery<
  * }
  * ```
  */
-export function useQuery<TData>(options: QueryOptions): {
-  /** The query result, cast to the provided type TData */
-  data: TData
-  /** True if another query is resolving in the background (suspense handles the initial loading state) */
-  isPending: boolean
-}
 
 /**
  * @public
@@ -133,15 +129,26 @@ export function useQuery<TData>(options: QueryOptions): {
  *
  * @category GROQ
  */
-export function useQuery(options: QueryOptions): {data: unknown; isPending: boolean} {
+export function useQuery<TData = unknown>({
+  sourceName = 'default',
+  ...options
+}: UseQueryOptions): {
+  /** The query result, cast to the provided type TData */
+  data: TData
+  /** True if another query is resolving in the background (suspense handles the initial loading state) */
+  isPending: boolean
+} {
   // Implementation returns unknown, overloads define specifics
-  const instance = useSanityInstance(options)
+  const instance = useSanityInstance()
+
+  const source = useSource(sourceName)
 
   // Use React's useTransition to avoid UI jank when queries change
   const [isPending, startTransition] = useTransition()
 
   // Get the unique key for this query and its options
-  const queryKey = getQueryKey(options)
+  const queryKey = getQueryKey({...options, source})
+
   // Use a deferred state to avoid immediate re-renders when the query changes
   const [deferredQueryKey, setDeferredQueryKey] = useState(queryKey)
   // Parse the deferred query key back into a query and options

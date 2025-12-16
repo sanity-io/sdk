@@ -1,7 +1,7 @@
-import {type SanityConfig} from '@sanity/sdk'
-import {type ReactElement, type ReactNode} from 'react'
+import {createSanityInstance, type SanityConfig, type SanityInstance} from '@sanity/sdk'
+import {type ReactElement, type ReactNode, Suspense, useEffect, useMemo, useRef} from 'react'
 
-import {ResourceProvider} from '../context/ResourceProvider'
+import {SanityInstanceContext} from '../context/SanityInstanceContext'
 import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
 
 /**
@@ -9,7 +9,7 @@ import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
  */
 export interface SDKProviderProps extends AuthBoundaryProps {
   children: ReactNode
-  config: SanityConfig | SanityConfig[]
+  config: SanityConfig
   fallback: ReactNode
 }
 
@@ -20,33 +20,39 @@ export interface SDKProviderProps extends AuthBoundaryProps {
  * Creates a hierarchy of ResourceProviders, each providing a SanityInstance that can be
  * accessed by hooks. The first configuration in the array becomes the default instance.
  */
-export function SDKProvider({
-  children,
-  config,
-  fallback,
-  ...props
-}: SDKProviderProps): ReactElement {
-  // reverse because we want the first config to be the default, but the
-  // ResourceProvider nesting makes the last one the default
-  const configs = (Array.isArray(config) ? config : [config]).slice().reverse()
-  const projectIds = configs.map((c) => c.projectId).filter((id): id is string => !!id)
+export function SDKProvider({children, config, fallback}: SDKProviderProps): ReactElement {
+  const instance = useMemo(() => createSanityInstance(config), [config])
 
-  // Create a nested structure of ResourceProviders for each config
-  const createNestedProviders = (index: number): ReactElement => {
-    if (index >= configs.length) {
-      return (
-        <AuthBoundary {...props} projectIds={projectIds}>
-          {children}
-        </AuthBoundary>
-      )
+  // Ref to hold the scheduled disposal timer.
+  const disposal = useRef<{
+    instance: SanityInstance
+    timeoutId: ReturnType<typeof setTimeout>
+  } | null>(null)
+
+  useEffect(() => {
+    // If the component remounts quickly (as in Strict Mode), cancel any pending disposal.
+    if (disposal.current !== null && instance === disposal.current.instance) {
+      clearTimeout(disposal.current.timeoutId)
+      disposal.current = null
     }
 
-    return (
-      <ResourceProvider {...configs[index]} fallback={fallback}>
-        {createNestedProviders(index + 1)}
-      </ResourceProvider>
-    )
-  }
+    return () => {
+      disposal.current = {
+        instance,
+        timeoutId: setTimeout(() => {
+          if (!instance.isDisposed()) {
+            instance.dispose()
+          }
+        }, 0),
+      }
+    }
+  }, [instance])
 
-  return createNestedProviders(0)
+  return (
+    <SanityInstanceContext.Provider value={instance}>
+      <Suspense fallback={fallback}>
+        <AuthBoundary>{children}</AuthBoundary>
+      </Suspense>
+    </SanityInstanceContext.Provider>
+  )
 }
