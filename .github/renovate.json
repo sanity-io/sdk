@@ -12,6 +12,12 @@
   "dependencyDashboardApproval": false,
   "stabilityDays": 3,
   "prCreation": "not-pending",
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "stabilityDays": 0,
+    "automerge": false
+  },
   "packageRules": [
     {
       "description": "Automerge all devDependencies (non-major)",
@@ -57,7 +63,6 @@
       "stabilityDays": 7,
       "minimumReleaseAge": "7 days",
       "labels": ["dependencies", "automerge"],
-      "rangeStrategy": "bump",
       "semanticCommitType": "fix",
       "semanticCommitScope": "deps"
     },
@@ -71,9 +76,14 @@
       "stabilityDays": 14,
       "minimumReleaseAge": "14 days",
       "labels": ["dependencies", "major-update", "breaking-change", "needs-review"],
-      "rangeStrategy": "bump",
       "semanticCommitType": "chore",
       "semanticCommitScope": "deps"
+    },
+    {
+      "description": "Use bump strategy for all production dependencies in public packages",
+      "matchDepTypes": ["dependencies"],
+      "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
+      "rangeStrategy": "bump"
     },
     {
       "description": "PeerDependencies - require approval as they affect consumer compatibility",
@@ -129,16 +139,6 @@
       "minimumReleaseAge": "2 days",
       "semanticCommitType": "chore",
       "semanticCommitScope": "apps"
-    },
-    {
-      "description": "Security vulnerabilities - no stability delay, but require review",
-      "matchPackagePatterns": ["*"],
-      "matchUpdateTypes": ["patch", "minor", "major"],
-      "vulnerabilitySeverity": "high",
-      "labels": ["security", "high-severity"],
-      "prPriority": 100,
-      "automerge": false,
-      "stabilityDays": 0
     }
   ]
 }
