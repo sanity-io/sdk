@@ -10,12 +10,12 @@
   "automergeStrategy": "squash",
   "dependencyDashboard": true,
   "dependencyDashboardApproval": false,
-  "stabilityDays": 3,
+  "minimumReleaseAge": "3 days",
   "prCreation": "not-pending",
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": ["security"],
-    "stabilityDays": 0,
+    "minimumReleaseAge": null,
     "automerge": false
   },
   "packageRules": [
@@ -25,7 +25,6 @@
       "matchUpdateTypes": ["patch", "minor"],
       "groupName": "devDependencies (non-major)",
       "automerge": true,
-      "stabilityDays": 3,
       "minimumReleaseAge": "3 days",
       "semanticCommitType": "chore",
       "semanticCommitScope": "dev-deps"
@@ -34,13 +33,12 @@
       "description": "Automerge devDependencies (major) after longer stability period",
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["major"],
-      "excludePackageNames": ["typescript"],
       "automerge": true,
-      "stabilityDays": 7,
       "minimumReleaseAge": "7 days",
       "labels": ["major-update"],
       "semanticCommitType": "chore",
-      "semanticCommitScope": "dev-deps"
+      "semanticCommitScope": "dev-deps",
+      "matchPackageNames": ["!typescript"]
     },
     {
       "description": "TypeScript major versions - require approval due to breaking changes",
@@ -48,7 +46,6 @@
       "matchUpdateTypes": ["major"],
       "automerge": false,
       "dependencyDashboardApproval": true,
-      "stabilityDays": 14,
       "minimumReleaseAge": "14 days",
       "labels": ["typescript", "major-update", "breaking-change"],
       "semanticCommitType": "chore",
@@ -57,10 +54,12 @@
     {
       "description": "Production dependencies (patch/minor) - automerge and trigger patch release",
       "matchDepTypes": ["dependencies"],
-      "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
+      "matchFileNames": [
+        "packages/core/package.json",
+        "packages/react/package.json"
+      ],
       "matchUpdateTypes": ["patch", "minor"],
       "automerge": true,
-      "stabilityDays": 7,
       "minimumReleaseAge": "7 days",
       "labels": ["dependencies", "automerge"],
       "semanticCommitType": "fix",
@@ -69,20 +68,30 @@
     {
       "description": "Production dependencies (major) - require manual approval for breaking changes",
       "matchDepTypes": ["dependencies"],
-      "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
+      "matchFileNames": [
+        "packages/core/package.json",
+        "packages/react/package.json"
+      ],
       "matchUpdateTypes": ["major"],
       "automerge": false,
       "dependencyDashboardApproval": true,
-      "stabilityDays": 14,
       "minimumReleaseAge": "14 days",
-      "labels": ["dependencies", "major-update", "breaking-change", "needs-review"],
+      "labels": [
+        "dependencies",
+        "major-update",
+        "breaking-change",
+        "needs-review"
+      ],
       "semanticCommitType": "chore",
       "semanticCommitScope": "deps"
     },
     {
       "description": "Use bump strategy for all production dependencies in public packages",
       "matchDepTypes": ["dependencies"],
-      "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
+      "matchFileNames": [
+        "packages/core/package.json",
+        "packages/react/package.json"
+      ],
       "rangeStrategy": "bump"
     },
     {
@@ -90,7 +99,7 @@
       "matchDepTypes": ["peerDependencies"],
       "automerge": false,
       "dependencyDashboardApproval": true,
-      "stabilityDays": 7,
+      "minimumReleaseAge": "7 days",
       "labels": ["peer-dependencies", "needs-review"],
       "rangeStrategy": "widen",
       "semanticCommitType": "chore",
@@ -101,7 +110,6 @@
       "groupName": "typescript-tooling",
       "matchPackageNames": ["@sanity/pkg-utils", "@sanity/tsdoc"],
       "automerge": true,
-      "stabilityDays": 5,
       "minimumReleaseAge": "5 days",
       "semanticCommitType": "chore",
       "semanticCommitScope": "tooling"
@@ -117,7 +125,6 @@
         "typescript-eslint"
       ],
       "automerge": true,
-      "stabilityDays": 3,
       "minimumReleaseAge": "3 days",
       "semanticCommitType": "chore",
       "semanticCommitScope": "tooling"
@@ -135,7 +142,6 @@
       "matchFileNames": ["apps/**/package.json"],
       "groupName": "app dependencies",
       "automerge": true,
-      "stabilityDays": 2,
       "minimumReleaseAge": "2 days",
       "semanticCommitType": "chore",
       "semanticCommitScope": "apps"
