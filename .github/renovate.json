@@ -3,26 +3,101 @@
   "extends": ["local>sanity-io/renovate-config"],
   "ignorePresets": ["github>sanity-io/renovate-config:group-non-major"],
   "schedule": ["before 5am"],
-  "prConcurrentLimit": 3,
+  "prConcurrentLimit": 10,
   "automerge": true,
+  "platformAutomerge": true,
+  "automergeType": "pr",
+  "automergeStrategy": "squash",
+  "dependencyDashboard": true,
   "dependencyDashboardApproval": false,
+  "stabilityDays": 3,
+  "prCreation": "not-pending",
   "packageRules": [
     {
+      "description": "Automerge all devDependencies (non-major)",
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["patch", "minor"],
       "groupName": "devDependencies (non-major)",
-      "group": {"semanticCommitType": "chore"},
-      "semanticCommitType": "chore"
+      "automerge": true,
+      "stabilityDays": 3,
+      "minimumReleaseAge": "3 days",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "dev-deps"
     },
     {
-      "description": "Group TypeScript related deps in a single PR, as they often have to update together",
+      "description": "Automerge devDependencies (major) after longer stability period",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["major"],
+      "excludePackageNames": ["typescript"],
+      "automerge": true,
+      "stabilityDays": 7,
+      "minimumReleaseAge": "7 days",
+      "labels": ["major-update"],
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "dev-deps"
+    },
+    {
+      "description": "TypeScript major versions - require approval due to breaking changes",
+      "matchPackageNames": ["typescript"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "dependencyDashboardApproval": true,
+      "stabilityDays": 14,
+      "minimumReleaseAge": "14 days",
+      "labels": ["typescript", "major-update", "breaking-change"],
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "tooling"
+    },
+    {
+      "description": "Production dependencies (patch/minor) - automerge and trigger patch release",
+      "matchDepTypes": ["dependencies"],
+      "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "stabilityDays": 7,
+      "minimumReleaseAge": "7 days",
+      "labels": ["dependencies", "automerge"],
+      "rangeStrategy": "bump",
+      "semanticCommitType": "fix",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "description": "Production dependencies (major) - require manual approval for breaking changes",
+      "matchDepTypes": ["dependencies"],
+      "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "dependencyDashboardApproval": true,
+      "stabilityDays": 14,
+      "minimumReleaseAge": "14 days",
+      "labels": ["dependencies", "major-update", "breaking-change", "needs-review"],
+      "rangeStrategy": "bump",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "description": "PeerDependencies - require approval as they affect consumer compatibility",
+      "matchDepTypes": ["peerDependencies"],
+      "automerge": false,
+      "dependencyDashboardApproval": true,
+      "stabilityDays": 7,
+      "labels": ["peer-dependencies", "needs-review"],
+      "rangeStrategy": "widen",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "peer-deps"
+    },
+    {
+      "description": "Group TypeScript tooling deps (excluding typescript itself)",
       "groupName": "typescript-tooling",
-      "matchPackageNames": ["@sanity/pkg-utils", "@sanity/tsdoc", "typescript"],
-      "group": {"semanticCommitType": "chore"},
-      "semanticCommitType": "chore"
+      "matchPackageNames": ["@sanity/pkg-utils", "@sanity/tsdoc"],
+      "automerge": true,
+      "stabilityDays": 5,
+      "minimumReleaseAge": "5 days",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "tooling"
     },
     {
-      "description": "Group eslint related deps in a single PR, as they often have to update together",
+      "description": "Group eslint related deps for easier review",
       "groupName": "eslint-tooling",
       "matchPackageNames": [
         "@eslint/*",
@@ -31,11 +106,14 @@
         "eslint-config-*",
         "typescript-eslint"
       ],
-      "group": {"semanticCommitType": "chore"},
-      "semanticCommitType": "chore"
+      "automerge": true,
+      "stabilityDays": 3,
+      "minimumReleaseAge": "3 days",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "tooling"
     },
     {
-      "group": {"semanticCommitType": "chore"},
+      "description": "App dependencies - aggressive automerge since apps aren't published",
       "matchDepTypes": [
         "dependencies",
         "devDependencies",
@@ -44,15 +122,23 @@
         "peerDependencies"
       ],
       "matchManagers": ["npm"],
-      "semanticCommitType": "chore",
-      "description": "Group all dependencies from the app directory",
       "matchFileNames": ["apps/**/package.json"],
-      "groupName": "App dependencies"
+      "groupName": "app dependencies",
+      "automerge": true,
+      "stabilityDays": 2,
+      "minimumReleaseAge": "2 days",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "apps"
     },
     {
-      "matchDepTypes": ["dependencies", "peerDependencies"],
-      "rangeStrategy": "bump",
-      "semanticCommitType": "fix"
+      "description": "Security vulnerabilities - no stability delay, but require review",
+      "matchPackagePatterns": ["*"],
+      "matchUpdateTypes": ["patch", "minor", "major"],
+      "vulnerabilitySeverity": "high",
+      "labels": ["security", "high-severity"],
+      "prPriority": 100,
+      "automerge": false,
+      "stabilityDays": 0
     }
   ]
 }
