@@ -183,8 +183,21 @@ const _getDocumentState = bindActionByDataset(
   documentStore,
   createStateSourceAction({
     selector: ({state: {error, documentStates}}, options: DocumentOptions<string | undefined>) => {
-      const {documentId, path} = options
+      const {documentId, path, liveEdit} = options
       if (error) throw error
+
+      if (liveEdit) {
+        // For liveEdit documents, only look at the single document
+        const document = documentStates[documentId]?.local
+        if (document === undefined) return undefined
+        if (!path) return document
+        const result = jsonMatch(document, path).next()
+        if (result.done) return undefined
+        const {value} = result.value
+        return value
+      }
+
+      // Standard draft/published logic
       const draftId = getDraftId(documentId)
       const publishedId = getPublishedId(documentId)
       const draft = documentStates[draftId]?.local
@@ -200,7 +213,7 @@ const _getDocumentState = bindActionByDataset(
       return value
     },
     onSubscribe: (context, options: DocumentOptions<string | undefined>) =>
-      manageSubscriberIds(context, options.documentId),
+      manageSubscriberIds(context, options.documentId, {expandDraftPublished: !options.liveEdit}),
   }),
 )
 
@@ -246,6 +259,15 @@ export const getDocumentSyncStatus = bindActionByDataset(
     ) => {
       const documentId = typeof doc === 'string' ? doc : doc.documentId
       if (error) throw error
+
+      if (doc.liveEdit) {
+        // For liveEdit documents, only check the single document
+        const document = documents[documentId]
+        if (document === undefined) return undefined
+        return !queued.length && !applied.length && !outgoing
+      }
+
+      // Standard draft/published logic
       const draftId = getDraftId(documentId)
       const publishedId = getPublishedId(documentId)
 

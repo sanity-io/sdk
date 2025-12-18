@@ -140,6 +140,52 @@ export function processActions({
     switch (action.type) {
       case 'document.create': {
         const documentId = getId(action.documentId)
+
+        if (action.liveEdit) {
+          // For liveEdit documents, create directly without draft/published logic
+          if (working[documentId]) {
+            throw new ActionError({
+              documentId,
+              transactionId,
+              message: `This document already exists.`,
+            })
+          }
+
+          const newDocBase = {_type: action.documentType, _id: documentId}
+          const newDocWorking = {_type: action.documentType, _id: documentId}
+          const mutations: Mutation[] = [{create: newDocWorking}]
+
+          base = processMutations({
+            documents: base,
+            transactionId,
+            mutations: [{create: newDocBase}],
+            timestamp,
+          })
+          working = processMutations({
+            documents: working,
+            transactionId,
+            mutations,
+            timestamp,
+          })
+
+          if (!checkGrant(grants.create, working[documentId] as SanityDocument)) {
+            throw new PermissionActionError({
+              documentId,
+              transactionId,
+              message: `You do not have permission to create document "${documentId}".`,
+            })
+          }
+
+          outgoingMutations.push(...mutations)
+          outgoingActions.push({
+            actionType: 'sanity.action.document.create',
+            publishedId: documentId,
+            attributes: newDocWorking,
+          })
+          continue
+        }
+
+        // Standard draft/published logic
         const draftId = getDraftId(documentId)
         const publishedId = getPublishedId(documentId)
 
@@ -198,6 +244,39 @@ export function processActions({
 
       case 'document.delete': {
         const documentId = action.documentId
+
+        if (action.liveEdit) {
+          // For liveEdit documents, delete directly
+          if (!working[documentId]) {
+            throw new ActionError({
+              documentId,
+              transactionId,
+              message: 'The document you are trying to delete does not exist.',
+            })
+          }
+
+          if (!checkGrant(grants.update, working[documentId])) {
+            throw new PermissionActionError({
+              documentId,
+              transactionId,
+              message: `You do not have permission to delete this document.`,
+            })
+          }
+
+          const mutations: Mutation[] = [{delete: {id: documentId}}]
+
+          base = processMutations({documents: base, transactionId, mutations, timestamp})
+          working = processMutations({documents: working, transactionId, mutations, timestamp})
+
+          outgoingMutations.push(...mutations)
+          outgoingActions.push({
+            actionType: 'sanity.action.document.delete',
+            publishedId: documentId,
+          })
+          continue
+        }
+
+        // Standard draft/published logic
         const draftId = getDraftId(documentId)
         const publishedId = getPublishedId(documentId)
 
@@ -240,6 +319,16 @@ export function processActions({
 
       case 'document.discard': {
         const documentId = getId(action.documentId)
+
+        if (action.liveEdit) {
+          throw new ActionError({
+            documentId,
+            transactionId,
+            message: `Cannot discard changes for liveEdit document "${documentId}". LiveEdit documents do not support drafts.`,
+          })
+        }
+
+        // Standard draft/published logic
         const draftId = getDraftId(documentId)
         const mutations: Mutation[] = [{delete: {id: draftId}}]
 
@@ -272,6 +361,70 @@ export function processActions({
 
       case 'document.edit': {
         const documentId = getId(action.documentId)
+
+        if (action.liveEdit) {
+          // For liveEdit documents, edit directly without draft logic
+          const userPatches = action.patches?.map((patch) => ({patch: {id: documentId, ...patch}}))
+
+          // skip this action if there are no associated patches
+          if (!userPatches?.length) continue
+
+          if (!working[documentId] || !base[documentId]) {
+            throw new ActionError({
+              documentId,
+              transactionId,
+              message: `Cannot edit document because it does not exist.`,
+            })
+          }
+
+          const baseBefore = base[documentId] as SanityDocument
+          if (userPatches) {
+            base = processMutations({
+              documents: base,
+              transactionId,
+              mutations: userPatches,
+              timestamp,
+            })
+          }
+
+          const baseAfter = base[documentId] as SanityDocument
+          const patches = diffValue(baseBefore, baseAfter)
+
+          const workingBefore = working[documentId] as SanityDocument
+          if (!checkGrant(grants.update, workingBefore)) {
+            throw new PermissionActionError({
+              documentId,
+              transactionId,
+              message: `You do not have permission to edit document "${documentId}".`,
+            })
+          }
+
+          const workingMutations = patches.map((patch) => ({patch: {id: documentId, ...patch}}))
+
+          working = processMutations({
+            documents: working,
+            transactionId,
+            mutations: workingMutations,
+            timestamp,
+          })
+
+          outgoingMutations.push(...workingMutations)
+          outgoingActions.push(
+            ...patches.map(
+              (patch): HttpAction => ({
+                actionType: 'sanity.action.document.edit',
+                // Server requires draftId to have drafts. prefix for validation, even for liveEdit
+                draftId: getDraftId(documentId),
+                publishedId: documentId,
+                patch: patch as PatchOperations,
+              }),
+            ),
+          )
+
+          continue
+        }
+
+        // Standard draft/published logic
         const draftId = getDraftId(documentId)
         const publishedId = getPublishedId(documentId)
         const userPatches = action.patches?.map((patch) => ({patch: {id: draftId, ...patch}}))
@@ -362,6 +515,16 @@ export function processActions({
 
       case 'document.publish': {
         const documentId = getId(action.documentId)
+
+        if (action.liveEdit) {
+          throw new ActionError({
+            documentId,
+            transactionId,
+            message: `Cannot publish liveEdit document "${documentId}". LiveEdit documents do not support drafts or publishing.`,
+          })
+        }
+
+        // Standard draft/published logic
         const draftId = getDraftId(documentId)
         const publishedId = getPublishedId(documentId)
 
@@ -428,6 +591,16 @@ export function processActions({
 
       case 'document.unpublish': {
         const documentId = getId(action.documentId)
+
+        if (action.liveEdit) {
+          throw new ActionError({
+            documentId,
+            transactionId,
+            message: `Cannot unpublish liveEdit document "${documentId}". LiveEdit documents do not support drafts or publishing.`,
+          })
+        }
+
+        // Standard draft/published logic
         const draftId = getDraftId(documentId)
         const publishedId = getPublishedId(documentId)
 
