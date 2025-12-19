@@ -89,7 +89,7 @@ export type Selector<TState, TParams extends unknown[], TReturn> = (
 /**
  * Configuration options for creating a state source action
  */
-interface StateSourceOptions<TState, TParams extends unknown[], TReturn> {
+interface StateSourceOptions<TState, TParams extends unknown[], TReturn, TKey> {
   /**
    * Selector function that derives the desired value from store state
    *
@@ -106,7 +106,7 @@ interface StateSourceOptions<TState, TParams extends unknown[], TReturn> {
    * @param params - Action parameters provided during invocation
    * @returns Optional cleanup function called when subscription ends
    */
-  onSubscribe?: (context: StoreContext<TState>, ...params: TParams) => void | (() => void)
+  onSubscribe?: (context: StoreContext<TState, TKey>, ...params: TParams) => void | (() => void)
 
   /**
    * Equality function to prevent unnecessary updates
@@ -168,9 +168,9 @@ interface StateSourceOptions<TState, TParams extends unknown[], TReturn> {
  * })
  * ```
  */
-export function createStateSourceAction<TState, TParams extends unknown[], TReturn>(
-  options: Selector<TState, TParams, TReturn> | StateSourceOptions<TState, TParams, TReturn>,
-): StoreAction<TState, TParams, StateSource<TReturn>> {
+export function createStateSourceAction<TState, TParams extends unknown[], TReturn, TKey = unknown>(
+  options: Selector<TState, TParams, TReturn> | StateSourceOptions<TState, TParams, TReturn, TKey>,
+): StoreAction<TState, TParams, StateSource<TReturn>, TKey> {
   const selector = typeof options === 'function' ? options : options.selector
   const subscribeHandler = options && 'onSubscribe' in options ? options.onSubscribe : undefined
   const isEqual = options && 'isEqual' in options ? (options.isEqual ?? Object.is) : Object.is
@@ -184,7 +184,7 @@ export function createStateSourceAction<TState, TParams extends unknown[], TRetu
    * @param context - Store context providing access to state and instance
    * @param params - Parameters provided when invoking the bound action
    */
-  function stateSourceAction(context: StoreContext<TState>, ...params: TParams) {
+  function stateSourceAction(context: StoreContext<TState, TKey>, ...params: TParams) {
     const {state, instance} = context
 
     const getCurrent = () => {

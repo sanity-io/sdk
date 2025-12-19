@@ -12,7 +12,7 @@ beforeEach(() => vi.mocked(createStoreInstance).mockClear())
 
 describe('createActionBinder', () => {
   it('should bind an action and call it with correct context and parameters, using caching', () => {
-    const binder = createActionBinder(() => '')
+    const binder = createActionBinder((..._rest) => ({name: ''}))
     const storeDefinition = {
       name: 'TestStore',
       getInitialState: () => ({counter: 0}),
@@ -37,7 +37,9 @@ describe('createActionBinder', () => {
   })
 
   it('should create separate store instances for different composite keys', () => {
-    const binder = createActionBinder(({projectId, dataset}) => `${projectId}.${dataset}`)
+    const binder = createActionBinder(({config: {projectId, dataset}}, ..._rest) => ({
+      name: `${projectId}.${dataset}`,
+    }))
     const storeDefinition = {
       name: 'TestStore',
       getInitialState: () => ({counter: 0}),
@@ -59,7 +61,7 @@ describe('createActionBinder', () => {
   })
 
   it('should dispose the store instance when the last instance is disposed', () => {
-    const binder = createActionBinder(() => '')
+    const binder = createActionBinder((..._rest) => ({name: ''}))
     const storeDefinition = {
       name: 'TestStore',
       getInitialState: () => ({counter: 0}),
@@ -93,10 +95,10 @@ describe('bindActionByDataset', () => {
       name: 'DSStore',
       getInitialState: () => ({counter: 0}),
     }
-    const action = vi.fn((_context, value: string) => value)
+    const action = vi.fn((_context, {value}: {value: string}) => value)
     const boundAction = bindActionByDataset(storeDefinition, action)
     const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
-    const result = boundAction(instance, 'hello')
+    const result = boundAction(instance, {value: 'hello'})
     expect(result).toBe('hello')
   })
 
@@ -105,7 +107,7 @@ describe('bindActionByDataset', () => {
       name: 'DSStore',
       getInitialState: () => ({counter: 0}),
     }
-    const action = vi.fn((_context) => 'fail')
+    const action = vi.fn((_context, _?) => 'fail')
     const boundAction = bindActionByDataset(storeDefinition, action)
     // Instance with missing dataset
     const instance = createSanityInstance({projectId: 'proj1', dataset: ''})

@@ -48,11 +48,11 @@ describe('applyDocumentActions', () => {
     }
     state = createStoreState(initialState)
     instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const key = {name: 'p.d', projectId: 'p', dataset: 'd'}
 
     vi.mocked(bindActionByDataset).mockImplementation(
-      (_storeDef, action) =>
-        (instanceParam: SanityInstance, ...params: unknown[]) =>
-          action({instance: instanceParam, state}, ...params),
+      (_storeDef, action) => (instanceParam: SanityInstance, options) =>
+        action({instance: instanceParam, state, key}, options),
     )
     // Import dynamically to ensure mocks are set up before the module under test is loaded
     const module = await import('./applyDocumentActions')
@@ -72,7 +72,8 @@ describe('applyDocumentActions', () => {
     }
 
     // Call applyDocumentActions with a fixed transactionId for reproducibility.
-    const applyPromise = applyDocumentActions(instance, action, {
+    const applyPromise = applyDocumentActions(instance, {
+      actions: [action],
       transactionId: 'txn-success',
     })
 
@@ -128,7 +129,8 @@ describe('applyDocumentActions', () => {
     }
 
     // Call applyDocumentActions with a fixed transactionId.
-    const applyPromise = applyDocumentActions(instance, action, {
+    const applyPromise = applyDocumentActions(instance, {
+      actions: [action],
       transactionId: 'txn-error',
     })
 
@@ -160,7 +162,8 @@ describe('applyDocumentActions', () => {
       dataset: 'd',
     }
     // Call applyDocumentActions with the context using childInstance, but with action requiring parent's config
-    const applyPromise = applyDocumentActions(childInstance, action, {
+    const applyPromise = applyDocumentActions(childInstance, {
+      actions: [action],
       transactionId: 'txn-child-match',
     })
 

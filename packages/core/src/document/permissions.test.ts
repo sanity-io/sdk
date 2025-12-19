@@ -75,7 +75,7 @@ describe('calculatePermissions', () => {
     const actions: DocumentAction[] = [
       {documentId: 'doc1', type: 'document.create', documentType: 'article'},
     ]
-    const result = calculatePermissions({instance, state}, actions)
+    const result = calculatePermissions({instance, state}, {actions})
     expect(result).toEqual({allowed: true})
   })
 
@@ -91,7 +91,7 @@ describe('calculatePermissions', () => {
     const actions: DocumentAction[] = [
       {documentId: 'doc1', type: 'document.create', documentType: 'article'},
     ]
-    expect(calculatePermissions({instance, state}, actions)).toBeUndefined()
+    expect(calculatePermissions({instance, state}, {actions})).toBeUndefined()
   })
 
   it('should catch PermissionActionError from processActions and return allowed false with a reason', () => {
@@ -107,7 +107,7 @@ describe('calculatePermissions', () => {
     const actions: DocumentAction[] = [
       {documentId: 'doc1', type: 'document.create', documentType: 'article'},
     ]
-    const result = calculatePermissions({instance, state}, actions)
+    const result = calculatePermissions({instance, state}, {actions})
     expect(result).toBeDefined()
     expect(result?.allowed).toBe(false)
     expect(result?.reasons).toEqual(
@@ -135,7 +135,7 @@ describe('calculatePermissions', () => {
     const actions: DocumentAction[] = [
       {documentId: 'doc1', documentType: 'book', type: 'document.edit'},
     ]
-    const result = calculatePermissions({instance, state}, actions)
+    const result = calculatePermissions({instance, state}, {actions})
     expect(result).toBeDefined()
     expect(result?.allowed).toBe(false)
     expect(result?.reasons).toEqual(
@@ -161,7 +161,7 @@ describe('calculatePermissions', () => {
     const actions: DocumentAction[] = [
       {documentId: 'doc1', documentType: 'book', type: 'document.edit'},
     ]
-    const result = calculatePermissions({instance, state}, actions)
+    const result = calculatePermissions({instance, state}, {actions})
     expect(result).toBeDefined()
     expect(result?.allowed).toBe(false)
     expect(result?.reasons).toEqual(
@@ -185,7 +185,7 @@ describe('calculatePermissions', () => {
     const actions: DocumentAction[] = [
       {documentId: 'doc1', type: 'document.create', documentType: 'article'},
     ]
-    expect(calculatePermissions({instance, state}, actions)).toBeUndefined()
+    expect(calculatePermissions({instance, state}, {actions})).toBeUndefined()
   })
 
   it('should catch ActionError from processActions and return a precondition error reason', () => {
@@ -200,7 +200,7 @@ describe('calculatePermissions', () => {
     const actions: DocumentAction[] = [
       {documentId: 'doc1', documentType: 'book', type: 'document.delete'},
     ]
-    const result = calculatePermissions({instance, state}, actions)
+    const result = calculatePermissions({instance, state}, {actions})
     expect(result).toBeDefined()
     expect(result?.allowed).toBe(false)
     expect(result?.reasons).toEqual(
@@ -228,8 +228,8 @@ describe('calculatePermissions', () => {
       documentType: 'article',
     }
     // notice how the action is a copy
-    const result1 = calculatePermissions({instance, state}, [{...action}])
-    const result2 = calculatePermissions({instance, state}, [{...action}])
+    const result1 = calculatePermissions({instance, state}, {actions: [{...action}]})
+    const result2 = calculatePermissions({instance, state}, {actions: [{...action}]})
     expect(result1).toBe(result2)
   })
 })
