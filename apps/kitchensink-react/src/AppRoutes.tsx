@@ -16,6 +16,7 @@ import {PresenceRoute} from './Presence/PresenceRoute'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProtectedRoute} from './ProtectedRoute'
 import {AgentActionsRoute} from './routes/AgentActionsRoute'
+import {AgentResourceContextRoute} from './routes/AgentResourceContextRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import ExperimentalResourceClientRoute from './routes/ExperimentalResourceClientRoute'
@@ -91,6 +92,10 @@ const dashboardInteractionRoutes = [
     path: 'workspaces',
     element: <DashboardWorkspacesRoute />,
   },
+  {
+    path: 'agent-resource-context',
+    element: <AgentResourceContextRoute />,
+  },
 ]
 
 const frameRoutes = [1, 2, 3].map((frameNum) => ({
@@ -131,6 +136,9 @@ export function AppRoutes(): JSX.Element {
             }
           />
           {documentCollectionRoutes.map((route) => (
+            <Route key={route.path} path={route.path} element={route.element} />
+          ))}
+          {dashboardInteractionRoutes.map((route) => (
             <Route key={route.path} path={route.path} element={route.element} />
           ))}
           <Route
