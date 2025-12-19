@@ -15,6 +15,7 @@ vi.mock('../query/queryStore')
 describe('subscribeToStateAndFetchBatches', () => {
   let instance: SanityInstance
   let state: StoreState<ProjectionStoreState>
+  const key = {name: 'test.test', projectId: 'test', dataset: 'test'}
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -38,7 +39,7 @@ describe('subscribeToStateAndFetchBatches', () => {
   })
 
   it('batches rapid subscription changes into single requests', async () => {
-    const subscription = subscribeToStateAndFetchBatches({instance, state})
+    const subscription = subscribeToStateAndFetchBatches({instance, state, key})
     const projection = '{title, description}'
     const projectionHash = hashString(projection)
 
@@ -95,7 +96,7 @@ describe('subscribeToStateAndFetchBatches', () => {
       observable: new Observable(subscriber),
     } as StateSource<ProjectionQueryResult[] | undefined>)
 
-    const subscription = subscribeToStateAndFetchBatches({instance, state})
+    const subscription = subscribeToStateAndFetchBatches({instance, state, key})
     const projection = '{title}'
     const projectionHash = hashString(projection)
 
@@ -166,7 +167,7 @@ describe('subscribeToStateAndFetchBatches', () => {
       subscriptions: {doc1: {[projectionHash]: {sub1: true}}},
     })
 
-    const subscription = subscribeToStateAndFetchBatches({instance, state})
+    const subscription = subscribeToStateAndFetchBatches({instance, state, key})
 
     // Add another subscription for doc1 (same hash)
     state.set('addSubscriptionAlreadyInBatch', (prev) => ({
@@ -218,7 +219,7 @@ describe('subscribeToStateAndFetchBatches', () => {
 
   it('cancels and restarts fetches when subscription set changes', async () => {
     const abortSpy = vi.spyOn(AbortController.prototype, 'abort')
-    const subscription = subscribeToStateAndFetchBatches({instance, state})
+    const subscription = subscribeToStateAndFetchBatches({instance, state, key})
     const projection = '{title, description}'
     const projectionHash = hashString(projection)
     const projection2 = '{_id}' // Different projection
@@ -266,7 +267,7 @@ describe('subscribeToStateAndFetchBatches', () => {
       observable: new Observable(subscriber),
     } as StateSource<ProjectionQueryResult[] | undefined>)
 
-    const subscription = subscribeToStateAndFetchBatches({instance, state})
+    const subscription = subscribeToStateAndFetchBatches({instance, state, key})
     const projection = '{title, description}'
     const projectionHash = hashString(projection)
 

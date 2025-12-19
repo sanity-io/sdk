@@ -17,13 +17,13 @@ const DEFAULT_PERSPECTIVE = 'drafts'
 // Cache for options
 const optionsCache = new Map<string, Map<string, PerspectiveHandle>>()
 
-const selectInstancePerspective = (context: SelectorContext<ReleasesStoreState>) =>
+const selectInstancePerspective = (context: SelectorContext<ReleasesStoreState>, _?: unknown) =>
   context.instance.config.perspective
 const selectActiveReleases = (context: SelectorContext<ReleasesStoreState>) =>
   context.state.activeReleases
 const selectOptions = (
   _context: SelectorContext<ReleasesStoreState>,
-  options?: PerspectiveHandle,
+  options: PerspectiveHandle & {projectId?: string; dataset?: string},
 ) => options
 
 const memoizedOptionsSelector = createSelector(
