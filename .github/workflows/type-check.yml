@@ -1,0 +1,30 @@
+name: Type Check
+
+on:
+  # Build on pushes to branches that have a PR (including drafts)
+  pull_request:
+  # Build on pushes to the main branch
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  type-check:
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 20
+
+      - name: Type Check
+        run: pnpm ts:check
