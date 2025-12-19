@@ -58,15 +58,14 @@ const nullReplacer: object = {}
 const documentsSelector = createSelector(
   [
     ({state: {documentStates}}: SelectorContext<SyncTransactionState>) => documentStates,
-    (_context: SelectorContext<SyncTransactionState>, actions: DocumentAction | DocumentAction[]) =>
+    (_context: SelectorContext<SyncTransactionState>, {actions}: {actions: DocumentAction[]}) =>
       actions,
   ],
   (documentStates, actions) => {
-    const actionArray = Array.isArray(actions) ? actions : [actions]
     // Collect all document IDs needed for permission checks.
     // Important: liveEdit documents don't have drafts, so we only fetch the single document to avoid waiting for non-existent draft documents.
     const documentIds = new Set(
-      actionArray
+      actions
         .map((action) => {
           if (typeof action.documentId !== 'string') return []
           // For liveEdit documents, only fetch the single document
@@ -107,7 +106,7 @@ const documentsSelector = createSelector(
 const memoizedActionsSelector = createSelector(
   [
     documentsSelector,
-    (_state: SelectorContext<SyncTransactionState>, actions: DocumentAction | DocumentAction[]) =>
+    (_state: SelectorContext<SyncTransactionState>, {actions}: {actions: DocumentAction[]}) =>
       actions,
   ],
   (documents, actions) => {
