@@ -951,12 +951,7 @@ beforeEach(() => {
             continue
           }
           default: {
-            throw new Error(
-              `Unsupported action for mock backend: ${
-                // @ts-expect-error unexpected input
-                i.actionType
-              }`,
-            )
+            throw new Error(`Unsupported action for mock backend: ${i.actionType}`)
           }
         }
       }
