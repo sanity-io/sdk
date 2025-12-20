@@ -44,7 +44,7 @@ jobs:
 
       - name: 💾 Cache Playwright browsers
         id: cache-playwright-browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-${{ steps.pw-version.outputs.version }}-playwright-browsers
@@ -97,7 +97,7 @@ jobs:
 
       - name: 💾 Restore cached Playwright browsers
         id: cache-playwright-browsers
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-${{ steps.pw-version.outputs.version }}-playwright-browsers
