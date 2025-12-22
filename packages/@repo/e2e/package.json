@@ -44,7 +44,7 @@
     "@playwright/test": "^1.57.0",
     "@repo/config-eslint": "workspace:*",
     "@repo/tsconfig": "workspace:*",
-    "@sanity/pkg-utils": "^8.1.29",
+    "@sanity/pkg-utils": "^10.2.1",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^22.19.1",
     "eslint": "^9.22.0",

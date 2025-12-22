@@ -57,7 +57,7 @@
     "@repo/config-eslint": "workspace:*",
     "@repo/config-test": "workspace:*",
     "@repo/tsconfig": "workspace:*",
-    "@sanity/pkg-utils": "^8.1.29",
+    "@sanity/pkg-utils": "^10.2.1",
     "@sanity/prettier-config": "^1.0.6",
     "@types/node": "^22.19.1",
     "@vitest/coverage-v8": "3.2.4",
