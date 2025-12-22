@@ -42,7 +42,7 @@ jobs:
           token: ${{ steps.generate-token.outputs.token }}
 
       # Publish to NPM on new releases
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
       - uses: pnpm/action-setup@v4
         if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
@@ -72,7 +72,7 @@ jobs:
     if: ${{ needs.release-please.outputs.command == 'true' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
