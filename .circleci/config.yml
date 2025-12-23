@@ -44,7 +44,7 @@ jobs:
             echo "do nothing"
   build:
     docker:
-      - image: cimg/node:22.21.1
+      - image: cimg/node:24.12.0
     steps:
       - checkout
       - restore_cache:
