@@ -16,6 +16,7 @@ import {PresenceRoute} from './Presence/PresenceRoute'
 import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProtectedRoute} from './ProtectedRoute'
 import {AgentActionsRoute} from './routes/AgentActionsRoute'
+import {AssetsRoute} from './routes/AssetsRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import ExperimentalResourceClientRoute from './routes/ExperimentalResourceClientRoute'
@@ -31,6 +32,10 @@ const documentCollectionRoutes = [
   {
     path: 'users',
     element: <UsersRoute />,
+  },
+  {
+    path: 'assets',
+    element: <AssetsRoute />,
   },
   {
     path: 'document-list',
