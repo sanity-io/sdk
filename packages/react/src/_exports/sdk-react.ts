@@ -4,6 +4,7 @@
 export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBoundary'
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
+export {SourcesProvider} from '../components/SourcesProvider'
 export {ComlinkTokenRefreshProvider} from '../context/ComlinkTokenRefresh'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
 export {
@@ -35,6 +36,7 @@ export {
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
+export {useSource} from '../hooks/context/useSource'
 export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
 export {useDispatchIntent} from '../hooks/dashboard/useDispatchIntent'
 export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'

@@ -9,10 +9,8 @@ import {isInIframe, isLocalUrl} from './utils'
  * @category Types
  */
 export interface SanityAppProps {
-  /* One or more SanityConfig objects providing a project ID and dataset name */
-  config: SanityConfig | SanityConfig[]
-  /** @deprecated use the `config` prop instead. */
-  sanityConfigs?: SanityConfig[]
+  /* One SanityConfig objects providing settings */
+  config?: SanityConfig
   children: React.ReactNode
   /* Fallback content to show when child components are suspending. Same as the `fallback` prop for React Suspense. */
   fallback: React.ReactNode
@@ -81,14 +79,13 @@ const REDIRECT_URL = 'https://sanity.io/welcome'
 export function SanityApp({
   children,
   fallback,
-  config = [],
+  config = {},
   ...props
 }: SanityAppProps): ReactElement {
   useEffect(() => {
     let timeout: NodeJS.Timeout | undefined
-    const primaryConfig = Array.isArray(config) ? config[0] : config
 
-    if (!isInIframe() && !isLocalUrl(window) && !primaryConfig?.studioMode?.enabled) {
+    if (!isInIframe() && !isLocalUrl(window) && !config?.studioMode?.enabled) {
       // If the app is not running in an iframe and is not a local url, redirect to core.
       timeout = setTimeout(() => {
         // eslint-disable-next-line no-console
