@@ -9,6 +9,10 @@ vi.mock('../../hooks/auth/useLogOut', () => ({
   useLogOut: vi.fn(() => async () => {}),
 }))
 
+vi.mock('../../hooks/comlink/useWindowConnection', () => ({
+  useWindowConnection: vi.fn(() => ({fetch: vi.fn()})),
+}))
+
 describe('LoginError', () => {
   it('shows authentication error and retry button', async () => {
     const mockReset = vi.fn()
@@ -21,6 +25,7 @@ describe('LoginError', () => {
     )
 
     expect(screen.getByText('Authentication Error')).toBeInTheDocument()
+
     const retryButton = screen.getByRole('button', {name: 'Retry'})
     fireEvent.click(retryButton)
 
