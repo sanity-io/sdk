@@ -18,7 +18,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/sanity-io/sdk.git"
+    "url": "git+https://github.com/sanity-io/sdk.git",
+    "directory": "packages/react"
   },
   "license": "MIT",
   "author": "Sanity <developers@sanity.io>",
