@@ -58,15 +58,22 @@ const nullReplacer: object = {}
 const documentsSelector = createSelector(
   [
     ({state: {documentStates}}: SelectorContext<SyncTransactionState>) => documentStates,
-    (_context: SelectorContext<SyncTransactionState>, actions: DocumentAction | DocumentAction[]) =>
+    (_context: SelectorContext<SyncTransactionState>, {actions}: {actions: DocumentAction[]}) =>
       actions,
   ],
   (documentStates, actions) => {
+    // Collect all document IDs needed for permission checks.
+    // Important: liveEdit documents don't have drafts, so we only fetch the single document to avoid waiting for non-existent draft documents.
     const documentIds = new Set(
-      (Array.isArray(actions) ? actions : [actions])
-        .map((i) => i.documentId)
-        .filter((i) => typeof i === 'string')
-        .flatMap((documentId) => [getPublishedId(documentId), getDraftId(documentId)]),
+      actions
+        .map((action) => {
+          if (typeof action.documentId !== 'string') return []
+          // For liveEdit documents, only fetch the single document
+          if (action.liveEdit) return [action.documentId]
+          // For standard documents, fetch both draft and published
+          return [getPublishedId(action.documentId), getDraftId(action.documentId)]
+        })
+        .flat(),
     )
 
     const documents: DocumentSet = {}
@@ -99,7 +106,7 @@ const documentsSelector = createSelector(
 const memoizedActionsSelector = createSelector(
   [
     documentsSelector,
-    (_state: SelectorContext<SyncTransactionState>, actions: DocumentAction | DocumentAction[]) =>
+    (_state: SelectorContext<SyncTransactionState>, {actions}: {actions: DocumentAction[]}) =>
       actions,
   ],
   (documents, actions) => {
@@ -203,7 +210,10 @@ const _calculatePermissions = createSelector(
       // Check edit actions with no patches
       if (action.type === 'document.edit' && !action.patches?.length) {
         const docId = action.documentId
-        const doc = documents[getDraftId(docId)] ?? documents[getPublishedId(docId)]
+        // For liveEdit documents, only check the single document
+        const doc = action.liveEdit
+          ? documents[docId]
+          : (documents[getDraftId(docId)] ?? documents[getPublishedId(docId)])
         if (!doc) {
           reasons.push({
             type: 'precondition',

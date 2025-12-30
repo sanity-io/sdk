@@ -97,7 +97,7 @@ describe('usePermissions', () => {
     })
 
     // ResourceProvider handles the instance configuration
-    expect(getPermissionsState).toHaveBeenCalledWith(expect.any(Object), mockAction)
+    expect(getPermissionsState).toHaveBeenCalledWith(expect.any(Object), {actions: [mockAction]})
     expect(result.current).toEqual(mockPermissionAllowed)
   })
 
@@ -140,7 +140,7 @@ describe('usePermissions', () => {
       ),
     })
 
-    expect(getPermissionsState).toHaveBeenCalledWith(expect.any(Object), actions)
+    expect(getPermissionsState).toHaveBeenCalledWith(expect.any(Object), {actions})
   })
 
   it('should throw an error if actions have mismatched project IDs', () => {
@@ -226,7 +226,7 @@ describe('usePermissions', () => {
 
     // Now it should render properly
     await waitFor(() => {
-      expect(getPermissionsState).toHaveBeenCalledWith(expect.any(Object), mockAction)
+      expect(getPermissionsState).toHaveBeenCalledWith(expect.any(Object), {actions: [mockAction]})
     })
   })
 

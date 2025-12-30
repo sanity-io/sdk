@@ -57,15 +57,16 @@ export interface StoreInstance<TState> {
  * instance.dispose()
  * ```
  */
-export function createStoreInstance<TState>(
+export function createStoreInstance<TState, TKey extends {name: string}>(
   instance: SanityInstance,
-  {name, getInitialState, initialize}: StoreDefinition<TState>,
+  key: TKey,
+  {name, getInitialState, initialize}: StoreDefinition<TState, TKey>,
 ): StoreInstance<TState> {
-  const state = createStoreState(getInitialState(instance), {
+  const state = createStoreState(getInitialState(instance, key), {
     enabled: !!getEnv('DEV'),
-    name: `${name}-${instance.config.projectId}.${instance.config.dataset}`,
+    name: `${name}-${key.name}`,
   })
-  const dispose = initialize?.({state, instance})
+  const dispose = initialize?.({state, instance, key})
   const disposed = {current: false}
 
   return {

@@ -28,7 +28,11 @@ import {
 
 import {getClientState} from '../client/clientStore'
 import {type DocumentHandle} from '../config/sanityConfig'
-import {bindActionByDataset, type StoreAction} from '../store/createActionBinder'
+import {
+  bindActionByDataset,
+  type BoundDatasetKey,
+  type StoreAction,
+} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {createStateSourceAction, type StateSource} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
@@ -103,7 +107,7 @@ export interface DocumentState {
   unverifiedRevisions?: {[TTransactionId in string]?: UnverifiedDocumentRevision}
 }
 
-export const documentStore = defineStore<DocumentStoreState>({
+export const documentStore = defineStore<DocumentStoreState, BoundDatasetKey>({
   name: 'Document',
   getInitialState: (instance) => ({
     documentStates: {},
@@ -183,8 +187,21 @@ const _getDocumentState = bindActionByDataset(
   documentStore,
   createStateSourceAction({
     selector: ({state: {error, documentStates}}, options: DocumentOptions<string | undefined>) => {
-      const {documentId, path} = options
+      const {documentId, path, liveEdit} = options
       if (error) throw error
+
+      if (liveEdit) {
+        // For liveEdit documents, only look at the single document
+        const document = documentStates[documentId]?.local
+        if (document === undefined) return undefined
+        if (!path) return document
+        const result = jsonMatch(document, path).next()
+        if (result.done) return undefined
+        const {value} = result.value
+        return value
+      }
+
+      // Standard draft/published logic
       const draftId = getDraftId(documentId)
       const publishedId = getPublishedId(documentId)
       const draft = documentStates[draftId]?.local
@@ -200,7 +217,7 @@ const _getDocumentState = bindActionByDataset(
       return value
     },
     onSubscribe: (context, options: DocumentOptions<string | undefined>) =>
-      manageSubscriberIds(context, options.documentId),
+      manageSubscriberIds(context, options.documentId, {expandDraftPublished: !options.liveEdit}),
   }),
 )
 
@@ -246,6 +263,15 @@ export const getDocumentSyncStatus = bindActionByDataset(
     ) => {
       const documentId = typeof doc === 'string' ? doc : doc.documentId
       if (error) throw error
+
+      if (doc.liveEdit) {
+        // For liveEdit documents, only check the single document
+        const document = documents[documentId]
+        if (document === undefined) return undefined
+        return !queued.length && !applied.length && !outgoing
+      }
+
+      // Standard draft/published logic
       const draftId = getDraftId(documentId)
       const publishedId = getPublishedId(documentId)
 
@@ -259,16 +285,20 @@ export const getDocumentSyncStatus = bindActionByDataset(
   }),
 )
 
+type PermissionsStateOptions = {
+  actions: DocumentAction[]
+}
+
 /** @beta */
 export const getPermissionsState = bindActionByDataset(
   documentStore,
   createStateSourceAction({
     selector: calculatePermissions,
-    onSubscribe: (context, actions) =>
+    onSubscribe: (context, {actions}: PermissionsStateOptions) =>
       manageSubscriberIds(context, getDocumentIdsFromActions(actions)),
   }) as StoreAction<
     DocumentStoreState,
-    [DocumentAction | DocumentAction[]],
+    [PermissionsStateOptions],
     StateSource<ReturnType<typeof calculatePermissions>>
   >,
 )
@@ -276,9 +306,9 @@ export const getPermissionsState = bindActionByDataset(
 /** @beta */
 export const resolvePermissions = bindActionByDataset(
   documentStore,
-  ({instance}, actions: DocumentAction | DocumentAction[]) => {
+  ({instance}, options: PermissionsStateOptions) => {
     return firstValueFrom(
-      getPermissionsState(instance, actions).observable.pipe(filter((i) => i !== undefined)),
+      getPermissionsState(instance, options).observable.pipe(filter((i) => i !== undefined)),
     )
   },
 )
@@ -439,8 +469,8 @@ const subscribeToSubscriptionsAndListenToDocuments = (
 const subscribeToClientAndFetchDatasetAcl = ({
   instance,
   state,
-}: StoreContext<DocumentStoreState>) => {
-  const {projectId, dataset} = instance.config
+  key: {projectId, dataset},
+}: StoreContext<DocumentStoreState, BoundDatasetKey>) => {
   return getClientState(instance, {apiVersion: API_VERSION})
     .observable.pipe(
       switchMap((client) =>

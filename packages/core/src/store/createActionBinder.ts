@@ -1,14 +1,20 @@
-import {type DocumentSource, type SanityConfig, SOURCE_ID} from '../config/sanityConfig'
+import {type DocumentSource, SOURCE_ID} from '../config/sanityConfig'
 import {type SanityInstance} from './createSanityInstance'
 import {createStoreInstance, type StoreInstance} from './createStoreInstance'
 import {type StoreState} from './createStoreState'
 import {type StoreContext, type StoreDefinition} from './defineStore'
 
+export type BoundDatasetKey = {
+  name: string
+  projectId: string
+  dataset: string
+}
+
 /**
  * Defines a store action that operates on a specific state type
  */
-export type StoreAction<TState, TParams extends unknown[], TReturn> = (
-  context: StoreContext<TState>,
+export type StoreAction<TState, TParams extends unknown[], TReturn, TKey = unknown> = (
+  context: StoreContext<TState, TKey>,
   ...params: TParams
 ) => TReturn
 
@@ -43,9 +49,10 @@ export type BoundStoreAction<_TState, TParams extends unknown[], TReturn> = (
  * )
  * ```
  */
-export function createActionBinder<TKeyParams extends unknown[]>(
-  keyFn: (config: SanityConfig, ...params: TKeyParams) => string,
-) {
+export function createActionBinder<
+  TKey extends {name: string},
+  TKeyParams extends unknown[] = unknown[],
+>(keyFn: (instance: SanityInstance, ...params: TKeyParams) => TKey) {
   const instanceRegistry = new Map<string, Set<string>>()
   const storeRegistry = new Map<string, StoreInstance<unknown>>()
 
@@ -57,12 +64,12 @@ export function createActionBinder<TKeyParams extends unknown[]>(
    * @returns A function that executes the action with a Sanity instance
    */
   return function bindAction<TState, TParams extends TKeyParams, TReturn>(
-    storeDefinition: StoreDefinition<TState>,
-    action: StoreAction<TState, TParams, TReturn>,
+    storeDefinition: StoreDefinition<TState, TKey>,
+    action: StoreAction<TState, TParams, TReturn, TKey>,
   ): BoundStoreAction<TState, TParams, TReturn> {
     return function boundAction(instance: SanityInstance, ...params: TParams) {
-      const keySuffix = keyFn(instance.config, ...params)
-      const compositeKey = storeDefinition.name + (keySuffix ? `:${keySuffix}` : '')
+      const key = keyFn(instance, ...params)
+      const compositeKey = storeDefinition.name + (key.name ? `:${key.name}` : '')
 
       // Get or create instance set for this composite key
       let instances = instanceRegistry.get(compositeKey)
@@ -89,12 +96,12 @@ export function createActionBinder<TKeyParams extends unknown[]>(
       // Get or create store instance
       let storeInstance = storeRegistry.get(compositeKey)
       if (!storeInstance) {
-        storeInstance = createStoreInstance(instance, storeDefinition)
+        storeInstance = createStoreInstance(instance, key, storeDefinition)
         storeRegistry.set(compositeKey, storeInstance)
       }
 
       // Execute action with store context
-      return action({instance, state: storeInstance.state as StoreState<TState>}, ...params)
+      return action({instance, state: storeInstance.state as StoreState<TState>, key}, ...params)
     }
   }
 }
@@ -130,31 +137,39 @@ export function createActionBinder<TKeyParams extends unknown[]>(
  * fetchDocument(sanityInstance, 'doc123')
  * ```
  */
-export const bindActionByDataset = createActionBinder<unknown[]>(({projectId, dataset}) => {
+export const bindActionByDataset = createActionBinder<
+  BoundDatasetKey,
+  [(object & {projectId?: string; dataset?: string})?, ...unknown[]]
+>((instance, options) => {
+  const projectId = options?.projectId ?? instance.config.projectId
+  const dataset = options?.dataset ?? instance.config.dataset
   if (!projectId || !dataset) {
     throw new Error('This API requires a project ID and dataset configured.')
   }
-  return `${projectId}.${dataset}`
+  return {name: `${projectId}.${dataset}`, projectId, dataset}
 })
 
 /**
  * Binds an action to a store that's scoped to a specific document source.
  **/
-export const bindActionBySource = createActionBinder<[{source?: DocumentSource}, ...unknown[]]>(
-  ({projectId, dataset}, {source}) => {
-    if (source) {
-      const id = source[SOURCE_ID]
-      if (!id) throw new Error('Invalid source (missing ID information)')
-      if (Array.isArray(id)) return id.join(':')
-      return `${id.projectId}.${id.dataset}`
-    }
+export const bindActionBySource = createActionBinder<
+  {name: string},
+  [{source?: DocumentSource}, ...unknown[]]
+>((instance, {source}) => {
+  if (source) {
+    const id = source[SOURCE_ID]
+    if (!id) throw new Error('Invalid source (missing ID information)')
+    if (Array.isArray(id)) return {name: id.join(':')}
+    return {name: `${id.projectId}.${id.dataset}`}
+  }
 
-    if (!projectId || !dataset) {
-      throw new Error('This API requires a project ID and dataset configured.')
-    }
-    return `${projectId}.${dataset}`
-  },
-)
+  const {projectId, dataset} = instance.config
+
+  if (!projectId || !dataset) {
+    throw new Error('This API requires a project ID and dataset configured.')
+  }
+  return {name: `${projectId}.${dataset}`}
+})
 
 /**
  * Binds an action to a global store that's shared across all Sanity instances
@@ -194,4 +209,4 @@ export const bindActionBySource = createActionBinder<[{source?: DocumentSource},
  * getCurrentUser(sanityInstance)
  * ```
  */
-export const bindActionGlobally = createActionBinder<unknown[]>(() => 'global')
+export const bindActionGlobally = createActionBinder((..._rest) => ({name: 'global'}))

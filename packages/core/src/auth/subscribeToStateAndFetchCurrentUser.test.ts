@@ -20,8 +20,8 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     const clientFactory = vi.fn().mockReturnValue(mockClient)
     const instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {clientFactory}})
 
-    const state = createStoreState(authStore.getInitialState(instance))
-    const subscription = subscribeToStateAndFetchCurrentUser({state, instance})
+    const state = createStoreState(authStore.getInitialState(instance, null))
+    const subscription = subscribeToStateAndFetchCurrentUser({state, instance, key: null})
 
     expect(state.get()).toMatchObject({authState: {type: AuthStateType.LOGGED_OUT}})
 
@@ -52,8 +52,8 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     const clientFactory = vi.fn().mockReturnValue(mockClient)
     const instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {clientFactory}})
 
-    const state = createStoreState(authStore.getInitialState(instance))
-    const subscription = subscribeToStateAndFetchCurrentUser({state, instance})
+    const state = createStoreState(authStore.getInitialState(instance, null))
+    const subscription = subscribeToStateAndFetchCurrentUser({state, instance, key: null})
 
     expect(state.get()).toMatchObject({authState: {type: AuthStateType.LOGGED_OUT}})
 
@@ -88,8 +88,8 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     const clientFactory = vi.fn().mockReturnValue(mockClient)
     const instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {clientFactory}})
 
-    const state = createStoreState(authStore.getInitialState(instance))
-    const subscription = subscribeToStateAndFetchCurrentUser({state, instance})
+    const state = createStoreState(authStore.getInitialState(instance, null))
+    const subscription = subscribeToStateAndFetchCurrentUser({state, instance, key: null})
 
     expect(state.get()).toMatchObject({authState: {type: AuthStateType.LOGGED_OUT}})
 
