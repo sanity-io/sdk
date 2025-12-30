@@ -46,8 +46,8 @@ jobs:
       - name: Publish preview packages
         run: |
           pnpm dlx pkg-pr-new publish \
-            './packages/core' \
-            './packages/react' \
+            'packages/core' \
+            'packages/react' \
             --comment=update \
             --compact
         env:
