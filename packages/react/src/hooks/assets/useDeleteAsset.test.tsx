@@ -25,11 +25,11 @@ describe('useDeleteAsset', () => {
       ),
     })
 
-    await result.current('image-abc-1x1-png')
+    await result.current({documentId: 'image-abc-1x1-png', documentType: 'sanity.imageAsset'})
 
     expect(deleteAsset).toHaveBeenCalledWith(
       expect.objectContaining({config: expect.objectContaining({projectId: 'p'})}),
-      'image-abc-1x1-png',
+      {documentId: 'image-abc-1x1-png', documentType: 'sanity.imageAsset'},
     )
   })
 
@@ -44,7 +44,9 @@ describe('useDeleteAsset', () => {
       ),
     })
 
-    await expect(result.current('file-1')).rejects.toThrow('nope')
+    await expect(
+      result.current({documentId: 'file-1', documentType: 'sanity.fileAsset'}),
+    ).rejects.toThrow('nope')
   })
 
   it('returns new function when instance changes', () => {
@@ -70,7 +72,7 @@ describe('useDeleteAsset', () => {
     expect(result2.current).not.toBe(first)
   })
 
-  it('calls deleteAsset when given an AssetHandle', async () => {
+  it('calls deleteAsset when given a DocumentHandle with custom dataset', async () => {
     vi.mocked(deleteAsset).mockResolvedValue(undefined)
 
     const {result} = renderHook(() => useDeleteAsset(), {
@@ -81,11 +83,21 @@ describe('useDeleteAsset', () => {
       ),
     })
 
-    await result.current({assetId: 'image-abc', projectId: 'p2', dataset: 'd2'})
+    await result.current({
+      documentId: 'image-abc',
+      documentType: 'sanity.imageAsset',
+      projectId: 'p2',
+      dataset: 'd2',
+    })
 
     expect(deleteAsset).toHaveBeenCalledWith(
       expect.objectContaining({config: expect.objectContaining({projectId: 'p'})}),
-      {assetId: 'image-abc', projectId: 'p2', dataset: 'd2'},
+      {
+        documentId: 'image-abc',
+        documentType: 'sanity.imageAsset',
+        projectId: 'p2',
+        dataset: 'd2',
+      },
     )
   })
 })
