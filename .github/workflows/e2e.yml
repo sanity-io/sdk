@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🧰 Setup pnpm
         uses: pnpm/action-setup@v4
@@ -44,7 +44,7 @@ jobs:
 
       - name: 💾 Cache Playwright browsers
         id: cache-playwright-browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-${{ steps.pw-version.outputs.version }}-playwright-browsers
@@ -77,7 +77,7 @@ jobs:
 
     steps:
       - name: 📥 Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🧰 Setup pnpm
         uses: pnpm/action-setup@v4
@@ -97,7 +97,7 @@ jobs:
 
       - name: 💾 Restore cached Playwright browsers
         id: cache-playwright-browsers
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-${{ steps.pw-version.outputs.version }}-playwright-browsers
