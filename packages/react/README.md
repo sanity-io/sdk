@@ -27,7 +27,7 @@ Opens at `https://www.sanity.io/welcome?dev=http%3A%2F%2Flocalhost%3A3333`, prox
 - `src/App.tsx` — Root with `<SanityApp>` provider and project configuration(s)
 - `src/ExampleComponent.tsx` — Your starting point
 
-### 2. Configuration
+### 2. Project configuration
 
 ```tsx
 import {SanityApp, type SanityConfig} from '@sanity/sdk-react'
