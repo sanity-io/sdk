@@ -23,7 +23,7 @@ Opens at `https://www.sanity.io/welcome?dev=http%3A%2F%2Flocalhost%3A3333`, prox
 
 **Key files:**
 
-- `sanity.cli.ts` — CLI config, app entry point
+- `sanity.cli.ts` — configuration options used by the CLI — application metadata, deployment config, etc
 - `src/App.tsx` — Root with `<SanityApp>` provider
 - `src/ExampleComponent.tsx` — Your starting point
 
