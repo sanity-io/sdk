@@ -65,7 +65,7 @@ type DocumentHandle = {
 }
 ```
 
-**Pattern:** Fetch handles first → pass to child components → fetch content there.
+**Best practice:** Fetch document handles first → pass them to child components → fetch individual document content from child components.
 
 ---
 
@@ -74,32 +74,32 @@ type DocumentHandle = {
 #### Data Retrieval
 
 ```tsx
-// Collection of handles (infinite scroll)
+// Get a collection of document handles (structured for infinite scrolling)
 const {data, hasMore, loadMore, isPending, count} = useDocuments({
   documentType: 'article',
   batchSize: 20,
   orderings: [{field: '_updatedAt', direction: 'desc'}],
-  filter: 'status == "published"', // GROQ filter
-  params: {status: 'published'}, // filter params
+  filter: 'status == $status', // GROQ filter
+  params: {status: 'published'}, // Parameters used for the GROQ filter
 })
 
-// Paginated (discrete pages)
+// Get a collection of document handles (structured for paginated lists)
 const {data, currentPage, totalPages, nextPage, previousPage} = usePaginatedDocuments({
   documentType: 'article',
   pageSize: 10,
 })
 
-// Single document (live, optimistic)
+// Get content from a single document (live content, optimistic updates when used with useEditDocument)
 const {data: doc} = useDocument(handle)
 const {data: title} = useDocument({...handle, path: 'title'})
 
-// Projection (live, no optimistic updates)
+// Get a projection for an individual document (live content, no optimistic updates)
 const {data} = useDocumentProjection({
   ...handle,
   projection: `{ title, "author": author->name, "imageUrl": image.asset->url }`,
 })
 
-// Raw GROQ
+// Use GROQ directly
 const {data} = useQuery({
   query: `*[_type == "article" && featured == true][0...5]{ title, slug }`,
 })
@@ -108,11 +108,11 @@ const {data} = useQuery({
 #### Document Manipulation
 
 ```tsx
-// Edit field (optimistic, creates draft automatically)
+// Edit field (emits optimistic updates to useEditDocument listeners, creates a draft automatically)
 const editTitle = useEditDocument({...handle, path: 'title'})
 editTitle('New Title') // fires on every keystroke, debounced internally
 
-// Edit nested path
+// Edit a nested path in a document
 const editAuthorName = useEditDocument({...handle, path: 'author.name'})
 
 // Document actions
@@ -133,7 +133,7 @@ await apply(publishDocument(handle))
 // Batch actions
 await apply([publishDocument(handle1), publishDocument(handle2), deleteDocument(handle3)])
 
-// Create new document
+// Create new document with an optional initial content
 await apply(
   createDocument({
     documentType: 'article',
@@ -187,7 +187,7 @@ To create a document, you must:
 
 1. Generate your own document ID (using `crypto.randomUUID()`)
 2. Create a document handle with `createDocumentHandle`
-3. Apply the `createDocument` action with initial data
+3. Apply the `createDocument` action using the document handle, along with optional initial content
 
 ```tsx
 import {useApplyDocumentActions, createDocumentHandle, createDocument} from '@sanity/sdk-react'
@@ -195,7 +195,7 @@ import {useApplyDocumentActions, createDocumentHandle, createDocument} from '@sa
 function CreateArticleButton() {
   const apply = useApplyDocumentActions()
 
-  const handleCreate = () => {
+  const handleCreateArticle = () => {
     const newId = crypto.randomUUID()
     const handle = createDocumentHandle({
       documentId: newId,
@@ -214,7 +214,7 @@ function CreateArticleButton() {
     navigate(`/articles/${newId}`)
   }
 
-  return <button onClick={handleCreate}>Create Article</button>
+  return <button onClick={handleCreateArticle}>Create Article</button>
 }
 ```
 
@@ -279,7 +279,7 @@ apply([publishDocument(handle1), publishDocument(handle2), publishDocument(handl
 
 ### Suspense Pattern
 
-All data hooks use React Suspense. Wrap components that fetch:
+All hooks that get or write data use React Suspense. Wrap all your components that fetch data with a Suspense boundary to avoid unnecessary re-renders:
 
 ```tsx
 function App() {
@@ -296,6 +296,7 @@ function ArticleList() {
   return (
     <ul>
       {articles.map((handle) => (
+        {/* Wrap each list item in its own Suspense boundary to prevent full list re-renders when one item updates */}
         <Suspense key={handle.documentId} fallback={<li>Loading...</li>}>
           <ArticleItem handle={handle} />
         </Suspense>
@@ -316,7 +317,7 @@ Sanity has two document states:
 - **Published:** `_id: "abc123"` — live, public
 - **Draft:** `_id: "drafts.abc123"` — working copy
 
-The SDK handles this transparently:
+The SDK handles updating the document state automatically:
 
 - `useDocument()` returns draft if exists, else published
 - `useEditDocument()` creates draft on first edit (automatic)
@@ -331,12 +332,11 @@ The SDK handles this transparently:
 
 - Document changes from other users appear instantly
 - No polling, uses Sanity's listener API
-- Optimistic updates for local edits (appear before server confirms)
+- Optimistic updates for local edits appear before the server confirms the updates
 
 #### Re-render Triggers
 
-- Any mutation to a subscribed document (even fields you don't display)
-- Use `useDocumentProjection()` for read-only displays to minimize re-renders
+Any mutation to a subscribed document (even fields you don't display) will trigger a re-render. Use `useDocumentProjection()` for read-only displays to minimize re-renders.
 
 ---
 
@@ -358,9 +358,16 @@ const handle: DocumentHandle = {
 ```tsx
 // App.tsx
 import {ResourceProvider} from '@sanity/sdk-react'
-;<ResourceProvider projectId="project-a" dataset="production">
-  <ProductCard productId="xyz" />
-</ResourceProvider>
+
+import {ProductCard} from './ProductCard'
+
+export function WrappedProductCard() {
+  return (
+    <ResourceProvider projectId="project-a" dataset="production">
+      <ProductCard productId="xyz" />
+    </ResourceProvider>
+  )
+}
 
 // ProductCard.tsx
 import {useProjectId, useDataset} from '@sanity/sdk-react'
@@ -396,7 +403,7 @@ const {data} = useDocument<Article>(handle)
 npx sanity deploy
 ```
 
-Add the resulting app ID to a `deploy` property in your `sanity.config.ts` file: `{appId: "appbc1234", ... }`.
+Add the resulting app ID to the `deployment` section of your `sanity.config.ts` file: `{deployment: { appId: "appbc1234", ... } }`.
 
 App appears in Sanity Dashboard alongside Studios. Requires `sanity.sdk.applications.deploy` permission.
 
@@ -510,9 +517,9 @@ function MyEditor({documentId}: {documentId: string}) {
 ```tsx
 function EditableTitle({handle}: {handle: DocumentHandle}) {
   const {data: title} = useDocument({...handle, path: 'title'})
-  const edit = useEditDocument({...handle, path: 'title'})
+  const editTitle = useEditDocument({...handle, path: 'title'})
 
-  return <input value={title ?? ''} onChange={(e) => edit(e.target.value)} />
+  return <input value={title ?? ''} onChange={(e) => editTitle(e.target.value)} />
 }
 ```
 
