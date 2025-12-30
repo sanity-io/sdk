@@ -46,7 +46,7 @@ export function App() {
 }
 ```
 
-**Auth is automatic** — Dashboard injects token via iframe. No login flow needed.
+**Auth is automatic** — Dashboard injects an auth token via iframe. No custom login flow is needed for your application.
 
 ---
 
