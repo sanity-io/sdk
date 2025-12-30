@@ -306,8 +306,6 @@ function ArticleList() {
 }
 ```
 
-**Key insight:** Wrap each list item in its own Suspense boundary. Prevents full-list re-renders when one item updates.
-
 ---
 
 ### Draft/Published Model
