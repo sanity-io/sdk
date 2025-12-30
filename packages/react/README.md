@@ -54,7 +54,7 @@ export function App() {
 
 ### Document Handles
 
-As a core concept, everything revolves around handles — minimal pointers to documents:
+Document handles are a core concept for apps built with the App SDK. Document handles are minimal pointers to documents. They consist of the following properties:
 
 ```tsx
 type DocumentHandle = {
