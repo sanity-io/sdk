@@ -118,6 +118,7 @@ const editAuthorName = useEditDocument({...handle, path: 'author.name'})
 // Document actions
 import {
   useApplyDocumentActions,
+  createDocumentHandle,
   publishDocument,
   unpublishDocument,
   deleteDocument,
@@ -134,12 +135,11 @@ await apply(publishDocument(handle))
 await apply([publishDocument(handle1), publishDocument(handle2), deleteDocument(handle3)])
 
 // Create new document with an optional initial content
-await apply(
-  createDocument({
-    documentType: 'article',
-    initialValue: {title: 'Untitled', status: 'draft'},
-  }),
-)
+const newHandle = createDocumentHandle({
+  documentId: crypto.randomUUID(),
+  documentType: 'article',
+})
+await apply(createDocument(newHandle, {title: 'Untitled', status: 'draft'}))
 ```
 
 #### Events & Permissions
