@@ -29,6 +29,16 @@ const defaultGrants = {
 const transactionId = 'txn-123'
 const timestamp = '2025-02-02T00:00:00.000Z'
 
+// Helper: Create a sample liveEdit document
+const createLiveEditDoc = (id: string, title: string, rev: string = 'initial'): SanityDocument => ({
+  _id: id,
+  _type: 'liveArticle',
+  _createdAt: '2025-01-01T00:00:00.000Z',
+  _updatedAt: '2025-01-01T00:00:00.000Z',
+  _rev: rev,
+  title,
+})
+
 describe('processActions', () => {
   describe('document.create', () => {
     it('should create a new draft document from a published document', () => {
@@ -843,6 +853,244 @@ describe('processActions', () => {
       expect(() =>
         processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
       ).toThrow(/Unknown action type: "document.unrecognizedAction"/)
+    })
+  })
+
+  describe('liveEdit documents', () => {
+    describe('document.create', () => {
+      it('should create a liveEdit document directly without draft logic', () => {
+        const base: DocumentSet = {}
+        const working: DocumentSet = {}
+        const actions: DocumentAction[] = [
+          {
+            documentId: 'live1',
+            type: 'document.create',
+            documentType: 'liveArticle',
+            liveEdit: true,
+          },
+        ]
+
+        const result = processActions({
+          actions,
+          transactionId,
+          base,
+          working,
+          timestamp,
+          grants: defaultGrants,
+        })
+
+        const doc = result.working['live1']
+        expect(doc).toBeDefined()
+        expect(doc?._id).toBe('live1')
+        expect(doc?._type).toBe('liveArticle')
+        expect(doc?._rev).toBe(transactionId)
+
+        // Should use document.create action, not version.create
+        expect(result.outgoingActions).toHaveLength(1)
+        const action = result.outgoingActions[0]
+        expect(action.actionType).toBe('sanity.action.document.create')
+        if ('attributes' in action && 'publishedId' in action) {
+          expect(action.publishedId).toBe('live1')
+          expect(action.attributes._id).toBe('live1')
+          expect(action.attributes._type).toBe('liveArticle')
+        } else {
+          throw new Error('Expected action to have attributes and publishedId')
+        }
+      })
+
+      it('should throw an error if liveEdit document already exists', () => {
+        const existingDoc = createLiveEditDoc('live1', 'Existing')
+        const base: DocumentSet = {live1: existingDoc}
+        const working: DocumentSet = {live1: existingDoc}
+        const actions: DocumentAction[] = [
+          {
+            documentId: 'live1',
+            type: 'document.create',
+            documentType: 'liveArticle',
+            liveEdit: true,
+          },
+        ]
+
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow('This document already exists')
+      })
+    })
+
+    describe('document.edit', () => {
+      it('should edit a liveEdit document directly', () => {
+        const doc = createLiveEditDoc('live1', 'Original Title')
+        const base: DocumentSet = {live1: doc}
+        const working: DocumentSet = {live1: doc}
+        const actions: DocumentAction[] = [
+          {
+            documentId: 'live1',
+            type: 'document.edit',
+            documentType: 'liveArticle',
+            liveEdit: true,
+            patches: [{set: {title: 'Updated Title'}}],
+          },
+        ]
+
+        const result = processActions({
+          actions,
+          transactionId,
+          base,
+          working,
+          timestamp,
+          grants: defaultGrants,
+        })
+
+        const editedDoc = result.working['live1']
+        expect(editedDoc).toBeDefined()
+        expect(editedDoc?.['title']).toBe('Updated Title')
+        expect(editedDoc?._id).toBe('live1')
+
+        // Should use document.edit action with draftId prefixed (for server validation) but publishedId as the actual doc
+        expect(result.outgoingActions[0]).toMatchObject({
+          actionType: 'sanity.action.document.edit',
+          draftId: 'drafts.live1',
+          publishedId: 'live1',
+        })
+      })
+
+      it('should throw an error if liveEdit document does not exist', () => {
+        const base: DocumentSet = {}
+        const working: DocumentSet = {}
+        const actions: DocumentAction[] = [
+          {
+            documentId: 'live1',
+            type: 'document.edit',
+            documentType: 'liveArticle',
+            liveEdit: true,
+            patches: [{set: {title: 'New Title'}}],
+          },
+        ]
+
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow('Cannot edit document because it does not exist')
+      })
+    })
+
+    describe('document.delete', () => {
+      it('should delete a liveEdit document directly', () => {
+        const doc = createLiveEditDoc('live1', 'To Delete')
+        const base: DocumentSet = {live1: doc}
+        const working: DocumentSet = {live1: doc}
+        const actions: DocumentAction[] = [
+          {
+            documentId: 'live1',
+            type: 'document.delete',
+            documentType: 'liveArticle',
+            liveEdit: true,
+          },
+        ]
+
+        const result = processActions({
+          actions,
+          transactionId,
+          base,
+          working,
+          timestamp,
+          grants: defaultGrants,
+        })
+
+        expect(result.working['live1']).toBeNull()
+
+        expect(result.outgoingActions).toEqual([
+          {
+            actionType: 'sanity.action.document.delete',
+            publishedId: 'live1',
+          },
+        ])
+      })
+
+      it('should throw an error if liveEdit document does not exist', () => {
+        const base: DocumentSet = {}
+        const working: DocumentSet = {}
+        const actions: DocumentAction[] = [
+          {
+            documentId: 'live1',
+            type: 'document.delete',
+            documentType: 'liveArticle',
+            liveEdit: true,
+          },
+        ]
+
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow('The document you are trying to delete does not exist')
+      })
+    })
+
+    describe('document.publish', () => {
+      it('should throw an error for liveEdit documents', () => {
+        const doc = createLiveEditDoc('live1', 'Title')
+        const base: DocumentSet = {live1: doc}
+        const working: DocumentSet = {live1: doc}
+        const actions: DocumentAction[] = [
+          {
+            documentId: 'live1',
+            type: 'document.publish',
+            documentType: 'liveArticle',
+            liveEdit: true,
+          },
+        ]
+
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow('Cannot publish liveEdit document')
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow('LiveEdit documents do not support drafts or publishing')
+      })
+    })
+
+    describe('document.unpublish', () => {
+      it('should throw an error for liveEdit documents', () => {
+        const doc = createLiveEditDoc('live1', 'Title')
+        const base: DocumentSet = {live1: doc}
+        const working: DocumentSet = {live1: doc}
+        const actions: DocumentAction[] = [
+          {
+            documentId: 'live1',
+            type: 'document.unpublish',
+            documentType: 'liveArticle',
+            liveEdit: true,
+          },
+        ]
+
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow('Cannot unpublish liveEdit document')
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow('LiveEdit documents do not support drafts or publishing')
+      })
+    })
+
+    describe('document.discard', () => {
+      it('should throw an error for liveEdit documents', () => {
+        const doc = createLiveEditDoc('live1', 'Title')
+        const base: DocumentSet = {live1: doc}
+        const working: DocumentSet = {live1: doc}
+        const actions: DocumentAction[] = [
+          {
+            documentId: 'live1',
+            type: 'document.discard',
+            documentType: 'liveArticle',
+            liveEdit: true,
+          },
+        ]
+
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow('Cannot discard changes for liveEdit document')
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow('LiveEdit documents do not support drafts')
+      })
     })
   })
 })

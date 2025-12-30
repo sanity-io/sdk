@@ -15,6 +15,7 @@ import {
 } from 'rxjs'
 
 import {getQueryState, resolveQuery} from '../query/queryStore'
+import {type BoundDatasetKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
 import {createPreviewQuery, processPreviewQuery} from './previewQuery'
 import {type PreviewQueryResult, type PreviewStoreState} from './previewStore'
@@ -28,7 +29,8 @@ const isSetEqual = <T>(a: Set<T>, b: Set<T>) =>
 export const subscribeToStateAndFetchBatches = ({
   state,
   instance,
-}: StoreContext<PreviewStoreState>): Subscription => {
+  key: {projectId, dataset},
+}: StoreContext<PreviewStoreState, BoundDatasetKey>): Subscription => {
   const newSubscriberIds$ = state.observable.pipe(
     map(({subscriptions}) => new Set(Object.keys(subscriptions))),
     distinctUntilChanged(isSetEqual),
@@ -64,6 +66,8 @@ export const subscribeToStateAndFetchBatches = ({
             params,
             tag: PREVIEW_TAG,
             perspective: PREVIEW_PERSPECTIVE,
+            projectId,
+            dataset,
           })
           const source$ = defer(() => {
             if (getCurrent() === undefined) {
@@ -74,6 +78,8 @@ export const subscribeToStateAndFetchBatches = ({
                   tag: PREVIEW_TAG,
                   perspective: PREVIEW_PERSPECTIVE,
                   signal: controller.signal,
+                  projectId,
+                  dataset,
                 }),
               ).pipe(switchMap(() => observable))
             }
@@ -91,8 +97,8 @@ export const subscribeToStateAndFetchBatches = ({
       }),
       map(({ids, data}) => ({
         values: processPreviewQuery({
-          projectId: instance.config.projectId!,
-          dataset: instance.config.dataset!,
+          projectId,
+          dataset,
           ids,
           results: data,
         }),

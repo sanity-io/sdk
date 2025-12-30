@@ -18,7 +18,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/sanity-io/sdk.git"
+    "url": "git+https://github.com/sanity-io/sdk.git",
+    "directory": "packages/core"
   },
   "license": "MIT",
   "author": "Sanity <developers@sanity.io>",
@@ -80,7 +81,7 @@
     "@repo/package.config": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/browserslist-config": "^1.0.5",
-    "@sanity/pkg-utils": "^7.9.6",
+    "@sanity/pkg-utils": "^8.1.29",
     "@sanity/prettier-config": "^1.0.6",
     "@types/lodash-es": "^4.17.12",
     "@vitest/coverage-v8": "3.2.4",
@@ -93,7 +94,7 @@
   },
   "packageManager": "pnpm@10.8.0",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.19"
   },
   "publishConfig": {
     "access": "public"

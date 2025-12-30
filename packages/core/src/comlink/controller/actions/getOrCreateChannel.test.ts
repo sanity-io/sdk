@@ -49,7 +49,7 @@ describe('getOrCreateChannel', () => {
   it('should create a new channel using the controller', () => {
     const createChannelSpy = vi.spyOn(mockController, 'createChannel')
 
-    const channel = getOrCreateChannel({state, instance}, channelConfig)
+    const channel = getOrCreateChannel({state, instance, key: null}, channelConfig)
 
     expect(createChannelSpy).toHaveBeenCalledWith(channelConfig)
     expect(channel.on).toBeDefined()
@@ -70,17 +70,17 @@ describe('getOrCreateChannel', () => {
       channels: new Map(),
     })
 
-    expect(() => getOrCreateChannel({state, instance}, channelConfig)).toThrow(
+    expect(() => getOrCreateChannel({state, instance, key: null}, channelConfig)).toThrow(
       'Controller must be initialized before using or creating channels',
     )
   })
 
   it('should retrieve channel directly from store once created', () => {
-    const createdChannel = getOrCreateChannel({state, instance}, channelConfig)
+    const createdChannel = getOrCreateChannel({state, instance, key: null}, channelConfig)
     vi.clearAllMocks() // Clear call counts
 
     // Retrieve channel again
-    const retrievedChannel = getOrCreateChannel({state, instance}, channelConfig)
+    const retrievedChannel = getOrCreateChannel({state, instance, key: null}, channelConfig)
     expect(retrievedChannel).toBeDefined()
     expect(retrievedChannel).toBe(createdChannel)
 
@@ -95,10 +95,10 @@ describe('getOrCreateChannel', () => {
   })
 
   it('should throw error when trying to create channel with different options', () => {
-    getOrCreateChannel({state, instance}, channelConfig)
+    getOrCreateChannel({state, instance, key: null}, channelConfig)
 
     expect(() =>
-      getOrCreateChannel({state, instance}, {...channelConfig, connectTo: 'window'}),
+      getOrCreateChannel({state, instance, key: null}, {...channelConfig, connectTo: 'window'}),
     ).toThrow('Channel "test" already exists with different options')
   })
 })

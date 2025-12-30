@@ -1,4 +1,4 @@
-name: Lint Check
+name: Type Check
 
 on:
   # Build on pushes to branches that have a PR (including drafts)
@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
+  type-check:
     runs-on: ubuntu-latest
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
@@ -26,5 +26,5 @@ jobs:
         with:
           node-version: 20
 
-      - name: Lint
-        run: pnpm lint
+      - name: Type Check
+        run: pnpm ts:check

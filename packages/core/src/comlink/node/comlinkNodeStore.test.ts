@@ -14,7 +14,7 @@ describe('nodeStore', () => {
   })
 
   it('should have correct initial state', () => {
-    const initialState = comlinkNodeStore.getInitialState(instance)
+    const initialState = comlinkNodeStore.getInitialState(instance, null)
 
     expect(initialState.nodes).toBeInstanceOf(Map)
     expect(initialState.nodes.size).toBe(0)
@@ -25,16 +25,17 @@ describe('nodeStore', () => {
       stop: vi.fn(),
     } as unknown as Node<WindowMessage, FrameMessage>
 
-    const initialState = comlinkNodeStore.getInitialState(instance)
+    const initialState = comlinkNodeStore.getInitialState(instance, null)
     initialState.nodes.set('test-node', {
       options: {name: 'test-node', connectTo: 'parent'},
       node: mockNode,
-      refCount: 1,
+      status: 'idle',
     })
 
     const cleanup = comlinkNodeStore.initialize?.({
       instance,
       state: createStoreState(initialState),
+      key: null,
     })
 
     cleanup?.()

@@ -11,6 +11,21 @@ Developers can use the SDK to harness enterprise-grade platform capabilities —
 
 The Sanity App SDK exposes these platform capabilities via a set of concise, composable React hooks. These programmable building blocks can be used to build out entire custom applications (backed by your choice of UI components or styling solution), while the Sanity CLI makes the creation and deployment of these applications fast and effortless.
 
+## Get Started
+
+```bash
+npx sanity@latest init --template app-quickstart
+cd your-app
+npm run dev
+```
+
+This creates a new Sanity App with the React SDK configured and ready to use. Your app will open at `https://www.sanity.io/welcome?dev=http%3A%2F%2Flocalhost%3A3333`, proxied through Sanity Dashboard for automatic authentication.
+
+## Which Package Should I Use?
+
+- **Building a React app?** → Use `@sanity/sdk-react` (most common use case)
+- **Building for another framework or need low-level control?** → Use `@sanity/sdk-core` and build your own integration
+
 ## Documentation
 
 - Familiarize yourself with the App SDK via a conceptual overview, a quickstart guide, and a step by step walkthrough on **[the Sanity Docs site](https://sanity.io/docs/app-sdk)**
@@ -19,7 +34,30 @@ The Sanity App SDK exposes these platform capabilities via a set of concise, com
 
 ## Packages
 
-- `@sanity/sdk-react`: React-specific functionality for building Sanity SDK apps
-  - https://www.npmjs.com/package/@sanity/sdk-react
-- `@sanity/sdk-core`: Core functionality powering the React SDK
-  - https://www.npmjs.com/package/@sanity/sdk-core
+### [@sanity/sdk-react](./packages/react)
+
+React hooks and components for building Sanity Apps. Includes real-time data subscriptions, optimistic updates, document editing, and multi-project support.
+
+- **NPM:** https://www.npmjs.com/package/@sanity/sdk-react
+- **Docs:** https://sanity.io/docs/app-sdk
+- **Reference:** https://reference.sanity.io/_sanity/sdk-react
+
+### [@sanity/sdk-core](./packages/core)
+
+Framework-agnostic TypeScript core powering the React SDK. Use this if you're building your own framework integration.
+
+- **NPM:** https://www.npmjs.com/package/@sanity/sdk-core
+
+## Repository Structure
+
+```
+/packages
+  /react        - React SDK implementation
+  /core         - Framework-agnostic core
+/apps
+  /kitchensink-react  - Internal testing & examples app
+```
+
+## License
+
+MIT © Sanity.io
