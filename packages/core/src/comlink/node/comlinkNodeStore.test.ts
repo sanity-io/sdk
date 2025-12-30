@@ -29,7 +29,7 @@ describe('nodeStore', () => {
     initialState.nodes.set('test-node', {
       options: {name: 'test-node', connectTo: 'parent'},
       node: mockNode,
-      refCount: 1,
+      status: 'idle',
     })
 
     const cleanup = comlinkNodeStore.initialize?.({

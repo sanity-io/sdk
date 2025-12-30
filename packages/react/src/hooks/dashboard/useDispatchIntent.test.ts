@@ -38,10 +38,7 @@ describe('useDispatchIntent', () => {
   })
 
   it('should throw error when neither action nor intentId is provided', () => {
-    const {result} = renderHook(() =>
-      // @ts-expect-error - Testing runtime error when neither is provided
-      useDispatchIntent({documentHandle: mockDocumentHandle}),
-    )
+    const {result} = renderHook(() => useDispatchIntent({documentHandle: mockDocumentHandle}))
 
     expect(() => result.current.dispatchIntent()).toThrow(
       'useDispatchIntent: Either `action` or `intentId` must be provided.',

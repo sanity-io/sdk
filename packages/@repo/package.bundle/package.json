@@ -7,7 +7,7 @@
   "types": "./src/package.bundle.ts",
   "scripts": {
     "lint": "eslint .",
-    "ts:check": "tsc --noEmit --skipLibCheck src/package.bundle.ts"
+    "ts:check": "tsc --noEmit --skipLibCheck"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",

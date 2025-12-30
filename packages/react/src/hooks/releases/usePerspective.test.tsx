@@ -52,6 +52,7 @@ describe('usePerspective', () => {
       _updatedAt: '2021-01-01T00:00:00Z',
       _rev: 'rev1',
       name: 'Test Release',
+      state: 'scheduled',
       metadata: {
         title: 'Test Release',
         releaseType: 'asap',
