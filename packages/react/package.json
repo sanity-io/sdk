@@ -80,7 +80,7 @@
     "@sanity/prettier-config": "^1.0.6",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
-    "@types/node": "^22.19.1",
+    "@types/node": "^24.10.4",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",
