@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.5.0](https://github.com/sanity-io/sdk/compare/sdk-v2.4.0...sdk-v2.5.0) (2025-12-31)
+
+
+### Features
+
+* add useAgentResourceContext hook ([#690](https://github.com/sanity-io/sdk/issues/690)) ([ffe4e88](https://github.com/sanity-io/sdk/commit/ffe4e88a92ba45d251cd5fc94211ab2b2ab52dc0))
+* implement liveEdit document handling ([#678](https://github.com/sanity-io/sdk/issues/678)) ([e3c8050](https://github.com/sanity-io/sdk/commit/e3c8050163fc060a045fd152eab4caa07b2b4f14))
+* make applyDocumentActions more similar to the rest ([#630](https://github.com/sanity-io/sdk/issues/630)) ([440ce84](https://github.com/sanity-io/sdk/commit/440ce84959712e30501ecc9d119d89436c5396ec))
+* support using the same instance for different datasets ([#632](https://github.com/sanity-io/sdk/issues/632)) ([1e22eed](https://github.com/sanity-io/sdk/commit/1e22eed070def852aa9c305379299f647bab03f1))
+
 ## [2.4.0](https://github.com/sanity-io/sdk/compare/sdk-v2.3.1...sdk-v2.4.0) (2025-12-15)
 
 
