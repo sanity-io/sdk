@@ -360,8 +360,8 @@ importers:
         specifier: ^1.0.5
         version: 1.0.5
       '@sanity/message-protocol':
-        specifier: ^0.12.0
-        version: 0.12.0
+        specifier: ^0.18.0
+        version: 0.18.0
       '@sanity/mutate':
         specifier: ^0.12.4
         version: 0.12.4(debug@4.4.3)
@@ -442,8 +442,8 @@ importers:
         specifier: ^7.12.0
         version: 7.12.0(debug@4.4.3)
       '@sanity/message-protocol':
-        specifier: ^0.12.0
-        version: 0.12.0
+        specifier: ^0.18.0
+        version: 0.18.0
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../core
@@ -2642,6 +2642,10 @@ packages:
     resolution: {integrity: sha512-UyBJG4oWNs+VGVo5Yr5aKir5bgMzF/dnaNYjqxP2+5+iXnvhVOcI6dAtEXDj7kMmn5/ysHNKbLDlW6aVeBm7xg==}
     engines: {node: '>=18'}
 
+  '@sanity/comlink@4.0.1':
+    resolution: {integrity: sha512-vdGOd6sxNjqTo2H3Q3L2/Gepy+cDBiQ1mr9ck7c/A9o4NnmBLoDliifsNHIwgNwBUz37oH4+EIz/lIjNy8hSew==}
+    engines: {node: '>=20.19 <22 || >=22.12'}
+
   '@sanity/diff-match-patch@3.2.0':
     resolution: {integrity: sha512-4hPADs0qUThFZkBK/crnfKKHg71qkRowfktBljH2UIxGHHTxIzt8g8fBiXItyCjxkuNy+zpYOdRMifQNv8+Yww==}
     engines: {node: '>=18.18'}
@@ -2707,8 +2711,8 @@ packages:
       '@sanity/color': ^2.0 || ^3.0 || ^3.0.0-beta
       react: ^18.3 || >=19.0.0-rc
 
-  '@sanity/message-protocol@0.12.0':
-    resolution: {integrity: sha512-RMRWQG5yVkCZnnBHW3qxVbZGUOeXPBzFPdD9+pynQCTVZI7zYBEzjnY8lcSYjty+0unDHqeoqMPfBXhqs0rg2g==}
+  '@sanity/message-protocol@0.18.0':
+    resolution: {integrity: sha512-yu4OPcggHqTb2qTqQgYdPlwj8+7ZIUHORMMiZfYNLt7P8hd/Wf90KBg13u9hrISU5L4rPVGzdkSJpaYu9wu6EQ==}
     engines: {node: '>=20.0.0'}
 
   '@sanity/message-protocol@0.9.0':
@@ -9946,6 +9950,12 @@ snapshots:
       uuid: 11.1.0
       xstate: 5.24.0
 
+  '@sanity/comlink@4.0.1':
+    dependencies:
+      rxjs: 7.8.2
+      uuid: 13.0.0
+      xstate: 5.24.0
+
   '@sanity/diff-match-patch@3.2.0': {}
 
   '@sanity/diff-patch@5.0.0':
@@ -10048,9 +10058,9 @@ snapshots:
       '@sanity/color': 3.0.6
       react: 18.3.1
 
-  '@sanity/message-protocol@0.12.0':
+  '@sanity/message-protocol@0.18.0':
     dependencies:
-      '@sanity/comlink': 2.0.5
+      '@sanity/comlink': 4.0.1
 
   '@sanity/message-protocol@0.9.0':
     dependencies:
@@ -12005,7 +12015,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.6.1))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.25.1(jiti@2.6.1)):
+  eslint-module-utils@2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.6.1))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.31.0)(eslint@9.25.1(jiti@2.6.1)))(eslint@9.25.1(jiti@2.6.1)):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
@@ -12027,7 +12037,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.25.1(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.6.1))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.25.1(jiti@2.6.1))
+      eslint-module-utils: 2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.6.1))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.31.0)(eslint@9.25.1(jiti@2.6.1)))(eslint@9.25.1(jiti@2.6.1))
       hasown: 2.0.2
       is-core-module: 2.15.1
       is-glob: 4.0.3
