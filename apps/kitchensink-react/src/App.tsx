@@ -1,4 +1,4 @@
-import {SanityApp, useDashboardNavigate} from '@sanity/sdk-react'
+import {SanityApp, SourcesProvider, useDashboardNavigate} from '@sanity/sdk-react'
 import {Spinner, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {type JSX, Suspense} from 'react'
@@ -17,20 +17,26 @@ function NavigationHandler() {
   return null
 }
 
+const sources = import.meta.env['VITE_IS_E2E'] ? e2eConfigs : devConfigs
+
 export default function App(): JSX.Element {
   return (
     <ThemeProvider theme={theme}>
-      <SanityApp
-        fallback={<Spinner />}
-        config={import.meta.env['VITE_IS_E2E'] ? e2eConfigs : devConfigs}
-      >
-        <BrowserRouter>
-          <Suspense>
-            <NavigationHandler />
-          </Suspense>
-          <AppRoutes />
-        </BrowserRouter>
-      </SanityApp>
+      <SourcesProvider sources={sources}>
+        <SanityApp
+          fallback={<Spinner />}
+          config={
+            import.meta.env['VITE_IS_E2E'] ? {auth: {apiHost: 'https://api.sanity.work'}} : {}
+          }
+        >
+          <BrowserRouter>
+            <Suspense>
+              <NavigationHandler />
+            </Suspense>
+            <AppRoutes />
+          </BrowserRouter>
+        </SanityApp>
+      </SourcesProvider>
     </ThemeProvider>
   )
 }

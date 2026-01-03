@@ -29,7 +29,8 @@ export interface PerspectiveHandle {
  * @public
  */
 export interface DatasetHandle<TDataset extends string = string, TProjectId extends string = string>
-  extends ProjectHandle<TProjectId>, PerspectiveHandle {
+  extends ProjectHandle<TProjectId>,
+    PerspectiveHandle {
   dataset?: TDataset
 }
 
@@ -72,10 +73,9 @@ export interface DocumentHandle<
  * Represents the complete configuration for a Sanity SDK instance
  * @public
  */
-export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
+export interface SanityConfig {
   /**
    * Authentication configuration for the instance
-   * @remarks Merged with parent configurations when using createChild
    */
   auth?: AuthConfig
   /**
@@ -87,43 +87,15 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
   }
 }
 
-export const SOURCE_ID = '__sanity_internal_sourceId'
-
 /**
  * A document source can be used for querying.
  *
  * @beta
- * @see datasetSource Construct a document source for a given projectId and dataset.
- * @see mediaLibrarySource Construct a document source for a mediaLibraryId.
- * @see canvasSource Construct a document source for a canvasId.
  */
-export type DocumentSource = {
-  [SOURCE_ID]: ['media-library', string] | ['canvas', string] | {projectId: string; dataset: string}
-}
+export type DocumentSource = DatasetSource | MediaLibrarySource | CanvasSource
 
-/**
- * Returns a document source for a projectId and dataset.
- *
- * @beta
- */
-export function datasetSource(projectId: string, dataset: string): DocumentSource {
-  return {[SOURCE_ID]: {projectId, dataset}}
-}
+export type DatasetSource = {projectId: string; dataset: string}
 
-/**
- * Returns a document source for a Media Library.
- *
- * @beta
- */
-export function mediaLibrarySource(id: string): DocumentSource {
-  return {[SOURCE_ID]: ['media-library', id]}
-}
+export type MediaLibrarySource = {mediaLibraryId: string}
 
-/**
- * Returns a document source for a Canvas.
- *
- * @beta
- */
-export function canvasSource(id: string): DocumentSource {
-  return {[SOURCE_ID]: ['canvas', id]}
-}
+export type CanvasSource = {canvasId: string}

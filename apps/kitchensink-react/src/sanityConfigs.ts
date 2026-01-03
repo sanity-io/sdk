@@ -1,29 +1,24 @@
-import {type SanityConfig} from '@sanity/sdk'
+import {type DocumentSource} from '@sanity/sdk'
 
-export const devConfigs: SanityConfig[] = [
-  {
-    projectId: 'ppsg7ml5',
-    dataset: 'test',
-  },
-  {
+export const devConfigs: Record<string, DocumentSource> = {
+  default: {
     projectId: 'vo1ysemo',
     dataset: 'production',
   },
-]
+  test: {
+    projectId: 'ppsg7ml5',
+    dataset: 'test',
+  },
+  media: {mediaLibraryId: 'mlPGY7BEqt52'},
+}
 
-export const e2eConfigs: SanityConfig[] = [
-  {
+export const e2eConfigs: Record<string, DocumentSource> = {
+  default: {
     projectId: import.meta.env['VITE_E2E_PROJECT_ID'],
     dataset: import.meta.env['VITE_E2E_DATASET_0'],
-    auth: {
-      apiHost: 'https://api.sanity.work',
-    },
   },
-  {
+  other: {
     projectId: import.meta.env['VITE_E2E_PROJECT_ID'],
     dataset: import.meta.env['VITE_E2E_DATASET_1'],
-    auth: {
-      apiHost: 'https://api.sanity.work',
-    },
   },
-]
+}

@@ -1,9 +1,6 @@
-import {mediaLibrarySource, useQuery} from '@sanity/sdk-react'
+import {useQuery} from '@sanity/sdk-react'
 import {Card, Spinner, Text} from '@sanity/ui'
 import {type JSX, useState} from 'react'
-
-// for now, hardcoded. should be inferred from org later on
-const MEDIA = mediaLibrarySource('mlPGY7BEqt52')
 
 export function MediaLibraryRoute(): JSX.Element {
   const [query] = useState('*[_type == "sanity.asset"][0...10] | order(_id desc)')
@@ -11,7 +8,7 @@ export function MediaLibraryRoute(): JSX.Element {
 
   const {data, isPending} = useQuery({
     query,
-    source: MEDIA,
+    sourceName: 'media',
   })
 
   return (
