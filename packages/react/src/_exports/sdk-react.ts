@@ -5,6 +5,7 @@ export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBound
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
 export {ComlinkTokenRefreshProvider} from '../context/ComlinkTokenRefresh'
+export {renderSanityApp} from '../context/renderSanityApp'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
 export {
   useAgentGenerate,
