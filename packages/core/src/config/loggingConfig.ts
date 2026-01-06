@@ -13,6 +13,33 @@ import {configureLogging as _configureLogging, type LoggerConfig} from '../utils
  * making it easier to debug issues in development or production.
  *
  * @remarks
+ * **Zero-Config via Environment Variable (Recommended):**
+ *
+ * The SDK automatically reads the `DEBUG` environment variable, making it
+ * easy to enable logging without code changes:
+ *
+ * ```bash
+ * # Enable all SDK logging at debug level
+ * DEBUG=sanity:* npm start
+ *
+ * # Enable specific namespaces
+ * DEBUG=sanity:auth,sanity:document npm start
+ *
+ * # Enable trace level for all namespaces
+ * DEBUG=sanity:trace:* npm start
+ *
+ * # Enable internal/maintainer logs
+ * DEBUG=sanity:*:internal npm start
+ * ```
+ *
+ * This matches the pattern used by Sanity CLI and Studio, making it familiar
+ * and easy for support teams to help troubleshoot issues.
+ *
+ * **Programmatic Configuration (Advanced):**
+ *
+ * For more control (custom handlers, dynamic configuration), call this function
+ * explicitly. Programmatic configuration overrides environment variables.
+ *
  * **For Application Developers:**
  * Use `info`, `warn`, or `error` levels to see high-level SDK activity
  * without being overwhelmed by internal details.
@@ -33,7 +60,13 @@ import {configureLogging as _configureLogging, type LoggerConfig} from '../utils
  * - `auth` - Authentication and authorization (when instrumented in the future)
  * - And more as logging is added to modules
  *
- * @example Basic usage (application developer)
+ * @example Zero-config via environment variable (recommended for debugging)
+ * ```bash
+ * # Just set DEBUG and run your app - no code changes needed!
+ * DEBUG=sanity:* npm start
+ * ```
+ *
+ * @example Programmatic configuration (application developer)
  * ```ts
  * import {configureLogging} from '@sanity/sdk'
  *
@@ -44,7 +77,7 @@ import {configureLogging as _configureLogging, type LoggerConfig} from '../utils
  * })
  * ```
  *
- * @example Advanced usage (SDK maintainer)
+ * @example Programmatic configuration (SDK maintainer)
  * ```ts
  * import {configureLogging} from '@sanity/sdk'
  *
@@ -74,17 +107,6 @@ import {configureLogging as _configureLogging, type LoggerConfig} from '../utils
  * })
  * ```
  *
- * @example Enable via environment variable
- * ```ts
- * // In your app initialization
- * if (process.env.DEBUG === 'sanity:*') {
- *   configureLogging({
- *     level: 'debug',
- *     namespaces: ['*']
- *   })
- * }
- * ```
- *
  * @public
  */
 export function configureLogging(config: LoggerConfig): void {
@@ -100,6 +122,7 @@ export function configureLogging(config: LoggerConfig): void {
       level: configLevel,
       namespaces: config.namespaces || [],
       internal: config.internal || false,
+      source: 'programmatic',
     })
   } else if (shouldLog) {
     // eslint-disable-next-line no-console
@@ -107,6 +130,7 @@ export function configureLogging(config: LoggerConfig): void {
       level: configLevel,
       namespaces: config.namespaces || [],
       internal: config.internal || false,
+      source: 'programmatic',
     })
   }
 }

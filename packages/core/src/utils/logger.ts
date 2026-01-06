@@ -108,9 +108,33 @@ export interface LogHandler {
 
 /**
  * Context object attached to log messages
+ *
+ * This interface allows you to attach arbitrary contextual data to log messages.
+ * The index signature `[key: string]: unknown` enables you to add any custom
+ * properties relevant to your log entry (e.g., `userId`, `documentId`, `action`, etc.).
+ *
+ * **Sensitive data sanitization:**
+ * Top-level keys containing sensitive names (`token`, `password`, `secret`, `apiKey`,
+ * `authorization`) are automatically redacted to `[REDACTED]` in log output.
+ *
+ * @example
+ * ```ts
+ * logger.info('User logged in', {
+ *   userId: '123',          // Custom context
+ *   action: 'login',        // Custom context
+ *   token: 'secret'         // Will be redacted to [REDACTED]
+ * })
+ * ```
+ *
  * @internal
  */
 export interface LogContext {
+  /**
+   * Custom context properties that provide additional information about the log entry.
+   * Any key-value pairs can be added here (e.g., userId, documentId, requestId, etc.).
+   * Keys with sensitive names (token, password, secret, apiKey, authorization) are
+   * automatically sanitized.
+   */
   [key: string]: unknown
   /** Error object if logging an error */
   error?: Error | unknown
@@ -184,8 +208,95 @@ const DEFAULT_CONFIG: Required<LoggerConfig> = {
   },
 }
 
-// Global configuration
-let globalConfig: Required<LoggerConfig> = {...DEFAULT_CONFIG}
+/**
+ * Parse DEBUG environment variable for automatic logging configuration
+ *
+ * Supports patterns similar to Sanity CLI/Studio:
+ * - DEBUG=sanity:* (all namespaces, debug level)
+ * - DEBUG=sanity:auth,sanity:document (specific namespaces)
+ * - DEBUG=sanity:trace:* (all namespaces, trace level)
+ * - DEBUG=sanity:*:internal (enable internal logs)
+ *
+ * @internal
+ */
+function parseDebugEnvVar(): Partial<LoggerConfig> | null {
+  if (typeof process === 'undefined' || !process.env?.['DEBUG']) {
+    return null
+  }
+
+  const debug = process.env['DEBUG']
+
+  // Only process if it includes 'sanity'
+  if (!debug.includes('sanity')) {
+    return null
+  }
+
+  const config: Partial<LoggerConfig> = {}
+
+  // Parse level from pattern like "sanity:trace:*" or "sanity:debug:*"
+  const levelMatch = debug.match(/sanity:(trace|debug|info|warn|error):/)
+  if (levelMatch) {
+    config.level = levelMatch[1] as LogLevel
+  } else {
+    // Default to debug level if just "sanity:*" or "sanity:namespace"
+    config.level = 'debug'
+  }
+
+  // Parse namespaces
+  if (debug.includes('sanity:*') || debug === 'sanity') {
+    config.namespaces = ['*']
+  } else {
+    // Extract specific namespaces like "sanity:auth,sanity:document"
+    const namespaces = debug
+      .split(',')
+      .filter((s) => s.includes('sanity:'))
+      .map((s) => {
+        // Remove 'sanity:' prefix and any level specifier
+        const cleaned = s.replace(/^sanity:/, '')
+        // Get first part before any colons (the namespace)
+        return cleaned.split(':')[0]
+      })
+      .filter(Boolean)
+      .filter((ns) => ns !== '*') // Filter out wildcards, we handle those above
+
+    if (namespaces.length > 0) {
+      config.namespaces = namespaces
+    }
+  }
+
+  // Check for internal flag: DEBUG=sanity:*:internal
+  if (debug.includes(':internal')) {
+    config.internal = true
+  }
+
+  return config
+}
+
+// Global configuration - initialized with env var settings if present
+const envConfig = parseDebugEnvVar()
+let globalConfig: Required<LoggerConfig> = {
+  ...DEFAULT_CONFIG,
+  ...(envConfig ?? {}),
+}
+
+// Log that env var configuration was detected (only if DEBUG is set)
+if (envConfig) {
+  const shouldLog =
+    ['info', 'debug', 'trace'].includes(globalConfig.level) || globalConfig.level === 'warn'
+  if (shouldLog) {
+    // eslint-disable-next-line no-console
+    console.info(
+      `[${new Date().toISOString()}] [INFO] [sdk] Logging auto-configured from DEBUG environment variable`,
+      {
+        level: globalConfig.level,
+        namespaces: globalConfig.namespaces,
+        internal: globalConfig.internal,
+        source: 'env:DEBUG',
+        value: typeof process !== 'undefined' ? process.env?.['DEBUG'] : undefined,
+      },
+    )
+  }
+}
 
 /**
  * Configure the global logging system
