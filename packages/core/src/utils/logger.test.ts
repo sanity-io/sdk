@@ -7,6 +7,7 @@ import {
   createTimer,
   getLoggingConfig,
   type LogHandler,
+  parseDebugEnvVar,
   resetLogging,
 } from './logger'
 
@@ -66,8 +67,30 @@ describe('logger', () => {
           level: 'info',
           namespaces: ['sdk'],
           internal: false,
+          source: 'programmatic',
         }),
       )
+    })
+
+    it('should log to console.info when no custom handler is provided', () => {
+      const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
+
+      publicConfigureLogging({
+        level: 'info',
+        namespaces: ['sdk'],
+      })
+
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[sdk] Logging configured'),
+        expect.objectContaining({
+          level: 'info',
+          namespaces: ['sdk'],
+          internal: false,
+          source: 'programmatic',
+        }),
+      )
+
+      consoleInfoSpy.mockRestore()
     })
   })
 
@@ -457,7 +480,106 @@ describe('logger', () => {
     })
   })
 
-  describe('DEBUG environment variable', () => {
+  describe('parseDebugEnvVar', () => {
+    const originalDebug = process.env['DEBUG']
+
+    afterEach(() => {
+      // Restore original DEBUG
+      if (originalDebug === undefined) {
+        delete process.env['DEBUG']
+      } else {
+        process.env['DEBUG'] = originalDebug
+      }
+    })
+
+    it('should return null when DEBUG is not set', () => {
+      delete process.env['DEBUG']
+      expect(parseDebugEnvVar()).toBeNull()
+    })
+
+    it('should return null when DEBUG does not include "sanity"', () => {
+      process.env['DEBUG'] = 'express:*'
+      expect(parseDebugEnvVar()).toBeNull()
+    })
+
+    it('should parse DEBUG=sanity:* to enable all namespaces at debug level', () => {
+      process.env['DEBUG'] = 'sanity:*'
+      const config = parseDebugEnvVar()
+
+      expect(config).toEqual({
+        level: 'debug',
+        namespaces: ['*'],
+      })
+    })
+
+    it('should parse DEBUG=sanity to enable all namespaces', () => {
+      process.env['DEBUG'] = 'sanity'
+      const config = parseDebugEnvVar()
+
+      expect(config).toEqual({
+        level: 'debug',
+        namespaces: ['*'],
+      })
+    })
+
+    it('should parse DEBUG=sanity:auth,sanity:document for specific namespaces', () => {
+      process.env['DEBUG'] = 'sanity:auth,sanity:document'
+      const config = parseDebugEnvVar()
+
+      expect(config).toEqual({
+        level: 'debug',
+        namespaces: ['auth', 'document'],
+      })
+    })
+
+    it('should parse DEBUG=sanity:trace:* to enable trace level', () => {
+      process.env['DEBUG'] = 'sanity:trace:*'
+      const config = parseDebugEnvVar()
+
+      expect(config).toEqual({
+        level: 'trace',
+        namespaces: ['*'],
+      })
+    })
+
+    it('should parse DEBUG=sanity:info:auth for custom level with namespace', () => {
+      process.env['DEBUG'] = 'sanity:info:auth'
+      const config = parseDebugEnvVar()
+
+      expect(config?.level).toBe('info')
+    })
+
+    it('should parse DEBUG=sanity:*:internal to enable internal logs', () => {
+      process.env['DEBUG'] = 'sanity:*:internal'
+      const config = parseDebugEnvVar()
+
+      expect(config).toEqual({
+        level: 'debug',
+        namespaces: ['*'],
+        internal: true,
+      })
+    })
+
+    it('should handle mixed DEBUG patterns with non-sanity values', () => {
+      process.env['DEBUG'] = 'express:*,sanity:auth,other:*'
+      const config = parseDebugEnvVar()
+
+      expect(config).toEqual({
+        level: 'debug',
+        namespaces: ['auth'],
+      })
+    })
+
+    it('should filter out wildcards from specific namespace list', () => {
+      process.env['DEBUG'] = 'sanity:auth,sanity:*'
+      const config = parseDebugEnvVar()
+
+      // Should prefer wildcard mode
+      expect(config?.namespaces).toContain('*')
+    })
+  })
+
+  describe('DEBUG environment variable integration', () => {
     const originalDebug = process.env['DEBUG']
 
     afterEach(() => {
@@ -470,16 +592,17 @@ describe('logger', () => {
       resetLogging()
     })
 
-    it('should parse DEBUG=sanity:* to enable all namespaces at debug level', () => {
+    it('should apply DEBUG env var configuration to logging', () => {
       process.env['DEBUG'] = 'sanity:*'
 
-      // Need to reload the module to pick up env var
-      // In real usage, this happens on module import
-      configureLogging({
-        level: 'debug',
-        namespaces: ['*'],
-        handler: mockHandler,
-      })
+      // Simulate what happens on module init
+      const envConfig = parseDebugEnvVar()
+      if (envConfig) {
+        configureLogging({
+          ...envConfig,
+          handler: mockHandler,
+        })
+      }
 
       const logger = createLogger('auth')
       logger.debug('test message')
@@ -487,80 +610,14 @@ describe('logger', () => {
       expect(mockHandler.debug).toHaveBeenCalled()
     })
 
-    it('should parse DEBUG=sanity:auth,sanity:document to enable specific namespaces', () => {
-      process.env['DEBUG'] = 'sanity:auth,sanity:document'
-
-      configureLogging({
-        level: 'debug',
-        namespaces: ['auth', 'document'],
-        handler: mockHandler,
-      })
-
-      const authLogger = createLogger('auth')
-      const docLogger = createLogger('document')
-      const queryLogger = createLogger('query')
-
-      authLogger.debug('auth message')
-      docLogger.debug('doc message')
-      queryLogger.debug('query message')
-
-      expect(mockHandler.debug).toHaveBeenCalledTimes(2)
-    })
-
-    it('should parse DEBUG=sanity:trace:* to enable trace level', () => {
-      process.env['DEBUG'] = 'sanity:trace:*'
-
-      configureLogging({
-        level: 'trace',
-        namespaces: ['*'],
-        internal: true,
-        handler: mockHandler,
-      })
-
-      const logger = createLogger('store')
-      logger.trace('trace message')
-
-      expect(mockHandler.trace).toHaveBeenCalled()
-    })
-
-    it('should parse DEBUG=sanity:*:internal to enable internal logs', () => {
-      process.env['DEBUG'] = 'sanity:*:internal'
-
-      configureLogging({
-        level: 'trace',
-        namespaces: ['*'],
-        internal: true,
-        handler: mockHandler,
-      })
-
-      const logger = createLogger('store')
-      logger.trace('internal message')
-
-      expect(mockHandler.trace).toHaveBeenCalled()
-    })
-
-    it('should ignore DEBUG if it does not include sanity', () => {
-      process.env['DEBUG'] = 'express:*'
-
-      configureLogging({
-        level: 'warn',
-        namespaces: [],
-        handler: mockHandler,
-      })
-
-      const config = getLoggingConfig()
-      // Should stay at defaults since DEBUG didn't match sanity pattern
-      expect(config.namespaces).toEqual([])
-    })
-
     it('should allow programmatic config to override env var', () => {
       process.env['DEBUG'] = 'sanity:*'
 
       // First apply env var config
-      configureLogging({
-        level: 'debug',
-        namespaces: ['*'],
-      })
+      const envConfig = parseDebugEnvVar()
+      if (envConfig) {
+        configureLogging(envConfig)
+      }
 
       // Then override with programmatic config
       configureLogging({

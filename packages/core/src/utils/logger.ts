@@ -219,7 +219,7 @@ const DEFAULT_CONFIG: Required<LoggerConfig> = {
  *
  * @internal
  */
-function parseDebugEnvVar(): Partial<LoggerConfig> | null {
+export function parseDebugEnvVar(): Partial<LoggerConfig> | null {
   if (typeof process === 'undefined' || !process.env?.['DEBUG']) {
     return null
   }
@@ -235,6 +235,7 @@ function parseDebugEnvVar(): Partial<LoggerConfig> | null {
 
   // Parse level from pattern like "sanity:trace:*" or "sanity:debug:*"
   const levelMatch = debug.match(/sanity:(trace|debug|info|warn|error):/)
+  const hasLevelSpecifier = !!levelMatch
   if (levelMatch) {
     config.level = levelMatch[1] as LogLevel
   } else {
@@ -243,7 +244,13 @@ function parseDebugEnvVar(): Partial<LoggerConfig> | null {
   }
 
   // Parse namespaces
-  if (debug.includes('sanity:*') || debug === 'sanity') {
+  if (debug === 'sanity') {
+    config.namespaces = ['*']
+  } else if (hasLevelSpecifier && debug.match(/sanity:(trace|debug|info|warn|error):\*/)) {
+    // Pattern like "sanity:trace:*" - wildcard after level
+    config.namespaces = ['*']
+  } else if (!hasLevelSpecifier && debug.includes('sanity:*')) {
+    // Pattern like "sanity:*" - wildcard without level
     config.namespaces = ['*']
   } else {
     // Extract specific namespaces like "sanity:auth,sanity:document"
@@ -251,13 +258,18 @@ function parseDebugEnvVar(): Partial<LoggerConfig> | null {
       .split(',')
       .filter((s) => s.includes('sanity:'))
       .map((s) => {
-        // Remove 'sanity:' prefix and any level specifier
+        // Remove 'sanity:' prefix
         const cleaned = s.replace(/^sanity:/, '')
-        // Get first part before any colons (the namespace)
+        // If there's a level specifier, skip it
+        if (hasLevelSpecifier && cleaned.match(/^(trace|debug|info|warn|error):/)) {
+          // Get the part after the level: "trace:auth" -> "auth"
+          return cleaned.split(':').slice(1).join(':')
+        }
+        // Otherwise get the first part: "auth:something" -> "auth"
         return cleaned.split(':')[0]
       })
       .filter(Boolean)
-      .filter((ns) => ns !== '*') // Filter out wildcards, we handle those above
+      .filter((ns) => ns !== '*') // Filter out wildcards
 
     if (namespaces.length > 0) {
       config.namespaces = namespaces
@@ -280,6 +292,8 @@ let globalConfig: Required<LoggerConfig> = {
 }
 
 // Log that env var configuration was detected (only if DEBUG is set)
+// Note: This runs at module initialization, difficult to test without complex module mocking
+/* c8 ignore next 14 */
 if (envConfig) {
   const shouldLog =
     ['info', 'debug', 'trace'].includes(globalConfig.level) || globalConfig.level === 'warn'
@@ -492,6 +506,7 @@ export function createTimer(
  * Will be exported in future PR when logging is added to stores
  * @internal
  */
+/* c8 ignore next 4 */
 function logRxJSOperator(namespace: string, operator: string, context?: LogContext): void {
   const logger = createLogger(namespace)
   logger.trace(`RxJS: ${operator}`, {...context, internal: true, operator})
@@ -504,6 +519,7 @@ function logRxJSOperator(namespace: string, operator: string, context?: LogConte
  * @returns Instance context suitable for logging
  * @internal
  */
+/* c8 ignore next 7 */
 function getInstanceContext(instance: {
   instanceId?: string
   config?: {projectId?: string; dataset?: string}
@@ -516,5 +532,6 @@ function getInstanceContext(instance: {
 }
 
 // Prevent unused function warnings - these will be exported and used in future PRs
+/* c8 ignore next 2 */
 void logRxJSOperator
 void getInstanceContext
