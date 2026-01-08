@@ -156,7 +156,7 @@ describe('createSanityInstance', () => {
     })
 
     it('should include instance context in logs', () => {
-      const _instance = createSanityInstance({projectId: 'my-project', dataset: 'my-dataset'})
+      createSanityInstance({projectId: 'my-project', dataset: 'my-dataset'})
 
       // Check that logs include the instance context (project and dataset)
       expect(mockHandler.info).toHaveBeenCalledWith(
