@@ -322,6 +322,30 @@ The SDK handles updating the document state automatically:
 - `publishDocument()` copies draft → published, deletes draft
 - `discardDraft()` deletes draft, reverts to published
 
+#### LiveEdit Documents
+
+For documents that don't need the draft/published workflow (such as settings, configuration, or real-time collaborative documents), you can use **liveEdit mode** by setting `liveEdit: true` in the document handle:
+
+```tsx
+const settingsHandle: DocumentHandle = {
+  documentId: 'site-settings',
+  documentType: 'settings',
+  liveEdit: true, // Edits apply directly without creating a draft
+}
+
+// Edits are applied immediately to the published document
+const editSettings = useEditDocument(settingsHandle)
+```
+
+**LiveEdit documents:**
+
+- Do not create drafts when edited
+- Changes apply directly to the published document
+- Cannot use `publishDocument()`, `unpublishDocument()`, or `discardDraft()` actions
+- Ideal for singleton documents, settings, or documents that need immediate updates
+
+For more details, see the [Sanity documentation on liveEdit documents](https://www.sanity.io/docs/content-lake/drafts).
+
 ---
 
 ### Real-Time Behavior
@@ -340,42 +364,104 @@ Any mutation to a subscribed document (even fields you don't display) will trigg
 
 ### Multi-Project Access
 
-#### Specify Source in Handle
+The SDK supports accessing documents from multiple projects and datasets simultaneously. There are two main approaches:
+
+#### Approach 1: Specify Project/Dataset Directly in the Handle
+
+Pass `projectId` and `dataset` directly in document handles to fetch data from specific projects:
 
 ```tsx
-const handle: DocumentHandle = {
-  documentId: 'xyz',
-  documentType: 'product',
-  projectId: 'project-a',
-  dataset: 'production',
+import {useDocument, useEditDocument} from '@sanity/sdk-react'
+
+function MultiProjectComponent() {
+  // Fetch from Project A
+  const {data: productA} = useDocument({
+    documentId: 'product-123',
+    documentType: 'product',
+    projectId: 'project-a',
+    dataset: 'production',
+  })
+
+  // Fetch from Project B
+  const {data: productB} = useDocument({
+    documentId: 'product-456',
+    documentType: 'product',
+    projectId: 'project-b',
+    dataset: 'staging',
+  })
+
+  // Edit documents from different projects
+  const editProductA = useEditDocument({
+    documentId: 'product-123',
+    documentType: 'product',
+    projectId: 'project-a',
+    dataset: 'production',
+  })
+
+  return (
+    <div>
+      <h2>{productA?.title} (Project A)</h2>
+      <h2>{productB?.title} (Project B)</h2>
+      <button onClick={() => editProductA({title: 'New Title'})}>Update Product A</button>
+    </div>
+  )
 }
 ```
 
-#### Use Resource Provider Context
+#### Approach 2: Use ResourceProvider to Set Context
+
+Wrap components in `ResourceProvider` to set default project/dataset values for all child components:
 
 ```tsx
 // App.tsx
-import {ResourceProvider} from '@sanity/sdk-react'
+import {ResourceProvider, useDocument, useSanityInstance} from '@sanity/sdk-react'
 
-import {ProductCard} from './ProductCard'
+function ProductCard({productId}: {productId: string}) {
+  // Get the current project/dataset from context
+  const {config} = useSanityInstance()
 
-export function WrappedProductCard() {
+  // No need to specify projectId/dataset - inherited from ResourceProvider
+  const {data: product} = useDocument({
+    documentId: productId,
+    documentType: 'product',
+  })
+
   return (
-    <ResourceProvider projectId="project-a" dataset="production">
-      <ProductCard productId="xyz" />
-    </ResourceProvider>
+    <div>
+      <h3>{product?.title}</h3>
+      <p>
+        From: {config.projectId}.{config.dataset}
+      </p>
+    </div>
   )
 }
 
-// ProductCard.tsx
-import {useProjectId, useDataset} from '@sanity/sdk-react'
+export function MultiProjectApp() {
+  return (
+    <div>
+      {/* Products from Project A */}
+      <ResourceProvider projectId="project-a" dataset="production" fallback={<div>Loading...</div>}>
+        <h2>Project A Products</h2>
+        <ProductCard productId="product-123" />
+        <ProductCard productId="product-456" />
+      </ResourceProvider>
 
-function ProductCard({productId}: {productId: string}) {
-  const projectId = useProjectId() // "project-a" from nearest configured ResourceProvider
-  const dataset = useDataset() // "production" from nearest configured ResourceProvider
-  // ...
+      {/* Products from Project B */}
+      <ResourceProvider projectId="project-b" dataset="staging" fallback={<div>Loading...</div>}>
+        <h2>Project B Products</h2>
+        <ProductCard productId="product-789" />
+      </ResourceProvider>
+    </div>
+  )
 }
 ```
+
+**Key Points:**
+
+- All hooks (useDocument, useEditDocument, useQuery, etc.) accept `projectId` and `dataset` parameters
+- ResourceProvider creates a context that child components can inherit from
+- You can nest ResourceProvider components to create sections with different project/dataset configurations
+- Use `useSanityInstance()` to access the current context's configuration: `const {config} = useSanityInstance()`
 
 ---
 
