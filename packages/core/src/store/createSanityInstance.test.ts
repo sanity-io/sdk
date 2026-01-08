@@ -1,5 +1,6 @@
-import {describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {configureLogging, type LogHandler, resetLogging} from '../utils/logger'
 import {createSanityInstance} from './createSanityInstance'
 
 describe('createSanityInstance', () => {
@@ -80,5 +81,88 @@ describe('createSanityInstance', () => {
     })
     const child = parent.createChild({auth: {token: 'my-token'}})
     expect(child.config.auth).toEqual({apiHost: 'api.sanity.work', token: 'my-token'})
+  })
+
+  describe('logging', () => {
+    const mockHandler: LogHandler = {
+      error: vi.fn(),
+      warn: vi.fn(),
+      info: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+    }
+
+    beforeEach(() => {
+      vi.clearAllMocks()
+      configureLogging({
+        level: 'debug',
+        namespaces: ['sdk'],
+        handler: mockHandler,
+      })
+    })
+
+    afterEach(() => {
+      resetLogging()
+    })
+
+    it('should log instance creation at info level', () => {
+      createSanityInstance({projectId: 'test-proj', dataset: 'test-ds'})
+
+      expect(mockHandler.info).toHaveBeenCalledWith(
+        expect.stringContaining('[INFO] [sdk]'),
+        expect.objectContaining({
+          hasProjectId: true,
+          hasDataset: true,
+        }),
+      )
+    })
+
+    it('should log configuration details at debug level', () => {
+      createSanityInstance({projectId: 'test-proj', dataset: 'test-ds'})
+
+      expect(mockHandler.debug).toHaveBeenCalledWith(
+        expect.stringContaining('[DEBUG] [sdk]'),
+        expect.objectContaining({
+          projectId: 'test-proj',
+          dataset: 'test-ds',
+        }),
+      )
+    })
+
+    it('should log instance disposal', () => {
+      const instance = createSanityInstance({projectId: 'test-proj'})
+      vi.clearAllMocks() // Clear creation logs
+
+      instance.dispose()
+
+      expect(mockHandler.info).toHaveBeenCalledWith(
+        expect.stringContaining('Instance disposed'),
+        expect.anything(),
+      )
+    })
+
+    it('should log child instance creation at debug level', () => {
+      const parent = createSanityInstance({projectId: 'parent-proj'})
+      vi.clearAllMocks() // Clear parent creation logs
+
+      parent.createChild({dataset: 'child-ds'})
+
+      expect(mockHandler.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Creating child instance'),
+        expect.objectContaining({
+          overridingDataset: true,
+        }),
+      )
+    })
+
+    it('should include instance context in logs', () => {
+      const _instance = createSanityInstance({projectId: 'my-project', dataset: 'my-dataset'})
+
+      // Check that logs include the instance context (project and dataset)
+      expect(mockHandler.info).toHaveBeenCalledWith(
+        expect.stringMatching(/\[project:my-project\].*\[dataset:my-dataset\]/),
+        expect.anything(),
+      )
+    })
   })
 })
