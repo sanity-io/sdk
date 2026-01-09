@@ -2,6 +2,7 @@ import {pick} from 'lodash-es'
 
 import {type SanityConfig} from '../config/sanityConfig'
 import {insecureRandomId} from '../utils/ids'
+import {createLogger, type InstanceContext} from '../utils/logger'
 
 /**
  * Represents a Sanity.io resource instance with its own configuration and lifecycle
@@ -76,15 +77,51 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
   const disposeListeners = new Map<string, () => void>()
   const disposed = {current: false}
 
+  // Create instance context for logging
+  const instanceContext: InstanceContext = {
+    instanceId,
+    projectId: config.projectId,
+    dataset: config.dataset,
+  }
+
+  // Create logger with instance context
+  const logger = createLogger('sdk', {instanceContext})
+
+  // Log instance creation
+  logger.info('Sanity instance created', {
+    hasProjectId: !!config.projectId,
+    hasDataset: !!config.dataset,
+    hasAuth: !!config.auth,
+    hasPerspective: !!config.perspective,
+  })
+
+  // Log configuration details at debug level
+  logger.debug('Instance configuration', {
+    projectId: config.projectId,
+    dataset: config.dataset,
+    perspective: config.perspective,
+    studioMode: config.studioMode?.enabled,
+    hasAuthProviders: !!config.auth?.providers,
+    hasAuthToken: !!config.auth?.token,
+  })
+
   const instance: SanityInstance = {
     instanceId,
     config,
     isDisposed: () => disposed.current,
     dispose: () => {
-      if (disposed.current) return
+      if (disposed.current) {
+        logger.trace('Dispose called on already disposed instance', {internal: true})
+        return
+      }
+      logger.trace('Disposing instance', {
+        internal: true,
+        listenerCount: disposeListeners.size,
+      })
       disposed.current = true
       disposeListeners.forEach((listener) => listener())
       disposeListeners.clear()
+      logger.info('Instance disposed')
     },
     onDispose: (cb) => {
       const listenerId = insecureRandomId()
@@ -94,8 +131,14 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
       }
     },
     getParent: () => undefined,
-    createChild: (next) =>
-      Object.assign(
+    createChild: (next) => {
+      logger.debug('Creating child instance', {
+        parentInstanceId: instanceId.slice(0, 8),
+        overridingProjectId: !!next.projectId,
+        overridingDataset: !!next.dataset,
+        overridingAuth: !!next.auth,
+      })
+      const child = Object.assign(
         createSanityInstance({
           ...config,
           ...next,
@@ -104,7 +147,13 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
             : config.auth && next.auth && {auth: {...config.auth, ...next.auth}}),
         }),
         {getParent: () => instance},
-      ),
+      )
+      logger.trace('Child instance created', {
+        internal: true,
+        childInstanceId: child.instanceId.slice(0, 8),
+      })
+      return child
+    },
     match: (targetConfig) => {
       if (
         Object.entries(pick(targetConfig, 'auth', 'projectId', 'dataset')).every(

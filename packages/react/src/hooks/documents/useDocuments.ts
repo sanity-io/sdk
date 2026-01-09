@@ -23,8 +23,8 @@ export interface DocumentsOptions<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> extends DatasetHandle<TDataset, TProjectId>,
-    Pick<QueryOptions, 'perspective' | 'params'> {
+>
+  extends DatasetHandle<TDataset, TProjectId>, Pick<QueryOptions, 'perspective' | 'params'> {
   /**
    * Filter documents by their `_type`. Can be a single type or an array of types.
    */
