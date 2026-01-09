@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.6.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.5.0...sdk-react-v2.6.0) (2026-01-09)
+
+
+### Features
+
+* **logging:** enhance createSanityInstance with logging capabilities ([#707](https://github.com/sanity-io/sdk/issues/707)) ([1af2df0](https://github.com/sanity-io/sdk/commit/1af2df095ea93d8c81c420f8a864d061d1d8914d))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.6.0
+
 ## [2.5.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.4.0...sdk-react-v2.5.0) (2025-12-31)
 
 
