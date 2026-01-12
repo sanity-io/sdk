@@ -337,12 +337,11 @@ const settingsHandle: DocumentHandle = {
 const editSettings = useEditDocument(settingsHandle)
 ```
 
-**LiveEdit documents:**
+**When using liveEdit documents:**
 
-- Do not create drafts when edited
-- Changes apply directly to the published document
-- Cannot use `publishDocument()`, `unpublishDocument()`, or `discardDraft()` actions
-- Ideal for singleton documents, settings, or documents that need immediate updates
+- Drafts will not be created when the document is edited
+- Edits will be applied directly to the published document
+- `publishDocument()`, `unpublishDocument()`, and `discardDraft()` actions cannot be used (since liveEdit documents are always published and do not have drafts)
 
 For more details, see the [Sanity documentation on liveEdit documents](https://www.sanity.io/docs/content-lake/drafts).
 
