@@ -265,8 +265,8 @@ importers:
   packages/@repo/e2e:
     dependencies:
       '@sanity/client':
-        specifier: ^7.12.0
-        version: 7.12.0(debug@4.4.3)
+        specifier: ^7.14.0
+        version: 7.14.0(debug@4.4.3)
       '@sanity/uuid':
         specifier: ^3.0.0
         version: 3.0.2
@@ -345,8 +345,8 @@ importers:
         specifier: ^0.4.1
         version: 0.4.1
       '@sanity/client':
-        specifier: ^7.12.0
-        version: 7.12.0(debug@4.4.3)
+        specifier: ^7.13.2
+        version: 7.14.0(debug@4.4.3)
       '@sanity/comlink':
         specifier: ^3.0.4
         version: 3.1.1
@@ -439,8 +439,8 @@ importers:
   packages/react:
     dependencies:
       '@sanity/client':
-        specifier: ^7.12.0
-        version: 7.12.0(debug@4.4.3)
+        specifier: ^7.13.2
+        version: 7.14.0(debug@4.4.3)
       '@sanity/message-protocol':
         specifier: ^0.18.0
         version: 0.18.0
@@ -2618,8 +2618,8 @@ packages:
     resolution: {integrity: sha512-BQRCMeDlBxwnMbFtB61HUxFf9aSb4HNVrpfrC7IFVqFf4cwcc3o5H8/nlrL9U3cDFedbe4W0AXt1mQzwbY/ljw==}
     engines: {node: '>=14.18'}
 
-  '@sanity/client@7.12.0':
-    resolution: {integrity: sha512-RIQ4JXOpLuc3UkUK34xxYA+n9z6m0RCEbsdloKEbS0areaHymM3144IkzeZGFcIokN1YlNenHfnBHNsMjf3TaQ==}
+  '@sanity/client@7.14.0':
+    resolution: {integrity: sha512-eXue3rc4MqJh89mvuTC0h0pdoY8lwXjlV8odFB3EF7aSFKF7F5BL0NU2mlTrCZYbPAlV3JTvMPPLGJCORqOKDw==}
     engines: {node: '>=20'}
 
   '@sanity/codegen@3.87.0':
@@ -4647,8 +4647,8 @@ packages:
     resolution: {integrity: sha512-qxsEs+9A+u85HhllWJJFicJfPDhRmjzoYdl64aMWW9yRIJmSyxdn8IEkuIM530/7T+lv0TIHd8L6Q/ra0tEoeA==}
     engines: {node: '>= 0.4'}
 
-  get-it@8.6.10:
-    resolution: {integrity: sha512-27StIK860ZVp2bhsG/aTWpcoA4OrFxtMqBbesa5sR23m5OxfVQYCnpm2rPQeo3gs5qsUk0FdkISLgXRJ4HynNw==}
+  get-it@8.7.0:
+    resolution: {integrity: sha512-uong/+jOz0GiuIWIUJXp2tnQKgQKukC99LEqOxLckPUoHYoerQbV6vC0Tu+/pSgk0tgHh1xX2aJtCk4y35LLLg==}
     engines: {node: '>=14.0.0'}
 
   get-latest-version@5.1.0:
@@ -9828,7 +9828,7 @@ snapshots:
       decompress: 4.2.1
       esbuild: 0.21.5
       esbuild-register: 3.6.0(esbuild@0.21.5)
-      get-it: 8.6.10(debug@4.4.3)
+      get-it: 8.7.0(debug@4.4.3)
       groq-js: 1.22.0
       pkg-dir: 5.0.0
       prettier: 3.7.4
@@ -9843,7 +9843,7 @@ snapshots:
   '@sanity/cli@3.88.1-typegen-experimental.0(@types/node@22.19.1)(@types/react@19.2.7)(jiti@2.6.1)(lightningcss@1.30.2)(react@18.3.1)(terser@5.36.0)(tsx@4.21.0)(typescript@5.8.3)(yaml@2.8.2)':
     dependencies:
       '@babel/traverse': 7.28.5
-      '@sanity/client': 7.12.0(debug@4.4.3)
+      '@sanity/client': 7.14.0(debug@4.4.3)
       '@sanity/codegen': 3.88.1-typegen-experimental.0
       '@sanity/runtime-cli': 6.1.1(@types/node@22.19.1)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.21.0)(typescript@5.8.3)(yaml@2.8.2)
       '@sanity/telemetry': 0.8.1(react@18.3.1)
@@ -9854,7 +9854,7 @@ snapshots:
       decompress: 4.2.1
       esbuild: 0.21.5
       esbuild-register: 3.6.0(esbuild@0.21.5)
-      get-it: 8.6.10(debug@4.4.3)
+      get-it: 8.7.0(debug@4.4.3)
       groq-js: 1.22.0
       pkg-dir: 5.0.0
       prettier: 3.7.4
@@ -9880,15 +9880,15 @@ snapshots:
   '@sanity/client@6.29.1(debug@4.4.3)':
     dependencies:
       '@sanity/eventsource': 5.0.2
-      get-it: 8.6.10(debug@4.4.3)
+      get-it: 8.7.0(debug@4.4.3)
       rxjs: 7.8.2
     transitivePeerDependencies:
       - debug
 
-  '@sanity/client@7.12.0(debug@4.4.3)':
+  '@sanity/client@7.14.0(debug@4.4.3)':
     dependencies:
       '@sanity/eventsource': 5.0.2
-      get-it: 8.6.10(debug@4.4.3)
+      get-it: 8.7.0(debug@4.4.3)
       nanoid: 3.3.11
       rxjs: 7.8.2
     transitivePeerDependencies:
@@ -9981,7 +9981,7 @@ snapshots:
       '@sanity/util': 3.68.3(@types/react@19.2.7)(debug@4.4.3)
       archiver: 7.0.1
       debug: 4.4.3(supports-color@8.1.1)
-      get-it: 8.6.10(debug@4.4.3)
+      get-it: 8.7.0(debug@4.4.3)
       json-stream-stringify: 2.0.4
       lodash: 4.17.21
       mississippi: 4.0.0
@@ -10016,7 +10016,7 @@ snapshots:
       '@sanity/uuid': 3.0.2
       debug: 4.4.3(supports-color@8.1.1)
       file-url: 2.0.2
-      get-it: 8.6.10(debug@4.4.3)
+      get-it: 8.7.0(debug@4.4.3)
       get-uri: 2.0.4
       gunzip-maybe: 1.4.2
       is-tar: 1.0.0
@@ -10292,7 +10292,7 @@ snapshots:
 
   '@sanity/types@3.88.1(@types/react@19.2.7)(debug@4.4.3)':
     dependencies:
-      '@sanity/client': 7.12.0(debug@4.4.3)
+      '@sanity/client': 7.14.0(debug@4.4.3)
       '@types/react': 19.2.7
     transitivePeerDependencies:
       - debug
@@ -10339,7 +10339,7 @@ snapshots:
 
   '@sanity/util@3.88.1(@types/react@19.2.7)(debug@4.4.3)':
     dependencies:
-      '@sanity/client': 7.12.0(debug@4.4.3)
+      '@sanity/client': 7.14.0(debug@4.4.3)
       '@sanity/types': 3.88.1(@types/react@19.2.7)(debug@4.4.3)
       get-random-values-esm: 1.0.2
       moment: 2.30.1
@@ -12486,7 +12486,7 @@ snapshots:
       hasown: 2.0.2
       math-intrinsics: 1.1.0
 
-  get-it@8.6.10(debug@4.4.3):
+  get-it@8.7.0(debug@4.4.3):
     dependencies:
       '@types/follow-redirects': 1.14.4
       decompress-response: 7.0.0
@@ -12499,7 +12499,7 @@ snapshots:
 
   get-latest-version@5.1.0:
     dependencies:
-      get-it: 8.6.10(debug@4.4.3)
+      get-it: 8.7.0(debug@4.4.3)
       registry-auth-token: 5.0.2
       registry-url: 5.1.0
       semver: 7.7.1
@@ -14677,7 +14677,7 @@ snapshots:
       fast-deep-equal: 3.1.3
       form-data: 4.0.1
       framer-motion: 12.6.3(@emotion/is-prop-valid@1.2.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      get-it: 8.6.10(debug@4.4.3)
+      get-it: 8.7.0(debug@4.4.3)
       get-random-values-esm: 1.0.2
       groq-js: 1.22.0
       history: 5.3.0
