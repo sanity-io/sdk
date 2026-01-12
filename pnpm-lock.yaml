@@ -274,8 +274,8 @@ importers:
         specifier: ^16.5.0
         version: 16.5.0
       lodash-es:
-        specifier: ^4.17.21
-        version: 4.17.21
+        specifier: ^4.17.22
+        version: 4.17.22
       ora:
         specifier: ^7.0.1
         version: 7.0.1
@@ -324,7 +324,7 @@ importers:
         version: 9.25.1(jiti@2.6.1)
       lodash-es:
         specifier: ^4.17.21
-        version: 4.17.21
+        version: 4.17.22
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
@@ -375,8 +375,8 @@ importers:
         specifier: ^1.19.0
         version: 1.22.0
       lodash-es:
-        specifier: ^4.17.21
-        version: 4.17.21
+        specifier: ^4.17.22
+        version: 4.17.22
       reselect:
         specifier: ^5.1.1
         version: 5.1.1
@@ -457,8 +457,8 @@ importers:
         specifier: 3.88.1-typegen-experimental.0
         version: 3.88.1-typegen-experimental.0
       lodash-es:
-        specifier: ^4.17.21
-        version: 4.17.21
+        specifier: ^4.17.22
+        version: 4.17.22
       react-compiler-runtime:
         specifier: 19.1.0-rc.2
         version: 19.1.0-rc.2(react@19.2.1)
@@ -5520,8 +5520,8 @@ packages:
     resolution: {integrity: sha512-gvVijfZvn7R+2qyPX8mAuKcFGDf6Nc61GdvGafQsHL0sBIxfKzA+usWn4GFC/bk+QdwPUD4kWFJLhElipq+0VA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
-  lodash-es@4.17.21:
-    resolution: {integrity: sha512-mKnC+QJ9pWVzv+C4/U3rRsHapFfHvQFoFB92e52xeyGMcX6/OlIl78je1u8vePzYZSkkogMPJ2yjxxsb89cxyw==}
+  lodash-es@4.17.22:
+    resolution: {integrity: sha512-XEawp1t0gxSi9x01glktRZ5HDy0HXqrM0x5pXQM98EaI0NxO6jVM7omDOxsuEo5UIASAnm2bRp1Jt/e0a2XU8Q==}
 
   lodash.camelcase@4.3.0:
     resolution: {integrity: sha512-TwuEnCnxbc3rAvhf/LbG7tJUDzhqXyFnv3dtzLOPgCG/hODL7WFnsbwktkD7yUV0RrreP/l1PALq/YSg6VvjlA==}
@@ -10252,7 +10252,7 @@ snapshots:
       '@sanity/mutate': 0.12.4(debug@4.4.3)
       '@sanity/types': 3.88.1(@types/react@19.2.7)(debug@4.4.3)
       '@types/lodash-es': 4.17.12
-      lodash-es: 4.17.21
+      lodash-es: 4.17.22
       reselect: 5.1.1
       rxjs: 7.8.2
       zustand: 5.0.4(@types/react@19.2.7)(immer@10.1.1)(react@18.3.1)(use-sync-external-store@1.5.0(react@18.3.1))
@@ -13404,7 +13404,7 @@ snapshots:
     dependencies:
       p-locate: 6.0.0
 
-  lodash-es@4.17.21: {}
+  lodash-es@4.17.22: {}
 
   lodash.camelcase@4.3.0: {}
 

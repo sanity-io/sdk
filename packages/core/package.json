@@ -68,7 +68,7 @@
     "@sanity/types": "^3.83.0",
     "groq": "3.88.1-typegen-experimental.0",
     "groq-js": "^1.19.0",
-    "lodash-es": "^4.17.21",
+    "lodash-es": "^4.17.22",
     "reselect": "^5.1.1",
     "rxjs": "^7.8.2",
     "zustand": "^5.0.4"
