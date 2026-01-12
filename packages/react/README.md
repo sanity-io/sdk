@@ -370,7 +370,7 @@ The SDK supports accessing documents from multiple projects and datasets simulta
 Pass `projectId` and `dataset` directly in document handles to fetch data from specific projects:
 
 ```tsx
-import {useDocument, useEditDocument} from '@sanity/sdk-react'
+import {useDocument} from '@sanity/sdk-react'
 
 function MultiProjectComponent() {
   // Fetch from Project A
@@ -389,19 +389,10 @@ function MultiProjectComponent() {
     dataset: 'staging',
   })
 
-  // Edit documents from different projects
-  const editProductA = useEditDocument({
-    documentId: 'product-123',
-    documentType: 'product',
-    projectId: 'project-a',
-    dataset: 'production',
-  })
-
   return (
     <div>
       <h2>{productA?.title} (Project A)</h2>
       <h2>{productB?.title} (Project B)</h2>
-      <button onClick={() => editProductA({title: 'New Title'})}>Update Product A</button>
     </div>
   )
 }
