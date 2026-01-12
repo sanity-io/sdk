@@ -384,8 +384,8 @@ importers:
         specifier: ^7.8.2
         version: 7.8.2
       zustand:
-        specifier: ^5.0.4
-        version: 5.0.4(@types/react@19.2.7)(immer@10.1.1)(react@19.2.1)(use-sync-external-store@1.5.0(react@19.2.1))
+        specifier: ^5.0.9
+        version: 5.0.9(@types/react@19.2.7)(immer@10.1.1)(react@19.2.1)(use-sync-external-store@1.5.0(react@19.2.1))
     devDependencies:
       '@repo/config-eslint':
         specifier: workspace:*
@@ -7775,8 +7775,8 @@ packages:
   zod@4.1.13:
     resolution: {integrity: sha512-AvvthqfqrAhNH9dnfmrfKzX5upOdjUVJYFqNSlkmGf64gRaTzlPwz99IHYnVs28qYAybvAlBV+H7pn0saFY4Ig==}
 
-  zustand@5.0.4:
-    resolution: {integrity: sha512-39VFTN5InDtMd28ZhjLyuTnlytDr9HfwO512Ai4I8ZABCoyAj4F1+sr7sD1jP/+p7k77Iko0Pb5NhgBFDCX0kQ==}
+  zustand@5.0.9:
+    resolution: {integrity: sha512-ALBtUj0AfjJt3uNRQoL1tL2tMvj6Gp/6e39dnfT6uzpelGru8v1tPOGBzayOWbPJvujM8JojDk3E1LxeFisBNg==}
     engines: {node: '>=12.20.0'}
     peerDependencies:
       '@types/react': '>=18.0.0'
@@ -10255,7 +10255,7 @@ snapshots:
       lodash-es: 4.17.21
       reselect: 5.1.1
       rxjs: 7.8.2
-      zustand: 5.0.4(@types/react@19.2.7)(immer@10.1.1)(react@18.3.1)(use-sync-external-store@1.5.0(react@18.3.1))
+      zustand: 5.0.9(@types/react@19.2.7)(immer@10.1.1)(react@18.3.1)(use-sync-external-store@1.5.0(react@18.3.1))
     transitivePeerDependencies:
       - '@types/react'
       - debug
@@ -15986,14 +15986,14 @@ snapshots:
 
   zod@4.1.13: {}
 
-  zustand@5.0.4(@types/react@19.2.7)(immer@10.1.1)(react@18.3.1)(use-sync-external-store@1.5.0(react@18.3.1)):
+  zustand@5.0.9(@types/react@19.2.7)(immer@10.1.1)(react@18.3.1)(use-sync-external-store@1.5.0(react@18.3.1)):
     optionalDependencies:
       '@types/react': 19.2.7
       immer: 10.1.1
       react: 18.3.1
       use-sync-external-store: 1.5.0(react@18.3.1)
 
-  zustand@5.0.4(@types/react@19.2.7)(immer@10.1.1)(react@19.2.1)(use-sync-external-store@1.5.0(react@19.2.1)):
+  zustand@5.0.9(@types/react@19.2.7)(immer@10.1.1)(react@19.2.1)(use-sync-external-store@1.5.0(react@19.2.1)):
     optionalDependencies:
       '@types/react': 19.2.7
       immer: 10.1.1
