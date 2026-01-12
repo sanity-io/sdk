@@ -457,10 +457,10 @@ export function MultiProjectApp() {
 
 **Key Points:**
 
-- All hooks (useDocument, useEditDocument, useQuery, etc.) accept `projectId` and `dataset` parameters
-- ResourceProvider creates a context that child components can inherit from
-- You can nest ResourceProvider components to create sections with different project/dataset configurations
-- Use `useSanityInstance()` to access the current context's configuration: `const {config} = useSanityInstance()`
+- When using hooks that take document handles as arguments (such useDocument, useEditDocument, useQuery, etc.), the document handles’ `projectId` and `dataset` values can be explicitly set to fetch documents from arbitrary projects and datasets
+- The ResourceProvider component is used to create a project ID and dataset context that child components will inherit from; this can negate the need to specify the project ID and dataset values for document handles in hooks called by child components
+- Use `useSanityInstance()` to access the context configuration for the current component: `const {config} = useSanityInstance()`
+- You can nest ResourceProvider components to create component trees with different project/dataset configurations — but be aware that, when the project ID and dataset values for document handles are _not_ specified, the project ID and dataset from the closest ResourceProvider context will be used
 
 ---
 
