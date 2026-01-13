@@ -367,7 +367,7 @@ The SDK supports accessing documents from multiple projects and datasets simulta
 
 #### Approach 1: Specify Project/Dataset Directly in the Handle
 
-Pass `projectId` and `dataset` directly in document handles to fetch data from specific projects:
+Pass `projectId` and `dataset` directly in document handles to fetch data from specific projects (note that any `projectId` and `dataset` pair you pass must be defined in your application’s array of [SanityConfig objects](https://www.sanity.io/docs/app-sdk/sdk-configuration#d95b8773097c)):
 
 ```tsx
 import {useDocument} from '@sanity/sdk-react'
