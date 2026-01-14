@@ -100,6 +100,9 @@ export function useEditDocument<TData>(
  * 3. **Explicit Type (Full Document):** Edit the entire document with a manually specified type.
  * 4. **Explicit Type (Specific Path):** Edit a specific field with a manually specified type.
  *
+ * **LiveEdit Documents:**
+ * For documents using {@link DocumentHandle.liveEdit | liveEdit mode} (set via `liveEdit: true` in the document handle), edits are applied directly to the published document without creating a draft.
+ *
  * This hook relies on the document state being loaded. If the document is not yet available
  * (e.g., during initial load), the component using this hook will suspend.
  *
