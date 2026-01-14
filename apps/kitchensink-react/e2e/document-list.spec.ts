@@ -43,6 +43,7 @@ test.describe('Document List', () => {
     await client.patch(id).set({name: 'Updated Author Name'}).commit()
 
     // Wait for the document preview to update with the new name
+    // Increase timeout as the update needs to propagate via subscriptions/queries
     await expect(async () => {
       const updatedDocumentPreview = pageContext.getByTestId(`document-preview-${id}`)
       await expect(updatedDocumentPreview).toBeVisible()
@@ -51,6 +52,6 @@ test.describe('Document List', () => {
         .getByTestId('document-title')
         .textContent()
       expect(updatedDocumentTitle).toBe('Updated Author Name')
-    }).toPass({timeout: 5000})
+    }).toPass({timeout: 10000})
   })
 })

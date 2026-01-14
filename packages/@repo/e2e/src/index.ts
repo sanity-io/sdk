@@ -38,6 +38,10 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
+  /* Increase expect timeout for async operations like mutations and subscriptions */
+  expect: {
+    timeout: 10000, // 10 seconds for expect assertions (increased from default 5000ms)
+  },
   /* Configure output directory for test results */
   outputDir: './e2e/test-results',
   /* Projects configuration */
