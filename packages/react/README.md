@@ -146,7 +146,7 @@ await apply([publishDocument(handle1), publishDocument(handle2), deleteDocument(
 useDocumentEvent({
   ...handle,
   onEvent: (event) => {
-    // event.type: 'documentEdited' | 'documentPublished' | 'documentDeleted' | ...
+    // event.type: 'edited' | 'published' | 'deleted' | 'created' | 'unpublished' | 'discarded' | ...
     console.log(event.type, event.documentId)
   },
 })
@@ -538,6 +538,27 @@ npx sanity deploy
 Add the resulting app ID to the `deployment` section of your `sanity.config.ts` file: `{deployment: { appId: "appbc1234", ... } }`.
 
 App appears in Sanity Dashboard alongside Studios. Requires `sanity.sdk.applications.deploy` permission.
+
+---
+
+### Viewport-Based Lazy Loading
+
+Use a ref with `useDocumentProjection` to load content only when the element enters the viewport:
+
+```tsx
+import {useRef} from 'react'
+
+function LazyArticleCard({handle}: {handle: DocumentHandle}) {
+  const ref = useRef(null)
+  const {data} = useDocumentProjection({
+    ...handle,
+    ref, // Only fetches when element is visible
+    projection: '{ title, excerpt }',
+  })
+
+  return <div ref={ref}>{data?.title}</div>
+}
+```
 
 ---
 
