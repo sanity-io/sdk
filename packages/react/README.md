@@ -452,6 +452,7 @@ export function MultiProjectApp() {
 - The ResourceProvider component is used to create a project ID and dataset context that child components will inherit from; this can negate the need to specify the project ID and dataset values for document handles in hooks called by child components
 - Use `useSanityInstance()` to access the context configuration for the current component: `const {config} = useSanityInstance()`
 - You can nest ResourceProvider components to create component trees with different project/dataset configurations — but be aware that, when the project ID and dataset values for document handles are _not_ specified, the project ID and dataset from the closest ResourceProvider context will be used
+- Regardless of the approach you use, the project IDs and dataset names you reference (whether in document handles or ResourceProviders) must be enumerated in your application’s [SanityConfig objects](https://www.sanity.io/docs/app-sdk/sdk-configuration#d95b8773097c)
 
 ---
 
