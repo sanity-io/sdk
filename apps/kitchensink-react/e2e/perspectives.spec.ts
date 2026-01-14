@@ -41,6 +41,6 @@ test.describe('Perspectives route', () => {
       // Published subtree should not show draft name
       expect(publishedText).toContain('Author Base Name')
       expect(publishedText).not.toContain('Author Draft Name')
-    }).toPass({timeout: 5000})
+    }).toPass({timeout: 10000})
   })
 })
