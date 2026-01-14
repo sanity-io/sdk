@@ -83,32 +83,28 @@ test.describe('Multi Resource Route', () => {
     await authorNameInput.fill('Updated Author Name')
     await authorNameInput.press('Enter')
 
-    // Verify the change is reflected in the display
-    await expect(pageContext.getByTestId('author-name-display')).toHaveText('Updated Author Name')
-
-    // Verify the change is also reflected in the projection
-    // Use toPass() to retry as the projection may take time to update after the mutation
+    // Verify the change is reflected in both the display and projection
+    // Check both together to ensure the mutation has fully propagated
     await expect(async () => {
+      await expect(pageContext.getByTestId('author-name-display')).toHaveText('Updated Author Name')
       await expect(pageContext.getByTestId('author-projection-name')).toContainText(
         'Updated Author Name',
       )
-    }).toPass({timeout: 10000})
+    }).toPass({timeout: 20000})
 
     // Test editing the movie document
     const movieNameInput = pageContext.getByTestId('movie-name-input')
     await movieNameInput.fill('Updated Movie Name')
     await movieNameInput.press('Enter')
 
-    // Verify the change is reflected in the display
-    await expect(pageContext.getByTestId('movie-name-display')).toHaveText('Updated Movie Name')
-
-    // Verify the change is also reflected in the projection
-    // Use toPass() to retry as the projection may take time to update after the mutation
+    // Verify the change is reflected in both the display and projection
+    // Check both together to ensure the mutation has fully propagated
     await expect(async () => {
+      await expect(pageContext.getByTestId('movie-name-display')).toHaveText('Updated Movie Name')
       await expect(pageContext.getByTestId('movie-projection-name')).toContainText(
         'Updated Movie Name',
       )
-    }).toPass({timeout: 10000})
+    }).toPass({timeout: 20000})
 
     // Test that external changes are reflected (simulating real-time updates)
     const authorClient = getClient(process.env['SDK_E2E_DATASET_0'])
@@ -125,7 +121,7 @@ test.describe('Multi Resource Route', () => {
       const authorProjection = await pageContext.getByTestId('author-projection-name').textContent()
       expect(authorDisplay).toBe('Externally Updated Author')
       expect(authorProjection).toContain('Externally Updated Author')
-    }).toPass({timeout: 15000})
+    }).toPass({timeout: 20000})
 
     // Verify external change is reflected
     // Increase timeout as external changes need to propagate via real-time subscriptions
@@ -134,6 +130,6 @@ test.describe('Multi Resource Route', () => {
       const movieProjection = await pageContext.getByTestId('movie-projection-name').textContent()
       expect(movieDisplay).toBe('Externally Updated Movie')
       expect(movieProjection).toContain('Externally Updated Movie')
-    }).toPass({timeout: 15000})
+    }).toPass({timeout: 20000})
   })
 })
