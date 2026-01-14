@@ -13,6 +13,10 @@ export {
   useAgentTransform,
   useAgentTranslate,
 } from '../hooks/agent/agentActions'
+export {
+  type AgentResourceContextOptions,
+  useAgentResourceContext,
+} from '../hooks/agent/useAgentResourceContext'
 export {useAssets} from '../hooks/assets/useAssets'
 export {useDeleteAsset} from '../hooks/assets/useDeleteAsset'
 export {useLinkMediaLibraryAsset} from '../hooks/assets/useLinkMediaLibraryAsset'

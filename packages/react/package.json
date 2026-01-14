@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk-react",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "private": false,
   "description": "Sanity SDK React toolkit for Content OS",
   "keywords": [
@@ -58,7 +58,7 @@
   "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@sanity/client": "^7.12.0",
-    "@sanity/message-protocol": "^0.12.0",
+    "@sanity/message-protocol": "^0.18.0",
     "@sanity/sdk": "workspace:*",
     "@sanity/types": "^3.83.0",
     "@types/lodash-es": "^4.17.12",

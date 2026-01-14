@@ -63,7 +63,7 @@ jobs:
           node-version: 20
 
       - name: "Download coverage artifacts"
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           path: .vitest-reports
           pattern: blob-report-${{ github.run_id }}-*

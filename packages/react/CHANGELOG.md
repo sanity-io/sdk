@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.5.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.4.0...sdk-react-v2.5.0) (2025-12-31)
+
+### Features
+
+- add useAgentResourceContext hook ([#690](https://github.com/sanity-io/sdk/issues/690)) ([ffe4e88](https://github.com/sanity-io/sdk/commit/ffe4e88a92ba45d251cd5fc94211ab2b2ab52dc0))
+- make applyDocumentActions more similar to the rest ([#630](https://github.com/sanity-io/sdk/issues/630)) ([440ce84](https://github.com/sanity-io/sdk/commit/440ce84959712e30501ecc9d119d89436c5396ec))
+- support using the same instance for different datasets ([#632](https://github.com/sanity-io/sdk/issues/632)) ([1e22eed](https://github.com/sanity-io/sdk/commit/1e22eed070def852aa9c305379299f647bab03f1))
+
+### Documentation
+
+- update README and package documentation with quickstart , examples, and package descriptions ([#675](https://github.com/sanity-io/sdk/issues/675)) ([93018bb](https://github.com/sanity-io/sdk/commit/93018bbfad1969d5230166850e6df4d1c7955aa3))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @sanity/sdk bumped to 2.5.0
+
 ## [2.4.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.3.1...sdk-react-v2.4.0) (2025-12-15)
 
 ### Features
