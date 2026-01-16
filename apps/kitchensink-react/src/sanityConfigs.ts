@@ -1,4 +1,4 @@
-import {type SanityConfig} from '@sanity/sdk'
+import {type DocumentSource, type SanityConfig} from '@sanity/sdk'
 
 export const devConfigs: SanityConfig[] = [
   {
@@ -10,6 +10,12 @@ export const devConfigs: SanityConfig[] = [
     dataset: 'production',
   },
 ]
+
+export const devSources: Record<string, DocumentSource> = {
+  'media-library': {
+    mediaLibraryId: 'mlPGY7BEqt52',
+  },
+}
 
 export const e2eConfigs: SanityConfig[] = [
   {

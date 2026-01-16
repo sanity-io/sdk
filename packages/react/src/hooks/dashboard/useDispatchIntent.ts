@@ -1,10 +1,9 @@
 import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
-import {type FrameMessage} from '@sanity/sdk'
+import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
 import {useCallback} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
-import {type DocumentHandleWithSource} from './types'
-import {getResourceIdFromDocumentHandle} from './utils/getResourceIdFromDocumentHandle'
+import {useResourceIdFromDocumentHandle} from './utils/useResourceIdFromDocumentHandle'
 
 /**
  * Message type for sending intents to the dashboard
@@ -42,7 +41,7 @@ interface DispatchIntent {
 interface UseDispatchIntentParams {
   action?: 'edit'
   intentId?: string
-  documentHandle: DocumentHandleWithSource
+  documentHandle: DocumentHandle
   parameters?: Record<string, unknown>
 }
 
@@ -104,13 +103,15 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
     connectTo: SDK_CHANNEL_NAME,
   })
 
+  const resource = useResourceIdFromDocumentHandle(documentHandle)
+
   const dispatchIntent = useCallback(() => {
     try {
       if (!action && !intentId) {
         throw new Error('useDispatchIntent: Either `action` or `intentId` must be provided.')
       }
 
-      const {projectId, dataset, source} = documentHandle
+      const {projectId, dataset, sourceName} = documentHandle
 
       if (action && intentId) {
         // eslint-disable-next-line no-console -- warn if both action and intentId are provided
@@ -119,13 +120,11 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
         )
       }
 
-      if (!source && (!projectId || !dataset)) {
+      if (!sourceName && (!projectId || !dataset)) {
         throw new Error(
           'useDispatchIntent: Either `source` or both `projectId` and `dataset` must be provided in documentHandle.',
         )
       }
-
-      const resource = getResourceIdFromDocumentHandle(documentHandle)
 
       const message: IntentMessage = {
         type: 'dashboard/v1/events/intents/dispatch-intent',
@@ -150,7 +149,7 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
       console.error('Failed to dispatch intent:', error)
       throw error
     }
-  }, [action, intentId, documentHandle, parameters, sendMessage])
+  }, [action, intentId, documentHandle, parameters, sendMessage, resource.id, resource.type])
 
   return {
     dispatchIntent,
