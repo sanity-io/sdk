@@ -1,3 +1,4 @@
+import {filter, firstValueFrom, timeout} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from './createSanityInstance'
@@ -193,5 +194,50 @@ describe('createStateSourceAction', () => {
     expect(context1).not.toBe(context2)
     expect(context1.instance).toBe(instance)
     expect(context2.instance).toBe(secondInstance)
+  })
+
+  it('correctly observes values defined in the onSubscribe', async () => {
+    const selector = vi.fn(({state: s}: SelectorContext<CountStoreState>) => s.count)
+    const source = createStateSourceAction({
+      selector: selector,
+      onSubscribe() {
+        state.set('update', {count: 1})
+      },
+    })({state, instance})
+
+    const value = await firstValueFrom(
+      source.observable.pipe(
+        filter((i) => i === 1),
+        timeout(10),
+      ),
+    )
+    expect(value).toBe(1)
+  })
+
+  it('only invokes selector once on changes', () => {
+    const selector = vi.fn(({state: s}: SelectorContext<CountStoreState>) => s.count)
+    const source = createStateSourceAction({selector: selector})({state, instance})
+
+    expect(selector).toBeCalledTimes(0)
+
+    // Now it should be called once:
+    const sub = source.observable.subscribe()
+    expect(selector).toBeCalledTimes(1)
+
+    // The observable should be shared so this shouldn't invoke it first.
+    const sub2 = source.observable.subscribe()
+    expect(selector).toBeCalledTimes(1)
+
+    // Updating the value should only invoke it once:
+    state.set('update', {count: 1})
+    expect(selector).toBeCalledTimes(2)
+
+    sub2.unsubscribe()
+    sub.unsubscribe()
+
+    // Once everyone has unsubscribed it should be invoked again.
+    const sub3 = source.observable.subscribe()
+    expect(selector).toBeCalledTimes(3)
+    sub3.unsubscribe()
   })
 })
