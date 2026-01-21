@@ -36,9 +36,12 @@ export interface DatasetHandle<TDataset extends string = string, TProjectId exte
    * The name of the source to use for this operation.
    */
   sourceName?: string
+  /**
+   * @beta
+   * Explicit source object to use for this operation.
+   */
+  source?: DocumentSource
 }
-
-/**
 
 /**
  * Identifies a specific document type within a Sanity dataset and project.

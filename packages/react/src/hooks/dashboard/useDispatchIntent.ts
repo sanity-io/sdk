@@ -122,7 +122,7 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
 
       if (!sourceName && (!projectId || !dataset)) {
         throw new Error(
-          'useDispatchIntent: Either `source` or both `projectId` and `dataset` must be provided in documentHandle.',
+          'useDispatchIntent: Either `sourceName` or both `projectId` and `dataset` must be provided in documentHandle.',
         )
       }
 

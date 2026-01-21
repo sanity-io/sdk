@@ -9,6 +9,7 @@ import {
 import React, {type ReactElement} from 'react'
 
 import {ResourceProvider} from '../src/context/ResourceProvider'
+import {SourcesContext} from '../src/context/SourcesContext'
 
 const sources = {
   'media-library': {mediaLibraryId: 'media-library-id'},
@@ -22,8 +23,8 @@ const sources = {
  */
 export const AppProviders = ({children}: {children: React.ReactNode}): ReactElement => {
   return (
-    <ResourceProvider projectId="test" dataset="test" fallback={null} sources={sources}>
-      {children}
+    <ResourceProvider projectId="test" dataset="test" fallback={null}>
+      <SourcesContext.Provider value={sources}>{children}</SourcesContext.Provider>
     </ResourceProvider>
   )
 }

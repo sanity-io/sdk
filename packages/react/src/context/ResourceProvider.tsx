@@ -2,7 +2,6 @@ import {createSanityInstance, type SanityConfig, type SanityInstance} from '@san
 import {Suspense, useContext, useEffect, useMemo, useRef} from 'react'
 
 import {SanityInstanceContext} from './SanityInstanceContext'
-import {SourcesContext} from './SourcesContext'
 
 const DEFAULT_FALLBACK = (
   <>
@@ -106,9 +105,7 @@ export function ResourceProvider({
 
   return (
     <SanityInstanceContext.Provider value={instance}>
-      <SourcesContext.Provider value={config.sources ?? {}}>
-        <Suspense fallback={fallback ?? DEFAULT_FALLBACK}>{children}</Suspense>
-      </SourcesContext.Provider>
+      <Suspense fallback={fallback ?? DEFAULT_FALLBACK}>{children}</Suspense>
     </SanityInstanceContext.Provider>
   )
 }

@@ -18,10 +18,13 @@ interface DashboardMessageResource {
 export function useResourceIdFromDocumentHandle(
   documentHandle: DocumentHandle,
 ): DashboardMessageResource {
-  const source = useSource(documentHandle.sourceName)
+  const source = useSource(documentHandle)
   const {projectId, dataset} = documentHandle
-  let resourceId: string = projectId + '.' + dataset
+  let resourceId: string = ''
   let resourceType: 'media-library' | 'canvas' | undefined
+  if (projectId && dataset) {
+    resourceId = `${projectId}.${dataset}`
+  }
 
   if (source) {
     if (isDatasetSource(source)) {

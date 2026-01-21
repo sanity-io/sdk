@@ -148,7 +148,7 @@ export function useQuery(options: QueryOptions): {data: unknown; isPending: bool
   // Implementation returns unknown, overloads define specifics
   const instance = useSanityInstance(options)
 
-  const source = useSource(options.sourceName)
+  const source = useSource(options)
 
   // Use React's useTransition to avoid UI jank when queries change
   const [isPending, startTransition] = useTransition()

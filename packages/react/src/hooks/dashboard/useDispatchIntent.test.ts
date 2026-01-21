@@ -238,7 +238,7 @@ describe('useDispatchIntent', () => {
       )
 
       expect(() => result.current.dispatchIntent()).toThrow(
-        'useDispatchIntent: Either `source` or both `projectId` and `dataset` must be provided in documentHandle.',
+        'useDispatchIntent: Either `sourceName` or both `projectId` and `dataset` must be provided in documentHandle.',
       )
     })
   })

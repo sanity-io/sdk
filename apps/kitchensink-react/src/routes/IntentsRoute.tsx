@@ -72,7 +72,9 @@ function CanvasDocumentIntent({document}: {document: SanityDocument}): JSX.Eleme
     documentHandle: {
       documentId: document._id,
       documentType: document._type,
-      sourceName: 'canvas',
+      source: {
+        canvasId: 'cag5gSK37IGV',
+      },
     },
   })
   return (
@@ -108,7 +110,9 @@ function IntentsContent(): JSX.Element {
   // Fetch first canvas document from Sanity Sandbox Org Canvas
   const {data: firstCanvasDocument, isPending: isCanvasDocumentPending} = useQuery<SanityDocument>({
     query: '*[_type == "sanity.canvas.document"][0]',
-    sourceName: 'canvas',
+    source: {
+      canvasId: 'cag5gSK37IGV',
+    },
   })
 
   const isLoading = isDocumentPending || isMoviePending || isAssetPending || isCanvasDocumentPending
