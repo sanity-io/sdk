@@ -76,6 +76,15 @@ export {
   createProjectHandle,
 } from '../config/handles'
 export {
+  configureLogging,
+  type InstanceContext,
+  type LogContext,
+  type Logger,
+  type LoggerConfig,
+  type LogLevel,
+  type LogNamespace,
+} from '../config/loggingConfig'
+export {
   canvasSource,
   type DatasetHandle,
   datasetSource,

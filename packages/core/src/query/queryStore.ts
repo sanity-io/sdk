@@ -58,7 +58,9 @@ export interface QueryOptions<
   TQuery extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> extends Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'>,
+>
+  extends
+    Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'>,
     DatasetHandle<TDataset, TProjectId> {
   query: TQuery
   params?: Record<string, unknown>

@@ -1,6 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalEnv": [
+    "DEBUG",
     "DEV",
     "VISUALIZER",
     "PKG_VERSION",
@@ -51,6 +52,7 @@
       "cache": false
     },
     "test": {
+      "env": ["DEBUG", "NODE_ENV"],
       "outputs": []
     },
     "test:watch": {
