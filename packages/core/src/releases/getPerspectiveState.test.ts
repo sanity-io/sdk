@@ -98,7 +98,7 @@ describe('getPerspectiveState', () => {
         take(1),
       ),
     )
-    expect(perspective).toEqual(['drafts', 'release1'])
+    expect(perspective).toEqual(['release1', 'drafts'])
   })
 
   it('should calculate perspective including multiple releases up to the specified releaseName', async () => {
@@ -111,13 +111,13 @@ describe('getPerspectiveState', () => {
         take(1),
       ),
     )
-    expect(perspective).toEqual(['drafts', 'release1', 'release2'])
+    expect(perspective).toEqual(['release2', 'release1', 'drafts'])
   })
 
   it('should filter excluded perspectives', async () => {
     const perspectiveConfig: ReleasePerspective = {
       releaseName: 'release2',
-      excludedPerspectives: ['drafts', 'release1'],
+      excludedPerspectives: ['release1', 'drafts'],
     }
     const options: PerspectiveHandle = {perspective: perspectiveConfig}
     const state = getPerspectiveState(instance, options)
@@ -162,7 +162,7 @@ describe('getPerspectiveState', () => {
     const state2 = getPerspectiveState(instance, options2)
     const perspective2 = state2.getCurrent()
 
-    expect(perspective2).toEqual(['drafts', 'release1'])
+    expect(perspective2).toEqual(['release1', 'drafts'])
   })
 
   it('should handle changes in activeReleases (cache test)', async () => {
@@ -176,7 +176,7 @@ describe('getPerspectiveState', () => {
         take(1),
       ),
     )
-    expect(perspective1).toEqual(['drafts', 'release1'])
+    expect(perspective1).toEqual(['release1', 'drafts'])
 
     const updatedActiveReleases = [release1]
     mockReleasesQuerySubject.next(updatedActiveReleases)
@@ -187,10 +187,10 @@ describe('getPerspectiveState', () => {
         take(1),
       ),
     )
-    expect(perspectiveAfterUpdate).toEqual(['drafts', 'release1'])
+    expect(perspectiveAfterUpdate).toEqual(['release1', 'drafts'])
 
     const state2 = getPerspectiveState(instance, options)
     const perspectiveNewCall = state2.getCurrent()
-    expect(perspectiveNewCall).toEqual(['drafts', 'release1'])
+    expect(perspectiveNewCall).toEqual(['release1', 'drafts'])
   })
 })

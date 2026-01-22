@@ -79,9 +79,9 @@ const _getPerspectiveStateSelector = createStateSourceAction({
 
       const filteredReleases = releaseNames.slice(0, index + 1) // Include the release itself
 
-      return ['drafts', ...filteredReleases].filter(
-        (name) => !perspective.excludedPerspectives?.includes(name),
-      )
+      return ['drafts', ...filteredReleases]
+        .filter((name) => !perspective.excludedPerspectives?.includes(name))
+        .reverse()
     },
   ),
 })

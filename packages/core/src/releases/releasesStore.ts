@@ -8,6 +8,7 @@ import {map} from 'rxjs'
  * 3. getPerspectiveState uses releasesStore as a data source
  * 4. however, queryStore does not use getPerspectiveState for the perspective used in releasesStore ("raw")
  */
+// eslint-disable-next-line import/no-cycle
 import {getQueryState} from '../query/queryStore'
 import {bindActionByDataset, type BoundDatasetKey} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
