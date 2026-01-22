@@ -1,6 +1,7 @@
 import {
   render,
   renderHook,
+  type RenderHookOptions,
   type RenderHookResult,
   type RenderOptions,
   type RenderResult,
@@ -8,6 +9,13 @@ import {
 import React, {type ReactElement} from 'react'
 
 import {ResourceProvider} from '../src/context/ResourceProvider'
+import {SourcesContext} from '../src/context/SourcesContext'
+
+const sources = {
+  'media-library': {mediaLibraryId: 'media-library-id'},
+  'canvas': {canvasId: 'canvas-id'},
+  'dataset': {projectId: 'source-project-id', dataset: 'source-dataset'},
+} as const
 
 /**
  * This function holds the providers to wrap around UI in tests.
@@ -16,7 +24,7 @@ import {ResourceProvider} from '../src/context/ResourceProvider'
 export const AppProviders = ({children}: {children: React.ReactNode}): ReactElement => {
   return (
     <ResourceProvider projectId="test" dataset="test" fallback={null}>
-      {children}
+      <SourcesContext.Provider value={sources}>{children}</SourcesContext.Provider>
     </ResourceProvider>
   )
 }
@@ -34,7 +42,7 @@ const customRender = (ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>
  */
 const customRenderHook = <TProps, TResult>(
   hook: (props: TProps) => TResult,
-  options?: Omit<RenderOptions, 'wrapper'>,
+  options?: Omit<RenderHookOptions<TProps>, 'wrapper'>,
 ): RenderHookResult<TResult, TProps> => renderHook(hook, {wrapper: AppProviders, ...options})
 
 // eslint-disable-next-line react-refresh/only-export-components

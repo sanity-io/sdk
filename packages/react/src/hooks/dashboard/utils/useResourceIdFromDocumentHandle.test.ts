@@ -1,28 +1,22 @@
-import {
-  canvasSource,
-  datasetSource,
-  type DocumentHandle,
-  type DocumentSource,
-  mediaLibrarySource,
-} from '@sanity/sdk'
+import {type DocumentHandle} from '@sanity/sdk'
 import {describe, expect, it} from 'vitest'
 
-import {type DocumentHandleWithSource} from '../types'
-import {getResourceIdFromDocumentHandle} from './getResourceIdFromDocumentHandle'
+import {renderHook} from '../../../../test/test-utils'
+import {useResourceIdFromDocumentHandle} from './useResourceIdFromDocumentHandle'
 
 describe('getResourceIdFromDocumentHandle', () => {
   describe('with traditional DocumentHandle (projectId/dataset)', () => {
     it('should return resource ID from projectId and dataset', () => {
-      const documentHandle: DocumentHandle = {
+      const documentHandle = {
         documentId: 'test-document-id',
         documentType: 'test-document-type',
         projectId: 'test-project-id',
         dataset: 'test-dataset',
       }
 
-      const result = getResourceIdFromDocumentHandle(documentHandle)
+      const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))
 
-      expect(result).toEqual({
+      expect(result.current).toEqual({
         id: 'test-project-id.test-dataset',
         type: undefined,
       })
@@ -31,33 +25,33 @@ describe('getResourceIdFromDocumentHandle', () => {
 
   describe('with DocumentHandleWithSource - media library', () => {
     it('should return media library ID and resourceType when media library source is provided', () => {
-      const documentHandle: DocumentHandleWithSource = {
+      const documentHandle: DocumentHandle = {
         documentId: 'test-asset-id',
         documentType: 'sanity.asset',
-        source: mediaLibrarySource('mlPGY7BEqt52'),
+        sourceName: 'media-library',
       }
 
-      const result = getResourceIdFromDocumentHandle(documentHandle)
+      const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))
 
-      expect(result).toEqual({
-        id: 'mlPGY7BEqt52',
+      expect(result.current).toEqual({
+        id: 'media-library-id',
         type: 'media-library',
       })
     })
 
     it('should prioritize source over projectId/dataset when both are provided', () => {
-      const documentHandle: DocumentHandleWithSource = {
+      const documentHandle = {
         documentId: 'test-asset-id',
         documentType: 'sanity.asset',
         projectId: 'test-project-id',
         dataset: 'test-dataset',
-        source: mediaLibrarySource('mlPGY7BEqt52'),
+        sourceName: 'media-library',
       }
 
-      const result = getResourceIdFromDocumentHandle(documentHandle)
+      const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))
 
-      expect(result).toEqual({
-        id: 'mlPGY7BEqt52',
+      expect(result.current).toEqual({
+        id: 'media-library-id',
         type: 'media-library',
       })
     })
@@ -65,16 +59,16 @@ describe('getResourceIdFromDocumentHandle', () => {
 
   describe('with DocumentHandleWithSource - canvas', () => {
     it('should return canvas ID and resourceType when canvas source is provided', () => {
-      const documentHandle: DocumentHandleWithSource = {
+      const documentHandle = {
         documentId: 'test-canvas-document-id',
         documentType: 'sanity.canvas.document',
-        source: canvasSource('canvas123'),
+        sourceName: 'canvas',
       }
 
-      const result = getResourceIdFromDocumentHandle(documentHandle)
+      const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))
 
-      expect(result).toEqual({
-        id: 'canvas123',
+      expect(result.current).toEqual({
+        id: 'canvas-id',
         type: 'canvas',
       })
     })
@@ -82,32 +76,32 @@ describe('getResourceIdFromDocumentHandle', () => {
 
   describe('with DocumentHandleWithSource - dataset source', () => {
     it('should return dataset resource ID when dataset source is provided', () => {
-      const documentHandle: DocumentHandleWithSource = {
+      const documentHandle = {
         documentId: 'test-document-id',
         documentType: 'test-document-type',
-        source: datasetSource('source-project-id', 'source-dataset'),
+        sourceName: 'dataset',
       }
 
-      const result = getResourceIdFromDocumentHandle(documentHandle)
+      const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))
 
-      expect(result).toEqual({
+      expect(result.current).toEqual({
         id: 'source-project-id.source-dataset',
         type: undefined,
       })
     })
 
     it('should use dataset source over projectId/dataset when both are provided', () => {
-      const documentHandle: DocumentHandleWithSource = {
+      const documentHandle = {
         documentId: 'test-document-id',
         documentType: 'test-document-type',
         projectId: 'test-project-id',
         dataset: 'test-dataset',
-        source: datasetSource('source-project-id', 'source-dataset'),
+        sourceName: 'dataset',
       }
 
-      const result = getResourceIdFromDocumentHandle(documentHandle)
+      const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))
 
-      expect(result).toEqual({
+      expect(result.current).toEqual({
         id: 'source-project-id.source-dataset',
         type: undefined,
       })
@@ -116,37 +110,17 @@ describe('getResourceIdFromDocumentHandle', () => {
 
   describe('edge cases', () => {
     it('should handle DocumentHandleWithSource with undefined source', () => {
-      const documentHandle: DocumentHandleWithSource = {
+      const documentHandle = {
         documentId: 'test-document-id',
         documentType: 'test-document-type',
         projectId: 'test-project-id',
         dataset: 'test-dataset',
-        source: undefined,
+        sourceName: undefined,
       }
 
-      const result = getResourceIdFromDocumentHandle(documentHandle)
+      const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))
 
-      expect(result).toEqual({
-        id: 'test-project-id.test-dataset',
-        type: undefined,
-      })
-    })
-
-    it('should fall back to projectId/dataset when source is not recognized', () => {
-      const documentHandle: DocumentHandleWithSource = {
-        documentId: 'test-document-id',
-        documentType: 'test-document-type',
-        projectId: 'test-project-id',
-        dataset: 'test-dataset',
-        source: {
-          __sanity_internal_sourceId: 'unknown-format',
-        } as unknown as DocumentSource,
-      }
-
-      const result = getResourceIdFromDocumentHandle(documentHandle)
-
-      // Falls back to projectId.dataset when source format is not recognized
-      expect(result).toEqual({
+      expect(result.current).toEqual({
         id: 'test-project-id.test-dataset',
         type: undefined,
       })

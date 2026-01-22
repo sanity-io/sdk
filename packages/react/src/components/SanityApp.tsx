@@ -1,4 +1,4 @@
-import {type SanityConfig} from '@sanity/sdk'
+import {type DocumentSource, type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, useEffect} from 'react'
 
 import {SDKProvider} from './SDKProvider'
@@ -13,6 +13,7 @@ export interface SanityAppProps {
   config: SanityConfig | SanityConfig[]
   /** @deprecated use the `config` prop instead. */
   sanityConfigs?: SanityConfig[]
+  sources?: Record<string, DocumentSource>
   children: React.ReactNode
   /* Fallback content to show when child components are suspending. Same as the `fallback` prop for React Suspense. */
   fallback: React.ReactNode
