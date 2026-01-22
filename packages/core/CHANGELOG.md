@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.6.0](https://github.com/sanity-io/sdk/compare/sdk-v2.5.0...sdk-v2.6.0) (2026-01-22)
+
+
+### Features
+
+* **logging:** enhance createSanityInstance with logging capabilities ([#707](https://github.com/sanity-io/sdk/issues/707)) ([1af2df0](https://github.com/sanity-io/sdk/commit/1af2df095ea93d8c81c420f8a864d061d1d8914d))
+* **logging:** introduce logging configuration and infrastructure ([#672](https://github.com/sanity-io/sdk/issues/672)) ([925aed0](https://github.com/sanity-io/sdk/commit/925aed0c890ebf1a0d4aced9921d1dee715012df))
+
+
+### Bug Fixes
+
+* **deps:** Update sanity monorepo to v5 (major) ([#715](https://github.com/sanity-io/sdk/issues/715)) ([204bae1](https://github.com/sanity-io/sdk/commit/204bae1c03987fb9780c7151a45737ac3babc8a2))
+
 ## [2.5.0](https://github.com/sanity-io/sdk/compare/sdk-v2.4.0...sdk-v2.5.0) (2025-12-31)
 
 
