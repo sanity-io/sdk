@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.6.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.5.0...sdk-react-v2.6.0) (2026-01-22)
+
+
+### Features
+
+* add renderSanityApp helper ([#704](https://github.com/sanity-io/sdk/issues/704)) ([49f4cb2](https://github.com/sanity-io/sdk/commit/49f4cb2182dfb66333604872373330e8538aab1d))
+* **logging:** enhance createSanityInstance with logging capabilities ([#707](https://github.com/sanity-io/sdk/issues/707)) ([1af2df0](https://github.com/sanity-io/sdk/commit/1af2df095ea93d8c81c420f8a864d061d1d8914d))
+
+
+### Bug Fixes
+
+* **deps:** Update sanity monorepo to v5 (major) ([#715](https://github.com/sanity-io/sdk/issues/715)) ([204bae1](https://github.com/sanity-io/sdk/commit/204bae1c03987fb9780c7151a45737ac3babc8a2))
+
+
+### Documentation
+
+* enhance README with LiveEdit mode and multi-project access examples ([#706](https://github.com/sanity-io/sdk/issues/706)) ([233096b](https://github.com/sanity-io/sdk/commit/233096b024803916437d1c9ef21dcbbd7a01d0d1))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.6.0
+
 ## [2.5.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.4.0...sdk-react-v2.5.0) (2025-12-31)
 
 
