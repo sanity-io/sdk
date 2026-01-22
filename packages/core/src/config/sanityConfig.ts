@@ -31,6 +31,16 @@ export interface PerspectiveHandle {
 export interface DatasetHandle<TDataset extends string = string, TProjectId extends string = string>
   extends ProjectHandle<TProjectId>, PerspectiveHandle {
   dataset?: TDataset
+  /**
+   * @beta
+   * The name of the source to use for this operation.
+   */
+  sourceName?: string
+  /**
+   * @beta
+   * Explicit source object to use for this operation.
+   */
+  source?: DocumentSource
 }
 
 /**
@@ -85,45 +95,54 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
   studioMode?: {
     enabled: boolean
   }
-}
 
-export const SOURCE_ID = '__sanity_internal_sourceId'
+  /**
+   * @beta
+   * A list of named sources to use for this instance.
+   */
+  sources?: Record<string, DocumentSource>
+}
 
 /**
  * A document source can be used for querying.
+ * This will soon be the default way to identify where you are querying from.
  *
  * @beta
- * @see datasetSource Construct a document source for a given projectId and dataset.
- * @see mediaLibrarySource Construct a document source for a mediaLibraryId.
- * @see canvasSource Construct a document source for a canvasId.
  */
-export type DocumentSource = {
-  [SOURCE_ID]: ['media-library', string] | ['canvas', string] | {projectId: string; dataset: string}
+export type DocumentSource = DatasetSource | MediaLibrarySource | CanvasSource
+
+/**
+ * @beta
+ */
+export type DatasetSource = {projectId: string; dataset: string}
+
+/**
+ * @beta
+ */
+export type MediaLibrarySource = {mediaLibraryId: string}
+
+/**
+ * @beta
+ */
+export type CanvasSource = {canvasId: string}
+
+/**
+ * @beta
+ */
+export function isDatasetSource(source: DocumentSource): source is DatasetSource {
+  return 'projectId' in source && 'dataset' in source
 }
 
 /**
- * Returns a document source for a projectId and dataset.
- *
  * @beta
  */
-export function datasetSource(projectId: string, dataset: string): DocumentSource {
-  return {[SOURCE_ID]: {projectId, dataset}}
+export function isMediaLibrarySource(source: DocumentSource): source is MediaLibrarySource {
+  return 'mediaLibraryId' in source
 }
 
 /**
- * Returns a document source for a Media Library.
- *
  * @beta
  */
-export function mediaLibrarySource(id: string): DocumentSource {
-  return {[SOURCE_ID]: ['media-library', id]}
-}
-
-/**
- * Returns a document source for a Canvas.
- *
- * @beta
- */
-export function canvasSource(id: string): DocumentSource {
-  return {[SOURCE_ID]: ['canvas', id]}
+export function isCanvasSource(source: DocumentSource): source is CanvasSource {
+  return 'canvasId' in source
 }

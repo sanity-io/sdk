@@ -1,4 +1,9 @@
-import {type DocumentSource, SOURCE_ID} from '../config/sanityConfig'
+import {
+  type DocumentSource,
+  isCanvasSource,
+  isDatasetSource,
+  isMediaLibrarySource,
+} from '../config/sanityConfig'
 import {type SanityInstance} from './createSanityInstance'
 import {createStoreInstance, type StoreInstance} from './createStoreInstance'
 import {type StoreState} from './createStoreState'
@@ -157,12 +162,18 @@ export const bindActionBySource = createActionBinder<
   [{source?: DocumentSource}, ...unknown[]]
 >((instance, {source}) => {
   if (source) {
-    const id = source[SOURCE_ID]
-    if (!id) throw new Error('Invalid source (missing ID information)')
-    if (Array.isArray(id)) return {name: id.join(':')}
-    return {name: `${id.projectId}.${id.dataset}`}
-  }
+    let id: string | undefined
+    if (isDatasetSource(source)) {
+      id = `${source.projectId}.${source.dataset}`
+    } else if (isMediaLibrarySource(source)) {
+      id = `media-library:${source.mediaLibraryId}`
+    } else if (isCanvasSource(source)) {
+      id = `canvas:${source.canvasId}`
+    }
 
+    if (!id) throw new Error(`Received invalid source: ${JSON.stringify(source)}`)
+    return {name: id}
+  }
   const {projectId, dataset} = instance.config
 
   if (!projectId || !dataset) {
