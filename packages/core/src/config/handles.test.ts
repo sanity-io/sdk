@@ -5,7 +5,7 @@ import {
   createDocumentHandle,
   createDocumentTypeHandle,
   createProjectHandle,
-} from '../handles'
+} from './handles'
 
 describe('handle creation functions', () => {
   it('createProjectHandle returns input', () => {
@@ -25,6 +25,16 @@ describe('handle creation functions', () => {
 
   it('createDocumentHandle returns input', () => {
     const input = {documentType: 'movie', documentId: '123'}
+    expect(createDocumentHandle(input)).toBe(input)
+  })
+
+  it('createDocumentHandle works for asset documents', () => {
+    const input = {
+      documentType: 'sanity.imageAsset' as const,
+      documentId: 'image-abc-1x1-png',
+      projectId: 'p',
+      dataset: 'd',
+    }
     expect(createDocumentHandle(input)).toBe(input)
   })
 })

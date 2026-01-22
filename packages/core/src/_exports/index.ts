@@ -1,3 +1,4 @@
+/* eslint-disable simple-import-sort/exports */
 import {type SanityProject as _SanityProject} from '@sanity/client'
 
 /**
@@ -174,6 +175,23 @@ export {
 export {getPerspectiveState} from '../releases/getPerspectiveState'
 export type {ReleaseDocument} from '../releases/releasesStore'
 export {getActiveReleasesState} from '../releases/releasesStore'
+export {
+  deleteAsset,
+  getAssetDownloadUrl,
+  getAssetsState,
+  getImageUrlBuilder,
+  isAssetDocumentType,
+  isImageAssetId,
+  linkMediaLibraryAsset,
+  resolveAssets,
+  uploadAsset,
+  type AssetDocumentBase,
+  type AssetKind,
+  type AssetQueryOptions,
+  type ImageAssetId,
+  type LinkMediaLibraryAssetOptions,
+  type UploadAssetOptions,
+} from '../assets/assets'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
 export {getUsersKey, parseUsersKey} from '../users/reducers'

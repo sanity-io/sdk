@@ -17,6 +17,10 @@ export {
   type AgentResourceContextOptions,
   useAgentResourceContext,
 } from '../hooks/agent/useAgentResourceContext'
+export {useAssets} from '../hooks/assets/useAssets'
+export {useDeleteAsset} from '../hooks/assets/useDeleteAsset'
+export {useLinkMediaLibraryAsset} from '../hooks/assets/useLinkMediaLibraryAsset'
+export {useUploadAsset} from '../hooks/assets/useUploadAsset'
 export {useAuthState} from '../hooks/auth/useAuthState'
 export {useAuthToken} from '../hooks/auth/useAuthToken'
 export {useCurrentUser} from '../hooks/auth/useCurrentUser'
