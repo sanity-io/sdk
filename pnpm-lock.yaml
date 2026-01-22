@@ -372,8 +372,8 @@ importers:
         specifier: ^5.2.0
         version: 5.5.0(@types/react@19.2.7)(debug@4.4.3)
       groq:
-        specifier: 5.2.0
-        version: 5.2.0
+        specifier: 3.88.1-typegen-experimental.0
+        version: 3.88.1-typegen-experimental.0
       groq-js:
         specifier: ^1.19.0
         version: 1.25.0
@@ -457,8 +457,8 @@ importers:
         specifier: ^4.17.12
         version: 4.17.12
       groq:
-        specifier: 5.2.0
-        version: 5.2.0
+        specifier: 3.88.1-typegen-experimental.0
+        version: 3.88.1-typegen-experimental.0
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.23
@@ -5251,10 +5251,6 @@ packages:
   groq@3.88.1-typegen-experimental.0:
     resolution: {integrity: sha512-6TZD6H1y3P7zk0BQharjFa7BOivV9nFL6KKVZbRZRH0yOSSyu2xHglTO48b1/2mCEdYoBQpvE7rjCDUf6XmQYQ==}
     engines: {node: '>=18'}
-
-  groq@5.2.0:
-    resolution: {integrity: sha512-8U/gKHbzyEXGUn2u9MilxSQsuzBrgP6I9LtUgiDrdbf1BBtee/W6qD9WYjqWmt+BXkf655umbmUs8q98XO7xZA==}
-    engines: {node: '>=20.19 <22 || >=22.12'}
 
   groq@5.5.0:
     resolution: {integrity: sha512-bLYqVE51cmoq/We+Hvt/UdsT021VJHUxn3IM51bUuLrQMBXI3gst+vq7rhooW9Xp9Sb7jNNailHgi6zsdLCGfg==}
@@ -13925,8 +13921,6 @@ snapshots:
       - supports-color
 
   groq@3.88.1-typegen-experimental.0: {}
-
-  groq@5.2.0: {}
 
   groq@5.5.0: {}
 
