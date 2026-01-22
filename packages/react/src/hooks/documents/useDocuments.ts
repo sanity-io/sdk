@@ -39,6 +39,7 @@ export interface DocumentsOptions<
   batchSize?: number
   /**
    * Sorting configuration for the results
+   * @beta
    */
   orderings?: SortOrderingItem[]
   /**
