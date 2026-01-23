@@ -28,6 +28,7 @@ export interface PaginatedDocumentsOptions<
   pageSize?: number
   /**
    * Sorting configuration for the results
+   * @beta
    */
   orderings?: SortOrderingItem[]
   /**

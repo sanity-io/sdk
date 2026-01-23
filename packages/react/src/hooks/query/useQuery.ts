@@ -9,6 +9,16 @@ import {type SanityQueryResult} from 'groq'
 import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {useSource} from '../context/useSource'
+
+interface UseQueryOptions<
+  TQuery extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+  TSourceName extends string = string,
+> extends QueryOptions<TQuery, TDataset, TProjectId> {
+  sourceName?: TSourceName
+}
 
 // Overload 1: Inferred Type (using Typegen)
 /**
@@ -70,8 +80,9 @@ export function useQuery<
   TQuery extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
+  TSourceName extends string = string,
 >(
-  options: QueryOptions<TQuery, TDataset, TProjectId>,
+  options: UseQueryOptions<TQuery, TDataset, TProjectId, TSourceName>,
 ): {
   /** The query result, typed based on the GROQ query string */
   data: SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>
@@ -137,6 +148,8 @@ export function useQuery(options: QueryOptions): {data: unknown; isPending: bool
   // Implementation returns unknown, overloads define specifics
   const instance = useSanityInstance(options)
 
+  const source = useSource(options)
+
   // Use React's useTransition to avoid UI jank when queries change
   const [isPending, startTransition] = useTransition()
 
@@ -144,8 +157,6 @@ export function useQuery(options: QueryOptions): {data: unknown; isPending: bool
   const queryKey = getQueryKey(options)
   // Use a deferred state to avoid immediate re-renders when the query changes
   const [deferredQueryKey, setDeferredQueryKey] = useState(queryKey)
-  // Parse the deferred query key back into a query and options
-  const deferred = useMemo(() => parseQueryKey(deferredQueryKey), [deferredQueryKey])
 
   // Create an AbortController to cancel in-flight requests when needed
   const ref = useRef<AbortController>(new AbortController())
@@ -166,10 +177,11 @@ export function useQuery(options: QueryOptions): {data: unknown; isPending: bool
   }, [deferredQueryKey, queryKey])
 
   // Get the state source for this query from the query store
-  const {getCurrent, subscribe} = useMemo(
-    () => getQueryState(instance, deferred),
-    [instance, deferred],
-  )
+  // Memoize the options object by depending on the stable string key instead of the parsed object
+  const {getCurrent, subscribe} = useMemo(() => {
+    const deferred = parseQueryKey(deferredQueryKey)
+    return getQueryState(instance, {...deferred, source})
+  }, [instance, deferredQueryKey, source])
 
   // If data isn't available yet, suspend rendering
   if (getCurrent() === undefined) {
@@ -182,8 +194,9 @@ export function useQuery(options: QueryOptions): {data: unknown; isPending: bool
     //    the captured signal remains unchanged for this suspended render.
     // Thus, the promise thrown here uses a stable abort signal, ensuring correct behavior.
     const currentSignal = ref.current.signal
+    const deferred = parseQueryKey(deferredQueryKey)
 
-    throw resolveQuery(instance, {...deferred, signal: currentSignal})
+    throw resolveQuery(instance, {...deferred, source, signal: currentSignal})
   }
 
   // Subscribe to updates and get the current data
