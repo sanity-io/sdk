@@ -58,7 +58,7 @@
   "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@sanity/bifur-client": "^0.4.1",
-    "@sanity/client": "^7.14.0",
+    "@sanity/client": "^7.14.1",
     "@sanity/comlink": "^3.0.4",
     "@sanity/diff-match-patch": "^3.2.0",
     "@sanity/diff-patch": "^6.0.0",
