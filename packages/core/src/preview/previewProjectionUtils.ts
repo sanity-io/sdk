@@ -2,8 +2,8 @@ import {type SanityClient} from '@sanity/client'
 import {createImageUrlBuilder} from '@sanity/image-url'
 import {isObject} from 'lodash-es'
 
-import {getClient} from '../client/clientStore'
-import {type DocumentResource} from '../config/sanityConfig'
+import {type ClientOptions, getClient} from '../client/clientStore'
+import {type DocumentResource, isDatasetResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {SUBTITLE_CANDIDATES, TITLE_CANDIDATES} from './previewConstants'
 import {type PreviewQueryResult, type PreviewValue} from './types'
@@ -77,7 +77,13 @@ export function transformProjectionToPreview(
   const title = findFirstDefined(TITLE_CANDIDATES, projectionResult.titleCandidates)
   const subtitle = findFirstDefined(SUBTITLE_CANDIDATES, projectionResult.subtitleCandidates, title)
 
-  const client = getClient(instance, {apiVersion: API_VERSION, resource})
+  const clientOptions: ClientOptions = {apiVersion: API_VERSION, resource}
+  if (isDatasetResource(resource)) {
+    clientOptions.projectId = resource.projectId
+    clientOptions.dataset = resource.dataset
+    delete clientOptions.resource
+  }
+  const client = getClient(instance, clientOptions)
 
   return {
     title: String(title || `${projectionResult._type}: ${projectionResult._id}`),

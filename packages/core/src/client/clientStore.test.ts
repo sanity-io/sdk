@@ -151,7 +151,7 @@ describe('clientStore', () => {
   })
 
   describe('source handling', () => {
-    it('should create client when source is provided', () => {
+    it('should create client when resource is provided', () => {
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
         resource: {mediaLibraryId: 'media-lib-123'},
@@ -159,8 +159,8 @@ describe('clientStore', () => {
 
       expect(vi.mocked(createClient)).toHaveBeenCalledWith(
         expect.objectContaining({
-          'apiVersion': '2024-11-12',
-          '~experimental_resource': {type: 'media-library', id: 'media-lib-123'},
+          apiVersion: '2024-11-12',
+          resource: {type: 'media-library', id: 'media-lib-123'},
         }),
       )
       // Client should be projectless - no projectId/dataset in config
@@ -168,7 +168,7 @@ describe('clientStore', () => {
       expect(client.config()).not.toHaveProperty('dataset')
       expect(client.config()).toEqual(
         expect.objectContaining({
-          '~experimental_resource': {type: 'media-library', id: 'media-lib-123'},
+          resource: {type: 'media-library', id: 'media-lib-123'},
         }),
       )
     })
@@ -181,8 +181,8 @@ describe('clientStore', () => {
 
       expect(vi.mocked(createClient)).toHaveBeenCalledWith(
         expect.objectContaining({
-          '~experimental_resource': {type: 'canvas', id: 'canvas-123'},
-          'apiVersion': '2024-11-12',
+          resource: {type: 'canvas', id: 'canvas-123'},
+          apiVersion: '2024-11-12',
         }),
       )
       // Client should be projectless - no projectId/dataset in config
@@ -190,7 +190,7 @@ describe('clientStore', () => {
       expect(client.config()).not.toHaveProperty('dataset')
       expect(client.config()).toEqual(
         expect.objectContaining({
-          '~experimental_resource': {type: 'canvas', id: 'canvas-123'},
+          resource: {type: 'canvas', id: 'canvas-123'},
         }),
       )
     })
