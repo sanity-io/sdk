@@ -5,7 +5,7 @@ import {
   isMediaLibrarySource,
 } from '@sanity/sdk'
 
-import {useSource} from '../../context/useSource'
+import {useNormalizedSourceOptions} from '../../helpers/useNormalizedSourceOptions'
 
 interface DashboardMessageResource {
   id: string
@@ -18,8 +18,8 @@ interface DashboardMessageResource {
 export function useResourceIdFromDocumentHandle(
   documentHandle: DocumentHandle,
 ): DashboardMessageResource {
-  const source = useSource(documentHandle)
-  const {projectId, dataset} = documentHandle
+  const options = useNormalizedSourceOptions(documentHandle)
+  const {projectId, dataset, source} = options
   let resourceId: string = ''
   let resourceType: 'media-library' | 'canvas' | undefined
   if (projectId && dataset) {
