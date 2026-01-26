@@ -182,6 +182,20 @@ export const bindActionBySource = createActionBinder<
   return {name: `${projectId}.${dataset}`}
 })
 
+export const getSourceFromKey = (key: {name: string}): DocumentSource | undefined => {
+  if (key.name.startsWith('media-library:')) {
+    return {mediaLibraryId: key.name.split(':')[1]}
+  } else if (key.name.startsWith('canvas:')) {
+    return {canvasId: key.name.split(':')[1]}
+  }
+  // do some regex / validation for projectId.dataset here
+  const [projectId, dataset] = key.name.split('.')
+  if (!projectId || !dataset) {
+    return undefined
+  }
+  return {projectId, dataset}
+}
+
 /**
  * Binds an action to a global store that's shared across all Sanity instances
  *
