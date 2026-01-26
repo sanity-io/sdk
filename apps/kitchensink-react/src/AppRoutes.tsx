@@ -19,7 +19,6 @@ import {AgentActionsRoute} from './routes/AgentActionsRoute'
 import {AgentResourceContextRoute} from './routes/AgentResourceContextRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
-import ExperimentalResourceClientRoute from './routes/ExperimentalResourceClientRoute'
 import {IntentsRoute} from './routes/IntentsRoute'
 import {MediaLibraryRoute} from './routes/MediaLibraryRoute'
 import {PerspectivesRoute} from './routes/PerspectivesRoute'
@@ -70,10 +69,6 @@ const documentCollectionRoutes = [
     element: <DashboardContextRoute />,
   },
   {
-    path: 'experimental-resource-client',
-    element: <ExperimentalResourceClientRoute />,
-  },
-  {
     path: 'presence',
     element: <PresenceRoute />,
   },
@@ -115,6 +110,10 @@ export function AppRoutes(): JSX.Element {
                 routes={[
                   ...documentCollectionRoutes,
                   ...dashboardInteractionRoutes,
+                  {
+                    path: 'agent-actions',
+                    element: <AgentActionsRoute />,
+                  },
                   {
                     path: 'comlink-demo',
                     element: <ParentApp />,

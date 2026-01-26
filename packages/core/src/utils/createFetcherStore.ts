@@ -175,7 +175,6 @@ export function createFetcherStore<TParams extends unknown[], TData>({
               const factoryFn = getObservable(entry.instance)
               return factoryFn(...entry.params).pipe(
                 // the `createStateSourceAction` util requires the update
-                // to
                 delay(0, asapScheduler),
                 tap((data: TData) =>
                   state.set('setData', (prev: FetcherStoreState<TParams, TData>) => ({

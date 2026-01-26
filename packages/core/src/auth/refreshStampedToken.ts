@@ -59,8 +59,6 @@ function createTokenRefreshStream(
     const client = clientFactory({
       apiVersion: DEFAULT_API_VERSION,
       requestTagPrefix: 'token-refresh',
-      useProjectHostname: false,
-      useCdn: false,
       token,
       ignoreBrowserTokenWarning: true,
       ...(apiHost && {apiHost}),

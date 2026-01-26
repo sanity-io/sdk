@@ -2,7 +2,7 @@ import {type SanityClient} from '@sanity/client'
 import {from, Observable, switchMap} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DocumentResource} from '../config/sanityConfig'
+import {type DocumentResource, isDatasetResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 
 const API_VERSION = 'vX'
@@ -57,6 +57,16 @@ export type AgentPromptResult = Awaited<ReturnType<SanityClient['agent']['action
 /** @alpha */
 export type AgentPatchResult = Awaited<ReturnType<SanityClient['agent']['action']['patch']>>
 
+const projectAndDatasetFromResource = (resource: DocumentResource) => {
+  if (!resource || !isDatasetResource(resource)) {
+    throw new Error('Resource is not a dataset resource. This is required for agent actions.')
+  }
+  return {
+    projectId: resource.projectId,
+    dataset: resource.dataset,
+  }
+}
+
 /**
  * Generates a new document using the agent.
  * @param instance - The Sanity instance.
@@ -69,9 +79,11 @@ export function agentGenerate(
   options: AgentGenerateOptions & AgentResourceOptions,
 ): AgentGenerateResult {
   const {resource, ...agentOptions} = options
+  const {projectId, dataset} = projectAndDatasetFromResource(resource)
   return getClientState(instance, {
     apiVersion: API_VERSION,
-    resource,
+    projectId,
+    dataset,
   }).observable.pipe(switchMap((client) => client.observable.agent.action.generate(agentOptions)))
 }
 
@@ -87,9 +99,11 @@ export function agentTransform(
   options: AgentTransformOptions & AgentResourceOptions,
 ): AgentTransformResult {
   const {resource, ...agentOptions} = options
+  const {projectId, dataset} = projectAndDatasetFromResource(resource)
   return getClientState(instance, {
     apiVersion: API_VERSION,
-    resource,
+    projectId,
+    dataset,
   }).observable.pipe(switchMap((client) => client.observable.agent.action.transform(agentOptions)))
 }
 
@@ -105,9 +119,11 @@ export function agentTranslate(
   options: AgentTranslateOptions & AgentResourceOptions,
 ): AgentTranslateResult {
   const {resource, ...agentOptions} = options
+  const {projectId, dataset} = projectAndDatasetFromResource(resource)
   return getClientState(instance, {
     apiVersion: API_VERSION,
-    resource,
+    projectId,
+    dataset,
   }).observable.pipe(switchMap((client) => client.observable.agent.action.translate(agentOptions)))
 }
 
@@ -123,9 +139,11 @@ export function agentPrompt(
   options: AgentPromptOptions & AgentResourceOptions,
 ): Observable<AgentPromptResult> {
   const {resource, ...agentOptions} = options
+  const {projectId, dataset} = projectAndDatasetFromResource(resource)
   return getClientState(instance, {
     apiVersion: API_VERSION,
-    resource,
+    projectId,
+    dataset,
   }).observable.pipe(switchMap((client) => from(client.agent.action.prompt(agentOptions))))
 }
 
@@ -141,8 +159,10 @@ export function agentPatch(
   options: AgentPatchOptions & AgentResourceOptions,
 ): Observable<AgentPatchResult> {
   const {resource, ...agentOptions} = options
+  const {projectId, dataset} = projectAndDatasetFromResource(resource)
   return getClientState(instance, {
     apiVersion: API_VERSION,
-    resource,
+    projectId,
+    dataset,
   }).observable.pipe(switchMap((client) => from(client.agent.action.patch(agentOptions))))
 }

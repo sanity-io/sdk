@@ -36,7 +36,7 @@ type IncomingBifurEvent = RollCallEvent | BifurStateMessage | BifurDisconnectMes
 
 function getBifurClient(client: SanityClient, token$: Observable<string | null>): BifurClient {
   const bifurVersionedClient = client.withConfig({apiVersion: '2022-06-30'})
-  const {dataset, url: baseUrl, requestTagPrefix = 'sanity.studio'} = bifurVersionedClient.config()
+  const {dataset, url: baseUrl, requestTagPrefix = 'sanity.sdk'} = bifurVersionedClient.config()
   const url = `${baseUrl.replace(/\/+$/, '')}/socket/${dataset}`.replace(/^http/, 'ws')
   const urlWithTag = `${url}?tag=${requestTagPrefix}`
 

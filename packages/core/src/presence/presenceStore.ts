@@ -33,7 +33,6 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
       key: {resource},
     } = context
 
-    // Presence is only supported for dataset resources
     if (isMediaLibraryResource(resource)) {
       throw new Error(
         'Presence is not supported for media library resources. Presence tracking requires a dataset resource with a projectId.',
@@ -45,12 +44,12 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
         'Presence is not supported for canvas resources. Presence tracking requires a dataset resource with a projectId.',
       )
     }
-
     const sessionId = crypto.randomUUID()
 
     const client = getClient(instance, {
       apiVersion: '2022-06-30',
-      resource,
+      projectId: resource.projectId,
+      dataset: resource.dataset,
     })
 
     const token$ = getTokenState(instance).observable.pipe(distinctUntilChanged())

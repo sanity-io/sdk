@@ -15,7 +15,6 @@ export const datasets = createFetcherStore({
     return getClientState(instance, {
       apiVersion: API_VERSION,
       projectId: options.projectId,
-      useProjectHostname: true,
     }).observable.pipe(switchMap((client) => client.observable.datasets.list()))
   },
 })
