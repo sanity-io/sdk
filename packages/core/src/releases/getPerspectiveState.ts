@@ -1,12 +1,20 @@
 import {createSelector} from 'reselect'
 
 import {type PerspectiveHandle, type ReleasePerspective} from '../config/sanityConfig'
-import {bindActionByDataset} from '../store/createActionBinder'
+import {bindActionByDataset, type BoundStoreAction} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
+/*
+ * Although this is an import dependency cycle, it is not a logical cycle:
+ * 1. getPerspectiveState uses releasesStore as a data source
+ * 2. releasesStore uses queryStore as a data source
+ * 3. queryStore calls getPerspectiveState for computing release perspectives
+ * 4. however, queryStore does not use getPerspectiveState for the perspective used in releasesStore ("raw")
+ */
+// eslint-disable-next-line import/no-cycle
 import {releasesStore, type ReleasesStoreState} from './releasesStore'
 import {sortReleases} from './utils/sortReleases'
 
-function isReleasePerspective(
+export function isReleasePerspective(
   perspective: PerspectiveHandle['perspective'],
 ): perspective is ReleasePerspective {
   return typeof perspective === 'object' && perspective !== null && 'releaseName' in perspective
@@ -50,6 +58,44 @@ const memoizedOptionsSelector = createSelector(
   },
 )
 
+// Lazily bind the action itself to avoid circular import initialization issues with `releasesStore`
+const _getPerspectiveStateSelector = createStateSourceAction({
+  selector: createSelector(
+    [selectInstancePerspective, selectActiveReleases, memoizedOptionsSelector],
+    (instancePerspective, activeReleases, memoizedOptions) => {
+      const perspective = memoizedOptions?.perspective ?? instancePerspective ?? DEFAULT_PERSPECTIVE
+
+      if (!isReleasePerspective(perspective)) return perspective
+
+      // if there are no active releases we can't compute the release perspective
+      if (!activeReleases || activeReleases.length === 0) return undefined
+
+      const releaseNames = sortReleases(activeReleases).map((release) => release.name)
+      const index = releaseNames.findIndex((name) => name === perspective.releaseName)
+
+      if (index < 0) {
+        throw new Error(`Release "${perspective.releaseName}" not found in active releases`)
+      }
+
+      const filteredReleases = releaseNames.slice(0, index + 1) // Include the release itself
+
+      return ['drafts', ...filteredReleases]
+        .filter((name) => !perspective.excludedPerspectives?.includes(name))
+        .reverse()
+    },
+  ),
+})
+
+type OmitFirst<T extends unknown[]> = T extends [unknown, ...infer R] ? R : never
+type SelectorParams = OmitFirst<Parameters<typeof _getPerspectiveStateSelector>>
+type BoundGetPerspectiveState = BoundStoreAction<
+  ReleasesStoreState,
+  SelectorParams,
+  ReturnType<typeof _getPerspectiveStateSelector>
+>
+
+let _boundGetPerspectiveState: BoundGetPerspectiveState | undefined
+
 /**
  * Provides a subscribable state source for a "perspective" for the Sanity client,
  * which is used to fetch documents as though certain Content Releases are active.
@@ -62,33 +108,12 @@ const memoizedOptionsSelector = createSelector(
  *
  * @public
  */
-export const getPerspectiveState = bindActionByDataset(
-  releasesStore,
-  createStateSourceAction({
-    selector: createSelector(
-      [selectInstancePerspective, selectActiveReleases, memoizedOptionsSelector],
-      (instancePerspective, activeReleases, memoizedOptions) => {
-        const perspective =
-          memoizedOptions?.perspective ?? instancePerspective ?? DEFAULT_PERSPECTIVE
-
-        if (!isReleasePerspective(perspective)) return perspective
-
-        // if there are no active releases we can't compute the release perspective
-        if (!activeReleases || activeReleases.length === 0) return undefined
-
-        const releaseNames = sortReleases(activeReleases).map((release) => release.name)
-        const index = releaseNames.findIndex((name) => name === perspective.releaseName)
-
-        if (index < 0) {
-          throw new Error(`Release "${perspective.releaseName}" not found in active releases`)
-        }
-
-        const filteredReleases = releaseNames.slice(0, index + 1) // Include the release itself
-
-        return ['drafts', ...filteredReleases].filter(
-          (name) => !perspective.excludedPerspectives?.includes(name),
-        )
-      },
-    ),
-  }),
-)
+export const getPerspectiveState: BoundGetPerspectiveState = (...args) => {
+  if (!_boundGetPerspectiveState) {
+    _boundGetPerspectiveState = bindActionByDataset(
+      releasesStore,
+      _getPerspectiveStateSelector,
+    ) as BoundGetPerspectiveState
+  }
+  return _boundGetPerspectiveState(...args)
+}

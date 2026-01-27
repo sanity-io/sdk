@@ -14,6 +14,7 @@ import {
   mergeMap,
   NEVER,
   Observable,
+  of,
   pairwise,
   race,
   share,
@@ -24,7 +25,15 @@ import {
 
 import {getClientState} from '../client/clientStore'
 import {type DatasetHandle, type DocumentSource} from '../config/sanityConfig'
-import {getPerspectiveState} from '../releases/getPerspectiveState'
+/*
+ * Although this is an import dependency cycle, it is not a logical cycle:
+ * 1. queryStore uses getPerspectiveState when resolving release perspectives
+ * 2. getPerspectiveState uses releasesStore as a data source
+ * 3. releasesStore uses queryStore as a data source
+ * 4. however, queryStore does not use getPerspectiveState for the perspective used in releasesStore ("raw")
+ */
+// eslint-disable-next-line import/no-cycle
+import {getPerspectiveState, isReleasePerspective} from '../releases/getPerspectiveState'
 import {bindActionBySource} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
@@ -168,9 +177,13 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
               ...restOptions
             } = parseQueryKey(group$.key)
 
-            const perspective$ = getPerspectiveState(instance, {
-              perspective: perspectiveFromOptions,
-            }).observable.pipe(filter(Boolean))
+            // Short-circuit perspective resolution for non-release perspectives to avoid
+            // touching the releases store (and its initialization) unnecessarily.
+            const perspective$ = isReleasePerspective(perspectiveFromOptions)
+              ? getPerspectiveState(instance, {
+                  perspective: perspectiveFromOptions,
+                }).observable.pipe(filter(Boolean))
+              : of(perspectiveFromOptions ?? QUERY_STORE_DEFAULT_PERSPECTIVE)
 
             const client$ = getClientState(instance, {
               apiVersion: QUERY_STORE_API_VERSION,
@@ -179,8 +192,12 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
               source,
             }).observable
 
-            return combineLatest([lastLiveEventId$, client$, perspective$]).pipe(
-              switchMap(([lastLiveEventId, client, perspective]) =>
+            return combineLatest({
+              lastLiveEventId: lastLiveEventId$,
+              client: client$,
+              perspective: perspective$,
+            }).pipe(
+              switchMap(({lastLiveEventId, client, perspective}) =>
                 client.observable.fetch(query, params, {
                   ...restOptions,
                   perspective,

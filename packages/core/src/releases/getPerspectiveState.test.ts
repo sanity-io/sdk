@@ -2,14 +2,13 @@ import {filter, firstValueFrom, of, Subject, take} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
 import {type PerspectiveHandle, type ReleasePerspective} from '../config/sanityConfig'
+import {getQueryState} from '../query/queryStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
-import {listenQuery as mockListenQuery} from '../utils/listenQuery'
+import {type StateSource} from '../store/createStateSourceAction'
 import {getPerspectiveState} from './getPerspectiveState'
 import {type ReleaseDocument} from './releasesStore'
 
-vi.mock('../utils/listenQuery', () => ({
-  listenQuery: vi.fn(),
-}))
+vi.mock('../query/queryStore')
 
 vi.mock('../client/clientStore', () => ({
   getClientState: vi.fn(() => ({
@@ -21,7 +20,7 @@ vi.mock('../client/clientStore', () => ({
 
 describe('getPerspectiveState', () => {
   let instance: SanityInstance
-  let mockReleasesQuerySubject: Subject<ReleaseDocument[]>
+  let mockReleasesQuerySubject: Subject<ReleaseDocument[] | undefined>
 
   const release1 = {
     _id: 'release-1',
@@ -44,8 +43,12 @@ describe('getPerspectiveState', () => {
   beforeEach(() => {
     instance = createSanityInstance({projectId: 'test', dataset: 'test'})
 
-    mockReleasesQuerySubject = new Subject<ReleaseDocument[]>()
-    vi.mocked(mockListenQuery).mockReturnValue(mockReleasesQuerySubject.asObservable())
+    mockReleasesQuerySubject = new Subject<ReleaseDocument[] | undefined>()
+    vi.mocked(getQueryState).mockReturnValue({
+      subscribe: () => () => {},
+      getCurrent: () => undefined,
+      observable: mockReleasesQuerySubject.asObservable(),
+    } as StateSource<ReleaseDocument[] | undefined>)
   })
 
   afterEach(() => {
@@ -95,7 +98,7 @@ describe('getPerspectiveState', () => {
         take(1),
       ),
     )
-    expect(perspective).toEqual(['drafts', 'release1'])
+    expect(perspective).toEqual(['release1', 'drafts'])
   })
 
   it('should calculate perspective including multiple releases up to the specified releaseName', async () => {
@@ -108,13 +111,13 @@ describe('getPerspectiveState', () => {
         take(1),
       ),
     )
-    expect(perspective).toEqual(['drafts', 'release1', 'release2'])
+    expect(perspective).toEqual(['release2', 'release1', 'drafts'])
   })
 
   it('should filter excluded perspectives', async () => {
     const perspectiveConfig: ReleasePerspective = {
       releaseName: 'release2',
-      excludedPerspectives: ['drafts', 'release1'],
+      excludedPerspectives: ['release1', 'drafts'],
     }
     const options: PerspectiveHandle = {perspective: perspectiveConfig}
     const state = getPerspectiveState(instance, options)
@@ -159,7 +162,7 @@ describe('getPerspectiveState', () => {
     const state2 = getPerspectiveState(instance, options2)
     const perspective2 = state2.getCurrent()
 
-    expect(perspective2).toEqual(['drafts', 'release1'])
+    expect(perspective2).toEqual(['release1', 'drafts'])
   })
 
   it('should handle changes in activeReleases (cache test)', async () => {
@@ -173,7 +176,7 @@ describe('getPerspectiveState', () => {
         take(1),
       ),
     )
-    expect(perspective1).toEqual(['drafts', 'release1'])
+    expect(perspective1).toEqual(['release1', 'drafts'])
 
     const updatedActiveReleases = [release1]
     mockReleasesQuerySubject.next(updatedActiveReleases)
@@ -184,10 +187,10 @@ describe('getPerspectiveState', () => {
         take(1),
       ),
     )
-    expect(perspectiveAfterUpdate).toEqual(['drafts', 'release1'])
+    expect(perspectiveAfterUpdate).toEqual(['release1', 'drafts'])
 
     const state2 = getPerspectiveState(instance, options)
     const perspectiveNewCall = state2.getCurrent()
-    expect(perspectiveNewCall).toEqual(['drafts', 'release1'])
+    expect(perspectiveNewCall).toEqual(['release1', 'drafts'])
   })
 })

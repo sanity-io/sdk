@@ -1,6 +1,7 @@
 import {
   type DocumentHandle,
   PerspectiveHandle,
+  ReleasePerspective,
   useActiveReleases,
   useDocument,
   useDocumentPreview,
@@ -99,13 +100,15 @@ export function ReleasesRoute(): JSX.Element {
     documentId: '386584b0-237f-4870-849e-f71af8e6b269',
     documentType: 'author',
   })
-
   const calculatedPerspective = usePerspective(selectedPerspective)
+  const selectedReleaseDocument = activeReleases.find(
+    (release) =>
+      release.name === (selectedPerspective.perspective as ReleasePerspective).releaseName,
+  )
 
   const handlePerspectiveSelect = (perspective: PerspectiveHandle) => {
     setSelectedPerspective(perspective)
   }
-
   const handleDocumentIdSubmit = (documentId: string) => {
     setSelectedDocument({documentId, documentType: 'author'})
   }
@@ -181,7 +184,7 @@ export function ReleasesRoute(): JSX.Element {
         {selectedPerspective && (
           <Box>
             <Heading as="h2" size={3}>
-              Documents in Selected{' '}
+              Document List in Selected{' '}
               {isReleasePerspective(selectedPerspective.perspective) ? 'Release' : 'Perspective'}
             </Heading>
             <DocumentList
@@ -244,6 +247,16 @@ export function ReleasesRoute(): JSX.Element {
           </Box>
         )}
       </Stack>
+      {selectedReleaseDocument && (
+        <Box>
+          <Heading as="h2" size={3}>
+            Selected Release Document
+          </Heading>
+          <pre data-testid="selected-release-document">
+            {JSON.stringify(selectedReleaseDocument, null, 2)}
+          </pre>
+        </Box>
+      )}
     </Box>
   )
 }

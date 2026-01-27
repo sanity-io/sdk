@@ -1,15 +1,22 @@
-import {type SanityClient} from '@sanity/client'
 import {type SanityDocument} from '@sanity/types'
-import {catchError, EMPTY, retry, switchMap, timer} from 'rxjs'
+import {map} from 'rxjs'
 
-import {getClientState} from '../client/clientStore'
+/*
+ * Although this is an import dependency cycle, it is not a logical cycle:
+ * 1. releasesStore uses queryStore as a data source
+ * 2. queryStore calls getPerspectiveState for computing release perspectives
+ * 3. getPerspectiveState uses releasesStore as a data source
+ * 4. however, queryStore does not use getPerspectiveState for the perspective used in releasesStore ("raw")
+ */
+// eslint-disable-next-line import/no-cycle
+import {getQueryState} from '../query/queryStore'
 import {bindActionByDataset, type BoundDatasetKey} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
-import {listenQuery} from '../utils/listenQuery'
 import {sortReleases} from './utils/sortReleases'
 
 const ARCHIVED_RELEASE_STATES = ['archived', 'published']
+const STABLE_EMPTY_RELEASES: ReleaseDocument[] = []
 
 /**
  * Represents a document in a Sanity dataset that represents release options.
@@ -55,51 +62,30 @@ export const getActiveReleasesState = bindActionByDataset(
 )
 
 const RELEASES_QUERY = 'releases::all()'
-const QUERY_PARAMS = {}
 
 const subscribeToReleases = ({
   instance,
   state,
   key: {projectId, dataset},
 }: StoreContext<ReleasesStoreState, BoundDatasetKey>) => {
-  return getClientState(instance, {
-    apiVersion: '2025-04-10',
+  const {observable: releases$} = getQueryState<ReleaseDocument[]>(instance, {
+    query: RELEASES_QUERY,
     perspective: 'raw',
     projectId,
     dataset,
+    tag: 'releases',
   })
-    .observable.pipe(
-      switchMap((client: SanityClient) =>
-        // releases are system documents, and are not supported by useQueryState
-        listenQuery<ReleaseDocument[]>(client, RELEASES_QUERY, QUERY_PARAMS, {
-          tag: 'releases-listener',
-          throttleTime: 1000,
-          transitions: ['update', 'appear', 'disappear'],
-        }).pipe(
-          retry({
-            count: 3,
-            delay: (error, retryCount) => {
-              // eslint-disable-next-line no-console
-              console.error('[releases] Error in subscription:', error, 'Retry count:', retryCount)
-              return timer(Math.min(1000 * Math.pow(2, retryCount), 10000))
-            },
-          }),
-          catchError((error) => {
-            state.set('setError', {error})
-            return EMPTY
-          }),
-        ),
-      ),
-    )
-    .subscribe({
-      next: (releases) => {
+  return releases$
+    .pipe(
+      map((releases) => {
         // logic here mirrors that of studio:
         // https://github.com/sanity-io/sanity/blob/156e8fa482703d99219f08da7bacb384517f1513/packages/sanity/src/core/releases/store/useActiveReleases.ts#L29
         state.set('setActiveReleases', {
-          activeReleases: sortReleases(releases ?? [])
+          activeReleases: sortReleases(releases ?? STABLE_EMPTY_RELEASES)
             .filter((release) => !ARCHIVED_RELEASE_STATES.includes(release.state))
             .reverse(),
         })
-      },
-    })
+      }),
+    )
+    .subscribe({error: (error) => state.set('setError', {error})})
 }
