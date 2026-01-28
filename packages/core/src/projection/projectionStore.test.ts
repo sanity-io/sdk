@@ -30,8 +30,8 @@ describe('projectionStore', () => {
       instance,
       {
         name: 'p.d',
-        projectId: 'p',
-        dataset: 'd',
+        source: {projectId: 'p', dataset: 'd'},
+        perspective: 'drafts',
       },
       projectionStore,
     )
@@ -42,8 +42,8 @@ describe('projectionStore', () => {
       state,
       key: {
         name: 'p.d',
-        projectId: 'p',
-        dataset: 'd',
+        source: {projectId: 'p', dataset: 'd'},
+        perspective: 'drafts',
       },
     })
 

@@ -1,6 +1,13 @@
+import {type ClientPerspective} from '@sanity/client'
 import {DocumentId} from '@sanity/id-utils'
 
-import {type DocumentProjections, type DocumentProjectionValues} from './types'
+import {type ReleasePerspective} from '../config/sanityConfig'
+import {getPublishedId} from '../utils/ids'
+import {
+  type DocumentProjections,
+  type DocumentProjectionValues,
+  type ProjectionStoreState,
+} from './types'
 import {validateProjection} from './util'
 
 export type ProjectionQueryResult = {
@@ -60,9 +67,15 @@ export function createProjectionQuery(
 interface ProcessProjectionQueryOptions {
   ids: Set<string>
   results: ProjectionQueryResult[]
+  documentStatuses?: ProjectionStoreState['documentStatuses']
+  perspective: ClientPerspective | ReleasePerspective
 }
 
-export function processProjectionQuery({ids, results}: ProcessProjectionQueryOptions): {
+export function processProjectionQuery({
+  ids,
+  results,
+  documentStatuses,
+}: ProcessProjectionQueryOptions): {
   [TDocumentId in string]?: DocumentProjectionValues<Record<string, unknown>>
 } {
   const groupedResults: {
@@ -72,19 +85,19 @@ export function processProjectionQuery({ids, results}: ProcessProjectionQueryOpt
   } = {}
 
   for (const result of results) {
-    const id = DocumentId(result._id)
+    const originalId = getPublishedId(result._id)
     const hash = result.__projectionHash
 
-    if (!ids.has(id)) continue
+    if (!ids.has(originalId)) continue
 
-    if (!groupedResults[id]) {
-      groupedResults[id] = {}
+    if (!groupedResults[originalId]) {
+      groupedResults[originalId] = {}
     }
-    if (!groupedResults[id][hash]) {
-      groupedResults[id][hash] = undefined
+    if (!groupedResults[originalId][hash]) {
+      groupedResults[originalId][hash] = undefined
     }
 
-    groupedResults[id][hash] = result
+    groupedResults[originalId][hash] = result
   }
 
   const finalValues: {
@@ -98,19 +111,18 @@ export function processProjectionQuery({ids, results}: ProcessProjectionQueryOpt
     if (!projectionsForDoc) continue
 
     for (const hash in projectionsForDoc) {
-      const projectionResultData = projectionsForDoc[hash]?.result
+      const projectionResult = projectionsForDoc[hash]
+      const projectionResultData = projectionResult?.result
 
       if (!projectionResultData) {
         finalValues[originalId][hash] = {data: null, isPending: false}
         continue
       }
 
-      const _status = {
-        lastEditedDraftAt: projectionResultData['_updatedAt'] ?? undefined,
-      }
+      const statusFromStore = documentStatuses?.[originalId]
 
       finalValues[originalId][hash] = {
-        data: {...projectionResultData, _status},
+        data: {...projectionResultData, _status: statusFromStore},
         isPending: false,
       }
     }

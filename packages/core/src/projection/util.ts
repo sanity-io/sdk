@@ -1,5 +1,4 @@
 export const PROJECTION_TAG = 'projection'
-export const PROJECTION_PERSPECTIVE = 'raw'
 export const PROJECTION_STATE_CLEAR_DELAY = 1000
 
 export const STABLE_EMPTY_PROJECTION = {
