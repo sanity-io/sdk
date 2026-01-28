@@ -15,6 +15,7 @@ import {type StoreState} from './createStoreState'
 import {type StoreContext, type StoreDefinition} from './defineStore'
 
 export interface BoundSourceKey {
+<<<<<<< HEAD
   name: string
   source: DocumentSource
 }
@@ -22,7 +23,14 @@ interface BoundPerspectiveKey extends BoundSourceKey {
   perspective: ClientPerspective | ReleasePerspective
 }
 export interface BoundDatasetKey {
+=======
+>>>>>>> 9d28b72 (refactor(projection): update projection store to use source and perspective)
   name: string
+}
+export interface BoundPerspectiveKey extends BoundSourceKey {
+  perspective: ClientPerspective | ReleasePerspective
+}
+export interface BoundDatasetKey extends BoundSourceKey {
   projectId: string
   dataset: string
 }

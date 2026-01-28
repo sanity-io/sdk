@@ -2,7 +2,7 @@ import {type SanityProjectionResult} from 'groq'
 import {omit} from 'lodash-es'
 
 import {type DocumentHandle} from '../config/sanityConfig'
-import {bindActionByDataset} from '../store/createActionBinder'
+import {bindActionBySourceAndPerspective} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -70,7 +70,7 @@ export function getProjectionState(
 /**
  * @beta
  */
-export const _getProjectionState = bindActionByDataset(
+export const _getProjectionState = bindActionBySourceAndPerspective(
   projectionStore,
   createStateSourceAction({
     selector: (

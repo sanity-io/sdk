@@ -16,8 +16,9 @@ import {
   tap,
 } from 'rxjs'
 
+import {isDatasetSource} from '../config/sanityConfig'
 import {getQueryState, resolveQuery} from '../query/queryStore'
-import {type BoundDatasetKey} from '../store/createActionBinder'
+import {type BoundPerspectiveKey, getSourceFromKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
 import {
   createProjectionQuery,
@@ -25,7 +26,7 @@ import {
   type ProjectionQueryResult,
 } from './projectionQuery'
 import {type ProjectionStoreState} from './types'
-import {PROJECTION_PERSPECTIVE, PROJECTION_TAG} from './util'
+import {PROJECTION_TAG} from './util'
 
 const BATCH_DEBOUNCE_TIME = 50
 
@@ -35,8 +36,8 @@ const isSetEqual = <T>(a: Set<T>, b: Set<T>) =>
 export const subscribeToStateAndFetchBatches = ({
   state,
   instance,
-  key: {projectId, dataset},
-}: StoreContext<ProjectionStoreState, BoundDatasetKey>): Subscription => {
+  key: {name, perspective},
+}: StoreContext<ProjectionStoreState, BoundPerspectiveKey>): Subscription => {
   const documentProjections$ = state.observable.pipe(
     map((s) => s.documentProjections),
     distinctUntilChanged(isEqual),
@@ -91,35 +92,40 @@ export const subscribeToStateAndFetchBatches = ({
         if (!ids.size) return EMPTY
         const {query, params} = createProjectionQuery(ids, documentProjections)
         const controller = new AbortController()
+        const source = getSourceFromKey({name})
 
         return new Observable<ProjectionQueryResult[]>((observer) => {
           const {getCurrent, observable} = getQueryState<ProjectionQueryResult[]>(instance, {
-            query,
-            params,
-            projectId,
-            dataset,
-            tag: PROJECTION_TAG,
-            perspective: PROJECTION_PERSPECTIVE,
+            ...{
+              query,
+              params,
+              tag: PROJECTION_TAG,
+              perspective,
+            },
+            // temporary guard here until we're ready for everything to be queried via global API
+            ...(source && !isDatasetSource(source) ? {source} : {}),
           })
 
-          const source$ = defer(() => {
+          const querySource = defer(() => {
             if (getCurrent() === undefined) {
               return from(
                 resolveQuery<ProjectionQueryResult[]>(instance, {
-                  query,
-                  params,
-                  projectId,
-                  dataset,
-                  tag: PROJECTION_TAG,
-                  perspective: PROJECTION_PERSPECTIVE,
-                  signal: controller.signal,
+                  ...{
+                    query,
+                    params,
+                    tag: PROJECTION_TAG,
+                    signal: controller.signal,
+                    perspective,
+                  },
+                  // temporary guard here until we're ready for everything to be queried via global API
+                  ...(source && !isDatasetSource(source) ? {source} : {}),
                 }),
               ).pipe(switchMap(() => observable))
             }
             return observable
           }).pipe(filter((result): result is ProjectionQueryResult[] => result !== undefined))
 
-          const subscription = source$.subscribe(observer)
+          const subscription = querySource.subscribe(observer)
 
           return () => {
             if (!controller.signal.aborted) {
@@ -131,8 +137,6 @@ export const subscribeToStateAndFetchBatches = ({
       }),
       map(({ids, data}) =>
         processProjectionQuery({
-          projectId,
-          dataset,
           ids,
           results: data,
         }),
