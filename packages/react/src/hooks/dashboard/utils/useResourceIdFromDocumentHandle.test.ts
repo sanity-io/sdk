@@ -1,4 +1,3 @@
-import {type DocumentHandle} from '@sanity/sdk'
 import {describe, expect, it} from 'vitest'
 
 import {renderHook} from '../../../../test/test-utils'
@@ -25,11 +24,11 @@ describe('getResourceIdFromDocumentHandle', () => {
 
   describe('with DocumentHandleWithSource - media library', () => {
     it('should return media library ID and resourceType when media library source is provided', () => {
-      const documentHandle: DocumentHandle = {
+      const documentHandle = {
         documentId: 'test-asset-id',
         documentType: 'sanity.asset',
         sourceName: 'media-library',
-      }
+      } as const
 
       const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))
 

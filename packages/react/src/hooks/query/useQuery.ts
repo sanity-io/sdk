@@ -9,16 +9,19 @@ import {type SanityQueryResult} from 'groq'
 import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useSource} from '../context/useSource'
-
-interface UseQueryOptions<
+import {
+  useNormalizedSourceOptions,
+  type WithSourceNameSupport,
+} from '../helpers/useNormalizedSourceOptions'
+/**
+ * Hook options for useQuery, supporting both direct source and sourceName.
+ * @beta
+ */
+type UseQueryOptions<
   TQuery extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-  TSourceName extends string = string,
-> extends QueryOptions<TQuery, TDataset, TProjectId> {
-  sourceName?: TSourceName
-}
+> = WithSourceNameSupport<QueryOptions<TQuery, TDataset, TProjectId>>
 
 // Overload 1: Inferred Type (using Typegen)
 /**
@@ -80,9 +83,8 @@ export function useQuery<
   TQuery extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-  TSourceName extends string = string,
 >(
-  options: UseQueryOptions<TQuery, TDataset, TProjectId, TSourceName>,
+  options: UseQueryOptions<TQuery, TDataset, TProjectId>,
 ): {
   /** The query result, typed based on the GROQ query string */
   data: SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>
@@ -119,7 +121,7 @@ export function useQuery<
  * }
  * ```
  */
-export function useQuery<TData>(options: QueryOptions): {
+export function useQuery<TData>(options: WithSourceNameSupport<QueryOptions>): {
   /** The query result, cast to the provided type TData */
   data: TData
   /** True if another query is resolving in the background (suspense handles the initial loading state) */
@@ -144,17 +146,21 @@ export function useQuery<TData>(options: QueryOptions): {
  *
  * @category GROQ
  */
-export function useQuery(options: QueryOptions): {data: unknown; isPending: boolean} {
+export function useQuery(options: WithSourceNameSupport<QueryOptions>): {
+  data: unknown
+  isPending: boolean
+} {
   // Implementation returns unknown, overloads define specifics
   const instance = useSanityInstance(options)
 
-  const source = useSource(options)
+  // Normalize options: resolve sourceName to source and strip sourceName
+  const normalized = useNormalizedSourceOptions(options)
 
   // Use React's useTransition to avoid UI jank when queries change
   const [isPending, startTransition] = useTransition()
 
-  // Get the unique key for this query and its options
-  const queryKey = getQueryKey(options)
+  // Get the unique key for this query and its options (using normalized options)
+  const queryKey = getQueryKey(normalized)
   // Use a deferred state to avoid immediate re-renders when the query changes
   const [deferredQueryKey, setDeferredQueryKey] = useState(queryKey)
 
@@ -180,8 +186,8 @@ export function useQuery(options: QueryOptions): {data: unknown; isPending: bool
   // Memoize the options object by depending on the stable string key instead of the parsed object
   const {getCurrent, subscribe} = useMemo(() => {
     const deferred = parseQueryKey(deferredQueryKey)
-    return getQueryState(instance, {...deferred, source})
-  }, [instance, deferredQueryKey, source])
+    return getQueryState(instance, deferred)
+  }, [instance, deferredQueryKey])
 
   // If data isn't available yet, suspend rendering
   if (getCurrent() === undefined) {
@@ -196,7 +202,7 @@ export function useQuery(options: QueryOptions): {data: unknown; isPending: bool
     const currentSignal = ref.current.signal
     const deferred = parseQueryKey(deferredQueryKey)
 
-    throw resolveQuery(instance, {...deferred, source, signal: currentSignal})
+    throw resolveQuery(instance, {...deferred, signal: currentSignal})
   }
 
   // Subscribe to updates and get the current data

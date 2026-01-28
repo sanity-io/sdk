@@ -3,6 +3,7 @@ import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
 import {useCallback} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
+import {type WithSourceNameSupport} from '../helpers/useNormalizedSourceOptions'
 import {useResourceIdFromDocumentHandle} from './utils/useResourceIdFromDocumentHandle'
 
 /**
@@ -41,7 +42,7 @@ interface DispatchIntent {
 interface UseDispatchIntentParams {
   action?: 'edit'
   intentId?: string
-  documentHandle: DocumentHandle
+  documentHandle: WithSourceNameSupport<DocumentHandle>
   parameters?: Record<string, unknown>
 }
 
@@ -111,8 +112,6 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
         throw new Error('useDispatchIntent: Either `action` or `intentId` must be provided.')
       }
 
-      const {projectId, dataset, sourceName} = documentHandle
-
       if (action && intentId) {
         // eslint-disable-next-line no-console -- warn if both action and intentId are provided
         console.warn(
@@ -120,9 +119,10 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
         )
       }
 
-      if (!sourceName && (!projectId || !dataset)) {
+      // Validate that we have a resource ID (which is computed from source/sourceName or projectId+dataset)
+      if (!resource.id) {
         throw new Error(
-          'useDispatchIntent: Either `sourceName` or both `projectId` and `dataset` must be provided in documentHandle.',
+          'useDispatchIntent: Unable to determine resource. Either `source`, `sourceName`, or both `projectId` and `dataset` must be provided in documentHandle.',
         )
       }
 
