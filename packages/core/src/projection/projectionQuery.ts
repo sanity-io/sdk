@@ -1,4 +1,5 @@
-import {getDraftId, getPublishedId} from '../utils/ids'
+import {DocumentId} from '@sanity/id-utils'
+
 import {type DocumentProjections, type DocumentProjectionValues} from './types'
 import {validateProjection} from './util'
 
@@ -18,8 +19,8 @@ interface CreateProjectionQueryResult {
 type ProjectionMap = Record<string, {projection: string; documentIds: Set<string>}>
 
 export function createProjectionQuery(
-  documentIds: Set<string>,
-  documentProjections: {[TDocumentId in string]?: DocumentProjections},
+  documentIds: Set<DocumentId>,
+  documentProjections: {[TDocumentId in DocumentId]?: DocumentProjections},
 ): CreateProjectionQueryResult {
   const projections = Array.from(documentIds)
     .flatMap((id) => {
@@ -48,11 +49,7 @@ export function createProjectionQuery(
 
   const params = Object.fromEntries(
     Object.entries(projections).map(([projectionHash, value]) => {
-      const idsInProjection = Array.from(value.documentIds).flatMap((id) => [
-        getPublishedId(id),
-        getDraftId(id),
-      ])
-
+      const idsInProjection = Array.from(value.documentIds).flatMap((id) => DocumentId(id))
       return [`__ids_${projectionHash}`, Array.from(idsInProjection)]
     }),
   )
@@ -61,8 +58,6 @@ export function createProjectionQuery(
 }
 
 interface ProcessProjectionQueryOptions {
-  projectId: string
-  dataset: string
   ids: Set<string>
   results: ProjectionQueryResult[]
 }
@@ -72,32 +67,24 @@ export function processProjectionQuery({ids, results}: ProcessProjectionQueryOpt
 } {
   const groupedResults: {
     [docId: string]: {
-      [hash: string]: {
-        draft?: ProjectionQueryResult
-        published?: ProjectionQueryResult
-      }
+      [hash: string]: ProjectionQueryResult | undefined
     }
   } = {}
 
   for (const result of results) {
-    const originalId = getPublishedId(result._id)
+    const id = DocumentId(result._id)
     const hash = result.__projectionHash
-    const isDraft = result._id.startsWith('drafts.')
 
-    if (!ids.has(originalId)) continue
+    if (!ids.has(id)) continue
 
-    if (!groupedResults[originalId]) {
-      groupedResults[originalId] = {}
+    if (!groupedResults[id]) {
+      groupedResults[id] = {}
     }
-    if (!groupedResults[originalId][hash]) {
-      groupedResults[originalId][hash] = {}
+    if (!groupedResults[id][hash]) {
+      groupedResults[id][hash] = undefined
     }
 
-    if (isDraft) {
-      groupedResults[originalId][hash].draft = result
-    } else {
-      groupedResults[originalId][hash].published = result
-    }
+    groupedResults[id][hash] = result
   }
 
   const finalValues: {
@@ -111,9 +98,7 @@ export function processProjectionQuery({ids, results}: ProcessProjectionQueryOpt
     if (!projectionsForDoc) continue
 
     for (const hash in projectionsForDoc) {
-      const {draft, published} = projectionsForDoc[hash]
-
-      const projectionResultData = draft?.result ?? published?.result
+      const projectionResultData = projectionsForDoc[hash]?.result
 
       if (!projectionResultData) {
         finalValues[originalId][hash] = {data: null, isPending: false}
@@ -121,8 +106,7 @@ export function processProjectionQuery({ids, results}: ProcessProjectionQueryOpt
       }
 
       const _status = {
-        ...(draft?._updatedAt && {lastEditedDraftAt: draft._updatedAt}),
-        ...(published?._updatedAt && {lastEditedPublishedAt: published._updatedAt}),
+        lastEditedDraftAt: projectionResultData['_updatedAt'] ?? undefined,
       }
 
       finalValues[originalId][hash] = {
