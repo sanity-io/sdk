@@ -10,6 +10,7 @@ export const projectionStore = defineStore<ProjectionStoreState, BoundPerspectiv
       values: {},
       documentProjections: {},
       subscriptions: {},
+      documentStatuses: {},
     }
   },
   initialize(context) {
