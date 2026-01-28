@@ -24,7 +24,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle, type DocumentSource} from '../config/sanityConfig'
+import {type DatasetHandle, type DocumentSource, isDatasetSource} from '../config/sanityConfig'
 /*
  * Although this is an import dependency cycle, it is not a logical cycle:
  * 1. queryStore uses getPerspectiveState when resolving release perspectives
@@ -34,7 +34,7 @@ import {type DatasetHandle, type DocumentSource} from '../config/sanityConfig'
  */
 // eslint-disable-next-line import/no-cycle
 import {getPerspectiveState, isReleasePerspective} from '../releases/getPerspectiveState'
-import {bindActionBySource} from '../store/createActionBinder'
+import {bindActionBySource, getSourceFromKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -87,6 +87,10 @@ export interface ResolveQueryOptions<
   signal?: AbortSignal
 }
 
+interface QueryStoreKey {
+  name: string
+}
+
 const EMPTY_ARRAY: never[] = []
 
 /** @beta */
@@ -116,7 +120,7 @@ function normalizeOptionsWithPerspective(
   }
 }
 
-const queryStore = defineStore<QueryStoreState>({
+const queryStore = defineStore<QueryStoreState, QueryStoreKey>({
   name: 'QueryStore',
   getInitialState: () => ({queries: {}}),
   initialize(context) {
@@ -225,9 +229,13 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
 const listenToLiveClientAndSetLastLiveEventIds = ({
   state,
   instance,
-}: StoreContext<QueryStoreState>) => {
+  key: queryStoreKey,
+}: StoreContext<QueryStoreState, QueryStoreKey>) => {
+  const source = getSourceFromKey(queryStoreKey)
   const liveMessages$ = getClientState(instance, {
     apiVersion: QUERY_STORE_API_VERSION,
+    // temporary guard here until we're ready for everything to be queried via global api
+    ...(source && !isDatasetSource(source) ? {source} : {}),
   }).observable.pipe(
     switchMap((client) =>
       defer(() =>
