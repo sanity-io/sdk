@@ -1,5 +1,5 @@
 import {NEVER} from 'rxjs'
-import {describe, it} from 'vitest'
+import {describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {AuthStateType} from './authStateType'
@@ -16,6 +16,21 @@ vi.mock('./utils', async (importOriginal) => {
 
 vi.mock('./subscribeToStateAndFetchCurrentUser')
 vi.mock('./subscribeToStorageEventsAndSetToken')
+
+// Mock logger to prevent actual logging during tests
+vi.mock('../utils/logger', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../utils/logger')>()
+  return {
+    ...original,
+    createLogger: vi.fn(() => ({
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      trace: vi.fn(),
+    })),
+  }
+})
 
 let instance: SanityInstance | undefined
 

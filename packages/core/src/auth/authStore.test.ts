@@ -1,7 +1,7 @@
 import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
 import {NEVER, type Subscription} from 'rxjs'
-import {afterEach, beforeEach, describe, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance} from '../store/createSanityInstance'
 import {AuthStateType} from './authStateType'
@@ -40,6 +40,20 @@ vi.mock('./studioModeAuth', async (importOriginal) => {
 
 vi.mock('./subscribeToStateAndFetchCurrentUser')
 vi.mock('./subscribeToStorageEventsAndSetToken')
+// Mock logger to prevent actual logging during tests
+vi.mock('../utils/logger', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../utils/logger')>()
+  return {
+    ...original,
+    createLogger: vi.fn(() => ({
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      trace: vi.fn(),
+    })),
+  }
+})
 
 describe('authStore', () => {
   // Global beforeEach and afterEach for all tests
