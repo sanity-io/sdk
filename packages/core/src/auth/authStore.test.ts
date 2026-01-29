@@ -17,7 +17,12 @@ import {handleAuthCallback} from './handleAuthCallback'
 import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
-import {getAuthCode, getTokenFromLocation, getTokenFromStorage} from './utils'
+import {
+  createLoggedInAuthState,
+  getAuthCode,
+  getTokenFromLocation,
+  getTokenFromStorage,
+} from './utils'
 
 vi.mock('./utils', async (importOriginal) => {
   const original = await importOriginal<typeof import('./utils')>()
@@ -590,6 +595,86 @@ describe('authStore', () => {
 
       const organizationId = getDashboardOrganizationId(instance)
       expect(organizationId.getCurrent()).toBeUndefined()
+    })
+  })
+
+  describe('createLoggedInAuthState', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'))
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('initializes lastTokenRefresh for stamped tokens', () => {
+      const token = 'sk-stamped-token-st123'
+      const currentUser = {id: 'user-1', name: 'Test User'} as CurrentUser
+
+      const authState = createLoggedInAuthState(token, currentUser)
+
+      expect(authState).toEqual({
+        type: AuthStateType.LOGGED_IN,
+        token,
+        currentUser,
+        lastTokenRefresh: Date.now(),
+      })
+    })
+
+    it('does not initialize lastTokenRefresh for non-stamped tokens', () => {
+      const token = 'sk-regular-token'
+      const currentUser = {id: 'user-1', name: 'Test User'} as CurrentUser
+
+      const authState = createLoggedInAuthState(token, currentUser)
+
+      expect(authState).toEqual({
+        type: AuthStateType.LOGGED_IN,
+        token,
+        currentUser,
+      })
+      expect(authState.lastTokenRefresh).toBeUndefined()
+    })
+
+    it('preserves existing lastTokenRefresh when provided', () => {
+      const token = 'sk-stamped-token-st123'
+      const currentUser = {id: 'user-1', name: 'Test User'} as CurrentUser
+      const existingTimestamp = Date.now() - 1000
+
+      const authState = createLoggedInAuthState(token, currentUser, existingTimestamp)
+
+      expect(authState).toEqual({
+        type: AuthStateType.LOGGED_IN,
+        token,
+        currentUser,
+        lastTokenRefresh: existingTimestamp,
+      })
+    })
+
+    it('handles null currentUser', () => {
+      const token = 'sk-stamped-token-st123'
+
+      const authState = createLoggedInAuthState(token, null)
+
+      expect(authState).toEqual({
+        type: AuthStateType.LOGGED_IN,
+        token,
+        currentUser: null,
+        lastTokenRefresh: Date.now(),
+      })
+    })
+
+    it('uses undefined lastTokenRefresh when explicitly passed for non-stamped token', () => {
+      const token = 'sk-regular-token'
+
+      const authState = createLoggedInAuthState(token, null, undefined)
+
+      expect(authState).toEqual({
+        type: AuthStateType.LOGGED_IN,
+        token,
+        currentUser: null,
+      })
+      expect(authState.lastTokenRefresh).toBeUndefined()
     })
   })
 })
