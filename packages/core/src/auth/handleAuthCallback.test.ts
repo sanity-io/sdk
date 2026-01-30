@@ -37,6 +37,10 @@ vi.mock('../utils/logger', async (importOriginal) => {
   }
 })
 
+// Import createLogger after mocking
+// eslint-disable-next-line import/first
+import {createLogger} from '../utils/logger'
+
 let instance: SanityInstance | undefined
 
 describe('handleCallback', () => {
@@ -269,5 +273,8 @@ describe('handleCallback', () => {
     })
     expect(clientFactory).not.toHaveBeenCalled()
     expect(setItem).not.toHaveBeenCalled()
+
+    // Verify logger was called
+    expect(createLogger).toHaveBeenCalled()
   })
 })

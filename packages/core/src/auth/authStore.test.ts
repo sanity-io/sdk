@@ -55,6 +55,10 @@ vi.mock('../utils/logger', async (importOriginal) => {
   }
 })
 
+// Import createLogger after mocking
+// eslint-disable-next-line import/first
+import {createLogger} from '../utils/logger'
+
 describe('authStore', () => {
   // Global beforeEach and afterEach for all tests
   beforeEach(() => {
@@ -272,6 +276,54 @@ describe('authStore', () => {
       expect(options.authMethod).toBe('localstorage')
     })
 
+    it('logs auth initialized in logged out state when no token available', () => {
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+      })
+
+      vi.mocked(getAuthCode).mockReturnValue(null)
+      vi.mocked(getTokenFromStorage).mockReturnValue(null)
+      vi.mocked(getTokenFromLocation).mockReturnValue(null)
+
+      const {authState} = authStore.getInitialState(instance, null)
+      expect(authState.type).toBe(AuthStateType.LOGGED_OUT)
+      // Logger should have been called
+      expect(createLogger).toHaveBeenCalled()
+    })
+
+    it('logs when auth initialized with storage token', () => {
+      const storageToken = 'storage-token'
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+      })
+
+      vi.mocked(getAuthCode).mockReturnValue(null)
+      vi.mocked(getTokenFromStorage).mockReturnValue(storageToken)
+      vi.mocked(getTokenFromLocation).mockReturnValue(null)
+
+      const {authState} = authStore.getInitialState(instance, null)
+      expect(authState).toMatchObject({type: AuthStateType.LOGGED_IN, token: storageToken})
+      // Logger should have been called
+      expect(createLogger).toHaveBeenCalled()
+    })
+
+    it('logs when auth initialized with logging in state', () => {
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+      })
+
+      vi.mocked(getAuthCode).mockReturnValue('test-code')
+      vi.mocked(getTokenFromLocation).mockReturnValue(null)
+
+      const {authState} = authStore.getInitialState(instance, null)
+      expect(authState.type).toBe(AuthStateType.LOGGING_IN)
+      // Logger should have been called
+      expect(createLogger).toHaveBeenCalled()
+    })
+
     it('checks for cookie auth during initialize when studio mode is enabled and no studio token exists', () => {
       const projectId = 'studio-project'
       const studioStorageKey = `__studio_auth_token_${projectId}`
@@ -416,6 +468,35 @@ describe('authStore', () => {
 
       expect(stateUnsubscribe).toHaveBeenCalled()
       expect(storageEventsUnsubscribe).not.toHaveBeenCalled()
+    })
+
+    it('logs when checking for cookie auth in studio mode', async () => {
+      const projectId = 'studio-project'
+      const mockStorage = {
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      } as unknown as Storage
+      vi.mocked(getStudioTokenFromLocalStorage).mockReturnValue(null)
+      vi.mocked(checkForCookieAuth).mockResolvedValue(true)
+
+      instance = createSanityInstance({
+        projectId,
+        dataset: 'd',
+        studioMode: {enabled: true},
+        auth: {storageArea: mockStorage},
+      })
+
+      // Trigger store initialization
+      getAuthState(instance)
+
+      // Wait for async cookie check
+      await vi.waitFor(() => {
+        expect(checkForCookieAuth).toHaveBeenCalledWith(projectId, expect.any(Function))
+      })
+
+      // Logger should have been called during initialization
+      expect(createLogger).toHaveBeenCalled()
     })
   })
 
