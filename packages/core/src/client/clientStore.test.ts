@@ -1,4 +1,4 @@
-import {createClient, type SanityClient} from '@sanity/client'
+import * as sanityClient from '@sanity/client'
 import {Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
@@ -10,6 +10,8 @@ import {getClient, getClientState} from './clientStore'
 vi.mock('@sanity/client')
 
 vi.mock('../auth/authStore')
+
+const createClientSpy = vi.spyOn(sanityClient, 'createClient')
 
 let instance: SanityInstance
 let authMethod$: Subject<'cookie' | 'localstorage' | undefined>
@@ -30,9 +32,7 @@ beforeEach(() => {
     subscribe: vi.fn(),
     observable: authMethod$, // Consistently return the module-scope Subject
   })
-  vi.mocked(createClient).mockImplementation(
-    (clientConfig) => ({config: () => clientConfig}) as SanityClient,
-  )
+
   instance = createSanityInstance({
     projectId: 'test-project',
     dataset: 'test-dataset',
@@ -53,16 +53,17 @@ describe('clientStore', () => {
         ignoreBrowserTokenWarning: true,
         allowReconfigure: false,
         requestTagPrefix: 'sanity.sdk',
-        projectId: 'test-project',
-        dataset: 'test-dataset',
+        resource: {type: 'dataset', id: 'test-project.test-dataset'},
         token: 'initial-token',
+        useProjectHostname: false,
       }
 
-      expect(vi.mocked(createClient)).toHaveBeenCalledWith({
+      expect(createClientSpy).toHaveBeenCalledWith({
         ...defaultConfiguration,
         apiVersion: '2024-11-12',
       })
-      expect(client.config()).toEqual({
+
+      expect(client.config()).toMatchObject({
         ...defaultConfiguration,
         apiVersion: '2024-11-12',
       })
@@ -98,7 +99,7 @@ describe('clientStore', () => {
       const client2 = getClient(instance, options)
 
       expect(client1).toBe(client2)
-      expect(vi.mocked(createClient)).toHaveBeenCalledTimes(1)
+      expect(createClientSpy).toHaveBeenCalledTimes(1)
     })
 
     it('should create new clients when configuration changes', () => {
@@ -106,7 +107,7 @@ describe('clientStore', () => {
       const client2 = getClient(instance, {apiVersion: '2023-08-01'})
 
       expect(client1).not.toBe(client2)
-      expect(vi.mocked(createClient)).toHaveBeenCalledTimes(2)
+      expect(createClientSpy).toHaveBeenCalledTimes(2)
     })
   })
 
@@ -126,7 +127,7 @@ describe('clientStore', () => {
       const client2 = getClient(instance, {apiVersion: '2024-11-12'})
 
       expect(client1).not.toBe(client2)
-      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
+      expect(createClientSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           token: 'new-token',
         }),
@@ -183,10 +184,10 @@ describe('clientStore', () => {
         source: {projectId: 'source-project', dataset: 'source-dataset'},
       })
 
-      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
+      expect(createClientSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          'apiVersion': '2024-11-12',
-          '~experimental_resource': {type: 'dataset', id: 'source-project.source-dataset'},
+          apiVersion: '2024-11-12',
+          resource: {type: 'dataset', id: 'source-project.source-dataset'},
         }),
       )
       // Client should be projectless - no projectId/dataset in config
@@ -194,7 +195,7 @@ describe('clientStore', () => {
       expect(client.config()).not.toHaveProperty('dataset')
       expect(client.config()).toEqual(
         expect.objectContaining({
-          '~experimental_resource': {type: 'dataset', id: 'source-project.source-dataset'},
+          resource: {type: 'dataset', id: 'source-project.source-dataset'},
         }),
       )
     })
@@ -205,10 +206,10 @@ describe('clientStore', () => {
         source: {mediaLibraryId: 'media-lib-123'},
       })
 
-      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
+      expect(createClientSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          '~experimental_resource': {type: 'media-library', id: 'media-lib-123'},
-          'apiVersion': '2024-11-12',
+          resource: {type: 'media-library', id: 'media-lib-123'},
+          apiVersion: '2024-11-12',
         }),
       )
       // Client should be projectless - no projectId/dataset in config
@@ -216,7 +217,7 @@ describe('clientStore', () => {
       expect(client.config()).not.toHaveProperty('dataset')
       expect(client.config()).toEqual(
         expect.objectContaining({
-          '~experimental_resource': {type: 'media-library', id: 'media-lib-123'},
+          resource: {type: 'media-library', id: 'media-lib-123'},
         }),
       )
     })
@@ -227,10 +228,10 @@ describe('clientStore', () => {
         source: {canvasId: 'canvas-123'},
       })
 
-      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
+      expect(createClientSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          '~experimental_resource': {type: 'canvas', id: 'canvas-123'},
-          'apiVersion': '2024-11-12',
+          resource: {type: 'canvas', id: 'canvas-123'},
+          apiVersion: '2024-11-12',
         }),
       )
       // Client should be projectless - no projectId/dataset in config
@@ -238,7 +239,7 @@ describe('clientStore', () => {
       expect(client.config()).not.toHaveProperty('dataset')
       expect(client.config()).toEqual(
         expect.objectContaining({
-          '~experimental_resource': {type: 'canvas', id: 'canvas-123'},
+          resource: {type: 'canvas', id: 'canvas-123'},
         }),
       )
     })
@@ -254,7 +255,7 @@ describe('clientStore', () => {
       expect(client.config()).not.toHaveProperty('dataset')
       expect(client.config()).toEqual(
         expect.objectContaining({
-          '~experimental_resource': {type: 'dataset', id: 'source-project.source-dataset'},
+          resource: {type: 'dataset', id: 'source-project.source-dataset'},
         }),
       )
     })
@@ -294,7 +295,7 @@ describe('clientStore', () => {
       expect(client1).not.toBe(client2)
       expect(client2).not.toBe(client3)
       expect(client1).not.toBe(client3)
-      expect(vi.mocked(createClient)).toHaveBeenCalledTimes(3)
+      expect(createClientSpy).toHaveBeenCalledTimes(3)
     })
 
     it('should reuse clients with identical source configurations', () => {
@@ -308,7 +309,7 @@ describe('clientStore', () => {
       })
 
       expect(client1).toBe(client2)
-      expect(vi.mocked(createClient)).toHaveBeenCalledTimes(1)
+      expect(createClientSpy).toHaveBeenCalledTimes(1)
     })
   })
 })
