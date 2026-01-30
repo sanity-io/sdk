@@ -6,7 +6,6 @@ import {
   bindActionBySource,
   bindActionGlobally,
   createActionBinder,
-  getSourceFromKey,
 } from './createActionBinder'
 import {createSanityInstance} from './createSanityInstance'
 import {createStoreInstance} from './createStoreInstance'
@@ -203,32 +202,5 @@ describe('bindActionBySource', () => {
       source: {projectId: 'proj2', dataset: 'ds2'},
     })
     expect(result).toBe('success')
-  })
-})
-
-describe('getSourceFromKey', () => {
-  it('should return undefined for invalid key format', () => {
-    expect(getSourceFromKey({name: 'invalid-format'})).toBeUndefined()
-    expect(getSourceFromKey({name: ''})).toBeUndefined()
-    expect(getSourceFromKey({name: 'just-a-string'})).toBeUndefined()
-  })
-
-  it('should return undefined when projectId or dataset is missing', () => {
-    expect(getSourceFromKey({name: 'projectIdOnly.'})).toBeUndefined()
-    expect(getSourceFromKey({name: '.datasetOnly'})).toBeUndefined()
-    expect(getSourceFromKey({name: '.'})).toBeUndefined()
-  })
-
-  it('should correctly parse valid key formats', () => {
-    expect(getSourceFromKey({name: 'proj1.dataset1'})).toEqual({
-      projectId: 'proj1',
-      dataset: 'dataset1',
-    })
-    expect(getSourceFromKey({name: 'media-library:ml123'})).toEqual({
-      mediaLibraryId: 'ml123',
-    })
-    expect(getSourceFromKey({name: 'canvas:canvas456'})).toEqual({
-      canvasId: 'canvas456',
-    })
   })
 })

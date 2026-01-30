@@ -9,6 +9,11 @@ import {createStoreInstance, type StoreInstance} from './createStoreInstance'
 import {type StoreState} from './createStoreState'
 import {type StoreContext, type StoreDefinition} from './defineStore'
 
+export interface BoundSourceKey {
+  name: string
+  source: DocumentSource
+}
+
 export type BoundDatasetKey = {
   name: string
   projectId: string
@@ -158,9 +163,9 @@ export const bindActionByDataset = createActionBinder<
  * Binds an action to a store that's scoped to a specific document source.
  **/
 export const bindActionBySource = createActionBinder<
-  {name: string},
+  BoundSourceKey,
   [{source?: DocumentSource}, ...unknown[]]
->((instance, {source}) => {
+>((instance, {source}): BoundSourceKey => {
   if (source) {
     let id: string | undefined
     if (isDatasetSource(source)) {
@@ -172,29 +177,15 @@ export const bindActionBySource = createActionBinder<
     }
 
     if (!id) throw new Error(`Received invalid source: ${JSON.stringify(source)}`)
-    return {name: id}
+    return {name: id, source}
   }
   const {projectId, dataset} = instance.config
 
   if (!projectId || !dataset) {
     throw new Error('This API requires a project ID and dataset configured.')
   }
-  return {name: `${projectId}.${dataset}`}
+  return {name: `${projectId}.${dataset}`, source: {projectId, dataset}}
 })
-
-export const getSourceFromKey = (key: {name: string}): DocumentSource | undefined => {
-  if (key.name.startsWith('media-library:')) {
-    return {mediaLibraryId: key.name.split(':')[1]}
-  } else if (key.name.startsWith('canvas:')) {
-    return {canvasId: key.name.split(':')[1]}
-  }
-  // do some regex / validation for projectId.dataset here
-  const [projectId, dataset] = key.name.split('.')
-  if (!projectId || !dataset) {
-    return undefined
-  }
-  return {projectId, dataset}
-}
 
 /**
  * Binds an action to a global store that's shared across all Sanity instances
