@@ -29,6 +29,11 @@ interface DocumentProjectionSubscriptions {
   }
 }
 
+interface DocumentStatus {
+  lastEditedDraftAt?: string
+  lastEditedPublishedAt?: string
+  lastEditedVersionAt?: string
+}
 export interface ProjectionStoreState<TValue extends object = object> {
   /**
    * A map of document IDs to their projection values, organized by projection hash
@@ -49,5 +54,12 @@ export interface ProjectionStoreState<TValue extends object = object> {
    */
   subscriptions: {
     [documentId: string]: DocumentProjectionSubscriptions
+  }
+
+  /**
+   * A map of document IDs to their status information (same shape as _status returned to users)
+   */
+  documentStatuses: {
+    [documentId: string]: DocumentStatus
   }
 }

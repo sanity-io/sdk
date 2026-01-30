@@ -18,7 +18,7 @@ export interface BoundSourceKey {
   name: string
   source: DocumentSource
 }
-interface BoundPerspectiveKey extends BoundSourceKey {
+export interface BoundPerspectiveKey extends BoundSourceKey {
   perspective: ClientPerspective | ReleasePerspective
 }
 export interface BoundDatasetKey {
