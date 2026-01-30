@@ -12,8 +12,8 @@ test.describe('Authenticated', () => {
 
     // should be able to see the component beneath the AuthBoundary
     await expect(pageContext.getByTestId('project-auth-home')).toBeVisible()
-    // Verify we're authenticated by checking for the absence of the sign-in link
-    await expect(page.getByRole('link', {name: 'Sign in with email'})).not.toBeVisible()
+    // Verify we're authenticated by checking for the absence of the Sanity login page
+    await expect(page.getByRole('link', {name: 'Sign in with Google'})).not.toBeVisible()
   })
 })
 
@@ -36,7 +36,7 @@ test.describe('Unauthenticated', () => {
 
     // should not be able to see the component beneath the AuthBoundary
     await expect(pageContext.getByTestId('project-auth-home')).not.toBeVisible()
-    // The sign in link should be visible when not authenticated
-    await expect(pageContext.getByRole('link', {name: 'Sign in with email'})).toBeVisible()
+    // The Sanity login page should be visible when not authenticated
+    await expect(page.getByRole('link', {name: 'Sign in with Google'})).toBeVisible()
   })
 })
