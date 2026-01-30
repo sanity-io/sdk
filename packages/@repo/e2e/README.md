@@ -13,6 +13,8 @@ The tests expect to find the below env variables. Either define them in your she
 - `RECAPTCHA_E2E_STAGING_KEY`: found in 1Password as "E2E staging reCAPTCHA bypass token" in Dev Secrets
 - `SDK_E2E_DATASET_0`=production
 - `SDK_E2E_DATASET_1`=testing
+- `SDK_E2E_MEDIA_LIBRARY_ID`=we use mlyobHbSHBsj internally
+- `SDK_E2E_MEDIA_LIBRARY_TOKEN`=You can use the same token you used for session token if it's your user session token, otherwise generate this in the org admin page in Manage.
 
 ## Writing tests
 
