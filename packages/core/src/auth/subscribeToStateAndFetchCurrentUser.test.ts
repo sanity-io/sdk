@@ -1,6 +1,6 @@
 import {type CurrentUser} from '@sanity/types'
 import {delay, of, throwError} from 'rxjs'
-import {beforeEach, describe, it} from 'vitest'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance} from '../store/createSanityInstance'
 import {createStoreState} from '../store/createStoreState'
@@ -8,13 +8,28 @@ import {AuthStateType} from './authStateType'
 import {authStore} from './authStore'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 
+// Mock logger to prevent actual logging during tests
+vi.mock('../utils/logger', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../utils/logger')>()
+  return {
+    ...original,
+    createLogger: vi.fn(() => ({
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      trace: vi.fn(),
+    })),
+  }
+})
+
 describe('subscribeToStateAndFetchCurrentUser', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('fetches the current user if the is logged in without a current user present', () => {
-    const mockUser = {id: 'example-user'} as CurrentUser
+    const mockUser = {id: 'example-user', email: 'user@example.com'} as CurrentUser
     const mockRequest = vi.fn().mockReturnValue(of(mockUser))
     const mockClient = {observable: {request: mockRequest}}
     const clientFactory = vi.fn().mockReturnValue(mockClient)

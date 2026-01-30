@@ -7,6 +7,13 @@ import {BrowserRouter, useNavigate} from 'react-router'
 import {AppRoutes} from './AppRoutes'
 import {devConfigs, devResources, e2eConfigs} from './sanityConfigs'
 
+// Enable SDK logging in the browser
+configureLogging({
+  level: 'debug',
+  namespaces: ['*'], // Enable all namespaces
+  internal: true, // Shows internal SDK operations (RxJS streams, store internals, etc.) when in trace mode
+})
+
 const theme = buildTheme({})
 
 function NavigationHandler() {

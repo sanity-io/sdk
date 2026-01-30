@@ -35,6 +35,7 @@ vi.mock('../utils/logger', async (importOriginal) => {
 let instance: SanityInstance | undefined
 
 beforeEach(() => {
+  vi.clearAllMocks()
   vi.mocked(subscribeToStateAndFetchCurrentUser).mockImplementation(() => NEVER.subscribe())
   vi.mocked(subscribeToStorageEventsAndSetToken).mockImplementation(() => NEVER.subscribe())
 })
@@ -135,5 +136,55 @@ describe('logout', () => {
 
     await originalLogout
     expect(removeItem).toHaveBeenCalledTimes(2)
+  })
+
+  it('handles logout when already logged out', async () => {
+    vi.mocked(getTokenFromStorage).mockReturnValue(null)
+    const mockRequest = vi.fn()
+    const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
+    const removeItem = vi.fn() as Storage['removeItem']
+
+    instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      auth: {
+        clientFactory,
+        storageArea: {removeItem} as Storage,
+      },
+    })
+
+    const authState = getAuthState(instance)
+    expect(authState.getCurrent()).toMatchObject({type: AuthStateType.LOGGED_OUT})
+
+    await logout(instance)
+
+    // Should not make API call when already logged out
+    expect(clientFactory).not.toHaveBeenCalled()
+    expect(mockRequest).not.toHaveBeenCalled()
+
+    // Should still clean up storage
+    expect(removeItem).toHaveBeenCalledWith('__sanity_auth_token')
+  })
+
+  it('cleans up storage even if logout request fails', async () => {
+    vi.mocked(getTokenFromStorage).mockReturnValue('token')
+    const error = new Error('Logout request failed')
+    const mockRequest = vi.fn().mockRejectedValue(error)
+    const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
+    const removeItem = vi.fn() as Storage['removeItem']
+
+    instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      auth: {
+        clientFactory,
+        storageArea: {removeItem} as Storage,
+      },
+    })
+
+    await expect(logout(instance)).rejects.toThrow('Logout request failed')
+
+    // Should still clean up storage even on error
+    expect(removeItem).toHaveBeenCalledWith('__sanity_auth_token')
   })
 })
