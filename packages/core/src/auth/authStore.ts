@@ -1,5 +1,4 @@
 import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
-import {type CurrentUser} from '@sanity/types'
 import {type Subscription} from 'rxjs'
 
 import {type AuthConfig, type AuthProvider} from '../config/authConfig'
@@ -7,11 +6,19 @@ import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore} from '../store/defineStore'
 import {AuthStateType} from './authStateType'
+import {
+  type AuthState,
+  type ErrorAuthState,
+  type LoggedInAuthState,
+  type LoggedOutAuthState,
+  type LoggingInAuthState,
+} from './authTypes'
 import {refreshStampedToken} from './refreshStampedToken'
 import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
 import {
+  createLoggedInAuthState,
   getAuthCode,
   getCleanedUrl,
   getDefaultLocation,
@@ -20,41 +27,8 @@ import {
   getTokenFromStorage,
 } from './utils'
 
-/**
- * Represents the various states the authentication can be in.
- *
- * @public
- */
-export type AuthState = LoggedInAuthState | LoggedOutAuthState | LoggingInAuthState | ErrorAuthState
-
-/**
- * Logged-in state from the auth state.
- * @public
- */
-export type LoggedInAuthState = {
-  type: AuthStateType.LOGGED_IN
-  token: string
-  currentUser: CurrentUser | null
-  lastTokenRefresh?: number
-}
-
-/**
- * Logged-out state from the auth state.
- * @public
- */
-export type LoggedOutAuthState = {type: AuthStateType.LOGGED_OUT; isDestroyingSession: boolean}
-
-/**
- * Logging-in state from the auth state.
- * @public
- */
-export type LoggingInAuthState = {type: AuthStateType.LOGGING_IN; isExchangingToken: boolean}
-
-/**
- * Error state from the auth state.
- * @public
- */
-export type ErrorAuthState = {type: AuthStateType.ERROR; error: unknown}
+// Re-export auth state types
+export type {AuthState, ErrorAuthState, LoggedInAuthState, LoggedOutAuthState, LoggingInAuthState}
 
 /**
  * Represents the various states the authentication can be in.
@@ -179,9 +153,9 @@ export const authStore = defineStore<AuthStoreState>({
 
     let authState: AuthState
     if (providedToken) {
-      authState = {type: AuthStateType.LOGGED_IN, token: providedToken, currentUser: null}
+      authState = createLoggedInAuthState(providedToken, null)
     } else if (token && studioModeEnabled) {
-      authState = {type: AuthStateType.LOGGED_IN, token: token ?? '', currentUser: null}
+      authState = createLoggedInAuthState(token ?? '', null)
     } else if (
       getAuthCode(callbackUrl, initialLocationHref) ||
       getTokenFromLocation(initialLocationHref)
@@ -190,7 +164,7 @@ export const authStore = defineStore<AuthStoreState>({
       // Note: dashboardContext from the callback URL can be set later in handleAuthCallback too
     } else if (token && !isInDashboard && !studioModeEnabled) {
       // Only use token from storage if NOT running in dashboard and studio mode is not enabled
-      authState = {type: AuthStateType.LOGGED_IN, token, currentUser: null}
+      authState = createLoggedInAuthState(token, null)
     } else {
       // Default to logged out if no provided token, not handling callback,
       // or if token exists but we ARE in dashboard mode.
@@ -240,7 +214,7 @@ export const authStore = defineStore<AuthStoreState>({
             authState:
               prev.authState.type === AuthStateType.LOGGED_IN
                 ? prev.authState
-                : {type: AuthStateType.LOGGED_IN, token: '', currentUser: null},
+                : createLoggedInAuthState('', null),
           }))
         })
       }
@@ -337,15 +311,15 @@ export const setAuthToken = bindActionGlobally(authStore, ({state}, token: strin
     // Update state only if the new token is different or currently logged out
     if (currentAuthState.type !== AuthStateType.LOGGED_IN || currentAuthState.token !== token) {
       // This state update structure should trigger listeners in clientStore
+      const currentUser =
+        currentAuthState.type === AuthStateType.LOGGED_IN ? currentAuthState.currentUser : null
+      // Preserve existing lastTokenRefresh if available
+      const preserveLastTokenRefresh =
+        currentAuthState.type === AuthStateType.LOGGED_IN
+          ? currentAuthState.lastTokenRefresh
+          : undefined
       state.set('setToken', {
-        authState: {
-          type: AuthStateType.LOGGED_IN,
-          token: token,
-          // Keep existing user or set to null? Setting to null forces refetch.
-          // Keep existing user to avoid unnecessary refetches if user data is still valid.
-          currentUser:
-            currentAuthState.type === AuthStateType.LOGGED_IN ? currentAuthState.currentUser : null,
-        },
+        authState: createLoggedInAuthState(token, currentUser, preserveLastTokenRefresh),
       })
     }
   } else {

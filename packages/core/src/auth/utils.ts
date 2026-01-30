@@ -1,7 +1,33 @@
 import {type ClientError} from '@sanity/client'
+import {type CurrentUser} from '@sanity/types'
 import {EMPTY, fromEvent, Observable} from 'rxjs'
 
 import {AUTH_CODE_PARAM, DEFAULT_BASE} from './authConstants'
+import {AuthStateType} from './authStateType'
+import {type LoggedInAuthState} from './authTypes'
+
+/**
+ * Helper function to create a properly initialized LoggedInAuthState.
+ * For stamped tokens (containing '-st'), initializes lastTokenRefresh to prevent
+ * unnecessary refreshes on visibility changes.
+ *
+ * @internal
+ */
+export function createLoggedInAuthState(
+  token: string,
+  currentUser: CurrentUser | null,
+  preserveLastTokenRefresh?: number,
+): LoggedInAuthState {
+  const isStampedToken = token.includes('-st')
+  const lastTokenRefresh = preserveLastTokenRefresh ?? (isStampedToken ? Date.now() : undefined)
+
+  return {
+    type: AuthStateType.LOGGED_IN,
+    token,
+    currentUser,
+    ...(lastTokenRefresh !== undefined && {lastTokenRefresh}),
+  }
+}
 
 export function getAuthCode(callbackUrl: string | undefined, locationHref: string): string | null {
   const loc = new URL(locationHref, DEFAULT_BASE)
