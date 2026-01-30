@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.6.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.6.0...sdk-react-v2.6.1) (2026-01-30)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/client ([#717](https://github.com/sanity-io/sdk/issues/717)) ([24fb157](https://github.com/sanity-io/sdk/commit/24fb157a0fbc97a625a7c7ad3045e502ec818af1))
+* prevent sourceName from reaching sdk core ([#720](https://github.com/sanity-io/sdk/issues/720)) ([b8cf408](https://github.com/sanity-io/sdk/commit/b8cf4080d63b7d933cae630d1118d3ca4b127e07))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.6.1
+
 ## [2.6.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.5.0...sdk-react-v2.6.0) (2026-01-22)
 
 
