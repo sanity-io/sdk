@@ -6,6 +6,7 @@ import {type AuthConfig, type AuthProvider} from '../config/authConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore} from '../store/defineStore'
+import {createLogger} from '../utils/logger'
 import {AuthStateType} from './authStateType'
 import {refreshStampedToken} from './refreshStampedToken'
 import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
@@ -99,6 +100,20 @@ export interface AuthStoreState {
 export const authStore = defineStore<AuthStoreState>({
   name: 'Auth',
   getInitialState(instance) {
+    const logger = createLogger('auth', {
+      instanceId: instance.instanceId,
+      projectId: instance.config.projectId,
+      dataset: instance.config.dataset,
+    })
+
+    logger.debug('Initializing auth store', {
+      hasProvidedToken: !!instance.config.auth?.token,
+      hasCustomProviders: !!(
+        instance.config.auth?.providers && instance.config.auth.providers.length > 0
+      ),
+      studioMode: instance.config.studioMode?.enabled ?? false,
+    })
+
     const {
       apiHost,
       callbackUrl,
@@ -179,23 +194,38 @@ export const authStore = defineStore<AuthStoreState>({
 
     let authState: AuthState
     if (providedToken) {
+      logger.info('Auth initialized with provided token')
       authState = {type: AuthStateType.LOGGED_IN, token: providedToken, currentUser: null}
     } else if (token && studioModeEnabled) {
+      logger.info('Auth initialized in Studio mode with token from storage')
       authState = {type: AuthStateType.LOGGED_IN, token: token ?? '', currentUser: null}
     } else if (
       getAuthCode(callbackUrl, initialLocationHref) ||
       getTokenFromLocation(initialLocationHref)
     ) {
+      logger.info('Auth callback detected, preparing to exchange token')
       authState = {type: AuthStateType.LOGGING_IN, isExchangingToken: false}
       // Note: dashboardContext from the callback URL can be set later in handleAuthCallback too
     } else if (token && !isInDashboard && !studioModeEnabled) {
       // Only use token from storage if NOT running in dashboard and studio mode is not enabled
+      logger.info('Auth initialized with token from storage')
       authState = {type: AuthStateType.LOGGED_IN, token, currentUser: null}
     } else {
       // Default to logged out if no provided token, not handling callback,
       // or if token exists but we ARE in dashboard mode.
+      logger.info('Auth initialized in logged out state', {
+        isInDashboard,
+        hasToken: !!token,
+        studioMode: studioModeEnabled,
+      })
       authState = {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false}
     }
+
+    logger.debug('Auth state initialized', {
+      authStateType: authState.type,
+      isInDashboard,
+      authMethod,
+    })
 
     return {
       authState,
@@ -215,6 +245,15 @@ export const authStore = defineStore<AuthStoreState>({
     }
   },
   initialize(context) {
+    const {instance} = context
+    const logger = createLogger('auth', {
+      instanceId: instance.instanceId,
+      projectId: instance.config.projectId,
+      dataset: instance.config.dataset,
+    })
+
+    logger.debug('Setting up auth subscriptions')
+
     const subscriptions: Subscription[] = []
     subscriptions.push(subscribeToStateAndFetchCurrentUser(context))
     const storageArea = context.state.get().options?.storageArea
@@ -224,17 +263,22 @@ export const authStore = defineStore<AuthStoreState>({
 
     // If in Studio mode with no local token, resolve cookie auth asynchronously
     try {
-      const {instance, state} = context
+      const {state} = context
       const studioModeEnabled = !!instance.config.studioMode?.enabled
       const token: string | null =
         state.get().authState?.type === AuthStateType.LOGGED_IN
           ? (state.get().authState as LoggedInAuthState).token
           : null
       if (studioModeEnabled && !token) {
+        logger.debug('Checking for cookie-based authentication in Studio mode')
         const projectId = instance.config.projectId
         const clientFactory = state.get().options.clientFactory
         checkForCookieAuth(projectId, clientFactory).then((isCookieAuthEnabled) => {
-          if (!isCookieAuthEnabled) return
+          if (!isCookieAuthEnabled) {
+            logger.debug('Cookie authentication not available')
+            return
+          }
+          logger.info('Cookie authentication enabled')
           state.set('enableCookieAuth', (prev) => ({
             options: {...prev.options, authMethod: 'cookie'},
             authState:
@@ -244,8 +288,9 @@ export const authStore = defineStore<AuthStoreState>({
           }))
         })
       }
-    } catch {
+    } catch (error) {
       // best-effort cookie detection
+      logger.debug('Cookie authentication check failed', {error})
     }
 
     if (!tokenRefresherRunning) {
@@ -254,6 +299,7 @@ export const authStore = defineStore<AuthStoreState>({
     }
 
     return () => {
+      logger.debug('Cleaning up auth subscriptions')
       for (const subscription of subscriptions) {
         subscription.unsubscribe()
       }
@@ -331,29 +377,42 @@ export const getIsInDashboardState = bindActionGlobally(
  * Used internally by the Comlink token refresh.
  * @internal
  */
-export const setAuthToken = bindActionGlobally(authStore, ({state}, token: string | null) => {
-  const currentAuthState = state.get().authState
-  if (token) {
-    // Update state only if the new token is different or currently logged out
-    if (currentAuthState.type !== AuthStateType.LOGGED_IN || currentAuthState.token !== token) {
-      // This state update structure should trigger listeners in clientStore
-      state.set('setToken', {
-        authState: {
-          type: AuthStateType.LOGGED_IN,
-          token: token,
-          // Keep existing user or set to null? Setting to null forces refetch.
-          // Keep existing user to avoid unnecessary refetches if user data is still valid.
-          currentUser:
-            currentAuthState.type === AuthStateType.LOGGED_IN ? currentAuthState.currentUser : null,
-        },
-      })
+export const setAuthToken = bindActionGlobally(
+  authStore,
+  ({state, instance}, token: string | null) => {
+    const logger = createLogger('auth', {
+      instanceId: instance.instanceId,
+      projectId: instance.config.projectId,
+      dataset: instance.config.dataset,
+    })
+
+    const currentAuthState = state.get().authState
+    if (token) {
+      // Update state only if the new token is different or currently logged out
+      if (currentAuthState.type !== AuthStateType.LOGGED_IN || currentAuthState.token !== token) {
+        logger.info('Setting auth token')
+        // This state update structure should trigger listeners in clientStore
+        state.set('setToken', {
+          authState: {
+            type: AuthStateType.LOGGED_IN,
+            token: token,
+            // Keep existing user or set to null? Setting to null forces refetch.
+            // Keep existing user to avoid unnecessary refetches if user data is still valid.
+            currentUser:
+              currentAuthState.type === AuthStateType.LOGGED_IN
+                ? currentAuthState.currentUser
+                : null,
+          },
+        })
+      }
+    } else {
+      // Handle setting token to null (logging out)
+      if (currentAuthState.type !== AuthStateType.LOGGED_OUT) {
+        logger.info('Clearing auth token')
+        state.set('setToken', {
+          authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
+        })
+      }
     }
-  } else {
-    // Handle setting token to null (logging out)
-    if (currentAuthState.type !== AuthStateType.LOGGED_OUT) {
-      state.set('setToken', {
-        authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
-      })
-    }
-  }
-})
+  },
+)
