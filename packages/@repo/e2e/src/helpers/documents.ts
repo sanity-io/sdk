@@ -6,7 +6,7 @@ import {getE2EEnv} from './getE2EEnv'
 
 const env = getE2EEnv()
 
-export type DocumentStub = Omit<SanityDocumentStub, '_id'>
+export type DocumentStub = Omit<SanityDocumentStub, '_id'> & {_id?: string}
 
 // Keep track of document IDs created during tests
 const documentIds = new Set<string>()
@@ -21,12 +21,20 @@ export async function createDocuments<T extends DocumentStub>(
   data: T[],
   options?: {asDraft?: boolean},
   dataset?: string,
-): Promise<MultipleMutationResult> {
+): Promise<MultipleMutationResult & {documentIds: string[]}> {
   const client = getClient(dataset)
   const asDraft = options?.asDraft ?? true // Default to draft if not specified
 
+  const createdIds: string[] = []
   const docs = data.map((doc) => {
-    const documentId = getUniqueDocumentId()
+    // Use provided _id if available, otherwise generate a new one
+    const documentId = doc._id || getUniqueDocumentId()
+    if (doc._id) {
+      // Track custom IDs for cleanup
+      documentIds.add(documentId)
+    }
+    createdIds.push(documentId)
+
     return {
       ...doc,
       _type: doc['_type'],
@@ -36,7 +44,12 @@ export async function createDocuments<T extends DocumentStub>(
 
   const transaction = client.transaction()
   docs.forEach((doc) => transaction.create(doc))
-  return transaction.commit()
+  const result = await transaction.commit({visibility: 'sync'})
+
+  return {
+    ...result,
+    documentIds: createdIds,
+  }
 }
 
 export async function cleanupDocuments(): Promise<void> {

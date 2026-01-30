@@ -52,6 +52,9 @@ export default defineConfig(({mode}) => {
       'import.meta.env.VITE_E2E_DATASET_1': JSON.stringify(
         process.env['SDK_E2E_DATASET_1'] || env['SDK_E2E_DATASET_1'],
       ),
+      'import.meta.env.VITE_E2E_MEDIA_LIBRARY_ID': JSON.stringify(
+        process.env['SDK_E2E_MEDIA_LIBRARY_ID'] || env['SDK_E2E_MEDIA_LIBRARY_ID'],
+      ),
     },
   }
 })
