@@ -292,10 +292,10 @@ function promptAdapter(
 
 /**
  * @alpha
- * Prompts the LLM using the same instruction template format as other agent actions.
+ * Prompts the Content Agent using the same instruction template format as other agent actions.
  *
  * @remarks
- * This hook provides a stable callback to send prompts to the LLM and receive responses.
+ * This hook provides a stable callback to send prompts to the Content Agent and receive responses.
  * Unlike the other agent action hooks, this one does not modify documents—it simply
  * returns the AI's response.
  *
