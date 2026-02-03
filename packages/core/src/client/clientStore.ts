@@ -28,24 +28,25 @@ type AllowedClientConfigKey =
   | 'projectId'
   | 'requestTagPrefix'
   | 'useProjectHostname'
+  | 'resource'
 
 const allowedKeys = Object.keys({
-  'apiHost': null,
-  'useCdn': null,
-  'token': null,
-  'perspective': null,
-  'proxy': null,
-  'withCredentials': null,
-  'timeout': null,
-  'maxRetries': null,
-  'dataset': null,
-  'projectId': null,
-  'scope': null,
-  'apiVersion': null,
-  'requestTagPrefix': null,
-  'useProjectHostname': null,
-  '~experimental_resource': null,
-  'source': null,
+  apiHost: null,
+  useCdn: null,
+  token: null,
+  perspective: null,
+  proxy: null,
+  withCredentials: null,
+  timeout: null,
+  maxRetries: null,
+  dataset: null,
+  projectId: null,
+  scope: null,
+  source: null,
+  apiVersion: null,
+  requestTagPrefix: null,
+  useProjectHostname: null,
+  resource: null,
 } satisfies Record<keyof ClientOptions, null>) as (keyof ClientOptions)[]
 
 const DEFAULT_CLIENT_CONFIG: ClientConfig = {
@@ -54,6 +55,7 @@ const DEFAULT_CLIENT_CONFIG: ClientConfig = {
   ignoreBrowserTokenWarning: true,
   allowReconfigure: false,
   requestTagPrefix: DEFAULT_REQUEST_TAG_PREFIX,
+  useProjectHostname: false,
 }
 
 /**
@@ -93,20 +95,16 @@ export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey
    * and the global client ('global'). When set to `'global'`, the global client
    * is used.
    */
-  'scope'?: 'default' | 'global'
+  scope?: 'default' | 'global'
   /**
    * A required string indicating the API version for the client.
    */
-  'apiVersion': string
-  /**
-   * @internal
-   */
-  '~experimental_resource'?: ClientConfig['~experimental_resource']
+  apiVersion: string
 
   /**
    * @internal
    */
-  'source'?: DocumentSource
+  source?: DocumentSource
 }
 
 const clientStore = defineStore<ClientStoreState>({
@@ -166,8 +164,10 @@ export const getClient = bindActionGlobally(
       )
     }
 
+    const {projectId, dataset, source, ...restOptions} = options
+
     // Check for disallowed keys
-    const providedKeys = Object.keys(options) as (keyof ClientOptions)[]
+    const providedKeys = Object.keys(restOptions) as (keyof ClientOptions)[]
     const disallowedKeys = providedKeys.filter((key) => !allowedKeys.includes(key))
 
     if (disallowedKeys.length > 0) {
@@ -183,43 +183,47 @@ export const getClient = bindActionGlobally(
 
     let resource: ClientResource | undefined
 
-    if (options.source) {
-      if (isDatasetSource(options.source)) {
-        resource = {type: 'dataset', id: `${options.source.projectId}.${options.source.dataset}`}
-      } else if (isMediaLibrarySource(options.source)) {
-        resource = {type: 'media-library', id: options.source.mediaLibraryId}
-      } else if (isCanvasSource(options.source)) {
-        resource = {type: 'canvas', id: options.source.canvasId}
+    if (source) {
+      if (isDatasetSource(source)) {
+        resource = {type: 'dataset', id: `${source.projectId}.${source.dataset}`}
+      } else if (isMediaLibrarySource(source)) {
+        resource = {type: 'media-library', id: source.mediaLibraryId}
+      } else if (isCanvasSource(source)) {
+        resource = {type: 'canvas', id: source.canvasId}
       }
-    }
-
-    const projectId = options.projectId ?? instance.config.projectId
-    const dataset = options.dataset ?? instance.config.dataset
-    const apiHost = options.apiHost ?? instance.config.auth?.apiHost
-
-    const effectiveOptions: ClientOptions = {
-      ...DEFAULT_CLIENT_CONFIG,
-      ...((options.scope === 'global' || !projectId || resource) && {useProjectHostname: false}),
-      token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
-      ...options,
-      ...(projectId && {projectId}),
-      ...(dataset && {dataset}),
-      ...(apiHost && {apiHost}),
-      ...(resource && {'~experimental_resource': resource}),
     }
 
     // When a source is provided, don't use projectId/dataset - the client should be "projectless"
     // The client code itself will ignore the non-source config, so we do this to prevent confusing the user.
     // (ref: https://github.com/sanity-io/client/blob/5c23f81f5ab93a53f5b22b39845c867988508d84/src/data/dataMethods.ts#L691)
     if (resource) {
-      if (options.projectId || options.dataset) {
+      if ((projectId || dataset) && !options.useProjectHostname) {
         // eslint-disable-next-line no-console
         console.warn(
           'Both source and explicit projectId/dataset are provided. The source will be used and projectId/dataset will be ignored.',
         )
       }
-      delete effectiveOptions.projectId
-      delete effectiveOptions.dataset
+    }
+
+    // conform all clients to use global API
+    if (!resource && !options.useProjectHostname) {
+      resource = {
+        type: 'dataset',
+        id: `${projectId ?? instance.config.projectId}.${dataset ?? instance.config.dataset}`,
+      }
+    }
+
+    const apiHost = options.apiHost ?? instance.config.auth?.apiHost
+
+    const effectiveOptions: ClientOptions = {
+      ...DEFAULT_CLIENT_CONFIG,
+      token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
+      ...restOptions,
+      ...(apiHost && {apiHost}),
+      ...(resource && !options.useProjectHostname && {resource}),
+      ...(options.useProjectHostname && {useProjectHostname: true}),
+      ...(options.useProjectHostname && {projectId}),
+      ...(options.useProjectHostname && {dataset}),
     }
 
     if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {
@@ -230,7 +234,6 @@ export const getClient = bindActionGlobally(
     } else {
       delete effectiveOptions.withCredentials
     }
-
     const key = getClientConfigKey(effectiveOptions)
 
     if (clients[key]) return clients[key]
