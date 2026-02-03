@@ -3,6 +3,10 @@ import {type SanityDocument} from 'groq'
 import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {
+  useNormalizedSourceOptions,
+  type WithSourceNameSupport,
+} from '../helpers/useNormalizedSourceOptions'
 // used in an `{@link useDocumentProjection}` and `{@link useQuery}`
 // eslint-disable-next-line import/consistent-type-specifier-style, unused-imports/no-unused-imports
 import type {useDocumentProjection} from '../projection/useDocumentProjection'
@@ -33,10 +37,17 @@ const wrapHookWithData = <TParams extends unknown[], TReturn>(
   return useHook
 }
 
+type UseDocumentOptions<
+  TPath extends string | undefined = undefined,
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> = WithSourceNameSupport<DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>>
+
 interface UseDocument {
   /** @internal */
   <TDocumentType extends string, TDataset extends string, TProjectId extends string = string>(
-    options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
+    options: UseDocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
   ): {data: SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`> | null}
 
   /** @internal */
@@ -46,7 +57,7 @@ interface UseDocument {
     TDataset extends string = string,
     TProjectId extends string = string,
   >(
-    options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
+    options: UseDocumentOptions<TPath, TDocumentType>,
   ): {
     data: JsonMatch<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath> | undefined
   }
@@ -124,7 +135,7 @@ interface UseDocument {
     TDataset extends string = string,
     TProjectId extends string = string,
   >(
-    options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
+    options: UseDocumentOptions<TPath, TDocumentType>,
   ): TPath extends string
     ? {
         data:
@@ -194,13 +205,13 @@ interface UseDocument {
    * @inlineType DocumentOptions
    */
   <TData, TPath extends string>(
-    options: DocumentOptions<TPath>,
+    options: UseDocumentOptions<TPath>,
   ): TPath extends string ? {data: TData | undefined} : {data: TData | null}
 
   /**
    * @internal
    */
-  (options: DocumentOptions): {data: unknown}
+  (options: UseDocumentOptions): {data: unknown}
 }
 
 /**
@@ -226,4 +237,7 @@ interface UseDocument {
  *
  * @function
  */
-export const useDocument = wrapHookWithData(useDocumentValue) as UseDocument
+export const useDocument = wrapHookWithData((options: UseDocumentOptions) => {
+  const normalizedOptions = useNormalizedSourceOptions(options)
+  return useDocumentValue(normalizedOptions)
+}) as UseDocument

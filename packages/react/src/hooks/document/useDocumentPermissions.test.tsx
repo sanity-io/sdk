@@ -1,6 +1,6 @@
 import {type DocumentAction, type DocumentPermissionsResult, getPermissionsState} from '@sanity/sdk'
 import {act, renderHook, waitFor} from '@testing-library/react'
-import {BehaviorSubject, firstValueFrom} from 'rxjs'
+import {BehaviorSubject, firstValueFrom, Observable} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
@@ -68,7 +68,8 @@ describe('usePermissions', () => {
 
     // Set up the getPermissionsState mock
     vi.mocked(getPermissionsState).mockReturnValue({
-      observable: permissionsSubject.asObservable(),
+      observable:
+        permissionsSubject.asObservable() as unknown as Observable<DocumentPermissionsResult>,
       subscribe: mockSubscribe,
       getCurrent: mockGetCurrent,
     })
@@ -180,6 +181,89 @@ describe('usePermissions', () => {
         ),
       })
     }).toThrow(/Mismatched datasets found in actions/)
+  })
+
+  it('should throw an error if actions have mismatched sources', () => {
+    const actions = [
+      {
+        type: 'document.publish' as const,
+        documentId: 'doc1',
+        documentType: 'article',
+        source: {projectId: 'p1', dataset: 'd1'},
+      },
+      {
+        type: 'document.publish' as const,
+        documentId: 'doc2',
+        documentType: 'article',
+        source: {projectId: 'p2', dataset: 'd2'},
+      },
+    ]
+
+    expect(() => {
+      renderHook(() => useDocumentPermissions(actions), {
+        wrapper: ({children}) => (
+          <ResourceProvider
+            projectId={mockAction.projectId}
+            dataset={mockAction.dataset}
+            fallback={null}
+          >
+            {children}
+          </ResourceProvider>
+        ),
+      })
+    }).toThrow(/Mismatched sources found in actions/)
+  })
+
+  it('should throw an error when mixing projectId and source (projectId first)', () => {
+    const actions = [
+      mockAction,
+      {
+        type: 'document.publish' as const,
+        documentId: 'doc2',
+        documentType: 'article',
+        source: {projectId: 'p', dataset: 'd'},
+      },
+    ]
+
+    expect(() => {
+      renderHook(() => useDocumentPermissions(actions), {
+        wrapper: ({children}) => (
+          <ResourceProvider
+            projectId={mockAction.projectId}
+            dataset={mockAction.dataset}
+            fallback={null}
+          >
+            {children}
+          </ResourceProvider>
+        ),
+      })
+    }).toThrow(/Mismatches between projectId\/dataset options and source/)
+  })
+
+  it('should throw an error when mixing source and projectId (source first)', () => {
+    const actions = [
+      {
+        type: 'document.publish' as const,
+        documentId: 'doc1',
+        documentType: 'article',
+        source: {projectId: 'p', dataset: 'd'},
+      },
+      mockAction,
+    ]
+
+    expect(() => {
+      renderHook(() => useDocumentPermissions(actions), {
+        wrapper: ({children}) => (
+          <ResourceProvider
+            projectId={mockAction.projectId}
+            dataset={mockAction.dataset}
+            fallback={null}
+          >
+            {children}
+          </ResourceProvider>
+        ),
+      })
+    }).toThrow(/Mismatches between projectId\/dataset options and source/)
   })
 
   it('should wait for permissions to be ready before rendering', async () => {

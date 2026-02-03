@@ -1,5 +1,6 @@
 import {
   type DocumentHandle,
+  type DocumentOptions,
   getDocumentSyncStatus,
   resolveDocument,
   type SanityInstance,
@@ -8,6 +9,7 @@ import {
 import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {useNormalizedSourceOptions} from '../helpers/useNormalizedSourceOptions'
 
 type UseDocumentSyncStatus = {
   /**
@@ -45,11 +47,7 @@ type UseDocumentSyncStatus = {
   (doc: DocumentHandle): boolean
 }
 
-/**
- * @public
- * @function
- */
-export const useDocumentSyncStatus: UseDocumentSyncStatus = createStateSourceHook({
+const useDocumentSyncStatusValue = createStateSourceHook({
   getState: getDocumentSyncStatus as (
     instance: SanityInstance,
     doc: DocumentHandle,
@@ -59,3 +57,14 @@ export const useDocumentSyncStatus: UseDocumentSyncStatus = createStateSourceHoo
   suspender: (instance, doc: DocumentHandle) => resolveDocument(instance, doc),
   getConfig: identity,
 })
+
+/**
+ * @public
+ * @function
+ */
+export const useDocumentSyncStatus: UseDocumentSyncStatus = (
+  options: DocumentOptions<string | undefined>,
+) => {
+  const normalizedOptions = useNormalizedSourceOptions(options)
+  return useDocumentSyncStatusValue(normalizedOptions)
+}
