@@ -1,6 +1,12 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {bindActionByDataset, bindActionGlobally, createActionBinder} from './createActionBinder'
+import {type DocumentSource} from '../config/sanityConfig'
+import {
+  bindActionByDataset,
+  bindActionBySource,
+  bindActionGlobally,
+  createActionBinder,
+} from './createActionBinder'
 import {createSanityInstance} from './createSanityInstance'
 import {createStoreInstance} from './createStoreInstance'
 
@@ -151,5 +157,50 @@ describe('bindActionGlobally', () => {
 
     instance2.dispose()
     expect(storeInstance.dispose).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('bindActionBySource', () => {
+  it('should throw an error when provided an invalid source', () => {
+    const storeDefinition = {
+      name: 'SourceStore',
+      getInitialState: () => ({counter: 0}),
+    }
+    const action = vi.fn((_context) => 'success')
+    const boundAction = bindActionBySource(storeDefinition, action)
+    const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
+
+    expect(() =>
+      boundAction(instance, {source: {invalid: 'source'} as unknown as DocumentSource}),
+    ).toThrow('Received invalid source:')
+  })
+
+  it('should throw an error when no source provided and projectId/dataset are missing', () => {
+    const storeDefinition = {
+      name: 'SourceStore',
+      getInitialState: () => ({counter: 0}),
+    }
+    const action = vi.fn((_context) => 'success')
+    const boundAction = bindActionBySource(storeDefinition, action)
+    const instance = createSanityInstance({projectId: '', dataset: ''})
+
+    expect(() => boundAction(instance, {})).toThrow(
+      'This API requires a project ID and dataset configured.',
+    )
+  })
+
+  it('should work correctly with a valid dataset source', () => {
+    const storeDefinition = {
+      name: 'SourceStore',
+      getInitialState: () => ({counter: 0}),
+    }
+    const action = vi.fn((_context) => 'success')
+    const boundAction = bindActionBySource(storeDefinition, action)
+    const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
+
+    const result = boundAction(instance, {
+      source: {projectId: 'proj2', dataset: 'ds2'},
+    })
+    expect(result).toBe('success')
   })
 })
