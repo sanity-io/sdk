@@ -1,9 +1,14 @@
+import {type ClientPerspective} from '@sanity/client'
+
 import {
+  type DatasetHandle,
   type DocumentSource,
   isCanvasSource,
   isDatasetSource,
   isMediaLibrarySource,
+  type ReleasePerspective,
 } from '../config/sanityConfig'
+import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type SanityInstance} from './createSanityInstance'
 import {createStoreInstance, type StoreInstance} from './createStoreInstance'
 import {type StoreState} from './createStoreState'
@@ -13,8 +18,10 @@ export interface BoundSourceKey {
   name: string
   source: DocumentSource
 }
-
-export type BoundDatasetKey = {
+interface BoundPerspectiveKey extends BoundSourceKey {
+  perspective: ClientPerspective | ReleasePerspective
+}
+export interface BoundDatasetKey {
   name: string
   projectId: string
   dataset: string
@@ -159,32 +166,98 @@ export const bindActionByDataset = createActionBinder<
   return {name: `${projectId}.${dataset}`, projectId, dataset}
 })
 
+const createSourceKey = (instance: SanityInstance, source?: DocumentSource): BoundSourceKey => {
+  let name: string | undefined
+  let sourceForKey: DocumentSource | undefined
+  if (source) {
+    sourceForKey = source
+    if (isDatasetSource(source)) {
+      name = `${source.projectId}.${source.dataset}`
+    } else if (isMediaLibrarySource(source)) {
+      name = `media-library:${source.mediaLibraryId}`
+    } else if (isCanvasSource(source)) {
+      name = `canvas:${source.canvasId}`
+    } else {
+      throw new Error(`Received invalid source: ${JSON.stringify(source)}`)
+    }
+    return {name, source: sourceForKey}
+  }
+
+  // TODO: remove reference to instance.config when we get to v3
+  const {projectId, dataset} = instance.config
+  if (!projectId || !dataset) {
+    throw new Error('This API requires a project ID and dataset configured.')
+  }
+  return {name: `${projectId}.${dataset}`, source: {projectId, dataset}}
+}
+
 /**
  * Binds an action to a store that's scoped to a specific document source.
  **/
 export const bindActionBySource = createActionBinder<
   BoundSourceKey,
   [{source?: DocumentSource}, ...unknown[]]
->((instance, {source}): BoundSourceKey => {
-  if (source) {
-    let id: string | undefined
-    if (isDatasetSource(source)) {
-      id = `${source.projectId}.${source.dataset}`
-    } else if (isMediaLibrarySource(source)) {
-      id = `media-library:${source.mediaLibraryId}`
-    } else if (isCanvasSource(source)) {
-      id = `canvas:${source.canvasId}`
-    }
+>((instance, {source}) => {
+  return createSourceKey(instance, source)
+})
 
-    if (!id) throw new Error(`Received invalid source: ${JSON.stringify(source)}`)
-    return {name: id, source}
+/**
+ * Binds an action to a store that's scoped to a specific document source and perspective.
+ *
+ * @remarks
+ * This creates actions that operate on state isolated to a specific document source and perspective.
+ * Different document sources and perspectives will have separate states.
+ *
+ * This is mostly useful for stores that do batch fetching operations, since the query store
+ * can isolate single queries by perspective.
+ *
+ * @throws Error if source or perspective is missing from the Sanity instance config
+ *
+ * @example
+ * ```ts
+ * // Define a store
+ * const documentStore = defineStore<DocumentState>({
+ *   name: 'Document',
+ *   getInitialState: () => ({ documents: {} }),
+ *   // ...
+ * })
+ *
+ * // Create source-and-perspective-specific actions
+ * export const fetchDocuments = bindActionBySourceAndPerspective(
+ *   documentStore,
+ *   ({instance, state}, documentId) => {
+ *     // This state is isolated to the specific document source and perspective
+ *     // ...fetch logic...
+ *   }
+ * )
+ *
+ * // Usage
+ * fetchDocument(sanityInstance, 'doc123')
+ * ```
+ */
+export const bindActionBySourceAndPerspective = createActionBinder<
+  BoundPerspectiveKey,
+  [DatasetHandle, ...unknown[]]
+>((instance, options): BoundPerspectiveKey => {
+  const {source, perspective} = options
+  // TODO: remove reference to instance.config.perspective when we get to v3
+  const utilizedPerspective = perspective ?? instance.config.perspective ?? 'drafts'
+  let perspectiveKey: string
+  if (isReleasePerspective(utilizedPerspective)) {
+    perspectiveKey = utilizedPerspective.releaseName
+  } else if (typeof utilizedPerspective === 'string') {
+    perspectiveKey = utilizedPerspective
+  } else {
+    // "StackablePerspective", shouldn't be a common case, but just in case
+    perspectiveKey = JSON.stringify(utilizedPerspective)
   }
-  const {projectId, dataset} = instance.config
+  const sourceKey = createSourceKey(instance, source)
 
-  if (!projectId || !dataset) {
-    throw new Error('This API requires a project ID and dataset configured.')
+  return {
+    name: `${sourceKey.name}:${perspectiveKey}`,
+    source: sourceKey.source,
+    perspective: utilizedPerspective,
   }
-  return {name: `${projectId}.${dataset}`, source: {projectId, dataset}}
 })
 
 /**
