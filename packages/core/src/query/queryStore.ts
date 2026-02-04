@@ -24,7 +24,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle, type DocumentSource} from '../config/sanityConfig'
+import {type DatasetHandle, isDatasetSource} from '../config/sanityConfig'
 /*
  * Although this is an import dependency cycle, it is not a logical cycle:
  * 1. queryStore uses getPerspectiveState when resolving release perspectives
@@ -33,8 +33,9 @@ import {type DatasetHandle, type DocumentSource} from '../config/sanityConfig'
  * 4. however, queryStore does not use getPerspectiveState for the perspective used in releasesStore ("raw")
  */
 // eslint-disable-next-line import/no-cycle
-import {getPerspectiveState, isReleasePerspective} from '../releases/getPerspectiveState'
-import {bindActionBySource} from '../store/createActionBinder'
+import {getPerspectiveState} from '../releases/getPerspectiveState'
+import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
+import {bindActionBySource, type BoundSourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -73,7 +74,6 @@ export interface QueryOptions<
     DatasetHandle<TDataset, TProjectId> {
   query: TQuery
   params?: Record<string, unknown>
-  source?: DocumentSource
 }
 
 /**
@@ -116,7 +116,7 @@ function normalizeOptionsWithPerspective(
   }
 }
 
-const queryStore = defineStore<QueryStoreState>({
+const queryStore = defineStore<QueryStoreState, BoundSourceKey>({
   name: 'QueryStore',
   getInitialState: () => ({queries: {}}),
   initialize(context) {
@@ -225,9 +225,12 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
 const listenToLiveClientAndSetLastLiveEventIds = ({
   state,
   instance,
-}: StoreContext<QueryStoreState>) => {
+  key: {source},
+}: StoreContext<QueryStoreState, BoundSourceKey>) => {
   const liveMessages$ = getClientState(instance, {
     apiVersion: QUERY_STORE_API_VERSION,
+    // temporary guard here until we're ready for everything to be queried via global api
+    ...(source && !isDatasetSource(source) ? {source} : {}),
   }).observable.pipe(
     switchMap((client) =>
       defer(() =>
