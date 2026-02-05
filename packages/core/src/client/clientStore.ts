@@ -182,19 +182,25 @@ export const getClient = bindActionGlobally(
     const {clients, authMethod} = state.get()
 
     let resource: ClientResource | undefined
+    let projectId: string | undefined
+    let dataset: string | undefined
 
     if (options.source) {
-      if (isDatasetSource(options.source)) {
-        resource = {type: 'dataset', id: `${options.source.projectId}.${options.source.dataset}`}
-      } else if (isMediaLibrarySource(options.source)) {
+      if (isMediaLibrarySource(options.source)) {
         resource = {type: 'media-library', id: options.source.mediaLibraryId}
       } else if (isCanvasSource(options.source)) {
         resource = {type: 'canvas', id: options.source.canvasId}
+      } else if (isDatasetSource(options.source)) {
+        projectId = options.source.projectId
+        dataset = options.source.dataset
       }
+      // temporary excluding dataset source as a resource for now. Many of the global API endpoints require vX api version.
+      // } else if (isDatasetSource(options.source)) {
+      //   resource = {type: 'dataset', id: `${options.source.projectId}.${options.source.dataset}`}
     }
 
-    const projectId = options.projectId ?? instance.config.projectId
-    const dataset = options.dataset ?? instance.config.dataset
+    projectId = projectId ?? options.projectId ?? instance.config.projectId
+    dataset = dataset ?? options.dataset ?? instance.config.dataset
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost
 
     const effectiveOptions: ClientOptions = {
@@ -208,18 +214,21 @@ export const getClient = bindActionGlobally(
       ...(resource && {'~experimental_resource': resource}),
     }
 
-    // When a source is provided, don't use projectId/dataset - the client should be "projectless"
+    // When a resource-based source is provided (MediaLibrary/Canvas), don't use projectId/dataset - the client should be "projectless"
     // The client code itself will ignore the non-source config, so we do this to prevent confusing the user.
     // (ref: https://github.com/sanity-io/client/blob/5c23f81f5ab93a53f5b22b39845c867988508d84/src/data/dataMethods.ts#L691)
-    if (resource) {
+    // Note: DatasetSource is handled differently - it extracts projectId/dataset from the source and uses those
+    if (options.source) {
       if (options.projectId || options.dataset) {
         // eslint-disable-next-line no-console
         console.warn(
           'Both source and explicit projectId/dataset are provided. The source will be used and projectId/dataset will be ignored.',
         )
       }
-      delete effectiveOptions.projectId
-      delete effectiveOptions.dataset
+      if (resource) {
+        delete effectiveOptions.projectId
+        delete effectiveOptions.dataset
+      }
     }
 
     if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {
