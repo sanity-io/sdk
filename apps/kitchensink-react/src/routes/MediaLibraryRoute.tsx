@@ -1,4 +1,9 @@
-import {useDocumentProjection, useDocumentSyncStatus, useQuery} from '@sanity/sdk-react'
+import {
+  useDocumentPreview,
+  useDocumentProjection,
+  useDocumentSyncStatus,
+  useQuery,
+} from '@sanity/sdk-react'
 import {Box, Button, Card, Dialog, Flex, Spinner, Text} from '@sanity/ui'
 import {type JSX, Suspense, useState} from 'react'
 import {SanityDocument} from 'sanity'
@@ -79,6 +84,42 @@ function AssetProjection({assetId}: {assetId: string}) {
   )
 }
 
+// Component to display preview data for a specific asset
+function AssetPreview({assetId}: {assetId: string}) {
+  const {data: previewData, isPending} = useDocumentPreview({
+    documentId: assetId,
+    documentType: 'sanity.asset',
+    sourceName: 'media-library',
+  })
+
+  return (
+    <Card padding={3} style={{backgroundColor: '#1a1a1a'}}>
+      <div style={{display: 'flex', alignItems: 'center', marginBottom: '1rem'}}>
+        <Text size={1} weight="medium" style={{color: '#fff'}}>
+          Preview Results:
+        </Text>
+        {isPending && <Spinner style={{marginLeft: '0.5rem'}} />}
+      </div>
+
+      <pre
+        data-testid="preview-results"
+        style={{
+          backgroundColor: '#2a2a2a',
+          padding: '1rem',
+          borderRadius: '4px',
+          overflow: 'auto',
+          maxHeight: '400px',
+          fontSize: '0.875rem',
+          color: '#fff',
+          whiteSpace: 'pre-wrap',
+        }}
+      >
+        {JSON.stringify(previewData, null, 2)}
+      </pre>
+    </Card>
+  )
+}
+
 export function MediaLibraryRoute(): JSX.Element {
   const [query] = useState('*[_type == "sanity.asset"][0...10] | order(_id desc)')
   const [isLoading] = useState(false)
@@ -127,50 +168,50 @@ export function MediaLibraryRoute(): JSX.Element {
         </div>
       </Card>
 
-      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
-        <Card padding={3} style={{backgroundColor: '#1a1a1a'}}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '1rem',
-            }}
-          >
-            <div style={{display: 'flex', alignItems: 'center'}}>
-              <Text size={1} weight="medium" style={{color: '#fff'}}>
-                useQuery Results:
-              </Text>
-              {(isPending || isLoading) && <Spinner style={{marginLeft: '0.5rem'}} />}
-            </div>
-            {firstAssetId && (
-              <Button
-                text="Edit First Asset"
-                tone="primary"
-                fontSize={1}
-                onClick={() => setEditingAssetId(firstAssetId)}
-              />
-            )}
+      <Card padding={3} style={{marginBottom: '2rem', backgroundColor: '#1a1a1a'}}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '1rem',
+          }}
+        >
+          <div style={{display: 'flex', alignItems: 'center'}}>
+            <Text size={1} weight="medium" style={{color: '#fff'}}>
+              useQuery Results:
+            </Text>
+            {(isPending || isLoading) && <Spinner style={{marginLeft: '0.5rem'}} />}
           </div>
+          {firstAssetId && (
+            <Button
+              text="Edit First Asset"
+              tone="primary"
+              fontSize={1}
+              onClick={() => setEditingAssetId(firstAssetId)}
+            />
+          )}
+        </div>
 
-          <pre
-            data-testid="query-results"
-            style={{
-              backgroundColor: '#2a2a2a',
-              padding: '1rem',
-              borderRadius: '4px',
-              overflow: 'auto',
-              maxHeight: '400px',
-              fontSize: '0.875rem',
-              color: '#fff',
-              whiteSpace: 'pre-wrap',
-            }}
-          >
-            {JSON.stringify(data, null, 2)}
-          </pre>
-        </Card>
+        <pre
+          data-testid="query-results"
+          style={{
+            backgroundColor: '#2a2a2a',
+            padding: '1rem',
+            borderRadius: '4px',
+            overflow: 'auto',
+            maxHeight: '400px',
+            fontSize: '0.875rem',
+            color: '#fff',
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      </Card>
 
-        {firstAssetId && (
+      {firstAssetId && (
+        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
           <Suspense
             fallback={
               <Card padding={3} style={{backgroundColor: '#1a1a1a'}}>
@@ -180,8 +221,18 @@ export function MediaLibraryRoute(): JSX.Element {
           >
             <AssetProjection assetId={firstAssetId} />
           </Suspense>
-        )}
-      </div>
+
+          <Suspense
+            fallback={
+              <Card padding={3} style={{backgroundColor: '#1a1a1a'}}>
+                <Spinner />
+              </Card>
+            }
+          >
+            <AssetPreview assetId={firstAssetId} />
+          </Suspense>
+        </div>
+      )}
 
       {/* Editor Dialog */}
       {editingAssetId && (

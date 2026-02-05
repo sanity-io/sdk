@@ -1,16 +1,12 @@
-import {type DocumentHandle, type PreviewQueryResult, type SanityInstance} from '@sanity/sdk'
+import {type DocumentHandle, type PreviewQueryResult} from '@sanity/sdk'
 import {beforeEach, describe, expect, test, vi} from 'vitest'
 
 import {render, renderHook, screen} from '../../../test/test-utils'
-import {useSanityInstance} from '../context/useSanityInstance'
 import {useDocumentProjection} from '../projection/useDocumentProjection'
 import {useDocumentPreview} from './useDocumentPreview'
 
 // Mock useDocumentProjection since useDocumentPreview now uses it internally
 vi.mock('../projection/useDocumentProjection')
-
-// Mock useSanityInstance to provide a proper config
-vi.mock('../context/useSanityInstance')
 
 const mockDocument: DocumentHandle = {
   documentId: 'doc1',
@@ -18,20 +14,8 @@ const mockDocument: DocumentHandle = {
 }
 
 describe('useDocumentPreview', () => {
-  const mockInstance = {
-    config: {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
-    },
-    instanceId: 'test-instance',
-    onDispose: vi.fn(),
-  } as unknown as SanityInstance
-
   beforeEach(() => {
     vi.clearAllMocks()
-
-    // Mock useSanityInstance to return an instance with projectId and dataset
-    vi.mocked(useSanityInstance).mockReturnValue(mockInstance)
   })
 
   test('transforms projection result to preview format', () => {

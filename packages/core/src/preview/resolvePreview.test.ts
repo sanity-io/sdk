@@ -2,15 +2,21 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {resolveProjection} from '../projection/resolveProjection'
 import {type ProjectionValuePending} from '../projection/types'
-import {createSanityInstance} from '../store/createSanityInstance'
+import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {resolvePreview} from './resolvePreview'
 import {type PreviewQueryResult} from './types'
 
 vi.mock('../projection/resolveProjection')
 
 describe('resolvePreview', () => {
+  let instance: SanityInstance
   beforeEach(() => {
     vi.clearAllMocks()
+    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  })
+
+  afterEach(() => {
+    instance.dispose()
   })
 
   it('resolves and transforms projection result to preview format', async () => {
@@ -27,11 +33,6 @@ describe('resolvePreview', () => {
       data: mockProjectionResult,
       isPending: false,
     } as ProjectionValuePending<PreviewQueryResult>)
-
-    const instance = createSanityInstance({
-      projectId: 'test-project',
-      dataset: 'test-dataset',
-    })
 
     const result = await resolvePreview(instance, {
       documentId: 'doc1',
@@ -50,11 +51,6 @@ describe('resolvePreview', () => {
     vi.mocked(resolveProjection).mockResolvedValue({
       data: null,
       isPending: false,
-    })
-
-    const instance = createSanityInstance({
-      projectId: 'test-project',
-      dataset: 'test-dataset',
     })
 
     const result = await resolvePreview(instance, {

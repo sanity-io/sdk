@@ -8,14 +8,17 @@ import {
 import {useMemo} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useNormalizedSourceOptions} from '../helpers/useNormalizedSourceOptions'
+import {
+  useNormalizedSourceOptions,
+  type WithSourceNameSupport,
+} from '../helpers/useNormalizedSourceOptions'
 import {useDocumentProjection} from '../projection/useDocumentProjection'
 
 /**
  * @public
  * @category Types
  */
-export interface useDocumentPreviewOptions extends DocumentHandle {
+export interface useDocumentPreviewOptions extends WithSourceNameSupport<DocumentHandle> {
   /**
    * Optional ref object to track visibility. When provided, preview resolution
    * only occurs when the referenced element is visible in the viewport.
