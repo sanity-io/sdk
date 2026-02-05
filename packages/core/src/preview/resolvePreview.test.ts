@@ -1,47 +1,68 @@
-import {of} from 'rxjs'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {createDocumentHandle} from '../config/handles'
-import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
-import {type StateSource} from '../store/createStateSourceAction'
-import {getPreviewState} from './getPreviewState'
-import {type PreviewValue, type ValuePending} from './previewStore'
+import {resolveProjection} from '../projection/resolveProjection'
+import {type ProjectionValuePending} from '../projection/types'
+import {createSanityInstance} from '../store/createSanityInstance'
 import {resolvePreview} from './resolvePreview'
+import {type PreviewQueryResult} from './types'
 
-vi.mock('./getPreviewState')
+vi.mock('../projection/resolveProjection')
 
 describe('resolvePreview', () => {
-  let instance: SanityInstance
-
   beforeEach(() => {
-    vi.resetAllMocks()
-    // Create a mock that returns the correct ValuePending type
-    vi.mocked(getPreviewState).mockReturnValue({
-      observable: of({
-        data: {title: 'test'},
-        isPending: false,
-      } as ValuePending<PreviewValue>),
-    } as StateSource<ValuePending<PreviewValue>>)
-
-    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    vi.clearAllMocks()
   })
 
-  afterEach(() => {
-    instance.dispose()
-  })
+  it('resolves and transforms projection result to preview format', async () => {
+    const mockProjectionResult: PreviewQueryResult = {
+      _id: 'doc1',
+      _type: 'article',
+      _updatedAt: '2024-01-01',
+      titleCandidates: {title: 'Resolved Title'},
+      subtitleCandidates: {description: 'Resolved Description'},
+      media: null,
+    }
 
-  it('resolves a preview and returns the first emitted value with results', async () => {
-    const docHandle = createDocumentHandle({
-      documentId: 'doc123',
-      documentType: 'movie',
+    vi.mocked(resolveProjection).mockResolvedValue({
+      data: mockProjectionResult,
+      isPending: false,
+    } as ProjectionValuePending<PreviewQueryResult>)
+
+    const instance = createSanityInstance({
+      projectId: 'test-project',
+      dataset: 'test-dataset',
     })
 
-    const result = await resolvePreview(instance, docHandle)
+    const result = await resolvePreview(instance, {
+      documentId: 'doc1',
+      documentType: 'article',
+    })
 
-    expect(getPreviewState).toHaveBeenCalledWith(instance, docHandle)
-    expect(result).toEqual({
-      data: {title: 'test'},
+    expect(result.data).toEqual({
+      title: 'Resolved Title',
+      subtitle: 'Resolved Description',
+      media: null,
+    })
+    expect(result.isPending).toBe(false)
+  })
+
+  it('returns null data when projection resolves with null', async () => {
+    vi.mocked(resolveProjection).mockResolvedValue({
+      data: null,
       isPending: false,
     })
+
+    const instance = createSanityInstance({
+      projectId: 'test-project',
+      dataset: 'test-dataset',
+    })
+
+    const result = await resolvePreview(instance, {
+      documentId: 'doc1',
+      documentType: 'article',
+    })
+
+    expect(result.data).toBeNull()
+    expect(result.isPending).toBe(false)
   })
 })

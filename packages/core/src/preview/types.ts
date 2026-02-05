@@ -1,7 +1,9 @@
-import {type BoundDatasetKey} from '../store/createActionBinder'
-import {defineStore} from '../store/defineStore'
-import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
+import {type DocumentStatus} from '../projection/types'
 
+/**
+ *
+ * @internal
+ */
 export interface PreviewQueryResult {
   _id: string
   _type: string
@@ -9,6 +11,7 @@ export interface PreviewQueryResult {
   titleCandidates: Record<string, unknown>
   subtitleCandidates: Record<string, unknown>
   media?: PreviewMedia | null
+  _status?: DocumentStatus
 }
 
 /**
@@ -74,22 +77,10 @@ export type ValuePending<T> = {
 
 /**
  * @public
+ * @deprecated This interface is kept for backwards compatibility but is no longer used internally.
+ * Preview state is now stored in the projection store.
  */
 export interface PreviewStoreState {
   values: {[TDocumentId in string]?: ValuePending<PreviewValue>}
   subscriptions: {[TDocumentId in string]?: {[TSubscriptionId in string]?: true}}
 }
-
-export const previewStore = defineStore<PreviewStoreState, BoundDatasetKey>({
-  name: 'Preview',
-  getInitialState() {
-    return {
-      subscriptions: {},
-      values: {},
-    }
-  },
-  initialize: (context) => {
-    const subscription = subscribeToStateAndFetchBatches(context)
-    return () => subscription.unsubscribe
-  },
-})

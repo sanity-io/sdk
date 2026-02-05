@@ -1,29 +1,22 @@
-import {omit} from 'lodash-es'
+import {map} from 'rxjs'
 
 import {type DocumentHandle} from '../config/sanityConfig'
-import {bindActionByDataset} from '../store/createActionBinder'
+import {getProjectionState} from '../projection/getProjectionState'
 import {type SanityInstance} from '../store/createSanityInstance'
-import {
-  createStateSourceAction,
-  type SelectorContext,
-  type StateSource,
-} from '../store/createStateSourceAction'
-import {getPublishedId, insecureRandomId} from '../utils/ids'
-import {
-  previewStore,
-  type PreviewStoreState,
-  type PreviewValue,
-  type ValuePending,
-} from './previewStore'
-import {STABLE_EMPTY_PREVIEW} from './util'
+import {type StateSource} from '../store/createStateSourceAction'
+import {PREVIEW_PROJECTION} from './previewConstants'
+import {transformProjectionToPreview} from './previewProjectionUtils'
+import {type PreviewQueryResult, type PreviewValue, type ValuePending} from './types'
 
 /**
  * @beta
+ * @deprecated This type is deprecated and will be removed in a future release.
  */
 export type GetPreviewStateOptions = DocumentHandle
 
 /**
  * @beta
+ * @deprecated This function is deprecated and will be removed in a future release.
  */
 export function getPreviewState<TResult extends object>(
   instance: SanityInstance,
@@ -31,6 +24,7 @@ export function getPreviewState<TResult extends object>(
 ): StateSource<ValuePending<TResult>>
 /**
  * @beta
+ * @deprecated This function is deprecated and will be removed in a future release.
  */
 export function getPreviewState(
   instance: SanityInstance,
@@ -38,54 +32,38 @@ export function getPreviewState(
 ): StateSource<ValuePending<PreviewValue>>
 /**
  * @beta
+ * @deprecated This function is deprecated and will be removed in a future release.
  */
 export function getPreviewState(
-  ...args: Parameters<typeof _getPreviewState>
-): StateSource<ValuePending<object>> {
-  return _getPreviewState(...args)
+  instance: SanityInstance,
+  options: GetPreviewStateOptions,
+): StateSource<ValuePending<PreviewValue>> {
+  // Get the projection state
+  const projectionState = getProjectionState<PreviewQueryResult>(instance, {
+    ...options,
+    projection: PREVIEW_PROJECTION,
+  })
+
+  // Transform helper to convert projection result to preview format
+  const transformResult = (
+    current: ReturnType<typeof projectionState.getCurrent>,
+  ): ValuePending<PreviewValue> => {
+    if (!current || current.data === null) {
+      return {data: null, isPending: current?.isPending ?? false}
+    }
+
+    const previewValue = transformProjectionToPreview(instance, current.data, options.source)
+
+    return {
+      data: previewValue,
+      isPending: current.isPending,
+    }
+  }
+
+  // Wrap the state source to transform projection results to preview format
+  return {
+    getCurrent: () => transformResult(projectionState.getCurrent()),
+    subscribe: (callback) => projectionState.subscribe(callback),
+    observable: projectionState.observable.pipe(map(transformResult)),
+  }
 }
-
-/**
- * @beta
- */
-export const _getPreviewState = bindActionByDataset(
-  previewStore,
-  createStateSourceAction({
-    selector: (
-      {state}: SelectorContext<PreviewStoreState>,
-      docHandle: GetPreviewStateOptions,
-    ): ValuePending<object> => state.values[docHandle.documentId] ?? STABLE_EMPTY_PREVIEW,
-    onSubscribe: ({state}, docHandle: GetPreviewStateOptions) => {
-      const subscriptionId = insecureRandomId()
-      const documentId = getPublishedId(docHandle.documentId)
-
-      state.set('addSubscription', (prev) => ({
-        subscriptions: {
-          ...prev.subscriptions,
-          [documentId]: {
-            ...prev.subscriptions[documentId],
-            [subscriptionId]: true,
-          },
-        },
-      }))
-
-      return () => {
-        state.set('removeSubscription', (prev): Partial<PreviewStoreState> => {
-          const documentSubscriptions = omit(prev.subscriptions[documentId], subscriptionId)
-          const hasSubscribers = !!Object.keys(documentSubscriptions).length
-          const prevValue = prev.values[documentId]
-          const previewValue = prevValue?.data ? prevValue.data : null
-
-          return {
-            subscriptions: hasSubscribers
-              ? {...prev.subscriptions, [documentId]: documentSubscriptions}
-              : omit(prev.subscriptions, documentId),
-            values: hasSubscribers
-              ? prev.values
-              : {...prev.values, [documentId]: {data: previewValue, isPending: false}},
-          }
-        })
-      }
-    },
-  }),
-)

@@ -1,5 +1,5 @@
 import {getEnv} from '../utils/getEnv'
-import {type PreviewValue, type ValuePending} from './previewStore'
+import {type PreviewValue, type ValuePending} from './types'
 
 export const PREVIEW_TAG = 'preview'
 export const PREVIEW_PERSPECTIVE = 'raw'
