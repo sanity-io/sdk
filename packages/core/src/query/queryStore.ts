@@ -24,7 +24,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle, isDatasetSource} from '../config/sanityConfig'
+import {type DatasetHandle} from '../config/sanityConfig'
 /*
  * Although this is an import dependency cycle, it is not a logical cycle:
  * 1. queryStore uses getPerspectiveState when resolving release perspectives
@@ -229,8 +229,7 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
 }: StoreContext<QueryStoreState, BoundSourceKey>) => {
   const liveMessages$ = getClientState(instance, {
     apiVersion: QUERY_STORE_API_VERSION,
-    // temporary guard here until we're ready for everything to be queried via global api
-    ...(source && !isDatasetSource(source) ? {source} : {}),
+    source,
   }).observable.pipe(
     switchMap((client) =>
       defer(() =>
