@@ -29,7 +29,7 @@ interface DocumentProjectionSubscriptions {
   }
 }
 
-interface DocumentStatus {
+export interface DocumentStatus {
   lastEditedDraftAt?: string
   lastEditedPublishedAt?: string
   lastEditedVersionAt?: string

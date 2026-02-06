@@ -106,10 +106,19 @@ test.describe('Releases Route', () => {
     const projectionCard = pageContext.getByTestId('document-projection-card')
     await projectionCard.scrollIntoViewIfNeeded()
 
+    const previewCard = pageContext.getByTestId('document-preview-card')
+    await previewCard.scrollIntoViewIfNeeded()
+
     // Verify the projection also shows the release version
     await expect(async () => {
       const projectionContent = await projectionCard.textContent()
       expect(projectionContent).toContain('"bestFriend": "Release Best Friend"')
+    }).toPass({timeout: 15000})
+
+    // Verify the preview also shows the release version
+    await expect(async () => {
+      const previewContent = await previewCard.textContent()
+      expect(previewContent).toContain('"title": "Release Test Author"')
     }).toPass({timeout: 15000})
 
     await client.action([
@@ -143,9 +152,15 @@ test.describe('Releases Route', () => {
       },
     ])
 
+    // Verify both projection and preview update with the name change
     await expect(async () => {
       const projectionContent = await projectionCard.textContent()
       expect(projectionContent).toContain('"name": "Updated Release Test Author"')
+    }).toPass({timeout: 20000, intervals: [2000, 3000, 5000]})
+
+    await expect(async () => {
+      const previewContent = await previewCard.textContent()
+      expect(previewContent).toContain('"title": "Updated Release Test Author"')
     }).toPass({timeout: 20000, intervals: [2000, 3000, 5000]})
   })
 })
