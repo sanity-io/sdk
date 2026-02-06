@@ -1,7 +1,7 @@
 import {type SanityProjectionResult} from 'groq'
 import {filter, firstValueFrom} from 'rxjs'
 
-import {bindActionByDataset} from '../store/createActionBinder'
+import {bindActionBySourceAndPerspective} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {getProjectionState, type ProjectionOptions} from './getProjectionState'
 import {projectionStore} from './projectionStore'
@@ -38,7 +38,7 @@ export function resolveProjection(
 /**
  * @beta
  */
-const _resolveProjection = bindActionByDataset(
+const _resolveProjection = bindActionBySourceAndPerspective(
   projectionStore,
   (
     {instance}: {instance: SanityInstance},

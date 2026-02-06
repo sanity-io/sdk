@@ -16,27 +16,34 @@ import {
   tap,
 } from 'rxjs'
 
+import {isDatasetSource} from '../config/sanityConfig'
 import {getQueryState, resolveQuery} from '../query/queryStore'
-import {type BoundDatasetKey} from '../store/createActionBinder'
+import {type BoundPerspectiveKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
 import {
   createProjectionQuery,
   processProjectionQuery,
   type ProjectionQueryResult,
 } from './projectionQuery'
+import {buildStatusQueryIds, processStatusQueryResults} from './statusQuery'
 import {type ProjectionStoreState} from './types'
-import {PROJECTION_PERSPECTIVE, PROJECTION_TAG} from './util'
+import {PROJECTION_TAG} from './util'
 
 const BATCH_DEBOUNCE_TIME = 50
 
 const isSetEqual = <T>(a: Set<T>, b: Set<T>) =>
   a.size === b.size && Array.from(a).every((i) => b.has(i))
 
+interface StatusQueryResult {
+  _id: string
+  _updatedAt: string
+}
+
 export const subscribeToStateAndFetchBatches = ({
   state,
   instance,
-  key: {projectId, dataset},
-}: StoreContext<ProjectionStoreState, BoundDatasetKey>): Subscription => {
+  key: {source, perspective},
+}: StoreContext<ProjectionStoreState, BoundPerspectiveKey>): Subscription => {
   const documentProjections$ = state.observable.pipe(
     map((s) => s.documentProjections),
     distinctUntilChanged(isEqual),
@@ -92,34 +99,43 @@ export const subscribeToStateAndFetchBatches = ({
         const {query, params} = createProjectionQuery(ids, documentProjections)
         const controller = new AbortController()
 
-        return new Observable<ProjectionQueryResult[]>((observer) => {
+        // Build status query IDs and query
+        const statusQueryIds = buildStatusQueryIds(ids, perspective)
+        const statusQuery = `*[_id in $statusIds]{_id, _updatedAt}`
+        const statusParams = {statusIds: statusQueryIds}
+
+        const projectionQuery$ = new Observable<ProjectionQueryResult[]>((observer) => {
           const {getCurrent, observable} = getQueryState<ProjectionQueryResult[]>(instance, {
-            query,
-            params,
-            projectId,
-            dataset,
-            tag: PROJECTION_TAG,
-            perspective: PROJECTION_PERSPECTIVE,
+            ...{
+              query,
+              params,
+              tag: PROJECTION_TAG,
+              perspective,
+            },
+            // temporary guard here until we're ready for everything to be queried via global API
+            ...(source && !isDatasetSource(source) ? {source} : {}),
           })
 
-          const source$ = defer(() => {
+          const querySource$ = defer(() => {
             if (getCurrent() === undefined) {
               return from(
                 resolveQuery<ProjectionQueryResult[]>(instance, {
-                  query,
-                  params,
-                  projectId,
-                  dataset,
-                  tag: PROJECTION_TAG,
-                  perspective: PROJECTION_PERSPECTIVE,
-                  signal: controller.signal,
+                  ...{
+                    query,
+                    params,
+                    tag: PROJECTION_TAG,
+                    signal: controller.signal,
+                    perspective,
+                  },
+                  // temporary guard here until we're ready for everything to be queried via global API in v3
+                  ...(source && !isDatasetSource(source) ? {source} : {}),
                 }),
               ).pipe(switchMap(() => observable))
             }
             return observable
           }).pipe(filter((result): result is ProjectionQueryResult[] => result !== undefined))
 
-          const subscription = source$.subscribe(observer)
+          const subscription = querySource$.subscribe(observer)
 
           return () => {
             if (!controller.signal.aborted) {
@@ -127,16 +143,79 @@ export const subscribeToStateAndFetchBatches = ({
             }
             subscription.unsubscribe()
           }
-        }).pipe(map((data) => ({data, ids})))
+        })
+
+        const statusQuery$ = new Observable<StatusQueryResult[]>((observer) => {
+          const {getCurrent, observable} = getQueryState<StatusQueryResult[]>(instance, {
+            ...{
+              query: statusQuery,
+              params: statusParams,
+              tag: PROJECTION_TAG,
+              perspective: 'raw',
+            },
+            // temporary guard here until we're ready for everything to be queried via global API
+            ...(source && !isDatasetSource(source) ? {source} : {}),
+          })
+
+          const statusQuerySource$ = defer(() => {
+            if (getCurrent() === undefined) {
+              return from(
+                resolveQuery<StatusQueryResult[]>(instance, {
+                  ...{
+                    query: statusQuery,
+                    params: statusParams,
+                    tag: PROJECTION_TAG,
+                    signal: controller.signal,
+                    perspective: 'raw',
+                  },
+                  // temporary guard here until we're ready for everything to be queried via global API
+                  ...(source && !isDatasetSource(source) ? {source} : {}),
+                }),
+              ).pipe(switchMap(() => observable))
+            }
+            return observable
+          }).pipe(filter((result): result is StatusQueryResult[] => result !== undefined))
+
+          const subscription = statusQuerySource$.subscribe(observer)
+
+          return () => {
+            subscription.unsubscribe()
+          }
+        })
+
+        // Combine both streams: emit whenever either has a new value (after both have
+        // emitted at least one defined value). This keeps reacting to query store updates.
+        return combineLatest([projectionQuery$, statusQuery$]).pipe(
+          filter(
+            (pair): pair is [ProjectionQueryResult[], StatusQueryResult[]] =>
+              pair[0] !== undefined && pair[1] !== undefined,
+          ),
+          map(([projection, status]) => ({
+            data: projection,
+            ids,
+            statusResults: status,
+          })),
+        )
       }),
-      map(({ids, data}) =>
-        processProjectionQuery({
-          projectId,
-          dataset,
+      map(({ids, data, statusResults}) => {
+        // Process status results into documentStatuses (same shape as _status returned to users)
+        const documentStatuses = processStatusQueryResults(statusResults)
+        state.set('updateStatuses', (prev) => ({
+          documentStatuses: {
+            ...prev.documentStatuses,
+            ...documentStatuses,
+          },
+        }))
+
+        // Assemble projection values with _status (buildStatusForDocument in statusQuery)
+        const currentState = state.get()
+        return processProjectionQuery({
           ids,
           results: data,
-        }),
-      ),
+          documentStatuses: currentState.documentStatuses,
+          perspective: perspective,
+        })
+      }),
     )
     .subscribe({
       next: (processedValues) => {

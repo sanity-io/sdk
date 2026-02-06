@@ -1,8 +1,9 @@
+import {DocumentId, getPublishedId} from '@sanity/id-utils'
 import {type SanityProjectionResult} from 'groq'
 import {omit} from 'lodash-es'
 
 import {type DocumentHandle} from '../config/sanityConfig'
-import {bindActionByDataset} from '../store/createActionBinder'
+import {bindActionBySourceAndPerspective} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -10,7 +11,7 @@ import {
   type StateSource,
 } from '../store/createStateSourceAction'
 import {hashString} from '../utils/hashString'
-import {getPublishedId, insecureRandomId} from '../utils/ids'
+import {insecureRandomId} from '../utils/ids'
 import {projectionStore} from './projectionStore'
 import {type ProjectionStoreState, type ProjectionValuePending} from './types'
 import {PROJECTION_STATE_CLEAR_DELAY, STABLE_EMPTY_PROJECTION, validateProjection} from './util'
@@ -70,21 +71,21 @@ export function getProjectionState(
 /**
  * @beta
  */
-export const _getProjectionState = bindActionByDataset(
+export const _getProjectionState = bindActionBySourceAndPerspective(
   projectionStore,
   createStateSourceAction({
     selector: (
       {state}: SelectorContext<ProjectionStoreState>,
       options: ProjectionOptions<string, string, string, string>,
     ): ProjectionValuePending<object> | undefined => {
-      const documentId = getPublishedId(options.documentId)
+      const documentId = getPublishedId(DocumentId(options.documentId))
       const projectionHash = hashString(options.projection)
       return state.values[documentId]?.[projectionHash] ?? STABLE_EMPTY_PROJECTION
     },
     onSubscribe: ({state}, options: ProjectionOptions<string, string, string, string>) => {
       const {projection, ...docHandle} = options
       const subscriptionId = insecureRandomId()
-      const documentId = getPublishedId(docHandle.documentId)
+      const documentId = getPublishedId(DocumentId(docHandle.documentId))
       const validProjection = validateProjection(projection)
       const projectionHash = hashString(validProjection)
 
