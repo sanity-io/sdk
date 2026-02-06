@@ -21,7 +21,7 @@ export interface BoundSourceKey {
 export interface BoundPerspectiveKey extends BoundSourceKey {
   perspective: ClientPerspective | ReleasePerspective
 }
-export interface BoundDatasetKey {
+interface BoundDatasetKey {
   name: string
   projectId: string
   dataset: string
