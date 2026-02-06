@@ -24,3 +24,22 @@ export function getClient(dataset: string = env.SDK_E2E_DATASET_0): SanityClient
 
   return clients[dataset]
 }
+
+let mediaLibraryClient: SanityClient | null = null
+
+export function getMediaLibraryClient(): SanityClient {
+  if (!mediaLibraryClient) {
+    mediaLibraryClient = createClient({
+      token: env.SDK_E2E_MEDIA_LIBRARY_TOKEN,
+      useCdn: false,
+      apiVersion: '2025-06-01',
+      apiHost: 'https://api.sanity.work',
+      resource: {
+        type: 'media-library',
+        id: env.SDK_E2E_MEDIA_LIBRARY_ID,
+      },
+    })
+  }
+
+  return mediaLibraryClient
+}
