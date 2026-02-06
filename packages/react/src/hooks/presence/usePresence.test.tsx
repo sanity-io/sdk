@@ -6,14 +6,18 @@ import {describe, expect, it, vi} from 'vitest'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {usePresence} from './usePresence'
 
-vi.mock('@sanity/sdk', () => ({
-  getPresence: vi.fn(),
-  createSanityInstance: vi.fn(() => ({
-    createChild: vi.fn(),
-    isDisposed: vi.fn(() => false),
-    dispose: vi.fn(),
-  })),
-}))
+vi.mock('@sanity/sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@sanity/sdk')>()
+  return {
+    ...actual,
+    getPresence: vi.fn(),
+    createSanityInstance: vi.fn(() => ({
+      createChild: vi.fn(),
+      isDisposed: vi.fn(() => false),
+      dispose: vi.fn(),
+    })),
+  }
+})
 
 describe('usePresence', () => {
   it('should return presence locations and update when the store changes', () => {
@@ -78,6 +82,53 @@ describe('usePresence', () => {
 
     // The hook should have been updated
     expect(result.current.locations).toEqual(updatedLocations)
+    unmount()
+  })
+
+  it('should throw an error when used with a media library source', () => {
+    expect(() => {
+      renderHook(() => usePresence({source: {mediaLibraryId: 'ml123'}}), {
+        wrapper: ({children}) => (
+          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+            {children}
+          </ResourceProvider>
+        ),
+      })
+    }).toThrow('usePresence() does not support media library sources')
+  })
+
+  it('should throw an error when used with a canvas source', () => {
+    expect(() => {
+      renderHook(() => usePresence({source: {canvasId: 'canvas123'}}), {
+        wrapper: ({children}) => (
+          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+            {children}
+          </ResourceProvider>
+        ),
+      })
+    }).toThrow('usePresence() does not support canvas sources')
+  })
+
+  it('should work with a dataset source', () => {
+    const mockPresenceSource = {
+      getCurrent: vi.fn().mockReturnValue([]),
+      subscribe: vi.fn(() => () => {}),
+      observable: NEVER,
+    }
+    vi.mocked(getPresence).mockReturnValue(mockPresenceSource)
+
+    const {result, unmount} = renderHook(
+      () => usePresence({source: {projectId: 'test-project', dataset: 'test-dataset'}}),
+      {
+        wrapper: ({children}) => (
+          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+            {children}
+          </ResourceProvider>
+        ),
+      },
+    )
+
+    expect(result.current.locations).toEqual([])
     unmount()
   })
 })
