@@ -29,9 +29,9 @@ import {
   TextInput,
   Tooltip,
 } from '@sanity/ui'
-import {JsonData, JsonEditor} from 'json-edit-react'
 import {type JSX, useEffect, useState} from 'react'
 
+import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
 import {devConfigs, e2eConfigs} from '../sanityConfigs'
 
 function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
@@ -50,7 +50,6 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   const setName = useEditDocument({...docHandle, path: 'name'})
 
   const {data: document} = useDocument(docHandle)
-  const setDocument = useEditDocument(docHandle)
 
   return (
     <Box padding={4}>
@@ -208,9 +207,12 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
                 <Box style={{display: 'none'}} data-testid="document-content">
                   {JSON.stringify(document)}
                 </Box>
-                <Box style={{minHeight: '400px'}}>
-                  <JsonEditor data={document} setData={setDocument as (data: JsonData) => void} />
-                </Box>
+                <JsonDocumentEditor
+                  documentHandle={docHandle}
+                  minHeight="400px"
+                  wrapInCard={false}
+                  showSyncStatus={false}
+                />
               </>
             )}
           </Stack>

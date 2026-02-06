@@ -10,6 +10,7 @@ import {type SanityDocument} from 'groq'
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {useNormalizedSourceOptions} from '../helpers/useNormalizedSourceOptions'
 import {useApplyDocumentActions} from './useApplyDocumentActions'
 
 const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
@@ -264,18 +265,20 @@ export function useEditDocument({
   ...doc
 }: DocumentOptions<string | undefined>): (updater: Updater<unknown>) => Promise<ActionsResult> {
   const instance = useSanityInstance(doc)
+  const normalizedDoc = useNormalizedSourceOptions(doc)
+
   const apply = useApplyDocumentActions()
   const isDocumentReady = useCallback(
-    () => getDocumentState(instance, doc).getCurrent() !== undefined,
-    [instance, doc],
+    () => getDocumentState(instance, normalizedDoc).getCurrent() !== undefined,
+    [instance, normalizedDoc],
   )
-  if (!isDocumentReady()) throw resolveDocument(instance, doc)
+  if (!isDocumentReady()) throw resolveDocument(instance, normalizedDoc)
 
   return (updater: Updater<unknown>) => {
     const currentPath = path
 
     if (currentPath) {
-      const stateWithOptions = getDocumentState(instance, {...doc, path})
+      const stateWithOptions = getDocumentState(instance, {...normalizedDoc, path})
       const currentValue = stateWithOptions.getCurrent()
 
       const nextValue =
@@ -283,10 +286,10 @@ export function useEditDocument({
           ? (updater as (prev: typeof currentValue) => typeof currentValue)(currentValue)
           : updater
 
-      return apply(editDocument(doc, {set: {[currentPath]: nextValue}}))
+      return apply(editDocument(normalizedDoc, {set: {[currentPath]: nextValue}}))
     }
 
-    const fullDocState = getDocumentState(instance, {...doc, path})
+    const fullDocState = getDocumentState(instance, {...normalizedDoc, path})
     const current = fullDocState.getCurrent() as object | null | undefined
     const nextValue =
       typeof updater === 'function'
@@ -308,8 +311,8 @@ export function useEditDocument({
       )
       .map((key) =>
         key in nextValue
-          ? editDocument(doc, {set: {[key]: (nextValue as Record<string, unknown>)[key]}})
-          : editDocument(doc, {unset: [key]}),
+          ? editDocument(normalizedDoc, {set: {[key]: (nextValue as Record<string, unknown>)[key]}})
+          : editDocument(normalizedDoc, {unset: [key]}),
       )
 
     return apply(editActions)
