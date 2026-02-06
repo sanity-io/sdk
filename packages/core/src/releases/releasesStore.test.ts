@@ -58,7 +58,7 @@ describe('releasesStore', () => {
       } as ReleaseDocument,
     ]
 
-    const state = getActiveReleasesState(instance)
+    const state = getActiveReleasesState(instance, {source: {projectId: 'test', dataset: 'test'}})
 
     const [observer] = subscriber.mock.lastCall!
 
@@ -77,7 +77,7 @@ describe('releasesStore', () => {
       observable: releasesSubject.asObservable(),
     } as StateSource<ReleaseDocument[] | undefined>)
 
-    const state = getActiveReleasesState(instance)
+    const state = getActiveReleasesState(instance, {source: {projectId: 'test', dataset: 'test'}})
 
     // Initial state should be default
     expect(state.getCurrent()).toBeUndefined() // Default initial state
@@ -124,7 +124,7 @@ describe('releasesStore', () => {
       observable: of([]),
     } as StateSource<ReleaseDocument[] | undefined>)
 
-    const state = getActiveReleasesState(instance)
+    const state = getActiveReleasesState(instance, {source: {projectId: 'test', dataset: 'test'}})
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -138,7 +138,7 @@ describe('releasesStore', () => {
       getCurrent: () => null as unknown as ReleaseDocument[] | undefined,
       observable: of(null as unknown as ReleaseDocument[] | undefined),
     } as StateSource<ReleaseDocument[] | undefined>)
-    const state = getActiveReleasesState(instance)
+    const state = getActiveReleasesState(instance, {source: {projectId: 'test', dataset: 'test'}})
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(state.getCurrent()).toEqual([])
 
@@ -160,7 +160,7 @@ describe('releasesStore', () => {
       observable: subject.asObservable(),
     } as StateSource<ReleaseDocument[] | undefined>)
 
-    const state = getActiveReleasesState(instance)
+    const state = getActiveReleasesState(instance, {source: {projectId: 'test', dataset: 'test'}})
 
     subject.error(new Error('Query failed'))
 
