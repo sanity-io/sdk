@@ -13,6 +13,7 @@ import {
 } from 'rxjs'
 
 import {type StoreContext} from '../store/defineStore'
+import {createLogger} from '../utils/logger'
 import {DEFAULT_API_VERSION} from './authConstants'
 import {AuthStateType} from './authStateType'
 import {type AuthState, type AuthStoreState} from './authStore'
@@ -140,7 +141,16 @@ function shouldRefreshToken(lastRefresh: number | undefined): boolean {
 /**
  * @internal
  */
-export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subscription => {
+export const refreshStampedToken = ({
+  state,
+  instance,
+}: StoreContext<AuthStoreState>): Subscription => {
+  const logger = createLogger('auth', {
+    instanceId: instance.instanceId,
+    projectId: instance.config.projectId,
+    dataset: instance.config.dataset,
+  })
+
   const {clientFactory, apiHost, storageArea, storageKey} = state.get().options
 
   const refreshToken$ = state.observable.pipe(
@@ -170,14 +180,17 @@ export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subs
         // Read the latest token directly from state inside refresh
         const currentState = state.get()
         if (currentState.authState.type !== AuthStateType.LOGGED_IN) {
+          logger.debug('Token refresh aborted - user logged out')
           throw new Error('User logged out before refresh could complete') // Abort refresh
         }
         const currentToken = currentState.authState.token
 
+        logger.debug('Refreshing stamped token')
         const response = await firstValueFrom(
           createTokenRefreshStream(currentToken, clientFactory, apiHost),
         )
 
+        logger.info('Token refreshed successfully')
         state.set('setRefreshStampedToken', (prev) => ({
           authState:
             prev.authState.type === AuthStateType.LOGGED_IN
@@ -275,6 +288,7 @@ export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subs
 
   return refreshToken$.subscribe({
     next: (response: {token: string}) => {
+      logger.debug('Token refresh completed, updating state')
       state.set('setRefreshStampedToken', (prev) => ({
         authState:
           prev.authState.type === AuthStateType.LOGGED_IN
@@ -288,6 +302,7 @@ export const refreshStampedToken = ({state}: StoreContext<AuthStoreState>): Subs
       storageArea?.setItem(storageKey, JSON.stringify({token: response.token}))
     },
     error: (error) => {
+      logger.error('Token refresh failed', {error})
       state.set('setRefreshStampedTokenError', {authState: {type: AuthStateType.ERROR, error}})
     },
   })

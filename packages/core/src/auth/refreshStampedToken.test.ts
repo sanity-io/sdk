@@ -15,6 +15,21 @@ import {
   setLastRefreshTime,
 } from './refreshStampedToken'
 
+// Mock logger to prevent actual logging during tests
+vi.mock('../utils/logger', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../utils/logger')>()
+  return {
+    ...original,
+    createLogger: vi.fn(() => ({
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      trace: vi.fn(),
+    })),
+  }
+})
+
 // Type definitions for Web Locks (can be kept if needed for context)
 // ... (Lock, LockOptions, LockGrantedCallback types)
 
