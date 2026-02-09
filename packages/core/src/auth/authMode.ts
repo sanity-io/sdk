@@ -1,0 +1,58 @@
+import {type SanityConfig} from '../config/sanityConfig'
+import {DEFAULT_BASE} from './authConstants'
+
+/**
+ * The runtime auth mode determines which authentication strategy the SDK uses.
+ *
+ * - `studio`     — Running inside Sanity Studio. Token is discovered from
+ *                  Studio's localStorage entry or via cookie auth.
+ * - `dashboard`  — Running inside the Sanity Dashboard iframe. Token is
+ *                  provided by the parent frame via Comlink.
+ * - `standalone` — Running as an independent app. Token comes from
+ *                  localStorage or the OAuth login flow.
+ *
+ * @internal
+ */
+type AuthMode = 'studio' | 'dashboard' | 'standalone'
+
+/**
+ * Determines the auth mode from instance config and environment.
+ *
+ * Priority:
+ * 1. `studioMode.enabled` in config → `'studio'`
+ * 2. Dashboard context detected (`_context` URL param with content) → `'dashboard'`
+ * 3. Otherwise → `'standalone'`
+ *
+ * @internal
+ */
+export function resolveAuthMode(config: SanityConfig, locationHref: string): AuthMode {
+  if (config.studioMode?.enabled) return 'studio'
+  if (detectDashboardContext(locationHref)) return 'dashboard'
+  return 'standalone'
+}
+
+/**
+ * Checks whether the given location href contains a `_context` URL parameter
+ * with a non-empty JSON object, indicating the SDK is running inside the
+ * Sanity Dashboard.
+ *
+ * @internal
+ */
+function detectDashboardContext(locationHref: string): boolean {
+  try {
+    const parsedUrl = new URL(locationHref, DEFAULT_BASE)
+    const contextParam = parsedUrl.searchParams.get('_context')
+    if (!contextParam) return false
+
+    const parsed: unknown = JSON.parse(contextParam)
+    return (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      Object.keys(parsed as Record<string, unknown>).length > 0
+    )
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to parse dashboard context from initial location:', err)
+    return false
+  }
+}
