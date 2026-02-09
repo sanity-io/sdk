@@ -26,16 +26,14 @@ export function getStudioInitialState(options: AuthStrategyOptions): AuthStrateg
   const storageArea = authConfig.storageArea ?? getDefaultStorage()
   const studioStorageKey = `__studio_auth_token_${projectId ?? ''}`
 
-  let token: string | null = null
-  let authMethod: AuthStrategyResult['authMethod']
-
-  // Try to find a token in Studio's localStorage entry
-  token = getStudioTokenFromLocalStorage(storageArea, studioStorageKey)
+  // Check localStorage first — mirrors original authStore behavior where
+  // the localStorage read always runs before the providedToken check.
+  let authMethod: AuthStrategyResult['authMethod'] = undefined
+  const token = getStudioTokenFromLocalStorage(storageArea, studioStorageKey)
   if (token) {
     authMethod = 'localstorage'
   }
 
-  // Determine the initial auth state
   if (providedToken) {
     return {
       authState: {type: AuthStateType.LOGGED_IN, token: providedToken, currentUser: null},

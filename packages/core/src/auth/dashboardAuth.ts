@@ -15,10 +15,7 @@ import {getAuthCode, getTokenFromLocation} from './utils'
  *
  * @internal
  */
-function parseDashboardContext(locationHref: string): {
-  dashboardContext: DashboardContext
-  isInDashboard: boolean
-} {
+function parseDashboardContext(locationHref: string): DashboardContext {
   try {
     const parsedUrl = new URL(locationHref, DEFAULT_BASE)
     const contextParam = parsedUrl.searchParams.get('_context')
@@ -32,14 +29,14 @@ function parseDashboardContext(locationHref: string): {
       ) {
         // Explicitly remove the 'sid' property before assigning
         delete parsedContext.sid
-        return {dashboardContext: parsedContext as DashboardContext, isInDashboard: true}
+        return parsedContext as DashboardContext
       }
     }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Failed to parse dashboard context from initial location:', err)
   }
-  return {dashboardContext: {}, isInDashboard: false}
+  return {} // Empty dashboard context if parsing fails
 }
 
 /**
@@ -60,7 +57,7 @@ export function getDashboardInitialState(options: AuthStrategyOptions): AuthStra
   const callbackUrl = authConfig.callbackUrl
   const storageKey = '__sanity_auth_token'
 
-  const {dashboardContext} = parseDashboardContext(initialLocationHref)
+  const dashboardContext = parseDashboardContext(initialLocationHref)
 
   // Dashboard does NOT use localStorage — token comes from the parent frame
   const storageArea = undefined
