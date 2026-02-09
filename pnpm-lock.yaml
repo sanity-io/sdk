@@ -372,11 +372,11 @@ importers:
         specifier: ^0.12.4
         version: 0.12.4(debug@4.4.3)
       '@sanity/types':
-        specifier: ^5.2.0
-        version: 5.5.0(@types/react@19.2.7)(debug@4.4.3)
+        specifier: ^5.7.0
+        version: 5.8.1(@types/react@19.2.7)(debug@4.4.3)
       groq:
-        specifier: 3.88.1-typegen-experimental.0
-        version: 3.88.1-typegen-experimental.0
+        specifier: 3.99.0
+        version: 3.99.0
       groq-js:
         specifier: ^1.19.0
         version: 1.25.0
@@ -431,7 +431,7 @@ importers:
         version: 3.7.4
       rollup-plugin-visualizer:
         specifier: ^5.14.0
-        version: 5.14.0(rolldown@1.0.0-beta.45)(rollup@4.53.5)
+        version: 5.14.0(rollup@4.53.5)
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
@@ -454,14 +454,14 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@sanity/types':
-        specifier: ^5.2.0
-        version: 5.5.0(@types/react@19.2.7)(debug@4.4.3)
+        specifier: ^5.7.0
+        version: 5.8.1(@types/react@19.2.7)(debug@4.4.3)
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
       groq:
-        specifier: 3.88.1-typegen-experimental.0
-        version: 3.88.1-typegen-experimental.0
+        specifier: 3.99.0
+        version: 3.99.0
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.23
@@ -546,7 +546,7 @@ importers:
         version: 19.2.1(react@19.2.1)
       rollup-plugin-visualizer:
         specifier: ^5.14.0
-        version: 5.14.0(rolldown@1.0.0-beta.45)(rollup@4.53.5)
+        version: 5.14.0(rollup@4.53.5)
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
@@ -3167,6 +3167,11 @@ packages:
     peerDependencies:
       '@types/react': ^19.2
 
+  '@sanity/types@5.8.1':
+    resolution: {integrity: sha512-HZuukk19haJYfIMKYjbjCeVrxFY2HrtcIamolVBBbQVty1y/C4TM4kG2O5W48Sop7MgbA60w26wL1utkLl4mfA==}
+    peerDependencies:
+      '@types/react': ^19.2
+
   '@sanity/ui@2.15.13':
     resolution: {integrity: sha512-L/vk5j/GH1scRWkTL4JWfN6HN5e9yWLbDKcjl9QVQdNQnK/tCZjg44n/uE4agIJiOa0P0UVl4IsdzwLLfcZeig==}
     engines: {node: '>=14.0.0'}
@@ -5190,6 +5195,7 @@ packages:
 
   glob@10.4.5:
     resolution: {integrity: sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@13.0.0:
@@ -5253,6 +5259,10 @@ packages:
 
   groq@3.88.1-typegen-experimental.0:
     resolution: {integrity: sha512-6TZD6H1y3P7zk0BQharjFa7BOivV9nFL6KKVZbRZRH0yOSSyu2xHglTO48b1/2mCEdYoBQpvE7rjCDUf6XmQYQ==}
+    engines: {node: '>=18'}
+
+  groq@3.99.0:
+    resolution: {integrity: sha512-ZwKAWzvVCw51yjmIf5484KgsAzZAlGTM4uy9lki4PjAYxcEME2Xf93d31LhHzgUAr2JI79H+cNKoRjDHdv1BXQ==}
     engines: {node: '>=18'}
 
   groq@5.5.0:
@@ -10378,7 +10388,7 @@ snapshots:
     dependencies:
       '@portabletext/sanity-bridge': 2.0.0(@types/react@19.2.7)(debug@4.4.3)
       '@portabletext/schema': 2.1.1
-      '@sanity/types': 5.5.0(@types/react@19.2.7)(debug@4.4.3)
+      '@sanity/types': 5.8.1(@types/react@19.2.7)(debug@4.4.3)
     transitivePeerDependencies:
       - '@types/react'
       - debug
@@ -10394,7 +10404,7 @@ snapshots:
       '@portabletext/schema': 2.1.1
       '@portabletext/to-html': 5.0.1
       '@sanity/schema': 5.5.0(@types/react@19.2.7)(debug@4.4.3)
-      '@sanity/types': 5.5.0(@types/react@19.2.7)(debug@4.4.3)
+      '@sanity/types': 5.8.1(@types/react@19.2.7)(debug@4.4.3)
       '@xstate/react': 6.0.0(@types/react@19.2.7)(react@19.2.1)(xstate@5.25.1)
       debug: 4.4.3(supports-color@8.1.1)
       react: 19.2.1
@@ -10471,7 +10481,7 @@ snapshots:
     dependencies:
       '@portabletext/schema': 2.1.1
       '@sanity/schema': 5.5.0(@types/react@19.2.7)(debug@4.4.3)
-      '@sanity/types': 5.5.0(@types/react@19.2.7)(debug@4.4.3)
+      '@sanity/types': 5.8.1(@types/react@19.2.7)(debug@4.4.3)
     transitivePeerDependencies:
       - '@types/react'
       - debug
@@ -10774,7 +10784,7 @@ snapshots:
       '@inquirer/prompts': 8.2.0(@types/node@22.19.1)
       '@oclif/core': 4.8.0
       '@sanity/client': 7.14.1(debug@4.4.3)
-      '@sanity/types': 5.5.0(@types/react@19.2.7)(debug@4.4.3)
+      '@sanity/types': 5.8.1(@types/react@19.2.7)(debug@4.4.3)
       babel-plugin-react-compiler: 1.0.0
       chalk: 5.6.2
       configstore: 7.1.0
@@ -11105,7 +11115,7 @@ snapshots:
       '@sanity/cli-test': 0.0.2-alpha.6(@oclif/core@4.8.0)(@sanity/cli-core@0.1.0-alpha.7(@noble/hashes@2.0.1)(@types/node@22.19.1)(@types/react@19.2.7)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.36.0)(yaml@2.8.2))(@sanity/client@7.14.1(debug@4.4.3))(vitest@3.2.4(@types/node@22.19.1)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.21.0)(yaml@2.8.2))
       '@sanity/client': 7.14.1(debug@4.4.3)
       '@sanity/mutate': 0.15.0(debug@4.4.3)
-      '@sanity/types': 5.5.0(@types/react@19.2.7)(debug@4.4.3)
+      '@sanity/types': 5.8.1(@types/react@19.2.7)(debug@4.4.3)
       '@sanity/util': 5.5.0(@types/react@19.2.7)(debug@4.4.3)
       arrify: 2.0.1
       console-table-printer: 2.15.0
@@ -11461,6 +11471,14 @@ snapshots:
       - debug
 
   '@sanity/types@5.5.0(@types/react@19.2.7)(debug@4.4.3)':
+    dependencies:
+      '@sanity/client': 7.14.1(debug@4.4.3)
+      '@sanity/media-library-types': 1.2.0
+      '@types/react': 19.2.7
+    transitivePeerDependencies:
+      - debug
+
+  '@sanity/types@5.8.1(@types/react@19.2.7)(debug@4.4.3)':
     dependencies:
       '@sanity/client': 7.14.1(debug@4.4.3)
       '@sanity/media-library-types': 1.2.0
@@ -13925,6 +13943,8 @@ snapshots:
 
   groq@3.88.1-typegen-experimental.0: {}
 
+  groq@3.99.0: {}
+
   groq@5.5.0: {}
 
   gtoken@7.1.0:
@@ -15863,14 +15883,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  rollup-plugin-visualizer@5.14.0(rolldown@1.0.0-beta.45)(rollup@4.53.5):
+  rollup-plugin-visualizer@5.14.0(rollup@4.53.5):
     dependencies:
       open: 8.4.2
       picomatch: 4.0.3
       source-map: 0.7.4
       yargs: 17.7.2
     optionalDependencies:
-      rolldown: 1.0.0-beta.45
       rollup: 4.53.5
 
   rollup@4.53.5:
