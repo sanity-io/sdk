@@ -63,7 +63,7 @@
     "@sanity/types": "^5.2.0",
     "@types/lodash-es": "^4.17.12",
     "groq": "3.88.1-typegen-experimental.0",
-    "lodash-es": "^4.17.21",
+    "lodash-es": "^4.17.23",
     "react-compiler-runtime": "19.1.0-rc.2",
     "react-error-boundary": "^5.0.0",
     "rxjs": "^7.8.2"
