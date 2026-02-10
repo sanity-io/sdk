@@ -124,13 +124,14 @@ export function SanityApp({
   useEffect(() => {
     let timeout: NodeJS.Timeout | undefined
     const primaryConfig = Array.isArray(resolvedConfig) ? resolvedConfig[0] : resolvedConfig
+    const shouldRedirectWithoutConfig =
+      configProp === undefined && !studioWorkspace && !primaryConfig
 
     if (
-      primaryConfig &&
       !isInIframe() &&
       !isLocalUrl(window) &&
-      !primaryConfig.studioMode?.enabled &&
-      !primaryConfig.studio
+      (shouldRedirectWithoutConfig ||
+        (!!primaryConfig && !primaryConfig.studioMode?.enabled && !primaryConfig.studio))
     ) {
       // If the app is not running in an iframe and is not a local url, redirect to core.
       timeout = setTimeout(() => {
@@ -140,7 +141,7 @@ export function SanityApp({
       }, 1000)
     }
     return () => clearTimeout(timeout)
-  }, [resolvedConfig])
+  }, [configProp, resolvedConfig, studioWorkspace])
 
   return (
     <SDKProvider {...props} fallback={fallback} config={resolvedConfig}>

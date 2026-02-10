@@ -207,6 +207,37 @@ describe('SanityApp', () => {
     consoleWarnSpy.mockRestore()
   })
 
+  it('redirects to core if config is omitted and no studio context is available', async () => {
+    const originalLocation = window.location
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const mockLocation = {
+      replace: vi.fn(),
+      href: 'http://sanity-test.app',
+    }
+
+    Object.defineProperty(window, 'location', {
+      value: mockLocation,
+      writable: true,
+    })
+
+    render(
+      <SanityApp fallback={<div>Fallback</div>}>
+        <div>Test Child</div>
+      </SanityApp>,
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 1010))
+
+    expect(mockLocation.replace).toHaveBeenCalledWith('https://sanity.io/welcome')
+
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+    })
+    consoleWarnSpy.mockRestore()
+  })
+
   it('does not redirect to core if not inside iframe and local url', async () => {
     const originalLocation = window.location
 
