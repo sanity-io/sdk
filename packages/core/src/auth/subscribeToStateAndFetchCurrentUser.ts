@@ -6,17 +6,32 @@ import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
 import {type AuthMethodOptions, type AuthState, type AuthStoreState} from './authStore'
 
-export const subscribeToStateAndFetchCurrentUser = ({
-  state,
-  instance,
-}: StoreContext<AuthStoreState>): Subscription => {
+/**
+ * Subscribes to auth state changes and fetches the current user when
+ * the state transitions to `LOGGED_IN` without a `currentUser`.
+ *
+ * @param context - The store context for the auth store.
+ * @param fetchOptions - Configuration options. When `useProjectHostname` is
+ *   `true`, requests use the project-specific hostname (required for Studio
+ *   cookie auth). Set to `true` for studio mode, `false` otherwise.
+ *
+ * @internal
+ */
+export const subscribeToStateAndFetchCurrentUser = (
+  {state, instance}: StoreContext<AuthStoreState>,
+  fetchOptions?: {useProjectHostname?: boolean},
+): Subscription => {
   const {clientFactory, apiHost} = state.get().options
-  const useProjectHostname = !!instance.config.studioMode?.enabled
+  const useProjectHostname =
+    fetchOptions?.useProjectHostname ?? !!instance.config.studioMode?.enabled
   const projectId = instance.config.projectId
 
   const currentUser$ = state.observable
     .pipe(
-      map(({authState, options}) => ({authState, authMethod: options.authMethod})),
+      map(({authState, options: storeOptions}) => ({
+        authState,
+        authMethod: storeOptions.authMethod,
+      })),
       filter(
         (
           value,
