@@ -283,4 +283,43 @@ describe('SanityApp', () => {
     })
     consoleWarnSpy.mockRestore()
   })
+
+  it('does not redirect to core when studio config is provided', async () => {
+    const originalLocation = window.location
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const mockLocation = {
+      replace: vi.fn(),
+      href: 'http://sanity-test.app',
+    }
+
+    const mockSanityConfig: SanityConfig = {
+      projectId: 'test-project',
+      dataset: 'test-dataset',
+      studio: {},
+    }
+
+    Object.defineProperty(window, 'location', {
+      value: mockLocation,
+      writable: true,
+    })
+
+    render(
+      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+        <div>Test Child</div>
+      </SanityApp>,
+    )
+
+    // Wait for 1 second
+    await new Promise((resolve) => setTimeout(resolve, 1010))
+
+    expect(mockLocation.replace).not.toHaveBeenCalled()
+
+    // Clean up the mock
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+    })
+    consoleWarnSpy.mockRestore()
+  })
 })

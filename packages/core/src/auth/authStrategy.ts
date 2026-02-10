@@ -1,6 +1,7 @@
 import {type ClientConfig, type SanityClient} from '@sanity/client'
 
 import {type AuthConfig} from '../config/authConfig'
+import {type TokenSource} from '../config/sanityConfig'
 import {type AuthMethodOptions, type AuthState, type DashboardContext} from './authStore'
 
 /**
@@ -29,4 +30,10 @@ export interface AuthStrategyOptions {
   projectId: string | undefined
   initialLocationHref: string
   clientFactory: (config: ClientConfig) => SanityClient
+  /**
+   * Reactive token source from a Studio workspace. When provided, the studio
+   * auth strategy subscribes to it for ongoing token sync instead of
+   * discovering tokens from localStorage or cookies.
+   */
+  tokenSource?: TokenSource
 }
