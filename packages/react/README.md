@@ -456,6 +456,92 @@ export function MultiProjectApp() {
 
 ---
 
+### Using the SDK inside Sanity Studio
+
+The SDK can be embedded directly inside a Sanity Studio with zero manual configuration. When the Studio provides an `SDKStudioContext`, `SanityApp` automatically derives `projectId`, `dataset`, and auth from the Studio's workspace.
+
+#### Zero-config setup (recommended)
+
+Sanity Studio automatically provides `SDKStudioContext` to SDK components, so your SDK component needs no `config` prop at all:
+
+```tsx
+import {SanityApp} from '@sanity/sdk-react'
+
+// Inside a Sanity Studio — no config needed:
+function MyStudioTool() {
+  return (
+    <SanityApp fallback={<div>Loading...</div>}>
+      <MyComponent />
+    </SanityApp>
+  )
+}
+```
+
+Under the hood, the Studio wraps its component tree with `SDKStudioContext.Provider`, passing its workspace to the SDK:
+
+```tsx
+import {SDKStudioContext} from '@sanity/sdk-react'
+import {useWorkspace} from 'sanity'
+
+// This is done automatically by Sanity Studio — shown here for reference only
+function StudioSDKWrapper({children}) {
+  const workspace = useWorkspace()
+  return <SDKStudioContext.Provider value={workspace}>{children}</SDKStudioContext.Provider>
+}
+```
+
+The Studio's `Workspace` object naturally satisfies the `StudioWorkspaceHandle` interface — no adapters needed.
+
+#### Explicit config takes precedence
+
+If you pass a `config` prop alongside `SDKStudioContext`, the explicit config wins:
+
+```tsx
+// This uses the explicit config, not the Studio workspace
+<SanityApp config={{projectId: 'other-project', dataset: 'staging'}} fallback={<Loading />}>
+  <MyComponent />
+</SanityApp>
+```
+
+#### Reactive auth token sync
+
+When the Studio provides a reactive token source via `workspace.auth.token` (an Observable-compatible object), the SDK subscribes to it and stays in sync automatically. The Studio remains the single authority for auth — the SDK does not perform its own token refresh.
+
+For older Studios that don't expose a token source, the SDK falls back to discovering the auth token from `localStorage` or cookie auth.
+
+#### Manual studio config (without SDKStudioContext)
+
+If you can't use `SDKStudioContext` (e.g., the SDK is used outside of a React tree), you can configure studio mode explicitly:
+
+```tsx
+const config: SanityConfig = {
+  projectId: 'my-project',
+  dataset: 'production',
+  studio: {
+    auth: {
+      token: myTokenSource, // Optional: Observable-compatible token source
+    },
+  },
+}
+```
+
+#### Migrating from `studioMode`
+
+The `studioMode: { enabled: true }` config field is deprecated. Replace it with the `studio` config:
+
+```diff
+ const config: SanityConfig = {
+   projectId: 'my-project',
+   dataset: 'production',
+-  studioMode: { enabled: true },
++  studio: {},
+ }
+```
+
+Or, preferably, use `SDKStudioContext` for fully automatic configuration as described above.
+
+---
+
 ### TypeScript & TypeGen
 
 ```bash
