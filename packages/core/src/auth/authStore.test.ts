@@ -287,6 +287,59 @@ describe('authStore', () => {
       expect(checkForCookieAuth).toHaveBeenCalledWith(projectId, expect.any(Function))
     })
 
+    it('starts in LOGGING_IN state when studio config with tokenSource is provided', () => {
+      const mockTokenSource = {
+        subscribe: vi.fn(() => ({unsubscribe: vi.fn()})),
+      }
+
+      instance = createSanityInstance({
+        projectId: 'studio-project',
+        dataset: 'production',
+        studio: {
+          auth: {token: mockTokenSource},
+        },
+      })
+
+      const {authState} = authStore.getInitialState(instance, null)
+      expect(authState.type).toBe(AuthStateType.LOGGING_IN)
+      // Should not try localStorage or cookie auth
+      expect(getStudioTokenFromLocalStorage).not.toHaveBeenCalled()
+    })
+
+    it('resolves to studio mode when studio config is provided (without studioMode flag)', () => {
+      instance = createSanityInstance({
+        projectId: 'studio-project',
+        dataset: 'production',
+        studio: {},
+      })
+
+      const {authState} = authStore.getInitialState(instance, null)
+      // Without tokenSource, falls back to localStorage discovery like studioMode
+      expect(authState.type).toBe(AuthStateType.LOGGED_OUT)
+      expect(getStudioTokenFromLocalStorage).toHaveBeenCalled()
+    })
+
+    it('subscribes to tokenSource during initialize when studio config is provided', () => {
+      const mockUnsubscribe = vi.fn()
+      const mockSubscribe = vi.fn(() => ({unsubscribe: mockUnsubscribe}))
+      const mockTokenSource = {subscribe: mockSubscribe}
+
+      instance = createSanityInstance({
+        projectId: 'studio-project',
+        dataset: 'production',
+        studio: {
+          auth: {token: mockTokenSource},
+        },
+      })
+
+      // Trigger store creation + initialize
+      getAuthState(instance)
+
+      expect(mockSubscribe).toHaveBeenCalledWith({next: expect.any(Function)})
+      // Should NOT start cookie auth or storage event subscriptions
+      expect(checkForCookieAuth).not.toHaveBeenCalled()
+    })
+
     it('falls back to default auth (storage token) when studio mode is disabled', () => {
       const storageToken = 'regular-storage-token'
       vi.mocked(getTokenFromStorage).mockReturnValue(storageToken)

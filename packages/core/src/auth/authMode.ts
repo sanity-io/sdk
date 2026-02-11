@@ -19,13 +19,15 @@ type AuthMode = 'studio' | 'dashboard' | 'standalone'
  * Determines the auth mode from instance config and environment.
  *
  * Priority:
- * 1. `studioMode.enabled` in config → `'studio'`
- * 2. Dashboard context detected (`_context` URL param with content) → `'dashboard'`
- * 3. Otherwise → `'standalone'`
+ * 1. `studio` config provided → `'studio'`
+ * 2. `studioMode.enabled` in config (deprecated) → `'studio'`
+ * 3. Dashboard context detected (`_context` URL param with content) → `'dashboard'`
+ * 4. Otherwise → `'standalone'`
  *
  * @internal
  */
 export function resolveAuthMode(config: SanityConfig, locationHref: string): AuthMode {
+  if (config.studio) return 'studio'
   if (config.studioMode?.enabled) return 'studio'
   if (detectDashboardContext(locationHref)) return 'dashboard'
   return 'standalone'

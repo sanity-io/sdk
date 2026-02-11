@@ -135,6 +135,7 @@ export const authStore = defineStore<AuthStoreState>({
       projectId: instance.config.projectId,
       initialLocationHref,
       clientFactory,
+      tokenSource: instance.config.studio?.auth?.token,
     }
 
     let result

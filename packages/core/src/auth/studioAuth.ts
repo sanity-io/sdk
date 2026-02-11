@@ -1,5 +1,6 @@
 import {type Subscription} from 'rxjs'
 
+import {type TokenSource} from '../config/sanityConfig'
 import {type StoreContext} from '../store/defineStore'
 import {AuthStateType} from './authStateType'
 import {type AuthStoreState, type LoggedInAuthState} from './authStore'
@@ -13,7 +14,11 @@ import {getDefaultStorage} from './utils'
 /**
  * Resolves the initial auth state for Studio mode.
  *
- * Token discovery order:
+ * When a `tokenSource` is provided (via `config.studio.auth.token`), the
+ * initial state is `LOGGING_IN` — the actual token arrives asynchronously
+ * via the subscription set up in `initializeStudioAuth`.
+ *
+ * Fallback token discovery order (no tokenSource):
  * 1. Provided token (`auth.token` in config)
  * 2. localStorage: `__studio_auth_token_${projectId}`
  * 3. Falls back to `LOGGED_OUT` (cookie auth is checked async in `initializeStudioAuth`)
@@ -21,10 +26,24 @@ import {getDefaultStorage} from './utils'
  * @internal
  */
 export function getStudioInitialState(options: AuthStrategyOptions): AuthStrategyResult {
-  const {authConfig, projectId} = options
-  const providedToken = authConfig.token
+  const {authConfig, projectId, tokenSource} = options
   const storageArea = authConfig.storageArea ?? getDefaultStorage()
   const studioStorageKey = `__studio_auth_token_${projectId ?? ''}`
+
+  // When a reactive token source is available, start in LOGGING_IN state.
+  // The actual token will arrive via subscription in initializeStudioAuth.
+  if (tokenSource) {
+    return {
+      authState: {type: AuthStateType.LOGGING_IN, isExchangingToken: false},
+      storageKey: studioStorageKey,
+      storageArea,
+      authMethod: undefined,
+      dashboardContext: {},
+    }
+  }
+
+  // Fallback: discover token from config or localStorage
+  const providedToken = authConfig.token
 
   // Check localStorage first — mirrors original authStore behavior where
   // the localStorage read always runs before the providedToken check.
@@ -65,7 +84,13 @@ export function getStudioInitialState(options: AuthStrategyOptions): AuthStrateg
 }
 
 /**
- * Initialize Studio auth subscriptions:
+ * Initialize Studio auth subscriptions.
+ *
+ * When a `tokenSource` is available (reactive path), subscribes to it for
+ * ongoing token sync. The Studio is the token authority — no independent
+ * token refresh or cookie auth probing is needed.
+ *
+ * Fallback path (no tokenSource):
  * - Subscribe to state changes and fetch current user
  * - Subscribe to storage events for studio token key
  * - Check for cookie auth asynchronously if no token was found
@@ -74,6 +99,69 @@ export function getStudioInitialState(options: AuthStrategyOptions): AuthStrateg
  * @internal
  */
 export function initializeStudioAuth(
+  context: StoreContext<AuthStoreState>,
+  tokenRefresherRunning: boolean,
+): {dispose: () => void; tokenRefresherStarted: boolean} {
+  const tokenSource = context.instance.config.studio?.auth?.token
+
+  // Reactive token path — Studio provides the token
+  if (tokenSource) {
+    return initializeWithTokenSource(context, tokenSource)
+  }
+
+  // Fallback path — discover token from localStorage/cookies
+  return initializeWithFallback(context, tokenRefresherRunning)
+}
+
+/**
+ * Subscribe to a reactive token source from the Studio workspace.
+ * The Studio is the single authority for auth — the SDK does not run
+ * its own token refresher or cookie auth checks.
+ */
+function initializeWithTokenSource(
+  context: StoreContext<AuthStoreState>,
+  tokenSource: TokenSource,
+): {dispose: () => void; tokenRefresherStarted: boolean} {
+  const subscriptions: Subscription[] = []
+
+  // Subscribe to the current user fetcher — runs whenever auth state changes
+  subscriptions.push(subscribeToStateAndFetchCurrentUser(context, {useProjectHostname: true}))
+
+  // Subscribe to the Studio's token stream
+  const tokenSub = tokenSource.subscribe({
+    next: (token) => {
+      const {state} = context
+      if (token) {
+        state.set('studioTokenSource', (prev) => ({
+          options: {...prev.options, authMethod: undefined},
+          authState: {type: AuthStateType.LOGGED_IN, token, currentUser: null},
+        }))
+      } else {
+        state.set('studioTokenSourceLoggedOut', (prev) => ({
+          options: {...prev.options, authMethod: undefined},
+          authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
+        }))
+      }
+    },
+  })
+
+  return {
+    dispose: () => {
+      tokenSub.unsubscribe()
+      for (const subscription of subscriptions) {
+        subscription.unsubscribe()
+      }
+    },
+    // Studio handles token refresh — do not start the SDK's refresher
+    tokenRefresherStarted: false,
+  }
+}
+
+/**
+ * Fallback initialization when no reactive token source is available.
+ * Uses localStorage/cookie discovery (existing behavior).
+ */
+function initializeWithFallback(
   context: StoreContext<AuthStoreState>,
   tokenRefresherRunning: boolean,
 ): {dispose: () => void; tokenRefresherStarted: boolean} {

@@ -99,6 +99,8 @@ export {
   type ProjectHandle,
   type ReleasePerspective,
   type SanityConfig,
+  type StudioConfig,
+  type TokenSource,
 } from '../config/sanityConfig'
 export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
 export {
