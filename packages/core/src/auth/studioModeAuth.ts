@@ -3,6 +3,13 @@ import {type ClientConfig, type SanityClient} from '@sanity/client'
 import {getTokenFromStorage} from './utils'
 
 /**
+ * Cookie auth is a best-effort probe — if the API doesn't respond quickly,
+ * the user likely isn't cookie-authenticated and we should move on rather
+ * than block the auth flow indefinitely.
+ */
+const COOKIE_AUTH_TIMEOUT_MS = 10_000
+
+/**
  * Attempts to check for cookie auth by making a withCredentials request to the users endpoint.
  * @param projectId - The project ID to check for cookie auth.
  * @param clientFactory - A factory function that creates a Sanity client.
@@ -18,13 +25,15 @@ export async function checkForCookieAuth(
     const client = clientFactory({
       projectId,
       useCdn: false,
+      requestTagPrefix: 'sdk',
+      timeout: COOKIE_AUTH_TIMEOUT_MS,
     })
     const user = await client.request({
       uri: '/users/me',
       withCredentials: true,
       tag: 'users.get-current',
     })
-    return typeof user?.id === 'string'
+    return user != null && typeof user === 'object' && typeof user.id === 'string'
   } catch {
     return false
   }
