@@ -234,7 +234,7 @@ describe('authStore', () => {
       expect(dashboardContext).toStrictEqual({})
     })
 
-    it('sets to logged in using studio token when studio mode is enabled and token exists', () => {
+    it('sets to logged in using studio token when studio config is provided and token exists', () => {
       const studioToken = 'studio-token'
       const projectId = 'studio-project'
       const studioStorageKey = `__studio_auth_token_${projectId}`
@@ -248,7 +248,7 @@ describe('authStore', () => {
       instance = createSanityInstance({
         projectId,
         dataset: 'd',
-        studioMode: {enabled: true},
+        studio: {},
         auth: {storageArea: mockStorage}, // Provide mock storage
       })
 
@@ -258,7 +258,7 @@ describe('authStore', () => {
       expect(options.authMethod).toBe('localstorage')
     })
 
-    it('checks for cookie auth during initialize when studio mode is enabled and no studio token exists', () => {
+    it('checks for cookie auth during initialize when studio config is provided and no studio token exists', () => {
       const projectId = 'studio-project'
       const studioStorageKey = `__studio_auth_token_${projectId}`
       const mockStorage = {
@@ -272,7 +272,7 @@ describe('authStore', () => {
       instance = createSanityInstance({
         projectId,
         dataset: 'd',
-        studioMode: {enabled: true},
+        studio: {},
         auth: {storageArea: mockStorage},
       })
 

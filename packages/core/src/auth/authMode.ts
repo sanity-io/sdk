@@ -27,10 +27,20 @@ type AuthMode = 'studio' | 'dashboard' | 'standalone'
  * @internal
  */
 export function resolveAuthMode(config: SanityConfig, locationHref: string): AuthMode {
-  if (config.studio) return 'studio'
-  if (config.studioMode?.enabled) return 'studio'
+  if (isStudioConfig(config)) return 'studio'
   if (detectDashboardContext(locationHref)) return 'dashboard'
   return 'standalone'
+}
+
+/**
+ * Returns `true` when the config indicates the SDK is running inside a Studio.
+ * Checks the new `studio` field first, then falls back to the deprecated
+ * `studioMode.enabled` for backwards compatibility.
+ *
+ * @internal
+ */
+export function isStudioConfig(config: SanityConfig): boolean {
+  return !!config.studio || !!config.studioMode?.enabled
 }
 
 /**
