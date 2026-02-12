@@ -6,8 +6,8 @@ This document outlines the various authentication types supported by the Sanity 
 
 Authentication in the SDK is managed by the `authStore`, which tracks the user's authentication state (`LoggedIn`, `LoggedOut`, `LoggingIn`, `Error`). It uses a **strategy pattern** to determine the initial state and initialization behavior based on the resolved auth mode:
 
-- **`studioAuth`** — handles token discovery and sync inside Sanity Studio
 - **`dashboardAuth`** — handles auth context provided by the Dashboard iframe
+- **`studioAuth`** — handles token discovery and sync inside Sanity Studio
 - **`standaloneAuth`** — handles provided tokens and the OAuth login flow
 
 The auth mode is resolved by `resolveAuthMode` in `authMode.ts` based on the instance config and environment. API client instances, managed by `clientStore`, automatically utilize the current authentication token from `authStore` for making requests.

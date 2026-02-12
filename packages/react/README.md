@@ -494,7 +494,7 @@ The Studio's `Workspace` object naturally satisfies the `StudioWorkspaceHandle` 
 
 #### Explicit config takes precedence
 
-If you pass a `config` prop alongside `SDKStudioContext`, the explicit config wins:
+If you pass a `config` prop to `SanityApp`, this config will take precedence over any workspace config picked up by `SDKStudioContext`:
 
 ```tsx
 // This uses the explicit config, not the Studio workspace
