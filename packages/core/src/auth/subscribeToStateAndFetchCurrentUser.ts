@@ -3,6 +3,7 @@ import {distinctUntilChanged, filter, map, type Subscription, switchMap} from 'r
 
 import {type StoreContext} from '../store/defineStore'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
+import {isStudioConfig} from './authMode'
 import {AuthStateType} from './authStateType'
 import {type AuthMethodOptions, type AuthState, type AuthStoreState} from './authStore'
 
@@ -22,8 +23,7 @@ export const subscribeToStateAndFetchCurrentUser = (
   fetchOptions?: {useProjectHostname?: boolean},
 ): Subscription => {
   const {clientFactory, apiHost} = state.get().options
-  const useProjectHostname =
-    fetchOptions?.useProjectHostname ?? !!instance.config.studioMode?.enabled
+  const useProjectHostname = fetchOptions?.useProjectHostname ?? isStudioConfig(instance.config)
   const projectId = instance.config.projectId
 
   const currentUser$ = state.observable

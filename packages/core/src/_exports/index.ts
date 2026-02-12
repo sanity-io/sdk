@@ -24,6 +24,7 @@ export {
   agentTransform,
   agentTranslate,
 } from '../agent/agentActions'
+export {isStudioConfig} from '../auth/authMode'
 export {AuthStateType} from '../auth/authStateType'
 export {
   type AuthState,
