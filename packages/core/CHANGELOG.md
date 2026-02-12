@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.7.0](https://github.com/sanity-io/sdk/compare/sdk-v2.6.0...sdk-v2.7.0) (2026-02-12)
+
+
+### Features
+
+* **auth:** add SDKStudioContext and workspace-based auth for zero-config Studio integration ([#738](https://github.com/sanity-io/sdk/issues/738)) ([ec89adc](https://github.com/sanity-io/sdk/commit/ec89adcb1c849fac684e2511cbee42066811934d))
+* **core:** add action binder for source and perspective ([#724](https://github.com/sanity-io/sdk/issues/724)) ([53c193e](https://github.com/sanity-io/sdk/commit/53c193e85639361e39af3364de314172ca823e9c))
+* **projection:** update projection store to use source and perspective ([#723](https://github.com/sanity-io/sdk/issues/723)) ([332f741](https://github.com/sanity-io/sdk/commit/332f7412981be5fd214d1d96088b95ae76b0e002))
+
+
+### Bug Fixes
+
+* **auth:** harden fallback auth with Array.isArray guards and cookie auth timeout ([#739](https://github.com/sanity-io/sdk/issues/739)) ([91175d7](https://github.com/sanity-io/sdk/commit/91175d7b7b090e2d1a53efbbc58b4786356ecf99))
+* **deps:** update dependency @sanity/client ([#717](https://github.com/sanity-io/sdk/issues/717)) ([24fb157](https://github.com/sanity-io/sdk/commit/24fb157a0fbc97a625a7c7ad3045e502ec818af1))
+* prevent sourceName from reaching sdk core ([#720](https://github.com/sanity-io/sdk/issues/720)) ([b8cf408](https://github.com/sanity-io/sdk/commit/b8cf4080d63b7d933cae630d1118d3ca4b127e07))
+* **query:** use store key to determine client for live events ([#721](https://github.com/sanity-io/sdk/issues/721)) ([4d4e690](https://github.com/sanity-io/sdk/commit/4d4e69002e6b35fb8060a94c2ec46b863326945c))
+
+
+### Documentation
+
+* update SDK documentation for Studio integration ([#741](https://github.com/sanity-io/sdk/issues/741)) ([18d1adc](https://github.com/sanity-io/sdk/commit/18d1adcfefc2e315d0ac262fa913bc03fcaaa4a8))
+
 ## [2.6.0](https://github.com/sanity-io/sdk/compare/sdk-v2.5.0...sdk-v2.6.0) (2026-01-22)
 
 
