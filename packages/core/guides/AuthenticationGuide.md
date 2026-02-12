@@ -10,7 +10,7 @@ Authentication in the SDK is managed by the `authStore`, which tracks the user's
 - **`studioAuth`** — handles token discovery and sync inside Sanity Studio
 - **`standaloneAuth`** — handles provided tokens and the OAuth login flow
 
-The auth mode is resolved by `resolveAuthMode` in `authMode.ts` based on the instance config and environment. API client instances, managed by `clientStore`, automatically utilize the current authentication token from `authStore` for making requests.
+The auth mode is resolved by `resolveAuthMode` in `authMode.ts` — it checks for `config.studio` (or the deprecated `config.studioMode`) first, then detects a Dashboard iframe via the `_context` URL parameter, and falls back to standalone. API client instances, managed by `clientStore`, automatically utilize the current authentication token from `authStore` for making requests.
 
 The primary interactive authentication flow involves redirecting the user to `sanity.io/login` (or `sanity.work/login` for staging environments) and handling the callback, which returns an `authCode` (`sid`) exchanged for a session token.
 
@@ -65,11 +65,11 @@ The primary interactive authentication flow involves redirecting the user to `sa
 
 - 🎯 **Use Case:** Using the SDK _within_ the Sanity Studio V3 codebase itself (not running in the dashboard iframe). For instance: in custom input components, tools, or plugins integrated directly into the Studio application.
 
-- ⚙️ **Mechanism:** Studio mode is activated when either `config.studio` is present or the deprecated `config.studioMode.enabled` is `true` (checked via the `isStudioConfig()` helper in `authMode.ts`). There are two token acquisition paths:
-  - **Reactive token source (recommended):** Modern Studios provide a reactive token source to the SDK via the `SDKStudioContext` React context (or explicitly via `config.studio.auth.token`). The token source is an Observable-compatible object (`TokenSource`) that the SDK subscribes to. When the Studio's auth state changes, the SDK receives updated tokens automatically. The Studio remains the single authority for auth — the SDK does not perform its own token refresh or cookie auth checks on this path.
+- ⚙️ **Mechanism:** Studio mode is activated when either `config.studio` is present or the deprecated `config.studioMode.enabled` is `true` (checked via the `isStudioConfig()` helper in `authMode.ts`). When using `SDKStudioContext`, `SanityApp` automatically creates a config with `studio` set — developers do not need to provide `config.studio` themselves. There are two token acquisition paths:
+  - **Reactive token source (recommended):** Modern Studios provide a reactive token source to the SDK via the `SDKStudioContext` React context (or explicitly via `config.studio.auth.token`). Both paths use a `TokenSource` — an Observable-like object that the SDK subscribes to for ongoing token updates. This is **not** a static string; it is a reactive stream. When the Studio's auth state changes, the SDK receives updated tokens automatically. The Studio remains the single authority for auth — the SDK does not perform its own token refresh or cookie auth checks on this path.
 
   - **Fallback discovery (older Studios):** When no reactive token source is available, the SDK discovers the auth token using these methods in order:
-    1. **Provided token** (`config.auth.token`) — if manually supplied
+    1. **Provided token** (`config.auth.token`) — a static string token, if manually supplied. Note: this is `config.auth.token` (from `AuthConfig`), not `config.studio.auth.token` (which is a reactive `TokenSource`).
     2. **Studio token (localStorage)** — stored under the key `__studio_auth_token_${projectId}`. This is a project-specific token managed by the Studio.
     3. **Cookie auth** — as a last resort, `checkForCookieAuth` attempts a request (`withCredentials: true`) to a Studio backend endpoint with a 10-second timeout to verify if a valid HTTP-only session cookie exists.
 

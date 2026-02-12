@@ -458,7 +458,7 @@ export function MultiProjectApp() {
 
 ### Using the SDK inside Sanity Studio
 
-The SDK can be embedded directly inside a Sanity Studio with zero manual configuration. When the Studio provides an `SDKStudioContext`, `SanityApp` automatically derives `projectId`, `dataset`, and auth from the Studio's workspace.
+The SDK can be embedded directly inside a Sanity Studio with zero manual configuration. Sanity Studio provides `SDKStudioContext` automatically, so `SanityApp` derives `projectId`, `dataset`, and auth from the Studio's workspace without any setup.
 
 #### Zero-config setup (recommended)
 
@@ -490,8 +490,6 @@ function StudioSDKWrapper({children}) {
 }
 ```
 
-The Studio's `Workspace` object naturally satisfies the `StudioWorkspaceHandle` interface — no adapters needed.
-
 #### Explicit config takes precedence
 
 If you pass a `config` prop to `SanityApp`, this config will take precedence over any workspace config picked up by `SDKStudioContext`:
@@ -505,29 +503,15 @@ If you pass a `config` prop to `SanityApp`, this config will take precedence ove
 
 #### Reactive auth token sync
 
-When the Studio provides a reactive token source via `workspace.auth.token` (an Observable-compatible object), the SDK subscribes to it and stays in sync automatically. The Studio remains the single authority for auth — the SDK does not perform its own token refresh.
+If the Studio provides a reactive token source via `workspace.auth.token`, the SDK subscribes to it and stays in sync automatically. The Studio remains the single authority for auth — the SDK does not perform its own token refresh.
 
 For older Studios that don't expose a token source, the SDK falls back to discovering the auth token from `localStorage` or cookie auth.
 
-#### Manual studio config (without SDKStudioContext)
-
-If you can't use `SDKStudioContext` (e.g., the SDK is used outside of a React tree), you can configure studio mode explicitly:
-
-```tsx
-const config: SanityConfig = {
-  projectId: 'my-project',
-  dataset: 'production',
-  studio: {
-    auth: {
-      token: myTokenSource, // Optional: Observable-compatible token source
-    },
-  },
-}
-```
-
 #### Migrating from `studioMode`
 
-The `studioMode: { enabled: true }` config field is deprecated. Replace it with the `studio` config:
+The `studioMode` config field is deprecated. If you are currently using it, the recommended replacement is to use the zero-config `SDKStudioContext` approach described above — which requires no `config` prop at all.
+
+If you need to pass an explicit config, replace `studioMode` with `studio`:
 
 ```diff
  const config: SanityConfig = {
@@ -537,8 +521,6 @@ The `studioMode: { enabled: true }` config field is deprecated. Replace it with 
 +  studio: {},
  }
 ```
-
-Or, preferably, use `SDKStudioContext` for fully automatic configuration as described above.
 
 ---
 
