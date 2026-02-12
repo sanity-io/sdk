@@ -275,7 +275,7 @@ describe('SanityApp', () => {
     })
   })
 
-  it('does not redirect to core if studioMode is enabled', async () => {
+  it('does not redirect to core if studio config is provided', async () => {
     const originalLocation = window.location
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
@@ -287,7 +287,7 @@ describe('SanityApp', () => {
     const mockSanityConfig: SanityConfig = {
       projectId: 'test-project',
       dataset: 'test-dataset',
-      studioMode: {enabled: true},
+      studio: {},
     }
 
     Object.defineProperty(window, 'location', {

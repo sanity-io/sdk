@@ -1,4 +1,4 @@
-import {type DocumentSource, type SanityConfig} from '@sanity/sdk'
+import {type DocumentSource, isStudioConfig, type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, useContext, useEffect, useMemo} from 'react'
 
 import {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
@@ -130,8 +130,7 @@ export function SanityApp({
     if (
       !isInIframe() &&
       !isLocalUrl(window) &&
-      (shouldRedirectWithoutConfig ||
-        (!!primaryConfig && !primaryConfig.studioMode?.enabled && !primaryConfig.studio))
+      (shouldRedirectWithoutConfig || (!!primaryConfig && !isStudioConfig(primaryConfig)))
     ) {
       // If the app is not running in an iframe and is not a local url, redirect to core.
       timeout = setTimeout(() => {
