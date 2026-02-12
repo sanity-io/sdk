@@ -42,9 +42,16 @@ export function SDKProvider({
   fallback,
   ...props
 }: SDKProviderProps): ReactElement {
-  const allConfigs = Array.isArray(config) ? config : [config]
+  const allConfigs = useMemo(() => (Array.isArray(config) ? config : [config]), [config])
   const resolvedConfig = allConfigs[0]
-  const projectIds = allConfigs.map((c) => c.projectId).filter((id): id is string => !!id)
+
+  // Memoize projectIds so AuthBoundary → useVerifyOrgProjects receives a stable
+  // array reference rather than a new one on every render.
+  // Note: React Compiler should handle this automatically, but kept for explicit intent.
+  const projectIds = useMemo(
+    () => allConfigs.map((c) => c.projectId).filter((id): id is string => !!id),
+    [allConfigs],
+  )
 
   // Extract static fields so the memo below doesn't take a reference dependency
   // on `config` — inline config objects change identity on every render.
