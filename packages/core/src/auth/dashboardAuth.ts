@@ -25,6 +25,7 @@ function parseDashboardContext(locationHref: string): DashboardContext {
       if (
         parsedContext &&
         typeof parsedContext === 'object' &&
+        !Array.isArray(parsedContext) &&
         Object.keys(parsedContext).length > 0
       ) {
         // Explicitly remove the 'sid' property before assigning

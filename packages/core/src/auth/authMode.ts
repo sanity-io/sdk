@@ -60,6 +60,7 @@ function detectDashboardContext(locationHref: string): boolean {
     return (
       typeof parsed === 'object' &&
       parsed !== null &&
+      !Array.isArray(parsed) &&
       Object.keys(parsed as Record<string, unknown>).length > 0
     )
   } catch (err) {

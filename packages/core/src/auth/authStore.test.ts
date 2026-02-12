@@ -153,6 +153,34 @@ describe('authStore', () => {
       errorSpy.mockRestore()
     })
 
+    it('rejects array _context and falls back to standalone mode', () => {
+      const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(['a', 'b']))}`
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {initialLocationHref},
+      })
+
+      const {dashboardContext, authState} = authStore.getInitialState(instance, null)
+      // Array should not be treated as dashboard context — falls through to standalone
+      expect(dashboardContext).toStrictEqual({})
+      expect(authState.type).toBe(AuthStateType.LOGGED_OUT)
+    })
+
+    it('rejects empty object _context and falls back to standalone mode', () => {
+      const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify({}))}`
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {initialLocationHref},
+      })
+
+      const {dashboardContext, authState} = authStore.getInitialState(instance, null)
+      // Empty object not treated as dashboard — falls through to standalone
+      expect(dashboardContext).toStrictEqual({})
+      expect(authState.type).toBe(AuthStateType.LOGGED_OUT)
+    })
+
     it('sets to logged in if provided token is present (even in dashboard)', () => {
       const token = 'provided-token'
       const context = {mode: 'dashboard'}
