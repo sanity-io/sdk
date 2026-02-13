@@ -37,6 +37,7 @@ function deriveConfigFromWorkspace(workspace: StudioWorkspaceHandle): SanityConf
     projectId: workspace.projectId,
     dataset: workspace.dataset,
     studio: {
+      authenticated: workspace.authenticated,
       auth: workspace.auth.token ? {token: workspace.auth.token} : undefined,
     },
   }

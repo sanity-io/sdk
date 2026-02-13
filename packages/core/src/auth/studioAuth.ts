@@ -115,14 +115,29 @@ export function initializeStudioAuth(
 
 /**
  * Subscribe to a reactive token source from the Studio workspace.
- * The Studio is the single authority for auth — the SDK does not run
- * its own token refresher or cookie auth checks.
+ *
+ * When the token source emits a non-null token, the SDK uses it directly.
+ * When it emits `null`, the behavior depends on the `authenticated` flag
+ * from the Studio's workspace config:
+ *
+ * - `authenticated: true` — the Studio has already verified the user is
+ *   logged in (e.g. via cookie auth). The SDK treats the null token as
+ *   cookie-based auth and stays in the LOGGED_IN state.
+ *
+ * - `authenticated` absent/false — the user is genuinely not authenticated;
+ *   transition to LOGGED_OUT.
+ *
+ * No async cookie probing is needed here because this code path only runs
+ * when a Studio provides SDKStudioContext, and the Studio's Workspace type
+ * always includes `authenticated`. The async `checkForCookieAuth` fallback
+ * remains in `initializeWithFallback` for the non-Studio path.
  */
 function initializeWithTokenSource(
   context: StoreContext<AuthStoreState>,
   tokenSource: TokenSource,
 ): {dispose: () => void; tokenRefresherStarted: boolean} {
   const subscriptions: Subscription[] = []
+  const studioAuthenticated = context.instance.config.studio?.authenticated === true
 
   // Subscribe to the current user fetcher — runs whenever auth state changes
   subscriptions.push(subscribeToStateAndFetchCurrentUser(context, {useProjectHostname: true}))
@@ -132,11 +147,23 @@ function initializeWithTokenSource(
     next: (token) => {
       const {state} = context
       if (token) {
+        // Studio provided a real token — use it directly
         state.set('studioTokenSource', (prev) => ({
           options: {...prev.options, authMethod: undefined},
           authState: {type: AuthStateType.LOGGED_IN, token, currentUser: null},
         }))
+      } else if (studioAuthenticated) {
+        // The Studio says the user is authenticated — null token means
+        // cookie-based auth is in use. Stay logged in with cookie method.
+        state.set('studioTokenSourceCookieAuth', (prev) => ({
+          options: {...prev.options, authMethod: 'cookie'},
+          authState:
+            prev.authState.type === AuthStateType.LOGGED_IN
+              ? prev.authState
+              : {type: AuthStateType.LOGGED_IN, token: '', currentUser: null},
+        }))
       } else {
+        // No token and Studio doesn't confirm authentication — logged out
         state.set('studioTokenSourceLoggedOut', (prev) => ({
           options: {...prev.options, authMethod: undefined},
           authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
