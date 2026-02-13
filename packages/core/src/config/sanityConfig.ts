@@ -23,6 +23,12 @@ export interface TokenSource {
  * @public
  */
 export interface StudioConfig {
+  /**
+   * Whether the Studio has already determined the user is authenticated.
+   * When `true` and the token source emits `null`, the SDK infers
+   * cookie-based auth is in use rather than transitioning to logged-out.
+   */
+  authenticated?: boolean
   /** Reactive auth token source from the Studio's auth store. */
   auth?: {
     /**
