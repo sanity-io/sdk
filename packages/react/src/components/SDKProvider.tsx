@@ -28,10 +28,24 @@ export function SDKProvider({
   fallback,
   ...props
 }: SDKProviderProps): ReactElement {
-  // reverse because we want the first config to be the default, but the
-  // ResourceProvider nesting makes the last one the default
-  const configs = (Array.isArray(config) ? config : [config]).slice().reverse()
-  const projectIds = configs.map((c) => c.projectId).filter((id): id is string => !!id)
+  // Memoize the reversed configs array so downstream providers receive stable
+  // references between renders (avoids unnecessary re-subscriptions and instance
+  // recreation in ResourceProvider / AuthBoundary).
+  // Note: React Compiler should handle this automatically, but kept for explicit intent.
+  const configs = useMemo(
+    // reverse because we want the first config to be the default, but the
+    // ResourceProvider nesting makes the last one the default
+    () => (Array.isArray(config) ? config : [config]).slice().reverse(),
+    [config],
+  )
+
+  // Memoize projectIds so AuthBoundary → useVerifyOrgProjects receives a stable
+  // array reference rather than a new one on every render.
+  // Note: React Compiler should handle this automatically, but kept for explicit intent.
+  const projectIds = useMemo(
+    () => configs.map((c) => c.projectId).filter((id): id is string => !!id),
+    [configs],
+  )
 
   // Memoize sources to prevent creating a new empty object on every render
   const sourcesValue = useMemo(() => props.sources ?? {}, [props.sources])

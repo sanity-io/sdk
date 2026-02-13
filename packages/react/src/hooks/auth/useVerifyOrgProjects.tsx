@@ -29,7 +29,10 @@ export function useVerifyOrgProjects(disabled = false, projectIds?: string[]): s
 
   useEffect(() => {
     if (disabled || !projectIds || projectIds.length === 0) {
-      if (error !== null) setError(null)
+      // Reset to null when verification is inactive. React bails out of the
+      // re-render when the value is already null, so this is a no-op in the
+      // common case and avoids needing `error` in the dependency array.
+      setError(null)
       return
     }
 
@@ -42,7 +45,9 @@ export function useVerifyOrgProjects(disabled = false, projectIds?: string[]): s
     return () => {
       subscription.unsubscribe()
     }
-  }, [instance, disabled, error, projectIds])
+    // NOTE: `error` is intentionally excluded — including it caused a
+    // subscribe → setError → re-render → resubscribe loop on every emission.
+  }, [instance, disabled, projectIds])
 
   return error
 }

@@ -1,7 +1,7 @@
 import {type DocumentSource, isStudioConfig, type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, useContext, useEffect, useMemo} from 'react'
 
-import {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
+import {SDKStudioContext} from '../context/SDKStudioContext'
 import {SDKProvider} from './SDKProvider'
 import {isInIframe, isLocalUrl} from './utils'
 
@@ -26,21 +26,6 @@ export interface SanityAppProps {
 }
 
 const REDIRECT_URL = 'https://sanity.io/welcome'
-
-/**
- * Derive a SanityConfig from a Studio workspace handle.
- * Maps the workspace's projectId, dataset, and reactive auth token into
- * the SDK's config shape.
- */
-function deriveConfigFromWorkspace(workspace: StudioWorkspaceHandle): SanityConfig {
-  return {
-    projectId: workspace.projectId,
-    dataset: workspace.dataset,
-    studio: {
-      auth: workspace.auth.token ? {token: workspace.auth.token} : undefined,
-    },
-  }
-}
 
 /**
  * @public
@@ -114,12 +99,28 @@ export function SanityApp({
 }: SanityAppProps): ReactElement {
   const studioWorkspace = useContext(SDKStudioContext)
 
-  // Derive config: explicit config takes precedence, then Studio context
+  // Derive config: explicit config takes precedence, then Studio context.
+  // We destructure the workspace into primitive / stable-reference values
+  // (projectId, dataset, auth.token) so the memo only recomputes when the
+  // actual config inputs change — not when the Studio re-provides a workspace
+  // object with the same contents but a new reference.
+  const studioProjectId = studioWorkspace?.projectId
+  const studioDataset = studioWorkspace?.dataset
+  const studioToken = studioWorkspace?.auth.token
+
   const resolvedConfig = useMemo(() => {
     if (configProp) return configProp
-    if (studioWorkspace) return deriveConfigFromWorkspace(studioWorkspace)
+    if (studioProjectId !== undefined && studioDataset !== undefined) {
+      return {
+        projectId: studioProjectId,
+        dataset: studioDataset,
+        studio: {
+          auth: studioToken ? {token: studioToken} : undefined,
+        },
+      }
+    }
     return []
-  }, [configProp, studioWorkspace])
+  }, [configProp, studioProjectId, studioDataset, studioToken])
 
   useEffect(() => {
     let timeout: NodeJS.Timeout | undefined
