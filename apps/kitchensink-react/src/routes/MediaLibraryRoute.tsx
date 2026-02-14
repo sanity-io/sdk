@@ -1,7 +1,44 @@
-import {useDocumentProjection, useQuery} from '@sanity/sdk-react'
-import {Card, Spinner, Text} from '@sanity/ui'
+import {useDocumentProjection, useDocumentSyncStatus, useQuery} from '@sanity/sdk-react'
+import {Box, Button, Card, Dialog, Flex, Spinner, Text} from '@sanity/ui'
 import {type JSX, Suspense, useState} from 'react'
 import {SanityDocument} from 'sanity'
+
+import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
+
+// Modal dialog for editing media assets
+function MediaAssetEditorDialog({
+  assetId,
+  open,
+  onClose,
+}: {
+  assetId: string
+  open: boolean
+  onClose: () => void
+}) {
+  const docHandle = {
+    documentType: 'sanity.asset',
+    documentId: assetId,
+    sourceName: 'media-library',
+  }
+  const synced = useDocumentSyncStatus(docHandle)
+
+  return (
+    <Dialog
+      header={`Edit Asset: ${assetId}`}
+      id="media-asset-editor"
+      onClose={onClose}
+      open={open}
+      width={2}
+    >
+      <Box padding={4}>
+        <JsonDocumentEditor documentHandle={docHandle} minHeight="500px" maxHeight="70vh" />
+        <Flex justify="flex-end" gap={2} marginTop={4}>
+          <Button text={synced ? 'Close' : 'Syncing...'} onClick={onClose} tone="primary" />
+        </Flex>
+      </Box>
+    </Dialog>
+  )
+}
 
 // Component to display projection data for a specific asset
 function AssetProjection({assetId}: {assetId: string}) {
@@ -45,6 +82,7 @@ function AssetProjection({assetId}: {assetId: string}) {
 export function MediaLibraryRoute(): JSX.Element {
   const [query] = useState('*[_type == "sanity.asset"][0...10] | order(_id desc)')
   const [isLoading] = useState(false)
+  const [editingAssetId, setEditingAssetId] = useState<string | null>(null)
 
   const {data, isPending} = useQuery<SanityDocument[]>({
     query,
@@ -91,11 +129,28 @@ export function MediaLibraryRoute(): JSX.Element {
 
       <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
         <Card padding={3} style={{backgroundColor: '#1a1a1a'}}>
-          <div style={{display: 'flex', alignItems: 'center', marginBottom: '1rem'}}>
-            <Text size={1} weight="medium" style={{color: '#fff'}}>
-              useQuery Results:
-            </Text>
-            {(isPending || isLoading) && <Spinner style={{marginLeft: '0.5rem'}} />}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '1rem',
+            }}
+          >
+            <div style={{display: 'flex', alignItems: 'center'}}>
+              <Text size={1} weight="medium" style={{color: '#fff'}}>
+                useQuery Results:
+              </Text>
+              {(isPending || isLoading) && <Spinner style={{marginLeft: '0.5rem'}} />}
+            </div>
+            {firstAssetId && (
+              <Button
+                text="Edit First Asset"
+                tone="primary"
+                fontSize={1}
+                onClick={() => setEditingAssetId(firstAssetId)}
+              />
+            )}
           </div>
 
           <pre
@@ -127,6 +182,15 @@ export function MediaLibraryRoute(): JSX.Element {
           </Suspense>
         )}
       </div>
+
+      {/* Editor Dialog */}
+      {editingAssetId && (
+        <MediaAssetEditorDialog
+          assetId={editingAssetId}
+          open={!!editingAssetId}
+          onClose={() => setEditingAssetId(null)}
+        />
+      )}
     </div>
   )
 }
