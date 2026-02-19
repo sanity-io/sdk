@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.8.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.7.0...sdk-react-v2.8.0) (2026-02-19)
+
+
+### Features
+
+* **access:** if a project user can't be found envoke dashboard request-access flow ([#655](https://github.com/sanity-io/sdk/issues/655)) ([d1eb7bc](https://github.com/sanity-io/sdk/commit/d1eb7bc12a6dac6d04340918bdf546db3b89fa02))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.8.0
+
 ## [2.7.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.6.0...sdk-react-v2.7.0) (2026-02-12)
 
 
