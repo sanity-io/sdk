@@ -1,5 +1,47 @@
 # Changelog
 
+## [2.8.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.7.0...sdk-react-v2.8.0) (2026-02-19)
+
+
+### Features
+
+* **access:** if a project user can't be found envoke dashboard request-access flow ([#655](https://github.com/sanity-io/sdk/issues/655)) ([d1eb7bc](https://github.com/sanity-io/sdk/commit/d1eb7bc12a6dac6d04340918bdf546db3b89fa02))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.8.0
+
+## [2.7.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.6.0...sdk-react-v2.7.0) (2026-02-12)
+
+
+### Features
+
+* **auth:** add SDKStudioContext and workspace-based auth for zero-config Studio integration ([#738](https://github.com/sanity-io/sdk/issues/738)) ([ec89adc](https://github.com/sanity-io/sdk/commit/ec89adcb1c849fac684e2511cbee42066811934d))
+* **projection:** update projection store to use source and perspective ([#723](https://github.com/sanity-io/sdk/issues/723)) ([332f741](https://github.com/sanity-io/sdk/commit/332f7412981be5fd214d1d96088b95ae76b0e002))
+
+
+### Bug Fixes
+
+* correct useAgentPatch TSDoc examples to match PatchDocument API ([#736](https://github.com/sanity-io/sdk/issues/736)) ([c9905be](https://github.com/sanity-io/sdk/commit/c9905be2b64562989f7139191c17e68cc9778c8d))
+* **deps:** update dependency @sanity/client ([#717](https://github.com/sanity-io/sdk/issues/717)) ([24fb157](https://github.com/sanity-io/sdk/commit/24fb157a0fbc97a625a7c7ad3045e502ec818af1))
+* prevent sourceName from reaching sdk core ([#720](https://github.com/sanity-io/sdk/issues/720)) ([b8cf408](https://github.com/sanity-io/sdk/commit/b8cf4080d63b7d933cae630d1118d3ca4b127e07))
+
+
+### Documentation
+
+* provide examples to Agent Action hooks ([#729](https://github.com/sanity-io/sdk/issues/729)) ([ac7b348](https://github.com/sanity-io/sdk/commit/ac7b348687a8b6a834c3c28f8c96c4164e352e82))
+* update SDK documentation for Studio integration ([#741](https://github.com/sanity-io/sdk/issues/741)) ([18d1adc](https://github.com/sanity-io/sdk/commit/18d1adcfefc2e315d0ac262fa913bc03fcaaa4a8))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.7.0
+
 ## [2.6.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.5.0...sdk-react-v2.6.0) (2026-01-22)
 
 

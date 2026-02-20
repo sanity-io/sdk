@@ -7,6 +7,7 @@ import {createSanityInstance} from '../store/createSanityInstance'
 import {AuthStateType} from './authStateType'
 import {
   authStore,
+  getAuthMethodState,
   getAuthState,
   getCurrentUserState,
   getDashboardOrganizationId,
@@ -153,6 +154,34 @@ describe('authStore', () => {
       errorSpy.mockRestore()
     })
 
+    it('rejects array _context and falls back to standalone mode', () => {
+      const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(['a', 'b']))}`
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {initialLocationHref},
+      })
+
+      const {dashboardContext, authState} = authStore.getInitialState(instance, null)
+      // Array should not be treated as dashboard context — falls through to standalone
+      expect(dashboardContext).toStrictEqual({})
+      expect(authState.type).toBe(AuthStateType.LOGGED_OUT)
+    })
+
+    it('rejects empty object _context and falls back to standalone mode', () => {
+      const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify({}))}`
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {initialLocationHref},
+      })
+
+      const {dashboardContext, authState} = authStore.getInitialState(instance, null)
+      // Empty object not treated as dashboard — falls through to standalone
+      expect(dashboardContext).toStrictEqual({})
+      expect(authState.type).toBe(AuthStateType.LOGGED_OUT)
+    })
+
     it('sets to logged in if provided token is present (even in dashboard)', () => {
       const token = 'provided-token'
       const context = {mode: 'dashboard'}
@@ -234,7 +263,7 @@ describe('authStore', () => {
       expect(dashboardContext).toStrictEqual({})
     })
 
-    it('sets to logged in using studio token when studio mode is enabled and token exists', () => {
+    it('sets to logged in using studio token when studio config is provided and token exists', () => {
       const studioToken = 'studio-token'
       const projectId = 'studio-project'
       const studioStorageKey = `__studio_auth_token_${projectId}`
@@ -248,7 +277,7 @@ describe('authStore', () => {
       instance = createSanityInstance({
         projectId,
         dataset: 'd',
-        studioMode: {enabled: true},
+        studio: {},
         auth: {storageArea: mockStorage}, // Provide mock storage
       })
 
@@ -258,7 +287,7 @@ describe('authStore', () => {
       expect(options.authMethod).toBe('localstorage')
     })
 
-    it('checks for cookie auth during initialize when studio mode is enabled and no studio token exists', () => {
+    it('checks for cookie auth during initialize when studio config is provided and no studio token exists', () => {
       const projectId = 'studio-project'
       const studioStorageKey = `__studio_auth_token_${projectId}`
       const mockStorage = {
@@ -272,7 +301,7 @@ describe('authStore', () => {
       instance = createSanityInstance({
         projectId,
         dataset: 'd',
-        studioMode: {enabled: true},
+        studio: {},
         auth: {storageArea: mockStorage},
       })
 
@@ -285,6 +314,114 @@ describe('authStore', () => {
       getAuthState(instance)
 
       expect(checkForCookieAuth).toHaveBeenCalledWith(projectId, expect.any(Function))
+    })
+
+    it('starts in LOGGING_IN state when studio config with tokenSource is provided', () => {
+      const mockTokenSource = {
+        subscribe: vi.fn(() => ({unsubscribe: vi.fn()})),
+      }
+
+      instance = createSanityInstance({
+        projectId: 'studio-project',
+        dataset: 'production',
+        studio: {
+          auth: {token: mockTokenSource},
+        },
+      })
+
+      const {authState} = authStore.getInitialState(instance, null)
+      expect(authState.type).toBe(AuthStateType.LOGGING_IN)
+      // Should not try localStorage or cookie auth
+      expect(getStudioTokenFromLocalStorage).not.toHaveBeenCalled()
+    })
+
+    it('resolves to studio mode when studio config is provided (without studioMode flag)', () => {
+      instance = createSanityInstance({
+        projectId: 'studio-project',
+        dataset: 'production',
+        studio: {},
+      })
+
+      const {authState} = authStore.getInitialState(instance, null)
+      // Without tokenSource, falls back to localStorage discovery like studioMode
+      expect(authState.type).toBe(AuthStateType.LOGGED_OUT)
+      expect(getStudioTokenFromLocalStorage).toHaveBeenCalled()
+    })
+
+    it('subscribes to tokenSource during initialize when studio config is provided', () => {
+      const mockUnsubscribe = vi.fn()
+      const mockSubscribe = vi.fn(() => ({unsubscribe: mockUnsubscribe}))
+      const mockTokenSource = {subscribe: mockSubscribe}
+
+      instance = createSanityInstance({
+        projectId: 'studio-project',
+        dataset: 'production',
+        studio: {
+          auth: {token: mockTokenSource},
+        },
+      })
+
+      // Trigger store creation + initialize
+      getAuthState(instance)
+
+      expect(mockSubscribe).toHaveBeenCalledWith({next: expect.any(Function)})
+      // Should NOT start cookie auth or storage event subscriptions
+      expect(checkForCookieAuth).not.toHaveBeenCalled()
+    })
+
+    it('treats null token as cookie auth when studio reports authenticated', () => {
+      let tokenObserver!: {next: (token: string | null) => void}
+      const mockSubscribe = vi.fn((observer: {next: (token: string | null) => void}) => {
+        tokenObserver = observer
+        return {unsubscribe: vi.fn()}
+      })
+      const mockTokenSource = {subscribe: mockSubscribe}
+
+      instance = createSanityInstance({
+        projectId: 'studio-project',
+        dataset: 'production',
+        studio: {
+          authenticated: true,
+          auth: {token: mockTokenSource},
+        },
+      })
+
+      getAuthState(instance)
+      tokenObserver.next(null)
+
+      expect(getAuthState(instance).getCurrent()).toMatchObject({
+        type: AuthStateType.LOGGED_IN,
+        token: '',
+      })
+      expect(getAuthMethodState(instance).getCurrent()).toBe('cookie')
+      expect(checkForCookieAuth).not.toHaveBeenCalled()
+    })
+
+    it('sets logged out when token is null and studio is not authenticated', () => {
+      let tokenObserver!: {next: (token: string | null) => void}
+      const mockSubscribe = vi.fn((observer: {next: (token: string | null) => void}) => {
+        tokenObserver = observer
+        return {unsubscribe: vi.fn()}
+      })
+      const mockTokenSource = {subscribe: mockSubscribe}
+
+      instance = createSanityInstance({
+        projectId: 'studio-project',
+        dataset: 'production',
+        studio: {
+          authenticated: false,
+          auth: {token: mockTokenSource},
+        },
+      })
+
+      getAuthState(instance)
+      tokenObserver.next(null)
+
+      expect(getAuthState(instance).getCurrent()).toMatchObject({
+        type: AuthStateType.LOGGED_OUT,
+      })
+      expect(getAuthMethodState(instance).getCurrent()).toBeUndefined()
+      expect(checkForCookieAuth).not.toHaveBeenCalled()
     })
 
     it('falls back to default auth (storage token) when studio mode is disabled', () => {
