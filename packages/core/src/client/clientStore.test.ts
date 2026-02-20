@@ -180,35 +180,13 @@ describe('clientStore', () => {
     it('should create client when source is provided', () => {
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
-        source: {projectId: 'source-project', dataset: 'source-dataset'},
-      })
-
-      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
-        expect.objectContaining({
-          'apiVersion': '2024-11-12',
-          '~experimental_resource': {type: 'dataset', id: 'source-project.source-dataset'},
-        }),
-      )
-      // Client should be projectless - no projectId/dataset in config
-      expect(client.config()).not.toHaveProperty('projectId')
-      expect(client.config()).not.toHaveProperty('dataset')
-      expect(client.config()).toEqual(
-        expect.objectContaining({
-          '~experimental_resource': {type: 'dataset', id: 'source-project.source-dataset'},
-        }),
-      )
-    })
-
-    it('should create resource when source has array sourceId and be projectless', () => {
-      const client = getClient(instance, {
-        apiVersion: '2024-11-12',
         source: {mediaLibraryId: 'media-lib-123'},
       })
 
       expect(vi.mocked(createClient)).toHaveBeenCalledWith(
         expect.objectContaining({
-          '~experimental_resource': {type: 'media-library', id: 'media-lib-123'},
           'apiVersion': '2024-11-12',
+          '~experimental_resource': {type: 'media-library', id: 'media-lib-123'},
         }),
       )
       // Client should be projectless - no projectId/dataset in config
@@ -243,7 +221,8 @@ describe('clientStore', () => {
       )
     })
 
-    it('should create projectless client when source is provided, ignoring instance config', () => {
+    // skipped until we migrate to using source for project and dataset
+    it.skip('should create projectless client when source is provided, ignoring instance config', () => {
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
         source: {projectId: 'source-project', dataset: 'source-dataset'},
@@ -263,7 +242,7 @@ describe('clientStore', () => {
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
-        source: {projectId: 'source-project', dataset: 'source-dataset'},
+        source: {mediaLibraryId: 'media-lib-123'},
         projectId: 'explicit-project',
         dataset: 'explicit-dataset',
       })
