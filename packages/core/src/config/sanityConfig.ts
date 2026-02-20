@@ -3,6 +3,46 @@ import {type ClientPerspective, type StackablePerspective} from '@sanity/client'
 import {type AuthConfig} from './authConfig'
 
 /**
+ * A minimal Observable-compatible interface for subscribing to token changes.
+ * Any object with a `subscribe` method that follows this contract will work,
+ * including RxJS Observables. This avoids coupling the SDK to a specific
+ * reactive library.
+ *
+ * @public
+ */
+export interface TokenSource {
+  /** Subscribe to token emissions. Emits `null` when logged out. */
+  subscribe(observer: {next: (token: string | null) => void}): {unsubscribe(): void}
+}
+
+/**
+ * Studio-specific configuration for the SDK.
+ * When present, the SDK operates in studio mode and derives auth from the
+ * provided token source instead of discovering tokens independently.
+ *
+ * @public
+ */
+export interface StudioConfig {
+  /**
+   * Whether the Studio has already determined the user is authenticated.
+   * When `true` and the token source emits `null`, the SDK infers
+   * cookie-based auth is in use rather than transitioning to logged-out.
+   */
+  authenticated?: boolean
+  /** Reactive auth token source from the Studio's auth store. */
+  auth?: {
+    /**
+     * A reactive token source. The SDK subscribes and stays in sync — the
+     * Studio is the single authority for auth and handles token refresh.
+     *
+     * Optional because older Studios may not expose it. When absent, the
+     * SDK falls back to localStorage/cookie discovery.
+     */
+    token?: TokenSource
+  }
+}
+
+/**
  * Represents the minimal configuration required to identify a Sanity project.
  * @public
  */
@@ -84,8 +124,20 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
    */
   auth?: AuthConfig
   /**
-   * Studio mode configuration for use of the SDK in a Sanity Studio
-   * @remarks Controls whether studio mode features are enabled
+   * Studio configuration provided by a Sanity Studio workspace.
+   * When present, the SDK operates in studio mode and derives auth from the
+   * workspace's reactive token source — no manual configuration needed.
+   *
+   * @remarks Typically set automatically by `SanityApp` when it detects an
+   * `SDKStudioContext` provider. Can also be set explicitly for programmatic use.
+   */
+  studio?: StudioConfig
+
+  /**
+   * Studio mode configuration for use of the SDK in a Sanity Studio.
+   * @remarks Controls whether studio mode features are enabled.
+   * @deprecated Use `studio` instead, which provides richer integration
+   * with the Studio's workspace (auth token sync, etc.).
    */
   studioMode?: {
     enabled: boolean

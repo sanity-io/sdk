@@ -4,6 +4,7 @@ import {
   AuthStateType,
   type FrameMessage,
   getIsInDashboardState,
+  isStudioConfig,
   type NewTokenResponseMessage,
   type RequestNewTokenMessage,
   setAuthToken,
@@ -130,9 +131,9 @@ function DashboardTokenRefresh({children}: PropsWithChildren) {
 export const ComlinkTokenRefreshProvider: React.FC<PropsWithChildren> = ({children}) => {
   const instance = useSanityInstance()
   const isInDashboard = useMemo(() => getIsInDashboardState(instance).getCurrent(), [instance])
-  const studioModeEnabled = !!instance.config.studioMode?.enabled
+  const isStudio = isStudioConfig(instance.config)
 
-  if (isInDashboard && !studioModeEnabled) {
+  if (isInDashboard && !isStudio) {
     return <DashboardTokenRefresh>{children}</DashboardTokenRefresh>
   }
 

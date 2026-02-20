@@ -1,4 +1,5 @@
 import {ClientError} from '@sanity/client'
+import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
 import {
   AuthStateType,
   getClientErrorApiBody,
@@ -10,6 +11,8 @@ import {type FallbackProps} from 'react-error-boundary'
 
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLogOut} from '../../hooks/auth/useLogOut'
+import {useWindowConnection} from '../../hooks/comlink/useWindowConnection'
+import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 import {Error} from '../errors/Error'
 import {AuthError} from './AuthError'
 import {ConfigurationError} from './ConfigurationError'
@@ -36,11 +39,22 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
 
   const logout = useLogOut()
   const authState = useAuthState()
+  const {
+    config: {projectId},
+  } = useSanityInstance()
 
   const [authErrorMessage, setAuthErrorMessage] = useState(
     'Please try again or contact support if the problem persists.',
   )
   const [showRetryCta, setShowRetryCta] = useState(true)
+
+  /**
+   * TODO: before merge update message-protocol package to include the new message type
+   */
+  const {fetch} = useWindowConnection({
+    name: SDK_NODE_NAME,
+    connectTo: SDK_CHANNEL_NAME,
+  })
 
   const handleRetry = useCallback(async () => {
     await logout()
@@ -55,6 +69,13 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
           const description = getClientErrorApiDescription(error)
           if (description) setAuthErrorMessage(description)
           setShowRetryCta(false)
+          /**
+           * Handoff to dashboard to enable the request access flow for the project.
+           */
+          fetch('dashboard/v1/auth/access/request', {
+            resourceType: 'project',
+            resourceId: projectId,
+          })
         } else {
           setShowRetryCta(true)
           handleRetry()
@@ -73,7 +94,7 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
       setAuthErrorMessage(error.message)
       setShowRetryCta(true)
     }
-  }, [authState, handleRetry, error])
+  }, [authState, handleRetry, error, fetch, projectId])
 
   return (
     <Error
