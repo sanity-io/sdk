@@ -100,7 +100,9 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
     projectId: config.projectId,
     dataset: config.dataset,
     perspective: config.perspective,
-    studioMode: config.studioMode?.enabled,
+    hasStudioConfig: !!config.studio,
+    hasStudioTokenSource: !!config.studio?.auth?.token,
+    legacyStudioMode: config.studioMode?.enabled,
     hasAuthProviders: !!config.auth?.providers,
     hasAuthToken: !!config.auth?.token,
   })

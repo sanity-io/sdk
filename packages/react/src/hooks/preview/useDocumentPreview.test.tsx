@@ -35,8 +35,8 @@ describe('useDocumentPreview', () => {
 
     const {result} = renderHook(() => useDocumentPreview(mockDocument))
     const {data, isPending} = result.current
-    expect(data?.title).toBe('Test Title')
-    expect(data?.subtitle).toBe('Test Description')
+    expect(data.title).toBe('Test Title')
+    expect(data.subtitle).toBe('Test Description')
     expect(isPending).toBe(false)
   })
 
@@ -59,7 +59,7 @@ describe('useDocumentPreview', () => {
       const {data, isPending} = useDocumentPreview(mockDocument)
       return (
         <div>
-          <h1>{data?.title}</h1>
+          <h1>{data.title}</h1>
           {isPending && <div>Pending...</div>}
         </div>
       )
@@ -88,7 +88,7 @@ describe('useDocumentPreview', () => {
 
     const {result} = renderHook(() => useDocumentPreview(mockDocument))
     const {data} = result.current
-    expect(data?.title).toBe('article: doc1')
+    expect(data.title).toBe('article: doc1')
   })
 
   test('passes ref to useDocumentProjection', () => {
@@ -109,7 +109,7 @@ describe('useDocumentPreview', () => {
     const ref = {current: null}
     const {result} = renderHook(() => useDocumentPreview({...mockDocument, ref}))
     const {data} = result.current
-    expect(data?.title).toBe('Title')
+    expect(data.title).toBe('Title')
 
     // Verify useDocumentProjection was called with the ref and preview projection
     expect(useDocumentProjection).toHaveBeenCalledWith(

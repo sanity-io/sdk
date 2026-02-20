@@ -30,6 +30,21 @@ describe('releasesStore', () => {
     instance.dispose()
   })
 
+  it('supports calls without options', () => {
+    const state = getActiveReleasesState(instance)
+
+    expect(state.getCurrent()).toBeUndefined()
+    expect(getQueryState).toHaveBeenCalledWith(
+      instance,
+      expect.objectContaining({
+        query: 'releases::all()',
+        perspective: 'raw',
+        source: undefined,
+        tag: 'releases',
+      }),
+    )
+  })
+
   it('should set active releases state when the releases query emits', async () => {
     const teardown = vi.fn()
     const subscriber = vi

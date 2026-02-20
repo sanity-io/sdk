@@ -107,17 +107,15 @@ export function useDocumentPreview({
     ref,
   })
 
-  // Transform the projection result to PreviewValue format
-  const previewValue = useMemo(() => {
-    if (!projectionResult.data) {
-      return null
-    }
-
-    return transformProjectionToPreview(instance, projectionResult.data, normalizedDocHandle.source)
-  }, [projectionResult.data, instance, normalizedDocHandle.source])
+  // Contract: useDocumentProjection suspends while data is null, so data is always available here.
+  // Keep this non-null assumption aligned with useDocumentPreviewResults.data.
+  const previewValue = useMemo(
+    () => transformProjectionToPreview(instance, projectionResult.data, normalizedDocHandle.source),
+    [projectionResult.data, instance, normalizedDocHandle.source],
+  )
 
   return {
-    data: previewValue!,
+    data: previewValue,
     isPending: projectionResult.isPending,
   }
 }
