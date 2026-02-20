@@ -192,6 +192,9 @@ export const getClient = bindActionGlobally(
       } else if (isCanvasResource(options.resource)) {
         resource = {type: 'canvas', id: options.resource.canvasId}
       }
+      // temporary excluding dataset source as a resource for now. Many of the global API endpoints require vX api version.
+      // } else if (isDatasetSource(options.source)) {
+      //   resource = {type: 'dataset', id: `${options.source.projectId}.${options.source.dataset}`}
     }
 
     const projectId = options.projectId ?? instance.config.projectId
@@ -212,15 +215,18 @@ export const getClient = bindActionGlobally(
     // When a resource is provided, don't use projectId/dataset - the client should be "projectless"
     // The client code itself will ignore the non-resource config, so we do this to prevent confusing the user.
     // (ref: https://github.com/sanity-io/client/blob/5c23f81f5ab93a53f5b22b39845c867988508d84/src/data/dataMethods.ts#L691)
-    if (resource) {
+    // Note: DatasetSource is handled differently - it extracts projectId/dataset from the source and uses those
+    if (options.resource) {
       if (options.projectId || options.dataset) {
         // eslint-disable-next-line no-console
         console.warn(
           'Both resource and explicit projectId/dataset are provided. The resource will be used and projectId/dataset will be ignored.',
         )
       }
-      delete effectiveOptions.projectId
-      delete effectiveOptions.dataset
+      if (resource) {
+        delete effectiveOptions.projectId
+        delete effectiveOptions.dataset
+      }
     }
 
     if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {
