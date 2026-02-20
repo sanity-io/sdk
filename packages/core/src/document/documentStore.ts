@@ -26,11 +26,17 @@ import {
   withLatestFrom,
 } from 'rxjs'
 
-import {getClientState} from '../client/clientStore'
-import {type DocumentHandle} from '../config/sanityConfig'
+import {type ClientOptions, getClientState} from '../client/clientStore'
 import {
-  bindActionByDataset,
-  type BoundDatasetKey,
+  type DocumentHandle,
+  type DocumentSource,
+  isCanvasSource,
+  isDatasetSource,
+  isMediaLibrarySource,
+} from '../config/sanityConfig'
+import {
+  bindActionBySource,
+  type BoundSourceKey,
   type StoreAction,
 } from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
@@ -42,7 +48,13 @@ import {API_VERSION, INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
 import {type DocumentEvent, getDocumentEvents} from './events'
 import {listen, OutOfSyncError} from './listen'
 import {type JsonMatch} from './patchOperations'
-import {calculatePermissions, createGrantsLookup, type DatasetAcl, type Grant} from './permissions'
+import {
+  calculatePermissions,
+  createGrantsLookup,
+  type DatasetAcl,
+  type DocumentPermissionsResult,
+  type Grant,
+} from './permissions'
 import {ActionError} from './processActions'
 import {
   type AppliedTransaction,
@@ -107,15 +119,15 @@ export interface DocumentState {
   unverifiedRevisions?: {[TTransactionId in string]?: UnverifiedDocumentRevision}
 }
 
-export const documentStore = defineStore<DocumentStoreState, BoundDatasetKey>({
+export const documentStore = defineStore<DocumentStoreState, BoundSourceKey>({
   name: 'Document',
-  getInitialState: (instance) => ({
+  getInitialState: (instance, {source}) => ({
     documentStates: {},
     // these can be emptied on refetch
     queued: [],
     applied: [],
-    sharedListener: createSharedListener(instance),
-    fetchDocument: createFetchDocument(instance),
+    sharedListener: createSharedListener(instance, source),
+    fetchDocument: createFetchDocument(instance, source),
     events: new Subject(),
   }),
   initialize(context) {
@@ -183,7 +195,7 @@ export function getDocumentState(
   return _getDocumentState(...args)
 }
 
-const _getDocumentState = bindActionByDataset(
+const _getDocumentState = bindActionBySource(
   documentStore,
   createStateSourceAction({
     selector: ({state: {error, documentStates}}, options: DocumentOptions<string | undefined>) => {
@@ -241,7 +253,7 @@ export function resolveDocument(
 ): Promise<SanityDocument | null> {
   return _resolveDocument(...args)
 }
-const _resolveDocument = bindActionByDataset(
+const _resolveDocument = bindActionBySource(
   documentStore,
   ({instance}, docHandle: DocumentHandle<string, string, string>) => {
     return firstValueFrom(
@@ -254,7 +266,7 @@ const _resolveDocument = bindActionByDataset(
 )
 
 /** @beta */
-export const getDocumentSyncStatus = bindActionByDataset(
+export const getDocumentSyncStatus = bindActionBySource(
   documentStore,
   createStateSourceAction({
     selector: (
@@ -286,11 +298,12 @@ export const getDocumentSyncStatus = bindActionByDataset(
 )
 
 type PermissionsStateOptions = {
+  source?: DocumentSource
   actions: DocumentAction[]
 }
 
 /** @beta */
-export const getPermissionsState = bindActionByDataset(
+export const getPermissionsState = bindActionBySource(
   documentStore,
   createStateSourceAction({
     selector: calculatePermissions,
@@ -299,12 +312,12 @@ export const getPermissionsState = bindActionByDataset(
   }) as StoreAction<
     DocumentStoreState,
     [PermissionsStateOptions],
-    StateSource<ReturnType<typeof calculatePermissions>>
+    StateSource<DocumentPermissionsResult>
   >,
 )
 
 /** @beta */
-export const resolvePermissions = bindActionByDataset(
+export const resolvePermissions = bindActionBySource(
   documentStore,
   ({instance}, options: PermissionsStateOptions) => {
     return firstValueFrom(
@@ -314,16 +327,18 @@ export const resolvePermissions = bindActionByDataset(
 )
 
 /** @beta */
-export const subscribeDocumentEvents = bindActionByDataset(
+export const subscribeDocumentEvents = bindActionBySource(
   documentStore,
-  ({state}, eventHandler: (e: DocumentEvent) => void) => {
+  ({state}, options: {source?: DocumentSource; eventHandler: (e: DocumentEvent) => void}) => {
     const {events} = state.get()
-    const subscription = events.subscribe(eventHandler)
+    const subscription = events.subscribe(options.eventHandler)
     return () => subscription.unsubscribe()
   },
 )
 
-const subscribeToQueuedAndApplyNextTransaction = ({state}: StoreContext<DocumentStoreState>) => {
+const subscribeToQueuedAndApplyNextTransaction = ({
+  state,
+}: StoreContext<DocumentStoreState, BoundSourceKey>) => {
   const {events} = state.get()
   return state.observable
     .pipe(
@@ -354,7 +369,8 @@ const subscribeToQueuedAndApplyNextTransaction = ({state}: StoreContext<Document
 const subscribeToAppliedAndSubmitNextTransaction = ({
   state,
   instance,
-}: StoreContext<DocumentStoreState>) => {
+  key: {source},
+}: StoreContext<DocumentStoreState, BoundSourceKey>) => {
   const {events} = state.get()
 
   return state.observable
@@ -374,7 +390,13 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
       tap((next) => state.set('transitionAppliedTransactionsToOutgoing', next)),
       map((s) => s.outgoing),
       distinctUntilChanged(),
-      withLatestFrom(getClientState(instance, {apiVersion: API_VERSION}).observable),
+      withLatestFrom(
+        getClientState(instance, {
+          apiVersion: API_VERSION,
+          // TODO: remove in v3 when we're ready for everything to be queried via source
+          source: source && !isDatasetSource(source) ? source : undefined,
+        }).observable,
+      ),
       concatMap(([outgoing, client]) => {
         if (!outgoing) return EMPTY
         return client.observable
@@ -401,7 +423,7 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
 }
 
 const subscribeToSubscriptionsAndListenToDocuments = (
-  context: StoreContext<DocumentStoreState>,
+  context: StoreContext<DocumentStoreState, BoundSourceKey>,
 ) => {
   const {state} = context
   const {events} = state.get()
@@ -469,13 +491,30 @@ const subscribeToSubscriptionsAndListenToDocuments = (
 const subscribeToClientAndFetchDatasetAcl = ({
   instance,
   state,
-  key: {projectId, dataset},
-}: StoreContext<DocumentStoreState, BoundDatasetKey>) => {
-  return getClientState(instance, {apiVersion: API_VERSION})
+  key: {source},
+}: StoreContext<DocumentStoreState, BoundSourceKey>) => {
+  const clientOptions: ClientOptions = {apiVersion: API_VERSION}
+  // TODO: remove in v3 when we're ready for everything to be queried via source
+  if (source && !isDatasetSource(source)) {
+    clientOptions.source = source
+  }
+
+  let uri: string
+  if (source && isDatasetSource(source)) {
+    uri = `/projects/${source.projectId}/datasets/${source.dataset}/acl`
+  } else if (source && isMediaLibrarySource(source)) {
+    uri = `/media-libraries/${source.mediaLibraryId}/acl`
+  } else if (source && isCanvasSource(source)) {
+    uri = `/canvases/${source.canvasId}/acl`
+  } else {
+    throw new Error(`Received invalid source: ${JSON.stringify(source)}`)
+  }
+
+  return getClientState(instance, clientOptions)
     .observable.pipe(
       switchMap((client) =>
         client.observable.request<DatasetAcl>({
-          uri: `/projects/${projectId}/datasets/${dataset}/acl`,
+          uri,
           tag: 'acl.get',
           withCredentials: true,
         }),

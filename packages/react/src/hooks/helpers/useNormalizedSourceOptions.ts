@@ -23,6 +23,55 @@ export type WithSourceNameSupport<T extends {source?: DocumentSource}> = T & {
 }
 
 /**
+ * Pure function that normalizes options by resolving `sourceName` to a `DocumentSource`
+ * using the provided sources map. Use this when options are only available at call time
+ * (e.g. inside a callback) and you cannot call the {@link useNormalizedSourceOptions} hook.
+ *
+ * @typeParam T - The options type (must include optional source field)
+ * @param options - Options that may include `sourceName` and/or `source`
+ * @param sources - Map of source names to DocumentSource (e.g. from SourcesContext)
+ * @returns Normalized options with `sourceName` removed and `source` resolved
+ * @internal
+ */
+export function normalizeSourceOptions<T extends {source?: DocumentSource; sourceName?: string}>(
+  options: T,
+  sources: Record<string, DocumentSource>,
+): Omit<T, 'sourceName'> {
+  const {sourceName, ...rest} = options
+
+  if (!sourceName && !options.source) {
+    return options
+  }
+
+  if (sourceName && Object.hasOwn(options, 'source')) {
+    throw new Error(
+      `Source name ${JSON.stringify(sourceName)} and source ${JSON.stringify(options.source)} cannot be used together.`,
+    )
+  }
+
+  let resolvedSource: DocumentSource | undefined
+
+  if (options.source) {
+    resolvedSource = options.source
+  }
+
+  if (sourceName && !Object.hasOwn(sources, sourceName)) {
+    throw new Error(
+      `There's no source named ${JSON.stringify(sourceName)} in context. Please use <SourceProvider>.`,
+    )
+  }
+
+  if (sourceName && sources[sourceName]) {
+    resolvedSource = sources[sourceName]
+  }
+
+  return {
+    ...rest,
+    source: resolvedSource,
+  }
+}
+
+/**
  * Normalizes hook options by resolving `sourceName` to a `DocumentSource`.
  * This hook ensures that options passed to core layer functions only contain
  * `source` (never `sourceName`), preventing duplicate cache keys and maintaining
@@ -53,33 +102,6 @@ export type WithSourceNameSupport<T extends {source?: DocumentSource}> = T & {
 export function useNormalizedSourceOptions<
   T extends {source?: DocumentSource; sourceName?: string},
 >(options: T): Omit<T, 'sourceName'> {
-  const {sourceName, ...rest} = options
-  if (sourceName && Object.hasOwn(options, 'source')) {
-    throw new Error(
-      `Source name ${JSON.stringify(sourceName)} and source ${JSON.stringify(options.source)} cannot be used together.`,
-    )
-  }
-
-  // Resolve sourceName to source via context
   const sources = useContext(SourcesContext)
-  let resolvedSource: DocumentSource | undefined
-
-  if (options.source) {
-    resolvedSource = options.source
-  }
-
-  if (sourceName && !Object.hasOwn(sources, sourceName)) {
-    throw new Error(
-      `There's no source named ${JSON.stringify(sourceName)} in context. Please use <SourceProvider>.`,
-    )
-  }
-
-  if (sourceName && sources[sourceName]) {
-    resolvedSource = sources[sourceName]
-  }
-
-  return {
-    ...rest,
-    source: resolvedSource,
-  }
+  return normalizeSourceOptions(options, sources)
 }

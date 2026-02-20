@@ -91,9 +91,15 @@ export function useDocumentPermissions(
   // if actions is an array, we need to check that all actions belong to the same project and dataset
   let projectId
   let dataset
+  let source
 
   for (const action of actions) {
     if (action.projectId) {
+      if (source) {
+        throw new Error(
+          `Mismatches between projectId/dataset options and source in actions. Found projectId "${action.projectId}" and dataset "${action.dataset}" but expected source "${source}".`,
+        )
+      }
       if (!projectId) projectId = action.projectId
       if (action.projectId !== projectId) {
         throw new Error(
@@ -108,6 +114,20 @@ export function useDocumentPermissions(
             `Mismatched datasets found in actions. All actions must belong to the same dataset. Found "${action.dataset}" but expected "${dataset}".`,
           )
         }
+      }
+    }
+
+    if (action.source) {
+      if (!source) source = action.source
+      if (action.source !== source) {
+        throw new Error(
+          `Mismatched sources found in actions. All actions must belong to the same source. Found "${action.source}" but expected "${source}".`,
+        )
+      }
+      if (projectId || dataset) {
+        throw new Error(
+          `Mismatches between projectId/dataset options and source in actions. Found "${action.source}" but expected project "${projectId}" and dataset "${dataset}".`,
+        )
       }
     }
   }
