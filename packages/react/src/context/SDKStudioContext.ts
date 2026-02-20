@@ -13,6 +13,12 @@ export interface StudioWorkspaceHandle {
   projectId: string
   /** The dataset name for this workspace. */
   dataset: string
+  /**
+   * Whether the Studio has determined the user is authenticated.
+   * When `true` and the token source emits `null`, the SDK infers
+   * cookie-based auth is in use and skips the logged-out state.
+   */
+  authenticated?: boolean
   /** Authentication state for this workspace. */
   auth: {
     /**

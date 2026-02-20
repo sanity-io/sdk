@@ -7,6 +7,7 @@ import {createSanityInstance} from '../store/createSanityInstance'
 import {AuthStateType} from './authStateType'
 import {
   authStore,
+  getAuthMethodState,
   getAuthState,
   getCurrentUserState,
   getDashboardOrganizationId,
@@ -365,6 +366,61 @@ describe('authStore', () => {
 
       expect(mockSubscribe).toHaveBeenCalledWith({next: expect.any(Function)})
       // Should NOT start cookie auth or storage event subscriptions
+      expect(checkForCookieAuth).not.toHaveBeenCalled()
+    })
+
+    it('treats null token as cookie auth when studio reports authenticated', () => {
+      let tokenObserver!: {next: (token: string | null) => void}
+      const mockSubscribe = vi.fn((observer: {next: (token: string | null) => void}) => {
+        tokenObserver = observer
+        return {unsubscribe: vi.fn()}
+      })
+      const mockTokenSource = {subscribe: mockSubscribe}
+
+      instance = createSanityInstance({
+        projectId: 'studio-project',
+        dataset: 'production',
+        studio: {
+          authenticated: true,
+          auth: {token: mockTokenSource},
+        },
+      })
+
+      getAuthState(instance)
+      tokenObserver.next(null)
+
+      expect(getAuthState(instance).getCurrent()).toMatchObject({
+        type: AuthStateType.LOGGED_IN,
+        token: '',
+      })
+      expect(getAuthMethodState(instance).getCurrent()).toBe('cookie')
+      expect(checkForCookieAuth).not.toHaveBeenCalled()
+    })
+
+    it('sets logged out when token is null and studio is not authenticated', () => {
+      let tokenObserver!: {next: (token: string | null) => void}
+      const mockSubscribe = vi.fn((observer: {next: (token: string | null) => void}) => {
+        tokenObserver = observer
+        return {unsubscribe: vi.fn()}
+      })
+      const mockTokenSource = {subscribe: mockSubscribe}
+
+      instance = createSanityInstance({
+        projectId: 'studio-project',
+        dataset: 'production',
+        studio: {
+          authenticated: false,
+          auth: {token: mockTokenSource},
+        },
+      })
+
+      getAuthState(instance)
+      tokenObserver.next(null)
+
+      expect(getAuthState(instance).getCurrent()).toMatchObject({
+        type: AuthStateType.LOGGED_OUT,
+      })
+      expect(getAuthMethodState(instance).getCurrent()).toBeUndefined()
       expect(checkForCookieAuth).not.toHaveBeenCalled()
     })
 
