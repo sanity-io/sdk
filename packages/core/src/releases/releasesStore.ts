@@ -1,6 +1,7 @@
 import {type SanityDocument} from '@sanity/types'
 import {map} from 'rxjs'
 
+import {type DocumentSource, isDatasetSource} from '../config/sanityConfig'
 /*
  * Although this is an import dependency cycle, it is not a logical cycle:
  * 1. releasesStore uses queryStore as a data source
@@ -10,8 +11,9 @@ import {map} from 'rxjs'
  */
 // eslint-disable-next-line import/no-cycle
 import {getQueryState} from '../query/queryStore'
-import {bindActionByDataset, type BoundDatasetKey} from '../store/createActionBinder'
-import {createStateSourceAction} from '../store/createStateSourceAction'
+import {bindActionBySource, type BoundSourceKey} from '../store/createActionBinder'
+import {type SanityInstance} from '../store/createSanityInstance'
+import {createStateSourceAction, type StateSource} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {sortReleases} from './utils/sortReleases'
 
@@ -39,7 +41,7 @@ export interface ReleasesStoreState {
   error?: unknown
 }
 
-export const releasesStore = defineStore<ReleasesStoreState, BoundDatasetKey>({
+export const releasesStore = defineStore<ReleasesStoreState, BoundSourceKey>({
   name: 'Releases',
   getInitialState: (): ReleasesStoreState => ({
     activeReleases: undefined,
@@ -54,25 +56,35 @@ export const releasesStore = defineStore<ReleasesStoreState, BoundDatasetKey>({
  * Get the active releases from the store.
  * @internal
  */
-export const getActiveReleasesState = bindActionByDataset(
+const _getActiveReleasesState = bindActionBySource(
   releasesStore,
   createStateSourceAction({
     selector: ({state}, _?) => state.activeReleases,
   }),
 )
 
+/**
+ * Get the active releases from the store.
+ * @internal
+ */
+export const getActiveReleasesState = (
+  instance: SanityInstance,
+  options?: {source?: DocumentSource},
+): StateSource<ReleaseDocument[] | undefined> =>
+  // bindActionBySource keyFn destructures { source } from the first param, so pass {} when no options
+  _getActiveReleasesState(instance, options ?? {})
+
 const RELEASES_QUERY = 'releases::all()'
 
 const subscribeToReleases = ({
   instance,
   state,
-  key: {projectId, dataset},
-}: StoreContext<ReleasesStoreState, BoundDatasetKey>) => {
+  key: {source},
+}: StoreContext<ReleasesStoreState, BoundSourceKey>) => {
   const {observable: releases$} = getQueryState<ReleaseDocument[]>(instance, {
     query: RELEASES_QUERY,
     perspective: 'raw',
-    projectId,
-    dataset,
+    source: source && !isDatasetSource(source) ? source : undefined,
     tag: 'releases',
   })
   return releases$

@@ -2,115 +2,99 @@
 
 ## [2.8.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.7.0...sdk-react-v2.8.0) (2026-02-19)
 
-
 ### Features
 
-* **access:** if a project user can't be found envoke dashboard request-access flow ([#655](https://github.com/sanity-io/sdk/issues/655)) ([d1eb7bc](https://github.com/sanity-io/sdk/commit/d1eb7bc12a6dac6d04340918bdf546db3b89fa02))
-
+- **access:** if a project user can't be found envoke dashboard request-access flow ([#655](https://github.com/sanity-io/sdk/issues/655)) ([d1eb7bc](https://github.com/sanity-io/sdk/commit/d1eb7bc12a6dac6d04340918bdf546db3b89fa02))
 
 ### Dependencies
 
-* The following workspace dependencies were updated
-  * dependencies
-    * @sanity/sdk bumped to 2.8.0
+- The following workspace dependencies were updated
+  - dependencies
+    - @sanity/sdk bumped to 2.8.0
 
 ## [2.7.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.6.0...sdk-react-v2.7.0) (2026-02-12)
 
-
 ### Features
 
-* **auth:** add SDKStudioContext and workspace-based auth for zero-config Studio integration ([#738](https://github.com/sanity-io/sdk/issues/738)) ([ec89adc](https://github.com/sanity-io/sdk/commit/ec89adcb1c849fac684e2511cbee42066811934d))
-* **projection:** update projection store to use source and perspective ([#723](https://github.com/sanity-io/sdk/issues/723)) ([332f741](https://github.com/sanity-io/sdk/commit/332f7412981be5fd214d1d96088b95ae76b0e002))
-
+- **auth:** add SDKStudioContext and workspace-based auth for zero-config Studio integration ([#738](https://github.com/sanity-io/sdk/issues/738)) ([ec89adc](https://github.com/sanity-io/sdk/commit/ec89adcb1c849fac684e2511cbee42066811934d))
+- **projection:** update projection store to use source and perspective ([#723](https://github.com/sanity-io/sdk/issues/723)) ([332f741](https://github.com/sanity-io/sdk/commit/332f7412981be5fd214d1d96088b95ae76b0e002))
 
 ### Bug Fixes
 
-* correct useAgentPatch TSDoc examples to match PatchDocument API ([#736](https://github.com/sanity-io/sdk/issues/736)) ([c9905be](https://github.com/sanity-io/sdk/commit/c9905be2b64562989f7139191c17e68cc9778c8d))
-* **deps:** update dependency @sanity/client ([#717](https://github.com/sanity-io/sdk/issues/717)) ([24fb157](https://github.com/sanity-io/sdk/commit/24fb157a0fbc97a625a7c7ad3045e502ec818af1))
-* prevent sourceName from reaching sdk core ([#720](https://github.com/sanity-io/sdk/issues/720)) ([b8cf408](https://github.com/sanity-io/sdk/commit/b8cf4080d63b7d933cae630d1118d3ca4b127e07))
-
+- correct useAgentPatch TSDoc examples to match PatchDocument API ([#736](https://github.com/sanity-io/sdk/issues/736)) ([c9905be](https://github.com/sanity-io/sdk/commit/c9905be2b64562989f7139191c17e68cc9778c8d))
+- **deps:** update dependency @sanity/client ([#717](https://github.com/sanity-io/sdk/issues/717)) ([24fb157](https://github.com/sanity-io/sdk/commit/24fb157a0fbc97a625a7c7ad3045e502ec818af1))
+- prevent sourceName from reaching sdk core ([#720](https://github.com/sanity-io/sdk/issues/720)) ([b8cf408](https://github.com/sanity-io/sdk/commit/b8cf4080d63b7d933cae630d1118d3ca4b127e07))
 
 ### Documentation
 
-* provide examples to Agent Action hooks ([#729](https://github.com/sanity-io/sdk/issues/729)) ([ac7b348](https://github.com/sanity-io/sdk/commit/ac7b348687a8b6a834c3c28f8c96c4164e352e82))
-* update SDK documentation for Studio integration ([#741](https://github.com/sanity-io/sdk/issues/741)) ([18d1adc](https://github.com/sanity-io/sdk/commit/18d1adcfefc2e315d0ac262fa913bc03fcaaa4a8))
-
+- provide examples to Agent Action hooks ([#729](https://github.com/sanity-io/sdk/issues/729)) ([ac7b348](https://github.com/sanity-io/sdk/commit/ac7b348687a8b6a834c3c28f8c96c4164e352e82))
+- update SDK documentation for Studio integration ([#741](https://github.com/sanity-io/sdk/issues/741)) ([18d1adc](https://github.com/sanity-io/sdk/commit/18d1adcfefc2e315d0ac262fa913bc03fcaaa4a8))
 
 ### Dependencies
 
-* The following workspace dependencies were updated
-  * dependencies
-    * @sanity/sdk bumped to 2.7.0
+- The following workspace dependencies were updated
+  - dependencies
+    - @sanity/sdk bumped to 2.7.0
 
 ## [2.6.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.5.0...sdk-react-v2.6.0) (2026-01-22)
 
-
 ### Features
 
-* add renderSanityApp helper ([#704](https://github.com/sanity-io/sdk/issues/704)) ([49f4cb2](https://github.com/sanity-io/sdk/commit/49f4cb2182dfb66333604872373330e8538aab1d))
-* **logging:** enhance createSanityInstance with logging capabilities ([#707](https://github.com/sanity-io/sdk/issues/707)) ([1af2df0](https://github.com/sanity-io/sdk/commit/1af2df095ea93d8c81c420f8a864d061d1d8914d))
-
+- add renderSanityApp helper ([#704](https://github.com/sanity-io/sdk/issues/704)) ([49f4cb2](https://github.com/sanity-io/sdk/commit/49f4cb2182dfb66333604872373330e8538aab1d))
+- **logging:** enhance createSanityInstance with logging capabilities ([#707](https://github.com/sanity-io/sdk/issues/707)) ([1af2df0](https://github.com/sanity-io/sdk/commit/1af2df095ea93d8c81c420f8a864d061d1d8914d))
 
 ### Bug Fixes
 
-* **deps:** Update sanity monorepo to v5 (major) ([#715](https://github.com/sanity-io/sdk/issues/715)) ([204bae1](https://github.com/sanity-io/sdk/commit/204bae1c03987fb9780c7151a45737ac3babc8a2))
-
+- **deps:** Update sanity monorepo to v5 (major) ([#715](https://github.com/sanity-io/sdk/issues/715)) ([204bae1](https://github.com/sanity-io/sdk/commit/204bae1c03987fb9780c7151a45737ac3babc8a2))
 
 ### Documentation
 
-* enhance README with LiveEdit mode and multi-project access examples ([#706](https://github.com/sanity-io/sdk/issues/706)) ([233096b](https://github.com/sanity-io/sdk/commit/233096b024803916437d1c9ef21dcbbd7a01d0d1))
-
+- enhance README with LiveEdit mode and multi-project access examples ([#706](https://github.com/sanity-io/sdk/issues/706)) ([233096b](https://github.com/sanity-io/sdk/commit/233096b024803916437d1c9ef21dcbbd7a01d0d1))
 
 ### Dependencies
 
-* The following workspace dependencies were updated
-  * dependencies
-    * @sanity/sdk bumped to 2.6.0
+- The following workspace dependencies were updated
+  - dependencies
+    - @sanity/sdk bumped to 2.6.0
 
 ## [2.5.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.4.0...sdk-react-v2.5.0) (2025-12-31)
 
-
 ### Features
 
-* add useAgentResourceContext hook ([#690](https://github.com/sanity-io/sdk/issues/690)) ([ffe4e88](https://github.com/sanity-io/sdk/commit/ffe4e88a92ba45d251cd5fc94211ab2b2ab52dc0))
-* make applyDocumentActions more similar to the rest ([#630](https://github.com/sanity-io/sdk/issues/630)) ([440ce84](https://github.com/sanity-io/sdk/commit/440ce84959712e30501ecc9d119d89436c5396ec))
-* support using the same instance for different datasets ([#632](https://github.com/sanity-io/sdk/issues/632)) ([1e22eed](https://github.com/sanity-io/sdk/commit/1e22eed070def852aa9c305379299f647bab03f1))
-
+- add useAgentResourceContext hook ([#690](https://github.com/sanity-io/sdk/issues/690)) ([ffe4e88](https://github.com/sanity-io/sdk/commit/ffe4e88a92ba45d251cd5fc94211ab2b2ab52dc0))
+- make applyDocumentActions more similar to the rest ([#630](https://github.com/sanity-io/sdk/issues/630)) ([440ce84](https://github.com/sanity-io/sdk/commit/440ce84959712e30501ecc9d119d89436c5396ec))
+- support using the same instance for different datasets ([#632](https://github.com/sanity-io/sdk/issues/632)) ([1e22eed](https://github.com/sanity-io/sdk/commit/1e22eed070def852aa9c305379299f647bab03f1))
 
 ### Documentation
 
-* update README and package documentation with quickstart , examples, and package descriptions ([#675](https://github.com/sanity-io/sdk/issues/675)) ([93018bb](https://github.com/sanity-io/sdk/commit/93018bbfad1969d5230166850e6df4d1c7955aa3))
-
+- update README and package documentation with quickstart , examples, and package descriptions ([#675](https://github.com/sanity-io/sdk/issues/675)) ([93018bb](https://github.com/sanity-io/sdk/commit/93018bbfad1969d5230166850e6df4d1c7955aa3))
 
 ### Dependencies
 
-* The following workspace dependencies were updated
-  * dependencies
-    * @sanity/sdk bumped to 2.5.0
+- The following workspace dependencies were updated
+  - dependencies
+    - @sanity/sdk bumped to 2.5.0
 
 ## [2.4.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.3.1...sdk-react-v2.4.0) (2025-12-15)
 
-
 ### Features
 
-* add agent actions ([#654](https://github.com/sanity-io/sdk/issues/654)) ([cb70f89](https://github.com/sanity-io/sdk/commit/cb70f89ebc3ffb90b36d04a959341643860c9fb6))
-* add canvas as a source for useQuery and useDispatchIntent ([#665](https://github.com/sanity-io/sdk/issues/665)) ([60de2d1](https://github.com/sanity-io/sdk/commit/60de2d1767558ca7ba88bc59b6b84f8b4a0a3658))
-* **document:** add support for initial values in document creation actions ([#676](https://github.com/sanity-io/sdk/issues/676)) ([6329f69](https://github.com/sanity-io/sdk/commit/6329f69dacc0437a83799585a9f2062be16f47b0))
-* **react:** create useDispatchIntent hook ([#595](https://github.com/sanity-io/sdk/issues/595)) ([3d5f45c](https://github.com/sanity-io/sdk/commit/3d5f45c76f4f53ba68ed6d6f68dffd4bce791b16))
-
+- add agent actions ([#654](https://github.com/sanity-io/sdk/issues/654)) ([cb70f89](https://github.com/sanity-io/sdk/commit/cb70f89ebc3ffb90b36d04a959341643860c9fb6))
+- add canvas as a source for useQuery and useDispatchIntent ([#665](https://github.com/sanity-io/sdk/issues/665)) ([60de2d1](https://github.com/sanity-io/sdk/commit/60de2d1767558ca7ba88bc59b6b84f8b4a0a3658))
+- **document:** add support for initial values in document creation actions ([#676](https://github.com/sanity-io/sdk/issues/676)) ([6329f69](https://github.com/sanity-io/sdk/commit/6329f69dacc0437a83799585a9f2062be16f47b0))
+- **react:** create useDispatchIntent hook ([#595](https://github.com/sanity-io/sdk/issues/595)) ([3d5f45c](https://github.com/sanity-io/sdk/commit/3d5f45c76f4f53ba68ed6d6f68dffd4bce791b16))
 
 ### Bug Fixes
 
-* **client:** improve error handling for missing or invalid options in getClient and useClient ([#677](https://github.com/sanity-io/sdk/issues/677)) ([61eaf6b](https://github.com/sanity-io/sdk/commit/61eaf6bb4adeb6df3f13524091ee4fc915192c37))
-* handle projectUserNotFoundErrors and display the error message ([#651](https://github.com/sanity-io/sdk/issues/651)) ([1668657](https://github.com/sanity-io/sdk/commit/1668657109833971aacde582c32fbacd6f1f7085))
-* **react:** ensure useDocumentProjection reuses state source for all strings ([#669](https://github.com/sanity-io/sdk/issues/669)) ([474ff5d](https://github.com/sanity-io/sdk/commit/474ff5d75e324c2c413bfcddc2432a78d21bb53a))
-
+- **client:** improve error handling for missing or invalid options in getClient and useClient ([#677](https://github.com/sanity-io/sdk/issues/677)) ([61eaf6b](https://github.com/sanity-io/sdk/commit/61eaf6bb4adeb6df3f13524091ee4fc915192c37))
+- handle projectUserNotFoundErrors and display the error message ([#651](https://github.com/sanity-io/sdk/issues/651)) ([1668657](https://github.com/sanity-io/sdk/commit/1668657109833971aacde582c32fbacd6f1f7085))
+- **react:** ensure useDocumentProjection reuses state source for all strings ([#669](https://github.com/sanity-io/sdk/issues/669)) ([474ff5d](https://github.com/sanity-io/sdk/commit/474ff5d75e324c2c413bfcddc2432a78d21bb53a))
 
 ### Dependencies
 
-* The following workspace dependencies were updated
-  * dependencies
-    * @sanity/sdk bumped to 2.4.0
+- The following workspace dependencies were updated
+  - dependencies
+    - @sanity/sdk bumped to 2.4.0
 
 ## [2.3.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.3.0...sdk-react-v2.3.1) (2025-10-17)
 

@@ -1,19 +1,18 @@
 import {
+  type DocumentSource,
   getActiveReleasesState,
   type ReleaseDocument,
+  type SanityConfig,
   type SanityInstance,
   type StateSource,
 } from '@sanity/sdk'
 import {filter, firstValueFrom} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-
-/**
- * @public
- */
-type UseActiveReleases = {
-  (): ReleaseDocument[]
-}
+import {
+  useNormalizedSourceOptions,
+  type WithSourceNameSupport,
+} from '../helpers/useNormalizedSourceOptions'
 
 /**
  * @public
@@ -30,10 +29,30 @@ type UseActiveReleases = {
  * const activeReleases = useActiveReleases()
  * ```
  */
-export const useActiveReleases: UseActiveReleases = createStateSourceHook({
-  getState: getActiveReleasesState as (instance: SanityInstance) => StateSource<ReleaseDocument[]>,
-  shouldSuspend: (instance: SanityInstance) =>
-    getActiveReleasesState(instance).getCurrent() === undefined,
-  suspender: (instance: SanityInstance) =>
-    firstValueFrom(getActiveReleasesState(instance).observable.pipe(filter(Boolean))),
+type UseActiveReleases = {
+  (options?: WithSourceNameSupport<SanityConfig> | undefined): ReleaseDocument[]
+}
+
+const useActiveReleasesValue: UseActiveReleases = createStateSourceHook({
+  getState: getActiveReleasesState as (
+    instance: SanityInstance,
+    options?: {source?: DocumentSource},
+  ) => StateSource<ReleaseDocument[]>,
+  shouldSuspend: (instance: SanityInstance, options?: {source?: DocumentSource}) =>
+    getActiveReleasesState(instance, options ?? {}).getCurrent() === undefined,
+  suspender: (instance: SanityInstance, options?: {source?: DocumentSource}) =>
+    firstValueFrom(
+      getActiveReleasesState(instance, options ?? {}).observable.pipe(filter(Boolean)),
+    ),
 })
+
+/**
+ * @public
+ * @function
+ */
+export const useActiveReleases: UseActiveReleases = (
+  options: WithSourceNameSupport<{source?: DocumentSource}> | undefined,
+) => {
+  const normalizedOptions = useNormalizedSourceOptions(options ?? {})
+  return useActiveReleasesValue(normalizedOptions)
+}
