@@ -22,6 +22,9 @@ vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
 vi.mock('../../hooks/auth/useLogOut', () => ({
   useLogOut: vi.fn(() => async () => {}),
 }))
+vi.mock('../../hooks/comlink/useWindowConnection', () => ({
+  useWindowConnection: vi.fn(() => ({fetch: vi.fn()})),
+}))
 
 // Mock AuthError throwing scenario
 vi.mock('./AuthError', async (importOriginal) => {

@@ -21,7 +21,7 @@ describe('checkForCookieAuth', () => {
 
     await checkForCookieAuth(projectId, clientFactory)
 
-    expect(clientFactory).toHaveBeenCalledWith({projectId, useCdn: false})
+    expect(clientFactory).toHaveBeenCalledWith(expect.objectContaining({projectId, useCdn: false}))
   })
 
   it('should return true if client request returns a user with id', async () => {
@@ -63,6 +63,48 @@ describe('checkForCookieAuth', () => {
     const result = await checkForCookieAuth(projectId, clientFactory)
 
     expect(result).toBe(false)
+  })
+
+  it('should return false if client request returns null', async () => {
+    const projectId = 'test-project'
+    const mockClient = {
+      request: vi.fn().mockResolvedValue(null),
+    } as unknown as SanityClient
+    const clientFactory = vi.fn().mockReturnValue(mockClient)
+
+    const result = await checkForCookieAuth(projectId, clientFactory)
+
+    expect(result).toBe(false)
+  })
+
+  it('should return false if client request returns a non-object', async () => {
+    const projectId = 'test-project'
+    const mockClient = {
+      request: vi.fn().mockResolvedValue('unexpected-string'),
+    } as unknown as SanityClient
+    const clientFactory = vi.fn().mockReturnValue(mockClient)
+
+    const result = await checkForCookieAuth(projectId, clientFactory)
+
+    expect(result).toBe(false)
+  })
+
+  it('should pass timeout to client factory', async () => {
+    const projectId = 'test-project'
+    const mockClient = {
+      request: vi.fn().mockResolvedValue({id: 'user-id'}),
+    } as unknown as SanityClient
+    const clientFactory = vi.fn().mockReturnValue(mockClient)
+
+    await checkForCookieAuth(projectId, clientFactory)
+
+    expect(clientFactory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId,
+        useCdn: false,
+        timeout: 10_000,
+      }),
+    )
   })
 })
 

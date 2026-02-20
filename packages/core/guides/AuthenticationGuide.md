@@ -4,9 +4,13 @@ This document outlines the various authentication types supported by the Sanity 
 
 ## ✨ High-Level Overview
 
-Authentication in the SDK is primarily managed by the `authStore`, which tracks the user's authentication state (`LoggedIn`, `LoggedOut`, `LoggingIn`, `Error`). It determines the initial state based on the environment (Dashboard iframe, Studio mode, presence of a provided token, or auth callback URL parameters).
+Authentication in the SDK is managed by the `authStore`, which tracks the user's authentication state (`LoggedIn`, `LoggedOut`, `LoggingIn`, `Error`). It uses a **strategy pattern** to determine the initial state and initialization behavior based on the resolved auth mode:
 
-API client instances, managed by `clientStore`, automatically utilize the current authentication token from `authStore` for making requests. The `clientStore` also handles differentiating between clients configured for 'global' endpoints (like `api.sanity.io`) and 'default' (project-specific) endpoints (like `<projectId>.api.sanity.io`).
+- **`dashboardAuth`** — handles auth context provided by the Dashboard iframe
+- **`studioAuth`** — handles token discovery and sync inside Sanity Studio
+- **`standaloneAuth`** — handles provided tokens and the OAuth login flow
+
+The auth mode is resolved by `resolveAuthMode` in `authMode.ts` — it checks for `config.studio` (or the deprecated `config.studioMode`) first, then detects a Dashboard iframe via the `_context` URL parameter, and falls back to standalone. API client instances, managed by `clientStore`, automatically utilize the current authentication token from `authStore` for making requests.
 
 The primary interactive authentication flow involves redirecting the user to `sanity.io/login` (or `sanity.work/login` for staging environments) and handling the callback, which returns an `authCode` (`sid`) exchanged for a session token.
 
@@ -16,17 +20,15 @@ The primary interactive authentication flow involves redirecting the user to `sa
   authentication context (`sid`) via URL parameters. Seamless for the end-user.
   This mechanism applies to both third-party Sanity Apps and internal Sanity
   applications (e.g., Canvas, Media Library).
-
   - **When should you use this?** Most of the time this is the best option. It is for building a Sanity App that is running in the Sanity Dashboard.
 
-- **Studio Mode:** Leverages Studio's own auth context (token or cookie)
-  when the SDK is used within the Studio application.
-
+- **Studio Mode:** Leverages the Studio's own auth context when the SDK is
+  used within the Studio application. Modern Studios provide a reactive token
+  source via `SDKStudioContext`; older Studios fall back to localStorage/cookie discovery.
   - **When should you use this?** This is only for using the SDK within the Sanity Studio application.
 
 - **Standalone (Experimental):** Supports manually provided tokens (stable for backends,
   requires care for stamped tokens on frontends).
-
   - **When should you use this?** For most developers, this is not the best option. It is only for using the SDK within a standalone application that is not running in the Sanity Dashboard and is not part of the Studio. It likely requires you to write custom code to handle the login flow and the callback.
 
   - ⚠️ The built-in web login flow (`sanity.io/login`) has significant limitations for apps on custom domains due to origin restrictions.
@@ -40,7 +42,6 @@ The primary interactive authentication flow involves redirecting the user to `sa
 - 🎯 **Use Case:** This is the **primary intended use case** for the SDK — that is, applications built to run embedded within an `iframe` in the Sanity Dashboard environment. This includes both customer-built Sanity Apps and internally developed applications like Canvas and Media Library.
 
 - ⚙️ **Mechanism:**
-
   - **Host-Provided Auth:** Authentication is managed **by the host Dashboard environment**. The Dashboard loads the app's iframe with specific URL parameters. The SDK's `getAuthCode` function looks for the session identifier (`sid`) in the following order: first in the **URL hash** (`#sid=...`), then in the **URL search parameters** (`?sid=...`), and finally as a fallback within the `_context` query parameter (`?_context={"sid":"..."}`). The `_context` parameter is a URL-encoded JSON object that may also contain other context (`orgId`, `mode`, etc.). It looks for these in these places because a custom built studio-like authentication will use the query parameter in a callback, the Dashboard will use a hash in the iframe URL, and the Dashboard will use the `_context` parameter which can also contain the `sid`. Additionally, the SDK will look for a `token` hash in the URL which can be used to pass a token into the App.
 
   - **Automatic Handling:** On load, the SDK's `authStore` and `handleAuthCallback` detect the `sid` using the logic described above. If an `sid` (auth code) is present, `handleAuthCallback` automatically attempts to exchange it for an authentication token without user interaction or redirects.
@@ -54,8 +55,7 @@ The primary interactive authentication flow involves redirecting the user to `sa
 - 🚧 **Limitations:** Tightly coupled to the Sanity Dashboard environment. Requires the app to be loaded within the dashboard iframe by the host.
 
 - 🛠️ **Technical Details:**
-
-  - `authStore.ts` and `handleAuthCallback` parse `initialLocationHref` for `_context` and `sid` parameters.
+  - `dashboardAuth.ts` parses the `_context` URL parameter via `parseDashboardContext`. `handleAuthCallback` extracts the `sid` from the URL.
 
   - `handleAuthCallback` triggers the `sid`-for-token exchange via `/auth/fetch`.
 
@@ -65,51 +65,53 @@ The primary interactive authentication flow involves redirecting the user to `sa
 
 - 🎯 **Use Case:** Using the SDK _within_ the Sanity Studio V3 codebase itself (not running in the dashboard iframe). For instance: in custom input components, tools, or plugins integrated directly into the Studio application.
 
-- ⚙️ **Mechanism:** Enabled by setting `studioMode.enabled: true` in the SDK configuration.
+- ⚙️ **Mechanism:** Studio mode is activated when either `config.studio` is present or the deprecated `config.studioMode.enabled` is `true` (checked via the `isStudioConfig()` helper in `authMode.ts`). When using `SDKStudioContext`, `SanityApp` automatically creates a config with `studio` set — developers do not need to provide `config.studio` themselves. There are two token acquisition paths:
+  - **Reactive token source (recommended):** Modern Studios provide a reactive token source to the SDK via the `SDKStudioContext` React context (or explicitly via `config.studio.auth.token`). Both paths use a `TokenSource` — an Observable-like object that the SDK subscribes to for ongoing token updates. This is **not** a static string; it is a reactive stream. When the Studio's auth state changes, the SDK receives updated tokens automatically. The Studio remains the single authority for auth — the SDK does not perform its own token refresh or cookie auth checks on this path.
 
-  - **Studio Token (localStorage):** The primary method. `authStore` looks for a token specific to the Studio session stored in `localStorage` under the key `__sanity_auth_token_${projectId}`. This token is project-specific.
-
-  - **Studio Cookie Auth:** As a fallback, if the `localStorage` token is not found, `checkForCookieAuth` is called. This function attempts a request (`withCredentials: true`) to a Studio backend endpoint to verify if a valid HTTP-only session cookie exists. If so, subsequent API requests managed by the SDK client will rely on this cookie for authentication.
+  - **Fallback discovery (older Studios):** When no reactive token source is available, the SDK discovers the auth token using these methods in order:
+    1. **Provided token** (`config.auth.token`) — a static string token, if manually supplied. Note: this is `config.auth.token` (from `AuthConfig`), not `config.studio.auth.token` (which is a reactive `TokenSource`).
+    2. **Studio token (localStorage)** — stored under the key `__studio_auth_token_${projectId}`. This is a project-specific token managed by the Studio.
+    3. **Cookie auth** — as a last resort, `checkForCookieAuth` attempts a request (`withCredentials: true`) to a Studio backend endpoint with a 10-second timeout to verify if a valid HTTP-only session cookie exists.
 
 - 🚧 **Limitations:**
-
   - Provides only project-level access (cannot use global tokens/endpoints). Calls to global endpoints will fail.
 
   - Relies entirely on the authentication context established by the Studio itself.
 
 - 🛠️ **Technical Details:**
+  - Auth mode resolution: `resolveAuthMode` in `authMode.ts` checks `isStudioConfig(config)`, which returns `true` for either `config.studio` or `config.studioMode?.enabled`.
 
-  - `authStore` contains specific logic gated by `instance.config.studioMode?.enabled`.
+  - Strategy implementation: `studioAuth.ts` contains `getStudioInitialState` (initial state resolution) and `initializeStudioAuth` (subscription setup). These are called by `authStore` via the strategy pattern.
 
-  - `getStudioTokenFromLocalStorage` retrieves the project-specific token.
+  - With a `TokenSource`: `initializeWithTokenSource` subscribes to the stream and updates auth state reactively. The SDK's own token refresher is **not** started.
 
-  - `checkForCookieAuth` initiates the cookie check flow.
+  - Without a `TokenSource`: `initializeWithFallback` subscribes to storage events, checks for cookie auth asynchronously, and starts the stamped token refresher.
 
-  - `clientStore` will configure clients based on the available token or implicitly rely on cookies if `withCredentials` is set appropriately. Clients are only configured for the project-specific endpoint.
+  - `getStudioTokenFromLocalStorage` (in `studioModeAuth.ts`) retrieves the project-specific token from localStorage.
+
+  - `checkForCookieAuth` (in `studioModeAuth.ts`) initiates the cookie check flow with a 10-second timeout.
+
+  - `clientStore` configures clients for the project-specific endpoint only.
 
 ### 3. Standalone Applications (Experimental)
 
 - 🎯 **Use Case:** External web applications using the SDK that operate independently of the Sanity Dashboard or Studio (e.g., SDK Explorer, custom internal dashboards). These applications are **not** running inside the Dashboard iframe or as part of the Studio build and they are not hosted on Sanity's domains.
 
 - ⚙️ **Mechanism:**
-
   - **No Auth:** For accessing only public datasets, `ResourceProvider` can be used without any specific auth configuration. Clients will operate without authentication.
 
   - **Provided Token:** Developers can manually provide a `token` (either a PAT or a project-scoped token) within the `SanityConfig` when initializing the SDK instance (`createSanityInstance` or via `ResourceProvider`). `authStore` detects and uses this `providedToken`.
-
     - **Important:** The automatic token refresh mechanism is designed for _stamped_ tokens (those containing `-st`, obtained via the interactive login flow). It will **not** attempt to refresh standard Personal Access Tokens (PATs) or other manually provided, non-stamped tokens. Applications using `providedToken` must be prepared for the token to be refreshed by the SDK if a stamped token is passed in.
 
   - **Auth Code Flow (Limited Use):** The standard redirect flow (`sanity.io/login` -> callback -> `handleAuthCallback`) can be technically implemented using components like `LoginCallback.tsx` and `AuthBoundary.tsx`. This flow is primarily relevant **only** for this standalone context. However, the `sanity.io/login` endpoint has a strict allowlist for the `origin` parameter. While `localhost` and Sanity domains (`*.sanity.dev`, `*.sanity.work`, `*.sanity.io`) are typically allowed, deploying a standalone app to an arbitrary domain (e.g., `myapp.vercel.app`) will fail this origin check, preventing the flow from completing. However during development of a standalone app, the origin check will pass because localhost is allowed, so the developer can be mistaken to think that a standalone app will continue to work once deployed.
 
 - 🚧 **Limitations:**
-
   - No straightforward, built-in authentication flow for web applications deployed to arbitrary domains due to the `sanity.io/login` origin restrictions.
 
   - Frontend applications using `providedToken` need careful consideration regarding token type (project or global and stamped or non-stamped) and security.
 
 - 🛠️ **Technical Details:**
-
-  - `authStore` checks `instance.config.auth.token` for a `providedToken`.
+  - `standaloneAuth.ts` checks `instance.config.auth.token` for a `providedToken`.
 
   - `handleAuthCallback` implements the exchange of the `authCode` (`sid`) from the callback URL for a token by calling the `/auth/fetch` endpoint.
 
@@ -118,22 +120,21 @@ The primary interactive authentication flow involves redirecting the user to `sa
 ## 🔑 Key Concepts & Technical Details
 
 - **Tokens:**
-
   - **Types:**
-
     - **Global Tokens:** Tokens not tied to a specific project, but instead to a Sanity User. It includes access to all of the user's orgs and projects. Required for accessing global Sanity APIs (e.g., project management). Used when `clientStore` configures a client with `scope: 'global'` or without a `projectId`.
 
     - **Project Tokens:** Scoped to a single project (any of that project's datasets). Used by Studio integration or can be provided manually. Can only be used for project-specific endpoints (`<projectId>.api.sanity.io`).
 
   - **Stamped Tokens:** Tokens obtained via the `sanity.io/login` flow and from the Dashboard are "stamped" (`type=stampedToken`). Refresh is handled via `refreshStampedToken.ts`. Non-stamped tokens will not be refreshed by the SDK.
 
-  - **Storage:** Primarily `localStorage` (`storageKey` in `authStore` defaults to `__sanity_auth_token`, or `__sanity_auth_token_${projectId}` in Studio mode).
+  - **Storage:** Primarily `localStorage`. The key varies by auth mode:
+    - Standalone/Dashboard: `__sanity_auth_token`
+    - Studio: `__studio_auth_token_${projectId}`
 
     - **Dashboard Context:** When running within the **Dashboard iframe context (section 1 above)**, the SDK does **not** store the obtained token in its own `localStorage`. Authentication relies on the initial `sid` exchange and potential host-managed sessions. The resulting token will be refreshed by the SDK's internal refresh mechanism.
 
 - **Login Flow (`sanity.io/login`)**
-
-  - Constructed in `authStore.ts`.
+  - Login URL is constructed in `authStore.ts`.
 
   - Requires specific parameters: `origin` (must be allowlisted), `type=stampedToken`, `withSid=true`.
 
@@ -142,29 +143,24 @@ The primary interactive authentication flow involves redirecting the user to `sa
   - `handleAuthCallback.ts` extracts the `authCode` and exchanges it for a `{token}` using the `/auth/fetch?sid=<authCode>` endpoint.
 
 - **API Clients (`clientStore`)**
-
   - Creates and caches `SanityClient` instances based on configuration.
 
   - Listens to `getTokenState` changes (`listenToToken`). When the token updates, it clears the client cache (`clients: {}`), forcing regeneration of clients with the new token upon next request.
 
   - **Client Scope:**
-
     - `scope: 'global'` or missing `projectId` results in a client configured with `useProjectHostname: false`, targeting global APIs (e.g., `api.sanity.io`). Requires a global token.
 
     - Default behavior (with `projectId` and `dataset`) uses project-specific hostnames (e.g., `<projectId>.api.sanity.io`).
 
 - **CORS & Endpoints:**
-
   - **Global Endpoints (e.g., `api.sanity.io`):** Generally have stricter Cross-Origin Resource Sharing (CORS) policies. They primarily allow requests from Sanity's own domains (`*.sanity.io`, `*.sanity.work`), associated development domains (`*.sanity.dev`), and `localhost`. Accessing these from arbitrary external domains is usually blocked by browser CORS rules. They also require global tokens.
 
   - **Project Endpoints (e.g., `<projectId>.api.sanity.io`):** CORS rules are configured per-project in `manage.sanity.io`. You can add specific origins (like your deployed application's domain) to the allowlist. These endpoints work with project-specific tokens (or cookies in Studio mode).
 
 - **Token Refresh**
-
   - Runs periodically **only** for stamped tokens identified by containing a `-st` suffix.
 
   - Calls the `/auth/refresh-token` endpoint using the current stamped token to extend the token's validity or get a new one based on the active session, preventing the user from being logged out unexpectedly in long-lived browser sessions.
-
     - Uses the Web Locks API (`navigator.locks`) for coordination when running
       outside the dashboard context to prevent multiple tabs from attempting to
       refresh simultaneously. Falls back to uncoordinated refresh if Locks API is

@@ -24,6 +24,7 @@ export {
   agentTransform,
   agentTranslate,
 } from '../agent/agentActions'
+export {isStudioConfig} from '../auth/authMode'
 export {AuthStateType} from '../auth/authStateType'
 export {
   type AuthState,
@@ -99,6 +100,8 @@ export {
   type ProjectHandle,
   type ReleasePerspective,
   type SanityConfig,
+  type StudioConfig,
+  type TokenSource,
 } from '../config/sanityConfig'
 export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
 export {

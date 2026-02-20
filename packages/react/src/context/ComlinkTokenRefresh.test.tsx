@@ -334,9 +334,9 @@ describe('ComlinkTokenRefresh', () => {
         })
 
         describe('when in studio mode', () => {
-          it('should not render DashboardTokenRefresh when studio mode enabled', () => {
+          it('should not render DashboardTokenRefresh when studio config is provided', () => {
             render(
-              <ResourceProvider fallback={null} studioMode={{enabled: true}}>
+              <ResourceProvider fallback={null} studio={{}}>
                 <ComlinkTokenRefreshProvider>
                   <div>Test</div>
                 </ComlinkTokenRefreshProvider>
