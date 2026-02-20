@@ -411,7 +411,11 @@ function patchAdapter(
  * - Validates provided paths/values against the document schema and merges object values safely.
  * - Prevents duplicate keys and supports array appends (including after a specific keyed item).
  * - Accepts `documentId` or `targetDocument` (mutually exclusive).
+ * - Requires `schemaId` (e.g., `'_.schemas.default'`) and `target` to specify patch operations.
  * - Optional `async`, `noWrite`, `conditionalPaths`.
+ *
+ * Each entry in `target` specifies a `path`, an `operation` (`'set'`, `'append'`, `'mixed'`, or `'unset'`),
+ * and a `value` (required for all operations except `'unset'`).
  *
  * @returns A stable callback that triggers the action and resolves a Promise with the patch result.
  *
@@ -425,10 +429,19 @@ function patchAdapter(
  *   const handleUpdate = async () => {
  *     const result = await patch({
  *       documentId,
- *       set: {
- *         title: 'Updated Title',
- *         lastModified: new Date().toISOString(),
- *       },
+ *       schemaId: '_.schemas.default',
+ *       target: [
+ *         {
+ *           path: 'title',
+ *           operation: 'set',
+ *           value: 'Updated Title',
+ *         },
+ *         {
+ *           path: 'lastModified',
+ *           operation: 'set',
+ *           value: new Date().toISOString(),
+ *         },
+ *       ],
  *     })
  *     console.log('Patch result:', result)
  *   }
@@ -447,8 +460,11 @@ function patchAdapter(
  *   const handleAddTag = async (newTag: string) => {
  *     await patch({
  *       documentId,
- *       append: {
- *         tags: [newTag],
+ *       schemaId: '_.schemas.default',
+ *       target: {
+ *         path: 'tags',
+ *         operation: 'append',
+ *         value: [newTag],
  *       },
  *     })
  *   }
@@ -465,12 +481,6 @@ function patchAdapter(
  * ```tsx
  * import {useAgentPatch} from '@sanity/sdk-react'
  *
- * interface ContentBlock {
- *   _key: string
- *   _type: string
- *   text: string
- * }
- *
  * function InsertContentBlock({
  *   documentId,
  *   afterKey,
@@ -481,19 +491,13 @@ function patchAdapter(
  *   const patch = useAgentPatch()
  *
  *   const handleInsert = async () => {
- *     const newBlock: ContentBlock = {
- *       _key: crypto.randomUUID(),
- *       _type: 'block',
- *       text: 'New paragraph inserted here.',
- *     }
- *
  *     await patch({
  *       documentId,
- *       append: {
- *         content: {
- *           items: [newBlock],
- *           after: afterKey,
- *         },
+ *       schemaId: '_.schemas.default',
+ *       target: {
+ *         path: ['content', {_key: afterKey}],
+ *         operation: 'append',
+ *         value: [{_type: 'block', text: 'New paragraph inserted here.'}],
  *       },
  *     })
  *   }
@@ -515,11 +519,24 @@ function patchAdapter(
  *         operation: 'create',
  *         _type: 'product',
  *       },
- *       set: {
- *         title: 'New Product',
- *         price: 29.99,
- *         inStock: true,
- *       },
+ *       schemaId: '_.schemas.default',
+ *       target: [
+ *         {
+ *           path: 'title',
+ *           operation: 'set',
+ *           value: 'New Product',
+ *         },
+ *         {
+ *           path: 'price',
+ *           operation: 'set',
+ *           value: 29.99,
+ *         },
+ *         {
+ *           path: 'inStock',
+ *           operation: 'set',
+ *           value: true,
+ *         },
+ *       ],
  *     })
  *     console.log('Created document:', result.documentId)
  *   }
