@@ -14,7 +14,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DocumentResource, isDatasetResource} from '../config/sanityConfig'
+import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 
 const API_VERSION = 'v2025-05-06'
@@ -31,8 +31,8 @@ export function createSharedListener(
   const dispose$ = new Subject<void>()
   const events$ = getClientState(instance, {
     apiVersion: API_VERSION,
-    // TODO: remove in v3 when we're ready for everything to be queried via resource
-    resource: resource && !isDatasetResource(resource) ? resource : undefined,
+    resource,
+    perspective: 'raw',
   }).observable.pipe(
     switchMap((client) =>
       // TODO: it seems like the client.listen method is not emitting disconnected
@@ -72,8 +72,8 @@ export function createFetchDocument(instance: SanityInstance, resource?: Documen
   return function (documentId: string): Observable<SanityDocument | null> {
     return getClientState(instance, {
       apiVersion: API_VERSION,
-      // TODO: remove in v3 when we're ready for everything to be queried via resource
-      resource: resource && !isDatasetResource(resource) ? resource : undefined,
+      resource,
+      perspective: 'raw',
     }).observable.pipe(
       switchMap((client) => {
         // creates a observable request to the /doc/{documentId} endpoint for a given document id
