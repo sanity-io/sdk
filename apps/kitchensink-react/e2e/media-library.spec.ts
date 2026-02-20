@@ -17,6 +17,9 @@ test.describe('Media Library', () => {
     const projectionResultsElement = pageContext.getByTestId('projection-results')
     await projectionResultsElement.waitFor({timeout: 15000})
 
+    const previewResultsElement = pageContext.getByTestId('preview-results')
+    await previewResultsElement.waitFor({timeout: 15000})
+
     // Extract the JSON text from the query results
     const queryJsonText = await queryResultsElement.textContent()
     expect(queryJsonText).toBeTruthy()
@@ -35,6 +38,14 @@ test.describe('Media Library', () => {
     expect(projectionJsonText).toBeTruthy()
     const projectionData = JSON.parse(projectionJsonText!)
     expect(projectionData).toBeTruthy()
+
+    // Verify the preview results are showing
+    const previewJsonText = await previewResultsElement.textContent()
+    expect(previewJsonText).toBeTruthy()
+    const previewData = JSON.parse(previewJsonText!)
+    expect(previewData).toBeTruthy()
+    expect(previewData).toHaveProperty('title')
+    expect(previewData).toHaveProperty('media')
 
     // Create a media library client
     const mediaLibraryClient = getMediaLibraryClient()

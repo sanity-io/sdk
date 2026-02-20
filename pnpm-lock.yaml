@@ -362,6 +362,9 @@ importers:
       '@sanity/id-utils':
         specifier: ^1.0.0
         version: 1.0.0
+      '@sanity/image-url':
+        specifier: ^2.0.3
+        version: 2.0.3
       '@sanity/json-match':
         specifier: ^1.0.5
         version: 1.0.5

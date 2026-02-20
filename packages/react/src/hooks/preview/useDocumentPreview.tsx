@@ -1,14 +1,24 @@
-import {type DocumentHandle, getPreviewState, type PreviewValue, resolvePreview} from '@sanity/sdk'
-import {useCallback, useSyncExternalStore} from 'react'
-import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
+import {
+  type DocumentHandle,
+  PREVIEW_PROJECTION,
+  type PreviewQueryResult,
+  type PreviewValue,
+  transformProjectionToPreview,
+} from '@sanity/sdk'
+import {useMemo} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {
+  useNormalizedSourceOptions,
+  type WithSourceNameSupport,
+} from '../helpers/useNormalizedSourceOptions'
+import {useDocumentProjection} from '../projection/useDocumentProjection'
 
 /**
  * @public
  * @category Types
  */
-export interface useDocumentPreviewOptions extends DocumentHandle {
+export interface useDocumentPreviewOptions extends WithSourceNameSupport<DocumentHandle> {
   /**
    * Optional ref object to track visibility. When provided, preview resolution
    * only occurs when the referenced element is visible in the viewport.
@@ -21,7 +31,7 @@ export interface useDocumentPreviewOptions extends DocumentHandle {
  * @category Types
  */
 export interface useDocumentPreviewResults {
-  /** The results of inferring the document’s preview values */
+  /** The results of inferring the document's preview values */
   data: PreviewValue
   /** True when inferred preview values are being refreshed */
   isPending: boolean
@@ -31,7 +41,7 @@ export interface useDocumentPreviewResults {
  * @public
  *
  * Attempts to infer preview values of a document (specified via a `DocumentHandle`),
- * including the document’s `title`, `subtitle`, `media`, and `status`. These values are live and will update in realtime.
+ * including the document's `title`, `subtitle`, `media`, and `status`. These values are live and will update in realtime.
  * To reduce unnecessary network requests for resolving the preview values, an optional `ref` can be passed to the hook so that preview
  * resolution will only occur if the `ref` is intersecting the current viewport.
  *
@@ -40,8 +50,12 @@ export interface useDocumentPreviewResults {
  * @remarks
  * Values returned by this hook may not be as expected. It is currently unable to read preview values as defined in your schema;
  * instead, it attempts to infer these preview values by checking against a basic set of potential fields on your document.
- * We are anticipating being able to significantly improve this hook’s functionality and output in a future release.
+ * We are anticipating being able to significantly improve this hook's functionality and output in a future release.
  * For now, we recommend using {@link useDocumentProjection} for rendering individual document fields (or projections of those fields).
+ *
+ * Internally, this hook is implemented as a specialized projection with post-processing logic.
+ * It uses a fixed GROQ projection to fetch common preview fields (title, subtitle, media) and
+ * transforms the results into the PreviewValue format.
  *
  * @category Documents
  * @param options - The document handle for the document you want to infer preview values for, and an optional ref
@@ -84,56 +98,24 @@ export function useDocumentPreview({
   ...docHandle
 }: useDocumentPreviewOptions): useDocumentPreviewResults {
   const instance = useSanityInstance(docHandle)
-  const stateSource = getPreviewState(instance, docHandle)
+  const normalizedDocHandle = useNormalizedSourceOptions(docHandle)
 
-  // Create subscribe function for useSyncExternalStore
-  const subscribe = useCallback(
-    (onStoreChanged: () => void) => {
-      const subscription = new Observable<boolean>((observer) => {
-        // For environments that don't have an intersection observer (e.g. server-side),
-        // we pass true to always subscribe since we can't detect visibility
-        if (typeof IntersectionObserver === 'undefined' || typeof HTMLElement === 'undefined') {
-          observer.next(true)
-          return
-        }
+  // Use the projection hook with the fixed preview projection
+  const projectionResult = useDocumentProjection<PreviewQueryResult>({
+    ...normalizedDocHandle,
+    projection: PREVIEW_PROJECTION,
+    ref,
+  })
 
-        const intersectionObserver = new IntersectionObserver(
-          ([entry]) => observer.next(entry.isIntersecting),
-          {rootMargin: '0px', threshold: 0},
-        )
-        if (ref?.current && ref.current instanceof HTMLElement) {
-          intersectionObserver.observe(ref.current)
-        } else {
-          // If no ref is provided or ref.current isn't an HTML element,
-          // pass true to always subscribe since we can't track visibility
-          observer.next(true)
-        }
-        return () => intersectionObserver.disconnect()
-      })
-        .pipe(
-          startWith(false),
-          distinctUntilChanged(),
-          switchMap((isVisible) =>
-            isVisible
-              ? new Observable<void>((obs) => {
-                  return stateSource.subscribe(() => obs.next())
-                })
-              : EMPTY,
-          ),
-        )
-        .subscribe({next: onStoreChanged})
-
-      return () => subscription.unsubscribe()
-    },
-    [stateSource, ref],
+  // Contract: useDocumentProjection suspends while data is null, so data is always available here.
+  // Keep this non-null assumption aligned with useDocumentPreviewResults.data.
+  const previewValue = useMemo(
+    () => transformProjectionToPreview(instance, projectionResult.data, normalizedDocHandle.source),
+    [projectionResult.data, instance, normalizedDocHandle.source],
   )
 
-  // Create getSnapshot function to return current state
-  const getSnapshot = useCallback(() => {
-    const currentState = stateSource.getCurrent()
-    if (currentState.data === null) throw resolvePreview(instance, docHandle)
-    return currentState as useDocumentPreviewResults
-  }, [docHandle, instance, stateSource])
-
-  return useSyncExternalStore(subscribe, getSnapshot)
+  return {
+    data: previewValue,
+    isPending: projectionResult.isPending,
+  }
 }
