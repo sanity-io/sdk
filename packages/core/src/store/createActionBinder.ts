@@ -21,7 +21,7 @@ export interface BoundResourceKey {
 export interface BoundPerspectiveKey extends BoundResourceKey {
   perspective: ClientPerspective | ReleasePerspective
 }
-export interface BoundDatasetKey {
+interface BoundDatasetKey {
   name: string
   projectId: string
   dataset: string
@@ -199,6 +199,8 @@ const createResourceKey = (
  **/
 export const bindActionByResource = createActionBinder<
   BoundResourceKey,
+  // this implies resources is optional to keep backwards compatibility
+  // but in reality, we'll always pass a resource (since we'll defer to the instance until v3)
   [{resource?: DocumentResource}, ...unknown[]]
 >((instance, {resource}) => {
   return createResourceKey(instance, resource)
