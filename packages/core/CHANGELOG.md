@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.0.0](https://github.com/sanity-io/sdk/compare/sdk-v2.8.0...sdk-v3.0.0) (2026-02-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* The SDK now uses source-based APIs in this v3 migration. Existing integrations that relied on projectId/dataset-based assumptions may require updates.
+
+### Features
+
+* **document:** update document store to accept sources ([#730](https://github.com/sanity-io/sdk/issues/730)) ([b7b727b](https://github.com/sanity-io/sdk/commit/b7b727b9cfc70d0c1e0486121ce8a55e33cbfd40))
+* **preview:** update preview to use perspective and source ([#731](https://github.com/sanity-io/sdk/issues/731)) ([9702f45](https://github.com/sanity-io/sdk/commit/9702f45fa11f368593fe741872b5bc4ae501183f))
+* refactor(presence): convert presence to use source ([#735](https://github.com/sanity-io/sdk/issues/735)) ([48e2363](https://github.com/sanity-io/sdk/commit/48e2363c3814a670854553d24ad9422401165fd8))
+* **releases:** update releases store to use sources ([#733](https://github.com/sanity-io/sdk/issues/733)) ([3912987](https://github.com/sanity-io/sdk/commit/3912987efd153bc0939b6a89b9639374cfef211b))
+
+
+### Bug Fixes
+
+* **auth:** handle Studio cookie auth when token source emits null ([#743](https://github.com/sanity-io/sdk/issues/743)) ([6323543](https://github.com/sanity-io/sdk/commit/632354343e4fa3c7f0d63ed26953532b80889812))
+
 ## [2.8.0](https://github.com/sanity-io/sdk/compare/sdk-v2.7.0...sdk-v2.8.0) (2026-02-19)
 
 ### Miscellaneous
