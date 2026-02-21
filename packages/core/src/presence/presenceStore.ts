@@ -1,20 +1,45 @@
-import {type SanityClient} from '@sanity/client'
 import {createSelector} from 'reselect'
-import {combineLatest, distinctUntilChanged, filter, map, of, Subscription, switchMap} from 'rxjs'
+import {
+  catchError,
+  combineLatest,
+  distinctUntilChanged,
+  EMPTY,
+  filter,
+  first,
+  map,
+  type Observable,
+  of,
+  Subscription,
+  switchMap,
+} from 'rxjs'
 
 import {getTokenState} from '../auth/authStore'
 import {getClient} from '../client/clientStore'
-import {bindActionByDataset, type BoundDatasetKey} from '../store/createActionBinder'
-import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
+import {
+  type DocumentResource,
+  isCanvasResource,
+  isDatasetResource,
+  isMediaLibraryResource,
+} from '../config/sanityConfig'
+import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
+import {type SanityInstance} from '../store/createSanityInstance'
+import {
+  createStateSourceAction,
+  type SelectorContext,
+  type StateSource,
+} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {type SanityUser} from '../users/types'
 import {getUserState} from '../users/usersStore'
 import {createBifurTransport} from './bifurTransport'
 import {type PresenceLocation, type TransportEvent, type UserPresence} from './types'
 
+const PRESENCE_API_VERSION = '2026-03-30'
+
 type PresenceStoreState = {
   locations: Map<string, {userId: string; locations: PresenceLocation[]}>
   users: Record<string, SanityUser | undefined>
+  organizationId?: string
 }
 
 const getInitialState = (): PresenceStoreState => ({
@@ -23,27 +48,40 @@ const getInitialState = (): PresenceStoreState => ({
 })
 
 /** @public */
-export const presenceStore = defineStore<PresenceStoreState, BoundDatasetKey>({
+export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
   name: 'presence',
   getInitialState,
-  initialize: (context: StoreContext<PresenceStoreState, BoundDatasetKey>) => {
+  initialize: (context: StoreContext<PresenceStoreState, BoundResourceKey>) => {
     const {
       instance,
       state,
-      key: {projectId, dataset},
+      key: {resource},
     } = context
+
+    if (isMediaLibraryResource(resource)) {
+      throw new Error('Presence is not supported for media library resources.')
+    }
+
     const sessionId = crypto.randomUUID()
 
-    const client = getClient(instance, {
-      apiVersion: '2022-06-30',
-      projectId,
-      dataset,
-    })
+    // Dataset resources must use the project hostname so the socket URL is project-specific.
+    // Canvas resources use the global API endpoint via the resource config.
+    const client = isDatasetResource(resource)
+      ? getClient(instance, {
+          apiVersion: PRESENCE_API_VERSION,
+          projectId: resource.projectId,
+          dataset: resource.dataset,
+          useProjectHostname: true,
+        })
+      : getClient(instance, {
+          apiVersion: PRESENCE_API_VERSION,
+          resource,
+        })
 
     const token$ = getTokenState(instance).observable.pipe(distinctUntilChanged())
 
     const [incomingEvents$, dispatch] = createBifurTransport({
-      client: client as SanityClient,
+      client,
       token$,
       sessionId,
     })
@@ -81,6 +119,22 @@ export const presenceStore = defineStore<PresenceStoreState, BoundDatasetKey>({
 
     dispatch({type: 'rollCall'}).subscribe()
 
+    // Canvas resources need the organizationId to resolve users — fetch it once from the canvas endpoint
+    if (isCanvasResource(resource)) {
+      const globalClient = getClient(instance, {apiVersion: PRESENCE_API_VERSION})
+      subscription.add(
+        globalClient.observable
+          .request<{organizationId: string}>({
+            uri: `/canvases/${resource.canvasId}`,
+            tag: 'canvases.get',
+          })
+          .pipe(catchError(() => EMPTY))
+          .subscribe(({organizationId}) => {
+            state.set('presence/organizationId', (prev) => ({...prev, organizationId}))
+          }),
+      )
+    }
+
     return () => {
       dispatch({type: 'disconnect'}).subscribe()
       subscription.unsubscribe()
@@ -114,13 +168,13 @@ const selectPresence = createSelector(
   },
 )
 
-/** @public */
-export const getPresence = bindActionByDataset(
+const _getPresence = bindActionByResource(
   presenceStore,
   createStateSourceAction({
-    selector: (context: SelectorContext<PresenceStoreState>, _?): UserPresence[] =>
+    selector: (context: SelectorContext<PresenceStoreState>): UserPresence[] =>
       selectPresence(context.state),
-    onSubscribe: (context: StoreContext<PresenceStoreState, BoundDatasetKey>, _?) => {
+    onSubscribe: (context: StoreContext<PresenceStoreState, BoundResourceKey>) => {
+      const resource = context.key.resource
       const userIds$ = context.state.observable.pipe(
         map((state) =>
           Array.from(state.locations.values())
@@ -130,26 +184,34 @@ export const getPresence = bindActionByDataset(
         distinctUntilChanged((a, b) => a.length === b.length && a.every((v, i) => v === b[i])),
       )
 
-      const subscription = userIds$
+      // For canvas resources, wait for organizationId to be fetched and stored in state.
+      // For dataset resources, emit undefined immediately so the stream isn't blocked.
+      const organizationId$: Observable<string | undefined> = isCanvasResource(resource)
+        ? context.state.observable.pipe(
+            map((s) => s.organizationId),
+            filter((id): id is string => id !== undefined),
+            first(),
+          )
+        : of(undefined)
+
+      const subscription = combineLatest([userIds$, organizationId$])
         .pipe(
-          switchMap((userIds) => {
+          switchMap(([userIds, organizationId]) => {
             if (userIds.length === 0) {
               return of([])
             }
             const userObservables = userIds.map((userId) =>
               getUserState(context.instance, {
                 userId,
-                resourceType: 'project',
-                projectId: context.key.projectId,
+                ...(isDatasetResource(resource)
+                  ? {resourceType: 'project', projectId: resource.projectId}
+                  : {resourceType: 'organization', organizationId}),
               }).pipe(filter((v): v is NonNullable<typeof v> => !!v)),
             )
             return combineLatest(userObservables)
           }),
         )
         .subscribe((users) => {
-          if (!users) {
-            return
-          }
           context.state.set('presence/users', (prevState) => ({
             ...prevState,
             users: {
@@ -167,3 +229,13 @@ export const getPresence = bindActionByDataset(
     },
   }),
 )
+
+/** @beta */
+export function getPresence(
+  instance: SanityInstance,
+  params?: {resource?: DocumentResource},
+): StateSource<UserPresence[]> {
+  // bit of a hack to support the old bound action by dataset
+  // in reality, this will always be passed a resource
+  return _getPresence(instance, params ?? {})
+}
