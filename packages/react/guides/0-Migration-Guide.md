@@ -2,6 +2,208 @@
 title: Migration guide
 ---
 
+## Migrating to @sanity/sdk-react@3.0.0
+
+### Breaking Changes
+
+#### 1. Sources: new way to specify where data comes from
+
+In addition to the existing `projectId`/`dataset` pattern, hooks and core functions now accept a `source` option that also supports media libraries and canvases. The new `DocumentSource` type is one of:
+
+- `DatasetSource` — `{ projectId: string; dataset: string }`
+- `MediaLibrarySource` — `{ mediaLibraryId: string }`
+- `CanvasSource` — `{ canvasId: string }`
+
+**Existing `projectId`/`dataset` usage still works.** If you don't pass a `source`, hooks fall back to the project and dataset from your config, so no changes are required for existing code.
+
+There are two ways to provide a source:
+
+**Option A: Pass a `source` object directly**
+
+```typescript
+import {useDocument} from '@sanity/sdk-react'
+
+const {data} = useDocument({
+  documentId: 'asset-123',
+  documentType: 'sanity.asset',
+  source: {mediaLibraryId: 'my-media-library'},
+})
+```
+
+**Option B: Register named sources and reference them with `sourceName`**
+
+Instead of repeating a full `source` object in every hook call, you can register named sources on `<SanityApp>` or `<SDKProvider>` and then reference them by name:
+
+```tsx
+import {SanityApp} from '@sanity/sdk-react'
+;<SanityApp
+  config={{projectId: 'abc123', dataset: 'production'}}
+  sources={{
+    media: {mediaLibraryId: 'my-media-library'},
+    canvas: {canvasId: 'my-canvas'},
+  }}
+  fallback={<>Loading…</>}
+>
+  <App />
+</SanityApp>
+```
+
+```typescript
+import {useDocument} from '@sanity/sdk-react'
+
+const {data} = useDocument({
+  documentId: 'asset-123',
+  documentType: 'sanity.asset',
+  sourceName: 'media',
+})
+```
+
+**Hooks with source support**
+
+All of the hooks below accept a `source` option. Hooks marked with **(+ sourceName)** also accept the `sourceName` shorthand described in Option B.
+
+- `useDocument` **(+ sourceName)**
+- `useDocumentProjection` **(+ sourceName)**
+- `useDocumentPreview` **(+ sourceName)**
+- `useDocumentSyncStatus`
+- `useDocumentEvent`
+- `useQuery` **(+ sourceName)**
+- `useDocuments`
+- `usePaginatedDocuments`
+- `usePerspective` **(+ sourceName)**
+- `useActiveReleases` **(+ sourceName)**
+- `usePresence` — dataset sources only **(+ sourceName)**
+
+**Core functions with source support**
+
+- `getDocumentState`
+- `getProjectionState` / `resolveProjection`
+- `getQueryState` / `resolveQuery`
+- `getActiveReleasesState`
+- `getPresence`
+- `getDocumentSyncStatus`
+- `getPermissionsState` / `resolvePermissions`
+- `subscribeDocumentEvents`
+
+#### 2. Removed deprecated APIs
+
+The following APIs were deprecated in v2 and have now been removed. Update any usage to the replacement shown below.
+
+**`getPreviewState` / `GetPreviewStateOptions` → `getProjectionState` / `ProjectionOptions`**
+
+**Before:**
+
+```typescript
+import {getPreviewState} from '@sanity/sdk-react'
+
+const state = getPreviewState(instance, {
+  documentId: '123',
+  documentType: 'product',
+})
+```
+
+**After:**
+
+```typescript
+import {getProjectionState} from '@sanity/sdk-react'
+
+const state = getProjectionState(instance, {
+  documentId: '123',
+  documentType: 'product',
+  projection: '{title, description, "imageUrl": image.asset->url}',
+})
+```
+
+---
+
+**`resolvePreview` / `ResolvePreviewOptions` → `resolveProjection`**
+
+**Before:**
+
+```typescript
+import {resolvePreview} from '@sanity/sdk-react'
+
+const result = await resolvePreview(instance, {
+  documentId: '123',
+  documentType: 'product',
+})
+```
+
+**After:**
+
+```typescript
+import {resolveProjection} from '@sanity/sdk-react'
+
+const result = await resolveProjection(instance, {
+  documentId: '123',
+  documentType: 'product',
+  projection: '{title, description}',
+})
+```
+
+---
+
+**`PreviewStoreState` type removed**
+
+This type is no longer exported. Use the return type of `getProjectionState` instead.
+
+---
+
+**`ValidProjection` type removed**
+
+This was an alias for `string`. Use `string` directly.
+
+---
+
+**`studioMode` config option → `studio`**
+
+**Before:**
+
+```typescript
+const config: SanityConfig = {
+  projectId: 'abc123',
+  dataset: 'production',
+  studioMode: {
+    enabled: true,
+  },
+}
+```
+
+**After:**
+
+```typescript
+const config: SanityConfig = {
+  projectId: 'abc123',
+  dataset: 'production',
+  studio: {
+    authenticated: true,
+    auth: {token: myTokenSource},
+  },
+}
+```
+
+---
+
+**`sanityConfigs` prop on `<SanityApp>` → `config`**
+
+**Before:**
+
+```tsx
+<SanityApp sanityConfigs={[config1, config2]} fallback={<>Loading…</>}>
+  <App />
+</SanityApp>
+```
+
+**After:**
+
+```tsx
+<SanityApp config={[config1, config2]} fallback={<>Loading…</>}>
+  <App />
+</SanityApp>
+```
+
+---
+
 ## Migrating to @sanity/sdk-react@2.0.0
 
 ### Breaking Changes
@@ -183,7 +385,6 @@ function MyDocumentAction(props: DocumentActionProps) {
 ```
 
 2. Renamed hooks for better clarity and consistency:
-
    - `usePreview` → `useDocumentPreview`
    - `useProjection` → `useDocumentProjection`
 
@@ -445,7 +646,6 @@ By adopting these changes, especially `defineQuery` and `defineProjection`, you 
 ### Breaking Changes
 
 1. Removed Authentication Components and Hooks:
-
    - Removed `<Login />` component - authentication now redirects to sanity.io/login
    - Removed `<LoginLayout />` component and its related props
    - Removed `useLoginUrls` hook - replaced with `useLoginUrl` hook that returns a single login URL
@@ -453,12 +653,10 @@ By adopting these changes, especially `defineQuery` and `defineProjection`, you 
    - `<LoginCallback />` now renders null during the callback process
 
 2. Authentication Flow Changes:
-
    - Authentication now uses a centralized login page at sanity.io/login
    - Token refresh interval is now consistently set to 12 hours for all environments
 
 3. Renamed hooks:
-
    - `useInfiniteList` is now `useDocuments`
    - `usePaginatedList` is now `usePaginatedDocuments`
    - `usePermissions` is now `useDocumentPermissions`
@@ -655,21 +853,18 @@ const datasets = useDatasets({projectId: 'abc12345'})
 ### Breaking Changes Summary
 
 1. Authentication Changes:
-
    - Removed `<Login />`, `<LoginLayout />`, and `useLoginUrls`
    - `<AuthBoundary />` and `<LoginCallback />` behavior changes
    - Centralized login at sanity.io/login
    - 12-hour token refresh interval
 
 2. Component Changes:
-
    - `<SanityApp />` now uses `config` instead of `sanityConfigs`
    - `<SDKProvider />` now uses `config` prop for multiple configurations
    - `<ResourceProvider />` provides granular control for single configuration
    - `<SanityProvider />` removed
 
 3. Hook Renames:
-
    - `useInfiniteList` is now `useDocuments`
    - `usePaginatedList` is now `usePaginatedDocuments`
    - `usePermissions` is now `useDocumentPermissions`
@@ -679,7 +874,6 @@ const datasets = useDatasets({projectId: 'abc12345'})
 4. `@sanity/sdk` Re-exported: All exports from `@sanity/sdk` are now available directly from `@sanity/sdk-react`.
 
 5. Property Renames:
-
    - `_type` → `documentType`
    - `_id` → `documentId`
    - `results` → `data` (in hook returns)
