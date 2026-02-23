@@ -210,6 +210,7 @@ export const bindActionBySource = createActionBinder<
  * can isolate single queries by perspective.
  *
  * @throws Error if source or perspective is missing from the Sanity instance config
+ * @throws Error if a stackable perspective (array) is provided, as they are not supported
  *
  * @example
  * ```ts
