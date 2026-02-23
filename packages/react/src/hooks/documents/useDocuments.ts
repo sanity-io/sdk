@@ -3,6 +3,7 @@ import {
   type DatasetHandle,
   type DocumentHandle,
   getDefaultDatasetSource,
+  isDatasetSource,
   type QueryOptions,
 } from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
@@ -10,6 +11,10 @@ import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {
+  useNormalizedSourceOptions,
+  type WithSourceNameSupport,
+} from '../helpers/useNormalizedSourceOptions'
 import {useQuery} from '../query/useQuery'
 
 const DEFAULT_BATCH_SIZE = 25
@@ -25,7 +30,9 @@ export interface DocumentsOptions<
   TDataset extends string = string,
   TProjectId extends string = string,
 >
-  extends DatasetHandle<TDataset, TProjectId>, Pick<QueryOptions, 'perspective' | 'params'> {
+  extends
+    WithSourceNameSupport<DatasetHandle<TDataset, TProjectId>>,
+    Pick<QueryOptions, 'perspective' | 'params'> {
   /**
    * Filter documents by their `_type`. Can be a single type or an array of types.
    */
@@ -202,12 +209,13 @@ export function useDocuments<
   filter,
   orderings,
   documentType,
-  ...options
+  ...rawOptions
 }: DocumentsOptions<TDocumentType, TDataset, TProjectId>): DocumentsResponse<
   TDocumentType,
   TDataset,
   TProjectId
 > {
+  const options = useNormalizedSourceOptions(rawOptions)
   const instance = useSanityInstance(options)
   const [limit, setLimit] = useState(batchSize)
   const documentTypes = useMemo(
@@ -282,6 +290,12 @@ export function useDocuments<
       ...params,
       __handle: {
         ...getDefaultDatasetSource(instance.config),
+        ...(options.source && isDatasetSource(options.source)
+          ? {
+              projectId: options.source.projectId,
+              dataset: options.source.dataset,
+            }
+          : {}),
         ...pick(instance.config, 'perspective'),
         ...pick(options, 'projectId', 'dataset', 'perspective'),
       },

@@ -3,6 +3,7 @@ import {evaluateSync, parse, toJS} from 'groq-js'
 import {describe, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
+import {SourcesContext} from '../../context/SourcesContext'
 import {useQuery} from '../query/useQuery'
 import {useDocuments} from './useDocuments'
 
@@ -235,6 +236,29 @@ describe('useDocuments', () => {
     expect(
       result.current.data.every(
         (doc) => doc.projectId === 'test-project' && doc.dataset === 'test-dataset',
+      ),
+    ).toBe(true)
+  })
+
+  it('should resolve sourceName to the named dataset source', () => {
+    const sources = {
+      default: {projectId: 'test-project', dataset: 'test-dataset'},
+      secondary: {projectId: 'secondary-project', dataset: 'secondary-dataset'},
+    }
+
+    const {result} = renderHook(() => useDocuments({sourceName: 'secondary'}), {
+      wrapper: ({children}) => (
+        <ResourceProvider sources={sources} fallback={null}>
+          <SourcesContext.Provider value={sources}>{children}</SourcesContext.Provider>
+        </ResourceProvider>
+      ),
+    })
+
+    expect(result.current.data[0].projectId).toBe('secondary-project')
+    expect(result.current.data[0].dataset).toBe('secondary-dataset')
+    expect(
+      result.current.data.every(
+        (doc) => doc.projectId === 'secondary-project' && doc.dataset === 'secondary-dataset',
       ),
     ).toBe(true)
   })
