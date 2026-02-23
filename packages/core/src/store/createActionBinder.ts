@@ -1,12 +1,10 @@
-import {type ClientPerspective} from '@sanity/client'
-
 import {
   type DatasetHandle,
   type DocumentSource,
   isCanvasSource,
   isDatasetSource,
   isMediaLibrarySource,
-  type ReleasePerspective,
+  type PerspectiveHandle,
 } from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type SanityInstance} from './createSanityInstance'
@@ -19,7 +17,7 @@ export interface BoundSourceKey {
   source: DocumentSource
 }
 export interface BoundPerspectiveKey extends BoundSourceKey {
-  perspective: ClientPerspective | ReleasePerspective
+  perspective: NonNullable<PerspectiveHandle['perspective']>
 }
 interface BoundDatasetKey {
   name: string
@@ -248,8 +246,9 @@ export const bindActionBySourceAndPerspective = createActionBinder<
   } else if (typeof utilizedPerspective === 'string') {
     perspectiveKey = utilizedPerspective
   } else {
-    // "StackablePerspective", shouldn't be a common case, but just in case
-    perspectiveKey = JSON.stringify(utilizedPerspective)
+    throw new Error(
+      `Stackable perspectives are not supported. Received perspective: ${JSON.stringify(utilizedPerspective)}`,
+    )
   }
   const sourceKey = createSourceKey(instance, source)
 
