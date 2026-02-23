@@ -18,21 +18,9 @@ In addition to the existing `projectId`/`dataset` pattern, hooks and core functi
 
 There are two ways to provide a source:
 
-**Option A: Pass a `source` object directly**
+**Option A: Register named sources and reference them with `sourceName` (recommended)**
 
-```typescript
-import {useDocument} from '@sanity/sdk-react'
-
-const {data} = useDocument({
-  documentId: 'asset-123',
-  documentType: 'sanity.asset',
-  source: {mediaLibraryId: 'my-media-library'},
-})
-```
-
-**Option B: Register named sources and reference them with `sourceName`**
-
-Instead of repeating a full `source` object in every hook call, you can register named sources on `<SanityApp>` or `<SDKProvider>` and then reference them by name:
+Register named sources on `<SanityApp>` or `<SDKProvider>` so that each source is documented in one place and can be referenced by name throughout your app:
 
 ```tsx
 import {SanityApp} from '@sanity/sdk-react'
@@ -58,9 +46,23 @@ const {data} = useDocument({
 })
 ```
 
+**Option B: Pass a `source` object directly**
+
+If you only need a source in one or two places, you can pass the object inline:
+
+```typescript
+import {useDocument} from '@sanity/sdk-react'
+
+const {data} = useDocument({
+  documentId: 'asset-123',
+  documentType: 'sanity.asset',
+  source: {mediaLibraryId: 'my-media-library'},
+})
+```
+
 **Hooks with source support**
 
-All of the hooks below accept a `source` option. Hooks marked with **(+ sourceName)** also accept the `sourceName` shorthand described in Option B.
+All of the hooks below accept a `source` option. Hooks marked with **(+ sourceName)** also accept the `sourceName` shorthand described in Option A.
 
 - `useDocument` **(+ sourceName)**
 - `useDocumentProjection` **(+ sourceName)**
