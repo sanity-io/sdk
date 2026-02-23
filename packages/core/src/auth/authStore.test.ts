@@ -369,7 +369,7 @@ describe('authStore', () => {
       expect(getStudioTokenFromLocalStorage).not.toHaveBeenCalled()
     })
 
-    it('resolves to studio mode when studio config is provided (without studioMode flag)', () => {
+    it('resolves to studio mode when studio config is provided', () => {
       instance = createSanityInstance({
         projectId: 'studio-project',
         dataset: 'production',
@@ -377,7 +377,7 @@ describe('authStore', () => {
       })
 
       const {authState} = authStore.getInitialState(instance, null)
-      // Without tokenSource, falls back to localStorage discovery like studioMode
+      // Without tokenSource, falls back to localStorage discovery
       expect(authState.type).toBe(AuthStateType.LOGGED_OUT)
       expect(getStudioTokenFromLocalStorage).toHaveBeenCalled()
     })

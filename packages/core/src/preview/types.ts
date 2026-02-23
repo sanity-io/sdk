@@ -74,13 +74,3 @@ export type ValuePending<T> = {
   data: T | null
   isPending: boolean
 }
-
-/**
- * @public
- * @deprecated This interface is kept for backwards compatibility but is no longer used internally.
- * Preview state is now stored in the projection store.
- */
-export interface PreviewStoreState {
-  values: {[TDocumentId in string]?: ValuePending<PreviewValue>}
-  subscriptions: {[TDocumentId in string]?: {[TSubscriptionId in string]?: true}}
-}
