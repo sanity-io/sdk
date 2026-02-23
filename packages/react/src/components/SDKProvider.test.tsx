@@ -4,7 +4,6 @@ import {describe, expect, it, vi} from 'vitest'
 
 import {SDKProvider} from './SDKProvider'
 
-// Mock ResourceProvider to test nesting behavior
 vi.mock('../context/ResourceProvider', () => ({
   ResourceProvider: ({
     children,
@@ -21,7 +20,6 @@ vi.mock('../context/ResourceProvider', () => ({
   },
 }))
 
-// Mock AuthBoundary
 vi.mock('./auth/AuthBoundary', () => ({
   AuthBoundary: ({children}: {children: React.ReactNode}) => {
     return <div data-testid="auth-boundary">{children}</div>
@@ -29,56 +27,51 @@ vi.mock('./auth/AuthBoundary', () => ({
 }))
 
 describe('SDKProvider', () => {
-  it('renders single ResourceProvider with AuthBoundary for a single config', () => {
+  it('renders a single ResourceProvider with AuthBoundary', () => {
     const config = {
       sources: {
         default: {projectId: 'test-project', dataset: 'production'},
       },
     }
 
-    const {getAllByTestId, getByTestId} = render(
-      <SDKProvider config={[config]} fallback={<div>Loading...</div>}>
+    const {getByTestId} = render(
+      <SDKProvider config={config} fallback={<div>Loading...</div>}>
         <div>Child Content</div>
       </SDKProvider>,
     )
 
-    const providers = getAllByTestId('resource-provider')
-    expect(providers.length).toBe(1)
+    const provider = getByTestId('resource-provider')
+    expect(provider).toBeInTheDocument()
 
     expect(getByTestId('auth-boundary')).toBeInTheDocument()
 
-    expect(JSON.parse(providers[0].getAttribute('data-config') || '{}')).toEqual({
+    expect(JSON.parse(provider.getAttribute('data-config') || '{}')).toEqual({
       sources: {default: {projectId: 'test-project', dataset: 'production'}},
     })
   })
 
-  it('renders nested ResourceProviders with AuthBoundary for multiple configs', () => {
-    const configs = [
-      {
-        sources: {default: {projectId: 'project-1', dataset: 'production'}},
+  it('renders with multiple named sources in a single config', () => {
+    const config = {
+      sources: {
+        default: {projectId: 'project-1', dataset: 'production'},
+        secondary: {projectId: 'project-2', dataset: 'staging'},
       },
-      {
-        sources: {default: {projectId: 'project-2', dataset: 'staging'}},
-      },
-    ]
+    }
 
-    const {getAllByTestId, getByTestId} = render(
-      <SDKProvider config={configs} fallback={<div>Loading...</div>}>
+    const {getByTestId} = render(
+      <SDKProvider config={config} fallback={<div>Loading...</div>}>
         <div>Child Content</div>
       </SDKProvider>,
     )
 
-    const providers = getAllByTestId('resource-provider')
-    expect(providers.length).toBe(2)
+    const provider = getByTestId('resource-provider')
+    expect(provider).toBeInTheDocument()
 
-    expect(getByTestId('auth-boundary')).toBeInTheDocument()
-
-    expect(JSON.parse(providers[0].getAttribute('data-config') || '{}')).toEqual({
-      sources: {default: {projectId: 'project-2', dataset: 'staging'}},
-    })
-
-    expect(JSON.parse(providers[1].getAttribute('data-config') || '{}')).toEqual({
-      sources: {default: {projectId: 'project-1', dataset: 'production'}},
+    expect(JSON.parse(provider.getAttribute('data-config') || '{}')).toEqual({
+      sources: {
+        default: {projectId: 'project-1', dataset: 'production'},
+        secondary: {projectId: 'project-2', dataset: 'staging'},
+      },
     })
   })
 })

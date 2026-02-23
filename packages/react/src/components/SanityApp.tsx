@@ -11,12 +11,12 @@ import {isInIframe, isLocalUrl} from './utils'
  */
 export interface SanityAppProps {
   /**
-   * One or more SanityConfig objects. Each config should declare its data
-   * sources via the `sources` field. Optional when `SanityApp` is rendered
-   * inside an `SDKStudioContext` provider (e.g. inside Sanity Studio) — the
-   * config is derived from the workspace automatically.
+   * A SanityConfig object declaring data sources via the `sources` field.
+   * Optional when `SanityApp` is rendered inside an `SDKStudioContext`
+   * provider (e.g. inside Sanity Studio) — the config is derived from
+   * the workspace automatically.
    */
-  config?: SanityConfig | SanityConfig[]
+  config?: SanityConfig
   children: React.ReactNode
   /* Fallback content to show when child components are suspending. Same as the `fallback` prop for React Suspense. */
   fallback: React.ReactNode
@@ -48,16 +48,12 @@ function deriveConfigFromWorkspace(workspace: StudioWorkspaceHandle): SanityConf
  * as well as application context and state which is used by the Sanity React hooks. Your application
  * must be wrapped with the SanityApp component to function properly.
  *
- * The `config` prop on the SanityApp component accepts either a single {@link SanityConfig} object, or an array of them.
- * This allows your app to work with one or more of your organization's datasets.
+ * The `config` prop accepts a {@link SanityConfig} object. Use the `sources` field to declare
+ * one or more named data sources for your app.
  *
  * When rendered inside a Sanity Studio that provides `SDKStudioContext`, the `config` prop is
  * optional — `SanityApp` will automatically derive `projectId`, `dataset`, and auth from the
  * Studio workspace.
- *
- * @remarks
- * When passing multiple SanityConfig objects to the `config` prop, the first configuration in the array becomes the default
- * configuration used by the App SDK Hooks.
  *
  * When both `config` and `SDKStudioContext` are available, the explicit `config` takes precedence.
  *
@@ -114,25 +110,22 @@ export function SanityApp({
 }: SanityAppProps): ReactElement {
   const studioWorkspace = useContext(SDKStudioContext)
 
-  // Derive config: explicit config takes precedence, then Studio context
-  const resolvedConfig = useMemo(() => {
+  const resolvedConfig = useMemo<SanityConfig>(() => {
     if (configProp) return configProp
     if (studioWorkspace) return deriveConfigFromWorkspace(studioWorkspace)
-    return []
+    return {}
   }, [configProp, studioWorkspace])
 
   useEffect(() => {
     let timeout: NodeJS.Timeout | undefined
-    const primaryConfig = Array.isArray(resolvedConfig) ? resolvedConfig[0] : resolvedConfig
     const shouldRedirectWithoutConfig =
-      configProp === undefined && !studioWorkspace && !primaryConfig
+      configProp === undefined && !studioWorkspace && !resolvedConfig
 
     if (
       !isInIframe() &&
       !isLocalUrl(window) &&
-      (shouldRedirectWithoutConfig || (!!primaryConfig && !isStudioConfig(primaryConfig)))
+      (shouldRedirectWithoutConfig || (!!resolvedConfig && !isStudioConfig(resolvedConfig)))
     ) {
-      // If the app is not running in an iframe and is not a local url, redirect to core.
       timeout = setTimeout(() => {
         // eslint-disable-next-line no-console
         console.warn('Redirecting to core', REDIRECT_URL)

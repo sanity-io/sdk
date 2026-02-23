@@ -364,8 +364,8 @@ export function MultiResourceRoute(): JSX.Element {
       <p style={{marginBottom: '2rem'}}>
         This route demonstrates how to use multiple resources in a single page.
         <br />
-        Note you must have access to both resources ({configs[0].projectId}.{configs[0].dataset} and{' '}
-        {configs[1].projectId}.{configs[1].dataset}) to see the documents.
+        Note you must have access to both the &quot;default&quot; and &quot;secondary&quot; sources
+        to see the documents.
       </p>
 
       <h2 style={{marginBottom: '1rem'}}>Document Editors</h2>

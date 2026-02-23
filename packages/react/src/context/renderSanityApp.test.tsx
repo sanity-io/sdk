@@ -64,7 +64,7 @@ describe('renderSanityApp', () => {
     expect(mockCreateRoot).toHaveBeenCalledTimes(1)
   })
 
-  it('converts namedSources object to array of configs', () => {
+  it('merges namedSources into a single config', () => {
     const namedSources = {
       main: {sources: {default: {projectId: 'project-1', dataset: 'production'}}},
       secondary: {sources: {default: {projectId: 'project-2', dataset: 'staging'}}},
@@ -76,12 +76,11 @@ describe('renderSanityApp', () => {
     const renderCall = mockRender.mock.calls[0][0]
     expect(renderCall).toBeDefined()
 
-    // The renderCall is the SanityApp component directly when not using StrictMode
     expect(renderCall.type).toBe(SanityApp)
-    expect(renderCall.props.config).toEqual([
-      {sources: {default: {projectId: 'project-1', dataset: 'production'}}},
-      {sources: {default: {projectId: 'project-2', dataset: 'staging'}}},
-    ])
+    // Later namedSources override earlier ones for the same key
+    expect(renderCall.props.config).toEqual({
+      sources: {default: {projectId: 'project-2', dataset: 'staging'}},
+    })
   })
 
   it('renders without StrictMode when reactStrictMode is false', () => {
@@ -182,7 +181,7 @@ describe('renderSanityApp', () => {
     const sanityAppElement = renderCall
 
     expect(sanityAppElement.type).toBe(SanityApp)
-    expect(sanityAppElement.props.config).toEqual([])
+    expect(sanityAppElement.props.config).toEqual({sources: {}})
   })
 
   it('handles single namedSource', () => {
@@ -197,16 +196,16 @@ describe('renderSanityApp', () => {
     const sanityAppElement = renderCall
 
     expect(sanityAppElement.type).toBe(SanityApp)
-    expect(sanityAppElement.props.config).toEqual([
-      {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
-    ])
+    expect(sanityAppElement.props.config).toEqual({
+      sources: {default: {projectId: 'test-project', dataset: 'production'}},
+    })
   })
 
-  it('handles multiple namedSources', () => {
+  it('merges multiple namedSources into one config with combined sources', () => {
     const namedSources = {
       main: {sources: {default: {projectId: 'project-1', dataset: 'production'}}},
-      blog: {sources: {default: {projectId: 'project-2', dataset: 'staging'}}},
-      ecommerce: {sources: {default: {projectId: 'project-3', dataset: 'development'}}},
+      blog: {sources: {blog: {projectId: 'project-2', dataset: 'staging'}}},
+      ecommerce: {sources: {ecommerce: {projectId: 'project-3', dataset: 'development'}}},
     }
 
     renderSanityApp(rootElement, namedSources, {}, <div>Test</div>)
@@ -216,32 +215,13 @@ describe('renderSanityApp', () => {
     const sanityAppElement = renderCall
 
     expect(sanityAppElement.type).toBe(SanityApp)
-    expect(sanityAppElement.props.config).toHaveLength(3)
-    expect(sanityAppElement.props.config).toEqual([
-      {sources: {default: {projectId: 'project-1', dataset: 'production'}}},
-      {sources: {default: {projectId: 'project-2', dataset: 'staging'}}},
-      {sources: {default: {projectId: 'project-3', dataset: 'development'}}},
-    ])
-  })
-
-  it('preserves order of namedSources in config array', () => {
-    const namedSources = {
-      z: {sources: {default: {projectId: 'project-z', dataset: 'z-dataset'}}},
-      a: {sources: {default: {projectId: 'project-a', dataset: 'a-dataset'}}},
-      m: {sources: {default: {projectId: 'project-m', dataset: 'm-dataset'}}},
-    }
-
-    renderSanityApp(rootElement, namedSources, {}, <div>Test</div>)
-
-    const renderCall = mockRender.mock.calls[0][0]
-    const sanityAppElement = renderCall
-
-    // Object.values preserves insertion order in modern JS
-    expect(sanityAppElement.props.config).toEqual([
-      {sources: {default: {projectId: 'project-z', dataset: 'z-dataset'}}},
-      {sources: {default: {projectId: 'project-a', dataset: 'a-dataset'}}},
-      {sources: {default: {projectId: 'project-m', dataset: 'm-dataset'}}},
-    ])
+    expect(sanityAppElement.props.config).toEqual({
+      sources: {
+        default: {projectId: 'project-1', dataset: 'production'},
+        blog: {projectId: 'project-2', dataset: 'staging'},
+        ecommerce: {projectId: 'project-3', dataset: 'development'},
+      },
+    })
   })
 
   it('passes children to SanityApp', () => {
@@ -319,11 +299,10 @@ describe('renderSanityApp', () => {
     const strictModeChild = renderCall.props.children
     expect(strictModeChild.type).toBe(SanityApp)
 
-    // Verify all props are passed correctly
-    expect(strictModeChild.props.config).toEqual([
-      {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
-      {sources: {default: {projectId: 'test-project-2', dataset: 'staging'}}},
-    ])
+    // Merged config: later namedSources override earlier ones for the same key
+    expect(strictModeChild.props.config).toEqual({
+      sources: {default: {projectId: 'test-project-2', dataset: 'staging'}},
+    })
     expect(strictModeChild.props.fallback).toEqual(<div>Loading...</div>)
     expect(strictModeChild.props.children).toEqual(children)
   })

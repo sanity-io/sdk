@@ -86,35 +86,6 @@ describe('SanityApp', () => {
     expect(props.fallback).toBeTruthy()
   })
 
-  it('renders SDKProvider with multiple configs in original order', () => {
-    const multipleConfigs = [
-      {sources: {default: {projectId: 'project-1', dataset: 'production'}}},
-      {sources: {default: {projectId: 'project-2', dataset: 'staging'}}},
-      {sources: {default: {projectId: 'project-3', dataset: 'development'}}},
-    ]
-
-    render(
-      <SanityApp config={multipleConfigs} fallback={<div>Loading...</div>}>
-        <div>Child Content</div>
-      </SanityApp>,
-    )
-
-    // Check that the SDKProvider is rendered
-    expect(screen.getByTestId('sdk-provider')).toBeInTheDocument()
-
-    // Verify SDKProvider was called with the correct props
-    expect(mockSDKProviderComponent).toHaveBeenCalledTimes(1)
-    const sdkProviderCalls = mockSDKProviderComponent.mock.calls
-    const firstCallArgs2 = sdkProviderCalls[0]
-    expect(firstCallArgs2).toBeDefined()
-    expect(firstCallArgs2.length).toBeGreaterThan(0)
-    const props = firstCallArgs2[0] as unknown as SDKProviderProps
-    const config = props?.config
-
-    // Config should be passed directly to SDKProvider
-    expect(config).toEqual(multipleConfigs)
-  })
-
   it('handles iframe environment correctly', async () => {
     // Mock window.self and window.top to simulate iframe environment
     const originalTop = window.top
@@ -135,7 +106,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
@@ -176,7 +147,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
@@ -244,7 +215,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
@@ -282,7 +253,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
@@ -321,7 +292,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
