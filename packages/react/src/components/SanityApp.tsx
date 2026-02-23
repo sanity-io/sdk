@@ -1,4 +1,4 @@
-import {type DocumentSource, isStudioConfig, type SanityConfig} from '@sanity/sdk'
+import {isStudioConfig, type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, useContext, useEffect, useMemo} from 'react'
 
 import {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
@@ -11,13 +11,12 @@ import {isInIframe, isLocalUrl} from './utils'
  */
 export interface SanityAppProps {
   /**
-   * One or more SanityConfig objects providing a project ID and dataset name.
-   * Optional when `SanityApp` is rendered inside an `SDKStudioContext` provider
-   * (e.g. inside Sanity Studio) — the config is derived from the workspace
-   * automatically.
+   * One or more SanityConfig objects. Each config should declare its data
+   * sources via the `sources` field. Optional when `SanityApp` is rendered
+   * inside an `SDKStudioContext` provider (e.g. inside Sanity Studio) — the
+   * config is derived from the workspace automatically.
    */
   config?: SanityConfig | SanityConfig[]
-  sources?: Record<string, DocumentSource>
   children: React.ReactNode
   /* Fallback content to show when child components are suspending. Same as the `fallback` prop for React Suspense. */
   fallback: React.ReactNode
@@ -28,12 +27,13 @@ const REDIRECT_URL = 'https://sanity.io/welcome'
 /**
  * Derive a SanityConfig from a Studio workspace handle.
  * Maps the workspace's projectId, dataset, and reactive auth token into
- * the SDK's config shape.
+ * the SDK's config shape using a named `"default"` source.
  */
 function deriveConfigFromWorkspace(workspace: StudioWorkspaceHandle): SanityConfig {
   return {
-    projectId: workspace.projectId,
-    dataset: workspace.dataset,
+    sources: {
+      default: {projectId: workspace.projectId, dataset: workspace.dataset},
+    },
     studio: {
       authenticated: workspace.authenticated,
       auth: workspace.auth.token ? {token: workspace.auth.token} : undefined,
@@ -65,40 +65,41 @@ function deriveConfigFromWorkspace(workspace: StudioWorkspaceHandle): SanityConf
  * @param props - Your Sanity configuration and the React children to render
  * @returns Your Sanity application, integrated with your Sanity configuration and application context
  *
- * @example
+ * @example Single project with named sources
  * ```tsx
- * import { SanityApp, type SanityConfig } from '@sanity/sdk-react'
- *
- * import MyAppRoot from './Root'
- *
- * // Single project configuration
- * const mySanityConfig: SanityConfig = {
- *   projectId: 'my-project-id',
- *   dataset: 'production',
- * }
- *
- * // Or multiple project configurations
- * const multipleConfigs: SanityConfig[] = [
- *   // Configuration for your main project. This will be used as the default project for hooks.
- *   {
- *     projectId: 'marketing-website-project',
- *     dataset: 'production',
- *   },
- *   // Configuration for a separate blog project
- *   {
- *     projectId: 'blog-project',
- *     dataset: 'production',
- *   },
- *   // Configuration for a separate ecommerce project
- *   {
- *     projectId: 'ecommerce-project',
- *     dataset: 'production',
- *   }
- * ]
+ * import { SanityApp } from '@sanity/sdk-react'
  *
  * export default function MyApp() {
  *   return (
- *     <SanityApp config={mySanityConfig} fallback={<div>Loading…</div>}>
+ *     <SanityApp
+ *       config={{
+ *         sources: {
+ *           default: { projectId: 'my-project-id', dataset: 'production' },
+ *         },
+ *       }}
+ *       fallback={<div>Loading…</div>}
+ *     >
+ *       <MyAppRoot />
+ *     </SanityApp>
+ *   )
+ * }
+ * ```
+ *
+ * @example Multiple sources
+ * ```tsx
+ * import { SanityApp } from '@sanity/sdk-react'
+ *
+ * export default function MyApp() {
+ *   return (
+ *     <SanityApp
+ *       config={{
+ *         sources: {
+ *           default: { projectId: 'abc123', dataset: 'production' },
+ *           'blog-project': { projectId: 'def456', dataset: 'production' },
+ *         },
+ *       }}
+ *       fallback={<div>Loading…</div>}
+ *     >
  *       <MyAppRoot />
  *     </SanityApp>
  *   )

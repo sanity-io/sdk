@@ -114,10 +114,34 @@ export interface DocumentHandle<
 }
 
 /**
- * Represents the complete configuration for a Sanity SDK instance
+ * The key used to identify the default source in a sources map.
+ * When no `source` or `sourceName` is specified, the SDK resolves
+ * the source registered under this name.
+ *
  * @public
  */
-export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
+export const DEFAULT_SOURCE_NAME = 'default'
+
+/**
+ * Represents the complete configuration for a Sanity SDK instance.
+ *
+ * Data targeting is handled entirely through named {@link sources}.
+ * The source keyed `"default"` is used automatically when no explicit
+ * `source` or `sourceName` is provided to a hook or core function.
+ *
+ * @example
+ * ```ts
+ * const config: SanityConfig = {
+ *   sources: {
+ *     default: { projectId: 'abc123', dataset: 'production' },
+ *     'blog-project': { projectId: 'def456', dataset: 'production' },
+ *   },
+ * }
+ * ```
+ *
+ * @public
+ */
+export interface SanityConfig extends PerspectiveHandle {
   /**
    * Authentication configuration for the instance
    * @remarks Merged with parent configurations when using createChild
@@ -134,8 +158,11 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
   studio?: StudioConfig
 
   /**
+   * Named sources for this instance. Each key is a source name that can be
+   * referenced via `sourceName` in hooks and core functions. The source named
+   * `"default"` is used automatically when no `source` or `sourceName` is specified.
+   *
    * @beta
-   * A list of named sources to use for this instance.
    */
   sources?: Record<string, DocumentSource>
 }
@@ -182,4 +209,43 @@ export function isMediaLibrarySource(source: DocumentSource): source is MediaLib
  */
 export function isCanvasSource(source: DocumentSource): source is CanvasSource {
   return 'canvasId' in source
+}
+
+/**
+ * Resolves the default `DocumentSource` from a `SanityConfig`.
+ * Returns the source registered under the `"default"` key, or `undefined`.
+ *
+ * @internal
+ */
+export function resolveDefaultSource(config: SanityConfig): DocumentSource | undefined {
+  return config.sources?.[DEFAULT_SOURCE_NAME]
+}
+
+/**
+ * Extracts the `projectId` from the config's default source.
+ * Returns `undefined` when no default source exists or it is not a
+ * {@link DatasetSource}.
+ *
+ * Useful for project-level operations (auth, CORS, project API) that
+ * need a projectId but should not depend on data-targeting config.
+ *
+ * @internal
+ */
+export function getDefaultProjectId(config: SanityConfig): string | undefined {
+  const source = resolveDefaultSource(config)
+  if (source && isDatasetSource(source)) return source.projectId
+  return undefined
+}
+
+/**
+ * Extracts `projectId` and `dataset` from the config's default source.
+ * Returns `undefined` when no default source exists or it is not a
+ * {@link DatasetSource}.
+ *
+ * @internal
+ */
+export function getDefaultDatasetSource(config: SanityConfig): DatasetSource | undefined {
+  const source = resolveDefaultSource(config)
+  if (source && isDatasetSource(source)) return source
+  return undefined
 }

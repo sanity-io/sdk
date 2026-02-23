@@ -32,7 +32,7 @@ import {
 import {type JSX, useEffect, useState} from 'react'
 
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
-import {devConfigs, e2eConfigs} from '../sanityConfigs'
+import {devConfig, e2eConfig} from '../sanityConfigs'
 
 function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   useDocumentEvent({...docHandle, onEvent: (e) => console.log(e)})
@@ -231,7 +231,10 @@ function Editor() {
   const [docHandle, setDocHandle] = useState<DocumentHandle<'author'> | null>(documents[0] ?? null)
   const [newDocumentId, setNewDocumentId] = useState<string>('')
   const [liveEditMode, setLiveEditMode] = useState<boolean>(false)
-  const {projectId, dataset} = import.meta.env['VITE_IS_E2E'] ? e2eConfigs[0] : devConfigs[0]
+  const cfg = import.meta.env['VITE_IS_E2E'] ? e2eConfig : devConfig
+  const defaultSource = cfg.sources?.['default']
+  const projectId = defaultSource && 'projectId' in defaultSource ? defaultSource.projectId : ''
+  const dataset = defaultSource && 'dataset' in defaultSource ? defaultSource.dataset : ''
 
   const handleLoadDocument = () => {
     const documentId = newDocumentId || docHandle?.documentId

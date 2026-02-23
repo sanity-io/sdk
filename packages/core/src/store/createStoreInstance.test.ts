@@ -1,5 +1,6 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {getDefaultProjectId} from '../config/sanityConfig'
 import {createSanityInstance} from './createSanityInstance'
 import {createStoreInstance} from './createStoreInstance'
 import {type StoreDefinition} from './defineStore'
@@ -13,13 +14,13 @@ describe('createStoreInstance', () => {
       randomUUID: () => 'test-uuid-1234',
     })
 
-    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    instance = createSanityInstance({sources: {default: {projectId: 'test', dataset: 'test'}}})
   })
 
   const storeDef: StoreDefinition<{count: number}> = {
     name: 'TestStore',
     getInitialState: (inst) => ({
-      count: inst.config.projectId === 'test' ? 0 : -1,
+      count: getDefaultProjectId(inst.config) === 'test' ? 0 : -1,
     }),
   }
 

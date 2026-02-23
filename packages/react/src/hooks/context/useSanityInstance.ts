@@ -26,29 +26,12 @@ import {SanityInstanceContext} from '../../context/SanityInstanceContext'
  *
  * @example Get the current instance
  * ```tsx
- * // Get the current instance from context
  * const instance = useSanityInstance()
- * console.log(instance.config.projectId)
+ * console.log(instance.config.sources)
  * ```
  *
- * @example Find an instance with specific configuration
+ * @example Match by auth configuration
  * ```tsx
- * // Find an instance matching the given project and dataset
- * const instance = useSanityInstance({
- *   projectId: 'abc123',
- *   dataset: 'production'
- * })
- *
- * // Use instance for API calls
- * const fetchDocument = (docId) => {
- *   // Instance is guaranteed to have the matching config
- *   return client.fetch(`*[_id == $id][0]`, { id: docId })
- * }
- * ```
- *
- * @example Match partial configuration
- * ```tsx
- * // Find an instance with specific auth configuration
  * const instance = useSanityInstance({
  *   auth: { requireLogin: true }
  * })

@@ -2,9 +2,19 @@ import {type SanityClient} from '@sanity/client'
 import {from, Observable, switchMap} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
+import {type DatasetSource, isDatasetSource, resolveDefaultSource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 
 const API_VERSION = 'vX'
+
+function resolveDatasetConfig(instance: SanityInstance): DatasetSource {
+  const source = resolveDefaultSource(instance.config)
+  if (source && isDatasetSource(source)) return source
+  throw new Error(
+    'Agent actions require a dataset source. ' +
+      'Register a "default" dataset source in config.sources, or pass projectId/dataset explicitly.',
+  )
+}
 
 /** @alpha */
 export type AgentGenerateOptions = Parameters<
@@ -59,10 +69,11 @@ export function agentGenerate(
   instance: SanityInstance,
   options: AgentGenerateOptions,
 ): AgentGenerateResult {
+  const {projectId, dataset} = resolveDatasetConfig(instance)
   return getClientState(instance, {
     apiVersion: API_VERSION,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
+    projectId,
+    dataset,
   }).observable.pipe(switchMap((client) => client.observable.agent.action.generate(options)))
 }
 
@@ -77,10 +88,11 @@ export function agentTransform(
   instance: SanityInstance,
   options: AgentTransformOptions,
 ): AgentTransformResult {
+  const {projectId, dataset} = resolveDatasetConfig(instance)
   return getClientState(instance, {
     apiVersion: API_VERSION,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
+    projectId,
+    dataset,
   }).observable.pipe(switchMap((client) => client.observable.agent.action.transform(options)))
 }
 
@@ -95,10 +107,11 @@ export function agentTranslate(
   instance: SanityInstance,
   options: AgentTranslateOptions,
 ): AgentTranslateResult {
+  const {projectId, dataset} = resolveDatasetConfig(instance)
   return getClientState(instance, {
     apiVersion: API_VERSION,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
+    projectId,
+    dataset,
   }).observable.pipe(switchMap((client) => client.observable.agent.action.translate(options)))
 }
 
@@ -113,10 +126,11 @@ export function agentPrompt(
   instance: SanityInstance,
   options: AgentPromptOptions,
 ): Observable<AgentPromptResult> {
+  const {projectId, dataset} = resolveDatasetConfig(instance)
   return getClientState(instance, {
     apiVersion: API_VERSION,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
+    projectId,
+    dataset,
   }).observable.pipe(switchMap((client) => from(client.agent.action.prompt(options))))
 }
 
@@ -131,9 +145,10 @@ export function agentPatch(
   instance: SanityInstance,
   options: AgentPatchOptions,
 ): Observable<AgentPatchResult> {
+  const {projectId, dataset} = resolveDatasetConfig(instance)
   return getClientState(instance, {
     apiVersion: API_VERSION,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
+    projectId,
+    dataset,
   }).observable.pipe(switchMap((client) => from(client.agent.action.patch(options))))
 }

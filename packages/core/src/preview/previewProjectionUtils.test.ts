@@ -59,8 +59,7 @@ describe('normalizeMedia', () => {
 
 describe('transformProjectionToPreview', () => {
   const instance = createSanityInstance({
-    projectId: 'test-project',
-    dataset: 'test-dataset',
+    sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
   })
 
   beforeEach(async () => {

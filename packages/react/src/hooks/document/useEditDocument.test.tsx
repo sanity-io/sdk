@@ -78,7 +78,10 @@ describe('useEditDocument hook', () => {
 
     const {result} = renderHook(() => useEditDocument<string>({...docHandle, path: 'foo'}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -105,7 +108,10 @@ describe('useEditDocument hook', () => {
 
     const {result} = renderHook(() => useEditDocument(docHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -129,7 +135,10 @@ describe('useEditDocument hook', () => {
 
     const {result} = renderHook(() => useEditDocument<string>({...docHandle, path: 'foo'}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -155,7 +164,10 @@ describe('useEditDocument hook', () => {
 
     const {result} = renderHook(() => useEditDocument(docHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -179,7 +191,10 @@ describe('useEditDocument hook', () => {
 
     const {result} = renderHook(() => useEditDocument(docHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -213,7 +228,10 @@ describe('useEditDocument hook', () => {
       },
       {
         wrapper: ({children}) => (
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+            fallback={null}
+          >
             {children}
           </ResourceProvider>
         ),

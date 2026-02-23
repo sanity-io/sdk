@@ -6,7 +6,6 @@ import {
   type SanityInstance,
   type StateSource,
 } from '@sanity/sdk'
-import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
@@ -48,5 +47,4 @@ export const useDatasets: UseDatasets = createStateSourceHook({
     // remove `undefined` since we're suspending when that is the case
     getDatasetsState(instance, projectHandle).getCurrent() === undefined,
   suspender: resolveDatasets,
-  getConfig: identity as (projectHandle?: ProjectHandle) => ProjectHandle,
 })

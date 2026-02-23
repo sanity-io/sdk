@@ -60,8 +60,7 @@ describe('SanityApp', () => {
 
   it('renders SDKProvider with a single config', () => {
     const singleConfig = {
-      projectId: 'test-project',
-      dataset: 'production',
+      sources: {default: {projectId: 'test-project', dataset: 'production'}},
     }
 
     render(
@@ -89,18 +88,9 @@ describe('SanityApp', () => {
 
   it('renders SDKProvider with multiple configs in original order', () => {
     const multipleConfigs = [
-      {
-        projectId: 'project-1',
-        dataset: 'production',
-      },
-      {
-        projectId: 'project-2',
-        dataset: 'staging',
-      },
-      {
-        projectId: 'project-3',
-        dataset: 'development',
-      },
+      {sources: {default: {projectId: 'project-1', dataset: 'production'}}},
+      {sources: {default: {projectId: 'project-2', dataset: 'staging'}}},
+      {sources: {default: {projectId: 'project-3', dataset: 'development'}}},
     ]
 
     render(
@@ -131,8 +121,7 @@ describe('SanityApp', () => {
     const originalSelf = window.self
 
     const mockSanityConfig: SanityConfig = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
+      sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
     }
 
     const mockTop = {}
@@ -178,8 +167,7 @@ describe('SanityApp', () => {
     }
 
     const mockSanityConfig: SanityConfig = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
+      sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
     }
 
     Object.defineProperty(window, 'location', {
@@ -242,8 +230,7 @@ describe('SanityApp', () => {
     const originalLocation = window.location
 
     const mockSanityConfig: SanityConfig = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
+      sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
     }
 
     const mockLocation = {
@@ -285,8 +272,7 @@ describe('SanityApp', () => {
     }
 
     const mockSanityConfig: SanityConfig = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
+      sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
       studio: {},
     }
 
@@ -325,8 +311,7 @@ describe('SanityApp', () => {
     }
 
     const mockSanityConfig: SanityConfig = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
+      sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
       studio: {},
     }
 

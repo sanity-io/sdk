@@ -7,8 +7,7 @@ import {ResourceProvider} from './ResourceProvider'
 import {SanityInstanceContext} from './SanityInstanceContext'
 
 const testConfig: SanityConfig = {
-  projectId: 'test-project',
-  dataset: 'test-dataset',
+  sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
 }
 
 function promiseWithResolvers<T = void>(): {
@@ -76,7 +75,9 @@ describe('ResourceProvider', () => {
   })
 
   it('creates child instance when parent context exists', async () => {
-    const parentConfig: SanityConfig = {...testConfig, dataset: 'parent-dataset'}
+    const parentConfig: SanityConfig = {
+      sources: {default: {projectId: 'test-project', dataset: 'parent-dataset'}},
+    }
     const child = promiseWithResolvers<SanityInstance | null>()
 
     const CaptureInstance = () => {

@@ -79,7 +79,10 @@ describe('useDocuments', () => {
     const customBatchSize = 2
     const {result} = renderHook(() => useDocuments({batchSize: customBatchSize}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -91,7 +94,10 @@ describe('useDocuments', () => {
   it('should filter by document type', () => {
     const {result} = renderHook(() => useDocuments({filter: '_type == "movie"'}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -105,7 +111,10 @@ describe('useDocuments', () => {
   it.skip('should apply search filter', () => {
     const {result} = renderHook(() => useDocuments({search: 'inter'}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -124,7 +133,10 @@ describe('useDocuments', () => {
         }),
       {
         wrapper: ({children}) => (
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+            fallback={null}
+          >
             {children}
           </ResourceProvider>
         ),
@@ -139,7 +151,10 @@ describe('useDocuments', () => {
     const batchSize = 2
     const {result} = renderHook(() => useDocuments({batchSize: batchSize}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -157,7 +172,10 @@ describe('useDocuments', () => {
   it('should indicate when there is more data to load', () => {
     const {result} = renderHook(() => useDocuments({batchSize: 3}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -175,7 +193,10 @@ describe('useDocuments', () => {
     const {result, rerender} = renderHook((props) => useDocuments(props), {
       initialProps: {batchSize: 2, filter: ''},
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -197,7 +218,10 @@ describe('useDocuments', () => {
   it('should add projectId and dataset to document handles', () => {
     const {result} = renderHook(() => useDocuments({}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),

@@ -2,7 +2,6 @@ import {
   type DocumentSource,
   getActiveReleasesState,
   type ReleaseDocument,
-  type SanityConfig,
   type SanityInstance,
   type StateSource,
 } from '@sanity/sdk'
@@ -30,7 +29,7 @@ import {
  * ```
  */
 type UseActiveReleases = {
-  (options?: WithSourceNameSupport<SanityConfig> | undefined): ReleaseDocument[]
+  (options?: WithSourceNameSupport<{source?: DocumentSource}> | undefined): ReleaseDocument[]
 }
 
 const useActiveReleasesValue: UseActiveReleases = createStateSourceHook({

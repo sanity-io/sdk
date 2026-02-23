@@ -7,6 +7,7 @@ import {
   isCanvasSource,
   isDatasetSource,
   isMediaLibrarySource,
+  resolveDefaultSource,
 } from '../config/sanityConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
@@ -199,8 +200,16 @@ export const getClient = bindActionGlobally(
       //   resource = {type: 'dataset', id: `${options.source.projectId}.${options.source.dataset}`}
     }
 
-    projectId = projectId ?? options.projectId ?? instance.config.projectId
-    dataset = dataset ?? options.dataset ?? instance.config.dataset
+    projectId = projectId ?? options.projectId
+    dataset = dataset ?? options.dataset
+
+    if (!projectId || !dataset) {
+      const defaultSource = resolveDefaultSource(instance.config)
+      if (defaultSource && isDatasetSource(defaultSource)) {
+        projectId = projectId ?? defaultSource.projectId
+        dataset = dataset ?? defaultSource.dataset
+      }
+    }
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost
 
     const effectiveOptions: ClientOptions = {

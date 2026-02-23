@@ -50,36 +50,33 @@ describe('useApplyDocumentActions', () => {
     })
   })
 
-  it('uses SanityInstance.match when projectId is overrideen', async () => {
+  it('passes actions with projectId override to the context instance', async () => {
     const {result} = renderHook(() => useApplyDocumentActions())
     result.current({
       type: 'document.edit',
       documentType: 'post',
       documentId: 'abc',
-
       projectId: 'p123',
     })
 
-    expect(applyDocumentActions).toHaveBeenCalledExactlyOnceWith(instances['p123.d'], {
+    expect(applyDocumentActions).toHaveBeenCalledExactlyOnceWith(instance, {
       actions: [
         {
           type: 'document.edit',
           documentType: 'post',
           documentId: 'abc',
-
           projectId: 'p123',
         },
       ],
     })
   })
 
-  it('uses SanityInstance when dataset is overrideen', async () => {
+  it('passes actions with dataset override to the context instance', async () => {
     const {result} = renderHook(() => useApplyDocumentActions())
     result.current({
       type: 'document.edit',
       documentType: 'post',
       documentId: 'abc',
-
       dataset: 'd123',
     })
 
@@ -89,49 +86,33 @@ describe('useApplyDocumentActions', () => {
           type: 'document.edit',
           documentType: 'post',
           documentId: 'abc',
-
           dataset: 'd123',
         },
       ],
     })
   })
 
-  it('uses SanityInstance.amcth when projectId and dataset is overrideen', async () => {
+  it('passes actions with both projectId and dataset overrides', async () => {
     const {result} = renderHook(() => useApplyDocumentActions())
     result.current({
       type: 'document.edit',
       documentType: 'post',
       documentId: 'abc',
-
       projectId: 'p123',
       dataset: 'd123',
     })
 
-    expect(applyDocumentActions).toHaveBeenCalledExactlyOnceWith(instances['p123.d123'], {
+    expect(applyDocumentActions).toHaveBeenCalledExactlyOnceWith(instance, {
       actions: [
         {
           type: 'document.edit',
           documentType: 'post',
           documentId: 'abc',
-
           projectId: 'p123',
           dataset: 'd123',
         },
       ],
     })
-  })
-
-  it("throws if SanityInstance.match doesn't find anything", async () => {
-    const {result} = renderHook(() => useApplyDocumentActions())
-    expect(() => {
-      result.current({
-        type: 'document.edit',
-        documentType: 'post',
-        documentId: 'abc',
-
-        projectId: 'other',
-      })
-    }).toThrow()
   })
 
   it('throws when actions have mismatched project IDs', async () => {

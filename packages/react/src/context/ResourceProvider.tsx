@@ -47,23 +47,10 @@ export interface ResourceProviderProps extends SanityConfig {
  * @example Creating a root provider
  * ```tsx
  * <ResourceProvider
- *   projectId="your-project-id"
- *   dataset="production"
+ *   sources={{ default: { projectId: 'your-project-id', dataset: 'production' } }}
  *   fallback={<LoadingSpinner />}
  * >
  *   <YourApp />
- * </ResourceProvider>
- * ```
- *
- * @example Creating nested providers with configuration inheritance
- * ```tsx
- * // Root provider with production config with nested provider for preview features with custom dataset
- * <ResourceProvider projectId="abc123" dataset="production" fallback={<Loading />}>
- *   <div>...Main app content</div>
- *   <Dashboard />
- *   <ResourceProvider dataset="preview" fallback={<Loading />}>
- *     <PreviewFeatures />
- *   </ResourceProvider>
  * </ResourceProvider>
  * ```
  */

@@ -1,6 +1,6 @@
 import {pick} from 'lodash-es'
 
-import {type SanityConfig} from '../config/sanityConfig'
+import {getDefaultDatasetSource, type SanityConfig} from '../config/sanityConfig'
 import {insecureRandomId} from '../utils/ids'
 import {createLogger, type InstanceContext} from '../utils/logger'
 
@@ -76,29 +76,27 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
   const instanceId = crypto.randomUUID()
   const disposeListeners = new Map<string, () => void>()
   const disposed = {current: false}
+  const defaultSource = getDefaultDatasetSource(config)
 
-  // Create instance context for logging
   const instanceContext: InstanceContext = {
     instanceId,
-    projectId: config.projectId,
-    dataset: config.dataset,
+    projectId: defaultSource?.projectId,
+    dataset: defaultSource?.dataset,
   }
 
-  // Create logger with instance context
   const logger = createLogger('sdk', {instanceContext})
 
-  // Log instance creation
   logger.info('Sanity instance created', {
-    hasProjectId: !!config.projectId,
-    hasDataset: !!config.dataset,
+    hasProjectId: !!defaultSource?.projectId,
+    hasSources: !!config.sources,
     hasAuth: !!config.auth,
     hasPerspective: !!config.perspective,
   })
 
-  // Log configuration details at debug level
   logger.debug('Instance configuration', {
-    projectId: config.projectId,
-    dataset: config.dataset,
+    projectId: defaultSource?.projectId,
+    dataset: defaultSource?.dataset,
+    sourceNames: config.sources ? Object.keys(config.sources) : [],
     perspective: config.perspective,
     hasStudioConfig: !!config.studio,
     hasStudioTokenSource: !!config.studio?.auth?.token,
@@ -135,14 +133,14 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
     createChild: (next) => {
       logger.debug('Creating child instance', {
         parentInstanceId: instanceId.slice(0, 8),
-        overridingProjectId: !!next.projectId,
-        overridingDataset: !!next.dataset,
+        overridingSources: !!next.sources,
         overridingAuth: !!next.auth,
       })
       const child = Object.assign(
         createSanityInstance({
           ...config,
           ...next,
+          ...(config.sources && next.sources && {sources: {...config.sources, ...next.sources}}),
           ...(config.auth === next.auth
             ? config.auth
             : config.auth && next.auth && {auth: {...config.auth, ...next.auth}}),
@@ -157,7 +155,7 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
     },
     match: (targetConfig) => {
       if (
-        Object.entries(pick(targetConfig, 'auth', 'projectId', 'dataset')).every(
+        Object.entries(pick(targetConfig, 'auth')).every(
           ([key, value]) => config[key as keyof SanityConfig] === value,
         )
       ) {

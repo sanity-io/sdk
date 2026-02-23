@@ -22,7 +22,10 @@ describe('useDashboardOrganizationId', () => {
 
     const {result} = renderHook(() => useDashboardOrganizationId(), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -41,7 +44,10 @@ describe('useDashboardOrganizationId', () => {
 
     const {result} = renderHook(() => useDashboardOrganizationId(), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),

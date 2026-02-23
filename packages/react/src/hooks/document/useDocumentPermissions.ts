@@ -132,7 +132,7 @@ export function useDocumentPermissions(
     }
   }
 
-  const instance = useSanityInstance({projectId, dataset})
+  const instance = useSanityInstance()
   const isDocumentReady = useCallback(
     () => getPermissionsState(instance, {actions}).getCurrent() !== undefined,
     [actions, instance],

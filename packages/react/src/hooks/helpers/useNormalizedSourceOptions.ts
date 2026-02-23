@@ -1,4 +1,4 @@
-import {type DocumentSource} from '@sanity/sdk'
+import {DEFAULT_SOURCE_NAME, type DocumentSource} from '@sanity/sdk'
 import {useContext} from 'react'
 
 import {SourcesContext} from '../../context/SourcesContext'
@@ -39,35 +39,31 @@ export function normalizeSourceOptions<T extends {source?: DocumentSource; sourc
 ): Omit<T, 'sourceName'> {
   const {sourceName, ...rest} = options
 
-  if (!sourceName && !options.source) {
-    return options
-  }
-
   if (sourceName && Object.hasOwn(options, 'source')) {
     throw new Error(
       `Source name ${JSON.stringify(sourceName)} and source ${JSON.stringify(options.source)} cannot be used together.`,
     )
   }
 
-  let resolvedSource: DocumentSource | undefined
-
   if (options.source) {
-    resolvedSource = options.source
+    return {...rest, source: options.source}
   }
 
-  if (sourceName && !Object.hasOwn(sources, sourceName)) {
-    throw new Error(
-      `There's no source named ${JSON.stringify(sourceName)} in context. Please use <SourceProvider>.`,
-    )
-  }
+  const effectiveName = sourceName ?? DEFAULT_SOURCE_NAME
 
-  if (sourceName && sources[sourceName]) {
-    resolvedSource = sources[sourceName]
+  if (!Object.hasOwn(sources, effectiveName)) {
+    if (sourceName) {
+      throw new Error(
+        `There's no source named ${JSON.stringify(sourceName)} in context. ` +
+          'Register it via the sources prop on <SanityApp>.',
+      )
+    }
+    return rest as Omit<T, 'sourceName'>
   }
 
   return {
     ...rest,
-    source: resolvedSource,
+    source: sources[effectiveName],
   }
 }
 
@@ -83,9 +79,11 @@ export function normalizeSourceOptions<T extends {source?: DocumentSource; sourc
  *
  * @remarks
  * Resolution priority:
- * 1. If `sourceName` is provided, resolves it via `SourcesContext` and uses that
- * 2. Otherwise, uses the inline `source` if provided
- * 3. If neither is provided, returns options without a source field
+ * 1. If both `sourceName` and `source` are provided, throws an error
+ * 2. If `source` is provided, uses it directly
+ * 3. If `sourceName` is provided, resolves it via `SourcesContext`
+ * 4. If neither is provided, resolves the `"default"` source from `SourcesContext`
+ * 5. If no `"default"` source is registered, returns options without a source field
  *
  * @example
  * ```tsx

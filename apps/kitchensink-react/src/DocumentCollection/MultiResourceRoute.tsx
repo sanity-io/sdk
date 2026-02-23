@@ -14,7 +14,6 @@ import {
   type MultiResourceAuthorProjectionProjectionResult,
   MultiResourceMovieProjectionProjectionResult,
 } from '../../sanity.types'
-import {devConfigs, e2eConfigs} from '../sanityConfigs'
 
 function LoadingFallback({message = 'Loading...'}: {message?: string}) {
   return (
@@ -337,19 +336,16 @@ function MoviePreview({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
 }
 
 export function MultiResourceRoute(): JSX.Element {
-  const configs = import.meta.env['VITE_IS_E2E'] ? e2eConfigs : devConfigs
   const {data: authorDocuments} = useDocuments({
     documentType: 'author',
     batchSize: 1,
-    projectId: configs[0].projectId,
-    dataset: configs[0].dataset,
+    sourceName: 'default',
   })
 
   const {data: movieDocuments} = useDocuments({
     documentType: 'movie',
     batchSize: 1,
-    projectId: configs[1].projectId,
-    dataset: configs[1].dataset,
+    sourceName: 'secondary',
   })
 
   const authorHandle = authorDocuments[0] ?? null

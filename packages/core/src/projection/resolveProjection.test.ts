@@ -23,7 +23,7 @@ describe('resolveProjection', () => {
       } as ProjectionValuePending<Record<string, unknown>>),
     } as StateSource<ProjectionValuePending<Record<string, unknown>>>)
 
-    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    instance = createSanityInstance({sources: {default: {projectId: 'p', dataset: 'd'}}})
   })
 
   afterEach(() => {

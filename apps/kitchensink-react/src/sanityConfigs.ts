@@ -1,37 +1,34 @@
-import {type DocumentSource, type SanityConfig} from '@sanity/sdk'
+import {type SanityConfig} from '@sanity/sdk'
 
-export const devConfigs: SanityConfig[] = [
-  {
-    projectId: 'ppsg7ml5',
-    dataset: 'test',
-  },
-  {
-    projectId: 'vo1ysemo',
-    dataset: 'production',
-  },
-]
-
-export const devSources: Record<string, DocumentSource> = {
-  'media-library': {
-    mediaLibraryId: import.meta.env['VITE_IS_E2E']
-      ? import.meta.env['VITE_E2E_MEDIA_LIBRARY_ID']
-      : 'mlPGY7BEqt52',
+export const devConfig: SanityConfig = {
+  sources: {
+    'default': {projectId: 'ppsg7ml5', dataset: 'test'},
+    'secondary': {projectId: 'vo1ysemo', dataset: 'production'},
+    'media-library': {
+      mediaLibraryId: import.meta.env['VITE_IS_E2E']
+        ? import.meta.env['VITE_E2E_MEDIA_LIBRARY_ID']
+        : 'mlPGY7BEqt52',
+    },
   },
 }
 
-export const e2eConfigs: SanityConfig[] = [
-  {
-    projectId: import.meta.env['VITE_E2E_PROJECT_ID'],
-    dataset: import.meta.env['VITE_E2E_DATASET_0'],
-    auth: {
-      apiHost: 'https://api.sanity.work',
+export const e2eConfig: SanityConfig = {
+  sources: {
+    'default': {
+      projectId: import.meta.env['VITE_E2E_PROJECT_ID'],
+      dataset: import.meta.env['VITE_E2E_DATASET_0'],
+    },
+    'secondary': {
+      projectId: import.meta.env['VITE_E2E_PROJECT_ID'],
+      dataset: import.meta.env['VITE_E2E_DATASET_1'],
+    },
+    'media-library': {
+      mediaLibraryId: import.meta.env['VITE_IS_E2E']
+        ? import.meta.env['VITE_E2E_MEDIA_LIBRARY_ID']
+        : 'mlPGY7BEqt52',
     },
   },
-  {
-    projectId: import.meta.env['VITE_E2E_PROJECT_ID'],
-    dataset: import.meta.env['VITE_E2E_DATASET_1'],
-    auth: {
-      apiHost: 'https://api.sanity.work',
-    },
+  auth: {
+    apiHost: 'https://api.sanity.work',
   },
-]
+}

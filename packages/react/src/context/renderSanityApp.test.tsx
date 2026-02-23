@@ -45,7 +45,7 @@ describe('renderSanityApp', () => {
 
   it('throws error when rootElement is null', () => {
     const namedSources = {
-      main: {projectId: 'test-project', dataset: 'production'},
+      main: {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
     }
 
     expect(() => renderSanityApp(null, namedSources, {}, <div>Test</div>)).toThrowError(
@@ -55,7 +55,7 @@ describe('renderSanityApp', () => {
 
   it('creates root with the provided element', () => {
     const namedSources = {
-      main: {projectId: 'test-project', dataset: 'production'},
+      main: {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
     }
 
     renderSanityApp(rootElement, namedSources, {}, <div>Test</div>)
@@ -66,8 +66,8 @@ describe('renderSanityApp', () => {
 
   it('converts namedSources object to array of configs', () => {
     const namedSources = {
-      main: {projectId: 'project-1', dataset: 'production'},
-      secondary: {projectId: 'project-2', dataset: 'staging'},
+      main: {sources: {default: {projectId: 'project-1', dataset: 'production'}}},
+      secondary: {sources: {default: {projectId: 'project-2', dataset: 'staging'}}},
     }
 
     renderSanityApp(rootElement, namedSources, {}, <div>Test</div>)
@@ -79,14 +79,14 @@ describe('renderSanityApp', () => {
     // The renderCall is the SanityApp component directly when not using StrictMode
     expect(renderCall.type).toBe(SanityApp)
     expect(renderCall.props.config).toEqual([
-      {projectId: 'project-1', dataset: 'production'},
-      {projectId: 'project-2', dataset: 'staging'},
+      {sources: {default: {projectId: 'project-1', dataset: 'production'}}},
+      {sources: {default: {projectId: 'project-2', dataset: 'staging'}}},
     ])
   })
 
   it('renders without StrictMode when reactStrictMode is false', () => {
     const namedSources = {
-      main: {projectId: 'test-project', dataset: 'production'},
+      main: {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
     }
     const children = <div>Test Children</div>
 
@@ -102,7 +102,7 @@ describe('renderSanityApp', () => {
 
   it('renders without StrictMode by default', () => {
     const namedSources = {
-      main: {projectId: 'test-project', dataset: 'production'},
+      main: {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
     }
     const children = <div>Test Children</div>
 
@@ -118,7 +118,7 @@ describe('renderSanityApp', () => {
 
   it('renders with StrictMode when reactStrictMode is true', () => {
     const namedSources = {
-      main: {projectId: 'test-project', dataset: 'production'},
+      main: {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
     }
     const children = <div>Test Children</div>
 
@@ -137,7 +137,7 @@ describe('renderSanityApp', () => {
 
   it('passes loading fallback to SanityApp', () => {
     const namedSources = {
-      main: {projectId: 'test-project', dataset: 'production'},
+      main: {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
     }
 
     renderSanityApp(rootElement, namedSources, {}, <div>Test</div>)
@@ -152,7 +152,7 @@ describe('renderSanityApp', () => {
 
   it('returns an unmount function', () => {
     const namedSources = {
-      main: {projectId: 'test-project', dataset: 'production'},
+      main: {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
     }
 
     const unmount = renderSanityApp(rootElement, namedSources, {}, <div>Test</div>)
@@ -162,7 +162,7 @@ describe('renderSanityApp', () => {
 
   it('calls root.unmount when unmount function is invoked', () => {
     const namedSources = {
-      main: {projectId: 'test-project', dataset: 'production'},
+      main: {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
     }
 
     const unmount = renderSanityApp(rootElement, namedSources, {}, <div>Test</div>)
@@ -187,7 +187,7 @@ describe('renderSanityApp', () => {
 
   it('handles single namedSource', () => {
     const namedSources = {
-      main: {projectId: 'test-project', dataset: 'production'},
+      main: {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
     }
 
     renderSanityApp(rootElement, namedSources, {}, <div>Test</div>)
@@ -198,15 +198,15 @@ describe('renderSanityApp', () => {
 
     expect(sanityAppElement.type).toBe(SanityApp)
     expect(sanityAppElement.props.config).toEqual([
-      {projectId: 'test-project', dataset: 'production'},
+      {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
     ])
   })
 
   it('handles multiple namedSources', () => {
     const namedSources = {
-      main: {projectId: 'project-1', dataset: 'production'},
-      blog: {projectId: 'project-2', dataset: 'staging'},
-      ecommerce: {projectId: 'project-3', dataset: 'development'},
+      main: {sources: {default: {projectId: 'project-1', dataset: 'production'}}},
+      blog: {sources: {default: {projectId: 'project-2', dataset: 'staging'}}},
+      ecommerce: {sources: {default: {projectId: 'project-3', dataset: 'development'}}},
     }
 
     renderSanityApp(rootElement, namedSources, {}, <div>Test</div>)
@@ -218,17 +218,17 @@ describe('renderSanityApp', () => {
     expect(sanityAppElement.type).toBe(SanityApp)
     expect(sanityAppElement.props.config).toHaveLength(3)
     expect(sanityAppElement.props.config).toEqual([
-      {projectId: 'project-1', dataset: 'production'},
-      {projectId: 'project-2', dataset: 'staging'},
-      {projectId: 'project-3', dataset: 'development'},
+      {sources: {default: {projectId: 'project-1', dataset: 'production'}}},
+      {sources: {default: {projectId: 'project-2', dataset: 'staging'}}},
+      {sources: {default: {projectId: 'project-3', dataset: 'development'}}},
     ])
   })
 
   it('preserves order of namedSources in config array', () => {
     const namedSources = {
-      z: {projectId: 'project-z', dataset: 'z-dataset'},
-      a: {projectId: 'project-a', dataset: 'a-dataset'},
-      m: {projectId: 'project-m', dataset: 'm-dataset'},
+      z: {sources: {default: {projectId: 'project-z', dataset: 'z-dataset'}}},
+      a: {sources: {default: {projectId: 'project-a', dataset: 'a-dataset'}}},
+      m: {sources: {default: {projectId: 'project-m', dataset: 'm-dataset'}}},
     }
 
     renderSanityApp(rootElement, namedSources, {}, <div>Test</div>)
@@ -238,15 +238,15 @@ describe('renderSanityApp', () => {
 
     // Object.values preserves insertion order in modern JS
     expect(sanityAppElement.props.config).toEqual([
-      {projectId: 'project-z', dataset: 'z-dataset'},
-      {projectId: 'project-a', dataset: 'a-dataset'},
-      {projectId: 'project-m', dataset: 'm-dataset'},
+      {sources: {default: {projectId: 'project-z', dataset: 'z-dataset'}}},
+      {sources: {default: {projectId: 'project-a', dataset: 'a-dataset'}}},
+      {sources: {default: {projectId: 'project-m', dataset: 'm-dataset'}}},
     ])
   })
 
   it('passes children to SanityApp', () => {
     const namedSources = {
-      main: {projectId: 'test-project', dataset: 'production'},
+      main: {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
     }
     const children = (
       <div>
@@ -265,7 +265,7 @@ describe('renderSanityApp', () => {
 
   it('works with different types of children', () => {
     const namedSources = {
-      main: {projectId: 'test-project', dataset: 'production'},
+      main: {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
     }
 
     // Test with string children
@@ -299,13 +299,10 @@ describe('renderSanityApp', () => {
   it('integrates with StrictMode and passes all props correctly', () => {
     const namedSources = {
       main: {
-        projectId: 'test-project',
-        dataset: 'production',
-        apiVersion: '2023-01-01',
+        sources: {default: {projectId: 'test-project', dataset: 'production'}},
       } as SanityConfig,
       secondary: {
-        projectId: 'test-project-2',
-        dataset: 'staging',
+        sources: {default: {projectId: 'test-project-2', dataset: 'staging'}},
       } as SanityConfig,
     }
     const children = <div>App Content</div>
@@ -324,8 +321,8 @@ describe('renderSanityApp', () => {
 
     // Verify all props are passed correctly
     expect(strictModeChild.props.config).toEqual([
-      {projectId: 'test-project', dataset: 'production', apiVersion: '2023-01-01'},
-      {projectId: 'test-project-2', dataset: 'staging'},
+      {sources: {default: {projectId: 'test-project', dataset: 'production'}}},
+      {sources: {default: {projectId: 'test-project-2', dataset: 'staging'}}},
     ])
     expect(strictModeChild.props.fallback).toEqual(<div>Loading...</div>)
     expect(strictModeChild.props.children).toEqual(children)
@@ -335,8 +332,10 @@ describe('renderSanityApp', () => {
     const rootElement2 = document.createElement('div')
     document.body.appendChild(rootElement2)
 
-    const namedSources1 = {main: {projectId: 'project-1', dataset: 'production'}}
-    const namedSources2 = {main: {projectId: 'project-2', dataset: 'staging'}}
+    const namedSources1 = {
+      main: {sources: {default: {projectId: 'project-1', dataset: 'production'}}},
+    }
+    const namedSources2 = {main: {sources: {default: {projectId: 'project-2', dataset: 'staging'}}}}
 
     const unmount1 = renderSanityApp(rootElement, namedSources1, {}, <div>App 1</div>)
     const unmount2 = renderSanityApp(rootElement2, namedSources2, {}, <div>App 2</div>)

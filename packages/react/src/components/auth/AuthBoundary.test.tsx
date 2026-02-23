@@ -166,7 +166,7 @@ describe('AuthBoundary', () => {
       isExchangingToken: false,
     })
     const {container} = render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider sources={{default: {projectId: 'p', dataset: 'd'}}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
@@ -183,7 +183,7 @@ describe('AuthBoundary', () => {
       token: 'exampleToken',
     })
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider sources={{default: {projectId: 'p', dataset: 'd'}}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
@@ -197,7 +197,7 @@ describe('AuthBoundary', () => {
       error: new Error('test error'),
     })
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider sources={{default: {projectId: 'p', dataset: 'd'}}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
@@ -214,7 +214,7 @@ describe('AuthBoundary', () => {
 
   it('renders children when logged in and org verification passes', () => {
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider sources={{default: {projectId: 'p', dataset: 'd'}}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
@@ -236,7 +236,7 @@ describe('AuthBoundary', () => {
 
     // Need to catch the error thrown during render. ErrorBoundary mock handles this.
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider sources={{default: {projectId: 'p', dataset: 'd'}}} fallback={null}>
         <AuthBoundary verifyOrganization={true} projectIds={testProjectIds}>
           <div>Protected Content</div>
         </AuthBoundary>
@@ -268,7 +268,7 @@ describe('AuthBoundary', () => {
     })
 
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider sources={{default: {projectId: 'p', dataset: 'd'}}} fallback={null}>
         <AuthBoundary verifyOrganization={false} projectIds={testProjectIds}>
           <div>Protected Content</div>
         </AuthBoundary>
@@ -293,7 +293,7 @@ describe('AuthBoundary', () => {
     mockUseVerifyOrgProjects.mockImplementation(() => null)
 
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider sources={{default: {projectId: 'p', dataset: 'd'}}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>
           <div>Protected Content</div>
         </AuthBoundary>

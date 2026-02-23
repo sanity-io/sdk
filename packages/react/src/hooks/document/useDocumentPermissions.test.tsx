@@ -88,8 +88,7 @@ describe('usePermissions', () => {
     const {result} = renderHook(() => useDocumentPermissions(mockAction), {
       wrapper: ({children}) => (
         <ResourceProvider
-          projectId={mockAction.projectId}
-          dataset={mockAction.dataset}
+          sources={{default: {projectId: mockAction.projectId!, dataset: mockAction.dataset!}}}
           fallback={null}
         >
           {children}
@@ -111,8 +110,7 @@ describe('usePermissions', () => {
     const {result} = renderHook(() => useDocumentPermissions(mockAction), {
       wrapper: ({children}) => (
         <ResourceProvider
-          projectId={mockAction.projectId}
-          dataset={mockAction.dataset}
+          sources={{default: {projectId: mockAction.projectId!, dataset: mockAction.dataset!}}}
           fallback={null}
         >
           {children}
@@ -132,8 +130,7 @@ describe('usePermissions', () => {
     renderHook(() => useDocumentPermissions(actions), {
       wrapper: ({children}) => (
         <ResourceProvider
-          projectId={mockAction.projectId}
-          dataset={mockAction.dataset}
+          sources={{default: {projectId: mockAction.projectId!, dataset: mockAction.dataset!}}}
           fallback={null}
         >
           {children}
@@ -154,8 +151,7 @@ describe('usePermissions', () => {
       renderHook(() => useDocumentPermissions(actions), {
         wrapper: ({children}) => (
           <ResourceProvider
-            projectId={mockAction.projectId}
-            dataset={mockAction.dataset}
+            sources={{default: {projectId: mockAction.projectId!, dataset: mockAction.dataset!}}}
             fallback={null}
           >
             {children}
@@ -172,8 +168,7 @@ describe('usePermissions', () => {
       renderHook(() => useDocumentPermissions(actions), {
         wrapper: ({children}) => (
           <ResourceProvider
-            projectId={mockAction.projectId}
-            dataset={mockAction.dataset}
+            sources={{default: {projectId: mockAction.projectId!, dataset: mockAction.dataset!}}}
             fallback={null}
           >
             {children}
@@ -203,8 +198,7 @@ describe('usePermissions', () => {
       renderHook(() => useDocumentPermissions(actions), {
         wrapper: ({children}) => (
           <ResourceProvider
-            projectId={mockAction.projectId}
-            dataset={mockAction.dataset}
+            sources={{default: {projectId: mockAction.projectId!, dataset: mockAction.dataset!}}}
             fallback={null}
           >
             {children}
@@ -229,8 +223,7 @@ describe('usePermissions', () => {
       renderHook(() => useDocumentPermissions(actions), {
         wrapper: ({children}) => (
           <ResourceProvider
-            projectId={mockAction.projectId}
-            dataset={mockAction.dataset}
+            sources={{default: {projectId: mockAction.projectId!, dataset: mockAction.dataset!}}}
             fallback={null}
           >
             {children}
@@ -255,8 +248,7 @@ describe('usePermissions', () => {
       renderHook(() => useDocumentPermissions(actions), {
         wrapper: ({children}) => (
           <ResourceProvider
-            projectId={mockAction.projectId}
-            dataset={mockAction.dataset}
+            sources={{default: {projectId: mockAction.projectId!, dataset: mockAction.dataset!}}}
             fallback={null}
           >
             {children}
@@ -291,8 +283,7 @@ describe('usePermissions', () => {
       {
         wrapper: ({children}) => (
           <ResourceProvider
-            projectId={mockAction.projectId}
-            dataset={mockAction.dataset}
+            sources={{default: {projectId: mockAction.projectId!, dataset: mockAction.dataset!}}}
             fallback={null}
           >
             {children}
@@ -323,8 +314,7 @@ describe('usePermissions', () => {
     const {result, rerender} = renderHook(() => useDocumentPermissions(mockAction), {
       wrapper: ({children}) => (
         <ResourceProvider
-          projectId={mockAction.projectId}
-          dataset={mockAction.dataset}
+          sources={{default: {projectId: mockAction.projectId!, dataset: mockAction.dataset!}}}
           fallback={null}
         >
           {children}

@@ -206,22 +206,6 @@ export const useApplyDocumentActions: UseApplyDocumentActions = () => {
       }
     }
 
-    if (projectId || dataset) {
-      const actualInstance = instance.match({projectId, dataset})
-      if (!actualInstance) {
-        throw new Error(
-          `Could not find a matching Sanity instance for the requested action: ${JSON.stringify({projectId, dataset}, null, 2)}.
-  Please ensure there is a ResourceProvider component with a matching configuration in the component hierarchy.`,
-        )
-      }
-
-      return applyDocumentActions(actualInstance, {
-        actions,
-        source,
-        ...normalizedOptions,
-      })
-    }
-
     return applyDocumentActions(instance, {
       actions,
       source,

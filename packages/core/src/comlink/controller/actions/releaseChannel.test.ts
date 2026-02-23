@@ -29,7 +29,9 @@ describe('releaseChannel', () => {
   let releaseChannel: (inst: SanityInstance, channelName: string) => void
 
   beforeEach(() => {
-    instance = createSanityInstance({projectId: 'test-project-id', dataset: 'test-dataset'})
+    instance = createSanityInstance({
+      sources: {default: {projectId: 'test-project-id', dataset: 'test-dataset'}},
+    })
     store = createStoreInstance(instance, key, comlinkControllerStore)
 
     const bind =

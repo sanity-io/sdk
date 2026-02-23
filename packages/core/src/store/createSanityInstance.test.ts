@@ -5,14 +5,18 @@ import {createSanityInstance} from './createSanityInstance'
 
 describe('createSanityInstance', () => {
   it('should create an instance with a unique instanceId and given config', () => {
-    const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
+    const instance = createSanityInstance({
+      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
+    })
     expect(typeof instance.instanceId).toBe('string')
-    expect(instance.config).toEqual({projectId: 'proj1', dataset: 'ds1'})
+    expect(instance.config).toEqual({sources: {default: {projectId: 'proj1', dataset: 'ds1'}}})
     expect(instance.isDisposed()).toBe(false)
   })
 
   it('should dispose an instance and call onDispose callbacks', () => {
-    const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
+    const instance = createSanityInstance({
+      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
+    })
     const callback = vi.fn()
     instance.onDispose(callback)
     instance.dispose()
@@ -21,7 +25,9 @@ describe('createSanityInstance', () => {
   })
 
   it('should not call onDispose callbacks more than once when disposed multiple times', () => {
-    const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
+    const instance = createSanityInstance({
+      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
+    })
     const callback = vi.fn()
     instance.onDispose(callback)
     instance.dispose()
@@ -30,53 +36,52 @@ describe('createSanityInstance', () => {
   })
 
   it('should create a child instance with merged config and correct parent', () => {
-    const parent = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
-    const child = parent.createChild({dataset: 'ds2'})
-    expect(child.config).toEqual({projectId: 'proj1', dataset: 'ds2'})
+    const parent = createSanityInstance({sources: {default: {projectId: 'proj1', dataset: 'ds1'}}})
+    const child = parent.createChild({sources: {default: {projectId: 'proj1', dataset: 'ds2'}}})
+    expect(child.config).toEqual({sources: {default: {projectId: 'proj1', dataset: 'ds2'}}})
     expect(child.getParent()).toBe(parent)
   })
 
   it('should match an instance in the hierarchy using match', () => {
     // three-level hierarchy
-    const grandparent = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
-    const parent = grandparent.createChild({projectId: 'proj2'})
-    const child = parent.createChild({dataset: 'ds2'})
+    const grandparent = createSanityInstance({
+      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
+    })
+    const parent = grandparent.createChild({
+      sources: {default: {projectId: 'proj2', dataset: 'ds1'}},
+    })
+    const child = parent.createChild({sources: {default: {projectId: 'proj2', dataset: 'ds2'}}})
 
-    expect(child.config).toEqual({projectId: 'proj2', dataset: 'ds2'})
-    expect(parent.config).toEqual({projectId: 'proj2', dataset: 'ds1'})
+    expect(child.config).toEqual({sources: {default: {projectId: 'proj2', dataset: 'ds2'}}})
+    expect(parent.config).toEqual({sources: {default: {projectId: 'proj2', dataset: 'ds1'}}})
 
-    expect(child.match({dataset: 'ds2'})).toBe(child)
-    expect(child.match({projectId: 'proj2'})).toBe(child)
-    expect(child.match({projectId: 'proj1'})).toBe(grandparent)
-    expect(parent.match({projectId: 'proj1'})).toBe(grandparent)
-    expect(grandparent.match({projectId: 'proj1'})).toBe(grandparent)
+    // match() compares auth - with no auth config, empty target matches current instance
+    expect(child.match({})).toBe(child)
   })
 
-  it('should match `undefined` when the desired resource ID should not be set on an instance', () => {
-    const noProjectOrDataset = createSanityInstance()
-    const noDataset = noProjectOrDataset.createChild({projectId: 'proj1'})
-    const leaf = noDataset.createChild({dataset: 'ds1'})
+  it('should support createChild with incremental source config', () => {
+    const empty = createSanityInstance()
+    const withSource = empty.createChild({
+      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
+    })
 
-    // no keys means anything (in this case, self) will match
-    expect(leaf.match({})).toBe(leaf)
+    expect(empty.config).toEqual({})
+    expect(withSource.config).toEqual({sources: {default: {projectId: 'proj1', dataset: 'ds1'}}})
 
-    // `[resourceId]: undefined` means match an instance with no dataset set
-    expect(leaf.match({dataset: undefined})).toBe(noDataset)
-    expect(noDataset.match({dataset: undefined})).toBe(noDataset)
-    expect(leaf.match({projectId: undefined})).toBe(noProjectOrDataset)
-    expect(noDataset.match({projectId: undefined})).toBe(noProjectOrDataset)
-    expect(noProjectOrDataset.match({projectId: undefined})).toBe(noProjectOrDataset)
+    expect(withSource.match({})).toBe(withSource)
   })
 
   it('should return undefined when no match is found', () => {
-    const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
-    expect(instance.match({dataset: 'non-existent'})).toBeUndefined()
+    const instance = createSanityInstance({
+      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
+    })
+    // match() only compares auth - no instance has auth: {apiHost: 'nonexistent'}
+    expect(instance.match({auth: {apiHost: 'nonexistent'}})).toBeUndefined()
   })
 
   it('should inherit and merge auth config', () => {
     const parent = createSanityInstance({
-      projectId: 'proj1',
-      dataset: 'ds1',
+      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
       auth: {apiHost: 'api.sanity.work'},
     })
     const child = parent.createChild({auth: {token: 'my-token'}})
@@ -106,31 +111,33 @@ describe('createSanityInstance', () => {
     })
 
     it('should log instance creation at info level', () => {
-      createSanityInstance({projectId: 'test-proj', dataset: 'test-ds'})
+      createSanityInstance({sources: {default: {projectId: 'test-proj', dataset: 'test-ds'}}})
 
       expect(mockHandler.info).toHaveBeenCalledWith(
         expect.stringContaining('[INFO] [sdk]'),
         expect.objectContaining({
           hasProjectId: true,
-          hasDataset: true,
+          hasSources: true,
         }),
       )
     })
 
     it('should log configuration details at debug level', () => {
-      createSanityInstance({projectId: 'test-proj', dataset: 'test-ds'})
+      createSanityInstance({sources: {default: {projectId: 'test-proj', dataset: 'test-ds'}}})
 
       expect(mockHandler.debug).toHaveBeenCalledWith(
         expect.stringContaining('[DEBUG] [sdk]'),
         expect.objectContaining({
           projectId: 'test-proj',
-          dataset: 'test-ds',
+          sourceNames: ['default'],
         }),
       )
     })
 
     it('should log instance disposal', () => {
-      const instance = createSanityInstance({projectId: 'test-proj'})
+      const instance = createSanityInstance({
+        sources: {default: {projectId: 'test-proj', dataset: 'ds'}},
+      })
       vi.clearAllMocks() // Clear creation logs
 
       instance.dispose()
@@ -142,25 +149,27 @@ describe('createSanityInstance', () => {
     })
 
     it('should log child instance creation at debug level', () => {
-      const parent = createSanityInstance({projectId: 'parent-proj'})
+      const parent = createSanityInstance({
+        sources: {default: {projectId: 'parent-proj', dataset: 'ds'}},
+      })
       vi.clearAllMocks() // Clear parent creation logs
 
-      parent.createChild({dataset: 'child-ds'})
+      parent.createChild({sources: {default: {projectId: 'parent-proj', dataset: 'child-ds'}}})
 
       expect(mockHandler.debug).toHaveBeenCalledWith(
         expect.stringContaining('Creating child instance'),
         expect.objectContaining({
-          overridingDataset: true,
+          overridingSources: true,
         }),
       )
     })
 
     it('should include instance context in logs', () => {
-      createSanityInstance({projectId: 'my-project', dataset: 'my-dataset'})
+      createSanityInstance({sources: {default: {projectId: 'my-project', dataset: 'my-dataset'}}})
 
-      // Check that logs include the instance context (project and dataset)
+      // Check that logs include the instance context (projectId from default source)
       expect(mockHandler.info).toHaveBeenCalledWith(
-        expect.stringMatching(/\[project:my-project\].*\[dataset:my-dataset\]/),
+        expect.stringMatching(/\[project:my-project\]/),
         expect.anything(),
       )
     })

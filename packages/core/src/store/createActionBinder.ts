@@ -7,6 +7,7 @@ import {
   isDatasetSource,
   isMediaLibrarySource,
   type ReleasePerspective,
+  resolveDefaultSource,
 } from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type SanityInstance} from './createSanityInstance'
@@ -158,37 +159,46 @@ export const bindActionByDataset = createActionBinder<
   BoundDatasetKey,
   [(object & {projectId?: string; dataset?: string})?, ...unknown[]]
 >((instance, options) => {
-  const projectId = options?.projectId ?? instance.config.projectId
-  const dataset = options?.dataset ?? instance.config.dataset
+  let projectId = options?.projectId
+  let dataset = options?.dataset
+
   if (!projectId || !dataset) {
-    throw new Error('This API requires a project ID and dataset configured.')
+    const defaultSource = resolveDefaultSource(instance.config)
+    if (defaultSource && isDatasetSource(defaultSource)) {
+      projectId = projectId ?? defaultSource.projectId
+      dataset = dataset ?? defaultSource.dataset
+    }
+  }
+
+  if (!projectId || !dataset) {
+    throw new Error(
+      'This API requires a project ID and dataset. ' +
+        'Register a "default" dataset source in config.sources, or pass projectId/dataset explicitly.',
+    )
   }
   return {name: `${projectId}.${dataset}`, projectId, dataset}
 })
 
+const sourceKeyName = (source: DocumentSource): string => {
+  if (isDatasetSource(source)) return `${source.projectId}.${source.dataset}`
+  if (isMediaLibrarySource(source)) return `media-library:${source.mediaLibraryId}`
+  if (isCanvasSource(source)) return `canvas:${source.canvasId}`
+  throw new Error(`Received invalid source: ${JSON.stringify(source)}`)
+}
+
 const createSourceKey = (instance: SanityInstance, source?: DocumentSource): BoundSourceKey => {
-  let name: string | undefined
-  let sourceForKey: DocumentSource | undefined
   if (source) {
-    sourceForKey = source
-    if (isDatasetSource(source)) {
-      name = `${source.projectId}.${source.dataset}`
-    } else if (isMediaLibrarySource(source)) {
-      name = `media-library:${source.mediaLibraryId}`
-    } else if (isCanvasSource(source)) {
-      name = `canvas:${source.canvasId}`
-    } else {
-      throw new Error(`Received invalid source: ${JSON.stringify(source)}`)
-    }
-    return {name, source: sourceForKey}
+    return {name: sourceKeyName(source), source}
   }
 
-  // TODO: remove reference to instance.config when we get to v3
-  const {projectId, dataset} = instance.config
-  if (!projectId || !dataset) {
-    throw new Error('This API requires a project ID and dataset configured.')
+  const defaultSource = resolveDefaultSource(instance.config)
+  if (!defaultSource) {
+    throw new Error(
+      'No source provided and no default source configured. ' +
+        'Register a "default" entry in config.sources, or pass an explicit source.',
+    )
   }
-  return {name: `${projectId}.${dataset}`, source: {projectId, dataset}}
+  return {name: sourceKeyName(defaultSource), source: defaultSource}
 }
 
 /**

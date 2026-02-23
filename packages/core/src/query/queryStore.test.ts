@@ -48,7 +48,7 @@ describe('queryStore', () => {
   }
 
   beforeEach(() => {
-    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    instance = createSanityInstance({sources: {default: {projectId: 'test', dataset: 'test'}}})
 
     fetch = vi
       .fn()
@@ -373,13 +373,11 @@ describe('queryStore', () => {
     }) as SanityClient['observable']['fetch'])
 
     const draftsInstance = createSanityInstance({
-      projectId: 'test',
-      dataset: 'test',
+      sources: {default: {projectId: 'test', dataset: 'test'}},
       perspective: 'drafts',
     })
     const publishedInstance = createSanityInstance({
-      projectId: 'test',
-      dataset: 'test',
+      sources: {default: {projectId: 'test', dataset: 'test'}},
       perspective: 'published',
     })
 
@@ -418,7 +416,7 @@ describe('queryStore', () => {
       >
     }) as SanityClient['observable']['fetch'])
 
-    const base = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const base = createSanityInstance({sources: {default: {projectId: 'test', dataset: 'test'}}})
 
     const sDrafts = getQueryState<{_id: string}[]>(base, {
       query: '*[_type == "movie"]',

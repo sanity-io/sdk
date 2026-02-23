@@ -15,7 +15,7 @@ describe('releasesStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    instance = createSanityInstance({sources: {default: {projectId: 'test', dataset: 'test'}}})
 
     vi.mocked(getQueryState).mockReturnValue({
       subscribe: () => () => {},

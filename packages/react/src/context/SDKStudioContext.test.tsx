@@ -46,8 +46,9 @@ describe('SDKStudioContext', () => {
     expect(mockSDKProvider).toHaveBeenCalled()
     const receivedConfig = mockSDKProvider.mock.calls[0][0].config as SanityConfig
     expect(receivedConfig).toMatchObject({
-      projectId: 'studio-project-id',
-      dataset: 'production',
+      sources: {
+        default: {projectId: 'studio-project-id', dataset: 'production'},
+      },
       studio: {
         auth: {token: mockWorkspace.auth.token},
       },
@@ -56,8 +57,9 @@ describe('SDKStudioContext', () => {
 
   it('explicit config takes precedence over SDKStudioContext', () => {
     const explicitConfig: SanityConfig = {
-      projectId: 'explicit-project',
-      dataset: 'staging',
+      sources: {
+        default: {projectId: 'explicit-project', dataset: 'staging'},
+      },
     }
 
     render(
@@ -71,17 +73,18 @@ describe('SDKStudioContext', () => {
     expect(mockSDKProvider).toHaveBeenCalled()
     const receivedConfig = mockSDKProvider.mock.calls[0][0].config as SanityConfig
     expect(receivedConfig).toMatchObject({
-      projectId: 'explicit-project',
-      dataset: 'staging',
+      sources: {
+        default: {projectId: 'explicit-project', dataset: 'staging'},
+      },
     })
-    // Should NOT have studio config from the context
     expect(receivedConfig.studio).toBeUndefined()
   })
 
   it('SanityApp works without SDKStudioContext (standalone mode)', () => {
     const standaloneConfig: SanityConfig = {
-      projectId: 'standalone-project',
-      dataset: 'production',
+      sources: {
+        default: {projectId: 'standalone-project', dataset: 'production'},
+      },
     }
 
     render(
@@ -93,8 +96,9 @@ describe('SDKStudioContext', () => {
     expect(mockSDKProvider).toHaveBeenCalled()
     const receivedConfig = mockSDKProvider.mock.calls[0][0].config as SanityConfig
     expect(receivedConfig).toMatchObject({
-      projectId: 'standalone-project',
-      dataset: 'production',
+      sources: {
+        default: {projectId: 'standalone-project', dataset: 'production'},
+      },
     })
   })
 
@@ -116,10 +120,10 @@ describe('SDKStudioContext', () => {
     expect(mockSDKProvider).toHaveBeenCalled()
     const receivedConfig = mockSDKProvider.mock.calls[0][0].config as SanityConfig
     expect(receivedConfig).toMatchObject({
-      projectId: 'older-studio',
-      dataset: 'production',
+      sources: {
+        default: {projectId: 'older-studio', dataset: 'production'},
+      },
     })
-    // studio config should be present but auth.token should be undefined
     expect(receivedConfig.studio).toBeDefined()
     expect(receivedConfig.studio?.auth).toBeUndefined()
   })

@@ -1,6 +1,6 @@
 import {createClient, type SanityClient} from '@sanity/client'
 import {Subject} from 'rxjs'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
@@ -34,8 +34,7 @@ beforeEach(() => {
     (clientConfig) => ({config: () => clientConfig}) as SanityClient,
   )
   instance = createSanityInstance({
-    projectId: 'test-project',
-    dataset: 'test-dataset',
+    sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
   })
 })
 

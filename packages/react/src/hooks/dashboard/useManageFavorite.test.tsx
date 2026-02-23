@@ -75,7 +75,10 @@ describe('useManageFavorite', () => {
   it('should initialize with default states', () => {
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -87,7 +90,7 @@ describe('useManageFavorite', () => {
   it('should handle favorite action and update state', async () => {
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test" dataset="test" fallback={null}>
+        <ResourceProvider sources={{default: {projectId: 'test', dataset: 'test'}}} fallback={null}>
           {children}
         </ResourceProvider>
       ),
@@ -122,7 +125,7 @@ describe('useManageFavorite', () => {
   it('should handle unfavorite action and update state', async () => {
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test" dataset="test" fallback={null}>
+        <ResourceProvider sources={{default: {projectId: 'test', dataset: 'test'}}} fallback={null}>
           {children}
         </ResourceProvider>
       ),
@@ -163,7 +166,10 @@ describe('useManageFavorite', () => {
 
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -189,7 +195,10 @@ describe('useManageFavorite', () => {
 
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -219,11 +228,7 @@ describe('useManageFavorite', () => {
 
     expect(() =>
       renderHook(() => useManageFavorite(mockDocumentHandleWithoutProjectId), {
-        wrapper: ({children}) => (
-          <ResourceProvider projectId={undefined} dataset={undefined} fallback={null}>
-            {children}
-          </ResourceProvider>
-        ),
+        wrapper: ({children}) => <ResourceProvider fallback={null}>{children}</ResourceProvider>,
       }),
     ).toThrow('projectId and dataset are required for studio resources')
   })
@@ -239,7 +244,10 @@ describe('useManageFavorite', () => {
     expect(() =>
       renderHook(() => useManageFavorite(mockMediaDocumentHandle), {
         wrapper: ({children}) => (
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+            fallback={null}
+          >
             {children}
           </ResourceProvider>
         ),
@@ -254,7 +262,10 @@ describe('useManageFavorite', () => {
     }
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandleWithSchema), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -295,7 +306,10 @@ describe('useManageFavorite', () => {
     }))
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -310,7 +324,10 @@ describe('useManageFavorite', () => {
     } as unknown as WindowConnection<Message>)
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -327,7 +344,10 @@ describe('useManageFavorite', () => {
     // @ts-expect-error -- no access to ManageFavorite props type
     const {result} = renderHook(() => useManageFavorite(handle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -344,7 +364,10 @@ describe('useManageFavorite', () => {
     // @ts-expect-error -- no access to ManageFavorite props type
     const {result} = renderHook(() => useManageFavorite(handle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -361,7 +384,10 @@ describe('useManageFavorite', () => {
     // @ts-expect-error -- no access to ManageFavorite props type
     const {result} = renderHook(() => useManageFavorite(handle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
