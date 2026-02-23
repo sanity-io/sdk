@@ -33,7 +33,7 @@ describe('useQuery', () => {
     } as StateSource<unknown>)
 
     function TestComponent() {
-      const {data, isPending} = useQuery({query: 'test query'})
+      const {data, isPending} = useQuery<string>({query: 'test query'})
       return (
         <div data-testid="output">
           {data} - {isPending ? 'pending' : 'not pending'}
@@ -82,7 +82,7 @@ describe('useQuery', () => {
     )
 
     function TestComponent() {
-      const {data} = useQuery({query: 'test query'})
+      const {data} = useQuery<string>({query: 'test query'})
       return <div data-testid="output">{data}</div>
     }
 

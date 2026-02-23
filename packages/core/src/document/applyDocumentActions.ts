@@ -1,5 +1,5 @@
 import {type SanityClient} from '@sanity/client'
-import {type SanityDocument} from 'groq'
+import {type SanityDocument} from '@sanity/types'
 import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
 
 import {type DocumentSource} from '../config/sanityConfig'
@@ -45,15 +45,6 @@ export interface ApplyDocumentActionsOptions {
   disableBatching?: boolean
 }
 
-/** @beta */
-export function applyDocumentActions<
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  instance: SanityInstance,
-  options: ApplyDocumentActionsOptions,
-): Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 /** @beta */
 export function applyDocumentActions(
   instance: SanityInstance,

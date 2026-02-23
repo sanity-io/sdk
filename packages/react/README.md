@@ -524,15 +524,16 @@ If you need to pass an explicit config, replace `studioMode` with `studio`:
 
 ---
 
-### TypeScript & TypeGen
-
-```bash
-# Generate types from your schema
-npx sanity typegen generate
-```
+### TypeScript
 
 ```tsx
-import type {Article} from './sanity.types'
+import {type SanityDocument} from '@sanity/sdk-react'
+
+interface Article extends SanityDocument {
+  _type: 'article'
+  title: string
+  body: string
+}
 
 const {data} = useDocument<Article>(handle)
 // data is typed as Article

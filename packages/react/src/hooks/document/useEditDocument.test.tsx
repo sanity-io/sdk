@@ -50,16 +50,6 @@ interface Book extends SanityDocument {
   title?: string
 }
 
-// Scope the TestDocument type to the project/datasets used in tests
-type AllTestSchemaTypes = Book
-
-// Augment the 'groq' module
-declare module 'groq' {
-  interface SanitySchemas {
-    'default:default': AllTestSchemaTypes
-  }
-}
-
 describe('useEditDocument hook', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -160,7 +150,7 @@ describe('useEditDocument hook', () => {
         </ResourceProvider>
       ),
     })
-    const promise = result.current((prevDoc) => ({...prevDoc, foo: 'baz'}))
+    const promise = result.current((prevDoc: Record<string, unknown>) => ({...prevDoc, foo: 'baz'}))
     expect(apply).toHaveBeenCalledWith([editDocument(docHandle, {set: {foo: 'baz'}})])
     const actionsResult = await promise
     expect(actionsResult).toEqual({transactionId: 'tx4'})
