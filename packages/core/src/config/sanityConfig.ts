@@ -134,16 +134,6 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
   studio?: StudioConfig
 
   /**
-   * Studio mode configuration for use of the SDK in a Sanity Studio.
-   * @remarks Controls whether studio mode features are enabled.
-   * @deprecated Use `studio` instead, which provides richer integration
-   * with the Studio's workspace (auth token sync, etc.).
-   */
-  studioMode?: {
-    enabled: boolean
-  }
-
-  /**
    * @beta
    * A list of named sources to use for this instance.
    */
