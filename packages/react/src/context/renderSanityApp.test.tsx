@@ -127,7 +127,7 @@ describe('renderSanityApp', () => {
     expect(mockRender).toHaveBeenCalledTimes(1)
     const renderCall = mockRender.mock.calls[0][0]
 
-    // Should have StrictMode wrapper (StrictMode is a Symbol in React 18)
+    // Should have StrictMode wrapper (StrictMode is a Symbol)
     expect(renderCall.type).toBeDefined()
     expect(renderCall.type.toString()).toContain('Symbol')
     const strictModeChild = renderCall.props.children
@@ -314,7 +314,7 @@ describe('renderSanityApp', () => {
 
     const renderCall = mockRender.mock.calls[0][0]
 
-    // Verify StrictMode wrapper (StrictMode is a Symbol in React 18)
+    // Verify StrictMode wrapper (StrictMode is a Symbol)
     expect(renderCall.type).toBeDefined()
     expect(renderCall.type.toString()).toContain('Symbol')
 
