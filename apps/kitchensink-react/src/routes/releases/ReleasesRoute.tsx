@@ -11,10 +11,12 @@ import {
   usePerspective,
   useResource,
 } from '@sanity/sdk-react'
-import {Box, Button, Card, Flex, Heading, Spinner, Stack, Text, TextInput} from '@sanity/ui'
+import {Box, Button, Card, Dialog, Flex, Heading, Spinner, Stack, Text, TextInput} from '@sanity/ui'
 import {type JSX, Suspense, useMemo, useState} from 'react'
 
+import {DocumentEditorPanel} from '../../components/DocumentEditorPanel'
 import {DocumentListLayout} from '../../components/DocumentListLayout/DocumentListLayout'
+import {JsonDocumentEditor} from '../../components/JsonDocumentEditor'
 import {DocumentPreview} from '../../DocumentCollection/DocumentPreview'
 import {ReleasesAutocomplete} from './ReleasesAutocomplete'
 import {isReleasePerspective} from './util'
@@ -301,6 +303,8 @@ export function ReleasesRoute(): JSX.Element {
     }),
   )
 
+  const [isEditorOpen, setIsEditorOpen] = useState(false)
+
   const handlePerspectiveSelect = (perspective: PerspectiveHandle) => {
     setSelectedPerspective(perspective)
   }
@@ -325,6 +329,38 @@ export function ReleasesRoute(): JSX.Element {
             onDocumentIdSubmit={handleDocumentIdSubmit}
           />
         </Suspense>
+
+        {selectedDocument && (
+          <Button
+            text="Edit Document"
+            tone="primary"
+            fontSize={1}
+            onClick={() => setIsEditorOpen(true)}
+          />
+        )}
+
+        {isEditorOpen && (
+          <Dialog
+            header={`Edit Document: ${selectedDocument.documentId}`}
+            id="releases-document-editor"
+            onClose={() => setIsEditorOpen(false)}
+            open={isEditorOpen}
+            width={2}
+          >
+            <Box padding={4}>
+              <Suspense fallback={<Spinner />}>
+                <Stack space={4}>
+                  <DocumentEditorPanel docHandle={selectedDocument} />
+                  <JsonDocumentEditor
+                    documentHandle={selectedDocument}
+                    minHeight="400px"
+                    maxHeight="60vh"
+                  />
+                </Stack>
+              </Suspense>
+            </Box>
+          </Dialog>
+        )}
       </Stack>
     </Box>
   )

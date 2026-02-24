@@ -5,7 +5,10 @@ import {filter, firstValueFrom} from 'rxjs'
 import {ResourceContext} from '../../context/DefaultResourceContext'
 import {ResourcesContext} from '../../context/ResourcesContext'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {normalizeResourceOptions} from '../helpers/useNormalizedResourceOptions'
+import {
+  normalizeResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 
 /**
  *
@@ -85,7 +88,9 @@ import {normalizeResourceOptions} from '../helpers/useNormalizedResourceOptions'
  * ```
  */
 export function useDocumentPermissions(
-  actionOrActions: DocumentAction | DocumentAction[],
+  actionOrActions:
+    | WithResourceNameSupport<DocumentAction>
+    | WithResourceNameSupport<DocumentAction>[],
 ): DocumentPermissionsResult {
   const instance = useSanityInstance()
   const contextResource = useContext(ResourceContext)
