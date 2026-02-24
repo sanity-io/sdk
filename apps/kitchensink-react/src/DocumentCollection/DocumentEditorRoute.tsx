@@ -1,55 +1,24 @@
 /* eslint-disable no-console */
 import {
-  createDocument,
-  deleteDocument,
-  discardDocument,
   type DocumentHandle,
-  editDocument,
-  publishDocument,
-  unpublishDocument,
-  useApplyDocumentActions,
   useDocument,
-  useDocumentEvent,
-  useDocumentPermissions,
   useDocuments,
   useDocumentSyncStatus,
-  useEditDocument,
-  useResource,
 } from '@sanity/sdk-react'
-import {
-  Badge,
-  Box,
-  Button,
-  Card,
-  Checkbox,
-  Flex,
-  Label,
-  Stack,
-  Text,
-  TextInput,
-  Tooltip,
-} from '@sanity/ui'
+import {Badge, Box, Button, Card, Checkbox, Flex, Label, Stack, Text, TextInput} from '@sanity/ui'
 import {type JSX, useEffect, useState} from 'react'
 
+import {DocumentEditorPanel} from '../components/DocumentEditorPanel'
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
 
+const AUTHOR_INITIAL_VALUES = {
+  name: 'New Author',
+  role: 'developer',
+  awards: ['Quick Creator Award'],
+}
+
 function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
-  useDocumentEvent({...docHandle, onEvent: (e) => console.log(e)})
-  // document actions (editDocument, createDocument, publishDocument, etc.) come from core and require resource to be passed in
-  const resource = useResource()!
-  const strictHandle = {...docHandle, resource}
   const synced = useDocumentSyncStatus(docHandle)
-  const apply = useApplyDocumentActions()
-
-  const canEdit = useDocumentPermissions(editDocument(strictHandle))
-  const canCreate = useDocumentPermissions(createDocument(strictHandle))
-  const canPublish = useDocumentPermissions(publishDocument(strictHandle))
-  const canDelete = useDocumentPermissions(deleteDocument(strictHandle))
-  const canUnpublish = useDocumentPermissions(unpublishDocument(strictHandle))
-  const canDiscard = useDocumentPermissions(discardDocument(strictHandle))
-
-  const {data: name = ''} = useDocument<string>({...docHandle, path: 'name'})
-  const setName = useEditDocument<string>({...docHandle, path: 'name'})
 
   const {data: document} = useDocument<Record<string, unknown>>(docHandle)
 
@@ -75,127 +44,7 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
           </Flex>
         </Card>
 
-        {/* Document Info Section */}
-        <Card padding={3} radius={2} shadow={1}>
-          <Stack space={3}>
-            <Text size={1} weight="semibold">
-              Document Information
-            </Text>
-            <Flex gap={3}>
-              <Box flex={1}>
-                <TextInput fontSize={1} label="Document ID" value={docHandle.documentId} readOnly />
-              </Box>
-              <Box flex={1}>
-                <TextInput
-                  fontSize={1}
-                  label="Name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.currentTarget.value)}
-                  data-testid="name-input"
-                />
-              </Box>
-            </Flex>
-          </Stack>
-        </Card>
-
-        {/* Actions Section */}
-        <Card padding={3} radius={2} shadow={1}>
-          <Stack space={3}>
-            <Text size={1} weight="semibold">
-              Document Actions
-            </Text>
-            <Flex gap={2} wrap="wrap">
-              <Tooltip content={canCreate.message}>
-                <Box>
-                  <Button
-                    disabled={!canCreate.allowed}
-                    onClick={() => apply(createDocument(strictHandle))}
-                    text="Create"
-                    tone="positive"
-                    fontSize={1}
-                  />
-                </Box>
-              </Tooltip>
-
-              <Tooltip content={canCreate.message}>
-                <Box>
-                  <Button
-                    disabled={!canCreate.allowed}
-                    onClick={() =>
-                      apply(
-                        createDocument(strictHandle, {
-                          name: 'New Author',
-                          role: 'developer',
-                          awards: ['Quick Creator Award'],
-                        }),
-                      )
-                    }
-                    text="Create with Initial Values"
-                    tone="positive"
-                    fontSize={1}
-                  />
-                </Box>
-              </Tooltip>
-
-              {!docHandle.liveEdit && (
-                <>
-                  <Tooltip content={canPublish.message}>
-                    <Box>
-                      <Button
-                        disabled={!canPublish.allowed}
-                        onClick={async () => {
-                          const response = await apply(publishDocument(strictHandle))
-                          await response.submitted()
-                        }}
-                        text="Publish"
-                        tone="positive"
-                        fontSize={1}
-                      />
-                    </Box>
-                  </Tooltip>
-                  <Tooltip content={canDiscard.message}>
-                    <Box>
-                      <Button
-                        disabled={!canDiscard.allowed}
-                        onClick={() => apply(discardDocument(strictHandle))}
-                        text="Discard Draft"
-                        fontSize={1}
-                      />
-                    </Box>
-                  </Tooltip>
-                  <Tooltip content={canUnpublish.message}>
-                    <Box>
-                      <Button
-                        disabled={!canUnpublish.allowed}
-                        onClick={() => apply(unpublishDocument(strictHandle))}
-                        text="Unpublish"
-                        fontSize={1}
-                      />
-                    </Box>
-                  </Tooltip>
-                </>
-              )}
-
-              <Tooltip content={canDelete.message}>
-                <Box>
-                  <Button
-                    disabled={!canDelete.allowed}
-                    onClick={() => apply(deleteDocument(strictHandle))}
-                    text="Delete"
-                    tone="critical"
-                    fontSize={1}
-                  />
-                </Box>
-              </Tooltip>
-            </Flex>
-            {canEdit.message && (
-              <Text size={1} muted>
-                Permissions: {canEdit.message}
-              </Text>
-            )}
-          </Stack>
-        </Card>
+        <DocumentEditorPanel docHandle={docHandle} createInitialValues={AUTHOR_INITIAL_VALUES} />
 
         {/* JSON Editor Section */}
         <Card padding={4} radius={2} shadow={1}>
