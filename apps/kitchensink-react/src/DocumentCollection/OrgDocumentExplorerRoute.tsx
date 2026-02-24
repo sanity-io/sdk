@@ -1,5 +1,7 @@
 import {
   DocumentHandle,
+  getDefaultDatasetSource,
+  getDefaultProjectId,
   ResourceProvider,
   useDatasets,
   useDocument,
@@ -333,8 +335,8 @@ function DocumentList({documentType}: DocumentListProps) {
     return (
       <Card padding={4} tone="caution">
         <Text>
-          No documents found of type &quot;{documentType}&quot; in dataset &quot;{config.dataset}
-          &quot;
+          No documents found of type &quot;{documentType}&quot; in dataset &quot;
+          {getDefaultDatasetSource(config)?.dataset}&quot;
         </Text>
       </Card>
     )
@@ -480,7 +482,8 @@ const allTypes = defineQuery(`array::unique(*[]._type)`)
 
 function DocumentTypes() {
   const {config} = useSanityInstance()
-  if (!config.dataset) throw new Error('Dataset required for this component')
+  const defaultSource = getDefaultDatasetSource(config)
+  if (!defaultSource?.dataset) throw new Error('Dataset required for this component')
 
   // Use GROQ with array::unique to get all document types in the dataset
   const {data: documentTypes} = useQuery({query: allTypes})
@@ -500,7 +503,7 @@ function DocumentTypes() {
   if (!documentTypes || documentTypes.length === 0) {
     return (
       <Card padding={4} tone="caution">
-        <Text>No document types found in dataset &quot;{config.dataset}&quot;</Text>
+        <Text>No document types found in dataset &quot;{defaultSource?.dataset}&quot;</Text>
       </Card>
     )
   }
@@ -508,11 +511,11 @@ function DocumentTypes() {
   return (
     <Stack space={4} padding={4}>
       <Box>
-        <Label htmlFor={`doctype-${config.dataset}`} size={2}>
+        <Label htmlFor={`doctype-${defaultSource?.dataset}`} size={2}>
           Document Type
         </Label>
         <Select
-          id={`doctype-${config.dataset}`}
+          id={`doctype-${defaultSource?.dataset}`}
           value={selectedType || ''}
           onChange={handleTypeChange}
           style={{width: '100%', marginTop: '8px'}}
@@ -528,7 +531,7 @@ function DocumentTypes() {
 
       {selectedType && (
         <ErrorBoundary
-          resetKeys={[config.dataset, selectedType]}
+          resetKeys={[defaultSource?.dataset, selectedType]}
           fallback={
             <Card padding={4} tone="critical">
               <Text>Error loading documents of type &quot;{selectedType}&quot;</Text>
@@ -544,6 +547,7 @@ function DocumentTypes() {
 
 function DatasetExplorer() {
   const {config} = useSanityInstance()
+  const defaultProjectId = getDefaultProjectId(config)
   const datasets = useDatasets()
   const [selectedDataset, setSelectedDataset] = useState<string | null>(null)
 
@@ -562,11 +566,11 @@ function DatasetExplorer() {
   return (
     <Stack space={4} padding={4}>
       <Box>
-        <Label htmlFor={`dataset-${config.projectId}`} size={2}>
+        <Label htmlFor={`dataset-${defaultProjectId}`} size={2}>
           Dataset
         </Label>
         <Select
-          id={`dataset-${config.projectId}`}
+          id={`dataset-${defaultProjectId}`}
           value={selectedDataset || ''}
           onChange={handleDatasetChange}
           style={{width: '100%', marginTop: '8px'}}
@@ -591,7 +595,7 @@ function DatasetExplorer() {
             }
           >
             <ResourceProvider
-              dataset={selectedDataset}
+              sources={{default: {projectId: defaultProjectId!, dataset: selectedDataset}}}
               fallback={
                 <Flex align="center" padding={4}>
                   <Spinner />
@@ -780,7 +784,7 @@ function ProjectsExplorer() {
             }
           >
             <ResourceProvider
-              projectId={selectedProject}
+              sources={{default: {projectId: selectedProject, dataset: ''}}}
               fallback={
                 <Flex align="center" padding={4}>
                   <Spinner />
@@ -830,8 +834,6 @@ export function OrgDocumentExplorerRoute(): JSX.Element {
                 }
               >
                 <ResourceProvider
-                  projectId={undefined}
-                  dataset={undefined}
                   fallback={
                     <Flex align="center" padding={4}>
                       <Spinner />

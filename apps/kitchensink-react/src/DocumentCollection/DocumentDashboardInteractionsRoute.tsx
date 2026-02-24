@@ -1,5 +1,6 @@
 import {
   DocumentHandle,
+  getDefaultDatasetSource,
   useDocuments,
   useManageFavorite,
   useNavigateToStudioDocument,
@@ -16,11 +17,11 @@ import {LoadMore} from './LoadMore'
 
 function useStudioResource<T extends DocumentHandle>(docHandle: T) {
   const {config} = useSanityInstance()
-  const {projectId, dataset} = config
+  const source = getDefaultDatasetSource(config)
 
   return {
     ...docHandle,
-    resourceId: `${projectId}.${dataset}`,
+    resourceId: `${source?.projectId}.${source?.dataset}`,
     resourceType: 'studio' as const,
   }
 }
