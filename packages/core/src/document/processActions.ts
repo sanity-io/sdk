@@ -1,4 +1,5 @@
 import {diffValue} from '@sanity/diff-patch'
+import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
 import {
   type Mutation,
   type PatchOperations,
@@ -8,11 +9,12 @@ import {
 import {evaluateSync, type ExprNode} from 'groq-js'
 import {isEqual} from 'lodash-es'
 
-import {getDraftId, getPublishedId} from '../utils/ids'
+import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type DocumentAction} from './actions'
 import {type Grant} from './permissions'
 import {type DocumentSet, getId, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
+import {shouldHaveSingleDocument} from './util'
 
 function checkGrant(grantExpr: ExprNode, document: SanityDocument): boolean {
   const value = evaluateSync(grantExpr, {params: {document}})
@@ -141,8 +143,7 @@ export function processActions({
       case 'document.create': {
         const documentId = getId(action.documentId)
 
-        if (action.liveEdit) {
-          // For liveEdit documents, create directly without draft/published logic
+        if (shouldHaveSingleDocument(action)) {
           if (working[documentId]) {
             throw new ActionError({
               documentId,
@@ -186,8 +187,8 @@ export function processActions({
         }
 
         // Standard draft/published logic
-        const draftId = getDraftId(documentId)
-        const publishedId = getPublishedId(documentId)
+        const draftId = getDraftId(DocumentId(documentId))
+        const publishedId = getPublishedId(DocumentId(documentId))
 
         if (working[draftId]) {
           throw new ActionError({
@@ -245,8 +246,15 @@ export function processActions({
       case 'document.delete': {
         const documentId = action.documentId
 
+        if (isReleasePerspective(action.perspective)) {
+          throw new ActionError({
+            documentId,
+            transactionId,
+            message: `Cannot delete a version document. You may want to use the "unpublish" or "discard" actions instead.`,
+          })
+        }
+
         if (action.liveEdit) {
-          // For liveEdit documents, delete directly
           if (!working[documentId]) {
             throw new ActionError({
               documentId,
@@ -277,8 +285,8 @@ export function processActions({
         }
 
         // Standard draft/published logic
-        const draftId = getDraftId(documentId)
-        const publishedId = getPublishedId(documentId)
+        const draftId = getDraftId(DocumentId(documentId))
+        const publishedId = getPublishedId(DocumentId(documentId))
 
         if (!working[publishedId]) {
           throw new ActionError({
@@ -324,15 +332,17 @@ export function processActions({
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Cannot discard changes for liveEdit document "${documentId}". LiveEdit documents do not support drafts.`,
+            message: `Cannot discard changes for this document. Draft/discard is not supported for liveEdit or version (release) documents.`,
           })
         }
 
-        // Standard draft/published logic
-        const draftId = getDraftId(documentId)
-        const mutations: Mutation[] = [{delete: {id: draftId}}]
+        // draft/published or version logic
+        const versionId = isReleasePerspective(action.perspective)
+          ? getVersionId(DocumentId(documentId), action.perspective.releaseName)
+          : getDraftId(DocumentId(documentId))
+        const mutations: Mutation[] = [{delete: {id: versionId}}]
 
-        if (!working[draftId]) {
+        if (!working[versionId]) {
           throw new ActionError({
             documentId,
             transactionId,
@@ -340,7 +350,7 @@ export function processActions({
           })
         }
 
-        if (!checkGrant(grants.update, working[draftId])) {
+        if (!checkGrant(grants.update, working[versionId])) {
           throw new PermissionActionError({
             documentId,
             transactionId,
@@ -354,7 +364,7 @@ export function processActions({
         outgoingMutations.push(...mutations)
         outgoingActions.push({
           actionType: 'sanity.action.document.version.discard',
-          versionId: draftId,
+          versionId,
         })
         continue
       }
@@ -362,8 +372,8 @@ export function processActions({
       case 'document.edit': {
         const documentId = getId(action.documentId)
 
-        if (action.liveEdit) {
-          // For liveEdit documents, edit directly without draft logic
+        if (shouldHaveSingleDocument(action)) {
+          // Single-document mode (liveEdit or release perspective): edit directly without draft logic
           const userPatches = action.patches?.map((patch) => ({patch: {id: documentId, ...patch}}))
 
           // skip this action if there are no associated patches
@@ -414,7 +424,7 @@ export function processActions({
               (patch): HttpAction => ({
                 actionType: 'sanity.action.document.edit',
                 // Server requires draftId to have drafts. prefix for validation, even for liveEdit
-                draftId: getDraftId(documentId),
+                draftId: getDraftId(DocumentId(documentId)),
                 publishedId: documentId,
                 patch: patch as PatchOperations,
               }),
@@ -425,8 +435,8 @@ export function processActions({
         }
 
         // Standard draft/published logic
-        const draftId = getDraftId(documentId)
-        const publishedId = getPublishedId(documentId)
+        const draftId = getDraftId(DocumentId(documentId))
+        const publishedId = getPublishedId(DocumentId(documentId))
         const userPatches = action.patches?.map((patch) => ({patch: {id: draftId, ...patch}}))
 
         // skip this action if there are no associated patches
@@ -516,17 +526,17 @@ export function processActions({
       case 'document.publish': {
         const documentId = getId(action.documentId)
 
-        if (action.liveEdit) {
+        if (shouldHaveSingleDocument(action)) {
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Cannot publish liveEdit document "${documentId}". LiveEdit documents do not support drafts or publishing.`,
+            message: `Cannot publish this document. Publishing is not supported for liveEdit or version (release) documents.`,
           })
         }
 
         // Standard draft/published logic
-        const draftId = getDraftId(documentId)
-        const publishedId = getPublishedId(documentId)
+        const draftId = getDraftId(DocumentId(documentId))
+        const publishedId = getPublishedId(DocumentId(documentId))
 
         const workingDraft = working[draftId]
         const baseDraft = base[draftId]
@@ -596,14 +606,15 @@ export function processActions({
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Cannot unpublish liveEdit document "${documentId}". LiveEdit documents do not support drafts or publishing.`,
+            message: `Cannot unpublish this document. Unpublishing is not supported for liveEdit or version (release) documents.`,
           })
         }
 
-        // Standard draft/published logic
-        const draftId = getDraftId(documentId)
-        const publishedId = getPublishedId(documentId)
+        // Standard draft/published or version logic
+        const draftId = getDraftId(DocumentId(documentId))
+        const publishedId = getPublishedId(DocumentId(documentId))
 
+        // TODO: verify -- this check may not work for version docs. Or we need to store the published version in the base set.
         if (!working[publishedId] && !base[publishedId]) {
           throw new ActionError({
             documentId,
@@ -640,7 +651,13 @@ export function processActions({
           transactionId,
           mutations: [
             {delete: {id: publishedId}},
-            {createIfNotExists: {...(base[publishedId] ?? sourceDoc), _id: draftId}},
+            // also check this -- may not work for version docs
+            {
+              createIfNotExists: {
+                ...(base[publishedId] ?? sourceDoc),
+                _id: draftId,
+              },
+            },
           ],
           timestamp,
         })

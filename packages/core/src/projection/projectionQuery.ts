@@ -1,7 +1,6 @@
-import {DocumentId} from '@sanity/id-utils'
+import {DocumentId, getPublishedId} from '@sanity/id-utils'
 
 import {type PerspectiveHandle} from '../config/sanityConfig'
-import {getPublishedId} from '../utils/ids'
 import {
   type DocumentProjections,
   type DocumentProjectionValues,
@@ -84,7 +83,7 @@ export function processProjectionQuery({
   } = {}
 
   for (const result of results) {
-    const originalId = getPublishedId(result._id)
+    const originalId = getPublishedId(DocumentId(result._id))
     const hash = result.__projectionHash
 
     if (!ids.has(originalId)) continue
