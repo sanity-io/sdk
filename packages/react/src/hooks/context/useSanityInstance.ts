@@ -4,25 +4,24 @@ import {useContext} from 'react'
 import {SanityInstanceContext} from '../../context/SanityInstanceContext'
 
 /**
- * Retrieves the current Sanity instance or finds a matching instance from the hierarchy
+ * Retrieves the current Sanity instance and optionally validates its config.
  *
  * @public
  *
  * @category Platform
- * @param config - Optional configuration to match against when finding an instance
- * @returns The current or matching Sanity instance
+ * @param config - Optional configuration to validate against the current instance
+ * @returns The current instance
  *
  * @remarks
- * This hook accesses the nearest Sanity instance from the React context. When provided with
- * a configuration object, it traverses up the instance hierarchy to find the closest instance
- * that matches the specified configuration using shallow comparison of properties.
+ * This hook accesses the nearest Sanity instance from React context.
+ * When provided with a configuration object, it validates that the current
+ * instance matches the requested config and throws otherwise.
  *
  * The hook must be used within a component wrapped by a `ResourceProvider` or `SanityApp`.
  *
  * Use this hook when you need to:
  * - Access the current SanityInstance from context
- * - Find a specific instance with matching project/dataset configuration
- * - Access a parent instance with specific configuration values
+ * - Validate that the current instance has expected configuration values
  *
  * @example Get the current instance
  * ```tsx
@@ -38,7 +37,7 @@ import {SanityInstanceContext} from '../../context/SanityInstanceContext'
  * ```
  *
  * @throws Error if no SanityInstance is found in context
- * @throws Error if no matching instance is found for the provided config
+ * @throws Error if the current instance does not match the provided config
  */
 export const useSanityInstance = (config?: SanityConfig): SanityInstance => {
   const instance = useContext(SanityInstanceContext)
@@ -51,11 +50,19 @@ export const useSanityInstance = (config?: SanityConfig): SanityInstance => {
 
   if (!config) return instance
 
-  const match = instance.match(config)
+  // Hooks may pass operation handles that include non-SanityConfig fields
+  // (e.g. source/projectId/dataset). Only match against real SanityConfig keys.
+  const sanitizedConfig: SanityConfig = {
+    ...(config.auth && {auth: config.auth}),
+    ...(config.perspective && {perspective: config.perspective}),
+    ...(config.sources && {sources: config.sources}),
+    ...(config.studio && {studio: config.studio}),
+  }
+
+  const match = instance.match(sanitizedConfig)
   if (!match) {
     throw new Error(
-      `Could not find a matching Sanity instance for the requested configuration: ${JSON.stringify(config, null, 2)}.
-Please ensure there is a ResourceProvider component with a matching configuration in the component hierarchy.`,
+      `Current Sanity instance does not match the requested configuration: ${JSON.stringify(config, null, 2)}.`,
     )
   }
 

@@ -1,12 +1,16 @@
-import {pick} from 'lodash-es'
+import {isEqual} from 'lodash-es'
 
-import {getDefaultDatasetSource, type SanityConfig} from '../config/sanityConfig'
+import {
+  DEFAULT_SOURCE_NAME,
+  getDefaultDatasetSource,
+  type SanityConfig,
+} from '../config/sanityConfig'
 import {insecureRandomId} from '../utils/ids'
 import {createLogger, type InstanceContext} from '../utils/logger'
 
 /**
- * Represents a Sanity.io resource instance with its own configuration and lifecycle
- * @remarks Instances form a hierarchy through parent/child relationships
+ * Represents a Sanity.io resource instance with its own configuration and lifecycle.
+ * @remarks Instances can form a hierarchy through parent/child relationships.
  *
  * @public
  */
@@ -56,10 +60,11 @@ export interface SanityInstance {
   createChild(config: SanityConfig): SanityInstance
 
   /**
-   * Traverses the instance hierarchy to find the first instance whose configuration
-   * matches the given target config using a shallow comparison.
+   * Checks whether this instance's configuration matches the given target config.
+   * Matching is scoped to the current instance only.
+   *
    * @param targetConfig - A partial configuration object containing key-value pairs to match.
-   * @returns The first matching instance or undefined if no match is found.
+   * @returns This instance when all provided config fields match, otherwise `undefined`.
    */
   match(targetConfig: Partial<SanityConfig>): SanityInstance | undefined
 }
@@ -68,7 +73,7 @@ export interface SanityInstance {
  * Creates a new Sanity resource instance
  * @param config - Configuration for the instance (optional)
  * @returns A configured SanityInstance
- * @remarks When creating child instances, configurations are merged with parent values
+ * @remarks When creating child instances, configurations are merged with parent values.
  *
  * @public
  */
@@ -154,17 +159,18 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
       return child
     },
     match: (targetConfig) => {
-      if (
-        Object.entries(pick(targetConfig, 'auth')).every(
-          ([key, value]) => config[key as keyof SanityConfig] === value,
-        )
-      ) {
-        return instance
-      }
+      const keys = Object.keys(targetConfig) as (keyof SanityConfig)[]
+      if (keys.length === 0) return instance
+      const hasSourcesConstraint = 'sources' in targetConfig && !!targetConfig.sources
+      const defaultSourceConstrained = !!targetConfig.sources?.[DEFAULT_SOURCE_NAME]
+      const shouldCompareAuth = !hasSourcesConstraint || defaultSourceConstrained
 
-      const parent = instance.getParent()
-      if (parent) return parent.match(targetConfig)
-      return undefined
+      return keys.every((key) => {
+        if (key === 'auth' && !shouldCompareAuth) return true
+        return isEqual(config[key], targetConfig[key])
+      })
+        ? instance
+        : undefined
     },
   }
 
