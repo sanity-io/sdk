@@ -167,6 +167,11 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
 
       return keys.every((key) => {
         if (key === 'auth' && !shouldCompareAuth) return true
+        if (key === 'sources') {
+          return Object.entries(targetConfig.sources!).every(([name, targetSource]) =>
+            isEqual(config.sources?.[name], targetSource),
+          )
+        }
         return isEqual(config[key], targetConfig[key])
       })
         ? instance
