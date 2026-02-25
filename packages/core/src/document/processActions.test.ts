@@ -1108,10 +1108,7 @@ describe('processActions', () => {
 
         expect(() =>
           processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
-        ).toThrow('Cannot publish liveEdit document')
-        expect(() =>
-          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
-        ).toThrow('LiveEdit documents do not support drafts or publishing')
+        ).toThrow(/Publishing is not supported for liveEdit or version/)
       })
     })
 
@@ -1132,10 +1129,7 @@ describe('processActions', () => {
 
         expect(() =>
           processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
-        ).toThrow('Cannot unpublish liveEdit document')
-        expect(() =>
-          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
-        ).toThrow('LiveEdit documents do not support drafts or publishing')
+        ).toThrow(/Unpublishing is not supported for liveEdit or version/)
       })
     })
 
@@ -1156,10 +1150,7 @@ describe('processActions', () => {
 
         expect(() =>
           processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
-        ).toThrow('Cannot discard changes for liveEdit document')
-        expect(() =>
-          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
-        ).toThrow('LiveEdit documents do not support drafts')
+        ).toThrow(/Draft\/discard is not supported for liveEdit or version/)
       })
     })
   })

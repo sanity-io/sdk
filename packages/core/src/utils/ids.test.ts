@@ -1,34 +1,6 @@
 import {describe, expect, it} from 'vitest'
 
-import {getDraftId, getPublishedId, insecureRandomId} from './ids'
-
-describe('getDraftId', () => {
-  it('should add drafts prefix to non-draft ids', () => {
-    expect(getDraftId('abc123')).toBe('drafts.abc123')
-  })
-
-  it('should not modify ids that already have drafts prefix', () => {
-    expect(getDraftId('drafts.abc123')).toBe('drafts.abc123')
-  })
-
-  it('should handle empty string', () => {
-    expect(getDraftId('')).toBe('drafts.')
-  })
-})
-
-describe('getPublishedId', () => {
-  it('should remove drafts prefix from draft ids', () => {
-    expect(getPublishedId('drafts.abc123')).toBe('abc123')
-  })
-
-  it('should not modify ids that dont have drafts prefix', () => {
-    expect(getPublishedId('abc123')).toBe('abc123')
-  })
-
-  it('should handle empty string', () => {
-    expect(getPublishedId('')).toBe('')
-  })
-})
+import {insecureRandomId} from './ids'
 
 describe('insecureRandomId', () => {
   it('should generate 16-character string', () => {
