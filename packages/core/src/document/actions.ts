@@ -3,9 +3,7 @@ import {type PatchMutation as SanityMutatePatchMutation} from '@sanity/mutate/_u
 import {type PatchMutation, type PatchOperations, type SanityDocument} from '@sanity/types'
 
 import {type DocumentHandle, type DocumentTypeHandle} from '../config/sanityConfig'
-import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
-import {ActionError} from './processActions'
-import {getEffectiveDocumentId} from './util/getEffectiveDocumentId'
+import {getEffectiveDocumentId} from './util'
 
 const isSanityMutatePatch = (value: unknown): value is SanityMutatePatchMutation => {
   if (typeof value !== 'object' || !value) return false
@@ -262,13 +260,6 @@ export function publishDocument<
 >(
   doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
 ): PublishDocumentAction<TDocumentType, TDataset, TProjectId> {
-  if (isReleasePerspective(doc.perspective)) {
-    throw new ActionError({
-      documentId: doc.documentId,
-      transactionId: 'publishDocument',
-      message: 'Cannot publish a document in a release perspective',
-    })
-  }
   const effectiveDocumentId = getEffectiveDocumentId(doc)
   return {
     type: 'document.publish',

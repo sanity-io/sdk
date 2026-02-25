@@ -202,8 +202,18 @@ const _getDocumentState = bindActionByResource(
       const {value} = result.value
       return value
     },
-    onSubscribe: (context, options: DocumentOptions<string | undefined>) =>
-      manageSubscriberIds(context, options.documentId, {expandDraftPublished: !options.liveEdit}),
+    onSubscribe: (context, options: DocumentOptions<string | undefined>) => {
+      if (isReleasePerspective(options.perspective)) {
+        const versionId = getVersionId(
+          DocumentId(options.documentId),
+          options.perspective.releaseName,
+        )
+        return manageSubscriberIds(context, versionId, {expandDraftPublished: false})
+      }
+      return manageSubscriberIds(context, options.documentId, {
+        expandDraftPublished: !options.liveEdit,
+      })
+    },
   }),
 )
 
@@ -262,7 +272,13 @@ export const getDocumentSyncStatus = bindActionByResource(
       if (document === undefined) return undefined
       return !queued.length && !applied.length && !outgoing
     },
-    onSubscribe: (context, doc: DocumentHandle) => manageSubscriberIds(context, doc.documentId),
+    onSubscribe: (context, doc: DocumentHandle) => {
+      if (isReleasePerspective(doc.perspective)) {
+        const versionId = getVersionId(DocumentId(doc.documentId), doc.perspective.releaseName)
+        return manageSubscriberIds(context, versionId, {expandDraftPublished: false})
+      }
+      return manageSubscriberIds(context, doc.documentId)
+    },
   }),
 )
 
@@ -276,8 +292,12 @@ export const getPermissionsState = bindActionByResource(
   documentStore,
   createStateSourceAction({
     selector: calculatePermissions,
-    onSubscribe: (context, {actions}: PermissionsStateOptions) =>
-      manageSubscriberIds(context, getDocumentIdsFromActions(actions)),
+    onSubscribe: (context, {actions}: PermissionsStateOptions) => {
+      const ids = getDocumentIdsFromActions(actions)
+      // expandDraftPublished is false because the above function already
+      // creates drafts and published ids if required
+      manageSubscriberIds(context, ids, {expandDraftPublished: false})
+    },
   }) as StoreAction<
     DocumentStoreState,
     [PermissionsStateOptions],
@@ -363,6 +383,7 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
         getClientState(instance, {
           apiVersion: API_VERSION,
           resource,
+          perspective: 'raw',
         }).observable,
       ),
       concatMap(([outgoing, client]) => {
