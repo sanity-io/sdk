@@ -1,4 +1,4 @@
-import {DEFAULT_SOURCE_NAME, type DocumentSource} from '@sanity/sdk'
+import {type DocumentSource} from '@sanity/sdk'
 import {useContext} from 'react'
 
 import {SourcesContext} from '../../context/SourcesContext'
@@ -49,21 +49,24 @@ export function normalizeSourceOptions<T extends {source?: DocumentSource; sourc
     return {...rest, source: options.source}
   }
 
-  const effectiveName = sourceName ?? DEFAULT_SOURCE_NAME
-
-  if (!Object.hasOwn(sources, effectiveName)) {
-    if (sourceName) {
-      throw new Error(
-        `There's no source named ${JSON.stringify(sourceName)} in context. ` +
-          'Register it via the sources prop on <SanityApp>.',
-      )
-    }
+  // Only resolve from SourcesContext when sourceName is explicitly provided.
+  // When neither source nor sourceName is given, let the core layer fall back
+  // to resolveDefaultSource(instance.config) so nested ResourceProviders
+  // target the correct project/dataset.
+  if (!sourceName) {
     return rest as Omit<T, 'sourceName'>
+  }
+
+  if (!Object.hasOwn(sources, sourceName)) {
+    throw new Error(
+      `There's no source named ${JSON.stringify(sourceName)} in context. ` +
+        'Register it via the sources prop on <SanityApp>.',
+    )
   }
 
   return {
     ...rest,
-    source: sources[effectiveName],
+    source: sources[sourceName],
   }
 }
 
@@ -82,8 +85,8 @@ export function normalizeSourceOptions<T extends {source?: DocumentSource; sourc
  * 1. If both `sourceName` and `source` are provided, throws an error
  * 2. If `source` is provided, uses it directly
  * 3. If `sourceName` is provided, resolves it via `SourcesContext`
- * 4. If neither is provided, resolves the `"default"` source from `SourcesContext`
- * 5. If no `"default"` source is registered, returns options without a source field
+ * 4. If neither is provided, returns options as-is (the core layer falls back
+ *    to `resolveDefaultSource(instance.config)`, which respects nested `ResourceProvider`s)
  *
  * @example
  * ```tsx

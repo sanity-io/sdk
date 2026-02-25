@@ -2,6 +2,7 @@ import {
   createGroqSearchFilter,
   type DocumentHandle,
   getDefaultDatasetSource,
+  isDatasetSource,
   type QueryOptions,
 } from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
@@ -307,6 +308,13 @@ export function usePaginatedDocuments<
       __types: documentTypes,
       __handle: {
         ...getDefaultDatasetSource(instance.config),
+        ...(options.source && isDatasetSource(options.source)
+          ? {
+              projectId: options.source.projectId,
+              dataset: options.source.dataset,
+              source: options.source,
+            }
+          : {}),
         ...pick(instance.config, 'perspective'),
         ...pick(options, 'projectId', 'dataset', 'perspective'),
       },

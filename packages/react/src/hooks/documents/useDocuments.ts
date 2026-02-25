@@ -294,6 +294,7 @@ export function useDocuments<
           ? {
               projectId: options.source.projectId,
               dataset: options.source.dataset,
+              source: options.source,
             }
           : {}),
         ...pick(instance.config, 'perspective'),
