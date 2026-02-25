@@ -94,10 +94,22 @@ export function useDocumentPermissions(
   let source
 
   for (const action of actions) {
-    if (action.projectId) {
+    if (action.source) {
+      if (projectId || dataset) {
+        throw new Error(
+          `Mismatches between projectId/dataset options and source in actions. Found "${JSON.stringify(action.source)}" but expected project "${projectId}" and dataset "${dataset}".`,
+        )
+      }
+      if (!source) source = action.source
+      if (action.source !== source) {
+        throw new Error(
+          `Mismatched sources found in actions. All actions must belong to the same source. Found "${JSON.stringify(action.source)}" but expected "${JSON.stringify(source)}".`,
+        )
+      }
+    } else if (action.projectId) {
       if (source) {
         throw new Error(
-          `Mismatches between projectId/dataset options and source in actions. Found projectId "${action.projectId}" and dataset "${action.dataset}" but expected source "${source}".`,
+          `Mismatches between projectId/dataset options and source in actions. Found projectId "${action.projectId}" and dataset "${action.dataset}" but expected source "${JSON.stringify(source)}".`,
         )
       }
       if (!projectId) projectId = action.projectId
@@ -114,20 +126,6 @@ export function useDocumentPermissions(
             `Mismatched datasets found in actions. All actions must belong to the same dataset. Found "${action.dataset}" but expected "${dataset}".`,
           )
         }
-      }
-    }
-
-    if (action.source) {
-      if (!source) source = action.source
-      if (action.source !== source) {
-        throw new Error(
-          `Mismatched sources found in actions. All actions must belong to the same source. Found "${action.source}" but expected "${source}".`,
-        )
-      }
-      if (projectId || dataset) {
-        throw new Error(
-          `Mismatches between projectId/dataset options and source in actions. Found "${action.source}" but expected project "${projectId}" and dataset "${dataset}".`,
-        )
       }
     }
   }
