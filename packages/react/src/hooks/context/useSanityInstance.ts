@@ -51,10 +51,11 @@ export const useSanityInstance = (config?: SanityConfig): SanityInstance => {
   if (!config) return instance
 
   // Hooks may pass operation handles that include non-SanityConfig fields
-  // (e.g. source/projectId/dataset). Only match against real SanityConfig keys.
+  // (e.g. source/projectId/dataset/perspective). Only match against structural
+  // config keys that identify an instance — perspective is a query-time option
+  // and should not constrain instance selection.
   const sanitizedConfig: SanityConfig = {
     ...(config.auth && {auth: config.auth}),
-    ...(config.perspective && {perspective: config.perspective}),
     ...(config.sources && {sources: config.sources}),
     ...(config.studio && {studio: config.studio}),
   }
