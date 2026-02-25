@@ -1,7 +1,7 @@
 import {type SanityDocument} from '@sanity/types'
 import {map} from 'rxjs'
 
-import {type DocumentSource, isDatasetSource} from '../config/sanityConfig'
+import {type DocumentSource} from '../config/sanityConfig'
 /*
  * Although this is an import dependency cycle, it is not a logical cycle:
  * 1. releasesStore uses queryStore as a data source
@@ -84,7 +84,7 @@ const subscribeToReleases = ({
   const {observable: releases$} = getQueryState<ReleaseDocument[]>(instance, {
     query: RELEASES_QUERY,
     perspective: 'raw',
-    source: source && !isDatasetSource(source) ? source : undefined,
+    ...(source ? {source} : {}),
     tag: 'releases',
   })
   return releases$
