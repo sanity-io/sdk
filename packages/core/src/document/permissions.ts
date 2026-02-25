@@ -1,14 +1,15 @@
+import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
 import {type SanityDocument} from '@sanity/types'
 import {evaluateSync, type ExprNode, parse} from 'groq-js'
 import {createSelector} from 'reselect'
 
 import {type SelectorContext} from '../store/createStateSourceAction'
-import {getDraftId, getPublishedId} from '../utils/ids'
 import {MultiKeyWeakMap} from '../utils/MultiKeyWeakMap'
 import {type DocumentAction} from './actions'
 import {ActionError, PermissionActionError, processActions} from './processActions'
 import {type DocumentSet} from './processMutations'
 import {type SyncTransactionState} from './reducers'
+import {shouldHaveSingleDocument} from './util'
 
 export type Grant = 'read' | 'update' | 'create' | 'history'
 
@@ -68,10 +69,13 @@ const documentsSelector = createSelector(
       actions
         .map((action) => {
           if (typeof action.documentId !== 'string') return []
-          // For liveEdit documents, only fetch the single document
-          if (action.liveEdit) return [action.documentId]
+          // live action and version docs
+          if (shouldHaveSingleDocument(action)) return [action.documentId]
           // For standard documents, fetch both draft and published
-          return [getPublishedId(action.documentId), getDraftId(action.documentId)]
+          return [
+            getPublishedId(DocumentId(action.documentId)),
+            getDraftId(DocumentId(action.documentId)),
+          ]
         })
         .flat(),
     )
@@ -210,10 +214,11 @@ const _calculatePermissions = createSelector(
       // Check edit actions with no patches
       if (action.type === 'document.edit' && !action.patches?.length) {
         const docId = action.documentId
-        // For liveEdit documents, only check the single document
-        const doc = action.liveEdit
+        // For liveEdit /version documents, only check the single document
+        const doc = shouldHaveSingleDocument(action)
           ? documents[docId]
-          : (documents[getDraftId(docId)] ?? documents[getPublishedId(docId)])
+          : (documents[getDraftId(DocumentId(docId))] ??
+            documents[getPublishedId(DocumentId(docId))])
         if (!doc) {
           reasons.push({
             type: 'precondition',

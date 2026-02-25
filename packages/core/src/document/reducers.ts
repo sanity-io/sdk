@@ -1,8 +1,8 @@
-import {getPublishedId} from '@sanity/client/csm'
+import {DocumentId, getDraftId, getPublishedId, isVersionId} from '@sanity/id-utils'
 import {type Mutation, type PatchOperations, type SanityDocumentLike} from '@sanity/types'
 
 import {type StoreContext} from '../store/defineStore'
-import {getDraftId, insecureRandomId} from '../utils/ids'
+import {insecureRandomId} from '../utils/ids'
 import {omitProperty} from '../utils/object'
 import {type DocumentAction} from './actions'
 import {DOCUMENT_STATE_CLEAR_DELAY} from './documentConstants'
@@ -39,7 +39,13 @@ export type HttpAction =
   | {actionType: ActionMap['discard']; versionId: string; purge?: boolean}
   | {actionType: ActionMap['unpublish']; draftId: string; publishedId: string}
   | {actionType: ActionMap['delete']; publishedId: string; includeDrafts?: string[]}
-  | {actionType: ActionMap['edit']; draftId: string; publishedId: string; patch: PatchOperations}
+  | {
+      actionType: ActionMap['edit']
+      draftId?: string
+      versionId?: string
+      publishedId: string
+      patch: PatchOperations
+    }
   | ({actionType: ActionMap['publish']; draftId: string; publishedId: string} & OptimisticLock)
 
 /**
@@ -559,8 +565,8 @@ export function manageSubscriberIds(
     new Set(
       expandDraftPublished
         ? (Array.isArray(documentId) ? documentId : [documentId]).flatMap((id) => [
-            getPublishedId(id),
-            getDraftId(id),
+            getPublishedId(DocumentId(id)),
+            getDraftId(DocumentId(id)),
           ])
         : Array.isArray(documentId)
           ? documentId
@@ -591,9 +597,14 @@ export function getDocumentIdsFromActions(actions: DocumentAction[]): string[] {
   return Array.from(
     new Set(
       actions
-        .map((i) => i.documentId)
-        .filter((i) => typeof i === 'string')
-        .flatMap((documentId) => [getPublishedId(documentId), getDraftId(documentId)]),
+        .map((i) => ({documentId: i.documentId, liveEdit: i.liveEdit}))
+        .filter((i): i is {documentId: string; liveEdit: boolean} => i.documentId !== undefined)
+        .flatMap(({documentId, liveEdit}): string[] => {
+          if (liveEdit || isVersionId(DocumentId(documentId))) {
+            return [documentId]
+          }
+          return [getPublishedId(DocumentId(documentId)), getDraftId(DocumentId(documentId))]
+        }),
     ),
   )
 }

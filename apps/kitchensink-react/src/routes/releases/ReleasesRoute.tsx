@@ -350,9 +350,14 @@ export function ReleasesRoute(): JSX.Element {
             <Box padding={4}>
               <Suspense fallback={<Spinner />}>
                 <Stack space={4}>
-                  <DocumentEditorPanel docHandle={selectedDocument} />
+                  <DocumentEditorPanel
+                    docHandle={{...selectedDocument, perspective: selectedPerspective.perspective}}
+                  />
                   <JsonDocumentEditor
-                    documentHandle={selectedDocument}
+                    documentHandle={{
+                      ...selectedDocument,
+                      perspective: selectedPerspective.perspective,
+                    }}
                     minHeight="400px"
                     maxHeight="60vh"
                   />
