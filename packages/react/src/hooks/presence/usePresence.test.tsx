@@ -64,7 +64,7 @@ describe('usePresence', () => {
     const {result, unmount} = renderHook(() => usePresence(), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -93,7 +93,7 @@ describe('usePresence', () => {
       renderHook(() => usePresence({source: {mediaLibraryId: 'ml123'}}), {
         wrapper: ({children}) => (
           <ResourceProvider
-            sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+            defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             {children}
@@ -108,7 +108,7 @@ describe('usePresence', () => {
       renderHook(() => usePresence({source: {canvasId: 'canvas123'}}), {
         wrapper: ({children}) => (
           <ResourceProvider
-            sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+            defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             {children}
@@ -131,7 +131,7 @@ describe('usePresence', () => {
       {
         wrapper: ({children}) => (
           <ResourceProvider
-            sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+            defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             {children}

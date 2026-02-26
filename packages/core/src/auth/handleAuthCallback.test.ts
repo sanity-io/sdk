@@ -44,7 +44,7 @@ describe('handleCallback', () => {
     vi.mocked(getAuthCode).mockReturnValue(authCode)
 
     instance = createSanityInstance({
-      sources: {default: {projectId: 'p', dataset: 'd'}},
+      defaultSource: {projectId: 'p', dataset: 'd'},
       auth: {
         clientFactory,
         storageArea: {setItem} as unknown as Storage,
@@ -88,7 +88,7 @@ describe('handleCallback', () => {
     vi.mocked(getAuthCode).mockReturnValue(authCode)
 
     instance = createSanityInstance({
-      sources: {default: {projectId: 'p', dataset: 'd'}},
+      defaultSource: {projectId: 'p', dataset: 'd'},
       auth: {
         clientFactory,
         storageArea: {setItem} as unknown as Storage,
@@ -117,7 +117,7 @@ describe('handleCallback', () => {
     const setItem = vi.fn()
 
     instance = createSanityInstance({
-      sources: {default: {projectId: 'p', dataset: 'd'}},
+      defaultSource: {projectId: 'p', dataset: 'd'},
       auth: {
         clientFactory,
         storageArea: {setItem: setItem as Storage['setItem']} as Storage,
@@ -158,7 +158,7 @@ describe('handleCallback', () => {
     const setItem = vi.fn()
 
     instance = createSanityInstance({
-      sources: {default: {projectId: 'p', dataset: 'd'}},
+      defaultSource: {projectId: 'p', dataset: 'd'},
       auth: {
         clientFactory,
         storageArea: {setItem} as unknown as Storage,
@@ -186,7 +186,7 @@ describe('handleCallback', () => {
     vi.mocked(getAuthCode).mockReturnValue(authCode)
 
     instance = createSanityInstance({
-      sources: {default: {projectId: 'p', dataset: 'd'}},
+      defaultSource: {projectId: 'p', dataset: 'd'},
       auth: {
         clientFactory,
         storageArea: {setItem} as unknown as Storage,
@@ -224,7 +224,7 @@ describe('handleCallback', () => {
     vi.mocked(getTokenFromLocation).mockReturnValue('hash-token')
 
     instance = createSanityInstance({
-      sources: {default: {projectId: 'p', dataset: 'd'}},
+      defaultSource: {projectId: 'p', dataset: 'd'},
       auth: {
         clientFactory,
         storageArea: {setItem} as unknown as Storage,

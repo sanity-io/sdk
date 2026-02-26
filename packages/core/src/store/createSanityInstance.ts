@@ -78,7 +78,7 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
 
   logger.info('Sanity instance created', {
     hasProjectId: !!defaultSource?.projectId,
-    hasSources: !!config.sources,
+    hasDefaultSource: !!config.defaultSource,
     hasAuth: !!config.auth,
     hasPerspective: !!config.perspective,
   })
@@ -86,7 +86,6 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
   logger.debug('Instance configuration', {
     projectId: defaultSource?.projectId,
     dataset: defaultSource?.dataset,
-    sourceNames: config.sources ? Object.keys(config.sources) : [],
     perspective: config.perspective,
     hasStudioConfig: !!config.studio,
     hasStudioTokenSource: !!config.studio?.auth?.token,
@@ -123,14 +122,13 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
     createChild: (next) => {
       logger.debug('Creating child instance', {
         parentInstanceId: instanceId.slice(0, 8),
-        overridingSources: !!next.sources,
+        overridingDefaultSource: !!next.defaultSource,
         overridingAuth: !!next.auth,
       })
       const child = Object.assign(
         createSanityInstance({
           ...config,
           ...next,
-          ...(config.sources && next.sources && {sources: {...config.sources, ...next.sources}}),
           ...(config.auth === next.auth
             ? config.auth
             : config.auth && next.auth && {auth: {...config.auth, ...next.auth}}),

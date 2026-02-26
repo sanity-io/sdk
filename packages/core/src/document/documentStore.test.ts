@@ -70,12 +70,12 @@ const source1 = {projectId: 'p', dataset: 'd1'}
 const source2 = {projectId: 'p', dataset: 'd2'}
 
 beforeEach(() => {
-  instance = createSanityInstance({sources: {default: {projectId: 'p', dataset: 'd'}}})
+  instance = createSanityInstance({defaultSource: {projectId: 'p', dataset: 'd'}})
   // test uses two instances that share the same in-memory dataset, but separate
   // store instances. in real scenarios, this would be separate machines but with
   // the same project + dataset
-  instance1 = createSanityInstance({sources: {default: {projectId: 'p', dataset: 'd1'}}})
-  instance2 = createSanityInstance({sources: {default: {projectId: 'p', dataset: 'd2'}}})
+  instance1 = createSanityInstance({defaultSource: {projectId: 'p', dataset: 'd1'}})
+  instance2 = createSanityInstance({defaultSource: {projectId: 'p', dataset: 'd2'}})
 })
 
 afterEach(() => {
@@ -276,7 +276,7 @@ it('handles concurrent edits and resolves conflicts', async () => {
   const state1Unsubscribe = state1.subscribe()
   const state2Unsubscribe = state2.subscribe()
 
-  const oneOffInstance = createSanityInstance({sources: {default: {projectId: 'p', dataset: 'd'}}})
+  const oneOffInstance = createSanityInstance({defaultSource: {projectId: 'p', dataset: 'd'}})
 
   // Create the initial document from a one-off instance.
   await applyDocumentActions(oneOffInstance, {
@@ -708,10 +708,7 @@ it('fetches dataset ACL and updates grants in the document store state', async (
 
 it('fetches ACL for MediaLibrarySource', async () => {
   const mediaLibraryInstance = createSanityInstance({
-    sources: {
-      'default': {projectId: 'p', dataset: 'd'},
-      'media-library': {mediaLibraryId: 'test-media-library'},
-    },
+    defaultSource: {projectId: 'p', dataset: 'd'},
   })
 
   const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
@@ -731,10 +728,7 @@ it('fetches ACL for MediaLibrarySource', async () => {
 
 it('fetches ACL for CanvasSource', async () => {
   const canvasInstance = createSanityInstance({
-    sources: {
-      default: {projectId: 'p', dataset: 'd'},
-      canvas: {canvasId: 'test-canvas'},
-    },
+    defaultSource: {projectId: 'p', dataset: 'd'},
   })
 
   const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
@@ -758,7 +752,7 @@ it('returns a promise that resolves when a document has been loaded in the store
   expect(await resolveDocument(instance, doc)).toBe(null)
 
   // use one-off instance to create the document in the mock backend
-  const oneOffInstance = createSanityInstance({sources: {default: {projectId: 'p', dataset: 'd'}}})
+  const oneOffInstance = createSanityInstance({defaultSource: {projectId: 'p', dataset: 'd'}})
   const result = await applyDocumentActions(oneOffInstance, {
     actions: [createDocument(doc), editDocument(doc, {set: {title: 'initial title'}})],
     source,

@@ -48,7 +48,7 @@ describe('queryStore', () => {
   }
 
   beforeEach(() => {
-    instance = createSanityInstance({sources: {default: {projectId: 'test', dataset: 'test'}}})
+    instance = createSanityInstance({defaultSource: {projectId: 'test', dataset: 'test'}})
 
     fetch = vi
       .fn()
@@ -373,11 +373,11 @@ describe('queryStore', () => {
     }) as SanityClient['observable']['fetch'])
 
     const draftsInstance = createSanityInstance({
-      sources: {default: {projectId: 'test', dataset: 'test'}},
+      defaultSource: {projectId: 'test', dataset: 'test'},
       perspective: 'drafts',
     })
     const publishedInstance = createSanityInstance({
-      sources: {default: {projectId: 'test', dataset: 'test'}},
+      defaultSource: {projectId: 'test', dataset: 'test'},
       perspective: 'published',
     })
 
@@ -416,7 +416,7 @@ describe('queryStore', () => {
       >
     }) as SanityClient['observable']['fetch'])
 
-    const base = createSanityInstance({sources: {default: {projectId: 'test', dataset: 'test'}}})
+    const base = createSanityInstance({defaultSource: {projectId: 'test', dataset: 'test'}})
 
     const sDrafts = getQueryState<{_id: string}[]>(base, {
       query: '*[_type == "movie"]',
@@ -500,7 +500,7 @@ describe('queryStore', () => {
     const projectASource = {projectId: 'project-a', dataset: 'production'}
     const projectBSource = {projectId: 'project-b', dataset: 'production'}
 
-    const rootInstance = createSanityInstance({sources: {default: projectASource}})
+    const rootInstance = createSanityInstance({defaultSource: projectASource})
 
     // 1. Root instance queries with an explicit source for project B.
     //    This creates the QueryStore:project-b.production store, whose
@@ -516,7 +516,7 @@ describe('queryStore', () => {
 
     // 2. A child instance with project B as its default queries the SAME
     //    store (same composite key) but does NOT pass an explicit source.
-    const childInstance = rootInstance.createChild({sources: {default: projectBSource}})
+    const childInstance = rootInstance.createChild({defaultSource: projectBSource})
     const stateNoSource = getQueryState(childInstance, {query: '*[_type == "movie"]'})
     const unsub2 = stateNoSource.subscribe()
     await firstValueFrom(stateNoSource.observable.pipe(filter((i) => i !== undefined)))

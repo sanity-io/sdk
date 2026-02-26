@@ -125,18 +125,27 @@ export const DEFAULT_SOURCE_NAME = 'default'
 /**
  * Represents the complete configuration for a Sanity SDK instance.
  *
- * Data targeting is handled entirely through named {@link sources}.
- * The source keyed `"default"` is used automatically when no explicit
- * `source` or `sourceName` is provided to a hook or core function.
+ * Most apps configure sources via the `sources` prop on `SanityApp`:
  *
- * @example
+ * @example Typical React usage
+ * ```tsx
+ * <SanityApp
+ *   sources={{ default: { projectId: 'abc123', dataset: 'production' } }}
+ *   fallback={<Loading />}
+ * >
+ *   <App />
+ * </SanityApp>
+ * ```
+ *
+ * The `defaultSource` field is set automatically by the React layer from
+ * `sources['default']`. It can also be set directly when using the core
+ * SDK without React (e.g. in a Node.js script):
+ *
+ * @example Direct core usage (without React)
  * ```ts
- * const config: SanityConfig = {
- *   sources: {
- *     default: { projectId: 'abc123', dataset: 'production' },
- *     'blog-project': { projectId: 'def456', dataset: 'production' },
- *   },
- * }
+ * const instance = createSanityInstance({
+ *   defaultSource: { projectId: 'abc123', dataset: 'production' },
+ * })
  * ```
  *
  * @public
@@ -158,13 +167,12 @@ export interface SanityConfig extends PerspectiveHandle {
   studio?: StudioConfig
 
   /**
-   * Named sources for this instance. Each key is a source name that can be
-   * referenced via `sourceName` in hooks and core functions. The source named
-   * `"default"` is used automatically when no `source` or `sourceName` is specified.
+   * The default document source for this instance. Used by auth (projectId),
+   * client fallback, and logging when no explicit source is provided.
    *
    * @beta
    */
-  sources?: Record<string, DocumentSource>
+  defaultSource?: DocumentSource
 }
 
 /**
@@ -213,12 +221,11 @@ export function isCanvasSource(source: DocumentSource): source is CanvasSource {
 
 /**
  * Resolves the default `DocumentSource` from a `SanityConfig`.
- * Returns the source registered under the `"default"` key, or `undefined`.
  *
  * @internal
  */
 export function resolveDefaultSource(config: SanityConfig): DocumentSource | undefined {
-  return config.sources?.[DEFAULT_SOURCE_NAME]
+  return config.defaultSource
 }
 
 /**

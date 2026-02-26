@@ -12,7 +12,7 @@ function resolveDatasetConfig(instance: SanityInstance): DatasetSource {
   if (source && isDatasetSource(source)) return source
   throw new Error(
     'Agent actions require a dataset source. ' +
-      'Register a "default" dataset source in config.sources, or pass projectId/dataset explicitly.',
+      'Provide a "default" dataset source in your sources map, or pass projectId/dataset explicitly.',
   )
 }
 

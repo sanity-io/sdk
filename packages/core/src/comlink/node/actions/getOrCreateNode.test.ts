@@ -23,7 +23,7 @@ const nodeConfig = {
 
 describe('getOrCreateNode', () => {
   const instance = createSanityInstance({
-    sources: {default: {projectId: 'test-project-id', dataset: 'test-dataset'}},
+    defaultSource: {projectId: 'test-project-id', dataset: 'test-dataset'},
   })
   let state: ReturnType<typeof createStoreState<ComlinkNodeState>>
   let mockNode: Partial<Node<WindowMessage, FrameMessage>> & {

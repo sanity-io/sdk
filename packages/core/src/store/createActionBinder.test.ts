@@ -30,7 +30,7 @@ describe('createActionBinder', () => {
     })
     const boundAction = binder(storeDefinition, action)
     const instance = createSanityInstance({
-      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
+      defaultSource: {projectId: 'proj1', dataset: 'ds1'},
     })
 
     // First call creates store instance
@@ -58,8 +58,8 @@ describe('createActionBinder', () => {
       return context.state.counter
     })
     const boundAction = binder(storeDefinition, action)
-    const instanceA = createSanityInstance({sources: {default: {projectId: 'p1', dataset: 'd1'}}})
-    const instanceB = createSanityInstance({sources: {default: {projectId: 'p2', dataset: 'd2'}}})
+    const instanceA = createSanityInstance({defaultSource: {projectId: 'p1', dataset: 'd1'}})
+    const instanceB = createSanityInstance({defaultSource: {projectId: 'p2', dataset: 'd2'}})
 
     const resultA = boundAction(instanceA, 3)
     const resultB = boundAction(instanceB, 4)
@@ -77,8 +77,8 @@ describe('createActionBinder', () => {
     }
     const action = vi.fn((context) => context.state.counter)
     const boundAction = binder(storeDefinition, action)
-    const instance1 = createSanityInstance({sources: {default: {projectId: 'p1', dataset: 'd1'}}})
-    const instance2 = createSanityInstance({sources: {default: {projectId: 'p1', dataset: 'd1'}}})
+    const instance1 = createSanityInstance({defaultSource: {projectId: 'p1', dataset: 'd1'}})
+    const instance2 = createSanityInstance({defaultSource: {projectId: 'p1', dataset: 'd1'}})
 
     // Call action on both instances
     boundAction(instance1)
@@ -108,9 +108,9 @@ describe('bindActionGlobally', () => {
     const boundAction = bindActionGlobally(storeDefinition, action)
 
     // Create instances with different configs
-    const instance1 = createSanityInstance({sources: {default: {projectId: 'any', dataset: 'any'}}})
+    const instance1 = createSanityInstance({defaultSource: {projectId: 'any', dataset: 'any'}})
     const instance2 = createSanityInstance({
-      sources: {default: {projectId: 'different', dataset: 'config'}},
+      defaultSource: {projectId: 'different', dataset: 'config'},
     })
 
     // Both instances should use the same store
@@ -138,7 +138,7 @@ describe('bindActionGlobally', () => {
 })
 
 describe('bindActionBySource', () => {
-  it('should resolve from config.sources.default when no source provided', () => {
+  it('should resolve from config.defaultSource when no source provided', () => {
     const storeDefinition = {
       name: 'SourceNamedStore',
       getInitialState: () => ({counter: 0}),
@@ -146,9 +146,7 @@ describe('bindActionBySource', () => {
     const action = vi.fn((context) => context.key)
     const boundAction = bindActionBySource(storeDefinition, action)
     const instance = createSanityInstance({
-      sources: {
-        default: {projectId: 'named-proj', dataset: 'named-ds'},
-      },
+      defaultSource: {projectId: 'named-proj', dataset: 'named-ds'},
     })
     const result = boundAction(instance, {})
     expect(result).toEqual(
@@ -167,7 +165,7 @@ describe('bindActionBySource', () => {
     const action = vi.fn((_context) => 'success')
     const boundAction = bindActionBySource(storeDefinition, action)
     const instance = createSanityInstance({
-      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
+      defaultSource: {projectId: 'proj1', dataset: 'ds1'},
     })
 
     expect(() =>
@@ -197,7 +195,7 @@ describe('bindActionBySource', () => {
     const action = vi.fn((_context) => 'success')
     const boundAction = bindActionBySource(storeDefinition, action)
     const instance = createSanityInstance({
-      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
+      defaultSource: {projectId: 'proj1', dataset: 'ds1'},
     })
 
     const result = boundAction(instance, {
@@ -216,7 +214,7 @@ describe('bindActionBySourceAndPerspective', () => {
     const action = vi.fn((_context) => 'success')
     const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
     const instance = createSanityInstance({
-      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
+      defaultSource: {projectId: 'proj1', dataset: 'ds1'},
     })
 
     expect(() =>
@@ -249,7 +247,7 @@ describe('bindActionBySourceAndPerspective', () => {
     const action = vi.fn((_context) => 'success')
     const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
     const instance = createSanityInstance({
-      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
+      defaultSource: {projectId: 'proj1', dataset: 'ds1'},
     })
 
     const result = boundAction(instance, {
@@ -267,7 +265,7 @@ describe('bindActionBySourceAndPerspective', () => {
     const action = vi.fn((_context) => 'success')
     const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
     const instance = createSanityInstance({
-      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
+      defaultSource: {projectId: 'proj1', dataset: 'ds1'},
     })
 
     const result = boundAction(instance, {
@@ -284,7 +282,7 @@ describe('bindActionBySourceAndPerspective', () => {
     const action = vi.fn((context) => context.key)
     const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
     const instance = createSanityInstance({
-      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
+      defaultSource: {projectId: 'proj1', dataset: 'ds1'},
       perspective: 'published',
     })
 
@@ -309,7 +307,7 @@ describe('bindActionBySourceAndPerspective', () => {
     const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
     // Use unique project/dataset so we don't reuse stores from other tests
     const instance = createSanityInstance({
-      sources: {default: {projectId: 'perspective-isolation', dataset: 'ds1'}},
+      defaultSource: {projectId: 'perspective-isolation', dataset: 'ds1'},
     })
 
     const resultDrafts = boundAction(instance, {perspective: 'drafts'}, 3)
@@ -329,7 +327,7 @@ describe('bindActionBySourceAndPerspective', () => {
     const action = vi.fn((_context) => 'success')
     const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
     const instance = createSanityInstance({
-      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
+      defaultSource: {projectId: 'proj1', dataset: 'ds1'},
     })
 
     const result = boundAction(instance, {
@@ -358,7 +356,7 @@ describe('bindActionBySourceAndPerspective', () => {
     const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
     // Use unique project/dataset so we don't reuse stores from other tests
     const instance = createSanityInstance({
-      sources: {default: {projectId: 'perspective-reuse', dataset: 'ds1'}},
+      defaultSource: {projectId: 'perspective-reuse', dataset: 'ds1'},
     })
 
     const result1 = boundAction(instance, {perspective: 'drafts'}, 2)

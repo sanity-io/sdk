@@ -20,7 +20,7 @@ describe('Users Reducers', () => {
   const mockInstance: SanityInstance = {
     instanceId: 'test-instance-id',
     config: {
-      sources: {default: {projectId: 'test-project-id', dataset: 'test'}},
+      defaultSource: {projectId: 'test-project-id', dataset: 'test'},
     },
     isDisposed: () => false,
     dispose: () => {},

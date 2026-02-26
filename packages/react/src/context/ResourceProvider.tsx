@@ -47,7 +47,7 @@ export interface ResourceProviderProps extends SanityConfig {
  * @example Creating a root provider
  * ```tsx
  * <ResourceProvider
- *   sources={{ default: { projectId: 'your-project-id', dataset: 'production' } }}
+ *   defaultSource={{ projectId: 'your-project-id', dataset: 'production' }}
  *   fallback={<LoadingSpinner />}
  * >
  *   <YourApp />

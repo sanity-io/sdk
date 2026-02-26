@@ -522,9 +522,9 @@ function logRxJSOperator(namespace: string, operator: string, context?: LogConte
 /* c8 ignore next 7 */
 function getInstanceContext(instance: {
   instanceId?: string
-  config?: {sources?: Record<string, {projectId?: string; dataset?: string}>}
+  config?: {defaultSource?: {projectId?: string; dataset?: string}}
 }): InstanceContext {
-  const defaultSource = instance.config?.sources?.['default']
+  const defaultSource = instance.config?.defaultSource
   return {
     instanceId: instance.instanceId,
     projectId: defaultSource?.projectId,

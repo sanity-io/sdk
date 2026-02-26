@@ -232,7 +232,7 @@ function Editor() {
   const [newDocumentId, setNewDocumentId] = useState<string>('')
   const [liveEditMode, setLiveEditMode] = useState<boolean>(false)
   const cfg = import.meta.env['VITE_IS_E2E'] ? e2eConfig : devConfig
-  const defaultSource = cfg.sources?.['default']
+  const defaultSource = cfg.defaultSource
   const projectId = defaultSource && 'projectId' in defaultSource ? defaultSource.projectId : ''
   const dataset = defaultSource && 'dataset' in defaultSource ? defaultSource.dataset : ''
 

@@ -41,7 +41,7 @@ describe('agent actions', () => {
 
   it('agentGenerate returns observable from client', async () => {
     mockClient.observable.agent.action.generate.mockReturnValue(of('gen'))
-    const instance = {config: {sources: {default: {projectId: 'p', dataset: 'd'}}}} as any
+    const instance = {config: {defaultSource: {projectId: 'p', dataset: 'd'}}} as any
     const value = await firstValueFrom(agentGenerate(instance, {foo: 'bar'} as any))
     expect(value).toBe('gen')
     expect(mockClient.observable.agent.action.generate).toHaveBeenCalledWith({foo: 'bar'})
@@ -49,7 +49,7 @@ describe('agent actions', () => {
 
   it('agentTransform returns observable from client', async () => {
     mockClient.observable.agent.action.transform.mockReturnValue(of('xform'))
-    const instance = {config: {sources: {default: {projectId: 'p', dataset: 'd'}}}} as any
+    const instance = {config: {defaultSource: {projectId: 'p', dataset: 'd'}}} as any
     const value = await firstValueFrom(agentTransform(instance, {a: 1} as any))
     expect(value).toBe('xform')
     expect(mockClient.observable.agent.action.transform).toHaveBeenCalledWith({a: 1})
@@ -57,7 +57,7 @@ describe('agent actions', () => {
 
   it('agentTranslate returns observable from client', async () => {
     mockClient.observable.agent.action.translate.mockReturnValue(of('xlate'))
-    const instance = {config: {sources: {default: {projectId: 'p', dataset: 'd'}}}} as any
+    const instance = {config: {defaultSource: {projectId: 'p', dataset: 'd'}}} as any
     const value = await firstValueFrom(agentTranslate(instance, {b: 2} as any))
     expect(value).toBe('xlate')
     expect(mockClient.observable.agent.action.translate).toHaveBeenCalledWith({b: 2})
@@ -65,7 +65,7 @@ describe('agent actions', () => {
 
   it('agentPrompt wraps promise into observable', async () => {
     mockClient.agent.action.prompt.mockResolvedValue('prompted')
-    const instance = {config: {sources: {default: {projectId: 'p', dataset: 'd'}}}} as any
+    const instance = {config: {defaultSource: {projectId: 'p', dataset: 'd'}}} as any
     const value = await firstValueFrom(agentPrompt(instance, {p: true} as any))
     expect(value).toBe('prompted')
     expect(mockClient.agent.action.prompt).toHaveBeenCalledWith({p: true})
@@ -73,7 +73,7 @@ describe('agent actions', () => {
 
   it('agentPatch wraps promise into observable', async () => {
     mockClient.agent.action.patch.mockResolvedValue('patched')
-    const instance = {config: {sources: {default: {projectId: 'p', dataset: 'd'}}}} as any
+    const instance = {config: {defaultSource: {projectId: 'p', dataset: 'd'}}} as any
     const value = await firstValueFrom(agentPatch(instance, {q: false} as any))
     expect(value).toBe('patched')
     expect(mockClient.agent.action.patch).toHaveBeenCalledWith({q: false})

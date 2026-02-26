@@ -7,7 +7,7 @@ import {useClient} from './useClient'
 describe('useClient', () => {
   const wrapper = ({children}: {children: React.ReactNode}) => (
     <ResourceProvider
-      sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+      defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
       fallback={null}
     >
       {children}

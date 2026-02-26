@@ -23,7 +23,7 @@ const sources = {
  */
 export const AppProviders = ({children}: {children: React.ReactNode}): ReactElement => {
   return (
-    <ResourceProvider sources={{default: {projectId: 'test', dataset: 'test'}}} fallback={null}>
+    <ResourceProvider defaultSource={{projectId: 'test', dataset: 'test'}} fallback={null}>
       <SourcesContext.Provider value={sources}>{children}</SourcesContext.Provider>
     </ResourceProvider>
   )

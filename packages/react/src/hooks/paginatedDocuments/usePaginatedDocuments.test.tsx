@@ -10,7 +10,7 @@ vi.mock('../query/useQuery')
 
 describe('usePaginatedDocuments', () => {
   const wrapper = ({children}: {children: React.ReactNode}) => (
-    <ResourceProvider sources={{default: {projectId: 'p', dataset: 'd'}}} fallback={null}>
+    <ResourceProvider defaultSource={{projectId: 'p', dataset: 'd'}} fallback={null}>
       {children}
     </ResourceProvider>
   )

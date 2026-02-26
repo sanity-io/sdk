@@ -34,7 +34,7 @@ beforeEach(() => {
     (clientConfig) => ({config: () => clientConfig}) as SanityClient,
   )
   instance = createSanityInstance({
-    sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
+    defaultSource: {projectId: 'test-project', dataset: 'test-dataset'},
   })
 })
 

@@ -1,4 +1,4 @@
-import {isDatasetSource, type SanityConfig} from '@sanity/sdk'
+import {type DocumentSource, isDatasetSource, type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, type ReactNode, useMemo} from 'react'
 
 import {ResourceProvider} from '../context/ResourceProvider'
@@ -11,18 +11,21 @@ import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
 export interface SDKProviderProps extends AuthBoundaryProps {
   children: ReactNode
   config: SanityConfig
+  /**
+   * Named document sources map. Provided to `SourcesContext` for
+   * name-based source resolution in hooks.
+   */
+  sources?: Record<string, DocumentSource>
   fallback: ReactNode
 }
 
 /**
- * Collects unique project IDs from a config's sources.
+ * Collects unique project IDs from a sources map.
  */
-function collectProjectIds(config: SanityConfig): string[] {
+function collectProjectIds(sources: Record<string, DocumentSource>): string[] {
   const ids = new Set<string>()
-  if (config.sources) {
-    for (const src of Object.values(config.sources)) {
-      if (isDatasetSource(src)) ids.add(src.projectId)
-    }
+  for (const src of Object.values(sources)) {
+    if (isDatasetSource(src)) ids.add(src.projectId)
   }
   return [...ids]
 }
@@ -39,16 +42,16 @@ function collectProjectIds(config: SanityConfig): string[] {
 export function SDKProvider({
   children,
   config,
+  sources = {},
   fallback,
   ...props
 }: SDKProviderProps): ReactElement {
-  const projectIds = useMemo(() => collectProjectIds(config), [config])
-  const sourcesValue = useMemo(() => config.sources ?? {}, [config])
+  const projectIds = useMemo(() => collectProjectIds(sources), [sources])
 
   return (
     <ResourceProvider {...config} fallback={fallback}>
       <AuthBoundary {...props} projectIds={projectIds}>
-        <SourcesContext.Provider value={sourcesValue}>{children}</SourcesContext.Provider>
+        <SourcesContext.Provider value={sources}>{children}</SourcesContext.Provider>
       </AuthBoundary>
     </ResourceProvider>
   )

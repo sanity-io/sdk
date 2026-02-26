@@ -23,7 +23,7 @@ describe('getNodeState', () => {
   let instance: ReturnType<typeof createSanityInstance>
 
   beforeEach(() => {
-    instance = createSanityInstance({sources: {default: {projectId: 'test', dataset: 'test'}}})
+    instance = createSanityInstance({defaultSource: {projectId: 'test', dataset: 'test'}})
   })
 
   afterEach(() => {

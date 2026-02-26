@@ -60,7 +60,7 @@ describe('SanityApp', () => {
 
   it('renders SDKProvider with a single config', () => {
     const singleConfig = {
-      sources: {default: {projectId: 'test-project', dataset: 'production'}},
+      defaultSource: {projectId: 'test-project', dataset: 'production'},
     }
 
     render(
@@ -92,7 +92,7 @@ describe('SanityApp', () => {
     const originalSelf = window.self
 
     const mockSanityConfig: SanityConfig = {
-      sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
+      defaultSource: {projectId: 'test-project', dataset: 'test-dataset'},
     }
 
     const mockTop = {}
@@ -138,7 +138,7 @@ describe('SanityApp', () => {
     }
 
     const mockSanityConfig: SanityConfig = {
-      sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
+      defaultSource: {projectId: 'test-project', dataset: 'test-dataset'},
     }
 
     Object.defineProperty(window, 'location', {
@@ -201,7 +201,7 @@ describe('SanityApp', () => {
     const originalLocation = window.location
 
     const mockSanityConfig: SanityConfig = {
-      sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
+      defaultSource: {projectId: 'test-project', dataset: 'test-dataset'},
     }
 
     const mockLocation = {
@@ -243,7 +243,7 @@ describe('SanityApp', () => {
     }
 
     const mockSanityConfig: SanityConfig = {
-      sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
+      defaultSource: {projectId: 'test-project', dataset: 'test-dataset'},
       studio: {},
     }
 
@@ -282,7 +282,7 @@ describe('SanityApp', () => {
     }
 
     const mockSanityConfig: SanityConfig = {
-      sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
+      defaultSource: {projectId: 'test-project', dataset: 'test-dataset'},
       studio: {},
     }
 

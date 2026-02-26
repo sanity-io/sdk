@@ -27,7 +27,7 @@ describe('useVerifyOrgProjects', () => {
     const {result} = renderHook(() => useVerifyOrgProjects(true, testProjectIds), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -43,7 +43,7 @@ describe('useVerifyOrgProjects', () => {
     const {result: resultUndefined} = renderHook(() => useVerifyOrgProjects(false, undefined), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -56,7 +56,7 @@ describe('useVerifyOrgProjects', () => {
     const {result: resultEmpty} = renderHook(() => useVerifyOrgProjects(false, []), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -74,7 +74,7 @@ describe('useVerifyOrgProjects', () => {
     const {result} = renderHook(() => useVerifyOrgProjects(false, testProjectIds), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -93,7 +93,7 @@ describe('useVerifyOrgProjects', () => {
     const {result} = renderHook(() => useVerifyOrgProjects(false, testProjectIds), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -118,7 +118,7 @@ describe('useVerifyOrgProjects', () => {
     const {result} = renderHook(() => useVerifyOrgProjects(false, testProjectIds), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -143,7 +143,7 @@ describe('useVerifyOrgProjects', () => {
     const {unmount} = renderHook(() => useVerifyOrgProjects(false, testProjectIds), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -174,7 +174,7 @@ describe('useVerifyOrgProjects', () => {
         initialProps: {disabled: false, pIds: testProjectIds},
         wrapper: ({children}) => (
           <ResourceProvider
-            sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+            defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             {children}

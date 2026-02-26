@@ -13,16 +13,29 @@ interface NamedSources {
 }
 
 /**
- * Merges multiple named SanityConfig objects into a single config
- * by combining their `sources` maps. Later entries override earlier
- * ones for the same source key.
+ * Merges multiple named SanityConfig objects into a single config.
+ * The last config wins for overlapping keys. The `defaultSource` from
+ * each config is collected into a `sources` map keyed by the entry name,
+ * and the final `defaultSource` is used as the merged config's default.
  */
-function mergeNamedSources(namedSources: NamedSources): SanityConfig {
-  const mergedSources: Record<string, DocumentSource> = {}
-  for (const cfg of Object.values(namedSources)) {
-    if (cfg.sources) Object.assign(mergedSources, cfg.sources)
+function mergeNamedSources(namedSources: NamedSources): {
+  config: SanityConfig
+  sources: Record<string, DocumentSource>
+} {
+  const sources: Record<string, DocumentSource> = {}
+  let mergedConfig: SanityConfig = {}
+
+  for (const [, cfg] of Object.entries(namedSources)) {
+    mergedConfig = {...mergedConfig, ...cfg}
   }
-  return {sources: mergedSources}
+
+  for (const [name, cfg] of Object.entries(namedSources)) {
+    if (cfg.defaultSource) {
+      sources[name === 'main' ? 'default' : name] = cfg.defaultSource
+    }
+  }
+
+  return {config: mergedConfig, sources}
 }
 
 /** @internal */
@@ -38,17 +51,17 @@ export function renderSanityApp(
   const {reactStrictMode = false} = options
 
   const root = createRoot(rootElement)
-  const config = mergeNamedSources(namedSources)
+  const {config, sources} = mergeNamedSources(namedSources)
 
   root.render(
     reactStrictMode ? (
       <StrictMode>
-        <SanityApp config={config} fallback={<div>Loading...</div>}>
+        <SanityApp config={config} sources={sources} fallback={<div>Loading...</div>}>
           {children}
         </SanityApp>
       </StrictMode>
     ) : (
-      <SanityApp config={config} fallback={<div>Loading...</div>}>
+      <SanityApp config={config} sources={sources} fallback={<div>Loading...</div>}>
         {children}
       </SanityApp>
     ),

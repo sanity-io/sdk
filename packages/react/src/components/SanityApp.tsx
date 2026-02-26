@@ -1,4 +1,9 @@
-import {isStudioConfig, type SanityConfig} from '@sanity/sdk'
+import {
+  DEFAULT_SOURCE_NAME,
+  type DocumentSource,
+  isStudioConfig,
+  type SanityConfig,
+} from '@sanity/sdk'
 import {type ReactElement, useContext, useEffect, useMemo} from 'react'
 
 import {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
@@ -11,12 +16,17 @@ import {isInIframe, isLocalUrl} from './utils'
  */
 export interface SanityAppProps {
   /**
-   * A SanityConfig object declaring data sources via the `sources` field.
+   * Core configuration for the SDK instance (auth, studio, perspective).
    * Optional when `SanityApp` is rendered inside an `SDKStudioContext`
    * provider (e.g. inside Sanity Studio) — the config is derived from
    * the workspace automatically.
    */
   config?: SanityConfig
+  /**
+   * Named document sources for the application. The source keyed `"default"`
+   * is used automatically when no explicit source is specified in hooks.
+   */
+  sources?: Record<string, DocumentSource>
   children: React.ReactNode
   /* Fallback content to show when child components are suspending. Same as the `fallback` prop for React Suspense. */
   fallback: React.ReactNode
@@ -25,18 +35,22 @@ export interface SanityAppProps {
 const REDIRECT_URL = 'https://sanity.io/welcome'
 
 /**
- * Derive a SanityConfig from a Studio workspace handle.
- * Maps the workspace's projectId, dataset, and reactive auth token into
- * the SDK's config shape using a named `"default"` source.
+ * Derive a SanityConfig and sources map from a Studio workspace handle.
  */
-function deriveConfigFromWorkspace(workspace: StudioWorkspaceHandle): SanityConfig {
+function deriveFromWorkspace(workspace: StudioWorkspaceHandle): {
+  config: SanityConfig
+  sources: Record<string, DocumentSource>
+} {
   return {
-    sources: {
-      default: {projectId: workspace.projectId, dataset: workspace.dataset},
+    config: {
+      defaultSource: {projectId: workspace.projectId, dataset: workspace.dataset},
+      studio: {
+        authenticated: workspace.authenticated,
+        auth: workspace.auth.token ? {token: workspace.auth.token} : undefined,
+      },
     },
-    studio: {
-      authenticated: workspace.authenticated,
-      auth: workspace.auth.token ? {token: workspace.auth.token} : undefined,
+    sources: {
+      [DEFAULT_SOURCE_NAME]: {projectId: workspace.projectId, dataset: workspace.dataset},
     },
   }
 }
@@ -48,30 +62,27 @@ function deriveConfigFromWorkspace(workspace: StudioWorkspaceHandle): SanityConf
  * as well as application context and state which is used by the Sanity React hooks. Your application
  * must be wrapped with the SanityApp component to function properly.
  *
- * The `config` prop accepts a {@link SanityConfig} object. Use the `sources` field to declare
+ * The `config` prop accepts a {@link SanityConfig} object. Use the `sources` prop to declare
  * one or more named data sources for your app.
  *
- * When rendered inside a Sanity Studio that provides `SDKStudioContext`, the `config` prop is
- * optional — `SanityApp` will automatically derive `projectId`, `dataset`, and auth from the
- * Studio workspace.
+ * When rendered inside a Sanity Studio that provides `SDKStudioContext`, the `config` and `sources`
+ * props are optional — `SanityApp` will automatically derive them from the Studio workspace.
  *
- * When both `config` and `SDKStudioContext` are available, the explicit `config` takes precedence.
+ * When both `config` and `SDKStudioContext` are available, the explicit props take precedence.
  *
  * @category Components
  * @param props - Your Sanity configuration and the React children to render
  * @returns Your Sanity application, integrated with your Sanity configuration and application context
  *
- * @example Single project with named sources
+ * @example Single project
  * ```tsx
  * import { SanityApp } from '@sanity/sdk-react'
  *
  * export default function MyApp() {
  *   return (
  *     <SanityApp
- *       config={{
- *         sources: {
- *           default: { projectId: 'my-project-id', dataset: 'production' },
- *         },
+ *       sources={{
+ *         default: { projectId: 'my-project-id', dataset: 'production' },
  *       }}
  *       fallback={<div>Loading…</div>}
  *     >
@@ -88,11 +99,9 @@ function deriveConfigFromWorkspace(workspace: StudioWorkspaceHandle): SanityConf
  * export default function MyApp() {
  *   return (
  *     <SanityApp
- *       config={{
- *         sources: {
- *           default: { projectId: 'abc123', dataset: 'production' },
- *           'blog-project': { projectId: 'def456', dataset: 'production' },
- *         },
+ *       sources={{
+ *         default: { projectId: 'abc123', dataset: 'production' },
+ *         'blog-project': { projectId: 'def456', dataset: 'production' },
  *       }}
  *       fallback={<div>Loading…</div>}
  *     >
@@ -106,15 +115,34 @@ export function SanityApp({
   children,
   fallback,
   config: configProp,
+  sources: sourcesProp,
   ...props
 }: SanityAppProps): ReactElement {
   const studioWorkspace = useContext(SDKStudioContext)
 
+  const derived = useMemo(() => {
+    if (studioWorkspace && !configProp && !sourcesProp) {
+      return deriveFromWorkspace(studioWorkspace)
+    }
+    return null
+  }, [configProp, sourcesProp, studioWorkspace])
+
   const resolvedConfig = useMemo<SanityConfig>(() => {
-    if (configProp) return configProp
-    if (studioWorkspace) return deriveConfigFromWorkspace(studioWorkspace)
+    if (configProp) {
+      if (!configProp.defaultSource && sourcesProp?.[DEFAULT_SOURCE_NAME]) {
+        return {...configProp, defaultSource: sourcesProp[DEFAULT_SOURCE_NAME]}
+      }
+      return configProp
+    }
+    if (derived) return derived.config
     return {}
-  }, [configProp, studioWorkspace])
+  }, [configProp, derived, sourcesProp])
+
+  const resolvedSources = useMemo<Record<string, DocumentSource>>(() => {
+    if (sourcesProp) return sourcesProp
+    if (derived) return derived.sources
+    return {}
+  }, [sourcesProp, derived])
 
   useEffect(() => {
     let timeout: NodeJS.Timeout | undefined
@@ -136,7 +164,7 @@ export function SanityApp({
   }, [configProp, resolvedConfig, studioWorkspace])
 
   return (
-    <SDKProvider {...props} fallback={fallback} config={resolvedConfig}>
+    <SDKProvider {...props} fallback={fallback} config={resolvedConfig} sources={resolvedSources}>
       {children}
     </SDKProvider>
   )

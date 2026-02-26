@@ -76,7 +76,7 @@ describe('useManageFavorite', () => {
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -90,7 +90,7 @@ describe('useManageFavorite', () => {
   it('should handle favorite action and update state', async () => {
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider sources={{default: {projectId: 'test', dataset: 'test'}}} fallback={null}>
+        <ResourceProvider defaultSource={{projectId: 'test', dataset: 'test'}} fallback={null}>
           {children}
         </ResourceProvider>
       ),
@@ -125,7 +125,7 @@ describe('useManageFavorite', () => {
   it('should handle unfavorite action and update state', async () => {
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider sources={{default: {projectId: 'test', dataset: 'test'}}} fallback={null}>
+        <ResourceProvider defaultSource={{projectId: 'test', dataset: 'test'}} fallback={null}>
           {children}
         </ResourceProvider>
       ),
@@ -167,7 +167,7 @@ describe('useManageFavorite', () => {
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -196,7 +196,7 @@ describe('useManageFavorite', () => {
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -245,7 +245,7 @@ describe('useManageFavorite', () => {
       renderHook(() => useManageFavorite(mockMediaDocumentHandle), {
         wrapper: ({children}) => (
           <ResourceProvider
-            sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+            defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             {children}
@@ -263,7 +263,7 @@ describe('useManageFavorite', () => {
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandleWithSchema), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -307,7 +307,7 @@ describe('useManageFavorite', () => {
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -325,7 +325,7 @@ describe('useManageFavorite', () => {
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -345,7 +345,7 @@ describe('useManageFavorite', () => {
     const {result} = renderHook(() => useManageFavorite(handle), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -365,7 +365,7 @@ describe('useManageFavorite', () => {
     const {result} = renderHook(() => useManageFavorite(handle), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -385,7 +385,7 @@ describe('useManageFavorite', () => {
     const {result} = renderHook(() => useManageFavorite(handle), {
       wrapper: ({children}) => (
         <ResourceProvider
-          sources={{default: {projectId: 'test-project', dataset: 'test-dataset'}}}
+          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}

@@ -70,7 +70,7 @@ describe('presenceStore', () => {
     vi.mocked(getUserState).mockImplementation(mockGetUserState)
 
     instance = createSanityInstance({
-      sources: {default: {projectId: 'test-project', dataset: 'test-dataset'}},
+      defaultSource: {projectId: 'test-project', dataset: 'test-dataset'},
     })
   })
 

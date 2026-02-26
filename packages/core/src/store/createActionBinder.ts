@@ -134,7 +134,7 @@ const createSourceKey = (instance: SanityInstance, source?: DocumentSource): Bou
   if (!defaultSource) {
     throw new Error(
       'No source provided and no default source configured. ' +
-        'Register a "default" entry in config.sources, or pass an explicit source.',
+        'Provide a "default" source in your sources map, or pass an explicit source.',
     )
   }
   return {name: sourceKeyName(defaultSource), source: defaultSource}

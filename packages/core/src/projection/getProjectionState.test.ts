@@ -49,7 +49,7 @@ describe('getProjectionState', () => {
     })
 
     instance = createSanityInstance({
-      sources: {default: {projectId: 'exampleProject', dataset: 'exampleDataset'}},
+      defaultSource: {projectId: 'exampleProject', dataset: 'exampleDataset'},
     })
     vi.useFakeTimers() // Enable fake timers for each test
   })

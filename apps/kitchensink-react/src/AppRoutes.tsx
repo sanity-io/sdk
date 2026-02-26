@@ -145,7 +145,7 @@ export function AppRoutes(): JSX.Element {
             path="agent-actions"
             element={
               <ResourceProvider
-                sources={{default: {projectId: 'vo1ysemo', dataset: 'production'}}}
+                defaultSource={{projectId: 'vo1ysemo', dataset: 'production'}}
                 fallback={null}
               >
                 <AgentActionsRoute />

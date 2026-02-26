@@ -595,7 +595,7 @@ function DatasetExplorer() {
             }
           >
             <ResourceProvider
-              sources={{default: {projectId: defaultProjectId!, dataset: selectedDataset}}}
+              defaultSource={{projectId: defaultProjectId!, dataset: selectedDataset}}
               fallback={
                 <Flex align="center" padding={4}>
                   <Spinner />
@@ -784,7 +784,7 @@ function ProjectsExplorer() {
             }
           >
             <ResourceProvider
-              sources={{default: {projectId: selectedProject, dataset: ''}}}
+              defaultSource={{projectId: selectedProject, dataset: ''}}
               fallback={
                 <Flex align="center" padding={4}>
                   <Spinner />

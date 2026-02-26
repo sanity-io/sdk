@@ -18,7 +18,7 @@ import {SanityInstanceContext} from '../../context/SanityInstanceContext'
  * @example Get the current instance
  * ```tsx
  * const instance = useSanityInstance()
- * console.log(instance.config.sources)
+ * console.log(instance.config.defaultSource)
  * ```
  *
  * @throws Error if no SanityInstance is found in context

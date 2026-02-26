@@ -5,7 +5,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 import {SanityApp} from '../components/SanityApp'
 import {SDKStudioContext, type StudioWorkspaceHandle} from './SDKStudioContext'
 
-// Mock SDKProvider to capture the config it receives
+// Mock SDKProvider to capture the config and sources it receives
 const mockSDKProvider = vi.hoisted(() => vi.fn())
 vi.mock('../components/SDKProvider', () => ({
   SDKProvider: mockSDKProvider.mockImplementation(({children}) => (
@@ -46,25 +46,29 @@ describe('SDKStudioContext', () => {
     expect(mockSDKProvider).toHaveBeenCalled()
     const receivedConfig = mockSDKProvider.mock.calls[0][0].config as SanityConfig
     expect(receivedConfig).toMatchObject({
-      sources: {
-        default: {projectId: 'studio-project-id', dataset: 'production'},
-      },
+      defaultSource: {projectId: 'studio-project-id', dataset: 'production'},
       studio: {
         auth: {token: mockWorkspace.auth.token},
       },
+    })
+    const receivedSources = mockSDKProvider.mock.calls[0][0].sources
+    expect(receivedSources).toEqual({
+      default: {projectId: 'studio-project-id', dataset: 'production'},
     })
   })
 
   it('explicit config takes precedence over SDKStudioContext', () => {
     const explicitConfig: SanityConfig = {
-      sources: {
-        default: {projectId: 'explicit-project', dataset: 'staging'},
-      },
+      defaultSource: {projectId: 'explicit-project', dataset: 'staging'},
     }
 
     render(
       <SDKStudioContext.Provider value={mockWorkspace}>
-        <SanityApp config={explicitConfig} fallback={<div>Loading</div>}>
+        <SanityApp
+          config={explicitConfig}
+          sources={{default: {projectId: 'explicit-project', dataset: 'staging'}}}
+          fallback={<div>Loading</div>}
+        >
           <div>Child</div>
         </SanityApp>
       </SDKStudioContext.Provider>,
@@ -73,18 +77,14 @@ describe('SDKStudioContext', () => {
     expect(mockSDKProvider).toHaveBeenCalled()
     const receivedConfig = mockSDKProvider.mock.calls[0][0].config as SanityConfig
     expect(receivedConfig).toMatchObject({
-      sources: {
-        default: {projectId: 'explicit-project', dataset: 'staging'},
-      },
+      defaultSource: {projectId: 'explicit-project', dataset: 'staging'},
     })
     expect(receivedConfig.studio).toBeUndefined()
   })
 
   it('SanityApp works without SDKStudioContext (standalone mode)', () => {
     const standaloneConfig: SanityConfig = {
-      sources: {
-        default: {projectId: 'standalone-project', dataset: 'production'},
-      },
+      defaultSource: {projectId: 'standalone-project', dataset: 'production'},
     }
 
     render(
@@ -96,9 +96,7 @@ describe('SDKStudioContext', () => {
     expect(mockSDKProvider).toHaveBeenCalled()
     const receivedConfig = mockSDKProvider.mock.calls[0][0].config as SanityConfig
     expect(receivedConfig).toMatchObject({
-      sources: {
-        default: {projectId: 'standalone-project', dataset: 'production'},
-      },
+      defaultSource: {projectId: 'standalone-project', dataset: 'production'},
     })
   })
 
@@ -120,9 +118,7 @@ describe('SDKStudioContext', () => {
     expect(mockSDKProvider).toHaveBeenCalled()
     const receivedConfig = mockSDKProvider.mock.calls[0][0].config as SanityConfig
     expect(receivedConfig).toMatchObject({
-      sources: {
-        default: {projectId: 'older-studio', dataset: 'production'},
-      },
+      defaultSource: {projectId: 'older-studio', dataset: 'production'},
     })
     expect(receivedConfig.studio).toBeDefined()
     expect(receivedConfig.studio?.auth).toBeUndefined()
