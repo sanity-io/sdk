@@ -2,7 +2,6 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {type DocumentSource, getDefaultDatasetSource} from '../config/sanityConfig'
 import {
-  bindActionByDataset,
   bindActionBySource,
   bindActionBySourceAndPerspective,
   bindActionGlobally,
@@ -99,34 +98,6 @@ describe('createActionBinder', () => {
   })
 })
 
-describe('bindActionByDataset', () => {
-  it('should work correctly when projectId and dataset are provided', () => {
-    const storeDefinition = {
-      name: 'DSStore',
-      getInitialState: () => ({counter: 0}),
-    }
-    const action = vi.fn((_context, {value}: {value: string}) => value)
-    const boundAction = bindActionByDataset(storeDefinition, action)
-    const instance = createSanityInstance({
-      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
-    })
-    const result = boundAction(instance, {value: 'hello'})
-    expect(result).toBe('hello')
-  })
-
-  it('should throw an error if projectId or dataset is missing', () => {
-    const storeDefinition = {
-      name: 'DSStore',
-      getInitialState: () => ({counter: 0}),
-    }
-    const action = vi.fn((_context, _?) => 'fail')
-    const boundAction = bindActionByDataset(storeDefinition, action)
-    // Instance with missing dataset
-    const instance = createSanityInstance({sources: {default: {projectId: 'proj1', dataset: ''}}})
-    expect(() => boundAction(instance)).toThrow('This API requires a project ID and dataset.')
-  })
-})
-
 describe('bindActionGlobally', () => {
   it('should work correctly ignoring config in key generation', () => {
     const storeDefinition = {
@@ -163,42 +134,6 @@ describe('bindActionGlobally', () => {
 
     instance2.dispose()
     expect(storeInstance.dispose).toHaveBeenCalledTimes(1)
-  })
-})
-
-describe('bindActionByDataset with named sources', () => {
-  it('should resolve from config.sources.default when no options provided', () => {
-    const storeDefinition = {
-      name: 'DSNamedStore',
-      getInitialState: () => ({counter: 0}),
-    }
-    const action = vi.fn((_context, _?) => 'ok')
-    const boundAction = bindActionByDataset(storeDefinition, action)
-    const instance = createSanityInstance({
-      sources: {
-        default: {projectId: 'src-proj', dataset: 'src-ds'},
-      },
-    })
-    const result = boundAction(instance)
-    expect(result).toBe('ok')
-  })
-
-  it('should prefer explicit options over default source', () => {
-    const storeDefinition = {
-      name: 'DSNamedStore2',
-      getInitialState: () => ({counter: 0}),
-    }
-    const action = vi.fn(
-      (context, _options?: {projectId?: string; dataset?: string}) => context.key,
-    )
-    const boundAction = bindActionByDataset(storeDefinition, action)
-    const instance = createSanityInstance({
-      sources: {
-        default: {projectId: 'src-proj', dataset: 'src-ds'},
-      },
-    })
-    const result = boundAction(instance, {projectId: 'override', dataset: 'override-ds'})
-    expect(result).toEqual(expect.objectContaining({projectId: 'override', dataset: 'override-ds'}))
   })
 })
 

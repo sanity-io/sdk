@@ -22,12 +22,6 @@ export interface BoundSourceKey {
 export interface BoundPerspectiveKey extends BoundSourceKey {
   perspective: ClientPerspective | ReleasePerspective
 }
-interface BoundDatasetKey {
-  name: string
-  projectId: string
-  dataset: string
-}
-
 /**
  * Defines a store action that operates on a specific state type
  */
@@ -123,61 +117,6 @@ export function createActionBinder<
     }
   }
 }
-
-/**
- * Binds an action to a store that's scoped to a specific project and dataset
- *
- * @remarks
- * This creates actions that operate on state isolated to a specific projectId and dataset.
- * Different project/dataset combinations will have separate states.
- *
- * @throws Error if projectId or dataset is missing from the Sanity instance config
- *
- * @example
- * ```ts
- * // Define a store
- * const documentStore = defineStore<DocumentState>({
- *   name: 'Document',
- *   getInitialState: () => ({ documents: {} }),
- *   // ...
- * })
- *
- * // Create dataset-specific actions
- * export const fetchDocument = bindActionByDataset(
- *   documentStore,
- *   ({instance, state}, documentId) => {
- *     // This state is isolated to the specific project/dataset
- *     // ...fetch logic...
- *   }
- * )
- *
- * // Usage
- * fetchDocument(sanityInstance, 'doc123')
- * ```
- */
-export const bindActionByDataset = createActionBinder<
-  BoundDatasetKey,
-  [(object & {projectId?: string; dataset?: string})?, ...unknown[]]
->((instance, options) => {
-  let projectId = options?.projectId
-  let dataset = options?.dataset
-
-  if (!projectId || !dataset) {
-    const defaultSource = resolveDefaultSource(instance.config)
-    if (defaultSource && isDatasetSource(defaultSource)) {
-      projectId = projectId ?? defaultSource.projectId
-      dataset = dataset ?? defaultSource.dataset
-    }
-  }
-
-  if (!projectId || !dataset) {
-    throw new Error(
-      'This API requires a project ID and dataset. ' +
-        'Register a "default" dataset source in config.sources, or pass projectId/dataset explicitly.',
-    )
-  }
-  return {name: `${projectId}.${dataset}`, projectId, dataset}
-})
 
 const sourceKeyName = (source: DocumentSource): string => {
   if (isDatasetSource(source)) return `${source.projectId}.${source.dataset}`

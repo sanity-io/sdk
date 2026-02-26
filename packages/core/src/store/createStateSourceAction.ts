@@ -155,13 +155,13 @@ interface StateSourceOptions<TState, TParams extends unknown[], TReturn, TKey> {
  *   // ...
  * })
  *
- * const getDocument = bindActionByDataset(
+ * const getDocument = bindActionBySource(
  *   documentStore,
- *   createStateSourceAction(({state}, documentId: string) => state.documents[documentId])
+ *   createStateSourceAction(({state}, _options, documentId: string) => state.documents[documentId])
  * )
  *
  * // Usage
- * const documentSource = getDocument(sanityInstance, 'doc123')
+ * const documentSource = getDocument(sanityInstance, {}, 'doc123')
  * const doc = documentSource.getCurrent()
  * const subscription = documentSource.observable.subscribe(updatedDoc => {
  *   console.log('Document changed:', updatedDoc)
