@@ -180,7 +180,7 @@ export function useDocumentProjection<TData extends object>({
   projection,
   ...docHandle
 }: useDocumentProjectionOptions): useDocumentProjectionResults<TData> {
-  const instance = useSanityInstance(docHandle)
+  const instance = useSanityInstance()
 
   // Normalize projection string to handle template literals with whitespace
   // This ensures that the same projection content produces the same state source

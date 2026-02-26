@@ -216,7 +216,7 @@ export function useDocuments<
   TProjectId
 > {
   const options = useNormalizedSourceOptions(rawOptions)
-  const instance = useSanityInstance(options)
+  const instance = useSanityInstance()
   const [limit, setLimit] = useState(batchSize)
   const documentTypes = useMemo(
     () =>

@@ -125,7 +125,6 @@ describe('AuthBoundary', () => {
       ...mockSanityInstance,
       config: {...mockSanityInstance.config, ...config},
     }),
-    match: () => undefined,
   }
 
   beforeEach(() => {

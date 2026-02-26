@@ -91,7 +91,7 @@ export function normalizeSourceOptions<T extends {source?: DocumentSource; sourc
  * @example
  * ```tsx
  * function useQuery(options: WithSourceNameSupport<QueryOptions>) {
- *   const instance = useSanityInstance(options)
+ *   const instance = useSanityInstance()
  *   const normalized = useNormalizedOptions(options)
  *   // normalized now has source but never sourceName
  *   const queryKey = getQueryKey(normalized)

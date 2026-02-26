@@ -244,7 +244,7 @@ export function usePaginatedDocuments<
   TDataset,
   TProjectId
 > {
-  const instance = useSanityInstance(options)
+  const instance = useSanityInstance()
   const [pageIndex, setPageIndex] = useState(0)
   const key = JSON.stringify({filter, search, params, orderings, pageSize})
   // Reset the pageIndex to 0 whenever any query parameters (filter, search,

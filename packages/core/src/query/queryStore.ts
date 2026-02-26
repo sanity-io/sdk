@@ -137,7 +137,11 @@ const errorHandler = (state: StoreState<{error?: unknown}>) => {
   return (error: unknown): void => state.set('setError', {error})
 }
 
-const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QueryStoreState>) => {
+const listenForNewSubscribersAndFetch = ({
+  state,
+  instance,
+  key: {source: boundSource},
+}: StoreContext<QueryStoreState, BoundSourceKey>) => {
   return state.observable
     .pipe(
       map((s) => new Set(Object.keys(s.queries))),
@@ -185,11 +189,17 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
                 }).observable.pipe(filter(Boolean))
               : of(perspectiveFromOptions ?? QUERY_STORE_DEFAULT_PERSPECTIVE)
 
+            // Use the store's bound source as fallback when the query key
+            // doesn't include an explicit source. The store is scoped to a
+            // specific source via bindActionBySource, but the captured
+            // `instance` may have a different default source (e.g. when the
+            // store was first created by a caller that passed an explicit
+            // source while using the root app instance).
             const client$ = getClientState(instance, {
               apiVersion: QUERY_STORE_API_VERSION,
               projectId,
               dataset,
-              source,
+              source: source ?? boundSource,
             }).observable
 
             return combineLatest({

@@ -42,24 +42,6 @@ describe('createSanityInstance', () => {
     expect(child.getParent()).toBe(parent)
   })
 
-  it('should match only against the current instance config', () => {
-    const grandparent = createSanityInstance({
-      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
-    })
-    const parent = grandparent.createChild({
-      sources: {default: {projectId: 'proj2', dataset: 'ds1'}},
-    })
-    const child = parent.createChild({sources: {default: {projectId: 'proj2', dataset: 'ds2'}}})
-
-    expect(child.config).toEqual({sources: {default: {projectId: 'proj2', dataset: 'ds2'}}})
-    expect(parent.config).toEqual({sources: {default: {projectId: 'proj2', dataset: 'ds1'}}})
-
-    // Empty target should match current instance
-    expect(child.match({})).toBe(child)
-    // Matching against parent config should not fall back to parent
-    expect(child.match({sources: {default: {projectId: 'proj2', dataset: 'ds1'}}})).toBeUndefined()
-  })
-
   it('should support createChild with incremental source config', () => {
     const empty = createSanityInstance()
     const withSource = empty.createChild({
@@ -68,37 +50,6 @@ describe('createSanityInstance', () => {
 
     expect(empty.config).toEqual({})
     expect(withSource.config).toEqual({sources: {default: {projectId: 'proj1', dataset: 'ds1'}}})
-
-    expect(withSource.match({})).toBe(withSource)
-  })
-
-  it('should return undefined when current instance does not match', () => {
-    const instance = createSanityInstance({
-      sources: {default: {projectId: 'proj1', dataset: 'ds1'}},
-    })
-    // No match for auth
-    expect(instance.match({auth: {apiHost: 'nonexistent'}})).toBeUndefined()
-    // No match for sources
-    expect(
-      instance.match({sources: {default: {projectId: 'other', dataset: 'ds1'}}}),
-    ).toBeUndefined()
-  })
-
-  it('should ignore auth matching when only non-default sources are constrained', () => {
-    const instance = createSanityInstance({
-      auth: {apiHost: 'api.sanity.work'},
-      sources: {
-        default: {projectId: 'proj1', dataset: 'ds1'},
-        assets: {projectId: 'proj2', dataset: 'ds2'},
-      },
-    })
-
-    expect(
-      instance.match({
-        auth: {apiHost: 'different-api-host'},
-        sources: {assets: {projectId: 'proj2', dataset: 'ds2'}},
-      }),
-    ).toBe(instance)
   })
 
   it('should inherit and merge auth config', () => {

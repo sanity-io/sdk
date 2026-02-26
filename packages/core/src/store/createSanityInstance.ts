@@ -1,10 +1,4 @@
-import {isEqual} from 'lodash-es'
-
-import {
-  DEFAULT_SOURCE_NAME,
-  getDefaultDatasetSource,
-  type SanityConfig,
-} from '../config/sanityConfig'
+import {getDefaultDatasetSource, type SanityConfig} from '../config/sanityConfig'
 import {insecureRandomId} from '../utils/ids'
 import {createLogger, type InstanceContext} from '../utils/logger'
 
@@ -58,15 +52,6 @@ export interface SanityInstance {
    * @remarks Child instances inherit parent configuration but can override values
    */
   createChild(config: SanityConfig): SanityInstance
-
-  /**
-   * Checks whether this instance's configuration matches the given target config.
-   * Matching is scoped to the current instance only.
-   *
-   * @param targetConfig - A partial configuration object containing key-value pairs to match.
-   * @returns This instance when all provided config fields match, otherwise `undefined`.
-   */
-  match(targetConfig: Partial<SanityConfig>): SanityInstance | undefined
 }
 
 /**
@@ -157,25 +142,6 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
         childInstanceId: child.instanceId.slice(0, 8),
       })
       return child
-    },
-    match: (targetConfig) => {
-      const keys = Object.keys(targetConfig) as (keyof SanityConfig)[]
-      if (keys.length === 0) return instance
-      const hasSourcesConstraint = 'sources' in targetConfig && !!targetConfig.sources
-      const defaultSourceConstrained = !!targetConfig.sources?.[DEFAULT_SOURCE_NAME]
-      const shouldCompareAuth = !hasSourcesConstraint || defaultSourceConstrained
-
-      return keys.every((key) => {
-        if (key === 'auth' && !shouldCompareAuth) return true
-        if (key === 'sources') {
-          return Object.entries(targetConfig.sources!).every(([name, targetSource]) =>
-            isEqual(config.sources?.[name], targetSource),
-          )
-        }
-        return isEqual(config[key], targetConfig[key])
-      })
-        ? instance
-        : undefined
     },
   }
 

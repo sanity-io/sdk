@@ -97,7 +97,7 @@ export function useDocumentPreview({
   ref,
   ...docHandle
 }: useDocumentPreviewOptions): useDocumentPreviewResults {
-  const instance = useSanityInstance(docHandle)
+  const instance = useSanityInstance()
   const normalizedDocHandle = useNormalizedSourceOptions(docHandle)
 
   // Use the projection hook with the fixed preview projection

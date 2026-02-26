@@ -151,7 +151,7 @@ export function useQuery(options: WithSourceNameSupport<QueryOptions>): {
   isPending: boolean
 } {
   // Implementation returns unknown, overloads define specifics
-  const instance = useSanityInstance(options)
+  const instance = useSanityInstance()
 
   // Normalize options: resolve sourceName to source and strip sourceName
   const normalized = useNormalizedSourceOptions(options)

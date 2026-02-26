@@ -490,4 +490,58 @@ describe('queryStore', () => {
 
     unsubscribe()
   })
+
+  it('uses bound source (not instance default) when a shared store receives a query without an explicit source', async () => {
+    // Regression test: when a store for source B is first created by an
+    // instance whose default source is A (passing source B explicitly),
+    // subsequent queries added to that store without an explicit source
+    // must still use source B for client creation — not fall back to the
+    // captured instance's default source A.
+    const projectASource = {projectId: 'project-a', dataset: 'production'}
+    const projectBSource = {projectId: 'project-b', dataset: 'production'}
+
+    const rootInstance = createSanityInstance({sources: {default: projectASource}})
+
+    // 1. Root instance queries with an explicit source for project B.
+    //    This creates the QueryStore:project-b.production store, whose
+    //    initialize() captures rootInstance in its closure.
+    const stateWithSource = getQueryState(rootInstance, {
+      query: '*[_type == "author"]',
+      source: projectBSource,
+    })
+    const unsub1 = stateWithSource.subscribe()
+    await firstValueFrom(stateWithSource.observable.pipe(filter((i) => i !== undefined)))
+
+    vi.mocked(getClientState).mockClear()
+
+    // 2. A child instance with project B as its default queries the SAME
+    //    store (same composite key) but does NOT pass an explicit source.
+    const childInstance = rootInstance.createChild({sources: {default: projectBSource}})
+    const stateNoSource = getQueryState(childInstance, {query: '*[_type == "movie"]'})
+    const unsub2 = stateNoSource.subscribe()
+    await firstValueFrom(stateNoSource.observable.pipe(filter((i) => i !== undefined)))
+
+    // The listener should create a client using the bound source (project B),
+    // not the captured rootInstance's default (project A).
+    const fetchCalls = vi.mocked(getClientState).mock.calls
+    const wrongCall = fetchCalls.find(
+      ([, options]) =>
+        options.projectId === 'project-a' ||
+        (options.source &&
+          'projectId' in options.source &&
+          options.source.projectId === 'project-a'),
+    )
+    expect(wrongCall).toBeUndefined()
+
+    const correctCall = fetchCalls.find(
+      ([, options]) =>
+        options.source && 'projectId' in options.source && options.source.projectId === 'project-b',
+    )
+    expect(correctCall).toBeDefined()
+
+    unsub1()
+    unsub2()
+    childInstance.dispose()
+    rootInstance.dispose()
+  })
 })

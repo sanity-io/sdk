@@ -89,7 +89,7 @@ export function useDocumentEvent<
     return ref.current(documentEvent)
   }, [])
 
-  const instance = useSanityInstance(datasetHandle)
+  const instance = useSanityInstance()
   useEffect(() => {
     return subscribeDocumentEvents(instance, {
       eventHandler: stableHandler,

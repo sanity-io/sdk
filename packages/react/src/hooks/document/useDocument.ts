@@ -1,6 +1,5 @@
 import {type DocumentOptions, getDocumentState, type JsonMatch, resolveDocument} from '@sanity/sdk'
 import {type SanityDocument} from 'groq'
-import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 import {
@@ -23,9 +22,6 @@ const useDocumentValue = createStateSourceHook({
   // Extract handle part for resolveDocument
   suspender: (instance, options: DocumentOptions<string | undefined>) =>
     resolveDocument(instance, options),
-  getConfig: identity as (
-    options: DocumentOptions<string | undefined>,
-  ) => DocumentOptions<string | undefined>,
 })
 
 const wrapHookWithData = <TParams extends unknown[], TReturn>(

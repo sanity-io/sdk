@@ -6,7 +6,6 @@ import {
   type SanityInstance,
   type StateSource,
 } from '@sanity/sdk'
-import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 import {useNormalizedSourceOptions} from '../helpers/useNormalizedSourceOptions'
@@ -55,7 +54,6 @@ const useDocumentSyncStatusValue = createStateSourceHook({
   shouldSuspend: (instance, doc: DocumentHandle) =>
     getDocumentSyncStatus(instance, doc).getCurrent() === undefined,
   suspender: (instance, doc: DocumentHandle) => resolveDocument(instance, doc),
-  getConfig: identity,
 })
 
 /**
