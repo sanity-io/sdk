@@ -344,6 +344,24 @@ describe('bindActionByResourceAndPerspective', () => {
     )
   })
 
+  it('should throw when provided a stackable perspective', () => {
+    const storeDefinition = {
+      name: 'PerspectiveStore',
+      getInitialState: () => ({counter: 0}),
+    }
+    const action = vi.fn((_context) => 'success')
+    const boundAction = bindActionByResourceAndPerspective(storeDefinition, action)
+    const instance = createSanityInstance({
+      defaultResource: {projectId: 'proj1', dataset: 'ds1'},
+    })
+
+    expect(() =>
+      boundAction(instance, {
+        perspective: ['drafts', 'release1'] as unknown as 'drafts',
+      }),
+    ).toThrow('Stackable perspectives are not supported.')
+  })
+
   it('should reuse same store when same resource and perspective are used', () => {
     const storeDefinition = {
       name: 'PerspectiveStore',

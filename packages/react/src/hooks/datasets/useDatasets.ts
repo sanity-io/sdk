@@ -1,11 +1,5 @@
 import {type DatasetsResponse} from '@sanity/client'
-import {
-  getDatasetsState,
-  type ProjectHandle,
-  resolveDatasets,
-  type SanityInstance,
-  type StateSource,
-} from '@sanity/sdk'
+import {getDatasetsState, resolveDatasets, type SanityInstance, type StateSource} from '@sanity/sdk'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
@@ -15,11 +9,12 @@ type UseDatasets = {
    * Returns metadata for each dataset the current user has access to.
    *
    * @category Datasets
-   * @returns The metadata for your the datasets
+   * @param options - An object containing the `projectId` to list datasets for.
+   * @returns The metadata for the datasets
    *
    * @example
    * ```tsx
-   * const datasets = useDatasets()
+   * const datasets = useDatasets({projectId: 'my-project-id'})
    *
    * return (
    *   <select>
@@ -31,7 +26,7 @@ type UseDatasets = {
    * ```
    *
    */
-  (): DatasetsResponse
+  (options: {projectId: string}): DatasetsResponse
 }
 
 /**
@@ -41,10 +36,9 @@ type UseDatasets = {
 export const useDatasets: UseDatasets = createStateSourceHook({
   getState: getDatasetsState as (
     instance: SanityInstance,
-    projectHandle?: ProjectHandle,
+    options: {projectId: string},
   ) => StateSource<DatasetsResponse>,
-  shouldSuspend: (instance, projectHandle?: ProjectHandle) =>
-    // remove `undefined` since we're suspending when that is the case
-    getDatasetsState(instance, projectHandle).getCurrent() === undefined,
+  shouldSuspend: (instance, options: {projectId: string}) =>
+    getDatasetsState(instance, options).getCurrent() === undefined,
   suspender: resolveDatasets,
 })

@@ -1,12 +1,10 @@
-import {type ClientPerspective} from '@sanity/client'
-
 import {
   type DatasetHandle,
   type DocumentResource,
   isCanvasResource,
   isDatasetResource,
   isMediaLibraryResource,
-  type ReleasePerspective,
+  type PerspectiveHandle,
   resolveDefaultResource,
 } from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
@@ -20,7 +18,7 @@ export interface BoundResourceKey {
   resource: DocumentResource
 }
 export interface BoundPerspectiveKey extends BoundResourceKey {
-  perspective: ClientPerspective | ReleasePerspective
+  perspective: NonNullable<PerspectiveHandle['perspective']>
 }
 /**
  * Defines a store action that operates on a specific state type
@@ -164,6 +162,7 @@ export const bindActionByResource = createActionBinder<
  * can isolate single queries by perspective.
  *
  * @throws Error if resource or perspective is missing from the Sanity instance config
+ * @throws Error if a stackable perspective (array) is provided, as they are not supported
  *
  * @example
  * ```ts
@@ -200,8 +199,9 @@ export const bindActionByResourceAndPerspective = createActionBinder<
   } else if (typeof utilizedPerspective === 'string') {
     perspectiveKey = utilizedPerspective
   } else {
-    // "StackablePerspective", shouldn't be a common case, but just in case
-    perspectiveKey = JSON.stringify(utilizedPerspective)
+    throw new Error(
+      `Stackable perspectives are not supported. Received perspective: ${JSON.stringify(utilizedPerspective)}`,
+    )
   }
   const resourceKey = createResourceKey(instance, resource)
 
