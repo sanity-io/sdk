@@ -20,6 +20,7 @@ export default [
 
       // Ignore files for Sanity TypeGen
       'sanity.types.ts',
+      '**/.sanity/**',
     ],
   },
   ...baseESLintConfig,
