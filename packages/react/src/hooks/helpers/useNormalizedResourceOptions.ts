@@ -39,14 +39,22 @@ export type WithResourceNameSupport<T extends {resource?: DocumentResource}> = T
  * @internal
  */
 export function normalizeResourceOptions<
-  T extends {resource?: DocumentResource; resourceName?: string; perspective?: unknown},
+  T extends {
+    resource?: DocumentResource
+    resourceName?: string
+    perspective?: unknown
+    projectId?: string
+    dataset?: string
+    mediaLibraryId?: string
+    canvasId?: string
+  },
 >(
   options: T,
   resources: Record<string, DocumentResource>,
   contextResource?: DocumentResource,
   contextPerspective?: PerspectiveHandle['perspective'],
 ): Omit<T, 'resourceName'> {
-  const {resourceName, ...rest} = options
+  const {resourceName, projectId, dataset, mediaLibraryId, canvasId, ...rest} = options
 
   if (resourceName && Object.hasOwn(options, 'resource')) {
     throw new Error(
@@ -66,8 +74,19 @@ export function normalizeResourceOptions<
     resolvedResource = resources[resourceName]
   }
 
+  if (!resolvedResource && projectId && dataset) {
+    resolvedResource = {projectId, dataset}
+  } else if (!resolvedResource && mediaLibraryId) {
+    resolvedResource = {mediaLibraryId}
+  } else if (!resolvedResource && canvasId) {
+    resolvedResource = {canvasId}
+  }
+
   const hasExplicitTargeting =
-    'projectId' in rest || 'dataset' in rest || 'mediaLibraryId' in rest || 'canvasId' in rest
+    projectId !== undefined ||
+    dataset !== undefined ||
+    mediaLibraryId !== undefined ||
+    canvasId !== undefined
   if (!resolvedResource && !hasExplicitTargeting) {
     resolvedResource = contextResource
   }
@@ -119,7 +138,15 @@ export function normalizeResourceOptions<
  * @beta
  */
 export function useNormalizedResourceOptions<
-  T extends {resource?: DocumentResource; resourceName?: string; perspective?: unknown},
+  T extends {
+    resource?: DocumentResource
+    resourceName?: string
+    perspective?: unknown
+    projectId?: string
+    dataset?: string
+    mediaLibraryId?: string
+    canvasId?: string
+  },
 >(options: T): Omit<T, 'resourceName'> {
   const resources = useContext(ResourcesContext)
   const contextResource = useContext(ResourceContext)
