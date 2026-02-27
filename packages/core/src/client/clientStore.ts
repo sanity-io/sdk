@@ -1,4 +1,9 @@
-import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
+import {
+  type ClientConfig,
+  type ClientPerspective,
+  createClient,
+  type SanityClient,
+} from '@sanity/client'
 import {pick} from 'lodash-es'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
@@ -48,13 +53,13 @@ const allowedKeys = Object.keys({
   'source': null,
 } satisfies Record<keyof ClientOptions, null>) as (keyof ClientOptions)[]
 
-const DEFAULT_CLIENT_CONFIG: ClientConfig = {
+const DEFAULT_CLIENT_CONFIG = {
   apiVersion: DEFAULT_API_VERSION,
   useCdn: false,
   ignoreBrowserTokenWarning: true,
   allowReconfigure: false,
   requestTagPrefix: DEFAULT_REQUEST_TAG_PREFIX,
-}
+} satisfies ClientConfig
 
 /**
  * States tracked by the client store
@@ -88,6 +93,11 @@ interface ClientResource {
  * @public
  */
 export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey> {
+  /**
+   * Narrows the inherited `perspective` to exclude stackable perspectives,
+   * which are not supported by the SDK.
+   */
+  'perspective'?: Exclude<ClientPerspective, readonly unknown[]>
   /**
    * An optional flag to choose between the default client (typically project-level)
    * and the global client ('global'). When set to `'global'`, the global client
