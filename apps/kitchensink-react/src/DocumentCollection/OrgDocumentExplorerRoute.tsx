@@ -544,7 +544,12 @@ function DocumentTypes() {
 
 function DatasetExplorer() {
   const {config} = useSanityInstance()
-  const datasets = useDatasets()
+
+  if (!config.projectId) {
+    throw new Error('A projectId is required for DatasetExplorer')
+  }
+
+  const datasets = useDatasets({projectId: config.projectId})
   const [selectedDataset, setSelectedDataset] = useState<string | null>(null)
 
   const handleDatasetChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
