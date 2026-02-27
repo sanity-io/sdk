@@ -1,3 +1,4 @@
+import {type StudioResource} from '@sanity/message-protocol'
 import {type DocumentHandle} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
@@ -7,7 +8,7 @@ import {useNavigateToStudioDocument} from './useNavigateToStudioDocument'
 // Mock dependencies
 const mockSendMessage = vi.fn()
 const mockFetch = vi.fn()
-let mockWorkspacesByProjectIdAndDataset = {}
+let mockWorkspacesByProjectIdAndDataset: Record<string, StudioResource[]> = {}
 
 vi.mock('../comlink/useWindowConnection', () => {
   return {
@@ -29,6 +30,43 @@ vi.mock('./useStudioWorkspacesByProjectIdDataset', () => {
   }
 })
 
+function makeStudioResource(overrides: Record<string, unknown> = {}): StudioResource {
+  return {
+    id: 'workspace123',
+    name: 'workspace1',
+    title: 'Workspace 1',
+    basePath: '/workspace1',
+    projectId: 'project1',
+    dataset: 'dataset1',
+    userApplicationId: 'user1',
+    url: 'https://test.sanity.studio',
+    href: 'https://test.sanity.studio',
+    type: 'studio',
+    urlType: 'internal',
+    activeDeployment: {
+      id: 'deploy-1',
+      version: '1.0.0',
+      isActiveDeployment: true,
+      userApplicationId: 'user1',
+      isAutoUpdating: false,
+      manifest: null,
+      size: 1024,
+      deployedAt: '2026-01-01T00:00:00Z',
+      deployedBy: 'user1',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    },
+    hasManifest: true,
+    hasSchema: true,
+    dashboardStatus: 'default',
+    autoUpdatingVersion: null,
+    manifest: null,
+    config: {},
+    updatedAt: '2026-01-01T00:00:00Z',
+    ...overrides,
+  } as StudioResource
+}
+
 describe('useNavigateToStudioDocument', () => {
   const mockDocumentHandle: DocumentHandle = {
     documentId: 'doc123',
@@ -37,15 +75,7 @@ describe('useNavigateToStudioDocument', () => {
     dataset: 'dataset1',
   }
 
-  const mockWorkspace = {
-    id: 'workspace123',
-    name: 'workspace1',
-    title: 'Workspace 1',
-    basePath: '/workspace1',
-    dataset: 'dataset1',
-    userApplicationId: 'user1',
-    url: 'https://test.sanity.studio',
-  }
+  const mockWorkspace = makeStudioResource()
 
   beforeEach(() => {
     vi.resetAllMocks()
@@ -54,12 +84,23 @@ describe('useNavigateToStudioDocument', () => {
     }
   })
 
-  it('returns a function and connection status', () => {
+  it('returns navigate function, workspace info, and ready status', () => {
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
 
-    expect(result.current).toEqual({
-      navigateToStudioDocument: expect.any(Function),
+    expect(result.current.navigateToStudioDocument).toEqual(expect.any(Function))
+    expect(result.current.status).toBe('ready')
+    expect(result.current.workspace).toEqual({
+      id: 'workspace123',
+      name: 'workspace1',
+      title: 'Workspace 1',
+      url: 'https://test.sanity.studio',
+      basePath: '/workspace1',
+      isDeployed: true,
+      hasManifest: true,
+      hasSchema: true,
+      urlType: 'internal',
     })
+    expect(result.current.workspaces).toHaveLength(1)
   })
 
   it('sends correct navigation message when called', () => {
@@ -74,24 +115,38 @@ describe('useNavigateToStudioDocument', () => {
     })
   })
 
-  it('does not send message when no workspace is found', () => {
+  it('returns no-workspace status when no workspace is found', () => {
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     mockWorkspacesByProjectIdAndDataset = {}
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
+
+    expect(result.current.status).toBe('no-workspace')
+    expect(result.current.workspace).toBeNull()
+    expect(result.current.workspaces).toHaveLength(0)
+
     result.current.navigateToStudioDocument()
     expect(mockSendMessage).not.toHaveBeenCalled()
     consoleSpy.mockRestore()
   })
 
-  it('warns when multiple workspaces are found', () => {
+  it('returns multiple-workspaces status when multiple workspaces match without preferred URL', () => {
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const mockWorkspace2 = {...mockWorkspace, id: 'workspace2'}
+    const mockWorkspace2 = makeStudioResource({
+      id: 'workspace2',
+      url: 'https://test2.sanity.studio',
+    })
 
     mockWorkspacesByProjectIdAndDataset = {
       'project1:dataset1': [mockWorkspace, mockWorkspace2],
     }
 
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
+
+    expect(result.current.status).toBe('multiple-workspaces')
+    expect(result.current.workspaces).toHaveLength(2)
+    // Still resolves to the first workspace
+    expect(result.current.workspace).not.toBeNull()
+    expect(result.current.workspace!.id).toBe('workspace123')
 
     result.current.navigateToStudioDocument()
 
@@ -109,7 +164,7 @@ describe('useNavigateToStudioDocument', () => {
     consoleSpy.mockRestore()
   })
 
-  it('warns and does not navigate when projectId or dataset is missing', () => {
+  it('returns no-workspace status when projectId or dataset is missing', () => {
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     const incompleteDocumentHandle: DocumentHandle = {
@@ -119,6 +174,10 @@ describe('useNavigateToStudioDocument', () => {
     }
 
     const {result} = renderHook(() => useNavigateToStudioDocument(incompleteDocumentHandle))
+
+    expect(result.current.status).toBe('no-workspace')
+    expect(result.current.workspace).toBeNull()
+    expect(result.current.workspaces).toHaveLength(0)
 
     result.current.navigateToStudioDocument()
 
@@ -132,13 +191,16 @@ describe('useNavigateToStudioDocument', () => {
 
   it('uses preferred studio URL when multiple workspaces are available', () => {
     const preferredUrl = 'https://preferred.sanity.studio'
-    const mockWorkspace2 = {...mockWorkspace, id: 'workspace2', url: preferredUrl}
+    const mockWorkspace2 = makeStudioResource({id: 'workspace2', url: preferredUrl})
 
     mockWorkspacesByProjectIdAndDataset = {
       'project1:dataset1': [mockWorkspace, mockWorkspace2],
     }
 
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle, preferredUrl))
+
+    expect(result.current.status).toBe('ready')
+    expect(result.current.workspace!.id).toBe('workspace2')
 
     result.current.navigateToStudioDocument()
 
@@ -154,19 +216,21 @@ describe('useNavigateToStudioDocument', () => {
   it('considers NO_PROJECT_ID:NO_DATASET workspaces when matching preferred URL', () => {
     const preferredUrl = 'https://preferred.sanity.studio'
     // Only have a workspace without projectId/dataset that matches the preferred URL
-    const mockWorkspaceNoProject = {
-      ...mockWorkspace,
+    const mockWorkspaceNoProject = makeStudioResource({
       id: 'workspace3',
       url: preferredUrl,
       projectId: undefined,
       dataset: undefined,
-    }
+      hasManifest: false,
+    })
 
     mockWorkspacesByProjectIdAndDataset = {
       'NO_PROJECT_ID:NO_DATASET': [mockWorkspaceNoProject],
     }
 
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle, preferredUrl))
+
+    expect(result.current.workspace!.id).toBe('workspace3')
 
     result.current.navigateToStudioDocument()
 
@@ -185,15 +249,12 @@ describe('useNavigateToStudioDocument', () => {
 
     // Set up workspaces that don't match the preferred URL
     mockWorkspacesByProjectIdAndDataset = {
-      'project1:dataset1': [
-        {
-          ...mockWorkspace,
-          url: 'https://different.sanity.studio',
-        },
-      ],
+      'project1:dataset1': [makeStudioResource({url: 'https://different.sanity.studio'})],
     }
 
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle, preferredUrl))
+
+    expect(result.current.workspace).toBeNull()
 
     result.current.navigateToStudioDocument()
 
@@ -203,5 +264,96 @@ describe('useNavigateToStudioDocument', () => {
     expect(mockSendMessage).not.toHaveBeenCalled()
 
     consoleSpy.mockRestore()
+  })
+
+  describe('deployment status detection', () => {
+    it('returns not-deployed for internal workspace without active deployment', () => {
+      mockWorkspacesByProjectIdAndDataset = {
+        'project1:dataset1': [
+          makeStudioResource({
+            urlType: 'internal',
+            activeDeployment: null,
+            hasManifest: true,
+          }),
+        ],
+      }
+
+      const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
+
+      expect(result.current.status).toBe('not-deployed')
+      expect(result.current.workspace!.isDeployed).toBe(false)
+    })
+
+    it('returns ready for internal workspace with active deployment and manifest', () => {
+      mockWorkspacesByProjectIdAndDataset = {
+        'project1:dataset1': [
+          makeStudioResource({
+            urlType: 'internal',
+            activeDeployment: {id: 'deploy-1'},
+            hasManifest: true,
+          }),
+        ],
+      }
+
+      const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
+
+      expect(result.current.status).toBe('ready')
+      expect(result.current.workspace!.isDeployed).toBe(true)
+      expect(result.current.workspace!.hasManifest).toBe(true)
+    })
+
+    it('returns no-manifest for deployed workspace without manifest', () => {
+      mockWorkspacesByProjectIdAndDataset = {
+        'project1:dataset1': [
+          makeStudioResource({
+            urlType: 'internal',
+            activeDeployment: {id: 'deploy-1'},
+            hasManifest: false,
+          }),
+        ],
+      }
+
+      const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
+
+      expect(result.current.status).toBe('no-manifest')
+      expect(result.current.workspace!.isDeployed).toBe(true)
+      expect(result.current.workspace!.hasManifest).toBe(false)
+    })
+
+    it('returns ready for external workspace (always considered deployed)', () => {
+      mockWorkspacesByProjectIdAndDataset = {
+        'project1:dataset1': [
+          makeStudioResource({
+            urlType: 'external',
+            activeDeployment: null,
+            hasManifest: true,
+          }),
+        ],
+      }
+
+      const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
+
+      expect(result.current.status).toBe('ready')
+      expect(result.current.workspace!.isDeployed).toBe(true)
+      expect(result.current.workspace!.urlType).toBe('external')
+    })
+
+    it('returns no-manifest for external workspace without manifest', () => {
+      mockWorkspacesByProjectIdAndDataset = {
+        'project1:dataset1': [
+          makeStudioResource({
+            urlType: 'external',
+            activeDeployment: null,
+            hasManifest: false,
+          }),
+        ],
+      }
+
+      const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
+
+      expect(result.current.status).toBe('no-manifest')
+      expect(result.current.workspace!.isDeployed).toBe(true)
+      expect(result.current.workspace!.hasManifest).toBe(false)
+    })
   })
 })
