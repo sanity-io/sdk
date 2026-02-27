@@ -14,7 +14,6 @@ import {type DocumentAction} from './actions'
 import {type Grant} from './permissions'
 import {type DocumentSet, getId, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
-import {shouldHaveSingleDocument} from './util'
 
 function checkGrant(grantExpr: ExprNode, document: SanityDocument): boolean {
   const value = evaluateSync(grantExpr, {params: {document}})
@@ -143,7 +142,7 @@ export function processActions({
       case 'document.create': {
         const documentId = getId(action.documentId)
 
-        if (shouldHaveSingleDocument(action)) {
+        if (action.liveEdit) {
           if (working[documentId]) {
             throw new ActionError({
               documentId,
@@ -186,29 +185,35 @@ export function processActions({
           continue
         }
 
-        // Standard draft/published logic
+        // Standard draft/published/version logic
+        const versionId = isReleasePerspective(action.perspective)
+          ? getVersionId(DocumentId(documentId), action.perspective.releaseName)
+          : undefined
         const draftId = getDraftId(DocumentId(documentId))
         const publishedId = getPublishedId(DocumentId(documentId))
 
-        if (working[draftId]) {
+        const alreadyHasVersion = versionId ? working[versionId] : working[draftId]
+
+        if (alreadyHasVersion) {
           throw new ActionError({
             documentId,
             transactionId,
-            message: `A draft version of this document already exists. Please use or discard the existing draft before creating a new one.`,
+            message: `A draft or release version of this document already exists. Please use or discard the existing draft before creating a new one.`,
           })
         }
 
-        // Spread the (possibly undefined) published version directly.
+        // Spread the (possibly undefined) draft or published version directly.
+        // (studio uses the draft version as a base if you are in a release perspective)
         const newDocBase = {
-          ...base[publishedId],
+          ...(base[draftId] ?? base[publishedId]),
           _type: action.documentType,
-          _id: draftId,
+          _id: versionId ?? draftId,
           ...action.initialValue,
         }
         const newDocWorking = {
-          ...working[publishedId],
+          ...(working[draftId] ?? working[publishedId]),
           _type: action.documentType,
-          _id: draftId,
+          _id: versionId ?? draftId,
           ...action.initialValue,
         }
         const mutations: Mutation[] = [{create: newDocWorking}]
@@ -226,7 +231,13 @@ export function processActions({
           timestamp,
         })
 
-        if (!checkGrant(grants.create, working[draftId] as SanityDocument)) {
+        if (versionId && !checkGrant(grants.create, working[versionId] as SanityDocument)) {
+          throw new PermissionActionError({
+            documentId,
+            transactionId,
+            message: `You do not have permission to create a release version for document "${documentId}".`,
+          })
+        } else if (!checkGrant(grants.create, working[draftId] as SanityDocument)) {
           throw new PermissionActionError({
             documentId,
             transactionId,
@@ -332,7 +343,7 @@ export function processActions({
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Cannot discard changes for this document. Draft/discard is not supported for liveEdit or version (release) documents.`,
+            message: `Cannot discard changes for liveEdit document "${documentId}". LiveEdit documents do not support drafts.`,
           })
         }
 
@@ -346,7 +357,7 @@ export function processActions({
           throw new ActionError({
             documentId,
             transactionId,
-            message: `There is no draft available to discard for document "${documentId}".`,
+            message: `There is no draft or version available to discard for document "${documentId}".`,
           })
         }
 
@@ -372,7 +383,7 @@ export function processActions({
       case 'document.edit': {
         const documentId = getId(action.documentId)
 
-        if (shouldHaveSingleDocument(action)) {
+        if (action.liveEdit || isReleasePerspective(action.perspective)) {
           // Single-document mode (liveEdit or release perspective): edit directly without draft logic
           const userPatches = action.patches?.map((patch) => ({patch: {id: documentId, ...patch}}))
 
@@ -380,11 +391,19 @@ export function processActions({
           if (!userPatches?.length) continue
 
           if (!working[documentId] || !base[documentId]) {
-            throw new ActionError({
-              documentId,
-              transactionId,
-              message: `Cannot edit document because it does not exist.`,
-            })
+            if (isReleasePerspective(action.perspective)) {
+              throw new ActionError({
+                documentId,
+                transactionId,
+                message: `This document does not exist in the release. Please create it or add it to the release first.`,
+              })
+            } else {
+              throw new ActionError({
+                documentId,
+                transactionId,
+                message: `Cannot edit document because it does not exist.`,
+              })
+            }
           }
 
           const baseBefore = base[documentId] as SanityDocument
@@ -423,9 +442,11 @@ export function processActions({
             ...patches.map(
               (patch): HttpAction => ({
                 actionType: 'sanity.action.document.edit',
-                // Server requires draftId to have drafts. prefix for validation, even for liveEdit
-                draftId: getDraftId(DocumentId(documentId)),
-                publishedId: documentId,
+                draftId: isReleasePerspective(action.perspective)
+                  ? documentId
+                  : // Server requires draftId to have drafts. prefix for validation, even for liveEdit
+                    getDraftId(DocumentId(documentId)),
+                publishedId: getPublishedId(DocumentId(documentId)),
                 patch: patch as PatchOperations,
               }),
             ),
@@ -434,7 +455,6 @@ export function processActions({
           continue
         }
 
-        // Standard draft/published logic
         const draftId = getDraftId(DocumentId(documentId))
         const publishedId = getPublishedId(DocumentId(documentId))
         const userPatches = action.patches?.map((patch) => ({patch: {id: draftId, ...patch}}))
@@ -526,7 +546,7 @@ export function processActions({
       case 'document.publish': {
         const documentId = getId(action.documentId)
 
-        if (shouldHaveSingleDocument(action)) {
+        if (action.liveEdit || isReleasePerspective(action.perspective)) {
           throw new ActionError({
             documentId,
             transactionId,

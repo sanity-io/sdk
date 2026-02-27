@@ -20,7 +20,13 @@ const AUTHOR_INITIAL_VALUES = {
   awards: ['Quick Creator Award'],
 }
 
-function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
+function DocumentEditor({
+  docHandle,
+  onDocumentIdChange,
+}: {
+  docHandle: DocumentHandle<'author'>
+  onDocumentIdChange: (id: string) => void
+}) {
   useDocumentEvent({...docHandle, onEvent: (e) => console.log(e)})
   const synced = useDocumentSyncStatus(docHandle)
 
@@ -48,7 +54,11 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
           </Flex>
         </Card>
 
-        <DocumentEditorPanel docHandle={docHandle} createInitialValues={AUTHOR_INITIAL_VALUES} />
+        <DocumentEditorPanel
+          docHandle={docHandle}
+          createInitialValues={AUTHOR_INITIAL_VALUES}
+          onDocumentIdChange={onDocumentIdChange}
+        />
 
         {/* JSON Editor Section */}
         <Card padding={4} radius={2} shadow={1}>
@@ -102,6 +112,18 @@ function Editor() {
         }),
       )
     }
+  }
+
+  const handleDocumentIdChange = (newId: string) => {
+    setDocHandle(
+      createDocumentHandle({
+        documentType: 'author',
+        documentId: newId,
+        projectId,
+        dataset,
+        liveEdit: liveEditMode,
+      }),
+    )
   }
 
   const updateDocHandle = (newValue: string) => {
@@ -192,6 +214,7 @@ function Editor() {
           <DocumentEditor
             key={`${docHandle.documentId}-${docHandle.liveEdit}`}
             docHandle={docHandle}
+            onDocumentIdChange={handleDocumentIdChange}
           />
         )}
       </Stack>

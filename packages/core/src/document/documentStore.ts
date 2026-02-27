@@ -60,7 +60,6 @@ import {
   applyFirstQueuedTransaction,
   applyRemoteDocument,
   cleanupOutgoingTransaction,
-  getDocumentIdsFromActions,
   manageSubscriberIds,
   type OutgoingTransaction,
   type QueuedTransaction,
@@ -175,25 +174,26 @@ const _getDocumentState = bindActionByResource(
   documentStore,
   createStateSourceAction({
     selector: ({state: {error, documentStates}}, options: DocumentOptions<string | undefined>) => {
-      const {documentId, path, liveEdit, perspective} = options
-      const normalizedDocumentId = DocumentId(documentId)
+      const {documentId: docId, path, liveEdit, perspective} = options
+      const documentId = DocumentId(docId)
       if (error) throw error
       let document: SanityDocument | null | undefined
 
-      // in studio, docs in a release are effectively "live edit" documents
-      // https://github.com/sanity-io/sanity/blob/9c4e8a189bd2075d80df3c10be51c4939161ce1e/packages/sanity/src/core/store/_legacy/document/document-pair/editState.ts#L66
-      if (isReleasePerspective(perspective)) {
-        document =
-          documentStates[getVersionId(normalizedDocumentId, perspective.releaseName)]?.local
-      } else if (liveEdit) {
-        document = documentStates[normalizedDocumentId]?.local
+      if (liveEdit) {
+        document = documentStates[documentId]?.local
       } else {
-        // Standard draft/published logic
-        const draft = documentStates[getDraftId(normalizedDocumentId)]?.local
-        const published = documentStates[getPublishedId(normalizedDocumentId)]?.local
+        let version: SanityDocument | null | undefined
+        if (isReleasePerspective(perspective)) {
+          const versionId = getVersionId(documentId, perspective.releaseName)
+          version = documentStates[versionId]?.local
+          // early exit if we don't have the version document and we're in a release perspective
+          if (version === undefined) return undefined
+        }
+        const draft = documentStates[getDraftId(documentId)]?.local
+        const published = documentStates[getPublishedId(documentId)]?.local
         // early exit if we don't have all the documents for draft/published logic
         if (draft === undefined || published === undefined) return undefined
-        document = draft ?? published
+        document = version ?? draft ?? published
       }
 
       if (!path) return document
@@ -202,18 +202,8 @@ const _getDocumentState = bindActionByResource(
       const {value} = result.value
       return value
     },
-    onSubscribe: (context, options: DocumentOptions<string | undefined>) => {
-      if (isReleasePerspective(options.perspective)) {
-        const versionId = getVersionId(
-          DocumentId(options.documentId),
-          options.perspective.releaseName,
-        )
-        return manageSubscriberIds(context, versionId, {expandDraftPublished: false})
-      }
-      return manageSubscriberIds(context, options.documentId, {
-        expandDraftPublished: !options.liveEdit,
-      })
-    },
+    onSubscribe: (context, options: DocumentOptions<string | undefined>) =>
+      manageSubscriberIds(context, [options]),
   }),
 )
 
@@ -257,9 +247,7 @@ export const getDocumentSyncStatus = bindActionByResource(
       let document: DocumentState | null | undefined
       if (error) throw error
 
-      if (isReleasePerspective(doc.perspective)) {
-        document = documents[getVersionId(documentId, doc.perspective.releaseName)]
-      } else if (doc.liveEdit) {
+      if (doc.liveEdit) {
         // For liveEdit documents, only check the single document
         document = documents[documentId]
       } else {
@@ -273,11 +261,7 @@ export const getDocumentSyncStatus = bindActionByResource(
       return !queued.length && !applied.length && !outgoing
     },
     onSubscribe: (context, doc: DocumentHandle) => {
-      if (isReleasePerspective(doc.perspective)) {
-        const versionId = getVersionId(DocumentId(doc.documentId), doc.perspective.releaseName)
-        return manageSubscriberIds(context, versionId, {expandDraftPublished: false})
-      }
-      return manageSubscriberIds(context, doc.documentId)
+      return manageSubscriberIds(context, [doc])
     },
   }),
 )
@@ -293,10 +277,7 @@ export const getPermissionsState = bindActionByResource(
   createStateSourceAction({
     selector: calculatePermissions,
     onSubscribe: (context, {actions}: PermissionsStateOptions) => {
-      const ids = getDocumentIdsFromActions(actions)
-      // expandDraftPublished is false because the above function already
-      // creates drafts and published ids if required
-      manageSubscriberIds(context, ids, {expandDraftPublished: false})
+      manageSubscriberIds(context, actions)
     },
   }) as StoreAction<
     DocumentStoreState,
