@@ -5,17 +5,11 @@ import {describe, expect, it, vi} from 'vitest'
 import {SDKProvider} from './SDKProvider'
 
 vi.mock('../context/ResourceProvider', () => ({
-  ResourceProvider: ({
-    children,
-    ...props
-  }: {
-    children: React.ReactNode
-    defaultResource?: unknown
-  }) => {
+  ResourceProvider: ({children, resource}: {children: React.ReactNode; resource?: unknown}) => {
     return (
       <div
         data-testid="resource-provider"
-        data-config={JSON.stringify({defaultResource: props.defaultResource})}
+        data-config={JSON.stringify({defaultResource: resource})}
       >
         {children}
       </div>
