@@ -17,4 +17,24 @@ describe('normalizeResourceOptions', () => {
       resource: {projectId: 'project-a', dataset: 'staging'},
     })
   })
+
+  it('throws when projectId is provided without dataset', () => {
+    expect(() =>
+      normalizeResourceOptions(
+        {query: '*', projectId: 'project-a'},
+        {},
+        {projectId: 'default', dataset: 'prod'},
+      ),
+    ).toThrow('projectId and dataset must be provided together')
+  })
+
+  it('throws when dataset is provided without projectId', () => {
+    expect(() =>
+      normalizeResourceOptions(
+        {query: '*', dataset: 'staging'},
+        {},
+        {projectId: 'default', dataset: 'prod'},
+      ),
+    ).toThrow('projectId and dataset must be provided together')
+  })
 })

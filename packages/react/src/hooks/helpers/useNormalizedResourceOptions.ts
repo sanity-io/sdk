@@ -74,6 +74,14 @@ export function normalizeResourceOptions<
     resolvedResource = resources[resourceName]
   }
 
+  const hasProjectId = projectId !== undefined
+  const hasDataset = dataset !== undefined
+  if (!resolvedResource && (hasProjectId || hasDataset) && !(hasProjectId && hasDataset)) {
+    throw new Error(
+      'projectId and dataset must be provided together when targeting a dataset resource.',
+    )
+  }
+
   if (!resolvedResource && projectId && dataset) {
     resolvedResource = {projectId, dataset}
   } else if (!resolvedResource && mediaLibraryId) {
