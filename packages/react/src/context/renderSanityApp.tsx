@@ -1,4 +1,4 @@
-import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
+import {DEFAULT_RESOURCE_NAME, type DocumentResource, type SanityConfig} from '@sanity/sdk'
 import {StrictMode} from 'react'
 import {createRoot} from 'react-dom/client'
 
@@ -14,9 +14,10 @@ interface NamedResources {
 
 /**
  * Merges multiple named SanityConfig objects into a single config.
- * The last config wins for overlapping keys. The `defaultResource` from
- * each config is collected into a `resources` map keyed by the entry name,
- * and the final `defaultResource` is used as the merged config's default.
+ * Each entry's `defaultResource` is extracted into a `resources` map keyed by
+ * the entry name, then the remaining config properties are shallow-merged
+ * (last config wins for overlapping keys). The merged config's
+ * `defaultResource` is set from `resources['default']` so the two stay in sync.
  */
 function mergeNamedResources(namedResources: NamedResources): {
   config: SanityConfig
@@ -25,14 +26,17 @@ function mergeNamedResources(namedResources: NamedResources): {
   const resources: Record<string, DocumentResource> = {}
   let mergedConfig: SanityConfig = {}
 
-  for (const [, cfg] of Object.entries(namedResources)) {
-    mergedConfig = {...mergedConfig, ...cfg}
+  for (const [name, cfg] of Object.entries(namedResources)) {
+    const {defaultResource, ...rest} = cfg
+    mergedConfig = {...mergedConfig, ...rest}
+    if (defaultResource) {
+      resources[name] = defaultResource
+    }
   }
 
-  for (const [name, cfg] of Object.entries(namedResources)) {
-    if (cfg.defaultResource) {
-      resources[name] = cfg.defaultResource
-    }
+  const defaultResource = resources[DEFAULT_RESOURCE_NAME]
+  if (defaultResource) {
+    mergedConfig = {...mergedConfig, defaultResource}
   }
 
   return {config: mergedConfig, resources}

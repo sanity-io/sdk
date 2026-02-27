@@ -77,10 +77,24 @@ describe('renderSanityApp', () => {
     expect(renderCall).toBeDefined()
 
     expect(renderCall.type).toBe(SanityApp)
-    // Later namedResources override earlier ones for the same key
+    // defaultResource comes from the 'default' named entry, not last-wins merge
     expect(renderCall.props.config).toEqual({
-      defaultResource: {projectId: 'project-2', dataset: 'staging'},
+      defaultResource: {projectId: 'project-1', dataset: 'production'},
     })
+  })
+
+  it('keeps config.defaultResource and resources.default in sync', () => {
+    const namedResources = {
+      default: {defaultResource: {projectId: 'project-1', dataset: 'production'}},
+      secondary: {defaultResource: {projectId: 'project-2', dataset: 'staging'}},
+    }
+
+    renderSanityApp(rootElement, namedResources, {}, <div>Test</div>)
+
+    const renderCall = mockRender.mock.calls[0][0]
+    const {config, resources} = renderCall.props
+
+    expect(config.defaultResource).toEqual(resources.default)
   })
 
   it('renders without StrictMode when reactStrictMode is false', () => {
@@ -298,9 +312,9 @@ describe('renderSanityApp', () => {
     const strictModeChild = renderCall.props.children
     expect(strictModeChild.type).toBe(SanityApp)
 
-    // Merged config: later namedResources override earlier ones for the same key
+    // defaultResource comes from the 'default' named entry
     expect(strictModeChild.props.config).toEqual({
-      defaultResource: {projectId: 'test-project-2', dataset: 'staging'},
+      defaultResource: {projectId: 'test-project', dataset: 'production'},
     })
     expect(strictModeChild.props.fallback).toEqual(<div>Loading...</div>)
     expect(strictModeChild.props.children).toEqual(children)
