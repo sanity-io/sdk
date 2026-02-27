@@ -148,17 +148,10 @@ describe('applyDocumentActions', () => {
     await expect(applyPromise).rejects.toThrow('Simulated error')
   })
 
-  it('matches parent instance via child when action projectId and dataset do not match child config', async () => {
-    // Create a parent instance
-    const parentInstance = createSanityInstance({
-      defaultResource: {projectId: 'p', dataset: 'd'},
-    })
-    // Create a child instance with different config
-    const childInstance = parentInstance.createChild({
+  it('uses explicit resource even when instance default differs', async () => {
+    const otherInstance = createSanityInstance({
       defaultResource: {projectId: 'child-p', dataset: 'child-d'},
     })
-    // Use the child instance in context
-    // Create an action that refers to the parent's configuration
     const action: DocumentAction = {
       type: 'document.edit',
       documentId: 'doc1',
@@ -167,8 +160,7 @@ describe('applyDocumentActions', () => {
       projectId: 'p',
       dataset: 'd',
     }
-    // Call applyDocumentActions with the context using childInstance, but with action requiring parent's config
-    const applyPromise = applyDocumentActions(childInstance, {
+    const applyPromise = applyDocumentActions(instance, {
       actions: [action],
       transactionId: 'txn-child-match',
       resource: {projectId: 'p', dataset: 'd'},
@@ -205,7 +197,6 @@ describe('applyDocumentActions', () => {
     const submittedResult = await result.submitted()
     expect(submittedResult).toEqual(acceptedResult)
 
-    childInstance.dispose()
-    parentInstance.dispose()
+    otherInstance.dispose()
   })
 })

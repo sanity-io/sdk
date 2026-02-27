@@ -12,7 +12,6 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
     ...actual,
     getPresence: vi.fn(),
     createSanityInstance: vi.fn(() => ({
-      createChild: vi.fn(),
       isDisposed: vi.fn(() => false),
       dispose: vi.fn(),
     })),
@@ -64,7 +63,7 @@ describe('usePresence', () => {
     const {result, unmount} = renderHook(() => usePresence(), {
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -93,7 +92,7 @@ describe('usePresence', () => {
       renderHook(() => usePresence({resource: {mediaLibraryId: 'ml123'}}), {
         wrapper: ({children}) => (
           <ResourceProvider
-            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             {children}
@@ -108,7 +107,7 @@ describe('usePresence', () => {
       renderHook(() => usePresence({resource: {canvasId: 'canvas123'}}), {
         wrapper: ({children}) => (
           <ResourceProvider
-            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             {children}
@@ -131,7 +130,7 @@ describe('usePresence', () => {
       {
         wrapper: ({children}) => (
           <ResourceProvider
-            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             {children}

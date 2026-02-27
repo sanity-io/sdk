@@ -1,7 +1,5 @@
 import {
   DocumentHandle,
-  getDefaultDatasetResource,
-  getDefaultProjectId,
   ResourceProvider,
   useDatasets,
   useDocument,
@@ -12,7 +10,7 @@ import {
   useProject,
   useProjects,
   useQuery,
-  useSanityInstance,
+  useResource,
   useUsers,
 } from '@sanity/sdk-react'
 import {
@@ -295,7 +293,7 @@ interface DocumentListProps {
 }
 
 function DocumentList({documentType}: DocumentListProps) {
-  const {config} = useSanityInstance()
+  const resource = useResource()
   const [searchTerm, setSearchTerm] = useState('')
   const [pageSize, setPageSize] = useState(10)
 
@@ -336,7 +334,8 @@ function DocumentList({documentType}: DocumentListProps) {
       <Card padding={4} tone="caution">
         <Text>
           No documents found of type &quot;{documentType}&quot; in dataset &quot;
-          {getDefaultDatasetResource(config)?.dataset}&quot;
+          {resource && 'dataset' in resource ? resource.dataset : 'unknown'}
+          &quot;
         </Text>
       </Card>
     )
@@ -481,9 +480,9 @@ function DocumentList({documentType}: DocumentListProps) {
 const allTypes = defineQuery(`array::unique(*[]._type)`)
 
 function DocumentTypes() {
-  const {config} = useSanityInstance()
-  const defaultResource = getDefaultDatasetResource(config)
-  if (!defaultResource?.dataset) throw new Error('Dataset required for this component')
+  const resource = useResource()
+  const dataset = resource && 'dataset' in resource ? resource.dataset : undefined
+  if (!dataset) throw new Error('Dataset required for this component')
 
   // Use GROQ with array::unique to get all document types in the dataset
   const {data: documentTypes} = useQuery({query: allTypes})
@@ -492,7 +491,7 @@ function DocumentTypes() {
 
   useEffect(() => {
     setSelectedType(firstDocumentType ?? null)
-  }, [config, firstDocumentType])
+  }, [resource, firstDocumentType])
 
   const handleTypeChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
     startTransition(() => {
@@ -503,7 +502,7 @@ function DocumentTypes() {
   if (!documentTypes || documentTypes.length === 0) {
     return (
       <Card padding={4} tone="caution">
-        <Text>No document types found in dataset &quot;{defaultResource?.dataset}&quot;</Text>
+        <Text>No document types found in dataset &quot;{dataset}&quot;</Text>
       </Card>
     )
   }
@@ -511,11 +510,11 @@ function DocumentTypes() {
   return (
     <Stack space={4} padding={4}>
       <Box>
-        <Label htmlFor={`doctype-${defaultResource?.dataset}`} size={2}>
+        <Label htmlFor={`doctype-${dataset}`} size={2}>
           Document Type
         </Label>
         <Select
-          id={`doctype-${defaultResource?.dataset}`}
+          id={`doctype-${dataset}`}
           value={selectedType || ''}
           onChange={handleTypeChange}
           style={{width: '100%', marginTop: '8px'}}
@@ -531,7 +530,7 @@ function DocumentTypes() {
 
       {selectedType && (
         <ErrorBoundary
-          resetKeys={[defaultResource?.dataset, selectedType]}
+          resetKeys={[dataset, selectedType]}
           fallback={
             <Card padding={4} tone="critical">
               <Text>Error loading documents of type &quot;{selectedType}&quot;</Text>
@@ -546,13 +545,13 @@ function DocumentTypes() {
 }
 
 function DatasetExplorer() {
-  const {config} = useSanityInstance()
-  const defaultProjectId = getDefaultProjectId(config)
-  if (!defaultProjectId) {
+  const resource = useResource()
+  const projectId = resource && 'projectId' in resource ? resource.projectId : undefined
+  if (!projectId) {
     throw new Error('A projectId is required for DatasetExplorer')
   }
 
-  const datasets = useDatasets({projectId: defaultProjectId})
+  const datasets = useDatasets({projectId})
   const [selectedDataset, setSelectedDataset] = useState<string | null>(null)
 
   const handleDatasetChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -570,11 +569,11 @@ function DatasetExplorer() {
   return (
     <Stack space={4} padding={4}>
       <Box>
-        <Label htmlFor={`dataset-${defaultProjectId}`} size={2}>
+        <Label htmlFor={`dataset-${projectId}`} size={2}>
           Dataset
         </Label>
         <Select
-          id={`dataset-${defaultProjectId}`}
+          id={`dataset-${projectId}`}
           value={selectedDataset || ''}
           onChange={handleDatasetChange}
           style={{width: '100%', marginTop: '8px'}}
@@ -599,7 +598,7 @@ function DatasetExplorer() {
             }
           >
             <ResourceProvider
-              defaultResource={{projectId: defaultProjectId!, dataset: selectedDataset}}
+              resource={{projectId: projectId!, dataset: selectedDataset}}
               fallback={
                 <Flex align="center" padding={4}>
                   <Spinner />
@@ -689,7 +688,9 @@ function UsersDialog({open, onClose}: UsersDialogProps) {
 }
 
 function ProjectExplorer() {
-  const project = useProject()
+  const resource = useResource()
+  const projectId = resource && 'projectId' in resource ? resource.projectId : undefined
+  const project = useProject({projectId: projectId!})
   const [isUsersDialogOpen, setIsUsersDialogOpen] = useState(false)
 
   const handleOpenUsersDialog = () => setIsUsersDialogOpen(true)
@@ -788,7 +789,7 @@ function ProjectsExplorer() {
             }
           >
             <ResourceProvider
-              defaultResource={{projectId: selectedProject, dataset: ''}}
+              resource={{projectId: selectedProject, dataset: ''}}
               fallback={
                 <Flex align="center" padding={4}>
                   <Spinner />

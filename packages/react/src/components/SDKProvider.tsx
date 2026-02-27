@@ -47,9 +47,10 @@ export function SDKProvider({
   ...props
 }: SDKProviderProps): ReactElement {
   const projectIds = useMemo(() => collectProjectIds(resources), [resources])
+  const {defaultResource, ...restConfig} = config
 
   return (
-    <ResourceProvider {...config} fallback={fallback}>
+    <ResourceProvider resource={defaultResource} {...restConfig} fallback={fallback}>
       <AuthBoundary {...props} projectIds={projectIds}>
         <ResourcesContext.Provider value={resources}>{children}</ResourcesContext.Provider>
       </AuthBoundary>

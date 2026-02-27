@@ -23,7 +23,7 @@ const resources = {
  */
 export const AppProviders = ({children}: {children: React.ReactNode}): ReactElement => {
   return (
-    <ResourceProvider defaultResource={{projectId: 'test', dataset: 'test'}} fallback={null}>
+    <ResourceProvider resource={{projectId: 'test', dataset: 'test'}} fallback={null}>
       <ResourcesContext.Provider value={resources}>{children}</ResourcesContext.Provider>
     </ResourceProvider>
   )

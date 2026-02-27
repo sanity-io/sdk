@@ -153,7 +153,6 @@ export const DEFAULT_RESOURCE_NAME = 'default'
 export interface SanityConfig extends PerspectiveHandle {
   /**
    * Authentication configuration for the instance
-   * @remarks Merged with parent configurations when using createChild
    */
   auth?: AuthConfig
   /**

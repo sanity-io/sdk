@@ -314,7 +314,7 @@ describe('useUsers', () => {
 
     render(
       <ResourceProvider
-        defaultResource={{projectId: 'p', dataset: 'production'}}
+        resource={{projectId: 'p', dataset: 'production'}}
         fallback={<div data-testid="fallback">Loading...</div>}
       >
         <TestComponent />

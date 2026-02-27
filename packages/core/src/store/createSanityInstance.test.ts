@@ -35,32 +35,6 @@ describe('createSanityInstance', () => {
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
-  it('should create a child instance with merged config and correct parent', () => {
-    const parent = createSanityInstance({defaultResource: {projectId: 'proj1', dataset: 'ds1'}})
-    const child = parent.createChild({defaultResource: {projectId: 'proj1', dataset: 'ds2'}})
-    expect(child.config).toEqual({defaultResource: {projectId: 'proj1', dataset: 'ds2'}})
-    expect(child.getParent()).toBe(parent)
-  })
-
-  it('should support createChild with incremental resource config', () => {
-    const empty = createSanityInstance()
-    const withResource = empty.createChild({
-      defaultResource: {projectId: 'proj1', dataset: 'ds1'},
-    })
-
-    expect(empty.config).toEqual({})
-    expect(withResource.config).toEqual({defaultResource: {projectId: 'proj1', dataset: 'ds1'}})
-  })
-
-  it('should inherit and merge auth config', () => {
-    const parent = createSanityInstance({
-      defaultResource: {projectId: 'proj1', dataset: 'ds1'},
-      auth: {apiHost: 'api.sanity.work'},
-    })
-    const child = parent.createChild({auth: {token: 'my-token'}})
-    expect(child.config.auth).toEqual({apiHost: 'api.sanity.work', token: 'my-token'})
-  })
-
   describe('logging', () => {
     const mockHandler: LogHandler = {
       error: vi.fn(),
@@ -117,22 +91,6 @@ describe('createSanityInstance', () => {
       expect(mockHandler.info).toHaveBeenCalledWith(
         expect.stringContaining('Instance disposed'),
         expect.anything(),
-      )
-    })
-
-    it('should log child instance creation at debug level', () => {
-      const parent = createSanityInstance({
-        defaultResource: {projectId: 'parent-proj', dataset: 'ds'},
-      })
-      vi.clearAllMocks() // Clear parent creation logs
-
-      parent.createChild({defaultResource: {projectId: 'parent-proj', dataset: 'child-ds'}})
-
-      expect(mockHandler.debug).toHaveBeenCalledWith(
-        expect.stringContaining('Creating child instance'),
-        expect.objectContaining({
-          overridingDefaultResource: true,
-        }),
       )
     })
 

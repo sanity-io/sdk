@@ -29,7 +29,7 @@ describe('useDocumentEvent hook', () => {
     renderHook(() => useDocumentEvent({...docHandle, onEvent: handleEvent}), {
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -56,7 +56,7 @@ describe('useDocumentEvent hook', () => {
     const {unmount} = renderHook(() => useDocumentEvent({...docHandle, onEvent: handleEvent}), {
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}

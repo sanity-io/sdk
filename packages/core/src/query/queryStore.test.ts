@@ -514,10 +514,10 @@ describe('queryStore', () => {
 
     vi.mocked(getClientState).mockClear()
 
-    // 2. A child instance with project B as its default queries the SAME
-    //    store (same composite key) but does NOT pass an explicit source.
-    const childInstance = rootInstance.createChild({defaultResource: projectBSource})
-    const stateNoResource = getQueryState(childInstance, {query: '*[_type == "movie"]'})
+    // 2. A second instance with project B as its default queries the SAME
+    //    store (same composite key) but does NOT pass an explicit resource.
+    const secondInstance = createSanityInstance({defaultResource: projectBSource})
+    const stateNoResource = getQueryState(secondInstance, {query: '*[_type == "movie"]'})
     const unsub2 = stateNoResource.subscribe()
     await firstValueFrom(stateNoResource.observable.pipe(filter((i) => i !== undefined)))
 
@@ -543,7 +543,7 @@ describe('queryStore', () => {
 
     unsub1()
     unsub2()
-    childInstance.dispose()
+    secondInstance.dispose()
     rootInstance.dispose()
   })
 })

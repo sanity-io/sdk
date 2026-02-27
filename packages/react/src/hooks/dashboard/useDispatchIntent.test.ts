@@ -223,9 +223,9 @@ describe('useDispatchIntent', () => {
     })
   })
 
-  describe('error handling', () => {
-    it('should throw error when neither resource nor projectId/dataset is provided', () => {
-      const invalidHandle = {
+  describe('default resource fallback', () => {
+    it('should use default resource from context when handle has no explicit targeting', () => {
+      const minimalHandle = {
         documentId: 'test-document-id',
         documentType: 'test-document-type',
       }
@@ -233,13 +233,22 @@ describe('useDispatchIntent', () => {
       const {result} = renderHook(() =>
         useDispatchIntent({
           action: 'edit',
-          documentHandle: invalidHandle as unknown as DocumentHandle,
+          documentHandle: minimalHandle as unknown as DocumentHandle,
         }),
       )
 
-      expect(() => result.current.dispatchIntent()).toThrow(
-        'useDispatchIntent: Unable to determine resource. Either `resource`, `resourceName`, or both `projectId` and `dataset` must be provided in documentHandle.',
-      )
+      result.current.dispatchIntent()
+
+      expect(mockSendMessage).toHaveBeenCalledWith('dashboard/v1/events/intents/dispatch-intent', {
+        action: 'edit',
+        document: {
+          id: 'test-document-id',
+          type: 'test-document-type',
+        },
+        resource: {
+          id: 'test.test',
+        },
+      })
     })
   })
 })

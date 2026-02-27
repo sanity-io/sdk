@@ -43,10 +43,7 @@ describe('useActiveReleases', () => {
       },
       {
         wrapper: ({children}) => (
-          <ResourceProvider
-            defaultResource={{projectId: 'p', dataset: 'd'}}
-            fallback={<p>Loading...</p>}
-          >
+          <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={<p>Loading...</p>}>
             {children}
           </ResourceProvider>
         ),
@@ -78,10 +75,7 @@ describe('useActiveReleases', () => {
 
     const {result} = renderHook(() => useActiveReleases(), {
       wrapper: ({children}) => (
-        <ResourceProvider
-          defaultResource={{projectId: 'p', dataset: 'd'}}
-          fallback={<p>Loading...</p>}
-        >
+        <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={<p>Loading...</p>}>
           {children}
         </ResourceProvider>
       ),

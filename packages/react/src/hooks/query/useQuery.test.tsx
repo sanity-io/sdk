@@ -42,10 +42,7 @@ describe('useQuery', () => {
     }
 
     render(
-      <ResourceProvider
-        defaultResource={{projectId: 'p', dataset: 'd'}}
-        fallback={<p>Loading...</p>}
-      >
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={<p>Loading...</p>}>
         <TestComponent />
       </ResourceProvider>,
     )
@@ -91,7 +88,7 @@ describe('useQuery', () => {
 
     render(
       <ResourceProvider
-        defaultResource={{projectId: 'p', dataset: 'd'}}
+        resource={{projectId: 'p', dataset: 'd'}}
         fallback={<div data-testid="fallback">Loading...</div>}
       >
         <TestComponent />
@@ -166,10 +163,7 @@ describe('useQuery', () => {
     }
 
     render(
-      <ResourceProvider
-        defaultResource={{projectId: 'p', dataset: 'd'}}
-        fallback={<p>Loading...</p>}
-      >
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={<p>Loading...</p>}>
         <WrapperComponent />
       </ResourceProvider>,
     )

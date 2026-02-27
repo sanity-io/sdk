@@ -57,7 +57,7 @@ describe('ComlinkTokenRefresh', () => {
         mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN})
         const {rerender} = render(
           <ResourceProvider
-            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             <ComlinkTokenRefreshProvider>
@@ -73,7 +73,7 @@ describe('ComlinkTokenRefresh', () => {
         act(() => {
           rerender(
             <ResourceProvider
-              defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
+              resource={{projectId: 'test-project', dataset: 'test-dataset'}}
               fallback={null}
             >
               <ComlinkTokenRefreshProvider>
@@ -99,7 +99,7 @@ describe('ComlinkTokenRefresh', () => {
         // Simulate studio mode disabled by default
         render(
           <ResourceProvider
-            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             <ComlinkTokenRefreshProvider>
@@ -134,7 +134,7 @@ describe('ComlinkTokenRefresh', () => {
 
         render(
           <ResourceProvider
-            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             <ComlinkTokenRefreshProvider>
@@ -170,7 +170,7 @@ describe('ComlinkTokenRefresh', () => {
 
         render(
           <ResourceProvider
-            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             <ComlinkTokenRefreshProvider>
@@ -195,7 +195,7 @@ describe('ComlinkTokenRefresh', () => {
 
         render(
           <ResourceProvider
-            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             <ComlinkTokenRefreshProvider>

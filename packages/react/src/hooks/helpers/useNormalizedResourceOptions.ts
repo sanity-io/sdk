@@ -1,6 +1,8 @@
-import {type DocumentResource} from '@sanity/sdk'
+import {type DocumentResource, type PerspectiveHandle} from '@sanity/sdk'
 import {useContext} from 'react'
 
+import {ResourceContext} from '../../context/DefaultResourceContext'
+import {PerspectiveContext} from '../../context/PerspectiveContext'
 import {ResourcesContext} from '../../context/ResourcesContext'
 
 /**
@@ -24,18 +26,26 @@ export type WithResourceNameSupport<T extends {resource?: DocumentResource}> = T
 
 /**
  * Pure function that normalizes options by resolving `resourceName` to a `DocumentResource`
- * using the provided resources map. Use this when options are only available at call time
- * (e.g. inside a callback) and you cannot call the {@link useNormalizedResourceOptions} hook.
+ * using the provided resources map, and injecting defaults from context when not provided.
+ * Use this when options are only available at call time (e.g. inside a callback)
+ * and you cannot call the {@link useNormalizedResourceOptions} hook.
  *
  * @typeParam T - The options type (must include optional resource field)
  * @param options - Options that may include `resourceName` and/or `resource`
  * @param resources - Map of resource names to DocumentResource (e.g. from ResourcesContext)
- * @returns Normalized options with `resourceName` removed and `resource` resolved
+ * @param contextResource - Resource from context (injected by ResourceProvider)
+ * @param contextPerspective - Perspective from context (injected by ResourceProvider)
+ * @returns Normalized options with `resourceName` removed and defaults injected
  * @internal
  */
 export function normalizeResourceOptions<
-  T extends {resource?: DocumentResource; resourceName?: string},
->(options: T, resources: Record<string, DocumentResource>): Omit<T, 'resourceName'> {
+  T extends {resource?: DocumentResource; resourceName?: string; perspective?: unknown},
+>(
+  options: T,
+  resources: Record<string, DocumentResource>,
+  contextResource?: DocumentResource,
+  contextPerspective?: PerspectiveHandle['perspective'],
+): Omit<T, 'resourceName'> {
   const {resourceName, ...rest} = options
 
   if (resourceName && Object.hasOwn(options, 'resource')) {
@@ -44,55 +54,64 @@ export function normalizeResourceOptions<
     )
   }
 
-  if (options.resource) {
-    return {...rest, resource: options.resource}
+  let resolvedResource: DocumentResource | undefined = options.resource
+
+  if (!resolvedResource && resourceName) {
+    if (!Object.hasOwn(resources, resourceName)) {
+      throw new Error(
+        `There's no resource named ${JSON.stringify(resourceName)} in context. ` +
+          'Register it via the resources prop on <SanityApp>.',
+      )
+    }
+    resolvedResource = resources[resourceName]
   }
 
-  // Only resolve from ResourcesContext when resourceName is explicitly provided.
-  // When neither resource nor resourceName is given, let the core layer fall back
-  // to resolveDefaultResource(instance.config) so nested ResourceProviders
-  // target the correct project/dataset.
-  if (!resourceName) {
-    return rest as Omit<T, 'resourceName'>
+  const hasExplicitTargeting =
+    'projectId' in rest || 'dataset' in rest || 'mediaLibraryId' in rest || 'canvasId' in rest
+  if (!resolvedResource && !hasExplicitTargeting) {
+    resolvedResource = contextResource
   }
 
-  if (!Object.hasOwn(resources, resourceName)) {
-    throw new Error(
-      `There's no resource named ${JSON.stringify(resourceName)} in context. ` +
-        'Register it via the resources prop on <SanityApp>.',
-    )
-  }
+  const resolvedPerspective = Object.hasOwn(options, 'perspective')
+    ? options.perspective
+    : contextPerspective
 
   return {
     ...rest,
-    resource: resources[resourceName],
-  }
+    ...(resolvedResource && {resource: resolvedResource}),
+    ...(resolvedPerspective !== undefined && {perspective: resolvedPerspective}),
+  } as Omit<T, 'resourceName'>
 }
 
 /**
- * Normalizes hook options by resolving `resourceName` to a `DocumentResource`.
- * This hook ensures that options passed to core layer functions only contain
- * `resource` (never `resourceName`), preventing duplicate cache keys and maintaining
- * clean separation between React and core layers.
+ * Normalizes hook options by resolving `resourceName` to a `DocumentResource`
+ * and injecting default resource/perspective from context.
+ *
+ * This hook ensures that options passed to core layer functions contain
+ * the correct `resource` and `perspective` values, maintaining clean
+ * separation between React and core layers.
  *
  * @typeParam T - The options type (must include optional resource field)
  * @param options - Hook options that may include `resourceName` and/or `resource`
- * @returns Normalized options with `resourceName` removed and `resource` resolved
+ * @returns Normalized options with `resourceName` removed and defaults injected
  *
  * @remarks
- * Resolution priority:
+ * Resolution priority for resource:
  * 1. If both `resourceName` and `resource` are provided, throws an error
  * 2. If `resource` is provided, uses it directly
  * 3. If `resourceName` is provided, resolves it via `ResourcesContext`
- * 4. If neither is provided, returns options as-is (the core layer falls back
- *    to `resolveDefaultResource(instance.config)`, which respects nested `ResourceProvider`s)
+ * 4. If neither is provided, injects the value from `ResourceContext`
+ *
+ * Resolution priority for perspective:
+ * 1. If `perspective` is explicitly provided in options, uses it
+ * 2. Otherwise, injects the default from `PerspectiveContext`
  *
  * @example
  * ```tsx
  * function useQuery(options: WithResourceNameSupport<QueryOptions>) {
  *   const instance = useSanityInstance()
- *   const normalized = useNormalizedOptions(options)
- *   // normalized now has resource but never resourceName
+ *   const normalized = useNormalizedResourceOptions(options)
+ *   // normalized has resource and perspective resolved from context
  *   const queryKey = getQueryKey(normalized)
  * }
  * ```
@@ -100,8 +119,10 @@ export function normalizeResourceOptions<
  * @beta
  */
 export function useNormalizedResourceOptions<
-  T extends {resource?: DocumentResource; resourceName?: string},
+  T extends {resource?: DocumentResource; resourceName?: string; perspective?: unknown},
 >(options: T): Omit<T, 'resourceName'> {
   const resources = useContext(ResourcesContext)
-  return normalizeResourceOptions(options, resources)
+  const contextResource = useContext(ResourceContext)
+  const contextPerspective = useContext(PerspectiveContext)
+  return normalizeResourceOptions(options, resources, contextResource, contextPerspective)
 }
