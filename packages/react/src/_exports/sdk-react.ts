@@ -40,7 +40,7 @@ export {
   type WindowConnection,
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
-export {useDefaultResource, useResource} from '../hooks/context/useDefaultResource'
+export {useResource} from '../hooks/context/useDefaultResource'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
 export {useDispatchIntent} from '../hooks/dashboard/useDispatchIntent'

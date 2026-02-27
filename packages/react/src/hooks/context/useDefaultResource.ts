@@ -28,8 +28,3 @@ import {ResourceContext} from '../../context/DefaultResourceContext'
 export function useResource(): DocumentResource | undefined {
   return useContext(ResourceContext)
 }
-
-/**
- * @deprecated Use {@link useResource} instead.
- */
-export const useDefaultResource = useResource
