@@ -3,22 +3,6 @@ import {useEffect, useState} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
 
-/**
- * @internal
- * @deprecated Use {@link StudioResource} from `@sanity/message-protocol` directly.
- */
-export interface DashboardResource {
-  id: string
-  name: string
-  title: string
-  basePath: string
-  projectId: string
-  dataset: string
-  type: string
-  userApplicationId: string
-  url: string
-}
-
 interface WorkspacesByProjectIdDataset {
   [key: `${string}:${string}`]: StudioResource[] // key format: `${projectId}:${dataset}`
 }

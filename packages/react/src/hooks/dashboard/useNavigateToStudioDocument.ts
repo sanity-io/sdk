@@ -61,13 +61,24 @@ export type NavigateToStudioDocumentStatus =
  * @category Types
  */
 export interface NavigateToStudioResult {
-  /** Function that when called will navigate to the studio document */
+  /** Function that when called will navigate to the studio document via the Dashboard bridge (smoother in-dashboard UX) */
   navigateToStudioDocument: () => void
+  /**
+   * Full absolute URL to the document in the studio.
+   * Use for `<a href>`, copy-to-clipboard, or open-in-new-tab.
+   * `null` when no workspace is resolved.
+   */
+  href: string | null
+  /**
+   * Whether a navigation target was resolved. Use this to disable buttons/links.
+   * `true` when status is `'ready'` or `'multiple-workspaces'` (first workspace is used).
+   */
+  hasTarget: boolean
   /** The resolved workspace that will be navigated to, or null if none found */
   workspace: WorkspaceInfo | null
   /** All workspaces matching the projectId:dataset */
   workspaces: WorkspaceInfo[]
-  /** Status of the workspace resolution */
+  /** Detailed status of the workspace resolution */
   status: NavigateToStudioDocumentStatus
 }
 
@@ -154,47 +165,40 @@ function deriveStatus(
  * @param preferredStudioUrl - The preferred studio url to navigate to if you have multiple
  * studios with the same projectId and dataset
  * @returns An object containing:
- * - `navigateToStudioDocument` - Function that when called will navigate to the studio document
+ * - `navigateToStudioDocument` - Function that navigates via the Dashboard bridge (in-dashboard UX)
+ * - `href` - Full absolute URL to the document in the studio (for `<a>` tags, copy-to-clipboard)
+ * - `hasTarget` - Whether a navigation target was resolved (use to disable buttons/links)
  * - `workspace` - The resolved workspace info, or null if none found
  * - `workspaces` - All workspaces matching the projectId:dataset
- * - `status` - Status of the workspace resolution ('ready', 'no-workspace', 'no-manifest', 'not-deployed', 'multiple-workspaces')
+ * - `status` - Detailed status ('ready', 'no-workspace', 'no-manifest', 'not-deployed', 'multiple-workspaces')
  *
- * @example
+ * @example Simple button with hasTarget
  * ```tsx
- * import {useNavigateToStudioDocument, type DocumentHandle} from '@sanity/sdk-react'
- * import {Button} from '@sanity/ui'
- * import {Suspense} from 'react'
+ * function EditButton({documentHandle}: {documentHandle: DocumentHandle}) {
+ *   const {navigateToStudioDocument, hasTarget} = useNavigateToStudioDocument(documentHandle)
+ *   return <Button onClick={navigateToStudioDocument} disabled={!hasTarget} text="Edit in Studio" />
+ * }
+ * ```
  *
+ * @example Link with href
+ * ```tsx
+ * function EditLink({documentHandle}: {documentHandle: DocumentHandle}) {
+ *   const {href, hasTarget} = useNavigateToStudioDocument(documentHandle)
+ *   if (!hasTarget) return null
+ *   return <a href={href!}>Edit in Studio</a>
+ * }
+ * ```
+ *
+ * @example Detailed status handling
+ * ```tsx
  * function NavigateButton({documentHandle}: {documentHandle: DocumentHandle}) {
  *   const {navigateToStudioDocument, status} = useNavigateToStudioDocument(documentHandle)
  *
- *   if (status === 'no-workspace') {
- *     return <Button text="No studio found" disabled />
- *   }
+ *   if (status === 'no-workspace') return <Button text="No studio found" disabled />
+ *   if (status === 'not-deployed') return <Button text="Studio not deployed" disabled />
+ *   if (status === 'no-manifest') return <Button text="Studio manifest not loaded" disabled />
  *
- *   if (status === 'not-deployed') {
- *     return <Button text="Studio not deployed" disabled />
- *   }
- *
- *   if (status === 'no-manifest') {
- *     return <Button text="Studio manifest not loaded" disabled />
- *   }
- *
- *   return (
- *     <Button
- *       onClick={navigateToStudioDocument}
- *       text="Navigate to Studio Document"
- *     />
- *   )
- * }
- *
- * // Wrap the component with Suspense since the hook may suspend
- * function MyDocumentAction({documentHandle}: {documentHandle: DocumentHandle}) {
- *   return (
- *     <Suspense fallback={<Button text="Loading..." disabled />}>
- *       <NavigateButton documentHandle={documentHandle} />
- *     </Suspense>
- *   )
+ *   return <Button onClick={navigateToStudioDocument} text="Edit in Studio" />
  * }
  * ```
  */
@@ -208,7 +212,9 @@ export function useNavigateToStudioDocument(
     connectTo: SDK_CHANNEL_NAME,
   })
 
-  const {projectId, dataset} = documentHandle
+  const {projectId, dataset, documentId, documentType} = documentHandle
+
+  const intentPath = `/intent/edit/id=${documentId};type=${documentType}`
 
   const {workspace, workspaces, status} = useMemo(() => {
     if (!projectId || !dataset) {
@@ -237,6 +243,16 @@ export function useNavigateToStudioDocument(
     }
   }, [projectId, dataset, workspacesByProjectIdAndDataset, preferredStudioUrl])
 
+  const hasTarget = workspace !== null && (status === 'ready' || status === 'multiple-workspaces')
+
+  const href = useMemo(() => {
+    if (!workspace) return null
+    // Construct absolute URL: workspace URL + basePath + intent path
+    // workspace.url is the studio origin (e.g., "https://my-studio.sanity.studio")
+    // workspace.basePath is the workspace path within the studio (e.g., "/workspace1")
+    return `${workspace.url}${workspace.basePath}${intentPath}`
+  }, [workspace, intentPath])
+
   const navigateToStudioDocument = useCallback(() => {
     if (!projectId || !dataset) {
       // eslint-disable-next-line no-console
@@ -254,10 +270,10 @@ export function useNavigateToStudioDocument(
 
     if (workspaces.length > 1 && !preferredStudioUrl) {
       // eslint-disable-next-line no-console
-      console.warn(
-        'Multiple workspaces found for document and no preferred studio url',
-        documentHandle,
-      )
+      console.warn('Multiple workspaces found for document and no preferred studio url', {
+        projectId,
+        dataset,
+      })
       // eslint-disable-next-line no-console
       console.warn('Using the first one', workspace)
     }
@@ -267,15 +283,17 @@ export function useNavigateToStudioDocument(
       data: {
         resourceId: workspace.id,
         resourceType: 'studio',
-        path: `/intent/edit/id=${documentHandle.documentId};type=${documentHandle.documentType}`,
+        path: intentPath,
       },
     }
 
     sendMessage(message.type, message.data)
-  }, [documentHandle, workspace, workspaces, sendMessage, preferredStudioUrl, projectId, dataset])
+  }, [workspace, workspaces, sendMessage, preferredStudioUrl, projectId, dataset, intentPath])
 
   return {
     navigateToStudioDocument,
+    href,
+    hasTarget,
     workspace,
     workspaces,
     status,

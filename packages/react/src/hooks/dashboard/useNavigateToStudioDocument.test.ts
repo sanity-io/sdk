@@ -84,11 +84,15 @@ describe('useNavigateToStudioDocument', () => {
     }
   })
 
-  it('returns navigate function, workspace info, and ready status', () => {
+  it('returns navigate function, workspace info, href, hasTarget, and ready status', () => {
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
 
     expect(result.current.navigateToStudioDocument).toEqual(expect.any(Function))
     expect(result.current.status).toBe('ready')
+    expect(result.current.hasTarget).toBe(true)
+    expect(result.current.href).toBe(
+      'https://test.sanity.studio/workspace1/intent/edit/id=doc123;type=article',
+    )
     expect(result.current.workspace).toEqual({
       id: 'workspace123',
       name: 'workspace1',
@@ -115,12 +119,14 @@ describe('useNavigateToStudioDocument', () => {
     })
   })
 
-  it('returns no-workspace status when no workspace is found', () => {
+  it('returns no-workspace status with hasTarget false and href null when no workspace is found', () => {
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     mockWorkspacesByProjectIdAndDataset = {}
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
 
     expect(result.current.status).toBe('no-workspace')
+    expect(result.current.hasTarget).toBe(false)
+    expect(result.current.href).toBeNull()
     expect(result.current.workspace).toBeNull()
     expect(result.current.workspaces).toHaveLength(0)
 
@@ -129,7 +135,7 @@ describe('useNavigateToStudioDocument', () => {
     consoleSpy.mockRestore()
   })
 
-  it('returns multiple-workspaces status when multiple workspaces match without preferred URL', () => {
+  it('returns multiple-workspaces status with hasTarget true when multiple workspaces match without preferred URL', () => {
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const mockWorkspace2 = makeStudioResource({
       id: 'workspace2',
@@ -143,6 +149,10 @@ describe('useNavigateToStudioDocument', () => {
     const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
 
     expect(result.current.status).toBe('multiple-workspaces')
+    expect(result.current.hasTarget).toBe(true)
+    expect(result.current.href).toBe(
+      'https://test.sanity.studio/workspace1/intent/edit/id=doc123;type=article',
+    )
     expect(result.current.workspaces).toHaveLength(2)
     // Still resolves to the first workspace
     expect(result.current.workspace).not.toBeNull()
@@ -152,7 +162,7 @@ describe('useNavigateToStudioDocument', () => {
 
     expect(consoleSpy).toHaveBeenCalledWith(
       'Multiple workspaces found for document and no preferred studio url',
-      mockDocumentHandle,
+      {projectId: 'project1', dataset: 'dataset1'},
     )
     expect(mockSendMessage).toHaveBeenCalledWith(
       'dashboard/v1/bridge/navigate-to-resource',
@@ -164,7 +174,7 @@ describe('useNavigateToStudioDocument', () => {
     consoleSpy.mockRestore()
   })
 
-  it('returns no-workspace status when projectId or dataset is missing', () => {
+  it('returns no-workspace status with hasTarget false when projectId or dataset is missing', () => {
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     const incompleteDocumentHandle: DocumentHandle = {
@@ -176,6 +186,8 @@ describe('useNavigateToStudioDocument', () => {
     const {result} = renderHook(() => useNavigateToStudioDocument(incompleteDocumentHandle))
 
     expect(result.current.status).toBe('no-workspace')
+    expect(result.current.hasTarget).toBe(false)
+    expect(result.current.href).toBeNull()
     expect(result.current.workspace).toBeNull()
     expect(result.current.workspaces).toHaveLength(0)
 
@@ -267,7 +279,7 @@ describe('useNavigateToStudioDocument', () => {
   })
 
   describe('deployment status detection', () => {
-    it('returns not-deployed for internal workspace without active deployment', () => {
+    it('returns not-deployed with hasTarget false for internal workspace without active deployment', () => {
       mockWorkspacesByProjectIdAndDataset = {
         'project1:dataset1': [
           makeStudioResource({
@@ -281,6 +293,7 @@ describe('useNavigateToStudioDocument', () => {
       const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
 
       expect(result.current.status).toBe('not-deployed')
+      expect(result.current.hasTarget).toBe(false)
       expect(result.current.workspace!.isDeployed).toBe(false)
     })
 
@@ -302,7 +315,7 @@ describe('useNavigateToStudioDocument', () => {
       expect(result.current.workspace!.hasManifest).toBe(true)
     })
 
-    it('returns no-manifest for deployed workspace without manifest', () => {
+    it('returns no-manifest with hasTarget false for deployed workspace without manifest', () => {
       mockWorkspacesByProjectIdAndDataset = {
         'project1:dataset1': [
           makeStudioResource({
@@ -316,6 +329,7 @@ describe('useNavigateToStudioDocument', () => {
       const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
 
       expect(result.current.status).toBe('no-manifest')
+      expect(result.current.hasTarget).toBe(false)
       expect(result.current.workspace!.isDeployed).toBe(true)
       expect(result.current.workspace!.hasManifest).toBe(false)
     })
@@ -338,6 +352,54 @@ describe('useNavigateToStudioDocument', () => {
       expect(result.current.workspace!.urlType).toBe('external')
     })
 
+    it('still sends navigation message when status is not-deployed (status is informational)', () => {
+      mockWorkspacesByProjectIdAndDataset = {
+        'project1:dataset1': [
+          makeStudioResource({
+            urlType: 'internal',
+            activeDeployment: null,
+            hasManifest: true,
+          }),
+        ],
+      }
+
+      const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
+
+      expect(result.current.status).toBe('not-deployed')
+      // Navigation still works — status is informational, not a gate
+      result.current.navigateToStudioDocument()
+      expect(mockSendMessage).toHaveBeenCalledWith(
+        'dashboard/v1/bridge/navigate-to-resource',
+        expect.objectContaining({
+          resourceType: 'studio',
+        }),
+      )
+    })
+
+    it('still sends navigation message when status is no-manifest (status is informational)', () => {
+      mockWorkspacesByProjectIdAndDataset = {
+        'project1:dataset1': [
+          makeStudioResource({
+            urlType: 'internal',
+            activeDeployment: {id: 'deploy-1'},
+            hasManifest: false,
+          }),
+        ],
+      }
+
+      const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
+
+      expect(result.current.status).toBe('no-manifest')
+      // Navigation still works — status is informational, not a gate
+      result.current.navigateToStudioDocument()
+      expect(mockSendMessage).toHaveBeenCalledWith(
+        'dashboard/v1/bridge/navigate-to-resource',
+        expect.objectContaining({
+          resourceType: 'studio',
+        }),
+      )
+    })
+
     it('returns no-manifest for external workspace without manifest', () => {
       mockWorkspacesByProjectIdAndDataset = {
         'project1:dataset1': [
@@ -354,6 +416,55 @@ describe('useNavigateToStudioDocument', () => {
       expect(result.current.status).toBe('no-manifest')
       expect(result.current.workspace!.isDeployed).toBe(true)
       expect(result.current.workspace!.hasManifest).toBe(false)
+    })
+  })
+
+  describe('href generation', () => {
+    it('constructs absolute URL from workspace url + basePath + intent path', () => {
+      mockWorkspacesByProjectIdAndDataset = {
+        'project1:dataset1': [
+          makeStudioResource({
+            url: 'https://my-studio.sanity.studio',
+            basePath: '/production',
+          }),
+        ],
+      }
+
+      const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
+
+      expect(result.current.href).toBe(
+        'https://my-studio.sanity.studio/production/intent/edit/id=doc123;type=article',
+      )
+    })
+
+    it('returns null href when no workspace is resolved', () => {
+      mockWorkspacesByProjectIdAndDataset = {}
+
+      const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
+
+      expect(result.current.href).toBeNull()
+    })
+
+    it('still provides href when status is not-deployed or no-manifest', () => {
+      mockWorkspacesByProjectIdAndDataset = {
+        'project1:dataset1': [
+          makeStudioResource({
+            urlType: 'internal',
+            activeDeployment: null,
+            hasManifest: false,
+          }),
+        ],
+      }
+
+      const {result} = renderHook(() => useNavigateToStudioDocument(mockDocumentHandle))
+
+      // href is available even when hasTarget is false — consumers can still
+      // show the URL for debugging or copy-to-clipboard
+      expect(result.current.status).toBe('not-deployed')
+      expect(result.current.hasTarget).toBe(false)
+      expect(result.current.href).toBe(
+        'https://test.sanity.studio/workspace1/intent/edit/id=doc123;type=article',
+      )
     })
   })
 })
