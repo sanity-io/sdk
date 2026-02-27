@@ -62,7 +62,7 @@ export type ReleasePerspective = {
  * @public
  */
 export interface PerspectiveHandle {
-  perspective?: ClientPerspective | ReleasePerspective
+  perspective?: Exclude<ClientPerspective, readonly unknown[]> | ReleasePerspective
 }
 
 /**
