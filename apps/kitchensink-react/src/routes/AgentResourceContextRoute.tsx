@@ -1,5 +1,5 @@
 import {
-  getDefaultDatasetSource,
+  getDefaultDatasetResource,
   useAgentResourceContext,
   useDocuments,
   useSanityInstance,
@@ -15,9 +15,9 @@ import {type JSX, useEffect, useMemo, useRef, useState} from 'react'
 export function AgentResourceContextRoute(): JSX.Element {
   // Get the current instance from context to access projectId and dataset
   const instance = useSanityInstance()
-  const source = getDefaultDatasetSource(instance.config)
-  const projectId = source!.projectId
-  const dataset = source!.dataset
+  const resource = getDefaultDatasetResource(instance.config)
+  const projectId = resource!.projectId
+  const dataset = resource!.dataset
 
   // Fetch some documents to use as examples
   const {data: documents} = useDocuments({

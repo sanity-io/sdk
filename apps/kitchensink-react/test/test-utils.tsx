@@ -18,7 +18,7 @@ export const AppProviders = ({children}: {children: React.ReactNode}): ReactElem
   const theme = buildTheme()
   return (
     <ThemeProvider theme={theme}>
-      <ResourceProvider defaultSource={{projectId: 'test', dataset: 'test'}} fallback={null}>
+      <ResourceProvider defaultResource={{projectId: 'test', dataset: 'test'}} fallback={null}>
         {children}
       </ResourceProvider>
     </ThemeProvider>

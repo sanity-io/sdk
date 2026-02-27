@@ -1,4 +1,4 @@
-import {type DocumentSource, type SanityConfig} from '@sanity/sdk'
+import {DEFAULT_RESOURCE_NAME, type DocumentResource, type SanityConfig} from '@sanity/sdk'
 import {StrictMode} from 'react'
 import {createRoot} from 'react-dom/client'
 
@@ -8,40 +8,40 @@ interface RenderSanitySDKAppOptions {
   reactStrictMode?: boolean
 }
 
-interface NamedSources {
+interface NamedResources {
   [key: string]: SanityConfig
 }
 
 /**
  * Merges multiple named SanityConfig objects into a single config.
- * The last config wins for overlapping keys. The `defaultSource` from
- * each config is collected into a `sources` map keyed by the entry name,
- * and the final `defaultSource` is used as the merged config's default.
+ * The last config wins for overlapping keys. The `defaultResource` from
+ * each config is collected into a `resources` map keyed by the entry name,
+ * and the final `defaultResource` is used as the merged config's default.
  */
-function mergeNamedSources(namedSources: NamedSources): {
+function mergeNamedResources(namedResources: NamedResources): {
   config: SanityConfig
-  sources: Record<string, DocumentSource>
+  resources: Record<string, DocumentResource>
 } {
-  const sources: Record<string, DocumentSource> = {}
+  const resources: Record<string, DocumentResource> = {}
   let mergedConfig: SanityConfig = {}
 
-  for (const [, cfg] of Object.entries(namedSources)) {
+  for (const [, cfg] of Object.entries(namedResources)) {
     mergedConfig = {...mergedConfig, ...cfg}
   }
 
-  for (const [name, cfg] of Object.entries(namedSources)) {
-    if (cfg.defaultSource) {
-      sources[name === 'main' ? 'default' : name] = cfg.defaultSource
+  for (const [name, cfg] of Object.entries(namedResources)) {
+    if (cfg.defaultResource) {
+      resources[name === 'main' ? DEFAULT_RESOURCE_NAME : name] = cfg.defaultResource
     }
   }
 
-  return {config: mergedConfig, sources}
+  return {config: mergedConfig, resources}
 }
 
 /** @internal */
 export function renderSanityApp(
   rootElement: HTMLElement | null,
-  namedSources: NamedSources,
+  namedResources: NamedResources,
   options: RenderSanitySDKAppOptions,
   children: React.ReactNode,
 ): () => void {
@@ -51,17 +51,17 @@ export function renderSanityApp(
   const {reactStrictMode = false} = options
 
   const root = createRoot(rootElement)
-  const {config, sources} = mergeNamedSources(namedSources)
+  const {config, resources} = mergeNamedResources(namedResources)
 
   root.render(
     reactStrictMode ? (
       <StrictMode>
-        <SanityApp config={config} sources={sources} fallback={<div>Loading...</div>}>
+        <SanityApp config={config} resources={resources} fallback={<div>Loading...</div>}>
           {children}
         </SanityApp>
       </StrictMode>
     ) : (
-      <SanityApp config={config} sources={sources} fallback={<div>Loading...</div>}>
+      <SanityApp config={config} resources={resources} fallback={<div>Loading...</div>}>
         {children}
       </SanityApp>
     ),

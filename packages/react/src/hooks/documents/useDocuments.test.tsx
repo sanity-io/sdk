@@ -3,7 +3,7 @@ import {evaluateSync, parse, toJS} from 'groq-js'
 import {describe, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
-import {SourcesContext} from '../../context/SourcesContext'
+import {ResourcesContext} from '../../context/ResourcesContext'
 import {useQuery} from '../query/useQuery'
 import {useDocuments} from './useDocuments'
 
@@ -81,7 +81,7 @@ describe('useDocuments', () => {
     const {result} = renderHook(() => useDocuments({batchSize: customBatchSize}), {
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -96,7 +96,7 @@ describe('useDocuments', () => {
     const {result} = renderHook(() => useDocuments({filter: '_type == "movie"'}), {
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -113,7 +113,7 @@ describe('useDocuments', () => {
     const {result} = renderHook(() => useDocuments({search: 'inter'}), {
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -135,7 +135,7 @@ describe('useDocuments', () => {
       {
         wrapper: ({children}) => (
           <ResourceProvider
-            defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             {children}
@@ -153,7 +153,7 @@ describe('useDocuments', () => {
     const {result} = renderHook(() => useDocuments({batchSize: batchSize}), {
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -174,7 +174,7 @@ describe('useDocuments', () => {
     const {result} = renderHook(() => useDocuments({batchSize: 3}), {
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -195,7 +195,7 @@ describe('useDocuments', () => {
       initialProps: {batchSize: 2, filter: ''},
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -220,7 +220,7 @@ describe('useDocuments', () => {
     const {result} = renderHook(() => useDocuments({}), {
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -240,16 +240,16 @@ describe('useDocuments', () => {
     ).toBe(true)
   })
 
-  it('should resolve sourceName to the named dataset source', () => {
-    const sources = {
+  it('should resolve resourceName to the named dataset resource', () => {
+    const resources = {
       default: {projectId: 'test-project', dataset: 'test-dataset'},
       secondary: {projectId: 'secondary-project', dataset: 'secondary-dataset'},
     }
 
-    const {result} = renderHook(() => useDocuments({sourceName: 'secondary'}), {
+    const {result} = renderHook(() => useDocuments({resourceName: 'secondary'}), {
       wrapper: ({children}) => (
-        <ResourceProvider defaultSource={sources.default} fallback={null}>
-          <SourcesContext.Provider value={sources}>{children}</SourcesContext.Provider>
+        <ResourceProvider defaultResource={resources.default} fallback={null}>
+          <ResourcesContext.Provider value={resources}>{children}</ResourcesContext.Provider>
         </ResourceProvider>
       ),
     })

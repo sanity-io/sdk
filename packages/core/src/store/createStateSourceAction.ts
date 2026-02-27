@@ -155,7 +155,7 @@ interface StateSourceOptions<TState, TParams extends unknown[], TReturn, TKey> {
  *   // ...
  * })
  *
- * const getDocument = bindActionBySource(
+ * const getDocument = bindActionByResource(
  *   documentStore,
  *   createStateSourceAction(({state}, _options, documentId: string) => state.documents[documentId])
  * )

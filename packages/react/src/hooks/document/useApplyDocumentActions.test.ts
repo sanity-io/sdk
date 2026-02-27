@@ -146,7 +146,7 @@ describe('useApplyDocumentActions', () => {
     }).toThrow(/Mismatched datasets found in actions/)
   })
 
-  it('throws when actions have mismatched sources', async () => {
+  it('throws when actions have mismatched resources', async () => {
     const {result} = renderHook(() => useApplyDocumentActions())
     expect(() => {
       result.current([
@@ -154,19 +154,19 @@ describe('useApplyDocumentActions', () => {
           type: 'document.edit',
           documentType: 'post',
           documentId: 'abc',
-          source: {projectId: 'p', dataset: 'd1'},
+          resource: {projectId: 'p', dataset: 'd1'},
         },
         {
           type: 'document.edit',
           documentType: 'post',
           documentId: 'def',
-          source: {projectId: 'p', dataset: 'd2'},
+          resource: {projectId: 'p', dataset: 'd2'},
         },
       ])
-    }).toThrow(/Mismatched sources found in actions/)
+    }).toThrow(/Mismatched resources found in actions/)
   })
 
-  it('throws when mixing projectId and source (projectId first)', async () => {
+  it('throws when mixing projectId and resource (projectId first)', async () => {
     const {result} = renderHook(() => useApplyDocumentActions())
     expect(() => {
       result.current([
@@ -180,13 +180,13 @@ describe('useApplyDocumentActions', () => {
           type: 'document.edit',
           documentType: 'post',
           documentId: 'def',
-          source: {projectId: 'p', dataset: 'd'},
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ])
-    }).toThrow(/Mismatches between projectId\/dataset options and source/)
+    }).toThrow(/Mismatches between projectId\/dataset options and resource/)
   })
 
-  it('throws when mixing source and projectId (source first)', async () => {
+  it('throws when mixing resource and projectId (resource first)', async () => {
     const {result} = renderHook(() => useApplyDocumentActions())
     expect(() => {
       result.current([
@@ -194,7 +194,7 @@ describe('useApplyDocumentActions', () => {
           type: 'document.edit',
           documentType: 'post',
           documentId: 'abc',
-          source: {projectId: 'p', dataset: 'd'},
+          resource: {projectId: 'p', dataset: 'd'},
         },
         {
           type: 'document.edit',
@@ -203,6 +203,6 @@ describe('useApplyDocumentActions', () => {
           projectId: 'p',
         },
       ])
-    }).toThrow(/Mismatches between projectId\/dataset options and source/)
+    }).toThrow(/Mismatches between projectId\/dataset options and resource/)
   })
 })

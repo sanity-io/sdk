@@ -1,10 +1,10 @@
-import {type DocumentSource, type SanityConfig} from '@sanity/sdk'
+import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
 
 export const devConfig: SanityConfig = {
-  defaultSource: {projectId: 'ppsg7ml5', dataset: 'test'},
+  defaultResource: {projectId: 'ppsg7ml5', dataset: 'test'},
 }
 
-export const devSources: Record<string, DocumentSource> = {
+export const devResources: Record<string, DocumentResource> = {
   'default': {projectId: 'ppsg7ml5', dataset: 'test'},
   'secondary': {projectId: 'vo1ysemo', dataset: 'production'},
   'media-library': {
@@ -15,7 +15,7 @@ export const devSources: Record<string, DocumentSource> = {
 }
 
 export const e2eConfig: SanityConfig = {
-  defaultSource: {
+  defaultResource: {
     projectId: import.meta.env['VITE_E2E_PROJECT_ID'],
     dataset: import.meta.env['VITE_E2E_DATASET_0'],
   },
@@ -24,7 +24,7 @@ export const e2eConfig: SanityConfig = {
   },
 }
 
-export const e2eSources: Record<string, DocumentSource> = {
+export const e2eResources: Record<string, DocumentResource> = {
   'default': {
     projectId: import.meta.env['VITE_E2E_PROJECT_ID'],
     dataset: import.meta.env['VITE_E2E_DATASET_0'],

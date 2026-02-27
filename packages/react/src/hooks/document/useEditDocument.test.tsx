@@ -79,7 +79,7 @@ describe('useEditDocument hook', () => {
     const {result} = renderHook(() => useEditDocument<string>({...docHandle, path: 'foo'}), {
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -109,7 +109,7 @@ describe('useEditDocument hook', () => {
     const {result} = renderHook(() => useEditDocument(docHandle), {
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -136,7 +136,7 @@ describe('useEditDocument hook', () => {
     const {result} = renderHook(() => useEditDocument<string>({...docHandle, path: 'foo'}), {
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -165,7 +165,7 @@ describe('useEditDocument hook', () => {
     const {result} = renderHook(() => useEditDocument(docHandle), {
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -192,7 +192,7 @@ describe('useEditDocument hook', () => {
     const {result} = renderHook(() => useEditDocument(docHandle), {
       wrapper: ({children}) => (
         <ResourceProvider
-          defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
           fallback={null}
         >
           {children}
@@ -229,7 +229,7 @@ describe('useEditDocument hook', () => {
       {
         wrapper: ({children}) => (
           <ResourceProvider
-            defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             {children}

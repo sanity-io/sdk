@@ -10,7 +10,7 @@ import {type SanityDocument} from 'groq'
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useNormalizedSourceOptions} from '../helpers/useNormalizedSourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {useApplyDocumentActions} from './useApplyDocumentActions'
 
 const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
@@ -265,7 +265,7 @@ export function useEditDocument({
   ...doc
 }: DocumentOptions<string | undefined>): (updater: Updater<unknown>) => Promise<ActionsResult> {
   const instance = useSanityInstance()
-  const normalizedDoc = useNormalizedSourceOptions(doc)
+  const normalizedDoc = useNormalizedResourceOptions(doc)
 
   const apply = useApplyDocumentActions()
   const isDocumentReady = useCallback(

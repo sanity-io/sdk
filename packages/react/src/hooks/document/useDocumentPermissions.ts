@@ -91,25 +91,25 @@ export function useDocumentPermissions(
   // if actions is an array, we need to check that all actions belong to the same project and dataset
   let projectId
   let dataset
-  let source
+  let resource
 
   for (const action of actions) {
-    if (action.source) {
+    if (action.resource) {
       if (projectId || dataset) {
         throw new Error(
-          `Mismatches between projectId/dataset options and source in actions. Found "${JSON.stringify(action.source)}" but expected project "${projectId}" and dataset "${dataset}".`,
+          `Mismatches between projectId/dataset options and resource in actions. Found "${JSON.stringify(action.resource)}" but expected project "${projectId}" and dataset "${dataset}".`,
         )
       }
-      if (!source) source = action.source
-      if (action.source !== source) {
+      if (!resource) resource = action.resource
+      if (action.resource !== resource) {
         throw new Error(
-          `Mismatched sources found in actions. All actions must belong to the same source. Found "${JSON.stringify(action.source)}" but expected "${JSON.stringify(source)}".`,
+          `Mismatched resources found in actions. All actions must belong to the same resource. Found "${JSON.stringify(action.resource)}" but expected "${JSON.stringify(resource)}".`,
         )
       }
     } else if (action.projectId) {
-      if (source) {
+      if (resource) {
         throw new Error(
-          `Mismatches between projectId/dataset options and source in actions. Found projectId "${action.projectId}" and dataset "${action.dataset}" but expected source "${JSON.stringify(source)}".`,
+          `Mismatches between projectId/dataset options and resource in actions. Found projectId "${action.projectId}" and dataset "${action.dataset}" but expected resource "${JSON.stringify(resource)}".`,
         )
       }
       if (!projectId) projectId = action.projectId

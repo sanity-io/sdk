@@ -1,4 +1,4 @@
-import {getDefaultDatasetSource, type SanityConfig} from '../config/sanityConfig'
+import {getDefaultDatasetResource, type SanityConfig} from '../config/sanityConfig'
 import {insecureRandomId} from '../utils/ids'
 import {createLogger, type InstanceContext} from '../utils/logger'
 
@@ -66,26 +66,26 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
   const instanceId = crypto.randomUUID()
   const disposeListeners = new Map<string, () => void>()
   const disposed = {current: false}
-  const defaultSource = getDefaultDatasetSource(config)
+  const defaultResource = getDefaultDatasetResource(config)
 
   const instanceContext: InstanceContext = {
     instanceId,
-    projectId: defaultSource?.projectId,
-    dataset: defaultSource?.dataset,
+    projectId: defaultResource?.projectId,
+    dataset: defaultResource?.dataset,
   }
 
   const logger = createLogger('sdk', {instanceContext})
 
   logger.info('Sanity instance created', {
-    hasProjectId: !!defaultSource?.projectId,
-    hasDefaultSource: !!config.defaultSource,
+    hasProjectId: !!defaultResource?.projectId,
+    hasDefaultResource: !!config.defaultResource,
     hasAuth: !!config.auth,
     hasPerspective: !!config.perspective,
   })
 
   logger.debug('Instance configuration', {
-    projectId: defaultSource?.projectId,
-    dataset: defaultSource?.dataset,
+    projectId: defaultResource?.projectId,
+    dataset: defaultResource?.dataset,
     perspective: config.perspective,
     hasStudioConfig: !!config.studio,
     hasStudioTokenSource: !!config.studio?.auth?.token,
@@ -122,7 +122,7 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
     createChild: (next) => {
       logger.debug('Creating child instance', {
         parentInstanceId: instanceId.slice(0, 8),
-        overridingDefaultSource: !!next.defaultSource,
+        overridingDefaultResource: !!next.defaultResource,
         overridingAuth: !!next.auth,
       })
       const child = Object.assign(

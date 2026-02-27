@@ -57,7 +57,7 @@ describe('ComlinkTokenRefresh', () => {
         mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN})
         const {rerender} = render(
           <ResourceProvider
-            defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             <ComlinkTokenRefreshProvider>
@@ -73,7 +73,7 @@ describe('ComlinkTokenRefresh', () => {
         act(() => {
           rerender(
             <ResourceProvider
-              defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+              defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
               fallback={null}
             >
               <ComlinkTokenRefreshProvider>
@@ -99,7 +99,7 @@ describe('ComlinkTokenRefresh', () => {
         // Simulate studio mode disabled by default
         render(
           <ResourceProvider
-            defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             <ComlinkTokenRefreshProvider>
@@ -134,7 +134,7 @@ describe('ComlinkTokenRefresh', () => {
 
         render(
           <ResourceProvider
-            defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             <ComlinkTokenRefreshProvider>
@@ -154,7 +154,7 @@ describe('ComlinkTokenRefresh', () => {
         const instanceArg = mockSetAuthToken.mock.calls[0][0]
         expect(instanceArg.config).toEqual(
           expect.objectContaining({
-            defaultSource: {projectId: 'test-project', dataset: 'test-dataset'},
+            defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
           }),
         )
         // Unauthorized error container should be removed
@@ -170,7 +170,7 @@ describe('ComlinkTokenRefresh', () => {
 
         render(
           <ResourceProvider
-            defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             <ComlinkTokenRefreshProvider>
@@ -195,7 +195,7 @@ describe('ComlinkTokenRefresh', () => {
 
         render(
           <ResourceProvider
-            defaultSource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            defaultResource={{projectId: 'test-project', dataset: 'test-dataset'}}
             fallback={null}
           >
             <ComlinkTokenRefreshProvider>

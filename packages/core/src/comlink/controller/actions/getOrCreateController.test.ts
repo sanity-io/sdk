@@ -22,7 +22,7 @@ describe('getOrCreateController', () => {
 
   beforeEach(() => {
     instance = createSanityInstance({
-      defaultSource: {projectId: 'test-project-id', dataset: 'test-dataset'},
+      defaultResource: {projectId: 'test-project-id', dataset: 'test-dataset'},
     })
 
     state = createStoreState<ComlinkControllerState>({

@@ -51,7 +51,7 @@ describe('favoritesStore', () => {
   describe('createFavoriteKey', () => {
     beforeEach(() => {
       vi.resetAllMocks()
-      instance = createSanityInstance({defaultSource: {projectId: 'p', dataset: 'd'}})
+      instance = createSanityInstance({defaultResource: {projectId: 'p', dataset: 'd'}})
       setupMockStateSource()
     })
 
@@ -99,7 +99,7 @@ describe('favoritesStore', () => {
   describe('fetcher', () => {
     beforeEach(() => {
       vi.resetAllMocks()
-      instance = createSanityInstance({defaultSource: {projectId: 'p', dataset: 'd'}})
+      instance = createSanityInstance({defaultResource: {projectId: 'p', dataset: 'd'}})
       setupMockStateSource()
     })
 

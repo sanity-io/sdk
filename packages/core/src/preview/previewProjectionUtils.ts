@@ -3,7 +3,7 @@ import {createImageUrlBuilder} from '@sanity/image-url'
 import {isObject} from 'lodash-es'
 
 import {getClient} from '../client/clientStore'
-import {type DocumentSource} from '../config/sanityConfig'
+import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {SUBTITLE_CANDIDATES, TITLE_CANDIDATES} from './previewConstants'
 import {type PreviewQueryResult, type PreviewValue} from './types'
@@ -66,20 +66,20 @@ function findFirstDefined(
  *
  * @param projectionResult - The raw projection result from GROQ
  * @param instance - The Sanity instance to use for client configuration
- * @param source - Data source for the preview
+ * @param resource - Data resource for the preview
  * @internal
  */
 export function transformProjectionToPreview(
   instance: SanityInstance,
   projectionResult: PreviewQueryResult,
-  source?: DocumentSource,
+  resource?: DocumentResource,
 ): PreviewValue {
   const title = findFirstDefined(TITLE_CANDIDATES, projectionResult.titleCandidates)
   const subtitle = findFirstDefined(SUBTITLE_CANDIDATES, projectionResult.subtitleCandidates, title)
 
   const client = getClient(instance, {
     apiVersion: API_VERSION,
-    ...(source ? {source} : {}),
+    ...(resource ? {resource} : {}),
   })
 
   return {

@@ -30,7 +30,7 @@ describe('releaseChannel', () => {
 
   beforeEach(() => {
     instance = createSanityInstance({
-      defaultSource: {projectId: 'test-project-id', dataset: 'test-dataset'},
+      defaultResource: {projectId: 'test-project-id', dataset: 'test-dataset'},
     })
     store = createStoreInstance(instance, key, comlinkControllerStore)
 

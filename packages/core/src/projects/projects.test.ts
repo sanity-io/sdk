@@ -13,7 +13,7 @@ describe('projects', () => {
   let instance: SanityInstance
 
   beforeEach(() => {
-    instance = createSanityInstance({defaultSource: {projectId: 'p', dataset: 'd'}})
+    instance = createSanityInstance({defaultResource: {projectId: 'p', dataset: 'd'}})
   })
 
   afterEach(() => {

@@ -2,12 +2,12 @@ import {type ClientPerspective} from '@sanity/client'
 
 import {
   type DatasetHandle,
-  type DocumentSource,
-  isCanvasSource,
-  isDatasetSource,
-  isMediaLibrarySource,
+  type DocumentResource,
+  isCanvasResource,
+  isDatasetResource,
+  isMediaLibraryResource,
   type ReleasePerspective,
-  resolveDefaultSource,
+  resolveDefaultResource,
 } from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type SanityInstance} from './createSanityInstance'
@@ -15,11 +15,11 @@ import {createStoreInstance, type StoreInstance} from './createStoreInstance'
 import {type StoreState} from './createStoreState'
 import {type StoreContext, type StoreDefinition} from './defineStore'
 
-export interface BoundSourceKey {
+export interface BoundResourceKey {
   name: string
-  source: DocumentSource
+  resource: DocumentResource
 }
-export interface BoundPerspectiveKey extends BoundSourceKey {
+export interface BoundPerspectiveKey extends BoundResourceKey {
   perspective: ClientPerspective | ReleasePerspective
 }
 /**
@@ -118,49 +118,52 @@ export function createActionBinder<
   }
 }
 
-const sourceKeyName = (source: DocumentSource): string => {
-  if (isDatasetSource(source)) return `${source.projectId}.${source.dataset}`
-  if (isMediaLibrarySource(source)) return `media-library:${source.mediaLibraryId}`
-  if (isCanvasSource(source)) return `canvas:${source.canvasId}`
-  throw new Error(`Received invalid source: ${JSON.stringify(source)}`)
+const resourceKeyName = (resource: DocumentResource): string => {
+  if (isDatasetResource(resource)) return `${resource.projectId}.${resource.dataset}`
+  if (isMediaLibraryResource(resource)) return `media-library:${resource.mediaLibraryId}`
+  if (isCanvasResource(resource)) return `canvas:${resource.canvasId}`
+  throw new Error(`Received invalid resource: ${JSON.stringify(resource)}`)
 }
 
-const createSourceKey = (instance: SanityInstance, source?: DocumentSource): BoundSourceKey => {
-  if (source) {
-    return {name: sourceKeyName(source), source}
+const createResourceKey = (
+  instance: SanityInstance,
+  resource?: DocumentResource,
+): BoundResourceKey => {
+  if (resource) {
+    return {name: resourceKeyName(resource), resource}
   }
 
-  const defaultSource = resolveDefaultSource(instance.config)
-  if (!defaultSource) {
+  const defaultResource = resolveDefaultResource(instance.config)
+  if (!defaultResource) {
     throw new Error(
-      'No source provided and no default source configured. ' +
-        'Provide a "default" source in your sources map, or pass an explicit source.',
+      'No resource provided and no default resource configured. ' +
+        'Provide a "default" resource in your resources map, or pass an explicit resource.',
     )
   }
-  return {name: sourceKeyName(defaultSource), source: defaultSource}
+  return {name: resourceKeyName(defaultResource), resource: defaultResource}
 }
 
 /**
- * Binds an action to a store that's scoped to a specific document source.
+ * Binds an action to a store that's scoped to a specific document resource.
  **/
-export const bindActionBySource = createActionBinder<
-  BoundSourceKey,
-  [{source?: DocumentSource}, ...unknown[]]
->((instance, {source}) => {
-  return createSourceKey(instance, source)
+export const bindActionByResource = createActionBinder<
+  BoundResourceKey,
+  [{resource?: DocumentResource}, ...unknown[]]
+>((instance, {resource}) => {
+  return createResourceKey(instance, resource)
 })
 
 /**
- * Binds an action to a store that's scoped to a specific document source and perspective.
+ * Binds an action to a store that's scoped to a specific document resource and perspective.
  *
  * @remarks
- * This creates actions that operate on state isolated to a specific document source and perspective.
- * Different document sources and perspectives will have separate states.
+ * This creates actions that operate on state isolated to a specific document resource and perspective.
+ * Different document resources and perspectives will have separate states.
  *
  * This is mostly useful for stores that do batch fetching operations, since the query store
  * can isolate single queries by perspective.
  *
- * @throws Error if source or perspective is missing from the Sanity instance config
+ * @throws Error if resource or perspective is missing from the Sanity instance config
  *
  * @example
  * ```ts
@@ -171,11 +174,11 @@ export const bindActionBySource = createActionBinder<
  *   // ...
  * })
  *
- * // Create source-and-perspective-specific actions
- * export const fetchDocuments = bindActionBySourceAndPerspective(
+ * // Create resource-and-perspective-specific actions
+ * export const fetchDocuments = bindActionByResourceAndPerspective(
  *   documentStore,
  *   ({instance, state}, documentId) => {
- *     // This state is isolated to the specific document source and perspective
+ *     // This state is isolated to the specific document resource and perspective
  *     // ...fetch logic...
  *   }
  * )
@@ -184,11 +187,11 @@ export const bindActionBySource = createActionBinder<
  * fetchDocument(sanityInstance, 'doc123')
  * ```
  */
-export const bindActionBySourceAndPerspective = createActionBinder<
+export const bindActionByResourceAndPerspective = createActionBinder<
   BoundPerspectiveKey,
   [DatasetHandle, ...unknown[]]
 >((instance, options): BoundPerspectiveKey => {
-  const {source, perspective} = options
+  const {resource, perspective} = options
   // TODO: remove reference to instance.config.perspective when we get to v3
   const utilizedPerspective = perspective ?? instance.config.perspective ?? 'drafts'
   let perspectiveKey: string
@@ -200,11 +203,11 @@ export const bindActionBySourceAndPerspective = createActionBinder<
     // "StackablePerspective", shouldn't be a common case, but just in case
     perspectiveKey = JSON.stringify(utilizedPerspective)
   }
-  const sourceKey = createSourceKey(instance, source)
+  const resourceKey = createResourceKey(instance, resource)
 
   return {
-    name: `${sourceKey.name}:${perspectiveKey}`,
-    source: sourceKey.source,
+    name: `${resourceKey.name}:${perspectiveKey}`,
+    resource: resourceKey.resource,
     perspective: utilizedPerspective,
   }
 })

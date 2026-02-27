@@ -80,7 +80,7 @@ describe('authStore', () => {
       const storageArea = {} as Storage
 
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {
           apiHost,
           callbackUrl,
@@ -109,7 +109,7 @@ describe('authStore', () => {
       const context = {mode: 'test', env: 'staging', orgId: 'abc'}
       const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(context))}`
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {initialLocationHref},
       })
 
@@ -123,7 +123,7 @@ describe('authStore', () => {
       const expectedContext = {mode: 'test', env: 'staging', orgId: 'abc'}
       const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(context))}`
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {initialLocationHref},
       })
 
@@ -136,7 +136,7 @@ describe('authStore', () => {
       const initialLocationHref = `https://example.com/?_context=invalid-json`
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {initialLocationHref},
       })
 
@@ -153,7 +153,7 @@ describe('authStore', () => {
     it('rejects array _context and falls back to standalone mode', () => {
       const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(['a', 'b']))}`
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {initialLocationHref},
       })
 
@@ -166,7 +166,7 @@ describe('authStore', () => {
     it('rejects empty object _context and falls back to standalone mode', () => {
       const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify({}))}`
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {initialLocationHref},
       })
 
@@ -181,7 +181,7 @@ describe('authStore', () => {
       const context = {mode: 'dashboard'}
       const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(context))}`
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {
           token,
           initialLocationHref,
@@ -197,7 +197,7 @@ describe('authStore', () => {
       const context = {orgId: 'org1'}
       const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(context))}`
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {initialLocationHref},
       })
 
@@ -211,7 +211,7 @@ describe('authStore', () => {
     it('sets to logged in from storage token when NOT in dashboard', () => {
       const storageToken = 'storage-token'
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
       })
 
       vi.mocked(getAuthCode).mockReturnValue(null)
@@ -227,7 +227,7 @@ describe('authStore', () => {
       const context = {mode: 'dashboard'}
       const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(context))}`
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {initialLocationHref},
       })
 
@@ -241,7 +241,7 @@ describe('authStore', () => {
 
     it('sets the state to logged out when no token, code, or context', () => {
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
       })
 
       vi.mocked(getAuthCode).mockReturnValue(null)
@@ -264,7 +264,7 @@ describe('authStore', () => {
       vi.mocked(getStudioTokenFromLocalStorage).mockReturnValue(studioToken)
 
       instance = createSanityInstance({
-        defaultSource: {projectId, dataset: 'd'},
+        defaultResource: {projectId, dataset: 'd'},
         studio: {},
         auth: {storageArea: mockStorage}, // Provide mock storage
       })
@@ -287,7 +287,7 @@ describe('authStore', () => {
       vi.mocked(checkForCookieAuth).mockResolvedValue(true)
 
       instance = createSanityInstance({
-        defaultSource: {projectId, dataset: 'd'},
+        defaultResource: {projectId, dataset: 'd'},
         studio: {},
         auth: {storageArea: mockStorage},
       })
@@ -309,7 +309,7 @@ describe('authStore', () => {
       }
 
       instance = createSanityInstance({
-        defaultSource: {projectId: 'studio-project', dataset: 'production'},
+        defaultResource: {projectId: 'studio-project', dataset: 'production'},
         studio: {
           auth: {token: mockTokenSource},
         },
@@ -323,7 +323,7 @@ describe('authStore', () => {
 
     it('resolves to studio mode when studio config is provided', () => {
       instance = createSanityInstance({
-        defaultSource: {projectId: 'studio-project', dataset: 'production'},
+        defaultResource: {projectId: 'studio-project', dataset: 'production'},
         studio: {},
       })
 
@@ -339,7 +339,7 @@ describe('authStore', () => {
       const mockTokenSource = {subscribe: mockSubscribe}
 
       instance = createSanityInstance({
-        defaultSource: {projectId: 'studio-project', dataset: 'production'},
+        defaultResource: {projectId: 'studio-project', dataset: 'production'},
         studio: {
           auth: {token: mockTokenSource},
         },
@@ -362,7 +362,7 @@ describe('authStore', () => {
       const mockTokenSource = {subscribe: mockSubscribe}
 
       instance = createSanityInstance({
-        defaultSource: {projectId: 'studio-project', dataset: 'production'},
+        defaultResource: {projectId: 'studio-project', dataset: 'production'},
         studio: {
           authenticated: true,
           auth: {token: mockTokenSource},
@@ -389,7 +389,7 @@ describe('authStore', () => {
       const mockTokenSource = {subscribe: mockSubscribe}
 
       instance = createSanityInstance({
-        defaultSource: {projectId: 'studio-project', dataset: 'production'},
+        defaultResource: {projectId: 'studio-project', dataset: 'production'},
         studio: {
           authenticated: false,
           auth: {token: mockTokenSource},
@@ -411,7 +411,7 @@ describe('authStore', () => {
       vi.mocked(getTokenFromStorage).mockReturnValue(storageToken)
 
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
       })
 
       const {authState, options} = authStore.getInitialState(instance, null)
@@ -424,7 +424,7 @@ describe('authStore', () => {
     it('sets to logging in if getTokenFromLocation returns a token', () => {
       const initialLocationHref = 'https://example.com/#token=hash-token'
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {initialLocationHref},
       })
 
@@ -479,7 +479,7 @@ describe('authStore', () => {
 
     it('subscribes to state and storage events and unsubscribes on dispose', () => {
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {storageArea: mockLocalStorage},
       })
 
@@ -504,7 +504,7 @@ describe('authStore', () => {
 
     it('does not subscribe to storage events when not using storage area', () => {
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {storageArea: undefined},
       })
 
@@ -545,7 +545,7 @@ describe('authStore', () => {
         return NEVER.subscribe()
       })
 
-      instance = createSanityInstance({defaultSource: {projectId: 'p', dataset: 'd'}})
+      instance = createSanityInstance({defaultResource: {projectId: 'p', dataset: 'd'}})
 
       const {getCurrent} = getCurrentUserState(instance)
 
@@ -554,7 +554,7 @@ describe('authStore', () => {
     })
 
     it('returns null otherwise', () => {
-      instance = createSanityInstance({defaultSource: {projectId: 'p', dataset: 'd'}})
+      instance = createSanityInstance({defaultResource: {projectId: 'p', dataset: 'd'}})
       const {getCurrent} = getCurrentUserState(instance)
       expect(getCurrent()).toBe(null)
     })
@@ -570,7 +570,7 @@ describe('authStore', () => {
     it('returns the token if logged in', () => {
       const token = 'hard-coded-token'
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {token},
       })
       const tokenState = getTokenState(instance)
@@ -581,7 +581,7 @@ describe('authStore', () => {
     })
 
     it('returns null otherwise', () => {
-      instance = createSanityInstance({defaultSource: {projectId: 'p', dataset: 'd'}})
+      instance = createSanityInstance({defaultResource: {projectId: 'p', dataset: 'd'}})
 
       const tokenState = getTokenState(instance)
       expect(tokenState.getCurrent()).toBe(null)
@@ -599,7 +599,7 @@ describe('authStore', () => {
     })
 
     it('returns the default login url', () => {
-      instance = createSanityInstance({defaultSource: {projectId: 'p', dataset: 'd'}})
+      instance = createSanityInstance({defaultResource: {projectId: 'p', dataset: 'd'}})
 
       const loginUrlState = getLoginUrlState(instance)
       expect(loginUrlState.getCurrent()).toBe(
@@ -617,7 +617,7 @@ describe('authStore', () => {
 
     it('returns the current state in `authState`', () => {
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {token: 'hard-coded-token'},
       })
 
@@ -648,7 +648,7 @@ describe('authStore', () => {
       const context = {orgId: 'initial-org-id'}
       const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(context))}`
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {initialLocationHref},
       })
 
@@ -665,7 +665,7 @@ describe('authStore', () => {
       const authCode = 'test-auth-code'
 
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {
           clientFactory: () => mockClient as unknown as SanityClient,
           initialLocationHref, // Set initial context
@@ -694,7 +694,7 @@ describe('authStore', () => {
       const context = {mode: 'test'} // No orgId
       const initialLocationHref = `https://example.com/?_context=${encodeURIComponent(JSON.stringify(context))}`
       instance = createSanityInstance({
-        defaultSource: {projectId: 'p', dataset: 'd'},
+        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {initialLocationHref},
       })
 

@@ -11,7 +11,7 @@ describe('nodeStore', () => {
 
   beforeEach(() => {
     instance = createSanityInstance({
-      defaultSource: {projectId: 'test-project-id', dataset: 'test-dataset'},
+      defaultResource: {projectId: 'test-project-id', dataset: 'test-dataset'},
     })
   })
 

@@ -17,7 +17,7 @@ describe('useSanityInstance', () => {
 
   it('should return the Sanity instance from context', () => {
     const instance = createSanityInstance({
-      defaultSource: {projectId: 'test-project', dataset: 'test-dataset'},
+      defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
     })
 
     const {result} = renderHook(() => useSanityInstance(), {

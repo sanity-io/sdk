@@ -165,11 +165,11 @@ describe('useDispatchIntent', () => {
     })
   })
 
-  it('should send intent message with media library source', () => {
+  it('should send intent message with media library resource', () => {
     const mockMediaLibraryHandle = {
       documentId: 'test-asset-id',
       documentType: 'sanity.asset',
-      sourceName: 'media-library',
+      resourceName: 'media-library',
     } as const
 
     const {result} = renderHook(() =>
@@ -194,11 +194,11 @@ describe('useDispatchIntent', () => {
     })
   })
 
-  it('should send intent message with canvas source', () => {
+  it('should send intent message with canvas resource', () => {
     const mockCanvasHandle = {
       documentId: 'test-canvas-document-id',
       documentType: 'sanity.canvas.document',
-      sourceName: 'canvas',
+      resourceName: 'canvas',
     } as const
 
     const {result} = renderHook(() =>
@@ -224,7 +224,7 @@ describe('useDispatchIntent', () => {
   })
 
   describe('error handling', () => {
-    it('should throw error when neither source nor projectId/dataset is provided', () => {
+    it('should throw error when neither resource nor projectId/dataset is provided', () => {
       const invalidHandle = {
         documentId: 'test-document-id',
         documentType: 'test-document-type',
@@ -238,7 +238,7 @@ describe('useDispatchIntent', () => {
       )
 
       expect(() => result.current.dispatchIntent()).toThrow(
-        'useDispatchIntent: Unable to determine resource. Either `source`, `sourceName`, or both `projectId` and `dataset` must be provided in documentHandle.',
+        'useDispatchIntent: Unable to determine resource. Either `resource`, `resourceName`, or both `projectId` and `dataset` must be provided in documentHandle.',
       )
     })
   })

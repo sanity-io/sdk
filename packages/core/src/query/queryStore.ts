@@ -35,7 +35,7 @@ import {type DatasetHandle} from '../config/sanityConfig'
 // eslint-disable-next-line import/no-cycle
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
-import {bindActionBySource, type BoundSourceKey} from '../store/createActionBinder'
+import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -116,7 +116,7 @@ function normalizeOptionsWithPerspective(
   }
 }
 
-const queryStore = defineStore<QueryStoreState, BoundSourceKey>({
+const queryStore = defineStore<QueryStoreState, BoundResourceKey>({
   name: 'QueryStore',
   getInitialState: () => ({queries: {}}),
   initialize(context) {
@@ -140,8 +140,8 @@ const errorHandler = (state: StoreState<{error?: unknown}>) => {
 const listenForNewSubscribersAndFetch = ({
   state,
   instance,
-  key: {source: boundSource},
-}: StoreContext<QueryStoreState, BoundSourceKey>) => {
+  key: {resource: boundResource},
+}: StoreContext<QueryStoreState, BoundResourceKey>) => {
   return state.observable
     .pipe(
       map((s) => new Set(Object.keys(s.queries))),
@@ -176,7 +176,7 @@ const listenForNewSubscribersAndFetch = ({
               projectId,
               dataset,
               tag,
-              source,
+              resource,
               perspective: perspectiveFromOptions,
               ...restOptions
             } = parseQueryKey(group$.key)
@@ -189,17 +189,17 @@ const listenForNewSubscribersAndFetch = ({
                 }).observable.pipe(filter(Boolean))
               : of(perspectiveFromOptions ?? QUERY_STORE_DEFAULT_PERSPECTIVE)
 
-            // Use the store's bound source as fallback when the query key
-            // doesn't include an explicit source. The store is scoped to a
-            // specific source via bindActionBySource, but the captured
-            // `instance` may have a different default source (e.g. when the
+            // Use the store's bound resource as fallback when the query key
+            // doesn't include an explicit resource. The store is scoped to a
+            // specific resource via bindActionByResource, but the captured
+            // `instance` may have a different default resource (e.g. when the
             // store was first created by a caller that passed an explicit
-            // source while using the root app instance).
+            // resource while using the root app instance).
             const client$ = getClientState(instance, {
               apiVersion: QUERY_STORE_API_VERSION,
               projectId,
               dataset,
-              source: source ?? boundSource,
+              resource: resource ?? boundResource,
             }).observable
 
             return combineLatest({
@@ -235,11 +235,11 @@ const listenForNewSubscribersAndFetch = ({
 const listenToLiveClientAndSetLastLiveEventIds = ({
   state,
   instance,
-  key: {source},
-}: StoreContext<QueryStoreState, BoundSourceKey>) => {
+  key: {resource},
+}: StoreContext<QueryStoreState, BoundResourceKey>) => {
   const liveMessages$ = getClientState(instance, {
     apiVersion: QUERY_STORE_API_VERSION,
-    source,
+    resource,
   }).observable.pipe(
     switchMap((client) =>
       defer(() =>
@@ -324,7 +324,7 @@ export function getQueryState(
 ): ReturnType<typeof _getQueryState> {
   return _getQueryState(...args)
 }
-const _getQueryState = bindActionBySource(
+const _getQueryState = bindActionByResource(
   queryStore,
   createStateSourceAction({
     selector: ({state, instance}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
@@ -383,7 +383,7 @@ export function resolveQuery<TData>(
 export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise<unknown> {
   return _resolveQuery(...args)
 }
-const _resolveQuery = bindActionBySource(
+const _resolveQuery = bindActionByResource(
   queryStore,
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
     const normalized = normalizeOptionsWithPerspective(instance, options)

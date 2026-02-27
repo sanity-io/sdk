@@ -59,7 +59,7 @@ describe('normalizeMedia', () => {
 
 describe('transformProjectionToPreview', () => {
   const instance = createSanityInstance({
-    defaultSource: {projectId: 'test-project', dataset: 'test-dataset'},
+    defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
   })
 
   beforeEach(async () => {
@@ -155,7 +155,7 @@ describe('transformProjectionToPreview', () => {
     })
   })
 
-  it('calls getClient with the provided source', async () => {
+  it('calls getClient with the provided resource', async () => {
     const projectionResult: PreviewQueryResult = {
       _id: 'doc1',
       _type: 'article',
@@ -165,14 +165,14 @@ describe('transformProjectionToPreview', () => {
       media: null,
     }
 
-    const source = {mediaLibraryId: 'test-library'}
+    const resource = {mediaLibraryId: 'test-library'}
 
-    transformProjectionToPreview(instance, projectionResult, source)
+    transformProjectionToPreview(instance, projectionResult, resource)
 
     const {getClient} = await import('../client/clientStore')
     expect(getClient).toHaveBeenCalledWith(instance, {
       apiVersion: 'v2025-05-06',
-      source,
+      resource,
     })
   })
 })

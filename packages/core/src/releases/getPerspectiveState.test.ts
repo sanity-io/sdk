@@ -41,7 +41,7 @@ describe('getPerspectiveState', () => {
   const activeReleases = [release2, release1]
 
   beforeEach(() => {
-    instance = createSanityInstance({defaultSource: {projectId: 'test', dataset: 'test'}})
+    instance = createSanityInstance({defaultResource: {projectId: 'test', dataset: 'test'}})
 
     mockReleasesQuerySubject = new Subject<ReleaseDocument[] | undefined>()
     vi.mocked(getQueryState).mockReturnValue({

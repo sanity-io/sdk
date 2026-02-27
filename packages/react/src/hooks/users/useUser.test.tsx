@@ -88,7 +88,7 @@ describe('useUser', () => {
     }
 
     render(
-      <ResourceProvider defaultSource={{projectId: 'p', dataset: 'production'}} fallback={null}>
+      <ResourceProvider defaultResource={{projectId: 'p', dataset: 'production'}} fallback={null}>
         <TestComponent />
       </ResourceProvider>,
     )
@@ -341,7 +341,7 @@ describe('useUser', () => {
 
     render(
       <ResourceProvider
-        defaultSource={{projectId: 'test-project', dataset: 'production'}}
+        defaultResource={{projectId: 'test-project', dataset: 'production'}}
         fallback={null}
       >
         <TestComponent />
@@ -391,7 +391,7 @@ describe('useUser', () => {
 
     render(
       <ResourceProvider
-        defaultSource={{projectId: 'test-project', dataset: 'production'}}
+        defaultResource={{projectId: 'test-project', dataset: 'production'}}
         fallback={null}
       >
         <WrapperComponent />

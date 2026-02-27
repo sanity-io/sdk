@@ -33,9 +33,9 @@ vi.mock('../project/organizationVerification', async (importOriginal) => {
 describe('observeOrganizationVerificationState', () => {
   let testScheduler: TestScheduler
 
-  // Mock instance (projectId from defaultSource)
+  // Mock instance (projectId from defaultResource)
   const mockInstance = {
-    config: {defaultSource: {projectId: 'proj-1', dataset: 'd'}},
+    config: {defaultResource: {projectId: 'proj-1', dataset: 'd'}},
   } as unknown as SanityInstance
 
   beforeEach(() => {
@@ -90,7 +90,7 @@ describe('observeOrganizationVerificationState', () => {
 
   it('should emit {error: null} if instance has no default source projectId', () => {
     const instanceWithoutProjectId = {
-      config: {defaultSource: {projectId: undefined, dataset: 'd'}},
+      config: {defaultResource: {projectId: undefined, dataset: 'd'}},
     } as unknown as SanityInstance
 
     testScheduler.run(({hot, expectObservable}) => {

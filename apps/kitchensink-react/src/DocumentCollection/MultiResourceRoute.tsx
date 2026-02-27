@@ -339,13 +339,13 @@ export function MultiResourceRoute(): JSX.Element {
   const {data: authorDocuments} = useDocuments({
     documentType: 'author',
     batchSize: 1,
-    sourceName: 'default',
+    resourceName: 'default',
   })
 
   const {data: movieDocuments} = useDocuments({
     documentType: 'movie',
     batchSize: 1,
-    sourceName: 'secondary',
+    resourceName: 'secondary',
   })
 
   const authorHandle = authorDocuments[0] ?? null
@@ -364,8 +364,8 @@ export function MultiResourceRoute(): JSX.Element {
       <p style={{marginBottom: '2rem'}}>
         This route demonstrates how to use multiple resources in a single page.
         <br />
-        Note you must have access to both the &quot;default&quot; and &quot;secondary&quot; sources
-        to see the documents.
+        Note you must have access to both the &quot;default&quot; and &quot;secondary&quot;
+        resources to see the documents.
       </p>
 
       <h2 style={{marginBottom: '1rem'}}>Document Editors</h2>

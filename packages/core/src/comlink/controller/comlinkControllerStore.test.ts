@@ -17,7 +17,7 @@ describe('comlinkControllerStore', () => {
   beforeEach(() => {
     vi.resetModules()
     instance = createSanityInstance({
-      defaultSource: {projectId: 'test-project-id', dataset: 'test-dataset'},
+      defaultResource: {projectId: 'test-project-id', dataset: 'test-dataset'},
     })
   })
 

@@ -17,13 +17,13 @@ describe('subscribeToStateAndFetchBatches', () => {
   let state: StoreState<ProjectionStoreState>
   const key = {
     name: 'test.test:drafts',
-    source: {projectId: 'test', dataset: 'test'},
+    resource: {projectId: 'test', dataset: 'test'},
     perspective: 'drafts' as const,
   }
 
   beforeEach(() => {
     vi.clearAllMocks()
-    instance = createSanityInstance({defaultSource: {projectId: 'test', dataset: 'test'}})
+    instance = createSanityInstance({defaultResource: {projectId: 'test', dataset: 'test'}})
     state = createStoreState<ProjectionStoreState>({
       documentProjections: {},
       documentStatuses: {},

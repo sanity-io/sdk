@@ -2,8 +2,8 @@ import {
   createGroqSearchFilter,
   type DatasetHandle,
   type DocumentHandle,
-  getDefaultDatasetSource,
-  isDatasetSource,
+  getDefaultDatasetResource,
+  isDatasetResource,
   type QueryOptions,
 } from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
@@ -12,9 +12,9 @@ import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 import {useQuery} from '../query/useQuery'
 
 const DEFAULT_BATCH_SIZE = 25
@@ -31,7 +31,7 @@ export interface DocumentsOptions<
   TProjectId extends string = string,
 >
   extends
-    WithSourceNameSupport<DatasetHandle<TDataset, TProjectId>>,
+    WithResourceNameSupport<DatasetHandle<TDataset, TProjectId>>,
     Pick<QueryOptions, 'perspective' | 'params'> {
   /**
    * Filter documents by their `_type`. Can be a single type or an array of types.
@@ -215,7 +215,7 @@ export function useDocuments<
   TDataset,
   TProjectId
 > {
-  const options = useNormalizedSourceOptions(rawOptions)
+  const options = useNormalizedResourceOptions(rawOptions)
   const instance = useSanityInstance()
   const [limit, setLimit] = useState(batchSize)
   const documentTypes = useMemo(
@@ -289,12 +289,12 @@ export function useDocuments<
     params: {
       ...params,
       __handle: {
-        ...getDefaultDatasetSource(instance.config),
-        ...(options.source && isDatasetSource(options.source)
+        ...getDefaultDatasetResource(instance.config),
+        ...(options.resource && isDatasetResource(options.resource)
           ? {
-              projectId: options.source.projectId,
-              dataset: options.source.dataset,
-              source: options.source,
+              projectId: options.resource.projectId,
+              dataset: options.resource.dataset,
+              resource: options.resource,
             }
           : {}),
         ...pick(instance.config, 'perspective'),

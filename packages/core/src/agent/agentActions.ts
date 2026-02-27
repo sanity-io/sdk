@@ -2,17 +2,21 @@ import {type SanityClient} from '@sanity/client'
 import {from, Observable, switchMap} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetSource, isDatasetSource, resolveDefaultSource} from '../config/sanityConfig'
+import {
+  type DatasetResource,
+  isDatasetResource,
+  resolveDefaultResource,
+} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 
 const API_VERSION = 'vX'
 
-function resolveDatasetConfig(instance: SanityInstance): DatasetSource {
-  const source = resolveDefaultSource(instance.config)
-  if (source && isDatasetSource(source)) return source
+function resolveDatasetConfig(instance: SanityInstance): DatasetResource {
+  const resource = resolveDefaultResource(instance.config)
+  if (resource && isDatasetResource(resource)) return resource
   throw new Error(
-    'Agent actions require a dataset source. ' +
-      'Provide a "default" dataset source in your sources map, or pass projectId/dataset explicitly.',
+    'Agent actions require a dataset resource. ' +
+      'Provide a "default" dataset resource in your resources map, or pass projectId/dataset explicitly.',
   )
 }
 

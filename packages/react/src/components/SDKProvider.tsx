@@ -1,8 +1,8 @@
-import {type DocumentSource, isDatasetSource, type SanityConfig} from '@sanity/sdk'
+import {type DocumentResource, isDatasetResource, type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, type ReactNode, useMemo} from 'react'
 
 import {ResourceProvider} from '../context/ResourceProvider'
-import {SourcesContext} from '../context/SourcesContext'
+import {ResourcesContext} from '../context/ResourcesContext'
 import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
 
 /**
@@ -12,20 +12,20 @@ export interface SDKProviderProps extends AuthBoundaryProps {
   children: ReactNode
   config: SanityConfig
   /**
-   * Named document sources map. Provided to `SourcesContext` for
-   * name-based source resolution in hooks.
+   * Named document resources map. Provided to `ResourcesContext` for
+   * name-based resource resolution in hooks.
    */
-  sources?: Record<string, DocumentSource>
+  resources?: Record<string, DocumentResource>
   fallback: ReactNode
 }
 
 /**
- * Collects unique project IDs from a sources map.
+ * Collects unique project IDs from a resources map.
  */
-function collectProjectIds(sources: Record<string, DocumentSource>): string[] {
+function collectProjectIds(resources: Record<string, DocumentResource>): string[] {
   const ids = new Set<string>()
-  for (const src of Object.values(sources)) {
-    if (isDatasetSource(src)) ids.add(src.projectId)
+  for (const res of Object.values(resources)) {
+    if (isDatasetResource(res)) ids.add(res.projectId)
   }
   return [...ids]
 }
@@ -36,22 +36,22 @@ function collectProjectIds(sources: Record<string, DocumentSource>): string[] {
  * Top-level context provider that provides access to the Sanity SDK.
  *
  * Creates a single `ResourceProvider` (and therefore a single `SanityInstance`)
- * for the given config. Source resolution is handled by `SourcesContext`
- * and the `"default"` named source.
+ * for the given config. Resource resolution is handled by `ResourcesContext`
+ * and the `"default"` named resource.
  */
 export function SDKProvider({
   children,
   config,
-  sources = {},
+  resources = {},
   fallback,
   ...props
 }: SDKProviderProps): ReactElement {
-  const projectIds = useMemo(() => collectProjectIds(sources), [sources])
+  const projectIds = useMemo(() => collectProjectIds(resources), [resources])
 
   return (
     <ResourceProvider {...config} fallback={fallback}>
       <AuthBoundary {...props} projectIds={projectIds}>
-        <SourcesContext.Provider value={sources}>{children}</SourcesContext.Provider>
+        <ResourcesContext.Provider value={resources}>{children}</ResourcesContext.Provider>
       </AuthBoundary>
     </ResourceProvider>
   )

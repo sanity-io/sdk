@@ -314,7 +314,7 @@ describe('useUsers', () => {
 
     render(
       <ResourceProvider
-        defaultSource={{projectId: 'p', dataset: 'production'}}
+        defaultResource={{projectId: 'p', dataset: 'production'}}
         fallback={<div data-testid="fallback">Loading...</div>}
       >
         <TestComponent />
@@ -332,7 +332,7 @@ describe('useUsers', () => {
     expect(loadMoreUsers).toHaveBeenCalledWith(
       expect.objectContaining({
         config: expect.objectContaining({
-          defaultSource: {projectId: 'p', dataset: 'production'},
+          defaultResource: {projectId: 'p', dataset: 'production'},
         }),
       }),
       {

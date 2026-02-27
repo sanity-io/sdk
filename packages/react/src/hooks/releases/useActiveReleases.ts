@@ -1,5 +1,5 @@
 import {
-  type DocumentSource,
+  type DocumentResource,
   getActiveReleasesState,
   type ReleaseDocument,
   type SanityInstance,
@@ -9,9 +9,9 @@ import {filter, firstValueFrom} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 
 /**
  * @public
@@ -29,17 +29,17 @@ import {
  * ```
  */
 type UseActiveReleases = {
-  (options?: WithSourceNameSupport<{source?: DocumentSource}> | undefined): ReleaseDocument[]
+  (options?: WithResourceNameSupport<{resource?: DocumentResource}> | undefined): ReleaseDocument[]
 }
 
 const useActiveReleasesValue: UseActiveReleases = createStateSourceHook({
   getState: getActiveReleasesState as (
     instance: SanityInstance,
-    options?: {source?: DocumentSource},
+    options?: {resource?: DocumentResource},
   ) => StateSource<ReleaseDocument[]>,
-  shouldSuspend: (instance: SanityInstance, options?: {source?: DocumentSource}) =>
+  shouldSuspend: (instance: SanityInstance, options?: {resource?: DocumentResource}) =>
     getActiveReleasesState(instance, options ?? {}).getCurrent() === undefined,
-  suspender: (instance: SanityInstance, options?: {source?: DocumentSource}) =>
+  suspender: (instance: SanityInstance, options?: {resource?: DocumentResource}) =>
     firstValueFrom(
       getActiveReleasesState(instance, options ?? {}).observable.pipe(filter(Boolean)),
     ),
@@ -50,8 +50,8 @@ const useActiveReleasesValue: UseActiveReleases = createStateSourceHook({
  * @function
  */
 export const useActiveReleases: UseActiveReleases = (
-  options: WithSourceNameSupport<{source?: DocumentSource}> | undefined,
+  options: WithResourceNameSupport<{resource?: DocumentResource}> | undefined,
 ) => {
-  const normalizedOptions = useNormalizedSourceOptions(options ?? {})
+  const normalizedOptions = useNormalizedResourceOptions(options ?? {})
   return useActiveReleasesValue(normalizedOptions)
 }

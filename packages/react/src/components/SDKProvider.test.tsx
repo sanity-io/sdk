@@ -10,12 +10,12 @@ vi.mock('../context/ResourceProvider', () => ({
     ...props
   }: {
     children: React.ReactNode
-    defaultSource?: unknown
+    defaultResource?: unknown
   }) => {
     return (
       <div
         data-testid="resource-provider"
-        data-config={JSON.stringify({defaultSource: props.defaultSource})}
+        data-config={JSON.stringify({defaultResource: props.defaultResource})}
       >
         {children}
       </div>
@@ -32,14 +32,14 @@ vi.mock('./auth/AuthBoundary', () => ({
 describe('SDKProvider', () => {
   it('renders a single ResourceProvider with AuthBoundary', () => {
     const config = {
-      defaultSource: {projectId: 'test-project', dataset: 'production'},
+      defaultResource: {projectId: 'test-project', dataset: 'production'},
     }
-    const sources = {
+    const resources = {
       default: {projectId: 'test-project', dataset: 'production'},
     }
 
     const {getByTestId} = render(
-      <SDKProvider config={config} sources={sources} fallback={<div>Loading...</div>}>
+      <SDKProvider config={config} resources={resources} fallback={<div>Loading...</div>}>
         <div>Child Content</div>
       </SDKProvider>,
     )
@@ -50,21 +50,21 @@ describe('SDKProvider', () => {
     expect(getByTestId('auth-boundary')).toBeInTheDocument()
 
     expect(JSON.parse(provider.getAttribute('data-config') || '{}')).toEqual({
-      defaultSource: {projectId: 'test-project', dataset: 'production'},
+      defaultResource: {projectId: 'test-project', dataset: 'production'},
     })
   })
 
-  it('renders with multiple named sources', () => {
+  it('renders with multiple named resources', () => {
     const config = {
-      defaultSource: {projectId: 'project-1', dataset: 'production'},
+      defaultResource: {projectId: 'project-1', dataset: 'production'},
     }
-    const sources = {
+    const resources = {
       default: {projectId: 'project-1', dataset: 'production'},
       secondary: {projectId: 'project-2', dataset: 'staging'},
     }
 
     const {getByTestId} = render(
-      <SDKProvider config={config} sources={sources} fallback={<div>Loading...</div>}>
+      <SDKProvider config={config} resources={resources} fallback={<div>Loading...</div>}>
         <div>Child Content</div>
       </SDKProvider>,
     )
@@ -73,7 +73,7 @@ describe('SDKProvider', () => {
     expect(provider).toBeInTheDocument()
 
     expect(JSON.parse(provider.getAttribute('data-config') || '{}')).toEqual({
-      defaultSource: {projectId: 'project-1', dataset: 'production'},
+      defaultResource: {projectId: 'project-1', dataset: 'production'},
     })
   })
 })
