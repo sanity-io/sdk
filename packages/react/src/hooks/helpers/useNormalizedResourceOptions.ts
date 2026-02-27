@@ -85,7 +85,7 @@ export function normalizeResourceOptions<
 
 /**
  * Normalizes hook options by resolving `resourceName` to a `DocumentResource`
- * and injecting default resource/perspective from context.
+ * and injecting resource/perspective from context.
  *
  * This hook ensures that options passed to core layer functions contain
  * the correct `resource` and `perspective` values, maintaining clean
@@ -104,7 +104,7 @@ export function normalizeResourceOptions<
  *
  * Resolution priority for perspective:
  * 1. If `perspective` is explicitly provided in options, uses it
- * 2. Otherwise, injects the default from `PerspectiveContext`
+ * 2. Otherwise, injects the value from `PerspectiveContext`
  *
  * @example
  * ```tsx
