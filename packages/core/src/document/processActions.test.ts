@@ -1150,7 +1150,11 @@ describe('processActions', () => {
 
         expect(() =>
           processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
-        ).toThrow(/Draft\/discard is not supported for liveEdit or version/)
+        ).toThrow('Cannot discard changes for liveEdit document "live1"')
+
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow('LiveEdit documents do not support drafts')
       })
     })
   })

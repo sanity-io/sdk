@@ -1025,7 +1025,7 @@ beforeEach(() => {
             continue
           }
           case 'sanity.action.document.edit': {
-            const documentSource = next[i.draftId!] ?? next[i.publishedId!]
+            const documentSource = (i.draftId && next[i.draftId]) ?? next[i.publishedId]
             if (!documentSource) {
               throw new Error(
                 `Could not find a document to edit from \`draftId\` \`${i.draftId}\` or \`publishedId\` ${i.publishedId}`,

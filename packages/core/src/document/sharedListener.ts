@@ -32,10 +32,7 @@ export function createSharedListener(
   const events$ = getClientState(instance, {
     apiVersion: API_VERSION,
     resource,
-<<<<<<< HEAD
-=======
     perspective: 'raw',
->>>>>>> e98cc0a (fix(document): prevent crashes and hangs and invalid ids)
   }).observable.pipe(
     switchMap((client) =>
       // TODO: it seems like the client.listen method is not emitting disconnected
