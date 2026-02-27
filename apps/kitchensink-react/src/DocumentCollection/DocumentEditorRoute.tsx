@@ -1,9 +1,12 @@
 /* eslint-disable no-console */
 import {
+  createDocumentHandle,
   type DocumentHandle,
   useDocument,
+  useDocumentEvent,
   useDocuments,
   useDocumentSyncStatus,
+  useResource,
 } from '@sanity/sdk-react'
 import {Badge, Box, Button, Card, Checkbox, Flex, Label, Stack, Text, TextInput} from '@sanity/ui'
 import {type JSX, useEffect, useState} from 'react'
@@ -17,7 +20,14 @@ const AUTHOR_INITIAL_VALUES = {
   awards: ['Quick Creator Award'],
 }
 
-function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
+function DocumentEditor({
+  docHandle,
+  onDocumentIdChange,
+}: {
+  docHandle: DocumentHandle<'author'>
+  onDocumentIdChange: (id: string) => void
+}) {
+  useDocumentEvent({...docHandle, onEvent: (e) => console.log(e)})
   const synced = useDocumentSyncStatus(docHandle)
 
   const {data: document} = useDocument<Record<string, unknown>>(docHandle)
@@ -44,7 +54,11 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
           </Flex>
         </Card>
 
-        <DocumentEditorPanel docHandle={docHandle} createInitialValues={AUTHOR_INITIAL_VALUES} />
+        <DocumentEditorPanel
+          docHandle={docHandle}
+          createInitialValues={AUTHOR_INITIAL_VALUES}
+          onDocumentIdChange={onDocumentIdChange}
+        />
 
         {/* JSON Editor Section */}
         <Card padding={4} radius={2} shadow={1}>
@@ -82,12 +96,24 @@ function Editor() {
   const [docHandle, setDocHandle] = useState<DocumentHandle<'author'> | null>(documents[0] ?? null)
   const [newDocumentId, setNewDocumentId] = useState<string>('')
   const [liveEditMode, setLiveEditMode] = useState<boolean>(false)
+  const resource = useResource()!
 
   const handleLoadDocument = () => {
     const documentId = newDocumentId || docHandle?.documentId
     if (documentId) {
       setDocHandle({documentType: 'author', documentId, liveEdit: liveEditMode})
     }
+  }
+
+  const handleDocumentIdChange = (newId: string) => {
+    setDocHandle(
+      createDocumentHandle({
+        documentType: 'author',
+        documentId: newId,
+        liveEdit: liveEditMode,
+        resource,
+      }),
+    )
   }
 
   const updateDocHandle = (newValue: string) => {
@@ -176,6 +202,7 @@ function Editor() {
           <DocumentEditor
             key={`${docHandle.documentId}-${docHandle.liveEdit}`}
             docHandle={docHandle}
+            onDocumentIdChange={handleDocumentIdChange}
           />
         )}
       </Stack>

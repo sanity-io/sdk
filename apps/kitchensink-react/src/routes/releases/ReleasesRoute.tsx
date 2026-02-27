@@ -352,6 +352,7 @@ export function ReleasesRoute(): JSX.Element {
                 <Stack space={4}>
                   <DocumentEditorPanel
                     docHandle={{...selectedDocument, perspective: selectedPerspective.perspective}}
+                    onDocumentIdChange={handleDocumentIdSubmit}
                   />
                   <JsonDocumentEditor
                     documentHandle={{
