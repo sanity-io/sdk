@@ -13,7 +13,7 @@ import {
   useResource,
 } from '@sanity/sdk-react'
 import {Box, Button, Card, Flex, Stack, Text, TextInput, Tooltip} from '@sanity/ui'
-import React from 'react'
+import React, {useEffect, useState} from 'react'
 
 interface DocumentEditorPanelProps {
   docHandle: DocumentHandle
@@ -32,6 +32,11 @@ interface DocumentEditorPanelProps {
    * If omitted, that button is hidden.
    */
   createInitialValues?: Record<string, unknown>
+  /**
+   * If provided, the Document ID input becomes editable. Called when the user commits
+   * a new ID (on blur or Enter). The parent is responsible for updating docHandle.
+   */
+  onDocumentIdChange?: (id: string) => void
 }
 
 /*
@@ -42,6 +47,7 @@ export function DocumentEditorPanel({
   nameField = 'name',
   nameLabel = 'Name',
   createInitialValues,
+  onDocumentIdChange,
 }: DocumentEditorPanelProps): React.JSX.Element {
   const apply = useApplyDocumentActions()
 
@@ -55,9 +61,22 @@ export function DocumentEditorPanel({
   const canDelete = useDocumentPermissions(deleteDocument(strictHandle))
   const canUnpublish = useDocumentPermissions(unpublishDocument(strictHandle))
   const canDiscard = useDocumentPermissions(discardDocument(strictHandle))
+  const [inputId, setInputId] = useState(docHandle.documentId)
 
+  useEffect(() => {
+    setInputId(docHandle.documentId)
+  }, [docHandle.documentId])
+
+  const commitId = () => {
+    if (inputId !== docHandle.documentId) {
+      onDocumentIdChange?.(inputId)
+    }
+  }
   const {data} = useDocument<string>({...docHandle, path: nameField})
-  const setName = useEditDocument({...docHandle, path: nameField})
+  const {data: fullDoc} = useDocument(docHandle)
+  const setName = useEditDocument<string>({...docHandle, path: nameField})
+
+  const documentMissing = fullDoc === null
 
   return (
     <Stack space={4}>
@@ -69,7 +88,22 @@ export function DocumentEditorPanel({
           </Text>
           <Flex gap={3}>
             <Box flex={1}>
-              <TextInput fontSize={1} label="Document ID" value={docHandle.documentId} readOnly />
+              <TextInput
+                fontSize={1}
+                label="Document ID"
+                value={inputId}
+                readOnly={!onDocumentIdChange}
+                onChange={(e) => setInputId(e.currentTarget.value)}
+                onBlur={commitId}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitId()
+                }}
+              />
+              {onDocumentIdChange && documentMissing && (
+                <Text size={1} muted>
+                  No document found — use &quot;Create&quot; to create it.
+                </Text>
+              )}
             </Box>
             <Box flex={1}>
               <TextInput
