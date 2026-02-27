@@ -1,4 +1,4 @@
-import {DEFAULT_RESOURCE_NAME, type DocumentResource, type SanityConfig} from '@sanity/sdk'
+import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
 import {StrictMode} from 'react'
 import {createRoot} from 'react-dom/client'
 
@@ -31,7 +31,7 @@ function mergeNamedResources(namedResources: NamedResources): {
 
   for (const [name, cfg] of Object.entries(namedResources)) {
     if (cfg.defaultResource) {
-      resources[name === 'main' ? DEFAULT_RESOURCE_NAME : name] = cfg.defaultResource
+      resources[name] = cfg.defaultResource
     }
   }
 

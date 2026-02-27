@@ -45,7 +45,7 @@ describe('renderSanityApp', () => {
 
   it('throws error when rootElement is null', () => {
     const namedResources = {
-      main: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
+      default: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
     }
 
     expect(() => renderSanityApp(null, namedResources, {}, <div>Test</div>)).toThrowError(
@@ -55,7 +55,7 @@ describe('renderSanityApp', () => {
 
   it('creates root with the provided element', () => {
     const namedResources = {
-      main: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
+      default: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
     }
 
     renderSanityApp(rootElement, namedResources, {}, <div>Test</div>)
@@ -66,7 +66,7 @@ describe('renderSanityApp', () => {
 
   it('merges namedResources into a single config', () => {
     const namedResources = {
-      main: {defaultResource: {projectId: 'project-1', dataset: 'production'}},
+      default: {defaultResource: {projectId: 'project-1', dataset: 'production'}},
       secondary: {defaultResource: {projectId: 'project-2', dataset: 'staging'}},
     }
 
@@ -85,7 +85,7 @@ describe('renderSanityApp', () => {
 
   it('renders without StrictMode when reactStrictMode is false', () => {
     const namedResources = {
-      main: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
+      default: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
     }
     const children = <div>Test Children</div>
 
@@ -101,7 +101,7 @@ describe('renderSanityApp', () => {
 
   it('renders without StrictMode by default', () => {
     const namedResources = {
-      main: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
+      default: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
     }
     const children = <div>Test Children</div>
 
@@ -117,7 +117,7 @@ describe('renderSanityApp', () => {
 
   it('renders with StrictMode when reactStrictMode is true', () => {
     const namedResources = {
-      main: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
+      default: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
     }
     const children = <div>Test Children</div>
 
@@ -136,7 +136,7 @@ describe('renderSanityApp', () => {
 
   it('passes loading fallback to SanityApp', () => {
     const namedResources = {
-      main: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
+      default: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
     }
 
     renderSanityApp(rootElement, namedResources, {}, <div>Test</div>)
@@ -151,7 +151,7 @@ describe('renderSanityApp', () => {
 
   it('returns an unmount function', () => {
     const namedResources = {
-      main: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
+      default: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
     }
 
     const unmount = renderSanityApp(rootElement, namedResources, {}, <div>Test</div>)
@@ -161,7 +161,7 @@ describe('renderSanityApp', () => {
 
   it('calls root.unmount when unmount function is invoked', () => {
     const namedResources = {
-      main: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
+      default: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
     }
 
     const unmount = renderSanityApp(rootElement, namedResources, {}, <div>Test</div>)
@@ -187,7 +187,7 @@ describe('renderSanityApp', () => {
 
   it('handles single namedSource', () => {
     const namedResources = {
-      main: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
+      default: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
     }
 
     renderSanityApp(rootElement, namedResources, {}, <div>Test</div>)
@@ -204,7 +204,7 @@ describe('renderSanityApp', () => {
 
   it('merges multiple namedResources into one config with combined sources', () => {
     const namedResources = {
-      main: {defaultResource: {projectId: 'project-1', dataset: 'production'}},
+      default: {defaultResource: {projectId: 'project-1', dataset: 'production'}},
       blog: {defaultResource: {projectId: 'project-2', dataset: 'staging'}},
       ecommerce: {defaultResource: {projectId: 'project-3', dataset: 'development'}},
     }
@@ -225,7 +225,7 @@ describe('renderSanityApp', () => {
 
   it('passes children to SanityApp', () => {
     const namedResources = {
-      main: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
+      default: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
     }
     const children = (
       <div>
@@ -244,7 +244,7 @@ describe('renderSanityApp', () => {
 
   it('works with different types of children', () => {
     const namedResources = {
-      main: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
+      default: {defaultResource: {projectId: 'test-project', dataset: 'production'}},
     }
 
     // Test with string children
@@ -277,7 +277,7 @@ describe('renderSanityApp', () => {
 
   it('integrates with StrictMode and passes all props correctly', () => {
     const namedResources = {
-      main: {
+      default: {
         defaultResource: {projectId: 'test-project', dataset: 'production'},
       } as SanityConfig,
       secondary: {
@@ -311,9 +311,11 @@ describe('renderSanityApp', () => {
     document.body.appendChild(rootElement2)
 
     const namedResources1 = {
-      main: {defaultResource: {projectId: 'project-1', dataset: 'production'}},
+      default: {defaultResource: {projectId: 'project-1', dataset: 'production'}},
     }
-    const namedResources2 = {main: {defaultResource: {projectId: 'project-2', dataset: 'staging'}}}
+    const namedResources2 = {
+      default: {defaultResource: {projectId: 'project-2', dataset: 'staging'}},
+    }
 
     const unmount1 = renderSanityApp(rootElement, namedResources1, {}, <div>App 1</div>)
     const unmount2 = renderSanityApp(rootElement2, namedResources2, {}, <div>App 2</div>)
