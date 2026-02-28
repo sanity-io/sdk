@@ -20,6 +20,8 @@ export default [
 
       // Ignore files for Sanity TypeGen
       'sanity.types.ts',
+
+      // Ignore generated .sanity directory
       '**/.sanity/**',
     ],
   },
