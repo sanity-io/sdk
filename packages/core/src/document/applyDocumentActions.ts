@@ -2,8 +2,8 @@ import {type SanityClient} from '@sanity/client'
 import {type SanityDocument} from 'groq'
 import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
 
-import {type DocumentSource} from '../config/sanityConfig'
-import {bindActionBySource} from '../store/createActionBinder'
+import {type DocumentResource} from '../config/sanityConfig'
+import {bindActionByResource} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StoreContext} from '../store/defineStore'
 import {type DocumentAction} from './actions'
@@ -31,9 +31,9 @@ export interface ApplyDocumentActionsOptions {
   actions: DocumentAction[]
 
   /**
-   * The source to which the documents being acted on belong.
+   * The resource to which the documents being acted on belong.
    */
-  source?: DocumentSource
+  resource?: DocumentResource
 
   /**
    * Optionally provide an ID to be used as this transaction ID
@@ -67,7 +67,7 @@ export function applyDocumentActions(
   return boundApplyDocumentActions(...args)
 }
 
-const boundApplyDocumentActions = bindActionBySource(documentStore, _applyDocumentActions)
+const boundApplyDocumentActions = bindActionByResource(documentStore, _applyDocumentActions)
 
 /** @internal */
 async function _applyDocumentActions(

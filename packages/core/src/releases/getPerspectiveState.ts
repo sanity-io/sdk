@@ -1,7 +1,7 @@
 import {createSelector} from 'reselect'
 
-import {type DocumentSource, type PerspectiveHandle} from '../config/sanityConfig'
-import {bindActionBySource, type BoundStoreAction} from '../store/createActionBinder'
+import {type DocumentResource, type PerspectiveHandle} from '../config/sanityConfig'
+import {bindActionByResource, type BoundStoreAction} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 /*
  * Although this is an import dependency cycle, it is not a logical cycle:
@@ -26,7 +26,7 @@ const selectActiveReleases = (context: SelectorContext<ReleasesStoreState>) =>
   context.state.activeReleases
 const selectOptions = (
   _context: SelectorContext<ReleasesStoreState>,
-  options: PerspectiveHandle & {projectId?: string; dataset?: string; source?: DocumentSource},
+  options: PerspectiveHandle & {projectId?: string; dataset?: string; resource?: DocumentResource},
 ) => options
 
 const memoizedOptionsSelector = createSelector(
@@ -105,11 +105,11 @@ let _boundGetPerspectiveState: BoundGetPerspectiveState | undefined
  */
 export const getPerspectiveState: BoundGetPerspectiveState = (instance, ...rest) => {
   if (!_boundGetPerspectiveState) {
-    _boundGetPerspectiveState = bindActionBySource(
+    _boundGetPerspectiveState = bindActionByResource(
       releasesStore,
       _getPerspectiveStateSelector,
     ) as BoundGetPerspectiveState
   }
-  // bindActionBySource keyFn destructures { source } from the first param, so pass {} when no options
+  // bindActionByResource keyFn destructures { resource } from the first param, so pass {} when no options
   return _boundGetPerspectiveState(instance, ...(rest.length ? rest : [{}]))
 }

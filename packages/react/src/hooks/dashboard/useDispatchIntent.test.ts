@@ -167,11 +167,11 @@ describe('useDispatchIntent', () => {
     })
   })
 
-  it('should send intent message with media library source', () => {
+  it('should send intent message with media library resource', () => {
     const mockMediaLibraryHandle = {
       documentId: 'test-asset-id',
       documentType: 'sanity.asset',
-      sourceName: 'media-library',
+      resourceName: 'media-library',
     } as const
 
     const {result} = renderHook(() =>
@@ -196,11 +196,11 @@ describe('useDispatchIntent', () => {
     })
   })
 
-  it('should send intent message with canvas source', () => {
+  it('should send intent message with canvas resource', () => {
     const mockCanvasHandle = {
       documentId: 'test-canvas-document-id',
       documentType: 'sanity.canvas.document',
-      sourceName: 'canvas',
+      resourceName: 'canvas',
     } as const
 
     const {result} = renderHook(() =>
@@ -225,9 +225,9 @@ describe('useDispatchIntent', () => {
     })
   })
 
-  describe('error handling', () => {
-    it('should throw error when neither source nor projectId/dataset is provided', () => {
-      const invalidHandle = {
+  describe('default resource fallback', () => {
+    it('should use default resource from context when handle has no explicit targeting', () => {
+      const minimalHandle = {
         documentId: 'test-document-id',
         documentType: 'test-document-type',
       }
@@ -235,13 +235,22 @@ describe('useDispatchIntent', () => {
       const {result} = renderHook(() =>
         useDispatchIntent({
           action: 'edit',
-          documentHandle: invalidHandle as unknown as DocumentHandle,
+          documentHandle: minimalHandle as unknown as DocumentHandle,
         }),
       )
 
-      expect(() => result.current.dispatchIntent()).toThrow(
-        'useDispatchIntent: Unable to determine resource. Either `source`, `sourceName`, or both `projectId` and `dataset` must be provided in documentHandle.',
-      )
+      result.current.dispatchIntent()
+
+      expect(mockSendMessage).toHaveBeenCalledWith('dashboard/v1/events/intents/dispatch-intent', {
+        action: 'edit',
+        document: {
+          id: 'test-document-id',
+          type: 'test-document-type',
+        },
+        resource: {
+          id: 'test.test',
+        },
+      })
     })
   })
 })

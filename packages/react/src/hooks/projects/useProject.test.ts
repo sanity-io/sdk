@@ -40,8 +40,7 @@ describe('useProject', () => {
       expect.objectContaining({
         getState: expect.any(Function),
         shouldSuspend: expect.any(Function),
-        suspender: expect.any(Function), // Actual function reference doesn't matter here as it's mocked
-        getConfig: expect.any(Function), // Actual function reference doesn't matter here
+        suspender: expect.any(Function),
       }),
     )
   })

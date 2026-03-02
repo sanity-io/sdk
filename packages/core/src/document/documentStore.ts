@@ -29,14 +29,14 @@ import {
 import {type ClientOptions, getClientState} from '../client/clientStore'
 import {
   type DocumentHandle,
-  type DocumentSource,
-  isCanvasSource,
-  isDatasetSource,
-  isMediaLibrarySource,
+  type DocumentResource,
+  isCanvasResource,
+  isDatasetResource,
+  isMediaLibraryResource,
 } from '../config/sanityConfig'
 import {
-  bindActionBySource,
-  type BoundSourceKey,
+  bindActionByResource,
+  type BoundResourceKey,
   type StoreAction,
 } from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
@@ -119,15 +119,15 @@ export interface DocumentState {
   unverifiedRevisions?: {[TTransactionId in string]?: UnverifiedDocumentRevision}
 }
 
-export const documentStore = defineStore<DocumentStoreState, BoundSourceKey>({
+export const documentStore = defineStore<DocumentStoreState, BoundResourceKey>({
   name: 'Document',
-  getInitialState: (instance, {source}) => ({
+  getInitialState: (instance, {resource}) => ({
     documentStates: {},
     // these can be emptied on refetch
     queued: [],
     applied: [],
-    sharedListener: createSharedListener(instance, source),
-    fetchDocument: createFetchDocument(instance, source),
+    sharedListener: createSharedListener(instance, resource),
+    fetchDocument: createFetchDocument(instance, resource),
     events: new Subject(),
   }),
   initialize(context) {
@@ -195,7 +195,7 @@ export function getDocumentState(
   return _getDocumentState(...args)
 }
 
-const _getDocumentState = bindActionBySource(
+const _getDocumentState = bindActionByResource(
   documentStore,
   createStateSourceAction({
     selector: ({state: {error, documentStates}}, options: DocumentOptions<string | undefined>) => {
@@ -253,7 +253,7 @@ export function resolveDocument(
 ): Promise<SanityDocument | null> {
   return _resolveDocument(...args)
 }
-const _resolveDocument = bindActionBySource(
+const _resolveDocument = bindActionByResource(
   documentStore,
   ({instance}, docHandle: DocumentHandle<string, string, string>) => {
     return firstValueFrom(
@@ -266,7 +266,7 @@ const _resolveDocument = bindActionBySource(
 )
 
 /** @beta */
-export const getDocumentSyncStatus = bindActionBySource(
+export const getDocumentSyncStatus = bindActionByResource(
   documentStore,
   createStateSourceAction({
     selector: (
@@ -298,12 +298,12 @@ export const getDocumentSyncStatus = bindActionBySource(
 )
 
 type PermissionsStateOptions = {
-  source?: DocumentSource
+  resource?: DocumentResource
   actions: DocumentAction[]
 }
 
 /** @beta */
-export const getPermissionsState = bindActionBySource(
+export const getPermissionsState = bindActionByResource(
   documentStore,
   createStateSourceAction({
     selector: calculatePermissions,
@@ -317,7 +317,7 @@ export const getPermissionsState = bindActionBySource(
 )
 
 /** @beta */
-export const resolvePermissions = bindActionBySource(
+export const resolvePermissions = bindActionByResource(
   documentStore,
   ({instance}, options: PermissionsStateOptions) => {
     return firstValueFrom(
@@ -327,9 +327,9 @@ export const resolvePermissions = bindActionBySource(
 )
 
 /** @beta */
-export const subscribeDocumentEvents = bindActionBySource(
+export const subscribeDocumentEvents = bindActionByResource(
   documentStore,
-  ({state}, options: {source?: DocumentSource; eventHandler: (e: DocumentEvent) => void}) => {
+  ({state}, options: {resource?: DocumentResource; eventHandler: (e: DocumentEvent) => void}) => {
     const {events} = state.get()
     const subscription = events.subscribe(options.eventHandler)
     return () => subscription.unsubscribe()
@@ -338,7 +338,7 @@ export const subscribeDocumentEvents = bindActionBySource(
 
 const subscribeToQueuedAndApplyNextTransaction = ({
   state,
-}: StoreContext<DocumentStoreState, BoundSourceKey>) => {
+}: StoreContext<DocumentStoreState, BoundResourceKey>) => {
   const {events} = state.get()
   return state.observable
     .pipe(
@@ -369,8 +369,8 @@ const subscribeToQueuedAndApplyNextTransaction = ({
 const subscribeToAppliedAndSubmitNextTransaction = ({
   state,
   instance,
-  key: {source},
-}: StoreContext<DocumentStoreState, BoundSourceKey>) => {
+  key: {resource},
+}: StoreContext<DocumentStoreState, BoundResourceKey>) => {
   const {events} = state.get()
 
   return state.observable
@@ -393,7 +393,7 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
       withLatestFrom(
         getClientState(instance, {
           apiVersion: API_VERSION,
-          source: source && !isDatasetSource(source) ? source : undefined,
+          ...(resource ? {resource} : {}),
         }).observable,
       ),
       concatMap(([outgoing, client]) => {
@@ -422,7 +422,7 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
 }
 
 const subscribeToSubscriptionsAndListenToDocuments = (
-  context: StoreContext<DocumentStoreState, BoundSourceKey>,
+  context: StoreContext<DocumentStoreState, BoundResourceKey>,
 ) => {
   const {state} = context
   const {events} = state.get()
@@ -490,22 +490,22 @@ const subscribeToSubscriptionsAndListenToDocuments = (
 const subscribeToClientAndFetchDatasetAcl = ({
   instance,
   state,
-  key: {source},
-}: StoreContext<DocumentStoreState, BoundSourceKey>) => {
+  key: {resource},
+}: StoreContext<DocumentStoreState, BoundResourceKey>) => {
   const clientOptions: ClientOptions = {apiVersion: API_VERSION}
-  if (source && !isDatasetSource(source)) {
-    clientOptions.source = source
+  if (resource) {
+    clientOptions.resource = resource
   }
 
   let uri: string
-  if (source && isDatasetSource(source)) {
-    uri = `/projects/${source.projectId}/datasets/${source.dataset}/acl`
-  } else if (source && isMediaLibrarySource(source)) {
-    uri = `/media-libraries/${source.mediaLibraryId}/acl`
-  } else if (source && isCanvasSource(source)) {
-    uri = `/canvases/${source.canvasId}/acl`
+  if (resource && isDatasetResource(resource)) {
+    uri = `/projects/${resource.projectId}/datasets/${resource.dataset}/acl`
+  } else if (resource && isMediaLibraryResource(resource)) {
+    uri = `/media-libraries/${resource.mediaLibraryId}/acl`
+  } else if (resource && isCanvasResource(resource)) {
+    uri = `/canvases/${resource.canvasId}/acl`
   } else {
-    throw new Error(`Received invalid source: ${JSON.stringify(source)}`)
+    throw new Error(`Received invalid resource: ${JSON.stringify(resource)}`)
   }
 
   return getClientState(instance, clientOptions)

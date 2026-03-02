@@ -39,5 +39,4 @@ export const useClient = createStateSourceHook({
     }
     return getClientState(instance, options)
   },
-  getConfig: (options: ClientOptions) => options,
 })

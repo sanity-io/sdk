@@ -1,6 +1,6 @@
 import {
   type DatasetHandle,
-  type DocumentSource,
+  type DocumentResource,
   getPerspectiveState,
   type SanityInstance,
   type StateSource,
@@ -9,9 +9,9 @@ import {filter, firstValueFrom} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 
 /**
  * @public
@@ -42,11 +42,11 @@ type UsePerspective = {
 const usePerspectiveValue: UsePerspective = createStateSourceHook({
   getState: getPerspectiveState as (
     instance: SanityInstance,
-    perspectiveHandle?: {source?: DocumentSource},
+    perspectiveHandle?: {resource?: DocumentResource},
   ) => StateSource<string | string[]>,
-  shouldSuspend: (instance: SanityInstance, options: {source?: DocumentSource}): boolean =>
+  shouldSuspend: (instance: SanityInstance, options: {resource?: DocumentResource}): boolean =>
     getPerspectiveState(instance, options).getCurrent() === undefined,
-  suspender: (instance: SanityInstance, _options?: {source?: DocumentSource}) =>
+  suspender: (instance: SanityInstance, _options?: {resource?: DocumentResource}) =>
     firstValueFrom(getPerspectiveState(instance, _options ?? {}).observable.pipe(filter(Boolean))),
 })
 
@@ -55,8 +55,8 @@ const usePerspectiveValue: UsePerspective = createStateSourceHook({
  * @function
  */
 export const usePerspective: UsePerspective = (
-  options: WithSourceNameSupport<DatasetHandle> | undefined,
+  options: WithResourceNameSupport<DatasetHandle> | undefined,
 ) => {
-  const normalizedOptions = useNormalizedSourceOptions(options ?? {})
+  const normalizedOptions = useNormalizedResourceOptions(options ?? {})
   return usePerspectiveValue(normalizedOptions)
 }
