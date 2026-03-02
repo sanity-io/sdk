@@ -7,15 +7,24 @@ import {
   agentPrompt,
   type AgentPromptOptions,
   type AgentPromptResult,
+  type AgentResourceOptions,
   agentTransform,
   type AgentTransformOptions,
   agentTranslate,
   type AgentTranslateOptions,
+  type DocumentResource,
   type SanityInstance,
 } from '@sanity/sdk'
+import {useCallback, useContext} from 'react'
 import {firstValueFrom} from 'rxjs'
 
-import {createCallbackHook} from '../helpers/createCallbackHook'
+import {ResourceContext} from '../../context/DefaultResourceContext'
+import {ResourcesContext} from '../../context/ResourcesContext'
+import {useSanityInstance} from '../context/useSanityInstance'
+import {
+  normalizeResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 
 interface Subscription {
   unsubscribe(): void
@@ -34,6 +43,29 @@ interface Subscribable<T> {
     error?: (err: unknown) => void,
     complete?: () => void,
   ): Subscription
+}
+
+function useAgentCallback<TOptions extends object, TReturn>(
+  action: (instance: SanityInstance, options: TOptions & AgentResourceOptions) => TReturn,
+): (options: TOptions & WithResourceNameSupport<AgentResourceOptions>) => TReturn {
+  const instance = useSanityInstance()
+  const resources = useContext(ResourcesContext)
+  const contextResource = useContext(ResourceContext)
+  return useCallback(
+    (options: TOptions & WithResourceNameSupport<AgentResourceOptions>) => {
+      const {resource} = normalizeResourceOptions(
+        {resource: options.resource, resourceName: options.resourceName} as {
+          resource?: DocumentResource
+          resourceName?: string
+        },
+        resources,
+        contextResource,
+      )
+      const {resourceName: _, ...rest} = options
+      return action(instance, {...rest, resource} as TOptions & AgentResourceOptions)
+    },
+    [instance, resources, contextResource, action],
+  )
 }
 
 /**
@@ -103,10 +135,13 @@ interface Subscribable<T> {
  *
  * @category Agent Actions
  */
-export const useAgentGenerate: () => (options: AgentGenerateOptions) => Subscribable<unknown> =
-  createCallbackHook(agentGenerate) as unknown as () => (
-    options: AgentGenerateOptions,
+export function useAgentGenerate(): (
+  options: AgentGenerateOptions & WithResourceNameSupport<AgentResourceOptions>,
+) => Subscribable<unknown> {
+  return useAgentCallback(agentGenerate) as (
+    options: AgentGenerateOptions & WithResourceNameSupport<AgentResourceOptions>,
   ) => Subscribable<unknown>
+}
 
 /**
  * @alpha
@@ -179,10 +214,13 @@ export const useAgentGenerate: () => (options: AgentGenerateOptions) => Subscrib
  *
  * @category Agent Actions
  */
-export const useAgentTransform: () => (options: AgentTransformOptions) => Subscribable<unknown> =
-  createCallbackHook(agentTransform) as unknown as () => (
-    options: AgentTransformOptions,
+export function useAgentTransform(): (
+  options: AgentTransformOptions & WithResourceNameSupport<AgentResourceOptions>,
+) => Subscribable<unknown> {
+  return useAgentCallback(agentTransform) as (
+    options: AgentTransformOptions & WithResourceNameSupport<AgentResourceOptions>,
   ) => Subscribable<unknown>
+}
 
 /**
  * @alpha
@@ -274,10 +312,13 @@ export const useAgentTransform: () => (options: AgentTransformOptions) => Subscr
  *
  * @category Agent Actions
  */
-export const useAgentTranslate: () => (options: AgentTranslateOptions) => Subscribable<unknown> =
-  createCallbackHook(agentTranslate) as unknown as () => (
-    options: AgentTranslateOptions,
+export function useAgentTranslate(): (
+  options: AgentTranslateOptions & WithResourceNameSupport<AgentResourceOptions>,
+) => Subscribable<unknown> {
+  return useAgentCallback(agentTranslate) as (
+    options: AgentTranslateOptions & WithResourceNameSupport<AgentResourceOptions>,
   ) => Subscribable<unknown>
+}
 
 /**
  * @internal
@@ -285,7 +326,7 @@ export const useAgentTranslate: () => (options: AgentTranslateOptions) => Subscr
  */
 function promptAdapter(
   instance: SanityInstance,
-  options: AgentPromptOptions,
+  options: AgentPromptOptions & AgentResourceOptions,
 ): Promise<AgentPromptResult> {
   return firstValueFrom(agentPrompt(instance, options))
 }
@@ -384,8 +425,11 @@ function promptAdapter(
  *
  * @category Agent Actions
  */
-export const useAgentPrompt: () => (options: AgentPromptOptions) => Promise<AgentPromptResult> =
-  createCallbackHook(promptAdapter)
+export function useAgentPrompt(): (
+  options: AgentPromptOptions & WithResourceNameSupport<AgentResourceOptions>,
+) => Promise<AgentPromptResult> {
+  return useAgentCallback(promptAdapter)
+}
 
 /**
  * @internal
@@ -393,7 +437,7 @@ export const useAgentPrompt: () => (options: AgentPromptOptions) => Promise<Agen
  */
 function patchAdapter(
   instance: SanityInstance,
-  options: AgentPatchOptions,
+  options: AgentPatchOptions & AgentResourceOptions,
 ): Promise<AgentPatchResult> {
   return firstValueFrom(agentPatch(instance, options))
 }
@@ -547,5 +591,8 @@ function patchAdapter(
  *
  * @category Agent Actions
  */
-export const useAgentPatch: () => (options: AgentPatchOptions) => Promise<AgentPatchResult> =
-  createCallbackHook(patchAdapter)
+export function useAgentPatch(): (
+  options: AgentPatchOptions & WithResourceNameSupport<AgentResourceOptions>,
+) => Promise<AgentPatchResult> {
+  return useAgentCallback(patchAdapter)
+}

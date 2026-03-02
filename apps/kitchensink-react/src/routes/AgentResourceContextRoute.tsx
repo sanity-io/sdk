@@ -1,4 +1,9 @@
-import {useAgentResourceContext, useDocuments, useSanityInstance} from '@sanity/sdk-react'
+import {
+  getDefaultDatasetResource,
+  useAgentResourceContext,
+  useDocuments,
+  useSanityInstance,
+} from '@sanity/sdk-react'
 import {Badge, Box, Button, Card, Flex, Heading, Select, Stack, Text, TextInput} from '@sanity/ui'
 import {type JSX, useEffect, useMemo, useRef, useState} from 'react'
 
@@ -10,8 +15,9 @@ import {type JSX, useEffect, useMemo, useRef, useState} from 'react'
 export function AgentResourceContextRoute(): JSX.Element {
   // Get the current instance from context to access projectId and dataset
   const instance = useSanityInstance()
-  const projectId = instance.config.projectId!
-  const dataset = instance.config.dataset!
+  const resource = getDefaultDatasetResource(instance.config)
+  const projectId = resource!.projectId
+  const dataset = resource!.dataset
 
   // Fetch some documents to use as examples
   const {data: documents} = useDocuments({

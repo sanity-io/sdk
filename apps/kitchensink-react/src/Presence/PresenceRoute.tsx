@@ -1,7 +1,6 @@
-import {ResourceProvider, usePresence, useProject} from '@sanity/sdk-react'
+import {usePresence, useProject} from '@sanity/sdk-react'
 import {JSX} from 'react'
 
-import {devConfigs} from '../sanityConfigs'
 import {PresenceSecondProject} from './PresenceSecondProject'
 
 export function PresenceRoute(): JSX.Element {
@@ -17,22 +16,8 @@ export function PresenceRoute(): JSX.Element {
         </a>
       </p>
       <pre>{JSON.stringify(locations, null, 2)}</pre>
-      <h1>Second Project Presence for {devConfigs[1].projectId}</h1>
-      <p>
-        <a
-          href={`https://sdk-movie-procure-studio.sanity.studio/${devConfigs[1].dataset}/structure/`}
-          target={devConfigs[1].dataset}
-        >
-          View in Studio →
-        </a>
-      </p>
-      <ResourceProvider
-        projectId={devConfigs[1].projectId}
-        dataset={devConfigs[1].dataset}
-        fallback={<p>Loading...</p>}
-      >
-        <PresenceSecondProject />
-      </ResourceProvider>
+      <h1>Second Project Presence</h1>
+      <PresenceSecondProject />
     </div>
   )
 }

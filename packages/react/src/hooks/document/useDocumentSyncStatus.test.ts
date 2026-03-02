@@ -25,7 +25,6 @@ describe('useDocumentSyncStatus', () => {
         getState: getDocumentSyncStatus,
         shouldSuspend: expect.any(Function),
         suspender: expect.any(Function),
-        getConfig: expect.any(Function),
       }),
     )
     // Verify that the hook was created and can be called
