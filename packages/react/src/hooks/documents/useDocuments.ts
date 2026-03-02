@@ -145,7 +145,7 @@ export interface DocumentsResponse<
  *         {data.map((docHandle) => (
  *           <li key={docHandle.documentId}>
  *            <Suspense fallback="Loading…">
- *              <MyDocumentComponent docHandle={docHandle} />
+ *              <MyDocumentComponent doc={docHandle} />
  *            </Suspense>
  *           </li>
  *         ))}
