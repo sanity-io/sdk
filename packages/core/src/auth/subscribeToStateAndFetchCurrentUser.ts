@@ -24,7 +24,7 @@ export const subscribeToStateAndFetchCurrentUser = (
 ): Subscription => {
   const {clientFactory, apiHost} = state.get().options
   const useProjectHostname = fetchOptions?.useProjectHostname ?? isStudioConfig(instance.config)
-  const projectId = instance.config.auth?.projectId
+  const projectId = instance.config.studio?.projectId
 
   const currentUser$ = state.observable
     .pipe(

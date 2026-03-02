@@ -44,14 +44,14 @@ describe('createCallbackHook', () => {
 
   it('should create new callback when instance changes', () => {
     // Create a test callback
-    const testCallback = (instance: SanityInstance) => instance.config.auth?.projectId
+    const testCallback = (instance: SanityInstance) => instance.config.studio?.projectId
 
     // Create and render our hook with first provider
     const useTestHook = createCallbackHook(testCallback)
     const {result, unmount} = renderHook(() => useTestHook(), {
       wrapper: ({children}) => (
         <ResourceProvider
-          auth={{projectId: 'p1'}}
+          studio={{projectId: 'p1'}}
           resource={{projectId: 'p1', dataset: 'd'}}
           fallback={null}
         >
@@ -71,7 +71,7 @@ describe('createCallbackHook', () => {
     const {result: result2} = renderHook(() => useTestHook(), {
       wrapper: ({children}) => (
         <ResourceProvider
-          auth={{projectId: 'p2'}}
+          studio={{projectId: 'p2'}}
           resource={{projectId: 'p2', dataset: 'd'}}
           fallback={null}
         >
@@ -93,7 +93,7 @@ describe('createCallbackHook', () => {
       method: string,
       data: object,
     ) => ({
-      url: `${instance.config.auth?.projectId}${path}`,
+      url: `${instance.config.studio?.projectId}${path}`,
       method,
       data,
     })
@@ -102,7 +102,7 @@ describe('createCallbackHook', () => {
     const {result} = renderHook(() => useTestHook(), {
       wrapper: ({children}) => (
         <ResourceProvider
-          auth={{projectId: 'p'}}
+          studio={{projectId: 'p'}}
           resource={{projectId: 'p', dataset: 'd'}}
           fallback={null}
         >

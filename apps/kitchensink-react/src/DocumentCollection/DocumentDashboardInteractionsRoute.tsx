@@ -1,11 +1,11 @@
 import {
+  DatasetResource,
   DocumentHandle,
-  getDefaultDatasetResource,
   useDocuments,
   useManageFavorite,
   useNavigateToStudioDocument,
   useRecordDocumentHistoryEvent,
-  useSanityInstance,
+  useResource,
 } from '@sanity/sdk-react'
 import {Box, Button, Flex, Heading} from '@sanity/ui'
 import {type JSX, Suspense} from 'react'
@@ -16,8 +16,7 @@ import {DocumentPreview} from './DocumentPreview'
 import {LoadMore} from './LoadMore'
 
 function useStudioResource<T extends DocumentHandle>(docHandle: T) {
-  const {config} = useSanityInstance()
-  const resource = getDefaultDatasetResource(config)
+  const resource = useResource()! as DatasetResource
 
   return {
     ...docHandle,

@@ -15,7 +15,11 @@ import {ResourcesContext} from '../../context/ResourcesContext'
  * @typeParam T - The core type to extend (must have optional `resource` field)
  * @beta
  */
-export type WithResourceNameSupport<T extends {resource?: DocumentResource}> = T & {
+export type WithResourceNameSupport<T extends {resource: DocumentResource}> = Omit<
+  T,
+  'resource'
+> & {
+  resource?: DocumentResource
   /**
    * Optional name of a resource to resolve from context.
    * If provided, will be resolved to a `DocumentResource` via `ResourcesContext`.

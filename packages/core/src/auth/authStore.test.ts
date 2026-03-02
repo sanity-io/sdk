@@ -256,8 +256,8 @@ describe('authStore', () => {
       vi.mocked(getStudioTokenFromLocalStorage).mockReturnValue(studioToken)
 
       instance = createSanityInstance({
-        studio: {},
-        auth: {storageArea: mockStorage, projectId}, // Provide mock storage
+        studio: {projectId},
+        auth: {storageArea: mockStorage},
       })
 
       const {authState, options} = authStore.getInitialState(instance, null)
@@ -278,8 +278,8 @@ describe('authStore', () => {
       vi.mocked(checkForCookieAuth).mockResolvedValue(true)
 
       instance = createSanityInstance({
-        studio: {},
-        auth: {storageArea: mockStorage, projectId},
+        studio: {projectId},
+        auth: {storageArea: mockStorage},
       })
 
       // Verify initial state without async cookie probe

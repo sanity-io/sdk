@@ -65,14 +65,14 @@ describe('createStateSourceHook', () => {
   })
 
   it('should recreate state source when instance changes', () => {
-    const mockInstance1 = createSanityInstance({auth: {projectId: 'p1'}})
-    const mockInstance2 = createSanityInstance({auth: {projectId: 'p2'}})
+    const mockInstance1 = createSanityInstance({studio: {projectId: 'p1'}})
+    const mockInstance2 = createSanityInstance({studio: {projectId: 'p2'}})
 
     vi.mocked(useSanityInstance).mockReturnValueOnce(mockInstance1)
 
     const stateSourceFactory = vi.fn((instance: SanityInstance) => ({
       subscribe: vi.fn(),
-      getCurrent: () => instance.config.auth?.projectId,
+      getCurrent: () => instance.config.studio?.projectId,
       observable: throwError(() => new Error('unexpected usage of observable')),
     }))
 

@@ -2,14 +2,11 @@ import {
   createGroqSearchFilter,
   type DatasetHandle,
   type DocumentHandle,
-  isDatasetResource,
   type QueryOptions,
 } from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
-import {pick} from 'lodash-es'
-import {useCallback, useContext, useEffect, useMemo, useState} from 'react'
+import {useCallback, useEffect, useMemo, useState} from 'react'
 
-import {ResourceContext} from '../../context/DefaultResourceContext'
 import {
   useNormalizedResourceOptions,
   type WithResourceNameSupport,
@@ -215,7 +212,6 @@ export function useDocuments<
   TProjectId
 > {
   const options = useNormalizedResourceOptions(rawOptions)
-  const contextResource = useContext(ResourceContext)
   const [limit, setLimit] = useState(batchSize)
   const documentTypes = useMemo(
     () =>
@@ -288,17 +284,7 @@ export function useDocuments<
     params: {
       ...params,
       __handle: {
-        ...(contextResource && isDatasetResource(contextResource)
-          ? {projectId: contextResource.projectId, dataset: contextResource.dataset}
-          : {}),
-        ...(options.resource && isDatasetResource(options.resource)
-          ? {
-              projectId: options.resource.projectId,
-              dataset: options.resource.dataset,
-              resource: options.resource,
-            }
-          : {}),
-        ...pick(options, 'perspective'),
+        options,
       },
       __types: documentTypes,
     },

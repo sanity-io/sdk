@@ -53,23 +53,10 @@ export function SDKProvider({
 }: SDKProviderProps): ReactElement {
   const projectIds = useMemo(() => collectProjectIds(resources), [resources])
 
-  const defaultProjectId = useMemo(() => {
-    const r = resources[DEFAULT_RESOURCE_NAME]
-    return r && isDatasetResource(r) ? r.projectId : undefined
-  }, [resources])
-
   const rootResource = useMemo(() => resources[DEFAULT_RESOURCE_NAME], [resources])
 
-  const effectiveConfig = useMemo<SanityConfig>(
-    () => ({
-      ...config,
-      auth: defaultProjectId ? {...config.auth, projectId: defaultProjectId} : config.auth,
-    }),
-    [config, defaultProjectId],
-  )
-
   return (
-    <ResourceProvider {...effectiveConfig} resource={rootResource} fallback={fallback}>
+    <ResourceProvider {...config} resource={rootResource} fallback={fallback}>
       <AuthBoundary {...props} projectIds={projectIds}>
         <ResourcesContext.Provider value={resources}>{children}</ResourcesContext.Provider>
       </AuthBoundary>

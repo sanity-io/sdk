@@ -46,6 +46,7 @@ function deriveFromWorkspace(workspace: StudioWorkspaceHandle): {
       studio: {
         authenticated: workspace.authenticated,
         auth: workspace.auth.token ? {token: workspace.auth.token} : undefined,
+        projectId: workspace.projectId,
       },
     },
     resources: {

@@ -11,7 +11,7 @@ export const getUsersKey = (
     resourceType,
     organizationId,
     batchSize = DEFAULT_USERS_BATCH_SIZE,
-    projectId = instance.config.auth?.projectId,
+    projectId,
     userId,
   }: GetUsersOptions = {},
 ): string =>

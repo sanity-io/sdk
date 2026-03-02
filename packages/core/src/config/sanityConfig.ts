@@ -40,6 +40,12 @@ export interface StudioConfig {
      */
     token?: TokenSource
   }
+  /**
+   * The project ID for this Studio workspace.
+   * Used to derive the localStorage key for studio auth token discovery
+   * (`__studio_auth_token_<projectId>`) and for project-specific API hostname requests.
+   */
+  projectId?: string
 }
 
 /**

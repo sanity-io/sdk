@@ -132,7 +132,7 @@ export const authStore = defineStore<AuthStoreState>({
 
     const strategyOptions: AuthStrategyOptions = {
       authConfig,
-      projectId: instance.config.auth?.projectId,
+      projectId: instance.config.studio?.projectId,
       initialLocationHref,
       clientFactory,
       tokenSource: instance.config.studio?.auth?.token,
