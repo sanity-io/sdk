@@ -26,12 +26,7 @@ const baseConfig = {
       typescript: {
         config: 'tsconfig.json',
       },
-      ignoreDependencies: [
-        '@repo/tsconfig',
-        '@testing-library/jest-dom',
-        '@testing-library/react',
-        'react-compiler-runtime',
-      ],
+      ignoreDependencies: ['@repo/tsconfig', '@testing-library/jest-dom', '@testing-library/react'],
       project,
     },
     'apps/*': {
@@ -54,7 +49,7 @@ const baseConfig = {
       },
       project,
       entry: ['package.bundle.ts'],
-      ignoreDependencies: ['@sanity/browserslist-config', 'react-compiler-runtime'],
+      ignoreDependencies: ['@sanity/browserslist-config'],
     },
     'packages/@repo/e2e': {
       typescript: {
