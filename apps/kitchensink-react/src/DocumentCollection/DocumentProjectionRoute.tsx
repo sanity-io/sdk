@@ -1,6 +1,5 @@
 import {DocumentHandle, useDocumentProjection, usePaginatedDocuments} from '@sanity/sdk-react'
 import {Box, Button, Card, Flex, Label, Spinner, Stack, Text, TextInput} from '@sanity/ui'
-import groq, {defineProjection} from 'groq'
 import {JSX, ReactNode, Suspense, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 
@@ -31,12 +30,12 @@ function ProjectionData({
     name,
     "favoriteBookTitles": favoriteBooks[]->{title}.title
   }`,
-    bestFriend: defineProjection(`{
+    bestFriend: `{
     name,
     'bestFriendName': bestFriend->{name}.name,
     role
-  }`),
-    groqHelper: groq`{
+  }`,
+    groqHelper: `{
     name,
     "bookCount": count(favoriteBooks),
     "hasBooks": count(favoriteBooks) > 0
