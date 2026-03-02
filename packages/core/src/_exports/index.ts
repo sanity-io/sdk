@@ -12,6 +12,7 @@ export type {
   AgentPatchResult,
   AgentPromptOptions,
   AgentPromptResult,
+  AgentResourceOptions,
   AgentTransformOptions,
   AgentTransformResult,
   AgentTranslateOptions,

@@ -11,12 +11,15 @@ import {
 } from './agentActions'
 
 let mockClient: any
+const mockGetClientState = vi.fn()
 
 vi.mock('../client/clientStore', () => {
   return {
-    getClientState: () => ({observable: of(mockClient)}),
+    getClientState: (...args: unknown[]) => mockGetClientState(...args),
   }
 })
+
+const testResource = {projectId: 'p', dataset: 'd'}
 
 describe('agent actions', () => {
   beforeEach(() => {
@@ -37,45 +40,86 @@ describe('agent actions', () => {
         },
       },
     }
+    mockGetClientState.mockReturnValue({observable: of(mockClient)})
   })
 
-  it('agentGenerate returns observable from client', async () => {
+  it('agentGenerate passes resource to getClientState and strips it from agent options', async () => {
     mockClient.observable.agent.action.generate.mockReturnValue(of('gen'))
-    const instance = {config: {defaultResource: {projectId: 'p', dataset: 'd'}}} as any
-    const value = await firstValueFrom(agentGenerate(instance, {foo: 'bar'} as any))
+    const instance = {config: {}} as any
+    const value = await firstValueFrom(
+      agentGenerate(instance, {foo: 'bar', resource: testResource} as any),
+    )
     expect(value).toBe('gen')
+    expect(mockGetClientState).toHaveBeenCalledWith(instance, {
+      apiVersion: 'vX',
+      resource: testResource,
+    })
     expect(mockClient.observable.agent.action.generate).toHaveBeenCalledWith({foo: 'bar'})
   })
 
-  it('agentTransform returns observable from client', async () => {
+  it('agentTransform passes resource to getClientState and strips it from agent options', async () => {
     mockClient.observable.agent.action.transform.mockReturnValue(of('xform'))
-    const instance = {config: {defaultResource: {projectId: 'p', dataset: 'd'}}} as any
-    const value = await firstValueFrom(agentTransform(instance, {a: 1} as any))
+    const instance = {config: {}} as any
+    const value = await firstValueFrom(
+      agentTransform(instance, {a: 1, resource: testResource} as any),
+    )
     expect(value).toBe('xform')
+    expect(mockGetClientState).toHaveBeenCalledWith(instance, {
+      apiVersion: 'vX',
+      resource: testResource,
+    })
     expect(mockClient.observable.agent.action.transform).toHaveBeenCalledWith({a: 1})
   })
 
-  it('agentTranslate returns observable from client', async () => {
+  it('agentTranslate passes resource to getClientState and strips it from agent options', async () => {
     mockClient.observable.agent.action.translate.mockReturnValue(of('xlate'))
-    const instance = {config: {defaultResource: {projectId: 'p', dataset: 'd'}}} as any
-    const value = await firstValueFrom(agentTranslate(instance, {b: 2} as any))
+    const instance = {config: {}} as any
+    const value = await firstValueFrom(
+      agentTranslate(instance, {b: 2, resource: testResource} as any),
+    )
     expect(value).toBe('xlate')
+    expect(mockGetClientState).toHaveBeenCalledWith(instance, {
+      apiVersion: 'vX',
+      resource: testResource,
+    })
     expect(mockClient.observable.agent.action.translate).toHaveBeenCalledWith({b: 2})
   })
 
-  it('agentPrompt wraps promise into observable', async () => {
+  it('agentPrompt passes resource to getClientState and strips it from agent options', async () => {
     mockClient.agent.action.prompt.mockResolvedValue('prompted')
-    const instance = {config: {defaultResource: {projectId: 'p', dataset: 'd'}}} as any
-    const value = await firstValueFrom(agentPrompt(instance, {p: true} as any))
+    const instance = {config: {}} as any
+    const value = await firstValueFrom(
+      agentPrompt(instance, {p: true, resource: testResource} as any),
+    )
     expect(value).toBe('prompted')
+    expect(mockGetClientState).toHaveBeenCalledWith(instance, {
+      apiVersion: 'vX',
+      resource: testResource,
+    })
     expect(mockClient.agent.action.prompt).toHaveBeenCalledWith({p: true})
   })
 
-  it('agentPatch wraps promise into observable', async () => {
+  it('agentPatch passes resource to getClientState and strips it from agent options', async () => {
     mockClient.agent.action.patch.mockResolvedValue('patched')
-    const instance = {config: {defaultResource: {projectId: 'p', dataset: 'd'}}} as any
-    const value = await firstValueFrom(agentPatch(instance, {q: false} as any))
+    const instance = {config: {}} as any
+    const value = await firstValueFrom(
+      agentPatch(instance, {q: false, resource: testResource} as any),
+    )
     expect(value).toBe('patched')
+    expect(mockGetClientState).toHaveBeenCalledWith(instance, {
+      apiVersion: 'vX',
+      resource: testResource,
+    })
     expect(mockClient.agent.action.patch).toHaveBeenCalledWith({q: false})
+  })
+
+  it('works without an explicit resource (falls back via getClientState)', async () => {
+    mockClient.observable.agent.action.generate.mockReturnValue(of('gen'))
+    const instance = {config: {}} as any
+    await firstValueFrom(agentGenerate(instance, {foo: 'bar'} as any))
+    expect(mockGetClientState).toHaveBeenCalledWith(instance, {
+      apiVersion: 'vX',
+      resource: undefined,
+    })
   })
 })
