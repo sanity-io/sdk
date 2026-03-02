@@ -71,7 +71,10 @@ describe('useDocument hook', () => {
 
     const {result} = renderHook(() => useDocument({documentId: 'doc1', documentType: 'book'}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -106,7 +109,10 @@ describe('useDocument hook', () => {
       },
       {
         wrapper: ({children}) => (
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
             {children}
           </ResourceProvider>
         ),

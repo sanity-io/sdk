@@ -1,4 +1,4 @@
-import {type SanityConfig} from '@sanity/sdk'
+import {DEFAULT_RESOURCE_NAME, type DocumentResource, type SanityConfig} from '@sanity/sdk'
 import {StrictMode} from 'react'
 import {createRoot} from 'react-dom/client'
 
@@ -8,16 +8,44 @@ interface RenderSanitySDKAppOptions {
   reactStrictMode?: boolean
 }
 
-/** In-flight CLI PR is using named sources since it's aspirational.
- *  We can transform the shape in this function until it's finalized.
- */
-interface NamedSources {
+interface NamedResources {
   [key: string]: SanityConfig
 }
+
+/**
+ * Merges multiple named SanityConfig objects into a single config.
+ * Each entry's `defaultResource` is extracted into a `resources` map keyed by
+ * the entry name, then the remaining config properties are shallow-merged
+ * (last config wins for overlapping keys). The merged config's
+ * `defaultResource` is set from `resources['default']` so the two stay in sync.
+ */
+function mergeNamedResources(namedResources: NamedResources): {
+  config: SanityConfig
+  resources: Record<string, DocumentResource>
+} {
+  const resources: Record<string, DocumentResource> = {}
+  let mergedConfig: SanityConfig = {}
+
+  for (const [name, cfg] of Object.entries(namedResources)) {
+    const {defaultResource, ...rest} = cfg
+    mergedConfig = {...mergedConfig, ...rest}
+    if (defaultResource) {
+      resources[name] = defaultResource
+    }
+  }
+
+  const defaultResource = resources[DEFAULT_RESOURCE_NAME]
+  if (defaultResource) {
+    mergedConfig = {...mergedConfig, defaultResource}
+  }
+
+  return {config: mergedConfig, resources}
+}
+
 /** @internal */
 export function renderSanityApp(
   rootElement: HTMLElement | null,
-  namedSources: NamedSources,
+  namedResources: NamedResources,
   options: RenderSanitySDKAppOptions,
   children: React.ReactNode,
 ): () => void {
@@ -27,18 +55,17 @@ export function renderSanityApp(
   const {reactStrictMode = false} = options
 
   const root = createRoot(rootElement)
-  const config = Object.values(namedSources)
+  const {config, resources} = mergeNamedResources(namedResources)
 
   root.render(
     reactStrictMode ? (
       <StrictMode>
-        {/* TODO: think about a loading component we want to be "universal" */}
-        <SanityApp config={config} fallback={<div>Loading...</div>}>
+        <SanityApp config={config} resources={resources} fallback={<div>Loading...</div>}>
           {children}
         </SanityApp>
       </StrictMode>
     ) : (
-      <SanityApp config={config} fallback={<div>Loading...</div>}>
+      <SanityApp config={config} resources={resources} fallback={<div>Loading...</div>}>
         {children}
       </SanityApp>
     ),

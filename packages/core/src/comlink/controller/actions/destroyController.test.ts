@@ -8,8 +8,7 @@ import {destroyController} from './destroyController'
 
 describe('destroyController', () => {
   const instance = createSanityInstance({
-    projectId: 'test-project-id',
-    dataset: 'test-dataset',
+    defaultResource: {projectId: 'test-project-id', dataset: 'test-dataset'},
   })
   let state: ReturnType<typeof createStoreState<ComlinkControllerState>>
   let mockController: {destroy: ReturnType<typeof vi.fn>}

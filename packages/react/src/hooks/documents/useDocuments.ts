@@ -2,6 +2,8 @@ import {
   createGroqSearchFilter,
   type DatasetHandle,
   type DocumentHandle,
+  getDefaultDatasetResource,
+  isDatasetResource,
   type QueryOptions,
 } from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
@@ -9,6 +11,10 @@ import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 import {useQuery} from '../query/useQuery'
 
 const DEFAULT_BATCH_SIZE = 25
@@ -24,7 +30,9 @@ export interface DocumentsOptions<
   TDataset extends string = string,
   TProjectId extends string = string,
 >
-  extends DatasetHandle<TDataset, TProjectId>, Pick<QueryOptions, 'perspective' | 'params'> {
+  extends
+    WithResourceNameSupport<DatasetHandle<TDataset, TProjectId>>,
+    Pick<QueryOptions, 'perspective' | 'params'> {
   /**
    * Filter documents by their `_type`. Can be a single type or an array of types.
    */
@@ -201,13 +209,14 @@ export function useDocuments<
   filter,
   orderings,
   documentType,
-  ...options
+  ...rawOptions
 }: DocumentsOptions<TDocumentType, TDataset, TProjectId>): DocumentsResponse<
   TDocumentType,
   TDataset,
   TProjectId
 > {
-  const instance = useSanityInstance(options)
+  const options = useNormalizedResourceOptions(rawOptions)
+  const instance = useSanityInstance()
   const [limit, setLimit] = useState(batchSize)
   const documentTypes = useMemo(
     () =>
@@ -280,8 +289,15 @@ export function useDocuments<
     params: {
       ...params,
       __handle: {
-        ...pick(instance.config, 'projectId', 'dataset', 'perspective'),
-        ...pick(options, 'projectId', 'dataset', 'perspective'),
+        ...getDefaultDatasetResource(instance.config),
+        ...(options.resource && isDatasetResource(options.resource)
+          ? {
+              projectId: options.resource.projectId,
+              dataset: options.resource.dataset,
+              resource: options.resource,
+            }
+          : {}),
+        ...pick(options, 'perspective'),
       },
       __types: documentTypes,
     },

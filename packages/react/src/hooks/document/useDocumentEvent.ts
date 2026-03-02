@@ -2,7 +2,7 @@ import {type DatasetHandle, type DocumentEvent, subscribeDocumentEvents} from '@
 import {useCallback, useEffect, useInsertionEffect, useRef} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useNormalizedSourceOptions} from '../helpers/useNormalizedSourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
 /**
  * @public
@@ -77,7 +77,7 @@ export function useDocumentEvent<
   options: UseDocumentEventOptions<TDataset, TProjectId>,
 ): void {
   // Destructure handler and datasetHandle from options
-  const normalizedOptions = useNormalizedSourceOptions(options)
+  const normalizedOptions = useNormalizedResourceOptions(options)
   const {onEvent, ...datasetHandle} = normalizedOptions
   const ref = useRef(onEvent)
 
@@ -89,11 +89,11 @@ export function useDocumentEvent<
     return ref.current(documentEvent)
   }, [])
 
-  const instance = useSanityInstance(datasetHandle)
+  const instance = useSanityInstance()
   useEffect(() => {
     return subscribeDocumentEvents(instance, {
       eventHandler: stableHandler,
-      source: datasetHandle.source,
+      resource: datasetHandle.resource,
     })
-  }, [instance, datasetHandle.source, stableHandler])
+  }, [instance, datasetHandle.resource, stableHandler])
 }
