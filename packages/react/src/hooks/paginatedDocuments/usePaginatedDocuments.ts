@@ -322,8 +322,7 @@ export function usePaginatedDocuments<
               resource: options.resource,
             }
           : {}),
-        ...pick(instance.config, 'perspective'),
-        ...pick(options, 'projectId', 'dataset', 'perspective'),
+        ...pick(options, 'perspective'),
       },
     },
   })

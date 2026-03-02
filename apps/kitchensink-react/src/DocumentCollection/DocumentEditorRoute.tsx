@@ -15,6 +15,7 @@ import {
   useDocuments,
   useDocumentSyncStatus,
   useEditDocument,
+  useResource,
 } from '@sanity/sdk-react'
 import {
   Badge,
@@ -32,7 +33,6 @@ import {
 import {type JSX, useEffect, useState} from 'react'
 
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
-import {devConfig, e2eConfig} from '../sanityConfigs'
 
 function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   useDocumentEvent({...docHandle, onEvent: (e) => console.log(e)})
@@ -231,11 +231,9 @@ function Editor() {
   const [docHandle, setDocHandle] = useState<DocumentHandle<'author'> | null>(documents[0] ?? null)
   const [newDocumentId, setNewDocumentId] = useState<string>('')
   const [liveEditMode, setLiveEditMode] = useState<boolean>(false)
-  const cfg = import.meta.env['VITE_IS_E2E'] ? e2eConfig : devConfig
-  const defaultResource = cfg.defaultResource
-  const projectId =
-    defaultResource && 'projectId' in defaultResource ? defaultResource.projectId : ''
-  const dataset = defaultResource && 'dataset' in defaultResource ? defaultResource.dataset : ''
+  const resource = useResource()
+  const projectId = resource && 'projectId' in resource ? resource.projectId : ''
+  const dataset = resource && 'dataset' in resource ? resource.dataset : ''
 
   const handleLoadDocument = () => {
     const documentId = newDocumentId || docHandle?.documentId

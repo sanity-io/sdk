@@ -297,8 +297,7 @@ export function useDocuments<
               resource: options.resource,
             }
           : {}),
-        ...pick(instance.config, 'perspective'),
-        ...pick(options, 'projectId', 'dataset', 'perspective'),
+        ...pick(options, 'perspective'),
       },
       __types: documentTypes,
     },

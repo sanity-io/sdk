@@ -1,8 +1,6 @@
 import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
 
-export const devConfig: SanityConfig = {
-  defaultResource: {projectId: 'ppsg7ml5', dataset: 'test'},
-}
+export const devConfig: SanityConfig = {}
 
 export const devResources: Record<string, DocumentResource> = {
   'default': {projectId: 'ppsg7ml5', dataset: 'test'},
@@ -15,10 +13,6 @@ export const devResources: Record<string, DocumentResource> = {
 }
 
 export const e2eConfig: SanityConfig = {
-  defaultResource: {
-    projectId: import.meta.env['VITE_E2E_PROJECT_ID'],
-    dataset: import.meta.env['VITE_E2E_DATASET_0'],
-  },
   auth: {
     apiHost: 'https://api.sanity.work',
   },
