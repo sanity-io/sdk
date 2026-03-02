@@ -369,9 +369,9 @@ This handle-based approach gives you:
 - **Flexibility**: Components can work with partial configuration
 - **Context Preservation**: Configuration flows naturally through your component tree
 
-To further improve type safety and facilitate integration with tools like Sanity Typegen, the SDK provides helper functions like `createDocumentHandle`, `createDocumentTypeHandle`, `createProjectHandle`, and `createDatasetHandle` (defined in `@sanity/core`). These functions act primarily as identity functions at runtime but provide stronger type guarantees in TypeScript. They help capture literal types (e.g., `{ documentType: 'author' }` instead of `{ documentType: string }`) without requiring the use of `as const` on the handle object literal.
+To further improve type safety, the SDK provides helper functions like `createDocumentHandle`, `createDocumentTypeHandle`, `createProjectHandle`, and `createDatasetHandle` (defined in `@sanity/core`). These functions act primarily as identity functions at runtime but provide stronger type guarantees in TypeScript. They help capture literal types (e.g., `{ documentType: 'author' }` instead of `{ documentType: string }`) without requiring the use of `as const` on the handle object literal.
 
-While you can still create handles using plain objects (especially with `as const` if needed for Typescript), using these helper functions is recommended, particularly when leveraging Typegen, as it ensures the necessary type information is preserved for accurate type inference downstream in hooks like `useDocument`.
+While you can still create handles using plain objects (especially with `as const` if needed for TypeScript), using these helper functions is recommended as it ensures the necessary type information is preserved for accurate type inference downstream in hooks like `useDocument`.
 
 ## Implementation Deep Dive: Store Architecture
 
@@ -690,13 +690,11 @@ function DocumentPreview(docHandle: DocumentHandle) {
 This example shows several key patterns in action:
 
 1. **Progressive Resource Creation**
-
    - Each level waits for selections before creating ResourceProviders
    - Resources are only initialized when needed
    - Clean boundaries between different configuration contexts
 
 2. **Handle Usage**
-
    - Document handles from `usePaginatedList` preserve all context
    - Handles are spread into components like `DocumentPreview`
    - Components remain agnostic about where their data comes from
@@ -730,24 +728,20 @@ function DatasetExplorer({projectId}: ProjectHandle) {
 When implementing or modifying the SDK's resource management system, keep these guidelines in mind:
 
 1. **Maintain the Component Hierarchy**
-
    - SanityApp should remain the public API
    - SDKProvider should handle the nesting logic and configuration transformation
    - ResourceProvider should focus on single-instance management
 
 2. **Preserve Config Ordering Semantics**
-
    - The first configuration in the user-provided array should always be the default (innermost) instance
    - Any changes to config handling must maintain this contract
 
 3. **Isolate Internal Components**
-
    - Mark internal components with `@internal` JSDoc tags
    - Keep implementation details out of public documentation
    - Provide clear prop interfaces for all components
 
 4. **Ensure Proper Resource Cleanup**
-
    - Every resource creation should have a corresponding cleanup
    - Use the instance dispose mechanism consistently
    - Test with multiple mounting/unmounting scenarios

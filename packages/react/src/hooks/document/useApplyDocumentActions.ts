@@ -4,7 +4,6 @@ import {
   type ApplyDocumentActionsOptions,
   type DocumentAction,
 } from '@sanity/sdk'
-import {type SanityDocument} from 'groq'
 import {useContext} from 'react'
 
 import {ResourcesContext} from '../../context/ResourcesContext'
@@ -30,7 +29,7 @@ interface UseApplyDocumentActions {
       | DocumentAction<TDocumentType, TDataset, TProjectId>
       | DocumentAction<TDocumentType, TDataset, TProjectId>[],
     options?: WithResourceNameSupport<ApplyDocumentActionsOptions>,
-  ) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
+  ) => Promise<ActionsResult>
 }
 
 /**

@@ -150,7 +150,6 @@ export {
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,
 } from '../document/events'
-export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export type {FavoriteStatusResponse} from '../favorites/favorites'
 export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'

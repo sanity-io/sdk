@@ -1,7 +1,7 @@
 import {type Action} from '@sanity/client'
 import {getPublishedId} from '@sanity/client/csm'
 import {jsonMatch} from '@sanity/json-match'
-import {type SanityDocument} from 'groq'
+import {type SanityDocument} from '@sanity/types'
 import {type ExprNode} from 'groq-js'
 import {
   catchError,
@@ -47,7 +47,6 @@ import {type DocumentAction} from './actions'
 import {API_VERSION, INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
 import {type DocumentEvent, getDocumentEvents} from './events'
 import {listen, OutOfSyncError} from './listen'
-import {type JsonMatch} from './patchOperations'
 import {
   calculatePermissions,
   createGrantsLookup,
@@ -160,29 +159,6 @@ export interface DocumentOptions<
 }
 
 /** @beta */
-export function getDocumentState<
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  instance: SanityInstance,
-  options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
-): StateSource<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`> | undefined | null>
-
-/** @beta */
-export function getDocumentState<
-  TPath extends string = string,
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  instance: SanityInstance,
-  options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
-): StateSource<
-  JsonMatch<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath> | undefined
->
-
-/** @beta */
 export function getDocumentState<TData>(
   instance: SanityInstance,
   options: DocumentOptions<string | undefined>,
@@ -234,19 +210,15 @@ const _getDocumentState = bindActionByResource(
 )
 
 /** @beta */
-export function resolveDocument<
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  instance: SanityInstance,
-  docHandle: DocumentHandle<TDocumentType, TDataset, TProjectId>,
-): Promise<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`> | null>
-/** @beta */
 export function resolveDocument<TData extends SanityDocument>(
   instance: SanityInstance,
-  docHandle: DocumentHandle<string, string, string>,
+  docHandle: DocumentHandle,
 ): Promise<TData | null>
+/** @beta */
+export function resolveDocument(
+  instance: SanityInstance,
+  docHandle: DocumentHandle,
+): Promise<SanityDocument | null>
 /** @beta */
 export function resolveDocument(
   ...args: Parameters<typeof _resolveDocument>
