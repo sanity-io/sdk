@@ -71,7 +71,11 @@ export {
   type WindowMessage,
 } from '../comlink/types'
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
-export {createDocumentHandle, createDocumentTypeHandle} from '../config/handles'
+export {
+  createDocumentHandle,
+  createDocumentTypeHandle,
+  createResourceHandle,
+} from '../config/handles'
 export {
   configureLogging,
   type InstanceContext,
@@ -83,7 +87,6 @@ export {
 } from '../config/loggingConfig'
 export {
   type CanvasResource,
-  type ResourceHandle as DatasetHandle,
   type DatasetResource,
   DEFAULT_RESOURCE_NAME,
   type DocumentHandle,
@@ -95,6 +98,7 @@ export {
   type MediaLibraryResource,
   type PerspectiveHandle,
   type ReleasePerspective,
+  type ResourceHandle,
   type SanityConfig,
   type StudioConfig,
   type TokenSource,
@@ -157,7 +161,7 @@ export {PREVIEW_PROJECTION} from '../preview/previewConstants'
 export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
 export type {PreviewMedia, PreviewQueryResult, PreviewValue, ValuePending} from '../preview/types'
 export {type OrgVerificationResult} from '../project/organizationVerification'
-export {getProjectState, resolveProject} from '../project/project'
+export {getProjectState, type ProjectHandle, resolveProject} from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'
 export {type ProjectionValuePending} from '../projection/types'

@@ -33,8 +33,7 @@ describe('useNavigateToStudioDocument', () => {
   const mockDocumentHandle: DocumentHandle = {
     documentId: 'doc123',
     documentType: 'article',
-    projectId: 'project1',
-    dataset: 'dataset1',
+    resource: {projectId: 'project1', dataset: 'dataset1'},
   }
 
   const mockWorkspace = {
@@ -109,13 +108,13 @@ describe('useNavigateToStudioDocument', () => {
     consoleSpy.mockRestore()
   })
 
-  it('warns and does not navigate when projectId or dataset is missing', () => {
+  it('warns and does not navigate when resource is not a dataset resource', () => {
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     const incompleteDocumentHandle: DocumentHandle = {
       documentId: 'doc123',
       documentType: 'article',
-      // missing projectId and dataset
+      resource: {mediaLibraryId: 'ml123'},
     }
 
     const {result} = renderHook(() => useNavigateToStudioDocument(incompleteDocumentHandle))
@@ -197,8 +196,11 @@ describe('useNavigateToStudioDocument', () => {
 
     result.current.navigateToStudioDocument()
 
+    const resource = mockDocumentHandle.resource
+    const projectId = 'projectId' in resource ? resource.projectId : undefined
+    const dataset = 'dataset' in resource ? resource.dataset : undefined
     expect(consoleSpy).toHaveBeenCalledWith(
-      `No workspace found for document with projectId: ${mockDocumentHandle.projectId} and dataset: ${mockDocumentHandle.dataset} or with preferred studio url: ${preferredUrl}`,
+      `No workspace found for document with projectId: ${projectId} and dataset: ${dataset} or with preferred studio url: ${preferredUrl}`,
     )
     expect(mockSendMessage).not.toHaveBeenCalled()
 

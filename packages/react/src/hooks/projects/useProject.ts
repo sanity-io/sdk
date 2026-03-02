@@ -43,7 +43,8 @@ export const useProject: UseProject = createStateSourceHook({
     instance: SanityInstance,
     projectHandle?: ProjectHandle,
   ) => StateSource<SanityProject>,
-  shouldSuspend: (instance, projectHandle) =>
-    getProjectState(instance, projectHandle).getCurrent() === undefined,
-  suspender: resolveProject,
-})
+  shouldSuspend: (instance: SanityInstance, projectHandle?: ProjectHandle) =>
+    getProjectState(instance, projectHandle as ProjectHandle).getCurrent() === undefined,
+  suspender: (instance: SanityInstance, projectHandle?: ProjectHandle) =>
+    resolveProject(instance, projectHandle as ProjectHandle),
+}) as UseProject

@@ -35,10 +35,10 @@ export function createDocumentTypeHandle<
 }
 
 /**
- * Creates or validates a `DatasetHandle` object.
- * Ensures the provided object conforms to the `DatasetHandle` interface.
- * @param handle - The object containing dataset identification properties.
- * @returns The validated `DatasetHandle` object.
+ * Creates or validates a `ResourceHandle` object.
+ * Ensures the provided object conforms to the `ResourceHandle` interface.
+ * @param handle - The object containing resource identification properties.
+ * @returns The validated `ResourceHandle` object.
  * @public
  */
 export function createResourceHandle<

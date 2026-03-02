@@ -172,8 +172,6 @@ const listenForNewSubscribersAndFetch = ({
             const {
               query,
               params,
-              projectId,
-              dataset,
               tag,
               resource,
               perspective: perspectiveFromOptions,
@@ -196,8 +194,6 @@ const listenForNewSubscribersAndFetch = ({
             // resource while using the root app instance).
             const client$ = getClientState(instance, {
               apiVersion: QUERY_STORE_API_VERSION,
-              projectId,
-              dataset,
               resource: resource ?? boundResource,
             }).observable
 

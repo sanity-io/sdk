@@ -84,8 +84,7 @@ interface UseManageFavoriteProps extends DocumentHandle {
 export function useManageFavorite({
   documentId,
   documentType,
-  projectId: paramProjectId,
-  dataset: paramDataset,
+  resource: paramResource,
   resourceId: paramResourceId,
   resourceType,
   schemaName,
@@ -96,10 +95,10 @@ export function useManageFavorite({
   })
   const instance = useSanityInstance()
   const contextResource = useContext(ResourceContext)
-  const defaultDatasetResource =
-    contextResource && isDatasetResource(contextResource) ? contextResource : undefined
-  const projectId = paramProjectId ?? defaultDatasetResource?.projectId
-  const dataset = paramDataset ?? defaultDatasetResource?.dataset
+  const resource = paramResource ?? contextResource
+  const datasetResource = resource && isDatasetResource(resource) ? resource : undefined
+  const projectId = datasetResource?.projectId
+  const dataset = datasetResource?.dataset
 
   if (resourceType === 'studio' && (!projectId || !dataset)) {
     throw new Error('projectId and dataset are required for studio resources')
@@ -112,16 +111,21 @@ export function useManageFavorite({
     throw new Error('resourceId is required for media-library and canvas resources')
   }
 
+  if (!resource) {
+    throw new Error('resource is required')
+  }
+
   // used for favoriteStore functions like getFavoritesState and resolveFavoritesState
   const context = useMemo(
     () => ({
       documentId,
       documentType,
+      resource,
       resourceId,
       resourceType,
       schemaName,
     }),
-    [documentId, documentType, resourceId, resourceType, schemaName],
+    [documentId, documentType, resource, resourceId, resourceType, schemaName],
   )
 
   // Get favorite status using StateSource

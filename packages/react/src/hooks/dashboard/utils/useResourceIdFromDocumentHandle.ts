@@ -22,12 +22,9 @@ export function useResourceIdFromDocumentHandle(
   documentHandle: WithResourceNameSupport<DocumentHandle>,
 ): DashboardMessageResource {
   const options = useNormalizedResourceOptions(documentHandle)
-  const {projectId, dataset, resource} = options
+  const {resource} = options
   let resourceId: string = ''
   let resourceType: 'media-library' | 'canvas' | undefined
-  if (projectId && dataset) {
-    resourceId = `${projectId}.${dataset}`
-  }
 
   if (resource) {
     if (isDatasetResource(resource)) {

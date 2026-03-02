@@ -163,49 +163,27 @@ export const useApplyDocumentActions: UseApplyDocumentActions = () => {
     const actions = Array.isArray(actionOrActions) ? actionOrActions : [actionOrActions]
     const normalizedOptions = options ? normalizeResourceOptions(options, resources) : undefined
 
-    let projectId
-    let dataset
     let resource
     for (const action of actions) {
       if (action.resource) {
-        if (projectId || dataset) {
-          throw new Error(
-            `Mismatches between projectId/dataset options and resource in actions. Found "${JSON.stringify(action.resource)}" but expected project "${projectId}" and dataset "${dataset}".`,
-          )
-        }
         if (!resource) resource = action.resource
         if (action.resource !== resource) {
           throw new Error(
             `Mismatched resources found in actions. All actions must belong to the same resource. Found "${JSON.stringify(action.resource)}" but expected "${JSON.stringify(resource)}".`,
           )
         }
-      } else if (action.projectId) {
-        if (resource) {
-          throw new Error(
-            `Mismatches between projectId/dataset options and resource in actions. Found projectId "${action.projectId}" and dataset "${action.dataset}" but expected resource "${JSON.stringify(resource)}".`,
-          )
-        }
-        if (!projectId) projectId = action.projectId
-        if (action.projectId !== projectId) {
-          throw new Error(
-            `Mismatched project IDs found in actions. All actions must belong to the same project. Found "${action.projectId}" but expected "${projectId}".`,
-          )
-        }
-
-        if (action.dataset) {
-          if (!dataset) dataset = action.dataset
-          if (action.dataset !== dataset) {
-            throw new Error(
-              `Mismatched datasets found in actions. All actions must belong to the same dataset. Found "${action.dataset}" but expected "${dataset}".`,
-            )
-          }
-        }
       }
+    }
+
+    // Fall back to the resource from normalized options (injected from context in the React layer)
+    const effectiveResource = resource ?? normalizedOptions?.resource
+    if (!effectiveResource) {
+      throw new Error('No resource found. Provide a resource via the action handle or context.')
     }
 
     return applyDocumentActions(instance, {
       actions,
-      resource,
+      resource: effectiveResource,
       ...normalizedOptions,
     })
   }

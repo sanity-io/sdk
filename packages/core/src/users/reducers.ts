@@ -6,7 +6,7 @@ import {DEFAULT_USERS_BATCH_SIZE} from './usersConstants'
 
 /** @internal */
 export const getUsersKey = (
-  instance: SanityInstance,
+  _instance: SanityInstance,
   {
     resourceType,
     organizationId,

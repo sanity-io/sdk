@@ -105,27 +105,23 @@ export const subscribeToStateAndFetchBatches = ({
 
         const projectionQuery$ = new Observable<ProjectionQueryResult[]>((observer) => {
           const {getCurrent, observable} = getQueryState<ProjectionQueryResult[]>(instance, {
-            ...{
-              query,
-              params,
-              tag: PROJECTION_TAG,
-              perspective,
-            },
-            ...(resource ? {resource} : {}),
+            query,
+            params,
+            tag: PROJECTION_TAG,
+            perspective,
+            resource,
           })
 
           const querySource$ = defer(() => {
             if (getCurrent() === undefined) {
               return from(
                 resolveQuery<ProjectionQueryResult[]>(instance, {
-                  ...{
-                    query,
-                    params,
-                    tag: PROJECTION_TAG,
-                    signal: controller.signal,
-                    perspective,
-                  },
-                  ...(resource ? {resource} : {}),
+                  query,
+                  params,
+                  tag: PROJECTION_TAG,
+                  signal: controller.signal,
+                  perspective,
+                  resource,
                 }),
               ).pipe(switchMap(() => observable))
             }
@@ -144,27 +140,23 @@ export const subscribeToStateAndFetchBatches = ({
 
         const statusQuery$ = new Observable<StatusQueryResult[]>((observer) => {
           const {getCurrent, observable} = getQueryState<StatusQueryResult[]>(instance, {
-            ...{
-              query: statusQuery,
-              params: statusParams,
-              tag: PROJECTION_TAG,
-              perspective: 'raw',
-            },
-            ...(resource ? {resource} : {}),
+            query: statusQuery,
+            params: statusParams,
+            tag: PROJECTION_TAG,
+            perspective: 'raw',
+            resource,
           })
 
           const statusQuerySource$ = defer(() => {
             if (getCurrent() === undefined) {
               return from(
                 resolveQuery<StatusQueryResult[]>(instance, {
-                  ...{
-                    query: statusQuery,
-                    params: statusParams,
-                    tag: PROJECTION_TAG,
-                    signal: controller.signal,
-                    perspective: 'raw',
-                  },
-                  ...(resource ? {resource} : {}),
+                  query: statusQuery,
+                  params: statusParams,
+                  tag: PROJECTION_TAG,
+                  signal: controller.signal,
+                  perspective: 'raw',
+                  resource,
                 }),
               ).pipe(switchMap(() => observable))
             }

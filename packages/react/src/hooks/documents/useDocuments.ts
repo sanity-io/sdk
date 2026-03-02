@@ -1,8 +1,8 @@
 import {
   createGroqSearchFilter,
-  type DatasetHandle,
   type DocumentHandle,
   type QueryOptions,
+  type ResourceHandle,
 } from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
 import {useCallback, useEffect, useMemo, useState} from 'react'
@@ -21,14 +21,8 @@ const DEFAULT_BATCH_SIZE = 25
  * @public
  * @category Types
  */
-export interface DocumentsOptions<
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->
-  extends
-    WithResourceNameSupport<DatasetHandle<TDataset, TProjectId>>,
-    Pick<QueryOptions, 'perspective' | 'params'> {
+export interface DocumentsOptions<TDocumentType extends string = string>
+  extends WithResourceNameSupport<ResourceHandle>, Pick<QueryOptions, 'perspective' | 'params'> {
   /**
    * Filter documents by their `_type`. Can be a single type or an array of types.
    */
@@ -58,15 +52,11 @@ export interface DocumentsOptions<
  * @public
  * @category Types
  */
-export interface DocumentsResponse<
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> {
+export interface DocumentsResponse<TDocumentType extends string = string> {
   /**
    * Array of document handles for the current batch
    */
-  data: DocumentHandle<TDocumentType, TDataset, TProjectId>[]
+  data: DocumentHandle<TDocumentType>[]
   /**
    * Whether there are more items available to load
    */
@@ -194,11 +184,7 @@ export interface DocumentsResponse<
  * }
  * ```
  */
-export function useDocuments<
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->({
+export function useDocuments<TDocumentType extends string = string>({
   batchSize = DEFAULT_BATCH_SIZE,
   params,
   search,
@@ -206,11 +192,7 @@ export function useDocuments<
   orderings,
   documentType,
   ...rawOptions
-}: DocumentsOptions<TDocumentType, TDataset, TProjectId>): DocumentsResponse<
-  TDocumentType,
-  TDataset,
-  TProjectId
-> {
+}: DocumentsOptions<TDocumentType>): DocumentsResponse<TDocumentType> {
   const options = useNormalizedResourceOptions(rawOptions)
   const [limit, setLimit] = useState(batchSize)
   const documentTypes = useMemo(
@@ -278,7 +260,7 @@ export function useDocuments<
   const {
     data: {count, data},
     isPending,
-  } = useQuery<{count: number; data: DocumentHandle<TDocumentType, TDataset, TProjectId>[]}>({
+  } = useQuery<{count: number; data: DocumentHandle<TDocumentType>[]}>({
     ...options,
     query: `{"count":${countQuery},"data":${dataQuery}}`,
     params: {

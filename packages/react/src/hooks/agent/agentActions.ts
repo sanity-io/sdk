@@ -428,7 +428,9 @@ function promptAdapter(
 export function useAgentPrompt(): (
   options: AgentPromptOptions & WithResourceNameSupport<AgentResourceOptions>,
 ) => Promise<AgentPromptResult> {
-  return useAgentCallback(promptAdapter)
+  return useAgentCallback(promptAdapter) as (
+    options: AgentPromptOptions & WithResourceNameSupport<AgentResourceOptions>,
+  ) => Promise<AgentPromptResult>
 }
 
 /**
@@ -594,5 +596,7 @@ function patchAdapter(
 export function useAgentPatch(): (
   options: AgentPatchOptions & WithResourceNameSupport<AgentResourceOptions>,
 ) => Promise<AgentPatchResult> {
-  return useAgentCallback(patchAdapter)
+  return useAgentCallback(patchAdapter) as (
+    options: AgentPatchOptions & WithResourceNameSupport<AgentResourceOptions>,
+  ) => Promise<AgentPatchResult>
 }

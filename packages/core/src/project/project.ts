@@ -5,7 +5,8 @@ import {createFetcherStore} from '../utils/createFetcherStore'
 
 const API_VERSION = 'v2025-02-19'
 
-type ProjectHandle = {
+/** @public */
+export type ProjectHandle = {
   projectId: string
 }
 const project = createFetcherStore({

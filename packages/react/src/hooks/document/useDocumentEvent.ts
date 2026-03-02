@@ -1,16 +1,16 @@
-import {type DatasetHandle, type DocumentEvent, subscribeDocumentEvents} from '@sanity/sdk'
+import {type DocumentEvent, type ResourceHandle, subscribeDocumentEvents} from '@sanity/sdk'
 import {useCallback, useEffect, useInsertionEffect, useRef} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
+import {
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 
 /**
  * @public
  */
-export interface UseDocumentEventOptions<
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends DatasetHandle<TDataset, TProjectId> {
+export interface UseDocumentEventOptions extends WithResourceNameSupport<ResourceHandle> {
   onEvent: (documentEvent: DocumentEvent) => void
 }
 
@@ -69,12 +69,9 @@ export interface UseDocumentEventOptions<
  * }
  * ```
  */
-export function useDocumentEvent<
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
+export function useDocumentEvent(
   // Single options object parameter
-  options: UseDocumentEventOptions<TDataset, TProjectId>,
+  options: UseDocumentEventOptions,
 ): void {
   // Destructure handler and datasetHandle from options
   const normalizedOptions = useNormalizedResourceOptions(options)

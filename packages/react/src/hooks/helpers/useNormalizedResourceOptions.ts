@@ -57,7 +57,7 @@ export function normalizeResourceOptions<
   resources: Record<string, DocumentResource>,
   contextResource?: DocumentResource,
   contextPerspective?: PerspectiveHandle['perspective'],
-): Omit<T, 'resourceName'> {
+): Omit<T, 'resourceName' | 'resource'> & {resource: DocumentResource} {
   const {resourceName, projectId, dataset, mediaLibraryId, canvasId, ...rest} = options
 
   if (resourceName && Object.hasOwn(options, 'resource')) {
@@ -111,7 +111,7 @@ export function normalizeResourceOptions<
     ...rest,
     ...(resolvedResource && {resource: resolvedResource}),
     ...(resolvedPerspective !== undefined && {perspective: resolvedPerspective}),
-  } as Omit<T, 'resourceName'>
+  } as Omit<T, 'resourceName' | 'resource'> & {resource: DocumentResource}
 }
 
 /**
@@ -159,7 +159,7 @@ export function useNormalizedResourceOptions<
     mediaLibraryId?: string
     canvasId?: string
   },
->(options: T): Omit<T, 'resourceName'> {
+>(options: T): Omit<T, 'resourceName' | 'resource'> & {resource: DocumentResource} {
   const resources = useContext(ResourcesContext)
   const contextResource = useContext(ResourceContext)
   const contextPerspective = useContext(PerspectiveContext)

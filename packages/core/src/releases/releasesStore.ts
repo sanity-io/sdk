@@ -69,10 +69,8 @@ const _getActiveReleasesState = bindActionByResource(
  */
 export const getActiveReleasesState = (
   instance: SanityInstance,
-  options?: {resource?: DocumentResource},
-): StateSource<ReleaseDocument[] | undefined> =>
-  // bindActionByResource keyFn destructures { resource } from the first param, so pass {} when no options
-  _getActiveReleasesState(instance, options ?? {})
+  options: {resource: DocumentResource},
+): StateSource<ReleaseDocument[] | undefined> => _getActiveReleasesState(instance, options)
 
 const RELEASES_QUERY = 'releases::all()'
 
@@ -84,7 +82,7 @@ const subscribeToReleases = ({
   const {observable: releases$} = getQueryState<ReleaseDocument[]>(instance, {
     query: RELEASES_QUERY,
     perspective: 'raw',
-    ...(resource ? {resource} : {}),
+    resource,
     tag: 'releases',
   })
   return releases$
