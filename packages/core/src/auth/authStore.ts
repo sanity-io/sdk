@@ -2,7 +2,6 @@ import {type ClientConfig, createClient, type SanityClient} from '@sanity/client
 import {type CurrentUser} from '@sanity/types'
 
 import {type AuthConfig, type AuthProvider} from '../config/authConfig'
-import {getDefaultProjectId} from '../config/sanityConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore} from '../store/defineStore'
@@ -133,7 +132,7 @@ export const authStore = defineStore<AuthStoreState>({
 
     const strategyOptions: AuthStrategyOptions = {
       authConfig,
-      projectId: getDefaultProjectId(instance.config),
+      projectId: instance.config.auth?.projectId,
       initialLocationHref,
       clientFactory,
       tokenSource: instance.config.studio?.auth?.token,

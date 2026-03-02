@@ -59,7 +59,7 @@ export interface StateSource<T> {
  * const getUserByProjectId = createStateSourceAction(
  *   ({ state, instance }: SelectorContext<UsersState>, options?: ProjectHandle) => {
  *     const allUsers = state.users
- *     const projectId = options?.projectId ?? getDefaultProjectId(instance.config)
+ *     const projectId = options?.projectId ?? instance.config.auth?.projectId
  *     return allUsers.filter(user => user.projectId === projectId)
  *   }
  * )

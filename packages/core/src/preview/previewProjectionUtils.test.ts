@@ -58,9 +58,7 @@ describe('normalizeMedia', () => {
 })
 
 describe('transformProjectionToPreview', () => {
-  const instance = createSanityInstance({
-    defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
-  })
+  const instance = createSanityInstance()
 
   beforeEach(async () => {
     vi.clearAllMocks()

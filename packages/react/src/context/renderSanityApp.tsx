@@ -1,4 +1,4 @@
-import {DEFAULT_RESOURCE_NAME, type DocumentResource, type SanityConfig} from '@sanity/sdk'
+import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
 import {StrictMode} from 'react'
 import {createRoot} from 'react-dom/client'
 
@@ -8,16 +8,19 @@ interface RenderSanitySDKAppOptions {
   reactStrictMode?: boolean
 }
 
+interface NamedResourceEntry extends SanityConfig {
+  resource?: DocumentResource
+}
+
 interface NamedResources {
-  [key: string]: SanityConfig
+  [key: string]: NamedResourceEntry
 }
 
 /**
- * Merges multiple named SanityConfig objects into a single config.
- * Each entry's `defaultResource` is extracted into a `resources` map keyed by
- * the entry name, then the remaining config properties are shallow-merged
- * (last config wins for overlapping keys). The merged config's
- * `defaultResource` is set from `resources['default']` so the two stay in sync.
+ * Merges multiple named resource entries into a single config and resources map.
+ * Each entry's `resource` is extracted into a `resources` map keyed by the entry name,
+ * then the remaining config properties are shallow-merged (last config wins for
+ * overlapping keys).
  */
 function mergeNamedResources(namedResources: NamedResources): {
   config: SanityConfig
@@ -26,17 +29,12 @@ function mergeNamedResources(namedResources: NamedResources): {
   const resources: Record<string, DocumentResource> = {}
   let mergedConfig: SanityConfig = {}
 
-  for (const [name, cfg] of Object.entries(namedResources)) {
-    const {defaultResource, ...rest} = cfg
+  for (const [name, entry] of Object.entries(namedResources)) {
+    const {resource, ...rest} = entry
     mergedConfig = {...mergedConfig, ...rest}
-    if (defaultResource) {
-      resources[name] = defaultResource
+    if (resource) {
+      resources[name] = resource
     }
-  }
-
-  const defaultResource = resources[DEFAULT_RESOURCE_NAME]
-  if (defaultResource) {
-    mergedConfig = {...mergedConfig, defaultResource}
   }
 
   return {config: mergedConfig, resources}

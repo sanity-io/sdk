@@ -71,12 +71,7 @@ export {
   type WindowMessage,
 } from '../comlink/types'
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
-export {
-  createDatasetHandle,
-  createDocumentHandle,
-  createDocumentTypeHandle,
-  createProjectHandle,
-} from '../config/handles'
+export {createDocumentHandle, createDocumentTypeHandle} from '../config/handles'
 export {
   configureLogging,
   type InstanceContext,
@@ -88,22 +83,18 @@ export {
 } from '../config/loggingConfig'
 export {
   type CanvasResource,
-  type DatasetHandle,
+  type ResourceHandle as DatasetHandle,
   type DatasetResource,
   DEFAULT_RESOURCE_NAME,
   type DocumentHandle,
   type DocumentResource,
   type DocumentTypeHandle,
-  getDefaultDatasetResource,
-  getDefaultProjectId,
   isCanvasResource,
   isDatasetResource,
   isMediaLibraryResource,
   type MediaLibraryResource,
   type PerspectiveHandle,
-  type ProjectHandle,
   type ReleasePerspective,
-  resolveDefaultResource,
   type SanityConfig,
   type StudioConfig,
   type TokenSource,

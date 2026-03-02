@@ -23,7 +23,6 @@ describe('subscribeToStorageEventsAndSetToken', () => {
     vi.clearAllMocks()
 
     instance = createSanityInstance({
-      defaultResource: {projectId: 'p', dataset: 'd'},
       auth: {storageArea: storageArea},
     })
 

@@ -1,4 +1,4 @@
-import {getDefaultProjectId, type SanityInstance} from '@sanity/sdk'
+import {type SanityInstance} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
@@ -44,13 +44,17 @@ describe('createCallbackHook', () => {
 
   it('should create new callback when instance changes', () => {
     // Create a test callback
-    const testCallback = (instance: SanityInstance) => getDefaultProjectId(instance.config)
+    const testCallback = (instance: SanityInstance) => instance.config.auth?.projectId
 
     // Create and render our hook with first provider
     const useTestHook = createCallbackHook(testCallback)
     const {result, unmount} = renderHook(() => useTestHook(), {
       wrapper: ({children}) => (
-        <ResourceProvider resource={{projectId: 'p1', dataset: 'd'}} fallback={null}>
+        <ResourceProvider
+          auth={{projectId: 'p1'}}
+          resource={{projectId: 'p1', dataset: 'd'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -66,7 +70,11 @@ describe('createCallbackHook', () => {
     // Re-render with different provider configuration
     const {result: result2} = renderHook(() => useTestHook(), {
       wrapper: ({children}) => (
-        <ResourceProvider resource={{projectId: 'p2', dataset: 'd'}} fallback={null}>
+        <ResourceProvider
+          auth={{projectId: 'p2'}}
+          resource={{projectId: 'p2', dataset: 'd'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -85,7 +93,7 @@ describe('createCallbackHook', () => {
       method: string,
       data: object,
     ) => ({
-      url: `${getDefaultProjectId(instance.config)}${path}`,
+      url: `${instance.config.auth?.projectId}${path}`,
       method,
       data,
     })
@@ -93,7 +101,11 @@ describe('createCallbackHook', () => {
     const useTestHook = createCallbackHook(testCallback)
     const {result} = renderHook(() => useTestHook(), {
       wrapper: ({children}) => (
-        <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
+        <ResourceProvider
+          auth={{projectId: 'p'}}
+          resource={{projectId: 'p', dataset: 'd'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),

@@ -47,7 +47,7 @@ describe('applyDocumentActions', () => {
       events: eventsSubject,
     }
     state = createStoreState(initialState)
-    instance = createSanityInstance({defaultResource: {projectId: 'p', dataset: 'd'}})
+    instance = createSanityInstance()
     const key = {name: 'p.d', resource: {projectId: 'p', dataset: 'd'}}
 
     vi.mocked(bindActionByResource).mockImplementation(
@@ -149,9 +149,7 @@ describe('applyDocumentActions', () => {
   })
 
   it('uses explicit resource even when instance default differs', async () => {
-    const otherInstance = createSanityInstance({
-      defaultResource: {projectId: 'child-p', dataset: 'child-d'},
-    })
+    const otherInstance = createSanityInstance()
     const action: DocumentAction = {
       type: 'document.edit',
       documentId: 'doc1',

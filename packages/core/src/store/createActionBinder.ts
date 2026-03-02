@@ -1,17 +1,18 @@
 import {
-  type DatasetHandle,
   type DocumentResource,
   isCanvasResource,
   isDatasetResource,
   isMediaLibraryResource,
   type PerspectiveHandle,
-  resolveDefaultResource,
+  type ResourceHandle,
 } from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type SanityInstance} from './createSanityInstance'
 import {createStoreInstance, type StoreInstance} from './createStoreInstance'
 import {type StoreState} from './createStoreState'
 import {type StoreContext, type StoreDefinition} from './defineStore'
+
+const DEFAULT_PERSPECTIVE = 'drafts'
 
 export interface BoundResourceKey {
   name: string
@@ -123,32 +124,14 @@ const resourceKeyName = (resource: DocumentResource): string => {
   throw new Error(`Received invalid resource: ${JSON.stringify(resource)}`)
 }
 
-const createResourceKey = (
-  instance: SanityInstance,
-  resource?: DocumentResource,
-): BoundResourceKey => {
-  if (resource) {
-    return {name: resourceKeyName(resource), resource}
-  }
-
-  const defaultResource = resolveDefaultResource(instance.config)
-  if (!defaultResource) {
-    throw new Error(
-      'No resource provided and no default resource configured. ' +
-        'Provide a "default" resource in your resources map, or pass an explicit resource.',
-    )
-  }
-  return {name: resourceKeyName(defaultResource), resource: defaultResource}
-}
-
 /**
  * Binds an action to a store that's scoped to a specific document resource.
  **/
 export const bindActionByResource = createActionBinder<
   BoundResourceKey,
-  [{resource?: DocumentResource}, ...unknown[]]
->((instance, {resource}) => {
-  return createResourceKey(instance, resource)
+  [{resource: DocumentResource}, ...unknown[]]
+>((_instance, {resource}) => {
+  return {name: resourceKeyName(resource), resource}
 })
 
 /**
@@ -188,11 +171,10 @@ export const bindActionByResource = createActionBinder<
  */
 export const bindActionByResourceAndPerspective = createActionBinder<
   BoundPerspectiveKey,
-  [DatasetHandle, ...unknown[]]
->((instance, options): BoundPerspectiveKey => {
+  [ResourceHandle, ...unknown[]]
+>((_instance, options): BoundPerspectiveKey => {
   const {resource, perspective} = options
-  // TODO: remove reference to instance.config.perspective when we get to v3
-  const utilizedPerspective = perspective ?? instance.config.perspective ?? 'drafts'
+  const utilizedPerspective = perspective ?? DEFAULT_PERSPECTIVE
   let perspectiveKey: string
   if (isReleasePerspective(utilizedPerspective)) {
     perspectiveKey = utilizedPerspective.releaseName
@@ -200,10 +182,10 @@ export const bindActionByResourceAndPerspective = createActionBinder<
     perspectiveKey = utilizedPerspective
   } else {
     throw new Error(
-      `Stackable perspectives are not supported. Received perspective: ${JSON.stringify(utilizedPerspective)}`,
+      `Stackable perspectives are not supported. Received perspective: ${JSON.stringify(perspective)}`,
     )
   }
-  const resourceKey = createResourceKey(instance, resource)
+  const resourceKey = {name: resourceKeyName(resource), resource}
 
   return {
     name: `${resourceKey.name}:${perspectiveKey}`,

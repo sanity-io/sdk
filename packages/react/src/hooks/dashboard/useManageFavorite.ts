@@ -10,12 +10,13 @@ import {
   type DocumentHandle,
   type FavoriteStatusResponse,
   type FrameMessage,
-  getDefaultDatasetResource,
   getFavoritesState,
+  isDatasetResource,
   resolveFavoritesState,
 } from '@sanity/sdk'
-import {useCallback, useMemo, useSyncExternalStore} from 'react'
+import {useCallback, useContext, useMemo, useSyncExternalStore} from 'react'
 
+import {ResourceContext} from '../../context/DefaultResourceContext'
 import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -94,9 +95,11 @@ export function useManageFavorite({
     connectTo: SDK_CHANNEL_NAME,
   })
   const instance = useSanityInstance()
-  const defaultResource = getDefaultDatasetResource(instance.config)
-  const projectId = paramProjectId ?? defaultResource?.projectId
-  const dataset = paramDataset ?? defaultResource?.dataset
+  const contextResource = useContext(ResourceContext)
+  const defaultDatasetResource =
+    contextResource && isDatasetResource(contextResource) ? contextResource : undefined
+  const projectId = paramProjectId ?? defaultDatasetResource?.projectId
+  const dataset = paramDataset ?? defaultDatasetResource?.dataset
 
   if (resourceType === 'studio' && (!projectId || !dataset)) {
     throw new Error('projectId and dataset are required for studio resources')

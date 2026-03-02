@@ -2,7 +2,6 @@ import {type Observable} from 'rxjs'
 import {TestScheduler} from 'rxjs/testing'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {getDefaultProjectId} from '../config/sanityConfig'
 import {
   compareProjectOrganization,
   type OrgVerificationResult,
@@ -33,9 +32,9 @@ vi.mock('../project/organizationVerification', async (importOriginal) => {
 describe('observeOrganizationVerificationState', () => {
   let testScheduler: TestScheduler
 
-  // Mock instance (projectId from defaultResource)
+  // Mock instance with auth.projectId
   const mockInstance = {
-    config: {defaultResource: {projectId: 'proj-1', dataset: 'd'}},
+    config: {auth: {projectId: 'proj-1'}},
   } as unknown as SanityInstance
 
   beforeEach(() => {
@@ -81,7 +80,7 @@ describe('observeOrganizationVerificationState', () => {
       const expectedValues = {a: {error: null}}
 
       const result$ = observeOrganizationVerificationState(mockInstance, [
-        getDefaultProjectId(mockInstance.config)!,
+        mockInstance.config.auth!.projectId!,
       ])
       expectObservable(result$).toBe(expectedMarble, expectedValues)
     })
@@ -90,7 +89,7 @@ describe('observeOrganizationVerificationState', () => {
 
   it('should emit {error: null} if instance has no default source projectId', () => {
     const instanceWithoutProjectId = {
-      config: {defaultResource: {projectId: undefined, dataset: 'd'}},
+      config: {auth: {}},
     } as unknown as SanityInstance
 
     testScheduler.run(({hot, expectObservable}) => {
@@ -139,7 +138,7 @@ describe('observeOrganizationVerificationState', () => {
       const expectedValues = {r: {error: null}} // Expect null error
 
       const result$ = observeOrganizationVerificationState(mockInstance, [
-        getDefaultProjectId(mockInstance.config)!,
+        mockInstance.config.auth!.projectId!,
       ])
       expectObservable(result$).toBe(expectedMarble, expectedValues)
     })
@@ -163,7 +162,7 @@ describe('observeOrganizationVerificationState', () => {
       const expectedValues = {r: comparisonResult}
 
       const result$ = observeOrganizationVerificationState(mockInstance, [
-        getDefaultProjectId(mockInstance.config)!,
+        mockInstance.config.auth!.projectId!,
       ])
       expectObservable(result$).toBe(expectedMarble, expectedValues)
     })
@@ -187,7 +186,7 @@ describe('observeOrganizationVerificationState', () => {
       const expectedValues = {r: comparisonResult}
 
       const result$ = observeOrganizationVerificationState(mockInstance, [
-        getDefaultProjectId(mockInstance.config)!,
+        mockInstance.config.auth!.projectId!,
       ])
       expectObservable(result$).toBe(expectedMarble, expectedValues)
     })

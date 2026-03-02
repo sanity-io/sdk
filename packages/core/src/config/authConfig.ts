@@ -76,4 +76,11 @@ export interface AuthConfig {
    * ignoring any storage or callback handling.
    */
   token?: string
+
+  /**
+   * The project ID associated with this auth configuration.
+   * Used by studio mode to derive the localStorage key for the studio auth token
+   * (`__studio_auth_token_<projectId>`).
+   */
+  projectId?: string
 }

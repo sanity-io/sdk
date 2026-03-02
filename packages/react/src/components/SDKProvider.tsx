@@ -1,4 +1,9 @@
-import {type DocumentResource, isDatasetResource, type SanityConfig} from '@sanity/sdk'
+import {
+  DEFAULT_RESOURCE_NAME,
+  type DocumentResource,
+  isDatasetResource,
+  type SanityConfig,
+} from '@sanity/sdk'
 import {type ReactElement, type ReactNode, useMemo} from 'react'
 
 import {ResourceProvider} from '../context/ResourceProvider'
@@ -47,10 +52,24 @@ export function SDKProvider({
   ...props
 }: SDKProviderProps): ReactElement {
   const projectIds = useMemo(() => collectProjectIds(resources), [resources])
-  const {defaultResource, ...restConfig} = config
+
+  const defaultProjectId = useMemo(() => {
+    const r = resources[DEFAULT_RESOURCE_NAME]
+    return r && isDatasetResource(r) ? r.projectId : undefined
+  }, [resources])
+
+  const rootResource = useMemo(() => resources[DEFAULT_RESOURCE_NAME], [resources])
+
+  const effectiveConfig = useMemo<SanityConfig>(
+    () => ({
+      ...config,
+      auth: defaultProjectId ? {...config.auth, projectId: defaultProjectId} : config.auth,
+    }),
+    [config, defaultProjectId],
+  )
 
   return (
-    <ResourceProvider resource={defaultResource} {...restConfig} fallback={fallback}>
+    <ResourceProvider {...effectiveConfig} resource={rootResource} fallback={fallback}>
       <AuthBoundary {...props} projectIds={projectIds}>
         <ResourcesContext.Provider value={resources}>{children}</ResourcesContext.Provider>
       </AuthBoundary>

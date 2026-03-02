@@ -12,7 +12,6 @@ import {
   isCanvasResource,
   isDatasetResource,
   isMediaLibraryResource,
-  resolveDefaultResource,
 } from '../config/sanityConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
@@ -196,8 +195,8 @@ export const getClient = bindActionGlobally(
     const {clients, authMethod} = state.get()
 
     let resource: ClientResource | undefined
-    let projectId: string | undefined
-    let dataset: string | undefined
+    let projectId: string | undefined = options.projectId
+    let dataset: string | undefined = options.dataset
 
     if (options.resource) {
       if (isMediaLibraryResource(options.resource)) {
@@ -208,21 +207,12 @@ export const getClient = bindActionGlobally(
         projectId = options.resource.projectId
         dataset = options.resource.dataset
       }
-      // temporary excluding dataset resource as a resource for now. Many of the global API endpoints require vX api version.
+      // temporarily excluding dataset resource as a resource for now. Many of the global API endpoints require vX api version.
+      // When ready, remove the above check and uncomment the below check.
       // } else if (isDatasetResource(options.resource)) {
       //   resource = {type: 'dataset', id: `${options.resource.projectId}.${options.resource.dataset}`}
     }
 
-    projectId = projectId ?? options.projectId
-    dataset = dataset ?? options.dataset
-
-    if (!projectId || !dataset) {
-      const defaultResource = resolveDefaultResource(instance.config)
-      if (defaultResource && isDatasetResource(defaultResource)) {
-        projectId = projectId ?? defaultResource.projectId
-        dataset = dataset ?? defaultResource.dataset
-      }
-    }
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost
 
     const effectiveOptions = {

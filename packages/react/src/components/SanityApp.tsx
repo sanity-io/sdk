@@ -43,7 +43,6 @@ function deriveFromWorkspace(workspace: StudioWorkspaceHandle): {
 } {
   return {
     config: {
-      defaultResource: {projectId: workspace.projectId, dataset: workspace.dataset},
       studio: {
         authenticated: workspace.authenticated,
         auth: workspace.auth.token ? {token: workspace.auth.token} : undefined,
@@ -129,14 +128,11 @@ export function SanityApp({
 
   const resolvedConfig = useMemo<SanityConfig>(() => {
     if (configProp) {
-      if (!configProp.defaultResource && resourcesProp?.[DEFAULT_RESOURCE_NAME]) {
-        return {...configProp, defaultResource: resourcesProp[DEFAULT_RESOURCE_NAME]}
-      }
       return configProp
     }
     if (derived) return derived.config
     return {}
-  }, [configProp, derived, resourcesProp])
+  }, [configProp, derived])
 
   const resolvedResources = useMemo<Record<string, DocumentResource>>(() => {
     if (resourcesProp) return resourcesProp

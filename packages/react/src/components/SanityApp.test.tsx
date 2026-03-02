@@ -59,9 +59,7 @@ describe('SanityApp', () => {
   })
 
   it('renders SDKProvider with a single config', () => {
-    const singleConfig = {
-      defaultResource: {projectId: 'test-project', dataset: 'production'},
-    }
+    const singleConfig = {}
 
     render(
       <SanityApp config={singleConfig} fallback={<div>Loading...</div>}>
@@ -91,9 +89,7 @@ describe('SanityApp', () => {
     const originalTop = window.top
     const originalSelf = window.self
 
-    const mockSanityConfig: SanityConfig = {
-      defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
-    }
+    const mockSanityConfig: SanityConfig = {}
 
     const mockTop = {}
     Object.defineProperty(window, 'top', {
@@ -137,9 +133,7 @@ describe('SanityApp', () => {
       href: 'http://sanity-test.app',
     }
 
-    const mockSanityConfig: SanityConfig = {
-      defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
-    }
+    const mockSanityConfig: SanityConfig = {}
 
     Object.defineProperty(window, 'location', {
       value: mockLocation,
@@ -200,9 +194,7 @@ describe('SanityApp', () => {
   it('does not redirect to core if not inside iframe and local url', async () => {
     const originalLocation = window.location
 
-    const mockSanityConfig: SanityConfig = {
-      defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
-    }
+    const mockSanityConfig: SanityConfig = {}
 
     const mockLocation = {
       replace: vi.fn(),
@@ -243,7 +235,6 @@ describe('SanityApp', () => {
     }
 
     const mockSanityConfig: SanityConfig = {
-      defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
       studio: {},
     }
 
@@ -282,7 +273,6 @@ describe('SanityApp', () => {
     }
 
     const mockSanityConfig: SanityConfig = {
-      defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
       studio: {},
     }
 

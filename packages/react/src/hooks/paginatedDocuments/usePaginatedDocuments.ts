@@ -1,15 +1,14 @@
 import {
   createGroqSearchFilter,
   type DocumentHandle,
-  getDefaultDatasetResource,
   isDatasetResource,
   type QueryOptions,
 } from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
 import {pick} from 'lodash-es'
-import {useCallback, useEffect, useMemo, useState} from 'react'
+import {useCallback, useContext, useEffect, useMemo, useState} from 'react'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {ResourceContext} from '../../context/DefaultResourceContext'
 import {
   useNormalizedResourceOptions,
   type WithResourceNameSupport,
@@ -250,7 +249,7 @@ export function usePaginatedDocuments<
   TDataset,
   TProjectId
 > {
-  const instance = useSanityInstance()
+  const contextResource = useContext(ResourceContext)
   const options = useNormalizedResourceOptions(rawOptions)
   const [pageIndex, setPageIndex] = useState(0)
   const key = JSON.stringify({filter, search, params, orderings, pageSize, ...options})
@@ -314,7 +313,9 @@ export function usePaginatedDocuments<
       ...params,
       __types: documentTypes,
       __handle: {
-        ...getDefaultDatasetResource(instance.config),
+        ...(contextResource && isDatasetResource(contextResource)
+          ? {projectId: contextResource.projectId, dataset: contextResource.dataset}
+          : {}),
         ...(options.resource && isDatasetResource(options.resource)
           ? {
               projectId: options.resource.projectId,
