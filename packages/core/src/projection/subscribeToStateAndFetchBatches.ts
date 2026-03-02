@@ -41,7 +41,7 @@ interface StatusQueryResult {
 export const subscribeToStateAndFetchBatches = ({
   state,
   instance,
-  key: {source, perspective},
+  key: {resource, perspective},
 }: StoreContext<ProjectionStoreState, BoundPerspectiveKey>): Subscription => {
   const documentProjections$ = state.observable.pipe(
     map((s) => s.documentProjections),
@@ -111,7 +111,7 @@ export const subscribeToStateAndFetchBatches = ({
               tag: PROJECTION_TAG,
               perspective,
             },
-            source,
+            ...(resource ? {resource} : {}),
           })
 
           const querySource$ = defer(() => {
@@ -125,7 +125,7 @@ export const subscribeToStateAndFetchBatches = ({
                     signal: controller.signal,
                     perspective,
                   },
-                  source,
+                  ...(resource ? {resource} : {}),
                 }),
               ).pipe(switchMap(() => observable))
             }
@@ -150,7 +150,7 @@ export const subscribeToStateAndFetchBatches = ({
               tag: PROJECTION_TAG,
               perspective: 'raw',
             },
-            source,
+            ...(resource ? {resource} : {}),
           })
 
           const statusQuerySource$ = defer(() => {
@@ -164,7 +164,7 @@ export const subscribeToStateAndFetchBatches = ({
                     signal: controller.signal,
                     perspective: 'raw',
                   },
-                  source,
+                  ...(resource ? {resource} : {}),
                 }),
               ).pipe(switchMap(() => observable))
             }

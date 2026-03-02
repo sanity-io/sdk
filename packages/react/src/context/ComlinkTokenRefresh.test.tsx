@@ -56,7 +56,10 @@ describe('ComlinkTokenRefresh', () => {
       it('should not request new token on 401 if not in dashboard', async () => {
         mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN})
         const {rerender} = render(
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
             <ComlinkTokenRefreshProvider>
               <div>Test</div>
             </ComlinkTokenRefreshProvider>
@@ -69,7 +72,10 @@ describe('ComlinkTokenRefresh', () => {
         })
         act(() => {
           rerender(
-            <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+            <ResourceProvider
+              resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+              fallback={null}
+            >
               <ComlinkTokenRefreshProvider>
                 <div>Test</div>
               </ComlinkTokenRefreshProvider>
@@ -92,7 +98,10 @@ describe('ComlinkTokenRefresh', () => {
       it('should initialize useWindowConnection with correct parameters when not in studio mode', () => {
         // Simulate studio mode disabled by default
         render(
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
             <ComlinkTokenRefreshProvider>
               <div>Test</div>
             </ComlinkTokenRefreshProvider>
@@ -124,7 +133,10 @@ describe('ComlinkTokenRefresh', () => {
         document.body.appendChild(errorContainer)
 
         render(
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
             <ComlinkTokenRefreshProvider>
               <div>Test</div>
             </ComlinkTokenRefreshProvider>
@@ -141,7 +153,9 @@ describe('ComlinkTokenRefresh', () => {
         // Assert setAuthToken was called with instance matching provider config
         const instanceArg = mockSetAuthToken.mock.calls[0][0]
         expect(instanceArg.config).toEqual(
-          expect.objectContaining({projectId: 'test-project', dataset: 'test-dataset'}),
+          expect.objectContaining({
+            defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
+          }),
         )
         // Unauthorized error container should be removed
         expect(document.getElementById('__sanityError')).toBeNull()
@@ -155,7 +169,10 @@ describe('ComlinkTokenRefresh', () => {
         mockFetch.mockResolvedValueOnce({token: null})
 
         render(
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
             <ComlinkTokenRefreshProvider>
               <div>Test</div>
             </ComlinkTokenRefreshProvider>
@@ -177,7 +194,10 @@ describe('ComlinkTokenRefresh', () => {
         mockFetch.mockRejectedValueOnce(new Error('Fetch failed'))
 
         render(
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
             <ComlinkTokenRefreshProvider>
               <div>Test</div>
             </ComlinkTokenRefreshProvider>

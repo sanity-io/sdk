@@ -73,9 +73,9 @@ export interface DatasetHandle<TDataset extends string = string, TProjectId exte
   dataset?: TDataset
   /**
    * @beta
-   * Explicit source object to use for this operation.
+   * Explicit resource object to use for this operation.
    */
-  source?: DocumentSource
+  resource?: DocumentResource
 }
 
 /**
@@ -114,13 +114,45 @@ export interface DocumentHandle<
 }
 
 /**
- * Represents the complete configuration for a Sanity SDK instance
+ * The key used to identify the default resource in a resources map.
+ * When no `resource` or `resourceName` is specified, the SDK resolves
+ * the resource registered under this name.
+ *
  * @public
  */
-export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
+export const DEFAULT_RESOURCE_NAME = 'default'
+
+/**
+ * Represents the complete configuration for a Sanity SDK instance.
+ *
+ * Most apps configure resources via the `resources` prop on `SanityApp`:
+ *
+ * @example Typical React usage
+ * ```tsx
+ * <SanityApp
+ *   resources={{ default: { projectId: 'abc123', dataset: 'production' } }}
+ *   fallback={<Loading />}
+ * >
+ *   <App />
+ * </SanityApp>
+ * ```
+ *
+ * The `defaultResource` field is set automatically by the React layer from
+ * `resources['default']`. It can also be set directly when using the core
+ * SDK without React (e.g. in a Node.js script):
+ *
+ * @example Direct core usage (without React)
+ * ```ts
+ * const instance = createSanityInstance({
+ *   defaultResource: { projectId: 'abc123', dataset: 'production' },
+ * })
+ * ```
+ *
+ * @public
+ */
+export interface SanityConfig extends PerspectiveHandle {
   /**
    * Authentication configuration for the instance
-   * @remarks Merged with parent configurations when using createChild
    */
   auth?: AuthConfig
   /**
@@ -134,52 +166,94 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
   studio?: StudioConfig
 
   /**
+   * The default document resource for this instance. Used by auth (projectId),
+   * client fallback, and logging when no explicit resource is provided.
+   *
    * @beta
-   * A list of named sources to use for this instance.
    */
-  sources?: Record<string, DocumentSource>
+  defaultResource?: DocumentResource
 }
 
 /**
- * A document source can be used for querying.
+ * A document resource can be used for querying.
  * This will soon be the default way to identify where you are querying from.
  *
  * @beta
  */
-export type DocumentSource = DatasetSource | MediaLibrarySource | CanvasSource
+export type DocumentResource = DatasetResource | MediaLibraryResource | CanvasResource
 
 /**
  * @beta
  */
-export type DatasetSource = {projectId: string; dataset: string}
+export type DatasetResource = {projectId: string; dataset: string}
 
 /**
  * @beta
  */
-export type MediaLibrarySource = {mediaLibraryId: string}
+export type MediaLibraryResource = {mediaLibraryId: string}
 
 /**
  * @beta
  */
-export type CanvasSource = {canvasId: string}
+export type CanvasResource = {canvasId: string}
 
 /**
  * @beta
  */
-export function isDatasetSource(source: DocumentSource): source is DatasetSource {
-  return 'projectId' in source && 'dataset' in source
+export function isDatasetResource(resource: DocumentResource): resource is DatasetResource {
+  return 'projectId' in resource && 'dataset' in resource
 }
 
 /**
  * @beta
  */
-export function isMediaLibrarySource(source: DocumentSource): source is MediaLibrarySource {
-  return 'mediaLibraryId' in source
+export function isMediaLibraryResource(
+  resource: DocumentResource,
+): resource is MediaLibraryResource {
+  return 'mediaLibraryId' in resource
 }
 
 /**
  * @beta
  */
-export function isCanvasSource(source: DocumentSource): source is CanvasSource {
-  return 'canvasId' in source
+export function isCanvasResource(resource: DocumentResource): resource is CanvasResource {
+  return 'canvasId' in resource
+}
+
+/**
+ * Resolves the default `DocumentResource` from a `SanityConfig`.
+ *
+ * @internal
+ */
+export function resolveDefaultResource(config: SanityConfig): DocumentResource | undefined {
+  return config.defaultResource
+}
+
+/**
+ * Extracts the `projectId` from the config's default resource.
+ * Returns `undefined` when no default resource exists or it is not a
+ * {@link DatasetResource}.
+ *
+ * Useful for project-level operations (auth, CORS, project API) that
+ * need a projectId but should not depend on data-targeting config.
+ *
+ * @internal
+ */
+export function getDefaultProjectId(config: SanityConfig): string | undefined {
+  const resource = resolveDefaultResource(config)
+  if (resource && isDatasetResource(resource)) return resource.projectId
+  return undefined
+}
+
+/**
+ * Extracts `projectId` and `dataset` from the config's default resource.
+ * Returns `undefined` when no default resource exists or it is not a
+ * {@link DatasetResource}.
+ *
+ * @internal
+ */
+export function getDefaultDatasetResource(config: SanityConfig): DatasetResource | undefined {
+  const resource = resolveDefaultResource(config)
+  if (resource && isDatasetResource(resource)) return resource
+  return undefined
 }

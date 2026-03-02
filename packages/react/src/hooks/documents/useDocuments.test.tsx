@@ -3,6 +3,7 @@ import {evaluateSync, parse, toJS} from 'groq-js'
 import {describe, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
+import {ResourcesContext} from '../../context/ResourcesContext'
 import {useQuery} from '../query/useQuery'
 import {useDocuments} from './useDocuments'
 
@@ -79,7 +80,10 @@ describe('useDocuments', () => {
     const customBatchSize = 2
     const {result} = renderHook(() => useDocuments({batchSize: customBatchSize}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -91,7 +95,10 @@ describe('useDocuments', () => {
   it('should filter by document type', () => {
     const {result} = renderHook(() => useDocuments({filter: '_type == "movie"'}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -105,7 +112,10 @@ describe('useDocuments', () => {
   it.skip('should apply search filter', () => {
     const {result} = renderHook(() => useDocuments({search: 'inter'}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -124,7 +134,10 @@ describe('useDocuments', () => {
         }),
       {
         wrapper: ({children}) => (
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
             {children}
           </ResourceProvider>
         ),
@@ -139,7 +152,10 @@ describe('useDocuments', () => {
     const batchSize = 2
     const {result} = renderHook(() => useDocuments({batchSize: batchSize}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -157,7 +173,10 @@ describe('useDocuments', () => {
   it('should indicate when there is more data to load', () => {
     const {result} = renderHook(() => useDocuments({batchSize: 3}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -175,7 +194,10 @@ describe('useDocuments', () => {
     const {result, rerender} = renderHook((props) => useDocuments(props), {
       initialProps: {batchSize: 2, filter: ''},
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -197,7 +219,10 @@ describe('useDocuments', () => {
   it('should add projectId and dataset to document handles', () => {
     const {result} = renderHook(() => useDocuments({}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -211,6 +236,29 @@ describe('useDocuments', () => {
     expect(
       result.current.data.every(
         (doc) => doc.projectId === 'test-project' && doc.dataset === 'test-dataset',
+      ),
+    ).toBe(true)
+  })
+
+  it('should resolve resourceName to the named dataset resource', () => {
+    const resources = {
+      default: {projectId: 'test-project', dataset: 'test-dataset'},
+      secondary: {projectId: 'secondary-project', dataset: 'secondary-dataset'},
+    }
+
+    const {result} = renderHook(() => useDocuments({resourceName: 'secondary'}), {
+      wrapper: ({children}) => (
+        <ResourceProvider resource={resources.default} fallback={null}>
+          <ResourcesContext.Provider value={resources}>{children}</ResourcesContext.Provider>
+        </ResourceProvider>
+      ),
+    })
+
+    expect(result.current.data[0].projectId).toBe('secondary-project')
+    expect(result.current.data[0].dataset).toBe('secondary-dataset')
+    expect(
+      result.current.data.every(
+        (doc) => doc.projectId === 'secondary-project' && doc.dataset === 'secondary-dataset',
       ),
     ).toBe(true)
   })

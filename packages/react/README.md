@@ -32,10 +32,12 @@ Opens at `https://www.sanity.io/welcome?dev=http%3A%2F%2Flocalhost%3A3333`, prox
 ```tsx
 import {SanityApp, type SanityConfig} from '@sanity/sdk-react'
 
-const config: SanityConfig[] = [
-  {projectId: 'abc123', dataset: 'production'},
-  {projectId: 'def456', dataset: 'production'}, // multi-project support
-]
+const config: SanityConfig = {
+  sources: {
+    'default': {projectId: 'abc123', dataset: 'production'},
+    'second-project': {projectId: 'def456', dataset: 'production'},
+  },
+}
 
 export function App() {
   return (

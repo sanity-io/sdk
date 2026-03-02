@@ -12,7 +12,6 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
     ...actual,
     getPresence: vi.fn(),
     createSanityInstance: vi.fn(() => ({
-      createChild: vi.fn(),
       isDisposed: vi.fn(() => false),
       dispose: vi.fn(),
     })),
@@ -63,7 +62,10 @@ describe('usePresence', () => {
 
     const {result, unmount} = renderHook(() => usePresence(), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -85,31 +87,37 @@ describe('usePresence', () => {
     unmount()
   })
 
-  it('should throw an error when used with a media library source', () => {
+  it('should throw an error when used with a media library resource', () => {
     expect(() => {
-      renderHook(() => usePresence({source: {mediaLibraryId: 'ml123'}}), {
+      renderHook(() => usePresence({resource: {mediaLibraryId: 'ml123'}}), {
         wrapper: ({children}) => (
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
             {children}
           </ResourceProvider>
         ),
       })
-    }).toThrow('usePresence() does not support media library sources')
+    }).toThrow('usePresence() does not support media library resources')
   })
 
-  it('should throw an error when used with a canvas source', () => {
+  it('should throw an error when used with a canvas resource', () => {
     expect(() => {
-      renderHook(() => usePresence({source: {canvasId: 'canvas123'}}), {
+      renderHook(() => usePresence({resource: {canvasId: 'canvas123'}}), {
         wrapper: ({children}) => (
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
             {children}
           </ResourceProvider>
         ),
       })
-    }).toThrow('usePresence() does not support canvas sources')
+    }).toThrow('usePresence() does not support canvas resources')
   })
 
-  it('should work with a dataset source', () => {
+  it('should work with a dataset resource', () => {
     const mockPresenceSource = {
       getCurrent: vi.fn().mockReturnValue([]),
       subscribe: vi.fn(() => () => {}),
@@ -118,10 +126,13 @@ describe('usePresence', () => {
     vi.mocked(getPresence).mockReturnValue(mockPresenceSource)
 
     const {result, unmount} = renderHook(
-      () => usePresence({source: {projectId: 'test-project', dataset: 'test-dataset'}}),
+      () => usePresence({resource: {projectId: 'test-project', dataset: 'test-dataset'}}),
       {
         wrapper: ({children}) => (
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
             {children}
           </ResourceProvider>
         ),

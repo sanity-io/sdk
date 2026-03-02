@@ -4,6 +4,7 @@ import {
   AuthStateType,
   getClientErrorApiBody,
   getClientErrorApiDescription,
+  getDefaultProjectId,
   isProjectUserNotFoundClientError,
 } from '@sanity/sdk'
 import {useCallback, useEffect, useState} from 'react'
@@ -39,9 +40,8 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
 
   const logout = useLogOut()
   const authState = useAuthState()
-  const {
-    config: {projectId},
-  } = useSanityInstance()
+  const instance = useSanityInstance()
+  const projectId = getDefaultProjectId(instance.config)
 
   const [authErrorMessage, setAuthErrorMessage] = useState(
     'Please try again or contact support if the problem persists.',

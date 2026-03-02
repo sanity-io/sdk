@@ -69,7 +69,9 @@ describe('presenceStore', () => {
     mockGetUserState = vi.fn(() => of(mockUser))
     vi.mocked(getUserState).mockImplementation(mockGetUserState)
 
-    instance = createSanityInstance({projectId: 'test-project', dataset: 'test-dataset'})
+    instance = createSanityInstance({
+      defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
+    })
   })
 
   afterEach(() => {
@@ -77,7 +79,7 @@ describe('presenceStore', () => {
   })
 
   describe('getPresence', () => {
-    const key = {source: {projectId: 'test-project', dataset: 'test-dataset'}}
+    const key = {resource: {projectId: 'test-project', dataset: 'test-dataset'}}
     it('creates bifur transport with correct parameters', () => {
       getPresence(instance, key)
 
@@ -245,27 +247,27 @@ describe('presenceStore', () => {
       unsubscribe()
     })
 
-    it('should throw an error when initialized with a media library source', () => {
-      const mediaLibrarySource = {mediaLibraryId: 'ml123'}
+    it('should throw an error when initialized with a media library resource', () => {
+      const mediaLibraryResource = {mediaLibraryId: 'ml123'}
 
       expect(() => {
-        getPresence(instance, {source: mediaLibrarySource})
-      }).toThrow('Presence is not supported for media library sources')
+        getPresence(instance, {resource: mediaLibraryResource})
+      }).toThrow('Presence is not supported for media library resources')
     })
 
-    it('should throw an error when initialized with a canvas source', () => {
-      const canvasSource = {canvasId: 'canvas123'}
+    it('should throw an error when initialized with a canvas resource', () => {
+      const canvasResource = {canvasId: 'canvas123'}
 
       expect(() => {
-        getPresence(instance, {source: canvasSource})
-      }).toThrow('Presence is not supported for canvas sources')
+        getPresence(instance, {resource: canvasResource})
+      }).toThrow('Presence is not supported for canvas resources')
     })
 
-    it('should work with a dataset source', () => {
-      const datasetSource = {projectId: 'test-project', dataset: 'test-dataset'}
+    it('should work with a dataset resource', () => {
+      const datasetResource = {projectId: 'test-project', dataset: 'test-dataset'}
 
       expect(() => {
-        getPresence(instance, {source: datasetSource})
+        getPresence(instance, {resource: datasetResource})
       }).not.toThrow()
     })
   })

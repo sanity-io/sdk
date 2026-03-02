@@ -14,7 +14,6 @@ import {
   type MultiResourceAuthorProjectionProjectionResult,
   MultiResourceMovieProjectionProjectionResult,
 } from '../../sanity.types'
-import {devConfigs, e2eConfigs} from '../sanityConfigs'
 
 function LoadingFallback({message = 'Loading...'}: {message?: string}) {
   return (
@@ -337,19 +336,16 @@ function MoviePreview({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
 }
 
 export function MultiResourceRoute(): JSX.Element {
-  const configs = import.meta.env['VITE_IS_E2E'] ? e2eConfigs : devConfigs
   const {data: authorDocuments} = useDocuments({
     documentType: 'author',
     batchSize: 1,
-    projectId: configs[0].projectId,
-    dataset: configs[0].dataset,
+    resourceName: 'default',
   })
 
   const {data: movieDocuments} = useDocuments({
     documentType: 'movie',
     batchSize: 1,
-    projectId: configs[1].projectId,
-    dataset: configs[1].dataset,
+    resourceName: 'secondary',
   })
 
   const authorHandle = authorDocuments[0] ?? null
@@ -368,8 +364,8 @@ export function MultiResourceRoute(): JSX.Element {
       <p style={{marginBottom: '2rem'}}>
         This route demonstrates how to use multiple resources in a single page.
         <br />
-        Note you must have access to both resources ({configs[0].projectId}.{configs[0].dataset} and{' '}
-        {configs[1].projectId}.{configs[1].dataset}) to see the documents.
+        Note you must have access to both the &quot;default&quot; and &quot;secondary&quot;
+        resources to see the documents.
       </p>
 
       <h2 style={{marginBottom: '1rem'}}>Document Editors</h2>
