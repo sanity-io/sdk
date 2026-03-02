@@ -1,7 +1,12 @@
 import {useClient} from '@sanity/sdk-react'
 import {Button} from '@sanity/ui'
-import {Author} from 'apps/kitchensink-react/sanity.types'
 import {type JSX, useState} from 'react'
+
+interface Author {
+  name?: string
+  role?: string
+  awards?: string[]
+}
 
 export default function ExperimentalResourceClientRoute(): JSX.Element {
   const projectId = 'ppsg7ml5'

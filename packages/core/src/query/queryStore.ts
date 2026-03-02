@@ -1,5 +1,4 @@
 import {CorsOriginError, type ResponseQueryOptions} from '@sanity/client'
-import {type SanityQueryResult} from 'groq'
 import {
   catchError,
   combineLatest,
@@ -298,16 +297,6 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
  *
  * @beta
  */
-export function getQueryState<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  instance: SanityInstance,
-  queryOptions: QueryOptions<TQuery, TDataset, TProjectId>,
-): StateSource<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`> | undefined>
-
-/** @beta */
 export function getQueryState<TData>(
   instance: SanityInstance,
   queryOptions: QueryOptions,
@@ -366,16 +355,6 @@ const _getQueryState = bindActionByResource(
  *
  * @beta
  */
-export function resolveQuery<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  instance: SanityInstance,
-  queryOptions: ResolveQueryOptions<TQuery, TDataset, TProjectId>,
-): Promise<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>>
-
-/** @beta */
 export function resolveQuery<TData>(
   instance: SanityInstance,
   queryOptions: ResolveQueryOptions,

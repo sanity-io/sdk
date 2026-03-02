@@ -30,7 +30,7 @@ function DocumentEditor({
   useDocumentEvent({...docHandle, onEvent: (e) => console.log(e)})
   const synced = useDocumentSyncStatus(docHandle)
 
-  const {data: document} = useDocument(docHandle)
+  const {data: document} = useDocument<Record<string, unknown>>(docHandle)
 
   return (
     <Box padding={4}>

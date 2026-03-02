@@ -1,7 +1,6 @@
 import {SanityEncoder} from '@sanity/mutate'
 import {type PatchMutation as SanityMutatePatchMutation} from '@sanity/mutate/_unstable_store'
-import {type PatchMutation, type PatchOperations} from '@sanity/types'
-import {type SanityDocument} from 'groq'
+import {type PatchMutation, type PatchOperations, type SanityDocument} from '@sanity/types'
 
 import {type DocumentHandle, type DocumentTypeHandle} from '../config/sanityConfig'
 import {getEffectiveDocumentId} from './util'
@@ -31,10 +30,7 @@ export interface CreateDocumentAction<
    * System fields (_id, _type, _rev, _createdAt, _updatedAt) are omitted as they are set automatically.
    */
   initialValue?: Partial<
-    Omit<
-      SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>,
-      '_id' | '_type' | '_rev' | '_createdAt' | '_updatedAt'
-    >
+    Omit<SanityDocument, '_id' | '_type' | '_rev' | '_createdAt' | '_updatedAt'>
   >
 }
 
@@ -134,10 +130,7 @@ export function createDocument<
 >(
   doc: DocumentTypeHandle<TDocumentType, TDataset, TProjectId>,
   initialValue?: Partial<
-    Omit<
-      SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>,
-      '_id' | '_type' | '_rev' | '_createdAt' | '_updatedAt'
-    >
+    Omit<SanityDocument, '_id' | '_type' | '_rev' | '_createdAt' | '_updatedAt'>
   >,
 ): CreateDocumentAction<TDocumentType, TDataset, TProjectId> {
   // users may pass in an explicit documentId -- make sure we format it correctly for the action

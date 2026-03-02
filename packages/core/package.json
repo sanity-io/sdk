@@ -74,7 +74,6 @@
     "@sanity/mutate": "^0.16.1",
     "@sanity/telemetry": "^1.0.0",
     "@sanity/types": "^5.2.0",
-    "groq": "3.88.1-typegen-experimental.0",
     "groq-js": "^1.19.0",
     "lodash-es": "^4.17.21",
     "reselect": "^5.1.1",

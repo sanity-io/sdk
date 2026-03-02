@@ -7,13 +7,7 @@ import {
   useEditDocument,
 } from '@sanity/sdk-react'
 import {Box, TextInput} from '@sanity/ui'
-import {defineProjection} from 'groq'
 import {JSX, Suspense, useRef} from 'react'
-
-import {
-  type MultiResourceAuthorProjectionProjectionResult,
-  MultiResourceMovieProjectionProjectionResult,
-} from '../../sanity.types'
 
 function LoadingFallback({message = 'Loading...'}: {message?: string}) {
   return (
@@ -33,18 +27,31 @@ interface DemoCardProps {
   forwardedRef?: React.RefObject<HTMLDivElement | null>
 }
 
-const multiResourceAuthorProjection = defineProjection(`{
+interface AuthorProjectionResult {
+  name?: string
+  role?: string
+  awardCount?: number
+  firstAward?: string
+}
+
+interface MovieProjectionResult {
+  title?: string
+  release_date?: string
+  hasPoster?: boolean
+}
+
+const multiResourceAuthorProjection = `{
   name,
   role,
   "awardCount": count(awards),
   "firstAward": awards[0]
-}`)
+}`
 
-const multiResourceMovieProjection = defineProjection(`{
+const multiResourceMovieProjection = `{
   title,
   release_date,
   "hasPoster": defined(hosted_poster_path)
-  }`)
+  }`
 
 interface ProjectionCardProps<TData = unknown> {
   docHandle: DocumentHandle
@@ -177,8 +184,21 @@ function DemoCard({
   )
 }
 
+interface Author {
+  _id: string
+  name?: string
+  role?: string
+  awards?: string[]
+}
+
+interface Movie {
+  _id: string
+  title?: string
+  tmdb_id?: string
+}
+
 function AuthorEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
-  const {data: author} = useDocument(docHandle)
+  const {data: author} = useDocument<Author>(docHandle)
   const setAuthorName = useEditDocument({...docHandle, path: 'name'})
 
   return (
@@ -222,7 +242,7 @@ function AuthorEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
 }
 
 function MovieEditor({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
-  const {data: movie} = useDocument(docHandle)
+  const {data: movie} = useDocument<Movie>(docHandle)
   const setMovieName = useEditDocument({...docHandle, path: 'title'})
 
   return (
@@ -258,7 +278,7 @@ function MovieEditor({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
 
 function AuthorProjection({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   return (
-    <ProjectionCard<MultiResourceAuthorProjectionProjectionResult>
+    <ProjectionCard<AuthorProjectionResult>
       docHandle={docHandle}
       projection={multiResourceAuthorProjection}
       title="Author Projection"
@@ -288,7 +308,7 @@ function AuthorProjection({docHandle}: {docHandle: DocumentHandle<'author'>}) {
 
 function MovieProjection({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
   return (
-    <ProjectionCard<MultiResourceMovieProjectionProjectionResult>
+    <ProjectionCard<MovieProjectionResult>
       docHandle={docHandle}
       projection={multiResourceMovieProjection}
       title="Movie Projection"

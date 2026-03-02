@@ -53,16 +53,6 @@ interface TestDocument extends SanityDocument {
   title?: string
 }
 
-// Scope the TestDocument type to the project/datasets used in tests
-type AllTestSchemaTypes = TestDocument
-
-// Augment the 'groq' module
-declare module 'groq' {
-  interface SanitySchemas {
-    default: AllTestSchemaTypes
-  }
-}
-
 let instance: SanityInstance
 let instance1: SanityInstance
 let instance2: SanityInstance
@@ -197,8 +187,8 @@ it('sets optimistic changes synchronously', async () => {
     documentType: 'article',
   }
 
-  const state1 = getDocumentState(instance1, doc1)
-  const state2 = getDocumentState(instance2, doc2)
+  const state1 = getDocumentState<TestDocument>(instance1, doc1)
+  const state2 = getDocumentState<TestDocument>(instance2, doc2)
 
   const unsubscribe1 = state1.subscribe()
   const unsubscribe2 = state2.subscribe()
@@ -249,8 +239,8 @@ it('sets optimistic changes synchronously', async () => {
 
 it('propagates changes between two instances', async () => {
   const doc = createDocumentHandle({documentId: 'doc-collab', documentType: 'article'})
-  const state1 = getDocumentState(instance1, doc)
-  const state2 = getDocumentState(instance2, doc)
+  const state1 = getDocumentState<TestDocument>(instance1, doc)
+  const state2 = getDocumentState<TestDocument>(instance2, doc)
 
   const state1Unsubscribe = state1.subscribe()
   const state2Unsubscribe = state2.subscribe()
@@ -282,8 +272,8 @@ it('propagates changes between two instances', async () => {
 
 it('handles concurrent edits and resolves conflicts', async () => {
   const doc = createDocumentHandle({documentId: 'doc-concurrent', documentType: 'article'})
-  const state1 = getDocumentState(instance1, doc)
-  const state2 = getDocumentState(instance2, doc)
+  const state1 = getDocumentState<TestDocument>(instance1, doc)
+  const state2 = getDocumentState<TestDocument>(instance2, doc)
 
   const state1Unsubscribe = state1.subscribe()
   const state2Unsubscribe = state2.subscribe()
@@ -360,7 +350,7 @@ it('deletes a document', async () => {
   const documentId = DocumentId('doc-delete')
   const doc = createDocumentHandle({documentId, documentType: 'article'})
 
-  const documentState = getDocumentState(instance, doc)
+  const documentState = getDocumentState<TestDocument>(instance, doc)
   const unsubscribe = documentState.subscribe()
 
   await applyDocumentActions(instance, {
@@ -398,14 +388,14 @@ it('cleans up document state when there are no subscribers', async () => {
   await new Promise((resolve) => setTimeout(resolve, 30))
 
   // When a new subscriber is created, if the state was cleared it should return undefined.
-  const newDocumentState = getDocumentState(instance, doc)
+  const newDocumentState = getDocumentState<TestDocument>(instance, doc)
   expect(newDocumentState.getCurrent()).toBeUndefined()
 })
 
 it('fetches documents if there are no active subscriptions for the actions applied', async () => {
   const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article'})
 
-  const {getCurrent} = getDocumentState(instance, doc)
+  const {getCurrent} = getDocumentState<TestDocument>(instance, doc)
   expect(getCurrent()).toBeUndefined()
   expect(getDocumentSyncStatus(instance, doc).getCurrent()).toBeUndefined()
 
@@ -460,7 +450,7 @@ it('fetches documents if there are no active subscriptions for the actions appli
 it('batches edit transaction into one outgoing transaction', async () => {
   const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
 
-  const unsubscribe = getDocumentState(instance, doc).subscribe()
+  const unsubscribe = getDocumentState<TestDocument>(instance, doc).subscribe()
 
   // this creates its own transaction
   applyDocumentActions(instance, {actions: [createDocument(doc)], resource})
@@ -493,7 +483,7 @@ it('submits liveEdit document edits through observable.mutate', async () => {
     documentType: 'article',
     liveEdit: true,
   })
-  const state = getDocumentState(instance, liveDoc)
+  const state = getDocumentState<TestDocument>(instance, liveDoc)
   const unsubscribe = state.subscribe()
 
   await firstValueFrom(state.observable.pipe(first((doc) => doc !== undefined)))
@@ -592,7 +582,7 @@ it('reverts failed outgoing transaction locally', async () => {
   const documentId = DocumentId(crypto.randomUUID())
   const doc = createDocumentHandle({documentId, documentType: 'article'})
 
-  const {getCurrent, subscribe} = getDocumentState(instance, doc)
+  const {getCurrent, subscribe} = getDocumentState<TestDocument>(instance, doc)
   const unsubscribe = subscribe()
 
   await applyDocumentActions(instance, {actions: [createDocument(doc)], resource})
@@ -658,7 +648,7 @@ it('removes a queued transaction if it fails to apply', async () => {
   })
 
   const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
-  const state = getDocumentState(instance, doc)
+  const state = getDocumentState<TestDocument>(instance, doc)
   const unsubscribe = state.subscribe()
 
   await expect(
@@ -697,7 +687,7 @@ it('returns allowed true when no permission errors occur', async () => {
     documentId: 'doc-perm-allowed',
     documentType: 'article',
   })
-  const state = getDocumentState(instance, doc)
+  const state = getDocumentState<TestDocument>(instance, doc)
   const unsubscribe = state.subscribe()
   await applyDocumentActions(instance, {actions: [createDocument(doc)], resource}).then((r) =>
     r.submitted(),
