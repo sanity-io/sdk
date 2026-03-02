@@ -9,9 +9,9 @@ import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransitio
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 // Overload 1: Explicit Type Provided
 /**
  * @public
@@ -41,7 +41,7 @@ import {
  * }
  * ```
  */
-export function useQuery<TData>(options: WithSourceNameSupport<QueryOptions>): {
+export function useQuery<TData>(options: WithResourceNameSupport<QueryOptions>): {
   /** The query result, cast to the provided type TData */
   data: TData
   /** True if another query is resolving in the background (suspense handles the initial loading state) */
@@ -65,15 +65,15 @@ export function useQuery<TData>(options: WithSourceNameSupport<QueryOptions>): {
  *
  * @category GROQ
  */
-export function useQuery(options: WithSourceNameSupport<QueryOptions>): {
+export function useQuery(options: WithResourceNameSupport<QueryOptions>): {
   data: unknown
   isPending: boolean
 } {
   // Implementation returns unknown, overloads define specifics
-  const instance = useSanityInstance(options)
+  const instance = useSanityInstance()
 
-  // Normalize options: resolve sourceName to source and strip sourceName
-  const normalized = useNormalizedSourceOptions(options)
+  // Normalize options: resolve resourceName to resource and strip resourceName
+  const normalized = useNormalizedResourceOptions(options)
 
   // Use React's useTransition to avoid UI jank when queries change
   const [isPending, startTransition] = useTransition()

@@ -4,9 +4,9 @@ import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxj
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 
 /**
  * @public
@@ -17,7 +17,7 @@ export interface useDocumentProjectionOptions<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> extends WithSourceNameSupport<DocumentHandle<TDocumentType, TDataset, TProjectId>> {
+> extends WithResourceNameSupport<DocumentHandle<TDocumentType, TDataset, TProjectId>> {
   /** The GROQ projection string */
   projection: TProjection
   /** Optional parameters for the projection query */
@@ -109,15 +109,15 @@ export function useDocumentProjection<TData extends object>({
   projection,
   ...docHandle
 }: useDocumentProjectionOptions): useDocumentProjectionResults<TData> {
-  const instance = useSanityInstance(docHandle)
+  const instance = useSanityInstance()
 
   // Normalize projection string to handle template literals with whitespace
   // This ensures that the same projection content produces the same state source
   // even if the string reference changes (e.g., from inline template literals)
   const normalizedProjection = useMemo(() => projection.trim(), [projection])
 
-  // Normalize options: resolve sourceName to source and strip sourceName
-  const normalizedDocHandle = useNormalizedSourceOptions(docHandle)
+  // Normalize options: resolve resourceName to resource and strip resourceName
+  const normalizedDocHandle = useNormalizedResourceOptions(docHandle)
 
   // Memoize stateSource based on normalized projection and docHandle properties
   // This prevents creating a new StateSource on every render when projection content is the same

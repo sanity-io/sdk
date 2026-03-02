@@ -1,5 +1,5 @@
 import {type Node} from '@sanity/comlink'
-import {beforeEach, describe, expect, it} from 'vitest'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from '../../store/createSanityInstance'
 import {createStoreState} from '../../store/createStoreState'
@@ -10,7 +10,9 @@ describe('nodeStore', () => {
   let instance: SanityInstance
 
   beforeEach(() => {
-    instance = createSanityInstance({projectId: 'test-project-id', dataset: 'test-dataset'})
+    instance = createSanityInstance({
+      defaultResource: {projectId: 'test-project-id', dataset: 'test-dataset'},
+    })
   })
 
   it('should have correct initial state', () => {

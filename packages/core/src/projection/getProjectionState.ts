@@ -2,7 +2,7 @@ import {DocumentId, getPublishedId} from '@sanity/id-utils'
 import {omit} from 'lodash-es'
 
 import {type DocumentHandle} from '../config/sanityConfig'
-import {bindActionBySourceAndPerspective} from '../store/createActionBinder'
+import {bindActionByResourceAndPerspective} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -52,7 +52,7 @@ export function getProjectionState(
 /**
  * @beta
  */
-export const _getProjectionState = bindActionBySourceAndPerspective(
+export const _getProjectionState = bindActionByResourceAndPerspective(
   projectionStore,
   createStateSourceAction({
     selector: (

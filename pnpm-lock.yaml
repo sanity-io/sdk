@@ -117,13 +117,10 @@ importers:
         specifier: ^1.26.2
         version: 1.26.2(react@19.2.1)
       react:
-        specifier: ^19
+        specifier: ^19.2
         version: 19.2.1
-      react-compiler-runtime:
-        specifier: 19.1.0-rc.1
-        version: 19.1.0-rc.1(react@19.2.1)
       react-dom:
-        specifier: ^19
+        specifier: ^19.2
         version: 19.2.1(react@19.2.1)
       react-error-boundary:
         specifier: ^5.0.0
@@ -456,9 +453,6 @@ importers:
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.23
-      react-compiler-runtime:
-        specifier: 19.1.0-rc.2
-        version: 19.1.0-rc.2(react@19.2.1)
       react-error-boundary:
         specifier: ^5.0.0
         version: 5.0.0(react@19.2.1)
@@ -6555,16 +6549,6 @@ packages:
 
   react-compiler-runtime@19.0.0-beta-e993439-20250405:
     resolution: {integrity: sha512-uTvtVgJR21Xy7XAthYbC3R9V00V/U7xP3BWrwpSvcmHgtar8+TweghRIankQJLps/g7HIYxy+dnXCGBy0cKv5w==}
-    peerDependencies:
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
-
-  react-compiler-runtime@19.1.0-rc.1:
-    resolution: {integrity: sha512-wCt6g+cRh8g32QT18/9blfQHywGjYu+4FlEc3CW1mx3pPxYzZZl1y+VtqxRgnKKBCFLIGUYxog4j4rs5YS86hw==}
-    peerDependencies:
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
-
-  react-compiler-runtime@19.1.0-rc.2:
-    resolution: {integrity: sha512-852AwyIsbWJ5o1LkQVAZsVK3iLjMxOfKZuxqeGd/RfD+j1GqHb6j3DSHLtpu4HhFbQHsP2DzxjJyKR6luv4D8w==}
     peerDependencies:
       react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
 
@@ -14869,14 +14853,6 @@ snapshots:
       react: 19.2.1
 
   react-compiler-runtime@19.0.0-beta-e993439-20250405(react@19.2.1):
-    dependencies:
-      react: 19.2.1
-
-  react-compiler-runtime@19.1.0-rc.1(react@19.2.1):
-    dependencies:
-      react: 19.2.1
-
-  react-compiler-runtime@19.1.0-rc.2(react@19.2.1):
     dependencies:
       react: 19.2.1
 

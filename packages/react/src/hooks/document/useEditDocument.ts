@@ -8,7 +8,7 @@ import {
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useNormalizedSourceOptions} from '../helpers/useNormalizedSourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {useApplyDocumentActions} from './useApplyDocumentActions'
 
 const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
@@ -141,8 +141,8 @@ export function useEditDocument({
   path,
   ...doc
 }: DocumentOptions<string | undefined>): (updater: Updater<unknown>) => Promise<ActionsResult> {
-  const instance = useSanityInstance(doc)
-  const normalizedDoc = useNormalizedSourceOptions(doc)
+  const instance = useSanityInstance()
+  const normalizedDoc = useNormalizedResourceOptions(doc)
 
   const apply = useApplyDocumentActions()
   const isDocumentReady = useCallback(

@@ -1,12 +1,9 @@
-import {pick} from 'lodash-es'
-
-import {type SanityConfig} from '../config/sanityConfig'
+import {getDefaultDatasetResource, type SanityConfig} from '../config/sanityConfig'
 import {insecureRandomId} from '../utils/ids'
 import {createLogger, type InstanceContext} from '../utils/logger'
 
 /**
- * Represents a Sanity.io resource instance with its own configuration and lifecycle
- * @remarks Instances form a hierarchy through parent/child relationships
+ * Represents a Sanity.io resource instance with its own configuration and lifecycle.
  *
  * @public
  */
@@ -17,10 +14,7 @@ export interface SanityInstance {
    */
   readonly instanceId: string
 
-  /**
-   * Resolved configuration for this instance
-   * @remarks Merges values from parent instances where appropriate
-   */
+  /** Resolved configuration for this instance */
   readonly config: SanityConfig
 
   /**
@@ -41,34 +35,12 @@ export interface SanityInstance {
    * @returns Function to unsubscribe the callback
    */
   onDispose(cb: () => void): () => void
-
-  /**
-   * Gets the parent instance in the hierarchy
-   * @returns Parent instance or undefined if this is the root
-   */
-  getParent(): SanityInstance | undefined
-
-  /**
-   * Creates a child instance with merged configuration
-   * @param config - Configuration to merge with parent values
-   * @remarks Child instances inherit parent configuration but can override values
-   */
-  createChild(config: SanityConfig): SanityInstance
-
-  /**
-   * Traverses the instance hierarchy to find the first instance whose configuration
-   * matches the given target config using a shallow comparison.
-   * @param targetConfig - A partial configuration object containing key-value pairs to match.
-   * @returns The first matching instance or undefined if no match is found.
-   */
-  match(targetConfig: Partial<SanityConfig>): SanityInstance | undefined
 }
 
 /**
  * Creates a new Sanity resource instance
  * @param config - Configuration for the instance (optional)
  * @returns A configured SanityInstance
- * @remarks When creating child instances, configurations are merged with parent values
  *
  * @public
  */
@@ -76,33 +48,29 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
   const instanceId = crypto.randomUUID()
   const disposeListeners = new Map<string, () => void>()
   const disposed = {current: false}
+  const defaultResource = getDefaultDatasetResource(config)
 
-  // Create instance context for logging
   const instanceContext: InstanceContext = {
     instanceId,
-    projectId: config.projectId,
-    dataset: config.dataset,
+    projectId: defaultResource?.projectId,
+    dataset: defaultResource?.dataset,
   }
 
-  // Create logger with instance context
   const logger = createLogger('sdk', {instanceContext})
 
-  // Log instance creation
   logger.info('Sanity instance created', {
-    hasProjectId: !!config.projectId,
-    hasDataset: !!config.dataset,
+    hasProjectId: !!defaultResource?.projectId,
+    hasDefaultResource: !!config.defaultResource,
     hasAuth: !!config.auth,
     hasPerspective: !!config.perspective,
   })
 
-  // Log configuration details at debug level
   logger.debug('Instance configuration', {
-    projectId: config.projectId,
-    dataset: config.dataset,
+    projectId: defaultResource?.projectId,
+    dataset: defaultResource?.dataset,
     perspective: config.perspective,
     hasStudioConfig: !!config.studio,
     hasStudioTokenSource: !!config.studio?.auth?.token,
-    legacyStudioMode: config.studioMode?.enabled,
     hasAuthProviders: !!config.auth?.providers,
     hasAuthToken: !!config.auth?.token,
   })
@@ -131,43 +99,6 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
       return () => {
         disposeListeners.delete(listenerId)
       }
-    },
-    getParent: () => undefined,
-    createChild: (next) => {
-      logger.debug('Creating child instance', {
-        parentInstanceId: instanceId.slice(0, 8),
-        overridingProjectId: !!next.projectId,
-        overridingDataset: !!next.dataset,
-        overridingAuth: !!next.auth,
-      })
-      const child = Object.assign(
-        createSanityInstance({
-          ...config,
-          ...next,
-          ...(config.auth === next.auth
-            ? config.auth
-            : config.auth && next.auth && {auth: {...config.auth, ...next.auth}}),
-        }),
-        {getParent: () => instance},
-      )
-      logger.trace('Child instance created', {
-        internal: true,
-        childInstanceId: child.instanceId.slice(0, 8),
-      })
-      return child
-    },
-    match: (targetConfig) => {
-      if (
-        Object.entries(pick(targetConfig, 'auth', 'projectId', 'dataset')).every(
-          ([key, value]) => config[key as keyof SanityConfig] === value,
-        )
-      ) {
-        return instance
-      }
-
-      const parent = instance.getParent()
-      if (parent) return parent.match(targetConfig)
-      return undefined
     },
   }
 

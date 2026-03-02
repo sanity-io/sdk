@@ -63,7 +63,6 @@
     "@sanity/types": "^5.2.0",
     "@types/lodash-es": "^4.17.12",
     "lodash-es": "^4.17.21",
-    "react-compiler-runtime": "19.1.0-rc.2",
     "react-error-boundary": "^5.0.0",
     "rxjs": "^7.8.2"
   },
@@ -97,8 +96,8 @@
     "vitest": "^3.2.4"
   },
   "peerDependencies": {
-    "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "packageManager": "pnpm@10.8.0",
   "engines": {

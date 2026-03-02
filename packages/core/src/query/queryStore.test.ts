@@ -3,7 +3,7 @@ import {delay, filter, firstValueFrom, Observable, of, Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
-import {isCanvasSource} from '../config/sanityConfig'
+import {isCanvasResource} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {getQueryState, resolveQuery} from './queryStore'
@@ -48,7 +48,7 @@ describe('queryStore', () => {
   }
 
   beforeEach(() => {
-    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    instance = createSanityInstance({defaultResource: {projectId: 'test', dataset: 'test'}})
 
     fetch = vi
       .fn()
@@ -373,13 +373,11 @@ describe('queryStore', () => {
     }) as SanityClient['observable']['fetch'])
 
     const draftsInstance = createSanityInstance({
-      projectId: 'test',
-      dataset: 'test',
+      defaultResource: {projectId: 'test', dataset: 'test'},
       perspective: 'drafts',
     })
     const publishedInstance = createSanityInstance({
-      projectId: 'test',
-      dataset: 'test',
+      defaultResource: {projectId: 'test', dataset: 'test'},
       perspective: 'published',
     })
 
@@ -418,7 +416,7 @@ describe('queryStore', () => {
       >
     }) as SanityClient['observable']['fetch'])
 
-    const base = createSanityInstance({projectId: 'test', dataset: 'test'})
+    const base = createSanityInstance({defaultResource: {projectId: 'test', dataset: 'test'}})
 
     const sDrafts = getQueryState<{_id: string}[]>(base, {
       query: '*[_type == "movie"]',
@@ -448,11 +446,11 @@ describe('queryStore', () => {
     base.dispose()
   })
 
-  it('uses source from params when passed in query options (listenForNewSubscribersAndFetch)', async () => {
+  it('uses resource from params when passed in query options (listenForNewSubscribersAndFetch)', async () => {
     const query = '*[_type == "movie"]'
-    const mediaLibrarySource = {mediaLibraryId: 'ml123'}
+    const mediaLibraryResource = {mediaLibraryId: 'ml123'}
 
-    const state = getQueryState(instance, {query, source: mediaLibrarySource})
+    const state = getQueryState(instance, {query, resource: mediaLibraryResource})
     const unsubscribe = state.subscribe()
 
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -462,7 +460,7 @@ describe('queryStore', () => {
     expect(getClientState).toHaveBeenCalledWith(
       instance,
       expect.objectContaining({
-        source: expect.objectContaining({
+        resource: expect.objectContaining({
           mediaLibraryId: 'ml123',
         }),
       }),
@@ -471,11 +469,11 @@ describe('queryStore', () => {
     unsubscribe()
   })
 
-  it('uses source from store context key when not a dataset source (listenToLiveClientAndSetLastLiveEventIds)', async () => {
+  it('uses resource from store context key when not a dataset resource (listenToLiveClientAndSetLastLiveEventIds)', async () => {
     const query = '*[_type == "movie"]'
-    const canvasSource = {canvasId: 'canvas456'}
+    const canvasResource = {canvasId: 'canvas456'}
 
-    const state = getQueryState(instance, {query, source: canvasSource})
+    const state = getQueryState(instance, {query, resource: canvasResource})
     const unsubscribe = state.subscribe()
 
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -486,10 +484,66 @@ describe('queryStore', () => {
     const calls = vi.mocked(getClientState).mock.calls
     const liveClientCall = calls.find(
       ([_instance, options]) =>
-        isCanvasSource(options.source!) && options.source.canvasId === 'canvas456',
+        isCanvasResource(options.resource!) && options.resource.canvasId === 'canvas456',
     )
     expect(liveClientCall).toBeDefined()
 
     unsubscribe()
+  })
+
+  it('uses bound resource (not instance default) when a shared store receives a query without an explicit resource', async () => {
+    // Regression test: when a store for source B is first created by an
+    // instance whose default source is A (passing source B explicitly),
+    // subsequent queries added to that store without an explicit source
+    // must still use resource B for client creation — not fall back to the
+    // captured instance's default resource A.
+    const projectASource = {projectId: 'project-a', dataset: 'production'}
+    const projectBSource = {projectId: 'project-b', dataset: 'production'}
+
+    const rootInstance = createSanityInstance({defaultResource: projectASource})
+
+    // 1. Root instance queries with an explicit source for project B.
+    //    This creates the QueryStore:project-b.production store, whose
+    //    initialize() captures rootInstance in its closure.
+    const stateWithResource = getQueryState(rootInstance, {
+      query: '*[_type == "author"]',
+      resource: projectBSource,
+    })
+    const unsub1 = stateWithResource.subscribe()
+    await firstValueFrom(stateWithResource.observable.pipe(filter((i) => i !== undefined)))
+
+    vi.mocked(getClientState).mockClear()
+
+    // 2. A second instance with project B as its default queries the SAME
+    //    store (same composite key) but does NOT pass an explicit resource.
+    const secondInstance = createSanityInstance({defaultResource: projectBSource})
+    const stateNoResource = getQueryState(secondInstance, {query: '*[_type == "movie"]'})
+    const unsub2 = stateNoResource.subscribe()
+    await firstValueFrom(stateNoResource.observable.pipe(filter((i) => i !== undefined)))
+
+    // The listener should create a client using the bound source (project B),
+    // not the captured rootInstance's default (project A).
+    const fetchCalls = vi.mocked(getClientState).mock.calls
+    const wrongCall = fetchCalls.find(
+      ([, options]) =>
+        options.projectId === 'project-a' ||
+        (options.resource &&
+          'projectId' in options.resource &&
+          options.resource.projectId === 'project-a'),
+    )
+    expect(wrongCall).toBeUndefined()
+
+    const correctCall = fetchCalls.find(
+      ([, options]) =>
+        options.resource &&
+        'projectId' in options.resource &&
+        options.resource.projectId === 'project-b',
+    )
+    expect(correctCall).toBeDefined()
+
+    unsub1()
+    unsub2()
+    secondInstance.dispose()
+    rootInstance.dispose()
   })
 })
