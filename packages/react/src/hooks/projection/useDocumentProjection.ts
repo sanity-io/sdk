@@ -5,9 +5,9 @@ import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxj
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 
 /**
@@ -19,7 +19,7 @@ export interface useDocumentProjectionOptions<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> extends WithSourceNameSupport<DocumentHandle<TDocumentType, TDataset, TProjectId>> {
+> extends WithResourceNameSupport<DocumentHandle<TDocumentType, TDataset, TProjectId>> {
   /** The GROQ projection string */
   projection: TProjection
   /** Optional parameters for the projection query */
@@ -181,7 +181,7 @@ export function useDocumentProjection<TData extends object>({
   projection,
   ...docHandle
 }: useDocumentProjectionOptions): useDocumentProjectionResults<TData> {
-  const instance = useSanityInstance(docHandle)
+  const instance = useSanityInstance()
   trackHookUsage(instance, 'useDocumentProjection')
 
   // Normalize projection string to handle template literals with whitespace
@@ -189,8 +189,8 @@ export function useDocumentProjection<TData extends object>({
   // even if the string reference changes (e.g., from inline template literals)
   const normalizedProjection = useMemo(() => projection.trim(), [projection])
 
-  // Normalize options: resolve sourceName to source and strip sourceName
-  const normalizedDocHandle = useNormalizedSourceOptions(docHandle)
+  // Normalize options: resolve resourceName to resource and strip resourceName
+  const normalizedDocHandle = useNormalizedResourceOptions(docHandle)
 
   // Memoize stateSource based on normalized projection and docHandle properties
   // This prevents creating a new StateSource on every render when projection content is the same

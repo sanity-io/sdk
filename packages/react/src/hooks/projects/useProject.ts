@@ -6,7 +6,6 @@ import {
   type SanityProject,
   type StateSource,
 } from '@sanity/sdk'
-import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
@@ -47,5 +46,4 @@ export const useProject: UseProject = createStateSourceHook({
   shouldSuspend: (instance, projectHandle) =>
     getProjectState(instance, projectHandle).getCurrent() === undefined,
   suspender: resolveProject,
-  getConfig: identity,
 })

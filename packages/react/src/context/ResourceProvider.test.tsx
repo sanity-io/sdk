@@ -1,14 +1,15 @@
-import {type SanityConfig, type SanityInstance} from '@sanity/sdk'
+import {type DocumentResource, type SanityConfig, type SanityInstance} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
-import {StrictMode, use, useEffect} from 'react'
+import {StrictMode, use, useContext, useEffect} from 'react'
 import {describe, expect, it, vi} from 'vitest'
 
+import {ResourceContext} from './DefaultResourceContext'
+import {PerspectiveContext} from './PerspectiveContext'
 import {ResourceProvider} from './ResourceProvider'
 import {SanityInstanceContext} from './SanityInstanceContext'
 
-const testConfig: SanityConfig = {
-  projectId: 'test-project',
-  dataset: 'test-dataset',
+const testConfig = {
+  resource: {projectId: 'test-project', dataset: 'test-dataset'} as DocumentResource,
 }
 
 function promiseWithResolvers<T = void>(): {
@@ -73,32 +74,108 @@ describe('ResourceProvider', () => {
     )
 
     await expect(promise).resolves.toMatchObject({
-      config: testConfig,
+      config: {defaultResource: testConfig.resource} as SanityConfig,
       isDisposed: expect.any(Function),
     })
   })
 
-  it('creates child instance when parent context exists', async () => {
-    const parentConfig: SanityConfig = {...testConfig, dataset: 'parent-dataset'}
-    const child = promiseWithResolvers<SanityInstance | null>()
+  it('provides ResourceContext and PerspectiveContext at root', async () => {
+    const captured = promiseWithResolvers<{
+      resource: DocumentResource | undefined
+      perspective: unknown
+    }>()
 
-    const CaptureInstance = () => {
-      const childInstance = use(SanityInstanceContext)
-      useEffect(() => child.resolve(childInstance), [childInstance])
+    const CaptureContexts = () => {
+      const resource = useContext(ResourceContext)
+      const perspective = useContext(PerspectiveContext)
+      useEffect(() => captured.resolve({resource, perspective}), [resource, perspective])
       return null
     }
 
     render(
-      <ResourceProvider {...parentConfig} fallback={null}>
-        <ResourceProvider {...testConfig} fallback={null}>
-          <CaptureInstance />
+      <ResourceProvider
+        resource={{projectId: 'abc', dataset: 'prod'}}
+        perspective="drafts"
+        fallback={null}
+      >
+        <CaptureContexts />
+      </ResourceProvider>,
+    )
+
+    const result = await captured.promise
+    expect(result.resource).toEqual({projectId: 'abc', dataset: 'prod'})
+    expect(result.perspective).toBe('drafts')
+  })
+
+  it('nested provider overrides resource and perspective via context', async () => {
+    const captured = promiseWithResolvers<{
+      instance: SanityInstance | null
+      resource: DocumentResource | undefined
+      perspective: unknown
+    }>()
+
+    const CaptureAll = () => {
+      const instance = use(SanityInstanceContext)
+      const resource = useContext(ResourceContext)
+      const perspective = useContext(PerspectiveContext)
+      useEffect(
+        () => captured.resolve({instance, resource, perspective}),
+        [instance, resource, perspective],
+      )
+      return null
+    }
+
+    render(
+      <ResourceProvider resource={{projectId: 'parent-proj', dataset: 'parent-ds'}} fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'child-proj', dataset: 'child-ds'}}
+          perspective="drafts"
+          fallback={null}
+        >
+          <CaptureAll />
         </ResourceProvider>
       </ResourceProvider>,
     )
 
-    const childInstance = await child.promise
-    expect(childInstance?.config).toEqual(testConfig)
-    expect(childInstance?.isDisposed()).toBe(false)
+    const result = await captured.promise
+    // Instance is the parent's (nested provider does not create a new one)
+    expect(result.instance?.config.defaultResource).toEqual({
+      projectId: 'parent-proj',
+      dataset: 'parent-ds',
+    })
+    // Resource and perspective come from the nested provider's context
+    expect(result.resource).toEqual({projectId: 'child-proj', dataset: 'child-ds'})
+    expect(result.perspective).toBe('drafts')
+  })
+
+  it('nested provider inherits parent context when not overridden', async () => {
+    const captured = promiseWithResolvers<{
+      resource: DocumentResource | undefined
+      perspective: unknown
+    }>()
+
+    const CaptureContexts = () => {
+      const resource = useContext(ResourceContext)
+      const perspective = useContext(PerspectiveContext)
+      useEffect(() => captured.resolve({resource, perspective}), [resource, perspective])
+      return null
+    }
+
+    render(
+      <ResourceProvider
+        resource={{projectId: 'parent-proj', dataset: 'parent-ds'}}
+        perspective="drafts"
+        fallback={null}
+      >
+        <ResourceProvider fallback={null}>
+          <CaptureContexts />
+        </ResourceProvider>
+      </ResourceProvider>,
+    )
+
+    const result = await captured.promise
+    expect(result.resource).toEqual({projectId: 'parent-proj', dataset: 'parent-ds'})
+    expect(result.perspective).toBe('drafts')
   })
 
   it('disposes instance when unmounted', async () => {

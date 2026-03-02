@@ -10,7 +10,7 @@ import {type SanityDocument} from 'groq'
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useNormalizedSourceOptions} from '../helpers/useNormalizedSourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 import {useApplyDocumentActions} from './useApplyDocumentActions'
 
@@ -286,9 +286,9 @@ export function useEditDocument({
   path,
   ...doc
 }: DocumentOptions<string | undefined>): (updater: Updater<unknown>) => Promise<ActionsResult> {
-  const instance = useSanityInstance(doc)
+  const instance = useSanityInstance()
   trackHookUsage(instance, 'useEditDocument')
-  const normalizedDoc = useNormalizedSourceOptions(doc)
+  const normalizedDoc = useNormalizedResourceOptions(doc)
 
   const apply = useApplyDocumentActions()
   const isDocumentReady = useCallback(

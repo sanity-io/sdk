@@ -3,8 +3,8 @@ import {combineLatest, distinctUntilChanged, filter, map, of, Subscription, swit
 
 import {getTokenState} from '../auth/authStore'
 import {getClient} from '../client/clientStore'
-import {isCanvasSource, isDatasetSource, isMediaLibrarySource} from '../config/sanityConfig'
-import {bindActionBySource, type BoundSourceKey} from '../store/createActionBinder'
+import {isCanvasResource, isDatasetResource, isMediaLibraryResource} from '../config/sanityConfig'
+import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {type SanityUser} from '../users/types'
@@ -23,26 +23,26 @@ const getInitialState = (): PresenceStoreState => ({
 })
 
 /** @public */
-export const presenceStore = defineStore<PresenceStoreState, BoundSourceKey>({
+export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
   name: 'presence',
   getInitialState,
-  initialize: (context: StoreContext<PresenceStoreState, BoundSourceKey>) => {
+  initialize: (context: StoreContext<PresenceStoreState, BoundResourceKey>) => {
     const {
       instance,
       state,
-      key: {source},
+      key: {resource},
     } = context
 
-    // Presence is only supported for dataset sources
-    if (isMediaLibrarySource(source)) {
+    // Presence is only supported for dataset resources
+    if (isMediaLibraryResource(resource)) {
       throw new Error(
-        'Presence is not supported for media library sources. Presence tracking requires a dataset source with a projectId.',
+        'Presence is not supported for media library resources. Presence tracking requires a dataset resource with a projectId.',
       )
     }
 
-    if (isCanvasSource(source)) {
+    if (isCanvasResource(resource)) {
       throw new Error(
-        'Presence is not supported for canvas sources. Presence tracking requires a dataset source with a projectId.',
+        'Presence is not supported for canvas resources. Presence tracking requires a dataset resource with a projectId.',
       )
     }
 
@@ -50,7 +50,7 @@ export const presenceStore = defineStore<PresenceStoreState, BoundSourceKey>({
 
     const client = getClient(instance, {
       apiVersion: '2022-06-30',
-      source,
+      resource,
     })
 
     const token$ = getTokenState(instance).observable.pipe(distinctUntilChanged())
@@ -128,12 +128,12 @@ const selectPresence = createSelector(
 )
 
 /** @beta */
-export const getPresence = bindActionBySource(
+export const getPresence = bindActionByResource(
   presenceStore,
   createStateSourceAction({
     selector: (context: SelectorContext<PresenceStoreState>): UserPresence[] =>
       selectPresence(context.state),
-    onSubscribe: (context: StoreContext<PresenceStoreState, BoundSourceKey>) => {
+    onSubscribe: (context: StoreContext<PresenceStoreState, BoundResourceKey>) => {
       const userIds$ = context.state.observable.pipe(
         map((state) =>
           Array.from(state.locations.values())
@@ -154,8 +154,8 @@ export const getPresence = bindActionBySource(
                 userId,
                 resourceType: 'project',
                 projectId:
-                  context.key.source && isDatasetSource(context.key.source)
-                    ? context.key.source.projectId
+                  context.key.resource && isDatasetResource(context.key.resource)
+                    ? context.key.resource.projectId
                     : undefined,
               }).pipe(filter((v): v is NonNullable<typeof v> => !!v)),
             )

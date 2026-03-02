@@ -1,12 +1,11 @@
 import {type DocumentOptions, getDocumentState, type JsonMatch, resolveDocument} from '@sanity/sdk'
 import {type SanityDocument} from 'groq'
-import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 // used in an `{@link useDocumentProjection}` and `{@link useQuery}`
 // eslint-disable-next-line import/consistent-type-specifier-style, unused-imports/no-unused-imports
@@ -24,9 +23,6 @@ const useDocumentValue = createStateSourceHook({
   // Extract handle part for resolveDocument
   suspender: (instance, options: DocumentOptions<string | undefined>) =>
     resolveDocument(instance, options),
-  getConfig: identity as (
-    options: DocumentOptions<string | undefined>,
-  ) => DocumentOptions<string | undefined>,
 })
 
 const wrapHookWithData = <TParams extends unknown[], TReturn>(
@@ -43,7 +39,7 @@ type UseDocumentOptions<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> = WithSourceNameSupport<DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>>
+> = WithResourceNameSupport<DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>>
 
 interface UseDocument {
   /** @internal */
@@ -240,6 +236,6 @@ interface UseDocument {
  */
 export const useDocument = wrapHookWithData((options: UseDocumentOptions) => {
   useTrackHookUsage('useDocument')
-  const normalizedOptions = useNormalizedSourceOptions(options)
+  const normalizedOptions = useNormalizedResourceOptions(options)
   return useDocumentValue(normalizedOptions)
 }) as UseDocument

@@ -167,39 +167,20 @@ export function getTelemetryManager(instance: SanityInstance): TelemetryManager 
 export function trackHookMounted(instance: SanityInstance, hookName: string): void {
   if (!isDevMode()) return
 
-  const manager = findManager(instance)
+  const manager = telemetryManagers.get(instance)
   if (manager) {
     logger.trace('hook mounted (logged)', {hookName, internal: true})
     manager.logHookFirstUsed(hookName)
     return
   }
 
-  const root = getRootInstance(instance)
-  let hooks = pendingHooks.get(root)
+  let hooks = pendingHooks.get(instance)
   if (!hooks) {
     hooks = new Set()
-    pendingHooks.set(root, hooks)
+    pendingHooks.set(instance, hooks)
   }
   if (!hooks.has(hookName)) {
     logger.trace('hook mounted (buffered)', {hookName, internal: true})
   }
   hooks.add(hookName)
-}
-
-function findManager(instance: SanityInstance): TelemetryManager | undefined {
-  let current: SanityInstance | undefined = instance
-  while (current) {
-    const manager = telemetryManagers.get(current)
-    if (manager) return manager
-    current = typeof current.getParent === 'function' ? current.getParent() : undefined
-  }
-  return undefined
-}
-
-function getRootInstance(instance: SanityInstance): SanityInstance {
-  let current = instance
-  while (typeof current.getParent === 'function' && current.getParent()) {
-    current = current.getParent()!
-  }
-  return current
 }

@@ -9,7 +9,7 @@ describe('createFetcherStore', () => {
   let instance: SanityInstance
 
   beforeEach(() => {
-    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    instance = createSanityInstance({defaultResource: {projectId: 'p', dataset: 'd'}})
     vi.useRealTimers()
   })
 

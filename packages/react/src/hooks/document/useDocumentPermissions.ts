@@ -92,13 +92,25 @@ export function useDocumentPermissions(
   // if actions is an array, we need to check that all actions belong to the same project and dataset
   let projectId
   let dataset
-  let source
+  let resource
 
   for (const action of actions) {
-    if (action.projectId) {
-      if (source) {
+    if (action.resource) {
+      if (projectId || dataset) {
         throw new Error(
-          `Mismatches between projectId/dataset options and source in actions. Found projectId "${action.projectId}" and dataset "${action.dataset}" but expected source "${source}".`,
+          `Mismatches between projectId/dataset options and resource in actions. Found "${JSON.stringify(action.resource)}" but expected project "${projectId}" and dataset "${dataset}".`,
+        )
+      }
+      if (!resource) resource = action.resource
+      if (action.resource !== resource) {
+        throw new Error(
+          `Mismatched resources found in actions. All actions must belong to the same resource. Found "${JSON.stringify(action.resource)}" but expected "${JSON.stringify(resource)}".`,
+        )
+      }
+    } else if (action.projectId) {
+      if (resource) {
+        throw new Error(
+          `Mismatches between projectId/dataset options and resource in actions. Found projectId "${action.projectId}" and dataset "${action.dataset}" but expected resource "${JSON.stringify(resource)}".`,
         )
       }
       if (!projectId) projectId = action.projectId
@@ -117,23 +129,9 @@ export function useDocumentPermissions(
         }
       }
     }
-
-    if (action.source) {
-      if (!source) source = action.source
-      if (action.source !== source) {
-        throw new Error(
-          `Mismatched sources found in actions. All actions must belong to the same source. Found "${action.source}" but expected "${source}".`,
-        )
-      }
-      if (projectId || dataset) {
-        throw new Error(
-          `Mismatches between projectId/dataset options and source in actions. Found "${action.source}" but expected project "${projectId}" and dataset "${dataset}".`,
-        )
-      }
-    }
   }
 
-  const instance = useSanityInstance({projectId, dataset})
+  const instance = useSanityInstance()
   trackHookUsage(instance, 'useDocumentPermissions')
   const isDocumentReady = useCallback(
     () => getPermissionsState(instance, {actions}).getCurrent() !== undefined,

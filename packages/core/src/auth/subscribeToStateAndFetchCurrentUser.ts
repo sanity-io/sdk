@@ -1,6 +1,7 @@
 import {type CurrentUser} from '@sanity/types'
 import {distinctUntilChanged, filter, map, type Subscription, switchMap} from 'rxjs'
 
+import {getDefaultProjectId} from '../config/sanityConfig'
 import {type StoreContext} from '../store/defineStore'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {isStudioConfig} from './authMode'
@@ -24,7 +25,7 @@ export const subscribeToStateAndFetchCurrentUser = (
 ): Subscription => {
   const {clientFactory, apiHost} = state.get().options
   const useProjectHostname = fetchOptions?.useProjectHostname ?? isStudioConfig(instance.config)
-  const projectId = instance.config.projectId
+  const projectId = getDefaultProjectId(instance.config)
 
   const currentUser$ = state.observable
     .pipe(

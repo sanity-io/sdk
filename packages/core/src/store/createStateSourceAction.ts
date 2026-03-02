@@ -59,7 +59,7 @@ export interface StateSource<T> {
  * const getUserByProjectId = createStateSourceAction(
  *   ({ state, instance }: SelectorContext<UsersState>, options?: ProjectHandle) => {
  *     const allUsers = state.users
- *     const projectId = options?.projectId ?? instance.config.projectId
+ *     const projectId = options?.projectId ?? getDefaultProjectId(instance.config)
  *     return allUsers.filter(user => user.projectId === projectId)
  *   }
  * )
@@ -155,13 +155,13 @@ interface StateSourceOptions<TState, TParams extends unknown[], TReturn, TKey> {
  *   // ...
  * })
  *
- * const getDocument = bindActionByDataset(
+ * const getDocument = bindActionByResource(
  *   documentStore,
- *   createStateSourceAction(({state}, documentId: string) => state.documents[documentId])
+ *   createStateSourceAction(({state}, _options, documentId: string) => state.documents[documentId])
  * )
  *
  * // Usage
- * const documentSource = getDocument(sanityInstance, 'doc123')
+ * const documentSource = getDocument(sanityInstance, {}, 'doc123')
  * const doc = documentSource.getCurrent()
  * const subscription = documentSource.observable.subscribe(updatedDoc => {
  *   console.log('Document changed:', updatedDoc)

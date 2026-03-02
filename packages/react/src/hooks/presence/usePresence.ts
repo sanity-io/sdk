@@ -1,20 +1,20 @@
 import {
-  type DocumentSource,
+  type DocumentResource,
   getPresence,
-  isCanvasSource,
-  isMediaLibrarySource,
+  isCanvasResource,
+  isMediaLibraryResource,
   type UserPresence,
 } from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 
-type UsePresenceOptions = WithSourceNameSupport<{source?: DocumentSource}>
+type UsePresenceOptions = WithResourceNameSupport<{resource?: DocumentResource}>
 /**
  * A hook for subscribing to presence information for the current project.
  * @public
@@ -22,24 +22,24 @@ type UsePresenceOptions = WithSourceNameSupport<{source?: DocumentSource}>
 export function usePresence(options: UsePresenceOptions = {}): {
   locations: UserPresence[]
 } {
-  const normalizedOptions = useNormalizedSourceOptions(options)
+  const normalizedOptions = useNormalizedResourceOptions(options)
   const sanityInstance = useSanityInstance()
   trackHookUsage(sanityInstance, 'usePresence')
 
-  // Validate source type before attempting to create the presence store
+  // Validate resource type before attempting to create the presence store
   // This provides immediate, clear feedback instead of hanging
-  if (normalizedOptions.source) {
-    if (isMediaLibrarySource(normalizedOptions.source)) {
+  if (normalizedOptions.resource) {
+    if (isMediaLibraryResource(normalizedOptions.resource)) {
       throw new Error(
-        'usePresence() does not support media library sources. Presence tracking requires a dataset source. ' +
-          'Either remove the sourceName parameter or use a dataset source instead.',
+        'usePresence() does not support media library resources. Presence tracking requires a dataset resource. ' +
+          'Either remove the resourceName parameter or use a dataset resource instead.',
       )
     }
 
-    if (isCanvasSource(normalizedOptions.source)) {
+    if (isCanvasResource(normalizedOptions.resource)) {
       throw new Error(
-        'usePresence() does not support canvas sources. Presence tracking requires a dataset source. ' +
-          'Either remove the sourceName parameter or use a dataset source instead.',
+        'usePresence() does not support canvas resources. Presence tracking requires a dataset resource. ' +
+          'Either remove the resourceName parameter or use a dataset resource instead.',
       )
     }
   }
