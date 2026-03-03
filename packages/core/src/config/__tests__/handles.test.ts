@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest'
 
-import {createDocumentHandle, createDocumentTypeHandle} from '../handles'
+import {createDocumentHandle, createDocumentTypeHandle, createResourceHandle} from '../handles'
 
 describe('handle creation functions', () => {
   it('createDocumentTypeHandle returns input', () => {
@@ -15,5 +15,10 @@ describe('handle creation functions', () => {
       resource: {projectId: 'p', dataset: 'd'},
     }
     expect(createDocumentHandle(input)).toBe(input)
+  })
+
+  it('createResourceHandle returns input', () => {
+    const input = {resource: {projectId: 'p', dataset: 'd'}}
+    expect(createResourceHandle(input)).toBe(input)
   })
 })

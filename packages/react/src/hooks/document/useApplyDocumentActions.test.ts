@@ -1,4 +1,5 @@
 import {applyDocumentActions, type SanityInstance} from '@sanity/sdk'
+import React from 'react'
 import {describe, it} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'
@@ -143,6 +144,38 @@ describe('useApplyDocumentActions', () => {
           resource: {projectId: 'p', dataset: 'd2'},
         },
       ])
+    }).toThrow(/Mismatched resources found in actions/)
+  })
+
+  it('throws when no resource is found from actions or context', async () => {
+    // Use a minimal wrapper without resource context so contextResource is undefined
+    const {result} = renderHook(() => useApplyDocumentActions(), {
+      wrapper: (props) => React.createElement(React.Fragment, null, props.children),
+    })
+
+    expect(() => {
+      result.current({
+        type: 'document.edit',
+        documentType: 'post',
+        documentId: 'abc',
+        // no resource
+      } as never)
+    }).toThrow(/resource is required/)
+  })
+
+  it('throws when options resource mismatches action resource', async () => {
+    const {result} = renderHook(() => useApplyDocumentActions())
+
+    expect(() => {
+      result.current(
+        {
+          type: 'document.edit',
+          documentType: 'post',
+          documentId: 'abc',
+          resource: {projectId: 'p1', dataset: 'd1'},
+        },
+        {resource: {projectId: 'p2', dataset: 'd2'}, actions: []},
+      )
     }).toThrow(/Mismatched resources found in actions/)
   })
 })

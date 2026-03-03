@@ -110,6 +110,5 @@ export const getPerspectiveState: BoundGetPerspectiveState = (instance, ...rest)
       _getPerspectiveStateSelector,
     ) as BoundGetPerspectiveState
   }
-  // bindActionByResource keyFn destructures { resource } from the first param, so pass {} when no options
   return _boundGetPerspectiveState(instance, ...rest)
 }

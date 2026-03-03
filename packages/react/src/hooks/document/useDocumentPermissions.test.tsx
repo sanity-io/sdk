@@ -213,6 +213,24 @@ describe('usePermissions', () => {
     })
   })
 
+  it('throws when no resource is found from action or context', () => {
+    // Provide SanityInstance via ResourceProvider but no resource, so contextResource is undefined
+    expect(() => {
+      renderHook(
+        () =>
+          useDocumentPermissions({
+            type: 'document.publish',
+            documentId: 'doc1',
+            documentType: 'article',
+            // no resource
+          } as never),
+        {
+          wrapper: ({children}) => <ResourceProvider fallback={null}>{children}</ResourceProvider>,
+        },
+      )
+    }).toThrow(/resource is required/)
+  })
+
   it('should react to permission state changes', async () => {
     // Start with permission allowed
     act(() => {
