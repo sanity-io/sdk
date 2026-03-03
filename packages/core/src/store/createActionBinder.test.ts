@@ -133,6 +133,25 @@ describe('bindActionGlobally', () => {
 })
 
 describe('bindActionByResource', () => {
+  it('should resolve from config.defaultResource when no resource provided', () => {
+    const storeDefinition = {
+      name: 'ResourceNamedStore',
+      getInitialState: () => ({counter: 0}),
+    }
+    const action = vi.fn((context) => context.key)
+    const boundAction = bindActionByResource(storeDefinition, action)
+    const instance = createSanityInstance({
+      defaultResource: {projectId: 'named-proj', dataset: 'named-ds'},
+    })
+    const result = boundAction(instance, {})
+    expect(result).toEqual(
+      expect.objectContaining({
+        name: 'named-proj.named-ds',
+        resource: {projectId: 'named-proj', dataset: 'named-ds'},
+      }),
+    )
+  })
+
   it('should throw an error when provided an invalid resource', () => {
     const storeDefinition = {
       name: 'ResourceStore',
@@ -197,6 +216,21 @@ describe('bindActionByResourceAndPerspective', () => {
     expect(result).toBe('success')
   })
 
+  it('should throw an error when no resource provided and no default resource configured', () => {
+    const storeDefinition = {
+      name: 'PerspectiveStore',
+      getInitialState: () => ({counter: 0}),
+    }
+    const action = vi.fn((_context) => 'success')
+    const boundAction = bindActionByResourceAndPerspective(storeDefinition, action)
+    const instance = createSanityInstance({})
+
+    // @ts-expect-error - test invalid argument
+    expect(() => boundAction(instance, {perspective: 'drafts' as const})).toThrow(
+      'No resource provided and no default resource configured.',
+    )
+  })
+
   it('should work correctly with valid dataset resource and no perspective (falls back to drafts)', () => {
     const storeDefinition = {
       name: 'PerspectiveStore',
@@ -226,8 +260,8 @@ describe('bindActionByResourceAndPerspective', () => {
     const result = boundAction(instance, {resource: {projectId: 'proj2', dataset: 'ds2'}})
     expect(result).toEqual(
       expect.objectContaining({
-        name: 'proj2.ds2:drafts',
-        perspective: 'drafts',
+        name: 'proj2.ds2:published',
+        perspective: 'published',
       }),
     )
   })

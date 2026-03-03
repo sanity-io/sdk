@@ -15,6 +15,7 @@ describe('useRecordDocumentHistoryEvent', () => {
     documentType: 'mock-type',
     resourceType: 'studio' as const,
     resourceId: 'mock-resource-id',
+    resource: {projectId: 'mock-project-id', dataset: 'mock-dataset'},
   }
 
   beforeEach(() => {
@@ -62,6 +63,7 @@ describe('useRecordDocumentHistoryEvent', () => {
       documentType: 'mock-type',
       resourceType: 'media-library' as const,
       resourceId: undefined,
+      resource: {mediaLibraryId: 'mock-media-library-id'},
     }
 
     expect(() => renderHook(() => useRecordDocumentHistoryEvent(mockMediaDocumentHandle))).toThrow(

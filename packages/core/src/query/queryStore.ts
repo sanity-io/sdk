@@ -183,6 +183,7 @@ const listenForNewSubscribersAndFetch = ({
             const perspective$ = isReleasePerspective(perspectiveFromOptions)
               ? getPerspectiveState(instance, {
                   perspective: perspectiveFromOptions,
+                  resource: resource ?? boundResource,
                 }).observable.pipe(filter(Boolean))
               : of(perspectiveFromOptions ?? QUERY_STORE_DEFAULT_PERSPECTIVE)
 

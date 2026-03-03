@@ -78,7 +78,11 @@ describe('transformProjectionToPreview', () => {
       media: null,
     }
 
-    const result = transformProjectionToPreview(instance, projectionResult)
+    const result = transformProjectionToPreview(
+      instance,
+      {projectId: 'p', dataset: 'd'},
+      projectionResult,
+    )
 
     expect(result).toEqual({
       title: 'My Title',
@@ -97,7 +101,11 @@ describe('transformProjectionToPreview', () => {
       media: null,
     }
 
-    const result = transformProjectionToPreview(instance, projectionResult)
+    const result = transformProjectionToPreview(
+      instance,
+      {projectId: 'p', dataset: 'd'},
+      projectionResult,
+    )
 
     expect(result.title).toBe('article: doc1')
     expect(result.subtitle).toBeUndefined()
@@ -113,7 +121,11 @@ describe('transformProjectionToPreview', () => {
       media: {type: 'image-asset', _ref: 'image-abc123-200x200-png', url: ''},
     }
 
-    const result = transformProjectionToPreview(instance, projectionResult)
+    const result = transformProjectionToPreview(
+      instance,
+      {projectId: 'p', dataset: 'd'},
+      projectionResult,
+    )
 
     expect(result).toEqual({
       title: 'My Title',
@@ -140,7 +152,11 @@ describe('transformProjectionToPreview', () => {
       },
     }
 
-    const result = transformProjectionToPreview(instance, projectionResult)
+    const result = transformProjectionToPreview(
+      instance,
+      {projectId: 'p', dataset: 'd'},
+      projectionResult,
+    )
 
     expect(result).toEqual({
       title: 'My Title',
@@ -165,7 +181,7 @@ describe('transformProjectionToPreview', () => {
 
     const resource = {mediaLibraryId: 'test-library'}
 
-    transformProjectionToPreview(instance, projectionResult, resource)
+    transformProjectionToPreview(instance, resource, projectionResult)
 
     const {getClient} = await import('../client/clientStore')
     expect(getClient).toHaveBeenCalledWith(instance, {

@@ -42,12 +42,12 @@ type UsePerspective = {
 const usePerspectiveValue = createStateSourceHook({
   getState: getPerspectiveState as (
     instance: SanityInstance,
-    perspectiveHandle?: {resource?: DocumentResource},
+    perspectiveHandle: ResourceHandle,
   ) => StateSource<string | string[]>,
-  shouldSuspend: (instance: SanityInstance, options: {resource?: DocumentResource}): boolean =>
+  shouldSuspend: (instance: SanityInstance, options: {resource: DocumentResource}): boolean =>
     getPerspectiveState(instance, options).getCurrent() === undefined,
-  suspender: (instance: SanityInstance, _options?: {resource?: DocumentResource}) =>
-    firstValueFrom(getPerspectiveState(instance, _options ?? {}).observable.pipe(filter(Boolean))),
+  suspender: (instance: SanityInstance, _options?: {resource: DocumentResource}) =>
+    firstValueFrom(getPerspectiveState(instance, _options).observable.pipe(filter(Boolean))),
 })
 
 /**

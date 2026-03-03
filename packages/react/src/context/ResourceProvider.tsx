@@ -20,12 +20,13 @@ const DEFAULT_FALLBACK = (
 /**
  * Props for the ResourceProvider component.
  *
- * Extends `SanityConfig` so new config fields are automatically forwarded.
- * The `resource` prop provides the active document resource for this subtree.
+ * Extends `SanityConfig` (minus `defaultResource`) so new config fields are
+ * automatically forwarded. The `resource` prop replaces `defaultResource`
+ * with a name that better describes its role at the React layer.
  *
  * @internal
  */
-export interface ResourceProviderProps extends SanityConfig {
+export interface ResourceProviderProps extends Omit<SanityConfig, 'defaultResource'> {
   /**
    * The document resource (project/dataset, media library, or canvas)
    * for this subtree. Hooks that don't specify an explicit resource will
@@ -81,8 +82,8 @@ export function ResourceProvider({
   const parent = useContext(SanityInstanceContext)
   const {perspective, auth, studio} = rest
   const config: SanityConfig = useMemo(
-    () => ({perspective, auth, studio}),
-    [perspective, auth, studio],
+    () => ({perspective, auth, studio, defaultResource: resource}),
+    [resource, perspective, auth, studio],
   )
 
   if (parent) {
@@ -94,7 +95,7 @@ export function ResourceProvider({
   }
 
   return (
-    <RootResourceProvider config={config} resource={resource} fallback={fallback}>
+    <RootResourceProvider config={config} fallback={fallback}>
       {children}
     </RootResourceProvider>
   )
@@ -104,12 +105,10 @@ function RootResourceProvider({
   children,
   fallback,
   config,
-  resource,
 }: {
   children: React.ReactNode
   fallback: React.ReactNode
   config: SanityConfig
-  resource?: DocumentResource
 }): React.ReactNode {
   const instance = useMemo(() => createSanityInstance(config), [config])
 
@@ -140,7 +139,7 @@ function RootResourceProvider({
 
   return (
     <SanityInstanceContext.Provider value={instance}>
-      <ResourceContext.Provider value={resource}>
+      <ResourceContext.Provider value={config.defaultResource}>
         <PerspectiveContext.Provider value={config.perspective}>
           <Suspense fallback={fallback ?? DEFAULT_FALLBACK}>{children}</Suspense>
         </PerspectiveContext.Provider>

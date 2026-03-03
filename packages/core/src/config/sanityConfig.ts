@@ -136,6 +136,16 @@ export const DEFAULT_RESOURCE_NAME = 'default'
  * </SanityApp>
  * ```
  *
+ * The `defaultResource` field is set automatically by the React layer from
+ * `resources['default']`. It can also be set directly when using the core
+ * SDK without React (e.g. in a Node.js script):
+ *
+ * @example Direct core usage (without React)
+ * ```ts
+ * const instance = createSanityInstance({
+ *   defaultResource: { projectId: 'abc123', dataset: 'production' },
+ * })
+ * ```
  * @public
  */
 export interface SanityConfig extends PerspectiveHandle {
@@ -152,6 +162,13 @@ export interface SanityConfig extends PerspectiveHandle {
    * `SDKStudioContext` provider. Can also be set explicitly for programmatic use.
    */
   studio?: StudioConfig
+  /**
+   * The default document resource for this instance. Used by bound actions
+   * when no explicit resource is provided.
+   *
+   * @beta
+   */
+  defaultResource?: DocumentResource
 }
 
 /**

@@ -6,6 +6,7 @@ import {
 } from '@sanity/sdk'
 import {useContext} from 'react'
 
+import {ResourceContext} from '../../context/DefaultResourceContext'
 import {ResourcesContext} from '../../context/ResourcesContext'
 import {useSanityInstance} from '../context/useSanityInstance'
 import {
@@ -158,25 +159,35 @@ interface UseApplyDocumentActions {
 export const useApplyDocumentActions: UseApplyDocumentActions = () => {
   const instance = useSanityInstance()
   const resources = useContext(ResourcesContext)
+  const contextResource = useContext(ResourceContext)
 
   return (actionOrActions, options) => {
     const actions = Array.isArray(actionOrActions) ? actionOrActions : [actionOrActions]
-    const normalizedOptions = options ? normalizeResourceOptions(options, resources) : undefined
+    const optionsResource = options
+      ? normalizeResourceOptions(options, resources, contextResource).resource
+      : undefined
 
+    const normalizedActions = actions.map((action) =>
+      normalizeResourceOptions(action, resources, contextResource),
+    )
     let resource
-    for (const action of actions) {
-      if (action.resource) {
-        if (!resource) resource = action.resource
-        if (action.resource !== resource) {
-          throw new Error(
-            `Mismatched resources found in actions. All actions must belong to the same resource. Found "${JSON.stringify(action.resource)}" but expected "${JSON.stringify(resource)}".`,
-          )
-        }
+
+    for (const action of normalizedActions) {
+      if (!resource) resource = action.resource
+      if (action.resource !== resource) {
+        throw new Error(
+          `Mismatched resources found in actions. All actions must belong to the same resource. Found "${JSON.stringify(action.resource)}" but expected "${JSON.stringify(resource)}".`,
+        )
       }
     }
 
-    // Fall back to the resource from normalized options (injected from context in the React layer)
-    const effectiveResource = resource ?? normalizedOptions?.resource
+    if (optionsResource && resource && optionsResource !== resource) {
+      throw new Error(
+        `Mismatched resources found in actions. Found top-level resource "${JSON.stringify(optionsResource)}" but expected resource from action handles "${JSON.stringify(resource)}".`,
+      )
+    }
+
+    const effectiveResource = resource ?? optionsResource
     if (!effectiveResource) {
       throw new Error('No resource found. Provide a resource via the action handle or context.')
     }
@@ -184,7 +195,6 @@ export const useApplyDocumentActions: UseApplyDocumentActions = () => {
     return applyDocumentActions(instance, {
       actions,
       resource: effectiveResource,
-      ...normalizedOptions,
     })
   }
 }

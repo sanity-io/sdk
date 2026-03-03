@@ -1,4 +1,4 @@
-import {createSanityInstance, type SanityInstance} from '@sanity/sdk'
+import {createSanityInstance, type DatasetResource, type SanityInstance} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {throwError} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
@@ -65,14 +65,14 @@ describe('createStateSourceHook', () => {
   })
 
   it('should recreate state source when instance changes', () => {
-    const mockInstance1 = createSanityInstance({studio: {projectId: 'p1'}})
-    const mockInstance2 = createSanityInstance({studio: {projectId: 'p2'}})
+    const mockInstance1 = createSanityInstance({defaultResource: {projectId: 'p1', dataset: 'd'}})
+    const mockInstance2 = createSanityInstance({defaultResource: {projectId: 'p2', dataset: 'd'}})
 
     vi.mocked(useSanityInstance).mockReturnValueOnce(mockInstance1)
 
     const stateSourceFactory = vi.fn((instance: SanityInstance) => ({
       subscribe: vi.fn(),
-      getCurrent: () => instance.config.studio?.projectId,
+      getCurrent: () => (instance.config.defaultResource as DatasetResource)?.projectId,
       observable: throwError(() => new Error('unexpected usage of observable')),
     }))
 

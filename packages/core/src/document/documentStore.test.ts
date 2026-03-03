@@ -52,26 +52,18 @@ interface TestDocument extends SanityDocument {
 }
 
 let instance: SanityInstance
-let instance1: SanityInstance
-let instance2: SanityInstance
 
+// bindActionByResource should ensure docs from different resources are isolated
 const resource = {projectId: 'p', dataset: 'd'}
 const resource1 = {projectId: 'p', dataset: 'd1'}
 const resource2 = {projectId: 'p', dataset: 'd2'}
 
 beforeEach(() => {
   instance = createSanityInstance()
-  // test uses two instances that share the same in-memory dataset, but separate
-  // store instances. in real scenarios, this would be separate machines but with
-  // the same project + dataset
-  instance1 = createSanityInstance()
-  instance2 = createSanityInstance()
 })
 
 afterEach(() => {
   instance?.dispose()
-  instance1?.dispose()
-  instance2?.dispose()
 })
 
 it('creates, edits, and publishes a document', async () => {
@@ -188,20 +180,20 @@ it('sets optimistic changes synchronously', async () => {
     resource: resource2,
   })
 
-  const state1 = getDocumentState<TestDocument>(instance1, doc1)
-  const state2 = getDocumentState<TestDocument>(instance2, doc2)
+  const state1 = getDocumentState<TestDocument>(instance, doc1)
+  const state2 = getDocumentState<TestDocument>(instance, doc2)
 
   const unsubscribe1 = state1.subscribe()
   const unsubscribe2 = state2.subscribe()
 
   // wait until the value is primed in the store
-  await resolveDocument(instance1, doc1)
+  await resolveDocument(instance, doc1)
 
   // then the actions are synchronous
   expect(state1.getCurrent()).toBeNull()
-  applyDocumentActions(instance1, {actions: [createDocument(doc1)], resource: resource1})
+  applyDocumentActions(instance, {actions: [createDocument(doc1)], resource: resource1})
   expect(state1.getCurrent()).toMatchObject({_id: getDraftId(doc1.documentId)})
-  const actionResult1Promise = applyDocumentActions(instance1, {
+  const actionResult1Promise = applyDocumentActions(instance, {
     actions: [editDocument(doc1, {set: {title: 'initial title'}})],
     resource: resource1,
   })
@@ -222,7 +214,7 @@ it('sets optimistic changes synchronously', async () => {
   expect(state2.getCurrent()?.title).toBe('initial title')
 
   // synchronous for state 2
-  const actionResult2Promise = applyDocumentActions(instance2, {
+  const actionResult2Promise = applyDocumentActions(instance, {
     actions: [editDocument(doc2, {set: {title: 'updated title'}})],
     resource: resource2,
   })
@@ -249,14 +241,14 @@ it('propagates changes between two instances', async () => {
     documentType: 'article',
     resource: resource2,
   })
-  const state1 = getDocumentState<TestDocument>(instance1, doc1)
-  const state2 = getDocumentState<TestDocument>(instance2, doc2)
+  const state1 = getDocumentState<TestDocument>(instance, doc1)
+  const state2 = getDocumentState<TestDocument>(instance, doc2)
 
   const state1Unsubscribe = state1.subscribe()
   const state2Unsubscribe = state2.subscribe()
 
-  // Create the document from instance1.
-  await applyDocumentActions(instance1, {
+  // Create the document from the store instance.
+  await applyDocumentActions(instance, {
     actions: [createDocument(doc1)],
     resource: resource1,
   }).then((r) => r.submitted())
@@ -266,8 +258,8 @@ it('propagates changes between two instances', async () => {
   expect(docState1?._id).toEqual(getDraftId(doc1.documentId))
   expect(docState2?._id).toEqual(getDraftId(doc1.documentId))
 
-  // Now, edit the document from instance2.
-  await applyDocumentActions(instance2, {
+  // Now, edit the document from the other store instance.
+  await applyDocumentActions(instance, {
     actions: [editDocument(doc2, {set: {title: 'Hello world!'}})],
     resource: resource2,
   }).then((r) => r.submitted())
@@ -292,8 +284,8 @@ it('handles concurrent edits and resolves conflicts', async () => {
     documentType: 'article',
     resource: resource2,
   })
-  const state1 = getDocumentState<TestDocument>(instance1, doc1)
-  const state2 = getDocumentState<TestDocument>(instance2, doc2)
+  const state1 = getDocumentState<TestDocument>(instance, doc1)
+  const state2 = getDocumentState<TestDocument>(instance, doc2)
 
   const state1Unsubscribe = state1.subscribe()
   const state2Unsubscribe = state2.subscribe()
@@ -309,12 +301,12 @@ it('handles concurrent edits and resolves conflicts', async () => {
     resource,
   }).then((res) => res.submitted())
 
-  // Both instances now issue an edit simultaneously.
-  const p1 = applyDocumentActions(instance1, {
+  // Both store instances now issue an edit simultaneously.
+  const p1 = applyDocumentActions(instance, {
     actions: [editDocument(doc1, {set: {title: 'The quick brown fox jumps over the lazy cat'}})],
     resource: resource1,
   }).then((r) => r.submitted())
-  const p2 = applyDocumentActions(instance2, {
+  const p2 = applyDocumentActions(instance, {
     actions: [
       editDocument(doc2, {set: {title: 'The quick brown elephant jumps over the lazy dog'}}),
     ],

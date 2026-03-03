@@ -12,8 +12,6 @@ import {createStoreInstance, type StoreInstance} from './createStoreInstance'
 import {type StoreState} from './createStoreState'
 import {type StoreContext, type StoreDefinition} from './defineStore'
 
-const DEFAULT_PERSPECTIVE = 'drafts'
-
 export interface BoundResourceKey {
   name: string
   resource: DocumentResource
@@ -124,14 +122,32 @@ const resourceKeyName = (resource: DocumentResource): string => {
   throw new Error(`Received invalid resource: ${JSON.stringify(resource)}`)
 }
 
+const createResourceKey = (
+  instance: SanityInstance,
+  resource?: DocumentResource,
+): BoundResourceKey => {
+  if (resource) {
+    return {name: resourceKeyName(resource), resource}
+  }
+
+  const defaultResource = instance.config.defaultResource
+  if (!defaultResource) {
+    throw new Error(
+      'No resource provided and no default resource configured. ' +
+        'Provide a "default" resource in your resources map, or pass an explicit resource.',
+    )
+  }
+  return {name: resourceKeyName(defaultResource), resource: defaultResource}
+}
+
 /**
  * Binds an action to a store that's scoped to a specific document resource.
  **/
 export const bindActionByResource = createActionBinder<
   BoundResourceKey,
-  [{resource: DocumentResource}, ...unknown[]]
->((_instance, {resource}) => {
-  return {name: resourceKeyName(resource), resource}
+  [{resource?: DocumentResource}, ...unknown[]]
+>((instance, {resource}) => {
+  return createResourceKey(instance, resource)
 })
 
 /**
@@ -172,9 +188,10 @@ export const bindActionByResource = createActionBinder<
 export const bindActionByResourceAndPerspective = createActionBinder<
   BoundPerspectiveKey,
   [ResourceHandle, ...unknown[]]
->((_instance, options): BoundPerspectiveKey => {
+>((instance, options): BoundPerspectiveKey => {
   const {resource, perspective} = options
-  const utilizedPerspective = perspective ?? DEFAULT_PERSPECTIVE
+  // TODO: remove reference to instance.config.perspective when we get to v3
+  const utilizedPerspective = perspective ?? instance.config.perspective ?? 'drafts'
   let perspectiveKey: string
   if (isReleasePerspective(utilizedPerspective)) {
     perspectiveKey = utilizedPerspective.releaseName
@@ -182,10 +199,10 @@ export const bindActionByResourceAndPerspective = createActionBinder<
     perspectiveKey = utilizedPerspective
   } else {
     throw new Error(
-      `Stackable perspectives are not supported. Received perspective: ${JSON.stringify(perspective)}`,
+      `Stackable perspectives are not supported. Received perspective: ${JSON.stringify(utilizedPerspective)}`,
     )
   }
-  const resourceKey = {name: resourceKeyName(resource), resource}
+  const resourceKey = createResourceKey(instance, resource)
 
   return {
     name: `${resourceKey.name}:${perspectiveKey}`,

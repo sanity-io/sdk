@@ -1,3 +1,4 @@
+import {type DocumentResource} from '@sanity/sdk'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {SanityApp} from '../components/SanityApp'
@@ -25,6 +26,7 @@ vi.mock('react-dom/client', () => ({
 
 describe('renderSanityApp', () => {
   let rootElement: HTMLElement | null
+  let namedResources: Record<string, DocumentResource>
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -33,6 +35,9 @@ describe('renderSanityApp', () => {
     mockCreateRoot.mockClear()
     rootElement = document.createElement('div')
     document.body.appendChild(rootElement)
+    namedResources = {
+      default: {projectId: 'test-project', dataset: 'production'},
+    }
   })
 
   afterEach(() => {
@@ -43,20 +48,12 @@ describe('renderSanityApp', () => {
   })
 
   it('throws error when rootElement is null', () => {
-    const namedResources = {
-      default: {resource: {projectId: 'test-project', dataset: 'production'}},
-    }
-
     expect(() => renderSanityApp(null, namedResources, {}, <div>Test</div>)).toThrowError(
       'Missing root element to mount application into',
     )
   })
 
   it('creates root with the provided element', () => {
-    const namedResources = {
-      default: {resource: {projectId: 'test-project', dataset: 'production'}},
-    }
-
     renderSanityApp(rootElement, namedResources, {}, <div>Test</div>)
 
     expect(mockCreateRoot).toHaveBeenCalledWith(rootElement)
@@ -64,9 +61,9 @@ describe('renderSanityApp', () => {
   })
 
   it('merges namedResources into a single config and resources map', () => {
-    const namedResources = {
-      default: {resource: {projectId: 'project-1', dataset: 'production'}},
-      secondary: {resource: {projectId: 'project-2', dataset: 'staging'}},
+    namedResources = {
+      default: {projectId: 'project-1', dataset: 'production'},
+      secondary: {projectId: 'project-2', dataset: 'staging'},
     }
 
     renderSanityApp(rootElement, namedResources, {}, <div>Test</div>)
@@ -77,7 +74,7 @@ describe('renderSanityApp', () => {
 
     expect(renderCall.type).toBe(SanityApp)
     // config has no resource fields
-    expect(renderCall.props.config).toEqual({})
+    expect(renderCall.props.config).toEqual(undefined)
     // resources map is populated from named entries
     expect(renderCall.props.resources).toEqual({
       default: {projectId: 'project-1', dataset: 'production'},
@@ -86,9 +83,6 @@ describe('renderSanityApp', () => {
   })
 
   it('renders without StrictMode when reactStrictMode is false', () => {
-    const namedResources = {
-      default: {resource: {projectId: 'test-project', dataset: 'production'}},
-    }
     const children = <div>Test Children</div>
 
     renderSanityApp(rootElement, namedResources, {reactStrictMode: false}, children)
@@ -102,9 +96,6 @@ describe('renderSanityApp', () => {
   })
 
   it('renders without StrictMode by default', () => {
-    const namedResources = {
-      default: {resource: {projectId: 'test-project', dataset: 'production'}},
-    }
     const children = <div>Test Children</div>
 
     renderSanityApp(rootElement, namedResources, {}, children)
@@ -118,9 +109,6 @@ describe('renderSanityApp', () => {
   })
 
   it('renders with StrictMode when reactStrictMode is true', () => {
-    const namedResources = {
-      default: {resource: {projectId: 'test-project', dataset: 'production'}},
-    }
     const children = <div>Test Children</div>
 
     renderSanityApp(rootElement, namedResources, {reactStrictMode: true}, children)
@@ -137,10 +125,6 @@ describe('renderSanityApp', () => {
   })
 
   it('passes loading fallback to SanityApp', () => {
-    const namedResources = {
-      default: {resource: {projectId: 'test-project', dataset: 'production'}},
-    }
-
     renderSanityApp(rootElement, namedResources, {}, <div>Test</div>)
 
     expect(mockRender).toHaveBeenCalledTimes(1)
@@ -152,20 +136,12 @@ describe('renderSanityApp', () => {
   })
 
   it('returns an unmount function', () => {
-    const namedResources = {
-      default: {resource: {projectId: 'test-project', dataset: 'production'}},
-    }
-
     const unmount = renderSanityApp(rootElement, namedResources, {}, <div>Test</div>)
 
     expect(typeof unmount).toBe('function')
   })
 
   it('calls root.unmount when unmount function is invoked', () => {
-    const namedResources = {
-      default: {resource: {projectId: 'test-project', dataset: 'production'}},
-    }
-
     const unmount = renderSanityApp(rootElement, namedResources, {}, <div>Test</div>)
 
     expect(mockUnmount).not.toHaveBeenCalled()
@@ -174,7 +150,7 @@ describe('renderSanityApp', () => {
   })
 
   it('handles empty namedResources object', () => {
-    const namedResources = {}
+    namedResources = {}
 
     renderSanityApp(rootElement, namedResources, {}, <div>Test</div>)
 
@@ -183,53 +159,28 @@ describe('renderSanityApp', () => {
     const sanityAppElement = renderCall
 
     expect(sanityAppElement.type).toBe(SanityApp)
-    expect(sanityAppElement.props.config).toEqual({})
+    expect(sanityAppElement.props.config).toEqual(undefined)
     expect(sanityAppElement.props.resources).toEqual({})
   })
 
   it('handles single namedSource', () => {
-    const namedResources = {
-      default: {resource: {projectId: 'test-project', dataset: 'production'}},
+    const namedResource = {
+      default: {projectId: 'test-project', dataset: 'production'},
     }
-
-    renderSanityApp(rootElement, namedResources, {}, <div>Test</div>)
+    renderSanityApp(rootElement, namedResource, {}, <div>Test</div>)
 
     expect(mockRender).toHaveBeenCalledTimes(1)
     const renderCall = mockRender.mock.calls[0][0]
     const sanityAppElement = renderCall
 
     expect(sanityAppElement.type).toBe(SanityApp)
-    expect(sanityAppElement.props.config).toEqual({})
+    expect(sanityAppElement.props.config).toEqual(undefined)
     expect(sanityAppElement.props.resources).toEqual({
       default: {projectId: 'test-project', dataset: 'production'},
     })
   })
 
-  it('merges multiple namedResources into one config with combined sources', () => {
-    const namedResources = {
-      default: {resource: {projectId: 'project-1', dataset: 'production'}},
-      blog: {resource: {projectId: 'project-2', dataset: 'staging'}},
-      ecommerce: {resource: {projectId: 'project-3', dataset: 'development'}},
-    }
-
-    renderSanityApp(rootElement, namedResources, {}, <div>Test</div>)
-
-    expect(mockRender).toHaveBeenCalledTimes(1)
-    const renderCall = mockRender.mock.calls[0][0]
-    const sanityAppElement = renderCall
-
-    expect(sanityAppElement.type).toBe(SanityApp)
-    expect(sanityAppElement.props.resources).toEqual({
-      default: {projectId: 'project-1', dataset: 'production'},
-      blog: {projectId: 'project-2', dataset: 'staging'},
-      ecommerce: {projectId: 'project-3', dataset: 'development'},
-    })
-  })
-
   it('passes children to SanityApp', () => {
-    const namedResources = {
-      default: {resource: {projectId: 'test-project', dataset: 'production'}},
-    }
     const children = (
       <div>
         <h1>Test App</h1>
@@ -246,10 +197,6 @@ describe('renderSanityApp', () => {
   })
 
   it('works with different types of children', () => {
-    const namedResources = {
-      default: {resource: {projectId: 'test-project', dataset: 'production'}},
-    }
-
     // Test with string children
     renderSanityApp(rootElement, namedResources, {}, 'String child')
 
@@ -278,44 +225,15 @@ describe('renderSanityApp', () => {
     expect(sanityAppElement.props.children).toEqual(arrayChildren)
   })
 
-  it('integrates with StrictMode and passes all props correctly', () => {
-    const namedResources = {
-      default: {resource: {projectId: 'test-project', dataset: 'production'}},
-      secondary: {resource: {projectId: 'test-project-2', dataset: 'staging'}},
-    }
-    const children = <div>App Content</div>
-
-    renderSanityApp(rootElement, namedResources, {reactStrictMode: true}, children)
-
-    const renderCall = mockRender.mock.calls[0][0]
-
-    // Verify StrictMode wrapper (StrictMode is a Symbol)
-    expect(renderCall.type).toBeDefined()
-    expect(renderCall.type.toString()).toContain('Symbol')
-
-    // Verify SanityApp is inside StrictMode
-    const strictModeChild = renderCall.props.children
-    expect(strictModeChild.type).toBe(SanityApp)
-
-    // config has no resource fields; resources map carries them
-    expect(strictModeChild.props.config).toEqual({})
-    expect(strictModeChild.props.resources).toEqual({
-      default: {projectId: 'test-project', dataset: 'production'},
-      secondary: {projectId: 'test-project-2', dataset: 'staging'},
-    })
-    expect(strictModeChild.props.fallback).toEqual(<div>Loading...</div>)
-    expect(strictModeChild.props.children).toEqual(children)
-  })
-
   it('can be called multiple times with different roots', () => {
     const rootElement2 = document.createElement('div')
     document.body.appendChild(rootElement2)
 
     const namedResources1 = {
-      default: {resource: {projectId: 'project-1', dataset: 'production'}},
+      default: {projectId: 'project-1', dataset: 'production'},
     }
     const namedResources2 = {
-      default: {resource: {projectId: 'project-2', dataset: 'staging'}},
+      default: {projectId: 'project-2', dataset: 'staging'},
     }
 
     const unmount1 = renderSanityApp(rootElement, namedResources1, {}, <div>App 1</div>)

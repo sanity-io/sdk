@@ -1,9 +1,8 @@
 // tests/useDocumentEvent.test.ts
 import {type DocumentEvent, type DocumentHandle, subscribeDocumentEvents} from '@sanity/sdk'
-import {renderHook} from '@testing-library/react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {ResourceProvider} from '../../context/ResourceProvider'
+import {renderHook} from '../../../test/test-utils'
 import {useDocumentEvent} from './useDocumentEvent'
 
 vi.mock('@sanity/sdk', async (importOriginal) => {
@@ -14,6 +13,7 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
 const docHandle: DocumentHandle = {
   documentId: 'doc1',
   documentType: 'book',
+  resource: {projectId: 'p', dataset: 'd'},
 }
 
 describe('useDocumentEvent hook', () => {
@@ -26,16 +26,7 @@ describe('useDocumentEvent hook', () => {
     const unsubscribe = vi.fn()
     vi.mocked(subscribeDocumentEvents).mockReturnValue(unsubscribe)
 
-    renderHook(() => useDocumentEvent({...docHandle, onEvent: handleEvent}), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    renderHook(() => useDocumentEvent({...docHandle, onEvent: handleEvent}))
 
     expect(vi.mocked(subscribeDocumentEvents)).toHaveBeenCalledTimes(1)
     expect(vi.mocked(subscribeDocumentEvents).mock.calls[0][0]).toEqual(expect.any(Object))
@@ -53,16 +44,7 @@ describe('useDocumentEvent hook', () => {
     const unsubscribe = vi.fn()
     vi.mocked(subscribeDocumentEvents).mockReturnValue(unsubscribe)
 
-    const {unmount} = renderHook(() => useDocumentEvent({...docHandle, onEvent: handleEvent}), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {unmount} = renderHook(() => useDocumentEvent({...docHandle, onEvent: handleEvent}))
     unmount()
     expect(unsubscribe).toHaveBeenCalledTimes(1)
   })

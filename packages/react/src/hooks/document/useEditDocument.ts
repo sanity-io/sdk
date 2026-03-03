@@ -23,7 +23,7 @@ type Updater<TValue> = TValue | ((currentValue: TValue) => TValue)
  * @public
  * Edit an entire document with an explicit type `TData`.
  *
- * @param options - Document options including `documentId` and optionally `projectId`/`dataset`.
+ * @param options - Document options including `documentId` and optionally `resource` or `resourceName`.
  * @returns A stable function to update the document state. Accepts either the new document state (`TData`) or an updater function `(currentValue: TData) => nextValue: TData`.
  *          Returns a promise resolving to the {@link ActionsResult}.
  */
@@ -36,7 +36,7 @@ export function useEditDocument<TData>(
  * @public
  * Edit a specific path within a document with an explicit type `TData`.
  *
- * @param options - Document options including `documentId`, `path`, and optionally `resource`.
+ * @param options - Document options including `documentId`, `path`, and optionally `resource` or `resourceName`.
  * @returns A stable function to update the value at the specified path. Accepts either the new value (`TData`) or an updater function `(currentValue: TData) => nextValue: TData`.
  *          Returns a promise resolving to the {@link ActionsResult}.
  */

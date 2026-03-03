@@ -20,7 +20,7 @@ function useStudioResource<T extends DocumentHandle>(docHandle: T) {
 
   return {
     ...docHandle,
-    resourceId: `${resource?.projectId}.${resource?.dataset}`,
+    resourceId: `${resource.projectId}.${resource.dataset}`,
     resourceType: 'studio' as const,
   }
 }

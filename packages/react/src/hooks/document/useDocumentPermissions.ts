@@ -3,7 +3,9 @@ import {useCallback, useContext, useMemo, useSyncExternalStore} from 'react'
 import {filter, firstValueFrom} from 'rxjs'
 
 import {ResourceContext} from '../../context/DefaultResourceContext'
+import {ResourcesContext} from '../../context/ResourcesContext'
 import {useSanityInstance} from '../context/useSanityInstance'
+import {normalizeResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
 /**
  *
@@ -85,14 +87,22 @@ import {useSanityInstance} from '../context/useSanityInstance'
 export function useDocumentPermissions(
   actionOrActions: DocumentAction | DocumentAction[],
 ): DocumentPermissionsResult {
-  const actions = useMemo(
-    () => (Array.isArray(actionOrActions) ? actionOrActions : [actionOrActions]),
-    [actionOrActions],
-  )
+  const instance = useSanityInstance()
+  const contextResource = useContext(ResourceContext)
+  const resources = useContext(ResourcesContext)
+
+  const normalizedActions = useMemo(() => {
+    return Array.isArray(actionOrActions)
+      ? actionOrActions.map((action) =>
+          normalizeResourceOptions(action, resources, contextResource),
+        )
+      : [normalizeResourceOptions(actionOrActions, resources, contextResource)]
+  }, [actionOrActions, resources, contextResource])
+
   // if actions is an array, we need to check that all actions belong to the same resource
   let resource
 
-  for (const action of actions) {
+  for (const action of normalizedActions) {
     if (action.resource) {
       if (!resource) resource = action.resource
       if (action.resource !== resource) {
@@ -103,8 +113,6 @@ export function useDocumentPermissions(
     }
   }
 
-  const instance = useSanityInstance()
-  const contextResource = useContext(ResourceContext)
   const effectiveResource = resource ?? contextResource
 
   if (!effectiveResource) {
@@ -114,8 +122,8 @@ export function useDocumentPermissions(
   }
 
   const permissionsOptions = useMemo(
-    () => ({resource: effectiveResource, actions}),
-    [effectiveResource, actions],
+    () => ({resource: effectiveResource, actions: normalizedActions as DocumentAction[]}),
+    [effectiveResource, normalizedActions],
   )
 
   const isDocumentReady = useCallback(

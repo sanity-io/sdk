@@ -10,7 +10,10 @@ import {
 /**
  * @public
  */
-export interface UseDocumentEventOptions extends WithResourceNameSupport<ResourceHandle> {
+export interface UseDocumentEventOptions<
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> extends WithResourceNameSupport<ResourceHandle<TDataset, TProjectId>> {
   onEvent: (documentEvent: DocumentEvent) => void
 }
 
@@ -69,9 +72,12 @@ export interface UseDocumentEventOptions extends WithResourceNameSupport<Resourc
  * }
  * ```
  */
-export function useDocumentEvent(
+export function useDocumentEvent<
+  TDataset extends string = string,
+  TProjectId extends string = string,
+>(
   // Single options object parameter
-  options: UseDocumentEventOptions,
+  options: UseDocumentEventOptions<TDataset, TProjectId>,
 ): void {
   // Destructure handler and datasetHandle from options
   const normalizedOptions = useNormalizedResourceOptions(options)

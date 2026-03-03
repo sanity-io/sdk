@@ -60,11 +60,7 @@ describe('getProjectionState', () => {
   })
 
   it('returns a state source that emits when the specific projection value changes', () => {
-    const projectionState = getProjectionState(instance, {
-      projection: projection1,
-      ...docHandle,
-      resource,
-    })
+    const projectionState = getProjectionState(instance, {projection: projection1, ...docHandle})
     expect(projectionState.getCurrent()).toEqual(STABLE_EMPTY_PROJECTION)
 
     const subscriber = vi.fn()

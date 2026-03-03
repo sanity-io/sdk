@@ -58,11 +58,11 @@ describe('SanityApp', () => {
     mockSDKProviderComponent.mockClear()
   })
 
-  it('renders SDKProvider with a single config', () => {
-    const singleConfig = {}
+  it('renders SDKProvider with a single resource', () => {
+    const singleResource = {projectId: 'test-project', dataset: 'production'}
 
     render(
-      <SanityApp config={singleConfig} fallback={<div>Loading...</div>}>
+      <SanityApp resources={{default: singleResource}} fallback={<div>Loading...</div>}>
         <div>Child Content</div>
       </SanityApp>,
     )
@@ -77,10 +77,8 @@ describe('SanityApp', () => {
     expect(firstCallArgs1).toBeDefined()
     expect(firstCallArgs1.length).toBeGreaterThan(0)
     const props = firstCallArgs1[0] as unknown as SDKProviderProps
-    const config = props?.config
 
-    // Config is now passed directly as an object for single configs
-    expect(config).toEqual(singleConfig)
+    expect(props.resources).toEqual({default: singleResource})
     expect(props.fallback).toBeTruthy()
   })
 

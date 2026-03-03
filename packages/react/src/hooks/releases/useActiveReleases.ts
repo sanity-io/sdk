@@ -29,7 +29,7 @@ import {
  * ```
  */
 type UseActiveReleases = {
-  (options?: WithResourceNameSupport<{resource: DocumentResource}> | undefined): ReleaseDocument[]
+  (options?: WithResourceNameSupport<{resource?: DocumentResource}> | undefined): ReleaseDocument[]
 }
 
 const useActiveReleasesValue = createStateSourceHook({

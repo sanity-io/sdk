@@ -57,9 +57,9 @@ export interface StateSource<T> {
  * ```ts
  * // Using both state and instance in a selector (psuedo example)
  * const getUserByProjectId = createStateSourceAction(
- *   ({ state, instance }: SelectorContext<UsersState>, options?: ProjectHandle) => {
+ *   ({ state, instance }: SelectorContext<UsersState>, options?: ResourceHandle) => {
  *     const allUsers = state.users
- *     const projectId = options?.projectId ?? instance.config.auth?.projectId
+ *     const projectId = options?.projectId ?? instance.config.defaultResource?.projectId
  *     return allUsers.filter(user => user.projectId === projectId)
  *   }
  * )

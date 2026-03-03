@@ -1,8 +1,8 @@
 import {type DocumentAction, type DocumentPermissionsResult, getPermissionsState} from '@sanity/sdk'
-import {act, renderHook, waitFor} from '@testing-library/react'
 import {BehaviorSubject, firstValueFrom, Observable} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {act, renderHook, waitFor} from '../../../test/test-utils'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useDocumentPermissions} from './useDocumentPermissions'
 
@@ -85,13 +85,7 @@ describe('usePermissions', () => {
       permissionsSubject.next(mockPermissionAllowed)
     })
 
-    const {result} = renderHook(() => useDocumentPermissions(mockAction), {
-      wrapper: ({children}) => (
-        <ResourceProvider resource={mockResource} fallback={null}>
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useDocumentPermissions(mockAction))
 
     // ResourceProvider handles the instance configuration
     expect(getPermissionsState).toHaveBeenCalledWith(
@@ -107,13 +101,7 @@ describe('usePermissions', () => {
       permissionsSubject.next(mockPermissionDenied)
     })
 
-    const {result} = renderHook(() => useDocumentPermissions(mockAction), {
-      wrapper: ({children}) => (
-        <ResourceProvider resource={mockResource} fallback={null}>
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useDocumentPermissions(mockAction))
 
     expect(result.current).toEqual(mockPermissionDenied)
     expect(result.current.allowed).toBe(false)
@@ -124,13 +112,7 @@ describe('usePermissions', () => {
   it('should accept an array of actions', () => {
     const actions = [mockAction, {...mockAction, documentId: 'doc2'}]
 
-    renderHook(() => useDocumentPermissions(actions), {
-      wrapper: ({children}) => (
-        <ResourceProvider resource={mockResource} fallback={null}>
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    renderHook(() => useDocumentPermissions(actions))
 
     expect(getPermissionsState).toHaveBeenCalledWith(
       expect.any(Object),
@@ -149,13 +131,7 @@ describe('usePermissions', () => {
     ]
 
     expect(() => {
-      renderHook(() => useDocumentPermissions(actions), {
-        wrapper: ({children}) => (
-          <ResourceProvider resource={mockResource} fallback={null}>
-            {children}
-          </ResourceProvider>
-        ),
-      })
+      renderHook(() => useDocumentPermissions(actions))
     }).toThrow(/Mismatched resources found in actions/)
   })
 
@@ -170,13 +146,7 @@ describe('usePermissions', () => {
     ]
 
     expect(() => {
-      renderHook(() => useDocumentPermissions(actions), {
-        wrapper: ({children}) => (
-          <ResourceProvider resource={mockResource} fallback={null}>
-            {children}
-          </ResourceProvider>
-        ),
-      })
+      renderHook(() => useDocumentPermissions(actions))
     }).toThrow(/Mismatched resources found in actions/)
   })
 
@@ -192,13 +162,7 @@ describe('usePermissions', () => {
     ]
 
     expect(() => {
-      renderHook(() => useDocumentPermissions(actions), {
-        wrapper: ({children}) => (
-          <ResourceProvider resource={mockResource} fallback={null}>
-            {children}
-          </ResourceProvider>
-        ),
-      })
+      renderHook(() => useDocumentPermissions(actions))
     }).toThrow(/Mismatched resources found in actions/)
   })
 
@@ -255,13 +219,7 @@ describe('usePermissions', () => {
       permissionsSubject.next(mockPermissionAllowed)
     })
 
-    const {result, rerender} = renderHook(() => useDocumentPermissions(mockAction), {
-      wrapper: ({children}) => (
-        <ResourceProvider resource={mockResource} fallback={null}>
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result, rerender} = renderHook(() => useDocumentPermissions(mockAction))
 
     expect(result.current).toEqual(mockPermissionAllowed)
 

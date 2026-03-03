@@ -12,7 +12,6 @@ import {
   type AgentTransformOptions,
   agentTranslate,
   type AgentTranslateOptions,
-  type DocumentResource,
   type SanityInstance,
 } from '@sanity/sdk'
 import {useCallback, useContext} from 'react'
@@ -54,10 +53,7 @@ function useAgentCallback<TOptions extends object, TReturn>(
   return useCallback(
     (options: TOptions & WithResourceNameSupport<AgentResourceOptions>) => {
       const {resource} = normalizeResourceOptions(
-        {resource: options.resource, resourceName: options.resourceName} as {
-          resource?: DocumentResource
-          resourceName?: string
-        },
+        {resource: options.resource, resourceName: options.resourceName},
         resources,
         contextResource,
       )
@@ -138,9 +134,7 @@ function useAgentCallback<TOptions extends object, TReturn>(
 export function useAgentGenerate(): (
   options: AgentGenerateOptions & WithResourceNameSupport<AgentResourceOptions>,
 ) => Subscribable<unknown> {
-  return useAgentCallback(agentGenerate) as (
-    options: AgentGenerateOptions & WithResourceNameSupport<AgentResourceOptions>,
-  ) => Subscribable<unknown>
+  return useAgentCallback<AgentGenerateOptions, Subscribable<unknown>>(agentGenerate)
 }
 
 /**
@@ -217,9 +211,7 @@ export function useAgentGenerate(): (
 export function useAgentTransform(): (
   options: AgentTransformOptions & WithResourceNameSupport<AgentResourceOptions>,
 ) => Subscribable<unknown> {
-  return useAgentCallback(agentTransform) as (
-    options: AgentTransformOptions & WithResourceNameSupport<AgentResourceOptions>,
-  ) => Subscribable<unknown>
+  return useAgentCallback<AgentTransformOptions, Subscribable<unknown>>(agentTransform)
 }
 
 /**
@@ -315,9 +307,7 @@ export function useAgentTransform(): (
 export function useAgentTranslate(): (
   options: AgentTranslateOptions & WithResourceNameSupport<AgentResourceOptions>,
 ) => Subscribable<unknown> {
-  return useAgentCallback(agentTranslate) as (
-    options: AgentTranslateOptions & WithResourceNameSupport<AgentResourceOptions>,
-  ) => Subscribable<unknown>
+  return useAgentCallback<AgentTranslateOptions, Subscribable<unknown>>(agentTranslate)
 }
 
 /**
@@ -428,9 +418,7 @@ function promptAdapter(
 export function useAgentPrompt(): (
   options: AgentPromptOptions & WithResourceNameSupport<AgentResourceOptions>,
 ) => Promise<AgentPromptResult> {
-  return useAgentCallback(promptAdapter) as (
-    options: AgentPromptOptions & WithResourceNameSupport<AgentResourceOptions>,
-  ) => Promise<AgentPromptResult>
+  return useAgentCallback<AgentPromptOptions, Promise<AgentPromptResult>>(promptAdapter)
 }
 
 /**
@@ -596,7 +584,5 @@ function patchAdapter(
 export function useAgentPatch(): (
   options: AgentPatchOptions & WithResourceNameSupport<AgentResourceOptions>,
 ) => Promise<AgentPatchResult> {
-  return useAgentCallback(patchAdapter) as (
-    options: AgentPatchOptions & WithResourceNameSupport<AgentResourceOptions>,
-  ) => Promise<AgentPatchResult>
+  return useAgentCallback<AgentPatchOptions, Promise<AgentPatchResult>>(patchAdapter)
 }

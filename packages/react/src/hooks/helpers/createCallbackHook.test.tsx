@@ -1,7 +1,7 @@
 import {type SanityInstance} from '@sanity/sdk'
-import {renderHook} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
+import {renderHook} from '../../../test/test-utils'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {createCallbackHook} from './createCallbackHook'
 
@@ -21,13 +21,7 @@ describe('createCallbackHook', () => {
     const useTestHook = createCallbackHook(testCallback)
 
     // Render the hook
-    const {result, rerender} = renderHook(() => useTestHook(), {
-      wrapper: ({children}) => (
-        <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result, rerender} = renderHook(() => useTestHook())
 
     // Test the callback with parameters
     const result1 = result.current('test', 123)

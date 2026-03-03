@@ -69,6 +69,7 @@ describe('applyDocumentActions', () => {
       documentId: 'doc1',
       documentType: 'example',
       patches: [{set: {foo: 'bar'}}],
+      resource: {projectId: 'p', dataset: 'd'},
     }
 
     // Call applyDocumentActions with a fixed transactionId for reproducibility.
@@ -127,6 +128,7 @@ describe('applyDocumentActions', () => {
       documentId: 'doc1',
       documentType: 'example',
       patches: [{set: {foo: 'error'}}],
+      resource: {projectId: 'p', dataset: 'd'},
     }
 
     // Call applyDocumentActions with a fixed transactionId.
@@ -149,14 +151,15 @@ describe('applyDocumentActions', () => {
   })
 
   it('uses explicit resource even when instance default differs', async () => {
-    const otherInstance = createSanityInstance()
+    const otherInstance = createSanityInstance({
+      defaultResource: {projectId: 'child-p', dataset: 'child-d'},
+    })
     const action: DocumentAction = {
       type: 'document.edit',
       documentId: 'doc1',
       documentType: 'example',
       patches: [{set: {foo: 'childTest'}}],
-      projectId: 'p',
-      dataset: 'd',
+      resource: {projectId: 'p', dataset: 'd'},
     }
     const applyPromise = applyDocumentActions(instance, {
       actions: [action],

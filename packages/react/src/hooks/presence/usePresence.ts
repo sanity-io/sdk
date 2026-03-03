@@ -13,7 +13,7 @@ import {
   type WithResourceNameSupport,
 } from '../helpers/useNormalizedResourceOptions'
 
-type UsePresenceOptions = WithResourceNameSupport<{resource: DocumentResource}>
+type UsePresenceOptions = WithResourceNameSupport<{resource?: DocumentResource}>
 /**
  * A hook for subscribing to presence information for the current project.
  * @public

@@ -64,7 +64,7 @@ describe('createSanityInstance', () => {
     })
 
     it('should log configuration details at debug level', () => {
-      createSanityInstance({auth: {projectId: 'test-proj'}})
+      createSanityInstance({defaultResource: {projectId: 'test-proj', dataset: 'test-dataset'}})
 
       expect(mockHandler.debug).toHaveBeenCalledWith(
         expect.stringContaining('[DEBUG] [sdk]'),
