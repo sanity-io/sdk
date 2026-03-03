@@ -14,8 +14,7 @@ const channelConfig = {
 
 describe('getOrCreateChannel', () => {
   const instance = createSanityInstance({
-    projectId: 'test-project-id',
-    dataset: 'test-dataset',
+    defaultResource: {projectId: 'test-project-id', dataset: 'test-dataset'},
   })
   let state: ReturnType<typeof createStoreState<ComlinkControllerState>>
   let mockController: Partial<Controller>

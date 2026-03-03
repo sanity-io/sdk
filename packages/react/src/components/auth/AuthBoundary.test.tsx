@@ -1,4 +1,4 @@
-import {AuthStateType, type SanityConfig} from '@sanity/sdk'
+import {AuthStateType} from '@sanity/sdk'
 import {render, screen, waitFor} from '@testing-library/react'
 import React from 'react'
 import {type FallbackProps} from 'react-error-boundary'
@@ -21,6 +21,9 @@ vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
 }))
 vi.mock('../../hooks/auth/useLogOut', () => ({
   useLogOut: vi.fn(() => async () => {}),
+}))
+vi.mock('../../hooks/comlink/useWindowConnection', () => ({
+  useWindowConnection: vi.fn(() => ({fetch: vi.fn()})),
 }))
 
 // Mock AuthError throwing scenario
@@ -107,24 +110,6 @@ describe('AuthBoundary', () => {
   const mockUseVerifyOrgProjects = vi.mocked(useVerifyOrgProjects)
   const testProjectIds = ['proj-test'] // Example project ID for tests
 
-  // Mock Sanity instance
-  const mockSanityInstance = {
-    instanceId: 'test-instance-id',
-    config: {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
-    },
-    isDisposed: () => false,
-    dispose: () => {},
-    onDispose: () => () => {},
-    getParent: () => undefined,
-    createChild: (config: SanityConfig) => ({
-      ...mockSanityInstance,
-      config: {...mockSanityInstance.config, ...config},
-    }),
-    match: () => undefined,
-  }
-
   beforeEach(() => {
     vi.clearAllMocks()
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -163,7 +148,7 @@ describe('AuthBoundary', () => {
       isExchangingToken: false,
     })
     const {container} = render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
@@ -180,7 +165,7 @@ describe('AuthBoundary', () => {
       token: 'exampleToken',
     })
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
@@ -194,7 +179,7 @@ describe('AuthBoundary', () => {
       error: new Error('test error'),
     })
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
@@ -211,7 +196,7 @@ describe('AuthBoundary', () => {
 
   it('renders children when logged in and org verification passes', () => {
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
@@ -233,7 +218,7 @@ describe('AuthBoundary', () => {
 
     // Need to catch the error thrown during render. ErrorBoundary mock handles this.
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
         <AuthBoundary verifyOrganization={true} projectIds={testProjectIds}>
           <div>Protected Content</div>
         </AuthBoundary>
@@ -265,7 +250,7 @@ describe('AuthBoundary', () => {
     })
 
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
         <AuthBoundary verifyOrganization={false} projectIds={testProjectIds}>
           <div>Protected Content</div>
         </AuthBoundary>
@@ -290,7 +275,7 @@ describe('AuthBoundary', () => {
     mockUseVerifyOrgProjects.mockImplementation(() => null)
 
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>
           <div>Protected Content</div>
         </AuthBoundary>

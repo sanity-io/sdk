@@ -1,9 +1,19 @@
-import {createGroqSearchFilter, type DocumentHandle, type QueryOptions} from '@sanity/sdk'
+import {
+  createGroqSearchFilter,
+  type DocumentHandle,
+  getDefaultDatasetResource,
+  isDatasetResource,
+  type QueryOptions,
+} from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
 import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 import {useQuery} from '../query/useQuery'
 
 /**
@@ -16,7 +26,9 @@ export interface PaginatedDocumentsOptions<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> extends Omit<QueryOptions<TDocumentType, TDataset, TProjectId>, 'query'> {
+> extends WithResourceNameSupport<
+  Omit<QueryOptions<TDocumentType, TDataset, TProjectId>, 'query'>
+> {
   documentType?: TDocumentType | TDocumentType[]
   /**
    * GROQ filter expression to apply to the query
@@ -28,6 +40,7 @@ export interface PaginatedDocumentsOptions<
   pageSize?: number
   /**
    * Sorting configuration for the results
+   * @beta
    */
   orderings?: SortOrderingItem[]
   /**
@@ -231,15 +244,16 @@ export function usePaginatedDocuments<
   params = {},
   orderings,
   search,
-  ...options
+  ...rawOptions
 }: PaginatedDocumentsOptions<TDocumentType, TDataset, TProjectId>): PaginatedDocumentsResponse<
   TDocumentType,
   TDataset,
   TProjectId
 > {
-  const instance = useSanityInstance(options)
+  const instance = useSanityInstance()
+  const options = useNormalizedResourceOptions(rawOptions)
   const [pageIndex, setPageIndex] = useState(0)
-  const key = JSON.stringify({filter, search, params, orderings, pageSize})
+  const key = JSON.stringify({filter, search, params, orderings, pageSize, ...options})
   // Reset the pageIndex to 0 whenever any query parameters (filter, search,
   // params, orderings) or pageSize changes
   useEffect(() => {
@@ -300,8 +314,15 @@ export function usePaginatedDocuments<
       ...params,
       __types: documentTypes,
       __handle: {
-        ...pick(instance.config, 'projectId', 'dataset', 'perspective'),
-        ...pick(options, 'projectId', 'dataset', 'perspective'),
+        ...getDefaultDatasetResource(instance.config),
+        ...(options.resource && isDatasetResource(options.resource)
+          ? {
+              projectId: options.resource.projectId,
+              dataset: options.resource.dataset,
+              resource: options.resource,
+            }
+          : {}),
+        ...pick(options, 'perspective'),
       },
     },
   })

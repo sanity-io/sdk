@@ -1,5 +1,4 @@
 import {CorsOriginError, type ResponseQueryOptions} from '@sanity/client'
-import {type SanityQueryResult} from 'groq'
 import {
   catchError,
   combineLatest,
@@ -14,6 +13,7 @@ import {
   mergeMap,
   NEVER,
   Observable,
+  of,
   pairwise,
   race,
   share,
@@ -23,9 +23,18 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle, type DocumentSource} from '../config/sanityConfig'
+import {type DatasetHandle} from '../config/sanityConfig'
+/*
+ * Although this is an import dependency cycle, it is not a logical cycle:
+ * 1. queryStore uses getPerspectiveState when resolving release perspectives
+ * 2. getPerspectiveState uses releasesStore as a data source
+ * 3. releasesStore uses queryStore as a data source
+ * 4. however, queryStore does not use getPerspectiveState for the perspective used in releasesStore ("raw")
+ */
+// eslint-disable-next-line import/no-cycle
 import {getPerspectiveState} from '../releases/getPerspectiveState'
-import {bindActionBySource} from '../store/createActionBinder'
+import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
+import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -64,7 +73,6 @@ export interface QueryOptions<
     DatasetHandle<TDataset, TProjectId> {
   query: TQuery
   params?: Record<string, unknown>
-  source?: DocumentSource
 }
 
 /**
@@ -107,7 +115,7 @@ function normalizeOptionsWithPerspective(
   }
 }
 
-const queryStore = defineStore<QueryStoreState>({
+const queryStore = defineStore<QueryStoreState, BoundResourceKey>({
   name: 'QueryStore',
   getInitialState: () => ({queries: {}}),
   initialize(context) {
@@ -128,7 +136,11 @@ const errorHandler = (state: StoreState<{error?: unknown}>) => {
   return (error: unknown): void => state.set('setError', {error})
 }
 
-const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QueryStoreState>) => {
+const listenForNewSubscribersAndFetch = ({
+  state,
+  instance,
+  key: {resource: boundResource},
+}: StoreContext<QueryStoreState, BoundResourceKey>) => {
   return state.observable
     .pipe(
       map((s) => new Set(Object.keys(s.queries))),
@@ -163,24 +175,38 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
               projectId,
               dataset,
               tag,
-              source,
+              resource,
               perspective: perspectiveFromOptions,
               ...restOptions
             } = parseQueryKey(group$.key)
 
-            const perspective$ = getPerspectiveState(instance, {
-              perspective: perspectiveFromOptions,
-            }).observable.pipe(filter(Boolean))
+            // Short-circuit perspective resolution for non-release perspectives to avoid
+            // touching the releases store (and its initialization) unnecessarily.
+            const perspective$ = isReleasePerspective(perspectiveFromOptions)
+              ? getPerspectiveState(instance, {
+                  perspective: perspectiveFromOptions,
+                }).observable.pipe(filter(Boolean))
+              : of(perspectiveFromOptions ?? QUERY_STORE_DEFAULT_PERSPECTIVE)
 
+            // Use the store's bound resource as fallback when the query key
+            // doesn't include an explicit resource. The store is scoped to a
+            // specific resource via bindActionByResource, but the captured
+            // `instance` may have a different default resource (e.g. when the
+            // store was first created by a caller that passed an explicit
+            // resource while using the root app instance).
             const client$ = getClientState(instance, {
               apiVersion: QUERY_STORE_API_VERSION,
               projectId,
               dataset,
-              source,
+              resource: resource ?? boundResource,
             }).observable
 
-            return combineLatest([lastLiveEventId$, client$, perspective$]).pipe(
-              switchMap(([lastLiveEventId, client, perspective]) =>
+            return combineLatest({
+              lastLiveEventId: lastLiveEventId$,
+              client: client$,
+              perspective: perspective$,
+            }).pipe(
+              switchMap(({lastLiveEventId, client, perspective}) =>
                 client.observable.fetch(query, params, {
                   ...restOptions,
                   perspective,
@@ -208,9 +234,11 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
 const listenToLiveClientAndSetLastLiveEventIds = ({
   state,
   instance,
-}: StoreContext<QueryStoreState>) => {
+  key: {resource},
+}: StoreContext<QueryStoreState, BoundResourceKey>) => {
   const liveMessages$ = getClientState(instance, {
     apiVersion: QUERY_STORE_API_VERSION,
+    resource,
   }).observable.pipe(
     switchMap((client) =>
       defer(() =>
@@ -268,16 +296,6 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
  *
  * @beta
  */
-export function getQueryState<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  instance: SanityInstance,
-  queryOptions: QueryOptions<TQuery, TDataset, TProjectId>,
-): StateSource<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`> | undefined>
-
-/** @beta */
 export function getQueryState<TData>(
   instance: SanityInstance,
   queryOptions: QueryOptions,
@@ -295,7 +313,7 @@ export function getQueryState(
 ): ReturnType<typeof _getQueryState> {
   return _getQueryState(...args)
 }
-const _getQueryState = bindActionBySource(
+const _getQueryState = bindActionByResource(
   queryStore,
   createStateSourceAction({
     selector: ({state, instance}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
@@ -336,16 +354,6 @@ const _getQueryState = bindActionBySource(
  *
  * @beta
  */
-export function resolveQuery<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  instance: SanityInstance,
-  queryOptions: ResolveQueryOptions<TQuery, TDataset, TProjectId>,
-): Promise<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>>
-
-/** @beta */
 export function resolveQuery<TData>(
   instance: SanityInstance,
   queryOptions: ResolveQueryOptions,
@@ -354,7 +362,7 @@ export function resolveQuery<TData>(
 export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise<unknown> {
   return _resolveQuery(...args)
 }
-const _resolveQuery = bindActionBySource(
+const _resolveQuery = bindActionByResource(
   queryStore,
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
     const normalized = normalizeOptionsWithPerspective(instance, options)

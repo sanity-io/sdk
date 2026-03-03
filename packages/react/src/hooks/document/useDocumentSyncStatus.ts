@@ -1,13 +1,14 @@
 import {
   type DocumentHandle,
+  type DocumentOptions,
   getDocumentSyncStatus,
   resolveDocument,
   type SanityInstance,
   type StateSource,
 } from '@sanity/sdk'
-import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
 type UseDocumentSyncStatus = {
   /**
@@ -45,11 +46,7 @@ type UseDocumentSyncStatus = {
   (doc: DocumentHandle): boolean
 }
 
-/**
- * @public
- * @function
- */
-export const useDocumentSyncStatus: UseDocumentSyncStatus = createStateSourceHook({
+const useDocumentSyncStatusValue = createStateSourceHook({
   getState: getDocumentSyncStatus as (
     instance: SanityInstance,
     doc: DocumentHandle,
@@ -57,5 +54,15 @@ export const useDocumentSyncStatus: UseDocumentSyncStatus = createStateSourceHoo
   shouldSuspend: (instance, doc: DocumentHandle) =>
     getDocumentSyncStatus(instance, doc).getCurrent() === undefined,
   suspender: (instance, doc: DocumentHandle) => resolveDocument(instance, doc),
-  getConfig: identity,
 })
+
+/**
+ * @public
+ * @function
+ */
+export const useDocumentSyncStatus: UseDocumentSyncStatus = (
+  options: DocumentOptions<string | undefined>,
+) => {
+  const normalizedOptions = useNormalizedResourceOptions(options)
+  return useDocumentSyncStatusValue(normalizedOptions)
+}

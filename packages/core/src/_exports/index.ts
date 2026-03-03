@@ -12,6 +12,7 @@ export type {
   AgentPatchResult,
   AgentPromptOptions,
   AgentPromptResult,
+  AgentResourceOptions,
   AgentTransformOptions,
   AgentTransformResult,
   AgentTranslateOptions,
@@ -24,6 +25,7 @@ export {
   agentTransform,
   agentTranslate,
 } from '../agent/agentActions'
+export {isStudioConfig} from '../auth/authMode'
 export {AuthStateType} from '../auth/authStateType'
 export {
   type AuthState,
@@ -85,17 +87,26 @@ export {
   type LogNamespace,
 } from '../config/loggingConfig'
 export {
-  canvasSource,
+  type CanvasResource,
   type DatasetHandle,
-  datasetSource,
+  type DatasetResource,
+  DEFAULT_RESOURCE_NAME,
   type DocumentHandle,
-  type DocumentSource,
+  type DocumentResource,
   type DocumentTypeHandle,
-  mediaLibrarySource,
+  getDefaultDatasetResource,
+  getDefaultProjectId,
+  isCanvasResource,
+  isDatasetResource,
+  isMediaLibraryResource,
+  type MediaLibraryResource,
   type PerspectiveHandle,
   type ProjectHandle,
   type ReleasePerspective,
+  resolveDefaultResource,
   type SanityConfig,
+  type StudioConfig,
+  type TokenSource,
 } from '../config/sanityConfig'
 export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
 export {
@@ -139,7 +150,6 @@ export {
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,
 } from '../document/events'
-export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export type {FavoriteStatusResponse} from '../favorites/favorites'
 export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
@@ -152,14 +162,14 @@ export type {
   TransportEvent,
   UserPresence,
 } from '../presence/types'
-export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
-export type {PreviewStoreState, PreviewValue, ValuePending} from '../preview/previewStore'
-export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
+export {PREVIEW_PROJECTION} from '../preview/previewConstants'
+export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
+export type {PreviewMedia, PreviewQueryResult, PreviewValue, ValuePending} from '../preview/types'
 export {type OrgVerificationResult} from '../project/organizationVerification'
 export {getProjectState, resolveProject} from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'
-export {type ProjectionValuePending, type ValidProjection} from '../projection/types'
+export {type ProjectionValuePending} from '../projection/types'
 export {getProjectsState, resolveProjects} from '../projects/projects'
 export {
   getQueryKey,

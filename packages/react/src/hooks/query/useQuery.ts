@@ -5,81 +5,14 @@ import {
   type QueryOptions,
   resolveQuery,
 } from '@sanity/sdk'
-import {type SanityQueryResult} from 'groq'
 import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-
-// Overload 1: Inferred Type (using Typegen)
-/**
- * @public
- * Executes a GROQ query, inferring the result type from the query string and options.
- * Leverages Sanity Typegen if configured for enhanced type safety.
- *
- * @param options - Configuration for the query, including `query`, optional `params`, `projectId`, `dataset`, etc.
- * @returns An object containing `data` (typed based on the query) and `isPending` (for transitions).
- *
- * @example Basic usage (Inferred Type)
- * ```tsx
- * import {useQuery} from '@sanity/sdk-react'
- * import {defineQuery} from 'groq'
- *
- * const myQuery = defineQuery(`*[_type == "movie"]{_id, title}`)
- *
- * function MovieList() {
- *   // Typegen infers the return type for data
- *   const {data} = useQuery({ query: myQuery })
- *
- *   return (
- *     <div>
- *       <h2>Movies</h2>
- *       <ul>
- *         {data.map(movie => <li key={movie._id}>{movie.title}</li>)}
- *       </ul>
- *     </div>
- *   )
- * }
- * // Suspense boundary should wrap <MovieList /> for initial load
- * ```
- *
- * @example Using parameters (Inferred Type)
- * ```tsx
- * import {useQuery} from '@sanity/sdk-react'
- * import {defineQuery} from 'groq'
- *
- * const myQuery = defineQuery(`*[_type == "movie" && _id == $id][0]`)
- *
- * function MovieDetails({movieId}: {movieId: string}) {
- *   // Typegen infers the return type based on query and params
- *   const {data, isPending} = useQuery({
- *     query: myQuery,
- *     params: { id: movieId }
- *   })
- *
- *   return (
- *     // utilize `isPending` to signal to users that new data is coming in
- *     // (e.g. the `movieId` changed and we're loading in the new one)
- *     <div style={{ opacity: isPending ? 0.5 : 1 }}>
- *       {data ? <h1>{data.title}</h1> : <p>Movie not found</p>}
- *     </div>
- *   )
- * }
- * ```
- */
-export function useQuery<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  options: QueryOptions<TQuery, TDataset, TProjectId>,
-): {
-  /** The query result, typed based on the GROQ query string */
-  data: SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>
-  /** True if a query transition is in progress */
-  isPending: boolean
-}
-
-// Overload 2: Explicit Type Provided
+import {
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
+// Overload 1: Explicit Type Provided
 /**
  * @public
  * Executes a GROQ query with an explicitly provided result type `TData`.
@@ -108,7 +41,7 @@ export function useQuery<
  * }
  * ```
  */
-export function useQuery<TData>(options: QueryOptions): {
+export function useQuery<TData>(options: WithResourceNameSupport<QueryOptions>): {
   /** The query result, cast to the provided type TData */
   data: TData
   /** True if another query is resolving in the background (suspense handles the initial loading state) */
@@ -128,24 +61,27 @@ export function useQuery<TData>(options: QueryOptions): {
  * - Subscribes to changes, providing real-time updates.
  * - Integrates with React Suspense for handling initial loading states.
  * - Uses React Transitions for managing loading states during query/parameter changes (indicated by `isPending`).
- * - Supports type inference based on the GROQ query when using Sanity Typegen.
  * - Allows specifying an explicit return type `TData` for the query result.
  *
  * @category GROQ
  */
-export function useQuery(options: QueryOptions): {data: unknown; isPending: boolean} {
+export function useQuery(options: WithResourceNameSupport<QueryOptions>): {
+  data: unknown
+  isPending: boolean
+} {
   // Implementation returns unknown, overloads define specifics
-  const instance = useSanityInstance(options)
+  const instance = useSanityInstance()
+
+  // Normalize options: resolve resourceName to resource and strip resourceName
+  const normalized = useNormalizedResourceOptions(options)
 
   // Use React's useTransition to avoid UI jank when queries change
   const [isPending, startTransition] = useTransition()
 
-  // Get the unique key for this query and its options
-  const queryKey = getQueryKey(options)
+  // Get the unique key for this query and its options (using normalized options)
+  const queryKey = getQueryKey(normalized)
   // Use a deferred state to avoid immediate re-renders when the query changes
   const [deferredQueryKey, setDeferredQueryKey] = useState(queryKey)
-  // Parse the deferred query key back into a query and options
-  const deferred = useMemo(() => parseQueryKey(deferredQueryKey), [deferredQueryKey])
 
   // Create an AbortController to cancel in-flight requests when needed
   const ref = useRef<AbortController>(new AbortController())
@@ -166,10 +102,11 @@ export function useQuery(options: QueryOptions): {data: unknown; isPending: bool
   }, [deferredQueryKey, queryKey])
 
   // Get the state source for this query from the query store
-  const {getCurrent, subscribe} = useMemo(
-    () => getQueryState(instance, deferred),
-    [instance, deferred],
-  )
+  // Memoize the options object by depending on the stable string key instead of the parsed object
+  const {getCurrent, subscribe} = useMemo(() => {
+    const deferred = parseQueryKey(deferredQueryKey)
+    return getQueryState(instance, deferred)
+  }, [instance, deferredQueryKey])
 
   // If data isn't available yet, suspend rendering
   if (getCurrent() === undefined) {
@@ -182,12 +119,13 @@ export function useQuery(options: QueryOptions): {data: unknown; isPending: bool
     //    the captured signal remains unchanged for this suspended render.
     // Thus, the promise thrown here uses a stable abort signal, ensuring correct behavior.
     const currentSignal = ref.current.signal
+    const deferred = parseQueryKey(deferredQueryKey)
 
     throw resolveQuery(instance, {...deferred, signal: currentSignal})
   }
 
   // Subscribe to updates and get the current data
   // useSyncExternalStore ensures the component re-renders when the data changes
-  const data = useSyncExternalStore(subscribe, getCurrent) as SanityQueryResult
+  const data = useSyncExternalStore(subscribe, getCurrent) as unknown
   return useMemo(() => ({data, isPending}), [data, isPending])
 }

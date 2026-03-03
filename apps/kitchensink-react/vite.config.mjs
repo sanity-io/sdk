@@ -1,13 +1,8 @@
 import {resolve} from 'node:path'
 
-// eslint-disable-next-line import/no-extraneous-dependencies
 import react from '@vitejs/plugin-react'
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {defineConfig, loadEnv} from 'vite'
-
-const ReactCompilerConfig = {
-  target: '18',
-}
 
 export default defineConfig(({mode}) => {
   // load env from root directory of turborepo
@@ -31,7 +26,7 @@ export default defineConfig(({mode}) => {
     plugins: [
       react({
         babel: {
-          plugins: [['babel-plugin-react-compiler', ReactCompilerConfig]],
+          plugins: ['babel-plugin-react-compiler'],
         },
       }),
     ],
@@ -52,6 +47,9 @@ export default defineConfig(({mode}) => {
       ),
       'import.meta.env.VITE_E2E_DATASET_1': JSON.stringify(
         process.env['SDK_E2E_DATASET_1'] || env['SDK_E2E_DATASET_1'],
+      ),
+      'import.meta.env.VITE_E2E_MEDIA_LIBRARY_ID': JSON.stringify(
+        process.env['SDK_E2E_MEDIA_LIBRARY_ID'] || env['SDK_E2E_MEDIA_LIBRARY_ID'],
       ),
     },
   }

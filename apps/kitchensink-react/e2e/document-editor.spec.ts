@@ -29,17 +29,20 @@ test.describe('Document Editor', () => {
       const document = JSON.parse(content || '{}')
       expect(document.name).toBe('Test Author for document editor')
       expect(document.biography).toBe('This is a test biography')
-    }).toPass({timeout: 5000})
+    }).toPass({timeout: 10000})
 
     // Update content
     await pageContext.getByTestId('name-input').fill('Updated Author Name')
     await pageContext.getByTestId('name-input').press('Enter')
 
     // Verify the changes are reflected
-    const updatedContent = await pageContext.getByTestId('document-content').textContent()
-    const updatedDocument = JSON.parse(updatedContent || '{}')
-    expect(updatedDocument.name).toBe('Updated Author Name')
-    expect(updatedDocument.biography).toBe('This is a test biography')
+    // Use toPass() to retry as the mutation may take time to complete
+    await expect(async () => {
+      const updatedContent = await pageContext.getByTestId('document-content').textContent()
+      const updatedDocument = JSON.parse(updatedContent || '{}')
+      expect(updatedDocument.name).toBe('Updated Author Name')
+      expect(updatedDocument.biography).toBe('This is a test biography')
+    }).toPass({timeout: 10000})
 
     // we should play with the other actions here (delete, discard, publish, etc)
     // and also see what happens in the browser if we update the value via the client (does it sync? race conditions?)

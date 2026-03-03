@@ -1,8 +1,7 @@
-import {canvasSource, type DocumentHandle, mediaLibrarySource} from '@sanity/sdk'
-import {renderHook} from '@testing-library/react'
+import {type DocumentHandle} from '@sanity/sdk'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {type DocumentHandleWithSource} from './types'
+import {renderHook} from '../../../test/test-utils'
 import {useDispatchIntent} from './useDispatchIntent'
 
 // Mock the useWindowConnection hook
@@ -62,9 +61,13 @@ describe('useDispatchIntent', () => {
   })
 
   it('should use memoized dispatchIntent function', () => {
-    const {result, rerender} = renderHook(({params}) => useDispatchIntent(params), {
-      initialProps: {params: {action: 'edit' as const, documentHandle: mockDocumentHandle}},
-    })
+    const params = {action: 'edit' as const, documentHandle: mockDocumentHandle}
+    const {result, rerender} = renderHook(
+      ({params: hookParams}: {params: typeof params}) => useDispatchIntent(hookParams),
+      {
+        initialProps: {params},
+      },
+    )
 
     const firstDispatchIntent = result.current.dispatchIntent
 
@@ -75,9 +78,12 @@ describe('useDispatchIntent', () => {
   })
 
   it('should create new dispatchIntent function when documentHandle changes', () => {
-    const {result, rerender} = renderHook(({params}) => useDispatchIntent(params), {
-      initialProps: {params: {action: 'edit' as const, documentHandle: mockDocumentHandle}},
-    })
+    const {result, rerender} = renderHook(
+      (params: {action: 'edit'; documentHandle: DocumentHandle}) => useDispatchIntent(params),
+      {
+        initialProps: {action: 'edit' as const, documentHandle: mockDocumentHandle},
+      },
+    )
 
     const firstDispatchIntent = result.current.dispatchIntent
 
@@ -88,7 +94,7 @@ describe('useDispatchIntent', () => {
       dataset: 'new-dataset',
     }
 
-    rerender({params: {action: 'edit' as const, documentHandle: newDocumentHandle}})
+    rerender({action: 'edit' as const, documentHandle: newDocumentHandle})
 
     expect(result.current.dispatchIntent).not.toBe(firstDispatchIntent)
   })
@@ -159,12 +165,12 @@ describe('useDispatchIntent', () => {
     })
   })
 
-  it('should send intent message with media library source', () => {
-    const mockMediaLibraryHandle: DocumentHandleWithSource = {
+  it('should send intent message with media library resource', () => {
+    const mockMediaLibraryHandle = {
       documentId: 'test-asset-id',
       documentType: 'sanity.asset',
-      source: mediaLibrarySource('mlPGY7BEqt52'),
-    }
+      resourceName: 'media-library',
+    } as const
 
     const {result} = renderHook(() =>
       useDispatchIntent({
@@ -182,18 +188,18 @@ describe('useDispatchIntent', () => {
         type: 'sanity.asset',
       },
       resource: {
-        id: 'mlPGY7BEqt52',
+        id: 'media-library-id',
         type: 'media-library',
       },
     })
   })
 
-  it('should send intent message with canvas source', () => {
-    const mockCanvasHandle: DocumentHandleWithSource = {
+  it('should send intent message with canvas resource', () => {
+    const mockCanvasHandle = {
       documentId: 'test-canvas-document-id',
       documentType: 'sanity.canvas.document',
-      source: canvasSource('canvas123'),
-    }
+      resourceName: 'canvas',
+    } as const
 
     const {result} = renderHook(() =>
       useDispatchIntent({
@@ -211,15 +217,15 @@ describe('useDispatchIntent', () => {
         type: 'sanity.canvas.document',
       },
       resource: {
-        id: 'canvas123',
+        id: 'canvas-id',
         type: 'canvas',
       },
     })
   })
 
-  describe('error handling', () => {
-    it('should throw error when neither source nor projectId/dataset is provided', () => {
-      const invalidHandle = {
+  describe('default resource fallback', () => {
+    it('should use default resource from context when handle has no explicit targeting', () => {
+      const minimalHandle = {
         documentId: 'test-document-id',
         documentType: 'test-document-type',
       }
@@ -227,13 +233,22 @@ describe('useDispatchIntent', () => {
       const {result} = renderHook(() =>
         useDispatchIntent({
           action: 'edit',
-          documentHandle: invalidHandle as unknown as DocumentHandleWithSource,
+          documentHandle: minimalHandle as unknown as DocumentHandle,
         }),
       )
 
-      expect(() => result.current.dispatchIntent()).toThrow(
-        'useDispatchIntent: Either `source` or both `projectId` and `dataset` must be provided in documentHandle.',
-      )
+      result.current.dispatchIntent()
+
+      expect(mockSendMessage).toHaveBeenCalledWith('dashboard/v1/events/intents/dispatch-intent', {
+        action: 'edit',
+        document: {
+          id: 'test-document-id',
+          type: 'test-document-type',
+        },
+        resource: {
+          id: 'test.test',
+        },
+      })
     })
   })
 })

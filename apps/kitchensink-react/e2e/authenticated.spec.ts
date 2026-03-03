@@ -12,8 +12,10 @@ test.describe('Authenticated', () => {
 
     // should be able to see the component beneath the AuthBoundary
     await expect(pageContext.getByTestId('project-auth-home')).toBeVisible()
-    // Verify we're authenticated by checking for the absence of the sign-in link
-    await expect(page.getByRole('link', {name: 'Sign in with email'})).not.toBeVisible()
+    // Verify we're authenticated by checking for the absence of the login page (no Google sign-in)
+    await expect(
+      page.getByRole('link', {name: /google/i}).or(page.getByRole('button', {name: /google/i})),
+    ).not.toBeVisible()
   })
 })
 
@@ -36,7 +38,8 @@ test.describe('Unauthenticated', () => {
 
     // should not be able to see the component beneath the AuthBoundary
     await expect(pageContext.getByTestId('project-auth-home')).not.toBeVisible()
-    // The sign in link should be visible when not authenticated
-    await expect(pageContext.getByRole('link', {name: 'Sign in with email'})).toBeVisible()
+    await expect(
+      page.getByRole('link', {name: /google/i}).or(page.getByRole('button', {name: /google/i})),
+    ).toBeVisible()
   })
 })

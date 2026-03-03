@@ -1,10 +1,10 @@
 import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
-import {type FrameMessage} from '@sanity/sdk'
+import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
 import {useCallback} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
-import {type DocumentHandleWithSource} from './types'
-import {getResourceIdFromDocumentHandle} from './utils/getResourceIdFromDocumentHandle'
+import {type WithResourceNameSupport} from '../helpers/useNormalizedResourceOptions'
+import {useResourceIdFromDocumentHandle} from './utils/useResourceIdFromDocumentHandle'
 
 /**
  * Message type for sending intents to the dashboard
@@ -42,7 +42,7 @@ interface DispatchIntent {
 interface UseDispatchIntentParams {
   action?: 'edit'
   intentId?: string
-  documentHandle: DocumentHandleWithSource
+  documentHandle: WithResourceNameSupport<DocumentHandle>
   parameters?: Record<string, unknown>
 }
 
@@ -56,8 +56,8 @@ interface UseDispatchIntentParams {
  *   - `action` - Action to perform (currently only 'edit' is supported). Will prompt a picker if multiple handlers are available.
  *   - `intentId` - Specific ID of the intent to dispatch. Either `action` or `intentId` is required.
  *   - `documentHandle` - The document handle containing document ID, type, and either:
- *     - `projectId` and `dataset` for traditional dataset sources, like `{documentId: '123', documentType: 'book', projectId: 'abc123', dataset: 'production'}`
- *     - `source` for media library, canvas, or dataset sources, like `{documentId: '123', documentType: 'sanity.asset', source: mediaLibrarySource('ml123')}` or `{documentId: '123', documentType: 'sanity.canvas.document', source: canvasSource('canvas123')}`
+ *     - `projectId` and `dataset` for traditional dataset resources, like `{documentId: '123', documentType: 'book', projectId: 'abc123', dataset: 'production'}`
+ *     - `resource` for media library, canvas, or dataset resources, like `{documentId: '123', documentType: 'sanity.asset', resource: mediaLibraryResource('ml123')}` or `{documentId: '123', documentType: 'sanity.canvas.document', resource: canvasResource('canvas123')}`
  *   - `paremeters` - Optional parameters to include in the dispatch; will be passed to the resolved intent handler
  * @returns An object containing:
  * - `dispatchIntent` - Function to dispatch the intent message
@@ -104,13 +104,13 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
     connectTo: SDK_CHANNEL_NAME,
   })
 
+  const resource = useResourceIdFromDocumentHandle(documentHandle)
+
   const dispatchIntent = useCallback(() => {
     try {
       if (!action && !intentId) {
         throw new Error('useDispatchIntent: Either `action` or `intentId` must be provided.')
       }
-
-      const {projectId, dataset, source} = documentHandle
 
       if (action && intentId) {
         // eslint-disable-next-line no-console -- warn if both action and intentId are provided
@@ -119,13 +119,12 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
         )
       }
 
-      if (!source && (!projectId || !dataset)) {
+      // Validate that we have a resource ID (which is computed from resource/resourceName or projectId+dataset)
+      if (!resource.id) {
         throw new Error(
-          'useDispatchIntent: Either `source` or both `projectId` and `dataset` must be provided in documentHandle.',
+          'useDispatchIntent: Unable to determine resource. Either `resource`, `resourceName`, or both `projectId` and `dataset` must be provided in documentHandle.',
         )
       }
-
-      const resource = getResourceIdFromDocumentHandle(documentHandle)
 
       const message: IntentMessage = {
         type: 'dashboard/v1/events/intents/dispatch-intent',
@@ -150,7 +149,7 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
       console.error('Failed to dispatch intent:', error)
       throw error
     }
-  }, [action, intentId, documentHandle, parameters, sendMessage])
+  }, [action, intentId, documentHandle, parameters, sendMessage, resource.id, resource.type])
 
   return {
     dispatchIntent,

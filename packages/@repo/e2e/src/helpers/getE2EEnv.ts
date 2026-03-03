@@ -19,6 +19,10 @@ interface E2EEnv {
   SDK_E2E_USER_PASSWORD: string
   /** E2E test recaptcha key for CI */
   RECAPTCHA_E2E_STAGING_KEY: string
+  /** The media library ID for media library tests */
+  SDK_E2E_MEDIA_LIBRARY_ID: string
+  /** The media library token for media library tests */
+  SDK_E2E_MEDIA_LIBRARY_TOKEN: string
 }
 
 type KnownEnvVar = keyof E2EEnv
@@ -64,7 +68,8 @@ export function getE2EEnv(): E2EEnv {
   const SDK_E2E_USER_ID = readEnv('SDK_E2E_USER_ID')
   const SDK_E2E_USER_PASSWORD = readEnv('SDK_E2E_USER_PASSWORD')
   const RECAPTCHA_E2E_STAGING_KEY = readEnv('RECAPTCHA_E2E_STAGING_KEY')
-
+  const SDK_E2E_MEDIA_LIBRARY_ID = readEnv('SDK_E2E_MEDIA_LIBRARY_ID')
+  const SDK_E2E_MEDIA_LIBRARY_TOKEN = readEnv('SDK_E2E_MEDIA_LIBRARY_TOKEN')
   return {
     CI,
     SDK_E2E_PROJECT_ID,
@@ -75,5 +80,7 @@ export function getE2EEnv(): E2EEnv {
     SDK_E2E_USER_ID,
     SDK_E2E_USER_PASSWORD,
     RECAPTCHA_E2E_STAGING_KEY,
+    SDK_E2E_MEDIA_LIBRARY_ID,
+    SDK_E2E_MEDIA_LIBRARY_TOKEN,
   }
 }

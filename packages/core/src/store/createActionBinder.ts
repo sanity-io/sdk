@@ -1,15 +1,25 @@
-import {type DocumentSource, SOURCE_ID} from '../config/sanityConfig'
+import {
+  type DatasetHandle,
+  type DocumentResource,
+  isCanvasResource,
+  isDatasetResource,
+  isMediaLibraryResource,
+  type PerspectiveHandle,
+  resolveDefaultResource,
+} from '../config/sanityConfig'
+import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type SanityInstance} from './createSanityInstance'
 import {createStoreInstance, type StoreInstance} from './createStoreInstance'
 import {type StoreState} from './createStoreState'
 import {type StoreContext, type StoreDefinition} from './defineStore'
 
-export type BoundDatasetKey = {
+export interface BoundResourceKey {
   name: string
-  projectId: string
-  dataset: string
+  resource: DocumentResource
 }
-
+export interface BoundPerspectiveKey extends BoundResourceKey {
+  perspective: NonNullable<PerspectiveHandle['perspective']>
+}
 /**
  * Defines a store action that operates on a specific state type
  */
@@ -106,14 +116,53 @@ export function createActionBinder<
   }
 }
 
+const resourceKeyName = (resource: DocumentResource): string => {
+  if (isDatasetResource(resource)) return `${resource.projectId}.${resource.dataset}`
+  if (isMediaLibraryResource(resource)) return `media-library:${resource.mediaLibraryId}`
+  if (isCanvasResource(resource)) return `canvas:${resource.canvasId}`
+  throw new Error(`Received invalid resource: ${JSON.stringify(resource)}`)
+}
+
+const createResourceKey = (
+  instance: SanityInstance,
+  resource?: DocumentResource,
+): BoundResourceKey => {
+  if (resource) {
+    return {name: resourceKeyName(resource), resource}
+  }
+
+  const defaultResource = resolveDefaultResource(instance.config)
+  if (!defaultResource) {
+    throw new Error(
+      'No resource provided and no default resource configured. ' +
+        'Provide a "default" resource in your resources map, or pass an explicit resource.',
+    )
+  }
+  return {name: resourceKeyName(defaultResource), resource: defaultResource}
+}
+
 /**
- * Binds an action to a store that's scoped to a specific project and dataset
+ * Binds an action to a store that's scoped to a specific document resource.
+ **/
+export const bindActionByResource = createActionBinder<
+  BoundResourceKey,
+  [{resource?: DocumentResource}, ...unknown[]]
+>((instance, {resource}) => {
+  return createResourceKey(instance, resource)
+})
+
+/**
+ * Binds an action to a store that's scoped to a specific document resource and perspective.
  *
  * @remarks
- * This creates actions that operate on state isolated to a specific projectId and dataset.
- * Different project/dataset combinations will have separate states.
+ * This creates actions that operate on state isolated to a specific document resource and perspective.
+ * Different document resources and perspectives will have separate states.
  *
- * @throws Error if projectId or dataset is missing from the Sanity instance config
+ * This is mostly useful for stores that do batch fetching operations, since the query store
+ * can isolate single queries by perspective.
+ *
+ * @throws Error if resource or perspective is missing from the Sanity instance config
+ * @throws Error if a stackable perspective (array) is provided, as they are not supported
  *
  * @example
  * ```ts
@@ -124,11 +173,11 @@ export function createActionBinder<
  *   // ...
  * })
  *
- * // Create dataset-specific actions
- * export const fetchDocument = bindActionByDataset(
+ * // Create resource-and-perspective-specific actions
+ * export const fetchDocuments = bindActionByResourceAndPerspective(
  *   documentStore,
  *   ({instance, state}, documentId) => {
- *     // This state is isolated to the specific project/dataset
+ *     // This state is isolated to the specific document resource and perspective
  *     // ...fetch logic...
  *   }
  * )
@@ -137,38 +186,30 @@ export function createActionBinder<
  * fetchDocument(sanityInstance, 'doc123')
  * ```
  */
-export const bindActionByDataset = createActionBinder<
-  BoundDatasetKey,
-  [(object & {projectId?: string; dataset?: string})?, ...unknown[]]
->((instance, options) => {
-  const projectId = options?.projectId ?? instance.config.projectId
-  const dataset = options?.dataset ?? instance.config.dataset
-  if (!projectId || !dataset) {
-    throw new Error('This API requires a project ID and dataset configured.')
+export const bindActionByResourceAndPerspective = createActionBinder<
+  BoundPerspectiveKey,
+  [DatasetHandle, ...unknown[]]
+>((instance, options): BoundPerspectiveKey => {
+  const {resource, perspective} = options
+  // TODO: remove reference to instance.config.perspective when we get to v3
+  const utilizedPerspective = perspective ?? instance.config.perspective ?? 'drafts'
+  let perspectiveKey: string
+  if (isReleasePerspective(utilizedPerspective)) {
+    perspectiveKey = utilizedPerspective.releaseName
+  } else if (typeof utilizedPerspective === 'string') {
+    perspectiveKey = utilizedPerspective
+  } else {
+    throw new Error(
+      `Stackable perspectives are not supported. Received perspective: ${JSON.stringify(utilizedPerspective)}`,
+    )
   }
-  return {name: `${projectId}.${dataset}`, projectId, dataset}
-})
+  const resourceKey = createResourceKey(instance, resource)
 
-/**
- * Binds an action to a store that's scoped to a specific document source.
- **/
-export const bindActionBySource = createActionBinder<
-  {name: string},
-  [{source?: DocumentSource}, ...unknown[]]
->((instance, {source}) => {
-  if (source) {
-    const id = source[SOURCE_ID]
-    if (!id) throw new Error('Invalid source (missing ID information)')
-    if (Array.isArray(id)) return {name: id.join(':')}
-    return {name: `${id.projectId}.${id.dataset}`}
+  return {
+    name: `${resourceKey.name}:${perspectiveKey}`,
+    resource: resourceKey.resource,
+    perspective: utilizedPerspective,
   }
-
-  const {projectId, dataset} = instance.config
-
-  if (!projectId || !dataset) {
-    throw new Error('This API requires a project ID and dataset configured.')
-  }
-  return {name: `${projectId}.${dataset}`}
 })
 
 /**

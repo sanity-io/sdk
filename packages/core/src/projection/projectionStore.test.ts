@@ -24,14 +24,14 @@ describe('projectionStore', () => {
       new Observable(subscriber).subscribe(),
     )
 
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance({defaultResource: {projectId: 'p', dataset: 'd'}})
 
     const {state, dispose} = createStoreInstance(
       instance,
       {
         name: 'p.d',
-        projectId: 'p',
-        dataset: 'd',
+        resource: {projectId: 'p', dataset: 'd'},
+        perspective: 'drafts',
       },
       projectionStore,
     )
@@ -42,8 +42,8 @@ describe('projectionStore', () => {
       state,
       key: {
         name: 'p.d',
-        projectId: 'p',
-        dataset: 'd',
+        resource: {projectId: 'p', dataset: 'd'},
+        perspective: 'drafts',
       },
     })
 

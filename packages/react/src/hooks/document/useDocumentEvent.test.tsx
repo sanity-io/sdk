@@ -28,7 +28,10 @@ describe('useDocumentEvent hook', () => {
 
     renderHook(() => useDocumentEvent({...docHandle, onEvent: handleEvent}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -37,11 +40,11 @@ describe('useDocumentEvent hook', () => {
     expect(vi.mocked(subscribeDocumentEvents)).toHaveBeenCalledTimes(1)
     expect(vi.mocked(subscribeDocumentEvents).mock.calls[0][0]).toEqual(expect.any(Object))
 
-    const stableHandler = vi.mocked(subscribeDocumentEvents).mock.calls[0][1]
-    expect(typeof stableHandler).toBe('function')
+    const options = vi.mocked(subscribeDocumentEvents).mock.calls[0][1]
+    expect(typeof options.eventHandler).toBe('function')
 
     const event = {type: 'edited', documentId: 'doc1', outgoing: {}} as DocumentEvent
-    stableHandler(event)
+    options.eventHandler(event)
     expect(handleEvent).toHaveBeenCalledWith(event)
   })
 
@@ -52,7 +55,10 @@ describe('useDocumentEvent hook', () => {
 
     const {unmount} = renderHook(() => useDocumentEvent({...docHandle, onEvent: handleEvent}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
