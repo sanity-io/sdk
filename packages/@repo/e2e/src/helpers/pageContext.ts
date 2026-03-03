@@ -1,8 +1,9 @@
 import {type FrameLocator, type Page} from '@playwright/test'
 
 /**
- * Unified interface for detecting elements in pages whether in iframe or not
- * (this might get lengthy with time but hopefully what we've provided here is sufficient)
+ * Unified interface for detecting elements in pages whether in iframe or not.
+ * Methods delegate to either Page or FrameLocator depending on context,
+ * and all arguments (including options like {exact: true}) are forwarded.
  */
 export type PageContext = Pick<Page, 'getByTestId' | 'getByText' | 'getByRole' | 'locator'> & {
   isDashboard: boolean
@@ -21,6 +22,17 @@ function isDashboardContext(projectName: string): boolean {
   return DASHBOARD_PROJECTS.includes(projectName)
 }
 
+function buildContextMethods(target: Page | FrameLocator, isDashboard: boolean): PageContext {
+  return {
+    getByTestId: (...args) => target.getByTestId(...args),
+    getByText: (...args) => target.getByText(...args),
+    getByRole: (...args) => target.getByRole(...args),
+    locator: (...args) => target.locator(...args),
+    isDashboard,
+    context: target,
+  }
+}
+
 /**
  * Creates a unified page context that works both in iframe and standalone modes
  */
@@ -32,29 +44,13 @@ export async function createPageContext(page: Page, projectName: string): Promis
     const iframe = page.getByTestId('app-frame')
     await iframe.waitFor({state: 'visible'})
 
-    // Wait for iframe to be ready
     const frame = iframe.contentFrame()
     if (!frame) {
       throw new Error('Failed to get iframe content frame')
     }
 
-    return {
-      getByTestId: (testId: string) => frame.getByTestId(testId),
-      getByText: (text: string | RegExp) => frame.getByText(text),
-      getByRole: (role, options) => frame.getByRole(role, options),
-      locator: (selector: string) => frame.locator(selector),
-      isDashboard: true,
-      context: frame,
-    }
-  } else {
-    // Standalone context - work directly with page
-    return {
-      getByTestId: (testId: string) => page.getByTestId(testId),
-      getByText: (text: string | RegExp) => page.getByText(text),
-      getByRole: (role, options) => page.getByRole(role, options),
-      locator: (selector: string) => page.locator(selector),
-      isDashboard: false,
-      context: page,
-    }
+    return buildContextMethods(frame, true)
   }
+
+  return buildContextMethods(page, false)
 }
