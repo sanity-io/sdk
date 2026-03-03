@@ -1,3 +1,4 @@
+import {getDefaultDatasetResource} from '../config/sanityConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createLogger} from '../utils/logger'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
@@ -8,10 +9,11 @@ import {authStore} from './authStore'
  * @public
  */
 export const logout = bindActionGlobally(authStore, async ({state, instance}) => {
+  const defaultResource = getDefaultDatasetResource(instance.config)
   const logger = createLogger('auth', {
     instanceId: instance.instanceId,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
+    projectId: defaultResource?.projectId,
+    dataset: defaultResource?.dataset,
   })
 
   const {clientFactory, apiHost, providedToken, storageArea, storageKey} = state.get().options

@@ -142,8 +142,7 @@ describe('logout', () => {
     const removeItem = vi.fn() as Storage['removeItem']
 
     instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      defaultResource: {projectId: 'p', dataset: 'd'},
       auth: {
         clientFactory,
         storageArea: {removeItem} as Storage,
@@ -171,8 +170,7 @@ describe('logout', () => {
     const removeItem = vi.fn() as Storage['removeItem']
 
     instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
+      defaultResource: {projectId: 'p', dataset: 'd'},
       auth: {
         clientFactory,
         storageArea: {removeItem} as Storage,

@@ -12,6 +12,7 @@ import {
   timer,
 } from 'rxjs'
 
+import {getDefaultDatasetResource} from '../config/sanityConfig'
 import {type StoreContext} from '../store/defineStore'
 import {createLogger} from '../utils/logger'
 import {DEFAULT_API_VERSION} from './authConstants'
@@ -145,10 +146,11 @@ export const refreshStampedToken = ({
   state,
   instance,
 }: StoreContext<AuthStoreState>): Subscription => {
+  const defaultResource = getDefaultDatasetResource(instance.config)
   const logger = createLogger('auth', {
     instanceId: instance.instanceId,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
+    projectId: defaultResource?.projectId,
+    dataset: defaultResource?.dataset,
   })
 
   const {clientFactory, apiHost, storageArea, storageKey} = state.get().options
