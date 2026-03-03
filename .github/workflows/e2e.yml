@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # shared setup for all browsers: install deps, cache Playwright, build kitchensink once
+  # shared setup: install deps and warm Playwright browser cache for downstream jobs
   setup:
     runs-on: ubuntu-latest
     steps:
@@ -45,17 +45,6 @@ jobs:
       - name: Install Playwright browsers
         if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
-
-      - name: 🏗️ Build kitchensink
-        working-directory: apps/kitchensink-react
-        run: pnpm build
-
-      - name: 📤 Upload kitchensink build
-        uses: actions/upload-artifact@v6
-        with:
-          name: kitchensink-dist-${{ github.run_id }}
-          path: apps/kitchensink-react/dist
-          retention-days: 1
 
   playwright-tests:
     needs: setup
@@ -90,12 +79,6 @@ jobs:
         with:
           node-version: 22
 
-      - name: 📦 Download kitchensink build
-        uses: actions/download-artifact@v7
-        with:
-          name: kitchensink-dist-${{ github.run_id }}
-          path: apps/kitchensink-react/dist
-
       - name: 🔍 Determine Playwright version
         id: pw-version
         run: echo "version=$(npx playwright --version | sed 's/Version //')" >> "$GITHUB_OUTPUT"
@@ -115,10 +98,12 @@ jobs:
         if: matrix.browser == 'webkit'
         run: pnpm exec playwright install-deps webkit
 
-      - name: 🚀 Start preview server
+      # Kitchensink must be built per browser because Vite bakes browser-specific
+      # dataset names (SDK_E2E_DATASET_0/1) into the bundle at compile time.
+      - name: 🚀 Build & start preview server
         run: |
           cd apps/kitchensink-react
-          pnpm run preview --port 3333 &
+          pnpm build && pnpm run preview --port 3333 &
           timeout 60 bash -c 'until curl -f -s http://localhost:3333 > /dev/null; do echo "Waiting for server..."; sleep 2; done'
           echo "Server is ready!"
 
