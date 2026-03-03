@@ -26,7 +26,10 @@ describe('useVerifyOrgProjects', () => {
   it('should return null and not observe state if disabled', () => {
     const {result} = renderHook(() => useVerifyOrgProjects(true, testProjectIds), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -39,7 +42,10 @@ describe('useVerifyOrgProjects', () => {
   it('should return null and not observe state if projectIds is missing or empty', () => {
     const {result: resultUndefined} = renderHook(() => useVerifyOrgProjects(false, undefined), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -49,7 +55,10 @@ describe('useVerifyOrgProjects', () => {
 
     const {result: resultEmpty} = renderHook(() => useVerifyOrgProjects(false, []), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -64,7 +73,10 @@ describe('useVerifyOrgProjects', () => {
 
     const {result} = renderHook(() => useVerifyOrgProjects(false, testProjectIds), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -80,7 +92,10 @@ describe('useVerifyOrgProjects', () => {
 
     const {result} = renderHook(() => useVerifyOrgProjects(false, testProjectIds), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -102,7 +117,10 @@ describe('useVerifyOrgProjects', () => {
 
     const {result} = renderHook(() => useVerifyOrgProjects(false, testProjectIds), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -124,7 +142,10 @@ describe('useVerifyOrgProjects', () => {
 
     const {unmount} = renderHook(() => useVerifyOrgProjects(false, testProjectIds), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -152,7 +173,10 @@ describe('useVerifyOrgProjects', () => {
       {
         initialProps: {disabled: false, pIds: testProjectIds},
         wrapper: ({children}) => (
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
             {children}
           </ResourceProvider>
         ),

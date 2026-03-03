@@ -644,7 +644,6 @@ describe('logger', () => {
         instanceContext: {
           instanceId: 'abc123def456',
           projectId: 'my-project',
-          dataset: 'production',
         },
       })
 
@@ -652,10 +651,6 @@ describe('logger', () => {
 
       expect(mockHandler.info).toHaveBeenCalledWith(
         expect.stringContaining('[project:my-project]'),
-        expect.any(Object),
-      )
-      expect(mockHandler.info).toHaveBeenCalledWith(
-        expect.stringContaining('[dataset:production]'),
         expect.any(Object),
       )
       expect(mockHandler.info).toHaveBeenCalledWith(
@@ -694,7 +689,6 @@ describe('logger', () => {
       const logger = createLogger('query', {
         instanceContext: {
           projectId: 'my-project',
-          // No dataset or instanceId
         },
       })
 
@@ -704,17 +698,12 @@ describe('logger', () => {
         expect.stringContaining('[project:my-project]'),
         expect.any(Object),
       )
-      expect(mockHandler.info).not.toHaveBeenCalledWith(
-        expect.stringContaining('[dataset:'),
-        expect.any(Object),
-      )
     })
 
     it('should return instance context', () => {
       const instanceContext = {
         instanceId: 'test-instance',
         projectId: 'test-project',
-        dataset: 'test-dataset',
       }
 
       const logger = createLogger('auth', {instanceContext})
@@ -738,7 +727,6 @@ describe('logger', () => {
       const logger = createLogger('document', {
         instanceContext: {
           projectId: 'my-project',
-          dataset: 'production',
         },
       })
 

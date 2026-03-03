@@ -1,8 +1,8 @@
-import {type SanityProjectionResult} from 'groq'
+import {DocumentId, getPublishedId} from '@sanity/id-utils'
 import {omit} from 'lodash-es'
 
 import {type DocumentHandle} from '../config/sanityConfig'
-import {bindActionByDataset} from '../store/createActionBinder'
+import {bindActionByResourceAndPerspective} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -10,7 +10,7 @@ import {
   type StateSource,
 } from '../store/createStateSourceAction'
 import {hashString} from '../utils/hashString'
-import {getPublishedId, insecureRandomId} from '../utils/ids'
+import {insecureRandomId} from '../utils/ids'
 import {projectionStore} from './projectionStore'
 import {type ProjectionStoreState, type ProjectionValuePending} from './types'
 import {PROJECTION_STATE_CLEAR_DELAY, STABLE_EMPTY_PROJECTION, validateProjection} from './util'
@@ -23,24 +23,6 @@ export interface ProjectionOptions<
 > extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
   projection: TProjection
 }
-
-/**
- * @beta
- */
-export function getProjectionState<
-  TProjection extends string = string,
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  instance: SanityInstance,
-  options: ProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
-): StateSource<
-  | ProjectionValuePending<
-      SanityProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
-    >
-  | undefined
->
 
 /**
  * @beta
@@ -70,21 +52,21 @@ export function getProjectionState(
 /**
  * @beta
  */
-export const _getProjectionState = bindActionByDataset(
+export const _getProjectionState = bindActionByResourceAndPerspective(
   projectionStore,
   createStateSourceAction({
     selector: (
       {state}: SelectorContext<ProjectionStoreState>,
       options: ProjectionOptions<string, string, string, string>,
     ): ProjectionValuePending<object> | undefined => {
-      const documentId = getPublishedId(options.documentId)
+      const documentId = getPublishedId(DocumentId(options.documentId))
       const projectionHash = hashString(options.projection)
       return state.values[documentId]?.[projectionHash] ?? STABLE_EMPTY_PROJECTION
     },
     onSubscribe: ({state}, options: ProjectionOptions<string, string, string, string>) => {
       const {projection, ...docHandle} = options
       const subscriptionId = insecureRandomId()
-      const documentId = getPublishedId(docHandle.documentId)
+      const documentId = getPublishedId(DocumentId(docHandle.documentId))
       const validProjection = validateProjection(projection)
       const projectionHash = hashString(validProjection)
 

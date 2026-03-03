@@ -5,7 +5,7 @@ import {type JSX, Suspense} from 'react'
 import {BrowserRouter, useNavigate} from 'react-router'
 
 import {AppRoutes} from './AppRoutes'
-import {devConfigs, devSources, e2eConfigs} from './sanityConfigs'
+import {devConfig, devResources, e2eConfig, e2eResources} from './sanityConfigs'
 
 // Enable SDK logging in the browser
 configureLogging({
@@ -25,12 +25,13 @@ function NavigationHandler() {
 }
 
 export default function App(): JSX.Element {
+  const isE2E = import.meta.env['VITE_IS_E2E']
   return (
     <ThemeProvider theme={theme}>
       <SanityApp
         fallback={<Spinner />}
-        config={import.meta.env['VITE_IS_E2E'] ? e2eConfigs : devConfigs}
-        sources={devSources}
+        config={isE2E ? e2eConfig : devConfig}
+        resources={isE2E ? e2eResources : devResources}
       >
         <BrowserRouter>
           <Suspense>

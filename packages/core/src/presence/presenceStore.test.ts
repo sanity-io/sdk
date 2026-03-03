@@ -69,7 +69,9 @@ describe('presenceStore', () => {
     mockGetUserState = vi.fn(() => of(mockUser))
     vi.mocked(getUserState).mockImplementation(mockGetUserState)
 
-    instance = createSanityInstance({projectId: 'test-project', dataset: 'test-dataset'})
+    instance = createSanityInstance({
+      defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
+    })
   })
 
   afterEach(() => {
@@ -77,8 +79,9 @@ describe('presenceStore', () => {
   })
 
   describe('getPresence', () => {
+    const key = {resource: {projectId: 'test-project', dataset: 'test-dataset'}}
     it('creates bifur transport with correct parameters', () => {
-      getPresence(instance)
+      getPresence(instance, key)
 
       expect(createBifurTransport).toHaveBeenCalledWith({
         client: mockClient,
@@ -88,18 +91,18 @@ describe('presenceStore', () => {
     })
 
     it('sends rollCall message on initialization', () => {
-      getPresence(instance)
+      getPresence(instance, key)
 
       expect(mockDispatchMessage).toHaveBeenCalledWith({type: 'rollCall'})
     })
 
     it('returns empty array when no users present', () => {
-      const source = getPresence(instance)
+      const source = getPresence(instance, key)
       expect(source.getCurrent()).toEqual([])
     })
 
     it('handles state events from other users', async () => {
-      const source = getPresence(instance)
+      const source = getPresence(instance, key)
 
       // Subscribe to initialize the store
       const unsubscribe = source.subscribe(() => {})
@@ -136,7 +139,7 @@ describe('presenceStore', () => {
     })
 
     it('ignores events from own session', async () => {
-      const source = getPresence(instance)
+      const source = getPresence(instance, key)
       const unsubscribe = source.subscribe(() => {})
 
       await firstValueFrom(of(null).pipe(delay(10)))
@@ -158,7 +161,7 @@ describe('presenceStore', () => {
     })
 
     it('handles disconnect events', async () => {
-      const source = getPresence(instance)
+      const source = getPresence(instance, key)
       const unsubscribe = source.subscribe(() => {})
 
       await firstValueFrom(of(null).pipe(delay(10)))
@@ -190,7 +193,7 @@ describe('presenceStore', () => {
     })
 
     it('fetches user data for present users', async () => {
-      const source = getPresence(instance)
+      const source = getPresence(instance, key)
       const unsubscribe = source.subscribe(() => {})
 
       await firstValueFrom(of(null).pipe(delay(10)))
@@ -222,7 +225,7 @@ describe('presenceStore', () => {
     })
 
     it('handles presence events correctly', async () => {
-      const source = getPresence(instance)
+      const source = getPresence(instance, key)
       const unsubscribe = source.subscribe(() => {})
 
       await firstValueFrom(of(null).pipe(delay(10)))
@@ -242,6 +245,30 @@ describe('presenceStore', () => {
       expect(presence[0].sessionId).toBe('other-session')
 
       unsubscribe()
+    })
+
+    it('should throw an error when initialized with a media library resource', () => {
+      const mediaLibraryResource = {mediaLibraryId: 'ml123'}
+
+      expect(() => {
+        getPresence(instance, {resource: mediaLibraryResource})
+      }).toThrow('Presence is not supported for media library resources')
+    })
+
+    it('should throw an error when initialized with a canvas resource', () => {
+      const canvasResource = {canvasId: 'canvas123'}
+
+      expect(() => {
+        getPresence(instance, {resource: canvasResource})
+      }).toThrow('Presence is not supported for canvas resources')
+    })
+
+    it('should work with a dataset resource', () => {
+      const datasetResource = {projectId: 'test-project', dataset: 'test-dataset'}
+
+      expect(() => {
+        getPresence(instance, {resource: datasetResource})
+      }).not.toThrow()
     })
   })
 })

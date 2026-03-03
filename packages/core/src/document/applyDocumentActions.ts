@@ -1,8 +1,9 @@
 import {type SanityClient} from '@sanity/client'
-import {type SanityDocument} from 'groq'
+import {type SanityDocument} from '@sanity/types'
 import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
 
-import {bindActionByDataset} from '../store/createActionBinder'
+import {type DocumentResource} from '../config/sanityConfig'
+import {bindActionByResource} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StoreContext} from '../store/defineStore'
 import {type DocumentAction} from './actions'
@@ -30,6 +31,11 @@ export interface ApplyDocumentActionsOptions {
   actions: DocumentAction[]
 
   /**
+   * The resource to which the documents being acted on belong.
+   */
+  resource?: DocumentResource
+
+  /**
    * Optionally provide an ID to be used as this transaction ID
    */
   transactionId?: string
@@ -39,15 +45,6 @@ export interface ApplyDocumentActionsOptions {
   disableBatching?: boolean
 }
 
-/** @beta */
-export function applyDocumentActions<
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  instance: SanityInstance,
-  options: ApplyDocumentActionsOptions,
-): Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 /** @beta */
 export function applyDocumentActions(
   instance: SanityInstance,
@@ -61,7 +58,7 @@ export function applyDocumentActions(
   return boundApplyDocumentActions(...args)
 }
 
-const boundApplyDocumentActions = bindActionByDataset(documentStore, _applyDocumentActions)
+const boundApplyDocumentActions = bindActionByResource(documentStore, _applyDocumentActions)
 
 /** @internal */
 async function _applyDocumentActions(

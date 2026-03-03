@@ -1,29 +1,46 @@
 import {type CurrentUser} from '@sanity/types'
 import {distinctUntilChanged, filter, map, type Subscription, switchMap} from 'rxjs'
 
+import {getDefaultDatasetResource, getDefaultProjectId} from '../config/sanityConfig'
 import {type StoreContext} from '../store/defineStore'
 import {createLogger} from '../utils/logger'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
+import {isStudioConfig} from './authMode'
 import {AuthStateType} from './authStateType'
 import {type AuthMethodOptions, type AuthState, type AuthStoreState} from './authStore'
 
-export const subscribeToStateAndFetchCurrentUser = ({
-  state,
-  instance,
-}: StoreContext<AuthStoreState>): Subscription => {
+/**
+ * Subscribes to auth state changes and fetches the current user when
+ * the state transitions to `LOGGED_IN` without a `currentUser`.
+ *
+ * @param context - The store context for the auth store.
+ * @param fetchOptions - Configuration options. When `useProjectHostname` is
+ *   `true`, requests use the project-specific hostname (required for Studio
+ *   cookie auth). Set to `true` for studio mode, `false` otherwise.
+ *
+ * @internal
+ */
+export const subscribeToStateAndFetchCurrentUser = (
+  {state, instance}: StoreContext<AuthStoreState>,
+  fetchOptions?: {useProjectHostname?: boolean},
+): Subscription => {
+  const defaultResource = getDefaultDatasetResource(instance.config)
   const logger = createLogger('auth', {
     instanceId: instance.instanceId,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
+    projectId: defaultResource?.projectId,
+    dataset: defaultResource?.dataset,
   })
 
   const {clientFactory, apiHost} = state.get().options
-  const useProjectHostname = !!instance.config.studioMode?.enabled
-  const projectId = instance.config.projectId
+  const useProjectHostname = fetchOptions?.useProjectHostname ?? isStudioConfig(instance.config)
+  const projectId = getDefaultProjectId(instance.config)
 
   const currentUser$ = state.observable
     .pipe(
-      map(({authState, options}) => ({authState, authMethod: options.authMethod})),
+      map(({authState, options: storeOptions}) => ({
+        authState,
+        authMethod: storeOptions.authMethod,
+      })),
       filter(
         (
           value,

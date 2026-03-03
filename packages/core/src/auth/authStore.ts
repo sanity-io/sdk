@@ -1,25 +1,23 @@
 import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
-import {type Subscription} from 'rxjs'
 
 import {type AuthConfig, type AuthProvider} from '../config/authConfig'
+import {getDefaultDatasetResource, getDefaultProjectId} from '../config/sanityConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore} from '../store/defineStore'
 import {createLogger} from '../utils/logger'
+import {resolveAuthMode} from './authMode'
 import {AuthStateType} from './authStateType'
-import {refreshStampedToken} from './refreshStampedToken'
-import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
-import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
-import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
-import {
-  getAuthCode,
-  getCleanedUrl,
-  getDefaultLocation,
-  getDefaultStorage,
-  getTokenFromLocation,
-  getTokenFromStorage,
-} from './utils'
+import {type AuthStrategyOptions} from './authStrategy'
+import {getDashboardInitialState, initializeDashboardAuth} from './dashboardAuth'
+import {getStandaloneInitialState, initializeStandaloneAuth} from './standaloneAuth'
+import {getStudioInitialState, initializeStudioAuth} from './studioAuth'
+import {getCleanedUrl, getDefaultLocation} from './utils'
+
+// ---------------------------------------------------------------------------
+// Public types
+// ---------------------------------------------------------------------------
 
 /**
  * Represents the various states the authentication can be in.
@@ -97,13 +95,19 @@ export interface AuthStoreState {
   dashboardContext?: DashboardContext
 }
 
+// ---------------------------------------------------------------------------
+// Store definition — thin orchestrator
+// ---------------------------------------------------------------------------
+
 export const authStore = defineStore<AuthStoreState>({
   name: 'Auth',
+
   getInitialState(instance) {
+    const defaultResource = getDefaultDatasetResource(instance.config)
     const logger = createLogger('auth', {
       instanceId: instance.instanceId,
-      projectId: instance.config.projectId,
-      dataset: instance.config.dataset,
+      projectId: defaultResource?.projectId,
+      dataset: defaultResource?.dataset,
     })
 
     logger.debug('Initializing auth store', {
@@ -111,7 +115,7 @@ export const authStore = defineStore<AuthStoreState>({
       hasCustomProviders: !!(
         instance.config.auth?.providers && instance.config.auth.providers.length > 0
       ),
-      studioMode: instance.config.studioMode?.enabled ?? false,
+      studioMode: !!instance.config.studio,
     })
 
     const {
@@ -122,12 +126,11 @@ export const authStore = defineStore<AuthStoreState>({
       clientFactory = createClient,
       initialLocationHref = getDefaultLocation(),
     } = instance.config.auth ?? {}
-    let storageArea = instance.config.auth?.storageArea
 
-    let storageKey = `__sanity_auth_token`
-    const studioModeEnabled = instance.config.studioMode?.enabled
+    const authConfig = instance.config.auth ?? {}
 
-    // This login URL will only be used for local development
+    // Build login URL (used by standalone mode, but always computed for the
+    // public `getLoginUrlState` accessor)
     let loginDomain = 'https://www.sanity.io'
     try {
       if (apiHost && new URL(apiHost).hostname.endsWith('.sanity.work')) {
@@ -141,95 +144,39 @@ export const authStore = defineStore<AuthStoreState>({
     loginUrl.searchParams.set('type', 'stampedToken') // Token must be stamped to have an sid passed back
     loginUrl.searchParams.set('withSid', 'true')
 
-    // Check if running in dashboard context by parsing initialLocationHref
-    let dashboardContext: DashboardContext = {}
-    let isInDashboard = false
-    try {
-      const parsedUrl = new URL(initialLocationHref)
-      const contextParam = parsedUrl.searchParams.get('_context')
-      if (contextParam) {
-        const parsedContext = JSON.parse(contextParam)
+    // Resolve auth mode and delegate to the appropriate strategy
+    const mode = resolveAuthMode(instance.config, initialLocationHref)
 
-        // Consider it in dashboard if context is present and an object
-        if (
-          parsedContext &&
-          typeof parsedContext === 'object' &&
-          Object.keys(parsedContext).length > 0
-        ) {
-          // Explicitly remove the 'sid' property from the parsed object *before* assigning
-          delete parsedContext.sid
-
-          // Now assign the potentially modified object to dashboardContext
-          dashboardContext = parsedContext
-          isInDashboard = true
-        }
-      }
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to parse dashboard context from initial location:', err)
+    const strategyOptions: AuthStrategyOptions = {
+      authConfig,
+      projectId: getDefaultProjectId(instance.config),
+      initialLocationHref,
+      clientFactory,
+      tokenSource: instance.config.studio?.auth?.token,
     }
 
-    if (!isInDashboard || studioModeEnabled) {
-      // If not in dashboard, use the storage area from the config
-      // If studio mode is enabled, use the local storage area (default)
-      storageArea = storageArea ?? getDefaultStorage()
-    }
-
-    let token: string | null
-    let authMethod: AuthMethodOptions
-    if (studioModeEnabled) {
-      // In studio mode, always use the studio-specific storage key and subscribe to it
-      const studioStorageKey = `__studio_auth_token_${instance.config.projectId ?? ''}`
-      storageKey = studioStorageKey
-      token = getStudioTokenFromLocalStorage(storageArea, studioStorageKey)
-      if (token) {
-        authMethod = 'localstorage'
-      }
-    } else {
-      token = getTokenFromStorage(storageArea, storageKey)
-      if (token) {
-        authMethod = 'localstorage'
-      }
-    }
-
-    let authState: AuthState
-    if (providedToken) {
-      logger.info('Auth initialized with provided token')
-      authState = {type: AuthStateType.LOGGED_IN, token: providedToken, currentUser: null}
-    } else if (token && studioModeEnabled) {
-      logger.info('Auth initialized in Studio mode with token from storage')
-      authState = {type: AuthStateType.LOGGED_IN, token: token ?? '', currentUser: null}
-    } else if (
-      getAuthCode(callbackUrl, initialLocationHref) ||
-      getTokenFromLocation(initialLocationHref)
-    ) {
-      logger.info('Auth callback detected, preparing to exchange token')
-      authState = {type: AuthStateType.LOGGING_IN, isExchangingToken: false}
-      // Note: dashboardContext from the callback URL can be set later in handleAuthCallback too
-    } else if (token && !isInDashboard && !studioModeEnabled) {
-      // Only use token from storage if NOT running in dashboard and studio mode is not enabled
-      logger.info('Auth initialized with token from storage')
-      authState = {type: AuthStateType.LOGGED_IN, token, currentUser: null}
-    } else {
-      // Default to logged out if no provided token, not handling callback,
-      // or if token exists but we ARE in dashboard mode.
-      logger.info('Auth initialized in logged out state', {
-        isInDashboard,
-        hasToken: !!token,
-        studioMode: studioModeEnabled,
-      })
-      authState = {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false}
+    let result
+    switch (mode) {
+      case 'studio':
+        result = getStudioInitialState(strategyOptions)
+        break
+      case 'dashboard':
+        result = getDashboardInitialState(strategyOptions)
+        break
+      case 'standalone':
+        result = getStandaloneInitialState(strategyOptions)
+        break
     }
 
     logger.debug('Auth state initialized', {
-      authStateType: authState.type,
-      isInDashboard,
-      authMethod,
+      authStateType: result.authState.type,
+      mode,
+      authMethod: result.authMethod,
     })
 
     return {
-      authState,
-      dashboardContext,
+      authState: result.authState,
+      dashboardContext: result.dashboardContext,
       options: {
         apiHost,
         loginUrl: loginUrl.toString(),
@@ -238,74 +185,42 @@ export const authStore = defineStore<AuthStoreState>({
         providedToken,
         clientFactory,
         initialLocationHref,
-        storageKey,
-        storageArea,
-        authMethod,
+        storageKey: result.storageKey,
+        storageArea: result.storageArea,
+        authMethod: result.authMethod,
       },
     }
   },
+
   initialize(context) {
-    const {instance} = context
-    const logger = createLogger('auth', {
-      instanceId: instance.instanceId,
-      projectId: instance.config.projectId,
-      dataset: instance.config.dataset,
-    })
+    const initialLocationHref =
+      context.state.get().options?.initialLocationHref ?? getDefaultLocation()
+    const mode = resolveAuthMode(context.instance.config, initialLocationHref)
 
-    logger.debug('Setting up auth subscriptions')
-
-    const subscriptions: Subscription[] = []
-    subscriptions.push(subscribeToStateAndFetchCurrentUser(context))
-    const storageArea = context.state.get().options?.storageArea
-    if (storageArea) {
-      subscriptions.push(subscribeToStorageEventsAndSetToken(context))
+    let initResult
+    switch (mode) {
+      case 'studio':
+        initResult = initializeStudioAuth(context, tokenRefresherRunning)
+        break
+      case 'dashboard':
+        initResult = initializeDashboardAuth(context, tokenRefresherRunning)
+        break
+      case 'standalone':
+        initResult = initializeStandaloneAuth(context, tokenRefresherRunning)
+        break
     }
 
-    // If in Studio mode with no local token, resolve cookie auth asynchronously
-    try {
-      const {state} = context
-      const studioModeEnabled = !!instance.config.studioMode?.enabled
-      const token: string | null =
-        state.get().authState?.type === AuthStateType.LOGGED_IN
-          ? (state.get().authState as LoggedInAuthState).token
-          : null
-      if (studioModeEnabled && !token) {
-        logger.debug('Checking for cookie-based authentication in Studio mode')
-        const projectId = instance.config.projectId
-        const clientFactory = state.get().options.clientFactory
-        checkForCookieAuth(projectId, clientFactory).then((isCookieAuthEnabled) => {
-          if (!isCookieAuthEnabled) {
-            logger.debug('Cookie authentication not available')
-            return
-          }
-          logger.info('Cookie authentication enabled')
-          state.set('enableCookieAuth', (prev) => ({
-            options: {...prev.options, authMethod: 'cookie'},
-            authState:
-              prev.authState.type === AuthStateType.LOGGED_IN
-                ? prev.authState
-                : {type: AuthStateType.LOGGED_IN, token: '', currentUser: null},
-          }))
-        })
-      }
-    } catch (error) {
-      // best-effort cookie detection
-      logger.debug('Cookie authentication check failed', {error})
-    }
-
-    if (!tokenRefresherRunning) {
+    if (initResult.tokenRefresherStarted) {
       tokenRefresherRunning = true
-      subscriptions.push(refreshStampedToken(context))
     }
 
-    return () => {
-      logger.debug('Cleaning up auth subscriptions')
-      for (const subscription of subscriptions) {
-        subscription.unsubscribe()
-      }
-    }
+    return initResult.dispose
   },
 })
+
+// ---------------------------------------------------------------------------
+// Public bound actions
+// ---------------------------------------------------------------------------
 
 /**
  * @public
@@ -380,10 +295,11 @@ export const getIsInDashboardState = bindActionGlobally(
 export const setAuthToken = bindActionGlobally(
   authStore,
   ({state, instance}, token: string | null) => {
+    const defaultResource = getDefaultDatasetResource(instance.config)
     const logger = createLogger('auth', {
       instanceId: instance.instanceId,
-      projectId: instance.config.projectId,
-      dataset: instance.config.dataset,
+      projectId: defaultResource?.projectId,
+      dataset: defaultResource?.dataset,
     })
 
     const currentAuthState = state.get().authState

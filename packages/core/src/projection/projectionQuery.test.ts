@@ -1,10 +1,11 @@
+import {DocumentId} from '@sanity/id-utils'
 import {describe, expect, it} from 'vitest'
 
 import {createProjectionQuery, processProjectionQuery} from './projectionQuery'
 
 describe('createProjectionQuery', () => {
   it('creates a query and params for given ids and projections', () => {
-    const ids = new Set(['doc1', 'doc2'])
+    const ids = new Set(['doc1', 'doc2'].map(DocumentId))
     const projectionHash = '{title, description}'
     const documentProjections = {
       doc1: {[projectionHash]: projectionHash},
@@ -15,11 +16,11 @@ describe('createProjectionQuery', () => {
     expect(query).toMatch(/.*_id in \$__ids_.*/)
     expect(Object.keys(params)).toHaveLength(1)
     expect(params[`__ids_${projectionHash}`]).toBeDefined()
-    expect(params[`__ids_${projectionHash}`]).toHaveLength(4)
+    expect(params[`__ids_${projectionHash}`]).toHaveLength(2)
   })
 
   it('handles multiple different projections', () => {
-    const ids = new Set(['doc1', 'doc2'])
+    const ids = new Set(['doc1', 'doc2'].map(DocumentId))
     const projectionHash1 = '{title, description}'
     const projectionHash2 = '{name, age}'
     const documentProjections = {
@@ -31,13 +32,13 @@ describe('createProjectionQuery', () => {
     expect(query).toMatch(/.*_id in \$__ids_.*/)
     expect(Object.keys(params)).toHaveLength(2)
     expect(params[`__ids_${projectionHash1}`]).toBeDefined()
-    expect(params[`__ids_${projectionHash1}`]).toHaveLength(2)
+    expect(params[`__ids_${projectionHash1}`]).toHaveLength(1)
     expect(params[`__ids_${projectionHash2}`]).toBeDefined()
-    expect(params[`__ids_${projectionHash2}`]).toHaveLength(2)
+    expect(params[`__ids_${projectionHash2}`]).toHaveLength(1)
   })
 
   it('filters out ids without projections', () => {
-    const ids = new Set(['doc1', 'doc2', 'doc3'])
+    const ids = new Set(['doc1', 'doc2', 'doc3'].map(DocumentId))
     const projectionHash1 = '{title}'
     // projectionHash2 missing intentionally
     const projectionHash3 = '{name}'
@@ -51,9 +52,9 @@ describe('createProjectionQuery', () => {
     expect(query).toMatch(/.*_id in \$__ids_.*/)
     expect(Object.keys(params)).toHaveLength(2)
     expect(params[`__ids_${projectionHash1}`]).toBeDefined()
-    expect(params[`__ids_${projectionHash1}`]).toHaveLength(2)
+    expect(params[`__ids_${projectionHash1}`]).toHaveLength(1)
     expect(params[`__ids_${projectionHash3}`]).toBeDefined()
-    expect(params[`__ids_${projectionHash3}`]).toHaveLength(2)
+    expect(params[`__ids_${projectionHash3}`]).toHaveLength(1)
   })
 })
 
@@ -63,10 +64,9 @@ describe('processProjectionQuery', () => {
   it('returns structure with empty object if no results found', () => {
     const ids = new Set(['doc1'])
     const result = processProjectionQuery({
-      projectId: 'p',
-      dataset: 'd',
       ids,
       results: [], // no results
+      perspective: 'published',
     })
 
     expect(result['doc1']).toEqual({})
@@ -85,10 +85,14 @@ describe('processProjectionQuery', () => {
     ]
 
     const processed = processProjectionQuery({
-      projectId: 'p',
-      dataset: 'd',
       ids,
       results,
+      perspective: 'published',
+      documentStatuses: {
+        doc1: {
+          lastEditedPublishedAt: '2021-01-01',
+        },
+      },
     })
 
     expect(processed['doc1']?.[testProjectionHash]).toEqual({
@@ -116,10 +120,14 @@ describe('processProjectionQuery', () => {
     ]
 
     const processed = processProjectionQuery({
-      projectId: 'p',
-      dataset: 'd',
       ids: new Set(['doc1']),
       results,
+      perspective: 'published',
+      documentStatuses: {
+        doc1: {
+          lastEditedPublishedAt: '2021-01-01',
+        },
+      },
     })
 
     expect(processed['doc1']?.[testProjectionHash]).toEqual({
@@ -134,66 +142,37 @@ describe('processProjectionQuery', () => {
     })
   })
 
-  it('handles both draft and published documents', () => {
+  it('handles release perspective with all three status fields', () => {
     const results = [
-      {
-        _id: 'drafts.doc1',
-        _type: 'document',
-        _updatedAt: '2021-01-02',
-        result: {title: 'Draft'},
-        __projectionHash: testProjectionHash,
-      },
       {
         _id: 'doc1',
         _type: 'document',
-        _updatedAt: '2021-01-01',
-        result: {title: 'Published'},
+        _updatedAt: '2021-01-03',
+        result: {title: 'Version'},
         __projectionHash: testProjectionHash,
       },
     ]
 
     const processed = processProjectionQuery({
-      projectId: 'p',
-      dataset: 'd',
       ids: new Set(['doc1']),
       results,
+      perspective: {releaseName: 'release1'},
+      documentStatuses: {
+        doc1: {
+          lastEditedDraftAt: '2021-01-02',
+          lastEditedPublishedAt: '2021-01-01',
+          lastEditedVersionAt: '2021-01-03',
+        },
+      },
     })
 
     expect(processed['doc1']?.[testProjectionHash]).toEqual({
       data: {
-        title: 'Draft',
+        title: 'Version',
         _status: {
           lastEditedDraftAt: '2021-01-02',
           lastEditedPublishedAt: '2021-01-01',
-        },
-      },
-      isPending: false,
-    })
-  })
-
-  it('uses published result when no draft exists', () => {
-    const results = [
-      {
-        _id: 'doc1',
-        _type: 'document',
-        _updatedAt: '2021-01-01',
-        result: {title: 'Published'},
-        __projectionHash: testProjectionHash,
-      },
-    ]
-
-    const processed = processProjectionQuery({
-      projectId: 'p',
-      dataset: 'd',
-      ids: new Set(['doc1']),
-      results,
-    })
-
-    expect(processed['doc1']?.[testProjectionHash]).toEqual({
-      data: {
-        title: 'Published',
-        _status: {
-          lastEditedPublishedAt: '2021-01-01',
+          lastEditedVersionAt: '2021-01-03',
         },
       },
       isPending: false,
@@ -221,10 +200,14 @@ describe('processProjectionQuery', () => {
     ]
 
     const processed = processProjectionQuery({
-      projectId: 'p',
-      dataset: 'd',
       ids: new Set(['doc1']),
       results,
+      perspective: 'published',
+      documentStatuses: {
+        doc1: {
+          lastEditedPublishedAt: '2021-01-01',
+        },
+      },
     })
 
     expect(processed['doc1']?.[hash1]).toEqual({

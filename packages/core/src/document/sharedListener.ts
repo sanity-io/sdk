@@ -14,6 +14,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
+import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 
 const API_VERSION = 'v2025-05-06'
@@ -23,10 +24,14 @@ export interface SharedListener {
   dispose: () => void
 }
 
-export function createSharedListener(instance: SanityInstance): SharedListener {
+export function createSharedListener(
+  instance: SanityInstance,
+  resource?: DocumentResource,
+): SharedListener {
   const dispose$ = new Subject<void>()
   const events$ = getClientState(instance, {
     apiVersion: API_VERSION,
+    ...(resource ? {resource} : {}),
   }).observable.pipe(
     switchMap((client) =>
       // TODO: it seems like the client.listen method is not emitting disconnected
@@ -62,9 +67,12 @@ export function createSharedListener(instance: SanityInstance): SharedListener {
   }
 }
 
-export function createFetchDocument(instance: SanityInstance) {
+export function createFetchDocument(instance: SanityInstance, resource?: DocumentResource) {
   return function (documentId: string): Observable<SanityDocument | null> {
-    return getClientState(instance, {apiVersion: API_VERSION}).observable.pipe(
+    return getClientState(instance, {
+      apiVersion: API_VERSION,
+      ...(resource ? {resource} : {}),
+    }).observable.pipe(
       switchMap((client) => {
         // TODO: remove this once the client is updated to v7 the new type is available in @sanity/mutate/_unstable_store
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

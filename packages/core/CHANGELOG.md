@@ -1,43 +1,63 @@
 # Changelog
 
-## [2.6.0](https://github.com/sanity-io/sdk/compare/sdk-v2.5.0...sdk-v2.6.0) (2026-01-22)
+## [2.8.0](https://github.com/sanity-io/sdk/compare/sdk-v2.7.0...sdk-v2.8.0) (2026-02-19)
 
+### Miscellaneous
+
+- **sdk:** Synchronize sdk versions
+
+## [2.7.0](https://github.com/sanity-io/sdk/compare/sdk-v2.6.0...sdk-v2.7.0) (2026-02-12)
 
 ### Features
 
-* **logging:** enhance createSanityInstance with logging capabilities ([#707](https://github.com/sanity-io/sdk/issues/707)) ([1af2df0](https://github.com/sanity-io/sdk/commit/1af2df095ea93d8c81c420f8a864d061d1d8914d))
-* **logging:** introduce logging configuration and infrastructure ([#672](https://github.com/sanity-io/sdk/issues/672)) ([925aed0](https://github.com/sanity-io/sdk/commit/925aed0c890ebf1a0d4aced9921d1dee715012df))
-
+- **auth:** add SDKStudioContext and workspace-based auth for zero-config Studio integration ([#738](https://github.com/sanity-io/sdk/issues/738)) ([ec89adc](https://github.com/sanity-io/sdk/commit/ec89adcb1c849fac684e2511cbee42066811934d))
+- **core:** add action binder for source and perspective ([#724](https://github.com/sanity-io/sdk/issues/724)) ([53c193e](https://github.com/sanity-io/sdk/commit/53c193e85639361e39af3364de314172ca823e9c))
+- **projection:** update projection store to use source and perspective ([#723](https://github.com/sanity-io/sdk/issues/723)) ([332f741](https://github.com/sanity-io/sdk/commit/332f7412981be5fd214d1d96088b95ae76b0e002))
 
 ### Bug Fixes
 
-* **deps:** Update sanity monorepo to v5 (major) ([#715](https://github.com/sanity-io/sdk/issues/715)) ([204bae1](https://github.com/sanity-io/sdk/commit/204bae1c03987fb9780c7151a45737ac3babc8a2))
+- **auth:** harden fallback auth with Array.isArray guards and cookie auth timeout ([#739](https://github.com/sanity-io/sdk/issues/739)) ([91175d7](https://github.com/sanity-io/sdk/commit/91175d7b7b090e2d1a53efbbc58b4786356ecf99))
+- **deps:** update dependency @sanity/client ([#717](https://github.com/sanity-io/sdk/issues/717)) ([24fb157](https://github.com/sanity-io/sdk/commit/24fb157a0fbc97a625a7c7ad3045e502ec818af1))
+- prevent sourceName from reaching sdk core ([#720](https://github.com/sanity-io/sdk/issues/720)) ([b8cf408](https://github.com/sanity-io/sdk/commit/b8cf4080d63b7d933cae630d1118d3ca4b127e07))
+- **query:** use store key to determine client for live events ([#721](https://github.com/sanity-io/sdk/issues/721)) ([4d4e690](https://github.com/sanity-io/sdk/commit/4d4e69002e6b35fb8060a94c2ec46b863326945c))
+
+### Documentation
+
+- update SDK documentation for Studio integration ([#741](https://github.com/sanity-io/sdk/issues/741)) ([18d1adc](https://github.com/sanity-io/sdk/commit/18d1adcfefc2e315d0ac262fa913bc03fcaaa4a8))
+
+## [2.6.0](https://github.com/sanity-io/sdk/compare/sdk-v2.5.0...sdk-v2.6.0) (2026-01-22)
+
+### Features
+
+- **logging:** enhance createSanityInstance with logging capabilities ([#707](https://github.com/sanity-io/sdk/issues/707)) ([1af2df0](https://github.com/sanity-io/sdk/commit/1af2df095ea93d8c81c420f8a864d061d1d8914d))
+- **logging:** introduce logging configuration and infrastructure ([#672](https://github.com/sanity-io/sdk/issues/672)) ([925aed0](https://github.com/sanity-io/sdk/commit/925aed0c890ebf1a0d4aced9921d1dee715012df))
+
+### Bug Fixes
+
+- **deps:** Update sanity monorepo to v5 (major) ([#715](https://github.com/sanity-io/sdk/issues/715)) ([204bae1](https://github.com/sanity-io/sdk/commit/204bae1c03987fb9780c7151a45737ac3babc8a2))
 
 ## [2.5.0](https://github.com/sanity-io/sdk/compare/sdk-v2.4.0...sdk-v2.5.0) (2025-12-31)
 
-
 ### Features
 
-* add useAgentResourceContext hook ([#690](https://github.com/sanity-io/sdk/issues/690)) ([ffe4e88](https://github.com/sanity-io/sdk/commit/ffe4e88a92ba45d251cd5fc94211ab2b2ab52dc0))
-* implement liveEdit document handling ([#678](https://github.com/sanity-io/sdk/issues/678)) ([e3c8050](https://github.com/sanity-io/sdk/commit/e3c8050163fc060a045fd152eab4caa07b2b4f14))
-* make applyDocumentActions more similar to the rest ([#630](https://github.com/sanity-io/sdk/issues/630)) ([440ce84](https://github.com/sanity-io/sdk/commit/440ce84959712e30501ecc9d119d89436c5396ec))
-* support using the same instance for different datasets ([#632](https://github.com/sanity-io/sdk/issues/632)) ([1e22eed](https://github.com/sanity-io/sdk/commit/1e22eed070def852aa9c305379299f647bab03f1))
+- add useAgentResourceContext hook ([#690](https://github.com/sanity-io/sdk/issues/690)) ([ffe4e88](https://github.com/sanity-io/sdk/commit/ffe4e88a92ba45d251cd5fc94211ab2b2ab52dc0))
+- implement liveEdit document handling ([#678](https://github.com/sanity-io/sdk/issues/678)) ([e3c8050](https://github.com/sanity-io/sdk/commit/e3c8050163fc060a045fd152eab4caa07b2b4f14))
+- make applyDocumentActions more similar to the rest ([#630](https://github.com/sanity-io/sdk/issues/630)) ([440ce84](https://github.com/sanity-io/sdk/commit/440ce84959712e30501ecc9d119d89436c5396ec))
+- support using the same instance for different datasets ([#632](https://github.com/sanity-io/sdk/issues/632)) ([1e22eed](https://github.com/sanity-io/sdk/commit/1e22eed070def852aa9c305379299f647bab03f1))
 
 ## [2.4.0](https://github.com/sanity-io/sdk/compare/sdk-v2.3.1...sdk-v2.4.0) (2025-12-15)
 
-
 ### Features
 
-* add agent actions ([#654](https://github.com/sanity-io/sdk/issues/654)) ([cb70f89](https://github.com/sanity-io/sdk/commit/cb70f89ebc3ffb90b36d04a959341643860c9fb6))
-* add canvas as a source for useQuery and useDispatchIntent ([#665](https://github.com/sanity-io/sdk/issues/665)) ([60de2d1](https://github.com/sanity-io/sdk/commit/60de2d1767558ca7ba88bc59b6b84f8b4a0a3658))
-* **document:** add support for initial values in document creation actions ([#676](https://github.com/sanity-io/sdk/issues/676)) ([6329f69](https://github.com/sanity-io/sdk/commit/6329f69dacc0437a83799585a9f2062be16f47b0))
-* Introduce "source" concept ([#626](https://github.com/sanity-io/sdk/issues/626)) ([92340b9](https://github.com/sanity-io/sdk/commit/92340b9e02c12023f1096cce153065dd02da5b29))
-
+- add agent actions ([#654](https://github.com/sanity-io/sdk/issues/654)) ([cb70f89](https://github.com/sanity-io/sdk/commit/cb70f89ebc3ffb90b36d04a959341643860c9fb6))
+- add canvas as a source for useQuery and useDispatchIntent ([#665](https://github.com/sanity-io/sdk/issues/665)) ([60de2d1](https://github.com/sanity-io/sdk/commit/60de2d1767558ca7ba88bc59b6b84f8b4a0a3658))
+- **document:** add support for initial values in document creation actions ([#676](https://github.com/sanity-io/sdk/issues/676)) ([6329f69](https://github.com/sanity-io/sdk/commit/6329f69dacc0437a83799585a9f2062be16f47b0))
+- Introduce "source" concept ([#626](https://github.com/sanity-io/sdk/issues/626)) ([92340b9](https://github.com/sanity-io/sdk/commit/92340b9e02c12023f1096cce153065dd02da5b29))
 
 ### Bug Fixes
 
-* **client:** improve error handling for missing or invalid options in getClient and useClient ([#677](https://github.com/sanity-io/sdk/issues/677)) ([61eaf6b](https://github.com/sanity-io/sdk/commit/61eaf6bb4adeb6df3f13524091ee4fc915192c37))
-* handle projectUserNotFoundErrors and display the error message ([#651](https://github.com/sanity-io/sdk/issues/651)) ([1668657](https://github.com/sanity-io/sdk/commit/1668657109833971aacde582c32fbacd6f1f7085))
+- **client:** improve error handling for missing or invalid options in getClient and useClient ([#677](https://github.com/sanity-io/sdk/issues/677)) ([61eaf6b](https://github.com/sanity-io/sdk/commit/61eaf6bb4adeb6df3f13524091ee4fc915192c37))
+- handle projectUserNotFoundErrors and display the error message ([#651](https://github.com/sanity-io/sdk/issues/651)) ([1668657](https://github.com/sanity-io/sdk/commit/1668657109833971aacde582c32fbacd6f1f7085))
 
 ## [2.3.1](https://github.com/sanity-io/sdk/compare/sdk-v2.3.0...sdk-v2.3.1) (2025-10-17)
 

@@ -91,9 +91,27 @@ export function useDocumentPermissions(
   // if actions is an array, we need to check that all actions belong to the same project and dataset
   let projectId
   let dataset
+  let resource
 
   for (const action of actions) {
-    if (action.projectId) {
+    if (action.resource) {
+      if (projectId || dataset) {
+        throw new Error(
+          `Mismatches between projectId/dataset options and resource in actions. Found "${JSON.stringify(action.resource)}" but expected project "${projectId}" and dataset "${dataset}".`,
+        )
+      }
+      if (!resource) resource = action.resource
+      if (action.resource !== resource) {
+        throw new Error(
+          `Mismatched resources found in actions. All actions must belong to the same resource. Found "${JSON.stringify(action.resource)}" but expected "${JSON.stringify(resource)}".`,
+        )
+      }
+    } else if (action.projectId) {
+      if (resource) {
+        throw new Error(
+          `Mismatches between projectId/dataset options and resource in actions. Found projectId "${action.projectId}" and dataset "${action.dataset}" but expected resource "${JSON.stringify(resource)}".`,
+        )
+      }
       if (!projectId) projectId = action.projectId
       if (action.projectId !== projectId) {
         throw new Error(
@@ -112,7 +130,7 @@ export function useDocumentPermissions(
     }
   }
 
-  const instance = useSanityInstance({projectId, dataset})
+  const instance = useSanityInstance()
   const isDocumentReady = useCallback(
     () => getPermissionsState(instance, {actions}).getCurrent() !== undefined,
     [actions, instance],

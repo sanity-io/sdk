@@ -40,7 +40,14 @@ const doc = {
 const docHandle = createDocumentHandle({
   documentId: 'doc1',
   documentType: 'book',
+  projectId: 'test-project',
+  dataset: 'test-dataset',
 })
+const normalizedDocHandle = {
+  documentId: 'doc1',
+  documentType: 'book',
+  resource: {projectId: 'test-project', dataset: 'test-dataset'},
+}
 
 // Define a single generic TestDocument type
 interface Book extends SanityDocument {
@@ -48,16 +55,6 @@ interface Book extends SanityDocument {
   foo?: string
   extra?: string
   title?: string
-}
-
-// Scope the TestDocument type to the project/datasets used in tests
-type AllTestSchemaTypes = Book
-
-// Augment the 'groq' module
-declare module 'groq' {
-  interface SanitySchemas {
-    'default:default': AllTestSchemaTypes
-  }
 }
 
 describe('useEditDocument hook', () => {
@@ -78,14 +75,17 @@ describe('useEditDocument hook', () => {
 
     const {result} = renderHook(() => useEditDocument<string>({...docHandle, path: 'foo'}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
     })
     const promise = result.current('newValue')
-    expect(editDocument).toHaveBeenCalledWith(docHandle, {set: {foo: 'newValue'}})
-    expect(apply).toHaveBeenCalledWith(editDocument(docHandle, {set: {foo: 'newValue'}}))
+    expect(editDocument).toHaveBeenCalledWith(normalizedDocHandle, {set: {foo: 'newValue'}})
+    expect(apply).toHaveBeenCalledWith(editDocument(normalizedDocHandle, {set: {foo: 'newValue'}}))
     const actionsResult = await promise
     expect(actionsResult).toEqual({transactionId: 'tx1'})
   })
@@ -105,13 +105,16 @@ describe('useEditDocument hook', () => {
 
     const {result} = renderHook(() => useEditDocument(docHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
     })
     const promise = result.current({...doc, foo: 'baz', extra: 'old', _id: 'doc1'})
-    expect(apply).toHaveBeenCalledWith([editDocument(docHandle, {set: {foo: 'baz'}})])
+    expect(apply).toHaveBeenCalledWith([editDocument(normalizedDocHandle, {set: {foo: 'baz'}})])
     const actionsResult = await promise
     expect(actionsResult).toEqual({transactionId: 'tx2'})
   })
@@ -129,14 +132,19 @@ describe('useEditDocument hook', () => {
 
     const {result} = renderHook(() => useEditDocument<string>({...docHandle, path: 'foo'}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
     })
     const promise = result.current((prev: unknown) => `${prev}Updated`) // 'bar' becomes 'barUpdated'
-    expect(editDocument).toHaveBeenCalledWith(docHandle, {set: {foo: 'barUpdated'}})
-    expect(apply).toHaveBeenCalledWith(editDocument(docHandle, {set: {foo: 'barUpdated'}}))
+    expect(editDocument).toHaveBeenCalledWith(normalizedDocHandle, {set: {foo: 'barUpdated'}})
+    expect(apply).toHaveBeenCalledWith(
+      editDocument(normalizedDocHandle, {set: {foo: 'barUpdated'}}),
+    )
     const actionsResult = await promise
     expect(actionsResult).toEqual({transactionId: 'tx3'})
   })
@@ -155,13 +163,16 @@ describe('useEditDocument hook', () => {
 
     const {result} = renderHook(() => useEditDocument(docHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
     })
-    const promise = result.current((prevDoc) => ({...prevDoc, foo: 'baz'}))
-    expect(apply).toHaveBeenCalledWith([editDocument(docHandle, {set: {foo: 'baz'}})])
+    const promise = result.current((prevDoc: Record<string, unknown>) => ({...prevDoc, foo: 'baz'}))
+    expect(apply).toHaveBeenCalledWith([editDocument(normalizedDocHandle, {set: {foo: 'baz'}})])
     const actionsResult = await promise
     expect(actionsResult).toEqual({transactionId: 'tx4'})
   })
@@ -179,7 +190,10 @@ describe('useEditDocument hook', () => {
 
     const {result} = renderHook(() => useEditDocument(docHandle), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -213,7 +227,10 @@ describe('useEditDocument hook', () => {
       },
       {
         wrapper: ({children}) => (
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
             {children}
           </ResourceProvider>
         ),

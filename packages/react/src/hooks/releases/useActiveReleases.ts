@@ -1,4 +1,5 @@
 import {
+  type DocumentResource,
   getActiveReleasesState,
   type ReleaseDocument,
   type SanityInstance,
@@ -7,13 +8,10 @@ import {
 import {filter, firstValueFrom} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-
-/**
- * @public
- */
-type UseActiveReleases = {
-  (): ReleaseDocument[]
-}
+import {
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 
 /**
  * @public
@@ -30,10 +28,30 @@ type UseActiveReleases = {
  * const activeReleases = useActiveReleases()
  * ```
  */
-export const useActiveReleases: UseActiveReleases = createStateSourceHook({
-  getState: getActiveReleasesState as (instance: SanityInstance) => StateSource<ReleaseDocument[]>,
-  shouldSuspend: (instance: SanityInstance) =>
-    getActiveReleasesState(instance).getCurrent() === undefined,
-  suspender: (instance: SanityInstance) =>
-    firstValueFrom(getActiveReleasesState(instance).observable.pipe(filter(Boolean))),
+type UseActiveReleases = {
+  (options?: WithResourceNameSupport<{resource?: DocumentResource}> | undefined): ReleaseDocument[]
+}
+
+const useActiveReleasesValue: UseActiveReleases = createStateSourceHook({
+  getState: getActiveReleasesState as (
+    instance: SanityInstance,
+    options?: {resource?: DocumentResource},
+  ) => StateSource<ReleaseDocument[]>,
+  shouldSuspend: (instance: SanityInstance, options?: {resource?: DocumentResource}) =>
+    getActiveReleasesState(instance, options ?? {}).getCurrent() === undefined,
+  suspender: (instance: SanityInstance, options?: {resource?: DocumentResource}) =>
+    firstValueFrom(
+      getActiveReleasesState(instance, options ?? {}).observable.pipe(filter(Boolean)),
+    ),
 })
+
+/**
+ * @public
+ * @function
+ */
+export const useActiveReleases: UseActiveReleases = (
+  options: WithResourceNameSupport<{resource?: DocumentResource}> | undefined,
+) => {
+  const normalizedOptions = useNormalizedResourceOptions(options ?? {})
+  return useActiveReleasesValue(normalizedOptions)
+}

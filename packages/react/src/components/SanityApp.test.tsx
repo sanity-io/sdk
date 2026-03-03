@@ -60,8 +60,7 @@ describe('SanityApp', () => {
 
   it('renders SDKProvider with a single config', () => {
     const singleConfig = {
-      projectId: 'test-project',
-      dataset: 'production',
+      defaultResource: {projectId: 'test-project', dataset: 'production'},
     }
 
     render(
@@ -87,52 +86,13 @@ describe('SanityApp', () => {
     expect(props.fallback).toBeTruthy()
   })
 
-  it('renders SDKProvider with multiple configs in original order', () => {
-    const multipleConfigs = [
-      {
-        projectId: 'project-1',
-        dataset: 'production',
-      },
-      {
-        projectId: 'project-2',
-        dataset: 'staging',
-      },
-      {
-        projectId: 'project-3',
-        dataset: 'development',
-      },
-    ]
-
-    render(
-      <SanityApp config={multipleConfigs} fallback={<div>Loading...</div>}>
-        <div>Child Content</div>
-      </SanityApp>,
-    )
-
-    // Check that the SDKProvider is rendered
-    expect(screen.getByTestId('sdk-provider')).toBeInTheDocument()
-
-    // Verify SDKProvider was called with the correct props
-    expect(mockSDKProviderComponent).toHaveBeenCalledTimes(1)
-    const sdkProviderCalls = mockSDKProviderComponent.mock.calls
-    const firstCallArgs2 = sdkProviderCalls[0]
-    expect(firstCallArgs2).toBeDefined()
-    expect(firstCallArgs2.length).toBeGreaterThan(0)
-    const props = firstCallArgs2[0] as unknown as SDKProviderProps
-    const config = props?.config
-
-    // Config should be passed directly to SDKProvider
-    expect(config).toEqual(multipleConfigs)
-  })
-
   it('handles iframe environment correctly', async () => {
     // Mock window.self and window.top to simulate iframe environment
     const originalTop = window.top
     const originalSelf = window.self
 
     const mockSanityConfig: SanityConfig = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
+      defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
     }
 
     const mockTop = {}
@@ -146,7 +106,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
@@ -178,8 +138,7 @@ describe('SanityApp', () => {
     }
 
     const mockSanityConfig: SanityConfig = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
+      defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
     }
 
     Object.defineProperty(window, 'location', {
@@ -188,7 +147,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
@@ -207,12 +166,42 @@ describe('SanityApp', () => {
     consoleWarnSpy.mockRestore()
   })
 
+  it('redirects to core if config is omitted and no studio context is available', async () => {
+    const originalLocation = window.location
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const mockLocation = {
+      replace: vi.fn(),
+      href: 'http://sanity-test.app',
+    }
+
+    Object.defineProperty(window, 'location', {
+      value: mockLocation,
+      writable: true,
+    })
+
+    render(
+      <SanityApp fallback={<div>Fallback</div>}>
+        <div>Test Child</div>
+      </SanityApp>,
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 1010))
+
+    expect(mockLocation.replace).toHaveBeenCalledWith('https://sanity.io/welcome')
+
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+    })
+    consoleWarnSpy.mockRestore()
+  })
+
   it('does not redirect to core if not inside iframe and local url', async () => {
     const originalLocation = window.location
 
     const mockSanityConfig: SanityConfig = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
+      defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
     }
 
     const mockLocation = {
@@ -226,7 +215,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
@@ -244,7 +233,7 @@ describe('SanityApp', () => {
     })
   })
 
-  it('does not redirect to core if studioMode is enabled', async () => {
+  it('does not redirect to core if studio config is provided', async () => {
     const originalLocation = window.location
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
@@ -254,9 +243,8 @@ describe('SanityApp', () => {
     }
 
     const mockSanityConfig: SanityConfig = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
-      studioMode: {enabled: true},
+      defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
+      studio: {},
     }
 
     Object.defineProperty(window, 'location', {
@@ -265,7 +253,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
@@ -274,6 +262,44 @@ describe('SanityApp', () => {
     await new Promise((resolve) => setTimeout(resolve, 1010))
 
     // Add assertions based on your iframe-specific behavior
+    expect(mockLocation.replace).not.toHaveBeenCalled()
+
+    // Clean up the mock
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+    })
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('does not redirect to core when studio config is provided', async () => {
+    const originalLocation = window.location
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const mockLocation = {
+      replace: vi.fn(),
+      href: 'http://sanity-test.app',
+    }
+
+    const mockSanityConfig: SanityConfig = {
+      defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
+      studio: {},
+    }
+
+    Object.defineProperty(window, 'location', {
+      value: mockLocation,
+      writable: true,
+    })
+
+    render(
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
+        <div>Test Child</div>
+      </SanityApp>,
+    )
+
+    // Wait for 1 second
+    await new Promise((resolve) => setTimeout(resolve, 1010))
+
     expect(mockLocation.replace).not.toHaveBeenCalled()
 
     // Clean up the mock

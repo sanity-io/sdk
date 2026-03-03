@@ -1,7 +1,7 @@
 import {createSelector} from 'reselect'
 
-import {type PerspectiveHandle, type ReleasePerspective} from '../config/sanityConfig'
-import {bindActionByDataset, type BoundStoreAction} from '../store/createActionBinder'
+import {type DocumentResource, type PerspectiveHandle} from '../config/sanityConfig'
+import {bindActionByResource, type BoundStoreAction} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 /*
  * Although this is an import dependency cycle, it is not a logical cycle:
@@ -12,13 +12,8 @@ import {createStateSourceAction, type SelectorContext} from '../store/createStat
  */
 // eslint-disable-next-line import/no-cycle
 import {releasesStore, type ReleasesStoreState} from './releasesStore'
+import {isReleasePerspective} from './utils/isReleasePerspective'
 import {sortReleases} from './utils/sortReleases'
-
-export function isReleasePerspective(
-  perspective: PerspectiveHandle['perspective'],
-): perspective is ReleasePerspective {
-  return typeof perspective === 'object' && perspective !== null && 'releaseName' in perspective
-}
 
 const DEFAULT_PERSPECTIVE = 'drafts'
 
@@ -31,7 +26,7 @@ const selectActiveReleases = (context: SelectorContext<ReleasesStoreState>) =>
   context.state.activeReleases
 const selectOptions = (
   _context: SelectorContext<ReleasesStoreState>,
-  options: PerspectiveHandle & {projectId?: string; dataset?: string},
+  options: PerspectiveHandle & {projectId?: string; dataset?: string; resource?: DocumentResource},
 ) => options
 
 const memoizedOptionsSelector = createSelector(
@@ -108,12 +103,13 @@ let _boundGetPerspectiveState: BoundGetPerspectiveState | undefined
  *
  * @public
  */
-export const getPerspectiveState: BoundGetPerspectiveState = (...args) => {
+export const getPerspectiveState: BoundGetPerspectiveState = (instance, ...rest) => {
   if (!_boundGetPerspectiveState) {
-    _boundGetPerspectiveState = bindActionByDataset(
+    _boundGetPerspectiveState = bindActionByResource(
       releasesStore,
       _getPerspectiveStateSelector,
     ) as BoundGetPerspectiveState
   }
-  return _boundGetPerspectiveState(...args)
+  // bindActionByResource keyFn destructures { resource } from the first param, so pass {} when no options
+  return _boundGetPerspectiveState(instance, ...(rest.length ? rest : [{}]))
 }

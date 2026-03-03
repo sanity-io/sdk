@@ -1,5 +1,12 @@
-import {getDraftId, getPublishedId} from '../utils/ids'
-import {type DocumentProjections, type DocumentProjectionValues} from './types'
+import {DocumentId} from '@sanity/id-utils'
+
+import {type PerspectiveHandle} from '../config/sanityConfig'
+import {getPublishedId} from '../utils/ids'
+import {
+  type DocumentProjections,
+  type DocumentProjectionValues,
+  type ProjectionStoreState,
+} from './types'
 import {validateProjection} from './util'
 
 export type ProjectionQueryResult = {
@@ -18,8 +25,8 @@ interface CreateProjectionQueryResult {
 type ProjectionMap = Record<string, {projection: string; documentIds: Set<string>}>
 
 export function createProjectionQuery(
-  documentIds: Set<string>,
-  documentProjections: {[TDocumentId in string]?: DocumentProjections},
+  documentIds: Set<DocumentId>,
+  documentProjections: {[TDocumentId in DocumentId]?: DocumentProjections},
 ): CreateProjectionQueryResult {
   const projections = Array.from(documentIds)
     .flatMap((id) => {
@@ -48,11 +55,7 @@ export function createProjectionQuery(
 
   const params = Object.fromEntries(
     Object.entries(projections).map(([projectionHash, value]) => {
-      const idsInProjection = Array.from(value.documentIds).flatMap((id) => [
-        getPublishedId(id),
-        getDraftId(id),
-      ])
-
+      const idsInProjection = Array.from(value.documentIds).flatMap((id) => DocumentId(id))
       return [`__ids_${projectionHash}`, Array.from(idsInProjection)]
     }),
   )
@@ -61,28 +64,28 @@ export function createProjectionQuery(
 }
 
 interface ProcessProjectionQueryOptions {
-  projectId: string
-  dataset: string
   ids: Set<string>
   results: ProjectionQueryResult[]
+  documentStatuses?: ProjectionStoreState['documentStatuses']
+  perspective: NonNullable<PerspectiveHandle['perspective']>
 }
 
-export function processProjectionQuery({ids, results}: ProcessProjectionQueryOptions): {
+export function processProjectionQuery({
+  ids,
+  results,
+  documentStatuses,
+}: ProcessProjectionQueryOptions): {
   [TDocumentId in string]?: DocumentProjectionValues<Record<string, unknown>>
 } {
   const groupedResults: {
     [docId: string]: {
-      [hash: string]: {
-        draft?: ProjectionQueryResult
-        published?: ProjectionQueryResult
-      }
+      [hash: string]: ProjectionQueryResult | undefined
     }
   } = {}
 
   for (const result of results) {
     const originalId = getPublishedId(result._id)
     const hash = result.__projectionHash
-    const isDraft = result._id.startsWith('drafts.')
 
     if (!ids.has(originalId)) continue
 
@@ -90,14 +93,10 @@ export function processProjectionQuery({ids, results}: ProcessProjectionQueryOpt
       groupedResults[originalId] = {}
     }
     if (!groupedResults[originalId][hash]) {
-      groupedResults[originalId][hash] = {}
+      groupedResults[originalId][hash] = undefined
     }
 
-    if (isDraft) {
-      groupedResults[originalId][hash].draft = result
-    } else {
-      groupedResults[originalId][hash].published = result
-    }
+    groupedResults[originalId][hash] = result
   }
 
   const finalValues: {
@@ -111,22 +110,18 @@ export function processProjectionQuery({ids, results}: ProcessProjectionQueryOpt
     if (!projectionsForDoc) continue
 
     for (const hash in projectionsForDoc) {
-      const {draft, published} = projectionsForDoc[hash]
-
-      const projectionResultData = draft?.result ?? published?.result
+      const projectionResult = projectionsForDoc[hash]
+      const projectionResultData = projectionResult?.result
 
       if (!projectionResultData) {
         finalValues[originalId][hash] = {data: null, isPending: false}
         continue
       }
 
-      const _status = {
-        ...(draft?._updatedAt && {lastEditedDraftAt: draft._updatedAt}),
-        ...(published?._updatedAt && {lastEditedPublishedAt: published._updatedAt}),
-      }
+      const statusFromStore = documentStatuses?.[originalId]
 
       finalValues[originalId][hash] = {
-        data: {...projectionResultData, _status},
+        data: {...projectionResultData, _status: statusFromStore},
         isPending: false,
       }
     }

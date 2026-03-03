@@ -1,6 +1,6 @@
 import {type DocumentAction, type DocumentPermissionsResult, getPermissionsState} from '@sanity/sdk'
 import {act, renderHook, waitFor} from '@testing-library/react'
-import {BehaviorSubject, firstValueFrom} from 'rxjs'
+import {BehaviorSubject, firstValueFrom, Observable} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
@@ -68,7 +68,8 @@ describe('usePermissions', () => {
 
     // Set up the getPermissionsState mock
     vi.mocked(getPermissionsState).mockReturnValue({
-      observable: permissionsSubject.asObservable(),
+      observable:
+        permissionsSubject.asObservable() as unknown as Observable<DocumentPermissionsResult>,
       subscribe: mockSubscribe,
       getCurrent: mockGetCurrent,
     })
@@ -87,8 +88,7 @@ describe('usePermissions', () => {
     const {result} = renderHook(() => useDocumentPermissions(mockAction), {
       wrapper: ({children}) => (
         <ResourceProvider
-          projectId={mockAction.projectId}
-          dataset={mockAction.dataset}
+          resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
           fallback={null}
         >
           {children}
@@ -110,8 +110,7 @@ describe('usePermissions', () => {
     const {result} = renderHook(() => useDocumentPermissions(mockAction), {
       wrapper: ({children}) => (
         <ResourceProvider
-          projectId={mockAction.projectId}
-          dataset={mockAction.dataset}
+          resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
           fallback={null}
         >
           {children}
@@ -131,8 +130,7 @@ describe('usePermissions', () => {
     renderHook(() => useDocumentPermissions(actions), {
       wrapper: ({children}) => (
         <ResourceProvider
-          projectId={mockAction.projectId}
-          dataset={mockAction.dataset}
+          resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
           fallback={null}
         >
           {children}
@@ -153,8 +151,7 @@ describe('usePermissions', () => {
       renderHook(() => useDocumentPermissions(actions), {
         wrapper: ({children}) => (
           <ResourceProvider
-            projectId={mockAction.projectId}
-            dataset={mockAction.dataset}
+            resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
             fallback={null}
           >
             {children}
@@ -171,8 +168,7 @@ describe('usePermissions', () => {
       renderHook(() => useDocumentPermissions(actions), {
         wrapper: ({children}) => (
           <ResourceProvider
-            projectId={mockAction.projectId}
-            dataset={mockAction.dataset}
+            resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
             fallback={null}
           >
             {children}
@@ -180,6 +176,86 @@ describe('usePermissions', () => {
         ),
       })
     }).toThrow(/Mismatched datasets found in actions/)
+  })
+
+  it('should throw an error if actions have mismatched resources', () => {
+    const actions = [
+      {
+        type: 'document.publish' as const,
+        documentId: 'doc1',
+        documentType: 'article',
+        resource: {projectId: 'p1', dataset: 'd1'},
+      },
+      {
+        type: 'document.publish' as const,
+        documentId: 'doc2',
+        documentType: 'article',
+        resource: {projectId: 'p2', dataset: 'd2'},
+      },
+    ]
+
+    expect(() => {
+      renderHook(() => useDocumentPermissions(actions), {
+        wrapper: ({children}) => (
+          <ResourceProvider
+            resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
+            fallback={null}
+          >
+            {children}
+          </ResourceProvider>
+        ),
+      })
+    }).toThrow(/Mismatched resources found in actions/)
+  })
+
+  it('should throw an error when mixing projectId and resource (projectId first)', () => {
+    const actions = [
+      mockAction,
+      {
+        type: 'document.publish' as const,
+        documentId: 'doc2',
+        documentType: 'article',
+        resource: {projectId: 'p', dataset: 'd'},
+      },
+    ]
+
+    expect(() => {
+      renderHook(() => useDocumentPermissions(actions), {
+        wrapper: ({children}) => (
+          <ResourceProvider
+            resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
+            fallback={null}
+          >
+            {children}
+          </ResourceProvider>
+        ),
+      })
+    }).toThrow(/Mismatches between projectId\/dataset options and resource/)
+  })
+
+  it('should throw an error when mixing resource and projectId (resource first)', () => {
+    const actions = [
+      {
+        type: 'document.publish' as const,
+        documentId: 'doc1',
+        documentType: 'article',
+        resource: {projectId: 'p', dataset: 'd'},
+      },
+      mockAction,
+    ]
+
+    expect(() => {
+      renderHook(() => useDocumentPermissions(actions), {
+        wrapper: ({children}) => (
+          <ResourceProvider
+            resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
+            fallback={null}
+          >
+            {children}
+          </ResourceProvider>
+        ),
+      })
+    }).toThrow(/Mismatches between projectId\/dataset options and resource/)
   })
 
   it('should wait for permissions to be ready before rendering', async () => {
@@ -207,8 +283,7 @@ describe('usePermissions', () => {
       {
         wrapper: ({children}) => (
           <ResourceProvider
-            projectId={mockAction.projectId}
-            dataset={mockAction.dataset}
+            resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
             fallback={null}
           >
             {children}
@@ -239,8 +314,7 @@ describe('usePermissions', () => {
     const {result, rerender} = renderHook(() => useDocumentPermissions(mockAction), {
       wrapper: ({children}) => (
         <ResourceProvider
-          projectId={mockAction.projectId}
-          dataset={mockAction.dataset}
+          resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
           fallback={null}
         >
           {children}

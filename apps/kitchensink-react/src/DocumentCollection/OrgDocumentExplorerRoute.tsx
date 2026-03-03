@@ -10,7 +10,7 @@ import {
   useProject,
   useProjects,
   useQuery,
-  useSanityInstance,
+  useResource,
   useUsers,
 } from '@sanity/sdk-react'
 import {
@@ -29,7 +29,6 @@ import {
   Text,
   TextInput,
 } from '@sanity/ui'
-import {defineQuery} from 'groq'
 import {type JsonData, JsonEditor} from 'json-edit-react'
 import {JSX, startTransition, Suspense, useCallback, useEffect, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
@@ -51,8 +50,8 @@ function DocumentEditorDialog({
   open,
 }: DocumentEditorDialogProps) {
   const handle = {documentId, documentType}
-  const {data: document} = useDocument(handle)
-  const editDocument = useEditDocument(handle)
+  const {data: document} = useDocument<Record<string, unknown>>(handle)
+  const editDocument = useEditDocument<Record<string, unknown>>(handle)
   const isSaving = useDocumentSyncStatus(handle)
 
   const editorStyles = {
@@ -293,7 +292,7 @@ interface DocumentListProps {
 }
 
 function DocumentList({documentType}: DocumentListProps) {
-  const {config} = useSanityInstance()
+  const resource = useResource()
   const [searchTerm, setSearchTerm] = useState('')
   const [pageSize, setPageSize] = useState(10)
 
@@ -333,7 +332,8 @@ function DocumentList({documentType}: DocumentListProps) {
     return (
       <Card padding={4} tone="caution">
         <Text>
-          No documents found of type &quot;{documentType}&quot; in dataset &quot;{config.dataset}
+          No documents found of type &quot;{documentType}&quot; in dataset &quot;
+          {resource && 'dataset' in resource ? resource.dataset : 'unknown'}
           &quot;
         </Text>
       </Card>
@@ -476,20 +476,21 @@ function DocumentList({documentType}: DocumentListProps) {
   )
 }
 
-const allTypes = defineQuery(`array::unique(*[]._type)`)
+const allTypes = `array::unique(*[]._type)`
 
 function DocumentTypes() {
-  const {config} = useSanityInstance()
-  if (!config.dataset) throw new Error('Dataset required for this component')
+  const resource = useResource()
+  const dataset = resource && 'dataset' in resource ? resource.dataset : undefined
+  if (!dataset) throw new Error('Dataset required for this component')
 
   // Use GROQ with array::unique to get all document types in the dataset
-  const {data: documentTypes} = useQuery({query: allTypes})
+  const {data: documentTypes} = useQuery<string[]>({query: allTypes})
   const firstDocumentType = documentTypes.at(0)
   const [selectedType, setSelectedType] = useState<string | null>(firstDocumentType ?? null)
 
   useEffect(() => {
     setSelectedType(firstDocumentType ?? null)
-  }, [config, firstDocumentType])
+  }, [resource, firstDocumentType])
 
   const handleTypeChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
     startTransition(() => {
@@ -500,7 +501,7 @@ function DocumentTypes() {
   if (!documentTypes || documentTypes.length === 0) {
     return (
       <Card padding={4} tone="caution">
-        <Text>No document types found in dataset &quot;{config.dataset}&quot;</Text>
+        <Text>No document types found in dataset &quot;{dataset}&quot;</Text>
       </Card>
     )
   }
@@ -508,11 +509,11 @@ function DocumentTypes() {
   return (
     <Stack space={4} padding={4}>
       <Box>
-        <Label htmlFor={`doctype-${config.dataset}`} size={2}>
+        <Label htmlFor={`doctype-${dataset}`} size={2}>
           Document Type
         </Label>
         <Select
-          id={`doctype-${config.dataset}`}
+          id={`doctype-${dataset}`}
           value={selectedType || ''}
           onChange={handleTypeChange}
           style={{width: '100%', marginTop: '8px'}}
@@ -528,7 +529,7 @@ function DocumentTypes() {
 
       {selectedType && (
         <ErrorBoundary
-          resetKeys={[config.dataset, selectedType]}
+          resetKeys={[dataset, selectedType]}
           fallback={
             <Card padding={4} tone="critical">
               <Text>Error loading documents of type &quot;{selectedType}&quot;</Text>
@@ -543,8 +544,13 @@ function DocumentTypes() {
 }
 
 function DatasetExplorer() {
-  const {config} = useSanityInstance()
-  const datasets = useDatasets()
+  const resource = useResource()
+  const projectId = resource && 'projectId' in resource ? resource.projectId : undefined
+  if (!projectId) {
+    throw new Error('A projectId is required for DatasetExplorer')
+  }
+
+  const datasets = useDatasets({projectId})
   const [selectedDataset, setSelectedDataset] = useState<string | null>(null)
 
   const handleDatasetChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -562,11 +568,11 @@ function DatasetExplorer() {
   return (
     <Stack space={4} padding={4}>
       <Box>
-        <Label htmlFor={`dataset-${config.projectId}`} size={2}>
+        <Label htmlFor={`dataset-${projectId}`} size={2}>
           Dataset
         </Label>
         <Select
-          id={`dataset-${config.projectId}`}
+          id={`dataset-${projectId}`}
           value={selectedDataset || ''}
           onChange={handleDatasetChange}
           style={{width: '100%', marginTop: '8px'}}
@@ -591,7 +597,7 @@ function DatasetExplorer() {
             }
           >
             <ResourceProvider
-              dataset={selectedDataset}
+              resource={{projectId: projectId!, dataset: selectedDataset}}
               fallback={
                 <Flex align="center" padding={4}>
                   <Spinner />
@@ -681,7 +687,9 @@ function UsersDialog({open, onClose}: UsersDialogProps) {
 }
 
 function ProjectExplorer() {
-  const project = useProject()
+  const resource = useResource()
+  const projectId = resource && 'projectId' in resource ? resource.projectId : undefined
+  const project = useProject({projectId: projectId!})
   const [isUsersDialogOpen, setIsUsersDialogOpen] = useState(false)
 
   const handleOpenUsersDialog = () => setIsUsersDialogOpen(true)
@@ -780,7 +788,7 @@ function ProjectsExplorer() {
             }
           >
             <ResourceProvider
-              projectId={selectedProject}
+              resource={{projectId: selectedProject, dataset: ''}}
               fallback={
                 <Flex align="center" padding={4}>
                   <Spinner />
@@ -830,8 +838,6 @@ export function OrgDocumentExplorerRoute(): JSX.Element {
                 }
               >
                 <ResourceProvider
-                  projectId={undefined}
-                  dataset={undefined}
                   fallback={
                     <Flex align="center" padding={4}>
                       <Spinner />

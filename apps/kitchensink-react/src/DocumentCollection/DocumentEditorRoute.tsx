@@ -15,6 +15,7 @@ import {
   useDocuments,
   useDocumentSyncStatus,
   useEditDocument,
+  useResource,
 } from '@sanity/sdk-react'
 import {
   Badge,
@@ -29,10 +30,9 @@ import {
   TextInput,
   Tooltip,
 } from '@sanity/ui'
-import {JsonData, JsonEditor} from 'json-edit-react'
 import {type JSX, useEffect, useState} from 'react'
 
-import {devConfigs, e2eConfigs} from '../sanityConfigs'
+import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
 
 function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   useDocumentEvent({...docHandle, onEvent: (e) => console.log(e)})
@@ -46,11 +46,10 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   const canUnpublish = useDocumentPermissions(unpublishDocument(docHandle))
   const canDiscard = useDocumentPermissions(discardDocument(docHandle))
 
-  const {data: name = ''} = useDocument({...docHandle, path: 'name'})
-  const setName = useEditDocument({...docHandle, path: 'name'})
+  const {data: name = ''} = useDocument<string>({...docHandle, path: 'name'})
+  const setName = useEditDocument<string>({...docHandle, path: 'name'})
 
-  const {data: document} = useDocument(docHandle)
-  const setDocument = useEditDocument(docHandle)
+  const {data: document} = useDocument<Record<string, unknown>>(docHandle)
 
   return (
     <Box padding={4}>
@@ -208,9 +207,12 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
                 <Box style={{display: 'none'}} data-testid="document-content">
                   {JSON.stringify(document)}
                 </Box>
-                <Box style={{minHeight: '400px'}}>
-                  <JsonEditor data={document} setData={setDocument as (data: JsonData) => void} />
-                </Box>
+                <JsonDocumentEditor
+                  documentHandle={docHandle}
+                  minHeight="400px"
+                  wrapInCard={false}
+                  showSyncStatus={false}
+                />
               </>
             )}
           </Stack>
@@ -229,7 +231,9 @@ function Editor() {
   const [docHandle, setDocHandle] = useState<DocumentHandle<'author'> | null>(documents[0] ?? null)
   const [newDocumentId, setNewDocumentId] = useState<string>('')
   const [liveEditMode, setLiveEditMode] = useState<boolean>(false)
-  const {projectId, dataset} = import.meta.env['VITE_IS_E2E'] ? e2eConfigs[0] : devConfigs[0]
+  const resource = useResource()
+  const projectId = resource && 'projectId' in resource ? resource.projectId : ''
+  const dataset = resource && 'dataset' in resource ? resource.dataset : ''
 
   const handleLoadDocument = () => {
     const documentId = newDocumentId || docHandle?.documentId

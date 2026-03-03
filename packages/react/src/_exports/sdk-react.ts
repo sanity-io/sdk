@@ -7,6 +7,7 @@ export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
 export {ComlinkTokenRefreshProvider} from '../context/ComlinkTokenRefresh'
 export {renderSanityApp} from '../context/renderSanityApp'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
+export {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
 export {
   useAgentGenerate,
   useAgentPatch,
@@ -39,6 +40,7 @@ export {
   type WindowConnection,
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
+export {useResource} from '../hooks/context/useDefaultResource'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
 export {useDispatchIntent} from '../hooks/dashboard/useDispatchIntent'

@@ -1,5 +1,5 @@
 import {CorsOriginError} from '@sanity/client'
-import {AuthStateType, getCorsErrorProjectId} from '@sanity/sdk'
+import {AuthStateType, getCorsErrorProjectId, isStudioConfig} from '@sanity/sdk'
 import {useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
@@ -156,20 +156,20 @@ function AuthSwitch({
 }: AuthSwitchProps) {
   const authState = useAuthState()
   const instance = useSanityInstance()
-  const studioModeEnabled = instance.config.studioMode?.enabled
+  const isStudio = isStudioConfig(instance.config)
   const disableVerifyOrg =
-    !verifyOrganization || studioModeEnabled || authState.type !== AuthStateType.LOGGED_IN
+    !verifyOrganization || isStudio || authState.type !== AuthStateType.LOGGED_IN
   const orgError = useVerifyOrgProjects(disableVerifyOrg, projectIds)
 
   const isLoggedOut = authState.type === AuthStateType.LOGGED_OUT && !authState.isDestroyingSession
   const loginUrl = useLoginUrl()
 
   useEffect(() => {
-    if (isLoggedOut && !isInIframe() && !studioModeEnabled) {
+    if (isLoggedOut && !isInIframe() && !isStudio) {
       // We don't want to redirect to login if we're in the Dashboard nor in studio mode
       window.location.href = loginUrl
     }
-  }, [isLoggedOut, loginUrl, studioModeEnabled])
+  }, [isLoggedOut, loginUrl, isStudio])
 
   // Only check the error if verification is enabled
   if (verifyOrganization && orgError) {

@@ -1,12 +1,18 @@
-import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
+import {
+  type ClientConfig,
+  type ClientPerspective,
+  createClient,
+  type SanityClient,
+} from '@sanity/client'
 import {pick} from 'lodash-es'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
 import {
-  type DocumentSource,
-  isCanvasSource,
-  isDatasetSource,
-  isMediaLibrarySource,
+  type DocumentResource,
+  isCanvasResource,
+  isDatasetResource,
+  isMediaLibraryResource,
+  resolveDefaultResource,
 } from '../config/sanityConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
@@ -45,16 +51,16 @@ const allowedKeys = Object.keys({
   'requestTagPrefix': null,
   'useProjectHostname': null,
   '~experimental_resource': null,
-  'source': null,
+  'resource': null,
 } satisfies Record<keyof ClientOptions, null>) as (keyof ClientOptions)[]
 
-const DEFAULT_CLIENT_CONFIG: ClientConfig = {
+const DEFAULT_CLIENT_CONFIG = {
   apiVersion: DEFAULT_API_VERSION,
   useCdn: false,
   ignoreBrowserTokenWarning: true,
   allowReconfigure: false,
   requestTagPrefix: DEFAULT_REQUEST_TAG_PREFIX,
-}
+} satisfies ClientConfig
 
 /**
  * States tracked by the client store
@@ -87,7 +93,15 @@ interface ClientResource {
  *
  * @public
  */
-export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey> {
+export interface ClientOptions extends Omit<
+  Pick<ClientConfig, AllowedClientConfigKey>,
+  'resource'
+> {
+  /**
+   * Narrows the inherited `perspective` to exclude stackable perspectives,
+   * which are not supported by the SDK.
+   */
+  'perspective'?: Exclude<ClientPerspective, readonly unknown[]>
   /**
    * An optional flag to choose between the default client (typically project-level)
    * and the global client ('global'). When set to `'global'`, the global client
@@ -106,7 +120,7 @@ export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey
   /**
    * @internal
    */
-  'source'?: DocumentSource
+  'resource'?: DocumentResource
 }
 
 const clientStore = defineStore<ClientStoreState>({
@@ -182,22 +196,36 @@ export const getClient = bindActionGlobally(
     const {clients, authMethod} = state.get()
 
     let resource: ClientResource | undefined
+    let projectId: string | undefined
+    let dataset: string | undefined
 
-    if (options.source) {
-      if (isDatasetSource(options.source)) {
-        resource = {type: 'dataset', id: `${options.source.projectId}.${options.source.dataset}`}
-      } else if (isMediaLibrarySource(options.source)) {
-        resource = {type: 'media-library', id: options.source.mediaLibraryId}
-      } else if (isCanvasSource(options.source)) {
-        resource = {type: 'canvas', id: options.source.canvasId}
+    if (options.resource) {
+      if (isMediaLibraryResource(options.resource)) {
+        resource = {type: 'media-library', id: options.resource.mediaLibraryId}
+      } else if (isCanvasResource(options.resource)) {
+        resource = {type: 'canvas', id: options.resource.canvasId}
+      } else if (isDatasetResource(options.resource)) {
+        projectId = options.resource.projectId
+        dataset = options.resource.dataset
       }
+      // temporary excluding dataset resource as a resource for now. Many of the global API endpoints require vX api version.
+      // } else if (isDatasetResource(options.resource)) {
+      //   resource = {type: 'dataset', id: `${options.resource.projectId}.${options.resource.dataset}`}
     }
 
-    const projectId = options.projectId ?? instance.config.projectId
-    const dataset = options.dataset ?? instance.config.dataset
+    projectId = projectId ?? options.projectId
+    dataset = dataset ?? options.dataset
+
+    if (!projectId || !dataset) {
+      const defaultResource = resolveDefaultResource(instance.config)
+      if (defaultResource && isDatasetResource(defaultResource)) {
+        projectId = projectId ?? defaultResource.projectId
+        dataset = dataset ?? defaultResource.dataset
+      }
+    }
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost
 
-    const effectiveOptions: ClientOptions = {
+    const effectiveOptions = {
       ...DEFAULT_CLIENT_CONFIG,
       ...((options.scope === 'global' || !projectId || resource) && {useProjectHostname: false}),
       token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
@@ -206,20 +234,23 @@ export const getClient = bindActionGlobally(
       ...(dataset && {dataset}),
       ...(apiHost && {apiHost}),
       ...(resource && {'~experimental_resource': resource}),
-    }
+    } as ClientOptions
 
-    // When a source is provided, don't use projectId/dataset - the client should be "projectless"
-    // The client code itself will ignore the non-source config, so we do this to prevent confusing the user.
+    // When a MediaLibrary or Canvas resource is provided, don't use projectId/dataset - the client should be "projectless"
+    // The client code itself will ignore the non-resource config, so we do this to prevent confusing the user.
     // (ref: https://github.com/sanity-io/client/blob/5c23f81f5ab93a53f5b22b39845c867988508d84/src/data/dataMethods.ts#L691)
-    if (resource) {
+    // Note: DatasetResource is handled differently - it extracts projectId/dataset from the resource and uses those
+    if (options.resource) {
       if (options.projectId || options.dataset) {
         // eslint-disable-next-line no-console
         console.warn(
-          'Both source and explicit projectId/dataset are provided. The source will be used and projectId/dataset will be ignored.',
+          'Both resource and explicit projectId/dataset are provided. The resource will be used and projectId/dataset will be ignored.',
         )
       }
-      delete effectiveOptions.projectId
-      delete effectiveOptions.dataset
+      if (resource) {
+        delete effectiveOptions.projectId
+        delete effectiveOptions.dataset
+      }
     }
 
     if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {
@@ -231,11 +262,14 @@ export const getClient = bindActionGlobally(
       delete effectiveOptions.withCredentials
     }
 
+    // Don't pass our DocumentResource to createClient - we've already derived projectId/dataset or ~experimental_resource
+    const {resource: _omitResource, ...clientConfig} = effectiveOptions
+
     const key = getClientConfigKey(effectiveOptions)
 
     if (clients[key]) return clients[key]
 
-    const client = createClient(effectiveOptions)
+    const client = createClient(clientConfig as ClientConfig)
     state.set('addClient', (prev) => ({clients: {...prev.clients, [key]: client}}))
 
     return client
