@@ -18,24 +18,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # run / share the same install step for all browsers
-  install:
+  # shared setup for all browsers: install deps, cache Playwright, build kitchensink once
+  setup:
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v6
 
-      - name: 🧰 Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: 🛠️ Setup Node.js
-        uses: actions/setup-node@v6
+      - name: 🔧 Setup Environment
+        uses: ./.github/actions/setup
         with:
-          cache: "pnpm"
-          node-version: "lts/*"
-
-      - name: 📦 Install dependencies
-        run: pnpm install --frozen-lockfile
+          node-version: 22
 
       # see if the Playwright version we're using is already cached -- skip download if so
       - name: 🔍 Determine Playwright version
@@ -53,8 +46,19 @@ jobs:
         if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
 
+      - name: 🏗️ Build kitchensink
+        working-directory: apps/kitchensink-react
+        run: pnpm build
+
+      - name: 📤 Upload kitchensink build
+        uses: actions/upload-artifact@v6
+        with:
+          name: kitchensink-dist-${{ github.run_id }}
+          path: apps/kitchensink-react/dist
+          retention-days: 1
+
   playwright-tests:
-    needs: install
+    needs: setup
     timeout-minutes: 30
     runs-on: ubuntu-latest
 
@@ -81,17 +85,16 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v6
 
-      - name: 🧰 Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: 🛠️ Setup Node.js
-        uses: actions/setup-node@v6
+      - name: 🔧 Setup Environment
+        uses: ./.github/actions/setup
         with:
-          cache: "pnpm"
-          node-version: "lts/*"
+          node-version: 22
 
-      - name: 📦 Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: 📦 Download kitchensink build
+        uses: actions/download-artifact@v7
+        with:
+          name: kitchensink-dist-${{ github.run_id }}
+          path: apps/kitchensink-react/dist
 
       - name: 🔍 Determine Playwright version
         id: pw-version
@@ -115,7 +118,7 @@ jobs:
       - name: 🚀 Start preview server
         run: |
           cd apps/kitchensink-react
-          pnpm build && pnpm run preview --port 3333 &
+          pnpm run preview --port 3333 &
           timeout 60 bash -c 'until curl -f -s http://localhost:3333 > /dev/null; do echo "Waiting for server..."; sleep 2; done'
           echo "Server is ready!"
 

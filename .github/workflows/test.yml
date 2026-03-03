@@ -18,10 +18,6 @@ jobs:
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
-    strategy:
-      matrix:
-        node-version: [20, 22]
-      fail-fast: false
 
     steps:
       - uses: actions/checkout@v6
@@ -29,26 +25,36 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22
 
       - name: Test
-        run: |
-          ARGS="--test-timeout=60000 --retry 4"
-          if [ "${{ matrix.node-version }}" == "20" ]; then
-            # We only gather coverage from a single Node version.
-            # We pass in `--reporter=blob` so that we can combine the results from all shards.
-            ARGS="$ARGS --coverage --reporter=default --reporter=blob"
-          fi
-          pnpm test $ARGS
+        run: pnpm test --test-timeout=60000 --retry 4 --coverage --reporter=default --reporter=blob
 
       - name: Upload blob report to GitHub Actions Artifacts
-        if: ${{ !cancelled() && matrix.node-version == '20' }}
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v6
         with:
-          name: blob-report-${{ github.run_id }}-${{ matrix.node-version }}
+          name: blob-report-${{ github.run_id }}-22
           path: ".vitest-reports/*"
           include-hidden-files: true
           retention-days: 1
+
+  test-compat:
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 20
+
+      - name: Test (Node 20 compatibility)
+        run: pnpm test --test-timeout=60000 --retry 1
 
   report-coverage:
     if: ${{ !cancelled() }}
@@ -60,7 +66,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
         with:
-          node-version: 20
+          node-version: 22
 
       - name: "Download coverage artifacts"
         uses: actions/download-artifact@v7
