@@ -26,10 +26,14 @@ import {
  * @example
  * ```tsx
  * import {usePerspective, useQuery} from '@sanity/sdk-react'
-
- * const perspective = usePerspective({perspective: 'rxg1346', projectId: 'abc123', dataset: 'production'})
- * const {data} = useQuery<Movie[]>('*[_type == "movie"]', {
- *   perspective: perspective,
+ *
+ * const perspective = usePerspective({
+ *   perspective: 'rxg1346',
+ *   resource: {projectId: 'abc123', dataset: 'production'},
+ * })
+ * const {data} = useQuery<Movie[]>({
+ *   query: '*[_type == "movie"]',
+ *   perspective,
  * })
  * ```
  *
