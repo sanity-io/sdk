@@ -72,7 +72,7 @@ This layered approach provides both convenience for users and flexibility for im
 
 A critical implementation detail is how the `resources` map flows through the component tree:
 
-1. **SanityApp** receives a `resources` map and optional `config`, then passes them to SDKProvider. The `"default"` resource becomes the `defaultResource` on the resolved `SanityConfig`.
+1. **SanityApp** receives a `resources` map (named data sources) and an optional `config` (auth, studio, and perspective settings), then passes them to SDKProvider. The `"default"` resource becomes the `defaultResource` on the resolved `SanityConfig`.
 2. **SDKProvider** creates a single `ResourceProvider` with the default resource, and wraps children in `ResourcesContext.Provider` so hooks can resolve named resources.
 3. **ResourceProvider** creates the `SanityInstance` and provides resource/perspective context.
 

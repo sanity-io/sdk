@@ -67,7 +67,7 @@ const {data} = useQuery({
 })
 ```
 
-The following hooks support `resourceName` / `resource`: 
+The following hooks support `resourceName` / `resource`:
 
 - `useDocument`
 - `useDocumentProjection`
@@ -110,9 +110,9 @@ The following APIs were deprecated in v2 and have been removed in v3:
 | `PreviewStoreState` type                     | Use the return type of `getProjectionState`                |
 | `ValidProjection` type                       | Use `string`                                               |
 | `studioMode` config option                   | `studio` config option (or zero-config `SDKStudioContext`) |
-| `sanityConfigs` prop on `<SanityApp>`        | `resources` prop                       |
+| `sanityConfigs` prop on `<SanityApp>`        | `resources` prop                                           |
 
-**`getPreviewState` / `resolvePreview`**
+**`getPreviewState`**
 
 **Before:**
 
@@ -130,7 +130,42 @@ const state = getProjectionState(instance, {
 })
 ```
 
+The old `getPreviewState` returned a fixed set of preview fields. `getProjectionState` replaces it with an explicit GROQ `projection`, giving you full control over which fields are returned.
+
+**`resolvePreview`**
+
+**Before:**
+
+```typescript
+const value = await resolvePreview(instance, {documentId: '123', documentType: 'product'})
+```
+
+**After:**
+
+```typescript
+const value = await resolveProjection(instance, {
+  documentId: '123',
+  documentType: 'product',
+  projection: '{title, description, "imageUrl": image.asset->url}',
+})
+```
+
 **`studioMode` config**
+
+The recommended replacement is the zero-config `SDKStudioContext` approach. If your SDK component runs inside Sanity Studio, no config is needed at all — `SanityApp` derives everything from the Studio workspace automatically:
+
+```tsx
+// Inside Sanity Studio — no config needed:
+function MyStudioTool() {
+  return (
+    <SanityApp fallback={<div>Loading...</div>}>
+      <MyComponent />
+    </SanityApp>
+  )
+}
+```
+
+If you need programmatic control outside of Studio, replace `studioMode` with `studio`:
 
 **Before:**
 
@@ -146,14 +181,9 @@ const config: SanityConfig = {
 
 ```typescript
 const config: SanityConfig = {
-  studio: {
-    authenticated: true,
-    auth: {token: myTokenSource},
-  },
+  studio: {},
 }
 ```
-
-Or use the zero-config `SDKStudioContext` approach (recommended for Studio integrations).
 
 #### 4. Experimental typegen and groq dependency removed
 
@@ -451,9 +481,7 @@ console.log(title) // title is possibly undefined
 
 ## Migrating to @sanity/sdk-react@0.0.0-rc.7
 
-This version introduced improvements for TypeScript users with a Typegen integration and refined hook signatures for better consistency. These changes also apply to JavaScript users.
-
-> **Note:** The `defineQuery` and `defineProjection` helpers from the `groq` package that were recommended below have been removed in v3.0.0. You no longer need them — pass plain strings to `query` and `projection` parameters instead. See the [v3.0.0 migration section](#migrating-to-sanitysdk-react300) above.
+This version introduces significant improvements for TypeScript users by integrating [Sanity TypeGen](https://www.sanity.io/docs/sanity-typegen). While Typegen is optional, using it unlocks strong type safety for documents, queries, and projections. These changes also refine hook signatures for better consistency, even for JavaScript users.
 
 See the [TypeScript guide](./Typescript.md) for full setup and usage details.
 
@@ -716,8 +744,6 @@ For most applications, particularly dashboard applications, we recommend using t
 ```
 
 The `config` prop replaces the previous `sanityConfigs` prop and supports both single and multiple configurations. When providing multiple configurations, the first one in the array will be the default instance.
-
-> **Note:** The `config` array format shown above was replaced in v3.0.0 with the `resources` prop. See the [v3.0.0 migration section](#migrating-to-sanitysdk-react300) above.
 
 ### Document Handle Pattern
 

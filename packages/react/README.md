@@ -547,7 +547,7 @@ function StudioSDKWrapper({children}) {
 
 #### Explicit config takes precedence
 
-If you pass `config` or `resources` props to `SanityApp`, they take precedence over any workspace config picked up by `SDKStudioContext`:
+If you pass `resources` (data sources) or `config` (auth, studio, and perspective settings) props to `SanityApp`, they take precedence over any workspace config picked up by `SDKStudioContext`:
 
 ```tsx
 <SanityApp
