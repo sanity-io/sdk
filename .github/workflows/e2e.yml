@@ -18,24 +18,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # run / share the same install step for all browsers
-  install:
+  # shared setup: install deps and warm Playwright browser cache for downstream jobs
+  setup:
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v6
 
-      - name: 🧰 Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: 🛠️ Setup Node.js
-        uses: actions/setup-node@v6
+      - name: 🔧 Setup Environment
+        uses: ./.github/actions/setup
         with:
-          cache: "pnpm"
-          node-version: "lts/*"
-
-      - name: 📦 Install dependencies
-        run: pnpm install --frozen-lockfile
+          node-version: 22
 
       # see if the Playwright version we're using is already cached -- skip download if so
       - name: 🔍 Determine Playwright version
@@ -54,7 +47,7 @@ jobs:
         run: npx playwright install --with-deps
 
   playwright-tests:
-    needs: install
+    needs: setup
     timeout-minutes: 30
     runs-on: ubuntu-latest
 
@@ -81,17 +74,10 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v6
 
-      - name: 🧰 Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: 🛠️ Setup Node.js
-        uses: actions/setup-node@v6
+      - name: 🔧 Setup Environment
+        uses: ./.github/actions/setup
         with:
-          cache: "pnpm"
-          node-version: "lts/*"
-
-      - name: 📦 Install dependencies
-        run: pnpm install --frozen-lockfile
+          node-version: 22
 
       - name: 🔍 Determine Playwright version
         id: pw-version
@@ -112,7 +98,9 @@ jobs:
         if: matrix.browser == 'webkit'
         run: pnpm exec playwright install-deps webkit
 
-      - name: 🚀 Start preview server
+      # Kitchensink must be built per browser because Vite bakes browser-specific
+      # dataset names (SDK_E2E_DATASET_0/1) into the bundle at compile time.
+      - name: 🚀 Build & start preview server
         run: |
           cd apps/kitchensink-react
           pnpm build && pnpm run preview --port 3333 &

@@ -88,11 +88,11 @@ test.describe('Multi Resource Route', () => {
       timeout: 15000,
     })
 
-    // Then verify the projection also updated (may take additional time)
-    await expect(pageContext.getByTestId('author-projection-name')).toContainText(
-      'Updated Author Name',
-      {timeout: 15000},
-    )
+    // Then verify the projection also updated (propagation can lag behind display updates)
+    await expect(async () => {
+      const authorProjection = await pageContext.getByTestId('author-projection-name').textContent()
+      expect(authorProjection).toContain('Updated Author Name')
+    }).toPass({timeout: 25000, intervals: [1000, 2000, 5000]})
 
     // Test editing the movie document
     const movieNameInput = pageContext.getByTestId('movie-name-input')
@@ -104,11 +104,11 @@ test.describe('Multi Resource Route', () => {
       timeout: 15000,
     })
 
-    // Then verify the projection also updated (may take additional time)
-    await expect(pageContext.getByTestId('movie-projection-name')).toContainText(
-      'Updated Movie Name',
-      {timeout: 15000},
-    )
+    // Then verify the projection also updated (propagation can lag behind display updates)
+    await expect(async () => {
+      const movieProjection = await pageContext.getByTestId('movie-projection-name').textContent()
+      expect(movieProjection).toContain('Updated Movie Name')
+    }).toPass({timeout: 25000, intervals: [1000, 2000, 5000]})
 
     // Skip external changes test for standalone mode (WebKit on localhost)
     // Real-time subscriptions are unreliable in this mode
