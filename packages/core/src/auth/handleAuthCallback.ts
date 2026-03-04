@@ -1,4 +1,4 @@
-import {getDefaultDatasetResource} from '../config/sanityConfig'
+import {isDatasetResource} from '../config/sanityConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createLogger} from '../utils/logger'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
@@ -18,7 +18,8 @@ import {
 export const handleAuthCallback = bindActionGlobally(
   authStore,
   async ({state, instance}, locationHref: string = getDefaultLocation()) => {
-    const defaultResource = getDefaultDatasetResource(instance.config)
+    const rawResource = instance.config.defaultResource
+    const defaultResource = rawResource && isDatasetResource(rawResource) ? rawResource : undefined
     const logger = createLogger('auth', {
       instanceId: instance.instanceId,
       projectId: defaultResource?.projectId,
