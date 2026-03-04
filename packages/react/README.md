@@ -49,7 +49,11 @@ export function App() {
 }
 ```
 
-In Sanity, a **resource** identifies where your data lives: a project and dataset pair (`{ projectId, dataset }`), a media library (`{ mediaLibraryId }`), or a canvas (`{ canvasId }`).
+In Sanity, a **resource** identifies where your data lives. It can be one of:
+
+- a project and dataset pair (`{ projectId, dataset }`)
+- a media library (`{ mediaLibraryId }`)
+- or a canvas (`{ canvasId }`)
 
 The `resources` prop is a map of named resources. Each resource tells the SDK where to read and write data. The resource keyed `"default"` is used automatically when no explicit resource is specified in a hook.
 
@@ -372,7 +376,7 @@ Any mutation to a subscribed document (even fields you don't display) will trigg
 
 ### Multi-Resource Access
 
-If your app only uses a single project and dataset, the `"default"` resource handles everything. When you need to pull data from additional projects, datasets, media libraries, or canvases, you register them as named resources. There are three main approaches:
+If your app only uses a single project and dataset, the `"default"` resource handles everything. When you need to pull data from additional projects, datasets, media libraries, or canvases, you can specify additional resources as needed. There are three main approaches to providing additional resources:
 
 #### Approach 1: Use Named Resources (recommended)
 
@@ -428,7 +432,7 @@ function MediaAssets() {
 
 #### Approach 2: Pass a Resource Object Directly
 
-If you only need a resource in one or two places, pass it inline via the `resource` option:
+If you only need to access a resource in one or two places within your app, you can pass it inline via the `resource` option:
 
 ```tsx
 import {useDocument} from '@sanity/sdk-react'
@@ -457,7 +461,7 @@ function MultiProjectComponent() {
 
 #### Approach 3: Use ResourceProvider to Set Context
 
-Wrap components in `ResourceProvider` to set a default resource for all child components:
+If you need to access certain resources within multiple sibling components, wrap those components in `ResourceProvider` and set a default resource for all its child components:
 
 ```tsx
 import {ResourceProvider, useDocument} from '@sanity/sdk-react'

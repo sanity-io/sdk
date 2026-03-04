@@ -46,7 +46,7 @@ npm install react@latest react-dom@latest
 </SanityApp>
 ```
 
-The `"default"` resource is used when no explicit resource is specified.
+The `"default"` resource will be used if no explicit resource is specified when invoking hooks that take `resource` or `resourceName` as options.
 
 **Hooks now accept `resourceName` or `resource`**
 
@@ -67,7 +67,17 @@ const {data} = useQuery({
 })
 ```
 
-Hooks with `resourceName` / `resource` support include: `useDocument`, `useDocumentProjection`, `useDocumentPreview`, `useQuery`, `useDocuments`, `usePaginatedDocuments`, `usePerspective`, `useActiveReleases`, and `usePresence` (dataset resources only).
+The following hooks support `resourceName` / `resource`: 
+
+- `useDocument`
+- `useDocumentProjection`
+- `useDocumentPreview`
+- `useQuery`
+- `useDocuments`
+- `usePaginatedDocuments`
+- `usePerspective`
+- `useActiveReleases`
+- `usePresence` (dataset resources only)
 
 **`ResourceProvider` uses `resource` prop**
 
@@ -100,7 +110,7 @@ The following APIs were deprecated in v2 and have been removed in v3:
 | `PreviewStoreState` type                     | Use the return type of `getProjectionState`                |
 | `ValidProjection` type                       | Use `string`                                               |
 | `studioMode` config option                   | `studio` config option (or zero-config `SDKStudioContext`) |
-| `sanityConfigs` prop on `<SanityApp>`        | `config` prop (or `resources` in v3)                       |
+| `sanityConfigs` prop on `<SanityApp>`        | `resources` prop                       |
 
 **`getPreviewState` / `resolvePreview`**
 
