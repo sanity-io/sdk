@@ -75,13 +75,14 @@ test.describe('Document Projection', () => {
 
     // Test 2: Switch to Best Friend Projection
     const bestFriendButton = pageContext.getByRole('button', {name: 'Best Friend'})
+    await expect(bestFriendButton).toBeVisible()
     await bestFriendButton.click()
 
     // Wait for the projection to update
     await expect(async () => {
       const bestFriendCell = pageContext.getByTestId(`projection-best-friend-${authorId}`)
       await expect(bestFriendCell).toBeVisible()
-    }).toPass({timeout: 10000})
+    }).toPass({timeout: 10000, intervals: [500, 1000, 2000]})
 
     // Verify best friend projection data is displayed
     const bestFriendCell = pageContext.getByTestId(`projection-best-friend-${authorId}`)
@@ -96,13 +97,14 @@ test.describe('Document Projection', () => {
 
     // Test 3: Switch to Book Count (Groq Helper) Projection
     const bookCountButton = pageContext.getByRole('button', {name: 'Book Count'})
+    await expect(bookCountButton).toBeVisible()
     await bookCountButton.click()
 
     // Wait for the projection to update
     await expect(async () => {
       const bookCountCell = pageContext.getByTestId(`projection-book-count-${authorId}`)
       await expect(bookCountCell).toBeVisible()
-    }).toPass({timeout: 10000})
+    }).toPass({timeout: 10000, intervals: [500, 1000, 2000]})
 
     // Verify book count projection data is displayed
     const bookCountCell = pageContext.getByTestId(`projection-book-count-${authorId}`)
@@ -122,6 +124,7 @@ test.describe('Document Projection', () => {
     await expect(roleCell).not.toBeVisible()
 
     // Test 4: Switch back to Favorite Books Projection
+    await expect(favoriteBooksButton).toBeVisible()
     await favoriteBooksButton.click()
 
     // Wait for the projection to update
@@ -130,7 +133,7 @@ test.describe('Document Projection', () => {
         `projection-favorite-books-${authorId}`,
       )
       await expect(favoriteBooksCellAgain).toBeVisible()
-    }).toPass({timeout: 10000})
+    }).toPass({timeout: 10000, intervals: [500, 1000, 2000]})
 
     // Verify favorite books projection is displayed again
     const favoriteBooksCellAgain = pageContext.getByTestId(`projection-favorite-books-${authorId}`)

@@ -19,8 +19,10 @@ test.describe('Document Editor', () => {
     // we may be in an iframe or just a page -- get the right locators
     const pageContext = await getPageContext(page)
 
-    // Wait for the document to load
-    await pageContext.getByTestId('document-id-input').fill(id.replace('drafts.', ''))
+    // Wait for the input to be ready, then load the document
+    const documentIdInput = pageContext.getByTestId('document-id-input')
+    await expect(documentIdInput).toBeVisible()
+    await documentIdInput.fill(id.replace('drafts.', ''))
     await pageContext.getByTestId('load-document-button').click()
 
     // Wait for the document to be loaded and match expected initial values
