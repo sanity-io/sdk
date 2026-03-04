@@ -69,9 +69,7 @@ describe('presenceStore', () => {
     mockGetUserState = vi.fn(() => of(mockUser))
     vi.mocked(getUserState).mockImplementation(mockGetUserState)
 
-    instance = createSanityInstance({
-      defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
-    })
+    instance = createSanityInstance()
   })
 
   afterEach(() => {

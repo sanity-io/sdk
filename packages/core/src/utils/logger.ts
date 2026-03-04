@@ -520,15 +520,9 @@ function logRxJSOperator(namespace: string, operator: string, context?: LogConte
  * @internal
  */
 /* c8 ignore next 7 */
-function getInstanceContext(instance: {
-  instanceId?: string
-  config?: {defaultResource?: {projectId?: string; dataset?: string}}
-}): InstanceContext {
-  const defaultResource = instance.config?.defaultResource
+function getInstanceContext(instance: {instanceId?: string}): InstanceContext {
   return {
     instanceId: instance.instanceId,
-    projectId: defaultResource?.projectId,
-    dataset: defaultResource?.dataset,
   }
 }
 

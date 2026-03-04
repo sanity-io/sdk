@@ -2,7 +2,7 @@ import {at, patch, set, setIfMissing} from '@sanity/mutate'
 import {type PatchOperations} from '@sanity/types'
 import {describe, expect, it} from 'vitest'
 
-import {type DocumentHandle} from '../config/sanityConfig'
+import {type DocumentHandle, type DocumentResource} from '../config/sanityConfig'
 import {
   createDocument,
   deleteDocument,
@@ -15,9 +15,18 @@ import {
 const dummyPatch: PatchOperations = {
   diffMatchPatch: {'dummy.path': 'dummy patch'},
 }
+const dummyDocResource: DocumentResource = {projectId: 'test-project', dataset: 'test-dataset'}
 
-const dummyDocHandle: DocumentHandle = {documentId: 'drafts.abc123', documentType: 'testType'}
-const dummyDocString = {documentId: 'drafts.abc123', documentType: 'testType'}
+const dummyDocHandle: DocumentHandle = {
+  documentId: 'drafts.abc123',
+  documentType: 'testType',
+  resource: dummyDocResource,
+}
+const dummyDocString: DocumentHandle = {
+  documentId: 'drafts.abc123',
+  documentType: 'testType',
+  resource: dummyDocResource,
+}
 
 describe('document actions', () => {
   describe('createDocument', () => {
@@ -28,18 +37,24 @@ describe('document actions', () => {
         // getId returns the input if it does not end with a dot.
         documentId: 'abc123',
         documentType: dummyDocHandle.documentType,
+        resource: dummyDocResource,
       })
     })
 
     it('creates a document action from a document type handle', () => {
       // A document type handle is similar to a document handle,
       // but _id is optional.
-      const typeHandle = {documentId: 'abc456', documentType: 'anotherType'}
+      const typeHandle = {
+        documentId: 'abc456',
+        documentType: 'anotherType',
+        resource: dummyDocResource,
+      }
       const action = createDocument(typeHandle)
       expect(action).toEqual({
         type: 'document.create',
         documentId: 'abc456',
         documentType: typeHandle.documentType,
+        resource: dummyDocResource,
       })
     })
 
@@ -55,6 +70,7 @@ describe('document actions', () => {
         documentId: 'abc123',
         documentType: dummyDocHandle.documentType,
         initialValue,
+        resource: dummyDocResource,
       })
     })
 
@@ -64,6 +80,7 @@ describe('document actions', () => {
         type: 'document.create',
         documentId: 'abc123',
         documentType: dummyDocHandle.documentType,
+        resource: dummyDocResource,
       })
     })
 
@@ -74,6 +91,7 @@ describe('document actions', () => {
         documentId: 'abc123',
         documentType: dummyDocHandle.documentType,
         initialValue: {},
+        resource: dummyDocResource,
       })
     })
   })
@@ -86,6 +104,7 @@ describe('document actions', () => {
         type: 'document.delete',
         documentId: 'abc123',
         documentType: dummyDocString.documentType,
+        resource: dummyDocResource,
       })
     })
 
@@ -95,6 +114,7 @@ describe('document actions', () => {
         type: 'document.delete',
         documentId: 'abc123',
         documentType: dummyDocHandle.documentType,
+        resource: dummyDocResource,
       })
     })
   })
@@ -107,6 +127,7 @@ describe('document actions', () => {
         documentId: 'abc123',
         documentType: dummyDocString.documentType,
         patches: [dummyPatch],
+        resource: dummyDocResource,
       })
     })
 
@@ -117,6 +138,7 @@ describe('document actions', () => {
         documentId: 'abc123',
         documentType: dummyDocHandle.documentType,
         patches: [dummyPatch],
+        resource: dummyDocResource,
       })
     })
 
@@ -143,6 +165,7 @@ describe('document actions', () => {
           {ifRevisionID: 'txn0', set: {'address.city': 'Oslo'}},
         ],
         type: 'document.edit',
+        resource: dummyDocResource,
       })
     })
   })
@@ -154,6 +177,7 @@ describe('document actions', () => {
         type: 'document.publish',
         documentId: 'abc123',
         documentType: dummyDocString.documentType,
+        resource: dummyDocResource,
       })
     })
 
@@ -163,6 +187,7 @@ describe('document actions', () => {
         type: 'document.publish',
         documentId: 'abc123',
         documentType: dummyDocHandle.documentType,
+        resource: dummyDocResource,
       })
     })
   })
@@ -174,6 +199,7 @@ describe('document actions', () => {
         type: 'document.unpublish',
         documentId: 'abc123',
         documentType: dummyDocString.documentType,
+        resource: dummyDocResource,
       })
     })
 
@@ -183,6 +209,7 @@ describe('document actions', () => {
         type: 'document.unpublish',
         documentId: 'abc123',
         documentType: dummyDocHandle.documentType,
+        resource: dummyDocResource,
       })
     })
   })
@@ -194,6 +221,7 @@ describe('document actions', () => {
         type: 'document.discard',
         documentId: 'abc123',
         documentType: dummyDocString.documentType,
+        resource: dummyDocResource,
       })
     })
 
@@ -203,6 +231,7 @@ describe('document actions', () => {
         type: 'document.discard',
         documentId: 'abc123',
         documentType: dummyDocHandle.documentType,
+        resource: dummyDocResource,
       })
     })
   })

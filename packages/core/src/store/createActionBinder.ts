@@ -1,11 +1,10 @@
 import {
-  type DatasetHandle,
   type DocumentResource,
   isCanvasResource,
   isDatasetResource,
   isMediaLibraryResource,
   type PerspectiveHandle,
-  resolveDefaultResource,
+  type ResourceHandle,
 } from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type SanityInstance} from './createSanityInstance'
@@ -131,7 +130,7 @@ const createResourceKey = (
     return {name: resourceKeyName(resource), resource}
   }
 
-  const defaultResource = resolveDefaultResource(instance.config)
+  const defaultResource = instance.config.defaultResource
   if (!defaultResource) {
     throw new Error(
       'No resource provided and no default resource configured. ' +
@@ -188,7 +187,7 @@ export const bindActionByResource = createActionBinder<
  */
 export const bindActionByResourceAndPerspective = createActionBinder<
   BoundPerspectiveKey,
-  [DatasetHandle, ...unknown[]]
+  [ResourceHandle, ...unknown[]]
 >((instance, options): BoundPerspectiveKey => {
   const {resource, perspective} = options
   // TODO: remove reference to instance.config.perspective when we get to v3

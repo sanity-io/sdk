@@ -11,6 +11,7 @@ vi.mock('../projection/useDocumentProjection')
 const mockDocument: DocumentHandle = {
   documentId: 'doc1',
   documentType: 'exampleType',
+  resource: {projectId: 'p', dataset: 'd'},
 }
 
 describe('useDocumentPreview', () => {

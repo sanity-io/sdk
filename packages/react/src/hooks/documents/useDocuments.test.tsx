@@ -1,7 +1,8 @@
-import {act, renderHook} from '@testing-library/react'
+import {type DatasetResource} from '@sanity/sdk'
 import {evaluateSync, parse, toJS} from 'groq-js'
 import {describe, vi} from 'vitest'
 
+import {act, renderHook} from '../../../test/test-utils'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {ResourcesContext} from '../../context/ResourcesContext'
 import {useQuery} from '../query/useQuery'
@@ -78,31 +79,13 @@ describe('useDocuments', () => {
 
   it('should respect custom page size', () => {
     const customBatchSize = 2
-    const {result} = renderHook(() => useDocuments({batchSize: customBatchSize}), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useDocuments({batchSize: customBatchSize}))
 
     expect(result.current.data.length).toBe(customBatchSize)
   })
 
   it('should filter by document type', () => {
-    const {result} = renderHook(() => useDocuments({filter: '_type == "movie"'}), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useDocuments({filter: '_type == "movie"'}))
 
     expect(result.current.data.every((doc) => doc.documentType === 'movie')).toBe(true)
     expect(result.current.count).toBe(5) // 5 movies in the dataset
@@ -110,38 +93,18 @@ describe('useDocuments', () => {
 
   // groq-js doesn't support search filters yet
   it.skip('should apply search filter', () => {
-    const {result} = renderHook(() => useDocuments({search: 'inter'}), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useDocuments({search: 'inter'}))
 
     // Should match "Interstellar"
     expect(result.current.data.some((doc) => doc.documentId === 'movie3')).toBe(true)
   })
 
   it('should apply ordering', () => {
-    const {result} = renderHook(
-      () =>
-        useDocuments({
-          filter: '_type == "movie"',
-          orderings: [{field: 'releaseYear', direction: 'desc'}],
-        }),
-      {
-        wrapper: ({children}) => (
-          <ResourceProvider
-            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-            fallback={null}
-          >
-            {children}
-          </ResourceProvider>
-        ),
-      },
+    const {result} = renderHook(() =>
+      useDocuments({
+        filter: '_type == "movie"',
+        orderings: [{field: 'releaseYear', direction: 'desc'}],
+      }),
     )
 
     // First item should be the most recent movie (Interstellar, 2014)
@@ -150,16 +113,7 @@ describe('useDocuments', () => {
 
   it('should load more data when loadMore is called', () => {
     const batchSize = 2
-    const {result} = renderHook(() => useDocuments({batchSize: batchSize}), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useDocuments({batchSize: batchSize}))
 
     expect(result.current.data.length).toBe(batchSize)
 
@@ -171,16 +125,7 @@ describe('useDocuments', () => {
   })
 
   it('should indicate when there is more data to load', () => {
-    const {result} = renderHook(() => useDocuments({batchSize: 3}), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useDocuments({batchSize: 3}))
     expect(result.current.hasMore).toBe(true)
     // Load all remaining data
     act(() => {
@@ -193,14 +138,6 @@ describe('useDocuments', () => {
   it('should reset limit when filter changes', () => {
     const {result, rerender} = renderHook((props) => useDocuments(props), {
       initialProps: {batchSize: 2, filter: ''},
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
     })
     // Initially, data length equals pageSize (2)
     expect(result.current.data.length).toBe(2)
@@ -216,26 +153,19 @@ describe('useDocuments', () => {
     expect(result.current.data.length).toBe(2)
   })
 
-  it('should add projectId and dataset to document handles', () => {
-    const {result} = renderHook(() => useDocuments({}), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+  it('should add resources to document handles', () => {
+    const {result} = renderHook(() => useDocuments({}))
 
     // Check that the first document handle has the projectId and dataset
-    expect(result.current.data[0].projectId).toBe('test-project')
-    expect(result.current.data[0].dataset).toBe('test-dataset')
+    expect((result.current.data[0].resource as DatasetResource).projectId).toBe('test')
+    expect((result.current.data[0].resource as DatasetResource).dataset).toBe('test')
 
     // Verify all document handles have these properties
     expect(
       result.current.data.every(
-        (doc) => doc.projectId === 'test-project' && doc.dataset === 'test-dataset',
+        (doc) =>
+          (doc.resource as DatasetResource).projectId === 'test' &&
+          (doc.resource as DatasetResource).dataset === 'test',
       ),
     ).toBe(true)
   })
@@ -254,11 +184,13 @@ describe('useDocuments', () => {
       ),
     })
 
-    expect(result.current.data[0].projectId).toBe('secondary-project')
-    expect(result.current.data[0].dataset).toBe('secondary-dataset')
+    expect((result.current.data[0].resource as DatasetResource).projectId).toBe('secondary-project')
+    expect((result.current.data[0].resource as DatasetResource).dataset).toBe('secondary-dataset')
     expect(
       result.current.data.every(
-        (doc) => doc.projectId === 'secondary-project' && doc.dataset === 'secondary-dataset',
+        (doc) =>
+          (doc.resource as DatasetResource).projectId === 'secondary-project' &&
+          (doc.resource as DatasetResource).dataset === 'secondary-dataset',
       ),
     ).toBe(true)
   })
