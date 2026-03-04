@@ -5,6 +5,7 @@ import {
   type ResourceHandle,
 } from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
+import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {
@@ -284,9 +285,8 @@ export function useDocuments<
     query: `{"count":${countQuery},"data":${dataQuery}}`,
     params: {
       ...params,
-      __handle: {
-        ...options,
-      },
+      // these are passed back to the user as part of each document handle
+      __handle: pick(options, ['resource', 'perspective']),
       __types: documentTypes,
     },
   })
