@@ -111,7 +111,7 @@ export function useDocumentPreview({
   // Keep this non-null assumption aligned with useDocumentPreviewResults.data.
   const previewValue = useMemo(
     () =>
-      transformProjectionToPreview(instance, projectionResult.data, normalizedDocHandle.resource),
+      transformProjectionToPreview(instance, normalizedDocHandle.resource, projectionResult.data),
     [projectionResult.data, instance, normalizedDocHandle.resource],
   )
 

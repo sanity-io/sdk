@@ -1,7 +1,40 @@
 import {type ClientError} from '@sanity/client'
+import {type CurrentUser} from '@sanity/types'
 import {EMPTY, fromEvent, Observable} from 'rxjs'
 
 import {AUTH_CODE_PARAM, DEFAULT_BASE} from './authConstants'
+import {AuthStateType} from './authStateType'
+import {type LoggedInAuthState} from './authStore'
+
+/**
+ * Creates a properly initialized {@link LoggedInAuthState}.
+ *
+ * For stamped tokens (containing `"-st"`), `lastTokenRefresh` is set to
+ * `Date.now()` so that the visibility-change handler in
+ * {@link refreshStampedToken} does not trigger an unnecessary refresh the
+ * first time the tab becomes visible.
+ *
+ * @param token - The auth token.
+ * @param currentUser - The current user, or `null` if not yet fetched.
+ * @param existingLastTokenRefresh - An existing timestamp to preserve
+ *   (e.g. when updating a token while keeping the previous refresh time).
+ * @internal
+ */
+export function createLoggedInAuthState(
+  token: string,
+  currentUser: CurrentUser | null,
+  existingLastTokenRefresh?: number,
+): LoggedInAuthState {
+  const isStampedToken = token.includes('-st')
+  const lastTokenRefresh = existingLastTokenRefresh ?? (isStampedToken ? Date.now() : undefined)
+
+  return {
+    type: AuthStateType.LOGGED_IN,
+    token,
+    currentUser,
+    ...(lastTokenRefresh !== undefined && {lastTokenRefresh}),
+  }
+}
 
 export function getAuthCode(callbackUrl: string | undefined, locationHref: string): string | null {
   const loc = new URL(locationHref, DEFAULT_BASE)

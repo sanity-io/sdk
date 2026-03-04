@@ -15,7 +15,7 @@ describe('releasesStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    instance = createSanityInstance({defaultResource: {projectId: 'test', dataset: 'test'}})
+    instance = createSanityInstance()
 
     vi.mocked(getQueryState).mockReturnValue({
       subscribe: () => () => {},
@@ -30,8 +30,8 @@ describe('releasesStore', () => {
     instance.dispose()
   })
 
-  it('supports calls without options', () => {
-    const state = getActiveReleasesState(instance)
+  it('supports calls with explicit resource', () => {
+    const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
 
     expect(state.getCurrent()).toBeUndefined()
     expect(getQueryState).toHaveBeenCalledWith(

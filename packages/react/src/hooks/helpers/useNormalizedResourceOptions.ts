@@ -12,10 +12,10 @@ import {ResourcesContext} from '../../context/ResourcesContext'
  * For now, we are trying to avoid resource name resolution in core --
  * functions having resources explicitly passed will reduce complexity.
  *
- * @typeParam T - The core type to extend (must have optional `resource` field)
  * @beta
  */
-export type WithResourceNameSupport<T extends {resource?: DocumentResource}> = T & {
+export type WithResourceNameSupport<T> = Omit<T, 'resource'> & {
+  resource?: DocumentResource
   /**
    * Optional name of a resource to resolve from context.
    * If provided, will be resolved to a `DocumentResource` via `ResourcesContext`.
@@ -53,7 +53,7 @@ export function normalizeResourceOptions<
   resources: Record<string, DocumentResource>,
   contextResource?: DocumentResource,
   contextPerspective?: PerspectiveHandle['perspective'],
-): Omit<T, 'resourceName'> {
+): Omit<T, 'resourceName' | 'resource'> & {resource: DocumentResource} {
   const {resourceName, projectId, dataset, mediaLibraryId, canvasId, ...rest} = options
 
   if (resourceName && Object.hasOwn(options, 'resource')) {
@@ -99,15 +99,21 @@ export function normalizeResourceOptions<
     resolvedResource = contextResource
   }
 
+  if (resolvedResource === undefined) {
+    throw new Error(
+      'A resource is required. Provide `resource`, `resourceName`, or ensure a default resource is available from context (e.g. via <ResourceProvider> or <SanityApp>).',
+    )
+  }
+
   const resolvedPerspective = Object.hasOwn(options, 'perspective')
     ? options.perspective
     : contextPerspective
 
   return {
     ...rest,
-    ...(resolvedResource && {resource: resolvedResource}),
+    resource: resolvedResource,
     ...(resolvedPerspective !== undefined && {perspective: resolvedPerspective}),
-  } as Omit<T, 'resourceName'>
+  } as Omit<T, 'resourceName' | 'resource'> & {resource: DocumentResource}
 }
 
 /**
@@ -155,7 +161,7 @@ export function useNormalizedResourceOptions<
     mediaLibraryId?: string
     canvasId?: string
   },
->(options: T): Omit<T, 'resourceName'> {
+>(options: T): Omit<T, 'resourceName' | 'resource'> & {resource: DocumentResource} {
   const resources = useContext(ResourcesContext)
   const contextResource = useContext(ResourceContext)
   const contextPerspective = useContext(PerspectiveContext)

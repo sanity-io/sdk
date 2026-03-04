@@ -1,7 +1,7 @@
 import {type CurrentUser} from '@sanity/types'
 import {distinctUntilChanged, filter, map, type Subscription, switchMap} from 'rxjs'
 
-import {getDefaultDatasetResource, getDefaultProjectId} from '../config/sanityConfig'
+import {isDatasetResource} from '../config/sanityConfig'
 import {type StoreContext} from '../store/defineStore'
 import {createLogger} from '../utils/logger'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
@@ -24,7 +24,8 @@ export const subscribeToStateAndFetchCurrentUser = (
   {state, instance}: StoreContext<AuthStoreState>,
   fetchOptions?: {useProjectHostname?: boolean},
 ): Subscription => {
-  const defaultResource = getDefaultDatasetResource(instance.config)
+  const rawResource = instance.config.defaultResource
+  const defaultResource = rawResource && isDatasetResource(rawResource) ? rawResource : undefined
   const logger = createLogger('auth', {
     instanceId: instance.instanceId,
     projectId: defaultResource?.projectId,
@@ -33,7 +34,7 @@ export const subscribeToStateAndFetchCurrentUser = (
 
   const {clientFactory, apiHost} = state.get().options
   const useProjectHostname = fetchOptions?.useProjectHostname ?? isStudioConfig(instance.config)
-  const projectId = getDefaultProjectId(instance.config)
+  const projectId = instance.config.studio?.projectId
 
   const currentUser$ = state.observable
     .pipe(

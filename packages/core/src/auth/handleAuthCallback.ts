@@ -4,7 +4,13 @@ import {createLogger} from '../utils/logger'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
 import {authStore, type AuthStoreState, type DashboardContext} from './authStore'
-import {getAuthCode, getCleanedUrl, getDefaultLocation, getTokenFromLocation} from './utils'
+import {
+  createLoggedInAuthState,
+  getAuthCode,
+  getCleanedUrl,
+  getDefaultLocation,
+  getTokenFromLocation,
+} from './utils'
 
 /**
  * @public
@@ -43,7 +49,7 @@ export const handleAuthCallback = bindActionGlobally(
     if (tokenFromUrl) {
       logger.info('Auth token found in URL, logging in')
       state.set('setTokenFromUrl', {
-        authState: {type: AuthStateType.LOGGED_IN, token: tokenFromUrl, currentUser: null},
+        authState: createLoggedInAuthState(tokenFromUrl, null),
       })
       return cleanedUrl
     }
@@ -101,7 +107,7 @@ export const handleAuthCallback = bindActionGlobally(
 
       logger.info('Auth token obtained successfully, user logged in')
       storageArea?.setItem(storageKey, JSON.stringify({token}))
-      state.set('setToken', {authState: {type: AuthStateType.LOGGED_IN, token, currentUser: null}})
+      state.set('setToken', {authState: createLoggedInAuthState(token, null)})
 
       return cleanedUrl
     } catch (error) {

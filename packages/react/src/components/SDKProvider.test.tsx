@@ -7,10 +7,7 @@ import {SDKProvider} from './SDKProvider'
 vi.mock('../context/ResourceProvider', () => ({
   ResourceProvider: ({children, resource}: {children: React.ReactNode; resource?: unknown}) => {
     return (
-      <div
-        data-testid="resource-provider"
-        data-config={JSON.stringify({defaultResource: resource})}
-      >
+      <div data-testid="resource-provider" data-resource={JSON.stringify(resource ?? null)}>
         {children}
       </div>
     )
@@ -25,9 +22,7 @@ vi.mock('./auth/AuthBoundary', () => ({
 
 describe('SDKProvider', () => {
   it('renders a single ResourceProvider with AuthBoundary', () => {
-    const config = {
-      defaultResource: {projectId: 'test-project', dataset: 'production'},
-    }
+    const config = {}
     const resources = {
       default: {projectId: 'test-project', dataset: 'production'},
     }
@@ -40,18 +35,17 @@ describe('SDKProvider', () => {
 
     const provider = getByTestId('resource-provider')
     expect(provider).toBeInTheDocument()
-
     expect(getByTestId('auth-boundary')).toBeInTheDocument()
 
-    expect(JSON.parse(provider.getAttribute('data-config') || '{}')).toEqual({
-      defaultResource: {projectId: 'test-project', dataset: 'production'},
+    // resource prop should be the default resource
+    expect(JSON.parse(provider.getAttribute('data-resource') || 'null')).toEqual({
+      projectId: 'test-project',
+      dataset: 'production',
     })
   })
 
   it('renders with multiple named resources', () => {
-    const config = {
-      defaultResource: {projectId: 'project-1', dataset: 'production'},
-    }
+    const config = {}
     const resources = {
       default: {projectId: 'project-1', dataset: 'production'},
       secondary: {projectId: 'project-2', dataset: 'staging'},
@@ -66,8 +60,9 @@ describe('SDKProvider', () => {
     const provider = getByTestId('resource-provider')
     expect(provider).toBeInTheDocument()
 
-    expect(JSON.parse(provider.getAttribute('data-config') || '{}')).toEqual({
-      defaultResource: {projectId: 'project-1', dataset: 'production'},
+    expect(JSON.parse(provider.getAttribute('data-resource') || 'null')).toEqual({
+      projectId: 'project-1',
+      dataset: 'production',
     })
   })
 })

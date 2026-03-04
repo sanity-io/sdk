@@ -26,7 +26,7 @@ export interface SharedListener {
 
 export function createSharedListener(
   instance: SanityInstance,
-  resource?: DocumentResource,
+  resource: DocumentResource,
 ): SharedListener {
   const dispose$ = new Subject<void>()
   const events$ = getClientState(instance, {
@@ -67,12 +67,9 @@ export function createSharedListener(
   }
 }
 
-export function createFetchDocument(instance: SanityInstance, resource?: DocumentResource) {
+export function createFetchDocument(instance: SanityInstance, resource: DocumentResource) {
   return function (documentId: string): Observable<SanityDocument | null> {
-    return getClientState(instance, {
-      apiVersion: API_VERSION,
-      ...(resource ? {resource} : {}),
-    }).observable.pipe(
+    return getClientState(instance, {apiVersion: API_VERSION, resource}).observable.pipe(
       switchMap((client) => {
         // TODO: remove this once the client is updated to v7 the new type is available in @sanity/mutate/_unstable_store
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

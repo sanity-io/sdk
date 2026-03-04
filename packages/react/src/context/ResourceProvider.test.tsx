@@ -71,7 +71,7 @@ describe('ResourceProvider', () => {
     )
 
     await expect(promise).resolves.toMatchObject({
-      config: {defaultResource: testConfig.resource} as SanityConfig,
+      config: {} as SanityConfig,
       isDisposed: expect.any(Function),
     })
   })
@@ -136,10 +136,7 @@ describe('ResourceProvider', () => {
 
     const result = await captured.promise
     // Instance is the parent's (nested provider does not create a new one)
-    expect(result.instance?.config.defaultResource).toEqual({
-      projectId: 'parent-proj',
-      dataset: 'parent-ds',
-    })
+    expect(result.instance?.instanceId).toBeDefined()
     // Resource and perspective come from the nested provider's context
     expect(result.resource).toEqual({projectId: 'child-proj', dataset: 'child-ds'})
     expect(result.perspective).toBe('drafts')

@@ -1,5 +1,5 @@
 import {type Bridge, SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
-import {type DocumentHandle} from '@sanity/sdk'
+import {type DocumentHandle, isDatasetResource} from '@sanity/sdk'
 import {useCallback} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
@@ -71,7 +71,10 @@ export function useNavigateToStudioDocument(
   })
 
   const navigateToStudioDocument = useCallback(() => {
-    const {projectId, dataset} = documentHandle
+    const {resource} = documentHandle
+    const datasetResource = resource && isDatasetResource(resource) ? resource : undefined
+    const projectId = datasetResource?.projectId
+    const dataset = datasetResource?.dataset
 
     if (!projectId || !dataset) {
       // eslint-disable-next-line no-console
