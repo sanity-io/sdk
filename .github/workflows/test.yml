@@ -18,6 +18,10 @@ jobs:
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    strategy:
+      matrix:
+        node-version: [20, 22]
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v6
@@ -25,36 +29,26 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
         with:
-          node-version: 22
+          node-version: ${{ matrix.node-version }}
 
       - name: Test
-        run: pnpm test --test-timeout=60000 --retry 4 --coverage --reporter=default --reporter=blob
+        run: |
+          ARGS="--test-timeout=60000"
+          if [ "${{ matrix.node-version }}" == "22" ]; then
+            ARGS="$ARGS --retry 4 --coverage --reporter=default --reporter=blob"
+          else
+            ARGS="$ARGS --retry 1"
+          fi
+          pnpm test $ARGS
 
       - name: Upload blob report to GitHub Actions Artifacts
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.node-version == 22 }}
         uses: actions/upload-artifact@v6
         with:
-          name: blob-report-${{ github.run_id }}-22
+          name: blob-report-${{ github.run_id }}-${{ matrix.node-version }}
           path: ".vitest-reports/*"
           include-hidden-files: true
           retention-days: 1
-
-  test-compat:
-    runs-on: ubuntu-latest
-    env:
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Environment
-        uses: ./.github/actions/setup
-        with:
-          node-version: 20
-
-      - name: Test (Node 20 compatibility)
-        run: pnpm test --test-timeout=60000 --retry 1
 
   report-coverage:
     if: ${{ !cancelled() }}
