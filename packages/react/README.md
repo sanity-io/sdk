@@ -5,7 +5,9 @@
   <h1 align="center">Sanity App SDK (React)</h1>
 </p>
 
-React hooks for creating Sanity applications. Live by default, optimistic updates, multi-project support.
+React hooks for creating Sanity applications. Live by default, optimistic updates, multi-resource support.
+
+> **Requires React 19** — `react` and `react-dom` `^19.2.0` are the minimum peer dependencies.
 
 ---
 
@@ -30,23 +32,30 @@ Opens at `https://www.sanity.io/welcome?dev=http%3A%2F%2Flocalhost%3A3333`, prox
 ### 2. Project configuration
 
 ```tsx
-import {SanityApp, type SanityConfig} from '@sanity/sdk-react'
-
-const config: SanityConfig = {
-  sources: {
-    'default': {projectId: 'abc123', dataset: 'production'},
-    'second-project': {projectId: 'def456', dataset: 'production'},
-  },
-}
+import {SanityApp} from '@sanity/sdk-react'
 
 export function App() {
   return (
-    <SanityApp config={config} fallback={<div>Loading...</div>}>
+    <SanityApp
+      resources={{
+        'default': {projectId: 'abc123', dataset: 'production'},
+        'second-project': {projectId: 'def456', dataset: 'production'},
+      }}
+      fallback={<div>Loading...</div>}
+    >
       <YourApp />
     </SanityApp>
   )
 }
 ```
+
+In Sanity, a **resource** identifies where your data lives. It can be one of:
+
+- a project and dataset pair (`{ projectId, dataset }`)
+- a media library (`{ mediaLibraryId }`)
+- or a canvas (`{ canvasId }`)
+
+The `resources` prop is a map of named resources. Each resource tells the SDK where to read and write data. The resource keyed `"default"` is used automatically when no explicit resource is specified in a hook.
 
 **Auth is automatic** — Dashboard injects an auth token via iframe. No custom login flow is needed for your application.
 
@@ -62,10 +71,13 @@ Document handles are a core concept for apps built with the App SDK. Document ha
 type DocumentHandle = {
   documentId: string
   documentType: string
-  projectId?: string // optional if using the default projectId or inside a ResourceProvider
-  dataset?: string // optional if using the default dataset or inside a ResourceProvider
+  resource: DocumentResource // e.g. { projectId, dataset }, { mediaLibraryId }, or { canvasId }
 }
 ```
+
+The `resource` field identifies where the document lives. When you fetch document handles from hooks like `useDocuments`, the `resource` is automatically populated from the current context.
+
+Most hooks also accept `resourceName` to target a specific named resource declared in the `resources` prop on `<SanityApp>`, or a `resource` object directly. When neither is provided, the `"default"` resource is used.
 
 **Best practice:** Fetch document handles first → pass them to child components → fetch individual document content from child components.
 
@@ -125,7 +137,7 @@ import {
   unpublishDocument,
   deleteDocument,
   createDocument,
-  discardDraft,
+  discardDocument,
 } from '@sanity/sdk-react'
 
 const apply = useApplyDocumentActions()
@@ -181,7 +193,7 @@ The `useApplyDocumentActions` hook is used to perform document lifecycle operati
 | `publishDocument`   | Publish a draft (copy draft → published)       |
 | `unpublishDocument` | Unpublish (delete published, keep draft)       |
 | `deleteDocument`    | Delete document entirely (draft and published) |
-| `discardDraft`      | Discard draft changes, revert to published     |
+| `discardDocument`   | Discard draft changes, revert to published     |
 
 #### Creating Documents
 
@@ -322,7 +334,7 @@ The SDK handles updating the document state automatically:
 - `useDocument()` returns draft if exists, else published
 - `useEditDocument()` creates draft on first edit (automatic)
 - `publishDocument()` copies draft → published, deletes draft
-- `discardDraft()` deletes draft, reverts to published
+- `discardDocument()` deletes draft, reverts to published
 
 #### LiveEdit Documents
 
@@ -332,6 +344,7 @@ For documents that don't need the draft/published workflow (such as settings, co
 const settingsHandle: DocumentHandle = {
   documentId: 'site-settings',
   documentType: 'settings',
+  resource: {projectId: 'abc123', dataset: 'production'},
   liveEdit: true, // Edits apply directly without creating a draft
 }
 
@@ -343,7 +356,7 @@ const editSettings = useEditDocument(settingsHandle)
 
 - Drafts will not be created when the document is edited
 - Edits will be applied directly to the published document
-- `publishDocument()`, `unpublishDocument()`, and `discardDraft()` actions cannot be used (since liveEdit documents are always published and do not have drafts)
+- `publishDocument()`, `unpublishDocument()`, and `discardDocument()` actions cannot be used (since liveEdit documents are always published and do not have drafts)
 
 For more details, see the [Sanity documentation on liveEdit documents](https://www.sanity.io/docs/content-lake/drafts).
 
@@ -363,32 +376,80 @@ Any mutation to a subscribed document (even fields you don't display) will trigg
 
 ---
 
-### Multi-Project Access
+### Multi-Resource Access
 
-The SDK supports accessing documents from multiple projects and datasets simultaneously. There are two main approaches:
+If your app only uses a single project and dataset, the `"default"` resource handles everything. When you need to pull data from additional projects, datasets, media libraries, or canvases, you can specify additional resources as needed. There are three main approaches to providing additional resources:
 
-#### Approach 1: Specify Project/Dataset Directly in the Handle
+#### Approach 1: Use Named Resources (recommended)
 
-Pass `projectId` and `dataset` directly in document handles to fetch data from specific projects (note that any `projectId` and `dataset` pair you pass must be defined in your application’s array of [SanityConfig objects](https://www.sanity.io/docs/app-sdk/sdk-configuration#d95b8773097c)):
+Register all your resources in the `resources` prop on `<SanityApp>` and reference them by name with `resourceName`:
+
+```tsx
+import {SanityApp} from '@sanity/sdk-react'
+
+export function App() {
+  return (
+    <SanityApp
+      resources={{
+        default: {projectId: 'project-a', dataset: 'production'},
+        staging: {projectId: 'project-a', dataset: 'staging'},
+        media: {mediaLibraryId: 'my-media-library'},
+      }}
+      fallback={<div>Loading...</div>}
+    >
+      <MyApp />
+    </SanityApp>
+  )
+}
+```
+
+Then reference them in hooks:
+
+```tsx
+import {useDocument, useQuery} from '@sanity/sdk-react'
+
+function StagingPreview({documentId}: {documentId: string}) {
+  const {data} = useDocument({
+    documentId,
+    documentType: 'article',
+    resourceName: 'staging',
+  })
+  return <pre>{JSON.stringify(data, null, 2)}</pre>
+}
+
+function MediaAssets() {
+  const {data} = useQuery({
+    query: '*[_type == "sanity.asset"][0...10]',
+    resourceName: 'media',
+  })
+  return (
+    <ul>
+      {data?.map((asset) => (
+        <li key={asset._id}>{asset.originalFilename}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+#### Approach 2: Pass a Resource Object Directly
+
+If you only need to access a resource in one or two places within your app, you can pass it inline via the `resource` option:
 
 ```tsx
 import {useDocument} from '@sanity/sdk-react'
 
 function MultiProjectComponent() {
-  // Fetch from Project A
   const {data: productA} = useDocument({
     documentId: 'product-123',
     documentType: 'product',
-    projectId: 'project-a',
-    dataset: 'production',
+    resource: {projectId: 'project-a', dataset: 'production'},
   })
 
-  // Fetch from Project B
   const {data: productB} = useDocument({
     documentId: 'product-456',
     documentType: 'product',
-    projectId: 'project-b',
-    dataset: 'staging',
+    resource: {projectId: 'project-b', dataset: 'staging'},
   })
 
   return (
@@ -400,46 +461,41 @@ function MultiProjectComponent() {
 }
 ```
 
-#### Approach 2: Use ResourceProvider to Set Context
+#### Approach 3: Use ResourceProvider to Set Context
 
-Wrap components in `ResourceProvider` to set default project/dataset values for all child components:
+If you need to access certain resources within multiple sibling components, wrap those components in `ResourceProvider` and set a default resource for all its child components:
 
 ```tsx
-// App.tsx
-import {ResourceProvider, useDocument, useSanityInstance} from '@sanity/sdk-react'
+import {ResourceProvider, useDocument} from '@sanity/sdk-react'
 
 function ProductCard({productId}: {productId: string}) {
-  // Get the current project/dataset from context
-  const {config} = useSanityInstance()
-
-  // No need to specify projectId/dataset - inherited from ResourceProvider
+  // No need to specify a resource - inherited from ResourceProvider
   const {data: product} = useDocument({
     documentId: productId,
     documentType: 'product',
   })
 
-  return (
-    <div>
-      <h3>{product?.title}</h3>
-      <p>
-        From: {config.projectId}.{config.dataset}
-      </p>
-    </div>
-  )
+  return <h3>{product?.title}</h3>
 }
 
 export function MultiProjectApp() {
   return (
     <div>
       {/* Products from Project A */}
-      <ResourceProvider projectId="project-a" dataset="production" fallback={<div>Loading...</div>}>
+      <ResourceProvider
+        resource={{projectId: 'project-a', dataset: 'production'}}
+        fallback={<div>Loading...</div>}
+      >
         <h2>Project A Products</h2>
         <ProductCard productId="product-123" />
         <ProductCard productId="product-456" />
       </ResourceProvider>
 
       {/* Products from Project B */}
-      <ResourceProvider projectId="project-b" dataset="staging" fallback={<div>Loading...</div>}>
+      <ResourceProvider
+        resource={{projectId: 'project-b', dataset: 'staging'}}
+        fallback={<div>Loading...</div>}
+      >
         <h2>Project B Products</h2>
         <ProductCard productId="product-789" />
       </ResourceProvider>
@@ -450,17 +506,16 @@ export function MultiProjectApp() {
 
 **Key Points:**
 
-- When using hooks that take document handles as arguments (such useDocument, useEditDocument, useQuery, etc.), the document handles’ `projectId` and `dataset` values can be explicitly set to fetch documents from arbitrary projects and datasets
-- The ResourceProvider component is used to create a project ID and dataset context that child components will inherit from; this can negate the need to specify the project ID and dataset values for document handles in hooks called by child components
-- Use `useSanityInstance()` to access the context configuration for the current component: `const {config} = useSanityInstance()`
-- You can nest ResourceProvider components to create component trees with different project/dataset configurations — but be aware that, when the project ID and dataset values for document handles are _not_ specified, the project ID and dataset from the closest ResourceProvider context will be used
-- Regardless of the approach you use, the project IDs and dataset names you reference (whether in document handles or ResourceProviders) must be enumerated in your application’s [SanityConfig objects](https://www.sanity.io/docs/app-sdk/sdk-configuration#d95b8773097c)
+- The `"default"` resource is used automatically when no `resourceName`, `resource`, or `ResourceProvider` context is present
+- Named resources (`resourceName`) are the recommended pattern for apps that work with multiple data sources
+- `ResourceProvider` sets context for an entire subtree — hooks inside it inherit the resource without needing to specify it
+- You can nest `ResourceProvider` components; the closest provider wins when no explicit resource is given
 
 ---
 
 ### Using the SDK inside Sanity Studio
 
-The SDK can be embedded directly inside a Sanity Studio with zero manual configuration. Sanity Studio provides `SDKStudioContext` automatically, so `SanityApp` derives `projectId`, `dataset`, and auth from the Studio's workspace without any setup.
+The SDK can be embedded directly inside a Sanity Studio with zero manual configuration. Sanity Studio provides `SDKStudioContext` automatically, so `SanityApp` derives its resource configuration and auth from the Studio's workspace without any setup.
 
 #### Zero-config setup (recommended)
 
@@ -494,11 +549,13 @@ function StudioSDKWrapper({children}) {
 
 #### Explicit config takes precedence
 
-If you pass a `config` prop to `SanityApp`, this config will take precedence over any workspace config picked up by `SDKStudioContext`:
+If you pass `resources` (data sources) or `config` (auth, studio, and perspective settings) props to `SanityApp`, they take precedence over any workspace config picked up by `SDKStudioContext`:
 
 ```tsx
-// This uses the explicit config, not the Studio workspace
-<SanityApp config={{projectId: 'other-project', dataset: 'staging'}} fallback={<Loading />}>
+<SanityApp
+  resources={{default: {projectId: 'other-project', dataset: 'staging'}}}
+  fallback={<Loading />}
+>
   <MyComponent />
 </SanityApp>
 ```
@@ -509,20 +566,22 @@ If the Studio provides a reactive token source via `workspace.auth.token`, the S
 
 For older Studios that don't expose a token source, the SDK falls back to discovering the auth token from `localStorage` or cookie auth.
 
-#### Migrating from `studioMode`
+#### `studioMode` has been removed
 
-The `studioMode` config field is deprecated. If you are currently using it, the recommended replacement is to use the zero-config `SDKStudioContext` approach described above — which requires no `config` prop at all.
+The `studioMode` config field was removed in v3. The recommended replacement is to use the zero-config `SDKStudioContext` approach described above — which requires no `config` prop at all.
 
-If you need to pass an explicit config, replace `studioMode` with `studio`:
+If you previously used `studioMode`, replace it with `studio`:
 
 ```diff
  const config: SanityConfig = {
-   projectId: 'my-project',
-   dataset: 'production',
+-  projectId: 'my-project',
+-  dataset: 'production',
 -  studioMode: { enabled: true },
 +  studio: {},
  }
 ```
+
+See the [Migration Guide](./guides/0-Migration-Guide.md) for all v3 breaking changes and upgrade steps.
 
 ---
 

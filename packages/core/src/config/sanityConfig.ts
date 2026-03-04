@@ -71,8 +71,8 @@ export interface ResourceHandle<
   TDataset extends string = string,
 > extends PerspectiveHandle {
   /**
-   * @beta
    * Explicit resource object to use for this operation.
+   * @public
    */
   resource: DocumentResource<TProjectId, TDataset>
 }
@@ -166,16 +166,16 @@ export interface SanityConfig extends PerspectiveHandle {
    * The default document resource for this instance. Used by bound actions
    * when no explicit resource is provided.
    *
-   * @beta
+   * @public
    */
   defaultResource?: DocumentResource
 }
 
 /**
- * A document resource can be used for querying.
- * This will soon be the default way to identify where you are querying from.
+ * A document resource identifies where data is stored and queried from.
+ * Can be a dataset (project + dataset pair), a media library, or a canvas.
  *
- * @beta
+ * @public
  */
 export type DocumentResource<
   TProjectId extends string = string,
@@ -183,7 +183,8 @@ export type DocumentResource<
 > = DatasetResource<TProjectId, TDataset> | MediaLibraryResource | CanvasResource
 
 /**
- * @beta
+ * A resource that targets a specific project and dataset.
+ * @public
  */
 export type DatasetResource<
   TProjectId extends string = string,
@@ -191,24 +192,28 @@ export type DatasetResource<
 > = {projectId: TProjectId; dataset: TDataset}
 
 /**
- * @beta
+ * A resource that targets a media library.
+ * @public
  */
 export type MediaLibraryResource = {mediaLibraryId: string}
 
 /**
- * @beta
+ * A resource that targets a canvas.
+ * @public
  */
 export type CanvasResource = {canvasId: string}
 
 /**
- * @beta
+ * Type guard that checks whether a {@link DocumentResource} is a {@link DatasetResource}.
+ * @public
  */
 export function isDatasetResource(resource: DocumentResource): resource is DatasetResource {
   return 'projectId' in resource && 'dataset' in resource
 }
 
 /**
- * @beta
+ * Type guard that checks whether a {@link DocumentResource} is a {@link MediaLibraryResource}.
+ * @public
  */
 export function isMediaLibraryResource(
   resource: DocumentResource,
@@ -217,7 +222,8 @@ export function isMediaLibraryResource(
 }
 
 /**
- * @beta
+ * Type guard that checks whether a {@link DocumentResource} is a {@link CanvasResource}.
+ * @public
  */
 export function isCanvasResource(resource: DocumentResource): resource is CanvasResource {
   return 'canvasId' in resource
