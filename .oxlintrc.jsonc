@@ -1,0 +1,66 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "env": {
+    "node": true,
+    "browser": true,
+  },
+  "plugins": ["typescript", "react", "import", "promise"],
+  "ignorePatterns": [
+    "**/node_modules/*",
+    "**/dist/*",
+    "**/lib/*",
+    "**/build/*",
+    "**/coverage/*",
+    "**/docs/*",
+    "**/.turbo/*",
+    "*.json",
+    "*.css",
+    "*.snap",
+    "*.md",
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error",
+  },
+  "rules": {
+    "no-console": "error",
+    "no-shadow": "error",
+
+    // oxlint's no-floating-promises suggests marking fire-and-forget with `void`,
+    // so we disable no-void to avoid conflicting guidance (same as Sanity monorepo)
+    "no-void": "off",
+
+    // Many hits are legitimate `for await...of` patterns (20 occurrences)
+    "no-await-in-loop": "off",
+
+    // Delegated to ESLint's unused-imports plugin which handles both
+    // unused imports and unused vars in a single pass
+    "no-unused-vars": "off",
+    "typescript/no-unused-vars": "off",
+
+    // React 19 uses the new JSX transform — React doesn't need to be in scope
+    "react/react-in-jsx-scope": "off",
+
+    // NEW — ESLint never enforced these. TODO: Fix 3 occurrences and enable
+    "react/no-array-index-key": "off",
+    // NEW — ESLint never enforced this. TODO: Fix 1 occurrence and enable
+    "react/iframe-missing-sandbox": "off",
+
+    // NEW — ESLint never enforced this. TODO: Fix 3 occurrences and enable
+    "import/no-empty-named-blocks": "off",
+    // Most hits are CSS side-effect imports (`import './styles.css'`) which are valid
+    "import/no-unassigned-import": "off",
+
+    // NEW — ESLint never enforced this. TODO: Fix 2 occurrences and enable
+    "promise/always-return": "off",
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx", "**/e2e/**"],
+      "rules": {
+        "no-console": "off",
+      },
+    },
+  ],
+}
