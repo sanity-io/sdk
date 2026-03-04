@@ -10,9 +10,7 @@ describe('nodeStore', () => {
   let instance: SanityInstance
 
   beforeEach(() => {
-    instance = createSanityInstance({
-      defaultResource: {projectId: 'test-project-id', dataset: 'test-dataset'},
-    })
+    instance = createSanityInstance()
   })
 
   it('should have correct initial state', () => {

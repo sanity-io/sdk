@@ -1,6 +1,7 @@
 import {NEVER} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {type DocumentResource} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StoreState} from '../store/createStoreState'
 import {hashString} from '../utils/hashString'
@@ -30,7 +31,8 @@ vi.mock('./subscribeToStateAndFetchBatches.ts')
 
 describe('getProjectionState', () => {
   let instance: SanityInstance
-  const docHandle = {documentId: 'exampleId', documentType: 'exampleType'}
+  const resource: DocumentResource = {projectId: 'p', dataset: 'd'}
+  const docHandle = {documentId: 'exampleId', documentType: 'exampleType', resource}
   const projection1 = '{exampleProjection1}'
   const hash1 = hashString(projection1)
   const projection2 = '{exampleProjection2}'
@@ -48,9 +50,7 @@ describe('getProjectionState', () => {
       return NEVER.subscribe()
     })
 
-    instance = createSanityInstance({
-      defaultResource: {projectId: 'exampleProject', dataset: 'exampleDataset'},
-    })
+    instance = createSanityInstance()
     vi.useFakeTimers() // Enable fake timers for each test
   })
 

@@ -1,4 +1,5 @@
 import {
+  createDocumentHandle,
   type DocumentHandle,
   PerspectiveHandle,
   ReleasePerspective,
@@ -8,6 +9,7 @@ import {
   useDocumentProjection,
   useDocuments,
   usePerspective,
+  useResource,
 } from '@sanity/sdk-react'
 import {Box, Button, Card, Flex, Heading, Spinner, Stack, Text, TextInput} from '@sanity/ui'
 import {type JSX, Suspense, useMemo, useState} from 'react'
@@ -288,18 +290,24 @@ export function ReleasesRoute(): JSX.Element {
   const [selectedPerspective, setSelectedPerspective] = useState<PerspectiveHandle>({
     perspective: 'drafts',
   })
-  const [selectedDocument, setSelectedDocument] = useState<DocumentHandle>({
-    documentId: import.meta.env['VITE_IS_E2E']
-      ? 'test-document-id'
-      : '386584b0-237f-4870-849e-f71af8e6b269',
-    documentType: 'author',
-  })
+  const resource = useResource()
+  const [selectedDocument, setSelectedDocument] = useState<DocumentHandle>(
+    createDocumentHandle({
+      documentId: import.meta.env['VITE_IS_E2E']
+        ? 'test-document-id'
+        : '386584b0-237f-4870-849e-f71af8e6b269',
+      documentType: 'author',
+      resource: resource!,
+    }),
+  )
 
   const handlePerspectiveSelect = (perspective: PerspectiveHandle) => {
     setSelectedPerspective(perspective)
   }
   const handleDocumentIdSubmit = (documentId: string) => {
-    setSelectedDocument({documentId, documentType: 'author'})
+    setSelectedDocument(
+      createDocumentHandle({documentId, documentType: 'author', resource: resource!}),
+    )
   }
 
   return (

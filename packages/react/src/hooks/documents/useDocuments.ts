@@ -1,16 +1,13 @@
 import {
   createGroqSearchFilter,
-  type DatasetHandle,
   type DocumentHandle,
-  getDefaultDatasetResource,
-  isDatasetResource,
   type QueryOptions,
+  type ResourceHandle,
 } from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
 import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
-import {useSanityInstance} from '../context/useSanityInstance'
 import {
   useNormalizedResourceOptions,
   type WithResourceNameSupport,
@@ -31,8 +28,8 @@ export interface DocumentsOptions<
   TProjectId extends string = string,
 >
   extends
-    WithResourceNameSupport<DatasetHandle<TDataset, TProjectId>>,
-    Pick<QueryOptions, 'perspective' | 'params'> {
+    WithResourceNameSupport<ResourceHandle<TDataset, TProjectId>>,
+    Pick<QueryOptions<TDocumentType, TDataset, TProjectId>, 'perspective' | 'params'> {
   /**
    * Filter documents by their `_type`. Can be a single type or an array of types.
    */
@@ -215,8 +212,8 @@ export function useDocuments<
   TDataset,
   TProjectId
 > {
-  const options = useNormalizedResourceOptions(rawOptions)
-  const instance = useSanityInstance()
+  const options =
+    useNormalizedResourceOptions<DocumentsOptions<TDocumentType, TDataset, TProjectId>>(rawOptions)
   const [limit, setLimit] = useState(batchSize)
   const documentTypes = useMemo(
     () =>
@@ -288,17 +285,8 @@ export function useDocuments<
     query: `{"count":${countQuery},"data":${dataQuery}}`,
     params: {
       ...params,
-      __handle: {
-        ...getDefaultDatasetResource(instance.config),
-        ...(options.resource && isDatasetResource(options.resource)
-          ? {
-              projectId: options.resource.projectId,
-              dataset: options.resource.dataset,
-              resource: options.resource,
-            }
-          : {}),
-        ...pick(options, 'perspective'),
-      },
+      // these are passed back to the user as part of each document handle
+      __handle: pick(options, ['resource', 'perspective']),
       __types: documentTypes,
     },
   })

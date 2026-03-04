@@ -270,7 +270,7 @@ export const getDocumentSyncStatus = bindActionByResource(
 )
 
 type PermissionsStateOptions = {
-  resource?: DocumentResource
+  resource: DocumentResource
   actions: DocumentAction[]
 }
 
@@ -301,7 +301,7 @@ export const resolvePermissions = bindActionByResource(
 /** @beta */
 export const subscribeDocumentEvents = bindActionByResource(
   documentStore,
-  ({state}, options: {resource?: DocumentResource; eventHandler: (e: DocumentEvent) => void}) => {
+  ({state}, options: {resource: DocumentResource; eventHandler: (e: DocumentEvent) => void}) => {
     const {events} = state.get()
     const subscription = events.subscribe(options.eventHandler)
     return () => subscription.unsubscribe()
