@@ -31,7 +31,8 @@ export function createSharedListener(
   const dispose$ = new Subject<void>()
   const events$ = getClientState(instance, {
     apiVersion: API_VERSION,
-    ...(resource ? {resource} : {}),
+    resource,
+    perspective: 'raw',
   }).observable.pipe(
     switchMap((client) =>
       // TODO: it seems like the client.listen method is not emitting disconnected
@@ -71,9 +72,9 @@ export function createFetchDocument(instance: SanityInstance, resource: Document
   return function (documentId: string): Observable<SanityDocument | null> {
     return getClientState(instance, {apiVersion: API_VERSION, resource}).observable.pipe(
       switchMap((client) => {
-        // TODO: remove this once the client is updated to v7 the new type is available in @sanity/mutate/_unstable_store
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const loadDocument = createDocumentLoaderFromClient(client as any)
+        // creates a observable request to the /doc/{documentId} endpoint for a given document id
+        // should work across all kinds of document IDs (drafts.**, version.**., etc.)
+        const loadDocument = createDocumentLoaderFromClient(client)
         return loadDocument(documentId)
       }),
       map((result) => {

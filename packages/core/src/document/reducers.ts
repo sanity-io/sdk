@@ -1,9 +1,11 @@
-import {getPublishedId} from '@sanity/client/csm'
+import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
 import {type Mutation, type PatchOperations, type SanityDocumentLike} from '@sanity/types'
 import {omit} from 'lodash-es'
 
+import {type DocumentHandle} from '../config/sanityConfig'
+import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type StoreContext} from '../store/defineStore'
-import {getDraftId, insecureRandomId} from '../utils/ids'
+import {insecureRandomId} from '../utils/ids'
 import {type DocumentAction} from './actions'
 import {DOCUMENT_STATE_CLEAR_DELAY} from './documentConstants'
 import {type DocumentState, type DocumentStoreState} from './documentStore'
@@ -17,6 +19,11 @@ export type SyncTransactionState = Pick<
   DocumentStoreState,
   'queued' | 'applied' | 'documentStates' | 'outgoing' | 'grants'
 >
+
+type DocumentHandleLike = Pick<DocumentHandle, 'perspective'> & {
+  documentId?: string
+  liveEdit?: boolean
+}
 
 type ActionMap = {
   create: 'sanity.action.document.version.create'
@@ -39,7 +46,13 @@ export type HttpAction =
   | {actionType: ActionMap['discard']; versionId: string; purge?: boolean}
   | {actionType: ActionMap['unpublish']; draftId: string; publishedId: string}
   | {actionType: ActionMap['delete']; publishedId: string; includeDrafts?: string[]}
-  | {actionType: ActionMap['edit']; draftId: string; publishedId: string; patch: PatchOperations}
+  | {
+      actionType: ActionMap['edit']
+      draftId?: string
+      versionId?: string
+      publishedId: string
+      patch: PatchOperations
+    }
   | ({actionType: ActionMap['publish']; draftId: string; publishedId: string} & OptimisticLock)
 
 /**
@@ -145,7 +158,7 @@ export function queueTransaction(
   transaction: QueuedTransaction,
 ): SyncTransactionState {
   const {transactionId, actions} = transaction
-  const prevWithSubscriptionIds = getDocumentIdsFromActions(actions).reduce(
+  const prevWithSubscriptionIds = getDocumentIdsFromHandleLikes(actions).reduce(
     (acc, id) => addSubscriptionIdToDocument(acc, id, transactionId),
     prev,
   )
@@ -163,7 +176,7 @@ export function removeQueuedTransaction(
   const transaction = prev.queued.find((t) => t.transactionId === transactionId)
   if (!transaction) return prev
 
-  const prevWithSubscriptionIds = getDocumentIdsFromActions(transaction.actions).reduce(
+  const prevWithSubscriptionIds = getDocumentIdsFromHandleLikes(transaction.actions).reduce(
     (acc, id) => removeSubscriptionIdFromDocument(acc, id, transactionId),
     prev,
   )
@@ -179,7 +192,7 @@ export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTra
   if (!queued) return prev
   if (!prev.grants) return prev
 
-  const ids = getDocumentIdsFromActions(queued.actions)
+  const ids = getDocumentIdsFromHandleLikes(queued.actions)
   // the local value is only ever `undefined` if it has not been loaded yet
   // we can't get the next applied state unless all relevant documents are ready
   if (ids.some((id) => prev.documentStates[id]?.local === undefined)) return prev
@@ -337,7 +350,7 @@ export function cleanupOutgoingTransaction(prev: SyncTransactionState): SyncTran
   if (!outgoing) return prev
 
   let next = prev
-  const ids = getDocumentIdsFromActions(outgoing.actions)
+  const ids = getDocumentIdsFromHandleLikes(outgoing.actions)
   for (const transactionId of outgoing.batchedTransactionIds) {
     for (const documentId of ids) {
       next = removeSubscriptionIdFromDocument(next, documentId, transactionId)
@@ -551,22 +564,10 @@ export function removeSubscriptionIdFromDocument(
 
 export function manageSubscriberIds(
   {state}: StoreContext<SyncTransactionState>,
-  documentId: string | string[],
-  options?: {expandDraftPublished?: boolean},
+  handles: DocumentHandleLike[],
 ): () => void {
-  const expandDraftPublished = options?.expandDraftPublished ?? true
-  const documentIds = Array.from(
-    new Set(
-      expandDraftPublished
-        ? (Array.isArray(documentId) ? documentId : [documentId]).flatMap((id) => [
-            getPublishedId(id),
-            getDraftId(id),
-          ])
-        : Array.isArray(documentId)
-          ? documentId
-          : [documentId],
-    ),
-  )
+  const documentIds = getDocumentIdsFromHandleLikes(handles)
+
   const subscriptionId = insecureRandomId()
   state.set('addSubscribers', (prev) =>
     documentIds.reduce(
@@ -587,13 +588,23 @@ export function manageSubscriberIds(
   }
 }
 
-export function getDocumentIdsFromActions(actions: DocumentAction[]): string[] {
-  return Array.from(
-    new Set(
-      actions
-        .map((i) => i.documentId)
-        .filter((i) => typeof i === 'string')
-        .flatMap((documentId) => [getPublishedId(documentId), getDraftId(documentId)]),
-    ),
-  )
+// document handles are passed in via the public facing API, but we also need to
+// pull the correct document ids from action bodies, which have similar but not
+// identical shapes to the document handles.
+function getDocumentIdsFromHandleLikes(handles: DocumentHandleLike[]): string[] {
+  return handles.flatMap((handle) => {
+    const idsForDocument = []
+    if (!handle.documentId) return []
+    if (handle.liveEdit) {
+      return [handle.documentId]
+    }
+    if (isReleasePerspective(handle.perspective)) {
+      idsForDocument.push(
+        getVersionId(DocumentId(handle.documentId), handle.perspective.releaseName),
+      )
+    }
+    idsForDocument.push(getPublishedId(DocumentId(handle.documentId)))
+    idsForDocument.push(getDraftId(DocumentId(handle.documentId)))
+    return idsForDocument
+  })
 }
