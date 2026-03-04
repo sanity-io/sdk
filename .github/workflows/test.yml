@@ -33,16 +33,16 @@ jobs:
 
       - name: Test
         run: |
-          ARGS="--test-timeout=60000 --retry 4"
-          if [ "${{ matrix.node-version }}" == "20" ]; then
-            # We only gather coverage from a single Node version.
-            # We pass in `--reporter=blob` so that we can combine the results from all shards.
-            ARGS="$ARGS --coverage --reporter=default --reporter=blob"
+          ARGS="--test-timeout=60000"
+          if [ "${{ matrix.node-version }}" == "22" ]; then
+            ARGS="$ARGS --retry 4 --coverage --reporter=default --reporter=blob"
+          else
+            ARGS="$ARGS --retry 1"
           fi
           pnpm test $ARGS
 
       - name: Upload blob report to GitHub Actions Artifacts
-        if: ${{ !cancelled() && matrix.node-version == '20' }}
+        if: ${{ !cancelled() && matrix.node-version == 22 }}
         uses: actions/upload-artifact@v6
         with:
           name: blob-report-${{ github.run_id }}-${{ matrix.node-version }}
@@ -60,7 +60,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
         with:
-          node-version: 20
+          node-version: 22
 
       - name: "Download coverage artifacts"
         uses: actions/download-artifact@v7
