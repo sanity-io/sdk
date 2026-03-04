@@ -1,5 +1,3 @@
-import {type ProjectHandle} from '../config/sanityConfig'
-
 /**
  * @public
  */
@@ -42,7 +40,8 @@ export interface UserProfile {
 /**
  * @public
  */
-export interface GetUsersOptions extends ProjectHandle {
+export interface GetUsersOptions {
+  projectId?: string
   resourceType?: 'organization' | 'project'
   batchSize?: number
   organizationId?: string
@@ -88,7 +87,8 @@ export interface ResolveUsersOptions extends GetUsersOptions {
 /**
  * @public
  */
-export interface GetUserOptions extends ProjectHandle {
+export interface GetUserOptions {
+  projectId?: string
   userId: string
   resourceType?: 'organization' | 'project'
   organizationId?: string

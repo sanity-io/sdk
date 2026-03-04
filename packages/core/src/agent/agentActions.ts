@@ -12,7 +12,7 @@ const API_VERSION = 'vX'
  * @alpha
  */
 export interface AgentResourceOptions {
-  resource?: DocumentResource
+  resource: DocumentResource
 }
 
 /** @alpha */

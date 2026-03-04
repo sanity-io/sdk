@@ -1,8 +1,8 @@
 import {type DocumentAction, type DocumentPermissionsResult, getPermissionsState} from '@sanity/sdk'
-import {act, renderHook, waitFor} from '@testing-library/react'
 import {BehaviorSubject, firstValueFrom, Observable} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {act, renderHook, waitFor} from '../../../test/test-utils'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useDocumentPermissions} from './useDocumentPermissions'
 
@@ -24,12 +24,12 @@ vi.mock('rxjs', async (importOriginal) => {
 })
 
 describe('usePermissions', () => {
+  const mockResource = {projectId: 'project1', dataset: 'dataset1'}
   const mockAction: DocumentAction = {
     type: 'document.publish',
     documentId: 'doc1',
     documentType: 'article',
-    projectId: 'project1',
-    dataset: 'dataset1',
+    resource: mockResource,
   }
 
   const mockPermissionAllowed: DocumentPermissionsResult = {allowed: true}
@@ -85,19 +85,13 @@ describe('usePermissions', () => {
       permissionsSubject.next(mockPermissionAllowed)
     })
 
-    const {result} = renderHook(() => useDocumentPermissions(mockAction), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useDocumentPermissions(mockAction))
 
     // ResourceProvider handles the instance configuration
-    expect(getPermissionsState).toHaveBeenCalledWith(expect.any(Object), {actions: [mockAction]})
+    expect(getPermissionsState).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({actions: [mockAction], resource: mockResource}),
+    )
     expect(result.current).toEqual(mockPermissionAllowed)
   })
 
@@ -107,16 +101,7 @@ describe('usePermissions', () => {
       permissionsSubject.next(mockPermissionDenied)
     })
 
-    const {result} = renderHook(() => useDocumentPermissions(mockAction), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useDocumentPermissions(mockAction))
 
     expect(result.current).toEqual(mockPermissionDenied)
     expect(result.current.allowed).toBe(false)
@@ -127,88 +112,45 @@ describe('usePermissions', () => {
   it('should accept an array of actions', () => {
     const actions = [mockAction, {...mockAction, documentId: 'doc2'}]
 
-    renderHook(() => useDocumentPermissions(actions), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    renderHook(() => useDocumentPermissions(actions))
 
-    expect(getPermissionsState).toHaveBeenCalledWith(expect.any(Object), {actions})
-  })
-
-  it('should throw an error if actions have mismatched project IDs', () => {
-    const actions = [
-      mockAction,
-      {...mockAction, projectId: 'different-project', documentId: 'doc2'},
-    ]
-
-    expect(() => {
-      renderHook(() => useDocumentPermissions(actions), {
-        wrapper: ({children}) => (
-          <ResourceProvider
-            resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
-            fallback={null}
-          >
-            {children}
-          </ResourceProvider>
-        ),
-      })
-    }).toThrow(/Mismatched project IDs found in actions/)
-  })
-
-  it('should throw an error if actions have mismatched datasets', () => {
-    const actions = [mockAction, {...mockAction, dataset: 'different-dataset', documentId: 'doc2'}]
-
-    expect(() => {
-      renderHook(() => useDocumentPermissions(actions), {
-        wrapper: ({children}) => (
-          <ResourceProvider
-            resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
-            fallback={null}
-          >
-            {children}
-          </ResourceProvider>
-        ),
-      })
-    }).toThrow(/Mismatched datasets found in actions/)
+    expect(getPermissionsState).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({actions, resource: mockResource}),
+    )
   })
 
   it('should throw an error if actions have mismatched resources', () => {
     const actions = [
+      mockAction,
       {
-        type: 'document.publish' as const,
-        documentId: 'doc1',
-        documentType: 'article',
-        resource: {projectId: 'p1', dataset: 'd1'},
-      },
-      {
-        type: 'document.publish' as const,
+        ...mockAction,
+        resource: {projectId: 'different-project', dataset: 'dataset1'},
         documentId: 'doc2',
-        documentType: 'article',
-        resource: {projectId: 'p2', dataset: 'd2'},
       },
     ]
 
     expect(() => {
-      renderHook(() => useDocumentPermissions(actions), {
-        wrapper: ({children}) => (
-          <ResourceProvider
-            resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
-            fallback={null}
-          >
-            {children}
-          </ResourceProvider>
-        ),
-      })
+      renderHook(() => useDocumentPermissions(actions))
     }).toThrow(/Mismatched resources found in actions/)
   })
 
-  it('should throw an error when mixing projectId and resource (projectId first)', () => {
+  it('should throw an error if actions have mismatched datasets', () => {
+    const actions = [
+      mockAction,
+      {
+        ...mockAction,
+        resource: {projectId: 'project1', dataset: 'different-dataset'},
+        documentId: 'doc2',
+      },
+    ]
+
+    expect(() => {
+      renderHook(() => useDocumentPermissions(actions))
+    }).toThrow(/Mismatched resources found in actions/)
+  })
+
+  it('should throw an error when mixing different resources', () => {
     const actions = [
       mockAction,
       {
@@ -220,42 +162,8 @@ describe('usePermissions', () => {
     ]
 
     expect(() => {
-      renderHook(() => useDocumentPermissions(actions), {
-        wrapper: ({children}) => (
-          <ResourceProvider
-            resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
-            fallback={null}
-          >
-            {children}
-          </ResourceProvider>
-        ),
-      })
-    }).toThrow(/Mismatches between projectId\/dataset options and resource/)
-  })
-
-  it('should throw an error when mixing resource and projectId (resource first)', () => {
-    const actions = [
-      {
-        type: 'document.publish' as const,
-        documentId: 'doc1',
-        documentType: 'article',
-        resource: {projectId: 'p', dataset: 'd'},
-      },
-      mockAction,
-    ]
-
-    expect(() => {
-      renderHook(() => useDocumentPermissions(actions), {
-        wrapper: ({children}) => (
-          <ResourceProvider
-            resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
-            fallback={null}
-          >
-            {children}
-          </ResourceProvider>
-        ),
-      })
-    }).toThrow(/Mismatches between projectId\/dataset options and resource/)
+      renderHook(() => useDocumentPermissions(actions))
+    }).toThrow(/Mismatched resources found in actions/)
   })
 
   it('should wait for permissions to be ready before rendering', async () => {
@@ -282,10 +190,7 @@ describe('usePermissions', () => {
       },
       {
         wrapper: ({children}) => (
-          <ResourceProvider
-            resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
-            fallback={null}
-          >
+          <ResourceProvider resource={mockResource} fallback={null}>
             {children}
           </ResourceProvider>
         ),
@@ -301,8 +206,29 @@ describe('usePermissions', () => {
 
     // Now it should render properly
     await waitFor(() => {
-      expect(getPermissionsState).toHaveBeenCalledWith(expect.any(Object), {actions: [mockAction]})
+      expect(getPermissionsState).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({actions: [mockAction], resource: mockResource}),
+      )
     })
+  })
+
+  it('throws when no resource is found from action or context', () => {
+    // Provide SanityInstance via ResourceProvider but no resource, so contextResource is undefined
+    expect(() => {
+      renderHook(
+        () =>
+          useDocumentPermissions({
+            type: 'document.publish',
+            documentId: 'doc1',
+            documentType: 'article',
+            // no resource
+          } as never),
+        {
+          wrapper: ({children}) => <ResourceProvider fallback={null}>{children}</ResourceProvider>,
+        },
+      )
+    }).toThrow(/resource is required/)
   })
 
   it('should react to permission state changes', async () => {
@@ -311,16 +237,7 @@ describe('usePermissions', () => {
       permissionsSubject.next(mockPermissionAllowed)
     })
 
-    const {result, rerender} = renderHook(() => useDocumentPermissions(mockAction), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: mockAction.projectId!, dataset: mockAction.dataset!}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result, rerender} = renderHook(() => useDocumentPermissions(mockAction))
 
     expect(result.current).toEqual(mockPermissionAllowed)
 

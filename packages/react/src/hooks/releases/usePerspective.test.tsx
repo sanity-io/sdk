@@ -5,11 +5,10 @@ import {
   type PerspectiveHandle,
   type ReleaseDocument,
 } from '@sanity/sdk'
-import {renderHook} from '@testing-library/react'
 import {BehaviorSubject} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
-import {ResourceProvider} from '../../context/ResourceProvider'
+import {renderHook} from '../../../test/test-utils'
 import {usePerspective} from './usePerspective'
 
 // Mock the SDK functions
@@ -68,18 +67,13 @@ describe('usePerspective', () => {
     vi.mocked(getPerspectiveState).mockReturnValue(mockStateSource)
     vi.mocked(getActiveReleasesState).mockReturnValue(mockReleasesStateSource)
 
-    const {result} = renderHook(
-      () => {
-        try {
-          return usePerspective(perspectiveHandle)
-        } catch (e) {
-          return e
-        }
-      },
-      {
-        wrapper: ({children}) => <ResourceProvider fallback={null}>{children}</ResourceProvider>,
-      },
-    )
+    const {result} = renderHook(() => {
+      try {
+        return usePerspective(perspectiveHandle)
+      } catch (e) {
+        return e
+      }
+    })
 
     // Verify that the hook threw a promise (suspended)
     expect(result.current).toBeInstanceOf(Promise)
@@ -104,9 +98,7 @@ describe('usePerspective', () => {
 
     vi.mocked(getPerspectiveState).mockReturnValue(mockStateSource)
 
-    const {result} = renderHook(() => usePerspective(perspectiveHandle), {
-      wrapper: ({children}) => <ResourceProvider fallback={null}>{children}</ResourceProvider>,
-    })
+    const {result} = renderHook(() => usePerspective(perspectiveHandle))
 
     // Verify that the hook returned the perspective without suspending
     expect(result.current).toEqual(mockPerspective)

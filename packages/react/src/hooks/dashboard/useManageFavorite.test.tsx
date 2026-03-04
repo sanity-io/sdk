@@ -1,10 +1,16 @@
 import {type Message} from '@sanity/comlink'
-import {type FavoriteStatusResponse, getFavoritesState, resolveFavoritesState} from '@sanity/sdk'
-import {act, renderHook} from '@testing-library/react'
+import {
+  type FavoriteStatusResponse,
+  getFavoritesState,
+  resolveFavoritesState,
+  type SanityInstance,
+} from '@sanity/sdk'
 import {BehaviorSubject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {act, renderHook} from '../../../test/test-utils'
 import {ResourceProvider} from '../../context/ResourceProvider'
+import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 import {useWindowConnection, type WindowConnection} from '../comlink/useWindowConnection'
 import {useManageFavorite} from './useManageFavorite'
 
@@ -21,6 +27,10 @@ vi.mock('../comlink/useWindowConnection', () => ({
   useWindowConnection: vi.fn(),
 }))
 
+vi.mock('../../hooks/context/useSanityInstance', () => ({
+  useSanityInstance: vi.fn(),
+}))
+
 describe('useManageFavorite', () => {
   let favoriteStatusSubject: BehaviorSubject<FavoriteStatusResponse>
   let mockFetch: ReturnType<typeof vi.fn>
@@ -30,6 +40,7 @@ describe('useManageFavorite', () => {
     documentId: 'mock-id',
     documentType: 'mock-type',
     resourceType: 'studio' as const,
+    resource: {projectId: 'test', dataset: 'test'},
   }
 
   beforeEach(() => {
@@ -67,34 +78,21 @@ describe('useManageFavorite', () => {
     })
   })
 
+  vi.mocked(useSanityInstance).mockImplementation(() => ({}) as unknown as SanityInstance)
+
   afterEach(() => {
     favoriteStatusSubject.complete()
     vi.clearAllMocks()
   })
 
   it('should initialize with default states', () => {
-    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
 
     expect(result.current.isFavorited).toBe(false)
   })
 
   it('should handle favorite action and update state', async () => {
-    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
-      wrapper: ({children}) => (
-        <ResourceProvider resource={{projectId: 'test', dataset: 'test'}} fallback={null}>
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
 
     expect(result.current.isFavorited).toBe(false)
 
@@ -123,13 +121,7 @@ describe('useManageFavorite', () => {
   })
 
   it('should handle unfavorite action and update state', async () => {
-    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
-      wrapper: ({children}) => (
-        <ResourceProvider resource={{projectId: 'test', dataset: 'test'}} fallback={null}>
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
 
     // Set initial state to favorited
     await act(async () => {
@@ -164,16 +156,7 @@ describe('useManageFavorite', () => {
   it('should not update state if favorite action fails', async () => {
     mockFetch.mockResolvedValueOnce({success: false})
 
-    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
 
     expect(result.current.isFavorited).toBe(false)
 
@@ -193,16 +176,7 @@ describe('useManageFavorite', () => {
       throw new Error(errorMessage)
     })
 
-    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
 
     await act(async () => {
       await expect(result.current.favorite()).rejects.toThrow(errorMessage)
@@ -219,7 +193,7 @@ describe('useManageFavorite', () => {
     consoleErrorSpy.mockRestore()
   })
 
-  it('should throw error when studio resource is missing projectId or dataset', () => {
+  it('should throw error when studio resource is missing resource', () => {
     const mockDocumentHandleWithoutProjectId = {
       documentId: 'mock-id',
       documentType: 'mock-type',
@@ -227,8 +201,11 @@ describe('useManageFavorite', () => {
     }
 
     expect(() =>
+      // @ts-expect-error -- no access to ManageFavorite props type
       renderHook(() => useManageFavorite(mockDocumentHandleWithoutProjectId), {
-        wrapper: ({children}) => <ResourceProvider fallback={null}>{children}</ResourceProvider>,
+        wrapper: ({children}: {children: React.ReactNode}) => (
+          <ResourceProvider fallback={null}>{children}</ResourceProvider>
+        ),
       }),
     ).toThrow('projectId and dataset are required for studio resources')
   })
@@ -239,20 +216,12 @@ describe('useManageFavorite', () => {
       documentType: 'mock-type',
       resourceType: 'media-library' as const,
       resourceId: undefined,
+      resource: {mediaLibraryId: 'media-library-id'},
     }
 
-    expect(() =>
-      renderHook(() => useManageFavorite(mockMediaDocumentHandle), {
-        wrapper: ({children}) => (
-          <ResourceProvider
-            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-            fallback={null}
-          >
-            {children}
-          </ResourceProvider>
-        ),
-      }),
-    ).toThrow('resourceId is required for media-library and canvas resources')
+    expect(() => renderHook(() => useManageFavorite(mockMediaDocumentHandle))).toThrow(
+      'resourceId is required for media-library and canvas resources',
+    )
   })
 
   it('should include schemaName in payload when provided', async () => {
@@ -260,16 +229,7 @@ describe('useManageFavorite', () => {
       ...mockDocumentHandle,
       schemaName: 'testSchema',
     }
-    const {result} = renderHook(() => useManageFavorite(mockDocumentHandleWithSchema), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useManageFavorite(mockDocumentHandleWithSchema))
 
     await act(async () => {
       await result.current.favorite()
@@ -282,7 +242,7 @@ describe('useManageFavorite', () => {
           id: 'mock-id',
           type: 'mock-type',
           resource: {
-            id: 'test-project.test-dataset',
+            id: 'test.test',
             type: 'studio',
             schemaName: 'testSchema',
           },
@@ -304,16 +264,7 @@ describe('useManageFavorite', () => {
       getCurrent: () => undefined,
       observable: favoriteStatusSubject.asObservable(),
     }))
-    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
     expect(result.current.isFavorited).toBe(false)
   })
 
@@ -322,16 +273,7 @@ describe('useManageFavorite', () => {
       fetch: undefined,
       sendMessage: mockSendMessage,
     } as unknown as WindowConnection<Message>)
-    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useManageFavorite(mockDocumentHandle))
     await act(async () => {
       await result.current.favorite()
       await result.current.unfavorite()
@@ -342,16 +284,7 @@ describe('useManageFavorite', () => {
   it('should do nothing if documentId is missing', async () => {
     const handle = {...mockDocumentHandle, documentId: undefined}
     // @ts-expect-error -- no access to ManageFavorite props type
-    const {result} = renderHook(() => useManageFavorite(handle), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useManageFavorite(handle))
     await act(async () => {
       await result.current.favorite()
       await result.current.unfavorite()
@@ -362,16 +295,7 @@ describe('useManageFavorite', () => {
   it('should do nothing if documentType is missing', async () => {
     const handle = {...mockDocumentHandle, documentType: undefined}
     // @ts-expect-error -- no access to ManageFavorite props type
-    const {result} = renderHook(() => useManageFavorite(handle), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useManageFavorite(handle))
     await act(async () => {
       await result.current.favorite()
       await result.current.unfavorite()
@@ -382,16 +306,7 @@ describe('useManageFavorite', () => {
   it('should do nothing if resourceType is missing', async () => {
     const handle = {...mockDocumentHandle, resourceType: undefined, resourceId: 'studio'}
     // @ts-expect-error -- no access to ManageFavorite props type
-    const {result} = renderHook(() => useManageFavorite(handle), {
-      wrapper: ({children}) => (
-        <ResourceProvider
-          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-          fallback={null}
-        >
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result} = renderHook(() => useManageFavorite(handle))
     await act(async () => {
       await result.current.favorite()
       await result.current.unfavorite()

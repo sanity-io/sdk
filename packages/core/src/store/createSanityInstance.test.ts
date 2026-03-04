@@ -5,18 +5,14 @@ import {createSanityInstance} from './createSanityInstance'
 
 describe('createSanityInstance', () => {
   it('should create an instance with a unique instanceId and given config', () => {
-    const instance = createSanityInstance({
-      defaultResource: {projectId: 'proj1', dataset: 'ds1'},
-    })
+    const instance = createSanityInstance()
     expect(typeof instance.instanceId).toBe('string')
-    expect(instance.config).toEqual({defaultResource: {projectId: 'proj1', dataset: 'ds1'}})
+    expect(instance.config).toEqual({})
     expect(instance.isDisposed()).toBe(false)
   })
 
   it('should dispose an instance and call onDispose callbacks', () => {
-    const instance = createSanityInstance({
-      defaultResource: {projectId: 'proj1', dataset: 'ds1'},
-    })
+    const instance = createSanityInstance()
     const callback = vi.fn()
     instance.onDispose(callback)
     instance.dispose()
@@ -25,9 +21,7 @@ describe('createSanityInstance', () => {
   })
 
   it('should not call onDispose callbacks more than once when disposed multiple times', () => {
-    const instance = createSanityInstance({
-      defaultResource: {projectId: 'proj1', dataset: 'ds1'},
-    })
+    const instance = createSanityInstance()
     const callback = vi.fn()
     instance.onDispose(callback)
     instance.dispose()
@@ -58,32 +52,30 @@ describe('createSanityInstance', () => {
     })
 
     it('should log instance creation at info level', () => {
-      createSanityInstance({defaultResource: {projectId: 'test-proj', dataset: 'test-ds'}})
+      createSanityInstance()
 
       expect(mockHandler.info).toHaveBeenCalledWith(
         expect.stringContaining('[INFO] [sdk]'),
         expect.objectContaining({
-          hasProjectId: true,
-          hasDefaultResource: true,
+          hasAuth: false,
+          hasPerspective: false,
         }),
       )
     })
 
     it('should log configuration details at debug level', () => {
-      createSanityInstance({defaultResource: {projectId: 'test-proj', dataset: 'test-ds'}})
+      createSanityInstance({defaultResource: {projectId: 'test-proj', dataset: 'test-dataset'}})
 
       expect(mockHandler.debug).toHaveBeenCalledWith(
         expect.stringContaining('[DEBUG] [sdk]'),
         expect.objectContaining({
-          projectId: 'test-proj',
+          hasStudioConfig: false,
         }),
       )
     })
 
     it('should log instance disposal', () => {
-      const instance = createSanityInstance({
-        defaultResource: {projectId: 'test-proj', dataset: 'ds'},
-      })
+      const instance = createSanityInstance()
       vi.clearAllMocks() // Clear creation logs
 
       instance.dispose()
@@ -94,12 +86,11 @@ describe('createSanityInstance', () => {
       )
     })
 
-    it('should include instance context in logs', () => {
-      createSanityInstance({defaultResource: {projectId: 'my-project', dataset: 'my-dataset'}})
+    it('should include instance id in logs', () => {
+      createSanityInstance()
 
-      // Check that logs include the instance context (projectId from default resource)
       expect(mockHandler.info).toHaveBeenCalledWith(
-        expect.stringMatching(/\[project:my-project\]/),
+        expect.stringMatching(/\[instance:/),
         expect.anything(),
       )
     })
