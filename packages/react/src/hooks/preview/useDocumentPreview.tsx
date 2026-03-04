@@ -64,9 +64,9 @@ export interface useDocumentPreviewResults {
  *
  * @example Combining with useDocuments to render a collection of document previews
  * ```
- * // PreviewComponent.jsx
- * export default function PreviewComponent({ document }) {
- *   const { data: { title, subtitle, media }, isPending } = useDocumentPreview({ document })
+ * // PreviewComponent.tsx
+ * export default function PreviewComponent(docHandle: DocumentHandle) {
+ *   const { data: { title, subtitle, media }, isPending } = useDocumentPreview(docHandle)
  *   return (
  *     <article style={{ opacity: isPending ? 0.5 : 1}}>
  *       {media?.type === 'image-asset' ? <img src={media.url} alt='' /> : ''}
@@ -76,16 +76,16 @@ export interface useDocumentPreviewResults {
  *   )
  * }
  *
- * // DocumentList.jsx
- * const { data } = useDocuments({ filter: '_type == "movie"' })
+ * // DocumentList.tsx
+ * const { data } = useDocuments({ documentType: 'movie' })
  * return (
  *   <div>
  *     <h1>Movies</h1>
  *     <ul>
  *       {data.map(movie => (
- *         <li key={movie._id}>
+ *         <li key={movie.documentId}>
  *           <Suspense fallback='Loading…'>
- *             <PreviewComponent document={movie} />
+ *             <PreviewComponent {...movie} />
  *           </Suspense>
  *         </li>
  *       ))}
