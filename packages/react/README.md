@@ -71,10 +71,11 @@ Document handles are a core concept for apps built with the App SDK. Document ha
 type DocumentHandle = {
   documentId: string
   documentType: string
-  projectId?: string // optional when using the default resource or a ResourceProvider
-  dataset?: string // optional when using the default resource or a ResourceProvider
+  resource: DocumentResource // e.g. { projectId, dataset }, { mediaLibraryId }, or { canvasId }
 }
 ```
+
+The `resource` field identifies where the document lives. When you fetch document handles from hooks like `useDocuments`, the `resource` is automatically populated from the current context.
 
 Most hooks also accept `resourceName` to target a specific named resource declared in the `resources` prop on `<SanityApp>`, or a `resource` object directly. When neither is provided, the `"default"` resource is used.
 
@@ -343,6 +344,7 @@ For documents that don't need the draft/published workflow (such as settings, co
 const settingsHandle: DocumentHandle = {
   documentId: 'site-settings',
   documentType: 'settings',
+  resource: {projectId: 'abc123', dataset: 'production'},
   liveEdit: true, // Edits apply directly without creating a draft
 }
 

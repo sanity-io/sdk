@@ -256,15 +256,25 @@ This system makes it possible to:
 Now, let's talk about "handles." The SDK uses a system of handle objects to make it easy to pass configuration between components. These handles form a simple hierarchy:
 
 ```typescript
-// Just project information
-interface ProjectHandle {
-  projectId?: string
+// Perspective only
+interface PerspectiveHandle {
+  perspective?: string | ReleasePerspective
 }
 
-// Project plus dataset information (also supports resource and perspective)
-interface DatasetHandle extends ProjectHandle, PerspectiveHandle {
-  dataset?: string
-  resource?: DocumentResource
+// Resource identification (required resource field)
+interface ResourceHandle extends PerspectiveHandle {
+  resource: DocumentResource // e.g. { projectId, dataset }, { mediaLibraryId }, or { canvasId }
+}
+
+// Document type within a resource
+interface DocumentTypeHandle extends ResourceHandle {
+  documentType: string
+  liveEdit?: boolean
+}
+
+// A specific document within a resource
+interface DocumentHandle extends DocumentTypeHandle {
+  documentId: string
 }
 
 // The complete configuration
@@ -358,7 +368,7 @@ This handle-based approach gives you:
 - **Flexibility**: Components can work with partial configuration
 - **Context Preservation**: Configuration flows naturally through your component tree
 
-To further improve type safety, the SDK provides helper functions like `createDocumentHandle`, `createDocumentTypeHandle`, `createProjectHandle`, and `createDatasetHandle` (defined in `@sanity/core`). These functions act primarily as identity functions at runtime but provide stronger type guarantees in TypeScript. They help capture literal types (e.g., `{ documentType: 'author' }` instead of `{ documentType: string }`) without requiring the use of `as const` on the handle object literal.
+To further improve type safety, the SDK provides helper functions like `createDocumentHandle`, `createDocumentTypeHandle`, and `createResourceHandle` (defined in `@sanity/core`). These functions act primarily as identity functions at runtime but provide stronger type guarantees in TypeScript. They help capture literal types (e.g., `{ documentType: 'author' }` instead of `{ documentType: string }`) without requiring the use of `as const` on the handle object literal.
 
 While you can still create handles using plain objects (especially with `as const` if needed for TypeScript), using these helper functions is recommended as it ensures the necessary type information is preserved for accurate type inference downstream in hooks like `useDocument`.
 

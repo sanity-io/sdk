@@ -97,18 +97,16 @@ export interface DocumentsResponse<
  * @returns An object containing the list of document handles, the loading state, the total count of retrieved document handles, and a function to load more
  *
  * @remarks
- * - The returned document handles include projectId and dataset information from the current Sanity instance
+ * - The returned document handles include resource information from the current Sanity instance
  * - This makes them ready to use with document operations and other document hooks
- * - The hook automatically uses the correct Sanity instance based on the projectId and dataset in the options
+ * - The hook automatically uses the correct Sanity instance based on the resource in the options
  *
  * @example Basic infinite list with loading more
  * ```tsx
  * import {
  *   useDocuments,
- *   createDatasetHandle,
- *   type DatasetHandle,
  *   type DocumentHandle,
- *   type SortOrderingItem
+ *   type DocumentResource,
  * } from '@sanity/sdk-react'
  * import {Suspense} from 'react'
  *
@@ -124,14 +122,14 @@ export interface DocumentsResponse<
  *
  * // Define props for the list component
  * interface DocumentListProps {
- *   dataset: DatasetHandle
+ *   resource: DocumentResource
  *   documentType: string
  *   search?: string
  * }
  *
- * function DocumentList({dataset, documentType, search}: DocumentListProps) {
+ * function DocumentList({resource, documentType, search}: DocumentListProps) {
  *   const { data, hasMore, isPending, loadMore, count } = useDocuments({
- *     ...dataset,
+ *     resource,
  *     documentType,
  *     search,
  *     batchSize: 10,
@@ -160,8 +158,7 @@ export interface DocumentsResponse<
  * }
  *
  * // Usage:
- * // const myDatasetHandle = createDatasetHandle({ projectId: 'p1', dataset: 'production' })
- * // <DocumentList dataset={myDatasetHandle} documentType="post" search="Sanity" />
+ * // <DocumentList resource={{projectId: 'p1', dataset: 'production'}} documentType="post" search="Sanity" />
  * ```
  *
  * @example Using `filter` and `params` options for narrowing a collection
