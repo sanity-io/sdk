@@ -45,7 +45,7 @@ describe('applyDocumentActions', () => {
       events: eventsSubject,
     }
     state = createStoreState(initialState)
-    instance = createSanityInstance({defaultResource: {projectId: 'p', dataset: 'd'}})
+    instance = createSanityInstance()
     const key = {name: 'p.d', resource: {projectId: 'p', dataset: 'd'}}
 
     vi.mocked(bindActionByResource).mockImplementation(
@@ -67,6 +67,7 @@ describe('applyDocumentActions', () => {
       documentId: 'doc1',
       documentType: 'example',
       patches: [{set: {foo: 'bar'}}],
+      resource: {projectId: 'p', dataset: 'd'},
     }
 
     // Call applyDocumentActions with a fixed transactionId for reproducibility.
@@ -125,6 +126,7 @@ describe('applyDocumentActions', () => {
       documentId: 'doc1',
       documentType: 'example',
       patches: [{set: {foo: 'error'}}],
+      resource: {projectId: 'p', dataset: 'd'},
     }
 
     // Call applyDocumentActions with a fixed transactionId.
@@ -155,8 +157,7 @@ describe('applyDocumentActions', () => {
       documentId: 'doc1',
       documentType: 'example',
       patches: [{set: {foo: 'childTest'}}],
-      projectId: 'p',
-      dataset: 'd',
+      resource: {projectId: 'p', dataset: 'd'},
     }
     const applyPromise = applyDocumentActions(instance, {
       actions: [action],

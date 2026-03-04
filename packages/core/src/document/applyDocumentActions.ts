@@ -33,7 +33,7 @@ export interface ApplyDocumentActionsOptions {
   /**
    * The resource to which the documents being acted on belong.
    */
-  resource?: DocumentResource
+  resource: DocumentResource
 
   /**
    * Optionally provide an ID to be used as this transaction ID

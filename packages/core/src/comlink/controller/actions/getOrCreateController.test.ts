@@ -21,9 +21,7 @@ describe('getOrCreateController', () => {
   let state: ReturnType<typeof createStoreState<ComlinkControllerState>>
 
   beforeEach(() => {
-    instance = createSanityInstance({
-      defaultResource: {projectId: 'test-project-id', dataset: 'test-dataset'},
-    })
+    instance = createSanityInstance()
 
     state = createStoreState<ComlinkControllerState>({
       controller: null,

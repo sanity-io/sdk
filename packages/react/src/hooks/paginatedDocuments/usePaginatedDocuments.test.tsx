@@ -1,20 +1,14 @@
-import {act, renderHook} from '@testing-library/react'
+import {type DatasetResource} from '@sanity/sdk'
 import {evaluateSync, parse, toJS} from 'groq-js'
 import {describe, vi} from 'vitest'
 
-import {ResourceProvider} from '../../context/ResourceProvider'
+import {act, renderHook} from '../../../test/test-utils'
 import {useQuery} from '../query/useQuery'
 import {usePaginatedDocuments} from './usePaginatedDocuments'
 
 vi.mock('../query/useQuery')
 
 describe('usePaginatedDocuments', () => {
-  const wrapper = ({children}: {children: React.ReactNode}) => (
-    <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
-      {children}
-    </ResourceProvider>
-  )
-
   beforeEach(() => {
     const dataset = [
       {
@@ -83,16 +77,14 @@ describe('usePaginatedDocuments', () => {
 
   it('should respect custom page size', () => {
     const customPageSize = 2
-    const {result} = renderHook(() => usePaginatedDocuments({pageSize: customPageSize}), {wrapper})
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize: customPageSize}))
 
     expect(result.current.pageSize).toBe(customPageSize)
     expect(result.current.data.length).toBeLessThanOrEqual(customPageSize)
   })
 
   it('should filter by document type', () => {
-    const {result} = renderHook(() => usePaginatedDocuments({filter: '_type == "movie"'}), {
-      wrapper,
-    })
+    const {result} = renderHook(() => usePaginatedDocuments({filter: '_type == "movie"'}))
 
     expect(result.current.data.every((doc) => doc.documentType === 'movie')).toBe(true)
     expect(result.current.count).toBe(5) // 5 movies in the dataset
@@ -100,20 +92,18 @@ describe('usePaginatedDocuments', () => {
 
   // groq-js doesn't support search filters yet
   it.skip('should apply search filter', () => {
-    const {result} = renderHook(() => usePaginatedDocuments({search: 'inter'}), {wrapper})
+    const {result} = renderHook(() => usePaginatedDocuments({search: 'inter'}))
 
     // Should match "Interstellar"
     expect(result.current.data.some((doc) => doc.documentId === 'movie3')).toBe(true)
   })
 
   it('should apply ordering', () => {
-    const {result} = renderHook(
-      () =>
-        usePaginatedDocuments({
-          filter: '_type == "movie"',
-          orderings: [{field: 'releaseYear', direction: 'desc'}],
-        }),
-      {wrapper},
+    const {result} = renderHook(() =>
+      usePaginatedDocuments({
+        filter: '_type == "movie"',
+        orderings: [{field: 'releaseYear', direction: 'desc'}],
+      }),
     )
 
     // First item should be the most recent movie (Interstellar, 2014)
@@ -122,7 +112,7 @@ describe('usePaginatedDocuments', () => {
 
   it('should calculate pagination values correctly', () => {
     const pageSize = 2
-    const {result} = renderHook(() => usePaginatedDocuments({pageSize}), {wrapper})
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize}))
 
     expect(result.current.currentPage).toBe(1)
     expect(result.current.totalPages).toBe(3) // 6 items with page size 2
@@ -133,7 +123,7 @@ describe('usePaginatedDocuments', () => {
 
   it('should navigate to next page', () => {
     const pageSize = 2
-    const {result} = renderHook(() => usePaginatedDocuments({pageSize}), {wrapper})
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize}))
 
     expect(result.current.currentPage).toBe(1)
     expect(result.current.data.length).toBe(pageSize)
@@ -149,7 +139,7 @@ describe('usePaginatedDocuments', () => {
 
   it('should navigate to previous page', () => {
     const pageSize = 2
-    const {result} = renderHook(() => usePaginatedDocuments({pageSize}), {wrapper})
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize}))
 
     // Go to page 2 first
     act(() => {
@@ -169,7 +159,7 @@ describe('usePaginatedDocuments', () => {
 
   it('should navigate to first page', () => {
     const pageSize = 2
-    const {result} = renderHook(() => usePaginatedDocuments({pageSize}), {wrapper})
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize}))
 
     // Go to last page first
     act(() => {
@@ -189,7 +179,7 @@ describe('usePaginatedDocuments', () => {
 
   it('should navigate to last page', () => {
     const pageSize = 2
-    const {result} = renderHook(() => usePaginatedDocuments({pageSize}), {wrapper})
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize}))
 
     act(() => {
       result.current.lastPage()
@@ -201,7 +191,7 @@ describe('usePaginatedDocuments', () => {
 
   it('should navigate to specific page', () => {
     const pageSize = 2
-    const {result} = renderHook(() => usePaginatedDocuments({pageSize}), {wrapper})
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize}))
 
     act(() => {
       result.current.goToPage(2) // Go to page 2
@@ -226,7 +216,7 @@ describe('usePaginatedDocuments', () => {
 
   it('should set page availability flags correctly', () => {
     const pageSize = 2
-    const {result} = renderHook(() => usePaginatedDocuments({pageSize}), {wrapper})
+    const {result} = renderHook(() => usePaginatedDocuments({pageSize}))
     // On first page
     expect(result.current.hasFirstPage).toBe(false)
     expect(result.current.hasPreviousPage).toBe(false)
@@ -254,7 +244,6 @@ describe('usePaginatedDocuments', () => {
   it('should reset current page when filter changes', () => {
     const {result, rerender} = renderHook((props) => usePaginatedDocuments(props), {
       initialProps: {pageSize: 2, filter: ''},
-      wrapper,
     })
     // Initially, current page should be 1
     expect(result.current.currentPage).toBe(1)
@@ -270,15 +259,19 @@ describe('usePaginatedDocuments', () => {
   })
 
   it('should add projectId and dataset to document handles', () => {
-    const {result} = renderHook(() => usePaginatedDocuments({}), {wrapper})
+    const {result} = renderHook(() => usePaginatedDocuments({}))
 
     // Check that the first document handle has the projectId and dataset
-    expect(result.current.data[0].projectId).toBe('p')
-    expect(result.current.data[0].dataset).toBe('d')
+    expect((result.current.data[0].resource as DatasetResource).projectId).toBe('test')
+    expect((result.current.data[0].resource as DatasetResource).dataset).toBe('test')
 
     // Verify all document handles have these properties
-    expect(result.current.data.every((doc) => doc.projectId === 'p' && doc.dataset === 'd')).toBe(
-      true,
-    )
+    expect(
+      result.current.data.every(
+        (doc) =>
+          (doc.resource as DatasetResource).projectId === 'test' &&
+          (doc.resource as DatasetResource).dataset === 'test',
+      ),
+    ).toBe(true)
   })
 })

@@ -120,8 +120,7 @@ function Editor() {
         createDocumentHandle({
           documentType: 'author',
           documentId,
-          projectId,
-          dataset,
+          resource: {projectId, dataset},
           liveEdit: liveEditMode,
         }),
       )
@@ -149,8 +148,7 @@ function Editor() {
         createDocumentHandle({
           documentType: 'author',
           documentId: docHandle.documentId,
-          projectId,
-          dataset,
+          resource: {projectId, dataset},
           liveEdit: liveEditMode,
         }),
       )

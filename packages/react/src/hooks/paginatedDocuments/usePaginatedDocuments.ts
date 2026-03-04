@@ -1,15 +1,8 @@
-import {
-  createGroqSearchFilter,
-  type DocumentHandle,
-  getDefaultDatasetResource,
-  isDatasetResource,
-  type QueryOptions,
-} from '@sanity/sdk'
+import {createGroqSearchFilter, type DocumentHandle, type QueryOptions} from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
 import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
-import {useSanityInstance} from '../context/useSanityInstance'
 import {
   useNormalizedResourceOptions,
   type WithResourceNameSupport,
@@ -252,7 +245,6 @@ export function usePaginatedDocuments<
   TProjectId
 > {
   useTrackHookUsage('usePaginatedDocuments')
-  const instance = useSanityInstance()
   const options = useNormalizedResourceOptions(rawOptions)
   const [pageIndex, setPageIndex] = useState(0)
   const key = JSON.stringify({filter, search, params, orderings, pageSize, ...options})
@@ -315,17 +307,8 @@ export function usePaginatedDocuments<
     params: {
       ...params,
       __types: documentTypes,
-      __handle: {
-        ...getDefaultDatasetResource(instance.config),
-        ...(options.resource && isDatasetResource(options.resource)
-          ? {
-              projectId: options.resource.projectId,
-              dataset: options.resource.dataset,
-              resource: options.resource,
-            }
-          : {}),
-        ...pick(options, 'perspective'),
-      },
+      // these are passed back to the user as part of each document handle
+      __handle: pick(options, ['resource', 'perspective']),
     },
   })
 

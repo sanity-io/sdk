@@ -19,7 +19,6 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     const mockClient = {observable: {request: mockRequest}}
     const clientFactory = vi.fn().mockReturnValue(mockClient)
     const instance = createSanityInstance({
-      defaultResource: {projectId: 'p', dataset: 'd'},
       auth: {clientFactory},
     })
 
@@ -58,7 +57,6 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     const mockClient = {observable: {request: mockRequest}}
     const clientFactory = vi.fn().mockReturnValue(mockClient)
     const instance = createSanityInstance({
-      defaultResource: {projectId: 'p', dataset: 'd'},
       auth: {clientFactory},
     })
 
@@ -101,7 +99,6 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     const mockClient = {observable: {request: mockRequest}}
     const clientFactory = vi.fn().mockReturnValue(mockClient)
     const instance = createSanityInstance({
-      defaultResource: {projectId: 'p', dataset: 'd'},
       auth: {clientFactory},
     })
 

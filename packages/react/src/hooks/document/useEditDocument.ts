@@ -8,7 +8,10 @@ import {
 import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
+import {
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 import {useApplyDocumentActions} from './useApplyDocumentActions'
 
@@ -21,12 +24,12 @@ type Updater<TValue> = TValue | ((currentValue: TValue) => TValue)
  * @public
  * Edit an entire document with an explicit type `TData`.
  *
- * @param options - Document options including `documentId` and optionally `projectId`/`dataset`.
+ * @param options - Document options including `documentId` and optionally `resource` or `resourceName`.
  * @returns A stable function to update the document state. Accepts either the new document state (`TData`) or an updater function `(currentValue: TData) => nextValue: TData`.
  *          Returns a promise resolving to the {@link ActionsResult}.
  */
 export function useEditDocument<TData>(
-  options: DocumentOptions<undefined>,
+  options: WithResourceNameSupport<DocumentOptions<undefined>>,
 ): (nextValue: Updater<TData>) => Promise<ActionsResult>
 
 // Overload 2: Explicit type, path provided
@@ -34,12 +37,12 @@ export function useEditDocument<TData>(
  * @public
  * Edit a specific path within a document with an explicit type `TData`.
  *
- * @param options - Document options including `documentId`, `path`, and optionally `projectId`/`dataset`.
+ * @param options - Document options including `documentId`, `path`, and optionally `resource` or `resourceName`.
  * @returns A stable function to update the value at the specified path. Accepts either the new value (`TData`) or an updater function `(currentValue: TData) => nextValue: TData`.
  *          Returns a promise resolving to the {@link ActionsResult}.
  */
 export function useEditDocument<TData>(
-  options: DocumentOptions<string>,
+  options: WithResourceNameSupport<DocumentOptions<string>>,
 ): (nextValue: Updater<TData>) => Promise<ActionsResult>
 
 /**
@@ -162,7 +165,9 @@ export function useEditDocument<TData>(
 export function useEditDocument({
   path,
   ...doc
-}: DocumentOptions<string | undefined>): (updater: Updater<unknown>) => Promise<ActionsResult> {
+}: WithResourceNameSupport<DocumentOptions<string | undefined>>): (
+  updater: Updater<unknown>,
+) => Promise<ActionsResult> {
   const instance = useSanityInstance()
   trackHookUsage(instance, 'useEditDocument')
   const normalizedDoc = useNormalizedResourceOptions(doc)

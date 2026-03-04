@@ -1,7 +1,7 @@
 import {
-  type DatasetHandle,
   type DocumentResource,
   getPerspectiveState,
+  type ResourceHandle,
   type SanityInstance,
   type StateSource,
 } from '@sanity/sdk'
@@ -36,18 +36,18 @@ import {
  * @returns The perspective for the given perspective handle.
  */
 type UsePerspective = {
-  (perspectiveHandle: DatasetHandle): string | string[]
+  (perspectiveHandle?: WithResourceNameSupport<ResourceHandle>): string | string[]
 }
 
-const usePerspectiveValue: UsePerspective = createStateSourceHook({
+const usePerspectiveValue = createStateSourceHook({
   getState: getPerspectiveState as (
     instance: SanityInstance,
-    perspectiveHandle?: {resource?: DocumentResource},
+    perspectiveHandle: ResourceHandle,
   ) => StateSource<string | string[]>,
-  shouldSuspend: (instance: SanityInstance, options: {resource?: DocumentResource}): boolean =>
+  shouldSuspend: (instance: SanityInstance, options: {resource: DocumentResource}): boolean =>
     getPerspectiveState(instance, options).getCurrent() === undefined,
-  suspender: (instance: SanityInstance, _options?: {resource?: DocumentResource}) =>
-    firstValueFrom(getPerspectiveState(instance, _options ?? {}).observable.pipe(filter(Boolean))),
+  suspender: (instance: SanityInstance, _options?: {resource: DocumentResource}) =>
+    firstValueFrom(getPerspectiveState(instance, _options).observable.pipe(filter(Boolean))),
 })
 
 /**
@@ -55,8 +55,8 @@ const usePerspectiveValue: UsePerspective = createStateSourceHook({
  * @function
  */
 export const usePerspective: UsePerspective = (
-  options: WithResourceNameSupport<DatasetHandle> | undefined,
+  options: WithResourceNameSupport<ResourceHandle> | undefined,
 ) => {
   const normalizedOptions = useNormalizedResourceOptions(options ?? {})
-  return usePerspectiveValue(normalizedOptions)
+  return usePerspectiveValue(normalizedOptions as ResourceHandle)
 }
