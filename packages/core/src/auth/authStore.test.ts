@@ -18,7 +18,12 @@ import {handleAuthCallback} from './handleAuthCallback'
 import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
-import {getAuthCode, getTokenFromLocation, getTokenFromStorage} from './utils'
+import {
+  createLoggedInAuthState,
+  getAuthCode,
+  getTokenFromLocation,
+  getTokenFromStorage,
+} from './utils'
 
 vi.mock('./utils', async (importOriginal) => {
   const original = await importOriginal<typeof import('./utils')>()
@@ -727,6 +732,65 @@ describe('authStore', () => {
 
       const organizationId = getDashboardOrganizationId(instance)
       expect(organizationId.getCurrent()).toBeUndefined()
+    })
+  })
+
+  describe('createLoggedInAuthState', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('sets lastTokenRefresh for stamped tokens', () => {
+      const state = createLoggedInAuthState('sk-stamped-token-st123', null)
+
+      expect(state).toEqual({
+        type: AuthStateType.LOGGED_IN,
+        token: 'sk-stamped-token-st123',
+        currentUser: null,
+        lastTokenRefresh: Date.now(),
+      })
+    })
+
+    it('does not set lastTokenRefresh for non-stamped tokens', () => {
+      const state = createLoggedInAuthState('sk-regular-token', null)
+
+      expect(state).toEqual({
+        type: AuthStateType.LOGGED_IN,
+        token: 'sk-regular-token',
+        currentUser: null,
+      })
+      expect(state.lastTokenRefresh).toBeUndefined()
+    })
+
+    it('preserves an existing lastTokenRefresh when provided', () => {
+      const existingTimestamp = Date.now() - 5000
+      const state = createLoggedInAuthState('sk-stamped-token-st123', null, existingTimestamp)
+
+      expect(state.lastTokenRefresh).toBe(existingTimestamp)
+    })
+
+    it('passes through the currentUser', () => {
+      const user = {id: 'user-1', name: 'Test'} as CurrentUser
+      const state = createLoggedInAuthState('sk-stamped-token-st123', user)
+
+      expect(state.currentUser).toBe(user)
+    })
+
+    it('handles null currentUser', () => {
+      const state = createLoggedInAuthState('sk-stamped-token-st123', null)
+
+      expect(state.currentUser).toBeNull()
+    })
+
+    it('does not set lastTokenRefresh when explicitly undefined for non-stamped token', () => {
+      const state = createLoggedInAuthState('sk-regular-token', null, undefined)
+
+      expect(state.lastTokenRefresh).toBeUndefined()
     })
   })
 })

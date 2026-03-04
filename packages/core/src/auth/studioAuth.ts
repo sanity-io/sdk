@@ -9,7 +9,7 @@ import {refreshStampedToken} from './refreshStampedToken'
 import {checkForCookieAuth, getStudioTokenFromLocalStorage} from './studioModeAuth'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
-import {getDefaultStorage} from './utils'
+import {createLoggedInAuthState, getDefaultStorage} from './utils'
 
 /**
  * Resolves the initial auth state for Studio mode.
@@ -55,7 +55,7 @@ export function getStudioInitialState(options: AuthStrategyOptions): AuthStrateg
 
   if (providedToken) {
     return {
-      authState: {type: AuthStateType.LOGGED_IN, token: providedToken, currentUser: null},
+      authState: createLoggedInAuthState(providedToken, null),
       storageKey: studioStorageKey,
       storageArea,
       authMethod,
@@ -65,7 +65,7 @@ export function getStudioInitialState(options: AuthStrategyOptions): AuthStrateg
 
   if (token) {
     return {
-      authState: {type: AuthStateType.LOGGED_IN, token, currentUser: null},
+      authState: createLoggedInAuthState(token, null),
       storageKey: studioStorageKey,
       storageArea,
       authMethod: 'localstorage',
@@ -150,7 +150,7 @@ function initializeWithTokenSource(
         // Studio provided a real token — use it directly
         state.set('studioTokenSource', (prev) => ({
           options: {...prev.options, authMethod: undefined},
-          authState: {type: AuthStateType.LOGGED_IN, token, currentUser: null},
+          authState: createLoggedInAuthState(token, null),
         }))
       } else if (studioAuthenticated) {
         // The Studio says the user is authenticated — null token means
@@ -160,7 +160,7 @@ function initializeWithTokenSource(
           authState:
             prev.authState.type === AuthStateType.LOGGED_IN
               ? prev.authState
-              : {type: AuthStateType.LOGGED_IN, token: '', currentUser: null},
+              : createLoggedInAuthState('', null),
         }))
       } else {
         // No token and Studio doesn't confirm authentication — logged out
@@ -220,7 +220,7 @@ function initializeWithFallback(
           authState:
             prev.authState.type === AuthStateType.LOGGED_IN
               ? prev.authState
-              : {type: AuthStateType.LOGGED_IN, token: '', currentUser: null},
+              : createLoggedInAuthState('', null),
         }))
       })
     }

@@ -7,7 +7,7 @@ import {type AuthStoreState, type DashboardContext} from './authStore'
 import {type AuthStrategyOptions, type AuthStrategyResult} from './authStrategy'
 import {refreshStampedToken} from './refreshStampedToken'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
-import {getAuthCode, getTokenFromLocation} from './utils'
+import {createLoggedInAuthState, getAuthCode, getTokenFromLocation} from './utils'
 
 /**
  * Parses the dashboard context from a location href's `_context` URL parameter.
@@ -66,7 +66,7 @@ export function getDashboardInitialState(options: AuthStrategyOptions): AuthStra
   // Provided token always wins, even in dashboard
   if (providedToken) {
     return {
-      authState: {type: AuthStateType.LOGGED_IN, token: providedToken, currentUser: null},
+      authState: createLoggedInAuthState(providedToken, null),
       storageKey,
       storageArea,
       authMethod: undefined,
