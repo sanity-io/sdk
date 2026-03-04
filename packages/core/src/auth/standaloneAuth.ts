@@ -7,7 +7,13 @@ import {type AuthStrategyOptions, type AuthStrategyResult} from './authStrategy'
 import {refreshStampedToken} from './refreshStampedToken'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
-import {getAuthCode, getDefaultStorage, getTokenFromLocation, getTokenFromStorage} from './utils'
+import {
+  createLoggedInAuthState,
+  getAuthCode,
+  getDefaultStorage,
+  getTokenFromLocation,
+  getTokenFromStorage,
+} from './utils'
 
 /**
  * Resolves the initial auth state for Standalone mode.
@@ -30,7 +36,7 @@ export function getStandaloneInitialState(options: AuthStrategyOptions): AuthStr
   // Provided token always wins
   if (providedToken) {
     return {
-      authState: {type: AuthStateType.LOGGED_IN, token: providedToken, currentUser: null},
+      authState: createLoggedInAuthState(providedToken, null),
       storageKey,
       storageArea,
       authMethod: undefined,
@@ -53,7 +59,7 @@ export function getStandaloneInitialState(options: AuthStrategyOptions): AuthStr
   const token = getTokenFromStorage(storageArea, storageKey)
   if (token) {
     return {
-      authState: {type: AuthStateType.LOGGED_IN, token, currentUser: null},
+      authState: createLoggedInAuthState(token, null),
       storageKey,
       storageArea,
       authMethod: 'localstorage',

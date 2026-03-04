@@ -2,7 +2,13 @@ import {bindActionGlobally} from '../store/createActionBinder'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
 import {authStore, type AuthStoreState, type DashboardContext} from './authStore'
-import {getAuthCode, getCleanedUrl, getDefaultLocation, getTokenFromLocation} from './utils'
+import {
+  createLoggedInAuthState,
+  getAuthCode,
+  getCleanedUrl,
+  getDefaultLocation,
+  getTokenFromLocation,
+} from './utils'
 
 /**
  * @public
@@ -27,7 +33,7 @@ export const handleAuthCallback = bindActionGlobally(
     const tokenFromUrl = getTokenFromLocation(locationHref)
     if (tokenFromUrl) {
       state.set('setTokenFromUrl', {
-        authState: {type: AuthStateType.LOGGED_IN, token: tokenFromUrl, currentUser: null},
+        authState: createLoggedInAuthState(tokenFromUrl, null),
       })
       return cleanedUrl
     }
@@ -77,7 +83,7 @@ export const handleAuthCallback = bindActionGlobally(
       })
 
       storageArea?.setItem(storageKey, JSON.stringify({token}))
-      state.set('setToken', {authState: {type: AuthStateType.LOGGED_IN, token, currentUser: null}})
+      state.set('setToken', {authState: createLoggedInAuthState(token, null)})
 
       return cleanedUrl
     } catch (error) {
