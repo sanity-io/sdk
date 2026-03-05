@@ -244,7 +244,7 @@ const config: SanityConfig = {
 }
 ```
 
-Note that the SDK stacks perspectives for you. The SDK automatically fetches all of your content releases, and order them the way the Sanity Studio does: usually by scheduled date, with ASAP releases coming first.
+Note that the SDK stacks perspectives for you. The SDK automatically fetches all of your content releases, and orders them in the same way the Sanity Studio does: usually by scheduled date, with ASAP releases coming first.
 
 For example, providing a specific perspective that reflects one of your Content Releases, like `{releaseName: 'rvi13yhxK'}` will create a query stack like:
 
