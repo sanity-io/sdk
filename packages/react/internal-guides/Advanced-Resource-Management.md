@@ -84,6 +84,13 @@ export function SanityApp({
   resources: resourcesProp,
 }: SanityAppProps): ReactElement {
   // Derive config and resources from Studio context if not provided
+  const derived = useMemo(() => {
+    if (studioWorkspace && !configProp && !resourcesProp) {
+      return deriveFromWorkspace(studioWorkspace)
+    }
+    return null
+  }, [configProp, resourcesProp, studioWorkspace])
+
   const resolvedConfig = useMemo<SanityConfig>(() => {
     if (configProp) {
       return configProp
@@ -196,7 +203,7 @@ The SDK handles instance creation using React context. Here's a simplified look 
 ```tsx
 function ResourceProvider({children, fallback, resource, ...rest}) {
   const parent = useContext(SanityInstanceContext)
-  const rest = {perspective, auth, studio}
+  const {perspective, auth, studio} = rest
   const config: SanityConfig = useMemo(
     () => ({perspective, auth, studio}),
     [perspective, auth, studio],
@@ -214,7 +221,7 @@ function ResourceProvider({children, fallback, resource, ...rest}) {
   }
 
   // Root: create a new SanityInstance
-  const instance = useMemo(() => createSanityInstance(config), [rest])
+  const instance = useMemo(() => createSanityInstance(config), [config])
 
   return (
     <SanityInstanceContext.Provider value={instance}>
@@ -245,7 +252,7 @@ This system makes it possible to:
 - Automatically clean up resources when components unmount
 - Use React Suspense for elegant loading states
 
-They can also access the current resource (that is, the "active" or "default" resource) by using the `useResourceHook` which is useful when specificity is needed:
+Components can also access the current resource (that is, the "active" or "default" resource) by using the `useResource` hook which is useful when specificity is needed:
 
 ```tsx
 function canEditDocument(documentHandle: DocumentHandle) {

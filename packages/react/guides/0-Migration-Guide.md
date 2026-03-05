@@ -48,11 +48,13 @@ npm install react@latest react-dom@latest
 
 **Hooks now optionally accept `resourceName` or `resource`**
 
-In v2 of `@sanity/sdk-react`, not passing an explicit `projectId` or `dataset` to a hook meant that that hook would target the first (or only) `{ projectId, dataset }` pair passed to the `<SanityApp>` component.
+In v2 of `@sanity/sdk-react`, not passing an explicit `projectId` or `dataset` to a hook meant that it would target the closest nested `<ResourceProvider>`.
 
 Now, in v3 of `@sanity/sdk-react`, not passing an explicit `resource` to a hook means that hook will target the `default` named resource passed to the `<SanityApp>` component.
 
-Hooks that previously relied on `projectId`/`dataset` in the options object now support `resourceName` (to reference a named resource) or `resource` (to pass a resource object directly):
+If you only named one `{ projectId, dataset }` pair in your v2 `<SanityApp>` config, your hooks targeted that pair. By changing your configuration to the `default` named resource per the above example, you will likely have to do very little refactoring.
+
+If your hooks previously relied on `projectId`/`dataset` in the options object, you can now update them to use the supported `resourceName` (to reference a named resource in your `<SanityApp` params) or `resource` (to pass a resource object directly):
 
 ```tsx
 // Reference a named resource
@@ -65,7 +67,7 @@ const {data} = useDocument({
 // Or pass a resource inline
 const {data} = useQuery({
   query: '*[_type == "asset"][0...10]',
-  resource: {mediaLibraryId: 'my-media-library'},
+  resource: {projectId: 'def456', dataset: 'production'},
 })
 ```
 
