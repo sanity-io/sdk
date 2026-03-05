@@ -1,7 +1,7 @@
 import {type DocumentResource, type SanityConfig, type SanityInstance} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
 import {StrictMode, use, useContext, useEffect} from 'react'
-import {describe, expect, it} from 'vitest'
+import {describe, expect, it, vi} from 'vitest'
 
 import {ResourceContext} from './DefaultResourceContext'
 import {PerspectiveContext} from './PerspectiveContext'
@@ -38,6 +38,7 @@ describe('ResourceProvider', () => {
   })
 
   it('shows fallback during loading', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const {promise, resolve} = promiseWithResolvers()
     function SuspendingChild(): React.ReactNode {
       throw promise
@@ -53,6 +54,8 @@ describe('ResourceProvider', () => {
     act(() => {
       resolve()
     })
+    await new Promise((r) => setTimeout(r, 0))
+    consoleSpy.mockRestore()
   })
 
   it('creates root instance when no parent context exists', async () => {
@@ -215,6 +218,7 @@ describe('ResourceProvider', () => {
   })
 
   it('uses default fallback when none provided', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const {promise, resolve} = promiseWithResolvers()
     function SuspendingChild(): React.ReactNode {
       throw promise
@@ -231,5 +235,7 @@ describe('ResourceProvider', () => {
     act(() => {
       resolve()
     })
+    await new Promise((r) => setTimeout(r, 0))
+    consoleSpy.mockRestore()
   })
 })

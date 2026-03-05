@@ -2,6 +2,7 @@ import {defineConfig} from '@repo/config-test/vitest'
 
 export default defineConfig({
   test: {
+    projects: ['packages/core', 'packages/react'],
     coverage: {
       provider: 'v8',
       reporter: ['html', 'json', 'json-summary'],
