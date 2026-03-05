@@ -1,7 +1,7 @@
 import {type DocumentResource, type SanityConfig, type SanityInstance} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
 import {StrictMode, use, useContext, useEffect} from 'react'
-import {describe, expect, it} from 'vitest'
+import {describe, expect, it, vi} from 'vitest'
 
 import {ResourceContext} from './DefaultResourceContext'
 import {PerspectiveContext} from './PerspectiveContext'
