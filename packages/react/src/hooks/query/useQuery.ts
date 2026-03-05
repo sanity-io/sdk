@@ -7,18 +7,20 @@ import {
 } from '@sanity/sdk'
 import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition} from 'react'
 
+import {type ResourceHandle} from '../../config/handles'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {
-  useNormalizedResourceOptions,
-  type WithResourceNameSupport,
-} from '../helpers/useNormalizedResourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
+
+/** Options for useQuery: QueryOptions with resource made optional (resolved from context) */
+type ReactQueryOptions = Omit<QueryOptions, 'resource' | 'resourceName'> & ResourceHandle
+
 // Overload 1: Explicit Type Provided
 /**
  * @public
  * Executes a GROQ query with an explicitly provided result type `TData`.
  *
- * @param options - Configuration for the query, including `query`, optional `params`, `projectId`, `dataset`, etc.
+ * @param options - Configuration for the query, including `query`, optional `params`, `resource`, etc.
  * @returns An object containing `data` (cast to `TData`) and `isPending` (indicates whether a query resolution is pending; note that Suspense handles initial loading states). *
  * @example Manually typed query result
  * ```tsx
@@ -42,7 +44,7 @@ import {trackHookUsage} from '../helpers/useTrackHookUsage'
  * }
  * ```
  */
-export function useQuery<TData>(options: WithResourceNameSupport<QueryOptions>): {
+export function useQuery<TData>(options: ReactQueryOptions): {
   /** The query result, cast to the provided type TData */
   data: TData
   /** True if another query is resolving in the background (suspense handles the initial loading state) */
@@ -66,7 +68,7 @@ export function useQuery<TData>(options: WithResourceNameSupport<QueryOptions>):
  *
  * @category GROQ
  */
-export function useQuery(options: WithResourceNameSupport<QueryOptions>): {
+export function useQuery(options: ReactQueryOptions): {
   data: unknown
   isPending: boolean
 } {

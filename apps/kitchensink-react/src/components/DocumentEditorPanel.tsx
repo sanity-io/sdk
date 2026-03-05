@@ -10,7 +10,7 @@ import {
   useDocument,
   useDocumentPermissions,
   useEditDocument,
-  useSanityInstance,
+  useResource,
 } from '@sanity/sdk-react'
 import {Box, Button, Card, Flex, Stack, Text, TextInput, Tooltip} from '@sanity/ui'
 import React, {useEffect, useState} from 'react'
@@ -50,14 +50,10 @@ export function DocumentEditorPanel({
   onDocumentIdChange,
 }: DocumentEditorPanelProps): React.JSX.Element {
   const apply = useApplyDocumentActions()
-  const instance = useSanityInstance()
+  const resource = useResource()!
 
   // document actions (editDocument, createDocument, publishDocument, etc.) come from core and require resource to be passed in
-  const strictHandle = {
-    ...docHandle,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
-  }
+  const strictHandle = {...docHandle, resource}
 
   const canEdit = useDocumentPermissions(editDocument(strictHandle))
   const canCreate = useDocumentPermissions(createDocument(strictHandle))

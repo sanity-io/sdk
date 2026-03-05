@@ -1,11 +1,9 @@
 import {type DocumentOptions, getDocumentState, resolveDocument} from '@sanity/sdk'
 import {type SanityDocument} from '@sanity/types'
 
+import {type DocumentHandle} from '../../config/handles'
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-import {
-  useNormalizedResourceOptions,
-  type WithResourceNameSupport,
-} from '../helpers/useNormalizedResourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 // used in an `{@link useDocumentProjection}` and `{@link useQuery}`
 // eslint-disable-next-line import/consistent-type-specifier-style, unused-imports/no-unused-imports
@@ -39,7 +37,7 @@ type UseDocumentOptions<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> = WithResourceNameSupport<DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>>
+> = DocumentHandle<TDocumentType, TDataset, TProjectId> & {path?: TPath}
 
 interface UseDocument {
   /**

@@ -30,7 +30,7 @@ function DocumentEditor({
   useDocumentEvent({...docHandle, onEvent: (e) => console.log(e)})
   const synced = useDocumentSyncStatus(docHandle)
 
-  const {data: document} = useDocument<Record<string, unknown>>(docHandle)
+  const {data: document} = useDocument(docHandle)
 
   return (
     <Box padding={4}>
@@ -70,7 +70,7 @@ function DocumentEditor({
             <Text size={1} weight="semibold">
               Document Content
             </Text>
-            {document && (
+            {document != null ? (
               <>
                 {/* Hidden element for e2e tests */}
                 <Box
@@ -92,7 +92,7 @@ function DocumentEditor({
                   showSyncStatus={false}
                 />
               </>
-            )}
+            ) : null}
           </Stack>
         </Card>
       </Stack>
@@ -101,6 +101,7 @@ function DocumentEditor({
 }
 
 function Editor() {
+  const resource = useResource()!
   const {data: documents} = useDocuments({
     documentType: 'author',
     batchSize: 1,
@@ -109,9 +110,6 @@ function Editor() {
   const [docHandle, setDocHandle] = useState<DocumentHandle<'author'> | null>(documents[0] ?? null)
   const [newDocumentId, setNewDocumentId] = useState<string>('')
   const [liveEditMode, setLiveEditMode] = useState<boolean>(false)
-  const resource = useResource()
-  const projectId = resource && 'projectId' in resource ? resource.projectId : ''
-  const dataset = resource && 'dataset' in resource ? resource.dataset : ''
 
   const handleLoadDocument = () => {
     const documentId = newDocumentId || docHandle?.documentId
@@ -120,8 +118,8 @@ function Editor() {
         createDocumentHandle({
           documentType: 'author',
           documentId,
-          resource: {projectId, dataset},
           liveEdit: liveEditMode,
+          resource,
         }),
       )
     }
@@ -133,6 +131,7 @@ function Editor() {
         documentType: 'author',
         documentId: newId,
         liveEdit: liveEditMode,
+        resource,
       }),
     )
   }
@@ -148,8 +147,8 @@ function Editor() {
         createDocumentHandle({
           documentType: 'author',
           documentId: docHandle.documentId,
-          resource: {projectId, dataset},
           liveEdit: liveEditMode,
+          resource,
         }),
       )
     }

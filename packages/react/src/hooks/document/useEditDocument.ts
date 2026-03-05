@@ -1,23 +1,20 @@
-import {
-  type ActionsResult,
-  type DocumentOptions,
-  editDocument,
-  getDocumentState,
-  resolveDocument,
-} from '@sanity/sdk'
+import {type ActionsResult, editDocument, getDocumentState, resolveDocument} from '@sanity/sdk'
 import {useCallback} from 'react'
 
+import {type DocumentHandle} from '../../config/handles'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {
-  useNormalizedResourceOptions,
-  type WithResourceNameSupport,
-} from '../helpers/useNormalizedResourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 import {useApplyDocumentActions} from './useApplyDocumentActions'
 
 const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
 
 type Updater<TValue> = TValue | ((currentValue: TValue) => TValue)
+
+/** React-layer edit document options: DocumentHandle with optional path */
+type EditDocumentOptions<TPath extends string | undefined = undefined> = DocumentHandle & {
+  path?: TPath
+}
 
 // Overload 1: Explicit type, no path
 /**
@@ -29,7 +26,7 @@ type Updater<TValue> = TValue | ((currentValue: TValue) => TValue)
  *          Returns a promise resolving to the {@link ActionsResult}.
  */
 export function useEditDocument<TData>(
-  options: WithResourceNameSupport<DocumentOptions<undefined>>,
+  options: EditDocumentOptions<undefined>,
 ): (nextValue: Updater<TData>) => Promise<ActionsResult>
 
 // Overload 2: Explicit type, path provided
@@ -42,7 +39,7 @@ export function useEditDocument<TData>(
  *          Returns a promise resolving to the {@link ActionsResult}.
  */
 export function useEditDocument<TData>(
-  options: WithResourceNameSupport<DocumentOptions<string>>,
+  options: EditDocumentOptions<string>,
 ): (nextValue: Updater<TData>) => Promise<ActionsResult>
 
 /**
@@ -165,9 +162,7 @@ export function useEditDocument<TData>(
 export function useEditDocument({
   path,
   ...doc
-}: WithResourceNameSupport<DocumentOptions<string | undefined>>): (
-  updater: Updater<unknown>,
-) => Promise<ActionsResult> {
+}: EditDocumentOptions<string | undefined>): (updater: Updater<unknown>) => Promise<ActionsResult> {
   const instance = useSanityInstance()
   trackHookUsage(instance, 'useEditDocument')
   const normalizedDoc = useNormalizedResourceOptions(doc)
