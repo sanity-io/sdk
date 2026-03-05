@@ -1,18 +1,17 @@
 import {omit} from 'lodash-es'
 
-import {getDefaultProjectId} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type GetUsersOptions, type SanityUserResponse, type UsersStoreState} from './types'
 import {DEFAULT_USERS_BATCH_SIZE} from './usersConstants'
 
 /** @internal */
 export const getUsersKey = (
-  instance: SanityInstance,
+  _instance: SanityInstance,
   {
     resourceType,
     organizationId,
     batchSize = DEFAULT_USERS_BATCH_SIZE,
-    projectId = getDefaultProjectId(instance.config),
+    projectId,
     userId,
   }: GetUsersOptions = {},
 ): string =>

@@ -16,7 +16,7 @@ import {createSanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {createFetchDocument, createSharedListener} from './sharedListener'
 
-const instance = createSanityInstance({defaultResource: {projectId: 'p', dataset: 'd'}})
+const instance = createSanityInstance()
 
 vi.mock('../client/clientStore.ts', () => ({getClientState: vi.fn()}))
 vi.mock('@sanity/mutate/_unstable_store', () => ({createDocumentLoaderFromClient: vi.fn()}))
@@ -43,7 +43,7 @@ describe('createSharedListener', () => {
   })
 
   it('should call client.listen with the expected parameters', () => {
-    createSharedListener(instance).events.subscribe()
+    createSharedListener(instance, {projectId: 'p', dataset: 'd'}).events.subscribe()
     expect(fakeClient.listen).toHaveBeenCalledTimes(1)
     expect(fakeClient.listen).toHaveBeenCalledWith(
       '*',
@@ -62,7 +62,7 @@ describe('createSharedListener', () => {
     const mutationEvent: MutationEvent = {type: 'mutation'} as MutationEvent
     const reconnectEvent: ReconnectEvent = {type: 'reconnect'} as ReconnectEvent
 
-    const sharedListener = createSharedListener(instance)
+    const sharedListener = createSharedListener(instance, {projectId: 'p', dataset: 'd'})
     // Start collecting the emitted events.
     const eventsPromise = lastValueFrom(sharedListener.events.pipe(toArray()))
 
@@ -80,7 +80,7 @@ describe('createSharedListener', () => {
   it('should replay the welcome event for new subscribers', async () => {
     const welcomeEvent: WelcomeEvent = {type: 'welcome', listenerName: 'listener'}
 
-    const sharedListener = createSharedListener(instance)
+    const sharedListener = createSharedListener(instance, {projectId: 'p', dataset: 'd'})
     // First subscription: emit welcome and complete.
     const firstPromise = lastValueFrom(sharedListener.events.pipe(toArray()))
     fakeListenSubject.next(welcomeEvent)
@@ -97,7 +97,7 @@ describe('createSharedListener', () => {
     const mutationEvent = {type: 'mutation'} as MutationEvent
     const reconnectEvent = {type: 'reconnect'} as ReconnectEvent
 
-    const sharedListener = createSharedListener(instance)
+    const sharedListener = createSharedListener(instance, {projectId: 'p', dataset: 'd'})
     const eventsPromise = lastValueFrom(sharedListener.events.pipe(toArray()))
     fakeListenSubject.next(mutationEvent)
     fakeListenSubject.next(reconnectEvent)
@@ -110,7 +110,7 @@ describe('createSharedListener', () => {
     const welcomeEvent = {type: 'welcome'} as WelcomeEvent
     const mutationEvent = {type: 'mutation'} as MutationEvent
 
-    const sharedListener = createSharedListener(instance)
+    const sharedListener = createSharedListener(instance, {projectId: 'p', dataset: 'd'})
 
     // Subscribe two observers concurrently.
     const subscriber1 = sharedListener.events.pipe(bufferTime(0))
@@ -133,7 +133,7 @@ describe('createSharedListener', () => {
 
   it('should propagate errors from the underlying client.listen observable', async () => {
     const errorMessage = 'Test error'
-    const sharedListener = createSharedListener(instance)
+    const sharedListener = createSharedListener(instance, {projectId: 'p', dataset: 'd'})
 
     const error$ = sharedListener.events.pipe(
       toArray(),
@@ -149,7 +149,7 @@ describe('createSharedListener', () => {
   it('should stop emitting events after calling dispose', async () => {
     const welcomeEvent: WelcomeEvent = {type: 'welcome', listenerName: 'listener'}
     const mutationEvent: MutationEvent = {type: 'mutation'} as MutationEvent
-    const sharedListener = createSharedListener(instance)
+    const sharedListener = createSharedListener(instance, {projectId: 'p', dataset: 'd'})
 
     const events: ListenEvent<SanityDocument>[] = []
     const subscription = sharedListener.events.subscribe((event) => {
@@ -187,7 +187,7 @@ describe('createFetchDocument', () => {
   })
 
   it('should call createDocumentLoaderFromClient with the fetched client', async () => {
-    const fetchDocument = createFetchDocument(instance)
+    const fetchDocument = createFetchDocument(instance, {projectId: 'p', dataset: 'd'})
     const accessibleResult = {
       id: 'doc1',
       document: {_id: 'doc1', _rev: 'rev1'},
@@ -201,7 +201,7 @@ describe('createFetchDocument', () => {
   })
 
   it('should return the document when it is accessible', async () => {
-    const fetchDocument = createFetchDocument(instance)
+    const fetchDocument = createFetchDocument(instance, {projectId: 'p', dataset: 'd'})
     const accessibleResult = {
       id: 'doc1',
       document: {_id: 'doc1', _rev: 'rev1', title: 'Test Document'},
@@ -214,7 +214,7 @@ describe('createFetchDocument', () => {
   })
 
   it('should return null when the document is inaccessible due to existence', async () => {
-    const fetchDocument = createFetchDocument(instance)
+    const fetchDocument = createFetchDocument(instance, {projectId: 'p', dataset: 'd'})
     const inaccessibleResult = {
       accessible: false,
       id: 'doc1',
@@ -227,7 +227,7 @@ describe('createFetchDocument', () => {
   })
 
   it('should throw an error when the document is inaccessible due to permissions', async () => {
-    const fetchDocument = createFetchDocument(instance)
+    const fetchDocument = createFetchDocument(instance, {projectId: 'p', dataset: 'd'})
     const inaccessibleResult = {
       accessible: false,
       id: 'doc1',
@@ -241,7 +241,7 @@ describe('createFetchDocument', () => {
   })
 
   it('should propagate errors from the loadDocument observable', async () => {
-    const fetchDocument = createFetchDocument(instance)
+    const fetchDocument = createFetchDocument(instance, {projectId: 'p', dataset: 'd'})
     const errorMessage = 'Load document failed'
     fakeLoadDocument.mockReturnValue(throwError(() => new Error(errorMessage)))
 

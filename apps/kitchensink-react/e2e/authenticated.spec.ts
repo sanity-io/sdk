@@ -4,9 +4,6 @@ test.describe('Authenticated', () => {
   test('Kitchen sink loads when authenticated', async ({page, getPageContext}) => {
     await page.goto('./')
 
-    // wait a bit -- the redirect can happen too quickly and then be misleading
-    await page.waitForTimeout(1000)
-
     // we may be in an iframe or just a page -- get the right locators
     const pageContext = await getPageContext(page)
 

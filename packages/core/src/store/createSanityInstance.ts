@@ -1,4 +1,4 @@
-import {getDefaultDatasetResource, type SanityConfig} from '../config/sanityConfig'
+import {type SanityConfig} from '../config/sanityConfig'
 import {insecureRandomId} from '../utils/ids'
 import {createLogger, type InstanceContext} from '../utils/logger'
 
@@ -48,26 +48,19 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
   const instanceId = crypto.randomUUID()
   const disposeListeners = new Map<string, () => void>()
   const disposed = {current: false}
-  const defaultResource = getDefaultDatasetResource(config)
 
   const instanceContext: InstanceContext = {
     instanceId,
-    projectId: defaultResource?.projectId,
-    dataset: defaultResource?.dataset,
   }
 
   const logger = createLogger('sdk', {instanceContext})
 
   logger.info('Sanity instance created', {
-    hasProjectId: !!defaultResource?.projectId,
-    hasDefaultResource: !!config.defaultResource,
     hasAuth: !!config.auth,
     hasPerspective: !!config.perspective,
   })
 
   logger.debug('Instance configuration', {
-    projectId: defaultResource?.projectId,
-    dataset: defaultResource?.dataset,
     perspective: config.perspective,
     hasStudioConfig: !!config.studio,
     hasStudioTokenSource: !!config.studio?.auth?.token,

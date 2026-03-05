@@ -4,16 +4,16 @@ import {
   AuthStateType,
   getClientErrorApiBody,
   getClientErrorApiDescription,
-  getDefaultProjectId,
+  isDatasetResource,
   isProjectUserNotFoundClientError,
 } from '@sanity/sdk'
-import {useCallback, useEffect, useState} from 'react'
+import {useCallback, useContext, useEffect, useState} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
+import {ResourceContext} from '../../context/DefaultResourceContext'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLogOut} from '../../hooks/auth/useLogOut'
 import {useWindowConnection} from '../../hooks/comlink/useWindowConnection'
-import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 import {Error} from '../errors/Error'
 import {AuthError} from './AuthError'
 import {ConfigurationError} from './ConfigurationError'
@@ -40,8 +40,8 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
 
   const logout = useLogOut()
   const authState = useAuthState()
-  const instance = useSanityInstance()
-  const projectId = getDefaultProjectId(instance.config)
+  const resource = useContext(ResourceContext)
+  const projectId = resource && isDatasetResource(resource) ? resource.projectId : undefined
 
   const [authErrorMessage, setAuthErrorMessage] = useState(
     'Please try again or contact support if the problem persists.',

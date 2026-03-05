@@ -23,7 +23,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle} from '../config/sanityConfig'
+import {type ResourceHandle} from '../config/sanityConfig'
 /*
  * Although this is an import dependency cycle, it is not a logical cycle:
  * 1. queryStore uses getPerspectiveState when resolving release perspectives
@@ -70,7 +70,7 @@ export interface QueryOptions<
 >
   extends
     Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'>,
-    DatasetHandle<TDataset, TProjectId> {
+    ResourceHandle<TDataset, TProjectId> {
   query: TQuery
   params?: Record<string, unknown>
 }
@@ -172,8 +172,6 @@ const listenForNewSubscribersAndFetch = ({
             const {
               query,
               params,
-              projectId,
-              dataset,
               tag,
               resource,
               perspective: perspectiveFromOptions,
@@ -185,6 +183,7 @@ const listenForNewSubscribersAndFetch = ({
             const perspective$ = isReleasePerspective(perspectiveFromOptions)
               ? getPerspectiveState(instance, {
                   perspective: perspectiveFromOptions,
+                  resource: resource ?? boundResource,
                 }).observable.pipe(filter(Boolean))
               : of(perspectiveFromOptions ?? QUERY_STORE_DEFAULT_PERSPECTIVE)
 
@@ -196,8 +195,6 @@ const listenForNewSubscribersAndFetch = ({
             // resource while using the root app instance).
             const client$ = getClientState(instance, {
               apiVersion: QUERY_STORE_API_VERSION,
-              projectId,
-              dataset,
               resource: resource ?? boundResource,
             }).observable
 

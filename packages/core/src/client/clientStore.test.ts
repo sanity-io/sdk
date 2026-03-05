@@ -33,9 +33,7 @@ beforeEach(() => {
   vi.mocked(createClient).mockImplementation(
     (clientConfig) => ({config: () => clientConfig}) as SanityClient,
   )
-  instance = createSanityInstance({
-    defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
-  })
+  instance = createSanityInstance()
 })
 
 afterEach(() => {
@@ -44,29 +42,6 @@ afterEach(() => {
 
 describe('clientStore', () => {
   describe('getClient', () => {
-    it('should create a client with default configuration', () => {
-      const client = getClient(instance, {apiVersion: '2024-11-12'})
-
-      const defaultConfiguration = {
-        useCdn: false,
-        ignoreBrowserTokenWarning: true,
-        allowReconfigure: false,
-        requestTagPrefix: 'sanity.sdk',
-        projectId: 'test-project',
-        dataset: 'test-dataset',
-        token: 'initial-token',
-      }
-
-      expect(vi.mocked(createClient)).toHaveBeenCalledWith({
-        ...defaultConfiguration,
-        apiVersion: '2024-11-12',
-      })
-      expect(client.config()).toEqual({
-        ...defaultConfiguration,
-        apiVersion: '2024-11-12',
-      })
-    })
-
     it('should throw when using disallowed configuration keys', () => {
       expect(() =>
         getClient(instance, {

@@ -32,17 +32,15 @@ type UseActiveReleases = {
   (options?: WithResourceNameSupport<{resource?: DocumentResource}> | undefined): ReleaseDocument[]
 }
 
-const useActiveReleasesValue: UseActiveReleases = createStateSourceHook({
+const useActiveReleasesValue = createStateSourceHook({
   getState: getActiveReleasesState as (
     instance: SanityInstance,
-    options?: {resource?: DocumentResource},
+    options: {resource: DocumentResource},
   ) => StateSource<ReleaseDocument[]>,
-  shouldSuspend: (instance: SanityInstance, options?: {resource?: DocumentResource}) =>
-    getActiveReleasesState(instance, options ?? {}).getCurrent() === undefined,
-  suspender: (instance: SanityInstance, options?: {resource?: DocumentResource}) =>
-    firstValueFrom(
-      getActiveReleasesState(instance, options ?? {}).observable.pipe(filter(Boolean)),
-    ),
+  shouldSuspend: (instance: SanityInstance, options: {resource: DocumentResource}) =>
+    getActiveReleasesState(instance, options).getCurrent() === undefined,
+  suspender: (instance: SanityInstance, options: {resource: DocumentResource}) =>
+    firstValueFrom(getActiveReleasesState(instance, options).observable.pipe(filter(Boolean))),
 })
 
 /**
@@ -50,7 +48,7 @@ const useActiveReleasesValue: UseActiveReleases = createStateSourceHook({
  * @function
  */
 export const useActiveReleases: UseActiveReleases = (
-  options: WithResourceNameSupport<{resource?: DocumentResource}> | undefined,
+  options: WithResourceNameSupport<{resource: DocumentResource}> | undefined,
 ) => {
   const normalizedOptions = useNormalizedResourceOptions(options ?? {})
   return useActiveReleasesValue(normalizedOptions)

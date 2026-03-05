@@ -101,7 +101,6 @@ test.describe('Releases Route', () => {
     const documentIdInput = pageContext.locator('input[placeholder="Enter document ID"]')
     await expect(documentIdInput).toBeVisible()
     await documentIdInput.fill(testDocId)
-    await page.waitForTimeout(2000)
 
     const projectionCard = pageContext.getByTestId('document-projection-card')
     await projectionCard.scrollIntoViewIfNeeded()

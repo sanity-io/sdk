@@ -1,9 +1,8 @@
 import {type DocumentHandle, getProjectionState, resolveProjection} from '@sanity/sdk'
-import {act, render, screen} from '@testing-library/react'
 import {useRef} from 'react'
 import {type Mock} from 'vitest'
 
-import {ResourceProvider} from '../../context/ResourceProvider'
+import {act, render, screen} from '../../../test/test-utils'
 import {useDocumentProjection} from './useDocumentProjection'
 
 // Mock IntersectionObserver
@@ -40,6 +39,7 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
 const mockDocument: DocumentHandle = {
   documentId: 'doc1',
   documentType: 'exampleType',
+  resource: {projectId: 'p', dataset: 'd'},
 }
 
 interface ProjectionResult {
@@ -85,11 +85,7 @@ describe('useDocumentProjection', () => {
     const eventsUnsubscribe = vi.fn()
     subscribe.mockImplementation(() => eventsUnsubscribe)
 
-    render(
-      <ResourceProvider fallback={<div>Loading...</div>}>
-        <TestComponent document={mockDocument} projection="{name, description}" />
-      </ResourceProvider>,
-    )
+    render(<TestComponent document={mockDocument} projection="{name, description}" />)
 
     // Initially, element is not intersecting
     expect(screen.getByText('Initial Title')).toBeInTheDocument()
@@ -135,11 +131,7 @@ describe('useDocumentProjection', () => {
     // Setup subscription that does nothing (we'll manually trigger updates)
     subscribe.mockReturnValue(() => {})
 
-    render(
-      <ResourceProvider fallback={<div>Loading...</div>}>
-        <TestComponent document={mockDocument} projection="{title, description}" />
-      </ResourceProvider>,
-    )
+    render(<TestComponent document={mockDocument} projection="{title, description}" />)
 
     await act(async () => {
       intersectionObserverCallback([{isIntersecting: true} as IntersectionObserverEntry])
@@ -162,11 +154,7 @@ describe('useDocumentProjection', () => {
     })
     subscribe.mockImplementation(() => vi.fn())
 
-    render(
-      <ResourceProvider fallback={<div>Loading...</div>}>
-        <TestComponent document={mockDocument} projection="{title, description}" />
-      </ResourceProvider>,
-    )
+    render(<TestComponent document={mockDocument} projection="{title, description}" />)
 
     expect(screen.getByText('Fallback Title')).toBeInTheDocument()
 
@@ -182,11 +170,7 @@ describe('useDocumentProjection', () => {
     const eventsUnsubscribe = vi.fn()
     subscribe.mockImplementation(() => eventsUnsubscribe)
 
-    const {rerender} = render(
-      <ResourceProvider fallback={<div>Loading...</div>}>
-        <TestComponent document={mockDocument} projection="{title}" />
-      </ResourceProvider>,
-    )
+    const {rerender} = render(<TestComponent document={mockDocument} projection="{title}" />)
 
     // Change projection
     getCurrent.mockReturnValue({
@@ -194,11 +178,7 @@ describe('useDocumentProjection', () => {
       isPending: false,
     })
 
-    rerender(
-      <ResourceProvider fallback={<div>Loading...</div>}>
-        <TestComponent document={mockDocument} projection="{title, description}" />
-      </ResourceProvider>,
-    )
+    rerender(<TestComponent document={mockDocument} projection="{title, description}" />)
 
     expect(screen.getByText('Updated Title')).toBeInTheDocument()
     expect(screen.getByText('Added Description')).toBeInTheDocument()
@@ -222,11 +202,7 @@ describe('useDocumentProjection', () => {
       )
     }
 
-    render(
-      <ResourceProvider fallback={<div>Loading...</div>}>
-        <NoRefComponent {...mockDocument} projection="{title, description}" />
-      </ResourceProvider>,
-    )
+    render(<NoRefComponent {...mockDocument} projection="{title, description}" />)
 
     // Should subscribe immediately without waiting for intersection
     expect(subscribe).toHaveBeenCalled()
@@ -255,11 +231,7 @@ describe('useDocumentProjection', () => {
       )
     }
 
-    render(
-      <ResourceProvider fallback={<div>Loading...</div>}>
-        <NonHtmlRefComponent {...mockDocument} projection="{title, description}" />
-      </ResourceProvider>,
-    )
+    render(<NonHtmlRefComponent {...mockDocument} projection="{title, description}" />)
 
     // Should subscribe immediately without waiting for intersection
     expect(subscribe).toHaveBeenCalled()

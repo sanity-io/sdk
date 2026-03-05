@@ -7,13 +7,13 @@ import {createSanityInstance} from '../store/createSanityInstance'
 import {createStoreState} from '../store/createStoreState'
 import {AuthStateType} from './authStateType'
 import {type AuthState, authStore} from './authStore'
-// Import only the public function
 import {
   getLastRefreshTime,
   getNextRefreshDelay,
   refreshStampedToken,
   setLastRefreshTime,
 } from './refreshStampedToken'
+import {createLoggedInAuthState} from './utils'
 
 // Type definitions for Web Locks (can be kept if needed for context)
 // ... (Lock, LockOptions, LockGrantedCallback types)
@@ -118,7 +118,6 @@ describe('refreshStampedToken', () => {
       }
       const mockClientFactory = vi.fn().mockReturnValue(mockClient)
       const instance = createSanityInstance({
-        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
       })
       const initialState = authStore.getInitialState(instance, null)
@@ -146,6 +145,126 @@ describe('refreshStampedToken', () => {
       expect(locksRequest).not.toHaveBeenCalled()
     })
 
+    it('does not refresh on visibility change when lastTokenRefresh is recent', async () => {
+      const mockClient = {
+        observable: {request: vi.fn(() => of({token: 'sk-refreshed-token-st123'}))},
+      }
+      const mockClientFactory = vi.fn().mockReturnValue(mockClient)
+      const instance = createSanityInstance({
+        defaultResource: {projectId: 'p', dataset: 'd'},
+        auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
+      })
+      const initialState = authStore.getInitialState(instance, null)
+      initialState.authState = createLoggedInAuthState('sk-initial-token-st123', null)
+      initialState.dashboardContext = {mode: 'test'}
+      const state = createStoreState(initialState)
+
+      const subscription = refreshStampedToken({state, instance, key: null})
+      subscriptions.push(subscription)
+
+      const addEventListenerMock = global.document.addEventListener as ReturnType<typeof vi.fn>
+      expect(addEventListenerMock).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
+      const visibilityHandler = addEventListenerMock.mock.calls[0][1] as () => void
+
+      Object.defineProperty(global.document, 'visibilityState', {
+        value: 'visible',
+        writable: true,
+        configurable: true,
+      })
+
+      visibilityHandler()
+      await vi.advanceTimersByTimeAsync(100)
+
+      expect(mockClient.observable.request).not.toHaveBeenCalled()
+      const finalAuthState = state.get().authState
+      if (finalAuthState.type === AuthStateType.LOGGED_IN) {
+        expect(finalAuthState.token).toBe('sk-initial-token-st123')
+      }
+    })
+
+    it('refreshes on visibility change when lastTokenRefresh is stale', async () => {
+      const REFRESH_INTERVAL = 12 * 60 * 60 * 1000
+      const mockClient = {
+        observable: {request: vi.fn(() => of({token: 'sk-refreshed-token-st123'}))},
+      }
+      const mockClientFactory = vi.fn().mockReturnValue(mockClient)
+      const instance = createSanityInstance({
+        defaultResource: {projectId: 'p', dataset: 'd'},
+        auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
+      })
+      const initialState = authStore.getInitialState(instance, null)
+      const staleTimestamp = Date.now() - REFRESH_INTERVAL - 1000
+      initialState.authState = {
+        type: AuthStateType.LOGGED_IN,
+        token: 'sk-initial-token-st123',
+        currentUser: null,
+        lastTokenRefresh: staleTimestamp,
+      }
+      initialState.dashboardContext = {mode: 'test'}
+      const state = createStoreState(initialState)
+
+      const subscription = refreshStampedToken({state, instance, key: null})
+      subscriptions.push(subscription)
+
+      const addEventListenerMock = global.document.addEventListener as ReturnType<typeof vi.fn>
+      expect(addEventListenerMock).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
+      const visibilityHandler = addEventListenerMock.mock.calls[0][1] as () => void
+
+      Object.defineProperty(global.document, 'visibilityState', {
+        value: 'visible',
+        writable: true,
+        configurable: true,
+      })
+
+      visibilityHandler()
+      await vi.advanceTimersToNextTimerAsync()
+
+      expect(mockClient.observable.request).toHaveBeenCalled()
+      const finalAuthState = state.get().authState
+      if (finalAuthState.type === AuthStateType.LOGGED_IN) {
+        expect(finalAuthState.token).toBe('sk-refreshed-token-st123')
+        expect(finalAuthState.lastTokenRefresh).toBeGreaterThan(staleTimestamp)
+      }
+    })
+
+    it('refreshes on visibility change when lastTokenRefresh is undefined (pre-fix behavior)', async () => {
+      const mockClient = {
+        observable: {request: vi.fn(() => of({token: 'sk-refreshed-token-st123'}))},
+      }
+      const mockClientFactory = vi.fn().mockReturnValue(mockClient)
+      const instance = createSanityInstance({
+        defaultResource: {projectId: 'p', dataset: 'd'},
+        auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
+      })
+      const initialState = authStore.getInitialState(instance, null)
+      initialState.authState = {
+        type: AuthStateType.LOGGED_IN,
+        token: 'sk-initial-token-st123',
+        currentUser: null,
+        // lastTokenRefresh intentionally omitted to demonstrate the old bug
+      }
+      initialState.dashboardContext = {mode: 'test'}
+      const state = createStoreState(initialState)
+
+      const subscription = refreshStampedToken({state, instance, key: null})
+      subscriptions.push(subscription)
+
+      const addEventListenerMock = global.document.addEventListener as ReturnType<typeof vi.fn>
+      const visibilityHandler = addEventListenerMock.mock.calls[0][1] as () => void
+
+      Object.defineProperty(global.document, 'visibilityState', {
+        value: 'visible',
+        writable: true,
+        configurable: true,
+      })
+
+      visibilityHandler()
+      await vi.advanceTimersToNextTimerAsync()
+
+      // Without lastTokenRefresh, shouldRefreshToken returns true — this is the bug
+      expect(mockClient.observable.request).toHaveBeenCalled()
+    })
+
     it('does not refresh when tab is not visible', async () => {
       // Set visibility to hidden
       Object.defineProperty(global, 'document', {
@@ -163,7 +282,6 @@ describe('refreshStampedToken', () => {
       }
       const mockClientFactory = vi.fn().mockReturnValue(mockClient)
       const instance = createSanityInstance({
-        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
       })
       const initialState = authStore.getInitialState(instance, null)
@@ -196,7 +314,6 @@ describe('refreshStampedToken', () => {
       const mockClient = {observable: {request: vi.fn()}}
       const mockClientFactory = vi.fn().mockReturnValue(mockClient)
       const instance = createSanityInstance({
-        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
       })
       const initialState = authStore.getInitialState(instance, null)
@@ -246,7 +363,6 @@ describe('refreshStampedToken', () => {
         }
         const mockClientFactory = vi.fn().mockReturnValue(mockClient)
         const instance = createSanityInstance({
-          defaultResource: {projectId: 'p', dataset: 'd'},
           auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
         })
         const initialState = authStore.getInitialState(instance, null)
@@ -295,7 +411,6 @@ describe('refreshStampedToken', () => {
         }
         const mockClientFactory = vi.fn().mockReturnValue(mockClient)
         const instance = createSanityInstance({
-          defaultResource: {projectId: 'p', dataset: 'd'},
           auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
         })
         const initialState = authStore.getInitialState(instance, null)
@@ -340,7 +455,6 @@ describe('refreshStampedToken', () => {
     const mockClient = {observable: {request: vi.fn(() => throwError(() => error))}}
     const mockClientFactory = vi.fn().mockReturnValue(mockClient)
     const instance = createSanityInstance({
-      defaultResource: {projectId: 'p', dataset: 'd'},
       auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
     })
     const initialState = authStore.getInitialState(instance, null)
@@ -368,7 +482,6 @@ describe('refreshStampedToken', () => {
   it('does nothing if user is not logged in', async () => {
     const mockClientFactory = vi.fn()
     const instance = createSanityInstance({
-      defaultResource: {projectId: 'p', dataset: 'd'},
       auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
     })
     const initialState = authStore.getInitialState(instance, null)
@@ -393,7 +506,6 @@ describe('refreshStampedToken', () => {
     const mockClient = {observable: {request: vi.fn()}}
     const mockClientFactory = vi.fn().mockReturnValue(mockClient)
     const instance = createSanityInstance({
-      defaultResource: {projectId: 'p', dataset: 'd'},
       auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
     })
     const initialState = authStore.getInitialState(instance, null)

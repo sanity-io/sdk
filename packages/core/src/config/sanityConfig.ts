@@ -40,14 +40,12 @@ export interface StudioConfig {
      */
     token?: TokenSource
   }
-}
-
-/**
- * Represents the minimal configuration required to identify a Sanity project.
- * @public
- */
-export interface ProjectHandle<TProjectId extends string = string> {
-  projectId?: TProjectId
+  /**
+   * The project ID for this Studio workspace.
+   * Used to derive the localStorage key for studio auth token discovery
+   * (`__studio_auth_token_<projectId>`) and for project-specific API hostname requests.
+   */
+  projectId?: string
 }
 
 /**
@@ -68,14 +66,15 @@ export interface PerspectiveHandle {
 /**
  * @public
  */
-export interface DatasetHandle<TDataset extends string = string, TProjectId extends string = string>
-  extends ProjectHandle<TProjectId>, PerspectiveHandle {
-  dataset?: TDataset
+export interface ResourceHandle<
+  TProjectId extends string = string,
+  TDataset extends string = string,
+> extends PerspectiveHandle {
   /**
-   * @beta
    * Explicit resource object to use for this operation.
+   * @public
    */
-  resource?: DocumentResource
+  resource: DocumentResource<TProjectId, TDataset>
 }
 
 /**
@@ -88,7 +87,7 @@ export interface DocumentTypeHandle<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> extends DatasetHandle<TDataset, TProjectId> {
+> extends ResourceHandle<TDataset, TProjectId> {
   documentId?: string
   documentType: TDocumentType
   /**
@@ -147,7 +146,6 @@ export const DEFAULT_RESOURCE_NAME = 'default'
  *   defaultResource: { projectId: 'abc123', dataset: 'production' },
  * })
  * ```
- *
  * @public
  */
 export interface SanityConfig extends PerspectiveHandle {
@@ -164,48 +162,58 @@ export interface SanityConfig extends PerspectiveHandle {
    * `SDKStudioContext` provider. Can also be set explicitly for programmatic use.
    */
   studio?: StudioConfig
-
   /**
-   * The default document resource for this instance. Used by auth (projectId),
-   * client fallback, and logging when no explicit resource is provided.
+   * The default document resource for this instance. Used by bound actions
+   * when no explicit resource is provided.
    *
-   * @beta
+   * @public
    */
   defaultResource?: DocumentResource
 }
 
 /**
- * A document resource can be used for querying.
- * This will soon be the default way to identify where you are querying from.
+ * A document resource identifies where data is stored and queried from.
+ * Can be a dataset (project + dataset pair), a media library, or a canvas.
  *
- * @beta
+ * @public
  */
-export type DocumentResource = DatasetResource | MediaLibraryResource | CanvasResource
+export type DocumentResource<
+  TProjectId extends string = string,
+  TDataset extends string = string,
+> = DatasetResource<TProjectId, TDataset> | MediaLibraryResource | CanvasResource
 
 /**
- * @beta
+ * A resource that targets a specific project and dataset.
+ * @public
  */
-export type DatasetResource = {projectId: string; dataset: string}
+export type DatasetResource<
+  TProjectId extends string = string,
+  TDataset extends string = string,
+> = {projectId: TProjectId; dataset: TDataset}
 
 /**
- * @beta
+ * A resource that targets a media library.
+ * @public
  */
 export type MediaLibraryResource = {mediaLibraryId: string}
 
 /**
- * @beta
+ * A resource that targets a canvas.
+ * @public
  */
 export type CanvasResource = {canvasId: string}
 
 /**
- * @beta
+ * Type guard that checks whether a {@link DocumentResource} is a {@link DatasetResource}.
+ * @public
  */
 export function isDatasetResource(resource: DocumentResource): resource is DatasetResource {
   return 'projectId' in resource && 'dataset' in resource
 }
 
 /**
- * @beta
+ * Type guard that checks whether a {@link DocumentResource} is a {@link MediaLibraryResource}.
+ * @public
  */
 export function isMediaLibraryResource(
   resource: DocumentResource,
@@ -214,46 +222,9 @@ export function isMediaLibraryResource(
 }
 
 /**
- * @beta
+ * Type guard that checks whether a {@link DocumentResource} is a {@link CanvasResource}.
+ * @public
  */
 export function isCanvasResource(resource: DocumentResource): resource is CanvasResource {
   return 'canvasId' in resource
-}
-
-/**
- * Resolves the default `DocumentResource` from a `SanityConfig`.
- *
- * @internal
- */
-export function resolveDefaultResource(config: SanityConfig): DocumentResource | undefined {
-  return config.defaultResource
-}
-
-/**
- * Extracts the `projectId` from the config's default resource.
- * Returns `undefined` when no default resource exists or it is not a
- * {@link DatasetResource}.
- *
- * Useful for project-level operations (auth, CORS, project API) that
- * need a projectId but should not depend on data-targeting config.
- *
- * @internal
- */
-export function getDefaultProjectId(config: SanityConfig): string | undefined {
-  const resource = resolveDefaultResource(config)
-  if (resource && isDatasetResource(resource)) return resource.projectId
-  return undefined
-}
-
-/**
- * Extracts `projectId` and `dataset` from the config's default resource.
- * Returns `undefined` when no default resource exists or it is not a
- * {@link DatasetResource}.
- *
- * @internal
- */
-export function getDefaultDatasetResource(config: SanityConfig): DatasetResource | undefined {
-  const resource = resolveDefaultResource(config)
-  if (resource && isDatasetResource(resource)) return resource
-  return undefined
 }

@@ -16,8 +16,7 @@ describe('useDispatchIntent', () => {
   const mockDocumentHandle: DocumentHandle = {
     documentId: 'test-document-id',
     documentType: 'test-document-type',
-    projectId: 'test-project-id',
-    dataset: 'test-dataset',
+    resource: {projectId: 'test-project-id', dataset: 'test-dataset'},
   }
 
   beforeEach(() => {
@@ -92,8 +91,7 @@ describe('useDispatchIntent', () => {
     const newDocumentHandle: DocumentHandle = {
       documentId: 'new-document-id',
       documentType: 'new-document-type',
-      projectId: 'new-project-id',
-      dataset: 'new-dataset',
+      resource: {projectId: 'new-project-id', dataset: 'new-dataset'},
     }
 
     rerender({action: 'edit' as const, documentHandle: newDocumentHandle})

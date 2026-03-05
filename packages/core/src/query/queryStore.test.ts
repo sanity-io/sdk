@@ -48,7 +48,7 @@ describe('queryStore', () => {
   }
 
   beforeEach(() => {
-    instance = createSanityInstance({defaultResource: {projectId: 'test', dataset: 'test'}})
+    instance = createSanityInstance()
 
     fetch = vi
       .fn()
@@ -80,7 +80,7 @@ describe('queryStore', () => {
 
   it('initializes query state and cleans up after unsubscribe', async () => {
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, resource: {projectId: 'p', dataset: 'd'}})
 
     // Initially undefined before subscription
     expect(state.getCurrent()).toBeUndefined()
@@ -109,7 +109,7 @@ describe('queryStore', () => {
 
   it('maintains state when multiple subscribers exist', async () => {
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, resource: {projectId: 'p', dataset: 'd'}})
 
     // Add two subscribers
     const unsubscribe1 = state.subscribe()
@@ -146,13 +146,13 @@ describe('queryStore', () => {
   it('resolveQuery works without affecting subscriber cleanup', async () => {
     const query = '*[_type == "movie"]'
 
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, resource: {projectId: 'p', dataset: 'd'}})
 
     // Check that getQueryState starts undefined
     expect(state.getCurrent()).toBeUndefined()
 
     // Use resolveQuery which should not add a subscriber
-    const result = await resolveQuery(instance, {query})
+    const result = await resolveQuery(instance, {query, resource: {projectId: 'p', dataset: 'd'}})
     expect(result).toEqual([
       {_id: 'movie1', _type: 'movie', title: 'Movie 1'},
       {_id: 'movie2', _type: 'movie', title: 'Movie 2'},
@@ -179,7 +179,11 @@ describe('queryStore', () => {
     const abortController = new AbortController()
 
     // Create a promise that will reject when aborted
-    const queryPromise = resolveQuery(instance, {query, signal: abortController.signal})
+    const queryPromise = resolveQuery(instance, {
+      query,
+      resource: {projectId: 'p', dataset: 'd'},
+      signal: abortController.signal,
+    })
 
     // Abort the request
     abortController.abort()
@@ -188,7 +192,9 @@ describe('queryStore', () => {
     await expect(queryPromise).rejects.toThrow('The operation was aborted.')
 
     // Verify state is cleared after abort
-    expect(getQueryState(instance, {query}).getCurrent()).toBeUndefined()
+    expect(
+      getQueryState(instance, {query, resource: {projectId: 'p', dataset: 'd'}}).getCurrent(),
+    ).toBeUndefined()
   })
 
   it('refetches query when receiving live event with matching sync tag', async () => {
@@ -207,7 +213,10 @@ describe('queryStore', () => {
     )
 
     const query = '*[_type == "movie"]'
-    const state = getQueryState<{_id: string; _type: string; title: string}[]>(instance, {query})
+    const state = getQueryState<{_id: string; _type: string; title: string}[]>(instance, {
+      query,
+      resource: {projectId: 'p', dataset: 'd'},
+    })
 
     const unsubscribe = state.subscribe()
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -238,7 +247,7 @@ describe('queryStore', () => {
     )
 
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, resource: {projectId: 'p', dataset: 'd'}})
 
     const unsubscribe = state.subscribe()
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -271,7 +280,7 @@ describe('queryStore', () => {
     )
 
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, resource: {projectId: 'p', dataset: 'd'}})
 
     const unsubscribe = state.subscribe()
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -308,7 +317,7 @@ describe('queryStore', () => {
     )
 
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, resource: {projectId: 'p', dataset: 'd'}})
     const unsubscribe = state.subscribe()
 
     // Verify error is thrown when accessing state
@@ -319,7 +328,7 @@ describe('queryStore', () => {
 
   it('delays query state removal after unsubscribe', async () => {
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, resource: {projectId: 'p', dataset: 'd'}})
     const unsubscribe = state.subscribe()
 
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -335,7 +344,7 @@ describe('queryStore', () => {
 
   it('preserves query state if a new subscriber subscribes before cleanup delay', async () => {
     const query = '*[_type == "movie"]'
-    const state = getQueryState(instance, {query})
+    const state = getQueryState(instance, {query, resource: {projectId: 'p', dataset: 'd'}})
     const unsubscribe1 = state.subscribe()
 
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
@@ -373,18 +382,20 @@ describe('queryStore', () => {
     }) as SanityClient['observable']['fetch'])
 
     const draftsInstance = createSanityInstance({
-      defaultResource: {projectId: 'test', dataset: 'test'},
       perspective: 'drafts',
     })
     const publishedInstance = createSanityInstance({
-      defaultResource: {projectId: 'test', dataset: 'test'},
       perspective: 'published',
     })
 
     // Same query/options, different implicit perspectives via instance.config
-    const sDrafts = getQueryState<{_id: string}[]>(draftsInstance, {query: '*[_type == "movie"]'})
+    const sDrafts = getQueryState<{_id: string}[]>(draftsInstance, {
+      query: '*[_type == "movie"]',
+      resource: {projectId: 'p', dataset: 'd'},
+    })
     const sPublished = getQueryState<{_id: string}[]>(publishedInstance, {
       query: '*[_type == "movie"]',
+      resource: {projectId: 'p', dataset: 'd'},
     })
 
     const unsubDrafts = sDrafts.subscribe()
@@ -416,15 +427,17 @@ describe('queryStore', () => {
       >
     }) as SanityClient['observable']['fetch'])
 
-    const base = createSanityInstance({defaultResource: {projectId: 'test', dataset: 'test'}})
+    const base = createSanityInstance()
 
     const sDrafts = getQueryState<{_id: string}[]>(base, {
       query: '*[_type == "movie"]',
       perspective: 'drafts',
+      resource: {projectId: 'p', dataset: 'd'},
     })
     const sPublished = getQueryState<{_id: string}[]>(base, {
       query: '*[_type == "movie"]',
       perspective: 'published',
+      resource: {projectId: 'p', dataset: 'd'},
     })
 
     const unsubDrafts = sDrafts.subscribe()
@@ -491,16 +504,14 @@ describe('queryStore', () => {
     unsubscribe()
   })
 
-  it('uses bound resource (not instance default) when a shared store receives a query without an explicit resource', async () => {
+  it('uses bound resource when a shared store receives a query with the same explicit resource', async () => {
     // Regression test: when a store for source B is first created by an
-    // instance whose default source is A (passing source B explicitly),
-    // subsequent queries added to that store without an explicit source
-    // must still use resource B for client creation — not fall back to the
-    // captured instance's default resource A.
-    const projectASource = {projectId: 'project-a', dataset: 'production'}
+    // instance (passing source B explicitly), subsequent queries added to
+    // that store by a different instance (also passing source B explicitly)
+    // must still use resource B for client creation.
     const projectBSource = {projectId: 'project-b', dataset: 'production'}
 
-    const rootInstance = createSanityInstance({defaultResource: projectASource})
+    const rootInstance = createSanityInstance()
 
     // 1. Root instance queries with an explicit source for project B.
     //    This creates the QueryStore:project-b.production store, whose
@@ -514,25 +525,18 @@ describe('queryStore', () => {
 
     vi.mocked(getClientState).mockClear()
 
-    // 2. A second instance with project B as its default queries the SAME
-    //    store (same composite key) but does NOT pass an explicit resource.
-    const secondInstance = createSanityInstance({defaultResource: projectBSource})
-    const stateNoResource = getQueryState(secondInstance, {query: '*[_type == "movie"]'})
-    const unsub2 = stateNoResource.subscribe()
-    await firstValueFrom(stateNoResource.observable.pipe(filter((i) => i !== undefined)))
+    // 2. A second instance queries the SAME store (same composite key)
+    //    with the same explicit resource.
+    const secondInstance = createSanityInstance()
+    const stateWithSameResource = getQueryState(secondInstance, {
+      query: '*[_type == "movie"]',
+      resource: projectBSource,
+    })
+    const unsub2 = stateWithSameResource.subscribe()
+    await firstValueFrom(stateWithSameResource.observable.pipe(filter((i) => i !== undefined)))
 
-    // The listener should create a client using the bound source (project B),
-    // not the captured rootInstance's default (project A).
+    // The listener should create a client using the bound source (project B).
     const fetchCalls = vi.mocked(getClientState).mock.calls
-    const wrongCall = fetchCalls.find(
-      ([, options]) =>
-        options.projectId === 'project-a' ||
-        (options.resource &&
-          'projectId' in options.resource &&
-          options.resource.projectId === 'project-a'),
-    )
-    expect(wrongCall).toBeUndefined()
-
     const correctCall = fetchCalls.find(
       ([, options]) =>
         options.resource &&
