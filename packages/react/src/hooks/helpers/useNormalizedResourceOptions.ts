@@ -6,13 +6,10 @@ import {PerspectiveContext} from '../../context/PerspectiveContext'
 import {ResourcesContext} from '../../context/ResourcesContext'
 
 /**
+ * You should generally prefer to use the React-layer handle types (ResourceHandle, DocumentHandle) from '\@sanity/sdk-react' instead.
+ * This type is useful for non-handles (like document actions) that we still want to resolve resources for.
  * Adds React hook support (resourceName resolution) to core types.
- * This wrapper allows hooks to accept `resourceName` as a convenience,
- * which is then resolved to a `DocumentResource` at the React layer.
- * For now, we are trying to avoid resource name resolution in core --
- * functions having resources explicitly passed will reduce complexity.
- *
- * @beta
+ * @internal
  */
 export type WithResourceNameSupport<T> = Omit<T, 'resource'> & {
   resource?: DocumentResource
@@ -43,10 +40,6 @@ export function normalizeResourceOptions<
     resource?: DocumentResource
     resourceName?: string
     perspective?: unknown
-    projectId?: string
-    dataset?: string
-    mediaLibraryId?: string
-    canvasId?: string
   },
 >(
   options: T,
@@ -54,7 +47,7 @@ export function normalizeResourceOptions<
   contextResource?: DocumentResource,
   contextPerspective?: PerspectiveHandle['perspective'],
 ): Omit<T, 'resourceName' | 'resource'> & {resource: DocumentResource} {
-  const {resourceName, projectId, dataset, mediaLibraryId, canvasId, ...rest} = options
+  const {resourceName, ...rest} = options
 
   if (resourceName && Object.hasOwn(options, 'resource')) {
     throw new Error(
@@ -74,28 +67,7 @@ export function normalizeResourceOptions<
     resolvedResource = resources[resourceName]
   }
 
-  const hasProjectId = projectId !== undefined
-  const hasDataset = dataset !== undefined
-  if (!resolvedResource && (hasProjectId || hasDataset) && !(hasProjectId && hasDataset)) {
-    throw new Error(
-      'projectId and dataset must be provided together when targeting a dataset resource.',
-    )
-  }
-
-  if (!resolvedResource && projectId && dataset) {
-    resolvedResource = {projectId, dataset}
-  } else if (!resolvedResource && mediaLibraryId) {
-    resolvedResource = {mediaLibraryId}
-  } else if (!resolvedResource && canvasId) {
-    resolvedResource = {canvasId}
-  }
-
-  const hasExplicitTargeting =
-    projectId !== undefined ||
-    dataset !== undefined ||
-    mediaLibraryId !== undefined ||
-    canvasId !== undefined
-  if (!resolvedResource && !hasExplicitTargeting) {
+  if (!resolvedResource) {
     resolvedResource = contextResource
   }
 
@@ -139,27 +111,13 @@ export function normalizeResourceOptions<
  * 1. If `perspective` is explicitly provided in options, uses it
  * 2. Otherwise, injects the value from `PerspectiveContext`
  *
- * @example
- * ```tsx
- * function useQuery(options: WithResourceNameSupport<QueryOptions>) {
- *   const instance = useSanityInstance()
- *   const normalized = useNormalizedResourceOptions(options)
- *   // normalized has resource and perspective resolved from context
- *   const queryKey = getQueryKey(normalized)
- * }
- * ```
- *
- * @beta
+ * @internal
  */
 export function useNormalizedResourceOptions<
   T extends {
     resource?: DocumentResource
     resourceName?: string
     perspective?: unknown
-    projectId?: string
-    dataset?: string
-    mediaLibraryId?: string
-    canvasId?: string
   },
 >(options: T): Omit<T, 'resourceName' | 'resource'> & {resource: DocumentResource} {
   const resources = useContext(ResourcesContext)

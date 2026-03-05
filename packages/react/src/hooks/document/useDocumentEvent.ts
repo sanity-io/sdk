@@ -1,11 +1,9 @@
-import {type DocumentEvent, type ResourceHandle, subscribeDocumentEvents} from '@sanity/sdk'
+import {type DocumentEvent, subscribeDocumentEvents} from '@sanity/sdk'
 import {useCallback, useEffect, useInsertionEffect, useRef} from 'react'
 
+import {type ResourceHandle} from '../../config/handles'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {
-  useNormalizedResourceOptions,
-  type WithResourceNameSupport,
-} from '../helpers/useNormalizedResourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
 /**
  * @public
@@ -13,7 +11,7 @@ import {
 export interface UseDocumentEventOptions<
   TDataset extends string = string,
   TProjectId extends string = string,
-> extends WithResourceNameSupport<ResourceHandle<TDataset, TProjectId>> {
+> extends ResourceHandle<TProjectId, TDataset> {
   onEvent: (documentEvent: DocumentEvent) => void
 }
 
