@@ -1,6 +1,6 @@
 import {type Subscription} from 'rxjs'
 
-import {getDefaultProjectId, type TokenSource} from '../config/sanityConfig'
+import {type TokenSource} from '../config/sanityConfig'
 import {type StoreContext} from '../store/defineStore'
 import {AuthStateType} from './authStateType'
 import {type AuthStoreState, type LoggedInAuthState} from './authStore'
@@ -211,7 +211,7 @@ function initializeWithFallback(
         : null
 
     if (!token) {
-      const projectIdValue = getDefaultProjectId(instance.config)
+      const projectIdValue = instance.config.studio?.projectId
       const clientFactory = state.get().options.clientFactory
       checkForCookieAuth(projectIdValue, clientFactory).then((isCookieAuthEnabled) => {
         if (!isCookieAuthEnabled) return

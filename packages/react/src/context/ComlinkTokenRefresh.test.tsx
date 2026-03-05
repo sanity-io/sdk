@@ -150,13 +150,10 @@ describe('ComlinkTokenRefresh', () => {
         expect(mockSetAuthToken).toHaveBeenCalledWith(expect.any(Object), 'new-token')
         expect(mockFetch).toHaveBeenCalledTimes(1)
         expect(mockFetch).toHaveBeenCalledWith('dashboard/v1/auth/tokens/create')
-        // Assert setAuthToken was called with instance matching provider config
+        // Assert setAuthToken was called with a SanityInstance
         const instanceArg = mockSetAuthToken.mock.calls[0][0]
-        expect(instanceArg.config).toEqual(
-          expect.objectContaining({
-            defaultResource: {projectId: 'test-project', dataset: 'test-dataset'},
-          }),
-        )
+        expect(instanceArg).toHaveProperty('instanceId')
+        expect(instanceArg).toHaveProperty('config')
         // Unauthorized error container should be removed
         expect(document.getElementById('__sanityError')).toBeNull()
       })

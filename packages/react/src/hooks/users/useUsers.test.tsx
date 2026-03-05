@@ -330,11 +330,7 @@ describe('useUsers', () => {
 
     // Verify that loadMoreUsers was called with the correct arguments
     expect(loadMoreUsers).toHaveBeenCalledWith(
-      expect.objectContaining({
-        config: expect.objectContaining({
-          defaultResource: {projectId: 'p', dataset: 'production'},
-        }),
-      }),
+      expect.objectContaining({instanceId: expect.any(String)}),
       {
         resourceType: 'organization',
         organizationId: 'test-org',

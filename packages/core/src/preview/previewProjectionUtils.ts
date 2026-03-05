@@ -71,16 +71,13 @@ function findFirstDefined(
  */
 export function transformProjectionToPreview(
   instance: SanityInstance,
+  resource: DocumentResource,
   projectionResult: PreviewQueryResult,
-  resource?: DocumentResource,
 ): PreviewValue {
   const title = findFirstDefined(TITLE_CANDIDATES, projectionResult.titleCandidates)
   const subtitle = findFirstDefined(SUBTITLE_CANDIDATES, projectionResult.subtitleCandidates, title)
 
-  const client = getClient(instance, {
-    apiVersion: API_VERSION,
-    ...(resource ? {resource} : {}),
-  })
+  const client = getClient(instance, {apiVersion: API_VERSION, resource})
 
   return {
     title: String(title || `${projectionResult._type}: ${projectionResult._id}`),

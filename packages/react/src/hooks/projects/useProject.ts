@@ -15,12 +15,12 @@ type UseProject = {
    * Returns metadata for a given project
    *
    * @category Projects
-   * @param projectId - The ID of the project to retrieve metadata for
+   * @param projectHandle - An optional project handle identifying which project to retrieve metadata for
    * @returns The metadata for the project
    * @example
    * ```tsx
    *  function ProjectMetadata({ projectId }: { projectId: string }) {
-   *    const project = useProject(projectId)
+   *    const project = useProject({ projectId })
    *
    *    return (
    *      <figure style={{ backgroundColor: project.metadata.color || 'lavender'}}>
@@ -43,7 +43,8 @@ export const useProject: UseProject = createStateSourceHook({
     instance: SanityInstance,
     projectHandle?: ProjectHandle,
   ) => StateSource<SanityProject>,
-  shouldSuspend: (instance, projectHandle) =>
-    getProjectState(instance, projectHandle).getCurrent() === undefined,
-  suspender: resolveProject,
-})
+  shouldSuspend: (instance: SanityInstance, projectHandle?: ProjectHandle) =>
+    getProjectState(instance, projectHandle as ProjectHandle).getCurrent() === undefined,
+  suspender: (instance: SanityInstance, projectHandle?: ProjectHandle) =>
+    resolveProject(instance, projectHandle as ProjectHandle),
+}) as UseProject

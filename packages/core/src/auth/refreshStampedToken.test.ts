@@ -118,7 +118,6 @@ describe('refreshStampedToken', () => {
       }
       const mockClientFactory = vi.fn().mockReturnValue(mockClient)
       const instance = createSanityInstance({
-        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
       })
       const initialState = authStore.getInitialState(instance, null)
@@ -283,7 +282,6 @@ describe('refreshStampedToken', () => {
       }
       const mockClientFactory = vi.fn().mockReturnValue(mockClient)
       const instance = createSanityInstance({
-        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
       })
       const initialState = authStore.getInitialState(instance, null)
@@ -316,7 +314,6 @@ describe('refreshStampedToken', () => {
       const mockClient = {observable: {request: vi.fn()}}
       const mockClientFactory = vi.fn().mockReturnValue(mockClient)
       const instance = createSanityInstance({
-        defaultResource: {projectId: 'p', dataset: 'd'},
         auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
       })
       const initialState = authStore.getInitialState(instance, null)
@@ -366,7 +363,6 @@ describe('refreshStampedToken', () => {
         }
         const mockClientFactory = vi.fn().mockReturnValue(mockClient)
         const instance = createSanityInstance({
-          defaultResource: {projectId: 'p', dataset: 'd'},
           auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
         })
         const initialState = authStore.getInitialState(instance, null)
@@ -415,7 +411,6 @@ describe('refreshStampedToken', () => {
         }
         const mockClientFactory = vi.fn().mockReturnValue(mockClient)
         const instance = createSanityInstance({
-          defaultResource: {projectId: 'p', dataset: 'd'},
           auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
         })
         const initialState = authStore.getInitialState(instance, null)
@@ -460,7 +455,6 @@ describe('refreshStampedToken', () => {
     const mockClient = {observable: {request: vi.fn(() => throwError(() => error))}}
     const mockClientFactory = vi.fn().mockReturnValue(mockClient)
     const instance = createSanityInstance({
-      defaultResource: {projectId: 'p', dataset: 'd'},
       auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
     })
     const initialState = authStore.getInitialState(instance, null)
@@ -488,7 +482,6 @@ describe('refreshStampedToken', () => {
   it('does nothing if user is not logged in', async () => {
     const mockClientFactory = vi.fn()
     const instance = createSanityInstance({
-      defaultResource: {projectId: 'p', dataset: 'd'},
       auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
     })
     const initialState = authStore.getInitialState(instance, null)
@@ -513,7 +506,6 @@ describe('refreshStampedToken', () => {
     const mockClient = {observable: {request: vi.fn()}}
     const mockClientFactory = vi.fn().mockReturnValue(mockClient)
     const instance = createSanityInstance({
-      defaultResource: {projectId: 'p', dataset: 'd'},
       auth: {clientFactory: mockClientFactory, storageArea: mockStorage},
     })
     const initialState = authStore.getInitialState(instance, null)

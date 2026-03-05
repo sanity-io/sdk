@@ -1,9 +1,4 @@
-import {
-  type DatasetHandle,
-  type DocumentHandle,
-  type DocumentTypeHandle,
-  type ProjectHandle,
-} from './sanityConfig'
+import {type DocumentHandle, type DocumentTypeHandle, type ResourceHandle} from './sanityConfig'
 
 /**
  * Creates or validates a `DocumentHandle` object.
@@ -40,28 +35,15 @@ export function createDocumentTypeHandle<
 }
 
 /**
- * Creates or validates a `ProjectHandle` object.
- * Ensures the provided object conforms to the `ProjectHandle` interface.
- * @param handle - The object containing project identification properties.
- * @returns The validated `ProjectHandle` object.
+ * Creates or validates a `ResourceHandle` object.
+ * Ensures the provided object conforms to the `ResourceHandle` interface.
+ * @param handle - The object containing resource identification properties.
+ * @returns The validated `ResourceHandle` object.
  * @public
  */
-export function createProjectHandle<TProjectId extends string = string>(
-  handle: ProjectHandle<TProjectId>,
-): ProjectHandle<TProjectId> {
-  return handle
-}
-
-/**
- * Creates or validates a `DatasetHandle` object.
- * Ensures the provided object conforms to the `DatasetHandle` interface.
- * @param handle - The object containing dataset identification properties.
- * @returns The validated `DatasetHandle` object.
- * @public
- */
-export function createDatasetHandle<
+export function createResourceHandle<
   TDataset extends string = string,
   TProjectId extends string = string,
->(handle: DatasetHandle<TDataset, TProjectId>): DatasetHandle<TDataset, TProjectId> {
+>(handle: ResourceHandle<TProjectId, TDataset>): ResourceHandle<TProjectId, TDataset> {
   return handle
 }
