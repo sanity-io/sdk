@@ -126,9 +126,15 @@ describe('favoritesStore', () => {
     })
 
     it('handles error and returns default response', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       setupMockStateSource({fetchImpl: vi.fn().mockRejectedValue(new Error('Failed to fetch'))})
       const result = await resolveFavoritesState(instance!, mockContext)
       expect(result).toEqual({isFavorited: false})
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Favorites service connection error',
+        expect.any(Error),
+      )
+      consoleErrorSpy.mockRestore()
     })
 
     it('shares observable between multiple subscribers and cleans up', async () => {

@@ -37,11 +37,13 @@ describe('useDispatchIntent', () => {
   })
 
   it('should throw error when neither action nor intentId is provided', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const {result} = renderHook(() => useDispatchIntent({documentHandle: mockDocumentHandle}))
 
     expect(() => result.current.dispatchIntent()).toThrow(
       'useDispatchIntent: Either `action` or `intentId` must be provided.',
     )
+    consoleErrorSpy.mockRestore()
   })
 
   it('should handle errors gracefully', () => {
