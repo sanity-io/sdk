@@ -1,17 +1,10 @@
-import {
-  createGroqSearchFilter,
-  type DocumentHandle,
-  type QueryOptions,
-  type ResourceHandle,
-} from '@sanity/sdk'
+import {createGroqSearchFilter, type QueryOptions} from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
 import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
-import {
-  useNormalizedResourceOptions,
-  type WithResourceNameSupport,
-} from '../helpers/useNormalizedResourceOptions'
+import {type DocumentHandle, type ResourceHandle} from '../../config/handles'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {useQuery} from '../query/useQuery'
 
 const DEFAULT_BATCH_SIZE = 25
@@ -28,8 +21,8 @@ export interface DocumentsOptions<
   TProjectId extends string = string,
 >
   extends
-    WithResourceNameSupport<ResourceHandle<TDataset, TProjectId>>,
-    Pick<QueryOptions<TDocumentType, TDataset, TProjectId>, 'perspective' | 'params'> {
+    ResourceHandle<TProjectId, TDataset>,
+    Pick<QueryOptions<TDocumentType, TDataset, TProjectId>, 'params'> {
   /**
    * Filter documents by their `_type`. Can be a single type or an array of types.
    */

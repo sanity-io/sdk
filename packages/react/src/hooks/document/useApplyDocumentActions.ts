@@ -1,18 +1,11 @@
-import {
-  type ActionsResult,
-  applyDocumentActions,
-  type ApplyDocumentActionsOptions,
-  type DocumentAction,
-} from '@sanity/sdk'
+import {type ActionsResult, applyDocumentActions, type DocumentAction} from '@sanity/sdk'
 import {useContext} from 'react'
 
+import {type ResourceHandle} from '../../config/handles'
 import {ResourceContext} from '../../context/DefaultResourceContext'
 import {ResourcesContext} from '../../context/ResourcesContext'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {
-  normalizeResourceOptions,
-  type WithResourceNameSupport,
-} from '../helpers/useNormalizedResourceOptions'
+import {normalizeResourceOptions} from '../helpers/useNormalizedResourceOptions'
 // this import is used in an `{@link useEditDocument}`
 // eslint-disable-next-line unused-imports/no-unused-imports, import/consistent-type-specifier-style
 import type {useEditDocument} from './useEditDocument'
@@ -29,7 +22,7 @@ interface UseApplyDocumentActions {
     action:
       | DocumentAction<TDocumentType, TDataset, TProjectId>
       | DocumentAction<TDocumentType, TDataset, TProjectId>[],
-    options?: WithResourceNameSupport<ApplyDocumentActionsOptions>,
+    options?: ResourceHandle,
   ) => Promise<ActionsResult>
 }
 

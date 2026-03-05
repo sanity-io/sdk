@@ -201,7 +201,6 @@ describe('useManageFavorite', () => {
     }
 
     expect(() =>
-      // @ts-expect-error -- no access to ManageFavorite props type
       renderHook(() => useManageFavorite(mockDocumentHandleWithoutProjectId), {
         wrapper: ({children}: {children: React.ReactNode}) => (
           <ResourceProvider fallback={null}>{children}</ResourceProvider>

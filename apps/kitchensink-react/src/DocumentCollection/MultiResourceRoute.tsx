@@ -83,7 +83,7 @@ function ProjectionCard<TData = unknown>({
   return (
     <DemoCard
       title={title}
-      projectInfo={`${isDatasetResource(docHandle.resource) ? `${docHandle.resource.projectId}.${docHandle.resource.dataset}` : ''}`}
+      projectInfo={`${docHandle.resource && isDatasetResource(docHandle.resource) ? `${docHandle.resource.projectId}.${docHandle.resource.dataset}` : ''}`}
       backgroundColor={backgroundColor}
       borderColor={borderColor}
       textColor={textColor}
@@ -121,7 +121,7 @@ function PreviewCard({
   return (
     <DemoCard
       title={title}
-      projectInfo={`${isDatasetResource(docHandle.resource) ? `${docHandle.resource.projectId}.${docHandle.resource.dataset}` : ''}`}
+      projectInfo={`${docHandle.resource && isDatasetResource(docHandle.resource) ? `${docHandle.resource.projectId}.${docHandle.resource.dataset}` : ''}`}
       backgroundColor={backgroundColor}
       borderColor={borderColor}
       textColor={textColor}
@@ -205,13 +205,13 @@ function AuthorEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   return (
     <DemoCard
       title="Author Document"
-      projectInfo={`${isDatasetResource(docHandle.resource) ? `${docHandle.resource.projectId}.${docHandle.resource.dataset}` : ''}`}
+      projectInfo={`${docHandle.resource && isDatasetResource(docHandle.resource) ? `${docHandle.resource.projectId}.${docHandle.resource.dataset}` : ''}`}
       backgroundColor="#3f0067"
       borderColor="#3f0067"
     >
       <a
         style={{display: 'block', marginBottom: '1rem', color: '#3e41e7'}}
-        href={`https://test-studio.sanity.build/${isDatasetResource(docHandle.resource) ? docHandle.resource.dataset : ''}/structure/author;${author?._id}`}
+        href={`https://test-studio.sanity.build/${docHandle.resource && isDatasetResource(docHandle.resource) ? docHandle.resource.dataset : ''}/structure/author;${author?._id}`}
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -249,7 +249,7 @@ function MovieEditor({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
   return (
     <DemoCard
       title="Movie Document"
-      projectInfo={`${isDatasetResource(docHandle.resource) ? `${docHandle.resource.projectId}.${docHandle.resource.dataset}` : ''}`}
+      projectInfo={`${docHandle.resource && isDatasetResource(docHandle.resource) ? `${docHandle.resource.projectId}.${docHandle.resource.dataset}` : ''}`}
       backgroundColor="#b4e6ef"
       borderColor="#4fb3c0"
       textColor="#444"
