@@ -1,24 +1,15 @@
-import {
-  type DocumentResource,
-  getPresence,
-  isCanvasResource,
-  isMediaLibraryResource,
-  type UserPresence,
-} from '@sanity/sdk'
+import {getPresence, isCanvasResource, isMediaLibraryResource, type UserPresence} from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 
+import {type ResourceHandle} from '../../config/handles'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {
-  useNormalizedResourceOptions,
-  type WithResourceNameSupport,
-} from '../helpers/useNormalizedResourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
-type UsePresenceOptions = WithResourceNameSupport<{resource?: DocumentResource}>
 /**
  * A hook for subscribing to presence information for the current project.
  * @public
  */
-export function usePresence(options: UsePresenceOptions = {}): {
+export function usePresence(options: ResourceHandle = {}): {
   locations: UserPresence[]
 } {
   const normalizedOptions = useNormalizedResourceOptions(options)

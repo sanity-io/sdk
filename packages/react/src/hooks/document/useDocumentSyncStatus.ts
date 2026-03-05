@@ -1,17 +1,14 @@
 import {
-  type DocumentHandle,
-  type DocumentOptions,
+  type DocumentHandle as StrictDocumentHandle,
   getDocumentSyncStatus,
   resolveDocument,
   type SanityInstance,
   type StateSource,
 } from '@sanity/sdk'
 
+import {type DocumentHandle} from '../../config/handles'
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-import {
-  useNormalizedResourceOptions,
-  type WithResourceNameSupport,
-} from '../helpers/useNormalizedResourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
 type UseDocumentSyncStatus = {
   /**
@@ -46,26 +43,24 @@ type UseDocumentSyncStatus = {
    * // <SyncIndicator doc={doc} />
    * ```
    */
-  (doc: WithResourceNameSupport<DocumentHandle>): boolean
+  (doc: DocumentHandle): boolean
 }
 
 const useDocumentSyncStatusValue = createStateSourceHook({
   getState: getDocumentSyncStatus as (
     instance: SanityInstance,
-    doc: DocumentHandle,
+    doc: StrictDocumentHandle,
   ) => StateSource<boolean>,
-  shouldSuspend: (instance, doc: DocumentHandle) =>
+  shouldSuspend: (instance, doc: StrictDocumentHandle) =>
     getDocumentSyncStatus(instance, doc).getCurrent() === undefined,
-  suspender: (instance, doc: DocumentHandle) => resolveDocument(instance, doc),
+  suspender: (instance, doc: StrictDocumentHandle) => resolveDocument(instance, doc),
 })
 
 /**
  * @public
  * @function
  */
-export const useDocumentSyncStatus: UseDocumentSyncStatus = (
-  options: WithResourceNameSupport<DocumentOptions<string | undefined>>,
-) => {
+export const useDocumentSyncStatus: UseDocumentSyncStatus = (options: DocumentHandle) => {
   const normalizedOptions = useNormalizedResourceOptions(options)
-  return useDocumentSyncStatusValue(normalizedOptions as DocumentHandle)
+  return useDocumentSyncStatusValue(normalizedOptions)
 }
