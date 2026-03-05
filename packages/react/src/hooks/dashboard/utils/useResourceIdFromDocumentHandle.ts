@@ -1,14 +1,7 @@
-import {
-  type DocumentHandle,
-  isCanvasResource,
-  isDatasetResource,
-  isMediaLibraryResource,
-} from '@sanity/sdk'
+import {isCanvasResource, isDatasetResource, isMediaLibraryResource} from '@sanity/sdk'
 
-import {
-  useNormalizedResourceOptions,
-  type WithResourceNameSupport,
-} from '../../helpers/useNormalizedResourceOptions'
+import {type DocumentHandle} from '../../../config/handles'
+import {useNormalizedResourceOptions} from '../../helpers/useNormalizedResourceOptions'
 
 interface DashboardMessageResource {
   id: string
@@ -19,7 +12,7 @@ interface DashboardMessageResource {
  * @beta
  */
 export function useResourceIdFromDocumentHandle(
-  documentHandle: WithResourceNameSupport<DocumentHandle>,
+  documentHandle: DocumentHandle,
 ): DashboardMessageResource {
   const options = useNormalizedResourceOptions(documentHandle)
   const {resource} = options

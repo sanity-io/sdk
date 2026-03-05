@@ -7,11 +7,9 @@ import {
 } from '@sanity/sdk'
 import {filter, firstValueFrom} from 'rxjs'
 
+import {type ResourceHandle} from '../../config/handles'
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-import {
-  useNormalizedResourceOptions,
-  type WithResourceNameSupport,
-} from '../helpers/useNormalizedResourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
 /**
  * @public
@@ -29,7 +27,7 @@ import {
  * ```
  */
 type UseActiveReleases = {
-  (options?: WithResourceNameSupport<{resource?: DocumentResource}> | undefined): ReleaseDocument[]
+  (options?: ResourceHandle | undefined): ReleaseDocument[]
 }
 
 const useActiveReleasesValue = createStateSourceHook({
@@ -47,9 +45,7 @@ const useActiveReleasesValue = createStateSourceHook({
  * @public
  * @function
  */
-export const useActiveReleases: UseActiveReleases = (
-  options: WithResourceNameSupport<{resource: DocumentResource}> | undefined,
-) => {
+export const useActiveReleases: UseActiveReleases = (options: ResourceHandle | undefined) => {
   const normalizedOptions = useNormalizedResourceOptions(options ?? {})
   return useActiveReleasesValue(normalizedOptions)
 }
