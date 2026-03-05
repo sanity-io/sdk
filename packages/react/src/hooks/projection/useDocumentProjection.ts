@@ -1,12 +1,10 @@
-import {type DocumentHandle, getProjectionState, resolveProjection} from '@sanity/sdk'
+import {getProjectionState, resolveProjection} from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
+import {type DocumentHandle} from '../../config/handles'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {
-  useNormalizedResourceOptions,
-  type WithResourceNameSupport,
-} from '../helpers/useNormalizedResourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
 /**
  * @public
@@ -17,7 +15,7 @@ export interface useDocumentProjectionOptions<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> extends WithResourceNameSupport<DocumentHandle<TDocumentType, TDataset, TProjectId>> {
+> extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
   /** The GROQ projection string */
   projection: TProjection
   /** Optional parameters for the projection query */

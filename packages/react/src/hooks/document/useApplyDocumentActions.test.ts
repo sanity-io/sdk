@@ -174,7 +174,7 @@ describe('useApplyDocumentActions', () => {
           documentId: 'abc',
           resource: {projectId: 'p1', dataset: 'd1'},
         },
-        {resource: {projectId: 'p2', dataset: 'd2'}, actions: []},
+        {resource: {projectId: 'p2', dataset: 'd2'}},
       )
     }).toThrow(/Mismatched resources found in actions/)
   })

@@ -7,7 +7,6 @@ import {
   type StudioResource,
 } from '@sanity/message-protocol'
 import {
-  type DocumentHandle,
   type FavoriteStatusResponse,
   type FrameMessage,
   getFavoritesState,
@@ -16,6 +15,7 @@ import {
 } from '@sanity/sdk'
 import {useCallback, useContext, useMemo, useSyncExternalStore} from 'react'
 
+import {type DocumentHandle} from '../../config/handles'
 import {ResourceContext} from '../../context/DefaultResourceContext'
 import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useSanityInstance} from '../context/useSanityInstance'
