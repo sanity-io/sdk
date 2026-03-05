@@ -82,8 +82,8 @@ export function ResourceProvider({
   const parent = useContext(SanityInstanceContext)
   const {perspective, auth, studio} = rest
   const config: SanityConfig = useMemo(
-    () => ({perspective, auth, studio, defaultResource: resource}),
-    [resource, perspective, auth, studio],
+    () => ({perspective, auth, studio}),
+    [perspective, auth, studio],
   )
 
   if (parent) {
@@ -95,7 +95,7 @@ export function ResourceProvider({
   }
 
   return (
-    <RootResourceProvider config={config} fallback={fallback}>
+    <RootResourceProvider config={config} resource={resource} fallback={fallback}>
       {children}
     </RootResourceProvider>
   )
@@ -105,10 +105,12 @@ function RootResourceProvider({
   children,
   fallback,
   config,
+  resource,
 }: {
   children: React.ReactNode
   fallback: React.ReactNode
   config: SanityConfig
+  resource?: DocumentResource
 }): React.ReactNode {
   const instance = useMemo(() => createSanityInstance(config), [config])
 
@@ -139,7 +141,7 @@ function RootResourceProvider({
 
   return (
     <SanityInstanceContext.Provider value={instance}>
-      <ResourceContext.Provider value={config.defaultResource}>
+      <ResourceContext.Provider value={resource}>
         <PerspectiveContext.Provider value={config.perspective}>
           <Suspense fallback={fallback ?? DEFAULT_FALLBACK}>{children}</Suspense>
         </PerspectiveContext.Provider>
