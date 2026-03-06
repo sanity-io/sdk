@@ -48,7 +48,6 @@ This layered approach provides both convenience for users and flexibility for im
 
 // Internally transforms to:
 <SDKProvider
-  config={{ defaultResource: { projectId: 'project1', dataset: 'production' } }}
   resources={{
     default: { projectId: 'project1', dataset: 'production' },
     'other-project': { projectId: 'project2', dataset: 'production' },
@@ -72,7 +71,7 @@ This layered approach provides both convenience for users and flexibility for im
 
 A critical implementation detail is how the `resources` map flows through the component tree:
 
-1. **SanityApp** receives a `resources` map (named data sources) and an optional `config` (auth, studio, and perspective settings), then passes them to SDKProvider. The `"default"` resource becomes the `defaultResource` on the resolved `SanityConfig`.
+1. **SanityApp** receives a `resources` map (named data sources) and an optional `config` (auth, studio, and perspective settings), then passes them to SDKProvider.
 2. **SDKProvider** creates a single `ResourceProvider` with the default resource, and wraps children in `ResourcesContext.Provider` so hooks can resolve named resources.
 3. **ResourceProvider** creates the `SanityInstance` and provides resource/perspective context.
 
@@ -85,15 +84,20 @@ export function SanityApp({
   resources: resourcesProp,
 }: SanityAppProps): ReactElement {
   // Derive config and resources from Studio context if not provided
+  const derived = useMemo(() => {
+    if (studioWorkspace && !configProp && !resourcesProp) {
+      return deriveFromWorkspace(studioWorkspace)
+    }
+    return null
+  }, [configProp, resourcesProp, studioWorkspace])
+
   const resolvedConfig = useMemo<SanityConfig>(() => {
     if (configProp) {
-      if (!configProp.defaultResource && resourcesProp?.[DEFAULT_RESOURCE_NAME]) {
-        return {...configProp, defaultResource: resourcesProp[DEFAULT_RESOURCE_NAME]}
-      }
       return configProp
     }
+    if (derived) return derived.config
     // ... fallback to SDKStudioContext
-  }, [configProp, resourcesProp])
+  }, [configProp, derived])
 
   return (
     <SDKProvider fallback={fallback} config={resolvedConfig} resources={resolvedResources}>
@@ -111,10 +115,10 @@ export function SDKProvider({
   ...props
 }: SDKProviderProps): ReactElement {
   const projectIds = useMemo(() => collectProjectIds(resources), [resources])
-  const {defaultResource, ...restConfig} = config
+  const defaultResource = resources[DEFAULT_RESOURCE_NAME]
 
   return (
-    <ResourceProvider resource={defaultResource} {...restConfig} fallback={fallback}>
+    <ResourceProvider resource={defaultResource} {...config} fallback={fallback}>
       <AuthBoundary projectIds={projectIds}>
         <ResourcesContext.Provider value={resources}>{children}</ResourcesContext.Provider>
       </AuthBoundary>
@@ -133,6 +137,7 @@ The `ResourceProvider` component creates and manages what we call "Sanity instan
   resource={{projectId: 'main-project', dataset: 'production'}}
   fallback={<Loading />}
 >
+  {/* This context uses the production dataset */}
   <ResourceProvider
     resource={{projectId: 'main-project', dataset: 'staging'}}
     fallback={<Loading />}
@@ -173,7 +178,6 @@ A "Sanity instance" is a self-contained unit that manages a specific configurati
 
 1. **Configuration**: A `SanityConfig` with auth, studio, perspective, and `defaultResource` settings
 2. **Lifecycle Management**: A way to clean up resources when they're no longer needed
-3. **Family Relationships**: Links to parent instances it inherits from
 
 Here's what the technical structure looks like:
 
@@ -189,10 +193,6 @@ interface SanityInstance {
   isDisposed(): boolean
   dispose(): void
   onDispose(cb: () => void): () => void
-
-  // Methods to work with the instance hierarchy
-  getParent(): SanityInstance | undefined
-  createChild(config: SanityConfig): SanityInstance
 }
 ```
 
@@ -203,16 +203,17 @@ The SDK handles instance creation using React context. Here's a simplified look 
 ```tsx
 function ResourceProvider({children, fallback, resource, ...rest}) {
   const parent = useContext(SanityInstanceContext)
+  const {perspective, auth, studio} = rest
   const config: SanityConfig = useMemo(
-    () => ({...rest, defaultResource: resource}),
-    [resource, rest],
+    () => ({perspective, auth, studio}),
+    [perspective, auth, studio],
   )
 
   if (parent) {
     // Nested: just provide new resource/perspective context
     return (
       <ResourceContext.Provider value={resource}>
-        <PerspectiveContext.Provider value={rest.perspective}>
+        <PerspectiveContext.Provider value={config.perspective}>
           <Suspense fallback={fallback}>{children}</Suspense>
         </PerspectiveContext.Provider>
       </ResourceContext.Provider>
@@ -224,7 +225,7 @@ function ResourceProvider({children, fallback, resource, ...rest}) {
 
   return (
     <SanityInstanceContext.Provider value={instance}>
-      <ResourceContext.Provider value={config.defaultResource}>
+      <ResourceContext.Provider value={resource}>
         <PerspectiveContext.Provider value={config.perspective}>
           <Suspense fallback={fallback}>{children}</Suspense>
         </PerspectiveContext.Provider>
@@ -250,6 +251,18 @@ This system makes it possible to:
 - Pass configuration down through your component tree
 - Automatically clean up resources when components unmount
 - Use React Suspense for elegant loading states
+
+Components can also access the current resource (that is, the "active" or "default" resource) by using the `useResource` hook which is useful when specificity is needed:
+
+```tsx
+function canEditDocument(documentHandle: DocumentHandle) {
+  const resource = useResource()
+
+  // most non-hooks, like `editDocument`, come from @sanity/sdk, and require an explicit resource
+  const editAction = editDocument({...documentHandle, resource})
+  return canUseDocumentPermissions(editAction)
+}
+```
 
 #### Configuration and Handles
 
@@ -685,19 +698,22 @@ function DocumentPreview(docHandle: DocumentHandle) {
 This example shows several key patterns in action:
 
 1. **Progressive Resource Creation**
-   - Each level waits for selections before creating ResourceProviders
-   - Resources are only initialized when needed
-   - Clean boundaries between different configuration contexts
+
+- Each level waits for selections before creating ResourceProviders
+- Resources are only initialized when needed
+- Clean boundaries between different configuration contexts
 
 2. **Handle Usage**
-   - Document handles from `usePaginatedDocuments` preserve all context
-   - Handles are spread into components like `DocumentPreview`
-   - Components remain agnostic about where their data comes from
+
+- Document handles from `usePaginatedDocuments` preserve all context
+- Handles are spread into components like `DocumentPreview`
+- Components remain agnostic about where their data comes from
 
 3. **Smart Resource Management**
-   - When selections change, old resources are automatically cleaned up
-   - Suspense boundaries provide loading states at appropriate levels
-   - State is isolated appropriately (project list vs. dataset-specific data)
+
+- When selections change, old resources are automatically cleaned up
+- Suspense boundaries provide loading states at appropriate levels
+- State is isolated appropriately (project list vs. dataset-specific data)
 
 You can extend this pattern for more complex scenarios too:
 
@@ -723,29 +739,34 @@ function DatasetExplorer({projectId}: {projectId: string}) {
 When implementing or modifying the SDK's resource management system, keep these guidelines in mind:
 
 1. **Maintain the Component Hierarchy**
-   - SanityApp should remain the public API
-   - SDKProvider should handle creating the single instance and providing resources context
-   - ResourceProvider should focus on instance management and resource/perspective context
+
+- SanityApp should remain the public API
+- SDKProvider should handle creating the single instance and providing resources context
+- ResourceProvider should focus on instance management and resource/perspective context
 
 2. **Named Resources are the Primary Pattern**
-   - The `resources` map on `SanityApp` is the recommended way to declare data sources
-   - Hooks resolve resources through `ResourcesContext` when given a `resourceName`
-   - The `"default"` resource is used as the fallback when no explicit resource is specified
+
+- The `resources` map on `SanityApp` is the recommended way to declare data sources
+- Hooks resolve resources through `ResourcesContext` when given a `resourceName`
+- The `"default"` resource is used as the fallback when no explicit resource is specified
 
 3. **Isolate Internal Components**
-   - Mark internal components with `@internal` JSDoc tags
-   - Keep implementation details out of public documentation
-   - Provide clear prop interfaces for all components
+
+- Mark internal components with `@internal` JSDoc tags
+- Keep implementation details out of public documentation
+- Provide clear prop interfaces for all components
 
 4. **Ensure Proper Resource Cleanup**
-   - Every resource creation should have a corresponding cleanup
-   - Use the instance dispose mechanism consistently
-   - Test with multiple mounting/unmounting scenarios
+
+- Every resource creation should have a corresponding cleanup
+- Use the instance dispose mechanism consistently
+- Test with multiple mounting/unmounting scenarios
 
 5. **Choose the Right Binding Type**
-   - Use global binding for state that should be shared everywhere (like authentication)
-   - Use resource binding for data that's specific to a particular resource
-   - Clearly document which pattern is used for each store
+
+- Use global binding for state that should be shared everywhere (like authentication)
+- Use resource binding for data that's specific to a particular resource
+- Clearly document which pattern is used for each store
 
 ## Conclusion
 
