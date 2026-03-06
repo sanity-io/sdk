@@ -60,6 +60,12 @@ export type ReleasePerspective = {
  * @public
  */
 export interface PerspectiveHandle {
+  /**
+   * The perspective to use for this operation.
+   * Note that the SDK stacks perspectives for you when querying.
+   * The SDK automatically fetches all of your content releases, and orders them the way the Sanity Studio does: usually by scheduled date, with ASAP releases coming first.
+   * @public
+   */
   perspective?: Exclude<ClientPerspective, readonly unknown[]> | ReleasePerspective
 }
 
