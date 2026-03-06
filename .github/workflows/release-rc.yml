@@ -1,6 +1,12 @@
 name: Release - Release Candidate
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      major:
+        description: "Publish a major release candidate (e.g. 3.0.0-rc.0)"
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}
@@ -39,7 +45,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{secrets.NPM_PUBLISH_TOKEN}}
       - name: release rc & commit + push the changed versions
         run: |
-          pnpm release:rc
+          pnpm release:rc ${{ inputs.major && '--major' || '' }}
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
