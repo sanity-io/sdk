@@ -46,11 +46,15 @@ npm install react@latest react-dom@latest
 </SanityApp>
 ```
 
-The `"default"` resource will be used if no explicit resource is specified when invoking hooks that take `resource` or `resourceName` as options.
+**Hooks now optionally accept `resourceName` or `resource`**
 
-**Hooks now accept `resourceName` or `resource`**
+In v2 of `@sanity/sdk-react`, not passing an explicit `projectId` or `dataset` to a hook meant that it would target the closest nested `<ResourceProvider>`.
 
-Hooks that previously relied on `projectId`/`dataset` in the options object now support `resourceName` (to reference a named resource) or `resource` (to pass a resource object directly):
+Now, in v3 of `@sanity/sdk-react`, not passing an explicit `resource` to a hook means that hook will target the `default` named resource passed to the `<SanityApp>` component.
+
+If you only named one `{ projectId, dataset }` pair in your v2 `<SanityApp>` config, your hooks targeted that pair. By changing your configuration to the `default` named resource per the above example, you will likely have to do very little refactoring.
+
+If your hooks previously relied on `projectId`/`dataset` in the options object, you can now update them to use the supported `resourceName` (to reference a named resource in your `<SanityApp` params) or `resource` (to pass a resource object directly):
 
 ```tsx
 // Reference a named resource
@@ -63,7 +67,7 @@ const {data} = useDocument({
 // Or pass a resource inline
 const {data} = useQuery({
   query: '*[_type == "asset"][0...10]',
-  resource: {mediaLibraryId: 'my-media-library'},
+  resource: {projectId: 'def456', dataset: 'production'},
 })
 ```
 
@@ -242,12 +246,27 @@ const config: SanityConfig = {
 }
 ```
 
+Note that the SDK stacks perspectives for you. The SDK automatically fetches all of your content releases, and orders them in the same way the Sanity Studio does: usually by scheduled date, with ASAP releases coming first.
+
+For example, providing a specific perspective that reflects one of your Content Releases, like `{releaseName: 'rvi13yhxK'}` will create a query stack like:
+
+```typescript
+;[
+  'rvi13yhxK', // your release
+  'r0IWxZEkm', // any releases scheduled to come before your release
+  'r6IoT17Cj', // an ASAP release
+  'drafts',
+]
+```
+
+This way, previous changes will be incorporated into your selected perspective.
+
 #### 7. Presence refactored to use resources
 
 `usePresence` now accepts `resource` / `resourceName` options. It only supports dataset resources — passing a media library or canvas resource will throw an error:
 
 ```typescript
-const {locations} = usePresence({resourceName: 'default'})
+const {locations} = usePresence({resourceName: 'marketing-site'})
 ```
 
 ---
