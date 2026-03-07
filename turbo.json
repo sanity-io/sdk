@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [".oxlintrc.jsonc"],
   "globalEnv": [
     "DEBUG",
     "DEV",
@@ -48,7 +49,8 @@
       "cache": false,
       "env": ["SDK_E2E_*", "SANITY_INTERNAL_ENV"]
     },
-    "lint": {
+    "lint": {},
+    "//#check:oxlint": {
       "cache": false
     },
     "test": {

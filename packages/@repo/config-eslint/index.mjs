@@ -1,14 +1,20 @@
 // @ts-check
+import {resolve} from 'node:path'
+import {fileURLToPath} from 'node:url'
+
 import js from '@eslint/js'
 import eslintConfigPrettier from 'eslint-config-prettier'
 import turboConfig from 'eslint-config-turbo/flat'
 import {createTypeScriptImportResolver} from 'eslint-import-resolver-typescript'
 import * as importPlugin from 'eslint-plugin-import'
-import eslintPluginPrettier from 'eslint-plugin-prettier/recommended'
+import oxlint from 'eslint-plugin-oxlint'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import unusedImports from 'eslint-plugin-unused-imports'
 import globals from 'globals'
 import tsLint from 'typescript-eslint'
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
+const rootOxlintrc = resolve(__dirname, '../../../.oxlintrc.jsonc')
 
 export default [
   {
@@ -34,7 +40,6 @@ export default [
   js.configs.recommended,
   eslintConfigPrettier,
   importPlugin.flatConfigs?.typescript,
-  eslintPluginPrettier,
   ...tsLint.configs.recommended,
   ...turboConfig,
   {
@@ -153,4 +158,6 @@ export default [
     },
   },
   {ignores: ['**/_synchronous-groq-js.mjs']},
+  // oxlint must be last so it can disable ESLint rules that it handles natively
+  ...oxlint.buildFromOxlintConfigFile(rootOxlintrc),
 ]
