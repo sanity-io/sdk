@@ -2,10 +2,13 @@
 import 'zx/globals'
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 
+const isMajor = argv['major'] === true
+const bumpType = isMajor ? 'premajor' : 'prerelease'
+
 const {packages} = await fs.readJson('./release-please-config.json')
 const workspaces = Object.keys(packages)
 
-echo`found ${chalk.blue(workspaces.length)} workspaces to publish canaries for`
+echo`found ${chalk.blue(workspaces.length)} workspaces to publish ${isMajor ? 'major ' : ''}release candidates for`
 
 const prev = new Map()
 const next = new Map()
@@ -16,7 +19,7 @@ for (const workspace of workspaces) {
     await spinner(`bumping ${chalk.blue(name)} from ${chalk.yellow(version)}`, async () => {
       prev.set(name, version)
       // `pnpm version` is really just an alias for `npm version` atm, so we have to jump through some hoops
-      await $`pnpm --filter="${name}" exec pnpm version --no-commit-hooks --no-git-tag-version --preid rc prerelease`
+      await $`pnpm --filter="${name}" exec pnpm version --no-commit-hooks --no-git-tag-version --preid rc ${bumpType}`
       next.set(name, (await fs.readJson(`./${workspace}/package.json`)).version)
     })
     echo`bumped ${chalk.blue(name)} from ${chalk.yellow(prev.get(name))} to ${chalk.green(next.get(name))}`
