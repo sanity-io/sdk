@@ -46,13 +46,7 @@ export type HttpAction =
   | {actionType: ActionMap['discard']; versionId: string; purge?: boolean}
   | {actionType: ActionMap['unpublish']; draftId: string; publishedId: string}
   | {actionType: ActionMap['delete']; publishedId: string; includeDrafts?: string[]}
-  | {
-      actionType: ActionMap['edit']
-      draftId?: string
-      versionId?: string
-      publishedId: string
-      patch: PatchOperations
-    }
+  | {actionType: ActionMap['edit']; draftId: string; publishedId: string; patch: PatchOperations}
   | ({actionType: ActionMap['publish']; draftId: string; publishedId: string} & OptimisticLock)
 
 /**
