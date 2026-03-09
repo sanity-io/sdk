@@ -50,9 +50,8 @@
       "env": ["SDK_E2E_*", "SANITY_INTERNAL_ENV"]
     },
     "lint": {},
-    "//#check:oxlint": {
-      "cache": false
-    },
+    "//#lint": {},
+    "//#check:oxlint": {},
     "test": {
       "env": ["DEBUG", "NODE_ENV"],
       "outputs": []

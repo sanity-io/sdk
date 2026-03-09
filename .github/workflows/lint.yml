@@ -30,4 +30,4 @@ jobs:
         run: pnpm turbo run check:oxlint
 
       - name: ESLint
-        run: pnpm turbo run lint && pnpm exec eslint .
+        run: pnpm turbo run lint
