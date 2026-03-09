@@ -143,6 +143,7 @@ export function processActions({
         const documentId = getId(action.documentId)
 
         if (action.liveEdit) {
+          // For liveEdit documents, create directly without draft/published logic
           if (working[documentId]) {
             throw new ActionError({
               documentId,
@@ -623,7 +624,7 @@ export function processActions({
       case 'document.unpublish': {
         const documentId = getId(action.documentId)
 
-        if (action.liveEdit) {
+        if (action.liveEdit || isReleasePerspective(action.perspective)) {
           throw new ActionError({
             documentId,
             transactionId,
@@ -635,7 +636,6 @@ export function processActions({
         const draftId = getDraftId(DocumentId(documentId))
         const publishedId = getPublishedId(DocumentId(documentId))
 
-        // TODO: verify -- this check may not work for version docs. Or we need to store the published version in the base set.
         if (!working[publishedId] && !base[publishedId]) {
           throw new ActionError({
             documentId,
@@ -672,13 +672,7 @@ export function processActions({
           transactionId,
           mutations: [
             {delete: {id: publishedId}},
-            // also check this -- may not work for version docs
-            {
-              createIfNotExists: {
-                ...(base[publishedId] ?? sourceDoc),
-                _id: draftId,
-              },
-            },
+            {createIfNotExists: {...(base[publishedId] ?? sourceDoc), _id: draftId}},
           ],
           timestamp,
         })
