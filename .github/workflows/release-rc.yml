@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       major:
-        description: "Publish a major release candidate (e.g. 3.0.0-rc.0)"
+        description: "Publish a major release candidate (e.g. 3.0.0-rc.0). Defaults to minor (e.g. 2.9.0-rc.0)."
         type: boolean
         default: false
 
