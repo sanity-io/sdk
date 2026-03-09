@@ -877,6 +877,133 @@ it('emits an event for each action after an outgoing transaction has been accept
   unsubscribe()
 })
 
+it('creates and edits a version document with a release perspective', async () => {
+  const documentId = DocumentId('doc-release')
+  const releaseName = 'test-release'
+  const doc = createDocumentHandle({
+    documentId,
+    documentType: 'article',
+    perspective: {releaseName},
+    resource,
+  })
+  const versionId = `versions.${releaseName}.${documentId}`
+
+  const documentState = getDocumentState<TestDocument>(instance, doc)
+  expect(documentState.getCurrent()).toBeUndefined()
+
+  const unsubscribe = documentState.subscribe()
+
+  // Create a version document for the release
+  const {appeared} = await applyDocumentActions(instance, {
+    actions: [createDocument(doc)],
+    resource,
+  })
+  expect(appeared).toContain(versionId)
+
+  let currentDoc = documentState.getCurrent()
+  expect(currentDoc?._id).toEqual(versionId)
+  expect(currentDoc?._type).toEqual('article')
+
+  // Edit the version document
+  await applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'Release Version Title'}})],
+    resource,
+  })
+  currentDoc = documentState.getCurrent()
+  expect(currentDoc?.title).toEqual('Release Version Title')
+  expect(currentDoc?._id).toEqual(versionId)
+
+  unsubscribe()
+})
+
+it('creates a version document with initial values and then discards it', async () => {
+  const documentId = DocumentId('doc-release-discard')
+  const releaseName = 'test-release-discard'
+  const doc = createDocumentHandle({
+    documentId,
+    documentType: 'article',
+    perspective: {releaseName},
+    resource,
+  })
+  const versionId = `versions.${releaseName}.${documentId}`
+
+  const documentState = getDocumentState<TestDocument>(instance, doc)
+  const unsubscribe = documentState.subscribe()
+
+  // Create a version document with initial values
+  await applyDocumentActions(instance, {
+    actions: [createDocument(doc, {title: 'Initial Release Title'})],
+    resource,
+  })
+
+  let currentDoc = documentState.getCurrent()
+  expect(currentDoc?._id).toEqual(versionId)
+  expect(currentDoc?.title).toEqual('Initial Release Title')
+
+  // Discard the version document
+  const {disappeared} = await applyDocumentActions(instance, {
+    actions: [discardDocument(doc)],
+    resource,
+  })
+  expect(disappeared).toContain(versionId)
+
+  currentDoc = documentState.getCurrent()
+  expect(currentDoc).toBeNull()
+
+  unsubscribe()
+})
+
+it('version edits are isolated from draft state', async () => {
+  const documentId = DocumentId('doc-version-isolation')
+  const releaseName = 'isolation-release'
+  const versionDoc = createDocumentHandle({
+    documentId,
+    documentType: 'article',
+    perspective: {releaseName},
+    resource,
+  })
+  const draftDoc = createDocumentHandle({documentId, documentType: 'article', resource})
+  const versionId = `versions.${releaseName}.${documentId}`
+
+  const versionState = getDocumentState<TestDocument>(instance, versionDoc)
+  const draftState = getDocumentState<TestDocument>(instance, draftDoc)
+
+  const unsubscribeVersion = versionState.subscribe()
+  const unsubscribeDraft = draftState.subscribe()
+
+  // Create draft and version documents
+  await applyDocumentActions(instance, {
+    actions: [createDocument(draftDoc)],
+    resource,
+  })
+  await applyDocumentActions(instance, {
+    actions: [editDocument(draftDoc, {set: {title: 'Draft Title'}})],
+    resource,
+  })
+  await applyDocumentActions(instance, {
+    actions: [createDocument(versionDoc, {title: 'Release Title'})],
+    resource,
+  })
+
+  // Version perspective shows the version doc
+  expect(versionState.getCurrent()?._id).toEqual(versionId)
+  expect(versionState.getCurrent()?.title).toEqual('Release Title')
+
+  // Draft state shows the draft doc
+  expect(draftState.getCurrent()?.title).toEqual('Draft Title')
+
+  // Editing the version doc should not affect the draft
+  await applyDocumentActions(instance, {
+    actions: [editDocument(versionDoc, {set: {title: 'Updated Release Title'}})],
+    resource,
+  })
+  expect(versionState.getCurrent()?.title).toEqual('Updated Release Title')
+  expect(draftState.getCurrent()?.title).toEqual('Draft Title')
+
+  unsubscribeVersion()
+  unsubscribeDraft()
+})
+
 vi.mock('../client/clientStore.ts', () => ({
   getClientState: vi.fn().mockReturnValue({observable: new ReplaySubject(1)}),
 }))
