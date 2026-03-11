@@ -1,5 +1,40 @@
 # Changelog
 
+## [3.0.0](https://github.com/sanity-io/sdk/compare/sdk-v2.8.0...sdk-v3.0.0) (2026-03-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove experimental typegen and groq package dependency ([#749](https://github.com/sanity-io/sdk/issues/749))
+* replace implicit projectId/dataset config with named sources ([#753](https://github.com/sanity-io/sdk/issues/753))
+* require explicit `projectId` for `getDatasetsState` ([#752](https://github.com/sanity-io/sdk/issues/752))
+* remove deprecated APIs for v3 ([#748](https://github.com/sanity-io/sdk/issues/748))
+* The SDK now uses source-based APIs in this v3 migration. Existing integrations that relied on projectId/dataset-based assumptions may require updates.
+
+### Features
+
+* **document:** update document store to accept sources ([#730](https://github.com/sanity-io/sdk/issues/730)) ([b7b727b](https://github.com/sanity-io/sdk/commit/b7b727b9cfc70d0c1e0486121ce8a55e33cbfd40))
+* **preview:** update preview to use perspective and source ([#731](https://github.com/sanity-io/sdk/issues/731)) ([9702f45](https://github.com/sanity-io/sdk/commit/9702f45fa11f368593fe741872b5bc4ae501183f))
+* refactor(presence): convert presence to use source ([#735](https://github.com/sanity-io/sdk/issues/735)) ([48e2363](https://github.com/sanity-io/sdk/commit/48e2363c3814a670854553d24ad9422401165fd8))
+* **releases:** update releases store to use sources ([#733](https://github.com/sanity-io/sdk/issues/733)) ([3912987](https://github.com/sanity-io/sdk/commit/3912987efd153bc0939b6a89b9639374cfef211b))
+* remove deprecated APIs for v3 ([#748](https://github.com/sanity-io/sdk/issues/748)) ([154e074](https://github.com/sanity-io/sdk/commit/154e074667472edb91d8cdd8388885b3ccde0556))
+* remove experimental typegen and groq package dependency ([#749](https://github.com/sanity-io/sdk/issues/749)) ([85da9d1](https://github.com/sanity-io/sdk/commit/85da9d1d4aa4d2b0709ccdb888456d96c6b12704))
+* replace implicit projectId/dataset config with named sources ([#753](https://github.com/sanity-io/sdk/issues/753)) ([cb83dfc](https://github.com/sanity-io/sdk/commit/cb83dfcc73b5f3679e4a31157236876835b8ee45))
+* require explicit `projectId` for `getDatasetsState` ([#752](https://github.com/sanity-io/sdk/issues/752)) ([c3fbb5e](https://github.com/sanity-io/sdk/commit/c3fbb5e43cfd45cdf59b996536df51faa2115903))
+
+
+### Bug Fixes
+
+* **auth:** handle Studio cookie auth when token source emits null ([#743](https://github.com/sanity-io/sdk/issues/743)) ([6323543](https://github.com/sanity-io/sdk/commit/632354343e4fa3c7f0d63ed26953532b80889812))
+* **core:** disallow stackable perspectives in PerspectiveHandle ([#750](https://github.com/sanity-io/sdk/issues/750)) ([5e4f8e7](https://github.com/sanity-io/sdk/commit/5e4f8e7c4bb7d8a4d55cff82bdd2c5743f668a2b))
+* **core:** initialize lastTokenRefresh for stamped tokens to prevent unnecessary refreshes ([#759](https://github.com/sanity-io/sdk/issues/759)) ([0b8b27f](https://github.com/sanity-io/sdk/commit/0b8b27f395542c3ec72619ace2b0f783f2c4fda6))
+
+
+### Documentation
+
+* **react:** minor tweaks ([#765](https://github.com/sanity-io/sdk/issues/765)) ([19fd786](https://github.com/sanity-io/sdk/commit/19fd78639acee75ecd9c465f2661cbcb740b9751))
+* Update all Docs for v3 ([#758](https://github.com/sanity-io/sdk/issues/758)) ([d756434](https://github.com/sanity-io/sdk/commit/d756434709e19bb2835869919648054285f660f7))
+
 ## [2.8.0](https://github.com/sanity-io/sdk/compare/sdk-v2.7.0...sdk-v2.8.0) (2026-02-19)
 
 ### Miscellaneous
