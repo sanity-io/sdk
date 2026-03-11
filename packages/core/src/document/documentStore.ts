@@ -1,5 +1,5 @@
 import {type Action} from '@sanity/client'
-import {getPublishedId} from '@sanity/client/csm'
+import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
 import {jsonMatch} from '@sanity/json-match'
 import {type SanityDocument} from '@sanity/types'
 import {type ExprNode} from 'groq-js'
@@ -34,6 +34,7 @@ import {
   isDatasetResource,
   isMediaLibraryResource,
 } from '../config/sanityConfig'
+import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {
   bindActionByResource,
   type BoundResourceKey,
@@ -42,7 +43,6 @@ import {
 import {type SanityInstance} from '../store/createSanityInstance'
 import {createStateSourceAction, type StateSource} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
-import {getDraftId} from '../utils/ids'
 import {type DocumentAction} from './actions'
 import {API_VERSION, INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
 import {type DocumentEvent, getDocumentEvents} from './events'
@@ -60,7 +60,6 @@ import {
   applyFirstQueuedTransaction,
   applyRemoteDocument,
   cleanupOutgoingTransaction,
-  getDocumentIdsFromActions,
   manageSubscriberIds,
   type OutgoingTransaction,
   type QueuedTransaction,
@@ -175,29 +174,28 @@ const _getDocumentState = bindActionByResource(
   documentStore,
   createStateSourceAction({
     selector: ({state: {error, documentStates}}, options: DocumentOptions<string | undefined>) => {
-      const {documentId, path, liveEdit} = options
+      const {documentId: docId, path, liveEdit, perspective} = options
+      const documentId = DocumentId(docId)
       if (error) throw error
+      let document: SanityDocument | null | undefined
 
       if (liveEdit) {
-        // For liveEdit documents, only look at the single document
-        const document = documentStates[documentId]?.local
-        if (document === undefined) return undefined
-        if (!path) return document
-        const result = jsonMatch(document, path).next()
-        if (result.done) return undefined
-        const {value} = result.value
-        return value
+        document = documentStates[documentId]?.local
+      } else {
+        let version: SanityDocument | null | undefined
+        if (isReleasePerspective(perspective)) {
+          const versionId = getVersionId(documentId, perspective.releaseName)
+          version = documentStates[versionId]?.local
+          // early exit if we don't have the version document and we're in a release perspective
+          if (version === undefined) return undefined
+        }
+        const draft = documentStates[getDraftId(documentId)]?.local
+        const published = documentStates[getPublishedId(documentId)]?.local
+        // early exit if we don't have all the documents for draft/published logic
+        if (draft === undefined || published === undefined) return undefined
+        document = version ?? draft ?? published
       }
 
-      // Standard draft/published logic
-      const draftId = getDraftId(documentId)
-      const publishedId = getPublishedId(documentId)
-      const draft = documentStates[draftId]?.local
-      const published = documentStates[publishedId]?.local
-
-      // wait for draft and published to be loaded before returning a value
-      if (draft === undefined || published === undefined) return undefined
-      const document = draft ?? published
       if (!path) return document
       const result = jsonMatch(document, path).next()
       if (result.done) return undefined
@@ -205,7 +203,7 @@ const _getDocumentState = bindActionByResource(
       return value
     },
     onSubscribe: (context, options: DocumentOptions<string | undefined>) =>
-      manageSubscriberIds(context, options.documentId, {expandDraftPublished: !options.liveEdit}),
+      manageSubscriberIds(context, [options]),
   }),
 )
 
@@ -245,27 +243,27 @@ export const getDocumentSyncStatus = bindActionByResource(
       {state: {error, documentStates: documents, outgoing, applied, queued}},
       doc: DocumentHandle,
     ) => {
-      const documentId = typeof doc === 'string' ? doc : doc.documentId
+      const documentId = DocumentId(typeof doc === 'string' ? doc : doc.documentId)
       if (error) throw error
 
       if (doc.liveEdit) {
         // For liveEdit documents, only check the single document
-        const document = documents[documentId]
-        if (document === undefined) return undefined
-        return !queued.length && !applied.length && !outgoing
+        if (documents[documentId] === undefined) return undefined
+      } else {
+        const version = isReleasePerspective(doc.perspective)
+          ? documents[getVersionId(documentId, doc.perspective.releaseName)]
+          : undefined
+        if (isReleasePerspective(doc.perspective) && version === undefined) return undefined
+        // Standard draft/published logic
+        const draft = documents[getDraftId(documentId)]
+        const published = documents[getPublishedId(documentId)]
+        if (draft === undefined || published === undefined) return undefined
       }
-
-      // Standard draft/published logic
-      const draftId = getDraftId(documentId)
-      const publishedId = getPublishedId(documentId)
-
-      const draft = documents[draftId]
-      const published = documents[publishedId]
-
-      if (draft === undefined || published === undefined) return undefined
       return !queued.length && !applied.length && !outgoing
     },
-    onSubscribe: (context, doc: DocumentHandle) => manageSubscriberIds(context, doc.documentId),
+    onSubscribe: (context, doc: DocumentHandle) => {
+      return manageSubscriberIds(context, [doc])
+    },
   }),
 )
 
@@ -279,8 +277,9 @@ export const getPermissionsState = bindActionByResource(
   documentStore,
   createStateSourceAction({
     selector: calculatePermissions,
-    onSubscribe: (context, {actions}: PermissionsStateOptions) =>
-      manageSubscriberIds(context, getDocumentIdsFromActions(actions)),
+    onSubscribe: (context, {actions}: PermissionsStateOptions) => {
+      manageSubscriberIds(context, actions)
+    },
   }) as StoreAction<
     DocumentStoreState,
     [PermissionsStateOptions],
@@ -365,7 +364,8 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
       withLatestFrom(
         getClientState(instance, {
           apiVersion: API_VERSION,
-          ...(resource ? {resource} : {}),
+          resource,
+          perspective: 'raw',
         }).observable,
       ),
       concatMap(([outgoing, client]) => {
@@ -424,8 +424,8 @@ const subscribeToSubscriptionsAndListenToDocuments = (
           ...added.map((id) => ({id, add: true})),
           ...removed.map((id) => ({id, add: false})),
         ].sort((a, b) => {
-          const aIsDraft = a.id === getDraftId(a.id)
-          const bIsDraft = b.id === getDraftId(b.id)
+          const aIsDraft = a.id === getDraftId(DocumentId(a.id))
+          const bIsDraft = b.id === getDraftId(DocumentId(b.id))
 
           if (aIsDraft && bIsDraft) return a.id.localeCompare(b.id, 'en-US')
           if (aIsDraft) return -1
