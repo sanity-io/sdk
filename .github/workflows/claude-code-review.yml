@@ -10,7 +10,7 @@ jobs:
       github.event.pull_request.draft == false &&
       !contains(github.event.pull_request.labels.*.name, 'skip-review') &&
       github.actor != 'squiggler[bot]' &&
-      github.actor != 'squiggler-ent[bot]' &&
+      github.actor != 'squiggler-app[bot]' &&
       (github.actor != 'renovate[bot]' || contains(github.event.pull_request.labels.*.name, '⚠️ major'))
 
     runs-on: ubuntu-latest
