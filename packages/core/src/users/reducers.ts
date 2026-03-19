@@ -1,6 +1,5 @@
-import {omit} from 'lodash-es'
-
 import {type SanityInstance} from '../store/createSanityInstance'
+import {omit} from '../utils/omit'
 import {type GetUsersOptions, type SanityUserResponse, type UsersStoreState} from './types'
 import {DEFAULT_USERS_BATCH_SIZE} from './usersConstants'
 

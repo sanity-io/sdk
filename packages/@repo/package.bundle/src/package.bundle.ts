@@ -1,9 +1,13 @@
 import react from '@vitejs/plugin-react'
-import {escapeRegExp} from 'lodash-es'
 import {type UserConfig} from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 import {version} from '../package.json'
+
+// Replace with `RegExp.escape()` once Node 24 is the minimum target.
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
 
 export const defaultConfig: UserConfig = {
   appType: 'custom',
