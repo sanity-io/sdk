@@ -31,6 +31,7 @@ import {createStateSourceAction, type SelectorContext} from '../store/createStat
 import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
+import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {
   addSubscription,
   cancelRequest,
@@ -310,7 +311,7 @@ export const getUsersState = bindActionGlobally(
       const key = getUsersKey(instance, options)
       state.set('addSubscription', addSubscription(subscriptionId, key))
       return () => {
-        setTimeout(
+        setCleanupTimeout(
           () => state.set('removeSubscription', removeSubscription(subscriptionId, key)),
           USERS_STATE_CLEAR_DELAY,
         )
