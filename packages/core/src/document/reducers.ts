@@ -1,9 +1,9 @@
 import {getPublishedId} from '@sanity/client/csm'
 import {type Mutation, type PatchOperations, type SanityDocumentLike} from '@sanity/types'
-import {omit} from 'lodash-es'
 
 import {type StoreContext} from '../store/defineStore'
 import {getDraftId, insecureRandomId} from '../utils/ids'
+import {omit} from '../utils/omit'
 import {type DocumentAction} from './actions'
 import {DOCUMENT_STATE_CLEAR_DELAY} from './documentConstants'
 import {type DocumentState, type DocumentStoreState} from './documentStore'

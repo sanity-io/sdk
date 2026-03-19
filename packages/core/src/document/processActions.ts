@@ -6,9 +6,9 @@ import {
   type SanityDocument,
 } from '@sanity/types'
 import {evaluateSync, type ExprNode} from 'groq-js'
-import {isEqual} from 'lodash-es'
 
 import {getDraftId, getPublishedId} from '../utils/ids'
+import {isEqual} from '../utils/isEqual'
 import {type DocumentAction} from './actions'
 import {type Grant} from './permissions'
 import {type DocumentSet, getId, processMutations} from './processMutations'

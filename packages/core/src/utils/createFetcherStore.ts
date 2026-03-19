@@ -1,4 +1,3 @@
-import {omit} from 'lodash-es'
 import {asapScheduler, EMPTY, firstValueFrom, from, Observable} from 'rxjs'
 import {
   catchError,
@@ -23,6 +22,7 @@ import {
 } from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
+import {omit} from '../utils/omit'
 
 interface CreateFetcherStoreOptions<TParams extends unknown[], TData> {
   /**

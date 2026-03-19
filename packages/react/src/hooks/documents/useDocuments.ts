@@ -1,6 +1,5 @@
 import {createGroqSearchFilter, type QueryOptions} from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
-import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {type DocumentHandle, type ResourceHandle} from '../../config/handles'
@@ -276,7 +275,7 @@ export function useDocuments<
     params: {
       ...params,
       // these are passed back to the user as part of each document handle
-      __handle: pick(options, ['resource', 'perspective']),
+      __handle: {resource: options.resource, perspective: options.perspective},
       __types: documentTypes,
     },
   })
