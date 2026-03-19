@@ -1,7 +1,9 @@
 import {type CurrentUser} from '@sanity/types'
 import {distinctUntilChanged, filter, map, type Subscription, switchMap} from 'rxjs'
 
+import {isDatasetResource} from '../config/sanityConfig'
 import {type StoreContext} from '../store/defineStore'
+import {createLogger} from '../utils/logger'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {isStudioConfig} from './authMode'
 import {AuthStateType} from './authStateType'
@@ -22,6 +24,14 @@ export const subscribeToStateAndFetchCurrentUser = (
   {state, instance}: StoreContext<AuthStoreState>,
   fetchOptions?: {useProjectHostname?: boolean},
 ): Subscription => {
+  const rawResource = instance.config.defaultResource
+  const defaultResource = rawResource && isDatasetResource(rawResource) ? rawResource : undefined
+  const logger = createLogger('auth', {
+    instanceId: instance.instanceId,
+    projectId: defaultResource?.projectId,
+    dataset: defaultResource?.dataset,
+  })
+
   const {clientFactory, apiHost} = state.get().options
   const useProjectHostname = fetchOptions?.useProjectHostname ?? isStudioConfig(instance.config)
   const projectId = instance.config.studio?.projectId
@@ -66,6 +76,10 @@ export const subscribeToStateAndFetchCurrentUser = (
 
   return currentUser$.subscribe({
     next: (currentUser) => {
+      logger.info('Current user fetched successfully', {
+        userId: currentUser.id,
+        hasEmail: !!currentUser.email,
+      })
       state.set('setCurrentUser', (prev) => ({
         authState:
           prev.authState.type === AuthStateType.LOGGED_IN
@@ -74,6 +88,7 @@ export const subscribeToStateAndFetchCurrentUser = (
       }))
     },
     error: (error) => {
+      logger.error('Failed to fetch current user', {error})
       state.set('setError', {authState: {type: AuthStateType.ERROR, error}})
     },
   })

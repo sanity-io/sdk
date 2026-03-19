@@ -2,9 +2,11 @@ import {type ClientConfig, createClient, type SanityClient} from '@sanity/client
 import {type CurrentUser} from '@sanity/types'
 
 import {type AuthConfig, type AuthProvider} from '../config/authConfig'
+import {isDatasetResource} from '../config/sanityConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore} from '../store/defineStore'
+import {createLogger} from '../utils/logger'
 import {resolveAuthMode} from './authMode'
 import {AuthStateType} from './authStateType'
 import {type AuthStrategyOptions} from './authStrategy'
@@ -101,6 +103,22 @@ export const authStore = defineStore<AuthStoreState>({
   name: 'Auth',
 
   getInitialState(instance) {
+    const rawResource = instance.config.defaultResource
+    const defaultResource = rawResource && isDatasetResource(rawResource) ? rawResource : undefined
+    const logger = createLogger('auth', {
+      instanceId: instance.instanceId,
+      projectId: defaultResource?.projectId,
+      dataset: defaultResource?.dataset,
+    })
+
+    logger.debug('Initializing auth store', {
+      hasProvidedToken: !!instance.config.auth?.token,
+      hasCustomProviders: !!(
+        instance.config.auth?.providers && instance.config.auth.providers.length > 0
+      ),
+      studioMode: !!instance.config.studio,
+    })
+
     const {
       apiHost,
       callbackUrl,
@@ -150,6 +168,12 @@ export const authStore = defineStore<AuthStoreState>({
         result = getStandaloneInitialState(strategyOptions)
         break
     }
+
+    logger.debug('Auth state initialized', {
+      authStateType: result.authState.type,
+      mode,
+      authMethod: result.authMethod,
+    })
 
     return {
       authState: result.authState,
@@ -269,27 +293,38 @@ export const getIsInDashboardState = bindActionGlobally(
  * Used internally by the Comlink token refresh.
  * @internal
  */
-export const setAuthToken = bindActionGlobally(authStore, ({state}, token: string | null) => {
-  const currentAuthState = state.get().authState
-  if (token) {
-    // Update state only if the new token is different or currently logged out
-    if (currentAuthState.type !== AuthStateType.LOGGED_IN || currentAuthState.token !== token) {
-      const currentUser =
-        currentAuthState.type === AuthStateType.LOGGED_IN ? currentAuthState.currentUser : null
-      const preservedLastTokenRefresh =
-        currentAuthState.type === AuthStateType.LOGGED_IN
-          ? currentAuthState.lastTokenRefresh
-          : undefined
-      state.set('setToken', {
-        authState: createLoggedInAuthState(token, currentUser, preservedLastTokenRefresh),
-      })
+export const setAuthToken = bindActionGlobally(
+  authStore,
+  ({state, instance}, token: string | null) => {
+    const rawResource = instance.config.defaultResource
+    const defaultResource = rawResource && isDatasetResource(rawResource) ? rawResource : undefined
+    const logger = createLogger('auth', {
+      instanceId: instance.instanceId,
+      projectId: defaultResource?.projectId,
+      dataset: defaultResource?.dataset,
+    })
+
+    const currentAuthState = state.get().authState
+    if (token) {
+      if (currentAuthState.type !== AuthStateType.LOGGED_IN || currentAuthState.token !== token) {
+        logger.info('Setting auth token')
+        const currentUser =
+          currentAuthState.type === AuthStateType.LOGGED_IN ? currentAuthState.currentUser : null
+        const preservedLastTokenRefresh =
+          currentAuthState.type === AuthStateType.LOGGED_IN
+            ? currentAuthState.lastTokenRefresh
+            : undefined
+        state.set('setToken', {
+          authState: createLoggedInAuthState(token, currentUser, preservedLastTokenRefresh),
+        })
+      }
+    } else {
+      if (currentAuthState.type !== AuthStateType.LOGGED_OUT) {
+        logger.info('Clearing auth token')
+        state.set('setToken', {
+          authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
+        })
+      }
     }
-  } else {
-    // Handle setting token to null (logging out)
-    if (currentAuthState.type !== AuthStateType.LOGGED_OUT) {
-      state.set('setToken', {
-        authState: {type: AuthStateType.LOGGED_OUT, isDestroyingSession: false},
-      })
-    }
-  }
-})
+  },
+)
