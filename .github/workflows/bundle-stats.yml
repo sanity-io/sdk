@@ -28,5 +28,5 @@ jobs:
       - name: Bundle Stats
         uses: rexxars/bundle-stats@v1
         with:
-          packages: '@sanity/sdk,@sanity/sdk-react'
+          packages: 'packages/core,packages/react'
           build-command: 'pnpm turbo run build --filter=@sanity/sdk... --filter=@sanity/sdk-react...'
