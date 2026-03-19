@@ -26,5 +26,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Lint
-        run: pnpm lint
+      - name: Oxlint
+        run: pnpm turbo run check:oxlint
+
+      - name: ESLint
+        run: pnpm turbo run lint
