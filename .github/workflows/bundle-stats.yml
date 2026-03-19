@@ -30,3 +30,4 @@ jobs:
         with:
           packages: 'packages/core,packages/react'
           build-command: 'pnpm turbo run build --filter=@sanity/sdk... --filter=@sanity/sdk-react...'
+          compare-npm: 'latest'
