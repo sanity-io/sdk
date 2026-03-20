@@ -26,7 +26,7 @@ jobs:
           node-version: 24
 
       - name: Bundle Stats
-        uses: rexxars/bundle-stats@4154b0052bf95b435cc3829fe90cd06a2f9d4dcd # v1.9.1
+        uses: rexxars/bundle-stats@5b965c0d5954a27d44a7def1f8293ef677e1ecd4 # v1.9.3
         with:
           packages: 'packages/core,packages/react'
           build-command: 'pnpm turbo run build --filter=@sanity/sdk... --filter=@sanity/sdk-react...'
