@@ -89,7 +89,10 @@ export const subscribeToStateAndFetchBatches = ({
 
   const queryTrigger$ = combineLatest([activeDocumentIds$, documentProjections$]).pipe(
     debounceTime(BATCH_DEBOUNCE_TIME),
-    distinctUntilChanged((a, b) => isEqual(a, b)),
+    distinctUntilChanged(
+      ([aIds, aProjections], [bIds, bProjections]) =>
+        isSetEqual(aIds, bIds) && isEqual(aProjections, bProjections),
+    ),
   )
 
   const queryExecutionSubscription = queryTrigger$

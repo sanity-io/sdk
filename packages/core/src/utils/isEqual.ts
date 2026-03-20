@@ -1,8 +1,7 @@
 /**
- * Deep equality check for JSON-like values (primitives, plain objects, arrays)
- * with additional support for Set comparison.
+ * Deep equality check for JSON-like values (primitives, plain objects, arrays).
  *
- * This does NOT handle Maps, Dates, RegExps, typed arrays, or circular
+ * This does NOT handle Sets, Maps, Dates, RegExps, typed arrays, or circular
  * references - it covers the subset of types actually used in the SDK.
  *
  * @internal
@@ -16,14 +15,6 @@ export function isEqual(a: unknown, b: unknown): boolean {
     if (!Array.isArray(b) || a.length !== b.length) return false
     for (let i = 0; i < a.length; i++) {
       if (!isEqual(a[i], b[i])) return false
-    }
-    return true
-  }
-
-  if (a instanceof Set && b instanceof Set) {
-    if (a.size !== b.size) return false
-    for (const item of a) {
-      if (!b.has(item)) return false
     }
     return true
   }
@@ -42,7 +33,5 @@ export function isEqual(a: unknown, b: unknown): boolean {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return (
-    typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Set)
-  )
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
