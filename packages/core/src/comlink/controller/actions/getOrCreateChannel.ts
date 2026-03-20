@@ -1,7 +1,7 @@
 import {type ChannelInput, type ChannelInstance} from '@sanity/comlink'
-import {isEqual} from 'lodash-es'
 
 import {type StoreContext} from '../../../store/defineStore'
+import {isEqual} from '../../../utils/isEqual'
 import {type FrameMessage, type WindowMessage} from '../../types'
 import {type ComlinkControllerState} from '../comlinkControllerStore'
 

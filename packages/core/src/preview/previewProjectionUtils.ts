@@ -1,6 +1,5 @@
 import {type SanityClient} from '@sanity/client'
 import {createImageUrlBuilder} from '@sanity/image-url'
-import {isObject} from 'lodash-es'
 
 import {getClient} from '../client/clientStore'
 import {type DocumentResource} from '../config/sanityConfig'
@@ -14,7 +13,12 @@ const API_VERSION = 'v2025-05-06'
  * Checks if the provided value has `_ref` property that is a string and starts with `image-`
  */
 function hasImageRef<T>(value: unknown): value is T & {_ref: string} {
-  return isObject(value) && '_ref' in value && typeof (value as {_ref: unknown})._ref === 'string'
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    '_ref' in value &&
+    typeof (value as {_ref: unknown})._ref === 'string'
+  )
 }
 
 /**

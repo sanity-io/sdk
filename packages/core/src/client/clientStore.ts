@@ -4,7 +4,6 @@ import {
   createClient,
   type SanityClient,
 } from '@sanity/client'
-import {pick} from 'lodash-es'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
 import {
@@ -156,7 +155,13 @@ const listenToAuthMethod = ({instance, state}: StoreContext<ClientStoreState>) =
   })
 }
 
-const getClientConfigKey = (options: ClientOptions) => JSON.stringify(pick(options, ...allowedKeys))
+const getClientConfigKey = (options: ClientOptions) => {
+  const picked: Record<string, unknown> = {}
+  for (const key of allowedKeys) {
+    if (key in options) picked[key] = options[key]
+  }
+  return JSON.stringify(picked)
+}
 
 /**
  * Retrieves a Sanity client instance configured with the provided options.
