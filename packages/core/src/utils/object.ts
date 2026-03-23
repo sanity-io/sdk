@@ -3,12 +3,11 @@
  *
  * @internal
  */
-export function isObject(value: unknown): value is Record<PropertyKey, unknown> {
+export function isObject(value: unknown): value is object {
   return typeof value === 'object' && value !== null
 }
 
-const hasOwn = (value: object, key: PropertyKey): boolean =>
-  Object.prototype.hasOwnProperty.call(value, key)
+const hasOwn = (value: object, key: PropertyKey) => Object.prototype.hasOwnProperty.call(value, key)
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {
   if (!isObject(value)) return false
@@ -22,7 +21,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
  *
  * @internal
  */
-export function omitProperty<T extends object, const K extends keyof T>(
+export function omitProperty<T extends object, K extends keyof T>(
   value: T | null | undefined,
   key: K,
 ): Omit<T, K> {
@@ -37,7 +36,7 @@ export function omitProperty<T extends object, const K extends keyof T>(
  *
  * @internal
  */
-export function pickProperties<T extends object, const K extends keyof T>(
+export function pickProperties<T extends object, K extends keyof T>(
   value: T,
   keys: readonly K[],
 ): Pick<T, K> {
@@ -94,6 +93,8 @@ const areMapsEqual = (left: Map<unknown, unknown>, right: Map<unknown, unknown>)
 
 /**
  * Compares values deeply across the plain object, array, map, and set shapes used by the SDK.
+ * This helper is intended for acyclic SDK data structures and does not guard against circular
+ * references.
  *
  * @internal
  */
