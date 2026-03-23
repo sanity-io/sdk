@@ -1,5 +1,4 @@
 import {DocumentId, getPublishedId} from '@sanity/id-utils'
-import {omit} from 'lodash-es'
 
 import {type DocumentHandle} from '../config/sanityConfig'
 import {bindActionByResourceAndPerspective} from '../store/createActionBinder'
@@ -11,6 +10,7 @@ import {
 } from '../store/createStateSourceAction'
 import {hashString} from '../utils/hashString'
 import {insecureRandomId} from '../utils/ids'
+import {omitProperty} from '../utils/object'
 import {projectionStore} from './projectionStore'
 import {type ProjectionStoreState, type ProjectionValuePending} from './types'
 import {PROJECTION_STATE_CLEAR_DELAY, STABLE_EMPTY_PROJECTION, validateProjection} from './util'
@@ -93,7 +93,7 @@ export const _getProjectionState = bindActionByResourceAndPerspective(
       return () => {
         setTimeout(() => {
           state.set('removeSubscription', (prev): Partial<ProjectionStoreState> => {
-            const documentSubscriptionsForHash = omit(
+            const documentSubscriptionsForHash = omitProperty(
               prev.subscriptions[documentId]?.[projectionHash],
               subscriptionId,
             )
