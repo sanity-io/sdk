@@ -23,6 +23,8 @@ export interface SanityAppProps {
    * is used automatically when no explicit resource is specified in hooks.
    */
   resources?: Record<string, DocumentResource>
+  /** When set, automatically fetches and registers the organization's media library and canvas as named resources. */
+  inferOrganizationResourcesFrom?: string
   children: React.ReactNode
   /* Fallback content to show when child components are suspending. Same as the `fallback` prop for React Suspense. */
   fallback: React.ReactNode
@@ -112,6 +114,7 @@ export function SanityApp({
   fallback,
   config: configProp,
   resources: resourcesProp,
+  inferOrganizationResourcesFrom,
   ...props
 }: SanityAppProps): ReactElement {
   const studioWorkspace = useContext(SDKStudioContext)
@@ -162,6 +165,7 @@ export function SanityApp({
       fallback={fallback}
       config={resolvedConfig}
       resources={resolvedResources}
+      inferOrganizationResourcesFrom={inferOrganizationResourcesFrom}
     >
       {children}
     </SDKProvider>
