@@ -27,7 +27,35 @@ export interface SanityAppProps {
    * is used automatically when no explicit resource is specified in hooks.
    */
   resources?: Record<string, DocumentResource>
-  /** When set, automatically fetches and registers the organization's media library and canvas as named resources. */
+  /**
+   * When set, automatically fetches and registers the organization's media library and canvas as named resources.
+   * Set this with your organization's ID to automatically fetch and register the organization's media library and canvas as named resources.
+   * These resources will be available to hooks as `media-library` and `canvas`.
+   *
+   * @example
+   * ```tsx
+   *
+   * const MyApp = () => {
+   *   // should "just work" because of inferOrganizationResourcesFrom.
+   *   const {data: assets} = useDocuments({
+   *     documentType: 'sanity.asset',
+   *     resourceName: 'media-library',
+   *   })
+   *   return (
+   *     <div>
+   *       {assets.map((asset) => (
+   *         <div key={asset._id}>{asset.originalFilename}</div>
+   *       ))}
+   *     </div>
+   *   )
+   * }
+   * <SanityApp
+   *   inferOrganizationResourcesFrom="your-organization-id"
+   * >
+   *   <MyApp />
+   * </SanityApp>
+   * ```
+   */
   inferOrganizationResourcesFrom?: string
   children: React.ReactNode
   /* Fallback content to show when child components are suspending. Same as the `fallback` prop for React Suspense. */
