@@ -5,7 +5,7 @@ import {type JSX, Suspense} from 'react'
 import {BrowserRouter, useNavigate} from 'react-router'
 
 import {AppRoutes} from './AppRoutes'
-import {devConfig, devResources, e2eConfig, e2eResources} from './sanityConfigs'
+import {devConfig, devOrgId, devResources, e2eConfig, e2eOrgId, e2eResources} from './sanityConfigs'
 
 const theme = buildTheme({})
 
@@ -25,6 +25,7 @@ export default function App(): JSX.Element {
         fallback={<Spinner />}
         config={isE2E ? e2eConfig : devConfig}
         resources={isE2E ? e2eResources : devResources}
+        inferOrganizationResourcesFrom={isE2E ? e2eOrgId : devOrgId}
       >
         <BrowserRouter>
           <Suspense>
