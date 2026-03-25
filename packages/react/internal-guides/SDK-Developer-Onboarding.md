@@ -311,7 +311,7 @@ That split matters a lot:
 - the resource named `"default"` becomes the root active resource context
 - other named resources are available for hooks that resolve `resourceName`
 
-This means the resources map is not "one instance per resource."
+This means the resources map is a declaration of available named resources, while the active root instance/context comes from the resource registered as `"default"`, not "one instance per resource."
 
 ### Step 3: `ResourceProvider`
 
@@ -551,8 +551,8 @@ Here is the least pretentious version:
 
 If you like analogies:
 
-- `defineStore` is the blueprint
-- `createStoreInstance` is a real apartment built from that blueprint
+- `defineStore` is the building blueprint
+- `createStoreInstance` is a real apartment built from that building blueprint
 - `createActionBinder` decides which tenants share a building and which tenants get a different building
 - `createStoreState` is the plumbing and wiring inside the apartment
 - `createStateSourceAction` is the window that lets the outside world look in without tearing down the wall
@@ -576,7 +576,7 @@ Most of the weirdness in this folder becomes much more reasonable once you reali
 
 ### `defineStore`
 
-This defines a store blueprint.
+This defines a store building blueprint.
 
 The important parts are:
 
@@ -602,7 +602,7 @@ This creates a real instance of a store for a given `SanityInstance` and key.
 
 This is where initialization actually happens.
 
-This is the moment the blueprint turns into a live thing.
+This is the moment the building blueprint turns into a live thing.
 
 That is an important distinction:
 
@@ -678,7 +678,7 @@ That means:
 
 - one dataset resource gets one document store instance
 - a different dataset resource gets a different document store instance
-- the store is not global across all resources
+- the store is scoped by resource, so each resource gets its own document-store bucket instead of all resources sharing one global bucket
 
 That is exactly what you would want for document state. A `projectA/production` document cache should not silently share state with `projectB/testing`.
 
