@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.9.0](https://github.com/sanity-io/sdk/compare/sdk-v2.8.0...sdk-v2.9.0) (2026-03-26)
+
+
+### Features
+
+* **document:** update document store to accept sources ([#730](https://github.com/sanity-io/sdk/issues/730)) ([b7b727b](https://github.com/sanity-io/sdk/commit/b7b727b9cfc70d0c1e0486121ce8a55e33cbfd40))
+* **preview:** update preview to use perspective and source ([#731](https://github.com/sanity-io/sdk/issues/731)) ([9702f45](https://github.com/sanity-io/sdk/commit/9702f45fa11f368593fe741872b5bc4ae501183f))
+* **releases:** update releases store to use sources ([#733](https://github.com/sanity-io/sdk/issues/733)) ([3912987](https://github.com/sanity-io/sdk/commit/3912987efd153bc0939b6a89b9639374cfef211b))
+
+
+### Bug Fixes
+
+* **auth:** handle Studio cookie auth when token source emits null ([#743](https://github.com/sanity-io/sdk/issues/743)) ([6323543](https://github.com/sanity-io/sdk/commit/632354343e4fa3c7f0d63ed26953532b80889812))
+* **core:** initialize lastTokenRefresh for stamped tokens to prevent unnecessary refreshes ([#759](https://github.com/sanity-io/sdk/issues/759)) ([72ef247](https://github.com/sanity-io/sdk/commit/72ef247b50abaa686597bddbbdb2181d16ca4463))
+* **core:** prevent cleanup timers from keeping Node.js process alive ([#772](https://github.com/sanity-io/sdk/issues/772)) ([c9e250e](https://github.com/sanity-io/sdk/commit/c9e250e882b84a9ba8cbf3501948341a0bc305d2))
+* **test:** remove default resource param from core ([#777](https://github.com/sanity-io/sdk/issues/777)) ([f4835fd](https://github.com/sanity-io/sdk/commit/f4835fd7f7087c93c8edc1bd371f147e18ddb291))
+
 ## [2.8.0](https://github.com/sanity-io/sdk/compare/sdk-v2.7.0...sdk-v2.8.0) (2026-02-19)
 
 ### Miscellaneous
