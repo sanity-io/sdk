@@ -23,6 +23,7 @@ import {
 } from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
+import {setCleanupTimeout} from './setCleanupTimeout'
 
 interface CreateFetcherStoreOptions<TParams extends unknown[], TData> {
   /**
@@ -247,7 +248,7 @@ export function createFetcherStore<TParams extends unknown[], TData>({
         }))
 
         return () => {
-          setTimeout(() => {
+          setCleanupTimeout(() => {
             state.set('removeSubscription', (prev: FetcherStoreState<TParams, TData>) => {
               const entry = prev.stateByParams[key]
               if (!entry) return prev
