@@ -43,6 +43,7 @@ export {
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
 export {useDispatchIntent} from '../hooks/dashboard/useDispatchIntent'
+export {useDocumentTitle} from '../hooks/dashboard/useDocumentTitle'
 export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
 export {
   type NavigateToStudioResult,
