@@ -3,6 +3,7 @@ import {createSelector} from 'reselect'
 
 import {bindActionGlobally} from '../../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../../store/createStateSourceAction'
+import {setCleanupTimeout} from '../../utils/setCleanupTimeout'
 import {type FrameMessage, type WindowMessage} from '../types'
 import {
   type ComlinkNodeState,
@@ -57,7 +58,7 @@ export const getNodeState = bindActionGlobally(
       subs.add(subscriberId)
 
       return () => {
-        setTimeout(() => {
+        setCleanupTimeout(() => {
           const activeSubs = state.get().subscriptions.get(nodeName)
           if (activeSubs) {
             activeSubs.delete(subscriberId)

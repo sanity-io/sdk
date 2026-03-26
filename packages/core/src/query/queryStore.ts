@@ -44,6 +44,7 @@ import {
 import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
+import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {
   QUERY_STATE_CLEAR_DELAY,
   QUERY_STORE_API_VERSION,
@@ -328,7 +329,7 @@ const _getQueryState = bindActionByResource(
 
       return () => {
         // this runs on unsubscribe
-        setTimeout(
+        setCleanupTimeout(
           () => state.set('removeSubscriber', removeSubscriber(key, subscriptionId)),
           QUERY_STATE_CLEAR_DELAY,
         )
