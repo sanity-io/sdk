@@ -204,12 +204,4 @@ export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {defineIntent, type Intent, type IntentFilter} from '../utils/defineIntent'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {CORE_SDK_VERSION} from '../version'
-export {
-  getIndexForKey,
-  getPathDepth,
-  joinPaths,
-  jsonMatch,
-  slicePath,
-  stringifyPath,
-} from '@sanity/json-match'
 export type {CurrentUser, Role, SanityDocument} from '@sanity/types'
