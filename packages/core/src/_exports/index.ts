@@ -158,22 +158,14 @@ export type {
   TransportEvent,
   UserPresence,
 } from '../presence/types'
-export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
 export {PREVIEW_PROJECTION} from '../preview/previewConstants'
 export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
-export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
-export type {
-  PreviewMedia,
-  PreviewQueryResult,
-  PreviewStoreState,
-  PreviewValue,
-  ValuePending,
-} from '../preview/types'
+export type {PreviewMedia, PreviewQueryResult, PreviewValue, ValuePending} from '../preview/types'
 export {type OrgVerificationResult} from '../project/organizationVerification'
 export {getProjectState, resolveProject} from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'
-export {type ProjectionValuePending, type ValidProjection} from '../projection/types'
+export {type ProjectionValuePending} from '../projection/types'
 export {getProjectsState, resolveProjects} from '../projects/projects'
 export {
   getQueryKey,

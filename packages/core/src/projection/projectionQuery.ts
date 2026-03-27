@@ -1,7 +1,6 @@
-import {type ClientPerspective} from '@sanity/client'
 import {DocumentId} from '@sanity/id-utils'
 
-import {type ReleasePerspective} from '../config/sanityConfig'
+import {type PerspectiveHandle} from '../config/sanityConfig'
 import {getPublishedId} from '../utils/ids'
 import {
   type DocumentProjections,
@@ -68,7 +67,7 @@ interface ProcessProjectionQueryOptions {
   ids: Set<string>
   results: ProjectionQueryResult[]
   documentStatuses?: ProjectionStoreState['documentStatuses']
-  perspective: ClientPerspective | ReleasePerspective
+  perspective: NonNullable<PerspectiveHandle['perspective']>
 }
 
 export function processProjectionQuery({

@@ -62,7 +62,7 @@ export type ReleasePerspective = {
  * @public
  */
 export interface PerspectiveHandle {
-  perspective?: ClientPerspective | ReleasePerspective
+  perspective?: Exclude<ClientPerspective, readonly unknown[]> | ReleasePerspective
 }
 
 /**
@@ -132,16 +132,6 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
    * `SDKStudioContext` provider. Can also be set explicitly for programmatic use.
    */
   studio?: StudioConfig
-
-  /**
-   * Studio mode configuration for use of the SDK in a Sanity Studio.
-   * @remarks Controls whether studio mode features are enabled.
-   * @deprecated Use `studio` instead, which provides richer integration
-   * with the Studio's workspace (auth token sync, etc.).
-   */
-  studioMode?: {
-    enabled: boolean
-  }
 
   /**
    * @beta

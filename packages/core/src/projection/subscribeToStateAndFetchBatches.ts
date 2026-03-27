@@ -16,7 +16,6 @@ import {
   tap,
 } from 'rxjs'
 
-import {isDatasetSource} from '../config/sanityConfig'
 import {getQueryState, resolveQuery} from '../query/queryStore'
 import {type BoundPerspectiveKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
@@ -112,8 +111,7 @@ export const subscribeToStateAndFetchBatches = ({
               tag: PROJECTION_TAG,
               perspective,
             },
-            // temporary guard here until we're ready for everything to be queried via global API
-            ...(source && !isDatasetSource(source) ? {source} : {}),
+            source,
           })
 
           const querySource$ = defer(() => {
@@ -127,8 +125,7 @@ export const subscribeToStateAndFetchBatches = ({
                     signal: controller.signal,
                     perspective,
                   },
-                  // temporary guard here until we're ready for everything to be queried via global API in v3
-                  ...(source && !isDatasetSource(source) ? {source} : {}),
+                  source,
                 }),
               ).pipe(switchMap(() => observable))
             }
@@ -153,8 +150,7 @@ export const subscribeToStateAndFetchBatches = ({
               tag: PROJECTION_TAG,
               perspective: 'raw',
             },
-            // temporary guard here until we're ready for everything to be queried via global API
-            ...(source && !isDatasetSource(source) ? {source} : {}),
+            source,
           })
 
           const statusQuerySource$ = defer(() => {
@@ -168,8 +164,7 @@ export const subscribeToStateAndFetchBatches = ({
                     signal: controller.signal,
                     perspective: 'raw',
                   },
-                  // temporary guard here until we're ready for everything to be queried via global API
-                  ...(source && !isDatasetSource(source) ? {source} : {}),
+                  source,
                 }),
               ).pipe(switchMap(() => observable))
             }
