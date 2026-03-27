@@ -1,4 +1,5 @@
-import {createGroqSearchFilter, type QueryOptions} from '@sanity/sdk'
+import {type QueryOptions} from '@sanity/sdk'
+import {createGroqSearchFilter} from '@sanity/sdk/_internal'
 import {type SortOrderingItem} from '@sanity/types'
 import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'

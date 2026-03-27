@@ -136,8 +136,8 @@ export {
   resolveUser,
   resolveUsers,
 } from '../users/usersStore'
+// must be exported since many stores are based on this type
 export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
-export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {defineIntent, type Intent, type IntentFilter} from '../utils/defineIntent'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {CORE_SDK_VERSION} from '../version'
