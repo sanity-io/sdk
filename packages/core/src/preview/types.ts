@@ -52,25 +52,5 @@ export interface PreviewValue {
   /**
    * The status of the document.
    */
-  _status?: {
-    /** The date of the last published edit */
-    lastEditedPublishedAt?: string
-    /** The date of the last draft edit */
-    lastEditedDraftAt?: string
-  }
-}
-
-/**
- * Represents the current state of a preview value along with a flag indicating whether
- * the preview data is still being fetched or is fully resolved.
- *
- * The tuple contains a preview value or null, and a boolean indicating if the data is
- * pending. A `true` value means a fetch is ongoing; `false` indicates that the
- * currently provided preview value is up-to-date.
- *
- * @public
- */
-export type ValuePending<T> = {
-  data: T | null
-  isPending: boolean
+  _status?: DocumentStatus
 }

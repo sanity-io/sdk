@@ -1,5 +1,4 @@
-import {type ReleasePerspective} from '@sanity/sdk'
-import {type PerspectiveHandle} from '@sanity/sdk-react'
+import {type PerspectiveHandle, type ReleasePerspective} from '@sanity/sdk-react'
 
 export const isReleasePerspective = (
   perspective: PerspectiveHandle['perspective'],

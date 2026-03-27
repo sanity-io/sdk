@@ -20,3 +20,5 @@ export function isLocalUrl(window: Window): boolean {
     url.startsWith('https://127.0.0.1')
   )
 }
+
+export const DEFAULT_RESOURCE_NAME = 'default'

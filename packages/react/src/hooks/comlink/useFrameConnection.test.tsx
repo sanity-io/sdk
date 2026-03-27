@@ -4,7 +4,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 import {act, renderHook} from '../../../test/test-utils'
 import {useFrameConnection} from './useFrameConnection'
 
-vi.mock(import('@sanity/sdk'), async (importOriginal) => {
+vi.mock(import('@sanity/sdk/comlink'), async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
@@ -14,7 +14,8 @@ vi.mock(import('@sanity/sdk'), async (importOriginal) => {
   }
 })
 
-const {getOrCreateChannel, getOrCreateController, releaseChannel} = await import('@sanity/sdk')
+const {getOrCreateChannel, getOrCreateController, releaseChannel} =
+  await import('@sanity/sdk/comlink')
 
 interface TestControllerMessage {
   type: 'TEST_MESSAGE'

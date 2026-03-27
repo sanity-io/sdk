@@ -1,9 +1,9 @@
+import {type SanityProject} from '@sanity/client'
 import {
   getProjectState,
   type ProjectHandle,
   resolveProject,
   type SanityInstance,
-  type SanityProject,
   type StateSource,
 } from '@sanity/sdk'
 
