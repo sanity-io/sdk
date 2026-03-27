@@ -1,12 +1,11 @@
 import {ClientError} from '@sanity/client'
 import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
+import {AuthStateType, isDatasetResource} from '@sanity/sdk'
 import {
-  AuthStateType,
   getClientErrorApiBody,
   getClientErrorApiDescription,
-  isDatasetResource,
   isProjectUserNotFoundClientError,
-} from '@sanity/sdk'
+} from '@sanity/sdk/_internal'
 import {useCallback, useContext, useEffect, useState} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 

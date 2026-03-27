@@ -1,31 +1,3 @@
-import {type SanityProject as _SanityProject} from '@sanity/client'
-
-/**
- * @public
- */
-export type SanityProject = _SanityProject
-
-export type {
-  AgentGenerateOptions,
-  AgentGenerateResult,
-  AgentPatchOptions,
-  AgentPatchResult,
-  AgentPromptOptions,
-  AgentPromptResult,
-  AgentResourceOptions,
-  AgentTransformOptions,
-  AgentTransformResult,
-  AgentTranslateOptions,
-  AgentTranslateResult,
-} from '../agent/agentActions'
-export {
-  agentGenerate,
-  agentPatch,
-  agentPrompt,
-  agentTransform,
-  agentTranslate,
-} from '../agent/agentActions'
-export {isStudioConfig} from '../auth/authMode'
 export {AuthStateType} from '../auth/authStateType'
 export {
   type AuthState,
@@ -45,31 +17,8 @@ export {
 export {observeOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
-export {
-  type ApiErrorBody,
-  getClientErrorApiBody,
-  getClientErrorApiDescription,
-  getClientErrorApiType,
-  isProjectUserNotFoundClientError,
-} from '../auth/utils'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
 export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
-export {
-  type ComlinkControllerState,
-  destroyController,
-  getOrCreateChannel,
-  getOrCreateController,
-  releaseChannel,
-} from '../comlink/controller/comlinkControllerStore'
-export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
-export {getOrCreateNode, releaseNode} from '../comlink/node/comlinkNodeStore'
-export {getNodeState, type NodeState} from '../comlink/node/getNodeState'
-export {
-  type FrameMessage,
-  type NewTokenResponseMessage,
-  type RequestNewTokenMessage,
-  type WindowMessage,
-} from '../comlink/types'
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
 export {
   createDocumentHandle,
@@ -88,7 +37,6 @@ export {
 export {
   type CanvasResource,
   type DatasetResource,
-  DEFAULT_RESOURCE_NAME,
   type DocumentHandle,
   type DocumentResource,
   type DocumentTypeHandle,
@@ -157,28 +105,18 @@ export type {
   TransportEvent,
   UserPresence,
 } from '../presence/types'
-export {PREVIEW_PROJECTION} from '../preview/previewConstants'
-export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
-export type {PreviewMedia, PreviewQueryResult, PreviewValue, ValuePending} from '../preview/types'
+export type {PreviewMedia, PreviewQueryResult, PreviewValue} from '../preview/types'
 export {type OrgVerificationResult} from '../project/organizationVerification'
 export {getProjectState, type ProjectHandle, resolveProject} from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'
 export {type ProjectionValuePending} from '../projection/types'
 export {getProjectsState, resolveProjects} from '../projects/projects'
-export {
-  getQueryKey,
-  getQueryState,
-  parseQueryKey,
-  type QueryOptions,
-  resolveQuery,
-} from '../query/queryStore'
+export {getQueryState, type QueryOptions, resolveQuery} from '../query/queryStore'
 export {getPerspectiveState} from '../releases/getPerspectiveState'
-export type {ReleaseDocument} from '../releases/releasesStore'
-export {getActiveReleasesState} from '../releases/releasesStore'
+export {getActiveReleasesState, type ReleaseDocument} from '../releases/releasesStore'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
-export {getUsersKey, parseUsersKey} from '../users/reducers'
 export {
   type GetUserOptions,
   type GetUsersOptions,

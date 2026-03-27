@@ -8,11 +8,11 @@ import {
 } from '@sanity/message-protocol'
 import {
   type FavoriteStatusResponse,
-  type FrameMessage,
   getFavoritesState,
   isDatasetResource,
   resolveFavoritesState,
 } from '@sanity/sdk'
+import {type FrameMessage} from '@sanity/sdk/comlink'
 import {useCallback, useContext, useMemo, useSyncExternalStore} from 'react'
 
 import {type DocumentHandle} from '../../config/handles'

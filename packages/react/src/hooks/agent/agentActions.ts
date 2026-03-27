@@ -1,3 +1,4 @@
+import {type SanityInstance} from '@sanity/sdk'
 import {
   agentGenerate,
   type AgentGenerateOptions,
@@ -12,8 +13,7 @@ import {
   type AgentTransformOptions,
   agentTranslate,
   type AgentTranslateOptions,
-  type SanityInstance,
-} from '@sanity/sdk'
+} from '@sanity/sdk/agent'
 import {useCallback, useContext} from 'react'
 import {firstValueFrom} from 'rxjs'
 

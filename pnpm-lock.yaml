@@ -156,9 +156,6 @@ importers:
       '@sanity/prettier-config':
         specifier: ^1.0.3
         version: 1.0.6(prettier@3.7.4)
-      '@sanity/sdk':
-        specifier: workspace:*
-        version: link:../../packages/core
       '@testing-library/jest-dom':
         specifier: ^6.6.3
         version: 6.9.1

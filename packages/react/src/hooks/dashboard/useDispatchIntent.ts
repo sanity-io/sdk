@@ -1,5 +1,5 @@
 import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
-import {type FrameMessage} from '@sanity/sdk'
+import {type FrameMessage} from '@sanity/sdk/comlink'
 import {useCallback} from 'react'
 
 import {type DocumentHandle} from '../../config/handles'
