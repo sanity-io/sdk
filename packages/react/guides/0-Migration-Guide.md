@@ -113,8 +113,10 @@ The following APIs were deprecated in v2 and have been removed in v3:
 | `resolvePreview` / `ResolvePreviewOptions`   | `resolveProjection` with an explicit `projection`          |
 | `PreviewStoreState` type                     | Use the return type of `getProjectionState`                |
 | `ValidProjection` type                       | Use `string`                                               |
+| `ValuePending` type                          | Removed — was only used with the old preview API           |
 | `studioMode` config option                   | `studio` config option (or zero-config `SDKStudioContext`) |
 | `sanityConfigs` prop on `<SanityApp>`        | `resources` prop                                           |
+| `SanityProject` type                         | Import from `@sanity/client`                               |
 
 **`getPreviewState`**
 
@@ -189,7 +191,46 @@ const config: SanityConfig = {
 }
 ```
 
-#### 4. Experimental typegen and groq dependency removed
+#### 4. `@sanity/sdk` agent and comlink utilities moved to sub-entries
+
+If you import directly from `@sanity/sdk` (the core package), agent and comlink utilities are now available only from dedicated sub-entry points:
+
+| Previously in `@sanity/sdk`                                                                             | Now in                |
+| ------------------------------------------------------------------------------------------------------- | --------------------- |
+| `agentGenerate`, `agentPatch`, `agentPrompt`, `agentTransform`, `agentTranslate` and their option types | `@sanity/sdk/agent`   |
+| `getOrCreateController`, `getOrCreateChannel`, `getOrCreateNode`, `getNodeState`, `FrameMessage`, etc.  | `@sanity/sdk/comlink` |
+
+**If you use `@sanity/sdk-react` (recommended), no changes are needed** — it re-exports everything from both sub-entries.
+
+If you import from `@sanity/sdk` directly:
+
+```typescript
+// Before
+import {agentGenerate, type AgentGenerateOptions} from '@sanity/sdk'
+import {type FrameMessage} from '@sanity/sdk'
+
+// After
+import {agentGenerate, type AgentGenerateOptions} from '@sanity/sdk/agent'
+import {type FrameMessage} from '@sanity/sdk/comlink'
+```
+
+#### 5. Explicit `projectId` required for `getDatasetsState` / `useDatasets`
+
+`getDatasetsState` and `useDatasets` now require an explicit `projectId` argument. They no longer infer it from instance config:
+
+**Before:**
+
+```typescript
+const datasets = useDatasets()
+```
+
+**After:**
+
+```typescript
+const datasets = useDatasets({projectId: 'abc123'})
+```
+
+#### 6. Experimental typegen and groq dependency removed
 
 The `groq` package is no longer a dependency. `defineQuery` and `defineProjection` are no longer needed or exported. Pass plain strings to `query` and `projection` parameters:
 
@@ -210,23 +251,7 @@ const {data} = useQuery({query: '*[_type == $type]', params: {type: 'book'}})
 
 You can safely remove the `groq` package from your dependencies if you were only using it for `defineQuery` / `defineProjection`.
 
-#### 5. Explicit `projectId` required for `getDatasetsState` / `useDatasets`
-
-`getDatasetsState` and `useDatasets` now require an explicit `projectId` argument. They no longer infer it from instance config:
-
-**Before:**
-
-```typescript
-const datasets = useDatasets()
-```
-
-**After:**
-
-```typescript
-const datasets = useDatasets({projectId: 'abc123'})
-```
-
-#### 6. Stackable perspectives disallowed
+#### 7. Stackable perspectives disallowed
 
 `PerspectiveHandle` no longer accepts array-based (stackable) perspectives. Only single perspectives are allowed:
 
@@ -261,7 +286,7 @@ For example, providing a specific perspective that reflects one of your Content 
 
 This way, previous changes will be incorporated into your selected perspective.
 
-#### 7. Presence refactored to use resources
+#### 8. Presence refactored to use resources
 
 `usePresence` now accepts `resource` / `resourceName` options. It only supports dataset resources — passing a media library or canvas resource will throw an error:
 
