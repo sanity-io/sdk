@@ -6,9 +6,9 @@ import {
   type SanityDocument,
 } from '@sanity/types'
 import {evaluateSync, type ExprNode} from 'groq-js'
-import {isEqual} from 'lodash-es'
 
 import {getDraftId, getPublishedId} from '../utils/ids'
+import {isDeepEqual} from '../utils/object'
 import {type DocumentAction} from './actions'
 import {type Grant} from './permissions'
 import {type DocumentSet, getId, processMutations} from './processMutations'
@@ -540,7 +540,7 @@ export function processActions({
 
         // Before proceeding, verify that the working draft is identical to the base draft.
         // TODO: is it enough just to check for the _rev or nah?
-        if (!isEqual(workingDraft, baseDraft)) {
+        if (!isDeepEqual(workingDraft, baseDraft)) {
           throw new ActionError({
             documentId,
             transactionId,
