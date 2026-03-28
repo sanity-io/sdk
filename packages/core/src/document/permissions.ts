@@ -1,9 +1,10 @@
+import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
 import {type SanityDocument} from '@sanity/types'
 import {evaluateSync, type ExprNode, parse} from 'groq-js'
 import {createSelector} from 'reselect'
 
+import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type SelectorContext} from '../store/createStateSourceAction'
-import {getDraftId, getPublishedId} from '../utils/ids'
 import {MultiKeyWeakMap} from '../utils/MultiKeyWeakMap'
 import {type DocumentAction} from './actions'
 import {ActionError, PermissionActionError, processActions} from './processActions'
@@ -68,10 +69,17 @@ const documentsSelector = createSelector(
       actions
         .map((action) => {
           if (typeof action.documentId !== 'string') return []
-          // For liveEdit documents, only fetch the single document
+          // live action and version docs
           if (action.liveEdit) return [action.documentId]
           // For standard documents, fetch both draft and published
-          return [getPublishedId(action.documentId), getDraftId(action.documentId)]
+          const ids: string[] = [
+            getPublishedId(DocumentId(action.documentId)),
+            getDraftId(DocumentId(action.documentId)),
+          ]
+          if (isReleasePerspective(action.perspective)) {
+            ids.push(getVersionId(DocumentId(action.documentId), action.perspective.releaseName))
+          }
+          return ids
         })
         .flat(),
     )
@@ -210,16 +218,32 @@ const _calculatePermissions = createSelector(
       // Check edit actions with no patches
       if (action.type === 'document.edit' && !action.patches?.length) {
         const docId = action.documentId
-        // For liveEdit documents, only check the single document
-        const doc = action.liveEdit
-          ? documents[docId]
-          : (documents[getDraftId(docId)] ?? documents[getPublishedId(docId)])
+        let doc: SanityDocument | null | undefined
+        if (action.liveEdit) {
+          doc = documents[docId]
+        }
+        // don't allow users to edit version documents that don't exist
+        // they should be explicitly created first, as in studio
+        else if (isReleasePerspective(action.perspective)) {
+          doc = documents[getVersionId(DocumentId(docId), action.perspective.releaseName)]
+        } else {
+          doc =
+            documents[getDraftId(DocumentId(docId))] ?? documents[getPublishedId(DocumentId(docId))]
+        }
         if (!doc) {
-          reasons.push({
-            type: 'precondition',
-            message: `The document with ID "${docId}" could not be found. Please check that it exists before editing.`,
-            documentId: docId,
-          })
+          if (isReleasePerspective(action.perspective)) {
+            reasons.push({
+              type: 'precondition',
+              message: `The version document with ID "${docId}" could not be found. Please create it or add it to the release first.`,
+              documentId: docId,
+            })
+          } else {
+            reasons.push({
+              type: 'precondition',
+              message: `The document with ID "${docId}" could not be found. Please check that it exists before editing.`,
+              documentId: docId,
+            })
+          }
         } else if (!checkGrant(grants.update, doc)) {
           reasons.push({
             type: 'access',
