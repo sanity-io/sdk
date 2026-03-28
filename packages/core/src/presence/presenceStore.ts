@@ -3,7 +3,7 @@ import {combineLatest, distinctUntilChanged, filter, map, of, Subscription, swit
 
 import {getTokenState} from '../auth/authStore'
 import {getClient} from '../client/clientStore'
-import {isCanvasResource, isDatasetResource, isMediaLibraryResource} from '../config/sanityConfig'
+import {isDatasetResource} from '../config/sanityConfig'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
@@ -33,24 +33,18 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
       key: {resource},
     } = context
 
-    // Presence is only supported for dataset resources
-    if (isMediaLibraryResource(resource)) {
+    if (!isDatasetResource(resource)) {
       throw new Error(
-        'Presence is not supported for media library resources. Presence tracking requires a dataset resource with a projectId.',
+        'Presence is only supported for dataset resources. Presence tracking requires a dataset resource with a projectId.',
       )
     }
-
-    if (isCanvasResource(resource)) {
-      throw new Error(
-        'Presence is not supported for canvas resources. Presence tracking requires a dataset resource with a projectId.',
-      )
-    }
-
     const sessionId = crypto.randomUUID()
 
+    // bifur transport requires a client with a projectId and dataset
     const client = getClient(instance, {
       apiVersion: '2022-06-30',
-      resource,
+      projectId: resource.projectId,
+      dataset: resource.dataset,
     })
 
     const token$ = getTokenState(instance).observable.pipe(distinctUntilChanged())

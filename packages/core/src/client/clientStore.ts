@@ -195,8 +195,6 @@ export const getClient = bindActionGlobally(
     const {clients, authMethod} = state.get()
 
     let resource: ClientResource | undefined
-    let projectId: string | undefined = options.projectId
-    let dataset: string | undefined = options.dataset
 
     if (options.resource) {
       if (isMediaLibraryResource(options.resource)) {
@@ -204,26 +202,24 @@ export const getClient = bindActionGlobally(
       } else if (isCanvasResource(options.resource)) {
         resource = {type: 'canvas', id: options.resource.canvasId}
       } else if (isDatasetResource(options.resource)) {
-        projectId = options.resource.projectId
-        dataset = options.resource.dataset
+        resource = {
+          type: 'dataset',
+          id: `${options.resource.projectId}.${options.resource.dataset}`,
+        }
       }
-      // temporarily excluding dataset resource as a resource for now. Many of the global API endpoints require vX api version.
-      // When ready, remove the above check and uncomment the below check.
-      // } else if (isDatasetResource(options.resource)) {
-      //   resource = {type: 'dataset', id: `${options.resource.projectId}.${options.resource.dataset}`}
     }
 
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost
 
     const effectiveOptions = {
       ...DEFAULT_CLIENT_CONFIG,
-      ...((options.scope === 'global' || !projectId || resource) && {useProjectHostname: false}),
+      ...((options.scope === 'global' || !options.projectId || resource) && {
+        useProjectHostname: false,
+      }),
       token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
       ...options,
-      ...(projectId && {projectId}),
-      ...(dataset && {dataset}),
       ...(apiHost && {apiHost}),
-      ...(resource && {'~experimental_resource': resource}),
+      ...(resource && {resource}),
     } as ClientOptions
 
     // When a MediaLibrary or Canvas resource is provided, don't use projectId/dataset - the client should be "projectless"
@@ -252,8 +248,7 @@ export const getClient = bindActionGlobally(
       delete effectiveOptions.withCredentials
     }
 
-    // Don't pass our DocumentResource to createClient - we've already derived projectId/dataset or ~experimental_resource
-    const {resource: _omitResource, ...clientConfig} = effectiveOptions
+    const clientConfig = effectiveOptions
 
     const key = getClientConfigKey(effectiveOptions)
 

@@ -4,6 +4,7 @@ import {omit} from 'lodash-es'
 
 import {type StoreContext} from '../store/defineStore'
 import {getDraftId, insecureRandomId} from '../utils/ids'
+import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {type DocumentAction} from './actions'
 import {DOCUMENT_STATE_CLEAR_DELAY} from './documentConstants'
 import {type DocumentState, type DocumentStoreState} from './documentStore'
@@ -576,7 +577,7 @@ export function manageSubscriberIds(
   )
 
   return () => {
-    setTimeout(() => {
+    setCleanupTimeout(() => {
       state.set('removeSubscribers', (prev) =>
         documentIds.reduce(
           (acc, id) => removeSubscriptionIdFromDocument(acc, id, subscriptionId),

@@ -11,6 +11,7 @@ import {
 } from '../store/createStateSourceAction'
 import {hashString} from '../utils/hashString'
 import {insecureRandomId} from '../utils/ids'
+import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {projectionStore} from './projectionStore'
 import {type ProjectionStoreState, type ProjectionValuePending} from './types'
 import {PROJECTION_STATE_CLEAR_DELAY, STABLE_EMPTY_PROJECTION, validateProjection} from './util'
@@ -91,7 +92,7 @@ export const _getProjectionState = bindActionByResourceAndPerspective(
       }))
 
       return () => {
-        setTimeout(() => {
+        setCleanupTimeout(() => {
           state.set('removeSubscription', (prev): Partial<ProjectionStoreState> => {
             const documentSubscriptionsForHash = omit(
               prev.subscriptions[documentId]?.[projectionHash],
