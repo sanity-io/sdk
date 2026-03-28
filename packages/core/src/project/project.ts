@@ -12,7 +12,7 @@ export type ProjectHandle = {
 const project = createFetcherStore({
   name: 'Project',
   getKey: (_instance, options: ProjectHandle) => {
-    const projectId = options?.projectId
+    const projectId = options.projectId
     if (!projectId) {
       throw new Error('A projectId is required to use the project API.')
     }
