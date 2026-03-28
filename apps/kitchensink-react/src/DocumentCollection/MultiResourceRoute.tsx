@@ -1,5 +1,6 @@
 import {
   type DocumentHandle,
+  isDatasetResource,
   useDocument,
   useDocumentPreview,
   useDocumentProjection,
@@ -7,14 +8,7 @@ import {
   useEditDocument,
 } from '@sanity/sdk-react'
 import {Box, TextInput} from '@sanity/ui'
-import {defineProjection} from 'groq'
 import {JSX, Suspense, useRef} from 'react'
-
-import {
-  type MultiResourceAuthorProjectionProjectionResult,
-  MultiResourceMovieProjectionProjectionResult,
-} from '../../sanity.types'
-import {devConfigs, e2eConfigs} from '../sanityConfigs'
 
 function LoadingFallback({message = 'Loading...'}: {message?: string}) {
   return (
@@ -34,18 +28,31 @@ interface DemoCardProps {
   forwardedRef?: React.RefObject<HTMLDivElement | null>
 }
 
-const multiResourceAuthorProjection = defineProjection(`{
+interface AuthorProjectionResult {
+  name?: string
+  role?: string
+  awardCount?: number
+  firstAward?: string
+}
+
+interface MovieProjectionResult {
+  title?: string
+  release_date?: string
+  hasPoster?: boolean
+}
+
+const multiResourceAuthorProjection = `{
   name,
   role,
   "awardCount": count(awards),
   "firstAward": awards[0]
-}`)
+}`
 
-const multiResourceMovieProjection = defineProjection(`{
+const multiResourceMovieProjection = `{
   title,
   release_date,
   "hasPoster": defined(hosted_poster_path)
-  }`)
+  }`
 
 interface ProjectionCardProps<TData = unknown> {
   docHandle: DocumentHandle
@@ -76,7 +83,7 @@ function ProjectionCard<TData = unknown>({
   return (
     <DemoCard
       title={title}
-      projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}
+      projectInfo={`${docHandle.resource && isDatasetResource(docHandle.resource) ? `${docHandle.resource.projectId}.${docHandle.resource.dataset}` : ''}`}
       backgroundColor={backgroundColor}
       borderColor={borderColor}
       textColor={textColor}
@@ -114,7 +121,7 @@ function PreviewCard({
   return (
     <DemoCard
       title={title}
-      projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}
+      projectInfo={`${docHandle.resource && isDatasetResource(docHandle.resource) ? `${docHandle.resource.projectId}.${docHandle.resource.dataset}` : ''}`}
       backgroundColor={backgroundColor}
       borderColor={borderColor}
       textColor={textColor}
@@ -178,20 +185,33 @@ function DemoCard({
   )
 }
 
+interface Author {
+  _id: string
+  name?: string
+  role?: string
+  awards?: string[]
+}
+
+interface Movie {
+  _id: string
+  title?: string
+  tmdb_id?: string
+}
+
 function AuthorEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
-  const {data: author} = useDocument(docHandle)
+  const {data: author} = useDocument<Author>(docHandle)
   const setAuthorName = useEditDocument({...docHandle, path: 'name'})
 
   return (
     <DemoCard
       title="Author Document"
-      projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}
+      projectInfo={`${docHandle.resource && isDatasetResource(docHandle.resource) ? `${docHandle.resource.projectId}.${docHandle.resource.dataset}` : ''}`}
       backgroundColor="#3f0067"
       borderColor="#3f0067"
     >
       <a
         style={{display: 'block', marginBottom: '1rem', color: '#3e41e7'}}
-        href={`https://test-studio.sanity.build/${docHandle.dataset}/structure/author;${author?._id}`}
+        href={`https://test-studio.sanity.build/${docHandle.resource && isDatasetResource(docHandle.resource) ? docHandle.resource.dataset : ''}/structure/author;${author?._id}`}
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -223,13 +243,13 @@ function AuthorEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
 }
 
 function MovieEditor({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
-  const {data: movie} = useDocument(docHandle)
+  const {data: movie} = useDocument<Movie>(docHandle)
   const setMovieName = useEditDocument({...docHandle, path: 'title'})
 
   return (
     <DemoCard
       title="Movie Document"
-      projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}
+      projectInfo={`${docHandle.resource && isDatasetResource(docHandle.resource) ? `${docHandle.resource.projectId}.${docHandle.resource.dataset}` : ''}`}
       backgroundColor="#b4e6ef"
       borderColor="#4fb3c0"
       textColor="#444"
@@ -259,7 +279,7 @@ function MovieEditor({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
 
 function AuthorProjection({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   return (
-    <ProjectionCard<MultiResourceAuthorProjectionProjectionResult>
+    <ProjectionCard<AuthorProjectionResult>
       docHandle={docHandle}
       projection={multiResourceAuthorProjection}
       title="Author Projection"
@@ -289,7 +309,7 @@ function AuthorProjection({docHandle}: {docHandle: DocumentHandle<'author'>}) {
 
 function MovieProjection({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
   return (
-    <ProjectionCard<MultiResourceMovieProjectionProjectionResult>
+    <ProjectionCard<MovieProjectionResult>
       docHandle={docHandle}
       projection={multiResourceMovieProjection}
       title="Movie Projection"
@@ -337,19 +357,16 @@ function MoviePreview({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
 }
 
 export function MultiResourceRoute(): JSX.Element {
-  const configs = import.meta.env['VITE_IS_E2E'] ? e2eConfigs : devConfigs
   const {data: authorDocuments} = useDocuments({
     documentType: 'author',
     batchSize: 1,
-    projectId: configs[0].projectId,
-    dataset: configs[0].dataset,
+    resourceName: 'default',
   })
 
   const {data: movieDocuments} = useDocuments({
     documentType: 'movie',
     batchSize: 1,
-    projectId: configs[1].projectId,
-    dataset: configs[1].dataset,
+    resourceName: 'secondary',
   })
 
   const authorHandle = authorDocuments[0] ?? null
@@ -368,8 +385,8 @@ export function MultiResourceRoute(): JSX.Element {
       <p style={{marginBottom: '2rem'}}>
         This route demonstrates how to use multiple resources in a single page.
         <br />
-        Note you must have access to both resources ({configs[0].projectId}.{configs[0].dataset} and{' '}
-        {configs[1].projectId}.{configs[1].dataset}) to see the documents.
+        Note you must have access to both the &quot;default&quot; and &quot;secondary&quot;
+        resources to see the documents.
       </p>
 
       <h2 style={{marginBottom: '1rem'}}>Document Editors</h2>

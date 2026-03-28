@@ -10,7 +10,7 @@ Authentication in the SDK is managed by the `authStore`, which tracks the user's
 - **`studioAuth`** — handles token discovery and sync inside Sanity Studio
 - **`standaloneAuth`** — handles provided tokens and the OAuth login flow
 
-The auth mode is resolved by `resolveAuthMode` in `authMode.ts` — it checks for `config.studio` (or the deprecated `config.studioMode`) first, then detects a Dashboard iframe via the `_context` URL parameter, and falls back to standalone. API client instances, managed by `clientStore`, automatically utilize the current authentication token from `authStore` for making requests.
+The auth mode is resolved by `resolveAuthMode` in `authMode.ts` — it checks for `config.studio` first, then detects a Dashboard iframe via the `_context` URL parameter, and falls back to standalone. (Note: `config.studioMode` was removed in v3; use `config.studio` instead.) API client instances, managed by `clientStore`, automatically utilize the current authentication token from `authStore` for making requests.
 
 The primary interactive authentication flow involves redirecting the user to `sanity.io/login` (or `sanity.work/login` for staging environments) and handling the callback, which returns an `authCode` (`sid`) exchanged for a session token.
 
@@ -65,7 +65,7 @@ The primary interactive authentication flow involves redirecting the user to `sa
 
 - 🎯 **Use Case:** Using the SDK _within_ the Sanity Studio V3 codebase itself (not running in the dashboard iframe). For instance: in custom input components, tools, or plugins integrated directly into the Studio application.
 
-- ⚙️ **Mechanism:** Studio mode is activated when either `config.studio` is present or the deprecated `config.studioMode.enabled` is `true` (checked via the `isStudioConfig()` helper in `authMode.ts`). When using `SDKStudioContext`, `SanityApp` automatically creates a config with `studio` set — developers do not need to provide `config.studio` themselves. There are two token acquisition paths:
+- ⚙️ **Mechanism:** Studio mode is activated when `config.studio` is present (checked via the `isStudioConfig()` helper in `authMode.ts`). The previous `config.studioMode` option was removed in v3. When using `SDKStudioContext`, `SanityApp` automatically creates a config with `studio` set — developers do not need to provide `config.studio` themselves. There are two token acquisition paths:
   - **Reactive token source (recommended):** Modern Studios provide a reactive token source to the SDK via the `SDKStudioContext` React context (or explicitly via `config.studio.auth.token`). Both paths use a `TokenSource` — an Observable-like object that the SDK subscribes to for ongoing token updates. This is **not** a static string; it is a reactive stream. When the Studio's auth state changes, the SDK receives updated tokens automatically. The Studio remains the single authority for auth — the SDK does not perform its own token refresh or cookie auth checks on this path.
 
   - **Fallback discovery (older Studios):** When no reactive token source is available, the SDK discovers the auth token using these methods in order:
@@ -79,7 +79,7 @@ The primary interactive authentication flow involves redirecting the user to `sa
   - Relies entirely on the authentication context established by the Studio itself.
 
 - 🛠️ **Technical Details:**
-  - Auth mode resolution: `resolveAuthMode` in `authMode.ts` checks `isStudioConfig(config)`, which returns `true` for either `config.studio` or `config.studioMode?.enabled`.
+  - Auth mode resolution: `resolveAuthMode` in `authMode.ts` checks `isStudioConfig(config)`, which returns `true` when `config.studio` is present.
 
   - Strategy implementation: `studioAuth.ts` contains `getStudioInitialState` (initial state resolution) and `initializeStudioAuth` (subscription setup). These are called by `authStore` via the strategy pattern.
 
@@ -98,7 +98,7 @@ The primary interactive authentication flow involves redirecting the user to `sa
 - 🎯 **Use Case:** External web applications using the SDK that operate independently of the Sanity Dashboard or Studio (e.g., SDK Explorer, custom internal dashboards). These applications are **not** running inside the Dashboard iframe or as part of the Studio build and they are not hosted on Sanity's domains.
 
 - ⚙️ **Mechanism:**
-  - **No Auth:** For accessing only public datasets, `ResourceProvider` can be used without any specific auth configuration. Clients will operate without authentication.
+  - **No Auth:** For accessing only public datasets, `ResourceProvider` (with a `resource` prop identifying the dataset) can be used without any specific auth configuration. Clients will operate without authentication.
 
   - **Provided Token:** Developers can manually provide a `token` (either a PAT or a project-scoped token) within the `SanityConfig` when initializing the SDK instance (`createSanityInstance` or via `ResourceProvider`). `authStore` detects and uses this `providedToken`.
     - **Important:** The automatic token refresh mechanism is designed for _stamped_ tokens (those containing `-st`, obtained via the interactive login flow). It will **not** attempt to refresh standard Personal Access Tokens (PATs) or other manually provided, non-stamped tokens. Applications using `providedToken` must be prepared for the token to be refreshed by the SDK if a stamped token is passed in.

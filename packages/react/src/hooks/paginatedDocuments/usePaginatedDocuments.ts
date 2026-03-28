@@ -1,9 +1,10 @@
-import {createGroqSearchFilter, type DocumentHandle, type QueryOptions} from '@sanity/sdk'
+import {createGroqSearchFilter, type QueryOptions} from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
 import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {type DocumentHandle, type ResourceHandle} from '../../config/handles'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {useQuery} from '../query/useQuery'
 
 /**
@@ -16,7 +17,10 @@ export interface PaginatedDocumentsOptions<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> extends Omit<QueryOptions<TDocumentType, TDataset, TProjectId>, 'query'> {
+>
+  extends
+    ResourceHandle<TProjectId, TDataset>,
+    Pick<QueryOptions<TDocumentType, TDataset, TProjectId>, 'params'> {
   documentType?: TDocumentType | TDocumentType[]
   /**
    * GROQ filter expression to apply to the query
@@ -137,18 +141,16 @@ export interface PaginatedDocumentsResponse<
  * @returns An object containing the list of document handles, pagination details, and functions to navigate between pages
  *
  * @remarks
- * - The returned document handles include projectId and dataset information from the current Sanity instance
+ * - The returned document handles include resource information from the current Sanity instance
  * - This makes them ready to use with document operations and other document hooks
- * - The hook automatically uses the correct Sanity instance based on the projectId and dataset in the options
+ * - The hook automatically uses the correct Sanity instance based on the resource in the options
  *
  * @example Paginated list of documents with navigation
  * ```tsx
  * import {
  *   usePaginatedDocuments,
- *   createDatasetHandle,
- *   type DatasetHandle,
  *   type DocumentHandle,
- *   type SortOrderingItem,
+ *   type DocumentResource,
  *   useDocumentProjection
  * } from '@sanity/sdk-react'
  * import {Suspense} from 'react'
@@ -171,10 +173,10 @@ export interface PaginatedDocumentsResponse<
  * // Define props for the list component
  * interface PaginatedDocumentListProps {
  *   documentType: string
- *   dataset?: DatasetHandle
+ *   resource?: DocumentResource
  * }
  *
- * function PaginatedDocumentList({documentType, dataset}: PaginatedDocumentListProps) {
+ * function PaginatedDocumentList({documentType, resource}: PaginatedDocumentListProps) {
  *   const {
  *     data,
  *     isPending,
@@ -185,7 +187,7 @@ export interface PaginatedDocumentsResponse<
  *     hasNextPage,
  *     hasPreviousPage
  *   } = usePaginatedDocuments({
- *     ...dataset,
+ *     resource,
  *     documentType,
  *     pageSize: 10,
  *     orderings: [{field: '_createdAt', direction: 'desc'}],
@@ -217,8 +219,7 @@ export interface PaginatedDocumentsResponse<
  * }
  *
  * // Usage:
- * // const myDatasetHandle = createDatasetHandle({ projectId: 'p1', dataset: 'production' })
- * // <PaginatedDocumentList dataset={myDatasetHandle} documentType="post" />
+ * // <PaginatedDocumentList resource={{projectId: 'p1', dataset: 'production'}} documentType="post" />
  * ```
  */
 export function usePaginatedDocuments<
@@ -232,15 +233,15 @@ export function usePaginatedDocuments<
   params = {},
   orderings,
   search,
-  ...options
+  ...rawOptions
 }: PaginatedDocumentsOptions<TDocumentType, TDataset, TProjectId>): PaginatedDocumentsResponse<
   TDocumentType,
   TDataset,
   TProjectId
 > {
-  const instance = useSanityInstance(options)
+  const options = useNormalizedResourceOptions(rawOptions)
   const [pageIndex, setPageIndex] = useState(0)
-  const key = JSON.stringify({filter, search, params, orderings, pageSize})
+  const key = JSON.stringify({filter, search, params, orderings, pageSize, ...options})
   // Reset the pageIndex to 0 whenever any query parameters (filter, search,
   // params, orderings) or pageSize changes
   useEffect(() => {
@@ -300,10 +301,8 @@ export function usePaginatedDocuments<
     params: {
       ...params,
       __types: documentTypes,
-      __handle: {
-        ...pick(instance.config, 'projectId', 'dataset', 'perspective'),
-        ...pick(options, 'projectId', 'dataset', 'perspective'),
-      },
+      // these are passed back to the user as part of each document handle
+      __handle: pick(options, ['resource', 'perspective']),
     },
   })
 

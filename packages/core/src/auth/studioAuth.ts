@@ -211,7 +211,7 @@ function initializeWithFallback(
         : null
 
     if (!token) {
-      const projectIdValue = instance.config.projectId
+      const projectIdValue = instance.config.studio?.projectId
       const clientFactory = state.get().options.clientFactory
       checkForCookieAuth(projectIdValue, clientFactory).then((isCookieAuthEnabled) => {
         if (!isCookieAuthEnabled) return

@@ -1,7 +1,6 @@
 /* eslint-disable no-console */
 import {
   createDocument,
-  createDocumentHandle,
   deleteDocument,
   discardDocument,
   type DocumentHandle,
@@ -15,6 +14,7 @@ import {
   useDocuments,
   useDocumentSyncStatus,
   useEditDocument,
+  useResource,
 } from '@sanity/sdk-react'
 import {
   Badge,
@@ -32,24 +32,26 @@ import {
 import {type JSX, useEffect, useState} from 'react'
 
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
-import {devConfigs, e2eConfigs} from '../sanityConfigs'
 
 function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   useDocumentEvent({...docHandle, onEvent: (e) => console.log(e)})
+  // document actions (editDocument, createDocument, publishDocument, etc.) come from core and require resource to be passed in
+  const resource = useResource()!
+  const strictHandle = {...docHandle, resource}
   const synced = useDocumentSyncStatus(docHandle)
   const apply = useApplyDocumentActions()
 
-  const canEdit = useDocumentPermissions(editDocument(docHandle))
-  const canCreate = useDocumentPermissions(createDocument(docHandle))
-  const canPublish = useDocumentPermissions(publishDocument(docHandle))
-  const canDelete = useDocumentPermissions(deleteDocument(docHandle))
-  const canUnpublish = useDocumentPermissions(unpublishDocument(docHandle))
-  const canDiscard = useDocumentPermissions(discardDocument(docHandle))
+  const canEdit = useDocumentPermissions(editDocument(strictHandle))
+  const canCreate = useDocumentPermissions(createDocument(strictHandle))
+  const canPublish = useDocumentPermissions(publishDocument(strictHandle))
+  const canDelete = useDocumentPermissions(deleteDocument(strictHandle))
+  const canUnpublish = useDocumentPermissions(unpublishDocument(strictHandle))
+  const canDiscard = useDocumentPermissions(discardDocument(strictHandle))
 
-  const {data: name = ''} = useDocument({...docHandle, path: 'name'})
-  const setName = useEditDocument({...docHandle, path: 'name'})
+  const {data: name = ''} = useDocument<string>({...docHandle, path: 'name'})
+  const setName = useEditDocument<string>({...docHandle, path: 'name'})
 
-  const {data: document} = useDocument(docHandle)
+  const {data: document} = useDocument<Record<string, unknown>>(docHandle)
 
   return (
     <Box padding={4}>
@@ -108,7 +110,7 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
                 <Box>
                   <Button
                     disabled={!canCreate.allowed}
-                    onClick={() => apply(createDocument(docHandle))}
+                    onClick={() => apply(createDocument(strictHandle))}
                     text="Create"
                     tone="positive"
                     fontSize={1}
@@ -122,7 +124,7 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
                     disabled={!canCreate.allowed}
                     onClick={() =>
                       apply(
-                        createDocument(docHandle, {
+                        createDocument(strictHandle, {
                           name: 'New Author',
                           role: 'developer',
                           awards: ['Quick Creator Award'],
@@ -143,7 +145,7 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
                       <Button
                         disabled={!canPublish.allowed}
                         onClick={async () => {
-                          const response = await apply(publishDocument(docHandle))
+                          const response = await apply(publishDocument(strictHandle))
                           await response.submitted()
                         }}
                         text="Publish"
@@ -156,7 +158,7 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
                     <Box>
                       <Button
                         disabled={!canDiscard.allowed}
-                        onClick={() => apply(discardDocument(docHandle))}
+                        onClick={() => apply(discardDocument(strictHandle))}
                         text="Discard Draft"
                         fontSize={1}
                       />
@@ -166,7 +168,7 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
                     <Box>
                       <Button
                         disabled={!canUnpublish.allowed}
-                        onClick={() => apply(unpublishDocument(docHandle))}
+                        onClick={() => apply(unpublishDocument(strictHandle))}
                         text="Unpublish"
                         fontSize={1}
                       />
@@ -179,7 +181,7 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
                 <Box>
                   <Button
                     disabled={!canDelete.allowed}
-                    onClick={() => apply(deleteDocument(docHandle))}
+                    onClick={() => apply(deleteDocument(strictHandle))}
                     text="Delete"
                     tone="critical"
                     fontSize={1}
@@ -231,20 +233,11 @@ function Editor() {
   const [docHandle, setDocHandle] = useState<DocumentHandle<'author'> | null>(documents[0] ?? null)
   const [newDocumentId, setNewDocumentId] = useState<string>('')
   const [liveEditMode, setLiveEditMode] = useState<boolean>(false)
-  const {projectId, dataset} = import.meta.env['VITE_IS_E2E'] ? e2eConfigs[0] : devConfigs[0]
 
   const handleLoadDocument = () => {
     const documentId = newDocumentId || docHandle?.documentId
     if (documentId) {
-      setDocHandle(
-        createDocumentHandle({
-          documentType: 'author',
-          documentId,
-          projectId,
-          dataset,
-          liveEdit: liveEditMode,
-        }),
-      )
+      setDocHandle({documentType: 'author', documentId, liveEdit: liveEditMode})
     }
   }
 
@@ -255,15 +248,12 @@ function Editor() {
   // Automatically reload document when liveEdit mode is toggled
   useEffect(() => {
     if (docHandle) {
-      setDocHandle(
-        createDocumentHandle({
-          documentType: 'author',
-          documentId: docHandle.documentId,
-          projectId,
-          dataset,
-          liveEdit: liveEditMode,
-        }),
-      )
+      setDocHandle({
+        documentType: 'author',
+        documentId: docHandle.documentId,
+        liveEdit: liveEditMode,
+        ...(docHandle.resource && {resource: docHandle.resource}),
+      })
     }
     // eslint-disable-next-line react-compiler/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps

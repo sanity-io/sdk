@@ -12,6 +12,7 @@ export type {
   AgentPatchResult,
   AgentPromptOptions,
   AgentPromptResult,
+  AgentResourceOptions,
   AgentTransformOptions,
   AgentTransformResult,
   AgentTranslateOptions,
@@ -71,10 +72,9 @@ export {
 } from '../comlink/types'
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
 export {
-  createDatasetHandle,
   createDocumentHandle,
   createDocumentTypeHandle,
-  createProjectHandle,
+  createResourceHandle,
 } from '../config/handles'
 export {
   configureLogging,
@@ -86,19 +86,19 @@ export {
   type LogNamespace,
 } from '../config/loggingConfig'
 export {
-  type CanvasSource,
-  type DatasetHandle,
-  type DatasetSource,
+  type CanvasResource,
+  type DatasetResource,
+  DEFAULT_RESOURCE_NAME,
   type DocumentHandle,
-  type DocumentSource,
+  type DocumentResource,
   type DocumentTypeHandle,
-  isCanvasSource,
-  isDatasetSource,
-  isMediaLibrarySource,
-  type MediaLibrarySource,
+  isCanvasResource,
+  isDatasetResource,
+  isMediaLibraryResource,
+  type MediaLibraryResource,
   type PerspectiveHandle,
-  type ProjectHandle,
   type ReleasePerspective,
+  type ResourceHandle,
   type SanityConfig,
   type StudioConfig,
   type TokenSource,
@@ -145,7 +145,6 @@ export {
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,
 } from '../document/events'
-export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export type {FavoriteStatusResponse} from '../favorites/favorites'
 export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
@@ -158,22 +157,14 @@ export type {
   TransportEvent,
   UserPresence,
 } from '../presence/types'
-export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
 export {PREVIEW_PROJECTION} from '../preview/previewConstants'
 export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
-export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
-export type {
-  PreviewMedia,
-  PreviewQueryResult,
-  PreviewStoreState,
-  PreviewValue,
-  ValuePending,
-} from '../preview/types'
+export type {PreviewMedia, PreviewQueryResult, PreviewValue, ValuePending} from '../preview/types'
 export {type OrgVerificationResult} from '../project/organizationVerification'
-export {getProjectState, resolveProject} from '../project/project'
+export {getProjectState, type ProjectHandle, resolveProject} from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'
-export {type ProjectionValuePending, type ValidProjection} from '../projection/types'
+export {type ProjectionValuePending} from '../projection/types'
 export {getProjectsState, resolveProjects} from '../projects/projects'
 export {
   getQueryKey,
@@ -212,12 +203,4 @@ export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {defineIntent, type Intent, type IntentFilter} from '../utils/defineIntent'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {CORE_SDK_VERSION} from '../version'
-export {
-  getIndexForKey,
-  getPathDepth,
-  joinPaths,
-  jsonMatch,
-  slicePath,
-  stringifyPath,
-} from '@sanity/json-match'
 export type {CurrentUser, Role, SanityDocument} from '@sanity/types'

@@ -51,42 +51,24 @@ interface TestDocument extends SanityDocument {
   title?: string
 }
 
-// Scope the TestDocument type to the project/datasets used in tests
-type AllTestSchemaTypes = TestDocument
-
-// Augment the 'groq' module
-declare module 'groq' {
-  interface SanitySchemas {
-    default: AllTestSchemaTypes
-  }
-}
-
 let instance: SanityInstance
-let instance1: SanityInstance
-let instance2: SanityInstance
 
-const source = {projectId: 'p', dataset: 'd'}
-const source1 = {projectId: 'p', dataset: 'd1'}
-const source2 = {projectId: 'p', dataset: 'd2'}
+// bindActionByResource should ensure docs from different resources are isolated
+const resource = {projectId: 'p', dataset: 'd'}
+const resource1 = {projectId: 'p', dataset: 'd1'}
+const resource2 = {projectId: 'p', dataset: 'd2'}
 
 beforeEach(() => {
-  instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-  // test uses two instances that share the same in-memory dataset, but separate
-  // store instances. in real scenarios, this would be separate machines but with
-  // the same project + dataset
-  instance1 = createSanityInstance({projectId: 'p', dataset: 'd1'})
-  instance2 = createSanityInstance({projectId: 'p', dataset: 'd2'})
+  instance = createSanityInstance()
 })
 
 afterEach(() => {
   instance?.dispose()
-  instance1?.dispose()
-  instance2?.dispose()
 })
 
 it('creates, edits, and publishes a document', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-single', documentType: 'article'})
-  const documentState = getDocumentState(instance, doc)
+  const doc = createDocumentHandle({documentId: 'doc-single', documentType: 'article', resource})
+  const documentState = getDocumentState<TestDocument>(instance, doc)
 
   // Initially the document is undefined
   expect(documentState.getCurrent()).toBeUndefined()
@@ -96,7 +78,7 @@ it('creates, edits, and publishes a document', async () => {
   // Create a new document
   const {appeared} = await applyDocumentActions(instance, {
     actions: [createDocument(doc)],
-    source,
+    resource,
   })
   expect(appeared).toContain(getDraftId(doc.documentId))
 
@@ -106,7 +88,7 @@ it('creates, edits, and publishes a document', async () => {
   // Edit the document – add a title
   await applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'My First Article'}})],
-    source,
+    resource,
   })
   currentDoc = documentState.getCurrent()
   expect(currentDoc?.title).toEqual('My First Article')
@@ -114,7 +96,7 @@ it('creates, edits, and publishes a document', async () => {
   // Publish the document; the resulting transactionId is used as the new _rev
   const {transactionId, submitted} = await applyDocumentActions(instance, {
     actions: [publishDocument(doc)],
-    source,
+    resource,
   })
   await submitted()
   currentDoc = documentState.getCurrent()
@@ -124,8 +106,12 @@ it('creates, edits, and publishes a document', async () => {
 })
 
 it('creates a document with initial values', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-with-initial', documentType: 'article'})
-  const documentState = getDocumentState(instance, doc)
+  const doc = createDocumentHandle({
+    documentId: 'doc-with-initial',
+    documentType: 'article',
+    resource,
+  })
+  const documentState = getDocumentState<TestDocument>(instance, doc)
 
   expect(documentState.getCurrent()).toBeUndefined()
 
@@ -140,7 +126,7 @@ it('creates a document with initial values', async () => {
         count: 42,
       }),
     ],
-    source,
+    resource,
   })
   expect(appeared).toContain(getDraftId(doc.documentId))
 
@@ -154,8 +140,8 @@ it('creates a document with initial values', async () => {
 })
 
 it('edits existing documents', async () => {
-  const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article'})
-  const state = getDocumentState(instance, doc)
+  const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article', resource})
+  const state = getDocumentState<TestDocument>(instance, doc)
 
   // not subscribed yet so the value is undefined
   expect(state.getCurrent()).toBeUndefined()
@@ -172,7 +158,7 @@ it('edits existing documents', async () => {
 
   await applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'updated title'}})],
-    source,
+    resource,
   })
   expect(state.getCurrent()).toMatchObject({
     _id: getDraftId(doc.documentId),
@@ -183,24 +169,33 @@ it('edits existing documents', async () => {
 })
 
 it('sets optimistic changes synchronously', async () => {
-  const doc = createDocumentHandle({documentId: 'optimistic', documentType: 'article'})
+  const doc1 = createDocumentHandle({
+    documentId: 'optimistic',
+    documentType: 'article',
+    resource: resource1,
+  })
+  const doc2 = createDocumentHandle({
+    documentId: 'optimistic',
+    documentType: 'article',
+    resource: resource2,
+  })
 
-  const state1 = getDocumentState(instance1, doc)
-  const state2 = getDocumentState(instance2, doc)
+  const state1 = getDocumentState<TestDocument>(instance, doc1)
+  const state2 = getDocumentState<TestDocument>(instance, doc2)
 
   const unsubscribe1 = state1.subscribe()
   const unsubscribe2 = state2.subscribe()
 
   // wait until the value is primed in the store
-  await resolveDocument(instance1, doc)
+  await resolveDocument(instance, doc1)
 
   // then the actions are synchronous
   expect(state1.getCurrent()).toBeNull()
-  applyDocumentActions(instance1, {actions: [createDocument(doc)], source: source1})
-  expect(state1.getCurrent()).toMatchObject({_id: getDraftId(doc.documentId)})
-  const actionResult1Promise = applyDocumentActions(instance1, {
-    actions: [editDocument(doc, {set: {title: 'initial title'}})],
-    source: source1,
+  applyDocumentActions(instance, {actions: [createDocument(doc1)], resource: resource1})
+  expect(state1.getCurrent()).toMatchObject({_id: getDraftId(doc1.documentId)})
+  const actionResult1Promise = applyDocumentActions(instance, {
+    actions: [editDocument(doc1, {set: {title: 'initial title'}})],
+    resource: resource1,
   })
   expect(state1.getCurrent()?.title).toBe('initial title')
 
@@ -219,9 +214,9 @@ it('sets optimistic changes synchronously', async () => {
   expect(state2.getCurrent()?.title).toBe('initial title')
 
   // synchronous for state 2
-  const actionResult2Promise = applyDocumentActions(instance2, {
-    actions: [editDocument(doc, {set: {title: 'updated title'}})],
-    source: source2,
+  const actionResult2Promise = applyDocumentActions(instance, {
+    actions: [editDocument(doc2, {set: {title: 'updated title'}})],
+    resource: resource2,
   })
   expect(state2.getCurrent()?.title).toBe('updated title')
   // async for state 1
@@ -236,27 +231,37 @@ it('sets optimistic changes synchronously', async () => {
 })
 
 it('propagates changes between two instances', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-collab', documentType: 'article'})
-  const state1 = getDocumentState(instance1, doc)
-  const state2 = getDocumentState(instance2, doc)
+  const doc1 = createDocumentHandle({
+    documentId: 'doc-collab',
+    documentType: 'article',
+    resource: resource1,
+  })
+  const doc2 = createDocumentHandle({
+    documentId: 'doc-collab',
+    documentType: 'article',
+    resource: resource2,
+  })
+  const state1 = getDocumentState<TestDocument>(instance, doc1)
+  const state2 = getDocumentState<TestDocument>(instance, doc2)
 
   const state1Unsubscribe = state1.subscribe()
   const state2Unsubscribe = state2.subscribe()
 
-  // Create the document from instance1.
-  await applyDocumentActions(instance1, {actions: [createDocument(doc)], source: source1}).then(
-    (r) => r.submitted(),
-  )
+  // Create the document from the store instance.
+  await applyDocumentActions(instance, {
+    actions: [createDocument(doc1)],
+    resource: resource1,
+  }).then((r) => r.submitted())
 
-  const doc1 = state1.getCurrent()
-  const doc2 = state2.getCurrent()
-  expect(doc1?._id).toEqual(getDraftId(doc.documentId))
-  expect(doc2?._id).toEqual(getDraftId(doc.documentId))
+  const docState1 = state1.getCurrent()
+  const docState2 = state2.getCurrent()
+  expect(docState1?._id).toEqual(getDraftId(doc1.documentId))
+  expect(docState2?._id).toEqual(getDraftId(doc1.documentId))
 
-  // Now, edit the document from instance2.
-  await applyDocumentActions(instance2, {
-    actions: [editDocument(doc, {set: {title: 'Hello world!'}})],
-    source: source2,
+  // Now, edit the document from the other store instance.
+  await applyDocumentActions(instance, {
+    actions: [editDocument(doc2, {set: {title: 'Hello world!'}})],
+    resource: resource2,
   }).then((r) => r.submitted())
 
   const updated1 = state1.getCurrent()
@@ -269,34 +274,43 @@ it('propagates changes between two instances', async () => {
 })
 
 it('handles concurrent edits and resolves conflicts', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-concurrent', documentType: 'article'})
-  const state1 = getDocumentState(instance1, doc)
-  const state2 = getDocumentState(instance2, doc)
+  const doc1 = createDocumentHandle({
+    documentId: 'doc-concurrent',
+    documentType: 'article',
+    resource: resource1,
+  })
+  const doc2 = createDocumentHandle({
+    documentId: 'doc-concurrent',
+    documentType: 'article',
+    resource: resource2,
+  })
+  const state1 = getDocumentState<TestDocument>(instance, doc1)
+  const state2 = getDocumentState<TestDocument>(instance, doc2)
 
   const state1Unsubscribe = state1.subscribe()
   const state2Unsubscribe = state2.subscribe()
 
-  const oneOffInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const oneOffInstance = createSanityInstance()
 
   // Create the initial document from a one-off instance.
   await applyDocumentActions(oneOffInstance, {
     actions: [
-      createDocument(doc),
-      editDocument(doc, {set: {title: 'The quick brown fox jumps over the lazy dog'}}),
+      createDocument(doc1),
+      editDocument(doc1, {set: {title: 'The quick brown fox jumps over the lazy dog'}}),
     ],
-    source,
+    resource,
   }).then((res) => res.submitted())
 
-  // Both instances now issue an edit simultaneously.
-  const p1 = applyDocumentActions(instance1, {
-    actions: [editDocument(doc, {set: {title: 'The quick brown fox jumps over the lazy cat'}})],
-    source: source1,
+  // Both store instances now issue an edit simultaneously.
+  const p1 = applyDocumentActions(instance, {
+    actions: [editDocument(doc1, {set: {title: 'The quick brown fox jumps over the lazy cat'}})],
+    resource: resource1,
   }).then((r) => r.submitted())
-  const p2 = applyDocumentActions(instance2, {
+  const p2 = applyDocumentActions(instance, {
     actions: [
-      editDocument(doc, {set: {title: 'The quick brown elephant jumps over the lazy dog'}}),
+      editDocument(doc2, {set: {title: 'The quick brown elephant jumps over the lazy dog'}}),
     ],
-    source: source2,
+    resource: resource2,
   }).then((r) => r.submitted())
 
   // Wait for both actions to complete (or reject).
@@ -313,15 +327,15 @@ it('handles concurrent edits and resolves conflicts', async () => {
 })
 
 it('unpublishes and discards a document', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-pub-unpub', documentType: 'article'})
-  const documentState = getDocumentState(instance, doc)
+  const doc = createDocumentHandle({documentId: 'doc-pub-unpub', documentType: 'article', resource})
+  const documentState = getDocumentState<TestDocument>(instance, doc)
   const unsubscribe = documentState.subscribe()
 
   // Create and publish the document.
-  await applyDocumentActions(instance, {actions: [createDocument(doc)], source})
+  await applyDocumentActions(instance, {actions: [createDocument(doc)], resource})
   const afterPublish = await applyDocumentActions(instance, {
     actions: [publishDocument(doc)],
-    source,
+    resource,
   })
   const publishedDoc = documentState.getCurrent()
   expect(publishedDoc).toMatchObject({
@@ -330,13 +344,13 @@ it('unpublishes and discards a document', async () => {
   })
 
   // Unpublish the document (which should delete the published version and create a draft).
-  await applyDocumentActions(instance, {actions: [unpublishDocument(doc)], source})
+  await applyDocumentActions(instance, {actions: [unpublishDocument(doc)], resource})
   const afterUnpublish = documentState.getCurrent()
   // In our mock implementation the _id remains the same but the published copy is removed.
   expect(afterUnpublish?._id).toEqual(getDraftId(doc.documentId))
 
   // Discard the draft (which deletes the draft version).
-  await applyDocumentActions(instance, {actions: [discardDocument(doc)], source})
+  await applyDocumentActions(instance, {actions: [discardDocument(doc)], resource})
   const afterDiscard = documentState.getCurrent()
   expect(afterDiscard).toBeNull()
 
@@ -344,20 +358,20 @@ it('unpublishes and discards a document', async () => {
 })
 
 it('deletes a document', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-delete', documentType: 'article'})
+  const doc = createDocumentHandle({documentId: 'doc-delete', documentType: 'article', resource})
 
-  const documentState = getDocumentState(instance, doc)
+  const documentState = getDocumentState<TestDocument>(instance, doc)
   const unsubscribe = documentState.subscribe()
 
   await applyDocumentActions(instance, {
     actions: [createDocument(doc), publishDocument(doc)],
-    source,
+    resource,
   })
   const docValue = documentState.getCurrent()
   expect(docValue).toBeDefined()
 
   // Delete the document.
-  await applyDocumentActions(instance, {actions: [deleteDocument(doc)], source})
+  await applyDocumentActions(instance, {actions: [deleteDocument(doc)], resource})
   const afterDelete = documentState.getCurrent()
   expect(afterDelete).toBeNull()
 
@@ -365,14 +379,14 @@ it('deletes a document', async () => {
 })
 
 it('cleans up document state when there are no subscribers', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-cleanup', documentType: 'article'})
-  const documentState = getDocumentState(instance, doc)
+  const doc = createDocumentHandle({documentId: 'doc-cleanup', documentType: 'article', resource})
+  const documentState = getDocumentState<TestDocument>(instance, doc)
 
   // Subscribe to the document state.
   const unsubscribe = documentState.subscribe()
 
   // Create a document.
-  await applyDocumentActions(instance, {actions: [createDocument(doc)], source})
+  await applyDocumentActions(instance, {actions: [createDocument(doc)], resource})
   expect(documentState.getCurrent()).toBeDefined()
 
   // Unsubscribe from the document.
@@ -383,14 +397,14 @@ it('cleans up document state when there are no subscribers', async () => {
   await new Promise((resolve) => setTimeout(resolve, 30))
 
   // When a new subscriber is created, if the state was cleared it should return undefined.
-  const newDocumentState = getDocumentState(instance, doc)
+  const newDocumentState = getDocumentState<TestDocument>(instance, doc)
   expect(newDocumentState.getCurrent()).toBeUndefined()
 })
 
 it('fetches documents if there are no active subscriptions for the actions applied', async () => {
-  const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article'})
+  const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article', resource})
 
-  const {getCurrent} = getDocumentState(instance, doc)
+  const {getCurrent} = getDocumentState<TestDocument>(instance, doc)
   expect(getCurrent()).toBeUndefined()
   expect(getDocumentSyncStatus(instance, doc).getCurrent()).toBeUndefined()
 
@@ -399,7 +413,7 @@ it('fetches documents if there are no active subscriptions for the actions appli
   // transaction for this action has been accepted by the server
   const setNewTitle = applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'new title'}})],
-    source,
+    resource,
   })
   expect(getCurrent()?.title).toBeUndefined()
   expect(getDocumentSyncStatus(instance, doc).getCurrent()).toBe(false)
@@ -410,12 +424,12 @@ it('fetches documents if there are no active subscriptions for the actions appli
   // there is an active subscriber now so the edits are synchronous
   applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'updated title'}})],
-    source,
+    resource,
   })
   expect(getCurrent()?.title).toBe('updated title')
   applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'updated title!'}})],
-    source,
+    resource,
   })
   expect(getCurrent()?.title).toBe('updated title!')
 
@@ -424,7 +438,7 @@ it('fetches documents if there are no active subscriptions for the actions appli
   // await submitted in order to test that there is no subscriptions
   const result = await applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'updated title'}})],
-    source,
+    resource,
   })
   await result.submitted()
 
@@ -433,7 +447,7 @@ it('fetches documents if there are no active subscriptions for the actions appli
 
   const setNewNewTitle = applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'new new title'}})],
-    source,
+    resource,
   })
   // now we'll have to await again
   expect(getCurrent()?.title).toBe(undefined)
@@ -443,20 +457,27 @@ it('fetches documents if there are no active subscriptions for the actions appli
 })
 
 it('batches edit transaction into one outgoing transaction', async () => {
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({
+    documentId: crypto.randomUUID(),
+    documentType: 'article',
+    resource,
+  })
 
-  const unsubscribe = getDocumentState(instance, doc).subscribe()
+  const unsubscribe = getDocumentState<TestDocument>(instance, doc).subscribe()
 
   // this creates its own transaction
-  applyDocumentActions(instance, {actions: [createDocument(doc)], source})
+  applyDocumentActions(instance, {actions: [createDocument(doc)], resource})
 
   // these get batched into one
-  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'name!'}})], source})
-  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'name!!'}})], source})
-  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'name!!!'}})], source})
+  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'name!'}})], resource})
+  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'name!!'}})], resource})
+  applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'name!!!'}})],
+    resource,
+  })
   const res = await applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'name!!!!'}})],
-    source,
+    resource,
   })
   await res.submitted()
 
@@ -470,7 +491,11 @@ it('batches edit transaction into one outgoing transaction', async () => {
 })
 
 it('provides the consistency status via `getDocumentSyncStatus`', async () => {
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({
+    documentId: crypto.randomUUID(),
+    documentType: 'article',
+    resource,
+  })
 
   const syncStatus = getDocumentSyncStatus(instance, doc)
   expect(syncStatus.getCurrent()).toBeUndefined()
@@ -478,7 +503,7 @@ it('provides the consistency status via `getDocumentSyncStatus`', async () => {
   const unsubscribe = syncStatus.subscribe()
   expect(syncStatus.getCurrent()).toBe(true)
 
-  const applied = applyDocumentActions(instance, {actions: [createDocument(doc)], source})
+  const applied = applyDocumentActions(instance, {actions: [createDocument(doc)], resource})
   expect(syncStatus.getCurrent()).toBe(false)
 
   const createResult = await applied
@@ -489,15 +514,15 @@ it('provides the consistency status via `getDocumentSyncStatus`', async () => {
 
   applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'initial name'}})],
-    source,
+    resource,
   })
   expect(syncStatus.getCurrent()).toBe(false)
 
   applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'updated name'}})],
-    source,
+    resource,
   })
-  const publishResult = applyDocumentActions(instance, {actions: [publishDocument(doc)], source})
+  const publishResult = applyDocumentActions(instance, {actions: [publishDocument(doc)], resource})
   expect(syncStatus.getCurrent()).toBe(false)
   await publishResult.then((res) => res.submitted())
   expect(syncStatus.getCurrent()).toBe(true)
@@ -515,7 +540,7 @@ it('reverts failed outgoing transaction locally', async () => {
 
   const revertedEventPromise = new Promise<TransactionRevertedEvent>((resolve) => {
     const unsubscribe = subscribeDocumentEvents(instance, {
-      source,
+      resource,
       eventHandler: (e) => {
         if (e.type === 'reverted') {
           resolve(e)
@@ -525,16 +550,20 @@ it('reverts failed outgoing transaction locally', async () => {
     })
   })
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({
+    documentId: crypto.randomUUID(),
+    documentType: 'article',
+    resource,
+  })
 
-  const {getCurrent, subscribe} = getDocumentState(instance, doc)
+  const {getCurrent, subscribe} = getDocumentState<TestDocument>(instance, doc)
   const unsubscribe = subscribe()
 
-  await applyDocumentActions(instance, {actions: [createDocument(doc)], source})
-  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'the'}})], source})
+  await applyDocumentActions(instance, {actions: [createDocument(doc)], resource})
+  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'the'}})], resource})
   applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'the quick'}})],
-    source,
+    resource,
   })
 
   // this edit action is simulated to fail from the backend and will be reverted
@@ -542,16 +571,16 @@ it('reverts failed outgoing transaction locally', async () => {
     actions: [editDocument(doc, {set: {title: 'the quick brown'}})],
     transactionId: 'force-revert',
     disableBatching: true,
-    source,
+    resource,
   })
 
   applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'the quick brown fox'}})],
-    source,
+    resource,
   })
   await applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'the quick brown fox jumps'}})],
-    source,
+    resource,
   }).then((e) => e.submitted())
 
   await expect(revertedEventPromise).resolves.toMatchObject({
@@ -571,7 +600,7 @@ it('reverts failed outgoing transaction locally', async () => {
   // check that we can still edit after recovering from the error
   applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'TEST the quick fox jumps'}})],
-    source,
+    resource,
   })
   expect(getCurrent()?.title).toBe('TEST the quick fox jumps')
 
@@ -582,7 +611,7 @@ it('reverts failed outgoing transaction locally', async () => {
 it('removes a queued transaction if it fails to apply', async () => {
   const actionErrorEventPromise = new Promise<ActionErrorEvent>((resolve) => {
     const unsubscribe = subscribeDocumentEvents(instance, {
-      source,
+      resource,
       eventHandler: (e) => {
         if (e.type === 'error') {
           resolve(e)
@@ -592,14 +621,18 @@ it('removes a queued transaction if it fails to apply', async () => {
     })
   })
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
-  const state = getDocumentState(instance, doc)
+  const doc = createDocumentHandle({
+    documentId: crypto.randomUUID(),
+    documentType: 'article',
+    resource,
+  })
+  const state = getDocumentState<TestDocument>(instance, doc)
   const unsubscribe = state.subscribe()
 
   await expect(
     applyDocumentActions(instance, {
       actions: [editDocument(doc, {set: {title: "can't set"}})],
-      source,
+      resource,
     }),
   ).rejects.toThrowError(/Cannot edit document/)
 
@@ -610,8 +643,11 @@ it('removes a queued transaction if it fails to apply', async () => {
   })
 
   // editing should still work after though (no crashing)
-  await applyDocumentActions(instance, {actions: [createDocument(doc)], source})
-  applyDocumentActions(instance, {actions: [editDocument(doc, {set: {title: 'can set!'}})], source})
+  await applyDocumentActions(instance, {actions: [createDocument(doc)], resource})
+  applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'can set!'}})],
+    resource,
+  })
 
   expect(state.getCurrent()?.title).toBe('can set!')
 
@@ -628,15 +664,17 @@ it('returns allowed true when no permission errors occur', async () => {
   const doc = createDocumentHandle({
     documentId: 'doc-perm-allowed',
     documentType: 'article',
+    resource,
   })
-  const state = getDocumentState(instance, doc)
+  const state = getDocumentState<TestDocument>(instance, doc)
   const unsubscribe = state.subscribe()
-  await applyDocumentActions(instance, {actions: [createDocument(doc)], source}).then((r) =>
+  await applyDocumentActions(instance, {actions: [createDocument(doc)], resource}).then((r) =>
     r.submitted(),
   )
 
   // Use an action that includes a patch (so that update permission check is bypassed).
   const permissionsState = getPermissionsState(instance, {
+    resource,
     actions: [
       {
         ...doc,
@@ -653,21 +691,29 @@ it('returns allowed true when no permission errors occur', async () => {
 })
 
 it("should reject applying the action if a precondition isn't met", async () => {
-  const doc = createDocumentHandle({documentId: 'does-not-exist', documentType: 'article'})
+  const doc = createDocumentHandle({
+    documentId: 'does-not-exist',
+    documentType: 'article',
+    resource,
+  })
 
   await expect(
-    applyDocumentActions(instance, {actions: [deleteDocument(doc)], source}),
+    applyDocumentActions(instance, {actions: [deleteDocument(doc)], resource}),
   ).rejects.toThrow('The document you are trying to delete does not exist.')
 })
 
 it("should reject applying the action if a permission isn't met", async () => {
-  const doc = createDocumentHandle({documentId: 'does-not-exist', documentType: 'article'})
+  const doc = createDocumentHandle({
+    documentId: 'does-not-exist',
+    documentType: 'article',
+    resource,
+  })
 
   const datasetAcl = [{filter: 'false', permissions: ['create']}]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
   await expect(
-    applyDocumentActions(instance, {actions: [createDocument(doc)], source}),
+    applyDocumentActions(instance, {actions: [createDocument(doc)], resource}),
   ).rejects.toThrow('You do not have permission to create a draft for document "does-not-exist".')
 })
 
@@ -675,8 +721,12 @@ it('returns allowed false with reasons when permission errors occur', async () =
   const datasetAcl = [{filter: 'false', permissions: ['create']}]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
-  const doc = createDocumentHandle({documentId: 'doc-perm-denied', documentType: 'article'})
-  const result = await resolvePermissions(instance, {actions: [createDocument(doc)]})
+  const doc = createDocumentHandle({
+    documentId: 'doc-perm-denied',
+    documentType: 'article',
+    resource,
+  })
+  const result = await resolvePermissions(instance, {actions: [createDocument(doc)], resource})
 
   const message = 'You do not have permission to create a draft for document "doc-perm-denied".'
   expect(result).toMatchObject({
@@ -694,60 +744,66 @@ it('fetches dataset ACL and updates grants in the document store state', async (
   ]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
-  const book = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'book'})
-  const author = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'author'})
+  const book = createDocumentHandle({
+    documentId: crypto.randomUUID(),
+    documentType: 'book',
+    resource,
+  })
+  const author = createDocumentHandle({
+    documentId: crypto.randomUUID(),
+    documentType: 'author',
+    resource,
+  })
 
-  expect(await resolvePermissions(instance, {actions: [createDocument(book)]})).toEqual({
+  expect(await resolvePermissions(instance, {actions: [createDocument(book)], resource})).toEqual({
     allowed: true,
   })
-  expect(await resolvePermissions(instance, {actions: [createDocument(author)]})).toMatchObject({
+  expect(
+    await resolvePermissions(instance, {actions: [createDocument(author)], resource}),
+  ).toMatchObject({
     allowed: false,
     message: expect.stringContaining('You do not have permission to create a draft for document'),
   })
 })
 
-it('fetches ACL for MediaLibrarySource', async () => {
-  const mediaLibraryInstance = createSanityInstance({
-    projectId: 'p',
-    dataset: 'd',
-    sources: {
-      'media-library': {mediaLibraryId: 'test-media-library'},
-    },
-  })
+it('fetches ACL for MediaLibraryResource', async () => {
+  const mediaLibraryInstance = createSanityInstance()
 
   const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
-  const mediaLibrarySource = {mediaLibraryId: 'test-media-library'}
+  const doc = createDocumentHandle({
+    documentId: crypto.randomUUID(),
+    documentType: 'article',
+    resource,
+  })
+  const mediaLibraryResource = {mediaLibraryId: 'test-media-library'}
 
   const result = await resolvePermissions(mediaLibraryInstance, {
     actions: [createDocument(doc)],
-    source: mediaLibrarySource,
+    resource: mediaLibraryResource,
   })
 
   expect(result).toEqual({allowed: true})
   mediaLibraryInstance.dispose()
 })
 
-it('fetches ACL for CanvasSource', async () => {
-  const canvasInstance = createSanityInstance({
-    projectId: 'p',
-    dataset: 'd',
-    sources: {
-      canvas: {canvasId: 'test-canvas'},
-    },
-  })
+it('fetches ACL for CanvasResource', async () => {
+  const canvasInstance = createSanityInstance()
 
   const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
-  const canvasSource = {canvasId: 'test-canvas'}
+  const doc = createDocumentHandle({
+    documentId: crypto.randomUUID(),
+    documentType: 'article',
+    resource,
+  })
+  const canvasResource = {canvasId: 'test-canvas'}
 
   const result = await resolvePermissions(canvasInstance, {
     actions: [createDocument(doc)],
-    source: canvasSource,
+    resource: canvasResource,
   })
 
   expect(result).toEqual({allowed: true})
@@ -755,15 +811,19 @@ it('fetches ACL for CanvasSource', async () => {
 })
 
 it('returns a promise that resolves when a document has been loaded in the store (useful for suspense)', async () => {
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({
+    documentId: crypto.randomUUID(),
+    documentType: 'article',
+    resource,
+  })
 
   expect(await resolveDocument(instance, doc)).toBe(null)
 
   // use one-off instance to create the document in the mock backend
-  const oneOffInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  const oneOffInstance = createSanityInstance()
   const result = await applyDocumentActions(oneOffInstance, {
     actions: [createDocument(doc), editDocument(doc, {set: {title: 'initial title'}})],
-    source,
+    resource,
   })
   await result.submitted() // wait till submitted to server before resolving
 
@@ -777,10 +837,10 @@ it('returns a promise that resolves when a document has been loaded in the store
 
 it('emits an event for each action after an outgoing transaction has been accepted', async () => {
   const handler = vi.fn()
-  const unsubscribe = subscribeDocumentEvents(instance, {source, eventHandler: handler})
+  const unsubscribe = subscribeDocumentEvents(instance, {resource, eventHandler: handler})
 
   const documentId = crypto.randomUUID()
-  const doc = createDocumentHandle({documentId, documentType: 'article'})
+  const doc = createDocumentHandle({documentId, documentType: 'article', resource})
   expect(handler).toHaveBeenCalledTimes(0)
 
   const tnx1 = await applyDocumentActions(instance, {
@@ -789,7 +849,7 @@ it('emits an event for each action after an outgoing transaction has been accept
       editDocument(doc, {set: {title: 'new name'}}),
       publishDocument(doc),
     ],
-    source,
+    resource,
   }).then((e) => e.submitted())
   expect(handler).toHaveBeenCalledTimes(4)
 
@@ -800,7 +860,7 @@ it('emits an event for each action after an outgoing transaction has been accept
       editDocument(doc, {set: {title: 'updated name'}}),
       discardDocument(doc),
     ],
-    source,
+    resource,
   }).then((e) => e.submitted())
   expect(handler).toHaveBeenCalledTimes(9)
 
@@ -816,7 +876,7 @@ it('emits an event for each action after an outgoing transaction has been accept
     [{type: 'accepted', outgoing: {transactionId: tnx2.transactionId}}],
   ])
 
-  await applyDocumentActions(instance, {actions: [deleteDocument(doc)], source})
+  await applyDocumentActions(instance, {actions: [deleteDocument(doc)], resource})
 
   unsubscribe()
 })

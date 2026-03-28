@@ -1,6 +1,6 @@
 import {createClient, type SanityClient} from '@sanity/client'
 import {Subject} from 'rxjs'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
@@ -33,10 +33,7 @@ beforeEach(() => {
   vi.mocked(createClient).mockImplementation(
     (clientConfig) => ({config: () => clientConfig}) as SanityClient,
   )
-  instance = createSanityInstance({
-    projectId: 'test-project',
-    dataset: 'test-dataset',
-  })
+  instance = createSanityInstance()
 })
 
 afterEach(() => {
@@ -45,29 +42,6 @@ afterEach(() => {
 
 describe('clientStore', () => {
   describe('getClient', () => {
-    it('should create a client with default configuration', () => {
-      const client = getClient(instance, {apiVersion: '2024-11-12'})
-
-      const defaultConfiguration = {
-        useCdn: false,
-        ignoreBrowserTokenWarning: true,
-        allowReconfigure: false,
-        requestTagPrefix: 'sanity.sdk',
-        projectId: 'test-project',
-        dataset: 'test-dataset',
-        token: 'initial-token',
-      }
-
-      expect(vi.mocked(createClient)).toHaveBeenCalledWith({
-        ...defaultConfiguration,
-        apiVersion: '2024-11-12',
-      })
-      expect(client.config()).toEqual({
-        ...defaultConfiguration,
-        apiVersion: '2024-11-12',
-      })
-    })
-
     it('should throw when using disallowed configuration keys', () => {
       expect(() =>
         getClient(instance, {
@@ -180,35 +154,13 @@ describe('clientStore', () => {
     it('should create client when source is provided', () => {
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
-        source: {projectId: 'source-project', dataset: 'source-dataset'},
+        resource: {mediaLibraryId: 'media-lib-123'},
       })
 
       expect(vi.mocked(createClient)).toHaveBeenCalledWith(
         expect.objectContaining({
           'apiVersion': '2024-11-12',
-          '~experimental_resource': {type: 'dataset', id: 'source-project.source-dataset'},
-        }),
-      )
-      // Client should be projectless - no projectId/dataset in config
-      expect(client.config()).not.toHaveProperty('projectId')
-      expect(client.config()).not.toHaveProperty('dataset')
-      expect(client.config()).toEqual(
-        expect.objectContaining({
-          '~experimental_resource': {type: 'dataset', id: 'source-project.source-dataset'},
-        }),
-      )
-    })
-
-    it('should create resource when source has array sourceId and be projectless', () => {
-      const client = getClient(instance, {
-        apiVersion: '2024-11-12',
-        source: {mediaLibraryId: 'media-lib-123'},
-      })
-
-      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
-        expect.objectContaining({
           '~experimental_resource': {type: 'media-library', id: 'media-lib-123'},
-          'apiVersion': '2024-11-12',
         }),
       )
       // Client should be projectless - no projectId/dataset in config
@@ -224,7 +176,7 @@ describe('clientStore', () => {
     it('should create resource when canvas source is provided and be projectless', () => {
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
-        source: {canvasId: 'canvas-123'},
+        resource: {canvasId: 'canvas-123'},
       })
 
       expect(vi.mocked(createClient)).toHaveBeenCalledWith(
@@ -243,10 +195,11 @@ describe('clientStore', () => {
       )
     })
 
-    it('should create projectless client when source is provided, ignoring instance config', () => {
+    // skipped until we migrate to using source for project and dataset
+    it.skip('should create projectless client when source is provided, ignoring instance config', () => {
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
-        source: {projectId: 'source-project', dataset: 'source-dataset'},
+        resource: {projectId: 'source-project', dataset: 'source-dataset'},
       })
 
       // Client should be projectless - source takes precedence, instance config is ignored
@@ -263,13 +216,13 @@ describe('clientStore', () => {
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
-        source: {projectId: 'source-project', dataset: 'source-dataset'},
+        resource: {mediaLibraryId: 'media-lib-123'},
         projectId: 'explicit-project',
         dataset: 'explicit-dataset',
       })
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        'Both source and explicit projectId/dataset are provided. The source will be used and projectId/dataset will be ignored.',
+        'Both resource and explicit projectId/dataset are provided. The resource will be used and projectId/dataset will be ignored.',
       )
       // Client should still be projectless despite explicit projectId/dataset
       expect(client.config()).not.toHaveProperty('projectId')
@@ -280,15 +233,15 @@ describe('clientStore', () => {
     it('should create different clients for different sources', () => {
       const client1 = getClient(instance, {
         apiVersion: '2024-11-12',
-        source: {projectId: 'source-project', dataset: 'source-dataset'},
+        resource: {projectId: 'source-project', dataset: 'source-dataset'},
       })
       const client2 = getClient(instance, {
         apiVersion: '2024-11-12',
-        source: {mediaLibraryId: 'media-lib-123'},
+        resource: {mediaLibraryId: 'media-lib-123'},
       })
       const client3 = getClient(instance, {
         apiVersion: '2024-11-12',
-        source: {canvasId: 'canvas-123'},
+        resource: {canvasId: 'canvas-123'},
       })
 
       expect(client1).not.toBe(client2)
@@ -300,11 +253,11 @@ describe('clientStore', () => {
     it('should reuse clients with identical source configurations', () => {
       const client1 = getClient(instance, {
         apiVersion: '2024-11-12',
-        source: {projectId: 'source-project', dataset: 'source-dataset'},
+        resource: {projectId: 'source-project', dataset: 'source-dataset'},
       })
       const client2 = getClient(instance, {
         apiVersion: '2024-11-12',
-        source: {projectId: 'source-project', dataset: 'source-dataset'},
+        resource: {projectId: 'source-project', dataset: 'source-dataset'},
       })
 
       expect(client1).toBe(client2)

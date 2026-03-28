@@ -1,9 +1,9 @@
 import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
-import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
+import {type FrameMessage} from '@sanity/sdk'
 import {useCallback} from 'react'
 
+import {type DocumentHandle} from '../../config/handles'
 import {useWindowConnection} from '../comlink/useWindowConnection'
-import {type WithSourceNameSupport} from '../helpers/useNormalizedSourceOptions'
 import {useResourceIdFromDocumentHandle} from './utils/useResourceIdFromDocumentHandle'
 
 /**
@@ -42,7 +42,7 @@ interface DispatchIntent {
 interface UseDispatchIntentParams {
   action?: 'edit'
   intentId?: string
-  documentHandle: WithSourceNameSupport<DocumentHandle>
+  documentHandle: DocumentHandle
   parameters?: Record<string, unknown>
 }
 
@@ -56,8 +56,8 @@ interface UseDispatchIntentParams {
  *   - `action` - Action to perform (currently only 'edit' is supported). Will prompt a picker if multiple handlers are available.
  *   - `intentId` - Specific ID of the intent to dispatch. Either `action` or `intentId` is required.
  *   - `documentHandle` - The document handle containing document ID, type, and either:
- *     - `projectId` and `dataset` for traditional dataset sources, like `{documentId: '123', documentType: 'book', projectId: 'abc123', dataset: 'production'}`
- *     - `source` for media library, canvas, or dataset sources, like `{documentId: '123', documentType: 'sanity.asset', source: mediaLibrarySource('ml123')}` or `{documentId: '123', documentType: 'sanity.canvas.document', source: canvasSource('canvas123')}`
+ *     - `projectId` and `dataset` for traditional dataset resources, like `{documentId: '123', documentType: 'book', projectId: 'abc123', dataset: 'production'}`
+ *     - `resource` for media library, canvas, or dataset resources, like `{documentId: '123', documentType: 'sanity.asset', resource: mediaLibraryResource('ml123')}` or `{documentId: '123', documentType: 'sanity.canvas.document', resource: canvasResource('canvas123')}`
  *   - `paremeters` - Optional parameters to include in the dispatch; will be passed to the resolved intent handler
  * @returns An object containing:
  * - `dispatchIntent` - Function to dispatch the intent message
@@ -119,10 +119,10 @@ export function useDispatchIntent(params: UseDispatchIntentParams): DispatchInte
         )
       }
 
-      // Validate that we have a resource ID (which is computed from source/sourceName or projectId+dataset)
+      // Validate that we have a resource ID (which is computed from resource/resourceName or projectId+dataset)
       if (!resource.id) {
         throw new Error(
-          'useDispatchIntent: Unable to determine resource. Either `source`, `sourceName`, or both `projectId` and `dataset` must be provided in documentHandle.',
+          'useDispatchIntent: Unable to determine resource. Either `resource`, `resourceName`, or both `projectId` and `dataset` must be provided in documentHandle.',
         )
       }
 

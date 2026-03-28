@@ -26,7 +26,7 @@ vi.mock('@sanity/sdk', async (orig) => {
 
 describe('agent action hooks', () => {
   const wrapper = ({children}: {children: React.ReactNode}) => (
-    <ResourceProvider projectId="p" dataset="d" fallback={null}>
+    <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
       {children}
     </ResourceProvider>
   )

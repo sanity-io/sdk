@@ -1,12 +1,10 @@
-import {type ClientPerspective} from '@sanity/client'
-
 import {
-  type DatasetHandle,
-  type DocumentSource,
-  isCanvasSource,
-  isDatasetSource,
-  isMediaLibrarySource,
-  type ReleasePerspective,
+  type DocumentResource,
+  isCanvasResource,
+  isDatasetResource,
+  isMediaLibraryResource,
+  type PerspectiveHandle,
+  type ResourceHandle,
 } from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type SanityInstance} from './createSanityInstance'
@@ -14,19 +12,13 @@ import {createStoreInstance, type StoreInstance} from './createStoreInstance'
 import {type StoreState} from './createStoreState'
 import {type StoreContext, type StoreDefinition} from './defineStore'
 
-export interface BoundSourceKey {
+export interface BoundResourceKey {
   name: string
-  source: DocumentSource
+  resource: DocumentResource
 }
-export interface BoundPerspectiveKey extends BoundSourceKey {
-  perspective: ClientPerspective | ReleasePerspective
+export interface BoundPerspectiveKey extends BoundResourceKey {
+  perspective: NonNullable<PerspectiveHandle['perspective']>
 }
-export interface BoundDatasetKey {
-  name: string
-  projectId: string
-  dataset: string
-}
-
 /**
  * Defines a store action that operates on a specific state type
  */
@@ -123,95 +115,53 @@ export function createActionBinder<
   }
 }
 
-/**
- * Binds an action to a store that's scoped to a specific project and dataset
- *
- * @remarks
- * This creates actions that operate on state isolated to a specific projectId and dataset.
- * Different project/dataset combinations will have separate states.
- *
- * @throws Error if projectId or dataset is missing from the Sanity instance config
- *
- * @example
- * ```ts
- * // Define a store
- * const documentStore = defineStore<DocumentState>({
- *   name: 'Document',
- *   getInitialState: () => ({ documents: {} }),
- *   // ...
- * })
- *
- * // Create dataset-specific actions
- * export const fetchDocument = bindActionByDataset(
- *   documentStore,
- *   ({instance, state}, documentId) => {
- *     // This state is isolated to the specific project/dataset
- *     // ...fetch logic...
- *   }
- * )
- *
- * // Usage
- * fetchDocument(sanityInstance, 'doc123')
- * ```
- */
-export const bindActionByDataset = createActionBinder<
-  BoundDatasetKey,
-  [(object & {projectId?: string; dataset?: string})?, ...unknown[]]
->((instance, options) => {
-  const projectId = options?.projectId ?? instance.config.projectId
-  const dataset = options?.dataset ?? instance.config.dataset
-  if (!projectId || !dataset) {
-    throw new Error('This API requires a project ID and dataset configured.')
-  }
-  return {name: `${projectId}.${dataset}`, projectId, dataset}
-})
+const resourceKeyName = (resource: DocumentResource): string => {
+  if (isDatasetResource(resource)) return `${resource.projectId}.${resource.dataset}`
+  if (isMediaLibraryResource(resource)) return `media-library:${resource.mediaLibraryId}`
+  if (isCanvasResource(resource)) return `canvas:${resource.canvasId}`
+  throw new Error(`Received invalid resource: ${JSON.stringify(resource)}`)
+}
 
-const createSourceKey = (instance: SanityInstance, source?: DocumentSource): BoundSourceKey => {
-  let name: string | undefined
-  let sourceForKey: DocumentSource | undefined
-  if (source) {
-    sourceForKey = source
-    if (isDatasetSource(source)) {
-      name = `${source.projectId}.${source.dataset}`
-    } else if (isMediaLibrarySource(source)) {
-      name = `media-library:${source.mediaLibraryId}`
-    } else if (isCanvasSource(source)) {
-      name = `canvas:${source.canvasId}`
-    } else {
-      throw new Error(`Received invalid source: ${JSON.stringify(source)}`)
-    }
-    return {name, source: sourceForKey}
+const createResourceKey = (
+  instance: SanityInstance,
+  resource?: DocumentResource,
+): BoundResourceKey => {
+  if (resource) {
+    return {name: resourceKeyName(resource), resource}
   }
 
-  // TODO: remove reference to instance.config when we get to v3
-  const {projectId, dataset} = instance.config
-  if (!projectId || !dataset) {
-    throw new Error('This API requires a project ID and dataset configured.')
+  const defaultResource = instance.config.defaultResource
+  if (!defaultResource) {
+    throw new Error(
+      'No resource provided and no default resource configured. ' +
+        'Provide a "default" resource in your resources map, or pass an explicit resource.',
+    )
   }
-  return {name: `${projectId}.${dataset}`, source: {projectId, dataset}}
+  return {name: resourceKeyName(defaultResource), resource: defaultResource}
 }
 
 /**
- * Binds an action to a store that's scoped to a specific document source.
+ * Binds an action to a store that's scoped to a specific document resource.
  **/
-export const bindActionBySource = createActionBinder<
-  BoundSourceKey,
-  [{source?: DocumentSource}, ...unknown[]]
->((instance, {source}) => {
-  return createSourceKey(instance, source)
+export const bindActionByResource = createActionBinder<
+  BoundResourceKey,
+  [{resource?: DocumentResource}, ...unknown[]]
+>((instance, {resource}) => {
+  return createResourceKey(instance, resource)
 })
 
 /**
- * Binds an action to a store that's scoped to a specific document source and perspective.
+ * Binds an action to a store that's scoped to a specific document resource and perspective.
  *
  * @remarks
- * This creates actions that operate on state isolated to a specific document source and perspective.
- * Different document sources and perspectives will have separate states.
+ * This creates actions that operate on state isolated to a specific document resource and perspective.
+ * Different document resources and perspectives will have separate states.
  *
  * This is mostly useful for stores that do batch fetching operations, since the query store
  * can isolate single queries by perspective.
  *
- * @throws Error if source or perspective is missing from the Sanity instance config
+ * @throws Error if resource or perspective is missing from the Sanity instance config
+ * @throws Error if a stackable perspective (array) is provided, as they are not supported
  *
  * @example
  * ```ts
@@ -222,11 +172,11 @@ export const bindActionBySource = createActionBinder<
  *   // ...
  * })
  *
- * // Create source-and-perspective-specific actions
- * export const fetchDocuments = bindActionBySourceAndPerspective(
+ * // Create resource-and-perspective-specific actions
+ * export const fetchDocuments = bindActionByResourceAndPerspective(
  *   documentStore,
  *   ({instance, state}, documentId) => {
- *     // This state is isolated to the specific document source and perspective
+ *     // This state is isolated to the specific document resource and perspective
  *     // ...fetch logic...
  *   }
  * )
@@ -235,11 +185,11 @@ export const bindActionBySource = createActionBinder<
  * fetchDocument(sanityInstance, 'doc123')
  * ```
  */
-export const bindActionBySourceAndPerspective = createActionBinder<
+export const bindActionByResourceAndPerspective = createActionBinder<
   BoundPerspectiveKey,
-  [DatasetHandle, ...unknown[]]
+  [ResourceHandle, ...unknown[]]
 >((instance, options): BoundPerspectiveKey => {
-  const {source, perspective} = options
+  const {resource, perspective} = options
   // TODO: remove reference to instance.config.perspective when we get to v3
   const utilizedPerspective = perspective ?? instance.config.perspective ?? 'drafts'
   let perspectiveKey: string
@@ -248,14 +198,15 @@ export const bindActionBySourceAndPerspective = createActionBinder<
   } else if (typeof utilizedPerspective === 'string') {
     perspectiveKey = utilizedPerspective
   } else {
-    // "StackablePerspective", shouldn't be a common case, but just in case
-    perspectiveKey = JSON.stringify(utilizedPerspective)
+    throw new Error(
+      `Stackable perspectives are not supported. Received perspective: ${JSON.stringify(utilizedPerspective)}`,
+    )
   }
-  const sourceKey = createSourceKey(instance, source)
+  const resourceKey = createResourceKey(instance, resource)
 
   return {
-    name: `${sourceKey.name}:${perspectiveKey}`,
-    source: sourceKey.source,
+    name: `${resourceKey.name}:${perspectiveKey}`,
+    resource: resourceKey.resource,
     perspective: utilizedPerspective,
   }
 })

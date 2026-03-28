@@ -1,4 +1,4 @@
-import {type SanityConfig} from '@sanity/sdk'
+import {type DocumentResource} from '@sanity/sdk'
 import {StrictMode} from 'react'
 import {createRoot} from 'react-dom/client'
 
@@ -8,16 +8,14 @@ interface RenderSanitySDKAppOptions {
   reactStrictMode?: boolean
 }
 
-/** In-flight CLI PR is using named sources since it's aspirational.
- *  We can transform the shape in this function until it's finalized.
- */
-interface NamedSources {
-  [key: string]: SanityConfig
+interface NamedResources {
+  [key: string]: DocumentResource
 }
+
 /** @internal */
 export function renderSanityApp(
   rootElement: HTMLElement | null,
-  namedSources: NamedSources,
+  namedResources: NamedResources,
   options: RenderSanitySDKAppOptions,
   children: React.ReactNode,
 ): () => void {
@@ -27,18 +25,16 @@ export function renderSanityApp(
   const {reactStrictMode = false} = options
 
   const root = createRoot(rootElement)
-  const config = Object.values(namedSources)
-
   root.render(
     reactStrictMode ? (
       <StrictMode>
-        {/* TODO: think about a loading component we want to be "universal" */}
-        <SanityApp config={config} fallback={<div>Loading...</div>}>
+        {/* TODO: we should find some way to pass top-level config, like auth, from a flatfile */}
+        <SanityApp resources={namedResources} fallback={<div>Loading...</div>}>
           {children}
         </SanityApp>
       </StrictMode>
     ) : (
-      <SanityApp config={config} fallback={<div>Loading...</div>}>
+      <SanityApp resources={namedResources} fallback={<div>Loading...</div>}>
         {children}
       </SanityApp>
     ),

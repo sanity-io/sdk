@@ -4,13 +4,12 @@ import {renderHook} from '../../../../test/test-utils'
 import {useResourceIdFromDocumentHandle} from './useResourceIdFromDocumentHandle'
 
 describe('getResourceIdFromDocumentHandle', () => {
-  describe('with traditional DocumentHandle (projectId/dataset)', () => {
-    it('should return resource ID from projectId and dataset', () => {
+  describe('with DocumentHandle using resource object', () => {
+    it('should return resource ID from resource object with projectId and dataset', () => {
       const documentHandle = {
         documentId: 'test-document-id',
         documentType: 'test-document-type',
-        projectId: 'test-project-id',
-        dataset: 'test-dataset',
+        resource: {projectId: 'test-project-id', dataset: 'test-dataset'},
       }
 
       const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))
@@ -22,12 +21,12 @@ describe('getResourceIdFromDocumentHandle', () => {
     })
   })
 
-  describe('with DocumentHandleWithSource - media library', () => {
-    it('should return media library ID and resourceType when media library source is provided', () => {
+  describe('with DocumentHandle - media library resource', () => {
+    it('should return media library ID and resourceType when media library resource is provided', () => {
       const documentHandle = {
         documentId: 'test-asset-id',
         documentType: 'sanity.asset',
-        sourceName: 'media-library',
+        resourceName: 'media-library',
       } as const
 
       const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))
@@ -38,13 +37,11 @@ describe('getResourceIdFromDocumentHandle', () => {
       })
     })
 
-    it('should prioritize source over projectId/dataset when both are provided', () => {
+    it('should use resourceName when provided', () => {
       const documentHandle = {
         documentId: 'test-asset-id',
         documentType: 'sanity.asset',
-        projectId: 'test-project-id',
-        dataset: 'test-dataset',
-        sourceName: 'media-library',
+        resourceName: 'media-library',
       }
 
       const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))
@@ -56,12 +53,12 @@ describe('getResourceIdFromDocumentHandle', () => {
     })
   })
 
-  describe('with DocumentHandleWithSource - canvas', () => {
-    it('should return canvas ID and resourceType when canvas source is provided', () => {
+  describe('with DocumentHandle - canvas resource', () => {
+    it('should return canvas ID and resourceType when canvas resource is provided', () => {
       const documentHandle = {
         documentId: 'test-canvas-document-id',
         documentType: 'sanity.canvas.document',
-        sourceName: 'canvas',
+        resourceName: 'canvas',
       }
 
       const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))
@@ -73,29 +70,12 @@ describe('getResourceIdFromDocumentHandle', () => {
     })
   })
 
-  describe('with DocumentHandleWithSource - dataset source', () => {
-    it('should return dataset resource ID when dataset source is provided', () => {
+  describe('with DocumentHandle - dataset resource', () => {
+    it('should return dataset resource ID when dataset resource is provided', () => {
       const documentHandle = {
         documentId: 'test-document-id',
         documentType: 'test-document-type',
-        sourceName: 'dataset',
-      }
-
-      const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))
-
-      expect(result.current).toEqual({
-        id: 'source-project-id.source-dataset',
-        type: undefined,
-      })
-    })
-
-    it('should use dataset source over projectId/dataset when both are provided', () => {
-      const documentHandle = {
-        documentId: 'test-document-id',
-        documentType: 'test-document-type',
-        projectId: 'test-project-id',
-        dataset: 'test-dataset',
-        sourceName: 'dataset',
+        resourceName: 'dataset',
       }
 
       const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))
@@ -108,13 +88,12 @@ describe('getResourceIdFromDocumentHandle', () => {
   })
 
   describe('edge cases', () => {
-    it('should handle DocumentHandleWithSource with undefined source', () => {
+    it('should handle DocumentHandle with explicit resource and no resourceName', () => {
       const documentHandle = {
         documentId: 'test-document-id',
         documentType: 'test-document-type',
-        projectId: 'test-project-id',
-        dataset: 'test-dataset',
-        sourceName: undefined,
+        resource: {projectId: 'test-project-id', dataset: 'test-dataset'},
+        resourceName: undefined,
       }
 
       const {result} = renderHook(() => useResourceIdFromDocumentHandle(documentHandle))

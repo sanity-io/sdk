@@ -1,24 +1,23 @@
 import {
-  type DocumentHandle,
-  type DocumentOptions,
+  type DocumentHandle as StrictDocumentHandle,
   getDocumentSyncStatus,
   resolveDocument,
   type SanityInstance,
   type StateSource,
 } from '@sanity/sdk'
-import {identity} from 'rxjs'
 
+import {type DocumentHandle} from '../../config/handles'
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-import {useNormalizedSourceOptions} from '../helpers/useNormalizedSourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
 type UseDocumentSyncStatus = {
   /**
    * Exposes the document's sync status between local and remote document states.
    *
    * @category Documents
-   * @param doc - The document handle to get sync status for. If you pass a `DocumentHandle` with specified `projectId` and `dataset`,
-   * the document will be read from the specified Sanity project and dataset that is included in the handle. If no `projectId` or `dataset` is provided,
-   * the document will use the nearest instance from context.
+   * @param doc - The document handle to get sync status for. If you pass a `resource` in the handle,
+   * the document will be read from the specified resource. If no `resource` is provided,
+   * the resource will be resolved from context.
    * @returns `true` if local changes are synced with remote, `false` if changes are pending. Note: Suspense handles loading states.
    * @example Show sync status indicator
    * ```tsx
@@ -50,21 +49,18 @@ type UseDocumentSyncStatus = {
 const useDocumentSyncStatusValue = createStateSourceHook({
   getState: getDocumentSyncStatus as (
     instance: SanityInstance,
-    doc: DocumentHandle,
+    doc: StrictDocumentHandle,
   ) => StateSource<boolean>,
-  shouldSuspend: (instance, doc: DocumentHandle) =>
+  shouldSuspend: (instance, doc: StrictDocumentHandle) =>
     getDocumentSyncStatus(instance, doc).getCurrent() === undefined,
-  suspender: (instance, doc: DocumentHandle) => resolveDocument(instance, doc),
-  getConfig: identity,
+  suspender: (instance, doc: StrictDocumentHandle) => resolveDocument(instance, doc),
 })
 
 /**
  * @public
  * @function
  */
-export const useDocumentSyncStatus: UseDocumentSyncStatus = (
-  options: DocumentOptions<string | undefined>,
-) => {
-  const normalizedOptions = useNormalizedSourceOptions(options)
+export const useDocumentSyncStatus: UseDocumentSyncStatus = (options: DocumentHandle) => {
+  const normalizedOptions = useNormalizedResourceOptions(options)
   return useDocumentSyncStatusValue(normalizedOptions)
 }

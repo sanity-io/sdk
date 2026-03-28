@@ -5,99 +5,21 @@ import {
   type QueryOptions,
   resolveQuery,
 } from '@sanity/sdk'
-import {type SanityQueryResult} from 'groq'
 import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition} from 'react'
 
+import {type ResourceHandle} from '../../config/handles'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
-/**
- * Hook options for useQuery, supporting both direct source and sourceName.
- * @beta
- */
-type UseQueryOptions<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> = WithSourceNameSupport<QueryOptions<TQuery, TDataset, TProjectId>>
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
-// Overload 1: Inferred Type (using Typegen)
-/**
- * @public
- * Executes a GROQ query, inferring the result type from the query string and options.
- * Leverages Sanity Typegen if configured for enhanced type safety.
- *
- * @param options - Configuration for the query, including `query`, optional `params`, `projectId`, `dataset`, etc.
- * @returns An object containing `data` (typed based on the query) and `isPending` (for transitions).
- *
- * @example Basic usage (Inferred Type)
- * ```tsx
- * import {useQuery} from '@sanity/sdk-react'
- * import {defineQuery} from 'groq'
- *
- * const myQuery = defineQuery(`*[_type == "movie"]{_id, title}`)
- *
- * function MovieList() {
- *   // Typegen infers the return type for data
- *   const {data} = useQuery({ query: myQuery })
- *
- *   return (
- *     <div>
- *       <h2>Movies</h2>
- *       <ul>
- *         {data.map(movie => <li key={movie._id}>{movie.title}</li>)}
- *       </ul>
- *     </div>
- *   )
- * }
- * // Suspense boundary should wrap <MovieList /> for initial load
- * ```
- *
- * @example Using parameters (Inferred Type)
- * ```tsx
- * import {useQuery} from '@sanity/sdk-react'
- * import {defineQuery} from 'groq'
- *
- * const myQuery = defineQuery(`*[_type == "movie" && _id == $id][0]`)
- *
- * function MovieDetails({movieId}: {movieId: string}) {
- *   // Typegen infers the return type based on query and params
- *   const {data, isPending} = useQuery({
- *     query: myQuery,
- *     params: { id: movieId }
- *   })
- *
- *   return (
- *     // utilize `isPending` to signal to users that new data is coming in
- *     // (e.g. the `movieId` changed and we're loading in the new one)
- *     <div style={{ opacity: isPending ? 0.5 : 1 }}>
- *       {data ? <h1>{data.title}</h1> : <p>Movie not found</p>}
- *     </div>
- *   )
- * }
- * ```
- */
-export function useQuery<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  options: UseQueryOptions<TQuery, TDataset, TProjectId>,
-): {
-  /** The query result, typed based on the GROQ query string */
-  data: SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>
-  /** True if a query transition is in progress */
-  isPending: boolean
-}
+/** Options for useQuery: QueryOptions with resource made optional (resolved from context) */
+type ReactQueryOptions = Omit<QueryOptions, 'resource' | 'resourceName'> & ResourceHandle
 
-// Overload 2: Explicit Type Provided
+// Overload 1: Explicit Type Provided
 /**
  * @public
  * Executes a GROQ query with an explicitly provided result type `TData`.
  *
- * @param options - Configuration for the query, including `query`, optional `params`, `projectId`, `dataset`, etc.
+ * @param options - Configuration for the query, including `query`, optional `params`, `resource`, etc.
  * @returns An object containing `data` (cast to `TData`) and `isPending` (indicates whether a query resolution is pending; note that Suspense handles initial loading states). *
  * @example Manually typed query result
  * ```tsx
@@ -121,7 +43,7 @@ export function useQuery<
  * }
  * ```
  */
-export function useQuery<TData>(options: WithSourceNameSupport<QueryOptions>): {
+export function useQuery<TData>(options: ReactQueryOptions): {
   /** The query result, cast to the provided type TData */
   data: TData
   /** True if another query is resolving in the background (suspense handles the initial loading state) */
@@ -141,20 +63,19 @@ export function useQuery<TData>(options: WithSourceNameSupport<QueryOptions>): {
  * - Subscribes to changes, providing real-time updates.
  * - Integrates with React Suspense for handling initial loading states.
  * - Uses React Transitions for managing loading states during query/parameter changes (indicated by `isPending`).
- * - Supports type inference based on the GROQ query when using Sanity Typegen.
  * - Allows specifying an explicit return type `TData` for the query result.
  *
  * @category GROQ
  */
-export function useQuery(options: WithSourceNameSupport<QueryOptions>): {
+export function useQuery(options: ReactQueryOptions): {
   data: unknown
   isPending: boolean
 } {
   // Implementation returns unknown, overloads define specifics
-  const instance = useSanityInstance(options)
+  const instance = useSanityInstance()
 
-  // Normalize options: resolve sourceName to source and strip sourceName
-  const normalized = useNormalizedSourceOptions(options)
+  // Normalize options: resolve resourceName to resource and strip resourceName
+  const normalized = useNormalizedResourceOptions(options)
 
   // Use React's useTransition to avoid UI jank when queries change
   const [isPending, startTransition] = useTransition()
@@ -207,6 +128,6 @@ export function useQuery(options: WithSourceNameSupport<QueryOptions>): {
 
   // Subscribe to updates and get the current data
   // useSyncExternalStore ensures the component re-renders when the data changes
-  const data = useSyncExternalStore(subscribe, getCurrent) as SanityQueryResult
+  const data = useSyncExternalStore(subscribe, getCurrent) as unknown
   return useMemo(() => ({data, isPending}), [data, isPending])
 }

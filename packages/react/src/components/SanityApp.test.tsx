@@ -58,14 +58,11 @@ describe('SanityApp', () => {
     mockSDKProviderComponent.mockClear()
   })
 
-  it('renders SDKProvider with a single config', () => {
-    const singleConfig = {
-      projectId: 'test-project',
-      dataset: 'production',
-    }
+  it('renders SDKProvider with a single resource', () => {
+    const singleResource = {projectId: 'test-project', dataset: 'production'}
 
     render(
-      <SanityApp config={singleConfig} fallback={<div>Loading...</div>}>
+      <SanityApp resources={{default: singleResource}} fallback={<div>Loading...</div>}>
         <div>Child Content</div>
       </SanityApp>,
     )
@@ -80,49 +77,9 @@ describe('SanityApp', () => {
     expect(firstCallArgs1).toBeDefined()
     expect(firstCallArgs1.length).toBeGreaterThan(0)
     const props = firstCallArgs1[0] as unknown as SDKProviderProps
-    const config = props?.config
 
-    // Config is now passed directly as an object for single configs
-    expect(config).toEqual(singleConfig)
+    expect(props.resources).toEqual({default: singleResource})
     expect(props.fallback).toBeTruthy()
-  })
-
-  it('renders SDKProvider with multiple configs in original order', () => {
-    const multipleConfigs = [
-      {
-        projectId: 'project-1',
-        dataset: 'production',
-      },
-      {
-        projectId: 'project-2',
-        dataset: 'staging',
-      },
-      {
-        projectId: 'project-3',
-        dataset: 'development',
-      },
-    ]
-
-    render(
-      <SanityApp config={multipleConfigs} fallback={<div>Loading...</div>}>
-        <div>Child Content</div>
-      </SanityApp>,
-    )
-
-    // Check that the SDKProvider is rendered
-    expect(screen.getByTestId('sdk-provider')).toBeInTheDocument()
-
-    // Verify SDKProvider was called with the correct props
-    expect(mockSDKProviderComponent).toHaveBeenCalledTimes(1)
-    const sdkProviderCalls = mockSDKProviderComponent.mock.calls
-    const firstCallArgs2 = sdkProviderCalls[0]
-    expect(firstCallArgs2).toBeDefined()
-    expect(firstCallArgs2.length).toBeGreaterThan(0)
-    const props = firstCallArgs2[0] as unknown as SDKProviderProps
-    const config = props?.config
-
-    // Config should be passed directly to SDKProvider
-    expect(config).toEqual(multipleConfigs)
   })
 
   it('handles iframe environment correctly', async () => {
@@ -130,10 +87,7 @@ describe('SanityApp', () => {
     const originalTop = window.top
     const originalSelf = window.self
 
-    const mockSanityConfig: SanityConfig = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
-    }
+    const mockSanityConfig: SanityConfig = {}
 
     const mockTop = {}
     Object.defineProperty(window, 'top', {
@@ -146,7 +100,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
@@ -177,10 +131,7 @@ describe('SanityApp', () => {
       href: 'http://sanity-test.app',
     }
 
-    const mockSanityConfig: SanityConfig = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
-    }
+    const mockSanityConfig: SanityConfig = {}
 
     Object.defineProperty(window, 'location', {
       value: mockLocation,
@@ -188,7 +139,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
@@ -241,10 +192,7 @@ describe('SanityApp', () => {
   it('does not redirect to core if not inside iframe and local url', async () => {
     const originalLocation = window.location
 
-    const mockSanityConfig: SanityConfig = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
-    }
+    const mockSanityConfig: SanityConfig = {}
 
     const mockLocation = {
       replace: vi.fn(),
@@ -257,7 +205,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
@@ -285,8 +233,6 @@ describe('SanityApp', () => {
     }
 
     const mockSanityConfig: SanityConfig = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
       studio: {},
     }
 
@@ -296,7 +242,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )
@@ -325,8 +271,6 @@ describe('SanityApp', () => {
     }
 
     const mockSanityConfig: SanityConfig = {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
       studio: {},
     }
 
@@ -336,7 +280,7 @@ describe('SanityApp', () => {
     })
 
     render(
-      <SanityApp config={[mockSanityConfig]} fallback={<div>Fallback</div>}>
+      <SanityApp config={mockSanityConfig} fallback={<div>Fallback</div>}>
         <div>Test Child</div>
       </SanityApp>,
     )

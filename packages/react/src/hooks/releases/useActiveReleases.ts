@@ -1,18 +1,15 @@
 import {
-  type DocumentSource,
+  type DocumentResource,
   getActiveReleasesState,
   type ReleaseDocument,
-  type SanityConfig,
   type SanityInstance,
   type StateSource,
 } from '@sanity/sdk'
 import {filter, firstValueFrom} from 'rxjs'
 
+import {type ResourceHandle} from '../../config/handles'
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
 /**
  * @public
@@ -30,29 +27,25 @@ import {
  * ```
  */
 type UseActiveReleases = {
-  (options?: WithSourceNameSupport<SanityConfig> | undefined): ReleaseDocument[]
+  (options?: ResourceHandle | undefined): ReleaseDocument[]
 }
 
-const useActiveReleasesValue: UseActiveReleases = createStateSourceHook({
+const useActiveReleasesValue = createStateSourceHook({
   getState: getActiveReleasesState as (
     instance: SanityInstance,
-    options?: {source?: DocumentSource},
+    options: {resource: DocumentResource},
   ) => StateSource<ReleaseDocument[]>,
-  shouldSuspend: (instance: SanityInstance, options?: {source?: DocumentSource}) =>
-    getActiveReleasesState(instance, options ?? {}).getCurrent() === undefined,
-  suspender: (instance: SanityInstance, options?: {source?: DocumentSource}) =>
-    firstValueFrom(
-      getActiveReleasesState(instance, options ?? {}).observable.pipe(filter(Boolean)),
-    ),
+  shouldSuspend: (instance: SanityInstance, options: {resource: DocumentResource}) =>
+    getActiveReleasesState(instance, options).getCurrent() === undefined,
+  suspender: (instance: SanityInstance, options: {resource: DocumentResource}) =>
+    firstValueFrom(getActiveReleasesState(instance, options).observable.pipe(filter(Boolean))),
 })
 
 /**
  * @public
  * @function
  */
-export const useActiveReleases: UseActiveReleases = (
-  options: WithSourceNameSupport<{source?: DocumentSource}> | undefined,
-) => {
-  const normalizedOptions = useNormalizedSourceOptions(options ?? {})
+export const useActiveReleases: UseActiveReleases = (options: ResourceHandle | undefined) => {
+  const normalizedOptions = useNormalizedResourceOptions(options ?? {})
   return useActiveReleasesValue(normalizedOptions)
 }

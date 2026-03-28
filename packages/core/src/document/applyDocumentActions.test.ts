@@ -3,7 +3,7 @@ import {type SanityDocument} from '@sanity/types'
 import {Subject} from 'rxjs'
 import {describe, expect, it} from 'vitest'
 
-import {bindActionBySource} from '../store/createActionBinder'
+import {bindActionByResource} from '../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {} from '../store/createStateSourceAction'
 import {createStoreState, type StoreState} from '../store/createStoreState'
@@ -14,7 +14,7 @@ import {type AppliedTransaction, type OutgoingTransaction} from './reducers'
 
 vi.mock('../store/createActionBinder', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../store/createActionBinder')>()),
-  bindActionBySource: vi.fn(),
+  bindActionByResource: vi.fn(),
 }))
 
 type TestState = Pick<
@@ -47,10 +47,10 @@ describe('applyDocumentActions', () => {
       events: eventsSubject,
     }
     state = createStoreState(initialState)
-    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    const key = {name: 'p.d', source: {projectId: 'p', dataset: 'd'}}
+    instance = createSanityInstance()
+    const key = {name: 'p.d', resource: {projectId: 'p', dataset: 'd'}}
 
-    vi.mocked(bindActionBySource).mockImplementation(
+    vi.mocked(bindActionByResource).mockImplementation(
       (_storeDef, action) => (instanceParam: SanityInstance, options) =>
         action({instance: instanceParam, state, key}, options),
     )
@@ -69,13 +69,14 @@ describe('applyDocumentActions', () => {
       documentId: 'doc1',
       documentType: 'example',
       patches: [{set: {foo: 'bar'}}],
+      resource: {projectId: 'p', dataset: 'd'},
     }
 
     // Call applyDocumentActions with a fixed transactionId for reproducibility.
     const applyPromise = applyDocumentActions(instance, {
       actions: [action],
       transactionId: 'txn-success',
-      source: {projectId: 'p', dataset: 'd'},
+      resource: {projectId: 'p', dataset: 'd'},
     })
 
     const appliedTx: AppliedTransaction = {
@@ -127,13 +128,14 @@ describe('applyDocumentActions', () => {
       documentId: 'doc1',
       documentType: 'example',
       patches: [{set: {foo: 'error'}}],
+      resource: {projectId: 'p', dataset: 'd'},
     }
 
     // Call applyDocumentActions with a fixed transactionId.
     const applyPromise = applyDocumentActions(instance, {
       actions: [action],
       transactionId: 'txn-error',
-      source: {projectId: 'p', dataset: 'd'},
+      resource: {projectId: 'p', dataset: 'd'},
     })
 
     const errorEvent: DocumentEvent = {
@@ -148,26 +150,21 @@ describe('applyDocumentActions', () => {
     await expect(applyPromise).rejects.toThrow('Simulated error')
   })
 
-  it('matches parent instance via child when action projectId and dataset do not match child config', async () => {
-    // Create a parent instance
-    const parentInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    // Create a child instance with different config
-    const childInstance = parentInstance.createChild({projectId: 'child-p', dataset: 'child-d'})
-    // Use the child instance in context
-    // Create an action that refers to the parent's configuration
+  it('uses explicit resource even when instance default differs', async () => {
+    const otherInstance = createSanityInstance({
+      defaultResource: {projectId: 'child-p', dataset: 'child-d'},
+    })
     const action: DocumentAction = {
       type: 'document.edit',
       documentId: 'doc1',
       documentType: 'example',
       patches: [{set: {foo: 'childTest'}}],
-      projectId: 'p',
-      dataset: 'd',
+      resource: {projectId: 'p', dataset: 'd'},
     }
-    // Call applyDocumentActions with the context using childInstance, but with action requiring parent's config
-    const applyPromise = applyDocumentActions(childInstance, {
+    const applyPromise = applyDocumentActions(instance, {
       actions: [action],
       transactionId: 'txn-child-match',
-      source: {projectId: 'p', dataset: 'd'},
+      resource: {projectId: 'p', dataset: 'd'},
     })
 
     // Simulate an applied transaction on the parent's instance
@@ -201,7 +198,6 @@ describe('applyDocumentActions', () => {
     const submittedResult = await result.submitted()
     expect(submittedResult).toEqual(acceptedResult)
 
-    childInstance.dispose()
-    parentInstance.dispose()
+    otherInstance.dispose()
   })
 })

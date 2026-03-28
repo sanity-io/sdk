@@ -22,10 +22,7 @@ describe('releaseNode', () => {
   }
 
   beforeEach(() => {
-    instance = createSanityInstance({
-      projectId: 'test-project-id',
-      dataset: 'test-dataset',
-    })
+    instance = createSanityInstance()
     mockNode = {start: vi.fn(), stop: vi.fn(), onStatus: vi.fn()}
     state = createStoreState<ComlinkNodeState>({nodes: new Map(), subscriptions: new Map()})
     vi.clearAllMocks()

@@ -1,9 +1,8 @@
 import {DocumentId, getPublishedId} from '@sanity/id-utils'
-import {type SanityProjectionResult} from 'groq'
 import {omit} from 'lodash-es'
 
 import {type DocumentHandle} from '../config/sanityConfig'
-import {bindActionBySourceAndPerspective} from '../store/createActionBinder'
+import {bindActionByResourceAndPerspective} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -25,24 +24,6 @@ export interface ProjectionOptions<
 > extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
   projection: TProjection
 }
-
-/**
- * @beta
- */
-export function getProjectionState<
-  TProjection extends string = string,
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  instance: SanityInstance,
-  options: ProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
-): StateSource<
-  | ProjectionValuePending<
-      SanityProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
-    >
-  | undefined
->
 
 /**
  * @beta
@@ -72,7 +53,7 @@ export function getProjectionState(
 /**
  * @beta
  */
-export const _getProjectionState = bindActionBySourceAndPerspective(
+export const _getProjectionState = bindActionByResourceAndPerspective(
   projectionStore,
   createStateSourceAction({
     selector: (

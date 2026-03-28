@@ -32,10 +32,10 @@ vi.mock('../project/organizationVerification', async (importOriginal) => {
 describe('observeOrganizationVerificationState', () => {
   let testScheduler: TestScheduler
 
-  // Mock instance (only config.projectId is used)
+  // Mock instance with studio.projectId
   const mockInstance = {
-    config: {projectId: 'proj-1', dataset: 'd'},
-  } as SanityInstance
+    config: {studio: {projectId: 'proj-1'}},
+  } as unknown as SanityInstance
 
   beforeEach(() => {
     testScheduler = new TestScheduler((actual, expected) => {
@@ -80,18 +80,17 @@ describe('observeOrganizationVerificationState', () => {
       const expectedValues = {a: {error: null}}
 
       const result$ = observeOrganizationVerificationState(mockInstance, [
-        mockInstance.config.projectId!,
+        mockInstance.config.studio!.projectId!,
       ])
       expectObservable(result$).toBe(expectedMarble, expectedValues)
     })
     expect(compareProjectOrganization).not.toHaveBeenCalled()
   })
 
-  it('should emit {error: null} if instance.config.projectId is missing', () => {
+  it('should emit {error: null} if instance has no default source projectId', () => {
     const instanceWithoutProjectId = {
-      config: {projectId: undefined, dataset: 'd'},
-      // Add other required properties if SanityInstance type needs them
-    } as SanityInstance
+      config: {auth: {}},
+    } as unknown as SanityInstance
 
     testScheduler.run(({hot, expectObservable}) => {
       // Dashboard org ID doesn't matter much here, but provide one
@@ -139,7 +138,7 @@ describe('observeOrganizationVerificationState', () => {
       const expectedValues = {r: {error: null}} // Expect null error
 
       const result$ = observeOrganizationVerificationState(mockInstance, [
-        mockInstance.config.projectId!,
+        mockInstance.config.studio!.projectId!,
       ])
       expectObservable(result$).toBe(expectedMarble, expectedValues)
     })
@@ -163,7 +162,7 @@ describe('observeOrganizationVerificationState', () => {
       const expectedValues = {r: comparisonResult}
 
       const result$ = observeOrganizationVerificationState(mockInstance, [
-        mockInstance.config.projectId!,
+        mockInstance.config.studio!.projectId!,
       ])
       expectObservable(result$).toBe(expectedMarble, expectedValues)
     })
@@ -187,7 +186,7 @@ describe('observeOrganizationVerificationState', () => {
       const expectedValues = {r: comparisonResult}
 
       const result$ = observeOrganizationVerificationState(mockInstance, [
-        mockInstance.config.projectId!,
+        mockInstance.config.studio!.projectId!,
       ])
       expectObservable(result$).toBe(expectedMarble, expectedValues)
     })

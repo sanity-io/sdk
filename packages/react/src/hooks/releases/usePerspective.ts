@@ -1,17 +1,14 @@
 import {
-  type DatasetHandle,
-  type DocumentSource,
+  type DocumentResource,
   getPerspectiveState,
   type SanityInstance,
   type StateSource,
 } from '@sanity/sdk'
 import {filter, firstValueFrom} from 'rxjs'
 
+import {type ResourceHandle} from '../../config/handles'
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
 /**
  * @public
@@ -26,37 +23,39 @@ import {
  * @example
  * ```tsx
  * import {usePerspective, useQuery} from '@sanity/sdk-react'
-
- * const perspective = usePerspective({perspective: 'rxg1346', projectId: 'abc123', dataset: 'production'})
- * const {data} = useQuery<Movie[]>('*[_type == "movie"]', {
- *   perspective: perspective,
+ *
+ * const perspective = usePerspective({
+ *   perspective: 'rxg1346',
+ *   resource: {projectId: 'abc123', dataset: 'production'},
+ * })
+ * const {data} = useQuery<Movie[]>({
+ *   query: '*[_type == "movie"]',
+ *   perspective,
  * })
  * ```
  *
  * @returns The perspective for the given perspective handle.
  */
 type UsePerspective = {
-  (perspectiveHandle: DatasetHandle): string | string[]
+  (perspectiveHandle?: ResourceHandle): string | string[]
 }
 
-const usePerspectiveValue: UsePerspective = createStateSourceHook({
+const usePerspectiveValue = createStateSourceHook({
   getState: getPerspectiveState as (
     instance: SanityInstance,
-    perspectiveHandle?: {source?: DocumentSource},
+    perspectiveHandle: {resource: DocumentResource; perspective?: unknown},
   ) => StateSource<string | string[]>,
-  shouldSuspend: (instance: SanityInstance, options: {source?: DocumentSource}): boolean =>
+  shouldSuspend: (instance: SanityInstance, options: {resource: DocumentResource}): boolean =>
     getPerspectiveState(instance, options).getCurrent() === undefined,
-  suspender: (instance: SanityInstance, _options?: {source?: DocumentSource}) =>
-    firstValueFrom(getPerspectiveState(instance, _options ?? {}).observable.pipe(filter(Boolean))),
+  suspender: (instance: SanityInstance, _options?: {resource: DocumentResource}) =>
+    firstValueFrom(getPerspectiveState(instance, _options).observable.pipe(filter(Boolean))),
 })
 
 /**
  * @public
  * @function
  */
-export const usePerspective: UsePerspective = (
-  options: WithSourceNameSupport<DatasetHandle> | undefined,
-) => {
-  const normalizedOptions = useNormalizedSourceOptions(options ?? {})
+export const usePerspective: UsePerspective = (options: ResourceHandle | undefined) => {
+  const normalizedOptions = useNormalizedResourceOptions(options ?? {})
   return usePerspectiveValue(normalizedOptions)
 }
