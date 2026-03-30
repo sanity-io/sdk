@@ -58,7 +58,7 @@
   "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@sanity/client": "^7.14.1",
-    "@sanity/message-protocol": "^0.18.0",
+    "@sanity/message-protocol": "^0.19.0",
     "@sanity/sdk": "workspace:*",
     "@sanity/types": "^5.2.0",
     "@types/lodash-es": "^4.17.12",
