@@ -351,7 +351,7 @@ importers:
         specifier: ^7.14.1
         version: 7.14.1(debug@4.4.3)
       '@sanity/comlink':
-        specifier: ^3.0.4
+        specifier: ^3.1.1
         version: 3.1.1
       '@sanity/diff-match-patch':
         specifier: ^3.2.0
@@ -434,7 +434,7 @@ importers:
         version: 3.7.4
       rollup-plugin-visualizer:
         specifier: ^5.14.0
-        version: 5.14.0(rolldown@1.0.0-beta.45)(rollup@4.53.5)
+        version: 5.14.0(rollup@4.53.5)
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
@@ -549,7 +549,7 @@ importers:
         version: 19.2.1(react@19.2.1)
       rollup-plugin-visualizer:
         specifier: ^5.14.0
-        version: 5.14.0(rolldown@1.0.0-beta.45)(rollup@4.53.5)
+        version: 5.14.0(rollup@4.53.5)
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
@@ -3973,6 +3973,7 @@ packages:
   basic-ftp@5.1.0:
     resolution: {integrity: sha512-RkaJzeJKDbaDWTIPiJwubyljaEPwpVWkm9Rt5h9Nd6h7tEXTJ3VB4qxdZBioV7JO5yLUaOKwz7vDOzlncUsegw==}
     engines: {node: '>=10.0.0'}
+    deprecated: Security vulnerability fixed in 5.2.0, please upgrade
 
   before-after-hook@2.2.3:
     resolution: {integrity: sha512-NzUnlZexiaH/46WDhANlyR2bXRopNg4F/zuSA3OpZnllCUgRaOF2znDioDWrmbNVsuZk6l9pMquQB38cfBZwkQ==}
@@ -5175,6 +5176,7 @@ packages:
   git-raw-commits@4.0.0:
     resolution: {integrity: sha512-ICsMM1Wk8xSGMowkOmPrzo2Fgmfo4bMHLNX6ytHjajRJUqvHOw/TFapQ+QG75c3X/tTDDhOSRPGC52dDbNM8FQ==}
     engines: {node: '>=16'}
+    deprecated: This package is no longer maintained. For the JavaScript API, please use @conventional-changelog/git-client instead.
     hasBin: true
 
   git-up@8.1.1:
@@ -5193,6 +5195,7 @@ packages:
 
   glob@10.4.5:
     resolution: {integrity: sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@13.0.0:
@@ -15866,14 +15869,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  rollup-plugin-visualizer@5.14.0(rolldown@1.0.0-beta.45)(rollup@4.53.5):
+  rollup-plugin-visualizer@5.14.0(rollup@4.53.5):
     dependencies:
       open: 8.4.2
       picomatch: 4.0.3
       source-map: 0.7.4
       yargs: 17.7.2
     optionalDependencies:
-      rolldown: 1.0.0-beta.45
       rollup: 4.53.5
 
   rollup@4.53.5:
