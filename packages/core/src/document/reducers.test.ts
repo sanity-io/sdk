@@ -56,6 +56,7 @@ describe('queueTransaction', () => {
           documentId: 'doc1',
           documentType: 'book',
           patches: [{set: {foo: 'bar'}}],
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ],
     }
@@ -90,6 +91,7 @@ describe('removeQueuedTransaction', () => {
               documentId: 'doc1',
               documentType: 'book',
               patches: [{set: {foo: 'bar'}}],
+              resource: {projectId: 'p', dataset: 'd'},
             },
           ],
         },
@@ -143,7 +145,14 @@ describe('applyFirstQueuedTransaction', () => {
       queued: [
         {
           transactionId: 'txn2',
-          actions: [{type: 'document.discard', documentId: 'doc1', documentType: 'book'}],
+          actions: [
+            {
+              type: 'document.discard',
+              documentId: 'doc1',
+              documentType: 'book',
+              resource: {projectId: 'p', dataset: 'd'},
+            },
+          ],
         },
       ],
       applied: [],
@@ -162,7 +171,14 @@ describe('applyFirstQueuedTransaction', () => {
       queued: [
         {
           transactionId: 'txn-missing-grants',
-          actions: [{type: 'document.discard', documentId: 'doc1', documentType: 'book'}],
+          actions: [
+            {
+              type: 'document.discard',
+              documentId: 'doc1',
+              documentType: 'book',
+              resource: {projectId: 'p', dataset: 'd'},
+            },
+          ],
         },
       ],
       applied: [],
@@ -185,7 +201,14 @@ describe('applyFirstQueuedTransaction', () => {
       queued: [
         {
           transactionId: 'txn3',
-          actions: [{type: 'document.discard', documentId: 'doc1', documentType: 'book'}],
+          actions: [
+            {
+              type: 'document.discard',
+              documentId: 'doc1',
+              documentType: 'book',
+              resource: {projectId: 'p', dataset: 'd'},
+            },
+          ],
         },
       ],
       applied: [],
@@ -224,12 +247,14 @@ describe('batchAppliedTransactions', () => {
           documentId: 'doc1',
           documentType: 'book',
           patches: [{set: {foo: 'a'}}],
+          resource: {projectId: 'p', dataset: 'd'},
         },
         {
           type: 'document.edit',
           documentId: 'doc1',
           documentType: 'book',
           patches: [{set: {bar: 'b'}}],
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ],
       disableBatching: false,
@@ -265,6 +290,7 @@ describe('batchAppliedTransactions', () => {
           documentId: 'doc1',
           documentType: 'book',
           patches: [{set: {foo: 'a'}}],
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ],
       disableBatching: false,
@@ -291,6 +317,7 @@ describe('batchAppliedTransactions', () => {
           documentId: 'doc1',
           documentType: 'book',
           patches: [{set: {bar: 'b'}}],
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ],
       disableBatching: false,
@@ -331,6 +358,7 @@ describe('batchAppliedTransactions', () => {
           documentId: 'docA',
           documentType: 'book',
           patches: [{set: {foo: 'a'}}],
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ],
       disableBatching: true, // already set to true
@@ -379,6 +407,7 @@ describe('transitionAppliedTransactionsToOutgoing', () => {
               documentId: 'doc1',
               documentType: 'book',
               patches: [{set: {foo: 'new'}}],
+              resource: {projectId: 'p', dataset: 'd'},
             },
           ],
           disableBatching: false,
@@ -439,6 +468,7 @@ describe('cleanupOutgoingTransaction', () => {
             documentId: 'doc1',
             documentType: 'book',
             patches: [{set: {foo: 'x'}}],
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ],
         disableBatching: false,
@@ -481,6 +511,7 @@ describe('revertOutgoingTransaction', () => {
               documentId: 'doc1',
               documentType: 'book',
               patches: [{set: {foo: 'reverted'}}],
+              resource: {projectId: 'p', dataset: 'd'},
             },
           ],
           disableBatching: false,
@@ -501,6 +532,7 @@ describe('revertOutgoingTransaction', () => {
             documentId: 'doc1',
             documentType: 'book',
             patches: [{set: {foo: 'changed'}}],
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ],
         disableBatching: false,

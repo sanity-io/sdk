@@ -33,7 +33,7 @@ describe('useQuery', () => {
     } as StateSource<unknown>)
 
     function TestComponent() {
-      const {data, isPending} = useQuery({query: 'test query'})
+      const {data, isPending} = useQuery<string>({query: 'test query'})
       return (
         <div data-testid="output">
           {data} - {isPending ? 'pending' : 'not pending'}
@@ -42,7 +42,7 @@ describe('useQuery', () => {
     }
 
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={<p>Loading...</p>}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={<p>Loading...</p>}>
         <TestComponent />
       </ResourceProvider>,
     )
@@ -82,14 +82,13 @@ describe('useQuery', () => {
     )
 
     function TestComponent() {
-      const {data} = useQuery({query: 'test query'})
+      const {data} = useQuery<string>({query: 'test query'})
       return <div data-testid="output">{data}</div>
     }
 
     render(
       <ResourceProvider
-        projectId="p"
-        dataset="d"
+        resource={{projectId: 'p', dataset: 'd'}}
         fallback={<div data-testid="fallback">Loading...</div>}
       >
         <TestComponent />
@@ -164,7 +163,7 @@ describe('useQuery', () => {
     }
 
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={<p>Loading...</p>}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={<p>Loading...</p>}>
         <WrapperComponent />
       </ResourceProvider>,
     )

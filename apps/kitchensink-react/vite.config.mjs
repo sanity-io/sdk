@@ -4,10 +4,6 @@ import react from '@vitejs/plugin-react'
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {defineConfig, loadEnv} from 'vite'
 
-const ReactCompilerConfig = {
-  target: '18',
-}
-
 export default defineConfig(({mode}) => {
   // load env from root directory of turborepo
   const rootDir = resolve(process.cwd(), '../..')
@@ -30,7 +26,7 @@ export default defineConfig(({mode}) => {
     plugins: [
       react({
         babel: {
-          plugins: [['babel-plugin-react-compiler', ReactCompilerConfig]],
+          plugins: ['babel-plugin-react-compiler'],
         },
       }),
     ],

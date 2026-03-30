@@ -1,13 +1,10 @@
-import {type DocumentHandle, getProjectionState, resolveProjection} from '@sanity/sdk'
-import {type SanityProjectionResult} from 'groq'
+import {getProjectionState, resolveProjection} from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
+import {type DocumentHandle} from '../../config/handles'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
 /**
  * @public
@@ -18,7 +15,7 @@ export interface useDocumentProjectionOptions<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> extends WithSourceNameSupport<DocumentHandle<TDocumentType, TDataset, TProjectId>> {
+> extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
   /** The GROQ projection string */
   projection: TProjection
   /** Optional parameters for the projection query */
@@ -48,83 +45,13 @@ export interface useDocumentProjectionResults<TData> {
  *
  * @category Documents
  * @remarks
- * This hook has multiple signatures allowing for fine-grained control over type inference:
- * - Using Typegen: Infers the return type based on the `documentType`, `dataset`, `projectId`, and `projection`.
- * - Using explicit type parameter: Allows specifying a custom return type `TData`.
+ * This hook allows specifying an explicit type parameter `TData` for the projected result.
  *
  * @param options - An object containing the `DocumentHandle` properties (`documentId`, `documentType`, etc.), the `projection` string, optional `params`, and an optional `ref`.
  * @returns An object containing the projection results (`data`) and a boolean indicating whether the resolution is pending (`isPending`). Note: Suspense handles initial loading states; `data` being `undefined` after initial loading means the document doesn't exist or the projection yielded no result.
  */
 
-// Overload 1: Relies on Typegen
-/**
- * @public
- * Fetch a projection, relying on Typegen for the return type based on the handle and projection.
- *
- * @category Documents
- * @param options - Options including the document handle properties (`documentId`, `documentType`, etc.) and the `projection`.
- * @returns The projected data, typed based on Typegen.
- *
- * @example Using Typegen for a book preview
- * ```tsx
- * // ProjectionComponent.tsx
- * import {useDocumentProjection, type DocumentHandle} from '@sanity/sdk-react'
- * import {useRef} from 'react'
- * import {defineProjection} from 'groq'
- *
- * // Define props using DocumentHandle with the specific document type
- * type ProjectionComponentProps = {
- *   doc: DocumentHandle<'book'> // Typegen knows 'book'
- * }
- *
- * // This is required for typegen to generate the correct return type
- * const myProjection = defineProjection(`{
- *   title,
- *   'coverImage': cover.asset->url,
- *   'authors': array::join(authors[]->{'name': firstName + ' ' + lastName}.name, ', ')
- * }`)
- *
- * export default function ProjectionComponent({ doc }: ProjectionComponentProps) {
- *   const ref = useRef(null) // Optional ref to track viewport intersection for lazy loading
- *
- *   // Spread the doc handle into the options
- *   // Typegen infers the return type based on 'book' and the projection
- *   const { data } = useDocumentProjection({
- *     ...doc, // Pass the handle properties
- *     ref,
- *     projection: myProjection,
- *   })
- *
- *   // Suspense handles initial load, check for data existence after
- *   return (
- *     <article ref={ref}>
- *       <h2>{data.title ?? 'Untitled'}</h2>
- *       {data.coverImage && <img src={data.coverImage} alt={data.title} />}
- *       <p>{data.authors ?? 'Unknown authors'}</p>
- *     </article>
- *   )
- * }
- *
- * // Usage:
- * // import {createDocumentHandle} from '@sanity/sdk-react'
- * // const myDocHandle = createDocumentHandle({ documentId: 'book123', documentType: 'book' })
- * // <Suspense fallback='Loading preview...'>
- * //   <ProjectionComponent doc={myDocHandle} />
- * // </Suspense>
- * ```
- */
-export function useDocumentProjection<
-  TProjection extends string = string,
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  options: useDocumentProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
-): useDocumentProjectionResults<
-  SanityProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
->
-
-// Overload 2: Explicit type provided
+// Overload 1: Explicit type provided
 /**
  * @public
  * Fetch a projection with an explicitly defined return type `TData`.
@@ -180,15 +107,15 @@ export function useDocumentProjection<TData extends object>({
   projection,
   ...docHandle
 }: useDocumentProjectionOptions): useDocumentProjectionResults<TData> {
-  const instance = useSanityInstance(docHandle)
+  const instance = useSanityInstance()
 
   // Normalize projection string to handle template literals with whitespace
   // This ensures that the same projection content produces the same state source
   // even if the string reference changes (e.g., from inline template literals)
   const normalizedProjection = useMemo(() => projection.trim(), [projection])
 
-  // Normalize options: resolve sourceName to source and strip sourceName
-  const normalizedDocHandle = useNormalizedSourceOptions(docHandle)
+  // Normalize options: resolve resourceName to resource and strip resourceName
+  const normalizedDocHandle = useNormalizedResourceOptions(docHandle)
 
   // Memoize stateSource based on normalized projection and docHandle properties
   // This prevents creating a new StateSource on every render when projection content is the same

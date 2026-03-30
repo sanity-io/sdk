@@ -13,8 +13,7 @@ function DatasetDocumentIntent({document}: {document: SanityDocument}): JSX.Elem
     documentHandle: {
       documentId: document._id,
       documentType: document._type,
-      projectId: PROJECT_ID,
-      dataset: DATASET,
+      resource: {projectId: PROJECT_ID, dataset: DATASET},
     },
   })
 
@@ -33,8 +32,7 @@ function MovieDocumentIntent({document}: {document: SanityDocument}): JSX.Elemen
     documentHandle: {
       documentId: document._id,
       documentType: document._type,
-      projectId: MOVIE_PROJECT_ID,
-      dataset: MOVIE_DATASET,
+      resource: {projectId: MOVIE_PROJECT_ID, dataset: MOVIE_DATASET},
     },
   })
 
@@ -53,7 +51,7 @@ function MediaLibraryAssetIntent({asset}: {asset: {_id: string; _type: string}})
     documentHandle: {
       documentId: asset._id,
       documentType: asset._type,
-      sourceName: 'media-library',
+      resourceName: 'media-library',
     },
   })
 
@@ -72,7 +70,7 @@ function CanvasDocumentIntent({document}: {document: SanityDocument}): JSX.Eleme
     documentHandle: {
       documentId: document._id,
       documentType: document._type,
-      source: {
+      resource: {
         canvasId: 'cag5gSK37IGV',
       },
     },
@@ -90,27 +88,25 @@ function IntentsContent(): JSX.Element {
   // Fetch first document from project/dataset
   const {data: firstDocument, isPending: isDocumentPending} = useQuery<SanityDocument>({
     query: '*[_type == "book"][0]',
-    projectId: PROJECT_ID,
-    dataset: DATASET,
+    resource: {projectId: PROJECT_ID, dataset: DATASET},
   })
 
   // Fetch first movie from vo1ysemo/production
   const {data: firstMovie, isPending: isMoviePending} = useQuery<SanityDocument>({
     query: '*[_type == "movie"][0]',
-    projectId: MOVIE_PROJECT_ID,
-    dataset: MOVIE_DATASET,
+    resource: {projectId: MOVIE_PROJECT_ID, dataset: MOVIE_DATASET},
   })
 
   // Fetch first asset from media library
   const {data: firstAsset, isPending: isAssetPending} = useQuery<SanityDocument>({
     query: '*[_type == "sanity.asset"][0]',
-    sourceName: 'media-library',
+    resourceName: 'media-library',
   })
 
   // Fetch first canvas document from Sanity Sandbox Org Canvas
   const {data: firstCanvasDocument, isPending: isCanvasDocumentPending} = useQuery<SanityDocument>({
     query: '*[_type == "sanity.canvas.document"][0]',
-    source: {
+    resource: {
       canvasId: 'cag5gSK37IGV',
     },
   })

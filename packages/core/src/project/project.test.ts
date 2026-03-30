@@ -11,7 +11,7 @@ vi.mock('../client/clientStore')
 
 describe('project', () => {
   it('calls the `client.observable.projects.getById` method on the client and returns the result', async () => {
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    const instance = createSanityInstance()
 
     const project = {id: 'a'}
     const getById = vi.fn().mockReturnValue(of(project))

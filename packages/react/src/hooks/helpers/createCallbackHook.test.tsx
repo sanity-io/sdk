@@ -1,7 +1,7 @@
 import {type SanityInstance} from '@sanity/sdk'
-import {renderHook} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
+import {renderHook} from '../../../test/test-utils'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {createCallbackHook} from './createCallbackHook'
 
@@ -21,13 +21,7 @@ describe('createCallbackHook', () => {
     const useTestHook = createCallbackHook(testCallback)
 
     // Render the hook
-    const {result, rerender} = renderHook(() => useTestHook(), {
-      wrapper: ({children}) => (
-        <ResourceProvider projectId="p" dataset="d" fallback={null}>
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result, rerender} = renderHook(() => useTestHook())
 
     // Test the callback with parameters
     const result1 = result.current('test', 123)
@@ -44,13 +38,17 @@ describe('createCallbackHook', () => {
 
   it('should create new callback when instance changes', () => {
     // Create a test callback
-    const testCallback = (instance: SanityInstance) => instance.config.projectId
+    const testCallback = (instance: SanityInstance) => instance.config.studio?.projectId
 
     // Create and render our hook with first provider
     const useTestHook = createCallbackHook(testCallback)
     const {result, unmount} = renderHook(() => useTestHook(), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="p1" dataset="d" fallback={null}>
+        <ResourceProvider
+          studio={{projectId: 'p1'}}
+          resource={{projectId: 'p1', dataset: 'd'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -66,7 +64,11 @@ describe('createCallbackHook', () => {
     // Re-render with different provider configuration
     const {result: result2} = renderHook(() => useTestHook(), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="p2" dataset="d" fallback={null}>
+        <ResourceProvider
+          studio={{projectId: 'p2'}}
+          resource={{projectId: 'p2', dataset: 'd'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -85,7 +87,7 @@ describe('createCallbackHook', () => {
       method: string,
       data: object,
     ) => ({
-      url: `${instance.config.projectId}${path}`,
+      url: `${instance.config.studio?.projectId}${path}`,
       method,
       data,
     })
@@ -93,7 +95,11 @@ describe('createCallbackHook', () => {
     const useTestHook = createCallbackHook(testCallback)
     const {result} = renderHook(() => useTestHook(), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="p" dataset="d" fallback={null}>
+        <ResourceProvider
+          studio={{projectId: 'p'}}
+          resource={{projectId: 'p', dataset: 'd'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),

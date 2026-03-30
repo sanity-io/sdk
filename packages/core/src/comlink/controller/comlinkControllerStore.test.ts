@@ -16,10 +16,7 @@ describe('comlinkControllerStore', () => {
   let instance: SanityInstance
   beforeEach(() => {
     vi.resetModules()
-    instance = createSanityInstance({
-      projectId: 'test-project-id',
-      dataset: 'test-dataset',
-    })
+    instance = createSanityInstance()
   })
 
   afterEach(() => {

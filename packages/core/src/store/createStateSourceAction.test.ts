@@ -14,7 +14,7 @@ describe('createStateSourceAction', () => {
   let instance: SanityInstance
 
   beforeEach(() => {
-    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    instance = createSanityInstance()
     state = createStoreState({count: 0, items: [] as string[]}, {name: 'test-store'})
   })
 
@@ -179,7 +179,7 @@ describe('createStateSourceAction', () => {
 
   // New test: distinct contexts for same state with different instance
   it('should create distinct contexts for same state with different instance', () => {
-    const secondInstance = createSanityInstance({projectId: 'test2', dataset: 'test2'})
+    const secondInstance = createSanityInstance()
     const selector = vi.fn(({state: s}: SelectorContext<CountStoreState>) => s.count)
 
     const source1 = createStateSourceAction(selector)({state, instance, key: null})

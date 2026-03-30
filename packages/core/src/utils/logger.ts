@@ -153,9 +153,9 @@ export interface LogContext {
 export interface InstanceContext {
   /** Unique instance ID */
   instanceId?: string
-  /** Project ID */
+  /** Project ID (derived from default resource) */
   projectId?: string
-  /** Dataset name */
+  /** Dataset name (derived from default resource) */
   dataset?: string
 }
 
@@ -520,14 +520,9 @@ function logRxJSOperator(namespace: string, operator: string, context?: LogConte
  * @internal
  */
 /* c8 ignore next 7 */
-function getInstanceContext(instance: {
-  instanceId?: string
-  config?: {projectId?: string; dataset?: string}
-}): InstanceContext {
+function getInstanceContext(instance: {instanceId?: string}): InstanceContext {
   return {
     instanceId: instance.instanceId,
-    projectId: instance.config?.projectId,
-    dataset: instance.config?.dataset,
   }
 }
 
