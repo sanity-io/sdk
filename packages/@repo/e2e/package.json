@@ -59,5 +59,5 @@
       "optional": false
     }
   },
-  "packageManager": "pnpm@10.8.0"
+  "packageManager": "pnpm@10.33.0"
 }
