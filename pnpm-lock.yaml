@@ -374,9 +374,6 @@ importers:
       groq-js:
         specifier: ^1.19.0
         version: 1.25.0
-      lodash-es:
-        specifier: ^4.17.21
-        version: 4.17.23
       reselect:
         specifier: ^5.1.1
         version: 5.1.1
@@ -411,9 +408,6 @@ importers:
       '@sanity/prettier-config':
         specifier: ^1.0.6
         version: 1.0.6(prettier@3.7.4)
-      '@types/lodash-es':
-        specifier: ^4.17.12
-        version: 4.17.12
       '@vitest/coverage-v8':
         specifier: 3.2.4
         version: 3.2.4(vitest@3.2.4(@types/node@22.19.1)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@2.0.1))(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.21.0)(yaml@2.8.2))
@@ -450,12 +444,6 @@ importers:
       '@sanity/types':
         specifier: ^5.2.0
         version: 5.5.0(@types/react@19.2.7)(debug@4.4.3)
-      '@types/lodash-es':
-        specifier: ^4.17.12
-        version: 4.17.12
-      lodash-es:
-        specifier: ^4.17.21
-        version: 4.17.23
       react-error-boundary:
         specifier: ^5.0.0
         version: 5.0.0(react@19.2.1)
@@ -4110,7 +4098,7 @@ packages:
   basic-ftp@5.1.0:
     resolution: {integrity: sha512-RkaJzeJKDbaDWTIPiJwubyljaEPwpVWkm9Rt5h9Nd6h7tEXTJ3VB4qxdZBioV7JO5yLUaOKwz7vDOzlncUsegw==}
     engines: {node: '>=10.0.0'}
-    deprecated: Security vulnerability fixed in 5.2.1, please upgrade
+    deprecated: Security vulnerability fixed in 5.2.0, please upgrade
 
   before-after-hook@2.2.3:
     resolution: {integrity: sha512-NzUnlZexiaH/46WDhANlyR2bXRopNg4F/zuSA3OpZnllCUgRaOF2znDioDWrmbNVsuZk6l9pMquQB38cfBZwkQ==}
