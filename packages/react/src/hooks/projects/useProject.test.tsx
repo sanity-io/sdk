@@ -1,9 +1,4 @@
-import {
-  getProjectState,
-  type ProjectHandle,
-  type SanityInstance,
-  type SanityProject,
-} from '@sanity/sdk'
+import {getProjectState, type ProjectHandle, type SanityInstance} from '@sanity/sdk'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'
@@ -32,7 +27,7 @@ vi.mock('../helpers/createStateSourceHook', () => ({
 //   useNormalizedResourceOptions: vi.fn(),
 // }))
 
-const mockProject: SanityProject = {
+const mockProject = {
   id: 'test-project',
   displayName: 'Test Project',
   studioHost: null,

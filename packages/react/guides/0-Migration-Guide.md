@@ -193,16 +193,12 @@ const config: SanityConfig = {
 
 #### 4. `@sanity/sdk` agent and comlink utilities moved to sub-entries
 
-If you import directly from `@sanity/sdk` (the core package), agent and comlink utilities are now available only from dedicated sub-entry points:
+Agent and comlink utilities are now available only from dedicated sub-entry points:
 
 | Previously in `@sanity/sdk`                                                                             | Now in                |
 | ------------------------------------------------------------------------------------------------------- | --------------------- |
 | `agentGenerate`, `agentPatch`, `agentPrompt`, `agentTransform`, `agentTranslate` and their option types | `@sanity/sdk/agent`   |
 | `getOrCreateController`, `getOrCreateChannel`, `getOrCreateNode`, `getNodeState`, `FrameMessage`, etc.  | `@sanity/sdk/comlink` |
-
-**If you use `@sanity/sdk-react` (recommended), no changes are needed** — it re-exports everything from both sub-entries.
-
-If you import from `@sanity/sdk` directly:
 
 ```typescript
 // Before
@@ -213,6 +209,8 @@ import {type FrameMessage} from '@sanity/sdk'
 import {agentGenerate, type AgentGenerateOptions} from '@sanity/sdk/agent'
 import {type FrameMessage} from '@sanity/sdk/comlink'
 ```
+
+`@sanity/sdk-react` previously re-exported all core utilities, but these two subdomains are now excluded. Make the above code changes to get access to these.
 
 #### 5. Explicit `projectId` required for `getDatasetsState` / `useDatasets`
 
