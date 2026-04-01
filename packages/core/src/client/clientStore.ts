@@ -4,7 +4,6 @@ import {
   createClient,
   type SanityClient,
 } from '@sanity/client'
-import {pick} from 'lodash-es'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
 import {
@@ -16,6 +15,7 @@ import {
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
+import {pickProperties} from '../utils/object'
 
 const DEFAULT_API_VERSION = '2024-11-12'
 const DEFAULT_REQUEST_TAG_PREFIX = 'sanity.sdk'
@@ -156,7 +156,8 @@ const listenToAuthMethod = ({instance, state}: StoreContext<ClientStoreState>) =
   })
 }
 
-const getClientConfigKey = (options: ClientOptions) => JSON.stringify(pick(options, ...allowedKeys))
+const getClientConfigKey = (options: ClientOptions) =>
+  JSON.stringify(pickProperties(options, allowedKeys))
 
 /**
  * Retrieves a Sanity client instance configured with the provided options.
