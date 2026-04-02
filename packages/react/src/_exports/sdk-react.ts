@@ -45,8 +45,10 @@ export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
 export {useDispatchIntent} from '../hooks/dashboard/useDispatchIntent'
 export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
 export {
+  type NavigateToStudioDocumentStatus,
   type NavigateToStudioResult,
   useNavigateToStudioDocument,
+  type WorkspaceInfo,
 } from '../hooks/dashboard/useNavigateToStudioDocument'
 export {useRecordDocumentHistoryEvent} from '../hooks/dashboard/useRecordDocumentHistoryEvent'
 export {useStudioWorkspacesByProjectIdDataset} from '../hooks/dashboard/useStudioWorkspacesByProjectIdDataset'
