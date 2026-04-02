@@ -1,5 +1,17 @@
 import {createSelector} from 'reselect'
-import {combineLatest, distinctUntilChanged, filter, map, of, Subscription, switchMap} from 'rxjs'
+import {
+  catchError,
+  combineLatest,
+  distinctUntilChanged,
+  EMPTY,
+  filter,
+  first,
+  map,
+  type Observable,
+  of,
+  Subscription,
+  switchMap,
+} from 'rxjs'
 
 import {getTokenState} from '../auth/authStore'
 import {getClient} from '../client/clientStore'
@@ -12,9 +24,12 @@ import {getUserState} from '../users/usersStore'
 import {createBifurTransport} from './bifurTransport'
 import {type PresenceLocation, type TransportEvent, type UserPresence} from './types'
 
+const PRESENCE_API_VERSION = '2026-03-30'
+
 type PresenceStoreState = {
   locations: Map<string, {userId: string; locations: PresenceLocation[]}>
   users: Record<string, SanityUser | undefined>
+  organizationId?: string
 }
 
 const getInitialState = (): PresenceStoreState => ({
@@ -34,23 +49,24 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
     } = context
 
     if (isMediaLibraryResource(resource)) {
-      throw new Error(
-        'Presence is not supported for media library resources. Presence tracking requires a dataset resource with a projectId.',
-      )
+      throw new Error('Presence is not supported for media library resources.')
     }
 
-    if (isCanvasResource(resource)) {
-      throw new Error(
-        'Presence is not supported for canvas resources. Presence tracking requires a dataset resource with a projectId.',
-      )
-    }
     const sessionId = crypto.randomUUID()
 
-    const client = getClient(instance, {
-      apiVersion: '2022-06-30',
-      projectId: resource.projectId,
-      dataset: resource.dataset,
-    })
+    // Dataset resources must use the project hostname so the socket URL is project-specific.
+    // Canvas resources use the global API endpoint via the resource config.
+    const client = isDatasetResource(resource)
+      ? getClient(instance, {
+          apiVersion: PRESENCE_API_VERSION,
+          projectId: resource.projectId,
+          dataset: resource.dataset,
+          useProjectHostname: true,
+        })
+      : getClient(instance, {
+          apiVersion: PRESENCE_API_VERSION,
+          resource,
+        })
 
     const token$ = getTokenState(instance).observable.pipe(distinctUntilChanged())
 
@@ -93,6 +109,19 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
 
     dispatch({type: 'rollCall'}).subscribe()
 
+    // Canvas resources need the organizationId to resolve users — fetch it once from the canvas endpoint
+    if (isCanvasResource(resource)) {
+      const globalClient = getClient(instance, {apiVersion: PRESENCE_API_VERSION})
+      subscription.add(
+        globalClient.observable
+          .request<{organizationId: string}>({uri: `/canvases/${resource.canvasId}`})
+          .pipe(catchError(() => EMPTY))
+          .subscribe(({organizationId}) => {
+            state.set('presence/organizationId', (prev) => ({...prev, organizationId}))
+          }),
+      )
+    }
+
     return () => {
       dispatch({type: 'disconnect'}).subscribe()
       subscription.unsubscribe()
@@ -133,6 +162,7 @@ export const getPresence = bindActionByResource(
     selector: (context: SelectorContext<PresenceStoreState>): UserPresence[] =>
       selectPresence(context.state),
     onSubscribe: (context: StoreContext<PresenceStoreState, BoundResourceKey>) => {
+      const resource = context.key.resource
       const userIds$ = context.state.observable.pipe(
         map((state) =>
           Array.from(state.locations.values())
@@ -142,29 +172,34 @@ export const getPresence = bindActionByResource(
         distinctUntilChanged((a, b) => a.length === b.length && a.every((v, i) => v === b[i])),
       )
 
-      const subscription = userIds$
+      // For canvas resources, wait for organizationId to be fetched and stored in state.
+      // For dataset resources, emit undefined immediately so the stream isn't blocked.
+      const organizationId$: Observable<string | undefined> = isCanvasResource(resource)
+        ? context.state.observable.pipe(
+            map((s) => s.organizationId),
+            filter((id): id is string => id !== undefined),
+            first(),
+          )
+        : of(undefined)
+
+      const subscription = combineLatest([userIds$, organizationId$])
         .pipe(
-          switchMap((userIds) => {
+          switchMap(([userIds, organizationId]) => {
             if (userIds.length === 0) {
               return of([])
             }
             const userObservables = userIds.map((userId) =>
               getUserState(context.instance, {
                 userId,
-                resourceType: 'project',
-                projectId:
-                  context.key.resource && isDatasetResource(context.key.resource)
-                    ? context.key.resource.projectId
-                    : undefined,
+                ...(isDatasetResource(resource)
+                  ? {resourceType: 'project', projectId: resource.projectId}
+                  : {resourceType: 'organization', organizationId}),
               }).pipe(filter((v): v is NonNullable<typeof v> => !!v)),
             )
             return combineLatest(userObservables)
           }),
         )
         .subscribe((users) => {
-          if (!users) {
-            return
-          }
           context.state.set('presence/users', (prevState) => ({
             ...prevState,
             users: {
