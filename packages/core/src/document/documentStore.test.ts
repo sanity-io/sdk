@@ -240,7 +240,7 @@ it('propagates changes between two instances', async () => {
     resource: resource1,
   })
   const doc2 = createDocumentHandle({
-    documentId: 'doc-collab',
+    documentId: DocumentId('doc-collab'),
     documentType: 'article',
     resource: resource2,
   })
@@ -277,16 +277,16 @@ it('propagates changes between two instances', async () => {
 })
 
 it('handles concurrent edits and resolves conflicts', async () => {
-  const doc1 = createDocumentHandle({
-    documentId: 'doc-concurrent',
+  const doc1 = {
+    documentId: DocumentId('doc-concurrent'),
     documentType: 'article',
     resource: resource1,
-  })
-  const doc2 = createDocumentHandle({
-    documentId: 'doc-concurrent',
+  }
+  const doc2 = {
+    documentId: DocumentId('doc-concurrent'),
     documentType: 'article',
     resource: resource2,
-  })
+  }
   const state1 = getDocumentState<TestDocument>(instance, doc1)
   const state2 = getDocumentState<TestDocument>(instance, doc2)
 

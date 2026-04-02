@@ -392,11 +392,19 @@ export function processActions({
           if (!userPatches?.length) continue
 
           if (!working[documentId] || !base[documentId]) {
-            throw new ActionError({
-              documentId,
-              transactionId,
-              message: `Cannot edit document because it does not exist.`,
-            })
+            if (isReleasePerspective(action.perspective)) {
+              throw new ActionError({
+                documentId,
+                transactionId,
+                message: `This document does not exist in the release. Please create it or add it to the release first.`,
+              })
+            } else {
+              throw new ActionError({
+                documentId,
+                transactionId,
+                message: `Cannot edit document because it does not exist.`,
+              })
+            }
           }
 
           const baseBefore = base[documentId] as SanityDocument

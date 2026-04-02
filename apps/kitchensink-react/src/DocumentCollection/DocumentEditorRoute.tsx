@@ -101,7 +101,6 @@ function DocumentEditor({
 }
 
 function Editor() {
-  const resource = useResource()!
   const {data: documents} = useDocuments({
     documentType: 'author',
     batchSize: 1,
@@ -110,6 +109,7 @@ function Editor() {
   const [docHandle, setDocHandle] = useState<DocumentHandle<'author'> | null>(documents[0] ?? null)
   const [newDocumentId, setNewDocumentId] = useState<string>('')
   const [liveEditMode, setLiveEditMode] = useState<boolean>(false)
+  const resource = useResource()!
 
   const handleLoadDocument = () => {
     const documentId = newDocumentId || docHandle?.documentId

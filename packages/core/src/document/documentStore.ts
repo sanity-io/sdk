@@ -368,7 +368,8 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
       withLatestFrom(
         getClientState(instance, {
           apiVersion: API_VERSION,
-          ...(resource ? {resource} : {}),
+          resource,
+          perspective: 'raw',
         }).observable,
       ),
       concatMap(([outgoing, client]) => {

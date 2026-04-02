@@ -31,7 +31,8 @@ export function createSharedListener(
   const dispose$ = new Subject<void>()
   const events$ = getClientState(instance, {
     apiVersion: API_VERSION,
-    ...(resource ? {resource} : {}),
+    resource,
+    perspective: 'raw',
   }).observable.pipe(
     switchMap((client) =>
       // TODO: it seems like the client.listen method is not emitting disconnected

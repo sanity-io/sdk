@@ -50,9 +50,9 @@ export function DocumentEditorPanel({
   onDocumentIdChange,
 }: DocumentEditorPanelProps): React.JSX.Element {
   const apply = useApplyDocumentActions()
-  const resource = useResource()!
 
   // document actions (editDocument, createDocument, publishDocument, etc.) come from core and require resource to be passed in
+  const resource = useResource()!
   const strictHandle = {...docHandle, resource}
 
   const canEdit = useDocumentPermissions(editDocument(strictHandle))
