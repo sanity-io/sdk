@@ -17,6 +17,7 @@ vi.mock('../components/SDKProvider', () => ({
 vi.mock('../components/utils', () => ({
   isInIframe: () => true,
   isLocalUrl: () => true,
+  DEFAULT_RESOURCE_NAME: 'default',
 }))
 
 describe('SDKStudioContext', () => {

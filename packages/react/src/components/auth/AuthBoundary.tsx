@@ -1,5 +1,6 @@
 import {CorsOriginError} from '@sanity/client'
-import {AuthStateType, getCorsErrorProjectId, isStudioConfig} from '@sanity/sdk'
+import {AuthStateType, getCorsErrorProjectId} from '@sanity/sdk'
+import {isStudioConfig} from '@sanity/sdk/_internal'
 import {useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 

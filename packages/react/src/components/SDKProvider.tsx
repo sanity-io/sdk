@@ -1,14 +1,10 @@
-import {
-  DEFAULT_RESOURCE_NAME,
-  type DocumentResource,
-  isDatasetResource,
-  type SanityConfig,
-} from '@sanity/sdk'
+import {type DocumentResource, isDatasetResource, type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, type ReactNode, useMemo} from 'react'
 
 import {ResourceProvider} from '../context/ResourceProvider'
 import {ResourcesContext} from '../context/ResourcesContext'
 import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
+import {DEFAULT_RESOURCE_NAME} from './utils'
 
 /**
  * @internal
