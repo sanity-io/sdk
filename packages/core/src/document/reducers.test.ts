@@ -1,9 +1,9 @@
+import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
 import {type SanityDocument} from '@sanity/types'
 import {parse} from 'groq-js'
 import {Subject} from 'rxjs'
 import {describe, expect, it} from 'vitest'
 
-import {getDraftId, getPublishedId} from '../utils/ids'
 import {type DocumentEvent} from './events'
 import {type RemoteDocument} from './listen'
 import {type DocumentSet} from './processMutations'
@@ -66,8 +66,8 @@ describe('queueTransaction', () => {
     expect(newState.queued[0]).toEqual(transaction)
 
     // Check that both the published and draft documentStates got a subscription id added.
-    const draftId = getDraftId('doc1')
-    const pubId = getPublishedId('doc1')
+    const draftId = getDraftId(DocumentId('doc1'))
+    const pubId = getPublishedId(DocumentId('doc1'))
     expect(newState.documentStates[draftId]).toBeDefined()
     expect(newState.documentStates[pubId]).toBeDefined()
     expect(newState.documentStates[draftId]?.subscriptions).toContain('txn1')
@@ -77,8 +77,8 @@ describe('queueTransaction', () => {
 
 describe('removeQueuedTransaction', () => {
   it('removes the transaction from queued and removes subscription ids from documents', () => {
-    const draftId = getDraftId('doc1')
-    const pubId = getPublishedId('doc1')
+    const draftId = getDraftId(DocumentId('doc1'))
+    const pubId = getPublishedId(DocumentId('doc1'))
 
     const initialState: SyncTransactionState = {
       queued: [
@@ -98,8 +98,8 @@ describe('removeQueuedTransaction', () => {
       outgoing: undefined,
       grants,
       documentStates: {
-        [draftId]: {id: draftId, subscriptions: ['txn1'], local: {}},
-        [pubId]: {id: pubId, subscriptions: ['txn1'], local: {}},
+        [draftId]: {id: draftId, subscriptions: ['txn1']},
+        [pubId]: {id: pubId, subscriptions: ['txn1']},
       } as SyncTransactionState['documentStates'],
     }
 
@@ -138,7 +138,7 @@ describe('applyFirstQueuedTransaction', () => {
 
   it('returns unchanged state if any required document is not yet loaded', () => {
     // If a document's local value is undefined, the reducer should do nothing.
-    const draftId = getDraftId('doc1')
+    const draftId = getDraftId(DocumentId('doc1'))
     const state: SyncTransactionState = {
       queued: [
         {
@@ -176,8 +176,8 @@ describe('applyFirstQueuedTransaction', () => {
 
   it('applies the first queued transaction (using a discard action)', () => {
     // For a discard action, processActions deletes the draft document.
-    const draftId = getDraftId('doc1')
-    const pubId = getPublishedId('doc1')
+    const draftId = getDraftId(DocumentId('doc1'))
+    const pubId = getPublishedId(DocumentId('doc1'))
     const initialDraft = {...exampleDoc, _id: draftId, foo: 'bar', _rev: 'rev1'}
     const initialPub = {...exampleDoc, _id: pubId, foo: 'bar', _rev: 'rev1'}
 
@@ -235,18 +235,26 @@ describe('batchAppliedTransactions', () => {
       disableBatching: false,
       outgoingActions: [],
       outgoingMutations: [],
-      base: {[getDraftId('doc1')]: {_id: getDraftId('doc1'), _rev: 'rev1'}} as DocumentSet,
+      base: {
+        [getDraftId(DocumentId('doc1'))]: {_id: getDraftId(DocumentId('doc1')), _rev: 'rev1'},
+      } as unknown as DocumentSet,
       working: {
-        [getDraftId('doc1')]: {
+        [getDraftId(DocumentId('doc1'))]: {
           ...exampleDoc,
-          _id: getDraftId('doc1'),
+          _id: getDraftId(DocumentId('doc1')),
           _rev: 'rev2',
           foo: 'a',
           bar: 'b',
         },
       },
-      previous: {[getDraftId('doc1')]: {...exampleDoc, _id: getDraftId('doc1'), _rev: 'rev1'}},
-      previousRevs: {[getDraftId('doc1')]: 'rev1'},
+      previous: {
+        [getDraftId(DocumentId('doc1'))]: {
+          ...exampleDoc,
+          _id: getDraftId(DocumentId('doc1')),
+          _rev: 'rev1',
+        },
+      },
+      previousRevs: {[getDraftId(DocumentId('doc1'))]: 'rev1'},
       timestamp: '2025-02-06T00:00:00.000Z',
     }
     const result = batchAppliedTransactions([appliedTx])
@@ -256,13 +264,14 @@ describe('batchAppliedTransactions', () => {
   })
 
   it('batches two edit transactions when possible', () => {
-    const draftId = getDraftId('doc1')
+    const documentId = DocumentId('doc1')
+    const draftId = getDraftId(documentId)
     const appliedTx1: AppliedTransaction = {
       transactionId: 'txn5',
       actions: [
         {
           type: 'document.edit',
-          documentId: 'doc1',
+          documentId,
           documentType: 'book',
           patches: [{set: {foo: 'a'}}],
         },
@@ -272,7 +281,7 @@ describe('batchAppliedTransactions', () => {
         {
           actionType: 'sanity.action.document.edit',
           draftId,
-          publishedId: getPublishedId('doc1'),
+          publishedId: getPublishedId(documentId),
           patch: {set: {foo: 'a'}},
         },
       ],
@@ -288,7 +297,7 @@ describe('batchAppliedTransactions', () => {
       actions: [
         {
           type: 'document.edit',
-          documentId: 'doc1',
+          documentId,
           documentType: 'book',
           patches: [{set: {bar: 'b'}}],
         },
@@ -298,7 +307,7 @@ describe('batchAppliedTransactions', () => {
         {
           actionType: 'sanity.action.document.edit',
           draftId,
-          publishedId: getPublishedId('doc1'),
+          publishedId: getPublishedId(documentId),
           patch: {set: {bar: 'b'}},
         },
       ],
@@ -322,7 +331,7 @@ describe('batchAppliedTransactions', () => {
   })
 
   it('returns a transaction with disableBatching true if a single edit action already has disableBatching set', () => {
-    const draftId = getDraftId('docA')
+    const draftId = getDraftId(DocumentId('docA'))
     const appliedTx: AppliedTransaction = {
       transactionId: 'txn-disable',
       actions: [
@@ -366,16 +375,34 @@ describe('batchAppliedTransactions', () => {
       outgoingActions: [
         {
           actionType: 'sanity.action.document.edit',
-          draftId: getDraftId('doc1'),
-          publishedId: getPublishedId('doc1'),
+          draftId: getDraftId(DocumentId('doc1')),
+          publishedId: getPublishedId(DocumentId('doc1')),
           patch: {set: {foo: 'a'}},
         },
       ],
       outgoingMutations: [],
-      base: {[getDraftId('doc1')]: {...exampleDoc, _id: getDraftId('doc1'), _rev: 'rev1'}},
-      working: {[getDraftId('doc1')]: {...exampleDoc, _id: getDraftId('doc1'), _rev: 'rev2'}},
-      previous: {[getDraftId('doc1')]: {...exampleDoc, _id: getDraftId('doc1'), _rev: 'rev1'}},
-      previousRevs: {[getDraftId('doc1')]: 'rev1'},
+      base: {
+        [getDraftId(DocumentId('doc1'))]: {
+          ...exampleDoc,
+          _id: getDraftId(DocumentId('doc1')),
+          _rev: 'rev1',
+        },
+      },
+      working: {
+        [getDraftId(DocumentId('doc1'))]: {
+          ...exampleDoc,
+          _id: getDraftId(DocumentId('doc1')),
+          _rev: 'rev2',
+        },
+      },
+      previous: {
+        [getDraftId(DocumentId('doc1'))]: {
+          ...exampleDoc,
+          _id: getDraftId(DocumentId('doc1')),
+          _rev: 'rev1',
+        },
+      },
+      previousRevs: {[getDraftId(DocumentId('doc1'))]: 'rev1'},
       timestamp: '2025-02-06T00:00:00.000Z',
     }
     const liveEditTx: AppliedTransaction = {
@@ -427,7 +454,7 @@ describe('transitionAppliedTransactionsToOutgoing', () => {
   })
 
   it('transitions applied transactions to an outgoing transaction', () => {
-    const draftId = getDraftId('doc1')
+    const draftId = getDraftId(DocumentId('doc1'))
     const initialDoc = {...exampleDoc, _id: draftId, foo: 'old', _rev: 'rev1'}
     const state: SyncTransactionState = {
       queued: [],
@@ -487,8 +514,8 @@ describe('cleanupOutgoingTransaction', () => {
   })
 
   it('removes subscription ids for all documents associated with the outgoing transaction and then clears outgoing', () => {
-    const draftId = getDraftId('doc1')
-    const pubId = getPublishedId('doc1')
+    const draftId = getDraftId(DocumentId('doc1'))
+    const pubId = getPublishedId(DocumentId('doc1'))
     const state: SyncTransactionState = {
       queued: [],
       applied: [],
@@ -528,8 +555,8 @@ describe('cleanupOutgoingTransaction', () => {
 
 describe('revertOutgoingTransaction', () => {
   it('reverts the outgoing transaction and updates documentStates by removing unverified revisions', () => {
-    const draftId = getDraftId('doc1')
-    const pubId = getPublishedId('doc1')
+    const draftId = getDraftId(DocumentId('doc1'))
+    const pubId = getPublishedId(DocumentId('doc1'))
     // In this test we simulate a state with one applied transaction and an outgoing transaction.
     const state: SyncTransactionState = {
       queued: [],
@@ -626,7 +653,7 @@ describe('applyRemoteDocument', () => {
   })
 
   it('verifies an unverified revision when the revision matches and previousRev is as expected', () => {
-    const docId = getDraftId('doc1')
+    const docId = getDraftId(DocumentId('doc1'))
     const initialState: SyncTransactionState = {
       queued: [],
       applied: [],
@@ -668,7 +695,7 @@ describe('applyRemoteDocument', () => {
 
   it('rebases local changes when no matching unverified revision is found', () => {
     // In this branch we simply let processActions rebase so that the local becomes the remote.
-    const docId = getDraftId('doc1')
+    const docId = getDraftId(DocumentId('doc1'))
     const initialState: SyncTransactionState = {
       queued: [],
       applied: [],
@@ -703,7 +730,7 @@ describe('applyRemoteDocument', () => {
 
   // Test that a sync event removes outdated unverified revisions.
   it('removes outdated unverified revisions when a sync event is received', () => {
-    const docId = getDraftId('doc1')
+    const docId = getDraftId(DocumentId('doc1'))
     // An unverified revision created at an earlier time.
     const outdatedTimestamp = new Date('2025-02-06T00:09:00.000Z').toISOString()
     // The incoming sync event timestamp is later.

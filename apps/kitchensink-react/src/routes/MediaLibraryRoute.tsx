@@ -4,10 +4,11 @@ import {
   useDocumentSyncStatus,
   useQuery,
 } from '@sanity/sdk-react'
-import {Box, Button, Card, Dialog, Flex, Spinner, Text} from '@sanity/ui'
+import {Box, Button, Card, Dialog, Flex, Spinner, Stack, Text} from '@sanity/ui'
 import {type JSX, Suspense, useState} from 'react'
 import {SanityDocument} from 'sanity'
 
+import {DocumentEditorPanel} from '../components/DocumentEditorPanel'
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
 
 // Modal dialog for editing media assets
@@ -36,7 +37,12 @@ function MediaAssetEditorDialog({
       width={2}
     >
       <Box padding={4}>
-        <JsonDocumentEditor documentHandle={docHandle} minHeight="500px" maxHeight="70vh" />
+        <Suspense fallback={<Spinner />}>
+          <Stack space={4}>
+            <DocumentEditorPanel docHandle={docHandle} nameField="title" nameLabel="Title" />
+            <JsonDocumentEditor documentHandle={docHandle} minHeight="500px" maxHeight="70vh" />
+          </Stack>
+        </Suspense>
         <Flex justify="flex-end" gap={2} marginTop={4}>
           <Button text={synced ? 'Close' : 'Syncing...'} onClick={onClose} tone="primary" />
         </Flex>

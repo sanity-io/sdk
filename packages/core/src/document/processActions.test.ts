@@ -1066,10 +1066,7 @@ describe('processActions', () => {
 
         expect(() =>
           processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
-        ).toThrow('Cannot publish liveEdit document')
-        expect(() =>
-          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
-        ).toThrow('LiveEdit documents do not support drafts or publishing')
+        ).toThrow(/Publishing is not supported for liveEdit or version/)
       })
     })
 
@@ -1089,10 +1086,7 @@ describe('processActions', () => {
 
         expect(() =>
           processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
-        ).toThrow('Cannot unpublish liveEdit document')
-        expect(() =>
-          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
-        ).toThrow('LiveEdit documents do not support drafts or publishing')
+        ).toThrow(/Unpublishing is not supported for liveEdit or version/)
       })
     })
 
@@ -1112,10 +1106,317 @@ describe('processActions', () => {
 
         expect(() =>
           processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
-        ).toThrow('Cannot discard changes for liveEdit document')
+        ).toThrow('Cannot discard changes for liveEdit document "live1"')
+
         expect(() =>
           processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
         ).toThrow('LiveEdit documents do not support drafts')
+      })
+    })
+  })
+
+  describe('release perspective (version) documents', () => {
+    const releaseName = 'test-release'
+    const perspective = {releaseName}
+    const versionId = `versions.${releaseName}.doc1`
+
+    describe('document.create', () => {
+      it('should create a version document for a release perspective', () => {
+        const base: DocumentSet = {}
+        const working: DocumentSet = {}
+        const actions: DocumentAction[] = [
+          {
+            documentId: versionId,
+            type: 'document.create',
+            documentType: 'article',
+            perspective,
+          },
+        ]
+        const result = processActions({
+          actions,
+          transactionId,
+          base,
+          working,
+          timestamp,
+          grants: defaultGrants,
+        })
+
+        const versionDoc = result.working[versionId]
+        expect(versionDoc).toBeDefined()
+        expect(versionDoc?._id).toBe(versionId)
+        expect(versionDoc?._type).toBe('article')
+        expect(versionDoc?._rev).toBe(transactionId)
+
+        expect(result.outgoingActions).toEqual([
+          {
+            actionType: 'sanity.action.document.version.create',
+            publishedId: 'doc1',
+            attributes: expect.objectContaining({_id: versionId, _type: 'article'}),
+          },
+        ])
+      })
+
+      it('should create a version document using the published document as a base', () => {
+        const published = createDoc('doc1', 'Published Title')
+        const base: DocumentSet = {doc1: published}
+        const working: DocumentSet = {doc1: published}
+        const actions: DocumentAction[] = [
+          {
+            documentId: versionId,
+            type: 'document.create',
+            documentType: 'article',
+            perspective,
+          },
+        ]
+        const result = processActions({
+          actions,
+          transactionId,
+          base,
+          working,
+          timestamp,
+          grants: defaultGrants,
+        })
+
+        const versionDoc = result.working[versionId]
+        expect(versionDoc).toBeDefined()
+        expect(versionDoc?._id).toBe(versionId)
+        expect(versionDoc?.['title']).toBe('Published Title')
+      })
+
+      it('should throw if a version document already exists', () => {
+        const existingVersion = createDoc(versionId, 'Existing Version')
+        const base: DocumentSet = {[versionId]: existingVersion}
+        const working: DocumentSet = {[versionId]: existingVersion}
+        const actions: DocumentAction[] = [
+          {
+            documentId: versionId,
+            type: 'document.create',
+            documentType: 'article',
+            perspective,
+          },
+        ]
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow(/release version.*already exists/i)
+      })
+
+      it('should create a version document with initial values', () => {
+        const base: DocumentSet = {}
+        const working: DocumentSet = {}
+        const actions: DocumentAction[] = [
+          {
+            documentId: versionId,
+            type: 'document.create',
+            documentType: 'article',
+            perspective,
+            initialValue: {title: 'Release Version Title', count: 7},
+          },
+        ]
+        const result = processActions({
+          actions,
+          transactionId,
+          base,
+          working,
+          timestamp,
+          grants: defaultGrants,
+        })
+
+        const versionDoc = result.working[versionId]
+        expect(versionDoc?.['title']).toBe('Release Version Title')
+        expect(versionDoc?.['count']).toBe(7)
+      })
+
+      it('should throw PermissionActionError if create permission is denied', () => {
+        const base: DocumentSet = {}
+        const working: DocumentSet = {}
+        const actions: DocumentAction[] = [
+          {
+            documentId: versionId,
+            type: 'document.create',
+            documentType: 'article',
+            perspective,
+          },
+        ]
+        const grants = {...defaultGrants, create: alwaysDeny}
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants}),
+        ).toThrow(/You do not have permission to create a release version/)
+      })
+    })
+
+    describe('document.edit', () => {
+      it('should edit a version document directly', () => {
+        const version = createDoc(versionId, 'Original Version Title')
+        const base: DocumentSet = {[versionId]: version}
+        const working: DocumentSet = {[versionId]: version}
+        const actions: DocumentAction[] = [
+          {
+            documentId: versionId,
+            type: 'document.edit',
+            documentType: 'article',
+            perspective,
+            patches: [{set: {title: 'Updated Version Title'}}],
+          },
+        ]
+        const result = processActions({
+          actions,
+          transactionId,
+          base,
+          working,
+          timestamp,
+          grants: defaultGrants,
+        })
+
+        const editedDoc = result.working[versionId]
+        expect(editedDoc?.['title']).toBe('Updated Version Title')
+        expect(editedDoc?._id).toBe(versionId)
+
+        // outgoing action should use versionId as draftId and the base publishedId
+        expect(result.outgoingActions[0]).toMatchObject({
+          actionType: 'sanity.action.document.edit',
+          draftId: versionId,
+          publishedId: 'doc1',
+        })
+      })
+
+      it('should throw if the version document does not exist', () => {
+        const base: DocumentSet = {}
+        const working: DocumentSet = {}
+        const actions: DocumentAction[] = [
+          {
+            documentId: versionId,
+            type: 'document.edit',
+            documentType: 'article',
+            perspective,
+            patches: [{set: {title: 'Should Fail'}}],
+          },
+        ]
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow(/does not exist in the release/)
+      })
+
+      it('should throw PermissionActionError if update permission is denied', () => {
+        const version = createDoc(versionId, 'Version Title')
+        const base: DocumentSet = {[versionId]: version}
+        const working: DocumentSet = {[versionId]: version}
+        const actions: DocumentAction[] = [
+          {
+            documentId: versionId,
+            type: 'document.edit',
+            documentType: 'article',
+            perspective,
+            patches: [{set: {title: 'No Permission'}}],
+          },
+        ]
+        const grants = {...defaultGrants, update: alwaysDeny}
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants}),
+        ).toThrow(/You do not have permission to edit document/)
+      })
+    })
+
+    describe('document.discard', () => {
+      it('should discard a version document', () => {
+        const version = createDoc(versionId, 'Version Title')
+        const base: DocumentSet = {[versionId]: version}
+        const working: DocumentSet = {[versionId]: version}
+        const actions: DocumentAction[] = [
+          {
+            documentId: versionId,
+            type: 'document.discard',
+            documentType: 'article',
+            perspective,
+          },
+        ]
+        const result = processActions({
+          actions,
+          transactionId,
+          base,
+          working,
+          timestamp,
+          grants: defaultGrants,
+        })
+
+        expect(result.working[versionId]).toBeNull()
+        expect(result.outgoingActions).toEqual([
+          {
+            actionType: 'sanity.action.document.version.discard',
+            versionId,
+          },
+        ])
+      })
+
+      it('should throw if there is no version document to discard', () => {
+        const base: DocumentSet = {}
+        const working: DocumentSet = {}
+        const actions: DocumentAction[] = [
+          {
+            documentId: versionId,
+            type: 'document.discard',
+            documentType: 'article',
+            perspective,
+          },
+        ]
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow(/no draft or version available to discard/)
+      })
+
+      it('should throw PermissionActionError if update permission is denied', () => {
+        const version = createDoc(versionId, 'Version Title')
+        const base: DocumentSet = {[versionId]: version}
+        const working: DocumentSet = {[versionId]: version}
+        const actions: DocumentAction[] = [
+          {
+            documentId: versionId,
+            type: 'document.discard',
+            documentType: 'article',
+            perspective,
+          },
+        ]
+        const grants = {...defaultGrants, update: alwaysDeny}
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants}),
+        ).toThrow(/You do not have permission to discard changes/)
+      })
+    })
+
+    describe('document.publish', () => {
+      it('should throw for release perspective documents', () => {
+        const version = createDoc(versionId, 'Version Title')
+        const base: DocumentSet = {[versionId]: version}
+        const working: DocumentSet = {[versionId]: version}
+        const actions: DocumentAction[] = [
+          {
+            documentId: versionId,
+            type: 'document.publish',
+            documentType: 'article',
+            perspective,
+          },
+        ]
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow(/Publishing is not supported for liveEdit or version/)
+      })
+    })
+
+    describe('document.delete', () => {
+      it('should throw for release perspective documents', () => {
+        const version = createDoc(versionId, 'Version Title')
+        const base: DocumentSet = {[versionId]: version}
+        const working: DocumentSet = {[versionId]: version}
+        const actions: DocumentAction[] = [
+          {
+            documentId: versionId,
+            type: 'document.delete',
+            documentType: 'article',
+            perspective,
+          },
+        ]
+        expect(() =>
+          processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+        ).toThrow(/Cannot delete a version document/)
       })
     })
   })
