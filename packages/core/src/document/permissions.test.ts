@@ -1,9 +1,9 @@
+import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
 import {type SanityDocument} from '@sanity/types'
 import {evaluateSync, type ExprNode, parse} from 'groq-js'
 import {describe, expect, it} from 'vitest'
 
 import {createSanityInstance} from '../store/createSanityInstance'
-import {getDraftId, getPublishedId} from '../utils/ids'
 import {type DocumentAction} from './actions'
 import {calculatePermissions, createGrantsLookup, type DatasetAcl, type Grant} from './permissions'
 import {type SyncTransactionState} from './reducers'
@@ -66,8 +66,10 @@ describe('calculatePermissions', () => {
     // For a document.create action, the selector expects both published and draft keys.
     const state = createState(
       {
-        [getPublishedId('doc1')]: {local: createDoc('doc1', 'Original Title')},
-        [getDraftId('doc1')]: {local: null},
+        [getPublishedId(DocumentId('doc1'))]: {
+          local: createDoc(DocumentId('doc1'), 'Original Title'),
+        },
+        [getDraftId(DocumentId('doc1'))]: {local: null},
       },
       defaultGrants,
     )
@@ -88,7 +90,7 @@ describe('calculatePermissions', () => {
     // Missing the draft key will cause documentsSelector to return undefined.
     const state = createState(
       {
-        [getPublishedId('doc1')]: {local: createDoc('doc1', 'Title')},
+        [getPublishedId(DocumentId('doc1'))]: {local: createDoc(DocumentId('doc1'), 'Title')},
         // Missing getDraftId('doc1')
       },
       defaultGrants,
@@ -109,8 +111,8 @@ describe('calculatePermissions', () => {
     const deniedGrants = {...defaultGrants, create: alwaysDeny}
     const state = createState(
       {
-        [getPublishedId('doc1')]: {local: createDoc('doc1', 'Title')},
-        [getDraftId('doc1')]: {local: null},
+        [getPublishedId(DocumentId('doc1'))]: {local: createDoc(DocumentId('doc1'), 'Title')},
+        [getDraftId(DocumentId('doc1'))]: {local: null},
       },
       deniedGrants,
     )
@@ -142,8 +144,8 @@ describe('calculatePermissions', () => {
     // Both published and draft documents are present as null.
     const state = createState(
       {
-        [getPublishedId('doc1')]: {local: null},
-        [getDraftId('doc1')]: {local: null},
+        [getPublishedId(DocumentId('doc1'))]: {local: null},
+        [getDraftId(DocumentId('doc1'))]: {local: null},
       },
       defaultGrants,
     )
@@ -173,8 +175,8 @@ describe('calculatePermissions', () => {
     const deniedGrants = {...defaultGrants, update: alwaysDeny}
     const state = createState(
       {
-        [getPublishedId('doc1')]: {local: createDoc('doc1', 'Title')},
-        [getDraftId('doc1')]: {local: createDoc(getDraftId('doc1'), 'Draft Title')},
+        [getPublishedId(DocumentId('doc1'))]: {local: createDoc(DocumentId('doc1'), 'Title')},
+        [getDraftId(DocumentId('doc1'))]: {local: createDoc(DocumentId('doc1'), 'Draft Title')},
       },
       deniedGrants,
     )
@@ -204,8 +206,8 @@ describe('calculatePermissions', () => {
 
   it('should return undefined if grants are not provided', () => {
     const state = createState({
-      [getPublishedId('doc1')]: {local: createDoc('doc1', 'Title')},
-      [getDraftId('doc1')]: {local: null},
+      [getPublishedId(DocumentId('doc1'))]: {local: createDoc(DocumentId('doc1'), 'Title')},
+      [getDraftId(DocumentId('doc1'))]: {local: null},
     })
     const actions: DocumentAction[] = [
       {
@@ -222,8 +224,8 @@ describe('calculatePermissions', () => {
     // For document.delete, if the published document is missing, processActions throws an ActionError.
     const state = createState(
       {
-        [getPublishedId('doc1')]: {local: null},
-        [getDraftId('doc1')]: {local: null},
+        [getPublishedId(DocumentId('doc1'))]: {local: null},
+        [getDraftId(DocumentId('doc1'))]: {local: null},
       },
       defaultGrants,
     )
@@ -252,8 +254,8 @@ describe('calculatePermissions', () => {
   it('should memoize the result for identical state and actions inputs', () => {
     const state = createState(
       {
-        [getPublishedId('doc1')]: {local: createDoc('doc1', 'Title')},
-        [getDraftId('doc1')]: {local: null},
+        [getPublishedId(DocumentId('doc1'))]: {local: createDoc(DocumentId('doc1'), 'Title')},
+        [getDraftId(DocumentId('doc1'))]: {local: null},
       },
       defaultGrants,
     )

@@ -3,7 +3,7 @@ import {type PatchMutation as SanityMutatePatchMutation} from '@sanity/mutate/_u
 import {type PatchMutation, type PatchOperations, type SanityDocument} from '@sanity/types'
 
 import {type DocumentHandle, type DocumentTypeHandle} from '../config/sanityConfig'
-import {getPublishedId} from '../utils/ids'
+import {getEffectiveDocumentId} from './util'
 
 const isSanityMutatePatch = (value: unknown): value is SanityMutatePatchMutation => {
   if (typeof value !== 'object' || !value) return false
@@ -133,12 +133,15 @@ export function createDocument<
     Omit<SanityDocument, '_id' | '_type' | '_rev' | '_createdAt' | '_updatedAt'>
   >,
 ): CreateDocumentAction<TDocumentType, TDataset, TProjectId> {
+  // users may pass in an explicit documentId -- make sure we format it correctly for the action
+  let effectiveDocumentId
+  if (typeof doc.documentId === 'string') {
+    effectiveDocumentId = getEffectiveDocumentId({...doc, documentId: doc.documentId})
+  }
   return {
     type: 'document.create',
     ...doc,
-    ...(doc.documentId && {
-      documentId: doc.liveEdit ? doc.documentId : getPublishedId(doc.documentId),
-    }),
+    ...(effectiveDocumentId && {documentId: effectiveDocumentId}),
     ...(initialValue && {initialValue}),
   }
 }
@@ -156,10 +159,11 @@ export function deleteDocument<
 >(
   doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
 ): DeleteDocumentAction<TDocumentType, TDataset, TProjectId> {
+  const effectiveDocumentId = getEffectiveDocumentId(doc)
   return {
     type: 'document.delete',
     ...doc,
-    documentId: doc.liveEdit ? doc.documentId : getPublishedId(doc.documentId),
+    documentId: effectiveDocumentId,
   }
 }
 
@@ -223,14 +227,14 @@ export function editDocument<
   doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
   patches?: PatchOperations | PatchOperations[] | SanityMutatePatchMutation,
 ): EditDocumentAction<TDocumentType, TDataset, TProjectId> {
-  const documentId = doc.liveEdit ? doc.documentId : getPublishedId(doc.documentId)
+  const effectiveDocumentId = getEffectiveDocumentId(doc)
 
   if (isSanityMutatePatch(patches)) {
     const converted = convertSanityMutatePatch(patches) ?? []
     return {
       ...doc,
       type: 'document.edit',
-      documentId,
+      documentId: effectiveDocumentId,
       patches: converted,
     }
   }
@@ -238,7 +242,7 @@ export function editDocument<
   return {
     ...doc,
     type: 'document.edit',
-    documentId,
+    documentId: effectiveDocumentId,
     ...(patches && {patches: Array.isArray(patches) ? patches : [patches]}),
   }
 }
@@ -256,10 +260,11 @@ export function publishDocument<
 >(
   doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
 ): PublishDocumentAction<TDocumentType, TDataset, TProjectId> {
+  const effectiveDocumentId = getEffectiveDocumentId(doc)
   return {
     type: 'document.publish',
     ...doc,
-    documentId: doc.liveEdit ? doc.documentId : getPublishedId(doc.documentId),
+    documentId: effectiveDocumentId,
   }
 }
 
@@ -276,10 +281,11 @@ export function unpublishDocument<
 >(
   doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
 ): UnpublishDocumentAction<TDocumentType, TDataset, TProjectId> {
+  const effectiveDocumentId = getEffectiveDocumentId(doc)
   return {
     type: 'document.unpublish',
     ...doc,
-    documentId: doc.liveEdit ? doc.documentId : getPublishedId(doc.documentId),
+    documentId: effectiveDocumentId,
   }
 }
 
@@ -296,9 +302,10 @@ export function discardDocument<
 >(
   doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
 ): DiscardDocumentAction<TDocumentType, TDataset, TProjectId> {
+  const effectiveDocumentId = getEffectiveDocumentId(doc)
   return {
     type: 'document.discard',
     ...doc,
-    documentId: doc.liveEdit ? doc.documentId : getPublishedId(doc.documentId),
+    documentId: effectiveDocumentId,
   }
 }
