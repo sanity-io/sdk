@@ -96,6 +96,37 @@ describe('clientStore', () => {
       expect(client1).not.toBe(client2)
       expect(vi.mocked(createClient)).toHaveBeenCalledTimes(2)
     })
+
+    it('should set useProjectHostname when both projectId and dataset are provided', () => {
+      getClient(instance, {
+        apiVersion: '2024-11-12',
+        projectId: 'abc123',
+        dataset: 'production',
+      })
+
+      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: 'abc123',
+          dataset: 'production',
+          useProjectHostname: true,
+        }),
+      )
+    })
+
+    it('should allow explicit useProjectHostname: false to override when project and dataset are set', () => {
+      getClient(instance, {
+        apiVersion: '2024-11-12',
+        projectId: 'abc123',
+        dataset: 'production',
+        useProjectHostname: false,
+      })
+
+      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          useProjectHostname: false,
+        }),
+      )
+    })
   })
 
   describe('token handling', () => {
@@ -165,7 +196,7 @@ describe('clientStore', () => {
   })
 
   describe('source handling', () => {
-    it('should create client when source is provided', () => {
+    it('should create client when resource is provided', () => {
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
         resource: {mediaLibraryId: 'media-lib-123'},
@@ -173,8 +204,8 @@ describe('clientStore', () => {
 
       expect(vi.mocked(createClient)).toHaveBeenCalledWith(
         expect.objectContaining({
-          'apiVersion': '2024-11-12',
-          '~experimental_resource': {type: 'media-library', id: 'media-lib-123'},
+          apiVersion: '2024-11-12',
+          resource: {type: 'media-library', id: 'media-lib-123'},
         }),
       )
       // Client should be projectless - no projectId/dataset in config
@@ -182,7 +213,7 @@ describe('clientStore', () => {
       expect(client.config()).not.toHaveProperty('dataset')
       expect(client.config()).toEqual(
         expect.objectContaining({
-          '~experimental_resource': {type: 'media-library', id: 'media-lib-123'},
+          resource: {type: 'media-library', id: 'media-lib-123'},
         }),
       )
     })
@@ -195,8 +226,8 @@ describe('clientStore', () => {
 
       expect(vi.mocked(createClient)).toHaveBeenCalledWith(
         expect.objectContaining({
-          '~experimental_resource': {type: 'canvas', id: 'canvas-123'},
-          'apiVersion': '2024-11-12',
+          resource: {type: 'canvas', id: 'canvas-123'},
+          apiVersion: '2024-11-12',
         }),
       )
       // Client should be projectless - no projectId/dataset in config
@@ -204,13 +235,13 @@ describe('clientStore', () => {
       expect(client.config()).not.toHaveProperty('dataset')
       expect(client.config()).toEqual(
         expect.objectContaining({
-          '~experimental_resource': {type: 'canvas', id: 'canvas-123'},
+          resource: {type: 'canvas', id: 'canvas-123'},
         }),
       )
     })
 
     // skipped until we migrate to using source for project and dataset
-    it.skip('should create projectless client when source is provided, ignoring instance config', () => {
+    it('should create projectless client when source is provided, ignoring instance config', () => {
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
         resource: {projectId: 'source-project', dataset: 'source-dataset'},
@@ -221,7 +252,7 @@ describe('clientStore', () => {
       expect(client.config()).not.toHaveProperty('dataset')
       expect(client.config()).toEqual(
         expect.objectContaining({
-          '~experimental_resource': {type: 'dataset', id: 'source-project.source-dataset'},
+          resource: {type: 'dataset', id: 'source-project.source-dataset'},
         }),
       )
     })
