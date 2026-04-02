@@ -121,7 +121,7 @@ describe('agent actions', () => {
   it('throws when resource is omitted', () => {
     const instance = {config: {}} as any
     expect(() => agentGenerate(instance, {foo: 'bar'} as any)).toThrow(
-      'Resource is not a dataset resource',
+      'No resource provided. Agent actions require a dataset resource to be specified.',
     )
   })
 
@@ -129,6 +129,6 @@ describe('agent actions', () => {
     const instance = {config: {}} as any
     expect(() =>
       agentGenerate(instance, {foo: 'bar', resource: {mediaLibraryId: 'ml'} as any} as any),
-    ).toThrow('Resource is not a dataset resource')
+    ).toThrow('Resource is not a dataset resource. This is required for agent actions.')
   })
 })

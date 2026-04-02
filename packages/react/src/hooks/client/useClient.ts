@@ -1,6 +1,20 @@
+import {type SanityClient} from '@sanity/client'
 import {type ClientOptions, getClientState, type SanityInstance} from '@sanity/sdk'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
+
+const useClientValue = createStateSourceHook({
+  getState: (instance: SanityInstance, options: ClientOptions) => {
+    if (!options || typeof options !== 'object') {
+      throw new Error(
+        'useClient() requires a configuration object with at least an "apiVersion" property. ' +
+          'Example: useClient({ apiVersion: "2024-11-12" })',
+      )
+    }
+    return getClientState(instance, options)
+  },
+})
 
 /**
  * A React hook that provides a client that subscribes to changes in your application,
@@ -29,14 +43,15 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  * @public
  * @function
  */
-export const useClient = createStateSourceHook({
-  getState: (instance: SanityInstance, options: ClientOptions) => {
-    if (!options || typeof options !== 'object') {
-      throw new Error(
-        'useClient() requires a configuration object with at least an "apiVersion" property. ' +
-          'Example: useClient({ apiVersion: "2024-11-12" })',
-      )
-    }
-    return getClientState(instance, options)
-  },
-})
+export const useClient = (options: ClientOptions): SanityClient => {
+  const normalizedOptions = useNormalizedResourceOptions((options ?? {}) as ClientOptions)
+  // don't conform to a resource if the user has explicitly provided a projectId and dataset
+  const clientOptions = options?.projectId && options?.dataset ? options : normalizedOptions
+  if (!clientOptions.apiVersion) {
+    throw new Error(
+      'useClient() requires a configuration object with at least an "apiVersion" property. ' +
+        'Example: useClient({ apiVersion: "2024-11-12" })',
+    )
+  }
+  return useClientValue(clientOptions)
+}

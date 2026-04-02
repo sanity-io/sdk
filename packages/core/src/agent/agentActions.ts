@@ -58,7 +58,12 @@ export type AgentPromptResult = Awaited<ReturnType<SanityClient['agent']['action
 export type AgentPatchResult = Awaited<ReturnType<SanityClient['agent']['action']['patch']>>
 
 const projectAndDatasetFromResource = (resource: DocumentResource) => {
-  if (!resource || !isDatasetResource(resource)) {
+  if (!resource) {
+    throw new Error(
+      'No resource provided. Agent actions require a dataset resource to be specified.',
+    )
+  }
+  if (!isDatasetResource(resource)) {
     throw new Error('Resource is not a dataset resource. This is required for agent actions.')
   }
   return {
