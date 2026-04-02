@@ -1,9 +1,5 @@
-import {
-  PREVIEW_PROJECTION,
-  type PreviewQueryResult,
-  type PreviewValue,
-  transformProjectionToPreview,
-} from '@sanity/sdk'
+import {type PreviewQueryResult, type PreviewValue} from '@sanity/sdk'
+import {PREVIEW_PROJECTION, transformProjectionToPreview} from '@sanity/sdk/_internal'
 import {useMemo} from 'react'
 
 import {type DocumentHandle} from '../../config/handles'

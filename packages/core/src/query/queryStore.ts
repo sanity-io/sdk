@@ -89,9 +89,11 @@ export interface ResolveQueryOptions<
 
 const EMPTY_ARRAY: never[] = []
 
-/** @beta */
-export const getQueryKey = (options: QueryOptions): string => JSON.stringify(options)
-/** @beta */
+/** @internal */
+export const getQueryKey = (instance: SanityInstance, options: QueryOptions): string => {
+  return JSON.stringify(normalizeOptionsWithPerspective(instance, options))
+}
+/** @internal */
 export const parseQueryKey = (key: string): QueryOptions => JSON.parse(key)
 
 /**
@@ -101,7 +103,6 @@ export const parseQueryKey = (key: string): QueryOptions => JSON.parse(key)
  *
  * Since perspectives are unique, we can depend on the release stacks
  * to be correct when we retrieve the results.
- *
  */
 function normalizeOptionsWithPerspective(
   instance: SanityInstance,
@@ -316,14 +317,14 @@ const _getQueryState = bindActionByResource(
   createStateSourceAction({
     selector: ({state, instance}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
       if (state.error) throw state.error
-      const key = getQueryKey(normalizeOptionsWithPerspective(instance, options))
+      const key = getQueryKey(instance, options)
       const queryState = state.queries[key]
       if (queryState?.error) throw queryState.error
       return queryState?.result
     },
     onSubscribe: ({state, instance}, options: QueryOptions) => {
       const subscriptionId = insecureRandomId()
-      const key = getQueryKey(normalizeOptionsWithPerspective(instance, options))
+      const key = getQueryKey(instance, options)
 
       state.set('addSubscriber', addSubscriber(key, subscriptionId))
 
@@ -365,7 +366,7 @@ const _resolveQuery = bindActionByResource(
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
     const normalized = normalizeOptionsWithPerspective(instance, options)
     const {getCurrent} = getQueryState(instance, normalized)
-    const key = getQueryKey(normalized)
+    const key = getQueryKey(instance, normalized)
 
     const aborted$ = signal
       ? new Observable<void>((observer) => {

@@ -1,4 +1,5 @@
-import {createGroqSearchFilter, type DocumentHandle, type QueryOptions} from '@sanity/sdk'
+import {type DocumentHandle, type QueryOptions} from '@sanity/sdk'
+import {createGroqSearchFilter} from '@sanity/sdk/_internal'
 import {type SortOrderingItem} from '@sanity/types'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 

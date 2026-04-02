@@ -36,6 +36,16 @@
       "source": "./src/_exports/_internal.ts",
       "import": "./dist/_exports/_internal.js",
       "default": "./dist/_exports/_internal.js"
+    },
+    "./agent": {
+      "source": "./src/_exports/agent.ts",
+      "import": "./dist/_exports/agent.js",
+      "default": "./dist/_exports/agent.js"
+    },
+    "./comlink": {
+      "source": "./src/_exports/comlink.ts",
+      "import": "./dist/_exports/comlink.js",
+      "default": "./dist/_exports/comlink.js"
     }
   },
   "main": "./dist/index.js",

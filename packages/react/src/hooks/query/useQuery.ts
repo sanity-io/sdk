@@ -1,10 +1,5 @@
-import {
-  getQueryKey,
-  getQueryState,
-  parseQueryKey,
-  type QueryOptions,
-  resolveQuery,
-} from '@sanity/sdk'
+import {getQueryState, type QueryOptions, resolveQuery} from '@sanity/sdk'
+import {getQueryKey, parseQueryKey} from '@sanity/sdk/_internal'
 import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {type ResourceHandle} from '../../config/handles'
@@ -83,7 +78,7 @@ export function useQuery(options: ReactQueryOptions): {
   const [isPending, startTransition] = useTransition()
 
   // Get the unique key for this query and its options (using normalized options)
-  const queryKey = getQueryKey(normalized)
+  const queryKey = getQueryKey(instance, normalized)
   // Use a deferred state to avoid immediate re-renders when the query changes
   const [deferredQueryKey, setDeferredQueryKey] = useState(queryKey)
 
