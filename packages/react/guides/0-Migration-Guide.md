@@ -107,16 +107,17 @@ The following hooks support `resourceName` / `resource`:
 
 The following APIs were deprecated in v2 and have been removed in v3:
 
-| Removed                                      | Replacement                                                |
-| -------------------------------------------- | ---------------------------------------------------------- |
-| `getPreviewState` / `GetPreviewStateOptions` | `getProjectionState` with an explicit `projection`         |
-| `resolvePreview` / `ResolvePreviewOptions`   | `resolveProjection` with an explicit `projection`          |
-| `PreviewStoreState` type                     | Use the return type of `getProjectionState`                |
-| `ValidProjection` type                       | Use `string`                                               |
-| `ValuePending` type                          | Removed — was only used with the old preview API           |
-| `studioMode` config option                   | `studio` config option (or zero-config `SDKStudioContext`) |
-| `sanityConfigs` prop on `<SanityApp>`        | `resources` prop                                           |
-| `SanityProject` type                         | Import from `@sanity/client`                               |
+| Removed                                       | Replacement                                                |
+| --------------------------------------------  | ---------------------------------------------------------- |
+| `getPreviewState` / `GetPreviewStateOptions`  | `getProjectionState` with an explicit `projection`         |
+| `resolvePreview` / `ResolvePreviewOptions`    | `resolveProjection` with an explicit `projection`          |
+| `PreviewStoreState` type                      | Use the return type of `getProjectionState`                |
+| `ValidProjection` type                        | Use `string`                                               |
+| `ValuePending` type                           | Removed — was only used with the old preview API           |
+| `studioMode` config option                    | `studio` config option (or zero-config `SDKStudioContext`) |
+| `sanityConfigs` prop on `<SanityApp>`         | `resources` prop                                           |
+| `SanityProject` type                          | Import from `@sanity/client`                               |
+| `scope` / `~experimental_resource` on clients | `useProjectHostname` and `resource` prop                   |
 
 **`getPreviewState`**
 

@@ -115,15 +115,9 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
             const {userId, batchSize, ...options} = parseUsersKey(group$.key)
 
             if (userId) {
-              // In the future we will be able to fetch a user from the global API using the resourceUserId,
-              // but for now we need to use the project subdomain to fetch a user if the userId is a project user (starts with "p")
               if (userId.startsWith('p')) {
                 const client = getClient(instance, {
                   apiVersion: PROJECT_API_VERSION,
-                  // this is a global store, so we need to use the projectId from the options when we're fetching
-                  // users from a project subdomain
-                  projectId: options.projectId,
-                  useProjectHostname: true,
                 })
 
                 return client.observable
@@ -167,10 +161,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                   )
               }
 
-              // Fetch the user from the global API
-              const scope = userId.startsWith('g') ? 'global' : undefined
               const client = getClient(instance, {
-                scope,
                 apiVersion: API_VERSION,
               })
               const resourceType = options.resourceType || 'project'
@@ -230,7 +221,6 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                 : organizationId$.pipe(map((id) => ({type: 'organization', id})))
 
             const client$ = getClientState(instance, {
-              scope: 'global',
               apiVersion: API_VERSION,
             }).observable
 
