@@ -30,8 +30,7 @@
     "build": "pkg build --strict --clean --check",
     "cleanup": "tsx src/scripts/cleanup-datasets.ts",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "prepare": "pnpm build"
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@sanity/client": "^7.14.1",

@@ -23,6 +23,9 @@ const baseConfig = {
     },
     'apps/kitchensink-react': {
       entry: ['src/main.tsx', 'src/css/css.config.js'],
+      // disable playwright plugin: playwright.config.ts imports @repo/e2e which
+      // may not be built yet, and knip crashes trying to load it as an entry file
+      playwright: false,
       typescript: {
         config: 'tsconfig.json',
       },
@@ -64,15 +67,13 @@ const baseConfig = {
       entry: ['src/index.ts', 'src/setup/**/*.ts', 'src/teardown/**/*.ts'],
       ignoreDependencies: ['@repo/tsconfig'],
     },
-    // TODO: Remove this once we have presence fully implemented in the SDK
     'packages/core': {
       typescript: {
         config: 'tsconfig.settings.json',
       },
       project,
       entry: ['package.bundle.ts'],
-      ignore: ['src/presence/bifurTransport.ts', 'src/presence/types.ts'],
-      ignoreDependencies: ['@sanity/bifur-client', '@sanity/browserslist-config'],
+      ignoreDependencies: ['@sanity/browserslist-config'],
     },
   },
 } satisfies KnipConfig
