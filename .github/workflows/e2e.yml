@@ -102,8 +102,8 @@ jobs:
       # dataset names (SDK_E2E_DATASET_0/1) into the bundle at compile time.
       - name: 🚀 Build & start preview server
         run: |
-          cd apps/kitchensink-react
-          pnpm build && pnpm run preview --port 3333 &
+          pnpm build --filter=@sanity/kitchensink-react
+          cd apps/kitchensink-react && pnpm run preview --port 3333 &
           timeout 60 bash -c 'until curl -f -s http://localhost:3333 > /dev/null; do echo "Waiting for server..."; sleep 2; done'
           echo "Server is ready!"
 
