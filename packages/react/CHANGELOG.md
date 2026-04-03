@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.9.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.8.0...sdk-react-v2.9.0) (2026-04-03)
+
+
+### Features
+
+* **document:** update document store to accept sources ([#730](https://github.com/sanity-io/sdk/issues/730)) ([b7b727b](https://github.com/sanity-io/sdk/commit/b7b727b9cfc70d0c1e0486121ce8a55e33cbfd40))
+* **preview:** update preview to use perspective and source ([#731](https://github.com/sanity-io/sdk/issues/731)) ([9702f45](https://github.com/sanity-io/sdk/commit/9702f45fa11f368593fe741872b5bc4ae501183f))
+* **react:** add useWindowTitle hook for browser tab title management ([#781](https://github.com/sanity-io/sdk/issues/781)) ([8757a16](https://github.com/sanity-io/sdk/commit/8757a1667b7ec010cb165263d425c37ae283fbde))
+* **releases:** update releases store to use sources ([#733](https://github.com/sanity-io/sdk/issues/733)) ([3912987](https://github.com/sanity-io/sdk/commit/3912987efd153bc0939b6a89b9639374cfef211b))
+
+
+### Bug Fixes
+
+* **auth:** handle Studio cookie auth when token source emits null ([#743](https://github.com/sanity-io/sdk/issues/743)) ([6323543](https://github.com/sanity-io/sdk/commit/632354343e4fa3c7f0d63ed26953532b80889812))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.9.0
+
 ## [2.8.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.7.0...sdk-react-v2.8.0) (2026-02-19)
 
 ### Features
