@@ -1,6 +1,9 @@
 import {describe, expect, it} from 'vitest'
 
-import {compareProjectOrganization, type OrgVerificationResult} from './organizationVerification'
+import {
+  compareProjectOrganization,
+  type OrganizationVerificationResult,
+} from './organizationVerification'
 
 describe('compareProjectOrganization', () => {
   const projectId = 'proj-1'
@@ -9,7 +12,7 @@ describe('compareProjectOrganization', () => {
   it('should return error null when project orgId matches expected orgId', () => {
     const projectOrgId = 'org-abc'
     const result = compareProjectOrganization(projectId, projectOrgId, expectedOrgId)
-    expect(result).toEqual<OrgVerificationResult>({error: null})
+    expect(result).toEqual<OrganizationVerificationResult>({error: null})
   })
 
   it('should return an error message when project orgId does not match expected orgId', () => {

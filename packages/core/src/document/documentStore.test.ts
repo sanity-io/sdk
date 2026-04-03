@@ -35,9 +35,9 @@ import {
   getDocumentState,
   getDocumentSyncStatus,
   getPermissionsState,
+  onDocumentEvent,
   resolveDocument,
   resolvePermissions,
-  subscribeDocumentEvents,
 } from './documentStore'
 import {type ActionErrorEvent, type TransactionRevertedEvent} from './events'
 import {type DatasetAcl} from './permissions'
@@ -541,7 +541,7 @@ it('reverts failed outgoing transaction locally', async () => {
   })
 
   const revertedEventPromise = new Promise<TransactionRevertedEvent>((resolve) => {
-    const unsubscribe = subscribeDocumentEvents(instance, {
+    const unsubscribe = onDocumentEvent(instance, {
       resource,
       eventHandler: (e) => {
         if (e.type === 'reverted') {
@@ -609,7 +609,7 @@ it('reverts failed outgoing transaction locally', async () => {
 
 it('removes a queued transaction if it fails to apply', async () => {
   const actionErrorEventPromise = new Promise<ActionErrorEvent>((resolve) => {
-    const unsubscribe = subscribeDocumentEvents(instance, {
+    const unsubscribe = onDocumentEvent(instance, {
       resource,
       eventHandler: (e) => {
         if (e.type === 'error') {
@@ -833,7 +833,7 @@ it('returns a promise that resolves when a document has been loaded in the store
 
 it('emits an event for each action after an outgoing transaction has been accepted', async () => {
   const handler = vi.fn()
-  const unsubscribe = subscribeDocumentEvents(instance, {resource, eventHandler: handler})
+  const unsubscribe = onDocumentEvent(instance, {resource, eventHandler: handler})
 
   const documentId = DocumentId(crypto.randomUUID())
   const doc = createDocumentHandle({documentId, documentType: 'article', resource})

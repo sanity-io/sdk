@@ -156,7 +156,7 @@ const selectPresence = createSelector(
 )
 
 /** @beta */
-export const getPresence = bindActionByResource(
+export const getPresenceState = bindActionByResource(
   presenceStore,
   createStateSourceAction({
     selector: (context: SelectorContext<PresenceStoreState>): UserPresence[] =>

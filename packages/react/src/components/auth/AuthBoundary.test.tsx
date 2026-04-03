@@ -7,7 +7,7 @@ import {beforeEach, describe, expect, it, type MockInstance, vi} from 'vitest'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
-import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
+import {useOrganizationVerification} from '../../hooks/auth/useOrganizationVerification'
 import {AuthBoundary} from './AuthBoundary'
 
 // Mock hooks
@@ -15,7 +15,7 @@ vi.mock('../../hooks/auth/useAuthState', () => ({
   useAuthState: vi.fn(() => 'logged-out'),
 }))
 vi.mock('../../hooks/auth/useLoginUrl')
-vi.mock('../../hooks/auth/useVerifyOrgProjects')
+vi.mock('../../hooks/auth/useOrganizationVerification')
 vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
   useHandleAuthCallback: vi.fn(() => async () => {}),
 }))
@@ -107,7 +107,7 @@ describe('AuthBoundary', () => {
   let consoleErrorSpy: MockInstance
   const mockUseAuthState = vi.mocked(useAuthState)
   const mockUseLoginUrl = vi.mocked(useLoginUrl)
-  const mockUseVerifyOrgProjects = vi.mocked(useVerifyOrgProjects)
+  const mockUseVerifyOrganizationProjects = vi.mocked(useOrganizationVerification)
   const testProjectIds = ['proj-test'] // Example project ID for tests
 
   beforeEach(() => {
@@ -117,8 +117,8 @@ describe('AuthBoundary', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN} as any)
     mockUseLoginUrl.mockReturnValue('http://example.com/login')
-    // Default mock for useVerifyOrgProjects - returns null (no error)
-    mockUseVerifyOrgProjects.mockImplementation(() => null)
+    // Default mock for useOrganizationVerification - returns null (no error)
+    mockUseVerifyOrganizationProjects.mockImplementation(() => null)
   })
 
   afterEach(() => {
@@ -208,7 +208,7 @@ describe('AuthBoundary', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN} as any)
     // Mock specific return value for this test
-    mockUseVerifyOrgProjects.mockImplementation((disabled, pIds) => {
+    mockUseVerifyOrganizationProjects.mockImplementation((disabled, pIds) => {
       // Expect verification to be enabled (disabled=false) and projectIds to match
       if (!disabled && pIds === testProjectIds) {
         return orgErrorMessage
@@ -240,7 +240,7 @@ describe('AuthBoundary', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN} as any)
     // Mock specific return value for this test
-    mockUseVerifyOrgProjects.mockImplementation((disabled, pIds) => {
+    mockUseVerifyOrganizationProjects.mockImplementation((disabled, pIds) => {
       // Expect verification to be disabled (disabled=true) and projectIds to match
       if (disabled && pIds === testProjectIds) {
         // Hook should return null when disabled, but we mock based on call
@@ -271,8 +271,8 @@ describe('AuthBoundary', () => {
       error: new Error(authErrorMessage),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
-    mockUseVerifyOrgProjects.mockReturnValue(null) // Org verification passes or is irrelevant
-    mockUseVerifyOrgProjects.mockImplementation(() => null)
+    mockUseVerifyOrganizationProjects.mockReturnValue(null) // Org verification passes or is irrelevant
+    mockUseVerifyOrganizationProjects.mockImplementation(() => null)
 
     render(
       <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>

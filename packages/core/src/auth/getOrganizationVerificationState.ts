@@ -1,24 +1,48 @@
-import {combineLatest, distinctUntilChanged, map, type Observable, of, switchMap} from 'rxjs'
+import {combineLatest, distinctUntilChanged, map, of, share, skip, switchMap} from 'rxjs'
 
 import {
   compareProjectOrganization,
-  type OrgVerificationResult,
+  type OrganizationVerificationResult,
 } from '../project/organizationVerification'
 import {getProjectState} from '../project/project'
 import {type SanityInstance} from '../store/createSanityInstance'
+import {type StateSource} from '../store/createStateSourceAction'
 import {getDashboardOrganizationId} from './dashboardUtils'
 
 /**
- * Creates an observable that emits the organization verification state for a given instance.
+ * Gets the organization verification state for a given instance.
  * It combines the dashboard organization ID (from auth context) with the
  * project's actual organization ID (fetched via getProjectState) and compares them.
  * @public
  */
-export function observeOrganizationVerificationState(
+export function getOrganizationVerificationState(
   instance: SanityInstance,
   projectIds: string[],
-): Observable<OrgVerificationResult> {
-  // Observable for the dashboard org ID (potentially null)
+): StateSource<OrganizationVerificationResult> {
+  const computeResult = (): OrganizationVerificationResult => {
+    const dashboardOrgId = getDashboardOrganizationId(instance).getCurrent()
+    const projectOrgDataArray = projectIds.map((id) => {
+      const project = getProjectState(instance, {projectId: id}).getCurrent()
+      return {projectId: id, orgId: project?.organizationId ?? null}
+    })
+
+    if (!dashboardOrgId || projectOrgDataArray.length === 0) {
+      return {error: null}
+    }
+
+    for (const projectData of projectOrgDataArray) {
+      if (!projectData.orgId) continue
+      const result = compareProjectOrganization(
+        projectData.projectId,
+        projectData.orgId,
+        dashboardOrgId,
+      )
+      if (result.error) return result
+    }
+
+    return {error: null}
+  }
+
   const dashboardOrgId$ =
     getDashboardOrganizationId(instance).observable.pipe(distinctUntilChanged())
 
@@ -35,39 +59,42 @@ export function observeOrganizationVerificationState(
   const allProjectOrgIds$ =
     projectOrgIdObservables.length > 0 ? combineLatest(projectOrgIdObservables) : of([])
 
-  // Combine the sources
-  return combineLatest([dashboardOrgId$, allProjectOrgIds$]).pipe(
-    switchMap(([dashboardOrgId, projectOrgDataArray]) => {
-      // If no dashboard org ID is set, or no project IDs provided, verification isn't applicable/possible
-      if (!dashboardOrgId || projectOrgDataArray.length === 0) {
-        return of<OrgVerificationResult>({error: null}) // Return success (no error)
-      }
-
-      // Iterate through all projects and check organization IDs
-      for (const projectData of projectOrgDataArray) {
-        // If a project doesn't have an orgId, we can't verify, treat as non-blocking for now
-        // (Matches original logic where null projectOrgId resulted in {error: null})
-        if (!projectData.orgId) {
-          continue
+  const orgVerificationPipeline = () =>
+    combineLatest([dashboardOrgId$, allProjectOrgIds$]).pipe(
+      switchMap(([dashboardOrgId, projectOrgDataArray]) => {
+        if (!dashboardOrgId || projectOrgDataArray.length === 0) {
+          return of<OrganizationVerificationResult>({error: null})
         }
 
-        // Perform the comparison for the current project
-        const result = compareProjectOrganization(
-          projectData.projectId,
-          projectData.orgId,
-          dashboardOrgId,
-        )
-
-        // If any project fails verification, immediately return the error
-        if (result.error) {
-          return of(result)
+        for (const projectData of projectOrgDataArray) {
+          // If a project doesn't have an orgId, we can't verify, treat as non-blocking for now
+          if (!projectData.orgId) continue
+          const result = compareProjectOrganization(
+            projectData.projectId,
+            projectData.orgId,
+            dashboardOrgId,
+          )
+          // If any project fails verification, immediately return the error
+          if (result.error) return of(result)
         }
-      }
 
-      // If all projects passed verification (or had no orgId to check)
-      return of<OrgVerificationResult>({error: null})
-    }),
-    // Only emit when the overall error status actually changes
-    distinctUntilChanged((prev, curr) => prev.error === curr.error),
-  )
+        return of<OrganizationVerificationResult>({error: null})
+      }),
+      distinctUntilChanged((prev, curr) => prev.error === curr.error),
+    )
+
+  // Shared for efficient multicasting when multiple consumers subscribe to .observable
+  const observable = orgVerificationPipeline().pipe(share())
+
+  // Uses a fresh pipeline so skip(1) always has an initial emission to discard,
+  // regardless of whether .observable already has active subscribers
+  const subscribe = (onStoreChanged?: () => void): (() => void) => {
+    const sub = orgVerificationPipeline()
+      // the initial emission is the current state (see getCurrent), so we skip it
+      .pipe(skip(1))
+      .subscribe(() => onStoreChanged?.())
+    return () => sub.unsubscribe()
+  }
+
+  return {getCurrent: computeResult, subscribe, observable}
 }
