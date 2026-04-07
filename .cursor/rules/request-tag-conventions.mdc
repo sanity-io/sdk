@@ -1,0 +1,33 @@
+---
+description: Conventions for Sanity API request tags and requestTagPrefix usage
+globs: packages/core/src/**/*.ts
+alwaysApply: false
+---
+
+# Request Tag Conventions
+
+All outgoing Sanity API requests from the SDK must use the `sanity.sdk.*` tag namespace for observability.
+
+## How tags work
+
+`@sanity/client` composes the effective tag as `${requestTagPrefix}.${tag}`. The prefix is set on the client; the tag is set per-request.
+
+## Rules
+
+1. **Never use ad hoc `requestTagPrefix` strings.** Use `REQUEST_TAG_PREFIX` from `authConstants.ts` for auth code, or rely on the default `'sanity.sdk'` from `clientStore.ts` for everything else. The only exception is `projects.ts` which uses `'sanity.sdk.projects'` because the client convenience method doesn't support per-request tags.
+
+2. **Every `.request()`, `.fetch()`, `.listen()`, and `.action()` call must include a `tag` property** that describes the operation (e.g., `'users.get-current'`, `'logout'`, `'document.action'`).
+
+3. **Tag names should be short, lowercase, dot-separated descriptors** of the operation — not the endpoint path.
+
+## Example
+
+```typescript
+// ❌ BAD — ad hoc prefix, no request tag
+const client = clientFactory({ requestTagPrefix: 'my-feature' })
+await client.request({ uri: '/users/me', method: 'GET' })
+
+// ✅ GOOD — shared constant prefix, explicit request tag
+const client = clientFactory({ requestTagPrefix: REQUEST_TAG_PREFIX })
+await client.request({ uri: '/users/me', method: 'GET', tag: 'users.get-current' })
+```
