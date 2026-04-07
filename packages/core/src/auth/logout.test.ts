@@ -56,7 +56,7 @@ describe('logout', () => {
       token: 'token',
       useCdn: false,
     })
-    expect(mockRequest).toHaveBeenCalledWith({method: 'POST', uri: '/auth/logout'})
+    expect(mockRequest).toHaveBeenCalledWith({method: 'POST', uri: '/auth/logout', tag: 'logout'})
     expect(removeItem).toHaveBeenCalledWith('__sanity_auth_token')
   })
 
