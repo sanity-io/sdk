@@ -4,7 +4,6 @@ import {
   createClient,
   type SanityClient,
 } from '@sanity/client'
-import {pick} from 'lodash-es'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
 import {
@@ -16,6 +15,7 @@ import {
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
+import {pickProperties} from '../utils/object'
 
 const DEFAULT_API_VERSION = '2024-11-12'
 const DEFAULT_REQUEST_TAG_PREFIX = 'sanity.sdk'
@@ -35,22 +35,20 @@ type AllowedClientConfigKey =
   | 'useProjectHostname'
 
 const allowedKeys = Object.keys({
-  'apiHost': null,
-  'useCdn': null,
-  'token': null,
-  'perspective': null,
-  'proxy': null,
-  'withCredentials': null,
-  'timeout': null,
-  'maxRetries': null,
-  'dataset': null,
-  'projectId': null,
-  'scope': null,
-  'apiVersion': null,
-  'requestTagPrefix': null,
-  'useProjectHostname': null,
-  '~experimental_resource': null,
-  'resource': null,
+  apiHost: null,
+  useCdn: null,
+  token: null,
+  perspective: null,
+  proxy: null,
+  withCredentials: null,
+  timeout: null,
+  maxRetries: null,
+  dataset: null,
+  projectId: null,
+  apiVersion: null,
+  requestTagPrefix: null,
+  useProjectHostname: null,
+  resource: null,
 } satisfies Record<keyof ClientOptions, null>) as (keyof ClientOptions)[]
 
 const DEFAULT_CLIENT_CONFIG = {
@@ -59,6 +57,7 @@ const DEFAULT_CLIENT_CONFIG = {
   ignoreBrowserTokenWarning: true,
   allowReconfigure: false,
   requestTagPrefix: DEFAULT_REQUEST_TAG_PREFIX,
+  useProjectHostname: false,
 } satisfies ClientConfig
 
 /**
@@ -82,9 +81,6 @@ interface ClientResource {
  * This interface extends the base {@link ClientConfig} and adds:
  *
  * - **apiVersion:** A required string indicating the API version for the client.
- * - **scope:** An optional flag to choose between the project-specific client
- *   ('project') and the global client ('global'). When set to `'global'`, the
- *   global client is used.
  *
  * These options are utilized by `getClient` and `getClientState` to configure and
  * return appropriate client instances that automatically handle authentication
@@ -92,34 +88,21 @@ interface ClientResource {
  *
  * @public
  */
-export interface ClientOptions extends Omit<
-  Pick<ClientConfig, AllowedClientConfigKey>,
-  'resource'
-> {
+export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey> {
   /**
    * Narrows the inherited `perspective` to exclude stackable perspectives,
    * which are not supported by the SDK.
    */
-  'perspective'?: Exclude<ClientPerspective, readonly unknown[]>
-  /**
-   * An optional flag to choose between the default client (typically project-level)
-   * and the global client ('global'). When set to `'global'`, the global client
-   * is used.
-   */
-  'scope'?: 'default' | 'global'
+  perspective?: Exclude<ClientPerspective, readonly unknown[]>
   /**
    * A required string indicating the API version for the client.
    */
-  'apiVersion': string
+  apiVersion: string
   /**
-   * @internal
+   * @public
+   * Use the SDK definition of a resource to populate the client `resource` parameter.
    */
-  '~experimental_resource'?: ClientConfig['~experimental_resource']
-
-  /**
-   * @internal
-   */
-  'resource'?: DocumentResource
+  resource?: DocumentResource
 }
 
 const clientStore = defineStore<ClientStoreState>({
@@ -156,7 +139,8 @@ const listenToAuthMethod = ({instance, state}: StoreContext<ClientStoreState>) =
   })
 }
 
-const getClientConfigKey = (options: ClientOptions) => JSON.stringify(pick(options, ...allowedKeys))
+const getClientConfigKey = (options: ClientOptions) =>
+  JSON.stringify(pickProperties(options, allowedKeys))
 
 /**
  * Retrieves a Sanity client instance configured with the provided options.
@@ -195,8 +179,6 @@ export const getClient = bindActionGlobally(
     const {clients, authMethod} = state.get()
 
     let resource: ClientResource | undefined
-    let projectId: string | undefined = options.projectId
-    let dataset: string | undefined = options.dataset
 
     if (options.resource) {
       if (isMediaLibraryResource(options.resource)) {
@@ -204,32 +186,27 @@ export const getClient = bindActionGlobally(
       } else if (isCanvasResource(options.resource)) {
         resource = {type: 'canvas', id: options.resource.canvasId}
       } else if (isDatasetResource(options.resource)) {
-        projectId = options.resource.projectId
-        dataset = options.resource.dataset
+        resource = {
+          type: 'dataset',
+          id: `${options.resource.projectId}.${options.resource.dataset}`,
+        }
       }
-      // temporarily excluding dataset resource as a resource for now. Many of the global API endpoints require vX api version.
-      // When ready, remove the above check and uncomment the below check.
-      // } else if (isDatasetResource(options.resource)) {
-      //   resource = {type: 'dataset', id: `${options.resource.projectId}.${options.resource.dataset}`}
     }
 
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost
 
     const effectiveOptions = {
       ...DEFAULT_CLIENT_CONFIG,
-      ...((options.scope === 'global' || !projectId || resource) && {useProjectHostname: false}),
+      ...(options.projectId && options.dataset ? {useProjectHostname: true} : {}),
       token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
       ...options,
-      ...(projectId && {projectId}),
-      ...(dataset && {dataset}),
       ...(apiHost && {apiHost}),
-      ...(resource && {'~experimental_resource': resource}),
+      ...(resource && {resource}),
     } as ClientOptions
 
     // When a MediaLibrary or Canvas resource is provided, don't use projectId/dataset - the client should be "projectless"
     // The client code itself will ignore the non-resource config, so we do this to prevent confusing the user.
     // (ref: https://github.com/sanity-io/client/blob/5c23f81f5ab93a53f5b22b39845c867988508d84/src/data/dataMethods.ts#L691)
-    // Note: DatasetResource is handled differently - it extracts projectId/dataset from the resource and uses those
     if (options.resource) {
       if (options.projectId || options.dataset) {
         // eslint-disable-next-line no-console
@@ -240,6 +217,7 @@ export const getClient = bindActionGlobally(
       if (resource) {
         delete effectiveOptions.projectId
         delete effectiveOptions.dataset
+        effectiveOptions.useProjectHostname = false
       }
     }
 
@@ -252,14 +230,11 @@ export const getClient = bindActionGlobally(
       delete effectiveOptions.withCredentials
     }
 
-    // Don't pass our DocumentResource to createClient - we've already derived projectId/dataset or ~experimental_resource
-    const {resource: _omitResource, ...clientConfig} = effectiveOptions
-
     const key = getClientConfigKey(effectiveOptions)
 
     if (clients[key]) return clients[key]
 
-    const client = createClient(clientConfig as ClientConfig)
+    const client = createClient(effectiveOptions as ClientConfig)
     state.set('addClient', (prev) => ({clients: {...prev.clients, [key]: client}}))
 
     return client

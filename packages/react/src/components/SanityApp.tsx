@@ -1,14 +1,10 @@
-import {
-  DEFAULT_RESOURCE_NAME,
-  type DocumentResource,
-  isStudioConfig,
-  type SanityConfig,
-} from '@sanity/sdk'
+import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
+import {isStudioConfig} from '@sanity/sdk/_internal'
 import {type ReactElement, useContext, useEffect, useMemo} from 'react'
 
 import {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
 import {SDKProvider} from './SDKProvider'
-import {isInIframe, isLocalUrl} from './utils'
+import {DEFAULT_RESOURCE_NAME, isInIframe, isLocalUrl} from './utils'
 
 /**
  * @public

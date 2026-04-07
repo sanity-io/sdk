@@ -1,4 +1,4 @@
-import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
+import {type DocumentResource, type SanityConfig} from '@sanity/sdk-react'
 
 export const devConfig: SanityConfig = {}
 

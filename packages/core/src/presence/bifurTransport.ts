@@ -36,8 +36,24 @@ type IncomingBifurEvent = RollCallEvent | BifurStateMessage | BifurDisconnectMes
 
 function getBifurClient(client: SanityClient, token$: Observable<string | null>): BifurClient {
   const bifurVersionedClient = client.withConfig({apiVersion: '2022-06-30'})
-  const {dataset, url: baseUrl, requestTagPrefix = 'sanity.studio'} = bifurVersionedClient.config()
-  const url = `${baseUrl.replace(/\/+$/, '')}/socket/${dataset}`.replace(/^http/, 'ws')
+  const {
+    resource,
+    dataset,
+    url: baseUrl,
+    requestTagPrefix = 'sanity.studio',
+  } = bifurVersionedClient.config()
+
+  let resourcePath: string
+  if (resource?.type === 'canvas') {
+    resourcePath = `canvases/${resource.id}`
+  } else if (dataset) {
+    // Dataset clients use project hostname — dataset name alone is the socket path
+    resourcePath = dataset
+  } else {
+    throw new Error(`Unable to determine presence URL: no canvas resource or dataset configured`)
+  }
+
+  const url = `${baseUrl}/socket/${resourcePath}`.replace(/^http/, 'ws')
   const urlWithTag = `${url}?tag=${requestTagPrefix}`
 
   return fromUrl(urlWithTag, {token$})

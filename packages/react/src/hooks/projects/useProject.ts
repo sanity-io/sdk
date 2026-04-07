@@ -1,3 +1,4 @@
+import {type SanityProject} from '@sanity/client'
 import {
   type DatasetResource,
   getProjectState,
@@ -5,7 +6,6 @@ import {
   type ProjectHandle,
   resolveProject,
   type SanityInstance,
-  type SanityProject,
   type StateSource,
 } from '@sanity/sdk'
 

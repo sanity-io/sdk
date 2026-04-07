@@ -43,7 +43,7 @@ describe('agent actions', () => {
     mockGetClientState.mockReturnValue({observable: of(mockClient)})
   })
 
-  it('agentGenerate passes resource to getClientState and strips it from agent options', async () => {
+  it('agentGenerate passes projectId and dataset to getClientState and strips resource from agent options', async () => {
     mockClient.observable.agent.action.generate.mockReturnValue(of('gen'))
     const instance = {config: {}} as any
     const value = await firstValueFrom(
@@ -52,12 +52,13 @@ describe('agent actions', () => {
     expect(value).toBe('gen')
     expect(mockGetClientState).toHaveBeenCalledWith(instance, {
       apiVersion: 'vX',
-      resource: testResource,
+      projectId: 'p',
+      dataset: 'd',
     })
     expect(mockClient.observable.agent.action.generate).toHaveBeenCalledWith({foo: 'bar'})
   })
 
-  it('agentTransform passes resource to getClientState and strips it from agent options', async () => {
+  it('agentTransform passes projectId and dataset to getClientState and strips resource from agent options', async () => {
     mockClient.observable.agent.action.transform.mockReturnValue(of('xform'))
     const instance = {config: {}} as any
     const value = await firstValueFrom(
@@ -66,12 +67,13 @@ describe('agent actions', () => {
     expect(value).toBe('xform')
     expect(mockGetClientState).toHaveBeenCalledWith(instance, {
       apiVersion: 'vX',
-      resource: testResource,
+      projectId: 'p',
+      dataset: 'd',
     })
     expect(mockClient.observable.agent.action.transform).toHaveBeenCalledWith({a: 1})
   })
 
-  it('agentTranslate passes resource to getClientState and strips it from agent options', async () => {
+  it('agentTranslate passes projectId and dataset to getClientState and strips resource from agent options', async () => {
     mockClient.observable.agent.action.translate.mockReturnValue(of('xlate'))
     const instance = {config: {}} as any
     const value = await firstValueFrom(
@@ -80,12 +82,13 @@ describe('agent actions', () => {
     expect(value).toBe('xlate')
     expect(mockGetClientState).toHaveBeenCalledWith(instance, {
       apiVersion: 'vX',
-      resource: testResource,
+      projectId: 'p',
+      dataset: 'd',
     })
     expect(mockClient.observable.agent.action.translate).toHaveBeenCalledWith({b: 2})
   })
 
-  it('agentPrompt passes resource to getClientState and strips it from agent options', async () => {
+  it('agentPrompt passes projectId and dataset to getClientState and strips resource from agent options', async () => {
     mockClient.agent.action.prompt.mockResolvedValue('prompted')
     const instance = {config: {}} as any
     const value = await firstValueFrom(
@@ -94,12 +97,13 @@ describe('agent actions', () => {
     expect(value).toBe('prompted')
     expect(mockGetClientState).toHaveBeenCalledWith(instance, {
       apiVersion: 'vX',
-      resource: testResource,
+      projectId: 'p',
+      dataset: 'd',
     })
     expect(mockClient.agent.action.prompt).toHaveBeenCalledWith({p: true})
   })
 
-  it('agentPatch passes resource to getClientState and strips it from agent options', async () => {
+  it('agentPatch passes projectId and dataset to getClientState and strips resource from agent options', async () => {
     mockClient.agent.action.patch.mockResolvedValue('patched')
     const instance = {config: {}} as any
     const value = await firstValueFrom(
@@ -108,18 +112,23 @@ describe('agent actions', () => {
     expect(value).toBe('patched')
     expect(mockGetClientState).toHaveBeenCalledWith(instance, {
       apiVersion: 'vX',
-      resource: testResource,
+      projectId: 'p',
+      dataset: 'd',
     })
     expect(mockClient.agent.action.patch).toHaveBeenCalledWith({q: false})
   })
 
-  it('works without an explicit resource (falls back via getClientState)', async () => {
-    mockClient.observable.agent.action.generate.mockReturnValue(of('gen'))
+  it('throws when resource is omitted', () => {
     const instance = {config: {}} as any
-    await firstValueFrom(agentGenerate(instance, {foo: 'bar'} as any))
-    expect(mockGetClientState).toHaveBeenCalledWith(instance, {
-      apiVersion: 'vX',
-      resource: undefined,
-    })
+    expect(() => agentGenerate(instance, {foo: 'bar'} as any)).toThrow(
+      'No resource provided. Agent actions require a dataset resource to be specified.',
+    )
+  })
+
+  it('throws when resource is not a dataset resource', () => {
+    const instance = {config: {}} as any
+    expect(() =>
+      agentGenerate(instance, {foo: 'bar', resource: {mediaLibraryId: 'ml'} as any} as any),
+    ).toThrow('Resource is not a dataset resource. This is required for agent actions.')
   })
 })

@@ -12,6 +12,7 @@ import {
   type WelcomeEvent,
 } from '@sanity/client'
 import {diffValue} from '@sanity/diff-patch'
+import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
 import {type Mutation, type SanityDocument} from '@sanity/types'
 import {evaluate, parse} from 'groq-js'
 import {delay, first, firstValueFrom, from, Observable, of, ReplaySubject, Subject} from 'rxjs'
@@ -21,7 +22,6 @@ import {getClientState} from '../client/clientStore'
 import {createDocumentHandle} from '../config/handles'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {getDraftId, getPublishedId} from '../utils/ids'
 import {
   createDocument,
   deleteDocument,
@@ -67,7 +67,8 @@ afterEach(() => {
 })
 
 it('creates, edits, and publishes a document', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-single', documentType: 'article', resource})
+  const documentId = DocumentId('doc-single')
+  const doc = createDocumentHandle({documentId, documentType: 'article', resource})
   const documentState = getDocumentState<TestDocument>(instance, doc)
 
   // Initially the document is undefined
@@ -80,10 +81,10 @@ it('creates, edits, and publishes a document', async () => {
     actions: [createDocument(doc)],
     resource,
   })
-  expect(appeared).toContain(getDraftId(doc.documentId))
+  expect(appeared).toContain(getDraftId(documentId))
 
   let currentDoc = documentState.getCurrent()
-  expect(currentDoc?._id).toEqual(getDraftId(doc.documentId))
+  expect(currentDoc?._id).toEqual(getDraftId(documentId))
 
   // Edit the document – add a title
   await applyDocumentActions(instance, {
@@ -101,16 +102,13 @@ it('creates, edits, and publishes a document', async () => {
   await submitted()
   currentDoc = documentState.getCurrent()
 
-  expect(currentDoc).toMatchObject({_id: doc.documentId, _rev: transactionId})
+  expect(currentDoc).toMatchObject({_id: documentId, _rev: transactionId})
   unsubscribe()
 })
 
 it('creates a document with initial values', async () => {
-  const doc = createDocumentHandle({
-    documentId: 'doc-with-initial',
-    documentType: 'article',
-    resource,
-  })
+  const documentId = DocumentId('doc-with-initial')
+  const doc = createDocumentHandle({documentId, documentType: 'article', resource})
   const documentState = getDocumentState<TestDocument>(instance, doc)
 
   expect(documentState.getCurrent()).toBeUndefined()
@@ -128,10 +126,10 @@ it('creates a document with initial values', async () => {
     ],
     resource,
   })
-  expect(appeared).toContain(getDraftId(doc.documentId))
+  expect(appeared).toContain(getDraftId(documentId))
 
   const currentDoc = documentState.getCurrent()
-  expect(currentDoc?._id).toEqual(getDraftId(doc.documentId))
+  expect(currentDoc?._id).toEqual(getDraftId(documentId))
   expect(currentDoc?.title).toEqual('Article with Initial Values')
   expect(currentDoc?.['author']).toEqual('Jane Doe')
   expect(currentDoc?.['count']).toEqual(42)
@@ -140,7 +138,8 @@ it('creates a document with initial values', async () => {
 })
 
 it('edits existing documents', async () => {
-  const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article', resource})
+  const documentId = DocumentId('existing-doc')
+  const doc = createDocumentHandle({documentId, documentType: 'article', resource})
   const state = getDocumentState<TestDocument>(instance, doc)
 
   // not subscribed yet so the value is undefined
@@ -152,7 +151,7 @@ it('edits existing documents', async () => {
   await firstValueFrom(state.observable.pipe(first((i) => !!i)))
 
   expect(state.getCurrent()).toMatchObject({
-    _id: getDraftId(doc.documentId),
+    _id: getDraftId(documentId),
     title: 'existing doc',
   })
 
@@ -161,7 +160,7 @@ it('edits existing documents', async () => {
     resource,
   })
   expect(state.getCurrent()).toMatchObject({
-    _id: getDraftId(doc.documentId),
+    _id: getDraftId(documentId),
     title: 'updated title',
   })
 
@@ -169,16 +168,16 @@ it('edits existing documents', async () => {
 })
 
 it('sets optimistic changes synchronously', async () => {
-  const doc1 = createDocumentHandle({
-    documentId: 'optimistic',
+  const doc1 = {
+    documentId: DocumentId('optimistic'),
     documentType: 'article',
     resource: resource1,
-  })
-  const doc2 = createDocumentHandle({
-    documentId: 'optimistic',
+  }
+  const doc2 = {
+    documentId: DocumentId('optimistic'),
     documentType: 'article',
     resource: resource2,
-  })
+  }
 
   const state1 = getDocumentState<TestDocument>(instance, doc1)
   const state2 = getDocumentState<TestDocument>(instance, doc2)
@@ -231,16 +230,16 @@ it('sets optimistic changes synchronously', async () => {
 })
 
 it('propagates changes between two instances', async () => {
-  const doc1 = createDocumentHandle({
-    documentId: 'doc-collab',
+  const doc1 = {
+    documentId: DocumentId('doc-collab'),
     documentType: 'article',
     resource: resource1,
-  })
-  const doc2 = createDocumentHandle({
-    documentId: 'doc-collab',
+  }
+  const doc2 = {
+    documentId: DocumentId('doc-collab'),
     documentType: 'article',
     resource: resource2,
-  })
+  }
   const state1 = getDocumentState<TestDocument>(instance, doc1)
   const state2 = getDocumentState<TestDocument>(instance, doc2)
 
@@ -274,16 +273,16 @@ it('propagates changes between two instances', async () => {
 })
 
 it('handles concurrent edits and resolves conflicts', async () => {
-  const doc1 = createDocumentHandle({
-    documentId: 'doc-concurrent',
+  const doc1 = {
+    documentId: DocumentId('doc-concurrent'),
     documentType: 'article',
     resource: resource1,
-  })
-  const doc2 = createDocumentHandle({
-    documentId: 'doc-concurrent',
+  }
+  const doc2 = {
+    documentId: DocumentId('doc-concurrent'),
     documentType: 'article',
     resource: resource2,
-  })
+  }
   const state1 = getDocumentState<TestDocument>(instance, doc1)
   const state2 = getDocumentState<TestDocument>(instance, doc2)
 
@@ -327,7 +326,8 @@ it('handles concurrent edits and resolves conflicts', async () => {
 })
 
 it('unpublishes and discards a document', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-pub-unpub', documentType: 'article', resource})
+  const documentId = DocumentId('doc-pub-unpub')
+  const doc = createDocumentHandle({documentId, documentType: 'article', resource})
   const documentState = getDocumentState<TestDocument>(instance, doc)
   const unsubscribe = documentState.subscribe()
 
@@ -339,7 +339,7 @@ it('unpublishes and discards a document', async () => {
   })
   const publishedDoc = documentState.getCurrent()
   expect(publishedDoc).toMatchObject({
-    _id: getPublishedId(doc.documentId),
+    _id: getPublishedId(documentId),
     _rev: afterPublish.transactionId,
   })
 
@@ -347,7 +347,7 @@ it('unpublishes and discards a document', async () => {
   await applyDocumentActions(instance, {actions: [unpublishDocument(doc)], resource})
   const afterUnpublish = documentState.getCurrent()
   // In our mock implementation the _id remains the same but the published copy is removed.
-  expect(afterUnpublish?._id).toEqual(getDraftId(doc.documentId))
+  expect(afterUnpublish?._id).toEqual(getDraftId(documentId))
 
   // Discard the draft (which deletes the draft version).
   await applyDocumentActions(instance, {actions: [discardDocument(doc)], resource})
@@ -358,7 +358,8 @@ it('unpublishes and discards a document', async () => {
 })
 
 it('deletes a document', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-delete', documentType: 'article', resource})
+  const documentId = DocumentId('doc-delete')
+  const doc = createDocumentHandle({documentId, documentType: 'article', resource})
 
   const documentState = getDocumentState<TestDocument>(instance, doc)
   const unsubscribe = documentState.subscribe()
@@ -379,7 +380,8 @@ it('deletes a document', async () => {
 })
 
 it('cleans up document state when there are no subscribers', async () => {
-  const doc = createDocumentHandle({documentId: 'doc-cleanup', documentType: 'article', resource})
+  const documentId = DocumentId('doc-cleanup')
+  const doc = createDocumentHandle({documentId, documentType: 'article', resource})
   const documentState = getDocumentState<TestDocument>(instance, doc)
 
   // Subscribe to the document state.
@@ -550,11 +552,8 @@ it('reverts failed outgoing transaction locally', async () => {
     })
   })
 
-  const doc = createDocumentHandle({
-    documentId: crypto.randomUUID(),
-    documentType: 'article',
-    resource,
-  })
+  const documentId = DocumentId(crypto.randomUUID())
+  const doc = createDocumentHandle({documentId, documentType: 'article', resource})
 
   const {getCurrent, subscribe} = getDocumentState<TestDocument>(instance, doc)
   const unsubscribe = subscribe()
@@ -811,11 +810,8 @@ it('fetches ACL for CanvasResource', async () => {
 })
 
 it('returns a promise that resolves when a document has been loaded in the store (useful for suspense)', async () => {
-  const doc = createDocumentHandle({
-    documentId: crypto.randomUUID(),
-    documentType: 'article',
-    resource,
-  })
+  const documentId = DocumentId(crypto.randomUUID())
+  const doc = createDocumentHandle({documentId, documentType: 'article', resource})
 
   expect(await resolveDocument(instance, doc)).toBe(null)
 
@@ -828,7 +824,7 @@ it('returns a promise that resolves when a document has been loaded in the store
   await result.submitted() // wait till submitted to server before resolving
 
   await expect(resolveDocument(instance, doc)).resolves.toMatchObject({
-    _id: getDraftId(doc.documentId),
+    _id: getDraftId(documentId),
     _type: 'article',
     title: 'initial title',
   })
@@ -839,7 +835,7 @@ it('emits an event for each action after an outgoing transaction has been accept
   const handler = vi.fn()
   const unsubscribe = subscribeDocumentEvents(instance, {resource, eventHandler: handler})
 
-  const documentId = crypto.randomUUID()
+  const documentId = DocumentId(crypto.randomUUID())
   const doc = createDocumentHandle({documentId, documentType: 'article', resource})
   expect(handler).toHaveBeenCalledTimes(0)
 
@@ -879,6 +875,133 @@ it('emits an event for each action after an outgoing transaction has been accept
   await applyDocumentActions(instance, {actions: [deleteDocument(doc)], resource})
 
   unsubscribe()
+})
+
+it('creates and edits a version document with a release perspective', async () => {
+  const documentId = DocumentId('doc-release')
+  const releaseName = 'test-release'
+  const doc = createDocumentHandle({
+    documentId,
+    documentType: 'article',
+    perspective: {releaseName},
+    resource,
+  })
+  const versionId = `versions.${releaseName}.${documentId}`
+
+  const documentState = getDocumentState<TestDocument>(instance, doc)
+  expect(documentState.getCurrent()).toBeUndefined()
+
+  const unsubscribe = documentState.subscribe()
+
+  // Create a version document for the release
+  const {appeared} = await applyDocumentActions(instance, {
+    actions: [createDocument(doc)],
+    resource,
+  })
+  expect(appeared).toContain(versionId)
+
+  let currentDoc = documentState.getCurrent()
+  expect(currentDoc?._id).toEqual(versionId)
+  expect(currentDoc?._type).toEqual('article')
+
+  // Edit the version document
+  await applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'Release Version Title'}})],
+    resource,
+  })
+  currentDoc = documentState.getCurrent()
+  expect(currentDoc?.title).toEqual('Release Version Title')
+  expect(currentDoc?._id).toEqual(versionId)
+
+  unsubscribe()
+})
+
+it('creates a version document with initial values and then discards it', async () => {
+  const documentId = DocumentId('doc-release-discard')
+  const releaseName = 'test-release-discard'
+  const doc = createDocumentHandle({
+    documentId,
+    documentType: 'article',
+    perspective: {releaseName},
+    resource,
+  })
+  const versionId = `versions.${releaseName}.${documentId}`
+
+  const documentState = getDocumentState<TestDocument>(instance, doc)
+  const unsubscribe = documentState.subscribe()
+
+  // Create a version document with initial values
+  await applyDocumentActions(instance, {
+    actions: [createDocument(doc, {title: 'Initial Release Title'})],
+    resource,
+  })
+
+  let currentDoc = documentState.getCurrent()
+  expect(currentDoc?._id).toEqual(versionId)
+  expect(currentDoc?.title).toEqual('Initial Release Title')
+
+  // Discard the version document
+  const {disappeared} = await applyDocumentActions(instance, {
+    actions: [discardDocument(doc)],
+    resource,
+  })
+  expect(disappeared).toContain(versionId)
+
+  currentDoc = documentState.getCurrent()
+  expect(currentDoc).toBeNull()
+
+  unsubscribe()
+})
+
+it('version edits are isolated from draft state', async () => {
+  const documentId = DocumentId('doc-version-isolation')
+  const releaseName = 'isolation-release'
+  const versionDoc = createDocumentHandle({
+    documentId,
+    documentType: 'article',
+    perspective: {releaseName},
+    resource,
+  })
+  const draftDoc = createDocumentHandle({documentId, documentType: 'article', resource})
+  const versionId = `versions.${releaseName}.${documentId}`
+
+  const versionState = getDocumentState<TestDocument>(instance, versionDoc)
+  const draftState = getDocumentState<TestDocument>(instance, draftDoc)
+
+  const unsubscribeVersion = versionState.subscribe()
+  const unsubscribeDraft = draftState.subscribe()
+
+  // Create draft and version documents
+  await applyDocumentActions(instance, {
+    actions: [createDocument(draftDoc)],
+    resource,
+  })
+  await applyDocumentActions(instance, {
+    actions: [editDocument(draftDoc, {set: {title: 'Draft Title'}})],
+    resource,
+  })
+  await applyDocumentActions(instance, {
+    actions: [createDocument(versionDoc, {title: 'Release Title'})],
+    resource,
+  })
+
+  // Version perspective shows the version doc
+  expect(versionState.getCurrent()?._id).toEqual(versionId)
+  expect(versionState.getCurrent()?.title).toEqual('Release Title')
+
+  // Draft state shows the draft doc
+  expect(draftState.getCurrent()?.title).toEqual('Draft Title')
+
+  // Editing the version doc should not affect the draft
+  await applyDocumentActions(instance, {
+    actions: [editDocument(versionDoc, {set: {title: 'Updated Release Title'}})],
+    resource,
+  })
+  expect(versionState.getCurrent()?.title).toEqual('Updated Release Title')
+  expect(draftState.getCurrent()?.title).toEqual('Draft Title')
+
+  unsubscribeVersion()
+  unsubscribeDraft()
 })
 
 vi.mock('../client/clientStore.ts', () => ({
@@ -930,8 +1053,8 @@ beforeEach(() => {
   )()
 
   let documents: DocumentSet = {
-    [getDraftId('existing-doc')]: {
-      _id: getDraftId('existing-doc'),
+    [getDraftId(DocumentId('existing-doc'))]: {
+      _id: getDraftId(DocumentId('existing-doc')),
       _createdAt: '2025-02-06T06:43:46.236Z',
       _updatedAt: '2025-02-06T06:43:46.236Z',
       _rev: 'initial-rev',
@@ -1029,7 +1152,7 @@ beforeEach(() => {
             continue
           }
           case 'sanity.action.document.edit': {
-            const documentSource = next[i.draftId] ?? next[i.publishedId]
+            const documentSource = (i.draftId && next[i.draftId]) ?? next[i.publishedId]
             if (!documentSource) {
               throw new Error(
                 `Could not find a document to edit from \`draftId\` \`${i.draftId}\` or \`publishedId\` ${i.publishedId}`,
@@ -1039,8 +1162,8 @@ beforeEach(() => {
             next = processMutations({
               documents: next,
               mutations: [
-                {createIfNotExists: {...documentSource, _id: i.draftId}},
-                {patch: {id: i.draftId, ...i.patch}},
+                {createIfNotExists: {...documentSource, _id: i.draftId!}},
+                {patch: {id: i.draftId!, ...i.patch}},
               ],
               transactionId,
               timestamp,

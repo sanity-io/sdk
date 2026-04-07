@@ -11,7 +11,7 @@ import {ErrorBoundary} from 'react-error-boundary'
 
 interface JsonDocumentEditorProps {
   /** Document handle for the document being edited */
-  documentHandle: Pick<DocumentHandle, 'documentId' | 'documentType'>
+  documentHandle: Pick<DocumentHandle, 'documentId' | 'documentType' | 'perspective'>
 
   /** Optional minimum height (defaults to 400px) */
   minHeight?: string

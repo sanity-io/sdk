@@ -42,4 +42,36 @@ describe('useClient', () => {
     expect(result.current).toBeDefined()
     expect(result.current.fetch).toBeDefined()
   })
+
+  it('should conform to the context resource when only apiVersion is provided', () => {
+    const {result} = renderHook(() => useClient({apiVersion: '2024-11-12'}), {wrapper})
+    expect(result.current.config()).toEqual(
+      expect.objectContaining({
+        apiVersion: '2024-11-12',
+        resource: {type: 'dataset', id: 'test-project.test-dataset'},
+      }),
+    )
+    expect(result.current.config()).not.toHaveProperty('projectId')
+    expect(result.current.config()).not.toHaveProperty('dataset')
+  })
+
+  it('should use explicit projectId and dataset instead of conforming to the context resource', () => {
+    const {result} = renderHook(
+      () =>
+        useClient({
+          apiVersion: '2024-11-12',
+          projectId: 'explicit-project',
+          dataset: 'explicit-dataset',
+        }),
+      {wrapper},
+    )
+    expect(result.current.config()).toEqual(
+      expect.objectContaining({
+        apiVersion: '2024-11-12',
+        projectId: 'explicit-project',
+        dataset: 'explicit-dataset',
+        useProjectHostname: true,
+      }),
+    )
+  })
 })

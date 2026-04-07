@@ -102,21 +102,6 @@ describe('usePresence', () => {
     }).toThrow('usePresence() does not support media library resources')
   })
 
-  it('should throw an error when used with a canvas resource', () => {
-    expect(() => {
-      renderHook(() => usePresence({resource: {canvasId: 'canvas123'}}), {
-        wrapper: ({children}) => (
-          <ResourceProvider
-            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
-            fallback={null}
-          >
-            {children}
-          </ResourceProvider>
-        ),
-      })
-    }).toThrow('usePresence() does not support canvas resources')
-  })
-
   it('should work with a dataset resource', () => {
     const mockPresenceSource = {
       getCurrent: vi.fn().mockReturnValue([]),
