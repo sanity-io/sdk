@@ -241,6 +241,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                 client.observable.request<SanityUserResponse>({
                   method: 'GET',
                   uri: `access/${resource.type}/${resource.id}/users`,
+                  tag: 'users.list',
                   query: cursor
                     ? {nextCursor: cursor, limit: batchSize.toString()}
                     : {limit: batchSize.toString()},

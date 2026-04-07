@@ -68,6 +68,7 @@ function createTokenRefreshStream(
       .request<{token: string}>({
         uri: 'auth/refresh-token',
         method: 'POST',
+        tag: 'refresh-token',
         body: {
           token,
         },

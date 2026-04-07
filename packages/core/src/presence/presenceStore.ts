@@ -114,7 +114,10 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
       const globalClient = getClient(instance, {apiVersion: PRESENCE_API_VERSION})
       subscription.add(
         globalClient.observable
-          .request<{organizationId: string}>({uri: `/canvases/${resource.canvasId}`})
+          .request<{organizationId: string}>({
+            uri: `/canvases/${resource.canvasId}`,
+            tag: 'canvases.get',
+          })
           .pipe(catchError(() => EMPTY))
           .subscribe(({organizationId}) => {
             state.set('presence/organizationId', (prev) => ({...prev, organizationId}))
