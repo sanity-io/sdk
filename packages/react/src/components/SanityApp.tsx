@@ -17,8 +17,6 @@ export interface SanityAppProps {
    * automatically.
    */
   config?: SanityConfig | SanityConfig[]
-  /** @deprecated use the `config` prop instead. */
-  sanityConfigs?: SanityConfig[]
   sources?: Record<string, DocumentSource>
   children: React.ReactNode
   /* Fallback content to show when child components are suspending. Same as the `fallback` prop for React Suspense. */

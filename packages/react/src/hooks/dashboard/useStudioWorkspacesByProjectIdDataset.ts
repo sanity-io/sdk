@@ -1,22 +1,10 @@
-import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
+import {SDK_CHANNEL_NAME, SDK_NODE_NAME, type StudioResource} from '@sanity/message-protocol'
 import {useEffect, useState} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
 
-export interface DashboardResource {
-  id: string
-  name: string
-  title: string
-  basePath: string
-  projectId: string
-  dataset: string
-  type: string
-  userApplicationId: string
-  url: string
-}
-
 interface WorkspacesByProjectIdDataset {
-  [key: `${string}:${string}`]: DashboardResource[] // key format: `${projectId}:${dataset}`
+  [key: `${string}:${string}`]: StudioResource[] // key format: `${projectId}:${dataset}`
 }
 
 interface StudioWorkspacesResult {
@@ -76,11 +64,11 @@ export function useStudioWorkspacesByProjectIdDataset(): StudioWorkspacesResult 
     async function fetchWorkspaces(signal: AbortSignal) {
       try {
         const data = await fetch<{
-          context: {availableResources: Array<DashboardResource>}
+          context: {availableResources: Array<StudioResource>}
         }>('dashboard/v1/context', undefined, {signal})
 
         const workspaceMap: WorkspacesByProjectIdDataset = {}
-        const noProjectIdAndDataset: DashboardResource[] = []
+        const noProjectIdAndDataset: StudioResource[] = []
 
         data.context.availableResources.forEach((resource) => {
           if (resource.type !== 'studio') return

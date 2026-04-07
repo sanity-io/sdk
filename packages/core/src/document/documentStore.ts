@@ -393,7 +393,6 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
       withLatestFrom(
         getClientState(instance, {
           apiVersion: API_VERSION,
-          // TODO: remove in v3 when we're ready for everything to be queried via source
           source: source && !isDatasetSource(source) ? source : undefined,
         }).observable,
       ),
@@ -494,7 +493,6 @@ const subscribeToClientAndFetchDatasetAcl = ({
   key: {source},
 }: StoreContext<DocumentStoreState, BoundSourceKey>) => {
   const clientOptions: ClientOptions = {apiVersion: API_VERSION}
-  // TODO: remove in v3 when we're ready for everything to be queried via source
   if (source && !isDatasetSource(source)) {
     clientOptions.source = source
   }

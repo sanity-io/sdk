@@ -1,10 +1,10 @@
-import {type SanityClient} from '@sanity/client'
 import {createSelector} from 'reselect'
 import {combineLatest, distinctUntilChanged, filter, map, of, Subscription, switchMap} from 'rxjs'
 
 import {getTokenState} from '../auth/authStore'
 import {getClient} from '../client/clientStore'
-import {bindActionByDataset, type BoundDatasetKey} from '../store/createActionBinder'
+import {isCanvasSource, isDatasetSource, isMediaLibrarySource} from '../config/sanityConfig'
+import {bindActionBySource, type BoundSourceKey} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {type SanityUser} from '../users/types'
@@ -23,27 +23,40 @@ const getInitialState = (): PresenceStoreState => ({
 })
 
 /** @public */
-export const presenceStore = defineStore<PresenceStoreState, BoundDatasetKey>({
+export const presenceStore = defineStore<PresenceStoreState, BoundSourceKey>({
   name: 'presence',
   getInitialState,
-  initialize: (context: StoreContext<PresenceStoreState, BoundDatasetKey>) => {
+  initialize: (context: StoreContext<PresenceStoreState, BoundSourceKey>) => {
     const {
       instance,
       state,
-      key: {projectId, dataset},
+      key: {source},
     } = context
+
+    // Presence is only supported for dataset sources
+    if (isMediaLibrarySource(source)) {
+      throw new Error(
+        'Presence is not supported for media library sources. Presence tracking requires a dataset source with a projectId.',
+      )
+    }
+
+    if (isCanvasSource(source)) {
+      throw new Error(
+        'Presence is not supported for canvas sources. Presence tracking requires a dataset source with a projectId.',
+      )
+    }
+
     const sessionId = crypto.randomUUID()
 
     const client = getClient(instance, {
       apiVersion: '2022-06-30',
-      projectId,
-      dataset,
+      source,
     })
 
     const token$ = getTokenState(instance).observable.pipe(distinctUntilChanged())
 
     const [incomingEvents$, dispatch] = createBifurTransport({
-      client: client as SanityClient,
+      client,
       token$,
       sessionId,
     })
@@ -114,13 +127,13 @@ const selectPresence = createSelector(
   },
 )
 
-/** @public */
-export const getPresence = bindActionByDataset(
+/** @beta */
+export const getPresence = bindActionBySource(
   presenceStore,
   createStateSourceAction({
-    selector: (context: SelectorContext<PresenceStoreState>, _?): UserPresence[] =>
+    selector: (context: SelectorContext<PresenceStoreState>): UserPresence[] =>
       selectPresence(context.state),
-    onSubscribe: (context: StoreContext<PresenceStoreState, BoundDatasetKey>, _?) => {
+    onSubscribe: (context: StoreContext<PresenceStoreState, BoundSourceKey>) => {
       const userIds$ = context.state.observable.pipe(
         map((state) =>
           Array.from(state.locations.values())
@@ -140,7 +153,10 @@ export const getPresence = bindActionByDataset(
               getUserState(context.instance, {
                 userId,
                 resourceType: 'project',
-                projectId: context.key.projectId,
+                projectId:
+                  context.key.source && isDatasetSource(context.key.source)
+                    ? context.key.source.projectId
+                    : undefined,
               }).pipe(filter((v): v is NonNullable<typeof v> => !!v)),
             )
             return combineLatest(userObservables)
