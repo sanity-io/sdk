@@ -13,7 +13,7 @@ import {
 } from 'rxjs'
 
 import {type StoreContext} from '../store/defineStore'
-import {DEFAULT_API_VERSION} from './authConstants'
+import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
 import {AuthStateType} from './authStateType'
 import {type AuthState, type AuthStoreState} from './authStore'
 
@@ -58,7 +58,7 @@ function createTokenRefreshStream(
   return new Observable((subscriber) => {
     const client = clientFactory({
       apiVersion: DEFAULT_API_VERSION,
-      requestTagPrefix: 'token-refresh',
+      requestTagPrefix: REQUEST_TAG_PREFIX,
       token,
       ignoreBrowserTokenWarning: true,
       ...(apiHost && {apiHost}),

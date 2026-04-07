@@ -40,7 +40,7 @@ function getBifurClient(client: SanityClient, token$: Observable<string | null>)
     resource,
     dataset,
     url: baseUrl,
-    requestTagPrefix = 'sanity.studio',
+    requestTagPrefix = 'sanity.sdk.presence',
   } = bifurVersionedClient.config()
 
   let resourcePath: string
