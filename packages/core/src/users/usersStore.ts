@@ -124,6 +124,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                   .request<PatchedSanityUserFromClient>({
                     method: 'GET',
                     uri: `/users/${userId}`,
+                    tag: 'users.get',
                   })
                   .pipe(
                     map((user) => {
@@ -174,6 +175,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                 .request<SanityUser | SanityUserResponse>({
                   method: 'GET',
                   uri: `access/${resourceType}/${resourceId}/users/${userId}`,
+                  tag: 'users.get',
                 })
                 .pipe(
                   map((response) => {
