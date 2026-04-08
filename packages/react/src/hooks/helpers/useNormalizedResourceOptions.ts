@@ -1,23 +1,9 @@
 import {type DocumentResource, type PerspectiveHandle} from '@sanity/sdk'
-import {use, useContext} from 'react'
+import {useContext} from 'react'
 
 import {ResourceContext} from '../../context/DefaultResourceContext'
-import {
-  DEFAULT_CANVAS_RESOURCE_NAME,
-  DEFAULT_MEDIA_LIBRARY_RESOURCE_NAME,
-  OrgInferenceContext,
-} from '../../context/OrgInferenceContext'
 import {PerspectiveContext} from '../../context/PerspectiveContext'
 import {ResourcesContext} from '../../context/ResourcesContext'
-
-/** The resource names that can be populated by org inference. When a hook
- * requests one of these by name and it isn't in the map yet, we suspend
- * until inference settles rather than throwing a "resource not found" error.
- */
-const INFERRED_RESOURCE_NAMES = new Set([
-  DEFAULT_CANVAS_RESOURCE_NAME,
-  DEFAULT_MEDIA_LIBRARY_RESOURCE_NAME,
-])
 
 /**
  * You should generally prefer to use the React-layer handle types (ResourceHandle, DocumentHandle) from '\@sanity/sdk-react' instead.
@@ -137,27 +123,5 @@ export function useNormalizedResourceOptions<
   const resources = useContext(ResourcesContext)
   const contextResource = useContext(ResourceContext)
   const contextPerspective = useContext(PerspectiveContext)
-  const inferencePromise = useContext(OrgInferenceContext)
-
-  // If a named resource isn't in the map yet but is one of the names that
-  // org inference populates, suspend just this hook's component until the
-  // inference promise settles. The resolved map is used directly so there's
-  // no race between the promise resolving and a context update propagating.
-  if (
-    inferencePromise !== null &&
-    options.resourceName !== undefined &&
-    INFERRED_RESOURCE_NAMES.has(options.resourceName) &&
-    !Object.hasOwn(resources, options.resourceName)
-  ) {
-    const inferredResources = use(inferencePromise)
-    return normalizeResourceOptions(
-      options,
-      // if user has manually provided a "media-library" or "canvas" resource, use that instead of the inferred one
-      {...inferredResources, ...resources},
-      contextResource,
-      contextPerspective,
-    )
-  }
-
   return normalizeResourceOptions(options, resources, contextResource, contextPerspective)
 }

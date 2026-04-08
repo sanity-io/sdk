@@ -33,7 +33,6 @@ export async function resolveOrgResources(
   const client = await firstValueFrom(
     getClientState(instance, {
       apiVersion: API_VERSION,
-      scope: 'global',
       requestTagPrefix: 'sanity.sdk.org-resources',
     }).observable,
   )
