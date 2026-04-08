@@ -374,6 +374,7 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
           .action(outgoing.outgoingActions as Action[], {
             transactionId: outgoing.transactionId,
             skipCrossDatasetReferenceValidation: true,
+            tag: 'document.action',
           })
           .pipe(
             catchError((error) => {

@@ -450,6 +450,7 @@ describe('usersStore', () => {
       expect(specificRequest).toHaveBeenCalledWith({
         method: 'GET',
         uri: `/users/${projectUserId}`,
+        tag: 'users.get',
       })
 
       const expectedUser: SanityUser = {
