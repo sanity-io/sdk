@@ -25,6 +25,7 @@ export default function App(): JSX.Element {
         fallback={<Spinner />}
         config={isE2E ? e2eConfig : devConfig}
         resources={isE2E ? e2eResources : devResources}
+        inferMediaLibraryAndCanvas
       >
         <BrowserRouter>
           <Suspense>
