@@ -1,4 +1,4 @@
-import {type DocumentResource, type PerspectiveHandle} from '@sanity/sdk'
+import {type DocumentResource, type PerspectiveHandle, type ResourceName} from '@sanity/sdk'
 import {useContext} from 'react'
 
 import {ResourceContext} from '../../context/DefaultResourceContext'
@@ -18,7 +18,7 @@ export type WithResourceNameSupport<T> = Omit<T, 'resource'> & {
    * If provided, will be resolved to a `DocumentResource` via `ResourcesContext`.
    * @beta
    */
-  resourceName?: string
+  resourceName?: ResourceName
 }
 
 /**
@@ -38,7 +38,7 @@ export type WithResourceNameSupport<T> = Omit<T, 'resource'> & {
 export function normalizeResourceOptions<
   T extends {
     resource?: DocumentResource
-    resourceName?: string
+    resourceName?: ResourceName
     perspective?: unknown
   },
 >(
@@ -116,7 +116,7 @@ export function normalizeResourceOptions<
 export function useNormalizedResourceOptions<
   T extends {
     resource?: DocumentResource
-    resourceName?: string
+    resourceName?: ResourceName
     perspective?: unknown
   },
 >(options: T): Omit<T, 'resourceName' | 'resource'> & {resource: DocumentResource} {

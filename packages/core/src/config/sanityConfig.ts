@@ -128,6 +128,50 @@ export interface DocumentHandle<
 export const DEFAULT_RESOURCE_NAME = 'default'
 
 /**
+ * Extensible registry of named resources. Augment this interface to add
+ * type safety to `resourceName` fields throughout the SDK.
+ *
+ * @example
+ * ```ts
+ * declare module '@sanity/sdk' {
+ *   interface RegisteredResources {
+ *     default: true
+ *     secondary: true
+ *   }
+ * }
+ * ```
+ * @public
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface RegisteredResources {}
+
+/**
+ * The union of all registered resource names, plus `"media-library"` and `"canvas"` which are
+ * automatically registered when `inferMediaLibraryAndCanvas` is enabled on `SanityApp`.
+ *
+ * When resources are registered via module augmentation, IDEs will autocomplete with the known
+ * names while still accepting any `string` — so you don't need to explicitly type your handles.
+ * Falls back to `string` when no resources have been registered.
+ *
+ * @public
+ */
+export type ResourceName = keyof RegisteredResources extends never
+  ? string
+  : keyof RegisteredResources | keyof InferredResources | (string & {})
+
+/**
+ * Resource names automatically registered when `inferMediaLibraryAndCanvas` is enabled on `SanityApp`.
+ * These names (`"media-library"` and `"canvas"`) are automatically included in {@link ResourceName}
+ * whenever any resources have been registered via module augmentation.
+ *
+ * @public
+ */
+export interface InferredResources {
+  'media-library': true
+  'canvas': true
+}
+
+/**
  * Represents the complete configuration for a Sanity SDK instance.
  *
  * Most apps configure resources via the `resources` prop on `SanityApp`:

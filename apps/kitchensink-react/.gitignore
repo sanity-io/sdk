@@ -1,4 +1,4 @@
-.sanity
+.sanity/runtime
 e2e/test-results
 e2e/test-report
 /schema.*.json

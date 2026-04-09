@@ -1,4 +1,4 @@
-import {type DocumentResource, type PerspectiveHandle} from '@sanity/sdk'
+import {type DocumentResource, type PerspectiveHandle, type ResourceName} from '@sanity/sdk'
 
 // React-layer types — shadow core equivalents when imported from @sanity/sdk-react.
 // resource is optional here and resolved from context by normalization,
@@ -16,7 +16,7 @@ export interface ResourceHandle<
   TDataset extends string = string,
 > {
   resource?: DocumentResource<TProjectId, TDataset>
-  resourceName?: string
+  resourceName?: ResourceName
   perspective?: PerspectiveHandle['perspective']
 }
 
