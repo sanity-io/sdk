@@ -1,8 +1,8 @@
 import {type DocumentResource, isDatasetResource, type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, type ReactNode, useMemo} from 'react'
 
+import {OrganizationResourcesProvider} from '../context/OrganizationResourcesProvider'
 import {ResourceProvider} from '../context/ResourceProvider'
-import {ResourcesContext} from '../context/ResourcesContext'
 import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
 import {DEFAULT_RESOURCE_NAME} from './utils'
 
@@ -17,6 +17,8 @@ export interface SDKProviderProps extends AuthBoundaryProps {
    * name-based resource resolution in hooks.
    */
   resources?: Record<string, DocumentResource>
+  /** When set, automatically fetches and registers the organization's media library and canvas as named resources. */
+  inferMediaLibraryAndCanvas?: boolean
   fallback: ReactNode
 }
 
@@ -44,6 +46,7 @@ export function SDKProvider({
   children,
   config,
   resources = {},
+  inferMediaLibraryAndCanvas,
   fallback,
   ...props
 }: SDKProviderProps): ReactElement {
@@ -54,7 +57,15 @@ export function SDKProvider({
   return (
     <ResourceProvider {...config} resource={rootResource} fallback={fallback}>
       <AuthBoundary {...props} projectIds={projectIds}>
-        <ResourcesContext.Provider value={resources}>{children}</ResourcesContext.Provider>
+        {/* OrganizationResourcesProvider wraps ResourcesContext.
+            It merges explicit resources with lazily inferred org resources (media
+            library, canvas) and provides the combined map to the subtree. */}
+        <OrganizationResourcesProvider
+          resources={resources}
+          inferMediaLibraryAndCanvas={inferMediaLibraryAndCanvas}
+        >
+          {children}
+        </OrganizationResourcesProvider>
       </AuthBoundary>
     </ResourceProvider>
   )

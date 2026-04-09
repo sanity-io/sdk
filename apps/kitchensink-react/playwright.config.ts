@@ -15,6 +15,11 @@ export default createPlaywrightConfig({
           env: {
             // Pass e2e organization ID to sanity dev
             SDK_E2E_ORGANIZATION_ID: process.env['SDK_E2E_ORGANIZATION_ID'] || '',
+            // Webkit runs standalone (no dashboard), so media library must be
+            // provided explicitly rather than inferred from the org.
+            ...(isWebkitProject
+              ? {VITE_E2E_MEDIA_LIBRARY_ID: process.env['SDK_E2E_MEDIA_LIBRARY_ID'] || ''}
+              : {}),
           },
         },
       }),
