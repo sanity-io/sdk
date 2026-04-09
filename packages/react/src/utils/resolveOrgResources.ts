@@ -33,16 +33,17 @@ export async function resolveOrgResources(
   const client = await firstValueFrom(
     getClientState(instance, {
       apiVersion: API_VERSION,
-      requestTagPrefix: 'sanity.sdk.org-resources',
     }).observable,
   )
 
   const [mediaLibrariesResult, canvasesResult] = await Promise.allSettled([
     client.request<OrgResourcesApiResponse>({
       url: `/media-libraries?organizationId=${encodeURIComponent(organizationId)}`,
+      tag: 'org-resources.media-libraries',
     }),
     client.request<OrgResourcesApiResponse>({
       url: `/canvases?organizationId=${encodeURIComponent(organizationId)}`,
+      tag: 'org-resources.canvases',
     }),
   ])
 
