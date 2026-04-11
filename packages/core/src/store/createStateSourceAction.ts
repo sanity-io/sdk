@@ -1,4 +1,4 @@
-import {defer, distinctUntilChanged, finalize, map, Observable, share, skip} from 'rxjs'
+import {defer, distinctUntilChanged, finalize, map, Observable, shareReplay, skip} from 'rxjs'
 
 import {type StoreAction} from './createActionBinder'
 import {type SanityInstance} from './createSanityInstance'
@@ -215,7 +215,11 @@ export function createStateSourceAction<TState, TParams extends unknown[], TRetu
       values = withSubscribeHook(values, () => subscribeHandler(context, ...params))
     }
 
-    const sharedValues = values.pipe(share())
+    // Share but replay the latest value so every subscriber gets an
+    // initial synchronous emission, matching `state.observable`. That keeps
+    // `skip(1)` in `subscribe()` aligned with "skip current snapshot" rather than
+    // silently eating the first real update after multicasting.
+    const sharedValues = values.pipe(shareReplay({bufferSize: 1, refCount: true}))
 
     const subscribe = (onStoreChanged?: () => void) => {
       const subscription = sharedValues.pipe(skip(1)).subscribe({

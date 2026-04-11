@@ -146,8 +146,9 @@ describe('favoritesStore', () => {
       await firstValueFrom(state.observable)
       expect(mockFetch).toHaveBeenCalledTimes(1)
       // Second subscriber should use cached response
-      const sub2 = state.subscribe()
-      await firstValueFrom(state.observable)
+      const state2 = getFavoritesState(instance!, mockContext)
+      const sub2 = state2.subscribe()
+      await firstValueFrom(state2.observable)
       expect(mockFetch).toHaveBeenCalledTimes(1)
       // Cleanup
       sub1()
