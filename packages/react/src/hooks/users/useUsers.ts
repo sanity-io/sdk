@@ -10,6 +10,7 @@ import {
 import {useCallback, useEffect, useMemo, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {trackHookUsage} from '../helpers/useTrackHookUsage'
 
 /**
  * @public
@@ -69,7 +70,7 @@ export interface UsersResult {
  */
 export function useUsers(options?: GetUsersOptions): UsersResult {
   const instance = useSanityInstance(options)
-  // Use React's useTransition to avoid UI jank when user options change
+  trackHookUsage(instance, 'useUsers')
   const [isPending, startTransition] = useTransition()
 
   // Get the unique key for this users request and its options

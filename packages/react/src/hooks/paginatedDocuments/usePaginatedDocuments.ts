@@ -4,6 +4,7 @@ import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 import {useQuery} from '../query/useQuery'
 
 /**
@@ -238,6 +239,7 @@ export function usePaginatedDocuments<
   TDataset,
   TProjectId
 > {
+  useTrackHookUsage('usePaginatedDocuments')
   const instance = useSanityInstance(options)
   const [pageIndex, setPageIndex] = useState(0)
   const key = JSON.stringify({filter, search, params, orderings, pageSize})

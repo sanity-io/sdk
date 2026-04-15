@@ -3,6 +3,7 @@ import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {filter, firstValueFrom} from 'rxjs'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {trackHookUsage} from '../helpers/useTrackHookUsage'
 
 /**
  *
@@ -133,6 +134,7 @@ export function useDocumentPermissions(
   }
 
   const instance = useSanityInstance({projectId, dataset})
+  trackHookUsage(instance, 'useDocumentPermissions')
   const isDocumentReady = useCallback(
     () => getPermissionsState(instance, {actions}).getCurrent() !== undefined,
     [actions, instance],

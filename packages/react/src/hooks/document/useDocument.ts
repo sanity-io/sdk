@@ -7,6 +7,7 @@ import {
   useNormalizedSourceOptions,
   type WithSourceNameSupport,
 } from '../helpers/useNormalizedSourceOptions'
+import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 // used in an `{@link useDocumentProjection}` and `{@link useQuery}`
 // eslint-disable-next-line import/consistent-type-specifier-style, unused-imports/no-unused-imports
 import type {useDocumentProjection} from '../projection/useDocumentProjection'
@@ -238,6 +239,7 @@ interface UseDocument {
  * @function
  */
 export const useDocument = wrapHookWithData((options: UseDocumentOptions) => {
+  useTrackHookUsage('useDocument')
   const normalizedOptions = useNormalizedSourceOptions(options)
   return useDocumentValue(normalizedOptions)
 }) as UseDocument

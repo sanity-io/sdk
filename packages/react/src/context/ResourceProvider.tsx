@@ -1,4 +1,5 @@
 import {createSanityInstance, type SanityConfig, type SanityInstance} from '@sanity/sdk'
+import {initTelemetry} from '@sanity/sdk/_internal'
 import {Suspense, useContext, useEffect, useMemo, useRef} from 'react'
 
 import {SanityInstanceContext} from './SanityInstanceContext'
@@ -77,6 +78,11 @@ export function ResourceProvider({
     () => (parent ? parent.createChild(config) : createSanityInstance(config)),
     [config, parent],
   )
+
+  const projectId = config.projectId ?? ''
+  useMemo(() => {
+    if (projectId && !parent) initTelemetry(instance, projectId)
+  }, [instance, projectId, parent])
 
   // Ref to hold the scheduled disposal timer.
   const disposal = useRef<{

@@ -3,6 +3,7 @@ import {useCallback, useEffect, useInsertionEffect, useRef} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useNormalizedSourceOptions} from '../helpers/useNormalizedSourceOptions'
+import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 
 /**
  * @public
@@ -76,7 +77,7 @@ export function useDocumentEvent<
   // Single options object parameter
   options: UseDocumentEventOptions<TDataset, TProjectId>,
 ): void {
-  // Destructure handler and datasetHandle from options
+  useTrackHookUsage('useDocumentEvent')
   const normalizedOptions = useNormalizedSourceOptions(options)
   const {onEvent, ...datasetHandle} = normalizedOptions
   const ref = useRef(onEvent)

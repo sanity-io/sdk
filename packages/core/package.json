@@ -31,7 +31,12 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./_internal": {
+      "source": "./src/_exports/_internal.ts",
+      "import": "./dist/_exports/_internal.js",
+      "default": "./dist/_exports/_internal.js"
+    }
   },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -67,6 +72,7 @@
     "@sanity/json-match": "^1.0.5",
     "@sanity/message-protocol": "^0.18.0",
     "@sanity/mutate": "^0.12.4",
+    "@sanity/telemetry": "^1.0.0",
     "@sanity/types": "^5.2.0",
     "groq": "3.88.1-typegen-experimental.0",
     "groq-js": "^1.19.0",
