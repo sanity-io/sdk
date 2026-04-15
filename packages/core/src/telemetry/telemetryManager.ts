@@ -96,9 +96,8 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
     return cachedConsent
   }
 
-  const sendEvents = async (batch: TelemetryEvent[]): Promise<unknown> => {
-    const client = getClient()
-    const enriched = batch.map((event) => ({
+  const enrichBatch = (batch: TelemetryEvent[]) =>
+    batch.map((event) => ({
       ...event,
       context: {
         sdkVersion: CORE_SDK_VERSION,
@@ -107,10 +106,12 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
       },
     }))
 
+  const sendEvents = async (batch: TelemetryEvent[]): Promise<unknown> => {
+    const client = getClient()
     return client.request({
       uri: '/intake/batch',
       method: 'POST',
-      body: {projectId, batch: enriched},
+      body: {projectId, batch: enrichBatch(batch)},
       tag: BATCH_TAG,
     })
   }
@@ -119,17 +120,11 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
     if (typeof navigator === 'undefined' || !navigator.sendBeacon) return false
 
     const client = getClient()
-    const enriched = batch.map((event) => ({
-      ...event,
-      context: {
-        sdkVersion: CORE_SDK_VERSION,
-        environment: 'development' as const,
-        origin: typeof window !== 'undefined' ? window.location.origin : 'node',
-      },
-    }))
-
     const url = client.getUrl('/intake/batch')
-    return navigator.sendBeacon(url, JSON.stringify({projectId, batch: enriched}))
+    const payload = new Blob([JSON.stringify({projectId, batch: enrichBatch(batch)})], {
+      type: 'application/json',
+    })
+    return navigator.sendBeacon(url, payload)
   }
 
   const store: TelemetryStore<Record<string, unknown>> = createBatchedStore(

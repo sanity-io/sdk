@@ -33,7 +33,7 @@ vi.mock('../version', () => ({
 
 describe('createTelemetryManager', () => {
   const mockClient = {
-    request: vi.fn(() => Promise.resolve()),
+    request: vi.fn((): Promise<unknown> => Promise.resolve()),
     getUrl: vi.fn((path: string) => `https://abc123.api.sanity.io/v2024-11-12${path}`),
   }
 
@@ -109,7 +109,7 @@ describe('createTelemetryManager', () => {
 
     const hookCalls = vi
       .mocked(logger.log)
-      .mock.calls.filter(([event]) => event.name === 'SDK Hook First Used')
+      .mock.calls.filter(([event]: [{name: string}]) => event.name === 'SDK Hook First Used')
     expect(hookCalls).toHaveLength(2)
     expect(hookCalls[0][1]).toEqual({hookName: 'useQuery'})
     expect(hookCalls[1][1]).toEqual({hookName: 'useDocument'})
@@ -173,6 +173,53 @@ describe('createTelemetryManager', () => {
     )
 
     vi.useRealTimers()
+  })
+
+  describe('endSession teardown', () => {
+    it('uses endWithBeacon in browser contexts', () => {
+      const originalDocument = globalThis.document
+      // @ts-expect-error -- simulating a browser environment
+      globalThis.document = {}
+
+      try {
+        const manager = createTelemetryManager({
+          sessionId: 'test-session-id',
+          getClient,
+          projectId: 'abc123',
+        })
+
+        const storeInstance = vi.mocked(createBatchedStore).mock.results[0].value
+
+        manager.endSession()
+
+        expect(storeInstance.endWithBeacon).toHaveBeenCalled()
+        expect(storeInstance.flush).not.toHaveBeenCalled()
+        expect(storeInstance.end).not.toHaveBeenCalled()
+      } finally {
+        if (originalDocument === undefined) {
+          // @ts-expect-error -- restoring original non-browser state
+          delete globalThis.document
+        } else {
+          globalThis.document = originalDocument
+        }
+      }
+    })
+
+    it('uses flush + end when document is not defined', () => {
+      const manager = createTelemetryManager({
+        sessionId: 'test-session-id',
+        getClient,
+        projectId: 'abc123',
+      })
+
+      const storeInstance = vi.mocked(createBatchedStore).mock.results[0].value
+
+      manager.endSession()
+
+      expect(storeInstance.endWithBeacon).not.toHaveBeenCalled()
+      expect(storeInstance.flush).toHaveBeenCalled()
+      expect(storeInstance.end).toHaveBeenCalled()
+    })
   })
 
   describe('consent resolution', () => {
