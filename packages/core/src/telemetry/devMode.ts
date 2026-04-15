@@ -6,7 +6,8 @@
  * @internal
  */
 function isLocalUrl(win: Window): boolean {
-  const url = win.location.href
+  const url = win.location?.href
+  if (!url) return false
   return (
     url.startsWith('http://localhost') ||
     url.startsWith('https://localhost') ||
