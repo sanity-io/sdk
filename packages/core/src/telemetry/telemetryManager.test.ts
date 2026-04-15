@@ -77,18 +77,16 @@ describe('createTelemetryManager', () => {
       perspective: 'published',
       authMethod: 'token',
       origin: 'http://localhost:3000',
-      nodeEnv: 'development',
     })
 
     expect(logger.log).toHaveBeenCalledWith(
       expect.objectContaining({name: 'SDK Dev Session Started'}),
       expect.objectContaining({
-        sdkVersion: '2.8.0-test',
+        version: '2.8.0-test',
         projectId: 'abc123',
         perspective: 'published',
         authMethod: 'token',
         origin: 'http://localhost:3000',
-        nodeEnv: 'development',
       }),
     )
   })
@@ -109,7 +107,7 @@ describe('createTelemetryManager', () => {
 
     const hookCalls = vi
       .mocked(logger.log)
-      .mock.calls.filter(([event]: [{name: string}]) => event.name === 'SDK Hook First Used')
+      .mock.calls.filter(([event]: [{name: string}]) => event.name === 'SDK Hook Mounted')
     expect(hookCalls).toHaveLength(2)
     expect(hookCalls[0][1]).toEqual({hookName: 'useQuery'})
     expect(hookCalls[1][1]).toEqual({hookName: 'useDocument'})
@@ -142,7 +140,7 @@ describe('createTelemetryManager', () => {
 
     expect(logger.log).toHaveBeenCalledWith(expect.objectContaining({name: 'SDK Dev Error'}), {
       errorType: 'TypeError',
-      hookContext: 'documentStore',
+      hookName: 'documentStore',
     })
   })
 

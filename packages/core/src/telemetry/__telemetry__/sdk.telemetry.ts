@@ -2,12 +2,11 @@ import {defineEvent} from '@sanity/telemetry'
 
 /** @internal */
 export const SDKDevSessionStarted = defineEvent<{
-  sdkVersion: string
+  version: string
   projectId: string
   perspective: string
   authMethod: string
   origin: string
-  nodeEnv: string
 }>({
   name: 'SDK Dev Session Started',
   version: 1,
@@ -15,12 +14,12 @@ export const SDKDevSessionStarted = defineEvent<{
 })
 
 /** @internal */
-export const SDKHookFirstUsed = defineEvent<{
+export const SDKHookMounted = defineEvent<{
   hookName: string
 }>({
-  name: 'SDK Hook First Used',
+  name: 'SDK Hook Mounted',
   version: 1,
-  description: 'First use of a specific SDK hook type in this session',
+  description: 'An SDK hook was mounted for the first time in this session',
 })
 
 /** @internal */
@@ -36,7 +35,7 @@ export const SDKDevSessionEnded = defineEvent<{
 /** @internal */
 export const SDKDevError = defineEvent<{
   errorType: string
-  hookContext: string
+  hookName: string
 }>({
   name: 'SDK Dev Error',
   version: 1,

@@ -26,7 +26,7 @@ vi.mock('../client/clientStore', () => ({
 
 vi.mock('../auth/authStore', () => ({
   getTokenState: vi.fn(() => ({
-    getCurrent: () => 'mock-token',
+    getCurrent: vi.fn(() => 'mock-token'),
     observable: {subscribe: vi.fn()},
   })),
 }))

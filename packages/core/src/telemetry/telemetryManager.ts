@@ -13,7 +13,7 @@ import {
   SDKDevError,
   SDKDevSessionEnded,
   SDKDevSessionStarted,
-  SDKHookFirstUsed,
+  SDKHookMounted,
 } from './__telemetry__/sdk.telemetry'
 
 const FLUSH_INTERVAL_MS = 30_000
@@ -43,14 +43,13 @@ export interface TelemetryManager {
     perspective: string
     authMethod: string
     origin: string
-    nodeEnv: string
   }): void
 
   /** Log a "SDK Hook First Used" event (deduplicated per hook name) */
   logHookFirstUsed(hookName: string): void
 
   /** Log a "SDK Dev Error" event */
-  logDevError(errorType: string, hookContext: string): void
+  logDevError(errorType: string, hookName: string): void
 
   /** Log a "SDK Dev Session Ended" event and tear down the store */
   endSession(): void
@@ -100,7 +99,7 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
     batch.map((event) => ({
       ...event,
       context: {
-        sdkVersion: CORE_SDK_VERSION,
+        version: CORE_SDK_VERSION,
         environment: 'development' as const,
         origin: typeof window !== 'undefined' ? window.location.origin : 'node',
       },
@@ -147,7 +146,7 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
 
     logSessionStarted(data) {
       logger.log(SDKDevSessionStarted, {
-        sdkVersion: CORE_SDK_VERSION,
+        version: CORE_SDK_VERSION,
         ...data,
       })
     },
@@ -155,11 +154,11 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
     logHookFirstUsed(hookName: string) {
       if (emittedHooks.has(hookName)) return
       emittedHooks.add(hookName)
-      logger.log(SDKHookFirstUsed, {hookName})
+      logger.log(SDKHookMounted, {hookName})
     },
 
-    logDevError(errorType: string, hookContext: string) {
-      logger.log(SDKDevError, {errorType, hookContext})
+    logDevError(errorType: string, hookName: string) {
+      logger.log(SDKDevError, {errorType, hookName})
     },
 
     endSession() {

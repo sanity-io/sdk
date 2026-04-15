@@ -1,7 +1,6 @@
 import {pick} from 'lodash-es'
 
 import {type SanityConfig} from '../config/sanityConfig'
-import {initTelemetry} from '../telemetry/initTelemetry'
 import {insecureRandomId} from '../utils/ids'
 import {createLogger, type InstanceContext} from '../utils/logger'
 
@@ -171,8 +170,6 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
       return undefined
     },
   }
-
-  initTelemetry(instance)
 
   return instance
 }
