@@ -14,7 +14,7 @@ export {
   type LoggingInAuthState,
   setAuthToken,
 } from '../auth/authStore'
-export {observeOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
+export {getOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
@@ -77,9 +77,9 @@ export {
   getDocumentState,
   getDocumentSyncStatus,
   getPermissionsState,
+  onDocumentEvent,
   resolveDocument,
   resolvePermissions,
-  subscribeDocumentEvents,
 } from '../document/documentStore'
 export {
   type ActionErrorEvent,
@@ -97,7 +97,7 @@ export {
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export type {FavoriteStatusResponse} from '../favorites/favorites'
 export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
-export {getPresence} from '../presence/presenceStore'
+export {getPresenceState} from '../presence/presenceStore'
 export type {
   DisconnectEvent,
   PresenceLocation,
@@ -107,7 +107,7 @@ export type {
   UserPresence,
 } from '../presence/types'
 export type {PreviewMedia, PreviewQueryResult, PreviewValue} from '../preview/types'
-export {type OrgVerificationResult} from '../project/organizationVerification'
+export {type OrganizationVerificationResult} from '../project/organizationVerification'
 export {getProjectState, type ProjectHandle, resolveProject} from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'

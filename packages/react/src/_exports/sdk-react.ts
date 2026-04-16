@@ -34,7 +34,7 @@ export {useDashboardOrganizationId} from '../hooks/auth/useDashboardOrganization
 export {useHandleAuthCallback} from '../hooks/auth/useHandleAuthCallback'
 export {useLoginUrl} from '../hooks/auth/useLoginUrl'
 export {useLogOut} from '../hooks/auth/useLogOut'
-export {useVerifyOrgProjects} from '../hooks/auth/useVerifyOrgProjects'
+export {useOrganizationVerification} from '../hooks/auth/useOrganizationVerification'
 export {useClient} from '../hooks/client/useClient'
 export {
   type FrameConnection,
@@ -51,13 +51,13 @@ export {
 export {useResource} from '../hooks/context/useDefaultResource'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
+export {useDispatchDocumentHistoryEvent} from '../hooks/dashboard/useDispatchDocumentHistoryEvent'
 export {useDispatchIntent} from '../hooks/dashboard/useDispatchIntent'
 export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
 export {
   type NavigateToStudioResult,
   useNavigateToStudioDocument,
 } from '../hooks/dashboard/useNavigateToStudioDocument'
-export {useRecordDocumentHistoryEvent} from '../hooks/dashboard/useRecordDocumentHistoryEvent'
 export {useStudioWorkspacesByProjectIdDataset} from '../hooks/dashboard/useStudioWorkspacesByProjectIdDataset'
 export {useWindowTitle} from '../hooks/dashboard/useWindowTitle'
 export {useDatasets} from '../hooks/datasets/useDatasets'

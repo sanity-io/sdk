@@ -81,7 +81,8 @@ The following hooks support `resourceName` / `resource`:
 - `usePaginatedDocuments`
 - `usePerspective`
 - `useActiveReleases`
-- `usePresence` (dataset resources only)
+- `usePresence` (dataset / canvas resources only)
+- `useProject`
 
 **`ResourceProvider` uses `resource` prop**
 
@@ -108,7 +109,7 @@ The following hooks support `resourceName` / `resource`:
 The following APIs were deprecated in v2 and have been removed in v3:
 
 | Removed                                       | Replacement                                                |
-| --------------------------------------------  | ---------------------------------------------------------- |
+| --------------------------------------------- | ---------------------------------------------------------- |
 | `getPreviewState` / `GetPreviewStateOptions`  | `getProjectionState` with an explicit `projection`         |
 | `resolvePreview` / `ResolvePreviewOptions`    | `resolveProjection` with an explicit `projection`          |
 | `PreviewStoreState` type                      | Use the return type of `getProjectionState`                |
@@ -118,6 +119,7 @@ The following APIs were deprecated in v2 and have been removed in v3:
 | `sanityConfigs` prop on `<SanityApp>`         | `resources` prop                                           |
 | `SanityProject` type                          | Import from `@sanity/client`                               |
 | `scope` / `~experimental_resource` on clients | `useProjectHostname` and `resource` prop                   |
+| `observeOrganizationVerificationState`        | `getOrganizationVerificationState.observable`              |
 
 **`getPreviewState`**
 
@@ -192,7 +194,19 @@ const config: SanityConfig = {
 }
 ```
 
-#### 4. `@sanity/sdk` agent and comlink utilities moved to sub-entries
+#### 4. Renamed APIs
+
+Some APIs have been renamed, mostly for consistency and clarity:
+
+| Original name                                  | New name                                                  |
+| ---------------------------------------------- | --------------------------------------------------------- |
+| `useRecordDocumentHistoryEvent`, `recordEvent` | `useDispatchDocumentHistoryEvent`, `dispatchHistoryEvent` |
+| `getPresence`                                  | `getPresenceState`                                        |
+| `OrgVerificationResult`                        | `OrganizationVerificationResult`                          |
+| `useVerifyOrgProjects`                         | `useOrganizationVerification`                             |
+| `subscribeDocumentEvents`                      | `onDocumentEvent`                                         |
+
+#### 5. `@sanity/sdk` agent and comlink utilities moved to sub-entries
 
 Agent and comlink utilities are now available only from dedicated sub-entry points:
 
@@ -213,7 +227,7 @@ import {type FrameMessage} from '@sanity/sdk/comlink'
 
 `@sanity/sdk-react` previously re-exported all core utilities, but these two subdomains are now excluded. Make the above code changes to get access to these.
 
-#### 5. Explicit `projectId` required for `getDatasetsState` / `useDatasets`
+#### 6. Explicit `projectId` required for `getDatasetsState` / `useDatasets`
 
 `getDatasetsState` and `useDatasets` now require an explicit `projectId` argument. They no longer infer it from instance config:
 
@@ -229,7 +243,7 @@ const datasets = useDatasets()
 const datasets = useDatasets({projectId: 'abc123'})
 ```
 
-#### 6. Experimental typegen and groq dependency removed
+#### 7. Experimental typegen and groq dependency removed
 
 The `groq` package is no longer a dependency. `defineQuery` and `defineProjection` are no longer needed or exported. Pass plain strings to `query` and `projection` parameters:
 
@@ -250,7 +264,7 @@ const {data} = useQuery({query: '*[_type == $type]', params: {type: 'book'}})
 
 You can safely remove the `groq` package from your dependencies if you were only using it for `defineQuery` / `defineProjection`.
 
-#### 7. Stackable perspectives disallowed
+#### 8. Stackable perspectives disallowed
 
 `PerspectiveHandle` no longer accepts array-based (stackable) perspectives. Only single perspectives are allowed:
 
@@ -285,9 +299,9 @@ For example, providing a specific perspective that reflects one of your Content 
 
 This way, previous changes will be incorporated into your selected perspective.
 
-#### 8. Presence refactored to use resources
+#### 9. Presence refactored to use resources
 
-`usePresence` now accepts `resource` / `resourceName` options. It only supports dataset resources — passing a media library or canvas resource will throw an error:
+`usePresence` now accepts `resource` / `resourceName` options. It only supports dataset and canvas resources — passing a media library will throw an error:
 
 ```typescript
 const {locations} = usePresence({resourceName: 'marketing-site'})

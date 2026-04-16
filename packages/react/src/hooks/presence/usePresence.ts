@@ -1,4 +1,4 @@
-import {getPresence, isMediaLibraryResource, type UserPresence} from '@sanity/sdk'
+import {getPresenceState, isMediaLibraryResource, type UserPresence} from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 
 import {type ResourceHandle} from '../../config/handles'
@@ -23,7 +23,7 @@ export function usePresence(options: ResourceHandle = {}): {
   const sanityInstance = useSanityInstance()
   trackHookUsage(sanityInstance, 'usePresence')
   const source = useMemo(
-    () => getPresence(sanityInstance, normalizedOptions),
+    () => getPresenceState(sanityInstance, normalizedOptions),
     [sanityInstance, normalizedOptions],
   )
   const subscribe = useCallback((callback: () => void) => source.subscribe(callback), [source])

@@ -1,10 +1,10 @@
 import {
   DatasetResource,
   DocumentHandle,
+  useDispatchDocumentHistoryEvent,
   useDocuments,
   useManageFavorite,
   useNavigateToStudioDocument,
-  useRecordDocumentHistoryEvent,
   useResource,
 } from '@sanity/sdk-react'
 import {Box, Button, Flex, Heading} from '@sanity/ui'
@@ -61,13 +61,13 @@ function FavoriteButton({docHandle}: {docHandle: DocumentHandle}) {
 }
 
 const ViewButton = ({docHandle}: {docHandle: DocumentHandle}) => {
-  const {recordEvent} = useRecordDocumentHistoryEvent({
+  const {dispatchHistoryEvent} = useDispatchDocumentHistoryEvent({
     ...docHandle,
     resourceType: 'studio',
   })
   return (
     <ErrorBoundary fallbackRender={({error}) => <ButtonError error={error} />}>
-      <Button mode="ghost" onClick={() => recordEvent('viewed')} text="Record view" />
+      <Button mode="ghost" onClick={() => dispatchHistoryEvent('viewed')} text="Record view" />
     </ErrorBoundary>
   )
 }

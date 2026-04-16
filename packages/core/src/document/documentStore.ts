@@ -302,7 +302,7 @@ export const resolvePermissions = bindActionByResource(
 )
 
 /** @beta */
-export const subscribeDocumentEvents = bindActionByResource(
+export const onDocumentEvent = bindActionByResource(
   documentStore,
   ({state}, options: {resource: DocumentResource; eventHandler: (e: DocumentEvent) => void}) => {
     const {events} = state.get()

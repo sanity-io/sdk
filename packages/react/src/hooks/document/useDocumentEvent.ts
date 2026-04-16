@@ -1,4 +1,4 @@
-import {type DocumentEvent, subscribeDocumentEvents} from '@sanity/sdk'
+import {type DocumentEvent, onDocumentEvent} from '@sanity/sdk'
 import {useCallback, useEffect, useInsertionEffect, useRef} from 'react'
 
 import {type ResourceHandle} from '../../config/handles'
@@ -90,7 +90,7 @@ export function useDocumentEvent<
 
   const instance = useSanityInstance()
   useEffect(() => {
-    return subscribeDocumentEvents(instance, {
+    return onDocumentEvent(instance, {
       eventHandler: stableHandler,
       resource: datasetHandle.resource,
     })
