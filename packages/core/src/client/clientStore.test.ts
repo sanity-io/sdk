@@ -68,6 +68,20 @@ describe('clientStore', () => {
       })
     })
 
+    it('should pass staging apiHost when __SANITY_STAGING__ is true and no explicit apiHost', () => {
+      vi.stubGlobal('__SANITY_STAGING__', true)
+
+      getClient(instance, {apiVersion: '2024-11-12'})
+
+      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiHost: 'https://api.sanity.work',
+        }),
+      )
+
+      vi.unstubAllGlobals()
+    })
+
     it('should throw when using disallowed configuration keys', () => {
       expect(() =>
         getClient(instance, {

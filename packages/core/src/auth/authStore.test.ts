@@ -73,6 +73,35 @@ describe('authStore', () => {
       instance?.dispose()
     })
 
+    it('uses staging apiHost when __SANITY_STAGING__ is true and no explicit apiHost', () => {
+      vi.stubGlobal('__SANITY_STAGING__', true)
+
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+      })
+
+      const {options} = authStore.getInitialState(instance, null)
+      expect(options.apiHost).toBe('https://api.sanity.work')
+
+      vi.unstubAllGlobals()
+    })
+
+    it('prefers explicit apiHost over __SANITY_STAGING__', () => {
+      vi.stubGlobal('__SANITY_STAGING__', true)
+
+      instance = createSanityInstance({
+        projectId: 'p',
+        dataset: 'd',
+        auth: {apiHost: 'https://custom.host'},
+      })
+
+      const {options} = authStore.getInitialState(instance, null)
+      expect(options.apiHost).toBe('https://custom.host')
+
+      vi.unstubAllGlobals()
+    })
+
     it('sets initial options onto state', () => {
       const apiHost = 'test-api-host'
       const callbackUrl = '/login/callback'

@@ -5,6 +5,7 @@ import {type AuthConfig, type AuthProvider} from '../config/authConfig'
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore} from '../store/defineStore'
+import {getStagingApiHost} from '../utils/getStagingApiHost'
 import {resolveAuthMode} from './authMode'
 import {AuthStateType} from './authStateType'
 import {type AuthStrategyOptions} from './authStrategy'
@@ -102,7 +103,7 @@ export const authStore = defineStore<AuthStoreState>({
 
   getInitialState(instance) {
     const {
-      apiHost,
+      apiHost: configApiHost,
       callbackUrl,
       providers: customProviders,
       token: providedToken,
@@ -110,6 +111,7 @@ export const authStore = defineStore<AuthStoreState>({
       initialLocationHref = getDefaultLocation(),
     } = instance.config.auth ?? {}
 
+    const apiHost = configApiHost ?? getStagingApiHost()
     const authConfig = instance.config.auth ?? {}
 
     // Build login URL (used by standalone mode, but always computed for the
