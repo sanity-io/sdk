@@ -67,7 +67,7 @@
       "semanticCommitScope": "deps"
     },
     {
-      "description": "Production dependencies (major) - require manual approval for breaking changes",
+      "description": "Production dependencies (major) - require manual approval. Defaults to fix(deps) for a patch release; override to feat! or BREAKING CHANGE at squash time if the upgrade affects the SDK's public API",
       "matchDepTypes": ["dependencies"],
       "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
       "matchUpdateTypes": ["major"],
