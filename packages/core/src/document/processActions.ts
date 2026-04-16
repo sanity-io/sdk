@@ -176,12 +176,8 @@ export function processActions({
             })
           }
 
+          // liveEdit documents use the mutation endpoint directly -- we don't send actions
           outgoingMutations.push(...mutations)
-          outgoingActions.push({
-            actionType: 'sanity.action.document.create',
-            publishedId: documentId,
-            attributes: newDocWorking,
-          })
           continue
         }
 

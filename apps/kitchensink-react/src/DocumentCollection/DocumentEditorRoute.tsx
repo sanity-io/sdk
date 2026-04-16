@@ -58,7 +58,11 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
         <Card padding={3} radius={2} shadow={1}>
           <Flex gap={3} align="center" justify="space-between">
             <Flex gap={2} align="center">
-              <Badge tone={docHandle.liveEdit ? 'primary' : 'default'} fontSize={2}>
+              <Badge
+                tone={docHandle.liveEdit ? 'primary' : 'default'}
+                fontSize={2}
+                data-testid="live-edit-mode-badge"
+              >
                 {docHandle.liveEdit ? 'Live Edit Mode' : 'Draft/Published Mode'}
               </Badge>
               {docHandle.liveEdit && (
@@ -112,6 +116,7 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
                     text="Create"
                     tone="positive"
                     fontSize={1}
+                    data-testid="document-editor-action-create"
                   />
                 </Box>
               </Tooltip>
@@ -132,6 +137,7 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
                     text="Create with Initial Values"
                     tone="positive"
                     fontSize={1}
+                    data-testid="document-editor-action-create-with-initial-values"
                   />
                 </Box>
               </Tooltip>
@@ -183,6 +189,7 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
                     text="Delete"
                     tone="critical"
                     fontSize={1}
+                    data-testid="document-editor-action-delete"
                   />
                 </Box>
               </Tooltip>
@@ -204,7 +211,16 @@ function DocumentEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
             {document && (
               <>
                 {/* Hidden element for e2e tests */}
-                <Box style={{display: 'none'}} data-testid="document-content">
+                <Box
+                  style={{
+                    position: 'absolute',
+                    width: 1,
+                    height: 1,
+                    overflow: 'hidden',
+                    left: -9999,
+                  }}
+                  data-testid="document-content"
+                >
                   {JSON.stringify(document)}
                 </Box>
                 <JsonDocumentEditor
@@ -268,10 +284,6 @@ function Editor() {
     // eslint-disable-next-line react-compiler/react-compiler
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveEditMode])
-
-  if (!documents.length) {
-    return <Box padding={4}>No documents found</Box>
-  }
 
   return (
     <Box padding={4}>

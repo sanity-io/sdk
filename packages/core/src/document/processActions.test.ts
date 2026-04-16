@@ -1,4 +1,4 @@
-import {type Reference, type SanityDocument} from '@sanity/types'
+import {type CreateMutation, type Reference, type SanityDocument} from '@sanity/types'
 import {parse} from 'groq-js'
 import {describe, expect, it} from 'vitest'
 
@@ -885,17 +885,12 @@ describe('processActions', () => {
         expect(doc?._type).toBe('liveArticle')
         expect(doc?._rev).toBe(transactionId)
 
-        // Should use document.create action, not version.create
-        expect(result.outgoingActions).toHaveLength(1)
-        const action = result.outgoingActions[0]
-        expect(action.actionType).toBe('sanity.action.document.create')
-        if ('attributes' in action && 'publishedId' in action) {
-          expect(action.publishedId).toBe('live1')
-          expect(action.attributes._id).toBe('live1')
-          expect(action.attributes._type).toBe('liveArticle')
-        } else {
-          throw new Error('Expected action to have attributes and publishedId')
-        }
+        // Should not use actions
+        expect(result.outgoingActions).toHaveLength(0)
+        expect(result.outgoingMutations).toHaveLength(1)
+        const mutation = result.outgoingMutations[0] as CreateMutation
+        expect(mutation.create._id).toBe('live1')
+        expect(mutation.create._type).toBe('liveArticle')
       })
 
       it('should throw an error if liveEdit document already exists', () => {
