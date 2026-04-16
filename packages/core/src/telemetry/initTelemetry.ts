@@ -176,14 +176,14 @@ function findManager(instance: SanityInstance): TelemetryManager | undefined {
   while (current) {
     const manager = telemetryManagers.get(current)
     if (manager) return manager
-    current = current.getParent()
+    current = typeof current.getParent === 'function' ? current.getParent() : undefined
   }
   return undefined
 }
 
 function getRootInstance(instance: SanityInstance): SanityInstance {
   let current = instance
-  while (current.getParent()) {
+  while (typeof current.getParent === 'function' && current.getParent()) {
     current = current.getParent()!
   }
   return current
