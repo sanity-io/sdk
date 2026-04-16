@@ -89,6 +89,7 @@ export function useDocumentPermissions(
     () => (Array.isArray(actionOrActions) ? actionOrActions : [actionOrActions]),
     [actionOrActions],
   )
+  // if actions is an array, we need to check that all actions belong to the same project and dataset
   let projectId
   let dataset
   let source

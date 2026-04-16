@@ -78,6 +78,7 @@ export function useDocumentEvent<
   options: UseDocumentEventOptions<TDataset, TProjectId>,
 ): void {
   useTrackHookUsage('useDocumentEvent')
+  // Destructure handler and datasetHandle from options
   const normalizedOptions = useNormalizedSourceOptions(options)
   const {onEvent, ...datasetHandle} = normalizedOptions
   const ref = useRef(onEvent)

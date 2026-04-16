@@ -151,6 +151,7 @@ export function useQuery(options: WithSourceNameSupport<QueryOptions>): {
   data: unknown
   isPending: boolean
 } {
+  // Implementation returns unknown, overloads define specifics
   const instance = useSanityInstance(options)
   trackHookUsage(instance, 'useQuery')
 
