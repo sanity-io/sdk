@@ -11,6 +11,7 @@ import {
 import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
+import {getStagingApiHost} from '../utils/getStagingApiHost'
 
 const DEFAULT_API_VERSION = '2024-11-12'
 const DEFAULT_REQUEST_TAG_PREFIX = 'sanity.sdk'
@@ -195,7 +196,7 @@ export const getClient = bindActionGlobally(
 
     const projectId = options.projectId ?? instance.config.projectId
     const dataset = options.dataset ?? instance.config.dataset
-    const apiHost = options.apiHost ?? instance.config.auth?.apiHost
+    const apiHost = options.apiHost ?? instance.config.auth?.apiHost ?? getStagingApiHost()
 
     const effectiveOptions: ClientOptions = {
       ...DEFAULT_CLIENT_CONFIG,
