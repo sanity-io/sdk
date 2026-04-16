@@ -1,4 +1,4 @@
-import {getPresence, type SanityUser, type UserPresence} from '@sanity/sdk'
+import {getPresenceState, type SanityUser, type UserPresence} from '@sanity/sdk'
 import {act, renderHook} from '@testing-library/react'
 import {NEVER} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
@@ -10,7 +10,7 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@sanity/sdk')>()
   return {
     ...actual,
-    getPresence: vi.fn(),
+    getPresenceState: vi.fn(),
     createSanityInstance: vi.fn(() => ({
       isDisposed: vi.fn(() => false),
       dispose: vi.fn(),
@@ -58,7 +58,7 @@ describe('usePresence', () => {
       }),
       observable: NEVER,
     }
-    vi.mocked(getPresence).mockReturnValue(mockPresenceSource)
+    vi.mocked(getPresenceState).mockReturnValue(mockPresenceSource)
 
     const {result, unmount} = renderHook(() => usePresence(), {
       wrapper: ({children}) => (
@@ -108,7 +108,7 @@ describe('usePresence', () => {
       subscribe: vi.fn(() => () => {}),
       observable: NEVER,
     }
-    vi.mocked(getPresence).mockReturnValue(mockPresenceSource)
+    vi.mocked(getPresenceState).mockReturnValue(mockPresenceSource)
 
     const {result, unmount} = renderHook(
       () => usePresence({resource: {projectId: 'test-project', dataset: 'test-dataset'}}),

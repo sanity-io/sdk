@@ -2,7 +2,7 @@
  * Error message returned by the organization verification
  * @public
  */
-export interface OrgVerificationResult {
+export interface OrganizationVerificationResult {
   error: string | null
 }
 
@@ -14,7 +14,7 @@ export function compareProjectOrganization(
   projectId: string,
   projectOrganizationId: string | null | undefined,
   currentDashboardOrgId: string,
-): OrgVerificationResult {
+): OrganizationVerificationResult {
   if (projectOrganizationId !== currentDashboardOrgId) {
     return {
       error:

@@ -12,14 +12,14 @@ import {useCallback} from 'react'
 import {type DocumentHandle} from '../../config/handles'
 import {useWindowConnection} from '../comlink/useWindowConnection'
 
-interface DocumentInteractionHistory {
-  recordEvent: (eventType: 'viewed' | 'edited' | 'created' | 'deleted') => void
+interface DocumentHistoryEventDispatcher {
+  dispatchHistoryEvent: (eventType: 'viewed' | 'edited' | 'created' | 'deleted') => void
 }
 
 /**
  * @internal
  */
-interface UseRecordDocumentHistoryEventProps extends DocumentHandle {
+interface UseDispatchDocumentHistoryEventProps extends DocumentHandle {
   resourceType: StudioResource['type'] | MediaResource['type'] | CanvasResource['type']
   resourceId?: string
   /**
@@ -32,21 +32,21 @@ interface UseRecordDocumentHistoryEventProps extends DocumentHandle {
 /**
  * @internal
  * Hook for managing document interaction history in Sanity Studio.
- * This hook provides functionality to record document interactions.
+ * This hook provides functionality to dispatch document history events.
  * @category History
  * @param documentHandle - The document handle containing document ID and type, like `{_id: '123', _type: 'book'}`
  * @returns An object containing:
- * - `recordEvent` - Function to record document interactions
+ * - `dispatchHistoryEvent` - Function to dispatch document history events
  *
  * @example
  * ```tsx
- * import {useRecordDocumentHistoryEvent} from '@sanity/sdk-react'
+ * import {useDispatchDocumentHistoryEvent} from '@sanity/sdk-react'
  * import {Button} from '@sanity/ui'
  * import {Suspense} from 'react'
  *
- * function RecordEventButton(props: DocumentActionProps) {
+ * function DispatchEventButton(props: DocumentActionProps) {
  *   const {documentId, documentType, resourceType, resourceId} = props
- *   const {recordEvent} = useRecordDocumentHistoryEvent({
+ *   const {dispatchHistoryEvent} = useDispatchDocumentHistoryEvent({
  *     documentId,
  *     documentType,
  *     resourceType,
@@ -54,7 +54,7 @@ interface UseRecordDocumentHistoryEventProps extends DocumentHandle {
  *   })
  *   return (
  *     <Button
- *       onClick={() => recordEvent('viewed')}
+ *       onClick={() => dispatchHistoryEvent('viewed')}
  *       text="Viewed"
  *     />
  *   )
@@ -64,19 +64,19 @@ interface UseRecordDocumentHistoryEventProps extends DocumentHandle {
  * function MyDocumentAction(props: DocumentActionProps) {
  *   return (
  *     <Suspense fallback={<Button text="Loading..." disabled />}>
- *       <RecordEventButton {...props} />
+ *       <DispatchEventButton {...props} />
  *     </Suspense>
  *   )
  * }
  * ```
  */
-export function useRecordDocumentHistoryEvent({
+export function useDispatchDocumentHistoryEvent({
   documentId,
   documentType,
   resourceType,
   resourceId,
   schemaName,
-}: UseRecordDocumentHistoryEventProps): DocumentInteractionHistory {
+}: UseDispatchDocumentHistoryEventProps): DocumentHistoryEventDispatcher {
   const {sendMessage} = useWindowConnection<Events.HistoryMessage, FrameMessage>({
     name: SDK_NODE_NAME,
     connectTo: SDK_CHANNEL_NAME,
@@ -86,7 +86,7 @@ export function useRecordDocumentHistoryEvent({
     throw new Error('resourceId is required for media-library and canvas resources')
   }
 
-  const recordEvent = useCallback(
+  const dispatchHistoryEvent = useCallback(
     (eventType: 'viewed' | 'edited' | 'created' | 'deleted') => {
       try {
         const message: Events.HistoryMessage = {
@@ -108,7 +108,7 @@ export function useRecordDocumentHistoryEvent({
         sendMessage(message.type, message.data)
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.error('Failed to record history event:', error)
+        console.error('Failed to dispatch history event:', error)
         throw error
       }
     },
@@ -116,6 +116,6 @@ export function useRecordDocumentHistoryEvent({
   )
 
   return {
-    recordEvent,
+    dispatchHistoryEvent,
   }
 }
