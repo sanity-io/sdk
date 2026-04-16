@@ -1,8 +1,11 @@
 import {type SanityInstance} from '../store/createSanityInstance'
+import {createLogger} from '../utils/logger'
 import {isDevMode} from './devMode'
 import {type TelemetryManager} from './telemetryManager'
 
 const DEFAULT_TELEMETRY_API_VERSION = '2024-11-12'
+
+const logger = createLogger('telemetry')
 
 /**
  * Per-instance map of active telemetry managers. Allows the React
@@ -13,6 +16,7 @@ const DEFAULT_TELEMETRY_API_VERSION = '2024-11-12'
  * @internal
  */
 const telemetryManagers = new WeakMap<SanityInstance, TelemetryManager>()
+const pendingHooks = new WeakMap<SanityInstance, Set<string>>()
 
 /**
  * Initializes dev-mode telemetry for a SDK instance if the environment
@@ -27,8 +31,16 @@ const telemetryManagers = new WeakMap<SanityInstance, TelemetryManager>()
  * @internal
  */
 export function initTelemetry(instance: SanityInstance, projectId: string): void {
-  if (!isDevMode()) return
-  if (!projectId) return
+  if (!isDevMode()) {
+    logger.trace('initTelemetry skipped: not dev mode', {internal: true})
+    return
+  }
+  if (!projectId) {
+    logger.trace('initTelemetry skipped: no projectId', {internal: true})
+    return
+  }
+
+  logger.debug('initializing telemetry', {projectId})
 
   Promise.all([
     import('./telemetryManager'),
@@ -36,7 +48,10 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
     import('../auth/authStore'),
   ])
     .then(async ([{createTelemetryManager}, {getClient}, {getTokenState}]) => {
-      if (instance.isDisposed()) return
+      if (instance.isDisposed()) {
+        logger.debug('telemetry skipped: instance disposed before imports resolved')
+        return
+      }
 
       // Wait for the auth store to resolve a token. The client needs a
       // Bearer token for the consent check and batch POSTs. If the token
@@ -45,19 +60,26 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
       // first emission. For unauthenticated apps the promise never
       // resolves, which is fine since telemetry requires auth anyway.
       const token = getTokenState(instance).getCurrent()
+      logger.trace('auth token check', {tokenPresent: !!token, internal: true})
+
       if (!token) {
+        logger.debug('waiting for auth token')
         const hasToken = await new Promise<boolean>((resolve) => {
           if (instance.isDisposed()) return resolve(false)
           const unsub = instance.onDispose(() => resolve(false))
           const sub = getTokenState(instance).observable.subscribe((t) => {
             if (t) {
+              logger.debug('auth token received')
               sub.unsubscribe()
               unsub()
               resolve(true)
             }
           })
         })
-        if (!hasToken || instance.isDisposed()) return
+        if (!hasToken || instance.isDisposed()) {
+          logger.debug('telemetry skipped: no token resolved or instance disposed')
+          return
+        }
       }
 
       const manager = createTelemetryManager({
@@ -66,16 +88,23 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
         projectId,
       })
 
-      // Check consent before logging anything. If the user hasn't
-      // opted in, discard the manager and skip all telemetry for
-      // this session.
       const consented = await manager.checkConsent()
+      logger.debug('consent check complete', {consented})
       if (!consented || instance.isDisposed()) {
         manager.endSession()
         return
       }
 
       telemetryManagers.set(instance, manager)
+
+      const buffered = pendingHooks.get(instance)
+      if (buffered) {
+        logger.debug('flushing buffered hooks', {hooks: Array.from(buffered)})
+        for (const hookName of buffered) {
+          manager.logHookFirstUsed(hookName)
+        }
+        pendingHooks.delete(instance)
+      }
 
       const config = instance.config
       const perspective = typeof config.perspective === 'string' ? config.perspective : 'published'
@@ -86,6 +115,7 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
           : 'default'
       const origin = typeof window !== 'undefined' ? window.location.origin : 'node'
 
+      logger.info('telemetry session started', {projectId, perspective, authMethod, origin})
       manager.logSessionStarted({
         projectId,
         perspective,
@@ -96,10 +126,11 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
       instance.onDispose(() => {
         manager.endSession()
         telemetryManagers.delete(instance)
+        logger.debug('telemetry session ended')
       })
     })
-    .catch(() => {
-      // Telemetry init is best-effort; never break the SDK
+    .catch((err) => {
+      logger.warn('telemetry init failed', {error: err})
     })
 }
 
@@ -111,4 +142,49 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
  */
 export function getTelemetryManager(instance: SanityInstance): TelemetryManager | undefined {
   return telemetryManagers.get(instance)
+}
+
+/**
+ * Record a hook name for an instance. If the telemetry manager is
+ * already initialized the event is logged immediately. Otherwise
+ * the name is buffered and flushed when init completes.
+ *
+ * @internal
+ */
+export function trackHookMounted(instance: SanityInstance, hookName: string): void {
+  const manager = findManager(instance)
+  if (manager) {
+    logger.trace('hook mounted (logged)', {hookName, internal: true})
+    manager.logHookFirstUsed(hookName)
+    return
+  }
+
+  const root = getRootInstance(instance)
+  let hooks = pendingHooks.get(root)
+  if (!hooks) {
+    hooks = new Set()
+    pendingHooks.set(root, hooks)
+  }
+  if (!hooks.has(hookName)) {
+    logger.trace('hook mounted (buffered)', {hookName, internal: true})
+  }
+  hooks.add(hookName)
+}
+
+function findManager(instance: SanityInstance): TelemetryManager | undefined {
+  let current: SanityInstance | undefined = instance
+  while (current) {
+    const manager = telemetryManagers.get(current)
+    if (manager) return manager
+    current = current.getParent()
+  }
+  return undefined
+}
+
+function getRootInstance(instance: SanityInstance): SanityInstance {
+  let current = instance
+  while (current.getParent()) {
+    current = current.getParent()!
+  }
+  return current
 }

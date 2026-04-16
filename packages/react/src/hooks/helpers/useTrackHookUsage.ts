@@ -1,11 +1,12 @@
 import {type SanityInstance} from '@sanity/sdk'
-import {getTelemetryManager} from '@sanity/sdk/_internal'
+import {trackHookMounted} from '@sanity/sdk/_internal'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 
 /**
  * Tracks the first usage of a named hook per SDK session.
- * Does nothing when telemetry is disabled or not yet initialized.
+ * If the telemetry manager hasn't initialized yet, the hook
+ * name is buffered and flushed when it becomes available.
  *
  * Call at the top of any public hook whose adoption we want to measure.
  *
@@ -13,7 +14,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  */
 export function useTrackHookUsage(hookName: string): void {
   const instance = useSanityInstance()
-  trackHookUsage(instance, hookName)
+  trackHookMounted(instance, hookName)
 }
 
 /**
@@ -24,8 +25,5 @@ export function useTrackHookUsage(hookName: string): void {
  * @internal
  */
 export function trackHookUsage(instance: SanityInstance, hookName: string): void {
-  const manager = getTelemetryManager(instance)
-  if (manager) {
-    manager.logHookFirstUsed(hookName)
-  }
+  trackHookMounted(instance, hookName)
 }

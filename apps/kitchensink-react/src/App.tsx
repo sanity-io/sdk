@@ -1,4 +1,4 @@
-import {SanityApp, useDashboardNavigate} from '@sanity/sdk-react'
+import {configureLogging, SanityApp, useDashboardNavigate} from '@sanity/sdk-react'
 import {Spinner, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {type JSX, Suspense} from 'react'
@@ -16,6 +16,11 @@ function NavigationHandler() {
   })
   return null
 }
+
+configureLogging({
+  level: 'debug',
+  namespaces: ['telemetry'],
+})
 
 export default function App(): JSX.Element {
   return (

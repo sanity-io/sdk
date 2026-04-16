@@ -8,6 +8,7 @@ import {
   type TelemetryStore,
 } from '@sanity/telemetry'
 
+import {createLogger} from '../utils/logger'
 import {CORE_SDK_VERSION} from '../version'
 import {
   SDKDevError,
@@ -19,6 +20,8 @@ import {
 const FLUSH_INTERVAL_MS = 30_000
 const CONSENT_TAG = 'telemetry-consent.sdk'
 const BATCH_TAG = 'telemetry.batch'
+
+const log = createLogger('telemetry')
 
 /**
  * Manages dev-mode telemetry for a single SDK instance.
@@ -107,6 +110,7 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
 
   const sendEvents = async (batch: TelemetryEvent[]): Promise<unknown> => {
     const client = getClient()
+    log.debug('sending event batch', {batchSize: batch.length})
     return client.request({
       uri: '/intake/batch',
       method: 'POST',
@@ -123,6 +127,7 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
     const payload = new Blob([JSON.stringify({projectId, batch: enrichBatch(batch)})], {
       type: 'application/json',
     })
+    log.debug('sending beacon', {batchSize: batch.length})
     return navigator.sendBeacon(url, payload)
   }
 
@@ -145,6 +150,13 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
     },
 
     logSessionStarted(data) {
+      log.debug('event: SDK Dev Session Started', {
+        projectId: data.projectId,
+        perspective: data.perspective,
+        authMethod: data.authMethod,
+        origin: data.origin,
+        version: CORE_SDK_VERSION,
+      })
       logger.log(SDKDevSessionStarted, {
         version: CORE_SDK_VERSION,
         ...data,
@@ -154,15 +166,21 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
     logHookFirstUsed(hookName: string) {
       if (emittedHooks.has(hookName)) return
       emittedHooks.add(hookName)
+      log.debug('event: SDK Hook Mounted', {hookName})
       logger.log(SDKHookMounted, {hookName})
     },
 
     logDevError(errorType: string, hookName: string) {
+      log.debug('event: SDK Dev Error', {errorType, hookName})
       logger.log(SDKDevError, {errorType, hookName})
     },
 
     endSession() {
       const durationSeconds = Math.round((Date.now() - startedAt) / 1000)
+      log.debug('event: SDK Dev Session Ended', {
+        durationSeconds,
+        hooksUsed: [...emittedHooks],
+      })
       logger.log(SDKDevSessionEnded, {
         durationSeconds,
         hooksUsed: [...emittedHooks],
