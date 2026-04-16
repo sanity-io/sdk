@@ -946,12 +946,15 @@ describe('processActions', () => {
         expect(editedDoc?.['title']).toBe('Updated Title')
         expect(editedDoc?._id).toBe('live1')
 
-        // Should use document.edit action with draftId prefixed (for server validation) but publishedId as the actual doc
-        expect(result.outgoingActions[0]).toMatchObject({
-          actionType: 'sanity.action.document.edit',
-          draftId: 'drafts.live1',
-          publishedId: 'live1',
+        expect(result.outgoingMutations[0]).toEqual({
+          patch: {
+            id: 'live1',
+            diffMatchPatch: {
+              title: '@@ -1,12 +1,11 @@\n-Original\n+Updated\n  Tit\n',
+            },
+          },
         })
+        expect(result.outgoingActions).toHaveLength(0)
       })
 
       it('should throw an error if liveEdit document does not exist', () => {

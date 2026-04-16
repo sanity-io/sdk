@@ -1,4 +1,3 @@
-import {type SanityClient} from '@sanity/client'
 import {type SanityDocument} from 'groq'
 import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
 
@@ -8,6 +7,7 @@ import {type SanityInstance} from '../store/createSanityInstance'
 import {type StoreContext} from '../store/defineStore'
 import {type DocumentAction} from './actions'
 import {documentStore, type DocumentStoreState} from './documentStore'
+import {type DocumentTransactionSubmissionResult} from './events'
 import {type DocumentSet} from './processMutations'
 import {type AppliedTransaction, type QueuedTransaction, queueTransaction} from './reducers'
 
@@ -20,7 +20,7 @@ export interface ActionsResult<TDocument extends SanityDocument = SanityDocument
   appeared: string[]
   updated: string[]
   disappeared: string[]
-  submitted: () => ReturnType<SanityClient['action']>
+  submitted: () => Promise<DocumentTransactionSubmissionResult>
 }
 
 /** @beta */

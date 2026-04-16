@@ -408,19 +408,8 @@ export function processActions({
             timestamp,
           })
 
+          // liveEdit documents use the mutation endpoint directly -- we don't send actions
           outgoingMutations.push(...workingMutations)
-          outgoingActions.push(
-            ...patches.map(
-              (patch): HttpAction => ({
-                actionType: 'sanity.action.document.edit',
-                // Server requires draftId to have drafts. prefix for validation, even for liveEdit
-                draftId: getDraftId(documentId),
-                publishedId: documentId,
-                patch: patch as PatchOperations,
-              }),
-            ),
-          )
-
           continue
         }
 

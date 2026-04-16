@@ -1,7 +1,12 @@
-import {type SanityClient} from '@sanity/client'
+import {type MultipleMutationResult, type SanityClient} from '@sanity/client'
 
 import {type DocumentAction} from './actions'
 import {type OutgoingTransaction} from './reducers'
+
+/** @beta Response body from submitting an outgoing transaction (actions or mutations API). */
+export type DocumentTransactionSubmissionResult =
+  | Awaited<ReturnType<SanityClient['action']>>
+  | MultipleMutationResult
 
 /** @beta */
 export type DocumentEvent =
@@ -35,7 +40,7 @@ export interface ActionErrorEvent {
 export interface TransactionAcceptedEvent {
   type: 'accepted'
   outgoing: OutgoingTransaction
-  result: Awaited<ReturnType<SanityClient['action']>>
+  result: DocumentTransactionSubmissionResult
 }
 /**
  * @beta

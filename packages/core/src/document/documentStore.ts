@@ -1,4 +1,4 @@
-import {type Action} from '@sanity/client'
+import {type Action, type Mutation} from '@sanity/client'
 import {getPublishedId} from '@sanity/client/csm'
 import {jsonMatch} from '@sanity/json-match'
 import {type SanityDocument} from 'groq'
@@ -45,7 +45,11 @@ import {defineStore, type StoreContext} from '../store/defineStore'
 import {getDraftId} from '../utils/ids'
 import {type DocumentAction} from './actions'
 import {API_VERSION, INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
-import {type DocumentEvent, getDocumentEvents} from './events'
+import {
+  type DocumentEvent,
+  type DocumentTransactionSubmissionResult,
+  getDocumentEvents,
+} from './events'
 import {listen, OutOfSyncError} from './listen'
 import {type JsonMatch} from './patchOperations'
 import {
@@ -399,20 +403,55 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
       ),
       concatMap(([outgoing, client]) => {
         if (!outgoing) return EMPTY
-        return client.observable
-          .action(outgoing.outgoingActions as Action[], {
-            transactionId: outgoing.transactionId,
-            skipCrossDatasetReferenceValidation: true,
-            tag: 'document.action',
-          })
-          .pipe(
-            catchError((error) => {
-              state.set('revertOutgoingTransaction', revertOutgoingTransaction)
-              events.next({type: 'reverted', message: error.message, outgoing, error})
-              return EMPTY
-            }),
-            map((result) => ({result, outgoing})),
-          )
+
+        const revertOnError = catchError((error: unknown) => {
+          state.set('revertOutgoingTransaction', revertOutgoingTransaction)
+          const message = error instanceof Error ? error.message : 'Request failed'
+          events.next({type: 'reverted', message, outgoing, error})
+          return EMPTY
+        })
+
+        // Draft/published flow and liveEdit create/delete -- use actions and return
+        if (outgoing.outgoingActions.length > 0) {
+          return client.observable
+            .action(outgoing.outgoingActions as Action[], {
+              transactionId: outgoing.transactionId,
+              skipCrossDatasetReferenceValidation: true,
+              tag: 'document.action',
+            })
+            .pipe(
+              revertOnError,
+              map((result) => ({
+                result: result as DocumentTransactionSubmissionResult,
+                outgoing,
+              })),
+            )
+        }
+
+        // liveEdit edits: mutations API and return
+        if (
+          outgoing.actions.every((action) => action.liveEdit) &&
+          outgoing.outgoingMutations.length > 0
+        ) {
+          return client.observable
+            .mutate(outgoing.outgoingMutations as Mutation[], {
+              transactionId: outgoing.transactionId,
+              visibility: 'async',
+              returnDocuments: false,
+              returnFirst: false,
+              tag: 'document.mutate',
+              skipCrossDatasetReferenceValidation: true,
+            })
+            .pipe(
+              revertOnError,
+              map((result) => ({
+                result: result as DocumentTransactionSubmissionResult,
+                outgoing,
+              })),
+            )
+        }
+
+        return EMPTY
       }),
       tap(({outgoing, result}) => {
         state.set('cleanupOutgoingTransaction', cleanupOutgoingTransaction)
