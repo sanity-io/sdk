@@ -16,7 +16,7 @@
     "eslint": "^9.23.0",
     "lodash-es": "^4.17.21",
     "typescript": "^5.8.3",
-    "vite": "^6.3.4",
+    "vite": "^7.0.0",
     "vite-tsconfig-paths": "^5.1.4"
   }
 }
