@@ -2,6 +2,10 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["local>sanity-io/renovate-config"],
   "ignorePresets": ["github>sanity-io/renovate-config:group-non-major"],
+  "constraints": {
+    "pnpm": "10.8.0"
+  },
+  "postUpdateOptions": ["pnpmDedupe"],
   "schedule": ["before 5am"],
   "prConcurrentLimit": 10,
   "automerge": true,
@@ -54,10 +58,7 @@
     {
       "description": "Production dependencies (patch/minor) - automerge and trigger patch release",
       "matchDepTypes": ["dependencies"],
-      "matchFileNames": [
-        "packages/core/package.json",
-        "packages/react/package.json"
-      ],
+      "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
       "matchUpdateTypes": ["patch", "minor"],
       "automerge": true,
       "minimumReleaseAge": "7 days",
@@ -68,30 +69,19 @@
     {
       "description": "Production dependencies (major) - require manual approval for breaking changes",
       "matchDepTypes": ["dependencies"],
-      "matchFileNames": [
-        "packages/core/package.json",
-        "packages/react/package.json"
-      ],
+      "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
       "matchUpdateTypes": ["major"],
       "automerge": false,
       "dependencyDashboardApproval": true,
       "minimumReleaseAge": "14 days",
-      "labels": [
-        "dependencies",
-        "major-update",
-        "breaking-change",
-        "needs-review"
-      ],
-      "semanticCommitType": "chore",
+      "labels": ["dependencies", "major-update", "breaking-change", "needs-review"],
+      "semanticCommitType": "fix",
       "semanticCommitScope": "deps"
     },
     {
       "description": "Use bump strategy for all production dependencies in public packages",
       "matchDepTypes": ["dependencies"],
-      "matchFileNames": [
-        "packages/core/package.json",
-        "packages/react/package.json"
-      ],
+      "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
       "rangeStrategy": "bump"
     },
     {
