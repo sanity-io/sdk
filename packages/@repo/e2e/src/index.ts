@@ -10,9 +10,10 @@ const SETUP_DIR = path.join(path.dirname(__dirname), 'src', 'setup')
 const TEARDOWN_DIR = path.join(path.dirname(__dirname), 'src', 'teardown')
 const AUTH_FILE = path.join(path.dirname(__dirname), '.auth', 'user.json')
 
-const {CI, SDK_E2E_ORGANIZATION_ID} = getE2EEnv()
-const BASE_URL = `https://www.sanity.work/@${SDK_E2E_ORGANIZATION_ID}/application/__dev/`
-
+const {CI} = getE2EEnv()
+// Restore for Dashboard when we get secrets
+// const BASE_URL = `https://www.sanity.work/@${SDK_E2E_ORGANIZATION_ID}/application/__dev/`
+const BASE_URL = 'http://localhost:3333/'
 /**
  * @internal
  * Base Playwright configuration
