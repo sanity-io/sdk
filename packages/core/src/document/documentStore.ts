@@ -411,28 +411,15 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
           return EMPTY
         })
 
-        // Draft/published flow -- send actions and return
-        if (outgoing.outgoingActions.length > 0) {
-          return client.observable
-            .action(outgoing.outgoingActions as Action[], {
-              transactionId: outgoing.transactionId,
-              skipCrossDatasetReferenceValidation: true,
-              tag: 'document.action',
-            })
-            .pipe(
-              revertOnError,
-              map((result) => ({
-                result: result as DocumentTransactionSubmissionResult,
-                outgoing,
-              })),
-            )
-        }
+        const toResult = map((result: unknown) => ({
+          result: result as DocumentTransactionSubmissionResult,
+          outgoing,
+        }))
 
-        // liveEdit edits: mutations API and return
-        if (
-          outgoing.actions.every((action) => action.liveEdit) &&
-          outgoing.outgoingMutations.length > 0
-        ) {
+        // Any liveEdit action in the batch routes to the mutations API. For mixed batches
+        // non-liveEdit operations (e.g. publish) lose atomicity, but that is acceptable
+        // given how rare mixed batches are.
+        if (outgoing.actions.some((action) => action.liveEdit)) {
           return client.observable
             .mutate(outgoing.outgoingMutations as Mutation[], {
               transactionId: outgoing.transactionId,
@@ -442,16 +429,17 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
               tag: 'document.mutate',
               skipCrossDatasetReferenceValidation: true,
             })
-            .pipe(
-              revertOnError,
-              map((result) => ({
-                result: result as DocumentTransactionSubmissionResult,
-                outgoing,
-              })),
-            )
+            .pipe(revertOnError, toResult)
         }
 
-        return EMPTY
+        // Pure non-liveEdit transactions use the actions API.
+        return client.observable
+          .action(outgoing.outgoingActions as Action[], {
+            transactionId: outgoing.transactionId,
+            skipCrossDatasetReferenceValidation: true,
+            tag: 'document.action',
+          })
+          .pipe(revertOnError, toResult)
       }),
       tap(({outgoing, result}) => {
         state.set('cleanupOutgoingTransaction', cleanupOutgoingTransaction)

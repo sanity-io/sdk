@@ -1,3 +1,5 @@
+import {randomUUID} from 'node:crypto'
+
 import {expect, test} from '@repo/e2e'
 
 test.describe('Live edit document editor', () => {
@@ -7,7 +9,7 @@ test.describe('Live edit document editor', () => {
     getPageContext,
   }) => {
     const client = getClient()
-    const liveDocId = `live-e2e-crud-${Date.now()}`
+    const liveDocId = `live-edit-${randomUUID()}`
     // not actually used -- we're checking for non-existence of draft
     const draftId = `drafts.${liveDocId}`
 

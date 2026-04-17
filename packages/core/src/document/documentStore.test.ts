@@ -501,7 +501,7 @@ it('submits liveEdit document edits through observable.mutate', async () => {
     visibility: 'async',
     returnDocuments: false,
     returnFirst: false,
-    tag: 'live-edit.mutate',
+    tag: 'document.mutate',
     skipCrossDatasetReferenceValidation: true,
   })
   expect(mutationList.length).toBeGreaterThan(0)
@@ -1266,7 +1266,9 @@ beforeEach(() => {
             continue
           }
           default: {
-            throw new Error(`Unsupported action for mock backend: ${i.actionType}`)
+            throw new Error(
+              `Unsupported action for mock backend: ${(i as {actionType: string}).actionType}`,
+            )
           }
         }
       }

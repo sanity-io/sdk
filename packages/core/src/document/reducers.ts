@@ -21,7 +21,6 @@ export type SyncTransactionState = Pick<
 
 type ActionMap = {
   create: 'sanity.action.document.version.create'
-  createLiveEdit: 'sanity.action.document.create'
   discard: 'sanity.action.document.version.discard'
   unpublish: 'sanity.action.document.unpublish'
   delete: 'sanity.action.document.delete'
@@ -36,7 +35,6 @@ type OptimisticLock = {
 
 export type HttpAction =
   | {actionType: ActionMap['create']; publishedId: string; attributes: SanityDocumentLike}
-  | {actionType: ActionMap['createLiveEdit']; publishedId: string; attributes: SanityDocumentLike}
   | {actionType: ActionMap['discard']; versionId: string; purge?: boolean}
   | {actionType: ActionMap['unpublish']; draftId: string; publishedId: string}
   | {actionType: ActionMap['delete']; publishedId: string; includeDrafts?: string[]}
