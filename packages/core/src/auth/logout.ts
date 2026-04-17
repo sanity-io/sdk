@@ -33,7 +33,7 @@ export const logout = bindActionGlobally(authStore, async ({state}) => {
         useCdn: false,
       })
 
-      await client.request<void>({uri: '/auth/logout', method: 'POST'})
+      await client.request<void>({uri: '/auth/logout', method: 'POST', tag: 'logout'})
     }
   } finally {
     state.set('logoutSuccess', {

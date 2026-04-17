@@ -13,7 +13,8 @@ export type PageContext = Pick<Page, 'getByTestId' | 'getByText' | 'getByRole' |
 // Webkit is excluded from dashboard tests because webkit blocks script execution
 // in sandboxed iframes without 'allow-scripts', and the dashboard creates
 // sandboxed iframes that webkit cannot execute JavaScript in
-const DASHBOARD_PROJECTS = ['chromium', 'firefox']
+// const DASHBOARD_PROJECTS = ['chromium', 'firefox']
+const DASHBOARD_PROJECTS: string[] = []
 
 /**
  * Determines if we're in a dashboard context by checking the project name

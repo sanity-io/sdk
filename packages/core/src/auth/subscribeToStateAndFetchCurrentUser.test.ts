@@ -40,7 +40,11 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
       useProjectHostname: false,
       useCdn: false,
     })
-    expect(mockRequest).toHaveBeenCalledWith({method: 'GET', uri: '/users/me'})
+    expect(mockRequest).toHaveBeenCalledWith({
+      method: 'GET',
+      uri: '/users/me',
+      tag: 'users.get-current',
+    })
 
     subscription.unsubscribe()
   })
@@ -76,7 +80,11 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
       useProjectHostname: false,
       useCdn: false,
     })
-    expect(mockRequest).toHaveBeenCalledWith({method: 'GET', uri: '/users/me'})
+    expect(mockRequest).toHaveBeenCalledWith({
+      method: 'GET',
+      uri: '/users/me',
+      tag: 'users.get-current',
+    })
 
     subscription.unsubscribe()
   })
