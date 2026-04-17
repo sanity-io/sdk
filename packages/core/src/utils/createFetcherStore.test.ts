@@ -127,8 +127,9 @@ describe('createFetcherStore', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1)
 
     // Second subscription within throttle interval
-    const sub2 = stateSource.subscribe()
-    await firstValueFrom(stateSource.observable)
+    const stateSource2 = store.getState(instance, 1)
+    const sub2 = stateSource2.subscribe()
+    await firstValueFrom(stateSource2.observable)
     expect(fetchSpy).toHaveBeenCalledTimes(1)
 
     // Advance past throttle interval
@@ -136,8 +137,9 @@ describe('createFetcherStore', () => {
     await vi.advanceTimersByTimeAsync(1000)
 
     // Third subscription after throttle interval
-    const sub3 = stateSource.subscribe()
-    await firstValueFrom(stateSource.observable)
+    const stateSource3 = store.getState(instance, 1)
+    const sub3 = stateSource3.subscribe()
+    await firstValueFrom(stateSource3.observable)
     expect(fetchSpy).toHaveBeenCalledTimes(2)
 
     sub1()

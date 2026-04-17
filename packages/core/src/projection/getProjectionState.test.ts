@@ -126,7 +126,7 @@ describe('getProjectionState', () => {
     expect(state.get().subscriptions).toEqual({})
     expect(state.get().documentProjections).toEqual({})
 
-    const unsubscribe1 = projectionState1.subscribe(vi.fn()) // Should use ID 3
+    const unsubscribe1 = projectionState1.subscribe(vi.fn()) // Should use ID 2
     expect(state.get().subscriptions).toEqual({
       [docHandle.documentId]: {[hash1]: {testSubId_2: true}},
     })
@@ -134,7 +134,7 @@ describe('getProjectionState', () => {
       [docHandle.documentId]: {[hash1]: projection1},
     })
 
-    const unsubscribe2 = projectionState2.subscribe(vi.fn()) // Should use ID 4
+    const unsubscribe2 = projectionState2.subscribe(vi.fn()) // Should use ID 3
     expect(state.get().subscriptions).toEqual({
       [docHandle.documentId]: {
         [hash1]: {testSubId_2: true},
@@ -148,10 +148,12 @@ describe('getProjectionState', () => {
       },
     })
 
-    const unsubscribe3 = projectionState1.subscribe(vi.fn()) // Should use ID 5
+    // should share ID 2 from the first subscription -- we only care if ANY subscription exists
+    // so we can include the document / projection in a bulk fetch
+    const unsubscribe3 = projectionState1.subscribe(vi.fn())
     expect(state.get().subscriptions).toEqual({
       [docHandle.documentId]: {
-        [hash1]: {testSubId_2: true, testSubId_4: true},
+        [hash1]: {testSubId_2: true},
         [hash2]: {testSubId_3: true},
       },
     })
@@ -165,23 +167,20 @@ describe('getProjectionState', () => {
     })
 
     // --- Test Unsubscribe ---
-    unsubscribe1() // Unsubscribes ID 3
-    expect(state.get().subscriptions[docHandle.documentId]?.[hash1]).toEqual({
-      testSubId_2: true,
-      testSubId_4: true,
-    })
+    unsubscribe1() // Unsubscribes first subscription consumer
+    expect(state.get().subscriptions[docHandle.documentId]?.[hash1]).toEqual({testSubId_2: true})
     vi.advanceTimersByTime(PROJECTION_STATE_CLEAR_DELAY)
-    expect(state.get().subscriptions[docHandle.documentId]?.[hash1]).toEqual({testSubId_4: true})
+    expect(state.get().subscriptions[docHandle.documentId]?.[hash1]).toEqual({testSubId_2: true})
     expect(state.get().documentProjections[docHandle.documentId]?.[hash1]).toEqual(projection1)
 
-    unsubscribe3() // Unsubscribes ID 5
+    unsubscribe3() // Also unsubscibes first projection subscription, should be removed
     vi.advanceTimersByTime(PROJECTION_STATE_CLEAR_DELAY)
     expect(state.get().subscriptions[docHandle.documentId]?.[hash1]).toBeUndefined()
     expect(state.get().documentProjections[docHandle.documentId]?.[hash1]).toBeUndefined()
     expect(state.get().subscriptions[docHandle.documentId]?.[hash2]).toEqual({testSubId_3: true})
     expect(state.get().documentProjections[docHandle.documentId]?.[hash2]).toEqual(projection2)
 
-    unsubscribe2() // Unsubscribes ID 4
+    unsubscribe2() // Unsubscribes second projection subscription, should be removed
     vi.advanceTimersByTime(PROJECTION_STATE_CLEAR_DELAY)
     expect(state.get().subscriptions[docHandle.documentId]).toBeUndefined()
     expect(state.get().documentProjections[docHandle.documentId]).toBeUndefined()
@@ -203,14 +202,14 @@ describe('getProjectionState', () => {
     }))
 
     const unsubscribe1 = projectionState.subscribe(vi.fn()) // Should use ID 2
-    const unsubscribe2 = projectionState.subscribe(vi.fn()) // Should use ID 3
+    const unsubscribe2 = projectionState.subscribe(vi.fn()) // Should reuse ID 2
 
     expect(state.get().values[docHandle.documentId]?.[hash]).toEqual({
       data: initialData,
       isPending: true,
     })
 
-    unsubscribe1() // Unsubscribes ID 2
+    unsubscribe1() // Unsubscribes first subscription consumer
     vi.advanceTimersByTime(PROJECTION_STATE_CLEAR_DELAY)
     expect(state.get().values[docHandle.documentId]?.[hash]).toEqual({
       data: initialData,
@@ -219,9 +218,10 @@ describe('getProjectionState', () => {
     expect(Object.keys(state.get().subscriptions[docHandle.documentId]?.[hash] ?? {}).length).toBe(
       1,
     )
-    expect(state.get().subscriptions[docHandle.documentId]?.[hash]).toEqual({testSubId_3: true})
+    // should still have the same subscription ID since we're not unsubscribing the second consumer
+    expect(state.get().subscriptions[docHandle.documentId]?.[hash]).toEqual({testSubId_2: true})
 
-    unsubscribe2() // Unsubscribes ID 3
+    unsubscribe2() // Unsubscribes second subscription consumer
     expect(state.get().values[docHandle.documentId]?.[hash]).toEqual({
       data: initialData,
       isPending: true,
