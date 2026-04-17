@@ -49,38 +49,38 @@ const authenticateUser = async (context: BrowserContext, config: AuthConfig) => 
   await page.close()
 }
 
-const setDashboardRedirectCookie = async (context: BrowserContext) => {
-  const page = await context.newPage()
+// const setDashboardRedirectCookie = async (context: BrowserContext) => {
+//   const page = await context.newPage()
 
-  // visit the dashboard url to set the redirect cookie
-  await page.goto(
-    `https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}?dev=http://localhost:3333`,
-  )
+//   // visit the dashboard url to set the redirect cookie
+//   await page.goto(
+//     `https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}?dev=http://localhost:3333`,
+//   )
 
-  // wait until the url is /application/__dev (indicating the redirect cookie was set)
-  await page.waitForURL(`https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}/application/__dev`)
+//   // wait until the url is /application/__dev (indicating the redirect cookie was set)
+//   await page.waitForURL(`https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}/application/__dev`)
 
-  await page.close()
-}
+//   await page.close()
+// }
 
 setup('setup authentication', async ({browser}) => {
   // Create a single browser context that will be used for all authentication operations
   const context = await browser.newContext()
 
   try {
-    // Authenticate for standalone (webkit)
+    // Authenticate for standalone (all browsers at the moment)
     await authenticateUser(context, {
       origin: 'http://localhost:3333',
       expectedRedirectUrl: 'http://localhost:3333',
     })
-    // Authenticate for Dashboard (other browsers)
-    await authenticateUser(context, {
-      origin: 'https://www.sanity.work/api/dashboard/authenticate',
-      expectedRedirectUrl: `https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}`,
-    })
+    // Authenticate for Dashboard (restore for every browser but webkit when we get secrets)
+    // await authenticateUser(context, {
+    //   origin: 'https://www.sanity.work/api/dashboard/authenticate',
+    //   expectedRedirectUrl: `https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}`,
+    // })
 
-    // Set the dashboard redirect cookie
-    await setDashboardRedirectCookie(context)
+    // // Set the dashboard redirect cookie
+    // await setDashboardRedirectCookie(context)
 
     // Save the combined context state to the auth file
     // This will contain all cookies, localStorage, and sessionStorage from all operations
