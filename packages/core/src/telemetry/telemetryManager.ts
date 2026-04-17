@@ -119,25 +119,12 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
     })
   }
 
-  const sendBeacon = (batch: TelemetryEvent[]): boolean => {
-    if (typeof navigator === 'undefined' || !navigator.sendBeacon) return false
-
-    const client = getClient()
-    const url = client.getUrl('/intake/batch')
-    const payload = new Blob([JSON.stringify({projectId, batch: enrichBatch(batch)})], {
-      type: 'application/json',
-    })
-    log.debug('sending beacon', {batchSize: batch.length})
-    return navigator.sendBeacon(url, payload)
-  }
-
   const store: TelemetryStore<Record<string, unknown>> = createBatchedStore(
     sessionId as SessionId,
     {
       flushInterval: FLUSH_INTERVAL_MS,
       resolveConsent,
       sendEvents,
-      sendBeacon,
     },
   )
 
@@ -186,14 +173,10 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
         hooksUsed: [...emittedHooks],
       })
 
-      if (typeof document !== 'undefined') {
-        store.endWithBeacon()
-      } else {
-        store.flush().catch(() => {
-          // Best-effort flush on dispose; swallow errors
-        })
-        store.end()
-      }
+      store.flush().catch(() => {
+        // Best-effort flush on dispose; swallow errors
+      })
+      store.end()
     },
 
     get hooksUsed(): ReadonlySet<string> {

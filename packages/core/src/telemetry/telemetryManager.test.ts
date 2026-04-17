@@ -14,7 +14,6 @@ vi.mock('@sanity/telemetry', () => {
     createBatchedStore: vi.fn(() => ({
       logger: mockLogger,
       end: vi.fn(),
-      endWithBeacon: vi.fn(() => true),
       flush: vi.fn(() => Promise.resolve()),
     })),
     defineEvent: vi.fn((opts) => ({
@@ -174,36 +173,7 @@ describe('createTelemetryManager', () => {
   })
 
   describe('endSession teardown', () => {
-    it('uses endWithBeacon in browser contexts', () => {
-      const originalDocument = globalThis.document
-      // @ts-expect-error -- simulating a browser environment
-      globalThis.document = {}
-
-      try {
-        const manager = createTelemetryManager({
-          sessionId: 'test-session-id',
-          getClient,
-          projectId: 'abc123',
-        })
-
-        const storeInstance = vi.mocked(createBatchedStore).mock.results[0].value
-
-        manager.endSession()
-
-        expect(storeInstance.endWithBeacon).toHaveBeenCalled()
-        expect(storeInstance.flush).not.toHaveBeenCalled()
-        expect(storeInstance.end).not.toHaveBeenCalled()
-      } finally {
-        if (originalDocument === undefined) {
-          // @ts-expect-error -- restoring original non-browser state
-          delete globalThis.document
-        } else {
-          globalThis.document = originalDocument
-        }
-      }
-    })
-
-    it('uses flush + end when document is not defined', () => {
+    it('always uses flush + end (no sendBeacon due to auth header limitation)', () => {
       const manager = createTelemetryManager({
         sessionId: 'test-session-id',
         getClient,
@@ -214,7 +184,6 @@ describe('createTelemetryManager', () => {
 
       manager.endSession()
 
-      expect(storeInstance.endWithBeacon).not.toHaveBeenCalled()
       expect(storeInstance.flush).toHaveBeenCalled()
       expect(storeInstance.end).toHaveBeenCalled()
     })

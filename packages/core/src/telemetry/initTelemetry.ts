@@ -17,6 +17,7 @@ const logger = createLogger('telemetry')
  */
 const telemetryManagers = new WeakMap<SanityInstance, TelemetryManager>()
 const pendingHooks = new WeakMap<SanityInstance, Set<string>>()
+const initInFlight = new WeakSet<SanityInstance>()
 
 /**
  * Initializes dev-mode telemetry for a SDK instance if the environment
@@ -39,6 +40,10 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
     logger.trace('initTelemetry skipped: no projectId', {internal: true})
     return
   }
+  if (telemetryManagers.has(instance) || initInFlight.has(instance)) {
+    return
+  }
+  initInFlight.add(instance)
 
   logger.debug('initializing telemetry', {projectId})
 
@@ -49,6 +54,7 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
   ])
     .then(async ([{createTelemetryManager}, {getClient}, {getTokenState}]) => {
       if (instance.isDisposed()) {
+        initInFlight.delete(instance)
         logger.debug('telemetry skipped: instance disposed before imports resolved')
         return
       }
@@ -66,7 +72,11 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
         logger.debug('waiting for auth token')
         const hasToken = await new Promise<boolean>((resolve) => {
           if (instance.isDisposed()) return resolve(false)
-          const unsub = instance.onDispose(() => resolve(false))
+          const cleanup = {unsubscribe: () => {}}
+          const unsub = instance.onDispose(() => {
+            cleanup.unsubscribe()
+            resolve(false)
+          })
           const sub = getTokenState(instance).observable.subscribe((t) => {
             if (t) {
               logger.debug('auth token received')
@@ -75,8 +85,10 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
               resolve(true)
             }
           })
+          cleanup.unsubscribe = () => sub.unsubscribe()
         })
         if (!hasToken || instance.isDisposed()) {
+          initInFlight.delete(instance)
           logger.debug('telemetry skipped: no token resolved or instance disposed')
           return
         }
@@ -91,10 +103,12 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
       const consented = await manager.checkConsent()
       logger.debug('consent check complete', {consented})
       if (!consented || instance.isDisposed()) {
+        initInFlight.delete(instance)
         manager.endSession()
         return
       }
 
+      initInFlight.delete(instance)
       telemetryManagers.set(instance, manager)
 
       const buffered = pendingHooks.get(instance)
@@ -130,6 +144,7 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
       })
     })
     .catch((err) => {
+      initInFlight.delete(instance)
       logger.warn('telemetry init failed', {error: err})
     })
 }
