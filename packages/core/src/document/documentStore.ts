@@ -411,7 +411,7 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
           return EMPTY
         })
 
-        // Draft/published flow and liveEdit create/delete -- use actions and return
+        // Draft/published flow -- send actions and return
         if (outgoing.outgoingActions.length > 0) {
           return client.observable
             .action(outgoing.outgoingActions as Action[], {

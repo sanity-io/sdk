@@ -151,8 +151,12 @@ export function processActions({
             })
           }
 
-          const newDocBase = {_type: action.documentType, _id: documentId}
-          const newDocWorking = {_type: action.documentType, _id: documentId}
+          const newDocBase = {_type: action.documentType, _id: documentId, ...action.initialValue}
+          const newDocWorking = {
+            _type: action.documentType,
+            _id: documentId,
+            ...action.initialValue,
+          }
           const mutations: Mutation[] = [{create: newDocWorking}]
 
           base = processMutations({
@@ -264,11 +268,10 @@ export function processActions({
           base = processMutations({documents: base, transactionId, mutations, timestamp})
           working = processMutations({documents: working, transactionId, mutations, timestamp})
 
+          // although liveEdit documents can use the actions API for deletion,
+          // having this be an action while other operations are mutations creates an inconsistency
+          // (and a possible race condition in document store where mutations might get skipped)
           outgoingMutations.push(...mutations)
-          outgoingActions.push({
-            actionType: 'sanity.action.document.delete',
-            publishedId: documentId,
-          })
           continue
         }
 

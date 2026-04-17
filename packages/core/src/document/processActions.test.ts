@@ -893,6 +893,37 @@ describe('processActions', () => {
         expect(mutation.create._type).toBe('liveArticle')
       })
 
+      it('should apply initialValue when creating a liveEdit document', () => {
+        const base: DocumentSet = {}
+        const working: DocumentSet = {}
+        const actions: DocumentAction[] = [
+          {
+            documentId: 'live1',
+            type: 'document.create',
+            documentType: 'liveArticle',
+            liveEdit: true,
+            initialValue: {title: 'Initial Title', count: 42},
+          },
+        ]
+
+        const result = processActions({
+          actions,
+          transactionId,
+          base,
+          working,
+          timestamp,
+          grants: defaultGrants,
+        })
+
+        const doc = result.working['live1']
+        expect(doc?.['title']).toBe('Initial Title')
+        expect(doc?.['count']).toBe(42)
+
+        const mutation = result.outgoingMutations[0] as CreateMutation
+        expect(mutation.create['title']).toBe('Initial Title')
+        expect(mutation.create['count']).toBe(42)
+      })
+
       it('should throw an error if liveEdit document already exists', () => {
         const existingDoc = createLiveEditDoc('live1', 'Existing')
         const base: DocumentSet = {live1: existingDoc}
@@ -996,12 +1027,9 @@ describe('processActions', () => {
 
         expect(result.working['live1']).toBeNull()
 
-        expect(result.outgoingActions).toEqual([
-          {
-            actionType: 'sanity.action.document.delete',
-            publishedId: 'live1',
-          },
-        ])
+        expect(result.outgoingActions).toHaveLength(0)
+        expect(result.outgoingMutations).toHaveLength(1)
+        expect(result.outgoingMutations[0]).toEqual({delete: {id: 'live1'}})
       })
 
       it('should throw an error if liveEdit document does not exist', () => {
