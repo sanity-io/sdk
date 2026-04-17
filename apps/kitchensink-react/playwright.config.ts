@@ -1,7 +1,7 @@
 import {createPlaywrightConfig} from '@repo/e2e'
 
-const isWebkitProject =
-  process.argv.includes('--project=webkit') || process.argv.some((arg) => arg.includes('webkit'))
+// const isWebkitProject =
+//   process.argv.includes('--project=webkit') || process.argv.some((arg) => arg.includes('webkit'))
 
 export default createPlaywrightConfig({
   testDir: './e2e',
@@ -9,7 +9,9 @@ export default createPlaywrightConfig({
     ? {} // In CI, don't start a webServer since it's started manually
     : {
         webServer: {
-          command: isWebkitProject ? 'pnpm exec vite --port 3333' : 'pnpm dev',
+          // Restore for Dashboard when we get secrets
+          // command: isWebkitProject ? 'pnpm exec vite --port 3333' : 'pnpm dev',
+          command: 'pnpm exec vite --port 3333',
           reuseExistingServer: true,
           stdout: 'pipe',
           env: {
