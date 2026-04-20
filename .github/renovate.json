@@ -1,6 +1,11 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["local>sanity-io/renovate-config"],
+  "extends": [
+    "local>sanity-io/renovate-config",
+    "helpers:pinGitHubActionDigests",
+    ":configMigration",
+    "abandonments:recommended"
+  ],
   "ignorePresets": ["github>sanity-io/renovate-config:group-non-major"],
   "constraints": {
     "pnpm": "10.8.0"
@@ -14,7 +19,8 @@
   "automergeStrategy": "squash",
   "dependencyDashboard": true,
   "dependencyDashboardApproval": false,
-  "minimumReleaseAge": "3 days",
+  "dependencyDashboardHeader": "## How to use this dashboard\n\nFull playbook: [RENOVATE_STRATEGY.md](../blob/main/.github/RENOVATE_STRATEGY.md)\n\n**Quick section reference**\n\n- **Pending Approval**: tick a checkbox to open the PR. Only tick items worth trying.\n- **Awaiting Schedule** / **Rate-Limited**: automatic, no action needed.\n- **Pending Status Checks**: Renovate branch exists, CI running; PR opens when CI finishes.\n- **PR Closed (Blocked)**: previously closed. Only tick to retry.\n- **Detected Dependencies**: reference only.\n\n<details>\n<summary><b>Automerge policy</b></summary>\n\n| Dependency type | Auto/Manual | Release age | Commit type | Triggers release? |\n| --- | --- | --- | --- | --- |\n| devDependencies (patch/minor/major) | Auto | 14 days | `chore(dev-deps)` | No |\n| TypeScript (major) | Manual | 14 days | `chore(tooling)` | No |\n| Production deps patch/minor (`packages/core`, `packages/react`) | Auto | 14 days | `fix(deps)` | **Yes, patch** |\n| Production deps major (`packages/core`, `packages/react`) | Manual | 14 days | `fix(deps)` | **Yes, patch**<br/>(override to `feat!` at squash if breaking) |\n| Peer deps | Manual | 14 days | `chore(peer-deps)` | No |\n| App deps (`apps/**`) | Auto | 14 days | `chore(apps)` | No |\n| High-severity security | Manual | 0 days | varies | varies |\n| Sanity-maintained (`@sanity/*`, `sanity`, `groq`, `groq-js`) | inherits | **3 days** | inherits | inherits |\n\n</details>\n\n<details>\n<summary><b>Common actions</b></summary>\n\n**Retry a closed PR**: find it under \"PR Closed (Blocked)\" and tick the box.\n\n**Approve a major dep update**: tick its checkbox under \"Pending Approval\". This only opens the PR; you still review and squash-merge manually. If the upgrade is a breaking change for our consumers, change the commit type from `fix(deps)` to `feat(deps)!` at squash time so release-please produces a major/minor bump.\n\n**A PR won't automerge**: check CI status, that the PR is approved, and that it's not labeled `needs-review`, `major-update`, or `breaking-change`.\n\n**A lockfile looks broken**: run `pnpm install` locally, commit, and push to the Renovate branch. Renovate won't overwrite manual commits.\n\n**Rate-limited queue is huge**: drain it by merging open Renovate PRs, or temporarily raise `prConcurrentLimit` in `.github/renovate.json`.\n\n**Bumping the repo's pnpm version**: also update `constraints.pnpm` in `.github/renovate.json` to match.\n\n</details>\n\n<details>\n<summary><b>Weekly checklist</b></summary>\n\n- Check this dashboard for pending approvals.\n- Review any failed automerge PRs.\n- Merge the release-please PR if ready.\n- Note any major updates that need planning.\n\n</details>",
+  "minimumReleaseAge": "14 days",
   "prCreation": "not-pending",
   "vulnerabilityAlerts": {
     "enabled": true,
@@ -29,7 +35,7 @@
       "matchUpdateTypes": ["patch", "minor"],
       "groupName": "devDependencies (non-major)",
       "automerge": true,
-      "minimumReleaseAge": "3 days",
+      "minimumReleaseAge": "14 days",
       "semanticCommitType": "chore",
       "semanticCommitScope": "dev-deps"
     },
@@ -38,7 +44,7 @@
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["major"],
       "automerge": true,
-      "minimumReleaseAge": "7 days",
+      "minimumReleaseAge": "14 days",
       "labels": ["major-update"],
       "semanticCommitType": "chore",
       "semanticCommitScope": "dev-deps",
@@ -61,7 +67,7 @@
       "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
       "matchUpdateTypes": ["patch", "minor"],
       "automerge": true,
-      "minimumReleaseAge": "7 days",
+      "minimumReleaseAge": "14 days",
       "labels": ["dependencies", "automerge"],
       "semanticCommitType": "fix",
       "semanticCommitScope": "deps"
@@ -89,7 +95,7 @@
       "matchDepTypes": ["peerDependencies"],
       "automerge": false,
       "dependencyDashboardApproval": true,
-      "minimumReleaseAge": "7 days",
+      "minimumReleaseAge": "14 days",
       "labels": ["peer-dependencies", "needs-review"],
       "rangeStrategy": "widen",
       "semanticCommitType": "chore",
@@ -100,7 +106,7 @@
       "groupName": "typescript-tooling",
       "matchPackageNames": ["@sanity/pkg-utils", "@sanity/tsdoc"],
       "automerge": true,
-      "minimumReleaseAge": "5 days",
+      "minimumReleaseAge": "14 days",
       "semanticCommitType": "chore",
       "semanticCommitScope": "tooling"
     },
@@ -115,7 +121,7 @@
         "typescript-eslint"
       ],
       "automerge": true,
-      "minimumReleaseAge": "3 days",
+      "minimumReleaseAge": "14 days",
       "semanticCommitType": "chore",
       "semanticCommitScope": "tooling"
     },
@@ -132,9 +138,14 @@
       "matchFileNames": ["apps/**/package.json"],
       "groupName": "app dependencies",
       "automerge": true,
-      "minimumReleaseAge": "2 days",
+      "minimumReleaseAge": "14 days",
       "semanticCommitType": "chore",
       "semanticCommitScope": "apps"
+    },
+    {
+      "description": "Sanity-maintained packages - shorter release age since we have direct visibility into releases and can react quickly to issues",
+      "matchPackageNames": ["@sanity/*", "sanity", "groq", "groq-js"],
+      "minimumReleaseAge": "3 days"
     }
   ]
 }
