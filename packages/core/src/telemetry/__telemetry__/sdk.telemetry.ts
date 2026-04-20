@@ -6,7 +6,6 @@ export const SDKDevSessionStarted = defineEvent<{
   projectId: string
   perspective: string
   authMethod: string
-  origin: string
 }>({
   name: 'SDK Dev Session Started',
   version: 1,

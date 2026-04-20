@@ -41,12 +41,7 @@ export interface TelemetryManager {
   checkConsent(): Promise<boolean>
 
   /** Log a "SDK Dev Session Started" event */
-  logSessionStarted(data: {
-    projectId: string
-    perspective: string
-    authMethod: string
-    origin: string
-  }): void
+  logSessionStarted(data: {projectId: string; perspective: string; authMethod: string}): void
 
   /** Log a "SDK Hook First Used" event (deduplicated per hook name) */
   logHookFirstUsed(hookName: string): void
@@ -56,6 +51,9 @@ export interface TelemetryManager {
 
   /** Log a "SDK Dev Session Ended" event and tear down the store */
   endSession(): void
+
+  /** Tear down the store without logging a session-end event */
+  dispose(): void
 
   /** The set of hook names used during this session */
   readonly hooksUsed: ReadonlySet<string>
@@ -141,7 +139,6 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
         projectId: data.projectId,
         perspective: data.perspective,
         authMethod: data.authMethod,
-        origin: data.origin,
         version: CORE_SDK_VERSION,
       })
       logger.log(SDKDevSessionStarted, {
@@ -176,6 +173,10 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
       store.flush().catch(() => {
         // Best-effort flush on dispose; swallow errors
       })
+      store.end()
+    },
+
+    dispose() {
       store.end()
     },
 

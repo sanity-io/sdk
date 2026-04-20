@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance} from '../store/createSanityInstance'
 import {isDevMode} from './devMode'
-import {getTelemetryManager, initTelemetry} from './initTelemetry'
+import {getTelemetryManager, initTelemetry, trackHookMounted} from './initTelemetry'
 import {createTelemetryManager} from './telemetryManager'
 
 vi.mock('./devMode', () => ({
@@ -16,6 +16,7 @@ vi.mock('./telemetryManager', () => ({
     logHookFirstUsed: vi.fn(),
     logDevError: vi.fn(),
     endSession: vi.fn(),
+    dispose: vi.fn(),
     hooksUsed: new Set(),
   })),
 }))
@@ -151,6 +152,7 @@ describe('initTelemetry', () => {
       logHookFirstUsed: vi.fn(),
       logDevError: vi.fn(),
       endSession: vi.fn(),
+      dispose: vi.fn(),
       hooksUsed: new Set(),
     })
 
@@ -161,7 +163,8 @@ describe('initTelemetry', () => {
     const manager = vi.mocked(createTelemetryManager).mock.results[0].value
 
     expect(manager.logSessionStarted).not.toHaveBeenCalled()
-    expect(manager.endSession).toHaveBeenCalled()
+    expect(manager.dispose).toHaveBeenCalled()
+    expect(manager.endSession).not.toHaveBeenCalled()
     expect(getTelemetryManager(instance)).toBeUndefined()
 
     instance.dispose()
@@ -183,5 +186,40 @@ describe('initTelemetry', () => {
     )
 
     instance.dispose()
+  })
+
+  it('flushes hooks buffered before manager is ready', async () => {
+    vi.mocked(isDevMode).mockReturnValue(true)
+
+    const instance = createSanityInstance()
+
+    trackHookMounted(instance, 'useQuery')
+    trackHookMounted(instance, 'useDocument')
+
+    initTelemetry(instance, 'abc123')
+    await flushPromises()
+
+    const manager = vi.mocked(createTelemetryManager).mock.results[0].value
+    expect(manager.logHookFirstUsed).toHaveBeenCalledWith('useQuery')
+    expect(manager.logHookFirstUsed).toHaveBeenCalledWith('useDocument')
+
+    instance.dispose()
+  })
+
+  it('finds manager through parent-child instance chain', async () => {
+    vi.mocked(isDevMode).mockReturnValue(true)
+
+    const root = createSanityInstance()
+    const child = root.createChild({})
+
+    initTelemetry(root, 'abc123')
+    await flushPromises()
+
+    trackHookMounted(child, 'useUsers')
+
+    const manager = vi.mocked(createTelemetryManager).mock.results[0].value
+    expect(manager.logHookFirstUsed).toHaveBeenCalledWith('useUsers')
+
+    root.dispose()
   })
 })

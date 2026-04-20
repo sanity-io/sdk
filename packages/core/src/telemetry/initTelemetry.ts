@@ -104,7 +104,7 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
       logger.debug('consent check complete', {consented})
       if (!consented || instance.isDisposed()) {
         initInFlight.delete(instance)
-        manager.endSession()
+        manager.dispose()
         return
       }
 
@@ -127,14 +127,12 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
         : config.studio?.auth?.token
           ? 'studio'
           : 'default'
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'node'
 
-      logger.info('telemetry session started', {projectId, perspective, authMethod, origin})
+      logger.info('telemetry session started', {projectId, perspective, authMethod})
       manager.logSessionStarted({
         projectId,
         perspective,
         authMethod,
-        origin,
       })
 
       instance.onDispose(() => {
@@ -167,6 +165,8 @@ export function getTelemetryManager(instance: SanityInstance): TelemetryManager 
  * @internal
  */
 export function trackHookMounted(instance: SanityInstance, hookName: string): void {
+  if (!isDevMode()) return
+
   const manager = findManager(instance)
   if (manager) {
     logger.trace('hook mounted (logged)', {hookName, internal: true})
