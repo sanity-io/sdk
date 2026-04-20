@@ -4,7 +4,6 @@ import {fileURLToPath} from 'node:url'
 import {type BrowserContext, test as setup} from '@playwright/test'
 
 import {getE2EEnv} from '../helpers/getE2EEnv'
-import {dismissCookieConsent} from '../helpers/pageContext'
 
 const __filename = fileURLToPath(import.meta.url)
 const AUTH_FILE = path.join(path.dirname(__filename), '..', '..', '.auth', 'user.json')
@@ -60,8 +59,17 @@ const setDashboardRedirectCookie = async (context: BrowserContext) => {
   // wait until the url is /application/__dev (indicating the redirect cookie was set)
   await page.waitForURL(`https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}/application/__dev`)
 
-  // Accept cookie consent so it's saved in the auth state and never blocks tests
-  await dismissCookieConsent(page)
+  // Accept cookie consent so it's saved in the auth state and never blocks tests.
+  // The Osano dialog appears on the dashboard page — dismissing it here ensures
+  // the consent cookie is included in the saved storageState.
+  try {
+    await page
+      .getByRole('dialog', {name: 'Cookie Consent Banner'})
+      .getByRole('button', {name: 'Accept', exact: true})
+      .click({timeout: 5000})
+  } catch {
+    // Dialog not present — nothing to dismiss
+  }
 
   await page.close()
 }
