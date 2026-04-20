@@ -8,7 +8,9 @@
     "NPM_CONFIG_PROVENANCE",
     "CI",
     "SDK_E2E_*",
-    "RECAPTCHA_E2E_STAGING_KEY"
+    "SANITY_INTERNAL_ENV",
+    "RECAPTCHA_E2E_STAGING_KEY",
+    "VERCEL_AUTOMATION_BYPASS_SECRET"
   ],
   "tasks": {
     "build": {
@@ -64,7 +66,12 @@
     },
     "test:e2e": {
       "cache": false,
-      "env": ["SDK_E2E_*", "NODE_ENV", "RECAPTCHA_E2E_STAGING_KEY"],
+      "env": [
+        "SDK_E2E_*",
+        "SANITY_INTERNAL_ENV",
+        "RECAPTCHA_E2E_STAGING_KEY",
+        "VERCEL_AUTOMATION_BYPASS_SECRET"
+      ],
       "dependsOn": ["@repo/e2e#build"],
       "outputs": ["e2e/test-results/**", "e2e/test-report/**"]
     },

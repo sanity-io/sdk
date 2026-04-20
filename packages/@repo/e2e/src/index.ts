@@ -10,10 +10,9 @@ const SETUP_DIR = path.join(path.dirname(__dirname), 'src', 'setup')
 const TEARDOWN_DIR = path.join(path.dirname(__dirname), 'src', 'teardown')
 const AUTH_FILE = path.join(path.dirname(__dirname), '.auth', 'user.json')
 
-const {CI} = getE2EEnv()
-// Restore for Dashboard when we get secrets
-// const BASE_URL = `https://www.sanity.work/@${SDK_E2E_ORGANIZATION_ID}/application/__dev/`
-const BASE_URL = 'http://localhost:3333/'
+const {CI, SDK_E2E_ORGANIZATION_ID, VERCEL_AUTOMATION_BYPASS_SECRET} = getE2EEnv()
+const BASE_URL = `https://www.sanity.work/@${SDK_E2E_ORGANIZATION_ID}/application/__dev/`
+
 /**
  * @internal
  * Base Playwright configuration
@@ -38,6 +37,12 @@ export const basePlaywrightConfig: PlaywrightTestConfig = {
     navigationTimeout: 15000,
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    extraHTTPHeaders: {
+      // bypass deployment protection on sanity.work
+      'x-vercel-protection-bypass': VERCEL_AUTOMATION_BYPASS_SECRET,
+      // we're running Chromium and Firefox tests in an iframe
+      'x-vercel-set-bypass-cookie': 'samesitenone',
+    },
   },
   /* Increase expect timeout for async operations like mutations and subscriptions */
   expect: {
@@ -99,4 +104,5 @@ export const createPlaywrightConfig = (
 }
 
 // Export test fixtures
-export {expect, test} from './fixtures'
+export {test} from './fixtures'
+export {expect} from '@playwright/test'

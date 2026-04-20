@@ -1,4 +1,4 @@
-import {type Reference, type SanityDocument} from '@sanity/types'
+import {type CreateMutation, type Reference, type SanityDocument} from '@sanity/types'
 import {parse} from 'groq-js'
 import {describe, expect, it} from 'vitest'
 
@@ -885,17 +885,43 @@ describe('processActions', () => {
         expect(doc?._type).toBe('liveArticle')
         expect(doc?._rev).toBe(transactionId)
 
-        // Should use document.create action, not version.create
-        expect(result.outgoingActions).toHaveLength(1)
-        const action = result.outgoingActions[0]
-        expect(action.actionType).toBe('sanity.action.document.create')
-        if ('attributes' in action && 'publishedId' in action) {
-          expect(action.publishedId).toBe('live1')
-          expect(action.attributes._id).toBe('live1')
-          expect(action.attributes._type).toBe('liveArticle')
-        } else {
-          throw new Error('Expected action to have attributes and publishedId')
-        }
+        // Should not use actions
+        expect(result.outgoingActions).toHaveLength(0)
+        expect(result.outgoingMutations).toHaveLength(1)
+        const mutation = result.outgoingMutations[0] as CreateMutation
+        expect(mutation.create._id).toBe('live1')
+        expect(mutation.create._type).toBe('liveArticle')
+      })
+
+      it('should apply initialValue when creating a liveEdit document', () => {
+        const base: DocumentSet = {}
+        const working: DocumentSet = {}
+        const actions: DocumentAction[] = [
+          {
+            documentId: 'live1',
+            type: 'document.create',
+            documentType: 'liveArticle',
+            liveEdit: true,
+            initialValue: {title: 'Initial Title', count: 42},
+          },
+        ]
+
+        const result = processActions({
+          actions,
+          transactionId,
+          base,
+          working,
+          timestamp,
+          grants: defaultGrants,
+        })
+
+        const doc = result.working['live1']
+        expect(doc?.['title']).toBe('Initial Title')
+        expect(doc?.['count']).toBe(42)
+
+        const mutation = result.outgoingMutations[0] as CreateMutation
+        expect(mutation.create['title']).toBe('Initial Title')
+        expect(mutation.create['count']).toBe(42)
       })
 
       it('should throw an error if liveEdit document already exists', () => {
@@ -946,12 +972,15 @@ describe('processActions', () => {
         expect(editedDoc?.['title']).toBe('Updated Title')
         expect(editedDoc?._id).toBe('live1')
 
-        // Should use document.edit action with draftId prefixed (for server validation) but publishedId as the actual doc
-        expect(result.outgoingActions[0]).toMatchObject({
-          actionType: 'sanity.action.document.edit',
-          draftId: 'drafts.live1',
-          publishedId: 'live1',
+        expect(result.outgoingMutations[0]).toEqual({
+          patch: {
+            id: 'live1',
+            diffMatchPatch: {
+              title: '@@ -1,12 +1,11 @@\n-Original\n+Updated\n  Tit\n',
+            },
+          },
         })
+        expect(result.outgoingActions).toHaveLength(0)
       })
 
       it('should throw an error if liveEdit document does not exist', () => {
@@ -998,12 +1027,9 @@ describe('processActions', () => {
 
         expect(result.working['live1']).toBeNull()
 
-        expect(result.outgoingActions).toEqual([
-          {
-            actionType: 'sanity.action.document.delete',
-            publishedId: 'live1',
-          },
-        ])
+        expect(result.outgoingActions).toHaveLength(0)
+        expect(result.outgoingMutations).toHaveLength(1)
+        expect(result.outgoingMutations[0]).toEqual({delete: {id: 'live1'}})
       })
 
       it('should throw an error if liveEdit document does not exist', () => {

@@ -21,7 +21,6 @@ export type SyncTransactionState = Pick<
 
 type ActionMap = {
   create: 'sanity.action.document.version.create'
-  createLiveEdit: 'sanity.action.document.create'
   discard: 'sanity.action.document.version.discard'
   unpublish: 'sanity.action.document.unpublish'
   delete: 'sanity.action.document.delete'
@@ -36,7 +35,6 @@ type OptimisticLock = {
 
 export type HttpAction =
   | {actionType: ActionMap['create']; publishedId: string; attributes: SanityDocumentLike}
-  | {actionType: ActionMap['createLiveEdit']; publishedId: string; attributes: SanityDocumentLike}
   | {actionType: ActionMap['discard']; versionId: string; purge?: boolean}
   | {actionType: ActionMap['unpublish']; draftId: string; publishedId: string}
   | {actionType: ActionMap['delete']; publishedId: string; includeDrafts?: string[]}
@@ -116,9 +114,9 @@ export interface AppliedTransaction extends QueuedTransaction {
   outgoingActions: HttpAction[]
 
   /**
-   * similar to `outgoingActions` but comprised of mutations instead of action.
-   * this left here for debugging purposes but could be used to send mutations
-   * to Content Lake instead of actions.
+   * similar to `outgoingActions` but comprised of mutations instead of actions.
+   * Useful for debugging, and is also used by liveEdit documents to send mutations,
+   * since they can't use the Actions API which is pretty dependent on the draft model.
    */
   outgoingMutations: Mutation[]
 }
@@ -265,6 +263,9 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
   const next = batchAppliedTransactions(rest)
   if (!next) return undefined
   if (next.disableBatching) return editAction
+
+  // Don't batch a liveEdit edit with a non-liveEdit edit — they route to different APIs
+  if (!!action.liveEdit !== !!next.actions[0]?.liveEdit) return editAction
 
   return {
     disableBatching: false,
