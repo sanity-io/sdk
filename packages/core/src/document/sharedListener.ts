@@ -76,9 +76,9 @@ export function createFetchDocument(instance: SanityInstance, source?: DocumentS
       source: source && !isDatasetSource(source) ? source : undefined,
     }).observable.pipe(
       switchMap((client) => {
-        // TODO: remove this once the client is updated to v7 the new type is available in @sanity/mutate/_unstable_store
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const loadDocument = createDocumentLoaderFromClient(client as any)
+        // creates a observable request to the /doc/{documentId} endpoint for a given document id
+        // should work across all kinds of document IDs (drafts.**, version.**., etc.)
+        const loadDocument = createDocumentLoaderFromClient(client)
         return loadDocument(documentId)
       }),
       map((result) => {

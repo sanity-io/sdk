@@ -260,6 +260,27 @@ export function useEditDocument<TData>(
  * }
  *
  * ```
+ *
+ * @example Edit a document in a release
+ * ```tsx
+ * import {useEditDocument} from '@sanity/sdk-react'
+ *
+ * function EditArticleInRelease({documentId}: {documentId: string}) {
+ *   // Use the document's plain ID — not `versions.<releaseName>.<id>`.
+ *   // The document must already exist in the release (added via `createDocument` first).
+ *   const editArticle = useEditDocument({
+ *     documentId,
+ *     documentType: 'article',
+ *     perspective: {releaseName: 'summer-drop'},
+ *   })
+ *
+ *   return (
+ *     <button onClick={() => editArticle(prev => ({...prev, title: 'Updated for release'}))}>
+ *       Edit in Release
+ *     </button>
+ *   )
+ * }
+ * ```
  */
 export function useEditDocument({
   path,

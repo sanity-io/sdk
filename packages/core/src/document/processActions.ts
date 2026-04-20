@@ -1,4 +1,5 @@
 import {diffValue} from '@sanity/diff-patch'
+import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
 import {
   type Mutation,
   type PatchOperations,
@@ -8,7 +9,7 @@ import {
 import {evaluateSync, type ExprNode} from 'groq-js'
 import {isEqual} from 'lodash-es'
 
-import {getDraftId, getPublishedId} from '../utils/ids'
+import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type DocumentAction} from './actions'
 import {type Grant} from './permissions'
 import {type DocumentSet, getId, processMutations} from './processMutations'
@@ -185,29 +186,36 @@ export function processActions({
           continue
         }
 
-        // Standard draft/published logic
-        const draftId = getDraftId(documentId)
-        const publishedId = getPublishedId(documentId)
+        // Standard draft/published/version logic
+        const versionId = isReleasePerspective(action.perspective)
+          ? getVersionId(DocumentId(documentId), action.perspective.releaseName)
+          : undefined
+        const draftId = getDraftId(DocumentId(documentId))
+        const publishedId = getPublishedId(DocumentId(documentId))
 
-        if (working[draftId]) {
+        const alreadyHasVersion = versionId ? working[versionId] : working[draftId]
+
+        if (alreadyHasVersion) {
+          const errorDocType = versionId ? 'release version' : 'draft'
           throw new ActionError({
             documentId,
             transactionId,
-            message: `A draft version of this document already exists. Please use or discard the existing draft before creating a new one.`,
+            message: `A ${errorDocType} of this document already exists. Please use or discard the existing ${errorDocType} before creating a new one.`,
           })
         }
 
-        // Spread the (possibly undefined) published version directly.
+        // Spread the (possibly undefined) draft or published version directly.
+        // (studio uses the draft version as a base if you are in a release perspective)
         const newDocBase = {
-          ...base[publishedId],
+          ...(base[draftId] ?? base[publishedId]),
           _type: action.documentType,
-          _id: draftId,
+          _id: versionId ?? draftId,
           ...action.initialValue,
         }
         const newDocWorking = {
-          ...working[publishedId],
+          ...(working[draftId] ?? working[publishedId]),
           _type: action.documentType,
-          _id: draftId,
+          _id: versionId ?? draftId,
           ...action.initialValue,
         }
         const mutations: Mutation[] = [{create: newDocWorking}]
@@ -225,7 +233,13 @@ export function processActions({
           timestamp,
         })
 
-        if (!checkGrant(grants.create, working[draftId] as SanityDocument)) {
+        if (versionId && !checkGrant(grants.create, working[versionId] as SanityDocument)) {
+          throw new PermissionActionError({
+            documentId,
+            transactionId,
+            message: `You do not have permission to create a release version for document "${documentId}".`,
+          })
+        } else if (!versionId && !checkGrant(grants.create, working[draftId] as SanityDocument)) {
           throw new PermissionActionError({
             documentId,
             transactionId,
@@ -245,8 +259,15 @@ export function processActions({
       case 'document.delete': {
         const documentId = action.documentId
 
+        if (isReleasePerspective(action.perspective)) {
+          throw new ActionError({
+            documentId,
+            transactionId,
+            message: `Cannot delete a version document. You may want to use the "unpublish" or "discard" actions instead.`,
+          })
+        }
+
         if (action.liveEdit) {
-          // For liveEdit documents, delete directly
           if (!working[documentId]) {
             throw new ActionError({
               documentId,
@@ -276,8 +297,8 @@ export function processActions({
         }
 
         // Standard draft/published logic
-        const draftId = getDraftId(documentId)
-        const publishedId = getPublishedId(documentId)
+        const draftId = getDraftId(DocumentId(documentId))
+        const publishedId = getPublishedId(DocumentId(documentId))
 
         if (!working[publishedId]) {
           throw new ActionError({
@@ -327,19 +348,21 @@ export function processActions({
           })
         }
 
-        // Standard draft/published logic
-        const draftId = getDraftId(documentId)
-        const mutations: Mutation[] = [{delete: {id: draftId}}]
+        // draft/published or version logic
+        const versionId = isReleasePerspective(action.perspective)
+          ? getVersionId(DocumentId(documentId), action.perspective.releaseName)
+          : getDraftId(DocumentId(documentId))
+        const mutations: Mutation[] = [{delete: {id: versionId}}]
 
-        if (!working[draftId]) {
+        if (!working[versionId]) {
           throw new ActionError({
             documentId,
             transactionId,
-            message: `There is no draft available to discard for document "${documentId}".`,
+            message: `There is no draft or version available to discard for document "${documentId}".`,
           })
         }
 
-        if (!checkGrant(grants.update, working[draftId])) {
+        if (!checkGrant(grants.update, working[versionId])) {
           throw new PermissionActionError({
             documentId,
             transactionId,
@@ -353,7 +376,7 @@ export function processActions({
         outgoingMutations.push(...mutations)
         outgoingActions.push({
           actionType: 'sanity.action.document.version.discard',
-          versionId: draftId,
+          versionId,
         })
         continue
       }
@@ -362,7 +385,7 @@ export function processActions({
         const documentId = getId(action.documentId)
 
         if (action.liveEdit) {
-          // For liveEdit documents, edit directly without draft logic
+          // Single-document mode (liveEdit or release perspective): edit directly without draft logic
           const userPatches = action.patches?.map((patch) => ({patch: {id: documentId, ...patch}}))
 
           // skip this action if there are no associated patches
@@ -412,15 +435,28 @@ export function processActions({
           continue
         }
 
-        // Standard draft/published logic
-        const draftId = getDraftId(documentId)
-        const publishedId = getPublishedId(documentId)
-        const userPatches = action.patches?.map((patch) => ({patch: {id: draftId, ...patch}}))
+        const versionId = isReleasePerspective(action.perspective)
+          ? getVersionId(DocumentId(documentId), action.perspective.releaseName)
+          : undefined
+        const draftId = getDraftId(DocumentId(documentId))
+        const publishedId = getPublishedId(DocumentId(documentId))
+        const patchDocumentId = isReleasePerspective(action.perspective) ? versionId! : draftId
+        const userPatches = action.patches?.map((patch) => ({
+          patch: {id: patchDocumentId, ...patch},
+        }))
 
         // skip this action if there are no associated patches
         if (!userPatches?.length) continue
 
-        if (
+        if (isReleasePerspective(action.perspective)) {
+          if (!working[versionId!] && !base[versionId!]) {
+            throw new ActionError({
+              documentId,
+              transactionId,
+              message: `This document does not exist in the release. Please create it or add it to the release first.`,
+            })
+          }
+        } else if (
           (!working[draftId] && !working[publishedId]) ||
           (!base[draftId] && !base[publishedId])
         ) {
@@ -432,12 +468,14 @@ export function processActions({
         }
 
         const baseMutations: Mutation[] = []
-        if (!base[draftId] && base[publishedId]) {
+        // don't create a draft from the published version in a release perspective
+        if (!isReleasePerspective(action.perspective) && !base[draftId] && base[publishedId]) {
+          // otherwise make a draft from the published version
           baseMutations.push({create: {...base[publishedId], _id: draftId}})
         }
 
-        // the first if statement should make this never be null or undefined
-        const baseBefore = (base[draftId] ?? base[publishedId]) as SanityDocument
+        // the above statement and guards should make this never be null or undefined
+        const baseBefore = base[patchDocumentId] ?? base[publishedId]
         if (userPatches) {
           baseMutations.push(...userPatches)
         }
@@ -450,11 +488,15 @@ export function processActions({
         })
         // this one will always be defined because a patch mutation will never
         // delete an input document
-        const baseAfter = base[draftId] as SanityDocument
+        const baseAfter = base[patchDocumentId] as SanityDocument
         const patches = diffValue(baseBefore, baseAfter)
 
         const workingMutations: Mutation[] = []
-        if (!working[draftId] && working[publishedId]) {
+        if (
+          !isReleasePerspective(action.perspective) &&
+          !working[draftId] &&
+          working[publishedId]
+        ) {
           const newDraftFromPublished = {...working[publishedId], _id: draftId}
 
           if (!checkGrant(grants.create, newDraftFromPublished)) {
@@ -469,15 +511,15 @@ export function processActions({
         }
 
         // the first if statement should make this never be null or undefined
-        const workingBefore = (working[draftId] ?? working[publishedId]) as SanityDocument
-        if (!checkGrant(grants.update, workingBefore)) {
+        const workingBefore = working[patchDocumentId] ?? working[publishedId]
+        if (!checkGrant(grants.update, workingBefore!)) {
           throw new PermissionActionError({
             documentId,
             transactionId,
             message: `You do not have permission to edit document "${documentId}".`,
           })
         }
-        workingMutations.push(...patches.map((patch) => ({patch: {id: draftId, ...patch}})))
+        workingMutations.push(...patches.map((patch) => ({patch: {id: patchDocumentId, ...patch}})))
 
         working = processMutations({
           documents: working,
@@ -488,14 +530,12 @@ export function processActions({
 
         outgoingMutations.push(...workingMutations)
         outgoingActions.push(
-          ...patches.map(
-            (patch): HttpAction => ({
-              actionType: 'sanity.action.document.edit',
-              draftId,
-              publishedId,
-              patch: patch as PatchOperations,
-            }),
-          ),
+          ...patches.map((patch) => ({
+            actionType: 'sanity.action.document.edit' as const,
+            draftId: patchDocumentId,
+            publishedId,
+            patch: patch as PatchOperations,
+          })),
         )
 
         continue
@@ -504,17 +544,17 @@ export function processActions({
       case 'document.publish': {
         const documentId = getId(action.documentId)
 
-        if (action.liveEdit) {
+        if (action.liveEdit || isReleasePerspective(action.perspective)) {
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Cannot publish liveEdit document "${documentId}". LiveEdit documents do not support drafts or publishing.`,
+            message: `Cannot publish this document. Publishing is not supported for liveEdit or version (release) documents.`,
           })
         }
 
         // Standard draft/published logic
-        const draftId = getDraftId(documentId)
-        const publishedId = getPublishedId(documentId)
+        const draftId = getDraftId(DocumentId(documentId))
+        const publishedId = getPublishedId(DocumentId(documentId))
 
         const workingDraft = working[draftId]
         const baseDraft = base[draftId]
@@ -580,17 +620,17 @@ export function processActions({
       case 'document.unpublish': {
         const documentId = getId(action.documentId)
 
-        if (action.liveEdit) {
+        if (action.liveEdit || isReleasePerspective(action.perspective)) {
           throw new ActionError({
             documentId,
             transactionId,
-            message: `Cannot unpublish liveEdit document "${documentId}". LiveEdit documents do not support drafts or publishing.`,
+            message: `Cannot unpublish this document. Unpublishing is not supported for liveEdit or version (release) documents.`,
           })
         }
 
-        // Standard draft/published logic
-        const draftId = getDraftId(documentId)
-        const publishedId = getPublishedId(documentId)
+        // Standard draft/published or version logic
+        const draftId = getDraftId(DocumentId(documentId))
+        const publishedId = getPublishedId(DocumentId(documentId))
 
         if (!working[publishedId] && !base[publishedId]) {
           throw new ActionError({

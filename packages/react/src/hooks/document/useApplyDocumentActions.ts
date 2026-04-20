@@ -155,6 +155,66 @@ interface UseApplyDocumentActions {
  *   return <button onClick={handleCreateArticle}>Create Article</button>
  * }
  * ```
+ *
+ * @example Create a new document in a release
+ * ```tsx
+ * import {
+ *   createDocument,
+ *   createDocumentHandle,
+ *   useApplyDocumentActions
+ * } from '@sanity/sdk-react'
+ *
+ * function CreateArticleButton() {
+ *   const apply = useApplyDocumentActions()
+ *
+ *   const handleCreateArticle = () => {
+ *     // Use any valid document ID — not the internal `versions.<releaseName>.<id>` format or "drafts.<id>" format.
+ *     // New documents must be explicitly created with `createDocument` to become part of a release.
+ *     const newDocHandle = createDocumentHandle({
+ *       documentId: crypto.randomUUID(), // or the existing document ID you want to make a release version of
+ *       documentType: 'article',
+ *       perspective: {releaseName: 'summer-drop'},
+ *     })
+ *
+ *     apply(
+ *       createDocument(newDocHandle, {
+ *         title: 'New Article',
+ *         author: 'John Doe',
+ *         publishedAt: new Date().toISOString(),
+ *       })
+ *     )
+ *   }
+ *
+ *   return <button onClick={handleCreateArticle}>Create Article</button>
+ * }
+ * ```
+ *
+ * @example Edit an existing document in a release
+ * ```tsx
+ * import {
+ *   editDocument,
+ *   createDocumentHandle,
+ *   useApplyDocumentActions
+ * } from '@sanity/sdk-react'
+ *
+ * function EditArticleInReleaseButton({documentId}: {documentId: string}) {
+ *   const apply = useApplyDocumentActions()
+ *
+ *   const handleEdit = () => {
+ *     // Pass the document's regular ID — not `versions.<releaseName>.<id>`.
+ *     // Documents that already have a version in the release can be edited directly with `editDocument`.
+ *     const docHandle = createDocumentHandle({
+ *       documentId,
+ *       documentType: 'article',
+ *       perspective: {releaseName: 'summer-drop'},
+ *     })
+ *
+ *     apply(editDocument(docHandle, {title: 'Updated for release'}))
+ *   }
+ *
+ *   return <button onClick={handleEdit}>Edit in Release</button>
+ * }
+ * ```
  */
 export const useApplyDocumentActions: UseApplyDocumentActions = () => {
   const instance = useSanityInstance()
