@@ -12,6 +12,7 @@ import {
   useNormalizedSourceOptions,
   type WithSourceNameSupport,
 } from '../helpers/useNormalizedSourceOptions'
+import {trackHookUsage} from '../helpers/useTrackHookUsage'
 import {useDocumentProjection} from '../projection/useDocumentProjection'
 
 /**
@@ -98,6 +99,7 @@ export function useDocumentPreview({
   ...docHandle
 }: useDocumentPreviewOptions): useDocumentPreviewResults {
   const instance = useSanityInstance(docHandle)
+  trackHookUsage(instance, 'useDocumentPreview')
   const normalizedDocHandle = useNormalizedSourceOptions(docHandle)
 
   // Use the projection hook with the fixed preview projection

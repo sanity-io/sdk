@@ -13,6 +13,7 @@ import {
   useNormalizedSourceOptions,
   type WithSourceNameSupport,
 } from '../helpers/useNormalizedSourceOptions'
+import {trackHookUsage} from '../helpers/useTrackHookUsage'
 /**
  * Hook options for useQuery, supporting both direct source and sourceName.
  * @beta
@@ -152,6 +153,7 @@ export function useQuery(options: WithSourceNameSupport<QueryOptions>): {
 } {
   // Implementation returns unknown, overloads define specifics
   const instance = useSanityInstance(options)
+  trackHookUsage(instance, 'useQuery')
 
   // Normalize options: resolve sourceName to source and strip sourceName
   const normalized = useNormalizedSourceOptions(options)
