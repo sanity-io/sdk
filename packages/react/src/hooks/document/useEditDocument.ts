@@ -11,6 +11,7 @@ import {useCallback} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useNormalizedSourceOptions} from '../helpers/useNormalizedSourceOptions'
+import {trackHookUsage} from '../helpers/useTrackHookUsage'
 import {useApplyDocumentActions} from './useApplyDocumentActions'
 
 const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
@@ -265,6 +266,7 @@ export function useEditDocument({
   ...doc
 }: DocumentOptions<string | undefined>): (updater: Updater<unknown>) => Promise<ActionsResult> {
   const instance = useSanityInstance(doc)
+  trackHookUsage(instance, 'useEditDocument')
   const normalizedDoc = useNormalizedSourceOptions(doc)
 
   const apply = useApplyDocumentActions()

@@ -9,6 +9,7 @@ import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 import {useQuery} from '../query/useQuery'
 
 const DEFAULT_BATCH_SIZE = 25
@@ -207,6 +208,7 @@ export function useDocuments<
   TDataset,
   TProjectId
 > {
+  useTrackHookUsage('useDocuments')
   const instance = useSanityInstance(options)
   const [limit, setLimit] = useState(batchSize)
   const documentTypes = useMemo(

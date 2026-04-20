@@ -8,6 +8,7 @@ import {
   useNormalizedSourceOptions,
   type WithSourceNameSupport,
 } from '../helpers/useNormalizedSourceOptions'
+import {trackHookUsage} from '../helpers/useTrackHookUsage'
 
 /**
  * @public
@@ -181,6 +182,7 @@ export function useDocumentProjection<TData extends object>({
   ...docHandle
 }: useDocumentProjectionOptions): useDocumentProjectionResults<TData> {
   const instance = useSanityInstance(docHandle)
+  trackHookUsage(instance, 'useDocumentProjection')
 
   // Normalize projection string to handle template literals with whitespace
   // This ensures that the same projection content produces the same state source
