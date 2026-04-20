@@ -75,7 +75,6 @@ describe('createTelemetryManager', () => {
       projectId: 'abc123',
       perspective: 'published',
       authMethod: 'token',
-      origin: 'http://localhost:3000',
     })
 
     expect(logger.log).toHaveBeenCalledWith(
@@ -85,7 +84,6 @@ describe('createTelemetryManager', () => {
         projectId: 'abc123',
         perspective: 'published',
         authMethod: 'token',
-        origin: 'http://localhost:3000',
       }),
     )
   })
