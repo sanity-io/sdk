@@ -54,5 +54,3 @@ export const test = base.extend<SanityFixtures>({
     await use(getPageContext)
   },
 })
-
-export {expect} from '@playwright/test'
