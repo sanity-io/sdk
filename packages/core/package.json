@@ -59,7 +59,7 @@
   "dependencies": {
     "@sanity/bifur-client": "^0.4.1",
     "@sanity/client": "^7.14.1",
-    "@sanity/comlink": "^3.0.4",
+    "@sanity/comlink": "^3.1.1",
     "@sanity/diff-match-patch": "^3.2.0",
     "@sanity/diff-patch": "^6.0.0",
     "@sanity/id-utils": "^1.0.0",
