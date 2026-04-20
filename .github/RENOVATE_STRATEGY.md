@@ -1,124 +1,113 @@
-# Renovate Dependency Management Strategy
+# Renovate dependency management strategy
 
-## Overview
+This doc explains how Renovate is configured for this repo and how we're expected to interact with it.
 
-This document explains our Renovate configuration and how it helps manage dependencies in our public SDK.
+For Renovate's own docs, see [Dependency Dashboard](https://docs.renovatebot.com/key-concepts/dashboard/) and [Upgrade best practices](https://docs.renovatebot.com/upgrade-best-practices/).
 
-## Key Principles
+## Key principles
 
-1. **Automerge by default** - CI acts as our safety net
-2. **Keep Option A** - Production dependency updates trigger patch releases via `fix(deps):` commits
-3. **Manual review only for high-risk changes** - Major updates, peer dependencies, TypeScript majors
-4. **Auto-approval workflow** - GitHub Action automatically approves safe Renovate PRs to satisfy branch protection
+1. **Automerge by default**, with CI as the safety net.
+2. **Production dep updates trigger a patch release** via `fix(deps)` commits, aligning with release-please.
+3. **Manual review for high-risk changes**: production majors, peer deps, TypeScript majors.
+4. **14-day release age for external deps, 3 days for Sanity-maintained**, to balance supply-chain safety against keeping current.
 
-## Branch Protection & Auto-Approval
+## Where to look
 
-Our branch protection rules require **at least 1 approval** before merging. To enable automerge for Renovate PRs, we use a GitHub Action (`.github/workflows/renovate-auto-approve.yml`) that:
+- Config: [`.github/renovate.json`](renovate.json)
+- Running state: [Dependency Dashboard issue](../../issues/9)
+- Auto-approve workflow: [`.github/workflows/renovate-auto-approve.yml`](workflows/renovate-auto-approve.yml)
 
-1. Waits for all CI checks to pass (build, test, lint, typecheck)
-2. Skips auto-approval for high-risk PRs (labeled `needs-review`, `major-update`, or `breaking-change`)
-3. Automatically approves safe PRs (devDependencies, production patches/minors)
-4. Allows Renovate's automerge to proceed
+## Reading the dashboard
 
-This ensures:
+The dashboard groups pending work into sections. Only a couple of them need regular human input.
 
-- ✅ Branch protection remains enforced (CI must pass)
-- ✅ Low-risk updates automerge without human intervention
-- ✅ High-risk updates still require manual review and approval
+### Pending Approval (needs you)
 
-## What Automerges (No Human Intervention Needed)
+Renovate won't create these PRs until you tick a checkbox. Matches rules with `dependencyDashboardApproval: true`: production major deps, peer deps, and TypeScript majors. Ticking the box only opens the PR; you can still review, reject, or ask for changes.
 
-### ✅ DevDependencies
+### Awaiting Schedule (automatic)
 
-- **Non-major** (patch/minor): Automerge after 3 days
-- **Major**: Automerge after 7 days (except TypeScript)
-- **Rationale**: Internal tooling changes don't affect published SDK
+Renovate will create these PRs at its next scheduled run (currently `before 5am` UTC daily) or once `minimumReleaseAge` has elapsed. No action required.
 
-### ✅ Production Dependencies (patch/minor)
+### Rate-Limited (automatic, but capped)
 
-- **Automerge after**: 7 days stability period
-- **Triggers**: `fix(deps):` commit → Release Please creates patch release
-- **Rationale**: Bug fixes and backwards-compatible improvements should reach users quickly
+We set `prConcurrentLimit: 10`. Once 10 Renovate PRs are open, additional updates queue here. If this section grows long, drain it by merging or reviewing open Renovate PRs.
 
-### ✅ Tooling Groups
+### Pending Status Checks (automatic)
 
-- **ESLint ecosystem**: Automerge after 3 days
-- **TypeScript tooling** (@sanity/pkg-utils, @sanity/tsdoc): Automerge after 5 days
-- **App dependencies**: Automerge after 2 days
+Renovate has pushed a branch and CI is running. Once CI reports a non-pending status, the PR opens. We use `prCreation: "not-pending"` so open PRs always have a CI verdict attached.
 
-## What Requires Manual Approval
+### PR Closed (Blocked) (needs you)
 
-### ⚠️ Production Dependencies (major)
+A previous PR was closed without merging, and Renovate won't try again unless you tick the box. Only re-tick if you actually want to retry the upgrade.
 
-- **Why**: Likely contains breaking changes
-- **Process**: Requires approval in Dependency Dashboard
-- **Commit type**: `chore(deps):` (doesn't auto-trigger release)
-- **Action**: Review changelog, test thoroughly, decide if SDK needs major/minor bump
+### Detected Dependencies (reference only)
 
-### ⚠️ PeerDependencies
+Inventory of everything Renovate tracks. No action required.
 
-- **Why**: Affects consumer compatibility (e.g., React version requirements)
-- **Process**: Requires approval in Dependency Dashboard
-- **Commit type**: `chore(peer-deps):`
-- **Action**: Test with minimum and maximum peer dep versions
+### Repository problems / Errored (investigate)
 
-### ⚠️ TypeScript (major)
+Neither usually appears. If one does, check the Renovate run logs linked from the top of the dashboard issue.
 
-- **Why**: Breaking changes in type system can affect consumers
-- **Process**: Requires approval in Dependency Dashboard
-- **Commit type**: `chore(tooling):`
-- **Action**: Check if types in public API are affected
+## Automerge policy
 
-### ⚠️ High Severity Security Vulnerabilities
+| Dependency type                                                           | Update type    | Auto/Manual | Release age | Commit type        | Triggers release?                                                   |
+| ------------------------------------------------------------------------- | -------------- | ----------- | ----------- | ------------------ | ------------------------------------------------------------------- |
+| devDependencies                                                           | patch/minor    | Auto        | 14 days     | `chore(dev-deps)`  | No                                                                  |
+| devDependencies (except TypeScript)                                       | major          | Auto        | 14 days     | `chore(dev-deps)`  | No                                                                  |
+| TypeScript                                                                | major          | Manual      | 14 days     | `chore(tooling)`   | No                                                                  |
+| Production deps (in `packages/core`, `packages/react`)                    | patch/minor    | Auto        | 14 days     | `fix(deps)`        | **Yes, patch**                                                      |
+| Production deps (in `packages/core`, `packages/react`)                    | major          | Manual      | 14 days     | `fix(deps)`        | **Yes, patch** (override to `feat!` at squash for breaking changes) |
+| Peer deps                                                                 | any            | Manual      | 14 days     | `chore(peer-deps)` | No                                                                  |
+| App deps (`apps/**`)                                                      | any            | Auto        | 14 days     | `chore(apps)`      | No                                                                  |
+| **Sanity-maintained packages** (`@sanity/*`, `sanity`, `groq`, `groq-js`) | inherits above | inherits    | **3 days**  | inherits           | inherits                                                            |
+| High-severity security (any)                                              | any            | Manual      | 0 days      | varies             | varies                                                              |
 
-- **Why**: Need to assess impact and urgency
-- **Process**: PR created immediately (no stability delay)
-- **Action**: Review, test, merge ASAP
+### Why 14 days for external packages
 
-## Expected Weekly Flow
+Renovate recommends a 14-day [`minimumReleaseAge`](https://docs.renovatebot.com/configuration-options/#minimumreleaseage) for any dep you automerge from third parties. The delay gives npm and upstream maintainers time to pull malicious or broken releases before they reach our CI. Supply-chain attacks in the JS ecosystem typically get spotted within that window.
 
-### Monday - Thursday
+For packages Sanity publishes, we have direct visibility into the release process, so 3 days is enough to catch obvious mistakes without slowing our own work.
 
-- Renovate creates PRs in the early morning (before 5am)
-- PRs wait for stability period (2-7 days depending on type)
-- CI runs on all PRs (build, test, lint, typecheck)
-- PRs automerge when stability period passes + CI green
+## Commit messages and releases
 
-### Friday
+Our rules align Renovate's commit types with [release-please](../release-please-config.json):
 
-- Most PRs from early week have automerged
-- Review any major update approvals in [Dependency Dashboard](../../issues)
-- Check for any failed automerges
+- `fix(deps)`: triggers a patch release. Used for any production dep update in `packages/core` or `packages/react`.
+- `chore(*)`: hidden from the changelog. Used for dev deps, tooling, peer deps, apps.
 
-### Release Cadence
+If a production major dep actually breaks our public API, override the commit type at squash time from `fix(deps)` to `feat(deps)!` or add a `BREAKING CHANGE:` footer so release-please produces a minor/major release.
 
-- **Ideal**: 1-2 releases per week (as dependency updates automerge)
-- **Process**: Review and merge Release Please PR when ready
-- **Emergency**: Security fixes can be merged immediately
+## Auto-approval workflow
 
-## Monitoring & Maintenance
+Our branch protection requires at least 1 approval before merging. The auto-approve workflow (`.github/workflows/renovate-auto-approve.yml`):
 
-### Dependency Dashboard
+1. Waits for CI checks (build, test, lint, typecheck).
+2. Skips auto-approval for PRs labeled `needs-review`, `major-update`, or `breaking-change`.
+3. Auto-approves the rest so Renovate's automerge can proceed.
 
-Check `https://github.com/sanity-io/sdk/issues` for the **Dependency Dashboard** issue created by Renovate.
+**Known gap**: the workflow uses `GITHUB_TOKEN`, whose approvals don't count toward CODEOWNERS or team-approval rules. Tracked in [SDK-1272](https://linear.app/sanity/issue/SDK-1272), where we plan to switch to `squiggler-app` so approvals come from a trusted team-identity bot.
 
-It shows:
+## Expected weekly flow
 
-- ✅ **Open PRs**: Currently pending updates
-- ⏳ **Rate Limited**: Updates waiting for stability period
-- 🔒 **Pending Approval**: Major updates needing your review
-- ⚠️ **Errors**: Failed PRs needing investigation
+**Monday-Thursday**: Renovate opens PRs in the early morning (before 5am UTC). CI runs. PRs automerge as release age elapses and CI goes green.
 
-### Weekly Checklist
+**Friday**: Most PRs from early in the week have merged. Review pending approvals on the Dependency Dashboard. Check for failed automerges.
 
-- [ ] Check Dependency Dashboard for pending approvals
-- [ ] Review any failed automerge PRs
-- [ ] Merge Release Please PR if ready
-- [ ] Check if any major updates need planning
+**Release cadence**: 1-2 releases per week via release-please, driven by `fix(deps)` commits merging in.
 
-### Pre-Release Checklist
+## Monitoring & maintenance
 
-Before merging a Release Please PR:
+### Weekly checklist
+
+- Check the [Dependency Dashboard](../../issues/9) for pending approvals.
+- Review any failed automerge PRs.
+- Merge the release-please PR if ready.
+- Note any major updates that need planning.
+
+### Pre-release checklist
+
+Before merging a release-please PR:
 
 ```bash
 # Review dependency changes since last release
@@ -137,56 +126,41 @@ pnpm run dev:kitchensink
 pnpm run build:bundle
 ```
 
-## Configuration Summary
-
-| Dependency Type  | Update Type | Auto/Manual | Stability Days | Commit Type        | Triggers Release? |
-| ---------------- | ----------- | ----------- | -------------- | ------------------ | ----------------- |
-| devDependencies  | patch/minor | ✅ Auto     | 3 days         | `chore(dev-deps)`  | No                |
-| devDependencies  | major       | ✅ Auto     | 7 days         | `chore(dev-deps)`  | No                |
-| TypeScript       | major       | ⚠️ Manual   | 14 days        | `chore(tooling)`   | No                |
-| Production deps  | patch/minor | ✅ Auto     | 7 days         | `fix(deps)`        | **Yes - Patch**   |
-| Production deps  | major       | ⚠️ Manual   | 14 days        | `chore(deps)`      | No                |
-| peerDependencies | any         | ⚠️ Manual   | 7 days         | `chore(peer-deps)` | No                |
-| Security (high)  | any         | ⚠️ Manual   | 0 days         | depends            | varies            |
-
 ## Troubleshooting
 
-### PR Won't Automerge
+### A Renovate PR's lockfile looks broken
 
-1. Check CI status - all checks must pass
-2. Check stability period - may still be waiting (see labels for `minimumReleaseAge`)
-3. Check if PR has been approved - branch protection requires 1 approval
-   - Low-risk PRs should auto-approve via `.github/workflows/renovate-auto-approve.yml`
-   - High-risk PRs (labeled `needs-review`, `major-update`) require manual approval
-4. Check if it's marked as requiring manual approval (major/peer deps)
-5. Check Renovate automerge is enabled for that PR type in `renovate.json`
+Our config uses `postUpdateOptions: ["pnpmDedupe"]` and pins `constraints.pnpm` to match the repo's `packageManager` field, which should prevent most lockfile issues. If one slips through, run `pnpm install` locally, commit the result, and push to the Renovate branch. Renovate won't overwrite manual commits.
 
-### Too Many Releases
+### A PR won't automerge
 
-If you're getting more releases than desired, consider:
+1. Check CI status: all checks must pass.
+2. Check the release-age label: might still be waiting.
+3. Check the PR has been approved: branch protection requires 1 approval.
+4. Check it's not labeled `needs-review`, `major-update`, or `breaking-change`.
+5. Check `renovate.json` confirms automerge is enabled for that PR type.
 
-- Grouping more dependencies together
-- Changing non-critical production deps to `chore:` commits
+### I want to retry a closed Renovate PR
 
-### Not Enough Releases
+Find it in "PR Closed (Blocked)" on the dashboard and tick the box.
 
-If updates are accumulating without releases:
+### The rate-limited queue is huge
 
-- Check if automerge is working (PRs should merge automatically)
-- Check if Release Please PR is open and waiting for merge
-- Consider reducing stability days for faster merges
+Either merge/close open Renovate PRs to drain the queue, or temporarily bump `prConcurrentLimit` in `renovate.json` and revert once drained.
 
-## Making Changes
+### I'm bumping the repo's pnpm version
 
-To adjust this strategy:
+When `packageManager` in `package.json` changes, update `constraints.pnpm` in `.github/renovate.json` to match. Otherwise Renovate's lockfile output will drift from local and CI.
 
-1. Edit `.github/renovate.json`
-2. Test changes by running Renovate in dry-run mode
-3. Monitor Dependency Dashboard for a week after changes
-4. Adjust based on actual PR volume and team capacity
+## Making changes
 
-## Questions?
+1. Edit `.github/renovate.json` (the `$schema` key provides editor validation).
+2. Open a PR and monitor the Dependency Dashboard over the next week to confirm behavior matches expectations.
+3. Adjust based on actual PR volume and team capacity.
 
-- **"Why 7 days for production deps?"** - Catches bugs reported by early adopters before we ship to our users
-- **"Why automerge devDependencies major?"** - Internal tooling breaking changes are caught by CI
-- **"Why require approval for peer deps?"** - Changing React version requirements affects all consumers
+## Related docs
+
+- [Dependency Dashboard](https://docs.renovatebot.com/key-concepts/dashboard/)
+- [Upgrade best practices](https://docs.renovatebot.com/upgrade-best-practices/)
+- [Noise reduction](https://docs.renovatebot.com/noise-reduction/)
+- [Configuration options](https://docs.renovatebot.com/configuration-options/)
