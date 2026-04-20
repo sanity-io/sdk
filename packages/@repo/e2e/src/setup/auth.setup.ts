@@ -59,6 +59,18 @@ const setDashboardRedirectCookie = async (context: BrowserContext) => {
   // wait until the url is /application/__dev (indicating the redirect cookie was set)
   await page.waitForURL(`https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}/application/__dev`)
 
+  // Accept cookie consent so it's saved in the auth state and never blocks tests.
+  // The Osano dialog appears on the dashboard page — dismissing it here ensures
+  // the consent cookie is included in the saved storageState.
+  try {
+    await page
+      .getByRole('dialog', {name: 'Cookie Consent Banner'})
+      .getByRole('button', {name: 'Accept', exact: true})
+      .click({timeout: 5000})
+  } catch {
+    // Dialog not present — nothing to dismiss
+  }
+
   await page.close()
 }
 
