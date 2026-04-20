@@ -1,5 +1,16 @@
 import {type FrameLocator, type Page} from '@playwright/test'
 
+export async function dismissCookieConsent(page: Page): Promise<void> {
+  try {
+    const acceptButton = page
+      .getByRole('dialog', {name: 'Cookie Consent Banner'})
+      .getByRole('button', {name: 'Accept', exact: true})
+    await acceptButton.click({timeout: 3000})
+  } catch {
+    // Dialog not present — nothing to dismiss
+  }
+}
+
 /**
  * Unified interface for detecting elements in pages whether in iframe or not.
  * Methods delegate to either Page or FrameLocator depending on context,
@@ -43,6 +54,10 @@ export async function createPageContext(page: Page, projectName: string): Promis
     // Dashboard context - needs to be up-to-date with how this is implemented in the dashboard
     const iframe = page.getByTestId('app-frame')
     await iframe.waitFor({state: 'visible'})
+
+    // Osano cookie consent lives on the outer page and overlays the iframe —
+    // dismiss it before returning so clicks in the frame aren't intercepted.
+    await dismissCookieConsent(page)
 
     const frame = iframe.contentFrame()
     if (!frame) {
