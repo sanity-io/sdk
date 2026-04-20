@@ -1,8 +1,10 @@
 import {
   type BaseActionOptions,
+  type BaseMutationOptions,
   type FilteredResponseQueryOptions,
   type ListenEvent,
   type MultipleActionResult,
+  type MultipleMutationResult,
   type MutationEvent,
   type RawQueryResponse,
   type ResponseQueryOptions,
@@ -469,6 +471,52 @@ it('batches edit transaction into one outgoing transaction', async () => {
   unsubscribe()
 })
 
+it('submits liveEdit document edits through observable.mutate', async () => {
+  const liveDoc = createDocumentHandle({
+    documentId: 'live-edit-test-doc',
+    documentType: 'article',
+    liveEdit: true,
+  })
+  const state = getDocumentState(instance, liveDoc)
+  const unsubscribe = state.subscribe()
+
+  await firstValueFrom(state.observable.pipe(first((doc) => doc !== undefined)))
+  expect(state.getCurrent()).toMatchObject({
+    _id: 'live-edit-test-doc',
+    title: 'live initial',
+  })
+
+  const callCountBefore = mutateSubmission.mock.calls.length
+
+  const result = await applyDocumentActions(instance, {
+    actions: [editDocument(liveDoc, {set: {title: 'patched via mutate'}})],
+    source,
+  })
+  await result.submitted()
+
+  expect(mutateSubmission.mock.calls.length).toBe(callCountBefore + 1)
+  const [mutationList, mutateOptions] = mutateSubmission.mock.calls[callCountBefore]!
+  expect(mutateOptions).toMatchObject({
+    transactionId: result.transactionId,
+    visibility: 'async',
+    returnDocuments: false,
+    returnFirst: false,
+    tag: 'document.mutate',
+    skipCrossDatasetReferenceValidation: true,
+  })
+  expect(mutationList.length).toBeGreaterThan(0)
+  expect(
+    mutationList.every(
+      (m) => 'patch' in m && (m as {patch: {id: string}}).patch.id === liveDoc.documentId,
+    ),
+  ).toBe(true)
+
+  expect(state.getCurrent()?.title).toBe('patched via mutate')
+  expect(client.action).not.toHaveBeenCalled()
+
+  unsubscribe()
+})
+
 it('provides the consistency status via `getDocumentSyncStatus`', async () => {
   const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
 
@@ -859,7 +907,21 @@ vi.mock('./documentConstants.ts', async (importOriginal) => {
 
 let client: SanityClient
 
+/** Mock for `client.observable.mutate` (liveEdit submission path); implementation reset in `beforeEach`. */
+const mutateSubmission = vi.fn(
+  async (
+    _mutations: Mutation[],
+    _options?: BaseMutationOptions,
+  ): Promise<MultipleMutationResult> => ({
+    transactionId: '',
+    documentIds: [],
+    results: [],
+  }),
+)
+
 beforeEach(() => {
+  mutateSubmission.mockReset()
+
   const client$ = (getClientState as () => StateSource<SanityClient>)()
     .observable as ReplaySubject<SanityClient>
   const sharedListener = (
@@ -878,6 +940,122 @@ beforeEach(() => {
       _type: 'book',
       title: 'existing doc',
     },
+    'live-edit-test-doc': {
+      _id: 'live-edit-test-doc',
+      _type: 'article',
+      _createdAt: '2025-02-06T06:43:46.236Z',
+      _updatedAt: '2025-02-06T06:43:46.236Z',
+      _rev: 'rev-live-initial',
+      title: 'live initial',
+    },
+  }
+
+  const emitDatasetChangeEvents = (
+    prior: DocumentSet,
+    next: DocumentSet,
+    transactionId: string,
+    timestamp: string,
+  ) => {
+    const existingIds = new Set(
+      Object.entries(prior)
+        .filter(([, value]) => !!value)
+        .map(([key]) => key),
+    )
+    const resultingIds = new Set(
+      Object.entries(next)
+        .filter(([, value]) => !!value)
+        .map(([key]) => key),
+    )
+    const allKeys = new Set([...existingIds, ...resultingIds])
+
+    const {appeared, disappeared, updated} = Array.from(allKeys).reduce<{
+      updated: string[]
+      appeared: string[]
+      disappeared: string[]
+    }>(
+      (acc, id) => {
+        if (existingIds.has(id) && resultingIds.has(id)) {
+          acc.updated.push(id)
+        } else if (!existingIds.has(id) && resultingIds.has(id)) {
+          acc.appeared.push(id)
+        } else if (!resultingIds.has(id) && existingIds.has(id)) {
+          acc.disappeared.push(id)
+        }
+        return acc
+      },
+      {updated: [], appeared: [], disappeared: []},
+    )
+
+    const transactionTotalEvents = appeared.length + disappeared.length + updated.length
+    let transactionCurrentEvent = 0
+
+    const mutationEvents: MutationEvent[] = []
+
+    for (const id of appeared) {
+      transactionCurrentEvent++
+      const nextDoc = next[id]!
+      mutationEvents.push({
+        type: 'mutation',
+        documentId: id,
+        eventId: `${transactionId}#${id}`,
+        identity: 'example-user',
+        mutations: [{create: nextDoc}],
+        timestamp,
+        transactionId,
+        transactionCurrentEvent,
+        transactionTotalEvents,
+        transition: 'appear',
+        visibility: 'query',
+        resultRev: transactionId,
+      })
+    }
+
+    for (const id of updated) {
+      transactionCurrentEvent++
+      const prevDoc = prior[id]!
+      const nextDoc = next[id]!
+
+      mutationEvents.push({
+        type: 'mutation',
+        documentId: id,
+        eventId: `${transactionId}#${id}`,
+        identity: 'example-user',
+        mutations: diffValue(prevDoc, nextDoc).map((patch): Mutation => ({patch: {...patch, id}})),
+        timestamp,
+        transactionCurrentEvent,
+        transactionTotalEvents,
+        transactionId,
+        transition: 'update',
+        visibility: 'query',
+        previousRev: prevDoc._rev,
+        resultRev: transactionId,
+      })
+    }
+
+    for (const id of disappeared) {
+      transactionCurrentEvent++
+      const prevDoc = prior[id]!
+      mutationEvents.push({
+        type: 'mutation',
+        documentId: id,
+        eventId: `${transactionId}#${id}`,
+        identity: 'example-user',
+        mutations: [{delete: {id}}],
+        timestamp,
+        transactionId,
+        transactionCurrentEvent,
+        transactionTotalEvents,
+        transition: 'disappear',
+        visibility: 'query',
+        previousRev: prevDoc._rev,
+      })
+    }
+
+    documents = next
+
+    for (const mutationEvent of mutationEvents) {
+      sharedListener.events.next(mutationEvent)
+    }
   }
 
   vi.mocked(createFetchDocument).mockReturnValue(
@@ -887,6 +1065,33 @@ beforeEach(() => {
         delay(0),
       ),
     ),
+  )
+
+  mutateSubmission.mockImplementation(
+    async (
+      mutations: Mutation[],
+      options: BaseMutationOptions = {},
+    ): Promise<MultipleMutationResult> => {
+      const transactionId = options.transactionId ?? crypto.randomUUID()
+      const timestamp = new Date().toISOString()
+      const prior = {...documents}
+      let next = {...documents}
+      next = processMutations({documents: next, mutations, transactionId, timestamp})
+
+      if (!options.dryRun) {
+        emitDatasetChangeEvents(prior, next, transactionId, timestamp)
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      return {
+        transactionId,
+        documentIds: Object.entries(next)
+          .filter(([, v]) => !!v)
+          .map(([k]) => k),
+        results: [],
+      }
+    },
   )
 
   const isNonNullable = <T>(t: T): t is NonNullable<T> => !!t
@@ -1061,114 +1266,15 @@ beforeEach(() => {
             continue
           }
           default: {
-            throw new Error(`Unsupported action for mock backend: ${i.actionType}`)
+            throw new Error(
+              `Unsupported action for mock backend: ${(i as {actionType: string}).actionType}`,
+            )
           }
         }
       }
 
       if (!dryRun) {
-        const existingIds = new Set(
-          Object.entries(documents)
-            .filter(([, value]) => !!value)
-            .map(([key]) => key),
-        )
-        const resultingIds = new Set(
-          Object.entries(next)
-            .filter(([, value]) => !!value)
-            .map(([key]) => key),
-        )
-        const allKeys = new Set([...existingIds, ...resultingIds])
-
-        const {appeared, disappeared, updated} = Array.from(allKeys).reduce<{
-          updated: string[]
-          appeared: string[]
-          disappeared: string[]
-        }>(
-          (acc, id) => {
-            if (existingIds.has(id) && resultingIds.has(id)) {
-              acc.updated.push(id)
-            } else if (!existingIds.has(id) && resultingIds.has(id)) {
-              acc.appeared.push(id)
-            } else if (!resultingIds.has(id) && existingIds.has(id)) {
-              acc.disappeared.push(id)
-            }
-            return acc
-          },
-          {updated: [], appeared: [], disappeared: []},
-        )
-
-        const transactionTotalEvents = appeared.length + disappeared.length + updated.length
-        let transactionCurrentEvent = 0
-
-        const mutationEvents: MutationEvent[] = []
-
-        for (const id of appeared) {
-          transactionCurrentEvent++ // index seems to start at 1
-          const nextDoc = next[id]!
-          mutationEvents.push({
-            type: 'mutation',
-            documentId: id,
-            eventId: `${transactionId}#${id}`,
-            identity: 'example-user',
-            mutations: [{create: nextDoc}],
-            timestamp,
-            transactionId,
-            transactionCurrentEvent,
-            transactionTotalEvents,
-            transition: 'appear',
-            visibility: 'query',
-            resultRev: transactionId,
-          })
-        }
-
-        for (const id of updated) {
-          transactionCurrentEvent++
-          const prevDoc = documents[id]!
-          const nextDoc = next[id]!
-
-          mutationEvents.push({
-            type: 'mutation',
-            documentId: id,
-            eventId: `${transactionId}#${id}`,
-            identity: 'example-user',
-            mutations: diffValue(prevDoc, nextDoc).map(
-              (patch): Mutation => ({patch: {...patch, id}}),
-            ),
-            timestamp,
-            transactionCurrentEvent,
-            transactionTotalEvents,
-            transactionId,
-            transition: 'update',
-            visibility: 'query',
-            previousRev: prevDoc._rev,
-            resultRev: transactionId,
-          })
-        }
-
-        for (const id of disappeared) {
-          transactionCurrentEvent++
-          const prevDoc = documents[id]!
-          mutationEvents.push({
-            type: 'mutation',
-            documentId: id,
-            eventId: `${transactionId}#${id}`,
-            identity: 'example-user',
-            mutations: [{delete: {id}}],
-            timestamp,
-            transactionId,
-            transactionCurrentEvent,
-            transactionTotalEvents,
-            transition: 'disappear',
-            visibility: 'query',
-            previousRev: prevDoc._rev,
-          })
-        }
-
-        documents = next
-
-        for (const mutationEvent of mutationEvents) {
-          sharedListener.events.next(mutationEvent)
-        }
+        emitDatasetChangeEvents(documents, next, transactionId, timestamp)
       }
 
       // add a tick for realism
@@ -1195,6 +1301,7 @@ beforeEach(() => {
       action: (...args: Parameters<typeof action>) => from(action(...args)),
       fetch: (...args: Parameters<typeof fetch>) => from(fetch(...args)),
       request: (...args: Parameters<typeof request>) => from(request(...args)),
+      mutate: (...args: Parameters<typeof mutateSubmission>) => from(mutateSubmission(...args)),
     },
   } as SanityClient
   client$.next(client)

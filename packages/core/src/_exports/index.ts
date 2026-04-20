@@ -141,6 +141,7 @@ export {
   type DocumentEditedEvent,
   type DocumentEvent,
   type DocumentPublishedEvent,
+  type DocumentTransactionSubmissionResult,
   type DocumentUnpublishedEvent,
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,

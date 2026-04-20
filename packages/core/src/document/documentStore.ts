@@ -1,4 +1,4 @@
-import {type Action} from '@sanity/client'
+import {type Action, type Mutation} from '@sanity/client'
 import {getPublishedId} from '@sanity/client/csm'
 import {jsonMatch} from '@sanity/json-match'
 import {type SanityDocument} from 'groq'
@@ -45,7 +45,11 @@ import {defineStore, type StoreContext} from '../store/defineStore'
 import {getDraftId} from '../utils/ids'
 import {type DocumentAction} from './actions'
 import {API_VERSION, INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
-import {type DocumentEvent, getDocumentEvents} from './events'
+import {
+  type DocumentEvent,
+  type DocumentTransactionSubmissionResult,
+  getDocumentEvents,
+} from './events'
 import {listen, OutOfSyncError} from './listen'
 import {type JsonMatch} from './patchOperations'
 import {
@@ -399,20 +403,43 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
       ),
       concatMap(([outgoing, client]) => {
         if (!outgoing) return EMPTY
+
+        const revertOnError = catchError((error: unknown) => {
+          state.set('revertOutgoingTransaction', revertOutgoingTransaction)
+          const message = error instanceof Error ? error.message : 'Request failed'
+          events.next({type: 'reverted', message, outgoing, error})
+          return EMPTY
+        })
+
+        const toResult = map((result: unknown) => ({
+          result: result as DocumentTransactionSubmissionResult,
+          outgoing,
+        }))
+
+        // Any liveEdit action in the batch routes to the mutations API. For mixed batches
+        // non-liveEdit operations (e.g. publish) lose atomicity, but that is acceptable
+        // given how rare mixed batches are.
+        if (outgoing.actions.some((action) => action.liveEdit)) {
+          return client.observable
+            .mutate(outgoing.outgoingMutations as Mutation[], {
+              transactionId: outgoing.transactionId,
+              visibility: 'async',
+              returnDocuments: false,
+              returnFirst: false,
+              tag: 'document.mutate',
+              skipCrossDatasetReferenceValidation: true,
+            })
+            .pipe(revertOnError, toResult)
+        }
+
+        // Pure non-liveEdit transactions use the actions API.
         return client.observable
           .action(outgoing.outgoingActions as Action[], {
             transactionId: outgoing.transactionId,
             skipCrossDatasetReferenceValidation: true,
             tag: 'document.action',
           })
-          .pipe(
-            catchError((error) => {
-              state.set('revertOutgoingTransaction', revertOutgoingTransaction)
-              events.next({type: 'reverted', message: error.message, outgoing, error})
-              return EMPTY
-            }),
-            map((result) => ({result, outgoing})),
-          )
+          .pipe(revertOnError, toResult)
       }),
       tap(({outgoing, result}) => {
         state.set('cleanupOutgoingTransaction', cleanupOutgoingTransaction)

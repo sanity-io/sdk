@@ -350,6 +350,67 @@ describe('batchAppliedTransactions', () => {
     // The actions array should be the same as the input's.
     expect(result?.actions).toEqual(appliedTx.actions)
   })
+
+  it('does not batch a liveEdit edit with a non-liveEdit edit', () => {
+    const nonLiveEditTx: AppliedTransaction = {
+      transactionId: 'txn-nonlive',
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc1',
+          documentType: 'article',
+          patches: [{set: {foo: 'a'}}],
+        },
+      ],
+      disableBatching: false,
+      outgoingActions: [
+        {
+          actionType: 'sanity.action.document.edit',
+          draftId: getDraftId('doc1'),
+          publishedId: getPublishedId('doc1'),
+          patch: {set: {foo: 'a'}},
+        },
+      ],
+      outgoingMutations: [],
+      base: {[getDraftId('doc1')]: {...exampleDoc, _id: getDraftId('doc1'), _rev: 'rev1'}},
+      working: {[getDraftId('doc1')]: {...exampleDoc, _id: getDraftId('doc1'), _rev: 'rev2'}},
+      previous: {[getDraftId('doc1')]: {...exampleDoc, _id: getDraftId('doc1'), _rev: 'rev1'}},
+      previousRevs: {[getDraftId('doc1')]: 'rev1'},
+      timestamp: '2025-02-06T00:00:00.000Z',
+    }
+    const liveEditTx: AppliedTransaction = {
+      transactionId: 'txn-live',
+      actions: [
+        {
+          type: 'document.edit',
+          documentId: 'doc2',
+          documentType: 'liveArticle',
+          liveEdit: true,
+          patches: [{set: {bar: 'b'}}],
+        },
+      ],
+      disableBatching: false,
+      outgoingActions: [],
+      outgoingMutations: [{patch: {id: 'doc2', set: {bar: 'b'}}}],
+      base: {doc2: {...exampleDoc, _id: 'doc2', _rev: 'rev1'}},
+      working: {doc2: {...exampleDoc, _id: 'doc2', _rev: 'rev2'}},
+      previous: {doc2: {...exampleDoc, _id: 'doc2', _rev: 'rev1'}},
+      previousRevs: {doc2: 'rev1'},
+      timestamp: '2025-02-06T00:01:00.000Z',
+    }
+
+    // liveEdit first: should return only the liveEdit transaction
+    const resultLiveFirst = batchAppliedTransactions([liveEditTx, nonLiveEditTx])
+    expect(resultLiveFirst?.batchedTransactionIds).toEqual(['txn-live'])
+    expect(resultLiveFirst?.outgoingMutations).toEqual(liveEditTx.outgoingMutations)
+    expect(resultLiveFirst?.outgoingActions).toHaveLength(0)
+
+    // non-liveEdit first: should return only the non-liveEdit transaction
+    const resultNonLiveFirst = batchAppliedTransactions([nonLiveEditTx, liveEditTx])
+    expect(resultNonLiveFirst?.batchedTransactionIds).toEqual(['txn-nonlive'])
+    expect(resultNonLiveFirst?.outgoingActions).toEqual(nonLiveEditTx.outgoingActions)
+    expect(resultNonLiveFirst?.outgoingMutations).toHaveLength(0)
+  })
 })
 
 describe('transitionAppliedTransactionsToOutgoing', () => {
