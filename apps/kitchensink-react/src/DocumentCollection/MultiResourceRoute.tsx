@@ -9,6 +9,7 @@ import {
 import {Box, TextInput} from '@sanity/ui'
 import {defineProjection} from 'groq'
 import {JSX, Suspense, useRef} from 'react'
+import {useSearchParams} from 'react-router'
 
 import {
   type MultiResourceAuthorProjectionProjectionResult,
@@ -338,11 +339,16 @@ function MoviePreview({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
 
 export function MultiResourceRoute(): JSX.Element {
   const configs = import.meta.env['VITE_IS_E2E'] ? e2eConfigs : devConfigs
+  const [searchParams] = useSearchParams()
+  const authorIdParam = searchParams.get('authorId')
+  const movieIdParam = searchParams.get('movieId')
+
   const {data: authorDocuments} = useDocuments({
     documentType: 'author',
     batchSize: 1,
     projectId: configs[0].projectId,
     dataset: configs[0].dataset,
+    ...(authorIdParam ? {filter: '_id == $authorId', params: {authorId: authorIdParam}} : {}),
   })
 
   const {data: movieDocuments} = useDocuments({
@@ -350,6 +356,7 @@ export function MultiResourceRoute(): JSX.Element {
     batchSize: 1,
     projectId: configs[1].projectId,
     dataset: configs[1].dataset,
+    ...(movieIdParam ? {filter: '_id == $movieId', params: {movieId: movieIdParam}} : {}),
   })
 
   const authorHandle = authorDocuments[0] ?? null
