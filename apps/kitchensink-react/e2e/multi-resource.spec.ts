@@ -40,7 +40,7 @@ test.describe('Multi Resource Route', () => {
       process.env['SDK_E2E_DATASET_1'], // Second dataset
     )
 
-    await page.goto('./multi-resource')
+    await page.goto(`./multi-resource?authorId=${authorId}&movieId=${movieId}`)
 
     // get the page context for iframe/page detection
     const pageContext = await getPageContext(page)
@@ -59,6 +59,11 @@ test.describe('Multi Resource Route', () => {
       'Test Movie Multi Resource',
     )
 
+    // Scroll projection cards into view so their visibility-gated subscriptions are active
+    // before we trigger external changes — useDocumentProjection uses a ref-based observer
+    // and won't receive updates for off-screen elements.
+    // (Specifically, do this between editing and verifying the projection -- they're a bit far from each other)
+    await pageContext.getByTestId('author-projection-name').scrollIntoViewIfNeeded()
     // Test author projection data
     await expect(pageContext.getByTestId('author-projection-name')).toContainText(
       'Test Author Multi Resource',
@@ -90,6 +95,7 @@ test.describe('Multi Resource Route', () => {
 
     // Then verify the projection also updated (propagation can lag behind display updates)
     await expect(async () => {
+      await pageContext.getByTestId('author-projection-name').scrollIntoViewIfNeeded()
       const authorProjection = await pageContext.getByTestId('author-projection-name').textContent()
       expect(authorProjection).toContain('Updated Author Name')
     }).toPass({timeout: 25000, intervals: [1000, 2000, 5000]})
@@ -106,6 +112,7 @@ test.describe('Multi Resource Route', () => {
 
     // Then verify the projection also updated (propagation can lag behind display updates)
     await expect(async () => {
+      await pageContext.getByTestId('movie-projection-name').scrollIntoViewIfNeeded()
       const movieProjection = await pageContext.getByTestId('movie-projection-name').textContent()
       expect(movieProjection).toContain('Updated Movie Name')
     }).toPass({timeout: 25000, intervals: [1000, 2000, 5000]})
