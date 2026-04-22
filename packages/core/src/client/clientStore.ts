@@ -12,6 +12,7 @@ import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {getStagingApiHost} from '../utils/getStagingApiHost'
+import {createSdkRequester} from './sdkRequester'
 
 const DEFAULT_API_VERSION = '2024-11-12'
 const DEFAULT_REQUEST_TAG_PREFIX = 'sanity.sdk'
@@ -47,6 +48,7 @@ const allowedKeys = Object.keys({
   'useProjectHostname': null,
   '~experimental_resource': null,
   'source': null,
+  'applicationId': null,
 } satisfies Record<keyof ClientOptions, null>) as (keyof ClientOptions)[]
 
 const DEFAULT_CLIENT_CONFIG: ClientConfig = {
@@ -108,6 +110,15 @@ export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey
    * @internal
    */
   'source'?: DocumentSource
+
+  /**
+   * Identifies the application making API requests for attribution and metrics.
+   *
+   * Falls back to the `applicationId` on the instance config when omitted.
+   *
+   * @public
+   */
+  'applicationId'?: string
 }
 
 const clientStore = defineStore<ClientStoreState>({
@@ -197,6 +208,7 @@ export const getClient = bindActionGlobally(
     const projectId = options.projectId ?? instance.config.projectId
     const dataset = options.dataset ?? instance.config.dataset
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost ?? getStagingApiHost()
+    const applicationId = options.applicationId ?? instance.config.applicationId
 
     const effectiveOptions: ClientOptions = {
       ...DEFAULT_CLIENT_CONFIG,
@@ -206,6 +218,7 @@ export const getClient = bindActionGlobally(
       ...(projectId && {projectId}),
       ...(dataset && {dataset}),
       ...(apiHost && {apiHost}),
+      ...(applicationId && {applicationId}),
       ...(resource && {'~experimental_resource': resource}),
     }
 
@@ -236,7 +249,14 @@ export const getClient = bindActionGlobally(
 
     if (clients[key]) return clients[key]
 
-    const client = createClient(effectiveOptions)
+    // `applicationId` is SDK-owned config surfaced through the custom requester.
+    // Keep it in the cache key (above) but strip it from what reaches
+    // `@sanity/client` so we don't leak an unknown config field.
+    const {applicationId: _resolvedAppId, ...clientOptions} = effectiveOptions
+    const client = createClient({
+      ...clientOptions,
+      requester: createSdkRequester({applicationId: _resolvedAppId}),
+    })
     state.set('addClient', (prev) => ({clients: {...prev.clients, [key]: client}}))
 
     return client
