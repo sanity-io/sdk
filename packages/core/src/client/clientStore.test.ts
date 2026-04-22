@@ -7,7 +7,13 @@ import {createSanityInstance, type SanityInstance} from '../store/createSanityIn
 import {getClient, getClientState} from './clientStore'
 
 // Mock dependencies
-vi.mock('@sanity/client')
+vi.mock('@sanity/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@sanity/client')>()
+  return {
+    ...actual,
+    createClient: vi.fn(),
+  }
+})
 
 vi.mock('../auth/authStore')
 
@@ -61,10 +67,12 @@ describe('clientStore', () => {
       expect(vi.mocked(createClient)).toHaveBeenCalledWith({
         ...defaultConfiguration,
         apiVersion: '2024-11-12',
+        requester: expect.any(Function),
       })
       expect(client.config()).toEqual({
         ...defaultConfiguration,
         apiVersion: '2024-11-12',
+        requester: expect.any(Function),
       })
     })
 
@@ -80,6 +88,60 @@ describe('clientStore', () => {
       )
 
       vi.unstubAllGlobals()
+    })
+
+    describe('attribution via custom requester', () => {
+      it('passes a custom requester to createClient', () => {
+        getClient(instance, {apiVersion: '2024-11-12'})
+
+        expect(vi.mocked(createClient)).toHaveBeenCalledWith(
+          expect.objectContaining({requester: expect.any(Function)}),
+        )
+      })
+
+      it('does not leak applicationId into the @sanity/client config', () => {
+        getClient(instance, {apiVersion: '2024-11-12', applicationId: 'opt-app'})
+
+        const call = vi.mocked(createClient).mock.calls[0][0]
+        expect(call).not.toHaveProperty('applicationId')
+      })
+
+      it('creates separate client instances for different applicationIds', () => {
+        const client1 = getClient(instance, {apiVersion: '2024-11-12', applicationId: 'app-a'})
+        const client2 = getClient(instance, {apiVersion: '2024-11-12', applicationId: 'app-b'})
+
+        expect(client1).not.toBe(client2)
+        expect(vi.mocked(createClient)).toHaveBeenCalledTimes(2)
+      })
+
+      it('reuses the same client instance when applicationId is identical', () => {
+        const client1 = getClient(instance, {apiVersion: '2024-11-12', applicationId: 'app-a'})
+        const client2 = getClient(instance, {apiVersion: '2024-11-12', applicationId: 'app-a'})
+
+        expect(client1).toBe(client2)
+        expect(vi.mocked(createClient)).toHaveBeenCalledTimes(1)
+      })
+
+      it('resolves applicationId from options over instance config', () => {
+        const instanceWithAppId = createSanityInstance({
+          projectId: 'test-project',
+          dataset: 'test-dataset',
+          applicationId: 'cfg-app',
+        })
+
+        const c1 = getClient(instanceWithAppId, {
+          apiVersion: '2024-11-12',
+          applicationId: 'opt-app',
+        })
+        const c2 = getClient(instanceWithAppId, {apiVersion: '2024-11-12'})
+        const c3 = getClient(instance, {apiVersion: '2024-11-12'})
+
+        expect(c1).not.toBe(c2)
+        expect(c2).not.toBe(c3)
+        expect(vi.mocked(createClient)).toHaveBeenCalledTimes(3)
+
+        instanceWithAppId.dispose()
+      })
     })
 
     it('should throw when using disallowed configuration keys', () => {

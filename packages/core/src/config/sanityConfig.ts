@@ -148,6 +148,21 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
    * A list of named sources to use for this instance.
    */
   sources?: Record<string, DocumentSource>
+
+  /**
+   * Identifies the application making API requests for attribution and metrics.
+   *
+   * When set, it's appended to outgoing API requests as the `_appId` query
+   * param. The value matches `deployment.appId` (or the legacy `app.id`) from
+   * `sanity.cli.ts`. A future Sanity CLI release is expected to generate a
+   * module (alongside `.sanity/resources.ts`) that apps can import and pass
+   * through here, so the value stays in lockstep with the deployed app.
+   *
+   * If unset, no `_appId` param is sent.
+   *
+   * @public
+   */
+  applicationId?: string
 }
 
 /**

@@ -1,13 +1,20 @@
 import {type DocumentSource, type SanityConfig} from '@sanity/sdk'
 
+// Mirrors `app.id` in sanity.cli.ts. A future CLI release is expected to emit a
+// generated module (alongside `.sanity/resources.ts`) that we can import here
+// instead of hardcoding.
+const APPLICATION_ID = 'wkyoigmzawwnnwx458zgoh46'
+
 export const devConfigs: SanityConfig[] = [
   {
     projectId: 'ppsg7ml5',
     dataset: 'test',
+    applicationId: APPLICATION_ID,
   },
   {
     projectId: 'vo1ysemo',
     dataset: 'production',
+    applicationId: APPLICATION_ID,
   },
 ]
 
