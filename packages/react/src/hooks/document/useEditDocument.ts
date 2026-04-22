@@ -1,16 +1,9 @@
-import {
-  type ActionsResult,
-  type DocumentOptions,
-  editDocument,
-  getDocumentState,
-  type JsonMatch,
-  resolveDocument,
-} from '@sanity/sdk'
-import {type SanityDocument} from 'groq'
+import {type ActionsResult, editDocument, getDocumentState, resolveDocument} from '@sanity/sdk'
 import {useCallback} from 'react'
 
+import {type DocumentHandle} from '../../config/handles'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useNormalizedSourceOptions} from '../helpers/useNormalizedSourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 import {useApplyDocumentActions} from './useApplyDocumentActions'
 
@@ -18,69 +11,35 @@ const ignoredKeys = ['_id', '_type', '_createdAt', '_updatedAt', '_rev']
 
 type Updater<TValue> = TValue | ((currentValue: TValue) => TValue)
 
-// Overload 1: No path, relies on Typegen
-/**
- * @public
- * Edit an entire document, relying on Typegen for the type.
- *
- * @param options - Document options including `documentId`, `documentType`, and optionally `projectId`/`dataset`.
- * @returns A stable function to update the document state. Accepts either the new document state or an updater function `(currentValue) => nextValue`.
- *          Returns a promise resolving to the {@link ActionsResult}.
- */
-export function useEditDocument<
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  options: DocumentOptions<undefined, TDocumentType, TDataset, TProjectId>,
-): (
-  nextValue: Updater<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>,
-) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
+/** React-layer edit document options: DocumentHandle with optional path */
+type EditDocumentOptions<TPath extends string | undefined = undefined> = DocumentHandle & {
+  path?: TPath
+}
 
-// Overload 2: Path provided, relies on Typegen
-/**
- * @public
- * Edit a specific path within a document, relying on Typegen for the type.
- *
- * @param options - Document options including `documentId`, `documentType`, `path`, and optionally `projectId`/`dataset`.
- * @returns A stable function to update the value at the specified path. Accepts either the new value or an updater function `(currentValue) => nextValue`.
- *          Returns a promise resolving to the {@link ActionsResult}.
- */
-export function useEditDocument<
-  TPath extends string = string,
-  TDocumentType extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  options: DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>,
-): (
-  nextValue: Updater<JsonMatch<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>, TPath>>,
-) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
-
-// Overload 3: Explicit type, no path
+// Overload 1: Explicit type, no path
 /**
  * @public
  * Edit an entire document with an explicit type `TData`.
  *
- * @param options - Document options including `documentId` and optionally `projectId`/`dataset`.
+ * @param options - Document options including `documentId` and optionally `resource` or `resourceName`.
  * @returns A stable function to update the document state. Accepts either the new document state (`TData`) or an updater function `(currentValue: TData) => nextValue: TData`.
  *          Returns a promise resolving to the {@link ActionsResult}.
  */
 export function useEditDocument<TData>(
-  options: DocumentOptions<undefined>,
+  options: EditDocumentOptions<undefined>,
 ): (nextValue: Updater<TData>) => Promise<ActionsResult>
 
-// Overload 4: Explicit type, path provided
+// Overload 2: Explicit type, path provided
 /**
  * @public
  * Edit a specific path within a document with an explicit type `TData`.
  *
- * @param options - Document options including `documentId`, `path`, and optionally `projectId`/`dataset`.
+ * @param options - Document options including `documentId`, `path`, and optionally `resource` or `resourceName`.
  * @returns A stable function to update the value at the specified path. Accepts either the new value (`TData`) or an updater function `(currentValue: TData) => nextValue: TData`.
  *          Returns a promise resolving to the {@link ActionsResult}.
  */
 export function useEditDocument<TData>(
-  options: DocumentOptions<string>,
+  options: EditDocumentOptions<string>,
 ): (nextValue: Updater<TData>) => Promise<ActionsResult>
 
 /**
@@ -96,11 +55,9 @@ export function useEditDocument<TData>(
  * - Integrating with the active {@link SanityInstance} context.
  * - Utilizing `useApplyDocumentActions` internally for optimistic updates and transaction handling.
  *
- * It offers several overloads for flexibility:
- * 1. **Typegen (Full Document):** Edit the entire document, inferring types from your schema.
- * 2. **Typegen (Specific Path):** Edit a specific field, inferring types.
- * 3. **Explicit Type (Full Document):** Edit the entire document with a manually specified type.
- * 4. **Explicit Type (Specific Path):** Edit a specific field with a manually specified type.
+ * It offers overloads for flexibility:
+ * 1. **Explicit Type (Full Document):** Edit the entire document with a manually specified type.
+ * 2. **Explicit Type (Specific Path):** Edit a specific field with a manually specified type.
  *
  * **LiveEdit Documents:**
  * For documents using {@link DocumentHandle.liveEdit | liveEdit mode} (set via `liveEdit: true` in the document handle), edits are applied directly to the published document without creating a draft.
@@ -108,87 +65,7 @@ export function useEditDocument<TData>(
  * This hook relies on the document state being loaded. If the document is not yet available
  * (e.g., during initial load), the component using this hook will suspend.
  *
- * @example Basic Usage (Typegen, Full Document)
- * ```tsx
- * import {useCallback} from 'react';
- * import {useEditDocument, useDocument, type DocumentHandle} from '@sanity/sdk-react'
- *
- * // Assume 'product' schema has a 'title' field (string)
- * interface ProductEditorProps {
- *   productHandle: DocumentHandle<'product'> // Typegen infers 'product' type
- * }
- *
- * function ProductEditor({ productHandle }: ProductEditorProps) {
- *   // Fetch the document to display its current state (optional)
- *   const {data: product} = useDocument(productHandle);
- *   // Get the edit function for the full document
- *   const editProduct = useEditDocument(productHandle);
- *
- *   // Use useCallback for stable event handlers
- *   const handleTitleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
- *     const newTitle = event.target.value;
- *     // Use the functional updater for safe partial updates
- *     editProduct(prev => ({
- *       ...prev,
- *       title: newTitle,
- *     })).
- *   }, [editProduct]);
- *
- *   return (
- *     <div>
- *       <label>
- *         Product Title:
- *         <input
- *           type="text"
- *           value={product?.title ?? ''}
- *           onChange={handleTitleChange}
- *         />
- *       </label>
- *     </div>
- *   );
- * }
- * ```
- *
- * @example Editing a Specific Path (Typegen)
- * ```tsx
- * import React, { useCallback } from 'react';
- * import {useEditDocument, useDocument, type DocumentHandle, type DocumentOptions} from '@sanity/sdk-react'
- *
- * // Assume 'product' schema has a 'price' field (number)
- * interface ProductPriceEditorProps {
- *   productHandle: DocumentHandle<'product'>;
- * }
- *
- * function ProductPriceEditor({ productHandle }: ProductPriceEditorProps) {
- *   // Construct DocumentOptions internally, combining the handle and a hardcoded path
- *   const priceOptions {
- *     ...productHandle,
- *     path: 'price', // Hardcode the path to edit
- *   };
- *
- *   // Fetch the current price to display it
- *   const {data: currentPrice} = useDocument(priceOptions);
- *   // Get the edit function for the specific path 'price'
- *   const editPrice = useEditDocument(priceOptions);
- *
- *   const handleSetFixedPrice = useCallback(() => {
- *     // Update the price directly to a hardcoded value
- *     editPrice(99.99)
- *   }, [editPrice]);
- *
- *   return (
- *     <div>
- *       <p>Current Price: {currentPrice}</p>
- *       <button onClick={handleSetFixedPrice}>
- *         Set Price to $99.99
- *       </button>
- *     </div>
- *   );
- * }
- *
- * ```
- *
- * @example Usage with Explicit Types (Full Document)
+ * @example Basic Usage with Explicit Types (Full Document)
  * ```tsx
  * import React, { useCallback } from 'react';
  * import {useEditDocument, useDocument, type DocumentHandle, type SanityDocument} from '@sanity/sdk-react'
@@ -285,10 +162,10 @@ export function useEditDocument<TData>(
 export function useEditDocument({
   path,
   ...doc
-}: DocumentOptions<string | undefined>): (updater: Updater<unknown>) => Promise<ActionsResult> {
-  const instance = useSanityInstance(doc)
+}: EditDocumentOptions<string | undefined>): (updater: Updater<unknown>) => Promise<ActionsResult> {
+  const instance = useSanityInstance()
   trackHookUsage(instance, 'useEditDocument')
-  const normalizedDoc = useNormalizedSourceOptions(doc)
+  const normalizedDoc = useNormalizedResourceOptions(doc)
 
   const apply = useApplyDocumentActions()
   const isDocumentReady = useCallback(

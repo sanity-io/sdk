@@ -8,7 +8,7 @@ import {type DocumentAction} from './actions'
 import {calculatePermissions, createGrantsLookup, type DatasetAcl, type Grant} from './permissions'
 import {type SyncTransactionState} from './reducers'
 
-const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+const instance = createSanityInstance()
 
 afterAll(() => {
   instance.dispose()
@@ -75,7 +75,12 @@ describe('calculatePermissions', () => {
     )
 
     const actions: DocumentAction[] = [
-      {documentId: 'doc1', type: 'document.create', documentType: 'article'},
+      {
+        documentId: 'doc1',
+        type: 'document.create',
+        documentType: 'article',
+        resource: {projectId: 'p', dataset: 'd'},
+      },
     ]
     const result = calculatePermissions({instance, state}, {actions})
     expect(result).toEqual({allowed: true})
@@ -91,7 +96,12 @@ describe('calculatePermissions', () => {
       defaultGrants,
     )
     const actions: DocumentAction[] = [
-      {documentId: 'doc1', type: 'document.create', documentType: 'article'},
+      {
+        documentId: 'doc1',
+        type: 'document.create',
+        documentType: 'article',
+        resource: {projectId: 'p', dataset: 'd'},
+      },
     ]
     expect(calculatePermissions({instance, state}, {actions})).toBeUndefined()
   })
@@ -107,7 +117,12 @@ describe('calculatePermissions', () => {
       deniedGrants,
     )
     const actions: DocumentAction[] = [
-      {documentId: 'doc1', type: 'document.create', documentType: 'article'},
+      {
+        documentId: 'doc1',
+        type: 'document.create',
+        documentType: 'article',
+        resource: {projectId: 'p', dataset: 'd'},
+      },
     ]
     const result = calculatePermissions({instance, state}, {actions})
     expect(result).toBeDefined()
@@ -135,7 +150,12 @@ describe('calculatePermissions', () => {
       defaultGrants,
     )
     const actions: DocumentAction[] = [
-      {documentId: 'doc1', documentType: 'book', type: 'document.edit'},
+      {
+        documentId: 'doc1',
+        documentType: 'book',
+        type: 'document.edit',
+        resource: {projectId: 'p', dataset: 'd'},
+      },
     ]
     const result = calculatePermissions({instance, state}, {actions})
     expect(result).toBeDefined()
@@ -161,7 +181,12 @@ describe('calculatePermissions', () => {
       deniedGrants,
     )
     const actions: DocumentAction[] = [
-      {documentId: 'doc1', documentType: 'book', type: 'document.edit'},
+      {
+        documentId: 'doc1',
+        documentType: 'book',
+        type: 'document.edit',
+        resource: {projectId: 'p', dataset: 'd'},
+      },
     ]
     const result = calculatePermissions({instance, state}, {actions})
     expect(result).toBeDefined()
@@ -185,7 +210,12 @@ describe('calculatePermissions', () => {
       [getDraftId(DocumentId('doc1'))]: {local: null},
     })
     const actions: DocumentAction[] = [
-      {documentId: 'doc1', type: 'document.create', documentType: 'article'},
+      {
+        documentId: 'doc1',
+        type: 'document.create',
+        documentType: 'article',
+        resource: {projectId: 'p', dataset: 'd'},
+      },
     ]
     expect(calculatePermissions({instance, state}, {actions})).toBeUndefined()
   })
@@ -200,7 +230,12 @@ describe('calculatePermissions', () => {
       defaultGrants,
     )
     const actions: DocumentAction[] = [
-      {documentId: 'doc1', documentType: 'book', type: 'document.delete'},
+      {
+        documentId: 'doc1',
+        documentType: 'book',
+        type: 'document.delete',
+        resource: {projectId: 'p', dataset: 'd'},
+      },
     ]
     const result = calculatePermissions({instance, state}, {actions})
     expect(result).toBeDefined()
@@ -228,6 +263,7 @@ describe('calculatePermissions', () => {
       documentId: 'doc1',
       type: 'document.create',
       documentType: 'article',
+      resource: {projectId: 'p', dataset: 'd'},
     }
     // notice how the action is a copy
     const result1 = calculatePermissions({instance, state}, {actions: [{...action}]})

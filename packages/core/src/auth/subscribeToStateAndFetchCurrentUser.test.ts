@@ -18,7 +18,9 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     const mockRequest = vi.fn().mockReturnValue(of(mockUser))
     const mockClient = {observable: {request: mockRequest}}
     const clientFactory = vi.fn().mockReturnValue(mockClient)
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {clientFactory}})
+    const instance = createSanityInstance({
+      auth: {clientFactory},
+    })
 
     const state = createStoreState(authStore.getInitialState(instance, null))
     const subscription = subscribeToStateAndFetchCurrentUser({state, instance, key: null})
@@ -54,7 +56,9 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     const mockRequest = vi.fn().mockReturnValue(of(mockUser).pipe(delay(0)))
     const mockClient = {observable: {request: mockRequest}}
     const clientFactory = vi.fn().mockReturnValue(mockClient)
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {clientFactory}})
+    const instance = createSanityInstance({
+      auth: {clientFactory},
+    })
 
     const state = createStoreState(authStore.getInitialState(instance, null))
     const subscription = subscribeToStateAndFetchCurrentUser({state, instance, key: null})
@@ -94,7 +98,9 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     const mockRequest = vi.fn().mockReturnValue(throwError(() => error))
     const mockClient = {observable: {request: mockRequest}}
     const clientFactory = vi.fn().mockReturnValue(mockClient)
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd', auth: {clientFactory}})
+    const instance = createSanityInstance({
+      auth: {clientFactory},
+    })
 
     const state = createStoreState(authStore.getInitialState(instance, null))
     const subscription = subscribeToStateAndFetchCurrentUser({state, instance, key: null})

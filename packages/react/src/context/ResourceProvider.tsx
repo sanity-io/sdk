@@ -1,7 +1,15 @@
-import {createSanityInstance, type SanityConfig, type SanityInstance} from '@sanity/sdk'
+import {
+  createSanityInstance,
+  type DocumentResource,
+  type PerspectiveHandle,
+  type SanityConfig,
+  type SanityInstance,
+} from '@sanity/sdk'
 import {initTelemetry} from '@sanity/sdk/_internal'
 import {Suspense, useContext, useEffect, useMemo, useRef} from 'react'
 
+import {ResourceContext} from './DefaultResourceContext'
+import {PerspectiveContext} from './PerspectiveContext'
 import {SanityInstanceContext} from './SanityInstanceContext'
 
 const DEFAULT_FALLBACK = (
@@ -11,78 +19,106 @@ const DEFAULT_FALLBACK = (
 )
 
 /**
- * Props for the ResourceProvider component
+ * Props for the ResourceProvider component.
+ *
+ * Extends `SanityConfig` (minus `defaultResource`) so new config fields are
+ * automatically forwarded. The `resource` prop replaces `defaultResource`
+ * with a name that better describes its role at the React layer.
+ *
  * @internal
  */
-export interface ResourceProviderProps extends SanityConfig {
+export interface ResourceProviderProps extends Omit<SanityConfig, 'defaultResource'> {
   /**
-   * React node to show while content is loading
-   * Used as the fallback for the internal Suspense boundary
+   * The document resource (project/dataset, media library, or canvas)
+   * for this subtree. Hooks that don't specify an explicit resource will
+   * use this value.
+   */
+  resource?: DocumentResource
+  /**
+   * React node to show while content is loading.
+   * Used as the fallback for the internal Suspense boundary.
    */
   fallback: React.ReactNode
   children: React.ReactNode
 }
 
 /**
- * Provides a Sanity instance to child components through React Context
+ * Provides Sanity configuration to child components through React Context.
  *
  * @internal
  *
  * @remarks
- * The ResourceProvider creates a hierarchical structure of Sanity instances:
- * - When used as a root provider, it creates a new Sanity instance with the given config
- * - When nested inside another ResourceProvider, it creates a child instance that
- *   inherits and extends the parent's configuration
+ * - **Root usage** (no parent instance): creates a `SanityInstance` with the
+ *   given config and provides it via `SanityInstanceContext`.
+ * - **Nested usage** (inside an existing provider): sets
+ *   `ResourceContext` and `PerspectiveContext` so hooks in the subtree
+ *   resolve the correct resource/perspective without creating a new instance.
  *
- * Features:
- * - Automatically manages the lifecycle of Sanity instances
- * - Disposes instances when the component unmounts
- * - Includes a Suspense boundary for data loading
- * - Enables hierarchical configuration inheritance
- *
- * Use this component to:
- * - Set up project/dataset configuration for an application
- * - Override specific configuration values in a section of your app
- * - Create isolated instance hierarchies for different features
- *
- * @example Creating a root provider
+ * @example Root provider
  * ```tsx
  * <ResourceProvider
- *   projectId="your-project-id"
- *   dataset="production"
+ *   resource={{ projectId: 'your-project-id', dataset: 'production' }}
  *   fallback={<LoadingSpinner />}
  * >
  *   <YourApp />
  * </ResourceProvider>
  * ```
  *
- * @example Creating nested providers with configuration inheritance
+ * @example Nested override
  * ```tsx
- * // Root provider with production config with nested provider for preview features with custom dataset
- * <ResourceProvider projectId="abc123" dataset="production" fallback={<Loading />}>
- *   <div>...Main app content</div>
- *   <Dashboard />
- *   <ResourceProvider dataset="preview" fallback={<Loading />}>
- *     <PreviewFeatures />
- *   </ResourceProvider>
+ * <ResourceProvider
+ *   resource={{ projectId: 'other-project', dataset: 'staging' }}
+ *   fallback={<LoadingSpinner />}
+ * >
+ *   <SubSection />
  * </ResourceProvider>
  * ```
  */
 export function ResourceProvider({
   children,
   fallback,
-  ...config
+  resource,
+  ...rest
 }: ResourceProviderProps): React.ReactNode {
   const parent = useContext(SanityInstanceContext)
-  const instance = useMemo(
-    () => (parent ? parent.createChild(config) : createSanityInstance(config)),
-    [config, parent],
+  const {perspective, auth, studio} = rest
+  const config: SanityConfig = useMemo(
+    () => ({perspective, auth, studio}),
+    [perspective, auth, studio],
   )
 
-  const projectId = config.projectId ?? ''
+  if (parent) {
+    return (
+      <NestedResourceProvider resource={resource} perspective={perspective} fallback={fallback}>
+        {children}
+      </NestedResourceProvider>
+    )
+  }
+
+  return (
+    <RootResourceProvider config={config} resource={resource} fallback={fallback}>
+      {children}
+    </RootResourceProvider>
+  )
+}
+
+function RootResourceProvider({
+  children,
+  fallback,
+  config,
+  resource,
+}: {
+  children: React.ReactNode
+  fallback: React.ReactNode
+  config: SanityConfig
+  resource?: DocumentResource
+}): React.ReactNode {
+  const instance = useMemo(() => createSanityInstance(config), [config])
   useMemo(() => {
-    if (projectId && !parent) initTelemetry(instance, projectId)
-  }, [instance, projectId, parent])
+    if (config.defaultResource && 'projectId' in config.defaultResource) {
+      initTelemetry(instance, config.defaultResource.projectId ?? '')
+    }
+  }, [instance, config.defaultResource])
 
   // Ref to hold the scheduled disposal timer.
   const disposal = useRef<{
@@ -111,7 +147,37 @@ export function ResourceProvider({
 
   return (
     <SanityInstanceContext.Provider value={instance}>
-      <Suspense fallback={fallback ?? DEFAULT_FALLBACK}>{children}</Suspense>
+      <ResourceContext.Provider value={resource}>
+        <PerspectiveContext.Provider value={config.perspective}>
+          <Suspense fallback={fallback ?? DEFAULT_FALLBACK}>{children}</Suspense>
+        </PerspectiveContext.Provider>
+      </ResourceContext.Provider>
     </SanityInstanceContext.Provider>
+  )
+}
+
+function NestedResourceProvider({
+  children,
+  fallback,
+  resource,
+  perspective,
+}: {
+  children: React.ReactNode
+  fallback: React.ReactNode
+  resource?: DocumentResource
+  perspective?: PerspectiveHandle['perspective']
+}): React.ReactNode {
+  const parentResource = useContext(ResourceContext)
+  const parentPerspective = useContext(PerspectiveContext)
+
+  const resolvedResource = resource ?? parentResource
+  const resolvedPerspective = perspective ?? parentPerspective
+
+  return (
+    <ResourceContext.Provider value={resolvedResource}>
+      <PerspectiveContext.Provider value={resolvedPerspective}>
+        <Suspense fallback={fallback ?? DEFAULT_FALLBACK}>{children}</Suspense>
+      </PerspectiveContext.Provider>
+    </ResourceContext.Provider>
   )
 }

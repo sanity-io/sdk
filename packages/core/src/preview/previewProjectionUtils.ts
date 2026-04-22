@@ -1,10 +1,10 @@
 import {type SanityClient} from '@sanity/client'
 import {createImageUrlBuilder} from '@sanity/image-url'
-import {isObject} from 'lodash-es'
 
 import {getClient} from '../client/clientStore'
-import {type DocumentSource, isDatasetSource} from '../config/sanityConfig'
+import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
+import {isObject} from '../utils/object'
 import {SUBTITLE_CANDIDATES, TITLE_CANDIDATES} from './previewConstants'
 import {type PreviewQueryResult, type PreviewValue} from './types'
 
@@ -66,23 +66,18 @@ function findFirstDefined(
  *
  * @param projectionResult - The raw projection result from GROQ
  * @param instance - The Sanity instance to use for client configuration
- * @param source - Data source for the preview
+ * @param resource - Data resource for the preview
  * @internal
  */
 export function transformProjectionToPreview(
   instance: SanityInstance,
+  resource: DocumentResource,
   projectionResult: PreviewQueryResult,
-  source?: DocumentSource,
 ): PreviewValue {
   const title = findFirstDefined(TITLE_CANDIDATES, projectionResult.titleCandidates)
   const subtitle = findFirstDefined(SUBTITLE_CANDIDATES, projectionResult.subtitleCandidates, title)
 
-  // Get a client for the source (if provided) or use the instance config
-  const client = getClient(instance, {
-    apiVersion: API_VERSION,
-    // TODO: remove in v3 when we're ready for everything to be queried via source
-    source: source && !isDatasetSource(source) ? source : undefined,
-  })
+  const client = getClient(instance, {apiVersion: API_VERSION, resource})
 
   return {
     title: String(title || `${projectionResult._type}: ${projectionResult._id}`),

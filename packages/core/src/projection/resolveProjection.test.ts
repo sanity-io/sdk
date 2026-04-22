@@ -23,7 +23,7 @@ describe('resolveProjection', () => {
       } as ProjectionValuePending<Record<string, unknown>>),
     } as StateSource<ProjectionValuePending<Record<string, unknown>>>)
 
-    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    instance = createSanityInstance()
   })
 
   afterEach(() => {
@@ -34,6 +34,7 @@ describe('resolveProjection', () => {
     const docHandle = createDocumentHandle({
       documentId: 'doc123',
       documentType: 'movie',
+      resource: {projectId: 'p', dataset: 'd'},
     })
     const projection = '{title}'
 

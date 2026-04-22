@@ -1,17 +1,10 @@
-import {
-  type DocumentHandle,
-  PREVIEW_PROJECTION,
-  type PreviewQueryResult,
-  type PreviewValue,
-  transformProjectionToPreview,
-} from '@sanity/sdk'
+import {type PreviewQueryResult, type PreviewValue} from '@sanity/sdk'
+import {PREVIEW_PROJECTION, transformProjectionToPreview} from '@sanity/sdk/_internal'
 import {useMemo} from 'react'
 
+import {type DocumentHandle} from '../../config/handles'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 import {useDocumentProjection} from '../projection/useDocumentProjection'
 
@@ -19,7 +12,7 @@ import {useDocumentProjection} from '../projection/useDocumentProjection'
  * @public
  * @category Types
  */
-export interface useDocumentPreviewOptions extends WithSourceNameSupport<DocumentHandle> {
+export interface useDocumentPreviewOptions extends DocumentHandle {
   /**
    * Optional ref object to track visibility. When provided, preview resolution
    * only occurs when the referenced element is visible in the viewport.
@@ -64,9 +57,9 @@ export interface useDocumentPreviewResults {
  *
  * @example Combining with useDocuments to render a collection of document previews
  * ```
- * // PreviewComponent.jsx
- * export default function PreviewComponent({ document }) {
- *   const { data: { title, subtitle, media }, isPending } = useDocumentPreview({ document })
+ * // PreviewComponent.tsx
+ * export default function PreviewComponent(docHandle: DocumentHandle) {
+ *   const { data: { title, subtitle, media }, isPending } = useDocumentPreview(docHandle)
  *   return (
  *     <article style={{ opacity: isPending ? 0.5 : 1}}>
  *       {media?.type === 'image-asset' ? <img src={media.url} alt='' /> : ''}
@@ -76,16 +69,16 @@ export interface useDocumentPreviewResults {
  *   )
  * }
  *
- * // DocumentList.jsx
- * const { data } = useDocuments({ filter: '_type == "movie"' })
+ * // DocumentList.tsx
+ * const { data } = useDocuments({ documentType: 'movie' })
  * return (
  *   <div>
  *     <h1>Movies</h1>
  *     <ul>
  *       {data.map(movie => (
- *         <li key={movie._id}>
+ *         <li key={movie.documentId}>
  *           <Suspense fallback='Loading…'>
- *             <PreviewComponent document={movie} />
+ *             <PreviewComponent {...movie} />
  *           </Suspense>
  *         </li>
  *       ))}
@@ -98,9 +91,9 @@ export function useDocumentPreview({
   ref,
   ...docHandle
 }: useDocumentPreviewOptions): useDocumentPreviewResults {
-  const instance = useSanityInstance(docHandle)
+  const instance = useSanityInstance()
   trackHookUsage(instance, 'useDocumentPreview')
-  const normalizedDocHandle = useNormalizedSourceOptions(docHandle)
+  const normalizedDocHandle = useNormalizedResourceOptions(docHandle)
 
   // Use the projection hook with the fixed preview projection
   const projectionResult = useDocumentProjection<PreviewQueryResult>({
@@ -112,8 +105,9 @@ export function useDocumentPreview({
   // Contract: useDocumentProjection suspends while data is null, so data is always available here.
   // Keep this non-null assumption aligned with useDocumentPreviewResults.data.
   const previewValue = useMemo(
-    () => transformProjectionToPreview(instance, projectionResult.data, normalizedDocHandle.source),
-    [projectionResult.data, instance, normalizedDocHandle.source],
+    () =>
+      transformProjectionToPreview(instance, normalizedDocHandle.resource, projectionResult.data),
+    [projectionResult.data, instance, normalizedDocHandle.resource],
   )
 
   return {

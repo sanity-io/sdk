@@ -1,30 +1,3 @@
-import {type SanityProject as _SanityProject} from '@sanity/client'
-
-/**
- * @public
- */
-export type SanityProject = _SanityProject
-
-export type {
-  AgentGenerateOptions,
-  AgentGenerateResult,
-  AgentPatchOptions,
-  AgentPatchResult,
-  AgentPromptOptions,
-  AgentPromptResult,
-  AgentTransformOptions,
-  AgentTransformResult,
-  AgentTranslateOptions,
-  AgentTranslateResult,
-} from '../agent/agentActions'
-export {
-  agentGenerate,
-  agentPatch,
-  agentPrompt,
-  agentTransform,
-  agentTranslate,
-} from '../agent/agentActions'
-export {isStudioConfig} from '../auth/authMode'
 export {AuthStateType} from '../auth/authStateType'
 export {
   type AuthState,
@@ -41,40 +14,16 @@ export {
   type LoggingInAuthState,
   setAuthToken,
 } from '../auth/authStore'
-export {observeOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
+export {getOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
-export {
-  type ApiErrorBody,
-  getClientErrorApiBody,
-  getClientErrorApiDescription,
-  getClientErrorApiType,
-  isProjectUserNotFoundClientError,
-} from '../auth/utils'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
 export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
-export {
-  type ComlinkControllerState,
-  destroyController,
-  getOrCreateChannel,
-  getOrCreateController,
-  releaseChannel,
-} from '../comlink/controller/comlinkControllerStore'
-export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
-export {getOrCreateNode, releaseNode} from '../comlink/node/comlinkNodeStore'
-export {getNodeState, type NodeState} from '../comlink/node/getNodeState'
-export {
-  type FrameMessage,
-  type NewTokenResponseMessage,
-  type RequestNewTokenMessage,
-  type WindowMessage,
-} from '../comlink/types'
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
 export {
-  createDatasetHandle,
   createDocumentHandle,
   createDocumentTypeHandle,
-  createProjectHandle,
+  createResourceHandle,
 } from '../config/handles'
 export {
   configureLogging,
@@ -86,19 +35,18 @@ export {
   type LogNamespace,
 } from '../config/loggingConfig'
 export {
-  type CanvasSource,
-  type DatasetHandle,
-  type DatasetSource,
+  type CanvasResource,
+  type DatasetResource,
   type DocumentHandle,
-  type DocumentSource,
+  type DocumentResource,
   type DocumentTypeHandle,
-  isCanvasSource,
-  isDatasetSource,
-  isMediaLibrarySource,
-  type MediaLibrarySource,
+  isCanvasResource,
+  isDatasetResource,
+  isMediaLibraryResource,
+  type MediaLibraryResource,
   type PerspectiveHandle,
-  type ProjectHandle,
   type ReleasePerspective,
+  type ResourceHandle,
   type SanityConfig,
   type StudioConfig,
   type TokenSource,
@@ -129,9 +77,9 @@ export {
   getDocumentState,
   getDocumentSyncStatus,
   getPermissionsState,
+  onDocumentEvent,
   resolveDocument,
   resolvePermissions,
-  subscribeDocumentEvents,
 } from '../document/documentStore'
 export {
   type ActionErrorEvent,
@@ -146,11 +94,10 @@ export {
   type TransactionAcceptedEvent,
   type TransactionRevertedEvent,
 } from '../document/events'
-export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export type {FavoriteStatusResponse} from '../favorites/favorites'
 export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
-export {getPresence} from '../presence/presenceStore'
+export {getPresenceState} from '../presence/presenceStore'
 export type {
   DisconnectEvent,
   PresenceLocation,
@@ -159,36 +106,18 @@ export type {
   TransportEvent,
   UserPresence,
 } from '../presence/types'
-export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
-export {PREVIEW_PROJECTION} from '../preview/previewConstants'
-export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
-export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
-export type {
-  PreviewMedia,
-  PreviewQueryResult,
-  PreviewStoreState,
-  PreviewValue,
-  ValuePending,
-} from '../preview/types'
-export {type OrgVerificationResult} from '../project/organizationVerification'
-export {getProjectState, resolveProject} from '../project/project'
+export type {PreviewMedia, PreviewQueryResult, PreviewValue} from '../preview/types'
+export {type OrganizationVerificationResult} from '../project/organizationVerification'
+export {getProjectState, type ProjectHandle, resolveProject} from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'
-export {type ProjectionValuePending, type ValidProjection} from '../projection/types'
+export {type ProjectionValuePending} from '../projection/types'
 export {getProjectsState, resolveProjects} from '../projects/projects'
-export {
-  getQueryKey,
-  getQueryState,
-  parseQueryKey,
-  type QueryOptions,
-  resolveQuery,
-} from '../query/queryStore'
+export {getQueryState, type QueryOptions, resolveQuery} from '../query/queryStore'
 export {getPerspectiveState} from '../releases/getPerspectiveState'
-export type {ReleaseDocument} from '../releases/releasesStore'
-export {getActiveReleasesState} from '../releases/releasesStore'
+export {getActiveReleasesState, type ReleaseDocument} from '../releases/releasesStore'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
-export {getUsersKey, parseUsersKey} from '../users/reducers'
 export {
   type GetUserOptions,
   type GetUsersOptions,
@@ -208,17 +137,9 @@ export {
   resolveUser,
   resolveUsers,
 } from '../users/usersStore'
+// must be exported since many stores are based on this type
 export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
-export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {defineIntent, type Intent, type IntentFilter} from '../utils/defineIntent'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {CORE_SDK_VERSION} from '../version'
-export {
-  getIndexForKey,
-  getPathDepth,
-  joinPaths,
-  jsonMatch,
-  slicePath,
-  stringifyPath,
-} from '@sanity/json-match'
 export type {CurrentUser, Role, SanityDocument} from '@sanity/types'

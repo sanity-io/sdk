@@ -13,14 +13,12 @@ describe('createStoreInstance', () => {
       randomUUID: () => 'test-uuid-1234',
     })
 
-    instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+    instance = createSanityInstance()
   })
 
   const storeDef: StoreDefinition<{count: number}> = {
     name: 'TestStore',
-    getInitialState: (inst) => ({
-      count: inst.config.projectId === 'test' ? 0 : -1,
-    }),
+    getInitialState: () => ({count: 0}),
   }
 
   it('should create store instance with initial state', () => {

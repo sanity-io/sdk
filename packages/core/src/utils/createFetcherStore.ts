@@ -1,4 +1,3 @@
-import {omit} from 'lodash-es'
 import {asapScheduler, EMPTY, firstValueFrom, from, Observable} from 'rxjs'
 import {
   catchError,
@@ -23,6 +22,7 @@ import {
 } from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
+import {omitProperty} from '../utils/object'
 import {setCleanupTimeout} from './setCleanupTimeout'
 
 interface CreateFetcherStoreOptions<TParams extends unknown[], TData> {
@@ -176,15 +176,16 @@ export function createFetcherStore<TParams extends unknown[], TData>({
               const factoryFn = getObservable(entry.instance)
               return factoryFn(...entry.params).pipe(
                 // the `createStateSourceAction` util requires the update
-                // to
                 delay(0, asapScheduler),
                 tap((data: TData) =>
                   state.set('setData', (prev: FetcherStoreState<TParams, TData>) => ({
                     stateByParams: {
                       ...prev.stateByParams,
                       [entry.key]: {
-                        ...omit(entry, 'error'),
-                        ...omit(prev.stateByParams[entry.key], 'error'),
+                        ...omitProperty(entry, 'error'),
+                        ...(prev.stateByParams[entry.key]
+                          ? omitProperty(prev.stateByParams[entry.key], 'error')
+                          : {}),
                         data,
                       },
                     },
@@ -255,7 +256,7 @@ export function createFetcherStore<TParams extends unknown[], TData>({
 
               const newSubs = (entry.subscriptions || []).filter((id) => id !== subscriptionId)
               if (newSubs.length === 0) {
-                return {stateByParams: omit(prev.stateByParams, key)}
+                return {stateByParams: omitProperty(prev.stateByParams, key)}
               }
 
               return {

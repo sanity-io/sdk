@@ -1,4 +1,4 @@
-import {observeOrganizationVerificationState, type OrgVerificationResult} from '@sanity/sdk'
+import {getOrganizationVerificationState, type OrganizationVerificationResult} from '@sanity/sdk'
 import {useEffect, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -13,7 +13,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @example
  * ```tsx
  * function OrgVerifier() {
- *   const error = useVerifyOrgProjects()
+ *   const error = useOrganizationVerification()
  *
  *   if (error) {
  *     return <div className="error">{error}</div>
@@ -23,7 +23,10 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * }
  * ```
  */
-export function useVerifyOrgProjects(disabled = false, projectIds?: string[]): string | null {
+export function useOrganizationVerification(
+  disabled = false,
+  projectIds?: string[],
+): string | null {
   const instance = useSanityInstance()
   const [error, setError] = useState<string | null>(null)
 
@@ -33,9 +36,10 @@ export function useVerifyOrgProjects(disabled = false, projectIds?: string[]): s
       return
     }
 
-    const verificationObservable$ = observeOrganizationVerificationState(instance, projectIds)
-
-    const subscription = verificationObservable$.subscribe((result: OrgVerificationResult) => {
+    const subscription = getOrganizationVerificationState(
+      instance,
+      projectIds,
+    ).observable.subscribe((result: OrganizationVerificationResult) => {
       setError(result.error)
     })
 

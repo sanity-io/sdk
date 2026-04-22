@@ -1,22 +1,22 @@
-import {observeOrganizationVerificationState, type OrgVerificationResult} from '@sanity/sdk'
+import {getOrganizationVerificationState, type OrganizationVerificationResult} from '@sanity/sdk'
 import {act, renderHook, waitFor} from '@testing-library/react'
 import {Subject} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
-import {useVerifyOrgProjects} from './useVerifyOrgProjects'
+import {useOrganizationVerification} from './useOrganizationVerification'
 
 // Mock dependencies
 vi.mock('@sanity/sdk', async (importOriginal) => {
   const original = await importOriginal<typeof import('@sanity/sdk')>()
   return {
     ...original,
-    observeOrganizationVerificationState: vi.fn(),
+    getOrganizationVerificationState: vi.fn(),
   }
 })
 
-describe('useVerifyOrgProjects', () => {
-  const mockObserve = vi.mocked(observeOrganizationVerificationState)
+describe('useOrganizationVerification', () => {
+  const mockObserve = vi.mocked(getOrganizationVerificationState)
   const testProjectIds = ['proj-1']
 
   beforeEach(() => {
@@ -24,9 +24,12 @@ describe('useVerifyOrgProjects', () => {
   })
 
   it('should return null and not observe state if disabled', () => {
-    const {result} = renderHook(() => useVerifyOrgProjects(true, testProjectIds), {
+    const {result} = renderHook(() => useOrganizationVerification(true, testProjectIds), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -37,19 +40,28 @@ describe('useVerifyOrgProjects', () => {
   })
 
   it('should return null and not observe state if projectIds is missing or empty', () => {
-    const {result: resultUndefined} = renderHook(() => useVerifyOrgProjects(false, undefined), {
-      wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {result: resultUndefined} = renderHook(
+      () => useOrganizationVerification(false, undefined),
+      {
+        wrapper: ({children}) => (
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
+            {children}
+          </ResourceProvider>
+        ),
+      },
+    )
     expect(resultUndefined.current).toBeNull()
     expect(mockObserve).not.toHaveBeenCalled()
 
-    const {result: resultEmpty} = renderHook(() => useVerifyOrgProjects(false, []), {
+    const {result: resultEmpty} = renderHook(() => useOrganizationVerification(false, []), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -59,12 +71,19 @@ describe('useVerifyOrgProjects', () => {
   })
 
   it('should return null initially when not disabled and projectIds provided', () => {
-    const subject = new Subject<OrgVerificationResult>()
-    mockObserve.mockReturnValue(subject.asObservable())
+    const subject = new Subject<OrganizationVerificationResult>()
+    mockObserve.mockReturnValue({
+      observable: subject.asObservable(),
+      getCurrent: () => ({error: null}),
+      subscribe: () => () => {},
+    })
 
-    const {result} = renderHook(() => useVerifyOrgProjects(false, testProjectIds), {
+    const {result} = renderHook(() => useOrganizationVerification(false, testProjectIds), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -75,12 +94,19 @@ describe('useVerifyOrgProjects', () => {
   })
 
   it('should return null if observable emits { error: null }', async () => {
-    const subject = new Subject<OrgVerificationResult>()
-    mockObserve.mockReturnValue(subject.asObservable())
+    const subject = new Subject<OrganizationVerificationResult>()
+    mockObserve.mockReturnValue({
+      observable: subject.asObservable(),
+      getCurrent: () => ({error: null}),
+      subscribe: () => () => {},
+    })
 
-    const {result} = renderHook(() => useVerifyOrgProjects(false, testProjectIds), {
+    const {result} = renderHook(() => useOrganizationVerification(false, testProjectIds), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -96,13 +122,20 @@ describe('useVerifyOrgProjects', () => {
   })
 
   it('should return error string if observable emits { error: string }', async () => {
-    const subject = new Subject<OrgVerificationResult>()
+    const subject = new Subject<OrganizationVerificationResult>()
     const errorMessage = 'Org mismatch'
-    mockObserve.mockReturnValue(subject.asObservable())
+    mockObserve.mockReturnValue({
+      observable: subject.asObservable(),
+      getCurrent: () => ({error: null}),
+      subscribe: () => () => {},
+    })
 
-    const {result} = renderHook(() => useVerifyOrgProjects(false, testProjectIds), {
+    const {result} = renderHook(() => useOrganizationVerification(false, testProjectIds), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -118,13 +151,20 @@ describe('useVerifyOrgProjects', () => {
   })
 
   it('should unsubscribe on unmount', () => {
-    const subject = new Subject<OrgVerificationResult>()
+    const subject = new Subject<OrganizationVerificationResult>()
     const unsubscribeSpy = vi.spyOn(subject, 'unsubscribe')
-    mockObserve.mockReturnValue(subject)
+    mockObserve.mockReturnValue({
+      observable: subject,
+      getCurrent: () => ({error: null}),
+      subscribe: () => () => {},
+    })
 
-    const {unmount} = renderHook(() => useVerifyOrgProjects(false, testProjectIds), {
+    const {unmount} = renderHook(() => useOrganizationVerification(false, testProjectIds), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -143,16 +183,23 @@ describe('useVerifyOrgProjects', () => {
   })
 
   it('should clear the error if disabled becomes true', async () => {
-    const subject = new Subject<OrgVerificationResult>()
+    const subject = new Subject<OrganizationVerificationResult>()
     const errorMessage = 'Org mismatch'
-    mockObserve.mockReturnValue(subject.asObservable())
+    mockObserve.mockReturnValue({
+      observable: subject.asObservable(),
+      getCurrent: () => ({error: null}),
+      subscribe: () => () => {},
+    })
 
     const {result, rerender} = renderHook(
-      ({disabled, pIds}) => useVerifyOrgProjects(disabled, pIds),
+      ({disabled, pIds}) => useOrganizationVerification(disabled, pIds),
       {
         initialProps: {disabled: false, pIds: testProjectIds},
         wrapper: ({children}) => (
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
             {children}
           </ResourceProvider>
         ),

@@ -1,5 +1,4 @@
 import {CorsOriginError, type ResponseQueryOptions} from '@sanity/client'
-import {type SanityQueryResult} from 'groq'
 import {
   catchError,
   combineLatest,
@@ -24,7 +23,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle, isDatasetSource} from '../config/sanityConfig'
+import {type ResourceHandle} from '../config/sanityConfig'
 /*
  * Although this is an import dependency cycle, it is not a logical cycle:
  * 1. queryStore uses getPerspectiveState when resolving release perspectives
@@ -35,7 +34,7 @@ import {type DatasetHandle, isDatasetSource} from '../config/sanityConfig'
 // eslint-disable-next-line import/no-cycle
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
-import {bindActionBySource, type BoundSourceKey} from '../store/createActionBinder'
+import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -72,7 +71,7 @@ export interface QueryOptions<
 >
   extends
     Pick<ResponseQueryOptions, 'useCdn' | 'cache' | 'next' | 'cacheMode' | 'tag'>,
-    DatasetHandle<TDataset, TProjectId> {
+    ResourceHandle<TDataset, TProjectId> {
   query: TQuery
   params?: Record<string, unknown>
 }
@@ -90,9 +89,11 @@ export interface ResolveQueryOptions<
 
 const EMPTY_ARRAY: never[] = []
 
-/** @beta */
-export const getQueryKey = (options: QueryOptions): string => JSON.stringify(options)
-/** @beta */
+/** @internal */
+export const getQueryKey = (instance: SanityInstance, options: QueryOptions): string => {
+  return JSON.stringify(normalizeOptionsWithPerspective(instance, options))
+}
+/** @internal */
 export const parseQueryKey = (key: string): QueryOptions => JSON.parse(key)
 
 /**
@@ -102,7 +103,6 @@ export const parseQueryKey = (key: string): QueryOptions => JSON.parse(key)
  *
  * Since perspectives are unique, we can depend on the release stacks
  * to be correct when we retrieve the results.
- *
  */
 function normalizeOptionsWithPerspective(
   instance: SanityInstance,
@@ -117,7 +117,7 @@ function normalizeOptionsWithPerspective(
   }
 }
 
-const queryStore = defineStore<QueryStoreState, BoundSourceKey>({
+const queryStore = defineStore<QueryStoreState, BoundResourceKey>({
   name: 'QueryStore',
   getInitialState: () => ({queries: {}}),
   initialize(context) {
@@ -138,7 +138,11 @@ const errorHandler = (state: StoreState<{error?: unknown}>) => {
   return (error: unknown): void => state.set('setError', {error})
 }
 
-const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QueryStoreState>) => {
+const listenForNewSubscribersAndFetch = ({
+  state,
+  instance,
+  key: {resource: boundResource},
+}: StoreContext<QueryStoreState, BoundResourceKey>) => {
   return state.observable
     .pipe(
       map((s) => new Set(Object.keys(s.queries))),
@@ -170,10 +174,8 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
             const {
               query,
               params,
-              projectId,
-              dataset,
               tag,
-              source,
+              resource,
               perspective: perspectiveFromOptions,
               ...restOptions
             } = parseQueryKey(group$.key)
@@ -183,14 +185,19 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
             const perspective$ = isReleasePerspective(perspectiveFromOptions)
               ? getPerspectiveState(instance, {
                   perspective: perspectiveFromOptions,
+                  resource: resource ?? boundResource,
                 }).observable.pipe(filter(Boolean))
               : of(perspectiveFromOptions ?? QUERY_STORE_DEFAULT_PERSPECTIVE)
 
+            // Use the store's bound resource as fallback when the query key
+            // doesn't include an explicit resource. The store is scoped to a
+            // specific resource via bindActionByResource, but the captured
+            // `instance` may have a different default resource (e.g. when the
+            // store was first created by a caller that passed an explicit
+            // resource while using the root app instance).
             const client$ = getClientState(instance, {
               apiVersion: QUERY_STORE_API_VERSION,
-              projectId,
-              dataset,
-              source,
+              resource: resource ?? boundResource,
             }).observable
 
             return combineLatest({
@@ -226,12 +233,11 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
 const listenToLiveClientAndSetLastLiveEventIds = ({
   state,
   instance,
-  key: {source},
-}: StoreContext<QueryStoreState, BoundSourceKey>) => {
+  key: {resource},
+}: StoreContext<QueryStoreState, BoundResourceKey>) => {
   const liveMessages$ = getClientState(instance, {
     apiVersion: QUERY_STORE_API_VERSION,
-    // temporary guard here until we're ready for everything to be queried via global api
-    ...(source && !isDatasetSource(source) ? {source} : {}),
+    resource,
   }).observable.pipe(
     switchMap((client) =>
       defer(() =>
@@ -289,16 +295,6 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
  *
  * @beta
  */
-export function getQueryState<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  instance: SanityInstance,
-  queryOptions: QueryOptions<TQuery, TDataset, TProjectId>,
-): StateSource<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`> | undefined>
-
-/** @beta */
 export function getQueryState<TData>(
   instance: SanityInstance,
   queryOptions: QueryOptions,
@@ -316,19 +312,19 @@ export function getQueryState(
 ): ReturnType<typeof _getQueryState> {
   return _getQueryState(...args)
 }
-const _getQueryState = bindActionBySource(
+const _getQueryState = bindActionByResource(
   queryStore,
   createStateSourceAction({
     selector: ({state, instance}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
       if (state.error) throw state.error
-      const key = getQueryKey(normalizeOptionsWithPerspective(instance, options))
+      const key = getQueryKey(instance, options)
       const queryState = state.queries[key]
       if (queryState?.error) throw queryState.error
       return queryState?.result
     },
     onSubscribe: ({state, instance}, options: QueryOptions) => {
       const subscriptionId = insecureRandomId()
-      const key = getQueryKey(normalizeOptionsWithPerspective(instance, options))
+      const key = getQueryKey(instance, options)
 
       state.set('addSubscriber', addSubscriber(key, subscriptionId))
 
@@ -357,16 +353,6 @@ const _getQueryState = bindActionBySource(
  *
  * @beta
  */
-export function resolveQuery<
-  TQuery extends string = string,
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  instance: SanityInstance,
-  queryOptions: ResolveQueryOptions<TQuery, TDataset, TProjectId>,
-): Promise<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>>
-
-/** @beta */
 export function resolveQuery<TData>(
   instance: SanityInstance,
   queryOptions: ResolveQueryOptions,
@@ -375,12 +361,12 @@ export function resolveQuery<TData>(
 export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise<unknown> {
   return _resolveQuery(...args)
 }
-const _resolveQuery = bindActionBySource(
+const _resolveQuery = bindActionByResource(
   queryStore,
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
     const normalized = normalizeOptionsWithPerspective(instance, options)
     const {getCurrent} = getQueryState(instance, normalized)
-    const key = getQueryKey(normalized)
+    const key = getQueryKey(instance, normalized)
 
     const aborted$ = signal
       ? new Observable<void>((observer) => {

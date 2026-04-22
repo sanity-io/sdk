@@ -1,19 +1,19 @@
 // tests/useDocumentEvent.test.ts
-import {type DocumentEvent, type DocumentHandle, subscribeDocumentEvents} from '@sanity/sdk'
-import {renderHook} from '@testing-library/react'
+import {type DocumentEvent, type DocumentHandle, onDocumentEvent} from '@sanity/sdk'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {ResourceProvider} from '../../context/ResourceProvider'
+import {renderHook} from '../../../test/test-utils'
 import {useDocumentEvent} from './useDocumentEvent'
 
 vi.mock('@sanity/sdk', async (importOriginal) => {
   const original = await importOriginal<typeof import('@sanity/sdk')>()
-  return {...original, subscribeDocumentEvents: vi.fn()}
+  return {...original, onDocumentEvent: vi.fn()}
 })
 
 const docHandle: DocumentHandle = {
   documentId: 'doc1',
   documentType: 'book',
+  resource: {projectId: 'p', dataset: 'd'},
 }
 
 describe('useDocumentEvent hook', () => {
@@ -21,23 +21,17 @@ describe('useDocumentEvent hook', () => {
     vi.resetAllMocks()
   })
 
-  it('calls subscribeDocumentEvents with instance and a stable handler', () => {
+  it('calls onDocumentEvent with instance and a stable handler', () => {
     const handleEvent = vi.fn()
     const unsubscribe = vi.fn()
-    vi.mocked(subscribeDocumentEvents).mockReturnValue(unsubscribe)
+    vi.mocked(onDocumentEvent).mockReturnValue(unsubscribe)
 
-    renderHook(() => useDocumentEvent({...docHandle, onEvent: handleEvent}), {
-      wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    renderHook(() => useDocumentEvent({...docHandle, onEvent: handleEvent}))
 
-    expect(vi.mocked(subscribeDocumentEvents)).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(subscribeDocumentEvents).mock.calls[0][0]).toEqual(expect.any(Object))
+    expect(vi.mocked(onDocumentEvent)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(onDocumentEvent).mock.calls[0][0]).toEqual(expect.any(Object))
 
-    const options = vi.mocked(subscribeDocumentEvents).mock.calls[0][1]
+    const options = vi.mocked(onDocumentEvent).mock.calls[0][1]
     expect(typeof options.eventHandler).toBe('function')
 
     const event = {type: 'edited', documentId: 'doc1', outgoing: {}} as DocumentEvent
@@ -48,15 +42,9 @@ describe('useDocumentEvent hook', () => {
   it('calls the unsubscribe function on unmount', () => {
     const handleEvent = vi.fn()
     const unsubscribe = vi.fn()
-    vi.mocked(subscribeDocumentEvents).mockReturnValue(unsubscribe)
+    vi.mocked(onDocumentEvent).mockReturnValue(unsubscribe)
 
-    const {unmount} = renderHook(() => useDocumentEvent({...docHandle, onEvent: handleEvent}), {
-      wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
-          {children}
-        </ResourceProvider>
-      ),
-    })
+    const {unmount} = renderHook(() => useDocumentEvent({...docHandle, onEvent: handleEvent}))
     unmount()
     expect(unsubscribe).toHaveBeenCalledTimes(1)
   })

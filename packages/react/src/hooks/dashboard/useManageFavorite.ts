@@ -7,14 +7,16 @@ import {
   type StudioResource,
 } from '@sanity/message-protocol'
 import {
-  type DocumentHandle,
   type FavoriteStatusResponse,
-  type FrameMessage,
   getFavoritesState,
+  isDatasetResource,
   resolveFavoritesState,
 } from '@sanity/sdk'
-import {useCallback, useMemo, useSyncExternalStore} from 'react'
+import {type FrameMessage} from '@sanity/sdk/comlink'
+import {useCallback, useContext, useMemo, useSyncExternalStore} from 'react'
 
+import {type DocumentHandle} from '../../config/handles'
+import {ResourceContext} from '../../context/DefaultResourceContext'
 import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useSanityInstance} from '../context/useSanityInstance'
 
@@ -82,8 +84,7 @@ interface UseManageFavoriteProps extends DocumentHandle {
 export function useManageFavorite({
   documentId,
   documentType,
-  projectId: paramProjectId,
-  dataset: paramDataset,
+  resource: paramResource,
   resourceId: paramResourceId,
   resourceType,
   schemaName,
@@ -93,11 +94,11 @@ export function useManageFavorite({
     connectTo: SDK_CHANNEL_NAME,
   })
   const instance = useSanityInstance()
-  const {config} = instance
-  const instanceProjectId = config?.projectId
-  const instanceDataset = config?.dataset
-  const projectId = paramProjectId ?? instanceProjectId
-  const dataset = paramDataset ?? instanceDataset
+  const contextResource = useContext(ResourceContext)
+  const resource = paramResource ?? contextResource
+  const datasetResource = resource && isDatasetResource(resource) ? resource : undefined
+  const projectId = datasetResource?.projectId
+  const dataset = datasetResource?.dataset
 
   if (resourceType === 'studio' && (!projectId || !dataset)) {
     throw new Error('projectId and dataset are required for studio resources')
@@ -110,16 +111,21 @@ export function useManageFavorite({
     throw new Error('resourceId is required for media-library and canvas resources')
   }
 
+  if (!resource) {
+    throw new Error('resource is required')
+  }
+
   // used for favoriteStore functions like getFavoritesState and resolveFavoritesState
   const context = useMemo(
     () => ({
       documentId,
       documentType,
+      resource,
       resourceId,
       resourceType,
       schemaName,
     }),
-    [documentId, documentType, resourceId, resourceType, schemaName],
+    [documentId, documentType, resource, resourceId, resourceType, schemaName],
   )
 
   // Get favorite status using StateSource

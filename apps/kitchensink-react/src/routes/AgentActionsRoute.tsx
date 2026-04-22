@@ -1,9 +1,5 @@
-import {
-  type AgentGenerateOptions,
-  type AgentPromptOptions,
-  useAgentGenerate,
-  useAgentPrompt,
-} from '@sanity/sdk-react'
+import {type AgentGenerateOptions, type AgentPromptOptions} from '@sanity/sdk/agent'
+import {useAgentGenerate, useAgentPrompt} from '@sanity/sdk-react'
 import {Box, Button, Card, Code, Label, Stack, Text} from '@sanity/ui'
 import {type JSX, useMemo, useState} from 'react'
 

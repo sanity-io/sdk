@@ -7,9 +7,9 @@ import {
   type SanityDocument,
 } from '@sanity/types'
 import {evaluateSync, type ExprNode} from 'groq-js'
-import {isEqual} from 'lodash-es'
 
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
+import {isDeepEqual} from '../utils/object'
 import {type DocumentAction} from './actions'
 import {type Grant} from './permissions'
 import {type DocumentSet, getId, processMutations} from './processMutations'
@@ -392,11 +392,19 @@ export function processActions({
           if (!userPatches?.length) continue
 
           if (!working[documentId] || !base[documentId]) {
-            throw new ActionError({
-              documentId,
-              transactionId,
-              message: `Cannot edit document because it does not exist.`,
-            })
+            if (isReleasePerspective(action.perspective)) {
+              throw new ActionError({
+                documentId,
+                transactionId,
+                message: `This document does not exist in the release. Please create it or add it to the release first.`,
+              })
+            } else {
+              throw new ActionError({
+                documentId,
+                transactionId,
+                message: `Cannot edit document because it does not exist.`,
+              })
+            }
           }
 
           const baseBefore = base[documentId] as SanityDocument
@@ -568,7 +576,7 @@ export function processActions({
 
         // Before proceeding, verify that the working draft is identical to the base draft.
         // TODO: is it enough just to check for the _rev or nah?
-        if (!isEqual(workingDraft, baseDraft)) {
+        if (!isDeepEqual(workingDraft, baseDraft)) {
           throw new ActionError({
             documentId,
             transactionId,

@@ -2,7 +2,6 @@
 import {getDocumentState, resolveDocument, type StateSource} from '@sanity/sdk'
 import {type SanityDocument} from '@sanity/types'
 import {renderHook} from '@testing-library/react'
-import {type SchemaOrigin} from 'groq'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
@@ -12,40 +11,6 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
   const original = await importOriginal<typeof import('@sanity/sdk')>()
   return {...original, getDocumentState: vi.fn(), resolveDocument: vi.fn()}
 })
-
-// Define a single generic TestDocument type
-type UseDocumentTestType = SchemaOrigin<
-  SanityDocument & {
-    _type: 'use-document-test-type'
-    foo?: string
-    extra?: boolean
-    title?: string
-    nested?: {
-      value?: number
-    }
-  },
-  'p.use-document-test-dataset'
->
-
-type UseDocumentTestTypeAlt = SchemaOrigin<
-  SanityDocument & {
-    _type: 'use-document-test-type'
-    bar: string[]
-    nested?: {
-      value?: number
-    }
-  },
-  'p.use-document-test-alt-dataset'
->
-
-// Scope the TestDocument type to the project/datasets used in tests
-
-declare module 'groq' {
-  interface SanitySchemas {
-    'p.use-document-test-dataset': UseDocumentTestType
-    'p.use-document-test-alt-dataset': UseDocumentTestTypeAlt
-  }
-}
 
 const book: SanityDocument = {
   _id: 'doc1',
@@ -71,7 +36,10 @@ describe('useDocument hook', () => {
 
     const {result} = renderHook(() => useDocument({documentId: 'doc1', documentType: 'book'}), {
       wrapper: ({children}) => (
-        <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+        <ResourceProvider
+          resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+          fallback={null}
+        >
           {children}
         </ResourceProvider>
       ),
@@ -106,7 +74,10 @@ describe('useDocument hook', () => {
       },
       {
         wrapper: ({children}) => (
-          <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
+          <ResourceProvider
+            resource={{projectId: 'test-project', dataset: 'test-dataset'}}
+            fallback={null}
+          >
             {children}
           </ResourceProvider>
         ),

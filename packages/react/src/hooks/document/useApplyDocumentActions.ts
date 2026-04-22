@@ -1,18 +1,11 @@
-import {
-  type ActionsResult,
-  applyDocumentActions,
-  type ApplyDocumentActionsOptions,
-  type DocumentAction,
-} from '@sanity/sdk'
-import {type SanityDocument} from 'groq'
+import {type ActionsResult, applyDocumentActions, type DocumentAction} from '@sanity/sdk'
 import {useContext} from 'react'
 
-import {SourcesContext} from '../../context/SourcesContext'
+import {type ResourceHandle} from '../../config/handles'
+import {ResourceContext} from '../../context/DefaultResourceContext'
+import {ResourcesContext} from '../../context/ResourcesContext'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {
-  normalizeSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+import {normalizeResourceOptions} from '../helpers/useNormalizedResourceOptions'
 // this import is used in an `{@link useEditDocument}`
 // eslint-disable-next-line unused-imports/no-unused-imports, import/consistent-type-specifier-style
 import type {useEditDocument} from './useEditDocument'
@@ -29,8 +22,8 @@ interface UseApplyDocumentActions {
     action:
       | DocumentAction<TDocumentType, TDataset, TProjectId>
       | DocumentAction<TDocumentType, TDataset, TProjectId>[],
-    options?: WithSourceNameSupport<ApplyDocumentActionsOptions>,
-  ) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
+    options?: ResourceHandle,
+  ) => Promise<ActionsResult>
 }
 
 /**
@@ -218,74 +211,43 @@ interface UseApplyDocumentActions {
  */
 export const useApplyDocumentActions: UseApplyDocumentActions = () => {
   const instance = useSanityInstance()
-  const sources = useContext(SourcesContext)
+  const resources = useContext(ResourcesContext)
+  const contextResource = useContext(ResourceContext)
 
   return (actionOrActions, options) => {
     const actions = Array.isArray(actionOrActions) ? actionOrActions : [actionOrActions]
-    const normalizedOptions = options ? normalizeSourceOptions(options, sources) : undefined
+    const optionsResource = options
+      ? normalizeResourceOptions(options, resources, contextResource).resource
+      : undefined
 
-    let projectId
-    let dataset
-    let source
-    for (const action of actions) {
-      if (action.projectId) {
-        if (source) {
-          throw new Error(
-            `Mismatches between projectId/dataset options and source in actions. Found projectId "${action.projectId}" and dataset "${action.dataset}" but expected source "${source}".`,
-          )
-        }
-        if (!projectId) projectId = action.projectId
-        if (action.projectId !== projectId) {
-          throw new Error(
-            `Mismatched project IDs found in actions. All actions must belong to the same project. Found "${action.projectId}" but expected "${projectId}".`,
-          )
-        }
+    const normalizedActions = actions.map((action) =>
+      normalizeResourceOptions(action, resources, contextResource),
+    )
+    let resource
 
-        if (action.dataset) {
-          if (!dataset) dataset = action.dataset
-          if (action.dataset !== dataset) {
-            throw new Error(
-              `Mismatched datasets found in actions. All actions must belong to the same dataset. Found "${action.dataset}" but expected "${dataset}".`,
-            )
-          }
-        }
-      }
-
-      if (action.source) {
-        if (!source) source = action.source
-        if (action.source !== source) {
-          throw new Error(
-            `Mismatched sources found in actions. All actions must belong to the same source. Found "${action.source}" but expected "${source}".`,
-          )
-        }
-        if (projectId || dataset) {
-          throw new Error(
-            `Mismatches between projectId/dataset options and source in actions. Found "${action.source}" but expected project "${projectId}" and dataset "${dataset}".`,
-          )
-        }
+    for (const action of normalizedActions) {
+      if (!resource) resource = action.resource
+      if (action.resource !== resource) {
+        throw new Error(
+          `Mismatched resources found in actions. All actions must belong to the same resource. Found "${JSON.stringify(action.resource)}" but expected "${JSON.stringify(resource)}".`,
+        )
       }
     }
 
-    if (projectId || dataset) {
-      const actualInstance = instance.match({projectId, dataset})
-      if (!actualInstance) {
-        throw new Error(
-          `Could not find a matching Sanity instance for the requested action: ${JSON.stringify({projectId, dataset}, null, 2)}.
-  Please ensure there is a ResourceProvider component with a matching configuration in the component hierarchy.`,
-        )
-      }
+    if (optionsResource && resource && optionsResource !== resource) {
+      throw new Error(
+        `Mismatched resources found in actions. Found top-level resource "${JSON.stringify(optionsResource)}" but expected resource from action handles "${JSON.stringify(resource)}".`,
+      )
+    }
 
-      return applyDocumentActions(actualInstance, {
-        actions,
-        source,
-        ...normalizedOptions,
-      })
+    const effectiveResource = resource ?? optionsResource
+    if (!effectiveResource) {
+      throw new Error('No resource found. Provide a resource via the action handle or context.')
     }
 
     return applyDocumentActions(instance, {
       actions,
-      source,
-      ...normalizedOptions,
+      resource: effectiveResource,
     })
   }
 }

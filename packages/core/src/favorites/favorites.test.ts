@@ -39,6 +39,7 @@ describe('favoritesStore', () => {
     resourceId: 'res456',
     resourceType: 'studio' as const,
     schemaName: 'movieSchema',
+    resource: {projectId: 'p', dataset: 'd'},
   }
 
   const mockContextNoSchema = {
@@ -46,12 +47,13 @@ describe('favoritesStore', () => {
     documentType: 'movie',
     resourceId: 'res456',
     resourceType: 'studio' as const,
+    resource: {projectId: 'p', dataset: 'd'},
   }
 
   describe('createFavoriteKey', () => {
     beforeEach(() => {
       vi.resetAllMocks()
-      instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      instance = createSanityInstance()
       setupMockStateSource()
     })
 
@@ -99,7 +101,7 @@ describe('favoritesStore', () => {
   describe('fetcher', () => {
     beforeEach(() => {
       vi.resetAllMocks()
-      instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      instance = createSanityInstance()
       setupMockStateSource()
     })
 

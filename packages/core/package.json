@@ -36,6 +36,16 @@
       "source": "./src/_exports/_internal.ts",
       "import": "./dist/_exports/_internal.js",
       "default": "./dist/_exports/_internal.js"
+    },
+    "./agent": {
+      "source": "./src/_exports/agent.ts",
+      "import": "./dist/_exports/agent.js",
+      "default": "./dist/_exports/agent.js"
+    },
+    "./comlink": {
+      "source": "./src/_exports/comlink.ts",
+      "import": "./dist/_exports/comlink.js",
+      "default": "./dist/_exports/comlink.js"
     }
   },
   "main": "./dist/index.js",
@@ -74,9 +84,7 @@
     "@sanity/mutate": "^0.16.1",
     "@sanity/telemetry": "^1.0.0",
     "@sanity/types": "^5.2.0",
-    "groq": "3.88.1-typegen-experimental.0",
     "groq-js": "^1.19.0",
-    "lodash-es": "^4.17.21",
     "reselect": "^5.1.1",
     "rxjs": "^7.8.2",
     "zustand": "^5.0.4"
@@ -90,7 +98,6 @@
     "@sanity/browserslist-config": "^1.0.5",
     "@sanity/pkg-utils": "^8.1.29",
     "@sanity/prettier-config": "^1.0.6",
-    "@types/lodash-es": "^4.17.12",
     "@vitest/coverage-v8": "3.2.4",
     "eslint": "^9.22.0",
     "prettier": "^3.7.3",

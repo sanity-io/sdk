@@ -1,4 +1,4 @@
-import {AuthStateType, type SanityConfig} from '@sanity/sdk'
+import {AuthStateType} from '@sanity/sdk'
 import {render, screen, waitFor} from '@testing-library/react'
 import React from 'react'
 import {type FallbackProps} from 'react-error-boundary'
@@ -7,7 +7,7 @@ import {beforeEach, describe, expect, it, type MockInstance, vi} from 'vitest'
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
-import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
+import {useOrganizationVerification} from '../../hooks/auth/useOrganizationVerification'
 import {AuthBoundary} from './AuthBoundary'
 
 // Mock hooks
@@ -15,7 +15,7 @@ vi.mock('../../hooks/auth/useAuthState', () => ({
   useAuthState: vi.fn(() => 'logged-out'),
 }))
 vi.mock('../../hooks/auth/useLoginUrl')
-vi.mock('../../hooks/auth/useVerifyOrgProjects')
+vi.mock('../../hooks/auth/useOrganizationVerification')
 vi.mock('../../hooks/auth/useHandleAuthCallback', () => ({
   useHandleAuthCallback: vi.fn(() => async () => {}),
 }))
@@ -107,26 +107,8 @@ describe('AuthBoundary', () => {
   let consoleErrorSpy: MockInstance
   const mockUseAuthState = vi.mocked(useAuthState)
   const mockUseLoginUrl = vi.mocked(useLoginUrl)
-  const mockUseVerifyOrgProjects = vi.mocked(useVerifyOrgProjects)
+  const mockUseVerifyOrganizationProjects = vi.mocked(useOrganizationVerification)
   const testProjectIds = ['proj-test'] // Example project ID for tests
-
-  // Mock Sanity instance
-  const mockSanityInstance = {
-    instanceId: 'test-instance-id',
-    config: {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
-    },
-    isDisposed: () => false,
-    dispose: () => {},
-    onDispose: () => () => {},
-    getParent: () => undefined,
-    createChild: (config: SanityConfig) => ({
-      ...mockSanityInstance,
-      config: {...mockSanityInstance.config, ...config},
-    }),
-    match: () => undefined,
-  }
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -135,8 +117,8 @@ describe('AuthBoundary', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN} as any)
     mockUseLoginUrl.mockReturnValue('http://example.com/login')
-    // Default mock for useVerifyOrgProjects - returns null (no error)
-    mockUseVerifyOrgProjects.mockImplementation(() => null)
+    // Default mock for useOrganizationVerification - returns null (no error)
+    mockUseVerifyOrganizationProjects.mockImplementation(() => null)
   })
 
   afterEach(() => {
@@ -166,7 +148,7 @@ describe('AuthBoundary', () => {
       isExchangingToken: false,
     })
     const {container} = render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
@@ -183,7 +165,7 @@ describe('AuthBoundary', () => {
       token: 'exampleToken',
     })
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
@@ -197,7 +179,7 @@ describe('AuthBoundary', () => {
       error: new Error('test error'),
     })
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
@@ -214,7 +196,7 @@ describe('AuthBoundary', () => {
 
   it('renders children when logged in and org verification passes', () => {
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>Protected Content</AuthBoundary>
       </ResourceProvider>,
     )
@@ -226,7 +208,7 @@ describe('AuthBoundary', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN} as any)
     // Mock specific return value for this test
-    mockUseVerifyOrgProjects.mockImplementation((disabled, pIds) => {
+    mockUseVerifyOrganizationProjects.mockImplementation((disabled, pIds) => {
       // Expect verification to be enabled (disabled=false) and projectIds to match
       if (!disabled && pIds === testProjectIds) {
         return orgErrorMessage
@@ -236,7 +218,7 @@ describe('AuthBoundary', () => {
 
     // Need to catch the error thrown during render. ErrorBoundary mock handles this.
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
         <AuthBoundary verifyOrganization={true} projectIds={testProjectIds}>
           <div>Protected Content</div>
         </AuthBoundary>
@@ -258,7 +240,7 @@ describe('AuthBoundary', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN} as any)
     // Mock specific return value for this test
-    mockUseVerifyOrgProjects.mockImplementation((disabled, pIds) => {
+    mockUseVerifyOrganizationProjects.mockImplementation((disabled, pIds) => {
       // Expect verification to be disabled (disabled=true) and projectIds to match
       if (disabled && pIds === testProjectIds) {
         // Hook should return null when disabled, but we mock based on call
@@ -268,7 +250,7 @@ describe('AuthBoundary', () => {
     })
 
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
         <AuthBoundary verifyOrganization={false} projectIds={testProjectIds}>
           <div>Protected Content</div>
         </AuthBoundary>
@@ -289,11 +271,11 @@ describe('AuthBoundary', () => {
       error: new Error(authErrorMessage),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
-    mockUseVerifyOrgProjects.mockReturnValue(null) // Org verification passes or is irrelevant
-    mockUseVerifyOrgProjects.mockImplementation(() => null)
+    mockUseVerifyOrganizationProjects.mockReturnValue(null) // Org verification passes or is irrelevant
+    mockUseVerifyOrganizationProjects.mockImplementation(() => null)
 
     render(
-      <ResourceProvider projectId="p" dataset="d" fallback={null}>
+      <ResourceProvider resource={{projectId: 'p', dataset: 'd'}} fallback={null}>
         <AuthBoundary projectIds={testProjectIds}>
           <div>Protected Content</div>
         </AuthBoundary>

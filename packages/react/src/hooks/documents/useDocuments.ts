@@ -1,14 +1,10 @@
-import {
-  createGroqSearchFilter,
-  type DatasetHandle,
-  type DocumentHandle,
-  type QueryOptions,
-} from '@sanity/sdk'
+import {type DocumentHandle, type QueryOptions} from '@sanity/sdk'
+import {createGroqSearchFilter} from '@sanity/sdk/_internal'
 import {type SortOrderingItem} from '@sanity/types'
-import {pick} from 'lodash-es'
 import {useCallback, useEffect, useMemo, useState} from 'react'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {type ResourceHandle} from '../../config/handles'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 import {useQuery} from '../query/useQuery'
 
@@ -25,7 +21,9 @@ export interface DocumentsOptions<
   TDataset extends string = string,
   TProjectId extends string = string,
 >
-  extends DatasetHandle<TDataset, TProjectId>, Pick<QueryOptions, 'perspective' | 'params'> {
+  extends
+    ResourceHandle<TProjectId, TDataset>,
+    Pick<QueryOptions<TDocumentType, TDataset, TProjectId>, 'params'> {
   /**
    * Filter documents by their `_type`. Can be a single type or an array of types.
    */
@@ -93,18 +91,16 @@ export interface DocumentsResponse<
  * @returns An object containing the list of document handles, the loading state, the total count of retrieved document handles, and a function to load more
  *
  * @remarks
- * - The returned document handles include projectId and dataset information from the current Sanity instance
+ * - The returned document handles include resource information from the current Sanity instance
  * - This makes them ready to use with document operations and other document hooks
- * - The hook automatically uses the correct Sanity instance based on the projectId and dataset in the options
+ * - The hook automatically uses the correct Sanity instance based on the resource in the options
  *
  * @example Basic infinite list with loading more
  * ```tsx
  * import {
  *   useDocuments,
- *   createDatasetHandle,
- *   type DatasetHandle,
  *   type DocumentHandle,
- *   type SortOrderingItem
+ *   type DocumentResource,
  * } from '@sanity/sdk-react'
  * import {Suspense} from 'react'
  *
@@ -120,14 +116,14 @@ export interface DocumentsResponse<
  *
  * // Define props for the list component
  * interface DocumentListProps {
- *   dataset: DatasetHandle
+ *   resource: DocumentResource
  *   documentType: string
  *   search?: string
  * }
  *
- * function DocumentList({dataset, documentType, search}: DocumentListProps) {
+ * function DocumentList({resource, documentType, search}: DocumentListProps) {
  *   const { data, hasMore, isPending, loadMore, count } = useDocuments({
- *     ...dataset,
+ *     resource,
  *     documentType,
  *     search,
  *     batchSize: 10,
@@ -141,7 +137,7 @@ export interface DocumentsResponse<
  *         {data.map((docHandle) => (
  *           <li key={docHandle.documentId}>
  *            <Suspense fallback="Loading…">
- *              <MyDocumentComponent docHandle={docHandle} />
+ *              <MyDocumentComponent doc={docHandle} />
  *            </Suspense>
  *           </li>
  *         ))}
@@ -156,8 +152,7 @@ export interface DocumentsResponse<
  * }
  *
  * // Usage:
- * // const myDatasetHandle = createDatasetHandle({ projectId: 'p1', dataset: 'production' })
- * // <DocumentList dataset={myDatasetHandle} documentType="post" search="Sanity" />
+ * // <DocumentList resource={{projectId: 'p1', dataset: 'production'}} documentType="post" search="Sanity" />
  * ```
  *
  * @example Using `filter` and `params` options for narrowing a collection
@@ -202,14 +197,14 @@ export function useDocuments<
   filter,
   orderings,
   documentType,
-  ...options
+  ...rawOptions
 }: DocumentsOptions<TDocumentType, TDataset, TProjectId>): DocumentsResponse<
   TDocumentType,
   TDataset,
   TProjectId
 > {
+  const options = useNormalizedResourceOptions(rawOptions)
   useTrackHookUsage('useDocuments')
-  const instance = useSanityInstance(options)
   const [limit, setLimit] = useState(batchSize)
   const documentTypes = useMemo(
     () =>
@@ -281,9 +276,10 @@ export function useDocuments<
     query: `{"count":${countQuery},"data":${dataQuery}}`,
     params: {
       ...params,
+      // these are passed back to the user as part of each document handle
       __handle: {
-        ...pick(instance.config, 'projectId', 'dataset', 'perspective'),
-        ...pick(options, 'projectId', 'dataset', 'perspective'),
+        ...(options.resource ? {resource: options.resource} : {}),
+        ...(options.perspective ? {perspective: options.perspective} : {}),
       },
       __types: documentTypes,
     },

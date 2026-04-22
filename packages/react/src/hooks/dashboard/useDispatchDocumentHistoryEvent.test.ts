@@ -2,19 +2,20 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'
 import {useWindowConnection} from '../comlink/useWindowConnection'
-import {useRecordDocumentHistoryEvent} from './useRecordDocumentHistoryEvent'
+import {useDispatchDocumentHistoryEvent} from './useDispatchDocumentHistoryEvent'
 
 vi.mock('../comlink/useWindowConnection', () => ({
   useWindowConnection: vi.fn(),
 }))
 
-describe('useRecordDocumentHistoryEvent', () => {
+describe('useDispatchDocumentHistoryEvent', () => {
   let mockSendMessage = vi.fn()
   const mockDocumentHandle = {
     documentId: 'mock-id',
     documentType: 'mock-type',
     resourceType: 'studio' as const,
     resourceId: 'mock-resource-id',
+    resource: {projectId: 'mock-project-id', dataset: 'mock-dataset'},
   }
 
   beforeEach(() => {
@@ -27,10 +28,10 @@ describe('useRecordDocumentHistoryEvent', () => {
     })
   })
 
-  it('should send correct message when recording events', () => {
-    const {result} = renderHook(() => useRecordDocumentHistoryEvent(mockDocumentHandle))
+  it('should send correct message when dispatching events', () => {
+    const {result} = renderHook(() => useDispatchDocumentHistoryEvent(mockDocumentHandle))
 
-    result.current.recordEvent('viewed')
+    result.current.dispatchHistoryEvent('viewed')
     expect(mockSendMessage).toHaveBeenCalledWith('dashboard/v1/events/history', {
       eventType: 'viewed',
       document: {
@@ -50,9 +51,9 @@ describe('useRecordDocumentHistoryEvent', () => {
       throw new Error('Failed to send message')
     })
 
-    const {result} = renderHook(() => useRecordDocumentHistoryEvent(mockDocumentHandle))
+    const {result} = renderHook(() => useDispatchDocumentHistoryEvent(mockDocumentHandle))
 
-    expect(() => result.current.recordEvent('viewed')).toThrow('Failed to send message')
+    expect(() => result.current.dispatchHistoryEvent('viewed')).toThrow('Failed to send message')
     consoleErrorSpy.mockRestore()
   })
 
@@ -62,10 +63,11 @@ describe('useRecordDocumentHistoryEvent', () => {
       documentType: 'mock-type',
       resourceType: 'media-library' as const,
       resourceId: undefined,
+      resource: {mediaLibraryId: 'mock-media-library-id'},
     }
 
-    expect(() => renderHook(() => useRecordDocumentHistoryEvent(mockMediaDocumentHandle))).toThrow(
-      'resourceId is required for media-library and canvas resources',
-    )
+    expect(() =>
+      renderHook(() => useDispatchDocumentHistoryEvent(mockMediaDocumentHandle)),
+    ).toThrow('resourceId is required for media-library and canvas resources')
   })
 })

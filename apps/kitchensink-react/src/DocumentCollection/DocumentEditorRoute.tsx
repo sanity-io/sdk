@@ -6,13 +6,13 @@ import {
   useDocumentEvent,
   useDocuments,
   useDocumentSyncStatus,
+  useResource,
 } from '@sanity/sdk-react'
 import {Badge, Box, Button, Card, Checkbox, Flex, Label, Stack, Text, TextInput} from '@sanity/ui'
 import {type JSX, useEffect, useState} from 'react'
 
 import {DocumentEditorPanel} from '../components/DocumentEditorPanel'
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
-import {devConfigs, e2eConfigs} from '../sanityConfigs'
 
 const AUTHOR_INITIAL_VALUES = {
   name: 'New Author',
@@ -70,7 +70,7 @@ function DocumentEditor({
             <Text size={1} weight="semibold">
               Document Content
             </Text>
-            {document && (
+            {document != null ? (
               <>
                 {/* Hidden element for e2e tests */}
                 <Box
@@ -92,7 +92,7 @@ function DocumentEditor({
                   showSyncStatus={false}
                 />
               </>
-            )}
+            ) : null}
           </Stack>
         </Card>
       </Stack>
@@ -109,7 +109,7 @@ function Editor() {
   const [docHandle, setDocHandle] = useState<DocumentHandle<'author'> | null>(documents[0] ?? null)
   const [newDocumentId, setNewDocumentId] = useState<string>('')
   const [liveEditMode, setLiveEditMode] = useState<boolean>(false)
-  const {projectId, dataset} = import.meta.env['VITE_IS_E2E'] ? e2eConfigs[0] : devConfigs[0]
+  const resource = useResource()!
 
   const handleLoadDocument = () => {
     const documentId = newDocumentId || docHandle?.documentId
@@ -118,9 +118,8 @@ function Editor() {
         createDocumentHandle({
           documentType: 'author',
           documentId,
-          projectId,
-          dataset,
           liveEdit: liveEditMode,
+          resource,
         }),
       )
     }
@@ -132,6 +131,7 @@ function Editor() {
         documentType: 'author',
         documentId: newId,
         liveEdit: liveEditMode,
+        resource,
       }),
     )
   }
@@ -147,9 +147,8 @@ function Editor() {
         createDocumentHandle({
           documentType: 'author',
           documentId: docHandle.documentId,
-          projectId,
-          dataset,
           liveEdit: liveEditMode,
+          resource,
         }),
       )
     }

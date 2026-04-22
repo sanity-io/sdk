@@ -1,8 +1,9 @@
-import {type DatasetHandle, type DocumentEvent, subscribeDocumentEvents} from '@sanity/sdk'
+import {type DocumentEvent, onDocumentEvent} from '@sanity/sdk'
 import {useCallback, useEffect, useInsertionEffect, useRef} from 'react'
 
+import {type ResourceHandle} from '../../config/handles'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useNormalizedSourceOptions} from '../helpers/useNormalizedSourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 
 /**
@@ -11,7 +12,7 @@ import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 export interface UseDocumentEventOptions<
   TDataset extends string = string,
   TProjectId extends string = string,
-> extends DatasetHandle<TDataset, TProjectId> {
+> extends ResourceHandle<TProjectId, TDataset> {
   onEvent: (documentEvent: DocumentEvent) => void
 }
 
@@ -22,19 +23,19 @@ export interface UseDocumentEventOptions<
  * Subscribes an event handler to events in your application's document store.
  *
  * @category Documents
- * @param options - An object containing the event handler (`onEvent`) and optionally a `DatasetHandle` (projectId and dataset). If the handle is not provided, the nearest Sanity instance from context will be used.
+ * @param options - An object containing the event handler (`onEvent`) and optionally a `resource`. If no resource is provided, the nearest resource from context will be used.
  * @example Creating a custom hook for document event toasts
  * ```tsx
- * import {createDatasetHandle, type DatasetHandle, type DocumentEvent, useDocumentEvent} from '@sanity/sdk-react'
+ * import {type DocumentResource, type DocumentEvent, useDocumentEvent} from '@sanity/sdk-react'
  * import {useToast} from './my-ui-library'
  *
- * // Define options for the custom hook, extending DatasetHandle
- * interface DocumentToastsOptions extends DatasetHandle {
- *   // Could add more options, e.g., { includeEvents: DocumentEvent['type'][] }
+ * // Define options for the custom hook
+ * interface DocumentToastsOptions {
+ *   resource?: DocumentResource
  * }
  *
  * // Define the custom hook
- * function useDocumentToasts({...datasetHandle}: DocumentToastsOptions = {}) {
+ * function useDocumentToasts({resource}: DocumentToastsOptions = {}) {
  *   const showToast = useToast() // Get the toast function
  *
  *   // Define the event handler logic to show toasts on specific events
@@ -46,24 +47,20 @@ export interface UseDocumentEventOptions<
  *     } else if (event.type === 'deleted') {
  *       showToast(`Document ${event.documentId} deleted.`)
  *     } else {
- *       // Optionally log other events for debugging
  *       console.log('Document Event:', event.type, event.documentId)
  *     }
  *   }
  *
- *   // Call the original hook, spreading the handle properties
  *   useDocumentEvent({
- *     ...datasetHandle, // Spread the dataset handle (projectId, dataset)
+ *     resource,
  *     onEvent: handleEvent,
  *   })
  * }
  *
  * function MyComponentWithToasts() {
- *   // Use the custom hook, passing specific handle info
- *   const specificHandle = createDatasetHandle({ projectId: 'p1', dataset: 'ds1' })
- *   useDocumentToasts(specificHandle)
+ *   useDocumentToasts({resource: {projectId: 'p1', dataset: 'ds1'}})
  *
- *   // // Or use it relying on context for the handle
+ *   // Or rely on context for the resource:
  *   // useDocumentToasts()
  *
  *   return <div>...</div>
@@ -79,7 +76,7 @@ export function useDocumentEvent<
 ): void {
   useTrackHookUsage('useDocumentEvent')
   // Destructure handler and datasetHandle from options
-  const normalizedOptions = useNormalizedSourceOptions(options)
+  const normalizedOptions = useNormalizedResourceOptions(options)
   const {onEvent, ...datasetHandle} = normalizedOptions
   const ref = useRef(onEvent)
 
@@ -91,11 +88,11 @@ export function useDocumentEvent<
     return ref.current(documentEvent)
   }, [])
 
-  const instance = useSanityInstance(datasetHandle)
+  const instance = useSanityInstance()
   useEffect(() => {
-    return subscribeDocumentEvents(instance, {
+    return onDocumentEvent(instance, {
       eventHandler: stableHandler,
-      source: datasetHandle.source,
+      resource: datasetHandle.resource,
     })
-  }, [instance, datasetHandle.source, stableHandler])
+  }, [instance, datasetHandle.resource, stableHandler])
 }

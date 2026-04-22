@@ -1,16 +1,17 @@
-import {type Observable} from 'rxjs'
+import {type SanityProject} from '@sanity/client'
+import {NEVER, type Observable} from 'rxjs'
 import {TestScheduler} from 'rxjs/testing'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {
   compareProjectOrganization,
-  type OrgVerificationResult,
+  type OrganizationVerificationResult,
 } from '../project/organizationVerification'
 import {getProjectState} from '../project/project'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {getDashboardOrganizationId} from './dashboardUtils'
-import {observeOrganizationVerificationState} from './getOrganizationVerificationState'
+import {getOrganizationVerificationState} from './getOrganizationVerificationState'
 
 // Mock dependencies
 vi.mock('./dashboardUtils', () => ({
@@ -20,22 +21,18 @@ vi.mock('../project/project', () => ({
   getProjectState: vi.fn(),
 }))
 // Mock the comparison function to check its inputs
-vi.mock('../project/organizationVerification', async (importOriginal) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const original = await importOriginal<any>()
-  return {
-    ...original,
-    compareProjectOrganization: vi.fn(),
-  }
-})
+vi.mock('../project/organizationVerification', (importOriginal) => ({
+  ...importOriginal(),
+  compareProjectOrganization: vi.fn(),
+}))
 
-describe('observeOrganizationVerificationState', () => {
+describe('getOrganizationVerificationState', () => {
   let testScheduler: TestScheduler
 
-  // Mock instance (only config.projectId is used)
+  // Mock instance with studio.projectId
   const mockInstance = {
-    config: {projectId: 'proj-1', dataset: 'd'},
-  } as SanityInstance
+    config: {studio: {projectId: 'proj-1'}},
+  } as unknown as SanityInstance
 
   beforeEach(() => {
     testScheduler = new TestScheduler((actual, expected) => {
@@ -50,21 +47,20 @@ describe('observeOrganizationVerificationState', () => {
       observable,
       getCurrent: () => undefined,
       subscribe: observable.subscribe.bind(observable),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any) // Cast to any to bypass strict type checking in mock
+    } as unknown as StateSource<string | undefined>)
   }
 
   // Helper to mock getProjectState
   const mockProjectOrgId = (observable: Observable<{organizationId: string | null} | null>) => {
     vi.mocked(getProjectState).mockReturnValue({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      observable: observable as any, // Cast needed due to complex type
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as StateSource<any>)
+      observable: observable as unknown as Observable<SanityProject | undefined>,
+      getCurrent: () => null,
+      subscribe: () => () => {},
+    } as unknown as StateSource<SanityProject | undefined>)
   }
 
   // Helper to mock compareProjectOrganization result
-  const mockComparisonResult = (result: OrgVerificationResult) => {
+  const mockComparisonResult = (result: OrganizationVerificationResult) => {
     vi.mocked(compareProjectOrganization).mockReturnValue(result)
   }
 
@@ -79,19 +75,18 @@ describe('observeOrganizationVerificationState', () => {
       const expectedMarble = '--a' // Corrected: combineLatest emits at frame 2
       const expectedValues = {a: {error: null}}
 
-      const result$ = observeOrganizationVerificationState(mockInstance, [
-        mockInstance.config.projectId!,
+      const result = getOrganizationVerificationState(mockInstance, [
+        mockInstance.config.studio!.projectId!,
       ])
-      expectObservable(result$).toBe(expectedMarble, expectedValues)
+      expectObservable(result.observable).toBe(expectedMarble, expectedValues)
     })
     expect(compareProjectOrganization).not.toHaveBeenCalled()
   })
 
-  it('should emit {error: null} if instance.config.projectId is missing', () => {
+  it('should emit {error: null} if instance has no default source projectId', () => {
     const instanceWithoutProjectId = {
-      config: {projectId: undefined, dataset: 'd'},
-      // Add other required properties if SanityInstance type needs them
-    } as SanityInstance
+      config: {auth: {}},
+    } as unknown as SanityInstance
 
     testScheduler.run(({hot, expectObservable}) => {
       // Dashboard org ID doesn't matter much here, but provide one
@@ -106,8 +101,8 @@ describe('observeOrganizationVerificationState', () => {
       const expectedMarble = '-a' // Corrected: Emit at frame 1
       const expectedValues = {a: {error: null}}
 
-      const result$ = observeOrganizationVerificationState(instanceWithoutProjectId, [])
-      expectObservable(result$).toBe(expectedMarble, expectedValues)
+      const result = getOrganizationVerificationState(instanceWithoutProjectId, [])
+      expectObservable(result.observable).toBe(expectedMarble, expectedValues)
     })
     // No project fetch or comparison should occur
     expect(getProjectState).not.toHaveBeenCalled()
@@ -138,10 +133,10 @@ describe('observeOrganizationVerificationState', () => {
       const expectedMarble = '---r' // Should emit { error: null }
       const expectedValues = {r: {error: null}} // Expect null error
 
-      const result$ = observeOrganizationVerificationState(mockInstance, [
-        mockInstance.config.projectId!,
+      const result = getOrganizationVerificationState(mockInstance, [
+        mockInstance.config.studio!.projectId!,
       ])
-      expectObservable(result$).toBe(expectedMarble, expectedValues)
+      expectObservable(result.observable).toBe(expectedMarble, expectedValues)
     })
     // Comparison should NOT be called because projectData.orgId is null
     expect(compareProjectOrganization).not.toHaveBeenCalled()
@@ -162,15 +157,73 @@ describe('observeOrganizationVerificationState', () => {
       const expectedMarble = '--r' // Emits when projectOrgId$ emits
       const expectedValues = {r: comparisonResult}
 
-      const result$ = observeOrganizationVerificationState(mockInstance, [
-        mockInstance.config.projectId!,
+      const result = getOrganizationVerificationState(mockInstance, [
+        mockInstance.config.studio!.projectId!,
       ])
-      expectObservable(result$).toBe(expectedMarble, expectedValues)
+      expectObservable(result.observable).toBe(expectedMarble, expectedValues)
     })
 
     // Check that comparison was called with correct values after observables emit
     expect(compareProjectOrganization).toHaveBeenCalledTimes(1)
     expect(compareProjectOrganization).toHaveBeenCalledWith('proj-1', 'org-match', 'org-match')
+  })
+
+  describe('getCurrent()', () => {
+    const setupMocks = ({
+      dashboardOrgId,
+      projectOrgId,
+    }: {
+      dashboardOrgId: string | null | undefined
+      projectOrgId: string | null
+    }) => {
+      vi.mocked(getDashboardOrganizationId).mockReturnValue({
+        getCurrent: () => dashboardOrgId,
+        observable: NEVER,
+        subscribe: () => () => {},
+      } as StateSource<string | undefined>)
+      vi.mocked(getProjectState).mockReturnValue({
+        getCurrent: () => (projectOrgId !== null ? {organizationId: projectOrgId} : null),
+        observable: NEVER as Observable<SanityProject | undefined>,
+        subscribe: () => () => {},
+      } as StateSource<SanityProject | undefined>)
+    }
+
+    it('returns {error: null} when dashboardOrgId is null', () => {
+      setupMocks({dashboardOrgId: null, projectOrgId: 'org-real'})
+      const result = getOrganizationVerificationState(mockInstance, ['proj-1'])
+      expect(result.getCurrent()).toEqual({error: null})
+      expect(compareProjectOrganization).not.toHaveBeenCalled()
+    })
+
+    it('returns {error: null} when projectIds is empty', () => {
+      setupMocks({dashboardOrgId: 'org-dash', projectOrgId: 'org-real'})
+      const result = getOrganizationVerificationState(mockInstance, [])
+      expect(result.getCurrent()).toEqual({error: null})
+      expect(compareProjectOrganization).not.toHaveBeenCalled()
+    })
+
+    it('returns {error: null} when project has no orgId', () => {
+      setupMocks({dashboardOrgId: 'org-dash', projectOrgId: null})
+      const result = getOrganizationVerificationState(mockInstance, ['proj-1'])
+      expect(result.getCurrent()).toEqual({error: null})
+      expect(compareProjectOrganization).not.toHaveBeenCalled()
+    })
+
+    it('returns {error: null} when org IDs match', () => {
+      setupMocks({dashboardOrgId: 'org-match', projectOrgId: 'org-match'})
+      vi.mocked(compareProjectOrganization).mockReturnValue({error: null})
+      const result = getOrganizationVerificationState(mockInstance, ['proj-1'])
+      expect(result.getCurrent()).toEqual({error: null})
+      expect(compareProjectOrganization).toHaveBeenCalledWith('proj-1', 'org-match', 'org-match')
+    })
+
+    it('returns error when org IDs mismatch', () => {
+      const mismatchError = {error: 'Mismatch'}
+      setupMocks({dashboardOrgId: 'org-dash', projectOrgId: 'org-proj'})
+      vi.mocked(compareProjectOrganization).mockReturnValue(mismatchError)
+      const result = getOrganizationVerificationState(mockInstance, ['proj-1'])
+      expect(result.getCurrent()).toEqual(mismatchError)
+    })
   })
 
   it('should call compareProjectOrganization and emit its result when IDs mismatch', () => {
@@ -186,10 +239,10 @@ describe('observeOrganizationVerificationState', () => {
       const expectedMarble = '--r'
       const expectedValues = {r: comparisonResult}
 
-      const result$ = observeOrganizationVerificationState(mockInstance, [
-        mockInstance.config.projectId!,
+      const result = getOrganizationVerificationState(mockInstance, [
+        mockInstance.config.studio!.projectId!,
       ])
-      expectObservable(result$).toBe(expectedMarble, expectedValues)
+      expectObservable(result.observable).toBe(expectedMarble, expectedValues)
     })
     expect(compareProjectOrganization).toHaveBeenCalledTimes(1)
     expect(compareProjectOrganization).toHaveBeenCalledWith('proj-1', 'org-proj', 'org-dash')

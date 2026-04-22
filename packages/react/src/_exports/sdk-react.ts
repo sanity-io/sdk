@@ -1,9 +1,17 @@
 /**
  * @module exports
  */
+
+// React-layer handle types (relaxed) — shadow core versions for @sanity/sdk-react consumers.
+// resource is optional and resolved from context when not provided.
 export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBoundary'
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
+export {
+  type DocumentHandle as DocumentHandle,
+  type DocumentTypeHandle as DocumentTypeHandle,
+  type ResourceHandle as ResourceHandle,
+} from '../config/handles'
 export {ComlinkTokenRefreshProvider} from '../context/ComlinkTokenRefresh'
 export {renderSanityApp} from '../context/renderSanityApp'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
@@ -26,7 +34,7 @@ export {useDashboardOrganizationId} from '../hooks/auth/useDashboardOrganization
 export {useHandleAuthCallback} from '../hooks/auth/useHandleAuthCallback'
 export {useLoginUrl} from '../hooks/auth/useLoginUrl'
 export {useLogOut} from '../hooks/auth/useLogOut'
-export {useVerifyOrgProjects} from '../hooks/auth/useVerifyOrgProjects'
+export {useOrganizationVerification} from '../hooks/auth/useOrganizationVerification'
 export {useClient} from '../hooks/client/useClient'
 export {
   type FrameConnection,
@@ -40,15 +48,16 @@ export {
   type WindowConnection,
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
+export {useResource} from '../hooks/context/useDefaultResource'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
+export {useDispatchDocumentHistoryEvent} from '../hooks/dashboard/useDispatchDocumentHistoryEvent'
 export {useDispatchIntent} from '../hooks/dashboard/useDispatchIntent'
 export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
 export {
   type NavigateToStudioResult,
   useNavigateToStudioDocument,
 } from '../hooks/dashboard/useNavigateToStudioDocument'
-export {useRecordDocumentHistoryEvent} from '../hooks/dashboard/useRecordDocumentHistoryEvent'
 export {useStudioWorkspacesByProjectIdDataset} from '../hooks/dashboard/useStudioWorkspacesByProjectIdDataset'
 export {useWindowTitle} from '../hooks/dashboard/useWindowTitle'
 export {useDatasets} from '../hooks/datasets/useDatasets'
@@ -89,4 +98,11 @@ export {type UsersResult, useUsers} from '../hooks/users/useUsers'
 export {REACT_SDK_VERSION} from '../version'
 export {type DatasetsResponse, type SanityProjectMember} from '@sanity/client'
 export type {Status as ComlinkStatus} from '@sanity/comlink'
+
+// Strict core versions — available for users who need explicit resource
+export {
+  type DocumentHandle as StrictDocumentHandle,
+  type DocumentTypeHandle as StrictDocumentTypeHandle,
+  type ResourceHandle as StrictResourceHandle,
+} from '@sanity/sdk'
 export {type SanityDocument, type SortOrderingItem} from '@sanity/types'

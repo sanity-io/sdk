@@ -19,15 +19,10 @@ describe('Users Reducers', () => {
   // Mock SanityInstance for testing
   const mockInstance: SanityInstance = {
     instanceId: 'test-instance-id',
-    config: {
-      projectId: 'test-project-id',
-    },
+    config: {},
     isDisposed: () => false,
     dispose: () => {},
     onDispose: () => () => {},
-    getParent: () => undefined,
-    createChild: (_config) => mockInstance,
-    match: () => undefined,
   }
 
   const sampleOptions: GetUsersOptions = {

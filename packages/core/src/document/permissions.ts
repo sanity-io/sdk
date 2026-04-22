@@ -69,7 +69,7 @@ const documentsSelector = createSelector(
       actions
         .map((action) => {
           if (typeof action.documentId !== 'string') return []
-          // For liveEdit documents, only fetch the single document
+          // live action and version docs
           if (action.liveEdit) return [action.documentId]
           // For standard documents, fetch both draft and published
           const ids: string[] = [

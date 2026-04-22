@@ -58,10 +58,7 @@ describe('normalizeMedia', () => {
 })
 
 describe('transformProjectionToPreview', () => {
-  const instance = createSanityInstance({
-    projectId: 'test-project',
-    dataset: 'test-dataset',
-  })
+  const instance = createSanityInstance()
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -81,7 +78,11 @@ describe('transformProjectionToPreview', () => {
       media: null,
     }
 
-    const result = transformProjectionToPreview(instance, projectionResult)
+    const result = transformProjectionToPreview(
+      instance,
+      {projectId: 'p', dataset: 'd'},
+      projectionResult,
+    )
 
     expect(result).toEqual({
       title: 'My Title',
@@ -100,7 +101,11 @@ describe('transformProjectionToPreview', () => {
       media: null,
     }
 
-    const result = transformProjectionToPreview(instance, projectionResult)
+    const result = transformProjectionToPreview(
+      instance,
+      {projectId: 'p', dataset: 'd'},
+      projectionResult,
+    )
 
     expect(result.title).toBe('article: doc1')
     expect(result.subtitle).toBeUndefined()
@@ -116,7 +121,11 @@ describe('transformProjectionToPreview', () => {
       media: {type: 'image-asset', _ref: 'image-abc123-200x200-png', url: ''},
     }
 
-    const result = transformProjectionToPreview(instance, projectionResult)
+    const result = transformProjectionToPreview(
+      instance,
+      {projectId: 'p', dataset: 'd'},
+      projectionResult,
+    )
 
     expect(result).toEqual({
       title: 'My Title',
@@ -143,7 +152,11 @@ describe('transformProjectionToPreview', () => {
       },
     }
 
-    const result = transformProjectionToPreview(instance, projectionResult)
+    const result = transformProjectionToPreview(
+      instance,
+      {projectId: 'p', dataset: 'd'},
+      projectionResult,
+    )
 
     expect(result).toEqual({
       title: 'My Title',
@@ -156,7 +169,7 @@ describe('transformProjectionToPreview', () => {
     })
   })
 
-  it('calls getClient with the provided source', async () => {
+  it('calls getClient with the provided resource', async () => {
     const projectionResult: PreviewQueryResult = {
       _id: 'doc1',
       _type: 'article',
@@ -166,14 +179,14 @@ describe('transformProjectionToPreview', () => {
       media: null,
     }
 
-    const source = {mediaLibraryId: 'test-library'}
+    const resource = {mediaLibraryId: 'test-library'}
 
-    transformProjectionToPreview(instance, projectionResult, source)
+    transformProjectionToPreview(instance, resource, projectionResult)
 
     const {getClient} = await import('../client/clientStore')
     expect(getClient).toHaveBeenCalledWith(instance, {
       apiVersion: 'v2025-05-06',
-      source,
+      resource,
     })
   })
 })

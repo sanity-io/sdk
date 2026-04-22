@@ -1,17 +1,16 @@
-import {omit} from 'lodash-es'
-
 import {type SanityInstance} from '../store/createSanityInstance'
+import {omitProperty} from '../utils/object'
 import {type GetUsersOptions, type SanityUserResponse, type UsersStoreState} from './types'
 import {DEFAULT_USERS_BATCH_SIZE} from './usersConstants'
 
 /** @internal */
 export const getUsersKey = (
-  instance: SanityInstance,
+  _instance: SanityInstance,
   {
     resourceType,
     organizationId,
     batchSize = DEFAULT_USERS_BATCH_SIZE,
-    projectId = instance.config.projectId,
+    projectId,
     userId,
   }: GetUsersOptions = {},
 ): string =>
@@ -48,7 +47,7 @@ export const removeSubscription =
     const group = prev.users[key]
     if (!group) return prev
     const subscriptions = group.subscriptions.filter((id) => id !== subscriptionId)
-    if (!subscriptions.length) return {...prev, users: omit(prev.users, key)}
+    if (!subscriptions.length) return {...prev, users: omitProperty(prev.users, key)}
     return {...prev, users: {...prev.users, [key]: {...group, subscriptions}}}
   }
 
@@ -83,7 +82,7 @@ export const cancelRequest =
     const group = prev.users[key]
     if (!group) return prev
     if (group.subscriptions.length) return prev
-    return {...prev, users: omit(prev.users, key)}
+    return {...prev, users: omitProperty(prev.users, key)}
   }
 
 export const initializeRequest =

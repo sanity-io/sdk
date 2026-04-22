@@ -1,57 +1,72 @@
-import {type DocumentSource, type SanityConfig} from '@sanity/sdk'
+import {type DocumentResource, isDatasetResource, type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, type ReactNode, useMemo} from 'react'
 
+import {OrganizationResourcesProvider} from '../context/OrganizationResourcesProvider'
 import {ResourceProvider} from '../context/ResourceProvider'
-import {SourcesContext} from '../context/SourcesContext'
 import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
+import {DEFAULT_RESOURCE_NAME} from './utils'
 
 /**
  * @internal
  */
 export interface SDKProviderProps extends AuthBoundaryProps {
   children: ReactNode
-  config: SanityConfig | SanityConfig[]
+  config: SanityConfig
+  /**
+   * Named document resources map. Provided to `ResourcesContext` for
+   * name-based resource resolution in hooks.
+   */
+  resources?: Record<string, DocumentResource>
+  /** When set, automatically fetches and registers the organization's media library and canvas as named resources. */
+  inferMediaLibraryAndCanvas?: boolean
   fallback: ReactNode
-  sources?: Record<string, DocumentSource>
+}
+
+/**
+ * Collects unique project IDs from a resources map.
+ */
+function collectProjectIds(resources: Record<string, DocumentResource>): string[] {
+  const ids = new Set<string>()
+  for (const res of Object.values(resources)) {
+    if (isDatasetResource(res)) ids.add(res.projectId)
+  }
+  return [...ids]
 }
 
 /**
  * @internal
  *
  * Top-level context provider that provides access to the Sanity SDK.
- * Creates a hierarchy of ResourceProviders, each providing a SanityInstance that can be
- * accessed by hooks. The first configuration in the array becomes the default instance.
+ *
+ * Creates a single `ResourceProvider` (and therefore a single `SanityInstance`)
+ * for the given config. Resource resolution is handled by `ResourcesContext`
+ * and the `"default"` named resource.
  */
 export function SDKProvider({
   children,
   config,
+  resources = {},
+  inferMediaLibraryAndCanvas,
   fallback,
   ...props
 }: SDKProviderProps): ReactElement {
-  // reverse because we want the first config to be the default, but the
-  // ResourceProvider nesting makes the last one the default
-  const configs = (Array.isArray(config) ? config : [config]).slice().reverse()
-  const projectIds = configs.map((c) => c.projectId).filter((id): id is string => !!id)
+  const projectIds = useMemo(() => collectProjectIds(resources), [resources])
 
-  // Memoize sources to prevent creating a new empty object on every render
-  const sourcesValue = useMemo(() => props.sources ?? {}, [props.sources])
+  const rootResource = useMemo(() => resources[DEFAULT_RESOURCE_NAME], [resources])
 
-  // Create a nested structure of ResourceProviders for each config
-  const createNestedProviders = (index: number): ReactElement => {
-    if (index >= configs.length) {
-      return (
-        <AuthBoundary {...props} projectIds={projectIds}>
-          <SourcesContext.Provider value={sourcesValue}>{children}</SourcesContext.Provider>
-        </AuthBoundary>
-      )
-    }
-
-    return (
-      <ResourceProvider {...configs[index]} fallback={fallback}>
-        {createNestedProviders(index + 1)}
-      </ResourceProvider>
-    )
-  }
-
-  return createNestedProviders(0)
+  return (
+    <ResourceProvider {...config} resource={rootResource} fallback={fallback}>
+      <AuthBoundary {...props} projectIds={projectIds}>
+        {/* OrganizationResourcesProvider wraps ResourcesContext.
+            It merges explicit resources with lazily inferred org resources (media
+            library, canvas) and provides the combined map to the subtree. */}
+        <OrganizationResourcesProvider
+          resources={resources}
+          inferMediaLibraryAndCanvas={inferMediaLibraryAndCanvas}
+        >
+          {children}
+        </OrganizationResourcesProvider>
+      </AuthBoundary>
+    </ResourceProvider>
+  )
 }

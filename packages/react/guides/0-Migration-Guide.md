@@ -2,6 +2,313 @@
 title: Migration guide
 ---
 
+## Migrating to @sanity/sdk-react@3.0.0
+
+### Breaking Changes
+
+#### 1. React 19 required
+
+The minimum peer dependency is now `react` and `react-dom` `^19.2.0`. React 18 and earlier are no longer supported.
+
+```bash
+npm install react@latest react-dom@latest
+```
+
+#### 2. Named resources replace implicit projectId/dataset config
+
+`<SanityApp>` no longer accepts a `config` array of `{ projectId, dataset }` objects. Instead, declare **named resources** via the `resources` prop:
+
+**Before:**
+
+```tsx
+<SanityApp
+  config={[
+    {projectId: 'abc123', dataset: 'production'},
+    {projectId: 'def456', dataset: 'production'},
+  ]}
+  fallback={<>Loading…</>}
+>
+  <App />
+</SanityApp>
+```
+
+**After:**
+
+```tsx
+<SanityApp
+  resources={{
+    'default': {projectId: 'abc123', dataset: 'production'},
+    'second-project': {projectId: 'def456', dataset: 'production'},
+  }}
+  fallback={<>Loading…</>}
+>
+  <App />
+</SanityApp>
+```
+
+**Hooks now optionally accept `resourceName` or `resource`**
+
+In v2 of `@sanity/sdk-react`, not passing an explicit `projectId` or `dataset` to a hook meant that it would target the closest nested `<ResourceProvider>`.
+
+Now, in v3 of `@sanity/sdk-react`, not passing an explicit `resource` to a hook means that hook will target the `default` named resource passed to the `<SanityApp>` component.
+
+If you only named one `{ projectId, dataset }` pair in your v2 `<SanityApp>` config, your hooks targeted that pair. By changing your configuration to the `default` named resource per the above example, you will likely have to do very little refactoring.
+
+If your hooks previously relied on `projectId`/`dataset` in the options object, you can now update them to use the supported `resourceName` (to reference a named resource in your `<SanityApp` params) or `resource` (to pass a resource object directly):
+
+```tsx
+// Reference a named resource
+const {data} = useDocument({
+  documentId: '123',
+  documentType: 'article',
+  resourceName: 'second-project',
+})
+
+// Or pass a resource inline
+const {data} = useQuery({
+  query: '*[_type == "asset"][0...10]',
+  resource: {projectId: 'def456', dataset: 'production'},
+})
+```
+
+The following hooks support `resourceName` / `resource`:
+
+- `useDocument`
+- `useDocumentProjection`
+- `useDocumentPreview`
+- `useQuery`
+- `useDocuments`
+- `usePaginatedDocuments`
+- `usePerspective`
+- `useActiveReleases`
+- `usePresence` (dataset / canvas resources only)
+- `useProject`
+
+**`ResourceProvider` uses `resource` prop**
+
+`ResourceProvider` no longer accepts `projectId` and `dataset` as direct props. Use the `resource` prop instead:
+
+**Before:**
+
+```tsx
+<ResourceProvider projectId="abc123" dataset="production" fallback={<Loading />}>
+  <App />
+</ResourceProvider>
+```
+
+**After:**
+
+```tsx
+<ResourceProvider resource={{projectId: 'abc123', dataset: 'production'}} fallback={<Loading />}>
+  <App />
+</ResourceProvider>
+```
+
+#### 3. Removed deprecated APIs
+
+The following APIs were deprecated in v2 and have been removed in v3:
+
+| Removed                                       | Replacement                                                |
+| --------------------------------------------- | ---------------------------------------------------------- |
+| `getPreviewState` / `GetPreviewStateOptions`  | `getProjectionState` with an explicit `projection`         |
+| `resolvePreview` / `ResolvePreviewOptions`    | `resolveProjection` with an explicit `projection`          |
+| `PreviewStoreState` type                      | Use the return type of `getProjectionState`                |
+| `ValidProjection` type                        | Use `string`                                               |
+| `ValuePending` type                           | Removed — was only used with the old preview API           |
+| `studioMode` config option                    | `studio` config option (or zero-config `SDKStudioContext`) |
+| `sanityConfigs` prop on `<SanityApp>`         | `resources` prop                                           |
+| `SanityProject` type                          | Import from `@sanity/client`                               |
+| `scope` / `~experimental_resource` on clients | `useProjectHostname` and `resource` prop                   |
+| `observeOrganizationVerificationState`        | `getOrganizationVerificationState.observable`              |
+
+**`getPreviewState`**
+
+**Before:**
+
+```typescript
+const state = getPreviewState(instance, {documentId: '123', documentType: 'product'})
+```
+
+**After:**
+
+```typescript
+const state = getProjectionState(instance, {
+  documentId: '123',
+  documentType: 'product',
+  projection: '{title, description, "imageUrl": image.asset->url}',
+})
+```
+
+The old `getPreviewState` returned a fixed set of preview fields. `getProjectionState` replaces it with an explicit GROQ `projection`, giving you full control over which fields are returned.
+
+**`resolvePreview`**
+
+**Before:**
+
+```typescript
+const value = await resolvePreview(instance, {documentId: '123', documentType: 'product'})
+```
+
+**After:**
+
+```typescript
+const value = await resolveProjection(instance, {
+  documentId: '123',
+  documentType: 'product',
+  projection: '{title, description, "imageUrl": image.asset->url}',
+})
+```
+
+**`studioMode` config**
+
+The recommended replacement is the zero-config `SDKStudioContext` approach. If your SDK component runs inside Sanity Studio, no config is needed at all — `SanityApp` derives everything from the Studio workspace automatically:
+
+```tsx
+// Inside Sanity Studio — no config needed:
+function MyStudioTool() {
+  return (
+    <SanityApp fallback={<div>Loading...</div>}>
+      <MyComponent />
+    </SanityApp>
+  )
+}
+```
+
+If you need programmatic control outside of Studio, replace `studioMode` with `studio`:
+
+**Before:**
+
+```typescript
+const config: SanityConfig = {
+  projectId: 'abc123',
+  dataset: 'production',
+  studioMode: {enabled: true},
+}
+```
+
+**After:**
+
+```typescript
+const config: SanityConfig = {
+  studio: {},
+}
+```
+
+#### 4. Renamed APIs
+
+Some APIs have been renamed, mostly for consistency and clarity:
+
+| Original name                                  | New name                                                  |
+| ---------------------------------------------- | --------------------------------------------------------- |
+| `useRecordDocumentHistoryEvent`, `recordEvent` | `useDispatchDocumentHistoryEvent`, `dispatchHistoryEvent` |
+| `getPresence`                                  | `getPresenceState`                                        |
+| `OrgVerificationResult`                        | `OrganizationVerificationResult`                          |
+| `useVerifyOrgProjects`                         | `useOrganizationVerification`                             |
+| `subscribeDocumentEvents`                      | `onDocumentEvent`                                         |
+
+#### 5. `@sanity/sdk` agent and comlink utilities moved to sub-entries
+
+Agent and comlink utilities are now available only from dedicated sub-entry points:
+
+| Previously in `@sanity/sdk`                                                                             | Now in                |
+| ------------------------------------------------------------------------------------------------------- | --------------------- |
+| `agentGenerate`, `agentPatch`, `agentPrompt`, `agentTransform`, `agentTranslate` and their option types | `@sanity/sdk/agent`   |
+| `getOrCreateController`, `getOrCreateChannel`, `getOrCreateNode`, `getNodeState`, `FrameMessage`, etc.  | `@sanity/sdk/comlink` |
+
+```typescript
+// Before
+import {agentGenerate, type AgentGenerateOptions} from '@sanity/sdk'
+import {type FrameMessage} from '@sanity/sdk'
+
+// After
+import {agentGenerate, type AgentGenerateOptions} from '@sanity/sdk/agent'
+import {type FrameMessage} from '@sanity/sdk/comlink'
+```
+
+`@sanity/sdk-react` previously re-exported all core utilities, but these two subdomains are now excluded. Make the above code changes to get access to these.
+
+#### 6. Explicit `projectId` required for `getDatasetsState` / `useDatasets`
+
+`getDatasetsState` and `useDatasets` now require an explicit `projectId` argument. They no longer infer it from instance config:
+
+**Before:**
+
+```typescript
+const datasets = useDatasets()
+```
+
+**After:**
+
+```typescript
+const datasets = useDatasets({projectId: 'abc123'})
+```
+
+#### 7. Experimental typegen and groq dependency removed
+
+The `groq` package is no longer a dependency. `defineQuery` and `defineProjection` are no longer needed or exported. Pass plain strings to `query` and `projection` parameters:
+
+**Before:**
+
+```typescript
+import {defineQuery} from 'groq'
+
+const query = defineQuery('*[_type == $type]')
+const {data} = useQuery({query, params: {type: 'book'}})
+```
+
+**After:**
+
+```typescript
+const {data} = useQuery({query: '*[_type == $type]', params: {type: 'book'}})
+```
+
+You can safely remove the `groq` package from your dependencies if you were only using it for `defineQuery` / `defineProjection`.
+
+#### 8. Stackable perspectives disallowed
+
+`PerspectiveHandle` no longer accepts array-based (stackable) perspectives. Only single perspectives are allowed:
+
+**Before:**
+
+```typescript
+const config: SanityConfig = {
+  perspective: ['drafts', 'published'],
+}
+```
+
+**After:**
+
+```typescript
+const config: SanityConfig = {
+  perspective: 'drafts',
+}
+```
+
+Note that the SDK stacks perspectives for you. The SDK automatically fetches all of your content releases, and orders them in the same way the Sanity Studio does: usually by scheduled date, with ASAP releases coming first.
+
+For example, providing a specific perspective that reflects one of your Content Releases, like `{releaseName: 'rvi13yhxK'}` will create a query stack like:
+
+```typescript
+;[
+  'rvi13yhxK', // your release
+  'r0IWxZEkm', // any releases scheduled to come before your release
+  'r6IoT17Cj', // an ASAP release
+  'drafts',
+]
+```
+
+This way, previous changes will be incorporated into your selected perspective.
+
+#### 9. Presence refactored to use resources
+
+`usePresence` now accepts `resource` / `resourceName` options. It only supports dataset and canvas resources — passing a media library will throw an error:
+
+```typescript
+const {locations} = usePresence({resourceName: 'marketing-site'})
+```
+
+---
+
 ## Migrating to @sanity/sdk-react@2.0.0
 
 ### Breaking Changes
@@ -183,7 +490,6 @@ function MyDocumentAction(props: DocumentActionProps) {
 ```
 
 2. Renamed hooks for better clarity and consistency:
-
    - `usePreview` → `useDocumentPreview`
    - `useProjection` → `useDocumentProjection`
 
@@ -238,13 +544,12 @@ See the [TypeScript guide](./Typescript.md) for full setup and usage details.
 
 ### Key Changes & Requirements
 
-1.  **Typegen Setup (Recommended for TypeScript):** Refer to the [TypeScript guide](./Typescript.md) for detailed setup instructions.
-2.  **Consistent Hook Options Pattern:** Most hooks now accept a single options object, often allowing you to spread a `DocumentHandle` or `DatasetHandle`.
-3.  **Handle Creation Helpers:** See below for details.
+1.  **Consistent Hook Options Pattern:** Most hooks now accept a single options object, often allowing you to spread a `DocumentHandle` or `DatasetHandle`.
+2.  **Handle Creation Helpers:** See below for details.
 
 ### Handle Creation Helpers
 
-While literal objects still work, using helpers like `createDocumentHandle` (imported from `@sanity/sdk-react`) is recommended, especially with TypeScript, to ensure literal types are captured correctly for Typegen.
+While literal objects still work, using helpers like `createDocumentHandle` (imported from `@sanity/sdk-react`) is recommended, especially with TypeScript, to ensure literal types are captured correctly.
 
 **Before:**
 
@@ -278,7 +583,7 @@ const handle = createDocumentHandle({
 
 #### `useQuery`
 
-Accepts a single options object containing `query` (defined with `defineQuery`), `params`, and optional `projectId`, `dataset`, etc.
+Accepts a single options object containing `query`, `params`, and optional `projectId`, `dataset`, etc.
 
 **Before:**
 
@@ -300,13 +605,8 @@ const {data} = useQuery(
 
 ```typescript
 // === ✅ AFTER ✨ ===
-import {defineQuery} from 'groq'
-
-const query = defineQuery('*[_type == $type]') // Defined query
-
 const {data} = useQuery({
-  // Single options object
-  query: query,
+  query: '*[_type == $type]',
   params: {type: 'book'},
   projectId: 'abc', // Optional override
   dataset: 'production', // Optional override
@@ -438,14 +738,11 @@ useDocumentEvent({...docHandle, onEvent: onEventCallback})
 - Action creators (`createDocument`, `editDocument`, `publishDocument`, etc.) and types (`DocumentHandle`, `DatasetHandle`, `DocumentAction`) now use generic type parameters (`<TDocumentType, TDataset, TProjectId>`) for better type safety with Typegen. Usage generally remains the same, but TypeScript users will see improved type checking.
 - `applyDocumentActions` similarly uses these generic types and its return type reflects the potentially typed document result (`SanityDocumentResult`).
 
-By adopting these changes, especially `defineQuery` and `defineProjection`, you enable the SDK to leverage Typegen for a much safer and more productive development experience, particularly in TypeScript projects.
-
 ## Migrating to @sanity/sdk-react@0.0.0-rc.4
 
 ### Breaking Changes
 
 1. Removed Authentication Components and Hooks:
-
    - Removed `<Login />` component - authentication now redirects to sanity.io/login
    - Removed `<LoginLayout />` component and its related props
    - Removed `useLoginUrls` hook - replaced with `useLoginUrl` hook that returns a single login URL
@@ -453,12 +750,10 @@ By adopting these changes, especially `defineQuery` and `defineProjection`, you 
    - `<LoginCallback />` now renders null during the callback process
 
 2. Authentication Flow Changes:
-
    - Authentication now uses a centralized login page at sanity.io/login
    - Token refresh interval is now consistently set to 12 hours for all environments
 
 3. Renamed hooks:
-
    - `useInfiniteList` is now `useDocuments`
    - `usePaginatedList` is now `usePaginatedDocuments`
    - `usePermissions` is now `useDocumentPermissions`
@@ -645,31 +940,21 @@ const project = useProject({projectId: 'abc12345'})
 const datasets = useDatasets({projectId: 'abc12345'})
 ```
 
-> 🔄 **Coming Soon**: We're continuing to refine our APIs. Future releases will include:
->
-> - Further unification of hook signatures
-> - More consistent parameter naming
-> - Additional handle pattern improvements
-> - Enhanced TypeScript types and validations
-
 ### Breaking Changes Summary
 
 1. Authentication Changes:
-
    - Removed `<Login />`, `<LoginLayout />`, and `useLoginUrls`
    - `<AuthBoundary />` and `<LoginCallback />` behavior changes
    - Centralized login at sanity.io/login
    - 12-hour token refresh interval
 
 2. Component Changes:
-
    - `<SanityApp />` now uses `config` instead of `sanityConfigs`
    - `<SDKProvider />` now uses `config` prop for multiple configurations
    - `<ResourceProvider />` provides granular control for single configuration
    - `<SanityProvider />` removed
 
 3. Hook Renames:
-
    - `useInfiniteList` is now `useDocuments`
    - `usePaginatedList` is now `usePaginatedDocuments`
    - `usePermissions` is now `useDocumentPermissions`
@@ -679,7 +964,6 @@ const datasets = useDatasets({projectId: 'abc12345'})
 4. `@sanity/sdk` Re-exported: All exports from `@sanity/sdk` are now available directly from `@sanity/sdk-react`.
 
 5. Property Renames:
-
    - `_type` → `documentType`
    - `_id` → `documentId`
    - `results` → `data` (in hook returns)

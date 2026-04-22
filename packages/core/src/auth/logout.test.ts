@@ -36,8 +36,6 @@ describe('logout', () => {
     const removeItem = vi.fn() as Storage['removeItem']
 
     instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
       auth: {
         clientFactory,
         storageArea: {removeItem} as Storage,
@@ -56,7 +54,6 @@ describe('logout', () => {
       apiVersion: '2021-06-07',
       requestTagPrefix: 'sanity.sdk.auth',
       token: 'token',
-      useProjectHostname: false,
       useCdn: false,
     })
     expect(mockRequest).toHaveBeenCalledWith({method: 'POST', uri: '/auth/logout', tag: 'logout'})
@@ -67,8 +64,6 @@ describe('logout', () => {
     const clientFactory = vi.fn()
     const removeItem = vi.fn() as Storage['removeItem']
     instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
       auth: {
         token: 'provided-token',
         clientFactory,
@@ -93,8 +88,6 @@ describe('logout', () => {
     vi.mocked(getTokenFromStorage).mockReturnValue('token')
 
     instance = createSanityInstance({
-      projectId: 'p',
-      dataset: 'd',
       auth: {
         clientFactory,
         storageArea: {removeItem} as Storage,

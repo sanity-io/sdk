@@ -1,12 +1,13 @@
 import {CorsOriginError} from '@sanity/client'
-import {AuthStateType, getCorsErrorProjectId, isStudioConfig} from '@sanity/sdk'
+import {AuthStateType, getCorsErrorProjectId} from '@sanity/sdk'
+import {isStudioConfig} from '@sanity/sdk/_internal'
 import {useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
 import {ComlinkTokenRefreshProvider} from '../../context/ComlinkTokenRefresh'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
-import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
+import {useOrganizationVerification} from '../../hooks/auth/useOrganizationVerification'
 import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 import {CorsErrorComponent} from '../errors/CorsErrorComponent'
 import {isInIframe} from '../utils'
@@ -159,7 +160,7 @@ function AuthSwitch({
   const isStudio = isStudioConfig(instance.config)
   const disableVerifyOrg =
     !verifyOrganization || isStudio || authState.type !== AuthStateType.LOGGED_IN
-  const orgError = useVerifyOrgProjects(disableVerifyOrg, projectIds)
+  const orgError = useOrganizationVerification(disableVerifyOrg, projectIds)
 
   const isLoggedOut = authState.type === AuthStateType.LOGGED_OUT && !authState.isDestroyingSession
   const loginUrl = useLoginUrl()

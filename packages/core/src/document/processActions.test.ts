@@ -50,6 +50,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           type: 'document.create',
           documentType: 'article',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -96,6 +97,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           type: 'document.create',
           documentType: 'article',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       expect(() =>
@@ -113,6 +115,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           type: 'document.create',
           documentType: 'article',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -141,6 +144,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           type: 'document.create',
           documentType: 'article',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const grants = {...defaultGrants, create: alwaysDeny}
@@ -162,6 +166,7 @@ describe('processActions', () => {
             author: 'John Doe',
             count: 42,
           },
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -198,6 +203,7 @@ describe('processActions', () => {
             title: 'Overridden Title',
             newField: 'New Value',
           },
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -227,6 +233,7 @@ describe('processActions', () => {
           type: 'document.create',
           documentType: 'article',
           initialValue: {},
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -258,6 +265,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           documentType: 'article',
           type: 'document.delete',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -294,6 +302,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           documentType: 'article',
           type: 'document.delete',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -326,6 +335,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           documentType: 'article',
           type: 'document.delete',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const grants = {...defaultGrants, update: alwaysDeny}
@@ -345,6 +355,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           documentType: 'article',
           type: 'document.discard',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -374,6 +385,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           documentType: 'article',
           type: 'document.discard',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const grants = {...defaultGrants, update: alwaysDeny}
@@ -394,6 +406,7 @@ describe('processActions', () => {
           documentType: 'article',
           type: 'document.edit',
           patches: [{set: {title: 'Edited Title'}}],
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -426,6 +439,7 @@ describe('processActions', () => {
           documentType: 'article',
           type: 'document.edit',
           patches: [{set: {title: 'New Draft Title'}}],
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -454,6 +468,7 @@ describe('processActions', () => {
           documentType: 'article',
           type: 'document.edit',
           patches: [{set: {title: 'Original Cool Title'}}],
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -483,6 +498,7 @@ describe('processActions', () => {
           documentType: 'article',
           type: 'document.edit',
           patches: [{set: {title: 'Should Fail'}}],
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       expect(() =>
@@ -500,6 +516,7 @@ describe('processActions', () => {
           documentType: 'article',
           type: 'document.edit',
           patches: [{set: {title: 'Edited Title'}}],
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const grants = {...defaultGrants, create: alwaysDeny}
@@ -518,6 +535,7 @@ describe('processActions', () => {
           documentType: 'article',
           type: 'document.edit',
           patches: [{set: {title: 'New Title'}}],
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const grants = {...defaultGrants, update: alwaysDeny}
@@ -537,6 +555,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           documentType: 'article',
           type: 'document.publish',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -572,6 +591,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           documentType: 'article',
           type: 'document.publish',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       expect(() =>
@@ -590,6 +610,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           documentType: 'article',
           type: 'document.publish',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       expect(() =>
@@ -602,7 +623,12 @@ describe('processActions', () => {
       const base: DocumentSet = {'drafts.doc1': draft}
       const working: DocumentSet = {'drafts.doc1': draft}
       const actions: DocumentAction[] = [
-        {documentId: 'doc1', documentType: 'article', type: 'document.publish'},
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.publish',
+          resource: {projectId: 'p', dataset: 'd'},
+        },
       ]
       const grants = {...defaultGrants, update: alwaysDeny}
       expect(() =>
@@ -616,7 +642,12 @@ describe('processActions', () => {
       const base: DocumentSet = {'drafts.doc1': draft, 'doc1': published}
       const working: DocumentSet = {'drafts.doc1': draft, 'doc1': published}
       const actions: DocumentAction[] = [
-        {documentId: 'doc1', documentType: 'article', type: 'document.publish'},
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.publish',
+          resource: {projectId: 'p', dataset: 'd'},
+        },
       ]
       const grants = {
         ...defaultGrants,
@@ -635,7 +666,12 @@ describe('processActions', () => {
       const base: DocumentSet = {'drafts.doc1': draft}
       const working: DocumentSet = {'drafts.doc1': draft}
       const actions: DocumentAction[] = [
-        {documentId: 'doc1', documentType: 'article', type: 'document.publish'},
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.publish',
+          resource: {projectId: 'p', dataset: 'd'},
+        },
       ]
       const grants = {...defaultGrants, create: alwaysDeny}
       expect(() =>
@@ -671,6 +707,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           documentType: 'article',
           type: 'document.publish',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -703,6 +740,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           documentType: 'article',
           type: 'document.unpublish',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -737,6 +775,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           documentType: 'article',
           type: 'document.unpublish',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       expect(() =>
@@ -755,6 +794,7 @@ describe('processActions', () => {
           documentId: 'doc1',
           documentType: 'article',
           type: 'document.unpublish',
+          resource: {projectId: 'p', dataset: 'd'},
         },
       ]
       const result = processActions({
@@ -786,7 +826,12 @@ describe('processActions', () => {
       const base: DocumentSet = {doc1: published}
       const working: DocumentSet = {doc1: published}
       const actions: DocumentAction[] = [
-        {documentId: 'doc1', documentType: 'article', type: 'document.unpublish'},
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.unpublish',
+          resource: {projectId: 'p', dataset: 'd'},
+        },
       ]
       const grants = {...defaultGrants, update: alwaysDeny}
       expect(() =>
@@ -799,7 +844,12 @@ describe('processActions', () => {
       const base: DocumentSet = {doc1: published}
       const working: DocumentSet = {doc1: published}
       const actions: DocumentAction[] = [
-        {documentId: 'doc1', documentType: 'article', type: 'document.unpublish'},
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.unpublish',
+          resource: {projectId: 'p', dataset: 'd'},
+        },
       ]
       const grants = {...defaultGrants, create: alwaysDeny}
       expect(() =>
@@ -814,14 +864,25 @@ describe('processActions', () => {
       const base: DocumentSet = {doc1: published}
       const working: DocumentSet = {doc1: published}
       const actions: DocumentAction[] = [
-        {documentId: 'doc1', documentType: 'article', type: 'document.create'},
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.create',
+          resource: {projectId: 'p', dataset: 'd'},
+        },
         {
           documentId: 'doc1',
           documentType: 'article',
           type: 'document.edit',
           patches: [{set: {title: 'Edited Title'}}],
+          resource: {projectId: 'p', dataset: 'd'},
         },
-        {documentId: 'doc1', documentType: 'article', type: 'document.publish'},
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.publish',
+          resource: {projectId: 'p', dataset: 'd'},
+        },
       ]
       const result = processActions({
         actions,
@@ -867,6 +928,7 @@ describe('processActions', () => {
             type: 'document.create',
             documentType: 'liveArticle',
             liveEdit: true,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
 
@@ -903,6 +965,7 @@ describe('processActions', () => {
             documentType: 'liveArticle',
             liveEdit: true,
             initialValue: {title: 'Initial Title', count: 42},
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
 
@@ -934,6 +997,7 @@ describe('processActions', () => {
             type: 'document.create',
             documentType: 'liveArticle',
             liveEdit: true,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
 
@@ -955,6 +1019,7 @@ describe('processActions', () => {
             documentType: 'liveArticle',
             liveEdit: true,
             patches: [{set: {title: 'Updated Title'}}],
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
 
@@ -993,6 +1058,7 @@ describe('processActions', () => {
             documentType: 'liveArticle',
             liveEdit: true,
             patches: [{set: {title: 'New Title'}}],
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
 
@@ -1013,6 +1079,7 @@ describe('processActions', () => {
             type: 'document.delete',
             documentType: 'liveArticle',
             liveEdit: true,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
 
@@ -1041,6 +1108,7 @@ describe('processActions', () => {
             type: 'document.delete',
             documentType: 'liveArticle',
             liveEdit: true,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
 
@@ -1061,6 +1129,7 @@ describe('processActions', () => {
             type: 'document.publish',
             documentType: 'liveArticle',
             liveEdit: true,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
 
@@ -1081,6 +1150,7 @@ describe('processActions', () => {
             type: 'document.unpublish',
             documentType: 'liveArticle',
             liveEdit: true,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
 
@@ -1101,6 +1171,7 @@ describe('processActions', () => {
             type: 'document.discard',
             documentType: 'liveArticle',
             liveEdit: true,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
 
@@ -1130,6 +1201,7 @@ describe('processActions', () => {
             type: 'document.create',
             documentType: 'article',
             perspective,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
         const result = processActions({
@@ -1166,6 +1238,7 @@ describe('processActions', () => {
             type: 'document.create',
             documentType: 'article',
             perspective,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
         const result = processActions({
@@ -1193,6 +1266,7 @@ describe('processActions', () => {
             type: 'document.create',
             documentType: 'article',
             perspective,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
         expect(() =>
@@ -1210,6 +1284,7 @@ describe('processActions', () => {
             documentType: 'article',
             perspective,
             initialValue: {title: 'Release Version Title', count: 7},
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
         const result = processActions({
@@ -1235,6 +1310,7 @@ describe('processActions', () => {
             type: 'document.create',
             documentType: 'article',
             perspective,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
         const grants = {...defaultGrants, create: alwaysDeny}
@@ -1256,6 +1332,7 @@ describe('processActions', () => {
             documentType: 'article',
             perspective,
             patches: [{set: {title: 'Updated Version Title'}}],
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
         const result = processActions({
@@ -1289,6 +1366,7 @@ describe('processActions', () => {
             documentType: 'article',
             perspective,
             patches: [{set: {title: 'Should Fail'}}],
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
         expect(() =>
@@ -1307,6 +1385,7 @@ describe('processActions', () => {
             documentType: 'article',
             perspective,
             patches: [{set: {title: 'No Permission'}}],
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
         const grants = {...defaultGrants, update: alwaysDeny}
@@ -1327,6 +1406,7 @@ describe('processActions', () => {
             type: 'document.discard',
             documentType: 'article',
             perspective,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
         const result = processActions({
@@ -1356,6 +1436,7 @@ describe('processActions', () => {
             type: 'document.discard',
             documentType: 'article',
             perspective,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
         expect(() =>
@@ -1373,6 +1454,7 @@ describe('processActions', () => {
             type: 'document.discard',
             documentType: 'article',
             perspective,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
         const grants = {...defaultGrants, update: alwaysDeny}
@@ -1393,6 +1475,7 @@ describe('processActions', () => {
             type: 'document.publish',
             documentType: 'article',
             perspective,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
         expect(() =>
@@ -1412,6 +1495,7 @@ describe('processActions', () => {
             type: 'document.delete',
             documentType: 'article',
             perspective,
+            resource: {projectId: 'p', dataset: 'd'},
           },
         ]
         expect(() =>
