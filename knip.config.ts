@@ -37,6 +37,14 @@ const baseConfig = {
       ],
       project,
     },
+    'apps/standalone-react': {
+      entry: ['src/main.tsx'],
+      typescript: {
+        config: 'tsconfig.json',
+      },
+      ignoreDependencies: ['@repo/tsconfig'],
+      project,
+    },
     'apps/*': {
       typescript: {
         config: 'tsconfig.json',
