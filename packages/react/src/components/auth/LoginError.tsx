@@ -57,9 +57,12 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
   // The dashboard access request flow relies on a comlink connection to the
   // parent window. In standalone apps that connection never materializes, so
   // we must skip it entirely to avoid suspending forever on the parent's
-  // Suspense boundary (see SDK-1318).
-  const shouldRequestDashboardAccess =
-    isProjectUserNotFound && !!projectId && getIsInDashboardState(instance).getCurrent()
+  // Suspense boundary (see SDK-1318). Resolving to the projectId (or null)
+  // here lets the JSX render the child with a single non-null guard.
+  const dashboardAccessProjectId =
+    isProjectUserNotFound && projectId && getIsInDashboardState(instance).getCurrent()
+      ? projectId
+      : null
 
   const handleRetry = useCallback(async () => {
     await logout()
@@ -95,13 +98,15 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
 
   return (
     <>
-      {shouldRequestDashboardAccess && projectId && (
+      {dashboardAccessProjectId && (
         <Suspense fallback={null}>
-          <DashboardAccessRequest projectId={projectId} />
+          <DashboardAccessRequest projectId={dashboardAccessProjectId} />
         </Suspense>
       )}
       <Error
-        heading={error instanceof AuthError ? 'Authentication Error' : 'Configuration Error'}
+        heading={
+          error instanceof ConfigurationError ? 'Configuration Error' : 'Authentication Error'
+        }
         description={authErrorMessage}
         cta={
           showRetryCta

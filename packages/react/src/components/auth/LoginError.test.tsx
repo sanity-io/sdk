@@ -104,6 +104,10 @@ describe('LoginError', () => {
     await waitFor(() => {
       expect(screen.getByText('User is not a member of this project.')).toBeInTheDocument()
     })
+    // ClientError must render under the "Authentication Error" heading; it is
+    // not a ConfigurationError.
+    expect(screen.getByText('Authentication Error')).toBeInTheDocument()
+    expect(screen.queryByText('Configuration Error')).not.toBeInTheDocument()
     expect(screen.queryByText('SUSPENDED')).not.toBeInTheDocument()
     expect(mockWindowConnectionFetch).not.toHaveBeenCalled()
   })
