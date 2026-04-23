@@ -1,21 +1,21 @@
 import {ClientError} from '@sanity/client'
-import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
 import {
   AuthStateType,
   getClientErrorApiBody,
   getClientErrorApiDescription,
+  getIsInDashboardState,
   isProjectUserNotFoundClientError,
 } from '@sanity/sdk'
-import {useCallback, useEffect, useState} from 'react'
+import {Suspense, useCallback, useEffect, useState} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLogOut} from '../../hooks/auth/useLogOut'
-import {useWindowConnection} from '../../hooks/comlink/useWindowConnection'
 import {useSanityInstance} from '../../hooks/context/useSanityInstance'
 import {Error} from '../errors/Error'
 import {AuthError} from './AuthError'
 import {ConfigurationError} from './ConfigurationError'
+import {DashboardAccessRequest} from './DashboardAccessRequest'
 /**
  * @alpha
  */
@@ -39,22 +39,30 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
 
   const logout = useLogOut()
   const authState = useAuthState()
+  const instance = useSanityInstance()
   const {
     config: {projectId},
-  } = useSanityInstance()
+  } = instance
 
   const [authErrorMessage, setAuthErrorMessage] = useState(
     'Please try again or contact support if the problem persists.',
   )
   const [showRetryCta, setShowRetryCta] = useState(true)
 
-  /**
-   * TODO: before merge update message-protocol package to include the new message type
-   */
-  const {fetch} = useWindowConnection({
-    name: SDK_NODE_NAME,
-    connectTo: SDK_CHANNEL_NAME,
-  })
+  const isProjectUserNotFound =
+    error instanceof ClientError &&
+    error.statusCode === 401 &&
+    isProjectUserNotFoundClientError(error)
+
+  // The dashboard access request flow relies on a comlink connection to the
+  // parent window. In standalone apps that connection never materializes, so
+  // we must skip it entirely to avoid suspending forever on the parent's
+  // Suspense boundary (see SDK-1318). Resolving to the projectId (or null)
+  // here lets the JSX render the child with a single non-null guard.
+  const dashboardAccessProjectId =
+    isProjectUserNotFound && projectId && getIsInDashboardState(instance).getCurrent()
+      ? projectId
+      : null
 
   const handleRetry = useCallback(async () => {
     await logout()
@@ -64,18 +72,10 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
   useEffect(() => {
     if (error instanceof ClientError) {
       if (error.statusCode === 401) {
-        // Surface a friendly message for projectUserNotFoundError (do not logout/refresh)
-        if (isProjectUserNotFoundClientError(error)) {
+        if (isProjectUserNotFound) {
           const description = getClientErrorApiDescription(error)
           if (description) setAuthErrorMessage(description)
           setShowRetryCta(false)
-          /**
-           * Handoff to dashboard to enable the request access flow for the project.
-           */
-          fetch('dashboard/v1/auth/access/request', {
-            resourceType: 'project',
-            resourceId: projectId,
-          })
         } else {
           setShowRetryCta(true)
           handleRetry()
@@ -94,20 +94,29 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
       setAuthErrorMessage(error.message)
       setShowRetryCta(true)
     }
-  }, [authState, handleRetry, error, fetch, projectId])
+  }, [authState, handleRetry, error, isProjectUserNotFound])
 
   return (
-    <Error
-      heading={error instanceof AuthError ? 'Authentication Error' : 'Configuration Error'}
-      description={authErrorMessage}
-      cta={
-        showRetryCta
-          ? {
-              text: 'Retry',
-              onClick: handleRetry,
-            }
-          : undefined
-      }
-    />
+    <>
+      {dashboardAccessProjectId && (
+        <Suspense fallback={null}>
+          <DashboardAccessRequest projectId={dashboardAccessProjectId} />
+        </Suspense>
+      )}
+      <Error
+        heading={
+          error instanceof ConfigurationError ? 'Configuration Error' : 'Authentication Error'
+        }
+        description={authErrorMessage}
+        cta={
+          showRetryCta
+            ? {
+                text: 'Retry',
+                onClick: handleRetry,
+              }
+            : undefined
+        }
+      />
+    </>
   )
 }
