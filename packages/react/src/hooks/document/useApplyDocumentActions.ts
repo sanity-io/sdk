@@ -7,12 +7,12 @@ import {
 import {type SanityDocument} from 'groq'
 import {useContext} from 'react'
 
-import {SourcesContext} from '../../context/SourcesContext'
+import {ResourcesContext} from '../../context/ResourcesContext'
 import {useSanityInstance} from '../context/useSanityInstance'
 import {
-  normalizeSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+  normalizeResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 // this import is used in an `{@link useEditDocument}`
 // eslint-disable-next-line unused-imports/no-unused-imports, import/consistent-type-specifier-style
 import type {useEditDocument} from './useEditDocument'
@@ -29,7 +29,7 @@ interface UseApplyDocumentActions {
     action:
       | DocumentAction<TDocumentType, TDataset, TProjectId>
       | DocumentAction<TDocumentType, TDataset, TProjectId>[],
-    options?: WithSourceNameSupport<ApplyDocumentActionsOptions>,
+    options?: WithResourceNameSupport<ApplyDocumentActionsOptions>,
   ) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 }
 
@@ -218,20 +218,20 @@ interface UseApplyDocumentActions {
  */
 export const useApplyDocumentActions: UseApplyDocumentActions = () => {
   const instance = useSanityInstance()
-  const sources = useContext(SourcesContext)
+  const resources = useContext(ResourcesContext)
 
   return (actionOrActions, options) => {
     const actions = Array.isArray(actionOrActions) ? actionOrActions : [actionOrActions]
-    const normalizedOptions = options ? normalizeSourceOptions(options, sources) : undefined
+    const normalizedOptions = options ? normalizeResourceOptions(options, resources) : undefined
 
     let projectId
     let dataset
-    let source
+    let resource
     for (const action of actions) {
       if (action.projectId) {
-        if (source) {
+        if (resource) {
           throw new Error(
-            `Mismatches between projectId/dataset options and source in actions. Found projectId "${action.projectId}" and dataset "${action.dataset}" but expected source "${source}".`,
+            `Mismatches between projectId/dataset options and resource in actions. Found projectId "${action.projectId}" and dataset "${action.dataset}" but expected resource "${resource}".`,
           )
         }
         if (!projectId) projectId = action.projectId
@@ -251,16 +251,16 @@ export const useApplyDocumentActions: UseApplyDocumentActions = () => {
         }
       }
 
-      if (action.source) {
-        if (!source) source = action.source
-        if (action.source !== source) {
+      if (action.resource) {
+        if (!resource) resource = action.resource
+        if (action.resource !== resource) {
           throw new Error(
-            `Mismatched sources found in actions. All actions must belong to the same source. Found "${action.source}" but expected "${source}".`,
+            `Mismatched resources found in actions. All actions must belong to the same resource. Found "${action.resource}" but expected "${resource}".`,
           )
         }
         if (projectId || dataset) {
           throw new Error(
-            `Mismatches between projectId/dataset options and source in actions. Found "${action.source}" but expected project "${projectId}" and dataset "${dataset}".`,
+            `Mismatches between projectId/dataset options and resource in actions. Found "${action.resource}" but expected project "${projectId}" and dataset "${dataset}".`,
           )
         }
       }
@@ -277,14 +277,14 @@ export const useApplyDocumentActions: UseApplyDocumentActions = () => {
 
       return applyDocumentActions(actualInstance, {
         actions,
-        source,
+        resource,
         ...normalizedOptions,
       })
     }
 
     return applyDocumentActions(instance, {
       actions,
-      source,
+      resource,
       ...normalizedOptions,
     })
   }

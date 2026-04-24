@@ -24,7 +24,7 @@ function MediaAssetEditorDialog({
   const docHandle = {
     documentType: 'sanity.asset',
     documentId: assetId,
-    sourceName: 'media-library',
+    resourceName: 'media-library',
   }
   const synced = useDocumentSyncStatus(docHandle)
 
@@ -59,7 +59,7 @@ function AssetProjection({assetId}: {assetId: string}) {
   }>({
     documentId: assetId,
     documentType: 'sanity.asset',
-    sourceName: 'media-library',
+    resourceName: 'media-library',
     projection: '{title, arbitraryValues}',
   })
 
@@ -95,7 +95,7 @@ function AssetPreview({assetId}: {assetId: string}) {
   const {data: previewData, isPending} = useDocumentPreview({
     documentId: assetId,
     documentType: 'sanity.asset',
-    sourceName: 'media-library',
+    resourceName: 'media-library',
   })
 
   return (
@@ -133,7 +133,7 @@ export function MediaLibraryRoute(): JSX.Element {
 
   const {data, isPending} = useQuery<SanityDocument[]>({
     query,
-    sourceName: 'media-library',
+    resourceName: 'media-library',
   })
 
   // Get the first asset's ID for projection testing

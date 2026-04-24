@@ -73,9 +73,9 @@ export interface DatasetHandle<TDataset extends string = string, TProjectId exte
   dataset?: TDataset
   /**
    * @beta
-   * Explicit source object to use for this operation.
+   * Explicit resource object to use for this operation.
    */
-  source?: DocumentSource
+  resource?: DocumentResource
 }
 
 /**
@@ -145,51 +145,53 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
 
   /**
    * @beta
-   * A list of named sources to use for this instance.
+   * A list of named resources to use for this instance.
    */
-  sources?: Record<string, DocumentSource>
+  resources?: Record<string, DocumentResource>
 }
 
 /**
- * A document source can be used for querying.
+ * A document resource can be used for querying.
  * This will soon be the default way to identify where you are querying from.
  *
  * @beta
  */
-export type DocumentSource = DatasetSource | MediaLibrarySource | CanvasSource
+export type DocumentResource = DatasetResource | MediaLibraryResource | CanvasResource
 
 /**
  * @beta
  */
-export type DatasetSource = {projectId: string; dataset: string}
+export type DatasetResource = {projectId: string; dataset: string}
 
 /**
  * @beta
  */
-export type MediaLibrarySource = {mediaLibraryId: string}
+export type MediaLibraryResource = {mediaLibraryId: string}
 
 /**
  * @beta
  */
-export type CanvasSource = {canvasId: string}
+export type CanvasResource = {canvasId: string}
 
 /**
  * @beta
  */
-export function isDatasetSource(source: DocumentSource): source is DatasetSource {
-  return 'projectId' in source && 'dataset' in source
+export function isDatasetResource(resource: DocumentResource): resource is DatasetResource {
+  return 'projectId' in resource && 'dataset' in resource
 }
 
 /**
  * @beta
  */
-export function isMediaLibrarySource(source: DocumentSource): source is MediaLibrarySource {
-  return 'mediaLibraryId' in source
+export function isMediaLibraryResource(
+  resource: DocumentResource,
+): resource is MediaLibraryResource {
+  return 'mediaLibraryId' in resource
 }
 
 /**
  * @beta
  */
-export function isCanvasSource(source: DocumentSource): source is CanvasSource {
-  return 'canvasId' in source
+export function isCanvasResource(resource: DocumentResource): resource is CanvasResource {
+  return 'canvasId' in resource
 }
