@@ -1,0 +1,52 @@
+name: Fallow
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fallow:
+    runs-on: ubuntu-latest
+    # Informational for now. Remove this line to make Fallow a blocking check.
+    continue-on-error: true
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 20
+
+      - name: Summary
+        run: pnpm fallow:summary || true
+
+      - name: Audit changed files
+        run: |
+          BASE_REF="${{ github.event.pull_request.base.ref || 'main' }}"
+          git fetch origin "$BASE_REF" --depth=1 || true
+          {
+            echo "## Fallow audit"
+            echo ""
+            pnpm fallow audit --base "origin/$BASE_REF" --format markdown --quiet || true
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Hotspots
+        run: |
+          {
+            echo "## Hotspots"
+            echo ""
+            echo '```'
+            pnpm fallow:hotspots || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
