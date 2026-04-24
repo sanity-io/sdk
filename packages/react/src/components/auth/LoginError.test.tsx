@@ -137,6 +137,48 @@ describe('LoginError', () => {
     })
   })
 
+  // Mirrors the real production chain: AuthBoundary wraps the ClientError in
+  // an AuthError before the error boundary hands it to LoginError. The
+  // `.cause` unwrap is what makes the dashboard access request path reachable
+  // at runtime (without it, the previous `error instanceof ClientError` check
+  // was dead code in the dashboard).
+  it('fires the dashboard access request when the projectUserNotFound ClientError is wrapped in an AuthError', async () => {
+    mockGetIsInDashboardState.mockReturnValue({getCurrent: vi.fn(() => true)})
+
+    const clientError = makeClientError(401, {
+      error: {
+        type: 'projectUserNotFoundError',
+        description: 'User is not a member of this project.',
+      },
+    })
+    const error = new AuthError(clientError)
+    const mockReset = vi.fn()
+
+    render(
+      <ResourceProvider projectId="abc123" dataset="production" fallback={<div>SUSPENDED</div>}>
+        <LoginError error={error} resetErrorBoundary={mockReset} />
+      </ResourceProvider>,
+    )
+
+    await waitFor(() => {
+      expect(mockWindowConnectionFetch).toHaveBeenCalledWith('dashboard/v1/auth/access/request', {
+        resourceType: 'project',
+        resourceId: 'abc123',
+      })
+    })
+
+    expect(screen.getByText('Authentication Error')).toBeInTheDocument()
+    expect(screen.getByText('User is not a member of this project.')).toBeInTheDocument()
+    // projectUserNotFound intentionally hides the Retry CTA: the user can't
+    // fix it by retrying, only by getting access granted through the
+    // dashboard access request flow above.
+    expect(screen.queryByRole('button', {name: 'Retry'})).not.toBeInTheDocument()
+    // Dashboard flow must never auto-log-out; ComlinkTokenRefreshProvider is
+    // responsible for any token mutation, not LoginError.
+    expect(mockLogout).not.toHaveBeenCalled()
+    expect(mockReset).not.toHaveBeenCalled()
+  })
+
   // In a standalone app, an invalid-token 401 (anything other than
   // `projectUserNotFoundError`) should silently log the user out so that
   // AuthBoundary's LOGGED_OUT effect redirects to the Sanity login URL.

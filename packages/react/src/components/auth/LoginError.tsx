@@ -6,7 +6,7 @@ import {
   getIsInDashboardState,
   isProjectUserNotFoundClientError,
 } from '@sanity/sdk'
-import {Suspense, useCallback, useEffect, useState} from 'react'
+import {Suspense, useCallback, useEffect, useRef, useState} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
 import {useAuthState} from '../../hooks/auth/useAuthState'
@@ -78,6 +78,13 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
     resetErrorBoundary()
   }, [logout, resetErrorBoundary])
 
+  // Guards against re-entering the standalone auto-logout branch below. Once
+  // `logout()` flips the auth store to LOGGED_OUT, `useAuthState` emits a new
+  // `authState` reference and re-runs this effect; without the ref we'd call
+  // `handleRetry` again on every emission and React eventually aborts with
+  // "Maximum update depth exceeded", leaving a blank page.
+  const hasAutoLoggedOutRef = useRef(false)
+
   useEffect(() => {
     if (clientError) {
       if (clientError.statusCode === 401) {
@@ -85,12 +92,13 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
           const description = getClientErrorApiDescription(clientError)
           if (description) setAuthErrorMessage(description)
           setShowRetryCta(false)
-        } else if (!isInDashboard) {
+        } else if (!isInDashboard && !hasAutoLoggedOutRef.current) {
           // Standalone apps: the token is bad and there's no parent window to
           // mint a new one, so log the user out and let `AuthBoundary`'s
           // LOGGED_OUT effect redirect to the Sanity login URL. The brief
           // visible message below gives the user context during the redirect
           // and keeps a Retry affordance in case the logout request hiccups.
+          hasAutoLoggedOutRef.current = true
           setAuthErrorMessage('Signing you out and returning to login...')
           setShowRetryCta(true)
           handleRetry()
