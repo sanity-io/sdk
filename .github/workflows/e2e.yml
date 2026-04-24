@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: 🔧 Setup Environment
         uses: ./.github/actions/setup
@@ -37,7 +37,7 @@ jobs:
 
       - name: 💾 Cache Playwright browsers
         id: cache-playwright-browsers
-        uses: actions/cache@v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-${{ steps.pw-version.outputs.version }}-playwright-browsers
@@ -73,7 +73,7 @@ jobs:
 
     steps:
       - name: 📥 Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: 🔧 Setup Environment
         uses: ./.github/actions/setup
@@ -86,7 +86,7 @@ jobs:
 
       - name: 💾 Restore cached Playwright browsers
         id: cache-playwright-browsers
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-${{ steps.pw-version.outputs.version }}-playwright-browsers
@@ -113,7 +113,7 @@ jobs:
 
       - name: 📤 Upload Playwright HTML report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: playwright-report-${{ matrix.browser }}
           path: apps/kitchensink-react/e2e/test-report
