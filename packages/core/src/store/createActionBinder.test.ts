@@ -1,10 +1,10 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {type DocumentSource} from '../config/sanityConfig'
+import {type DocumentResource} from '../config/sanityConfig'
 import {
   bindActionByDataset,
-  bindActionBySource,
-  bindActionBySourceAndPerspective,
+  bindActionByResource,
+  bindActionByResourceAndPerspective,
   bindActionGlobally,
   createActionBinder,
 } from './createActionBinder'
@@ -161,28 +161,28 @@ describe('bindActionGlobally', () => {
   })
 })
 
-describe('bindActionBySource', () => {
-  it('should throw an error when provided an invalid source', () => {
+describe('bindActionByResource', () => {
+  it('should throw an error when provided an invalid resource', () => {
     const storeDefinition = {
       name: 'SourceStore',
       getInitialState: () => ({counter: 0}),
     }
     const action = vi.fn((_context) => 'success')
-    const boundAction = bindActionBySource(storeDefinition, action)
+    const boundAction = bindActionByResource(storeDefinition, action)
     const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
 
     expect(() =>
-      boundAction(instance, {source: {invalid: 'source'} as unknown as DocumentSource}),
-    ).toThrow('Received invalid source:')
+      boundAction(instance, {resource: {invalid: 'resource'} as unknown as DocumentResource}),
+    ).toThrow('Received invalid resource:')
   })
 
-  it('should throw an error when no source provided and projectId/dataset are missing', () => {
+  it('should throw an error when no resource provided and projectId/dataset are missing', () => {
     const storeDefinition = {
       name: 'SourceStore',
       getInitialState: () => ({counter: 0}),
     }
     const action = vi.fn((_context) => 'success')
-    const boundAction = bindActionBySource(storeDefinition, action)
+    const boundAction = bindActionByResource(storeDefinition, action)
     const instance = createSanityInstance({projectId: '', dataset: ''})
 
     expect(() => boundAction(instance, {})).toThrow(
@@ -190,47 +190,47 @@ describe('bindActionBySource', () => {
     )
   })
 
-  it('should work correctly with a valid dataset source', () => {
+  it('should work correctly with a valid dataset resource', () => {
     const storeDefinition = {
       name: 'SourceStore',
       getInitialState: () => ({counter: 0}),
     }
     const action = vi.fn((_context) => 'success')
-    const boundAction = bindActionBySource(storeDefinition, action)
+    const boundAction = bindActionByResource(storeDefinition, action)
     const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
 
     const result = boundAction(instance, {
-      source: {projectId: 'proj2', dataset: 'ds2'},
+      resource: {projectId: 'proj2', dataset: 'ds2'},
     })
     expect(result).toBe('success')
   })
 })
 
-describe('bindActionBySourceAndPerspective', () => {
-  it('should throw an error when provided an invalid source', () => {
+describe('bindActionByResourceAndPerspective', () => {
+  it('should throw an error when provided an invalid resource', () => {
     const storeDefinition = {
       name: 'PerspectiveStore',
       getInitialState: () => ({counter: 0}),
     }
     const action = vi.fn((_context) => 'success')
-    const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
+    const boundAction = bindActionByResourceAndPerspective(storeDefinition, action)
     const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
 
     expect(() =>
       boundAction(instance, {
-        source: {invalid: 'source'} as unknown as DocumentSource,
+        resource: {invalid: 'resource'} as unknown as DocumentResource,
         perspective: 'drafts',
       }),
-    ).toThrow('Received invalid source:')
+    ).toThrow('Received invalid resource:')
   })
 
-  it('should throw an error when no source provided and projectId/dataset are missing', () => {
+  it('should throw an error when no resource provided and projectId/dataset are missing', () => {
     const storeDefinition = {
       name: 'PerspectiveStore',
       getInitialState: () => ({counter: 0}),
     }
     const action = vi.fn((_context) => 'success')
-    const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
+    const boundAction = bindActionByResourceAndPerspective(storeDefinition, action)
     const instance = createSanityInstance({projectId: '', dataset: ''})
 
     expect(() => boundAction(instance, {perspective: 'drafts'})).toThrow(
@@ -238,33 +238,33 @@ describe('bindActionBySourceAndPerspective', () => {
     )
   })
 
-  it('should work correctly with a valid dataset source and explicit perspective', () => {
+  it('should work correctly with a valid dataset resource and explicit perspective', () => {
     const storeDefinition = {
       name: 'PerspectiveStore',
       getInitialState: () => ({counter: 0}),
     }
     const action = vi.fn((_context) => 'success')
-    const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
+    const boundAction = bindActionByResourceAndPerspective(storeDefinition, action)
     const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
 
     const result = boundAction(instance, {
-      source: {projectId: 'proj2', dataset: 'ds2'},
+      resource: {projectId: 'proj2', dataset: 'ds2'},
       perspective: 'drafts',
     })
     expect(result).toBe('success')
   })
 
-  it('should work correctly with valid dataset source and no perspective (falls back to drafts)', () => {
+  it('should work correctly with valid dataset resource and no perspective (falls back to drafts)', () => {
     const storeDefinition = {
       name: 'PerspectiveStore',
       getInitialState: () => ({counter: 0}),
     }
     const action = vi.fn((_context) => 'success')
-    const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
+    const boundAction = bindActionByResourceAndPerspective(storeDefinition, action)
     const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
 
     const result = boundAction(instance, {
-      source: {projectId: 'proj1', dataset: 'ds1'},
+      resource: {projectId: 'proj1', dataset: 'ds1'},
     })
     expect(result).toBe('success')
   })
@@ -275,7 +275,7 @@ describe('bindActionBySourceAndPerspective', () => {
       getInitialState: () => ({counter: 0}),
     }
     const action = vi.fn((context) => context.key)
-    const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
+    const boundAction = bindActionByResourceAndPerspective(storeDefinition, action)
     const instance = createSanityInstance({
       projectId: 'proj1',
       dataset: 'ds1',
@@ -300,7 +300,7 @@ describe('bindActionBySourceAndPerspective', () => {
       context.state.counter += increment
       return context.state.counter
     })
-    const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
+    const boundAction = bindActionByResourceAndPerspective(storeDefinition, action)
     // Use unique project/dataset so we don't reuse stores from other tests
     const instance = createSanityInstance({
       projectId: 'perspective-isolation',
@@ -322,7 +322,7 @@ describe('bindActionBySourceAndPerspective', () => {
       getInitialState: () => ({counter: 0}),
     }
     const action = vi.fn((_context) => 'success')
-    const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
+    const boundAction = bindActionByResourceAndPerspective(storeDefinition, action)
     const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
 
     const result = boundAction(instance, {
@@ -339,7 +339,7 @@ describe('bindActionBySourceAndPerspective', () => {
     )
   })
 
-  it('should reuse same store when same source and perspective are used', () => {
+  it('should reuse same store when same resource and perspective are used', () => {
     const storeDefinition = {
       name: 'PerspectiveStore',
       getInitialState: () => ({counter: 0}),
@@ -348,7 +348,7 @@ describe('bindActionBySourceAndPerspective', () => {
       context.state.counter += increment
       return context.state.counter
     })
-    const boundAction = bindActionBySourceAndPerspective(storeDefinition, action)
+    const boundAction = bindActionByResourceAndPerspective(storeDefinition, action)
     // Use unique project/dataset so we don't reuse stores from other tests
     const instance = createSanityInstance({
       projectId: 'perspective-reuse',

@@ -183,19 +183,19 @@ describe('usePermissions', () => {
     }).toThrow(/Mismatched datasets found in actions/)
   })
 
-  it('should throw an error if actions have mismatched sources', () => {
+  it('should throw an error if actions have mismatched resources', () => {
     const actions = [
       {
         type: 'document.publish' as const,
         documentId: 'doc1',
         documentType: 'article',
-        source: {projectId: 'p1', dataset: 'd1'},
+        resource: {projectId: 'p1', dataset: 'd1'},
       },
       {
         type: 'document.publish' as const,
         documentId: 'doc2',
         documentType: 'article',
-        source: {projectId: 'p2', dataset: 'd2'},
+        resource: {projectId: 'p2', dataset: 'd2'},
       },
     ]
 
@@ -211,17 +211,17 @@ describe('usePermissions', () => {
           </ResourceProvider>
         ),
       })
-    }).toThrow(/Mismatched sources found in actions/)
+    }).toThrow(/Mismatched resources found in actions/)
   })
 
-  it('should throw an error when mixing projectId and source (projectId first)', () => {
+  it('should throw an error when mixing projectId and resource (projectId first)', () => {
     const actions = [
       mockAction,
       {
         type: 'document.publish' as const,
         documentId: 'doc2',
         documentType: 'article',
-        source: {projectId: 'p', dataset: 'd'},
+        resource: {projectId: 'p', dataset: 'd'},
       },
     ]
 
@@ -237,16 +237,16 @@ describe('usePermissions', () => {
           </ResourceProvider>
         ),
       })
-    }).toThrow(/Mismatches between projectId\/dataset options and source/)
+    }).toThrow(/Mismatches between projectId\/dataset options and resource/)
   })
 
-  it('should throw an error when mixing source and projectId (source first)', () => {
+  it('should throw an error when mixing resource and projectId (resource first)', () => {
     const actions = [
       {
         type: 'document.publish' as const,
         documentId: 'doc1',
         documentType: 'article',
-        source: {projectId: 'p', dataset: 'd'},
+        resource: {projectId: 'p', dataset: 'd'},
       },
       mockAction,
     ]
@@ -263,7 +263,7 @@ describe('usePermissions', () => {
           </ResourceProvider>
         ),
       })
-    }).toThrow(/Mismatches between projectId\/dataset options and source/)
+    }).toThrow(/Mismatches between projectId\/dataset options and resource/)
   })
 
   it('should wait for permissions to be ready before rendering', async () => {

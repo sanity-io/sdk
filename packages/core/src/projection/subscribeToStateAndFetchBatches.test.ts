@@ -17,7 +17,7 @@ describe('subscribeToStateAndFetchBatches', () => {
   let state: StoreState<ProjectionStoreState>
   const key = {
     name: 'test.test:drafts',
-    source: {projectId: 'test', dataset: 'test'},
+    resource: {projectId: 'test', dataset: 'test'},
     perspective: 'drafts' as const,
   }
 
