@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.9.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.9.0...sdk-react-v2.9.1) (2026-04-24)
+
+
+### Bug Fixes
+
+* keep LoginError synchronous in standalone apps ([#810](https://github.com/sanity-io/sdk/issues/810)) ([9e88a08](https://github.com/sanity-io/sdk/commit/9e88a089df85c9761cf5ccaac05eb617abacca5e))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.9.1
+
 ## [2.9.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.8.0...sdk-react-v2.9.0) (2026-04-20)
 
 
