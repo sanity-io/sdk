@@ -4,9 +4,9 @@ import {identity} from 'rxjs'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 // used in an `{@link useDocumentProjection}` and `{@link useQuery}`
 // eslint-disable-next-line import/consistent-type-specifier-style, unused-imports/no-unused-imports
@@ -43,7 +43,7 @@ type UseDocumentOptions<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> = WithSourceNameSupport<DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>>
+> = WithResourceNameSupport<DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>>
 
 interface UseDocument {
   /** @internal */
@@ -240,6 +240,6 @@ interface UseDocument {
  */
 export const useDocument = wrapHookWithData((options: UseDocumentOptions) => {
   useTrackHookUsage('useDocument')
-  const normalizedOptions = useNormalizedSourceOptions(options)
+  const normalizedOptions = useNormalizedResourceOptions(options)
   return useDocumentValue(normalizedOptions)
 }) as UseDocument

@@ -16,7 +16,7 @@ import {
   tap,
 } from 'rxjs'
 
-import {isDatasetSource} from '../config/sanityConfig'
+import {isDatasetResource} from '../config/sanityConfig'
 import {getQueryState, resolveQuery} from '../query/queryStore'
 import {type BoundPerspectiveKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
@@ -42,7 +42,7 @@ interface StatusQueryResult {
 export const subscribeToStateAndFetchBatches = ({
   state,
   instance,
-  key: {source, perspective},
+  key: {resource, perspective},
 }: StoreContext<ProjectionStoreState, BoundPerspectiveKey>): Subscription => {
   const documentProjections$ = state.observable.pipe(
     map((s) => s.documentProjections),
@@ -113,7 +113,7 @@ export const subscribeToStateAndFetchBatches = ({
               perspective,
             },
             // temporary guard here until we're ready for everything to be queried via global API
-            ...(source && !isDatasetSource(source) ? {source} : {}),
+            ...(resource && !isDatasetResource(resource) ? {resource} : {}),
           })
 
           const querySource$ = defer(() => {
@@ -128,7 +128,7 @@ export const subscribeToStateAndFetchBatches = ({
                     perspective,
                   },
                   // temporary guard here until we're ready for everything to be queried via global API in v3
-                  ...(source && !isDatasetSource(source) ? {source} : {}),
+                  ...(resource && !isDatasetResource(resource) ? {resource} : {}),
                 }),
               ).pipe(switchMap(() => observable))
             }
@@ -154,7 +154,7 @@ export const subscribeToStateAndFetchBatches = ({
               perspective: 'raw',
             },
             // temporary guard here until we're ready for everything to be queried via global API
-            ...(source && !isDatasetSource(source) ? {source} : {}),
+            ...(resource && !isDatasetResource(resource) ? {resource} : {}),
           })
 
           const statusQuerySource$ = defer(() => {
@@ -169,7 +169,7 @@ export const subscribeToStateAndFetchBatches = ({
                     perspective: 'raw',
                   },
                   // temporary guard here until we're ready for everything to be queried via global API
-                  ...(source && !isDatasetSource(source) ? {source} : {}),
+                  ...(resource && !isDatasetResource(resource) ? {resource} : {}),
                 }),
               ).pipe(switchMap(() => observable))
             }

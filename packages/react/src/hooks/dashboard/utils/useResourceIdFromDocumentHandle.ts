@@ -1,11 +1,11 @@
 import {
   type DocumentHandle,
-  isCanvasSource,
-  isDatasetSource,
-  isMediaLibrarySource,
+  isCanvasResource,
+  isDatasetResource,
+  isMediaLibraryResource,
 } from '@sanity/sdk'
 
-import {useNormalizedSourceOptions} from '../../helpers/useNormalizedSourceOptions'
+import {useNormalizedResourceOptions} from '../../helpers/useNormalizedResourceOptions'
 
 interface DashboardMessageResource {
   id: string
@@ -18,23 +18,23 @@ interface DashboardMessageResource {
 export function useResourceIdFromDocumentHandle(
   documentHandle: DocumentHandle,
 ): DashboardMessageResource {
-  const options = useNormalizedSourceOptions(documentHandle)
-  const {projectId, dataset, source} = options
+  const options = useNormalizedResourceOptions(documentHandle)
+  const {projectId, dataset, resource} = options
   let resourceId: string = ''
   let resourceType: 'media-library' | 'canvas' | undefined
   if (projectId && dataset) {
     resourceId = `${projectId}.${dataset}`
   }
 
-  if (source) {
-    if (isDatasetSource(source)) {
-      resourceId = `${source.projectId}.${source.dataset}`
+  if (resource) {
+    if (isDatasetResource(resource)) {
+      resourceId = `${resource.projectId}.${resource.dataset}`
       resourceType = undefined
-    } else if (isMediaLibrarySource(source)) {
-      resourceId = source.mediaLibraryId
+    } else if (isMediaLibraryResource(resource)) {
+      resourceId = resource.mediaLibraryId
       resourceType = 'media-library'
-    } else if (isCanvasSource(source)) {
-      resourceId = source.canvasId
+    } else if (isCanvasResource(resource)) {
+      resourceId = resource.canvasId
       resourceType = 'canvas'
     }
   }

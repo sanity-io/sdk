@@ -9,9 +9,9 @@ import {useMemo} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 import {useDocumentProjection} from '../projection/useDocumentProjection'
 
@@ -19,7 +19,7 @@ import {useDocumentProjection} from '../projection/useDocumentProjection'
  * @public
  * @category Types
  */
-export interface useDocumentPreviewOptions extends WithSourceNameSupport<DocumentHandle> {
+export interface useDocumentPreviewOptions extends WithResourceNameSupport<DocumentHandle> {
   /**
    * Optional ref object to track visibility. When provided, preview resolution
    * only occurs when the referenced element is visible in the viewport.
@@ -100,7 +100,7 @@ export function useDocumentPreview({
 }: useDocumentPreviewOptions): useDocumentPreviewResults {
   const instance = useSanityInstance(docHandle)
   trackHookUsage(instance, 'useDocumentPreview')
-  const normalizedDocHandle = useNormalizedSourceOptions(docHandle)
+  const normalizedDocHandle = useNormalizedResourceOptions(docHandle)
 
   // Use the projection hook with the fixed preview projection
   const projectionResult = useDocumentProjection<PreviewQueryResult>({
@@ -112,8 +112,9 @@ export function useDocumentPreview({
   // Contract: useDocumentProjection suspends while data is null, so data is always available here.
   // Keep this non-null assumption aligned with useDocumentPreviewResults.data.
   const previewValue = useMemo(
-    () => transformProjectionToPreview(instance, projectionResult.data, normalizedDocHandle.source),
-    [projectionResult.data, instance, normalizedDocHandle.source],
+    () =>
+      transformProjectionToPreview(instance, projectionResult.data, normalizedDocHandle.resource),
+    [projectionResult.data, instance, normalizedDocHandle.resource],
   )
 
   return {

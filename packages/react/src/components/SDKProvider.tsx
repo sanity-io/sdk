@@ -1,8 +1,8 @@
-import {type DocumentSource, type SanityConfig} from '@sanity/sdk'
+import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
 import {type ReactElement, type ReactNode, useMemo} from 'react'
 
 import {ResourceProvider} from '../context/ResourceProvider'
-import {SourcesContext} from '../context/SourcesContext'
+import {ResourcesContext} from '../context/ResourcesContext'
 import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
 
 /**
@@ -12,7 +12,7 @@ export interface SDKProviderProps extends AuthBoundaryProps {
   children: ReactNode
   config: SanityConfig | SanityConfig[]
   fallback: ReactNode
-  sources?: Record<string, DocumentSource>
+  resources?: Record<string, DocumentResource>
 }
 
 /**
@@ -33,15 +33,15 @@ export function SDKProvider({
   const configs = (Array.isArray(config) ? config : [config]).slice().reverse()
   const projectIds = configs.map((c) => c.projectId).filter((id): id is string => !!id)
 
-  // Memoize sources to prevent creating a new empty object on every render
-  const sourcesValue = useMemo(() => props.sources ?? {}, [props.sources])
+  // Memoize resources to prevent creating a new empty object on every render
+  const resourcesValue = useMemo(() => props.resources ?? {}, [props.resources])
 
   // Create a nested structure of ResourceProviders for each config
   const createNestedProviders = (index: number): ReactElement => {
     if (index >= configs.length) {
       return (
         <AuthBoundary {...props} projectIds={projectIds}>
-          <SourcesContext.Provider value={sourcesValue}>{children}</SourcesContext.Provider>
+          <ResourcesContext.Provider value={resourcesValue}>{children}</ResourcesContext.Provider>
         </AuthBoundary>
       )
     }
