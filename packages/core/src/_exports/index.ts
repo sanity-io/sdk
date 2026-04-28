@@ -212,6 +212,7 @@ export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherS
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {defineIntent, type Intent, type IntentFilter} from '../utils/defineIntent'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
+export {isImportError} from '../utils/isImportError'
 export {CORE_SDK_VERSION} from '../version'
 export {
   getIndexForKey,

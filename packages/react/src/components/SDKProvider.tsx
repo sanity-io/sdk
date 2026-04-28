@@ -1,9 +1,12 @@
-import {type DocumentSource, type SanityConfig} from '@sanity/sdk'
-import {type ReactElement, type ReactNode, useMemo} from 'react'
+import {type DocumentSource, isImportError, type SanityConfig} from '@sanity/sdk'
+import {type ReactElement, type ReactNode, useEffect, useMemo} from 'react'
+import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
 import {ResourceProvider} from '../context/ResourceProvider'
 import {SourcesContext} from '../context/SourcesContext'
 import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
+import {ChunkLoadError} from './errors/ChunkLoadError'
+import {clearChunkReloadFlag} from './errors/chunkReloadStorage'
 
 /**
  * @internal
@@ -13,6 +16,18 @@ export interface SDKProviderProps extends AuthBoundaryProps {
   config: SanityConfig | SanityConfig[]
   fallback: ReactNode
   sources?: Record<string, DocumentSource>
+}
+
+/**
+ * Clears the chunk-reload flag once children render successfully past the
+ * top-level boundary, so a future incident in the same session can trigger
+ * another automatic reload.
+ */
+function ResetChunkReloadFlagOnMount(): null {
+  useEffect(() => {
+    clearChunkReloadFlag()
+  }, [])
+  return null
 }
 
 /**
@@ -53,5 +68,18 @@ export function SDKProvider({
     )
   }
 
-  return createNestedProviders(0)
+  return (
+    <ErrorBoundary FallbackComponent={ChunkAwareFallback}>
+      <ResetChunkReloadFlagOnMount />
+      {createNestedProviders(0)}
+    </ErrorBoundary>
+  )
+}
+
+function ChunkAwareFallback(fallbackProps: FallbackProps): ReactElement {
+  if (isImportError(fallbackProps.error)) {
+    return <ChunkLoadError {...fallbackProps} />
+  }
+  // Re-throw so downstream boundaries (e.g. AuthBoundary) handle other errors.
+  throw fallbackProps.error
 }
