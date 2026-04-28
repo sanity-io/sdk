@@ -18,7 +18,7 @@ jobs:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -28,6 +28,6 @@ jobs:
       - name: Bundle Stats
         uses: rexxars/bundle-stats@5b965c0d5954a27d44a7def1f8293ef677e1ecd4 # v1.9.3
         with:
-          packages: 'packages/core,packages/react'
-          build-command: 'pnpm turbo run build --filter=@sanity/sdk... --filter=@sanity/sdk-react...'
-          compare-npm: 'latest'
+          packages: "packages/core,packages/react"
+          build-command: "pnpm turbo run build --filter=@sanity/sdk... --filter=@sanity/sdk-react..."
+          compare-npm: "latest"

@@ -2,7 +2,7 @@ import {type SanityDocument} from '@sanity/types'
 import {Subject} from 'rxjs'
 import {describe, expect, it} from 'vitest'
 
-import {bindActionBySource} from '../store/createActionBinder'
+import {bindActionByResource} from '../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {createStoreState, type StoreState} from '../store/createStoreState'
 import {type DocumentAction} from './actions'
@@ -12,7 +12,7 @@ import {type AppliedTransaction, type OutgoingTransaction} from './reducers'
 
 vi.mock('../store/createActionBinder', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../store/createActionBinder')>()),
-  bindActionBySource: vi.fn(),
+  bindActionByResource: vi.fn(),
 }))
 
 type TestState = Pick<
@@ -46,9 +46,9 @@ describe('applyDocumentActions', () => {
     }
     state = createStoreState(initialState)
     instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    const key = {name: 'p.d', source: {projectId: 'p', dataset: 'd'}}
+    const key = {name: 'p.d', resource: {projectId: 'p', dataset: 'd'}}
 
-    vi.mocked(bindActionBySource).mockImplementation(
+    vi.mocked(bindActionByResource).mockImplementation(
       (_storeDef, action) => (instanceParam: SanityInstance, options) =>
         action({instance: instanceParam, state, key}, options),
     )
@@ -73,7 +73,7 @@ describe('applyDocumentActions', () => {
     const applyPromise = applyDocumentActions(instance, {
       actions: [action],
       transactionId: 'txn-success',
-      source: {projectId: 'p', dataset: 'd'},
+      resource: {projectId: 'p', dataset: 'd'},
     })
 
     const appliedTx: AppliedTransaction = {
@@ -131,7 +131,7 @@ describe('applyDocumentActions', () => {
     const applyPromise = applyDocumentActions(instance, {
       actions: [action],
       transactionId: 'txn-error',
-      source: {projectId: 'p', dataset: 'd'},
+      resource: {projectId: 'p', dataset: 'd'},
     })
 
     const errorEvent: DocumentEvent = {
@@ -165,7 +165,7 @@ describe('applyDocumentActions', () => {
     const applyPromise = applyDocumentActions(childInstance, {
       actions: [action],
       transactionId: 'txn-child-match',
-      source: {projectId: 'p', dataset: 'd'},
+      resource: {projectId: 'p', dataset: 'd'},
     })
 
     // Simulate an applied transaction on the parent's instance
