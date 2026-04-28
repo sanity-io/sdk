@@ -3,7 +3,7 @@ import {delay, filter, firstValueFrom, Observable, of, Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
-import {isCanvasSource} from '../config/sanityConfig'
+import {isCanvasResource} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {getQueryState, resolveQuery} from './queryStore'
@@ -448,21 +448,21 @@ describe('queryStore', () => {
     base.dispose()
   })
 
-  it('uses source from params when passed in query options (listenForNewSubscribersAndFetch)', async () => {
+  it('uses resource from params when passed in query options (listenForNewSubscribersAndFetch)', async () => {
     const query = '*[_type == "movie"]'
     const mediaLibrarySource = {mediaLibraryId: 'ml123'}
 
-    const state = getQueryState(instance, {query, source: mediaLibrarySource})
+    const state = getQueryState(instance, {query, resource: mediaLibrarySource})
     const unsubscribe = state.subscribe()
 
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
 
-    // Verify getClientState was called with the source from params in listenForNewSubscribersAndFetch
-    // This call includes projectId, dataset, and source
+    // Verify getClientState was called with the resource from params in listenForNewSubscribersAndFetch
+    // This call includes projectId, dataset, and resource
     expect(getClientState).toHaveBeenCalledWith(
       instance,
       expect.objectContaining({
-        source: expect.objectContaining({
+        resource: expect.objectContaining({
           mediaLibraryId: 'ml123',
         }),
       }),
@@ -471,22 +471,22 @@ describe('queryStore', () => {
     unsubscribe()
   })
 
-  it('uses source from store context key when not a dataset source (listenToLiveClientAndSetLastLiveEventIds)', async () => {
+  it('uses resource from store context key when not a dataset resource (listenToLiveClientAndSetLastLiveEventIds)', async () => {
     const query = '*[_type == "movie"]'
     const canvasSource = {canvasId: 'canvas456'}
 
-    const state = getQueryState(instance, {query, source: canvasSource})
+    const state = getQueryState(instance, {query, resource: canvasSource})
     const unsubscribe = state.subscribe()
 
     await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
 
-    // Verify getClientState was called with the canvas source for live events
-    // The source is extracted from the store key and passed when it's not a dataset source
-    // This call only has apiVersion and source (no projectId/dataset)
+    // Verify getClientState was called with the canvas resource for live events
+    // The resource is extracted from the store key and passed when it's not a dataset resource
+    // This call only has apiVersion and resource (no projectId/dataset)
     const calls = vi.mocked(getClientState).mock.calls
     const liveClientCall = calls.find(
       ([_instance, options]) =>
-        isCanvasSource(options.source!) && options.source.canvasId === 'canvas456',
+        isCanvasResource(options.resource!) && options.resource.canvasId === 'canvas456',
     )
     expect(liveClientCall).toBeDefined()
 
