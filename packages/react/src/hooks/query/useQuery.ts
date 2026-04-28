@@ -10,19 +10,19 @@ import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransitio
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {
-  useNormalizedSourceOptions,
-  type WithSourceNameSupport,
-} from '../helpers/useNormalizedSourceOptions'
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 /**
- * Hook options for useQuery, supporting both direct source and sourceName.
+ * Hook options for useQuery, supporting both direct resource and resourceName.
  * @beta
  */
 type UseQueryOptions<
   TQuery extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> = WithSourceNameSupport<QueryOptions<TQuery, TDataset, TProjectId>>
+> = WithResourceNameSupport<QueryOptions<TQuery, TDataset, TProjectId>>
 
 // Overload 1: Inferred Type (using Typegen)
 /**
@@ -122,7 +122,7 @@ export function useQuery<
  * }
  * ```
  */
-export function useQuery<TData>(options: WithSourceNameSupport<QueryOptions>): {
+export function useQuery<TData>(options: WithResourceNameSupport<QueryOptions>): {
   /** The query result, cast to the provided type TData */
   data: TData
   /** True if another query is resolving in the background (suspense handles the initial loading state) */
@@ -147,7 +147,7 @@ export function useQuery<TData>(options: WithSourceNameSupport<QueryOptions>): {
  *
  * @category GROQ
  */
-export function useQuery(options: WithSourceNameSupport<QueryOptions>): {
+export function useQuery(options: WithResourceNameSupport<QueryOptions>): {
   data: unknown
   isPending: boolean
 } {
@@ -155,8 +155,8 @@ export function useQuery(options: WithSourceNameSupport<QueryOptions>): {
   const instance = useSanityInstance(options)
   trackHookUsage(instance, 'useQuery')
 
-  // Normalize options: resolve sourceName to source and strip sourceName
-  const normalized = useNormalizedSourceOptions(options)
+  // Normalize options: resolve resourceName to resource and strip resourceName
+  const normalized = useNormalizedResourceOptions(options)
 
   // Use React's useTransition to avoid UI jank when queries change
   const [isPending, startTransition] = useTransition()

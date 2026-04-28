@@ -24,7 +24,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle, isDatasetSource} from '../config/sanityConfig'
+import {type DatasetHandle, isDatasetResource} from '../config/sanityConfig'
 /*
  * Although this is an import dependency cycle, it is not a logical cycle:
  * 1. queryStore uses getPerspectiveState when resolving release perspectives
@@ -35,7 +35,7 @@ import {type DatasetHandle, isDatasetSource} from '../config/sanityConfig'
 // eslint-disable-next-line import/no-cycle
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
-import {bindActionBySource, type BoundSourceKey} from '../store/createActionBinder'
+import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
   createStateSourceAction,
@@ -117,7 +117,7 @@ function normalizeOptionsWithPerspective(
   }
 }
 
-const queryStore = defineStore<QueryStoreState, BoundSourceKey>({
+const queryStore = defineStore<QueryStoreState, BoundResourceKey>({
   name: 'QueryStore',
   getInitialState: () => ({queries: {}}),
   initialize(context) {
@@ -173,7 +173,7 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
               projectId,
               dataset,
               tag,
-              source,
+              resource,
               perspective: perspectiveFromOptions,
               ...restOptions
             } = parseQueryKey(group$.key)
@@ -190,7 +190,7 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
               apiVersion: QUERY_STORE_API_VERSION,
               projectId,
               dataset,
-              source,
+              resource,
             }).observable
 
             return combineLatest({
@@ -226,12 +226,12 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
 const listenToLiveClientAndSetLastLiveEventIds = ({
   state,
   instance,
-  key: {source},
-}: StoreContext<QueryStoreState, BoundSourceKey>) => {
+  key: {resource},
+}: StoreContext<QueryStoreState, BoundResourceKey>) => {
   const liveMessages$ = getClientState(instance, {
     apiVersion: QUERY_STORE_API_VERSION,
     // temporary guard here until we're ready for everything to be queried via global api
-    ...(source && !isDatasetSource(source) ? {source} : {}),
+    ...(resource && !isDatasetResource(resource) ? {resource} : {}),
   }).observable.pipe(
     switchMap((client) =>
       defer(() =>
@@ -316,7 +316,7 @@ export function getQueryState(
 ): ReturnType<typeof _getQueryState> {
   return _getQueryState(...args)
 }
-const _getQueryState = bindActionBySource(
+const _getQueryState = bindActionByResource(
   queryStore,
   createStateSourceAction({
     selector: ({state, instance}: SelectorContext<QueryStoreState>, options: QueryOptions) => {
@@ -375,7 +375,7 @@ export function resolveQuery<TData>(
 export function resolveQuery(...args: Parameters<typeof _resolveQuery>): Promise<unknown> {
   return _resolveQuery(...args)
 }
-const _resolveQuery = bindActionBySource(
+const _resolveQuery = bindActionByResource(
   queryStore,
   ({state, instance}, {signal, ...options}: ResolveQueryOptions) => {
     const normalized = normalizeOptionsWithPerspective(instance, options)

@@ -30,7 +30,11 @@ export async function resolvePreview(
   }
 
   // Transform to preview format
-  const previewValue = transformProjectionToPreview(instance, projectionResult.data, options.source)
+  const previewValue = transformProjectionToPreview(
+    instance,
+    projectionResult.data,
+    options.resource,
+  )
 
   return {
     data: previewValue,

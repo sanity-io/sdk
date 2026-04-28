@@ -19,7 +19,6 @@ import {AgentActionsRoute} from './routes/AgentActionsRoute'
 import {AgentResourceContextRoute} from './routes/AgentResourceContextRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
-import ExperimentalResourceClientRoute from './routes/ExperimentalResourceClientRoute'
 import {IntentsRoute} from './routes/IntentsRoute'
 import {MediaLibraryRoute} from './routes/MediaLibraryRoute'
 import {PerspectivesRoute} from './routes/PerspectivesRoute'
@@ -68,10 +67,6 @@ const documentCollectionRoutes = [
   {
     path: 'dashboard-context',
     element: <DashboardContextRoute />,
-  },
-  {
-    path: 'experimental-resource-client',
-    element: <ExperimentalResourceClientRoute />,
   },
   {
     path: 'presence',

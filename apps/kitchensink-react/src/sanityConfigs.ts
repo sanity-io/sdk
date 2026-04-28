@@ -1,4 +1,4 @@
-import {type DocumentSource, type SanityConfig} from '@sanity/sdk'
+import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
 
 export const devConfigs: SanityConfig[] = [
   {
@@ -11,7 +11,7 @@ export const devConfigs: SanityConfig[] = [
   },
 ]
 
-export const devSources: Record<string, DocumentSource> = {
+export const devResources: Record<string, DocumentResource> = {
   'media-library': {
     mediaLibraryId: import.meta.env['VITE_IS_E2E']
       ? import.meta.env['VITE_E2E_MEDIA_LIBRARY_ID']

@@ -9,12 +9,12 @@ import {
 import React, {type ReactElement} from 'react'
 
 import {ResourceProvider} from '../src/context/ResourceProvider'
-import {SourcesContext} from '../src/context/SourcesContext'
+import {ResourcesContext} from '../src/context/ResourcesContext'
 
-const sources = {
+const resources = {
   'media-library': {mediaLibraryId: 'media-library-id'},
   'canvas': {canvasId: 'canvas-id'},
-  'dataset': {projectId: 'source-project-id', dataset: 'source-dataset'},
+  'dataset': {projectId: 'resource-project-id', dataset: 'resource-dataset'},
 } as const
 
 /**
@@ -24,7 +24,7 @@ const sources = {
 export const AppProviders = ({children}: {children: React.ReactNode}): ReactElement => {
   return (
     <ResourceProvider projectId="test" dataset="test" fallback={null}>
-      <SourcesContext.Provider value={sources}>{children}</SourcesContext.Provider>
+      <ResourcesContext.Provider value={resources}>{children}</ResourcesContext.Provider>
     </ResourceProvider>
   )
 }
