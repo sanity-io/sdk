@@ -53,7 +53,7 @@ function MediaLibraryAssetIntent({asset}: {asset: {_id: string; _type: string}})
     documentHandle: {
       documentId: asset._id,
       documentType: asset._type,
-      sourceName: 'media-library',
+      resourceName: 'media-library',
     },
   })
 
@@ -72,7 +72,7 @@ function CanvasDocumentIntent({document}: {document: SanityDocument}): JSX.Eleme
     documentHandle: {
       documentId: document._id,
       documentType: document._type,
-      source: {
+      resource: {
         canvasId: 'cag5gSK37IGV',
       },
     },
@@ -104,13 +104,13 @@ function IntentsContent(): JSX.Element {
   // Fetch first asset from media library
   const {data: firstAsset, isPending: isAssetPending} = useQuery<SanityDocument>({
     query: '*[_type == "sanity.asset"][0]',
-    sourceName: 'media-library',
+    resourceName: 'media-library',
   })
 
   // Fetch first canvas document from Sanity Sandbox Org Canvas
   const {data: firstCanvasDocument, isPending: isCanvasDocumentPending} = useQuery<SanityDocument>({
     query: '*[_type == "sanity.canvas.document"][0]',
-    source: {
+    resource: {
       canvasId: 'cag5gSK37IGV',
     },
   })
@@ -125,7 +125,7 @@ function IntentsContent(): JSX.Element {
 
       <Text size={2} style={{marginBottom: '2rem'}}>
         This route demonstrates dispatching intents for documents from both a traditional dataset
-        and a media library source.
+        and a media library resource.
       </Text>
 
       {isLoading && (
@@ -178,7 +178,7 @@ function IntentsContent(): JSX.Element {
           Media Library Asset Intent
         </Text>
         <Text size={1} style={{marginBottom: '1rem', color: '#ccc'}}>
-          Source Name: media-library
+          Resource Name: media-library
         </Text>
         <MediaLibraryAssetIntent asset={firstAsset} />
       </Card>
@@ -188,7 +188,7 @@ function IntentsContent(): JSX.Element {
           Canvas Document Intent
         </Text>
         <Text size={1} style={{marginBottom: '1rem', color: '#ccc'}}>
-          Source Name: canvas
+          Resource Name: canvas
         </Text>
         <div>
           <Text size={1} style={{marginBottom: '0.5rem', color: '#ccc'}}>

@@ -15,7 +15,7 @@ jobs:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -46,7 +46,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Upload Docs
-        uses: sanity-io/reference-api-typedoc/.github/actions/typedoc-upload@main
+        uses: sanity-io/reference-api-typedoc/.github/actions/typedoc-upload@4b9ef0f3b5061d2b9435a04f5da04d0332e6ebbb # main
         with:
           packageName: ${{ steps.package_info.outputs.package_name }}
           version: ${{ steps.package_info.outputs.version }}

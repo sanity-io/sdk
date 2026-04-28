@@ -2,10 +2,10 @@ import {type ClientPerspective} from '@sanity/client'
 
 import {
   type DatasetHandle,
-  type DocumentSource,
-  isCanvasSource,
-  isDatasetSource,
-  isMediaLibrarySource,
+  type DocumentResource,
+  isCanvasResource,
+  isDatasetResource,
+  isMediaLibraryResource,
   type ReleasePerspective,
 } from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
@@ -14,11 +14,11 @@ import {createStoreInstance, type StoreInstance} from './createStoreInstance'
 import {type StoreState} from './createStoreState'
 import {type StoreContext, type StoreDefinition} from './defineStore'
 
-export interface BoundSourceKey {
+export interface BoundResourceKey {
   name: string
-  source: DocumentSource
+  resource: DocumentResource
 }
-export interface BoundPerspectiveKey extends BoundSourceKey {
+export interface BoundPerspectiveKey extends BoundResourceKey {
   perspective: ClientPerspective | ReleasePerspective
 }
 export interface BoundDatasetKey {
@@ -166,21 +166,24 @@ export const bindActionByDataset = createActionBinder<
   return {name: `${projectId}.${dataset}`, projectId, dataset}
 })
 
-const createSourceKey = (instance: SanityInstance, source?: DocumentSource): BoundSourceKey => {
+const createResourceKey = (
+  instance: SanityInstance,
+  resource?: DocumentResource,
+): BoundResourceKey => {
   let name: string | undefined
-  let sourceForKey: DocumentSource | undefined
-  if (source) {
-    sourceForKey = source
-    if (isDatasetSource(source)) {
-      name = `${source.projectId}.${source.dataset}`
-    } else if (isMediaLibrarySource(source)) {
-      name = `media-library:${source.mediaLibraryId}`
-    } else if (isCanvasSource(source)) {
-      name = `canvas:${source.canvasId}`
+  let resourceForKey: DocumentResource | undefined
+  if (resource) {
+    resourceForKey = resource
+    if (isDatasetResource(resource)) {
+      name = `${resource.projectId}.${resource.dataset}`
+    } else if (isMediaLibraryResource(resource)) {
+      name = `media-library:${resource.mediaLibraryId}`
+    } else if (isCanvasResource(resource)) {
+      name = `canvas:${resource.canvasId}`
     } else {
-      throw new Error(`Received invalid source: ${JSON.stringify(source)}`)
+      throw new Error(`Received invalid resource: ${JSON.stringify(resource)}`)
     }
-    return {name, source: sourceForKey}
+    return {name, resource: resourceForKey}
   }
 
   // TODO: remove reference to instance.config when we get to v3
@@ -188,30 +191,30 @@ const createSourceKey = (instance: SanityInstance, source?: DocumentSource): Bou
   if (!projectId || !dataset) {
     throw new Error('This API requires a project ID and dataset configured.')
   }
-  return {name: `${projectId}.${dataset}`, source: {projectId, dataset}}
+  return {name: `${projectId}.${dataset}`, resource: {projectId, dataset}}
 }
 
 /**
- * Binds an action to a store that's scoped to a specific document source.
+ * Binds an action to a store that's scoped to a specific document resource.
  **/
-export const bindActionBySource = createActionBinder<
-  BoundSourceKey,
-  [{source?: DocumentSource}, ...unknown[]]
->((instance, {source}) => {
-  return createSourceKey(instance, source)
+export const bindActionByResource = createActionBinder<
+  BoundResourceKey,
+  [{resource?: DocumentResource}, ...unknown[]]
+>((instance, {resource}) => {
+  return createResourceKey(instance, resource)
 })
 
 /**
- * Binds an action to a store that's scoped to a specific document source and perspective.
+ * Binds an action to a store that's scoped to a specific document resource and perspective.
  *
  * @remarks
- * This creates actions that operate on state isolated to a specific document source and perspective.
- * Different document sources and perspectives will have separate states.
+ * This creates actions that operate on state isolated to a specific document resource and perspective.
+ * Different document resources and perspectives will have separate states.
  *
  * This is mostly useful for stores that do batch fetching operations, since the query store
  * can isolate single queries by perspective.
  *
- * @throws Error if source or perspective is missing from the Sanity instance config
+ * @throws Error if resource or perspective is missing from the Sanity instance config
  *
  * @example
  * ```ts
@@ -222,11 +225,11 @@ export const bindActionBySource = createActionBinder<
  *   // ...
  * })
  *
- * // Create source-and-perspective-specific actions
- * export const fetchDocuments = bindActionBySourceAndPerspective(
+ * // Create resource-and-perspective-specific actions
+ * export const fetchDocuments = bindActionByResourceAndPerspective(
  *   documentStore,
  *   ({instance, state}, documentId) => {
- *     // This state is isolated to the specific document source and perspective
+ *     // This state is isolated to the specific document resource and perspective
  *     // ...fetch logic...
  *   }
  * )
@@ -235,11 +238,11 @@ export const bindActionBySource = createActionBinder<
  * fetchDocument(sanityInstance, 'doc123')
  * ```
  */
-export const bindActionBySourceAndPerspective = createActionBinder<
+export const bindActionByResourceAndPerspective = createActionBinder<
   BoundPerspectiveKey,
   [DatasetHandle, ...unknown[]]
 >((instance, options): BoundPerspectiveKey => {
-  const {source, perspective} = options
+  const {resource, perspective} = options
   // TODO: remove reference to instance.config.perspective when we get to v3
   const utilizedPerspective = perspective ?? instance.config.perspective ?? 'drafts'
   let perspectiveKey: string
@@ -251,11 +254,11 @@ export const bindActionBySourceAndPerspective = createActionBinder<
     // "StackablePerspective", shouldn't be a common case, but just in case
     perspectiveKey = JSON.stringify(utilizedPerspective)
   }
-  const sourceKey = createSourceKey(instance, source)
+  const sourceKey = createResourceKey(instance, resource)
 
   return {
     name: `${sourceKey.name}:${perspectiveKey}`,
-    source: sourceKey.source,
+    resource: sourceKey.resource,
     perspective: utilizedPerspective,
   }
 })

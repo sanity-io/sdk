@@ -52,7 +52,7 @@ export function getPreviewState(
       return {data: null, isPending: current?.isPending ?? false}
     }
 
-    const previewValue = transformProjectionToPreview(instance, current.data, options.source)
+    const previewValue = transformProjectionToPreview(instance, current.data, options.resource)
 
     return {
       data: previewValue,

@@ -33,9 +33,9 @@ Renovate will create these PRs at its next scheduled run (currently `before 5am`
 
 We set `prConcurrentLimit: 10`. Once 10 Renovate PRs are open, additional updates queue here. If this section grows long, drain it by merging or reviewing open Renovate PRs.
 
-### Pending Status Checks (automatic)
+### Pending Status Checks (should stay empty)
 
-Renovate has pushed a branch and CI is running. Once CI reports a non-pending status, the PR opens. We use `prCreation: "not-pending"` so open PRs always have a CI verdict attached.
+We use `prCreation: "immediate"` so Renovate opens PRs right away rather than waiting for branch-level CI. Our CI workflows only fire on `pull_request:` events, so waiting for branch status checks would deadlock. If items do land here, it means Renovate observed an external pending check on the branch — worth investigating.
 
 ### PR Closed (Blocked) (needs you)
 
