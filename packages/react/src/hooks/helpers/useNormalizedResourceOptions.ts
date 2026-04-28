@@ -20,6 +20,11 @@ export type WithResourceNameSupport<T extends {resource?: DocumentResource}> = T
    * @beta
    */
   resourceName?: string
+  /**
+   * @deprecated Use `resourceName` instead.
+   * @beta
+   */
+  sourceName?: string
 }
 
 /**
@@ -34,34 +39,49 @@ export type WithResourceNameSupport<T extends {resource?: DocumentResource}> = T
  * @internal
  */
 export function normalizeResourceOptions<
-  T extends {resource?: DocumentResource; resourceName?: string},
->(options: T, resources: Record<string, DocumentResource>): Omit<T, 'resourceName'> {
-  const {resourceName, ...rest} = options
+  T extends {
+    resource?: DocumentResource
+    resourceName?: string
+    source?: DocumentResource
+    sourceName?: string
+  },
+>(
+  options: T,
+  resources: Record<string, DocumentResource>,
+): Omit<T, 'resourceName' | 'source' | 'sourceName'> {
+  const {resourceName, sourceName, source, ...rest} = options
 
-  if (!resourceName && !options.resource) {
-    return options
+  // Coalesce deprecated aliases to their canonical equivalents
+  const effectiveResourceName = resourceName ?? sourceName
+  const effectiveResource = options.resource ?? source
+
+  if (!effectiveResourceName && !effectiveResource) {
+    return rest as Omit<T, 'resourceName' | 'source' | 'sourceName'>
   }
 
-  if (resourceName && Object.hasOwn(options, 'resource')) {
+  const hasNameKey = Object.hasOwn(options, 'resourceName') || Object.hasOwn(options, 'sourceName')
+  const hasResourceKey = Object.hasOwn(options, 'resource') || Object.hasOwn(options, 'source')
+
+  if (hasNameKey && hasResourceKey) {
     throw new Error(
-      `Resource name ${JSON.stringify(resourceName)} and resource ${JSON.stringify(options.resource)} cannot be used together.`,
+      `Resource name ${JSON.stringify(effectiveResourceName)} and resource ${JSON.stringify(effectiveResource)} cannot be used together.`,
     )
   }
 
   let resolvedResource: DocumentResource | undefined
 
-  if (options.resource) {
-    resolvedResource = options.resource
+  if (effectiveResource) {
+    resolvedResource = effectiveResource
   }
 
-  if (resourceName && !Object.hasOwn(resources, resourceName)) {
+  if (effectiveResourceName && !Object.hasOwn(resources, effectiveResourceName)) {
     throw new Error(
-      `There's no resource named ${JSON.stringify(resourceName)} in context. Please use <ResourceProvider>.`,
+      `There's no resource named ${JSON.stringify(effectiveResourceName)} in context. Please use <ResourceProvider>.`,
     )
   }
 
-  if (resourceName && resources[resourceName]) {
-    resolvedResource = resources[resourceName]
+  if (effectiveResourceName && resources[effectiveResourceName]) {
+    resolvedResource = resources[effectiveResourceName]
   }
 
   return {
@@ -99,8 +119,13 @@ export function normalizeResourceOptions<
  * @beta
  */
 export function useNormalizedResourceOptions<
-  T extends {resource?: DocumentResource; resourceName?: string},
->(options: T): Omit<T, 'resourceName'> {
+  T extends {
+    resource?: DocumentResource
+    resourceName?: string
+    source?: DocumentResource
+    sourceName?: string
+  },
+>(options: T): Omit<T, 'resourceName' | 'source' | 'sourceName'> {
   const resources = useContext(ResourcesContext)
   return normalizeResourceOptions(options, resources)
 }
