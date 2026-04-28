@@ -196,6 +196,55 @@ importers:
         specifier: ^3.1.2
         version: 3.2.4(@types/node@22.19.1)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.21.0)(yaml@2.8.2)
 
+  apps/standalone-react:
+    dependencies:
+      '@sanity/sdk-react':
+        specifier: workspace:*
+        version: link:../../packages/react
+      react:
+        specifier: ^19
+        version: 19.2.1
+      react-dom:
+        specifier: ^19
+        version: 19.2.1(react@19.2.1)
+    devDependencies:
+      '@repo/config-eslint':
+        specifier: workspace:*
+        version: link:../../packages/@repo/config-eslint
+      '@repo/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/@repo/tsconfig
+      '@sanity/prettier-config':
+        specifier: ^1.0.3
+        version: 1.0.6(prettier@3.7.4)
+      '@sanity/sdk':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@types/react':
+        specifier: ^19.1.2
+        version: 19.2.7
+      '@types/react-dom':
+        specifier: ^19.1.2
+        version: 19.2.3(@types/react@19.2.7)
+      '@vitejs/plugin-react':
+        specifier: ^5.1.2
+        version: 5.1.2(vite@7.3.2(@types/node@22.19.1)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.21.0)(yaml@2.8.2))
+      eslint:
+        specifier: ^9.25.1
+        version: 9.25.1(jiti@2.6.1)
+      prettier:
+        specifier: ^3.5.3
+        version: 3.7.4
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.1.2
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+      vite:
+        specifier: ^7.0.0
+        version: 7.3.2(@types/node@22.19.1)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.21.0)(yaml@2.8.2)
+
   packages/@repo/config-eslint:
     devDependencies:
       '@eslint/js':

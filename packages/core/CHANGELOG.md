@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.9.0](https://github.com/sanity-io/sdk/compare/sdk-v2.8.0...sdk-v2.9.0) (2026-04-20)
+
+
+### Features
+
+* **core:** add dev-mode telemetry with consent-gated event tracking ([#792](https://github.com/sanity-io/sdk/issues/792)) ([26a61e7](https://github.com/sanity-io/sdk/commit/26a61e717d75e948db6d14deea31fe3111ec476f))
+* **core:** respect __SANITY_STAGING__ global variable if present for apiHost ([#793](https://github.com/sanity-io/sdk/issues/793)) ([643eb2d](https://github.com/sanity-io/sdk/commit/643eb2d62450c0ae6d1f0c3710d92cd48d8d5ab0))
+* **document:** update document store to accept sources ([#730](https://github.com/sanity-io/sdk/issues/730)) ([b7b727b](https://github.com/sanity-io/sdk/commit/b7b727b9cfc70d0c1e0486121ce8a55e33cbfd40))
+* **preview:** update preview to use perspective and source ([#731](https://github.com/sanity-io/sdk/issues/731)) ([9702f45](https://github.com/sanity-io/sdk/commit/9702f45fa11f368593fe741872b5bc4ae501183f))
+* **releases:** update releases store to use sources ([#733](https://github.com/sanity-io/sdk/issues/733)) ([3912987](https://github.com/sanity-io/sdk/commit/3912987efd153bc0939b6a89b9639374cfef211b))
+
+
+### Bug Fixes
+
+* **auth:** handle Studio cookie auth when token source emits null ([#743](https://github.com/sanity-io/sdk/issues/743)) ([6323543](https://github.com/sanity-io/sdk/commit/632354343e4fa3c7f0d63ed26953532b80889812))
+* **core:** correctly handle state changes during onSubscribe in createStateSourceAction ([#643](https://github.com/sanity-io/sdk/issues/643)) ([48ece2c](https://github.com/sanity-io/sdk/commit/48ece2ce15515c7da04c90831487c5227945854f))
+* **core:** initialize lastTokenRefresh for stamped tokens to prevent unnecessary refreshes ([#759](https://github.com/sanity-io/sdk/issues/759)) ([72ef247](https://github.com/sanity-io/sdk/commit/72ef247b50abaa686597bddbbdb2181d16ca4463))
+* **core:** prevent cleanup timers from keeping Node.js process alive ([#772](https://github.com/sanity-io/sdk/issues/772)) ([c9e250e](https://github.com/sanity-io/sdk/commit/c9e250e882b84a9ba8cbf3501948341a0bc305d2))
+* **core:** standardize request tags across all SDK API calls ([#790](https://github.com/sanity-io/sdk/issues/790)) ([#799](https://github.com/sanity-io/sdk/issues/799)) ([07fd5cd](https://github.com/sanity-io/sdk/commit/07fd5cdbb13eb74feab0d51ce671055fc4bef306))
+* **core:** use mutations endpoint for liveEdit documents ([#794](https://github.com/sanity-io/sdk/issues/794)) ([dfea5a5](https://github.com/sanity-io/sdk/commit/dfea5a59f1f4c3c7f019bb55166bc186cb168ad1))
+* **document:** ensure document store works for version and source ([#754](https://github.com/sanity-io/sdk/issues/754)) ([#802](https://github.com/sanity-io/sdk/issues/802)) ([a8db072](https://github.com/sanity-io/sdk/commit/a8db072d811d44e1c2f92850c12d93bc9e1db135))
+* **test:** remove default resource param from core ([#777](https://github.com/sanity-io/sdk/issues/777)) ([f4835fd](https://github.com/sanity-io/sdk/commit/f4835fd7f7087c93c8edc1bd371f147e18ddb291))
+
 ## [2.8.0](https://github.com/sanity-io/sdk/compare/sdk-v2.7.0...sdk-v2.8.0) (2026-02-19)
 
 ### Miscellaneous
