@@ -13,8 +13,6 @@ concurrency:
 jobs:
   fallow:
     runs-on: ubuntu-latest
-    # Informational for now. Remove this line to make Fallow a blocking check.
-    continue-on-error: true
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
@@ -35,13 +33,16 @@ jobs:
         run: |
           BASE_REF="${{ github.event.pull_request.base.ref || 'main' }}"
           git fetch origin "$BASE_REF" --depth=1 || true
+          AUDIT_OUTPUT=$(pnpm --silent fallow audit --base "origin/$BASE_REF" --format markdown --quiet) || AUDIT_EXIT=$?
           {
             echo "## Fallow audit"
             echo ""
-            pnpm fallow audit --base "origin/$BASE_REF" --format markdown --quiet || true
+            echo "$AUDIT_OUTPUT"
           } >> "$GITHUB_STEP_SUMMARY"
+          exit "${AUDIT_EXIT:-0}"
 
       - name: Hotspots
+        if: always()
         run: |
           {
             echo "## Hotspots"
