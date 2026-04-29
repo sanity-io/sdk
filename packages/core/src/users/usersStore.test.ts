@@ -444,8 +444,7 @@ describe('usersStore', () => {
       expect(getClient).toHaveBeenCalledWith(
         instance,
         expect.objectContaining({
-          projectId: 'project1',
-          useProjectHostname: true,
+          apiVersion: expect.any(String),
         }),
       )
       expect(specificRequest).toHaveBeenCalledWith({

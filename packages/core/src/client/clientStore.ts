@@ -1,4 +1,9 @@
-import {type ClientConfig, createClient, type SanityClient} from '@sanity/client'
+import {
+  type ClientConfig,
+  type ClientPerspective,
+  createClient,
+  type SanityClient,
+} from '@sanity/client'
 import {pick} from 'lodash-es'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
@@ -41,11 +46,11 @@ const allowedKeys = Object.keys({
   maxRetries: null,
   dataset: null,
   projectId: null,
-  scope: null,
   apiVersion: null,
   requestTagPrefix: null,
   useProjectHostname: null,
   resource: null,
+  scope: null,
 } satisfies Record<keyof ClientOptions, null>) as (keyof ClientOptions)[]
 
 const DEFAULT_CLIENT_CONFIG: ClientConfig = {
@@ -54,7 +59,8 @@ const DEFAULT_CLIENT_CONFIG: ClientConfig = {
   ignoreBrowserTokenWarning: true,
   allowReconfigure: false,
   requestTagPrefix: DEFAULT_REQUEST_TAG_PREFIX,
-}
+  useProjectHostname: false,
+} satisfies ClientConfig
 
 /**
  * States tracked by the client store
@@ -72,9 +78,11 @@ export interface ClientStoreState {
  * This interface extends the base {@link ClientConfig} and adds:
  *
  * - **apiVersion:** A required string indicating the API version for the client.
+ *
  * - **scope:** An optional flag to choose between the project-specific client
- *   ('project') and the global client ('global'). When set to `'global'`, the
- *   global client is used.
+ *   ('project') and the global client ('global'). Most client calls are global by default.
+ *   This flag is deprecated and will be removed in a future version;
+ *   prefer using the native Sanity client `useProjectHostname` option instead.
  *
  * These options are utilized by `getClient` and `getClientState` to configure and
  * return appropriate client instances that automatically handle authentication
@@ -84,21 +92,25 @@ export interface ClientStoreState {
  */
 export interface ClientOptions extends Pick<ClientConfig, AllowedClientConfigKey> {
   /**
-   * An optional flag to choose between the default client (typically project-level)
-   * and the global client ('global'). When set to `'global'`, the global client
-   * is used.
+   * The perspective to use for the client. Note that array-based perpsectives may not behave as expected.
    */
-  scope?: 'default' | 'global'
+  perspective?: ClientPerspective
   /**
    * A required string indicating the API version for the client.
    */
   apiVersion: string
-
   /**
    * @internal
    * The SDK resource to use for the client -- this will get transformed into a ClientConfig resource.
    */
   resource?: DocumentResource
+  /**
+   * An optional flag to choose between the default client (typically project-level)
+   * and the global client ('global'). Most client calls are global by default.
+   * This flag is deprecated and will be removed in a future version.
+   * @deprecated Use `useProjectHostname` instead.
+   */
+  scope?: 'default' | 'global'
 }
 
 const clientStore = defineStore<ClientStoreState>({
@@ -136,7 +148,7 @@ const listenToAuthMethod = ({instance, state}: StoreContext<ClientStoreState>) =
 }
 
 type ClientInstanceCacheKeyInput = ClientConfig &
-  Partial<Pick<ClientOptions, 'scope'>> & {
+  Partial<Pick<ClientOptions, 'perspective'>> & {
     apiVersion: string
   }
 
@@ -179,40 +191,47 @@ export const getClient = bindActionGlobally(
     const tokenFromState = state.get().token
     const {clients, authMethod} = state.get()
 
+    const {resource: sdkResource, scope, ...restOptions} = options
+
     let resource: ClientConfig['resource'] | undefined
 
-    if (options.resource) {
-      if (isDatasetResource(options.resource)) {
+    if (sdkResource) {
+      if (isDatasetResource(sdkResource)) {
         resource = {
           type: 'dataset',
-          id: `${options.resource.projectId}.${options.resource.dataset}`,
+          id: `${sdkResource.projectId}.${sdkResource.dataset}`,
         }
-      } else if (isMediaLibraryResource(options.resource)) {
-        resource = {type: 'media-library', id: options.resource.mediaLibraryId}
-      } else if (isCanvasResource(options.resource)) {
-        resource = {type: 'canvas', id: options.resource.canvasId}
+      } else if (isMediaLibraryResource(sdkResource)) {
+        resource = {type: 'media-library', id: sdkResource.mediaLibraryId}
+      } else if (isCanvasResource(sdkResource)) {
+        resource = {type: 'canvas', id: sdkResource.canvasId}
+      }
+    } else if (!options.projectId || !options.dataset) {
+      const {projectId, dataset} = instance.config
+      if (projectId && dataset) {
+        resource = {type: 'dataset', id: `${projectId}.${dataset}`}
       }
     }
 
-    const projectId = options.projectId ?? instance.config.projectId
-    const dataset = options.dataset ?? instance.config.dataset
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost ?? getStagingApiHost()
 
-    const effectiveOptions: ClientConfig & {apiVersion: string} = {
+    const effectiveOptions = {
       ...DEFAULT_CLIENT_CONFIG,
-      ...((options.scope === 'global' || !projectId || resource) && {useProjectHostname: false}),
+      // assume explicit projectId / dataset rather than resource means project-specific client
+      // useProjectHostname will also navigate to the correct endpoint with just a resource
+      ...((options.projectId && options.dataset) || scope === 'default'
+        ? {useProjectHostname: true}
+        : {}),
       token: authMethod === 'cookie' ? undefined : (tokenFromState ?? undefined),
-      ...options,
-      ...(projectId && {projectId}),
-      ...(dataset && {dataset}),
-      ...(resource ? {resource} : {resource: undefined}),
+      ...restOptions,
       ...(apiHost && {apiHost}),
+      ...(resource && {resource}),
     }
 
     // When a resource is provided, don't use projectId/dataset - the client should be "projectless"
     // The client code itself will ignore the non-resource config, so we do this to prevent confusing the user.
     // (ref: https://github.com/sanity-io/client/blob/5c23f81f5ab93a53f5b22b39845c867988508d84/src/data/dataMethods.ts#L691)
-    if (resource) {
+    if (options.resource) {
       if (options.projectId || options.dataset) {
         // eslint-disable-next-line no-console
         console.warn(
@@ -221,6 +240,7 @@ export const getClient = bindActionGlobally(
       }
       delete effectiveOptions.projectId
       delete effectiveOptions.dataset
+      effectiveOptions.useProjectHostname = false
     }
 
     if (effectiveOptions.token === null || typeof effectiveOptions.token === 'undefined') {

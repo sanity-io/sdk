@@ -385,7 +385,7 @@ export function processActions({
         const documentId = getId(action.documentId)
 
         if (action.liveEdit) {
-          // Single-document mode (liveEdit or release perspective): edit directly without draft logic
+          // Single-document mode (liveEdit): edit directly without draft logic
           const userPatches = action.patches?.map((patch) => ({patch: {id: documentId, ...patch}}))
 
           // skip this action if there are no associated patches

@@ -39,7 +39,10 @@ describe('releasesStore', () => {
       expect.objectContaining({
         query: 'releases::all()',
         perspective: 'raw',
-        resource: undefined,
+        resource: {
+          dataset: 'test',
+          projectId: 'test',
+        },
         tag: 'releases',
       }),
     )

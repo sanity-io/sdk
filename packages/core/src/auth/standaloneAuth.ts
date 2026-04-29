@@ -92,7 +92,7 @@ export function initializeStandaloneAuth(
   const subscriptions: Subscription[] = []
   let startedRefresher = false
 
-  subscriptions.push(subscribeToStateAndFetchCurrentUser(context, {useProjectHostname: false}))
+  subscriptions.push(subscribeToStateAndFetchCurrentUser(context))
 
   const storageArea = context.state.get().options?.storageArea
   if (storageArea) {

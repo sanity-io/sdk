@@ -19,9 +19,7 @@ export const datasets = createFetcherStore({
   fetcher: (instance) => (options?: ProjectHandle) => {
     return getClientState(instance, {
       apiVersion: API_VERSION,
-      // non-null assertion is fine because we check above
-      projectId: (options?.projectId ?? instance.config.projectId)!,
-      useProjectHostname: true,
+      projectId: options?.projectId ?? instance.config.projectId,
     }).observable.pipe(switchMap((client) => client.observable.datasets.list()))
   },
 })
