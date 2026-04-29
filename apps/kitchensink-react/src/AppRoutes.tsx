@@ -111,10 +111,6 @@ export function AppRoutes(): JSX.Element {
                   ...documentCollectionRoutes,
                   ...dashboardInteractionRoutes,
                   {
-                    path: 'agent-actions',
-                    element: <AgentActionsRoute />,
-                  },
-                  {
                     path: 'comlink-demo',
                     element: <ParentApp />,
                   },

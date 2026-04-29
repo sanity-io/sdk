@@ -24,7 +24,7 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {type DatasetHandle} from '../config/sanityConfig'
+import {type DatasetHandle, isDatasetResource} from '../config/sanityConfig'
 /*
  * Although this is an import dependency cycle, it is not a logical cycle:
  * 1. queryStore uses getPerspectiveState when resolving release perspectives
@@ -138,11 +138,7 @@ const errorHandler = (state: StoreState<{error?: unknown}>) => {
   return (error: unknown): void => state.set('setError', {error})
 }
 
-const listenForNewSubscribersAndFetch = ({
-  state,
-  instance,
-  key: {resource},
-}: StoreContext<QueryStoreState, BoundResourceKey>) => {
+const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QueryStoreState>) => {
   return state.observable
     .pipe(
       map((s) => new Set(Object.keys(s.queries))),
@@ -174,9 +170,11 @@ const listenForNewSubscribersAndFetch = ({
             const {
               query,
               params,
+              projectId,
+              dataset,
               tag,
+              resource,
               perspective: perspectiveFromOptions,
-              resource: resourceFromOptions,
               ...restOptions
             } = parseQueryKey(group$.key)
 
@@ -185,13 +183,14 @@ const listenForNewSubscribersAndFetch = ({
             const perspective$ = isReleasePerspective(perspectiveFromOptions)
               ? getPerspectiveState(instance, {
                   perspective: perspectiveFromOptions,
-                  resource: resourceFromOptions ?? resource,
                 }).observable.pipe(filter(Boolean))
               : of(perspectiveFromOptions ?? QUERY_STORE_DEFAULT_PERSPECTIVE)
 
             const client$ = getClientState(instance, {
               apiVersion: QUERY_STORE_API_VERSION,
-              resource: resourceFromOptions ?? resource,
+              projectId,
+              dataset,
+              resource,
             }).observable
 
             return combineLatest({
@@ -231,7 +230,8 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
 }: StoreContext<QueryStoreState, BoundResourceKey>) => {
   const liveMessages$ = getClientState(instance, {
     apiVersion: QUERY_STORE_API_VERSION,
-    resource,
+    // temporary guard here until we're ready for everything to be queried via global api
+    ...(resource && !isDatasetResource(resource) ? {resource} : {}),
   }).observable.pipe(
     switchMap((client) =>
       defer(() =>

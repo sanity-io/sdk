@@ -1,6 +1,6 @@
 import {createClient, type SanityClient} from '@sanity/client'
 import {Subject} from 'rxjs'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getAuthMethodState, getTokenState} from '../auth/authStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
@@ -53,9 +53,9 @@ describe('clientStore', () => {
         ignoreBrowserTokenWarning: true,
         allowReconfigure: false,
         requestTagPrefix: 'sanity.sdk',
+        projectId: 'test-project',
+        dataset: 'test-dataset',
         token: 'initial-token',
-        useProjectHostname: false,
-        resource: {type: 'dataset', id: 'test-project.test-dataset'},
       }
 
       expect(vi.mocked(createClient)).toHaveBeenCalledWith({
@@ -67,6 +67,7 @@ describe('clientStore', () => {
         apiVersion: '2024-11-12',
       })
     })
+
     it('should pass staging apiHost when __SANITY_STAGING__ is true and no explicit apiHost', () => {
       vi.stubGlobal('__SANITY_STAGING__', true)
 
@@ -120,49 +121,6 @@ describe('clientStore', () => {
 
       expect(client1).not.toBe(client2)
       expect(vi.mocked(createClient)).toHaveBeenCalledTimes(2)
-    })
-
-    it('should set useProjectHostname when both projectId and dataset are provided', () => {
-      getClient(instance, {
-        apiVersion: '2024-11-12',
-        projectId: 'abc123',
-        dataset: 'production',
-      })
-
-      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
-        expect.objectContaining({
-          projectId: 'abc123',
-          dataset: 'production',
-          useProjectHostname: true,
-        }),
-      )
-    })
-
-    it('should respect the deprecated scope option', () => {
-      getClient(instance, {
-        apiVersion: '2024-11-12',
-        scope: 'default',
-      })
-      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
-        expect.objectContaining({
-          useProjectHostname: true,
-        }),
-      )
-    })
-
-    it('should allow explicit useProjectHostname: false to override when project and dataset are set', () => {
-      getClient(instance, {
-        apiVersion: '2024-11-12',
-        projectId: 'abc123',
-        dataset: 'production',
-        useProjectHostname: false,
-      })
-
-      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
-        expect.objectContaining({
-          useProjectHostname: false,
-        }),
-      )
     })
   })
 
@@ -233,7 +191,29 @@ describe('clientStore', () => {
   })
 
   describe('resource handling', () => {
-    it('should create client when media library resource is provided', () => {
+    it('should create client when resource is provided', () => {
+      const client = getClient(instance, {
+        apiVersion: '2024-11-12',
+        resource: {projectId: 'source-project', dataset: 'source-dataset'},
+      })
+
+      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiVersion: '2024-11-12',
+          resource: {type: 'dataset', id: 'source-project.source-dataset'},
+        }),
+      )
+      // Client should be projectless - no projectId/dataset in config
+      expect(client.config()).not.toHaveProperty('projectId')
+      expect(client.config()).not.toHaveProperty('dataset')
+      expect(client.config()).toEqual(
+        expect.objectContaining({
+          resource: {type: 'dataset', id: 'source-project.source-dataset'},
+        }),
+      )
+    })
+
+    it('should create resource when resource has array resourceId and be projectless', () => {
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
         resource: {mediaLibraryId: 'media-lib-123'},
@@ -241,8 +221,8 @@ describe('clientStore', () => {
 
       expect(vi.mocked(createClient)).toHaveBeenCalledWith(
         expect.objectContaining({
-          apiVersion: '2024-11-12',
           resource: {type: 'media-library', id: 'media-lib-123'},
+          apiVersion: '2024-11-12',
         }),
       )
       // Client should be projectless - no projectId/dataset in config
@@ -255,7 +235,7 @@ describe('clientStore', () => {
       )
     })
 
-    it('should create client when canvas resource is provided', () => {
+    it('should create resource when canvas resource is provided and be projectless', () => {
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
         resource: {canvasId: 'canvas-123'},
@@ -277,13 +257,13 @@ describe('clientStore', () => {
       )
     })
 
-    it('should create client when dataset resource is provided', () => {
+    it('should create projectless client when resource is provided, ignoring instance config', () => {
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
         resource: {projectId: 'source-project', dataset: 'source-dataset'},
       })
 
-      // Client should be projectless - source takes precedence, instance config is ignored
+      // Client should be projectless - resource takes precedence, instance config is ignored
       expect(client.config()).not.toHaveProperty('projectId')
       expect(client.config()).not.toHaveProperty('dataset')
       expect(client.config()).toEqual(
@@ -293,11 +273,11 @@ describe('clientStore', () => {
       )
     })
 
-    it('should warn when both source and explicit projectId/dataset are provided', () => {
+    it('should warn when both resource and explicit projectId/dataset are provided', () => {
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
-        resource: {mediaLibraryId: 'media-lib-123'},
+        resource: {projectId: 'source-project', dataset: 'source-dataset'},
         projectId: 'explicit-project',
         dataset: 'explicit-dataset',
       })

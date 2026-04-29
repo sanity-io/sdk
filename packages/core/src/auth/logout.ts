@@ -29,6 +29,7 @@ export const logout = bindActionGlobally(authStore, async ({state}) => {
         requestTagPrefix: REQUEST_TAG_PREFIX,
         apiVersion: DEFAULT_API_VERSION,
         ...(apiHost && {apiHost}),
+        useProjectHostname: false,
         useCdn: false,
       })
 

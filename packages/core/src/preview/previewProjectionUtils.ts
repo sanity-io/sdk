@@ -3,7 +3,7 @@ import {createImageUrlBuilder} from '@sanity/image-url'
 import {isObject} from 'lodash-es'
 
 import {getClient} from '../client/clientStore'
-import {type DocumentResource} from '../config/sanityConfig'
+import {type DocumentResource, isDatasetResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {SUBTITLE_CANDIDATES, TITLE_CANDIDATES} from './previewConstants'
 import {type PreviewQueryResult, type PreviewValue} from './types'
@@ -80,7 +80,8 @@ export function transformProjectionToPreview(
   // Get a client for the resource (if provided) or use the instance config
   const client = getClient(instance, {
     apiVersion: API_VERSION,
-    resource,
+    // TODO: remove in v3 when we're ready for everything to be queried via resource
+    resource: resource && !isDatasetResource(resource) ? resource : undefined,
   })
 
   return {

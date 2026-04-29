@@ -22,6 +22,7 @@ const project = createFetcherStore({
 
       return getClientState(instance, {
         apiVersion: API_VERSION,
+        scope: 'global',
         projectId,
       }).observable.pipe(
         switchMap((client) =>

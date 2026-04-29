@@ -121,7 +121,7 @@ The primary interactive authentication flow involves redirecting the user to `sa
 
 - **Tokens:**
   - **Types:**
-    - **Global Tokens:** Tokens not tied to a specific project, but instead to a Sanity User. It includes access to all of the user's orgs and projects. Required for accessing global Sanity APIs (e.g., project management). Used when `clientStore` configures a client with `useProjectHostname: false` or without a `projectId`.
+    - **Global Tokens:** Tokens not tied to a specific project, but instead to a Sanity User. It includes access to all of the user's orgs and projects. Required for accessing global Sanity APIs (e.g., project management). Used when `clientStore` configures a client with `scope: 'global'` or without a `projectId`.
 
     - **Project Tokens:** Scoped to a single project (any of that project's datasets). Used by Studio integration or can be provided manually. Can only be used for project-specific endpoints (`<projectId>.api.sanity.io`).
 
@@ -148,8 +148,9 @@ The primary interactive authentication flow involves redirecting the user to `sa
   - Listens to `getTokenState` changes (`listenToToken`). When the token updates, it clears the client cache (`clients: {}`), forcing regeneration of clients with the new token upon next request.
 
   - **Client Scope:**
-    - Default behavior uses resource-based hostnames, like `api.sanity.io/projects/<projectId>/datasets/<datasetId>`.
-    - To use a project-based hostname like `<projectId>.api.sanity.io`, pass `useProjectHostname: true` via the client options.
+    - `scope: 'global'` or missing `projectId` results in a client configured with `useProjectHostname: false`, targeting global APIs (e.g., `api.sanity.io`). Requires a global token.
+
+    - Default behavior (with `projectId` and `dataset`) uses project-specific hostnames (e.g., `<projectId>.api.sanity.io`).
 
 - **CORS & Endpoints:**
   - **Global Endpoints (e.g., `api.sanity.io`):** Generally have stricter Cross-Origin Resource Sharing (CORS) policies. They primarily allow requests from Sanity's own domains (`*.sanity.io`, `*.sanity.work`), associated development domains (`*.sanity.dev`), and `localhost`. Accessing these from arbitrary external domains is usually blocked by browser CORS rules. They also require global tokens.
