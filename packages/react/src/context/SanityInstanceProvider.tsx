@@ -25,7 +25,7 @@ export interface SanityInstanceProviderProps {
 /**
  * Provides an externally-created Sanity instance to child components through React Context.
  *
- * @public
+ * @internal
  *
  * @remarks
  * Unlike {@link ResourceProvider}, this component does not create or dispose a SanityInstance.
