@@ -1,9 +1,19 @@
 import {type DocumentAction, type DocumentPermissionsResult, getPermissionsState} from '@sanity/sdk'
-import {useCallback, useMemo, useSyncExternalStore} from 'react'
+import {isDeepEqual} from '@sanity/sdk/_internal'
+import {useCallback, useContext, useMemo, useSyncExternalStore} from 'react'
 import {filter, firstValueFrom} from 'rxjs'
 
+import {ResourceContext} from '../../context/DefaultResourceContext'
+import {ResourcesContext} from '../../context/ResourcesContext'
 import {useSanityInstance} from '../context/useSanityInstance'
+import {
+  normalizeResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
+
+const noopSubscribe = () => () => {}
+const returnUndefined = () => undefined
 
 /**
  *
@@ -83,74 +93,91 @@ import {trackHookUsage} from '../helpers/useTrackHookUsage'
  * ```
  */
 export function useDocumentPermissions(
-  actionOrActions: DocumentAction | DocumentAction[],
+  actionOrActions:
+    | WithResourceNameSupport<DocumentAction>
+    | WithResourceNameSupport<DocumentAction>[],
 ): DocumentPermissionsResult {
-  const actions = useMemo(
-    () => (Array.isArray(actionOrActions) ? actionOrActions : [actionOrActions]),
-    [actionOrActions],
-  )
-  // if actions is an array, we need to check that all actions belong to the same project and dataset
-  let projectId
-  let dataset
-  let resource
+  const instance = useSanityInstance()
+  trackHookUsage(instance, 'useDocumentPermissions')
+  const contextResource = useContext(ResourceContext)
+  const resources = useContext(ResourcesContext)
 
-  for (const action of actions) {
-    if (action.projectId) {
-      if (resource) {
-        throw new Error(
-          `Mismatches between projectId/dataset options and resource in actions. Found projectId "${action.projectId}" and dataset "${action.dataset}" but expected resource "${resource}".`,
+  const {
+    actions: normalizedActions,
+    resource: actionResource,
+    error: validationError,
+  } = useMemo(() => {
+    const normalized = Array.isArray(actionOrActions)
+      ? actionOrActions.map((action) =>
+          normalizeResourceOptions(action, resources, contextResource),
         )
-      }
-      if (!projectId) projectId = action.projectId
-      if (action.projectId !== projectId) {
-        throw new Error(
-          `Mismatched project IDs found in actions. All actions must belong to the same project. Found "${action.projectId}" but expected "${projectId}".`,
-        )
-      }
+      : [normalizeResourceOptions(actionOrActions, resources, contextResource)]
 
-      if (action.dataset) {
-        if (!dataset) dataset = action.dataset
-        if (action.dataset !== dataset) {
-          throw new Error(
-            `Mismatched datasets found in actions. All actions must belong to the same dataset. Found "${action.dataset}" but expected "${dataset}".`,
-          )
+    let resource
+    for (const action of normalized) {
+      if (action.resource) {
+        if (!resource) resource = action.resource
+        if (!isDeepEqual(action.resource, resource)) {
+          return {
+            actions: normalized,
+            resource,
+            error: new Error(
+              `Mismatched resources found in actions. All actions must belong to the same resource. Found "${JSON.stringify(action.resource)}" but expected "${JSON.stringify(resource)}".`,
+            ),
+          }
         }
       }
     }
+    return {actions: normalized, resource, error: undefined}
+  }, [actionOrActions, resources, contextResource])
 
-    if (action.resource) {
-      if (!resource) resource = action.resource
-      if (action.resource !== resource) {
-        throw new Error(
-          `Mismatched resources found in actions. All actions must belong to the same resource. Found "${action.resource}" but expected "${resource}".`,
-        )
-      }
-      if (projectId || dataset) {
-        throw new Error(
-          `Mismatches between projectId/dataset options and resource in actions. Found "${action.resource}" but expected project "${projectId}" and dataset "${dataset}".`,
-        )
-      }
-    }
-  }
+  const effectiveResource = actionResource ?? contextResource
 
-  const instance = useSanityInstance({projectId, dataset})
-  trackHookUsage(instance, 'useDocumentPermissions')
-  const isDocumentReady = useCallback(
-    () => getPermissionsState(instance, {actions}).getCurrent() !== undefined,
-    [actions, instance],
+  // Keep hooks unconditional — validation errors and missing-resource errors are
+  // thrown after all hooks so that the hook call count stays stable across renders.
+  const permissionsOptions = useMemo(
+    () =>
+      effectiveResource
+        ? {
+            resource: effectiveResource,
+            // `Omit<>` on `DocumentAction` loses the discriminant; runtime values are still actions.
+            actions: normalizedActions as DocumentAction[],
+          }
+        : undefined,
+    [effectiveResource, normalizedActions],
   )
+
+  const isDocumentReady = useCallback(
+    () =>
+      permissionsOptions !== undefined &&
+      getPermissionsState(instance, permissionsOptions).getCurrent() !== undefined,
+    [permissionsOptions, instance],
+  )
+
+  const stateSource = useMemo(
+    () => (permissionsOptions ? getPermissionsState(instance, permissionsOptions) : undefined),
+    [permissionsOptions, instance],
+  )
+
+  const result = useSyncExternalStore(
+    stateSource?.subscribe ?? noopSubscribe,
+    stateSource?.getCurrent ?? returnUndefined,
+  )
+
+  // All hooks have been called — safe to throw now.
+  if (validationError) throw validationError
+  if (!effectiveResource) {
+    throw new Error(
+      'No resource found. Provide a resource via the action handle or wrap with a resource context.',
+    )
+  }
   if (!isDocumentReady()) {
     throw firstValueFrom(
-      getPermissionsState(instance, {actions}).observable.pipe(
-        filter((result) => result !== undefined),
+      getPermissionsState(instance, permissionsOptions!).observable.pipe(
+        filter((permissions) => permissions !== undefined),
       ),
     )
   }
 
-  const {subscribe, getCurrent} = useMemo(
-    () => getPermissionsState(instance, {actions}),
-    [actions, instance],
-  )
-
-  return useSyncExternalStore(subscribe, getCurrent) as DocumentPermissionsResult
+  return result as DocumentPermissionsResult
 }

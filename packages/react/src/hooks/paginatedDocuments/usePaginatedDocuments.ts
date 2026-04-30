@@ -1,8 +1,17 @@
-import {createGroqSearchFilter, type DocumentHandle, type QueryOptions} from '@sanity/sdk'
+import {
+  createGroqSearchFilter,
+  type DocumentHandle,
+  isDatasetResource,
+  type QueryOptions,
+} from '@sanity/sdk'
+import {pickProperties} from '@sanity/sdk/_internal'
 import {type SortOrderingItem} from '@sanity/types'
 import {useCallback, useMemo, useState} from 'react'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 import {useQuery} from '../query/useQuery'
 
@@ -16,7 +25,9 @@ export interface PaginatedDocumentsOptions<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> extends Omit<QueryOptions<TDocumentType, TDataset, TProjectId>, 'query'> {
+> extends WithResourceNameSupport<
+  Omit<QueryOptions<TDocumentType, TDataset, TProjectId>, 'query'>
+> {
   documentType?: TDocumentType | TDocumentType[]
   /**
    * GROQ filter expression to apply to the query
@@ -232,14 +243,14 @@ export function usePaginatedDocuments<
   params = {},
   orderings,
   search,
-  ...options
+  ...rawOptions
 }: PaginatedDocumentsOptions<TDocumentType, TDataset, TProjectId>): PaginatedDocumentsResponse<
   TDocumentType,
   TDataset,
   TProjectId
 > {
   useTrackHookUsage('usePaginatedDocuments')
-  const instance = useSanityInstance(options)
+  const options = useNormalizedResourceOptions(rawOptions)
   const [pageIndex, setPageIndex] = useState(0)
   const key = JSON.stringify({filter, search, params, orderings, pageSize})
   // Reset pageIndex to 0 whenever any query parameter changes.
@@ -303,9 +314,12 @@ export function usePaginatedDocuments<
       ...params,
       __types: documentTypes,
       __handle: {
-        projectId: options.projectId ?? instance.config.projectId,
-        dataset: options.dataset ?? instance.config.dataset,
-        perspective: options.perspective ?? instance.config.perspective,
+        // keep projectId/dataset for backward compat until v3; resource is added
+        // intentionally so that hook consumers can resolve the correct resource
+        ...(options.resource && isDatasetResource(options.resource)
+          ? pickProperties(options.resource, ['projectId', 'dataset'])
+          : {}),
+        ...pickProperties(options, ['perspective', 'resource']),
       },
     },
   })

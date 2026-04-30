@@ -286,7 +286,7 @@ export function useEditDocument({
   path,
   ...doc
 }: DocumentOptions<string | undefined>): (updater: Updater<unknown>) => Promise<ActionsResult> {
-  const instance = useSanityInstance(doc)
+  const instance = useSanityInstance()
   trackHookUsage(instance, 'useEditDocument')
   const normalizedDoc = useNormalizedResourceOptions(doc)
 

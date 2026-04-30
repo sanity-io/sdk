@@ -1,14 +1,18 @@
-import {type DocumentResource} from '@sanity/sdk'
+import {type DocumentResource, type PerspectiveHandle} from '@sanity/sdk'
 import {useContext} from 'react'
 
+import {ResourceContext} from '../../context/DefaultResourceContext'
+import {PerspectiveContext} from '../../context/PerspectiveContext'
 import {ResourcesContext} from '../../context/ResourcesContext'
+import {SanityInstanceContext} from '../../context/SanityInstanceContext'
+
+type NormalizedResourceFields = 'resourceName' | 'source' | 'sourceName' | 'projectId' | 'dataset'
 
 /**
  * Adds React hook support (resourceName resolution) to core types.
- * This wrapper allows hooks to accept `resourceName` as a convenience,
- * which is then resolved to a `DocumentResource` at the React layer.
- * For now, we are trying to avoid resource name resolution in core --
- * functions having resources explicitly passed will reduce complexity.
+ * Prefer using the React-layer handle types (ResourceHandle, DocumentHandle)
+ * from `@sanity/sdk-react` — this wrapper is kept for cases where overloads
+ * don't fit (e.g. non-handle options objects).
  *
  * @typeParam T - The core type to extend (must have optional `resource` field)
  * @beta
@@ -35,6 +39,8 @@ export type WithResourceNameSupport<T extends {resource?: DocumentResource}> = T
  * @typeParam T - The options type (must include optional resource field)
  * @param options - Options that may include `resourceName` and/or `resource`
  * @param resources - Map of resource names to DocumentResource (e.g. from ResourcesContext)
+ * @param contextResource - Resource from context (from ResourceContext)
+ * @param contextPerspective - Perspective from context (from PerspectiveContext)
  * @returns Normalized options with `resourceName` removed and `resource` resolved
  * @internal
  */
@@ -44,25 +50,23 @@ export function normalizeResourceOptions<
     resourceName?: string
     source?: DocumentResource
     sourceName?: string
+    projectId?: string
+    dataset?: string
+    perspective?: unknown
   },
 >(
   options: T,
   resources: Record<string, DocumentResource>,
-): Omit<T, 'resourceName' | 'source' | 'sourceName'> {
-  const {resourceName, sourceName, source, ...rest} = options
+  contextResource?: DocumentResource,
+  contextPerspective?: PerspectiveHandle['perspective'],
+): Omit<T, NormalizedResourceFields> {
+  const {resourceName, sourceName, source, projectId, dataset, ...rest} = options
 
   // Coalesce deprecated aliases to their canonical equivalents
   const effectiveResourceName = resourceName ?? sourceName
   const effectiveResource = options.resource ?? source
 
-  if (!effectiveResourceName && !effectiveResource) {
-    return rest as Omit<T, 'resourceName' | 'source' | 'sourceName'>
-  }
-
-  const hasNameKey = Object.hasOwn(options, 'resourceName') || Object.hasOwn(options, 'sourceName')
-  const hasResourceKey = Object.hasOwn(options, 'resource') || Object.hasOwn(options, 'source')
-
-  if (hasNameKey && hasResourceKey) {
+  if (effectiveResourceName && effectiveResource) {
     throw new Error(
       `Resource name ${JSON.stringify(effectiveResourceName)} and resource ${JSON.stringify(effectiveResource)} cannot be used together.`,
     )
@@ -70,53 +74,57 @@ export function normalizeResourceOptions<
 
   let resolvedResource: DocumentResource | undefined
 
+  // Tier (a): explicit resource object or resourceName lookup
   if (effectiveResource) {
     resolvedResource = effectiveResource
-  }
-
-  if (effectiveResourceName && !Object.hasOwn(resources, effectiveResourceName)) {
-    throw new Error(
-      `There's no resource named ${JSON.stringify(effectiveResourceName)} in context. Please use <ResourceProvider>.`,
-    )
-  }
-
-  if (effectiveResourceName && resources[effectiveResourceName]) {
+  } else if (effectiveResourceName) {
+    if (!Object.hasOwn(resources, effectiveResourceName)) {
+      throw new Error(
+        `There's no resource named ${JSON.stringify(effectiveResourceName)} in context. Please use <ResourceProvider>.`,
+      )
+    }
     resolvedResource = resources[effectiveResourceName]
   }
 
+  // Tier (b): projectId or dataset in options → synthesize a resource
+  if (!resolvedResource && projectId && dataset) {
+    resolvedResource = {
+      projectId,
+      dataset,
+    }
+  }
+
+  // Tier (c): fall back to whatever ResourceContext provides
+  if (!resolvedResource) {
+    resolvedResource = contextResource
+  }
+
+  // Inject perspective from context when not explicitly provided in options
+  const resolvedPerspective = Object.hasOwn(options, 'perspective')
+    ? options.perspective
+    : contextPerspective
+
   return {
     ...rest,
-    resource: resolvedResource,
+    ...(resolvedResource !== undefined && {resource: resolvedResource}),
+    ...(resolvedPerspective !== undefined && {perspective: resolvedPerspective}),
   }
 }
 
 /**
  * Normalizes hook options by resolving `resourceName` to a `DocumentResource`.
- * This hook ensures that options passed to core layer functions only contain
- * `resource` (never `resourceName`), preventing duplicate cache keys and maintaining
- * clean separation between React and core layers.
  *
- * @typeParam T - The options type (must include optional resource field)
- * @param options - Hook options that may include `resourceName` and/or `resource`
- * @returns Normalized options with `resourceName` removed and `resource` resolved
+ * Resolution priority for resource:
+ * 1. Explicit `resource` or `resourceName` in options
+ * 2. Bare `projectId`/`dataset` pair in options → synthesized into a resource
+ * 3. `ResourceContext` value (set by `ResourceProvider` / `SDKProvider`)
+ * 4. Current `SanityInstance` config — falls back to `undefined` for studio configs
  *
- * @remarks
- * Resolution priority:
- * 1. If `resourceName` is provided, resolves it via `ResourcesContext` and uses that
- * 2. Otherwise, uses the inline `resource` if provided
- * 3. If neither is provided, returns options without a resource field
+ * Resolution priority for perspective:
+ * 1. Explicit `perspective` in options
+ * 2. `PerspectiveContext` value (set by `ResourceProvider`)
  *
- * @example
- * ```tsx
- * function useQuery(options: WithResourceNameSupport<QueryOptions>) {
- *   const instance = useSanityInstance(options)
- *   const normalized = useNormalizedOptions(options)
- *   // normalized now has resource but never resourceName
- *   const queryKey = getQueryKey(normalized)
- * }
- * ```
- *
- * @beta
+ * @internal
  */
 export function useNormalizedResourceOptions<
   T extends {
@@ -124,8 +132,25 @@ export function useNormalizedResourceOptions<
     resourceName?: string
     source?: DocumentResource
     sourceName?: string
+    projectId?: string
+    dataset?: string
+    perspective?: unknown
   },
->(options: T): Omit<T, 'resourceName' | 'source' | 'sourceName'> {
+>(options: T): Omit<T, NormalizedResourceFields> {
   const resources = useContext(ResourcesContext)
-  return normalizeResourceOptions(options, resources)
+  const contextResource = useContext(ResourceContext)
+  const contextPerspective = useContext(PerspectiveContext)
+  const instance = useContext(SanityInstanceContext)
+
+  // Tier (d): instance config fallback — synthesize resource from projectId/dataset
+  // when the higher tiers all come up empty
+  let effectiveContextResource = contextResource
+  if (!effectiveContextResource && instance) {
+    const {projectId, dataset} = instance.config
+    if (projectId && dataset) {
+      effectiveContextResource = {projectId, dataset}
+    }
+  }
+
+  return normalizeResourceOptions(options, resources, effectiveContextResource, contextPerspective)
 }

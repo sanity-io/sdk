@@ -1,7 +1,14 @@
-import {createSanityInstance, type SanityConfig, type SanityInstance} from '@sanity/sdk'
+import {
+  createSanityInstance,
+  type DocumentResource,
+  type SanityConfig,
+  type SanityInstance,
+} from '@sanity/sdk'
 import {initTelemetry} from '@sanity/sdk/_internal'
 import {useContext, useEffect, useMemo, useRef} from 'react'
 
+import {ResourceContext} from './DefaultResourceContext'
+import {PerspectiveContext} from './PerspectiveContext'
 import {SanityInstanceContext} from './SanityInstanceContext'
 import {SanityInstanceProvider} from './SanityInstanceProvider'
 
@@ -16,6 +23,11 @@ const DEFAULT_FALLBACK = (
  * @internal
  */
 export interface ResourceProviderProps extends SanityConfig {
+  /**
+   * The document resource for this subtree. Hooks that receive no explicit
+   * resource or resourceName will use this value via ResourceContext.
+   */
+  resource?: DocumentResource
   /**
    * React node to show while content is loading
    * Used as the fallback for the internal Suspense boundary
@@ -72,6 +84,7 @@ export interface ResourceProviderProps extends SanityConfig {
 export function ResourceProvider({
   children,
   fallback,
+  resource,
   ...config
 }: ResourceProviderProps): React.ReactNode {
   const parent = useContext(SanityInstanceContext)
@@ -112,7 +125,11 @@ export function ResourceProvider({
 
   return (
     <SanityInstanceProvider instance={instance} fallback={fallback ?? DEFAULT_FALLBACK}>
-      {children}
+      <ResourceContext.Provider value={resource}>
+        <PerspectiveContext.Provider value={config.perspective}>
+          {children}
+        </PerspectiveContext.Provider>
+      </ResourceContext.Provider>
     </SanityInstanceProvider>
   )
 }
