@@ -1,7 +1,7 @@
 import {createGroqSearchFilter, type DocumentHandle, type QueryOptions} from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
 import {pick} from 'lodash-es'
-import {useCallback, useEffect, useMemo, useState} from 'react'
+import {useCallback, useMemo, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
@@ -243,11 +243,12 @@ export function usePaginatedDocuments<
   const instance = useSanityInstance(options)
   const [pageIndex, setPageIndex] = useState(0)
   const key = JSON.stringify({filter, search, params, orderings, pageSize})
-  // Reset the pageIndex to 0 whenever any query parameters (filter, search,
-  // params, orderings) or pageSize changes
-  useEffect(() => {
+  // Reset pageIndex to 0 whenever any query parameter changes.
+  const [prevKey, setPrevKey] = useState(key)
+  if (prevKey !== key) {
+    setPrevKey(key)
     setPageIndex(0)
-  }, [key])
+  }
 
   const startIndex = pageIndex * pageSize
   const endIndex = (pageIndex + 1) * pageSize

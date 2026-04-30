@@ -13,7 +13,7 @@ import {
   useSanityInstance,
 } from '@sanity/sdk-react'
 import {Box, Button, Card, Flex, Stack, Text, TextInput, Tooltip} from '@sanity/ui'
-import React, {useEffect, useState} from 'react'
+import React, {useState} from 'react'
 
 interface DocumentEditorPanelProps {
   docHandle: DocumentHandle
@@ -65,11 +65,13 @@ export function DocumentEditorPanel({
   const canDelete = useDocumentPermissions(deleteDocument(strictHandle))
   const canUnpublish = useDocumentPermissions(unpublishDocument(strictHandle))
   const canDiscard = useDocumentPermissions(discardDocument(strictHandle))
+  // Reset the input mirror when the incoming handle's id changes.
   const [inputId, setInputId] = useState(docHandle.documentId)
-
-  useEffect(() => {
+  const [prevDocumentId, setPrevDocumentId] = useState(docHandle.documentId)
+  if (prevDocumentId !== docHandle.documentId) {
+    setPrevDocumentId(docHandle.documentId)
     setInputId(docHandle.documentId)
-  }, [docHandle.documentId])
+  }
 
   const commitId = () => {
     if (inputId !== docHandle.documentId) {

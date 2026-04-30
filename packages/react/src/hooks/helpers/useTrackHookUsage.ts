@@ -18,8 +18,8 @@ import {useSanityInstance} from '../context/useSanityInstance'
  */
 export function useTrackHookUsage(hookName: string): void {
   const instance = useSanityInstance()
-  const tracked = useRef(false)
-  if (!tracked.current) {
+  const tracked = useRef<true | null>(null)
+  if (tracked.current === null) {
     tracked.current = true
     trackHookMounted(instance, hookName)
   }

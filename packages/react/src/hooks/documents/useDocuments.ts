@@ -6,7 +6,7 @@ import {
 } from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
 import {pick} from 'lodash-es'
-import {useCallback, useEffect, useMemo, useState} from 'react'
+import {useCallback, useMemo, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
@@ -230,9 +230,11 @@ export function useDocuments<
     types: documentTypes,
     ...options,
   })
-  useEffect(() => {
+  const [prevKey, setPrevKey] = useState(key)
+  if (prevKey !== key) {
+    setPrevKey(key)
     setLimit(batchSize)
-  }, [key, batchSize])
+  }
 
   const filterClause = useMemo(() => {
     const conditions: string[] = []
