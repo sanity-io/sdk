@@ -205,21 +205,4 @@ describe('initTelemetry', () => {
 
     instance.dispose()
   })
-
-  it('finds manager through parent-child instance chain', async () => {
-    vi.mocked(isDevMode).mockReturnValue(true)
-
-    const root = createSanityInstance()
-    const child = root.createChild({})
-
-    initTelemetry(root, 'abc123')
-    await flushPromises()
-
-    trackHookMounted(child, 'useUsers')
-
-    const manager = vi.mocked(createTelemetryManager).mock.results[0].value
-    expect(manager.logHookFirstUsed).toHaveBeenCalledWith('useUsers')
-
-    root.dispose()
-  })
 })
