@@ -204,6 +204,7 @@ export function useQuery(options: WithResourceNameSupport<QueryOptions>): {
     const currentSignal = ref.current.signal
     const deferred = parseQueryKey(deferredQueryKey)
 
+    // eslint-disable-next-line react-hooks/refs -- intentional during suspended render; see comment above.
     throw resolveQuery(instance, {...deferred, signal: currentSignal})
   }
 
