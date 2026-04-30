@@ -49,7 +49,10 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 30
           running-workflow-name: "auto-approve"
-          allowed-conclusions: success
+          # Include "skipped" so conditionally-run jobs (e.g. claude-review,
+          # publish-preview) don't block auto-approval when they don't execute
+          # on Renovate PRs.
+          allowed-conclusions: success,skipped
 
       - name: Auto-approve Renovate PR
         if: steps.check-labels.outputs.skip != 'true'
