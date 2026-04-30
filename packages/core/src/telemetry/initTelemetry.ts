@@ -187,19 +187,9 @@ export function trackHookMounted(instance: SanityInstance, hookName: string): vo
 }
 
 function findManager(instance: SanityInstance): TelemetryManager | undefined {
-  let current: SanityInstance | undefined = instance
-  while (current) {
-    const manager = telemetryManagers.get(current)
-    if (manager) return manager
-    current = typeof current.getParent === 'function' ? current.getParent() : undefined
-  }
-  return undefined
+  return telemetryManagers.get(instance)
 }
 
 function getRootInstance(instance: SanityInstance): SanityInstance {
-  let current = instance
-  while (typeof current.getParent === 'function' && current.getParent()) {
-    current = current.getParent()!
-  }
-  return current
+  return instance
 }
