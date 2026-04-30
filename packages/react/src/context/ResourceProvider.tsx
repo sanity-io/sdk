@@ -1,8 +1,9 @@
 import {createSanityInstance, type SanityConfig, type SanityInstance} from '@sanity/sdk'
 import {initTelemetry} from '@sanity/sdk/_internal'
-import {Suspense, useContext, useEffect, useMemo, useRef} from 'react'
+import {useContext, useEffect, useMemo, useRef} from 'react'
 
 import {SanityInstanceContext} from './SanityInstanceContext'
+import {SanityInstanceProvider} from './SanityInstanceProvider'
 
 const DEFAULT_FALLBACK = (
   <>
@@ -110,8 +111,8 @@ export function ResourceProvider({
   }, [instance])
 
   return (
-    <SanityInstanceContext.Provider value={instance}>
-      <Suspense fallback={fallback ?? DEFAULT_FALLBACK}>{children}</Suspense>
-    </SanityInstanceContext.Provider>
+    <SanityInstanceProvider instance={instance} fallback={fallback ?? DEFAULT_FALLBACK}>
+      {children}
+    </SanityInstanceProvider>
   )
 }

@@ -7,6 +7,10 @@ export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
 export {ComlinkTokenRefreshProvider} from '../context/ComlinkTokenRefresh'
 export {renderSanityApp} from '../context/renderSanityApp'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
+export {
+  SanityInstanceProvider,
+  type SanityInstanceProviderProps,
+} from '../context/SanityInstanceProvider'
 export {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
 export {
   useAgentGenerate,
