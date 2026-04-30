@@ -230,7 +230,7 @@ export const useApplyDocumentActions: UseApplyDocumentActions = () => {
     let resource
 
     for (const action of normalizedActions) {
-      if (!resource) resource = action.resource
+      if (!resource && action.resource) resource = action.resource
       if (!isDeepEqual(action.resource, resource)) {
         throw new Error(
           `Mismatched resources found in actions. All actions must belong to the same resource. Found "${JSON.stringify(action.resource)}" but expected "${JSON.stringify(resource)}".`,
