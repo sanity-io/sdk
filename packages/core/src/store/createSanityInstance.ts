@@ -1,8 +1,7 @@
-import {pick} from 'lodash-es'
-
 import {type SanityConfig} from '../config/sanityConfig'
 import {insecureRandomId} from '../utils/ids'
 import {createLogger, type InstanceContext} from '../utils/logger'
+import {pickProperties} from '../utils/object'
 
 /**
  * Represents a Sanity.io resource instance with its own configuration and lifecycle
@@ -158,7 +157,7 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
     },
     match: (targetConfig) => {
       if (
-        Object.entries(pick(targetConfig, 'auth', 'projectId', 'dataset')).every(
+        Object.entries(pickProperties(targetConfig, ['auth', 'projectId', 'dataset'])).every(
           ([key, value]) => config[key as keyof SanityConfig] === value,
         )
       ) {

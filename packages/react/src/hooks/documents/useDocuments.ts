@@ -5,7 +5,6 @@ import {
   type QueryOptions,
 } from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
-import {pick} from 'lodash-es'
 import {useCallback, useMemo, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -283,9 +282,11 @@ export function useDocuments<
     query: `{"count":${countQuery},"data":${dataQuery}}`,
     params: {
       ...params,
+      // these are passed back to the user as part of each document handle
       __handle: {
-        ...pick(instance.config, 'projectId', 'dataset', 'perspective'),
-        ...pick(options, 'projectId', 'dataset', 'perspective'),
+        projectId: options.projectId ?? instance.config.projectId,
+        dataset: options.dataset ?? instance.config.dataset,
+        perspective: options.perspective ?? instance.config.perspective,
       },
       __types: documentTypes,
     },
