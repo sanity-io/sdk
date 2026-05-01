@@ -32,7 +32,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Build SDK packages
         run: pnpm build:packages

@@ -20,7 +20,7 @@ jobs:
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     strategy:
       matrix:
-        node-version: [20, 22]
+        node-version: [22, 24]
       fail-fast: false
 
     steps:

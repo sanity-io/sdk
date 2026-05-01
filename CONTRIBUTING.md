@@ -13,7 +13,7 @@ Before contributing, please read our [code of conduct](https://github.com/sanity
 
 ### Prerequisites
 
-- Node.js: Version 20.x or higher (we recommend using the LTS version)
+- Node.js: Version 22.13 or higher (we recommend using the active LTS version)
 - pnpm: Version 8.x or higher
 
 Check your versions:
