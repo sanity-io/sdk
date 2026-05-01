@@ -2,11 +2,14 @@ import {type Message} from '@sanity/comlink'
 import {type FavoriteStatusResponse, getFavoritesState, resolveFavoritesState} from '@sanity/sdk'
 import {act, renderHook} from '@testing-library/react'
 import {BehaviorSubject} from 'rxjs'
-import {beforeEach, describe, expect, it, vi} from 'vitest'
+import {beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useWindowConnection, type WindowConnection} from '../comlink/useWindowConnection'
 import {useManageFavorite} from './useManageFavorite'
+
+type MockFetch = (type: string, data?: unknown, options?: unknown) => Promise<{success: boolean}>
+type MockSendMessage = (type: string, data?: unknown) => void
 
 vi.mock(import('@sanity/sdk'), async (importOriginal) => {
   const actual = await importOriginal()
@@ -23,8 +26,8 @@ vi.mock('../comlink/useWindowConnection', () => ({
 
 describe('useManageFavorite', () => {
   let favoriteStatusSubject: BehaviorSubject<FavoriteStatusResponse>
-  let mockFetch: ReturnType<typeof vi.fn>
-  let mockSendMessage: ReturnType<typeof vi.fn>
+  let mockFetch: Mock<MockFetch>
+  let mockSendMessage: Mock<MockSendMessage>
 
   const mockDocumentHandle = {
     documentId: 'mock-id',
@@ -56,15 +59,16 @@ describe('useManageFavorite', () => {
     })
 
     // Mock useWindowConnection
-    mockFetch = vi.fn().mockResolvedValue({success: true})
-    mockSendMessage = vi.fn()
-    vi.mocked(useWindowConnection).mockImplementation(() => {
-      return {
-        fetch: (type: string, data?: unknown, options: unknown = {}) =>
-          mockFetch(type, data, options),
-        sendMessage: mockSendMessage,
-      }
-    })
+    mockFetch = vi.fn<MockFetch>().mockResolvedValue({success: true})
+    mockSendMessage = vi.fn<MockSendMessage>()
+    vi.mocked(useWindowConnection).mockImplementation(
+      () =>
+        ({
+          fetch: (type: string, data?: unknown, options: unknown = {}) =>
+            mockFetch(type, data, options),
+          sendMessage: mockSendMessage,
+        }) as unknown as WindowConnection<Message>,
+    )
   })
 
   afterEach(() => {

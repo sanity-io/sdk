@@ -15,7 +15,7 @@ const nodeConfig = {
 describe('releaseNode', () => {
   let instance: SanityInstance
   let state: ReturnType<typeof createStoreState<ComlinkNodeState>>
-  let mockNode: Partial<Node<WindowMessage, FrameMessage>> & {
+  let mockNode: {
     start: ReturnType<typeof vi.fn>
     stop: ReturnType<typeof vi.fn>
     onStatus: ReturnType<typeof vi.fn>
@@ -39,7 +39,7 @@ describe('releaseNode', () => {
     // Set up a node in the state
     const nodes = new Map()
     nodes.set('test-node', {
-      node: mockNode as Node<WindowMessage, FrameMessage>,
+      node: mockNode as unknown as Node<WindowMessage, FrameMessage>,
       options: nodeConfig,
     })
     state.set('setup', {nodes})
@@ -58,7 +58,7 @@ describe('releaseNode', () => {
     const statusUnsub = vi.fn()
     const nodes = new Map()
     nodes.set('test-node', {
-      node: mockNode as Node<WindowMessage, FrameMessage>,
+      node: mockNode as unknown as Node<WindowMessage, FrameMessage>,
       options: nodeConfig,
       statusUnsub,
     })

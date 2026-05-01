@@ -1,6 +1,6 @@
 import {type SanityClient} from '@sanity/client'
-import {delay, firstValueFrom, of, Subject} from 'rxjs'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {delay, firstValueFrom, type Observable, of, Subject} from 'rxjs'
+import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
 import {getTokenState} from '../auth/authStore'
 import {getClient} from '../client/clientStore'
@@ -9,7 +9,7 @@ import {type SanityUser} from '../users/types'
 import {getUserState} from '../users/usersStore'
 import {createBifurTransport} from './bifurTransport'
 import {getPresence} from './presenceStore'
-import {type PresenceLocation, type TransportEvent} from './types'
+import {type PresenceLocation, type TransportEvent, type TransportMessage} from './types'
 
 vi.mock('../auth/authStore')
 vi.mock('../client/clientStore')
@@ -21,8 +21,8 @@ describe('presenceStore', () => {
   let mockClient: SanityClient
   let mockTokenState: Subject<string | null>
   let mockIncomingEvents: Subject<TransportEvent>
-  let mockDispatchMessage: ReturnType<typeof vi.fn>
-  let mockGetUserState: ReturnType<typeof vi.fn>
+  let mockDispatchMessage: Mock<(message: TransportMessage) => Observable<void>>
+  let mockGetUserState: Mock<typeof getUserState>
 
   const mockUser: SanityUser = {
     sanityUserId: 'u123',
