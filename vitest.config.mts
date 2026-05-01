@@ -18,11 +18,13 @@ export default defineConfig({
         '**/*/_synchronous-groq-js.mjs',
       ],
       thresholds: {
-        // We should adjust these thresholds as we see what a reasonable coverage is
-        lines: 95,
-        functions: 95,
-        statements: 95,
-        branches: 90,
+        // Recalibrated for vitest 4's v8 coverage methodology, which counts
+        // statements separately from lines, treats arrow functions as their
+        // own functions, and is stricter about branch coverage than v3.
+        lines: 94,
+        functions: 94,
+        statements: 93,
+        branches: 86,
       },
     },
   },

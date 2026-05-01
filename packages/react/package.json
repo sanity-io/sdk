@@ -82,7 +82,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",
-    "@vitest/coverage-v8": "4.1.4",
+    "@vitest/coverage-v8": "4.1.5",
     "babel-plugin-react-compiler": "19.1.0-rc.1",
     "eslint": "^9.22.0",
     "groq-js": "^1.22.0",
