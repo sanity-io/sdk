@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.10.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.9.0...sdk-react-v2.10.0) (2026-05-01)
+
+
+### Features
+
+* handle chunk-load errors with automatic reload ([#819](https://github.com/sanity-io/sdk/issues/819)) ([5f95741](https://github.com/sanity-io/sdk/commit/5f95741522664c2de0aabf4f7aaf4034755d7a2f))
+* **react:** add SanityInstanceProvider for externally-created instances ([#826](https://github.com/sanity-io/sdk/issues/826)) ([9723413](https://github.com/sanity-io/sdk/commit/9723413fff78cd1a82fe72dcef6f5ab7d69fe9b9))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/client to ^7.22.0 ([#818](https://github.com/sanity-io/sdk/issues/818)) ([aefe0f1](https://github.com/sanity-io/sdk/commit/aefe0f1aae21f861b4f107df6589208183f53fde))
+* **deps:** update dependency @sanity/message-protocol to ^0.23.0 ([#833](https://github.com/sanity-io/sdk/issues/833)) ([a7f95a4](https://github.com/sanity-io/sdk/commit/a7f95a4842b7929309415470d11c0f13f5e69cf9))
+* keep LoginError synchronous in standalone apps ([#810](https://github.com/sanity-io/sdk/issues/810)) ([9e88a08](https://github.com/sanity-io/sdk/commit/9e88a089df85c9761cf5ccaac05eb617abacca5e))
+* **react:** guard LoginError auto-logout against re-entry ([#814](https://github.com/sanity-io/sdk/issues/814)) ([07161d1](https://github.com/sanity-io/sdk/commit/07161d10405dfc47fbd3f9612f4bf5e017b7ac9e))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.10.0
+
 ## [2.9.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.8.0...sdk-react-v2.9.0) (2026-04-20)
 
 
