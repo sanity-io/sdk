@@ -1,7 +1,7 @@
 import {type DocumentAction, type DocumentPermissionsResult, getPermissionsState} from '@sanity/sdk'
 import {act, renderHook, waitFor} from '@testing-library/react'
 import {BehaviorSubject, firstValueFrom, Observable} from 'rxjs'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {useDocumentPermissions} from './useDocumentPermissions'
@@ -46,8 +46,8 @@ describe('usePermissions', () => {
   }
 
   let permissionsSubject: BehaviorSubject<DocumentPermissionsResult | undefined>
-  let mockSubscribe: ReturnType<typeof vi.fn>
-  let mockGetCurrent: ReturnType<typeof vi.fn>
+  let mockSubscribe: Mock<(onStoreChanged?: () => void) => () => void>
+  let mockGetCurrent: Mock<() => DocumentPermissionsResult | undefined>
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -71,7 +71,7 @@ describe('usePermissions', () => {
       observable:
         permissionsSubject.asObservable() as unknown as Observable<DocumentPermissionsResult>,
       subscribe: mockSubscribe,
-      getCurrent: mockGetCurrent,
+      getCurrent: mockGetCurrent as unknown as () => DocumentPermissionsResult,
     })
   })
 

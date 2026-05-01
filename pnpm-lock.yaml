@@ -469,6 +469,9 @@ importers:
       '@sanity/prettier-config':
         specifier: ^1.0.6
         version: 1.0.6(prettier@3.7.4)
+      '@types/node':
+        specifier: ^22.19.1
+        version: 22.19.1
       '@vitest/coverage-v8':
         specifier: 4.1.4
         version: 4.1.4(vitest@4.1.5)
@@ -480,7 +483,7 @@ importers:
         version: 3.7.4
       rollup-plugin-visualizer:
         specifier: ^5.14.0
-        version: 5.14.0(rollup@4.60.1)
+        version: 5.14.0(rolldown@1.0.0-beta.45)(rollup@4.60.1)
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
@@ -589,7 +592,7 @@ importers:
         version: 19.2.1(react@19.2.1)
       rollup-plugin-visualizer:
         specifier: ^5.14.0
-        version: 5.14.0(rollup@4.60.1)
+        version: 5.14.0(rolldown@1.0.0-beta.45)(rollup@4.60.1)
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
@@ -4281,7 +4284,7 @@ packages:
   basic-ftp@5.1.0:
     resolution: {integrity: sha512-RkaJzeJKDbaDWTIPiJwubyljaEPwpVWkm9Rt5h9Nd6h7tEXTJ3VB4qxdZBioV7JO5yLUaOKwz7vDOzlncUsegw==}
     engines: {node: '>=10.0.0'}
-    deprecated: Security vulnerability fixed in 5.2.1, please upgrade
+    deprecated: Security vulnerability fixed in 5.2.0, please upgrade
 
   before-after-hook@2.2.3:
     resolution: {integrity: sha512-NzUnlZexiaH/46WDhANlyR2bXRopNg4F/zuSA3OpZnllCUgRaOF2znDioDWrmbNVsuZk6l9pMquQB38cfBZwkQ==}
@@ -16412,13 +16415,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  rollup-plugin-visualizer@5.14.0(rollup@4.60.1):
+  rollup-plugin-visualizer@5.14.0(rolldown@1.0.0-beta.45)(rollup@4.60.1):
     dependencies:
       open: 8.4.2
       picomatch: 4.0.4
       source-map: 0.7.4
       yargs: 17.7.2
     optionalDependencies:
+      rolldown: 1.0.0-beta.45
       rollup: 4.60.1
 
   rollup@4.60.1:
