@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.10.0](https://github.com/sanity-io/sdk/compare/sdk-v2.9.0...sdk-v2.10.0) (2026-05-01)
+
+
+### Features
+
+* handle chunk-load errors with automatic reload ([#819](https://github.com/sanity-io/sdk/issues/819)) ([5f95741](https://github.com/sanity-io/sdk/commit/5f95741522664c2de0aabf4f7aaf4034755d7a2f))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/client to ^7.22.0 ([#818](https://github.com/sanity-io/sdk/issues/818)) ([aefe0f1](https://github.com/sanity-io/sdk/commit/aefe0f1aae21f861b4f107df6589208183f53fde))
+* **deps:** update dependency @sanity/comlink to ^3.1.1 ([#830](https://github.com/sanity-io/sdk/issues/830)) ([fe30d56](https://github.com/sanity-io/sdk/commit/fe30d56170a6850fa3b714eaba796f5f29ddf2a2))
+* **deps:** update dependency @sanity/message-protocol to ^0.23.0 ([#833](https://github.com/sanity-io/sdk/issues/833)) ([a7f95a4](https://github.com/sanity-io/sdk/commit/a7f95a4842b7929309415470d11c0f13f5e69cf9))
+* **deps:** update dependency @sanity/telemetry to ^1.1.0 ([#822](https://github.com/sanity-io/sdk/issues/822)) ([168ae3e](https://github.com/sanity-io/sdk/commit/168ae3ead13a2ab4abacad0ea7082b66e0b8c960))
+* **deps:** update dependency zustand to ^5.0.12 ([#832](https://github.com/sanity-io/sdk/issues/832)) ([9b8c2de](https://github.com/sanity-io/sdk/commit/9b8c2de1b2806b575bde99901430791f8538d1ba))
+
 ## [2.9.0](https://github.com/sanity-io/sdk/compare/sdk-v2.8.0...sdk-v2.9.0) (2026-04-20)
 
 
