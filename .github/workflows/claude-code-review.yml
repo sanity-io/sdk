@@ -11,7 +11,7 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'skip-review') &&
       github.actor != 'squiggler[bot]' &&
       github.actor != 'squiggler-app[bot]' &&
-      (github.actor != 'renovate[bot]' || contains(github.event.pull_request.labels.*.name, '⚠️ major'))
+      (github.actor != 'renovate[bot]' || contains(github.event.pull_request.labels.*.name, 'major-update'))
 
     runs-on: ubuntu-latest
     permissions:
