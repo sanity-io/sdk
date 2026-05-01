@@ -412,8 +412,8 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0
       '@sanity/image-url':
-        specifier: ^2.0.3
-        version: 2.0.3
+        specifier: ^2.1.1
+        version: 2.1.1
       '@sanity/json-match':
         specifier: ^1.0.5
         version: 1.0.5
@@ -3266,6 +3266,10 @@ packages:
 
   '@sanity/image-url@2.0.3':
     resolution: {integrity: sha512-A/vOugFw/ROGgSeSGB6nimO0c35x9KztatOPIIVlhkL+zsOfP7khigCbdJup2FSv6C03FX2XaUAhXojCxANl2Q==}
+    engines: {node: '>=20.19.0'}
+
+  '@sanity/image-url@2.1.1':
+    resolution: {integrity: sha512-qVXsF1teWR6FO3ZFAz46HDcRU+E6EQkpyncPnkGOzeJ1PgnaOiWMVbiSrZtX10s3txzzu/tAjKwbxbGHfDWgGw==}
     engines: {node: '>=20.19.0'}
 
   '@sanity/import@4.1.0':
@@ -11354,6 +11358,10 @@ snapshots:
       ts-brand: 0.2.0
 
   '@sanity/image-url@2.0.3':
+    dependencies:
+      '@sanity/signed-urls': 2.0.2
+
+  '@sanity/image-url@2.1.1':
     dependencies:
       '@sanity/signed-urls': 2.0.2
 

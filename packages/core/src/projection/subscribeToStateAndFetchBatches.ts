@@ -16,7 +16,6 @@ import {
   tap,
 } from 'rxjs'
 
-import {isDatasetResource} from '../config/sanityConfig'
 import {getQueryState, resolveQuery} from '../query/queryStore'
 import {type BoundPerspectiveKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
@@ -106,29 +105,23 @@ export const subscribeToStateAndFetchBatches = ({
 
         const projectionQuery$ = new Observable<ProjectionQueryResult[]>((observer) => {
           const {getCurrent, observable} = getQueryState<ProjectionQueryResult[]>(instance, {
-            ...{
-              query,
-              params,
-              tag: PROJECTION_TAG,
-              perspective,
-            },
-            // temporary guard here until we're ready for everything to be queried via global API
-            ...(resource && !isDatasetResource(resource) ? {resource} : {}),
+            query,
+            params,
+            tag: PROJECTION_TAG,
+            perspective,
+            resource,
           })
 
           const querySource$ = defer(() => {
             if (getCurrent() === undefined) {
               return from(
                 resolveQuery<ProjectionQueryResult[]>(instance, {
-                  ...{
-                    query,
-                    params,
-                    tag: PROJECTION_TAG,
-                    signal: controller.signal,
-                    perspective,
-                  },
-                  // temporary guard here until we're ready for everything to be queried via global API in v3
-                  ...(resource && !isDatasetResource(resource) ? {resource} : {}),
+                  query,
+                  params,
+                  tag: PROJECTION_TAG,
+                  signal: controller.signal,
+                  perspective,
+                  resource,
                 }),
               ).pipe(switchMap(() => observable))
             }
@@ -147,29 +140,23 @@ export const subscribeToStateAndFetchBatches = ({
 
         const statusQuery$ = new Observable<StatusQueryResult[]>((observer) => {
           const {getCurrent, observable} = getQueryState<StatusQueryResult[]>(instance, {
-            ...{
-              query: statusQuery,
-              params: statusParams,
-              tag: PROJECTION_TAG,
-              perspective: 'raw',
-            },
-            // temporary guard here until we're ready for everything to be queried via global API
-            ...(resource && !isDatasetResource(resource) ? {resource} : {}),
+            query: statusQuery,
+            params: statusParams,
+            tag: PROJECTION_TAG,
+            perspective: 'raw',
+            resource,
           })
 
           const statusQuerySource$ = defer(() => {
             if (getCurrent() === undefined) {
               return from(
                 resolveQuery<StatusQueryResult[]>(instance, {
-                  ...{
-                    query: statusQuery,
-                    params: statusParams,
-                    tag: PROJECTION_TAG,
-                    signal: controller.signal,
-                    perspective: 'raw',
-                  },
-                  // temporary guard here until we're ready for everything to be queried via global API
-                  ...(resource && !isDatasetResource(resource) ? {resource} : {}),
+                  query: statusQuery,
+                  params: statusParams,
+                  tag: PROJECTION_TAG,
+                  signal: controller.signal,
+                  perspective: 'raw',
+                  resource,
                 }),
               ).pipe(switchMap(() => observable))
             }

@@ -34,6 +34,7 @@ export const PREVIEW_PROJECTION = `{
       defined(asset) => {"type": "image-asset", "_ref": asset._ref},
       defined(image.asset) => {"type": "image-asset", "_ref": image.asset._ref},
       defined(mainImage.asset) => {"type": "image-asset", "_ref": mainImage.asset._ref},
+      defined(currentVersion) => {"type": "image-asset", "_ref": currentVersion._ref},
       null
     )
   ),
