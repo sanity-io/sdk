@@ -320,7 +320,7 @@ importers:
         specifier: ^7.22.0
         version: 7.22.0
       '@sanity/uuid':
-        specifier: ^3.0.0
+        specifier: ^3.0.2
         version: 3.0.2
       dotenv:
         specifier: ^16.5.0
