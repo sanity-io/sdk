@@ -1,10 +1,10 @@
 import {type SanityClient} from '@sanity/client'
 import {createImageUrlBuilder} from '@sanity/image-url'
-import {isObject} from 'lodash-es'
 
 import {getClient} from '../client/clientStore'
 import {type DocumentResource, isDatasetResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
+import {isObject} from '../utils/object'
 import {SUBTITLE_CANDIDATES, TITLE_CANDIDATES} from './previewConstants'
 import {type PreviewQueryResult, type PreviewValue} from './types'
 

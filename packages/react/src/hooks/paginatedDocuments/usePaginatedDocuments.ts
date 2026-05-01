@@ -1,6 +1,5 @@
 import {createGroqSearchFilter, type DocumentHandle, type QueryOptions} from '@sanity/sdk'
 import {type SortOrderingItem} from '@sanity/types'
-import {pick} from 'lodash-es'
 import {useCallback, useMemo, useState} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -304,8 +303,9 @@ export function usePaginatedDocuments<
       ...params,
       __types: documentTypes,
       __handle: {
-        ...pick(instance.config, 'projectId', 'dataset', 'perspective'),
-        ...pick(options, 'projectId', 'dataset', 'perspective'),
+        projectId: options.projectId ?? instance.config.projectId,
+        dataset: options.dataset ?? instance.config.dataset,
+        perspective: options.perspective ?? instance.config.perspective,
       },
     },
   })

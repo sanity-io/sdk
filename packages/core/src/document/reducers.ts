@@ -1,11 +1,11 @@
 import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
 import {type Mutation, type PatchOperations, type SanityDocumentLike} from '@sanity/types'
-import {omit} from 'lodash-es'
 
 import {type DocumentHandle} from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
+import {omitProperty} from '../utils/object'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {type DocumentAction} from './actions'
 import {DOCUMENT_STATE_CLEAR_DELAY} from './documentConstants'
@@ -392,7 +392,7 @@ export function revertOutgoingTransaction(prev: SyncTransactionState): SyncTrans
             local: documentId in working ? working[documentId] : local,
             unverifiedRevisions:
               prev.outgoing && prev.outgoing.transactionId in unverifiedRevisions
-                ? omit(unverifiedRevisions, prev.outgoing.transactionId)
+                ? omitProperty(unverifiedRevisions, prev.outgoing.transactionId)
                 : unverifiedRevisions,
           }
           return [documentId, next] as const
@@ -420,7 +420,7 @@ export function applyRemoteDocument(
   const revisionToVerify = revision ? prevUnverifiedRevisions?.[revision] : undefined
   let unverifiedRevisions = prevUnverifiedRevisions ?? EMPTY_REVISIONS
   if (revision && revisionToVerify) {
-    unverifiedRevisions = omit(prevUnverifiedRevisions, revision)
+    unverifiedRevisions = omitProperty(prevUnverifiedRevisions, revision)
   }
 
   // if this remote document is from a `'sync'` event (meaning that the whole
@@ -547,7 +547,7 @@ export function removeSubscriptionIdFromDocument(
 
   if (!prevDocState) return prev
   if (!subscriptions.length) {
-    return {...prev, documentStates: omit(prev.documentStates, documentId)}
+    return {...prev, documentStates: omitProperty(prev.documentStates, documentId)}
   }
   return {
     ...prev,

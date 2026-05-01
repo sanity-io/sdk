@@ -1,7 +1,7 @@
 import {createNode, type Node, type NodeInput} from '@sanity/comlink'
-import {isEqual} from 'lodash-es'
 
 import {type StoreContext} from '../../../store/defineStore'
+import {isDeepEqual} from '../../../utils/object'
 import {type FrameMessage, type WindowMessage} from '../../types'
 import {type ComlinkNodeState} from '../comlinkNodeStore'
 
@@ -14,7 +14,7 @@ export const getOrCreateNode = (
 
   // limit nodes to one per name
   if (existing) {
-    if (!isEqual(existing.options, options)) {
+    if (!isDeepEqual(existing.options, options)) {
       throw new Error(`Node "${options.name}" already exists with different options`)
     }
 
