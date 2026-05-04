@@ -1,7 +1,9 @@
 import {applyDocumentActions, createSanityInstance} from '@sanity/sdk'
+import {renderHook as reactRenderHook} from '@testing-library/react'
 import {describe, it} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'
+import {SanityInstanceContext} from '../../context/SanityInstanceContext'
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useApplyDocumentActions} from './useApplyDocumentActions'
 
@@ -20,13 +22,42 @@ describe('useApplyDocumentActions', () => {
     vi.mocked(useSanityInstance).mockReturnValueOnce(instance)
   })
 
-  it('uses the SanityInstance', async () => {
+  it('uses the effective context resource', async () => {
     const {result} = renderHook(() => useApplyDocumentActions())
     result.current({
       type: 'document.edit',
       documentType: 'post',
       documentId: 'abc',
     })
+
+    expect(applyDocumentActions).toHaveBeenCalledExactlyOnceWith(instance, {
+      actions: [
+        {
+          type: 'document.edit',
+          documentType: 'post',
+          documentId: 'abc',
+          // resource named in test-utils
+          resource: {projectId: 'test', dataset: 'test'},
+        },
+      ],
+      resource: {projectId: 'test', dataset: 'test'},
+    })
+  })
+
+  it('uses the SanityInstance when resource is not provided', async () => {
+    const {result} = reactRenderHook(() => useApplyDocumentActions(), {
+      wrapper: ({children}) => (
+        <SanityInstanceContext.Provider value={instance}>{children}</SanityInstanceContext.Provider>
+      ),
+    })
+    result.current(
+      {
+        type: 'document.edit',
+        documentType: 'post',
+        documentId: 'abc',
+      },
+      {},
+    )
 
     expect(applyDocumentActions).toHaveBeenCalledExactlyOnceWith(instance, {
       actions: [

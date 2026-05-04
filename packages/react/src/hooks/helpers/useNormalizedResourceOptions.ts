@@ -1,5 +1,5 @@
 import {type DocumentResource, type PerspectiveHandle} from '@sanity/sdk'
-import {useContext} from 'react'
+import {useContext, useMemo} from 'react'
 
 import {ResourceContext} from '../../context/DefaultResourceContext'
 import {PerspectiveContext} from '../../context/PerspectiveContext'
@@ -112,6 +112,25 @@ export function normalizeResourceOptions<
 }
 
 /**
+ * Returns the effective context resource: the `ResourceContext` value if set,
+ * otherwise a resource synthesized from the current `SanityInstance` config
+ * (tier-d fallback — returns `undefined` for studio-style configs with no project).
+ *
+ * @internal
+ */
+export function useEffectiveContextResource(): DocumentResource | undefined {
+  const contextResource = useContext(ResourceContext)
+  const instance = useContext(SanityInstanceContext)
+  const {projectId, dataset} = instance?.config ?? {}
+
+  return useMemo(() => {
+    if (contextResource) return contextResource
+    if (projectId && dataset) return {projectId, dataset}
+    return undefined
+  }, [contextResource, projectId, dataset])
+}
+
+/**
  * Normalizes hook options by resolving `resourceName` to a `DocumentResource`.
  *
  * Resolution priority for resource:
@@ -138,19 +157,8 @@ export function useNormalizedResourceOptions<
   },
 >(options: T): Omit<T, NormalizedResourceFields> {
   const resources = useContext(ResourcesContext)
-  const contextResource = useContext(ResourceContext)
+  const effectiveContextResource = useEffectiveContextResource()
   const contextPerspective = useContext(PerspectiveContext)
-  const instance = useContext(SanityInstanceContext)
-
-  // Tier (d): instance config fallback — synthesize resource from projectId/dataset
-  // when the higher tiers all come up empty
-  let effectiveContextResource = contextResource
-  if (!effectiveContextResource && instance) {
-    const {projectId, dataset} = instance.config
-    if (projectId && dataset) {
-      effectiveContextResource = {projectId, dataset}
-    }
-  }
 
   return normalizeResourceOptions(options, resources, effectiveContextResource, contextPerspective)
 }

@@ -49,24 +49,25 @@ export function SDKProvider({
   const configs = (Array.isArray(config) ? config : [config]).slice().reverse()
   const projectIds = configs.map((c) => c.projectId).filter((id): id is string => !!id)
 
+  // Extract static fields so the memo below doesn't take a reference dependency
+  // on `config` — inline config objects change identity on every render.
+  const singleConfig = Array.isArray(config) ? null : config
+  const defaultProjectId = singleConfig?.projectId
+  const defaultDataset = singleConfig?.dataset
+
   // For a single config, synthesize a 'default' resource from its projectId/dataset
   // so that hooks can resolve it via resourceName: 'default' or fall back to it
   // automatically when no resource info is provided.
   const resourcesValue = useMemo(() => {
     const explicit = props.resources ?? {}
-    if (
-      !Array.isArray(config) &&
-      config.projectId &&
-      config.dataset &&
-      !Object.hasOwn(explicit, DEFAULT_RESOURCE_NAME)
-    ) {
+    if (defaultProjectId && defaultDataset && !Object.hasOwn(explicit, DEFAULT_RESOURCE_NAME)) {
       return {
-        [DEFAULT_RESOURCE_NAME]: {projectId: config.projectId, dataset: config.dataset},
+        [DEFAULT_RESOURCE_NAME]: {projectId: defaultProjectId, dataset: defaultDataset},
         ...explicit,
       }
     }
     return explicit
-  }, [config, props.resources])
+  }, [defaultProjectId, defaultDataset, props.resources])
 
   // Create a nested structure of ResourceProviders for each config
   const createNestedProviders = (index: number): ReactElement => {

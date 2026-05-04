@@ -3,11 +3,11 @@ import {isDeepEqual} from '@sanity/sdk/_internal'
 import {useCallback, useContext, useMemo, useSyncExternalStore} from 'react'
 import {filter, firstValueFrom} from 'rxjs'
 
-import {ResourceContext} from '../../context/DefaultResourceContext'
 import {ResourcesContext} from '../../context/ResourcesContext'
 import {useSanityInstance} from '../context/useSanityInstance'
 import {
   normalizeResourceOptions,
+  useEffectiveContextResource,
   type WithResourceNameSupport,
 } from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
@@ -99,7 +99,7 @@ export function useDocumentPermissions(
 ): DocumentPermissionsResult {
   const instance = useSanityInstance()
   trackHookUsage(instance, 'useDocumentPermissions')
-  const contextResource = useContext(ResourceContext)
+  const effectiveContextResource = useEffectiveContextResource()
   const resources = useContext(ResourcesContext)
 
   const {
@@ -109,9 +109,9 @@ export function useDocumentPermissions(
   } = useMemo(() => {
     const normalized = Array.isArray(actionOrActions)
       ? actionOrActions.map((action) =>
-          normalizeResourceOptions(action, resources, contextResource),
+          normalizeResourceOptions(action, resources, effectiveContextResource),
         )
-      : [normalizeResourceOptions(actionOrActions, resources, contextResource)]
+      : [normalizeResourceOptions(actionOrActions, resources, effectiveContextResource)]
 
     let resource
     for (const action of normalized) {
@@ -129,9 +129,9 @@ export function useDocumentPermissions(
       }
     }
     return {actions: normalized, resource, error: undefined}
-  }, [actionOrActions, resources, contextResource])
+  }, [actionOrActions, resources, effectiveContextResource])
 
-  const effectiveResource = actionResource ?? contextResource
+  const effectiveResource = actionResource ?? effectiveContextResource
 
   // Keep hooks unconditional — validation errors and missing-resource errors are
   // thrown after all hooks so that the hook call count stays stable across renders.
@@ -147,16 +147,14 @@ export function useDocumentPermissions(
     [effectiveResource, normalizedActions],
   )
 
-  const isDocumentReady = useCallback(
-    () =>
-      permissionsOptions !== undefined &&
-      getPermissionsState(instance, permissionsOptions).getCurrent() !== undefined,
-    [permissionsOptions, instance],
-  )
-
   const stateSource = useMemo(
     () => (permissionsOptions ? getPermissionsState(instance, permissionsOptions) : undefined),
     [permissionsOptions, instance],
+  )
+
+  const isDocumentReady = useCallback(
+    () => stateSource !== undefined && stateSource.getCurrent() !== undefined,
+    [stateSource],
   )
 
   const result = useSyncExternalStore(
@@ -173,9 +171,7 @@ export function useDocumentPermissions(
   }
   if (!isDocumentReady()) {
     throw firstValueFrom(
-      getPermissionsState(instance, permissionsOptions!).observable.pipe(
-        filter((permissions) => permissions !== undefined),
-      ),
+      stateSource!.observable.pipe(filter((permissions) => permissions !== undefined)),
     )
   }
 

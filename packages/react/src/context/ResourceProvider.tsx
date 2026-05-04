@@ -88,6 +88,7 @@ export function ResourceProvider({
   ...config
 }: ResourceProviderProps): React.ReactNode {
   const parent = useContext(SanityInstanceContext)
+  const parentPerspective = useContext(PerspectiveContext)
   const instance = useMemo(
     () => (parent ? parent.createChild(config) : createSanityInstance(config)),
     [config, parent],
@@ -126,7 +127,7 @@ export function ResourceProvider({
   return (
     <SanityInstanceProvider instance={instance} fallback={fallback ?? DEFAULT_FALLBACK}>
       <ResourceContext.Provider value={resource}>
-        <PerspectiveContext.Provider value={config.perspective}>
+        <PerspectiveContext.Provider value={config.perspective ?? parentPerspective}>
           {children}
         </PerspectiveContext.Provider>
       </ResourceContext.Provider>

@@ -1,12 +1,15 @@
 import {type ActionsResult, applyDocumentActions, type DocumentAction} from '@sanity/sdk'
 import {isDeepEqual} from '@sanity/sdk/_internal'
+import {type SanityDocument} from 'groq'
 import {useContext} from 'react'
 
 import {type ResourceHandle} from '../../config/handles'
-import {ResourceContext} from '../../context/DefaultResourceContext'
 import {ResourcesContext} from '../../context/ResourcesContext'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {normalizeResourceOptions} from '../helpers/useNormalizedResourceOptions'
+import {
+  normalizeResourceOptions,
+  useEffectiveContextResource,
+} from '../helpers/useNormalizedResourceOptions'
 // this import is used in an `{@link useEditDocument}`
 // eslint-disable-next-line unused-imports/no-unused-imports, import/consistent-type-specifier-style
 import type {useEditDocument} from './useEditDocument'
@@ -24,7 +27,7 @@ interface UseApplyDocumentActions {
       | DocumentAction<TDocumentType, TDataset, TProjectId>
       | DocumentAction<TDocumentType, TDataset, TProjectId>[],
     options?: ResourceHandle,
-  ) => Promise<ActionsResult>
+  ) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 }
 
 /**
@@ -213,16 +216,7 @@ interface UseApplyDocumentActions {
 export const useApplyDocumentActions: UseApplyDocumentActions = () => {
   const instance = useSanityInstance()
   const resources = useContext(ResourcesContext)
-  const contextResource = useContext(ResourceContext)
-
-  // Tier (d): fall back to instance config when no context resource is set
-  let effectiveContextResource = contextResource
-  if (!effectiveContextResource) {
-    const {projectId, dataset} = instance.config
-    if (projectId && dataset) {
-      effectiveContextResource = {projectId, dataset}
-    }
-  }
+  const effectiveContextResource = useEffectiveContextResource()
 
   return (actionOrActions, options) => {
     const actions = Array.isArray(actionOrActions) ? actionOrActions : [actionOrActions]
@@ -250,7 +244,7 @@ export const useApplyDocumentActions: UseApplyDocumentActions = () => {
       )
     }
 
-    const effectiveResource = resource ?? optionsResource
+    const effectiveResource = resource ?? optionsResource ?? effectiveContextResource
     if (!effectiveResource) {
       throw new Error('No resource found. Provide a resource via the action handle or context.')
     }

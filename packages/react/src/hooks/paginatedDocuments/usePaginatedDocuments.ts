@@ -252,7 +252,7 @@ export function usePaginatedDocuments<
   useTrackHookUsage('usePaginatedDocuments')
   const options = useNormalizedResourceOptions(rawOptions)
   const [pageIndex, setPageIndex] = useState(0)
-  const key = JSON.stringify({filter, search, params, orderings, pageSize})
+  const key = JSON.stringify({filter, search, params, orderings, pageSize, ...options})
   // Reset pageIndex to 0 whenever any query parameter changes.
   const [prevKey, setPrevKey] = useState(key)
   if (prevKey !== key) {
@@ -314,7 +314,7 @@ export function usePaginatedDocuments<
       ...params,
       __types: documentTypes,
       __handle: {
-        // keep projectId/dataset for backward compat until v3; resource is added
+        // keep projectId/dataset for backward compat until v4; resource is added
         // intentionally so that hook consumers can resolve the correct resource
         ...(options.resource && isDatasetResource(options.resource)
           ? pickProperties(options.resource, ['projectId', 'dataset'])
