@@ -5,7 +5,6 @@ import {pickProperties} from '../utils/object'
 
 /**
  * Represents a Sanity.io resource instance with its own configuration and lifecycle
- * @remarks Instances form a hierarchy through parent/child relationships
  *
  * @public
  */
@@ -18,7 +17,6 @@ export interface SanityInstance {
 
   /**
    * Resolved configuration for this instance
-   * @remarks Merges values from parent instances where appropriate
    */
   readonly config: SanityConfig
 
@@ -44,13 +42,14 @@ export interface SanityInstance {
   /**
    * Gets the parent instance in the hierarchy
    * @returns Parent instance or undefined if this is the root
+   * @deprecated The parent/child instance hierarchy is deprecated. Use a single SanityInstance instead.
    */
   getParent(): SanityInstance | undefined
 
   /**
    * Creates a child instance with merged configuration
    * @param config - Configuration to merge with parent values
-   * @remarks Child instances inherit parent configuration but can override values
+   * @deprecated The parent/child instance hierarchy is deprecated. Use a single SanityInstance instead.
    */
   createChild(config: SanityConfig): SanityInstance
 
@@ -59,6 +58,7 @@ export interface SanityInstance {
    * matches the given target config using a shallow comparison.
    * @param targetConfig - A partial configuration object containing key-value pairs to match.
    * @returns The first matching instance or undefined if no match is found.
+   * @deprecated The parent/child instance hierarchy is deprecated. Use a single SanityInstance instead.
    */
   match(targetConfig: Partial<SanityConfig>): SanityInstance | undefined
 }
