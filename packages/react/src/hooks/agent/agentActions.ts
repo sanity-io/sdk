@@ -11,11 +11,13 @@ import {
   type AgentTransformOptions,
   agentTranslate,
   type AgentTranslateOptions,
-  type SanityInstance,
 } from '@sanity/sdk'
+import {useCallback} from 'react'
 import {firstValueFrom} from 'rxjs'
 
-import {createCallbackHook} from '../helpers/createCallbackHook'
+import {type ResourceHandle} from '../../config/handles'
+import {useSanityInstance} from '../context/useSanityInstance'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
 interface Subscription {
   unsubscribe(): void
@@ -103,10 +105,17 @@ interface Subscribable<T> {
  *
  * @category Agent Actions
  */
-export const useAgentGenerate: () => (options: AgentGenerateOptions) => Subscribable<unknown> =
-  createCallbackHook(agentGenerate) as unknown as () => (
-    options: AgentGenerateOptions,
-  ) => Subscribable<unknown>
+export function useAgentGenerate(
+  resourceHandle?: ResourceHandle,
+): (options: AgentGenerateOptions) => Subscribable<unknown> {
+  const instance = useSanityInstance()
+  const {resource} = useNormalizedResourceOptions(resourceHandle ?? {})
+  return useCallback(
+    (options: AgentGenerateOptions) =>
+      agentGenerate(instance, options, resource) as unknown as Subscribable<unknown>,
+    [instance, resource],
+  )
+}
 
 /**
  * @alpha
@@ -179,10 +188,17 @@ export const useAgentGenerate: () => (options: AgentGenerateOptions) => Subscrib
  *
  * @category Agent Actions
  */
-export const useAgentTransform: () => (options: AgentTransformOptions) => Subscribable<unknown> =
-  createCallbackHook(agentTransform) as unknown as () => (
-    options: AgentTransformOptions,
-  ) => Subscribable<unknown>
+export function useAgentTransform(
+  resourceHandle?: ResourceHandle,
+): (options: AgentTransformOptions) => Subscribable<unknown> {
+  const instance = useSanityInstance()
+  const {resource} = useNormalizedResourceOptions(resourceHandle ?? {})
+  return useCallback(
+    (options: AgentTransformOptions) =>
+      agentTransform(instance, options, resource) as unknown as Subscribable<unknown>,
+    [instance, resource],
+  )
+}
 
 /**
  * @alpha
@@ -274,20 +290,16 @@ export const useAgentTransform: () => (options: AgentTransformOptions) => Subscr
  *
  * @category Agent Actions
  */
-export const useAgentTranslate: () => (options: AgentTranslateOptions) => Subscribable<unknown> =
-  createCallbackHook(agentTranslate) as unknown as () => (
-    options: AgentTranslateOptions,
-  ) => Subscribable<unknown>
-
-/**
- * @internal
- * Adapter to convert the agentPrompt observable to a Promise.
- */
-function promptAdapter(
-  instance: SanityInstance,
-  options: AgentPromptOptions,
-): Promise<AgentPromptResult> {
-  return firstValueFrom(agentPrompt(instance, options))
+export function useAgentTranslate(
+  resourceHandle?: ResourceHandle,
+): (options: AgentTranslateOptions) => Subscribable<unknown> {
+  const instance = useSanityInstance()
+  const {resource} = useNormalizedResourceOptions(resourceHandle ?? {})
+  return useCallback(
+    (options: AgentTranslateOptions) =>
+      agentTranslate(instance, options, resource) as unknown as Subscribable<unknown>,
+    [instance, resource],
+  )
 }
 
 /**
@@ -384,18 +396,15 @@ function promptAdapter(
  *
  * @category Agent Actions
  */
-export const useAgentPrompt: () => (options: AgentPromptOptions) => Promise<AgentPromptResult> =
-  createCallbackHook(promptAdapter)
-
-/**
- * @internal
- * Adapter to convert the agentPatch observable to a Promise.
- */
-function patchAdapter(
-  instance: SanityInstance,
-  options: AgentPatchOptions,
-): Promise<AgentPatchResult> {
-  return firstValueFrom(agentPatch(instance, options))
+export function useAgentPrompt(
+  resourceHandle?: ResourceHandle,
+): (options: AgentPromptOptions) => Promise<AgentPromptResult> {
+  const instance = useSanityInstance()
+  const {resource} = useNormalizedResourceOptions(resourceHandle ?? {})
+  return useCallback(
+    (options: AgentPromptOptions) => firstValueFrom(agentPrompt(instance, options, resource)),
+    [instance, resource],
+  )
 }
 
 /**
@@ -547,5 +556,13 @@ function patchAdapter(
  *
  * @category Agent Actions
  */
-export const useAgentPatch: () => (options: AgentPatchOptions) => Promise<AgentPatchResult> =
-  createCallbackHook(patchAdapter)
+export function useAgentPatch(
+  resourceHandle?: ResourceHandle,
+): (options: AgentPatchOptions) => Promise<AgentPatchResult> {
+  const instance = useSanityInstance()
+  const {resource} = useNormalizedResourceOptions(resourceHandle ?? {})
+  return useCallback(
+    (options: AgentPatchOptions) => firstValueFrom(agentPatch(instance, options, resource)),
+    [instance, resource],
+  )
+}

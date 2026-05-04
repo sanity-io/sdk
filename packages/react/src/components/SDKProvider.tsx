@@ -2,6 +2,7 @@ import {type DocumentResource, isImportError, type SanityConfig} from '@sanity/s
 import {type ReactElement, type ReactNode, useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
+import {DEFAULT_RESOURCE_NAME} from '../constants'
 import {ResourceProvider} from '../context/ResourceProvider'
 import {ResourcesContext} from '../context/ResourcesContext'
 import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
@@ -48,8 +49,25 @@ export function SDKProvider({
   const configs = (Array.isArray(config) ? config : [config]).slice().reverse()
   const projectIds = configs.map((c) => c.projectId).filter((id): id is string => !!id)
 
-  // Memoize resources to prevent creating a new empty object on every render
-  const resourcesValue = useMemo(() => props.resources ?? {}, [props.resources])
+  // Extract static fields so the memo below doesn't take a reference dependency
+  // on `config` — inline config objects change identity on every render.
+  const singleConfig = Array.isArray(config) ? null : config
+  const defaultProjectId = singleConfig?.projectId
+  const defaultDataset = singleConfig?.dataset
+
+  // For a single config, synthesize a 'default' resource from its projectId/dataset
+  // so that hooks can resolve it via resourceName: 'default' or fall back to it
+  // automatically when no resource info is provided.
+  const resourcesValue = useMemo(() => {
+    const explicit = props.resources ?? {}
+    if (defaultProjectId && defaultDataset && !Object.hasOwn(explicit, DEFAULT_RESOURCE_NAME)) {
+      return {
+        [DEFAULT_RESOURCE_NAME]: {projectId: defaultProjectId, dataset: defaultDataset},
+        ...explicit,
+      }
+    }
+    return explicit
+  }, [defaultProjectId, defaultDataset, props.resources])
 
   // Create a nested structure of ResourceProviders for each config
   const createNestedProviders = (index: number): ReactElement => {

@@ -191,29 +191,7 @@ describe('clientStore', () => {
   })
 
   describe('resource handling', () => {
-    it('should create client when resource is provided', () => {
-      const client = getClient(instance, {
-        apiVersion: '2024-11-12',
-        resource: {projectId: 'source-project', dataset: 'source-dataset'},
-      })
-
-      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
-        expect.objectContaining({
-          apiVersion: '2024-11-12',
-          resource: {type: 'dataset', id: 'source-project.source-dataset'},
-        }),
-      )
-      // Client should be projectless - no projectId/dataset in config
-      expect(client.config()).not.toHaveProperty('projectId')
-      expect(client.config()).not.toHaveProperty('dataset')
-      expect(client.config()).toEqual(
-        expect.objectContaining({
-          resource: {type: 'dataset', id: 'source-project.source-dataset'},
-        }),
-      )
-    })
-
-    it('should create resource when resource has array resourceId and be projectless', () => {
+    it('should create resource when media library resource is provided and be projectless', () => {
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
         resource: {mediaLibraryId: 'media-lib-123'},
@@ -257,38 +235,24 @@ describe('clientStore', () => {
       )
     })
 
-    it('should create projectless client when resource is provided, ignoring instance config', () => {
+    it('should transform dataset resource to project-based config for now', () => {
       const client = getClient(instance, {
         apiVersion: '2024-11-12',
         resource: {projectId: 'source-project', dataset: 'source-dataset'},
       })
 
-      // Client should be projectless - resource takes precedence, instance config is ignored
-      expect(client.config()).not.toHaveProperty('projectId')
-      expect(client.config()).not.toHaveProperty('dataset')
-      expect(client.config()).toEqual(
+      expect(vi.mocked(createClient)).toHaveBeenCalledWith(
         expect.objectContaining({
-          resource: {type: 'dataset', id: 'source-project.source-dataset'},
+          projectId: 'source-project',
+          dataset: 'source-dataset',
         }),
       )
-    })
-
-    it('should warn when both resource and explicit projectId/dataset are provided', () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const client = getClient(instance, {
-        apiVersion: '2024-11-12',
-        resource: {projectId: 'source-project', dataset: 'source-dataset'},
-        projectId: 'explicit-project',
-        dataset: 'explicit-dataset',
-      })
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'Both resource and explicit projectId/dataset are provided. The resource will be used and projectId/dataset will be ignored.',
+      expect(client.config()).toEqual(
+        expect.objectContaining({
+          projectId: 'source-project',
+          dataset: 'source-dataset',
+        }),
       )
-      // Client should still be projectless despite explicit projectId/dataset
-      expect(client.config()).not.toHaveProperty('projectId')
-      expect(client.config()).not.toHaveProperty('dataset')
-      consoleSpy.mockRestore()
     })
 
     it('should create different clients for different resources', () => {

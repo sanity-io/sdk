@@ -69,7 +69,7 @@ export interface UsersResult {
  * ```
  */
 export function useUsers(options?: GetUsersOptions): UsersResult {
-  const instance = useSanityInstance(options)
+  const instance = useSanityInstance()
   trackHookUsage(instance, 'useUsers')
   // Use React's useTransition to avoid UI jank when user options change
   const [isPending, startTransition] = useTransition()

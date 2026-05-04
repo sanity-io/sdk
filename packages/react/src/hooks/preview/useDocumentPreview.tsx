@@ -1,5 +1,4 @@
 import {
-  type DocumentHandle,
   PREVIEW_PROJECTION,
   type PreviewQueryResult,
   type PreviewValue,
@@ -7,11 +6,9 @@ import {
 } from '@sanity/sdk'
 import {useMemo} from 'react'
 
+import {type DocumentHandle} from '../../config/handles'
 import {useSanityInstance} from '../context/useSanityInstance'
-import {
-  useNormalizedResourceOptions,
-  type WithResourceNameSupport,
-} from '../helpers/useNormalizedResourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 import {useDocumentProjection} from '../projection/useDocumentProjection'
 
@@ -19,7 +16,7 @@ import {useDocumentProjection} from '../projection/useDocumentProjection'
  * @public
  * @category Types
  */
-export interface useDocumentPreviewOptions extends WithResourceNameSupport<DocumentHandle> {
+export interface useDocumentPreviewOptions extends DocumentHandle {
   /**
    * Optional ref object to track visibility. When provided, preview resolution
    * only occurs when the referenced element is visible in the viewport.
@@ -98,7 +95,7 @@ export function useDocumentPreview({
   ref,
   ...docHandle
 }: useDocumentPreviewOptions): useDocumentPreviewResults {
-  const instance = useSanityInstance(docHandle)
+  const instance = useSanityInstance()
   trackHookUsage(instance, 'useDocumentPreview')
   const normalizedDocHandle = useNormalizedResourceOptions(docHandle)
 

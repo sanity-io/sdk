@@ -1,13 +1,15 @@
 import {
   createGroqSearchFilter,
-  type DatasetHandle,
   type DocumentHandle,
+  isDatasetResource,
   type QueryOptions,
 } from '@sanity/sdk'
+import {pickProperties} from '@sanity/sdk/_internal'
 import {type SortOrderingItem} from '@sanity/types'
 import {useCallback, useMemo, useState} from 'react'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {type ResourceHandle} from '../../config/handles'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 import {useQuery} from '../query/useQuery'
 
@@ -24,7 +26,7 @@ export interface DocumentsOptions<
   TDataset extends string = string,
   TProjectId extends string = string,
 >
-  extends DatasetHandle<TDataset, TProjectId>, Pick<QueryOptions, 'perspective' | 'params'> {
+  extends ResourceHandle<TDataset, TProjectId>, Pick<QueryOptions, 'perspective' | 'params'> {
   /**
    * Filter documents by their `_type`. Can be a single type or an array of types.
    */
@@ -201,14 +203,14 @@ export function useDocuments<
   filter,
   orderings,
   documentType,
-  ...options
+  ...rawOptions
 }: DocumentsOptions<TDocumentType, TDataset, TProjectId>): DocumentsResponse<
   TDocumentType,
   TDataset,
   TProjectId
 > {
   useTrackHookUsage('useDocuments')
-  const instance = useSanityInstance(options)
+  const options = useNormalizedResourceOptions(rawOptions)
   const [limit, setLimit] = useState(batchSize)
   const documentTypes = useMemo(
     () =>
@@ -284,9 +286,12 @@ export function useDocuments<
       ...params,
       // these are passed back to the user as part of each document handle
       __handle: {
-        projectId: options.projectId ?? instance.config.projectId,
-        dataset: options.dataset ?? instance.config.dataset,
-        perspective: options.perspective ?? instance.config.perspective,
+        // keep projectId/dataset for backward compat until v4; resource is added
+        // intentionally so that hook consumers can resolve the correct resource
+        ...(options.resource && isDatasetResource(options.resource)
+          ? pickProperties(options.resource, ['projectId', 'dataset'])
+          : {}),
+        ...pickProperties(options, ['perspective', 'resource']),
       },
       __types: documentTypes,
     },
