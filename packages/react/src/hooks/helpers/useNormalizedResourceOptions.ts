@@ -153,9 +153,14 @@ export function useNormalizedResourceOptions<
     sourceName?: string
     projectId?: string
     dataset?: string
-    perspective?: unknown
+    perspective?: PerspectiveHandle['perspective']
   },
->(options: T): Omit<T, NormalizedResourceFields> {
+>(
+  options: T,
+): Omit<T, NormalizedResourceFields> & {
+  resource?: DocumentResource
+  perspective?: PerspectiveHandle['perspective']
+} {
   const resources = useContext(ResourcesContext)
   const effectiveContextResource = useEffectiveContextResource()
   const contextPerspective = useContext(PerspectiveContext)

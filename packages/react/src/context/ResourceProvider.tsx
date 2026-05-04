@@ -1,14 +1,17 @@
 import {
   createSanityInstance,
+  type DatasetResource,
   type DocumentResource,
+  isDatasetResource,
   type SanityConfig,
   type SanityInstance,
 } from '@sanity/sdk'
 import {initTelemetry} from '@sanity/sdk/_internal'
-import {useContext, useEffect, useMemo, useRef} from 'react'
+import {useContext, useEffect, useMemo, useRef, useState} from 'react'
 
 import {ResourceContext} from './DefaultResourceContext'
 import {PerspectiveContext} from './PerspectiveContext'
+import {SanityInstanceContext} from './SanityInstanceContext'
 import {SanityInstanceProvider} from './SanityInstanceProvider'
 
 const DEFAULT_FALLBACK = (
@@ -23,37 +26,28 @@ const DEFAULT_FALLBACK = (
  */
 export interface ResourceProviderProps extends SanityConfig {
   /**
-   * The document resource for this subtree. Hooks that receive no explicit
-   * resource or resourceName will use this value via ResourceContext.
+   * The document resource (project/dataset, media library, or canvas)
+   * for this subtree. Hooks that don't specify an explicit resource will
+   * use this value.
    */
   resource?: DocumentResource
   /**
-   * React node to show while content is loading
-   * Used as the fallback for the internal Suspense boundary
+   * React node to show while content is loading.
+   * Used as the fallback for the internal Suspense boundary.
    */
   fallback: React.ReactNode
   children: React.ReactNode
 }
 
 /**
- * Provides a Sanity instance to child components through React Context
+ * Provides Sanity configuration to child components through React Context.
  *
  * @internal
- *
- * @remarks
- * The ResourceProvider creates a Sanity instance and makes it available to all
- * child components via React context.
- *
- * Features:
- * - Automatically manages the lifecycle of Sanity instances
- * - Disposes instances when the component unmounts
- * - Includes a Suspense boundary for data loading
  *
  * @example
  * ```tsx
  * <ResourceProvider
- *   projectId="your-project-id"
- *   dataset="production"
+ *   resource={{ projectId: 'your-project-id', dataset: 'production' }}
  *   fallback={<LoadingSpinner />}
  * >
  *   <YourApp />
@@ -67,12 +61,28 @@ export function ResourceProvider({
   ...config
 }: ResourceProviderProps): React.ReactNode {
   const parentPerspective = useContext(PerspectiveContext)
-  const instance = useMemo(() => createSanityInstance(config), [config])
+  const parentResource = useContext(ResourceContext)
+  const parentInstance = useContext(SanityInstanceContext)
 
-  const projectId = config.projectId ?? ''
-  useMemo(() => {
-    if (projectId) initTelemetry(instance, projectId)
-  }, [instance, projectId])
+  const {projectId, dataset, perspective} = config
+
+  const [instance] = useState<SanityInstance>(() => parentInstance ?? createSanityInstance(config))
+
+  const configResource: DatasetResource | undefined = useMemo(() => {
+    if (projectId && dataset) {
+      return {projectId, dataset}
+    }
+    return undefined
+  }, [projectId, dataset])
+
+  const effectiveResource = useMemo(() => {
+    return resource ?? configResource ?? parentResource
+  }, [resource, configResource, parentResource])
+
+  useEffect(() => {
+    if (effectiveResource && isDatasetResource(effectiveResource))
+      initTelemetry(instance, effectiveResource.projectId)
+  }, [instance, effectiveResource])
 
   // Ref to hold the scheduled disposal timer.
   const disposal = useRef<{
@@ -91,18 +101,19 @@ export function ResourceProvider({
       disposal.current = {
         instance,
         timeoutId: setTimeout(() => {
-          if (!instance.isDisposed()) {
+          // don't dispose the parent instance when this unmounts
+          if (!instance.isDisposed() && instance !== parentInstance) {
             instance.dispose()
           }
         }, 0),
       }
     }
-  }, [instance])
+  }, [instance, parentInstance])
 
   return (
     <SanityInstanceProvider instance={instance} fallback={fallback ?? DEFAULT_FALLBACK}>
-      <ResourceContext.Provider value={resource}>
-        <PerspectiveContext.Provider value={config.perspective ?? parentPerspective}>
+      <ResourceContext.Provider value={effectiveResource}>
+        <PerspectiveContext.Provider value={perspective ?? parentPerspective}>
           {children}
         </PerspectiveContext.Provider>
       </ResourceContext.Provider>
