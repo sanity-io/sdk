@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/sanity-io/sdk/compare/sdk-v2.10.0...sdk-v3.0.0) (2026-05-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* drop support for Node 20 ([#846](https://github.com/sanity-io/sdk/issues/846))
+
+### Features
+
+* drop support for Node 20 ([#846](https://github.com/sanity-io/sdk/issues/846)) ([d8ddee9](https://github.com/sanity-io/sdk/commit/d8ddee934e8793b90fb8be27985cc0571e0b6022))
+
 ## [2.10.0](https://github.com/sanity-io/sdk/compare/sdk-v2.9.0...sdk-v2.10.0) (2026-05-01)
 
 
