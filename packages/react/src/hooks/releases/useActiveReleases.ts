@@ -2,14 +2,17 @@ import {
   type DocumentResource,
   getActiveReleasesState,
   type ReleaseDocument,
+  type SanityConfig,
   type SanityInstance,
   type StateSource,
 } from '@sanity/sdk'
 import {filter, firstValueFrom} from 'rxjs'
 
-import {type ResourceHandle} from '../../config/handles'
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
+import {
+  useNormalizedResourceOptions,
+  type WithResourceNameSupport,
+} from '../helpers/useNormalizedResourceOptions'
 
 /**
  * @public
@@ -47,7 +50,9 @@ const useActiveReleasesValue: UseActiveReleasesValue = createStateSourceHook({
  * @public
  * @function
  */
-export function useActiveReleases(options?: ResourceHandle): ReleaseDocument[] {
+export function useActiveReleases(
+  options?: WithResourceNameSupport<SanityConfig> | undefined,
+): ReleaseDocument[] {
   const normalizedOptions = useNormalizedResourceOptions(options ?? {})
   return useActiveReleasesValue(normalizedOptions)
 }
