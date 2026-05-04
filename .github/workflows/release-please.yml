@@ -83,7 +83,7 @@ jobs:
       - name: Mark SDK issues as done
         uses: sanity-labs/mark-issues-done-action@main
         with:
-          linear_api_key: ${{secrets.LINEAR_API_TOKEN}}
+          linear_api_key: ${{secrets.LINEAR_API_KEY}}
           repository_name: ${{github.event.repository.name}}
           # Label: In Staging
           initial_state_id: "c56956cd-c281-4ca5-889f-6189ce231a6d"
