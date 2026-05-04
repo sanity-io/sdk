@@ -1,0 +1,42 @@
+{
+  "unused_files": [
+    "apps/kitchensink-react/src/css/css.config.js",
+    "packages/@repo/e2e/src/setup/auth.setup.ts",
+    "packages/@repo/e2e/src/setup/datasets.setup.ts",
+    "packages/@repo/e2e/src/teardown/auth.teardown.ts"
+  ],
+  "unused_exports": ["apps/kitchensink-react/test/test-utils.tsx:renderHook"],
+  "unused_types": [],
+  "unused_dependencies": ["react-compiler-runtime", "styled-components", "react-compiler-runtime"],
+  "unused_dev_dependencies": [
+    "@sanity/cli-v3",
+    "@sanity/prettier-config",
+    "@sanity/browserslist-config",
+    "@sanity/browserslist-config",
+    "babel-plugin-react-compiler"
+  ],
+  "circular_dependencies": [
+    "packages/core/src/query/queryStore.ts->packages/core/src/releases/getPerspectiveState.ts->packages/core/src/releases/releasesStore.ts"
+  ],
+  "unused_optional_dependencies": [],
+  "unused_enum_members": [],
+  "unused_class_members": [
+    "packages/core/src/document/processActions.ts:ActionError.documentId",
+    "packages/core/src/document/processActions.ts:ActionError.transactionId"
+  ],
+  "unresolved_imports": [],
+  "unlisted_dependencies": [],
+  "duplicate_exports": [
+    "destroyController|packages/core/src/comlink/controller/actions/destroyController.ts|packages/core/src/comlink/controller/comlinkControllerStore.ts",
+    "getDashboardOrganizationId|packages/core/src/auth/authStore.ts|packages/core/src/auth/dashboardUtils.ts",
+    "getOrCreateChannel|packages/core/src/comlink/controller/actions/getOrCreateChannel.ts|packages/core/src/comlink/controller/comlinkControllerStore.ts",
+    "getOrCreateController|packages/core/src/comlink/controller/actions/getOrCreateController.ts|packages/core/src/comlink/controller/comlinkControllerStore.ts",
+    "getOrCreateNode|packages/core/src/comlink/node/actions/getOrCreateNode.ts|packages/core/src/comlink/node/comlinkNodeStore.ts",
+    "releaseChannel|packages/core/src/comlink/controller/actions/releaseChannel.ts|packages/core/src/comlink/controller/comlinkControllerStore.ts",
+    "releaseNode|packages/core/src/comlink/node/actions/releaseNode.ts|packages/core/src/comlink/node/comlinkNodeStore.ts"
+  ],
+  "type_only_dependencies": [],
+  "test_only_dependencies": [],
+  "boundary_violations": [],
+  "stale_suppressions": []
+}

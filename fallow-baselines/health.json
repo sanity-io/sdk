@@ -1,0 +1,231 @@
+{
+  "finding_counts": {
+    "apps/kitchensink-react/sanity.cli.ts": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/Comlink/Framed.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/Comlink/ParentApp.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/DocumentCollection/DocumentEditorRoute.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/DocumentCollection/DocumentPreview.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/DocumentCollection/DocumentProjectionRoute.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/DocumentCollection/MultiResourceRoute.tsx": {
+      "crap_critical": {
+        "count": 3
+      },
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/DocumentCollection/OrgDocumentExplorerRoute.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    },
+    "apps/kitchensink-react/src/components/DocumentEditorPanel.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/components/FallbackAvatar.tsx": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "apps/kitchensink-react/src/components/JsonDocumentEditor.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/routes/AgentResourceContextRoute.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/routes/IntentsRoute.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/routes/MediaLibraryRoute.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/routes/PerspectivesRoute.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/routes/UserDetailRoute.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/routes/releases/ReleasesAutocomplete.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/src/routes/releases/ReleasesRoute.tsx": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "apps/kitchensink-react/vite.config.mjs": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "knip.config.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "packages/@repo/config-test/vitest.mjs": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "packages/@repo/e2e/src/scripts/cleanup-datasets.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/core/src/auth/utils.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "packages/core/src/client/clientStore.ts": {
+      "complexity_high": {
+        "count": 1
+      }
+    },
+    "packages/core/src/document/documentStore.test.ts": {
+      "complexity_high": {
+        "count": 1
+      }
+    },
+    "packages/core/src/document/patchOperations.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "complexity_moderate": {
+        "count": 2
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "packages/core/src/document/permissions.ts": {
+      "complexity_high": {
+        "count": 1
+      }
+    },
+    "packages/core/src/document/processActions.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "packages/core/src/document/processMutations.ts": {
+      "complexity_high": {
+        "count": 1
+      }
+    },
+    "packages/core/src/releases/utils/sortReleases.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "packages/core/src/users/usersStore.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "packages/core/src/utils/defineIntent.ts": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "packages/react/src/components/auth/LoginError.tsx": {
+      "complexity_moderate": {
+        "count": 1
+      }
+    },
+    "packages/react/src/hooks/document/useApplyDocumentActions.ts": {
+      "complexity_critical": {
+        "count": 1
+      }
+    },
+    "packages/react/src/hooks/document/useDocumentPermissions.ts": {
+      "complexity_high": {
+        "count": 1
+      }
+    },
+    "scripts/uploadBundles.mts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 3
+      }
+    }
+  },
+  "production_coverage_findings": [],
+  "target_keys": [
+    "packages/core/src/query/queryStore.ts:circular dependency",
+    "packages/core/src/releases/getPerspectiveState.ts:circular dependency",
+    "packages/core/src/releases/releasesStore.ts:circular dependency",
+    "packages/react/src/hooks/document/useApplyDocumentActions.ts:complexity",
+    "packages/core/src/document/processMutations.ts:complexity",
+    "packages/react/src/hooks/document/useDocumentPermissions.ts:complexity",
+    "packages/core/src/document/processActions.ts:complexity",
+    "packages/core/src/document/patchOperations.ts:complexity"
+  ]
+}

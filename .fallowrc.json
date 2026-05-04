@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "package.config.ts",
+    "packages/*/package.config.ts",
+    "packages/*/package.bundle.ts",
+    "scripts/*.{ts,mts}"
+  ],
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/lib/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/.turbo/**",
+    "**/docs/**",
+    "**/typedoc-theme/**"
+  ],
+  "workspaces": {
+    "apps/kitchensink-react": {
+      "plugins": {
+        "playwright": false
+      }
+    }
+  },
+  "audit": {
+    "deadCodeBaseline": "fallow-baselines/dead-code.json",
+    "healthBaseline": "fallow-baselines/health.json",
+    "dupesBaseline": "fallow-baselines/dupes.json"
+  }
+}
