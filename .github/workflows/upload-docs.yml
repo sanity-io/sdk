@@ -20,7 +20,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Build Docs
         run: pnpm build:docs
