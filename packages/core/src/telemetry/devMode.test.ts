@@ -30,6 +30,14 @@ describe('isDevMode', () => {
     expect(isDevMode()).toBe(true)
   })
 
+  it('returns true on localhost even when NODE_ENV is production', () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubGlobal('window', {
+      location: {href: 'http://localhost:3000/'},
+    })
+    expect(isDevMode()).toBe(true)
+  })
+
   it('returns false for a non-local URL', () => {
     vi.stubEnv('NODE_ENV', 'test')
     vi.stubGlobal('window', {
