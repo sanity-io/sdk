@@ -85,7 +85,7 @@
   },
   "pnpm": {
     "overrides": {
-      "@babel/types": "7.28.6"
+      "@babel/types": "7.29.0"
     }
   }
 }
