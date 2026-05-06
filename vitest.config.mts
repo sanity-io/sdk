@@ -8,7 +8,7 @@ export default defineConfig({
       reporter: ['html', 'json', 'json-summary'],
       include: ['packages/*/src/**/*.{ts,tsx}'],
       exclude: [
-        '**/*.{test,spec,stories,d}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+        '**/*.{test,test-d,spec,stories,d}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
         'packages/core/src/_exports/*.ts',
         'packages/react/src/_exports/*.ts',
         'packages/core/src/utils/getEnv.ts',
