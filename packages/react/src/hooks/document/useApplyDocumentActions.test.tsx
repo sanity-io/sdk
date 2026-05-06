@@ -1,7 +1,9 @@
-import {applyDocumentActions, type SanityInstance} from '@sanity/sdk'
+import {applyDocumentActions, createSanityInstance} from '@sanity/sdk'
+import {renderHook as reactRenderHook} from '@testing-library/react'
 import {describe, it} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'
+import {SanityInstanceContext} from '../../context/SanityInstanceContext'
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useApplyDocumentActions} from './useApplyDocumentActions'
 
@@ -12,18 +14,7 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
 
 vi.mock('../context/useSanityInstance')
 
-// These are quite fragile mocks, but they are useful enough for now.
-const instances: Record<string, SanityInstance | undefined> = {
-  'p123.d': {__id: 'p123.d'} as unknown as SanityInstance,
-  'p.d123': {__id: 'p.d123'} as unknown as SanityInstance,
-  'p123.d123': {__id: 'p123.d123'} as unknown as SanityInstance,
-}
-
-const instance = {
-  match({projectId = 'p', dataset = 'd'}): SanityInstance | undefined {
-    return instances[`${projectId}.${dataset}`]
-  },
-} as unknown as SanityInstance
+const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
 
 describe('useApplyDocumentActions', () => {
   beforeEach(() => {
@@ -31,7 +22,7 @@ describe('useApplyDocumentActions', () => {
     vi.mocked(useSanityInstance).mockReturnValueOnce(instance)
   })
 
-  it('uses the SanityInstance', async () => {
+  it('uses the effective context resource', async () => {
     const {result} = renderHook(() => useApplyDocumentActions())
     result.current({
       type: 'document.edit',
@@ -45,93 +36,63 @@ describe('useApplyDocumentActions', () => {
           type: 'document.edit',
           documentType: 'post',
           documentId: 'abc',
+          // resource named in test-utils
+          resource: {projectId: 'test', dataset: 'test'},
         },
       ],
+      resource: {projectId: 'test', dataset: 'test'},
     })
   })
 
-  it('uses SanityInstance.match when projectId is overrideen', async () => {
-    const {result} = renderHook(() => useApplyDocumentActions())
-    result.current({
-      type: 'document.edit',
-      documentType: 'post',
-      documentId: 'abc',
-
-      projectId: 'p123',
+  it('uses the SanityInstance when resource is not provided', async () => {
+    const {result} = reactRenderHook(() => useApplyDocumentActions(), {
+      wrapper: ({children}) => (
+        <SanityInstanceContext.Provider value={instance}>{children}</SanityInstanceContext.Provider>
+      ),
     })
-
-    expect(applyDocumentActions).toHaveBeenCalledExactlyOnceWith(instances['p123.d'], {
-      actions: [
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'abc',
-
-          projectId: 'p123',
-        },
-      ],
-    })
-  })
-
-  it('uses SanityInstance when dataset is overrideen', async () => {
-    const {result} = renderHook(() => useApplyDocumentActions())
-    result.current({
-      type: 'document.edit',
-      documentType: 'post',
-      documentId: 'abc',
-
-      dataset: 'd123',
-    })
-
-    expect(applyDocumentActions).toHaveBeenCalledExactlyOnceWith(instance, {
-      actions: [
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'abc',
-
-          dataset: 'd123',
-        },
-      ],
-    })
-  })
-
-  it('uses SanityInstance.amcth when projectId and dataset is overrideen', async () => {
-    const {result} = renderHook(() => useApplyDocumentActions())
-    result.current({
-      type: 'document.edit',
-      documentType: 'post',
-      documentId: 'abc',
-
-      projectId: 'p123',
-      dataset: 'd123',
-    })
-
-    expect(applyDocumentActions).toHaveBeenCalledExactlyOnceWith(instances['p123.d123'], {
-      actions: [
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'abc',
-
-          projectId: 'p123',
-          dataset: 'd123',
-        },
-      ],
-    })
-  })
-
-  it("throws if SanityInstance.match doesn't find anything", async () => {
-    const {result} = renderHook(() => useApplyDocumentActions())
-    expect(() => {
-      result.current({
+    result.current(
+      {
         type: 'document.edit',
         documentType: 'post',
         documentId: 'abc',
+      },
+      {},
+    )
 
-        projectId: 'other',
-      })
-    }).toThrow()
+    expect(applyDocumentActions).toHaveBeenCalledExactlyOnceWith(instance, {
+      actions: [
+        {
+          type: 'document.edit',
+          documentType: 'post',
+          documentId: 'abc',
+          resource: {projectId: 'p', dataset: 'd'},
+        },
+      ],
+      resource: {projectId: 'p', dataset: 'd'},
+    })
+  })
+
+  it('resolves resource from projectId and dataset in action', async () => {
+    const {result} = renderHook(() => useApplyDocumentActions())
+    result.current({
+      type: 'document.edit',
+      documentType: 'post',
+      documentId: 'abc',
+      projectId: 'p',
+      dataset: 'd123',
+    })
+
+    expect(applyDocumentActions).toHaveBeenCalledExactlyOnceWith(instance, {
+      actions: [
+        {
+          type: 'document.edit',
+          documentType: 'post',
+          documentId: 'abc',
+          resource: {projectId: 'p', dataset: 'd123'},
+        },
+      ],
+      resource: {projectId: 'p', dataset: 'd123'},
+    })
   })
 
   it('throws when actions have mismatched project IDs', async () => {
@@ -143,15 +104,17 @@ describe('useApplyDocumentActions', () => {
           documentType: 'post',
           documentId: 'abc',
           projectId: 'p123',
+          dataset: 'd',
         },
         {
           type: 'document.edit',
           documentType: 'post',
           documentId: 'def',
           projectId: 'p456',
+          dataset: 'd',
         },
       ])
-    }).toThrow(/Mismatched project IDs found in actions/)
+    }).toThrow(/Mismatched resources found in actions/)
   })
 
   it('throws when actions have mismatched datasets', async () => {
@@ -173,7 +136,7 @@ describe('useApplyDocumentActions', () => {
           dataset: 'd2',
         },
       ])
-    }).toThrow(/Mismatched datasets found in actions/)
+    }).toThrow(/Mismatched resources found in actions/)
   })
 
   it('throws when actions have mismatched resources', async () => {
@@ -196,7 +159,7 @@ describe('useApplyDocumentActions', () => {
     }).toThrow(/Mismatched resources found in actions/)
   })
 
-  it('throws when mixing projectId and resource (projectId first)', async () => {
+  it('throws when mixing projectId/dataset and resource with a mismatch (projectId first)', async () => {
     const {result} = renderHook(() => useApplyDocumentActions())
     expect(() => {
       result.current([
@@ -204,19 +167,20 @@ describe('useApplyDocumentActions', () => {
           type: 'document.edit',
           documentType: 'post',
           documentId: 'abc',
-          projectId: 'p',
+          projectId: 'p1',
+          dataset: 'd',
         },
         {
           type: 'document.edit',
           documentType: 'post',
           documentId: 'def',
-          resource: {projectId: 'p', dataset: 'd'},
+          resource: {projectId: 'p2', dataset: 'd'},
         },
       ])
-    }).toThrow(/Mismatches between projectId\/dataset options and resource/)
+    }).toThrow(/Mismatched resources found in actions/)
   })
 
-  it('throws when mixing resource and projectId (resource first)', async () => {
+  it('throws when mixing resource and projectId/dataset with a mismatch (resource first)', async () => {
     const {result} = renderHook(() => useApplyDocumentActions())
     expect(() => {
       result.current([
@@ -224,15 +188,16 @@ describe('useApplyDocumentActions', () => {
           type: 'document.edit',
           documentType: 'post',
           documentId: 'abc',
-          resource: {projectId: 'p', dataset: 'd'},
+          resource: {projectId: 'p1', dataset: 'd'},
         },
         {
           type: 'document.edit',
           documentType: 'post',
           documentId: 'def',
-          projectId: 'p',
+          projectId: 'p2',
+          dataset: 'd',
         },
       ])
-    }).toThrow(/Mismatches between projectId\/dataset options and resource/)
+    }).toThrow(/Mismatched resources found in actions/)
   })
 })

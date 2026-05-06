@@ -396,8 +396,7 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
       withLatestFrom(
         getClientState(instance, {
           apiVersion: API_VERSION,
-          // TODO: remove in v3 when we're ready for everything to be queried via resource
-          resource: resource && !isDatasetResource(resource) ? resource : undefined,
+          resource,
         }).observable,
       ),
       concatMap(([outgoing, client]) => {
@@ -520,11 +519,7 @@ const subscribeToClientAndFetchDatasetAcl = ({
   state,
   key: {resource},
 }: StoreContext<DocumentStoreState, BoundResourceKey>) => {
-  const clientOptions: ClientOptions = {apiVersion: API_VERSION}
-  // TODO: remove in v3 when we're ready for everything to be queried via resource
-  if (resource && !isDatasetResource(resource)) {
-    clientOptions.resource = resource
-  }
+  const clientOptions: ClientOptions = {apiVersion: API_VERSION, resource}
 
   let uri: string
   if (resource && isDatasetResource(resource)) {

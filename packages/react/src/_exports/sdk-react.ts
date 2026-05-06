@@ -4,6 +4,7 @@
 export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBoundary'
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
+export {type DocumentHandle, type DocumentTypeHandle, type ResourceHandle} from '../config/handles'
 export {ComlinkTokenRefreshProvider} from '../context/ComlinkTokenRefresh'
 export {renderSanityApp} from '../context/renderSanityApp'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'

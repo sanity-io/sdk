@@ -178,24 +178,23 @@ export const getClient = bindActionGlobally(
 
     const tokenFromState = state.get().token
     const {clients, authMethod} = state.get()
+    let projectId = options.projectId ?? instance.config.projectId
+    let dataset = options.dataset ?? instance.config.dataset
 
     let resource: ClientConfig['resource'] | undefined
 
     if (options.resource) {
-      if (isDatasetResource(options.resource)) {
-        resource = {
-          type: 'dataset',
-          id: `${options.resource.projectId}.${options.resource.dataset}`,
-        }
-      } else if (isMediaLibraryResource(options.resource)) {
+      if (isMediaLibraryResource(options.resource)) {
         resource = {type: 'media-library', id: options.resource.mediaLibraryId}
       } else if (isCanvasResource(options.resource)) {
         resource = {type: 'canvas', id: options.resource.canvasId}
+      } else if (isDatasetResource(options.resource)) {
+        // use project-based routes for datasets to avoid existing CORS and Studio auth cookie issues
+        projectId = options.resource.projectId
+        dataset = options.resource.dataset
       }
     }
 
-    const projectId = options.projectId ?? instance.config.projectId
-    const dataset = options.dataset ?? instance.config.dataset
     const apiHost = options.apiHost ?? instance.config.auth?.apiHost ?? getStagingApiHost()
 
     const effectiveOptions: ClientConfig & {apiVersion: string} = {
@@ -213,12 +212,6 @@ export const getClient = bindActionGlobally(
     // The client code itself will ignore the non-resource config, so we do this to prevent confusing the user.
     // (ref: https://github.com/sanity-io/client/blob/5c23f81f5ab93a53f5b22b39845c867988508d84/src/data/dataMethods.ts#L691)
     if (resource) {
-      if (options.projectId || options.dataset) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          'Both resource and explicit projectId/dataset are provided. The resource will be used and projectId/dataset will be ignored.',
-        )
-      }
       delete effectiveOptions.projectId
       delete effectiveOptions.dataset
     }

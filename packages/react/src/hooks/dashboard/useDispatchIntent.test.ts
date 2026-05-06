@@ -1,4 +1,5 @@
 import {type DocumentHandle} from '@sanity/sdk'
+import {renderHook as reactRenderHook} from '@testing-library/react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'
@@ -227,12 +228,14 @@ describe('useDispatchIntent', () => {
 
   describe('error handling', () => {
     it('should throw error when neither resource nor projectId/dataset is provided', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       const invalidHandle = {
         documentId: 'test-document-id',
         documentType: 'test-document-type',
       }
 
-      const {result} = renderHook(() =>
+      // Use a minimal wrapper with no resource context so the normalization has nothing to fall back to
+      const {result} = reactRenderHook(() =>
         useDispatchIntent({
           action: 'edit',
           documentHandle: invalidHandle as unknown as DocumentHandle,
@@ -242,6 +245,7 @@ describe('useDispatchIntent', () => {
       expect(() => result.current.dispatchIntent()).toThrow(
         'useDispatchIntent: Unable to determine resource. Either `resource`, `resourceName`, or both `projectId` and `dataset` must be provided in documentHandle.',
       )
+      consoleErrorSpy.mockRestore()
     })
   })
 })
