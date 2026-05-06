@@ -1,5 +1,4 @@
-import {type SanityProject} from '@sanity/client'
-import {getProjectsState, resolveProjects, type SanityInstance, type StateSource} from '@sanity/sdk'
+import {getProjectsState, type Project, type ProjectsOptions, resolveProjects} from '@sanity/sdk'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
@@ -7,24 +6,17 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  * @public
  * @category Types
  * @interface
+ * @deprecated use the Project type directly.
  */
-export type ProjectWithoutMembers = Omit<SanityProject, 'members'>
-
-/**
- * @public
- * @category Types
- */
-type UseProjects = <TIncludeMembers extends boolean = false>(options?: {
-  organizationId?: string
-  includeMembers?: TIncludeMembers
-}) => TIncludeMembers extends true ? SanityProject[] : ProjectWithoutMembers[]
+export type ProjectWithoutMembers = Project
 
 /**
  * Returns metadata for each project you have access to.
  *
  * @category Projects
  * @param options - Configuration options
- * @returns An array of project metadata. If includeMembers is true, returns full SanityProject objects. Otherwise, returns ProjectWithoutMembers objects.
+ * @returns An array of project metadata. `members` is included only when
+ *   `includeMembers: true`; `features` is included unless `includeFeatures: false`.
  * @example
  * ```tsx
  * const projects = useProjects()
@@ -39,18 +31,20 @@ type UseProjects = <TIncludeMembers extends boolean = false>(options?: {
  * ```
  * @example
  * ```tsx
- * const projectsWithMembers = useProjects({ includeMembers: true })
- * const projectsWithoutMembers = useProjects({ includeMembers: false })
+ * const projects = useProjects()
+ * const projectsWithFeatures = useProjects()
+ * const projectsWithMembers = useProjects({includeMembers: true})
+ * const projectsWithoutMembers = useProjects({includeMembers: false})
+ * const projectsWithoutFeatures = useProjects({includeFeatures: false})
  * ```
  * @public
  * @function
  */
-export const useProjects: UseProjects = createStateSourceHook({
-  getState: getProjectsState as (
-    instance: SanityInstance,
-    options?: {organizationId?: string; includeMembers?: boolean},
-  ) => StateSource<SanityProject[] | ProjectWithoutMembers[]>,
-  shouldSuspend: (instance, options) =>
-    getProjectsState(instance, options).getCurrent() === undefined,
+export const useProjects = createStateSourceHook({
+  getState: getProjectsState,
+  shouldSuspend: (instance, ...params) =>
+    getProjectsState(instance, ...params).getCurrent() === undefined,
   suspender: resolveProjects,
-}) as UseProjects
+}) as <IncludeMembers extends boolean = false, IncludeFeatures extends boolean = true>(
+  options?: ProjectsOptions<IncludeMembers, IncludeFeatures>,
+) => Project<IncludeMembers, IncludeFeatures>[]

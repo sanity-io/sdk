@@ -1,5 +1,4 @@
 import {
-  type DatasetHandle,
   type DocumentResource,
   getPerspectiveState,
   type SanityInstance,
@@ -7,11 +6,9 @@ import {
 } from '@sanity/sdk'
 import {filter, firstValueFrom} from 'rxjs'
 
+import {type ResourceHandle} from '../../config/handles'
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-import {
-  useNormalizedResourceOptions,
-  type WithResourceNameSupport,
-} from '../helpers/useNormalizedResourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 
 /**
  * @public
@@ -35,11 +32,11 @@ import {
  *
  * @returns The perspective for the given perspective handle.
  */
-type UsePerspective = {
-  (perspectiveHandle: DatasetHandle): string | string[]
+type UsePerspectiveValue = {
+  (perspectiveHandle: {resource?: DocumentResource}): string | string[]
 }
 
-const usePerspectiveValue: UsePerspective = createStateSourceHook({
+const usePerspectiveValue: UsePerspectiveValue = createStateSourceHook({
   getState: getPerspectiveState as (
     instance: SanityInstance,
     perspectiveHandle?: {resource?: DocumentResource},
@@ -54,9 +51,7 @@ const usePerspectiveValue: UsePerspective = createStateSourceHook({
  * @public
  * @function
  */
-export const usePerspective: UsePerspective = (
-  options: WithResourceNameSupport<DatasetHandle> | undefined,
-) => {
-  const normalizedOptions = useNormalizedResourceOptions(options ?? {})
+export function usePerspective(perspectiveHandle?: ResourceHandle): string | string[] {
+  const normalizedOptions = useNormalizedResourceOptions(perspectiveHandle ?? {})
   return usePerspectiveValue(normalizedOptions)
 }

@@ -62,7 +62,7 @@ describe('SDKProvider', () => {
     })
   })
 
-  it('renders nested ResourceProviders with AuthBoundary for multiple configs', () => {
+  it('renders a single ResourceProvider using the first config when multiple configs are provided', () => {
     const configs = [
       {
         projectId: 'project-1',
@@ -80,22 +80,15 @@ describe('SDKProvider', () => {
       </SDKProvider>,
     )
 
-    // Should create two nested ResourceProviders
+    // Should create a single ResourceProvider using the first config
     const providers = getAllByTestId('resource-provider')
-    expect(providers.length).toBe(2)
+    expect(providers.length).toBe(1)
 
-    // Should create an AuthBoundary inside the innermost provider
+    // Should create an AuthBoundary inside
     expect(getByTestId('auth-boundary')).toBeInTheDocument()
 
-    // Verify each provider has the correct config - order is based on how SDKProvider creates nestings
-    // The first provider contains config[1]
+    // Verify the provider uses the first config
     expect(JSON.parse(providers[0].getAttribute('data-config') || '{}')).toEqual({
-      projectId: 'project-2',
-      dataset: 'staging',
-    })
-
-    // The second provider contains config[0]
-    expect(JSON.parse(providers[1].getAttribute('data-config') || '{}')).toEqual({
       projectId: 'project-1',
       dataset: 'production',
     })

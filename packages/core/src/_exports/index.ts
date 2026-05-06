@@ -178,11 +178,20 @@ export type {
   ValuePending,
 } from '../preview/types'
 export {type OrgVerificationResult} from '../project/organizationVerification'
-export {getProjectState, resolveProject} from '../project/project'
+export {
+  getProjectState,
+  type Project,
+  type ProjectBase,
+  type ProjectMember,
+  type ProjectMemberRole,
+  type ProjectMetadata,
+  type ProjectOptions,
+  resolveProject,
+} from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'
 export {type ProjectionValuePending, type ValidProjection} from '../projection/types'
-export {getProjectsState, resolveProjects} from '../projects/projects'
+export {getProjectsState, type ProjectsOptions, resolveProjects} from '../projects/projects'
 export {
   getQueryKey,
   getQueryState,
