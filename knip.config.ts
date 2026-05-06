@@ -65,6 +65,7 @@ const baseConfig = {
       },
       project,
       entry: ['package.bundle.ts'],
+      ignore: ['src/**/*.test-d.ts', 'src/**/*.test-d.tsx'],
       ignoreDependencies: ['@sanity/browserslist-config', 'react-compiler-runtime'],
     },
     'packages/@repo/e2e': {
@@ -81,6 +82,7 @@ const baseConfig = {
       },
       project,
       entry: ['package.bundle.ts'],
+      ignore: ['src/**/*.test-d.ts'],
       ignoreDependencies: ['@sanity/browserslist-config'],
     },
   },

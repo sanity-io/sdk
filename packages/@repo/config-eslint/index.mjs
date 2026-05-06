@@ -56,6 +56,8 @@ export default [
           devDependencies: [
             '**/*.test.ts',
             '**/*.test.tsx',
+            '**/*.test-d.ts',
+            '**/*.test-d.tsx',
             '**/test/**',
             '**/e2e/**',
             '**/config-eslint/**',
