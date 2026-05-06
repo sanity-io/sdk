@@ -84,7 +84,7 @@ export {
   type useDocumentProjectionResults,
 } from '../hooks/projection/useDocumentProjection'
 export {useProject} from '../hooks/projects/useProject'
-export {useProjects} from '../hooks/projects/useProjects'
+export {type ProjectWithoutMembers, useProjects} from '../hooks/projects/useProjects'
 export {useQuery} from '../hooks/query/useQuery'
 export {useActiveReleases} from '../hooks/releases/useActiveReleases'
 export {usePerspective} from '../hooks/releases/usePerspective'

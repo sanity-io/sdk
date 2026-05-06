@@ -99,22 +99,27 @@ function resolveProjectId(instance: SanityInstance, options?: ProjectOptions<boo
   return projectId
 }
 
+/** @internal */
+export function getProjectCacheKey(
+  instance: SanityInstance,
+  options?: ProjectOptions<boolean, boolean>,
+): string {
+  const projectId = resolveProjectId(instance, options)
+  const {includeMembers, includeFeatures} = normalizeProjectOptions(options)
+  const membersKey = includeMembers ? ':members' : ''
+  const featuresKey = includeFeatures ? ':features' : ''
+  return `project:${projectId}${membersKey}${featuresKey}`
+}
+
 const project = createFetcherStore({
   name: 'Project',
-  getKey: (instance, options?: ProjectOptions<boolean, boolean>) => {
-    const projectId = resolveProjectId(instance, options)
-    const {includeMembers, includeFeatures} = normalizeProjectOptions(options)
-    const membersKey = includeMembers ? ':members' : ''
-    const featuresKey = includeFeatures ? ':features' : ''
-    return `project:${projectId}${membersKey}${featuresKey}`
-  },
+  getKey: getProjectCacheKey,
   fetcher: (instance) => (options?: ProjectOptions<boolean, boolean>) => {
     const projectId = resolveProjectId(instance, options)
 
     return getClientState(instance, {
       apiVersion: API_VERSION,
       scope: 'global',
-      projectId,
       requestTagPrefix: 'sanity.sdk.project',
     }).observable.pipe(
       switchMap((client) => {

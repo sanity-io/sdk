@@ -28,17 +28,23 @@ function normalizeProjectsOptions(options?: ProjectsOptions<boolean, boolean>) {
   }
 }
 
+/** @internal */
+export function getProjectsCacheKey(
+  _instance: SanityInstance,
+  options?: ProjectsOptions<boolean, boolean>,
+): string {
+  const {organizationId, includeMembers, includeFeatures, onlyExplicitMembership} =
+    normalizeProjectsOptions(options)
+  const orgKey = organizationId ? `:org:${organizationId}` : ''
+  const membersKey = includeMembers ? ':members' : ''
+  const featuresKey = includeFeatures ? ':features' : ''
+  const explicitKey = onlyExplicitMembership ? ':explicit' : ''
+  return `projects${orgKey}${membersKey}${featuresKey}${explicitKey}`
+}
+
 const projects = createFetcherStore({
   name: 'Projects',
-  getKey: (_instance, options?: ProjectsOptions<boolean, boolean>) => {
-    const {organizationId, includeMembers, includeFeatures, onlyExplicitMembership} =
-      normalizeProjectsOptions(options)
-    const orgKey = organizationId ? `:org:${organizationId}` : ''
-    const membersKey = includeMembers ? ':members' : ''
-    const featuresKey = includeFeatures ? ':features' : ''
-    const explicitKey = onlyExplicitMembership ? ':explicit' : ''
-    return `projects${orgKey}${membersKey}${featuresKey}${explicitKey}`
-  },
+  getKey: getProjectsCacheKey,
   fetcher: (instance) => (options?: ProjectsOptions<boolean, boolean>) =>
     getClientState(instance, {
       apiVersion: API_VERSION,

@@ -31,6 +31,8 @@ export type ProjectWithoutMembers = Project
  * ```
  * @example
  * ```tsx
+ * const projects = useProjects()
+ * const projectsWithFeatures = useProjects()
  * const projectsWithMembers = useProjects({includeMembers: true})
  * const projectsWithoutMembers = useProjects({includeMembers: false})
  * const projectsWithoutFeatures = useProjects({includeFeatures: false})

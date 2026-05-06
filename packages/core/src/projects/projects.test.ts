@@ -5,7 +5,7 @@ import {afterEach, beforeEach, describe, it} from 'vitest'
 import {getClientState} from '../client/clientStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {resolveProjects} from './projects'
+import {getProjectsCacheKey, resolveProjects} from './projects'
 
 vi.mock('../client/clientStore')
 
@@ -69,41 +69,29 @@ describe('projects', () => {
 })
 
 describe('projects cache key generation', () => {
-  const mockGetKey = (
-    _instance: SanityInstance,
-    options?: {
-      organizationId?: string
-      includeMembers?: boolean
-      includeFeatures?: boolean
-      onlyExplicitMembership?: boolean
-    },
-  ) => {
-    const organizationId = options?.organizationId
-    const includeMembers = options?.includeMembers ?? false
-    const includeFeatures = options?.includeFeatures ?? true
-    const onlyExplicitMembership = options?.onlyExplicitMembership ?? false
-    const orgKey = organizationId ? `:org:${organizationId}` : ''
-    const membersKey = includeMembers ? ':members' : ''
-    const featuresKey = includeFeatures ? ':features' : ''
-    const explicitKey = onlyExplicitMembership ? ':explicit' : ''
-    return `projects${orgKey}${membersKey}${featuresKey}${explicitKey}`
-  }
+  let instance: SanityInstance
 
-  const mockInstance = {} as SanityInstance
+  beforeEach(() => {
+    instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  })
+
+  afterEach(() => {
+    instance.dispose()
+  })
 
   it('default call includes :features (default-true) and excludes :members (default-false)', () => {
-    expect(mockGetKey(mockInstance)).toBe('projects:features')
+    expect(getProjectsCacheKey(instance)).toBe('projects:features')
   })
 
   it('treats undefined and the matching default as the same key', () => {
-    expect(mockGetKey(mockInstance)).toBe(
-      mockGetKey(mockInstance, {includeMembers: false, includeFeatures: true}),
+    expect(getProjectsCacheKey(instance)).toBe(
+      getProjectsCacheKey(instance, {includeMembers: false, includeFeatures: true}),
     )
   })
 
   it('treats raw and explicit defaults equivalently', () => {
-    expect(mockGetKey(mockInstance, {organizationId: 'org123'})).toBe(
-      mockGetKey(mockInstance, {
+    expect(getProjectsCacheKey(instance, {organizationId: 'org123'})).toBe(
+      getProjectsCacheKey(instance, {
         organizationId: 'org123',
         includeMembers: false,
         includeFeatures: true,
@@ -113,22 +101,22 @@ describe('projects cache key generation', () => {
   })
 
   it('explicit includeFeatures: false drops the :features segment', () => {
-    expect(mockGetKey(mockInstance, {includeFeatures: false})).toBe('projects')
+    expect(getProjectsCacheKey(instance, {includeFeatures: false})).toBe('projects')
   })
 
   it('appends an org segment when organizationId is set', () => {
-    expect(mockGetKey(mockInstance, {organizationId: 'org123'})).toBe(
+    expect(getProjectsCacheKey(instance, {organizationId: 'org123'})).toBe(
       'projects:org:org123:features',
     )
   })
 
   it('appends :members when includeMembers is true', () => {
-    expect(mockGetKey(mockInstance, {includeMembers: true})).toBe('projects:members:features')
+    expect(getProjectsCacheKey(instance, {includeMembers: true})).toBe('projects:members:features')
   })
 
   it('combines all segments in order', () => {
     expect(
-      mockGetKey(mockInstance, {
+      getProjectsCacheKey(instance, {
         organizationId: 'org123',
         includeMembers: true,
         includeFeatures: true,
@@ -139,13 +127,13 @@ describe('projects cache key generation', () => {
 
   it('produces distinct keys for each meaningful option permutation', () => {
     const keys = new Set([
-      mockGetKey(mockInstance),
-      mockGetKey(mockInstance, {includeMembers: true}),
-      mockGetKey(mockInstance, {includeFeatures: false}),
-      mockGetKey(mockInstance, {includeMembers: true, includeFeatures: false}),
-      mockGetKey(mockInstance, {onlyExplicitMembership: true}),
-      mockGetKey(mockInstance, {organizationId: 'a'}),
-      mockGetKey(mockInstance, {organizationId: 'b'}),
+      getProjectsCacheKey(instance),
+      getProjectsCacheKey(instance, {includeMembers: true}),
+      getProjectsCacheKey(instance, {includeFeatures: false}),
+      getProjectsCacheKey(instance, {includeMembers: true, includeFeatures: false}),
+      getProjectsCacheKey(instance, {onlyExplicitMembership: true}),
+      getProjectsCacheKey(instance, {organizationId: 'a'}),
+      getProjectsCacheKey(instance, {organizationId: 'b'}),
     ])
     expect(keys.size).toBe(7)
   })

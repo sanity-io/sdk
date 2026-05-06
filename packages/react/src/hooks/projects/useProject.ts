@@ -24,7 +24,9 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  * ```
  * @example
  * ```tsx
+ * const projectWithMembersAndFeatures = useProject({projectId})
  * const projectWithMembers = useProject({projectId, includeMembers: true})
+ * const projectWithoutMembers = useProject({projectId, includeMembers: false})
  * const projectWithoutFeatures = useProject({projectId, includeFeatures: false})
  * ```
  * @public

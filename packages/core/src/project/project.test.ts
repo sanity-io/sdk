@@ -5,7 +5,7 @@ import {afterEach, beforeEach, describe, it} from 'vitest'
 import {getClientState} from '../client/clientStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {resolveProject} from './project'
+import {getProjectCacheKey, resolveProject} from './project'
 
 vi.mock('../client/clientStore')
 
@@ -84,45 +84,29 @@ describe('project', () => {
 })
 
 describe('project cache key generation', () => {
-  const mockGetKey = (
-    instance: SanityInstance,
-    options?: {
-      projectId?: string
-      includeMembers?: boolean
-      includeFeatures?: boolean
-    },
-  ) => {
-    const projectId = options?.projectId ?? instance.config.projectId
-    const includeMembers = options?.includeMembers ?? true
-    const includeFeatures = options?.includeFeatures ?? true
-    const membersKey = includeMembers ? ':members' : ''
-    const featuresKey = includeFeatures ? ':features' : ''
-    return `project:${projectId}${membersKey}${featuresKey}`
-  }
-
   const mockInstance = {config: {projectId: 'p'}} as SanityInstance
 
   it('default call includes :members and :features (both default-true)', () => {
-    expect(mockGetKey(mockInstance)).toBe('project:p:members:features')
+    expect(getProjectCacheKey(mockInstance)).toBe('project:p:members:features')
   })
 
   it('treats undefined and the matching default as the same key', () => {
-    expect(mockGetKey(mockInstance)).toBe(
-      mockGetKey(mockInstance, {includeMembers: true, includeFeatures: true}),
+    expect(getProjectCacheKey(mockInstance)).toBe(
+      getProjectCacheKey(mockInstance, {includeMembers: true, includeFeatures: true}),
     )
   })
 
   it('explicit includeFeatures: false drops the :features segment', () => {
-    expect(mockGetKey(mockInstance, {includeFeatures: false})).toBe('project:p:members')
+    expect(getProjectCacheKey(mockInstance, {includeFeatures: false})).toBe('project:p:members')
   })
 
   it('explicit includeMembers: false drops the :members segment', () => {
-    expect(mockGetKey(mockInstance, {includeMembers: false})).toBe('project:p:features')
+    expect(getProjectCacheKey(mockInstance, {includeMembers: false})).toBe('project:p:features')
   })
 
   it('combines all segments in order', () => {
     expect(
-      mockGetKey(mockInstance, {
+      getProjectCacheKey(mockInstance, {
         projectId: 'a',
         includeMembers: true,
         includeFeatures: true,
@@ -132,12 +116,12 @@ describe('project cache key generation', () => {
 
   it('produces distinct keys for each meaningful option permutation', () => {
     const keys = new Set([
-      mockGetKey(mockInstance),
-      mockGetKey(mockInstance, {includeMembers: false}),
-      mockGetKey(mockInstance, {includeFeatures: false}),
-      mockGetKey(mockInstance, {includeMembers: false, includeFeatures: false}),
-      mockGetKey(mockInstance, {projectId: 'a'}),
-      mockGetKey(mockInstance, {projectId: 'b'}),
+      getProjectCacheKey(mockInstance),
+      getProjectCacheKey(mockInstance, {includeMembers: false}),
+      getProjectCacheKey(mockInstance, {includeFeatures: false}),
+      getProjectCacheKey(mockInstance, {includeMembers: false, includeFeatures: false}),
+      getProjectCacheKey(mockInstance, {projectId: 'a'}),
+      getProjectCacheKey(mockInstance, {projectId: 'b'}),
     ])
     expect(keys.size).toBe(6)
   })
