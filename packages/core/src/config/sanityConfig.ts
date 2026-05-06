@@ -125,7 +125,6 @@ export interface DocumentHandle<
 export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
   /**
    * Authentication configuration for the instance
-   * @remarks Merged with parent configurations when using createChild
    */
   auth?: AuthConfig
   /**

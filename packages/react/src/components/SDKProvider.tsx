@@ -35,8 +35,6 @@ function ResetChunkReloadFlagOnMount(): null {
  * @internal
  *
  * Top-level context provider that provides access to the Sanity SDK.
- * Creates a hierarchy of ResourceProviders, each providing a SanityInstance that can be
- * accessed by hooks. The first configuration in the array becomes the default instance.
  */
 export function SDKProvider({
   children,
@@ -44,10 +42,9 @@ export function SDKProvider({
   fallback,
   ...props
 }: SDKProviderProps): ReactElement {
-  // reverse because we want the first config to be the default, but the
-  // ResourceProvider nesting makes the last one the default
-  const configs = (Array.isArray(config) ? config : [config]).slice().reverse()
-  const projectIds = configs.map((c) => c.projectId).filter((id): id is string => !!id)
+  const allConfigs = Array.isArray(config) ? config : [config]
+  const resolvedConfig = allConfigs[0]
+  const projectIds = allConfigs.map((c) => c.projectId).filter((id): id is string => !!id)
 
   // Extract static fields so the memo below doesn't take a reference dependency
   // on `config` — inline config objects change identity on every render.
@@ -69,27 +66,14 @@ export function SDKProvider({
     return explicit
   }, [defaultProjectId, defaultDataset, props.resources])
 
-  // Create a nested structure of ResourceProviders for each config
-  const createNestedProviders = (index: number): ReactElement => {
-    if (index >= configs.length) {
-      return (
-        <AuthBoundary {...props} projectIds={projectIds}>
-          <ResourcesContext.Provider value={resourcesValue}>{children}</ResourcesContext.Provider>
-        </AuthBoundary>
-      )
-    }
-
-    return (
-      <ResourceProvider {...configs[index]} fallback={fallback}>
-        {createNestedProviders(index + 1)}
-      </ResourceProvider>
-    )
-  }
-
   return (
     <ErrorBoundary FallbackComponent={ChunkAwareFallback}>
       <ResetChunkReloadFlagOnMount />
-      {createNestedProviders(0)}
+      <ResourceProvider {...resolvedConfig} fallback={fallback}>
+        <AuthBoundary {...props} projectIds={projectIds}>
+          <ResourcesContext.Provider value={resourcesValue}>{children}</ResourcesContext.Provider>
+        </AuthBoundary>
+      </ResourceProvider>
     </ErrorBoundary>
   )
 }
