@@ -157,6 +157,20 @@ export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export type {FavoriteStatusResponse} from '../favorites/favorites'
 export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
+export {
+  getOrganizationState,
+  type Organization,
+  type OrganizationBase,
+  type OrganizationMember,
+  type OrganizationOptions,
+  resolveOrganization,
+} from '../organization/organization'
+export {
+  getOrganizationsState,
+  type Organizations,
+  type OrganizationsOptions,
+  resolveOrganizations,
+} from '../organizations/organizations'
 export {getPresence} from '../presence/presenceStore'
 export type {
   DisconnectEvent,
