@@ -120,7 +120,6 @@ const project = createFetcherStore({
     return getClientState(instance, {
       apiVersion: API_VERSION,
       scope: 'global',
-      requestTagPrefix: 'sanity.sdk.project',
     }).observable.pipe(
       switchMap((client) => {
         const normalized = normalizeProjectOptions(options)
@@ -133,6 +132,7 @@ const project = createFetcherStore({
         return client.observable.request({
           uri: `/projects/${projectId}`,
           query,
+          tag: 'project.get',
         })
       }),
     )
