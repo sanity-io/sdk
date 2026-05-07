@@ -13,8 +13,8 @@ Before contributing, please read our [code of conduct](https://github.com/sanity
 
 ### Prerequisites
 
-- Node.js: Version 20.x or higher (we recommend using the LTS version)
-- pnpm: Version 8.x or higher
+- **Node.js**: see [`.nvmrc`](.nvmrc). Run `nvm use` (or your equivalent for [fnm](https://github.com/Schniz/fnm), [asdf](https://asdf-vm.com/), [Volta](https://volta.sh/), etc.) to match.
+- **pnpm**: pinned via the `packageManager` field in `package.json`. Run `corepack enable` once and pnpm will resolve to the correct version automatically.
 
 Check your versions:
 
