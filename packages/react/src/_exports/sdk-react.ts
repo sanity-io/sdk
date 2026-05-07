@@ -69,6 +69,8 @@ export {
   type DocumentsResponse,
   useDocuments,
 } from '../hooks/documents/useDocuments'
+export {useOrganization} from '../hooks/organizations/useOrganization'
+export {useOrganizations} from '../hooks/organizations/useOrganizations'
 export {
   type PaginatedDocumentsOptions,
   type PaginatedDocumentsResponse,
