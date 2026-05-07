@@ -3,21 +3,11 @@
 ## [2.11.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.10.0...sdk-react-v2.11.0) (2026-05-07)
 
 
-### ⚠ BREAKING CHANGES
-
-* drop support for Node 20 ([#846](https://github.com/sanity-io/sdk/issues/846))
-
 ### Features
 
 * add organization stores to the sdk ([#866](https://github.com/sanity-io/sdk/issues/866)) ([1d642f0](https://github.com/sanity-io/sdk/commit/1d642f09bebb483d944956038179867a6c98ed0c))
 * **core:** add other param options to projectsStore ([#865](https://github.com/sanity-io/sdk/issues/865)) ([12cd510](https://github.com/sanity-io/sdk/commit/12cd510983a1abd0690e4760e12fa127f764023c))
-* drop support for Node 20 ([#846](https://github.com/sanity-io/sdk/issues/846)) ([d8ddee9](https://github.com/sanity-io/sdk/commit/d8ddee934e8793b90fb8be27985cc0571e0b6022))
 * use single sanity instance ([#828](https://github.com/sanity-io/sdk/issues/828)) ([ec047a7](https://github.com/sanity-io/sdk/commit/ec047a7a20c2d6623afc4c58b36dfa07767f8f88))
-
-
-### Reverts
-
-* drop support for Node 20 ([#867](https://github.com/sanity-io/sdk/issues/867)) ([806c814](https://github.com/sanity-io/sdk/commit/806c814875000ac27fcabb9f48c67ca75f15bcf8))
 
 
 ### Dependencies
