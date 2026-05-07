@@ -17,21 +17,22 @@ function isLocalUrl(win: Window): boolean {
 }
 
 /**
- * Determines whether the SDK should enable dev-mode telemetry.
+ * Determines whether the SDK should enable dev-mode telemetry for the
+ * SDK consumer (i.e. a developer building an app with `@sanity/sdk`).
  *
- * Combines a browser URL check (localhost/127.0.0.1) with a Node.js
- * environment variable check (`NODE_ENV === 'development'`). Returns
- * false in production environments so bundlers can tree-shake the
- * telemetry code path entirely.
+ * Browser: returns true only when the URL is `localhost` or `127.0.0.1`.
+ * The URL check is the primary signal because consumer bundlers may or
+ * may not forward `NODE_ENV` to the browser reliably.
+ *
+ * Node (scripts / non-browser): falls back to `NODE_ENV === 'development'`.
+ *
+ * Bracket-notation `process.env['NODE_ENV']` is used to avoid bundler
+ * dead-code replacement.
  *
  * @returns True if the SDK is running in a development environment
  * @internal
  */
 export function isDevMode(): boolean {
-  if (typeof process !== 'undefined' && process.env?.['NODE_ENV'] === 'production') {
-    return false
-  }
-
   if (typeof window !== 'undefined') {
     return isLocalUrl(window)
   }
