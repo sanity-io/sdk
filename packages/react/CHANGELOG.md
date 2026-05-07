@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.11.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.10.0...sdk-react-v2.11.0) (2026-05-07)
+
+
+### Features
+
+* add organization stores to the sdk ([#866](https://github.com/sanity-io/sdk/issues/866)) ([1d642f0](https://github.com/sanity-io/sdk/commit/1d642f09bebb483d944956038179867a6c98ed0c))
+* **core:** add other param options to projectsStore ([#865](https://github.com/sanity-io/sdk/issues/865)) ([12cd510](https://github.com/sanity-io/sdk/commit/12cd510983a1abd0690e4760e12fa127f764023c))
+* use single sanity instance ([#828](https://github.com/sanity-io/sdk/issues/828)) ([ec047a7](https://github.com/sanity-io/sdk/commit/ec047a7a20c2d6623afc4c58b36dfa07767f8f88))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.11.0
+
 ## [2.10.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.9.0...sdk-react-v2.10.0) (2026-05-01)
 
 
