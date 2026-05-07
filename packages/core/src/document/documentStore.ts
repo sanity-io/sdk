@@ -59,7 +59,7 @@ import {
   type DocumentPermissionsResult,
   type Grant,
 } from './permissions'
-import {ActionError} from './processActions'
+import {ActionError} from './processActions/processActions'
 import {
   type AppliedTransaction,
   applyFirstQueuedTransaction,

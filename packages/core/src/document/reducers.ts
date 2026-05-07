@@ -11,7 +11,7 @@ import {type DocumentAction} from './actions'
 import {DOCUMENT_STATE_CLEAR_DELAY} from './documentConstants'
 import {type DocumentState, type DocumentStoreState} from './documentStore'
 import {type RemoteDocument} from './listen'
-import {ActionError, processActions} from './processActions'
+import {ActionError, processActions} from './processActions/processActions'
 import {type DocumentSet} from './processMutations'
 
 const EMPTY_REVISIONS: NonNullable<Required<DocumentState['unverifiedRevisions']>> = {}
