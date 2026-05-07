@@ -37,6 +37,7 @@ describe('projects', () => {
     expect(request).toHaveBeenCalledWith({
       uri: '/projects',
       query: {includeMembers: 'false', includeFeatures: 'true', onlyExplicitMembership: 'false'},
+      tag: 'projects.get',
     })
   })
 
@@ -64,6 +65,7 @@ describe('projects', () => {
         includeFeatures: 'false',
         onlyExplicitMembership: 'false',
       },
+      tag: 'projects.get',
     })
   })
 })
