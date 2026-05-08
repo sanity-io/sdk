@@ -3,7 +3,7 @@ import {parse} from 'groq-js'
 import {describe, expect, it} from 'vitest'
 
 import {type DocumentAction} from './actions'
-import {ActionError, processActions} from './processActions'
+import {ActionError, processActions} from './processActions/processActions'
 import {type DocumentSet} from './processMutations'
 
 // Helper: Create a sample document that conforms to SanityDocument.

@@ -7,7 +7,7 @@ import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type SelectorContext} from '../store/createStateSourceAction'
 import {MultiKeyWeakMap} from '../utils/MultiKeyWeakMap'
 import {type DocumentAction} from './actions'
-import {ActionError, PermissionActionError, processActions} from './processActions'
+import {ActionError, PermissionActionError, processActions} from './processActions/processActions'
 import {type DocumentSet} from './processMutations'
 import {type SyncTransactionState} from './reducers'
 
