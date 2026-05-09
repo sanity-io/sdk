@@ -394,8 +394,8 @@ importers:
   packages/core:
     dependencies:
       '@sanity/bifur-client':
-        specifier: ^0.4.1
-        version: 0.4.1
+        specifier: ^1.0.0
+        version: 1.0.0
       '@sanity/client':
         specifier: ^7.22.0
         version: 7.22.0
@@ -3178,6 +3178,10 @@ packages:
 
   '@sanity/bifur-client@0.4.1':
     resolution: {integrity: sha512-mHM8WR7pujbIw2qxuV0lzinS1izOoyLza/ejWV6quITTLpBhUoPIQGPER3Ar0SON5JV0VEEqkJGa1kjiYYgx2w==}
+
+  '@sanity/bifur-client@1.0.0':
+    resolution: {integrity: sha512-4cy7RytpkR0wm08EzEx9tL3XwoH7FqnAb9aUNskLmwpWzkFSs34amh19BvUq1TujmEqwCGLJARa+QWpOCoWpjw==}
+    engines: {node: '>=20.19'}
 
   '@sanity/blueprints-parser@0.3.0':
     resolution: {integrity: sha512-kS/MU3r71MXExzatvP6lCO7J/mhnmxO2qSsC+/j+YXm1qZo9BoXTRMsC8f0M/Hi5r+1i/l/6NSk3RUsNEtHAyg==}
@@ -11221,6 +11225,11 @@ snapshots:
   '@sanity/bifur-client@0.4.1':
     dependencies:
       nanoid: 3.3.11
+      rxjs: 7.8.2
+
+  '@sanity/bifur-client@1.0.0':
+    dependencies:
+      nanoid: 5.1.9
       rxjs: 7.8.2
 
   '@sanity/blueprints-parser@0.3.0': {}
