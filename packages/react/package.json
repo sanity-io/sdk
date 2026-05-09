@@ -73,7 +73,7 @@
     "@repo/package.config": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/browserslist-config": "^1.0.5",
-    "@sanity/comlink": "^3.1.1",
+    "@sanity/comlink": "^4.0.1",
     "@sanity/pkg-utils": "^8.1.29",
     "@sanity/prettier-config": "^1.0.6",
     "@testing-library/jest-dom": "^6.9.1",
