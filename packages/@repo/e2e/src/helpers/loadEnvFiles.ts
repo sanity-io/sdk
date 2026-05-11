@@ -37,7 +37,7 @@ export function loadEnvFiles(): string[] {
     if (!fs.existsSync(envFilePath)) {
       continue
     }
-    const {error} = dotenv.config({path: envFilePath})
+    const {error} = dotenv.config({path: envFilePath, quiet: true})
     if (error) {
       // eslint-disable-next-line no-console
       console.warn(`Failed to load environment variables from ${envFilePath}: ${error.message}`)
