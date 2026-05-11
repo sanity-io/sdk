@@ -430,11 +430,11 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0(react@19.2.1)
       '@sanity/types':
-        specifier: ^5.2.0
-        version: 5.5.0(@types/react@19.2.7)
+        specifier: ^5.24.0
+        version: 5.24.0(@types/react@19.2.7)
       groq:
-        specifier: 3.88.1-typegen-experimental.0
-        version: 3.88.1-typegen-experimental.0
+        specifier: 3.99.0
+        version: 3.99.0
       groq-js:
         specifier: ^1.30.1
         version: 1.30.1
@@ -509,11 +509,11 @@ importers:
         specifier: workspace:*
         version: link:../core
       '@sanity/types':
-        specifier: ^5.2.0
-        version: 5.5.0(@types/react@19.2.7)
+        specifier: ^5.24.0
+        version: 5.24.0(@types/react@19.2.7)
       groq:
-        specifier: 3.88.1-typegen-experimental.0
-        version: 3.88.1-typegen-experimental.0
+        specifier: 3.99.0
+        version: 3.99.0
       react-compiler-runtime:
         specifier: 19.1.0-rc.2
         version: 19.1.0-rc.2(react@19.2.1)
@@ -3328,8 +3328,8 @@ packages:
     peerDependencies:
       react: ^18.3 || ^19.0.0-0
 
-  '@sanity/media-library-types@1.2.0':
-    resolution: {integrity: sha512-p+Bw96I63SwBcMNA/L5dnMdEcS88EEDUDZ65LGuwOCMXrESRGMFCSxgc+0HnL0JXDIzgYgfrPuf1I3bO9QneAw==}
+  '@sanity/media-library-types@1.4.0':
+    resolution: {integrity: sha512-DZwNT+dDSc1JPW4e7U5C+IJELq5IAeU2A1UcY1079gl+Hakx2USvu5LyY1hrjb1eifRPAhL8uwOVcMNBUmSmzg==}
 
   '@sanity/message-protocol@0.12.0':
     resolution: {integrity: sha512-RMRWQG5yVkCZnnBHW3qxVbZGUOeXPBzFPdD9+pynQCTVZI7zYBEzjnY8lcSYjty+0unDHqeoqMPfBXhqs0rg2g==}
@@ -3443,6 +3443,11 @@ packages:
     resolution: {integrity: sha512-VWAUc8Xtj4IipQt99SzudRldJWHfBVnde+g5qnLZ/Nc1MpFjGiRWu/3smRN5mPOqlrtUfrr0ho/fBZnjE1CEMg==}
     peerDependencies:
       '@types/react': 18 || 19
+
+  '@sanity/types@5.24.0':
+    resolution: {integrity: sha512-d279P6BTJHk4L/qgRO7fm0JwMoOy/V4sKGmBXampmHkT07PhkK8kJubARurwKTbEDHiPJHw/OK5tPZ1QJr7O5Q==}
+    peerDependencies:
+      '@types/react': ^19.2
 
   '@sanity/types@5.5.0':
     resolution: {integrity: sha512-FIobNdhR0VsH8MDplVfFPKESieBogR+pEDzyc4FDvmGjZmIL39GATndkxVAcUXuORVPFZqrHvBYe4OquOEZYpQ==}
@@ -5585,6 +5590,10 @@ packages:
 
   groq@3.88.1-typegen-experimental.0:
     resolution: {integrity: sha512-6TZD6H1y3P7zk0BQharjFa7BOivV9nFL6KKVZbRZRH0yOSSyu2xHglTO48b1/2mCEdYoBQpvE7rjCDUf6XmQYQ==}
+    engines: {node: '>=18'}
+
+  groq@3.99.0:
+    resolution: {integrity: sha512-ZwKAWzvVCw51yjmIf5484KgsAzZAlGTM4uy9lki4PjAYxcEME2Xf93d31LhHzgUAr2JI79H+cNKoRjDHdv1BXQ==}
     engines: {node: '>=18'}
 
   groq@5.5.0:
@@ -10886,7 +10895,7 @@ snapshots:
     dependencies:
       '@portabletext/sanity-bridge': 2.0.0(@types/react@19.2.7)
       '@portabletext/schema': 2.1.1
-      '@sanity/types': 5.5.0(@types/react@19.2.7)
+      '@sanity/types': 5.24.0(@types/react@19.2.7)
     transitivePeerDependencies:
       - '@types/react'
       - supports-color
@@ -10901,7 +10910,7 @@ snapshots:
       '@portabletext/schema': 2.1.1
       '@portabletext/to-html': 5.0.1
       '@sanity/schema': 5.5.0(@types/react@19.2.7)
-      '@sanity/types': 5.5.0(@types/react@19.2.7)
+      '@sanity/types': 5.24.0(@types/react@19.2.7)
       '@xstate/react': 6.0.0(@types/react@19.2.7)(react@19.2.1)(xstate@5.25.1)
       debug: 4.4.3(supports-color@8.1.1)
       react: 19.2.1
@@ -10978,7 +10987,7 @@ snapshots:
     dependencies:
       '@portabletext/schema': 2.1.1
       '@sanity/schema': 5.5.0(@types/react@19.2.7)
-      '@sanity/types': 5.5.0(@types/react@19.2.7)
+      '@sanity/types': 5.24.0(@types/react@19.2.7)
     transitivePeerDependencies:
       - '@types/react'
       - supports-color
@@ -11294,7 +11303,7 @@ snapshots:
       '@inquirer/prompts': 8.2.0(@types/node@22.19.18)
       '@oclif/core': 4.8.0
       '@sanity/client': 7.22.0
-      '@sanity/types': 5.5.0(@types/react@19.2.7)
+      '@sanity/types': 5.24.0(@types/react@19.2.7)
       babel-plugin-react-compiler: 1.0.0
       chalk: 5.6.2
       configstore: 7.1.0
@@ -11599,7 +11608,7 @@ snapshots:
       '@sanity/color': 3.0.6
       react: 19.2.1
 
-  '@sanity/media-library-types@1.2.0': {}
+  '@sanity/media-library-types@1.4.0': {}
 
   '@sanity/message-protocol@0.12.0':
     dependencies:
@@ -11621,7 +11630,7 @@ snapshots:
       '@sanity/cli-test': 0.0.2-alpha.6(@oclif/core@4.8.0)(@sanity/cli-core@0.1.0-alpha.7(@noble/hashes@2.0.1)(@types/node@22.19.18)(@types/react@19.2.7)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.36.0)(yaml@2.8.2))(@sanity/client@7.22.0)(vitest@3.2.4(@types/node@22.19.18)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.21.0)(yaml@2.8.2))
       '@sanity/client': 7.22.0
       '@sanity/mutate': 0.15.0
-      '@sanity/types': 5.5.0(@types/react@19.2.7)
+      '@sanity/types': 5.24.0(@types/react@19.2.7)
       '@sanity/util': 5.5.0(@types/react@19.2.7)
       arrify: 2.0.1
       console-table-printer: 2.15.0
@@ -11980,13 +11989,19 @@ snapshots:
   '@sanity/types@4.22.0(@types/react@19.2.7)':
     dependencies:
       '@sanity/client': 7.22.0
-      '@sanity/media-library-types': 1.2.0
+      '@sanity/media-library-types': 1.4.0
+      '@types/react': 19.2.7
+
+  '@sanity/types@5.24.0(@types/react@19.2.7)':
+    dependencies:
+      '@sanity/client': 7.22.0
+      '@sanity/media-library-types': 1.4.0
       '@types/react': 19.2.7
 
   '@sanity/types@5.5.0(@types/react@19.2.7)':
     dependencies:
       '@sanity/client': 7.22.0
-      '@sanity/media-library-types': 1.2.0
+      '@sanity/media-library-types': 1.4.0
       '@types/react': 19.2.7
 
   '@sanity/ui@2.15.13(@emotion/is-prop-valid@1.2.2)(react-dom@19.2.1(react@19.2.1))(react-is@19.2.3)(react@19.2.1)(styled-components@6.1.18(react-dom@19.2.1(react@19.2.1))(react@19.2.1))':
@@ -13897,7 +13912,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.6.1))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.31.0)(eslint@9.25.1(jiti@2.6.1)))(eslint@9.25.1(jiti@2.6.1)):
+  eslint-module-utils@2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.6.1))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.25.1(jiti@2.6.1)):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
@@ -13919,7 +13934,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.25.1(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.6.1))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.31.0)(eslint@9.25.1(jiti@2.6.1)))(eslint@9.25.1(jiti@2.6.1))
+      eslint-module-utils: 2.12.0(@typescript-eslint/parser@8.26.1(eslint@9.25.1(jiti@2.6.1))(typescript@5.8.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.25.1(jiti@2.6.1))
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
@@ -14526,6 +14541,8 @@ snapshots:
       - supports-color
 
   groq@3.88.1-typegen-experimental.0: {}
+
+  groq@3.99.0: {}
 
   groq@5.5.0: {}
 
@@ -16579,7 +16596,7 @@ snapshots:
       '@sanity/import': 4.1.0(@types/node@22.19.18)(@types/react@19.2.7)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.36.0)(yaml@2.8.2)
       '@sanity/insert-menu': 3.0.3(@emotion/is-prop-valid@1.2.2)(@sanity/types@5.5.0(@types/react@19.2.7))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(styled-components@6.1.18(react-dom@19.2.1(react@19.2.1))(react@19.2.1))
       '@sanity/logos': 2.2.2(react@19.2.1)
-      '@sanity/media-library-types': 1.2.0
+      '@sanity/media-library-types': 1.4.0
       '@sanity/message-protocol': 0.19.0
       '@sanity/migrate': 5.2.2(@noble/hashes@2.0.1)(@types/node@22.19.18)(@types/react@19.2.7)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.36.0)(vitest@3.2.4(@types/node@22.19.18)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.21.0)(yaml@2.8.2))(yaml@2.8.2)
       '@sanity/mutator': 5.5.0(@types/react@19.2.7)
