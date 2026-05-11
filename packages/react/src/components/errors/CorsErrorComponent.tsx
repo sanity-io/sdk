@@ -1,5 +1,5 @@
 import {useMemo} from 'react'
-import {type FallbackProps} from 'react-error-boundary'
+import {type FallbackProps, getErrorMessage} from 'react-error-boundary'
 
 import {Error} from './Error'
 
@@ -30,7 +30,7 @@ export function CorsErrorComponent({projectId, error}: CorsErrorComponentProps):
             },
           }
         : {
-            description: error?.message,
+            description: getErrorMessage(error),
           })}
     />
   )
