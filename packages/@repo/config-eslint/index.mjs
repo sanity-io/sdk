@@ -124,7 +124,6 @@ export default [
     plugins: {
       'simple-import-sort': simpleImportSort,
       'unused-imports': unusedImports,
-      'import': importPlugin,
     },
     languageOptions: {
       globals: {

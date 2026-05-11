@@ -11,7 +11,7 @@ import {
   useEffectiveContextResource,
 } from '../helpers/useNormalizedResourceOptions'
 // this import is used in an `{@link useEditDocument}`
-// eslint-disable-next-line unused-imports/no-unused-imports, import/consistent-type-specifier-style
+// eslint-disable-next-line import/consistent-type-specifier-style
 import type {useEditDocument} from './useEditDocument'
 
 /**
