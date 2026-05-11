@@ -62,9 +62,9 @@
   "browserslist": "extends @sanity/browserslist-config",
   "prettier": "@sanity/prettier-config",
   "dependencies": {
-    "@sanity/bifur-client": "^0.4.1",
+    "@sanity/bifur-client": "^1.0.0",
     "@sanity/client": "^7.22.0",
-    "@sanity/comlink": "^3.1.1",
+    "@sanity/comlink": "^4.0.1",
     "@sanity/diff-match-patch": "^3.2.0",
     "@sanity/diff-patch": "^6.0.0",
     "@sanity/id-utils": "^1.0.0",
