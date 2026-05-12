@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.11.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.11.0...sdk-react-v2.11.1) (2026-05-12)
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-error-boundary to v6 ([#874](https://github.com/sanity-io/sdk/issues/874)) ([c6ab1bd](https://github.com/sanity-io/sdk/commit/c6ab1bd5d2466ed2d1d081c316073d54c7c7f043))
+* **deps:** Update sanity monorepo ([#881](https://github.com/sanity-io/sdk/issues/881)) ([639061d](https://github.com/sanity-io/sdk/commit/639061de13401fd49baf75c2c6eb1f4838a8afdc))
+* **dev-deps:** update dependency @sanity/comlink to v4 ([#875](https://github.com/sanity-io/sdk/issues/875)) ([e1dc041](https://github.com/sanity-io/sdk/commit/e1dc041acbfaf6d49ff1da4049ea3b4782b50edf))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.11.1
+
 ## [2.11.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.10.0...sdk-react-v2.11.0) (2026-05-07)
 
 
