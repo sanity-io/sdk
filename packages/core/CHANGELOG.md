@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.11.1](https://github.com/sanity-io/sdk/compare/sdk-v2.11.0...sdk-v2.11.1) (2026-05-12)
+
+
+### Bug Fixes
+
+* **auth:** keep subscription alive after /users/me fetch error ([#894](https://github.com/sanity-io/sdk/issues/894)) ([134e9e8](https://github.com/sanity-io/sdk/commit/134e9e848c365110b25b86246dab30fce86911ea))
+* **deps:** update dependency @sanity/bifur-client to v1 ([#873](https://github.com/sanity-io/sdk/issues/873)) ([2dda973](https://github.com/sanity-io/sdk/commit/2dda97336bd4efc26928095e99b351a924ca7ccd))
+* **deps:** update dependency @sanity/image-url to ^2.1.1 ([#880](https://github.com/sanity-io/sdk/issues/880)) ([b478cae](https://github.com/sanity-io/sdk/commit/b478cae97fb01aab171230fa5841de881705ff2e))
+* **deps:** update dependency zustand to ^5.0.13 ([#879](https://github.com/sanity-io/sdk/issues/879)) ([5344f3c](https://github.com/sanity-io/sdk/commit/5344f3cabe82a96265a59ae407d8581eaad9c7c2))
+* **deps:** Update sanity monorepo ([#881](https://github.com/sanity-io/sdk/issues/881)) ([639061d](https://github.com/sanity-io/sdk/commit/639061de13401fd49baf75c2c6eb1f4838a8afdc))
+* **dev-deps:** update dependency @sanity/comlink to v4 ([#875](https://github.com/sanity-io/sdk/issues/875)) ([e1dc041](https://github.com/sanity-io/sdk/commit/e1dc041acbfaf6d49ff1da4049ea3b4782b50edf))
+
 ## [2.11.0](https://github.com/sanity-io/sdk/compare/sdk-v2.10.0...sdk-v2.11.0) (2026-05-07)
 
 
