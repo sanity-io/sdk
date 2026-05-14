@@ -5,7 +5,7 @@ import {type DocumentResource} from '../config/sanityConfig'
 import {bindActionByResource} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StoreContext} from '../store/defineStore'
-import {type DocumentAction} from './actions'
+import {type Action} from './actions'
 import {documentStore, type DocumentStoreState} from './documentStore'
 import {type DocumentTransactionSubmissionResult} from './events'
 import {type DocumentSet} from './processMutations'
@@ -26,9 +26,10 @@ export interface ActionsResult<TDocument extends SanityDocument = SanityDocument
 /** @beta */
 export interface ApplyDocumentActionsOptions {
   /**
-   * List of actions to apply.
+   * List of actions to apply. Accepts both document actions and release
+   * lifecycle actions because they share the same transaction pipeline.
    */
-  actions: DocumentAction[]
+  actions: Action[]
 
   /**
    * The resource to which the documents being acted on belong.

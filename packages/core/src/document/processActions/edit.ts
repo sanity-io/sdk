@@ -9,6 +9,7 @@ import {
   ActionError,
   type ActionHandlerContext,
   type ActionHandlerResult,
+  applySingleDocPatch,
   checkGrant,
   PermissionActionError,
 } from './shared'
@@ -23,54 +24,18 @@ export function handleEdit(
   const documentId = getId(action.documentId)
 
   if (action.liveEdit) {
-    // Single-document mode (liveEdit or release perspective): edit directly without draft logic
-    const userPatches = action.patches?.map((patch) => ({patch: {id: documentId, ...patch}}))
-
-    // skip this action if there are no associated patches
-    if (!userPatches?.length) return {base, working}
-
-    if (!working[documentId] || !base[documentId]) {
-      throw new ActionError({
-        documentId,
-        transactionId,
-        message: `Cannot edit document because it does not exist.`,
-      })
-    }
-
-    const baseBefore = base[documentId] as SanityDocument
-    if (userPatches) {
-      base = processMutations({
-        documents: base,
-        transactionId,
-        mutations: userPatches,
-        timestamp,
-      })
-    }
-
-    const baseAfter = base[documentId] as SanityDocument
-    const patches = diffValue(baseBefore, baseAfter)
-
-    const workingBefore = working[documentId] as SanityDocument
-    if (!checkGrant(grants.update, workingBefore)) {
-      throw new PermissionActionError({
-        documentId,
-        transactionId,
-        message: `You do not have permission to edit document "${documentId}".`,
-      })
-    }
-
-    const workingMutations = patches.map((patch) => ({patch: {id: documentId, ...patch}}))
-
-    working = processMutations({
-      documents: working,
+    const result = applySingleDocPatch({
+      base,
+      working,
+      documentId,
+      patches: action.patches,
       transactionId,
-      mutations: workingMutations,
       timestamp,
+      grants,
     })
-
     // liveEdit documents use the mutation endpoint directly -- we don't send actions
-    outgoingMutations.push(...workingMutations)
-    return {base, working}
+    outgoingMutations.push(...result.workingMutations)
+    return {base: result.base, working: result.working}
   }
 
   const versionId = isReleasePerspective(action.perspective)

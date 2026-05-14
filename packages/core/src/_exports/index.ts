@@ -105,6 +105,7 @@ export {
   type MediaLibrarySource,
   type PerspectiveHandle,
   type ProjectHandle,
+  type ReleaseHandle,
   type ReleasePerspective,
   type SanityConfig,
   type StudioConfig,
@@ -112,19 +113,38 @@ export {
 } from '../config/sanityConfig'
 export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
 export {
+  type Action,
+  archiveRelease,
+  type ArchiveReleaseAction,
   createDocument,
   type CreateDocumentAction,
+  createRelease,
+  type CreateReleaseAction,
   deleteDocument,
   type DeleteDocumentAction,
+  deleteRelease,
+  type DeleteReleaseAction,
   discardDocument,
   type DiscardDocumentAction,
   type DocumentAction,
   editDocument,
   type EditDocumentAction,
+  editRelease,
+  type EditReleaseAction,
   publishDocument,
   type PublishDocumentAction,
+  publishRelease,
+  type PublishReleaseAction,
+  type ReleaseAction,
+  type ReleaseActionMetadata,
+  scheduleRelease,
+  type ScheduleReleaseAction,
+  unarchiveRelease,
+  type UnarchiveReleaseAction,
   unpublishDocument,
   type UnpublishDocumentAction,
+  unscheduleRelease,
+  type UnscheduleReleaseAction,
 } from '../document/actions'
 export {
   type ActionsResult,
@@ -155,6 +175,7 @@ export {
 } from '../document/events'
 export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
+export {getReleaseDocumentId} from '../document/processActions/releaseUtil'
 export type {FavoriteStatusResponse} from '../favorites/favorites'
 export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
 export {

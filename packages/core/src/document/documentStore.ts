@@ -60,6 +60,7 @@ import {
   type Grant,
 } from './permissions'
 import {ActionError} from './processActions/processActions'
+import {isReleaseAction} from './processActions/releaseUtil'
 import {
   type AppliedTransaction,
   applyFirstQueuedTransaction,
@@ -414,10 +415,11 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
           outgoing,
         }))
 
-        // Any liveEdit action in the batch routes to the mutations API. For mixed batches
-        // non-liveEdit operations (e.g. publish) lose atomicity, but that is acceptable
-        // given how rare mixed batches are.
-        if (outgoing.actions.some((action) => action.liveEdit)) {
+        // liveEdit transactions route to the mutations API; everything else routes
+        // to the actions API. processActions rejects transactions that mix the two,
+        // and reducers won't batch across that boundary, so a batch is always
+        // entirely liveEdit or entirely not.
+        if (outgoing.actions.some((action) => !isReleaseAction(action) && action.liveEdit)) {
           return client.observable
             .mutate(outgoing.outgoingMutations as Mutation[], {
               transactionId: outgoing.transactionId,
@@ -430,7 +432,6 @@ const subscribeToAppliedAndSubmitNextTransaction = ({
             .pipe(revertOnError, toResult)
         }
 
-        // Pure non-liveEdit transactions use the actions API.
         return client.observable
           .action(outgoing.outgoingActions as Action[], {
             transactionId: outgoing.transactionId,

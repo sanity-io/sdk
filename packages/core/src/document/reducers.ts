@@ -7,11 +7,12 @@ import {type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
 import {omitProperty} from '../utils/object'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
-import {type DocumentAction} from './actions'
+import {type Action} from './actions'
 import {DOCUMENT_STATE_CLEAR_DELAY} from './documentConstants'
 import {type DocumentState, type DocumentStoreState} from './documentStore'
 import {type RemoteDocument} from './listen'
 import {ActionError, processActions} from './processActions/processActions'
+import {getReleaseDocumentId, isReleaseAction} from './processActions/releaseUtil'
 import {type DocumentSet} from './processMutations'
 
 const EMPTY_REVISIONS: NonNullable<Required<DocumentState['unverifiedRevisions']>> = {}
@@ -33,11 +34,27 @@ type ActionMap = {
   delete: 'sanity.action.document.delete'
   edit: 'sanity.action.document.edit'
   publish: 'sanity.action.document.publish'
+  releaseCreate: 'sanity.action.release.create'
+  releaseEdit: 'sanity.action.release.edit'
+  releasePublish: 'sanity.action.release.publish'
+  releaseSchedule: 'sanity.action.release.schedule'
+  releaseUnschedule: 'sanity.action.release.unschedule'
+  releaseArchive: 'sanity.action.release.archive'
+  releaseUnarchive: 'sanity.action.release.unarchive'
+  releaseDelete: 'sanity.action.release.delete'
 }
 
 type OptimisticLock = {
   ifDraftRevisionId?: string
   ifPublishedRevisionId?: string
+}
+
+interface ReleaseMetadataPayload {
+  title?: string
+  description?: string
+  intendedPublishAt?: string
+  releaseType?: 'asap' | 'scheduled' | 'undecided'
+  cardinality?: 'one' | 'many'
 }
 
 export type HttpAction =
@@ -47,6 +64,18 @@ export type HttpAction =
   | {actionType: ActionMap['delete']; publishedId: string; includeDrafts?: string[]}
   | {actionType: ActionMap['edit']; draftId: string; publishedId: string; patch: PatchOperations}
   | ({actionType: ActionMap['publish']; draftId: string; publishedId: string} & OptimisticLock)
+  | {
+      actionType: ActionMap['releaseCreate']
+      releaseId: string
+      metadata?: ReleaseMetadataPayload
+    }
+  | {actionType: ActionMap['releaseEdit']; releaseId: string; patch: PatchOperations}
+  | {actionType: ActionMap['releasePublish']; releaseId: string}
+  | {actionType: ActionMap['releaseSchedule']; releaseId: string; publishAt: string}
+  | {actionType: ActionMap['releaseUnschedule']; releaseId: string}
+  | {actionType: ActionMap['releaseArchive']; releaseId: string}
+  | {actionType: ActionMap['releaseUnarchive']; releaseId: string}
+  | {actionType: ActionMap['releaseDelete']; releaseId: string}
 
 /**
  * Represents a transaction that is queued to be applied but has not yet been
@@ -63,7 +92,7 @@ export interface QueuedTransaction {
    * actions don't mention draft IDs and is meant to abstract away the draft
    * model from users.
    */
-  actions: DocumentAction[]
+  actions: Action[]
   /**
    * An optional flag set to disable this transaction from being batched with
    * other transactions.
@@ -272,7 +301,9 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
   if (next.disableBatching) return editAction
 
   // Don't batch a liveEdit edit with a non-liveEdit edit — they route to different APIs
-  if (!!action.liveEdit !== !!next.actions[0]?.liveEdit) return editAction
+  const nextFirst = next.actions[0]
+  const nextLiveEdit = nextFirst && 'liveEdit' in nextFirst ? nextFirst.liveEdit : false
+  if (!!action.liveEdit !== !!nextLiveEdit) return editAction
 
   return {
     disableBatching: false,
@@ -586,9 +617,13 @@ export function manageSubscriberIds(
 
 // document handles are passed in via the public facing API, but we also need to
 // pull the correct document ids from action bodies, which have similar but not
-// identical shapes to the document handles.
-function getDocumentIdsFromHandleLikes(handles: DocumentHandleLike[]): string[] {
+// identical shapes to the document handles. release actions also flow through
+// here, and resolve to the underlying release document id.
+function getDocumentIdsFromHandleLikes(handles: (DocumentHandleLike | Action)[]): string[] {
   return handles.flatMap((handle) => {
+    if ('type' in handle && isReleaseAction(handle)) {
+      return [getReleaseDocumentId(handle.releaseId)]
+    }
     const idsForDocument = []
     if (!handle.documentId) return []
     if (handle.liveEdit) {

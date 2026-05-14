@@ -15,7 +15,7 @@ function createReleaseMock(
   return {
     _id: id,
     _rev: 'rev',
-    _type: 'release',
+    _type: 'system.release',
     _createdAt: new Date().toISOString(),
     _updatedAt: new Date().toISOString(),
     state: 'active',

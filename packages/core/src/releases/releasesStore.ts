@@ -23,7 +23,7 @@ const STABLE_EMPTY_RELEASES: ReleaseDocument[] = []
 /**
  * Lifecycle states a release document can be in. Mirrors the server's
  * `ReleaseState`.
- * @internal
+ * @beta
  */
 export type ReleaseState =
   | 'active'
@@ -36,18 +36,40 @@ export type ReleaseState =
   | 'scheduling'
 
 /**
- * Represents a document in a Sanity dataset that represents release options.
- * @internal
+ * Represents a release document (`_.releases.<name>`) in a Sanity dataset.
+ * The shape mirrors the server-side release document and is wider than the
+ * subset surfaced through `getActiveReleasesState` (which filters to active
+ * releases only).
+ * @beta
  */
 export type ReleaseDocument = SanityDocument & {
+  _type: 'system.release'
   name: string
-  publishAt?: string
   state: ReleaseState
+  /**
+   * Server-set time at which a scheduled release will be published. Takes
+   * precedence over `metadata.intendedPublishAt`.
+   */
+  publishAt?: string
+  /**
+   * Server-set time at which the release was actually published.
+   */
+  publishedAt?: string
+  /**
+   * Populated when a release transition fails on the server.
+   */
+  error?: {message: string}
+  /**
+   * Populated for `published` releases — captures the final IDs of documents
+   * the release published.
+   */
+  finalDocumentStates?: {id: string}[]
   metadata: {
-    title: string
-    releaseType: 'asap' | 'scheduled' | 'undecided'
-    intendedPublishAt?: string
+    title?: string
     description?: string
+    intendedPublishAt?: string
+    releaseType: 'asap' | 'scheduled' | 'undecided'
+    cardinality?: 'one' | 'many'
   }
 }
 
