@@ -1,11 +1,14 @@
 import {applyDocumentActions, createSanityInstance} from '@sanity/sdk'
-import {renderHook as reactRenderHook} from '@testing-library/react'
 import {describe, it} from 'vitest'
 
 import {renderHook} from '../../../test/test-utils'
-import {SanityInstanceContext} from '../../context/SanityInstanceContext'
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useApplyDocumentActions} from './useApplyDocumentActions'
+
+// Resource resolution, mismatch detection, and context fallback are covered
+// by hooks/helpers/useApplyActions.test.tsx — both this hook and
+// useApplyReleaseActions are typed wrappers over that shared implementation.
+// These tests just verify the wrapper forwards document actions through.
 
 vi.mock('@sanity/sdk', async (importOriginal) => {
   const original = await importOriginal<typeof import('@sanity/sdk')>()
@@ -22,7 +25,7 @@ describe('useApplyDocumentActions', () => {
     vi.mocked(useSanityInstance).mockReturnValueOnce(instance)
   })
 
-  it('uses the effective context resource', async () => {
+  it('forwards a document action to applyDocumentActions with the resolved resource', () => {
     const {result} = renderHook(() => useApplyDocumentActions())
     result.current({
       type: 'document.edit',
@@ -36,168 +39,10 @@ describe('useApplyDocumentActions', () => {
           type: 'document.edit',
           documentType: 'post',
           documentId: 'abc',
-          // resource named in test-utils
           resource: {projectId: 'test', dataset: 'test'},
         },
       ],
       resource: {projectId: 'test', dataset: 'test'},
     })
-  })
-
-  it('uses the SanityInstance when resource is not provided', async () => {
-    const {result} = reactRenderHook(() => useApplyDocumentActions(), {
-      wrapper: ({children}) => (
-        <SanityInstanceContext.Provider value={instance}>{children}</SanityInstanceContext.Provider>
-      ),
-    })
-    result.current(
-      {
-        type: 'document.edit',
-        documentType: 'post',
-        documentId: 'abc',
-      },
-      {},
-    )
-
-    expect(applyDocumentActions).toHaveBeenCalledExactlyOnceWith(instance, {
-      actions: [
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'abc',
-          resource: {projectId: 'p', dataset: 'd'},
-        },
-      ],
-      resource: {projectId: 'p', dataset: 'd'},
-    })
-  })
-
-  it('resolves resource from projectId and dataset in action', async () => {
-    const {result} = renderHook(() => useApplyDocumentActions())
-    result.current({
-      type: 'document.edit',
-      documentType: 'post',
-      documentId: 'abc',
-      projectId: 'p',
-      dataset: 'd123',
-    })
-
-    expect(applyDocumentActions).toHaveBeenCalledExactlyOnceWith(instance, {
-      actions: [
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'abc',
-          resource: {projectId: 'p', dataset: 'd123'},
-        },
-      ],
-      resource: {projectId: 'p', dataset: 'd123'},
-    })
-  })
-
-  it('throws when actions have mismatched project IDs', async () => {
-    const {result} = renderHook(() => useApplyDocumentActions())
-    expect(() => {
-      result.current([
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'abc',
-          projectId: 'p123',
-          dataset: 'd',
-        },
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'def',
-          projectId: 'p456',
-          dataset: 'd',
-        },
-      ])
-    }).toThrow(/Mismatched resources found in actions/)
-  })
-
-  it('throws when actions have mismatched datasets', async () => {
-    const {result} = renderHook(() => useApplyDocumentActions())
-    expect(() => {
-      result.current([
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'abc',
-          projectId: 'p',
-          dataset: 'd1',
-        },
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'def',
-          projectId: 'p',
-          dataset: 'd2',
-        },
-      ])
-    }).toThrow(/Mismatched resources found in actions/)
-  })
-
-  it('throws when actions have mismatched resources', async () => {
-    const {result} = renderHook(() => useApplyDocumentActions())
-    expect(() => {
-      result.current([
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'abc',
-          resource: {projectId: 'p', dataset: 'd1'},
-        },
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'def',
-          resource: {projectId: 'p', dataset: 'd2'},
-        },
-      ])
-    }).toThrow(/Mismatched resources found in actions/)
-  })
-
-  it('throws when mixing projectId/dataset and resource with a mismatch (projectId first)', async () => {
-    const {result} = renderHook(() => useApplyDocumentActions())
-    expect(() => {
-      result.current([
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'abc',
-          projectId: 'p1',
-          dataset: 'd',
-        },
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'def',
-          resource: {projectId: 'p2', dataset: 'd'},
-        },
-      ])
-    }).toThrow(/Mismatched resources found in actions/)
-  })
-
-  it('throws when mixing resource and projectId/dataset with a mismatch (resource first)', async () => {
-    const {result} = renderHook(() => useApplyDocumentActions())
-    expect(() => {
-      result.current([
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'abc',
-          resource: {projectId: 'p1', dataset: 'd'},
-        },
-        {
-          type: 'document.edit',
-          documentType: 'post',
-          documentId: 'def',
-          projectId: 'p2',
-          dataset: 'd',
-        },
-      ])
-    }).toThrow(/Mismatched resources found in actions/)
   })
 })
