@@ -4,7 +4,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {getQueryState, resolveQuery} from '../query/queryStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {getActiveReleasesState, type ReleaseDocument} from './releasesStore'
+import {getActiveReleasesState, getAllReleasesState, type ReleaseDocument} from './releasesStore'
 
 // Mock dependencies
 vi.mock('../query/queryStore')
@@ -165,6 +165,54 @@ describe('releasesStore', () => {
     } as StateSource<ReleaseDocument[] | undefined>)
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(state.getCurrent()).toEqual([])
+  })
+
+  it('exposes archived/published releases through getAllReleasesState but filters them out of getActiveReleasesState', async () => {
+    const subject = new Subject<ReleaseDocument[]>()
+    vi.mocked(getQueryState).mockReturnValue({
+      subscribe: () => () => {},
+      getCurrent: () => undefined,
+      observable: subject.asObservable(),
+    } as StateSource<ReleaseDocument[] | undefined>)
+
+    const active = getActiveReleasesState(instance, {
+      resource: {projectId: 'test', dataset: 'test'},
+    })
+    const all = getAllReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
+
+    const releases: ReleaseDocument[] = [
+      {
+        _id: 'r-active',
+        _type: 'system.release',
+        name: 'r-active',
+        state: 'active',
+        metadata: {releaseType: 'asap'},
+      } as ReleaseDocument,
+      {
+        _id: 'r-archived',
+        _type: 'system.release',
+        name: 'r-archived',
+        state: 'archived',
+        metadata: {releaseType: 'asap'},
+      } as ReleaseDocument,
+      {
+        _id: 'r-published',
+        _type: 'system.release',
+        name: 'r-published',
+        state: 'published',
+        metadata: {releaseType: 'asap'},
+      } as ReleaseDocument,
+    ]
+
+    subject.next(releases)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const activeNames = active.getCurrent()?.map((r) => r.name) ?? []
+    const allNames = all.getCurrent()?.map((r) => r.name) ?? []
+
+    expect(activeNames).toEqual(['r-active'])
+    expect(allNames).toEqual(expect.arrayContaining(['r-active', 'r-archived', 'r-published']))
+    expect(allNames).toHaveLength(3)
   })
 
   it('should not crash when the releases query errors', async () => {
