@@ -38,6 +38,13 @@ describe('createTelemetryManager', () => {
 
   const getClient = () => mockClient as never
 
+  const baseOptions = {
+    sessionId: 'test-session-id',
+    getClient,
+    projectId: 'abc123',
+    environment: 'development' as const,
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -47,11 +54,7 @@ describe('createTelemetryManager', () => {
   })
 
   it('creates a batched store with the given session ID', () => {
-    createTelemetryManager({
-      sessionId: 'test-session-id',
-      getClient,
-      projectId: 'abc123',
-    })
+    createTelemetryManager(baseOptions)
 
     expect(createBatchedStore).toHaveBeenCalledWith(
       'test-session-id',
@@ -62,11 +65,7 @@ describe('createTelemetryManager', () => {
   })
 
   it('logs session started with SDK version and provided data', () => {
-    const manager = createTelemetryManager({
-      sessionId: 'test-session-id',
-      getClient,
-      projectId: 'abc123',
-    })
+    const manager = createTelemetryManager(baseOptions)
 
     const storeInstance = vi.mocked(createBatchedStore).mock.results[0].value
     const logger = storeInstance.logger
@@ -78,7 +77,7 @@ describe('createTelemetryManager', () => {
     })
 
     expect(logger.log).toHaveBeenCalledWith(
-      expect.objectContaining({name: 'SDK Dev Session Started'}),
+      expect.objectContaining({name: 'SDK Session Started'}),
       expect.objectContaining({
         version: '2.8.0-test',
         projectId: 'abc123',
@@ -89,11 +88,7 @@ describe('createTelemetryManager', () => {
   })
 
   it('deduplicates hook first-used events by name', () => {
-    const manager = createTelemetryManager({
-      sessionId: 'test-session-id',
-      getClient,
-      projectId: 'abc123',
-    })
+    const manager = createTelemetryManager(baseOptions)
 
     const storeInstance = vi.mocked(createBatchedStore).mock.results[0].value
     const logger = storeInstance.logger
@@ -111,11 +106,7 @@ describe('createTelemetryManager', () => {
   })
 
   it('tracks hooksUsed set', () => {
-    const manager = createTelemetryManager({
-      sessionId: 'test-session-id',
-      getClient,
-      projectId: 'abc123',
-    })
+    const manager = createTelemetryManager(baseOptions)
 
     manager.logHookFirstUsed('useQuery')
     manager.logHookFirstUsed('useDocument')
@@ -123,19 +114,15 @@ describe('createTelemetryManager', () => {
     expect(manager.hooksUsed).toEqual(new Set(['useQuery', 'useDocument']))
   })
 
-  it('logs dev error events', () => {
-    const manager = createTelemetryManager({
-      sessionId: 'test-session-id',
-      getClient,
-      projectId: 'abc123',
-    })
+  it('logs error events', () => {
+    const manager = createTelemetryManager(baseOptions)
 
     const storeInstance = vi.mocked(createBatchedStore).mock.results[0].value
     const logger = storeInstance.logger
 
-    manager.logDevError('TypeError', 'documentStore')
+    manager.logError('TypeError', 'documentStore')
 
-    expect(logger.log).toHaveBeenCalledWith(expect.objectContaining({name: 'SDK Dev Error'}), {
+    expect(logger.log).toHaveBeenCalledWith(expect.objectContaining({name: 'SDK Error'}), {
       errorType: 'TypeError',
       hookName: 'documentStore',
     })
@@ -144,11 +131,7 @@ describe('createTelemetryManager', () => {
   it('logs session ended with duration and hooksUsed on endSession', () => {
     vi.useFakeTimers()
 
-    const manager = createTelemetryManager({
-      sessionId: 'test-session-id',
-      getClient,
-      projectId: 'abc123',
-    })
+    const manager = createTelemetryManager(baseOptions)
 
     const storeInstance = vi.mocked(createBatchedStore).mock.results[0].value
     const logger = storeInstance.logger
@@ -160,7 +143,7 @@ describe('createTelemetryManager', () => {
     manager.endSession()
 
     expect(logger.log).toHaveBeenCalledWith(
-      expect.objectContaining({name: 'SDK Dev Session Ended'}),
+      expect.objectContaining({name: 'SDK Session Ended'}),
       expect.objectContaining({
         durationSeconds: 5,
         hooksUsed: ['useQuery'],
@@ -170,13 +153,40 @@ describe('createTelemetryManager', () => {
     vi.useRealTimers()
   })
 
+  describe('environment context', () => {
+    const getRequestBody = () => {
+      const [args] = mockClient.request.mock.calls as unknown as Array<
+        [{body: {batch: Array<{context: {environment: string}}>}}]
+      >
+      return args[0].body
+    }
+
+    it('records "development" in the enriched batch context', async () => {
+      createTelemetryManager({...baseOptions, environment: 'development'})
+
+      const storeOptions = vi.mocked(createBatchedStore).mock.calls[0][1]
+      await storeOptions.sendEvents([
+        {type: 'log', version: 1, name: 'SDK Session Started', payload: {}} as never,
+      ])
+
+      expect(getRequestBody().batch[0].context.environment).toBe('development')
+    })
+
+    it('records "production" in the enriched batch context', async () => {
+      createTelemetryManager({...baseOptions, environment: 'production'})
+
+      const storeOptions = vi.mocked(createBatchedStore).mock.calls[0][1]
+      await storeOptions.sendEvents([
+        {type: 'log', version: 1, name: 'SDK Session Started', payload: {}} as never,
+      ])
+
+      expect(getRequestBody().batch[0].context.environment).toBe('production')
+    })
+  })
+
   describe('endSession teardown', () => {
     it('always uses flush + end (no sendBeacon due to auth header limitation)', () => {
-      const manager = createTelemetryManager({
-        sessionId: 'test-session-id',
-        getClient,
-        projectId: 'abc123',
-      })
+      const manager = createTelemetryManager(baseOptions)
 
       const storeInstance = vi.mocked(createBatchedStore).mock.results[0].value
 
@@ -191,11 +201,7 @@ describe('createTelemetryManager', () => {
     it('checkConsent returns true when user has opted in', async () => {
       mockClient.request.mockResolvedValue({status: 'granted'})
 
-      const manager = createTelemetryManager({
-        sessionId: 'test-session-id',
-        getClient,
-        projectId: 'abc123',
-      })
+      const manager = createTelemetryManager(baseOptions)
 
       const result = await manager.checkConsent()
       expect(result).toBe(true)
@@ -207,11 +213,7 @@ describe('createTelemetryManager', () => {
     it('checkConsent returns false when user has denied telemetry', async () => {
       mockClient.request.mockResolvedValue({status: 'denied'})
 
-      const manager = createTelemetryManager({
-        sessionId: 'test-session-id',
-        getClient,
-        projectId: 'abc123',
-      })
+      const manager = createTelemetryManager(baseOptions)
 
       expect(await manager.checkConsent()).toBe(false)
     })
@@ -219,11 +221,7 @@ describe('createTelemetryManager', () => {
     it('checkConsent returns false when consent is unset', async () => {
       mockClient.request.mockResolvedValue({status: 'unset'})
 
-      const manager = createTelemetryManager({
-        sessionId: 'test-session-id',
-        getClient,
-        projectId: 'abc123',
-      })
+      const manager = createTelemetryManager(baseOptions)
 
       expect(await manager.checkConsent()).toBe(false)
     })
@@ -231,11 +229,7 @@ describe('createTelemetryManager', () => {
     it('checkConsent returns false on network failure', async () => {
       mockClient.request.mockRejectedValue(new Error('Network error'))
 
-      const manager = createTelemetryManager({
-        sessionId: 'test-session-id',
-        getClient,
-        projectId: 'abc123',
-      })
+      const manager = createTelemetryManager(baseOptions)
 
       expect(await manager.checkConsent()).toBe(false)
     })
@@ -243,11 +237,7 @@ describe('createTelemetryManager', () => {
     it('caches consent after the first call', async () => {
       mockClient.request.mockResolvedValue({status: 'granted'})
 
-      createTelemetryManager({
-        sessionId: 'test-session-id',
-        getClient,
-        projectId: 'abc123',
-      })
+      createTelemetryManager(baseOptions)
 
       const storeOptions = vi.mocked(createBatchedStore).mock.calls[0][1]
       const resolveConsent = storeOptions.resolveConsent

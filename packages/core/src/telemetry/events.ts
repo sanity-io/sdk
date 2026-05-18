@@ -1,15 +1,15 @@
 import {defineEvent} from '@sanity/telemetry'
 
 /** @internal */
-export const SDKDevSessionStarted = defineEvent<{
+export const SDKSessionStarted = defineEvent<{
   version: string
   projectId: string
   perspective: string
   authMethod: string
 }>({
-  name: 'SDK Dev Session Started',
+  name: 'SDK Session Started',
   version: 1,
-  description: 'SDK instance created in development mode',
+  description: 'SDK instance created (environment is recorded in the event context)',
 })
 
 /** @internal */
@@ -22,21 +22,21 @@ export const SDKHookMounted = defineEvent<{
 })
 
 /** @internal */
-export const SDKDevSessionEnded = defineEvent<{
+export const SDKSessionEnded = defineEvent<{
   durationSeconds: number
   hooksUsed: string[]
 }>({
-  name: 'SDK Dev Session Ended',
+  name: 'SDK Session Ended',
   version: 1,
-  description: 'SDK instance disposed in development mode',
+  description: 'SDK instance disposed (environment is recorded in the event context)',
 })
 
 /** @internal */
-export const SDKDevError = defineEvent<{
+export const SDKError = defineEvent<{
   errorType: string
   hookName: string
 }>({
-  name: 'SDK Dev Error',
+  name: 'SDK Error',
   version: 1,
-  description: 'Runtime error caught during SDK development',
+  description: 'Runtime error caught in the SDK',
 })
