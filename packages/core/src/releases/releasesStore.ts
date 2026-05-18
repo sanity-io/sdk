@@ -21,13 +21,28 @@ const ARCHIVED_RELEASE_STATES = ['archived', 'published']
 const STABLE_EMPTY_RELEASES: ReleaseDocument[] = []
 
 /**
+ * Lifecycle states a release document can be in. Mirrors the server's
+ * `ReleaseState`.
+ * @internal
+ */
+export type ReleaseState =
+  | 'active'
+  | 'archiving'
+  | 'unarchiving'
+  | 'archived'
+  | 'published'
+  | 'publishing'
+  | 'scheduled'
+  | 'scheduling'
+
+/**
  * Represents a document in a Sanity dataset that represents release options.
  * @internal
  */
 export type ReleaseDocument = SanityDocument & {
   name: string
   publishAt?: string
-  state: 'active' | 'scheduled'
+  state: ReleaseState
   metadata: {
     title: string
     releaseType: 'asap' | 'scheduled' | 'undecided'
@@ -38,6 +53,7 @@ export type ReleaseDocument = SanityDocument & {
 
 export interface ReleasesStoreState {
   activeReleases?: ReleaseDocument[]
+  allReleases?: ReleaseDocument[]
   error?: unknown
 }
 
@@ -45,6 +61,7 @@ export const releasesStore = defineStore<ReleasesStoreState, BoundResourceKey>({
   name: 'Releases',
   getInitialState: (): ReleasesStoreState => ({
     activeReleases: undefined,
+    allReleases: undefined,
   }),
   initialize: (context) => {
     const subscription = subscribeToReleases(context)
@@ -74,6 +91,26 @@ export const getActiveReleasesState = (
   // bindActionByResource keyFn destructures { resource } from the first param, so pass {} when no options
   _getActiveReleasesState(instance, options ?? {})
 
+/**
+ * Get every release in the store, including archived and published.
+ * @internal
+ */
+const _getAllReleasesState = bindActionByResource(
+  releasesStore,
+  createStateSourceAction({
+    selector: ({state}, _?) => state.allReleases,
+  }),
+)
+
+/**
+ * Get every release in the store, including archived and published.
+ * @internal
+ */
+export const getAllReleasesState = (
+  instance: SanityInstance,
+  options?: {resource?: DocumentResource},
+): StateSource<ReleaseDocument[] | undefined> => _getAllReleasesState(instance, options ?? {})
+
 const RELEASES_QUERY = 'releases::all()'
 
 const subscribeToReleases = ({
@@ -92,10 +129,12 @@ const subscribeToReleases = ({
       map((releases) => {
         // logic here mirrors that of studio:
         // https://github.com/sanity-io/sanity/blob/156e8fa482703d99219f08da7bacb384517f1513/packages/sanity/src/core/releases/store/useActiveReleases.ts#L29
-        state.set('setActiveReleases', {
-          activeReleases: sortReleases(releases ?? STABLE_EMPTY_RELEASES)
-            .filter((release) => !ARCHIVED_RELEASE_STATES.includes(release.state))
-            .reverse(),
+        const sorted = sortReleases(releases ?? STABLE_EMPTY_RELEASES).reverse()
+        state.set('setReleases', {
+          allReleases: sorted,
+          activeReleases: sorted.filter(
+            (release) => !ARCHIVED_RELEASE_STATES.includes(release.state),
+          ),
         })
       }),
     )

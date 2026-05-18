@@ -14,21 +14,6 @@ import {
   type WithResourceNameSupport,
 } from '../helpers/useNormalizedResourceOptions'
 
-/**
- * @public
-
- * Returns the active releases for the current project,
- * represented as a list of release documents.
- *
- * @returns The active releases for the current project.
- * @category Projects
- * @example
- * ```tsx
- * import {useActiveReleases} from '@sanity/sdk-react'
- *
- * const activeReleases = useActiveReleases()
- * ```
- */
 type UseActiveReleasesValue = {
   (options?: {resource?: DocumentResource}): ReleaseDocument[]
 }
@@ -49,6 +34,18 @@ const useActiveReleasesValue: UseActiveReleasesValue = createStateSourceHook({
 /**
  * @public
  * @function
+ *
+ * Returns the active releases for the current project,
+ * represented as a list of release documents.
+ *
+ * @returns The active releases for the current project.
+ * @category Releases
+ * @example
+ * ```tsx
+ * import {useActiveReleases} from '@sanity/sdk-react'
+ *
+ * const activeReleases = useActiveReleases()
+ * ```
  */
 export function useActiveReleases(
   options?: WithResourceNameSupport<SanityConfig> | undefined,

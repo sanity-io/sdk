@@ -1,21 +1,20 @@
-import {getActiveReleasesState, type ReleaseDocument} from '@sanity/sdk'
+import {getAllReleasesState, type ReleaseDocument} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {BehaviorSubject} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
-import {useActiveReleases} from './useActiveReleases'
+import {useAllReleases} from './useAllReleases'
 
-// Mock the getActiveReleasesState function
 vi.mock('@sanity/sdk', async () => {
   const actual = await vi.importActual('@sanity/sdk')
   return {
     ...actual,
-    getActiveReleasesState: vi.fn(),
+    getAllReleasesState: vi.fn(),
   }
 })
 
-describe('useActiveReleases', () => {
+describe('useAllReleases', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -31,12 +30,12 @@ describe('useActiveReleases', () => {
       observable: mockSubject,
     }
 
-    vi.mocked(getActiveReleasesState).mockReturnValue(mockStateSource)
+    vi.mocked(getAllReleasesState).mockReturnValue(mockStateSource)
 
     const {result} = renderHook(
       () => {
         try {
-          return useActiveReleases()
+          return useAllReleases()
         } catch (e) {
           return e
         }
@@ -53,16 +52,19 @@ describe('useActiveReleases', () => {
     expect(result.current).toBeInstanceOf(Promise)
     expect(mockStateSource.getCurrent).toHaveBeenCalled()
 
-    const resolved: ReleaseDocument[] = [{_id: 'release1', _type: 'release'} as ReleaseDocument]
+    const resolved: ReleaseDocument[] = [
+      {_id: 'r-active', _type: 'system.release', state: 'active'} as ReleaseDocument,
+    ]
     mockSubject.next(resolved)
 
     await expect(result.current).resolves.toEqual(resolved)
   })
 
-  it('should resolve with releases when data is available', () => {
+  it('returns every release including archived and published once loaded', () => {
     const mockReleases: ReleaseDocument[] = [
-      {_id: 'release1', _type: 'release'} as ReleaseDocument,
-      {_id: 'release2', _type: 'release'} as ReleaseDocument,
+      {_id: 'r-active', _type: 'system.release', state: 'active'} as ReleaseDocument,
+      {_id: 'r-archived', _type: 'system.release', state: 'archived'} as ReleaseDocument,
+      {_id: 'r-published', _type: 'system.release', state: 'published'} as ReleaseDocument,
     ]
 
     const mockSubject = new BehaviorSubject<ReleaseDocument[]>(mockReleases)
@@ -75,9 +77,9 @@ describe('useActiveReleases', () => {
       observable: mockSubject,
     }
 
-    vi.mocked(getActiveReleasesState).mockReturnValue(mockStateSource)
+    vi.mocked(getAllReleasesState).mockReturnValue(mockStateSource)
 
-    const {result} = renderHook(() => useActiveReleases(), {
+    const {result} = renderHook(() => useAllReleases(), {
       wrapper: ({children}) => (
         <ResourceProvider projectId="p" dataset="d" fallback={<p>Loading...</p>}>
           {children}
@@ -85,7 +87,6 @@ describe('useActiveReleases', () => {
       ),
     })
 
-    // Verify that the hook returned the releases without suspending
     expect(result.current).toEqual(mockReleases)
     expect(mockStateSource.getCurrent).toHaveBeenCalled()
   })
