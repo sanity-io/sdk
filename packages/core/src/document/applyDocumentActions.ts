@@ -2,7 +2,7 @@ import {type SanityDocument} from 'groq'
 import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
 
 import {type DocumentResource} from '../config/sanityConfig'
-import {bindActionByResource} from '../store/createActionBinder'
+import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StoreContext} from '../store/defineStore'
 import {type Action} from './actions'
@@ -10,6 +10,7 @@ import {documentStore, type DocumentStoreState} from './documentStore'
 import {type DocumentTransactionSubmissionResult} from './events'
 import {type DocumentSet} from './processMutations'
 import {type AppliedTransaction, type QueuedTransaction, queueTransaction} from './reducers'
+import {normalizeActionsForResource} from './resourceRules'
 
 /** @beta */
 export interface ActionsResult<TDocument extends SanityDocument = SanityDocument> {
@@ -72,14 +73,16 @@ const boundApplyDocumentActions = bindActionByResource(documentStore, _applyDocu
 
 /** @internal */
 async function _applyDocumentActions(
-  {state}: StoreContext<DocumentStoreState>,
+  {state, key: boundKey}: StoreContext<DocumentStoreState, BoundResourceKey>,
   {actions, transactionId = crypto.randomUUID(), disableBatching}: ApplyDocumentActionsOptions,
 ): Promise<ActionsResult> {
   const {events} = state.get()
 
+  const normalizedActions = normalizeActionsForResource(actions, boundKey?.resource)
+
   const transaction: QueuedTransaction = {
     transactionId,
-    actions,
+    actions: normalizedActions,
     ...(disableBatching && {disableBatching}),
   }
 
