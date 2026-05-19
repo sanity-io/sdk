@@ -1,6 +1,6 @@
 import {type SanityInstance} from '../store/createSanityInstance'
 import {createLogger} from '../utils/logger'
-import {isDevMode} from './devMode'
+import {getTelemetryEnvironment} from './environment'
 import {type TelemetryManager} from './telemetryManager'
 
 const DEFAULT_TELEMETRY_API_VERSION = '2024-11-12'
@@ -20,10 +20,23 @@ const pendingHooks = new WeakMap<SanityInstance, Set<string>>()
 const initInFlight = new WeakSet<SanityInstance>()
 
 /**
- * Initializes dev-mode telemetry for a SDK instance if the environment
- * qualifies. Both `telemetryManager` and `clientStore` are dynamically
- * imported to avoid circular dependencies and to keep telemetry code
- * out of production bundles via code splitting.
+ * Initializes telemetry for a SDK instance if the runtime environment
+ * qualifies. The environment is resolved by `getTelemetryEnvironment()`:
+ *
+ * - `'development'` — local dev servers (`localhost` / `127.0.0.1`, or
+ *   Node with `NODE_ENV=development`). This is the original opt-in
+ *   surface.
+ * - `'production'` — apps deployed to Sanity-controlled domains
+ *   (e.g. `*.sanity.studio`, the dashboard). End users are
+ *   authenticated Sanity users with Populus consent records, so we
+ *   apply the same consent gate as the Studio's `telemetry-sink`.
+ *
+ * Apps on customer-controlled domains return `null` and skip telemetry
+ * entirely.
+ *
+ * `telemetryManager` and `clientStore` are dynamically imported so the
+ * telemetry code path stays out of production bundles for apps that
+ * don't qualify. Only the lightweight environment check runs at boot.
  *
  * The `projectId` must be passed explicitly because the resource
  * configuration is typically set by the React layer after the
@@ -32,8 +45,9 @@ const initInFlight = new WeakSet<SanityInstance>()
  * @internal
  */
 export function initTelemetry(instance: SanityInstance, projectId: string): void {
-  if (!isDevMode()) {
-    logger.trace('initTelemetry skipped: not dev mode', {internal: true})
+  const environment = getTelemetryEnvironment()
+  if (!environment) {
+    logger.trace('initTelemetry skipped: environment not eligible', {internal: true})
     return
   }
   if (!projectId) {
@@ -45,7 +59,7 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
   }
   initInFlight.add(instance)
 
-  logger.debug('initializing telemetry', {projectId})
+  logger.debug('initializing telemetry', {projectId, environment})
 
   Promise.all([
     import('./telemetryManager'),
@@ -77,15 +91,23 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
             cleanup.unsubscribe()
             resolve(false)
           })
+          // The token observable is a `shareReplay({bufferSize: 1, refCount: true})`
+          // (see `createStateSourceAction`), so it can deliver a buffered value
+          // synchronously while we're still inside `.subscribe(cb)`. At that
+          // moment `sub` is in the TDZ, so the callback can't reach it. We
+          // gate on a `received` flag and let the post-subscribe block do the
+          // unsubscribe in the sync-emission case.
+          let received = false
           const sub = getTokenState(instance).observable.subscribe((t) => {
-            if (t) {
-              logger.debug('auth token received')
-              sub.unsubscribe()
-              unsub()
-              resolve(true)
-            }
+            if (received || !t) return
+            received = true
+            logger.debug('auth token received')
+            unsub()
+            resolve(true)
+            cleanup.unsubscribe()
           })
           cleanup.unsubscribe = () => sub.unsubscribe()
+          if (received) cleanup.unsubscribe()
         })
         if (!hasToken || instance.isDisposed()) {
           initInFlight.delete(instance)
@@ -98,6 +120,7 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
         sessionId: instance.instanceId,
         getClient: () => getClient(instance, {apiVersion: DEFAULT_TELEMETRY_API_VERSION}),
         projectId,
+        environment,
       })
 
       const consented = await manager.checkConsent()
@@ -128,7 +151,7 @@ export function initTelemetry(instance: SanityInstance, projectId: string): void
           ? 'studio'
           : 'default'
 
-      logger.info('telemetry session started', {projectId, perspective, authMethod})
+      logger.info('telemetry session started', {projectId, perspective, authMethod, environment})
       manager.logSessionStarted({
         projectId,
         perspective,
@@ -165,7 +188,7 @@ export function getTelemetryManager(instance: SanityInstance): TelemetryManager 
  * @internal
  */
 export function trackHookMounted(instance: SanityInstance, hookName: string): void {
-  if (!isDevMode()) return
+  if (!getTelemetryEnvironment()) return
 
   const manager = findManager(instance)
   if (manager) {

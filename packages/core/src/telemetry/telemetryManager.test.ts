@@ -38,6 +38,13 @@ describe('createTelemetryManager', () => {
 
   const getClient = () => mockClient as never
 
+  const baseOptions = {
+    sessionId: 'test-session-id',
+    getClient,
+    projectId: 'abc123',
+    environment: 'development' as const,
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -47,11 +54,7 @@ describe('createTelemetryManager', () => {
   })
 
   it('creates a batched store with the given session ID', () => {
-    createTelemetryManager({
-      sessionId: 'test-session-id',
-      getClient,
-      projectId: 'abc123',
-    })
+    createTelemetryManager(baseOptions)
 
     expect(createBatchedStore).toHaveBeenCalledWith(
       'test-session-id',
@@ -62,11 +65,7 @@ describe('createTelemetryManager', () => {
   })
 
   it('logs session started with SDK version and provided data', () => {
-    const manager = createTelemetryManager({
-      sessionId: 'test-session-id',
-      getClient,
-      projectId: 'abc123',
-    })
+    const manager = createTelemetryManager(baseOptions)
 
     const storeInstance = vi.mocked(createBatchedStore).mock.results[0].value
     const logger = storeInstance.logger
@@ -78,7 +77,7 @@ describe('createTelemetryManager', () => {
     })
 
     expect(logger.log).toHaveBeenCalledWith(
-      expect.objectContaining({name: 'SDK Dev Session Started'}),
+      expect.objectContaining({name: 'SDK Session Started'}),
       expect.objectContaining({
         version: '2.8.0-test',
         projectId: 'abc123',
@@ -89,11 +88,7 @@ describe('createTelemetryManager', () => {
   })
 
   it('deduplicates hook first-used events by name', () => {
-    const manager = createTelemetryManager({
-      sessionId: 'test-session-id',
-      getClient,
-      projectId: 'abc123',
-    })
+    const manager = createTelemetryManager(baseOptions)
 
     const storeInstance = vi.mocked(createBatchedStore).mock.results[0].value
     const logger = storeInstance.logger
@@ -111,11 +106,7 @@ describe('createTelemetryManager', () => {
   })
 
   it('tracks hooksUsed set', () => {
-    const manager = createTelemetryManager({
-      sessionId: 'test-session-id',
-      getClient,
-      projectId: 'abc123',
-    })
+    const manager = createTelemetryManager(baseOptions)
 
     manager.logHookFirstUsed('useQuery')
     manager.logHookFirstUsed('useDocument')
@@ -123,19 +114,15 @@ describe('createTelemetryManager', () => {
     expect(manager.hooksUsed).toEqual(new Set(['useQuery', 'useDocument']))
   })
 
-  it('logs dev error events', () => {
-    const manager = createTelemetryManager({
-      sessionId: 'test-session-id',
-      getClient,
-      projectId: 'abc123',
-    })
+  it('logs error events', () => {
+    const manager = createTelemetryManager(baseOptions)
 
     const storeInstance = vi.mocked(createBatchedStore).mock.results[0].value
     const logger = storeInstance.logger
 
-    manager.logDevError('TypeError', 'documentStore')
+    manager.logError('TypeError', 'documentStore')
 
-    expect(logger.log).toHaveBeenCalledWith(expect.objectContaining({name: 'SDK Dev Error'}), {
+    expect(logger.log).toHaveBeenCalledWith(expect.objectContaining({name: 'SDK Error'}), {
       errorType: 'TypeError',
       hookName: 'documentStore',
     })
@@ -144,11 +131,7 @@ describe('createTelemetryManager', () => {
   it('logs session ended with duration and hooksUsed on endSession', () => {
     vi.useFakeTimers()
 
-    const manager = createTelemetryManager({
-      sessionId: 'test-session-id',
-      getClient,
-      projectId: 'abc123',
-    })
+    const manager = createTelemetryManager(baseOptions)
 
     const storeInstance = vi.mocked(createBatchedStore).mock.results[0].value
     const logger = storeInstance.logger
@@ -160,7 +143,7 @@ describe('createTelemetryManager', () => {
     manager.endSession()
 
     expect(logger.log).toHaveBeenCalledWith(
-      expect.objectContaining({name: 'SDK Dev Session Ended'}),
+      expect.objectContaining({name: 'SDK Session Ended'}),
       expect.objectContaining({
         durationSeconds: 5,
         hooksUsed: ['useQuery'],
@@ -170,13 +153,114 @@ describe('createTelemetryManager', () => {
     vi.useRealTimers()
   })
 
+  describe('environment context', () => {
+    type EnrichedContext = {
+      environment?: string
+      version?: string
+      origin?: string
+      traceCorrelationId?: string
+    }
+    type EnrichedEvent = {
+      type?: string
+      name?: string
+      version?: number
+      traceId?: string
+      sessionId?: string
+      createdAt?: string
+      data?: unknown
+      context: EnrichedContext
+    }
+    const getRequestBody = () => {
+      const [args] = mockClient.request.mock.calls as unknown as Array<
+        [{body: {batch: EnrichedEvent[]}}]
+      >
+      return args[0].body
+    }
+
+    it('records "development" in the enriched batch context and preserves the event payload', async () => {
+      createTelemetryManager({...baseOptions, environment: 'development'})
+
+      const storeOptions = vi.mocked(createBatchedStore).mock.calls[0][1]
+      await storeOptions.sendEvents([
+        {
+          type: 'log',
+          version: 1,
+          name: 'SDK Session Started',
+          sessionId: 'test-session-id',
+          createdAt: '2026-01-01T00:00:00Z',
+          data: {projectId: 'p1'},
+        } as never,
+      ])
+
+      const [event] = getRequestBody().batch
+      expect(event.context.environment).toBe('development')
+      expect(event.type).toBe('log')
+      expect(event.name).toBe('SDK Session Started')
+      expect(event.version).toBe(1)
+      expect(event.sessionId).toBe('test-session-id')
+      expect(event.data).toEqual({projectId: 'p1'})
+    })
+
+    it('records "production" in the enriched batch context', async () => {
+      createTelemetryManager({...baseOptions, environment: 'production'})
+
+      const storeOptions = vi.mocked(createBatchedStore).mock.calls[0][1]
+      await storeOptions.sendEvents([
+        {
+          type: 'log',
+          version: 1,
+          name: 'SDK Session Started',
+          sessionId: 'test-session-id',
+          createdAt: '2026-01-01T00:00:00Z',
+          data: {},
+        } as never,
+      ])
+
+      expect(getRequestBody().batch[0].context.environment).toBe('production')
+    })
+
+    it('preserves pre-existing context fields from trace events and lets SDK fields take precedence on conflict', async () => {
+      // Trace events from `@sanity/telemetry` arrive with a top-level
+      // `context` (see `TelemetryTraceStartEvent`, etc.). Replacing rather
+      // than merging would silently drop those fields. The SDK-managed
+      // fields (`version`, `environment`, `origin`) should also win on key
+      // collision so they remain authoritative. The rest of the trace
+      // event (`type`, `name`, `traceId`, `sessionId`, `createdAt`) must
+      // survive — downstream consumers (Rudderstack via telemetry-sink)
+      // read those fields directly off each batch entry.
+      createTelemetryManager({...baseOptions, environment: 'production'})
+
+      const storeOptions = vi.mocked(createBatchedStore).mock.calls[0][1]
+      await storeOptions.sendEvents([
+        {
+          type: 'trace.start',
+          name: 'some.trace',
+          version: 1,
+          traceId: 't1',
+          sessionId: 'test-session-id',
+          createdAt: '2026-01-01T00:00:00Z',
+          context: {
+            traceCorrelationId: 'abc-123',
+            environment: 'should-be-overwritten',
+          },
+        } as never,
+      ])
+
+      const [event] = getRequestBody().batch
+      expect(event.context.traceCorrelationId).toBe('abc-123')
+      expect(event.context.environment).toBe('production')
+      expect(event.context.version).toBe('2.8.0-test')
+      expect(event.type).toBe('trace.start')
+      expect(event.name).toBe('some.trace')
+      expect(event.traceId).toBe('t1')
+      expect(event.sessionId).toBe('test-session-id')
+      expect(event.createdAt).toBe('2026-01-01T00:00:00Z')
+    })
+  })
+
   describe('endSession teardown', () => {
     it('always uses flush + end (no sendBeacon due to auth header limitation)', () => {
-      const manager = createTelemetryManager({
-        sessionId: 'test-session-id',
-        getClient,
-        projectId: 'abc123',
-      })
+      const manager = createTelemetryManager(baseOptions)
 
       const storeInstance = vi.mocked(createBatchedStore).mock.results[0].value
 
@@ -191,11 +275,7 @@ describe('createTelemetryManager', () => {
     it('checkConsent returns true when user has opted in', async () => {
       mockClient.request.mockResolvedValue({status: 'granted'})
 
-      const manager = createTelemetryManager({
-        sessionId: 'test-session-id',
-        getClient,
-        projectId: 'abc123',
-      })
+      const manager = createTelemetryManager(baseOptions)
 
       const result = await manager.checkConsent()
       expect(result).toBe(true)
@@ -207,11 +287,7 @@ describe('createTelemetryManager', () => {
     it('checkConsent returns false when user has denied telemetry', async () => {
       mockClient.request.mockResolvedValue({status: 'denied'})
 
-      const manager = createTelemetryManager({
-        sessionId: 'test-session-id',
-        getClient,
-        projectId: 'abc123',
-      })
+      const manager = createTelemetryManager(baseOptions)
 
       expect(await manager.checkConsent()).toBe(false)
     })
@@ -219,11 +295,7 @@ describe('createTelemetryManager', () => {
     it('checkConsent returns false when consent is unset', async () => {
       mockClient.request.mockResolvedValue({status: 'unset'})
 
-      const manager = createTelemetryManager({
-        sessionId: 'test-session-id',
-        getClient,
-        projectId: 'abc123',
-      })
+      const manager = createTelemetryManager(baseOptions)
 
       expect(await manager.checkConsent()).toBe(false)
     })
@@ -231,11 +303,7 @@ describe('createTelemetryManager', () => {
     it('checkConsent returns false on network failure', async () => {
       mockClient.request.mockRejectedValue(new Error('Network error'))
 
-      const manager = createTelemetryManager({
-        sessionId: 'test-session-id',
-        getClient,
-        projectId: 'abc123',
-      })
+      const manager = createTelemetryManager(baseOptions)
 
       expect(await manager.checkConsent()).toBe(false)
     })
@@ -243,11 +311,7 @@ describe('createTelemetryManager', () => {
     it('caches consent after the first call', async () => {
       mockClient.request.mockResolvedValue({status: 'granted'})
 
-      createTelemetryManager({
-        sessionId: 'test-session-id',
-        getClient,
-        projectId: 'abc123',
-      })
+      createTelemetryManager(baseOptions)
 
       const storeOptions = vi.mocked(createBatchedStore).mock.calls[0][1]
       const resolveConsent = storeOptions.resolveConsent
