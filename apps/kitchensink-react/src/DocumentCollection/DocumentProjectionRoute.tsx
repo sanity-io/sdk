@@ -121,7 +121,9 @@ function AuthorRow({
 }) {
   return (
     <TR data-testid={`author-row-${docHandle.documentId}`}>
-      <ErrorBoundary fallbackRender={({error}) => <ProjectionError error={error} />}>
+      <ErrorBoundary
+        fallbackRender={({error}) => <ProjectionError error={error as unknown as Error} />}
+      >
         <Suspense fallback={<ProjectionFallback />}>
           <ProjectionData docHandle={docHandle} projectionType={projectionType} />
         </Suspense>

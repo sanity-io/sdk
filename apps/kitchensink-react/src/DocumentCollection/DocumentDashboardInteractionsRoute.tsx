@@ -44,7 +44,7 @@ function FavoriteButton({docHandle}: {docHandle: DocumentHandle}) {
   const {favorite, unfavorite, isFavorited} = useManageFavorite(studioResource)
 
   return (
-    <ErrorBoundary fallbackRender={({error}) => <ButtonError error={error} />}>
+    <ErrorBoundary fallbackRender={({error}) => <ButtonError error={error as unknown as Error} />}>
       <Button
         mode="ghost"
         onClick={() => {
@@ -66,7 +66,7 @@ const ViewButton = ({docHandle}: {docHandle: DocumentHandle}) => {
     resourceType: 'studio',
   })
   return (
-    <ErrorBoundary fallbackRender={({error}) => <ButtonError error={error} />}>
+    <ErrorBoundary fallbackRender={({error}) => <ButtonError error={error as unknown as Error} />}>
       <Button mode="ghost" onClick={() => recordEvent('viewed')} text="Record view" />
     </ErrorBoundary>
   )
@@ -78,7 +78,7 @@ const NavigateToStudioButton = ({docHandle}: {docHandle: DocumentHandle}) => {
     'https://test-studio.sanity.build',
   )
   return (
-    <ErrorBoundary fallbackRender={({error}) => <ButtonError error={error} />}>
+    <ErrorBoundary fallbackRender={({error}) => <ButtonError error={error as unknown as Error} />}>
       <Button mode="ghost" onClick={navigateToStudioDocument} text="Edit in Studio" />
     </ErrorBoundary>
   )
