@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "./scripts/format-on-edit.sh"
+      }
+    ]
+  }
+}
