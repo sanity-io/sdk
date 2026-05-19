@@ -97,14 +97,20 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
   }
 
   const enrichBatch = (batch: TelemetryEvent[]) =>
-    batch.map((event) => ({
-      ...event,
-      context: {
-        version: CORE_SDK_VERSION,
-        environment,
-        origin: typeof window !== 'undefined' ? window.location.origin : 'node',
-      },
-    }))
+    batch.map((event) => {
+      // Trace events arrive with their own `context`; merge so we don't
+      // drop it. SDK-owned fields below win on conflict.
+      const existing = (event as {context?: Record<string, unknown>}).context
+      return {
+        ...event,
+        context: {
+          ...existing,
+          version: CORE_SDK_VERSION,
+          environment,
+          origin: typeof window !== 'undefined' ? window.location.origin : 'node',
+        },
+      }
+    })
 
   const sendEvents = async (batch: TelemetryEvent[]): Promise<unknown> => {
     const client = getClient()

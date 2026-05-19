@@ -49,12 +49,17 @@ describe('getTelemetryEnvironment', () => {
       expect(getTelemetryEnvironment()).toBeNull()
     })
 
-    it('returns null on a lookalike domain (suffix match must be a true subdomain)', () => {
-      // "notsanity.studio" should not match ".sanity.studio"
+    it('returns null on a lookalike subdomain (suffix match requires a leading dot)', () => {
+      // `evilsanity.studio` ends in `sanity.studio` but not `.sanity.studio`,
+      // so the suffix check rejects it.
       vi.stubGlobal('window', {location: {hostname: 'evilsanity.studio'}})
-      // endsWith('.sanity.studio') is false for 'evilsanity.studio' because
-      // there's no leading dot — but to be safe, also test 'sanity.studio'
-      // apex which lacks a subdomain prefix.
+      expect(getTelemetryEnvironment()).toBeNull()
+    })
+
+    it('returns null on the bare apex hostname (sanity.studio with no subdomain)', () => {
+      // The allowlist intentionally only matches subdomains (the leading
+      // `.` in `.sanity.studio` means the apex `sanity.studio` is excluded).
+      vi.stubGlobal('window', {location: {hostname: 'sanity.studio'}})
       expect(getTelemetryEnvironment()).toBeNull()
     })
 

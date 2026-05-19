@@ -154,9 +154,15 @@ describe('createTelemetryManager', () => {
   })
 
   describe('environment context', () => {
+    type EnrichedContext = {
+      environment?: string
+      version?: string
+      origin?: string
+      traceCorrelationId?: string
+    }
     const getRequestBody = () => {
       const [args] = mockClient.request.mock.calls as unknown as Array<
-        [{body: {batch: Array<{context: {environment: string}}>}}]
+        [{body: {batch: Array<{context: EnrichedContext}>}}]
       >
       return args[0].body
     }
@@ -181,6 +187,36 @@ describe('createTelemetryManager', () => {
       ])
 
       expect(getRequestBody().batch[0].context.environment).toBe('production')
+    })
+
+    it('preserves pre-existing context fields from trace events and lets SDK fields take precedence on conflict', async () => {
+      // Trace events from `@sanity/telemetry` arrive with a top-level
+      // `context` (see `TelemetryTraceStartEvent`, etc.). Replacing rather
+      // than merging would silently drop those fields. The SDK-managed
+      // fields (`version`, `environment`, `origin`) should also win on key
+      // collision so they remain authoritative.
+      createTelemetryManager({...baseOptions, environment: 'production'})
+
+      const storeOptions = vi.mocked(createBatchedStore).mock.calls[0][1]
+      await storeOptions.sendEvents([
+        {
+          type: 'trace.start',
+          name: 'some.trace',
+          version: 1,
+          traceId: 't1',
+          sessionId: 'test-session-id',
+          createdAt: '2026-01-01T00:00:00Z',
+          context: {
+            traceCorrelationId: 'abc-123',
+            environment: 'should-be-overwritten',
+          },
+        } as never,
+      ])
+
+      const ctx = getRequestBody().batch[0].context
+      expect(ctx.traceCorrelationId).toBe('abc-123')
+      expect(ctx.environment).toBe('production')
+      expect(ctx.version).toBe('2.8.0-test')
     })
   })
 
