@@ -12,7 +12,7 @@ export function handleReleaseArchive(
   action: ArchiveReleaseAction,
   ctx: ActionHandlerContext,
 ): ActionHandlerResult {
-  const {base, working, grants, outgoingActions, transactionId} = ctx
+  const {base, working, grants, outgoingActions, transactionId, identity} = ctx
 
   const releaseDocumentId = getReleaseDocumentId(action.releaseId)
   const existing = working[releaseDocumentId] ?? base[releaseDocumentId]
@@ -24,7 +24,7 @@ export function handleReleaseArchive(
     })
   }
 
-  if (!checkGrant(grants.update, existing)) {
+  if (!checkGrant(grants.update, existing, identity)) {
     throw new PermissionActionError({
       documentId: releaseDocumentId,
       transactionId,
@@ -48,7 +48,7 @@ export function handleReleaseUnarchive(
   action: UnarchiveReleaseAction,
   ctx: ActionHandlerContext,
 ): ActionHandlerResult {
-  const {base, working, grants, outgoingActions, transactionId} = ctx
+  const {base, working, grants, outgoingActions, transactionId, identity} = ctx
 
   const releaseDocumentId = getReleaseDocumentId(action.releaseId)
   const existing = working[releaseDocumentId] ?? base[releaseDocumentId]
@@ -60,7 +60,7 @@ export function handleReleaseUnarchive(
     })
   }
 
-  if (!checkGrant(grants.update, existing)) {
+  if (!checkGrant(grants.update, existing, identity)) {
     throw new PermissionActionError({
       documentId: releaseDocumentId,
       transactionId,

@@ -16,7 +16,7 @@ export function handleCreate(
   action: CreateDocumentAction,
   ctx: ActionHandlerContext,
 ): ActionHandlerResult {
-  const {transactionId, timestamp, grants, outgoingActions, outgoingMutations} = ctx
+  const {transactionId, timestamp, grants, identity, outgoingActions, outgoingMutations} = ctx
   let {base, working} = ctx
 
   const documentId = getId(action.documentId)
@@ -51,7 +51,7 @@ export function handleCreate(
       timestamp,
     })
 
-    if (!checkGrant(grants.create, working[documentId] as SanityDocument)) {
+    if (!checkGrant(grants.create, working[documentId] as SanityDocument, identity)) {
       throw new PermissionActionError({
         documentId,
         transactionId,
@@ -111,13 +111,16 @@ export function handleCreate(
     timestamp,
   })
 
-  if (versionId && !checkGrant(grants.create, working[versionId] as SanityDocument)) {
+  if (versionId && !checkGrant(grants.create, working[versionId] as SanityDocument, identity)) {
     throw new PermissionActionError({
       documentId,
       transactionId,
       message: `You do not have permission to create a release version for document "${documentId}".`,
     })
-  } else if (!versionId && !checkGrant(grants.create, working[draftId] as SanityDocument)) {
+  } else if (
+    !versionId &&
+    !checkGrant(grants.create, working[draftId] as SanityDocument, identity)
+  ) {
     throw new PermissionActionError({
       documentId,
       transactionId,

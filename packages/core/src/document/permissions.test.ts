@@ -32,9 +32,11 @@ const alwaysDeny = parse('false')
 const createState = (
   docStates: Record<string, {local: unknown}>,
   grants?: Record<Grant, ExprNode>,
+  identity?: string,
 ): SyncTransactionState => ({
   documentStates: docStates as SyncTransactionState['documentStates'],
   grants,
+  identity,
   queued: [],
   applied: [],
 })
@@ -233,5 +235,75 @@ describe('calculatePermissions', () => {
     const result1 = calculatePermissions({instance, state}, {actions: [{...action}]})
     const result2 = calculatePermissions({instance, state}, {actions: [{...action}]})
     expect(result1).toBe(result2)
+  })
+
+  describe('identity-aware grants', () => {
+    // Mirrors the canvas ACL filter shape: only the document's creator may
+    // update it. Without an identity passed to groq, `identity()` is null and
+    // the expression collapses to null — which used to read as "denied".
+    const canvasUpdateAcl: DatasetAcl = [
+      {
+        filter: '_type == "sanity.canvas.document" && _system.createdBy == identity()',
+        permissions: ['read', 'update'],
+      },
+    ]
+
+    const canvasDoc = (createdBy: string): SanityDocument => ({
+      _id: 'canvas-1',
+      _type: 'sanity.canvas.document',
+      _createdAt: '2025-01-01T00:00:00.000Z',
+      _updatedAt: '2025-01-01T00:00:00.000Z',
+      _rev: 'rev-1',
+      _system: {createdBy},
+    })
+
+    const editAction: DocumentAction = {
+      documentId: 'canvas-1',
+      documentType: 'sanity.canvas.document',
+      type: 'document.edit',
+      liveEdit: true,
+    }
+
+    it('allows edits when identity matches the document creator', () => {
+      const state = createState(
+        {'canvas-1': {local: canvasDoc('user-A')}},
+        createGrantsLookup(canvasUpdateAcl),
+        'user-A',
+      )
+      expect(calculatePermissions({instance, state}, {actions: [editAction]})).toEqual({
+        allowed: true,
+      })
+    })
+
+    it('denies edits when identity does not match the document creator', () => {
+      const state = createState(
+        {'canvas-1': {local: canvasDoc('user-A')}},
+        createGrantsLookup(canvasUpdateAcl),
+        'user-B',
+      )
+      const result = calculatePermissions({instance, state}, {actions: [editAction]})
+      expect(result?.allowed).toBe(false)
+      expect(result?.reasons).toEqual(
+        expect.arrayContaining([expect.objectContaining({type: 'access', documentId: 'canvas-1'})]),
+      )
+    })
+
+    it('denies edits when identity is not yet loaded (regression test for SDK-1429)', () => {
+      // Before the fix, identity() in the ACL filter always evaluated to null,
+      // so this filter collapsed to null and the user was denied even when
+      // they actually were the creator. Now that we pass identity through, a
+      // missing identity correctly fails the check rather than masquerading as
+      // an evaluation success.
+      const state = createState(
+        {'canvas-1': {local: canvasDoc('user-A')}},
+        createGrantsLookup(canvasUpdateAcl),
+        undefined,
+      )
+      const result = calculatePermissions({instance, state}, {actions: [editAction]})
+      expect(result?.allowed).toBe(false)
+      expect(result?.reasons).toEqual(
+        expect.arrayContaining([expect.objectContaining({type: 'access', documentId: 'canvas-1'})]),
+      )
+    })
   })
 })

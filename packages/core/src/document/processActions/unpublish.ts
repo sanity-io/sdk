@@ -16,7 +16,7 @@ export function handleUnpublish(
   action: UnpublishDocumentAction,
   ctx: ActionHandlerContext,
 ): ActionHandlerResult {
-  const {transactionId, timestamp, grants, outgoingActions, outgoingMutations} = ctx
+  const {transactionId, timestamp, grants, identity, outgoingActions, outgoingMutations} = ctx
   let {base, working} = ctx
 
   const documentId = getId(action.documentId)
@@ -48,7 +48,7 @@ export function handleUnpublish(
     {createIfNotExists: newDraftFromPublished},
   ]
 
-  if (!checkGrant(grants.update, sourceDoc)) {
+  if (!checkGrant(grants.update, sourceDoc, identity)) {
     throw new PermissionActionError({
       documentId,
       transactionId,
@@ -56,7 +56,7 @@ export function handleUnpublish(
     })
   }
 
-  if (!working[draftId] && !checkGrant(grants.create, newDraftFromPublished)) {
+  if (!working[draftId] && !checkGrant(grants.create, newDraftFromPublished, identity)) {
     throw new PermissionActionError({
       documentId,
       transactionId,

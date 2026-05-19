@@ -6,7 +6,7 @@ export function handleReleaseEdit(
   action: EditReleaseAction,
   ctx: ActionHandlerContext,
 ): ActionHandlerResult {
-  const {transactionId, timestamp, grants, outgoingActions, outgoingMutations} = ctx
+  const {transactionId, timestamp, grants, outgoingActions, outgoingMutations, identity} = ctx
   const {base, working} = ctx
 
   const releaseDocumentId = getReleaseDocumentId(action.releaseId)
@@ -19,6 +19,7 @@ export function handleReleaseEdit(
     transactionId,
     timestamp,
     grants,
+    identity,
     notFoundMessage: `Cannot edit release "${action.releaseId}" because it does not exist.`,
     permissionMessage: `You do not have permission to edit release "${action.releaseId}".`,
   })

@@ -140,8 +140,12 @@ const memoizedActionsSelector = createSelector(
   },
 )
 
-function checkGrant(grantExpr: ExprNode, document: SanityDocument): boolean {
-  const value = evaluateSync(grantExpr, {params: {document}})
+function checkGrant(
+  grantExpr: ExprNode,
+  document: SanityDocument,
+  identity: string | undefined,
+): boolean {
+  const value = evaluateSync(grantExpr, {params: {document}, identity})
   return value.type === 'boolean' && value.data
 }
 
@@ -172,11 +176,13 @@ export function calculatePermissions(
 const _calculatePermissions = createSelector(
   [
     ({state: {grants}}: SelectorContext<SyncTransactionState>) => grants,
+    ({state: {identity}}: SelectorContext<SyncTransactionState>) => identity,
     documentsSelector,
     memoizedActionsSelector,
   ],
   (
     grants: Record<Grant, ExprNode> | undefined,
+    identity: string | undefined,
     documents: DocumentSet | undefined,
     actions: DocumentAction[] | undefined,
   ): DocumentPermissionsResult | undefined => {
@@ -195,6 +201,7 @@ const _calculatePermissions = createSelector(
         base: documents,
         timestamp,
         grants,
+        identity,
       })
     } catch (error) {
       if (error instanceof PermissionActionError) {
@@ -244,7 +251,7 @@ const _calculatePermissions = createSelector(
               documentId: docId,
             })
           }
-        } else if (!checkGrant(grants.update, doc)) {
+        } else if (!checkGrant(grants.update, doc, identity)) {
           reasons.push({
             type: 'access',
             message: `You are not allowed to edit the document with ID "${docId}".`,

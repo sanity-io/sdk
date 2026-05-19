@@ -65,6 +65,13 @@ interface ProcessActionsOptions {
    */
   grants: Record<Grant, ExprNode>
 
+  /**
+   * The current user's ID, passed to GROQ as the value of `identity()` when
+   * evaluating ACL filters. Optional because the user may not have loaded yet;
+   * filters that reference `identity()` will evaluate to null in that case.
+   */
+  identity?: string
+
   // // TODO: implement initial values from the schema?
   // initialValues?: {[TDocumentType in string]?: {_type: string}}
 }
@@ -116,6 +123,7 @@ export function processActions({
   base: initialBase,
   timestamp,
   grants,
+  identity,
 }: ProcessActionsOptions): ProcessActionsResult {
   let base: DocumentSet = {...initialBase}
   let working: DocumentSet = {...initialWorking}
@@ -148,6 +156,7 @@ export function processActions({
       transactionId,
       timestamp,
       grants,
+      identity,
       outgoingActions,
       outgoingMutations,
     })
