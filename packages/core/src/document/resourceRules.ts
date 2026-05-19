@@ -11,9 +11,7 @@ import {getEffectiveDocumentId} from './util'
 
 export interface EffectiveDocModel {
   /**
-   * When `true`, the resource forces the document type to liveEdit mode.
-   * When `false`, the resource forces draft/published behavior.
-   * When `undefined`, the resource has no opinion and the handle's `liveEdit`
+   * If this is `undefined`, the resource has no opinion and the handle's `liveEdit`
    * flag should be respected.
    */
   liveEdit: boolean | undefined
@@ -27,15 +25,13 @@ export interface EffectiveDocModel {
 const MEDIA_LIBRARY_DRAFTED_TYPES = new Set(['sanity.asset'])
 
 /**
- * Returns the effective document model for a given resource and document type.
+ * Different resources have different "default" editing models.
  *
- * Canvas has no draft/published model — every document is liveEdit. Media
- * Library is mostly liveEdit except for `sanity.asset`, which retains the
+ * Canvas uses a liveEdit model.
+ * Medial Library is mostly liveEdit except for `sanity.asset`, which retains the
  * draft/published model. Neither resource supports release perspectives.
- *
- * @internal
  */
-export function getEffectiveDocModel(
+export function getEffectiveDocumentModel(
   resource: DocumentResource | undefined,
   documentType: string | undefined,
 ): EffectiveDocModel {
@@ -77,34 +73,32 @@ export function normalizeActionsForResource(
   actions: DocumentAction[],
   resource: DocumentResource | undefined,
 ): DocumentAction[] {
+  // collect actions that may have changed in unexpected ways
   const stripped: Array<{documentType: string; documentId: string}> = []
 
   const normalized = actions.map((action) => {
     if (action.type !== 'document.edit') return action
 
-    const {liveEdit: forcedLiveEdit, supportsReleases} = getEffectiveDocModel(
+    const {liveEdit: forcedLiveEdit, supportsReleases} = getEffectiveDocumentModel(
       resource,
       action.documentType,
     )
-    const stripRelease = isReleasePerspective(action.perspective) && !supportsReleases
-    const overrideLiveEdit = forcedLiveEdit === true && !action.liveEdit
+    const shouldRemovePerspective = isReleasePerspective(action.perspective) && !supportsReleases
+    const shouldForceLiveEdit = forcedLiveEdit === true && !action.liveEdit
 
-    if (!stripRelease && !overrideLiveEdit) return action
+    if (!shouldRemovePerspective && !shouldForceLiveEdit) return action
 
     const corrected: DocumentAction = {...action}
-    if (overrideLiveEdit) corrected.liveEdit = true
-    if (stripRelease) corrected.perspective = undefined
+    if (shouldForceLiveEdit) corrected.liveEdit = true
+    if (shouldRemovePerspective) corrected.perspective = undefined
 
-    // Re-derive the document ID from the published root so a previously
-    // computed draft/version ID is converted back to the form appropriate for
-    // the corrected liveEdit/perspective.
-    const publishedRoot = getPublishedId(DocumentId(action.documentId))
+    // ensure we're using the right document ID for the corrected model
     corrected.documentId = getEffectiveDocumentId({
       ...corrected,
-      documentId: publishedRoot,
+      documentId: getPublishedId(DocumentId(corrected.documentId)),
     })
 
-    if (stripRelease) {
+    if (shouldRemovePerspective) {
       stripped.push({documentType: action.documentType, documentId: corrected.documentId})
     }
 

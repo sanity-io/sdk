@@ -5,7 +5,7 @@ import {type DocumentResource} from '../config/sanityConfig'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StoreContext} from '../store/defineStore'
-import {type Action} from './actions'
+import {type Action, type DocumentAction} from './actions'
 import {documentStore, type DocumentStoreState} from './documentStore'
 import {type DocumentTransactionSubmissionResult} from './events'
 import {type DocumentSet} from './processMutations'
@@ -78,7 +78,10 @@ async function _applyDocumentActions(
 ): Promise<ActionsResult> {
   const {events} = state.get()
 
-  const normalizedActions = normalizeActionsForResource(actions, boundKey?.resource)
+  const normalizedActions = normalizeActionsForResource(
+    actions as DocumentAction[], // cast required because of the complicated unions here. Runtime logic ensures only edit actions are normalized.
+    boundKey?.resource,
+  )
 
   const transaction: QueuedTransaction = {
     transactionId,

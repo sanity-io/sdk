@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {type EditDocumentAction} from './actions'
-import {getEffectiveDocModel, normalizeActionsForResource} from './resourceRules'
+import {getEffectiveDocumentModel, normalizeActionsForResource} from './resourceRules'
 
 const datasetResource = {projectId: 'p', dataset: 'd'}
 const canvasResource = {canvasId: 'canvas-1'}
@@ -17,37 +17,37 @@ function editAction(
   }
 }
 
-describe('getEffectiveDocModel', () => {
+describe('getEffectiveDocumentModel', () => {
   it('returns passthrough for no resource', () => {
-    expect(getEffectiveDocModel(undefined, 'anything')).toEqual({
+    expect(getEffectiveDocumentModel(undefined, 'anything')).toEqual({
       liveEdit: undefined,
       supportsReleases: true,
     })
   })
 
   it('returns passthrough for dataset resources', () => {
-    expect(getEffectiveDocModel(datasetResource, 'author')).toEqual({
+    expect(getEffectiveDocumentModel(datasetResource, 'author')).toEqual({
       liveEdit: undefined,
       supportsReleases: true,
     })
   })
 
   it('forces liveEdit and disallows releases for canvas resources', () => {
-    expect(getEffectiveDocModel(canvasResource, 'page')).toEqual({
+    expect(getEffectiveDocumentModel(canvasResource, 'page')).toEqual({
       liveEdit: true,
       supportsReleases: false,
     })
   })
 
   it('forces liveEdit for non-asset media library types', () => {
-    expect(getEffectiveDocModel(mediaLibraryResource, 'sanity.imageAsset')).toEqual({
+    expect(getEffectiveDocumentModel(mediaLibraryResource, 'sanity.imageAsset')).toEqual({
       liveEdit: true,
       supportsReleases: false,
     })
   })
 
   it('keeps draft/published model for sanity.asset in media library', () => {
-    expect(getEffectiveDocModel(mediaLibraryResource, 'sanity.asset')).toEqual({
+    expect(getEffectiveDocumentModel(mediaLibraryResource, 'sanity.asset')).toEqual({
       liveEdit: false,
       supportsReleases: false,
     })
