@@ -98,9 +98,13 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
 
   const enrichBatch = (batch: TelemetryEvent[]) =>
     batch.map((event) => {
-      // Trace events arrive with their own `context`; merge so we don't
-      // drop it. SDK-owned fields below win on conflict.
-      const existing = (event as {context?: Record<string, unknown>}).context
+      // Trace events (`trace.start` / `trace.log` / `trace.error` /
+      // `trace.complete`) arrive with their own caller-provided `context`.
+      // Log / userProperties events don't. Narrow via `in` so `event`
+      // stays typed as `TelemetryEvent`, then merge so we don't drop the
+      // trace context. SDK-owned fields below win on conflict.
+      const existing =
+        'context' in event ? (event.context as Record<string, unknown> | undefined) : undefined
       return {
         ...event,
         context: {

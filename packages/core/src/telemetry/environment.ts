@@ -5,11 +5,13 @@
  *   (`localhost` / `127.0.0.1` in the browser, or `NODE_ENV=development`
  *   in Node). These are the original dev-only telemetry sessions.
  *
- * - `'production'` — the SDK is running on a Sanity-controlled domain
- *   (Studio deployments, the dashboard, etc.) where end users are
- *   authenticated Sanity users with Populus consent records. Production
- *   telemetry is gated to this allowlist; SDK apps deployed to
- *   customer-controlled domains do not emit telemetry.
+ * - `'production'` — the SDK is running on a production Sanity-controlled
+ *   domain (Studio deployments on `*.sanity.studio`, the dashboard on
+ *   `*.sanity.io`) where end users are authenticated Sanity users with
+ *   Populus consent records. Production telemetry is gated to this
+ *   allowlist; SDK apps deployed to customer-controlled domains do not
+ *   emit telemetry. Staging (`*.sanity.work`) and preview
+ *   (`*.sanity.dev`) hosts are deliberately excluded.
  *
  * @internal
  */
@@ -22,17 +24,15 @@ export type TelemetryEnvironment = 'development' | 'production'
  * record, so we apply the same telemetry rules as the Studio's
  * `telemetry-sink`.
  *
- * Apex matches (`sanity.io`) are intentionally excluded; we only emit
- * from real app surfaces (subdomains).
+ * The leading `.` is required: it ensures suffix matches hit a real
+ * subdomain boundary, so apex matches (`sanity.io`, `sanity.studio`)
+ * and lookalikes (`evilsanity.studio`) are excluded. Only production
+ * hosts are listed; staging (`*.sanity.work`) and preview
+ * (`*.sanity.dev`) hosts are excluded by omission.
  *
  * @internal
  */
-const SANITY_CONTROLLED_HOST_SUFFIXES = [
-  '.sanity.studio',
-  '.sanity.io',
-  '.sanity.work',
-  '.sanity.dev',
-] as const
+const SANITY_CONTROLLED_HOST_SUFFIXES = ['.sanity.studio', '.sanity.io'] as const
 
 function getBrowserHostname(win: Window): string | null {
   const hostname = win.location?.hostname

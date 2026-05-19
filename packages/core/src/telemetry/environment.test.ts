@@ -29,14 +29,14 @@ describe('getTelemetryEnvironment', () => {
       expect(getTelemetryEnvironment()).toBe('production')
     })
 
-    it('returns "production" on www.sanity.work (staging dashboard)', () => {
+    it('returns null on *.sanity.work (staging is intentionally not allowlisted)', () => {
       vi.stubGlobal('window', {location: {hostname: 'www.sanity.work'}})
-      expect(getTelemetryEnvironment()).toBe('production')
+      expect(getTelemetryEnvironment()).toBeNull()
     })
 
-    it('returns "production" on a *.sanity.dev preview', () => {
+    it('returns null on *.sanity.dev (preview hosts are intentionally not allowlisted)', () => {
       vi.stubGlobal('window', {location: {hostname: 'preview-123.sanity.dev'}})
-      expect(getTelemetryEnvironment()).toBe('production')
+      expect(getTelemetryEnvironment()).toBeNull()
     })
 
     it('is case-insensitive on hostname', () => {

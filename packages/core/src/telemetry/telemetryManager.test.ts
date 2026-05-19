@@ -160,22 +160,45 @@ describe('createTelemetryManager', () => {
       origin?: string
       traceCorrelationId?: string
     }
+    type EnrichedEvent = {
+      type?: string
+      name?: string
+      version?: number
+      traceId?: string
+      sessionId?: string
+      createdAt?: string
+      data?: unknown
+      context: EnrichedContext
+    }
     const getRequestBody = () => {
       const [args] = mockClient.request.mock.calls as unknown as Array<
-        [{body: {batch: Array<{context: EnrichedContext}>}}]
+        [{body: {batch: EnrichedEvent[]}}]
       >
       return args[0].body
     }
 
-    it('records "development" in the enriched batch context', async () => {
+    it('records "development" in the enriched batch context and preserves the event payload', async () => {
       createTelemetryManager({...baseOptions, environment: 'development'})
 
       const storeOptions = vi.mocked(createBatchedStore).mock.calls[0][1]
       await storeOptions.sendEvents([
-        {type: 'log', version: 1, name: 'SDK Session Started', payload: {}} as never,
+        {
+          type: 'log',
+          version: 1,
+          name: 'SDK Session Started',
+          sessionId: 'test-session-id',
+          createdAt: '2026-01-01T00:00:00Z',
+          data: {projectId: 'p1'},
+        } as never,
       ])
 
-      expect(getRequestBody().batch[0].context.environment).toBe('development')
+      const [event] = getRequestBody().batch
+      expect(event.context.environment).toBe('development')
+      expect(event.type).toBe('log')
+      expect(event.name).toBe('SDK Session Started')
+      expect(event.version).toBe(1)
+      expect(event.sessionId).toBe('test-session-id')
+      expect(event.data).toEqual({projectId: 'p1'})
     })
 
     it('records "production" in the enriched batch context', async () => {
@@ -183,7 +206,14 @@ describe('createTelemetryManager', () => {
 
       const storeOptions = vi.mocked(createBatchedStore).mock.calls[0][1]
       await storeOptions.sendEvents([
-        {type: 'log', version: 1, name: 'SDK Session Started', payload: {}} as never,
+        {
+          type: 'log',
+          version: 1,
+          name: 'SDK Session Started',
+          sessionId: 'test-session-id',
+          createdAt: '2026-01-01T00:00:00Z',
+          data: {},
+        } as never,
       ])
 
       expect(getRequestBody().batch[0].context.environment).toBe('production')
@@ -194,7 +224,10 @@ describe('createTelemetryManager', () => {
       // `context` (see `TelemetryTraceStartEvent`, etc.). Replacing rather
       // than merging would silently drop those fields. The SDK-managed
       // fields (`version`, `environment`, `origin`) should also win on key
-      // collision so they remain authoritative.
+      // collision so they remain authoritative. The rest of the trace
+      // event (`type`, `name`, `traceId`, `sessionId`, `createdAt`) must
+      // survive — downstream consumers (Rudderstack via telemetry-sink)
+      // read those fields directly off each batch entry.
       createTelemetryManager({...baseOptions, environment: 'production'})
 
       const storeOptions = vi.mocked(createBatchedStore).mock.calls[0][1]
@@ -213,10 +246,15 @@ describe('createTelemetryManager', () => {
         } as never,
       ])
 
-      const ctx = getRequestBody().batch[0].context
-      expect(ctx.traceCorrelationId).toBe('abc-123')
-      expect(ctx.environment).toBe('production')
-      expect(ctx.version).toBe('2.8.0-test')
+      const [event] = getRequestBody().batch
+      expect(event.context.traceCorrelationId).toBe('abc-123')
+      expect(event.context.environment).toBe('production')
+      expect(event.context.version).toBe('2.8.0-test')
+      expect(event.type).toBe('trace.start')
+      expect(event.name).toBe('some.trace')
+      expect(event.traceId).toBe('t1')
+      expect(event.sessionId).toBe('test-session-id')
+      expect(event.createdAt).toBe('2026-01-01T00:00:00Z')
     })
   })
 
