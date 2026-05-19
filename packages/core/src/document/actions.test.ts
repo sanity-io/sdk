@@ -1,3 +1,4 @@
+import {type ReleaseDocument} from '@sanity/client'
 import {at, patch, set, setIfMissing} from '@sanity/mutate'
 import {type PatchOperations} from '@sanity/types'
 import {describe, expect, it} from 'vitest'
@@ -14,7 +15,6 @@ import {
   editRelease,
   publishDocument,
   publishRelease,
-  type ReleaseActionMetadata,
   scheduleRelease,
   unarchiveRelease,
   unpublishDocument,
@@ -227,11 +227,12 @@ describe('release actions', () => {
       expect(action).toEqual({
         type: 'release.create',
         releaseId: 'my-release',
+        metadata: {releaseType: 'undecided'},
       })
     })
 
     it('creates a release action with metadata', () => {
-      const metadata: ReleaseActionMetadata = {
+      const metadata: ReleaseDocument['metadata'] = {
         title: 'My release',
         description: 'Some description',
         releaseType: 'scheduled',
@@ -245,15 +246,6 @@ describe('release actions', () => {
       })
     })
 
-    it('omits metadata when not provided', () => {
-      const action = createRelease(dummyReleaseHandle, undefined)
-      expect(action).toEqual({
-        type: 'release.create',
-        releaseId: 'my-release',
-      })
-      expect(action).not.toHaveProperty('metadata')
-    })
-
     it('preserves resource fields from the handle', () => {
       const action = createRelease({
         releaseId: 'my-release',
@@ -263,6 +255,7 @@ describe('release actions', () => {
         type: 'release.create',
         releaseId: 'my-release',
         resource: {dataset: 'production', projectId: 'abc123'},
+        metadata: {releaseType: 'undecided'},
       })
     })
   })

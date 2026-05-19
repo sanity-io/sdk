@@ -1,6 +1,6 @@
+import {type ReleaseDocument} from '@sanity/client'
 import {describe, expect, it} from 'vitest'
 
-import {type ReleaseDocument} from '../releasesStore'
 import {sortReleases} from './sortReleases'
 
 // Mock function to create a release document

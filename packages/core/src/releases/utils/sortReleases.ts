@@ -1,4 +1,4 @@
-import {type ReleaseDocument} from '../releasesStore'
+import {type ReleaseDocument} from '@sanity/client'
 
 // mirrors the order of the releases in the releases list in Studio
 // https://github.com/sanity-io/sanity/blob/main/packages/sanity/src/core/releases/hooks/utils.ts

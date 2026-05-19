@@ -114,9 +114,9 @@ export function applySingleDocPatch({
     throw new ActionError({documentId, transactionId, message: notFoundMessage})
   }
 
-  const baseBefore = base[documentId] as SanityDocument
+  const baseBefore = base[documentId]
   base = processMutations({documents: base, transactionId, mutations: userPatches, timestamp})
-  const baseAfter = base[documentId] as SanityDocument
+  const baseAfter = base[documentId]
   const diffedPatches = diffValue(baseBefore, baseAfter) as PatchOperations[]
 
   const workingBefore = working[documentId] as SanityDocument

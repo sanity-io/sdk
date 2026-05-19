@@ -136,7 +136,6 @@ export {
   publishRelease,
   type PublishReleaseAction,
   type ReleaseAction,
-  type ReleaseActionMetadata,
   scheduleRelease,
   type ScheduleReleaseAction,
   unarchiveRelease,
@@ -235,7 +234,7 @@ export {
   resolveQuery,
 } from '../query/queryStore'
 export {getPerspectiveState} from '../releases/getPerspectiveState'
-export type {ReleaseDocument, ReleaseState} from '../releases/releasesStore'
+export type {ReleaseState} from '../releases/releasesStore'
 export {getActiveReleasesState, getAllReleasesState} from '../releases/releasesStore'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
@@ -265,6 +264,7 @@ export {defineIntent, type Intent, type IntentFilter} from '../utils/defineInten
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {isImportError} from '../utils/isImportError'
 export {CORE_SDK_VERSION} from '../version'
+export type {ReleaseDocument} from '@sanity/client'
 export {
   getIndexForKey,
   getPathDepth,

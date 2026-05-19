@@ -1,5 +1,3 @@
-import {type SanityDocument} from '@sanity/types'
-
 import {type PublishReleaseAction} from '../actions'
 import {getReleaseDocumentId} from './releaseUtil'
 import {
@@ -26,7 +24,7 @@ export function handleReleasePublish(
     })
   }
 
-  if (!checkGrant(grants.update, existing as SanityDocument)) {
+  if (!checkGrant(grants.update, existing)) {
     throw new PermissionActionError({
       documentId: releaseDocumentId,
       transactionId,

@@ -1,4 +1,4 @@
-import {type SanityDocument} from '@sanity/types'
+import {type ReleaseDocument} from '@sanity/client'
 import {map} from 'rxjs'
 
 import {type DocumentResource} from '../config/sanityConfig'
@@ -34,44 +34,6 @@ export type ReleaseState =
   | 'publishing'
   | 'scheduled'
   | 'scheduling'
-
-/**
- * Represents a release document (`_.releases.<name>`) in a Sanity dataset.
- * The shape mirrors the server-side release document and is wider than the
- * subset surfaced through `getActiveReleasesState` (which filters to active
- * releases only).
- * @beta
- */
-export type ReleaseDocument = SanityDocument & {
-  _type: 'system.release'
-  name: string
-  state: ReleaseState
-  /**
-   * Server-set time at which a scheduled release will be published. Takes
-   * precedence over `metadata.intendedPublishAt`.
-   */
-  publishAt?: string
-  /**
-   * Server-set time at which the release was actually published.
-   */
-  publishedAt?: string
-  /**
-   * Populated when a release transition fails on the server.
-   */
-  error?: {message: string}
-  /**
-   * Populated for `published` releases — captures the final IDs of documents
-   * the release published.
-   */
-  finalDocumentStates?: {id: string}[]
-  metadata: {
-    title?: string
-    description?: string
-    intendedPublishAt?: string
-    releaseType: 'asap' | 'scheduled' | 'undecided'
-    cardinality?: 'one' | 'many'
-  }
-}
 
 export interface ReleasesStoreState {
   activeReleases?: ReleaseDocument[]

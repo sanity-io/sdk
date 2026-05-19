@@ -1,3 +1,4 @@
+import {type ReleaseDocument} from '@sanity/client'
 import {SanityEncoder} from '@sanity/mutate'
 import {type PatchMutation as SanityMutatePatchMutation} from '@sanity/mutate/_unstable_store'
 import {type PatchMutation, type PatchOperations} from '@sanity/types'
@@ -133,7 +134,7 @@ export type Action<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> = DocumentAction<TDocumentType, TDataset, TProjectId> | ReleaseAction<TDataset, TProjectId>
+> = DocumentAction<TDocumentType, TDataset, TProjectId> | ReleaseAction
 
 /**
  * Creates a `CreateDocumentAction` object.
@@ -333,39 +334,20 @@ export function discardDocument<
 }
 
 /**
- * The release metadata shape accepted by the create/edit release actions.
- * Mirrors the server-side release document metadata.
- * @beta
- */
-export interface ReleaseActionMetadata {
-  title?: string
-  description?: string
-  intendedPublishAt?: string
-  releaseType?: 'asap' | 'scheduled' | 'undecided'
-  cardinality?: 'one' | 'many'
-}
-
-/**
  * Creates a new release. The `releaseId` must be unique within the current
  * retention period.
  * @beta
  */
-export interface CreateReleaseAction<
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends ReleaseHandle<TDataset, TProjectId> {
+export interface CreateReleaseAction extends ReleaseHandle {
   type: 'release.create'
-  metadata?: ReleaseActionMetadata
+  metadata: ReleaseDocument['metadata']
 }
 
 /**
  * Patches the metadata of an existing release.
  * @beta
  */
-export interface EditReleaseAction<
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends ReleaseHandle<TDataset, TProjectId> {
+export interface EditReleaseAction extends ReleaseHandle {
   type: 'release.edit'
   patch: PatchOperations
 }
@@ -374,10 +356,7 @@ export interface EditReleaseAction<
  * Publishes all version documents in a release.
  * @beta
  */
-export interface PublishReleaseAction<
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends ReleaseHandle<TDataset, TProjectId> {
+export interface PublishReleaseAction extends ReleaseHandle {
   type: 'release.publish'
 }
 
@@ -386,10 +365,7 @@ export interface PublishReleaseAction<
  * version documents server-side until the release is unscheduled or published.
  * @beta
  */
-export interface ScheduleReleaseAction<
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends ReleaseHandle<TDataset, TProjectId> {
+export interface ScheduleReleaseAction extends ReleaseHandle {
   type: 'release.schedule'
   publishAt: string
 }
@@ -399,10 +375,7 @@ export interface ScheduleReleaseAction<
  * active editable state.
  * @beta
  */
-export interface UnscheduleReleaseAction<
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends ReleaseHandle<TDataset, TProjectId> {
+export interface UnscheduleReleaseAction extends ReleaseHandle {
   type: 'release.unschedule'
 }
 
@@ -412,10 +385,7 @@ export interface UnscheduleReleaseAction<
  * during the retention period.
  * @beta
  */
-export interface ArchiveReleaseAction<
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends ReleaseHandle<TDataset, TProjectId> {
+export interface ArchiveReleaseAction extends ReleaseHandle {
   type: 'release.archive'
 }
 
@@ -423,10 +393,7 @@ export interface ArchiveReleaseAction<
  * Restores an archived release. Only possible during the retention period.
  * @beta
  */
-export interface UnarchiveReleaseAction<
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends ReleaseHandle<TDataset, TProjectId> {
+export interface UnarchiveReleaseAction extends ReleaseHandle {
   type: 'release.unarchive'
 }
 
@@ -435,10 +402,7 @@ export interface UnarchiveReleaseAction<
  * release, use the archive action first.
  * @beta
  */
-export interface DeleteReleaseAction<
-  TDataset extends string = string,
-  TProjectId extends string = string,
-> extends ReleaseHandle<TDataset, TProjectId> {
+export interface DeleteReleaseAction extends ReleaseHandle {
   type: 'release.delete'
 }
 
@@ -447,78 +411,55 @@ export interface DeleteReleaseAction<
  * actions through `applyDocumentActions`.
  * @beta
  */
-export type ReleaseAction<TDataset extends string = string, TProjectId extends string = string> =
-  | CreateReleaseAction<TDataset, TProjectId>
-  | EditReleaseAction<TDataset, TProjectId>
-  | PublishReleaseAction<TDataset, TProjectId>
-  | ScheduleReleaseAction<TDataset, TProjectId>
-  | UnscheduleReleaseAction<TDataset, TProjectId>
-  | ArchiveReleaseAction<TDataset, TProjectId>
-  | UnarchiveReleaseAction<TDataset, TProjectId>
-  | DeleteReleaseAction<TDataset, TProjectId>
+export type ReleaseAction =
+  | CreateReleaseAction
+  | EditReleaseAction
+  | PublishReleaseAction
+  | ScheduleReleaseAction
+  | UnscheduleReleaseAction
+  | ArchiveReleaseAction
+  | UnarchiveReleaseAction
+  | DeleteReleaseAction
 
 /** @beta */
-export function createRelease<TDataset extends string = string, TProjectId extends string = string>(
-  handle: ReleaseHandle<TDataset, TProjectId>,
-  metadata?: ReleaseActionMetadata,
-): CreateReleaseAction<TDataset, TProjectId> {
-  return {type: 'release.create', ...handle, ...(metadata && {metadata})}
+export function createRelease(
+  handle: ReleaseHandle,
+  metadata: ReleaseDocument['metadata'] = {releaseType: 'undecided'},
+): CreateReleaseAction {
+  return {type: 'release.create', ...handle, metadata}
 }
 
 /** @beta */
-export function editRelease<TDataset extends string = string, TProjectId extends string = string>(
-  handle: ReleaseHandle<TDataset, TProjectId>,
-  patch: PatchOperations,
-): EditReleaseAction<TDataset, TProjectId> {
+export function editRelease(handle: ReleaseHandle, patch: PatchOperations): EditReleaseAction {
   return {type: 'release.edit', ...handle, patch}
 }
 
 /** @beta */
-export function publishRelease<
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(handle: ReleaseHandle<TDataset, TProjectId>): PublishReleaseAction<TDataset, TProjectId> {
+export function publishRelease(handle: ReleaseHandle): PublishReleaseAction {
   return {type: 'release.publish', ...handle}
 }
 
 /** @beta */
-export function scheduleRelease<
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(
-  handle: ReleaseHandle<TDataset, TProjectId>,
-  publishAt: string,
-): ScheduleReleaseAction<TDataset, TProjectId> {
+export function scheduleRelease(handle: ReleaseHandle, publishAt: string): ScheduleReleaseAction {
   return {type: 'release.schedule', ...handle, publishAt}
 }
 
 /** @beta */
-export function unscheduleRelease<
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(handle: ReleaseHandle<TDataset, TProjectId>): UnscheduleReleaseAction<TDataset, TProjectId> {
+export function unscheduleRelease(handle: ReleaseHandle): UnscheduleReleaseAction {
   return {type: 'release.unschedule', ...handle}
 }
 
 /** @beta */
-export function archiveRelease<
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(handle: ReleaseHandle<TDataset, TProjectId>): ArchiveReleaseAction<TDataset, TProjectId> {
+export function archiveRelease(handle: ReleaseHandle): ArchiveReleaseAction {
   return {type: 'release.archive', ...handle}
 }
 
 /** @beta */
-export function unarchiveRelease<
-  TDataset extends string = string,
-  TProjectId extends string = string,
->(handle: ReleaseHandle<TDataset, TProjectId>): UnarchiveReleaseAction<TDataset, TProjectId> {
+export function unarchiveRelease(handle: ReleaseHandle): UnarchiveReleaseAction {
   return {type: 'release.unarchive', ...handle}
 }
 
 /** @beta */
-export function deleteRelease<TDataset extends string = string, TProjectId extends string = string>(
-  handle: ReleaseHandle<TDataset, TProjectId>,
-): DeleteReleaseAction<TDataset, TProjectId> {
+export function deleteRelease(handle: ReleaseHandle): DeleteReleaseAction {
   return {type: 'release.delete', ...handle}
 }

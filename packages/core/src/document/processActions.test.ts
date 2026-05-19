@@ -1425,18 +1425,17 @@ describe('processActions', () => {
     const releaseName = 'my-release'
     const releaseDocId = `_.releases.${releaseName}`
 
-    const createReleaseDoc = (overrides: Partial<SanityDocument> = {}): SanityDocument =>
-      ({
-        _id: releaseDocId,
-        _type: 'system.release',
-        _createdAt: '2025-01-01T00:00:00.000Z',
-        _updatedAt: '2025-01-01T00:00:00.000Z',
-        _rev: 'initial',
-        name: releaseName,
-        state: 'active',
-        metadata: {releaseType: 'undecided'},
-        ...overrides,
-      }) as SanityDocument
+    const createReleaseDoc = (overrides: Partial<SanityDocument> = {}): SanityDocument => ({
+      _id: releaseDocId,
+      _type: 'system.release',
+      _createdAt: '2025-01-01T00:00:00.000Z',
+      _updatedAt: '2025-01-01T00:00:00.000Z',
+      _rev: 'initial',
+      name: releaseName,
+      state: 'active',
+      metadata: {releaseType: 'undecided'},
+      ...overrides,
+    })
 
     describe('release.create', () => {
       it('inserts an optimistic release doc and emits a release.create action', () => {
@@ -1479,7 +1478,13 @@ describe('processActions', () => {
         const existing = createReleaseDoc()
         expect(() =>
           processActions({
-            actions: [{type: 'release.create', releaseId: releaseName}],
+            actions: [
+              {
+                type: 'release.create',
+                releaseId: releaseName,
+                metadata: {releaseType: 'undecided'},
+              },
+            ],
             transactionId,
             base: {[releaseDocId]: existing},
             working: {[releaseDocId]: existing},
@@ -1492,7 +1497,13 @@ describe('processActions', () => {
       it('throws PermissionActionError when the create grant is denied', () => {
         expect(() =>
           processActions({
-            actions: [{type: 'release.create', releaseId: releaseName}],
+            actions: [
+              {
+                type: 'release.create',
+                releaseId: releaseName,
+                metadata: {releaseType: 'undecided'},
+              },
+            ],
             transactionId,
             base: {},
             working: {},
@@ -1771,7 +1782,7 @@ describe('processActions', () => {
         _createdAt: '2025-01-01T00:00:00.000Z',
         _updatedAt: '2025-01-01T00:00:00.000Z',
         _rev: 'initial',
-      } as SanityDocument
+      }
       const liveEditAction = {
         type: 'document.edit',
         documentId: liveEditDocId,
@@ -1784,7 +1795,11 @@ describe('processActions', () => {
         expect(() =>
           processActions({
             actions: [
-              {type: 'release.create', releaseId: releaseName},
+              {
+                type: 'release.create',
+                releaseId: releaseName,
+                metadata: {releaseType: 'undecided'},
+              },
               liveEditAction as unknown as Action,
             ],
             transactionId,

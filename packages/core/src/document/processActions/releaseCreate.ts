@@ -52,7 +52,7 @@ export function handleReleaseCreate(
   outgoingActions.push({
     actionType: 'sanity.action.release.create',
     releaseId: action.releaseId,
-    ...(action.metadata && {metadata: action.metadata}),
+    metadata: action.metadata,
   })
 
   return {base, working}
