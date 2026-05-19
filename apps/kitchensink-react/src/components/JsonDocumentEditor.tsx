@@ -88,5 +88,11 @@ export function JsonDocumentEditor({
     editorContent
   )
 
-  return <ErrorBoundary FallbackComponent={ErrorFallback}>{content}</ErrorBoundary>
+  return (
+    <ErrorBoundary
+      fallbackRender={({error}) => <ErrorFallback error={error as unknown as Error} />}
+    >
+      {content}
+    </ErrorBoundary>
+  )
 }

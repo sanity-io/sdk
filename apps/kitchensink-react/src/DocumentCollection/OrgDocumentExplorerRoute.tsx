@@ -425,7 +425,9 @@ function DocumentList({documentType}: DocumentListProps) {
               data.map((doc) => (
                 <ErrorBoundary
                   key={doc.documentId}
-                  fallbackRender={({error}) => <DocumentRowError error={error} />}
+                  fallbackRender={({error}) => (
+                    <DocumentRowError error={error as unknown as Error} />
+                  )}
                 >
                   <Suspense fallback={<DocumentRowFallback />}>
                     <DocumentTableRow {...doc} />
