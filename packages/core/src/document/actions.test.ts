@@ -1,15 +1,24 @@
+import {type ReleaseDocument} from '@sanity/client'
 import {at, patch, set, setIfMissing} from '@sanity/mutate'
 import {type PatchOperations} from '@sanity/types'
 import {describe, expect, it} from 'vitest'
 
-import {type DocumentHandle} from '../config/sanityConfig'
+import {type DocumentHandle, type ReleaseHandle} from '../config/sanityConfig'
 import {
+  archiveRelease,
   createDocument,
+  createRelease,
   deleteDocument,
+  deleteRelease,
   discardDocument,
   editDocument,
+  editRelease,
   publishDocument,
+  publishRelease,
+  scheduleRelease,
+  unarchiveRelease,
   unpublishDocument,
+  unscheduleRelease,
 } from '../document/actions'
 
 const dummyPatch: PatchOperations = {
@@ -18,6 +27,9 @@ const dummyPatch: PatchOperations = {
 
 const dummyDocHandle: DocumentHandle = {documentId: 'drafts.abc123', documentType: 'testType'}
 const dummyDocString = {documentId: 'drafts.abc123', documentType: 'testType'}
+
+const dummyReleaseHandle: ReleaseHandle = {releaseId: 'my-release'}
+const dummyReleasePatch: PatchOperations = {set: {'metadata.title': 'Updated title'}}
 
 describe('document actions', () => {
   describe('createDocument', () => {
@@ -204,6 +216,105 @@ describe('document actions', () => {
         documentId: 'abc123',
         documentType: dummyDocHandle.documentType,
       })
+    })
+  })
+})
+
+describe('release actions', () => {
+  describe('createRelease', () => {
+    it('creates a release action from a release handle', () => {
+      const action = createRelease(dummyReleaseHandle)
+      expect(action).toEqual({
+        type: 'release.create',
+        releaseId: 'my-release',
+        metadata: {releaseType: 'undecided'},
+      })
+    })
+
+    it('creates a release action with metadata', () => {
+      const metadata: ReleaseDocument['metadata'] = {
+        title: 'My release',
+        description: 'Some description',
+        releaseType: 'scheduled',
+        intendedPublishAt: '2026-01-01T00:00:00.000Z',
+      }
+      const action = createRelease(dummyReleaseHandle, metadata)
+      expect(action).toEqual({
+        type: 'release.create',
+        releaseId: 'my-release',
+        metadata,
+      })
+    })
+
+    it('preserves resource fields from the handle', () => {
+      const action = createRelease({
+        releaseId: 'my-release',
+        resource: {dataset: 'production', projectId: 'abc123'},
+      })
+      expect(action).toEqual({
+        type: 'release.create',
+        releaseId: 'my-release',
+        resource: {dataset: 'production', projectId: 'abc123'},
+        metadata: {releaseType: 'undecided'},
+      })
+    })
+  })
+
+  describe('editRelease', () => {
+    it('creates a release.edit action with a patch', () => {
+      const action = editRelease(dummyReleaseHandle, dummyReleasePatch)
+      expect(action).toEqual({
+        type: 'release.edit',
+        releaseId: 'my-release',
+        patch: dummyReleasePatch,
+      })
+    })
+  })
+
+  describe('publishRelease', () => {
+    it('creates a release.publish action from a release handle', () => {
+      const action = publishRelease(dummyReleaseHandle)
+      expect(action).toEqual({type: 'release.publish', releaseId: 'my-release'})
+    })
+  })
+
+  describe('scheduleRelease', () => {
+    it('creates a release.schedule action with publishAt', () => {
+      const publishAt = '2026-01-01T00:00:00.000Z'
+      const action = scheduleRelease(dummyReleaseHandle, publishAt)
+      expect(action).toEqual({
+        type: 'release.schedule',
+        releaseId: 'my-release',
+        publishAt,
+      })
+    })
+  })
+
+  describe('unscheduleRelease', () => {
+    it('creates a release.unschedule action from a release handle', () => {
+      const action = unscheduleRelease(dummyReleaseHandle)
+      expect(action).toEqual({type: 'release.unschedule', releaseId: 'my-release'})
+    })
+  })
+
+  describe('archiveRelease', () => {
+    it('creates a release.archive action from a release handle', () => {
+      const action = archiveRelease(dummyReleaseHandle)
+      expect(action).toEqual({type: 'release.archive', releaseId: 'my-release'})
+    })
+  })
+
+  describe('unarchiveRelease', () => {
+    it('creates a release.unarchive action from a release handle', () => {
+      const action = unarchiveRelease(dummyReleaseHandle)
+      expect(action).toEqual({type: 'release.unarchive', releaseId: 'my-release'})
+    })
+  })
+
+  describe('deleteRelease', () => {
+    it('creates a release.delete action from a release handle', () => {
+      const action = deleteRelease(dummyReleaseHandle)
+      expect(action).toEqual({type: 'release.delete', releaseId: 'my-release'})
     })
   })
 })

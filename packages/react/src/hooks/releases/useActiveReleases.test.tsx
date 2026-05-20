@@ -53,7 +53,9 @@ describe('useActiveReleases', () => {
     expect(result.current).toBeInstanceOf(Promise)
     expect(mockStateSource.getCurrent).toHaveBeenCalled()
 
-    const resolved: ReleaseDocument[] = [{_id: 'release1', _type: 'release'} as ReleaseDocument]
+    const resolved: ReleaseDocument[] = [
+      {_id: 'release1', _type: 'release'} as unknown as ReleaseDocument,
+    ]
     mockSubject.next(resolved)
 
     await expect(result.current).resolves.toEqual(resolved)
@@ -61,8 +63,8 @@ describe('useActiveReleases', () => {
 
   it('should resolve with releases when data is available', () => {
     const mockReleases: ReleaseDocument[] = [
-      {_id: 'release1', _type: 'release'} as ReleaseDocument,
-      {_id: 'release2', _type: 'release'} as ReleaseDocument,
+      {_id: 'release1', _type: 'release'} as unknown as ReleaseDocument,
+      {_id: 'release2', _type: 'release'} as unknown as ReleaseDocument,
     ]
 
     const mockSubject = new BehaviorSubject<ReleaseDocument[]>(mockReleases)

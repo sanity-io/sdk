@@ -1,7 +1,7 @@
 import {type Mutation} from '@sanity/types'
 import {type ExprNode} from 'groq-js'
 
-import {type DocumentAction} from '../actions'
+import {type Action, type DocumentAction} from '../actions'
 import {type Grant} from '../permissions'
 import {type DocumentSet} from '../processMutations'
 import {type HttpAction} from '../reducers'
@@ -10,6 +10,13 @@ import {handleDelete} from './delete'
 import {handleDiscard} from './discard'
 import {handleEdit} from './edit'
 import {handlePublish} from './publish'
+import {handleReleaseArchive, handleReleaseUnarchive} from './releaseArchive'
+import {handleReleaseCreate} from './releaseCreate'
+import {handleReleaseDelete} from './releaseDelete'
+import {handleReleaseEdit} from './releaseEdit'
+import {handleReleasePublish} from './releasePublish'
+import {handleReleaseSchedule, handleReleaseUnschedule} from './releaseSchedule'
+import {isReleaseAction} from './releaseUtil'
 import {
   ActionError,
   type ActionHandlerContext,
@@ -30,7 +37,7 @@ interface ProcessActionsOptions {
   /**
    * The actions to apply to the given documents
    */
-  actions: DocumentAction[]
+  actions: Action[]
 
   /**
    * The set of documents these actions were intended to be applied to. These
@@ -116,6 +123,24 @@ export function processActions({
   const outgoingActions: HttpAction[] = []
   const outgoingMutations: Mutation[] = []
 
+  // liveEdit document actions go to the mutations API, since the actions API
+  // requires a draft+published pair. Mixing them with anything else in the same
+  // transaction would silently lose atomicity for the non-liveEdit operations,
+  // so require users to split the transaction.
+  // (Note that the reducers already does this for us -- you'd have to try hard to mix them.)
+  const liveEditAction = actions.find((action) => !isReleaseAction(action) && action.liveEdit) as
+    | DocumentAction
+    | undefined
+  const otherAction = actions.find((action) => isReleaseAction(action) || !action.liveEdit)
+  if (liveEditAction && otherAction) {
+    throw new ActionError({
+      documentId: liveEditAction.documentId!,
+      transactionId,
+      message:
+        'Cannot combine liveEdit document actions with other actions in the same transaction. Submit them as separate transactions.',
+    })
+  }
+
   for (const action of actions) {
     const result = dispatch(action, {
       base,
@@ -143,7 +168,7 @@ export function processActions({
   }
 }
 
-function dispatch(action: DocumentAction, ctx: ActionHandlerContext): ActionHandlerResult {
+function dispatch(action: Action, ctx: ActionHandlerContext): ActionHandlerResult {
   switch (action.type) {
     case 'document.create':
       return handleCreate(action, ctx)
@@ -157,6 +182,22 @@ function dispatch(action: DocumentAction, ctx: ActionHandlerContext): ActionHand
       return handlePublish(action, ctx)
     case 'document.unpublish':
       return handleUnpublish(action, ctx)
+    case 'release.create':
+      return handleReleaseCreate(action, ctx)
+    case 'release.edit':
+      return handleReleaseEdit(action, ctx)
+    case 'release.publish':
+      return handleReleasePublish(action, ctx)
+    case 'release.schedule':
+      return handleReleaseSchedule(action, ctx)
+    case 'release.unschedule':
+      return handleReleaseUnschedule(action, ctx)
+    case 'release.archive':
+      return handleReleaseArchive(action, ctx)
+    case 'release.unarchive':
+      return handleReleaseUnarchive(action, ctx)
+    case 'release.delete':
+      return handleReleaseDelete(action, ctx)
     default:
       throw new Error(
         `Unknown action type: "${

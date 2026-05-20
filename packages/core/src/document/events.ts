@@ -1,6 +1,7 @@
 import {type MultipleMutationResult, type SanityClient} from '@sanity/client'
 
-import {type DocumentAction} from './actions'
+import {type DocumentAction, type ReleaseAction} from './actions'
+import {getReleaseDocumentId, isReleaseAction} from './processActions/releaseUtil'
 import {type OutgoingTransaction} from './reducers'
 
 /** @beta Response body from submitting an outgoing transaction (actions or mutations API). */
@@ -118,31 +119,49 @@ export interface DocumentDiscardedEvent {
   outgoing: OutgoingTransaction
 }
 
+// Release actions that write a mutation to the local release doc map onto
+// the regular per-document events with `documentId = '_.releases.<releaseId>'`.
+// The other release actions (publish/schedule/unschedule/archive/unarchive)
+// don't mutate local state, so they aren't in the map and get skipped — they
+// surface through the transaction-level `accepted`/`reverted` events instead.
+const actionMap = {
+  'document.create': 'created',
+  'document.delete': 'deleted',
+  'document.discard': 'discarded',
+  'document.edit': 'edited',
+  'document.publish': 'published',
+  'document.unpublish': 'unpublished',
+  'release.create': 'created',
+  'release.edit': 'edited',
+  'release.delete': 'deleted',
+} satisfies Partial<Record<DocumentAction['type'] | ReleaseAction['type'], DocumentEvent['type']>>
+
+type MappedActionType = keyof typeof actionMap
+
 export function getDocumentEvents(outgoing: OutgoingTransaction): DocumentEvent[] {
-  const documentIdsByAction = Object.entries(
-    outgoing.actions.reduce(
-      (acc, {type, documentId}) => {
-        const ids = acc[type] || new Set()
-        if (documentId) ids.add(documentId)
-        acc[type] = ids
-        return acc
-      },
-      {} as Record<DocumentAction['type'], Set<string>>,
-    ),
-  ) as [DocumentAction['type'], Set<string>][]
+  const documentIdsByAction = outgoing.actions.reduce(
+    (acc, action) => {
+      if (!(action.type in actionMap)) return acc
+      const documentId = isReleaseAction(action)
+        ? getReleaseDocumentId(action.releaseId)
+        : action.documentId
+      if (!documentId) return acc
+      const type = action.type as MappedActionType
+      const ids = acc[type] ?? new Set<string>()
+      ids.add(documentId)
+      acc[type] = ids
+      return acc
+    },
+    {} as Partial<Record<MappedActionType, Set<string>>>,
+  )
 
-  const actionMap = {
-    'document.create': 'created',
-    'document.delete': 'deleted',
-    'document.discard': 'discarded',
-    'document.edit': 'edited',
-    'document.publish': 'published',
-    'document.unpublish': 'unpublished',
-  } satisfies Record<DocumentAction['type'], DocumentEvent['type']>
-
-  return documentIdsByAction.flatMap(([actionType, documentIds]) =>
-    Array.from(documentIds).map(
-      (documentId): DocumentEvent => ({type: actionMap[actionType], documentId, outgoing}),
+  return Object.entries(documentIdsByAction).flatMap(([actionType, documentIds]) =>
+    Array.from(documentIds ?? []).map(
+      (documentId): DocumentEvent => ({
+        type: actionMap[actionType as MappedActionType],
+        documentId,
+        outgoing,
+      }),
     ),
   )
 }

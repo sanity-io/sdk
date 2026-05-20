@@ -1,6 +1,6 @@
+import {type ReleaseDocument} from '@sanity/client'
 import {describe, expect, it} from 'vitest'
 
-import {type ReleaseDocument} from '../releasesStore'
 import {sortReleases} from './sortReleases'
 
 // Mock function to create a release document
@@ -15,7 +15,7 @@ function createReleaseMock(
   return {
     _id: id,
     _rev: 'rev',
-    _type: 'release',
+    _type: 'system.release',
     _createdAt: new Date().toISOString(),
     _updatedAt: new Date().toISOString(),
     state: 'active',

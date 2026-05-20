@@ -1,4 +1,4 @@
-import {type SanityDocument} from '@sanity/types'
+import {type ReleaseDocument} from '@sanity/client'
 import {map} from 'rxjs'
 
 import {type DocumentResource} from '../config/sanityConfig'
@@ -23,7 +23,7 @@ const STABLE_EMPTY_RELEASES: ReleaseDocument[] = []
 /**
  * Lifecycle states a release document can be in. Mirrors the server's
  * `ReleaseState`.
- * @internal
+ * @beta
  */
 export type ReleaseState =
   | 'active'
@@ -34,22 +34,6 @@ export type ReleaseState =
   | 'publishing'
   | 'scheduled'
   | 'scheduling'
-
-/**
- * Represents a document in a Sanity dataset that represents release options.
- * @internal
- */
-export type ReleaseDocument = SanityDocument & {
-  name: string
-  publishAt?: string
-  state: ReleaseState
-  metadata: {
-    title: string
-    releaseType: 'asap' | 'scheduled' | 'undecided'
-    intendedPublishAt?: string
-    description?: string
-  }
-}
 
 export interface ReleasesStoreState {
   activeReleases?: ReleaseDocument[]

@@ -119,6 +119,18 @@ export interface DocumentHandle<
 }
 
 /**
+ * Identifies a release within a Sanity dataset and project. `releaseId` is the
+ * `name` parameter on the release document (e.g. `{name: 'r41035a4'}`).
+ * The underlying release document ID is `_.releases.<releaseId>`.
+ * It's also the `id` parameter sent to the Actions API.
+ * (This type doesn't need to have ProjectId / Dataset generics since it's always the same shape)
+ * @beta
+ */
+export interface ReleaseHandle extends DatasetHandle {
+  releaseId: string
+}
+
+/**
  * Represents the complete configuration for a Sanity SDK instance
  * @public
  */

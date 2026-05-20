@@ -22,7 +22,7 @@ export function ReleasesAutocomplete({
       <Autocomplete
         id="release-autocomplete"
         filterOption={(query, option) =>
-          option.payload.metadata.title.toLowerCase().indexOf(query.toLowerCase()) > -1
+          (option.payload.metadata.title ?? '').toLowerCase().indexOf(query.toLowerCase()) > -1
         }
         fontSize={[2, 2, 3]}
         icon={<SearchIcon style={{width: '1.5em', height: '1.5em'}} />}

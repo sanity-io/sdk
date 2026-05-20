@@ -1,9 +1,14 @@
+import {type ReleaseDocument} from '@sanity/client'
 import {SanityEncoder} from '@sanity/mutate'
 import {type PatchMutation as SanityMutatePatchMutation} from '@sanity/mutate/_unstable_store'
 import {type PatchMutation, type PatchOperations} from '@sanity/types'
 import {type SanityDocument} from 'groq'
 
-import {type DocumentHandle, type DocumentTypeHandle} from '../config/sanityConfig'
+import {
+  type DocumentHandle,
+  type DocumentTypeHandle,
+  type ReleaseHandle,
+} from '../config/sanityConfig'
 import {getEffectiveDocumentId} from './util'
 
 const isSanityMutatePatch = (value: unknown): value is SanityMutatePatchMutation => {
@@ -119,6 +124,17 @@ export type DocumentAction<
   | PublishDocumentAction<TDocumentType, TDataset, TProjectId>
   | UnpublishDocumentAction<TDocumentType, TDataset, TProjectId>
   | DiscardDocumentAction<TDocumentType, TDataset, TProjectId>
+
+/**
+ * Union of every action accepted by `applyDocumentActions` — both document-
+ * level actions and release-lifecycle actions.
+ * @beta
+ */
+export type Action<
+  TDocumentType extends string = string,
+  TDataset extends string = string,
+  TProjectId extends string = string,
+> = DocumentAction<TDocumentType, TDataset, TProjectId> | ReleaseAction
 
 /**
  * Creates a `CreateDocumentAction` object.
@@ -315,4 +331,135 @@ export function discardDocument<
     ...doc,
     documentId: effectiveDocumentId,
   }
+}
+
+/**
+ * Creates a new release. The `releaseId` must be unique within the current
+ * retention period.
+ * @beta
+ */
+export interface CreateReleaseAction extends ReleaseHandle {
+  type: 'release.create'
+  metadata: ReleaseDocument['metadata']
+}
+
+/**
+ * Patches the metadata of an existing release.
+ * @beta
+ */
+export interface EditReleaseAction extends ReleaseHandle {
+  type: 'release.edit'
+  patch: PatchOperations
+}
+
+/**
+ * Publishes all version documents in a release.
+ * @beta
+ */
+export interface PublishReleaseAction extends ReleaseHandle {
+  type: 'release.publish'
+}
+
+/**
+ * Schedules a release to be published at the given UTC time. Locks the
+ * version documents server-side until the release is unscheduled or published.
+ * @beta
+ */
+export interface ScheduleReleaseAction extends ReleaseHandle {
+  type: 'release.schedule'
+  publishAt: string
+}
+
+/**
+ * Unschedules a release that was previously scheduled, returning it to the
+ * active editable state.
+ * @beta
+ */
+export interface UnscheduleReleaseAction extends ReleaseHandle {
+  type: 'release.unschedule'
+}
+
+/**
+ * Archives an active release. Version documents within the release are
+ * removed and no longer queryable, though still recoverable through history
+ * during the retention period.
+ * @beta
+ */
+export interface ArchiveReleaseAction extends ReleaseHandle {
+  type: 'release.archive'
+}
+
+/**
+ * Restores an archived release. Only possible during the retention period.
+ * @beta
+ */
+export interface UnarchiveReleaseAction extends ReleaseHandle {
+  type: 'release.unarchive'
+}
+
+/**
+ * Permanently deletes an archived or published release. To remove an active
+ * release, use the archive action first.
+ * @beta
+ */
+export interface DeleteReleaseAction extends ReleaseHandle {
+  type: 'release.delete'
+}
+
+/**
+ * Union of all release actions that can be dispatched alongside document
+ * actions through `applyDocumentActions`.
+ * @beta
+ */
+export type ReleaseAction =
+  | CreateReleaseAction
+  | EditReleaseAction
+  | PublishReleaseAction
+  | ScheduleReleaseAction
+  | UnscheduleReleaseAction
+  | ArchiveReleaseAction
+  | UnarchiveReleaseAction
+  | DeleteReleaseAction
+
+/** @beta */
+export function createRelease(
+  handle: ReleaseHandle,
+  metadata: ReleaseDocument['metadata'] = {releaseType: 'undecided'},
+): CreateReleaseAction {
+  return {type: 'release.create', ...handle, metadata}
+}
+
+/** @beta */
+export function editRelease(handle: ReleaseHandle, patch: PatchOperations): EditReleaseAction {
+  return {type: 'release.edit', ...handle, patch}
+}
+
+/** @beta */
+export function publishRelease(handle: ReleaseHandle): PublishReleaseAction {
+  return {type: 'release.publish', ...handle}
+}
+
+/** @beta */
+export function scheduleRelease(handle: ReleaseHandle, publishAt: string): ScheduleReleaseAction {
+  return {type: 'release.schedule', ...handle, publishAt}
+}
+
+/** @beta */
+export function unscheduleRelease(handle: ReleaseHandle): UnscheduleReleaseAction {
+  return {type: 'release.unschedule', ...handle}
+}
+
+/** @beta */
+export function archiveRelease(handle: ReleaseHandle): ArchiveReleaseAction {
+  return {type: 'release.archive', ...handle}
+}
+
+/** @beta */
+export function unarchiveRelease(handle: ReleaseHandle): UnarchiveReleaseAction {
+  return {type: 'release.unarchive', ...handle}
+}
+
+/** @beta */
+export function deleteRelease(handle: ReleaseHandle): DeleteReleaseAction {
+  return {type: 'release.delete', ...handle}
 }

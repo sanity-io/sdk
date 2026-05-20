@@ -105,6 +105,7 @@ export {
   type MediaLibrarySource,
   type PerspectiveHandle,
   type ProjectHandle,
+  type ReleaseHandle,
   type ReleasePerspective,
   type SanityConfig,
   type StudioConfig,
@@ -112,19 +113,37 @@ export {
 } from '../config/sanityConfig'
 export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
 export {
+  type Action,
+  archiveRelease,
+  type ArchiveReleaseAction,
   createDocument,
   type CreateDocumentAction,
+  createRelease,
+  type CreateReleaseAction,
   deleteDocument,
   type DeleteDocumentAction,
+  deleteRelease,
+  type DeleteReleaseAction,
   discardDocument,
   type DiscardDocumentAction,
   type DocumentAction,
   editDocument,
   type EditDocumentAction,
+  editRelease,
+  type EditReleaseAction,
   publishDocument,
   type PublishDocumentAction,
+  publishRelease,
+  type PublishReleaseAction,
+  type ReleaseAction,
+  scheduleRelease,
+  type ScheduleReleaseAction,
+  unarchiveRelease,
+  type UnarchiveReleaseAction,
   unpublishDocument,
   type UnpublishDocumentAction,
+  unscheduleRelease,
+  type UnscheduleReleaseAction,
 } from '../document/actions'
 export {
   type ActionsResult,
@@ -155,6 +174,7 @@ export {
 } from '../document/events'
 export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
+export {getReleaseDocumentId} from '../document/processActions/releaseUtil'
 export type {FavoriteStatusResponse} from '../favorites/favorites'
 export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
 export {
@@ -214,7 +234,7 @@ export {
   resolveQuery,
 } from '../query/queryStore'
 export {getPerspectiveState} from '../releases/getPerspectiveState'
-export type {ReleaseDocument, ReleaseState} from '../releases/releasesStore'
+export type {ReleaseState} from '../releases/releasesStore'
 export {getActiveReleasesState, getAllReleasesState} from '../releases/releasesStore'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
@@ -244,6 +264,7 @@ export {defineIntent, type Intent, type IntentFilter} from '../utils/defineInten
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {isImportError} from '../utils/isImportError'
 export {CORE_SDK_VERSION} from '../version'
+export type {ReleaseDocument} from '@sanity/client'
 export {
   getIndexForKey,
   getPathDepth,
