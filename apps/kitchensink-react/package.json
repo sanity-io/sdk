@@ -31,7 +31,7 @@
     "react-dom": "^19.2.6",
     "react-error-boundary": "^6.1.1",
     "react-router": "^7.15.1",
-    "sanity": "^5.26.0",
+    "sanity": "5.14.1",
     "styled-components": "^6.4.1",
     "typescript": "^5.9.3"
   },
@@ -41,7 +41,7 @@
     "@repo/e2e": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/cli": "5.14.1",
-    "@sanity/cli-v3": "npm:@sanity/cli@3.99.0",
+    "@sanity/cli-v3": "npm:@sanity/cli@3.88.1-typegen-experimental.0",
     "@sanity/prettier-config": "^1.0.6",
     "@sanity/sdk": "workspace:*",
     "@testing-library/jest-dom": "^6.9.1",

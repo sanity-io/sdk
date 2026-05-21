@@ -30,8 +30,8 @@
   },
   "packageRules": [
     {
-      "description": "Pin groq to the typegen-experimental prerelease tag. The SDK depends on typegen APIs that only exist on this branch; do not let Renovate move it to a stable release. Revisit once typegen lands in a regular groq release.",
-      "matchPackageNames": ["groq"],
+      "description": "Pin the typegen-experimental toolchain. Revisit once typegen lands in a regular release.",
+      "matchDepNames": ["groq", "@sanity/cli-v3", "sanity"],
       "enabled": false
     },
     {
