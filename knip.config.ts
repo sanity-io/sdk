@@ -1,19 +1,19 @@
-import {join} from 'node:path'
-
 import {KnipConfig} from 'knip'
-import {match} from 'minimatch'
 
 const project = ['src/**/*.{js,jsx,ts,tsx}', '!**/build/**', '!**/docs/**']
 
-const baseConfig = {
+const config: KnipConfig = {
   workspaces: {
     '.': {
       typescript: {
         config: 'tsconfig.tsdoc.json',
       },
-      // Knip doesn't support pnpm version
-      ignoreBinaries: ['version', 'sed', 'open'],
-      entry: ['package.config.ts', 'vitest.config.mts'],
+      // `open` is invoked by the test:coverage:open script.
+      // `prerelease` is a positional argument to `pnpm version` in
+      // scripts/release-branch.mts that knip's shell parser misidentifies
+      // as a binary.
+      ignoreBinaries: ['open', 'prerelease'],
+      entry: ['package.config.ts'],
     },
     'scripts/*': {
       typescript: {
@@ -22,27 +22,14 @@ const baseConfig = {
       project,
     },
     'apps/kitchensink-react': {
-      entry: ['src/main.tsx', 'src/css/css.config.js'],
+      entry: ['src/css/css.config.js'],
       // disable playwright plugin: playwright.config.ts imports @repo/e2e which
       // may not be built yet, and knip crashes trying to load it as an entry file
       playwright: false,
       typescript: {
         config: 'tsconfig.json',
       },
-      ignoreDependencies: [
-        '@repo/tsconfig',
-        '@testing-library/jest-dom',
-        '@testing-library/react',
-        'react-compiler-runtime',
-      ],
-      project,
-    },
-    'apps/standalone-react': {
-      entry: ['src/main.tsx'],
-      typescript: {
-        config: 'tsconfig.json',
-      },
-      ignoreDependencies: ['@repo/tsconfig'],
+      ignoreDependencies: ['@testing-library/react', 'react-compiler-runtime'],
       project,
     },
     'apps/*': {
@@ -56,7 +43,6 @@ const baseConfig = {
         config: 'tsconfig.settings.json',
       },
       project,
-      entry: ['package.bundle.ts'],
       ignoreDependencies: ['@sanity/browserslist-config'],
     },
     'packages/react': {
@@ -64,8 +50,8 @@ const baseConfig = {
         config: 'tsconfig.settings.json',
       },
       project,
-      entry: ['package.bundle.ts'],
-      ignore: ['src/**/*.test-d.ts', 'src/**/*.test-d.tsx'],
+      entry: ['package.config.ts'],
+      ignore: ['src/**/*.test-d.ts'],
       ignoreDependencies: ['@sanity/browserslist-config', 'react-compiler-runtime'],
     },
     'packages/@repo/e2e': {
@@ -73,53 +59,17 @@ const baseConfig = {
         config: 'tsconfig.json',
       },
       project,
-      entry: ['src/index.ts', 'src/setup/**/*.ts', 'src/teardown/**/*.ts'],
-      ignoreDependencies: ['@repo/tsconfig'],
+      entry: ['src/setup/**/*.ts', 'src/teardown/**/*.ts'],
     },
     'packages/core': {
       typescript: {
         config: 'tsconfig.settings.json',
       },
       project,
-      entry: ['package.bundle.ts'],
-      ignore: ['src/**/*.test-d.ts'],
+      entry: ['package.config.ts'],
       ignoreDependencies: ['@sanity/browserslist-config'],
     },
   },
-} satisfies KnipConfig
-
-export const addBundlerEntries = async (config: KnipConfig): Promise<KnipConfig> => {
-  const dirs = [
-    'packages/@repo/config-eslint',
-    'packages/@repo/config-test',
-    'packages/@repo/e2e',
-    'packages/@repo/tsconfig',
-    'packages/@repo/package.config',
-    'packages/core',
-    'packages/react',
-    'apps/kitchensink-react',
-  ]
-
-  for (const wsDir of dirs) {
-    for (const configKey of Object.keys(baseConfig.workspaces)) {
-      if (match([wsDir], configKey)) {
-        const manifest = await import(join(__dirname, wsDir, 'package.json'))
-        const configEntries = (config?.workspaces?.[configKey].entry as string[]) ?? []
-        const bundler = manifest?.bundler
-        for (const value of Object.values(bundler ?? {})) {
-          if (Array.isArray(value)) {
-            configEntries.push(...value)
-          }
-        }
-        // Add package.config.ts to entry points
-        configEntries.push('package.config.ts')
-        if (config.workspaces && config.workspaces[configKey]) {
-          config.workspaces[configKey].entry = Array.from(new Set(configEntries))
-        }
-      }
-    }
-  }
-  return config
 }
 
-export default addBundlerEntries(baseConfig)
+export default config

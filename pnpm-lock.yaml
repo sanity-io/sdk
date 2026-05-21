@@ -61,9 +61,6 @@ importers:
       lint-staged:
         specifier: ^16.4.0
         version: 16.4.0
-      minimatch:
-        specifier: ^10.2.5
-        version: 10.2.5
       npm-run-all2:
         specifier: ^8.0.4
         version: 8.0.4
