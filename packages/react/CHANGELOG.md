@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.12.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.11.1...sdk-react-v2.12.0) (2026-05-21)
+
+
+### Features
+
+* **core:** add release actions to document store ([#898](https://github.com/sanity-io/sdk/issues/898)) ([44c22d7](https://github.com/sanity-io/sdk/commit/44c22d73821f56229e516724662667c53c66fd42))
+* **releases:** add useAllReleases hook ([#899](https://github.com/sanity-io/sdk/issues/899)) ([57e78a5](https://github.com/sanity-io/sdk/commit/57e78a583040dbdb3936dd144817cc0feb657709))
+
+
+### Bug Fixes
+
+* **deps:** Update sanity monorepo ([#901](https://github.com/sanity-io/sdk/issues/901)) ([31e95f0](https://github.com/sanity-io/sdk/commit/31e95f028efa3223578fcac7a50e3c85a897b3d2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.12.0
+
 ## [2.11.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.11.0...sdk-react-v2.11.1) (2026-05-12)
 
 
