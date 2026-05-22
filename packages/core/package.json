@@ -71,7 +71,7 @@
     "@sanity/image-url": "^2.1.1",
     "@sanity/json-match": "^1.0.5",
     "@sanity/message-protocol": "^0.23.0",
-    "@sanity/mutate": "^0.16.1",
+    "@sanity/mutate": "^0.18.0",
     "@sanity/telemetry": "^1.1.0",
     "@sanity/types": "^5.26.0",
     "groq": "3.88.1-typegen-experimental.0",
