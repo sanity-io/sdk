@@ -17,11 +17,13 @@ import {
   Observable,
   of,
   pairwise,
+  retry,
   startWith,
   Subject,
   switchMap,
   tap,
   throttle,
+  throwError,
   timer,
   withLatestFrom,
 } from 'rxjs'
@@ -44,7 +46,12 @@ import {type SanityInstance} from '../store/createSanityInstance'
 import {createStateSourceAction, type StateSource} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {type DocumentAction} from './actions'
-import {API_VERSION, INITIAL_OUTGOING_THROTTLE_TIME} from './documentConstants'
+import {
+  API_VERSION,
+  INITIAL_OUTGOING_THROTTLE_TIME,
+  OUT_OF_SYNC_RETRY_BASE_DELAY,
+  OUT_OF_SYNC_RETRY_MAX_DELAY,
+} from './documentConstants'
 import {
   type DocumentEvent,
   type DocumentTransactionSubmissionResult,
@@ -497,10 +504,15 @@ const subscribeToSubscriptionsAndListenToDocuments = (
           switchMap((e) => {
             if (!e.add) return EMPTY
             return listen(context, e.id).pipe(
-              catchError((error) => {
-                // retry on `OutOfSyncError`
-                if (error instanceof OutOfSyncError) listen(context, e.id)
-                throw error
+              retry({
+                delay: (error, retryCount) => {
+                  if (!(error instanceof OutOfSyncError)) return throwError(() => error)
+                  const backoff = Math.min(
+                    OUT_OF_SYNC_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
+                    OUT_OF_SYNC_RETRY_MAX_DELAY,
+                  )
+                  return timer(backoff)
+                },
               }),
               tap((remote) =>
                 state.set('applyRemoteDocument', (prev) =>

@@ -42,6 +42,7 @@ import {
   subscribeDocumentEvents,
 } from './documentStore'
 import {type ActionErrorEvent, type TransactionRevertedEvent} from './events'
+import {DEFAULT_MAX_BUFFER_SIZE} from './listen'
 import {type DatasetAcl} from './permissions'
 import {type DocumentSet, processMutations} from './processMutations'
 import {type HttpAction} from './reducers'
@@ -1006,6 +1007,72 @@ it('version edits are isolated from draft state', async () => {
   unsubscribeDraft()
 })
 
+it('subscribeToSubscriptionsAndListenToDocuments recovers from an OutOfSyncError instead of failing the document store', async () => {
+  const documentId = DocumentId('doc-out-of-sync-recovery')
+  const doc = createDocumentHandle({documentId, documentType: 'article'})
+  const documentState = getDocumentState<TestDocument>(instance, doc)
+  const unsubscribe = documentState.subscribe()
+  const draftId = getDraftId(documentId)
+
+  // Establish a synced document so the listener has a base revision.
+  const created = await applyDocumentActions(instance, {
+    actions: [createDocument(doc), editDocument(doc, {set: {title: 'initial'}})],
+  })
+  await created.submitted()
+  expect(documentState.getCurrent()?.title).toBe('initial')
+
+  // Capture the fetchDocument spy so we can detect when the listener
+  // re-subscribes. (every frest subscription re-runs fetchDocument)
+  const fetchDocumentSpy = vi.mocked(createFetchDocument).mock.results.at(-1)?.value as ReturnType<
+    typeof vi.fn
+  >
+  const fetchCallsBefore = fetchDocumentSpy.mock.calls.filter(([id]) => id === draftId).length
+
+  // Inject DEFAULT_MAX_BUFFER_SIZE mutations whose previousRev doesn't chain
+  // to the base revision (basically forcing the error)
+  const sharedListener = (
+    createSharedListener as unknown as () => {events: Subject<ListenEvent<SanityDocument>>}
+  )()
+  for (let i = 0; i < DEFAULT_MAX_BUFFER_SIZE; i++) {
+    sharedListener.events.next({
+      type: 'mutation',
+      documentId: draftId,
+      eventId: `bad-${i}`,
+      identity: 'user',
+      mutations: [],
+      timestamp: new Date().toISOString(),
+      transactionId: `bad-tx-${i}`,
+      transactionCurrentEvent: 0,
+      transactionTotalEvents: 1,
+      previousRev: `dangling-rev-${i}`,
+      resultRev: `bad-rev-${i}`,
+      transition: 'update',
+      visibility: 'query',
+    })
+  }
+
+  // The above should have triggered a retry and re-subscribed to the listener
+  await vi.waitFor(() => {
+    expect(fetchDocumentSpy.mock.calls.filter(([id]) => id === draftId).length).toBeGreaterThan(
+      fetchCallsBefore,
+    )
+  })
+
+  // The store stayed healthy through the OutOfSyncError.
+  expect(() => documentState.getCurrent()).not.toThrow()
+  expect(() => getDocumentSyncStatus(instance, doc).getCurrent()).not.toThrow()
+
+  // A follow-up edit still propagates through the recovered listener.
+  const edited = await applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'after-recovery'}})],
+    resource,
+  })
+  await edited.submitted()
+  expect(documentState.getCurrent()?.title).toBe('after-recovery')
+
+  unsubscribe()
+})
+
 vi.mock('../client/clientStore.ts', () => ({
   getClientState: vi.fn().mockReturnValue({observable: new ReplaySubject(1)}),
 }))
@@ -1039,6 +1106,8 @@ vi.mock('./documentConstants.ts', async (importOriginal) => {
     ...original,
     INITIAL_OUTGOING_THROTTLE_TIME: 0,
     DOCUMENT_STATE_CLEAR_DELAY: 25,
+    OUT_OF_SYNC_RETRY_BASE_DELAY: 0,
+    OUT_OF_SYNC_RETRY_MAX_DELAY: 0,
   }
 })
 
