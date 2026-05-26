@@ -7,7 +7,9 @@
     "PKG_VERSION",
     "NPM_CONFIG_PROVENANCE",
     "CI",
-    "SANITY_INTERNAL_ENV"
+    "SANITY_INTERNAL_ENV",
+    "RECAPTCHA_E2E_STAGING_KEY",
+    "VERCEL_AUTOMATION_BYPASS_SECRET"
   ],
   "tasks": {
     "build": {
