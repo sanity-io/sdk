@@ -20,7 +20,7 @@ import {type StoreContext} from '../store/defineStore'
 import {type DocumentStoreState} from './documentStore'
 import {processMutations} from './processMutations'
 
-const DEFAULT_MAX_BUFFER_SIZE = 20
+export const DEFAULT_MAX_BUFFER_SIZE = 20
 const DEFAULT_DEADLINE_MS = 30000
 
 export interface RemoteDocument {
