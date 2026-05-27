@@ -7,15 +7,17 @@
     "PKG_VERSION",
     "NPM_CONFIG_PROVENANCE",
     "CI",
-    "SDK_E2E_*",
-    "SANITY_INTERNAL_ENV",
-    "RECAPTCHA_E2E_STAGING_KEY",
-    "VERCEL_AUTOMATION_BYPASS_SECRET"
+    "SANITY_INTERNAL_ENV"
   ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
+    },
+    "@sanity/kitchensink-react#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"],
+      "env": ["SDK_E2E_*"]
     },
     "build:bundle": {
       "dependsOn": ["^build:bundle"],
@@ -31,7 +33,7 @@
     "clean": {},
     "cleanup": {
       "cache": false,
-      "env": ["SDK_E2E_*"]
+      "env": ["SDK_E2E_*", "RECAPTCHA_E2E_STAGING_KEY", "VERCEL_AUTOMATION_BYPASS_SECRET"]
     },
     "depcheck": {
       "env": ["DEPCHECK"]
