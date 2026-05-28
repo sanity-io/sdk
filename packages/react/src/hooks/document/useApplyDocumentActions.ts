@@ -1,15 +1,8 @@
-import {type ActionsResult, applyDocumentActions, type DocumentAction} from '@sanity/sdk'
-import {isDeepEqual} from '@sanity/sdk/_internal'
+import {type ActionsResult, type DocumentAction} from '@sanity/sdk'
 import {type SanityDocument} from 'groq'
-import {useContext} from 'react'
 
 import {type ResourceHandle} from '../../config/handles'
-import {ResourcesContext} from '../../context/ResourcesContext'
-import {useSanityInstance} from '../context/useSanityInstance'
-import {
-  normalizeResourceOptions,
-  useEffectiveContextResource,
-} from '../helpers/useNormalizedResourceOptions'
+import {useApplyActions} from '../helpers/useApplyActions'
 // this import is used in an `{@link useEditDocument}`
 // eslint-disable-next-line import/consistent-type-specifier-style
 import type {useEditDocument} from './useEditDocument'
@@ -214,44 +207,5 @@ interface UseApplyDocumentActions {
  * ```
  */
 export const useApplyDocumentActions: UseApplyDocumentActions = () => {
-  const instance = useSanityInstance()
-  const resources = useContext(ResourcesContext)
-  const effectiveContextResource = useEffectiveContextResource()
-
-  return (actionOrActions, options) => {
-    const actions = Array.isArray(actionOrActions) ? actionOrActions : [actionOrActions]
-    const optionsResource = options
-      ? normalizeResourceOptions(options, resources, effectiveContextResource).resource
-      : undefined
-
-    const normalizedActions = actions.map((action) =>
-      normalizeResourceOptions(action, resources, effectiveContextResource),
-    )
-    let resource
-
-    for (const action of normalizedActions) {
-      if (!resource && action.resource) resource = action.resource
-      if (!isDeepEqual(action.resource, resource)) {
-        throw new Error(
-          `Mismatched resources found in actions. All actions must belong to the same resource. Found "${JSON.stringify(action.resource)}" but expected "${JSON.stringify(resource)}".`,
-        )
-      }
-    }
-
-    if (optionsResource && resource && !isDeepEqual(optionsResource, resource)) {
-      throw new Error(
-        `Mismatched resources found in actions. Found top-level resource "${JSON.stringify(optionsResource)}" but expected resource from action handles "${JSON.stringify(resource)}".`,
-      )
-    }
-
-    const effectiveResource = resource ?? optionsResource ?? effectiveContextResource
-    if (!effectiveResource) {
-      throw new Error('No resource found. Provide a resource via the action handle or context.')
-    }
-
-    return applyDocumentActions(instance, {
-      actions: normalizedActions as DocumentAction[],
-      resource: effectiveResource,
-    })
-  }
+  return useApplyActions() as ReturnType<UseApplyDocumentActions>
 }

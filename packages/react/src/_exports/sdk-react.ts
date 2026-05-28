@@ -92,6 +92,7 @@ export {type ProjectWithoutMembers, useProjects} from '../hooks/projects/useProj
 export {useQuery} from '../hooks/query/useQuery'
 export {useActiveReleases} from '../hooks/releases/useActiveReleases'
 export {useAllReleases} from '../hooks/releases/useAllReleases'
+export {useApplyReleaseActions} from '../hooks/releases/useApplyReleaseActions'
 export {usePerspective} from '../hooks/releases/usePerspective'
 export {type UserResult, useUser} from '../hooks/users/useUser'
 export {type UsersResult, useUsers} from '../hooks/users/useUsers'

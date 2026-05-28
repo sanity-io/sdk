@@ -3,6 +3,7 @@ import {
   PerspectiveHandle,
   ReleasePerspective,
   useActiveReleases,
+  useAllReleases,
   useDocument,
   useDocumentPreview,
   useDocumentProjection,
@@ -10,12 +11,13 @@ import {
   usePerspective,
 } from '@sanity/sdk-react'
 import {Box, Button, Card, Dialog, Flex, Heading, Spinner, Stack, Text, TextInput} from '@sanity/ui'
-import {type JSX, Suspense, useMemo, useState} from 'react'
+import {type JSX, Suspense, useEffect, useMemo, useState} from 'react'
 
 import {DocumentEditorPanel} from '../../components/DocumentEditorPanel'
 import {DocumentListLayout} from '../../components/DocumentListLayout/DocumentListLayout'
 import {JsonDocumentEditor} from '../../components/JsonDocumentEditor'
 import {DocumentPreview} from '../../DocumentCollection/DocumentPreview'
+import {ReleaseActionsDialog} from './ReleaseActionsDialog'
 import {ReleasesAutocomplete} from './ReleasesAutocomplete'
 import {isReleasePerspective} from './util'
 
@@ -161,9 +163,28 @@ function ReleasesContent({
   selectedDocument: DocumentHandle
   onDocumentIdSubmit: (documentId: string) => void
 }) {
+  const [releaseDialog, setReleaseDialog] = useState<
+    {mode: 'create'} | {mode: 'edit'; releaseName: string} | null
+  >(null)
+  // After creating a release, defer switching the perspective until the
+  // listener has delivered it into useActiveReleases — otherwise
+  // getPerspectiveState throws "not found in active releases".
+  const [pendingPerspectiveSwitch, setPendingPerspectiveSwitch] = useState<string | null>(null)
   const activeReleases = useActiveReleases()
+  // useAllReleases includes archived/published so a release stays visible
+  // through its full lifecycle in the management UI (selected card + dialog).
+  const allReleases = useAllReleases()
   const calculatedPerspective = usePerspective(selectedPerspective)
-  const selectedReleaseDocument = activeReleases.find(
+
+  useEffect(() => {
+    if (!pendingPerspectiveSwitch) return
+    if (activeReleases.some((r) => r.name === pendingPerspectiveSwitch)) {
+      onPerspectiveSelect({perspective: {releaseName: pendingPerspectiveSwitch}})
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPendingPerspectiveSwitch(null)
+    }
+  }, [pendingPerspectiveSwitch, activeReleases, onPerspectiveSelect])
+  const selectedReleaseDocument = allReleases.find(
     (release) =>
       release.name === (selectedPerspective.perspective as ReleasePerspective).releaseName,
   )
@@ -202,9 +223,17 @@ function ReleasesContent({
       </Box>
 
       <Box>
-        <Text size={1} weight="semibold" style={{marginBottom: '8px'}}>
-          Releases
-        </Text>
+        <Flex align="center" justify="space-between" style={{marginBottom: '8px'}}>
+          <Text size={1} weight="semibold">
+            Releases
+          </Text>
+          <Button
+            text="Create release"
+            tone="positive"
+            fontSize={1}
+            onClick={() => setReleaseDialog({mode: 'create'})}
+          />
+        </Flex>
         <ReleasesAutocomplete
           activeReleases={activeReleases}
           selectedPerspective={selectedPerspective}
@@ -274,13 +303,40 @@ function ReleasesContent({
 
       {selectedReleaseDocument && (
         <Box>
-          <Heading as="h2" size={3}>
-            Selected Release Document
-          </Heading>
+          <Flex align="center" justify="space-between">
+            <Heading as="h2" size={3}>
+              Selected Release Document
+            </Heading>
+            <Button
+              text="Edit release"
+              tone="primary"
+              fontSize={1}
+              onClick={() =>
+                setReleaseDialog({mode: 'edit', releaseName: selectedReleaseDocument.name})
+              }
+            />
+          </Flex>
           <pre data-testid="selected-release-document">
             {JSON.stringify(selectedReleaseDocument, null, 2)}
           </pre>
         </Box>
+      )}
+
+      {releaseDialog && (
+        <ReleaseActionsDialog
+          mode={releaseDialog.mode}
+          release={
+            releaseDialog.mode === 'edit'
+              ? allReleases.find((r) => r.name === releaseDialog.releaseName)
+              : undefined
+          }
+          onClose={() => setReleaseDialog(null)}
+          onCreated={(releaseId) => {
+            setPendingPerspectiveSwitch(releaseId)
+            setReleaseDialog(null)
+          }}
+          onLeftActive={() => onPerspectiveSelect({perspective: 'drafts'})}
+        />
       )}
     </>
   )
