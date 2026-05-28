@@ -47,7 +47,7 @@ describe('usePerspective', () => {
     // Mock the active releases observable for the suspender
     const mockReleaseDoc: ReleaseDocument = {
       _id: 'release1',
-      _type: 'release',
+      _type: 'system.release',
       _createdAt: '2021-01-01T00:00:00Z',
       _updatedAt: '2021-01-01T00:00:00Z',
       _rev: 'rev1',

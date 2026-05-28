@@ -1,5 +1,63 @@
 # Changelog
 
+## [2.12.0](https://github.com/sanity-io/sdk/compare/sdk-v2.11.1...sdk-v2.12.0) (2026-05-21)
+
+
+### Features
+
+* **core:** add release actions to document store ([#898](https://github.com/sanity-io/sdk/issues/898)) ([44c22d7](https://github.com/sanity-io/sdk/commit/44c22d73821f56229e516724662667c53c66fd42))
+* **core:** enable production telemetry on Sanity-controlled domains ([#905](https://github.com/sanity-io/sdk/issues/905)) ([a160523](https://github.com/sanity-io/sdk/commit/a160523f7e3ff7094cb03ce14a06deaedcc892c3))
+* **releases:** add useAllReleases hook ([#899](https://github.com/sanity-io/sdk/issues/899)) ([57e78a5](https://github.com/sanity-io/sdk/commit/57e78a583040dbdb3936dd144817cc0feb657709))
+
+
+### Bug Fixes
+
+* **deps:** Update sanity monorepo ([#901](https://github.com/sanity-io/sdk/issues/901)) ([31e95f0](https://github.com/sanity-io/sdk/commit/31e95f028efa3223578fcac7a50e3c85a897b3d2))
+
+## [2.11.1](https://github.com/sanity-io/sdk/compare/sdk-v2.11.0...sdk-v2.11.1) (2026-05-12)
+
+
+### Bug Fixes
+
+* **auth:** keep subscription alive after /users/me fetch error ([#894](https://github.com/sanity-io/sdk/issues/894)) ([134e9e8](https://github.com/sanity-io/sdk/commit/134e9e848c365110b25b86246dab30fce86911ea))
+* **deps:** update dependency @sanity/bifur-client to v1 ([#873](https://github.com/sanity-io/sdk/issues/873)) ([2dda973](https://github.com/sanity-io/sdk/commit/2dda97336bd4efc26928095e99b351a924ca7ccd))
+* **deps:** update dependency @sanity/image-url to ^2.1.1 ([#880](https://github.com/sanity-io/sdk/issues/880)) ([b478cae](https://github.com/sanity-io/sdk/commit/b478cae97fb01aab171230fa5841de881705ff2e))
+* **deps:** update dependency zustand to ^5.0.13 ([#879](https://github.com/sanity-io/sdk/issues/879)) ([5344f3c](https://github.com/sanity-io/sdk/commit/5344f3cabe82a96265a59ae407d8581eaad9c7c2))
+* **deps:** Update sanity monorepo ([#881](https://github.com/sanity-io/sdk/issues/881)) ([639061d](https://github.com/sanity-io/sdk/commit/639061de13401fd49baf75c2c6eb1f4838a8afdc))
+* **dev-deps:** update dependency @sanity/comlink to v4 ([#875](https://github.com/sanity-io/sdk/issues/875)) ([e1dc041](https://github.com/sanity-io/sdk/commit/e1dc041acbfaf6d49ff1da4049ea3b4782b50edf))
+
+## [2.11.0](https://github.com/sanity-io/sdk/compare/sdk-v2.10.0...sdk-v2.11.0) (2026-05-07)
+
+
+### Features
+
+* add organization stores to the sdk ([#866](https://github.com/sanity-io/sdk/issues/866)) ([1d642f0](https://github.com/sanity-io/sdk/commit/1d642f09bebb483d944956038179867a6c98ed0c))
+* **core:** add other param options to projectsStore ([#865](https://github.com/sanity-io/sdk/issues/865)) ([12cd510](https://github.com/sanity-io/sdk/commit/12cd510983a1abd0690e4760e12fa127f764023c))
+* use single sanity instance ([#828](https://github.com/sanity-io/sdk/issues/828)) ([ec047a7](https://github.com/sanity-io/sdk/commit/ec047a7a20c2d6623afc4c58b36dfa07767f8f88))
+
+
+### Bug Fixes
+
+* **core:** use tag instead of requestTagPrefix on project calls ([#868](https://github.com/sanity-io/sdk/issues/868)) ([b4b559f](https://github.com/sanity-io/sdk/commit/b4b559f6ee20bcb769891944384cecf3cb97d0d8))
+* **deps:** update dependency groq-js to ^1.30.1 ([#848](https://github.com/sanity-io/sdk/issues/848)) ([60090da](https://github.com/sanity-io/sdk/commit/60090da6d7258694394c49398f1f8d027062c100))
+* **telemetry:** use URL as primary dev-mode signal in browser ([#864](https://github.com/sanity-io/sdk/issues/864)) ([47ed6dd](https://github.com/sanity-io/sdk/commit/47ed6ddc8b520605a52f8c925df94568c371cd3b))
+
+## [2.10.0](https://github.com/sanity-io/sdk/compare/sdk-v2.9.0...sdk-v2.10.0) (2026-05-01)
+
+
+### Features
+
+* handle chunk-load errors with automatic reload ([#819](https://github.com/sanity-io/sdk/issues/819)) ([5f95741](https://github.com/sanity-io/sdk/commit/5f95741522664c2de0aabf4f7aaf4034755d7a2f))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/client to ^7.22.0 ([#818](https://github.com/sanity-io/sdk/issues/818)) ([aefe0f1](https://github.com/sanity-io/sdk/commit/aefe0f1aae21f861b4f107df6589208183f53fde))
+* **deps:** update dependency @sanity/comlink to ^3.1.1 ([#830](https://github.com/sanity-io/sdk/issues/830)) ([fe30d56](https://github.com/sanity-io/sdk/commit/fe30d56170a6850fa3b714eaba796f5f29ddf2a2))
+* **deps:** update dependency @sanity/message-protocol to ^0.23.0 ([#833](https://github.com/sanity-io/sdk/issues/833)) ([a7f95a4](https://github.com/sanity-io/sdk/commit/a7f95a4842b7929309415470d11c0f13f5e69cf9))
+* **deps:** update dependency @sanity/telemetry to ^1.1.0 ([#822](https://github.com/sanity-io/sdk/issues/822)) ([168ae3e](https://github.com/sanity-io/sdk/commit/168ae3ead13a2ab4abacad0ea7082b66e0b8c960))
+* **deps:** update dependency zustand to ^5.0.12 ([#832](https://github.com/sanity-io/sdk/issues/832)) ([9b8c2de](https://github.com/sanity-io/sdk/commit/9b8c2de1b2806b575bde99901430791f8538d1ba))
+
 ## [2.9.0](https://github.com/sanity-io/sdk/compare/sdk-v2.8.0...sdk-v2.9.0) (2026-04-20)
 
 

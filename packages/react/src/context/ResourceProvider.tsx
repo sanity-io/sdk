@@ -1,8 +1,18 @@
-import {createSanityInstance, type SanityConfig, type SanityInstance} from '@sanity/sdk'
+import {
+  createSanityInstance,
+  type DatasetResource,
+  type DocumentResource,
+  isDatasetResource,
+  type SanityConfig,
+  type SanityInstance,
+} from '@sanity/sdk'
 import {initTelemetry} from '@sanity/sdk/_internal'
-import {Suspense, useContext, useEffect, useMemo, useRef} from 'react'
+import {useContext, useEffect, useMemo, useRef, useState} from 'react'
 
+import {ResourceContext} from './DefaultResourceContext'
+import {PerspectiveContext} from './PerspectiveContext'
 import {SanityInstanceContext} from './SanityInstanceContext'
+import {SanityInstanceProvider} from './SanityInstanceProvider'
 
 const DEFAULT_FALLBACK = (
   <>
@@ -16,73 +26,63 @@ const DEFAULT_FALLBACK = (
  */
 export interface ResourceProviderProps extends SanityConfig {
   /**
-   * React node to show while content is loading
-   * Used as the fallback for the internal Suspense boundary
+   * The document resource (project/dataset, media library, or canvas)
+   * for this subtree. Hooks that don't specify an explicit resource will
+   * use this value.
+   */
+  resource?: DocumentResource
+  /**
+   * React node to show while content is loading.
+   * Used as the fallback for the internal Suspense boundary.
    */
   fallback: React.ReactNode
   children: React.ReactNode
 }
 
 /**
- * Provides a Sanity instance to child components through React Context
+ * Provides Sanity configuration to child components through React Context.
  *
  * @internal
  *
- * @remarks
- * The ResourceProvider creates a hierarchical structure of Sanity instances:
- * - When used as a root provider, it creates a new Sanity instance with the given config
- * - When nested inside another ResourceProvider, it creates a child instance that
- *   inherits and extends the parent's configuration
- *
- * Features:
- * - Automatically manages the lifecycle of Sanity instances
- * - Disposes instances when the component unmounts
- * - Includes a Suspense boundary for data loading
- * - Enables hierarchical configuration inheritance
- *
- * Use this component to:
- * - Set up project/dataset configuration for an application
- * - Override specific configuration values in a section of your app
- * - Create isolated instance hierarchies for different features
- *
- * @example Creating a root provider
+ * @example
  * ```tsx
  * <ResourceProvider
- *   projectId="your-project-id"
- *   dataset="production"
+ *   resource={{ projectId: 'your-project-id', dataset: 'production' }}
  *   fallback={<LoadingSpinner />}
  * >
  *   <YourApp />
- * </ResourceProvider>
- * ```
- *
- * @example Creating nested providers with configuration inheritance
- * ```tsx
- * // Root provider with production config with nested provider for preview features with custom dataset
- * <ResourceProvider projectId="abc123" dataset="production" fallback={<Loading />}>
- *   <div>...Main app content</div>
- *   <Dashboard />
- *   <ResourceProvider dataset="preview" fallback={<Loading />}>
- *     <PreviewFeatures />
- *   </ResourceProvider>
  * </ResourceProvider>
  * ```
  */
 export function ResourceProvider({
   children,
   fallback,
+  resource,
   ...config
 }: ResourceProviderProps): React.ReactNode {
-  const parent = useContext(SanityInstanceContext)
-  const instance = useMemo(
-    () => (parent ? parent.createChild(config) : createSanityInstance(config)),
-    [config, parent],
-  )
+  const parentPerspective = useContext(PerspectiveContext)
+  const parentResource = useContext(ResourceContext)
+  const parentInstance = useContext(SanityInstanceContext)
 
-  const projectId = config.projectId ?? ''
-  useMemo(() => {
-    if (projectId && !parent) initTelemetry(instance, projectId)
-  }, [instance, projectId, parent])
+  const {projectId, dataset, perspective} = config
+
+  const [instance] = useState<SanityInstance>(() => parentInstance ?? createSanityInstance(config))
+
+  const configResource: DatasetResource | undefined = useMemo(() => {
+    if (projectId && dataset) {
+      return {projectId, dataset}
+    }
+    return undefined
+  }, [projectId, dataset])
+
+  const effectiveResource = useMemo(() => {
+    return resource ?? configResource ?? parentResource
+  }, [resource, configResource, parentResource])
+
+  useEffect(() => {
+    if (effectiveResource && isDatasetResource(effectiveResource))
+      initTelemetry(instance, effectiveResource.projectId)
+  }, [instance, effectiveResource])
 
   // Ref to hold the scheduled disposal timer.
   const disposal = useRef<{
@@ -101,17 +101,22 @@ export function ResourceProvider({
       disposal.current = {
         instance,
         timeoutId: setTimeout(() => {
-          if (!instance.isDisposed()) {
+          // don't dispose the parent instance when this unmounts
+          if (!instance.isDisposed() && instance !== parentInstance) {
             instance.dispose()
           }
         }, 0),
       }
     }
-  }, [instance])
+  }, [instance, parentInstance])
 
   return (
-    <SanityInstanceContext.Provider value={instance}>
-      <Suspense fallback={fallback ?? DEFAULT_FALLBACK}>{children}</Suspense>
-    </SanityInstanceContext.Provider>
+    <SanityInstanceProvider instance={instance} fallback={fallback ?? DEFAULT_FALLBACK}>
+      <ResourceContext.Provider value={effectiveResource}>
+        <PerspectiveContext.Provider value={perspective ?? parentPerspective}>
+          {children}
+        </PerspectiveContext.Provider>
+      </ResourceContext.Provider>
+    </SanityInstanceProvider>
   )
 }

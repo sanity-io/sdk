@@ -1,7 +1,7 @@
-import {type SanityDocument} from '@sanity/types'
+import {type ReleaseDocument} from '@sanity/client'
 import {map} from 'rxjs'
 
-import {type DocumentResource, isDatasetResource} from '../config/sanityConfig'
+import {type DocumentResource} from '../config/sanityConfig'
 /*
  * Although this is an import dependency cycle, it is not a logical cycle:
  * 1. releasesStore uses queryStore as a data source
@@ -21,23 +21,23 @@ const ARCHIVED_RELEASE_STATES = ['archived', 'published']
 const STABLE_EMPTY_RELEASES: ReleaseDocument[] = []
 
 /**
- * Represents a document in a Sanity dataset that represents release options.
- * @internal
+ * Lifecycle states a release document can be in. Mirrors the server's
+ * `ReleaseState`.
+ * @beta
  */
-export type ReleaseDocument = SanityDocument & {
-  name: string
-  publishAt?: string
-  state: 'active' | 'scheduled'
-  metadata: {
-    title: string
-    releaseType: 'asap' | 'scheduled' | 'undecided'
-    intendedPublishAt?: string
-    description?: string
-  }
-}
+export type ReleaseState =
+  | 'active'
+  | 'archiving'
+  | 'unarchiving'
+  | 'archived'
+  | 'published'
+  | 'publishing'
+  | 'scheduled'
+  | 'scheduling'
 
 export interface ReleasesStoreState {
   activeReleases?: ReleaseDocument[]
+  allReleases?: ReleaseDocument[]
   error?: unknown
 }
 
@@ -45,6 +45,7 @@ export const releasesStore = defineStore<ReleasesStoreState, BoundResourceKey>({
   name: 'Releases',
   getInitialState: (): ReleasesStoreState => ({
     activeReleases: undefined,
+    allReleases: undefined,
   }),
   initialize: (context) => {
     const subscription = subscribeToReleases(context)
@@ -74,6 +75,26 @@ export const getActiveReleasesState = (
   // bindActionByResource keyFn destructures { resource } from the first param, so pass {} when no options
   _getActiveReleasesState(instance, options ?? {})
 
+/**
+ * Get every release in the store, including archived and published.
+ * @internal
+ */
+const _getAllReleasesState = bindActionByResource(
+  releasesStore,
+  createStateSourceAction({
+    selector: ({state}, _?) => state.allReleases,
+  }),
+)
+
+/**
+ * Get every release in the store, including archived and published.
+ * @internal
+ */
+export const getAllReleasesState = (
+  instance: SanityInstance,
+  options?: {resource?: DocumentResource},
+): StateSource<ReleaseDocument[] | undefined> => _getAllReleasesState(instance, options ?? {})
+
 const RELEASES_QUERY = 'releases::all()'
 
 const subscribeToReleases = ({
@@ -84,7 +105,7 @@ const subscribeToReleases = ({
   const {observable: releases$} = getQueryState<ReleaseDocument[]>(instance, {
     query: RELEASES_QUERY,
     perspective: 'raw',
-    resource: resource && !isDatasetResource(resource) ? resource : undefined,
+    resource,
     tag: 'releases',
   })
   return releases$
@@ -92,10 +113,12 @@ const subscribeToReleases = ({
       map((releases) => {
         // logic here mirrors that of studio:
         // https://github.com/sanity-io/sanity/blob/156e8fa482703d99219f08da7bacb384517f1513/packages/sanity/src/core/releases/store/useActiveReleases.ts#L29
-        state.set('setActiveReleases', {
-          activeReleases: sortReleases(releases ?? STABLE_EMPTY_RELEASES)
-            .filter((release) => !ARCHIVED_RELEASE_STATES.includes(release.state))
-            .reverse(),
+        const sorted = sortReleases(releases ?? STABLE_EMPTY_RELEASES).reverse()
+        state.set('setReleases', {
+          allReleases: sorted,
+          activeReleases: sorted.filter(
+            (release) => !ARCHIVED_RELEASE_STATES.includes(release.state),
+          ),
         })
       }),
     )

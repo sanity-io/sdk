@@ -2,8 +2,8 @@ import {type CreateMutation, type Reference, type SanityDocument} from '@sanity/
 import {parse} from 'groq-js'
 import {describe, expect, it} from 'vitest'
 
-import {type DocumentAction} from './actions'
-import {ActionError, processActions} from './processActions'
+import {type Action, type DocumentAction} from './actions'
+import {ActionError, processActions} from './processActions/processActions'
 import {type DocumentSet} from './processMutations'
 
 // Helper: Create a sample document that conforms to SanityDocument.
@@ -1417,6 +1417,428 @@ describe('processActions', () => {
         expect(() =>
           processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
         ).toThrow(/Cannot delete a version document/)
+      })
+    })
+  })
+
+  describe('release actions', () => {
+    const releaseName = 'my-release'
+    const releaseDocId = `_.releases.${releaseName}`
+
+    const createReleaseDoc = (overrides: Partial<SanityDocument> = {}): SanityDocument => ({
+      _id: releaseDocId,
+      _type: 'system.release',
+      _createdAt: '2025-01-01T00:00:00.000Z',
+      _updatedAt: '2025-01-01T00:00:00.000Z',
+      _rev: 'initial',
+      name: releaseName,
+      state: 'active',
+      metadata: {releaseType: 'undecided'},
+      ...overrides,
+    })
+
+    describe('release.create', () => {
+      it('inserts an optimistic release doc and emits a release.create action', () => {
+        const base: DocumentSet = {}
+        const working: DocumentSet = {}
+        const actions: Action[] = [
+          {
+            type: 'release.create',
+            releaseId: releaseName,
+            metadata: {title: 'My release', releaseType: 'asap'},
+          },
+        ]
+
+        const result = processActions({
+          actions,
+          transactionId,
+          base,
+          working,
+          timestamp,
+          grants: defaultGrants,
+        })
+
+        const doc = result.working[releaseDocId]
+        expect(doc).toBeDefined()
+        expect(doc?._type).toBe('system.release')
+        expect(doc?.['name']).toBe(releaseName)
+        expect(doc?.['state']).toBe('active')
+        expect(doc?.['metadata']).toEqual({title: 'My release', releaseType: 'asap'})
+
+        expect(result.outgoingActions).toEqual([
+          {
+            actionType: 'sanity.action.release.create',
+            releaseId: releaseName,
+            metadata: {title: 'My release', releaseType: 'asap'},
+          },
+        ])
+      })
+
+      it('throws if the release already exists in base or working', () => {
+        const existing = createReleaseDoc()
+        expect(() =>
+          processActions({
+            actions: [
+              {
+                type: 'release.create',
+                releaseId: releaseName,
+                metadata: {releaseType: 'undecided'},
+              },
+            ],
+            transactionId,
+            base: {[releaseDocId]: existing},
+            working: {[releaseDocId]: existing},
+            timestamp,
+            grants: defaultGrants,
+          }),
+        ).toThrow(/already exists/)
+      })
+
+      it('throws PermissionActionError when the create grant is denied', () => {
+        expect(() =>
+          processActions({
+            actions: [
+              {
+                type: 'release.create',
+                releaseId: releaseName,
+                metadata: {releaseType: 'undecided'},
+              },
+            ],
+            transactionId,
+            base: {},
+            working: {},
+            timestamp,
+            grants: {...defaultGrants, create: alwaysDeny},
+          }),
+        ).toThrow(/permission to create release/)
+      })
+    })
+
+    describe('release.edit', () => {
+      it('applies the patch optimistically and forwards the original patch to the outgoing action', () => {
+        const existing = createReleaseDoc({
+          metadata: {releaseType: 'undecided'},
+        } as Partial<SanityDocument>)
+        const patch = {set: {'metadata.title': 'Updated title'}}
+
+        const result = processActions({
+          actions: [{type: 'release.edit', releaseId: releaseName, patch}],
+          transactionId,
+          base: {[releaseDocId]: existing},
+          working: {[releaseDocId]: existing},
+          timestamp,
+          grants: defaultGrants,
+        })
+
+        const updated = result.working[releaseDocId] as SanityDocument & {
+          metadata: {title?: string; releaseType: string}
+        }
+        expect(updated.metadata.title).toBe('Updated title')
+        // releaseType wasn't unset
+        expect(updated.metadata.releaseType).toBe('undecided')
+
+        expect(result.outgoingActions).toEqual([
+          {
+            actionType: 'sanity.action.release.edit',
+            releaseId: releaseName,
+            patch,
+          },
+        ])
+      })
+
+      it('throws when editing a release that does not exist', () => {
+        expect(() =>
+          processActions({
+            actions: [
+              {
+                type: 'release.edit',
+                releaseId: releaseName,
+                patch: {set: {'metadata.title': 'x'}},
+              },
+            ],
+            transactionId,
+            base: {},
+            working: {},
+            timestamp,
+            grants: defaultGrants,
+          }),
+        ).toThrow(/does not exist/)
+      })
+
+      it('throws PermissionActionError when the working release fails the update grant', () => {
+        const existing = createReleaseDoc()
+        expect(() =>
+          processActions({
+            actions: [
+              {
+                type: 'release.edit',
+                releaseId: releaseName,
+                patch: {set: {'metadata.title': 'x'}},
+              },
+            ],
+            transactionId,
+            base: {[releaseDocId]: existing},
+            working: {[releaseDocId]: existing},
+            timestamp,
+            grants: {...defaultGrants, update: alwaysDeny},
+          }),
+        ).toThrow(/permission to edit release/)
+      })
+    })
+
+    describe('fire-and-forget actions', () => {
+      const existing = createReleaseDoc()
+      const cases: Array<{
+        name: string
+        action: Action
+        expectedOutgoing: Record<string, unknown>
+      }> = [
+        {
+          name: 'release.publish',
+          action: {type: 'release.publish', releaseId: releaseName},
+          expectedOutgoing: {actionType: 'sanity.action.release.publish', releaseId: releaseName},
+        },
+        {
+          name: 'release.schedule',
+          action: {
+            type: 'release.schedule',
+            releaseId: releaseName,
+            publishAt: '2026-01-01T00:00:00.000Z',
+          },
+          expectedOutgoing: {
+            actionType: 'sanity.action.release.schedule',
+            releaseId: releaseName,
+            publishAt: '2026-01-01T00:00:00.000Z',
+          },
+        },
+        {
+          name: 'release.unschedule',
+          action: {type: 'release.unschedule', releaseId: releaseName},
+          expectedOutgoing: {
+            actionType: 'sanity.action.release.unschedule',
+            releaseId: releaseName,
+          },
+        },
+        {
+          name: 'release.archive',
+          action: {type: 'release.archive', releaseId: releaseName},
+          expectedOutgoing: {actionType: 'sanity.action.release.archive', releaseId: releaseName},
+        },
+        {
+          name: 'release.unarchive',
+          action: {type: 'release.unarchive', releaseId: releaseName},
+          expectedOutgoing: {actionType: 'sanity.action.release.unarchive', releaseId: releaseName},
+        },
+      ]
+
+      it.each(cases)(
+        '$name does not mutate local state and emits the matching outgoing action',
+        ({action, expectedOutgoing}) => {
+          const base: DocumentSet = {[releaseDocId]: existing}
+          const working: DocumentSet = {[releaseDocId]: existing}
+
+          const result = processActions({
+            actions: [action],
+            transactionId,
+            base,
+            working,
+            timestamp,
+            grants: defaultGrants,
+          })
+
+          // working and base reference the same doc instance — no optimistic
+          // mutation was applied
+          expect(result.working[releaseDocId]).toBe(existing)
+          expect(result.outgoingActions).toEqual([expectedOutgoing])
+          expect(result.outgoingMutations).toEqual([])
+        },
+      )
+
+      it.each(cases)('$name throws if the release does not exist', ({action}) => {
+        expect(() =>
+          processActions({
+            actions: [action],
+            transactionId,
+            base: {},
+            working: {},
+            timestamp,
+            grants: defaultGrants,
+          }),
+        ).toThrow(ActionError)
+      })
+
+      it.each(cases)(
+        '$name throws PermissionActionError when update grant is denied',
+        ({action}) => {
+          const base: DocumentSet = {[releaseDocId]: existing}
+          const working: DocumentSet = {[releaseDocId]: existing}
+          expect(() =>
+            processActions({
+              actions: [action],
+              transactionId,
+              base,
+              working,
+              timestamp,
+              grants: {...defaultGrants, update: alwaysDeny},
+            }),
+          ).toThrow(/permission to/)
+        },
+      )
+    })
+
+    describe('release.schedule publishAt validation', () => {
+      const existing = createReleaseDoc()
+
+      it.each(['not-a-date', '', '2026-13-40T99:99:99Z'])(
+        'throws ActionError when publishAt is not a valid timestamp (%s)',
+        (publishAt) => {
+          expect(() =>
+            processActions({
+              actions: [{type: 'release.schedule', releaseId: releaseName, publishAt}],
+              transactionId,
+              base: {[releaseDocId]: existing},
+              working: {[releaseDocId]: existing},
+              timestamp,
+              grants: defaultGrants,
+            }),
+          ).toThrow(/must be a valid ISO 8601 timestamp/)
+        },
+      )
+    })
+
+    describe('release.delete', () => {
+      it.each(['archived', 'published'] as const)(
+        'optimistically removes the local release when state is %s',
+        (state) => {
+          const existing = createReleaseDoc({state} as Partial<SanityDocument>)
+          const result = processActions({
+            actions: [{type: 'release.delete', releaseId: releaseName}],
+            transactionId,
+            base: {[releaseDocId]: existing},
+            working: {[releaseDocId]: existing},
+            timestamp,
+            grants: defaultGrants,
+          })
+
+          // processMutations sets deleted entries to null
+          expect(result.working[releaseDocId]).toBeNull()
+          expect(result.outgoingMutations).toEqual([{delete: {id: releaseDocId}}])
+          expect(result.outgoingActions).toEqual([
+            {actionType: 'sanity.action.release.delete', releaseId: releaseName},
+          ])
+        },
+      )
+
+      it.each(['active', 'scheduled', 'archiving', 'publishing'] as const)(
+        'throws when state is %s (server only accepts archived/published)',
+        (state) => {
+          const existing = createReleaseDoc({state} as Partial<SanityDocument>)
+          expect(() =>
+            processActions({
+              actions: [{type: 'release.delete', releaseId: releaseName}],
+              transactionId,
+              base: {[releaseDocId]: existing},
+              working: {[releaseDocId]: existing},
+              timestamp,
+              grants: defaultGrants,
+            }),
+          ).toThrow(/Archive it first/)
+        },
+      )
+
+      it('throws if the release does not exist', () => {
+        expect(() =>
+          processActions({
+            actions: [{type: 'release.delete', releaseId: releaseName}],
+            transactionId,
+            base: {},
+            working: {},
+            timestamp,
+            grants: defaultGrants,
+          }),
+        ).toThrow(/does not exist/)
+      })
+
+      it('throws PermissionActionError when the update grant is denied', () => {
+        const existing = createReleaseDoc({state: 'archived'} as Partial<SanityDocument>)
+        expect(() =>
+          processActions({
+            actions: [{type: 'release.delete', releaseId: releaseName}],
+            transactionId,
+            base: {[releaseDocId]: existing},
+            working: {[releaseDocId]: existing},
+            timestamp,
+            grants: {...defaultGrants, update: alwaysDeny},
+          }),
+        ).toThrow(/permission to delete release/)
+      })
+    })
+
+    describe('mixed with liveEdit document actions', () => {
+      const liveEditDocId = 'live-edit-doc'
+      const liveEditDoc = {
+        _id: liveEditDocId,
+        _type: 'liveEditType',
+        _createdAt: '2025-01-01T00:00:00.000Z',
+        _updatedAt: '2025-01-01T00:00:00.000Z',
+        _rev: 'initial',
+      }
+      const liveEditAction = {
+        type: 'document.edit',
+        documentId: liveEditDocId,
+        documentType: 'liveEditType',
+        liveEdit: true,
+        patches: [{set: {title: 'x'}}],
+      } as const
+
+      it('throws ActionError when a transaction mixes a release action with a liveEdit document action', () => {
+        expect(() =>
+          processActions({
+            actions: [
+              {
+                type: 'release.create',
+                releaseId: releaseName,
+                metadata: {releaseType: 'undecided'},
+              },
+              liveEditAction as unknown as Action,
+            ],
+            transactionId,
+            base: {[liveEditDocId]: liveEditDoc},
+            working: {[liveEditDocId]: liveEditDoc},
+            timestamp,
+            grants: defaultGrants,
+          }),
+        ).toThrow(/Cannot combine liveEdit document actions with other actions/)
+      })
+
+      it('throws ActionError when a transaction mixes a non-liveEdit document action with a liveEdit document action', () => {
+        const otherDocId = 'other-doc'
+        const otherDoc = {
+          _id: otherDocId,
+          _type: 'someType',
+          _createdAt: '2025-01-01T00:00:00.000Z',
+          _updatedAt: '2025-01-01T00:00:00.000Z',
+          _rev: 'initial',
+        } as SanityDocument
+
+        expect(() =>
+          processActions({
+            actions: [
+              {
+                type: 'document.edit',
+                documentId: otherDocId,
+                documentType: 'someType',
+                patches: [{set: {title: 'y'}}],
+              },
+              liveEditAction as unknown as Action,
+            ],
+            transactionId,
+            base: {[liveEditDocId]: liveEditDoc, [otherDocId]: otherDoc},
+            working: {[liveEditDocId]: liveEditDoc, [otherDocId]: otherDoc},
+            timestamp,
+            grants: defaultGrants,
+          }),
+        ).toThrow(/Cannot combine liveEdit document actions with other actions/)
       })
     })
   })

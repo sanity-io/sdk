@@ -1,4 +1,4 @@
-import {omit} from 'lodash-es'
+import {omitProperty} from '../utils/object'
 
 interface QueryState {
   syncTags?: string[]
@@ -54,7 +54,7 @@ export const removeSubscriber =
     const prevQuery = prev.queries[key]
     if (!prevQuery) return prev
     const subscribers = prevQuery.subscribers.filter((id) => id !== subscriptionId)
-    if (!subscribers.length) return {...prev, queries: omit(prev.queries, key)}
+    if (!subscribers.length) return {...prev, queries: omitProperty(prev.queries, key)}
     return {...prev, queries: {...prev.queries, [key]: {...prevQuery, subscribers}}}
   }
 
@@ -64,7 +64,7 @@ export const cancelQuery =
     const prevQuery = prev.queries[key]
     if (!prevQuery) return prev
     if (prevQuery.subscribers.length) return prev
-    return {...prev, queries: omit(prev.queries, key)}
+    return {...prev, queries: omitProperty(prev.queries, key)}
   }
 
 export const initializeQuery =

@@ -27,14 +27,17 @@ describe('getOrCreateNode', () => {
     dataset: 'test-dataset',
   })
   let state: ReturnType<typeof createStoreState<ComlinkNodeState>>
-  let mockNode: Partial<Node<WindowMessage, FrameMessage>> & {
+  let mockNode: {
     start: ReturnType<typeof vi.fn>
     stop: ReturnType<typeof vi.fn>
+    onStatus: ReturnType<typeof vi.fn>
   }
 
   beforeEach(() => {
     mockNode = {start: vi.fn(), stop: vi.fn(), onStatus: vi.fn()}
-    vi.mocked(comlink.createNode).mockReturnValue(mockNode as Node<WindowMessage, FrameMessage>)
+    vi.mocked(comlink.createNode).mockReturnValue(
+      mockNode as unknown as Node<WindowMessage, FrameMessage>,
+    )
     state = createStoreState<ComlinkNodeState>({nodes: new Map(), subscriptions: new Map()})
     vi.clearAllMocks()
   })

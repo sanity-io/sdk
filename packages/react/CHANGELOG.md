@@ -1,5 +1,80 @@
 # Changelog
 
+## [2.12.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.11.1...sdk-react-v2.12.0) (2026-05-21)
+
+
+### Features
+
+* **core:** add release actions to document store ([#898](https://github.com/sanity-io/sdk/issues/898)) ([44c22d7](https://github.com/sanity-io/sdk/commit/44c22d73821f56229e516724662667c53c66fd42))
+* **releases:** add useAllReleases hook ([#899](https://github.com/sanity-io/sdk/issues/899)) ([57e78a5](https://github.com/sanity-io/sdk/commit/57e78a583040dbdb3936dd144817cc0feb657709))
+
+
+### Bug Fixes
+
+* **deps:** Update sanity monorepo ([#901](https://github.com/sanity-io/sdk/issues/901)) ([31e95f0](https://github.com/sanity-io/sdk/commit/31e95f028efa3223578fcac7a50e3c85a897b3d2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.12.0
+
+## [2.11.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.11.0...sdk-react-v2.11.1) (2026-05-12)
+
+
+### Bug Fixes
+
+* **deps:** update dependency react-error-boundary to v6 ([#874](https://github.com/sanity-io/sdk/issues/874)) ([c6ab1bd](https://github.com/sanity-io/sdk/commit/c6ab1bd5d2466ed2d1d081c316073d54c7c7f043))
+* **deps:** Update sanity monorepo ([#881](https://github.com/sanity-io/sdk/issues/881)) ([639061d](https://github.com/sanity-io/sdk/commit/639061de13401fd49baf75c2c6eb1f4838a8afdc))
+* **dev-deps:** update dependency @sanity/comlink to v4 ([#875](https://github.com/sanity-io/sdk/issues/875)) ([e1dc041](https://github.com/sanity-io/sdk/commit/e1dc041acbfaf6d49ff1da4049ea3b4782b50edf))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.11.1
+
+## [2.11.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.10.0...sdk-react-v2.11.0) (2026-05-07)
+
+
+### Features
+
+* add organization stores to the sdk ([#866](https://github.com/sanity-io/sdk/issues/866)) ([1d642f0](https://github.com/sanity-io/sdk/commit/1d642f09bebb483d944956038179867a6c98ed0c))
+* **core:** add other param options to projectsStore ([#865](https://github.com/sanity-io/sdk/issues/865)) ([12cd510](https://github.com/sanity-io/sdk/commit/12cd510983a1abd0690e4760e12fa127f764023c))
+* use single sanity instance ([#828](https://github.com/sanity-io/sdk/issues/828)) ([ec047a7](https://github.com/sanity-io/sdk/commit/ec047a7a20c2d6623afc4c58b36dfa07767f8f88))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.11.0
+
+## [2.10.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.9.0...sdk-react-v2.10.0) (2026-05-01)
+
+
+### Features
+
+* handle chunk-load errors with automatic reload ([#819](https://github.com/sanity-io/sdk/issues/819)) ([5f95741](https://github.com/sanity-io/sdk/commit/5f95741522664c2de0aabf4f7aaf4034755d7a2f))
+* **react:** add SanityInstanceProvider for externally-created instances ([#826](https://github.com/sanity-io/sdk/issues/826)) ([9723413](https://github.com/sanity-io/sdk/commit/9723413fff78cd1a82fe72dcef6f5ab7d69fe9b9))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/client to ^7.22.0 ([#818](https://github.com/sanity-io/sdk/issues/818)) ([aefe0f1](https://github.com/sanity-io/sdk/commit/aefe0f1aae21f861b4f107df6589208183f53fde))
+* **deps:** update dependency @sanity/message-protocol to ^0.23.0 ([#833](https://github.com/sanity-io/sdk/issues/833)) ([a7f95a4](https://github.com/sanity-io/sdk/commit/a7f95a4842b7929309415470d11c0f13f5e69cf9))
+* keep LoginError synchronous in standalone apps ([#810](https://github.com/sanity-io/sdk/issues/810)) ([9e88a08](https://github.com/sanity-io/sdk/commit/9e88a089df85c9761cf5ccaac05eb617abacca5e))
+* **react:** guard LoginError auto-logout against re-entry ([#814](https://github.com/sanity-io/sdk/issues/814)) ([07161d1](https://github.com/sanity-io/sdk/commit/07161d10405dfc47fbd3f9612f4bf5e017b7ac9e))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.10.0
+
 ## [2.9.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.8.0...sdk-react-v2.9.0) (2026-04-20)
 
 

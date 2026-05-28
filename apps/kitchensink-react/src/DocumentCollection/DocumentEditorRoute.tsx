@@ -8,7 +8,7 @@ import {
   useDocumentSyncStatus,
 } from '@sanity/sdk-react'
 import {Badge, Box, Button, Card, Checkbox, Flex, Label, Stack, Text, TextInput} from '@sanity/ui'
-import {type JSX, useEffect, useState} from 'react'
+import {type JSX, useMemo, useState} from 'react'
 
 import {DocumentEditorPanel} from '../components/DocumentEditorPanel'
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
@@ -106,56 +106,39 @@ function Editor() {
     batchSize: 1,
   })
 
-  const [docHandle, setDocHandle] = useState<DocumentHandle<'author'> | null>(documents[0] ?? null)
+  const [documentId, setDocumentId] = useState<string | null>(documents[0]?.documentId ?? null)
   const [newDocumentId, setNewDocumentId] = useState<string>('')
   const [liveEditMode, setLiveEditMode] = useState<boolean>(false)
   const {projectId, dataset} = import.meta.env['VITE_IS_E2E'] ? e2eConfigs[0] : devConfigs[0]
 
+  const docHandle = useMemo<DocumentHandle<'author'> | null>(
+    () =>
+      documentId
+        ? createDocumentHandle({
+            documentType: 'author',
+            documentId,
+            projectId,
+            dataset,
+            liveEdit: liveEditMode,
+          })
+        : null,
+    [documentId, projectId, dataset, liveEditMode],
+  )
+
   const handleLoadDocument = () => {
-    const documentId = newDocumentId || docHandle?.documentId
-    if (documentId) {
-      setDocHandle(
-        createDocumentHandle({
-          documentType: 'author',
-          documentId,
-          projectId,
-          dataset,
-          liveEdit: liveEditMode,
-        }),
-      )
+    const idToLoad = newDocumentId || documentId
+    if (idToLoad) {
+      setDocumentId(idToLoad)
     }
   }
 
   const handleDocumentIdChange = (newId: string) => {
-    setDocHandle(
-      createDocumentHandle({
-        documentType: 'author',
-        documentId: newId,
-        liveEdit: liveEditMode,
-      }),
-    )
+    setDocumentId(newId)
   }
 
   const updateDocHandle = (newValue: string) => {
     setNewDocumentId(newValue)
   }
-
-  // Automatically reload document when liveEdit mode is toggled
-  useEffect(() => {
-    if (docHandle) {
-      setDocHandle(
-        createDocumentHandle({
-          documentType: 'author',
-          documentId: docHandle.documentId,
-          projectId,
-          dataset,
-          liveEdit: liveEditMode,
-        }),
-      )
-    }
-    // eslint-disable-next-line react-compiler/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [liveEditMode])
 
   return (
     <Box padding={4}>

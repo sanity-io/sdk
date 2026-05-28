@@ -9,7 +9,7 @@ For Renovate's own docs, see [Dependency Dashboard](https://docs.renovatebot.com
 1. **Automerge by default**, with CI as the safety net.
 2. **Production dep updates trigger a patch release** via `fix(deps)` commits, aligning with release-please.
 3. **Manual review for high-risk changes**: production majors, peer deps, TypeScript majors.
-4. **14-day release age for external deps, 3 days for Sanity-maintained**, to balance supply-chain safety against keeping current.
+4. **3-day release age for external deps, 0 days for trusted upstream packages** (Sanity-maintained, React, Next, `@types/*`, and the rest of the [preset exemption list](https://github.com/sanity-io/renovate-config/blob/main/min-age-3days.json)), to balance supply-chain safety against keeping current. Both values come from the upstream [`sanity-io/renovate-config`](https://github.com/sanity-io/renovate-config) preset; we don't override.
 
 ## Where to look
 
@@ -31,7 +31,7 @@ Renovate will create these PRs at its next scheduled run (currently `before 5am`
 
 ### Rate-Limited (automatic, but capped)
 
-We set `prConcurrentLimit: 10`. Once 10 Renovate PRs are open, additional updates queue here. If this section grows long, drain it by merging or reviewing open Renovate PRs.
+We set `prConcurrentLimit: 20` (max open PRs at once) and `prHourlyLimit: 5` (max PRs created per hour). New updates queue here when either ceiling is hit. The hourly cap is usually the bottleneck during a backlog; drain it by merging open Renovate PRs, or temporarily raise either limit in `.github/renovate.json`.
 
 ### Pending Status Checks (should stay empty)
 
@@ -51,23 +51,29 @@ Neither usually appears. If one does, check the Renovate run logs linked from th
 
 ## Automerge policy
 
-| Dependency type                                                           | Update type    | Auto/Manual | Release age | Commit type        | Triggers release?                                                   |
-| ------------------------------------------------------------------------- | -------------- | ----------- | ----------- | ------------------ | ------------------------------------------------------------------- |
-| devDependencies                                                           | patch/minor    | Auto        | 14 days     | `chore(dev-deps)`  | No                                                                  |
-| devDependencies (except TypeScript)                                       | major          | Auto        | 14 days     | `chore(dev-deps)`  | No                                                                  |
-| TypeScript                                                                | major          | Manual      | 14 days     | `chore(tooling)`   | No                                                                  |
-| Production deps (in `packages/core`, `packages/react`)                    | patch/minor    | Auto        | 14 days     | `fix(deps)`        | **Yes, patch**                                                      |
-| Production deps (in `packages/core`, `packages/react`)                    | major          | Manual      | 14 days     | `fix(deps)`        | **Yes, patch** (override to `feat!` at squash for breaking changes) |
-| Peer deps                                                                 | any            | Manual      | 14 days     | `chore(peer-deps)` | No                                                                  |
-| App deps (`apps/**`)                                                      | any            | Auto        | 14 days     | `chore(apps)`      | No                                                                  |
-| **Sanity-maintained packages** (`@sanity/*`, `sanity`, `groq`, `groq-js`) | inherits above | inherits    | **3 days**  | inherits           | inherits                                                            |
-| High-severity security (any)                                              | any            | Manual      | 0 days      | varies             | varies                                                              |
+| Dependency type                                                                                                                                                              | Update type    | Auto/Manual | Release age | Commit type        | Triggers release?                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ----------- | ----------- | ------------------ | ------------------------------------------------------------------- |
+| devDependencies                                                                                                                                                              | patch/minor    | Auto        | 3 days      | `chore(dev-deps)`  | No                                                                  |
+| devDependencies (except TypeScript)                                                                                                                                          | major          | Auto        | 3 days      | `chore(dev-deps)`  | No                                                                  |
+| TypeScript                                                                                                                                                                   | major          | Manual      | 3 days      | `chore(tooling)`   | No                                                                  |
+| Production deps (in `packages/core`, `packages/react`)                                                                                                                       | patch/minor    | Auto        | 3 days      | `fix(deps)`        | **Yes, patch**                                                      |
+| Production deps (in `packages/core`, `packages/react`)                                                                                                                       | major          | Manual      | 3 days      | `fix(deps)`        | **Yes, patch** (override to `feat!` at squash for breaking changes) |
+| Peer deps                                                                                                                                                                    | any            | Manual      | 3 days      | `chore(peer-deps)` | No                                                                  |
+| App deps (`apps/**`)                                                                                                                                                         | any            | Auto        | 3 days      | `chore(apps)`      | No                                                                  |
+| **Trusted upstream packages** (Sanity-maintained, React, Next, `@types/*`, full list in [preset](https://github.com/sanity-io/renovate-config/blob/main/min-age-3days.json)) | inherits above | inherits    | **0 days**  | inherits           | inherits                                                            |
+| High-severity security (any)                                                                                                                                                 | any            | Manual      | 0 days      | varies             | varies                                                              |
 
-### Why 14 days for external packages
+### Why 3 days for external packages
 
-Renovate recommends a 14-day [`minimumReleaseAge`](https://docs.renovatebot.com/configuration-options/#minimumreleaseage) for any dep you automerge from third parties. The delay gives npm and upstream maintainers time to pull malicious or broken releases before they reach our CI. Supply-chain attacks in the JS ecosystem typically get spotted within that window.
+We inherit a 3-day [`minimumReleaseAge`](https://docs.renovatebot.com/configuration-options/#minimumreleaseage) from the [`min-age-3days`](https://github.com/sanity-io/renovate-config/blob/main/min-age-3days.json) preset. We don't override it. Three days aligns with npm's 72-hour unpublish window: if a malicious release gets pulled within that grace period, we never installed it. It also matches where industry guidance is converging, including [Datadog Security Labs](https://securitylabs.datadoghq.com/articles/dependency-cooldowns/), the [npm `min-release-age` proposals](https://github.com/npm/cli/pull/9173), and the pnpm/Yarn defaults, which all cluster in the 3-7 day range.
 
-For packages Sanity publishes, we have direct visibility into the release process, so 3 days is enough to catch obvious mistakes without slowing our own work.
+The wait only protects automerged paths. On manual-review tracks (production majors, peer deps, TypeScript major) the human review is the actual safety net.
+
+Vulnerability alerts bypass the delay entirely (`vulnerabilityAlerts.minimumReleaseAge: null`), so security advisories from the GitHub Advisory Database land immediately.
+
+### Why 0 days for trusted upstream packages
+
+The Sanity preset exempts packages we trust from the minimum-age delay: our own (`@sanity/*`, `sanity`, `groq`, `groq-js`) and framework deps we use heavily (`react*`, `next*`, `@types/*`, `pnpm`, `@portabletext/*`, etc.). We have direct relationships or strong visibility into these release processes, so the wait would slow our work without meaningful safety benefit. Full list lives in [`min-age-3days.json`](https://github.com/sanity-io/renovate-config/blob/main/min-age-3days.json).
 
 ## Commit messages and releases
 
@@ -146,7 +152,7 @@ Find it in "PR Closed (Blocked)" on the dashboard and tick the box.
 
 ### The rate-limited queue is huge
 
-Either merge/close open Renovate PRs to drain the queue, or temporarily bump `prConcurrentLimit` in `renovate.json` and revert once drained.
+Either merge/close open Renovate PRs to drain the queue, or temporarily bump `prHourlyLimit` (the creation throttle) and/or `prConcurrentLimit` (the open-PR ceiling) in `renovate.json`, then revert once drained. The hourly cap is usually the bottleneck.
 
 ### I'm bumping the repo's pnpm version
 

@@ -20,14 +20,14 @@ describe('useActiveReleases', () => {
     vi.clearAllMocks()
   })
 
-  it('should suspend when initial state is undefined', () => {
+  it('suspends until the releases state source emits, then resolves with the data', async () => {
     const mockSubject = new BehaviorSubject<ReleaseDocument[] | undefined>(undefined)
     const mockStateSource = {
       subscribe: vi.fn((callback) => {
         const subscription = mockSubject.subscribe(callback)
         return () => subscription.unsubscribe()
       }),
-      getCurrent: vi.fn(() => undefined),
+      getCurrent: vi.fn(() => mockSubject.getValue()),
       observable: mockSubject,
     }
 
@@ -50,15 +50,21 @@ describe('useActiveReleases', () => {
       },
     )
 
-    // Verify that the hook threw a promise (suspended)
     expect(result.current).toBeInstanceOf(Promise)
     expect(mockStateSource.getCurrent).toHaveBeenCalled()
+
+    const resolved: ReleaseDocument[] = [
+      {_id: 'release1', _type: 'release'} as unknown as ReleaseDocument,
+    ]
+    mockSubject.next(resolved)
+
+    await expect(result.current).resolves.toEqual(resolved)
   })
 
   it('should resolve with releases when data is available', () => {
     const mockReleases: ReleaseDocument[] = [
-      {_id: 'release1', _type: 'release'} as ReleaseDocument,
-      {_id: 'release2', _type: 'release'} as ReleaseDocument,
+      {_id: 'release1', _type: 'release'} as unknown as ReleaseDocument,
+      {_id: 'release2', _type: 'release'} as unknown as ReleaseDocument,
     ]
 
     const mockSubject = new BehaviorSubject<ReleaseDocument[]>(mockReleases)

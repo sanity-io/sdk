@@ -4,9 +4,14 @@
 export {AuthBoundary, type AuthBoundaryProps} from '../components/auth/AuthBoundary'
 export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
+export {type DocumentHandle, type DocumentTypeHandle, type ResourceHandle} from '../config/handles'
 export {ComlinkTokenRefreshProvider} from '../context/ComlinkTokenRefresh'
 export {renderSanityApp} from '../context/renderSanityApp'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
+export {
+  SanityInstanceProvider,
+  type SanityInstanceProviderProps,
+} from '../context/SanityInstanceProvider'
 export {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
 export {
   useAgentGenerate,
@@ -40,6 +45,7 @@ export {
   type WindowConnection,
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
+export {useResource} from '../hooks/context/useResource'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
 export {useDispatchIntent} from '../hooks/dashboard/useDispatchIntent'
@@ -63,6 +69,8 @@ export {
   type DocumentsResponse,
   useDocuments,
 } from '../hooks/documents/useDocuments'
+export {useOrganization} from '../hooks/organizations/useOrganization'
+export {useOrganizations} from '../hooks/organizations/useOrganizations'
 export {
   type PaginatedDocumentsOptions,
   type PaginatedDocumentsResponse,
@@ -83,6 +91,8 @@ export {useProject} from '../hooks/projects/useProject'
 export {type ProjectWithoutMembers, useProjects} from '../hooks/projects/useProjects'
 export {useQuery} from '../hooks/query/useQuery'
 export {useActiveReleases} from '../hooks/releases/useActiveReleases'
+export {useAllReleases} from '../hooks/releases/useAllReleases'
+export {useApplyReleaseActions} from '../hooks/releases/useApplyReleaseActions'
 export {usePerspective} from '../hooks/releases/usePerspective'
 export {type UserResult, useUser} from '../hooks/users/useUser'
 export {type UsersResult, useUsers} from '../hooks/users/useUsers'

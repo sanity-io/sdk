@@ -2,6 +2,7 @@ import {type SanityClient} from '@sanity/client'
 import {from, Observable, switchMap} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
+import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
 
 const API_VERSION = 'vX'
@@ -58,12 +59,11 @@ export type AgentPatchResult = Awaited<ReturnType<SanityClient['agent']['action'
 export function agentGenerate(
   instance: SanityInstance,
   options: AgentGenerateOptions,
+  resource?: DocumentResource,
 ): AgentGenerateResult {
-  return getClientState(instance, {
-    apiVersion: API_VERSION,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
-  }).observable.pipe(switchMap((client) => client.observable.agent.action.generate(options)))
+  return getClientState(instance, {apiVersion: API_VERSION, resource}).observable.pipe(
+    switchMap((client) => client.observable.agent.action.generate(options)),
+  )
 }
 
 /**
@@ -76,12 +76,11 @@ export function agentGenerate(
 export function agentTransform(
   instance: SanityInstance,
   options: AgentTransformOptions,
+  resource?: DocumentResource,
 ): AgentTransformResult {
-  return getClientState(instance, {
-    apiVersion: API_VERSION,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
-  }).observable.pipe(switchMap((client) => client.observable.agent.action.transform(options)))
+  return getClientState(instance, {apiVersion: API_VERSION, resource}).observable.pipe(
+    switchMap((client) => client.observable.agent.action.transform(options)),
+  )
 }
 
 /**
@@ -94,12 +93,11 @@ export function agentTransform(
 export function agentTranslate(
   instance: SanityInstance,
   options: AgentTranslateOptions,
+  resource?: DocumentResource,
 ): AgentTranslateResult {
-  return getClientState(instance, {
-    apiVersion: API_VERSION,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
-  }).observable.pipe(switchMap((client) => client.observable.agent.action.translate(options)))
+  return getClientState(instance, {apiVersion: API_VERSION, resource}).observable.pipe(
+    switchMap((client) => client.observable.agent.action.translate(options)),
+  )
 }
 
 /**
@@ -112,12 +110,11 @@ export function agentTranslate(
 export function agentPrompt(
   instance: SanityInstance,
   options: AgentPromptOptions,
+  resource?: DocumentResource,
 ): Observable<AgentPromptResult> {
-  return getClientState(instance, {
-    apiVersion: API_VERSION,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
-  }).observable.pipe(switchMap((client) => from(client.agent.action.prompt(options))))
+  return getClientState(instance, {apiVersion: API_VERSION, resource}).observable.pipe(
+    switchMap((client) => from(client.agent.action.prompt(options))),
+  )
 }
 
 /**
@@ -130,10 +127,9 @@ export function agentPrompt(
 export function agentPatch(
   instance: SanityInstance,
   options: AgentPatchOptions,
+  resource?: DocumentResource,
 ): Observable<AgentPatchResult> {
-  return getClientState(instance, {
-    apiVersion: API_VERSION,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
-  }).observable.pipe(switchMap((client) => from(client.agent.action.patch(options))))
+  return getClientState(instance, {apiVersion: API_VERSION, resource}).observable.pipe(
+    switchMap((client) => from(client.agent.action.patch(options))),
+  )
 }

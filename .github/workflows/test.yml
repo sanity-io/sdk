@@ -20,7 +20,7 @@ jobs:
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     strategy:
       matrix:
-        node-version: [20, 22]
+        node-version: [22, 24]
       fail-fast: false
 
     steps:
@@ -43,7 +43,7 @@ jobs:
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: ${{ !cancelled() && matrix.node-version == 22 }}
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: blob-report-${{ github.run_id }}-${{ matrix.node-version }}
           path: ".vitest-reports/*"
@@ -63,7 +63,7 @@ jobs:
           node-version: 22
 
       - name: "Download coverage artifacts"
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           path: .vitest-reports
           pattern: blob-report-${{ github.run_id }}-*

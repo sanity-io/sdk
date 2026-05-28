@@ -1,6 +1,6 @@
 import {type SanityClient} from '@sanity/client'
-import {delay, firstValueFrom, of, Subject} from 'rxjs'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {delay, firstValueFrom, type Observable, of, Subject} from 'rxjs'
+import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
 import {getTokenState} from '../auth/authStore'
 import {getClient} from '../client/clientStore'
@@ -9,7 +9,7 @@ import {type SanityUser} from '../users/types'
 import {getUserState} from '../users/usersStore'
 import {createBifurTransport} from './bifurTransport'
 import {getPresence} from './presenceStore'
-import {type PresenceLocation, type TransportEvent} from './types'
+import {type PresenceLocation, type TransportEvent, type TransportMessage} from './types'
 
 vi.mock('../auth/authStore')
 vi.mock('../client/clientStore')
@@ -21,8 +21,8 @@ describe('presenceStore', () => {
   let mockClient: SanityClient
   let mockTokenState: Subject<string | null>
   let mockIncomingEvents: Subject<TransportEvent>
-  let mockDispatchMessage: ReturnType<typeof vi.fn>
-  let mockGetUserState: ReturnType<typeof vi.fn>
+  let mockDispatchMessage: Mock<(message: TransportMessage) => Observable<void>>
+  let mockGetUserState: Mock<typeof getUserState>
 
   const mockUser: SanityUser = {
     sanityUserId: 'u123',
@@ -48,6 +48,9 @@ describe('presenceStore', () => {
 
     mockClient = {
       withConfig: vi.fn().mockReturnThis(),
+      observable: {
+        request: vi.fn(() => of({organizationId: 'test-org-id'})),
+      },
     } as unknown as SanityClient
 
     mockTokenState = new Subject<string | null>()
@@ -240,6 +243,99 @@ describe('presenceStore', () => {
       const presence = source.getCurrent()
       expect(presence).toHaveLength(1)
       expect(presence[0].sessionId).toBe('other-session')
+
+      unsubscribe()
+    })
+
+    it('should throw an error when initialized with a media library resource', () => {
+      const mediaLibraryResource = {mediaLibraryId: 'ml123'}
+
+      expect(() => {
+        getPresence(instance, {resource: mediaLibraryResource})
+      }).toThrow('Presence is not supported for media library resources.')
+    })
+
+    it('should work with a dataset resource', () => {
+      const datasetResource = {projectId: 'test-project', dataset: 'test-dataset'}
+
+      expect(() => {
+        getPresence(instance, {resource: datasetResource})
+      }).not.toThrow()
+    })
+
+    it('should work with a canvas resource', () => {
+      const canvasResource = {canvasId: 'canvas123'}
+
+      expect(() => {
+        getPresence(instance, {resource: canvasResource})
+      }).not.toThrow()
+    })
+
+    it('creates a project-hostname client for dataset resources', () => {
+      getPresence(instance, {resource: {projectId: 'my-project', dataset: 'my-dataset'}})
+
+      expect(getClient).toHaveBeenCalledWith(instance, {
+        apiVersion: '2026-03-30',
+        projectId: 'my-project',
+        dataset: 'my-dataset',
+        useProjectHostname: true,
+      })
+    })
+
+    it('creates a resource client for canvas resources', () => {
+      const canvasResource = {canvasId: 'canvas123'}
+      getPresence(instance, {resource: canvasResource})
+
+      expect(getClient).toHaveBeenCalledWith(instance, {
+        apiVersion: '2026-03-30',
+        resource: canvasResource,
+      })
+    })
+
+    it('fetches organizationId from canvas endpoint for canvas resources', () => {
+      const canvasResource = {canvasId: 'canvas123'}
+      getPresence(instance, {resource: canvasResource})
+
+      expect(mockClient.observable.request).toHaveBeenCalledWith({
+        uri: '/canvases/canvas123',
+        tag: 'canvases.get',
+      })
+    })
+
+    it('does not fetch organizationId for dataset resources', () => {
+      getPresence(instance, {resource: {projectId: 'my-project', dataset: 'my-dataset'}})
+
+      expect(mockClient.observable.request).not.toHaveBeenCalled()
+    })
+
+    it('fetches user data for canvas users', async () => {
+      const source = getPresence(instance, {resource: {canvasId: 'canvas123'}})
+      const unsubscribe = source.subscribe(() => {})
+
+      await firstValueFrom(of(null).pipe(delay(10)))
+
+      mockIncomingEvents.next({
+        type: 'state',
+        userId: 'user-1',
+        sessionId: 'other-session',
+        timestamp: '2023-01-01T12:00:00Z',
+        locations: [
+          {
+            type: 'document',
+            documentId: 'doc-1',
+            path: ['title'],
+            lastActiveAt: '2023-01-01T12:00:00Z',
+          },
+        ],
+      })
+
+      await firstValueFrom(of(null).pipe(delay(50)))
+
+      expect(getUserState).toHaveBeenCalledWith(instance, {
+        userId: 'user-1',
+        resourceType: 'organization',
+        organizationId: 'test-org-id',
+      })
 
       unsubscribe()
     })

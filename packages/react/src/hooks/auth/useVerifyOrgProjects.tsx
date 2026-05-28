@@ -27,13 +27,20 @@ export function useVerifyOrgProjects(disabled = false, projectIds?: string[]): s
   const instance = useSanityInstance()
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (disabled || !projectIds || projectIds.length === 0) {
-      if (error !== null) setError(null)
-      return
-    }
+  const isInactive = disabled || !projectIds || projectIds.length === 0
 
-    const verificationObservable$ = observeOrganizationVerificationState(instance, projectIds)
+  // Reset stale errors when verification turns off so the next activation
+  // doesn't briefly leak the previous result.
+  const [prevInactive, setPrevInactive] = useState(isInactive)
+  if (prevInactive !== isInactive) {
+    setPrevInactive(isInactive)
+    if (isInactive) setError(null)
+  }
+
+  useEffect(() => {
+    if (isInactive) return
+
+    const verificationObservable$ = observeOrganizationVerificationState(instance, projectIds!)
 
     const subscription = verificationObservable$.subscribe((result: OrgVerificationResult) => {
       setError(result.error)
@@ -42,7 +49,7 @@ export function useVerifyOrgProjects(disabled = false, projectIds?: string[]): s
     return () => {
       subscription.unsubscribe()
     }
-  }, [instance, disabled, error, projectIds])
+  }, [instance, isInactive, projectIds])
 
   return error
 }

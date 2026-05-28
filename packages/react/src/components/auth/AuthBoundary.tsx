@@ -1,5 +1,5 @@
 import {CorsOriginError} from '@sanity/client'
-import {AuthStateType, getCorsErrorProjectId, isStudioConfig} from '@sanity/sdk'
+import {AuthStateType, getCorsErrorProjectId, isImportError, isStudioConfig} from '@sanity/sdk'
 import {useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
@@ -8,6 +8,7 @@ import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
 import {useSanityInstance} from '../../hooks/context/useSanityInstance'
+import {ChunkLoadError} from '../errors/ChunkLoadError'
 import {CorsErrorComponent} from '../errors/CorsErrorComponent'
 import {isInIframe} from '../utils'
 import {AuthError} from './AuthError'
@@ -110,6 +111,12 @@ export function AuthBoundary({
 }: AuthBoundaryProps): React.ReactNode {
   const FallbackComponent = useMemo(() => {
     return function LoginComponentWithLayoutProps(fallbackProps: FallbackProps) {
+      // Chunk-load errors from any lazy-loaded code beneath this boundary
+      // (typically the consumer's app) get the chunk-aware fallback instead
+      // of being misreported as auth errors.
+      if (isImportError(fallbackProps.error)) {
+        return <ChunkLoadError {...fallbackProps} />
+      }
       if (fallbackProps.error instanceof CorsOriginError) {
         return (
           <CorsErrorComponent

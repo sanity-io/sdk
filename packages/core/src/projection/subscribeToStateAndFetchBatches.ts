@@ -1,4 +1,4 @@
-import {isEqual} from 'lodash-es'
+import {DocumentId} from '@sanity/id-utils'
 import {
   combineLatest,
   debounceTime,
@@ -16,10 +16,10 @@ import {
   tap,
 } from 'rxjs'
 
-import {isDatasetResource} from '../config/sanityConfig'
 import {getQueryState, resolveQuery} from '../query/queryStore'
 import {type BoundPerspectiveKey} from '../store/createActionBinder'
 import {type StoreContext} from '../store/defineStore'
+import {isDeepEqual} from '../utils/object'
 import {
   createProjectionQuery,
   processProjectionQuery,
@@ -46,18 +46,18 @@ export const subscribeToStateAndFetchBatches = ({
 }: StoreContext<ProjectionStoreState, BoundPerspectiveKey>): Subscription => {
   const documentProjections$ = state.observable.pipe(
     map((s) => s.documentProjections),
-    distinctUntilChanged(isEqual),
+    distinctUntilChanged(isDeepEqual),
   )
 
   const activeDocumentIds$ = state.observable.pipe(
-    map(({subscriptions}) => new Set(Object.keys(subscriptions))),
+    map(({subscriptions}) => new Set(Object.keys(subscriptions).map((id) => DocumentId(id)))),
     distinctUntilChanged(isSetEqual),
   )
 
   const pendingUpdateSubscription = activeDocumentIds$
     .pipe(
       debounceTime(BATCH_DEBOUNCE_TIME),
-      startWith(new Set<string>()),
+      startWith(new Set<DocumentId>()),
       pairwise(),
       tap(([prevIds, currIds]) => {
         const newIds = [...currIds].filter((id) => !prevIds.has(id))
@@ -89,7 +89,7 @@ export const subscribeToStateAndFetchBatches = ({
 
   const queryTrigger$ = combineLatest([activeDocumentIds$, documentProjections$]).pipe(
     debounceTime(BATCH_DEBOUNCE_TIME),
-    distinctUntilChanged(isEqual),
+    distinctUntilChanged(isDeepEqual),
   )
 
   const queryExecutionSubscription = queryTrigger$
@@ -112,8 +112,7 @@ export const subscribeToStateAndFetchBatches = ({
               tag: PROJECTION_TAG,
               perspective,
             },
-            // temporary guard here until we're ready for everything to be queried via global API
-            ...(resource && !isDatasetResource(resource) ? {resource} : {}),
+            resource,
           })
 
           const querySource$ = defer(() => {
@@ -127,8 +126,7 @@ export const subscribeToStateAndFetchBatches = ({
                     signal: controller.signal,
                     perspective,
                   },
-                  // temporary guard here until we're ready for everything to be queried via global API in v3
-                  ...(resource && !isDatasetResource(resource) ? {resource} : {}),
+                  resource,
                 }),
               ).pipe(switchMap(() => observable))
             }
@@ -153,8 +151,7 @@ export const subscribeToStateAndFetchBatches = ({
               tag: PROJECTION_TAG,
               perspective: 'raw',
             },
-            // temporary guard here until we're ready for everything to be queried via global API
-            ...(resource && !isDatasetResource(resource) ? {resource} : {}),
+            resource,
           })
 
           const statusQuerySource$ = defer(() => {
@@ -168,8 +165,7 @@ export const subscribeToStateAndFetchBatches = ({
                     signal: controller.signal,
                     perspective: 'raw',
                   },
-                  // temporary guard here until we're ready for everything to be queried via global API
-                  ...(resource && !isDatasetResource(resource) ? {resource} : {}),
+                  resource,
                 }),
               ).pipe(switchMap(() => observable))
             }

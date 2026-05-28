@@ -59,8 +59,8 @@ describe('refreshStampedToken', () => {
       request: vi.fn(
         async (
           _name: string,
-          _options: LockOptions | LockGrantedCallback,
-          callback?: LockGrantedCallback,
+          _options: LockOptions | LockGrantedCallback<unknown>,
+          callback?: LockGrantedCallback<unknown>,
         ) => {
           const actualCallback = typeof _options === 'function' ? _options : callback
           if (!actualCallback) return false

@@ -14,26 +14,11 @@ import {
   type WithResourceNameSupport,
 } from '../helpers/useNormalizedResourceOptions'
 
-/**
- * @public
-
- * Returns the active releases for the current project,
- * represented as a list of release documents.
- *
- * @returns The active releases for the current project.
- * @category Projects
- * @example
- * ```tsx
- * import {useActiveReleases} from '@sanity/sdk-react'
- *
- * const activeReleases = useActiveReleases()
- * ```
- */
-type UseActiveReleases = {
-  (options?: WithResourceNameSupport<SanityConfig> | undefined): ReleaseDocument[]
+type UseActiveReleasesValue = {
+  (options?: {resource?: DocumentResource}): ReleaseDocument[]
 }
 
-const useActiveReleasesValue: UseActiveReleases = createStateSourceHook({
+const useActiveReleasesValue: UseActiveReleasesValue = createStateSourceHook({
   getState: getActiveReleasesState as (
     instance: SanityInstance,
     options?: {resource?: DocumentResource},
@@ -49,10 +34,22 @@ const useActiveReleasesValue: UseActiveReleases = createStateSourceHook({
 /**
  * @public
  * @function
+ *
+ * Returns the active releases for the current project,
+ * represented as a list of release documents.
+ *
+ * @returns The active releases for the current project.
+ * @category Releases
+ * @example
+ * ```tsx
+ * import {useActiveReleases} from '@sanity/sdk-react'
+ *
+ * const activeReleases = useActiveReleases()
+ * ```
  */
-export const useActiveReleases: UseActiveReleases = (
-  options: WithResourceNameSupport<{resource?: DocumentResource}> | undefined,
-) => {
+export function useActiveReleases(
+  options?: WithResourceNameSupport<SanityConfig> | undefined,
+): ReleaseDocument[] {
   const normalizedOptions = useNormalizedResourceOptions(options ?? {})
   return useActiveReleasesValue(normalizedOptions)
 }

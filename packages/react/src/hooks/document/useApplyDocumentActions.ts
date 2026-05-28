@@ -1,20 +1,10 @@
-import {
-  type ActionsResult,
-  applyDocumentActions,
-  type ApplyDocumentActionsOptions,
-  type DocumentAction,
-} from '@sanity/sdk'
+import {type ActionsResult, type DocumentAction} from '@sanity/sdk'
 import {type SanityDocument} from 'groq'
-import {useContext} from 'react'
 
-import {ResourcesContext} from '../../context/ResourcesContext'
-import {useSanityInstance} from '../context/useSanityInstance'
-import {
-  normalizeResourceOptions,
-  type WithResourceNameSupport,
-} from '../helpers/useNormalizedResourceOptions'
+import {type ResourceHandle} from '../../config/handles'
+import {useApplyActions} from '../helpers/useApplyActions'
 // this import is used in an `{@link useEditDocument}`
-// eslint-disable-next-line unused-imports/no-unused-imports, import/consistent-type-specifier-style
+// eslint-disable-next-line import/consistent-type-specifier-style
 import type {useEditDocument} from './useEditDocument'
 
 /**
@@ -29,7 +19,7 @@ interface UseApplyDocumentActions {
     action:
       | DocumentAction<TDocumentType, TDataset, TProjectId>
       | DocumentAction<TDocumentType, TDataset, TProjectId>[],
-    options?: WithResourceNameSupport<ApplyDocumentActionsOptions>,
+    options?: ResourceHandle,
   ) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 }
 
@@ -217,75 +207,5 @@ interface UseApplyDocumentActions {
  * ```
  */
 export const useApplyDocumentActions: UseApplyDocumentActions = () => {
-  const instance = useSanityInstance()
-  const resources = useContext(ResourcesContext)
-
-  return (actionOrActions, options) => {
-    const actions = Array.isArray(actionOrActions) ? actionOrActions : [actionOrActions]
-    const normalizedOptions = options ? normalizeResourceOptions(options, resources) : undefined
-
-    let projectId
-    let dataset
-    let resource
-    for (const action of actions) {
-      if (action.projectId) {
-        if (resource) {
-          throw new Error(
-            `Mismatches between projectId/dataset options and resource in actions. Found projectId "${action.projectId}" and dataset "${action.dataset}" but expected resource "${resource}".`,
-          )
-        }
-        if (!projectId) projectId = action.projectId
-        if (action.projectId !== projectId) {
-          throw new Error(
-            `Mismatched project IDs found in actions. All actions must belong to the same project. Found "${action.projectId}" but expected "${projectId}".`,
-          )
-        }
-
-        if (action.dataset) {
-          if (!dataset) dataset = action.dataset
-          if (action.dataset !== dataset) {
-            throw new Error(
-              `Mismatched datasets found in actions. All actions must belong to the same dataset. Found "${action.dataset}" but expected "${dataset}".`,
-            )
-          }
-        }
-      }
-
-      if (action.resource) {
-        if (!resource) resource = action.resource
-        if (action.resource !== resource) {
-          throw new Error(
-            `Mismatched resources found in actions. All actions must belong to the same resource. Found "${action.resource}" but expected "${resource}".`,
-          )
-        }
-        if (projectId || dataset) {
-          throw new Error(
-            `Mismatches between projectId/dataset options and resource in actions. Found "${action.resource}" but expected project "${projectId}" and dataset "${dataset}".`,
-          )
-        }
-      }
-    }
-
-    if (projectId || dataset) {
-      const actualInstance = instance.match({projectId, dataset})
-      if (!actualInstance) {
-        throw new Error(
-          `Could not find a matching Sanity instance for the requested action: ${JSON.stringify({projectId, dataset}, null, 2)}.
-  Please ensure there is a ResourceProvider component with a matching configuration in the component hierarchy.`,
-        )
-      }
-
-      return applyDocumentActions(actualInstance, {
-        actions,
-        resource,
-        ...normalizedOptions,
-      })
-    }
-
-    return applyDocumentActions(instance, {
-      actions,
-      resource,
-      ...normalizedOptions,
-    })
-  }
+  return useApplyActions() as ReturnType<UseApplyDocumentActions>
 }

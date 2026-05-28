@@ -21,6 +21,9 @@ jobs:
   # shared setup: install deps and warm Playwright browser cache for downstream jobs
   setup:
     runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -59,6 +62,8 @@ jobs:
 
     # Shared env required by the SDK E2E helpers. Configure these in the repo → Settings → Secrets / Variables
     env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
       SDK_E2E_PROJECT_ID: ${{ secrets.SDK_E2E_PROJECT_ID }}
       SDK_E2E_ORGANIZATION_ID: ${{ secrets.SDK_E2E_ORGANIZATION_ID }}
       SDK_E2E_DATASET_0: ${{ github.event_name == 'pull_request' && format('pr-{0}-{1}-{2}', github.event.number, matrix.browser, github.run_id) || format('main-{0}-{1}', matrix.browser, github.run_id) }}
@@ -113,7 +118,7 @@ jobs:
 
       - name: 📤 Upload Playwright HTML report
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: playwright-report-${{ matrix.browser }}
           path: apps/kitchensink-react/e2e/test-report

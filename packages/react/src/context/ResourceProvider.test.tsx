@@ -78,7 +78,7 @@ describe('ResourceProvider', () => {
     })
   })
 
-  it('creates child instance when parent context exists', async () => {
+  it('reuses instance when parent context exists', async () => {
     const parentConfig: SanityConfig = {...testConfig, dataset: 'parent-dataset'}
     const child = promiseWithResolvers<SanityInstance | null>()
 
@@ -97,7 +97,7 @@ describe('ResourceProvider', () => {
     )
 
     const childInstance = await child.promise
-    expect(childInstance?.config).toEqual(testConfig)
+    expect(childInstance?.config).toEqual(parentConfig)
     expect(childInstance?.isDisposed()).toBe(false)
   })
 

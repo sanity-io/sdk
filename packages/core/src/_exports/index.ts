@@ -105,6 +105,7 @@ export {
   type MediaLibrarySource,
   type PerspectiveHandle,
   type ProjectHandle,
+  type ReleaseHandle,
   type ReleasePerspective,
   type SanityConfig,
   type StudioConfig,
@@ -112,19 +113,37 @@ export {
 } from '../config/sanityConfig'
 export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
 export {
+  type Action,
+  archiveRelease,
+  type ArchiveReleaseAction,
   createDocument,
   type CreateDocumentAction,
+  createRelease,
+  type CreateReleaseAction,
   deleteDocument,
   type DeleteDocumentAction,
+  deleteRelease,
+  type DeleteReleaseAction,
   discardDocument,
   type DiscardDocumentAction,
   type DocumentAction,
   editDocument,
   type EditDocumentAction,
+  editRelease,
+  type EditReleaseAction,
   publishDocument,
   type PublishDocumentAction,
+  publishRelease,
+  type PublishReleaseAction,
+  type ReleaseAction,
+  scheduleRelease,
+  type ScheduleReleaseAction,
+  unarchiveRelease,
+  type UnarchiveReleaseAction,
   unpublishDocument,
   type UnpublishDocumentAction,
+  unscheduleRelease,
+  type UnscheduleReleaseAction,
 } from '../document/actions'
 export {
   type ActionsResult,
@@ -155,8 +174,23 @@ export {
 } from '../document/events'
 export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
+export {getReleaseDocumentId} from '../document/processActions/releaseUtil'
 export type {FavoriteStatusResponse} from '../favorites/favorites'
 export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
+export {
+  getOrganizationState,
+  type Organization,
+  type OrganizationBase,
+  type OrganizationMember,
+  type OrganizationOptions,
+  resolveOrganization,
+} from '../organization/organization'
+export {
+  getOrganizationsState,
+  type Organizations,
+  type OrganizationsOptions,
+  resolveOrganizations,
+} from '../organizations/organizations'
 export {getPresence} from '../presence/presenceStore'
 export type {
   DisconnectEvent,
@@ -178,11 +212,20 @@ export type {
   ValuePending,
 } from '../preview/types'
 export {type OrgVerificationResult} from '../project/organizationVerification'
-export {getProjectState, resolveProject} from '../project/project'
+export {
+  getProjectState,
+  type Project,
+  type ProjectBase,
+  type ProjectMember,
+  type ProjectMemberRole,
+  type ProjectMetadata,
+  type ProjectOptions,
+  resolveProject,
+} from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'
 export {type ProjectionValuePending, type ValidProjection} from '../projection/types'
-export {getProjectsState, resolveProjects} from '../projects/projects'
+export {getProjectsState, type ProjectsOptions, resolveProjects} from '../projects/projects'
 export {
   getQueryKey,
   getQueryState,
@@ -191,8 +234,8 @@ export {
   resolveQuery,
 } from '../query/queryStore'
 export {getPerspectiveState} from '../releases/getPerspectiveState'
-export type {ReleaseDocument} from '../releases/releasesStore'
-export {getActiveReleasesState} from '../releases/releasesStore'
+export type {ReleaseState} from '../releases/releasesStore'
+export {getActiveReleasesState, getAllReleasesState} from '../releases/releasesStore'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
 export {getUsersKey, parseUsersKey} from '../users/reducers'
@@ -219,7 +262,9 @@ export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherS
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {defineIntent, type Intent, type IntentFilter} from '../utils/defineIntent'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
+export {isImportError} from '../utils/isImportError'
 export {CORE_SDK_VERSION} from '../version'
+export type {ReleaseDocument} from '@sanity/client'
 export {
   getIndexForKey,
   getPathDepth,

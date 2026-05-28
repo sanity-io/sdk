@@ -45,16 +45,18 @@ describe('createBifurTransport', () => {
 
   beforeEach(() => {
     vi.useFakeTimers()
+    vi.clearAllMocks()
     mockBifurClient = {
       listen: vi.fn(() => new Subject<never>()),
       request: vi.fn(() => of(undefined)),
     }
     fromUrlMock.mockReturnValue(mockBifurClient)
 
+    // Default mock is a dataset client using project hostname
     mockSanityClient = {
       config: () => ({
         dataset: 'test-dataset',
-        url: 'http://localhost:3333',
+        url: 'https://test-project.api.sanity.io/v2022-06-30',
         requestTagPrefix: 'test-tag',
       }),
       withConfig: vi.fn().mockReturnThis(),
@@ -63,7 +65,7 @@ describe('createBifurTransport', () => {
     token$ = new Subject<string | null>()
   })
 
-  it('constructs the bifur client with the correct URL', () => {
+  it('constructs the bifur client URL for a dataset resource', () => {
     createBifurTransport({
       client: mockSanityClient,
       token$,
@@ -71,11 +73,49 @@ describe('createBifurTransport', () => {
     })
 
     expect(fromUrlMock).toHaveBeenCalledWith(
-      'ws://localhost:3333/socket/test-dataset?tag=test-tag',
-      {
-        token$,
-      },
+      'wss://test-project.api.sanity.io/v2022-06-30/socket/test-dataset?tag=test-tag',
+      {token$},
     )
+  })
+
+  it('constructs the bifur client URL for a canvas resource', () => {
+    const canvasClient = {
+      config: () => ({
+        resource: {type: 'canvas', id: 'canvas-123'},
+        url: 'https://api.sanity.io/v2022-06-30',
+        requestTagPrefix: 'test-tag',
+      }),
+      withConfig: vi.fn().mockReturnThis(),
+    } as unknown as SanityClient
+
+    createBifurTransport({
+      client: canvasClient,
+      token$,
+      sessionId: 'session-id-123',
+    })
+
+    expect(fromUrlMock).toHaveBeenCalledWith(
+      'wss://api.sanity.io/v2022-06-30/socket/canvases/canvas-123?tag=test-tag',
+      {token$},
+    )
+  })
+
+  it('throws when no canvas resource or dataset is configured', () => {
+    const invalidClient = {
+      config: () => ({
+        url: 'https://api.sanity.io/v2022-06-30',
+        requestTagPrefix: 'test-tag',
+      }),
+      withConfig: vi.fn().mockReturnThis(),
+    } as unknown as SanityClient
+
+    expect(() =>
+      createBifurTransport({
+        client: invalidClient,
+        token$,
+        sessionId: 'session-id-123',
+      }),
+    ).toThrow('Unable to determine presence URL')
   })
 
   it('handles incoming rollCall events', () => {

@@ -1,3 +1,4 @@
+import {type ReleaseDocument} from '@sanity/client'
 import {filter, firstValueFrom, of, Subject, take} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
@@ -6,7 +7,6 @@ import {getQueryState} from '../query/queryStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {getPerspectiveState} from './getPerspectiveState'
-import {type ReleaseDocument} from './releasesStore'
 
 vi.mock('../query/queryStore')
 

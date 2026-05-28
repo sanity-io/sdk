@@ -56,6 +56,8 @@ export default [
           devDependencies: [
             '**/*.test.ts',
             '**/*.test.tsx',
+            '**/*.test-d.ts',
+            '**/*.test-d.tsx',
             '**/test/**',
             '**/e2e/**',
             '**/config-eslint/**',
@@ -122,7 +124,6 @@ export default [
     plugins: {
       'simple-import-sort': simpleImportSort,
       'unused-imports': unusedImports,
-      'import': importPlugin,
     },
     languageOptions: {
       globals: {

@@ -1,9 +1,13 @@
-import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
-import {type ReactElement, type ReactNode, useMemo} from 'react'
+import {type DocumentResource, isImportError, type SanityConfig} from '@sanity/sdk'
+import {type ReactElement, type ReactNode, useEffect, useMemo} from 'react'
+import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
+import {DEFAULT_RESOURCE_NAME} from '../constants'
 import {ResourceProvider} from '../context/ResourceProvider'
 import {ResourcesContext} from '../context/ResourcesContext'
 import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
+import {ChunkLoadError} from './errors/ChunkLoadError'
+import {clearChunkReloadFlag} from './errors/chunkReloadStorage'
 
 /**
  * @internal
@@ -16,11 +20,21 @@ export interface SDKProviderProps extends AuthBoundaryProps {
 }
 
 /**
+ * Clears the chunk-reload flag once children render successfully past the
+ * top-level boundary, so a future incident in the same session can trigger
+ * another automatic reload.
+ */
+function ResetChunkReloadFlagOnMount(): null {
+  useEffect(() => {
+    clearChunkReloadFlag()
+  }, [])
+  return null
+}
+
+/**
  * @internal
  *
  * Top-level context provider that provides access to the Sanity SDK.
- * Creates a hierarchy of ResourceProviders, each providing a SanityInstance that can be
- * accessed by hooks. The first configuration in the array becomes the default instance.
  */
 export function SDKProvider({
   children,
@@ -28,30 +42,46 @@ export function SDKProvider({
   fallback,
   ...props
 }: SDKProviderProps): ReactElement {
-  // reverse because we want the first config to be the default, but the
-  // ResourceProvider nesting makes the last one the default
-  const configs = (Array.isArray(config) ? config : [config]).slice().reverse()
-  const projectIds = configs.map((c) => c.projectId).filter((id): id is string => !!id)
+  const allConfigs = Array.isArray(config) ? config : [config]
+  const resolvedConfig = allConfigs[0]
+  const projectIds = allConfigs.map((c) => c.projectId).filter((id): id is string => !!id)
 
-  // Memoize resources to prevent creating a new empty object on every render
-  const resourcesValue = useMemo(() => props.resources ?? {}, [props.resources])
+  // Extract static fields so the memo below doesn't take a reference dependency
+  // on `config` — inline config objects change identity on every render.
+  const singleConfig = Array.isArray(config) ? null : config
+  const defaultProjectId = singleConfig?.projectId
+  const defaultDataset = singleConfig?.dataset
 
-  // Create a nested structure of ResourceProviders for each config
-  const createNestedProviders = (index: number): ReactElement => {
-    if (index >= configs.length) {
-      return (
+  // For a single config, synthesize a 'default' resource from its projectId/dataset
+  // so that hooks can resolve it via resourceName: 'default' or fall back to it
+  // automatically when no resource info is provided.
+  const resourcesValue = useMemo(() => {
+    const explicit = props.resources ?? {}
+    if (defaultProjectId && defaultDataset && !Object.hasOwn(explicit, DEFAULT_RESOURCE_NAME)) {
+      return {
+        [DEFAULT_RESOURCE_NAME]: {projectId: defaultProjectId, dataset: defaultDataset},
+        ...explicit,
+      }
+    }
+    return explicit
+  }, [defaultProjectId, defaultDataset, props.resources])
+
+  return (
+    <ErrorBoundary FallbackComponent={ChunkAwareFallback}>
+      <ResetChunkReloadFlagOnMount />
+      <ResourceProvider {...resolvedConfig} fallback={fallback}>
         <AuthBoundary {...props} projectIds={projectIds}>
           <ResourcesContext.Provider value={resourcesValue}>{children}</ResourcesContext.Provider>
         </AuthBoundary>
-      )
-    }
-
-    return (
-      <ResourceProvider {...configs[index]} fallback={fallback}>
-        {createNestedProviders(index + 1)}
       </ResourceProvider>
-    )
-  }
+    </ErrorBoundary>
+  )
+}
 
-  return createNestedProviders(0)
+function ChunkAwareFallback(fallbackProps: FallbackProps): ReactElement {
+  if (isImportError(fallbackProps.error)) {
+    return <ChunkLoadError {...fallbackProps} />
+  }
+  // Re-throw so downstream boundaries (e.g. AuthBoundary) handle other errors.
+  throw fallbackProps.error
 }

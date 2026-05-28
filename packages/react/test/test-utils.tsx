@@ -11,14 +11,18 @@ import React, {type ReactElement} from 'react'
 import {ResourceProvider} from '../src/context/ResourceProvider'
 import {ResourcesContext} from '../src/context/ResourcesContext'
 
-const resources = {
+export const resources = {
   'media-library': {mediaLibraryId: 'media-library-id'},
   'canvas': {canvasId: 'canvas-id'},
   'dataset': {projectId: 'resource-project-id', dataset: 'resource-dataset'},
 } as const
 
+type WrapperComponent = React.ComponentType<{children: React.ReactNode}>
+
 /**
- * This function holds the providers to wrap around UI in tests.
+ * Default providers for tests.
+ * - SanityInstance config: projectId="test", dataset="test" (no ResourceContext set)
+ * - ResourcesContext: named resources (media-library, canvas, dataset)
  * @internal
  */
 export const AppProviders = ({children}: {children: React.ReactNode}): ReactElement => {
@@ -30,20 +34,39 @@ export const AppProviders = ({children}: {children: React.ReactNode}): ReactElem
 }
 
 /**
- * This is a custom render function that wraps the UI in the AppProviders component.
+ * Returns the wrapper to use: AppProviders when no custom wrapper is provided,
+ * or the custom wrapper alone (which should include its own providers as needed).
  * @internal
  */
-const customRender = (ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>): RenderResult =>
-  render(ui, {wrapper: AppProviders, ...options})
+const resolveWrapper = (CustomWrapper?: WrapperComponent): WrapperComponent => {
+  return CustomWrapper ?? AppProviders
+}
 
 /**
- * This is a custom render function that wraps hooks in the AppProviders component.
+ * Custom render that wraps UI in AppProviders by default.
+ * Pass `options.wrapper` to replace AppProviders with a custom wrapper.
+ * @internal
+ */
+const customRender = (
+  ui: ReactElement,
+  options?: Omit<RenderOptions, 'wrapper'> & {wrapper?: WrapperComponent},
+): RenderResult => {
+  const {wrapper, ...rest} = options ?? {}
+  return render(ui, {wrapper: resolveWrapper(wrapper), ...rest})
+}
+
+/**
+ * Custom renderHook that wraps hooks in AppProviders by default.
+ * Pass `options.wrapper` to replace AppProviders with a custom wrapper.
  * @internal
  */
 const customRenderHook = <TProps, TResult>(
   hook: (props: TProps) => TResult,
-  options?: Omit<RenderHookOptions<TProps>, 'wrapper'>,
-): RenderHookResult<TResult, TProps> => renderHook(hook, {wrapper: AppProviders, ...options})
+  options?: Omit<RenderHookOptions<TProps>, 'wrapper'> & {wrapper?: WrapperComponent},
+): RenderHookResult<TResult, TProps> => {
+  const {wrapper, ...rest} = options ?? {}
+  return renderHook(hook, {wrapper: resolveWrapper(wrapper), ...rest})
+}
 
 // eslint-disable-next-line react-refresh/only-export-components
 export * from '@testing-library/react'

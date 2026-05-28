@@ -1,5 +1,13 @@
 import {type CurrentUser} from '@sanity/types'
-import {distinctUntilChanged, filter, map, type Subscription, switchMap} from 'rxjs'
+import {
+  catchError,
+  distinctUntilChanged,
+  EMPTY,
+  filter,
+  map,
+  type Subscription,
+  switchMap,
+} from 'rxjs'
 
 import {type StoreContext} from '../store/defineStore'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
@@ -60,11 +68,24 @@ export const subscribeToStateAndFetchCurrentUser = (
         }),
       ),
       switchMap((client) =>
-        client.observable.request<CurrentUser>({
-          uri: '/users/me',
-          method: 'GET',
-          tag: 'users.get-current',
-        }),
+        client.observable
+          .request<CurrentUser>({
+            uri: '/users/me',
+            method: 'GET',
+            tag: 'users.get-current',
+          })
+          .pipe(
+            /**
+             * Catch inside switchMap so the outer subscription survives.
+             * Without this, a 401 terminates the subscription permanently
+             * and subsequent token refreshes via comlink never re-fetch /users/me.
+             * @see SDK-1409
+             */
+            catchError((error) => {
+              state.set('setError', {authState: {type: AuthStateType.ERROR, error}})
+              return EMPTY
+            }),
+          ),
       ),
     )
 
@@ -76,9 +97,6 @@ export const subscribeToStateAndFetchCurrentUser = (
             ? {...prev.authState, currentUser}
             : prev.authState,
       }))
-    },
-    error: (error) => {
-      state.set('setError', {authState: {type: AuthStateType.ERROR, error}})
     },
   })
 }

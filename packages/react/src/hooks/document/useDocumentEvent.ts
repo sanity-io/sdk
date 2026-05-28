@@ -1,6 +1,7 @@
-import {type DatasetHandle, type DocumentEvent, subscribeDocumentEvents} from '@sanity/sdk'
+import {type DocumentEvent, subscribeDocumentEvents} from '@sanity/sdk'
 import {useCallback, useEffect, useInsertionEffect, useRef} from 'react'
 
+import {type ResourceHandle} from '../../config/handles'
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
@@ -11,7 +12,7 @@ import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 export interface UseDocumentEventOptions<
   TDataset extends string = string,
   TProjectId extends string = string,
-> extends DatasetHandle<TDataset, TProjectId> {
+> extends ResourceHandle<TDataset, TProjectId> {
   onEvent: (documentEvent: DocumentEvent) => void
 }
 
@@ -91,7 +92,7 @@ export function useDocumentEvent<
     return ref.current(documentEvent)
   }, [])
 
-  const instance = useSanityInstance(datasetHandle)
+  const instance = useSanityInstance()
   useEffect(() => {
     return subscribeDocumentEvents(instance, {
       eventHandler: stableHandler,

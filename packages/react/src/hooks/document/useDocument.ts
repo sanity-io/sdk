@@ -2,16 +2,14 @@ import {type DocumentOptions, getDocumentState, type JsonMatch, resolveDocument}
 import {type SanityDocument} from 'groq'
 import {identity} from 'rxjs'
 
+import {type DocumentHandle} from '../../config/handles'
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
-import {
-  useNormalizedResourceOptions,
-  type WithResourceNameSupport,
-} from '../helpers/useNormalizedResourceOptions'
+import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 // used in an `{@link useDocumentProjection}` and `{@link useQuery}`
-// eslint-disable-next-line import/consistent-type-specifier-style, unused-imports/no-unused-imports
+// eslint-disable-next-line import/consistent-type-specifier-style
 import type {useDocumentProjection} from '../projection/useDocumentProjection'
-// eslint-disable-next-line import/consistent-type-specifier-style, unused-imports/no-unused-imports
+// eslint-disable-next-line import/consistent-type-specifier-style
 import type {useQuery} from '../query/useQuery'
 
 const useDocumentValue = createStateSourceHook({
@@ -43,7 +41,7 @@ type UseDocumentOptions<
   TDocumentType extends string = string,
   TDataset extends string = string,
   TProjectId extends string = string,
-> = WithResourceNameSupport<DocumentOptions<TPath, TDocumentType, TDataset, TProjectId>>
+> = DocumentHandle<TDocumentType, TDataset, TProjectId> & {path?: TPath}
 
 interface UseDocument {
   /** @internal */

@@ -31,7 +31,7 @@ import {
 } from '@sanity/ui'
 import {defineQuery} from 'groq'
 import {type JsonData, JsonEditor} from 'json-edit-react'
-import {JSX, startTransition, Suspense, useCallback, useEffect, useRef, useState} from 'react'
+import {JSX, startTransition, Suspense, useCallback, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 
 // Import the custom table components
@@ -425,7 +425,9 @@ function DocumentList({documentType}: DocumentListProps) {
               data.map((doc) => (
                 <ErrorBoundary
                   key={doc.documentId}
-                  fallbackRender={({error}) => <DocumentRowError error={error} />}
+                  fallbackRender={({error}) => (
+                    <DocumentRowError error={error as unknown as Error} />
+                  )}
                 >
                   <Suspense fallback={<DocumentRowFallback />}>
                     <DocumentTableRow {...doc} />
@@ -487,9 +489,14 @@ function DocumentTypes() {
   const firstDocumentType = documentTypes.at(0)
   const [selectedType, setSelectedType] = useState<string | null>(firstDocumentType ?? null)
 
-  useEffect(() => {
+  // Reset to the first available type when the dataset or that first type changes.
+  const [prevConfig, setPrevConfig] = useState(config)
+  const [prevFirstDocumentType, setPrevFirstDocumentType] = useState(firstDocumentType)
+  if (prevConfig !== config || prevFirstDocumentType !== firstDocumentType) {
+    setPrevConfig(config)
+    setPrevFirstDocumentType(firstDocumentType)
     setSelectedType(firstDocumentType ?? null)
-  }, [config, firstDocumentType])
+  }
 
   const handleTypeChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
     startTransition(() => {

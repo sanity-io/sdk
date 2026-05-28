@@ -152,7 +152,7 @@ export function useQuery(options: WithResourceNameSupport<QueryOptions>): {
   isPending: boolean
 } {
   // Implementation returns unknown, overloads define specifics
-  const instance = useSanityInstance(options)
+  const instance = useSanityInstance()
   trackHookUsage(instance, 'useQuery')
 
   // Normalize options: resolve resourceName to resource and strip resourceName
@@ -204,6 +204,7 @@ export function useQuery(options: WithResourceNameSupport<QueryOptions>): {
     const currentSignal = ref.current.signal
     const deferred = parseQueryKey(deferredQueryKey)
 
+    // eslint-disable-next-line react-hooks/refs -- intentional during suspended render; see comment above.
     throw resolveQuery(instance, {...deferred, signal: currentSignal})
   }
 
