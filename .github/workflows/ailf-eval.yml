@@ -1,0 +1,118 @@
+name: AILF Eval
+
+on:
+  # Run on demand from the Actions tab.
+  workflow_dispatch:
+  # Run weekly against main. Docs and the live Sanity dataset drift
+  # independently of code releases, so a scheduled run is the highest-signal
+  # trigger. Thursday 10:00 UTC (mid-morning).
+  schedule:
+    - cron: "0 10 * * 4"
+  # Evaluate on PRs. The `decide` job below works out whether to actually run:
+  # automatically when task/config files change, or on demand via the
+  # `trigger: ailf` label. `synchronize` re-runs on new commits.
+  pull_request:
+    types: [labeled, synchronize, opened, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Decide whether the eval should run. Schedule and manual runs always do.
+  # PRs run when they touch the AILF config/tasks, or carry the
+  # `trigger: ailf` label as a manual override.
+  decide:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - name: Checkout repository
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: Decide
+        id: check
+        env:
+          EVENT: ${{ github.event_name }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          # Non-PR triggers (schedule, workflow_dispatch) always run.
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Manual override: the `trigger: ailf` label forces a run.
+          if echo "$LABELS" | grep -q '"trigger: ailf"'; then
+            echo "label present -> run"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Auto-trigger: run when the AILF config/tasks change.
+          if git diff --name-only "$BASE_SHA...HEAD" | grep -q '^packages/@repo/ailf-eval/\.ailf/'; then
+            echo ".ailf changes detected -> run"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "no .ailf changes and no label -> skip"
+          echo "run=false" >> "$GITHUB_OUTPUT"
+
+  eval:
+    needs: decide
+    if: needs.decide.outputs.run == 'true'
+
+    runs-on: ubuntu-latest
+
+    # The remote eval long-polls the AILF API and can run several minutes;
+    # cap it so a hung job doesn't sit on a runner for the 6h default.
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
+      - name: Run AILF eval
+        run: pnpm ailf
+        env:
+          AILF_API_KEY: ${{ secrets.AILF_API_KEY }}
+          # Override via a repo/org `vars` entry to point at staging or a
+          # preview gateway; falls back to production.
+          AILF_API_URL: ${{ vars.AILF_API_URL || 'https://ailf-api.sanity.build' }}
+
+      # Surface a link to the report on the Sanity dashboard in the job
+      # summary. The org handle and application id are fixed for the AILF
+      # studio app; only the report id varies per run.
+      - name: Link to report
+        if: always()
+        env:
+          DASHBOARD_BASE: https://www.sanity.io/@oSyH1iET5/application/l3gwk99w5xtv3dl8wxv94uny
+        run: |
+          META=packages/@repo/ailf-eval/.ailf/results/latest/job-metadata.json
+          REPORT_ID=$([ -f "$META" ] && jq -r '.reportId // empty' "$META")
+          if [ -z "$REPORT_ID" ]; then
+            echo "No report id found; eval may not have produced a report." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          URL="$DASHBOARD_BASE/?view=report&id=$REPORT_ID"
+          # Echo to the step log for discoverability...
+          echo "Report: $URL"
+          # ...and to the run summary page as a rendered link.
+          {
+            echo "### AILF eval report"
+            echo ""
+            echo "[View report on the Sanity dashboard]($URL)"
+            echo ""
+            echo "Report ID: \`$REPORT_ID\`"
+          } >> "$GITHUB_STEP_SUMMARY"
