@@ -573,5 +573,9 @@ const subscribeToCurrentUserAndSetIdentity = ({
 }: StoreContext<DocumentStoreState, BoundResourceKey>) =>
   getCurrentUserState(instance).observable.subscribe({
     next: (currentUser) => state.set('setIdentity', {identity: currentUser?.id}),
-    error: (error) => state.set('setError', {error}),
+    // A transient identity-fetch failure (network blip, expired token, or a
+    // normal logout/re-login transition) should not brick all document
+    // operations. Reset the identity to `undefined` and keep going — GROQ's
+    // `identity()` then evaluates to null, matching the unauthenticated state.
+    error: () => state.set('setIdentity', {identity: undefined}),
   })

@@ -1,6 +1,6 @@
 import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
 import {type SanityDocument} from '@sanity/types'
-import {evaluateSync, type ExprNode, parse} from 'groq-js'
+import {type ExprNode, parse} from 'groq-js'
 import {createSelector} from 'reselect'
 
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
@@ -8,6 +8,7 @@ import {type SelectorContext} from '../store/createStateSourceAction'
 import {MultiKeyWeakMap} from '../utils/MultiKeyWeakMap'
 import {type DocumentAction} from './actions'
 import {ActionError, PermissionActionError, processActions} from './processActions/processActions'
+import {checkGrant} from './processActions/shared'
 import {type DocumentSet} from './processMutations'
 import {type SyncTransactionState} from './reducers'
 
@@ -139,15 +140,6 @@ const memoizedActionsSelector = createSelector(
     return normalizedActions
   },
 )
-
-function checkGrant(
-  grantExpr: ExprNode,
-  document: SanityDocument,
-  identity: string | undefined,
-): boolean {
-  const value = evaluateSync(grantExpr, {params: {document}, identity})
-  return value.type === 'boolean' && value.data
-}
 
 /** @beta */
 export interface PermissionDeniedReason {

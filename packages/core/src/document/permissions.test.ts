@@ -288,12 +288,7 @@ describe('calculatePermissions', () => {
       )
     })
 
-    it('denies edits when identity is not yet loaded (regression test for SDK-1429)', () => {
-      // Before the fix, identity() in the ACL filter always evaluated to null,
-      // so this filter collapsed to null and the user was denied even when
-      // they actually were the creator. Now that we pass identity through, a
-      // missing identity correctly fails the check rather than masquerading as
-      // an evaluation success.
+    it('denies edits when identity is not yet loaded', () => {
       const state = createState(
         {'canvas-1': {local: canvasDoc('user-A')}},
         createGrantsLookup(canvasUpdateAcl),
