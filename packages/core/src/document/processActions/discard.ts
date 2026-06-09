@@ -16,7 +16,7 @@ export function handleDiscard(
   action: DiscardDocumentAction,
   ctx: ActionHandlerContext,
 ): ActionHandlerResult {
-  const {transactionId, timestamp, grants, outgoingActions, outgoingMutations} = ctx
+  const {transactionId, timestamp, grants, identity, outgoingActions, outgoingMutations} = ctx
   let {base, working} = ctx
 
   const documentId = getId(action.documentId)
@@ -43,7 +43,7 @@ export function handleDiscard(
     })
   }
 
-  if (!checkGrant(grants.update, working[versionId])) {
+  if (!checkGrant(grants.update, working[versionId], identity)) {
     throw new PermissionActionError({
       documentId,
       transactionId,

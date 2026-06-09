@@ -28,6 +28,7 @@ import {
   withLatestFrom,
 } from 'rxjs'
 
+import {getCurrentUserState} from '../auth/authStore'
 import {type ClientOptions, getClientState} from '../client/clientStore'
 import {
   type DocumentHandle,
@@ -89,6 +90,10 @@ export interface DocumentStoreState {
   applied: AppliedTransaction[]
   outgoing?: OutgoingTransaction
   grants?: Record<Grant, ExprNode>
+  /**
+   * The current user's identity (their user ID).
+   */
+  identity?: string
   error?: unknown
   sharedListener: SharedListener
   fetchDocument: (documentId: string) => Observable<SanityDocument | null>
@@ -148,6 +153,7 @@ export const documentStore = defineStore<DocumentStoreState, BoundResourceKey>({
       subscribeToSubscriptionsAndListenToDocuments(context),
       subscribeToAppliedAndSubmitNextTransaction(context),
       subscribeToClientAndFetchDatasetAcl(context),
+      subscribeToCurrentUserAndSetIdentity(context),
     ]
 
     return () => {
@@ -560,3 +566,16 @@ const subscribeToClientAndFetchDatasetAcl = ({
       error: (error) => state.set('setError', {error}),
     })
 }
+
+const subscribeToCurrentUserAndSetIdentity = ({
+  instance,
+  state,
+}: StoreContext<DocumentStoreState, BoundResourceKey>) =>
+  getCurrentUserState(instance).observable.subscribe({
+    next: (currentUser) => state.set('setIdentity', {identity: currentUser?.id}),
+    // A transient identity-fetch failure (network blip, expired token, or a
+    // normal logout/re-login transition) should not brick all document
+    // operations. Reset the identity to `undefined` and keep going — GROQ's
+    // `identity()` then evaluates to null, matching the unauthenticated state.
+    error: () => state.set('setIdentity', {identity: undefined}),
+  })

@@ -12,7 +12,7 @@ export function handleReleaseSchedule(
   action: ScheduleReleaseAction,
   ctx: ActionHandlerContext,
 ): ActionHandlerResult {
-  const {base, working, grants, outgoingActions, transactionId} = ctx
+  const {base, working, grants, outgoingActions, transactionId, identity} = ctx
 
   const releaseDocumentId = getReleaseDocumentId(action.releaseId)
 
@@ -33,7 +33,7 @@ export function handleReleaseSchedule(
     })
   }
 
-  if (!checkGrant(grants.update, existing)) {
+  if (!checkGrant(grants.update, existing, identity)) {
     throw new PermissionActionError({
       documentId: releaseDocumentId,
       transactionId,
@@ -58,7 +58,7 @@ export function handleReleaseUnschedule(
   action: UnscheduleReleaseAction,
   ctx: ActionHandlerContext,
 ): ActionHandlerResult {
-  const {base, working, grants, outgoingActions, transactionId} = ctx
+  const {base, working, grants, outgoingActions, transactionId, identity} = ctx
 
   const releaseDocumentId = getReleaseDocumentId(action.releaseId)
   const existing = working[releaseDocumentId] ?? base[releaseDocumentId]
@@ -70,7 +70,7 @@ export function handleReleaseUnschedule(
     })
   }
 
-  if (!checkGrant(grants.update, existing)) {
+  if (!checkGrant(grants.update, existing, identity)) {
     throw new PermissionActionError({
       documentId: releaseDocumentId,
       transactionId,

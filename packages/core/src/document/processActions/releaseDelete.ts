@@ -19,7 +19,7 @@ export function handleReleaseDelete(
   action: DeleteReleaseAction,
   ctx: ActionHandlerContext,
 ): ActionHandlerResult {
-  const {transactionId, timestamp, grants, outgoingActions, outgoingMutations} = ctx
+  const {transactionId, timestamp, grants, outgoingActions, outgoingMutations, identity} = ctx
   let {base, working} = ctx
 
   const releaseDocumentId = getReleaseDocumentId(action.releaseId)
@@ -42,7 +42,7 @@ export function handleReleaseDelete(
     })
   }
 
-  if (!checkGrant(grants.update, existing)) {
+  if (!checkGrant(grants.update, existing, identity)) {
     throw new PermissionActionError({
       documentId: releaseDocumentId,
       transactionId,

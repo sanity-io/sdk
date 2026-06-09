@@ -16,7 +16,7 @@ export function handleDelete(
   action: DeleteDocumentAction,
   ctx: ActionHandlerContext,
 ): ActionHandlerResult {
-  const {transactionId, timestamp, grants, outgoingActions, outgoingMutations} = ctx
+  const {transactionId, timestamp, grants, identity, outgoingActions, outgoingMutations} = ctx
   let {base, working} = ctx
 
   const documentId = action.documentId
@@ -38,7 +38,7 @@ export function handleDelete(
       })
     }
 
-    if (!checkGrant(grants.update, working[documentId])) {
+    if (!checkGrant(grants.update, working[documentId], identity)) {
       throw new PermissionActionError({
         documentId,
         transactionId,
@@ -72,9 +72,9 @@ export function handleDelete(
     })
   }
 
-  const cantDeleteDraft = working[draftId] && !checkGrant(grants.update, working[draftId])
+  const cantDeleteDraft = working[draftId] && !checkGrant(grants.update, working[draftId], identity)
   const cantDeletePublished =
-    working[publishedId] && !checkGrant(grants.update, working[publishedId])
+    working[publishedId] && !checkGrant(grants.update, working[publishedId], identity)
 
   if (cantDeleteDraft || cantDeletePublished) {
     throw new PermissionActionError({
