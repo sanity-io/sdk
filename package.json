@@ -83,8 +83,6 @@
   "pnpm": {
     "overrides": {
       "@babel/types": "7.29.7",
-      "basic-ftp@<5.3.1": "^5.3.1",
-      "form-data@<2.5.4": "^2.5.4",
       "tsx": "<4.22.0"
     }
   }
