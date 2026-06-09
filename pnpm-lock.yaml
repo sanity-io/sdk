@@ -4,6 +4,99 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    '@playwright/test':
+      specifier: ^1.60.0
+      version: 1.60.0
+    '@sanity/browserslist-config':
+      specifier: ^1.0.5
+      version: 1.0.5
+    '@sanity/client':
+      specifier: ^7.22.0
+      version: 7.22.0
+    '@sanity/comlink':
+      specifier: ^4.0.1
+      version: 4.0.1
+    '@sanity/message-protocol':
+      specifier: ^0.23.0
+      version: 0.23.0
+    '@sanity/pkg-utils':
+      specifier: ^9.2.3
+      version: 9.2.3
+    '@sanity/prettier-config':
+      specifier: ^1.0.6
+      version: 1.0.6
+    '@sanity/types':
+      specifier: ^5.26.0
+      version: 5.26.0
+    '@testing-library/jest-dom':
+      specifier: ^6.9.1
+      version: 6.9.1
+    '@testing-library/react':
+      specifier: ^16.3.2
+      version: 16.3.2
+    '@types/lodash-es':
+      specifier: ^4.17.12
+      version: 4.17.12
+    '@types/node':
+      specifier: ^24.12.4
+      version: 24.12.4
+    '@types/react':
+      specifier: ^19.2.15
+      version: 19.2.15
+    '@types/react-dom':
+      specifier: ^19.2.3
+      version: 19.2.3
+    '@vitest/coverage-v8':
+      specifier: ^4.1.8
+      version: 4.1.8
+    eslint:
+      specifier: ^9.39.4
+      version: 9.39.4
+    groq:
+      specifier: 3.88.1-typegen-experimental.0
+      version: 3.88.1-typegen-experimental.0
+    groq-js:
+      specifier: ^1.30.1
+      version: 1.30.1
+    lodash-es:
+      specifier: ^4.18.1
+      version: 4.18.1
+    prettier:
+      specifier: ^3.8.3
+      version: 3.8.3
+    react:
+      specifier: ^19.2.6
+      version: 19.2.6
+    react-compiler-runtime:
+      specifier: 19.1.0-rc.2
+      version: 19.1.0-rc.2
+    react-dom:
+      specifier: ^19.2.6
+      version: 19.2.6
+    react-error-boundary:
+      specifier: ^6.1.1
+      version: 6.1.1
+    rimraf:
+      specifier: ^6.0.1
+      version: 6.1.2
+    rollup-plugin-visualizer:
+      specifier: ^5.14.0
+      version: 5.14.0
+    rxjs:
+      specifier: ^7.8.2
+      version: 7.8.2
+    typescript:
+      specifier: ^5.9.3
+      version: 5.9.3
+    vite:
+      specifier: ^7.3.3
+      version: 7.3.3
+    vitest:
+      specifier: ^4.1.8
+      version: 4.1.8
+
 overrides:
   '@babel/types': 7.29.7
   tsx: <4.22.0
@@ -25,7 +118,7 @@ importers:
         specifier: ^7.19.0
         version: 7.19.0
       '@playwright/test':
-        specifier: ^1.60.0
+        specifier: 'catalog:'
         version: 1.60.0
       '@repo/config-eslint':
         specifier: workspace:*
@@ -37,19 +130,19 @@ importers:
         specifier: workspace:*
         version: link:packages/@repo/tsconfig
       '@sanity/pkg-utils':
-        specifier: ^9.2.3
+        specifier: 'catalog:'
         version: 9.2.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/babel__core@7.20.5)(@types/node@24.12.4)(babel-plugin-react-compiler@1.0.0)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@5.9.3)
       '@sanity/prettier-config':
-        specifier: ^1.0.6
+        specifier: 'catalog:'
         version: 1.0.6(prettier@3.8.3)
       '@types/node':
-        specifier: ^24.12.4
+        specifier: 'catalog:'
         version: 24.12.4
       '@vitest/coverage-v8':
-        specifier: 4.1.6
-        version: 4.1.6(vitest@4.1.7)
+        specifier: 'catalog:'
+        version: 4.1.8(vitest@4.1.8)
       eslint:
-        specifier: ^9.39.4
+        specifier: 'catalog:'
         version: 9.39.4(jiti@2.7.0)
       husky:
         specifier: ^9.1.7
@@ -64,13 +157,13 @@ importers:
         specifier: ^8.0.4
         version: 8.0.4
       prettier:
-        specifier: ^3.8.3
+        specifier: 'catalog:'
         version: 3.8.3
       read-package-up:
         specifier: ^12.0.0
         version: 12.0.0
       rimraf:
-        specifier: ^6.0.1
+        specifier: 'catalog:'
         version: 6.1.2
       tsx:
         specifier: <4.22.0
@@ -82,14 +175,14 @@ importers:
         specifier: ^0.28.19
         version: 0.28.19(typescript@5.9.3)
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vite:
-        specifier: ^7.3.3
+        specifier: 'catalog:'
         version: 7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0)
       vitest:
-        specifier: ^4.1.6
-        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
+        specifier: 'catalog:'
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
       zx:
         specifier: ^8.8.5
         version: 8.8.5
@@ -109,7 +202,7 @@ importers:
         specifier: ^2.16.22
         version: 2.16.22(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.6(react@19.2.6))(react-is@19.2.6)(react@19.2.6)(styled-components@6.4.2(css-to-react-native@3.2.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))
       groq:
-        specifier: 3.88.1-typegen-experimental.0
+        specifier: 'catalog:'
         version: 3.88.1-typegen-experimental.0
       inter-ui:
         specifier: ^4.1.1
@@ -118,16 +211,16 @@ importers:
         specifier: ^1.29.1
         version: 1.30.1(react@19.2.6)
       react:
-        specifier: ^19.2.6
+        specifier: 'catalog:'
         version: 19.2.6
       react-compiler-runtime:
-        specifier: 19.1.0-rc.1
-        version: 19.1.0-rc.1(react@19.2.6)
+        specifier: 'catalog:'
+        version: 19.1.0-rc.2(react@19.2.6)
       react-dom:
-        specifier: ^19.2.6
+        specifier: 'catalog:'
         version: 19.2.6(react@19.2.6)
       react-error-boundary:
-        specifier: ^6.1.1
+        specifier: 'catalog:'
         version: 6.1.1(react@19.2.6)
       react-router:
         specifier: ^7.15.1
@@ -139,11 +232,11 @@ importers:
         specifier: ^6.4.1
         version: 6.4.2(css-to-react-native@3.2.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
     devDependencies:
       '@playwright/test':
-        specifier: ^1.60.0
+        specifier: 'catalog:'
         version: 1.60.0
       '@repo/config-eslint':
         specifier: workspace:*
@@ -161,41 +254,41 @@ importers:
         specifier: npm:@sanity/cli@3.88.1-typegen-experimental.0
         version: '@sanity/cli@3.88.1-typegen-experimental.0(@types/node@24.12.4)(@types/react@19.2.15)(jiti@2.7.0)(lightningcss@1.30.2)(react@19.2.6)(terser@5.36.0)(tsx@4.20.6)(typescript@5.9.3)(yaml@2.9.0)'
       '@sanity/prettier-config':
-        specifier: ^1.0.6
+        specifier: 'catalog:'
         version: 1.0.6(prettier@3.8.3)
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../../packages/core
       '@testing-library/jest-dom':
-        specifier: ^6.9.1
+        specifier: 'catalog:'
         version: 6.9.1
       '@testing-library/react':
-        specifier: ^16.3.2
+        specifier: 'catalog:'
         version: 16.3.2(@testing-library/dom@10.4.0)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@types/node':
-        specifier: ^24.12.4
+        specifier: 'catalog:'
         version: 24.12.4
       '@types/react':
-        specifier: ^19.2.15
+        specifier: 'catalog:'
         version: 19.2.15
       '@types/react-dom':
-        specifier: ^19.2.3
+        specifier: 'catalog:'
         version: 19.2.3(@types/react@19.2.15)
       '@vitejs/plugin-react':
         specifier: ^5.2.0
         version: 5.2.0(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
       eslint:
-        specifier: ^9.39.4
+        specifier: 'catalog:'
         version: 9.39.4(jiti@2.7.0)
       prettier:
-        specifier: ^3.8.3
+        specifier: 'catalog:'
         version: 3.8.3
       vite:
-        specifier: ^7.3.3
+        specifier: 'catalog:'
         version: 7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0)
       vitest:
-        specifier: ^4.1.6
-        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.6)(jsdom@26.1.0)(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
+        specifier: 'catalog:'
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.8)(jsdom@26.1.0)(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
 
   apps/standalone-react:
     dependencies:
@@ -203,10 +296,10 @@ importers:
         specifier: workspace:*
         version: link:../../packages/react
       react:
-        specifier: ^19.2.6
+        specifier: 'catalog:'
         version: 19.2.6
       react-dom:
-        specifier: ^19.2.6
+        specifier: 'catalog:'
         version: 19.2.6(react@19.2.6)
     devDependencies:
       '@repo/config-eslint':
@@ -216,34 +309,34 @@ importers:
         specifier: workspace:*
         version: link:../../packages/@repo/tsconfig
       '@sanity/prettier-config':
-        specifier: ^1.0.6
+        specifier: 'catalog:'
         version: 1.0.6(prettier@3.8.3)
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../../packages/core
       '@types/react':
-        specifier: ^19.2.15
+        specifier: 'catalog:'
         version: 19.2.15
       '@types/react-dom':
-        specifier: ^19.2.3
+        specifier: 'catalog:'
         version: 19.2.3(@types/react@19.2.15)
       '@vitejs/plugin-react':
         specifier: ^5.2.0
         version: 5.2.0(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
       eslint:
-        specifier: ^9.39.4
+        specifier: 'catalog:'
         version: 9.39.4(jiti@2.7.0)
       prettier:
-        specifier: ^3.8.3
+        specifier: 'catalog:'
         version: 3.8.3
       rimraf:
-        specifier: ^6.0.1
+        specifier: 'catalog:'
         version: 6.1.2
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vite:
-        specifier: ^7.3.3
+        specifier: 'catalog:'
         version: 7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0)
 
   packages/@repo/ailf-eval:
@@ -259,10 +352,10 @@ importers:
         specifier: workspace:*
         version: link:../tsconfig
       eslint:
-        specifier: ^9.39.4
+        specifier: 'catalog:'
         version: 9.39.4(jiti@2.7.0)
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/@repo/config-eslint:
@@ -271,7 +364,7 @@ importers:
         specifier: ^9.39.4
         version: 9.39.4
       eslint:
-        specifier: ^9.39.4
+        specifier: 'catalog:'
         version: 9.39.4(jiti@2.7.0)
       eslint-config-prettier:
         specifier: ^10.1.8
@@ -325,8 +418,8 @@ importers:
         specifier: workspace:*
         version: link:../dev-aliases
       vitest:
-        specifier: ^4.1.6
-        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
+        specifier: 'catalog:'
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
 
   packages/@repo/dev-aliases:
     devDependencies:
@@ -337,7 +430,7 @@ importers:
   packages/@repo/e2e:
     dependencies:
       '@sanity/client':
-        specifier: ^7.22.0
+        specifier: 'catalog:'
         version: 7.22.0
       '@sanity/uuid':
         specifier: ^3.0.2
@@ -346,14 +439,14 @@ importers:
         specifier: ^17.4.2
         version: 17.4.2
       lodash-es:
-        specifier: ^4.18.1
+        specifier: 'catalog:'
         version: 4.18.1
       ora:
         specifier: ^7.0.1
         version: 7.0.1
     devDependencies:
       '@playwright/test':
-        specifier: ^1.60.0
+        specifier: 'catalog:'
         version: 1.60.0
       '@repo/config-eslint':
         specifier: workspace:*
@@ -362,22 +455,22 @@ importers:
         specifier: workspace:*
         version: link:../tsconfig
       '@sanity/pkg-utils':
-        specifier: ^9.2.3
+        specifier: 'catalog:'
         version: 9.2.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/babel__core@7.20.5)(@types/node@24.12.4)(babel-plugin-react-compiler@1.0.0)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@5.9.3)
       '@types/lodash-es':
-        specifier: ^4.17.12
+        specifier: 'catalog:'
         version: 4.17.12
       '@types/node':
-        specifier: ^24.12.4
+        specifier: 'catalog:'
         version: 24.12.4
       eslint:
-        specifier: ^9.39.4
+        specifier: 'catalog:'
         version: 9.39.4(jiti@2.7.0)
       tsx:
         specifier: <4.22.0
         version: 4.20.6
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/@repo/package.bundle:
@@ -386,22 +479,22 @@ importers:
         specifier: workspace:*
         version: link:../config-eslint
       '@types/lodash-es':
-        specifier: ^4.17.12
+        specifier: 'catalog:'
         version: 4.17.12
       '@vitejs/plugin-react':
         specifier: ^4.7.0
         version: 4.7.0(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
       eslint:
-        specifier: ^9.39.4
+        specifier: 'catalog:'
         version: 9.39.4(jiti@2.7.0)
       lodash-es:
-        specifier: ^4.18.1
+        specifier: 'catalog:'
         version: 4.18.1
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vite:
-        specifier: ^7.3.3
+        specifier: 'catalog:'
         version: 7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0)
       vite-tsconfig-paths:
         specifier: ^5.1.4
@@ -417,10 +510,10 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0
       '@sanity/client':
-        specifier: ^7.22.0
+        specifier: 'catalog:'
         version: 7.22.0
       '@sanity/comlink':
-        specifier: ^4.0.1
+        specifier: 'catalog:'
         version: 4.0.1
       '@sanity/diff-match-patch':
         specifier: ^3.2.0
@@ -438,7 +531,7 @@ importers:
         specifier: ^1.0.5
         version: 1.0.5
       '@sanity/message-protocol':
-        specifier: ^0.23.0
+        specifier: 'catalog:'
         version: 0.23.0
       '@sanity/mutate':
         specifier: ^0.18.0
@@ -447,19 +540,19 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0(react@19.2.6)
       '@sanity/types':
-        specifier: ^5.26.0
+        specifier: 'catalog:'
         version: 5.26.0(@types/react@19.2.15)
       groq:
-        specifier: 3.88.1-typegen-experimental.0
+        specifier: 'catalog:'
         version: 3.88.1-typegen-experimental.0
       groq-js:
-        specifier: ^1.30.1
+        specifier: 'catalog:'
         version: 1.30.1
       reselect:
         specifier: ^5.1.1
         version: 5.1.1
       rxjs:
-        specifier: ^7.8.2
+        specifier: 'catalog:'
         version: 7.8.2
       zustand:
         specifier: ^5.0.13
@@ -481,64 +574,64 @@ importers:
         specifier: workspace:*
         version: link:../@repo/tsconfig
       '@sanity/browserslist-config':
-        specifier: ^1.0.5
+        specifier: 'catalog:'
         version: 1.0.5
       '@sanity/pkg-utils':
-        specifier: ^9.2.3
+        specifier: 'catalog:'
         version: 9.2.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/babel__core@7.20.5)(@types/node@24.12.4)(babel-plugin-react-compiler@1.0.0)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@5.9.3)
       '@sanity/prettier-config':
-        specifier: ^1.0.6
+        specifier: 'catalog:'
         version: 1.0.6(prettier@3.8.3)
       '@types/node':
-        specifier: ^24.12.4
+        specifier: 'catalog:'
         version: 24.12.4
       '@vitest/coverage-v8':
-        specifier: 4.1.6
-        version: 4.1.6(vitest@4.1.7)
+        specifier: 'catalog:'
+        version: 4.1.8(vitest@4.1.8)
       eslint:
-        specifier: ^9.39.4
+        specifier: 'catalog:'
         version: 9.39.4(jiti@2.7.0)
       prettier:
-        specifier: ^3.8.3
+        specifier: 'catalog:'
         version: 3.8.3
       rollup-plugin-visualizer:
-        specifier: ^5.14.0
+        specifier: 'catalog:'
         version: 5.14.0(rollup@4.60.1)
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vite:
-        specifier: ^7.3.3
+        specifier: 'catalog:'
         version: 7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0)
       vitest:
-        specifier: ^4.1.6
-        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
+        specifier: 'catalog:'
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
 
   packages/react:
     dependencies:
       '@sanity/client':
-        specifier: ^7.22.0
+        specifier: 'catalog:'
         version: 7.22.0
       '@sanity/message-protocol':
-        specifier: ^0.23.0
+        specifier: 'catalog:'
         version: 0.23.0
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../core
       '@sanity/types':
-        specifier: ^5.26.0
+        specifier: 'catalog:'
         version: 5.26.0(@types/react@19.2.15)
       groq:
-        specifier: 3.88.1-typegen-experimental.0
+        specifier: 'catalog:'
         version: 3.88.1-typegen-experimental.0
       react-compiler-runtime:
-        specifier: 19.1.0-rc.2
+        specifier: 'catalog:'
         version: 19.1.0-rc.2(react@19.2.6)
       react-error-boundary:
-        specifier: ^6.1.1
+        specifier: 'catalog:'
         version: 6.1.1(react@19.2.6)
       rxjs:
-        specifier: ^7.8.2
+        specifier: 'catalog:'
         version: 7.8.2
     devDependencies:
       '@repo/config-eslint':
@@ -557,71 +650,71 @@ importers:
         specifier: workspace:*
         version: link:../@repo/tsconfig
       '@sanity/browserslist-config':
-        specifier: ^1.0.5
+        specifier: 'catalog:'
         version: 1.0.5
       '@sanity/comlink':
-        specifier: ^4.0.1
+        specifier: 'catalog:'
         version: 4.0.1
       '@sanity/pkg-utils':
-        specifier: ^9.2.3
+        specifier: 'catalog:'
         version: 9.2.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/babel__core@7.20.5)(@types/node@24.12.4)(babel-plugin-react-compiler@19.1.0-rc.1)(oxc-resolver@11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(typescript@5.9.3)
       '@sanity/prettier-config':
-        specifier: ^1.0.6
+        specifier: 'catalog:'
         version: 1.0.6(prettier@3.8.3)
       '@testing-library/jest-dom':
-        specifier: ^6.9.1
+        specifier: 'catalog:'
         version: 6.9.1
       '@testing-library/react':
-        specifier: ^16.3.2
+        specifier: 'catalog:'
         version: 16.3.2(@testing-library/dom@10.4.0)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@types/node':
-        specifier: ^24.12.4
+        specifier: 'catalog:'
         version: 24.12.4
       '@types/react':
-        specifier: ^19.2.15
+        specifier: 'catalog:'
         version: 19.2.15
       '@types/react-dom':
-        specifier: ^19.2.3
+        specifier: 'catalog:'
         version: 19.2.3(@types/react@19.2.15)
       '@vitejs/plugin-react':
         specifier: ^4.7.0
         version: 4.7.0(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
       '@vitest/coverage-v8':
-        specifier: 4.1.6
-        version: 4.1.6(vitest@4.1.7)
+        specifier: 'catalog:'
+        version: 4.1.8(vitest@4.1.8)
       babel-plugin-react-compiler:
         specifier: 19.1.0-rc.1
         version: 19.1.0-rc.1
       eslint:
-        specifier: ^9.39.4
+        specifier: 'catalog:'
         version: 9.39.4(jiti@2.7.0)
       groq-js:
-        specifier: ^1.30.1
+        specifier: 'catalog:'
         version: 1.30.1
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1(@noble/hashes@2.0.1)
       prettier:
-        specifier: ^3.8.3
+        specifier: 'catalog:'
         version: 3.8.3
       react:
-        specifier: ^19.2.6
+        specifier: 'catalog:'
         version: 19.2.6
       react-dom:
-        specifier: ^19.2.6
+        specifier: 'catalog:'
         version: 19.2.6(react@19.2.6)
       rollup-plugin-visualizer:
-        specifier: ^5.14.0
+        specifier: 'catalog:'
         version: 5.14.0(rollup@4.60.1)
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
       vite:
-        specifier: ^7.3.3
+        specifier: 'catalog:'
         version: 7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0)
       vitest:
-        specifier: ^4.1.6
-        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
+        specifier: 'catalog:'
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
 
 packages:
 
@@ -5461,20 +5554,20 @@ packages:
     peerDependencies:
       vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
 
-  '@vitest/coverage-v8@4.1.6':
-    resolution: {integrity: sha512-36l628fQ/9a/8ihy97eOtEnvWQEdqULQOJtcaxtoNq0G1w3Mxd4szSahOaMM9/NGyZ+hyKcMtIW/WIxq0XQViQ==}
+  '@vitest/coverage-v8@4.1.8':
+    resolution: {integrity: sha512-lt3kovsyHwYe00wq4D1ti0Z974fWj4NLp6siqiyEufUpyFwK9Yhi7rBhac9JL5aA0zoMrJqc4vYPZRUnI7l7nw==}
     peerDependencies:
-      '@vitest/browser': 4.1.6
-      vitest: 4.1.6
+      '@vitest/browser': 4.1.8
+      vitest: 4.1.8
     peerDependenciesMeta:
       '@vitest/browser':
         optional: true
 
-  '@vitest/expect@4.1.7':
-    resolution: {integrity: sha512-1R+tw0ortHEbZDGMymm+pN7/AFQ/RkFFdtd7EN+VBpynKmLbP8A3rpEXdshBJ7+8hQ9zBJh/i1s0yKNtxAnU7w==}
+  '@vitest/expect@4.1.8':
+    resolution: {integrity: sha512-h3nDO677RDLEGlBxyQ5CW8RlMThSKSRLUePLOx09gNIWRL40edgA1GCZSZgf1W55MFAG6/Sw14KeaAnqv0NKdQ==}
 
-  '@vitest/mocker@4.1.7':
-    resolution: {integrity: sha512-vY7nuamKgfvpA1Koa3oYIw/k7D6kZnpGyNMZW8loow2bsBYla1TFdqTaXncWdRn4pgwNs+90RhnXhJScDwQeJA==}
+  '@vitest/mocker@4.1.8':
+    resolution: {integrity: sha512-LEiN/xe4OSIbKe9HQIp5OC24agGD9J5CnmMgsLohVVoOPWL9a2sBoR6VBx43jQZb7Kr1l4RCuyCJzcAa0+dojw==}
     peerDependencies:
       msw: ^2.4.9
       vite: ^6.0.0 || ^7.0.0 || ^8.0.0
@@ -5484,26 +5577,20 @@ packages:
       vite:
         optional: true
 
-  '@vitest/pretty-format@4.1.6':
-    resolution: {integrity: sha512-h5SxD/IzNhZYnrSZRsUZQIC+vD0GY8cUvq0iwsmkFKixRCKLLWqCXa/FIQ4S1R+sI+PGoojkHsdNrbZiM9Qpgw==}
+  '@vitest/pretty-format@4.1.8':
+    resolution: {integrity: sha512-9GasEBxpZ1VYIpqHf/0+YGg121uSNwCKOJqIrTwWP/TB7DmFCiaBpNl3aPZzoLWfWkuqhbH8vJIVobZkvdo2cA==}
 
-  '@vitest/pretty-format@4.1.7':
-    resolution: {integrity: sha512-umgCarTOYQWIaDMvGDRZij+6b9oVeLIyJzfN+AS88e0ZOU3QTgNNSTtjQOpcvWr3np1N0j4WgZj+sb3oYBDscw==}
+  '@vitest/runner@4.1.8':
+    resolution: {integrity: sha512-EmVxeBAfMJvycdjd6Hm+RbFBbA9fKvo0Kx37hNpBYoYeavH3RNsBXWDooR1mgD52dCrxIIuP7UotpfiwOikvcg==}
 
-  '@vitest/runner@4.1.7':
-    resolution: {integrity: sha512-BapjmAQ2aI78WdMEfeUWivnfVzB+VPGwWRQcJE0OUq7qEeEcBsCSf+0T5iREBNE5nBb4wA5Ya0W6IA+sghdEFw==}
+  '@vitest/snapshot@4.1.8':
+    resolution: {integrity: sha512-acfZboRmAIf05DEKcBQy33VXojFJjtUdLyo7oOmV9kebb2xdU01UknNiPuPZoJZQyO7DF0gZdTGTpeAzET9QPQ==}
 
-  '@vitest/snapshot@4.1.7':
-    resolution: {integrity: sha512-ZacLzja+TmJeZ1h14xW2FB/WpeimUD3haBXQPyJqxvo8jQTmfeA8zv58mtjN2C7EHXZDYVcVYdYmAxjkWVvKCw==}
+  '@vitest/spy@4.1.8':
+    resolution: {integrity: sha512-6EevtBp6OZOPF7bmz36HrGMeP3txgVSrgebWxHOafDXGkhIzfXK14f8KF6MuFfgXXUeHxmpD3BQxkV00/3s5mA==}
 
-  '@vitest/spy@4.1.7':
-    resolution: {integrity: sha512-kbkI5LMWakyuTIvs6fUJ5qdIVb1XVKsYJAT4OJ938cHMROYMSfmoQdZy0aaAnjbbc8F61vkoTqz/Az+/HiIu5Q==}
-
-  '@vitest/utils@4.1.6':
-    resolution: {integrity: sha512-FxIY+U81R3LGKCxaHHFRQ5+g6/iRgGLmeHWdp2Amj4ljQRrEIWHmZyDfDYBRZlpyqA7qKxtS9DD1dhk8RnRIVQ==}
-
-  '@vitest/utils@4.1.7':
-    resolution: {integrity: sha512-T532WBu791cBxJlCl6SO+J14l81DQx6uQHm1bQbmCDY7nqlEIgkza/UFnSBNaUtSf41unldDFjdOBYEQC4b5Hw==}
+  '@vitest/utils@4.1.8':
+    resolution: {integrity: sha512-uOJamYALNhfJ6iolExyQM40yIQwDqYnkKtQ5VCiSe17E33H0aQ/u+1GlRuz4LZBk6Mm3sg90G9hEbmEt37C1Zg==}
 
   '@xmldom/xmldom@0.8.13':
     resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
@@ -9895,11 +9982,6 @@ packages:
     peerDependencies:
       react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
 
-  react-compiler-runtime@19.1.0-rc.1:
-    resolution: {integrity: sha512-wCt6g+cRh8g32QT18/9blfQHywGjYu+4FlEc3CW1mx3pPxYzZZl1y+VtqxRgnKKBCFLIGUYxog4j4rs5YS86hw==}
-    peerDependencies:
-      react: ^17.0.0 || ^18.0.0 || ^19.0.0 || ^0.0.0-experimental
-
   react-compiler-runtime@19.1.0-rc.2:
     resolution: {integrity: sha512-852AwyIsbWJ5o1LkQVAZsVK3iLjMxOfKZuxqeGd/RfD+j1GqHb6j3DSHLtpu4HhFbQHsP2DzxjJyKR6luv4D8w==}
     peerDependencies:
@@ -11381,20 +11463,20 @@ packages:
       yaml:
         optional: true
 
-  vitest@4.1.7:
-    resolution: {integrity: sha512-flYyaFd2CgoCoU+0UKt3pxksgC+S02iTDN0n3LtqaMeXsI9SBcdNujc2k0DeFLzUn/0k538yNjOSdwgCqcrwJA==}
+  vitest@4.1.8:
+    resolution: {integrity: sha512-flY6ScbCIt9HThs+C5HS7jvGOB560DJtk/Z15IQROTA6zEy49Nh8T/dofWTQL+n3vswqn87sbJNiuqw1SDp5Ig==}
     engines: {node: ^20.0.0 || ^22.0.0 || >=24.0.0}
     hasBin: true
     peerDependencies:
       '@edge-runtime/vm': '*'
       '@opentelemetry/api': ^1.9.0
       '@types/node': ^20.0.0 || ^22.0.0 || >=24.0.0
-      '@vitest/browser-playwright': 4.1.7
-      '@vitest/browser-preview': 4.1.7
-      '@vitest/browser-webdriverio': 4.1.7
-      '@vitest/coverage-istanbul': 4.1.7
-      '@vitest/coverage-v8': 4.1.7
-      '@vitest/ui': 4.1.7
+      '@vitest/browser-playwright': 4.1.8
+      '@vitest/browser-preview': 4.1.8
+      '@vitest/browser-webdriverio': 4.1.8
+      '@vitest/coverage-istanbul': 4.1.8
+      '@vitest/coverage-v8': 4.1.8
+      '@vitest/ui': 4.1.8
       happy-dom: '*'
       jsdom: '*'
       vite: ^6.0.0 || ^7.0.0 || ^8.0.0
@@ -17289,10 +17371,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/coverage-v8@4.1.6(vitest@4.1.7)':
+  '@vitest/coverage-v8@4.1.8(vitest@4.1.8)':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
-      '@vitest/utils': 4.1.6
+      '@vitest/utils': 4.1.8
       ast-v8-to-istanbul: 1.0.0
       istanbul-lib-coverage: 3.2.2
       istanbul-lib-report: 3.0.1
@@ -17301,56 +17383,46 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
+      vitest: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.8)(jsdom@26.1.0)(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
 
-  '@vitest/expect@4.1.7':
+  '@vitest/expect@4.1.8':
     dependencies:
       '@standard-schema/spec': 1.1.0
       '@types/chai': 5.2.3
-      '@vitest/spy': 4.1.7
-      '@vitest/utils': 4.1.7
+      '@vitest/spy': 4.1.8
+      '@vitest/utils': 4.1.8
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.7(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))':
+  '@vitest/mocker@4.1.8(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))':
     dependencies:
-      '@vitest/spy': 4.1.7
+      '@vitest/spy': 4.1.8
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
       vite: 7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0)
 
-  '@vitest/pretty-format@4.1.6':
+  '@vitest/pretty-format@4.1.8':
     dependencies:
       tinyrainbow: 3.1.0
 
-  '@vitest/pretty-format@4.1.7':
+  '@vitest/runner@4.1.8':
     dependencies:
-      tinyrainbow: 3.1.0
-
-  '@vitest/runner@4.1.7':
-    dependencies:
-      '@vitest/utils': 4.1.7
+      '@vitest/utils': 4.1.8
       pathe: 2.0.3
 
-  '@vitest/snapshot@4.1.7':
+  '@vitest/snapshot@4.1.8':
     dependencies:
-      '@vitest/pretty-format': 4.1.7
-      '@vitest/utils': 4.1.7
+      '@vitest/pretty-format': 4.1.8
+      '@vitest/utils': 4.1.8
       magic-string: 0.30.21
       pathe: 2.0.3
 
-  '@vitest/spy@4.1.7': {}
+  '@vitest/spy@4.1.8': {}
 
-  '@vitest/utils@4.1.6':
+  '@vitest/utils@4.1.8':
     dependencies:
-      '@vitest/pretty-format': 4.1.6
-      convert-source-map: 2.0.0
-      tinyrainbow: 3.1.0
-
-  '@vitest/utils@4.1.7':
-    dependencies:
-      '@vitest/pretty-format': 4.1.7
+      '@vitest/pretty-format': 4.1.8
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
 
@@ -20018,7 +20090,7 @@ snapshots:
       jsonwebtoken: 9.0.3
       load-esm: 1.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.16.1)
+      retry-axios: 2.6.0(axios@1.16.1(debug@4.3.4))
       tough-cookie: 4.1.3
     transitivePeerDependencies:
       - supports-color
@@ -22377,10 +22449,6 @@ snapshots:
     dependencies:
       react: 19.2.6
 
-  react-compiler-runtime@19.1.0-rc.1(react@19.2.6):
-    dependencies:
-      react: 19.2.6
-
   react-compiler-runtime@19.1.0-rc.2(react@19.2.6):
     dependencies:
       react: 19.2.6
@@ -22670,7 +22738,7 @@ snapshots:
       onetime: 7.0.0
       signal-exit: 4.1.0
 
-  retry-axios@2.6.0(axios@1.16.1):
+  retry-axios@2.6.0(axios@1.16.1(debug@4.3.4)):
     dependencies:
       axios: 1.16.1(debug@4.3.4)
     optional: true
@@ -24228,15 +24296,15 @@ snapshots:
       tsx: 4.20.6
       yaml: 2.9.0
 
-  vitest@4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.6)(jsdom@26.1.0)(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0)):
+  vitest@4.1.8(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.8)(jsdom@26.1.0)(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0)):
     dependencies:
-      '@vitest/expect': 4.1.7
-      '@vitest/mocker': 4.1.7(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
-      '@vitest/pretty-format': 4.1.7
-      '@vitest/runner': 4.1.7
-      '@vitest/snapshot': 4.1.7
-      '@vitest/spy': 4.1.7
-      '@vitest/utils': 4.1.7
+      '@vitest/expect': 4.1.8
+      '@vitest/mocker': 4.1.8(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
+      '@vitest/pretty-format': 4.1.8
+      '@vitest/runner': 4.1.8
+      '@vitest/snapshot': 4.1.8
+      '@vitest/spy': 4.1.8
+      '@vitest/utils': 4.1.8
       es-module-lexer: 2.1.0
       expect-type: 1.3.0
       magic-string: 0.30.21
@@ -24253,20 +24321,20 @@ snapshots:
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
       '@types/node': 24.12.4
-      '@vitest/coverage-v8': 4.1.6(vitest@4.1.7)
+      '@vitest/coverage-v8': 4.1.8(vitest@4.1.8)
       jsdom: 26.1.0
     transitivePeerDependencies:
       - msw
 
-  vitest@4.1.7(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0)):
+  vitest@4.1.8(@opentelemetry/api@1.9.1)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0)):
     dependencies:
-      '@vitest/expect': 4.1.7
-      '@vitest/mocker': 4.1.7(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
-      '@vitest/pretty-format': 4.1.7
-      '@vitest/runner': 4.1.7
-      '@vitest/snapshot': 4.1.7
-      '@vitest/spy': 4.1.7
-      '@vitest/utils': 4.1.7
+      '@vitest/expect': 4.1.8
+      '@vitest/mocker': 4.1.8(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.30.2)(terser@5.36.0)(tsx@4.20.6)(yaml@2.9.0))
+      '@vitest/pretty-format': 4.1.8
+      '@vitest/runner': 4.1.8
+      '@vitest/snapshot': 4.1.8
+      '@vitest/spy': 4.1.8
+      '@vitest/utils': 4.1.8
       es-module-lexer: 2.1.0
       expect-type: 1.3.0
       magic-string: 0.30.21
@@ -24283,7 +24351,7 @@ snapshots:
     optionalDependencies:
       '@opentelemetry/api': 1.9.1
       '@types/node': 24.12.4
-      '@vitest/coverage-v8': 4.1.6(vitest@4.1.7)
+      '@vitest/coverage-v8': 4.1.8(vitest@4.1.8)
       jsdom: 29.1.1(@noble/hashes@2.0.1)
     transitivePeerDependencies:
       - msw
