@@ -8,6 +8,22 @@ packages:
 onlyBuiltDependencies:
   - esbuild
 
+minimumReleaseAge: 4320
+
+minimumReleaseAgeExclude:
+  - '@portabletext/*'
+  - '@sanity/*'
+  - '@types/*'
+  - 'groq-js'
+  - 'groq'
+  - 'lodash-es'
+  - 'react-rx'
+  - 'sanity'
+  - 'use-effect-event'
+  - 'dotenv'
+  - 'oxfmt'
+  - '@oxfmt/*'
+
 catalog:
   '@playwright/test': '^1.60.0'
   '@sanity/browserslist-config': '^1.0.5'
