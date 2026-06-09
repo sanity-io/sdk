@@ -7,3 +7,6 @@ packages:
 
 onlyBuiltDependencies:
   - esbuild
+
+catalog:
+  tsx: ^4.22.4
