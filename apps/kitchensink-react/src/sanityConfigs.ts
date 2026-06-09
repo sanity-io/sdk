@@ -18,7 +18,9 @@ export const devResources: Record<string, DocumentResource> = {
       : 'mlPGY7BEqt52',
   },
   'canvas': {
-    canvasId: 'cag5gSK37IGV',
+    canvasId: import.meta.env['VITE_IS_E2E']
+      ? import.meta.env['VITE_E2E_CANVAS_ID']
+      : 'cag5gSK37IGV',
   },
 }
 

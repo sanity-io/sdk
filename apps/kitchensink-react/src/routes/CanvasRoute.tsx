@@ -15,7 +15,7 @@ export function CanvasRoute(): JSX.Element {
       resourceName="canvas"
       documentType="sanity.canvas.document"
       initialQuery='*[_type == "sanity.canvas.document"][0...10] | order(_id desc)'
-      projection="{title}"
+      projection="{title, arbitraryValues}"
       itemNoun="Document"
       editor={{nameField: 'title', nameLabel: 'Title'}}
     />

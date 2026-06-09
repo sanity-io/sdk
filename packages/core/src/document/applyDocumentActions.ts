@@ -2,10 +2,10 @@ import {type SanityDocument} from 'groq'
 import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
 
 import {type DocumentResource} from '../config/sanityConfig'
-import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
+import {bindActionByResource} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StoreContext} from '../store/defineStore'
-import {type Action, type DocumentAction} from './actions'
+import {type Action} from './actions'
 import {documentStore, type DocumentStoreState} from './documentStore'
 import {type DocumentTransactionSubmissionResult} from './events'
 import {type DocumentSet} from './processMutations'
@@ -73,15 +73,20 @@ const boundApplyDocumentActions = bindActionByResource(documentStore, _applyDocu
 
 /** @internal */
 async function _applyDocumentActions(
-  {state, key: boundKey}: StoreContext<DocumentStoreState, BoundResourceKey>,
-  {actions, transactionId = crypto.randomUUID(), disableBatching}: ApplyDocumentActionsOptions,
+  {state}: StoreContext<DocumentStoreState>,
+  {
+    actions,
+    resource,
+    transactionId = crypto.randomUUID(),
+    disableBatching,
+  }: ApplyDocumentActionsOptions,
 ): Promise<ActionsResult> {
   const {events} = state.get()
 
-  const normalizedActions = normalizeActionsForResource(
-    actions as DocumentAction[], // cast required because of the complicated unions here. Runtime logic ensures only edit actions are normalized.
-    boundKey?.resource,
-  )
+  // Rewrite edit actions to match the bound resource's editing model (e.g.
+  // forcing liveEdit for Canvas, stripping unsupported release perspectives).
+  // Non-edit and release actions pass through unchanged.
+  const normalizedActions = normalizeActionsForResource(actions, resource)
 
   const transaction: QueuedTransaction = {
     transactionId,

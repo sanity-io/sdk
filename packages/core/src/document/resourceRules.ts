@@ -6,7 +6,7 @@ import {
   isMediaLibraryResource,
 } from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
-import {type DocumentAction} from './actions'
+import {type Action, type DocumentAction} from './actions'
 import {getEffectiveDocumentId} from './util'
 
 export interface EffectiveDocModel {
@@ -65,14 +65,14 @@ function describeResource(resource: DocumentResource | undefined): string {
  * is set so the dispatcher takes the liveEdit branch.
  *
  * Only `document.edit` actions are normalized today — other action types
- * (publish, unpublish, etc.) pass through unchanged.
+ * (publish, unpublish, release actions, etc.) pass through unchanged.
  *
  * @internal
  */
 export function normalizeActionsForResource(
-  actions: DocumentAction[],
+  actions: Action[],
   resource: DocumentResource | undefined,
-): DocumentAction[] {
+): Action[] {
   // collect actions that may have changed in unexpected ways
   const stripped: Array<{documentType: string; documentId: string}> = []
 
