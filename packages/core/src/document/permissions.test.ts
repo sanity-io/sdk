@@ -52,6 +52,18 @@ describe('createGrantsLookup', () => {
       expect(evaluateSync(grants[key], {params: {document: dummyDoc}}).data).toBe(true)
     })
   })
+
+  it('should ignore unknown permissions like "manage"', () => {
+    const datasetAcl = [
+      {filter: '_id != null', permissions: ['history', 'read', 'update', 'create', 'manage']},
+    ] as DatasetAcl
+    const grants = createGrantsLookup(datasetAcl)
+    const dummyDoc = {_id: 'doc1'}
+    ;(['read', 'update', 'create', 'history'] as Grant[]).forEach((key) => {
+      expect(grants[key]).toBeDefined()
+      expect(evaluateSync(grants[key], {params: {document: dummyDoc}}).data).toBe(true)
+    })
+  })
 })
 
 describe('calculatePermissions', () => {

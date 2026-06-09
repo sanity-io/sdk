@@ -29,6 +29,8 @@ export function createGrantsLookup(datasetAcl: DatasetAcl): Record<Grant, ExprNo
   for (const entry of datasetAcl) {
     for (const grant of entry.permissions) {
       const set = filtersByGrant[grant]
+      // Ignore permissions we don't model (e.g. "manage")
+      if (!set) continue
       set.add(entry.filter)
       filtersByGrant[grant] = set
     }
