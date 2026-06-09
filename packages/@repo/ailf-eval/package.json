@@ -11,7 +11,7 @@
     "ts:check": "tsc --noEmit"
   },
   "dependencies": {
-    "@sanity/ailf": "^7.3.0"
+    "@sanity/ailf": "^7.6.0"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
