@@ -12,7 +12,7 @@
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
     "@types/lodash-es": "catalog:",
-    "@vitejs/plugin-react": "^4.7.0",
+    "@vitejs/plugin-react": "catalog:",
     "eslint": "catalog:",
     "lodash-es": "catalog:",
     "typescript": "catalog:",
