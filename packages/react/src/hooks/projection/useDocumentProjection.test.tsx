@@ -114,6 +114,47 @@ describe('useDocumentProjection', () => {
     expect(eventsUnsubscribe).toHaveBeenCalled()
   })
 
+  test('it re-reads the current snapshot when the element becomes visible again after an off-screen update', async () => {
+    // The store notifies subscribers only on changes *after* subscribe (it skips the
+    // value current at subscribe time), so the mocked subscribe never invokes its
+    // callback — matching real behavior. The hook must therefore re-read getCurrent()
+    // itself whenever the visibility gate (re)opens, otherwise a value that updated
+    // while the element was off-screen stays frozen on screen.
+    getCurrent.mockReturnValue({
+      data: {title: 'Initial Title', description: 'Initial Description'},
+      isPending: false,
+    })
+    const eventsUnsubscribe = vi.fn()
+    subscribe.mockImplementation(() => eventsUnsubscribe)
+
+    render(
+      <ResourceProvider fallback={<div>Loading...</div>}>
+        <TestComponent document={mockDocument} projection="{name, description}" />
+      </ResourceProvider>,
+    )
+
+    // Become visible, then hidden — mirrors a card being scrolled out of view.
+    await act(async () => {
+      intersectionObserverCallback([{isIntersecting: true} as IntersectionObserverEntry])
+    })
+    await act(async () => {
+      intersectionObserverCallback([{isIntersecting: false} as IntersectionObserverEntry])
+    })
+
+    // The underlying document changes while the element is off-screen.
+    getCurrent.mockReturnValue({
+      data: {title: 'Updated Title', description: 'Updated Description'},
+      isPending: false,
+    })
+
+    // Becoming visible again must surface the value that changed while hidden.
+    await act(async () => {
+      intersectionObserverCallback([{isIntersecting: true} as IntersectionObserverEntry])
+    })
+
+    expect(screen.getByText('Updated Title')).toBeInTheDocument()
+  })
+
   test('it suspends and resolves data when element becomes visible', async () => {
     // Mock the initial state to trigger suspense
     getCurrent.mockReturnValueOnce({
