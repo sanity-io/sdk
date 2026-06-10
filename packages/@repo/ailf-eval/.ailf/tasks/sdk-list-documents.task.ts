@@ -24,6 +24,10 @@ export default defineSdkTask({
         slug: 'sdk-react-hooks',
         reason: 'Reference for useDocuments and useDocumentProjection hooks',
       },
+      {
+        slug: 'sdk-best-practices',
+        reason: 'Discusses things that are relevant to the usage of most SDK hooks',
+      },
     ],
   },
   docCoverage: true,
@@ -49,7 +53,7 @@ Only the title of each post should be rendered. There may be many posts, so the 
         },
         {
           id: 'projects-title',
-          text: 'Renders each document title via useDocumentProjection or useDocumentPreview inside a Suspense boundary',
+          text: 'Renders each document title via useDocumentProjection inside a Suspense boundary',
         },
         {
           id: 'paginates-with-load-more',
@@ -67,7 +71,7 @@ Only the title of each post should be rendered. There may be many posts, so the 
         },
         {
           id: 'passes-document-handle',
-          text: 'Passes the full document handle through to useDocumentProjection or useDocumentPreview',
+          text: 'Passes the full document handle through to useDocumentProjection',
         },
       ],
     },

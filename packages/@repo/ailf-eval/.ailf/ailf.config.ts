@@ -10,7 +10,7 @@
 import {defineRepoConfig} from '@sanity/ailf'
 
 export default defineRepoConfig({
-  // Which Sanity project/dataset holds the docs under test.
+  // Which Sanity project/dataset holds the docs being tested
   source: {
     projectId: '3do82whm',
     dataset: 'next',
