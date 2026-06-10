@@ -27,4 +27,16 @@ export default [
   },
   ...baseESLintConfig,
   ...reactConfig,
+  {
+    // Node tooling scripts (e.g. typegen) legitimately use console output and
+    // import dev-only build dependencies.
+    files: ['scripts/**'],
+    rules: {
+      'no-console': 'off',
+      'import/no-extraneous-dependencies': [
+        'error',
+        {devDependencies: true, optionalDependencies: false, includeTypes: false},
+      ],
+    },
+  },
 ]
