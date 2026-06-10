@@ -51,9 +51,9 @@
   },
   "prettier": "@sanity/prettier-config",
   "devDependencies": {
-    "@commitlint/cli": "^19.8.1",
-    "@commitlint/config-conventional": "^19.8.1",
-    "@commitlint/types": "^19.8.1",
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
+    "@commitlint/types": "^21.0.1",
     "@google-cloud/storage": "^7.19.0",
     "@playwright/test": "catalog:",
     "@repo/config-eslint": "workspace:*",
