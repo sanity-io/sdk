@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.13.0](https://github.com/sanity-io/sdk/compare/sdk-v2.12.0...sdk-v2.13.0) (2026-06-10)
+
+
+### Bug Fixes
+
+* **core:** ignore unknown grants in createGrantsLookup ([#934](https://github.com/sanity-io/sdk/issues/934)) ([75b79cf](https://github.com/sanity-io/sdk/commit/75b79cfc11340725bf2e17894e431b83d9777d06))
+* **deps:** update dependency @sanity/mutate to ^0.17.1 ([#900](https://github.com/sanity-io/sdk/issues/900)) ([fbad3ad](https://github.com/sanity-io/sdk/commit/fbad3ad52ba1c9d9f0aaae32866ad6afd19853d6))
+* **document:** allow correct editing for non-dataset docs ([#933](https://github.com/sanity-io/sdk/issues/933)) ([ec440e1](https://github.com/sanity-io/sdk/commit/ec440e1785e70bc8bf9e25834c86753fdb1e155a))
+* **document:** pass identity to local acl evaluations ([#932](https://github.com/sanity-io/sdk/issues/932)) ([52767c8](https://github.com/sanity-io/sdk/commit/52767c8628e12dd4a5f2689ae1596658a6e8b1ab))
+* **document:** return warm listener on a document store retry ([#925](https://github.com/sanity-io/sdk/issues/925)) ([b7c8252](https://github.com/sanity-io/sdk/commit/b7c82529f62d8e6a7dfefd338e31f4c74bfd7e29))
+
 ## [2.12.0](https://github.com/sanity-io/sdk/compare/sdk-v2.11.1...sdk-v2.12.0) (2026-05-21)
 
 
