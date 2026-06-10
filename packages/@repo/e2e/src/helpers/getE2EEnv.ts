@@ -25,6 +25,10 @@ interface E2EEnv {
   SDK_E2E_MEDIA_LIBRARY_ID: string
   /** The media library token for media library tests */
   SDK_E2E_MEDIA_LIBRARY_TOKEN: string
+  /** The canvas ID for canvas tests */
+  SDK_E2E_CANVAS_ID: string
+  /** The canvas token for canvas tests */
+  SDK_E2E_CANVAS_TOKEN: string
 }
 
 type KnownEnvVar = keyof E2EEnv
@@ -73,6 +77,8 @@ export function getE2EEnv(): E2EEnv {
   const VERCEL_AUTOMATION_BYPASS_SECRET = readEnv('VERCEL_AUTOMATION_BYPASS_SECRET')
   const SDK_E2E_MEDIA_LIBRARY_ID = readEnv('SDK_E2E_MEDIA_LIBRARY_ID')
   const SDK_E2E_MEDIA_LIBRARY_TOKEN = readEnv('SDK_E2E_MEDIA_LIBRARY_TOKEN')
+  const SDK_E2E_CANVAS_ID = readEnv('SDK_E2E_CANVAS_ID')
+  const SDK_E2E_CANVAS_TOKEN = readEnv('SDK_E2E_CANVAS_TOKEN')
   return {
     CI,
     SDK_E2E_PROJECT_ID,
@@ -86,5 +92,7 @@ export function getE2EEnv(): E2EEnv {
     VERCEL_AUTOMATION_BYPASS_SECRET,
     SDK_E2E_MEDIA_LIBRARY_ID,
     SDK_E2E_MEDIA_LIBRARY_TOKEN,
+    SDK_E2E_CANVAS_ID,
+    SDK_E2E_CANVAS_TOKEN,
   }
 }

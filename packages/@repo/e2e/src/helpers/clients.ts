@@ -43,3 +43,22 @@ export function getMediaLibraryClient(): SanityClient {
 
   return mediaLibraryClient
 }
+
+let canvasClient: SanityClient | null = null
+
+export function getCanvasClient(): SanityClient {
+  if (!canvasClient) {
+    canvasClient = createClient({
+      token: env.SDK_E2E_CANVAS_TOKEN,
+      useCdn: false,
+      apiVersion: '2025-06-01',
+      apiHost: 'https://api.sanity.work',
+      resource: {
+        type: 'canvas',
+        id: env.SDK_E2E_CANVAS_ID,
+      },
+    })
+  }
+
+  return canvasClient
+}
