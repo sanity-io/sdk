@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.13.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.12.0...sdk-react-v2.13.0) (2026-06-10)
+
+
+### Features
+
+* **react:** add useApplyReleaseActions ([#903](https://github.com/sanity-io/sdk/issues/903)) ([f337af1](https://github.com/sanity-io/sdk/commit/f337af11889ca0b93c168958dd7400fb865477e5))
+
+
+### Bug Fixes
+
+* **projection:** notify on intersection re-entry for fresh data ([#942](https://github.com/sanity-io/sdk/issues/942)) ([bfaf1a9](https://github.com/sanity-io/sdk/commit/bfaf1a9c924d4b70db93ab2cdca07803878c4056))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.13.0
+
 ## [2.12.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.11.1...sdk-react-v2.12.0) (2026-05-21)
 
 
