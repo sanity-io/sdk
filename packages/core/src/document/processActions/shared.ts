@@ -12,6 +12,12 @@ export interface ActionHandlerContext {
   transactionId: string
   timestamp: string
   grants: Record<Grant, ExprNode>
+  /**
+   * The current user's ID, used by GROQ's `identity()` when evaluating ACL
+   * filters. May be `undefined` before the user has loaded; in that case
+   * `identity()` evaluates to null.
+   */
+  identity: string | undefined
   outgoingActions: HttpAction[]
   outgoingMutations: Mutation[]
 }
@@ -21,8 +27,12 @@ export interface ActionHandlerResult {
   working: DocumentSet
 }
 
-export function checkGrant(grantExpr: ExprNode, document: SanityDocument): boolean {
-  const value = evaluateSync(grantExpr, {params: {document}})
+export function checkGrant(
+  grantExpr: ExprNode,
+  document: SanityDocument,
+  identity: string | undefined,
+): boolean {
+  const value = evaluateSync(grantExpr, {params: {document}, identity})
   return value.type === 'boolean' && value.data
 }
 
@@ -55,6 +65,7 @@ interface ApplySingleDocPatchOptions {
   transactionId: string
   timestamp: string
   grants: Record<Grant, ExprNode>
+  identity: string | undefined
   /**
    * Error message thrown when the target document does not exist in either
    * the base or working set.
@@ -98,6 +109,7 @@ export function applySingleDocPatch({
   transactionId,
   timestamp,
   grants,
+  identity,
   notFoundMessage = 'Cannot edit document because it does not exist.',
   permissionMessage = `You do not have permission to edit document "${documentId}".`,
 }: ApplySingleDocPatchOptions): ApplySingleDocPatchResult {
@@ -120,7 +132,7 @@ export function applySingleDocPatch({
   const diffedPatches = diffValue(baseBefore, baseAfter) as PatchOperations[]
 
   const workingBefore = working[documentId] as SanityDocument
-  if (!checkGrant(grants.update, workingBefore)) {
+  if (!checkGrant(grants.update, workingBefore, identity)) {
     throw new PermissionActionError({documentId, transactionId, message: permissionMessage})
   }
 

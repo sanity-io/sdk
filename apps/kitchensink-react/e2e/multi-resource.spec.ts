@@ -40,7 +40,7 @@ test.describe('Multi Resource Route', () => {
       process.env['SDK_E2E_DATASET_1'], // Second dataset
     )
 
-    await page.goto('./multi-resource')
+    await page.goto(`./multi-resource?authorId=${authorId}&movieId=${movieId}`)
 
     // get the page context for iframe/page detection
     const pageContext = await getPageContext(page)
@@ -89,10 +89,10 @@ test.describe('Multi Resource Route', () => {
     })
 
     // Then verify the projection also updated (propagation can lag behind display updates)
-    await expect(async () => {
-      const authorProjection = await pageContext.getByTestId('author-projection-name').textContent()
-      expect(authorProjection).toContain('Updated Author Name')
-    }).toPass({timeout: 25000, intervals: [1000, 2000, 5000]})
+    await expect(pageContext.getByTestId('author-projection-name')).toContainText(
+      'Updated Author Name',
+      {timeout: 25000},
+    )
 
     // Test editing the movie document
     const movieNameInput = pageContext.getByTestId('movie-name-input')
@@ -105,10 +105,10 @@ test.describe('Multi Resource Route', () => {
     })
 
     // Then verify the projection also updated (propagation can lag behind display updates)
-    await expect(async () => {
-      const movieProjection = await pageContext.getByTestId('movie-projection-name').textContent()
-      expect(movieProjection).toContain('Updated Movie Name')
-    }).toPass({timeout: 25000, intervals: [1000, 2000, 5000]})
+    await expect(pageContext.getByTestId('movie-projection-name')).toContainText(
+      'Updated Movie Name',
+      {timeout: 25000},
+    )
 
     // Skip external changes test for standalone mode (WebKit on localhost)
     // Real-time subscriptions are unreliable in this mode

@@ -44,17 +44,17 @@
     },
     "apps/kitchensink-react/src/DocumentCollection/MultiResourceRoute.tsx": {
       "crap_critical": {
-        "count": 3
+        "count": 4
       },
       "crap_high": {
-        "count": 2
+        "count": 1
       },
       "crap_moderate": {
         "count": 1
       }
     },
     "apps/kitchensink-react/src/DocumentCollection/OrgDocumentExplorerRoute.tsx": {
-      "crap_high": {
+      "crap_critical": {
         "count": 1
       },
       "crap_moderate": {
@@ -76,17 +76,17 @@
         "count": 1
       }
     },
+    "apps/kitchensink-react/src/components/ResourceDemoRoute.tsx": {
+      "crap_critical": {
+        "count": 1
+      }
+    },
     "apps/kitchensink-react/src/routes/AgentResourceContextRoute.tsx": {
       "crap_critical": {
         "count": 1
       }
     },
     "apps/kitchensink-react/src/routes/IntentsRoute.tsx": {
-      "crap_critical": {
-        "count": 1
-      }
-    },
-    "apps/kitchensink-react/src/routes/MediaLibraryRoute.tsx": {
       "crap_critical": {
         "count": 1
       }
@@ -101,26 +101,29 @@
         "count": 1
       }
     },
+    "apps/kitchensink-react/src/routes/releases/ReleaseActionsDialog.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
     "apps/kitchensink-react/src/routes/releases/ReleasesAutocomplete.tsx": {
       "crap_moderate": {
         "count": 1
       }
     },
     "apps/kitchensink-react/src/routes/releases/ReleasesRoute.tsx": {
-      "crap_high": {
+      "crap_critical": {
         "count": 1
       }
     },
     "apps/kitchensink-react/vite.config.mjs": {
       "crap_moderate": {
-        "count": 1
-      }
-    },
-    "knip.config.ts": {
-      "complexity_critical": {
-        "count": 1
-      },
-      "crap_critical": {
         "count": 1
       }
     },
@@ -134,7 +137,7 @@
         "count": 1
       }
     },
-    "packages/core/src/auth/utils.ts": {
+    "packages/core/src/auth/refreshStampedToken.ts": {
       "crap_moderate": {
         "count": 1
       }
@@ -165,11 +168,13 @@
         "count": 1
       }
     },
-    "packages/core/src/document/processActions.ts": {
-      "complexity_critical": {
+    "packages/core/src/document/processActions/create.ts": {
+      "complexity_moderate": {
         "count": 1
-      },
-      "crap_critical": {
+      }
+    },
+    "packages/core/src/document/processActions/edit.ts": {
+      "complexity_moderate": {
         "count": 1
       }
     },
@@ -193,18 +198,13 @@
         "count": 1
       }
     },
-    "packages/react/src/components/auth/LoginError.tsx": {
+    "packages/core/src/utils/object.ts": {
       "complexity_moderate": {
         "count": 1
       }
     },
-    "packages/react/src/hooks/document/useApplyDocumentActions.ts": {
-      "complexity_critical": {
-        "count": 1
-      }
-    },
-    "packages/react/src/hooks/document/useDocumentPermissions.ts": {
-      "complexity_high": {
+    "packages/react/src/components/auth/LoginError.tsx": {
+      "complexity_moderate": {
         "count": 1
       }
     },
@@ -217,15 +217,14 @@
       }
     }
   },
-  "production_coverage_findings": [],
+  "runtime_coverage_findings": [],
   "target_keys": [
     "packages/core/src/query/queryStore.ts:circular dependency",
     "packages/core/src/releases/getPerspectiveState.ts:circular dependency",
     "packages/core/src/releases/releasesStore.ts:circular dependency",
-    "packages/react/src/hooks/document/useApplyDocumentActions.ts:complexity",
+    "packages/core/src/releases/utils/isReleasePerspective.ts:high impact",
+    "packages/core/src/utils/object.ts:high impact",
     "packages/core/src/document/processMutations.ts:complexity",
-    "packages/react/src/hooks/document/useDocumentPermissions.ts:complexity",
-    "packages/core/src/document/processActions.ts:complexity",
     "packages/core/src/document/patchOperations.ts:complexity"
   ]
 }

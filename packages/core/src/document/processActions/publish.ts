@@ -17,7 +17,7 @@ export function handlePublish(
   action: PublishDocumentAction,
   ctx: ActionHandlerContext,
 ): ActionHandlerResult {
-  const {transactionId, timestamp, grants, outgoingActions, outgoingMutations} = ctx
+  const {transactionId, timestamp, grants, identity, outgoingActions, outgoingMutations} = ctx
   let {base, working} = ctx
 
   const documentId = getId(action.documentId)
@@ -58,7 +58,7 @@ export function handlePublish(
 
   const mutations: Mutation[] = [{delete: {id: draftId}}, {createOrReplace: newPublishedFromDraft}]
 
-  if (working[draftId] && !checkGrant(grants.update, working[draftId])) {
+  if (working[draftId] && !checkGrant(grants.update, working[draftId], identity)) {
     throw new PermissionActionError({
       documentId,
       transactionId,
@@ -66,13 +66,13 @@ export function handlePublish(
     })
   }
 
-  if (working[publishedId] && !checkGrant(grants.update, newPublishedFromDraft)) {
+  if (working[publishedId] && !checkGrant(grants.update, newPublishedFromDraft, identity)) {
     throw new PermissionActionError({
       documentId,
       transactionId,
       message: `Publish failed: You do not have permission to update the published version of "${documentId}".`,
     })
-  } else if (!working[publishedId] && !checkGrant(grants.create, newPublishedFromDraft)) {
+  } else if (!working[publishedId] && !checkGrant(grants.create, newPublishedFromDraft, identity)) {
     throw new PermissionActionError({
       documentId,
       transactionId,

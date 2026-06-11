@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "extends": "@sanity/pkg-utils/tsconfig/strictest.json",
+  "extends": "@sanity/tsconfig/strictest",
   "description": "Shared TS config that are used for builds, dts generation, etl extract, and vscode/intellisense",
   "compilerOptions": {
     // Everything needs to use the same lib settings for `paths` to work consistently throughout the monorepo

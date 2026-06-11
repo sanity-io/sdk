@@ -1,7 +1,7 @@
 import {type BrowserContext, type Page, test as base} from '@playwright/test'
 import {type MultipleMutationResult, SanityClient} from '@sanity/client'
 
-import {getClient, getMediaLibraryClient} from './helpers/clients'
+import {getCanvasClient, getClient, getMediaLibraryClient} from './helpers/clients'
 import {cleanupDocuments, createDocuments, type DocumentStub} from './helpers/documents'
 import {createPageContext, type PageContext} from './helpers/pageContext'
 
@@ -13,6 +13,7 @@ interface SanityFixtures {
   ) => Promise<MultipleMutationResult>
   getClient: (dataset?: string) => SanityClient
   getMediaLibraryClient: () => SanityClient
+  getCanvasClient: () => SanityClient
   getPageContext: (page: Page) => Promise<PageContext>
   context: BrowserContext
 }
@@ -45,6 +46,10 @@ export const test = base.extend<SanityFixtures>({
   // eslint-disable-next-line no-empty-pattern
   getMediaLibraryClient: async ({}, use) => {
     await use(getMediaLibraryClient)
+  },
+  // eslint-disable-next-line no-empty-pattern
+  getCanvasClient: async ({}, use) => {
+    await use(getCanvasClient)
   },
   // eslint-disable-next-line no-empty-pattern
   getPageContext: async ({}, use, testInfo) => {

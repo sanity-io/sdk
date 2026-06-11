@@ -17,6 +17,11 @@ export const devResources: Record<string, DocumentResource> = {
       ? import.meta.env['VITE_E2E_MEDIA_LIBRARY_ID']
       : 'mlPGY7BEqt52',
   },
+  'canvas': {
+    canvasId: import.meta.env['VITE_IS_E2E']
+      ? import.meta.env['VITE_E2E_CANVAS_ID']
+      : 'cag5gSK37IGV',
+  },
 }
 
 export const e2eConfigs: SanityConfig[] = [

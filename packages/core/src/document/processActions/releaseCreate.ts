@@ -15,7 +15,7 @@ export function handleReleaseCreate(
   action: CreateReleaseAction,
   ctx: ActionHandlerContext,
 ): ActionHandlerResult {
-  const {transactionId, timestamp, grants, outgoingActions, outgoingMutations} = ctx
+  const {transactionId, timestamp, grants, outgoingActions, outgoingMutations, identity} = ctx
   let {base, working} = ctx
 
   const releaseDocumentId = getReleaseDocumentId(action.releaseId)
@@ -40,7 +40,7 @@ export function handleReleaseCreate(
   base = processMutations({documents: base, transactionId, mutations, timestamp})
   working = processMutations({documents: working, transactionId, mutations, timestamp})
 
-  if (!checkGrant(grants.create, working[releaseDocumentId] as SanityDocument)) {
+  if (!checkGrant(grants.create, working[releaseDocumentId] as SanityDocument, identity)) {
     throw new PermissionActionError({
       documentId: releaseDocumentId,
       transactionId,

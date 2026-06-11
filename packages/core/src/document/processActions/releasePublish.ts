@@ -12,7 +12,7 @@ export function handleReleasePublish(
   action: PublishReleaseAction,
   ctx: ActionHandlerContext,
 ): ActionHandlerResult {
-  const {base, working, grants, outgoingActions, transactionId} = ctx
+  const {base, working, grants, outgoingActions, transactionId, identity} = ctx
 
   const releaseDocumentId = getReleaseDocumentId(action.releaseId)
   const existing = working[releaseDocumentId] ?? base[releaseDocumentId]
@@ -24,7 +24,7 @@ export function handleReleasePublish(
     })
   }
 
-  if (!checkGrant(grants.update, existing)) {
+  if (!checkGrant(grants.update, existing, identity)) {
     throw new PermissionActionError({
       documentId: releaseDocumentId,
       transactionId,

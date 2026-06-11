@@ -1,30 +1,42 @@
 {
   "unused_files": [
     "apps/kitchensink-react/src/css/css.config.js",
+    "apps/kitchensink-react/test/setup.ts",
     "packages/@repo/e2e/src/setup/auth.setup.ts",
     "packages/@repo/e2e/src/setup/datasets.setup.ts",
-    "packages/@repo/e2e/src/teardown/auth.teardown.ts"
+    "packages/@repo/e2e/src/teardown/auth.teardown.ts",
+    "packages/core/src/organization/organization.test-d.ts",
+    "packages/core/src/organizations/organizations.test-d.ts",
+    "packages/core/src/project/project.test-d.ts",
+    "packages/core/src/projects/projects.test-d.ts",
+    "packages/react/src/hooks/organizations/useOrganization.test-d.ts",
+    "packages/react/src/hooks/organizations/useOrganizations.test-d.ts",
+    "packages/react/src/hooks/projects/useProject.test-d.ts",
+    "packages/react/src/hooks/projects/useProjects.test-d.ts"
   ],
   "unused_exports": ["apps/kitchensink-react/test/test-utils.tsx:renderHook"],
   "unused_types": [],
-  "unused_dependencies": ["react-compiler-runtime", "styled-components", "react-compiler-runtime"],
+  "private_type_leaks": [],
+  "unused_dependencies": [
+    "apps/kitchensink-react/package.json:react-compiler-runtime",
+    "packages/@repo/tsconfig/package.json:@sanity/tsconfig",
+    "packages/react/package.json:react-compiler-runtime"
+  ],
   "unused_dev_dependencies": [
-    "@sanity/cli-v3",
-    "@sanity/prettier-config",
-    "@sanity/browserslist-config",
-    "@sanity/browserslist-config",
-    "babel-plugin-react-compiler"
+    "packages/core/package.json:@sanity/browserslist-config",
+    "packages/react/package.json:@sanity/browserslist-config",
+    "packages/react/package.json:babel-plugin-react-compiler"
   ],
   "circular_dependencies": [
     "packages/core/src/query/queryStore.ts->packages/core/src/releases/getPerspectiveState.ts->packages/core/src/releases/releasesStore.ts"
   ],
+  "re_export_cycles": [],
   "unused_optional_dependencies": [],
   "unused_enum_members": [],
-  "unused_class_members": [
-    "packages/core/src/document/processActions.ts:ActionError.documentId",
-    "packages/core/src/document/processActions.ts:ActionError.transactionId"
+  "unused_class_members": [],
+  "unresolved_imports": [
+    "packages/core/src/projection/projectionStore.test.ts:../common/createLiveEventSubscriber"
   ],
-  "unresolved_imports": [],
   "unlisted_dependencies": [],
   "duplicate_exports": [
     "destroyController|packages/core/src/comlink/controller/actions/destroyController.ts|packages/core/src/comlink/controller/comlinkControllerStore.ts",
@@ -38,5 +50,10 @@
   "type_only_dependencies": [],
   "test_only_dependencies": [],
   "boundary_violations": [],
-  "stale_suppressions": []
+  "stale_suppressions": [],
+  "unused_catalog_entries": [],
+  "empty_catalog_groups": [],
+  "unresolved_catalog_references": [],
+  "unused_dependency_overrides": [],
+  "misconfigured_dependency_overrides": []
 }

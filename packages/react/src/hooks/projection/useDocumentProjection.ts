@@ -235,6 +235,12 @@ export function useDocumentProjection<TData extends object>({
           switchMap((isVisible) =>
             isVisible
               ? new Observable<void>((obs) => {
+                  // `stateSource.subscribe` skips the value current at subscribe time;
+                  // (intentionally -- we only want new events)
+                  // but in this case the store might have updated while the element was off-screen;
+                  // so we fire an immediate notification here to make useSyncExternalStore
+                  // re-read getCurrent() and pick up the fresh value.
+                  obs.next()
                   return stateSource.subscribe(() => obs.next())
                 })
               : EMPTY,

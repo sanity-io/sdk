@@ -1,5 +1,8 @@
 {
   "name": "@repo/tsconfig",
   "version": "0.0.1",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "@sanity/tsconfig": "catalog:"
+  }
 }

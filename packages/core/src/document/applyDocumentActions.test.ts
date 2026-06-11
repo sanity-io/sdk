@@ -202,4 +202,28 @@ describe('applyDocumentActions', () => {
     childInstance.dispose()
     parentInstance.dispose()
   })
+
+  it('normalizes actions for the bound resource before queueing', async () => {
+    // A plain edit action with no `liveEdit` flag. Canvas forces liveEdit, so
+    // the queued action should come back with `liveEdit: true` — proving that
+    // `applyDocumentActions` runs `normalizeActionsForResource`.
+    const action: DocumentAction = {
+      type: 'document.edit',
+      documentId: 'doc1',
+      documentType: 'sanity.canvas.document',
+      patches: [{set: {foo: 'bar'}}],
+    }
+
+    // Don't await — we only need to inspect the synchronously-queued transaction.
+    applyDocumentActions(instance, {
+      actions: [action],
+      transactionId: 'txn-normalize',
+      resource: {canvasId: 'c'},
+    })
+
+    const queued = state.get().queued.find((t) => t.transactionId === 'txn-normalize')
+    expect(queued).toBeDefined()
+    const [queuedAction] = queued!.actions
+    expect(queuedAction).toMatchObject({type: 'document.edit', liveEdit: true})
+  })
 })

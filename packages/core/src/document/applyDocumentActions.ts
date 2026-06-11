@@ -10,6 +10,7 @@ import {documentStore, type DocumentStoreState} from './documentStore'
 import {type DocumentTransactionSubmissionResult} from './events'
 import {type DocumentSet} from './processMutations'
 import {type AppliedTransaction, type QueuedTransaction, queueTransaction} from './reducers'
+import {normalizeActionsForResource} from './resourceRules'
 
 /** @beta */
 export interface ActionsResult<TDocument extends SanityDocument = SanityDocument> {
@@ -73,13 +74,23 @@ const boundApplyDocumentActions = bindActionByResource(documentStore, _applyDocu
 /** @internal */
 async function _applyDocumentActions(
   {state}: StoreContext<DocumentStoreState>,
-  {actions, transactionId = crypto.randomUUID(), disableBatching}: ApplyDocumentActionsOptions,
+  {
+    actions,
+    resource,
+    transactionId = crypto.randomUUID(),
+    disableBatching,
+  }: ApplyDocumentActionsOptions,
 ): Promise<ActionsResult> {
   const {events} = state.get()
 
+  // Rewrite edit actions to match the bound resource's editing model (e.g.
+  // forcing liveEdit for Canvas, stripping unsupported release perspectives).
+  // Non-edit and release actions pass through unchanged.
+  const normalizedActions = normalizeActionsForResource(actions, resource)
+
   const transaction: QueuedTransaction = {
     transactionId,
-    actions,
+    actions: normalizedActions,
     ...(disableBatching && {disableBatching}),
   }
 

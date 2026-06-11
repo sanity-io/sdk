@@ -19,7 +19,7 @@ const EMPTY_REVISIONS: NonNullable<Required<DocumentState['unverifiedRevisions']
 
 export type SyncTransactionState = Pick<
   DocumentStoreState,
-  'queued' | 'applied' | 'documentStates' | 'outgoing' | 'grants'
+  'queued' | 'applied' | 'documentStates' | 'outgoing' | 'grants' | 'identity'
 >
 
 type DocumentHandleLike = Pick<DocumentHandle, 'perspective'> & {
@@ -232,6 +232,7 @@ export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTra
     base: working,
     timestamp,
     grants: prev.grants,
+    identity: prev.identity,
   })
   const applied: AppliedTransaction = {
     ...queued,
@@ -399,7 +400,7 @@ export function revertOutgoingTransaction(prev: SyncTransactionState): SyncTrans
 
   for (const t of prev.applied) {
     try {
-      const next = processActions({...t, working, grants: prev.grants})
+      const next = processActions({...t, working, grants: prev.grants, identity: prev.identity})
       working = next.working
       nextApplied.push({...t, ...next})
     } catch (error) {
@@ -506,7 +507,7 @@ export function applyRemoteDocument(
   // transaction again through the listener and this same flow will run then
   for (const curr of prev.applied) {
     try {
-      const next = processActions({...curr, working, grants: prev.grants})
+      const next = processActions({...curr, working, grants: prev.grants, identity: prev.identity})
       working = next.working
       // next includes an updated `previous` set and `working` set and updates
       // the `outgoingAction` and `outgoingMutations`. the `base` set from the

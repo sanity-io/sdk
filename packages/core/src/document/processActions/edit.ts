@@ -18,7 +18,7 @@ export function handleEdit(
   action: EditDocumentAction,
   ctx: ActionHandlerContext,
 ): ActionHandlerResult {
-  const {transactionId, timestamp, grants, outgoingActions, outgoingMutations} = ctx
+  const {transactionId, timestamp, grants, identity, outgoingActions, outgoingMutations} = ctx
   let {base, working} = ctx
 
   const documentId = getId(action.documentId)
@@ -32,6 +32,7 @@ export function handleEdit(
       transactionId,
       timestamp,
       grants,
+      identity,
     })
     // liveEdit documents use the mutation endpoint directly -- we don't send actions
     outgoingMutations.push(...result.workingMutations)
@@ -98,7 +99,7 @@ export function handleEdit(
   if (!isReleasePerspective(action.perspective) && !working[draftId] && working[publishedId]) {
     const newDraftFromPublished = {...working[publishedId], _id: draftId}
 
-    if (!checkGrant(grants.create, newDraftFromPublished)) {
+    if (!checkGrant(grants.create, newDraftFromPublished, identity)) {
       throw new PermissionActionError({
         documentId,
         transactionId,
@@ -111,7 +112,7 @@ export function handleEdit(
 
   // the first if statement should make this never be null or undefined
   const workingBefore = working[patchDocumentId] ?? working[publishedId]
-  if (!checkGrant(grants.update, workingBefore!)) {
+  if (!checkGrant(grants.update, workingBefore!, identity)) {
     throw new PermissionActionError({
       documentId,
       transactionId,

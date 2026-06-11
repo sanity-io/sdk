@@ -14,21 +14,21 @@
   "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@sanity/sdk-react": "workspace:*",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
     "@repo/tsconfig": "workspace:*",
-    "@sanity/prettier-config": "^1.0.6",
+    "@sanity/prettier-config": "catalog:",
     "@sanity/sdk": "workspace:*",
-    "@types/react": "^19.2.15",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.2.0",
-    "eslint": "^9.39.4",
-    "prettier": "^3.8.3",
-    "rimraf": "^6.0.1",
-    "typescript": "^5.9.3",
-    "vite": "^7.3.3"
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "rimraf": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
   }
 }

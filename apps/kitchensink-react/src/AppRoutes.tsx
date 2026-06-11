@@ -17,6 +17,7 @@ import {ProjectAuthHome} from './ProjectAuthentication/ProjectAuthHome'
 import {ProtectedRoute} from './ProtectedRoute'
 import {AgentActionsRoute} from './routes/AgentActionsRoute'
 import {AgentResourceContextRoute} from './routes/AgentResourceContextRoute'
+import {CanvasRoute} from './routes/CanvasRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import {IntentsRoute} from './routes/IntentsRoute'
@@ -75,6 +76,10 @@ const documentCollectionRoutes = [
   {
     path: 'media-library',
     element: <MediaLibraryRoute />,
+  },
+  {
+    path: 'canvas',
+    element: <CanvasRoute />,
   },
   {
     path: 'intents',
