@@ -30,10 +30,5 @@ export default defineCliConfig({
         '@sanity/sdk-react': resolve(import.meta.dirname, '../../packages/react/src/_exports'),
       },
     },
-    server: {
-      ...prev.server,
-      port: 3333,
-      fs: {strict: false},
-    },
   }),
 })

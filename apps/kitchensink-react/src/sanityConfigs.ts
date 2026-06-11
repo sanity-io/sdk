@@ -2,7 +2,7 @@ import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
 
 // True when running against the e2e environment. The SANITY_APP_E2E_* vars are
 // auto-exposed on import.meta.env by the App SDK's Vite config (SANITY_APP_ prefix).
-export const isE2E = !!import.meta.env['SANITY_APP_E2E_ORGANIZATION_ID']
+export const isE2E = !!import.meta.env['SANITY_APP_E2E_MODE']
 
 export const devConfigs: SanityConfig[] = [
   {

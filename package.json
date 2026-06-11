@@ -75,7 +75,6 @@
     "turbo": "^2.9.14",
     "typedoc": "^0.28.19",
     "typescript": "catalog:",
-    "vite": "catalog:",
     "vitest": "catalog:",
     "zx": "^8.8.5"
   },
