@@ -1,11 +1,84 @@
-import {defineCliConfig} from 'sanity/cli'
-import {
-  type ConfigEnv,
-  type Plugin,
-  type PluginOption,
-  type UserConfig,
-  type UserConfigExport,
-} from 'vite'
+import {type CliConfig, defineCliConfig} from 'sanity/cli'
+
+type VitePlugin = {name?: string}
+type VitePluginOption = VitePlugin | false | null | undefined | VitePluginOption[]
+
+const flattenPlugins = (input: VitePluginOption | VitePluginOption[] | undefined): VitePlugin[] => {
+  const result: VitePlugin[] = []
+  const push = (value: VitePluginOption) => {
+    if (!value) return
+    if (Array.isArray(value)) {
+      value.forEach(push)
+      return
+    }
+    if (typeof value === 'object' && 'name' in value) {
+      result.push(value)
+    }
+  }
+  push(input as VitePluginOption)
+  return result
+}
+
+const vite = (async (prev) => {
+  const {default: viteConfigFactory} = (await import('./vite.config.mjs')) as {
+    default:
+      | Record<string, unknown>
+      | ((env: {mode: string; command: 'build' | 'serve'}) => Record<string, unknown>)
+  }
+
+  const mode = process.env['NODE_ENV'] === 'production' ? 'production' : 'development'
+  const command = (mode === 'production' ? 'build' : 'serve') as 'build' | 'serve'
+  const env = {mode, command}
+
+  const projectConfigMaybe =
+    typeof viteConfigFactory === 'function' ? viteConfigFactory(env) : viteConfigFactory
+  const projectConfig = await Promise.resolve(projectConfigMaybe)
+
+  const prevPlugins = flattenPlugins(
+    prev.plugins as VitePluginOption | VitePluginOption[] | undefined,
+  )
+  const projectPlugins = flattenPlugins(
+    projectConfig['plugins'] as VitePluginOption | VitePluginOption[] | undefined,
+  )
+
+  const projectHasReact = projectPlugins.some((p) => /react|refresh/i.test(p.name ?? ''))
+  const filteredPrev = projectHasReact
+    ? prevPlugins.filter((p) => !/react|refresh/i.test(p.name ?? ''))
+    : prevPlugins
+
+  const seen = new Set<string>()
+  const mergedPlugins = [...projectPlugins, ...filteredPrev].filter((p) => {
+    if (!p.name) return true
+    if (seen.has(p.name)) return false
+    seen.add(p.name)
+    return true
+  })
+
+  const prevResolve = prev.resolve as Record<string, unknown> | undefined
+  const projectResolve = projectConfig['resolve'] as Record<string, unknown> | undefined
+
+  return {
+    ...prev,
+    ...projectConfig,
+    plugins: mergedPlugins,
+    resolve: {
+      ...prevResolve,
+      ...projectResolve,
+      alias: {
+        ...((prevResolve?.['alias'] as Record<string, unknown> | undefined) ?? {}),
+        ...((projectResolve?.['alias'] as Record<string, unknown> | undefined) ?? {}),
+      },
+    },
+    define: {
+      ...(prev.define as Record<string, unknown> | undefined),
+      ...((projectConfig['define'] as Record<string, unknown> | undefined) ?? {}),
+    },
+    server: {
+      ...(prev.server as Record<string, unknown> | undefined),
+      ...((projectConfig['server'] as Record<string, unknown> | undefined) ?? {}),
+    },
+  }
+}) as NonNullable<CliConfig['vite']>
 
 export default defineCliConfig({
   app: {
@@ -15,75 +88,5 @@ export default defineCliConfig({
     id: 'wkyoigmzawwnnwx458zgoh46',
   },
   // Extend Sanity CLI's internal Vite config with the app's Vite config
-  vite: async (prev: UserConfig) => {
-    const {default: viteConfigFactory} = (await import('./vite.config.mjs')) as {
-      default: UserConfigExport
-    }
-
-    const mode = process.env['NODE_ENV'] === 'production' ? 'production' : 'development'
-    const command: ConfigEnv['command'] = mode === 'production' ? 'build' : 'serve'
-    const env: ConfigEnv = {mode, command}
-
-    const projectConfigMaybe =
-      typeof viteConfigFactory === 'function' ? viteConfigFactory(env) : viteConfigFactory
-    const projectConfig = (await Promise.resolve(projectConfigMaybe)) as UserConfig
-
-    // Merge plugins without duplicates and avoid double React Refresh injection
-    const flattenPlugins = (
-      input: PluginOption | PluginOption[] | undefined,
-    ): import('vite').Plugin[] => {
-      const result: import('vite').Plugin[] = []
-      const push = (value: unknown) => {
-        if (!value) return
-        if (Array.isArray(value)) {
-          value.forEach(push)
-          return
-        }
-        const maybe = value as Partial<Plugin>
-        if (typeof maybe === 'object' && maybe && 'name' in maybe) {
-          result.push(maybe as Plugin)
-        }
-      }
-      push(input as unknown)
-      return result
-    }
-
-    const prevPlugins = flattenPlugins(prev.plugins)
-    const projectPlugins = flattenPlugins(projectConfig.plugins)
-
-    const projectHasReact = projectPlugins.some((p) => /react|refresh/i.test(p.name))
-    const filteredPrev = projectHasReact
-      ? prevPlugins.filter((p) => !/react|refresh/i.test(p.name))
-      : prevPlugins
-
-    const seen = new Set<string>()
-    const mergedPlugins = [...projectPlugins, ...filteredPrev].filter((p) => {
-      if (!p.name) return true
-      if (seen.has(p.name)) return false
-      seen.add(p.name)
-      return true
-    })
-
-    return {
-      ...prev,
-      ...projectConfig,
-      plugins: mergedPlugins,
-      resolve: {
-        ...prev.resolve,
-        ...projectConfig.resolve,
-        alias: {
-          ...(prev.resolve?.alias ?? {}),
-          ...(projectConfig.resolve?.alias ?? {}),
-        },
-      },
-      define: {
-        ...prev.define,
-        ...(projectConfig.define ?? {}),
-      },
-      server: {
-        ...prev.server,
-        ...(projectConfig.server ?? {}),
-      },
-    }
-  },
+  vite,
 })
