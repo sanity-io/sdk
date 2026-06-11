@@ -31,8 +31,8 @@ catalogs:
       specifier: ^2.1.0
       version: 2.1.0
     '@sanity/types':
-      specifier: ^5.26.0
-      version: 5.26.0
+      specifier: ^6.0.0
+      version: 6.0.0
     '@testing-library/jest-dom':
       specifier: ^6.9.1
       version: 6.9.1
@@ -553,7 +553,7 @@ importers:
         version: 1.1.0(react@19.2.7)
       '@sanity/types':
         specifier: 'catalog:'
-        version: 5.26.0(@types/react@19.2.17)
+        version: 6.0.0(@types/react@19.2.17)
       groq:
         specifier: 'catalog:'
         version: 3.88.1-typegen-experimental.0
@@ -632,7 +632,7 @@ importers:
         version: link:../core
       '@sanity/types':
         specifier: 'catalog:'
-        version: 5.26.0(@types/react@19.2.17)
+        version: 6.0.0(@types/react@19.2.17)
       groq:
         specifier: 'catalog:'
         version: 3.88.1-typegen-experimental.0
@@ -4784,6 +4784,10 @@ packages:
     resolution: {integrity: sha512-KqN9cowZwfZNCwCchRaz1B9WrZTThQxX/gfJhJO1uKJBuk/JcbYGBiSK9CSqocWoYDQ/QqANVXy1r7a8zognww==}
     engines: {node: '>=20'}
 
+  '@sanity/client@7.22.1':
+    resolution: {integrity: sha512-DrQqLAes7W9Ek2iKgTZ+ffY1v3DURJ6//iXJZMEQSUeRbxls2ifRTdV1gRS26v8nMkL0OCH+WCoUUseD4vhuQQ==}
+    engines: {node: '>=20'}
+
   '@sanity/codegen@3.88.1-typegen-experimental.0':
     resolution: {integrity: sha512-9GuT4aTNA1r8F8k6Rv2H2chmatzrmdK40fo4mosDr426nSsAkTD2gl632KVjmuI6veBnfT+ecv5Q/QvmvXl4SA==}
     engines: {node: '>=18'}
@@ -5018,6 +5022,11 @@ packages:
 
   '@sanity/types@5.26.0':
     resolution: {integrity: sha512-zhlw/z0dFk8ixP7hHVQvC2ZfBhsXJ5jkBiY33waMeV+ZCbCueXEjiNxCcmnY7D3OysX+FrOfhkn8rc8/Dl9snw==}
+    peerDependencies:
+      '@types/react': ^19.2
+
+  '@sanity/types@6.0.0':
+    resolution: {integrity: sha512-VnNk5Hyeytr71pei4Do4xapIObDP0ZC32ce1kLKdJRGzz93tkJZNzrAYXZld/r8j4d6TYfJlxDP+VxacTtIKKQ==}
     peerDependencies:
       '@types/react': ^19.2
 
@@ -16209,6 +16218,13 @@ snapshots:
       nanoid: 3.3.11
       rxjs: 7.8.2
 
+  '@sanity/client@7.22.1':
+    dependencies:
+      '@sanity/eventsource': 5.0.2
+      get-it: 8.7.2
+      nanoid: 3.3.11
+      rxjs: 7.8.2
+
   '@sanity/codegen@3.88.1-typegen-experimental.0':
     dependencies:
       '@babel/core': 7.29.7
@@ -16818,6 +16834,12 @@ snapshots:
   '@sanity/types@5.26.0(@types/react@19.2.17)':
     dependencies:
       '@sanity/client': 7.22.0
+      '@sanity/media-library-types': 1.4.0
+      '@types/react': 19.2.17
+
+  '@sanity/types@6.0.0(@types/react@19.2.17)':
+    dependencies:
+      '@sanity/client': 7.22.1
       '@sanity/media-library-types': 1.4.0
       '@types/react': 19.2.17
 
@@ -20407,7 +20429,7 @@ snapshots:
       jsonwebtoken: 9.0.3
       load-esm: 1.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.16.1(debug@4.3.4))
+      retry-axios: 2.6.0(axios@1.16.1)
       tough-cookie: 4.1.3
     transitivePeerDependencies:
       - supports-color
@@ -23029,7 +23051,7 @@ snapshots:
       onetime: 7.0.0
       signal-exit: 4.1.0
 
-  retry-axios@2.6.0(axios@1.16.1(debug@4.3.4)):
+  retry-axios@2.6.0(axios@1.16.1):
     dependencies:
       axios: 1.16.1(debug@4.3.4)
     optional: true
