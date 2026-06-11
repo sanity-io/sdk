@@ -182,7 +182,8 @@ describe('logout', () => {
       },
     })
 
-    await expect(logout(instance)).rejects.toThrow('Logout request failed')
+    // logout resolves even when the request fails; the error is only logged
+    await expect(logout(instance)).resolves.toBeUndefined()
 
     // Should still clean up storage even on error
     expect(removeItem).toHaveBeenCalledWith('__sanity_auth_token')

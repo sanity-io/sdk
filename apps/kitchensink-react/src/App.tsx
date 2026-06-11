@@ -7,11 +7,12 @@ import {BrowserRouter, useNavigate} from 'react-router'
 import {AppRoutes} from './AppRoutes'
 import {devConfigs, devResources, e2eConfigs} from './sanityConfigs'
 
-// Enable SDK logging in the browser
+// Enable SDK logging in the browser. The wildcard picks up new namespaces
+// automatically as logging is added to more modules.
 configureLogging({
   level: 'debug',
-  namespaces: ['*'], // Enable all namespaces
-  internal: true, // Shows internal SDK operations (RxJS streams, store internals, etc.) when in trace mode
+  namespaces: ['*'],
+  internal: true, // also show logs flagged as internal/maintainer-level
 })
 
 const theme = buildTheme({})
