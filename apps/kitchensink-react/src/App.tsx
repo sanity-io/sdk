@@ -7,6 +7,14 @@ import {BrowserRouter, useNavigate} from 'react-router'
 import {AppRoutes} from './AppRoutes'
 import {devConfigs, devResources, e2eConfigs} from './sanityConfigs'
 
+// Enable SDK logging in the browser. The wildcard picks up new namespaces
+// automatically as logging is added to more modules.
+configureLogging({
+  level: 'debug',
+  namespaces: ['*'],
+  internal: true, // also show logs flagged as internal/maintainer-level
+})
+
 const theme = buildTheme({})
 
 function NavigationHandler() {
@@ -16,11 +24,6 @@ function NavigationHandler() {
   })
   return null
 }
-
-configureLogging({
-  level: 'debug',
-  namespaces: ['telemetry'],
-})
 
 export default function App(): JSX.Element {
   return (

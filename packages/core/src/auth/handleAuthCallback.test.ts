@@ -1,5 +1,5 @@
 import {NEVER} from 'rxjs'
-import {beforeEach, describe, it} from 'vitest'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {AuthStateType} from './authStateType'
@@ -21,6 +21,25 @@ vi.mock('./utils', async (importOriginal) => {
 
 vi.mock('./subscribeToStateAndFetchCurrentUser')
 vi.mock('./subscribeToStorageEventsAndSetToken')
+
+// Mock logger to prevent actual logging during tests
+vi.mock('../utils/logger', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../utils/logger')>()
+  return {
+    ...original,
+    createLogger: vi.fn(() => ({
+      info: vi.fn(),
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      trace: vi.fn(),
+    })),
+  }
+})
+
+// Import createLogger after mocking
+// eslint-disable-next-line import/first
+import {createLogger} from '../utils/logger'
 
 let instance: SanityInstance | undefined
 
@@ -254,5 +273,8 @@ describe('handleCallback', () => {
     })
     expect(clientFactory).not.toHaveBeenCalled()
     expect(setItem).not.toHaveBeenCalled()
+
+    // Verify logger was called
+    expect(createLogger).toHaveBeenCalled()
   })
 })

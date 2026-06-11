@@ -11,6 +11,7 @@ import {
 
 import {type StoreContext} from '../store/defineStore'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
+import {getAuthLogger} from './authLogger'
 import {isStudioConfig} from './authMode'
 import {AuthStateType} from './authStateType'
 import {type AuthMethodOptions, type AuthState, type AuthStoreState} from './authStore'
@@ -30,6 +31,8 @@ export const subscribeToStateAndFetchCurrentUser = (
   {state, instance}: StoreContext<AuthStoreState>,
   fetchOptions?: {useProjectHostname?: boolean},
 ): Subscription => {
+  const logger = getAuthLogger(instance)
+
   const {clientFactory, apiHost} = state.get().options
   const useProjectHostname = fetchOptions?.useProjectHostname ?? isStudioConfig(instance.config)
   const projectId = instance.config.projectId
@@ -82,6 +85,7 @@ export const subscribeToStateAndFetchCurrentUser = (
              * @see SDK-1409
              */
             catchError((error) => {
+              logger.error('Failed to fetch current user', {error})
               state.set('setError', {authState: {type: AuthStateType.ERROR, error}})
               return EMPTY
             }),
@@ -91,6 +95,11 @@ export const subscribeToStateAndFetchCurrentUser = (
 
   return currentUser$.subscribe({
     next: (currentUser) => {
+      logger.info('Current user fetched successfully', {
+        hasEmail: !!currentUser.email,
+      })
+      // userId is PII, so only surface it at debug level
+      logger.debug('Current user details', {userId: currentUser.id})
       state.set('setCurrentUser', (prev) => ({
         authState:
           prev.authState.type === AuthStateType.LOGGED_IN
