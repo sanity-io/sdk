@@ -15,6 +15,8 @@ The tests expect to find the below env variables. Either define them in your she
 - `SANITY_APP_E2E_DATASET_1`=testing
 - `SANITY_APP_E2E_MEDIA_LIBRARY_ID`=we use mlyobHbSHBsj internally
 - `SDK_E2E_MEDIA_LIBRARY_TOKEN`=You can use the same token you used for session token if it's your user session token, otherwise generate this in the org admin page in Manage.
+- `SANITY_APP_E2E_CANVAS_ID`: the Canvas ID to run the Canvas tests against
+- `SDK_E2E_CANVAS_TOKEN`=You can use the same token you used for session token if it's your user session token, otherwise generate this in the org admin page in Manage.
 
 ## Writing tests
 
