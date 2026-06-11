@@ -1,6 +1,6 @@
 import {bindActionGlobally} from '../store/createActionBinder'
-import {createLogger} from '../utils/logger'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
+import {getAuthLogger} from './authLogger'
 import {AuthStateType} from './authStateType'
 import {authStore} from './authStore'
 
@@ -8,11 +8,7 @@ import {authStore} from './authStore'
  * @public
  */
 export const logout = bindActionGlobally(authStore, async ({state, instance}) => {
-  const logger = createLogger('auth', {
-    instanceId: instance.instanceId,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
-  })
+  const logger = getAuthLogger(instance)
 
   const {clientFactory, apiHost, providedToken, storageArea, storageKey} = state.get().options
 

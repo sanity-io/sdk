@@ -13,8 +13,8 @@ import {
 } from 'rxjs'
 
 import {type StoreContext} from '../store/defineStore'
-import {createLogger} from '../utils/logger'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
+import {getAuthLogger} from './authLogger'
 import {AuthStateType} from './authStateType'
 import {type AuthState, type AuthStoreState} from './authStore'
 
@@ -146,11 +146,7 @@ export const refreshStampedToken = ({
   state,
   instance,
 }: StoreContext<AuthStoreState>): Subscription => {
-  const logger = createLogger('auth', {
-    instanceId: instance.instanceId,
-    projectId: instance.config.projectId,
-    dataset: instance.config.dataset,
-  })
+  const logger = getAuthLogger(instance)
 
   const {clientFactory, apiHost, storageArea, storageKey} = state.get().options
 

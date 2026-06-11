@@ -1,6 +1,6 @@
 import {bindActionGlobally} from '../store/createActionBinder'
-import {createLogger} from '../utils/logger'
 import {DEFAULT_API_VERSION, REQUEST_TAG_PREFIX} from './authConstants'
+import {getAuthLogger} from './authLogger'
 import {AuthStateType} from './authStateType'
 import {authStore, type AuthStoreState, type DashboardContext} from './authStore'
 import {
@@ -17,11 +17,7 @@ import {
 export const handleAuthCallback = bindActionGlobally(
   authStore,
   async ({state, instance}, locationHref: string = getDefaultLocation()) => {
-    const logger = createLogger('auth', {
-      instanceId: instance.instanceId,
-      projectId: instance.config.projectId,
-      dataset: instance.config.dataset,
-    })
+    const logger = getAuthLogger(instance)
 
     const {providedToken, callbackUrl, clientFactory, apiHost, storageArea, storageKey} =
       state.get().options

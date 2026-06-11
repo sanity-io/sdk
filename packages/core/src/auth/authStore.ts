@@ -6,7 +6,7 @@ import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction} from '../store/createStateSourceAction'
 import {defineStore} from '../store/defineStore'
 import {getStagingApiHost} from '../utils/getStagingApiHost'
-import {createLogger} from '../utils/logger'
+import {getAuthLogger} from './authLogger'
 import {resolveAuthMode} from './authMode'
 import {AuthStateType} from './authStateType'
 import {type AuthStrategyOptions} from './authStrategy'
@@ -103,11 +103,7 @@ export const authStore = defineStore<AuthStoreState>({
   name: 'Auth',
 
   getInitialState(instance) {
-    const logger = createLogger('auth', {
-      instanceId: instance.instanceId,
-      projectId: instance.config.projectId,
-      dataset: instance.config.dataset,
-    })
+    const logger = getAuthLogger(instance)
 
     logger.debug('Initializing auth store', {
       hasProvidedToken: !!instance.config.auth?.token,
@@ -193,12 +189,7 @@ export const authStore = defineStore<AuthStoreState>({
   },
 
   initialize(context) {
-    const {instance} = context
-    const logger = createLogger('auth', {
-      instanceId: instance.instanceId,
-      projectId: instance.config.projectId,
-      dataset: instance.config.dataset,
-    })
+    const logger = getAuthLogger(context.instance)
 
     const initialLocationHref =
       context.state.get().options?.initialLocationHref ?? getDefaultLocation()
@@ -307,11 +298,7 @@ export const getIsInDashboardState = bindActionGlobally(
 export const setAuthToken = bindActionGlobally(
   authStore,
   ({state, instance}, token: string | null) => {
-    const logger = createLogger('auth', {
-      instanceId: instance.instanceId,
-      projectId: instance.config.projectId,
-      dataset: instance.config.dataset,
-    })
+    const logger = getAuthLogger(instance)
 
     const currentAuthState = state.get().authState
     if (token) {
