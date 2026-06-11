@@ -49,9 +49,10 @@ export const logout = bindActionGlobally(authStore, async ({state, instance}) =>
       logger.debug('No token to logout - already logged out')
     }
   } catch (error) {
-    // Log but don't re-throw: logout always resolves, and local state is
-    // cleared in the finally block even when the request fails.
+    // Re-throw to preserve the existing contract: logout rejects when the
+    // request fails. Local state is still cleared in the finally block.
     logger.error('Logout request failed', {error})
+    throw error
   } finally {
     logger.info('User logged out, clearing stored tokens')
     state.set('logoutSuccess', {
