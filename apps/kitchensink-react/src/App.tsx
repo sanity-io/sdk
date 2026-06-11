@@ -24,11 +24,6 @@ function NavigationHandler() {
   return null
 }
 
-configureLogging({
-  level: 'debug',
-  namespaces: ['telemetry'],
-})
-
 export default function App(): JSX.Element {
   return (
     <ThemeProvider theme={theme}>
