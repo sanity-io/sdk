@@ -30,15 +30,9 @@
   },
   "packageRules": [
     {
-      "description": "Pin groq and the @sanity/cli-v3 alias to the typegen-experimental prerelease tag. The SDK depends on typegen APIs (defineProjection / defineQuery) that only exist on this branch; do not let Renovate move them to a stable release. The alias is matched by depName because matchPackageNames resolves to @sanity/cli and would also cover the v5 CLI we do want to update. Revisit once typegen lands in a regular release.",
-      "matchDepNames": ["groq", "@sanity/cli-v3"],
+      "description": "Pin groq and @sanity/codegen to the typegen-experimental prerelease tag. The kitchensink's typegen depends on APIs (defineProjection / defineQuery, multi-schema/projections) that only exist on this prerelease; do not let Renovate move them to a stable release, which would drop the experimental typegen the SDK relies on. Revisit once typegen lands in a regular release.",
+      "matchDepNames": ["groq", "@sanity/codegen"],
       "enabled": false
-    },
-    {
-      "description": "Cap sanity at <5.15.0 in the kitchensink. The typegen-experimental cli-v3 loads CLI commands via sanity/_internal, and sanity@5.15.0 onwards ships only a throwing Proxy stub there, which breaks `sanity schema extract` / `sanity typegen generate`. Relax this once the kitchensink moves off the typegen-experimental toolchain (or sanity restores real _internal commands).",
-      "matchDepNames": ["sanity"],
-      "matchFileNames": ["apps/kitchensink-react/package.json"],
-      "allowedVersions": "<5.15.0"
     },
     {
       "description": "Automerge all devDependencies (non-major)",
