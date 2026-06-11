@@ -57,7 +57,7 @@ export async function cleanupDocuments(): Promise<void> {
 
   // Clean up documents in both datasets
   await Promise.all(
-    [env.SDK_E2E_DATASET_0, env.SDK_E2E_DATASET_1].map(async (dataset) => {
+    [env.SANITY_APP_E2E_DATASET_0, env.SANITY_APP_E2E_DATASET_1].map(async (dataset) => {
       try {
         const client = getClient(dataset)
         await client.delete({

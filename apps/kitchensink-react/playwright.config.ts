@@ -14,7 +14,7 @@ export default createPlaywrightConfig({
           stdout: 'pipe',
           env: {
             // Pass e2e organization ID to sanity dev
-            SDK_E2E_ORGANIZATION_ID: process.env['SDK_E2E_ORGANIZATION_ID'] || '',
+            SANITY_APP_E2E_ORGANIZATION_ID: process.env['SANITY_APP_E2E_ORGANIZATION_ID'] || '',
           },
         },
       }),

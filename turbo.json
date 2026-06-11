@@ -17,7 +17,7 @@
     "@sanity/kitchensink-react#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"],
-      "env": ["SDK_E2E_*"]
+      "env": ["SDK_E2E_*", "SANITY_APP_E2E_*"]
     },
     "build:bundle": {
       "dependsOn": ["^build:bundle"],
@@ -33,7 +33,12 @@
     "clean": {},
     "cleanup": {
       "cache": false,
-      "env": ["SDK_E2E_*", "RECAPTCHA_E2E_STAGING_KEY", "VERCEL_AUTOMATION_BYPASS_SECRET"]
+      "env": [
+        "SDK_E2E_*",
+        "SANITY_APP_E2E_*",
+        "RECAPTCHA_E2E_STAGING_KEY",
+        "VERCEL_AUTOMATION_BYPASS_SECRET"
+      ]
     },
     "depcheck": {
       "env": ["DEPCHECK"]
@@ -50,7 +55,7 @@
     "dev:e2e": {
       "persistent": true,
       "cache": false,
-      "env": ["SDK_E2E_*", "SANITY_INTERNAL_ENV"]
+      "env": ["SDK_E2E_*", "SANITY_APP_E2E_*", "SANITY_INTERNAL_ENV"]
     },
     "lint": {
       "cache": false
@@ -70,6 +75,7 @@
       "cache": false,
       "env": [
         "SDK_E2E_*",
+        "SANITY_APP_E2E_*",
         "SANITY_INTERNAL_ENV",
         "RECAPTCHA_E2E_STAGING_KEY",
         "VERCEL_AUTOMATION_BYPASS_SECRET"

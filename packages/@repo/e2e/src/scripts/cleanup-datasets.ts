@@ -10,8 +10,8 @@ const env = getE2EEnv()
 
 // must be run as a separate script to avoid race conditions with the tests
 async function cleanupDatasets() {
-  const primaryDataset = sanitizeDatasetName(env.SDK_E2E_DATASET_0)
-  const secondaryDataset = sanitizeDatasetName(env.SDK_E2E_DATASET_1)
+  const primaryDataset = sanitizeDatasetName(env.SANITY_APP_E2E_DATASET_0)
+  const secondaryDataset = sanitizeDatasetName(env.SANITY_APP_E2E_DATASET_1)
   if (!env.CI) {
     console.log('Skipping cleanup in non-CI environment')
     return

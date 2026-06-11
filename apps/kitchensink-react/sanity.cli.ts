@@ -1,89 +1,39 @@
+import {resolve} from 'node:path'
+
 import {defineCliConfig} from 'sanity/cli'
-import {
-  type ConfigEnv,
-  type Plugin,
-  type PluginOption,
-  type UserConfig,
-  type UserConfigExport,
-} from 'vite'
 
 export default defineCliConfig({
   app: {
     // Use e2e organization ID if provided, otherwise use dev organization ID
-    organizationId: process.env['SDK_E2E_ORGANIZATION_ID'] || 'oblZgbTFj',
+    organizationId: process.env['SANITY_APP_E2E_ORGANIZATION_ID'] || 'oblZgbTFj',
     entry: './src/App.tsx',
     id: 'wkyoigmzawwnnwx458zgoh46',
   },
-  // Extend Sanity CLI's internal Vite config with the app's Vite config
-  vite: async (prev: UserConfig) => {
-    const {default: viteConfigFactory} = (await import('./vite.config.mjs')) as {
-      default: UserConfigExport
-    }
-
-    const mode = process.env['NODE_ENV'] === 'production' ? 'production' : 'development'
-    const command: ConfigEnv['command'] = mode === 'production' ? 'build' : 'serve'
-    const env: ConfigEnv = {mode, command}
-
-    const projectConfigMaybe =
-      typeof viteConfigFactory === 'function' ? viteConfigFactory(env) : viteConfigFactory
-    const projectConfig = (await Promise.resolve(projectConfigMaybe)) as UserConfig
-
-    // Merge plugins without duplicates and avoid double React Refresh injection
-    const flattenPlugins = (
-      input: PluginOption | PluginOption[] | undefined,
-    ): import('vite').Plugin[] => {
-      const result: import('vite').Plugin[] = []
-      const push = (value: unknown) => {
-        if (!value) return
-        if (Array.isArray(value)) {
-          value.forEach(push)
-          return
-        }
-        const maybe = value as Partial<Plugin>
-        if (typeof maybe === 'object' && maybe && 'name' in maybe) {
-          result.push(maybe as Plugin)
-        }
-      }
-      push(input as unknown)
-      return result
-    }
-
-    const prevPlugins = flattenPlugins(prev.plugins)
-    const projectPlugins = flattenPlugins(projectConfig.plugins)
-
-    const projectHasReact = projectPlugins.some((p) => /react|refresh/i.test(p.name))
-    const filteredPrev = projectHasReact
-      ? prevPlugins.filter((p) => !/react|refresh/i.test(p.name))
-      : prevPlugins
-
-    const seen = new Set<string>()
-    const mergedPlugins = [...projectPlugins, ...filteredPrev].filter((p) => {
-      if (!p.name) return true
-      if (seen.has(p.name)) return false
-      seen.add(p.name)
-      return true
-    })
-
-    return {
-      ...prev,
-      ...projectConfig,
-      plugins: mergedPlugins,
-      resolve: {
-        ...prev.resolve,
-        ...projectConfig.resolve,
-        alias: {
-          ...(prev.resolve?.alias ?? {}),
-          ...(projectConfig.resolve?.alias ?? {}),
-        },
+  // Compile with the React Compiler. Target React 19 so the output uses
+  // react-compiler-runtime (a dependency of this app). The App SDK owns the
+  // React plugin and applies this for both `sanity dev` and `sanity build`.
+  reactCompiler: {target: '19'},
+  // Extend the App SDK's internal Vite config to resolve the SDK to local source.
+  // The SANITY_APP_E2E_* env vars the app reads are auto-exposed on
+  // import.meta.env by the App SDK (SANITY_APP_ prefix) — no manual define needed.
+  // envDir points at the turborepo root so the root .env is loaded (the App SDK
+  // otherwise looks for .env in the app directory).
+  vite: (prev) => ({
+    ...prev,
+    clearScreen: false,
+    envDir: resolve(import.meta.dirname, '../..'),
+    resolve: {
+      ...prev.resolve,
+      alias: {
+        ...prev.resolve?.alias,
+        '@sanity/sdk': resolve(import.meta.dirname, '../../packages/core/src/_exports'),
+        '@sanity/sdk-react': resolve(import.meta.dirname, '../../packages/react/src/_exports'),
       },
-      define: {
-        ...prev.define,
-        ...(projectConfig.define ?? {}),
-      },
-      server: {
-        ...prev.server,
-        ...(projectConfig.server ?? {}),
-      },
-    }
-  },
+    },
+    server: {
+      ...prev.server,
+      port: 3333,
+      fs: {strict: false},
+    },
+  }),
 })
