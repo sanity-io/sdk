@@ -8,7 +8,7 @@
   ],
   "ignorePresets": ["github>sanity-io/renovate-config:group-non-major"],
   "constraints": {
-    "pnpm": "10.34.1"
+    "pnpm": "10.34.3"
   },
   "postUpdateOptions": ["pnpmDedupe"],
   "schedule": ["before 5am"],
