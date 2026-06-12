@@ -1,27 +1,29 @@
 name: AILF Eval
 
 on:
-  # Run on demand from the Actions tab.
+  # Run on demand from the Actions tab
   workflow_dispatch:
-  # Run weekly against main. Docs and the live Sanity dataset drift
-  # independently of code releases, so a scheduled run is the highest-signal
-  # trigger. Thursday 10:00 UTC (mid-morning).
+  # Run weekly against main
   schedule:
     - cron: "0 10 * * 4"
-  # Evaluate on PRs. The `decide` job below works out whether to actually run:
-  # automatically when task/config files change, or on demand via the
-  # `trigger: ailf` label. `synchronize` re-runs on new commits.
+  # Evaluate on PRs
+  # The `decide` job below works out whether to actually run:
+  # - automatically when task/config files change
+  # - on demand via the `trigger: ailf` label
+  # - automatically when PRs are synchronized (new commits)
   pull_request:
     types: [labeled, synchronize, opened, reopened]
 
+# One run per branch at a time; a new push cancels the in-flight run so we
+# never evaluate stale commits (and don't pay for two agent runs in parallel)
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # Decide whether the eval should run. Schedule and manual runs always do.
-  # PRs run when they touch the AILF config/tasks, or carry the
-  # `trigger: ailf` label as a manual override.
+  # Decide whether the eval should run
+  # - Schedule and manual runs always do
+  # - PRs run when they touch the AILF config/tasks, or have the `trigger: ailf` label
   decide:
     runs-on: ubuntu-latest
     outputs:
@@ -66,9 +68,10 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    # The remote eval long-polls the AILF API and can run several minutes;
-    # cap it so a hung job doesn't sit on a runner for the 6h default.
-    timeout-minutes: 30
+    # The remote eval long-polls the AILF API and can run several minutes,
+    # and the docs-improvement agent run afterwards can take 10-15 more
+    # cap it here so we don't have a hung runner
+    timeout-minutes: 45
 
     permissions:
       contents: read
@@ -84,18 +87,13 @@ jobs:
           node-version: 22
 
       - name: Run AILF eval
-        run: pnpm ailf
+        run: pnpm ailf:eval
         env:
           AILF_API_KEY: ${{ secrets.AILF_API_KEY }}
-          # Override via a repo/org `vars` entry to point at staging or a
-          # preview gateway; falls back to production.
           AILF_API_URL: ${{ vars.AILF_API_URL || 'https://ailf-api.sanity.build' }}
 
-      # Surface a link to the report on the Sanity dashboard in the job
-      # summary. The org handle and application id are fixed for the AILF
-      # studio app; only the report id varies per run.
       - name: Link to report
-        if: always()
+        if: always() # always run, even if the eval fails -- the dashboard will show where we failed
         env:
           DASHBOARD_BASE: https://www.sanity.io/@oSyH1iET5/application/l3gwk99w5xtv3dl8wxv94uny
         run: |
@@ -115,4 +113,22 @@ jobs:
             echo "[View report on the Sanity dashboard]($URL)"
             echo ""
             echo "Report ID: \`$REPORT_ID\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Run a read-only agent against the docs dataset; see packages/@repo/ailf-eval/scripts/improve-docs.ts
+      # continue-on-error keeps a flaky agent run from masking the eval result
+      - name: Propose docs improvements
+        continue-on-error: true
+        env:
+          SANITY_DOCS_READ_TOKEN: ${{ secrets.SANITY_DOCS_READ_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # --verbose streams the agent's tool calls to the step log; the
+          # proposal itself lands in docs-improvement.md next to the report.
+          pnpm ailf:improve-docs --verbose
+          {
+            echo ""
+            echo "---"
+            echo ""
+            cat packages/@repo/ailf-eval/.ailf/results/latest/docs-improvement.md
           } >> "$GITHUB_STEP_SUMMARY"
