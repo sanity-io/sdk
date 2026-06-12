@@ -76,7 +76,8 @@ export const test = base.extend<SanityFixtures>({
       w.__esWrapped = true
       const Orig = w.EventSource
       if (!Orig) return
-      const Wrapped = function (url: string, cfg: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Wrapped: any = function (url: string, cfg: unknown) {
         const es = new Orig(url, cfg)
         const t0 = Date.now()
         const tag = `[ES] ${String(url).slice(-70)}`
