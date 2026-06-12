@@ -22,7 +22,9 @@ const config: KnipConfig = {
       project,
     },
     'apps/kitchensink-react': {
-      entry: ['src/css/css.config.js'],
+      // App SDK app entry (configured via `app.entry` in sanity.cli.ts); there is
+      // no index.html/main.tsx for knip to auto-detect.
+      entry: ['src/App.tsx', 'src/css/css.config.js'],
       // disable playwright plugin: playwright.config.ts imports @repo/e2e which
       // may not be built yet, and knip crashes trying to load it as an entry file
       playwright: false,
@@ -65,11 +67,10 @@ const config: KnipConfig = {
       typescript: {
         config: 'tsconfig.json',
       },
-      // Task files are loaded dynamically by the `ailf` CLI, so knip can't
-      // see them via the import graph — treat them as entry points (this also
-      // marks `@sanity/ailf` as used). Canonical reference solutions are graded
-      // by the eval and never imported, so skip them entirely.
-      entry: ['.ailf/tasks/**/*.task.ts'],
+      // Config and task files are loaded dynamically by the `ailf` CLI, so knip can't
+      // see them via the import graph — treat them as entry points.
+      entry: ['.ailf/ailf.config.ts', '.ailf/tasks/**/*.task.ts'],
+      // Canonical reference solutions are examples and have things knip can't resolve.
       ignore: ['.ailf/canonical/**'],
     },
     'packages/core': {

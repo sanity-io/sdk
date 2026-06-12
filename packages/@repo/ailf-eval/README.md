@@ -6,7 +6,7 @@ AILF evaluates how well the SDK docs enable AI coding tools to implement feature
 
 ## Layout
 
-- `.ailf/config.yaml` — project configuration: the docs source (Sanity project/dataset/site URL), the `taskSource` (set to `repo` so AILF reads the tasks in this package), and the triggers that decide when evaluations run. This is the only config file `ailf run` reads.
+- `.ailf/ailf.config.ts` — project configuration (authored with `defineRepoConfig` from `@sanity/ailf`): the docs source (Sanity project/dataset/site URL) and the `taskSource` (set to `repo` so AILF reads the tasks in this package). This is the only config file `ailf run` reads.
 - `.ailf/tasks/*.task.ts` — task definitions, authored with `defineTask` from [`@sanity/ailf`](https://www.npmjs.com/package/@sanity/ailf). Each task evaluates whether an AI coding agent can implement a feature using the docs as context. `sdk-list-documents.task.ts` is the starter task: it checks that an agent can build a paginated document list with the App SDK's `useDocuments` hook.
 
 The workflow that runs evaluations lives at [`.github/workflows/ailf-eval.yml`](../../../.github/workflows/ailf-eval.yml) in the repo root.

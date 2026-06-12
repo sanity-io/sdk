@@ -4,9 +4,12 @@
  * Evaluates whether an AI coding tool can build a React component that lists documents of type "post" from a dataset.
  */
 
-import {defineTask} from '@sanity/ailf'
+import {defineSdkTask} from './_defineSdkTask'
 
-export default defineTask({
+// defineSdkTask emits this task twice: as authored, plus an auto-generated
+// `sdk-list-documents-with-reference` twin that also injects the App SDK API
+// reference doc. See _defineSdkTask.ts.
+export default defineSdkTask({
   mode: 'literacy',
   id: 'sdk-list-documents',
   title: 'List documents with the App SDK',
@@ -46,7 +49,7 @@ Only the title of each post should be rendered. There may be many posts, so the 
         },
         {
           id: 'projects-title',
-          text: 'Renders each document title via useDocumentProjection or usePreview inside a Suspense boundary',
+          text: 'Renders each document title via useDocumentProjection or useDocumentPreview inside a Suspense boundary',
         },
         {
           id: 'paginates-with-load-more',
@@ -64,7 +67,7 @@ Only the title of each post should be rendered. There may be many posts, so the 
         },
         {
           id: 'passes-document-handle',
-          text: 'Passes the full document handle through to useDocumentProjection or usePreview',
+          text: 'Passes the full document handle through to useDocumentProjection or useDocumentPreview',
         },
       ],
     },

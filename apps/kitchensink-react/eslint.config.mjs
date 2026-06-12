@@ -39,4 +39,15 @@ export default [
       ],
     },
   },
+  {
+    // Sanity config files import the `sanity` package and Vite, which are
+    // build-time devDependencies for this App SDK app.
+    files: ['sanity.config.ts', 'sanity.cli.ts'],
+    rules: {
+      'import/no-extraneous-dependencies': [
+        'error',
+        {devDependencies: true, optionalDependencies: false, includeTypes: false},
+      ],
+    },
+  },
 ]

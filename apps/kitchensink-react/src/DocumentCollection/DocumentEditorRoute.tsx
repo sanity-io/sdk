@@ -12,7 +12,7 @@ import {type JSX, useMemo, useState} from 'react'
 
 import {DocumentEditorPanel} from '../components/DocumentEditorPanel'
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
-import {devConfigs, e2eConfigs} from '../sanityConfigs'
+import {devConfigs, e2eConfigs, isE2E} from '../sanityConfigs'
 
 const AUTHOR_INITIAL_VALUES = {
   name: 'New Author',
@@ -109,7 +109,7 @@ function Editor() {
   const [documentId, setDocumentId] = useState<string | null>(documents[0]?.documentId ?? null)
   const [newDocumentId, setNewDocumentId] = useState<string>('')
   const [liveEditMode, setLiveEditMode] = useState<boolean>(false)
-  const {projectId, dataset} = import.meta.env['VITE_IS_E2E'] ? e2eConfigs[0] : devConfigs[0]
+  const {projectId, dataset} = isE2E ? e2eConfigs[0] : devConfigs[0]
 
   const docHandle = useMemo<DocumentHandle<'author'> | null>(
     () =>
