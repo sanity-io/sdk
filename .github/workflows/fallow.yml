@@ -27,7 +27,7 @@ jobs:
           node-version: 20
 
       - name: Summary
-        run: pnpm fallow:summary || true
+        run: pnpm fallow --summary --quiet || true
 
       - name: Audit changed files
         run: |
@@ -48,6 +48,6 @@ jobs:
             echo "## Hotspots"
             echo ""
             echo '```'
-            pnpm fallow:hotspots || true
+            pnpm fallow health --hotspots --ownership --production --quiet || true
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
