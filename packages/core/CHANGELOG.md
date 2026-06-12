@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.0](https://github.com/sanity-io/sdk/compare/sdk-v2.13.0...sdk-v2.14.0) (2026-06-11)
+
+
+### Features
+
+* add logging to authentication flows ([#727](https://github.com/sanity-io/sdk/issues/727)) ([73b1269](https://github.com/sanity-io/sdk/commit/73b1269691845eda42bb17f2cebccf50ece9e837))
+
 ## [2.13.0](https://github.com/sanity-io/sdk/compare/sdk-v2.12.0...sdk-v2.13.0) (2026-06-10)
 
 
