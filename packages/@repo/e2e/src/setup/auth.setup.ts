@@ -53,11 +53,13 @@ const setDashboardRedirectCookie = async (context: BrowserContext) => {
 
   // visit the dashboard url to set the redirect cookie
   await page.goto(
-    `https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}?dev=http://localhost:3333`,
+    `https://www.sanity.work/@${env.SANITY_APP_E2E_ORGANIZATION_ID}?dev=http://localhost:3333`,
   )
 
   // wait until the url is /application/__dev (indicating the redirect cookie was set)
-  await page.waitForURL(`https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}/application/__dev`)
+  await page.waitForURL(
+    `https://www.sanity.work/@${env.SANITY_APP_E2E_ORGANIZATION_ID}/application/__dev`,
+  )
 
   // Accept cookie consent so it's saved in the auth state and never blocks tests.
   // The Osano dialog appears on the dashboard page — dismissing it here ensures
@@ -94,7 +96,7 @@ setup('setup authentication', async ({browser}) => {
     // Authenticate for Dashboard (restore for every browser but webkit when we get secrets)
     await authenticateUser(context, {
       origin: 'https://www.sanity.work/api/dashboard/authenticate',
-      expectedRedirectUrl: `https://www.sanity.work/@${env.SDK_E2E_ORGANIZATION_ID}`,
+      expectedRedirectUrl: `https://www.sanity.work/@${env.SANITY_APP_E2E_ORGANIZATION_ID}`,
     })
 
     // // Set the dashboard redirect cookie

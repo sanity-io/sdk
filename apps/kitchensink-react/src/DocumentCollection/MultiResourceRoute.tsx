@@ -15,7 +15,7 @@ import {
   type MultiResourceAuthorProjectionProjectionResult,
   MultiResourceMovieProjectionProjectionResult,
 } from '../../sanity.types'
-import {devConfigs, e2eConfigs} from '../sanityConfigs'
+import {devConfigs, e2eConfigs, isE2E} from '../sanityConfigs'
 
 function LoadingFallback({message = 'Loading...'}: {message?: string}) {
   return (
@@ -338,7 +338,7 @@ function MoviePreview({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
 }
 
 export function MultiResourceRoute(): JSX.Element {
-  const configs = import.meta.env['VITE_IS_E2E'] ? e2eConfigs : devConfigs
+  const configs = isE2E ? e2eConfigs : devConfigs
   const [searchParams] = useSearchParams()
   const authorIdParam = searchParams.get('authorId')
   const movieIdParam = searchParams.get('movieId')

@@ -20,7 +20,7 @@ test.describe('Multi Resource Route', () => {
         },
       ],
       {asDraft: false}, // Create as published document
-      process.env['SDK_E2E_DATASET_0'], // First dataset
+      process.env['SANITY_APP_E2E_DATASET_0'], // First dataset
     )
 
     // Create a movie document in dataset 1
@@ -37,7 +37,7 @@ test.describe('Multi Resource Route', () => {
         },
       ],
       {asDraft: false}, // Create as published document
-      process.env['SDK_E2E_DATASET_1'], // Second dataset
+      process.env['SANITY_APP_E2E_DATASET_1'], // Second dataset
     )
 
     await page.goto(`./multi-resource?authorId=${authorId}&movieId=${movieId}`)
@@ -114,14 +114,14 @@ test.describe('Multi Resource Route', () => {
     // Real-time subscriptions are unreliable in this mode
     if (pageContext.isDashboard) {
       // Test that external changes are reflected (simulating real-time updates)
-      const authorClient = getClient(process.env['SDK_E2E_DATASET_0'])
+      const authorClient = getClient(process.env['SANITY_APP_E2E_DATASET_0'])
       await authorClient
         .patch(`drafts.${authorId}`)
         .set({name: 'Externally Updated Author'})
         .commit()
 
       // Test external change for movie
-      const movieClient = getClient(process.env['SDK_E2E_DATASET_1'])
+      const movieClient = getClient(process.env['SANITY_APP_E2E_DATASET_1'])
       await movieClient.patch(`drafts.${movieId}`).set({title: 'Externally Updated Movie'}).commit()
 
       // Verify external change is reflected

@@ -10,8 +10,8 @@ const SETUP_DIR = path.join(path.dirname(__dirname), 'src', 'setup')
 const TEARDOWN_DIR = path.join(path.dirname(__dirname), 'src', 'teardown')
 const AUTH_FILE = path.join(path.dirname(__dirname), '.auth', 'user.json')
 
-const {CI, SDK_E2E_ORGANIZATION_ID, VERCEL_AUTOMATION_BYPASS_SECRET} = getE2EEnv()
-const BASE_URL = `https://www.sanity.work/@${SDK_E2E_ORGANIZATION_ID}/application/__dev/`
+const {CI, SANITY_APP_E2E_ORGANIZATION_ID, VERCEL_AUTOMATION_BYPASS_SECRET} = getE2EEnv()
+const BASE_URL = `https://www.sanity.work/@${SANITY_APP_E2E_ORGANIZATION_ID}/application/__dev/`
 
 /**
  * @internal

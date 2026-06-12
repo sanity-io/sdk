@@ -8,8 +8,8 @@ import {startTimer} from '../helpers/timer'
 const env = getE2EEnv()
 
 setup('setup test datasets', async () => {
-  const primaryDataset = sanitizeDatasetName(env.SDK_E2E_DATASET_0)
-  const secondaryDataset = sanitizeDatasetName(env.SDK_E2E_DATASET_1)
+  const primaryDataset = sanitizeDatasetName(env.SANITY_APP_E2E_DATASET_0)
+  const secondaryDataset = sanitizeDatasetName(env.SANITY_APP_E2E_DATASET_1)
 
   const client = getClient()
 

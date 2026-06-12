@@ -6,15 +6,17 @@ The tests expect to find the below env variables. Either define them in your she
 
 -- `SDK_E2E_SESSION_TOKEN`: The client fixture needs to use this token. Running `SANITY_INTERNAL_ENV=staging sanity debug --secrets` will give you your token provided you are logged in (`SANITY_INTERNAL_ENV=staging sanity login`).
 
-- `SDK_E2E_PROJECT_ID`: We use 3j6vt2rg internally
-- `SDK_E2E_ORGANIZATION_ID`: We use oFvj4MZWQ internally
+- `SANITY_APP_E2E_PROJECT_ID`: We use 3j6vt2rg internally
+- `SANITY_APP_E2E_ORGANIZATION_ID`: We use oFvj4MZWQ internally
 - `SDK_E2E_USER_ID`: sdk+e2e@sanity.io
 - `SDK_E2E_USER_PASSWORD`: found in 1Password
 - `RECAPTCHA_E2E_STAGING_KEY`: found in 1Password as "E2E staging reCAPTCHA bypass token" in Dev Secrets
-- `SDK_E2E_DATASET_0`=production
-- `SDK_E2E_DATASET_1`=testing
-- `SDK_E2E_MEDIA_LIBRARY_ID`=we use mlyobHbSHBsj internally
+- `SANITY_APP_E2E_DATASET_0`=production
+- `SANITY_APP_E2E_DATASET_1`=testing
+- `SANITY_APP_E2E_MEDIA_LIBRARY_ID`=we use mlyobHbSHBsj internally
 - `SDK_E2E_MEDIA_LIBRARY_TOKEN`=You can use the same token you used for session token if it's your user session token, otherwise generate this in the org admin page in Manage.
+- `SANITY_APP_E2E_CANVAS_ID`: the Canvas ID to run the Canvas tests against
+- `SDK_E2E_CANVAS_TOKEN`=You can use the same token you used for session token if it's your user session token, otherwise generate this in the org admin page in Manage.
 
 ## Writing tests
 

@@ -6,7 +6,7 @@ import {
 } from '@sanity/sdk-react'
 import {Box, Button, Card, Dialog, Flex, Spinner, Stack, Text} from '@sanity/ui'
 import {type JSX, type ReactNode, Suspense, useState} from 'react'
-import {SanityDocument} from 'sanity'
+import {type SanityDocument} from 'sanity'
 
 import {DocumentEditorPanel} from './DocumentEditorPanel'
 import {JsonDocumentEditor} from './JsonDocumentEditor'

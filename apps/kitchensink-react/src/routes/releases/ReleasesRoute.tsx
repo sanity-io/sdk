@@ -17,6 +17,7 @@ import {DocumentEditorPanel} from '../../components/DocumentEditorPanel'
 import {DocumentListLayout} from '../../components/DocumentListLayout/DocumentListLayout'
 import {JsonDocumentEditor} from '../../components/JsonDocumentEditor'
 import {DocumentPreview} from '../../DocumentCollection/DocumentPreview'
+import {isE2E} from '../../sanityConfigs'
 import {ReleaseActionsDialog} from './ReleaseActionsDialog'
 import {ReleasesAutocomplete} from './ReleasesAutocomplete'
 import {isReleasePerspective} from './util'
@@ -347,9 +348,7 @@ export function ReleasesRoute(): JSX.Element {
     perspective: 'drafts',
   })
   const [selectedDocument, setSelectedDocument] = useState<DocumentHandle>({
-    documentId: import.meta.env['VITE_IS_E2E']
-      ? 'test-document-id'
-      : '386584b0-237f-4870-849e-f71af8e6b269',
+    documentId: isE2E ? 'test-document-id' : '386584b0-237f-4870-849e-f71af8e6b269',
     documentType: 'author',
   })
 
