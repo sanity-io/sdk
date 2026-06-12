@@ -7,68 +7,6 @@ test.describe('Multi Resource Route', () => {
     createDocuments,
     getPageContext,
   }) => {
-    // --- TEMP DIAGNOSTICS (debug/firefox-e2e-sse): capture live SSE lifecycle ---
-    // eslint-disable-next-line no-console
-    const diag = (m: string) => console.log(`[DIAG] ${m}`)
-    page.on('console', (msg) => {
-      const t = msg.text()
-      if (/\[ES\]|EventSource|listen|live|sse|abort|subscript|reconnect|error/i.test(t)) {
-        diag(`browser:${msg.type()} ${t}`)
-      }
-    })
-    page.on('pageerror', (err) => diag(`pageerror ${err.message}`))
-    page.on('requestfailed', (req) => {
-      const u = req.url()
-      if (/live|listen|query|\/data\//.test(u)) {
-        diag(`requestfailed ${req.failure()?.errorText} ${u.slice(-80)}`)
-      }
-    })
-    page.on('response', (res) => {
-      const u = res.url()
-      if (/live\/events|data\/listen/.test(u)) {
-        diag(`response ${res.status()} ${u.slice(-80)}`)
-      }
-    })
-    await page.addInitScript(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const w = window as any
-      if (w.__esWrapped) return
-      w.__esWrapped = true
-      const Orig = w.EventSource
-      if (!Orig) return
-      w.EventSource = function (url: string, cfg: unknown) {
-        const es = new Orig(url, cfg)
-        const t0 = Date.now()
-        const tag = `[ES] ${String(url).slice(-70)}`
-        // eslint-disable-next-line no-console
-        console.log(`${tag} :: created`)
-        es.addEventListener('open', () =>
-          // eslint-disable-next-line no-console
-          console.log(`${tag} :: open @${Date.now() - t0}ms`),
-        )
-        es.addEventListener('error', () =>
-          // eslint-disable-next-line no-console
-          console.log(`${tag} :: ERROR @${Date.now() - t0}ms readyState=${es.readyState}`),
-        )
-        const origClose = es.close.bind(es)
-        es.close = function () {
-          // eslint-disable-next-line no-console
-          console.log(`${tag} :: close() @${Date.now() - t0}ms :: ${new Error().stack}`)
-          return origClose()
-        }
-        return es
-      }
-      w.EventSource.prototype = Orig.prototype
-      Object.keys(Orig).forEach((k) => {
-        try {
-          w.EventSource[k] = Orig[k]
-        } catch {
-          /* noop */
-        }
-      })
-    })
-    // --- END TEMP DIAGNOSTICS ---
-
     // create an author document in dataset 0
     const {
       documentIds: [authorId],
