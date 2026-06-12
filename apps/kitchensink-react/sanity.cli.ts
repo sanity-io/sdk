@@ -7,7 +7,10 @@ export default defineCliConfig({
     // Use e2e organization ID if provided, otherwise use dev organization ID
     organizationId: process.env['SANITY_APP_E2E_ORGANIZATION_ID'] || 'oblZgbTFj',
     entry: './src/App.tsx',
-    id: 'wkyoigmzawwnnwx458zgoh46',
+    icon: './assets/favicon-kitchensink.svg',
+  },
+  deployment: {
+    appId: 'wkyoigmzawwnnwx458zgoh46',
   },
   // Compile with the React Compiler. Target React 19 so the output uses
   // react-compiler-runtime (a dependency of this app). The App SDK owns the

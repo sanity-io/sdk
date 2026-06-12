@@ -1,3 +1,5 @@
+import './global.css'
+
 import {configureLogging, SanityApp, useDashboardNavigate} from '@sanity/sdk-react'
 import {Spinner, ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
