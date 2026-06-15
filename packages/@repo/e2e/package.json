@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "@sanity/client": "catalog:",
-    "@sanity/uuid": "^3.0.2",
+    "@sanity/uuid": "^3.0.3",
     "dotenv": "^17.4.2",
     "lodash-es": "catalog:",
     "ora": "^7.0.1"
