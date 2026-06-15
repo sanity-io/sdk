@@ -42,16 +42,25 @@ export const test = base.extend<SanityFixtures>({
     const diag = (m: string) => console.log(`[DIAG ${ctx}] ${m}`)
 
     page.on('pageerror', (err) => diag(`pageerror ${err.message}`))
+    // Forward browser-side console (incl. the [SSE] wire-chunk logs from the
+    // addInitScript below, which run in the iframe's window) into the test output.
+    page.on('console', (msg) => {
+      const t = msg.text()
+      if (/\[SSE\]|\[ES\]/.test(t) || msg.type() === 'error') diag(`browser:${msg.type()} ${t}`)
+    })
     page.on('requestfailed', (req) => {
       const u = req.url()
-      if (/live|listen|\/data\/(query|listen)|api\.sanity/.test(u)) {
+      if (/live|listen|query|api\.sanity|sanity\.work/.test(u)) {
         diag(`requestfailed ${req.failure()?.errorText} ${u.slice(-90)}`)
       }
     })
-    // Normal (non-stream) refetches the query store issues after a change ping.
+    // Query/projection refetches + stream opens across content-lake, media-library
+    // and canvas APIs (broadened from /data/query/ which missed media-library).
     page.on('response', (res) => {
       const u = res.url()
-      if (/\/data\/query\//.test(u)) diag(`query-refetch ${res.status()} ${u.slice(-70)}`)
+      if (/(query|live\/events|\/listen)/.test(u) && /api\.sanity|sanity\.work/.test(u)) {
+        diag(`resp ${res.status()} ${u.slice(-85)}`)
+      }
     })
 
     // Tee SSE stream bodies in every frame (incl. the dashboard iframe). Logs each
