@@ -2,7 +2,12 @@ import {type BrowserContext, type Page, test as base} from '@playwright/test'
 import {type MultipleMutationResult, SanityClient} from '@sanity/client'
 
 import {getCanvasClient, getClient, getMediaLibraryClient} from './helpers/clients'
-import {cleanupDocuments, createDocuments, type DocumentStub} from './helpers/documents'
+import {
+  cleanupDocuments,
+  createDocuments,
+  type DocumentStub,
+  trackDocumentsForCleanup,
+} from './helpers/documents'
 import {createPageContext, type PageContext} from './helpers/pageContext'
 
 interface SanityFixtures {
@@ -11,6 +16,7 @@ interface SanityFixtures {
     options?: {asDraft?: boolean},
     dataset?: string,
   ) => Promise<MultipleMutationResult>
+  trackDocumentsForCleanup: (...ids: string[]) => void
   getClient: (dataset?: string) => SanityClient
   getMediaLibraryClient: () => SanityClient
   getCanvasClient: () => SanityClient
@@ -37,6 +43,15 @@ export const test = base.extend<SanityFixtures>({
     await use(createDocuments)
 
     // cleanup documents after each test
+    await cleanupDocuments()
+  },
+  // Lets tests register IDs minted by the app under test (e.g. via
+  // useCreateDocument) so they're deleted during teardown.
+  // eslint-disable-next-line no-empty-pattern
+  trackDocumentsForCleanup: async ({}, use) => {
+    await use(trackDocumentsForCleanup)
+
+    // cleanup documents after each test (no-op if createDocuments already ran it)
     await cleanupDocuments()
   },
   // eslint-disable-next-line no-empty-pattern

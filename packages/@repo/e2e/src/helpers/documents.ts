@@ -17,6 +17,18 @@ function getUniqueDocumentId(): string {
   return documentId
 }
 
+/**
+ * Registers document IDs that were created outside of {@link createDocuments}
+ * (e.g. minted by the app under test) so they are removed during teardown.
+ * Any `drafts.` prefix is stripped, since cleanup deletes both the draft and
+ * published forms.
+ */
+export function trackDocumentsForCleanup(...ids: string[]): void {
+  for (const id of ids) {
+    documentIds.add(id.replace(/^drafts\./, ''))
+  }
+}
+
 export async function createDocuments<T extends DocumentStub>(
   data: T[],
   options?: {asDraft?: boolean},

@@ -59,6 +59,7 @@ export {useStudioWorkspacesByProjectIdDataset} from '../hooks/dashboard/useStudi
 export {useWindowTitle} from '../hooks/dashboard/useWindowTitle'
 export {useDatasets} from '../hooks/datasets/useDatasets'
 export {useApplyDocumentActions} from '../hooks/document/useApplyDocumentActions'
+export {type CreateDocumentOverrides, useCreateDocument} from '../hooks/document/useCreateDocument'
 export {useDocument} from '../hooks/document/useDocument'
 export {useDocumentEvent} from '../hooks/document/useDocumentEvent'
 export {useDocumentPermissions} from '../hooks/document/useDocumentPermissions'
