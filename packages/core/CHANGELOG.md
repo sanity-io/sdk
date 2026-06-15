@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.1](https://github.com/sanity-io/sdk/compare/sdk-v2.14.0...sdk-v2.14.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @sanity/mutate to ^0.18.1 ([#973](https://github.com/sanity-io/sdk/issues/973)) ([0ecfed0](https://github.com/sanity-io/sdk/commit/0ecfed0b2f4ac349a30167868045e02423cf2ded))
+
 ## [2.14.0](https://github.com/sanity-io/sdk/compare/sdk-v2.13.0...sdk-v2.14.0) (2026-06-11)
 
 
