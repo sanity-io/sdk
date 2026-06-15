@@ -63,16 +63,6 @@ const config: KnipConfig = {
       project,
       entry: ['src/setup/**/*.ts', 'src/teardown/**/*.ts'],
     },
-    'packages/@repo/ailf-eval': {
-      typescript: {
-        config: 'tsconfig.json',
-      },
-      // Config and task files are loaded dynamically by the `ailf` CLI, so knip can't
-      // see them via the import graph — treat them as entry points.
-      entry: ['.ailf/ailf.config.ts', '.ailf/tasks/**/*.task.ts'],
-      // Canonical reference solutions are examples and have things knip can't resolve.
-      ignore: ['.ailf/canonical/**'],
-    },
     'packages/core': {
       typescript: {
         config: 'tsconfig.settings.json',
