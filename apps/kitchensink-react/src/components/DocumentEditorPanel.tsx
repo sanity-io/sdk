@@ -160,21 +160,20 @@ export function DocumentEditorPanel({
               </Tooltip>
             )}
 
-            <Tooltip content={canCreate.message}>
-              <Box>
-                <Button
-                  disabled={!canCreate.allowed}
-                  onClick={async () => {
-                    const newHandle = await createDocumentFromHook(createInitialValues)
-                    onDocumentIdChange?.(newHandle.documentId)
-                  }}
-                  text="Create New (useCreateDocument)"
-                  tone="positive"
-                  fontSize={1}
-                  data-testid="document-editor-action-create-hook"
-                />
-              </Box>
-            </Tooltip>
+            {/* useCreateDocument always targets a brand-new id, so it isn't
+                gated on the loaded document's create permission. */}
+            <Box>
+              <Button
+                onClick={async () => {
+                  const newHandle = await createDocumentFromHook(createInitialValues)
+                  onDocumentIdChange?.(newHandle.documentId)
+                }}
+                text="Create New (useCreateDocument)"
+                tone="positive"
+                fontSize={1}
+                data-testid="document-editor-action-create-hook"
+              />
+            </Box>
 
             {!docHandle.liveEdit && (
               <>
