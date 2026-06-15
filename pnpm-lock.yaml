@@ -70,7 +70,7 @@ catalogs:
       specifier: ^4.18.1
       version: 4.18.1
     prettier:
-      specifier: ^3.8.3
+      specifier: ^3.8.4
       version: 3.8.4
     react:
       specifier: ^19.2.7
