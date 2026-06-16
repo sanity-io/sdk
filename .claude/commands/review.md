@@ -29,6 +29,7 @@ Focus on:
 - Ensure any new dependency installed is truly necessary or could be accomplished with existing dependencies
 - Breaking changes to publicly exported APIs — this is a published SDK and semver must be respected
 - Cross-package impact — changes in `packages/core` can have downstream effects on `packages/react` consumers; flag if related packages need corresponding updates
+- Renovate config sync — when a dependency is added/removed/moved in `packages/core` or `packages/react`, verify `.github/renovate.json` stays in sync: a new **runtime** dep must appear in all three runtime rules' `matchPackageNames` (the fix-list) or it ships as `chore` and silently misses its patch release; a new dep belonging to an existing group (eslint/vitest/react-types/apps) should be matched by that group. There is no CI guard for this, so it must be checked here
 - React leakage into `packages/core` — core is framework-agnostic; flag any React imports, hooks, or JSX introduced there
 
 If there is no actionable feedback, do not post a comment. If you have already posted a review comment on this PR, update it to indicate there are no further issues.
