@@ -51,17 +51,22 @@ Neither usually appears. If one does, check the Renovate run logs linked from th
 
 ## Automerge policy
 
-| Dependency type                                                                                                                                                              | Update type    | Auto/Manual | Release age | Commit type        | Triggers release?                                                   |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ----------- | ----------- | ------------------ | ------------------------------------------------------------------- |
-| devDependencies                                                                                                                                                              | patch/minor    | Auto        | 3 days      | `chore(dev-deps)`  | No                                                                  |
-| devDependencies (except TypeScript)                                                                                                                                          | major          | Auto        | 3 days      | `chore(dev-deps)`  | No                                                                  |
-| TypeScript                                                                                                                                                                   | major          | Manual      | 3 days      | `chore(tooling)`   | No                                                                  |
-| Production deps (in `packages/core`, `packages/react`)                                                                                                                       | patch/minor    | Auto        | 3 days      | `fix(deps)`        | **Yes, patch**                                                      |
-| Production deps (in `packages/core`, `packages/react`)                                                                                                                       | major          | Manual      | 3 days      | `fix(deps)`        | **Yes, patch** (override to `feat!` at squash for breaking changes) |
-| Peer deps                                                                                                                                                                    | any            | Manual      | 3 days      | `chore(peer-deps)` | No                                                                  |
-| App deps (`apps/**`)                                                                                                                                                         | any            | Auto        | 3 days      | `chore(apps)`      | No                                                                  |
-| **Trusted upstream packages** (Sanity-maintained, React, Next, `@types/*`, full list in [preset](https://github.com/sanity-io/renovate-config/blob/main/min-age-3days.json)) | inherits above | inherits    | **0 days**  | inherits           | inherits                                                            |
-| High-severity security (any)                                                                                                                                                 | any            | Manual      | 0 days      | varies             | varies                                                              |
+Rules are scoped by **package name**, not file path (see below for why). "Auto" means the PR inherits the global `automerge: true`; "Manual" means the rule sets `dependencyDashboardApproval: true` (the PR won't open until ticked) and carries a `needs-review`/`major-update`/`breaking-change` label the auto-approve workflow skips.
+
+| Dependency type                                                                                                                                                              | Update type    | Auto/Manual | Release age | Commit type                          | Triggers release?                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ----------- | ----------- | ------------------------------------ | ------------------------------------------------------------------- |
+| devDependencies                                                                                                                                                              | patch/minor    | Auto        | 3 days      | `chore(dev-deps)`                    | No                                                                  |
+| devDependencies (except TypeScript)                                                                                                                                          | major          | Auto        | 3 days      | `chore(dev-deps)`                    | No                                                                  |
+| TypeScript                                                                                                                                                                   | major          | Manual      | 3 days      | `chore(tooling)`                     | No                                                                  |
+| Runtime deps of core/react (the `matchPackageNames` fix-list)                                                                                                                | patch/minor    | Auto        | 3 days      | `fix(deps)`                          | **Yes, patch**                                                      |
+| Runtime deps of core/react (fix-list)                                                                                                                                        | major          | Manual      | 3 days      | `fix(deps)`                          | **Yes, patch** (override to `feat!` at squash for breaking changes) |
+| `react` / `react-dom` peers                                                                                                                                                  | any            | Manual      | 3 days      | `chore(peer-deps)`                   | No                                                                  |
+| eslint-tooling / vitest-tooling / react-types groups                                                                                                                         | patch/minor    | Auto        | varies      | `chore(tooling)` / `chore(dev-deps)` | No                                                                  |
+| App-only deps (the `app dependencies` group)                                                                                                                                 | patch/minor    | Auto        | 3 days      | `chore(apps)`                        | No                                                                  |
+| **Trusted upstream packages** (Sanity-maintained, React, Next, `@types/*`, full list in [preset](https://github.com/sanity-io/renovate-config/blob/main/min-age-3days.json)) | inherits above | inherits    | **0 days**  | inherits                             | inherits                                                            |
+| High-severity security (any)                                                                                                                                                 | any            | Manual      | 0 days      | varies                               | varies                                                              |
+
+Majors are never grouped — each opens its own PR (groups are scoped to `patch`/`minor`), so a breaking bump is reviewed in isolation.
 
 ### Why 3 days for external packages
 
@@ -79,10 +84,16 @@ The Sanity preset exempts packages we trust from the minimum-age delay: our own 
 
 Our rules align Renovate's commit types with [release-please](../release-please-config.json):
 
-- `fix(deps)`: triggers a patch release. Used for any production dep update in `packages/core` or `packages/react`.
+- `fix(deps)`: triggers a patch release. Used for the runtime deps of `packages/core` / `packages/react` (the `matchPackageNames` fix-list).
 - `chore(*)`: hidden from the changelog. Used for dev deps, tooling, peer deps, apps.
 
 If a production major dep actually breaks our public API, override the commit type at squash time from `fix(deps)` to `feat(deps)!` or add a `BREAKING CHANGE:` footer so release-please produces a minor/major release.
+
+### Why rules are scoped by package name, not file path
+
+pnpm catalog deps live in `pnpm-workspace.yaml`; Renovate reports their `packageFile` as that file and their `depType` as `pnpm.catalog.<name>` — never the consuming package's `dependencies` type. So `matchFileNames`/`matchDepTypes` cannot identify a catalog'd runtime dep, and a flat catalog erases the usage signal. (This is why catalog'd runtime deps like `@sanity/client` historically shipped as silent `chore` instead of `fix`.) We therefore list the published runtime deps of core/react explicitly in `matchPackageNames` (the "fix-list"), duplicated across the patch/minor rule, the major rule, and the `rangeStrategy: bump` rule.
+
+**Keep the fix-list in sync (manual).** The list mirrors core+react `dependencies`. When you add or remove a runtime dependency in `packages/core` or `packages/react`, update all three runtime rules in `renovate.json` to match. If you forget, the dep will bump as `chore` and miss its patch release — recoverable, but silent. (`groq` and `@sanity/codegen` are intentionally excluded; the disable rule freezes them on the `typegen-experimental` tag. `@sanity/sdk` is `workspace:*` and not Renovate-managed.) There is no CI guard for this today; the `/review` command flags dep changes that aren't reflected here, and a CI check can be added if drift becomes a recurring problem.
 
 ## Auto-approval workflow
 
