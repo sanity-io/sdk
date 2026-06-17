@@ -109,6 +109,16 @@ export function AuthBoundary({
   LoginErrorComponent = LoginError,
   ...props
 }: AuthBoundaryProps): React.ReactNode {
+  /**
+   * When the session is re-established (e.g. ComlinkTokenRefresh silently mints a
+   * fresh token via setAuthToken), the auth store returns to LOGGED_IN but the
+   * ErrorBoundary stays latched on its fallback until reset. Keying it on the
+   * recovered session lets it clear automatically
+   */
+  const authState = useAuthState()
+  const sessionResetKey =
+    authState.type === AuthStateType.LOGGED_IN ? authState.token : authState.type
+
   const FallbackComponent = useMemo(() => {
     return function LoginComponentWithLayoutProps(fallbackProps: FallbackProps) {
       // Chunk-load errors from any lazy-loaded code beneath this boundary
@@ -131,7 +141,7 @@ export function AuthBoundary({
 
   return (
     <ComlinkTokenRefreshProvider>
-      <ErrorBoundary FallbackComponent={FallbackComponent}>
+      <ErrorBoundary FallbackComponent={FallbackComponent} resetKeys={[sessionResetKey]}>
         <AuthSwitch {...props} />
       </ErrorBoundary>
     </ComlinkTokenRefreshProvider>
