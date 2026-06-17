@@ -7,6 +7,7 @@ import {
   publishDocument,
   unpublishDocument,
   useApplyDocumentActions,
+  useCreateDocument,
   useDocument,
   useDocumentPermissions,
   useEditDocument,
@@ -58,6 +59,14 @@ export function DocumentEditorPanel({
     projectId: instance.config.projectId,
     dataset: instance.config.dataset,
   }
+
+  // useCreateDocument mints a brand-new document (generating its id) and
+  // returns the handle, so we can navigate to it via onDocumentIdChange.
+  const createDocumentFromHook = useCreateDocument({
+    documentType: docHandle.documentType,
+    projectId: instance.config.projectId,
+    dataset: instance.config.dataset,
+  })
 
   const canEdit = useDocumentPermissions(editDocument(strictHandle))
   const canCreate = useDocumentPermissions(createDocument(strictHandle))
@@ -150,6 +159,21 @@ export function DocumentEditorPanel({
                 </Box>
               </Tooltip>
             )}
+
+            {/* useCreateDocument always targets a brand-new id, so it isn't
+                gated on the loaded document's create permission. */}
+            <Box>
+              <Button
+                onClick={async () => {
+                  const newHandle = await createDocumentFromHook(createInitialValues)
+                  onDocumentIdChange?.(newHandle.documentId)
+                }}
+                text="Create New (useCreateDocument)"
+                tone="positive"
+                fontSize={1}
+                data-testid="document-editor-action-create-hook"
+              />
+            </Box>
 
             {!docHandle.liveEdit && (
               <>

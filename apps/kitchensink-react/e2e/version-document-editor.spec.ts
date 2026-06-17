@@ -54,8 +54,10 @@ test.describe('Version Document Editor', () => {
     await expect(dialog).toBeVisible()
 
     // The document doesn't exist in the release yet — wait for permissions to
-    // resolve, then click Create to create the version document
-    const createButton = dialog.getByRole('button', {name: 'Create'})
+    // resolve, then click Create to create the version document. Target the
+    // testid directly: a substring match on "Create" is ambiguous now that the
+    // panel also has a "Create New (useCreateDocument)" button.
+    const createButton = dialog.getByTestId('document-editor-action-create')
     await expect(createButton).toBeEnabled({timeout: 10000})
     await createButton.click()
 

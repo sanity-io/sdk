@@ -108,6 +108,10 @@ const {data} = useQuery({
 #### Document Manipulation
 
 ```tsx
+// Create a new document and get back its handle
+const createArticle = useCreateDocument({documentType: 'article'})
+const newHandle = await createArticle({title: 'Untitled', status: 'draft'})
+
 // Edit field (emits optimistic updates to useEditDocument listeners, creates a draft automatically)
 const editTitle = useEditDocument({...handle, path: 'title'})
 editTitle('New Title') // fires on every keystroke, debounced internally
@@ -133,13 +137,6 @@ await apply(publishDocument(handle))
 
 // Batch actions
 await apply([publishDocument(handle1), publishDocument(handle2), deleteDocument(handle3)])
-
-// Create new document with an optional initial content
-const newHandle = createDocumentHandle({
-  documentId: crypto.randomUUID(),
-  documentType: 'article',
-})
-await apply(createDocument(newHandle, {title: 'Untitled', status: 'draft'}))
 ```
 
 #### Events & Permissions
@@ -183,40 +180,32 @@ The `useApplyDocumentActions` hook is used to perform document lifecycle operati
 
 #### Creating Documents
 
-To create a document, you must:
-
-1. Generate your own document ID (using `crypto.randomUUID()`)
-2. Create a document handle with `createDocumentHandle`
-3. Apply the `createDocument` action using the document handle, along with optional initial content
+`useCreateDocument` handles the common case: it generates the document ID for you and returns the new document's handle, ready to pass to `useDocument`, `useEditDocument`, or your router.
 
 ```tsx
-import {useApplyDocumentActions, createDocumentHandle, createDocument} from '@sanity/sdk-react'
+import {useCreateDocument} from '@sanity/sdk-react'
 
 function CreateArticleButton() {
-  const apply = useApplyDocumentActions()
+  const createArticle = useCreateDocument({documentType: 'article'})
 
-  const handleCreateArticle = () => {
-    const newId = crypto.randomUUID()
-    const handle = createDocumentHandle({
-      documentId: newId,
-      documentType: 'article',
+  const handleCreateArticle = async () => {
+    const handle = await createArticle({
+      title: 'New Article',
+      status: 'draft',
+      author: {_type: 'reference', _ref: 'author-123'},
     })
 
-    apply(
-      createDocument(handle, {
-        title: 'New Article',
-        status: 'draft',
-        author: {_type: 'reference', _ref: 'author-123'},
-      }),
-    )
-
-    // Navigate to the new document
-    navigate(`/articles/${newId}`)
+    // Navigate to the new document using the returned handle
+    navigate(`/articles/${handle.documentId}`)
   }
 
   return <button onClick={handleCreateArticle}>Create Article</button>
 }
 ```
+
+To use a specific ID instead of a generated one, pass it on the handle (`useCreateDocument({documentType: 'article', documentId})`) or per call (`createArticle(initialValue, {documentId})`).
+
+For atomic create-and-publish, or to create several documents in a single transaction, drop down to `useApplyDocumentActions` with the `createDocument` and `publishDocument` action creators (see [Batch Operations](#batch-operations) below).
 
 #### Publishing Documents
 

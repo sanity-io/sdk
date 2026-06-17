@@ -49,4 +49,54 @@ test.describe('Document Editor', () => {
     // we should play with the other actions here (delete, discard, publish, etc)
     // and also see what happens in the browser if we update the value via the client (does it sync? race conditions?)
   })
+
+  test('creates a new document with useCreateDocument and navigates to it', async ({
+    page,
+    createDocuments,
+    trackDocumentsForCleanup,
+    getPageContext,
+  }) => {
+    // Seed a document so the editor has something loaded to start from.
+    const {
+      documentIds: [id],
+    } = await createDocuments([
+      {
+        _type: 'author',
+        name: 'Original Author',
+      },
+    ])
+    const originalId = id.replace('drafts.', '')
+
+    await page.goto('./document-editor')
+    const pageContext = await getPageContext(page)
+
+    const documentIdInput = pageContext.getByTestId('document-id-input')
+    await expect(documentIdInput).toBeVisible()
+    await documentIdInput.fill(originalId)
+    await pageContext.getByTestId('load-document-button').click()
+
+    await expect(async () => {
+      const content = await pageContext.getByTestId('document-content').textContent()
+      expect(JSON.parse(content || '{}').name).toBe('Original Author')
+    }).toPass({timeout: 10000})
+
+    // Create a brand-new document via the hook; it generates the id and the UI
+    // navigates to the returned handle.
+    await pageContext.getByTestId('document-editor-action-create-hook').click()
+
+    // The hook mints the id in the browser, so register it for teardown to
+    // avoid leaking a document into the dataset on every run.
+    let createdId: string | undefined
+    await expect(async () => {
+      const content = await pageContext.getByTestId('document-content').textContent()
+      const document = JSON.parse(content || '{}')
+      // AUTHOR_INITIAL_VALUES.name from DocumentEditorRoute
+      expect(document.name).toBe('New Author')
+      const newId = document._id.replace('drafts.', '')
+      expect(newId).not.toBe(originalId)
+      createdId = newId
+    }).toPass({timeout: 10000})
+
+    if (createdId) trackDocumentsForCleanup(createdId)
+  })
 })
