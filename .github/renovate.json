@@ -7,9 +7,6 @@
     "abandonments:recommended"
   ],
   "ignorePresets": ["github>sanity-io/renovate-config:group-non-major"],
-  "constraints": {
-    "pnpm": "10.34.1"
-  },
   "postUpdateOptions": ["pnpmDedupe"],
   "schedule": ["before 5am"],
   "prConcurrentLimit": 20,
@@ -20,7 +17,7 @@
   "automergeStrategy": "squash",
   "dependencyDashboard": true,
   "dependencyDashboardApproval": false,
-  "dependencyDashboardHeader": "## How to use this dashboard\n\nFull playbook: [RENOVATE_STRATEGY.md](../blob/main/.github/RENOVATE_STRATEGY.md)\n\n**Quick section reference**\n\n- **Pending Approval**: tick a checkbox to open the PR. Only tick items worth trying.\n- **Awaiting Schedule** / **Rate-Limited**: automatic, no action needed.\n- **Pending Status Checks**: should stay empty. Renovate PRs open immediately so CI runs on the PR itself.\n- **PR Closed (Blocked)**: previously closed. Only tick to retry.\n- **Detected Dependencies**: reference only.\n\n<details>\n<summary><b>Automerge policy</b></summary>\n\n| Dependency type | Auto/Manual | Release age | Commit type | Triggers release? |\n| --- | --- | --- | --- | --- |\n| devDependencies (patch/minor/major) | Auto | 3 days | `chore(dev-deps)` | No |\n| TypeScript (major) | Manual | 3 days | `chore(tooling)` | No |\n| Production deps patch/minor (`packages/core`, `packages/react`) | Auto | 3 days | `fix(deps)` | **Yes, patch** |\n| Production deps major (`packages/core`, `packages/react`) | Manual | 3 days | `fix(deps)` | **Yes, patch**<br/>(override to `feat!` at squash if breaking) |\n| Peer deps | Manual | 3 days | `chore(peer-deps)` | No |\n| App deps (`apps/**`) | Auto | 3 days | `chore(apps)` | No |\n| High-severity security | Manual | 0 days | varies | varies |\n| Trusted upstream (Sanity-maintained, React, Next, `@types/*`, etc.; full list in [preset](https://github.com/sanity-io/renovate-config/blob/main/min-age-3days.json)) | inherits | **0 days** | inherits | inherits |\n\n</details>\n\n<details>\n<summary><b>Common actions</b></summary>\n\n**Retry a closed PR**: find it under \"PR Closed (Blocked)\" and tick the box.\n\n**Approve a major dep update**: tick its checkbox under \"Pending Approval\". This only opens the PR; you still review and squash-merge manually. If the upgrade is a breaking change for our consumers, change the commit type from `fix(deps)` to `feat(deps)!` at squash time so release-please produces a major/minor bump.\n\n**A PR won't automerge**: check CI status, that the PR is approved, and that it's not labeled `needs-review`, `major-update`, or `breaking-change`.\n\n**A lockfile looks broken**: run `pnpm install` locally, commit, and push to the Renovate branch. Renovate won't overwrite manual commits.\n\n**Rate-limited queue is huge**: drain it by merging open Renovate PRs. The throttles are `prHourlyLimit` (currently 5, the creation rate) and `prConcurrentLimit` (currently 20, the open-PR ceiling) in `.github/renovate.json`; raise either temporarily if needed.\n\n**Bumping the repo's pnpm version**: also update `constraints.pnpm` in `.github/renovate.json` to match.\n\n</details>\n\n<details>\n<summary><b>Weekly checklist</b></summary>\n\n- Check this dashboard for pending approvals.\n- Review any failed automerge PRs.\n- Merge the release-please PR if ready.\n- Note any major updates that need planning.\n\n</details>",
+  "dependencyDashboardHeader": "## How to use this dashboard\n\nFull playbook: [RENOVATE_STRATEGY.md](../blob/main/.github/RENOVATE_STRATEGY.md)\n\n**Quick section reference**\n\n- **Pending Approval**: should stay empty — we no longer gate any update behind dashboard approval.\n- **Awaiting Schedule** / **Rate-Limited**: automatic, no action needed.\n- **Pending Status Checks**: should stay empty. Renovate PRs open immediately so CI runs on the PR itself.\n- **PR Closed (Blocked)**: previously closed. Only tick to retry.\n- **Detected Dependencies**: reference only.\n\n<details>\n<summary><b>Automerge policy</b></summary>\n\n| Dependency type | Auto/Manual | Release age | Commit type | Triggers release? |\n| --- | --- | --- | --- | --- |\n| `@sanity/*` and other production `dependencies` | Auto | 3 days | `fix(deps)` | **Yes, patch** |\n| Catalog non-`@sanity` deps (rxjs, groq-js, react-compiler-runtime, react-error-boundary) | Auto | 3 days | `chore` | No — catalog hides depType, see RENOVATE_STRATEGY.md |\n| eslint / vitest / commitlint / react groups, app deps, devDependencies | Auto | 3 days | `chore(*)` | No |\n| High-severity security | Manual | 0 days | varies | varies |\n| Trusted upstream (Sanity-maintained, React, Next, `@types/*`, etc.; full list in [preset](https://github.com/sanity-io/renovate-config/blob/main/min-age-3days.json)) | inherits | **0 days** | inherits | inherits |\n\n</details>\n\n<details>\n<summary><b>Common actions</b></summary>\n\n**Retry a closed PR**: find it under \"PR Closed (Blocked)\" and tick the box.\n\n**A breaking major landed**: majors automerge after CI + release age like everything else. If a major is a breaking change for our consumers, change its commit type from `fix(deps)` to `feat(deps)!` (or add a `BREAKING CHANGE:` footer) when squashing so release-please produces a major/minor bump.\n\n**A PR won't automerge**: check CI status and that the PR is approved (the auto-approve workflow approves once checks pass).\n\n**A lockfile looks broken**: run `pnpm install` locally, commit, and push to the Renovate branch. Renovate won't overwrite manual commits.\n\n**Rate-limited queue is huge**: drain it by merging open Renovate PRs. The throttles are `prHourlyLimit` (currently 5, the creation rate) and `prConcurrentLimit` (currently 20, the open-PR ceiling) in `.github/renovate.json`; raise either temporarily if needed.\n\n**The pnpm version** comes from the root `package.json` `packageManager` field — Renovate reads it automatically (no `constraints` override).\n\n</details>\n\n<details>\n<summary><b>Weekly checklist</b></summary>\n\n- Skim the dashboard for anything stuck (errored, or repeatedly failing automerge).\n- Merge the release-please PR if ready.\n- Note any major updates that need planning.\n\n</details>",
   "prCreation": "immediate",
   "vulnerabilityAlerts": {
     "enabled": true,
@@ -30,87 +27,29 @@
   },
   "packageRules": [
     {
-      "description": "Pin groq and @sanity/codegen to the typegen-experimental prerelease tag. The kitchensink's typegen depends on APIs (defineProjection / defineQuery, multi-schema/projections) that only exist on this prerelease; do not let Renovate move them to a stable release, which would drop the experimental typegen the SDK relies on. Revisit once typegen lands in a regular release.",
-      "matchDepNames": ["groq", "@sanity/codegen"],
-      "enabled": false
+      "description": "Group @sanity/* deps; production, triggers a patch release",
+      "matchPackageNames": ["@sanity/*"],
+      "groupName": "sanity",
+      "rangeStrategy": "bump",
+      "semanticCommitType": "fix",
+      "semanticCommitScope": "deps"
     },
     {
-      "description": "Automerge all devDependencies (non-major)",
+      "description": "All other production deps; triggers a patch release",
+      "matchDepTypes": ["dependencies"],
+      "rangeStrategy": "bump",
+      "semanticCommitType": "fix",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "description": "devDependencies; no release",
       "matchDepTypes": ["devDependencies"],
-      "matchUpdateTypes": ["patch", "minor"],
       "groupName": "devDependencies (non-major)",
-      "automerge": true,
       "semanticCommitType": "chore",
       "semanticCommitScope": "dev-deps"
     },
     {
-      "description": "Automerge devDependencies (major) after longer stability period",
-      "matchDepTypes": ["devDependencies"],
-      "matchUpdateTypes": ["major"],
-      "automerge": true,
-      "labels": ["major-update"],
-      "semanticCommitType": "chore",
-      "semanticCommitScope": "dev-deps",
-      "matchPackageNames": ["!typescript"]
-    },
-    {
-      "description": "TypeScript major versions - require approval due to breaking changes",
-      "matchPackageNames": ["typescript"],
-      "matchUpdateTypes": ["major"],
-      "automerge": false,
-      "dependencyDashboardApproval": true,
-      "labels": ["typescript", "major-update", "breaking-change"],
-      "semanticCommitType": "chore",
-      "semanticCommitScope": "tooling"
-    },
-    {
-      "description": "Production dependencies (patch/minor) - automerge and trigger patch release",
-      "matchDepTypes": ["dependencies"],
-      "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
-      "matchUpdateTypes": ["patch", "minor"],
-      "automerge": true,
-      "labels": ["dependencies", "automerge"],
-      "semanticCommitType": "fix",
-      "semanticCommitScope": "deps"
-    },
-    {
-      "description": "Production dependencies (major) - require manual approval. Defaults to fix(deps) for a patch release; override to feat! or BREAKING CHANGE at squash time if the upgrade affects the SDK's public API",
-      "matchDepTypes": ["dependencies"],
-      "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
-      "matchUpdateTypes": ["major"],
-      "automerge": false,
-      "dependencyDashboardApproval": true,
-      "labels": ["dependencies", "major-update", "breaking-change", "needs-review"],
-      "semanticCommitType": "fix",
-      "semanticCommitScope": "deps"
-    },
-    {
-      "description": "Use bump strategy for all production dependencies in public packages",
-      "matchDepTypes": ["dependencies"],
-      "matchFileNames": ["packages/core/package.json", "packages/react/package.json"],
-      "rangeStrategy": "bump"
-    },
-    {
-      "description": "PeerDependencies - require approval as they affect consumer compatibility",
-      "matchDepTypes": ["peerDependencies"],
-      "automerge": false,
-      "dependencyDashboardApproval": true,
-      "labels": ["peer-dependencies", "needs-review"],
-      "rangeStrategy": "widen",
-      "semanticCommitType": "chore",
-      "semanticCommitScope": "peer-deps"
-    },
-    {
-      "description": "Group TypeScript tooling deps (excluding typescript itself)",
-      "groupName": "typescript-tooling",
-      "matchPackageNames": ["@sanity/pkg-utils", "@sanity/tsdoc"],
-      "automerge": true,
-      "semanticCommitType": "chore",
-      "semanticCommitScope": "tooling"
-    },
-    {
-      "description": "Group eslint related deps for easier review",
-      "groupName": "eslint-tooling",
+      "description": "Group eslint deps",
       "matchPackageNames": [
         "@eslint/*",
         "eslint",
@@ -118,25 +57,42 @@
         "eslint-config-*",
         "typescript-eslint"
       ],
-      "automerge": true,
+      "groupName": "eslint-tooling",
       "semanticCommitType": "chore",
       "semanticCommitScope": "tooling"
     },
     {
-      "description": "App dependencies - aggressive automerge since apps aren't published",
-      "matchDepTypes": [
-        "dependencies",
-        "devDependencies",
-        "engines",
-        "optionalDependencies",
-        "peerDependencies"
-      ],
-      "matchManagers": ["npm"],
+      "description": "Group vitest deps",
+      "matchPackageNames": ["vitest", "@vitest/*"],
+      "groupName": "vitest-tooling",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "tooling"
+    },
+    {
+      "description": "Group commitlint deps",
+      "matchPackageNames": ["@commitlint/*", "commitlint"],
+      "groupName": "commitlint-tooling",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "tooling"
+    },
+    {
+      "description": "Group react deps",
+      "matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
+      "groupName": "react",
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "dev-deps"
+    },
+    {
+      "description": "App deps; no release",
       "matchFileNames": ["apps/**/package.json"],
       "groupName": "app dependencies",
-      "automerge": true,
       "semanticCommitType": "chore",
       "semanticCommitScope": "apps"
+    },
+    {
+      "description": "Pin groq and @sanity/codegen to the typegen-experimental prerelease; don't bump to stable",
+      "matchDepNames": ["groq", "@sanity/codegen"],
+      "enabled": false
     }
   ]
 }

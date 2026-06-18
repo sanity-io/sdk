@@ -29,6 +29,7 @@ Focus on:
 - Ensure any new dependency installed is truly necessary or could be accomplished with existing dependencies
 - Breaking changes to publicly exported APIs — this is a published SDK and semver must be respected
 - Cross-package impact — changes in `packages/core` can have downstream effects on `packages/react` consumers; flag if related packages need corresponding updates
+- Renovate release coverage — when a runtime dependency is added to `packages/core` or `packages/react`, confirm it will trigger a release. `@sanity/*` deps and inline (non-catalog) `dependencies` are covered automatically by `.github/renovate.json`. The gap is a **catalog, non-`@sanity`** runtime dep (its catalog depType hides it from the catch-all) — that ships as `chore` and silently misses its patch release, so flag it (it needs a name-matched `fix` rule). There is no CI guard for this
 - React leakage into `packages/core` — core is framework-agnostic; flag any React imports, hooks, or JSX introduced there
 
 If there is no actionable feedback, do not post a comment. If you have already posted a review comment on this PR, update it to indicate there are no further issues.
