@@ -3,11 +3,11 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "main": "./dev-aliases.mjs",
   "exports": {
     ".": "./dev-aliases.mjs",
     "./vitest": "./vitest.mjs"
   },
-  "main": "./dev-aliases.mjs",
   "scripts": {
     "lint": "eslint ."
   },

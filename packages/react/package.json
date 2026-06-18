@@ -4,27 +4,34 @@
   "private": false,
   "description": "Sanity SDK React toolkit for Content OS",
   "keywords": [
-    "sanity",
-    "sdk",
-    "content operating system",
     "cms",
+    "content",
+    "content operating system",
     "headless",
     "realtime",
-    "content"
+    "sanity",
+    "sdk"
   ],
   "homepage": "https://github.com/sanity-io/sdk/tree/main/packages/react/README.md",
   "bugs": {
     "url": "https://github.com/sanity-io/sdk/issues"
   },
+  "license": "MIT",
+  "author": "Sanity <developers@sanity.io>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sanity-io/sdk.git",
     "directory": "packages/react"
   },
-  "license": "MIT",
-  "author": "Sanity <developers@sanity.io>",
-  "sideEffects": false,
+  "files": [
+    "dist",
+    "src"
+  ],
   "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "source": "./src/_exports/index.ts",
@@ -33,20 +40,16 @@
     },
     "./package.json": "./package.json"
   },
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "src"
-  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "pkg build --strict --clean --check",
     "build:bundle": "vite build --configLoader runner --config package.bundle.ts",
     "clean": "rimraf dist",
     "dev": "pkg watch",
     "docs": "typedoc --json docs/typedoc.json --tsconfig ./tsconfig.dist.json",
-    "format": "prettier --write --cache --ignore-unknown .",
+    "format": "oxfmt",
     "lint": "eslint .",
     "prepublishOnly": "pnpm run build",
     "test": "vitest run",
@@ -54,8 +57,6 @@
     "test:watch": "vitest",
     "ts:check": "tsc --noEmit"
   },
-  "browserslist": "extends @sanity/browserslist-config",
-  "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@sanity/client": "catalog:",
     "@sanity/message-protocol": "catalog:",
@@ -75,7 +76,6 @@
     "@sanity/browserslist-config": "catalog:",
     "@sanity/comlink": "catalog:",
     "@sanity/pkg-utils": "catalog:",
-    "@sanity/prettier-config": "catalog:",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/node": "catalog:",
@@ -87,7 +87,7 @@
     "eslint": "catalog:",
     "groq-js": "catalog:",
     "jsdom": "^29.1.1",
-    "prettier": "catalog:",
+    "oxfmt": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "rollup-plugin-visualizer": "catalog:",
@@ -99,8 +99,6 @@
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"
   },
-  "packageManager": "pnpm@10.33.4",
-  "publishConfig": {
-    "access": "public"
-  }
+  "browserslist": "extends @sanity/browserslist-config",
+  "packageManager": "pnpm@10.33.4"
 }

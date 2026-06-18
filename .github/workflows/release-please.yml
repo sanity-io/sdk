@@ -86,9 +86,9 @@ jobs:
           linear_api_key: ${{secrets.LINEAR_API_KEY}}
           repository_name: ${{github.event.repository.name}}
           # Label: In Staging
-          initial_state_id: "c56956cd-c281-4ca5-889f-6189ce231a6d"
+          initial_state_id: 'c56956cd-c281-4ca5-889f-6189ce231a6d'
           # Label: Shipped
-          done_state_id: "5a35b7bf-6d37-4cc2-854a-2f18d160e2e5"
+          done_state_id: '5a35b7bf-6d37-4cc2-854a-2f18d160e2e5'
 
       - name: Trigger CircleCI Pipeline
         uses: CircleCI-Public/trigger-circleci-pipeline-action@a81cd720792a6088debd7f182b552845abb86f1b # v1.2.0

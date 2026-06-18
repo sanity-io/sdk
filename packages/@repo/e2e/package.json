@@ -4,13 +4,20 @@
   "private": true,
   "description": "Shared Playwright configuration for the monorepo",
   "keywords": [
+    "e2e",
     "playwright",
-    "testing",
-    "e2e"
+    "testing"
   ],
   "license": "ISC",
   "author": "",
+  "files": [
+    "dist",
+    "src"
+  ],
   "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "source": "./src/index.ts",
@@ -19,13 +26,6 @@
     },
     "./package.json": "./package.json"
   },
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "src"
-  ],
   "scripts": {
     "build": "pkg build --strict --clean --check",
     "cleanup": "tsx src/scripts/cleanup-datasets.ts",

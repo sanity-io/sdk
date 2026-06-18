@@ -8,12 +8,12 @@
   "bugs": {
     "url": "https://github.com/sanity-io/sdk/issues"
   },
+  "license": "MIT",
+  "author": "Sanity <developers@sanity.io>",
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/sanity-io/sdk.git"
   },
-  "license": "MIT",
-  "author": "Sanity <developers@sanity.io>",
   "sideEffects": false,
   "scripts": {
     "all": "turbo run build && turbo run lint && turbo run test:coverage && pnpm build:docs && pnpm depcheck",
@@ -34,7 +34,8 @@
     "dev:standalone": "turbo run dev --filter=@sanity/standalone-react",
     "fallow": "fallow",
     "fallow:baseline": "fallow dead-code --save-baseline fallow-baselines/dead-code.json --quiet; fallow health --save-baseline fallow-baselines/health.json --quiet; fallow dupes --save-baseline fallow-baselines/dupes.json --quiet; exit 0",
-    "format": "prettier --write --cache --ignore-unknown .",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
     "lint": "turbo run lint -- --fix && eslint . --fix",
     "prepare": "husky",
     "release:current-branch": "tsx scripts/release-branch.mts",
@@ -50,7 +51,6 @@
     "ts:check": "turbo run ts:check --filter='./packages/*' --filter='./apps/*'",
     "upload:bundles": "tsx scripts/uploadBundles.mts"
   },
-  "prettier": "@sanity/prettier-config",
   "devDependencies": {
     "@commitlint/cli": "^21.0.2",
     "@commitlint/config-conventional": "^21.0.2",
@@ -61,7 +61,6 @@
     "@repo/config-test": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/pkg-utils": "catalog:",
-    "@sanity/prettier-config": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
@@ -70,7 +69,7 @@
     "knip": "^6.14.1",
     "lint-staged": "^16.4.0",
     "npm-run-all2": "^9.0.1",
-    "prettier": "catalog:",
+    "oxfmt": "catalog:",
     "read-package-up": "^12.0.0",
     "rimraf": "catalog:",
     "tsx": "catalog:",

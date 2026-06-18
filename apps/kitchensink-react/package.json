@@ -17,7 +17,6 @@
     "tsc": "tsc --noEmit",
     "types:generate": "node scripts/typegen.mjs"
   },
-  "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@paramour/css": "1.0.0-rc.2",
     "@sanity/icons": "^3.7.4",
@@ -40,7 +39,6 @@
     "@repo/e2e": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@sanity/codegen": "3.88.1-typegen-experimental.0",
-    "@sanity/prettier-config": "catalog:",
     "@sanity/sdk": "workspace:*",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
@@ -48,7 +46,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "eslint": "catalog:",
-    "prettier": "catalog:",
+    "oxfmt": "catalog:",
     "sanity": "^5.31.1",
     "vite": "catalog:",
     "vitest": "catalog:"

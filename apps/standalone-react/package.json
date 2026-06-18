@@ -11,7 +11,6 @@
     "preview": "vite preview",
     "tsc": "tsc --noEmit"
   },
-  "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@sanity/sdk-react": "workspace:*",
     "react": "catalog:",
@@ -20,13 +19,11 @@
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
     "@repo/tsconfig": "workspace:*",
-    "@sanity/prettier-config": "catalog:",
     "@sanity/sdk": "workspace:*",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "eslint": "catalog:",
-    "prettier": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:"

@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "bracketSpacing": false,
+  "printWidth": 100,
+  "quoteProps": "consistent",
+  "semi": false,
+  "singleQuote": true,
+  "sortPackageJson": {},
+  "ignorePatterns": [
+    ".turbo",
+    ".vscode",
+    ".cursor",
+    ".sanity",
+    "coverage",
+    "docs",
+    "**/dist/**",
+    "**/lib/**",
+    "**/.turbo/**",
+    "**/__snapshots__/**",
+    "pnpm-lock.yaml",
+    "CHANGELOG.md",
+    "**/CHANGELOG.md",
+    ".release-please-manifest.json",
+    ".env.example",
+    ".nvmrc"
+  ]
+}

@@ -1,9 +1,9 @@
-name: "Setup Environment"
-description: "Sets up Node.js, pnpm, and dependencies"
+name: 'Setup Environment'
+description: 'Sets up Node.js, pnpm, and dependencies'
 
 inputs:
   node-version:
-    description: "Node.js version to use"
+    description: 'Node.js version to use'
     required: true
 
 runs:
