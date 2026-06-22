@@ -48,7 +48,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 30
-          running-workflow-name: "auto-approve"
+          running-workflow-name: 'auto-approve'
           # Include "skipped" so conditionally-run jobs (e.g. claude-review,
           # publish-preview) don't block auto-approval when they don't execute
           # on Renovate PRs.

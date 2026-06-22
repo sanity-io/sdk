@@ -4,27 +4,34 @@
   "private": false,
   "description": "Sanity SDK",
   "keywords": [
-    "sanity",
-    "sdk",
-    "content operating system",
     "cms",
+    "content",
+    "content operating system",
     "headless",
     "realtime",
-    "content"
+    "sanity",
+    "sdk"
   ],
   "homepage": "https://github.com/sanity-io/sdk/tree/main/packages/core/README.md",
   "bugs": {
     "url": "https://github.com/sanity-io/sdk/issues"
   },
+  "license": "MIT",
+  "author": "Sanity <developers@sanity.io>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sanity-io/sdk.git",
     "directory": "packages/core"
   },
-  "license": "MIT",
-  "author": "Sanity <developers@sanity.io>",
-  "sideEffects": false,
+  "files": [
+    "dist",
+    "src"
+  ],
   "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "source": "./src/_exports/index.ts",
@@ -38,20 +45,16 @@
       "default": "./dist/_exports/_internal.js"
     }
   },
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "src"
-  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "pkg build --strict --clean --check",
     "build:bundle": "vite build --configLoader runner --config package.bundle.ts",
     "clean": "rimraf dist",
     "dev": "pkg watch",
     "docs": "typedoc --json docs/typedoc.json --tsconfig ./tsconfig.dist.json",
-    "format": "prettier --write --cache --ignore-unknown .",
+    "format": "oxfmt",
     "lint": "eslint .",
     "prepublishOnly": "pnpm run build",
     "test": "vitest run",
@@ -59,8 +62,6 @@
     "test:watch": "vitest",
     "ts:check": "tsc --noEmit"
   },
-  "browserslist": "extends @sanity/browserslist-config",
-  "prettier": "@sanity/prettier-config",
   "dependencies": {
     "@sanity/bifur-client": "^1.0.0",
     "@sanity/client": "catalog:",
@@ -88,18 +89,15 @@
     "@repo/tsconfig": "workspace:*",
     "@sanity/browserslist-config": "catalog:",
     "@sanity/pkg-utils": "catalog:",
-    "@sanity/prettier-config": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
-    "prettier": "catalog:",
+    "oxfmt": "catalog:",
     "rollup-plugin-visualizer": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
   },
-  "packageManager": "pnpm@10.33.4",
-  "publishConfig": {
-    "access": "public"
-  }
+  "browserslist": "extends @sanity/browserslist-config",
+  "packageManager": "pnpm@10.33.4"
 }

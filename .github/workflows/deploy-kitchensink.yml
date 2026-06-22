@@ -2,7 +2,7 @@ name: Deploy Kitchensink
 
 on:
   push:
-    branches: ["main"]
+    branches: ['main']
   workflow_dispatch:
 
 concurrency:

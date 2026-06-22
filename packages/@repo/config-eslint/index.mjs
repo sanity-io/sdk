@@ -4,7 +4,6 @@ import eslintConfigPrettier from 'eslint-config-prettier'
 import turboConfig from 'eslint-config-turbo/flat'
 import {createTypeScriptImportResolver} from 'eslint-import-resolver-typescript'
 import * as importPlugin from 'eslint-plugin-import'
-import eslintPluginPrettier from 'eslint-plugin-prettier/recommended'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import unusedImports from 'eslint-plugin-unused-imports'
 import globals from 'globals'
@@ -34,7 +33,6 @@ export default [
   js.configs.recommended,
   eslintConfigPrettier,
   importPlugin.flatConfigs?.typescript,
-  eslintPluginPrettier,
   ...tsLint.configs.recommended,
   ...turboConfig,
   {

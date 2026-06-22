@@ -110,11 +110,22 @@ try {
   fileHandle = null
 
   if (formatGeneratedCode) {
-    const prettier = await import('prettier')
-    const prettierConfig = await prettier.resolveConfig(outputPath)
+    const {format} = await import('oxfmt')
     fileHandle = await open(outputPath, 'r+')
     const code = await fileHandle.readFile({encoding: 'utf-8'})
-    const formatted = await prettier.format(code, {...prettierConfig, parser: 'typescript'})
+    // Mirror the repo's .oxfmtrc.json so generated types match committed style.
+    const {code: formatted, errors} = await format(outputPath, code, {
+      bracketSpacing: false,
+      printWidth: 100,
+      quoteProps: 'consistent',
+      semi: false,
+      singleQuote: true,
+    })
+    // oxfmt returns parse/format errors in an array rather than throwing; fail
+    // loudly like the previous prettier.format() call did on invalid output.
+    if (errors.length > 0) {
+      throw new Error(`Failed to format generated types:\n${errors.map(String).join('\n')}`)
+    }
     await fileHandle.truncate()
     await fileHandle.write(formatted, 0)
     await fileHandle.close()
