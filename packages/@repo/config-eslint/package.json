@@ -15,17 +15,17 @@
     "@eslint/js": "^9.39.4",
     "eslint": "catalog:",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-config-turbo": "^2.9.14",
+    "eslint-config-turbo": "^2.9.18",
     "eslint-import-resolver-typescript": "^3.10.1",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-compiler": "19.1.0-rc.2",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
+    "eslint-plugin-react-refresh": "^0.5.3",
     "eslint-plugin-simple-import-sort": "^13.0.0",
     "eslint-plugin-tsdoc": "^0.5.2",
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.6.0",
-    "typescript-eslint": "^8.59.3"
+    "typescript-eslint": "^8.61.1"
   }
 }
