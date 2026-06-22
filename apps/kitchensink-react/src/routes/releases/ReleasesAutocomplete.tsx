@@ -22,7 +22,9 @@ export function ReleasesAutocomplete({
       <Autocomplete
         id="release-autocomplete"
         filterOption={(query, option) =>
-          (option.payload.metadata.title ?? '').toLowerCase().indexOf(query.toLowerCase()) > -1
+          (option.payload.metadata?.title ?? option.payload.name ?? '')
+            .toLowerCase()
+            .indexOf(query.toLowerCase()) > -1
         }
         fontSize={[2, 2, 3]}
         icon={<SearchIcon style={{width: '1.5em', height: '1.5em'}} />}
@@ -41,13 +43,13 @@ export function ReleasesAutocomplete({
             <Card as="button" padding={2}>
               <Stack space={2}>
                 <Text size={[2, 2, 3]} weight="semibold">
-                  {release.metadata.title}
+                  {release.metadata?.title || release.name}
                 </Text>
                 <Text size={1} muted>
                   Release ID: {release.name}
                 </Text>
                 <Text size={1}>
-                  Type: {release.metadata.releaseType} | State: {release.state}
+                  Type: {release.metadata?.releaseType ?? 'unknown'} | State: {release.state}
                 </Text>
                 {formattedDate && (
                   <Text size={1} muted>
@@ -58,7 +60,7 @@ export function ReleasesAutocomplete({
             </Card>
           )
         }}
-        renderValue={(value, option) => option?.payload.metadata.title || value}
+        renderValue={(value, option) => option?.payload.metadata?.title || value}
         value={
           isReleasePerspective(selectedPerspective.perspective)
             ? selectedPerspective.perspective.releaseName
