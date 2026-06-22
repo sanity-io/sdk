@@ -1,5 +1,5 @@
 import {type ReleaseDocument} from '@sanity/client'
-import {map} from 'rxjs'
+import {map, retry, timer} from 'rxjs'
 
 import {type DocumentResource} from '../config/sanityConfig'
 /*
@@ -19,6 +19,10 @@ import {sortReleases} from './utils/sortReleases'
 
 const ARCHIVED_RELEASE_STATES = ['archived', 'published']
 const STABLE_EMPTY_RELEASES: ReleaseDocument[] = []
+
+const RELEASES_RETRY_BASE_DELAY = 500
+const RELEASES_RETRY_MAX_DELAY = 10_000
+const RELEASES_MAX_RETRIES = 5
 
 /**
  * Lifecycle states a release document can be in. Mirrors the server's
@@ -60,7 +64,10 @@ export const releasesStore = defineStore<ReleasesStoreState, BoundResourceKey>({
 const _getActiveReleasesState = bindActionByResource(
   releasesStore,
   createStateSourceAction({
-    selector: ({state}, _?) => state.activeReleases,
+    selector: ({state}) => {
+      if (state.error) throw state.error
+      return state.activeReleases
+    },
   }),
 )
 
@@ -82,7 +89,10 @@ export const getActiveReleasesState = (
 const _getAllReleasesState = bindActionByResource(
   releasesStore,
   createStateSourceAction({
-    selector: ({state}, _?) => state.allReleases,
+    selector: ({state}) => {
+      if (state.error) throw state.error
+      return state.allReleases
+    },
   }),
 )
 
@@ -120,6 +130,14 @@ const subscribeToReleases = ({
             (release) => !ARCHIVED_RELEASE_STATES.includes(release.state),
           ),
         })
+      }),
+      retry({
+        count: RELEASES_MAX_RETRIES,
+        delay: (_error, retryCount) =>
+          timer(
+            Math.min(RELEASES_RETRY_BASE_DELAY * 2 ** (retryCount - 1), RELEASES_RETRY_MAX_DELAY),
+          ),
+        resetOnSuccess: true,
       }),
     )
     .subscribe({error: (error) => state.set('setError', {error})})

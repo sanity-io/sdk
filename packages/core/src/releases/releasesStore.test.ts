@@ -1,5 +1,5 @@
 import {type ReleaseDocument} from '@sanity/client'
-import {NEVER, Observable, type Observer, of, Subject} from 'rxjs'
+import {defer, NEVER, Observable, type Observer, of, Subject, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getQueryState, resolveQuery} from '../query/queryStore'
@@ -216,20 +216,75 @@ describe('releasesStore', () => {
     expect(allNames).toHaveLength(3)
   })
 
-  it('should not crash when the releases query errors', async () => {
-    const subject = new Subject<ReleaseDocument[]>()
-    vi.mocked(getQueryState).mockReturnValue({
-      subscribe: () => () => {},
-      getCurrent: () => undefined,
-      observable: subject.asObservable(),
-    } as StateSource<ReleaseDocument[] | undefined>)
+  it('recovers via retry when a transient query error is followed by success', async () => {
+    vi.useFakeTimers()
+    try {
+      const release = {
+        _id: '_.releases.r-active',
+        _type: 'system.release',
+        name: 'r-active',
+        state: 'active',
+        metadata: {releaseType: 'asap'},
+      } as ReleaseDocument
 
-    const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
+      let attempts = 0
+      const source = defer(() => {
+        attempts += 1
+        return attempts === 1 ? throwError(() => new Error('transient blip')) : of([release])
+      })
+      vi.mocked(getQueryState).mockReturnValue({
+        subscribe: () => () => {},
+        getCurrent: () => undefined,
+        observable: source,
+      } as StateSource<ReleaseDocument[] | undefined>)
 
-    subject.error(new Error('Query failed'))
+      const active = getActiveReleasesState(instance, {
+        resource: {projectId: 'test', dataset: 'test'},
+      })
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+      // First attempt errors; after the backoff delay the retry re-subscribes
+      // and the second attempt succeeds — no error should surface.
+      await vi.advanceTimersByTimeAsync(600)
 
-    expect(state.getCurrent()).toEqual(undefined)
+      expect(attempts).toBe(2)
+      expect(() => active.getCurrent()).not.toThrow()
+      expect(active.getCurrent()?.map((r) => r.name)).toEqual(['r-active'])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('surfaces the error only after retries are exhausted', async () => {
+    vi.useFakeTimers()
+    try {
+      // A permanently-errored subject re-errors every re-subscription, so the
+      // retry budget is exhausted and the error is ultimately surfaced.
+      const subject = new Subject<ReleaseDocument[]>()
+      vi.mocked(getQueryState).mockReturnValue({
+        subscribe: () => () => {},
+        getCurrent: () => undefined,
+        observable: subject.asObservable(),
+      } as StateSource<ReleaseDocument[] | undefined>)
+
+      const active = getActiveReleasesState(instance, {
+        resource: {projectId: 'test', dataset: 'test'},
+      })
+      const all = getAllReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
+
+      const error = new Error('Query failed')
+      subject.error(error)
+
+      // While retries are still pending, the error is not yet surfaced.
+      await vi.advanceTimersByTimeAsync(0)
+      expect(() => active.getCurrent()).not.toThrow()
+
+      // After all backoff delays elapse (500+1000+2000+4000+8000ms), the error
+      // is surfaced rather than silently swallowed.
+      await vi.advanceTimersByTimeAsync(20_000)
+      expect(() => active.getCurrent()).toThrow(error)
+      expect(() => all.getCurrent()).toThrow(error)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
