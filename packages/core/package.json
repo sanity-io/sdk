@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk",
-  "version": "2.14.1",
+  "version": "2.15.0",
   "private": false,
   "description": "Sanity SDK",
   "keywords": [

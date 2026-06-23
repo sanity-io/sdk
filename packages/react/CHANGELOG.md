@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.15.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.14.1...sdk-react-v2.15.0) (2026-06-23)
+
+
+### Features
+
+* **react:** add useCreateDocument hook ([#978](https://github.com/sanity-io/sdk/issues/978)) ([7051def](https://github.com/sanity-io/sdk/commit/7051def3b3b6c83f3e33d80c7bc2d9a5cbdc10bb))
+
+
+### Bug Fixes
+
+* **react:** auto-recover auth error screen when the session is restored ([#985](https://github.com/sanity-io/sdk/issues/985)) ([00262fe](https://github.com/sanity-io/sdk/commit/00262fe5fe4be056df63c7bd13ac056cdd98e585))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.15.0
+
 ## [2.14.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.14.0...sdk-react-v2.14.1) (2026-06-15)
 
 
