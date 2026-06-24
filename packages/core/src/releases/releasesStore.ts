@@ -60,7 +60,10 @@ export const releasesStore = defineStore<ReleasesStoreState, BoundResourceKey>({
 const _getActiveReleasesState = bindActionByResource(
   releasesStore,
   createStateSourceAction({
-    selector: ({state}, _?) => state.activeReleases,
+    selector: ({state}, _?) => {
+      if (state.error) throw state.error
+      return state.activeReleases
+    },
   }),
 )
 
@@ -82,7 +85,10 @@ export const getActiveReleasesState = (
 const _getAllReleasesState = bindActionByResource(
   releasesStore,
   createStateSourceAction({
-    selector: ({state}, _?) => state.allReleases,
+    selector: ({state}, _?) => {
+      if (state.error) throw state.error
+      return state.allReleases
+    },
   }),
 )
 

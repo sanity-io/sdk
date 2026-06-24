@@ -216,7 +216,7 @@ describe('releasesStore', () => {
     expect(allNames).toHaveLength(3)
   })
 
-  it('should not crash when the releases query errors', async () => {
+  it('should surface the error when the releases query errors', async () => {
     const subject = new Subject<ReleaseDocument[]>()
     vi.mocked(getQueryState).mockReturnValue({
       subscribe: () => () => {},
@@ -224,12 +224,19 @@ describe('releasesStore', () => {
       observable: subject.asObservable(),
     } as StateSource<ReleaseDocument[] | undefined>)
 
-    const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
+    const active = getActiveReleasesState(instance, {
+      resource: {projectId: 'test', dataset: 'test'},
+    })
+    const all = getAllReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
 
-    subject.error(new Error('Query failed'))
+    const error = new Error('Query failed')
+    subject.error(error)
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(state.getCurrent()).toEqual(undefined)
+    // The error must be surfaced (thrown) rather than silently swallowed,
+    // otherwise consumers just see an empty list with no signal.
+    expect(() => active.getCurrent()).toThrow(error)
+    expect(() => all.getCurrent()).toThrow(error)
   })
 })
