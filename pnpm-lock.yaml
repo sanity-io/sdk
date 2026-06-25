@@ -28,8 +28,8 @@ catalogs:
       specifier: ^2.1.0
       version: 2.1.0
     '@sanity/types':
-      specifier: ^6.1.0
-      version: 6.1.0
+      specifier: ^6.2.0
+      version: 6.2.0
     '@testing-library/jest-dom':
       specifier: ^6.9.1
       version: 6.9.1
@@ -510,7 +510,7 @@ importers:
         version: 1.1.0(react@19.2.7)
       '@sanity/types':
         specifier: 'catalog:'
-        version: 6.1.0(@types/react@19.2.17)
+        version: 6.2.0(@types/react@19.2.17)
       groq:
         specifier: 'catalog:'
         version: 3.88.1-typegen-experimental.0
@@ -586,7 +586,7 @@ importers:
         version: link:../core
       '@sanity/types':
         specifier: 'catalog:'
-        version: 6.1.0(@types/react@19.2.17)
+        version: 6.2.0(@types/react@19.2.17)
       groq:
         specifier: 'catalog:'
         version: 3.88.1-typegen-experimental.0
@@ -3558,8 +3558,8 @@ packages:
     peerDependencies:
       '@types/react': ^19.2
 
-  '@sanity/types@6.1.0':
-    resolution: {integrity: sha512-EtkC/oB1585wkTEiVyuBsIJYLGlbNldWzMuYPvi91WKBGhMyJ1OJqMfpZDcqWpsvTqjV8TH+/YlVwi+CQBKcTA==}
+  '@sanity/types@6.2.0':
+    resolution: {integrity: sha512-Q6VkqpESVMdYPxlaxckiJuZl0hhma4klTehuK6DMsB0KwhvJePHzxi7IJR3Uw7+4NyWx0Q7ohvVsey3VBdCW3A==}
     peerDependencies:
       '@types/react': ^19.2
 
@@ -11424,7 +11424,7 @@ snapshots:
       '@sanity/media-library-types': 1.4.0
       '@types/react': 19.2.17
 
-  '@sanity/types@6.1.0(@types/react@19.2.17)':
+  '@sanity/types@6.2.0(@types/react@19.2.17)':
     dependencies:
       '@sanity/client': 7.23.0
       '@sanity/media-library-types': 1.4.0
