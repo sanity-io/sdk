@@ -28,7 +28,7 @@ Use `pnpm --filter @sanity/sdk-core ...` (or `--filter @sanity/sdk-react`) to sc
 
 You are working in a TypeScript codebase with React 19, Vitest, and Sanity.io as the primary technologies.
 
-- Formatting is controlled by Prettier with `@sanity/prettier-config`: no semicolons, single quotes, no bracket spacing (`{foo}` not `{ foo }`), 100-character print width, 2-space indentation.
+- Formatting is controlled by oxfmt via `.oxfmtrc.json`: no semicolons, single quotes, no bracket spacing (`{foo}` not `{ foo }`), 100-character print width, 2-space indentation.
 - Never use `any`. ESLint enforces this and the build will fail.
 - Tests use Vitest and live next to the source file they cover, not in a separate `tests/` tree.
 - All exported members need TSDoc comments. ESLint's TSDoc plugin enforces this.

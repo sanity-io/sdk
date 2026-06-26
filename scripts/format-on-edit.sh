@@ -15,15 +15,15 @@ file=$(printf '%s' "$input" | jq -r '
 [ -z "$file" ] && exit 0
 
 # Skip absolute paths or anything containing a `..` segment so a malformed
-# tool payload cannot let Prettier rewrite a file outside the repo.
+# tool payload cannot let oxfmt rewrite a file outside the repo.
 case "$file" in
   /*|..|../*|*/..|*/../*) exit 0 ;;
 esac
 
 case "$file" in
   *.js|*.jsx|*.ts|*.tsx|*.mjs|*.cjs|*.json|*.md|*.yaml|*.yml|*.html|*.css|*.scss)
-    if [ -x ./node_modules/.bin/prettier ]; then
-      ./node_modules/.bin/prettier --write --log-level=error "$file" >/dev/null 2>&1 || true
+    if [ -x ./node_modules/.bin/oxfmt ]; then
+      ./node_modules/.bin/oxfmt --no-error-on-unmatched-pattern "$file" >/dev/null 2>&1 || true
     fi
     ;;
 esac
