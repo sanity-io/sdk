@@ -83,7 +83,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "@vitest/coverage-v8": "catalog:",
-    "babel-plugin-react-compiler": "19.1.0-rc.1",
+    "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "catalog:",
     "groq-js": "catalog:",
     "jsdom": "^29.1.1",

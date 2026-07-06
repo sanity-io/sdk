@@ -1,4 +1,5 @@
-import react from '@vitejs/plugin-react'
+import babel from '@rolldown/plugin-babel'
+import viteReact, {reactCompilerPreset} from '@vitejs/plugin-react'
 import {escapeRegExp} from 'lodash-es'
 import {esmExternalRequirePlugin, type UserConfig} from 'vite'
 
@@ -15,9 +16,8 @@ export const defaultConfig: UserConfig = {
     tsconfigPaths: true,
   },
   plugins: [
-    react({
-      babel: {plugins: [['babel-plugin-react-compiler', {}]]},
-    }),
+    viteReact(),
+    babel({presets: [reactCompilerPreset({target: '19'})]}),
     esmExternalRequirePlugin({
       // self-externals are required here in order to ensure that the presentation
       // tool and future transitive dependencies that require sanity do not
