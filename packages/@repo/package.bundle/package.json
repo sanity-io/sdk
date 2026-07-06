@@ -11,8 +11,10 @@
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
+    "@rolldown/plugin-babel": "^0.2.3",
     "@types/lodash-es": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "catalog:",
     "lodash-es": "catalog:",
     "typescript": "catalog:",
