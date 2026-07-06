@@ -1,7 +1,6 @@
 import {resolve} from 'node:path'
 
 import react from '@vitejs/plugin-react'
-// eslint-disable-next-line import/no-extraneous-dependencies
 import {defineConfig} from 'vite'
 
 export default defineConfig({

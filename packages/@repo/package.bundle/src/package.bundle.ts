@@ -1,7 +1,6 @@
 import react from '@vitejs/plugin-react'
 import {escapeRegExp} from 'lodash-es'
-import {type UserConfig} from 'vite'
-import tsconfigPaths from 'vite-tsconfig-paths'
+import {esmExternalRequirePlugin, type UserConfig} from 'vite'
 
 import {version} from '../package.json'
 
@@ -12,20 +11,14 @@ export const defaultConfig: UserConfig = {
     'process.env.NODE_ENV': '"production"',
     'process.env': {},
   },
+  resolve: {
+    tsconfigPaths: true,
+  },
   plugins: [
     react({
       babel: {plugins: [['babel-plugin-react-compiler', {}]]},
     }),
-    tsconfigPaths(),
-  ],
-  build: {
-    emptyOutDir: true,
-    sourcemap: true,
-    lib: {
-      entry: {},
-      formats: ['es'],
-    },
-    rollupOptions: {
+    esmExternalRequirePlugin({
       // self-externals are required here in order to ensure that the presentation
       // tool and future transitive dependencies that require sanity do not
       // re-include sanity in their bundle
@@ -41,16 +34,25 @@ export const defaultConfig: UserConfig = {
         // this matches `react/jsx-runtime`, `sanity/presentation` etc
         new RegExp(`^${escapeRegExp(dependency)}\\/`),
       ]),
+    }),
+  ],
+  build: {
+    emptyOutDir: true,
+    sourcemap: true,
+    lib: {
+      entry: {},
+      formats: ['es'],
+    },
+    rolldownOptions: {
       output: {
+        minify: true,
         exports: 'named',
         dir: 'lib',
         format: 'es',
         entryFileNames: `[name].mjs`,
         chunkFileNames: `[name].[hash].mjs`,
       },
-      treeshake: {
-        preset: 'recommended',
-      },
+      treeshake: true,
     },
   },
 }

@@ -16,7 +16,6 @@
     "eslint": "catalog:",
     "lodash-es": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite": "catalog:"
   }
 }
