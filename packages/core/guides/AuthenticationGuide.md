@@ -161,10 +161,10 @@ The primary interactive authentication flow involves redirecting the user to `sa
   - Runs periodically **only** for stamped tokens identified by containing a `-st` suffix.
 
   - Calls the `/auth/refresh-token` endpoint using the current stamped token to extend the token's validity or get a new one based on the active session, preventing the user from being logged out unexpectedly in long-lived browser sessions.
-    - Uses the Web Locks API (`navigator.locks`) for coordination when running
-      outside the dashboard context to prevent multiple tabs from attempting to
-      refresh simultaneously. Falls back to uncoordinated refresh if Locks API is
-      unavailable.
 
-  - When running inside the dashboard context, it uses a simpler timer mechanism
-    as coordination is not needed because each tab/host will have its own `sid` and therefore its own stamped token.
+  - Refreshes are triggered by a 12-hour timer (which only fires while the tab
+    is visible) and by the tab becoming visible again after the last refresh has
+    gone stale. Tabs do not coordinate refreshes with each other: in the
+    dashboard each tab/host has its own `sid` and therefore its own stamped
+    token, and in standalone mode tabs share the refreshed token through
+    localStorage storage events.
