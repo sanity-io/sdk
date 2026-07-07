@@ -317,6 +317,35 @@ describe('queryStore', () => {
     unsubscribe()
   })
 
+  it('refetches when a query key is re-added after an error', async () => {
+    // First fetch fails (e.g. transient network failure)
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Observable((observer) => {
+        observer.error(new Error('transient network failure'))
+      }),
+    )
+
+    const query = '*[_type == "movie"]'
+    const state1 = getQueryState(instance, {query})
+    const unsub1 = state1.subscribe()
+    expect(() => state1.getCurrent()).toThrow('transient network failure')
+    unsub1()
+
+    // Wait for the clear delay so the key is fully removed from state
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    // Retry with the same key — must trigger a fresh fetch
+    const state2 = getQueryState(instance, {query})
+    const unsub2 = state2.subscribe()
+
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2)
+
+    const result = await firstValueFrom(state2.observable.pipe(filter((i) => i !== undefined)))
+    expect(result).toEqual(mockData.movies)
+    unsub2()
+  })
+
   it('delays query state removal after unsubscribe', async () => {
     const query = '*[_type == "movie"]'
     const state = getQueryState(instance, {query})

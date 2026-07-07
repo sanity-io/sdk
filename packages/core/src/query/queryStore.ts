@@ -208,14 +208,18 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
                   tag,
                 }),
               ),
+              tap(({result, syncTags}) => {
+                state.set('setQueryData', setQueryData(group$.key, result, syncTags))
+              }),
+              // Catch inside the per-event stream: erroring the group pipe would
+              // complete the group's subscription, and since `groupBy` above never
+              // removes its group subjects, re-adding the key would emit into a
+              // subject with no subscribers — the key could never be fetched again.
+              catchError((error) => {
+                state.set('setQueryError', setQueryError(group$.key, error))
+                return EMPTY
+              }),
             )
-          }),
-          catchError((error) => {
-            state.set('setQueryError', setQueryError(group$.key, error))
-            return EMPTY
-          }),
-          tap(({result, syncTags}) => {
-            state.set('setQueryData', setQueryData(group$.key, result, syncTags))
           }),
         ),
       ),
