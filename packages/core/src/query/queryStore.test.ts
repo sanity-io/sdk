@@ -1,4 +1,4 @@
-import {type LiveEvent, type SanityClient, type SyncTag} from '@sanity/client'
+import {DisconnectError, type LiveEvent, type SanityClient, type SyncTag} from '@sanity/client'
 import {delay, filter, firstValueFrom, Observable, of, Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
@@ -11,6 +11,7 @@ import {getQueryState, resolveQuery} from './queryStore'
 vi.mock('./queryStoreConstants', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./queryStoreConstants')>()),
   QUERY_STATE_CLEAR_DELAY: 10,
+  LIVE_EVENTS_RETRY_DELAY: 10,
 }))
 
 vi.mock('../client/clientStore', () => ({
@@ -151,17 +152,17 @@ describe('queryStore', () => {
     // Check that getQueryState starts undefined
     expect(state.getCurrent()).toBeUndefined()
 
-    // Use resolveQuery which should not add a subscriber
+    // resolveQuery holds only a temporary subscriber (released after the
+    // clear delay once the promise settles)
     const result = await resolveQuery(instance, {query})
     expect(result).toEqual([
       {_id: 'movie1', _type: 'movie', title: 'Movie 1'},
       {_id: 'movie2', _type: 'movie', title: 'Movie 2'},
     ])
 
-    // Check that getQueryState starts resolved now.
-    // Note that this behavior is important for supporting suspense.
-    // `resolveQuery` is the only way to resolve state without adding a
-    // subscriber that can trigger a clean up
+    // Check that getQueryState is resolved now. This behavior is important
+    // for supporting suspense: the resolved state must remain readable while
+    // React re-renders and attaches a lasting subscriber
     expect(state.getCurrent()).toEqual([
       {_id: 'movie1', _type: 'movie', title: 'Movie 1'},
       {_id: 'movie2', _type: 'movie', title: 'Movie 2'},
@@ -189,6 +190,13 @@ describe('queryStore', () => {
 
     // Verify state is cleared after abort
     expect(getQueryState(instance, {query}).getCurrent()).toBeUndefined()
+
+    // The key must be removed immediately (not after the clear delay): a new
+    // resolveQuery re-adds it, which only triggers a fresh fetch if the abort
+    // actually released the previous temporary subscriber
+    const callsBefore = vi.mocked(fetch).mock.calls.length
+    await expect(resolveQuery(instance, {query})).resolves.toEqual(mockData.movies)
+    expect(vi.mocked(fetch).mock.calls.length).toBe(callsBefore + 1)
   })
 
   it('refetches query when receiving live event with matching sync tag', async () => {
@@ -341,6 +349,83 @@ describe('queryStore', () => {
     await new Promise((resolve) => setTimeout(resolve, 20))
     expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2)
 
+    const result = await firstValueFrom(state2.observable.pipe(filter((i) => i !== undefined)))
+    expect(result).toEqual(mockData.movies)
+    unsub2()
+  })
+
+  it('releases an errored key created by resolveQuery so a retry can refetch', async () => {
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Observable((observer) => {
+        observer.error(new Error('network down'))
+      }),
+    )
+
+    const query = '*[_type == "movie"]'
+    // This is how React drives a suspended query: resolveQuery creates the
+    // key without any subscriber (the component never commits when it throws)
+    await expect(resolveQuery(instance, {query})).rejects.toThrow('network down')
+
+    // While the errored key exists, the error surfaces to error boundaries
+    const state = getQueryState(instance, {query})
+    expect(() => state.getCurrent()).toThrow('network down')
+
+    // After the clear delay, the errored key must be released — otherwise it
+    // has no subscribers, nothing ever removes it, and every future mount
+    // rethrows the stored error without ever fetching
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    expect(state.getCurrent()).toBeUndefined()
+
+    // A retry now creates a fresh key and fetches
+    await expect(resolveQuery(instance, {query})).resolves.toEqual(mockData.movies)
+  })
+
+  it('stops live updates without retrying or erroring on DisconnectError', async () => {
+    const query = '*[_type == "movie"]'
+    const state = getQueryState(instance, {query})
+    const unsub = state.subscribe()
+    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+
+    // Grab the live events factory from the client the store is subscribed to
+    const clientState = vi.mocked(getClientState).mock.results[0]
+      ?.value as StateSource<SanityClient>
+    const client = await firstValueFrom(clientState.observable)
+    const eventsMock = vi.mocked(client.live.events)
+    const callsBefore = eventsMock.mock.calls.length
+
+    // The server instructed the client to stop reconnecting
+    liveEvents.error(new DisconnectError('Server disconnected client'))
+    // Wait past several (mocked, 10ms) retry delays
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    // No store-wide error, and no reconnect attempts (a retry would call
+    // live.events again)
+    expect(() => state.getCurrent()).not.toThrow()
+    expect(eventsMock.mock.calls.length).toBe(callsBefore)
+    unsub()
+  })
+
+  it('keeps queries working after the live events connection errors', async () => {
+    const query = '*[_type == "movie"]'
+    const state = getQueryState(instance, {query})
+    const unsub = state.subscribe()
+    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+
+    // The live connection drops (e.g. network goes offline)
+    liveEvents.error(new Error('live connection lost'))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Existing query state must remain readable — a lost live connection must
+    // not poison the whole store
+    expect(() => state.getCurrent()).not.toThrow()
+    expect(state.getCurrent()).toEqual(mockData.movies)
+    unsub()
+
+    // Wait for the clear delay so the key is fully removed, then re-add it —
+    // fetching must still work
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    const state2 = getQueryState(instance, {query})
+    const unsub2 = state2.subscribe()
     const result = await firstValueFrom(state2.observable.pipe(filter((i) => i !== undefined)))
     expect(result).toEqual(mockData.movies)
     unsub2()

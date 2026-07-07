@@ -2,8 +2,6 @@ import {describe, expect, it} from 'vitest'
 
 import {
   addSubscriber,
-  cancelQuery,
-  initializeQuery,
   type QueryStoreState,
   removeSubscriber,
   setLastLiveEventId,
@@ -107,46 +105,6 @@ describe('Query Reducers', () => {
       const reducer = removeSubscriber('q8', 'onlySub')
       const newState = reducer(state)
       expect(newState.queries).not.toHaveProperty('q8')
-    })
-  })
-
-  describe('cancelQuery', () => {
-    it('should return state unchanged if key does not exist', () => {
-      const state: QueryStoreState = {queries: {}}
-      const reducer = cancelQuery('nonexistent')
-      const newState = reducer(state)
-      expect(newState).toBe(state)
-    })
-
-    it('should return state unchanged if query has subscribers', () => {
-      const state: QueryStoreState = {queries: {q9: {subscribers: ['sub1']}}}
-      const reducer = cancelQuery('q9')
-      const newState = reducer(state)
-      expect(newState).toBe(state)
-    })
-
-    it('should remove the query if no subscribers exist', () => {
-      const state: QueryStoreState = {queries: {q10: {subscribers: []}}}
-      const reducer = cancelQuery('q10')
-      const newState = reducer(state)
-      expect(newState.queries).not.toHaveProperty('q10')
-    })
-  })
-
-  describe('initializeQuery', () => {
-    it('should return state unchanged if query already exists', () => {
-      const existing = {subscribers: ['sub1']}
-      const state: QueryStoreState = {queries: {q11: existing}}
-      const reducer = initializeQuery('q11')
-      const newState = reducer(state)
-      expect(newState).toBe(state)
-    })
-
-    it('should add the query with empty subscribers if it does not exist', () => {
-      const state: QueryStoreState = {queries: {}}
-      const reducer = initializeQuery('q12')
-      const newState = reducer(state)
-      expect(newState.queries['q12']).toEqual({subscribers: []})
     })
   })
 })

@@ -57,19 +57,3 @@ export const removeSubscriber =
     if (!subscribers.length) return {...prev, queries: omitProperty(prev.queries, key)}
     return {...prev, queries: {...prev.queries, [key]: {...prevQuery, subscribers}}}
   }
-
-export const cancelQuery =
-  (key: string) =>
-  (prev: QueryStoreState): QueryStoreState => {
-    const prevQuery = prev.queries[key]
-    if (!prevQuery) return prev
-    if (prevQuery.subscribers.length) return prev
-    return {...prev, queries: omitProperty(prev.queries, key)}
-  }
-
-export const initializeQuery =
-  (key: string) =>
-  (prev: QueryStoreState): QueryStoreState => {
-    if (prev.queries[key]) return prev
-    return {...prev, queries: {...prev.queries, [key]: {subscribers: []}}}
-  }
