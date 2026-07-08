@@ -1,5 +1,5 @@
 import {type ReleaseDocument} from '@sanity/client'
-import {map, retry, timer} from 'rxjs'
+import {map} from 'rxjs'
 
 import {type DocumentResource} from '../config/sanityConfig'
 /*
@@ -19,10 +19,6 @@ import {sortReleases} from './utils/sortReleases'
 
 const ARCHIVED_RELEASE_STATES = ['archived', 'published']
 const STABLE_EMPTY_RELEASES: ReleaseDocument[] = []
-
-const RELEASES_RETRY_BASE_DELAY = 500
-const RELEASES_RETRY_MAX_DELAY = 10_000
-const RELEASES_MAX_RETRIES = 5
 
 /**
  * Lifecycle states a release document can be in. Mirrors the server's
@@ -118,27 +114,22 @@ const subscribeToReleases = ({
     resource,
     tag: 'releases',
   })
-  return releases$
-    .pipe(
-      map((releases) => {
-        // logic here mirrors that of studio:
-        // https://github.com/sanity-io/sanity/blob/156e8fa482703d99219f08da7bacb384517f1513/packages/sanity/src/core/releases/store/useActiveReleases.ts#L29
-        const sorted = sortReleases(releases ?? STABLE_EMPTY_RELEASES).reverse()
-        state.set('setReleases', {
-          allReleases: sorted,
-          activeReleases: sorted.filter(
-            (release) => !ARCHIVED_RELEASE_STATES.includes(release.state),
-          ),
-        })
-      }),
-      retry({
-        count: RELEASES_MAX_RETRIES,
-        delay: (_error, retryCount) =>
-          timer(
-            Math.min(RELEASES_RETRY_BASE_DELAY * 2 ** (retryCount - 1), RELEASES_RETRY_MAX_DELAY),
-          ),
-        resetOnSuccess: true,
-      }),
-    )
-    .subscribe({error: (error) => state.set('setError', {error})})
+  return (
+    releases$
+      .pipe(
+        map((releases) => {
+          // logic here mirrors that of studio:
+          // https://github.com/sanity-io/sanity/blob/156e8fa482703d99219f08da7bacb384517f1513/packages/sanity/src/core/releases/store/useActiveReleases.ts#L29
+          const sorted = sortReleases(releases ?? STABLE_EMPTY_RELEASES).reverse()
+          state.set('setReleases', {
+            allReleases: sorted,
+            activeReleases: sorted.filter(
+              (release) => !ARCHIVED_RELEASE_STATES.includes(release.state),
+            ),
+          })
+        }),
+      )
+      // the query is retried by the queryStore, so we don't need to retry here
+      .subscribe({error: (error) => state.set('setError', {error})})
+  )
 }
