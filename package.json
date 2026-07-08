@@ -83,12 +83,6 @@
   "pnpm": {
     "overrides": {
       "@babel/types": "7.29.7"
-    },
-    "peerDependencyRules": {
-      "allowedVersions": {
-        "eslint-plugin-import>eslint": "10",
-        "eslint-plugin-react>eslint": "10"
-      }
     }
   }
 }
