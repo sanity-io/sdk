@@ -34,3 +34,11 @@ You are working in a TypeScript codebase with React 19, Vitest, and Sanity.io as
 - All exported members need TSDoc comments. ESLint's TSDoc plugin enforces this.
 - Do not edit files under `dist/` or `node_modules/`.
 - Do not introduce React-specific dependencies into `packages/core`. Keep it framework-agnostic.
+
+## Cursor Cloud specific instructions
+
+- Runtime: the VM ships Node 22.14.0 (`/exec-daemon/node`) and pnpm 10.33.4 by default in the agent's normal shell. `.nvmrc` pins 24.17.0, but Node 22 is fully supported (the CI test matrix runs both 22 and 24), so the default Node is fine for install/lint/test/build/dev.
+- `pnpm install` runs a kitchensink `postinstall` that calls `sanity schema extract` + typegen; it needs network access to Sanity but requires no secrets and completes in the standard install.
+- No env vars/secrets are needed to install, lint, test, build, or start either dev app. Sanity project IDs are hardcoded and point at public dev projects. `.env.local` (copy from `.env.example`) is only needed for the Playwright e2e suite (`pnpm test:e2e`), which targets Sanity staging.
+- Dev servers (see root `package.json` scripts): `pnpm dev` → kitchensink via `sanity dev` on port 3333 (meant to be opened embedded in the Sanity Dashboard for auth); `pnpm dev:standalone` → Vite on port 3334 (uses the `www.sanity.io/login` redirect flow). Both start and serve without login; showing authenticated content requires an interactive Sanity login in the browser.
+- tmux gotcha: a tmux `bash -l` login shell does NOT inherit Node/pnpm on PATH (you'll get `pnpm: command not found`). The agent's default Shell tool environment does. When starting long-running dev servers in tmux, first `export PATH="/exec-daemon:/home/ubuntu/.nvm/versions/node/v22.22.2/bin:$PATH"` (or run them from the normal Shell environment).
