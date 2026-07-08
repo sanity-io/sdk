@@ -1,4 +1,4 @@
-import {CorsOriginError, type ResponseQueryOptions} from '@sanity/client'
+import {CorsOriginError, DisconnectError, type ResponseQueryOptions} from '@sanity/client'
 import {type SanityQueryResult} from 'groq'
 import {
   catchError,
@@ -17,6 +17,7 @@ import {
   of,
   pairwise,
   race,
+  retry,
   share,
   startWith,
   switchMap,
@@ -47,14 +48,13 @@ import {defineStore, type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {
+  LIVE_EVENTS_RETRY_DELAY,
   QUERY_STATE_CLEAR_DELAY,
   QUERY_STORE_API_VERSION,
   QUERY_STORE_DEFAULT_PERSPECTIVE,
 } from './queryStoreConstants'
 import {
   addSubscriber,
-  cancelQuery,
-  initializeQuery,
   type QueryStoreState,
   removeSubscriber,
   setLastLiveEventId,
@@ -208,14 +208,18 @@ const listenForNewSubscribersAndFetch = ({state, instance}: StoreContext<QuerySt
                   tag,
                 }),
               ),
+              tap(({result, syncTags}) => {
+                state.set('setQueryData', setQueryData(group$.key, result, syncTags))
+              }),
+              // Catch inside the per-event stream: erroring the group pipe would
+              // complete the group's subscription, and since `groupBy` above never
+              // removes its group subjects, re-adding the key would emit into a
+              // subject with no subscribers — the key could never be fetched again.
+              catchError((error) => {
+                state.set('setQueryError', setQueryError(group$.key, error))
+                return EMPTY
+              }),
             )
-          }),
-          catchError((error) => {
-            state.set('setQueryError', setQueryError(group$.key, error))
-            return EMPTY
-          }),
-          tap(({result, syncTags}) => {
-            state.set('setQueryData', setQueryData(group$.key, result, syncTags))
           }),
         ),
       ),
@@ -242,8 +246,20 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
             state.set('setError', {error})
             return EMPTY
           }
+          if (error instanceof DisconnectError) {
+            // The server explicitly told this client to stop reconnecting —
+            // end live updates without erroring the store (queries keep
+            // serving, they just stop receiving live invalidation)
+            return EMPTY
+          }
           throw error
         }),
+        // Server-initiated live errors (e.g. ChannelError, MessageError) are
+        // retried, not surfaced: an error here would reach the outer
+        // subscription's errorHandler, set the store-wide `state.error`, and
+        // permanently brick every query selector (nothing ever clears it).
+        // Dropped connections are already reconnected inside @sanity/client.
+        retry({delay: LIVE_EVENTS_RETRY_DELAY}),
       ),
     ),
     share(),
@@ -346,13 +362,14 @@ const _getQueryState = bindActionByResource(
  * Resolves the result of a query without registering a lasting subscriber.
  *
  * This function fetches the result of a GROQ query and returns a promise that resolves with the query result.
- * Unlike `getQueryState`, which registers subscribers to keep the query live and performs automatic cleanup,
- * `resolveQuery` does not track subscribers. This makes it ideal for use with React Suspense, where the returned
- * promise is thrown to delay rendering until the query result becomes available.
+ * It registers a temporary subscriber for the lifetime of the resolution (released shortly after the promise
+ * settles), so the query state participates in normal cleanup even when no lasting subscriber ever attaches —
+ * e.g. when a suspended component errors before committing. This makes it ideal for use with React Suspense,
+ * where the returned promise is thrown to delay rendering until the query result becomes available.
  * Once the promise resolves, it is expected that a real subscriber will be added via `getQueryState` to manage ongoing updates.
  *
  * Additionally, an optional AbortSignal can be provided to cancel the query and immediately clear the associated state
- * if there are no active subscribers.
+ * if there are no other active subscribers.
  *
  * @beta
  */
@@ -381,6 +398,14 @@ const _resolveQuery = bindActionByResource(
     const {getCurrent} = getQueryState(instance, normalized)
     const key = getQueryKey(normalized)
 
+    // Hold a temporary subscription for the lifetime of this resolution so the
+    // key participates in normal cleanup. Without one, a fetch that errors
+    // while a component is suspended leaves a subscriber-less key behind — the
+    // component never commits, so no other subscriber exists — and its stored
+    // error would be rethrown on every future mount without ever refetching.
+    const subscriptionId = insecureRandomId()
+    state.set('addSubscriber', addSubscriber(key, subscriptionId))
+
     const aborted$ = signal
       ? new Observable<void>((observer) => {
           const cleanup = () => {
@@ -398,20 +423,29 @@ const _resolveQuery = bindActionByResource(
         }).pipe(
           catchError((error) => {
             if (error instanceof Error && error.name === 'AbortError') {
-              state.set('cancelQuery', cancelQuery(key))
+              // Release immediately (not after the clear delay) so that when
+              // this was the only subscriber, the key removal tears down the
+              // in-flight request right away — e.g. when useQuery switches
+              // to a different query
+              state.set('removeSubscriber', removeSubscriber(key, subscriptionId))
             }
             throw error
           }),
         )
       : NEVER
 
-    state.set('initializeQuery', initializeQuery(key))
-
     const resolved$ = state.observable.pipe(
       map(getCurrent),
       first((i) => i !== undefined),
     )
 
-    return firstValueFrom(race([resolved$, aborted$]))
+    const promise = firstValueFrom(race([resolved$, aborted$]))
+    const releaseSubscriber = () => {
+      setCleanupTimeout(() => {
+        state.set('removeSubscriber', removeSubscriber(key, subscriptionId))
+      }, QUERY_STATE_CLEAR_DELAY)
+    }
+    promise.then(releaseSubscriber, releaseSubscriber)
+    return promise
   },
 )

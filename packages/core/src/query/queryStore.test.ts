@@ -1,4 +1,4 @@
-import {type LiveEvent, type SanityClient, type SyncTag} from '@sanity/client'
+import {DisconnectError, type LiveEvent, type SanityClient, type SyncTag} from '@sanity/client'
 import {delay, filter, firstValueFrom, Observable, of, Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
@@ -7,11 +7,7 @@ import {isCanvasResource} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {getQueryState, resolveQuery} from './queryStore'
-
-vi.mock('./queryStoreConstants', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./queryStoreConstants')>()),
-  QUERY_STATE_CLEAR_DELAY: 10,
-}))
+import {LIVE_EVENTS_RETRY_DELAY, QUERY_STATE_CLEAR_DELAY} from './queryStoreConstants'
 
 vi.mock('../client/clientStore', () => ({
   getClientState: vi.fn(),
@@ -34,6 +30,14 @@ vi.mock('../releases/getPerspectiveState', async () => {
   }
 })
 
+// With fake timers, an emission gated on a pending rxjs delay or cleanup
+// timeout never arrives on its own: create the promise first, advance the
+// clock, then await it.
+async function advanceAndAwait<T>(promise: Promise<T>, ms = 0): Promise<T> {
+  await vi.advanceTimersByTimeAsync(ms)
+  return promise
+}
+
 describe('queryStore', () => {
   let instance: SanityInstance
   let liveEvents: Subject<LiveEvent>
@@ -48,6 +52,7 @@ describe('queryStore', () => {
   }
 
   beforeEach(() => {
+    vi.useFakeTimers()
     instance = createSanityInstance({projectId: 'test', dataset: 'test'})
 
     fetch = vi
@@ -76,6 +81,7 @@ describe('queryStore', () => {
   afterEach(() => {
     vi.mocked(getClientState).mockClear()
     instance.dispose()
+    vi.useRealTimers()
   })
 
   it('initializes query state and cleans up after unsubscribe', async () => {
@@ -89,7 +95,7 @@ describe('queryStore', () => {
     const unsubscribe = state.subscribe()
 
     // Wait for data to be fetched
-    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
 
     // Verify data is present
     expect(state.getCurrent()).toEqual([
@@ -101,7 +107,7 @@ describe('queryStore', () => {
     unsubscribe()
 
     // Wait for the cleanup delay
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY)
 
     // Verify state is cleared
     expect(state.getCurrent()).toBeUndefined()
@@ -116,7 +122,7 @@ describe('queryStore', () => {
     const unsubscribe2 = state.subscribe()
 
     // Wait for data to be fetched
-    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
 
     // Verify data is present
     expect(state.getCurrent()).toEqual([
@@ -137,7 +143,7 @@ describe('queryStore', () => {
     unsubscribe2()
 
     // Wait for cleanup delay
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY)
 
     // Verify state is cleared after all subscribers are gone
     expect(state.getCurrent()).toBeUndefined()
@@ -151,17 +157,17 @@ describe('queryStore', () => {
     // Check that getQueryState starts undefined
     expect(state.getCurrent()).toBeUndefined()
 
-    // Use resolveQuery which should not add a subscriber
-    const result = await resolveQuery(instance, {query})
+    // resolveQuery holds only a temporary subscriber (released after the
+    // clear delay once the promise settles)
+    const result = await advanceAndAwait(resolveQuery(instance, {query}))
     expect(result).toEqual([
       {_id: 'movie1', _type: 'movie', title: 'Movie 1'},
       {_id: 'movie2', _type: 'movie', title: 'Movie 2'},
     ])
 
-    // Check that getQueryState starts resolved now.
-    // Note that this behavior is important for supporting suspense.
-    // `resolveQuery` is the only way to resolve state without adding a
-    // subscriber that can trigger a clean up
+    // Check that getQueryState is resolved now. This behavior is important
+    // for supporting suspense: the resolved state must remain readable while
+    // React re-renders and attaches a lasting subscriber
     expect(state.getCurrent()).toEqual([
       {_id: 'movie1', _type: 'movie', title: 'Movie 1'},
       {_id: 'movie2', _type: 'movie', title: 'Movie 2'},
@@ -170,7 +176,7 @@ describe('queryStore', () => {
     // Subscribing and unsubscribing should nuke the state now
     const unsubscribe = state.subscribe()
     unsubscribe()
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY)
     expect(state.getCurrent()).toBeUndefined()
   })
 
@@ -189,6 +195,13 @@ describe('queryStore', () => {
 
     // Verify state is cleared after abort
     expect(getQueryState(instance, {query}).getCurrent()).toBeUndefined()
+
+    // The key must be removed immediately (not after the clear delay): a new
+    // resolveQuery re-adds it, which only triggers a fresh fetch if the abort
+    // actually released the previous temporary subscriber
+    const callsBefore = vi.mocked(fetch).mock.calls.length
+    await expect(advanceAndAwait(resolveQuery(instance, {query}))).resolves.toEqual(mockData.movies)
+    expect(vi.mocked(fetch).mock.calls.length).toBe(callsBefore + 1)
   })
 
   it('refetches query when receiving live event with matching sync tag', async () => {
@@ -210,7 +223,7 @@ describe('queryStore', () => {
     const state = getQueryState<{_id: string; _type: string; title: string}[]>(instance, {query})
 
     const unsubscribe = state.subscribe()
-    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
 
     // Emit live event with matching sync tag
     liveEvents.next({
@@ -222,7 +235,9 @@ describe('queryStore', () => {
     } as LiveEvent)
 
     // Wait for updated data
-    const result = await firstValueFrom(state.observable.pipe(filter((data) => data?.length === 3)))
+    const result = await advanceAndAwait(
+      firstValueFrom(state.observable.pipe(filter((data) => data?.length === 3))),
+    )
 
     expect(fetch).toHaveBeenCalledTimes(2)
     expect(vi.mocked(fetch).mock.calls[1][2]?.lastLiveEventId).toBe('event1')
@@ -241,7 +256,7 @@ describe('queryStore', () => {
     const state = getQueryState(instance, {query})
 
     const unsubscribe = state.subscribe()
-    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
 
     // Emit event with different tag
     liveEvents.next({
@@ -252,7 +267,7 @@ describe('queryStore', () => {
       event: 'created',
     } as LiveEvent)
 
-    await new Promise((resolve) => setTimeout(resolve, 50)) // Allow time for potential refetch
+    await vi.advanceTimersByTimeAsync(50) // Allow time for potential refetch
     expect(fetch).toHaveBeenCalledTimes(1)
 
     unsubscribe()
@@ -274,7 +289,7 @@ describe('queryStore', () => {
     const state = getQueryState(instance, {query})
 
     const unsubscribe = state.subscribe()
-    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
 
     // Emit two events with same tag
     liveEvents.next({
@@ -289,7 +304,7 @@ describe('queryStore', () => {
       tags: mockSyncTags,
     })
 
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await vi.advanceTimersByTimeAsync(0)
     expect(fetch).toHaveBeenCalledTimes(3)
     expect(vi.mocked(fetch).mock.calls[1][2]?.lastLiveEventId).toBe('event1')
     expect(vi.mocked(fetch).mock.calls[2][2]?.lastLiveEventId).toBe('event2')
@@ -317,19 +332,129 @@ describe('queryStore', () => {
     unsubscribe()
   })
 
+  it('refetches when a query key is re-added after an error', async () => {
+    // First fetch fails (e.g. transient network failure)
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Observable((observer) => {
+        observer.error(new Error('transient network failure'))
+      }),
+    )
+
+    const query = '*[_type == "movie"]'
+    const state1 = getQueryState(instance, {query})
+    const unsub1 = state1.subscribe()
+    expect(() => state1.getCurrent()).toThrow('transient network failure')
+    unsub1()
+
+    // Wait for the clear delay so the key is fully removed from state
+    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY)
+
+    // Retry with the same key — must trigger a fresh fetch
+    const state2 = getQueryState(instance, {query})
+    const unsub2 = state2.subscribe()
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2)
+
+    const result = await advanceAndAwait(
+      firstValueFrom(state2.observable.pipe(filter((i) => i !== undefined))),
+    )
+    expect(result).toEqual(mockData.movies)
+    unsub2()
+  })
+
+  it('releases an errored key created by resolveQuery so a retry can refetch', async () => {
+    vi.mocked(fetch).mockReturnValueOnce(
+      new Observable((observer) => {
+        observer.error(new Error('network down'))
+      }),
+    )
+
+    const query = '*[_type == "movie"]'
+    // This is how React drives a suspended query: resolveQuery creates the
+    // key without any subscriber (the component never commits when it throws)
+    await expect(resolveQuery(instance, {query})).rejects.toThrow('network down')
+
+    // While the errored key exists, the error surfaces to error boundaries
+    const state = getQueryState(instance, {query})
+    expect(() => state.getCurrent()).toThrow('network down')
+
+    // After the clear delay, the errored key must be released — otherwise it
+    // has no subscribers, nothing ever removes it, and every future mount
+    // rethrows the stored error without ever fetching
+    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY)
+    expect(state.getCurrent()).toBeUndefined()
+
+    // A retry now creates a fresh key and fetches
+    await expect(advanceAndAwait(resolveQuery(instance, {query}))).resolves.toEqual(mockData.movies)
+  })
+
+  it('stops live updates without retrying or erroring on DisconnectError', async () => {
+    const query = '*[_type == "movie"]'
+    const state = getQueryState(instance, {query})
+    const unsub = state.subscribe()
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
+
+    // Grab the live events factory from the client the store is subscribed to
+    const clientState = vi.mocked(getClientState).mock.results[0]
+      ?.value as StateSource<SanityClient>
+    const client = await firstValueFrom(clientState.observable)
+    const eventsMock = vi.mocked(client.live.events)
+    const callsBefore = eventsMock.mock.calls.length
+
+    // The server instructed the client to stop reconnecting
+    liveEvents.error(new DisconnectError('Server disconnected client'))
+    // Advance past several retry delays
+    await vi.advanceTimersByTimeAsync(LIVE_EVENTS_RETRY_DELAY * 5)
+
+    // No store-wide error, and no reconnect attempts (a retry would call
+    // live.events again)
+    expect(() => state.getCurrent()).not.toThrow()
+    expect(eventsMock.mock.calls.length).toBe(callsBefore)
+    unsub()
+  })
+
+  it('keeps queries working after the live events connection errors', async () => {
+    const query = '*[_type == "movie"]'
+    const state = getQueryState(instance, {query})
+    const unsub = state.subscribe()
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
+
+    // The live connection drops (e.g. network goes offline)
+    liveEvents.error(new Error('live connection lost'))
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Existing query state must remain readable — a lost live connection must
+    // not poison the whole store
+    expect(() => state.getCurrent()).not.toThrow()
+    expect(state.getCurrent()).toEqual(mockData.movies)
+    unsub()
+
+    // Wait for the clear delay so the key is fully removed, then re-add it —
+    // fetching must still work
+    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY)
+    const state2 = getQueryState(instance, {query})
+    const unsub2 = state2.subscribe()
+    const result = await advanceAndAwait(
+      firstValueFrom(state2.observable.pipe(filter((i) => i !== undefined))),
+    )
+    expect(result).toEqual(mockData.movies)
+    unsub2()
+  })
+
   it('delays query state removal after unsubscribe', async () => {
     const query = '*[_type == "movie"]'
     const state = getQueryState(instance, {query})
     const unsubscribe = state.subscribe()
 
-    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
 
     unsubscribe()
     // Immediately after unsubscription, state should still be present due to delay
     expect(state.getCurrent()).not.toBeUndefined()
 
     // Wait for the cleanup delay and then state should be removed
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY)
     expect(state.getCurrent()).toBeUndefined()
   })
 
@@ -338,7 +463,7 @@ describe('queryStore', () => {
     const state = getQueryState(instance, {query})
     const unsubscribe1 = state.subscribe()
 
-    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
     expect(state.getCurrent()).toEqual([
       {_id: 'movie1', _type: 'movie', title: 'Movie 1'},
       {_id: 'movie2', _type: 'movie', title: 'Movie 2'},
@@ -346,13 +471,13 @@ describe('queryStore', () => {
 
     unsubscribe1()
     // Wait less than the cleanup delay
-    await new Promise((resolve) => setTimeout(resolve, 5))
+    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY / 2)
 
     // Subscribe again before cleanup occurs
     const unsubscribe2 = state.subscribe()
 
     // Wait for cleanup delay to pass
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    await vi.advanceTimersByTimeAsync(QUERY_STATE_CLEAR_DELAY)
 
     // Since a subscriber now exists, state should still be present
     expect(state.getCurrent()).toEqual([
@@ -392,11 +517,11 @@ describe('queryStore', () => {
     const unsubDrafts = sDrafts.subscribe()
     const unsubPublished = sPublished.subscribe()
 
-    const draftsResult = await firstValueFrom(
-      sDrafts.observable.pipe(filter((i) => i !== undefined)),
+    const draftsResult = await advanceAndAwait(
+      firstValueFrom(sDrafts.observable.pipe(filter((i) => i !== undefined))),
     )
-    const publishedResult = await firstValueFrom(
-      sPublished.observable.pipe(filter((i) => i !== undefined)),
+    const publishedResult = await advanceAndAwait(
+      firstValueFrom(sPublished.observable.pipe(filter((i) => i !== undefined))),
     )
 
     expect(draftsResult).toEqual([{_id: 'drafts'}])
@@ -432,11 +557,11 @@ describe('queryStore', () => {
     const unsubDrafts = sDrafts.subscribe()
     const unsubPublished = sPublished.subscribe()
 
-    const draftsResult = await firstValueFrom(
-      sDrafts.observable.pipe(filter((i) => i !== undefined)),
+    const draftsResult = await advanceAndAwait(
+      firstValueFrom(sDrafts.observable.pipe(filter((i) => i !== undefined))),
     )
-    const publishedResult = await firstValueFrom(
-      sPublished.observable.pipe(filter((i) => i !== undefined)),
+    const publishedResult = await advanceAndAwait(
+      firstValueFrom(sPublished.observable.pipe(filter((i) => i !== undefined))),
     )
 
     expect(draftsResult).toEqual([{_id: 'drafts'}])
@@ -455,7 +580,7 @@ describe('queryStore', () => {
     const state = getQueryState(instance, {query, resource: mediaLibrarySource})
     const unsubscribe = state.subscribe()
 
-    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
 
     // Verify getClientState was called with the resource from params in listenForNewSubscribersAndFetch
     // This call includes projectId, dataset, and resource
@@ -478,7 +603,7 @@ describe('queryStore', () => {
     const state = getQueryState(instance, {query, resource: canvasSource})
     const unsubscribe = state.subscribe()
 
-    await firstValueFrom(state.observable.pipe(filter((i) => i !== undefined)))
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
 
     // Verify getClientState was called with the canvas resource for live events
     // The resource is extracted from the store key and passed when it's not a dataset resource
