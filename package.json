@@ -64,7 +64,7 @@
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
-    "fallow": "^2.100.0",
+    "fallow": "^3.2.0",
     "husky": "^9.1.7",
     "knip": "^6.17.1",
     "lint-staged": "^16.4.0",
