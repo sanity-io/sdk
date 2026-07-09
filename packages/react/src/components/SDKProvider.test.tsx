@@ -1,41 +1,59 @@
+import {createSanityInstance} from '@sanity/sdk'
 import {render} from '@testing-library/react'
 import React from 'react'
-import {describe, expect, it, vi} from 'vitest'
+import {beforeEach, describe, expect, it, vi} from 'vitest'
 
+import {useDashboardOrganizationId} from '../hooks/auth/useDashboardOrganizationId'
+import {resolveOrgResources} from '../utils/resolveOrgResources'
 import {SDKProvider} from './SDKProvider'
 
-// Mock ResourceProvider to test nesting behavior
+const instance = createSanityInstance()
+
+// Returns the same object on every call so the module-level WeakMap cache works across renders.
+vi.mock('../hooks/context/useSanityInstance', () => {
+  return {useSanityInstance: () => instance}
+})
+
+vi.mock('../hooks/auth/useDashboardOrganizationId', () => ({
+  useDashboardOrganizationId: vi.fn(),
+}))
+
+vi.mock('../utils/resolveOrgResources', () => ({
+  resolveOrgResources: vi.fn(),
+}))
+
 vi.mock('../context/ResourceProvider', () => ({
   ResourceProvider: ({
     children,
-    ...props
+    projectId,
+    dataset,
   }: {
     children: React.ReactNode
     projectId?: string
     dataset?: string
-  }) => {
-    return (
-      <div
-        data-testid="resource-provider"
-        data-config={JSON.stringify({
-          projectId: props.projectId,
-          dataset: props.dataset,
-        })}
-      >
-        {children}
-      </div>
-    )
-  },
+  }) => (
+    <div data-testid="resource-provider" data-config={JSON.stringify({projectId, dataset})}>
+      {children}
+    </div>
+  ),
 }))
 
-// Mock AuthBoundary
 vi.mock('./auth/AuthBoundary', () => ({
-  AuthBoundary: ({children}: {children: React.ReactNode}) => {
-    return <div data-testid="auth-boundary">{children}</div>
-  },
+  AuthBoundary: ({children}: {children: React.ReactNode}) => (
+    <div data-testid="auth-boundary">{children}</div>
+  ),
 }))
+
+const mockResolveOrgResources = vi.mocked(resolveOrgResources)
+const mockUseDashboardOrganizationId = vi.mocked(useDashboardOrganizationId)
 
 describe('SDKProvider', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockResolveOrgResources.mockResolvedValue({})
+    mockUseDashboardOrganizationId.mockReturnValue(undefined)
+  })
+
   it('renders single ResourceProvider with AuthBoundary for a single config', () => {
     const config = {
       projectId: 'test-project',

@@ -3,8 +3,8 @@ import {type ReactElement, type ReactNode, useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
 import {DEFAULT_RESOURCE_NAME} from '../constants'
+import {OrganizationResourcesProvider} from '../context/OrganizationResourcesProvider'
 import {ResourceProvider} from '../context/ResourceProvider'
-import {ResourcesContext} from '../context/ResourcesContext'
 import {AuthBoundary, type AuthBoundaryProps} from './auth/AuthBoundary'
 import {ChunkLoadError} from './errors/ChunkLoadError'
 import {clearChunkReloadFlag} from './errors/chunkReloadStorage'
@@ -17,6 +17,8 @@ export interface SDKProviderProps extends AuthBoundaryProps {
   config: SanityConfig | SanityConfig[]
   fallback: ReactNode
   resources?: Record<string, DocumentResource>
+  /** When set, automatically fetches and registers the organization's media library and canvas as named resources. */
+  inferMediaLibraryAndCanvas?: boolean
 }
 
 /**
@@ -40,6 +42,7 @@ export function SDKProvider({
   children,
   config,
   fallback,
+  inferMediaLibraryAndCanvas,
   ...props
 }: SDKProviderProps): ReactElement {
   const allConfigs = Array.isArray(config) ? config : [config]
@@ -59,7 +62,10 @@ export function SDKProvider({
     const explicit = props.resources ?? {}
     if (defaultProjectId && defaultDataset && !Object.hasOwn(explicit, DEFAULT_RESOURCE_NAME)) {
       return {
-        [DEFAULT_RESOURCE_NAME]: {projectId: defaultProjectId, dataset: defaultDataset},
+        [DEFAULT_RESOURCE_NAME]: {
+          projectId: defaultProjectId,
+          dataset: defaultDataset,
+        },
         ...explicit,
       }
     }
@@ -71,7 +77,15 @@ export function SDKProvider({
       <ResetChunkReloadFlagOnMount />
       <ResourceProvider {...resolvedConfig} fallback={fallback}>
         <AuthBoundary {...props} projectIds={projectIds}>
-          <ResourcesContext.Provider value={resourcesValue}>{children}</ResourcesContext.Provider>
+          {/* OrganizationResourcesProvider wraps ResourcesContext.
+            It merges explicit resources with lazily inferred org resources (media
+            library, canvas) and provides the combined map to the subtree. */}
+          <OrganizationResourcesProvider
+            resources={resourcesValue}
+            inferMediaLibraryAndCanvas={inferMediaLibraryAndCanvas}
+          >
+            {children}
+          </OrganizationResourcesProvider>
         </AuthBoundary>
       </ResourceProvider>
     </ErrorBoundary>
