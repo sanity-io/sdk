@@ -10,7 +10,7 @@ const tableStyle = {
   width: '100%',
 } as const
 
-export const TR = forwardRef(function TR(
+export const TR = forwardRef(function TableRow(
   props: PropsWithChildren<CardProps>,
   ref: Ref<HTMLTableRowElement>,
 ): JSX.Element {
@@ -22,7 +22,7 @@ export const TR = forwardRef(function TR(
   )
 })
 
-export const TD = forwardRef(function TD(
+export const TD = forwardRef(function TableCell(
   props: PropsWithChildren<CardProps>,
   ref: Ref<HTMLTableCellElement>,
 ): JSX.Element {
@@ -34,7 +34,7 @@ export const TD = forwardRef(function TD(
   )
 })
 
-export const TH = forwardRef(function TH(
+export const TH = forwardRef(function TableHeaderCell(
   props: PropsWithChildren<CardProps>,
   ref: Ref<HTMLTableCellElement>,
 ): JSX.Element {
@@ -46,7 +46,7 @@ export const TH = forwardRef(function TH(
   )
 })
 
-export const Table = forwardRef(function Table(
+export const Table = forwardRef(function TableRoot(
   props: PropsWithChildren<CardProps & {style?: CSSProperties}>,
   ref: Ref<HTMLTableElement>,
 ): JSX.Element {

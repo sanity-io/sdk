@@ -34,7 +34,10 @@ export default [
     ...reactPlugin.configs.flat?.recommended,
     settings: {
       react: {
-        version: 'detect',
+        // Pinned to an explicit version instead of 'detect'. eslint-plugin-react@7.37.5's
+        // version detection calls the `context.getFilename()` API that ESLint 10 removed,
+        // which throws at lint time. An explicit version skips detection entirely.
+        version: '19.2',
       },
     },
   },

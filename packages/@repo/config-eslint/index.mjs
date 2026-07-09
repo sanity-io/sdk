@@ -136,7 +136,8 @@ export default [
           alwaysTryTypes: true,
           extensions: ['.js', '.ts', '.mjs', '.mts'],
 
-          // use an array of glob patterns
+          // use an array of glob patterns; v4 warns on multiple projects unless opted out
+          noWarnOnMultipleProjects: true,
           project: ['packages/*/tsconfig.json', 'apps/*/tsconfig.json'],
         }),
       ],
