@@ -4,25 +4,22 @@ import baseESLintConfig from '@repo/config-eslint'
 export default [
   {
     ignores: [
-      '.DS_Store',
-      '**/node_modules',
-      '**/build',
-      '**/dist',
-      '**/coverage',
-      '**/docs',
+      // Packages and apps lint themselves; the base config covers the rest.
       '**/packages/',
       '**/apps',
       '**/.turbo',
-      '.env',
-      '.env.*',
-      '!.env.example',
-
-      // Ignore files for PNPM, NPM and YARN
-      'pnpm-lock.yaml',
-      'package-lock.json',
-      'yarn.lock',
       'sanity.types.ts',
     ],
   },
   ...baseESLintConfig,
+  {
+    // Root-level scripts are repo tooling and may import devDependencies.
+    files: ['scripts/**'],
+    rules: {
+      'import-x/no-extraneous-dependencies': [
+        'error',
+        {devDependencies: true, optionalDependencies: false, includeTypes: false},
+      ],
+    },
+  },
 ]

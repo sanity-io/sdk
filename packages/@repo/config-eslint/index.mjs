@@ -3,7 +3,7 @@ import js from '@eslint/js'
 import eslintConfigPrettier from 'eslint-config-prettier'
 import turboConfig from 'eslint-config-turbo/flat'
 import {createTypeScriptImportResolver} from 'eslint-import-resolver-typescript'
-import * as importPlugin from 'eslint-plugin-import'
+import {importX} from 'eslint-plugin-import-x'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import unusedImports from 'eslint-plugin-unused-imports'
 import globals from 'globals'
@@ -32,23 +32,23 @@ export default [
   },
   js.configs.recommended,
   eslintConfigPrettier,
-  importPlugin.flatConfigs?.typescript,
+  importX.flatConfigs?.typescript,
   ...tsLint.configs.recommended,
   ...turboConfig,
   {
     rules: {
-      'import/consistent-type-specifier-style': ['error', 'prefer-inline'],
-      'import/first': 'error',
-      'import/newline-after-import': 'error',
-      'import/no-cycle': 'error',
-      'import/no-duplicates': [
+      'import-x/consistent-type-specifier-style': ['error', 'prefer-inline'],
+      'import-x/first': 'error',
+      'import-x/newline-after-import': 'error',
+      'import-x/no-cycle': 'error',
+      'import-x/no-duplicates': [
         'error',
         {
           'prefer-inline': true,
         },
       ],
-      'import/no-self-import': 'error',
-      'import/no-extraneous-dependencies': [
+      'import-x/no-self-import': 'error',
+      'import-x/no-extraneous-dependencies': [
         'error',
         {
           devDependencies: [
@@ -60,6 +60,7 @@ export default [
             '**/e2e/**',
             '**/config-eslint/**',
             '**/vite.config.ts',
+            '**/vite.config.mjs',
             '**/eslint.config.mjs',
             '**/vitest.mjs',
             '**/vitest.config.ts',
@@ -73,7 +74,7 @@ export default [
           includeTypes: false,
         },
       ],
-      'import/order': 'off',
+      'import-x/order': 'off',
       'no-console': 'error',
       'no-multi-spaces': 'error',
       'no-restricted-imports': [
@@ -131,14 +132,9 @@ export default [
       },
     },
     settings: {
-      'import/resolver-next': [
+      'import-x/resolver-next': [
         createTypeScriptImportResolver({
           alwaysTryTypes: true,
-          extensions: ['.js', '.ts', '.mjs', '.mts'],
-
-          // use an array of glob patterns; v4 warns on multiple projects unless opted out
-          noWarnOnMultipleProjects: true,
-          project: ['packages/*/tsconfig.json', 'apps/*/tsconfig.json'],
         }),
       ],
     },

@@ -25,7 +25,6 @@ export default [
     rules: {
       ...reactHooks.configs.recommended.rules,
       ...reactRefresh.configs.recommended.rules,
-      'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
       'react-refresh/only-export-components': ['warn', {allowConstantExport: true}],
     },

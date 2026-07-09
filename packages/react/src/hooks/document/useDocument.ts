@@ -7,9 +7,9 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
 import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
 import {useTrackHookUsage} from '../helpers/useTrackHookUsage'
 // used in an `{@link useDocumentProjection}` and `{@link useQuery}`
-// eslint-disable-next-line import/consistent-type-specifier-style
+// eslint-disable-next-line import-x/consistent-type-specifier-style
 import type {useDocumentProjection} from '../projection/useDocumentProjection'
-// eslint-disable-next-line import/consistent-type-specifier-style
+// eslint-disable-next-line import-x/consistent-type-specifier-style
 import type {useQuery} from '../query/useQuery'
 
 const useDocumentValue = createStateSourceHook({

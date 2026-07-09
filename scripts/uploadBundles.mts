@@ -4,7 +4,6 @@ import {readdir, readFile, stat, writeFile} from 'node:fs/promises'
 import {type SourceMapPayload} from 'node:module'
 import path from 'node:path'
 
-/* eslint-disable import/no-extraneous-dependencies */
 import {Storage, type UploadOptions} from '@google-cloud/storage'
 import {type NormalizedReadResult, readPackageUp} from 'read-package-up'
 

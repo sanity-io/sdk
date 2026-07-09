@@ -4,7 +4,7 @@ import {type SanityDocument} from 'groq'
 import {type ResourceHandle} from '../../config/handles'
 import {useApplyActions} from '../helpers/useApplyActions'
 // this import is used in an `{@link useEditDocument}`
-// eslint-disable-next-line import/consistent-type-specifier-style
+// eslint-disable-next-line import-x/consistent-type-specifier-style
 import type {useEditDocument} from './useEditDocument'
 
 /**
