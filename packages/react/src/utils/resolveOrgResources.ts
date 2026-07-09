@@ -22,37 +22,48 @@ interface OrgResources {
 }
 
 /**
+ * Gets the id of the first resource from a settled request result. The request
+ * is already scoped to a single organization, so the first item is the one we want.
+ */
+function getFirstResourceId(
+  result: PromiseSettledResult<OrgResourcesApiResponse>,
+): string | undefined {
+  if (result.status !== 'fulfilled') return undefined
+  return result.value.data?.[0]?.id
+}
+
+/**
  * Fetches the media library and canvas resources for the given organization.
- * Each resource is fetched independently — a failure for one does not prevent
- * the other from resolving.
+ * Both requests are scoped to `organizationId` so each response contains only
+ * that org's resources. Each resource is fetched independently — a failure for
+ * one does not prevent the other from resolving.
  */
 export async function resolveOrgResources(
   instance: SanityInstance,
   organizationId: string,
 ): Promise<OrgResources> {
   const client = await firstValueFrom(
-    getClientState(instance, {apiVersion: API_VERSION}).observable,
+    getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable,
   )
 
   const [mediaLibrariesResult, canvasesResult] = await Promise.allSettled([
     client.request<OrgResourcesApiResponse>({
-      url: `/media-libraries?organizationId=${encodeURIComponent(organizationId)}`,
+      uri: `/media-libraries`,
+      query: {organizationId},
       tag: 'org-resources.media-libraries',
     }),
     client.request<OrgResourcesApiResponse>({
-      url: `/canvases?organizationId=${encodeURIComponent(organizationId)}`,
+      uri: `/canvases`,
+      query: {organizationId},
       tag: 'org-resources.canvases',
     }),
   ])
 
+  const mediaLibraryId = getFirstResourceId(mediaLibrariesResult)
+  const canvasId = getFirstResourceId(canvasesResult)
+
   return {
-    mediaLibrary:
-      mediaLibrariesResult.status === 'fulfilled' && mediaLibrariesResult.value.data?.[0]?.id
-        ? {mediaLibraryId: mediaLibrariesResult.value.data[0].id}
-        : undefined,
-    canvas:
-      canvasesResult.status === 'fulfilled' && canvasesResult.value.data?.[0]?.id
-        ? {canvasId: canvasesResult.value.data[0].id}
-        : undefined,
+    mediaLibrary: mediaLibraryId ? {mediaLibraryId} : undefined,
+    canvas: canvasId ? {canvasId} : undefined,
   }
 }

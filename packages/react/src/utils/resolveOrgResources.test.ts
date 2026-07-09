@@ -28,13 +28,15 @@ beforeEach(() => {
   mockFirstValueFrom.mockResolvedValue(mockClient as unknown as SanityClient)
 })
 
+const ORG_ID = 'org-1'
+
 describe('resolveOrgResources', () => {
   it('returns both mediaLibrary and canvas when both requests succeed', async () => {
     mockRequest
       .mockResolvedValueOnce({data: [{id: 'ml-123'}]})
       .mockResolvedValueOnce({data: [{id: 'canvas-456'}]})
 
-    const result = await resolveOrgResources(mockInstance, 'org-id')
+    const result = await resolveOrgResources(mockInstance, ORG_ID)
 
     expect(result).toEqual({
       mediaLibrary: {mediaLibraryId: 'ml-123'},
@@ -42,12 +44,27 @@ describe('resolveOrgResources', () => {
     })
   })
 
+  it('scopes both requests to the organization', async () => {
+    mockRequest
+      .mockResolvedValueOnce({data: [{id: 'ml-123'}]})
+      .mockResolvedValueOnce({data: [{id: 'canvas-456'}]})
+
+    await resolveOrgResources(mockInstance, ORG_ID)
+
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.objectContaining({uri: '/media-libraries', query: {organizationId: ORG_ID}}),
+    )
+    expect(mockRequest).toHaveBeenCalledWith(
+      expect.objectContaining({uri: '/canvases', query: {organizationId: ORG_ID}}),
+    )
+  })
+
   it('returns only mediaLibrary when canvas request fails', async () => {
     mockRequest
       .mockResolvedValueOnce({data: [{id: 'ml-123'}]})
       .mockRejectedValueOnce(new Error('canvas not found'))
 
-    const result = await resolveOrgResources(mockInstance, 'org-id')
+    const result = await resolveOrgResources(mockInstance, ORG_ID)
 
     expect(result).toEqual({
       mediaLibrary: {mediaLibraryId: 'ml-123'},
@@ -60,7 +77,7 @@ describe('resolveOrgResources', () => {
       .mockRejectedValueOnce(new Error('media library not found'))
       .mockResolvedValueOnce({data: [{id: 'canvas-456'}]})
 
-    const result = await resolveOrgResources(mockInstance, 'org-id')
+    const result = await resolveOrgResources(mockInstance, ORG_ID)
 
     expect(result).toEqual({
       mediaLibrary: undefined,
@@ -73,7 +90,7 @@ describe('resolveOrgResources', () => {
       .mockRejectedValueOnce(new Error('error 1'))
       .mockRejectedValueOnce(new Error('error 2'))
 
-    const result = await resolveOrgResources(mockInstance, 'org-id')
+    const result = await resolveOrgResources(mockInstance, ORG_ID)
 
     expect(result).toEqual({
       mediaLibrary: undefined,
@@ -84,7 +101,7 @@ describe('resolveOrgResources', () => {
   it('returns undefined for both when data arrays are empty', async () => {
     mockRequest.mockResolvedValueOnce({data: []}).mockResolvedValueOnce({data: []})
 
-    const result = await resolveOrgResources(mockInstance, 'org-id')
+    const result = await resolveOrgResources(mockInstance, ORG_ID)
 
     expect(result).toEqual({
       mediaLibrary: undefined,

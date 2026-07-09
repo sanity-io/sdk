@@ -16,20 +16,15 @@ type OrgResourcePromises = Map<OrgResource, PromiseLike<DocumentResource | undef
 // across Suspense unmount/remount cycles. React's use() tracks promises by
 // identity, so stable references prevent unnecessary re-suspensions.
 // WeakMap entries are GC'd when the instance is disposed.
-// There is only one org available at a time, so we don't need to key by organizationId.
-const inferredResourceCache = new WeakMap<SanityInstance, Map<string, OrgResourcePromises>>()
+// There is only ever one org at a time, so the instance alone is a sufficient
+// key — organizationId only scopes the fetch, it doesn't need to key the cache.
+const inferredResourceCache = new WeakMap<SanityInstance, OrgResourcePromises>()
 
 function getOrgResourcePromises(
   instance: SanityInstance,
   organizationId: string,
 ): OrgResourcePromises {
-  let orgCache = inferredResourceCache.get(instance)
-  if (!orgCache) {
-    orgCache = new Map()
-    inferredResourceCache.set(instance, orgCache)
-  }
-
-  let promises = orgCache.get(organizationId)
+  let promises = inferredResourceCache.get(instance)
   if (!promises) {
     const basePromise = resolveOrgResources(instance, organizationId).then(
       (result) => result,
@@ -43,7 +38,7 @@ function getOrgResourcePromises(
       [DEFAULT_MEDIA_LIBRARY_RESOURCE_NAME, basePromise.then((r) => r.mediaLibrary)],
       [DEFAULT_CANVAS_RESOURCE_NAME, basePromise.then((r) => r.canvas)],
     ])
-    orgCache.set(organizationId, promises)
+    inferredResourceCache.set(instance, promises)
   }
 
   return promises

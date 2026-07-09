@@ -7,7 +7,7 @@ import {type JSX, Suspense} from 'react'
 import {BrowserRouter, useNavigate} from 'react-router'
 
 import {AppRoutes} from './AppRoutes'
-import {devConfigs, devResources, e2eConfigs, isE2E} from './sanityConfigs'
+import {devConfigs, e2eConfigs, e2eResources, isE2E} from './sanityConfigs'
 
 // Enable SDK logging in the browser. The wildcard picks up new namespaces
 // automatically as logging is added to more modules.
@@ -33,7 +33,8 @@ export default function App(): JSX.Element {
       <SanityApp
         fallback={<Spinner />}
         config={isE2E ? e2eConfigs : devConfigs}
-        resources={devResources}
+        resources={isE2E ? e2eResources : {}}
+        inferMediaLibraryAndCanvas
       >
         <BrowserRouter>
           <Suspense>

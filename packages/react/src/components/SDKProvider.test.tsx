@@ -23,8 +23,16 @@ vi.mock('../utils/resolveOrgResources', () => ({
 }))
 
 vi.mock('../context/ResourceProvider', () => ({
-  ResourceProvider: ({children, resource}: {children: React.ReactNode; resource?: unknown}) => (
-    <div data-testid="resource-provider" data-resource={JSON.stringify(resource ?? null)}>
+  ResourceProvider: ({
+    children,
+    projectId,
+    dataset,
+  }: {
+    children: React.ReactNode
+    projectId?: string
+    dataset?: string
+  }) => (
+    <div data-testid="resource-provider" data-config={JSON.stringify({projectId, dataset})}>
       {children}
     </div>
   ),

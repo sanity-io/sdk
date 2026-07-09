@@ -19,9 +19,11 @@ function promiseWithResolvers<T>(): {
   return {promise, resolve}
 }
 
-const instance = createSanityInstance()
+// Reset to a fresh instance per test so the module-level WeakMap cache (keyed by
+// instance) starts empty. `useSanityInstance` returns the same object across
+// renders within a test, which is what the cache relies on.
+let instance = createSanityInstance()
 
-// Returns the same object on every call so the module-level WeakMap cache works across renders.
 vi.mock('../hooks/context/useSanityInstance', () => {
   return {useSanityInstance: () => instance}
 })
@@ -40,6 +42,7 @@ const mockUseDashboardOrganizationId = vi.mocked(useDashboardOrganizationId)
 describe('OrganizationResourcesProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    instance = createSanityInstance()
     mockResolveOrgResources.mockResolvedValue({})
     mockUseDashboardOrganizationId.mockReturnValue(undefined)
   })
@@ -88,8 +91,7 @@ describe('OrganizationResourcesProvider', () => {
   })
 
   it('suspends children while org resources are being fetched, then renders with resolved resources', async () => {
-    const testOrgId = 'org-suspend-test'
-    mockUseDashboardOrganizationId.mockReturnValue(testOrgId)
+    mockUseDashboardOrganizationId.mockReturnValue('org-suspend-test')
     const {promise, resolve} = promiseWithResolvers<void>()
     mockResolveOrgResources.mockReturnValue(
       promise.then(() => ({
@@ -113,8 +115,7 @@ describe('OrganizationResourcesProvider', () => {
   })
 
   it('renders without inferred entries and logs a warning when resolveOrgResources rejects', async () => {
-    const testOrgId = 'org-warn-test'
-    mockUseDashboardOrganizationId.mockReturnValue(testOrgId)
+    mockUseDashboardOrganizationId.mockReturnValue('org-warn-test')
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     mockResolveOrgResources.mockRejectedValue(new Error('fetch failed'))
 
@@ -133,10 +134,8 @@ describe('OrganizationResourcesProvider', () => {
     consoleSpy.mockRestore()
   })
 
-  it('caches Promise references for the same organizationId', () => {
-    const testOrgId = 'org-cache-unique'
-    mockUseDashboardOrganizationId.mockReturnValue(testOrgId)
-
+  it('caches Promise references across providers for the same instance', () => {
+    mockUseDashboardOrganizationId.mockReturnValue('org-cache-test')
     render(
       <Suspense fallback={null}>
         <OrganizationResourcesProvider inferMediaLibraryAndCanvas>
@@ -169,8 +168,7 @@ describe('OrganizationResourcesProvider', () => {
   })
 
   it('explicit resources take precedence over inferred ones', async () => {
-    const testOrgId = 'org-override-test'
-    mockUseDashboardOrganizationId.mockReturnValue(testOrgId)
+    mockUseDashboardOrganizationId.mockReturnValue('org-override-test')
     mockResolveOrgResources.mockResolvedValue({
       mediaLibrary: {mediaLibraryId: 'inferred-ml'},
       canvas: {canvasId: 'inferred-canvas'},

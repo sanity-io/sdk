@@ -4,6 +4,11 @@ import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
 // auto-exposed on import.meta.env by the App SDK's Vite config (SANITY_APP_ prefix).
 export const isE2E = !!import.meta.env['SANITY_APP_E2E_MODE']
 
+// True when the app is the top-level window rather than embedded in the Dashboard
+// iframe. Webkit/Safari runs the e2e suite standalone (it can't execute scripts in
+// the Dashboard's sandboxed iframe), while chromium/firefox run inside the Dashboard.
+const isStandalone = window.self === window.top
+
 export const devConfigs: SanityConfig[] = [
   {
     projectId: 'ppsg7ml5',
@@ -14,15 +19,6 @@ export const devConfigs: SanityConfig[] = [
     dataset: 'production',
   },
 ]
-
-export const devResources: Record<string, DocumentResource> = {
-  'media-library': {
-    mediaLibraryId: isE2E ? import.meta.env['SANITY_APP_E2E_MEDIA_LIBRARY_ID'] : 'mlPGY7BEqt52',
-  },
-  'canvas': {
-    canvasId: isE2E ? import.meta.env['SANITY_APP_E2E_CANVAS_ID'] : 'cag5gSK37IGV',
-  },
-}
 
 export const e2eConfigs: SanityConfig[] = [
   {
@@ -40,3 +36,13 @@ export const e2eConfigs: SanityConfig[] = [
     },
   },
 ]
+
+export const e2eResources: Record<string, DocumentResource> = {
+  // Standalone runs (webkit/Safari) have no Dashboard org context, so `inferMediaLibraryAndCanvas`
+  // can't resolve anything — provide the media library and canvas resources explicitly.
+  // Otherewise, omit these so we can ensure that inferMediaLibraryAndCanvas is e2e tested.
+  ...(isStandalone && {
+    'media-library': {mediaLibraryId: import.meta.env['SANITY_APP_E2E_MEDIA_LIBRARY_ID']},
+    'canvas': {canvasId: import.meta.env['SANITY_APP_E2E_CANVAS_ID']},
+  }),
+}
