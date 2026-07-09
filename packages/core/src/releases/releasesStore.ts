@@ -9,7 +9,7 @@ import {type DocumentResource} from '../config/sanityConfig'
  * 3. getPerspectiveState uses releasesStore as a data source
  * 4. however, queryStore does not use getPerspectiveState for the perspective used in releasesStore ("raw")
  */
-// eslint-disable-next-line import/no-cycle
+// eslint-disable-next-line import-x/no-cycle
 import {getQueryState} from '../query/queryStore'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'

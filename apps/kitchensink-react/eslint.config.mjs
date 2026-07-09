@@ -5,19 +5,6 @@ import reactConfig from '@repo/config-eslint/react'
 export default [
   {
     ignores: [
-      '.DS_Store',
-      '**/node_modules',
-      '**/build',
-      '**/dist',
-      '.env',
-      '.env.*',
-      '!.env.example',
-
-      // Ignore files for PNPM, NPM and YARN
-      'pnpm-lock.yaml',
-      'package-lock.json',
-      'yarn.lock',
-
       // Ignore files for Sanity TypeGen
       'sanity.types.ts',
 
@@ -28,23 +15,18 @@ export default [
   ...baseESLintConfig,
   ...reactConfig,
   {
-    // Node tooling scripts (e.g. typegen) legitimately use console output and
-    // import dev-only build dependencies.
+    // Node tooling scripts (e.g. typegen) legitimately use console output.
     files: ['scripts/**'],
     rules: {
       'no-console': 'off',
-      'import/no-extraneous-dependencies': [
-        'error',
-        {devDependencies: true, optionalDependencies: false, includeTypes: false},
-      ],
     },
   },
   {
-    // Sanity config files import the `sanity` package and Vite, which are
-    // build-time devDependencies for this App SDK app.
-    files: ['sanity.config.ts', 'sanity.cli.ts'],
+    // Tooling scripts and Sanity config files import the `sanity` package and
+    // Vite, which are build-time devDependencies for this App SDK app.
+    files: ['scripts/**', 'sanity.config.ts', 'sanity.cli.ts'],
     rules: {
-      'import/no-extraneous-dependencies': [
+      'import-x/no-extraneous-dependencies': [
         'error',
         {devDependencies: true, optionalDependencies: false, includeTypes: false},
       ],

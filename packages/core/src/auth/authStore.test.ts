@@ -62,7 +62,7 @@ vi.mock('../utils/logger', async (importOriginal) => {
 })
 
 // Import createLogger after mocking
-// eslint-disable-next-line import/first
+// eslint-disable-next-line import-x/first
 import {createLogger} from '../utils/logger'
 
 describe('authStore', () => {

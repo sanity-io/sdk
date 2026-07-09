@@ -10,7 +10,7 @@ import {createStateSourceAction, type SelectorContext} from '../store/createStat
  * 3. queryStore calls getPerspectiveState for computing release perspectives
  * 4. however, queryStore does not use getPerspectiveState for the perspective used in releasesStore ("raw")
  */
-// eslint-disable-next-line import/no-cycle
+// eslint-disable-next-line import-x/no-cycle
 import {releasesStore, type ReleasesStoreState} from './releasesStore'
 import {isReleasePerspective} from './utils/isReleasePerspective'
 import {sortReleases} from './utils/sortReleases'

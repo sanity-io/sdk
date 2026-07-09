@@ -33,7 +33,7 @@ import {type DatasetHandle} from '../config/sanityConfig'
  * 3. releasesStore uses queryStore as a data source
  * 4. however, queryStore does not use getPerspectiveState for the perspective used in releasesStore ("raw")
  */
-// eslint-disable-next-line import/no-cycle
+// eslint-disable-next-line import-x/no-cycle
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
