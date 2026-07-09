@@ -60,7 +60,10 @@ export const releasesStore = defineStore<ReleasesStoreState, BoundResourceKey>({
 const _getActiveReleasesState = bindActionByResource(
   releasesStore,
   createStateSourceAction({
-    selector: ({state}, _?) => state.activeReleases,
+    selector: ({state}) => {
+      if (state.error) throw state.error
+      return state.activeReleases
+    },
   }),
 )
 
@@ -82,7 +85,10 @@ export const getActiveReleasesState = (
 const _getAllReleasesState = bindActionByResource(
   releasesStore,
   createStateSourceAction({
-    selector: ({state}, _?) => state.allReleases,
+    selector: ({state}) => {
+      if (state.error) throw state.error
+      return state.allReleases
+    },
   }),
 )
 
@@ -108,19 +114,22 @@ const subscribeToReleases = ({
     resource,
     tag: 'releases',
   })
-  return releases$
-    .pipe(
-      map((releases) => {
-        // logic here mirrors that of studio:
-        // https://github.com/sanity-io/sanity/blob/156e8fa482703d99219f08da7bacb384517f1513/packages/sanity/src/core/releases/store/useActiveReleases.ts#L29
-        const sorted = sortReleases(releases ?? STABLE_EMPTY_RELEASES).reverse()
-        state.set('setReleases', {
-          allReleases: sorted,
-          activeReleases: sorted.filter(
-            (release) => !ARCHIVED_RELEASE_STATES.includes(release.state),
-          ),
-        })
-      }),
-    )
-    .subscribe({error: (error) => state.set('setError', {error})})
+  return (
+    releases$
+      .pipe(
+        map((releases) => {
+          // logic here mirrors that of studio:
+          // https://github.com/sanity-io/sanity/blob/156e8fa482703d99219f08da7bacb384517f1513/packages/sanity/src/core/releases/store/useActiveReleases.ts#L29
+          const sorted = sortReleases(releases ?? STABLE_EMPTY_RELEASES).reverse()
+          state.set('setReleases', {
+            allReleases: sorted,
+            activeReleases: sorted.filter(
+              (release) => !ARCHIVED_RELEASE_STATES.includes(release.state),
+            ),
+          })
+        }),
+      )
+      // the query is retried by the queryStore, so we don't need to retry here
+      .subscribe({error: (error) => state.set('setError', {error})})
+  )
 }

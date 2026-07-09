@@ -333,4 +333,40 @@ describe('sortReleases()', () => {
       expect(sorted[idx]['_id']).toContain(expectedName)
     })
   })
+
+  it('should not throw when a release has no metadata', () => {
+    // Releases created without a title/type can come back from the API with no
+    // `metadata` object at all. Sorting must not throw on these, otherwise the
+    // whole releases subscription errors and the list comes back empty.
+    const releaseWithoutMetadata = {
+      _id: '_.releases.rnometa',
+      _rev: 'rev',
+      _type: 'system.release',
+      _createdAt: '2024-10-24T00:00:00Z',
+      _updatedAt: '2024-10-24T00:00:00Z',
+      state: 'active',
+      name: 'rnometa',
+    } as unknown as ReleaseDocument
+
+    const releases: ReleaseDocument[] = [
+      createReleaseMock({
+        _id: '_.releases.rasap1',
+        _createdAt: '2024-10-25T00:00:00Z',
+        metadata: {releaseType: 'asap'},
+      }),
+      releaseWithoutMetadata,
+      createReleaseMock({
+        _id: '_.releases.rundecided1',
+        _createdAt: '2024-10-26T00:00:00Z',
+        metadata: {releaseType: 'undecided'},
+      }),
+    ]
+
+    let sorted: ReleaseDocument[] = []
+    expect(() => {
+      sorted = sortReleases(releases)
+    }).not.toThrow()
+    expect(sorted).toHaveLength(3)
+    expect(sorted.map((r) => r._id)).toContain('_.releases.rnometa')
+  })
 })
