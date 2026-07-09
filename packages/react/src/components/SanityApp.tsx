@@ -23,6 +23,35 @@ export interface SanityAppProps {
   children: React.ReactNode
   /* Fallback content to show when child components are suspending. Same as the `fallback` prop for React Suspense. */
   fallback: React.ReactNode
+  /**
+   * Set this to automatically fetch and register the organization's media library and canvas as named resources.
+   * These resources will be available to hooks as `media-library` and `canvas`.
+   *
+   * The SDK App must be running in the organization's Dashboard to use this feature.
+   *
+   * @example
+   * ```tsx
+   *
+   * const MyApp = () => {
+   *   // should "just work" because of inferMediaLibraryAndCanvas.
+   *   const {data: assets} = useDocuments({
+   *     documentType: 'sanity.asset',
+   *     resourceName: 'media-library',
+   *   })
+   *   return (
+   *     <div>
+   *       {assets.map((asset) => (
+   *         <div key={asset._id}>{asset.originalFilename}</div>
+   *       ))}
+   *     </div>
+   *   )
+   * }
+   * <SanityApp inferMediaLibraryAndCanvas>
+   *   <MyApp />
+   * </SanityApp>
+   * ```
+   */
+  inferMediaLibraryAndCanvas?: boolean
 }
 
 const REDIRECT_URL = 'https://sanity.io/welcome'
