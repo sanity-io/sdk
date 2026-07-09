@@ -108,6 +108,9 @@ test.describe('Releases Route', () => {
     const previewCard = pageContext.getByTestId('document-preview-card')
     await previewCard.scrollIntoViewIfNeeded()
 
+    const dataCard = pageContext.getByTestId('document-data-card')
+    await dataCard.scrollIntoViewIfNeeded()
+
     // Verify the projection also shows the release version
     await expect(async () => {
       const projectionContent = await projectionCard.textContent()
@@ -118,6 +121,12 @@ test.describe('Releases Route', () => {
     await expect(async () => {
       const previewContent = await previewCard.textContent()
       expect(previewContent).toContain('"title": "Release Test Author"')
+    }).toPass({timeout: 15000})
+
+    // Verify useDocument (the document-data-card) also resolves the release version
+    await expect(async () => {
+      const dataContent = await dataCard.textContent()
+      expect(dataContent).toContain('"name": "Release Test Author"')
     }).toPass({timeout: 15000})
 
     await client.action([
@@ -160,6 +169,13 @@ test.describe('Releases Route', () => {
     await expect(async () => {
       const previewContent = await previewCard.textContent()
       expect(previewContent).toContain('"title": "Updated Release Test Author"')
+    }).toPass({timeout: 20000, intervals: [2000, 3000, 5000]})
+
+    // Verify useDocument live-updates the version document under a release
+    // perspective when it is edited elsewhere
+    await expect(async () => {
+      const dataContent = await dataCard.textContent()
+      expect(dataContent).toContain('"name": "Updated Release Test Author"')
     }).toPass({timeout: 20000, intervals: [2000, 3000, 5000]})
   })
 })

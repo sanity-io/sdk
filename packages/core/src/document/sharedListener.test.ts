@@ -51,6 +51,7 @@ describe('createSharedListener', () => {
       {
         events: ['mutation', 'welcome', 'reconnect'],
         includeResult: false,
+        includeAllVersions: true,
         tag: 'document-listener',
       },
     )

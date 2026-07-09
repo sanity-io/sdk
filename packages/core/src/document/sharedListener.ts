@@ -43,6 +43,8 @@ export function createSharedListener(
         {
           events: ['mutation', 'welcome', 'reconnect'],
           includeResult: false,
+          // the document store handles version documents, so we need to include all versions
+          includeAllVersions: true,
           tag: 'document-listener',
           // // from manual testing, it seems like mendoza patches may be
           // // causing some ambiguity/wonkiness
