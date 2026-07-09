@@ -2,19 +2,11 @@ import {type ReleaseDocument} from '@sanity/client'
 import {map} from 'rxjs'
 
 import {type DocumentResource} from '../config/sanityConfig'
-/*
- * Although this is an import dependency cycle, it is not a logical cycle:
- * 1. releasesStore uses queryStore as a data source
- * 2. queryStore calls getPerspectiveState for computing release perspectives
- * 3. getPerspectiveState uses releasesStore as a data source
- * 4. however, queryStore does not use getPerspectiveState for the perspective used in releasesStore ("raw")
- */
-// eslint-disable-next-line import-x/no-cycle
-import {getQueryState} from '../query/queryStore'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {createStateSourceAction, type StateSource} from '../store/createStateSourceAction'
 import {defineStore, type StoreContext} from '../store/defineStore'
+import {observeReleases} from './observeReleases'
 import {sortReleases} from './utils/sortReleases'
 
 const ARCHIVED_RELEASE_STATES = ['archived', 'published']
@@ -101,18 +93,16 @@ export const getAllReleasesState = (
   options?: {resource?: DocumentResource},
 ): StateSource<ReleaseDocument[] | undefined> => _getAllReleasesState(instance, options ?? {})
 
-const RELEASES_QUERY = 'releases::all()'
-
 const subscribeToReleases = ({
   instance,
   state,
   key: {resource},
 }: StoreContext<ReleasesStoreState, BoundResourceKey>) => {
-  const {observable: releases$} = getQueryState<ReleaseDocument[]>(instance, {
-    query: RELEASES_QUERY,
-    perspective: 'raw',
+  const releases$ = observeReleases(instance, {
     resource,
-    tag: 'releases',
+    // Surface CORS errors as store state instead of erroring the stream so
+    // they can be handled by the Cors Error component
+    onCorsError: (error) => state.set('setError', {error}),
   })
   return (
     releases$
@@ -129,7 +119,8 @@ const subscribeToReleases = ({
           })
         }),
       )
-      // the query is retried by the queryStore, so we don't need to retry here
+      // live-connection errors are already retried inside observeLiveEvents;
+      // a fetch error is terminal and surfaced via setError
       .subscribe({error: (error) => state.set('setError', {error})})
   )
 }

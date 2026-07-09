@@ -1,14 +1,8 @@
-import {
-  ConnectionFailedError,
-  CorsOriginError,
-  DisconnectError,
-  type ResponseQueryOptions,
-} from '@sanity/client'
+import {type ResponseQueryOptions} from '@sanity/client'
 import {type SanityQueryResult} from 'groq'
 import {
   catchError,
   combineLatest,
-  defer,
   distinctUntilChanged,
   EMPTY,
   filter,
@@ -22,7 +16,6 @@ import {
   of,
   pairwise,
   race,
-  retry,
   share,
   startWith,
   switchMap,
@@ -30,15 +23,8 @@ import {
 } from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
+import {observeLiveEvents} from '../client/liveEvents'
 import {type DatasetHandle} from '../config/sanityConfig'
-/*
- * Although this is an import dependency cycle, it is not a logical cycle:
- * 1. queryStore uses getPerspectiveState when resolving release perspectives
- * 2. getPerspectiveState uses releasesStore as a data source
- * 3. releasesStore uses queryStore as a data source
- * 4. however, queryStore does not use getPerspectiveState for the perspective used in releasesStore ("raw")
- */
-// eslint-disable-next-line import-x/no-cycle
 import {getPerspectiveState} from '../releases/getPerspectiveState'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
@@ -53,7 +39,6 @@ import {defineStore, type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {
-  LIVE_EVENTS_RETRY_DELAY,
   QUERY_STATE_CLEAR_DELAY,
   QUERY_STORE_API_VERSION,
   QUERY_STORE_DEFAULT_PERSPECTIVE,
@@ -237,52 +222,14 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
   instance,
   key: {resource},
 }: StoreContext<QueryStoreState, BoundResourceKey>) => {
-  const liveMessages$ = getClientState(instance, {
-    apiVersion: QUERY_STORE_API_VERSION,
+  const liveMessages$ = observeLiveEvents(instance, {
     resource,
-  }).observable.pipe(
-    switchMap((client) =>
-      defer(() =>
-        client.live.events({includeDrafts: !!client.config().token, tag: 'query-store'}),
-      ).pipe(
-        catchError((error) => {
-          if (error instanceof CorsOriginError) {
-            // Swallow only CORS errors in store without bubbling up so that they are handled by the Cors Error component
-            state.set('setError', {error})
-            return EMPTY
-          }
-          if (error instanceof DisconnectError) {
-            // The server explicitly told this client to stop reconnecting —
-            // end live updates without erroring the store (queries keep
-            // serving, they just stop receiving live invalidation)
-            return EMPTY
-          }
-          if (
-            error instanceof ConnectionFailedError &&
-            typeof error.status === 'number' &&
-            error.status >= 400 &&
-            error.status < 500
-          ) {
-            // The server rejected the connection with a 4xx (e.g. a 401 from
-            // an expired token) — it will keep rejecting, so retrying would
-            // reconnect once per second forever. End live updates like a
-            // DisconnectError. A ConnectionFailedError without a status stays
-            // retryable: it may be a transient network failure.
-            return EMPTY
-          }
-          throw error
-        }),
-        // Server-initiated live errors (e.g. ChannelError, MessageError) are
-        // retried, not surfaced: an error here would reach the outer
-        // subscription's errorHandler, set the store-wide `state.error`, and
-        // permanently brick every query selector (nothing ever clears it).
-        // Dropped connections are already reconnected inside @sanity/client.
-        retry({delay: LIVE_EVENTS_RETRY_DELAY}),
-      ),
-    ),
-    share(),
-    filter((e) => e.type === 'message'),
-  )
+    // Surface CORS errors as store state (handled by the Cors Error
+    // component) instead of erroring the stream: a stream error here would
+    // reach the outer subscription's errorHandler, set the store-wide
+    // `state.error`, and permanently brick every query selector.
+    onCorsError: (error) => state.set('setError', {error}),
+  }).pipe(share())
 
   return state.observable
     .pipe(
