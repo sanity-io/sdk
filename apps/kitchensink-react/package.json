@@ -8,6 +8,7 @@
     "clean": "rimraf dist",
     "deploy": "sanity deploy",
     "dev": "sanity dev",
+    "dev:e2e": "sanity dev",
     "install": "npm run schema:extract && npm run types:generate",
     "lint": "eslint .",
     "paramour": "npx paramour --config=./src/css/css.config.js --output=./src/css/paramour.css",
