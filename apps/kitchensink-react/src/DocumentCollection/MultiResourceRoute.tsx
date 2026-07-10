@@ -1,10 +1,12 @@
 import {
+  DatasetResource,
   type DocumentHandle,
   useDocument,
   useDocumentPreview,
   useDocumentProjection,
   useDocuments,
   useEditDocument,
+  useResource,
 } from '@sanity/sdk-react'
 import {Box, TextInput} from '@sanity/ui'
 import {defineProjection} from 'groq'
@@ -15,7 +17,7 @@ import {
   type MultiResourceAuthorProjectionProjectionResult,
   MultiResourceMovieProjectionProjectionResult,
 } from '../../sanity.types'
-import {devConfigs, e2eConfigs, isE2E} from '../sanityConfigs'
+import {devResources, e2eResources, isE2E} from '../sanityConfigs'
 
 function LoadingFallback({message = 'Loading...'}: {message?: string}) {
   return (
@@ -338,24 +340,21 @@ function MoviePreview({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
 }
 
 export function MultiResourceRoute(): JSX.Element {
-  const configs = isE2E ? e2eConfigs : devConfigs
   const [searchParams] = useSearchParams()
   const authorIdParam = searchParams.get('authorId')
   const movieIdParam = searchParams.get('movieId')
+  const defaultResource = useResource()
 
   const {data: authorDocuments} = useDocuments({
     documentType: 'author',
     batchSize: 1,
-    projectId: configs[0].projectId,
-    dataset: configs[0].dataset,
     ...(authorIdParam ? {filter: '_id == $authorId', params: {authorId: authorIdParam}} : {}),
   })
 
   const {data: movieDocuments} = useDocuments({
     documentType: 'movie',
     batchSize: 1,
-    projectId: configs[1].projectId,
-    dataset: configs[1].dataset,
+    resourceName: 'secondary',
     ...(movieIdParam ? {filter: '_id == $movieId', params: {movieId: movieIdParam}} : {}),
   })
 
@@ -370,13 +369,19 @@ export function MultiResourceRoute(): JSX.Element {
     return <Box padding={4}>Loading...</Box>
   }
 
+  // remove when we add the ability to use `useResource` with a `resourceName` param
+  const secondaryResource = isE2E ? e2eResources['secondary'] : devResources['secondary']
+
   return (
     <div>
       <p style={{marginBottom: '2rem'}}>
         This route demonstrates how to use multiple resources in a single page.
         <br />
-        Note you must have access to both resources ({configs[0].projectId}.{configs[0].dataset} and{' '}
-        {configs[1].projectId}.{configs[1].dataset}) to see the documents.
+        Note you must have access to both resources (
+        {(defaultResource as DatasetResource).projectId}.
+        {(defaultResource as DatasetResource).dataset} and{' '}
+        {(secondaryResource as DatasetResource).projectId}.
+        {(secondaryResource as DatasetResource).dataset}) to see the documents.
       </p>
 
       <h2 style={{marginBottom: '1rem'}}>Document Editors</h2>

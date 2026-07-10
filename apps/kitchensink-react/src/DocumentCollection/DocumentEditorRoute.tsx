@@ -6,13 +6,13 @@ import {
   useDocumentEvent,
   useDocuments,
   useDocumentSyncStatus,
+  useResource,
 } from '@sanity/sdk-react'
 import {Badge, Box, Button, Card, Checkbox, Flex, Label, Stack, Text, TextInput} from '@sanity/ui'
 import {type JSX, useMemo, useState} from 'react'
 
 import {DocumentEditorPanel} from '../components/DocumentEditorPanel'
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
-import {devConfigs, e2eConfigs, isE2E} from '../sanityConfigs'
 
 const AUTHOR_INITIAL_VALUES = {
   name: 'New Author',
@@ -109,7 +109,7 @@ function Editor() {
   const [documentId, setDocumentId] = useState<string | null>(documents[0]?.documentId ?? null)
   const [newDocumentId, setNewDocumentId] = useState<string>('')
   const [liveEditMode, setLiveEditMode] = useState<boolean>(false)
-  const {projectId, dataset} = isE2E ? e2eConfigs[0] : devConfigs[0]
+  const resource = useResource()
 
   const docHandle = useMemo<DocumentHandle<'author'> | null>(
     () =>
@@ -117,12 +117,11 @@ function Editor() {
         ? createDocumentHandle({
             documentType: 'author',
             documentId,
-            projectId,
-            dataset,
+            resource,
             liveEdit: liveEditMode,
           })
         : null,
-    [documentId, projectId, dataset, liveEditMode],
+    [documentId, resource, liveEditMode],
   )
 
   const handleLoadDocument = () => {
