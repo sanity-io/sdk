@@ -58,4 +58,33 @@ test.describe('Document List', () => {
       }).toPass({timeout: 10000})
     }
   })
+
+  test('progressively loads more documents as the sentinel scrolls into view', async ({
+    page,
+    createDocuments,
+    getPageContext,
+  }) => {
+    // `useDocuments` loads in batches of 25, so 30 documents guarantees a
+    // second batch that only arrives once the LoadMore sentinel is visible.
+    await createDocuments(
+      Array.from({length: 30}, (_, i) => ({
+        _type: 'author',
+        name: `LoadMore Author ${i}`,
+      })),
+      {asDraft: false},
+    )
+
+    await page.goto('./document-list')
+    const pageContext = await getPageContext(page)
+
+    const previews = pageContext.locator('[data-testid^="document-preview-"]')
+
+    // First batch renders (25 items) before any scrolling.
+    await expect.poll(() => previews.count(), {timeout: 15000}).toBeGreaterThanOrEqual(25)
+    const initialCount = await previews.count()
+
+    // Scrolling the sentinel into view triggers the next batch.
+    await pageContext.getByTestId('load-more').scrollIntoViewIfNeeded()
+    await expect.poll(() => previews.count(), {timeout: 15000}).toBeGreaterThan(initialCount)
+  })
 })

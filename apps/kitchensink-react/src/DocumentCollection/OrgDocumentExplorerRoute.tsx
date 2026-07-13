@@ -2,10 +2,7 @@ import {
   DocumentHandle,
   ResourceProvider,
   useDatasets,
-  useDocument,
   useDocumentPreview,
-  useDocumentSyncStatus,
-  useEditDocument,
   usePaginatedDocuments,
   useProject,
   useProjects,
@@ -27,15 +24,18 @@ import {
   Spinner,
   Stack,
   Text,
-  TextInput,
 } from '@sanity/ui'
 import {defineQuery} from 'groq'
-import {type JsonData, JsonEditor} from 'json-edit-react'
 import {JSX, startTransition, Suspense, useCallback, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 
+import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
+import {LoadMore} from '../components/LoadMore'
+import {PaginatedListToolbar} from '../components/PaginatedListToolbar'
+import {PaginationControls} from '../components/PaginationControls'
 // Import the custom table components
 import {Table, TD, TH, TR} from '../components/TableElements'
+import {UserListItem} from '../components/UserListItem'
 
 interface DocumentEditorDialogProps {
   documentId: string
@@ -51,60 +51,22 @@ function DocumentEditorDialog({
   open,
 }: DocumentEditorDialogProps) {
   const handle = {documentId, documentType}
-  const {data: document} = useDocument(handle)
-  const editDocument = useEditDocument(handle)
-  const isSaving = useDocumentSyncStatus(handle)
-
-  const editorStyles = {
-    container: {
-      height: '100%',
-      border: '1px solid #e2e2e2',
-      borderRadius: '4px',
-      padding: '8px',
-      backgroundColor: '#fafafa',
-    },
-  }
 
   return (
-    <>
-      <Dialog
-        header={`Editing ${documentType}: ${documentId}`}
-        id="document-editor-dialog"
-        onClose={onClose}
-        open={open}
-        width={2}
-      >
-        <ErrorBoundary
-          fallback={
-            <Box padding={4}>
-              <Card tone="critical" padding={4}>
-                <Text>Error loading document editor. Please try again.</Text>
-              </Card>
-            </Box>
-          }
-        >
-          <Stack space={4} padding={4}>
-            <Box style={{height: '70vh', overflow: 'auto'}}>
-              {document && (
-                <div style={editorStyles.container}>
-                  <JsonEditor data={document} setData={editDocument as (data: JsonData) => void} />
-                </div>
-              )}
-            </Box>
-            <Flex justify="flex-end" gap={2}>
-              <Button mode="ghost" text="Cancel" onClick={onClose} disabled={isSaving} />
-              <Button
-                tone="primary"
-                text={isSaving ? 'Syncing...' : 'Close'}
-                onClick={onClose}
-                disabled={isSaving}
-                loading={isSaving}
-              />
-            </Flex>
-          </Stack>
-        </ErrorBoundary>
-      </Dialog>
-    </>
+    <Dialog
+      header={`Editing ${documentType}: ${documentId}`}
+      id="document-editor-dialog"
+      onClose={onClose}
+      open={open}
+      width={2}
+    >
+      <Stack space={4} padding={4}>
+        <JsonDocumentEditor documentHandle={handle} wrapInCard={false} maxHeight="70vh" />
+        <Flex justify="flex-end">
+          <Button tone="primary" text="Close" onClick={onClose} />
+        </Flex>
+      </Stack>
+    </Dialog>
   )
 }
 
@@ -119,7 +81,7 @@ function DocumentTableRow(doc: DocumentHandle) {
 
   return (
     <>
-      <TR ref={ref}>
+      <TR ref={ref} data-testid={`org-document-row-${doc.documentId}`}>
         <TD padding={3}>{data.title}</TD>
         <TD padding={3}>{data.subtitle || '-'}</TD>
         <TD padding={3}>{doc.documentType}</TD>
@@ -130,6 +92,7 @@ function DocumentTableRow(doc: DocumentHandle) {
             text="View"
             tone="primary"
             mode="ghost"
+            data-testid={`org-document-view-${doc.documentId}`}
             onClick={handleOpenDialog}
           />
         </TD>
@@ -179,111 +142,6 @@ function DocumentRowError({error}: {error: Error}) {
         </Card>
       </TD>
     </TR>
-  )
-}
-
-// Pagination controls component
-interface PaginationControlsProps {
-  currentPage: number
-  totalPages: number
-  hasFirstPage: boolean
-  hasPreviousPage: boolean
-  hasNextPage: boolean
-  hasLastPage: boolean
-  firstPage: () => void
-  previousPage: () => void
-  nextPage: () => void
-  lastPage: () => void
-  goToPage: (pageNumber: number) => void
-  isPending: boolean
-}
-
-function PaginationControls({
-  currentPage,
-  totalPages,
-  hasFirstPage,
-  hasPreviousPage,
-  hasNextPage,
-  hasLastPage,
-  firstPage,
-  previousPage,
-  nextPage,
-  lastPage,
-  goToPage,
-  isPending,
-}: PaginationControlsProps) {
-  const buttonStyle = {
-    minWidth: '40px',
-    margin: '0 4px',
-    textAlign: 'center',
-  } as const
-
-  // Generate page number buttons
-  const pageButtons = () => {
-    const buttons = []
-    const maxVisiblePages = 5
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2))
-    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1)
-
-    if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1)
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      buttons.push(
-        <Button
-          key={i}
-          mode={i === currentPage ? 'default' : 'ghost'}
-          onClick={() => goToPage(i)}
-          style={{
-            ...buttonStyle,
-            fontWeight: i === currentPage ? 'bold' : 'normal',
-          }}
-        >
-          {i}
-        </Button>,
-      )
-    }
-    return buttons
-  }
-
-  return (
-    <Flex align="center" justify="space-between" padding={3}>
-      <Flex>
-        <Button
-          onClick={firstPage}
-          disabled={!hasFirstPage}
-          style={buttonStyle}
-          text="<<"
-          mode="ghost"
-        />
-        <Button
-          onClick={previousPage}
-          disabled={!hasPreviousPage}
-          style={buttonStyle}
-          text="<"
-          mode="ghost"
-        />
-        {pageButtons()}
-        <Button
-          onClick={nextPage}
-          disabled={!hasNextPage}
-          style={buttonStyle}
-          text=">"
-          mode="ghost"
-        />
-        <Button
-          onClick={lastPage}
-          disabled={!hasLastPage}
-          style={buttonStyle}
-          text=">>"
-          mode="ghost"
-        />
-      </Flex>
-      <Text size={1} style={{opacity: isPending ? 0.5 : 1}}>
-        Page {currentPage} of {totalPages}
-      </Text>
-    </Flex>
   )
 }
 
@@ -347,54 +205,17 @@ function DocumentList({documentType}: DocumentListProps) {
       </Heading>
 
       <Stack space={4} marginTop={4}>
-        <Flex justify="space-between" align="center">
-          <Box style={{width: '300px'}}>
-            <Label
-              htmlFor={`search-${documentType}`}
-              size={1}
-              style={{marginBottom: '4px', display: 'block'}}
-            >
-              Search Documents
-            </Label>
-            <TextInput
-              id={`search--${documentType}`}
-              value={searchTerm}
-              onChange={handleSearchChange}
-              placeholder="Search documents..."
-              style={{width: '100%'}}
-            />
-          </Box>
-          <Box>
-            <Label
-              htmlFor={`pageSize-${documentType}`}
-              size={1}
-              style={{marginBottom: '4px', display: 'block'}}
-            >
-              Items per page
-            </Label>
-            <select
-              id={`pageSize-${documentType}`}
-              value={pageSize}
-              onChange={handlePageSizeChange}
-              style={{
-                padding: '8px',
-                borderRadius: '4px',
-                border: '1px solid #ccc',
-              }}
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
-          </Box>
-        </Flex>
-
-        <Box style={{borderRadius: '4px', border: '1px solid #eee', padding: '8px'}}>
-          <Text size={1}>
-            Showing {startIndex + 1}-{Math.min(endIndex, count)} of {count} documents
-          </Text>
-        </Box>
+        <PaginatedListToolbar
+          noun="documents"
+          idSuffix={documentType}
+          searchTerm={searchTerm}
+          onSearchChange={handleSearchChange}
+          pageSize={pageSize}
+          onPageSizeChange={handlePageSizeChange}
+          count={count}
+          startIndex={startIndex}
+          endIndex={endIndex}
+        />
 
         <PaginationControls
           currentPage={currentPage}
@@ -411,7 +232,7 @@ function DocumentList({documentType}: DocumentListProps) {
           isPending={isPending}
         />
 
-        <Table style={{opacity: isPending ? 0.7 : 1}}>
+        <Table style={{opacity: isPending ? 0.7 : 1}} data-testid="org-document-table">
           <thead>
             <TR>
               <TH padding={3}>Title</TH>
@@ -520,6 +341,7 @@ function DocumentTypes() {
         </Label>
         <Select
           id={`doctype-${config.dataset}`}
+          data-testid="org-doctype-select"
           value={selectedType || ''}
           onChange={handleTypeChange}
           style={{width: '100%', marginTop: '8px'}}
@@ -574,6 +396,7 @@ function DatasetExplorer() {
         </Label>
         <Select
           id={`dataset-${config.projectId}`}
+          data-testid="org-dataset-select"
           value={selectedDataset || ''}
           onChange={handleDatasetChange}
           style={{width: '100%', marginTop: '8px'}}
@@ -638,29 +461,10 @@ function UsersDialogContent() {
           ) : (
             <Stack space={2}>
               {data.map((user) => (
-                <Card key={user.profile.id} padding={3} radius={2}>
-                  <Flex align="center" gap={2}>
-                    <Avatar size={1} src={user.profile.imageUrl} />
-                    <Box>
-                      <Text weight="semibold">{user.profile.displayName}</Text>
-                      <Text size={1} muted>
-                        {user.profile.email}
-                      </Text>
-                    </Box>
-                  </Flex>
-                </Card>
+                <UserListItem key={user.profile.id} user={user} />
               ))}
 
-              {hasMore && (
-                <Button
-                  onClick={loadMore}
-                  text={isPending ? 'Loading...' : 'Load more'}
-                  tone="primary"
-                  mode="ghost"
-                  disabled={isPending}
-                  loading={isPending}
-                />
-              )}
+              <LoadMore as="div" isPending={isPending} hasMore={hasMore} onLoadMore={loadMore} />
             </Stack>
           )}
         </>
@@ -763,6 +567,7 @@ function ProjectsExplorer() {
         </Label>
         <Select
           id="project-selector"
+          data-testid="org-project-select"
           value={selectedProject || ''}
           onChange={handleProjectChange}
           style={{width: '100%', marginTop: '8px'}}
