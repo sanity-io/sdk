@@ -34,8 +34,12 @@ export function PaginatedListToolbar({
   idSuffix = '',
 }: PaginatedListToolbarProps): JSX.Element {
   const nounLabel = noun.charAt(0).toUpperCase() + noun.slice(1)
-  const searchId = `search-${idSuffix}`
-  const pageSizeId = `pageSize-${idSuffix}`
+  // Only append a suffix segment when one is provided, so single-toolbar pages
+  // keep stable ids/test ids (`list-page-size`) while multiple toolbars stay
+  // unique (`list-page-size-author`).
+  const suffix = idSuffix ? `-${idSuffix}` : ''
+  const searchId = `search${suffix}`
+  const pageSizeId = `pageSize${suffix}`
 
   return (
     <>
@@ -46,6 +50,7 @@ export function PaginatedListToolbar({
           </Label>
           <TextInput
             id={searchId}
+            data-testid={`list-search-input${suffix}`}
             value={searchTerm}
             onChange={onSearchChange}
             placeholder={`Search ${noun}...`}
@@ -58,6 +63,7 @@ export function PaginatedListToolbar({
           </Label>
           <select
             id={pageSizeId}
+            data-testid={`list-page-size${suffix}`}
             value={pageSize}
             onChange={onPageSizeChange}
             style={{
@@ -76,7 +82,7 @@ export function PaginatedListToolbar({
       </Flex>
 
       <Box style={{borderRadius: '4px', border: '1px solid #eee', padding: '8px'}}>
-        <Text size={1}>
+        <Text size={1} data-testid={`list-summary${suffix}`}>
           Showing {startIndex + 1}-{Math.min(endIndex, count)} of {count} {noun}
         </Text>
       </Box>

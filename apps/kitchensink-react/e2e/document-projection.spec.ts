@@ -147,4 +147,46 @@ test.describe('Document Projection', () => {
     await expect(nameCell).toBeVisible()
     await expect(nameCell).toContainText('Test Author Projection')
   })
+
+  test('paginates through author documents', async ({page, createDocuments, getPageContext}) => {
+    // The projection route filters to authors with `count(favoriteBooks) > 0`,
+    // so every author needs at least one favorite book to be listed.
+    const {
+      documentIds: [bookId],
+    } = await createDocuments([{_type: 'book', title: 'Pagination Book'}], {asDraft: false})
+
+    await createDocuments(
+      Array.from({length: 12}, (_, i) => ({
+        _type: 'author',
+        name: `Pagination Author ${i}`,
+        favoriteBooks: [{_type: 'reference', _ref: bookId}],
+      })),
+      {asDraft: false},
+    )
+
+    await page.goto('./document-projection')
+    const pageContext = await getPageContext(page)
+
+    await pageContext.getByTestId('projection-table').waitFor()
+
+    // A page size of 5 across at least 12 authors yields 3+ pages.
+    await pageContext.getByTestId('list-page-size').selectOption('5')
+
+    const rows = pageContext.locator('[data-testid^="author-row-"]')
+    await expect.poll(() => rows.count(), {timeout: 15000}).toBe(5)
+
+    const status = pageContext.getByTestId('pagination-status').first()
+    await expect(status).toContainText('Page 1 of')
+    await expect(pageContext.getByTestId('pagination-previous').first()).toBeDisabled()
+    await expect(pageContext.getByTestId('pagination-next').first()).toBeEnabled()
+
+    // Advance to page 2, then jump to the last page and confirm it's terminal
+    await pageContext.getByTestId('pagination-next').first().click()
+    await expect(status).toContainText('Page 2 of')
+    await expect.poll(() => rows.count(), {timeout: 15000}).toBe(5)
+
+    await pageContext.getByTestId('pagination-last').first().click()
+    await expect(pageContext.getByTestId('pagination-next').first()).toBeDisabled()
+    await expect(pageContext.getByTestId('pagination-previous').first()).toBeEnabled()
+  })
 })

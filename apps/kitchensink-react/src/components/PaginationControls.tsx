@@ -54,6 +54,7 @@ export function PaginationControls({
       buttons.push(
         <Button
           key={i}
+          data-testid={`pagination-page-${i}`}
           mode={i === currentPage ? 'default' : 'ghost'}
           onClick={() => goToPage(i)}
           style={{
@@ -69,9 +70,10 @@ export function PaginationControls({
   }
 
   return (
-    <Flex align="center" justify="space-between" padding={3}>
+    <Flex align="center" justify="space-between" padding={3} data-testid="pagination-controls">
       <Flex>
         <Button
+          data-testid="pagination-first"
           onClick={firstPage}
           disabled={!hasFirstPage}
           style={buttonStyle}
@@ -79,6 +81,7 @@ export function PaginationControls({
           mode="ghost"
         />
         <Button
+          data-testid="pagination-previous"
           onClick={previousPage}
           disabled={!hasPreviousPage}
           style={buttonStyle}
@@ -87,6 +90,7 @@ export function PaginationControls({
         />
         {pageButtons()}
         <Button
+          data-testid="pagination-next"
           onClick={nextPage}
           disabled={!hasNextPage}
           style={buttonStyle}
@@ -94,6 +98,7 @@ export function PaginationControls({
           mode="ghost"
         />
         <Button
+          data-testid="pagination-last"
           onClick={lastPage}
           disabled={!hasLastPage}
           style={buttonStyle}
@@ -101,7 +106,7 @@ export function PaginationControls({
           mode="ghost"
         />
       </Flex>
-      <Text size={1} style={{opacity: isPending ? 0.5 : 1}}>
+      <Text size={1} style={{opacity: isPending ? 0.5 : 1}} data-testid="pagination-status">
         Page {currentPage} of {totalPages}
       </Text>
     </Flex>

@@ -22,6 +22,7 @@ export function UserListItem({user, href, avatarSize = 2}: UserListItemProps): J
       width="fill"
       marginBottom={2}
       tone="inherit"
+      data-testid={`user-list-item-${user.profile.id}`}
       style={href ? {cursor: 'pointer'} : undefined}
     >
       <Flex align="center" gap={2} padding={2}>

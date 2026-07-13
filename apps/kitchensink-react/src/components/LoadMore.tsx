@@ -53,7 +53,15 @@ export function LoadMore({
   }, [isVisible])
 
   return (
-    <Flex as={as} style={{height: 12}} ref={ref} flex="auto" justify="center" padding={3}>
+    <Flex
+      as={as}
+      data-testid="load-more"
+      style={{height: 12}}
+      ref={ref}
+      flex="auto"
+      justify="center"
+      padding={3}
+    >
       {isPending && <Text>Loading…</Text>}
     </Flex>
   )

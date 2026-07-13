@@ -81,7 +81,7 @@ function DocumentTableRow(doc: DocumentHandle) {
 
   return (
     <>
-      <TR ref={ref}>
+      <TR ref={ref} data-testid={`org-document-row-${doc.documentId}`}>
         <TD padding={3}>{data.title}</TD>
         <TD padding={3}>{data.subtitle || '-'}</TD>
         <TD padding={3}>{doc.documentType}</TD>
@@ -92,6 +92,7 @@ function DocumentTableRow(doc: DocumentHandle) {
             text="View"
             tone="primary"
             mode="ghost"
+            data-testid={`org-document-view-${doc.documentId}`}
             onClick={handleOpenDialog}
           />
         </TD>
@@ -231,7 +232,7 @@ function DocumentList({documentType}: DocumentListProps) {
           isPending={isPending}
         />
 
-        <Table style={{opacity: isPending ? 0.7 : 1}}>
+        <Table style={{opacity: isPending ? 0.7 : 1}} data-testid="org-document-table">
           <thead>
             <TR>
               <TH padding={3}>Title</TH>
@@ -340,6 +341,7 @@ function DocumentTypes() {
         </Label>
         <Select
           id={`doctype-${config.dataset}`}
+          data-testid="org-doctype-select"
           value={selectedType || ''}
           onChange={handleTypeChange}
           style={{width: '100%', marginTop: '8px'}}
@@ -394,6 +396,7 @@ function DatasetExplorer() {
         </Label>
         <Select
           id={`dataset-${config.projectId}`}
+          data-testid="org-dataset-select"
           value={selectedDataset || ''}
           onChange={handleDatasetChange}
           style={{width: '100%', marginTop: '8px'}}
@@ -564,6 +567,7 @@ function ProjectsExplorer() {
         </Label>
         <Select
           id="project-selector"
+          data-testid="org-project-select"
           value={selectedProject || ''}
           onChange={handleProjectChange}
           style={{width: '100%', marginTop: '8px'}}
