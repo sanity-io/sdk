@@ -1,4 +1,10 @@
-import {DisconnectError, type LiveEvent, type SanityClient, type SyncTag} from '@sanity/client'
+import {
+  ConnectionFailedError,
+  DisconnectError,
+  type LiveEvent,
+  type SanityClient,
+  type SyncTag,
+} from '@sanity/client'
 import {delay, filter, firstValueFrom, Observable, of, Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
@@ -387,6 +393,52 @@ describe('queryStore', () => {
 
     // A retry now creates a fresh key and fetches
     await expect(advanceAndAwait(resolveQuery(instance, {query}))).resolves.toEqual(mockData.movies)
+  })
+
+  it('stops live updates without retrying or erroring on a 4xx connection rejection', async () => {
+    const query = '*[_type == "movie"]'
+    const state = getQueryState(instance, {query})
+    const unsub = state.subscribe()
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
+
+    const clientState = vi.mocked(getClientState).mock.results[0]
+      ?.value as StateSource<SanityClient>
+    const client = await firstValueFrom(clientState.observable)
+    const eventsMock = vi.mocked(client.live.events)
+    const callsBefore = eventsMock.mock.calls.length
+
+    // The server rejected the connection with a 401 (e.g. expired token). The
+    // client surfaces this as a fatal ConnectionFailedError with the status —
+    // retrying would reconnect once per second forever against a server that
+    // keeps rejecting
+    liveEvents.error(new ConnectionFailedError('EventSource connection failed', {status: 401}))
+    await vi.advanceTimersByTimeAsync(LIVE_EVENTS_RETRY_DELAY * 5)
+
+    expect(() => state.getCurrent()).not.toThrow()
+    expect(eventsMock.mock.calls.length).toBe(callsBefore)
+    unsub()
+  })
+
+  it('retries a connection failure without a status (transient network failure)', async () => {
+    const query = '*[_type == "movie"]'
+    const state = getQueryState(instance, {query})
+    const unsub = state.subscribe()
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
+
+    const clientState = vi.mocked(getClientState).mock.results[0]
+      ?.value as StateSource<SanityClient>
+    const client = await firstValueFrom(clientState.observable)
+    const eventsMock = vi.mocked(client.live.events)
+    const callsBefore = eventsMock.mock.calls.length
+
+    // No status means the failure could be transient (native EventSource
+    // exposes no status) — reconnecting is correct here
+    liveEvents.error(new ConnectionFailedError('EventSource connection failed'))
+    await vi.advanceTimersByTimeAsync(LIVE_EVENTS_RETRY_DELAY * 2)
+
+    expect(() => state.getCurrent()).not.toThrow()
+    expect(eventsMock.mock.calls.length).toBeGreaterThan(callsBefore)
+    unsub()
   })
 
   it('stops live updates without retrying or erroring on DisconnectError', async () => {

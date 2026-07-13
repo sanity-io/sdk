@@ -1,4 +1,9 @@
-import {CorsOriginError, DisconnectError, type ResponseQueryOptions} from '@sanity/client'
+import {
+  ConnectionFailedError,
+  CorsOriginError,
+  DisconnectError,
+  type ResponseQueryOptions,
+} from '@sanity/client'
 import {type SanityQueryResult} from 'groq'
 import {
   catchError,
@@ -250,6 +255,19 @@ const listenToLiveClientAndSetLastLiveEventIds = ({
             // The server explicitly told this client to stop reconnecting —
             // end live updates without erroring the store (queries keep
             // serving, they just stop receiving live invalidation)
+            return EMPTY
+          }
+          if (
+            error instanceof ConnectionFailedError &&
+            typeof error.status === 'number' &&
+            error.status >= 400 &&
+            error.status < 500
+          ) {
+            // The server rejected the connection with a 4xx (e.g. a 401 from
+            // an expired token) — it will keep rejecting, so retrying would
+            // reconnect once per second forever. End live updates like a
+            // DisconnectError. A ConnectionFailedError without a status stays
+            // retryable: it may be a transient network failure.
             return EMPTY
           }
           throw error
