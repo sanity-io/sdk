@@ -27,7 +27,7 @@ minimumReleaseAgeExclude:
 catalog:
   '@playwright/test': '^1.61.1'
   '@sanity/browserslist-config': '^1.0.5'
-  '@sanity/client': '^7.23.0'
+  '@sanity/client': '^7.23.1'
   '@sanity/comlink': '^4.0.1'
   '@sanity/message-protocol': '^0.23.0'
   '@sanity/pkg-utils': '^10.5.8'
