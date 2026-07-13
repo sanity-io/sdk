@@ -3,8 +3,8 @@ import {Box, Heading, Stack, Text, TextInput} from '@sanity/ui'
 import {type JSX, useState} from 'react'
 
 import {DocumentListLayout} from '../components/DocumentListLayout/DocumentListLayout'
+import {LoadMore} from '../components/LoadMore'
 import {DocumentPreview} from './DocumentPreview'
-import {LoadMore} from './LoadMore'
 
 export function SearchRoute(): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('')

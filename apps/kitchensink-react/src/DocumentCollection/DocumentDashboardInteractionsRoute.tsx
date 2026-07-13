@@ -11,8 +11,8 @@ import {type JSX, Suspense} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 
 import {DocumentListLayout} from '../components/DocumentListLayout/DocumentListLayout'
+import {LoadMore} from '../components/LoadMore'
 import {DocumentPreview} from './DocumentPreview'
-import {LoadMore} from './LoadMore'
 
 function useStudioResource<T extends DocumentHandle>(docHandle: T) {
   const {config} = useSanityInstance()

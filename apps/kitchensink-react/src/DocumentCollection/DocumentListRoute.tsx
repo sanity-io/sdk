@@ -3,8 +3,8 @@ import {Box, Heading} from '@sanity/ui'
 import {type JSX} from 'react'
 
 import {DocumentListLayout} from '../components/DocumentListLayout/DocumentListLayout'
+import {LoadMore} from '../components/LoadMore'
 import {DocumentPreview} from './DocumentPreview'
-import {LoadMore} from './LoadMore'
 
 export function DocumentListRoute(): JSX.Element {
   const {isPending, data, hasMore, loadMore} = useDocuments({
