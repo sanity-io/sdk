@@ -297,6 +297,27 @@ function ArticleList() {
 
 ---
 
+### Viewport-Based Lazy Loading
+
+Pass a `ref` to `useDocumentProjection` to fetch only when the element enters the viewport. Wrap the component in Suspense like any other data hook:
+
+```tsx
+import {useRef} from 'react'
+
+function LazyArticleCard({handle}: {handle: DocumentHandle}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const {data} = useDocumentProjection({
+    ...handle,
+    ref, // Only fetches when element is visible
+    projection: '{ title }',
+  })
+
+  return <div ref={ref}>{data?.title}</div>
+}
+```
+
+---
+
 ### Draft/Published Model
 
 Sanity has two document states:
@@ -538,27 +559,6 @@ npx sanity deploy
 Add the resulting app ID to the `deployment` section of your `sanity.config.ts` file: `{deployment: { appId: "appbc1234", ... } }`.
 
 App appears in Sanity Dashboard alongside Studios. Requires `sanity.sdk.applications.deploy` permission.
-
----
-
-### Viewport-Based Lazy Loading
-
-Use a ref with `useDocumentProjection` to load content only when the element enters the viewport:
-
-```tsx
-import {useRef} from 'react'
-
-function LazyArticleCard({handle}: {handle: DocumentHandle}) {
-  const ref = useRef(null)
-  const {data} = useDocumentProjection({
-    ...handle,
-    ref, // Only fetches when element is visible
-    projection: '{ title, excerpt }',
-  })
-
-  return <div ref={ref}>{data?.title}</div>
-}
-```
 
 ---
 
