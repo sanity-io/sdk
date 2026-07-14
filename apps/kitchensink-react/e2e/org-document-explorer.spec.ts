@@ -1,3 +1,5 @@
+import {randomUUID} from 'node:crypto'
+
 import {expect, test} from '@repo/e2e'
 
 test.describe('Organization Document Explorer', () => {
@@ -84,5 +86,47 @@ test.describe('Organization Document Explorer', () => {
     // At least the current user should be listed
     const users = pageContext.locator('[data-testid^="user-list-item-"]')
     await expect.poll(() => users.count(), {timeout: 15000}).toBeGreaterThan(0)
+  })
+
+  test('reads documents from a non-default dataset selected in the hierarchy', async ({
+    page,
+    getClient,
+    createDocuments,
+    getPageContext,
+  }) => {
+    const {projectId} = getClient().config()
+    const primaryDataset = process.env['SANITY_APP_E2E_DATASET_0']
+    const secondaryDataset = process.env['SANITY_APP_E2E_DATASET_1']
+    if (!projectId || !primaryDataset || !secondaryDataset) {
+      throw new Error('E2E env is missing a projectId or datasets')
+    }
+
+    // Create a document with the same name in both datasets
+    const name = `Org Explorer Dataset Isolation ${randomUUID()}`
+    const {
+      documentIds: [primaryId],
+    } = await createDocuments([{_type: 'author', name}], {asDraft: false}, primaryDataset)
+    const {
+      documentIds: [secondaryId],
+    } = await createDocuments([{_type: 'author', name}], {asDraft: false}, secondaryDataset)
+
+    await page.goto('./org-document-explorer')
+    const pageContext = await getPageContext(page)
+
+    // Drill down: project → secondary dataset → author type.
+    await pageContext.getByTestId('org-project-select').selectOption(projectId)
+    await pageContext.getByTestId('org-dataset-select').selectOption(secondaryDataset)
+    await pageContext.getByTestId('org-doctype-select').selectOption('author')
+
+    await expect(pageContext.getByTestId('org-document-table')).toBeVisible()
+    // Show plenty of rows so the freshly-created author is on the first page.
+    await pageContext.getByTestId('list-page-size-author').selectOption('50')
+
+    // The secondary-dataset document should be visible
+    await expect(pageContext.getByTestId(`org-document-row-${secondaryId}`)).toBeVisible({
+      timeout: 15000,
+    })
+    // The identically-named primary-dataset document should not be visible
+    await expect(pageContext.getByTestId(`org-document-row-${primaryId}`)).toHaveCount(0)
   })
 })

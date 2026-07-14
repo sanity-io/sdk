@@ -1,8 +1,10 @@
-import {type SanityConfig, type SanityInstance} from '@sanity/sdk'
+import {type DocumentResource, type SanityConfig, type SanityInstance} from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
 import {StrictMode, use, useEffect} from 'react'
 import {describe, expect, it, vi} from 'vitest'
 
+import {ResourceContext} from './DefaultResourceContext'
+import {ProjectContext} from './ProjectContext'
 import {ResourceProvider} from './ResourceProvider'
 import {SanityInstanceContext} from './SanityInstanceContext'
 
@@ -163,5 +165,59 @@ describe('ResourceProvider', () => {
     })
     await new Promise((r) => setTimeout(r, 0))
     consoleSpy.mockRestore()
+  })
+
+  it('inherits the missing half of a partial nested config from the parent resource', async () => {
+    const {promise, resolve} = promiseWithResolvers<DocumentResource | undefined>()
+    const CaptureResource = () => {
+      const resource = use(ResourceContext)
+      useEffect(() => resolve(resource), [resource])
+      return null
+    }
+
+    render(
+      <ResourceProvider projectId="parent-project" dataset="parent-dataset" fallback={null}>
+        {/* Partial config: only `dataset`. It should inherit `projectId` from the
+          parent resource and resolve to a complete DatasetResource rather than
+          being dropped in favor of the parent's dataset. */}
+        <ResourceProvider dataset="child-dataset" fallback={null}>
+          <CaptureResource />
+        </ResourceProvider>
+      </ResourceProvider>,
+    )
+
+    await expect(promise).resolves.toEqual({
+      projectId: 'parent-project',
+      dataset: 'child-dataset',
+    })
+  })
+
+  it('does not merge a nested bare projectId with the enveloping dataset', async () => {
+    const captured = promiseWithResolvers<{
+      resource: DocumentResource | undefined
+      projectId: string | undefined
+    }>()
+    const Capture = () => {
+      const resource = use(ResourceContext)
+      const projectId = use(ProjectContext)
+      useEffect(() => captured.resolve({resource, projectId}), [resource, projectId])
+      return null
+    }
+
+    render(
+      <ResourceProvider projectId="parent-project" dataset="parent-dataset" fallback={null}>
+        {/* Bare `projectId`: switches project scope. It must surface as the
+          project but must NOT adopt the parent's dataset — that dataset belongs
+          to a different project. */}
+        <ResourceProvider projectId="child-project" fallback={null}>
+          <Capture />
+        </ResourceProvider>
+      </ResourceProvider>,
+    )
+
+    await expect(captured.promise).resolves.toEqual({
+      resource: undefined,
+      projectId: 'child-project',
+    })
   })
 })

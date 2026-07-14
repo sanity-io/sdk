@@ -11,6 +11,7 @@ import {useContext, useEffect, useMemo, useRef, useState} from 'react'
 
 import {ResourceContext} from './DefaultResourceContext'
 import {PerspectiveContext} from './PerspectiveContext'
+import {ProjectContext} from './ProjectContext'
 import {SanityInstanceContext} from './SanityInstanceContext'
 import {SanityInstanceProvider} from './SanityInstanceProvider'
 
@@ -63,21 +64,39 @@ export function ResourceProvider({
   const parentPerspective = useContext(PerspectiveContext)
   const parentResource = useContext(ResourceContext)
   const parentInstance = useContext(SanityInstanceContext)
+  const parentProjectId = useContext(ProjectContext)
 
   const {projectId, dataset, perspective} = config
 
   const [instance] = useState<SanityInstance>(() => parentInstance ?? createSanityInstance(config))
 
   const configResource: DatasetResource | undefined = useMemo(() => {
-    if (projectId && dataset) {
-      return {projectId, dataset}
-    }
+    // Historically, we allowed asymmetric merging: If you provided JUST a dataset, we'd merge it with the parent projectId.
+    //
+    // This backwards-compatible merging should be removed in the next major version.
+    if (projectId && dataset) return {projectId, dataset}
+    if (dataset && parentProjectId) return {projectId: parentProjectId, dataset}
     return undefined
-  }, [projectId, dataset])
+  }, [projectId, dataset, parentProjectId])
 
   const effectiveResource = useMemo(() => {
-    return resource ?? configResource ?? parentResource
-  }, [resource, configResource, parentResource])
+    if (resource) return resource
+    if (configResource) return configResource
+    // A projectId with no dataset historically created its own scope, so no resource is needed.
+    if (projectId) return undefined
+    return parentResource
+  }, [resource, configResource, projectId, parentResource])
+
+  // Historically, ResourceProviders allowed a bare `projectId` (no dataset, no resource to complete it) to be provided.
+  // This keeps that behavior intact for backwards compatibility, even though we prefer resources everywhere.
+  //
+  // This should be removed in the next major version.
+  const effectiveProjectId = useMemo(() => {
+    if (effectiveResource && isDatasetResource(effectiveResource)) {
+      return effectiveResource.projectId
+    }
+    return projectId ?? parentProjectId
+  }, [effectiveResource, projectId, parentProjectId])
 
   useEffect(() => {
     if (effectiveResource && isDatasetResource(effectiveResource))
@@ -113,9 +132,11 @@ export function ResourceProvider({
   return (
     <SanityInstanceProvider instance={instance} fallback={fallback ?? DEFAULT_FALLBACK}>
       <ResourceContext.Provider value={effectiveResource}>
-        <PerspectiveContext.Provider value={perspective ?? parentPerspective}>
-          {children}
-        </PerspectiveContext.Provider>
+        <ProjectContext.Provider value={effectiveProjectId}>
+          <PerspectiveContext.Provider value={perspective ?? parentPerspective}>
+            {children}
+          </PerspectiveContext.Provider>
+        </ProjectContext.Provider>
       </ResourceContext.Provider>
     </SanityInstanceProvider>
   )
