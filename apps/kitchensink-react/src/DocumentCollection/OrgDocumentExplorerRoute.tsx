@@ -1,4 +1,5 @@
 import {
+  DatasetResource,
   DocumentHandle,
   ResourceProvider,
   useDatasets,
@@ -7,6 +8,7 @@ import {
   useProject,
   useProjects,
   useQuery,
+  useResource,
   useSanityInstance,
   useUsers,
 } from '@sanity/sdk-react'
@@ -302,8 +304,9 @@ function DocumentList({documentType}: DocumentListProps) {
 const allTypes = defineQuery(`array::unique(*[]._type)`)
 
 function DocumentTypes() {
-  const {config} = useSanityInstance()
-  if (!config.dataset) throw new Error('Dataset required for this component')
+  const {projectId, dataset} = useResource() as DatasetResource
+  const config = {projectId, dataset}
+  if (!projectId || !dataset) throw new Error('Project and dataset required for this component')
 
   // Use GROQ with array::unique to get all document types in the dataset
   const {data: documentTypes} = useQuery({query: allTypes})
@@ -311,7 +314,7 @@ function DocumentTypes() {
   const [selectedType, setSelectedType] = useState<string | null>(firstDocumentType ?? null)
 
   // Reset to the first available type when the dataset or that first type changes.
-  const [prevConfig, setPrevConfig] = useState(config)
+  const [prevConfig, setPrevConfig] = useState({projectId, dataset})
   const [prevFirstDocumentType, setPrevFirstDocumentType] = useState(firstDocumentType)
   if (prevConfig !== config || prevFirstDocumentType !== firstDocumentType) {
     setPrevConfig(config)
