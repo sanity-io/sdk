@@ -1,5 +1,6 @@
 import {
   ConnectionFailedError,
+  CorsOriginError,
   DisconnectError,
   type LiveEvent,
   type SanityClient,
@@ -9,11 +10,12 @@ import {delay, filter, firstValueFrom, Observable, of, Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
+import {LIVE_EVENTS_RETRY_DELAY} from '../client/liveEvents'
 import {isCanvasResource} from '../config/sanityConfig'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {getQueryState, resolveQuery} from './queryStore'
-import {LIVE_EVENTS_RETRY_DELAY, QUERY_STATE_CLEAR_DELAY} from './queryStoreConstants'
+import {QUERY_STATE_CLEAR_DELAY} from './queryStoreConstants'
 
 vi.mock('../client/clientStore', () => ({
   getClientState: vi.fn(),
@@ -438,6 +440,21 @@ describe('queryStore', () => {
 
     expect(() => state.getCurrent()).not.toThrow()
     expect(eventsMock.mock.calls.length).toBeGreaterThan(callsBefore)
+    unsub()
+  })
+
+  it('surfaces CORS errors on the live connection as a store-wide error', async () => {
+    const query = '*[_type == "movie"]'
+    const state = getQueryState(instance, {query})
+    const unsub = state.subscribe()
+    await advanceAndAwait(firstValueFrom(state.observable.pipe(filter((i) => i !== undefined))))
+
+    liveEvents.error(new CorsOriginError({projectId: 'test'}))
+    await vi.advanceTimersByTimeAsync(0)
+
+    // the swallowed CORS error is recorded as store state so the query
+    // selector rethrows it (handled by the Cors Error component)
+    expect(() => state.getCurrent()).toThrow(CorsOriginError)
     unsub()
   })
 

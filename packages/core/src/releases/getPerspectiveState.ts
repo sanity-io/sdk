@@ -3,14 +3,6 @@ import {createSelector} from 'reselect'
 import {type DocumentResource, type PerspectiveHandle} from '../config/sanityConfig'
 import {bindActionByResource, type BoundStoreAction} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
-/*
- * Although this is an import dependency cycle, it is not a logical cycle:
- * 1. getPerspectiveState uses releasesStore as a data source
- * 2. releasesStore uses queryStore as a data source
- * 3. queryStore calls getPerspectiveState for computing release perspectives
- * 4. however, queryStore does not use getPerspectiveState for the perspective used in releasesStore ("raw")
- */
-// eslint-disable-next-line import-x/no-cycle
 import {releasesStore, type ReleasesStoreState} from './releasesStore'
 import {isReleasePerspective} from './utils/isReleasePerspective'
 import {sortReleases} from './utils/sortReleases'
@@ -53,7 +45,6 @@ const memoizedOptionsSelector = createSelector(
   },
 )
 
-// Lazily bind the action itself to avoid circular import initialization issues with `releasesStore`
 const _getPerspectiveStateSelector = createStateSourceAction({
   selector: createSelector(
     [selectInstancePerspective, selectActiveReleases, memoizedOptionsSelector],
@@ -89,7 +80,10 @@ type BoundGetPerspectiveState = BoundStoreAction<
   ReturnType<typeof _getPerspectiveStateSelector>
 >
 
-let _boundGetPerspectiveState: BoundGetPerspectiveState | undefined
+const _boundGetPerspectiveState = bindActionByResource(
+  releasesStore,
+  _getPerspectiveStateSelector,
+) as BoundGetPerspectiveState
 
 /**
  * Provides a subscribable state source for a "perspective" for the Sanity client,
@@ -103,13 +97,6 @@ let _boundGetPerspectiveState: BoundGetPerspectiveState | undefined
  *
  * @public
  */
-export const getPerspectiveState: BoundGetPerspectiveState = (instance, ...rest) => {
-  if (!_boundGetPerspectiveState) {
-    _boundGetPerspectiveState = bindActionByResource(
-      releasesStore,
-      _getPerspectiveStateSelector,
-    ) as BoundGetPerspectiveState
-  }
+export const getPerspectiveState: BoundGetPerspectiveState = (instance, ...rest) =>
   // bindActionByResource keyFn destructures { resource } from the first param, so pass {} when no options
-  return _boundGetPerspectiveState(instance, ...(rest.length ? rest : [{}]))
-}
+  _boundGetPerspectiveState(instance, ...(rest.length ? rest : [{}]))

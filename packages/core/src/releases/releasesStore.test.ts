@@ -2,13 +2,12 @@ import {type ReleaseDocument} from '@sanity/client'
 import {NEVER, Observable, type Observer, of, Subject} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {getQueryState, resolveQuery} from '../query/queryStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
-import {type StateSource} from '../store/createStateSourceAction'
+import {observeReleases} from './observeReleases'
 import {getActiveReleasesState, getAllReleasesState} from './releasesStore'
 
 // Mock dependencies
-vi.mock('../query/queryStore')
+vi.mock('./observeReleases')
 
 describe('releasesStore', () => {
   let instance: SanityInstance
@@ -18,13 +17,7 @@ describe('releasesStore', () => {
 
     instance = createSanityInstance({projectId: 'test', dataset: 'test'})
 
-    vi.mocked(getQueryState).mockReturnValue({
-      subscribe: () => () => {},
-      getCurrent: () => undefined,
-      observable: NEVER as Observable<ReleaseDocument[] | undefined>,
-    } as StateSource<ReleaseDocument[] | undefined>)
-
-    vi.mocked(resolveQuery).mockResolvedValue(undefined)
+    vi.mocked(observeReleases).mockReturnValue(NEVER as Observable<ReleaseDocument[] | undefined>)
   })
 
   afterEach(() => {
@@ -35,13 +28,11 @@ describe('releasesStore', () => {
     const state = getActiveReleasesState(instance)
 
     expect(state.getCurrent()).toBeUndefined()
-    expect(getQueryState).toHaveBeenCalledWith(
+    expect(observeReleases).toHaveBeenCalledWith(
       instance,
       expect.objectContaining({
-        query: 'releases::all()',
-        perspective: 'raw',
-        tag: 'releases',
         resource: {dataset: 'test', projectId: 'test'},
+        onCorsError: expect.any(Function),
       }),
     )
   })
@@ -52,11 +43,7 @@ describe('releasesStore', () => {
       .fn<(observer: Observer<ReleaseDocument[] | undefined>) => () => void>()
       .mockReturnValue(teardown)
 
-    vi.mocked(getQueryState).mockReturnValue({
-      subscribe: () => () => {},
-      getCurrent: () => undefined,
-      observable: new Observable(subscriber),
-    } as StateSource<ReleaseDocument[] | undefined>)
+    vi.mocked(observeReleases).mockReturnValue(new Observable(subscriber))
 
     // note that the order of the releases is important here -- they get sorted
     const mockReleases: ReleaseDocument[] = [
@@ -87,11 +74,7 @@ describe('releasesStore', () => {
 
   it('should update active releases state when the query emits new data', async () => {
     const releasesSubject = new Subject<ReleaseDocument[]>()
-    vi.mocked(getQueryState).mockReturnValue({
-      subscribe: () => () => {},
-      getCurrent: () => undefined,
-      observable: releasesSubject.asObservable(),
-    } as StateSource<ReleaseDocument[] | undefined>)
+    vi.mocked(observeReleases).mockReturnValue(releasesSubject.asObservable())
 
     const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
 
@@ -133,12 +116,8 @@ describe('releasesStore', () => {
   })
 
   it('should handle empty array from the query', async () => {
-    // Configure query to return an empty array
-    vi.mocked(getQueryState).mockReturnValue({
-      subscribe: () => () => {},
-      getCurrent: () => [],
-      observable: of([]),
-    } as StateSource<ReleaseDocument[] | undefined>)
+    // Configure the releases source to return an empty array
+    vi.mocked(observeReleases).mockReturnValue(of([]))
 
     const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
 
@@ -149,32 +128,20 @@ describe('releasesStore', () => {
 
   it('should handle null/undefined from the query by defaulting to empty array', async () => {
     // Test null case
-    vi.mocked(getQueryState).mockReturnValue({
-      subscribe: () => () => {},
-      getCurrent: () => null as unknown as ReleaseDocument[] | undefined,
-      observable: of(null as unknown as ReleaseDocument[] | undefined),
-    } as StateSource<ReleaseDocument[] | undefined>)
+    vi.mocked(observeReleases).mockReturnValue(of(null as unknown as ReleaseDocument[] | undefined))
     const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(state.getCurrent()).toEqual([])
 
     // Test undefined case
-    vi.mocked(getQueryState).mockReturnValue({
-      subscribe: () => () => {},
-      getCurrent: () => undefined,
-      observable: of(undefined),
-    } as StateSource<ReleaseDocument[] | undefined>)
+    vi.mocked(observeReleases).mockReturnValue(of(undefined))
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(state.getCurrent()).toEqual([])
   })
 
   it('exposes archived/published releases through getAllReleasesState but filters them out of getActiveReleasesState', async () => {
     const subject = new Subject<ReleaseDocument[]>()
-    vi.mocked(getQueryState).mockReturnValue({
-      subscribe: () => () => {},
-      getCurrent: () => undefined,
-      observable: subject.asObservable(),
-    } as StateSource<ReleaseDocument[] | undefined>)
+    vi.mocked(observeReleases).mockReturnValue(subject.asObservable())
 
     const active = getActiveReleasesState(instance, {
       resource: {projectId: 'test', dataset: 'test'},
@@ -216,13 +183,37 @@ describe('releasesStore', () => {
     expect(allNames).toHaveLength(3)
   })
 
+  it('surfaces CORS errors from the live connection as a store-wide error', async () => {
+    const subject = new Subject<ReleaseDocument[]>()
+    vi.mocked(observeReleases).mockReturnValue(subject.asObservable())
+
+    const state = getActiveReleasesState(instance, {resource: {projectId: 'test', dataset: 'test'}})
+
+    subject.next([
+      {
+        _id: 'r1',
+        _type: 'system.release',
+        name: 'r1',
+        state: 'active',
+        metadata: {releaseType: 'asap'},
+      } as ReleaseDocument,
+    ])
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(state.getCurrent()).toHaveLength(1)
+
+    const [, options] = vi.mocked(observeReleases).mock.lastCall!
+    const corsError = new Error('CORS misconfiguration')
+    options.onCorsError(corsError)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // the CORS error is recorded as store state so the releases selector
+    // rethrows it (handled by the Cors Error component)
+    expect(() => state.getCurrent()).toThrow(corsError)
+  })
+
   it('should surface the error when the releases query errors', async () => {
     const subject = new Subject<ReleaseDocument[]>()
-    vi.mocked(getQueryState).mockReturnValue({
-      subscribe: () => () => {},
-      getCurrent: () => undefined,
-      observable: subject.asObservable(),
-    } as StateSource<ReleaseDocument[] | undefined>)
+    vi.mocked(observeReleases).mockReturnValue(subject.asObservable())
 
     const active = getActiveReleasesState(instance, {
       resource: {projectId: 'test', dataset: 'test'},
