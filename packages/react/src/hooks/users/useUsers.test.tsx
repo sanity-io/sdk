@@ -1,4 +1,5 @@
 import {
+  createSanityInstance,
   getUsersState,
   loadMoreUsers,
   resolveUsers,
@@ -6,12 +7,14 @@ import {
   type StateSource,
   type UserProfile,
 } from '@sanity/sdk'
-import {act, fireEvent, render, screen} from '@testing-library/react'
-import {useState} from 'react'
+import {act, fireEvent, render, renderHook, screen} from '@testing-library/react'
+import {type ReactNode, useState} from 'react'
 import {type Observable, Subject} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
+import {SanityInstanceContext} from '../../context/SanityInstanceContext'
+import {useSanityInstance} from '../context/useSanityInstance'
 import {useUsers} from './useUsers'
 
 // Mock the functions from '@sanity/sdk'
@@ -333,6 +336,102 @@ describe('useUsers', () => {
         organizationId: 'test-org',
         batchSize: 10,
       },
+    )
+  })
+
+  it('resolves the projectId from the default resource for a project-scoped query', () => {
+    vi.mocked(getUsersState).mockReturnValue({
+      getCurrent: vi.fn().mockReturnValue({data: mockUsers, hasMore: false, totalCount: 2}),
+      subscribe: vi.fn(),
+      get observable(): Observable<unknown> {
+        throw new Error('Not implemented')
+      },
+    } as unknown as StateSource<
+      {data: SanityUser[]; totalCount: number; hasMore: boolean} | undefined
+    >)
+
+    const {
+      result: {current: instance},
+    } = renderHook(
+      () => {
+        useUsers({resourceType: 'project'})
+        return useSanityInstance()
+      },
+      {
+        wrapper: ({children}: {children: ReactNode}) => (
+          <ResourceProvider
+            resource={{projectId: 'resource-project', dataset: 'production'}}
+            fallback={null}
+          >
+            {children}
+          </ResourceProvider>
+        ),
+      },
+    )
+
+    expect(getUsersState).toHaveBeenLastCalledWith(
+      instance,
+      expect.objectContaining({projectId: 'resource-project', resourceType: 'project'}),
+    )
+  })
+
+  it('does not inject a projectId for an organization-scoped query', () => {
+    vi.mocked(getUsersState).mockReturnValue({
+      getCurrent: vi.fn().mockReturnValue({data: mockUsers, hasMore: false, totalCount: 2}),
+      subscribe: vi.fn(),
+      get observable(): Observable<unknown> {
+        throw new Error('Not implemented')
+      },
+    } as unknown as StateSource<
+      {data: SanityUser[]; totalCount: number; hasMore: boolean} | undefined
+    >)
+
+    function TestComponent() {
+      useUsers({resourceType: 'organization', organizationId: 'test-org'})
+      return null
+    }
+
+    render(
+      <ResourceProvider
+        resource={{projectId: 'resource-project', dataset: 'production'}}
+        fallback={null}
+      >
+        <TestComponent />
+      </ResourceProvider>,
+    )
+
+    // Organization queries key off organizationId; the ambient project resource
+    // must not leak in as a projectId.
+    expect(vi.mocked(getUsersState).mock.lastCall?.[1]).not.toHaveProperty('projectId')
+  })
+
+  it('resolves a bare projectId from a ResourceProvider when the parent instance has no config', () => {
+    vi.mocked(getUsersState).mockReturnValue({
+      getCurrent: vi.fn().mockReturnValue({data: mockUsers, hasMore: false, totalCount: 2}),
+      subscribe: vi.fn(),
+      get observable(): Observable<unknown> {
+        throw new Error('Not implemented')
+      },
+    } as unknown as StateSource<
+      {data: SanityUser[]; totalCount: number; hasMore: boolean} | undefined
+    >)
+
+    // An instance with no project/dataset config, then a
+    // projectId-only ResourceProvider.
+    const emptyInstance = createSanityInstance({})
+    renderHook(() => useUsers(), {
+      wrapper: ({children}: {children: ReactNode}) => (
+        <SanityInstanceContext.Provider value={emptyInstance}>
+          <ResourceProvider projectId="bare-project" fallback={null}>
+            {children}
+          </ResourceProvider>
+        </SanityInstanceContext.Provider>
+      ),
+    })
+
+    expect(getUsersState).toHaveBeenLastCalledWith(
+      emptyInstance,
+      expect.objectContaining({projectId: 'bare-project'}),
     )
   })
 })

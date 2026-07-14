@@ -10,6 +10,7 @@ import {
 import {useCallback, useEffect, useMemo, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
+import {useResolvedProjectId} from '../helpers/useResolvedProjectId'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 
 /**
@@ -34,6 +35,23 @@ export interface UsersResult {
    * Load more users.
    */
   loadMore: () => void
+}
+
+/**
+ * Injects a resolved `projectId` into project-scoped users options. A missing
+ * `projectId` is a no-op, and organization-scoped queries (explicit
+ * `resourceType`/`organizationId`) or options that already carry a `projectId`
+ * are returned unchanged.
+ */
+function withResolvedProjectId(
+  options: GetUsersOptions | undefined,
+  projectId: string | undefined,
+): GetUsersOptions | undefined {
+  if (!projectId) return options
+  if (!options) return {projectId}
+  const isOrgScoped = options.resourceType === 'organization' || !!options.organizationId
+  if (isOrgScoped || options.projectId) return options
+  return {...options, projectId}
 }
 
 /**
@@ -67,6 +85,12 @@ export interface UsersResult {
  *   </div>
  * )
  * ```
+ * @remarks
+ * For project-scoped queries the `projectId` is resolved in order from:
+ * 1. an explicit `projectId` option
+ * 2. A legacy ProjectContext (e.g. a `<ResourceProvider projectId="…">` with no dataset), then
+ * 3. The active resource (`ResourceProvider`/`SDKProvider`)
+ * 4. `instance.config`.
  */
 export function useUsers(options?: GetUsersOptions): UsersResult {
   const instance = useSanityInstance()
@@ -74,8 +98,16 @@ export function useUsers(options?: GetUsersOptions): UsersResult {
   // Use React's useTransition to avoid UI jank when user options change
   const [isPending, startTransition] = useTransition()
 
+  // Resolve the projectId from the ambient project/resource context so a
+  // project-scoped users request can pick it up rather than the top-level config.
+  const resolvedProjectId = useResolvedProjectId(options)
+  const effectiveOptions = useMemo(
+    () => withResolvedProjectId(options, resolvedProjectId),
+    [options, resolvedProjectId],
+  )
+
   // Get the unique key for this users request and its options
-  const key = getUsersKey(instance, options)
+  const key = getUsersKey(instance, effectiveOptions)
   // Use a deferred state to avoid immediate re-renders when the users request changes
   const [deferredKey, setDeferredKey] = useState(key)
   // Parse the deferred users key back into users options
@@ -115,8 +147,8 @@ export function useUsers(options?: GetUsersOptions): UsersResult {
   const {data, hasMore} = useSyncExternalStore(subscribe, getCurrent)!
 
   const loadMore = useCallback(() => {
-    loadMoreUsers(instance, options)
-  }, [instance, options])
+    loadMoreUsers(instance, effectiveOptions)
+  }, [instance, effectiveOptions])
 
   return {data, hasMore, isPending, loadMore}
 }
