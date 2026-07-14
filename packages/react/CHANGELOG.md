@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.16.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.15.0...sdk-react-v2.16.0) (2026-07-14)
+
+
+### Features
+
+* expand resource support and restore partial resources ([#1041](https://github.com/sanity-io/sdk/issues/1041)) ([87436a2](https://github.com/sanity-io/sdk/commit/87436a2e081dfe739455845650c2f33ee0e2d507))
+* infer organization resources if parameter passed ([#1024](https://github.com/sanity-io/sdk/issues/1024)) ([86879c4](https://github.com/sanity-io/sdk/commit/86879c4d5caa022ad1ac29e67c8563e41ff93996))
+
+
+### Bug Fixes
+
+* **deps:** update dependency @vitejs/plugin-react to v6 ([#1010](https://github.com/sanity-io/sdk/issues/1010)) ([8e0e223](https://github.com/sanity-io/sdk/commit/8e0e223eafd46f3b56e29361b5022b4942e32fb5))
+* **react:** ensure explicit "default" resource is used ([#1029](https://github.com/sanity-io/sdk/issues/1029)) ([dd72e52](https://github.com/sanity-io/sdk/commit/dd72e522c0fec86b1ae19394020e9ea97b48965b))
+
+
+### Documentation
+
+* update README with viewport-based lazy loading example and event type clarification ([#709](https://github.com/sanity-io/sdk/issues/709)) ([060c945](https://github.com/sanity-io/sdk/commit/060c94518655efdff8d58a4481c055661cb27ae0))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.16.0
+
 ## [2.15.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.14.1...sdk-react-v2.15.0) (2026-06-23)
 
 
