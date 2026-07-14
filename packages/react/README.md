@@ -146,7 +146,7 @@ await apply([publishDocument(handle1), publishDocument(handle2), deleteDocument(
 useDocumentEvent({
   ...handle,
   onEvent: (event) => {
-    // event.type: 'documentEdited' | 'documentPublished' | 'documentDeleted' | ...
+    // event.type: 'edited' | 'published' | 'deleted' | 'created' | 'unpublished' | 'discarded' | ...
     console.log(event.type, event.documentId)
   },
 })
@@ -292,6 +292,27 @@ function ArticleList() {
       ))}
     </ul>
   )
+}
+```
+
+---
+
+### Viewport-Based Lazy Loading
+
+Pass a `ref` to `useDocumentProjection` to fetch only when the element enters the viewport. Wrap the component in Suspense like any other data hook:
+
+```tsx
+import {useRef} from 'react'
+
+function LazyArticleCard({handle}: {handle: DocumentHandle}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const {data} = useDocumentProjection({
+    ...handle,
+    ref, // Only fetches when element is visible
+    projection: '{ title }',
+  })
+
+  return <div ref={ref}>{data?.title}</div>
 }
 ```
 
