@@ -1,4 +1,9 @@
-import {type DocumentResource, isImportError, type SanityConfig} from '@sanity/sdk'
+import {
+  type DocumentResource,
+  isDatasetResource,
+  isImportError,
+  type SanityConfig,
+} from '@sanity/sdk'
 import {type ReactElement, type ReactNode, useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
@@ -45,19 +50,13 @@ export function SDKProvider({
   inferMediaLibraryAndCanvas,
   ...props
 }: SDKProviderProps): ReactElement {
-  const allConfigs = Array.isArray(config) ? config : [config]
-  const resolvedConfig = allConfigs[0]
-  const projectIds = allConfigs.map((c) => c.projectId).filter((id): id is string => !!id)
+  // For legacy config support, extract the first config object as a default resource,
+  // matching the legacy behavior nesting ResourceProviders with the first config closest to users' application code.
+  // This should be removed when we remove legacy config support.
+  const defaultConfig = Array.isArray(config) ? config[0] : config
+  const defaultProjectId = defaultConfig?.projectId
+  const defaultDataset = defaultConfig?.dataset
 
-  // Extract static fields so the memo below doesn't take a reference dependency
-  // on `config` — inline config objects change identity on every render.
-  const singleConfig = Array.isArray(config) ? null : config
-  const defaultProjectId = singleConfig?.projectId
-  const defaultDataset = singleConfig?.dataset
-
-  // For a single config, synthesize a 'default' resource from its projectId/dataset
-  // so that hooks can resolve it via resourceName: 'default' or fall back to it
-  // automatically when no resource info is provided.
   const resourcesValue = useMemo(() => {
     const explicit = props.resources ?? {}
     if (defaultProjectId && defaultDataset && !Object.hasOwn(explicit, DEFAULT_RESOURCE_NAME)) {
@@ -72,10 +71,34 @@ export function SDKProvider({
     return explicit
   }, [defaultProjectId, defaultDataset, props.resources])
 
+  // Collect all projectIds from both resources and config, deduped so
+  // AuthBoundary doesn't verify the same project more than once.
+  const projectIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [
+            ...Object.values(resourcesValue)
+              .filter(isDatasetResource)
+              .map((resource) => resource.projectId),
+            ...(Array.isArray(config) ? config : [config]).map((configObj) => configObj.projectId),
+          ].filter((id): id is string => !!id),
+        ),
+      ),
+    [resourcesValue, config],
+  )
+
   return (
     <ErrorBoundary FallbackComponent={ChunkAwareFallback}>
       <ResetChunkReloadFlagOnMount />
-      <ResourceProvider {...resolvedConfig} fallback={fallback}>
+      {/* Spread the first config so SanityInstance can use the auth,
+        perspective, and other config fields; `resource` lets an explicitly
+        provided `default` resource override the config-derived resource. */}
+      <ResourceProvider
+        {...defaultConfig}
+        resource={resourcesValue[DEFAULT_RESOURCE_NAME]}
+        fallback={fallback}
+      >
         <AuthBoundary {...props} projectIds={projectIds}>
           {/* OrganizationResourcesProvider wraps ResourcesContext.
             It merges explicit resources with lazily inferred org resources (media
