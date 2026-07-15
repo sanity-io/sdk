@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.16.0](https://github.com/sanity-io/sdk/compare/sdk-v2.15.0...sdk-v2.16.0) (2026-07-14)
+
+
+### Bug Fixes
+
+* **core:** recover queries after fetch, live-connection, and suspense errors ([#1015](https://github.com/sanity-io/sdk/issues/1015)) ([10dd5b8](https://github.com/sanity-io/sdk/commit/10dd5b8b2e24decb3a8741a1290f2bb1270c2faf))
+* **deps:** update dependency typescript to v6 ([#1014](https://github.com/sanity-io/sdk/issues/1014)) ([c2ddae4](https://github.com/sanity-io/sdk/commit/c2ddae48366d68d61fb667988b00199807491090))
+* **react:** ensure explicit "default" resource is used ([#1029](https://github.com/sanity-io/sdk/issues/1029)) ([dd72e52](https://github.com/sanity-io/sdk/commit/dd72e522c0fec86b1ae19394020e9ea97b48965b))
+* **releases:** handle missing metadata ([#998](https://github.com/sanity-io/sdk/issues/998)) ([0864bed](https://github.com/sanity-io/sdk/commit/0864bed6f7111d9c7391f37b7eff809899d4a9b7))
+* **releases:** include all versions when listening to documents ([#1020](https://github.com/sanity-io/sdk/issues/1020)) ([074c621](https://github.com/sanity-io/sdk/commit/074c621088b7df771671f56ab5a217635af34abf))
+* stop retrying live events connections rejected with a 4xx ([#1035](https://github.com/sanity-io/sdk/issues/1035)) ([e267db7](https://github.com/sanity-io/sdk/commit/e267db7c6a9fe057b00370a0404e5f0e2c8756aa))
+
 ## [2.15.0](https://github.com/sanity-io/sdk/compare/sdk-v2.14.1...sdk-v2.15.0) (2026-06-23)
 
 
