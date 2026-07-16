@@ -4,13 +4,14 @@ import {type Mutation, type PatchOperations, type SanityDocument} from '@sanity/
 
 import {isReleasePerspective} from '../../releases/utils/isReleasePerspective'
 import {type EditDocumentAction} from '../actions'
-import {getId, processMutations} from '../processMutations'
+import {getId} from '../processMutations'
 import {
   ActionError,
   type ActionHandlerContext,
   type ActionHandlerResult,
   applySingleDocPatch,
   checkGrant,
+  createMutationApplier,
   PermissionActionError,
 } from './shared'
 
@@ -72,27 +73,12 @@ export function handleEdit(
     })
   }
 
-  const applyMutations = (
-    documents: typeof base,
-    mutations: Mutation[],
-    documentSetName: 'base' | 'working',
-  ): typeof base => {
-    try {
-      return processMutations({documents, transactionId, mutations, timestamp})
-    } catch (error) {
-      // with preserved operations, patches can legitimately fail to apply
-      // (e.g. re-applied onto a diverged document during a rebase), so we
-      // surface these as `ActionError`s to skip the transaction gracefully
-      if (!action.preserveOperations) throw error
-      throw new ActionError({
-        documentId,
-        transactionId,
-        message: `Failed to apply patches to the ${documentSetName} document: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`,
-      })
-    }
-  }
+  const applyMutations = createMutationApplier({
+    documentId,
+    transactionId,
+    timestamp,
+    preserveOperations: action.preserveOperations,
+  })
 
   const baseMutations: Mutation[] = []
   // don't create a draft from the published version in a release perspective

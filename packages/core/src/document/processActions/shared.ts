@@ -57,6 +57,41 @@ export class ActionError extends Error implements ActionErrorOptions {
 
 export class PermissionActionError extends ActionError {}
 
+/**
+ * Creates a `processMutations` wrapper that surfaces application failures as
+ * `ActionError`s when the caller asked to preserve their patch operations.
+ * With preserved operations, patches can legitimately fail to apply (e.g.
+ * re-applied onto a diverged document during a rebase), so wrapping lets a
+ * rebase skip the transaction instead of failing the store. Without
+ * `preserveOperations`, errors are rethrown untouched.
+ */
+export function createMutationApplier(options: {
+  documentId: string
+  transactionId: string
+  timestamp: string
+  preserveOperations: boolean | undefined
+}): (
+  documents: DocumentSet,
+  mutations: Mutation[],
+  documentSetName: 'base' | 'working',
+) => DocumentSet {
+  const {documentId, transactionId, timestamp, preserveOperations} = options
+  return (documents, mutations, documentSetName) => {
+    try {
+      return processMutations({documents, transactionId, mutations, timestamp})
+    } catch (error) {
+      if (!preserveOperations) throw error
+      throw new ActionError({
+        documentId,
+        transactionId,
+        message: `Failed to apply patches to the ${documentSetName} document: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
+      })
+    }
+  }
+}
+
 interface ApplySingleDocPatchOptions {
   base: DocumentSet
   working: DocumentSet
@@ -134,24 +169,15 @@ export function applySingleDocPatch({
     throw new ActionError({documentId, transactionId, message: notFoundMessage})
   }
 
-  const applyMutations = (documents: DocumentSet, mutations: Mutation[]): DocumentSet => {
-    try {
-      return processMutations({documents, transactionId, mutations, timestamp})
-    } catch (error) {
-      // with preserved operations, patches can legitimately fail to apply
-      // (e.g. re-applied onto a diverged document during a rebase), so we
-      // surface these as `ActionError`s to skip the transaction gracefully
-      if (!preserveOperations) throw error
-      throw new ActionError({
-        documentId,
-        transactionId,
-        message: error instanceof Error ? error.message : 'Failed to apply patches.',
-      })
-    }
-  }
+  const applyMutations = createMutationApplier({
+    documentId,
+    transactionId,
+    timestamp,
+    preserveOperations,
+  })
 
   const baseBefore = base[documentId]
-  base = applyMutations(base, userPatches)
+  base = applyMutations(base, userPatches, 'base')
   const baseAfter = base[documentId]
   const diffedPatches = preserveOperations
     ? (patches as PatchOperations[])
@@ -166,7 +192,7 @@ export function applySingleDocPatch({
     patch: {id: documentId, ...patch},
   }))
 
-  working = applyMutations(working, workingMutations)
+  working = applyMutations(working, workingMutations, 'working')
 
   return {base, working, diffedPatches, workingMutations}
 }
