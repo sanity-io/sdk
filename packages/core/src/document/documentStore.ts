@@ -133,6 +133,14 @@ export interface DocumentState {
    * local transactions on top of this new remote.
    */
   unverifiedRevisions?: {[TTransactionId in string]?: UnverifiedDocumentRevision}
+  /**
+   * transaction IDs recently submitted by this client for this document,
+   * newest last. used to label `remote-patches` events with the correct
+   * `origin` even after the corresponding `unverifiedRevisions` entry has
+   * been pruned (e.g. by a sync event that raced the listener echo). capped
+   * to the most recent entries.
+   */
+  recentOwnTransactionIds?: string[]
 }
 
 export const documentStore = defineStore<DocumentStoreState, BoundResourceKey>({

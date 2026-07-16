@@ -497,6 +497,9 @@ describe('transitionAppliedTransactionsToOutgoing', () => {
     expect(docState?.unverifiedRevisions).toBeDefined()
     expect(docState?.unverifiedRevisions?.['txn7']).toBeDefined()
     expect(docState?.unverifiedRevisions?.['txn7']?.previousRev).toEqual('rev1')
+    // the transaction ID is also tracked durably for remote-patches origin
+    // labeling, surviving unverified-revision pruning
+    expect(docState?.recentOwnTransactionIds).toEqual(['txn7'])
   })
 })
 
@@ -802,6 +805,7 @@ describe('applyRemoteDocument', () => {
       unverifiedRevisions: NonNullable<
         SyncTransactionState['documentStates'][string]
       >['unverifiedRevisions'] = {},
+      recentOwnTransactionIds?: string[],
     ): SyncTransactionState {
       return {
         queued: [],
@@ -815,6 +819,7 @@ describe('applyRemoteDocument', () => {
             local: {...exampleDoc, _id: docId, foo: 'old'},
             remote: {...exampleDoc, _id: docId, foo: 'old'},
             unverifiedRevisions,
+            ...(recentOwnTransactionIds && {recentOwnTransactionIds}),
           },
         },
       }
@@ -941,6 +946,58 @@ describe('applyRemoteDocument', () => {
 
       applyRemoteDocument(createInitialState(), remote, events)
       expect(received).toEqual([])
+    })
+
+    it('excludes patches addressed to other documents in the same transaction', () => {
+      const events = new Subject<DocumentEvent>()
+      const received: DocumentEvent[] = []
+      events.subscribe((e) => received.push(e))
+
+      const remote: RemoteDocument = {
+        type: 'mutation',
+        documentId: docId,
+        document: {...exampleDoc, _id: docId, foo: 'new'},
+        revision: 'txnMulti',
+        previousRev: 'txn0',
+        timestamp: '2025-02-06T00:20:00.000Z',
+        mutations: [
+          {patch: {id: docId, set: {foo: 'new'}}},
+          {patch: {id: 'some-other-doc', set: {foo: 'other'}}},
+          {patch: {query: '*[_type == "author"]', set: {foo: 'queried'}}},
+        ],
+      }
+
+      applyRemoteDocument(createInitialState(), remote, events)
+
+      expect(received).toHaveLength(1)
+      expect((received[0] as {patches: unknown}).patches).toEqual([{set: {foo: 'new'}}])
+    })
+
+    it('labels origin "local" via recentOwnTransactionIds when the unverified revision was pruned', () => {
+      const events = new Subject<DocumentEvent>()
+      const received: DocumentEvent[] = []
+      events.subscribe((e) => received.push(e))
+
+      const remote: RemoteDocument = {
+        type: 'mutation',
+        documentId: docId,
+        document: {...exampleDoc, _id: docId, foo: 'new'},
+        revision: 'txnPruned',
+        previousRev: 'txn0',
+        timestamp: '2025-02-06T00:21:00.000Z',
+        mutations: [{patch: {id: docId, set: {foo: 'new'}}}],
+      }
+
+      // a sync event racing the listener echo pruned the unverified revision,
+      // but the transaction ID is still tracked as one of our own
+      applyRemoteDocument(createInitialState({}, ['txnPruned']), remote, events)
+
+      expect(received).toHaveLength(1)
+      expect(received[0]).toMatchObject({
+        type: 'remote-patches',
+        transactionId: 'txnPruned',
+        origin: 'local',
+      })
     })
   })
 
