@@ -33,6 +33,7 @@ export function handleEdit(
       timestamp,
       grants,
       identity,
+      preserveOperations: action.preserveOperations,
     })
     // liveEdit documents use the mutation endpoint directly -- we don't send actions
     outgoingMutations.push(...result.workingMutations)
@@ -71,6 +72,28 @@ export function handleEdit(
     })
   }
 
+  const applyMutations = (
+    documents: typeof base,
+    mutations: Mutation[],
+    documentSetName: 'base' | 'working',
+  ): typeof base => {
+    try {
+      return processMutations({documents, transactionId, mutations, timestamp})
+    } catch (error) {
+      // with preserved operations, patches can legitimately fail to apply
+      // (e.g. re-applied onto a diverged document during a rebase), so we
+      // surface these as `ActionError`s to skip the transaction gracefully
+      if (!action.preserveOperations) throw error
+      throw new ActionError({
+        documentId,
+        transactionId,
+        message: `Failed to apply patches to the ${documentSetName} document: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
+      })
+    }
+  }
+
   const baseMutations: Mutation[] = []
   // don't create a draft from the published version in a release perspective
   if (!isReleasePerspective(action.perspective) && !base[draftId] && base[publishedId]) {
@@ -84,16 +107,17 @@ export function handleEdit(
     baseMutations.push(...userPatches)
   }
 
-  base = processMutations({
-    documents: base,
-    transactionId,
-    mutations: baseMutations,
-    timestamp,
-  })
+  base = applyMutations(base, baseMutations, 'base')
   // this one will always be defined because a patch mutation will never
   // delete an input document
   const baseAfter = base[patchDocumentId] as SanityDocument
-  const patches = diffValue(baseBefore, baseAfter)
+  // when the caller asked us to preserve their operations, forward their
+  // patches verbatim instead of re-deriving them from a snapshot diff. this
+  // keeps keyed array operations addressable so concurrent edits from other
+  // clients interleave instead of being overwritten
+  const patches = action.preserveOperations
+    ? (action.patches ?? [])
+    : diffValue(baseBefore, baseAfter)
 
   const workingMutations: Mutation[] = []
   if (!isReleasePerspective(action.perspective) && !working[draftId] && working[publishedId]) {
@@ -121,12 +145,7 @@ export function handleEdit(
   }
   workingMutations.push(...patches.map((patch) => ({patch: {id: patchDocumentId, ...patch}})))
 
-  working = processMutations({
-    documents: working,
-    transactionId,
-    mutations: workingMutations,
-    timestamp,
-  })
+  working = applyMutations(working, workingMutations, 'working')
 
   outgoingMutations.push(...workingMutations)
   outgoingActions.push(

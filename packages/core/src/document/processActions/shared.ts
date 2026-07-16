@@ -75,6 +75,13 @@ interface ApplySingleDocPatchOptions {
    * Error message thrown when the working document fails the `update` grant.
    */
   permissionMessage?: string
+  /**
+   * When `true`, the given patches are used verbatim instead of being
+   * re-derived by diffing the base document before and after application.
+   * Patch application failures are surfaced as `ActionError`s so a rebase
+   * can skip the transaction instead of failing the store.
+   */
+  preserveOperations?: boolean
 }
 
 interface ApplySingleDocPatchResult {
@@ -112,6 +119,7 @@ export function applySingleDocPatch({
   identity,
   notFoundMessage = 'Cannot edit document because it does not exist.',
   permissionMessage = `You do not have permission to edit document "${documentId}".`,
+  preserveOperations,
 }: ApplySingleDocPatchOptions): ApplySingleDocPatchResult {
   let base = initialBase
   let working = initialWorking
@@ -126,10 +134,28 @@ export function applySingleDocPatch({
     throw new ActionError({documentId, transactionId, message: notFoundMessage})
   }
 
+  const applyMutations = (documents: DocumentSet, mutations: Mutation[]): DocumentSet => {
+    try {
+      return processMutations({documents, transactionId, mutations, timestamp})
+    } catch (error) {
+      // with preserved operations, patches can legitimately fail to apply
+      // (e.g. re-applied onto a diverged document during a rebase), so we
+      // surface these as `ActionError`s to skip the transaction gracefully
+      if (!preserveOperations) throw error
+      throw new ActionError({
+        documentId,
+        transactionId,
+        message: error instanceof Error ? error.message : 'Failed to apply patches.',
+      })
+    }
+  }
+
   const baseBefore = base[documentId]
-  base = processMutations({documents: base, transactionId, mutations: userPatches, timestamp})
+  base = applyMutations(base, userPatches)
   const baseAfter = base[documentId]
-  const diffedPatches = diffValue(baseBefore, baseAfter) as PatchOperations[]
+  const diffedPatches = preserveOperations
+    ? (patches as PatchOperations[])
+    : (diffValue(baseBefore, baseAfter) as PatchOperations[])
 
   const workingBefore = working[documentId] as SanityDocument
   if (!checkGrant(grants.update, workingBefore, identity)) {
@@ -140,12 +166,7 @@ export function applySingleDocPatch({
     patch: {id: documentId, ...patch},
   }))
 
-  working = processMutations({
-    documents: working,
-    transactionId,
-    mutations: workingMutations,
-    timestamp,
-  })
+  working = applyMutations(working, workingMutations)
 
   return {base, working, diffedPatches, workingMutations}
 }

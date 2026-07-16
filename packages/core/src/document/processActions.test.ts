@@ -527,6 +527,151 @@ describe('processActions', () => {
     })
   })
 
+  describe('document.edit with preserveOperations', () => {
+    const createKeyedDoc = (): SanityDocument => ({
+      _id: 'drafts.doc1',
+      _type: 'article',
+      _createdAt: '2025-01-01T00:00:00.000Z',
+      _updatedAt: '2025-01-01T00:00:00.000Z',
+      _rev: 'initial',
+      items: [
+        {_key: 'a', value: 'first'},
+        {_key: 'b', value: 'second'},
+      ],
+    })
+
+    it('forwards the given patches verbatim instead of re-diffing', () => {
+      const draft = createKeyedDoc()
+      const base: DocumentSet = {'drafts.doc1': draft}
+      const working: DocumentSet = {'drafts.doc1': draft}
+      const patches = [
+        {insert: {after: 'items[_key=="a"]', items: [{_key: 'c', value: 'in between'}]}},
+      ]
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.edit',
+          patches,
+          preserveOperations: true,
+        },
+      ]
+      const result = processActions({
+        actions,
+        transactionId,
+        base,
+        working,
+        timestamp,
+        grants: defaultGrants,
+      })
+
+      // the outgoing action carries the caller's keyed patch untouched
+      expect(result.outgoingActions).toEqual([
+        {
+          actionType: 'sanity.action.document.edit',
+          draftId: 'drafts.doc1',
+          publishedId: 'doc1',
+          patch: patches[0],
+        },
+      ])
+
+      // and it still applies to the local working copy
+      expect(result.working['drafts.doc1']?.['items']).toEqual([
+        {_key: 'a', value: 'first'},
+        {_key: 'c', value: 'in between'},
+        {_key: 'b', value: 'second'},
+      ])
+    })
+
+    it('applies keyed unsets and sets to the local working copy', () => {
+      const draft = createKeyedDoc()
+      const base: DocumentSet = {'drafts.doc1': draft}
+      const working: DocumentSet = {'drafts.doc1': draft}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.edit',
+          patches: [
+            {unset: ['items[_key=="a"]']},
+            {set: {'items[_key=="b"].value': 'updated second'}},
+          ],
+          preserveOperations: true,
+        },
+      ]
+      const result = processActions({
+        actions,
+        transactionId,
+        base,
+        working,
+        timestamp,
+        grants: defaultGrants,
+      })
+
+      expect(result.working['drafts.doc1']?.['items']).toEqual([
+        {_key: 'b', value: 'updated second'},
+      ])
+      expect(result.outgoingActions.map((action) => 'patch' in action && action.patch)).toEqual([
+        {unset: ['items[_key=="a"]']},
+        {set: {'items[_key=="b"].value': 'updated second'}},
+      ])
+    })
+
+    it('surfaces patch application failures as ActionError', () => {
+      const draft = {...createKeyedDoc(), count: 5}
+      const base: DocumentSet = {'drafts.doc1': draft}
+      const working: DocumentSet = {'drafts.doc1': draft}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.edit',
+          // diff-match-patch on a non-string value cannot apply
+          patches: [{diffMatchPatch: {count: '@@ -1,3 +1,3 @@\n-foo\n+bar\n'}}],
+          preserveOperations: true,
+        },
+      ]
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+      ).toThrow(ActionError)
+      expect(() =>
+        processActions({actions, transactionId, base, working, timestamp, grants: defaultGrants}),
+      ).toThrow(/Failed to apply patches to the base document/)
+    })
+
+    it('forwards patches verbatim through the liveEdit mutation path', () => {
+      const liveDoc = {...createKeyedDoc(), _id: 'live-doc'}
+      const base: DocumentSet = {'live-doc': liveDoc}
+      const working: DocumentSet = {'live-doc': liveDoc}
+      const patches = [{insert: {before: 'items[_key=="a"]', items: [{_key: 'z', value: 'start'}]}}]
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'live-doc',
+          documentType: 'liveArticle',
+          type: 'document.edit',
+          liveEdit: true,
+          patches,
+          preserveOperations: true,
+        },
+      ]
+      const result = processActions({
+        actions,
+        transactionId,
+        base,
+        working,
+        timestamp,
+        grants: defaultGrants,
+      })
+
+      expect(result.outgoingMutations).toEqual([{patch: {id: 'live-doc', ...patches[0]}}])
+      expect(result.working['live-doc']?.['items']).toEqual([
+        {_key: 'z', value: 'start'},
+        {_key: 'a', value: 'first'},
+        {_key: 'b', value: 'second'},
+      ])
+    })
+  })
+
   describe('document.publish', () => {
     it('should publish a draft document', () => {
       const draft = createDoc('drafts.doc1', 'Draft Title', '1')

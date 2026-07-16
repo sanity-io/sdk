@@ -433,9 +433,30 @@ export function revertOutgoingTransaction(prev: SyncTransactionState): SyncTrans
   }
 }
 
+/**
+ * Extracts the patch operations from a set of raw listener mutations,
+ * stripping the mutation-level `id`/`query` addressing so the patches are
+ * rooted at the document.
+ */
+function extractPatchOperations(mutations: Mutation[] | undefined): PatchOperations[] {
+  if (!mutations) return []
+  return mutations.flatMap((mutation) => {
+    if (!('patch' in mutation) || !mutation.patch) return []
+    const {
+      id: _id,
+      query: _query,
+      ...operations
+    } = mutation.patch as PatchOperations & {
+      id?: string
+      query?: string
+    }
+    return [operations]
+  })
+}
+
 export function applyRemoteDocument(
   prev: SyncTransactionState,
-  {document, documentId, previousRev, revision, timestamp, type}: RemoteDocument,
+  {document, documentId, previousRev, revision, timestamp, type, mutations}: RemoteDocument,
   events: DocumentStoreState['events'],
 ): SyncTransactionState {
   if (!prev.grants) return prev
@@ -453,6 +474,25 @@ export function applyRemoteDocument(
   let unverifiedRevisions = prevUnverifiedRevisions ?? EMPTY_REVISIONS
   if (revision && revisionToVerify) {
     unverifiedRevisions = omitProperty(prevUnverifiedRevisions, revision)
+  }
+
+  // surface the operational patches from this transaction before they are
+  // collapsed into the whole-document snapshot below. consumers that keep
+  // their own state (e.g. collaborative text editors) rely on these to apply
+  // remote changes without re-diffing document snapshots
+  if (type === 'mutation' && revision) {
+    const patches = extractPatchOperations(mutations)
+    if (patches.length) {
+      events.next({
+        type: 'remote-patches',
+        documentId,
+        transactionId: revision,
+        previousRev,
+        timestamp,
+        patches,
+        origin: revisionToVerify ? 'local' : 'remote',
+      })
+    }
   }
 
   // if this remote document is from a `'sync'` event (meaning that the whole

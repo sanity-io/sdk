@@ -1,4 +1,5 @@
 import {type MultipleMutationResult, type SanityClient} from '@sanity/client'
+import {type PatchOperations} from '@sanity/types'
 
 import {type DocumentAction, type ReleaseAction} from './actions'
 import {getReleaseDocumentId, isReleaseAction} from './processActions/releaseUtil'
@@ -21,6 +22,7 @@ export type DocumentEvent =
   | DocumentPublishedEvent
   | DocumentUnpublishedEvent
   | DocumentDiscardedEvent
+  | DocumentRemotePatchesEvent
 
 /**
  * @beta
@@ -117,6 +119,36 @@ export interface DocumentDiscardedEvent {
   type: 'discarded'
   documentId: string
   outgoing: OutgoingTransaction
+}
+
+/**
+ * @beta
+ * Event emitted when patches for a document are observed through the listener.
+ *
+ * Unlike the whole-document snapshots the store keeps, these are the raw patch
+ * operations from the transaction that produced the change, preserving the
+ * operational intent of the edit (e.g. keyed array inserts/unsets). Consumers
+ * that maintain their own local state, like collaborative text editors, can
+ * apply these directly instead of diffing document snapshots.
+ *
+ * `origin` is `'local'` when the transaction was submitted by this document
+ * store instance (an own edit observed back through the listener) and
+ * `'remote'` when it came from another client.
+ */
+export interface DocumentRemotePatchesEvent {
+  type: 'remote-patches'
+  /** The ID of the document version the patches apply to (e.g. a draft ID). */
+  documentId: string
+  /** The transaction ID that carried these patches. */
+  transactionId: string
+  /** The revision the document was at before this transaction. */
+  previousRev?: string
+  /** The timestamp of the transaction. */
+  timestamp: string
+  /** The patch operations, rooted at the document. */
+  patches: PatchOperations[]
+  /** Whether the transaction originated from this client or another one. */
+  origin: 'local' | 'remote'
 }
 
 // Release actions that write a mutation to the local release doc map onto
