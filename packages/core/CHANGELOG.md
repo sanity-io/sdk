@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.17.0](https://github.com/sanity-io/sdk/compare/sdk-v2.16.0...sdk-v2.17.0) (2026-07-16)
+
+
+### Features
+
+* **core:** add operational patch channel for concurrent document edits ([#1046](https://github.com/sanity-io/sdk/issues/1046)) ([0721ee7](https://github.com/sanity-io/sdk/commit/0721ee7640e0c255c95ce19270e0d69441a1f088))
+
 ## [2.16.0](https://github.com/sanity-io/sdk/compare/sdk-v2.15.0...sdk-v2.16.0) (2026-07-14)
 
 
