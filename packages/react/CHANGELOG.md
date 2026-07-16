@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.17.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.16.0...sdk-react-v2.17.0) (2026-07-16)
+
+
+### Miscellaneous
+
+* **sdk-react:** Synchronize sdk versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.17.0
+
 ## [2.16.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.15.0...sdk-react-v2.16.0) (2026-07-14)
 
 
