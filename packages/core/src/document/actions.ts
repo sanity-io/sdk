@@ -68,6 +68,21 @@ export interface EditDocumentAction<
 > extends DocumentHandle<TDocumentType, TDataset, TProjectId> {
   type: 'document.edit'
   patches?: PatchOperations[]
+  /**
+   * When `true`, the given `patches` are forwarded verbatim to the server and
+   * applied as-is locally, instead of being re-derived by diffing document
+   * snapshots. This preserves the operational intent of the patches (e.g.
+   * keyed array inserts/unsets), which lets concurrent edits from other
+   * clients interleave coherently instead of being overwritten by
+   * position-based patches computed from a stale snapshot.
+   *
+   * Use this when the patches were produced by an editor that tracks its own
+   * operations (e.g. a collaborative text editor). During a rebase onto a
+   * changed remote document, preserved patches are re-applied operationally;
+   * if a patch can no longer apply, the transaction is skipped and reported
+   * as a `rebase-error` document event.
+   */
+  preserveOperations?: boolean
 }
 
 /**
@@ -202,11 +217,24 @@ function convertSanityMutatePatch(
 }
 
 /**
+ * Options for creating an `EditDocumentAction`.
+ * @beta
+ */
+export interface EditDocumentOptions {
+  /**
+   * Forward the given patches verbatim instead of re-deriving them by
+   * diffing document snapshots. See {@link EditDocumentAction.preserveOperations}.
+   */
+  preserveOperations?: boolean
+}
+
+/**
  * Creates an `EditDocumentAction` object with patches for modifying a document.
  * Accepts patches in either the standard `PatchOperations` format or as a `SanityMutatePatchMutation` from `@sanity/mutate`.
  *
  * @param doc - A handle uniquely identifying the document to be edited.
  * @param sanityMutatePatch - A patch mutation object from `@sanity/mutate`.
+ * @param options - Options controlling how the patches are processed.
  * @returns An `EditDocumentAction` object ready for dispatch.
  * @beta
  */
@@ -217,12 +245,14 @@ export function editDocument<
 >(
   doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
   sanityMutatePatch: SanityMutatePatchMutation,
+  options?: EditDocumentOptions,
 ): EditDocumentAction<TDocumentType, TDataset, TProjectId>
 /**
  * Creates an `EditDocumentAction` object with patches for modifying a document.
  *
  * @param doc - A handle uniquely identifying the document to be edited.
  * @param patches - A single patch operation or an array of patch operations.
+ * @param options - Options controlling how the patches are processed.
  * @returns An `EditDocumentAction` object ready for dispatch.
  * @beta
  */
@@ -233,6 +263,7 @@ export function editDocument<
 >(
   doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
   patches?: PatchOperations | PatchOperations[],
+  options?: EditDocumentOptions,
 ): EditDocumentAction<TDocumentType, TDataset, TProjectId>
 /**
  * Creates an `EditDocumentAction` object with patches for modifying a document.
@@ -240,6 +271,7 @@ export function editDocument<
  *
  * @param doc - A handle uniquely identifying the document to be edited.
  * @param patches - Patches in various formats (`PatchOperations`, `PatchOperations[]`, or `SanityMutatePatchMutation`).
+ * @param options - Options controlling how the patches are processed.
  * @returns An `EditDocumentAction` object ready for dispatch.
  */
 export function editDocument<
@@ -249,8 +281,10 @@ export function editDocument<
 >(
   doc: DocumentHandle<TDocumentType, TDataset, TProjectId>,
   patches?: PatchOperations | PatchOperations[] | SanityMutatePatchMutation,
+  options?: EditDocumentOptions,
 ): EditDocumentAction<TDocumentType, TDataset, TProjectId> {
   const effectiveDocumentId = getEffectiveDocumentId(doc)
+  const preserveOperations = options?.preserveOperations && {preserveOperations: true as const}
 
   if (isSanityMutatePatch(patches)) {
     const converted = convertSanityMutatePatch(patches) ?? []
@@ -259,6 +293,7 @@ export function editDocument<
       type: 'document.edit',
       documentId: effectiveDocumentId,
       patches: converted,
+      ...preserveOperations,
     }
   }
 
@@ -267,6 +302,7 @@ export function editDocument<
     type: 'document.edit',
     documentId: effectiveDocumentId,
     ...(patches && {patches: Array.isArray(patches) ? patches : [patches]}),
+    ...preserveOperations,
   }
 }
 

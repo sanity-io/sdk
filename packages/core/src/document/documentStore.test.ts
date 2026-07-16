@@ -41,7 +41,11 @@ import {
   resolvePermissions,
   subscribeDocumentEvents,
 } from './documentStore'
-import {type ActionErrorEvent, type TransactionRevertedEvent} from './events'
+import {
+  type ActionErrorEvent,
+  type DocumentRemotePatchesEvent,
+  type TransactionRevertedEvent,
+} from './events'
 import {DEFAULT_MAX_BUFFER_SIZE} from './listen'
 import {type DatasetAcl} from './permissions'
 import {type DocumentSet, processMutations} from './processMutations'
@@ -281,6 +285,66 @@ it('propagates changes between two instances', async () => {
   state2Unsubscribe()
 })
 
+it('emits remote-patches events distinguishing own and foreign transactions', async () => {
+  const doc = createDocumentHandle({documentId: 'doc-remote-patches', documentType: 'article'})
+  const state1 = getDocumentState(instance1, doc)
+  const state2 = getDocumentState(instance2, doc)
+
+  const state1Unsubscribe = state1.subscribe()
+  const state2Unsubscribe = state2.subscribe()
+
+  await applyDocumentActions(instance1, {actions: [createDocument(doc)], resource: source1}).then(
+    (r) => r.submitted(),
+  )
+
+  const events1: DocumentRemotePatchesEvent[] = []
+  const events2: DocumentRemotePatchesEvent[] = []
+  const unsubscribeEvents1 = subscribeDocumentEvents(instance1, {
+    resource: source1,
+    eventHandler: (e) => {
+      if (e.type === 'remote-patches') events1.push(e)
+    },
+  })
+  const unsubscribeEvents2 = subscribeDocumentEvents(instance2, {
+    resource: source2,
+    eventHandler: (e) => {
+      if (e.type === 'remote-patches') events2.push(e)
+    },
+  })
+
+  // edit from instance2: an own transaction for instance2, a foreign one for instance1
+  const result = await applyDocumentActions(instance2, {
+    actions: [editDocument(doc, {set: {title: 'Hello world!'}})],
+    resource: source2,
+  }).then((r) => r.submitted())
+
+  const draftId = getDraftId(DocumentId(doc.documentId))
+
+  expect(events1).toHaveLength(1)
+  expect(events1[0]).toMatchObject({
+    type: 'remote-patches',
+    documentId: draftId,
+    transactionId: result.transactionId,
+    origin: 'remote',
+  })
+  expect(events1[0].patches).toEqual(
+    expect.arrayContaining([{set: expect.objectContaining({title: 'Hello world!'})}]),
+  )
+
+  expect(events2).toHaveLength(1)
+  expect(events2[0]).toMatchObject({
+    type: 'remote-patches',
+    documentId: draftId,
+    transactionId: result.transactionId,
+    origin: 'local',
+  })
+
+  unsubscribeEvents1()
+  unsubscribeEvents2()
+  state1Unsubscribe()
+  state2Unsubscribe()
+})
+
 it('handles concurrent edits and resolves conflicts', async () => {
   const doc = createDocumentHandle({documentId: 'doc-concurrent', documentType: 'article'})
   const state1 = getDocumentState(instance1, doc)
@@ -319,6 +383,73 @@ it('handles concurrent edits and resolves conflicts', async () => {
   const finalDoc2 = state2.getCurrent()
   expect(finalDoc1?.title).toEqual(finalDoc2?.title)
   expect(finalDoc1?.title).toBe('The quick brown elephant jumps over the lazy cat')
+
+  state1Unsubscribe()
+  state2Unsubscribe()
+  oneOffInstance.dispose()
+})
+
+it('interleaves concurrent keyed-array edits when operations are preserved', async () => {
+  const doc = createDocumentHandle({documentId: 'doc-preserve-ops', documentType: 'article'})
+  const state1 = getDocumentState(instance1, doc)
+  const state2 = getDocumentState(instance2, doc)
+
+  const state1Unsubscribe = state1.subscribe()
+  const state2Unsubscribe = state2.subscribe()
+
+  const oneOffInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  await applyDocumentActions(oneOffInstance, {
+    actions: [
+      createDocument(doc),
+      editDocument(doc, {
+        set: {
+          items: [
+            {_key: 'a', value: 'first'},
+            {_key: 'b', value: 'second'},
+          ],
+        },
+      }),
+    ],
+    resource,
+  }).then((r) => r.submitted())
+
+  // both instances insert into the same keyed array simultaneously, each
+  // preserving their operational patches instead of re-diffing snapshots
+  const p1 = applyDocumentActions(instance1, {
+    actions: [
+      editDocument(
+        doc,
+        {insert: {after: 'items[_key=="a"]', items: [{_key: 'c', value: 'from instance1'}]}},
+        {preserveOperations: true},
+      ),
+    ],
+    resource: source1,
+  }).then((r) => r.submitted())
+  const p2 = applyDocumentActions(instance2, {
+    actions: [
+      editDocument(
+        doc,
+        {insert: {after: 'items[_key=="b"]', items: [{_key: 'd', value: 'from instance2'}]}},
+        {preserveOperations: true},
+      ),
+    ],
+    resource: source2,
+  }).then((r) => r.submitted())
+
+  await Promise.allSettled([p1, p2])
+
+  const finalDoc1 = state1.getCurrent()
+  const finalDoc2 = state2.getCurrent()
+
+  // neither edit overwrote the other: both keyed inserts landed and both
+  // instances converged on the same interleaved result
+  expect(finalDoc1?.['items']).toEqual(finalDoc2?.['items'])
+  expect(finalDoc1?.['items']).toEqual([
+    {_key: 'a', value: 'first'},
+    {_key: 'c', value: 'from instance1'},
+    {_key: 'b', value: 'second'},
+    {_key: 'd', value: 'from instance2'},
+  ])
 
   state1Unsubscribe()
   state2Unsubscribe()

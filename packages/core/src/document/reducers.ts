@@ -17,6 +17,13 @@ import {type DocumentSet} from './processMutations'
 
 const EMPTY_REVISIONS: NonNullable<Required<DocumentState['unverifiedRevisions']>> = {}
 
+/**
+ * How many of this client's own transaction IDs to remember per document for
+ * `remote-patches` origin labeling. Sized to comfortably outlast the window
+ * between submitting a transaction and observing its listener echo.
+ */
+const MAX_RECENT_OWN_TRANSACTION_IDS = 50
+
 export type SyncTransactionState = Pick<
   DocumentStoreState,
   'queued' | 'applied' | 'documentStates' | 'outgoing' | 'grants' | 'identity'
@@ -364,6 +371,15 @@ export function transitionAppliedTransactionsToOutgoing(
             // add unverified revision
             [transactionId]: {documentId, previousRev, transactionId, timestamp},
           },
+          // also track the transaction ID durably (unverified revisions can be
+          // pruned by sync events before the listener echo arrives) so
+          // `remote-patches` events label our own transactions correctly
+          recentOwnTransactionIds: [
+            ...(documentState.recentOwnTransactionIds ?? []).slice(
+              -(MAX_RECENT_OWN_TRANSACTION_IDS - 1),
+            ),
+            transactionId,
+          ],
         }
 
         return acc
@@ -433,9 +449,29 @@ export function revertOutgoingTransaction(prev: SyncTransactionState): SyncTrans
   }
 }
 
+/**
+ * Extracts the patch operations addressed to the given document from a set of
+ * raw listener mutations, stripping the mutation-level `id` addressing so the
+ * patches are rooted at the document. A transaction can carry mutations for
+ * other documents, so anything not explicitly id-addressed to this document
+ * (including query-addressed patches) is dropped.
+ */
+function extractPatchOperations(
+  mutations: Mutation[] | undefined,
+  documentId: string,
+): PatchOperations[] {
+  if (!mutations) return []
+  return mutations.flatMap((mutation) => {
+    if (!('patch' in mutation) || !mutation.patch) return []
+    const {id, ...operations} = mutation.patch as PatchOperations & {id?: string}
+    if (id !== documentId) return []
+    return [operations]
+  })
+}
+
 export function applyRemoteDocument(
   prev: SyncTransactionState,
-  {document, documentId, previousRev, revision, timestamp, type}: RemoteDocument,
+  {document, documentId, previousRev, revision, timestamp, type, mutations}: RemoteDocument,
   events: DocumentStoreState['events'],
 ): SyncTransactionState {
   if (!prev.grants) return prev
@@ -453,6 +489,31 @@ export function applyRemoteDocument(
   let unverifiedRevisions = prevUnverifiedRevisions ?? EMPTY_REVISIONS
   if (revision && revisionToVerify) {
     unverifiedRevisions = omitProperty(prevUnverifiedRevisions, revision)
+  }
+
+  // surface the operational patches from this transaction before they are
+  // collapsed into the whole-document snapshot below. consumers that keep
+  // their own state (e.g. collaborative text editors) rely on these to apply
+  // remote changes without re-diffing document snapshots
+  if (type === 'mutation' && revision) {
+    const patches = extractPatchOperations(mutations, documentId)
+    if (patches.length) {
+      // `unverifiedRevisions` alone isn't a reliable origin marker: a sync
+      // event can prune an in-flight transaction's entry before its listener
+      // echo arrives. `recentOwnTransactionIds` survives that race
+      const isOwnTransaction =
+        Boolean(revisionToVerify) ||
+        (prevDocState.recentOwnTransactionIds?.includes(revision) ?? false)
+      events.next({
+        type: 'remote-patches',
+        documentId,
+        transactionId: revision,
+        previousRev,
+        timestamp,
+        patches,
+        origin: isOwnTransaction ? 'local' : 'remote',
+      })
+    }
   }
 
   // if this remote document is from a `'sync'` event (meaning that the whole

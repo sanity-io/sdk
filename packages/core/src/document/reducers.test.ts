@@ -497,6 +497,9 @@ describe('transitionAppliedTransactionsToOutgoing', () => {
     expect(docState?.unverifiedRevisions).toBeDefined()
     expect(docState?.unverifiedRevisions?.['txn7']).toBeDefined()
     expect(docState?.unverifiedRevisions?.['txn7']?.previousRev).toEqual('rev1')
+    // the transaction ID is also tracked durably for remote-patches origin
+    // labeling, surviving unverified-revision pruning
+    expect(docState?.recentOwnTransactionIds).toEqual(['txn7'])
   })
 })
 
@@ -793,6 +796,399 @@ describe('applyRemoteDocument', () => {
     })
     expect(newDocState?.remote).toEqual(remote.document)
     expect(newDocState?.remoteRev).toBe('currentRev')
+  })
+
+  describe('remote-patches events', () => {
+    const docId = getDraftId(DocumentId('doc1'))
+
+    function createInitialState(
+      unverifiedRevisions: NonNullable<
+        SyncTransactionState['documentStates'][string]
+      >['unverifiedRevisions'] = {},
+      recentOwnTransactionIds?: string[],
+    ): SyncTransactionState {
+      return {
+        queued: [],
+        applied: [],
+        outgoing: undefined,
+        grants,
+        documentStates: {
+          [docId]: {
+            id: docId,
+            subscriptions: ['sub1'],
+            local: {...exampleDoc, _id: docId, foo: 'old'},
+            remote: {...exampleDoc, _id: docId, foo: 'old'},
+            unverifiedRevisions,
+            ...(recentOwnTransactionIds && {recentOwnTransactionIds}),
+          },
+        },
+      }
+    }
+
+    it('emits a remote-patches event with origin "remote" for foreign transactions', () => {
+      const events = new Subject<DocumentEvent>()
+      const received: DocumentEvent[] = []
+      events.subscribe((e) => received.push(e))
+
+      const remote: RemoteDocument = {
+        type: 'mutation',
+        documentId: docId,
+        document: {...exampleDoc, _id: docId, foo: 'new'},
+        revision: 'txnForeign',
+        previousRev: 'txn0',
+        timestamp: '2025-02-06T00:12:00.000Z',
+        mutations: [
+          {
+            patch: {
+              id: docId,
+              unset: ['blocks[_key=="a"].children[_key=="b"].marks[0]'],
+            },
+          },
+          {
+            patch: {
+              id: docId,
+              insert: {after: 'blocks[_key=="a"].markDefs[-1]', items: [{_key: 'link1'}]},
+            },
+          },
+        ],
+      }
+
+      applyRemoteDocument(createInitialState(), remote, events)
+
+      expect(received).toEqual([
+        {
+          type: 'remote-patches',
+          documentId: docId,
+          transactionId: 'txnForeign',
+          previousRev: 'txn0',
+          timestamp: '2025-02-06T00:12:00.000Z',
+          origin: 'remote',
+          patches: [
+            {unset: ['blocks[_key=="a"].children[_key=="b"].marks[0]']},
+            {insert: {after: 'blocks[_key=="a"].markDefs[-1]', items: [{_key: 'link1'}]}},
+          ],
+        },
+      ])
+    })
+
+    it('emits origin "local" when the transaction is one of our own unverified revisions', () => {
+      const events = new Subject<DocumentEvent>()
+      const received: DocumentEvent[] = []
+      events.subscribe((e) => received.push(e))
+
+      const remote: RemoteDocument = {
+        type: 'mutation',
+        documentId: docId,
+        document: {...exampleDoc, _id: docId, foo: 'new'},
+        revision: 'txnOwn',
+        previousRev: 'txn0',
+        timestamp: '2025-02-06T00:13:00.000Z',
+        mutations: [{patch: {id: docId, set: {foo: 'new'}}}],
+      }
+
+      applyRemoteDocument(
+        createInitialState({
+          txnOwn: {
+            transactionId: 'txnOwn',
+            documentId: docId,
+            previousRev: 'txn0',
+            timestamp: '2025-02-06T00:13:00.000Z',
+          },
+        }),
+        remote,
+        events,
+      )
+
+      expect(received).toEqual([
+        {
+          type: 'remote-patches',
+          documentId: docId,
+          transactionId: 'txnOwn',
+          previousRev: 'txn0',
+          timestamp: '2025-02-06T00:13:00.000Z',
+          origin: 'local',
+          patches: [{set: {foo: 'new'}}],
+        },
+      ])
+    })
+
+    it('does not emit for sync events', () => {
+      const events = new Subject<DocumentEvent>()
+      const received: DocumentEvent[] = []
+      events.subscribe((e) => received.push(e))
+
+      const remote: RemoteDocument = {
+        type: 'sync',
+        documentId: docId,
+        document: {...exampleDoc, _id: docId, foo: 'new'},
+        revision: 'revSync',
+        timestamp: '2025-02-06T00:14:00.000Z',
+      }
+
+      applyRemoteDocument(createInitialState(), remote, events)
+      expect(received).toEqual([])
+    })
+
+    it('does not emit when the mutations contain no patches', () => {
+      const events = new Subject<DocumentEvent>()
+      const received: DocumentEvent[] = []
+      events.subscribe((e) => received.push(e))
+
+      const remote: RemoteDocument = {
+        type: 'mutation',
+        documentId: docId,
+        document: {...exampleDoc, _id: docId, foo: 'new'},
+        revision: 'txnCreate',
+        previousRev: 'txn0',
+        timestamp: '2025-02-06T00:15:00.000Z',
+        mutations: [{createOrReplace: {...exampleDoc, _id: docId, foo: 'new'}}],
+      }
+
+      applyRemoteDocument(createInitialState(), remote, events)
+      expect(received).toEqual([])
+    })
+
+    it('excludes patches addressed to other documents in the same transaction', () => {
+      const events = new Subject<DocumentEvent>()
+      const received: DocumentEvent[] = []
+      events.subscribe((e) => received.push(e))
+
+      const remote: RemoteDocument = {
+        type: 'mutation',
+        documentId: docId,
+        document: {...exampleDoc, _id: docId, foo: 'new'},
+        revision: 'txnMulti',
+        previousRev: 'txn0',
+        timestamp: '2025-02-06T00:20:00.000Z',
+        mutations: [
+          {patch: {id: docId, set: {foo: 'new'}}},
+          {patch: {id: 'some-other-doc', set: {foo: 'other'}}},
+          {patch: {query: '*[_type == "author"]', set: {foo: 'queried'}}},
+        ],
+      }
+
+      applyRemoteDocument(createInitialState(), remote, events)
+
+      expect(received).toHaveLength(1)
+      expect((received[0] as {patches: unknown}).patches).toEqual([{set: {foo: 'new'}}])
+    })
+
+    it('labels origin "local" via recentOwnTransactionIds when the unverified revision was pruned', () => {
+      const events = new Subject<DocumentEvent>()
+      const received: DocumentEvent[] = []
+      events.subscribe((e) => received.push(e))
+
+      const remote: RemoteDocument = {
+        type: 'mutation',
+        documentId: docId,
+        document: {...exampleDoc, _id: docId, foo: 'new'},
+        revision: 'txnPruned',
+        previousRev: 'txn0',
+        timestamp: '2025-02-06T00:21:00.000Z',
+        mutations: [{patch: {id: docId, set: {foo: 'new'}}}],
+      }
+
+      // a sync event racing the listener echo pruned the unverified revision,
+      // but the transaction ID is still tracked as one of our own
+      applyRemoteDocument(createInitialState({}, ['txnPruned']), remote, events)
+
+      expect(received).toHaveLength(1)
+      expect(received[0]).toMatchObject({
+        type: 'remote-patches',
+        transactionId: 'txnPruned',
+        origin: 'local',
+      })
+    })
+  })
+
+  describe('rebase with preserved operations', () => {
+    it('skips a preserved-operations transaction that fails to re-apply and emits rebase-error', () => {
+      const docId = getDraftId(DocumentId('doc1'))
+      const originalDoc: SanityDocument = {
+        ...exampleDoc,
+        _id: docId,
+        _rev: 'rev1',
+        title: 'The quick brown fox',
+      }
+      const locallyEditedDoc: SanityDocument = {
+        ...originalDoc,
+        title: 'The quick brown cat',
+        _rev: 'txnLocal',
+      }
+
+      const appliedTransaction: AppliedTransaction = {
+        transactionId: 'txnLocal',
+        actions: [
+          {
+            type: 'document.edit',
+            documentId: 'doc1',
+            documentType: 'author',
+            patches: [{diffMatchPatch: {title: '@@ -13,7 +13,7 @@\n own \n-fox\n+cat\n'}}],
+            preserveOperations: true,
+          },
+        ],
+        previous: {[docId]: originalDoc},
+        base: {[docId]: originalDoc},
+        working: {[docId]: locallyEditedDoc},
+        previousRevs: {[docId]: 'rev1'},
+        timestamp: '2025-02-06T00:16:00.000Z',
+        outgoingActions: [],
+        outgoingMutations: [],
+      }
+
+      const initialState: SyncTransactionState = {
+        queued: [],
+        applied: [appliedTransaction],
+        outgoing: undefined,
+        grants,
+        documentStates: {
+          [docId]: {
+            id: docId,
+            subscriptions: ['sub1'],
+            local: locallyEditedDoc,
+            remote: originalDoc,
+            unverifiedRevisions: {},
+          },
+        },
+      }
+
+      // a foreign transaction replaced the title with a non-string, so our
+      // diffMatchPatch can no longer re-apply during the rebase
+      const remoteDoc: SanityDocument = {
+        ...originalDoc,
+        title: 42 as unknown as string,
+        _rev: 'txnForeign',
+      }
+      const remote: RemoteDocument = {
+        type: 'mutation',
+        documentId: docId,
+        document: remoteDoc,
+        revision: 'txnForeign',
+        previousRev: 'rev1',
+        timestamp: '2025-02-06T00:17:00.000Z',
+        mutations: [{patch: {id: docId, set: {title: 42}}}],
+      }
+
+      const events = new Subject<DocumentEvent>()
+      const received: DocumentEvent[] = []
+      events.subscribe((e) => received.push(e))
+
+      const newState = applyRemoteDocument(initialState, remote, events)
+
+      const rebaseErrors = received.filter((e) => e.type === 'rebase-error')
+      expect(rebaseErrors).toHaveLength(1)
+      expect(rebaseErrors[0]).toMatchObject({
+        type: 'rebase-error',
+        transactionId: 'txnLocal',
+        documentId: 'doc1',
+        message: expect.stringMatching(/Failed to apply patches to the working document/),
+      })
+
+      // the failing transaction is dropped and local converges to remote
+      expect(newState.applied).toEqual([])
+      expect(newState.documentStates[docId]?.local).toEqual(remoteDoc)
+      expect(newState.documentStates[docId]?.remote).toEqual(remoteDoc)
+    })
+
+    it('re-applies preserved keyed patches onto a diverged remote document', () => {
+      const docId = getDraftId(DocumentId('doc1'))
+      const originalDoc: SanityDocument = {
+        ...exampleDoc,
+        _id: docId,
+        _rev: 'rev1',
+        items: [
+          {_key: 'a', value: 'first'},
+          {_key: 'b', value: 'second'},
+        ],
+      }
+      const locallyEditedDoc: SanityDocument = {
+        ...originalDoc,
+        items: [
+          {_key: 'a', value: 'first'},
+          {_key: 'c', value: 'in between'},
+          {_key: 'b', value: 'second'},
+        ],
+        _rev: 'txnLocal',
+      }
+
+      const appliedTransaction: AppliedTransaction = {
+        transactionId: 'txnLocal',
+        actions: [
+          {
+            type: 'document.edit',
+            documentId: 'doc1',
+            documentType: 'author',
+            patches: [
+              {insert: {after: 'items[_key=="a"]', items: [{_key: 'c', value: 'in between'}]}},
+            ],
+            preserveOperations: true,
+          },
+        ],
+        previous: {[docId]: originalDoc},
+        base: {[docId]: originalDoc},
+        working: {[docId]: locallyEditedDoc},
+        previousRevs: {[docId]: 'rev1'},
+        timestamp: '2025-02-06T00:18:00.000Z',
+        outgoingActions: [],
+        outgoingMutations: [],
+      }
+
+      const initialState: SyncTransactionState = {
+        queued: [],
+        applied: [appliedTransaction],
+        outgoing: undefined,
+        grants,
+        documentStates: {
+          [docId]: {
+            id: docId,
+            subscriptions: ['sub1'],
+            local: locallyEditedDoc,
+            remote: originalDoc,
+            unverifiedRevisions: {},
+          },
+        },
+      }
+
+      // a foreign transaction appended a new item concurrently
+      const remoteDoc: SanityDocument = {
+        ...originalDoc,
+        items: [
+          {_key: 'a', value: 'first'},
+          {_key: 'b', value: 'second'},
+          {_key: 'd', value: 'appended remotely'},
+        ],
+        _rev: 'txnForeign',
+      }
+      const remote: RemoteDocument = {
+        type: 'mutation',
+        documentId: docId,
+        document: remoteDoc,
+        revision: 'txnForeign',
+        previousRev: 'rev1',
+        timestamp: '2025-02-06T00:19:00.000Z',
+        mutations: [
+          {
+            patch: {
+              id: docId,
+              insert: {after: 'items[-1]', items: [{_key: 'd', value: 'appended remotely'}]},
+            },
+          },
+        ],
+      }
+
+      const events = new Subject<DocumentEvent>()
+      const newState = applyRemoteDocument(initialState, remote, events)
+
+      // both edits survive: our keyed insert re-anchors after item "a" while
+      // the remote append is preserved
+      expect(newState.documentStates[docId]?.local?.['items']).toEqual([
+        {_key: 'a', value: 'first'},
+        {_key: 'c', value: 'in between'},
+        {_key: 'b', value: 'second'},
+        {_key: 'd', value: 'appended remotely'},
+      ])
+      expect(newState.applied).toHaveLength(1)
+    })
   })
 })
 

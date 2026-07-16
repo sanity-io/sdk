@@ -4,13 +4,14 @@ import {type Mutation, type PatchOperations, type SanityDocument} from '@sanity/
 
 import {isReleasePerspective} from '../../releases/utils/isReleasePerspective'
 import {type EditDocumentAction} from '../actions'
-import {getId, processMutations} from '../processMutations'
+import {getId} from '../processMutations'
 import {
   ActionError,
   type ActionHandlerContext,
   type ActionHandlerResult,
   applySingleDocPatch,
   checkGrant,
+  createMutationApplier,
   PermissionActionError,
 } from './shared'
 
@@ -33,6 +34,7 @@ export function handleEdit(
       timestamp,
       grants,
       identity,
+      preserveOperations: action.preserveOperations,
     })
     // liveEdit documents use the mutation endpoint directly -- we don't send actions
     outgoingMutations.push(...result.workingMutations)
@@ -71,6 +73,13 @@ export function handleEdit(
     })
   }
 
+  const applyMutations = createMutationApplier({
+    documentId,
+    transactionId,
+    timestamp,
+    preserveOperations: action.preserveOperations,
+  })
+
   const baseMutations: Mutation[] = []
   // don't create a draft from the published version in a release perspective
   if (!isReleasePerspective(action.perspective) && !base[draftId] && base[publishedId]) {
@@ -84,16 +93,17 @@ export function handleEdit(
     baseMutations.push(...userPatches)
   }
 
-  base = processMutations({
-    documents: base,
-    transactionId,
-    mutations: baseMutations,
-    timestamp,
-  })
+  base = applyMutations(base, baseMutations, 'base')
   // this one will always be defined because a patch mutation will never
   // delete an input document
   const baseAfter = base[patchDocumentId] as SanityDocument
-  const patches = diffValue(baseBefore, baseAfter)
+  // when the caller asked us to preserve their operations, forward their
+  // patches verbatim instead of re-deriving them from a snapshot diff. this
+  // keeps keyed array operations addressable so concurrent edits from other
+  // clients interleave instead of being overwritten
+  const patches = action.preserveOperations
+    ? (action.patches ?? [])
+    : diffValue(baseBefore, baseAfter)
 
   const workingMutations: Mutation[] = []
   if (!isReleasePerspective(action.perspective) && !working[draftId] && working[publishedId]) {
@@ -121,12 +131,7 @@ export function handleEdit(
   }
   workingMutations.push(...patches.map((patch) => ({patch: {id: patchDocumentId, ...patch}})))
 
-  working = processMutations({
-    documents: working,
-    transactionId,
-    mutations: workingMutations,
-    timestamp,
-  })
+  working = applyMutations(working, workingMutations, 'working')
 
   outgoingMutations.push(...workingMutations)
   outgoingActions.push(

@@ -30,6 +30,13 @@ export interface RemoteDocument {
   revision?: string
   previousRev?: string
   timestamp: string
+  /**
+   * The raw mutations from the listener event that produced this document.
+   * Only present for `'mutation'` events. These carry the operational intent
+   * of the remote change (e.g. keyed patches) before it is collapsed into a
+   * whole document snapshot.
+   */
+  mutations?: Mutation[]
 }
 
 export interface SyncEvent {
@@ -251,6 +258,7 @@ export const listen = (
         document: document ?? null,
         revision: transactionId,
         timestamp,
+        mutations: next.mutations as Mutation[],
         ...(previousRev && {previousRev}),
       }
     }),
