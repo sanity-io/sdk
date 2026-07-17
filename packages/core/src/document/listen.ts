@@ -98,9 +98,48 @@ interface SortListenerEventsOptions {
 }
 
 /**
+ * Orders the given mutation events into chains where each event's
+ * `previousRev` points at another event's `resultRev`. Events whose
+ * `previousRev` matches no other event start a new chain. The buffer may have
+ * multiple holes in it, so multiple chains can exist at once.
+ */
+function toOrderedChains(events: MutationEvent[]): MutationEvent[][] {
+  const chainStarts = events.filter(
+    (event) => !events.some((other) => other.resultRev === event.previousRev),
+  )
+
+  return chainStarts.map((start) => {
+    const chain: MutationEvent[] = []
+    let current: MutationEvent | undefined = start
+    while (current) {
+      chain.push(current)
+      const currentResultRev: string | undefined = current.resultRev
+      current = events.find((event) => event.previousRev === currentResultRev)
+    }
+    return chain
+  })
+}
+
+/**
+ * Discards the leading events of a chain up to and including the event whose
+ * `resultRev` equals the given revision. These events describe changes that
+ * are already reflected in the current base (e.g. events replayed by a
+ * resumed listener after the snapshot was refetched).
+ */
+function discardChainTo(chain: MutationEvent[], revision: string | undefined): MutationEvent[] {
+  const revisionIndex = chain.findIndex((event) => event.resultRev === revision)
+  if (revisionIndex === -1) return chain
+  return chain.slice(revisionIndex + 1)
+}
+
+/**
  * Takes an input observable of listener events that might arrive out of order, and emits them in sequence
  * If we receive mutation events that doesn't line up in [previousRev, resultRev] pairs we'll put them in a buffer and
  * check if we have an unbroken chain every time we receive a new event
+ *
+ * Buffered chains that lead up to the current base revision are discarded:
+ * they describe changes already reflected in the base (e.g. events replayed
+ * by a resumed listener after the snapshot was refetched)
  *
  * If the buffer grows beyond `maxBufferSize`, or if `resolveChainDeadline` milliseconds passes before the chain resolves
  * an OutOfSyncError will be thrown on the stream
@@ -132,38 +171,40 @@ export function sortListenerEvents(options?: SortListenerEventsOptions) {
                 'Invalid state. Cannot process mutation event without a base sync event',
               )
             }
-            // Add the new mutation event into the buffer
-            const buffer = state.buffer.concat(event)
-            const emitEvents: MutationEvent[] = []
-            let baseRevision = state.base.revision
-            let progress = true
+            const baseRevision = state.base.revision
 
-            // Try to apply as many buffered mutations as possible.
-            while (progress) {
-              progress = false
-              // Look for a mutation whose previousRev matches the current base.
-              const idx = buffer.findIndex((e) => e.previousRev === baseRevision)
-              if (idx !== -1) {
-                // Remove the event from the buffer and “apply” it.
-                const [next] = buffer.splice(idx, 1)
-                emitEvents.push(next)
-                // If the mutation is a deletion, the new base revision is undefined.
-                baseRevision = next.transition === 'disappear' ? undefined : next.resultRev
-                progress = true
+            // Order the buffered events (plus the new one) into chains, then
+            // drop the parts of each chain the base already reflects.
+            const chains = toOrderedChains(state.buffer.concat(event))
+              .map((chain) => discardChainTo(chain, baseRevision))
+              .filter((chain) => chain.length > 0)
+
+            // A chain whose head continues the current base revision can be
+            // applied. There can be at most one; anything else stays buffered.
+            const applicable = chains.find((chain) => chain[0].previousRev === baseRevision)
+            const buffer = chains.filter((chain) => chain !== applicable).flat()
+
+            if (applicable) {
+              const last = applicable[applicable.length - 1]
+              return {
+                // If the chain ends in a deletion, the new base revision is undefined.
+                base: {revision: last.transition === 'disappear' ? undefined : last.resultRev},
+                buffer,
+                emitEvents: applicable,
               }
             }
 
             if (buffer.length >= maxBufferSize) {
               throw new MaxBufferExceededError(
                 `Too many unchainable mutation events (${buffer.length}) waiting to resolve.`,
-                {base: {revision: baseRevision}, buffer, emitEvents},
+                {base: {revision: baseRevision}, buffer, emitEvents: []},
               )
             }
 
             return {
               base: {revision: baseRevision},
               buffer,
-              emitEvents,
+              emitEvents: [],
             }
           }
           // Any other event is simply forwarded.
@@ -208,7 +249,11 @@ export const listen = (
 
   return sharedListener.events.pipe(
     concatMap((e) => {
-      if (e.type === 'welcome') {
+      // `welcome` means a fresh listener connection and `reset` means a
+      // resumed listener could not replay what was missed; both require
+      // refetching the snapshot. a `welcomeback` means the resume succeeded
+      // and the missed events were replayed, so no refetch is needed
+      if (e.type === 'welcome' || e.type === 'reset') {
         return fetchDocument(documentId).pipe(
           map((document): SyncEvent => ({type: 'sync', document})),
         )
