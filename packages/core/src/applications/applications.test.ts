@@ -6,7 +6,7 @@ import {getClientState} from '../client/clientStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {defineMutation} from '../store/fetcherStore'
-import {application, applications} from './applications'
+import {application, applications, deleteApplication, updateApplication} from './applications'
 
 vi.mock('../client/clientStore')
 
@@ -83,5 +83,48 @@ describe('applications', () => {
     expect(request).toHaveBeenCalledTimes(2)
     expect(source.getCurrent().data).toEqual({nextCursor: null, data: [{id: 'app-2'}]})
     unsubscribe()
+  })
+
+  it('updates an application via PATCH and refetches the invalidated list', async () => {
+    request.mockImplementation((opts) => {
+      const {method} = opts as {method?: string}
+      return method === 'PATCH'
+        ? of({id: 'app1', title: 'New'})
+        : of({nextCursor: null, data: [{id: 'app1'}]})
+    })
+
+    const source = applications.getState(instance, {organizationId: 'org1'})
+    const unsubscribe = source.subscribe()
+    await vi.waitFor(() => expect(source.getCurrent().status).toBe('success'))
+
+    const {data, invalidated} = await updateApplication(instance, {
+      applicationId: 'app1',
+      title: 'New',
+    })
+    await invalidated
+
+    expect(data).toEqual({id: 'app1', title: 'New'})
+    expect(request).toHaveBeenCalledWith({
+      uri: '/applications/app1',
+      method: 'PATCH',
+      body: {title: 'New'},
+      tag: 'applications.update',
+    })
+    // initial list GET + PATCH + list refetch after invalidation
+    expect(request).toHaveBeenCalledTimes(3)
+    unsubscribe()
+  })
+
+  it('deletes an application via DELETE with no body', async () => {
+    request.mockReturnValue(of({deleted: true}))
+
+    const {data} = await deleteApplication(instance, {applicationId: 'app1'})
+
+    expect(data).toEqual({deleted: true})
+    expect(request).toHaveBeenCalledWith({
+      uri: '/applications/app1',
+      method: 'DELETE',
+      tag: 'applications.delete',
+    })
   })
 })
