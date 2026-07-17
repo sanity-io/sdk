@@ -2,7 +2,7 @@ import {usePresence, useProject} from '@sanity/sdk-react'
 import {JSX} from 'react'
 
 function PresenceSecondProject(): JSX.Element {
-  const project = useProject({projectId: 'vo1ysemo'})
+  const {data: project} = useProject({projectId: 'vo1ysemo'})
   const {locations} = usePresence({resource: {projectId: 'vo1ysemo', dataset: 'production'}})
 
   return (
@@ -26,7 +26,7 @@ function PresenceCanvas(): JSX.Element {
 }
 
 export function PresenceRoute(): JSX.Element {
-  const project = useProject()
+  const {data: project} = useProject()
   const {locations} = usePresence()
 
   return (

@@ -1,39 +1,22 @@
-import {
-  type Project,
-  project,
-  type ProjectOptions,
-  type SanityInstance,
-  type StateSource,
-} from '@sanity/sdk'
+import {type Project, project, type ProjectOptions} from '@sanity/sdk'
 
-import {createStateSourceHook} from '../helpers/createStateSourceHook'
-import {mapStateSource} from '../helpers/mapStateSource'
+import {createFetcherHook, type FetcherHookResult} from '../helpers/createFetcherHook'
 import {useResolvedProjectId} from '../helpers/useResolvedProjectId'
 
-const getProjectData = (
-  instance: SanityInstance,
-  options?: ProjectOptions<boolean, boolean>,
-): StateSource<Project<boolean, boolean> | undefined> =>
-  mapStateSource(project.getState(instance, options), (snapshot) => snapshot.data)
-
-const useProjectBase = createStateSourceHook({
-  getState: getProjectData,
-  shouldSuspend: (instance, ...params) =>
-    getProjectData(instance, ...params).getCurrent() === undefined,
-  suspender: project.resolveState,
-})
+const useProjectBase = createFetcherHook(project)
 
 /**
  * Returns metadata for a given project.
  *
  * @category Projects
  * @param options - Configuration options
- * @returns The metadata for the project. `members` is included only when
- *   `includeMembers: true`; `features` is included unless `includeFeatures: false`.
+ * @returns A {@link FetcherHookResult} whose `data` is the metadata for the
+ *   project. `members` is included only when `includeMembers: true`; `features`
+ *   is included unless `includeFeatures: false`.
  * @example
  * ```tsx
  * function ProjectMetadata({projectId}: {projectId: string}) {
- *   const project = useProject({projectId})
+ *   const {data: project} = useProject({projectId})
  *
  *   return (
  *     <figure style={{backgroundColor: project.metadata.color || 'lavender'}}>
@@ -44,10 +27,10 @@ const useProjectBase = createStateSourceHook({
  * ```
  * @example
  * ```tsx
- * const projectWithMembersAndFeatures = useProject({projectId})
- * const projectWithMembers = useProject({projectId, includeMembers: true})
- * const projectWithoutMembers = useProject({projectId, includeMembers: false})
- * const projectWithoutFeatures = useProject({projectId, includeFeatures: false})
+ * const {data: projectWithMembersAndFeatures} = useProject({projectId})
+ * const {data: projectWithMembers} = useProject({projectId, includeMembers: true})
+ * const {data: projectWithoutMembers} = useProject({projectId, includeMembers: false})
+ * const {data: projectWithoutFeatures} = useProject({projectId, includeFeatures: false})
  * ```
  * @remarks
  * The `projectId` is resolved in order from:
@@ -63,4 +46,4 @@ export const useProject = ((options?: ProjectOptions<boolean, boolean>) => {
   return useProjectBase(projectId ? {...options, projectId} : options)
 }) as <IncludeMembers extends boolean = true, IncludeFeatures extends boolean = true>(
   options?: ProjectOptions<IncludeMembers, IncludeFeatures>,
-) => Project<IncludeMembers, IncludeFeatures>
+) => FetcherHookResult<Project<IncludeMembers, IncludeFeatures>>
