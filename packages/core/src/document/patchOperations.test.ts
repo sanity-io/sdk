@@ -274,10 +274,51 @@ describe('set', () => {
     expect(output).toEqual({a: 1, nonexistent: {path: 999}})
   })
 
-  it('creates an item from a key constraint if the key is not present', () => {
+  // Content Lake never creates array items when setting: a keyed or indexed
+  // segment that does not resolve is a silent no-op server-side. The applier
+  // used to append a degenerate item (without the key, even), which
+  // fabricated array items locally that would never exist on the server.
+  it('does not create an item from a key constraint if the key is not present', () => {
     const input = {items: [{_key: 'item1'}]}
     const output = set(input, {'items[_key=="item2"]': {_key: 'item2'}})
-    expect(output).toEqual({items: [{_key: 'item1'}, {_key: 'item2'}]})
+    expect(output).toEqual({items: [{_key: 'item1'}]})
+  })
+
+  it('does not create an item when setting a property under an unresolvable key constraint', () => {
+    const input = {
+      blocks: [
+        {
+          _key: 'b1',
+          children: [{_key: 's1', _type: 'span', text: 'hello', marks: []}],
+        },
+      ],
+    }
+    const output = set(input, {'blocks[_key=="b1"].children[_key=="missing"].marks': ['mark1']})
+    expect(output).toEqual(input)
+  })
+
+  it('does not create an item when setting through an out-of-bounds index', () => {
+    const input = {items: [{_key: 'item1', value: 1}]}
+    const output = set(input, {'items[3].value': 99})
+    expect(output).toEqual(input)
+  })
+
+  it('still sets a missing property on an existing keyed item', () => {
+    const input = {items: [{_key: 'item1'}]}
+    const output = set(input, {'items[_key=="item1"].value': 42})
+    expect(output).toEqual({items: [{_key: 'item1', value: 42}]})
+  })
+
+  it('does not create anything when an array-addressing segment targets a non-array', () => {
+    const input = {items: {nested: true}}
+    const output = set(input, {'items[_key=="item1"].value': 42})
+    expect(output).toEqual(input)
+  })
+
+  it('does not create an item when setting through a negative out-of-bounds index', () => {
+    const input = {items: [{_key: 'item1', value: 1}]}
+    const output = set(input, {'items[-5].value': 99})
+    expect(output).toEqual(input)
   })
 })
 
@@ -298,6 +339,12 @@ describe('setIfMissing', () => {
     const input = {a: {b: 1}}
     const output = setIfMissing(input, {'a.b': 42})
     expect(output).toEqual({a: {b: 1}})
+  })
+
+  it('does not create an item under an unresolvable key constraint', () => {
+    const input = {items: [{_key: 'item1'}]}
+    const output = setIfMissing(input, {'items[_key=="missing"].value': 1})
+    expect(output).toEqual(input)
   })
 })
 
