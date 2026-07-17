@@ -906,6 +906,17 @@ it('fetches dataset ACL and updates grants in the document store state', async (
   })
 })
 
+it('does not send credentials with the dataset ACL request', async () => {
+  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  await resolvePermissions(instance, {actions: [createDocument(doc)]})
+
+  const aclCall = vi
+    .mocked(client.request)
+    .mock.calls.find(([options]) => options.uri?.endsWith('/acl'))
+  expect(aclCall).toBeDefined()
+  expect(aclCall![0]).not.toHaveProperty('withCredentials')
+})
+
 it('fetches ACL for MediaLibraryResource', async () => {
   const mediaLibraryInstance = createSanityInstance({
     projectId: 'p',
