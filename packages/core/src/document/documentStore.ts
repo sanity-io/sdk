@@ -565,7 +565,6 @@ const subscribeToClientAndFetchDatasetAcl = ({
         client.observable.request<DatasetAcl>({
           uri,
           tag: 'acl.get',
-          withCredentials: true,
         }),
       ),
       tap((datasetAcl) => state.set('setGrants', {grants: createGrantsLookup(datasetAcl)})),
