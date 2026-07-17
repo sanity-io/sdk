@@ -1,4 +1,4 @@
-import {type Observable} from 'rxjs'
+import {map, type Observable} from 'rxjs'
 import {TestScheduler} from 'rxjs/testing'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
@@ -6,7 +6,7 @@ import {
   compareProjectOrganization,
   type OrgVerificationResult,
 } from '../project/organizationVerification'
-import {getProjectState} from '../project/project'
+import {project} from '../project/project'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {getDashboardOrganizationId} from './dashboardUtils'
@@ -17,7 +17,7 @@ vi.mock('./dashboardUtils', () => ({
   getDashboardOrganizationId: vi.fn(),
 }))
 vi.mock('../project/project', () => ({
-  getProjectState: vi.fn(),
+  project: {getState: vi.fn()},
 }))
 // Mock the comparison function to check its inputs
 vi.mock('../project/organizationVerification', async (importOriginal) => {
@@ -54,11 +54,11 @@ describe('observeOrganizationVerificationState', () => {
     } as any) // Cast to any to bypass strict type checking in mock
   }
 
-  // Helper to mock getProjectState
+  // Helper to mock the project fetcher's state; wraps plain values in the snapshot envelope
   const mockProjectOrgId = (observable: Observable<{organizationId: string | null} | null>) => {
-    vi.mocked(getProjectState).mockReturnValue({
+    vi.mocked(project.getState).mockReturnValue({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      observable: observable as any, // Cast needed due to complex type
+      observable: observable.pipe(map((value) => ({data: value ?? undefined}))) as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as StateSource<any>)
   }
@@ -110,7 +110,7 @@ describe('observeOrganizationVerificationState', () => {
       expectObservable(result$).toBe(expectedMarble, expectedValues)
     })
     // No project fetch or comparison should occur
-    expect(getProjectState).not.toHaveBeenCalled()
+    expect(project.getState).not.toHaveBeenCalled()
     expect(compareProjectOrganization).not.toHaveBeenCalled()
   })
 

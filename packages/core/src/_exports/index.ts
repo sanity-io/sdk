@@ -5,6 +5,8 @@ import {type SanityProject as _SanityProject} from '@sanity/client'
  */
 export type SanityProject = _SanityProject
 
+export {checkPermissions} from '../access/checkPermissions'
+export {type AccessResourceType} from '../access/checkPermissions'
 export type {
   AgentGenerateOptions,
   AgentGenerateResult,
@@ -24,6 +26,25 @@ export {
   agentTransform,
   agentTranslate,
 } from '../agent/agentActions'
+export {application, applications} from '../applications/applications'
+export {
+  type Application,
+  type ApplicationAccess,
+  type ApplicationBase,
+  type ApplicationDeployment,
+  type ApplicationInclude,
+  type ApplicationInterface,
+  type ApplicationsOptions,
+  type ApplicationsResponse,
+  type ApplicationStudioConfig,
+  type ApplicationWorkspace,
+} from '../applications/applications'
+export {userApplication, userApplications} from '../applications/userApplications'
+export {
+  type UserApplication,
+  type UserApplicationDeployment,
+  type UserApplicationsOptions,
+} from '../applications/userApplications'
 export {isStudioConfig} from '../auth/authMode'
 export {AuthStateType} from '../auth/authStateType'
 export {
@@ -179,20 +200,26 @@ export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../do
 export {getReleaseDocumentId} from '../document/processActions/releaseUtil'
 export type {FavoriteStatusResponse} from '../favorites/favorites'
 export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
+export {installation, installations} from '../installations/installations'
 export {
-  getOrganizationState,
+  type Installation,
+  type InstallationAccess,
+  type InstallationActiveConfig,
+  type InstallationBase,
+  type InstallationInclude,
+  type InstallationInterface,
+  type InstallationsOptions,
+  type InstallationsResponse,
+} from '../installations/installations'
+export {organization} from '../organization/organization'
+export {
   type Organization,
   type OrganizationBase,
   type OrganizationMember,
   type OrganizationOptions,
-  resolveOrganization,
 } from '../organization/organization'
-export {
-  getOrganizationsState,
-  type Organizations,
-  type OrganizationsOptions,
-  resolveOrganizations,
-} from '../organizations/organizations'
+export {organizations} from '../organizations/organizations'
+export {type Organizations, type OrganizationsOptions} from '../organizations/organizations'
 export {getPresence} from '../presence/presenceStore'
 export type {
   DisconnectEvent,
@@ -214,20 +241,20 @@ export type {
   ValuePending,
 } from '../preview/types'
 export {type OrgVerificationResult} from '../project/organizationVerification'
+export {project} from '../project/project'
 export {
-  getProjectState,
   type Project,
   type ProjectBase,
   type ProjectMember,
   type ProjectMemberRole,
   type ProjectMetadata,
   type ProjectOptions,
-  resolveProject,
 } from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'
 export {type ProjectionValuePending, type ValidProjection} from '../projection/types'
-export {getProjectsState, type ProjectsOptions, resolveProjects} from '../projects/projects'
+export {projects} from '../projects/projects'
+export {type ProjectsOptions} from '../projects/projects'
 export {
   getQueryKey,
   getQueryState,

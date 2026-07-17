@@ -1,13 +1,15 @@
-import {getOrganizationsState, type SanityInstance} from '@sanity/sdk'
+import {organizations, type SanityInstance} from '@sanity/sdk'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
 vi.mock('@sanity/sdk', () => ({
-  getOrganizationsState: vi.fn(() => ({
-    getCurrent: vi.fn(() => undefined),
-  })),
-  resolveOrganizations: vi.fn(),
+  organizations: {
+    getState: vi.fn(() => ({
+      getCurrent: vi.fn(() => ({status: 'pending', data: undefined})),
+    })),
+    resolveState: vi.fn(),
+  },
 }))
 vi.mock('../helpers/createStateSourceHook', () => ({
   createStateSourceHook: vi.fn(),
@@ -15,16 +17,8 @@ vi.mock('../helpers/createStateSourceHook', () => ({
 
 describe('useOrganizations', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.resetModules()
-    vi.mock('@sanity/sdk', () => ({
-      getOrganizationsState: vi.fn(() => ({
-        getCurrent: vi.fn(() => undefined),
-      })),
-      resolveOrganizations: vi.fn(),
-    }))
-    vi.mock('../helpers/createStateSourceHook', () => ({
-      createStateSourceHook: vi.fn(),
-    }))
   })
 
   it('should call createStateSourceHook with correct arguments on import', async () => {
@@ -40,25 +34,19 @@ describe('useOrganizations', () => {
     )
   })
 
-  it('shouldSuspend should call getOrganizationsState and getCurrent', async () => {
+  it('shouldSuspend suspends while the fetcher snapshot is pending', async () => {
     await import('./useOrganizations')
 
     const mockCreateStateSourceHook = createStateSourceHook as ReturnType<typeof vi.fn>
     expect(mockCreateStateSourceHook.mock.calls.length).toBeGreaterThan(0)
-    const createStateSourceHookArgs = mockCreateStateSourceHook.mock.calls[0][0]
-    const shouldSuspend = createStateSourceHookArgs.shouldSuspend
+    const {shouldSuspend} = mockCreateStateSourceHook.mock.calls[0][0]
 
     const mockInstance = {} as SanityInstance
-
     const result = shouldSuspend(mockInstance, undefined)
 
-    const mockGetOrganizationsState = getOrganizationsState as ReturnType<typeof vi.fn>
-    expect(mockGetOrganizationsState).toHaveBeenCalledWith(mockInstance, undefined)
-
-    expect(mockGetOrganizationsState.mock.results.length).toBeGreaterThan(0)
-    const getOrganizationsStateMockResult = mockGetOrganizationsState.mock.results[0].value
-    expect(getOrganizationsStateMockResult.getCurrent).toHaveBeenCalled()
-
+    expect(organizations.getState).toHaveBeenCalledWith(mockInstance, undefined)
+    const organizationsStateMockResult = vi.mocked(organizations.getState).mock.results[0].value
+    expect(organizationsStateMockResult.getCurrent).toHaveBeenCalled()
     expect(result).toBe(true)
   })
 
@@ -66,8 +54,7 @@ describe('useOrganizations', () => {
     await import('./useOrganizations')
 
     const mockCreateStateSourceHook = createStateSourceHook as ReturnType<typeof vi.fn>
-    const createStateSourceHookArgs = mockCreateStateSourceHook.mock.calls[0][0]
-    const shouldSuspend = createStateSourceHookArgs.shouldSuspend
+    const {shouldSuspend} = mockCreateStateSourceHook.mock.calls[0][0]
 
     const mockInstance = {} as SanityInstance
 
