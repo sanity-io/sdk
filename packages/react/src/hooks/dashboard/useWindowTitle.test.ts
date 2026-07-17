@@ -101,6 +101,37 @@ describe('useWindowTitle', () => {
     })
   })
 
+  it('should fall back to the iframe title when the dashboard resource has no title', async () => {
+    document.title = 'Local App'
+
+    const mockFetch = vi.fn().mockResolvedValue(
+      createContextResponse({
+        type: 'application',
+        title: '',
+        manifest: null,
+        activeDeployment: null,
+      }),
+    )
+    vi.mocked(useWindowConnection).mockReturnValue({
+      fetch: mockFetch,
+      sendMessage: vi.fn(),
+    })
+
+    const {rerender} = renderHook(({viewTitle}) => useWindowTitle(viewTitle), {
+      initialProps: {viewTitle: 'Teams'},
+    })
+
+    await waitFor(() => {
+      expect(document.title).toBe('Teams | Local App')
+    })
+
+    rerender({viewTitle: 'Week 10'})
+
+    await waitFor(() => {
+      expect(document.title).toBe('Week 10 | Local App')
+    })
+  })
+
   it('should prepend view title when provided', async () => {
     const mockFetch = vi.fn().mockResolvedValue(
       createContextResponse({
