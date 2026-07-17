@@ -696,6 +696,129 @@ describe('applyRemoteDocument', () => {
     expect(newDocState?.unverifiedRevisions?.['txn10']).toBeUndefined()
   })
 
+  describe('fast-forward convergence of local', () => {
+    const docId = getDraftId(DocumentId('doc1'))
+    const otherDocId = getDraftId(DocumentId('doc2'))
+
+    const makeApplied = (overrides: Partial<AppliedTransaction>): AppliedTransaction => ({
+      transactionId: 'txnPending',
+      actions: [],
+      working: {},
+      previous: {},
+      base: {},
+      previousRevs: {},
+      timestamp: '2025-02-06T00:06:30.000Z',
+      outgoingActions: [],
+      outgoingMutations: [],
+      ...overrides,
+    })
+
+    const makeState = (applied: AppliedTransaction[]): SyncTransactionState => ({
+      queued: [],
+      applied,
+      outgoing: undefined,
+      grants,
+      documentStates: {
+        [docId]: {
+          id: docId,
+          subscriptions: ['sub1'],
+          local: {...exampleDoc, _id: docId, foo: 'optimistic'},
+          remote: {...exampleDoc, _id: docId, foo: 'old'},
+          unverifiedRevisions: {
+            txn10: {
+              transactionId: 'txn10',
+              documentId: docId,
+              previousRev: 'revOld',
+              timestamp: '2025-02-06T00:06:00.000Z',
+            },
+          },
+        },
+      },
+    })
+
+    const remote: RemoteDocument = {
+      type: 'sync',
+      documentId: docId,
+      document: {...exampleDoc, _id: docId, foo: 'server-truth'},
+      revision: 'txn10',
+      previousRev: 'revOld',
+      timestamp: '2025-02-06T00:07:00.000Z',
+    }
+
+    it('converges local to the server document when nothing else is pending', () => {
+      const events = new Subject<DocumentEvent>()
+      const newState = applyRemoteDocument(makeState([]), remote, events)
+      expect(newState.documentStates[docId]?.local).toEqual(remote.document)
+    })
+
+    it('converges local when pending work modifies only other documents', () => {
+      // a pending applied transaction on doc2 must not block convergence of
+      // doc1: nothing would ever revisit doc1's local otherwise
+      const otherDoc = {...exampleDoc, _id: otherDocId}
+      const pendingOnOtherDoc = makeApplied({
+        working: {[otherDocId]: {...otherDoc, _rev: 'txnPending'}},
+        previous: {[otherDocId]: otherDoc},
+        base: {[otherDocId]: otherDoc},
+        previousRevs: {[otherDocId]: 'txn0'},
+      })
+      const events = new Subject<DocumentEvent>()
+      const newState = applyRemoteDocument(makeState([pendingOnOtherDoc]), remote, events)
+      expect(newState.documentStates[docId]?.local).toEqual(remote.document)
+    })
+
+    it('converges local when pending work carries this document unmodified', () => {
+      // a draft edit carries the published document in its working set
+      // without changing it; presence alone must not block convergence
+      const thisDoc = {...exampleDoc, _id: docId}
+      const pendingCarryingUnmodified = makeApplied({
+        working: {
+          [docId]: thisDoc,
+          [otherDocId]: {...exampleDoc, _id: otherDocId, _rev: 'txnPending'},
+        },
+        previous: {[docId]: thisDoc, [otherDocId]: {...exampleDoc, _id: otherDocId}},
+        base: {[docId]: thisDoc, [otherDocId]: {...exampleDoc, _id: otherDocId}},
+        previousRevs: {[docId]: thisDoc._rev, [otherDocId]: 'txn0'},
+      })
+      const events = new Subject<DocumentEvent>()
+      const newState = applyRemoteDocument(makeState([pendingCarryingUnmodified]), remote, events)
+      expect(newState.documentStates[docId]?.local).toEqual(remote.document)
+    })
+
+    it('keeps the optimistic local when pending work modifies this document', () => {
+      const optimistic = {...exampleDoc, _id: docId, _rev: 'txnPending', foo: 'optimistic'}
+      const pendingOnThisDoc = makeApplied({
+        working: {[docId]: optimistic},
+        previous: {[docId]: {...exampleDoc, _id: docId}},
+        base: {[docId]: {...exampleDoc, _id: docId}},
+        previousRevs: {[docId]: 'txn0'},
+      })
+      const state = makeState([pendingOnThisDoc])
+      const events = new Subject<DocumentEvent>()
+      const newState = applyRemoteDocument(state, remote, events)
+      expect(newState.documentStates[docId]?.local).toBe(state.documentStates[docId]?.local)
+      expect(newState.documentStates[docId]?.remote).toEqual(remote.document)
+    })
+
+    it('keeps the optimistic local when a different in-flight transaction modifies this document', () => {
+      const optimistic = {...exampleDoc, _id: docId, _rev: 'txnOutgoing', foo: 'optimistic'}
+      const outgoing = {
+        ...makeApplied({
+          transactionId: 'txnOutgoing',
+          working: {[docId]: optimistic},
+          previous: {[docId]: {...exampleDoc, _id: docId}},
+          base: {[docId]: {...exampleDoc, _id: docId}},
+          previousRevs: {[docId]: 'txn0'},
+        }),
+        disableBatching: false,
+        batchedTransactionIds: ['txnOutgoing'],
+      }
+      const state = {...makeState([]), outgoing}
+      const events = new Subject<DocumentEvent>()
+      const newState = applyRemoteDocument(state, remote, events)
+      expect(newState.documentStates[docId]?.local).toBe(state.documentStates[docId]?.local)
+    })
+  })
+
   it('rebases local changes when no matching unverified revision is found', () => {
     // In this branch we simply let processActions rebase so that the local becomes the remote.
     const docId = getDraftId(DocumentId('doc1'))
