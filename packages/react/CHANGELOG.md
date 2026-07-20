@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.18.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.17.0...sdk-react-v2.18.0) (2026-07-20)
+
+
+### Bug Fixes
+
+* **react:** fall back to iframe title in local development ([#1054](https://github.com/sanity-io/sdk/issues/1054)) ([62ca65d](https://github.com/sanity-io/sdk/commit/62ca65d8e88ee0356c22d1ee4aba46ee4f104385))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.18.0
+
 ## [2.17.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.16.0...sdk-react-v2.17.0) (2026-07-16)
 
 
