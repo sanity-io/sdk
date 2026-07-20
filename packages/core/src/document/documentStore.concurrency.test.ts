@@ -392,11 +392,6 @@ const getSpanMarks = (doc: RigDocument | null, blockKey: string): string[] | und
  */
 const KNOWN_LOSS: {scenario: string; firstWriter?: 'A' | 'B'; reason: string}[] = [
   {
-    scenario: 'counter-inc-inc',
-    reason:
-      'user-supplied inc ops are re-derived as set ops by the snapshot diff, so concurrent increments collapse to last-write-wins',
-  },
-  {
     scenario: 'preserved-set-text-vs-typing',
     reason:
       'preserveOperations forwards whole-value sets verbatim, so whichever preserved set lands second overwrites the concurrent one (server-side last-write-wins)',

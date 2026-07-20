@@ -13,6 +13,7 @@ import {
   checkGrant,
   createMutationApplier,
   PermissionActionError,
+  preserveNumericOperations,
 } from './shared'
 
 export function handleEdit(
@@ -100,10 +101,16 @@ export function handleEdit(
   // when the caller asked us to preserve their operations, forward their
   // patches verbatim instead of re-deriving them from a snapshot diff. this
   // keeps keyed array operations addressable so concurrent edits from other
-  // clients interleave instead of being overwritten
+  // clients interleave instead of being overwritten. otherwise, diff the
+  // snapshots but swap back any `inc`/`dec` the diff collapsed into a `set`,
+  // so concurrent increments accumulate instead of last-write-winning
   const patches = action.preserveOperations
     ? (action.patches ?? [])
-    : diffValue(baseBefore, baseAfter)
+    : preserveNumericOperations(
+        baseBefore,
+        action.patches,
+        diffValue(baseBefore, baseAfter) as PatchOperations[],
+      )
 
   const workingMutations: Mutation[] = []
   if (!isReleasePerspective(action.perspective) && !working[draftId] && working[publishedId]) {
