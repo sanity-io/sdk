@@ -5,7 +5,7 @@ import {type DocumentHandle} from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type StoreContext} from '../store/defineStore'
 import {insecureRandomId} from '../utils/ids'
-import {omitProperty} from '../utils/object'
+import {isDeepEqual, omitProperty} from '../utils/object'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {type Action} from './actions'
 import {DOCUMENT_STATE_CLEAR_DELAY} from './documentConstants'
@@ -534,6 +534,34 @@ export function applyRemoteDocument(
   // matches the previous revision we expected, we can "fast-forward" and skip
   // rebasing local changes on top of this new base
   if (revisionToVerify && revisionToVerify.previousRev === previousRev) {
+    // even on a clean fast-forward, the server's result can differ from our
+    // optimistic prediction: a publish derives the published content from the
+    // server's copy of the draft, which may carry concurrent edits our
+    // prediction never saw. once nothing else is pending locally for this
+    // document (no applied transaction and no in-flight transaction, other
+    // than the one this event just confirmed, modifies it), converge `local`
+    // to the server's document. while local work that modifies this document
+    // is pending, keep the optimistic `local` so those changes stay visible;
+    // that work's own echo (or rebase) recomputes `local` later.
+    //
+    // "modifies" matters: pending work on other documents must not block
+    // convergence here (nothing would ever revisit this document's `local`),
+    // and a pending draft edit carries the published document in its working
+    // set without changing it, so a presence check would block published-doc
+    // convergence whenever a draft edit is pending. this is the same
+    // modified-test `transitionAppliedTransactionsToOutgoing` uses
+    const modifiesDocument = (transaction: AppliedTransaction) =>
+      transaction.working[documentId]?._rev !== transaction.previousRevs[documentId]
+    const nothingElsePending =
+      !prev.applied.some(modifiesDocument) &&
+      (!prev.outgoing ||
+        prev.outgoing.transactionId === revision ||
+        !modifiesDocument(prev.outgoing))
+    const local =
+      nothingElsePending && !isDeepEqual(prevDocState.local, document)
+        ? document
+        : prevDocState.local
+
     return {
       ...prev,
       documentStates: {
@@ -542,6 +570,7 @@ export function applyRemoteDocument(
           ...prevDocState,
           remote: document,
           remoteRev: revision,
+          local,
           unverifiedRevisions,
         },
       },
@@ -592,6 +621,12 @@ export function applyRemoteDocument(
     }
   }
 
+  // when the recompute lands on a value deep-equal to the current local
+  // (the common case for echoes of our own transactions), keep the previous
+  // reference so subscribers don't re-render for an identical value
+  const nextLocal = working[documentId]
+  const local = isDeepEqual(prevDocState.local, nextLocal) ? prevDocState.local : nextLocal
+
   return {
     ...prev,
     applied: nextApplied,
@@ -601,7 +636,7 @@ export function applyRemoteDocument(
         ...prevDocState,
         remote: document,
         remoteRev: revision,
-        local: working[documentId],
+        local,
         unverifiedRevisions,
       },
     },

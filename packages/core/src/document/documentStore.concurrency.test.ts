@@ -415,18 +415,7 @@ const KNOWN_DIVERGENCE: {
   client: 'A' | 'B'
   documentId: string
   reason: string
-}[] = [
-  {
-    scenario: 'publish-vs-edit',
-    firstWriter: 'B',
-    client: 'A',
-    documentId: PUBLISHED_ID,
-    reason:
-      "the publisher's own echo fast-forwards, keeping the optimistic published " +
-      "prediction as `local` even though the server's publish carried B's newer " +
-      'draft edit; nothing reconciles local with remote afterwards',
-  },
-]
+}[] = []
 
 const isKnownDivergence = (
   scenarioId: string,
