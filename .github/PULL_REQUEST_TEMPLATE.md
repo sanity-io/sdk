@@ -21,6 +21,14 @@ If not, please explain how you tested this change and why it was not
 possible/practical for writing an automated test
 -->
 
+### Documentation
+
+<!--
+Does this change require a change in public-facing or internal documentation?
+Consider adding the `trigger: ailf` tag to this PR if so;
+this will create a new draft task and stage documentation changes (note this takes ~20 minutes)
+-->
+
 ### Fun gif
 
 <!--
