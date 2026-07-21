@@ -20,8 +20,8 @@
   },
   "dependencies": {
     "@paramour/css": "1.0.0-rc.2",
-    "@portabletext/editor": "7.10.9",
-    "@portabletext/plugin-sdk-value": "7.1.1",
+    "@portabletext/editor": "7.10.10",
+    "@portabletext/plugin-sdk-value": "7.1.2",
     "@sanity/icons": "^3.7.4",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
