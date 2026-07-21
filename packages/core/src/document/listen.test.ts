@@ -205,4 +205,60 @@ describe('sortListenerEvents operator', () => {
     const events = await lastValueFrom(source$.pipe(sortListenerEvents(), toArray()))
     expect(events).toEqual([other])
   })
+
+  it('should discard replayed events already reflected in the base', async () => {
+    // The snapshot is at rev2; a resumed listener replays the event that
+    // produced rev2. It should be discarded instead of clogging the buffer.
+    const sync = createSyncEvent('rev2')
+    const replayed = createMutationEvent({
+      id: 'replayed',
+      previousRev: 'rev1',
+      resultRev: 'rev2',
+    })
+    const source$ = of(sync, replayed)
+    const events = await lastValueFrom(source$.pipe(sortListenerEvents(), toArray()))
+    expect(events).toEqual([sync])
+  })
+
+  it('should discard the replayed part of a chain and apply the rest', async () => {
+    // The snapshot is at rev2; the listener replays rev1->rev2 followed by a
+    // genuinely new rev2->rev3. Only the new event should be emitted.
+    const sync = createSyncEvent('rev2')
+    const replayed = createMutationEvent({
+      id: 'replayed',
+      previousRev: 'rev1',
+      resultRev: 'rev2',
+    })
+    const fresh = createMutationEvent({
+      id: 'fresh',
+      previousRev: 'rev2',
+      resultRev: 'rev3',
+    })
+    const source$ = of(sync, replayed, fresh)
+    const events = await lastValueFrom(source$.pipe(sortListenerEvents(), toArray()))
+    expect(events).toEqual([sync, fresh])
+  })
+
+  it('should discard a multi-event replayed chain that leads up to the base', async () => {
+    const sync = createSyncEvent('rev3')
+    // two replayed events that together lead up to the base revision
+    const replayedA = createMutationEvent({
+      id: 'replayedA',
+      previousRev: 'rev1',
+      resultRev: 'rev2',
+    })
+    const replayedB = createMutationEvent({
+      id: 'replayedB',
+      previousRev: 'rev2',
+      resultRev: 'rev3',
+    })
+    const fresh = createMutationEvent({
+      id: 'fresh',
+      previousRev: 'rev3',
+      resultRev: 'rev4',
+    })
+    const source$ = of(sync, replayedA, replayedB, fresh)
+    const events = await lastValueFrom(source$.pipe(sortListenerEvents(), toArray()))
+    expect(events).toEqual([sync, fresh])
+  })
 })

@@ -4,7 +4,7 @@ import {describe, expect, it} from 'vitest'
 
 import {type Action, type DocumentAction} from './actions'
 import {ActionError, processActions} from './processActions/processActions'
-import {type DocumentSet} from './processMutations'
+import {type DocumentSet, processMutations} from './processMutations'
 
 // Helper: Create a sample document that conforms to SanityDocument.
 const createDoc = (id: string, title: string, rev: string = 'initial'): SanityDocument => ({
@@ -441,6 +441,190 @@ describe('processActions', () => {
       expect(editedDoc).toBeDefined()
       expect(editedDoc?.['title']).toBe('New Draft Title')
       expect(result.outgoingActions[0].actionType).toBe('sanity.action.document.edit')
+    })
+
+    it('preserves inc/dec operations instead of collapsing them into sets', () => {
+      const draft = {...createDoc('drafts.doc1', 'Title', '1'), count: 5, score: 10}
+      const base: DocumentSet = {'drafts.doc1': draft}
+      const working: DocumentSet = {'drafts.doc1': draft}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.edit',
+          patches: [{inc: {count: 1}, dec: {score: 3}}],
+        },
+      ]
+      const result = processActions({
+        actions,
+        transactionId,
+        base,
+        working,
+        timestamp,
+        grants: defaultGrants,
+      })
+
+      // the local working copy reflects the applied increments
+      expect(result.working['drafts.doc1']).toMatchObject({count: 6, score: 7})
+      // the outgoing patch keeps the operational inc/dec instead of a set.
+      // the setIfMissing seeds the base value in case the field was removed
+      // concurrently: the server runs setIfMissing before inc/dec, and inc on
+      // a missing path would otherwise fail the whole transaction
+      const patches = result.outgoingActions.map((action) => 'patch' in action && action.patch)
+      expect(patches).toEqual([
+        {setIfMissing: {count: 5, score: 10}, inc: {count: 1}, dec: {score: 3}},
+      ])
+    })
+
+    it('accumulates multiple inc/dec records on the same path into one operation', () => {
+      const draft = {...createDoc('drafts.doc1', 'Title', '1'), count: 5}
+      const base: DocumentSet = {'drafts.doc1': draft}
+      const working: DocumentSet = {'drafts.doc1': draft}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.edit',
+          patches: [{inc: {count: 1}}, {inc: {count: 2}}, {dec: {count: 4}}],
+        },
+      ]
+      const result = processActions({
+        actions,
+        transactionId,
+        base,
+        working,
+        timestamp,
+        grants: defaultGrants,
+      })
+
+      // 5 + 1 + 2 - 4 = 4 locally
+      expect(result.working['drafts.doc1']).toMatchObject({count: 4})
+      // the three records collapse into one accumulated dec (net -1) with the
+      // base value seeded for the concurrent-removal degradation path
+      const patches = result.outgoingActions.map((action) => 'patch' in action && action.patch)
+      expect(patches).toEqual([{setIfMissing: {count: 5}, dec: {count: 1}}])
+    })
+
+    it('keeps the diffed set when an inc is combined with a set of the same field', () => {
+      const draft = {...createDoc('drafts.doc1', 'Title', '1'), count: 5}
+      const base: DocumentSet = {'drafts.doc1': draft}
+      const working: DocumentSet = {'drafts.doc1': draft}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.edit',
+          // set to 100 first, then inc: the final value (101) is not
+          // explainable by the inc alone, so it must remain a set
+          patches: [{set: {count: 100}}, {inc: {count: 1}}],
+        },
+      ]
+      const result = processActions({
+        actions,
+        transactionId,
+        base,
+        working,
+        timestamp,
+        grants: defaultGrants,
+      })
+
+      expect(result.working['drafts.doc1']).toMatchObject({count: 101})
+      const patches = result.outgoingActions.map((action) => 'patch' in action && action.patch)
+      expect(patches).toEqual([{set: {count: 101}}])
+    })
+
+    it('preserves inc operations targeting keyed array items', () => {
+      const draft = {
+        ...createDoc('drafts.doc1', 'Title', '1'),
+        items: [{_key: 'itemA', qty: 2}],
+      }
+      const base: DocumentSet = {'drafts.doc1': draft}
+      const working: DocumentSet = {'drafts.doc1': draft}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.edit',
+          patches: [{inc: {'items[_key=="itemA"].qty': 3}}],
+        },
+      ]
+      const result = processActions({
+        actions,
+        transactionId,
+        base,
+        working,
+        timestamp,
+        grants: defaultGrants,
+      })
+
+      expect(result.working['drafts.doc1']?.['items']).toEqual([{_key: 'itemA', qty: 5}])
+      const patches = result.outgoingActions.map((action) => 'patch' in action && action.patch)
+      expect(patches).toEqual([
+        {setIfMissing: {'items[_key=="itemA"].qty': 2}, inc: {'items[_key=="itemA"].qty': 3}},
+      ])
+    })
+
+    it('preserves inc operations through the liveEdit mutation path', () => {
+      const liveDoc = {...createLiveEditDoc('live-doc', 'Title', '1'), count: 5}
+      const base: DocumentSet = {'live-doc': liveDoc}
+      const working: DocumentSet = {'live-doc': liveDoc}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'live-doc',
+          documentType: 'liveArticle',
+          type: 'document.edit',
+          liveEdit: true,
+          patches: [{inc: {count: 2}}],
+        },
+      ]
+      const result = processActions({
+        actions,
+        transactionId,
+        base,
+        working,
+        timestamp,
+        grants: defaultGrants,
+      })
+
+      expect(result.working['live-doc']).toMatchObject({count: 7})
+      expect(result.outgoingMutations).toEqual([
+        {patch: {id: 'live-doc', setIfMissing: {count: 5}, inc: {count: 2}}},
+      ])
+    })
+
+    it('degrades to the diffed set result when the inc target was removed concurrently', () => {
+      const draft = {...createDoc('drafts.doc1', 'Title', '1'), count: 5}
+      const base: DocumentSet = {'drafts.doc1': draft}
+      const working: DocumentSet = {'drafts.doc1': draft}
+      const actions: DocumentAction[] = [
+        {
+          documentId: 'doc1',
+          documentType: 'article',
+          type: 'document.edit',
+          patches: [{inc: {count: 1}}],
+        },
+      ]
+      const result = processActions({
+        actions,
+        transactionId,
+        base,
+        working,
+        timestamp,
+        grants: defaultGrants,
+      })
+      const patch = result.outgoingActions.map((action) => 'patch' in action && action.patch)[0]
+
+      // simulate the server applying the emitted patch to a document where
+      // another client removed the counter in the meantime: setIfMissing
+      // seeds the base value, then inc applies, matching what the collapsed
+      // set would have written (instead of inc failing the transaction)
+      const {count: _count, ...draftWithoutCount} = draft
+      const serverResult = processMutations({
+        documents: {'drafts.doc1': draftWithoutCount as SanityDocument},
+        mutations: [{patch: {id: 'drafts.doc1', ...(patch as object)}}],
+        transactionId: 'txn-server',
+      })
+      expect(serverResult['drafts.doc1']).toMatchObject({count: 6})
     })
 
     it('should edit a document when base and working diverge', () => {

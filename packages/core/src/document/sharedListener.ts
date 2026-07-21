@@ -16,6 +16,7 @@ import {
 import {getClientState} from '../client/clientStore'
 import {type DocumentResource} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
+import {dedupeListenerEvents, groupTransactionEvents} from './listenerEventOperators'
 
 const API_VERSION = 'v2025-05-06'
 
@@ -41,7 +42,12 @@ export function createSharedListener(
         '*',
         {},
         {
-          events: ['mutation', 'welcome', 'reconnect'],
+          // with `enableResume`, a reconnect replays the events missed while
+          // offline (emitting `welcomeback`) instead of forcing a refetch of
+          // every subscribed document. when the backend cannot resume, it
+          // emits `welcome` or `reset`, both of which trigger a refetch
+          events: ['mutation', 'welcome', 'welcomeback', 'reconnect', 'reset'],
+          enableResume: true,
           includeResult: false,
           // the document store handles version documents, so we need to include all versions
           includeAllVersions: true,
@@ -53,6 +59,11 @@ export function createSharedListener(
         },
       ),
     ),
+    // resumed events are delivered at-least-once, so drop replayed duplicates
+    dedupeListenerEvents(),
+    // hold multi-document transactions (e.g. publish) until complete so
+    // per-document processing never observes half a transaction
+    groupTransactionEvents(),
     takeUntil(dispose$),
     share(),
   )

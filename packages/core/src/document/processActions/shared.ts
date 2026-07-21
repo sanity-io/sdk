@@ -1,4 +1,5 @@
 import {diffValue} from '@sanity/diff-patch'
+import {jsonMatch, stringifyPath} from '@sanity/json-match'
 import {type Mutation, type PatchOperations, type SanityDocument} from '@sanity/types'
 import {evaluateSync, type ExprNode} from 'groq-js'
 
@@ -92,6 +93,111 @@ export function createMutationApplier(options: {
   }
 }
 
+/**
+ * Re-applies the operational intent of user-supplied `inc`/`dec` patches to a
+ * set of snapshot-diffed patches.
+ *
+ * The outgoing patches sent to Content Lake are re-derived by diffing the
+ * base document before and after the user's patches were applied. That diff
+ * collapses an `inc` into a `set` of the resulting number, which turns
+ * concurrent increments from different clients into last-write-wins. This
+ * helper finds diffed `set` operations that are exactly explained by the
+ * user's `inc`/`dec` operations and swaps them back, so the server applies
+ * the increment against whatever value is current at commit time.
+ *
+ * A `set` is only swapped when its value equals the base value plus the
+ * accumulated user deltas for that exact path; anything else (e.g. an `inc`
+ * combined with a `set` of the same field) keeps the diffed `set`.
+ *
+ * Content Lake fails the whole transaction when `inc`/`dec` targets a missing
+ * path (unlike `set`, which always succeeds). To avoid turning a concurrent
+ * field removal into a transaction revert, the emitted patch seeds the target
+ * with a `setIfMissing` of the base value; the server executes `setIfMissing`
+ * before `inc`/`dec` within a single patch, so a concurrently removed field
+ * degrades to the same result the diffed `set` would have produced. A path
+ * into a concurrently removed keyed array item can still fail the
+ * transaction (`setIfMissing` cannot create array items); the transaction is
+ * then reverted and reported, which is preferable to silently resurrecting
+ * the item.
+ */
+export function preserveNumericOperations(
+  baseBefore: SanityDocument | null | undefined,
+  userPatches: PatchOperations[] | undefined,
+  diffedPatches: PatchOperations[],
+): PatchOperations[] {
+  if (!baseBefore || !userPatches?.length) return diffedPatches
+
+  // accumulate the user's inc/dec deltas per concrete (stringified) path,
+  // tracking the expected final value by replaying the additions in order
+  const targets = new Map<string, {baseValue: number; expectedValue: number; delta: number}>()
+  for (const patch of userPatches) {
+    for (const [op, sign] of [
+      ['inc', 1],
+      ['dec', -1],
+    ] as const) {
+      const record = patch[op]
+      if (!record) continue
+      for (const [pathExpression, amount] of Object.entries(record)) {
+        if (typeof amount !== 'number') continue
+        for (const match of jsonMatch(baseBefore, pathExpression)) {
+          const path = stringifyPath(match.path)
+          const existing = targets.get(path)
+          if (existing) {
+            existing.expectedValue += sign * amount
+            existing.delta += sign * amount
+          } else if (typeof match.value === 'number') {
+            targets.set(path, {
+              baseValue: match.value,
+              expectedValue: match.value + sign * amount,
+              delta: sign * amount,
+            })
+          }
+        }
+      }
+    }
+  }
+  if (!targets.size) return diffedPatches
+
+  const preserved = new Map<string, {delta: number; baseValue: number}>()
+  const next = diffedPatches.flatMap((patch) => {
+    if (!patch.set) return [patch]
+
+    const keptSet: Record<string, unknown> = {}
+    for (const [path, value] of Object.entries(patch.set)) {
+      const target = targets.get(path)
+      if (target && typeof value === 'number' && value === target.expectedValue) {
+        preserved.set(path, {delta: target.delta, baseValue: target.baseValue})
+      } else {
+        keptSet[path] = value
+      }
+    }
+
+    if (Object.keys(keptSet).length === Object.keys(patch.set).length) return [patch]
+    const {set: _set, ...rest} = patch
+    const withKept = Object.keys(keptSet).length ? {...rest, set: keptSet} : rest
+    return Object.keys(withKept).length ? [withKept] : []
+  })
+
+  if (!preserved.size) return next
+
+  const setIfMissing: Record<string, unknown> = {}
+  const inc: Record<string, number> = {}
+  const dec: Record<string, number> = {}
+  for (const [path, {delta, baseValue}] of preserved) {
+    setIfMissing[path] = baseValue
+    if (delta >= 0) inc[path] = delta
+    else dec[path] = -delta
+  }
+  return [
+    ...next,
+    {
+      setIfMissing,
+      ...(Object.keys(inc).length && {inc}),
+      ...(Object.keys(dec).length && {dec}),
+    },
+  ]
+}
+
 interface ApplySingleDocPatchOptions {
   base: DocumentSet
   working: DocumentSet
@@ -181,7 +287,11 @@ export function applySingleDocPatch({
   const baseAfter = base[documentId]
   const diffedPatches = preserveOperations
     ? (patches as PatchOperations[])
-    : (diffValue(baseBefore, baseAfter) as PatchOperations[])
+    : preserveNumericOperations(
+        baseBefore,
+        patches,
+        diffValue(baseBefore, baseAfter) as PatchOperations[],
+      )
 
   const workingBefore = working[documentId] as SanityDocument
   if (!checkGrant(grants.update, workingBefore, identity)) {

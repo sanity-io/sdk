@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.18.0](https://github.com/sanity-io/sdk/compare/sdk-v2.17.0...sdk-v2.18.0) (2026-07-20)
+
+
+### Features
+
+* **core:** harden the shared listener for reconnects and multi-document transactions ([#1058](https://github.com/sanity-io/sdk/issues/1058)) ([7e1e77e](https://github.com/sanity-io/sdk/commit/7e1e77e5cd4218331bd1c6ddf8c266f013c1a711))
+
+
+### Bug Fixes
+
+* **core:** converge local to server truth on idle fast-forward ([#1057](https://github.com/sanity-io/sdk/issues/1057)) ([d905c7b](https://github.com/sanity-io/sdk/commit/d905c7bbed92635a40edb340f86126c83f044e13))
+* **core:** do not send credentials on dataset ACL request ([#1050](https://github.com/sanity-io/sdk/issues/1050)) ([93cf3e9](https://github.com/sanity-io/sdk/commit/93cf3e98426ae475524d7932660805226722643e))
+* **core:** preserve inc/dec operational intent through the snapshot diff ([#1056](https://github.com/sanity-io/sdk/issues/1056)) ([1ddee6d](https://github.com/sanity-io/sdk/commit/1ddee6da5c491c993daa4d841615a42793507523))
+* **core:** stop fabricating array items for unresolvable keyed set paths ([#1059](https://github.com/sanity-io/sdk/issues/1059)) ([a9cb04f](https://github.com/sanity-io/sdk/commit/a9cb04f28940ab5bda4f75c512c6476853ca711e))
+
 ## [2.17.0](https://github.com/sanity-io/sdk/compare/sdk-v2.16.0...sdk-v2.17.0) (2026-07-16)
 
 

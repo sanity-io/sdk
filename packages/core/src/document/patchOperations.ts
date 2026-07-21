@@ -176,6 +176,54 @@ export const ensureArrayKeysDeep = memoize(<R>(input: R): R => {
 })
 
 /**
+ * Whether every array-addressing segment (keyed `[_key=="…"]` or numeric
+ * index) in the given match path resolves to an existing array item.
+ *
+ * This mirrors Content Lake, which auto-creates missing *object* properties
+ * when setting but never creates *array items*:
+ *
+ * ```js
+ * // object properties are created, even nested ones:
+ * set({}, {'meta.author.name': 'Ada'})
+ * // -> {meta: {author: {name: 'Ada'}}}                    (applies)
+ *
+ * // array items are not:
+ * set({items: [{_key: 'a'}]}, {'items[_key=="b"].title': 'x'})
+ * // -> {items: [{_key: 'a'}]}                             (no-op)
+ * ```
+ *
+ * Without this filter, the second example fabricated a degenerate item
+ * (`{title: 'x'}`, no `_key`) that would never exist on the server, which
+ * is how concurrent Portable Text edits grew phantom span-less children.
+ */
+function resolvesArraySegments(input: unknown, path: SingleValuePath): boolean {
+  let current: unknown = input
+  for (const segment of path) {
+    if (typeof segment === 'string') {
+      // missing object properties (nested ones included) are created
+      // server-side, so a string segment may descend into undefined
+      current =
+        typeof current === 'object' && current !== null && !Array.isArray(current)
+          ? (current as Record<string, unknown>)[segment]
+          : undefined
+      continue
+    }
+    // keyed and numeric segments address array items, which are never created
+    if (!Array.isArray(current)) return false
+    if (isKeySegment(segment)) {
+      const index = getIndexForKey(current, segment._key)
+      if (index === undefined) return false
+      current = current[index]
+    } else {
+      const index = segment < 0 ? current.length + segment : segment
+      if (!(index in current)) return false
+      current = current[index]
+    }
+  }
+  return true
+}
+
+/**
  * Given an input object and a record of path expressions to values, this
  * function will set each match with the given value.
  *
@@ -198,6 +246,7 @@ export function set(input: unknown, pathExpressionValues: Record<string, unknown
         replacementValue,
       })),
     )
+    .filter(({path}) => resolvesArraySegments(input, path))
     .reduce((acc, {path, replacementValue}) => setDeep(acc, path, replacementValue), input)
 
   return ensureArrayKeysDeep(result)
@@ -231,6 +280,7 @@ export function setIfMissing(
       }))
     })
     .filter((matchEntry) => matchEntry.value === null || matchEntry.value === undefined)
+    .filter(({path}) => resolvesArraySegments(input, path))
     .reduce((acc, {path, replacementValue}) => setDeep(acc, path, replacementValue), input)
 
   return ensureArrayKeysDeep(result)

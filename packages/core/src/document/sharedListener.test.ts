@@ -49,7 +49,8 @@ describe('createSharedListener', () => {
       '*',
       {},
       {
-        events: ['mutation', 'welcome', 'reconnect'],
+        events: ['mutation', 'welcome', 'welcomeback', 'reconnect', 'reset'],
+        enableResume: true,
         includeResult: false,
         includeAllVersions: true,
         tag: 'document-listener',

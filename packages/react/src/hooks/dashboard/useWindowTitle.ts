@@ -23,7 +23,7 @@ interface ContextResponse {
 }
 
 function resolveAppTitle(resource: ContextResource): string | undefined {
-  return resource.manifest?.title ?? resource.activeDeployment?.manifest?.title ?? resource.title
+  return resource.manifest?.title || resource.activeDeployment?.manifest?.title || resource.title
 }
 
 /**
@@ -81,7 +81,9 @@ export function useWindowTitle(viewTitle?: string): void {
     async function fetchAppTitle(signal: AbortSignal) {
       try {
         const data = await fetch<ContextResponse>('dashboard/v1/context', undefined, {signal})
-        const title = resolveAppTitle(data.context.resource)
+        // Local development resources do not have a registered title or deployment manifest.
+        // In that case, use the title rendered into the iframe HTML by the Sanity CLI.
+        const title = resolveAppTitle(data.context.resource) || document.title
         if (title) {
           setAppTitle(title)
         }
