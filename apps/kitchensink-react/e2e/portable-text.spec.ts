@@ -143,6 +143,113 @@ test.describe('Portable Text concurrent editing', () => {
     await expect(editableB).toContainText('twoB')
   })
 
+  test('a single user typing with delete-and-retype bursts loses nothing', async ({
+    page,
+    createDocuments,
+    getPageContext,
+  }) => {
+    // The gesture alone takes ~25s (human-cadence typing with pauses that
+    // straddle the ~1s flush window), plus a 20s convergence assertion.
+    test.setTimeout(120_000)
+    // Field regression: one user typing alone (no collaboration) saw text
+    // duplicated and reordered, most visibly after backspacing a few
+    // characters and retyping them. The concurrent tests above never catch
+    // this because they type in short discrete bursts and settle; this
+    // gesture has to straddle the plugin's ~1s mutation flush window.
+    // Fixed in @portabletext/plugin-sdk-value 7.1.1 (portabletext/editor#2986).
+    const {
+      documentIds: [id],
+    } = await createDocuments([
+      {
+        _type: 'author',
+        name: 'PTE solo typing test author',
+        minimalBlock: [
+          {
+            _type: 'block',
+            _key: 'b1',
+            style: 'normal',
+            markDefs: [],
+            children: [{_type: 'span', _key: 's1', text: 'Start: ', marks: []}],
+          },
+        ],
+      },
+    ])
+
+    await page.goto('./portable-text')
+    const pageContext = await getPageContext(page)
+
+    const documentIdInput = pageContext.getByTestId('pte-document-id-input')
+    await expect(documentIdInput).toBeVisible()
+    await documentIdInput.fill(id.replace('drafts.', ''))
+    await pageContext.getByTestId('pte-load-button').click()
+
+    const editableA = pageContext.getByTestId('pte-editable-a')
+    // Wait for the sync plugin to seed the EDITOR (not just the store
+    // preview) before typing: keystrokes that land before the initial value
+    // sync get merged against the seed and end up split across blocks. The
+    // non-empty seed text is what makes editor readiness observable.
+    await expect(editableA).toContainText('Start:')
+
+    // Deterministic caret at the very end (select-all + ArrowRight collapses
+    // to the end; the End key is unreliable across browsers). The pauses
+    // matter: select-all racing the editor's selection handling can leave
+    // the whole seed selected, and the first keystroke then replaces it.
+    await editableA.click()
+    await page.waitForTimeout(300)
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.waitForTimeout(150)
+    await page.keyboard.press('ArrowRight')
+    await page.waitForTimeout(150)
+
+    // Type into pane A only, mirroring every keystroke into an expected
+    // model. Pauses are sampled around the flush cadence so deletes and
+    // retypes land on both sides of a flush boundary.
+    let expected = 'Start: '
+    const type = async (text: string) => {
+      await page.keyboard.type(text, {delay: 40})
+      expected += text
+    }
+    const backspace = async (count: number) => {
+      for (let i = 0; i < count; i++) {
+        await page.keyboard.press('Backspace')
+        await page.waitForTimeout(30)
+      }
+      expected = expected.slice(0, -count)
+    }
+    const pause = (ms: number) => page.waitForTimeout(ms)
+
+    await type('publish editors ')
+    await pause(400)
+    await type('deadline ')
+    await backspace(5)
+    await pause(1100)
+    await type('line ')
+    await pause(300)
+    await type('sources ')
+    await backspace(8)
+    await pause(900)
+    await type('sources ')
+    await type('context')
+    await pause(150)
+    await backspace(3)
+    await pause(1100)
+    await type('ext')
+
+    // Both panes and the stored value must equal exactly what was typed:
+    // no duplicated suffixes, no resurrected deletions, no reordering.
+    await expect(async () => {
+      const previewA = JSON.parse(
+        (await pageContext.getByTestId('pte-preview-a').textContent()) || 'null',
+      )
+      const previewB = JSON.parse(
+        (await pageContext.getByTestId('pte-preview-b').textContent()) || 'null',
+      )
+      expect(textOf(previewA)).toBe(expected)
+      expect(previewA).toEqual(previewB)
+      expect(validatePortableText(previewA)).toEqual([])
+    }).toPass({timeout: 20000})
+  })
+
   test('concurrent formatting and typing converge to valid Portable Text', async ({
     page,
     createDocuments,
