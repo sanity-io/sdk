@@ -1,13 +1,6 @@
-import {
-  type Project,
-  projects,
-  type ProjectsOptions,
-  type SanityInstance,
-  type StateSource,
-} from '@sanity/sdk'
+import {type Project, projects, type ProjectsOptions} from '@sanity/sdk'
 
-import {createStateSourceHook} from '../helpers/createStateSourceHook'
-import {mapStateSource} from '../helpers/mapStateSource'
+import {createFetcherHook, type FetcherHookResult} from '../helpers/createFetcherHook'
 
 /**
  * @public
@@ -17,22 +10,17 @@ import {mapStateSource} from '../helpers/mapStateSource'
  */
 export type ProjectWithoutMembers = Project
 
-const getProjectsData = (
-  instance: SanityInstance,
-  options?: ProjectsOptions<boolean, boolean>,
-): StateSource<Project<boolean, boolean>[] | undefined> =>
-  mapStateSource(projects.getState(instance, options), (snapshot) => snapshot.data)
-
 /**
  * Returns metadata for each project you have access to.
  *
  * @category Projects
  * @param options - Configuration options
- * @returns An array of project metadata. `members` is included only when
- *   `includeMembers: true`; `features` is included unless `includeFeatures: false`.
+ * @returns A {@link FetcherHookResult} whose `data` is an array of project
+ *   metadata. `members` is included only when `includeMembers: true`; `features`
+ *   is included unless `includeFeatures: false`.
  * @example
  * ```tsx
- * const projects = useProjects()
+ * const {data: projects} = useProjects()
  *
  * return (
  *   <select>
@@ -44,20 +32,18 @@ const getProjectsData = (
  * ```
  * @example
  * ```tsx
- * const projects = useProjects()
- * const projectsWithFeatures = useProjects()
- * const projectsWithMembers = useProjects({includeMembers: true})
- * const projectsWithoutMembers = useProjects({includeMembers: false})
- * const projectsWithoutFeatures = useProjects({includeFeatures: false})
+ * const {data: projects} = useProjects()
+ * const {data: projectsWithFeatures} = useProjects()
+ * const {data: projectsWithMembers} = useProjects({includeMembers: true})
+ * const {data: projectsWithoutMembers} = useProjects({includeMembers: false})
+ * const {data: projectsWithoutFeatures} = useProjects({includeFeatures: false})
  * ```
  * @public
  * @function
  */
-export const useProjects = createStateSourceHook({
-  getState: getProjectsData,
-  shouldSuspend: (instance, ...params) =>
-    getProjectsData(instance, ...params).getCurrent() === undefined,
-  suspender: projects.resolveState,
-}) as <IncludeMembers extends boolean = false, IncludeFeatures extends boolean = true>(
+export const useProjects = createFetcherHook(projects) as <
+  IncludeMembers extends boolean = false,
+  IncludeFeatures extends boolean = true,
+>(
   options?: ProjectsOptions<IncludeMembers, IncludeFeatures>,
-) => Project<IncludeMembers, IncludeFeatures>[]
+) => FetcherHookResult<Project<IncludeMembers, IncludeFeatures>[]>
