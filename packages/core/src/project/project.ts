@@ -2,9 +2,10 @@ import {switchMap} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
 import {type ProjectHandle} from '../config/sanityConfig'
+import {projects} from '../projects/projects'
 import {type SanityInstance} from '../store/createSanityInstance'
-import {type StateSource} from '../store/createStateSourceAction'
-import {createFetcherStore} from '../utils/createFetcherStore'
+import {defineFetcher} from '../store/fetcherStore'
+import {buildQuery} from '../utils/buildQuery'
 
 const API_VERSION = 'v2025-02-19'
 
@@ -111,57 +112,37 @@ export function getProjectCacheKey(
   return `project:${projectId}${membersKey}${featuresKey}`
 }
 
-const project = createFetcherStore({
-  name: 'Project',
+/**
+ * Fetcher for a single project (`GET /projects/:id`), on the shared fetcher
+ * cache. Pre-seeds from the default {@link projects} list entry when it can
+ * satisfy the read — the default list carries features but not members, so
+ * only `includeMembers: false` reads seed.
+ *
+ * @internal
+ */
+export const project = defineFetcher<
+  [options?: ProjectOptions<boolean, boolean>],
+  Project<boolean, boolean>
+>({
+  name: 'project',
   getKey: getProjectCacheKey,
-  fetcher: (instance) => (options?: ProjectOptions<boolean, boolean>) => {
+  fetch: (instance) => (options) =>
+    getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
+      switchMap((client) =>
+        client.observable.request<Project<boolean, boolean>>({
+          uri: `/projects/${resolveProjectId(instance, options)}`,
+          query: buildQuery(normalizeProjectOptions(options)),
+          tag: 'projects.get',
+        }),
+      ),
+    ),
+  tags: (data) => [{type: 'project', id: data.id}],
+  initialData: (instance, options) => {
+    if (normalizeProjectOptions(options).includeMembers) return undefined
+    const snapshot = projects.getState(instance).getCurrent()
+    if (snapshot.status !== 'success') return undefined
     const projectId = resolveProjectId(instance, options)
-
-    return getClientState(instance, {
-      apiVersion: API_VERSION,
-      scope: 'global',
-    }).observable.pipe(
-      switchMap((client) => {
-        const normalized = normalizeProjectOptions(options)
-        const query = Object.fromEntries(
-          Object.entries(normalized)
-            .filter(([, value]) => value !== undefined)
-            .map(([key, value]) => [key, String(value)]),
-        )
-
-        return client.observable.request({
-          uri: `/projects/${projectId}`,
-          query,
-          tag: 'project.get',
-        })
-      }),
-    )
+    const match = snapshot.data.find((item) => item.id === projectId)
+    return match && {data: match, dataUpdatedAt: snapshot.dataUpdatedAt}
   },
 })
-
-/**
- * Public signature for the project state source. The conditional generics
- * cannot flow through `BoundStoreAction`, so we declare the signature here
- * and assign the (already-correct) runtime function to it.
- */
-type GetProjectState = <
-  IncludeMembers extends boolean = true,
-  IncludeFeatures extends boolean = true,
->(
-  instance: SanityInstance,
-  options?: ProjectOptions<IncludeMembers, IncludeFeatures>,
-) => StateSource<Project<IncludeMembers, IncludeFeatures> | undefined>
-
-type ResolveProject = <
-  IncludeMembers extends boolean = true,
-  IncludeFeatures extends boolean = true,
->(
-  instance: SanityInstance,
-  options?: ProjectOptions<IncludeMembers, IncludeFeatures>,
-) => Promise<Project<IncludeMembers, IncludeFeatures>>
-
-/** @public */
-export const getProjectState: GetProjectState = project.getState
-
-/** @public */
-export const resolveProject: ResolveProject = project.resolveState
