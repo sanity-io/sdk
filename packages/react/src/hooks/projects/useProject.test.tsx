@@ -14,18 +14,25 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
   return {...original, project: {getState: vi.fn(), resolveState: vi.fn()}}
 })
 
-const stateSource = (current: Project | undefined): StateSource<FetcherSnapshot<Project>> =>
-  ({
-    getCurrent: vi.fn(() =>
-      current
-        ? {status: 'success', data: current, isFetching: false}
-        : {status: 'pending', data: undefined, isFetching: true},
-    ),
-    subscribe: vi.fn(),
+const stateSource = (current: Project | undefined): StateSource<FetcherSnapshot<Project>> => {
+  // Cache the snapshot: useSyncExternalStore requires a referentially stable current value.
+  const snapshot = current
+    ? {status: 'success', data: current, error: undefined, isFetching: false, dataUpdatedAt: 1}
+    : {
+        status: 'pending',
+        data: undefined,
+        error: undefined,
+        isFetching: true,
+        dataUpdatedAt: undefined,
+      }
+  return {
+    getCurrent: vi.fn(() => snapshot),
+    subscribe: vi.fn(() => () => {}),
     get observable(): Observable<unknown> {
       throw new Error('Not implemented')
     },
-  }) as unknown as StateSource<FetcherSnapshot<Project>>
+  } as unknown as StateSource<FetcherSnapshot<Project>>
+}
 
 const sanityInstance = expect.objectContaining({config: expect.any(Object)})
 
