@@ -29,8 +29,6 @@ const client = clientFactory({requestTagPrefix: REQUEST_TAG_PREFIX})
 await client.request({uri: '/users/me', method: 'GET', tag: 'users.get-current'})
 
 // GOOD (non-auth code): omit requestTagPrefix to inherit the default
-const client = clientFactory({
-  /* ...other config... */
-})
+const client = clientFactory({/* ...other config... */})
 await client.request({uri: '/users/me', method: 'GET', tag: 'users.get-current'})
 ```
