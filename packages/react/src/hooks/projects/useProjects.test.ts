@@ -1,87 +1,59 @@
-import {projects, type SanityInstance} from '@sanity/sdk'
+import {type Project, projects, type StateSource} from '@sanity/sdk'
+import {type FetcherSnapshot} from '@sanity/sdk/_internal'
+import {type Observable} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {renderHook} from '../../../test/test-utils'
+import {useProjects} from './useProjects'
 
-// Mock dependencies
-vi.mock('@sanity/sdk', () => ({
-  projects: {
-    getState: vi.fn(() => ({
-      getCurrent: vi.fn(() => ({status: 'pending', data: undefined})),
-    })),
-    resolveState: vi.fn(),
-  },
-}))
-vi.mock('../helpers/createStateSourceHook', () => ({
-  createStateSourceHook: vi.fn(),
-}))
+vi.mock('@sanity/sdk', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@sanity/sdk')>()
+  return {...original, projects: {getState: vi.fn(), resolveState: vi.fn(), refetch: vi.fn()}}
+})
+
+const stateSource = (current: Project[] | undefined): StateSource<FetcherSnapshot<Project[]>> => {
+  const snapshot = current
+    ? {status: 'success', data: current, error: undefined, isFetching: false, dataUpdatedAt: 1}
+    : {
+        status: 'pending',
+        data: undefined,
+        error: undefined,
+        isFetching: true,
+        dataUpdatedAt: undefined,
+      }
+  return {
+    getCurrent: vi.fn(() => snapshot),
+    subscribe: vi.fn(() => () => {}),
+    get observable(): Observable<unknown> {
+      throw new Error('Not implemented')
+    },
+  } as unknown as StateSource<FetcherSnapshot<Project[]>>
+}
+
+const sanityInstance = expect.objectContaining({config: expect.any(Object)})
 
 describe('useProjects', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.resetModules()
+    vi.mocked(projects.getState).mockReturnValue(stateSource([{id: 'a'}] as unknown as Project[]))
   })
 
-  it('should call createStateSourceHook with correct arguments on import', async () => {
-    // Dynamically import the hook *after* mocks are set up and modules reset
-    await import('./useProjects')
-
-    // Check if createStateSourceHook was called during the module evaluation (import)
-    expect(createStateSourceHook).toHaveBeenCalled()
-    expect(createStateSourceHook).toHaveBeenCalledWith(
-      expect.objectContaining({
-        getState: expect.any(Function),
-        shouldSuspend: expect.any(Function),
-        suspender: expect.any(Function),
-      }),
-    )
+  it('reads the projects fetcher with the passed options', () => {
+    renderHook(() => useProjects({organizationId: 'org123'}))
+    expect(projects.getState).toHaveBeenCalledWith(sanityInstance, {organizationId: 'org123'})
   })
 
-  it('shouldSuspend suspends while the fetcher snapshot is pending', async () => {
-    await import('./useProjects')
-
-    const mockCreateStateSourceHook = createStateSourceHook as ReturnType<typeof vi.fn>
-    expect(mockCreateStateSourceHook.mock.calls.length).toBeGreaterThan(0)
-    const {shouldSuspend} = mockCreateStateSourceHook.mock.calls[0][0]
-
-    const mockInstance = {} as SanityInstance
-    const result = shouldSuspend(mockInstance, undefined)
-
-    // The hook reads the fetcher's snapshot and suspends while data is undefined
-    expect(projects.getState).toHaveBeenCalledWith(mockInstance, undefined)
-    const projectsStateMockResult = vi.mocked(projects.getState).mock.results[0].value
-    expect(projectsStateMockResult.getCurrent).toHaveBeenCalled()
-    expect(result).toBe(true)
+  it('returns the fetcher data in the result envelope', () => {
+    const {result} = renderHook(() => useProjects())
+    expect(result.current.data).toEqual([{id: 'a'}])
+    expect(result.current.isFetching).toBe(false)
+    expect(typeof result.current.refetch).toBe('function')
   })
 
-  it('getState maps the snapshot envelope to bare data', async () => {
-    await import('./useProjects')
-
-    const mockCreateStateSourceHook = createStateSourceHook as ReturnType<typeof vi.fn>
-    const {getState} = mockCreateStateSourceHook.mock.calls[0][0]
-
-    const mockInstance = {} as SanityInstance
-    vi.mocked(projects.getState).mockReturnValueOnce({
-      getCurrent: () => ({status: 'success', data: [{id: 'a'}]}),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any)
-
-    expect(getState(mockInstance, undefined).getCurrent()).toEqual([{id: 'a'}])
-  })
-
-  it('should handle different parameter combinations in shouldSuspend', async () => {
-    await import('./useProjects')
-
-    const mockCreateStateSourceHook = createStateSourceHook as ReturnType<typeof vi.fn>
-    const {shouldSuspend} = mockCreateStateSourceHook.mock.calls[0][0]
-
-    const mockInstance = {} as SanityInstance
-
-    expect(() => shouldSuspend(mockInstance, undefined)).not.toThrow()
-    expect(() => shouldSuspend(mockInstance, {organizationId: 'org123'})).not.toThrow()
-    expect(() => shouldSuspend(mockInstance, {includeMembers: false})).not.toThrow()
-    expect(() =>
-      shouldSuspend(mockInstance, {organizationId: 'org123', includeMembers: false}),
-    ).not.toThrow()
+  it('suspends via the projects fetcher until data is available', () => {
+    vi.mocked(projects.getState).mockReturnValue(stateSource(undefined))
+    vi.mocked(projects.resolveState).mockReturnValue(new Promise(() => {}))
+    renderHook(() => useProjects())
+    expect(projects.resolveState).toHaveBeenCalled()
   })
 })
