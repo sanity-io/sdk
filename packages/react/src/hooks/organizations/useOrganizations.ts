@@ -1,11 +1,19 @@
 import {
-  getOrganizationsState,
   type Organizations,
+  organizations,
   type OrganizationsOptions,
-  resolveOrganizations,
+  type SanityInstance,
+  type StateSource,
 } from '@sanity/sdk'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {mapStateSource} from '../helpers/mapStateSource'
+
+const getOrganizationsData = (
+  instance: SanityInstance,
+  options?: OrganizationsOptions<boolean, boolean>,
+): StateSource<Organizations<boolean, boolean> | undefined> =>
+  mapStateSource(organizations.getState(instance, options), (snapshot) => snapshot.data)
 
 /**
  * Returns metadata for each organisation the current user has access to.
@@ -36,10 +44,10 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  * @function
  */
 export const useOrganizations = createStateSourceHook({
-  getState: getOrganizationsState,
+  getState: getOrganizationsData,
   shouldSuspend: (instance, ...params) =>
-    getOrganizationsState(instance, ...params).getCurrent() === undefined,
-  suspender: resolveOrganizations,
+    getOrganizationsData(instance, ...params).getCurrent() === undefined,
+  suspender: organizations.resolveState,
 }) as <IncludeMembers extends boolean = false, IncludeFeatures extends boolean = false>(
   options?: OrganizationsOptions<IncludeMembers, IncludeFeatures>,
 ) => Organizations<IncludeMembers, IncludeFeatures>

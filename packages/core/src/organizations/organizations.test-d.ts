@@ -3,41 +3,26 @@ import {expectTypeOf, test} from 'vitest'
 import {type OrganizationMember} from '../organization/organization'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {getOrganizationsState, type Organizations, resolveOrganizations} from './organizations'
+import {type FetcherSnapshot} from '../store/fetcherStore'
+import {type Organizations, organizations} from './organizations'
 
 const instance = {} as SanityInstance
 
-test('resolveOrganizations — default call: bare list shape', () => {
-  expectTypeOf(resolveOrganizations(instance)).resolves.toEqualTypeOf<Organizations<false, false>>()
-})
-
-test('resolveOrganizations — includeMembers: true narrows the generic', () => {
-  expectTypeOf(resolveOrganizations(instance, {includeMembers: true})).resolves.toEqualTypeOf<
-    Organizations<true, false>
+test('organizations.resolveState — resolves the wide-boolean list shape', () => {
+  expectTypeOf(organizations.resolveState(instance)).resolves.toEqualTypeOf<
+    Organizations<boolean, boolean>
   >()
 })
 
-test('resolveOrganizations — includeFeatures: true narrows the generic', () => {
-  expectTypeOf(resolveOrganizations(instance, {includeFeatures: true})).resolves.toEqualTypeOf<
-    Organizations<false, true>
+test('organizations.getState — exposes the snapshot envelope', () => {
+  expectTypeOf(organizations.getState(instance)).toEqualTypeOf<
+    StateSource<FetcherSnapshot<Organizations<boolean, boolean>>>
   >()
 })
 
-test('resolveOrganizations — both flags true', () => {
-  expectTypeOf(
-    resolveOrganizations(instance, {includeMembers: true, includeFeatures: true}),
-  ).resolves.toEqualTypeOf<Organizations<true, true>>()
-})
-
-test('resolveOrganizations — rejects non-boolean flag values', () => {
-  // @ts-expect-error — includeMembers must be a boolean
-  void resolveOrganizations(instance, {includeMembers: 'yes'})
-})
-
-test('resolveOrganizations — includeImplicitMemberships does not change the data shape', () => {
-  expectTypeOf(
-    resolveOrganizations(instance, {includeImplicitMemberships: true}),
-  ).resolves.toEqualTypeOf<Organizations<false, false>>()
+test('organizations — rejects non-boolean flag values', () => {
+  // @ts-expect-error includeMembers must be a boolean
+  void organizations.resolveState(instance, {includeMembers: 'yes'})
 })
 
 test('Organizations — list items expose the documented subset of keys', () => {
@@ -68,10 +53,4 @@ test('Organizations<true, true>[number] exposes both members[] and features[]', 
   type Item = Organizations<true, true>[number]
   expectTypeOf<Item['members']>().toEqualTypeOf<OrganizationMember[]>()
   expectTypeOf<Item['features']>().toEqualTypeOf<string[]>()
-})
-
-test('getOrganizationsState — default call returns the bare-base StateSource', () => {
-  expectTypeOf(getOrganizationsState(instance)).toEqualTypeOf<
-    StateSource<Organizations<false, false> | undefined>
-  >()
 })
