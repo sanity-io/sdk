@@ -4,31 +4,38 @@ import {expectTypeOf, test} from 'vitest'
 import {useProjects} from './useProjects'
 
 test('useProjects — no args: features included, members omitted', () => {
-  expectTypeOf(useProjects()).toEqualTypeOf<Project<false, true>[]>()
+  expectTypeOf(useProjects().data).toEqualTypeOf<Project<false, true>[]>()
+})
+
+test('useProjects — returns the FetcherHookResult envelope', () => {
+  const result = useProjects()
+  expectTypeOf(result.isFetching).toEqualTypeOf<boolean>()
+  expectTypeOf(result.error).toEqualTypeOf<unknown>()
+  expectTypeOf(result.refetch).toEqualTypeOf<() => Promise<Project<false, true>[]>>()
 })
 
 test('useProjects — includeMembers: true adds members to the type', () => {
-  expectTypeOf(useProjects({includeMembers: true})).toEqualTypeOf<Project<true, true>[]>()
+  expectTypeOf(useProjects({includeMembers: true}).data).toEqualTypeOf<Project<true, true>[]>()
   type Result = ReturnType<typeof useProjects<true, true>>
-  expectTypeOf<Result[number]['members']>().toEqualTypeOf<ProjectMember[]>()
+  expectTypeOf<Result['data'][number]['members']>().toEqualTypeOf<ProjectMember[]>()
 })
 
 test('useProjects — includeFeatures: false drops features from the type', () => {
-  expectTypeOf(useProjects({includeFeatures: false})).toEqualTypeOf<Project<false, false>[]>()
+  expectTypeOf(useProjects({includeFeatures: false}).data).toEqualTypeOf<Project<false, false>[]>()
 })
 
 test('useProjects — both flags true → both arrays present', () => {
-  expectTypeOf(useProjects({includeMembers: true, includeFeatures: true})).toEqualTypeOf<
+  expectTypeOf(useProjects({includeMembers: true, includeFeatures: true}).data).toEqualTypeOf<
     Project<true, true>[]
   >()
 })
 
 test('useProjects — both flags false → bare base shape', () => {
-  expectTypeOf(useProjects({includeMembers: false, includeFeatures: false})).toEqualTypeOf<
+  expectTypeOf(useProjects({includeMembers: false, includeFeatures: false}).data).toEqualTypeOf<
     Project<false, false>[]
   >()
   type Result = ReturnType<typeof useProjects<false, false>>
-  expectTypeOf<Result[number]['id']>().toEqualTypeOf<string>()
+  expectTypeOf<Result['data'][number]['id']>().toEqualTypeOf<string>()
 })
 
 test('useProjects — rejects non-boolean flag values', () => {
@@ -37,13 +44,17 @@ test('useProjects — rejects non-boolean flag values', () => {
 })
 
 test('useProjects — organizationId alone does not change the data shape', () => {
-  expectTypeOf(useProjects({organizationId: 'org_123'})).toEqualTypeOf<Project<false, true>[]>()
+  expectTypeOf(useProjects({organizationId: 'org_123'}).data).toEqualTypeOf<
+    Project<false, true>[]
+  >()
 })
 
 test('useProjects — non-literal boolean flag makes members optional', () => {
   const includeMembers = false as boolean
-  expectTypeOf(useProjects({includeMembers})).toEqualTypeOf<Project<boolean, true>[]>()
+  expectTypeOf(useProjects({includeMembers}).data).toEqualTypeOf<Project<boolean, true>[]>()
   type Result = ReturnType<typeof useProjects<boolean, true>>
-  expectTypeOf<Result[number]['members']>().toEqualTypeOf<ProjectMember[] | undefined>()
-  expectTypeOf<Pick<Result[number], 'members'>>().toEqualTypeOf<{members?: ProjectMember[]}>()
+  expectTypeOf<Result['data'][number]['members']>().toEqualTypeOf<ProjectMember[] | undefined>()
+  expectTypeOf<Pick<Result['data'][number], 'members'>>().toEqualTypeOf<{
+    members?: ProjectMember[]
+  }>()
 })
