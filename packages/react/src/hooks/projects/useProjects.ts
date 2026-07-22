@@ -1,6 +1,13 @@
-import {getProjectsState, type Project, type ProjectsOptions, resolveProjects} from '@sanity/sdk'
+import {
+  type Project,
+  projects,
+  type ProjectsOptions,
+  type SanityInstance,
+  type StateSource,
+} from '@sanity/sdk'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {mapStateSource} from '../helpers/mapStateSource'
 
 /**
  * @public
@@ -9,6 +16,12 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  * @deprecated use the Project type directly.
  */
 export type ProjectWithoutMembers = Project
+
+const getProjectsData = (
+  instance: SanityInstance,
+  options?: ProjectsOptions<boolean, boolean>,
+): StateSource<Project<boolean, boolean>[] | undefined> =>
+  mapStateSource(projects.getState(instance, options), (snapshot) => snapshot.data)
 
 /**
  * Returns metadata for each project you have access to.
@@ -41,10 +54,10 @@ export type ProjectWithoutMembers = Project
  * @function
  */
 export const useProjects = createStateSourceHook({
-  getState: getProjectsState,
+  getState: getProjectsData,
   shouldSuspend: (instance, ...params) =>
-    getProjectsState(instance, ...params).getCurrent() === undefined,
-  suspender: resolveProjects,
+    getProjectsData(instance, ...params).getCurrent() === undefined,
+  suspender: projects.resolveState,
 }) as <IncludeMembers extends boolean = false, IncludeFeatures extends boolean = true>(
   options?: ProjectsOptions<IncludeMembers, IncludeFeatures>,
 ) => Project<IncludeMembers, IncludeFeatures>[]
