@@ -104,7 +104,9 @@ test.describe('Portable Text concurrent editing', () => {
     const documentIdInput = pageContext.getByTestId('pte-document-id-input')
     await expect(documentIdInput).toBeVisible()
     await documentIdInput.fill(id.replace('drafts.', ''))
-    await pageContext.getByTestId('pte-load-button').click()
+    const loadButton = pageContext.getByTestId('pte-load-button')
+    await expect(loadButton).toBeEnabled()
+    await loadButton.click()
 
     const editableA = pageContext.getByTestId('pte-editable-a')
     const editableB = pageContext.getByTestId('pte-editable-b')
@@ -156,7 +158,7 @@ test.describe('Portable Text concurrent editing', () => {
     // characters and retyping them. The concurrent tests above never catch
     // this because they type in short discrete bursts and settle; this
     // gesture has to straddle the plugin's ~1s mutation flush window.
-    // Fixed in @portabletext/plugin-sdk-value 7.1.1 (portabletext/editor#2986).
+    // Fixed in @portabletext/plugin-sdk-value 7.1.2 (portabletext/editor#2986).
     const {
       documentIds: [id],
     } = await createDocuments([
@@ -181,7 +183,9 @@ test.describe('Portable Text concurrent editing', () => {
     const documentIdInput = pageContext.getByTestId('pte-document-id-input')
     await expect(documentIdInput).toBeVisible()
     await documentIdInput.fill(id.replace('drafts.', ''))
-    await pageContext.getByTestId('pte-load-button').click()
+    const loadButton = pageContext.getByTestId('pte-load-button')
+    await expect(loadButton).toBeEnabled()
+    await loadButton.click()
 
     const editableA = pageContext.getByTestId('pte-editable-a')
     // Wait for the sync plugin to seed the EDITOR (not just the store
@@ -279,7 +283,9 @@ test.describe('Portable Text concurrent editing', () => {
     const documentIdInput = pageContext.getByTestId('pte-document-id-input')
     await expect(documentIdInput).toBeVisible()
     await documentIdInput.fill(id.replace('drafts.', ''))
-    await pageContext.getByTestId('pte-load-button').click()
+    const loadButton = pageContext.getByTestId('pte-load-button')
+    await expect(loadButton).toBeEnabled()
+    await loadButton.click()
 
     const editableA = pageContext.getByTestId('pte-editable-a')
     const editableB = pageContext.getByTestId('pte-editable-b')
@@ -295,7 +301,9 @@ test.describe('Portable Text concurrent editing', () => {
     await pageContext.getByTestId('pte-bold-a').click()
 
     await editableB.getByText('The quick brown fox').click()
-    await page.keyboard.press('End')
+    // End is unreliable across browsers; select-all + ArrowRight collapses to the end.
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.press('ArrowRight')
     await page.keyboard.type(' jumps')
 
     await expect(async () => {

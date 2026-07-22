@@ -203,7 +203,10 @@ function ConcurrentEditors() {
 
   const {data: documents} = useDocuments({documentType: 'author', batchSize: 1})
   const [documentId, setDocumentId] = useState<string>(documents[0]?.documentId ?? '')
-  const [pendingId, setPendingId] = useState<string>('')
+  // Single draft value for the input. Avoid `pending || documentId`: clearing the
+  // field would snap the value back to documentId and fight Playwright fill on
+  // WebKit, leaving Load disabled because pending never sticks.
+  const [draftId, setDraftId] = useState<string>(documents[0]?.documentId ?? '')
 
   const docHandle = useMemo<DocumentHandle<'author'> | null>(
     () =>
@@ -229,9 +232,9 @@ function ConcurrentEditors() {
               <Box flex={1}>
                 <TextInput
                   fontSize={2}
-                  value={pendingId || documentId}
+                  value={draftId}
                   placeholder="Author document ID"
-                  onChange={(e) => setPendingId(e.currentTarget.value)}
+                  onChange={(e) => setDraftId(e.currentTarget.value)}
                   data-testid="pte-document-id-input"
                 />
               </Box>
@@ -239,11 +242,8 @@ function ConcurrentEditors() {
                 text="Load"
                 tone="primary"
                 fontSize={2}
-                disabled={!pendingId}
-                onClick={() => {
-                  setDocumentId(pendingId)
-                  setPendingId('')
-                }}
+                disabled={!draftId}
+                onClick={() => setDocumentId(draftId)}
                 data-testid="pte-load-button"
               />
             </Flex>
