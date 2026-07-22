@@ -469,6 +469,50 @@ function extractPatchOperations(
   })
 }
 
+// Opt-in sync diagnostics for concurrency investigations: set
+// `globalThis.__SDK_SYNC_DEBUG = true` before load (harness: SYNC_DEBUG=1).
+// Free when off.
+function syncDebugEnabled(): boolean {
+  return (globalThis as {__SDK_SYNC_DEBUG?: boolean}).__SDK_SYNC_DEBUG === true
+}
+
+type SyncDebugDigest = {
+  sample: string
+  chars: number
+  /** Count of the duo-paste harness phrase; useful for H1 outgoing-wipe traces. */
+  imFeeling: number
+}
+
+/** Compact digest of Portable-Text-shaped fields for `[sdk-sync]` trace lines. */
+function syncDebugTextDigest(doc: unknown): SyncDebugDigest {
+  if (!doc || typeof doc !== 'object') {
+    return {sample: '<none>', chars: 0, imFeeling: 0}
+  }
+  for (const field of ['blocks', 'content']) {
+    const value = (doc as Record<string, unknown>)[field]
+    if (!Array.isArray(value)) continue
+    const sample = value
+      .map((blockNode) => {
+        const children = (blockNode as {children?: {text?: string}[]}).children
+        if (!Array.isArray(children)) return ''
+        return children.map((child) => child.text ?? '').join('|')
+      })
+      .join(' ¶ ')
+    return {
+      sample: sample.length > 240 ? `${sample.slice(0, 240)}…` : sample,
+      chars: sample.length,
+      imFeeling: sample.split("I'm feeling").length - 1,
+    }
+  }
+  return {sample: '<no pte field>', chars: 0, imFeeling: 0}
+}
+
+function syncDebug(label: string, payload: Record<string, unknown>): void {
+  if (!syncDebugEnabled()) return
+  // eslint-disable-next-line no-console
+  console.debug(`[sdk-sync] ${label} ${JSON.stringify(payload)}`)
+}
+
 export function applyRemoteDocument(
   prev: SyncTransactionState,
   {document, documentId, previousRev, revision, timestamp, type, mutations}: RemoteDocument,
@@ -480,6 +524,22 @@ export function applyRemoteDocument(
   // document state is deleted when there are no more subscribers so we can
   // simply skip if there is no state
   if (!prevDocState) return prev
+
+  const prevLocalDigest = syncDebugTextDigest(prevDocState.local)
+  const remoteDigest = syncDebugTextDigest(document)
+  syncDebug('remote-in', {
+    documentId,
+    type,
+    revision,
+    previousRev,
+    own: Boolean(revision && prevDocState.unverifiedRevisions?.[revision]),
+    appliedTxs: prev.applied.map((transaction) => transaction.transactionId),
+    appliedCount: prev.applied.length,
+    outgoingTx: prev.outgoing?.transactionId ?? null,
+    outgoingPresent: Boolean(prev.outgoing),
+    remote: remoteDigest,
+    local: prevLocalDigest,
+  })
 
   // we send out transactions with IDs generated client-side to identify them
   // when they are observed through the listener. here we can check if this
@@ -562,6 +622,15 @@ export function applyRemoteDocument(
         ? document
         : prevDocState.local
 
+    const localDigest = syncDebugTextDigest(local)
+    syncDebug('fast-forward', {
+      documentId,
+      revision,
+      converged: nothingElsePending,
+      local: localDigest,
+      localLostImFeeling: localDigest.imFeeling < prevLocalDigest.imFeeling,
+    })
+
     return {
       ...prev,
       documentStates: {
@@ -587,14 +656,60 @@ export function applyRemoteDocument(
   let working = {...previous, [documentId]: document}
   const nextApplied: AppliedTransaction[] = []
 
+  // When pastes (or other edits) sit only in `outgoing` with an empty `applied`
+  // queue, re-apply that submitted transaction onto the new remote for local
+  // EDGE only. Mutator keeps submitted work on EDGE; without this, local snaps
+  // to remote and the plugin can repair away in-flight paste text. Do not mutate
+  // `outgoing` itself; `processActions`/`processMutations` mutate document sets
+  // in place, so clone `base`/`previous` before re-applying. Skip when `applied`
+  // is non-empty: those txns already sit on the outgoing optimistic chain, and
+  // replaying both double-applies.
+  if (
+    prev.outgoing &&
+    prev.grants &&
+    prev.outgoing.actions.length > 0 &&
+    prev.applied.length === 0 &&
+    // Own echo already includes this transaction's result; re-applying would
+    // duplicate inserts/DMP hunks (e.g. `oneA oneA`).
+    prev.outgoing.transactionId !== revision
+  ) {
+    try {
+      const next = processActions({
+        transactionId: prev.outgoing.transactionId,
+        actions: prev.outgoing.actions,
+        timestamp: prev.outgoing.timestamp,
+        base: structuredClone(prev.outgoing.base),
+        working: {
+          ...structuredClone(prev.outgoing.previous),
+          [documentId]: document,
+        },
+        grants: prev.grants,
+        identity: prev.identity,
+      })
+      working = next.working
+    } catch (error) {
+      if (error instanceof ActionError) {
+        syncDebug('outgoing-rebase-error', {
+          documentId: error.documentId,
+          transactionId: error.transactionId,
+          message: error.message,
+        })
+        events.next({
+          type: 'rebase-error',
+          transactionId: error.transactionId,
+          documentId: error.documentId,
+          message: error.message,
+          error,
+        })
+      } else {
+        throw error
+      }
+    }
+  }
+
   // now we can iterate through our applied (but not yet committed) transactions
   // starting with the updated working set and re-apply each transaction in
   // order creating a new set of applied transactions as we go.
-  //
-  // NOTE: we don't want to rebase over the outgoing transaction because that
-  // transaction is already on its way to the server. if an outgoing transaction
-  // needs to be rebased, then it eventually will be when we see that
-  // transaction again through the listener and this same flow will run then
   for (const curr of prev.applied) {
     try {
       const next = processActions({...curr, working, grants: prev.grants, identity: prev.identity})
@@ -608,6 +723,13 @@ export function applyRemoteDocument(
       // if processing the action ever throws a related error, we can skip this
       // local transaction and report the error to the user
       if (error instanceof ActionError) {
+        syncDebug('rebase-error', {
+          documentId: error.documentId,
+          transactionId: error.transactionId,
+          message: error.message,
+          outgoingPresent: Boolean(prev.outgoing),
+          appliedCount: prev.applied.length,
+        })
         events.next({
           type: 'rebase-error',
           transactionId: error.transactionId,
@@ -626,6 +748,22 @@ export function applyRemoteDocument(
   // reference so subscribers don't re-render for an identical value
   const nextLocal = working[documentId]
   const local = isDeepEqual(prevDocState.local, nextLocal) ? prevDocState.local : nextLocal
+
+  const localDigest = syncDebugTextDigest(local)
+  syncDebug('rebase', {
+    documentId,
+    revision,
+    outgoingPresent: Boolean(prev.outgoing),
+    outgoingTx: prev.outgoing?.transactionId ?? null,
+    appliedCountBefore: prev.applied.length,
+    replayedTxs: nextApplied.map((transaction) => transaction.transactionId),
+    // After Phase 1, outgoing is re-applied for local EDGE before this digest.
+    local: localDigest,
+    remote: remoteDigest,
+    prevLocal: prevLocalDigest,
+    localLostImFeeling: localDigest.imFeeling < prevLocalDigest.imFeeling,
+    localLostChars: localDigest.chars < prevLocalDigest.chars,
+  })
 
   return {
     ...prev,

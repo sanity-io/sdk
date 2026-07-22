@@ -854,6 +854,220 @@ describe('applyRemoteDocument', () => {
     expect(newDocState?.local).toEqual(remote.document)
   })
 
+  /**
+   * Paste-loss H1 (duo-typing paste): when pastes sit only in `outgoing` (1s
+   * throttle) and a foreign mutation arrives with `applied` empty, rebase must
+   * still re-apply outgoing onto the new remote for local EDGE (mutator-style
+   * HEAD + submitted + pending) so in-flight paste text stays visible.
+   */
+  it('H1: rebase with empty applied retains outgoing paste text on local', () => {
+    const docId = getDraftId(DocumentId('doc1'))
+    const seedText = 'A: There is an armadillo in the restaurant and it wants a taco '
+    const pastePhrase = "I'm feeling pretty good honestly. "
+    const pastedText = `${seedText}${pastePhrase}${pastePhrase}${pastePhrase}`
+    const seedBlocks = [
+      {
+        _key: 'blockA',
+        _type: 'block',
+        children: [
+          {
+            _key: 'spanA',
+            _type: 'span',
+            text: seedText,
+            marks: [],
+          },
+        ],
+        markDefs: [],
+        style: 'normal',
+      },
+      {
+        _key: 'blockB',
+        _type: 'block',
+        children: [{_key: 'spanB', _type: 'span', text: 'B: peer', marks: []}],
+        markDefs: [],
+        style: 'normal',
+      },
+    ]
+    const localWithPastes = {
+      ...exampleDoc,
+      _id: docId,
+      _rev: 'txnPasteOutgoing',
+      blocks: [
+        {
+          ...seedBlocks[0],
+          children: [
+            {
+              ...seedBlocks[0].children[0],
+              text: pastedText,
+            },
+          ],
+        },
+        seedBlocks[1],
+      ],
+    }
+    // Foreign peer typed in block B; remote has no paste copies yet.
+    const remoteWithoutPastes = {
+      ...exampleDoc,
+      _id: docId,
+      _rev: 'txnForeign',
+      blocks: [
+        seedBlocks[0],
+        {
+          ...seedBlocks[1],
+          children: [{_key: 'spanB', _type: 'span', text: 'B: peer typed', marks: []}],
+        },
+      ],
+    }
+
+    const seedDoc = {...exampleDoc, _id: docId, _rev: 'txn0', blocks: seedBlocks}
+    const outgoing = {
+      transactionId: 'txnPasteOutgoing',
+      actions: [
+        {
+          type: 'document.edit' as const,
+          documentId: 'doc1',
+          documentType: 'author',
+          patches: [
+            {
+              set: {
+                'blocks[_key=="blockA"].children[_key=="spanA"].text': pastedText,
+              },
+            },
+          ],
+          preserveOperations: true,
+        },
+      ],
+      working: {[docId]: localWithPastes},
+      previous: {[docId]: seedDoc},
+      base: {[docId]: seedDoc},
+      previousRevs: {[docId]: 'txn0'},
+      timestamp: '2025-02-06T00:08:00.000Z',
+      outgoingActions: [],
+      outgoingMutations: [],
+      disableBatching: false,
+      batchedTransactionIds: ['txnPasteOutgoing'],
+    }
+
+    const initialState: SyncTransactionState = {
+      queued: [],
+      applied: [],
+      outgoing,
+      grants,
+      documentStates: {
+        [docId]: {
+          id: docId,
+          subscriptions: ['sub-paste'],
+          local: localWithPastes,
+          remote: seedDoc,
+          unverifiedRevisions: {
+            txnPasteOutgoing: {
+              transactionId: 'txnPasteOutgoing',
+              documentId: docId,
+              previousRev: 'txn0',
+              timestamp: '2025-02-06T00:08:00.000Z',
+            },
+          },
+        },
+      },
+    }
+
+    const remote: RemoteDocument = {
+      type: 'mutation',
+      documentId: docId,
+      document: remoteWithoutPastes,
+      revision: 'txnForeign',
+      previousRev: 'txn0',
+      timestamp: '2025-02-06T00:08:01.000Z',
+      mutations: [],
+    }
+
+    const events = new Subject<DocumentEvent>()
+    const newState = applyRemoteDocument(initialState, remote, events)
+    const nextLocal = newState.documentStates[docId]?.local as {
+      blocks?: {children?: {text?: string}[]}[]
+    }
+    const blockTexts = (nextLocal?.blocks ?? []).map((block) =>
+      (block.children ?? []).map((child) => child.text ?? '').join(''),
+    )
+    const pasteCount = blockTexts.join('').split("I'm feeling").length - 1
+
+    expect(pasteCount).toBe(3)
+    expect(blockTexts[1]).toBe('B: peer typed')
+    expect(newState.outgoing?.transactionId).toBe('txnPasteOutgoing')
+    // Outgoing object itself is unchanged (already submitted).
+    expect(newState.outgoing).toBe(outgoing)
+  })
+
+  it('does not re-apply outgoing onto its own echo (avoids duplicated patches)', () => {
+    const docId = getDraftId(DocumentId('doc1'))
+    const seedDoc = {...exampleDoc, _id: docId, _rev: 'txn0', title: 'alpha bravo'}
+    const withOwnEdit = {...seedDoc, _rev: 'txnOwn', title: 'alpha oneA bravo'}
+    // Echo result already includes our edit; previousRev mismatch forces rebase.
+    const ownEchoWithPeer = {...seedDoc, _rev: 'txnOwn', title: 'alpha oneA bravo twoB'}
+
+    const outgoing = {
+      transactionId: 'txnOwn',
+      actions: [
+        {
+          type: 'document.edit' as const,
+          documentId: 'doc1',
+          documentType: 'author',
+          patches: [{set: {title: 'alpha oneA bravo'}}],
+          preserveOperations: true,
+        },
+      ],
+      working: {[docId]: withOwnEdit},
+      previous: {[docId]: seedDoc},
+      base: {[docId]: seedDoc},
+      previousRevs: {[docId]: 'txn0'},
+      timestamp: '2025-02-06T00:08:00.000Z',
+      outgoingActions: [],
+      outgoingMutations: [],
+      disableBatching: false,
+      batchedTransactionIds: ['txnOwn'],
+    }
+
+    const initialState: SyncTransactionState = {
+      queued: [],
+      applied: [],
+      outgoing,
+      grants,
+      documentStates: {
+        [docId]: {
+          id: docId,
+          subscriptions: ['sub-own'],
+          local: withOwnEdit,
+          remote: seedDoc,
+          unverifiedRevisions: {
+            txnOwn: {
+              transactionId: 'txnOwn',
+              documentId: docId,
+              previousRev: 'txn0',
+              timestamp: '2025-02-06T00:08:00.000Z',
+            },
+          },
+        },
+      },
+    }
+
+    const remote: RemoteDocument = {
+      type: 'mutation',
+      documentId: docId,
+      document: ownEchoWithPeer,
+      revision: 'txnOwn',
+      // Peer slipped in: stored previousRev was txn0 but server saw peer first.
+      previousRev: 'txnPeer',
+      timestamp: '2025-02-06T00:08:02.000Z',
+      mutations: [],
+    }
+
+    const newState = applyRemoteDocument(initialState, remote, new Subject<DocumentEvent>())
+    expect(newState.documentStates[docId]?.local).toEqual(ownEchoWithPeer)
+    expect((newState.documentStates[docId]?.local as {title?: string}).title).toBe(
+      'alpha oneA bravo twoB',
+    )
+  })
+
   // Test that a sync event removes outdated unverified revisions.
   it('removes outdated unverified revisions when a sync event is received', () => {
     const docId = getDraftId(DocumentId('doc1'))
