@@ -46,6 +46,10 @@ export default defineCliConfig({
         ...(prev.optimizeDeps?.include ?? []),
         '@portabletext/plugin-sdk-value > @xstate/react > use-sync-external-store/shim',
         '@portabletext/plugin-sdk-value > @xstate/react > use-sync-external-store/shim/with-selector',
+        // `debug` is CJS-only. The excluded plugin does `import rawDebug from 'debug'`,
+        // which fails when Vite serves the raw browser build without a default export.
+        // Nested form is required so pnpm can resolve it through the plugin.
+        '@portabletext/plugin-sdk-value > debug',
       ],
     },
   }),
