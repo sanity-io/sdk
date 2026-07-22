@@ -23,6 +23,7 @@ import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
 import {IntentsRoute} from './routes/IntentsRoute'
 import {MediaLibraryRoute} from './routes/MediaLibraryRoute'
 import {PerspectivesRoute} from './routes/PerspectivesRoute'
+import {PortableTextRoute} from './routes/PortableTextRoute'
 import {ProjectsRoute} from './routes/ProjectsRoute'
 import {ReleasesRoute} from './routes/releases/ReleasesRoute'
 import {UserDetailRoute} from './routes/UserDetailRoute'
@@ -44,6 +45,10 @@ const documentCollectionRoutes = [
   {
     path: 'document-editor',
     element: <DocumentEditorRoute />,
+  },
+  {
+    path: 'portable-text',
+    element: <PortableTextRoute />,
   },
   {
     path: 'multi-resource',

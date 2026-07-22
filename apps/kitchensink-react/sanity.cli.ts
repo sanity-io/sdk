@@ -33,5 +33,24 @@ export default defineCliConfig({
         '@sanity/sdk-react': resolve(import.meta.dirname, '../../packages/react/src/_exports'),
       },
     },
+    optimizeDeps: {
+      ...prev.optimizeDeps,
+      // Pre-bundling would inline a second copy of @sanity/sdk-react into the
+      // plugin's chunk, giving it a different SanityInstanceContext than the
+      // aliased workspace source the app renders. Serve it unbundled so both
+      // resolve to the same modules.
+      exclude: [...(prev.optimizeDeps?.exclude ?? []), '@portabletext/plugin-sdk-value'],
+      // With the plugin excluded, its CJS sub-dependencies still need
+      // pre-bundling for named-export interop.
+      include: [
+        ...(prev.optimizeDeps?.include ?? []),
+        '@portabletext/plugin-sdk-value > @xstate/react > use-sync-external-store/shim',
+        '@portabletext/plugin-sdk-value > @xstate/react > use-sync-external-store/shim/with-selector',
+        // `debug` is CJS-only. The excluded plugin does `import rawDebug from 'debug'`,
+        // which fails when Vite serves the raw browser build without a default export.
+        // Nested form is required so pnpm can resolve it through the plugin.
+        '@portabletext/plugin-sdk-value > debug',
+      ],
+    },
   }),
 })

@@ -25,6 +25,7 @@ import {
   type SanityClient,
   type WelcomeEvent,
 } from '@sanity/client'
+import {makePatches, stringifyPatches} from '@sanity/diff-match-patch'
 import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
 import {type Mutation, type PatchOperations, type SanityDocument} from '@sanity/types'
 import {
@@ -100,7 +101,10 @@ interface HeldSubmission {
 }
 
 interface MockContentLake {
-  connect: () => {events: Observable<ListenEvent<SanityDocument>>; dispose: () => void}
+  connect: () => {
+    events: Observable<ListenEvent<SanityDocument>>
+    dispose: () => void
+  }
   getDocument: (id: string) => SanityDocument | null
   seed: (docs: DocumentSet) => void
   holdSubmissions: () => void
@@ -165,7 +169,12 @@ function createMockContentLake(): MockContentLake {
 
     for (const action of actions) {
       const mutations = convertAction(action, next)
-      next = processMutations({documents: next, mutations, transactionId, timestamp})
+      next = processMutations({
+        documents: next,
+        mutations,
+        transactionId,
+        timestamp,
+      })
       allMutations.push(...mutations)
     }
 
@@ -378,6 +387,15 @@ const getSpanText = (doc: RigDocument | null, blockKey: string): string | undefi
   return blockNode?.children[0]?.text
 }
 
+/** concatenated text of every span in a block, in child order */
+const blockText = (doc: RigDocument | null, blockKey: string): string | undefined => {
+  const blockNode = doc?.content?.find((b) => b._key === blockKey)
+  return blockNode?.children.map((child) => child.text).join('')
+}
+
+/** diff-match-patch payload transforming `before` into `after` */
+const dmp = (before: string, after: string): string => stringifyPatches(makePatches(before, after))
+
 const getSpanMarks = (doc: RigDocument | null, blockKey: string): string[] | undefined => {
   const blockNode = doc?.content?.find((b) => b._key === blockKey)
   return blockNode?.children[0]?.marks
@@ -390,7 +408,11 @@ const getSpanMarks = (doc: RigDocument | null, blockKey: string): string[] | und
  * Keyed by `scenarioId` with an optional restriction on which apply order
  * exhibits the loss.
  */
-const KNOWN_LOSS: {scenario: string; firstWriter?: 'A' | 'B'; reason: string}[] = [
+const KNOWN_LOSS: {
+  scenario: string
+  firstWriter?: 'A' | 'B'
+  reason: string
+}[] = [
   {
     scenario: 'preserved-set-text-vs-typing',
     reason:
@@ -492,11 +514,19 @@ const scenarios: Scenario[] = [
     id: 'different-blocks-text',
     title: 'A and B type into different blocks of the same array',
     actA: editField(
-      {set: {'content[_key=="blkA"].children[_key=="spA"].text': 'alpha oneA bravo charlie delta'}},
+      {
+        set: {
+          'content[_key=="blkA"].children[_key=="spA"].text': 'alpha oneA bravo charlie delta',
+        },
+      },
       'txn-a',
     ),
     actB: editField(
-      {set: {'content[_key=="blkB"].children[_key=="spB"].text': 'echo foxtrot twoB golf hotel'}},
+      {
+        set: {
+          'content[_key=="blkB"].children[_key=="spB"].text': 'echo foxtrot twoB golf hotel',
+        },
+      },
       'txn-b',
     ),
     verify: ({serverDraft}) => {
@@ -508,11 +538,19 @@ const scenarios: Scenario[] = [
     id: 'same-span-disjoint-offsets',
     title: 'A and B type into the same span at different offsets',
     actA: editField(
-      {set: {'content[_key=="blkA"].children[_key=="spA"].text': 'alpha oneA bravo charlie delta'}},
+      {
+        set: {
+          'content[_key=="blkA"].children[_key=="spA"].text': 'alpha oneA bravo charlie delta',
+        },
+      },
       'txn-a',
     ),
     actB: editField(
-      {set: {'content[_key=="blkA"].children[_key=="spA"].text': 'alpha bravo charlie twoB delta'}},
+      {
+        set: {
+          'content[_key=="blkA"].children[_key=="spA"].text': 'alpha bravo charlie twoB delta',
+        },
+      },
       'txn-b',
     ),
     verify: ({serverDraft}) => {
@@ -561,7 +599,11 @@ const scenarios: Scenario[] = [
       })
     },
     actB: editField(
-      {set: {'content[_key=="blkB"].children[_key=="spB"].text': 'echo foxtrot twoB golf hotel'}},
+      {
+        set: {
+          'content[_key=="blkB"].children[_key=="spB"].text': 'echo foxtrot twoB golf hotel',
+        },
+      },
       'txn-b',
     ),
     verify: ({serverDraft}) => {
@@ -579,11 +621,25 @@ const scenarios: Scenario[] = [
     id: 'preserved-keyed-inserts',
     title: 'A and B insert different blocks with preserveOperations',
     actA: editPreserved(
-      [{insert: {after: 'content[_key=="blkA"]', items: [block('blkC', 'spC', 'inserted by A')]}}],
+      [
+        {
+          insert: {
+            after: 'content[_key=="blkA"]',
+            items: [block('blkC', 'spC', 'inserted by A')],
+          },
+        },
+      ],
       'txn-a',
     ),
     actB: editPreserved(
-      [{insert: {after: 'content[_key=="blkB"]', items: [block('blkD', 'spD', 'inserted by B')]}}],
+      [
+        {
+          insert: {
+            after: 'content[_key=="blkB"]',
+            items: [block('blkD', 'spD', 'inserted by B')],
+          },
+        },
+      ],
       'txn-b',
     ),
     verify: ({serverDraft}) => {
@@ -633,11 +689,19 @@ const scenarios: Scenario[] = [
     id: 'format-vs-typing',
     title: 'A formats a span (marks) while B types into it',
     actA: editField(
-      {set: {'content[_key=="blkA"].children[_key=="spA"].marks': ['strong']}},
+      {
+        set: {
+          'content[_key=="blkA"].children[_key=="spA"].marks': ['strong'],
+        },
+      },
       'txn-a',
     ),
     actB: editField(
-      {set: {'content[_key=="blkA"].children[_key=="spA"].text': 'alpha bravo twoB charlie delta'}},
+      {
+        set: {
+          'content[_key=="blkA"].children[_key=="spA"].text': 'alpha bravo twoB charlie delta',
+        },
+      },
       'txn-b',
     ),
     verify: ({serverDraft}) => {
@@ -831,16 +895,107 @@ describe.each([
 interface RebaseScenario {
   id: string
   title: string
+  /** custom seed; defaults to `seedDocument()` */
+  seed?: () => SanityDocument
   /** first edit from A; becomes the in-flight (held) txn-a1 */
   actA1: Act
   /** second edit from A; stays in `applied` until txn-a1 clears */
   actA2: Act
+  /** optional third edit from A, queued behind txn-a2 (txn-a3) */
+  actA3?: Act
   /** concurrent edit from B (txn-b) */
   actB: Act
+  /** optional second edit from B, applied after the first releases (txn-b2) */
+  actB2?: Act
   verify: (result: CollisionResult, firstWriter: 'A' | 'B') => void
 }
 
+/**
+ * The exact three transactions a live portabletext/editor client pushed
+ * while a user toggled bold on "armadillo" twice (select word, bold,
+ * unbold), captured from a two-client harness trace that ended with the
+ * store scrambling the fragment order. Each transaction is a span split or
+ * merge: dmp-trim a span, insert keyed fragments after it, set marks, and
+ * on merge extend a fragment and unset its siblings. Applied in sequence
+ * (verified against real Content Lake) they reconstruct the seed sentence
+ * exactly.
+ */
+const LIVE_SPLIT_SENTENCE = 'A: There is an armadillo in the restaurant and it wants a taco '
+// prettier-ignore
+const LIVE_SPLIT_PUSHES: PatchOperations[][] = [
+  [
+    {diffMatchPatch: {'content[_key=="blockA"].children[_key=="spanA"].text': '@@ -53,11 +53,4 @@\n nts \n-a taco \n'}},
+    {setIfMissing: {'content[_key=="blockA"].children': []}},
+    {insert: {after: 'content[_key=="blockA"].children[_key=="spanA"]', items: [{_key: '31f77137d3fb', _type: 'span', marks: [], text: 'a taco '}]}},
+    {diffMatchPatch: {'content[_key=="blockA"].children[_key=="spanA"].text': '@@ -44,13 +44,4 @@\n and \n-it wants \n'}},
+    {setIfMissing: {'content[_key=="blockA"].children': []}},
+    {insert: {after: 'content[_key=="blockA"].children[_key=="spanA"]', items: [{_key: '6d39d5732d93', _type: 'span', marks: [], text: 'it wants '}]}},
+    {set: {'content[_key=="blockA"].children[_key=="6d39d5732d93"].marks': ['strong']}},
+  ],
+  [
+    {diffMatchPatch: {'content[_key=="blockA"].children[_key=="spanA"].text': '@@ -35,13 +35,4 @@\n stau\n-rant and \n'}},
+    {setIfMissing: {'content[_key=="blockA"].children': []}},
+    {insert: {after: 'content[_key=="blockA"].children[_key=="spanA"]', items: [{_key: 'a014aab8b2c6', _type: 'span', marks: [], text: 'rant and '}]}},
+    {set: {'content[_key=="blockA"].children[_key=="a014aab8b2c6"].marks': ['strong']}},
+    {diffMatchPatch: {'content[_key=="blockA"].children[_key=="a014aab8b2c6"].text': '@@ -2,8 +2,17 @@\n ant and \n+it wants \n'}},
+    {unset: ['content[_key=="blockA"].children[_key=="6d39d5732d93"]']},
+  ],
+  [
+    {diffMatchPatch: {'content[_key=="blockA"].children[_key=="a014aab8b2c6"].text': '@@ -1,18 +1,4 @@\n rant\n- and it wants \n'}},
+    {setIfMissing: {'content[_key=="blockA"].children': []}},
+    {insert: {after: 'content[_key=="blockA"].children[_key=="a014aab8b2c6"]', items: [{_key: '0ebc53c64b6c', _type: 'span', marks: ['strong'], text: ' and it wants '}]}},
+    {diffMatchPatch: {'content[_key=="blockA"].children[_key=="spanA"].text': '@@ -30,9 +30,4 @@\n he r\n-estau\n'}},
+    {setIfMissing: {'content[_key=="blockA"].children': []}},
+    {insert: {after: 'content[_key=="blockA"].children[_key=="spanA"]', items: [{_key: 'f508bf653099', _type: 'span', marks: [], text: 'estau'}]}},
+    {set: {'content[_key=="blockA"].children[_key=="f508bf653099"].marks': ['strong']}},
+    {set: {'content[_key=="blockA"].children[_key=="a014aab8b2c6"].marks': ['strong']}},
+    {diffMatchPatch: {'content[_key=="blockA"].children[_key=="f508bf653099"].text': '@@ -1,5 +1,9 @@\n estau\n+rant\n'}},
+    {unset: ['content[_key=="blockA"].children[_key=="a014aab8b2c6"]']},
+    {diffMatchPatch: {'content[_key=="blockA"].children[_key=="f508bf653099"].text': '@@ -2,8 +2,22 @@\n staurant\n+ and it wants \n'}},
+    {unset: ['content[_key=="blockA"].children[_key=="0ebc53c64b6c"]']},
+  ],
+]
+
+function liveSplitSeed(): SanityDocument {
+  return {
+    ...seedDocument(),
+    content: [block('blockA', 'spanA', LIVE_SPLIT_SENTENCE), block('blockB', 'spanB', 'B: ')],
+  }
+}
+
 const rebaseScenarios: RebaseScenario[] = [
+  {
+    id: 'rebase-live-span-split-capture',
+    title: 'the captured live bold-toggle transaction chain survives interleaved foreign edits',
+    seed: liveSplitSeed,
+    actA1: editPreserved(LIVE_SPLIT_PUSHES[0], 'txn-a1'),
+    actA2: editPreserved(LIVE_SPLIT_PUSHES[1], 'txn-a2'),
+    actA3: editPreserved(LIVE_SPLIT_PUSHES[2], 'txn-a3'),
+    actB: editField(
+      {
+        set: {
+          'content[_key=="blockB"].children[_key=="spanB"].text': 'B: coverage ',
+        },
+      },
+      'txn-b',
+    ),
+    actB2: editField(
+      {
+        set: {
+          'content[_key=="blockB"].children[_key=="spanB"].text': 'B: coverage exclusive ',
+        },
+      },
+      'txn-b2',
+    ),
+    verify: ({serverDraft, local}) => {
+      // Formatting toggles must never change the text, on the server or in
+      // either client's local view.
+      expect(blockText(serverDraft, 'blockA')).toBe(LIVE_SPLIT_SENTENCE)
+      expect(blockText(local.A.draft, 'blockA')).toBe(LIVE_SPLIT_SENTENCE)
+      expect(blockText(local.B.draft, 'blockA')).toBe(LIVE_SPLIT_SENTENCE)
+      expect(blockText(serverDraft, 'blockB')).toBe('B: coverage exclusive ')
+    },
+  },
   {
     id: 'rebase-pending-set-stomps-remote',
     title: "A's pending whole-string set is re-applied over B's concurrent insert",
@@ -866,7 +1021,11 @@ const rebaseScenarios: RebaseScenario[] = [
     id: 'rebase-pending-span-set-stomps-remote',
     title: "A's pending span text set is re-applied over B's concurrent typing in the same span",
     actA1: editField(
-      {set: {'content[_key=="blkA"].children[_key=="spA"].text': 'alpha oneA bravo charlie delta'}},
+      {
+        set: {
+          'content[_key=="blkA"].children[_key=="spA"].text': 'alpha oneA bravo charlie delta',
+        },
+      },
       'txn-a1',
     ),
     actA2: ({instance, resource}) => {
@@ -875,7 +1034,9 @@ const rebaseScenarios: RebaseScenario[] = [
       return applyDocumentActions(instance, {
         actions: [
           editDocument(handle, {
-            set: {'content[_key=="blkA"].children[_key=="spA"].text': `${text} moreA`},
+            set: {
+              'content[_key=="blkA"].children[_key=="spA"].text': `${text} moreA`,
+            },
           }),
         ],
         resource,
@@ -883,7 +1044,11 @@ const rebaseScenarios: RebaseScenario[] = [
       })
     },
     actB: editField(
-      {set: {'content[_key=="blkA"].children[_key=="spA"].text': 'alpha bravo charlie twoB delta'}},
+      {
+        set: {
+          'content[_key=="blkA"].children[_key=="spA"].text': 'alpha bravo charlie twoB delta',
+        },
+      },
       'txn-b',
     ),
     verify: ({serverDraft}) => {
@@ -906,18 +1071,125 @@ const rebaseScenarios: RebaseScenario[] = [
     },
   },
   {
+    id: 'rebase-pte-span-split',
+    title:
+      "A's pending span-split (bold toggle) is rebased over B's concurrent typing in another block",
+    // Mirrors the patch language portabletext/editor emits when a user
+    // selects a word and toggles bold: dmp-trim the span, insert keyed
+    // fragments anchored after it, set marks — then (second transaction)
+    // merge back: extend a fragment with dmp and unset its sibling. Captured
+    // from a live two-client trace where the store settled on scrambled
+    // fragment order while the editor's local application was correct.
+    actA1: editPreserved(
+      [
+        {
+          diffMatchPatch: {
+            [`content[_key=="blkA"].children[_key=="spA"].text`]: dmp(
+              'alpha bravo charlie delta',
+              'alpha bravo charlie ',
+            ),
+          },
+        },
+        {setIfMissing: {[`content[_key=="blkA"].children`]: []}},
+        {
+          insert: {
+            after: `content[_key=="blkA"].children[_key=="spA"]`,
+            items: [span('fragTail', 'delta')],
+          },
+        },
+        {
+          diffMatchPatch: {
+            [`content[_key=="blkA"].children[_key=="spA"].text`]: dmp(
+              'alpha bravo charlie ',
+              'alpha bravo ',
+            ),
+          },
+        },
+        {setIfMissing: {[`content[_key=="blkA"].children`]: []}},
+        {
+          insert: {
+            after: `content[_key=="blkA"].children[_key=="spA"]`,
+            items: [span('fragBold', 'charlie ')],
+          },
+        },
+        {
+          set: {
+            [`content[_key=="blkA"].children[_key=="fragBold"].marks`]: ['strong'],
+          },
+        },
+      ],
+      'txn-a1',
+    ),
+    // second toggle: unbold and merge the fragments back
+    actA2: editPreserved(
+      [
+        {
+          set: {
+            [`content[_key=="blkA"].children[_key=="fragBold"].marks`]: [],
+          },
+        },
+        {
+          diffMatchPatch: {
+            [`content[_key=="blkA"].children[_key=="fragBold"].text`]: dmp(
+              'charlie ',
+              'charlie delta',
+            ),
+          },
+        },
+        {unset: [`content[_key=="blkA"].children[_key=="fragTail"]`]},
+      ],
+      'txn-a2',
+    ),
+    actB: editField(
+      {
+        set: {
+          'content[_key=="blkB"].children[_key=="spB"].text': 'echo foxtrot twoB golf hotel',
+        },
+      },
+      'txn-b',
+    ),
+    verify: ({serverDraft}) => {
+      // Formatting toggles must never change the text: block A reads exactly
+      // the seed sentence, in order, regardless of apply order.
+      expect(blockText(serverDraft, 'blkA')).toBe('alpha bravo charlie delta')
+      // and B's concurrent edit in the other block survives
+      expect(blockText(serverDraft, 'blkB')).toBe('echo foxtrot twoB golf hotel')
+    },
+  },
+  {
     id: 'rebase-preserved-keyed-inserts',
     title: "A's pending preserveOperations insert is rebased over B's concurrent keyed insert",
     actA1: editPreserved(
-      [{insert: {after: 'content[_key=="blkA"]', items: [block('blkC', 'spC', 'inserted by A1')]}}],
+      [
+        {
+          insert: {
+            after: 'content[_key=="blkA"]',
+            items: [block('blkC', 'spC', 'inserted by A1')],
+          },
+        },
+      ],
       'txn-a1',
     ),
     actA2: editPreserved(
-      [{insert: {after: 'content[_key=="blkC"]', items: [block('blkE', 'spE', 'inserted by A2')]}}],
+      [
+        {
+          insert: {
+            after: 'content[_key=="blkC"]',
+            items: [block('blkE', 'spE', 'inserted by A2')],
+          },
+        },
+      ],
       'txn-a2',
     ),
     actB: editPreserved(
-      [{insert: {after: 'content[_key=="blkB"]', items: [block('blkD', 'spD', 'inserted by B')]}}],
+      [
+        {
+          insert: {
+            after: 'content[_key=="blkB"]',
+            items: [block('blkD', 'spD', 'inserted by B')],
+          },
+        },
+      ],
       'txn-b',
     ),
     verify: ({serverDraft}) => {
@@ -933,7 +1205,7 @@ async function runRebaseCollision(
   scenario: RebaseScenario,
   order: 'a-first' | 'b-first',
 ): Promise<CollisionResult> {
-  server.seed({[DRAFT_ID]: seedDocument()})
+  server.seed({[DRAFT_ID]: (scenario.seed ?? seedDocument)()})
 
   const stateA = getDocumentState<RigDocument>(clientA.instance, handle)
   const stateB = getDocumentState<RigDocument>(clientB.instance, handle)
@@ -953,6 +1225,7 @@ async function runRebaseCollision(
       expect(server.pendingTransactionIds()).toContain('txn-a1')
     })
     await scenario.actA2(clientA)
+    await scenario.actA3?.(clientA)
     await scenario.actB(clientB)
     await vi.waitFor(() => {
       expect(server.pendingTransactionIds()).toContain('txn-b')
@@ -962,11 +1235,29 @@ async function runRebaseCollision(
     await server.release(firstTxn)
     await server.release(secondTxn)
 
-    // txn-a1's ack clears A's outgoing slot; txn-a2 (rebased) submits next
+    // txn-a1's ack clears A's outgoing slot; the queued edits submit next,
+    // either individually or batched into one outgoing transaction (queued
+    // applied edits coalesce, and the batch carries the last transactionId)
     await vi.waitFor(() => {
-      expect(server.pendingTransactionIds()).toContain('txn-a2')
+      expect(server.pendingTransactionIds().some((id) => id.startsWith('txn-a'))).toBe(true)
     })
-    await server.release('txn-a2')
+    // B's second edit (if any) lands while A's follow-up is in flight, so
+    // any remaining rebase happens over a remote that already contains it
+    if (scenario.actB2) {
+      await scenario.actB2(clientB)
+      await vi.waitFor(() => {
+        expect(server.pendingTransactionIds()).toContain('txn-b2')
+      })
+      await server.release('txn-b2')
+    }
+    // release A transactions until none remain pending or queued
+    for (;;) {
+      const pendingA = server.pendingTransactionIds().filter((id) => id.startsWith('txn-a'))
+      if (pendingA.length === 0) break
+      await server.release(pendingA[0])
+      // let the store submit the next queued transaction, if any
+      await new Promise((resolve) => setTimeout(resolve, 25))
+    }
 
     const syncA = getDocumentSyncStatus(clientA.instance, handle)
     const syncB = getDocumentSyncStatus(clientB.instance, handle)
