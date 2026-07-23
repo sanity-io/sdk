@@ -26,7 +26,12 @@ export {
   agentTransform,
   agentTranslate,
 } from '../agent/agentActions'
-export {application, applications} from '../applications/applications'
+export {
+  application,
+  applications,
+  deleteApplication,
+  updateApplication,
+} from '../applications/applications'
 export {
   type Application,
   type ApplicationAccess,
@@ -37,13 +42,27 @@ export {
   type ApplicationsOptions,
   type ApplicationsResponse,
   type ApplicationStudioConfig,
+  type ApplicationVisibility,
   type ApplicationWorkspace,
+  type DeleteApplicationInput,
+  type DeletedResult,
+  type UpdateApplicationInput,
 } from '../applications/applications'
-export {userApplication, userApplications} from '../applications/userApplications'
 export {
+  createUserApplication,
+  deleteUserApplication,
+  updateUserApplication,
+  userApplication,
+  userApplications,
+} from '../applications/userApplications'
+export {
+  type CreateUserApplicationInput,
+  type DeleteUserApplicationInput,
+  type UpdateUserApplicationInput,
   type UserApplication,
   type UserApplicationDeployment,
   type UserApplicationsOptions,
+  type UserApplicationWriteFields,
 } from '../applications/userApplications'
 export {isStudioConfig} from '../auth/authMode'
 export {AuthStateType} from '../auth/authStateType'
