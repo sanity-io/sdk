@@ -1,0 +1,205 @@
+name: AILF Run
+
+# Label a PR with `trigger: ailf` to run the AILF pipeline against it:
+# the app-sdk-ailf repo (sanity-labs) judges the PR diff, drafts an eval task
+# when the PR changes how users use the SDK, runs a task-scoped eval, proposes
+# docs improvements off the report, and this workflow posts the results back
+# here as a PR comment.
+#
+# Only people with triage/write access can add labels, so outside contributors
+# cannot trigger this.
+#
+# Secrets:
+#   AILF_DISPATCH_TOKEN — fine-grained PAT (or GitHub App installation token)
+#   for sanity-labs/app-sdk-ailf with Actions: read and write. Used to
+#   dispatch the ailf-eval workflow, watch the run, and download its
+#   artifacts. Commenting on the PR uses the regular GITHUB_TOKEN.
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ailf-run-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  TARGET_REPO: sanity-labs/app-sdk-ailf
+  TARGET_WORKFLOW: ailf-eval.yml
+
+jobs:
+  ailf:
+    # Compare against the label that was just added (not the label set), so a
+    # PR that already carries other labels doesn't re-trigger on unrelated adds.
+    if: "github.event.label.name == 'trigger: ailf'"
+    runs-on: ubuntu-latest
+    # The dispatched run does an agent task-sync (~10m), a remote eval (~10m),
+    # and a docs-improvement agent run (~15m); leave queueing headroom on top.
+    timeout-minutes: 90
+
+    steps:
+      - name: Dispatch AILF eval
+        id: dispatch
+        env:
+          GH_TOKEN: ${{ secrets.AILF_DISPATCH_TOKEN }}
+        run: |
+          DISTINCT_ID="sdk-pr-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}"
+          echo "distinct_id=$DISTINCT_ID" >> "$GITHUB_OUTPUT"
+          gh workflow run "$TARGET_WORKFLOW" \
+            --repo "$TARGET_REPO" \
+            --ref main \
+            -f pr_repo="${{ github.repository }}" \
+            -f pr_number="${{ github.event.pull_request.number }}" \
+            -f run_docs_improvement=true \
+            -f distinct_id="$DISTINCT_ID"
+
+      # workflow_dispatch doesn't return the run id; the dispatched workflow
+      # echoes distinct_id into its run name, so find it by that.
+      - name: Find dispatched run
+        id: find
+        env:
+          GH_TOKEN: ${{ secrets.AILF_DISPATCH_TOKEN }}
+          DISTINCT_ID: ${{ steps.dispatch.outputs.distinct_id }}
+        run: |
+          for i in $(seq 1 24); do
+            RUN_ID=$(gh run list \
+              --repo "$TARGET_REPO" \
+              --workflow "$TARGET_WORKFLOW" \
+              --event workflow_dispatch \
+              --limit 20 \
+              --json databaseId,displayTitle \
+              --jq ".[] | select(.displayTitle | contains(\"$DISTINCT_ID\")) | .databaseId" | head -1)
+            if [ -n "$RUN_ID" ]; then
+              echo "Found run $RUN_ID"
+              echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+              echo "run_url=https://github.com/$TARGET_REPO/actions/runs/$RUN_ID" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Could not find the dispatched run after 2 minutes" >&2
+          exit 1
+
+      - name: Wait for run to complete
+        id: watch
+        # Keep going on failure — the comment below reports the outcome either way.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.AILF_DISPATCH_TOKEN }}
+        run: |
+          gh run watch "${{ steps.find.outputs.run_id }}" \
+            --repo "$TARGET_REPO" \
+            --interval 30 \
+            --exit-status
+
+      - name: Download results
+        if: always() && steps.find.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.AILF_DISPATCH_TOKEN }}
+        run: |
+          mkdir -p results
+          # Each artifact only exists when its step ran; missing ones are fine.
+          for name in task-sync eval-results docs-improvement; do
+            gh run download "${{ steps.find.outputs.run_id }}" \
+              --repo "$TARGET_REPO" \
+              --name "$name" \
+              --dir "results/$name" || echo "(no $name artifact)"
+          done
+          find results -type f | sort
+
+      - name: Comment results on PR
+        if: always() && steps.find.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ steps.find.outputs.run_url }}
+          RUN_OK: ${{ steps.watch.outcome == 'success' }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          DASHBOARD_BASE: https://www.sanity.io/@oSyH1iET5/application/l3gwk99w5xtv3dl8wxv94uny
+          STUDIO_TASKS_BASE: https://www.sanity.io/@oSyH1iET5/studio/v1hea81zrw9q7stf01cudwae/editor/structure/ailfTasks
+        run: |
+          MARKER="<!-- ailf-run-comment -->"
+          SYNC=results/task-sync/task-sync.json
+          META=results/eval-results/job-metadata.json
+          DOCS=results/docs-improvement/docs-improvement.md
+
+          {
+            echo "$MARKER"
+            echo "## AILF results"
+            echo ""
+            if [ "$RUN_OK" = "true" ]; then
+              echo "✅ [Pipeline run]($RUN_URL) completed."
+            else
+              echo "❌ [Pipeline run]($RUN_URL) failed or timed out — results below may be partial."
+            fi
+            echo ""
+
+            if [ -f "$SYNC" ]; then
+              VERDICT=$(jq -r '.verdict' "$SYNC")
+              REASON=$(jq -r '.reason // ""' "$SYNC")
+              TASK_ID=$(jq -r '.taskId // empty' "$SYNC")
+              TASK_DOC_ID=$(jq -r '.taskDocumentId // empty' "$SYNC")
+              case "$VERDICT" in
+                create)
+                  echo "### 📝 New draft task: \`$TASK_ID\`"
+                  echo ""
+                  echo "$REASON"
+                  echo ""
+                  echo "The task was created with status **draft** — [review and activate it in Studio]($STUDIO_TASKS_BASE;ailf.task.$TASK_ID) to make it permanent."
+                  ;;
+                update)
+                  echo "### ✏️ Existing task \`$TASK_ID\` may need updates"
+                  echo ""
+                  echo "$REASON"
+                  echo ""
+                  jq -r '.proposedUpdates[] | "- \(.)"' "$SYNC"
+                  echo ""
+                  echo "[Review the task in Studio]($STUDIO_TASKS_BASE;$TASK_DOC_ID) — nothing was changed automatically."
+                  ;;
+                existing)
+                  echo "### ✔️ Covered by existing task \`$TASK_ID\`"
+                  echo ""
+                  echo "$REASON"
+                  ;;
+                none)
+                  echo "### No AILF-relevant changes"
+                  echo ""
+                  echo "$REASON"
+                  echo ""
+                  echo "_The eval was skipped for this PR._"
+                  ;;
+              esac
+              echo ""
+            fi
+
+            if [ -f "$META" ]; then
+              REPORT_ID=$(jq -r '.reportId // empty' "$META")
+              if [ -n "$REPORT_ID" ]; then
+                echo "### 📊 Eval report"
+                echo ""
+                echo "[View the report on the Sanity dashboard]($DASHBOARD_BASE/?view=report&id=$REPORT_ID) (\`$REPORT_ID\`)"
+                echo ""
+              fi
+            fi
+
+            if [ -f "$DOCS" ]; then
+              echo "<details>"
+              echo "<summary>📚 Proposed docs improvements</summary>"
+              echo ""
+              cat "$DOCS"
+              echo ""
+              echo "</details>"
+            fi
+          } > comment.md
+
+          # Sticky: update the existing results comment when there is one.
+          EXISTING=$(gh api "repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            --paginate --jq ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -1)
+          if [ -n "$EXISTING" ]; then
+            gh api -X PATCH "repos/${{ github.repository }}/issues/comments/$EXISTING" -F body=@comment.md
+          else
+            gh pr comment "$PR_NUMBER" --repo "${{ github.repository }}" --body-file comment.md
+          fi
