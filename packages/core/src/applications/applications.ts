@@ -1,7 +1,7 @@
 import {switchMap} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
-import {defineFetcher} from '../store/fetcherStore'
+import {defineFetcher, defineMutation} from '../store/fetcherStore'
 import {buildQuery} from '../utils/buildQuery'
 import {type Included, type IncludesAny} from '../utils/includeShape'
 
@@ -267,4 +267,98 @@ export const application = defineFetcher<
       ),
     ),
   tags: (data) => [{type: 'application', id: data.id}],
+})
+
+/**
+ * Confirmation returned by the API's soft-delete endpoints.
+ *
+ * @see https://www.sanity.io/docs/http-reference/applications-api
+ * @internal
+ */
+export interface DeletedResult {
+  deleted: boolean
+}
+
+/**
+ * Dashboard visibility for an application. The same set of values backs a user
+ * application's `dashboardStatus`.
+ *
+ * @see https://www.sanity.io/docs/http-reference/applications-api
+ * @internal
+ */
+export type ApplicationVisibility = ApplicationBase['visibility']
+
+/**
+ * Mutable properties of an application (`PATCH /applications/:id`) — the
+ * writable subset of {@link ApplicationBase}, each optional, keyed by id.
+ *
+ * @see https://www.sanity.io/docs/http-reference/applications-api
+ * @internal
+ */
+export type UpdateApplicationInput = {applicationId: string} & Partial<
+  Pick<ApplicationBase, 'title' | 'icon' | 'visibility'>
+>
+
+/**
+ * Mutation to update an application (`PATCH /applications/:id`). Invalidates the
+ * updated application and the list so active entries reconverge on server truth.
+ *
+ * @see https://www.sanity.io/docs/http-reference/applications-api
+ * @internal
+ */
+export const updateApplication = defineMutation<UpdateApplicationInput, Application>({
+  name: 'updateApplication',
+  mutationFn:
+    (instance) =>
+    ({applicationId, ...body}) =>
+      getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
+        switchMap((client) =>
+          client.observable.request<Application>({
+            uri: `/applications/${applicationId}`,
+            method: 'PATCH',
+            body,
+            tag: 'applications.update',
+          }),
+        ),
+      ),
+  invalidates: (_result, {applicationId}) => [
+    {type: 'application', id: 'LIST'},
+    {type: 'application', id: applicationId},
+  ],
+})
+
+/**
+ * Input for {@link deleteApplication}.
+ *
+ * @internal
+ */
+export interface DeleteApplicationInput {
+  applicationId: string
+}
+
+/**
+ * Mutation to soft-delete an application (`DELETE /applications/:id`).
+ * Invalidates the deleted application and the list.
+ *
+ * @see https://www.sanity.io/docs/http-reference/applications-api
+ * @internal
+ */
+export const deleteApplication = defineMutation<DeleteApplicationInput, DeletedResult>({
+  name: 'deleteApplication',
+  mutationFn:
+    (instance) =>
+    ({applicationId}) =>
+      getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
+        switchMap((client) =>
+          client.observable.request<DeletedResult>({
+            uri: `/applications/${applicationId}`,
+            method: 'DELETE',
+            tag: 'applications.delete',
+          }),
+        ),
+      ),
+  invalidates: (_result, {applicationId}) => [
+    {type: 'application', id: 'LIST'},
+    {type: 'application', id: applicationId},
+  ],
 })
