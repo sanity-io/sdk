@@ -4,11 +4,18 @@ import {
   PortableTextEditable,
   type RenderAnnotationFunction,
   type RenderDecoratorFunction,
-  useEditor,
-  useEditorSelector,
 } from '@portabletext/editor'
-import * as selectors from '@portabletext/editor/selectors'
+import {bold, italic, link} from '@portabletext/keyboard-shortcuts'
 import {SDKValuePlugin} from '@portabletext/plugin-sdk-value'
+import {
+  type ExtendAnnotationSchemaType,
+  type ExtendDecoratorSchemaType,
+  type ToolbarAnnotationSchemaType,
+  type ToolbarDecoratorSchemaType,
+  useAnnotationButton,
+  useDecoratorButton,
+  useToolbarSchema,
+} from '@portabletext/toolbar'
 import {createSanityInstance, isDatasetResource, type SanityInstance} from '@sanity/sdk'
 import {
   createDocumentHandle,
@@ -43,68 +50,100 @@ const renderAnnotation: RenderAnnotationFunction = (props) => {
   return <>{props.children}</>
 }
 
-function ToolbarButton(props: {
-  active: boolean
-  label: string
-  onClick: () => void
+// `@portabletext/toolbar`'s extend hooks are where a plain editor schema
+// picks up the display metadata (title, keyboard shortcut) a toolbar needs.
+// These are defined at module scope so `useToolbarSchema` doesn't recompute
+// the extended schema on every render.
+const extendDecorator: ExtendDecoratorSchemaType = (decorator) => {
+  if (decorator.name === 'strong') return {...decorator, title: 'Bold', shortcut: bold}
+  if (decorator.name === 'em') return {...decorator, title: 'Italic', shortcut: italic}
+  return decorator
+}
+
+const extendAnnotation: ExtendAnnotationSchemaType = (annotation) => {
+  if (annotation.name === 'link') {
+    return {
+      ...annotation,
+      title: 'Link',
+      shortcut: link,
+      defaultValues: {href: 'https://www.sanity.io'},
+    }
+  }
+  return annotation
+}
+
+function DecoratorButton({
+  schemaType,
+  testId,
+}: {
+  schemaType: ToolbarDecoratorSchemaType
   testId: string
 }) {
+  const decoratorButton = useDecoratorButton({schemaType})
+  const active = decoratorButton.snapshot.matches({enabled: 'active'})
+  const label = schemaType.title ?? schemaType.name
+
   return (
     <Button
-      mode={props.active ? 'default' : 'ghost'}
-      tone={props.active ? 'primary' : 'default'}
-      text={props.label}
+      mode={active ? 'default' : 'ghost'}
+      tone={active ? 'primary' : 'default'}
+      text={label}
       fontSize={1}
       padding={2}
-      onClick={props.onClick}
-      data-testid={props.testId}
+      disabled={decoratorButton.snapshot.matches('disabled')}
+      onClick={() => decoratorButton.send({type: 'toggle'})}
+      data-testid={`pte-${label.toLowerCase()}-${testId}`}
+    />
+  )
+}
+
+function AnnotationButton({
+  schemaType,
+  testId,
+}: {
+  schemaType: ToolbarAnnotationSchemaType
+  testId: string
+}) {
+  const annotationButton = useAnnotationButton({schemaType})
+  const active = annotationButton.snapshot.matches({enabled: 'active'})
+  const label = schemaType.title ?? schemaType.name
+
+  // `defaultValues` from the schema extension stands in for the insert
+  // dialog a real toolbar would show: it lets `add` be sent directly
+  // instead of going through the button's dialog-open state.
+  const toggle = () => {
+    if (active) {
+      annotationButton.send({type: 'remove'})
+    } else {
+      annotationButton.send({type: 'add', annotation: {value: schemaType.defaultValues ?? {}}})
+    }
+  }
+
+  return (
+    <Button
+      mode={active ? 'default' : 'ghost'}
+      tone={active ? 'primary' : 'default'}
+      text={label}
+      fontSize={1}
+      padding={2}
+      disabled={annotationButton.snapshot.matches('disabled')}
+      onClick={toggle}
+      data-testid={`pte-${label.toLowerCase()}-${testId}`}
     />
   )
 }
 
 function Toolbar({testId}: {testId: string}) {
-  const editor = useEditor()
-  const strongActive = useEditorSelector(editor, selectors.isActiveDecorator('strong'))
-  const emActive = useEditorSelector(editor, selectors.isActiveDecorator('em'))
-  const linkActive = useEditorSelector(editor, selectors.isActiveAnnotation('link'))
-
-  const toggleDecorator = (decorator: string) => {
-    editor.send({type: 'decorator.toggle', decorator})
-    editor.send({type: 'focus'})
-  }
-
-  const toggleLink = () => {
-    if (linkActive) {
-      editor.send({type: 'annotation.remove', annotation: {name: 'link'}})
-    } else {
-      editor.send({
-        type: 'annotation.add',
-        annotation: {name: 'link', value: {href: 'https://www.sanity.io'}},
-      })
-    }
-    editor.send({type: 'focus'})
-  }
+  const toolbarSchema = useToolbarSchema({extendDecorator, extendAnnotation})
 
   return (
     <Flex gap={1}>
-      <ToolbarButton
-        active={strongActive}
-        label="Bold"
-        onClick={() => toggleDecorator('strong')}
-        testId={`pte-bold-${testId}`}
-      />
-      <ToolbarButton
-        active={emActive}
-        label="Italic"
-        onClick={() => toggleDecorator('em')}
-        testId={`pte-italic-${testId}`}
-      />
-      <ToolbarButton
-        active={linkActive}
-        label="Link"
-        onClick={toggleLink}
-        testId={`pte-link-${testId}`}
-      />
+      {toolbarSchema.decorators.map((decorator) => (
+        <DecoratorButton key={decorator.name} schemaType={decorator} testId={testId} />
+      ))}
+      {toolbarSchema.annotations.map((annotation) => (
+        <AnnotationButton key={annotation.name} schemaType={annotation} testId={testId} />
+      ))}
     </Flex>
   )
 }
