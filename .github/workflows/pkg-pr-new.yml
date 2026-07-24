@@ -49,6 +49,7 @@ jobs:
             'packages/core' \
             'packages/react' \
             --comment=update \
-            --compact
+            --compact \
+            --pnpm
         env:
           GITHUB_TOKEN: ${{ github.token }}
