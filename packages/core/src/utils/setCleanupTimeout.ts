@@ -1,3 +1,13 @@
+// Calls `.unref()` on a timer when running in Node.js. In Node.js, timers are
+// objects with an `unref()` method; in browsers they are numbers. Narrow at
+// runtime so this works in both environments without type assertions.
+function unref(timer: ReturnType<typeof setTimeout> | ReturnType<typeof setInterval>): void {
+  const t: unknown = timer
+  if (typeof t === 'object' && t !== null && 'unref' in t && typeof t.unref === 'function') {
+    t.unref()
+  }
+}
+
 /**
  * Like `setTimeout`, but calls `.unref()` on the timer when running in Node.js.
  *
@@ -11,14 +21,17 @@
  */
 export function setCleanupTimeout(fn: () => void, delay: number): ReturnType<typeof setTimeout> {
   const timer = setTimeout(fn, delay)
+  unref(timer)
+  return timer
+}
 
-  // In Node.js, setTimeout returns an object with an `unref()` method.
-  // In browsers, it returns a number. We assign to `unknown` and narrow
-  // at runtime so this works in both environments without type assertions.
-  const t: unknown = timer
-  if (typeof t === 'object' && t !== null && 'unref' in t && typeof t.unref === 'function') {
-    t.unref()
-  }
-
+/**
+ * Like `setInterval`, but calls `.unref()` on the timer when running in Node.js
+ * so a recurring poll never keeps the process alive. See {@link setCleanupTimeout}
+ * for why cleanup and background timers must not block process exit.
+ */
+export function setCleanupInterval(fn: () => void, delay: number): ReturnType<typeof setInterval> {
+  const timer = setInterval(fn, delay)
+  unref(timer)
   return timer
 }

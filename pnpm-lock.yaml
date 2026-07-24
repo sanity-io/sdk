@@ -596,6 +596,9 @@ importers:
       '@sanity/types':
         specifier: 'catalog:'
         version: 6.5.0(@types/react@19.2.17)
+      '@sanity/workbench':
+        specifier: 0.1.0-alpha.24
+        version: 0.1.0-alpha.24(@sanity/sdk@packages+core)(node-fetch@2.7.0)(react@19.2.7)(xstate@5.32.2)
       groq:
         specifier: 'catalog:'
         version: 3.88.1-typegen-experimental.0
@@ -3561,6 +3564,13 @@ packages:
   '@sanity/workbench-cli@1.1.3':
     resolution: {integrity: sha512-LsQG4/6MrUlanNM+/pjFP9e7KMbSzQGTavegrCxH6E2TbIZL+DtSESiMMvVyC933XHeU2zN0UpOIPwgAwT6sYA==}
     engines: {node: '>=22.12'}
+
+  '@sanity/workbench@0.1.0-alpha.24':
+    resolution: {integrity: sha512-235mR37+z8eg9OQqhUwgkQ4dZnveFHczUTgW2jk81qm1pP6vMlTdEAiKpz1Tq4zU9zRfg2xck51DP1VlkVzdWA==}
+    engines: {node: '>=20.19.1 <22 || >=22.12'}
+    peerDependencies:
+      '@sanity/sdk': ^2.9.0
+      xstate: ^5.31.0
 
   '@sanity/worker-channels@2.0.0':
     resolution: {integrity: sha512-mC+8yPQuw2rHXdHigFPU9thNa6vTaPmh7jFR6RvloE8s+6dmnk9bHdPXRbrrUqafxzK3L9aH2E170ubXyxcAIA==}
@@ -11601,6 +11611,20 @@ snapshots:
       - utf-8-validate
       - vue-tsc
       - yaml
+
+  '@sanity/workbench@0.1.0-alpha.24(@sanity/sdk@packages+core)(node-fetch@2.7.0)(react@19.2.7)(xstate@5.32.2)':
+    dependencies:
+      '@module-federation/runtime': 2.6.0(node-fetch@2.7.0)
+      '@sanity/message-protocol': 0.23.0
+      '@sanity/sdk': link:packages/core
+      '@sanity/telemetry': 1.1.0(react@19.2.7)
+      rxjs: 7.8.2
+      semver: 7.8.5
+      xstate: 5.32.2
+      zod: 4.4.3
+    transitivePeerDependencies:
+      - node-fetch
+      - react
 
   '@sanity/worker-channels@2.0.0': {}
 

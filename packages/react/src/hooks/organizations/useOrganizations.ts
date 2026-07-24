@@ -1,22 +1,18 @@
-import {
-  getOrganizationsState,
-  type Organizations,
-  type OrganizationsOptions,
-  resolveOrganizations,
-} from '@sanity/sdk'
+import {type Organizations, organizations, type OrganizationsOptions} from '@sanity/sdk'
 
-import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {createFetcherHook, type FetcherHookResult} from '../helpers/createFetcherHook'
 
 /**
  * Returns metadata for each organisation the current user has access to.
  *
  * @category Organizations
  * @param options - Configuration options
- * @returns An array of organisation metadata. `members` is included only when
- *   `includeMembers: true`; `features` is included only when `includeFeatures: true`.
+ * @returns A {@link FetcherHookResult} whose `data` is an array of organisation
+ *   metadata. `members` is included only when `includeMembers: true`; `features`
+ *   is included only when `includeFeatures: true`.
  * @example
  * ```tsx
- * const organizations = useOrganizations()
+ * const {data: organizations} = useOrganizations()
  *
  * return (
  *   <select>
@@ -28,18 +24,16 @@ import {createStateSourceHook} from '../helpers/createStateSourceHook'
  * ```
  * @example
  * ```tsx
- * const organizationsWithMembers = useOrganizations({includeMembers: true})
- * const organizationsWithFeatures = useOrganizations({includeFeatures: true})
- * const organizationsIncludingImplicit = useOrganizations({includeImplicitMemberships: true})
+ * const {data: organizationsWithMembers} = useOrganizations({includeMembers: true})
+ * const {data: organizationsWithFeatures} = useOrganizations({includeFeatures: true})
+ * const {data: organizationsIncludingImplicit} = useOrganizations({includeImplicitMemberships: true})
  * ```
  * @public
  * @function
  */
-export const useOrganizations = createStateSourceHook({
-  getState: getOrganizationsState,
-  shouldSuspend: (instance, ...params) =>
-    getOrganizationsState(instance, ...params).getCurrent() === undefined,
-  suspender: resolveOrganizations,
-}) as <IncludeMembers extends boolean = false, IncludeFeatures extends boolean = false>(
+export const useOrganizations = createFetcherHook(organizations) as <
+  IncludeMembers extends boolean = false,
+  IncludeFeatures extends boolean = false,
+>(
   options?: OrganizationsOptions<IncludeMembers, IncludeFeatures>,
-) => Organizations<IncludeMembers, IncludeFeatures>
+) => FetcherHookResult<Organizations<IncludeMembers, IncludeFeatures>>

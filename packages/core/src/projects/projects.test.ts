@@ -5,7 +5,7 @@ import {afterEach, beforeEach, describe, it} from 'vitest'
 import {getClientState} from '../client/clientStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {getProjectsCacheKey, resolveProjects} from './projects'
+import {getProjectsCacheKey, projects} from './projects'
 
 vi.mock('../client/clientStore')
 
@@ -21,8 +21,8 @@ describe('projects', () => {
   })
 
   it('calls `client.observable.request` against `/projects` and returns the result', async () => {
-    const projects = [{id: 'a'}, {id: 'b'}]
-    const request = vi.fn().mockReturnValue(of(projects))
+    const list = [{id: 'a'}, {id: 'b'}]
+    const request = vi.fn().mockReturnValue(of(list))
 
     const mockClient = {
       observable: {request} as unknown as SanityClient['observable'],
@@ -32,12 +32,12 @@ describe('projects', () => {
       observable: of(mockClient),
     } as StateSource<SanityClient>)
 
-    const result = await resolveProjects(instance)
-    expect(result).toEqual(projects)
+    const result = await projects.resolveState(instance)
+    expect(result).toEqual(list)
     expect(request).toHaveBeenCalledWith({
       uri: '/projects',
       query: {includeMembers: 'false', includeFeatures: 'true', onlyExplicitMembership: 'false'},
-      tag: 'projects.get',
+      tag: 'projects.list',
     })
   })
 
@@ -51,7 +51,7 @@ describe('projects', () => {
       observable: of(mockClient),
     } as StateSource<SanityClient>)
 
-    await resolveProjects(instance, {
+    await projects.resolveState(instance, {
       organizationId: 'org123',
       includeMembers: true,
       includeFeatures: false,
@@ -65,7 +65,7 @@ describe('projects', () => {
         includeFeatures: 'false',
         onlyExplicitMembership: 'false',
       },
-      tag: 'projects.get',
+      tag: 'projects.list',
     })
   })
 })

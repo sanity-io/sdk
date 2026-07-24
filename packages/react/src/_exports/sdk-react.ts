@@ -13,6 +13,7 @@ export {
   type SanityInstanceProviderProps,
 } from '../context/SanityInstanceProvider'
 export {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
+export {useCheckPermissions} from '../hooks/access/useCheckPermissions'
 export {
   useAgentGenerate,
   useAgentPatch,
@@ -24,6 +25,15 @@ export {
   type AgentResourceContextOptions,
   useAgentResourceContext,
 } from '../hooks/agent/useAgentResourceContext'
+export {useApplication} from '../hooks/applications/useApplication'
+export {useApplications} from '../hooks/applications/useApplications'
+export {useCreateUserApplication} from '../hooks/applications/useCreateUserApplication'
+export {useDeleteApplication} from '../hooks/applications/useDeleteApplication'
+export {useDeleteUserApplication} from '../hooks/applications/useDeleteUserApplication'
+export {useUpdateApplication} from '../hooks/applications/useUpdateApplication'
+export {useUpdateUserApplication} from '../hooks/applications/useUpdateUserApplication'
+export {useUserApplication} from '../hooks/applications/useUserApplication'
+export {useUserApplications} from '../hooks/applications/useUserApplications'
 export {useAuthState} from '../hooks/auth/useAuthState'
 export {useAuthToken} from '../hooks/auth/useAuthToken'
 export {useCurrentUser} from '../hooks/auth/useCurrentUser'
@@ -70,6 +80,10 @@ export {
   type DocumentsResponse,
   useDocuments,
 } from '../hooks/documents/useDocuments'
+export {type FetcherHookResult} from '../hooks/helpers/createFetcherHook'
+export {type MutationHookResult} from '../hooks/helpers/createMutationHook'
+export {useInstallation} from '../hooks/installations/useInstallation'
+export {useInstallations} from '../hooks/installations/useInstallations'
 export {useOrganization} from '../hooks/organizations/useOrganization'
 export {useOrganizations} from '../hooks/organizations/useOrganizations'
 export {

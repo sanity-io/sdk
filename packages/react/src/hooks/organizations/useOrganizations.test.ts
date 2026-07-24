@@ -1,85 +1,63 @@
-import {getOrganizationsState, type SanityInstance} from '@sanity/sdk'
+import {type Organizations, organizations, type StateSource} from '@sanity/sdk'
+import {type FetcherSnapshot} from '@sanity/sdk/_internal'
+import {type Observable} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {renderHook} from '../../../test/test-utils'
+import {useOrganizations} from './useOrganizations'
 
-vi.mock('@sanity/sdk', () => ({
-  getOrganizationsState: vi.fn(() => ({
-    getCurrent: vi.fn(() => undefined),
-  })),
-  resolveOrganizations: vi.fn(),
-}))
-vi.mock('../helpers/createStateSourceHook', () => ({
-  createStateSourceHook: vi.fn(),
-}))
+vi.mock('@sanity/sdk', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@sanity/sdk')>()
+  return {...original, organizations: {getState: vi.fn(), resolveState: vi.fn(), refetch: vi.fn()}}
+})
+
+const stateSource = (
+  current: Organizations | undefined,
+): StateSource<FetcherSnapshot<Organizations>> => {
+  const snapshot = current
+    ? {status: 'success', data: current, error: undefined, isFetching: false, dataUpdatedAt: 1}
+    : {
+        status: 'pending',
+        data: undefined,
+        error: undefined,
+        isFetching: true,
+        dataUpdatedAt: undefined,
+      }
+  return {
+    getCurrent: vi.fn(() => snapshot),
+    subscribe: vi.fn(() => () => {}),
+    get observable(): Observable<unknown> {
+      throw new Error('Not implemented')
+    },
+  } as unknown as StateSource<FetcherSnapshot<Organizations>>
+}
+
+const sanityInstance = expect.objectContaining({config: expect.any(Object)})
 
 describe('useOrganizations', () => {
   beforeEach(() => {
-    vi.resetModules()
-    vi.mock('@sanity/sdk', () => ({
-      getOrganizationsState: vi.fn(() => ({
-        getCurrent: vi.fn(() => undefined),
-      })),
-      resolveOrganizations: vi.fn(),
-    }))
-    vi.mock('../helpers/createStateSourceHook', () => ({
-      createStateSourceHook: vi.fn(),
-    }))
-  })
-
-  it('should call createStateSourceHook with correct arguments on import', async () => {
-    await import('./useOrganizations')
-
-    expect(createStateSourceHook).toHaveBeenCalled()
-    expect(createStateSourceHook).toHaveBeenCalledWith(
-      expect.objectContaining({
-        getState: expect.any(Function),
-        shouldSuspend: expect.any(Function),
-        suspender: expect.any(Function),
-      }),
+    vi.clearAllMocks()
+    vi.mocked(organizations.getState).mockReturnValue(
+      stateSource([{id: 'org_1'}] as unknown as Organizations),
     )
   })
 
-  it('shouldSuspend should call getOrganizationsState and getCurrent', async () => {
-    await import('./useOrganizations')
-
-    const mockCreateStateSourceHook = createStateSourceHook as ReturnType<typeof vi.fn>
-    expect(mockCreateStateSourceHook.mock.calls.length).toBeGreaterThan(0)
-    const createStateSourceHookArgs = mockCreateStateSourceHook.mock.calls[0][0]
-    const shouldSuspend = createStateSourceHookArgs.shouldSuspend
-
-    const mockInstance = {} as SanityInstance
-
-    const result = shouldSuspend(mockInstance, undefined)
-
-    const mockGetOrganizationsState = getOrganizationsState as ReturnType<typeof vi.fn>
-    expect(mockGetOrganizationsState).toHaveBeenCalledWith(mockInstance, undefined)
-
-    expect(mockGetOrganizationsState.mock.results.length).toBeGreaterThan(0)
-    const getOrganizationsStateMockResult = mockGetOrganizationsState.mock.results[0].value
-    expect(getOrganizationsStateMockResult.getCurrent).toHaveBeenCalled()
-
-    expect(result).toBe(true)
+  it('reads the organizations fetcher with the passed options', () => {
+    renderHook(() => useOrganizations({includeMembers: true}))
+    expect(organizations.getState).toHaveBeenCalledWith(sanityInstance, {includeMembers: true})
   })
 
-  it('should handle different parameter combinations in shouldSuspend', async () => {
-    await import('./useOrganizations')
+  it('returns the fetcher data in the result envelope', () => {
+    const {result} = renderHook(() => useOrganizations())
+    expect(result.current.data).toEqual([{id: 'org_1'}])
+    expect(result.current.isFetching).toBe(false)
+    expect(typeof result.current.refetch).toBe('function')
+  })
 
-    const mockCreateStateSourceHook = createStateSourceHook as ReturnType<typeof vi.fn>
-    const createStateSourceHookArgs = mockCreateStateSourceHook.mock.calls[0][0]
-    const shouldSuspend = createStateSourceHookArgs.shouldSuspend
-
-    const mockInstance = {} as SanityInstance
-
-    expect(() => shouldSuspend(mockInstance, undefined)).not.toThrow()
-    expect(() => shouldSuspend(mockInstance, {includeMembers: true})).not.toThrow()
-    expect(() => shouldSuspend(mockInstance, {includeFeatures: true})).not.toThrow()
-    expect(() =>
-      shouldSuspend(mockInstance, {
-        includeMembers: true,
-        includeFeatures: true,
-        includeImplicitMemberships: true,
-      }),
-    ).not.toThrow()
+  it('suspends via the organizations fetcher until data is available', () => {
+    vi.mocked(organizations.getState).mockReturnValue(stateSource(undefined))
+    vi.mocked(organizations.resolveState).mockReturnValue(new Promise(() => {}))
+    renderHook(() => useOrganizations())
+    expect(organizations.resolveState).toHaveBeenCalled()
   })
 })

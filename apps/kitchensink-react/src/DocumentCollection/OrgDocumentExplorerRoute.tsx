@@ -495,7 +495,7 @@ function UsersDialog({open, onClose}: UsersDialogProps) {
 }
 
 function ProjectExplorer() {
-  const project = useProject()
+  const {data: project} = useProject()
   const [isUsersDialogOpen, setIsUsersDialogOpen] = useState(false)
 
   const handleOpenUsersDialog = () => setIsUsersDialogOpen(true)
@@ -547,7 +547,7 @@ function ProjectExplorer() {
 
 // Component to display all projects
 function ProjectsExplorer() {
-  const projects = useProjects()
+  const {data: projects} = useProjects()
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
 
   const handleProjectChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
