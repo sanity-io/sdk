@@ -71,6 +71,12 @@ export {type FetcherHookResult} from '../hooks/helpers/createFetcherHook'
 export {type MutationHookResult} from '../hooks/helpers/createMutationHook'
 export {useInstallation} from '../hooks/installations/useInstallation'
 export {useInstallations} from '../hooks/installations/useInstallations'
+export {
+  getMediaLibraryAssetDocumentHandle,
+  type MediaLibraryAsset,
+  type MediaLibraryAssetHandle,
+  useMediaLibraryAsset,
+} from '../hooks/mediaLibrary/useMediaLibraryAsset'
 export {useOrganization} from '../hooks/organizations/useOrganization'
 export {useOrganizations} from '../hooks/organizations/useOrganizations'
 export {
