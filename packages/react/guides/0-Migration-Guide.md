@@ -2,6 +2,84 @@
 title: Migration guide
 ---
 
+## Migrating to @sanity/sdk-react@3.0.0
+
+### Breaking Changes
+
+1. `useProject`, `useProjects`, `useOrganization`, and `useOrganizations` return a result object
+
+These four hooks are now backed by a live re-fetching utility. Instead of returning the fetched value directly, they return a `FetcherHookResult`: `{data, isFetching, error, refetch}`. The hook still suspends until the first fetch succeeds, so `data` is always present once your component renders.
+
+**Before:**
+
+```typescript
+const project = useProject({projectId})
+const projects = useProjects()
+const organization = useOrganization({organizationId})
+const organizations = useOrganizations()
+```
+
+**After:**
+
+```typescript
+const {data: project} = useProject({projectId})
+const {data: projects} = useProjects()
+const {data: organization} = useOrganization({organizationId})
+const {data: organizations} = useOrganizations()
+```
+
+Destructuring in place works the same way:
+
+**Before:**
+
+```typescript
+const {organizationId, id} = useProject()
+```
+
+**After:**
+
+```typescript
+const {
+  data: {organizationId, id},
+} = useProject()
+```
+
+No other hooks changed shape.
+
+2. These hooks now revalidate in the background
+
+Fetched data is considered fresh for 30 seconds. After that, the hook serves the cached value immediately and refetches in the background, so a mounted component can receive new data without remounting. In v2 each entry was fetched once and cached for the lifetime of the instance.
+
+If you relied on the value being stable for as long as the component was mounted, read `isFetching` to tell a background refresh apart from settled data, and use `refetch` to force a fresh read:
+
+```typescript
+const {data: project, isFetching, refetch} = useProject({projectId})
+```
+
+`refetch` bypasses the freshness window and resolves with the refreshed data.
+
+3. Background fetch errors no longer reach your error boundary
+
+Only the initial fetch throws. Once data has rendered, a failed background revalidation is reported through `error` while the last successful value keeps rendering; the next success clears it. An error boundary alone will no longer surface these failures.
+
+```typescript
+const {data: projects, error} = useProjects()
+
+if (error) {
+  // stale data is still rendering — surface a refresh warning if you need one
+}
+```
+
+### New in v3
+
+Non-breaking additions:
+
+- `useCheckPermissions` for resource-level permission checks.
+- Applications hooks: `useApplication`, `useApplications`, `useUserApplication`, `useUserApplications`, `useCreateUserApplication`, `useUpdateApplication`, `useUpdateUserApplication`, `useDeleteApplication`, and `useDeleteUserApplication`.
+- Installations hooks: `useInstallation` and `useInstallations`.
+- A mutation hook layer. Mutation hooks return a `MutationHookResult`: `{mutate, isPending, error, data, reset}`.
+- `AuthBoundary` no longer redirects to the login URL when running in the workbench, where the host OS owns the session and mints the token.
+
 ## Migrating to @sanity/sdk-react@2.0.0
 
 ### Breaking Changes
