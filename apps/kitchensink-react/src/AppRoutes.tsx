@@ -20,7 +20,6 @@ import {AgentResourceContextRoute} from './routes/AgentResourceContextRoute'
 import {CanvasRoute} from './routes/CanvasRoute'
 import {DashboardContextRoute} from './routes/DashboardContextRoute'
 import {DashboardWorkspacesRoute} from './routes/DashboardWorkspacesRoute'
-import {IntentsRoute} from './routes/IntentsRoute'
 import {MediaLibraryRoute} from './routes/MediaLibraryRoute'
 import {PerspectivesRoute} from './routes/PerspectivesRoute'
 import {PortableTextRoute} from './routes/PortableTextRoute'
@@ -85,10 +84,6 @@ const documentCollectionRoutes = [
   {
     path: 'canvas',
     element: <CanvasRoute />,
-  },
-  {
-    path: 'intents',
-    element: <IntentsRoute />,
   },
 ]
 
