@@ -344,7 +344,6 @@ export {
 } from '../users/usersStore'
 export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
-export {defineIntent, type Intent, type IntentFilter} from '../utils/defineIntent'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {isImportError} from '../utils/isImportError'
 export {CORE_SDK_VERSION} from '../version'
