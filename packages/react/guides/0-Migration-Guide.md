@@ -70,6 +70,12 @@ if (error) {
 }
 ```
 
+4. Removed the preliminary intent hooks
+
+The `useDispatchIntent` hook and the `defineIntent` function have been removed, along with the `Intent` and `IntentFilter` types.
+
+The other half of this system was never built: defined intents were never registered anywhere, and a dispatched intent had no handler to resolve to. `dispatchIntent()` sent a window message that nothing listened for, so removing these APIs does not change how your app behaves at runtime.
+
 ### New in v3
 
 Non-breaking additions:
