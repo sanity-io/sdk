@@ -86,11 +86,6 @@
         "count": 1
       }
     },
-    "apps/kitchensink-react/src/routes/IntentsRoute.tsx": {
-      "crap_critical": {
-        "count": 1
-      }
-    },
     "apps/kitchensink-react/src/routes/PerspectivesRoute.tsx": {
       "crap_moderate": {
         "count": 1
@@ -189,11 +184,6 @@
       }
     },
     "packages/core/src/users/usersStore.ts": {
-      "complexity_moderate": {
-        "count": 1
-      }
-    },
-    "packages/core/src/utils/defineIntent.ts": {
       "complexity_moderate": {
         "count": 1
       }
