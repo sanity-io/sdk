@@ -36,7 +36,9 @@ function maxStable(versions: string[]): string {
 // when the package has never been published (npm exits non-zero).
 async function publishedVersions(name: string): Promise<string[]> {
   try {
-    const {stdout} = await $`npm view ${name} versions --json`.quiet()
+    // Pass args as an array so the interpolation is the final token — a trailing
+    // bare word like `versions` here trips knip's binary detection (depcheck).
+    const {stdout} = await $`npm view ${[name, 'versions', '--json']}`.quiet()
     const parsed = JSON.parse(stdout)
     return Array.isArray(parsed) ? parsed : [parsed]
   } catch {
