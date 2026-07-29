@@ -598,7 +598,7 @@ importers:
         version: 6.5.0(@types/react@19.2.17)
       '@sanity/workbench':
         specifier: 0.1.0-alpha.24
-        version: 0.1.0-alpha.24(@sanity/sdk@packages+core)(node-fetch@2.7.0)(react@19.2.7)(xstate@5.32.2)
+        version: 0.1.0-alpha.24(@sanity/sdk@packages+core)(node-fetch@2.7.0)(react@19.2.7)(xstate@5.32.5)
       groq:
         specifier: 'catalog:'
         version: 3.88.1-typegen-experimental.0
@@ -611,6 +611,9 @@ importers:
       rxjs:
         specifier: 'catalog:'
         version: 7.8.2
+      xstate:
+        specifier: ^5.31.0
+        version: 5.32.5
     devDependencies:
       '@repo/config-eslint':
         specifier: workspace:*
@@ -11590,7 +11593,7 @@ snapshots:
       - vue-tsc
       - yaml
 
-  '@sanity/workbench@0.1.0-alpha.24(@sanity/sdk@packages+core)(node-fetch@2.7.0)(react@19.2.7)(xstate@5.32.2)':
+  '@sanity/workbench@0.1.0-alpha.24(@sanity/sdk@packages+core)(node-fetch@2.7.0)(react@19.2.7)(xstate@5.32.5)':
     dependencies:
       '@module-federation/runtime': 2.6.0(node-fetch@2.7.0)
       '@sanity/message-protocol': 0.23.0
@@ -11598,7 +11601,7 @@ snapshots:
       '@sanity/telemetry': 1.1.0(react@19.2.7)
       rxjs: 7.8.2
       semver: 7.8.5
-      xstate: 5.32.2
+      xstate: 5.32.5
       zod: 4.4.3
     transitivePeerDependencies:
       - node-fetch
