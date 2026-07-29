@@ -69,7 +69,8 @@
     "groq": "catalog:",
     "react-compiler-runtime": "catalog:",
     "react-error-boundary": "catalog:",
-    "rxjs": "catalog:"
+    "rxjs": "catalog:",
+    "xstate": "^5.31.0"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
