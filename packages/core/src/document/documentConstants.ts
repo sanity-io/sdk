@@ -10,6 +10,15 @@ export const INITIAL_OUTGOING_THROTTLE_TIME = 1000
 export const API_VERSION = 'v2025-05-06'
 
 /**
+ * How long a submitted transaction's revision is kept around waiting to be
+ * verified by its listener echo. After this, the transaction is no longer
+ * treated as in flight and a document held onto only for that verification can
+ * be evicted. Sized to match the listener's own chaining deadline, after which
+ * an echo that has not arrived is not going to.
+ */
+export const UNVERIFIED_REVISION_RETENTION_TIME = 30_000
+
+/**
  * Base delay (ms) before retrying a document listener after an `OutOfSyncError`.
  * Backoff doubles on each successive retry, capped at {@link OUT_OF_SYNC_RETRY_MAX_DELAY}.
  */

@@ -345,6 +345,75 @@ it('emits remote-patches events distinguishing own and foreign transactions', as
   state2Unsubscribe()
 })
 
+it('labels an echo that arrives after the last subscriber left as its own', async () => {
+  const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article'})
+  const draftId = getDraftId(DocumentId(doc.documentId))
+  const state = getDocumentState(instance, doc)
+  const unsubscribe = state.subscribe()
+  await vi.waitUntil(() => state.getCurrent() !== undefined)
+  const previousRev = state.getCurrent()?._rev
+
+  // ack without emitting the listener echo, so the echo can be delivered later
+  // and out of band, which is the ordering the real API produces
+  const clientActionMockImplementation = vi.mocked(client.action).getMockImplementation()!
+  vi.mocked(client.action).mockImplementation(
+    async (_input, {transactionId = crypto.randomUUID()} = {}) => ({transactionId}),
+  )
+
+  const patchEvents: DocumentRemotePatchesEvent[] = []
+  const unsubscribeEvents = subscribeDocumentEvents(instance, {
+    resource,
+    eventHandler: (e) => {
+      if (e.type === 'remote-patches') patchEvents.push(e)
+    },
+  })
+
+  const edited = await applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'edited while leaving'}})],
+    resource,
+  })
+
+  // the last subscriber leaves before the ack comes back, which used to delete
+  // the document state (and with it the memory of our own transaction) as soon
+  // as the ack released the transaction's subscription
+  unsubscribe()
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  await edited.submitted()
+
+  const {events: listenerEvents} = (
+    createSharedListener as () => {
+      dispose: () => void
+      events: Subject<ListenEvent<SanityDocument>>
+    }
+  )()
+  listenerEvents.next({
+    type: 'mutation',
+    documentId: draftId,
+    eventId: `${edited.transactionId}#${draftId}`,
+    identity: 'example-user',
+    mutations: [{patch: {id: draftId, set: {title: 'edited while leaving'}}}],
+    timestamp: new Date().toISOString(),
+    transactionId: edited.transactionId,
+    transactionCurrentEvent: 1,
+    transactionTotalEvents: 1,
+    transition: 'update',
+    visibility: 'query',
+    previousRev,
+    resultRev: edited.transactionId,
+  } satisfies MutationEvent)
+  await vi.waitUntil(() => patchEvents.length > 0)
+
+  expect(patchEvents).toHaveLength(1)
+  expect(patchEvents[0]).toMatchObject({
+    documentId: draftId,
+    transactionId: edited.transactionId,
+    origin: 'local',
+  })
+
+  unsubscribeEvents()
+  vi.mocked(client.action).mockImplementation(clientActionMockImplementation)
+})
+
 it('handles concurrent edits and resolves conflicts', async () => {
   const doc = createDocumentHandle({documentId: 'doc-concurrent', documentType: 'article'})
   const state1 = getDocumentState(instance1, doc)
