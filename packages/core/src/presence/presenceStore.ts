@@ -503,36 +503,56 @@ function selectDocumentPresence(
   return computed
 }
 
+/**
+ * The id a query and a location are compared on. Exact when `excludeVersions` is
+ * set, otherwise normalized so a draft, its published version, and any release
+ * version count as one document.
+ */
+const scopeId = (documentId: string, excludeVersions: boolean | undefined): string =>
+  excludeVersions ? documentId : getPublishedId(DocumentId(documentId))
+
+/**
+ * Declared `string[]`, actually a `Path`. See the note on
+ * {@link PresenceLocation.path}; `DocumentPresence.path` reports it honestly.
+ */
+const pathOf = (location: PresenceLocation): Path => location.path as unknown as Path
+
+function matchesQuery(
+  location: PresenceLocation,
+  target: string,
+  {path, excludeVersions}: DocumentPresenceOptions,
+): boolean {
+  if (scopeId(location.documentId, excludeVersions) !== target) return false
+  return !path || startsWithPath(path, pathOf(location))
+}
+
+function toDocumentPresence(
+  users: PresenceStoreState['users'],
+  sessionId: string,
+  userId: string,
+  location: PresenceLocation,
+): DocumentPresence {
+  return {
+    user: users[userId] || createUnresolvedUser(userId),
+    sessionId,
+    documentId: location.documentId,
+    path: pathOf(location),
+    lastActiveAt: location.lastActiveAt,
+    ...(location.selection === undefined ? {} : {selection: location.selection}),
+  }
+}
+
 function computeDocumentPresence(
   state: PresenceStoreState,
-  {documentId, path, excludeVersions}: DocumentPresenceOptions,
+  options: DocumentPresenceOptions,
 ): DocumentPresence[] {
-  const target = excludeVersions ? documentId : getPublishedId(DocumentId(documentId))
+  const target = scopeId(options.documentId, options.excludeVersions)
 
-  const results: DocumentPresence[] = []
-  for (const [sessionId, session] of state.locations) {
-    for (const location of session.locations) {
-      const candidate = excludeVersions
-        ? location.documentId
-        : getPublishedId(DocumentId(location.documentId))
-      if (candidate !== target) continue
-
-      // Declared `string[]`, actually a `Path`. See the note on
-      // `PresenceLocation.path`; `DocumentPresence.path` reports it honestly.
-      const locationPath = location.path as unknown as Path
-      if (path && !startsWithPath(path, locationPath)) continue
-
-      results.push({
-        user: state.users[session.userId] || createUnresolvedUser(session.userId),
-        sessionId,
-        documentId: location.documentId,
-        path: locationPath,
-        lastActiveAt: location.lastActiveAt,
-        ...(location.selection === undefined ? {} : {selection: location.selection}),
-      })
-    }
-  }
-  return results
+  return Array.from(state.locations).flatMap(([sessionId, session]) =>
+    session.locations
+      .filter((location) => matchesQuery(location, target, options))
+      .map((location) => toDocumentPresence(state.users, sessionId, session.userId, location)),
+  )
 }
 
 const _getPresence = bindActionByResource(

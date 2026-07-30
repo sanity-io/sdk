@@ -1,4 +1,5 @@
 import {
+  type DocumentPresence,
   useDocumentProjection,
   useDocuments,
   usePresenceForDocument,
@@ -46,12 +47,9 @@ const FIELDS = [
   {name: 'role', label: 'Role', options: ['developer', 'designer', 'ops']},
 ] as const
 
-/**
- * Who else is focused at or below one field.
- *
- * `excludeVersions` is on deliberately: a field indicator should show only people
- * in the same document you are looking at, not someone in a release version of it.
- */
+type ReportAs = 'draft' | 'published'
+
+/** Who else is focused at or below one field. */
 function FieldPresence({
   documentId,
   path,
@@ -61,6 +59,8 @@ function FieldPresence({
   path: string[]
   testId: string
 }): JSX.Element {
+  // `excludeVersions` deliberately: a field indicator should show only people in
+  // the same document you are looking at, not someone in a release version of it.
   const {presence} = usePresenceForDocument({
     documentId,
     documentType: DOCUMENT_TYPE,
@@ -105,6 +105,238 @@ function PresenceReporter({
   return null
 }
 
+function ReportAsSelect({
+  reportAs,
+  onChange,
+}: {
+  reportAs: ReportAs
+  onChange: (next: ReportAs) => void
+}): JSX.Element {
+  return (
+    <Flex align="center" gap={2}>
+      <Text size={1} muted>
+        Present in the
+      </Text>
+      <Select
+        data-testid="presence-report-as"
+        value={reportAs}
+        onChange={(event) =>
+          onChange(event.currentTarget.value === 'published' ? 'published' : 'draft')
+        }
+      >
+        <option value="draft">draft</option>
+        <option value="published">published document</option>
+      </Select>
+    </Flex>
+  )
+}
+
+/** The project and dataset in play, so a mismatch with the Studio link is visible. */
+function ScopeText(): JSX.Element | null {
+  const resource = useResource()
+  if (!resource || !('projectId' in resource)) return null
+
+  return (
+    <Text size={1} muted>
+      {`Project ${resource.projectId} · dataset ${resource.dataset}`}
+    </Text>
+  )
+}
+
+function DocumentCard({
+  documentId,
+  reportedId,
+  reportAs,
+  onReportAsChange,
+  studioUrl,
+}: {
+  documentId: string
+  reportedId: string
+  reportAs: ReportAs
+  onReportAsChange: (next: ReportAs) => void
+  studioUrl: string
+}): JSX.Element {
+  const {data} = useDocumentProjection<{name: string | null}>({
+    documentId,
+    documentType: DOCUMENT_TYPE,
+    projection: `{name}`,
+  })
+
+  return (
+    <Card padding={3} radius={2} tone="transparent">
+      <Flex align="flex-start" gap={3}>
+        <Stack space={3} flex={1}>
+          <Text size={1} weight="medium">
+            {data?.name ?? 'Untitled'}
+          </Text>
+          <Code size={0} data-testid="presence-document-id">
+            {documentId}
+          </Code>
+          <ReportAsSelect reportAs={reportAs} onChange={onReportAsChange} />
+          <Text size={1} muted data-testid="presence-reported-id">
+            Reporting as {reportedId}
+          </Text>
+          <ScopeText />
+        </Stack>
+        <Button
+          as="a"
+          href={studioUrl}
+          target="_blank"
+          rel="noreferrer"
+          mode="ghost"
+          text="Open in Studio"
+          data-testid="presence-studio-link"
+        />
+      </Flex>
+    </Card>
+  )
+}
+
+function AnnounceToggle({
+  announcing,
+  onChange,
+}: {
+  announcing: boolean
+  onChange: (next: boolean) => void
+}): JSX.Element {
+  return (
+    <Card padding={3} radius={2} tone="transparent">
+      <Flex align="flex-start" gap={3}>
+        <Checkbox
+          id="presence-announcing"
+          data-testid="presence-announcing"
+          checked={announcing}
+          onChange={(event) => onChange(event.currentTarget.checked)}
+        />
+        <Stack space={2} flex={1}>
+          <Text
+            as="label"
+            htmlFor="presence-announcing"
+            size={1}
+            weight="medium"
+            data-testid="presence-announcing-label"
+          >
+            Announce my presence
+          </Text>
+          <Text size={1} muted>
+            Turn this off to read presence without appearing to anyone else, which is how an app
+            that only displays presence behaves.
+          </Text>
+        </Stack>
+      </Flex>
+    </Card>
+  )
+}
+
+function Participant({participant}: {participant: DocumentPresence}): JSX.Element {
+  return (
+    <Flex align="center" gap={2} data-testid="presence-document-participant">
+      <Badge tone="primary">{participant.user.profile.displayName}</Badge>
+      {/* Plain text rather than `Code`, which renders as a block and would stack
+          the words vertically. */}
+      <Text size={1} muted>
+        {participant.path.length > 0 ? `in ${participant.path.join('.')}` : 'at the document root'}
+      </Text>
+    </Flex>
+  )
+}
+
+function ParticipantList({documentId}: {documentId: string}): JSX.Element {
+  const {presence} = usePresenceForDocument({documentId, documentType: DOCUMENT_TYPE})
+
+  return (
+    <Stack space={3}>
+      <Text size={1} weight="semibold">
+        Others in this document
+      </Text>
+      <Card
+        padding={3}
+        radius={2}
+        border
+        data-testid="presence-document"
+        data-count={presence.length}
+      >
+        {presence.length === 0 ? (
+          <Text size={1} muted data-testid="presence-document-empty">
+            Nobody else is here
+          </Text>
+        ) : (
+          <Stack space={3}>
+            {presence.map((participant) => (
+              <Participant key={participant.sessionId} participant={participant} />
+            ))}
+          </Stack>
+        )}
+      </Card>
+    </Stack>
+  )
+}
+
+function FieldRow({
+  field,
+  documentId,
+  onFocus,
+  onBlur,
+}: {
+  field: (typeof FIELDS)[number]
+  documentId: string
+  onFocus: () => void
+  onBlur: () => void
+}): JSX.Element {
+  const testId = `presence-input-${field.name}`
+
+  return (
+    <Stack space={2}>
+      <Flex align="center" gap={2}>
+        <Text size={1} weight="medium">
+          {field.label}
+        </Text>
+        <FieldPresence documentId={documentId} path={[field.name]} testId={field.name} />
+      </Flex>
+      {'options' in field ? (
+        <Select data-testid={testId} onFocus={onFocus} onBlur={onBlur}>
+          <option value="">Focus to be present in {field.name}</option>
+          {field.options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </Select>
+      ) : (
+        <TextInput
+          data-testid={testId}
+          placeholder={`Focus to be present in ${field.name}`}
+          onFocus={onFocus}
+          onBlur={onBlur}
+        />
+      )}
+    </Stack>
+  )
+}
+
+function Notes(): JSX.Element {
+  return (
+    <Stack space={2}>
+      <Text size={1} muted>
+        Opening the same document in a Studio checks that presence works between the two: they share
+        one room per project and dataset, so each should see the other. The link assumes that Studio
+        serves the project and dataset above.
+      </Text>
+      <Text size={1} muted>
+        The Studio compares published ids in its navbar and document lists, but its field indicators
+        compare the exact id it is editing, which while editing is the draft. So reporting the
+        published document appears in the Studio at document level yet never lights up a field. That
+        is what the selector above is for.
+      </Text>
+      <Text size={1} muted>
+        Defaults to the most recently created {DOCUMENT_TYPE} document. Add ?documentId=&lt;id&gt;
+        to the URL to pick a different one, or ?studio=&lt;baseUrl&gt; to point the link at another
+        Studio.
+      </Text>
+    </Stack>
+  )
+}
+
 /**
  * Announces the current user and shows everyone else in the same document.
  *
@@ -119,31 +351,19 @@ function PresenceDemo({documentId}: {documentId: string}): JSX.Element {
   const [announcing, setAnnouncing] = useState(true)
 
   // Which exact document id to be present in, and it matters more than it looks.
+  // The Studio's field indicators compare the id it is editing, exactly, and while
+  // editing in the default perspective that is the draft. Reporting the published
+  // id therefore shows up at document level while never lighting up a field.
   //
-  // The Studio scopes presence differently per surface. Its navbar and document
-  // lists compare published ids, so they match whichever of these you pick. Its
-  // form field indicators use the id it is actually editing with an exact
-  // comparison, and while editing in the default perspective that is the draft.
-  // So reporting the published id shows up in the Studio at document level while
-  // never lighting up a single field.
-  //
-  // Defaults to the draft for that reason. `drafts.` is the stable convention for
-  // draft ids; the SDK does not re-export an id helper for this.
-  const [reportAs, setReportAs] = useState<'draft' | 'published'>('draft')
+  // `drafts.` is the stable convention for draft ids; the SDK does not re-export an
+  // id helper for this.
+  const [reportAs, setReportAs] = useState<ReportAs>('draft')
   const reportedId = reportAs === 'draft' ? `drafts.${documentId}` : documentId
 
-  const resource = useResource()
-  const studioBaseUrl = (searchParams.get('studio') ?? DEFAULT_STUDIO_BASE_URL).replace(/\/+$/, '')
+  const studioBase = (searchParams.get('studio') ?? DEFAULT_STUDIO_BASE_URL).replace(/\/+$/, '')
   // An intent link rather than a structure path, so the Studio resolves it with
   // whichever tool handles editing rather than us guessing its structure.
-  const studioUrl = `${studioBaseUrl}/intent/edit/id=${encodeURIComponent(documentId)};type=${DOCUMENT_TYPE}`
-
-  const {presence} = usePresenceForDocument({documentId: reportedId, documentType: DOCUMENT_TYPE})
-  const {data} = useDocumentProjection<{name: string | null}>({
-    documentId,
-    documentType: DOCUMENT_TYPE,
-    projection: `{name}`,
-  })
+  const studioUrl = `${studioBase}/intent/edit/id=${encodeURIComponent(documentId)};type=${DOCUMENT_TYPE}`
 
   return (
     <PageLayout
@@ -152,134 +372,16 @@ function PresenceDemo({documentId}: {documentId: string}): JSX.Element {
     >
       {announcing ? <PresenceReporter documentId={reportedId} focusedField={focusedField} /> : null}
 
-      <Card padding={3} radius={2} tone="transparent">
-        <Flex align="flex-start" gap={3}>
-          <Stack space={3} flex={1}>
-            <Text size={1} weight="medium">
-              {data?.name ?? 'Untitled'}
-            </Text>
-            <Code size={0} data-testid="presence-document-id">
-              {documentId}
-            </Code>
-            <Flex align="center" gap={2}>
-              <Text size={1} muted>
-                Present in the
-              </Text>
-              <Select
-                data-testid="presence-report-as"
-                value={reportAs}
-                onChange={(event) =>
-                  setReportAs(event.currentTarget.value === 'draft' ? 'draft' : 'published')
-                }
-              >
-                <option value="draft">draft</option>
-                <option value="published">published document</option>
-              </Select>
-            </Flex>
-            <Text size={1} muted data-testid="presence-reported-id">
-              Reporting as {reportedId}
-            </Text>
-            <Text size={1} muted>
-              {resource && 'projectId' in resource
-                ? `Project ${resource.projectId} · dataset ${resource.dataset}`
-                : null}
-            </Text>
-          </Stack>
-          <Button
-            as="a"
-            href={studioUrl}
-            target="_blank"
-            rel="noreferrer"
-            mode="ghost"
-            text="Open in Studio"
-            data-testid="presence-studio-link"
-          />
-        </Flex>
-      </Card>
-
-      <Stack space={2}>
-        <Text size={1} muted>
-          Opening the same document in a Studio checks that presence works between the two: they
-          share one room per project and dataset, so each should see the other. The link assumes
-          that Studio serves the project and dataset above.
-        </Text>
-        <Text size={1} muted>
-          The Studio compares published ids in its navbar and document lists, but its field
-          indicators compare the exact id it is editing, which while editing is the draft. So
-          reporting the published document appears in the Studio at document level yet never lights
-          up a field. That is what the selector above is for.
-        </Text>
-        <Text size={1} muted>
-          Defaults to the most recently created {DOCUMENT_TYPE} document. Add ?documentId=&lt;id&gt;
-          to the URL to pick a different one, or ?studio=&lt;baseUrl&gt; to point the link at
-          another Studio.
-        </Text>
-      </Stack>
-
-      <Card padding={3} radius={2} tone="transparent">
-        <Flex align="flex-start" gap={3}>
-          <Checkbox
-            id="presence-announcing"
-            data-testid="presence-announcing"
-            checked={announcing}
-            onChange={(event) => setAnnouncing(event.currentTarget.checked)}
-          />
-          <Stack space={2} flex={1}>
-            <Text
-              as="label"
-              htmlFor="presence-announcing"
-              size={1}
-              weight="medium"
-              data-testid="presence-announcing-label"
-            >
-              Announce my presence
-            </Text>
-            <Text size={1} muted>
-              Turn this off to read presence without appearing to anyone else, which is how an app
-              that only displays presence behaves.
-            </Text>
-          </Stack>
-        </Flex>
-      </Card>
-
-      <Stack space={3}>
-        <Text size={1} weight="semibold">
-          Others in this document
-        </Text>
-        <Card
-          padding={3}
-          radius={2}
-          border
-          data-testid="presence-document"
-          data-count={presence.length}
-        >
-          {presence.length === 0 ? (
-            <Text size={1} muted data-testid="presence-document-empty">
-              Nobody else is here
-            </Text>
-          ) : (
-            <Stack space={3}>
-              {presence.map((participant) => (
-                <Flex
-                  key={participant.sessionId}
-                  align="center"
-                  gap={2}
-                  data-testid="presence-document-participant"
-                >
-                  <Badge tone="primary">{participant.user.profile.displayName}</Badge>
-                  {/* Plain text rather than `Code`, which renders as a block and
-                      would stack the words vertically. */}
-                  <Text size={1} muted>
-                    {participant.path.length > 0
-                      ? `in ${participant.path.join('.')}`
-                      : 'at the document root'}
-                  </Text>
-                </Flex>
-              ))}
-            </Stack>
-          )}
-        </Card>
-      </Stack>
+      <DocumentCard
+        documentId={documentId}
+        reportedId={reportedId}
+        reportAs={reportAs}
+        onReportAsChange={setReportAs}
+        studioUrl={studioUrl}
+      />
+      <Notes />
+      <AnnounceToggle announcing={announcing} onChange={setAnnouncing} />
+      <ParticipantList documentId={reportedId} />
 
       <Stack space={3}>
         <Text size={1} weight="semibold">
@@ -289,35 +391,13 @@ function PresenceDemo({documentId}: {documentId: string}): JSX.Element {
           Focus a field to report presence there. The other tab shows a badge beside it.
         </Text>
         {FIELDS.map((field) => (
-          <Stack key={field.name} space={2}>
-            <Flex align="center" gap={2}>
-              <Text size={1} weight="medium">
-                {field.label}
-              </Text>
-              <FieldPresence documentId={reportedId} path={[field.name]} testId={field.name} />
-            </Flex>
-            {'options' in field ? (
-              <Select
-                data-testid={`presence-input-${field.name}`}
-                onFocus={() => setFocusedField(field.name)}
-                onBlur={() => setFocusedField(undefined)}
-              >
-                <option value="">Focus to be present in {field.name}</option>
-                {field.options.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </Select>
-            ) : (
-              <TextInput
-                data-testid={`presence-input-${field.name}`}
-                placeholder={`Focus to be present in ${field.name}`}
-                onFocus={() => setFocusedField(field.name)}
-                onBlur={() => setFocusedField(undefined)}
-              />
-            )}
-          </Stack>
+          <FieldRow
+            key={field.name}
+            field={field}
+            documentId={reportedId}
+            onFocus={() => setFocusedField(field.name)}
+            onBlur={() => setFocusedField(undefined)}
+          />
         ))}
         <Box>
           <Button
@@ -328,6 +408,22 @@ function PresenceDemo({documentId}: {documentId: string}): JSX.Element {
           />
         </Box>
       </Stack>
+    </PageLayout>
+  )
+}
+
+function NoDocuments({documentIdParam}: {documentIdParam: string | null}): JSX.Element {
+  const detail = documentIdParam
+    ? `No ${DOCUMENT_TYPE} document with id ${documentIdParam}.`
+    : `No ${DOCUMENT_TYPE} documents in this dataset.`
+
+  return (
+    <PageLayout title="Presence" subtitle="Nothing to be present in">
+      <Card padding={3} radius={2} tone="caution">
+        <Text size={1} data-testid="presence-no-documents">
+          {detail}
+        </Text>
+      </Card>
     </PageLayout>
   )
 }
@@ -350,20 +446,7 @@ export function PresenceRoute(): JSX.Element {
   })
 
   const documentId = data[0]?.documentId
-
-  if (!documentId) {
-    return (
-      <PageLayout title="Presence" subtitle="Nothing to be present in">
-        <Card padding={3} radius={2} tone="caution">
-          <Text size={1} data-testid="presence-no-documents">
-            {documentIdParam
-              ? `No ${DOCUMENT_TYPE} document with id ${documentIdParam}.`
-              : `No ${DOCUMENT_TYPE} documents in this dataset.`}
-          </Text>
-        </Card>
-      </PageLayout>
-    )
-  }
+  if (!documentId) return <NoDocuments documentIdParam={documentIdParam} />
 
   return <PresenceDemo documentId={documentId} />
 }
