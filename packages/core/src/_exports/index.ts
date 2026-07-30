@@ -193,9 +193,11 @@ export {
   type OrganizationsOptions,
   resolveOrganizations,
 } from '../organizations/organizations'
-export {getPresence, reportPresence} from '../presence/presenceStore'
+export {getDocumentPresence, getPresence, reportPresence} from '../presence/presenceStore'
 export type {
   DisconnectEvent,
+  DocumentPresence,
+  DocumentPresenceOptions,
   PresenceLocation,
   PresenceSelection,
   PresenceSelectionPoint,

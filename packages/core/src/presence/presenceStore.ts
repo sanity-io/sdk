@@ -1,3 +1,5 @@
+import {DocumentId, getPublishedId} from '@sanity/id-utils'
+import {type Path} from '@sanity/types'
 import {createSelector} from 'reselect'
 import {
   auditTime,
@@ -37,7 +39,10 @@ import {type SanityUser} from '../users/types'
 import {getUserState} from '../users/usersStore'
 import {createLogger} from '../utils/logger'
 import {createBifurTransport} from './bifurTransport'
+import {startsWithPath} from './paths'
 import {
+  type DocumentPresence,
+  type DocumentPresenceOptions,
   type PresenceLocation,
   type ReportPresenceOptions,
   type TransportEvent,
@@ -333,6 +338,72 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
         .subscribe(),
     )
 
+    // Resolve display names for everyone we can see.
+    //
+    // This belongs to the store rather than to one state source: it is driven by
+    // which user ids are in state, and every selector needs it. It used to hang off
+    // `getPresence`'s `onSubscribe`, which meant anything reading presence another
+    // way saw only "Unknown user".
+    const userIds$ = state.observable.pipe(
+      map((s) =>
+        Array.from(s.locations.values())
+          .map((l) => l.userId)
+          .filter((id): id is string => !!id),
+      ),
+      distinctUntilChanged((a, b) => a.length === b.length && a.every((v, i) => v === b[i])),
+    )
+
+    // For canvas resources, wait for the organizationId to arrive. A failed lookup
+    // resolves to `undefined` rather than never emitting, so one failed request
+    // does not leave every user permanently unresolved. Dataset resources emit
+    // immediately so the stream is never blocked.
+    const organizationId$: Observable<string | undefined> = isCanvasResource(resource)
+      ? state.observable.pipe(
+          filter((s) => s.organizationId !== undefined || s.organizationIdError !== undefined),
+          first(),
+          map((s) => s.organizationId),
+        )
+      : of(undefined)
+
+    subscription.add(
+      combineLatest([userIds$, organizationId$])
+        .pipe(
+          switchMap(([userIds, organizationId]) => {
+            if (userIds.length === 0) {
+              return of([])
+            }
+            // Without an organization there is nothing to scope the lookup to, so
+            // skip the request rather than making one that cannot succeed.
+            if (!isDatasetResource(resource) && !organizationId) {
+              return of([])
+            }
+            const userObservables = userIds.map((userId) =>
+              getUserState(instance, {
+                userId,
+                ...(isDatasetResource(resource)
+                  ? {resourceType: 'project', projectId: resource.projectId}
+                  : {resourceType: 'organization', organizationId}),
+              }).pipe(filter((v): v is NonNullable<typeof v> => !!v)),
+            )
+            return combineLatest(userObservables)
+          }),
+        )
+        .subscribe((users) => {
+          state.set('presence/users', (prevState) => ({
+            ...prevState,
+            users: {
+              ...prevState.users,
+              ...users.reduce<Record<string, SanityUser>>((acc, user) => {
+                if (user) {
+                  acc[user.profile.id] = user
+                }
+                return acc
+              }, {}),
+            },
+          }))
+        }),
+    )
+
     // Canvas resources need the organizationId to resolve users — fetch it once from the canvas endpoint
     if (isCanvasResource(resource)) {
       const globalClient = getClient(instance, {apiVersion: PRESENCE_API_VERSION})
@@ -392,72 +463,83 @@ const selectPresence = createSelector(
   },
 )
 
+/**
+ * Results per state object, then per query.
+ *
+ * `createStateSourceAction` runs its selector afresh on every `getCurrent()`, and
+ * `getCurrent` is what React's `useSyncExternalStore` calls as its snapshot. A
+ * selector that builds a new array each call therefore sends React into an
+ * infinite render loop, which is why the store docs point at memoized selectors.
+ *
+ * A single `reselect` memo slot is not enough here, because the selector is
+ * parameterised per document and callers watching different documents would
+ * evict each other. Keyed on the state object, which is replaced on every change,
+ * so entries are collected once that state is unreachable.
+ */
+const documentPresenceCache = new WeakMap<PresenceStoreState, Map<string, DocumentPresence[]>>()
+
+/** Flattens the session map down to one document. */
+function selectDocumentPresence(
+  state: PresenceStoreState,
+  options: DocumentPresenceOptions,
+): DocumentPresence[] {
+  const cacheKey = JSON.stringify([
+    options.documentId,
+    options.path ?? null,
+    options.excludeVersions ?? false,
+  ])
+
+  let perState = documentPresenceCache.get(state)
+  if (!perState) {
+    perState = new Map<string, DocumentPresence[]>()
+    documentPresenceCache.set(state, perState)
+  }
+
+  const cached = perState.get(cacheKey)
+  if (cached) return cached
+
+  const computed = computeDocumentPresence(state, options)
+  perState.set(cacheKey, computed)
+  return computed
+}
+
+function computeDocumentPresence(
+  state: PresenceStoreState,
+  {documentId, path, excludeVersions}: DocumentPresenceOptions,
+): DocumentPresence[] {
+  const target = excludeVersions ? documentId : getPublishedId(DocumentId(documentId))
+
+  const results: DocumentPresence[] = []
+  for (const [sessionId, session] of state.locations) {
+    for (const location of session.locations) {
+      const candidate = excludeVersions
+        ? location.documentId
+        : getPublishedId(DocumentId(location.documentId))
+      if (candidate !== target) continue
+
+      // Declared `string[]`, actually a `Path`. See the note on
+      // `PresenceLocation.path`; `DocumentPresence.path` reports it honestly.
+      const locationPath = location.path as unknown as Path
+      if (path && !startsWithPath(path, locationPath)) continue
+
+      results.push({
+        user: state.users[session.userId] || createUnresolvedUser(session.userId),
+        sessionId,
+        documentId: location.documentId,
+        path: locationPath,
+        lastActiveAt: location.lastActiveAt,
+        ...(location.selection === undefined ? {} : {selection: location.selection}),
+      })
+    }
+  }
+  return results
+}
+
 const _getPresence = bindActionByResource(
   presenceStore,
   createStateSourceAction({
     selector: (context: SelectorContext<PresenceStoreState>): UserPresence[] =>
       selectPresence(context.state),
-    onSubscribe: (context: StoreContext<PresenceStoreState, BoundResourceKey>) => {
-      const resource = context.key.resource
-      const userIds$ = context.state.observable.pipe(
-        map((state) =>
-          Array.from(state.locations.values())
-            .map((l) => l.userId)
-            .filter((id): id is string => !!id),
-        ),
-        distinctUntilChanged((a, b) => a.length === b.length && a.every((v, i) => v === b[i])),
-      )
-
-      // For canvas resources, wait for organizationId to be fetched and stored in state.
-      // A failed lookup resolves to `undefined` rather than never emitting, so that
-      // one failed request does not leave every user permanently unresolved.
-      // For dataset resources, emit undefined immediately so the stream isn't blocked.
-      const organizationId$: Observable<string | undefined> = isCanvasResource(resource)
-        ? context.state.observable.pipe(
-            filter((s) => s.organizationId !== undefined || s.organizationIdError !== undefined),
-            first(),
-            map((s) => s.organizationId),
-          )
-        : of(undefined)
-
-      const subscription = combineLatest([userIds$, organizationId$])
-        .pipe(
-          switchMap(([userIds, organizationId]) => {
-            if (userIds.length === 0) {
-              return of([])
-            }
-            // Without an organization there is nothing to scope the lookup to,
-            // so skip the request rather than making one that cannot succeed.
-            if (!isDatasetResource(resource) && !organizationId) {
-              return of([])
-            }
-            const userObservables = userIds.map((userId) =>
-              getUserState(context.instance, {
-                userId,
-                ...(isDatasetResource(resource)
-                  ? {resourceType: 'project', projectId: resource.projectId}
-                  : {resourceType: 'organization', organizationId}),
-              }).pipe(filter((v): v is NonNullable<typeof v> => !!v)),
-            )
-            return combineLatest(userObservables)
-          }),
-        )
-        .subscribe((users) => {
-          context.state.set('presence/users', (prevState) => ({
-            ...prevState,
-            users: {
-              ...prevState.users,
-              ...users.reduce<Record<string, SanityUser>>((acc, user) => {
-                if (user) {
-                  acc[user.profile.id] = user
-                }
-                return acc
-              }, {}),
-            },
-          }))
-        })
-      return () => subscription.unsubscribe()
-    },
   }),
 )
 
@@ -469,6 +551,36 @@ export function getPresence(
   // bit of a hack to support the old bound action by dataset
   // in reality, this will always be passed a resource
   return _getPresence(instance, params ?? {})
+}
+
+const _getDocumentPresence = bindActionByResource(
+  presenceStore,
+  createStateSourceAction({
+    selector: (
+      {state}: SelectorContext<PresenceStoreState>,
+      options: {resource?: DocumentResource} & DocumentPresenceOptions,
+    ): DocumentPresence[] => selectDocumentPresence(state, options),
+  }),
+)
+
+/**
+ * Presence within a single document, flattened to one entry per participant per
+ * location so it can be rendered directly against a field.
+ *
+ * Reading presence never announces anything. Use `reportPresence` to make the
+ * current user visible to others.
+ *
+ * @param instance - the Sanity instance
+ * @param params - the document to look at, an optional `path` to narrow to a
+ *   field subtree, and `excludeVersions` to compare document ids exactly
+ *
+ * @beta
+ */
+export function getDocumentPresence(
+  instance: SanityInstance,
+  params: {resource?: DocumentResource} & DocumentPresenceOptions,
+): StateSource<DocumentPresence[]> {
+  return _getDocumentPresence(instance, params)
 }
 
 const _reportPresence = bindActionByResource(

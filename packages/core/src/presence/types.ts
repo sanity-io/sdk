@@ -91,6 +91,46 @@ export interface UserPresence {
   sessionId: string
 }
 
+/**
+ * One participant at one location within a single document, flattened so it can
+ * be rendered directly against a field.
+ *
+ * `path` is a full `Path` here, unlike {@link PresenceLocation.path}, because this
+ * type is new and can describe the keyed segments that actually arrive.
+ * @beta
+ */
+export interface DocumentPresence {
+  user: SanityUser
+  sessionId: string
+  /**
+   * The specific document id this participant is in: a draft, published, or
+   * version id, depending on which perspective they are editing.
+   */
+  documentId: string
+  /** The focused field path. Empty when they are in the document but no field. */
+  path: Path
+  lastActiveAt: string
+  /** The Portable Text caret, when they are focused in a Portable Text field. */
+  selection?: PresenceSelection
+}
+
+/** @beta */
+export interface DocumentPresenceOptions {
+  documentId: string
+  /**
+   * Narrows to participants at or below this field path. Omit it for everyone in
+   * the document.
+   */
+  path?: Path
+  /**
+   * By default a draft, its published version, and any release versions are
+   * treated as the same document, which is what document lists want. Set this to
+   * compare ids exactly, which is what field-level indicators want so that a
+   * draft and a release version do not bleed into each other.
+   */
+  excludeVersions?: boolean
+}
+
 /** @public */
 export type PresenceTransport = [
   incomingEvents$: Observable<TransportEvent>,
