@@ -16,7 +16,7 @@ import {createSanityInstance, type SanityInstance} from '../store/createSanityIn
 import {type SanityUser} from '../users/types'
 import {getUserState} from '../users/usersStore'
 import {createBifurTransport} from './bifurTransport'
-import {getPresence} from './presenceStore'
+import {getPresence, reportPresence} from './presenceStore'
 import {type PresenceLocation, type TransportEvent, type TransportMessage} from './types'
 
 vi.mock('../auth/authStore')
@@ -470,6 +470,26 @@ describe('presenceStore', () => {
       unsubscribe()
     })
 
+    it('still announces a disconnect if an earlier one failed', async () => {
+      const source = getPresence(instance)
+      const unsubscribe = source.subscribe(() => {})
+
+      await firstValueFrom(of(null).pipe(delay(10)))
+      mockDispatchMessage.mockClear()
+
+      // `pagehide` can fire more than once: a page restored from the back/forward
+      // cache will fire it again. A failure on the first must not kill the stream.
+      mockDispatchMessage.mockReturnValueOnce(throwError(() => new Error('socket closed')))
+      mockUnload.next()
+      mockUnload.next()
+
+      expect(mockDispatchMessage.mock.calls.filter(([m]) => m.type === 'disconnect')).toHaveLength(
+        2,
+      )
+
+      unsubscribe()
+    })
+
     it('announces a disconnect when the page unloads', async () => {
       const source = getPresence(instance)
       const unsubscribe = source.subscribe(() => {})
@@ -543,6 +563,282 @@ describe('presenceStore', () => {
         expect(source.getCurrent()).toHaveLength(1)
 
         unsubscribe()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+  })
+
+  describe('reportPresence', () => {
+    /** Drains the audit window so a pending announcement is flushed. */
+    const flush = () => vi.advanceTimersByTimeAsync(250)
+
+    const stateCalls = () =>
+      mockDispatchMessage.mock.calls
+        .map(([message]) => message)
+        .filter(
+          (message): message is Extract<TransportMessage, {type: 'state'}> =>
+            message.type === 'state',
+        )
+
+    it('stays silent until the app reports, so reading never broadcasts', async () => {
+      vi.useFakeTimers()
+      try {
+        getPresence(instance)
+        await flush()
+        await vi.advanceTimersByTimeAsync(60_000)
+
+        // A rollCall goes out on connect, but never a state announcement.
+        expect(mockDispatchMessage).toHaveBeenCalledWith({type: 'rollCall'})
+        expect(stateCalls()).toEqual([])
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('announces a document-level location', async () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-07-30T12:00:00.000Z'))
+      try {
+        getPresence(instance)
+        reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
+        await flush()
+
+        expect(stateCalls()).toEqual([
+          {
+            type: 'state',
+            locations: [
+              {
+                type: 'document',
+                documentId: 'doc-1',
+                path: [],
+                lastActiveAt: '2026-07-30T12:00:00.000Z',
+              },
+            ],
+          },
+        ])
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('carries keyed path segments and a Portable Text selection', async () => {
+      vi.useFakeTimers()
+      try {
+        getPresence(instance)
+        // The shape the Studio expects: keyed segments for array items and spans.
+        reportPresence(instance, {
+          locations: [
+            {
+              documentId: 'doc-1',
+              path: ['body', {_key: 'block-1'}, 'children', {_key: 'span-1'}, 'text'],
+              selection: {
+                anchor: {path: [{_key: 'block-1'}, 'children', {_key: 'span-1'}], offset: 3},
+                focus: {path: [{_key: 'block-1'}, 'children', {_key: 'span-1'}], offset: 7},
+                backward: false,
+              },
+            },
+          ],
+        })
+        await flush()
+
+        const [announced] = stateCalls()
+        expect(announced.locations[0].path).toEqual([
+          'body',
+          {_key: 'block-1'},
+          'children',
+          {_key: 'span-1'},
+          'text',
+        ])
+        expect(announced.locations[0].selection).toEqual({
+          anchor: {path: [{_key: 'block-1'}, 'children', {_key: 'span-1'}], offset: 3},
+          focus: {path: [{_key: 'block-1'}, 'children', {_key: 'span-1'}], offset: 7},
+          backward: false,
+        })
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('omits selection entirely when none was reported', async () => {
+      vi.useFakeTimers()
+      try {
+        getPresence(instance)
+        reportPresence(instance, {locations: [{documentId: 'doc-1', path: ['title']}]})
+        await flush()
+
+        expect('selection' in stateCalls()[0].locations[0]).toBe(false)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('announces an empty location list as present but nowhere', async () => {
+      vi.useFakeTimers()
+      try {
+        getPresence(instance)
+        reportPresence(instance, {locations: []})
+        await flush()
+
+        expect(stateCalls()).toEqual([{type: 'state', locations: []}])
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('collapses reports spread across the audit window into one announcement', async () => {
+      vi.useFakeTimers()
+      try {
+        getPresence(instance)
+
+        // Deliberately spaced out. Reports made in the same tick are collapsed by
+        // `switchMap` alone, so stepping the clock between them is what actually
+        // exercises the audit window - which is the case that matters, since a
+        // user typing produces focus changes tens of milliseconds apart.
+        reportPresence(instance, {locations: [{documentId: 'doc-1', path: ['a']}]})
+        await vi.advanceTimersByTimeAsync(50)
+        reportPresence(instance, {locations: [{documentId: 'doc-1', path: ['b']}]})
+        await vi.advanceTimersByTimeAsync(50)
+        reportPresence(instance, {locations: [{documentId: 'doc-1', path: ['c']}]})
+        await flush()
+
+        const announced = stateCalls()
+        expect(announced).toHaveLength(1)
+        expect(announced[0].locations[0].path).toEqual(['c'])
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('does not re-announce when only lastActiveAt would differ', async () => {
+      vi.useFakeTimers()
+      try {
+        getPresence(instance)
+        reportPresence(instance, {locations: [{documentId: 'doc-1', path: ['title']}]})
+        await flush()
+        expect(stateCalls()).toHaveLength(1)
+
+        // Same place, reported again. `lastActiveAt` is regenerated, but nothing
+        // moved, so this must not restart the heartbeat.
+        await vi.advanceTimersByTimeAsync(5_000)
+        reportPresence(instance, {locations: [{documentId: 'doc-1', path: ['title']}]})
+        await flush()
+
+        expect(stateCalls()).toHaveLength(1)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('re-announces every 30s while idle, so peers do not expire it', async () => {
+      vi.useFakeTimers()
+      try {
+        getPresence(instance)
+        reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
+        await flush()
+        expect(stateCalls()).toHaveLength(1)
+
+        await vi.advanceTimersByTimeAsync(30_000)
+        expect(stateCalls()).toHaveLength(2)
+
+        await vi.advanceTimersByTimeAsync(30_000)
+        expect(stateCalls()).toHaveLength(3)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it("answers another client's roll call", async () => {
+      vi.useFakeTimers()
+      try {
+        getPresence(instance)
+        reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
+        await flush()
+        expect(stateCalls()).toHaveLength(1)
+
+        mockIncomingEvents.next({
+          type: 'rollCall',
+          userId: 'user-2',
+          sessionId: 'their-session',
+        })
+        await flush()
+
+        expect(stateCalls()).toHaveLength(2)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('ignores the echo of its own roll call', async () => {
+      vi.useFakeTimers()
+      try {
+        getPresence(instance)
+        reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
+        await flush()
+        expect(stateCalls()).toHaveLength(1)
+
+        // Bifur publishes to the topic we are subscribed to, so our own roll call
+        // comes straight back. Answering it would be a pointless round trip.
+        mockIncomingEvents.next({
+          type: 'rollCall',
+          userId: 'user-1',
+          sessionId: 'test-session-id',
+        })
+        await flush()
+
+        expect(stateCalls()).toHaveLength(1)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('keeps announcing after a failed announcement', async () => {
+      vi.useFakeTimers()
+      try {
+        getPresence(instance)
+        reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
+        await flush()
+        expect(stateCalls()).toHaveLength(1)
+
+        // A dropped socket errors the in-flight request. If that error reaches the
+        // announce stream it kills every trigger at once, because the heartbeat,
+        // roll-call responses, and reconnect re-announce all share this chain.
+        mockDispatchMessage.mockReturnValueOnce(throwError(() => new Error('socket closed')))
+        await vi.advanceTimersByTimeAsync(30_000)
+        expect(stateCalls()).toHaveLength(2)
+
+        // The heartbeat must survive the failure.
+        await vi.advanceTimersByTimeAsync(30_000)
+        expect(stateCalls()).toHaveLength(3)
+
+        // So must roll-call responses.
+        mockIncomingEvents.next({type: 'rollCall', userId: 'user-2', sessionId: 'their-session'})
+        await flush()
+        expect(stateCalls()).toHaveLength(4)
+
+        // And so must the re-announce on reconnect, which is the path that matters
+        // most: the failure and the reconnect have the same root cause.
+        mockConnections.next(2)
+        await flush()
+        expect(stateCalls()).toHaveLength(5)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('re-announces after a reconnect', async () => {
+      vi.useFakeTimers()
+      try {
+        getPresence(instance)
+        reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
+        await flush()
+        expect(stateCalls()).toHaveLength(1)
+
+        mockConnections.next(2)
+        await flush()
+
+        // Peers cleared their view of us when we dropped, so we have to speak up.
+        expect(stateCalls()).toHaveLength(2)
       } finally {
         vi.useRealTimers()
       }
