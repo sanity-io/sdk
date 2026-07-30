@@ -6,5 +6,14 @@
     "deadCodeBaseline": "fallow-baselines/dead-code.json",
     "healthBaseline": "fallow-baselines/health.json",
     "dupesBaseline": "fallow-baselines/dupes.json"
+  },
+  "health": {
+    "thresholdOverrides": [
+      {
+        "files": ["apps/**"],
+        "maxCrap": 110,
+        "reason": "The example apps ship no tests, so fallow estimates 0% coverage and CRAP collapses to cc + cc^2. The default ceiling of 30 would cap these apps at cyclomatic 5, stricter than the packages. 110 caps them at cyclomatic 10; cognitive and cyclomatic still gate normally."
+      }
+    ]
   }
 }
