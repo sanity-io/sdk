@@ -4,6 +4,8 @@ import {
   PortableTextEditable,
   type RenderAnnotationFunction,
   type RenderDecoratorFunction,
+  type RenderListItemFunction,
+  type RenderStyleFunction,
   useEditor,
   useEditorSelector,
 } from '@portabletext/editor'
@@ -26,13 +28,31 @@ import {isE2E} from '../sanityConfigs'
 const PTE_FIELD_PATH = 'minimalBlock'
 
 const schemaDefinition = defineSchema({
-  decorators: [{name: 'strong'}, {name: 'em'}],
+  styles: [{name: 'normal'}, {name: 'h1'}, {name: 'h2'}, {name: 'blockquote'}],
+  lists: [{name: 'bullet'}, {name: 'number'}],
+  decorators: [{name: 'strong'}, {name: 'em'}, {name: 'underline'}, {name: 'code'}],
   annotations: [{name: 'link', fields: [{name: 'href', type: 'string'}]}],
 })
 
 const renderDecorator: RenderDecoratorFunction = (props) => {
   if (props.value === 'strong') return <strong>{props.children}</strong>
   if (props.value === 'em') return <em>{props.children}</em>
+  if (props.value === 'underline') return <u>{props.children}</u>
+  if (props.value === 'code') {
+    return (
+      <code
+        style={{
+          background: 'var(--card-code-bg-color)',
+          borderRadius: 3,
+          fontFamily: 'monospace',
+          fontSize: '0.95em',
+          padding: '0.08em 0.25em',
+        }}
+      >
+        {props.children}
+      </code>
+    )
+  }
   return <>{props.children}</>
 }
 
@@ -41,6 +61,31 @@ const renderAnnotation: RenderAnnotationFunction = (props) => {
     return <span style={{textDecoration: 'underline', color: 'blue'}}>{props.children}</span>
   }
   return <>{props.children}</>
+}
+
+const renderStyle: RenderStyleFunction = (props) => {
+  if (props.value === 'h1') {
+    return <h1 style={{margin: 0, fontSize: '1.5rem'}}>{props.children}</h1>
+  }
+
+  if (props.value === 'h2') {
+    return <h2 style={{margin: 0, fontSize: '1.25rem'}}>{props.children}</h2>
+  }
+
+  if (props.value === 'blockquote') {
+    return (
+      <blockquote style={{borderLeft: '3px solid #6e7683', margin: 0, paddingLeft: '0.75rem'}}>
+        {props.children}
+      </blockquote>
+    )
+  }
+
+  return <>{props.children}</>
+}
+
+const renderListItem: RenderListItemFunction = (props) => {
+  const listStyleType = props.value === 'number' ? 'decimal' : 'disc'
+  return <li style={{listStyleType, margin: 0}}>{props.children}</li>
 }
 
 function ToolbarButton(props: {
@@ -56,6 +101,7 @@ function ToolbarButton(props: {
       text={props.label}
       fontSize={1}
       padding={2}
+      onMouseDown={(event) => event.preventDefault()}
       onClick={props.onClick}
       data-testid={props.testId}
     />
@@ -66,10 +112,41 @@ function Toolbar({testId}: {testId: string}) {
   const editor = useEditor()
   const strongActive = useEditorSelector(editor, selectors.isActiveDecorator('strong'))
   const emActive = useEditorSelector(editor, selectors.isActiveDecorator('em'))
+  const underlineActive = useEditorSelector(editor, selectors.isActiveDecorator('underline'))
+  const codeActive = useEditorSelector(editor, selectors.isActiveDecorator('code'))
+  const h1Active = useEditorSelector(editor, selectors.isActiveStyle('h1'))
+  const h2Active = useEditorSelector(editor, selectors.isActiveStyle('h2'))
+  const blockquoteActive = useEditorSelector(editor, selectors.isActiveStyle('blockquote'))
+  const bulletActive = useEditorSelector(editor, selectors.isActiveListItem('bullet'))
+  const numberActive = useEditorSelector(editor, selectors.isActiveListItem('number'))
   const linkActive = useEditorSelector(editor, selectors.isActiveAnnotation('link'))
 
   const toggleDecorator = (decorator: string) => {
     editor.send({type: 'decorator.toggle', decorator})
+    editor.send({type: 'focus'})
+  }
+
+  const toggleStyle = (style: string, active: boolean) => {
+    if (active) {
+      editor.send({type: 'style.remove', style})
+    } else {
+      editor.send({type: 'style.add', style})
+    }
+    editor.send({type: 'focus'})
+  }
+
+  const toggleList = (listItem: string) => {
+    editor.send({type: 'list item.toggle', listItem})
+    editor.send({type: 'focus'})
+  }
+
+  const undo = () => {
+    editor.send({type: 'history.undo'})
+    editor.send({type: 'focus'})
+  }
+
+  const redo = () => {
+    editor.send({type: 'history.redo'})
     editor.send({type: 'focus'})
   }
 
@@ -86,18 +163,60 @@ function Toolbar({testId}: {testId: string}) {
   }
 
   return (
-    <Flex gap={1}>
+    <Flex gap={1} style={{flexWrap: 'wrap'}}>
       <ToolbarButton
         active={strongActive}
-        label="Bold"
+        label="B"
         onClick={() => toggleDecorator('strong')}
         testId={`pte-bold-${testId}`}
       />
       <ToolbarButton
         active={emActive}
-        label="Italic"
+        label="I"
         onClick={() => toggleDecorator('em')}
         testId={`pte-italic-${testId}`}
+      />
+      <ToolbarButton
+        active={underlineActive}
+        label="U"
+        onClick={() => toggleDecorator('underline')}
+        testId={`pte-underline-${testId}`}
+      />
+      <ToolbarButton
+        active={codeActive}
+        label="Code"
+        onClick={() => toggleDecorator('code')}
+        testId={`pte-code-${testId}`}
+      />
+      <ToolbarButton
+        active={h1Active}
+        label="H1"
+        onClick={() => toggleStyle('h1', h1Active)}
+        testId={`pte-h1-${testId}`}
+      />
+      <ToolbarButton
+        active={h2Active}
+        label="H2"
+        onClick={() => toggleStyle('h2', h2Active)}
+        testId={`pte-h2-${testId}`}
+      />
+      <ToolbarButton
+        active={blockquoteActive}
+        label="Quote"
+        onClick={() => toggleStyle('blockquote', blockquoteActive)}
+        testId={`pte-quote-${testId}`}
+      />
+      <ToolbarButton
+        active={bulletActive}
+        label="UL"
+        onClick={() => toggleList('bullet')}
+        testId={`pte-ul-${testId}`}
+      />
+      <ToolbarButton
+        active={numberActive}
+        label="OL"
+        onClick={() => toggleList('number')}
+        testId={`pte-ol-${testId}`}
       />
       <ToolbarButton
         active={linkActive}
@@ -105,6 +224,8 @@ function Toolbar({testId}: {testId: string}) {
         onClick={toggleLink}
         testId={`pte-link-${testId}`}
       />
+      <ToolbarButton active={false} label="Undo" onClick={undo} testId={`pte-undo-${testId}`} />
+      <ToolbarButton active={false} label="Redo" onClick={redo} testId={`pte-redo-${testId}`} />
     </Flex>
   )
 }
@@ -149,6 +270,8 @@ function EditorPane({
               style={{minHeight: 120, outline: 'none'}}
               renderDecorator={renderDecorator}
               renderAnnotation={renderAnnotation}
+              renderListItem={renderListItem}
+              renderStyle={renderStyle}
               data-testid={`pte-editable-${testId}`}
             />
           </Card>
@@ -225,8 +348,9 @@ function ConcurrentEditors() {
             <Text size={1} muted>
               Both panes edit the <code>{PTE_FIELD_PATH}</code> field of the same author document,
               but the right pane runs on its own SanityInstance, so edits sync through the server
-              like two separate users. Type in both panes at once and toggle bold/italic/link
-              mid-typing: edits should interleave without overwriting each other.
+              like two separate users. Type in both panes at once and toggle toolbar formatting
+              (decorators, styles, lists, link, undo, redo) mid-typing: edits should interleave
+              without overwriting each other.
             </Text>
             <Flex gap={3} align="flex-end">
               <Box flex={1}>
