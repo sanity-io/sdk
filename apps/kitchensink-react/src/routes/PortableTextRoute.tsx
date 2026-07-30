@@ -21,7 +21,15 @@ import {
   useResource,
 } from '@sanity/sdk-react'
 import {Badge, Box, Button, Card, Flex, Spinner, Stack, Text, TextInput} from '@sanity/ui'
-import {type JSX, type ReactNode, Suspense, useEffect, useMemo, useState} from 'react'
+import {
+  type ElementType,
+  type JSX,
+  type ReactNode,
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 
 import {isE2E} from '../sanityConfigs'
 
@@ -34,10 +42,15 @@ const schemaDefinition = defineSchema({
   annotations: [{name: 'link', fields: [{name: 'href', type: 'string'}]}],
 })
 
+const simpleDecoratorTags: Record<string, ElementType> = {
+  strong: 'strong',
+  em: 'em',
+  underline: 'u',
+}
+
 const renderDecorator: RenderDecoratorFunction = (props) => {
-  if (props.value === 'strong') return <strong>{props.children}</strong>
-  if (props.value === 'em') return <em>{props.children}</em>
-  if (props.value === 'underline') return <u>{props.children}</u>
+  const Tag = simpleDecoratorTags[props.value]
+  if (Tag) return <Tag>{props.children}</Tag>
   if (props.value === 'code') {
     return (
       <code
