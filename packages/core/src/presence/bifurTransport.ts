@@ -1,7 +1,7 @@
 import {type BifurClient, fromUrl} from '@sanity/bifur-client'
 import {type SanityClient} from '@sanity/client'
-import {EMPTY, fromEvent, type Observable} from 'rxjs'
-import {map, share, switchMap} from 'rxjs/operators'
+import {defer, EMPTY, fromEvent, merge, type Observable, timer} from 'rxjs'
+import {distinctUntilChanged, map, retry, share} from 'rxjs/operators'
 
 import {
   type BifurTransportOptions,
@@ -10,6 +10,12 @@ import {
   type TransportEvent,
   type TransportMessage,
 } from './types'
+
+/**
+ * Longest gap between reconnection attempts, matching the Studio's presence
+ * transport so both behave the same way on a flaky connection.
+ */
+const CONNECT_RETRY_MAX_DELAY = 1000 * 240
 
 type BifurStateMessage = {
   type: 'state'
@@ -91,13 +97,55 @@ const handleIncomingMessage = (event: IncomingBifurEvent): TransportEvent => {
   }
 }
 
+/**
+ * Emits an incrementing generation number each time the socket becomes live.
+ *
+ * `@sanity/bifur-client` does not reconnect on its own — it errors the stream
+ * when the socket closes. Without the `retry` below, presence stops for the
+ * life of the page after the first dropped connection.
+ */
+const createConnections = (bifur: BifurClient): Observable<number> => {
+  let generation = 0
+
+  return defer(() => {
+    const current = ++generation
+    // `heartbeats` emits as soon as the socket is open and authorized, then on
+    // every server heartbeat and every response. Subscribing to it is also what
+    // keeps the socket alive between requests.
+    return bifur.heartbeats.pipe(map(() => current))
+  }).pipe(
+    retry({
+      delay: (_error, retryCount) =>
+        timer(Math.min(CONNECT_RETRY_MAX_DELAY, 2 ** retryCount * 100)),
+      resetOnSuccess: true,
+    }),
+    // After `retry` so that one operator instance spans reconnects, making each
+    // live socket yield exactly one emission.
+    distinctUntilChanged(),
+    share(),
+  )
+}
+
+/**
+ * Emits when the page is going away. `pagehide` is needed alongside
+ * `beforeunload` because iOS Safari and pages entering the back/forward cache
+ * never fire `beforeunload`.
+ */
+const createUnload = (): Observable<void> => {
+  if (typeof window === 'undefined') return EMPTY
+
+  return merge(fromEvent(window, 'beforeunload'), fromEvent(window, 'pagehide')).pipe(
+    map(() => undefined),
+  )
+}
+
 export const createBifurTransport = (options: BifurTransportOptions): PresenceTransport => {
   const {client, token$, sessionId} = options
   const bifur = getBifurClient(client, token$)
 
-  const incomingEvents$: Observable<TransportEvent> = bifur
+  const incomingEvents$ = bifur
     .listen<IncomingBifurEvent>('presence')
-    .pipe(map(handleIncomingMessage))
+    .pipe(map(handleIncomingMessage), share())
 
   const dispatchMessage = (message: TransportMessage): Observable<void> => {
     switch (message.type) {
@@ -115,11 +163,5 @@ export const createBifurTransport = (options: BifurTransportOptions): PresenceTr
     }
   }
 
-  if (typeof window !== 'undefined') {
-    fromEvent(window, 'beforeunload')
-      .pipe(switchMap(() => dispatchMessage({type: 'disconnect'})))
-      .subscribe()
-  }
-
-  return [incomingEvents$.pipe(share()), dispatchMessage]
+  return [incomingEvents$, dispatchMessage, createConnections(bifur), createUnload()]
 }

@@ -22,6 +22,13 @@ export interface UserPresence {
 export type PresenceTransport = [
   incomingEvents$: Observable<TransportEvent>,
   dispatchMessage: (message: TransportMessage) => Observable<void>,
+  /**
+   * Emits an incrementing generation number each time the connection becomes
+   * live. Reconnects with backoff, and subscribing keeps the connection alive.
+   */
+  connections$: Observable<number>,
+  /** Emits when the page is going away, so a disconnect can be announced. */
+  unload$: Observable<void>,
 ]
 
 /** @public */
