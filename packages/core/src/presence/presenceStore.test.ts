@@ -826,6 +826,31 @@ describe('presenceStore', () => {
       }
     })
 
+    it('keeps announcing when a trigger source fails', async () => {
+      vi.useFakeTimers()
+      try {
+        getPresence(instance)
+        reportPresence(instance, {locations: [{documentId: 'doc-1'}]})
+        await flush()
+        expect(stateCalls()).toHaveLength(1)
+
+        // The three announce triggers are combined with `merge`, which propagates
+        // an error from any one of them. The inbound stream feeds the roll-call
+        // trigger, so a failure there would otherwise take the heartbeat and the
+        // reconnect re-announce down with it.
+        mockIncomingEvents.error(new Error('inbound stream failed'))
+
+        await vi.advanceTimersByTimeAsync(30_000)
+        expect(stateCalls()).toHaveLength(2)
+
+        mockConnections.next(2)
+        await flush()
+        expect(stateCalls()).toHaveLength(3)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
     it('re-announces after a reconnect', async () => {
       vi.useFakeTimers()
       try {

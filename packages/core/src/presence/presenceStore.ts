@@ -136,6 +136,24 @@ const sendSafely = (
     }),
   )
 
+/**
+ * Reduces a stream to a bare trigger that cannot fail.
+ *
+ * The announce pipeline combines three inputs with `merge`, which propagates an
+ * error from any one of them. Since that one pipeline carries the idle heartbeat,
+ * roll-call responses, and the re-announce on reconnect, a single failing input
+ * would silence this client for good. Losing one trigger is survivable; losing
+ * all three is not.
+ */
+const asTrigger = (source$: Observable<unknown>, name: string): Observable<void> =>
+  source$.pipe(
+    map(() => undefined),
+    catchError((error: unknown) => {
+      logger.error('Presence announce trigger failed', {trigger: name, error})
+      return EMPTY
+    }),
+  )
+
 /** Ignores `lastActiveAt`, which changes on every report even when nothing moved. */
 const locationKey = ({documentId, path, selection}: WirePresenceLocation) =>
   JSON.stringify([documentId, path, selection ?? null])
@@ -298,7 +316,11 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
     )
 
     subscription.add(
-      merge(localLocations$, rollCallRequests$, connections$)
+      merge(
+        asTrigger(localLocations$, 'locationChange'),
+        asTrigger(rollCallRequests$, 'rollCall'),
+        asTrigger(connections$, 'connection'),
+      )
         .pipe(
           switchMap(() => timer(0, REPORT_MIN_INTERVAL)),
           withLatestFrom(localLocations$),
