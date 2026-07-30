@@ -632,6 +632,60 @@ describe('revertOutgoingTransaction', () => {
     const docState = newState.documentStates[draftId]
     expect(docState?.unverifiedRevisions && docState.unverifiedRevisions['txnOut']).toBeUndefined()
   })
+
+  it('unregisters the reverted batch subscription ids, making documents with no other subscribers evictable', () => {
+    const draftId = getDraftId(DocumentId('doc1'))
+    const pubId = getPublishedId(DocumentId('doc1'))
+    const state: SyncTransactionState = {
+      queued: [],
+      applied: [],
+      outgoing: {
+        transactionId: 'txnRevert',
+        actions: [
+          {
+            type: 'document.edit',
+            documentId: 'doc1',
+            documentType: 'book',
+            patches: [{set: {foo: 'changed'}}],
+          },
+        ],
+        disableBatching: false,
+        batchedTransactionIds: ['txnRevert'],
+        outgoingActions: [],
+        outgoingMutations: [],
+        base: {},
+        working: {},
+        previous: {},
+        previousRevs: {},
+        timestamp: '2025-02-06T00:04:30.000Z',
+      },
+      grants,
+      documentStates: {
+        // only subscriber is the reverted transaction itself
+        [draftId]: {
+          id: draftId,
+          subscriptions: ['txnRevert'],
+          local: {...exampleDoc, _id: draftId, foo: 'changed', _rev: 'rev2'},
+          remote: {...exampleDoc, _id: draftId, foo: 'old', _rev: 'rev1'},
+        },
+        // also has a UI subscriber, so it should survive with only the
+        // transaction subscription removed
+        [pubId]: {
+          id: pubId,
+          subscriptions: ['txnRevert', 'sub-ui'],
+          local: {...exampleDoc, _id: pubId, foo: 'pub', _rev: 'revPub'},
+          remote: {...exampleDoc, _id: pubId, foo: 'pub', _rev: 'revPub'},
+        },
+      },
+    }
+    const newState = revertOutgoingTransaction(state)
+    expect(newState.outgoing).toBeUndefined()
+    // no subscribers remain, so the document state is evicted entirely
+    expect(newState.documentStates[draftId]).toBeUndefined()
+    // the UI subscription keeps the other document alive, but the reverted
+    // transaction id is gone from its subscriptions
+    expect(newState.documentStates[pubId]?.subscriptions).toEqual(['sub-ui'])
+  })
 })
 
 describe('applyRemoteDocument', () => {
