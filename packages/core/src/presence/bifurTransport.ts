@@ -1,7 +1,7 @@
 import {type BifurClient, fromUrl} from '@sanity/bifur-client'
 import {type SanityClient} from '@sanity/client'
 import {defer, EMPTY, fromEvent, merge, type Observable, timer} from 'rxjs'
-import {distinctUntilChanged, map, retry, share} from 'rxjs/operators'
+import {catchError, distinctUntilChanged, map, retry, share, switchMap} from 'rxjs/operators'
 
 import {
   type BifurTransportOptions,
@@ -127,6 +127,32 @@ const createConnections = (bifur: BifurClient): Observable<number> => {
 }
 
 /**
+ * Presence events from everyone else in the room, re-established on every live
+ * connection.
+ *
+ * A socket close errors this stream just as it errors the heartbeats, so without
+ * re-subscribing the client would keep announcing itself after a reconnect while
+ * never hearing from anyone again. Driving it from `connections$` rather than
+ * giving it its own `retry` keeps a single reconnect loop, instead of two
+ * independent backoffs racing over one refcounted socket.
+ */
+const createIncomingEvents = (
+  bifur: BifurClient,
+  connections$: Observable<number>,
+): Observable<TransportEvent> =>
+  connections$.pipe(
+    switchMap(() =>
+      bifur.listen<IncomingBifurEvent>('presence').pipe(
+        // Let a dead listener go quietly. The next connection replaces it, and
+        // surfacing the error here would tear down the reconnect loop with it.
+        catchError(() => EMPTY),
+      ),
+    ),
+    map(handleIncomingMessage),
+    share(),
+  )
+
+/**
  * Emits when the page is going away. `pagehide` is needed alongside
  * `beforeunload` because iOS Safari and pages entering the back/forward cache
  * never fire `beforeunload`.
@@ -143,9 +169,8 @@ export const createBifurTransport = (options: BifurTransportOptions): PresenceTr
   const {client, token$, sessionId} = options
   const bifur = getBifurClient(client, token$)
 
-  const incomingEvents$ = bifur
-    .listen<IncomingBifurEvent>('presence')
-    .pipe(map(handleIncomingMessage), share())
+  const connections$ = createConnections(bifur)
+  const incomingEvents$ = createIncomingEvents(bifur, connections$)
 
   const dispatchMessage = (message: TransportMessage): Observable<void> => {
     switch (message.type) {
@@ -163,5 +188,5 @@ export const createBifurTransport = (options: BifurTransportOptions): PresenceTr
     }
   }
 
-  return [incomingEvents$, dispatchMessage, createConnections(bifur), createUnload()]
+  return [incomingEvents$, dispatchMessage, connections$, createUnload()]
 }

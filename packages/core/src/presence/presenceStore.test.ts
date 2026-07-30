@@ -452,6 +452,21 @@ describe('presenceStore', () => {
       expect(source.getCurrent()).toHaveLength(0)
       expect(mockDispatchMessage).toHaveBeenNthCalledWith(2, {type: 'rollCall'})
 
+      // Wiping the map is only safe because peers answer that roll call and
+      // repopulate it. If the inbound listener did not survive the reconnect,
+      // this would stay empty for the life of the page.
+      mockIncomingEvents.next({
+        type: 'state',
+        userId: 'user-2',
+        sessionId: 'a-peer-answering',
+        timestamp: '2023-01-01T12:00:05Z',
+        locations: [],
+      })
+
+      await firstValueFrom(of(null).pipe(delay(20)))
+      expect(source.getCurrent()).toHaveLength(1)
+      expect(source.getCurrent()[0].sessionId).toBe('a-peer-answering')
+
       unsubscribe()
     })
 

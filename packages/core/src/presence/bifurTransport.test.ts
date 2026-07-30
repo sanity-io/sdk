@@ -134,6 +134,8 @@ describe('createBifurTransport', () => {
 
     const receivedEvents: TransportEvent[] = []
     incomingEvents$.subscribe((event) => receivedEvents.push(event))
+    // The listener is established per live connection, so bring one up first.
+    heartbeats$.next(new Date())
 
     incomingBifurEvents$.next({
       type: 'rollCall',
@@ -165,6 +167,8 @@ describe('createBifurTransport', () => {
 
     const receivedEvents: TransportEvent[] = []
     incomingEvents$.subscribe((event) => receivedEvents.push(event))
+    // The listener is established per live connection, so bring one up first.
+    heartbeats$.next(new Date())
 
     const locations: PresenceLocation[] = [
       {type: 'document', documentId: 'doc1', path: ['a'], lastActiveAt: new Date().toISOString()},
@@ -204,6 +208,8 @@ describe('createBifurTransport', () => {
 
     const receivedEvents: TransportEvent[] = []
     incomingEvents$.subscribe((event) => receivedEvents.push(event))
+    // The listener is established per live connection, so bring one up first.
+    heartbeats$.next(new Date())
 
     incomingBifurEvents$.next({
       type: 'disconnect',
@@ -237,6 +243,7 @@ describe('createBifurTransport', () => {
     incomingEvents$.subscribe({
       error: (err) => errors.push(err),
     })
+    heartbeats$.next(new Date())
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     incomingBifurEvents$.next({type: 'unknown'} as any)
@@ -293,6 +300,48 @@ describe('createBifurTransport', () => {
       vi.advanceTimersByTime(199)
       reconnected$.next(new Date())
       expect(generations).toEqual([1])
+    })
+  })
+
+  describe('incoming events across a reconnect', () => {
+    it('keeps delivering presence after the socket drops', () => {
+      // bifur errors every stream on the same socket close, the inbound listener
+      // included. If only the heartbeat stream recovers, this client re-announces
+      // itself to peers while permanently ceasing to see any of them.
+      const firstListen$ = new Subject<IncomingBifurEvent>()
+      const secondListen$ = new Subject<IncomingBifurEvent>()
+      mockBifurClient.listen.mockReturnValueOnce(firstListen$).mockReturnValueOnce(secondListen$)
+
+      const [incomingEvents$, , connections$] = createBifurTransport({
+        client: mockSanityClient,
+        token$,
+        sessionId: 'my-session',
+      })
+
+      const received: TransportEvent[] = []
+      incomingEvents$.subscribe({
+        next: (event) => received.push(event),
+        error: () => received.push({type: 'rollCall', userId: 'STREAM_DIED', sessionId: ''}),
+      })
+      connections$.subscribe()
+
+      heartbeats$.next(new Date())
+      firstListen$.next({type: 'rollCall', i: 'user-1', session: 'before'})
+      expect(received.map((e) => e.sessionId)).toEqual(['before'])
+
+      // Socket closes: both streams error.
+      const reconnectedHeartbeats$ = new Subject<Date>()
+      mockBifurClient.heartbeats = reconnectedHeartbeats$.asObservable()
+      firstListen$.error(new Error('WebSocket connection error'))
+      heartbeats$.error(new Error('WebSocket connection error'))
+
+      vi.advanceTimersByTime(200)
+      reconnectedHeartbeats$.next(new Date())
+
+      // Peers answer the roll call we send on reconnect. We have to be listening.
+      secondListen$.next({type: 'rollCall', i: 'user-1', session: 'after'})
+
+      expect(received.map((e) => e.sessionId)).toEqual(['before', 'after'])
     })
   })
 

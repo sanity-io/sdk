@@ -30,8 +30,11 @@ import {
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {type SanityUser} from '../users/types'
 import {getUserState} from '../users/usersStore'
+import {createLogger} from '../utils/logger'
 import {createBifurTransport} from './bifurTransport'
 import {type PresenceLocation, type TransportEvent, type UserPresence} from './types'
+
+const logger = createLogger('presence')
 
 const PRESENCE_API_VERSION = '2026-03-30'
 
@@ -121,33 +124,44 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
 
     const subscription = new Subscription()
 
+    // Subscribed before the roll call below, deliberately. The transport
+    // establishes its listener when this stream is subscribed, and a roll call
+    // sent before we are listening would have its answers arrive to no one.
     subscription.add(
-      incomingEvents$.subscribe((event: TransportEvent) => {
-        if ('sessionId' in event && event.sessionId === sessionId) {
-          return
-        }
+      incomingEvents$.subscribe({
+        next: (event: TransportEvent) => {
+          if ('sessionId' in event && event.sessionId === sessionId) {
+            return
+          }
 
-        if (event.type === 'state') {
-          state.set('presence/state', (prevState: PresenceStoreState) => {
-            const newLocations = new Map(prevState.locations)
-            newLocations.set(event.sessionId, {
-              userId: event.userId,
-              locations: event.locations,
-              lastSeenAt: Date.now(),
+          if (event.type === 'state') {
+            state.set('presence/state', (prevState: PresenceStoreState) => {
+              const newLocations = new Map(prevState.locations)
+              newLocations.set(event.sessionId, {
+                userId: event.userId,
+                locations: event.locations,
+                lastSeenAt: Date.now(),
+              })
+
+              return {
+                ...prevState,
+                locations: newLocations,
+              }
             })
-
-            return {
-              ...prevState,
-              locations: newLocations,
-            }
-          })
-        } else if (event.type === 'disconnect') {
-          state.set('presence/disconnect', (prevState: PresenceStoreState) => {
-            const newLocations = new Map(prevState.locations)
-            newLocations.delete(event.sessionId)
-            return {...prevState, locations: newLocations}
-          })
-        }
+          } else if (event.type === 'disconnect') {
+            state.set('presence/disconnect', (prevState: PresenceStoreState) => {
+              const newLocations = new Map(prevState.locations)
+              newLocations.delete(event.sessionId)
+              return {...prevState, locations: newLocations}
+            })
+          }
+        },
+        // The transport re-establishes its listener on every live connection, so
+        // this should not fire. Handled rather than left to become an unhandled
+        // error, which is how presence used to die silently and for good.
+        error: (error: unknown) => {
+          logger.error('Presence event stream failed', {error})
+        },
       }),
     )
 
@@ -166,6 +180,12 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
 
     // Restarted per connection so a long reconnect backoff does not expire
     // everyone while we are offline — reconnecting clears the map anyway.
+    //
+    // Uses an rxjs timer rather than `setCleanupTimeout`, despite the guidance in
+    // core-package-conventions, because this is a recurring sweep and not a
+    // cleanup timer. Unref'ing it would not help anyway: a live presence
+    // subscription holds an open WebSocket, and that is what keeps a Node process
+    // alive. Anything running server-side should not subscribe to presence at all.
     subscription.add(
       connections$.pipe(switchMap(() => timer(SWEEP_INTERVAL, SWEEP_INTERVAL))).subscribe(() => {
         state.set('presence/expire', (prevState) => {
