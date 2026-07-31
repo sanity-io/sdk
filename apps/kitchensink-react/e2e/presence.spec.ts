@@ -41,11 +41,15 @@ function tracePresenceSocket(page: Page, label: string): void {
     })
   })
 
+  // The dashboard emits a steady stream of font, Sentry, and CORS errors of its own,
+  // which drown anything useful. Kept out so a real error is visible.
+  const noise = /studio-static|sentry|Replay|bridge\.js|Failed to load resource/
   page.on('console', (message) => {
-    if (message.type() === 'error') {
-      // eslint-disable-next-line no-console
-      console.log(`[${label}] console error ${message.text().slice(0, 300)}`)
-    }
+    if (message.type() !== 'error') return
+    const text = message.text()
+    if (noise.test(text)) return
+    // eslint-disable-next-line no-console
+    console.log(`[${label}] console error ${text.slice(0, 300)}`)
   })
 
   page.on('pageerror', (error) => {
@@ -55,23 +59,21 @@ function tracePresenceSocket(page: Page, label: string): void {
 }
 
 /**
- * Presence is exercised across two browser contexts rather than two panes on one
- * page.
+ * Presence is exercised across two browser tabs rather than two panes on one page.
  *
  * Presence stores are keyed by project and dataset and held in a module-level
  * registry, so two `SanityInstance`s in the same JavaScript realm share one store,
  * one socket, and one session id. Two panes would therefore be a single
  * participant, and every assertion here would pass without proving anything.
- * Separate contexts are separate realms, so they are genuinely separate sessions
- * talking over a real Bifur room.
+ * Separate tabs are separate realms, so they are genuinely separate sessions talking
+ * over a real Bifur room.
  *
- * Both contexts are the same user, which is the ordinary "one person, two tabs"
- * case. Participants are counted by session, not by user.
+ * Both tabs are the same user, which is the ordinary "one person, two tabs" case.
+ * Participants are counted by session, not by user.
  */
 test.describe('Presence', () => {
   test('two sessions see each other in a document, down to the focused field', async ({
     page,
-    browser,
     createDocuments,
     getPageContext,
   }) => {
@@ -89,12 +91,14 @@ test.describe('Presence', () => {
     // Alone to begin with: a client never sees its own session reported back.
     await expect(first.getByTestId('presence-document-empty')).toBeVisible()
 
-    // A second context, authenticated as the same user from the same storage state
-    // the project set up, so this is a second session rather than a second person.
-    const secondContext = await browser.newContext({
-      storageState: await page.context().storageState(),
-    })
-    const secondPage = await secondContext.newPage()
+    // A second tab in the same context, which is a separate JavaScript realm and so
+    // a separate presence store, socket, and session id. Same user, second session.
+    //
+    // Deliberately not `browser.newContext()`: a manually created context does not
+    // inherit the project's `use` options, and without the `x-vercel-protection-bypass`
+    // headers the dashboard's app iframe stays sandboxed, scripts never execute, and
+    // the app never renders at all.
+    const secondPage = await page.context().newPage()
     tracePresenceSocket(secondPage, 'second')
 
     try {
@@ -135,7 +139,7 @@ test.describe('Presence', () => {
       await expect(first.getByTestId('presence-field-role')).toHaveAttribute('data-count', '0')
       await expect(first.getByTestId('presence-document')).toHaveAttribute('data-count', '1')
     } finally {
-      await secondContext.close()
+      await secondPage.close()
     }
 
     // Closing the tab fires the disconnect on unload, so the peer goes away
@@ -145,7 +149,6 @@ test.describe('Presence', () => {
 
   test('reading presence does not announce anything', async ({
     page,
-    browser,
     createDocuments,
     getPageContext,
   }) => {
@@ -168,10 +171,7 @@ test.describe('Presence', () => {
     await first.getByTestId('presence-announcing-label').click()
     await expect(first.getByTestId('presence-announcing')).not.toBeChecked()
 
-    const secondContext = await browser.newContext({
-      storageState: await page.context().storageState(),
-    })
-    const secondPage = await secondContext.newPage()
+    const secondPage = await page.context().newPage()
     tracePresenceSocket(secondPage, 'announcer')
 
     try {
@@ -184,7 +184,7 @@ test.describe('Presence', () => {
       // The announcer never sees the reader.
       await expect(second.getByTestId('presence-document-empty')).toBeVisible()
     } finally {
-      await secondContext.close()
+      await secondPage.close()
     }
   })
 
