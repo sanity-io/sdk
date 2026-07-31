@@ -1,4 +1,5 @@
 import {
+  getEditingDocumentId,
   isMediaLibraryResource,
   type PresenceSelection,
   reportPresence,
@@ -78,7 +79,13 @@ export interface UseReportPresenceOptions extends DocumentHandle {
  * @beta
  */
 export function useReportPresence(options: UseReportPresenceOptions): void {
-  const {documentId, path, selection, throttleMs, ...handle} = options
+  const {path, selection, throttleMs, ...handle} = options
+
+  // Resolved to the specific document the user is editing under this perspective,
+  // because that is what other clients compare against. The Studio's field
+  // indicators match its form's id exactly, so reporting the published id would
+  // appear at document level and never light up a field.
+  const documentId = getEditingDocumentId(options)
 
   const normalizedOptions = useNormalizedResourceOptions(handle)
   if (normalizedOptions.resource && isMediaLibraryResource(normalizedOptions.resource)) {

@@ -80,10 +80,26 @@ describe('usePresenceForDocument', () => {
       {wrapper},
     )
 
+    // Already a draft id, so resolution leaves it alone.
     expect(vi.mocked(getDocumentPresence).mock.calls[0][1]).toMatchObject({
       documentId: 'drafts.movie-1',
       path: ['cast', {_key: 'm1'}],
       excludeVersions: true,
+    })
+  })
+
+  it('reads the same id useReportPresence writes, or reads never match writes', () => {
+    const {source} = createSource([])
+    vi.mocked(getDocumentPresence).mockReturnValue(source as never)
+
+    // A published id in, the draft it resolves to out. If this diverged from
+    // `useReportPresence`, field-level presence would silently never match.
+    renderHook(() => usePresenceForDocument({documentId: 'movie-1', documentType: 'movie'}), {
+      wrapper,
+    })
+
+    expect(vi.mocked(getDocumentPresence).mock.calls[0][1]).toMatchObject({
+      documentId: 'drafts.movie-1',
     })
   })
 

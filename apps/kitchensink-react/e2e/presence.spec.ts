@@ -105,8 +105,9 @@ test.describe('Presence', () => {
       await secondPage.goto(url)
       const second = await getPageContext(secondPage)
 
-      // Both should be reporting the same specific id, or they will not see each
-      // other for the same reason the Studio's field indicators would not.
+      // Both resolve the default `drafts` perspective to the same specific id. If
+      // they diverged they would not see each other, for the same reason the
+      // Studio's field indicators would not.
       await expect(first.getByTestId('presence-reported-id')).toHaveText(
         `Reporting as drafts.${documentId}`,
       )

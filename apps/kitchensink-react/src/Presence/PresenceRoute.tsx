@@ -1,3 +1,4 @@
+import {getEditingDocumentId} from '@sanity/sdk'
 import {
   type DocumentPresence,
   useDocumentProjection,
@@ -47,15 +48,18 @@ const FIELDS = [
   {name: 'role', label: 'Role', options: ['developer', 'designer', 'ops']},
 ] as const
 
-type ReportAs = 'draft' | 'published'
+/** The perspectives this route can be present in. Mirrors what the Studio offers. */
+type Perspective = 'drafts' | 'published'
 
 /** Who else is focused at or below one field. */
 function FieldPresence({
   documentId,
+  perspective,
   path,
   testId,
 }: {
   documentId: string
+  perspective: Perspective
   path: string[]
   testId: string
 }): JSX.Element {
@@ -64,6 +68,7 @@ function FieldPresence({
   const {presence} = usePresenceForDocument({
     documentId,
     documentType: DOCUMENT_TYPE,
+    perspective,
     path,
     excludeVersions: true,
   })
@@ -92,40 +97,43 @@ function FieldPresence({
  */
 function PresenceReporter({
   documentId,
+  perspective,
   focusedField,
 }: {
   documentId: string
+  perspective: Perspective
   focusedField?: string
 }): null {
   useReportPresence({
     documentId,
     documentType: DOCUMENT_TYPE,
+    perspective,
     ...(focusedField ? {path: [focusedField]} : {}),
   })
   return null
 }
 
-function ReportAsSelect({
-  reportAs,
+function PerspectiveSelect({
+  perspective,
   onChange,
 }: {
-  reportAs: ReportAs
-  onChange: (next: ReportAs) => void
+  perspective: Perspective
+  onChange: (next: Perspective) => void
 }): JSX.Element {
   return (
     <Flex align="center" gap={2}>
       <Text size={1} muted>
-        Present in the
+        Perspective
       </Text>
       <Select
-        data-testid="presence-report-as"
-        value={reportAs}
+        data-testid="presence-perspective"
+        value={perspective}
         onChange={(event) =>
-          onChange(event.currentTarget.value === 'published' ? 'published' : 'draft')
+          onChange(event.currentTarget.value === 'published' ? 'published' : 'drafts')
         }
       >
-        <option value="draft">draft</option>
-        <option value="published">published document</option>
+        <option value="drafts">drafts</option>
+        <option value="published">published</option>
       </Select>
     </Flex>
   )
@@ -146,14 +154,14 @@ function ScopeText(): JSX.Element | null {
 function DocumentCard({
   documentId,
   reportedId,
-  reportAs,
-  onReportAsChange,
+  perspective,
+  onPerspectiveChange,
   studioUrl,
 }: {
   documentId: string
   reportedId: string
-  reportAs: ReportAs
-  onReportAsChange: (next: ReportAs) => void
+  perspective: Perspective
+  onPerspectiveChange: (next: Perspective) => void
   studioUrl: string
 }): JSX.Element {
   const {data} = useDocumentProjection<{name: string | null}>({
@@ -172,7 +180,7 @@ function DocumentCard({
           <Code size={0} data-testid="presence-document-id">
             {documentId}
           </Code>
-          <ReportAsSelect reportAs={reportAs} onChange={onReportAsChange} />
+          <PerspectiveSelect perspective={perspective} onChange={onPerspectiveChange} />
           <Text size={1} muted data-testid="presence-reported-id">
             Reporting as {reportedId}
           </Text>
@@ -241,8 +249,14 @@ function Participant({participant}: {participant: DocumentPresence}): JSX.Elemen
   )
 }
 
-function ParticipantList({documentId}: {documentId: string}): JSX.Element {
-  const {presence} = usePresenceForDocument({documentId, documentType: DOCUMENT_TYPE})
+function ParticipantList({
+  documentId,
+  perspective,
+}: {
+  documentId: string
+  perspective: Perspective
+}): JSX.Element {
+  const {presence} = usePresenceForDocument({documentId, documentType: DOCUMENT_TYPE, perspective})
 
   return (
     <Stack space={3}>
@@ -275,11 +289,13 @@ function ParticipantList({documentId}: {documentId: string}): JSX.Element {
 function FieldRow({
   field,
   documentId,
+  perspective,
   onFocus,
   onBlur,
 }: {
   field: (typeof FIELDS)[number]
   documentId: string
+  perspective: Perspective
   onFocus: () => void
   onBlur: () => void
 }): JSX.Element {
@@ -291,7 +307,12 @@ function FieldRow({
         <Text size={1} weight="medium">
           {field.label}
         </Text>
-        <FieldPresence documentId={documentId} path={[field.name]} testId={field.name} />
+        <FieldPresence
+          documentId={documentId}
+          perspective={perspective}
+          path={[field.name]}
+          testId={field.name}
+        />
       </Flex>
       {'options' in field ? (
         <Select data-testid={testId} onFocus={onFocus} onBlur={onBlur}>
@@ -323,10 +344,10 @@ function Notes(): JSX.Element {
         serves the project and dataset above.
       </Text>
       <Text size={1} muted>
-        The Studio compares published ids in its navbar and document lists, but its field indicators
-        compare the exact id it is editing, which while editing is the draft. So reporting the
-        published document appears in the Studio at document level yet never lights up a field. That
-        is what the selector above is for.
+        The perspective is the only thing an app supplies; the hooks resolve it to the specific
+        document being edited. That matters because the Studio compares published ids in its navbar
+        and document lists but compares the exact id its form is on for field indicators, so
+        reporting the wrong one appears at document level yet never lights up a field.
       </Text>
       <Text size={1} muted>
         Defaults to the most recently created {DOCUMENT_TYPE} document. Add ?documentId=&lt;id&gt;
@@ -350,15 +371,13 @@ function PresenceDemo({documentId}: {documentId: string}): JSX.Element {
   const [focusedField, setFocusedField] = useState<string | undefined>(undefined)
   const [announcing, setAnnouncing] = useState(true)
 
-  // Which exact document id to be present in, and it matters more than it looks.
-  // The Studio's field indicators compare the id it is editing, exactly, and while
-  // editing in the default perspective that is the draft. Reporting the published
-  // id therefore shows up at document level while never lighting up a field.
-  //
-  // `drafts.` is the stable convention for draft ids; the SDK does not re-export an
-  // id helper for this.
-  const [reportAs, setReportAs] = useState<ReportAs>('draft')
-  const reportedId = reportAs === 'draft' ? `drafts.${documentId}` : documentId
+  // The perspective is all the app has to supply. The hooks resolve it to the
+  // specific document being edited, which is what other clients compare against:
+  // the draft under `drafts`, the published document under `published`. Getting that
+  // wrong is why presence can appear in the Studio at document level while never
+  // lighting up a field.
+  const [perspective, setPerspective] = useState<Perspective>('drafts')
+  const reportedId = getEditingDocumentId({documentId, perspective})
 
   const studioBase = (searchParams.get('studio') ?? DEFAULT_STUDIO_BASE_URL).replace(/\/+$/, '')
   // An intent link rather than a structure path, so the Studio resolves it with
@@ -370,18 +389,24 @@ function PresenceDemo({documentId}: {documentId: string}): JSX.Element {
       title="Presence"
       subtitle="Open this page in a second tab to see presence. Both tabs are you, as two separate sessions, which is what the Studio shows too."
     >
-      {announcing ? <PresenceReporter documentId={reportedId} focusedField={focusedField} /> : null}
+      {announcing ? (
+        <PresenceReporter
+          documentId={documentId}
+          perspective={perspective}
+          focusedField={focusedField}
+        />
+      ) : null}
 
       <DocumentCard
         documentId={documentId}
         reportedId={reportedId}
-        reportAs={reportAs}
-        onReportAsChange={setReportAs}
+        perspective={perspective}
+        onPerspectiveChange={setPerspective}
         studioUrl={studioUrl}
       />
       <Notes />
       <AnnounceToggle announcing={announcing} onChange={setAnnouncing} />
-      <ParticipantList documentId={reportedId} />
+      <ParticipantList documentId={documentId} perspective={perspective} />
 
       <Stack space={3}>
         <Text size={1} weight="semibold">
@@ -394,7 +419,8 @@ function PresenceDemo({documentId}: {documentId: string}): JSX.Element {
           <FieldRow
             key={field.name}
             field={field}
-            documentId={reportedId}
+            documentId={documentId}
+            perspective={perspective}
             onFocus={() => setFocusedField(field.name)}
             onBlur={() => setFocusedField(undefined)}
           />

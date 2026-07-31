@@ -1,4 +1,9 @@
-import {type DocumentPresence, getDocumentPresence, isMediaLibraryResource} from '@sanity/sdk'
+import {
+  type DocumentPresence,
+  getDocumentPresence,
+  getEditingDocumentId,
+  isMediaLibraryResource,
+} from '@sanity/sdk'
 import {type Path} from '@sanity/types'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 
@@ -55,7 +60,12 @@ export interface UsePresenceForDocumentOptions extends DocumentHandle {
 export function usePresenceForDocument(options: UsePresenceForDocumentOptions): {
   presence: DocumentPresence[]
 } {
-  const {documentId, path, excludeVersions, ...handle} = options
+  const {path, excludeVersions, ...handle} = options
+
+  // Resolved the same way `useReportPresence` resolves it, or reads would not match
+  // writes: a client reporting `drafts.<id>` is invisible to a query for `<id>` once
+  // `excludeVersions` turns off published-id normalization.
+  const documentId = getEditingDocumentId(options)
 
   const normalizedOptions = useNormalizedResourceOptions(handle)
   if (normalizedOptions.resource && isMediaLibraryResource(normalizedOptions.resource)) {

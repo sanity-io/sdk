@@ -31,11 +31,44 @@ describe('useReportPresence', () => {
     vi.useRealTimers()
   })
 
-  it('announces the document on mount', () => {
+  it('announces the draft by default, which is what the Studio edits', () => {
     renderHook(() => useReportPresence({documentId: 'doc-1', documentType: 'movie'}), {wrapper})
 
     // No `path` or `selection` keys at all, rather than keys set to `undefined`.
-    expect(reported()).toEqual([[{documentId: 'doc-1'}]])
+    expect(reported()).toEqual([[{documentId: 'drafts.doc-1'}]])
+  })
+
+  it('announces the published document under the published perspective', () => {
+    renderHook(
+      () =>
+        useReportPresence({documentId: 'doc-1', documentType: 'movie', perspective: 'published'}),
+      {wrapper},
+    )
+
+    expect(reported()[0][0].documentId).toBe('doc-1')
+  })
+
+  it('announces the version under a release perspective', () => {
+    renderHook(
+      () =>
+        useReportPresence({
+          documentId: 'doc-1',
+          documentType: 'movie',
+          perspective: {releaseName: 'autumn'},
+        }),
+      {wrapper},
+    )
+
+    expect(reported()[0][0].documentId).toBe('versions.autumn.doc-1')
+  })
+
+  it('announces the published document for live edit, which has no draft', () => {
+    renderHook(
+      () => useReportPresence({documentId: 'doc-1', documentType: 'movie', liveEdit: true}),
+      {wrapper},
+    )
+
+    expect(reported()[0][0].documentId).toBe('doc-1')
   })
 
   it('announces a field path', () => {
