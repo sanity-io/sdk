@@ -199,6 +199,7 @@ export type {
   DocumentPresence,
   DocumentPresenceOptions,
   PresenceLocation,
+  PresencePerspectiveOptions,
   PresenceSelection,
   PresenceSelectionPoint,
   ReportPresenceOptions,

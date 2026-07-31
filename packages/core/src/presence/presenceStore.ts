@@ -594,8 +594,8 @@ const _getDocumentPresence = bindActionByResource(
  * current user visible to others.
  *
  * @param instance - the Sanity instance
- * @param params - the document to look at, an optional `path` to narrow to a
- *   field subtree, and `excludeVersions` to compare document ids exactly
+ * @param params - the document to look at, its perspective, an optional `path` to
+ *   narrow to a field subtree, and `excludeVersions` to compare document ids exactly
  *
  * @beta
  */
@@ -635,6 +635,11 @@ const _reportPresence = bindActionByResource(
  * Call it again whenever the user moves. Announcements are collapsed over a short
  * window and then repeated every 30 seconds while idle, which is what tells peers
  * the session is still alive.
+ *
+ * Which specific document each location resolves to depends on its perspective, and
+ * that matters for interoperability: other clients, the Studio included, compare
+ * exact document ids for field-level presence. Pass the perspective you are editing
+ * under rather than building a draft or version id yourself.
  *
  * @param instance - the Sanity instance
  * @param params - the resource to announce on, plus the locations to report.

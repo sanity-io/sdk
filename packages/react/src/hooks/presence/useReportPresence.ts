@@ -55,6 +55,13 @@ export interface UseReportPresenceOptions extends DocumentHandle {
  * as the user is in the document. On unmount the location is cleared, leaving the
  * user present in the app but not in any particular document.
  *
+ * The perspective decides which specific document is reported: the draft under
+ * `drafts`, the published document under `published`, a version under a release.
+ * It is taken from `ResourceProvider` unless you pass one on the handle. That
+ * matters for interoperability, because the Studio's field indicators compare the
+ * exact id its form is on, so a mismatch shows your user at document level while
+ * never lighting up a field.
+ *
  * Presence is scoped to a single project and dataset. It is not a list of everyone
  * signed in to your organization.
  *
@@ -64,6 +71,12 @@ export interface UseReportPresenceOptions extends DocumentHandle {
  *   useReportPresence({documentId, documentType})
  *   return <Editor />
  * }
+ * ```
+ *
+ * @example Presence in a release version
+ * ```tsx
+ * // The document id stays plain; the perspective selects the version.
+ * useReportPresence({documentId, documentType, perspective: {releaseName: 'autumn'}})
  * ```
  *
  * @example Field-level presence

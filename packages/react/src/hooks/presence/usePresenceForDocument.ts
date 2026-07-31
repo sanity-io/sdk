@@ -31,8 +31,12 @@ export interface UsePresenceForDocumentOptions extends DocumentHandle {
  * current user visible to others.
  *
  * Prefer this over `usePresence` when you care about one document: `usePresence`
- * returns every participant in the whole project and dataset, leaving the
- * filtering to you.
+ * returns every participant in the whole project and dataset, leaving the filtering
+ * to you.
+ *
+ * Resolves the document through its perspective exactly as `useReportPresence` does,
+ * so reads match writes. Participants are counted by session, so one person in two
+ * tabs appears twice.
  *
  * @example Avatars on a document
  * ```tsx
