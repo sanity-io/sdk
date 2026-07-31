@@ -1,4 +1,58 @@
+import {type Page} from '@playwright/test'
 import {expect, test} from '@repo/e2e'
+
+/**
+ * Reports what the presence socket actually did, so a failure says which of three
+ * things went wrong: the socket never opened, it opened and was rejected, or it
+ * connected and no peer was ever heard from.
+ *
+ * Without this, a failed assertion only says "nobody showed up", which is the same
+ * symptom for all three.
+ */
+function tracePresenceSocket(page: Page, label: string): void {
+  page.on('websocket', (ws) => {
+    const url = ws.url()
+    if (!url.includes('/socket/')) return
+
+    // eslint-disable-next-line no-console
+    console.log(`[${label}] socket open ${url}`)
+    ws.on('socketerror', (error) => {
+      // eslint-disable-next-line no-console
+      console.log(`[${label}] socket error ${error}`)
+    })
+    ws.on('close', () => {
+      // eslint-disable-next-line no-console
+      console.log(`[${label}] socket closed`)
+    })
+    ws.on('framesent', ({payload}) => {
+      const text = String(payload)
+      if (text.includes('presence_')) {
+        // eslint-disable-next-line no-console
+        console.log(`[${label}] sent ${text.slice(0, 200)}`)
+      }
+    })
+    ws.on('framereceived', ({payload}) => {
+      const text = String(payload)
+      // Skip the heartbeat, which is a bare U+2665 and would drown the log.
+      if (text.length > 1 && !text.includes('welcome')) {
+        // eslint-disable-next-line no-console
+        console.log(`[${label}] recv ${text.slice(0, 200)}`)
+      }
+    })
+  })
+
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      // eslint-disable-next-line no-console
+      console.log(`[${label}] console error ${message.text().slice(0, 300)}`)
+    }
+  })
+
+  page.on('pageerror', (error) => {
+    // eslint-disable-next-line no-console
+    console.log(`[${label}] page error ${error.message.slice(0, 300)}`)
+  })
+}
 
 /**
  * Presence is exercised across two browser contexts rather than two panes on one
@@ -27,6 +81,7 @@ test.describe('Presence', () => {
     const documentId = documentIds[0]
     const url = `./presence?documentId=${documentId}`
 
+    tracePresenceSocket(page, 'first')
     await page.goto(url)
     const first = await getPageContext(page)
     await expect(first.getByTestId('presence-document-id')).toHaveText(documentId)
@@ -40,10 +95,20 @@ test.describe('Presence', () => {
       storageState: await page.context().storageState(),
     })
     const secondPage = await secondContext.newPage()
+    tracePresenceSocket(secondPage, 'second')
 
     try {
       await secondPage.goto(url)
       const second = await getPageContext(secondPage)
+
+      // Both should be reporting the same specific id, or they will not see each
+      // other for the same reason the Studio's field indicators would not.
+      await expect(first.getByTestId('presence-reported-id')).toHaveText(
+        `Reporting as drafts.${documentId}`,
+      )
+      await expect(second.getByTestId('presence-reported-id')).toHaveText(
+        `Reporting as drafts.${documentId}`,
+      )
 
       // Each announces on mount, and each answers the other's roll call.
       await expect(first.getByTestId('presence-document')).toHaveAttribute('data-count', '1')
@@ -89,6 +154,7 @@ test.describe('Presence', () => {
     })
     const url = `./presence?documentId=${documentIds[0]}`
 
+    tracePresenceSocket(page, 'reader')
     await page.goto(url)
     const first = await getPageContext(page)
 
@@ -106,6 +172,7 @@ test.describe('Presence', () => {
       storageState: await page.context().storageState(),
     })
     const secondPage = await secondContext.newPage()
+    tracePresenceSocket(secondPage, 'announcer')
 
     try {
       await secondPage.goto(url)
