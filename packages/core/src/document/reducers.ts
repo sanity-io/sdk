@@ -1,5 +1,10 @@
 import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
-import {type Mutation, type PatchOperations, type SanityDocumentLike} from '@sanity/types'
+import {
+  type Mutation,
+  type PatchOperations,
+  type SanityDocument,
+  type SanityDocumentLike,
+} from '@sanity/types'
 
 import {type DocumentHandle} from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
@@ -15,7 +20,9 @@ import {ActionError, processActions} from './processActions/processActions'
 import {getReleaseDocumentId, isReleaseAction} from './processActions/releaseUtil'
 import {type DocumentSet} from './processMutations'
 
-const EMPTY_REVISIONS: NonNullable<Required<DocumentState['unverifiedRevisions']>> = {}
+type UnverifiedRevisions = NonNullable<Required<DocumentState['unverifiedRevisions']>>
+
+const EMPTY_REVISIONS: UnverifiedRevisions = {}
 
 /**
  * How many of this client's own transaction IDs to remember per document for
@@ -469,48 +476,201 @@ function extractPatchOperations(
   })
 }
 
-// Opt-in sync diagnostics for concurrency investigations: set
-// `globalThis.__SDK_SYNC_DEBUG = true` before load (harness: SYNC_DEBUG=1).
-// Free when off.
-function syncDebugEnabled(): boolean {
-  return (globalThis as {__SDK_SYNC_DEBUG?: boolean}).__SDK_SYNC_DEBUG === true
+function emitRemotePatchesIfAny({
+  type,
+  revision,
+  previousRev,
+  timestamp,
+  mutations,
+  documentId,
+  revisionToVerify,
+  prevDocState,
+  events,
+}: {
+  type: RemoteDocument['type']
+  revision: string | undefined
+  previousRev: string | undefined
+  timestamp: string
+  mutations: Mutation[] | undefined
+  documentId: string
+  revisionToVerify: UnverifiedDocumentRevision | undefined
+  prevDocState: DocumentState
+  events: DocumentStoreState['events']
+}): void {
+  if (type !== 'mutation' || !revision) return
+
+  const patches = extractPatchOperations(mutations, documentId)
+  if (!patches.length) return
+
+  const isOwnTransaction =
+    Boolean(revisionToVerify) || (prevDocState.recentOwnTransactionIds?.includes(revision) ?? false)
+  events.next({
+    type: 'remote-patches',
+    documentId,
+    transactionId: revision,
+    previousRev,
+    timestamp,
+    patches,
+    origin: isOwnTransaction ? 'local' : 'remote',
+  })
 }
 
-type SyncDebugDigest = {
-  sample: string
-  chars: number
-  /** Count of the duo-paste harness phrase; useful for H1 outgoing-wipe traces. */
-  imFeeling: number
-}
+function pruneOutdatedUnverifiedRevisions(
+  unverifiedRevisions: UnverifiedRevisions,
+  timestamp: string,
+): UnverifiedRevisions {
+  const syncTime = new Date(timestamp).getTime()
+  const next: UnverifiedRevisions = {}
 
-/** Compact digest of Portable-Text-shaped fields for `[sdk-sync]` trace lines. */
-function syncDebugTextDigest(doc: unknown): SyncDebugDigest {
-  if (!doc || typeof doc !== 'object') {
-    return {sample: '<none>', chars: 0, imFeeling: 0}
-  }
-  for (const field of ['blocks', 'content']) {
-    const value = (doc as Record<string, unknown>)[field]
-    if (!Array.isArray(value)) continue
-    const sample = value
-      .map((blockNode) => {
-        const children = (blockNode as {children?: {text?: string}[]}).children
-        if (!Array.isArray(children)) return ''
-        return children.map((child) => child.text ?? '').join('|')
-      })
-      .join(' ¶ ')
-    return {
-      sample: sample.length > 240 ? `${sample.slice(0, 240)}…` : sample,
-      chars: sample.length,
-      imFeeling: sample.split("I'm feeling").length - 1,
+  for (const [transactionId, unverifiedRevision] of Object.entries(unverifiedRevisions)) {
+    if (!unverifiedRevision) continue
+    const revisionTime = new Date(unverifiedRevision.timestamp).getTime()
+    if (syncTime <= revisionTime) {
+      next[transactionId] = unverifiedRevision
     }
   }
-  return {sample: '<no pte field>', chars: 0, imFeeling: 0}
+
+  return next
 }
 
-function syncDebug(label: string, payload: Record<string, unknown>): void {
-  if (!syncDebugEnabled()) return
-  // eslint-disable-next-line no-console
-  console.debug(`[sdk-sync] ${label} ${JSON.stringify(payload)}`)
+function modifiesDocument(transaction: AppliedTransaction, documentId: string): boolean {
+  return transaction.working[documentId]?._rev !== transaction.previousRevs[documentId]
+}
+
+function shouldConvergeFastForwardLocal({
+  prev,
+  documentId,
+  revision,
+}: {
+  prev: SyncTransactionState
+  documentId: string
+  revision: string | undefined
+}): boolean {
+  if (prev.applied.some((transaction) => modifiesDocument(transaction, documentId))) {
+    return false
+  }
+  if (!prev.outgoing) return true
+  if (prev.outgoing.transactionId === revision) return true
+  return !modifiesDocument(prev.outgoing, documentId)
+}
+
+function shouldReapplyOutgoingForEdge({
+  prev,
+  documentId,
+  revision,
+  previousRev,
+}: {
+  prev: SyncTransactionState
+  documentId: string
+  revision: string | undefined
+  previousRev: string | undefined
+}): boolean {
+  const outgoing = prev.outgoing
+  if (!outgoing) return false
+  if (!prev.grants) return false
+  if (outgoing.actions.length === 0) return false
+  if (prev.applied.length > 0) return false
+  if (outgoing.transactionId === revision) return false
+  if (outgoing.transactionId === previousRev) return false
+  return modifiesDocument(outgoing, documentId)
+}
+
+function reapplyOutgoingForEdge({
+  prev,
+  document,
+  documentId,
+  revision,
+  previousRev,
+  working,
+  events,
+}: {
+  prev: SyncTransactionState
+  document: SanityDocument | null
+  documentId: string
+  revision: string | undefined
+  previousRev: string | undefined
+  working: DocumentSet
+  events: DocumentStoreState['events']
+}): DocumentSet {
+  if (!shouldReapplyOutgoingForEdge({prev, documentId, revision, previousRev})) {
+    return working
+  }
+
+  const outgoing = prev.outgoing
+  if (!outgoing || !prev.grants) return working
+
+  try {
+    const next = processActions({
+      transactionId: outgoing.transactionId,
+      actions: outgoing.actions,
+      timestamp: outgoing.timestamp,
+      base: structuredClone(outgoing.base),
+      working: {
+        ...structuredClone(outgoing.previous),
+        [documentId]: document,
+      },
+      grants: prev.grants,
+      identity: prev.identity,
+    })
+    return next.working
+  } catch (error) {
+    if (error instanceof ActionError) {
+      events.next({
+        type: 'rebase-error',
+        transactionId: error.transactionId,
+        documentId: error.documentId,
+        message: error.message,
+        error,
+      })
+      return working
+    }
+    throw error
+  }
+}
+
+function replayAppliedTransactions({
+  prev,
+  working,
+  events,
+}: {
+  prev: SyncTransactionState
+  working: DocumentSet
+  events: DocumentStoreState['events']
+}): {
+  working: DocumentSet
+  applied: AppliedTransaction[]
+} {
+  if (!prev.grants) return {working, applied: []}
+
+  let nextWorking = working
+  const nextApplied: AppliedTransaction[] = []
+
+  for (const transaction of prev.applied) {
+    try {
+      const next = processActions({
+        ...transaction,
+        working: nextWorking,
+        grants: prev.grants,
+        identity: prev.identity,
+      })
+      nextWorking = next.working
+      nextApplied.push({...transaction, ...next})
+    } catch (error) {
+      if (error instanceof ActionError) {
+        events.next({
+          type: 'rebase-error',
+          transactionId: error.transactionId,
+          documentId: error.documentId,
+          message: error.message,
+          error,
+        })
+        continue
+      }
+      throw error
+    }
+  }
+
+  return {working: nextWorking, applied: nextApplied}
 }
 
 export function applyRemoteDocument(
@@ -524,22 +684,6 @@ export function applyRemoteDocument(
   // document state is deleted when there are no more subscribers so we can
   // simply skip if there is no state
   if (!prevDocState) return prev
-
-  const prevLocalDigest = syncDebugTextDigest(prevDocState.local)
-  const remoteDigest = syncDebugTextDigest(document)
-  syncDebug('remote-in', {
-    documentId,
-    type,
-    revision,
-    previousRev,
-    own: Boolean(revision && prevDocState.unverifiedRevisions?.[revision]),
-    appliedTxs: prev.applied.map((transaction) => transaction.transactionId),
-    appliedCount: prev.applied.length,
-    outgoingTx: prev.outgoing?.transactionId ?? null,
-    outgoingPresent: Boolean(prev.outgoing),
-    remote: remoteDigest,
-    local: prevLocalDigest,
-  })
 
   // we send out transactions with IDs generated client-side to identify them
   // when they are observed through the listener. here we can check if this
@@ -555,26 +699,17 @@ export function applyRemoteDocument(
   // collapsed into the whole-document snapshot below. consumers that keep
   // their own state (e.g. collaborative text editors) rely on these to apply
   // remote changes without re-diffing document snapshots
-  if (type === 'mutation' && revision) {
-    const patches = extractPatchOperations(mutations, documentId)
-    if (patches.length) {
-      // `unverifiedRevisions` alone isn't a reliable origin marker: a sync
-      // event can prune an in-flight transaction's entry before its listener
-      // echo arrives. `recentOwnTransactionIds` survives that race
-      const isOwnTransaction =
-        Boolean(revisionToVerify) ||
-        (prevDocState.recentOwnTransactionIds?.includes(revision) ?? false)
-      events.next({
-        type: 'remote-patches',
-        documentId,
-        transactionId: revision,
-        previousRev,
-        timestamp,
-        patches,
-        origin: isOwnTransaction ? 'local' : 'remote',
-      })
-    }
-  }
+  emitRemotePatchesIfAny({
+    type,
+    revision,
+    previousRev,
+    timestamp,
+    mutations,
+    documentId,
+    revisionToVerify,
+    prevDocState,
+    events,
+  })
 
   // if this remote document is from a `'sync'` event (meaning that the whole
   // thing was just fetched and not re-created from mutations)
@@ -582,12 +717,7 @@ export function applyRemoteDocument(
     // then remove unverified revisions that are older than our sync time. we
     // don't need to verify them for a rebase any more because we synced and
     // grabbed the latest document
-    unverifiedRevisions = Object.fromEntries(
-      Object.entries(unverifiedRevisions).filter(([, unverifiedRevision]) => {
-        if (!unverifiedRevision) return false
-        return new Date(timestamp).getTime() <= new Date(unverifiedRevision.timestamp).getTime()
-      }),
-    )
+    unverifiedRevisions = pruneOutdatedUnverifiedRevisions(unverifiedRevisions, timestamp)
   }
 
   // if there is a revision to verify and the previous revision from remote
@@ -610,26 +740,11 @@ export function applyRemoteDocument(
     // set without changing it, so a presence check would block published-doc
     // convergence whenever a draft edit is pending. this is the same
     // modified-test `transitionAppliedTransactionsToOutgoing` uses
-    const modifiesDocument = (transaction: AppliedTransaction) =>
-      transaction.working[documentId]?._rev !== transaction.previousRevs[documentId]
-    const nothingElsePending =
-      !prev.applied.some(modifiesDocument) &&
-      (!prev.outgoing ||
-        prev.outgoing.transactionId === revision ||
-        !modifiesDocument(prev.outgoing))
+    const nothingElsePending = shouldConvergeFastForwardLocal({prev, documentId, revision})
     const local =
       nothingElsePending && !isDeepEqual(prevDocState.local, document)
         ? document
         : prevDocState.local
-
-    const localDigest = syncDebugTextDigest(local)
-    syncDebug('fast-forward', {
-      documentId,
-      revision,
-      converged: nothingElsePending,
-      local: localDigest,
-      localLostImFeeling: localDigest.imFeeling < prevLocalDigest.imFeeling,
-    })
 
     return {
       ...prev,
@@ -654,7 +769,6 @@ export function applyRemoteDocument(
   // our initial working set now is the state of the documents before any of our
   // local transactions plus the newly updated document from remote
   let working = {...previous, [documentId]: document}
-  const nextApplied: AppliedTransaction[] = []
 
   // When pastes (or other edits) sit only in `outgoing` with an empty `applied`
   // queue, re-apply that submitted transaction onto the new remote for local
@@ -664,84 +778,21 @@ export function applyRemoteDocument(
   // in place, so clone `base`/`previous` before re-applying. Skip when `applied`
   // is non-empty: those txns already sit on the outgoing optimistic chain, and
   // replaying both double-applies.
-  if (
-    prev.outgoing &&
-    prev.grants &&
-    prev.outgoing.actions.length > 0 &&
-    prev.applied.length === 0 &&
-    // Own echo already includes this transaction's result; re-applying would
-    // duplicate inserts/DMP hunks (e.g. `oneA oneA`).
-    prev.outgoing.transactionId !== revision
-  ) {
-    try {
-      const next = processActions({
-        transactionId: prev.outgoing.transactionId,
-        actions: prev.outgoing.actions,
-        timestamp: prev.outgoing.timestamp,
-        base: structuredClone(prev.outgoing.base),
-        working: {
-          ...structuredClone(prev.outgoing.previous),
-          [documentId]: document,
-        },
-        grants: prev.grants,
-        identity: prev.identity,
-      })
-      working = next.working
-    } catch (error) {
-      if (error instanceof ActionError) {
-        syncDebug('outgoing-rebase-error', {
-          documentId: error.documentId,
-          transactionId: error.transactionId,
-          message: error.message,
-        })
-        events.next({
-          type: 'rebase-error',
-          transactionId: error.transactionId,
-          documentId: error.documentId,
-          message: error.message,
-          error,
-        })
-      } else {
-        throw error
-      }
-    }
-  }
+  working = reapplyOutgoingForEdge({
+    prev,
+    document,
+    documentId,
+    revision,
+    previousRev,
+    working,
+    events,
+  })
 
   // now we can iterate through our applied (but not yet committed) transactions
   // starting with the updated working set and re-apply each transaction in
   // order creating a new set of applied transactions as we go.
-  for (const curr of prev.applied) {
-    try {
-      const next = processActions({...curr, working, grants: prev.grants, identity: prev.identity})
-      working = next.working
-      // next includes an updated `previous` set and `working` set and updates
-      // the `outgoingAction` and `outgoingMutations`. the `base` set from the
-      // original applied transaction gets put back into the updated transaction
-      // as-is to preserve the intended base for a 3-way merge
-      nextApplied.push({...curr, ...next})
-    } catch (error) {
-      // if processing the action ever throws a related error, we can skip this
-      // local transaction and report the error to the user
-      if (error instanceof ActionError) {
-        syncDebug('rebase-error', {
-          documentId: error.documentId,
-          transactionId: error.transactionId,
-          message: error.message,
-          outgoingPresent: Boolean(prev.outgoing),
-          appliedCount: prev.applied.length,
-        })
-        events.next({
-          type: 'rebase-error',
-          transactionId: error.transactionId,
-          documentId: error.documentId,
-          message: error.message,
-          error,
-        })
-        continue
-      }
-      throw error
-    }
-  }
+  const replayed = replayAppliedTransactions({prev, working, events})
+  working = replayed.working
 
   // when the recompute lands on a value deep-equal to the current local
   // (the common case for echoes of our own transactions), keep the previous
@@ -749,25 +800,9 @@ export function applyRemoteDocument(
   const nextLocal = working[documentId]
   const local = isDeepEqual(prevDocState.local, nextLocal) ? prevDocState.local : nextLocal
 
-  const localDigest = syncDebugTextDigest(local)
-  syncDebug('rebase', {
-    documentId,
-    revision,
-    outgoingPresent: Boolean(prev.outgoing),
-    outgoingTx: prev.outgoing?.transactionId ?? null,
-    appliedCountBefore: prev.applied.length,
-    replayedTxs: nextApplied.map((transaction) => transaction.transactionId),
-    // After Phase 1, outgoing is re-applied for local EDGE before this digest.
-    local: localDigest,
-    remote: remoteDigest,
-    prevLocal: prevLocalDigest,
-    localLostImFeeling: localDigest.imFeeling < prevLocalDigest.imFeeling,
-    localLostChars: localDigest.chars < prevLocalDigest.chars,
-  })
-
   return {
     ...prev,
-    applied: nextApplied,
+    applied: replayed.applied,
     documentStates: {
       ...prev.documentStates,
       [documentId]: {

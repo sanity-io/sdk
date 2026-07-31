@@ -14,6 +14,7 @@ import {
   applyRemoteDocument,
   batchAppliedTransactions,
   cleanupOutgoingTransaction,
+  type OutgoingTransaction,
   type QueuedTransaction,
   queueTransaction,
   removeQueuedTransaction,
@@ -1068,6 +1069,108 @@ describe('applyRemoteDocument', () => {
     )
   })
 
+  it('does not re-apply outgoing when foreign revisions already include it', () => {
+    const docId = getDraftId(DocumentId('doc1'))
+    const seedDoc = {
+      ...exampleDoc,
+      _id: docId,
+      _rev: 'txn0',
+      items: [
+        {_key: 'a', value: 'first'},
+        {_key: 'b', value: 'second'},
+      ],
+    }
+    const withOwnInsert = {
+      ...seedDoc,
+      _rev: 'txnOwn',
+      items: [
+        {_key: 'a', value: 'first'},
+        {_key: 'c', value: 'from own transaction'},
+        {_key: 'b', value: 'second'},
+      ],
+    }
+    const remoteAlreadyIncludingOwn = {
+      ...seedDoc,
+      _rev: 'txnForeign',
+      items: [
+        {_key: 'a', value: 'first'},
+        {_key: 'c', value: 'from own transaction'},
+        {_key: 'b', value: 'second'},
+        {_key: 'd', value: 'from peer transaction'},
+      ],
+    }
+
+    const outgoing = {
+      transactionId: 'txnOwn',
+      actions: [
+        {
+          type: 'document.edit' as const,
+          documentId: 'doc1',
+          documentType: 'author',
+          patches: [
+            {
+              insert: {
+                after: 'items[_key=="a"]',
+                items: [{_key: 'c', value: 'from own transaction'}],
+              },
+            },
+          ],
+          preserveOperations: true,
+        },
+      ],
+      working: {[docId]: withOwnInsert},
+      previous: {[docId]: seedDoc},
+      base: {[docId]: seedDoc},
+      previousRevs: {[docId]: 'txn0'},
+      timestamp: '2025-02-06T00:08:00.000Z',
+      outgoingActions: [],
+      outgoingMutations: [],
+      disableBatching: false,
+      batchedTransactionIds: ['txnOwn'],
+    }
+
+    const initialState: SyncTransactionState = {
+      queued: [],
+      applied: [],
+      outgoing,
+      grants,
+      documentStates: {
+        [docId]: {
+          id: docId,
+          subscriptions: ['sub-own'],
+          local: withOwnInsert,
+          remote: seedDoc,
+          unverifiedRevisions: {
+            txnOwn: {
+              transactionId: 'txnOwn',
+              documentId: docId,
+              previousRev: 'txn0',
+              timestamp: '2025-02-06T00:08:00.000Z',
+            },
+          },
+        },
+      },
+    }
+
+    const remote: RemoteDocument = {
+      type: 'mutation',
+      documentId: docId,
+      document: remoteAlreadyIncludingOwn,
+      revision: 'txnForeign',
+      previousRev: 'txnOwn',
+      timestamp: '2025-02-06T00:08:02.000Z',
+      mutations: [],
+    }
+
+    const newState = applyRemoteDocument(initialState, remote, new Subject<DocumentEvent>())
+    expect(newState.documentStates[docId]?.local?.['items']).toEqual([
+      {_key: 'a', value: 'first'},
+      {_key: 'c', value: 'from own transaction'},
+      {_key: 'b', value: 'second'},
+      {_key: 'd', value: 'from peer transaction'},
+    ])
+  })
+
   // Test that a sync event removes outdated unverified revisions.
   it('removes outdated unverified revisions when a sync event is received', () => {
     const docId = getDraftId(DocumentId('doc1'))
@@ -1339,6 +1442,90 @@ describe('applyRemoteDocument', () => {
   })
 
   describe('rebase with preserved operations', () => {
+    it('emits rebase-error when outgoing re-apply fails', () => {
+      const docId = getDraftId(DocumentId('doc1'))
+      const originalDoc: SanityDocument = {
+        ...exampleDoc,
+        _id: docId,
+        _rev: 'rev1',
+        title: 'The quick brown fox',
+      }
+      const localDoc: SanityDocument = {
+        ...originalDoc,
+        _rev: 'txnLocal',
+        title: 'The quick brown cat',
+      }
+      const outgoing: OutgoingTransaction = {
+        transactionId: 'txnLocal',
+        actions: [
+          {
+            type: 'document.edit',
+            documentId: 'doc1',
+            documentType: 'author',
+            patches: [{diffMatchPatch: {title: '@@ -13,7 +13,7 @@\n own \n-fox\n+cat\n'}}],
+            preserveOperations: true,
+          },
+        ],
+        previous: {[docId]: originalDoc},
+        base: {[docId]: originalDoc},
+        working: {[docId]: localDoc},
+        previousRevs: {[docId]: 'rev1'},
+        timestamp: '2025-02-06T00:16:00.000Z',
+        outgoingActions: [],
+        outgoingMutations: [],
+        disableBatching: false,
+        batchedTransactionIds: ['txnLocal'],
+      }
+
+      const initialState: SyncTransactionState = {
+        queued: [],
+        applied: [],
+        outgoing,
+        grants,
+        documentStates: {
+          [docId]: {
+            id: docId,
+            subscriptions: ['sub1'],
+            local: localDoc,
+            remote: originalDoc,
+            unverifiedRevisions: {},
+          },
+        },
+      }
+
+      const remoteDoc: SanityDocument = {
+        ...originalDoc,
+        title: 42 as unknown as string,
+        _rev: 'txnForeign',
+      }
+      const remote: RemoteDocument = {
+        type: 'mutation',
+        documentId: docId,
+        document: remoteDoc,
+        revision: 'txnForeign',
+        previousRev: 'rev1',
+        timestamp: '2025-02-06T00:17:00.000Z',
+        mutations: [{patch: {id: docId, set: {title: 42}}}],
+      }
+
+      const events = new Subject<DocumentEvent>()
+      const received: DocumentEvent[] = []
+      events.subscribe((event) => received.push(event))
+
+      const newState = applyRemoteDocument(initialState, remote, events)
+      const rebaseErrors = received.filter((event) => event.type === 'rebase-error')
+
+      expect(rebaseErrors).toHaveLength(1)
+      expect(rebaseErrors[0]).toMatchObject({
+        type: 'rebase-error',
+        transactionId: 'txnLocal',
+        documentId: 'doc1',
+        message: expect.stringMatching(/Failed to apply patches to the working document/),
+      })
+      expect(newState.documentStates[docId]?.local).toEqual(remoteDoc)
+      expect(newState.documentStates[docId]?.remote).toEqual(remoteDoc)
+    })
+
     it('skips a preserved-operations transaction that fails to re-apply and emits rebase-error', () => {
       const docId = getDraftId(DocumentId('doc1'))
       const originalDoc: SanityDocument = {
