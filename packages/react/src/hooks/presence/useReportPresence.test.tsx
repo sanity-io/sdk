@@ -31,24 +31,16 @@ describe('useReportPresence', () => {
     vi.useRealTimers()
   })
 
-  it('announces the draft by default, which is what the Studio edits', () => {
+  it('reports the document with no path or selection keys when neither was given', () => {
     renderHook(() => useReportPresence({documentId: 'doc-1', documentType: 'movie'}), {wrapper})
 
-    // No `path` or `selection` keys at all, rather than keys set to `undefined`.
-    expect(reported()).toEqual([[{documentId: 'drafts.doc-1'}]])
+    // Keys absent rather than set to `undefined`. The id stays unresolved here:
+    // core turns a perspective into a specific document id, so the read and write
+    // sides cannot drift apart.
+    expect(reported()).toEqual([[{documentId: 'doc-1'}]])
   })
 
-  it('announces the published document under the published perspective', () => {
-    renderHook(
-      () =>
-        useReportPresence({documentId: 'doc-1', documentType: 'movie', perspective: 'published'}),
-      {wrapper},
-    )
-
-    expect(reported()[0][0].documentId).toBe('doc-1')
-  })
-
-  it('announces the version under a release perspective', () => {
+  it('forwards an explicit perspective for core to resolve', () => {
     renderHook(
       () =>
         useReportPresence({
@@ -59,16 +51,35 @@ describe('useReportPresence', () => {
       {wrapper},
     )
 
-    expect(reported()[0][0].documentId).toBe('versions.autumn.doc-1')
+    expect(reported()[0][0]).toMatchObject({
+      documentId: 'doc-1',
+      perspective: {releaseName: 'autumn'},
+    })
   })
 
-  it('announces the published document for live edit, which has no draft', () => {
+  it('forwards liveEdit, which core resolves to the published document', () => {
     renderHook(
       () => useReportPresence({documentId: 'doc-1', documentType: 'movie', liveEdit: true}),
       {wrapper},
     )
 
-    expect(reported()[0][0].documentId).toBe('doc-1')
+    expect(reported()[0][0]).toMatchObject({documentId: 'doc-1', liveEdit: true})
+  })
+
+  it('picks up an ambient perspective from the provider', () => {
+    // The whole point of resolving after normalization: a perspective set once on
+    // `ResourceProvider` has to reach presence without every call site passing it.
+    const ambient = ({children}: {children: React.ReactNode}) => (
+      <ResourceProvider projectId="p" dataset="d" perspective="published" fallback={null}>
+        {children}
+      </ResourceProvider>
+    )
+
+    renderHook(() => useReportPresence({documentId: 'doc-1', documentType: 'movie'}), {
+      wrapper: ambient,
+    })
+
+    expect(reported()[0][0]).toMatchObject({documentId: 'doc-1', perspective: 'published'})
   })
 
   it('announces a field path', () => {

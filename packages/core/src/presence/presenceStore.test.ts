@@ -500,6 +500,27 @@ describe('presenceStore', () => {
       unsubscribe()
     })
 
+    it('matches a peer in the draft when queried with a published id and excludeVersions', async () => {
+      // The field-indicator case, and the one that only works if the read side
+      // resolves the perspective exactly as the write side does. `excludeVersions`
+      // turns off published-id normalization, so an unresolved query for `movie-1`
+      // would never match a peer reporting `drafts.movie-1`.
+      const source = getDocumentPresence(instance, {
+        documentId: 'movie-1',
+        excludeVersions: true,
+      })
+      const unsubscribe = source.subscribe(() => {})
+      await firstValueFrom(of(null).pipe(delay(10)))
+
+      await peerAt('peer-a', [{documentId: 'drafts.movie-1', path: ['title']}])
+
+      const presence = source.getCurrent()
+      expect(presence).toHaveLength(1)
+      expect(presence[0].documentId).toBe('drafts.movie-1')
+
+      unsubscribe()
+    })
+
     it('narrows to a field subtree, including the field itself', async () => {
       const source = getDocumentPresence(instance, {documentId: 'movie-1', path: ['body']})
       const unsubscribe = source.subscribe(() => {})
@@ -813,6 +834,35 @@ describe('presenceStore', () => {
       }
     })
 
+    it('resolves the reported id from the perspective', async () => {
+      vi.useFakeTimers()
+      try {
+        getPresence(instance)
+
+        // Default: the draft, which is what the Studio's form is on and therefore
+        // what its field indicators compare against.
+        reportPresence(instance, {locations: [{documentId: 'movie-1'}]})
+        await flush()
+        expect(stateCalls().at(-1)!.locations[0].documentId).toBe('drafts.movie-1')
+
+        reportPresence(instance, {locations: [{documentId: 'movie-1', perspective: 'published'}]})
+        await flush()
+        expect(stateCalls().at(-1)!.locations[0].documentId).toBe('movie-1')
+
+        reportPresence(instance, {
+          locations: [{documentId: 'movie-1', perspective: {releaseName: 'autumn'}}],
+        })
+        await flush()
+        expect(stateCalls().at(-1)!.locations[0].documentId).toBe('versions.autumn.movie-1')
+
+        reportPresence(instance, {locations: [{documentId: 'movie-1', liveEdit: true}]})
+        await flush()
+        expect(stateCalls().at(-1)!.locations[0].documentId).toBe('movie-1')
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
     it('announces a document-level location', async () => {
       vi.useFakeTimers()
       vi.setSystemTime(new Date('2026-07-30T12:00:00.000Z'))
@@ -827,7 +877,8 @@ describe('presenceStore', () => {
             locations: [
               {
                 type: 'document',
-                documentId: 'doc-1',
+                // Resolved to the draft, which is the default perspective.
+                documentId: 'drafts.doc-1',
                 path: [],
                 lastActiveAt: '2026-07-30T12:00:00.000Z',
               },

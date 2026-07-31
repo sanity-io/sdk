@@ -177,7 +177,6 @@ export {
 export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export {getReleaseDocumentId} from '../document/processActions/releaseUtil'
-export {getEditingDocumentId} from '../document/util'
 export type {FavoriteStatusResponse} from '../favorites/favorites'
 export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
 export {

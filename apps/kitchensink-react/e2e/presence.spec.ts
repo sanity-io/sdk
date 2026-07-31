@@ -105,14 +105,11 @@ test.describe('Presence', () => {
       await secondPage.goto(url)
       const second = await getPageContext(secondPage)
 
-      // Both resolve the default `drafts` perspective to the same specific id. If
-      // they diverged they would not see each other, for the same reason the
-      // Studio's field indicators would not.
-      await expect(first.getByTestId('presence-reported-id')).toHaveText(
-        `Reporting as drafts.${documentId}`,
-      )
-      await expect(second.getByTestId('presence-reported-id')).toHaveText(
-        `Reporting as drafts.${documentId}`,
+      // Asserted on the peer's own reported id, which is what actually went over the
+      // wire and came back, rather than on either tab's local display. Under the
+      // default `drafts` perspective the SDK resolves to the draft.
+      await expect(first.getByTestId('presence-participant-document-id')).toHaveText(
+        `drafts.${documentId}`,
       )
 
       // Each announces on mount, and each answers the other's roll call.

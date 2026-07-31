@@ -1,4 +1,3 @@
-import {getEditingDocumentId} from '@sanity/sdk'
 import {
   type DocumentPresence,
   useDocumentProjection,
@@ -153,13 +152,11 @@ function ScopeText(): JSX.Element | null {
 
 function DocumentCard({
   documentId,
-  reportedId,
   perspective,
   onPerspectiveChange,
   studioUrl,
 }: {
   documentId: string
-  reportedId: string
   perspective: Perspective
   onPerspectiveChange: (next: Perspective) => void
   studioUrl: string
@@ -181,9 +178,6 @@ function DocumentCard({
             {documentId}
           </Code>
           <PerspectiveSelect perspective={perspective} onChange={onPerspectiveChange} />
-          <Text size={1} muted data-testid="presence-reported-id">
-            Reporting as {reportedId}
-          </Text>
           <ScopeText />
         </Stack>
         <Button
@@ -240,6 +234,9 @@ function Participant({participant}: {participant: DocumentPresence}): JSX.Elemen
   return (
     <Flex align="center" gap={2} data-testid="presence-document-participant">
       <Badge tone="primary">{participant.user.profile.displayName}</Badge>
+      <Code size={0} data-testid="presence-participant-document-id">
+        {participant.documentId}
+      </Code>
       {/* Plain text rather than `Code`, which renders as a block and would stack
           the words vertically. */}
       <Text size={1} muted>
@@ -371,13 +368,12 @@ function PresenceDemo({documentId}: {documentId: string}): JSX.Element {
   const [focusedField, setFocusedField] = useState<string | undefined>(undefined)
   const [announcing, setAnnouncing] = useState(true)
 
-  // The perspective is all the app has to supply. The hooks resolve it to the
-  // specific document being edited, which is what other clients compare against:
-  // the draft under `drafts`, the published document under `published`. Getting that
-  // wrong is why presence can appear in the Studio at document level while never
-  // lighting up a field.
+  // The perspective is all the app supplies. The SDK resolves it to the specific
+  // document being edited, which is what other clients compare against: the draft
+  // under `drafts`, the published document under `published`. Getting that wrong is
+  // why presence can appear in the Studio at document level while never lighting up
+  // a field.
   const [perspective, setPerspective] = useState<Perspective>('drafts')
-  const reportedId = getEditingDocumentId({documentId, perspective})
 
   const studioBase = (searchParams.get('studio') ?? DEFAULT_STUDIO_BASE_URL).replace(/\/+$/, '')
   // An intent link rather than a structure path, so the Studio resolves it with
@@ -399,7 +395,6 @@ function PresenceDemo({documentId}: {documentId: string}): JSX.Element {
 
       <DocumentCard
         documentId={documentId}
-        reportedId={reportedId}
         perspective={perspective}
         onPerspectiveChange={setPerspective}
         studioUrl={studioUrl}

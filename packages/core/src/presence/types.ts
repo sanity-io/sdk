@@ -2,6 +2,7 @@ import {type SanityClient} from '@sanity/client'
 import {type Path} from '@sanity/types'
 import {type Observable} from 'rxjs'
 
+import {type PerspectiveHandle} from '../config/sanityConfig'
 import {type SanityUser} from '../users/types'
 
 /**
@@ -64,12 +65,26 @@ export interface WirePresenceLocation extends Omit<PresenceLocation, 'path'> {
 }
 
 /**
+ * Which specific document a presence id resolves to.
+ *
+ * Presence compares exact document ids, so a client in a draft and a client in the
+ * published document are in different places even for the same `documentId`. Pass
+ * the perspective you are editing under and the SDK resolves it; the React hooks
+ * take it from `ResourceProvider` when you do not pass one.
+ * @public
+ */
+export interface PresencePerspectiveOptions extends PerspectiveHandle {
+  /** Live-edit documents have no draft, so presence resolves to the published id. */
+  liveEdit?: boolean
+}
+
+/**
  * What an app reports about where the current user is.
  *
  * Omit `path` for document-level presence, or pass one for field-level presence.
  * @public
  */
-export interface ReportPresenceOptions {
+export interface ReportPresenceOptions extends PresencePerspectiveOptions {
   /**
    * The specific document id the user is in: a draft, published, or version id,
    * whichever matches the perspective they are editing.
@@ -115,7 +130,7 @@ export interface DocumentPresence {
 }
 
 /** @beta */
-export interface DocumentPresenceOptions {
+export interface DocumentPresenceOptions extends PresencePerspectiveOptions {
   documentId: string
   /**
    * Narrows to participants at or below this field path. Omit it for everyone in

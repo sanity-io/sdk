@@ -1,9 +1,4 @@
-import {
-  type DocumentPresence,
-  getDocumentPresence,
-  getEditingDocumentId,
-  isMediaLibraryResource,
-} from '@sanity/sdk'
+import {type DocumentPresence, getDocumentPresence, isMediaLibraryResource} from '@sanity/sdk'
 import {type Path} from '@sanity/types'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 
@@ -62,11 +57,6 @@ export function usePresenceForDocument(options: UsePresenceForDocumentOptions): 
 } {
   const {path, excludeVersions, ...handle} = options
 
-  // Resolved the same way `useReportPresence` resolves it, or reads would not match
-  // writes: a client reporting `drafts.<id>` is invisible to a query for `<id>` once
-  // `excludeVersions` turns off published-id normalization.
-  const documentId = getEditingDocumentId(options)
-
   const normalizedOptions = useNormalizedResourceOptions(handle)
   if (normalizedOptions.resource && isMediaLibraryResource(normalizedOptions.resource)) {
     throw new Error(
@@ -77,7 +67,9 @@ export function usePresenceForDocument(options: UsePresenceForDocumentOptions): 
   const sanityInstance = useSanityInstance()
   trackHookUsage(sanityInstance, 'usePresenceForDocument')
 
-  const {resource} = normalizedOptions
+  const {resource, perspective} = normalizedOptions
+  const {documentId, liveEdit} = options
+
   // Serialized so a caller passing a fresh `path` array each render does not
   // rebuild the state source every render.
   const pathKey = useMemo(() => JSON.stringify(path ?? null), [path])
@@ -87,10 +79,14 @@ export function usePresenceForDocument(options: UsePresenceForDocumentOptions): 
       getDocumentPresence(sanityInstance, {
         ...(resource ? {resource} : {}),
         documentId,
+        // Forwarded, not resolved here, so this matches what `useReportPresence`
+        // sends. Core owns turning a perspective into a specific document id.
+        ...(perspective ? {perspective} : {}),
+        ...(liveEdit ? {liveEdit} : {}),
         ...(pathKey === 'null' ? {} : {path: JSON.parse(pathKey) as Path}),
         ...(excludeVersions === undefined ? {} : {excludeVersions}),
       }),
-    [sanityInstance, resource, documentId, pathKey, excludeVersions],
+    [sanityInstance, resource, documentId, perspective, liveEdit, pathKey, excludeVersions],
   )
 
   const subscribe = useCallback((callback: () => void) => source.subscribe(callback), [source])

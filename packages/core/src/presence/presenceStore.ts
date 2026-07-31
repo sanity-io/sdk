@@ -27,6 +27,7 @@ import {
   isDatasetResource,
   isMediaLibraryResource,
 } from '../config/sanityConfig'
+import {getEditingDocumentId} from '../document/util'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {
@@ -484,7 +485,7 @@ function selectDocumentPresence(
   options: DocumentPresenceOptions,
 ): DocumentPresence[] {
   const cacheKey = JSON.stringify([
-    options.documentId,
+    getEditingDocumentId(options),
     options.path ?? null,
     options.excludeVersions ?? false,
   ])
@@ -546,7 +547,9 @@ function computeDocumentPresence(
   state: PresenceStoreState,
   options: DocumentPresenceOptions,
 ): DocumentPresence[] {
-  const target = scopeId(options.documentId, options.excludeVersions)
+  // Resolved before scoping, and identically to the write side, or a query for a
+  // document would not match the client reporting it.
+  const target = scopeId(getEditingDocumentId(options), options.excludeVersions)
 
   return Array.from(state.locations).flatMap(([sessionId, session]) =>
     session.locations
@@ -610,15 +613,15 @@ const _reportPresence = bindActionByResource(
     {locations}: {resource?: DocumentResource; locations: ReportPresenceOptions[]},
   ) => {
     const lastActiveAt = new Date().toISOString()
-    const wireLocations: WirePresenceLocation[] = locations.map(
-      ({documentId, path = [], selection}) => ({
-        type: 'document',
-        documentId,
-        path,
-        lastActiveAt,
-        ...(selection === undefined ? {} : {selection}),
-      }),
-    )
+    const wireLocations: WirePresenceLocation[] = locations.map((location) => ({
+      type: 'document',
+      // The specific document being edited, not the canonical id. Other clients,
+      // the Studio included, compare exact ids for field-level presence.
+      documentId: getEditingDocumentId(location),
+      path: location.path ?? [],
+      lastActiveAt,
+      ...(location.selection === undefined ? {} : {selection: location.selection}),
+    }))
 
     state.set('presence/report', (prevState) => ({...prevState, localLocations: wireLocations}))
   },

@@ -22,7 +22,7 @@ import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
  * that would mean reading document state, which presence deliberately does not
  * depend on.
  *
- * @beta
+ * @internal
  */
 export function getEditingDocumentId(
   doc: Pick<DocumentHandle, 'documentId' | 'liveEdit' | 'perspective'>,

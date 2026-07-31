@@ -92,14 +92,22 @@ describe('usePresenceForDocument', () => {
     const {source} = createSource([])
     vi.mocked(getDocumentPresence).mockReturnValue(source as never)
 
-    // A published id in, the draft it resolves to out. If this diverged from
-    // `useReportPresence`, field-level presence would silently never match.
-    renderHook(() => usePresenceForDocument({documentId: 'movie-1', documentType: 'movie'}), {
-      wrapper,
-    })
+    // Forwarded unresolved, exactly as `useReportPresence` forwards it, so core
+    // resolves both the same way. If these diverged, field-level presence would
+    // silently never match.
+    renderHook(
+      () =>
+        usePresenceForDocument({
+          documentId: 'movie-1',
+          documentType: 'movie',
+          perspective: 'published',
+        }),
+      {wrapper},
+    )
 
     expect(vi.mocked(getDocumentPresence).mock.calls[0][1]).toMatchObject({
-      documentId: 'drafts.movie-1',
+      documentId: 'movie-1',
+      perspective: 'published',
     })
   })
 

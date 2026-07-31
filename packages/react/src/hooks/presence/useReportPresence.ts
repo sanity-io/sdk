@@ -1,5 +1,4 @@
 import {
-  getEditingDocumentId,
   isMediaLibraryResource,
   type PresenceSelection,
   reportPresence,
@@ -81,12 +80,6 @@ export interface UseReportPresenceOptions extends DocumentHandle {
 export function useReportPresence(options: UseReportPresenceOptions): void {
   const {path, selection, throttleMs, ...handle} = options
 
-  // Resolved to the specific document the user is editing under this perspective,
-  // because that is what other clients compare against. The Studio's field
-  // indicators match its form's id exactly, so reporting the published id would
-  // appear at document level and never light up a field.
-  const documentId = getEditingDocumentId(options)
-
   const normalizedOptions = useNormalizedResourceOptions(handle)
   if (normalizedOptions.resource && isMediaLibraryResource(normalizedOptions.resource)) {
     throw new Error(
@@ -97,26 +90,31 @@ export function useReportPresence(options: UseReportPresenceOptions): void {
   const sanityInstance = useSanityInstance()
   trackHookUsage(sanityInstance, 'useReportPresence')
 
-  const {resource} = normalizedOptions
+  const {resource, perspective} = normalizedOptions
+  const {documentId, liveEdit} = options
+
   const interval = throttleMs ?? (selection ? SELECTION_THROTTLE_MS : FOCUS_THROTTLE_MS)
 
   // Compared by value, because callers write `path={['title']}` inline and a fresh
   // array identity every render must not mean a fresh announcement every render.
   const locationKey = useMemo(
-    () => JSON.stringify([documentId, path ?? [], selection ?? null]),
-    [documentId, path, selection],
+    () =>
+      JSON.stringify([documentId, path ?? [], selection ?? null, perspective ?? null, liveEdit]),
+    [documentId, path, selection, perspective, liveEdit],
   )
 
   // Rebuilt from the key rather than from the props, so the effect below can
   // depend on it honestly instead of suppressing the exhaustive-deps rule.
   const location = useMemo<ReportPresenceOptions>(() => {
-    const [id, parsedPath, parsedSelection] = JSON.parse(locationKey) as [
-      string,
-      Path,
-      PresenceSelection,
-    ]
+    const [id, parsedPath, parsedSelection, parsedPerspective, parsedLiveEdit] = JSON.parse(
+      locationKey,
+    ) as [string, Path, PresenceSelection, ReportPresenceOptions['perspective'] | null, boolean?]
     return {
       documentId: id,
+      // Forwarded rather than resolved here: core turns the perspective into the
+      // specific document id, so the read and write sides cannot drift apart.
+      ...(parsedPerspective ? {perspective: parsedPerspective} : {}),
+      ...(parsedLiveEdit ? {liveEdit: parsedLiveEdit} : {}),
       ...(parsedPath.length > 0 ? {path: parsedPath} : {}),
       ...(parsedSelection ? {selection: parsedSelection} : {}),
     }
