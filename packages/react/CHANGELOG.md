@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.19.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.18.0...sdk-react-v2.19.0) (2026-08-03)
+
+
+### Features
+
+* **react:** add presence reporting and per-document presence hooks ([#1081](https://github.com/sanity-io/sdk/issues/1081)) ([d2345ff](https://github.com/sanity-io/sdk/commit/d2345ff7ff972e72bcc22dc21b286a79355cba3c))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.19.0
+
 ## [2.18.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.17.0...sdk-react-v2.18.0) (2026-07-20)
 
 
