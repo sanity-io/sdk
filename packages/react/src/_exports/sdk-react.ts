@@ -79,6 +79,11 @@ export {
 } from '../hooks/paginatedDocuments/usePaginatedDocuments'
 export {usePresence} from '../hooks/presence/usePresence'
 export {
+  usePresenceForDocument,
+  type UsePresenceForDocumentOptions,
+} from '../hooks/presence/usePresenceForDocument'
+export {useReportPresence, type UseReportPresenceOptions} from '../hooks/presence/useReportPresence'
+export {
   useDocumentPreview,
   type useDocumentPreviewOptions,
   type useDocumentPreviewResults,

@@ -16,7 +16,7 @@ import {createSanityInstance, type SanityInstance} from '../store/createSanityIn
 import {type SanityUser} from '../users/types'
 import {getUserState} from '../users/usersStore'
 import {createBifurTransport} from './bifurTransport'
-import {getPresence, reportPresence} from './presenceStore'
+import {getDocumentPresence, getPresence, reportPresence} from './presenceStore'
 import {type PresenceLocation, type TransportEvent, type TransportMessage} from './types'
 
 vi.mock('../auth/authStore')
@@ -425,6 +425,244 @@ describe('presenceStore', () => {
     })
   })
 
+  describe('getDocumentPresence', () => {
+    /** Puts a peer in a document at the given paths. */
+    const peerAt = async (
+      sessionId: string,
+      locations: {documentId: string; path?: unknown[]; selection?: unknown}[],
+    ) => {
+      mockIncomingEvents.next({
+        type: 'state',
+        userId: 'user-1',
+        sessionId,
+        timestamp: '2026-07-30T12:00:00Z',
+        locations: locations.map((l) => ({
+          type: 'document',
+          documentId: l.documentId,
+          path: (l.path ?? []) as string[],
+          lastActiveAt: '2026-07-30T12:00:00Z',
+          ...(l.selection === undefined ? {} : {selection: l.selection}),
+        })) as never,
+      })
+      await firstValueFrom(of(null).pipe(delay(20)))
+    }
+
+    it('flattens one entry per participant per location', async () => {
+      const source = getDocumentPresence(instance, {documentId: 'movie-1'})
+      const unsubscribe = source.subscribe(() => {})
+      await firstValueFrom(of(null).pipe(delay(10)))
+
+      await peerAt('peer-a', [
+        {documentId: 'movie-1', path: ['title']},
+        {documentId: 'movie-1', path: ['body']},
+      ])
+
+      const presence = source.getCurrent()
+      expect(presence).toHaveLength(2)
+      expect(presence.map((p) => p.path)).toEqual([['title'], ['body']])
+      expect(presence.every((p) => p.sessionId === 'peer-a')).toBe(true)
+
+      unsubscribe()
+    })
+
+    it('treats a draft, its published version, and a release version as one document', async () => {
+      const source = getDocumentPresence(instance, {documentId: 'movie-1'})
+      const unsubscribe = source.subscribe(() => {})
+      await firstValueFrom(of(null).pipe(delay(10)))
+
+      await peerAt('peer-a', [{documentId: 'drafts.movie-1'}])
+      await peerAt('peer-b', [{documentId: 'versions.r1.movie-1'}])
+      await peerAt('peer-c', [{documentId: 'movie-1'}])
+
+      // What a document list wants: someone is in this document, wherever exactly.
+      expect(source.getCurrent()).toHaveLength(3)
+
+      unsubscribe()
+    })
+
+    it('compares ids exactly when excludeVersions is set', async () => {
+      const source = getDocumentPresence(instance, {
+        documentId: 'drafts.movie-1',
+        excludeVersions: true,
+      })
+      const unsubscribe = source.subscribe(() => {})
+      await firstValueFrom(of(null).pipe(delay(10)))
+
+      await peerAt('peer-a', [{documentId: 'drafts.movie-1'}])
+      await peerAt('peer-b', [{documentId: 'versions.r1.movie-1'}])
+
+      // What a field indicator wants: a release version must not bleed into the
+      // draft the user is actually looking at.
+      const presence = source.getCurrent()
+      expect(presence).toHaveLength(1)
+      expect(presence[0].documentId).toBe('drafts.movie-1')
+
+      unsubscribe()
+    })
+
+    it('matches a peer in the draft when queried with a published id and excludeVersions', async () => {
+      // The field-indicator case, and the one that only works if the read side
+      // resolves the perspective exactly as the write side does. `excludeVersions`
+      // turns off published-id normalization, so an unresolved query for `movie-1`
+      // would never match a peer reporting `drafts.movie-1`.
+      const source = getDocumentPresence(instance, {
+        documentId: 'movie-1',
+        excludeVersions: true,
+      })
+      const unsubscribe = source.subscribe(() => {})
+      await firstValueFrom(of(null).pipe(delay(10)))
+
+      await peerAt('peer-a', [{documentId: 'drafts.movie-1', path: ['title']}])
+
+      const presence = source.getCurrent()
+      expect(presence).toHaveLength(1)
+      expect(presence[0].documentId).toBe('drafts.movie-1')
+
+      unsubscribe()
+    })
+
+    it('narrows to a field subtree, including the field itself', async () => {
+      const source = getDocumentPresence(instance, {documentId: 'movie-1', path: ['body']})
+      const unsubscribe = source.subscribe(() => {})
+      await firstValueFrom(of(null).pipe(delay(10)))
+
+      await peerAt('peer-a', [
+        {documentId: 'movie-1', path: ['title']},
+        {documentId: 'movie-1', path: ['body']},
+        {documentId: 'movie-1', path: ['body', {_key: 'b1'}, 'children']},
+      ])
+
+      const presence = source.getCurrent()
+      expect(presence).toHaveLength(2)
+      expect(presence.map((p) => p.path)).toEqual([['body'], ['body', {_key: 'b1'}, 'children']])
+
+      unsubscribe()
+    })
+
+    it('matches keyed path segments by key, not by identity', async () => {
+      const source = getDocumentPresence(instance, {
+        documentId: 'movie-1',
+        // A different object with the same key, which is what arrives over the wire.
+        path: ['cast', {_key: 'member-2'}],
+      })
+      const unsubscribe = source.subscribe(() => {})
+      await firstValueFrom(of(null).pipe(delay(10)))
+
+      await peerAt('peer-a', [
+        {documentId: 'movie-1', path: ['cast', {_key: 'member-1'}, 'name']},
+        {documentId: 'movie-1', path: ['cast', {_key: 'member-2'}, 'name']},
+      ])
+
+      const presence = source.getCurrent()
+      expect(presence).toHaveLength(1)
+      expect(presence[0].path).toEqual(['cast', {_key: 'member-2'}, 'name'])
+
+      unsubscribe()
+    })
+
+    it('preserves a Portable Text selection', async () => {
+      const selection = {
+        anchor: {path: [{_key: 'b1'}, 'children', {_key: 's1'}], offset: 2},
+        focus: {path: [{_key: 'b1'}, 'children', {_key: 's1'}], offset: 9},
+        backward: false,
+      }
+
+      const source = getDocumentPresence(instance, {documentId: 'movie-1'})
+      const unsubscribe = source.subscribe(() => {})
+      await firstValueFrom(of(null).pipe(delay(10)))
+
+      await peerAt('peer-a', [{documentId: 'movie-1', path: ['body'], selection}])
+
+      expect(source.getCurrent()[0].selection).toEqual(selection)
+
+      unsubscribe()
+    })
+
+    it('omits selection when the participant did not report one', async () => {
+      const source = getDocumentPresence(instance, {documentId: 'movie-1'})
+      const unsubscribe = source.subscribe(() => {})
+      await firstValueFrom(of(null).pipe(delay(10)))
+
+      await peerAt('peer-a', [{documentId: 'movie-1', path: ['title']}])
+
+      expect('selection' in source.getCurrent()[0]).toBe(false)
+
+      unsubscribe()
+    })
+
+    it('returns a referentially stable snapshot', async () => {
+      const source = getDocumentPresence(instance, {documentId: 'movie-1'})
+      const unsubscribe = source.subscribe(() => {})
+      await firstValueFrom(of(null).pipe(delay(10)))
+      await peerAt('peer-a', [{documentId: 'movie-1', path: ['title']}])
+
+      // React calls `getCurrent` as its `useSyncExternalStore` snapshot on every
+      // render. Returning a fresh array each call sends it into an infinite
+      // render loop, so this is load-bearing rather than a micro-optimisation.
+      expect(source.getCurrent()).toBe(source.getCurrent())
+
+      unsubscribe()
+    })
+
+    it('keeps separate snapshots per query, so callers do not evict each other', async () => {
+      const movie = getDocumentPresence(instance, {documentId: 'movie-1'})
+      const other = getDocumentPresence(instance, {documentId: 'movie-2'})
+      const titleOnly = getDocumentPresence(instance, {documentId: 'movie-1', path: ['title']})
+      const subs = [movie, other, titleOnly].map((s) => s.subscribe(() => {}))
+      await firstValueFrom(of(null).pipe(delay(10)))
+
+      await peerAt('peer-a', [
+        {documentId: 'movie-1', path: ['title']},
+        {documentId: 'movie-1', path: ['body']},
+      ])
+
+      // Interleaved reads, which is what concurrent components do.
+      const movieFirst = movie.getCurrent()
+      const titleFirst = titleOnly.getCurrent()
+      expect(movie.getCurrent()).toBe(movieFirst)
+      expect(titleOnly.getCurrent()).toBe(titleFirst)
+
+      expect(movieFirst).toHaveLength(2)
+      expect(titleFirst).toHaveLength(1)
+      expect(other.getCurrent()).toEqual([])
+
+      subs.forEach((unsubscribe) => unsubscribe())
+    })
+
+    it('resolves display names without anything else subscribing first', async () => {
+      // Regression guard: user resolution used to hang off `getPresence`'s
+      // `onSubscribe`, so reading presence any other way showed only
+      // "Unknown user". It belongs to the store, not to one state source.
+      const source = getDocumentPresence(instance, {documentId: 'movie-1'})
+      const unsubscribe = source.subscribe(() => {})
+      await firstValueFrom(of(null).pipe(delay(10)))
+
+      await peerAt('peer-a', [{documentId: 'movie-1', path: ['title']}])
+      await firstValueFrom(of(null).pipe(delay(50)))
+
+      expect(getUserState).toHaveBeenCalledWith(instance, {
+        userId: 'user-1',
+        resourceType: 'project',
+        projectId: 'test-project',
+      })
+      expect(source.getCurrent()[0].user.profile.displayName).toBe('Test User')
+
+      unsubscribe()
+    })
+
+    it('ignores other documents entirely', async () => {
+      const source = getDocumentPresence(instance, {documentId: 'movie-1'})
+      const unsubscribe = source.subscribe(() => {})
+      await firstValueFrom(of(null).pipe(delay(10)))
+
+      await peerAt('peer-a', [{documentId: 'movie-2', path: ['title']}])
+
+      expect(source.getCurrent()).toEqual([])
+
+      unsubscribe()
+    })
+  })
+
   describe('connection lifecycle', () => {
     it('clears accumulated presence and re-rollCalls when the socket reconnects', async () => {
       const source = getPresence(instance)
@@ -596,6 +834,35 @@ describe('presenceStore', () => {
       }
     })
 
+    it('resolves the reported id from the perspective', async () => {
+      vi.useFakeTimers()
+      try {
+        getPresence(instance)
+
+        // Default: the draft, which is what the Studio's form is on and therefore
+        // what its field indicators compare against.
+        reportPresence(instance, {locations: [{documentId: 'movie-1'}]})
+        await flush()
+        expect(stateCalls().at(-1)!.locations[0].documentId).toBe('drafts.movie-1')
+
+        reportPresence(instance, {locations: [{documentId: 'movie-1', perspective: 'published'}]})
+        await flush()
+        expect(stateCalls().at(-1)!.locations[0].documentId).toBe('movie-1')
+
+        reportPresence(instance, {
+          locations: [{documentId: 'movie-1', perspective: {releaseName: 'autumn'}}],
+        })
+        await flush()
+        expect(stateCalls().at(-1)!.locations[0].documentId).toBe('versions.autumn.movie-1')
+
+        reportPresence(instance, {locations: [{documentId: 'movie-1', liveEdit: true}]})
+        await flush()
+        expect(stateCalls().at(-1)!.locations[0].documentId).toBe('movie-1')
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
     it('announces a document-level location', async () => {
       vi.useFakeTimers()
       vi.setSystemTime(new Date('2026-07-30T12:00:00.000Z'))
@@ -610,7 +877,8 @@ describe('presenceStore', () => {
             locations: [
               {
                 type: 'document',
-                documentId: 'doc-1',
+                // Resolved to the draft, which is the default perspective.
+                documentId: 'drafts.doc-1',
                 path: [],
                 lastActiveAt: '2026-07-30T12:00:00.000Z',
               },
