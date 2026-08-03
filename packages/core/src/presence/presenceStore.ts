@@ -1,15 +1,20 @@
 import {createSelector} from 'reselect'
 import {
+  auditTime,
+  catchError,
   combineLatest,
   distinctUntilChanged,
+  EMPTY,
   filter,
   first,
   map,
+  merge,
   type Observable,
   of,
   Subscription,
   switchMap,
   timer,
+  withLatestFrom,
 } from 'rxjs'
 
 import {getTokenState} from '../auth/authStore'
@@ -32,11 +37,33 @@ import {type SanityUser} from '../users/types'
 import {getUserState} from '../users/usersStore'
 import {createLogger} from '../utils/logger'
 import {createBifurTransport} from './bifurTransport'
-import {type PresenceLocation, type TransportEvent, type UserPresence} from './types'
+import {
+  type PresenceLocation,
+  type ReportPresenceOptions,
+  type TransportEvent,
+  type TransportMessage,
+  type UserPresence,
+  type WirePresenceLocation,
+} from './types'
 
 const logger = createLogger('presence')
 
+/**
+ * Used for the canvas organization lookup only. The socket itself is pinned to
+ * `2022-06-30` in `bifurTransport`, because that is the version Bifur compares
+ * against when deciding whether a connection may authenticate over RPC rather
+ * than requiring a JWT at upgrade. Do not align these two.
+ */
 const PRESENCE_API_VERSION = '2026-03-30'
+
+/**
+ * How often the current user re-announces while idle. Matches the Studio so the
+ * two agree on how long a quiet peer should be trusted.
+ */
+const REPORT_MIN_INTERVAL = 30_000
+
+/** Collapses a burst of focus changes into a single announcement. */
+const REPORT_AUDIT_TIME = 200
 
 /**
  * How long a session may go without announcing before it is dropped. Bifur
@@ -71,12 +98,79 @@ type PresenceStoreState = {
    * on `organizationId` would wait forever.
    */
   organizationIdError?: unknown
+  /**
+   * Where this client says it is. `undefined` means the app has never reported,
+   * which keeps it silent: reading presence must not make an app start
+   * broadcasting. An empty array is different, and means "here, but not in any
+   * particular document".
+   */
+  localLocations?: WirePresenceLocation[]
 }
 
 const getInitialState = (): PresenceStoreState => ({
   locations: new Map<string, PresenceSession>(),
   users: {},
 })
+
+/**
+ * Sends a message without letting a failure tear down the stream it was sent on.
+ *
+ * This matters most for the announce pipeline, which carries the idle heartbeat,
+ * roll-call responses, and the re-announce on reconnect. Those share one chain, so
+ * an unhandled error from a single rejected RPC would silence this client
+ * permanently while it carried on reading presence normally. A dropped socket
+ * errors the in-flight request, which is exactly the case where staying alive
+ * matters, since the reconnect that follows is what makes us visible again.
+ *
+ * No retry is needed here. The 30 second heartbeat sends again on its own, and a
+ * recovered connection triggers an immediate re-announce.
+ */
+const sendSafely = (
+  dispatch: (message: TransportMessage) => Observable<void>,
+  message: TransportMessage,
+): Observable<void> =>
+  dispatch(message).pipe(
+    catchError((error: unknown) => {
+      logger.warn('Failed to send presence message', {messageType: message.type, error})
+      return EMPTY
+    }),
+  )
+
+/**
+ * Reduces a stream to a bare trigger that cannot fail.
+ *
+ * The announce pipeline combines three inputs with `merge`, which propagates an
+ * error from any one of them. Since that one pipeline carries the idle heartbeat,
+ * roll-call responses, and the re-announce on reconnect, a single failing input
+ * would silence this client for good. Losing one trigger is survivable; losing
+ * all three is not.
+ */
+const asTrigger = (source$: Observable<unknown>, name: string): Observable<void> =>
+  source$.pipe(
+    map(() => undefined),
+    catchError((error: unknown) => {
+      logger.error('Presence announce trigger failed', {trigger: name, error})
+      return EMPTY
+    }),
+  )
+
+/** Ignores `lastActiveAt`, which changes on every report even when nothing moved. */
+const locationKey = ({documentId, path, selection}: WirePresenceLocation) =>
+  JSON.stringify([documentId, path, selection ?? null])
+
+/**
+ * Compares reported locations by value. Key order within a caller-supplied
+ * `selection` could in principle differ and read as a change, which costs one
+ * extra announcement and nothing else.
+ */
+function isEqualLocations(
+  a: WirePresenceLocation[] | undefined,
+  b: WirePresenceLocation[] | undefined,
+): boolean {
+  if (a === b) return true
+  if (!a || !b || a.length !== b.length) return false
+  return a.every((location, index) => locationKey(location) === locationKey(b[index]))
+}
 
 /** @public */
 export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
@@ -174,7 +268,7 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
           ...prevState,
           locations: new Map<string, PresenceSession>(),
         }))
-        dispatch({type: 'rollCall'}).subscribe()
+        sendSafely(dispatch, {type: 'rollCall'}).subscribe()
       }),
     )
 
@@ -200,7 +294,44 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
       }),
     )
 
-    subscription.add(unload$.pipe(switchMap(() => dispatch({type: 'disconnect'}))).subscribe())
+    subscription.add(
+      unload$.pipe(switchMap(() => sendSafely(dispatch, {type: 'disconnect'}))).subscribe(),
+    )
+
+    // Announce where we are. A location change, a peer asking for a roll call, or
+    // a reconnect all restart `timer(0, ...)`, so we announce immediately and then
+    // every 30s while idle. That idle tick is what tells peers we are still here,
+    // and is what their expiry sweep measures against.
+    const localLocations$ = state.observable.pipe(
+      map((s) => s.localLocations),
+      // Compared by value, not by reference. The Studio compares by reference and
+      // so never dedupes, because its form rebuilds the array on every call.
+      distinctUntilChanged(isEqualLocations),
+    )
+
+    const rollCallRequests$ = incomingEvents$.pipe(
+      // Bifur echoes our own roll call back to us, since we are subscribed to the
+      // same topic we published to. Answering it would be a pointless round trip.
+      filter((event) => event.type === 'rollCall' && event.sessionId !== sessionId),
+    )
+
+    subscription.add(
+      merge(
+        asTrigger(localLocations$, 'locationChange'),
+        asTrigger(rollCallRequests$, 'rollCall'),
+        asTrigger(connections$, 'connection'),
+      )
+        .pipe(
+          switchMap(() => timer(0, REPORT_MIN_INTERVAL)),
+          withLatestFrom(localLocations$),
+          map(([, locations]) => locations),
+          // Stay silent until the app has reported at least once.
+          filter((locations): locations is WirePresenceLocation[] => locations !== undefined),
+          auditTime(REPORT_AUDIT_TIME),
+          switchMap((locations) => sendSafely(dispatch, {type: 'state', locations})),
+        )
+        .subscribe(),
+    )
 
     // Canvas resources need the organizationId to resolve users — fetch it once from the canvas endpoint
     if (isCanvasResource(resource)) {
@@ -223,7 +354,7 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
     }
 
     return () => {
-      dispatch({type: 'disconnect'}).subscribe()
+      sendSafely(dispatch, {type: 'disconnect'}).subscribe()
       subscription.unsubscribe()
     }
   },
@@ -338,4 +469,49 @@ export function getPresence(
   // bit of a hack to support the old bound action by dataset
   // in reality, this will always be passed a resource
   return _getPresence(instance, params ?? {})
+}
+
+const _reportPresence = bindActionByResource(
+  presenceStore,
+  (
+    {state}: StoreContext<PresenceStoreState, BoundResourceKey>,
+    {locations}: {resource?: DocumentResource; locations: ReportPresenceOptions[]},
+  ) => {
+    const lastActiveAt = new Date().toISOString()
+    const wireLocations: WirePresenceLocation[] = locations.map(
+      ({documentId, path = [], selection}) => ({
+        type: 'document',
+        documentId,
+        path,
+        lastActiveAt,
+        ...(selection === undefined ? {} : {selection}),
+      }),
+    )
+
+    state.set('presence/report', (prevState) => ({...prevState, localLocations: wireLocations}))
+  },
+)
+
+/**
+ * Announces where the current user is, so other clients in the same project and
+ * dataset can show them. Reading presence never announces anything, so this is
+ * the only way an app becomes visible to others.
+ *
+ * Call it again whenever the user moves. Announcements are collapsed over a short
+ * window and then repeated every 30 seconds while idle, which is what tells peers
+ * the session is still alive.
+ *
+ * @param instance - the Sanity instance
+ * @param params - the resource to announce on, plus the locations to report.
+ *   Pass one location with a `documentId` for document-level presence, add a
+ *   `path` for field-level presence, and pass an empty array to appear present
+ *   without being in any document.
+ *
+ * @beta
+ */
+export function reportPresence(
+  instance: SanityInstance,
+  params: {resource?: DocumentResource; locations: ReportPresenceOptions[]},
+): void {
+  return _reportPresence(instance, params)
 }

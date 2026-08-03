@@ -193,10 +193,13 @@ export {
   type OrganizationsOptions,
   resolveOrganizations,
 } from '../organizations/organizations'
-export {getPresence} from '../presence/presenceStore'
+export {getPresence, reportPresence} from '../presence/presenceStore'
 export type {
   DisconnectEvent,
   PresenceLocation,
+  PresenceSelection,
+  PresenceSelectionPoint,
+  ReportPresenceOptions,
   RollCallEvent,
   StateEvent,
   TransportEvent,
