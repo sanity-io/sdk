@@ -69,6 +69,41 @@ export {
   type RequestNewTokenMessage,
   type WindowMessage,
 } from '../comlink/types'
+export {
+  createComment,
+  type CreateCommentOptions,
+  removeComment,
+  type RemoveCommentOptions,
+  replyToComment,
+  type ReplyToCommentOptions,
+  setCommentStatus,
+  type SetCommentStatusOptions,
+  updateComment,
+  type UpdateCommentOptions,
+} from '../comments/commentActions'
+export {toCommentFieldPath} from '../comments/commentFieldPath'
+export {
+  type CommentsOptions,
+  getCommentsState,
+  getCommentThreadsState,
+  resolveComments,
+  type ResolveCommentsOptions,
+  resolveCommentThreads,
+} from '../comments/commentsStore'
+export {
+  type CommentContext,
+  type CommentDocument,
+  type CommentLocalState,
+  type CommentMessage,
+  type CommentPath,
+  type CommentPostPayload,
+  type CommentReactionItem,
+  type CommentStatus,
+  type CommentTarget,
+  type CommentTextSelection,
+  type CommentTextSelectionItem,
+  type CommentThread,
+} from '../comments/types'
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
 export {
   createDatasetHandle,
