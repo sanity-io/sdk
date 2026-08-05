@@ -574,13 +574,21 @@ const subscribeToClientAndFetchDatasetAcl = ({
               delay: (error, retryCount) => {
                 // 4xx responses and CORS misconfigurations are not transient —
                 // the server will keep rejecting the request, so rethrow to
-                // surface them as a fatal store error
-                if (error instanceof ClientError || error instanceof CorsOriginError) {
+                // surface them as a fatal store error. 408 (request timeout)
+                // and 429 (rate limit) are the exceptions: they resolve on
+                // their own, so they are retried like network errors
+                const isTransientClientError =
+                  error instanceof ClientError &&
+                  (error.statusCode === 408 || error.statusCode === 429)
+                if (
+                  (error instanceof ClientError && !isTransientClientError) ||
+                  error instanceof CorsOriginError
+                ) {
                   return throwError(() => error)
                 }
-                // network errors (no status code) and 5xx responses are
-                // retried with exponential backoff so a transient failure
-                // during startup doesn't permanently brick the store
+                // network errors (no status code), 408/429 responses, and 5xx
+                // responses are retried with exponential backoff so a transient
+                // failure during startup doesn't permanently brick the store
                 const backoff = Math.min(
                   ACL_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
                   ACL_RETRY_MAX_DELAY,

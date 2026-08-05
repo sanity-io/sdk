@@ -983,6 +983,35 @@ it('does not retry dataset ACL fetch failures caused by 4xx client errors', asyn
   unsubscribe()
 })
 
+it('retries dataset ACL fetch failures caused by 429 rate-limit errors', async () => {
+  const rateLimited = new ClientError({
+    statusCode: 429,
+    headers: {},
+    body: {error: 'Too Many Requests', message: 'Rate limit exceeded'},
+  })
+  const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
+
+  // the first attempt is rate limited; subsequent attempts succeed
+  let aclAttempts = 0
+  client.observable.request = vi.fn().mockReturnValue(
+    defer(() => {
+      aclAttempts++
+      if (aclAttempts === 1) return throwError(() => rateLimited)
+      return of(datasetAcl)
+    }),
+  )
+
+  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const result = await resolvePermissions(instance, {actions: [createDocument(doc)]})
+
+  expect(result).toEqual({allowed: true})
+  expect(aclAttempts).toBe(2)
+
+  // the store never entered the fatal error state
+  const documentState = getDocumentState(instance, doc)
+  expect(() => documentState.getCurrent()).not.toThrow()
+})
+
 it('fetches ACL for MediaLibraryResource', async () => {
   const mediaLibraryInstance = createSanityInstance({
     projectId: 'p',
