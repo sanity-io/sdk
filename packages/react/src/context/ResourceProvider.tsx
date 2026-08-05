@@ -130,7 +130,10 @@ export function ResourceProvider({
   }, [instance, parentInstance])
 
   return (
-    <SanityInstanceProvider instance={instance} fallback={fallback ?? DEFAULT_FALLBACK}>
+    <SanityInstanceProvider
+      instance={instance}
+      fallback={fallback === undefined ? DEFAULT_FALLBACK : fallback}
+    >
       <ResourceContext.Provider value={effectiveResource}>
         <ProjectContext.Provider value={effectiveProjectId}>
           <PerspectiveContext.Provider value={perspective ?? parentPerspective}>
