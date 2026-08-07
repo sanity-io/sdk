@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.19.1](https://github.com/sanity-io/sdk/compare/sdk-v2.19.0...sdk-v2.19.1) (2026-08-07)
+
+
+### Bug Fixes
+
+* **core:** retry transient dataset ACL fetch failures ([#1084](https://github.com/sanity-io/sdk/issues/1084)) ([03a015f](https://github.com/sanity-io/sdk/commit/03a015f5890fc859f579b1bdd0231da850f29737))
+* **deps:** update dependency @sanity/client to ^7.24.0 ([#1064](https://github.com/sanity-io/sdk/issues/1064)) ([a2ced1b](https://github.com/sanity-io/sdk/commit/a2ced1b39f1f14180b2c67f491241a21dc11d9db))
+
 ## [2.19.0](https://github.com/sanity-io/sdk/compare/sdk-v2.18.0...sdk-v2.19.0) (2026-08-03)
 
 

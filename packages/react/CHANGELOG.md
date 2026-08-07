@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.19.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.19.0...sdk-react-v2.19.1) (2026-08-07)
+
+
+### Bug Fixes
+
+* **react:** allow `null` as fallback for `ResourceProvider` ([#1083](https://github.com/sanity-io/sdk/issues/1083)) ([3c06ab7](https://github.com/sanity-io/sdk/commit/3c06ab70d0f8711b78e4a90b1525219f29c7ed46))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.19.1
+
 ## [2.19.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.18.0...sdk-react-v2.19.0) (2026-08-03)
 
 
