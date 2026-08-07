@@ -33,7 +33,7 @@
     "react-compiler-runtime": "catalog:",
     "react-dom": "catalog:",
     "react-error-boundary": "catalog:",
-    "react-router": "^7.15.1",
+    "react-router": "^7.18.2",
     "styled-components": "^6.4.1",
     "typescript": "catalog:"
   },
