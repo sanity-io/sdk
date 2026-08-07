@@ -33,7 +33,7 @@
     "dev:kitchensink": "turbo run dev --filter=@sanity/kitchensink-react",
     "dev:standalone": "turbo run dev --filter=@sanity/standalone-react",
     "fallow": "fallow",
-    "fallow:baseline": "fallow dead-code --save-baseline fallow-baselines/dead-code.json --quiet; fallow health --save-baseline fallow-baselines/health.json --quiet; fallow dupes --save-baseline fallow-baselines/dupes.json --quiet; exit 0",
+    "fallow:baseline": "fallow dead-code --save-baseline fallow-baselines/dead-code.json --quiet; fallow health --save-baseline fallow-baselines/health.json --quiet; fallow dupes --save-baseline fallow-baselines/dupes.json --quiet; oxfmt fallow-baselines/*.json --no-error-on-unmatched-pattern; exit 0",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "lint": "turbo run lint -- --fix && eslint . --fix",
