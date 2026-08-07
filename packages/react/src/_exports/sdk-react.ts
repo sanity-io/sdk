@@ -70,6 +70,12 @@ export {
   type DocumentsResponse,
   useDocuments,
 } from '../hooks/documents/useDocuments'
+export {
+  getMediaLibraryAssetDocumentHandle,
+  type MediaLibraryAsset,
+  type MediaLibraryAssetHandle,
+  useMediaLibraryAsset,
+} from '../hooks/mediaLibrary/useMediaLibraryAsset'
 export {useOrganization} from '../hooks/organizations/useOrganization'
 export {useOrganizations} from '../hooks/organizations/useOrganizations'
 export {
