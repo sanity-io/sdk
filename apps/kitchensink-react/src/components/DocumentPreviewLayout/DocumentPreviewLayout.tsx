@@ -1,21 +1,21 @@
-import 'inter-ui/inter.css'
-import '../../css/styles.css'
+import "inter-ui/inter.css";
+import "../../css/styles.css";
 
-import {DocumentIcon} from '@sanity/icons'
-import {forwardRef, type JSX} from 'react'
+import { DocumentIcon } from "@sanity/icons/Document";
+import { forwardRef, type JSX } from "react";
 
 /**
  * @public
  */
 export interface DocumentPreviewLayoutProps {
-  docType?: string
-  media?: {type: string; url: string} | null | undefined
-  onClick?: () => void
-  selected?: boolean
-  status?: string
-  subtitle?: string
-  title: string
-  documentId?: string
+  docType?: string;
+  media?: { type: string; url: string } | null | undefined;
+  onClick?: () => void;
+  selected?: boolean;
+  status?: string;
+  subtitle?: string;
+  title: string;
+  documentId?: string;
 }
 
 /**
@@ -33,8 +33,8 @@ export const DocumentPreviewLayout = forwardRef(
       media,
       onClick,
       selected = false,
-      status = '',
-      subtitle = '',
+      status = "",
+      subtitle = "",
       title,
       documentId,
     }: DocumentPreviewLayoutProps,
@@ -42,21 +42,21 @@ export const DocumentPreviewLayout = forwardRef(
   ): JSX.Element => {
     // @TODO: empty state
     if (!title) {
-      return <></>
+      return <></>;
     }
 
-    let PreviewMedia
+    let PreviewMedia;
 
     if (media?.url) {
-      const baseUrl = new URL(media.url)
-      baseUrl.searchParams.set('h', '66')
-      baseUrl.searchParams.set('w', '66')
-      baseUrl.searchParams.set('fit', 'crop')
-      const mediaUrl = baseUrl.toString()
+      const baseUrl = new URL(media.url);
+      baseUrl.searchParams.set("h", "66");
+      baseUrl.searchParams.set("w", "66");
+      baseUrl.searchParams.set("fit", "crop");
+      const mediaUrl = baseUrl.toString();
       // media url string params for sanity img
-      PreviewMedia = <img src={mediaUrl} alt="" />
+      PreviewMedia = <img src={mediaUrl} alt="" />;
     } else {
-      PreviewMedia = <DocumentIcon />
+      PreviewMedia = <DocumentIcon />;
     }
 
     return (
@@ -132,8 +132,8 @@ export const DocumentPreviewLayout = forwardRef(
         <button
           onClick={onClick}
           ref={ref as React.Ref<HTMLButtonElement>}
-          className={`DocumentPreviewLayout block si-100 text-start p-1 radius1 ${selected ? 'selected' : ''}`}
-          data-testid={`document-preview-${documentId || 'unknown'}`}
+          className={`DocumentPreviewLayout block si-100 text-start p-1 radius1 ${selected ? "selected" : ""}`}
+          data-testid={`document-preview-${documentId || "unknown"}`}
         >
           <div className="container-inline flex align-items-center gap-2 font-sans">
             <figure className="Media border0 border-solid flex-none flex align-items-center justify-content-center object-cover">
@@ -141,11 +141,17 @@ export const DocumentPreviewLayout = forwardRef(
             </figure>
 
             <div className="leading2 flex-grow overflow-hidden">
-              <p className="Title text-1 font-medium truncate" data-testid="document-title">
+              <p
+                className="Title text-1 font-medium truncate"
+                data-testid="document-title"
+              >
                 {title}
               </p>
               {subtitle && (
-                <p className="Subtitle text-1 truncate" data-testid="document-subtitle">
+                <p
+                  className="Subtitle text-1 truncate"
+                  data-testid="document-subtitle"
+                >
                   {subtitle}
                 </p>
               )}
@@ -158,14 +164,14 @@ export const DocumentPreviewLayout = forwardRef(
             )}
 
             {/* @TODO: finalize UI for this */}
-            {status === 'published' && (
+            {status === "published" && (
               <figure className="Published inline-block pb-5 pi-3 radius-pill text-2">
                 ✔︎ <figcaption className="inline">published</figcaption>
               </figure>
             )}
 
             {/* @TODO: finalize UI for this */}
-            {status === 'draft' && (
+            {status === "draft" && (
               <figure className="Draft inline-block pb-5 pi-3 radius-pill text-2">
                 ⛑︎ <figcaption className="inline">draft</figcaption>
               </figure>
@@ -173,8 +179,8 @@ export const DocumentPreviewLayout = forwardRef(
           </div>
         </button>
       </>
-    )
+    );
   },
-)
+);
 
-DocumentPreviewLayout.displayName = 'DocumentPreviewLayout'
+DocumentPreviewLayout.displayName = "DocumentPreviewLayout";
