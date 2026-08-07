@@ -59,6 +59,27 @@ describe('ResourceProvider', () => {
     consoleSpy.mockRestore()
   })
 
+  it('renders nothing during loading when fallback is null', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const {promise, resolve} = promiseWithResolvers()
+    function SuspendingChild(): React.ReactNode {
+      throw promise
+    }
+
+    const {container} = render(
+      <ResourceProvider {...testConfig} fallback={null}>
+        <SuspendingChild />
+      </ResourceProvider>,
+    )
+
+    expect(container).toBeEmptyDOMElement()
+    act(() => {
+      resolve()
+    })
+    await new Promise((r) => setTimeout(r, 0))
+    consoleSpy.mockRestore()
+  })
+
   it('creates root instance when no parent context exists', async () => {
     const {promise, resolve} = promiseWithResolvers<SanityInstance | null>()
 

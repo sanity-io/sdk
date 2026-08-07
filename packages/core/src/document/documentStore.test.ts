@@ -1,6 +1,7 @@
 import {
   type BaseActionOptions,
   type BaseMutationOptions,
+  ClientError,
   type FilteredResponseQueryOptions,
   type ListenEvent,
   type MultipleActionResult,
@@ -17,7 +18,18 @@ import {diffValue} from '@sanity/diff-patch'
 import {DocumentId, getDraftId, getPublishedId} from '@sanity/id-utils'
 import {type Mutation, type SanityDocument} from '@sanity/types'
 import {evaluate, parse} from 'groq-js'
-import {delay, first, firstValueFrom, from, Observable, of, ReplaySubject, Subject} from 'rxjs'
+import {
+  defer,
+  delay,
+  first,
+  firstValueFrom,
+  from,
+  Observable,
+  of,
+  ReplaySubject,
+  Subject,
+  throwError,
+} from 'rxjs'
 import {afterEach, beforeEach, expect, it, vi} from 'vitest'
 
 import {getClientState} from '../client/clientStore'
@@ -917,6 +929,89 @@ it('does not send credentials with the dataset ACL request', async () => {
   expect(aclCall![0]).not.toHaveProperty('withCredentials')
 })
 
+it('retries transient dataset ACL fetch failures instead of failing fatally', async () => {
+  const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
+
+  // the first attempt fails like a dropped connection; subsequent attempts succeed
+  let aclAttempts = 0
+  client.observable.request = vi.fn().mockReturnValue(
+    defer(() => {
+      aclAttempts++
+      if (aclAttempts === 1) return throwError(() => new Error('socket hang up'))
+      return of(datasetAcl)
+    }),
+  )
+
+  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const result = await resolvePermissions(instance, {actions: [createDocument(doc)]})
+
+  expect(result).toEqual({allowed: true})
+  expect(aclAttempts).toBe(2)
+
+  // the store never entered the fatal error state
+  const documentState = getDocumentState(instance, doc)
+  expect(() => documentState.getCurrent()).not.toThrow()
+})
+
+it('does not retry dataset ACL fetch failures caused by 4xx client errors', async () => {
+  const forbidden = new ClientError({
+    statusCode: 403,
+    headers: {},
+    body: {error: 'Forbidden', message: 'Session does not have access to this dataset'},
+  })
+
+  let aclAttempts = 0
+  client.observable.request = vi.fn().mockReturnValue(
+    defer(() => {
+      aclAttempts++
+      return throwError(() => forbidden)
+    }),
+  )
+
+  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const documentState = getDocumentState(instance, doc)
+  const unsubscribe = documentState.subscribe()
+
+  // the error is fatal: it surfaces through the store instead of being retried
+  await vi.waitFor(() => {
+    expect(() => documentState.getCurrent()).toThrow(
+      'Forbidden - Session does not have access to this dataset',
+    )
+  })
+  expect(aclAttempts).toBe(1)
+
+  unsubscribe()
+})
+
+it('retries dataset ACL fetch failures caused by 429 rate-limit errors', async () => {
+  const rateLimited = new ClientError({
+    statusCode: 429,
+    headers: {},
+    body: {error: 'Too Many Requests', message: 'Rate limit exceeded'},
+  })
+  const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
+
+  // the first attempt is rate limited; subsequent attempts succeed
+  let aclAttempts = 0
+  client.observable.request = vi.fn().mockReturnValue(
+    defer(() => {
+      aclAttempts++
+      if (aclAttempts === 1) return throwError(() => rateLimited)
+      return of(datasetAcl)
+    }),
+  )
+
+  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const result = await resolvePermissions(instance, {actions: [createDocument(doc)]})
+
+  expect(result).toEqual({allowed: true})
+  expect(aclAttempts).toBe(2)
+
+  // the store never entered the fatal error state
+  const documentState = getDocumentState(instance, doc)
+  expect(() => documentState.getCurrent()).not.toThrow()
+})
+
 it('fetches ACL for MediaLibraryResource', async () => {
   const mediaLibraryInstance = createSanityInstance({
     projectId: 'p',
@@ -1250,6 +1345,8 @@ vi.mock('./documentConstants.ts', async (importOriginal) => {
     DOCUMENT_STATE_CLEAR_DELAY: 25,
     OUT_OF_SYNC_RETRY_BASE_DELAY: 0,
     OUT_OF_SYNC_RETRY_MAX_DELAY: 0,
+    ACL_RETRY_BASE_DELAY: 0,
+    ACL_RETRY_MAX_DELAY: 0,
   }
 })
 

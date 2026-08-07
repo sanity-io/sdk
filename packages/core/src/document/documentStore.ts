@@ -1,4 +1,4 @@
-import {type Action, type Mutation} from '@sanity/client'
+import {type Action, ClientError, CorsOriginError, type Mutation} from '@sanity/client'
 import {DocumentId, getDraftId, getPublishedId, getVersionId} from '@sanity/id-utils'
 import {jsonMatch} from '@sanity/json-match'
 import {type SanityDocument} from 'groq'
@@ -48,6 +48,8 @@ import {createStateSourceAction, type StateSource} from '../store/createStateSou
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {type DocumentAction} from './actions'
 import {
+  ACL_RETRY_BASE_DELAY,
+  ACL_RETRY_MAX_DELAY,
   API_VERSION,
   INITIAL_OUTGOING_THROTTLE_TIME,
   OUT_OF_SYNC_RETRY_BASE_DELAY,
@@ -562,10 +564,39 @@ const subscribeToClientAndFetchDatasetAcl = ({
   return getClientState(instance, clientOptions)
     .observable.pipe(
       switchMap((client) =>
-        client.observable.request<DatasetAcl>({
-          uri,
-          tag: 'acl.get',
-        }),
+        client.observable
+          .request<DatasetAcl>({
+            uri,
+            tag: 'acl.get',
+          })
+          .pipe(
+            retry({
+              delay: (error, retryCount) => {
+                // 4xx responses and CORS misconfigurations are not transient —
+                // the server will keep rejecting the request, so rethrow to
+                // surface them as a fatal store error. 408 (request timeout)
+                // and 429 (rate limit) are the exceptions: they resolve on
+                // their own, so they are retried like network errors
+                const isTransientClientError =
+                  error instanceof ClientError &&
+                  (error.statusCode === 408 || error.statusCode === 429)
+                if (
+                  (error instanceof ClientError && !isTransientClientError) ||
+                  error instanceof CorsOriginError
+                ) {
+                  return throwError(() => error)
+                }
+                // network errors (no status code), 408/429 responses, and 5xx
+                // responses are retried with exponential backoff so a transient
+                // failure during startup doesn't permanently brick the store
+                const backoff = Math.min(
+                  ACL_RETRY_BASE_DELAY * 2 ** (retryCount - 1),
+                  ACL_RETRY_MAX_DELAY,
+                )
+                return timer(backoff)
+              },
+            }),
+          ),
       ),
       tap((datasetAcl) => state.set('setGrants', {grants: createGrantsLookup(datasetAcl)})),
     )

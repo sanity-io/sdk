@@ -7,7 +7,20 @@ import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOpti
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 
 /**
- * A hook for subscribing to presence information for the current project or Canvas.
+ * Every participant in the current project and dataset, or Canvas.
+ *
+ * Reading presence never announces anything. Call `useReportPresence` to make the
+ * current user visible to others, including to the Studio, which shares the same
+ * presence room.
+ *
+ * This returns everyone in the whole resource and leaves the filtering to you.
+ * Prefer `usePresenceForDocument` when you care about one document: it scopes and
+ * flattens the result for rendering. Note that participants are counted by session,
+ * so one person in two tabs appears twice.
+ *
+ * Presence is scoped to a single project and dataset. It is not a list of everyone
+ * signed in to your organization.
+ *
  * @public
  */
 export function usePresence(options: ResourceHandle = {}): {

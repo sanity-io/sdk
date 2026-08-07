@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.19.0](https://github.com/sanity-io/sdk/compare/sdk-v2.18.0...sdk-v2.19.0) (2026-08-03)
+
+
+### Features
+
+* **core:** report presence at document, field, and cursor level ([#1080](https://github.com/sanity-io/sdk/issues/1080)) ([7baa7c9](https://github.com/sanity-io/sdk/commit/7baa7c95b055c59366180b746c5ddbf8cee62c01))
+* **react:** add presence reporting and per-document presence hooks ([#1081](https://github.com/sanity-io/sdk/issues/1081)) ([d2345ff](https://github.com/sanity-io/sdk/commit/d2345ff7ff972e72bcc22dc21b286a79355cba3c))
+
+
+### Bug Fixes
+
+* **core:** reconnect presence and expire stale sessions ([#1079](https://github.com/sanity-io/sdk/issues/1079)) ([e61cd15](https://github.com/sanity-io/sdk/commit/e61cd15a0d5b75fcf2735a1964ce29de9b3fc5a0))
+
 ## [2.18.0](https://github.com/sanity-io/sdk/compare/sdk-v2.17.0...sdk-v2.18.0) (2026-07-20)
 
 
