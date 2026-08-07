@@ -1,6 +1,7 @@
 import {type FrameLocator, type Page} from '@playwright/test'
 
 /**
+ * @internal
  * Unified interface for detecting elements in pages whether in iframe or not.
  * Methods delegate to either Page or FrameLocator depending on context,
  * and all arguments (including options like {exact: true}) are forwarded.

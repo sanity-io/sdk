@@ -1,12 +1,62 @@
 #!/usr/bin/env node
 
 /* eslint-disable no-console */
+import {type SanityClient} from '@sanity/client'
+
 import {getClient} from '../helpers/clients'
 import {getE2EEnv} from '../helpers/getE2EEnv'
 import {sanitizeDatasetName} from '../helpers/sanitizeDatasetName'
 import {startTimer} from '../helpers/timer'
 
 const env = getE2EEnv()
+
+/**
+ * The comments add-on paired to a dataset, when a run wrote a comment.
+ *
+ * Writing the first comment on a dataset creates one of these, so any spec that
+ * exercises comments leaves one behind. The name cannot be derived: the suffix
+ * is best-effort and shortens for longer dataset names, so it has to come from
+ * the same query the SDK discovers it with.
+ */
+async function findCommentsAddon(
+  client: SanityClient,
+  dataset: string,
+): Promise<string | undefined> {
+  try {
+    const datasets = await client.request<{name: string}[] | undefined>({
+      uri: `/projects/${env.SANITY_APP_E2E_PROJECT_ID}/datasets?datasetProfile=comments&addonFor=${dataset}`,
+    })
+    return datasets?.[0]?.name
+  } catch (error) {
+    console.error(`Failed to look up the comments add-on for ${dataset}:`, error)
+    return undefined
+  }
+}
+
+async function deleteDataset(client: SanityClient, label: string, name: string): Promise<void> {
+  try {
+    await client.datasets.delete(name)
+    console.log(`Successfully deleted ${label} ${name}`)
+  } catch (error) {
+    console.error(`Failed to delete ${label} ${name}:`, error)
+  }
+}
+
+/**
+ * Deletes a run's dataset and the comments add-on paired to it.
+ *
+ * The add-on goes first. It is only findable through `addonFor=<parent>`, so
+ * deleting the parent first risks leaving one behind with no way left to
+ * identify it. Add-on datasets are free and off-quota, which is exactly why an
+ * orphan would sit there unnoticed.
+ */
+async function deleteWithAddon(client: SanityClient, label: string, dataset: string) {
+  const addon = await findCommentsAddon(client, dataset)
+  if (addon) {
+    await deleteDataset(client, `${label} comments add-on`, addon)
+  }
+  await deleteDataset(client, label, dataset)
+}
 
 // must be run as a separate script to avoid race conditions with the tests
 async function cleanupDatasets() {
@@ -22,21 +72,8 @@ async function cleanupDatasets() {
   const timer = startTimer('Cleaning up test datasets')
 
   try {
-    // Delete primary dataset
-    try {
-      await client.datasets.delete(primaryDataset)
-      console.log(`Successfully deleted primary dataset ${primaryDataset}`)
-    } catch (error) {
-      console.error(`Failed to delete primary dataset ${primaryDataset}:`, error)
-    }
-
-    // Delete secondary dataset
-    try {
-      await client.datasets.delete(secondaryDataset)
-      console.log(`Successfully deleted secondary dataset ${secondaryDataset}`)
-    } catch (error) {
-      console.error(`Failed to delete secondary dataset ${secondaryDataset}:`, error)
-    }
+    await deleteWithAddon(client, 'primary dataset', primaryDataset)
+    await deleteWithAddon(client, 'secondary dataset', secondaryDataset)
 
     timer.end()
   } catch (error) {
