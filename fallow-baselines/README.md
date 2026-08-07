@@ -1,6 +1,13 @@
 # Fallow baselines
 
-These three JSON files are the inputs that let the [`Fallow`](../.github/workflows/fallow.yml) CI workflow fail PRs only on _new_ findings instead of on the whole pre-existing backlog.
+These three JSON files hold findings the [`Fallow`](../.github/workflows/fallow.yml) CI workflow should stay quiet about, so a pull request is judged on what it introduced rather than on the whole pre-existing backlog.
+
+Two layers decide whether a pull request fails, and the difference matters when you regenerate:
+
+1. **These baselines.** Anything listed is suppressed outright, whether or not the branch introduced it.
+2. **`--gate new-only`**, the `fallow audit` default. Of whatever is left, it fails only on findings attributed to the branch, comparing against a snapshot of the base ref that is rebuilt from git on every run.
+
+A baseline that has drifted out of date is harmless: the finding falls through to layer 2, which still recognises it as pre-existing, so reports get noisier but builds stay green. A baseline regenerated at the wrong moment is not harmless, because layer 1 wins and a real regression is silenced for good.
 
 | File             | Suppresses                                                                        |
 | ---------------- | --------------------------------------------------------------------------------- |
@@ -40,7 +47,9 @@ Run from the repo root:
 pnpm fallow:baseline
 ```
 
-That runs `dead-code --save-baseline`, `health --save-baseline`, and `dupes --save-baseline` and overwrites the three files. Commit the result.
+That runs `dead-code --save-baseline`, `health --save-baseline`, and `dupes --save-baseline`, formats the output, and overwrites the three files. Commit the result.
+
+Check that `pnpm fallow audit` is green before you run it. Regeneration records whatever it finds, so regenerating with an unaddressed regression in the tree writes that regression into the baseline and suppresses it from then on.
 
 ## When to regenerate
 
@@ -50,4 +59,4 @@ That runs `dead-code --save-baseline`, `health --save-baseline`, and `dupes --sa
 
 ## When _not_ to regenerate
 
-- To make a failing audit pass. If audit is failing, it's because the PR introduced a new finding. Fix the finding, suppress it inline (`// fallow-ignore-next-line ...`), or update the audit thresholds in [`.fallowrc.json`](../.fallowrc.json). Regenerating the baseline to silence a real regression defeats the purpose of the gate.
+- To make a failing audit pass. It does work, and that is exactly the danger: baselines suppress findings whether or not the branch introduced them, so regenerating buries the regression rather than fixing it. If audit is failing, the branch introduced a new finding. Fix it, suppress it inline (`// fallow-ignore-next-line ...`), or update the audit thresholds in [`.fallowrc.json`](../.fallowrc.json).
