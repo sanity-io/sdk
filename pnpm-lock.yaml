@@ -197,9 +197,15 @@ importers:
       '@portabletext/editor':
         specifier: 7.10.13
         version: 7.10.13(@types/react@19.2.17)(react@19.2.7)
+      '@portabletext/keyboard-shortcuts':
+        specifier: ^2.1.3
+        version: 2.1.3
       '@portabletext/plugin-sdk-value':
         specifier: 7.1.5
         version: 7.1.5(@portabletext/editor@7.10.13(@types/react@19.2.17)(react@19.2.7))(@sanity/sdk-react@packages+react)(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@portabletext/toolbar':
+        specifier: ^8.0.40
+        version: 8.0.40(@portabletext/editor@7.10.13(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(react@19.2.7)
       '@sanity/icons':
         specifier: ^3.7.4
         version: 3.7.4(react@19.2.7)
@@ -2799,6 +2805,13 @@ packages:
   '@portabletext/to-html@5.0.2':
     resolution: {integrity: sha512-w59PcErj5JXUCv9tbV2npqJmcnORTAftCMLp0vc9FnWrXL3C9qYvuB2MQbdHsZEOesF3VmwqUsYUgjm7PX4JTw==}
     engines: {node: '>=20.19 <22 || >=22.12'}
+
+  '@portabletext/toolbar@8.0.40':
+    resolution: {integrity: sha512-pIEoR+Qt1VHpoAeg+J+lAJ4l6RQVvpcd0yNAWvkJyEcN3mOMJNOTqsoPqtoioY1ACFb2E4uVK4hG0r7+4T4Alw==}
+    engines: {node: '>=20.19 <22 || >=22.12'}
+    peerDependencies:
+      '@portabletext/editor': ^7.10.13
+      react: ^19.2.7
 
   '@portabletext/toolkit@5.0.2':
     resolution: {integrity: sha512-Njc1LE1PMJkTx/wEPqZ6sOWGgFgX2B47fxpOQ/Ia4ByhsZoA5Sq8dNvvV5F052j/xE8TbOLiBEjS848FkKADDQ==}
@@ -10573,6 +10586,16 @@ snapshots:
     dependencies:
       '@portabletext/toolkit': 5.0.2
       '@portabletext/types': 4.0.2
+
+  '@portabletext/toolbar@8.0.40(@portabletext/editor@7.10.13(@types/react@19.2.17)(react@19.2.7))(@types/react@19.2.17)(react@19.2.7)':
+    dependencies:
+      '@portabletext/editor': 7.10.13(@types/react@19.2.17)(react@19.2.7)
+      '@portabletext/keyboard-shortcuts': 2.1.3
+      '@xstate/react': 6.1.0(@types/react@19.2.17)(react@19.2.7)(xstate@5.32.5)
+      react: 19.2.7
+      xstate: 5.32.5
+    transitivePeerDependencies:
+      - '@types/react'
 
   '@portabletext/toolkit@5.0.2':
     dependencies:

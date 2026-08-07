@@ -1,4 +1,9 @@
-@import './paramour.css';
+/* Vite injects component-imported CSS globally, so this classless
+   framework styles bare elements across the whole app, not just the
+   layout demos that import it. Keeping it in a layer lets unlayered
+   styles (e.g. `@sanity/ui`'s styled-components) win whenever the two
+   compete. */
+@import './paramour.css' layer(paramour);
 
 body {
   color-scheme: light dark;
