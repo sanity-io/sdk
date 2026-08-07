@@ -266,7 +266,9 @@ describe('calculatePermissions', () => {
       _createdAt: '2025-01-01T00:00:00.000Z',
       _updatedAt: '2025-01-01T00:00:00.000Z',
       _rev: 'rev-1',
-      _system: {createdBy},
+      // Content Lake sets `_system.createdBy` on canvas documents; the public
+      // `DocumentSystem` type doesn't declare it, so the literal needs a cast.
+      _system: {createdBy} as SanityDocument['_system'],
     })
 
     const editAction: DocumentAction = {
