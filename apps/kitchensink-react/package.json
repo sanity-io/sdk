@@ -22,7 +22,7 @@
     "@paramour/css": "1.0.0-rc.2",
     "@portabletext/editor": "7.10.13",
     "@portabletext/plugin-sdk-value": "7.1.5",
-    "@sanity/icons": "^3.7.4",
+    "@sanity/icons": "^5.2.1",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
     "@sanity/ui": "^2.16.22",
