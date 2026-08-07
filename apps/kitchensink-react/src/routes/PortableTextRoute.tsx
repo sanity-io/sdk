@@ -14,6 +14,7 @@ import {
   h1,
   h2,
   italic,
+  type KeyboardShortcut,
   link,
   underline,
 } from '@portabletext/keyboard-shortcuts'
@@ -128,12 +129,16 @@ const renderListItem: RenderListItemFunction = (props) => {
 // picks up the display metadata (title, keyboard shortcut) a toolbar needs.
 // These are defined at module scope so `useToolbarSchema` doesn't recompute
 // the extended schema on every render.
+const decoratorDisplay: Record<string, {title: string; shortcut: KeyboardShortcut}> = {
+  strong: {title: 'Bold', shortcut: bold},
+  em: {title: 'Italic', shortcut: italic},
+  underline: {title: 'Underline', shortcut: underline},
+  code: {title: 'Code', shortcut: code},
+}
+
 const extendDecorator: ExtendDecoratorSchemaType = (decorator) => {
-  if (decorator.name === 'strong') return {...decorator, title: 'Bold', shortcut: bold}
-  if (decorator.name === 'em') return {...decorator, title: 'Italic', shortcut: italic}
-  if (decorator.name === 'underline') return {...decorator, title: 'Underline', shortcut: underline}
-  if (decorator.name === 'code') return {...decorator, title: 'Code', shortcut: code}
-  return decorator
+  const display = decoratorDisplay[decorator.name]
+  return display ? {...decorator, ...display} : decorator
 }
 
 const extendAnnotation: ExtendAnnotationSchemaType = (annotation) => {
