@@ -201,8 +201,8 @@ importers:
         specifier: 7.1.5
         version: 7.1.5(@portabletext/editor@7.10.13(@types/react@19.2.17)(react@19.2.7))(@sanity/sdk-react@packages+react)(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@sanity/icons':
-        specifier: ^3.7.4
-        version: 3.7.4(react@19.2.7)
+        specifier: ^5.2.1
+        version: 5.2.1(react@19.2.7)
       '@sanity/sdk':
         specifier: workspace:*
         version: link:../../packages/core
@@ -3401,6 +3401,12 @@ packages:
     engines: {node: '>=14.0.0'}
     peerDependencies:
       react: ^18.3 || ^19.0.0-0
+
+  '@sanity/icons@5.2.1':
+    resolution: {integrity: sha512-P5gY1HRungh4RgCcypdIpu/SKoTwRBTttpbHntZjdW1MO3MK6xEOs+pbAzSARyhh22OcN9PkBBEYk2FL34BvfQ==}
+    engines: {node: '>=20.19 <22 || >=22.12'}
+    peerDependencies:
+      react: ^18 || ^19
 
   '@sanity/id-utils@1.0.0':
     resolution: {integrity: sha512-2sb7tbdMDuUuVyocJPKG0gZBiOML/ovCe+mJiLrv1j69ODOfa2LfUjDVR+dRw/A/+XuxoJSSP8ebG7NiwTOgIA==}
@@ -11272,6 +11278,10 @@ snapshots:
   '@sanity/generate-help-url@4.0.0': {}
 
   '@sanity/icons@3.7.4(react@19.2.7)':
+    dependencies:
+      react: 19.2.7
+
+  '@sanity/icons@5.2.1(react@19.2.7)':
     dependencies:
       react: 19.2.7
 
