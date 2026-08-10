@@ -1,0 +1,7 @@
+---
+description: The Fallow audit that gates pull requests, and how to fix what it reports.
+globs: packages/**/src/**/*.ts,packages/**/src/**/*.tsx,apps/**/src/**/*.ts,apps/**/src/**/*.tsx
+alwaysApply: false
+---
+
+@.claude/rules/fallow.md

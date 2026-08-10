@@ -6,14 +6,6 @@ import {createStoreInstance} from '../store/createStoreInstance'
 import {projectionStore} from './projectionStore'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 
-// Mock the module with a factory function
-vi.mock('../common/createLiveEventSubscriber', () => {
-  const mockLiveSubscriber = vi.fn()
-  return {
-    createLiveEventSubscriber: vi.fn(() => mockLiveSubscriber),
-  }
-})
-
 vi.mock('./subscribeToStateAndFetchBatches')
 
 describe('projectionStore', () => {
