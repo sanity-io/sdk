@@ -114,7 +114,7 @@ v2 introduced `source` and then the `resource` parameter to allow for easier usa
 | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `source` option on handles                                              | `resource`                                                                      |
 | `sourceName` option on hooks                                            | `resourceName`                                                                  |
-| `sources` config option                                                 | `resources`                                                                     |
+| `sources` config option                                                 | `resources` prop on `<SanityApp>` (see 12)                                      |
 | `DocumentSource`, `DatasetSource`, `MediaLibrarySource`, `CanvasSource` | `DocumentResource`, `DatasetResource`, `MediaLibraryResource`, `CanvasResource` |
 | `isDatasetSource`, `isMediaLibrarySource`, `isCanvasSource`             | `isDatasetResource`, `isMediaLibraryResource`, `isCanvasResource`               |
 
@@ -186,6 +186,53 @@ applyDocumentActions(child, {actions})
 ```typescript
 applyDocumentActions(instance, {actions, resource: {projectId: 'other', dataset: 'production'}})
 ```
+
+**The instance config still acts as the default resource in core.** This is unchanged; neither of the two removals above affects it. If you configure a project and dataset when you create the instance, you can keep calling resource-scoped APIs without passing a `resource`:
+
+```typescript
+const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+
+// still resolves to {projectId: 'p', dataset: 'd'}
+getDocumentState(instance, {documentId: 'doc1', documentType: 'author'})
+```
+
+The same applies to `perspective`: set it once on the instance and it is used by any call that does not pass its own. An explicit `resource` or `perspective` on an individual call always wins over the instance config. This remains the recommended way to use the core SDK directly, without the React layer.
+
+12. `SanityConfig.resources` removed; `resource` is now an effective default
+
+`resources` (plural) was a map of named resources on the instance config, but the core SDK package never read it; named-resource lookup is a React-layer feature driven by the `resources` prop on `<SanityApp>` / `<SDKProvider>`, which is unchanged. The config field has been removed.
+
+```typescript
+// Before — had no effect in core
+const instance = createSanityInstance({
+  projectId: 'p',
+  dataset: 'd',
+  resources: {'media-library': {mediaLibraryId: 'ml-123'}},
+})
+
+// After — named resources stay a React concern
+<SanityApp config={{projectId: 'p', dataset: 'd'}} resources={{'media-library': {mediaLibraryId: 'ml-123'}}} />
+```
+
+In its place, `resource` (singular) on `SanityConfig` now works as the instance's default resource. Previously it type-checked but was ignored; calls fell back to `projectId`/`dataset` regardless. Any call that does not pass its own `resource` now operates against it:
+
+```typescript
+const instance = createSanityInstance({resource: {mediaLibraryId: 'ml-123'}})
+
+// resolves against the media library — no per-call resource needed
+getDocumentState(instance, {documentId, documentType})
+```
+
+Unlike `projectId`/`dataset`, this can be a media library or canvas resource, so the whole surface is usable against those without threading a `resource` through every call. `projectId`/`dataset` remain to try to maintain some compatibility with v2, but may be removed in a future version.
+
+```typescript
+const instance = createSanityInstance({
+  projectId: 'p',
+  resource: {mediaLibraryId: 'ml-123'},
+})
+```
+
+Relatedly, `useActiveReleases` and `useAllReleases` now take a `DatasetHandle` rather than a `SanityConfig`. Both already ignored the config-only fields, and this keeps them accepting an explicit `resource`.
 
 ### New in v3
 

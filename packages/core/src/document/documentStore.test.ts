@@ -918,23 +918,17 @@ it('does not send credentials with the dataset ACL request', async () => {
 })
 
 it('fetches ACL for MediaLibraryResource', async () => {
-  const mediaLibraryInstance = createSanityInstance({
-    projectId: 'p',
-    dataset: 'd',
-    resources: {
-      'media-library': {mediaLibraryId: 'test-media-library'},
-    },
-  })
+  const mediaLibraryInstance = createSanityInstance()
 
   const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
   const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
-  const mediaLibrarySource = {mediaLibraryId: 'test-media-library'}
+  const mediaLibraryResource = {mediaLibraryId: 'test-media-library'}
 
   const result = await resolvePermissions(mediaLibraryInstance, {
     actions: [createDocument(doc)],
-    resource: mediaLibrarySource,
+    resource: mediaLibraryResource,
   })
 
   expect(result).toEqual({allowed: true})
@@ -942,23 +936,17 @@ it('fetches ACL for MediaLibraryResource', async () => {
 })
 
 it('fetches ACL for CanvasResource', async () => {
-  const canvasInstance = createSanityInstance({
-    projectId: 'p',
-    dataset: 'd',
-    resources: {
-      canvas: {canvasId: 'test-canvas'},
-    },
-  })
+  const canvasInstance = createSanityInstance()
 
   const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
   const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
-  const canvasSource = {canvasId: 'test-canvas'}
+  const canvasResource = {canvasId: 'test-canvas'}
 
   const result = await resolvePermissions(canvasInstance, {
     actions: [createDocument(doc)],
-    resource: canvasSource,
+    resource: canvasResource,
   })
 
   expect(result).toEqual({allowed: true})

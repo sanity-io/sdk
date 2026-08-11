@@ -111,13 +111,14 @@ export function normalizeResourceOptions<
 export function useEffectiveContextResource(): DocumentResource | undefined {
   const contextResource = useContext(ResourceContext)
   const instance = useContext(SanityInstanceContext)
-  const {projectId, dataset} = instance?.config ?? {}
+  const {projectId, dataset, resource: configResource} = instance?.config ?? {}
 
   return useMemo(() => {
     if (contextResource) return contextResource
+    if (configResource) return configResource
     if (projectId && dataset) return {projectId, dataset}
     return undefined
-  }, [contextResource, projectId, dataset])
+  }, [contextResource, configResource, projectId, dataset])
 }
 
 /**

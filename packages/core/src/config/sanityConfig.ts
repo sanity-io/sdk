@@ -73,7 +73,9 @@ export interface DatasetHandle<TDataset extends string = string, TProjectId exte
   dataset?: TDataset
   /**
    * @beta
-   * Explicit resource object to use for this operation.
+   * Explicit resource to use. On an individual operation this overrides any default;
+   * on a `SanityConfig` it becomes the instance's default resource. Unlike
+   * `projectId`/`dataset`, this can also be a media library or canvas resource.
    */
   resource?: DocumentResource
 }
@@ -143,12 +145,6 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
    * `SDKStudioContext` provider. Can also be set explicitly for programmatic use.
    */
   studio?: StudioConfig
-
-  /**
-   * @beta
-   * A list of named resources to use for this instance.
-   */
-  resources?: Record<string, DocumentResource>
 }
 
 /**
