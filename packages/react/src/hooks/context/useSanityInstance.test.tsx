@@ -1,7 +1,7 @@
-import {createSanityInstance, type SanityConfig, type SanityInstance} from '@sanity/sdk'
+import {createSanityInstance, type SanityInstance} from '@sanity/sdk'
 import {renderHook} from '@testing-library/react'
 import {type ReactNode} from 'react'
-import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {describe, expect, it} from 'vitest'
 
 import {SanityInstanceContext} from '../../context/SanityInstanceContext'
 import {useSanityInstance} from './useSanityInstance'
@@ -48,57 +48,5 @@ describe('useSanityInstance', () => {
 
     // Should return the instance
     expect(result.current).toBe(instance)
-  })
-
-  describe('deprecated config parameter', () => {
-    let warnSpy: ReturnType<typeof vi.spyOn>
-
-    beforeEach(() => {
-      warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    })
-
-    afterEach(() => {
-      warnSpy.mockRestore()
-    })
-
-    it('should return the current context instance regardless of config', () => {
-      const instance = createSanityInstance({projectId: 'test-project', dataset: 'test-dataset'})
-      const requestedConfig: SanityConfig = {projectId: 'test-project', dataset: 'test-dataset'}
-
-      const {result} = renderHook(() => useSanityInstance(requestedConfig), {
-        wrapper: createWrapper(instance),
-      })
-
-      expect(result.current).toBe(instance)
-    })
-
-    it('should throw if no instance in context even when config is provided', () => {
-      expect(() => {
-        renderHook(() => useSanityInstance({projectId: 'test'}), {
-          wrapper: createWrapper(null),
-        })
-      }).toThrow('SanityInstance context not found')
-    })
-
-    it('warns once when a config argument is passed', () => {
-      const instance = createSanityInstance({projectId: 'test-project', dataset: 'test-dataset'})
-      const {rerender} = renderHook(() => useSanityInstance({projectId: 'test-project'}), {
-        wrapper: createWrapper(instance),
-      })
-
-      expect(warnSpy).toHaveBeenCalledTimes(1)
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[useSanityInstance]'))
-
-      rerender()
-      rerender()
-      expect(warnSpy).toHaveBeenCalledTimes(1)
-    })
-
-    it('does not warn when no config is passed', () => {
-      const instance = createSanityInstance({projectId: 'test-project', dataset: 'test-dataset'})
-      renderHook(() => useSanityInstance(), {wrapper: createWrapper(instance)})
-
-      expect(warnSpy).not.toHaveBeenCalled()
-    })
   })
 })
