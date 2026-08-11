@@ -35,7 +35,7 @@ describe('organizations', () => {
     const result = await resolveOrganizations(instance)
     expect(result).toEqual(organizations)
     expect(request).toHaveBeenCalledWith({
-      uri: '/organizations',
+      url: '/organizations',
       query: {
         includeImplicitMemberships: 'false',
         includeMembers: 'false',
@@ -62,7 +62,7 @@ describe('organizations', () => {
     })
 
     expect(request).toHaveBeenCalledWith({
-      uri: '/organizations',
+      url: '/organizations',
       query: {
         includeImplicitMemberships: 'true',
         includeMembers: 'true',

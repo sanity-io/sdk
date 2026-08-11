@@ -280,7 +280,7 @@ describe('createTelemetryManager', () => {
       const result = await manager.checkConsent()
       expect(result).toBe(true)
       expect(mockClient.request).toHaveBeenCalledWith(
-        expect.objectContaining({uri: '/intake/telemetry-status'}),
+        expect.objectContaining({url: '/intake/telemetry-status'}),
       )
     })
 

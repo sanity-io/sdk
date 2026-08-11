@@ -48,12 +48,12 @@ export async function resolveOrgResources(
 
   const [mediaLibrariesResult, canvasesResult] = await Promise.allSettled([
     client.request<OrgResourcesApiResponse>({
-      uri: `/media-libraries`,
+      url: `/media-libraries`,
       query: {organizationId},
       tag: 'org-resources.media-libraries',
     }),
     client.request<OrgResourcesApiResponse>({
-      uri: `/canvases`,
+      url: `/canvases`,
       query: {organizationId},
       tag: 'org-resources.canvases',
     }),

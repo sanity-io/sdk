@@ -314,7 +314,7 @@ describe('presenceStore', () => {
       getPresence(instance, {resource: canvasResource})
 
       expect(mockClient.observable.request).toHaveBeenCalledWith({
-        uri: '/canvases/canvas123',
+        url: '/canvases/canvas123',
         tag: 'canvases.get',
       })
     })

@@ -86,7 +86,7 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
     try {
       const client = getClient()
       const result = await client.request<{status: ConsentStatus}>({
-        uri: '/intake/telemetry-status',
+        url: '/intake/telemetry-status',
         tag: CONSENT_TAG,
       })
       cachedConsent = result
@@ -120,7 +120,7 @@ export function createTelemetryManager(options: TelemetryManagerOptions): Teleme
     const client = getClient()
     log.debug('sending event batch', {batchSize: batch.length, environment})
     return client.request({
-      uri: '/intake/batch',
+      url: '/intake/batch',
       method: 'POST',
       body: {projectId, batch: enrichBatch(batch)},
       tag: BATCH_TAG,
