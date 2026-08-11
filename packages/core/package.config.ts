@@ -7,17 +7,14 @@ const enableVisualizer = process.env['VISUALIZER'] === 'true'
 export default defineConfig({
   ...basePackageConfig,
   tsconfig: 'tsconfig.dist.json',
-  rollup: {
-    plugins: [
-      ...(enableVisualizer
-        ? [
-            visualizer({
-              filename: './stats/index.html',
-              open: false,
-            }),
-          ]
-        : []),
-    ],
-  },
-  dts: 'rolldown',
+  plugins: [
+    ...(enableVisualizer
+      ? [
+          visualizer({
+            filename: './stats/index.html',
+            open: false,
+          }),
+        ]
+      : []),
+  ],
 })

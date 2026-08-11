@@ -1,7 +1,7 @@
 import {defineConfig} from '@sanity/pkg-utils'
 
 export const basePackageConfig = defineConfig({
-  extract: {
+  tsdoc: {
     rules: {
       'ae-internal-missing-underscore': 'off',
     },
