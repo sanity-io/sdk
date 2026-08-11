@@ -9,10 +9,10 @@ import {
 import {
   type DocumentHandle,
   type FavoriteStatusResponse,
-  type FrameMessage,
   getFavoritesState,
   resolveFavoritesState,
 } from '@sanity/sdk'
+import {type FrameMessage} from '@sanity/sdk/comlink'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
