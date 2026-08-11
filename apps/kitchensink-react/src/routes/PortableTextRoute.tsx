@@ -6,11 +6,35 @@ import {
   type RenderDecoratorFunction,
   type RenderListItemFunction,
   type RenderStyleFunction,
-  useEditor,
-  useEditorSelector,
 } from '@portabletext/editor'
-import * as selectors from '@portabletext/editor/selectors'
+import {
+  blockquote,
+  bold,
+  code,
+  h1,
+  h2,
+  italic,
+  type KeyboardShortcut,
+  link,
+  underline,
+} from '@portabletext/keyboard-shortcuts'
 import {SDKValuePlugin} from '@portabletext/plugin-sdk-value'
+import {
+  type ExtendAnnotationSchemaType,
+  type ExtendDecoratorSchemaType,
+  type ExtendListSchemaType,
+  type ExtendStyleSchemaType,
+  type ToolbarAnnotationSchemaType,
+  type ToolbarDecoratorSchemaType,
+  type ToolbarListSchemaType,
+  type ToolbarStyleSchemaType,
+  useAnnotationButton,
+  useDecoratorButton,
+  useHistoryButtons,
+  useListButton,
+  useStyleSelector,
+  useToolbarSchema,
+} from '@portabletext/toolbar'
 import {createSanityInstance, isDatasetResource, type SanityInstance} from '@sanity/sdk'
 import {
   createDocumentHandle,
@@ -101,144 +125,215 @@ const renderListItem: RenderListItemFunction = (props) => {
   return <li style={{listStyleType, margin: 0}}>{props.children}</li>
 }
 
-function ToolbarButton(props: {
-  active: boolean
-  label: string
-  onClick: () => void
+// `@portabletext/toolbar`'s extend hooks are where a plain editor schema
+// picks up the display metadata (title, keyboard shortcut) a toolbar needs.
+// These are defined at module scope so `useToolbarSchema` doesn't recompute
+// the extended schema on every render.
+const decoratorDisplay: Record<string, {title: string; shortcut: KeyboardShortcut}> = {
+  strong: {title: 'Bold', shortcut: bold},
+  em: {title: 'Italic', shortcut: italic},
+  underline: {title: 'Underline', shortcut: underline},
+  code: {title: 'Code', shortcut: code},
+}
+
+const extendDecorator: ExtendDecoratorSchemaType = (decorator) => {
+  const display = decoratorDisplay[decorator.name]
+  return display ? {...decorator, ...display} : decorator
+}
+
+const extendAnnotation: ExtendAnnotationSchemaType = (annotation) => {
+  if (annotation.name === 'link') {
+    return {
+      ...annotation,
+      title: 'Link',
+      shortcut: link,
+      defaultValues: {href: 'https://www.sanity.io'},
+    }
+  }
+  return annotation
+}
+
+const extendStyle: ExtendStyleSchemaType = (style) => {
+  if (style.name === 'h1') return {...style, title: 'H1', shortcut: h1}
+  if (style.name === 'h2') return {...style, title: 'H2', shortcut: h2}
+  if (style.name === 'blockquote') return {...style, title: 'Quote', shortcut: blockquote}
+  return style
+}
+
+const extendList: ExtendListSchemaType = (list) => {
+  if (list.name === 'bullet') return {...list, title: 'UL'}
+  if (list.name === 'number') return {...list, title: 'OL'}
+  return list
+}
+
+function DecoratorButton({
+  schemaType,
+  testId,
+}: {
+  schemaType: ToolbarDecoratorSchemaType
   testId: string
 }) {
+  const decoratorButton = useDecoratorButton({schemaType})
+  const active = decoratorButton.snapshot.matches({enabled: 'active'})
+  const label = schemaType.title ?? schemaType.name
+
   return (
     <Button
-      mode={props.active ? 'default' : 'ghost'}
-      tone={props.active ? 'primary' : 'default'}
-      text={props.label}
+      mode={active ? 'default' : 'ghost'}
+      tone={active ? 'primary' : 'default'}
+      text={label}
       fontSize={1}
       padding={2}
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={props.onClick}
-      data-testid={props.testId}
+      disabled={decoratorButton.snapshot.matches('disabled')}
+      onClick={() => decoratorButton.send({type: 'toggle'})}
+      data-testid={`pte-${label.toLowerCase()}-${testId}`}
     />
   )
 }
 
-function Toolbar({testId}: {testId: string}) {
-  const editor = useEditor()
-  const strongActive = useEditorSelector(editor, selectors.isActiveDecorator('strong'))
-  const emActive = useEditorSelector(editor, selectors.isActiveDecorator('em'))
-  const underlineActive = useEditorSelector(editor, selectors.isActiveDecorator('underline'))
-  const codeActive = useEditorSelector(editor, selectors.isActiveDecorator('code'))
-  const h1Active = useEditorSelector(editor, selectors.isActiveStyle('h1'))
-  const h2Active = useEditorSelector(editor, selectors.isActiveStyle('h2'))
-  const blockquoteActive = useEditorSelector(editor, selectors.isActiveStyle('blockquote'))
-  const bulletActive = useEditorSelector(editor, selectors.isActiveListItem('bullet'))
-  const numberActive = useEditorSelector(editor, selectors.isActiveListItem('number'))
-  const linkActive = useEditorSelector(editor, selectors.isActiveAnnotation('link'))
+function AnnotationButton({
+  schemaType,
+  testId,
+}: {
+  schemaType: ToolbarAnnotationSchemaType
+  testId: string
+}) {
+  const annotationButton = useAnnotationButton({schemaType})
+  const active = annotationButton.snapshot.matches({enabled: 'active'})
+  const label = schemaType.title ?? schemaType.name
 
-  const toggleDecorator = (decorator: string) => {
-    editor.send({type: 'decorator.toggle', decorator})
-    editor.send({type: 'focus'})
-  }
-
-  const toggleStyle = (style: string, active: boolean) => {
+  // `defaultValues` from the schema extension stands in for the insert
+  // dialog a real toolbar would show: it lets `add` be sent directly
+  // instead of going through the button's dialog-open state.
+  const toggle = () => {
     if (active) {
-      editor.send({type: 'style.remove', style})
+      annotationButton.send({type: 'remove'})
     } else {
-      editor.send({type: 'style.add', style})
+      annotationButton.send({type: 'add', annotation: {value: schemaType.defaultValues ?? {}}})
     }
-    editor.send({type: 'focus'})
-  }
-
-  const toggleList = (listItem: string) => {
-    editor.send({type: 'list item.toggle', listItem})
-    editor.send({type: 'focus'})
-  }
-
-  const undo = () => {
-    editor.send({type: 'history.undo'})
-    editor.send({type: 'focus'})
-  }
-
-  const redo = () => {
-    editor.send({type: 'history.redo'})
-    editor.send({type: 'focus'})
-  }
-
-  const toggleLink = () => {
-    if (linkActive) {
-      editor.send({type: 'annotation.remove', annotation: {name: 'link'}})
-    } else {
-      editor.send({
-        type: 'annotation.add',
-        annotation: {name: 'link', value: {href: 'https://www.sanity.io'}},
-      })
-    }
-    editor.send({type: 'focus'})
   }
 
   return (
+    <Button
+      mode={active ? 'default' : 'ghost'}
+      tone={active ? 'primary' : 'default'}
+      text={label}
+      fontSize={1}
+      padding={2}
+      disabled={annotationButton.snapshot.matches('disabled')}
+      onClick={toggle}
+      data-testid={`pte-${label.toLowerCase()}-${testId}`}
+    />
+  )
+}
+
+function ListButton({schemaType, testId}: {schemaType: ToolbarListSchemaType; testId: string}) {
+  const listButton = useListButton({schemaType})
+  const active = listButton.snapshot.matches({enabled: 'active'})
+  const label = schemaType.title ?? schemaType.name
+
+  return (
+    <Button
+      mode={active ? 'default' : 'ghost'}
+      tone={active ? 'primary' : 'default'}
+      text={label}
+      fontSize={1}
+      padding={2}
+      disabled={listButton.snapshot.matches('disabled')}
+      onClick={() => listButton.send({type: 'toggle'})}
+      data-testid={`pte-${label.toLowerCase()}-${testId}`}
+    />
+  )
+}
+
+// Styles are mutually exclusive (a block has at most one), so
+// `useStyleSelector` manages the whole group behind one state machine
+// instead of one hook call per button, unlike decorators/lists/annotations.
+function StyleButtons({
+  schemaTypes,
+  testId,
+}: {
+  schemaTypes: ReadonlyArray<ToolbarStyleSchemaType>
+  testId: string
+}) {
+  const styleSelector = useStyleSelector({schemaTypes})
+  const disabled = styleSelector.snapshot.matches('disabled')
+  const {activeStyle} = styleSelector.snapshot.context
+
+  return (
+    <>
+      {schemaTypes
+        .filter((schemaType) => schemaType.name !== 'normal')
+        .map((schemaType) => {
+          const active = activeStyle === schemaType.name
+          const label = schemaType.title ?? schemaType.name
+          return (
+            <Button
+              key={schemaType.name}
+              mode={active ? 'default' : 'ghost'}
+              tone={active ? 'primary' : 'default'}
+              text={label}
+              fontSize={1}
+              padding={2}
+              disabled={disabled}
+              onClick={() => styleSelector.send({type: 'toggle', style: schemaType.name})}
+              data-testid={`pte-${label.toLowerCase()}-${testId}`}
+            />
+          )
+        })}
+    </>
+  )
+}
+
+function HistoryButtons({testId}: {testId: string}) {
+  const historyButtons = useHistoryButtons()
+  const disabled = historyButtons.snapshot.matches('disabled')
+
+  return (
+    <>
+      <Button
+        mode="ghost"
+        text="Undo"
+        fontSize={1}
+        padding={2}
+        disabled={disabled}
+        onClick={() => historyButtons.send({type: 'history.undo'})}
+        data-testid={`pte-undo-${testId}`}
+      />
+      <Button
+        mode="ghost"
+        text="Redo"
+        fontSize={1}
+        padding={2}
+        disabled={disabled}
+        onClick={() => historyButtons.send({type: 'history.redo'})}
+        data-testid={`pte-redo-${testId}`}
+      />
+    </>
+  )
+}
+
+function Toolbar({testId}: {testId: string}) {
+  const toolbarSchema = useToolbarSchema({
+    extendDecorator,
+    extendAnnotation,
+    extendStyle,
+    extendList,
+  })
+
+  return (
     <Flex gap={1} style={{flexWrap: 'wrap'}}>
-      <ToolbarButton
-        active={strongActive}
-        label="B"
-        onClick={() => toggleDecorator('strong')}
-        testId={`pte-bold-${testId}`}
-      />
-      <ToolbarButton
-        active={emActive}
-        label="I"
-        onClick={() => toggleDecorator('em')}
-        testId={`pte-italic-${testId}`}
-      />
-      <ToolbarButton
-        active={underlineActive}
-        label="U"
-        onClick={() => toggleDecorator('underline')}
-        testId={`pte-underline-${testId}`}
-      />
-      <ToolbarButton
-        active={codeActive}
-        label="Code"
-        onClick={() => toggleDecorator('code')}
-        testId={`pte-code-${testId}`}
-      />
-      <ToolbarButton
-        active={h1Active}
-        label="H1"
-        onClick={() => toggleStyle('h1', h1Active)}
-        testId={`pte-h1-${testId}`}
-      />
-      <ToolbarButton
-        active={h2Active}
-        label="H2"
-        onClick={() => toggleStyle('h2', h2Active)}
-        testId={`pte-h2-${testId}`}
-      />
-      <ToolbarButton
-        active={blockquoteActive}
-        label="Quote"
-        onClick={() => toggleStyle('blockquote', blockquoteActive)}
-        testId={`pte-quote-${testId}`}
-      />
-      <ToolbarButton
-        active={bulletActive}
-        label="UL"
-        onClick={() => toggleList('bullet')}
-        testId={`pte-ul-${testId}`}
-      />
-      <ToolbarButton
-        active={numberActive}
-        label="OL"
-        onClick={() => toggleList('number')}
-        testId={`pte-ol-${testId}`}
-      />
-      <ToolbarButton
-        active={linkActive}
-        label="Link"
-        onClick={toggleLink}
-        testId={`pte-link-${testId}`}
-      />
-      <ToolbarButton active={false} label="Undo" onClick={undo} testId={`pte-undo-${testId}`} />
-      <ToolbarButton active={false} label="Redo" onClick={redo} testId={`pte-redo-${testId}`} />
+      {toolbarSchema.decorators.map((decorator) => (
+        <DecoratorButton key={decorator.name} schemaType={decorator} testId={testId} />
+      ))}
+      <StyleButtons schemaTypes={toolbarSchema.styles} testId={testId} />
+      {toolbarSchema.lists.map((list) => (
+        <ListButton key={list.name} schemaType={list} testId={testId} />
+      ))}
+      {toolbarSchema.annotations.map((annotation) => (
+        <AnnotationButton key={annotation.name} schemaType={annotation} testId={testId} />
+      ))}
+      <HistoryButtons testId={testId} />
     </Flex>
   )
 }
