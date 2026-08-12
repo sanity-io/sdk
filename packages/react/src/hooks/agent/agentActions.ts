@@ -11,7 +11,7 @@ import {
   type AgentTransformOptions,
   agentTranslate,
   type AgentTranslateOptions,
-} from '@sanity/sdk'
+} from '@sanity/sdk/agent'
 import {useCallback} from 'react'
 import {firstValueFrom} from 'rxjs'
 
