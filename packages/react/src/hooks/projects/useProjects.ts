@@ -3,14 +3,6 @@ import {type Project, projects, type ProjectsOptions} from '@sanity/sdk'
 import {createFetcherHook, type FetcherHookResult} from '../helpers/createFetcherHook'
 
 /**
- * @public
- * @category Types
- * @interface
- * @deprecated use the Project type directly.
- */
-export type ProjectWithoutMembers = Project
-
-/**
  * Returns metadata for each project you have access to.
  *
  * @category Projects
