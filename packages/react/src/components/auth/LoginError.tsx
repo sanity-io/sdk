@@ -1,11 +1,10 @@
 import {ClientError} from '@sanity/client'
+import {AuthStateType, getIsInDashboardState} from '@sanity/sdk'
 import {
-  AuthStateType,
   getClientErrorApiBody,
   getClientErrorApiDescription,
-  getIsInDashboardState,
   isProjectUserNotFoundClientError,
-} from '@sanity/sdk'
+} from '@sanity/sdk/_internal'
 import {Suspense, useCallback, useEffect, useMemo, useRef} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
 
