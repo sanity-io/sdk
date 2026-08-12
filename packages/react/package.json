@@ -93,6 +93,7 @@
     "oxfmt": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "rolldown": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
