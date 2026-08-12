@@ -1,15 +1,13 @@
 import {type ClientError} from '@sanity/client'
 import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
+import {AuthStateType, getIsInDashboardState, setAuthToken} from '@sanity/sdk'
+import {isStudioConfig} from '@sanity/sdk/_internal'
 import {
-  AuthStateType,
   type FrameMessage,
-  getIsInDashboardState,
-  isStudioConfig,
   type NewTokenResponseMessage,
   type RequestNewTokenMessage,
-  setAuthToken,
   type WindowMessage,
-} from '@sanity/sdk'
+} from '@sanity/sdk/comlink'
 import React, {type PropsWithChildren, useCallback, useEffect, useMemo, useRef} from 'react'
 
 import {useAuthState} from '../hooks/auth/useAuthState'

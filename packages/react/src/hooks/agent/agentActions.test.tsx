@@ -12,7 +12,7 @@ import {
   useAgentTranslate,
 } from './agentActions'
 
-vi.mock('@sanity/sdk', async (orig) => {
+vi.mock('@sanity/sdk/agent', async (orig) => {
   const actual = await orig()
   return {
     ...(actual as Record<string, any>),
