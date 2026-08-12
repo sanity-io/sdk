@@ -1,4 +1,5 @@
-import {type DocumentResource, isStudioConfig, type SanityConfig} from '@sanity/sdk'
+import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
+import {isStudioConfig} from '@sanity/sdk/_internal'
 import {type ReactElement, useContext, useEffect, useMemo} from 'react'
 
 import {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
