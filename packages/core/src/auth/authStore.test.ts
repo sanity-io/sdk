@@ -654,7 +654,7 @@ describe('authStore', () => {
       instance = createSanityInstance({
         projectId,
         dataset: 'd',
-        studioMode: {enabled: true},
+        studio: {},
         auth: {storageArea: mockStorage},
       })
 

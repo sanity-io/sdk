@@ -1,7 +1,6 @@
 import {type SanityConfig} from '../config/sanityConfig'
 import {insecureRandomId} from '../utils/ids'
 import {createLogger, type InstanceContext} from '../utils/logger'
-import {pickProperties} from '../utils/object'
 
 /**
  * Represents a Sanity.io resource instance with its own configuration and lifecycle
@@ -38,36 +37,12 @@ export interface SanityInstance {
    * @returns Function to unsubscribe the callback
    */
   onDispose(cb: () => void): () => void
-
-  /**
-   * Gets the parent instance in the hierarchy
-   * @returns Parent instance or undefined if this is the root
-   * @deprecated The parent/child instance hierarchy is deprecated. Use a single SanityInstance instead.
-   */
-  getParent(): SanityInstance | undefined
-
-  /**
-   * Creates a child instance with merged configuration
-   * @param config - Configuration to merge with parent values
-   * @deprecated The parent/child instance hierarchy is deprecated. Use a single SanityInstance instead.
-   */
-  createChild(config: SanityConfig): SanityInstance
-
-  /**
-   * Traverses the instance hierarchy to find the first instance whose configuration
-   * matches the given target config using a shallow comparison.
-   * @param targetConfig - A partial configuration object containing key-value pairs to match.
-   * @returns The first matching instance or undefined if no match is found.
-   * @deprecated The parent/child instance hierarchy is deprecated. Use a single SanityInstance instead.
-   */
-  match(targetConfig: Partial<SanityConfig>): SanityInstance | undefined
 }
 
 /**
  * Creates a new Sanity resource instance
  * @param config - Configuration for the instance (optional)
  * @returns A configured SanityInstance
- * @remarks When creating child instances, configurations are merged with parent values
  *
  * @public
  */
@@ -101,7 +76,6 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
     perspective: config.perspective,
     hasStudioConfig: !!config.studio,
     hasStudioTokenSource: !!config.studio?.auth?.token,
-    legacyStudioMode: config.studioMode?.enabled,
     hasAuthProviders: !!config.auth?.providers,
     hasAuthToken: !!config.auth?.token,
   })
@@ -130,43 +104,6 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
       return () => {
         disposeListeners.delete(listenerId)
       }
-    },
-    getParent: () => undefined,
-    createChild: (next) => {
-      logger.debug('Creating child instance', {
-        parentInstanceId: instanceId.slice(0, 8),
-        overridingProjectId: !!next.projectId,
-        overridingDataset: !!next.dataset,
-        overridingAuth: !!next.auth,
-      })
-      const child = Object.assign(
-        createSanityInstance({
-          ...config,
-          ...next,
-          ...(config.auth === next.auth
-            ? config.auth
-            : config.auth && next.auth && {auth: {...config.auth, ...next.auth}}),
-        }),
-        {getParent: () => instance},
-      )
-      logger.trace('Child instance created', {
-        internal: true,
-        childInstanceId: child.instanceId.slice(0, 8),
-      })
-      return child
-    },
-    match: (targetConfig) => {
-      if (
-        Object.entries(pickProperties(targetConfig, ['auth', 'projectId', 'dataset'])).every(
-          ([key, value]) => config[key as keyof SanityConfig] === value,
-        )
-      ) {
-        return instance
-      }
-
-      const parent = instance.getParent()
-      if (parent) return parent.match(targetConfig)
-      return undefined
     },
   }
 
