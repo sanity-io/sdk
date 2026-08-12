@@ -25,9 +25,6 @@ describe('Users Reducers', () => {
     isDisposed: () => false,
     dispose: () => {},
     onDispose: () => () => {},
-    getParent: () => undefined,
-    createChild: (_config) => mockInstance,
-    match: () => undefined,
   }
 
   const sampleOptions: GetUsersOptions = {
