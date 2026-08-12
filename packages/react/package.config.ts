@@ -7,22 +7,17 @@ const enableVisualizer = process.env['VISUALIZER'] === 'true'
 export default defineConfig({
   ...basePackageConfig,
   tsconfig: 'tsconfig.dist.json',
-  babel: {
-    reactCompiler: true,
-  },
-  reactCompilerOptions: {
+  reactCompiler: {
     target: '18',
   },
-  rollup: {
-    plugins: [
-      ...(enableVisualizer
-        ? [
-            visualizer({
-              filename: './stats/index.html',
-              open: false,
-            }),
-          ]
-        : []),
-    ],
-  },
+  plugins: [
+    ...(enableVisualizer
+      ? [
+          visualizer({
+            filename: './stats/index.html',
+            open: false,
+          }),
+        ]
+      : []),
+  ],
 })
