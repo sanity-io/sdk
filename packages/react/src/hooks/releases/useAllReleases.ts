@@ -1,8 +1,8 @@
 import {
+  type DatasetHandle,
   type DocumentResource,
   getAllReleasesState,
   type ReleaseDocument,
-  type SanityConfig,
   type SanityInstance,
   type StateSource,
 } from '@sanity/sdk'
@@ -55,7 +55,7 @@ const useAllReleasesValue: UseAllReleasesValue = createStateSourceHook({
  * ```
  */
 export function useAllReleases(
-  options?: WithResourceNameSupport<SanityConfig> | undefined,
+  options?: WithResourceNameSupport<DatasetHandle> | undefined,
 ): ReleaseDocument[] {
   const normalizedOptions = useNormalizedResourceOptions(options ?? {})
   return useAllReleasesValue(normalizedOptions)

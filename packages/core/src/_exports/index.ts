@@ -114,22 +114,15 @@ export {
 } from '../config/loggingConfig'
 export {
   type CanvasResource,
-  type CanvasSource,
   type DatasetHandle,
   type DatasetResource,
-  type DatasetSource,
   type DocumentHandle,
   type DocumentResource,
-  type DocumentSource,
   type DocumentTypeHandle,
   isCanvasResource,
-  isCanvasSource,
   isDatasetResource,
-  isDatasetSource,
   isMediaLibraryResource,
-  isMediaLibrarySource,
   type MediaLibraryResource,
-  type MediaLibrarySource,
   type PerspectiveHandle,
   type ProjectHandle,
   type ReleaseHandle,
@@ -241,15 +234,7 @@ export type {
   TransportEvent,
   UserPresence,
 } from '../presence/types'
-export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
-export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
-export type {
-  PreviewMedia,
-  PreviewQueryResult,
-  PreviewStoreState,
-  PreviewValue,
-  ValuePending,
-} from '../preview/types'
+export type {PreviewMedia, PreviewQueryResult, PreviewValue} from '../preview/types'
 export {type OrgVerificationResult} from '../project/organizationVerification'
 export {project} from '../project/project'
 export {
@@ -262,7 +247,7 @@ export {
 } from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'
-export {type ProjectionValuePending, type ValidProjection} from '../projection/types'
+export {type ProjectionValuePending} from '../projection/types'
 export {projects} from '../projects/projects'
 export {type ProjectsOptions} from '../projects/projects'
 export {getQueryState, type QueryOptions, resolveQuery} from '../query/queryStore'

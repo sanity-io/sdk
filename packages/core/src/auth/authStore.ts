@@ -110,7 +110,6 @@ export const authStore = defineStore<AuthStoreState>({
       hasCustomProviders: !!(
         instance.config.auth?.providers && instance.config.auth.providers.length > 0
       ),
-      studioMode: instance.config.studioMode?.enabled ?? false,
     })
 
     const {
