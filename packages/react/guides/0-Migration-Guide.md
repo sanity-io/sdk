@@ -76,6 +76,36 @@ The `useDispatchIntent` hook and the `defineIntent` function have been removed, 
 
 The other half of this system was never built: defined intents were never registered anywhere, and a dispatched intent had no handler to resolve to. `dispatchIntent()` sent a window message that nothing listened for, so removing these APIs does not change how your app behaves at runtime.
 
+5. `@sanity/sdk` agent and comlink utilities moved to sub-entries
+
+Agent and comlink utilities are now available only from dedicated sub-entry points:
+
+| Previously in `@sanity/sdk`                                                                             | Now in                |
+| ------------------------------------------------------------------------------------------------------- | --------------------- |
+| `agentGenerate`, `agentPatch`, `agentPrompt`, `agentTransform`, `agentTranslate` and their option types | `@sanity/sdk/agent`   |
+| `getOrCreateController`, `getOrCreateChannel`, `getOrCreateNode`, `getNodeState`, `FrameMessage`, etc.  | `@sanity/sdk/comlink` |
+
+**Before:**
+
+```typescript
+import {agentGenerate, type AgentGenerateOptions, type FrameMessage} from '@sanity/sdk'
+```
+
+**After:**
+
+```typescript
+import {agentGenerate, type AgentGenerateOptions} from '@sanity/sdk/agent'
+import {type FrameMessage} from '@sanity/sdk/comlink'
+```
+
+`@sanity/sdk-react` re-exports the main `@sanity/sdk` entry point, but not these two sub-entries. Make the above code changes to get access to these.
+
+6. Internal utilities removed from the public API
+
+A handful of helpers that only existed to support the React layer are no longer part of the public API: `isStudioConfig`, `getClientErrorApiBody`, `getClientErrorApiDescription`, `getClientErrorApiType`, `isProjectUserNotFoundClientError`, `ApiErrorBody`, `PREVIEW_PROJECTION`, `transformProjectionToPreview`, `getQueryKey`, `parseQueryKey`, `getUsersKey`, `parseUsersKey`, and `createGroqSearchFilter`.
+
+These were never intended as app-facing APIs and have no stability guarantee. If you depend on one, open an issue describing your use case so we can consider a supported replacement.
+
 ### New in v3
 
 Non-breaking additions:

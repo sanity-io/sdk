@@ -7,25 +7,6 @@ export type SanityProject = _SanityProject
 
 export {checkPermissions} from '../access/checkPermissions'
 export {type AccessResourceType} from '../access/checkPermissions'
-export type {
-  AgentGenerateOptions,
-  AgentGenerateResult,
-  AgentPatchOptions,
-  AgentPatchResult,
-  AgentPromptOptions,
-  AgentPromptResult,
-  AgentTransformOptions,
-  AgentTransformResult,
-  AgentTranslateOptions,
-  AgentTranslateResult,
-} from '../agent/agentActions'
-export {
-  agentGenerate,
-  agentPatch,
-  agentPrompt,
-  agentTransform,
-  agentTranslate,
-} from '../agent/agentActions'
 export {
   application,
   applications,
@@ -64,7 +45,6 @@ export {
   type UserApplicationsOptions,
   type UserApplicationWriteFields,
 } from '../applications/userApplications'
-export {isStudioConfig} from '../auth/authMode'
 export {AuthStateType} from '../auth/authStateType'
 export {
   type AuthState,
@@ -84,31 +64,8 @@ export {
 export {observeOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
-export {
-  type ApiErrorBody,
-  getClientErrorApiBody,
-  getClientErrorApiDescription,
-  getClientErrorApiType,
-  isProjectUserNotFoundClientError,
-} from '../auth/utils'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
 export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
-export {
-  type ComlinkControllerState,
-  destroyController,
-  getOrCreateChannel,
-  getOrCreateController,
-  releaseChannel,
-} from '../comlink/controller/comlinkControllerStore'
-export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
-export {getOrCreateNode, releaseNode} from '../comlink/node/comlinkNodeStore'
-export {getNodeState, type NodeState} from '../comlink/node/getNodeState'
-export {
-  type FrameMessage,
-  type NewTokenResponseMessage,
-  type RequestNewTokenMessage,
-  type WindowMessage,
-} from '../comlink/types'
 export {
   createComment,
   type CreateCommentOptions,
@@ -285,8 +242,6 @@ export type {
   UserPresence,
 } from '../presence/types'
 export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
-export {PREVIEW_PROJECTION} from '../preview/previewConstants'
-export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
 export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
 export type {
   PreviewMedia,
@@ -310,19 +265,12 @@ export {resolveProjection} from '../projection/resolveProjection'
 export {type ProjectionValuePending, type ValidProjection} from '../projection/types'
 export {projects} from '../projects/projects'
 export {type ProjectsOptions} from '../projects/projects'
-export {
-  getQueryKey,
-  getQueryState,
-  parseQueryKey,
-  type QueryOptions,
-  resolveQuery,
-} from '../query/queryStore'
+export {getQueryState, type QueryOptions, resolveQuery} from '../query/queryStore'
 export {getPerspectiveState} from '../releases/getPerspectiveState'
 export type {ReleaseState} from '../releases/releasesStore'
 export {getActiveReleasesState, getAllReleasesState} from '../releases/releasesStore'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
-export {getUsersKey, parseUsersKey} from '../users/reducers'
 export {
   type GetUserOptions,
   type GetUsersOptions,
@@ -343,7 +291,6 @@ export {
   resolveUsers,
 } from '../users/usersStore'
 export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
-export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {isImportError} from '../utils/isImportError'
 export {CORE_SDK_VERSION} from '../version'

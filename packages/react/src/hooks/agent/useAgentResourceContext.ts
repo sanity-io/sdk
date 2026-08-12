@@ -1,5 +1,5 @@
 import {type Events, SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
-import {type FrameMessage} from '@sanity/sdk'
+import {type FrameMessage} from '@sanity/sdk/comlink'
 import {useCallback, useEffect, useRef} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
