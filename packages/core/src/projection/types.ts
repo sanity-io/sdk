@@ -11,14 +11,6 @@ export interface DocumentProjectionValues<TValue extends object = object> {
   [projectionHash: string]: ProjectionValuePending<TValue>
 }
 
-/**
- * @public
- * @deprecated
- * Template literals are a bit too limited, so this type is deprecated.
- * Use `string` instead. Projection strings are validated at runtime.
- */
-export type ValidProjection = string
-
 export interface DocumentProjections {
   [projectionHash: string]: string
 }
