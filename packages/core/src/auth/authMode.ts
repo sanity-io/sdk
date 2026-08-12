@@ -20,9 +20,8 @@ type AuthMode = 'studio' | 'dashboard' | 'standalone'
  *
  * Priority:
  * 1. `studio` config provided → `'studio'`
- * 2. `studioMode.enabled` in config (deprecated) → `'studio'`
- * 3. Dashboard context detected (`_context` URL param with content) → `'dashboard'`
- * 4. Otherwise → `'standalone'`
+ * 2. Dashboard context detected (`_context` URL param with content) → `'dashboard'`
+ * 3. Otherwise → `'standalone'`
  *
  * @internal
  */
@@ -34,13 +33,11 @@ export function resolveAuthMode(config: SanityConfig, locationHref: string): Aut
 
 /**
  * Returns `true` when the config indicates the SDK is running inside a Studio.
- * Checks the new `studio` field first, then falls back to the deprecated
- * `studioMode.enabled` for backwards compatibility.
  *
  * @internal
  */
 export function isStudioConfig(config: SanityConfig): boolean {
-  return !!config.studio || !!config.studioMode?.enabled
+  return !!config.studio
 }
 
 /**
