@@ -25,11 +25,17 @@ minimumReleaseAgeExclude:
   - '@oxfmt/*'
   # Renovate security update: react-router@7.18.2
   - react-router@7.18.2
+  # TESTING ONLY: the get-it 9 client preview depends on eventsource@5, published
+  # 2026-08-10. Remove along with the '@sanity/client' catalog pin below.
+  - eventsource
+  - eventsource-parser
 
 catalog:
   '@playwright/test': '^1.61.1'
   '@sanity/browserslist-config': '^1.0.5'
-  '@sanity/client': '^7.26.2'
+  # TESTING ONLY: get-it 9 / fetch preview build from sanity-io/client#1217.
+  # Revert to '^7.26.2' before this branch goes anywhere near main.
+  '@sanity/client': 'https://pkg.pr.new/@sanity/client@1217'
   '@sanity/comlink': '^4.0.3'
   '@sanity/message-protocol': '^0.24.0'
   '@sanity/pkg-utils': '^12.1.0'

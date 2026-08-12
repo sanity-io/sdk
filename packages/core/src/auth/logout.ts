@@ -44,7 +44,7 @@ export const logout = bindActionGlobally(authStore, async ({state, instance}) =>
       })
 
       logger.debug('Calling logout endpoint')
-      await client.request<void>({uri: '/auth/logout', method: 'POST', tag: 'logout'})
+      await client.request<void>({url: '/auth/logout', method: 'POST', tag: 'logout'})
     } else {
       logger.debug('No token to logout - already logged out')
     }

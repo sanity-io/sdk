@@ -94,7 +94,7 @@ describe('handleCallback', () => {
       method: 'GET',
       query: {sid: authCode},
       tag: 'fetch-token',
-      uri: '/auth/fetch',
+      url: '/auth/fetch',
     })
     expect(setItem).toHaveBeenCalledWith('__sanity_auth_token', '{"token":"new-token"}')
   })
@@ -236,7 +236,7 @@ describe('handleCallback', () => {
       method: 'GET',
       query: {sid: authCode},
       tag: 'fetch-token',
-      uri: '/auth/fetch',
+      url: '/auth/fetch',
     })
   })
 

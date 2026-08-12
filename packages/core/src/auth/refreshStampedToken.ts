@@ -36,7 +36,7 @@ function createTokenRefreshStream(
 
     const subscription = client.observable
       .request<{token: string}>({
-        uri: 'auth/refresh-token',
+        url: 'auth/refresh-token',
         method: 'POST',
         tag: 'refresh-token',
         body: {

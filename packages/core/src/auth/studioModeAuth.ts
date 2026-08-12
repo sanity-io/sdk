@@ -30,7 +30,7 @@ export async function checkForCookieAuth(
       timeout: COOKIE_AUTH_TIMEOUT_MS,
     })
     const user = await client.request({
-      uri: '/users/me',
+      url: '/users/me',
       withCredentials: true,
       tag: 'users.get-current',
     })

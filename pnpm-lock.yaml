@@ -13,7 +13,7 @@ catalogs:
       specifier: ^1.0.5
       version: 1.0.5
     '@sanity/client':
-      specifier: ^7.26.2
+      specifier: https://pkg.pr.new/@sanity/client@1217
       version: 7.26.2
     '@sanity/comlink':
       specifier: ^4.0.3
@@ -408,7 +408,7 @@ importers:
     dependencies:
       '@sanity/client':
         specifier: 'catalog:'
-        version: 7.26.2
+        version: https://pkg.pr.new/@sanity/client@1217(vitest@4.1.10)
       '@sanity/uuid':
         specifier: ^3.0.3
         version: 3.0.3
@@ -495,7 +495,7 @@ importers:
         version: 1.0.0
       '@sanity/client':
         specifier: 'catalog:'
-        version: 7.26.2
+        version: https://pkg.pr.new/@sanity/client@1217(vitest@4.1.10)
       '@sanity/comlink':
         specifier: 'catalog:'
         version: 4.0.3
@@ -592,7 +592,7 @@ importers:
     dependencies:
       '@sanity/client':
         specifier: 'catalog:'
-        version: 7.26.2
+        version: https://pkg.pr.new/@sanity/client@1217(vitest@4.1.10)
       '@sanity/message-protocol':
         specifier: 'catalog:'
         version: 0.24.0
@@ -3262,6 +3262,11 @@ packages:
     resolution: {integrity: sha512-iEkGiHbrxCnT/A30A6pH+vX4otP3lLp935Vwuv0/YrnETxrKCn6PnsZU+TfTm6ZEZ9kZGs8wKP5yBLmZw5S6OQ==}
     engines: {node: '>=20'}
 
+  '@sanity/client@https://pkg.pr.new/@sanity/client@1217':
+    resolution: {tarball: https://pkg.pr.new/@sanity/client@1217}
+    version: 7.26.2
+    engines: {node: '>=22.12.0'}
+
   '@sanity/codegen@3.88.1-typegen-experimental.0':
     resolution: {integrity: sha512-9GuT4aTNA1r8F8k6Rv2H2chmatzrmdK40fo4mosDr426nSsAkTD2gl632KVjmuI6veBnfT+ecv5Q/QvmvXl4SA==}
     engines: {node: '>=18'}
@@ -5329,6 +5334,10 @@ packages:
     resolution: {integrity: sha512-kJezFj9YFAMLeORyi7aCLxLbD5/qWMQnoMVlVPyHIll7lgRJCc3JVln9Vgl9nwQi0YkMnhdGTMNn7CkRRAptMg==}
     engines: {node: '>=18.0.0'}
 
+  eventsource-parser@4.0.0:
+    resolution: {integrity: sha512-aIpvYxbqTx4KYWw73KpCt1Rh22tEAJ144F1qR76CT3Ex+LNMEPKf5HFrK5Yz9fMP1EVT0GrfA35VZvWQhMPuSQ==}
+    engines: {node: '>=22.12'}
+
   eventsource@2.0.2:
     resolution: {integrity: sha512-IzUmBGPR3+oUG9dUeXynyNmf91/3zUSJg1lCktzKw47OXuhco54U3r9B7O4XX+Rb1Itm9OZ2b0RkTs10bICOxA==}
     engines: {node: '>=12.0.0'}
@@ -5336,6 +5345,10 @@ packages:
   eventsource@4.1.0:
     resolution: {integrity: sha512-2GuF51iuHX6A9xdTccMTsNb7VO0lHZihApxhvQzJB5A03DvHDd2FQepodbMaztPBmBcE/ox7o2gqaxGhYB9LhQ==}
     engines: {node: '>=20.0.0'}
+
+  eventsource@5.0.0:
+    resolution: {integrity: sha512-iNd5IgeR56Om1Aje0ACZTd5oRQ+u5i6RfRkKdIuhlykeH3o+f0vIiiT0i9t1SXABfTnsfxVPadAB2T4cLS32Sw==}
+    engines: {node: '>=22.12.0'}
 
   execa@9.6.1:
     resolution: {integrity: sha512-9Be3ZoN4LmYR90tUoVu2te2BsbzHfhJyfEiAVfz7N5/zv+jduIfLrV2xdQXOHbaD6KgpGdO9PRPM1Y4Q9QkPkA==}
@@ -5553,13 +5566,18 @@ packages:
     resolution: {integrity: sha512-9fSjSaos/fRIVIp+xSJlE6lfwhES7LNtKaCBIamHsjr2na1BiABJPo0mOjjz8GJDURarmCPGqaiVg5mfjb98CQ==}
     engines: {node: '>= 0.4'}
 
-  get-it@8.8.0:
-    resolution: {integrity: sha512-vRyooMBzoIdEbARGT3JcvWqMD67YzC5SKlMqofyfck1ebLh2zzlpD4hVQ3xiuuiADk4jNs0rTezVlxCMqOlZfA==}
-    engines: {node: '>=14.0.0'}
-
   get-it@8.8.3:
     resolution: {integrity: sha512-IfkbWqOGO2kd2Ccgiz/NIzk3bcwjtVqBm3RNa3j/veHg2q7c1DgS3EXrCrvIWH0jbNTbhkdblnxBP7Dm8CiH+A==}
     engines: {node: '>=14.0.0'}
+
+  get-it@9.4.1:
+    resolution: {integrity: sha512-WEYs8b65nMYdYvbi0AwlyfRWrnkto1xLG1YqxFGKrU4yb7Vd06ryIS5XAFrBgRnYwsoszsZEsUGimQMQE7ztVA==}
+    engines: {node: '>=22.12.0'}
+    peerDependencies:
+      vitest: '>=2.0.0'
+    peerDependenciesMeta:
+      vitest:
+        optional: true
 
   get-latest-version@6.0.1:
     resolution: {integrity: sha512-6Zub9FhioDbCJzGTZtetVvAkLeA5UnvQEbKfFZUc62hcZm3gO3Txr21oRGOcT6SdiKhjI0vWd/Jxct+wuLJgHA==}
@@ -6699,11 +6717,6 @@ packages:
   nano-pubsub@3.0.0:
     resolution: {integrity: sha512-zoTNyBafxG0+F5PP3T3j1PKMr7gedriSdYRhLFLRFCz0OnQfQ6BkVk9peXVF30hz633Bw0Zh5McleOrXPjWYCQ==}
     engines: {node: '>=18'}
-
-  nanoid@3.3.16:
-    resolution: {integrity: sha512-bzlKTyNJ7+LdGIIwy8ijFpIqEQIvafahV7eYykJ8Cvh42EdJeODoJ6gUJXpQJvej1BddH8OqTXZNE/KfbWAu8Q==}
-    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
-    hasBin: true
 
   nanoid@3.3.17:
     resolution: {integrity: sha512-xQLf0A3HOMlgHq0n247/LRuAOYmB7dXJ/DvAxGvsSBij45XtBSmQycu+F8ODbHwns/XyFZagyL1+J0Offw1E0g==}
@@ -11042,10 +11055,10 @@ snapshots:
     dependencies:
       '@inquirer/prompts': 8.5.2(@types/node@24.13.3)
       '@oclif/core': 4.11.11
-      '@sanity/client': 7.24.0
+      '@sanity/client': 7.26.2
       boxen: 8.0.1
       debug: 4.4.3(supports-color@8.1.1)
-      get-it: 8.8.0
+      get-it: 8.8.3
       get-tsconfig: 4.14.0
       import-meta-resolve: 4.2.0
       jiti: 2.7.0
@@ -11083,13 +11096,13 @@ snapshots:
       '@oclif/plugin-not-found': 3.2.87(@types/node@24.13.3)
       '@sanity/cli-build': 2.0.1(@babel/core@7.29.7)(@babel/runtime@7.29.7)(@noble/hashes@2.0.1)(@types/node@24.13.3)(@types/react@19.2.17)(babel-plugin-react-compiler@1.0.0)(esbuild@0.28.1)(jiti@2.7.0)(node-fetch@2.7.0)(rolldown@1.2.3)(terser@5.36.0)(tsx@4.23.1)(typescript@6.0.3)(yaml@2.9.0)
       '@sanity/cli-core': 2.1.3(@noble/hashes@2.0.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(esbuild@0.28.1)(terser@5.36.0)(yaml@2.9.0)
-      '@sanity/client': 7.24.0
+      '@sanity/client': 7.26.2
       '@sanity/codegen': 7.0.3(@oclif/core@4.11.11)(@sanity/cli-core@2.1.3(@noble/hashes@2.0.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(esbuild@0.28.1)(terser@5.36.0)(yaml@2.9.0))(oxfmt@0.58.0)(react@19.2.7)
       '@sanity/descriptors': 1.3.0
       '@sanity/export': 6.2.0
       '@sanity/generate-help-url': 4.0.0
       '@sanity/id-utils': 1.0.0
-      '@sanity/import': 6.0.3(@sanity/client@7.24.0)(@types/react@19.2.17)
+      '@sanity/import': 6.0.3(@sanity/client@7.26.2)(@types/react@19.2.17)
       '@sanity/migrate': 7.0.3(@oclif/core@4.11.11)(@sanity/cli-core@2.1.3(@noble/hashes@2.0.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(esbuild@0.28.1)(terser@5.36.0)(yaml@2.9.0))(@types/react@19.2.17)(xstate@5.32.5)
       '@sanity/runtime-cli': 17.1.0(@types/node@24.13.3)(esbuild@0.28.1)(terser@5.36.0)(tsx@4.23.1)(yaml@2.9.0)
       '@sanity/schema': 6.3.0(@types/react@19.2.17)
@@ -11179,8 +11192,8 @@ snapshots:
   '@sanity/client@7.24.0':
     dependencies:
       '@sanity/eventsource': 5.0.4
-      get-it: 8.8.0
-      nanoid: 3.3.16
+      get-it: 8.8.3
+      nanoid: 3.3.17
       rxjs: 7.8.2
 
   '@sanity/client@7.26.2':
@@ -11189,6 +11202,17 @@ snapshots:
       get-it: 8.8.3
       nanoid: 3.3.17
       rxjs: 7.8.2
+
+  '@sanity/client@https://pkg.pr.new/@sanity/client@1217(vitest@4.1.10)':
+    dependencies:
+      debug: 4.4.3(supports-color@8.1.1)
+      eventsource: 5.0.0
+      get-it: 9.4.1(vitest@4.1.10)
+      nanoid: 3.3.17
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - supports-color
+      - vitest
 
   '@sanity/codegen@3.88.1-typegen-experimental.0':
     dependencies:
@@ -11283,7 +11307,7 @@ snapshots:
   '@sanity/export@6.2.0':
     dependencies:
       debug: 4.4.3(supports-color@8.1.1)
-      get-it: 8.8.0
+      get-it: 8.8.3
       json-stream-stringify: 3.1.6
       p-queue: 9.1.0
       tar: 7.5.15
@@ -11313,14 +11337,14 @@ snapshots:
     dependencies:
       '@sanity/signed-urls': 2.0.2
 
-  '@sanity/import@6.0.3(@sanity/client@7.24.0)(@types/react@19.2.17)':
+  '@sanity/import@6.0.3(@sanity/client@7.26.2)(@types/react@19.2.17)':
     dependencies:
       '@sanity/asset-utils': 2.3.0
-      '@sanity/client': 7.24.0
+      '@sanity/client': 7.26.2
       '@sanity/generate-help-url': 4.0.0
       '@sanity/mutator': 6.3.0(@types/react@19.2.17)
       debug: 4.4.3(supports-color@8.1.1)
-      get-it: 8.8.0
+      get-it: 8.8.3
       gunzip-maybe: 1.4.2
       p-map: 7.0.3
       tar-fs: 3.1.2
@@ -11365,7 +11389,7 @@ snapshots:
     dependencies:
       '@oclif/core': 4.11.11
       '@sanity/cli-core': 2.1.3(@noble/hashes@2.0.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(esbuild@0.28.1)(terser@5.36.0)(yaml@2.9.0)
-      '@sanity/client': 7.24.0
+      '@sanity/client': 7.26.2
       '@sanity/mutate': 0.18.1(xstate@5.32.5)
       '@sanity/types': 6.5.0(@types/react@19.2.17)
       '@sanity/util': 6.3.0(@types/react@19.2.17)
@@ -11532,7 +11556,7 @@ snapshots:
       '@sanity-labs/design-tokens': 0.0.2-alpha.4
       '@sanity/blueprints': 0.20.1
       '@sanity/blueprints-parser': 0.4.0
-      '@sanity/client': 7.24.0
+      '@sanity/client': 7.26.2
       adm-zip: 0.5.17
       array-treeify: 0.1.5
       cardinal: 2.1.1
@@ -11582,7 +11606,7 @@ snapshots:
   '@sanity/sdk@2.15.0(@types/react@19.2.17)(immer@10.1.1)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))(xstate@5.32.5)':
     dependencies:
       '@sanity/bifur-client': 1.0.0
-      '@sanity/client': 7.24.0
+      '@sanity/client': 7.26.2
       '@sanity/comlink': 4.0.1
       '@sanity/diff-match-patch': 3.2.0
       '@sanity/diff-patch': 6.0.0
@@ -11684,13 +11708,13 @@ snapshots:
 
   '@sanity/types@6.3.0(@types/react@19.2.17)':
     dependencies:
-      '@sanity/client': 7.24.0
+      '@sanity/client': 7.26.2
       '@sanity/media-library-types': 1.6.0
       '@types/react': 19.2.17
 
   '@sanity/types@6.5.0(@types/react@19.2.17)':
     dependencies:
-      '@sanity/client': 7.24.0
+      '@sanity/client': 7.26.2
       '@sanity/media-library-types': 1.6.0
       '@types/react': 19.2.17
 
@@ -11740,7 +11764,7 @@ snapshots:
     dependencies:
       '@date-fns/tz': 1.5.0
       '@date-fns/utc': 2.1.1
-      '@sanity/client': 7.24.0
+      '@sanity/client': 7.26.2
       '@sanity/types': 6.3.0(@types/react@19.2.17)
       date-fns: 4.4.0
       rxjs: 7.8.2
@@ -13693,11 +13717,17 @@ snapshots:
 
   eventsource-parser@3.1.0: {}
 
+  eventsource-parser@4.0.0: {}
+
   eventsource@2.0.2: {}
 
   eventsource@4.1.0:
     dependencies:
       eventsource-parser: 3.1.0
+
+  eventsource@5.0.0:
+    dependencies:
+      eventsource-parser: 4.0.0
 
   execa@9.6.1:
     dependencies:
@@ -13952,19 +13982,18 @@ snapshots:
       hasown: 2.0.2
       math-intrinsics: 1.1.0
 
-  get-it@8.8.0:
-    dependencies:
-      decompress-response: 7.0.0
-      is-retry-allowed: 2.2.0
-      through2: 4.0.2
-      tunnel-agent: 0.6.0
-
   get-it@8.8.3:
     dependencies:
       decompress-response: 7.0.0
       is-retry-allowed: 2.2.0
       through2: 4.0.2
       tunnel-agent: 0.6.0
+
+  get-it@9.4.1(vitest@4.1.10):
+    dependencies:
+      undici: 7.28.0
+    optionalDependencies:
+      vitest: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.36.0)(tsx@4.23.1)(yaml@2.9.0))
 
   get-latest-version@6.0.1:
     dependencies:
@@ -15038,8 +15067,6 @@ snapshots:
 
   nano-pubsub@3.0.0: {}
 
-  nanoid@3.3.16: {}
-
   nanoid@3.3.17: {}
 
   nanoid@5.1.16: {}
@@ -15437,7 +15464,7 @@ snapshots:
 
   postcss@8.5.22:
     dependencies:
-      nanoid: 3.3.16
+      nanoid: 3.3.17
       picocolors: 1.1.1
       source-map-js: 1.2.1
 

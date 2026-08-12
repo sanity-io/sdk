@@ -95,7 +95,7 @@ const organizations = createFetcherStore({
         )
 
         return client.observable.request({
-          uri: `/organizations`,
+          url: `/organizations`,
           query,
           tag: 'organizations.get',
         })

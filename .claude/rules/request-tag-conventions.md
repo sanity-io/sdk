@@ -22,15 +22,13 @@ All outgoing Sanity API requests from the SDK must use the `sanity.sdk.*` tag na
 ```typescript
 // BAD: ad hoc prefix, no request tag
 const client = clientFactory({requestTagPrefix: 'my-feature'})
-await client.request({uri: '/users/me', method: 'GET'})
+await client.request({url: '/users/me', method: 'GET'})
 
 // GOOD (auth code): use the shared constant prefix, set an explicit tag
 const client = clientFactory({requestTagPrefix: REQUEST_TAG_PREFIX})
-await client.request({uri: '/users/me', method: 'GET', tag: 'users.get-current'})
+await client.request({url: '/users/me', method: 'GET', tag: 'users.get-current'})
 
 // GOOD (non-auth code): omit requestTagPrefix to inherit the default
-const client = clientFactory({
-  /* ...other config... */
-})
-await client.request({uri: '/users/me', method: 'GET', tag: 'users.get-current'})
+const client = clientFactory({/* ...other config... */})
+await client.request({url: '/users/me', method: 'GET', tag: 'users.get-current'})
 ```

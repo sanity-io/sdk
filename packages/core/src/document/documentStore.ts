@@ -550,13 +550,13 @@ const subscribeToClientAndFetchDatasetAcl = ({
 }: StoreContext<DocumentStoreState, BoundResourceKey>) => {
   const clientOptions: ClientOptions = {apiVersion: API_VERSION, resource}
 
-  let uri: string
+  let url: string
   if (resource && isDatasetResource(resource)) {
-    uri = `/projects/${resource.projectId}/datasets/${resource.dataset}/acl`
+    url = `/projects/${resource.projectId}/datasets/${resource.dataset}/acl`
   } else if (resource && isMediaLibraryResource(resource)) {
-    uri = `/media-libraries/${resource.mediaLibraryId}/acl`
+    url = `/media-libraries/${resource.mediaLibraryId}/acl`
   } else if (resource && isCanvasResource(resource)) {
-    uri = `/canvases/${resource.canvasId}/acl`
+    url = `/canvases/${resource.canvasId}/acl`
   } else {
     throw new Error(`Received invalid resource: ${JSON.stringify(resource)}`)
   }
@@ -566,7 +566,7 @@ const subscribeToClientAndFetchDatasetAcl = ({
       switchMap((client) =>
         client.observable
           .request<DatasetAcl>({
-            uri,
+            url,
             tag: 'acl.get',
           })
           .pipe(

@@ -59,7 +59,7 @@ const projects = createFetcherStore({
         )
 
         return client.observable.request({
-          uri: '/projects',
+          url: '/projects',
           query,
           tag: 'projects.get',
         })

@@ -52,10 +52,10 @@ describe('resolveOrgResources', () => {
     await resolveOrgResources(mockInstance, ORG_ID)
 
     expect(mockRequest).toHaveBeenCalledWith(
-      expect.objectContaining({uri: '/media-libraries', query: {organizationId: ORG_ID}}),
+      expect.objectContaining({url: '/media-libraries', query: {organizationId: ORG_ID}}),
     )
     expect(mockRequest).toHaveBeenCalledWith(
-      expect.objectContaining({uri: '/canvases', query: {organizationId: ORG_ID}}),
+      expect.objectContaining({url: '/canvases', query: {organizationId: ORG_ID}}),
     )
   })
 
