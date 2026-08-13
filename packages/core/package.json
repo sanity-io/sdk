@@ -96,7 +96,7 @@
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
     "oxfmt": "catalog:",
-    "rollup-plugin-visualizer": "catalog:",
+    "rolldown": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
