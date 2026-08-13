@@ -186,15 +186,20 @@ test.describe('Comments', () => {
     await expect(app.getByTestId('thread')).toBeVisible()
     await expect(app.getByTestId('thread-field')).toHaveText('name')
 
-    // The stored document is the interop contract. The Studio finds a comment by
-    // `target.document._ref` and groups it by `target.path.field`, and reaches
-    // across datasets to do it, so all three have to be right or the comment is
-    // invisible there while looking fine here.
+    // A full round trip: written, read back off the server, and still pointed at
+    // the right document and field. The published id matters, since a comment
+    // anchored to a draft id would be invisible from the published document.
+    //
+    // The written shape is not checked here. Comments are returned normalised,
+    // so the cross dataset reference the Studio actually reads is no longer
+    // visible through the public API. That is pinned instead by the payload test
+    // in `commentActions.test.ts`, which asserts the whole `target` object
+    // against what the client is handed.
     await app.getByTestId('comment-inspect').first().click()
     const stored = app.getByTestId('comment-json')
-    await expect(stored).toContainText('"_type": "crossDatasetReference"')
-    await expect(stored).toContainText(`"_ref": "${documentId}"`)
-    await expect(stored).toContainText('"field": "name"')
+    await expect(stored).toContainText(`"documentId": "${documentId}"`)
+    await expect(stored).toContainText('"fieldPath": "name"')
+    await expect(stored).toContainText('"documentType": "author"')
 
     // Narrowing to the other field excludes it, which is the same filter an app
     // would use to put a count beside each input.
