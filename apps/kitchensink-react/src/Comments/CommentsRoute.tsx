@@ -1,5 +1,5 @@
 import {
-  type CommentDocument,
+  type Comment,
   type CommentMessage,
   type CommentStatus,
   type CommentThread,
@@ -136,21 +136,21 @@ function CommentRow({
   comment,
   onSelect,
 }: {
-  comment: CommentDocument
-  onSelect: (comment: CommentDocument) => void
+  comment: Comment
+  onSelect: (comment: Comment) => void
 }): JSX.Element {
   const {updateComment, removeComment} = useCommentActions()
   const [editing, setEditing] = useState(false)
 
   return (
-    <Card padding={3} radius={2} border data-testid="comment" data-comment-id={comment._id}>
+    <Card padding={3} radius={2} border data-testid="comment" data-comment-id={comment.id}>
       <Stack space={3}>
         <Flex align="center" gap={2}>
           <Code size={0} data-testid="comment-author">
             {comment.authorId}
           </Code>
           {comment.lastEditedAt ? <Badge tone="caution">edited</Badge> : null}
-          {comment._state ? <Badge tone="critical">{comment._state.type}</Badge> : null}
+          {comment.state ? <Badge tone="critical">{comment.state.type}</Badge> : null}
         </Flex>
 
         {editing ? (
@@ -160,7 +160,7 @@ function CommentRow({
             initialValue={toPlainText(comment.message)}
             onCancel={() => setEditing(false)}
             onSubmit={(text) => {
-              updateComment({commentId: comment._id, message: toMessage(text)})
+              updateComment({commentId: comment.id, message: toMessage(text)})
               setEditing(false)
             }}
           />
@@ -182,7 +182,7 @@ function CommentRow({
             mode="bleed"
             tone="critical"
             text="Delete"
-            onClick={() => removeComment({commentId: comment._id})}
+            onClick={() => removeComment({commentId: comment.id})}
           />
           <Button
             data-testid="comment-inspect"
@@ -205,7 +205,7 @@ function ThreadCard({
   thread: CommentThread
   documentId: string
   perspective: Perspective
-  onSelect: (comment: CommentDocument) => void
+  onSelect: (comment: Comment) => void
 }): JSX.Element {
   const {replyToComment, setCommentStatus} = useCommentActions()
   const display = thread.status === 'resolved' ? RESOLVED_DISPLAY : OPEN_DISPLAY
@@ -233,7 +233,7 @@ function ThreadCard({
             text={display.action}
             onClick={() =>
               setCommentStatus({
-                commentId: thread.parentComment._id,
+                commentId: thread.parentComment.id,
                 status: display.nextStatus,
               })
             }
@@ -243,7 +243,7 @@ function ThreadCard({
         <CommentRow comment={thread.parentComment} onSelect={onSelect} />
 
         {thread.replies.map((reply) => (
-          <Box key={reply._id} paddingLeft={4}>
+          <Box key={reply.id} paddingLeft={4}>
             <CommentRow comment={reply} onSelect={onSelect} />
           </Box>
         ))}
@@ -256,7 +256,7 @@ function ThreadCard({
               documentId,
               documentType: DOCUMENT_TYPE,
               perspective,
-              parentCommentId: thread.parentComment._id,
+              parentCommentId: thread.parentComment.id,
               message: toMessage(text),
             })
           }
@@ -277,7 +277,7 @@ function ThreadList({
   perspective: Perspective
   fieldPath: string | undefined
   status: StatusFilter
-  onSelect: (comment: CommentDocument) => void
+  onSelect: (comment: Comment) => void
 }): JSX.Element {
   const {threads, isPending} = useCommentThreads({
     documentId,
@@ -426,7 +426,7 @@ function DocumentCard({
  * The most useful thing on this page for checking interop: put it beside a
  * Studio-written comment and the `target` objects should match field for field.
  */
-function Inspector({comment}: {comment: CommentDocument | undefined}): JSX.Element | null {
+function Inspector({comment}: {comment: Comment | undefined}): JSX.Element | null {
   if (!comment) return null
 
   return (
@@ -448,7 +448,7 @@ function CommentsDemo({documentId}: {documentId: string}): JSX.Element {
   const [perspective, setPerspective] = useState<Perspective>('drafts')
   const [fieldPath, setFieldPath] = useState<string | undefined>(undefined)
   const [status, setStatus] = useState<StatusFilter>('all')
-  const [selected, setSelected] = useState<CommentDocument | undefined>(undefined)
+  const [selected, setSelected] = useState<Comment | undefined>(undefined)
   const {createComment} = useCommentActions()
 
   const studioBase = searchParams.get('studio') ?? DEFAULT_STUDIO_BASE_URL

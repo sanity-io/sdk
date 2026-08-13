@@ -1,5 +1,5 @@
 import {
-  type CommentDocument,
+  type Comment,
   type CommentsOptions,
   getCommentsState,
   resolveComments,
@@ -21,8 +21,19 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
 
 const HANDLE = {documentId: 'doc-1', documentType: 'author'}
 
-function comment(id: string) {
-  return {_id: id, message: null} as CommentDocument
+function comment(id: string): Comment {
+  return {
+    id,
+    createdAt: '2026-01-01T00:00:00Z',
+    authorId: 'user-1',
+    message: null,
+    threadId: 'thread-1',
+    status: 'open',
+    documentId: 'doc-1',
+    documentType: 'author',
+    fieldPath: '',
+    reactions: [],
+  }
 }
 
 /**
@@ -34,7 +45,7 @@ function comment(id: string) {
  * is why the store memoises its selectors.
  */
 function mockSource(
-  getCurrent: (options: CommentsOptions) => CommentDocument[] | undefined,
+  getCurrent: (options: CommentsOptions) => Comment[] | undefined,
   changed$?: Subject<void>,
 ) {
   vi.mocked(getCommentsState).mockImplementation(
@@ -45,10 +56,10 @@ function mockSource(
           const subscription = changed$?.subscribe(() => cb?.())
           return () => subscription?.unsubscribe()
         }),
-        get observable(): Observable<CommentDocument[] | undefined> {
+        get observable(): Observable<Comment[] | undefined> {
           throw new Error('Not implemented')
         },
-      }) as StateSource<CommentDocument[] | undefined>,
+      }) as StateSource<Comment[] | undefined>,
   )
 }
 
@@ -99,13 +110,13 @@ describe('useComments', () => {
 
   it('suspends until the first snapshot arrives', async () => {
     const loaded = [comment('a')]
-    const ref: {current: CommentDocument[] | undefined} = {current: undefined}
+    const ref: {current: Comment[] | undefined} = {current: undefined}
     const changed$ = new Subject<void>()
     mockSource(() => ref.current, changed$)
 
     let settle: () => void = () => {}
     vi.mocked(resolveComments).mockReturnValue(
-      new Promise<CommentDocument[]>((resolve) => {
+      new Promise<Comment[]>((resolve) => {
         settle = () => resolve(loaded)
       }),
     )
@@ -127,7 +138,7 @@ describe('useComments', () => {
   })
 
   it('passes the field path and status through to the store', () => {
-    const loaded: CommentDocument[] = []
+    const loaded: Comment[] = []
     mockSource(() => loaded)
 
     function TestComponent() {
@@ -149,7 +160,7 @@ describe('useComments', () => {
   })
 
   it('resolves a named resource from context', () => {
-    const loaded: CommentDocument[] = []
+    const loaded: Comment[] = []
     mockSource(() => loaded)
 
     function TestComponent() {
@@ -169,7 +180,7 @@ describe('useComments', () => {
     // Core turns a release perspective into `target.documentVersionId` and into
     // the key the list is stored under, so dropping it here would read and
     // write the wrong release with nothing to show that anything went wrong.
-    const loaded: CommentDocument[] = []
+    const loaded: Comment[] = []
     mockSource(() => loaded)
 
     function TestComponent() {
@@ -189,12 +200,12 @@ describe('useComments', () => {
     const first = [comment('a')]
     const second = [comment('b'), comment('c')]
     // Only `doc-1` is loaded, so switching to `doc-2` has to suspend.
-    const byDocument: Record<string, CommentDocument[] | undefined> = {'doc-1': first}
+    const byDocument: Record<string, Comment[] | undefined> = {'doc-1': first}
     mockSource((options) => byDocument[options.documentId])
 
     let settle: () => void = () => {}
     vi.mocked(resolveComments).mockReturnValue(
-      new Promise<CommentDocument[]>((resolve) => {
+      new Promise<Comment[]>((resolve) => {
         settle = () => resolve(second)
       }),
     )

@@ -1,5 +1,5 @@
 import {
-  type CommentDocument,
+  type Comment,
   createComment,
   type CreateCommentOptions,
   type DocumentResource,
@@ -31,13 +31,9 @@ import {trackHookUsage} from '../helpers/useTrackHookUsage'
  */
 export interface CommentActions {
   /** Starts a thread on a document, or on one of its fields. */
-  createComment: (
-    options: WithResourceNameSupport<CreateCommentOptions>,
-  ) => Promise<CommentDocument>
+  createComment: (options: WithResourceNameSupport<CreateCommentOptions>) => Promise<Comment>
   /** Adds a reply to an existing thread. */
-  replyToComment: (
-    options: WithResourceNameSupport<ReplyToCommentOptions>,
-  ) => Promise<CommentDocument>
+  replyToComment: (options: WithResourceNameSupport<ReplyToCommentOptions>) => Promise<Comment>
   /** Rewrites a comment's message. */
   updateComment: (options: WithResourceNameSupport<UpdateCommentOptions>) => Promise<void>
   /** Resolves or reopens a thread. Pass the thread's first comment. */

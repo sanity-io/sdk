@@ -1,9 +1,4 @@
-import {
-  type CommentDocument,
-  type CommentsOptions,
-  getCommentsState,
-  resolveComments,
-} from '@sanity/sdk'
+import {type Comment, type CommentsOptions, getCommentsState, resolveComments} from '@sanity/sdk'
 import {useMemo} from 'react'
 
 import {type WithResourceNameSupport} from '../helpers/useNormalizedResourceOptions'
@@ -15,12 +10,12 @@ import {type CommentListSource, useCommentList} from './useCommentList'
  */
 export interface UseCommentsResult {
   /** Every matching comment, newest first, replies included. */
-  comments: CommentDocument[]
+  comments: Comment[]
   /** True while switching to a different document or filter. */
   isPending: boolean
 }
 
-const SOURCE: CommentListSource<CommentDocument[]> = {
+const SOURCE: CommentListSource<Comment[]> = {
   getState: getCommentsState,
   resolve: resolveComments,
 }
