@@ -3,9 +3,9 @@ import {Subject} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {type CommentsEvent, observeComments} from './observeComments'
-import {type CommentDocument} from './types'
+import {type StoredComment} from './types'
 
-function comment(overrides: Partial<CommentDocument> & Pick<CommentDocument, '_id'>) {
+function comment(overrides: Partial<StoredComment> & Pick<StoredComment, '_id'>) {
   return {
     _type: 'comment',
     _createdAt: '2026-01-01T00:00:00Z',
@@ -17,13 +17,13 @@ function comment(overrides: Partial<CommentDocument> & Pick<CommentDocument, '_i
     reactions: null,
     target: {documentType: 'author', document: {_ref: 'doc-1', _type: 'reference', _weak: true}},
     ...overrides,
-  } satisfies CommentDocument as CommentDocument
+  } satisfies StoredComment as StoredComment
 }
 
-const WELCOME = {type: 'welcome'} as ListenEvent<CommentDocument>
+const WELCOME = {type: 'welcome'} as ListenEvent<StoredComment>
 
-let listen$: Subject<ListenEvent<CommentDocument>>
-let fetches: Subject<CommentDocument[]>[]
+let listen$: Subject<ListenEvent<StoredComment>>
+let fetches: Subject<StoredComment[]>[]
 let client: SanityClient
 
 beforeEach(() => {
@@ -33,7 +33,7 @@ beforeEach(() => {
     observable: {
       listen: vi.fn(() => listen$),
       fetch: vi.fn(() => {
-        const fetch$ = new Subject<CommentDocument[]>()
+        const fetch$ = new Subject<StoredComment[]>()
         fetches.push(fetch$)
         return fetch$
       }),
@@ -89,19 +89,19 @@ describe('observeComments', () => {
       documentId: 'a',
       result: created,
       transactionId: 'tx-1',
-    } as ListenEvent<CommentDocument>)
+    } as ListenEvent<StoredComment>)
     listen$.next({
       type: 'mutation',
       transition: 'update',
       documentId: 'a',
       result: edited,
       transactionId: 'tx-2',
-    } as ListenEvent<CommentDocument>)
+    } as ListenEvent<StoredComment>)
     listen$.next({
       type: 'mutation',
       transition: 'disappear',
       documentId: 'a',
-    } as ListenEvent<CommentDocument>)
+    } as ListenEvent<StoredComment>)
 
     expect(events.slice(1)).toEqual([
       {type: 'appear', comment: created},
@@ -120,7 +120,7 @@ describe('observeComments', () => {
       transition: 'update',
       documentId: 'a',
       transactionId: 'tx-1',
-    } as ListenEvent<CommentDocument>)
+    } as ListenEvent<StoredComment>)
 
     expect(events).toHaveLength(1)
   })
@@ -138,7 +138,7 @@ describe('observeComments', () => {
       documentId: 'late',
       result: created,
       transactionId: 'tx-1',
-    } as ListenEvent<CommentDocument>)
+    } as ListenEvent<StoredComment>)
 
     expect(events).toEqual([])
 

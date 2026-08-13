@@ -24,6 +24,7 @@ import {
 import {toCommentFieldPath} from './commentFieldPath'
 import {COMMENTS_API_VERSION} from './commentsConstants'
 import {type CommentsOptions, commentsStore, toCommentsKeyParts} from './commentsStore'
+import {normalizeComment} from './normalizeComment'
 import {
   addComment,
   applyCommentUpdate,
@@ -38,12 +39,12 @@ import {
   setPendingTransaction,
 } from './reducers'
 import {
-  type CommentContext,
-  type CommentDocument,
+  type Comment,
   type CommentMessage,
   type CommentPostPayload,
   type CommentStatus,
   type CommentTextSelection,
+  type StoredComment,
 } from './types'
 import {weakenReferencesInContentSnapshot} from './weakenReferences'
 
@@ -76,12 +77,15 @@ export interface CreateCommentOptions extends DocumentHandle {
    */
   documentRevisionId?: string
   /**
-   * Merged over the defaults. The Studio writes `tool`, `payload`, `intent`,
-   * and `notification` here for its notification backend; the SDK has no source
-   * for any of them, so mentions in comments created this way do not send
-   * email unless you supply `notification` yourself.
+   * Ambient information stored alongside the comment, merged over the defaults.
+   *
+   * The Studio writes `tool`, `payload`, `intent`, and `notification` here for
+   * its notification backend. The SDK has no source for any of them, so
+   * mentions in comments created this way do not send email unless you supply
+   * `notification` yourself. Deliberately loose: the organization-level store
+   * treats this as free-form, so no shape is worth promising.
    */
-  context?: Partial<CommentContext>
+  context?: Record<string, unknown>
   /** A copy of the content being discussed. References in it are weakened. */
   contentSnapshot?: unknown
 }
@@ -165,7 +169,7 @@ function buildCommentPayload(options: {
   authorId: string
   commentId: string
   contentSnapshot?: unknown
-  context?: Partial<CommentContext>
+  context?: Record<string, unknown>
   documentRevisionId?: string
   handle: DocumentHandle
   message: CommentMessage
@@ -220,7 +224,7 @@ function findComment(
   state: StoreState<CommentsStoreState>,
   commentsKey: string,
   commentId: string,
-): CommentDocument | undefined {
+): StoredComment | undefined {
   const comments = state.get().entries[commentsKey]?.comments
   return comments && Object.hasOwn(comments, commentId) ? comments[commentId] : undefined
 }
@@ -228,7 +232,7 @@ function findComment(
 function findCommentById(
   state: StoreState<CommentsStoreState>,
   commentId: string,
-): CommentDocument | undefined {
+): StoredComment | undefined {
   for (const entry of Object.values(state.get().entries)) {
     const comments = entry?.comments
     const comment = comments && Object.hasOwn(comments, commentId) ? comments[commentId] : undefined
@@ -241,7 +245,7 @@ async function postComment(
   context: StoreContext<CommentsStoreState, BoundResourceKey>,
   handle: DocumentHandle & CommentsOptions,
   payload: CommentPostPayload,
-): Promise<CommentDocument> {
+): Promise<Comment> {
   const {state, instance, key} = context
   const commentsKey = getCommentsKey(toCommentsKeyParts(instance, handle))
 
@@ -255,7 +259,7 @@ async function postComment(
     // the same comment id.
     const created = await client.createIfNotExists(payload, {tag: 'comments.create'})
     state.set('receiveComment', receiveComment(commentsKey, created))
-    return created
+    return normalizeComment(created)
   } catch (error) {
     // Keep it on screen carrying the failure, so an app can offer a retry with
     // the same id rather than silently losing what someone typed.
@@ -280,7 +284,7 @@ async function postComment(
 export const createComment: (
   instance: SanityInstance,
   options: CreateCommentOptions,
-) => Promise<CommentDocument> = bindActionByResource(
+) => Promise<Comment> = bindActionByResource(
   commentsStore,
   // `async` so a validation failure rejects rather than throwing at the call
   // site, which would slip past a `.catch()`.
@@ -325,7 +329,7 @@ export const createComment: (
 export const replyToComment: (
   instance: SanityInstance,
   options: ReplyToCommentOptions,
-) => Promise<CommentDocument> = bindActionByResource(
+) => Promise<Comment> = bindActionByResource(
   commentsStore,
   async (
     context: StoreContext<CommentsStoreState, BoundResourceKey>,
@@ -439,7 +443,7 @@ export const setCommentStatus: (
     {commentId, status}: SetCommentStatusOptions,
   ) => {
     const transactionId = crypto.randomUUID()
-    const previousComments: CommentDocument[] = []
+    const previousComments: StoredComment[] = []
 
     for (const entry of Object.values(state.get().entries)) {
       for (const candidate of Object.values(entry?.comments ?? {})) {

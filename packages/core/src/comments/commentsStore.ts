@@ -35,6 +35,7 @@ import {observeAddonDatasetClient} from './addonDatasetStore'
 import {buildCommentThreads} from './buildCommentThreads'
 import {toCommentFieldPath} from './commentFieldPath'
 import {COMMENTS_STATE_CLEAR_DELAY} from './commentsConstants'
+import {normalizeComment} from './normalizeComment'
 import {type CommentsEvent, observeComments} from './observeComments'
 import {
   addSubscriber,
@@ -49,7 +50,7 @@ import {
   setComments,
   setCommentsError,
 } from './reducers'
-import {type CommentDocument, type CommentStatus, type CommentThread} from './types'
+import {type Comment, type CommentStatus, type CommentThread, type StoredComment} from './types'
 
 /**
  * Which comments to read.
@@ -203,18 +204,39 @@ export const commentsStore = defineStore<CommentsStoreState, BoundResourceKey>({
  * to an unrelated part of the state, hands back the identical array. Entries
  * die with the map they belong to.
  */
-const filteredCache = new WeakMap<object, Map<string, CommentDocument[]>>()
+const normalizedCache = new WeakMap<object, Comment[]>()
+const filteredCache = new WeakMap<object, Map<string, Comment[]>>()
 const threadCache = new WeakMap<object, Map<string, CommentThread[]>>()
 
+/**
+ * The stored map turned into what consumers see, newest first.
+ *
+ * Cached alongside the filters below rather than done per read, so the
+ * normalised objects keep their identity for as long as the stored map does.
+ */
+function normalizeAll(commentsById: Record<string, StoredComment>): Comment[] {
+  const cached = normalizedCache.get(commentsById)
+  if (cached) return cached
+
+  // Newest first, matching the query's order. The store keys comments by id, so
+  // the order has to be reapplied here.
+  const normalized = Object.values(commentsById)
+    .map(normalizeComment)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+
+  normalizedCache.set(commentsById, normalized)
+  return normalized
+}
+
 function filterComments(
-  commentsById: Record<string, CommentDocument>,
+  all: Comment[],
   fieldPath: string | undefined,
   status: CommentStatus | undefined,
-): CommentDocument[] {
-  let byFilter = filteredCache.get(commentsById)
+): Comment[] {
+  let byFilter = filteredCache.get(all)
   if (!byFilter) {
     byFilter = new Map()
-    filteredCache.set(commentsById, byFilter)
+    filteredCache.set(all, byFilter)
   }
 
   // `\0` stands in for "no field filter", which is not the same as `''`.
@@ -222,15 +244,11 @@ function filterComments(
   const cached = byFilter.get(cacheKey)
   if (cached) return cached
 
-  const filtered = Object.values(commentsById)
-    .filter((comment) => {
-      if (status && comment.status !== status) return false
-      if (fieldPath === undefined) return true
-      return (comment.target.path?.field ?? '') === fieldPath
-    })
-    // Newest first, matching the query's order. The store keys comments by id,
-    // so the order has to be reapplied here.
-    .sort((a, b) => b._createdAt.localeCompare(a._createdAt))
+  const filtered = all.filter((comment) => {
+    if (status && comment.status !== status) return false
+    if (fieldPath === undefined) return true
+    return comment.fieldPath === fieldPath
+  })
 
   byFilter.set(cacheKey, filtered)
   return filtered
@@ -239,7 +257,7 @@ function filterComments(
 function selectComments(
   {state, instance}: SelectorContext<CommentsStoreState>,
   options: CommentsOptions,
-): CommentDocument[] | undefined {
+): Comment[] | undefined {
   if (state.error) throw state.error
 
   const entry = state.entries[getCommentsKey(toCommentsKeyParts(instance, options))]
@@ -247,7 +265,7 @@ function selectComments(
   if (!entry?.comments) return undefined
 
   return filterComments(
-    entry.comments,
+    normalizeAll(entry.comments),
     options.fieldPath === undefined ? undefined : toCommentFieldPath(options.fieldPath),
     options.status,
   )
@@ -292,7 +310,7 @@ function selectCommentThreads(
 export const getCommentsState: (
   instance: SanityInstance,
   options: CommentsOptions,
-) => StateSource<CommentDocument[] | undefined> = bindActionByResource(
+) => StateSource<Comment[] | undefined> = bindActionByResource(
   commentsStore,
   createStateSourceAction({
     selector: selectComments,
@@ -353,7 +371,7 @@ export const getCommentThreadsState: (
 export const resolveComments: (
   instance: SanityInstance,
   options: ResolveCommentsOptions,
-) => Promise<CommentDocument[]> = bindActionByResource(
+) => Promise<Comment[]> = bindActionByResource(
   commentsStore,
   (
     {state, instance}: StoreContext<CommentsStoreState, BoundResourceKey>,

@@ -16,11 +16,11 @@ import {
   setCommentsError,
   setPendingTransaction,
 } from './reducers'
-import {type CommentDocument} from './types'
+import {type StoredComment} from './types'
 
 const KEY = getCommentsKey({documentId: 'doc-1'})
 
-function comment(overrides: Partial<CommentDocument> & Pick<CommentDocument, '_id'>) {
+function comment(overrides: Partial<StoredComment> & Pick<StoredComment, '_id'>) {
   return {
     _type: 'comment',
     _createdAt: '2026-01-01T00:00:00Z',
@@ -32,10 +32,10 @@ function comment(overrides: Partial<CommentDocument> & Pick<CommentDocument, '_i
     reactions: null,
     target: {documentType: 'author', document: {_ref: 'doc-1', _type: 'reference', _weak: true}},
     ...overrides,
-  } satisfies CommentDocument as CommentDocument
+  } satisfies StoredComment as StoredComment
 }
 
-function stateWith(comments: CommentDocument[]): CommentsStoreState {
+function stateWith(comments: StoredComment[]): CommentsStoreState {
   const base: CommentsStoreState = {
     entries: {[KEY]: {subscribers: ['sub-1']}},
     pendingCreates: {},

@@ -91,15 +91,11 @@ export {
   resolveCommentThreads,
 } from '../comments/commentsStore'
 export {
-  type CommentContext,
-  type CommentDocument,
+  type Comment,
   type CommentLocalState,
   type CommentMessage,
-  type CommentPath,
-  type CommentPostPayload,
-  type CommentReactionItem,
+  type CommentReaction,
   type CommentStatus,
-  type CommentTarget,
   type CommentTextSelection,
   type CommentTextSelectionItem,
   type CommentThread,

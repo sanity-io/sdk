@@ -2,17 +2,17 @@ import {type ListenEvent, type SanityClient} from '@sanity/client'
 import {filter, map, Observable, share, switchMap, take} from 'rxjs'
 
 import {buildCommentsListenQuery, buildCommentsQuery, LISTEN_OPTIONS} from './commentsConstants'
-import {type CommentDocument} from './types'
+import {type StoredComment} from './types'
 
 /** What the listener saw, in terms the store can apply. */
 export type CommentsEvent =
-  | {type: 'snapshot'; comments: CommentDocument[]}
-  | {type: 'appear'; comment: CommentDocument}
+  | {type: 'snapshot'; comments: StoredComment[]}
+  | {type: 'appear'; comment: StoredComment}
   | {type: 'disappear'; commentId: string}
-  | {type: 'update'; comment: CommentDocument; transactionId: string}
+  | {type: 'update'; comment: StoredComment; transactionId: string}
   | {type: 'error'; error: unknown}
 
-function toCommentsEvent(event: ListenEvent<CommentDocument>): CommentsEvent | undefined {
+function toCommentsEvent(event: ListenEvent<StoredComment>): CommentsEvent | undefined {
   if (event.type !== 'mutation') return undefined
 
   if (event.transition === 'disappear') {
@@ -58,7 +58,7 @@ export function observeComments(options: {
   }
 
   const events$ = client.observable
-    .listen<CommentDocument>(buildCommentsListenQuery(documentVersionId), params, LISTEN_OPTIONS)
+    .listen<StoredComment>(buildCommentsListenQuery(documentVersionId), params, LISTEN_OPTIONS)
     .pipe(share())
 
   const mutations$ = events$.pipe(
@@ -85,7 +85,7 @@ export function observeComments(options: {
           })
 
           const snapshotSubscription = client.observable
-            .fetch<CommentDocument[]>(buildCommentsQuery(documentVersionId), params, {
+            .fetch<StoredComment[]>(buildCommentsQuery(documentVersionId), params, {
               tag: 'comments.list',
             })
             .pipe(take(1))

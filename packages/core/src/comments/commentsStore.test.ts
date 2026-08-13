@@ -13,13 +13,13 @@ import {
   resolveComments,
 } from './commentsStore'
 import {setPendingTransaction} from './reducers'
-import {type CommentDocument} from './types'
+import {type StoredComment} from './types'
 
 vi.mock('./addonDatasetStore', () => ({
   observeAddonDatasetClient: vi.fn(),
 }))
 
-function comment(overrides: Partial<CommentDocument> & Pick<CommentDocument, '_id'>) {
+function comment(overrides: Partial<StoredComment> & Pick<StoredComment, '_id'>) {
   return {
     _type: 'comment',
     _createdAt: '2026-01-01T00:00:00Z',
@@ -31,10 +31,10 @@ function comment(overrides: Partial<CommentDocument> & Pick<CommentDocument, '_i
     reactions: null,
     target: {documentType: 'author', document: {_ref: 'doc-1', _type: 'reference', _weak: true}},
     ...overrides,
-  } satisfies CommentDocument as CommentDocument
+  } satisfies StoredComment as StoredComment
 }
 
-const WELCOME = {type: 'welcome'} as ListenEvent<CommentDocument>
+const WELCOME = {type: 'welcome'} as ListenEvent<StoredComment>
 
 /** Lets a test seed a pending transaction the way the write actions will. */
 const markPending = bindActionByResource(
@@ -49,8 +49,8 @@ const markPending = bindActionByResource(
 const HANDLE = {documentId: 'doc-1', documentType: 'author'}
 
 let instance: SanityInstance
-let listeners: Map<string, Subject<ListenEvent<CommentDocument>>>
-let fetches: Subject<CommentDocument[]>[]
+let listeners: Map<string, Subject<ListenEvent<StoredComment>>>
+let fetches: Subject<StoredComment[]>[]
 let client$: BehaviorSubject<SanityClient | null>
 let client: SanityClient
 
@@ -62,7 +62,7 @@ function listenerFor(query: string, params: Record<string, unknown>) {
   const key = `${query}|${JSON.stringify(params)}`
   const existing = listeners.get(key)
   if (existing) return existing
-  const subject = new Subject<ListenEvent<CommentDocument>>()
+  const subject = new Subject<ListenEvent<StoredComment>>()
   listeners.set(key, subject)
   return subject
 }
@@ -76,7 +76,7 @@ beforeEach(() => {
     observable: {
       listen: vi.fn((query: string, params: Record<string, unknown>) => listenerFor(query, params)),
       fetch: vi.fn(() => {
-        const fetch$ = new Subject<CommentDocument[]>()
+        const fetch$ = new Subject<StoredComment[]>()
         fetches.push(fetch$)
         return fetch$
       }),
@@ -108,7 +108,23 @@ describe('getCommentsState', () => {
     listeners.values().next().value!.next(WELCOME)
     fetches[0].next([comment({_id: 'a'})])
 
-    expect(source.getCurrent()).toEqual([comment({_id: 'a'})])
+    // Asserted in full rather than by id. This is the entire mapping from the
+    // stored document to what a consumer sees, and it is what has to stay put
+    // when comments move off the addon dataset.
+    expect(source.getCurrent()).toEqual([
+      {
+        id: 'a',
+        createdAt: '2026-01-01T00:00:00Z',
+        authorId: 'user-1',
+        message: null,
+        threadId: 'thread-1',
+        status: 'open',
+        documentId: 'doc-1',
+        documentType: 'author',
+        fieldPath: '',
+        reactions: [],
+      },
+    ])
   })
 
   it('sorts newest first', () => {
@@ -121,7 +137,7 @@ describe('getCommentsState', () => {
     listeners.values().next().value!.next(WELCOME)
     fetches[0].next([older, newer])
 
-    expect(source.getCurrent()!.map((c) => c._id)).toEqual(['b', 'a'])
+    expect(source.getCurrent()!.map((c) => c.id)).toEqual(['b', 'a'])
   })
 
   it('settles on an empty list when the project has no comments dataset', () => {
@@ -151,7 +167,7 @@ describe('getCommentsState', () => {
     listeners.values().next().value!.next(WELCOME)
     fetches[0].next([onField, comment({_id: 'b'})])
 
-    expect(source.getCurrent()!.map((c) => c._id)).toEqual(['a'])
+    expect(source.getCurrent()!.map((c) => c.id)).toEqual(['a'])
   })
 
   it('selects document-level threads for an empty field path', () => {
@@ -170,7 +186,7 @@ describe('getCommentsState', () => {
     listeners.values().next().value!.next(WELCOME)
     fetches[0].next([onField, comment({_id: 'b'})])
 
-    expect(source.getCurrent()!.map((c) => c._id)).toEqual(['b'])
+    expect(source.getCurrent()!.map((c) => c.id)).toEqual(['b'])
   })
 
   it('filters by status', () => {
@@ -180,7 +196,7 @@ describe('getCommentsState', () => {
     listeners.values().next().value!.next(WELCOME)
     fetches[0].next([comment({_id: 'a'}), comment({_id: 'b', status: 'resolved'})])
 
-    expect(source.getCurrent()!.map((c) => c._id)).toEqual(['b'])
+    expect(source.getCurrent()!.map((c) => c.id)).toEqual(['b'])
   })
 
   it('keeps a release’s comments apart from the default ones', () => {
@@ -200,8 +216,8 @@ describe('getCommentsState', () => {
     fetches[0].next([comment({_id: 'a'})])
     fetches[1].next([comment({_id: 'b'})])
 
-    expect(base.getCurrent()!.map((c) => c._id)).toEqual(['a'])
-    expect(release.getCurrent()!.map((c) => c._id)).toEqual(['b'])
+    expect(base.getCurrent()!.map((c) => c.id)).toEqual(['a'])
+    expect(release.getCurrent()!.map((c) => c.id)).toEqual(['b'])
   })
 
   it('shares one list between a draft and its published document', () => {
@@ -213,14 +229,14 @@ describe('getCommentsState', () => {
 })
 
 describe('transaction reconciliation', () => {
-  function updateEvent(transactionId: string, status: CommentDocument['status']) {
+  function updateEvent(transactionId: string, status: StoredComment['status']) {
     return {
       type: 'mutation',
       transition: 'update',
       documentId: 'a',
       result: comment({_id: 'a', status}),
       transactionId,
-    } as ListenEvent<CommentDocument>
+    } as ListenEvent<StoredComment>
   }
 
   function loaded() {
@@ -281,8 +297,8 @@ describe('getCommentThreadsState', () => {
 
     expect(source.getCurrent()).toMatchObject([
       {
-        parentComment: {_id: 'parent'},
-        replies: [{_id: 'reply'}],
+        parentComment: {id: 'parent'},
+        replies: [{id: 'reply'}],
         commentsCount: 2,
       },
     ])
@@ -328,7 +344,7 @@ describe('resolveComments', () => {
     listeners.values().next().value!.next(WELCOME)
     fetches[0].next([comment({_id: 'a'})])
 
-    await expect(promise).resolves.toEqual([comment({_id: 'a'})])
+    await expect(promise).resolves.toMatchObject([{id: 'a'}])
   })
 
   it('rejects when aborted', async () => {

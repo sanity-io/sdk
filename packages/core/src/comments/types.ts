@@ -45,27 +45,111 @@ export interface CommentTextSelection {
 }
 
 /**
- * Where in a document a thread hangs.
+ * An emoji reaction on a comment.
+ *
+ * Read only for now: a reaction added in the Studio shows up here, but there is
+ * no action for adding or removing one.
  * @beta
  */
-export interface CommentPath {
-  /**
-   * A stringified field path, for example `title` or
-   * `body[_key=="intro"].content`. Empty for a document-level thread.
-   */
+export interface CommentReaction {
+  shortName: string
+  userId: string
+  addedAt: string
+}
+
+/**
+ * Why a comment is not yet on the server.
+ *
+ * Local only, never written. Present on a comment whose create request failed,
+ * so an app can offer a retry.
+ * @beta
+ */
+export type CommentLocalState = {type: 'createError'; error: Error} | {type: 'createRetrying'}
+
+/**
+ * A single comment.
+ *
+ * Deliberately not the stored document. Comments are moving from per-dataset
+ * addon datasets to an organization-level store, and the two disagree on the
+ * document type, on how the commented document is referenced, and on where the
+ * author is recorded. Everything here reads the same on both sides, so an app
+ * written against this survives the move.
+ *
+ * Threads are flat: every comment in a thread shares a `threadId`, the thread's
+ * first comment has no `parentCommentId`, and replies carry that first comment's
+ * `id`. Use {@link CommentThread} to work with them grouped.
+ *
+ * @beta
+ */
+export interface Comment {
+  id: string
+  createdAt: string
+  /** Who wrote it. */
+  authorId: string
+  message: CommentMessage
+  threadId: string
+  /** Absent on the comment that starts a thread. */
+  parentCommentId?: string
+  status: CommentStatus
+  /** Set once the message has been rewritten. */
+  lastEditedAt?: string
+  /** The document the thread hangs on, always the published id. */
+  documentId: string
+  documentType: string
+  /** `''` for a thread about the document as a whole. */
+  fieldPath: string
+  /** Set when the comment is anchored to a run of text in a Portable Text field. */
+  selection?: CommentTextSelection
+  /** A copy of the content the comment was written about. */
+  contentSnapshot?: unknown
+  reactions: CommentReaction[]
+  /** Local only. Present while a create is failing or being retried. */
+  state?: CommentLocalState
+}
+
+/**
+ * A thread: one comment plus its replies.
+ *
+ * Unlike the Studio, the SDK returns every thread it finds. The Studio hides
+ * threads whose field is gone from the schema or hidden by a conditional, which
+ * it can do because it has the schema. Check `fieldPath` yourself if your app
+ * needs the same behaviour.
+ * @beta
+ */
+export interface CommentThread {
+  threadId: string
+  /** Empty for a thread about the document as a whole. */
+  fieldPath: string
+  parentComment: Comment
+  /** Oldest first. */
+  replies: Comment[]
+  /** The parent plus its replies. */
+  commentsCount: number
+  /** Taken from the parent comment; replies follow it. */
+  status: CommentStatus
+  /** `createdAt` of the most recent comment in the thread. */
+  lastActivityAt: string
+}
+
+/**
+ * Where in a document a thread hangs, as stored.
+ * @internal
+ */
+interface StoredCommentPath {
   field: string
   selection?: CommentTextSelection
 }
 
 /**
- * Ambient information about where a comment was written.
+ * Ambient information the Studio records about where a comment was written.
  *
- * Written by the Studio for its notification backend and read by nothing in the
- * Studio UI. The SDK fills in what it can and omits the rest; see the remarks on
- * {@link CreateCommentOptions.context}.
- * @beta
+ * Written for the notification backend and read by nothing in the Studio UI.
+ * Not surfaced on {@link Comment}: the organization-level store types this as a
+ * free-form object, so nothing about the shape is worth promising.
+ *
+ * @internal
  */
-export interface CommentContext {
+interface StoredCommentContext {
   tool: string
   payload?: Record<string, unknown>
   notification?: {
@@ -84,39 +168,25 @@ export interface CommentContext {
 }
 
 /**
- * An emoji reaction on a comment.
- *
- * The SDK reads these so a reaction added in the Studio is visible, but has no
- * action for adding or removing one.
- * @beta
+ * A reaction as stored, including the array key.
+ * @internal
  */
-export interface CommentReactionItem {
+interface StoredCommentReaction extends CommentReaction {
   _key: string
-  shortName: string
-  userId: string
-  addedAt: string
 }
 
 /**
- * Why a comment is not yet on the server.
- *
- * Local only, never written. Present on a comment whose create request failed,
- * so an app can offer a retry.
- * @beta
- */
-export type CommentLocalState = {type: 'createError'; error: Error} | {type: 'createRetrying'}
-
-/**
- * What a comment points at.
+ * What a stored comment points at.
  *
  * Comments live in a separate addon dataset, so `document` is a
  * `crossDatasetReference` back into the dataset holding the commented document.
  * It is deliberately weak: a strong reference would stop Content Lake deleting
  * the document it points at.
- * @beta
+ *
+ * @internal
  */
-export interface CommentTarget {
-  path?: CommentPath
+interface StoredCommentTarget {
+  path?: StoredCommentPath
   documentRevisionId?: string
   documentVersionId?: string
   documentType: string
@@ -136,14 +206,15 @@ export interface CommentTarget {
 }
 
 /**
- * A single comment, exactly as the Studio stores it.
+ * A comment exactly as the Studio stores it.
  *
- * Threads are flat: every comment in a thread shares a `threadId`, the thread's
- * first comment has no `parentCommentId`, and replies carry the first comment's
- * `_id`. Use {@link CommentThread} to work with them grouped.
- * @beta
+ * Internal on purpose. This is the addon dataset's shape, and it changes when
+ * comments move to the organization-level store. {@link Comment} is what
+ * consumers get.
+ *
+ * @internal
  */
-export interface CommentDocument {
+export interface StoredComment {
   _type: 'comment'
   _id: string
   _createdAt: string
@@ -158,41 +229,14 @@ export interface CommentDocument {
   parentCommentId?: string
   status: CommentStatus
   lastEditedAt?: string
-  reactions: CommentReactionItem[] | null
-  context?: CommentContext
-
-  /** A copy of the content the comment was written about. */
+  reactions: StoredCommentReaction[] | null
+  context?: StoredCommentContext
   contentSnapshot?: unknown
-
-  target: CommentTarget
+  target: StoredCommentTarget
 }
 
 /**
  * What gets written when a comment is created.
- * @beta
+ * @internal
  */
-export type CommentPostPayload = Omit<CommentDocument, '_rev' | '_createdAt' | '_state'>
-
-/**
- * A thread: one comment plus its replies.
- *
- * Unlike the Studio, the SDK returns every thread it finds. The Studio hides
- * threads whose field is gone from the schema or hidden by a conditional, which
- * it can do because it has the schema. Check `fieldPath` yourself if your app
- * needs the same behaviour.
- * @beta
- */
-export interface CommentThread {
-  threadId: string
-  /** Empty for a document-level thread. */
-  fieldPath: string
-  parentComment: CommentDocument
-  /** Oldest first. */
-  replies: CommentDocument[]
-  /** The parent plus its replies. */
-  commentsCount: number
-  /** Taken from the parent comment; replies follow it. */
-  status: CommentStatus
-  /** `_createdAt` of the most recent comment in the thread. */
-  lastActivityAt: string
-}
+export type CommentPostPayload = Omit<StoredComment, '_rev' | '_createdAt' | '_state'>

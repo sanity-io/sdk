@@ -1,9 +1,9 @@
 import {omitProperty} from '../utils/object'
-import {type CommentDocument, type CommentPostPayload} from './types'
+import {type CommentPostPayload, type StoredComment} from './types'
 
 interface CommentsEntry {
   /** `undefined` until the first snapshot arrives, which is what suspends readers. */
-  comments?: Record<string, CommentDocument>
+  comments?: Record<string, StoredComment>
   error?: unknown
   subscribers: string[]
 }
@@ -74,7 +74,7 @@ export const removeSubscriber =
 
 /** Replaces an entry's contents with a freshly fetched snapshot. */
 export const setComments =
-  (key: string, comments: CommentDocument[]) =>
+  (key: string, comments: StoredComment[]) =>
   (prev: CommentsStoreState): CommentsStoreState => {
     const entry = prev.entries[key]
     if (!entry) return prev
@@ -108,7 +108,7 @@ export const setCommentsError =
 
 /** A comment as it arrived from the server, replacing whatever we held. */
 export const receiveComment =
-  (key: string, comment: CommentDocument) =>
+  (key: string, comment: StoredComment) =>
   (prev: CommentsStoreState): CommentsStoreState => {
     const entry = prev.entries[key]
     const pendingCreates = omitProperty(prev.pendingCreates, comment._id)
@@ -132,15 +132,15 @@ export const receiveComment =
 type OptimisticComment = CommentPostPayload & {_createdAt?: string; _rev?: string}
 
 /** A create that already failed once is being retried, not written fresh. */
-function isRetryingCreate(existing: CommentDocument | undefined): boolean {
+function isRetryingCreate(existing: StoredComment | undefined): boolean {
   const state = existing?._state?.type
   return state === 'createError' || state === 'createRetrying'
 }
 
 function mergeOptimisticComment(
-  existing: CommentDocument | undefined,
+  existing: StoredComment | undefined,
   comment: OptimisticComment,
-): CommentDocument {
+): StoredComment {
   return {
     ...existing,
     ...comment,
@@ -185,7 +185,7 @@ export const addComment =
  * say which document it belongs to.
  */
 export const applyCommentUpdate =
-  (commentId: string, patch: Partial<CommentDocument>) =>
+  (commentId: string, patch: Partial<StoredComment>) =>
   (prev: CommentsStoreState): CommentsStoreState => {
     const entries = {...prev.entries}
     let changed = false
@@ -265,7 +265,7 @@ export const setCommentCreateError =
 
 /** Restores an optimistic edit if the failed transaction is still current. */
 export const rollbackCommentUpdate =
-  (commentId: string, transactionId: string, previous: CommentDocument) =>
+  (commentId: string, transactionId: string, previous: StoredComment) =>
   (prev: CommentsStoreState): CommentsStoreState => {
     if (
       !Object.hasOwn(prev.pendingTransactions, commentId) ||
@@ -290,7 +290,7 @@ export const rollbackCommentUpdate =
 
 /** Restores comments removed optimistically when the server delete fails. */
 export const restoreComments =
-  (removed: Array<{key: string; comments: CommentDocument[]}>) =>
+  (removed: Array<{key: string; comments: StoredComment[]}>) =>
   (prev: CommentsStoreState): CommentsStoreState => {
     const entries = {...prev.entries}
     let changed = false

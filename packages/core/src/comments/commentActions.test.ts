@@ -19,7 +19,7 @@ import {
 } from './commentActions'
 import {commentsStore, getCommentsState} from './commentsStore'
 import {addSubscriber, getCommentsKey, setComments} from './reducers'
-import {type CommentDocument} from './types'
+import {type StoredComment} from './types'
 
 vi.mock('../auth/authStore', () => ({getCurrentUserState: vi.fn()}))
 vi.mock('../client/clientStore', () => ({getClient: vi.fn(), getClientState: vi.fn()}))
@@ -32,7 +32,7 @@ vi.mock('./addonDatasetStore', async (importOriginal) => ({
 
 const HANDLE = {documentId: 'doc-1', documentType: 'author'}
 
-function comment(overrides: Partial<CommentDocument> & Pick<CommentDocument, '_id'>) {
+function comment(overrides: Partial<StoredComment> & Pick<StoredComment, '_id'>) {
   return {
     _type: 'comment',
     _createdAt: '2026-01-01T00:00:00Z',
@@ -44,7 +44,7 @@ function comment(overrides: Partial<CommentDocument> & Pick<CommentDocument, '_i
     reactions: null,
     target: {documentType: 'author', document: {_ref: 'doc-1', _type: 'reference', _weak: true}},
     ...overrides,
-  } satisfies CommentDocument as CommentDocument
+  } satisfies StoredComment as StoredComment
 }
 
 /** Puts comments into the store without going through the listener. */
@@ -52,7 +52,7 @@ const seedComments = bindActionByResource(
   commentsStore,
   (
     {state},
-    options: {resource?: DocumentResource; documentId?: string; comments: CommentDocument[]},
+    options: {resource?: DocumentResource; documentId?: string; comments: StoredComment[]},
   ) => {
     const key = getCommentsKey({documentId: options.documentId ?? 'doc-1'})
     state.set('addSubscriber', addSubscriber(key, 'seed'))
@@ -228,7 +228,7 @@ describe('createComment', () => {
 
     const pending = createComment(instance, {...HANDLE, commentId: 'c1', message: null})
 
-    expect(source.getCurrent()!.map((c) => c._id)).toEqual(['c1'])
+    expect(source.getCurrent()!.map((c) => c.id)).toEqual(['c1'])
 
     resolveCreate({...comment({_id: 'c1'})})
     await pending
@@ -245,7 +245,7 @@ describe('createComment', () => {
       createComment(instance, {...HANDLE, commentId: 'c1', message: null}),
     ).rejects.toThrow('nope')
 
-    expect(source.getCurrent()![0]._state).toEqual({type: 'createError', error: expect.any(Error)})
+    expect(source.getCurrent()![0].state).toEqual({type: 'createError', error: expect.any(Error)})
   })
 
   it('marks a failed comment as retrying while the retry is in flight', async () => {
@@ -264,7 +264,7 @@ describe('createComment', () => {
 
     const retry = createComment(instance, {...HANDLE, commentId: 'c1', message: null})
 
-    expect(source.getCurrent()![0]._state).toEqual({type: 'createRetrying'})
+    expect(source.getCurrent()![0].state).toEqual({type: 'createRetrying'})
 
     resolveRetry(comment({_id: 'c1'}))
     await retry
@@ -398,7 +398,7 @@ describe('updateComment', () => {
     source.subscribe()
     seedComments(instance, {comments: [comment({_id: 'c1', message: null})]})
     transactionCommit.mockRejectedValue(new Error('nope'))
-    const message: CommentDocument['message'] = [
+    const message: StoredComment['message'] = [
       {_type: 'block', _key: 'block-1', children: [{_type: 'span', text: 'changed'}]},
     ]
 
@@ -487,7 +487,7 @@ describe('removeComment', () => {
 
     await removeComment(instance, {commentId: 'c1'})
 
-    expect(source.getCurrent()!.map((c) => c._id)).toEqual(['other'])
+    expect(source.getCurrent()!.map((c) => c.id)).toEqual(['other'])
   })
 
   it('restores the comment and replies when the write fails', async () => {
@@ -508,7 +508,7 @@ describe('removeComment', () => {
     expect(
       source
         .getCurrent()!
-        .map((c) => c._id)
+        .map((c) => c.id)
         .sort(),
     ).toEqual(['c1', 'other', 'r1'])
   })

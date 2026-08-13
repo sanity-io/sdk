@@ -1,10 +1,10 @@
-import {type CommentDocument, type CommentThread} from './types'
+import {type Comment, type CommentThread} from './types'
 
 /**
  * Groups a flat comment list into threads.
  *
  * A thread's parent is the comment with no `parentCommentId`; replies point at
- * the parent's `_id`. Replies whose parent is missing from the input are
+ * the parent's `id`. Replies whose parent is missing from the input are
  * dropped, which is what happens when a parent is deleted but its replies have
  * not disappeared yet.
  *
@@ -14,8 +14,8 @@ import {type CommentDocument, type CommentThread} from './types'
  *
  * @internal
  */
-export function buildCommentThreads(comments: CommentDocument[]): CommentThread[] {
-  const repliesByParent = new Map<string, CommentDocument[]>()
+export function buildCommentThreads(comments: Comment[]): CommentThread[] {
+  const repliesByParent = new Map<string, Comment[]>()
 
   for (const comment of comments) {
     if (!comment.parentCommentId) continue
@@ -33,20 +33,20 @@ export function buildCommentThreads(comments: CommentDocument[]): CommentThread[
     if (parentComment.parentCommentId) continue
 
     // The array is built above and owned here, so sorting in place is safe.
-    const replies = (repliesByParent.get(parentComment._id) ?? []).sort((a, b) =>
-      a._createdAt.localeCompare(b._createdAt),
+    const replies = (repliesByParent.get(parentComment.id) ?? []).sort((a, b) =>
+      a.createdAt.localeCompare(b.createdAt),
     )
 
     const lastReply = replies[replies.length - 1]
 
     threads.push({
       threadId: parentComment.threadId,
-      fieldPath: parentComment.target.path?.field ?? '',
+      fieldPath: parentComment.fieldPath,
       parentComment,
       replies,
       commentsCount: replies.length + 1,
       status: parentComment.status,
-      lastActivityAt: lastReply ? lastReply._createdAt : parentComment._createdAt,
+      lastActivityAt: lastReply ? lastReply.createdAt : parentComment.createdAt,
     })
   }
 
