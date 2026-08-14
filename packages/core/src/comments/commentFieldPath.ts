@@ -26,8 +26,8 @@ function quoteReservedFieldSegments(path: string): string {
  * exactly. A string given here is parsed and re-stringified, so both a path
  * array and a hand-written string come out in the same canonical form.
  *
- * `undefined` and `[]` both produce `''`, which is how a document-level thread
- * is addressed.
+ * `undefined` and `[]` both produce `''`. Callers writing a comment reject that
+ * rather than passing it on, since a comment has to point at a field.
  *
  * @example
  * ```ts

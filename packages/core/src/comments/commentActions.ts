@@ -52,10 +52,16 @@ import {weakenReferencesInContentSnapshot} from './weakenReferences'
 export interface CreateCommentOptions extends DocumentHandle {
   message: CommentMessage
   /**
-   * Which field the thread hangs off. Omit, or pass `''`, for a thread about
-   * the document as a whole.
+   * Which field the thread hangs off, for example `title` or
+   * `body[_key=="intro"].content`.
+   *
+   * Required, and it has to resolve to a real path. There is no such thing as a
+   * comment on a document as a whole: the Studio only ever creates field
+   * comments, and its comment inspector throws on an empty path rather than
+   * ignoring it, so a pathless comment takes the inspector down for everyone
+   * looking at that document.
    */
-  fieldPath?: string | Path
+  fieldPath: string | Path
   /**
    * Anchors the comment to a run of text inside a Portable Text field. Building
    * one needs a live editor, so this comes from
@@ -120,6 +126,25 @@ export interface SetCommentStatusOptions extends DatasetHandle {
 /** @beta */
 export interface RemoveCommentOptions extends DatasetHandle {
   commentId: string
+}
+
+/**
+ * Refuses to write a comment that points at nothing.
+ *
+ * The type already requires `fieldPath`, but an empty string or an empty path
+ * array both survive that and normalise to `''`. Such a comment is not merely
+ * useless: the Studio's comment inspector calls `fromString` on the stored
+ * path, which throws on `''`, so the inspector crashes for everyone viewing
+ * that document until the comment is deleted. Cheaper to refuse the write.
+ */
+function requireFieldPath(fieldPath: string | Path): string {
+  const normalized = toCommentFieldPath(fieldPath)
+  if (!normalized) {
+    throw new Error(
+      'A comment needs a field path. Comments attach to a field, not to a document as a whole.',
+    )
+  }
+  return normalized
 }
 
 function requireCurrentUserId(instance: SanityInstance): string {
@@ -294,6 +319,7 @@ export const createComment: (
   ) => {
     const {instance, key} = context
     const perspective = options.perspective ?? instance.config.perspective
+    const fieldPath = requireFieldPath(options.fieldPath)
 
     return postComment(
       context,
@@ -307,7 +333,7 @@ export const createComment: (
         handle: options,
         message: options.message,
         resource: assertDatasetResource(key.resource),
-        fieldPath: toCommentFieldPath(options.fieldPath),
+        fieldPath,
         selection: options.selection,
         status: options.status ?? 'open',
         threadId: options.threadId ?? crypto.randomUUID(),
@@ -367,10 +393,10 @@ export const replyToComment: (
         // the Studio flattens threads.
         parentCommentId: parent?.parentCommentId ?? options.parentCommentId,
         resource: assertDatasetResource(key.resource),
-        fieldPath:
-          options.fieldPath === undefined
-            ? (parent?.target.path?.field ?? '')
-            : toCommentFieldPath(options.fieldPath),
+        // Inherited from the parent unless the caller names one, and checked
+        // either way: a reply with no path crashes the Studio inspector exactly
+        // as a pathless thread would.
+        fieldPath: requireFieldPath(options.fieldPath ?? parent?.target.path?.field ?? ''),
         // A reply into a resolved thread stays consistent with its parent.
         status,
         threadId,

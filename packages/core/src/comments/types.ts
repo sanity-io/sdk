@@ -96,7 +96,7 @@ export interface Comment {
   /** The document the thread hangs on, always the published id. */
   documentId: string
   documentType: string
-  /** `''` for a thread about the document as a whole. */
+  /** The field the thread hangs off, for example `title`. */
   fieldPath: string
   /** Set when the comment is anchored to a run of text in a Portable Text field. */
   selection?: CommentTextSelection
@@ -118,7 +118,7 @@ export interface Comment {
  */
 export interface CommentThread {
   threadId: string
-  /** Empty for a thread about the document as a whole. */
+  /** The field the thread hangs off, taken from its first comment. */
   fieldPath: string
   parentComment: Comment
   /** Oldest first. */

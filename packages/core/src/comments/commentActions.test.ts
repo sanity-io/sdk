@@ -32,6 +32,9 @@ vi.mock('./addonDatasetStore', async (importOriginal) => ({
 
 const HANDLE = {documentId: 'doc-1', documentType: 'author'}
 
+/** Creates always name a field, since a pathless comment is refused. */
+const CREATE = {...HANDLE, fieldPath: 'name'}
+
 function comment(overrides: Partial<StoredComment> & Pick<StoredComment, '_id'>) {
   return {
     _type: 'comment',
@@ -42,7 +45,12 @@ function comment(overrides: Partial<StoredComment> & Pick<StoredComment, '_id'>)
     threadId: 'thread-1',
     status: 'open',
     reactions: null,
-    target: {documentType: 'author', document: {_ref: 'doc-1', _type: 'reference', _weak: true}},
+    target: {
+      documentType: 'author',
+      // Every comment points at a field, so replies inherit a real path.
+      path: {field: 'name'},
+      document: {_ref: 'doc-1', _type: 'reference', _weak: true},
+    },
     ...overrides,
   } satisfies StoredComment as StoredComment
 }
@@ -170,14 +178,14 @@ describe('createComment', () => {
   })
 
   it('targets the published document from a draft id', async () => {
-    await createComment(instance, {...HANDLE, documentId: 'drafts.doc-1', message: null})
+    await createComment(instance, {...CREATE, documentId: 'drafts.doc-1', message: null})
 
     expect(client.createIfNotExists.mock.calls[0][0].target.document._ref).toBe('doc-1')
   })
 
   it('records the release when commenting on one', async () => {
     await createComment(instance, {
-      ...HANDLE,
+      ...CREATE,
       perspective: {releaseName: 'summer'},
       message: null,
     })
@@ -188,7 +196,7 @@ describe('createComment', () => {
   it('carries a text selection through untouched', async () => {
     const selection = {type: 'text' as const, value: [{_key: 'b1', text: 'marked'}]}
 
-    await createComment(instance, {...HANDLE, message: null, fieldPath: 'body', selection})
+    await createComment(instance, {...CREATE, message: null, fieldPath: 'body', selection})
 
     expect(client.createIfNotExists.mock.calls[0][0].target.path).toEqual({
       field: 'body',
@@ -198,7 +206,7 @@ describe('createComment', () => {
 
   it('weakens references in a content snapshot', async () => {
     await createComment(instance, {
-      ...HANDLE,
+      ...CREATE,
       message: null,
       contentSnapshot: {author: {_ref: 'other-doc', _type: 'reference'}},
     })
@@ -209,7 +217,7 @@ describe('createComment', () => {
   })
 
   it('provisions the addon dataset on the way', async () => {
-    await createComment(instance, {...HANDLE, message: null})
+    await createComment(instance, {...CREATE, message: null})
 
     expect(provisionAddonDataset).toHaveBeenCalled()
     expect(getClient).toHaveBeenCalledWith(instance, {
@@ -226,7 +234,7 @@ describe('createComment', () => {
     let resolveCreate: (value: unknown) => void = () => {}
     client.createIfNotExists.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)))
 
-    const pending = createComment(instance, {...HANDLE, commentId: 'c1', message: null})
+    const pending = createComment(instance, {...CREATE, commentId: 'c1', message: null})
 
     expect(source.getCurrent()!.map((c) => c.id)).toEqual(['c1'])
 
@@ -242,7 +250,7 @@ describe('createComment', () => {
     client.createIfNotExists.mockRejectedValue(new Error('nope'))
 
     await expect(
-      createComment(instance, {...HANDLE, commentId: 'c1', message: null}),
+      createComment(instance, {...CREATE, commentId: 'c1', message: null}),
     ).rejects.toThrow('nope')
 
     expect(source.getCurrent()![0].state).toEqual({type: 'createError', error: expect.any(Error)})
@@ -255,14 +263,14 @@ describe('createComment', () => {
     client.createIfNotExists.mockRejectedValueOnce(new Error('nope'))
 
     await expect(
-      createComment(instance, {...HANDLE, commentId: 'c1', message: null}),
+      createComment(instance, {...CREATE, commentId: 'c1', message: null}),
     ).rejects.toThrow('nope')
 
     let resolveRetry: (value: unknown) => void = () => {}
     client.create.mockReturnValue(new Promise((resolve) => (resolveRetry = resolve)))
     client.createIfNotExists.mockReturnValue(new Promise((resolve) => (resolveRetry = resolve)))
 
-    const retry = createComment(instance, {...HANDLE, commentId: 'c1', message: null})
+    const retry = createComment(instance, {...CREATE, commentId: 'c1', message: null})
 
     expect(source.getCurrent()![0].state).toEqual({type: 'createRetrying'})
 
@@ -277,9 +285,24 @@ describe('createComment', () => {
       subscribe: () => () => {},
     } as unknown as StateSource<CurrentUser | null>)
 
-    await expect(createComment(instance, {...HANDLE, message: null})).rejects.toThrow(
+    await expect(createComment(instance, {...CREATE, message: null})).rejects.toThrow(
       /requires a logged in user/,
     )
+  })
+
+  it('refuses a comment that points at no field', async () => {
+    // Not pedantry. The Studio's inspector calls `fromString` on the stored
+    // path and throws on `''`, so a pathless comment crashes the inspector for
+    // everyone viewing that document until someone deletes it.
+    await expect(
+      createComment(instance, {...HANDLE, fieldPath: '', message: null}),
+    ).rejects.toThrow(/needs a field path/)
+
+    await expect(
+      createComment(instance, {...HANDLE, fieldPath: [], message: null}),
+    ).rejects.toThrow(/needs a field path/)
+
+    expect(client.createIfNotExists).not.toHaveBeenCalled()
   })
 })
 
@@ -349,6 +372,8 @@ describe('replyToComment', () => {
       parentCommentId: 'unknown',
       threadId: 'thread-3',
       status: 'resolved',
+      // With no parent to inherit from, the field has to be named too.
+      fieldPath: 'name',
       message: null,
     })
 

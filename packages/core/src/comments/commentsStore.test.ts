@@ -170,7 +170,9 @@ describe('getCommentsState', () => {
     expect(source.getCurrent()!.map((c) => c.id)).toEqual(['a'])
   })
 
-  it('selects document-level threads for an empty field path', () => {
+  it('matches the field path exactly rather than by prefix', () => {
+    // Nothing writes an empty path any more, but the filter is still an exact
+    // match, so it must not sweep up every comment on the document.
     const source = getCommentsState(instance, {...HANDLE, fieldPath: ''})
     source.subscribe()
 

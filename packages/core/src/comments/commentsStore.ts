@@ -58,8 +58,7 @@ import {type Comment, type CommentStatus, type CommentThread, type StoredComment
  */
 export interface CommentsOptions extends DocumentHandle {
   /**
-   * Narrow to one field. `''` selects document-level threads only. Omit to get
-   * every comment on the document.
+   * Narrow to one field. Omit to get every comment on the document.
    */
   fieldPath?: string | Path
   /** Narrow to open or resolved threads. Omit for both. */
