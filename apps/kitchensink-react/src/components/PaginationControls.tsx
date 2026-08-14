@@ -57,6 +57,7 @@ export function PaginationControls({
           data-testid={`pagination-page-${i}`}
           mode={i === currentPage ? 'default' : 'ghost'}
           onClick={() => goToPage(i)}
+          fontSize={1}
           style={{
             ...buttonStyle,
             fontWeight: i === currentPage ? 'bold' : 'normal',
@@ -78,6 +79,7 @@ export function PaginationControls({
           disabled={!hasFirstPage}
           style={buttonStyle}
           text="<<"
+          fontSize={1}
           mode="ghost"
         />
         <Button
@@ -86,6 +88,7 @@ export function PaginationControls({
           disabled={!hasPreviousPage}
           style={buttonStyle}
           text="<"
+          fontSize={1}
           mode="ghost"
         />
         {pageButtons()}
@@ -95,6 +98,7 @@ export function PaginationControls({
           disabled={!hasNextPage}
           style={buttonStyle}
           text=">"
+          fontSize={1}
           mode="ghost"
         />
         <Button
@@ -103,6 +107,7 @@ export function PaginationControls({
           disabled={!hasLastPage}
           style={buttonStyle}
           text=">>"
+          fontSize={1}
           mode="ghost"
         />
       </Flex>

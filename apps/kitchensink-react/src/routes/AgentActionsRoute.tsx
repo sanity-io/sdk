@@ -4,7 +4,8 @@ import {
   useAgentGenerate,
   useAgentPrompt,
 } from '@sanity/sdk-react'
-import {Box, Button, Card, Code, Label, Stack, Text} from '@sanity/ui'
+import {Box, Button, Card, Stack, Text} from '@sanity/ui'
+import {Code} from '@sanity/ui/code'
 import {type JSX, useMemo, useState} from 'react'
 
 import {PageLayout} from '../components/PageLayout'
@@ -41,28 +42,35 @@ export function AgentActionsRoute(): JSX.Element {
 
   return (
     <PageLayout title="Agent Actions" subtitle="Prompt and generate using the movie schema">
-      <Stack space={4}>
+      <Stack gap={4}>
         <Card padding={4} radius={2} shadow={1} tone="inherit">
-          <Stack space={3}>
-            <Label size={1}>Prompt</Label>
+          <Stack gap={3}>
+            <Text size={1} weight="medium">
+              Prompt
+            </Text>
             <Text muted size={1}>
               Sends an instruction to the LLM and returns plain text (or JSON if requested). Does
               not reference a schema or write any data.
             </Text>
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              disabled={isLoadingPrompt}
-              style={{
-                width: '100%',
-                height: 120,
-                border: '1px solid #ccc',
-                borderRadius: 4,
-                padding: 8,
-              }}
-            />
+            <Card padding={2} radius={2} tone="transparent" border>
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                disabled={isLoadingPrompt}
+                style={{
+                  width: '100%',
+                  height: 120,
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'inherit',
+                  font: 'inherit',
+                  resize: 'vertical',
+                }}
+              />
+            </Card>
             <Box>
               <Button
+                fontSize={1}
                 text="Run prompt"
                 tone="primary"
                 disabled={isLoadingPrompt}
@@ -89,8 +97,10 @@ export function AgentActionsRoute(): JSX.Element {
         </Card>
 
         <Card padding={4} radius={2} shadow={1} tone="inherit">
-          <Stack space={3}>
-            <Label size={1}>Generaten a Sanity document (no write)</Label>
+          <Stack gap={3}>
+            <Text size={1} weight="medium">
+              Generate a Sanity document (no write)
+            </Text>
             <Text muted size={1}>
               Generates title and overview for a movie; does not persist changes.
             </Text>
@@ -101,6 +111,7 @@ export function AgentActionsRoute(): JSX.Element {
             </Text>
             <Box>
               <Button
+                fontSize={1}
                 text="Generate"
                 tone="primary"
                 disabled={isLoadingGenerate}

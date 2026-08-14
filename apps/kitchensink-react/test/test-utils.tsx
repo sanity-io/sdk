@@ -1,3 +1,5 @@
+import '@sanity/ui/styles.css'
+
 import {ResourceProvider} from '@sanity/sdk-react'
 import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'

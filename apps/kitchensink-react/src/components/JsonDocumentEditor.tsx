@@ -32,7 +32,7 @@ interface JsonDocumentEditorProps {
 function ErrorFallback({error}: {error: Error}) {
   return (
     <Card tone="critical" padding={4}>
-      <Stack space={3}>
+      <Stack gap={3}>
         <Text weight="semibold">Failed to load editor</Text>
         <Text size={1}>{error.message}</Text>
       </Stack>
@@ -53,7 +53,7 @@ export function JsonDocumentEditor({
   const synced = useDocumentSyncStatus(documentHandle)
 
   const editorContent = (
-    <Stack space={3}>
+    <Stack gap={3}>
       {showSyncStatus && (
         <Box>
           {synced ? (

@@ -1,5 +1,5 @@
 import {type ComlinkStatus, useFrameConnection} from '@sanity/sdk-react'
-import {Box, Button, Card, Label, Stack, Text, TextInput} from '@sanity/ui'
+import {Box, Button, Card, Flex, Stack, Text, TextInput} from '@sanity/ui'
 import {ReactElement, useEffect, useRef, useState} from 'react'
 
 import {PageLayout} from '../components/PageLayout'
@@ -86,21 +86,22 @@ const ParentApp = (): ReactElement => {
 
   return (
     <PageLayout title="Comlink demo" subtitle="Explore comlink connections and fetch operations">
-      <Stack space={4} height="fill">
+      <Stack gap={4} height="fill">
         <Box flex={1}>
           <Box display="flex" height="fill">
             {/* Frame Navigation */}
             <Box paddingRight={4} style={{minWidth: 200, maxWidth: 250}}>
-              <Stack space={3}>
+              <Stack gap={3}>
                 <Card padding={3}>
-                  <Text size={2} weight="semibold">
+                  <Text size={1} weight="semibold">
                     Frames
                   </Text>
                 </Card>
-                <Stack space={2}>
+                <Stack gap={2}>
                   {frames.map((frameNum) => (
                     <Button
                       key={frameNum}
+                      fontSize={1}
                       mode={selectedFrame === frameNum ? 'default' : 'ghost'}
                       onClick={() => setSelectedFrame(frameNum)}
                       text={`Frame ${frameNum}`}
@@ -112,36 +113,42 @@ const ParentApp = (): ReactElement => {
 
             {/* Parent App Controls */}
             <Box flex={1}>
-              <Stack space={4}>
+              <Stack gap={4}>
                 {/* Message input */}
                 <Card padding={3}>
-                  <Stack space={3}>
-                    <Label>Send message to frame</Label>
-                    <Box display="flex">
+                  <Stack gap={3}>
+                    <Text size={1} weight="semibold">
+                      Send message to frame
+                    </Text>
+                    <Flex gap={2}>
                       <Box flex={1}>
                         <TextInput
+                          fontSize={1}
                           ref={messageInputRef}
                           onKeyDown={(e) => e.key === 'Enter' && sendMessageToFramedApp()}
                           disabled={status !== 'connected'}
                         />
                       </Box>
                       <Button
+                        fontSize={1}
                         text="Send"
                         tone="primary"
                         onClick={sendMessageToFramedApp}
                         disabled={status !== 'connected'}
                       />
-                    </Box>
+                    </Flex>
                   </Stack>
                 </Card>
 
                 {/* Messages display */}
                 <Box>
-                  <Stack space={3}>
-                    <Text weight="semibold">Received Messages</Text>
+                  <Stack gap={3}>
+                    <Text size={1} weight="semibold">
+                      Received Messages
+                    </Text>
                     {receivedMessages.map((msg, idx) => (
                       <Card key={idx} padding={3} radius={2}>
-                        <Stack space={2}>
+                        <Stack gap={2}>
                           <Text size={1} muted>
                             {msg.from}
                           </Text>

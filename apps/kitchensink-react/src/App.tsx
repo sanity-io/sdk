@@ -1,4 +1,6 @@
+import 'inter-ui/inter.css'
 import './global.css'
+import '@sanity/ui/styles.css'
 
 import {configureLogging, SanityApp, useDashboardNavigate} from '@sanity/sdk-react'
 import {Spinner, ThemeProvider} from '@sanity/ui'

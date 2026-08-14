@@ -1,5 +1,5 @@
 import {useWindowConnection} from '@sanity/sdk-react'
-import {Box, Button, Card, Container, Label, Stack, Text, TextInput} from '@sanity/ui'
+import {Box, Button, Card, Container, Flex, Stack, Text, TextInput} from '@sanity/ui'
 import {type ReactElement, Suspense, useEffect, useRef, useState} from 'react'
 
 import {FromIFrameMessage, ToIFrameMessage, UserData} from './types'
@@ -54,28 +54,33 @@ function FramedContent() {
 
   return (
     <>
-      <Stack space={3}>
-        <Label>Send message to parent</Label>
-        <Box display="flex">
+      <Stack gap={3}>
+        <Text size={1} weight="semibold">
+          Send message to parent
+        </Text>
+        <Flex gap={2}>
           <Box flex={1}>
             <TextInput
+              fontSize={1}
               ref={messageInputRef}
               onKeyDown={(e) => e.key === 'Enter' && sendMessageToParent()}
             />
           </Box>
-          <Button text="Send" tone="primary" onClick={sendMessageToParent} />
-        </Box>
+          <Button fontSize={1} text="Send" tone="primary" onClick={sendMessageToParent} />
+        </Flex>
       </Stack>
 
       {/* Users section */}
       <Card padding={3} border radius={2}>
-        <Stack space={3}>
-          <Label>Users</Label>
+        <Stack gap={3}>
+          <Text size={1} weight="semibold">
+            Users
+          </Text>
           {users.length > 0 ? (
-            <Stack space={2}>
+            <Stack gap={2}>
               {users.map((user) => (
                 <Card key={user.id} padding={3} tone="positive" radius={2}>
-                  <Stack space={2}>
+                  <Stack gap={2}>
                     <Text size={1} weight="semibold">
                       {user.name}
                     </Text>
@@ -98,8 +103,10 @@ function FramedContent() {
 
       {/* Received messages */}
       <Box flex={1} style={{height: '500px'}}>
-        <Stack space={3}>
-          <Text weight="semibold">Received Messages</Text>
+        <Stack gap={3}>
+          <Text size={1} weight="semibold">
+            Received Messages
+          </Text>
           {receivedMessages.map((msg, idx) => (
             <Card key={idx} padding={3} radius={2}>
               <Text>{msg}</Text>
@@ -115,11 +122,11 @@ const Framed = (): ReactElement => {
   return (
     <Container height="fill">
       <Card tone="transparent">
-        <Stack padding={4} space={4}>
-          <Text weight="semibold" size={2}>
+        <Stack padding={4} gap={4}>
+          <Text weight="semibold" size={1}>
             Frame Content
           </Text>
-          <Suspense fallback={<div>Connecting to ParentApp...</div>}>
+          <Suspense fallback={<Text size={1}>Connecting to ParentApp...</Text>}>
             <FramedContent />
           </Suspense>
         </Stack>

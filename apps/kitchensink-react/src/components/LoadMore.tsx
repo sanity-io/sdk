@@ -62,7 +62,7 @@ export function LoadMore({
       justify="center"
       padding={3}
     >
-      {isPending && <Text>Loading…</Text>}
+      {isPending && <Text size={1}>Loading…</Text>}
     </Flex>
   )
 }

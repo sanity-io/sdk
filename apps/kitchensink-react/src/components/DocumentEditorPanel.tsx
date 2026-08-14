@@ -13,7 +13,8 @@ import {
   useEditDocument,
   useSanityInstance,
 } from '@sanity/sdk-react'
-import {Box, Button, Card, Flex, Stack, Text, TextInput, Tooltip} from '@sanity/ui'
+import {Box, Button, Card, Flex, Stack, Text, TextInput} from '@sanity/ui'
+import {Tooltip} from '@sanity/ui/tooltip'
 import React, {useState} from 'react'
 
 interface DocumentEditorPanelProps {
@@ -91,10 +92,10 @@ export function DocumentEditorPanel({
   const setName = useEditDocument<string>({...docHandle, path: nameField})
 
   return (
-    <Stack space={4}>
+    <Stack gap={4}>
       {/* Document Info Section */}
       <Card padding={3} radius={2} shadow={1}>
-        <Stack space={3}>
+        <Stack gap={3}>
           <Text size={1} weight="semibold">
             Document Information
           </Text>
@@ -128,7 +129,7 @@ export function DocumentEditorPanel({
 
       {/* Actions Section */}
       <Card padding={3} radius={2} shadow={1}>
-        <Stack space={3}>
+        <Stack gap={3}>
           <Text size={1} weight="semibold">
             Document Actions
           </Text>

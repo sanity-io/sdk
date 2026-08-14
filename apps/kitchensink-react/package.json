@@ -11,7 +11,6 @@
     "dev:e2e": "sanity dev",
     "install": "npm run schema:extract && npm run types:generate",
     "lint": "eslint .",
-    "paramour": "npx paramour --config=./src/css/css.config.js --output=./src/css/paramour.css",
     "preview": "sanity preview",
     "schema:extract": "sanity schema extract --workspace ppsg7ml5-test --path schema.ppsg7ml5.test.json && sanity schema extract --workspace vo1ysemo-production --path schema.vo1ysemo.production.json",
     "test:e2e": "playwright test",
@@ -19,7 +18,6 @@
     "types:generate": "node scripts/typegen.mjs"
   },
   "dependencies": {
-    "@paramour/css": "1.0.0-rc.2",
     "@portabletext/editor": "7.10.13",
     "@portabletext/keyboard-shortcuts": "^2.1.3",
     "@portabletext/plugin-sdk-value": "7.1.5",
@@ -27,7 +25,7 @@
     "@sanity/icons": "^5.2.1",
     "@sanity/sdk": "workspace:*",
     "@sanity/sdk-react": "workspace:*",
-    "@sanity/ui": "^2.16.22",
+    "@sanity/ui": "^4.0.3",
     "groq": "catalog:",
     "inter-ui": "^4.1.1",
     "json-edit-react": "^1.29.1",

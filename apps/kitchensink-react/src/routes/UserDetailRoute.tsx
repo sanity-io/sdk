@@ -1,10 +1,45 @@
+import {AddCircleIcon} from '@sanity/icons/AddCircle'
+import {CalendarIcon} from '@sanity/icons/Calendar'
+import {EarthGlobeIcon} from '@sanity/icons/EarthGlobe'
+import {EnvelopeIcon} from '@sanity/icons/Envelope'
+import {ErrorOutlineIcon} from '@sanity/icons/ErrorOutline'
+import {EyeOpenIcon} from '@sanity/icons/EyeOpen'
+import {HashIcon} from '@sanity/icons/Hash'
+import {LockIcon} from '@sanity/icons/Lock'
+import {ProjectsIcon} from '@sanity/icons/Projects'
+import {SyncIcon} from '@sanity/icons/Sync'
+import {TiersIcon} from '@sanity/icons/Tiers'
+import {UserIcon} from '@sanity/icons/User'
 import {useProject, useUser} from '@sanity/sdk-react'
 import {Badge, Card, Flex, Grid, Heading, Stack, Text} from '@sanity/ui'
-import {type JSX} from 'react'
+import {type ComponentType, type JSX, type ReactNode, type SVGProps} from 'react'
 import {useParams} from 'react-router'
 
 import {FallbackAvatar} from '../components/FallbackAvatar'
 import {PageLayout} from '../components/PageLayout'
+
+function IconText({
+  icon: Icon,
+  children,
+  muted,
+  weight,
+}: {
+  icon: ComponentType<SVGProps<SVGSVGElement>>
+  children: ReactNode
+  muted?: boolean
+  weight?: 'semibold'
+}): JSX.Element {
+  return (
+    <Flex align="center" gap={2}>
+      <Text muted={muted} size={1} weight={weight}>
+        <Icon />
+      </Text>
+      <Text muted={muted} size={1} weight={weight}>
+        {children}
+      </Text>
+    </Flex>
+  )
+}
 
 export function UserDetailRoute(): JSX.Element {
   const {userId} = useParams<{userId: string}>()
@@ -21,7 +56,11 @@ export function UserDetailRoute(): JSX.Element {
 
   if (!user) {
     return (
-      <PageLayout title="❓ User Not Found" subtitle="The requested user could not be located">
+      <PageLayout
+        icon={ErrorOutlineIcon}
+        title="User Not Found"
+        subtitle="The requested user could not be located"
+      >
         <Text>
           The user with ID &quot;{userId}&quot; was not found in this {resourceType}.
         </Text>
@@ -30,47 +69,49 @@ export function UserDetailRoute(): JSX.Element {
   }
 
   return (
-    <PageLayout title="👤 User Profile" subtitle={user.sanityUserId}>
-      <Stack space={4}>
-        {/* Main Profile Card */}
+    <PageLayout icon={UserIcon} title="User Profile" subtitle={user.sanityUserId}>
+      <Stack gap={4}>
         <Card padding={4} radius={3} shadow={1}>
-          <Stack space={4}>
-            {/* User Avatar & Basic Info */}
+          <Stack gap={4}>
             <Flex align="center" gap={4}>
               <FallbackAvatar
                 size={3}
                 src={user.profile.imageUrl}
                 displayName={user.profile.displayName}
               />
-              <Stack space={2}>
+              <Stack gap={2}>
                 <Heading as="h2" size={2}>
                   {user.profile.displayName}
                 </Heading>
-                <Text muted size={1}>
-                  📧 {user.profile.email}
-                </Text>
-                <Badge tone="primary" fontSize={1}>
-                  🆔 {user.profile.id}
-                </Badge>
+                <IconText icon={EnvelopeIcon} muted>
+                  {user.profile.email}
+                </IconText>
+                <Flex align="center" gap={2}>
+                  <Text size={1}>
+                    <HashIcon />
+                  </Text>
+                  <Badge tone="primary" fontSize={1}>
+                    {user.profile.id}
+                  </Badge>
+                </Flex>
               </Stack>
             </Flex>
 
-            {/* Profile Details Grid */}
-            <Grid columns={2} gap={3}>
-              <Stack space={2}>
-                <Text weight="semibold" size={1}>
-                  📅 Created
-                </Text>
+            <Grid gridTemplateColumns={2} gap={3}>
+              <Stack gap={2}>
+                <IconText icon={CalendarIcon} weight="semibold">
+                  Created
+                </IconText>
                 <Text size={1} muted>
                   {new Date(user.profile.createdAt).toLocaleDateString()}
                 </Text>
               </Stack>
 
               {user.profile.updatedAt && (
-                <Stack space={2}>
-                  <Text weight="semibold" size={1}>
-                    🔄 Last Updated
-                  </Text>
+                <Stack gap={2}>
+                  <IconText icon={SyncIcon} weight="semibold">
+                    Last Updated
+                  </IconText>
                   <Text size={1} muted>
                     {new Date(user.profile.updatedAt).toLocaleDateString()}
                   </Text>
@@ -80,15 +121,19 @@ export function UserDetailRoute(): JSX.Element {
           </Stack>
         </Card>
 
-        {/* Memberships Section */}
         {user.memberships.length > 0 && (
           <Card padding={4} radius={3} shadow={1}>
-            <Stack space={4}>
-              <Heading as="h3" size={2}>
-                🔐 Access & Permissions
-              </Heading>
+            <Stack gap={4}>
+              <Flex align="center" gap={2}>
+                <Text size={2}>
+                  <LockIcon />
+                </Text>
+                <Heading as="h3" size={2}>
+                  Access & Permissions
+                </Heading>
+              </Flex>
 
-              <Stack space={3}>
+              <Stack gap={3}>
                 {user.memberships.map((membership, index) => (
                   <Card
                     key={`${membership.resourceId}-${index}`}
@@ -97,12 +142,17 @@ export function UserDetailRoute(): JSX.Element {
                     border
                     radius={2}
                   >
-                    <Grid columns={[1, 2]} gap={3}>
-                      <Stack space={2}>
+                    <Grid gridTemplateColumns={[1, 2]} gap={3}>
+                      <Stack gap={2}>
                         <Flex align="center" gap={2}>
-                          <Text weight="semibold" size={1}>
-                            {membership.resourceType === 'project' ? '📦' : '🏢'} Resource
-                          </Text>
+                          <IconText
+                            icon={
+                              membership.resourceType === 'project' ? ProjectsIcon : EarthGlobeIcon
+                            }
+                            weight="semibold"
+                          >
+                            Resource
+                          </IconText>
                           <Badge tone="default" fontSize={1}>
                             {membership.resourceType}
                           </Badge>
@@ -112,10 +162,10 @@ export function UserDetailRoute(): JSX.Element {
                         </Text>
                       </Stack>
 
-                      <Stack space={2}>
-                        <Text weight="semibold" size={1}>
-                          🎭 Roles
-                        </Text>
+                      <Stack gap={2}>
+                        <IconText icon={TiersIcon} weight="semibold">
+                          Roles
+                        </IconText>
                         <Flex gap={1} wrap="wrap">
                           {membership.roleNames.map((role) => (
                             <Badge key={role} tone="primary" fontSize={1}>
@@ -126,10 +176,10 @@ export function UserDetailRoute(): JSX.Element {
                       </Stack>
 
                       {membership.addedAt && (
-                        <Stack space={2}>
-                          <Text weight="semibold" size={1}>
-                            ➕ Added
-                          </Text>
+                        <Stack gap={2}>
+                          <IconText icon={AddCircleIcon} weight="semibold">
+                            Added
+                          </IconText>
                           <Text size={1} muted>
                             {new Date(membership.addedAt).toLocaleDateString()}
                           </Text>
@@ -137,10 +187,10 @@ export function UserDetailRoute(): JSX.Element {
                       )}
 
                       {membership.lastSeenAt && (
-                        <Stack space={2}>
-                          <Text weight="semibold" size={1}>
-                            👁️ Last Seen
-                          </Text>
+                        <Stack gap={2}>
+                          <IconText icon={EyeOpenIcon} weight="semibold">
+                            Last Seen
+                          </IconText>
                           <Text size={1} muted>
                             {new Date(membership.lastSeenAt).toLocaleDateString()}
                           </Text>

@@ -1,6 +1,40 @@
+import {BarChartIcon} from '@sanity/icons/BarChart'
+import {BulbOutlineIcon} from '@sanity/icons/BulbOutline'
+import {EnvelopeIcon} from '@sanity/icons/Envelope'
+import {WrenchIcon} from '@sanity/icons/Wrench'
 import {useAgentResourceContext, useDocuments, useSanityInstance} from '@sanity/sdk-react'
-import {Badge, Box, Button, Card, Flex, Heading, Select, Stack, Text, TextInput} from '@sanity/ui'
-import {type JSX, useEffect, useMemo, useRef, useState} from 'react'
+import {Badge, Box, Button, Card, Flex, Select, Stack, Text, TextInput} from '@sanity/ui'
+import {
+  type ComponentType,
+  type JSX,
+  type ReactNode,
+  type SVGProps,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+
+import {PageLayout} from '../components/PageLayout'
+
+function IconHeading({
+  icon: Icon,
+  children,
+}: {
+  icon: ComponentType<SVGProps<SVGSVGElement>>
+  children: ReactNode
+}): JSX.Element {
+  return (
+    <Flex align="center" gap={2}>
+      <Text size={1} weight="semibold">
+        <Icon />
+      </Text>
+      <Text size={1} weight="semibold">
+        {children}
+      </Text>
+    </Flex>
+  )
+}
 
 /**
  * Route that demonstrates the useAgentResourceContext hook.
@@ -70,26 +104,20 @@ export function AgentResourceContextRoute(): JSX.Element {
   }
 
   return (
-    <Box padding={4}>
-      <Stack space={5}>
-        {/* Header */}
-        <Card padding={4} radius={2} shadow={1}>
-          <Stack space={3}>
-            <Heading as="h1" size={3}>
-              Agent Resource Context
-            </Heading>
-            <Text size={2} muted>
-              This page demonstrates the <code>useAgentResourceContext</code> hook, which
-              automatically notifies the Dashboard about what resource you&rsquo;re currently
-              viewing or editing. This allows the Agent to understand your context and provide more
-              relevant assistance.
-            </Text>
-          </Stack>
-        </Card>
+    <PageLayout
+      title="Agent Resource Context"
+      subtitle="Notify the Dashboard about the resource you are viewing"
+    >
+      <Stack gap={5}>
+        <Text size={1} muted>
+          This page demonstrates the <code>useAgentResourceContext</code> hook, which automatically
+          notifies the Dashboard about what resource you&rsquo;re currently viewing or editing. This
+          allows the Agent to understand your context and provide more relevant assistance.
+        </Text>
 
         {/* Current Context Display */}
         <Card padding={4} radius={2} shadow={1} tone="primary">
-          <Stack space={3}>
+          <Stack gap={3}>
             <Flex gap={2} align="center">
               <Text size={1} weight="semibold">
                 Current Context Being Sent to Agent
@@ -99,7 +127,7 @@ export function AgentResourceContextRoute(): JSX.Element {
               </Badge>
             </Flex>
             <Card padding={3} radius={2} tone="inherit" border>
-              <Stack space={2}>
+              <Stack gap={2}>
                 <Flex gap={2}>
                   <Text size={1} weight="semibold" style={{minWidth: '100px'}}>
                     Project ID:
@@ -133,10 +161,8 @@ export function AgentResourceContextRoute(): JSX.Element {
 
             {/* Update stats */}
             <Card padding={3} radius={2} tone="caution" border>
-              <Stack space={2}>
-                <Text size={1} weight="semibold">
-                  📊 Update Statistics
-                </Text>
+              <Stack gap={2}>
+                <IconHeading icon={BarChartIcon}>Update Statistics</IconHeading>
                 <Flex gap={2}>
                   <Text size={1} style={{minWidth: '120px'}}>
                     Updates sent:
@@ -167,8 +193,8 @@ export function AgentResourceContextRoute(): JSX.Element {
 
         {/* Document Selection Controls */}
         <Card padding={4} radius={2} shadow={1}>
-          <Stack space={4}>
-            <Text size={2} weight="semibold">
+          <Stack gap={4}>
+            <Text size={1} weight="semibold">
               Select a Document to View
             </Text>
             <Text size={1} muted>
@@ -192,12 +218,12 @@ export function AgentResourceContextRoute(): JSX.Element {
             </Flex>
 
             {includeDocumentId && (
-              <Stack space={3}>
+              <Stack gap={3}>
                 {/* Document Dropdown */}
                 {documents.length > 0 && (
                   <Box>
                     <Select
-                      fontSize={2}
+                      fontSize={1}
                       value={selectedDocumentId || 'none'}
                       onChange={(e) => handleDocumentSelect(e.currentTarget.value)}
                     >
@@ -214,7 +240,7 @@ export function AgentResourceContextRoute(): JSX.Element {
 
                 {/* Custom Document ID Input */}
                 <Card padding={3} tone="transparent" border>
-                  <Stack space={3}>
+                  <Stack gap={3}>
                     <Text size={1} weight="semibold">
                       Or Enter Custom Document ID
                     </Text>
@@ -249,11 +275,9 @@ export function AgentResourceContextRoute(): JSX.Element {
 
         {/* Information Card */}
         <Card padding={4} radius={2} tone="transparent" border>
-          <Stack space={3}>
-            <Text size={1} weight="semibold">
-              💡 How This Works
-            </Text>
-            <Stack space={2}>
+          <Stack gap={3}>
+            <IconHeading icon={BulbOutlineIcon}>How This Works</IconHeading>
+            <Stack gap={2}>
               <Text size={1}>
                 • The <code>useAgentResourceContext</code> hook runs automatically on every render
               </Text>
@@ -273,15 +297,13 @@ export function AgentResourceContextRoute(): JSX.Element {
 
         {/* Message Details */}
         <Card padding={4} radius={2} tone="transparent" border>
-          <Stack space={3}>
-            <Text size={1} weight="semibold">
-              📨 Message Being Sent
-            </Text>
+          <Stack gap={3}>
+            <IconHeading icon={EnvelopeIcon}>Message Being Sent</IconHeading>
             <Text size={1} muted>
               The hook sends messages with the following structure:
             </Text>
             <Card padding={3} radius={2} tone="default" border>
-              <Stack space={2}>
+              <Stack gap={2}>
                 <Text size={1} style={{fontFamily: 'monospace'}}>
                   <strong>Type:</strong> &lsquo;dashboard/v1/events/agent/resource/update&rsquo;
                 </Text>
@@ -289,7 +311,7 @@ export function AgentResourceContextRoute(): JSX.Element {
                   <strong>Data:</strong> {'{'}
                 </Text>
                 <Box paddingLeft={3}>
-                  <Stack space={1}>
+                  <Stack gap={1}>
                     <Text size={1} style={{fontFamily: 'monospace'}}>
                       projectId: &lsquo;{projectId}&rsquo;,
                     </Text>
@@ -314,16 +336,14 @@ export function AgentResourceContextRoute(): JSX.Element {
 
         {/* Developer Info */}
         <Card padding={3} radius={2} tone="caution">
-          <Stack space={3}>
-            <Text size={1} weight="semibold">
-              🔧 For Developers
-            </Text>
-            <Stack space={2}>
+          <Stack gap={3}>
+            <IconHeading icon={WrenchIcon}>For Developers</IconHeading>
+            <Stack gap={2}>
               <Text size={1}>
                 <strong>To see messages in the browser:</strong>
               </Text>
               <Box paddingLeft={3}>
-                <Stack space={1}>
+                <Stack gap={1}>
                   <Text size={1}>
                     1. Open DevTools Console - check for console.log messages from this component
                   </Text>
@@ -342,6 +362,6 @@ export function AgentResourceContextRoute(): JSX.Element {
           </Stack>
         </Card>
       </Stack>
-    </Box>
+    </PageLayout>
   )
 }

@@ -19,7 +19,6 @@ export interface UserListItemProps {
 export function UserListItem({user, href, avatarSize = 2}: UserListItemProps): JSX.Element {
   const card = (
     <Card
-      width="fill"
       marginBottom={2}
       tone="inherit"
       data-testid={`user-list-item-${user.profile.id}`}
@@ -33,8 +32,10 @@ export function UserListItem({user, href, avatarSize = 2}: UserListItemProps): J
         />
         <Box paddingY={2}>
           <Flex direction="column" gap={1}>
-            <Text>{user.profile.displayName}</Text>
-            <Text muted>{user.profile.email}</Text>
+            <Text size={1}>{user.profile.displayName}</Text>
+            <Text muted size={1}>
+              {user.profile.email}
+            </Text>
           </Flex>
         </Box>
       </Flex>

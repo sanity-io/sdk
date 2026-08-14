@@ -49,7 +49,6 @@ export function FallbackAvatar({src, size, displayName}: FallbackAvatarProps): J
           width: '2.25rem',
           height: '2.25rem',
           borderRadius: '50%',
-          backgroundColor: '#e1e3e9',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -58,12 +57,9 @@ export function FallbackAvatar({src, size, displayName}: FallbackAvatarProps): J
         title={displayName}
       >
         <Text
-          size={size !== undefined && size >= 2 ? 3 : 2}
+          muted
+          size={(Array.isArray(size) ? (size[0] ?? 0) : (size ?? 0)) >= 2 ? 3 : 2}
           weight="semibold"
-          style={{
-            color: '#6e7683',
-            lineHeight: 1,
-          }}
         >
           {initials}
         </Text>

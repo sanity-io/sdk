@@ -55,6 +55,7 @@ import {
   useState,
 } from 'react'
 
+import {PageLayout} from '../components/PageLayout'
 import {isE2E} from '../sanityConfigs'
 
 const PTE_FIELD_PATH = 'minimalBlock'
@@ -364,7 +365,7 @@ function EditorPane({
 }) {
   return (
     <Card padding={3} radius={2} shadow={1} flex={1}>
-      <Stack space={3}>
+      <Stack gap={3}>
         <Flex justify="space-between" align="center">
           <Text size={1} weight="semibold">
             {label}
@@ -446,11 +447,11 @@ function ConcurrentEditors() {
   )
 
   return (
-    <Box padding={4}>
-      <Stack space={4}>
+    <PageLayout title="Portable Text" subtitle="Concurrent editing of the same author document">
+      <Stack gap={4}>
         <Card padding={4} radius={2} shadow={1}>
-          <Stack space={3}>
-            <Text size={2} weight="semibold">
+          <Stack gap={3}>
+            <Text size={1} weight="semibold">
               Concurrent Portable Text editing
             </Text>
             <Text size={1} muted>
@@ -463,7 +464,7 @@ function ConcurrentEditors() {
             <Flex gap={3} align="flex-end">
               <Box flex={1}>
                 <TextInput
-                  fontSize={2}
+                  fontSize={1}
                   value={draftId}
                   placeholder="Author document ID"
                   onChange={(e) => setDraftId(e.currentTarget.value)}
@@ -473,7 +474,7 @@ function ConcurrentEditors() {
               <Button
                 text="Load"
                 tone="primary"
-                fontSize={2}
+                fontSize={1}
                 disabled={!draftId}
                 onClick={() => setDocumentId(draftId)}
                 data-testid="pte-load-button"
@@ -513,7 +514,7 @@ function ConcurrentEditors() {
           </Flex>
         )}
       </Stack>
-    </Box>
+    </PageLayout>
   )
 }
 
