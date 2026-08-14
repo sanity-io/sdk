@@ -29,22 +29,6 @@ export {
   type DeletedResult,
   type UpdateApplicationInput,
 } from '../applications/applications'
-export {
-  createUserApplication,
-  deleteUserApplication,
-  updateUserApplication,
-  userApplication,
-  userApplications,
-} from '../applications/userApplications'
-export {
-  type CreateUserApplicationInput,
-  type DeleteUserApplicationInput,
-  type UpdateUserApplicationInput,
-  type UserApplication,
-  type UserApplicationDeployment,
-  type UserApplicationsOptions,
-  type UserApplicationWriteFields,
-} from '../applications/userApplications'
 export {AuthStateType} from '../auth/authStateType'
 export {
   type AuthState,
