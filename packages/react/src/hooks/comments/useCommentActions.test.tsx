@@ -26,6 +26,9 @@ vi.mock('@sanity/sdk', async (importOriginal) => {
 
 const HANDLE = {documentId: 'doc-1', documentType: 'author'}
 
+/** Creates name a field, since a comment with no path is refused. */
+const CREATE = {...HANDLE, fieldPath: 'name'}
+
 // Hoisted: an inline object here would be a new value on every render, and the
 // callbacks are memoised against it.
 const RESOURCES = {other: {projectId: 'p2', dataset: 'd2'}}
@@ -70,7 +73,7 @@ describe('useCommentActions', () => {
   it('forwards each action to the store', () => {
     const {result} = setup()
 
-    result.current.createComment({...HANDLE, message: null})
+    result.current.createComment({...CREATE, message: null})
     result.current.replyToComment({...HANDLE, parentCommentId: 'p1', message: null})
     result.current.updateComment({commentId: 'c1', message: null})
     result.current.setCommentStatus({commentId: 'c1', status: 'resolved'})
@@ -86,7 +89,7 @@ describe('useCommentActions', () => {
   it('fills in the resource from context', () => {
     const {result} = setup()
 
-    result.current.createComment({...HANDLE, message: null})
+    result.current.createComment({...CREATE, message: null})
 
     expect(createComment).toHaveBeenCalledWith(
       expect.anything(),
@@ -121,7 +124,7 @@ describe('useCommentActions', () => {
     // reports an error.
     const {result} = setup(PerspectiveWrapper)
 
-    result.current.createComment({...HANDLE, message: null})
+    result.current.createComment({...CREATE, message: null})
     result.current.replyToComment({...HANDLE, parentCommentId: 'p1', message: null})
 
     expect(createComment).toHaveBeenCalledWith(
@@ -137,7 +140,7 @@ describe('useCommentActions', () => {
   it('lets a call override the perspective from context', () => {
     const {result} = setup(PerspectiveWrapper)
 
-    result.current.createComment({...HANDLE, message: null, perspective: 'published'})
+    result.current.createComment({...CREATE, message: null, perspective: 'published'})
 
     expect(createComment).toHaveBeenCalledWith(
       expect.anything(),
