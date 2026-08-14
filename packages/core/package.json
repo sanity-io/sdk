@@ -44,22 +44,22 @@
     },
     "./agent": {
       "source": "./src/_exports/agent.ts",
-      "import": "./dist/_exports/agent.js",
       "default": "./dist/_exports/agent.js"
     },
     "./comlink": {
       "source": "./src/_exports/comlink.ts",
-      "import": "./dist/_exports/comlink.js",
       "default": "./dist/_exports/comlink.js"
     }
   },
   "publishConfig": {
-    "access": "public",
     "exports": {
       ".": "./dist/index.js",
       "./package.json": "./package.json",
-      "./_internal": "./dist/_exports/_internal.js"
-    }
+      "./_internal": "./dist/_exports/_internal.js",
+      "./agent": "./dist/_exports/agent.js",
+      "./comlink": "./dist/_exports/comlink.js"
+    },
+    "access": "public"
   },
   "scripts": {
     "build": "pkg build --strict --clean --check",
