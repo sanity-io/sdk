@@ -280,8 +280,7 @@ export interface DeletedResult {
 }
 
 /**
- * Dashboard visibility for an application. The same set of values backs a user
- * application's `dashboardStatus`.
+ * Dashboard visibility for an application.
  *
  * @see https://www.sanity.io/docs/http-reference/applications-api
  * @internal
