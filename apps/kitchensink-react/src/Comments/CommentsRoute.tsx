@@ -43,7 +43,6 @@ const DEFAULT_STUDIO_BASE_URL = 'https://test-studio.sanity.build/test'
  * path has nowhere to show it, so a made-up field would look like a failure.
  */
 const FIELDS = [
-  {value: '', label: 'Whole document'},
   {value: 'name', label: 'Name'},
   {value: 'role', label: 'Role'},
 ] as const
@@ -224,7 +223,7 @@ function ThreadCard({
         <Flex align="center" gap={2}>
           <Badge tone={display.badge}>{thread.status}</Badge>
           <Text size={1} muted data-testid="thread-field">
-            {thread.fieldPath || 'whole document'}
+            {thread.fieldPath}
           </Text>
           <Box flex={1} />
           <Button
@@ -449,14 +448,14 @@ function CommentsDemo({documentId}: {documentId: string}): JSX.Element {
   const [fieldPath, setFieldPath] = useState<string | undefined>(undefined)
   const [status, setStatus] = useState<StatusFilter>('all')
   const [selected, setSelected] = useState<Comment | undefined>(undefined)
+  // Separate from the filter above. One control doing both meant "Every field",
+  // a sensible default for reading, silently became "attach to nothing" when
+  // writing.
+  const [newThreadFieldPath, setNewThreadFieldPath] = useState<string>(FIELDS[0].value)
   const {createComment} = useCommentActions()
 
   const studioBase = searchParams.get('studio') ?? DEFAULT_STUDIO_BASE_URL
   const studioUrl = `${studioBase}/intent/edit/id=${encodeURIComponent(documentId)};type=${DOCUMENT_TYPE}`
-
-  // A new thread hangs off whichever field is selected; "Every field" means the
-  // document as a whole.
-  const newThreadFieldPath = fieldPath ?? ''
 
   return (
     <PageLayout
@@ -476,10 +475,24 @@ function CommentsDemo({documentId}: {documentId: string}): JSX.Element {
 
       <Stack space={3}>
         <Text size={1} weight="semibold">
-          {newThreadFieldPath === ''
-            ? 'New thread on the document'
-            : `New thread on ${newThreadFieldPath}`}
+          New thread
         </Text>
+        <Flex gap={2} align="center">
+          <Text size={1} muted>
+            On field
+          </Text>
+          <Select
+            data-testid="comments-new-thread-field"
+            value={newThreadFieldPath}
+            onChange={(event) => setNewThreadFieldPath(event.currentTarget.value)}
+          >
+            {FIELDS.map((field) => (
+              <option key={field.value} value={field.value}>
+                {field.label}
+              </option>
+            ))}
+          </Select>
+        </Flex>
         <Composer
           label="Comment"
           testId="comments-new-thread"

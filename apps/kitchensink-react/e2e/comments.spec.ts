@@ -32,7 +32,17 @@ async function settle(page: Page, action: () => Promise<void>): Promise<void> {
   ])
 }
 
-async function startThread(context: PageContext, message: string): Promise<void> {
+/**
+ * Every comment hangs off a field, so the target is always named. The picker is
+ * separate from the filter above it: one control doing both once meant a new
+ * thread silently attached to nothing.
+ */
+async function startThread(
+  context: PageContext,
+  message: string,
+  field: string = 'name',
+): Promise<void> {
+  await context.getByTestId('comments-new-thread-field').selectOption(field)
   await context.getByTestId('comments-new-thread-input').fill(message)
   await context.getByTestId('comments-new-thread-submit').click()
 }
@@ -180,8 +190,7 @@ test.describe('Comments', () => {
     await page.goto(`./comments?documentId=${documentId}`)
     const app = await getPageContext(page)
 
-    await app.getByTestId('comments-field').selectOption('name')
-    await settle(page, () => startThread(app, 'Rename this'))
+    await settle(page, () => startThread(app, 'Rename this', 'name'))
 
     await expect(app.getByTestId('thread')).toBeVisible()
     await expect(app.getByTestId('thread-field')).toHaveText('name')
