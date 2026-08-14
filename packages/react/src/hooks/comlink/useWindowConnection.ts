@@ -1,12 +1,11 @@
 import {type MessageData, type NodeInput} from '@sanity/comlink'
+import {type SanityInstance, type StateSource} from '@sanity/sdk'
 import {
   type FrameMessage,
   getNodeState,
   type NodeState,
-  type SanityInstance,
-  type StateSource,
   type WindowMessage,
-} from '@sanity/sdk'
+} from '@sanity/sdk/comlink'
 import {useCallback, useEffect, useRef} from 'react'
 import {filter, firstValueFrom} from 'rxjs'
 

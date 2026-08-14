@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk-react",
-  "version": "2.19.0",
+  "version": "3.0.0-rc.1",
   "private": false,
   "description": "Sanity SDK React toolkit for Content OS",
   "keywords": [
@@ -65,10 +65,12 @@
     "@sanity/message-protocol": "catalog:",
     "@sanity/sdk": "workspace:*",
     "@sanity/types": "catalog:",
+    "@sanity/workbench": "0.1.0-alpha.24",
     "groq": "catalog:",
     "react-compiler-runtime": "catalog:",
     "react-error-boundary": "catalog:",
-    "rxjs": "catalog:"
+    "rxjs": "catalog:",
+    "xstate": "^5.31.0"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",

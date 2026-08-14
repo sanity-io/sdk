@@ -5,7 +5,7 @@ import {
   getOrCreateController,
   releaseChannel,
   type WindowMessage,
-} from '@sanity/sdk'
+} from '@sanity/sdk/comlink'
 import {useCallback, useEffect, useRef} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'

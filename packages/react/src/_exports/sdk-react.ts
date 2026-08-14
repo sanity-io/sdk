@@ -13,6 +13,7 @@ export {
   type SanityInstanceProviderProps,
 } from '../context/SanityInstanceProvider'
 export {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
+export {useCheckPermissions} from '../hooks/access/useCheckPermissions'
 export {
   useAgentGenerate,
   useAgentPatch,
@@ -24,6 +25,10 @@ export {
   type AgentResourceContextOptions,
   useAgentResourceContext,
 } from '../hooks/agent/useAgentResourceContext'
+export {useApplication} from '../hooks/applications/useApplication'
+export {useApplications} from '../hooks/applications/useApplications'
+export {useDeleteApplication} from '../hooks/applications/useDeleteApplication'
+export {useUpdateApplication} from '../hooks/applications/useUpdateApplication'
 export {useAuthState} from '../hooks/auth/useAuthState'
 export {useAuthToken} from '../hooks/auth/useAuthToken'
 export {useCurrentUser} from '../hooks/auth/useCurrentUser'
@@ -48,7 +53,6 @@ export {
 export {useResource} from '../hooks/context/useResource'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
-export {useDispatchIntent} from '../hooks/dashboard/useDispatchIntent'
 export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
 export {
   type NavigateToStudioResult,
@@ -70,6 +74,10 @@ export {
   type DocumentsResponse,
   useDocuments,
 } from '../hooks/documents/useDocuments'
+export {type FetcherHookResult} from '../hooks/helpers/createFetcherHook'
+export {type MutationHookResult} from '../hooks/helpers/createMutationHook'
+export {useInstallation} from '../hooks/installations/useInstallation'
+export {useInstallations} from '../hooks/installations/useInstallations'
 export {useOrganization} from '../hooks/organizations/useOrganization'
 export {useOrganizations} from '../hooks/organizations/useOrganizations'
 export {
@@ -94,7 +102,7 @@ export {
   type useDocumentProjectionResults,
 } from '../hooks/projection/useDocumentProjection'
 export {useProject} from '../hooks/projects/useProject'
-export {type ProjectWithoutMembers, useProjects} from '../hooks/projects/useProjects'
+export {useProjects} from '../hooks/projects/useProjects'
 export {useQuery} from '../hooks/query/useQuery'
 export {useActiveReleases} from '../hooks/releases/useActiveReleases'
 export {useAllReleases} from '../hooks/releases/useAllReleases'

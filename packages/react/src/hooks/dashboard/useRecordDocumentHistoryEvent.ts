@@ -6,7 +6,8 @@ import {
   SDK_NODE_NAME,
   type StudioResource,
 } from '@sanity/message-protocol'
-import {type DocumentHandle, type FrameMessage} from '@sanity/sdk'
+import {type DocumentHandle} from '@sanity/sdk'
+import {type FrameMessage} from '@sanity/sdk/comlink'
 import {useCallback} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
