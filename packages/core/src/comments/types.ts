@@ -84,8 +84,15 @@ export type CommentLocalState = {type: 'createError'; error: Error} | {type: 'cr
 export interface Comment {
   id: string
   createdAt: string
-  /** Who wrote it. */
-  authorId: string
+  /**
+   * Who wrote it.
+   *
+   * Absent when the server carries the author instead of the document. The
+   * Studio's comments dataset stores it on the document, so it is present on
+   * everything written today, but an agent-authored comment records
+   * attribution elsewhere. Render a fallback rather than assuming a user id.
+   */
+  authorId?: string
   message: CommentMessage
   threadId: string
   /** Absent on the comment that starts a thread. */

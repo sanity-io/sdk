@@ -93,6 +93,16 @@ describe('normalizeComment', () => {
     ])
   })
 
+  it('leaves the author out when the document does not carry one', () => {
+    // The organization store records identity server-side rather than on the
+    // document, and types it as doubly optional, so there are comments with no
+    // author to map. Emitting `''` would look like a user id.
+    const comment = stored()
+    delete (comment as {authorId?: string}).authorId
+
+    expect('authorId' in normalizeComment(comment)).toBe(false)
+  })
+
   it('carries the local create state through', () => {
     const error = new Error('nope')
     const comment = stored({_state: {type: 'createError', error}})

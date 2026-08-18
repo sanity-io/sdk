@@ -21,7 +21,9 @@ export function normalizeComment(stored: StoredComment): Comment {
   return {
     id: stored._id,
     createdAt: stored._createdAt,
-    authorId: stored.authorId,
+    // Omitted rather than emptied when absent, so a consumer can tell "no
+    // author recorded" from a user whose id happens to be falsy.
+    ...(stored.authorId ? {authorId: stored.authorId} : {}),
     message: stored.message,
     threadId: stored.threadId,
     ...(stored.parentCommentId ? {parentCommentId: stored.parentCommentId} : {}),
