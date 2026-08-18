@@ -131,6 +131,14 @@ function Composer({
   )
 }
 
+/**
+ * The author is optional: the organization store records it server-side rather
+ * than on the document, so it can genuinely be absent.
+ */
+function authorLabel(comment: Comment): string {
+  return comment.authorId ?? 'unknown author'
+}
+
 function CommentRow({
   comment,
   onSelect,
@@ -146,7 +154,7 @@ function CommentRow({
       <Stack space={3}>
         <Flex align="center" gap={2}>
           <Code size={0} data-testid="comment-author">
-            {comment.authorId}
+            {authorLabel(comment)}
           </Code>
           {comment.lastEditedAt ? <Badge tone="caution">edited</Badge> : null}
           {comment.state ? <Badge tone="critical">{comment.state.type}</Badge> : null}
