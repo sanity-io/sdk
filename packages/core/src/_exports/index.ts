@@ -81,7 +81,6 @@ export {
   updateComment,
   type UpdateCommentOptions,
 } from '../comments/commentActions'
-export {toCommentFieldPath} from '../comments/commentFieldPath'
 export {
   type CommentsOptions,
   getCommentsState,

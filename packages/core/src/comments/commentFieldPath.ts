@@ -37,7 +37,7 @@ function quoteReservedFieldSegments(path: string): string {
  * // ''
  * ```
  *
- * @beta
+ * @internal
  */
 export function toCommentFieldPath(path?: string | Path): string {
   return quoteReservedFieldSegments(stringifyPath(path))
