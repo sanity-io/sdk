@@ -1,7 +1,6 @@
 import {useStudioWorkspacesByProjectIdDataset} from '@sanity/sdk-react'
-import {Card, Flex, Stack, Text} from '@sanity/ui'
-import {Code} from '@sanity/ui/code'
 import {type ReactElement, Suspense} from 'react'
+import {Card, Code, Flex, Text, VStack} from 'ui5'
 
 import {PageLayout} from '../components/PageLayout'
 
@@ -13,10 +12,10 @@ function DashboardWorkspacesContent() {
       title="Studio Workspaces By Resource ID"
       subtitle="Workspaces grouped by project and dataset"
     >
-      <Card padding={4} radius={2} shadow={1}>
-        <Stack gap={4}>
+      <Card density="regular">
+        <VStack gap={4}>
           {error && (
-            <Flex direction="column" gap={2}>
+            <Flex flexDirection="column" gap={2}>
               <Text size={1} weight="semibold">
                 Error:
               </Text>
@@ -24,13 +23,13 @@ function DashboardWorkspacesContent() {
             </Flex>
           )}
 
-          <Flex direction="column" gap={2}>
+          <Flex flexDirection="column" gap={2}>
             <Text size={1} weight="semibold">
               Workspaces by Resource ID:
             </Text>
             <Code language="json">{JSON.stringify(workspacesByProjectIdAndDataset, null, 2)}</Code>
           </Flex>
-        </Stack>
+        </VStack>
       </Card>
     </PageLayout>
   )
@@ -41,7 +40,7 @@ export function DashboardWorkspacesRoute(): ReactElement {
     <Suspense
       fallback={
         <PageLayout title="Studio Workspaces By Resource ID" subtitle="Loading workspaces">
-          <Card padding={4} radius={2} shadow={1}>
+          <Card density="regular">
             <Text size={1}>Loading workspaces…</Text>
           </Card>
         </PageLayout>

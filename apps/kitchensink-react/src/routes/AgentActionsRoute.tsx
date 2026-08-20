@@ -4,9 +4,9 @@ import {
   useAgentGenerate,
   useAgentPrompt,
 } from '@sanity/sdk-react'
-import {Box, Button, Card, Stack, Text} from '@sanity/ui'
-import {Code} from '@sanity/ui/code'
+import {Button} from '@sanity/ui'
 import {type JSX, useMemo, useState} from 'react'
+import {Box, Card, Code, Text, VStack} from 'ui5'
 
 import {PageLayout} from '../components/PageLayout'
 
@@ -42,9 +42,9 @@ export function AgentActionsRoute(): JSX.Element {
 
   return (
     <PageLayout title="Agent Actions" subtitle="Prompt and generate using the movie schema">
-      <Stack gap={4}>
-        <Card padding={4} radius={2} shadow={1} tone="inherit">
-          <Stack gap={3}>
+      <VStack gap={4}>
+        <Card density="regular">
+          <VStack gap={3}>
             <Text size={1} weight="medium">
               Prompt
             </Text>
@@ -52,7 +52,7 @@ export function AgentActionsRoute(): JSX.Element {
               Sends an instruction to the LLM and returns plain text (or JSON if requested). Does
               not reference a schema or write any data.
             </Text>
-            <Card padding={2} radius={2} tone="transparent" border>
+            <Box border padding={2}>
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
@@ -67,7 +67,7 @@ export function AgentActionsRoute(): JSX.Element {
                   resize: 'vertical',
                 }}
               />
-            </Card>
+            </Box>
             <Box>
               <Button
                 fontSize={1}
@@ -87,17 +87,19 @@ export function AgentActionsRoute(): JSX.Element {
               />
             </Box>
             {promptResult && (
-              <Card padding={3} radius={2} tone="transparent">
+              <Box padding={3}>
                 <Text>
-                  <Code style={{whiteSpace: 'pre-wrap'}}>{promptResult}</Code>
+                  <Code as="span" style={{whiteSpace: 'pre-wrap'}}>
+                    {promptResult}
+                  </Code>
                 </Text>
-              </Card>
+              </Box>
             )}
-          </Stack>
+          </VStack>
         </Card>
 
-        <Card padding={4} radius={2} shadow={1} tone="inherit">
-          <Stack gap={3}>
+        <Card density="regular">
+          <VStack gap={3}>
             <Text size={1} weight="medium">
               Generate a Sanity document (no write)
             </Text>
@@ -133,15 +135,17 @@ export function AgentActionsRoute(): JSX.Element {
               />
             </Box>
             {generateResult && (
-              <Card padding={3} radius={2} tone="transparent">
+              <Box padding={3}>
                 <Text>
-                  <Code style={{whiteSpace: 'pre-wrap'}}>{generateResult}</Code>
+                  <Code as="span" style={{whiteSpace: 'pre-wrap'}}>
+                    {generateResult}
+                  </Code>
                 </Text>
-              </Card>
+              </Box>
             )}
-          </Stack>
+          </VStack>
         </Card>
-      </Stack>
+      </VStack>
     </PageLayout>
   )
 }

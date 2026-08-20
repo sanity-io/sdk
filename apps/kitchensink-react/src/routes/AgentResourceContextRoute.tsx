@@ -3,7 +3,7 @@ import {BulbOutlineIcon} from '@sanity/icons/BulbOutline'
 import {EnvelopeIcon} from '@sanity/icons/Envelope'
 import {WrenchIcon} from '@sanity/icons/Wrench'
 import {useAgentResourceContext, useDocuments, useSanityInstance} from '@sanity/sdk-react'
-import {Badge, Box, Button, Card, Flex, Select, Stack, Text, TextInput} from '@sanity/ui'
+import {Badge, Button, Select, TextInput} from '@sanity/ui'
 import {
   type ComponentType,
   type JSX,
@@ -14,21 +14,20 @@ import {
   useRef,
   useState,
 } from 'react'
+import {Box, Card, Flex, Icon, Text, VStack} from 'ui5'
 
 import {PageLayout} from '../components/PageLayout'
 
 function IconHeading({
-  icon: Icon,
+  icon,
   children,
 }: {
   icon: ComponentType<SVGProps<SVGSVGElement>>
   children: ReactNode
 }): JSX.Element {
   return (
-    <Flex align="center" gap={2}>
-      <Text size={1} weight="semibold">
-        <Icon />
-      </Text>
+    <Flex alignItems="center" gap={2}>
+      <Icon aria-hidden icon={icon} />
       <Text size={1} weight="semibold">
         {children}
       </Text>
@@ -108,7 +107,7 @@ export function AgentResourceContextRoute(): JSX.Element {
       title="Agent Resource Context"
       subtitle="Notify the Dashboard about the resource you are viewing"
     >
-      <Stack gap={5}>
+      <VStack gap={5}>
         <Text size={1} muted>
           This page demonstrates the <code>useAgentResourceContext</code> hook, which automatically
           notifies the Dashboard about what resource you&rsquo;re currently viewing or editing. This
@@ -116,9 +115,9 @@ export function AgentResourceContextRoute(): JSX.Element {
         </Text>
 
         {/* Current Context Display */}
-        <Card padding={4} radius={2} shadow={1} tone="primary">
-          <Stack gap={3}>
-            <Flex gap={2} align="center">
+        <Card density="regular" tone="suggest">
+          <VStack gap={3}>
+            <Flex alignItems="center" gap={2}>
               <Text size={1} weight="semibold">
                 Current Context Being Sent to Agent
               </Text>
@@ -126,8 +125,8 @@ export function AgentResourceContextRoute(): JSX.Element {
                 Live
               </Badge>
             </Flex>
-            <Card padding={3} radius={2} tone="inherit" border>
-              <Stack gap={2}>
+            <Box border padding={3}>
+              <VStack gap={2}>
                 <Flex gap={2}>
                   <Text size={1} weight="semibold" style={{minWidth: '100px'}}>
                     Project ID:
@@ -156,12 +155,11 @@ export function AgentResourceContextRoute(): JSX.Element {
                     {includeDocumentId && selectedDocumentId ? selectedDocumentId : '(not set)'}
                   </Text>
                 </Flex>
-              </Stack>
-            </Card>
+              </VStack>
+            </Box>
 
-            {/* Update stats */}
-            <Card padding={3} radius={2} tone="caution" border>
-              <Stack gap={2}>
+            <Card density="compact" tone="caution">
+              <VStack gap={2}>
                 <IconHeading icon={BarChartIcon}>Update Statistics</IconHeading>
                 <Flex gap={2}>
                   <Text size={1} style={{minWidth: '120px'}}>
@@ -186,14 +184,13 @@ export function AgentResourceContextRoute(): JSX.Element {
                     Change a value below to send an update
                   </Text>
                 )}
-              </Stack>
+              </VStack>
             </Card>
-          </Stack>
+          </VStack>
         </Card>
 
-        {/* Document Selection Controls */}
-        <Card padding={4} radius={2} shadow={1}>
-          <Stack gap={4}>
+        <Card density="regular">
+          <VStack gap={4}>
             <Text size={1} weight="semibold">
               Select a Document to View
             </Text>
@@ -203,7 +200,7 @@ export function AgentResourceContextRoute(): JSX.Element {
             </Text>
 
             {/* Toggle Document Context */}
-            <Flex gap={3} align="center">
+            <Flex alignItems="center" gap={3}>
               <Button
                 text={includeDocumentId ? 'Disable Document Context' : 'Enable Document Context'}
                 tone={includeDocumentId ? 'default' : 'primary'}
@@ -218,7 +215,7 @@ export function AgentResourceContextRoute(): JSX.Element {
             </Flex>
 
             {includeDocumentId && (
-              <Stack gap={3}>
+              <VStack gap={3}>
                 {/* Document Dropdown */}
                 {documents.length > 0 && (
                   <Box>
@@ -239,13 +236,13 @@ export function AgentResourceContextRoute(): JSX.Element {
                 )}
 
                 {/* Custom Document ID Input */}
-                <Card padding={3} tone="transparent" border>
-                  <Stack gap={3}>
+                <Box border padding={3}>
+                  <VStack gap={3}>
                     <Text size={1} weight="semibold">
                       Or Enter Custom Document ID
                     </Text>
                     <Flex gap={2}>
-                      <Box flex={1}>
+                      <Box flexGrow={1}>
                         <TextInput
                           fontSize={1}
                           placeholder="e.g., drafts.my-custom-id"
@@ -266,18 +263,18 @@ export function AgentResourceContextRoute(): JSX.Element {
                         fontSize={1}
                       />
                     </Flex>
-                  </Stack>
-                </Card>
-              </Stack>
+                  </VStack>
+                </Box>
+              </VStack>
             )}
-          </Stack>
+          </VStack>
         </Card>
 
         {/* Information Card */}
-        <Card padding={4} radius={2} tone="transparent" border>
-          <Stack gap={3}>
+        <Box border padding={4}>
+          <VStack gap={3}>
             <IconHeading icon={BulbOutlineIcon}>How This Works</IconHeading>
-            <Stack gap={2}>
+            <VStack gap={2}>
               <Text size={1}>
                 • The <code>useAgentResourceContext</code> hook runs automatically on every render
               </Text>
@@ -291,19 +288,18 @@ export function AgentResourceContextRoute(): JSX.Element {
                 • The Agent uses this context to understand what you&rsquo;re working on
               </Text>
               <Text size={1}>• This enables context-aware assistance without manual prompting</Text>
-            </Stack>
-          </Stack>
-        </Card>
+            </VStack>
+          </VStack>
+        </Box>
 
-        {/* Message Details */}
-        <Card padding={4} radius={2} tone="transparent" border>
-          <Stack gap={3}>
+        <Box border padding={4}>
+          <VStack gap={3}>
             <IconHeading icon={EnvelopeIcon}>Message Being Sent</IconHeading>
             <Text size={1} muted>
               The hook sends messages with the following structure:
             </Text>
-            <Card padding={3} radius={2} tone="default" border>
-              <Stack gap={2}>
+            <Box border padding={3}>
+              <VStack gap={2}>
                 <Text size={1} style={{fontFamily: 'monospace'}}>
                   <strong>Type:</strong> &lsquo;dashboard/v1/events/agent/resource/update&rsquo;
                 </Text>
@@ -311,7 +307,7 @@ export function AgentResourceContextRoute(): JSX.Element {
                   <strong>Data:</strong> {'{'}
                 </Text>
                 <Box paddingLeft={3}>
-                  <Stack gap={1}>
+                  <VStack gap={1}>
                     <Text size={1} style={{fontFamily: 'monospace'}}>
                       projectId: &lsquo;{projectId}&rsquo;,
                     </Text>
@@ -324,26 +320,25 @@ export function AgentResourceContextRoute(): JSX.Element {
                         ? `'${selectedDocumentId}'`
                         : 'undefined'}
                     </Text>
-                  </Stack>
+                  </VStack>
                 </Box>
                 <Text size={1} style={{fontFamily: 'monospace'}}>
                   {'}'}
                 </Text>
-              </Stack>
-            </Card>
-          </Stack>
-        </Card>
+              </VStack>
+            </Box>
+          </VStack>
+        </Box>
 
-        {/* Developer Info */}
-        <Card padding={3} radius={2} tone="caution">
-          <Stack gap={3}>
+        <Card density="compact" tone="caution">
+          <VStack gap={3}>
             <IconHeading icon={WrenchIcon}>For Developers</IconHeading>
-            <Stack gap={2}>
+            <VStack gap={2}>
               <Text size={1}>
                 <strong>To see messages in the browser:</strong>
               </Text>
               <Box paddingLeft={3}>
-                <Stack gap={1}>
+                <VStack gap={1}>
                   <Text size={1}>
                     1. Open DevTools Console - check for console.log messages from this component
                   </Text>
@@ -352,16 +347,16 @@ export function AgentResourceContextRoute(): JSX.Element {
                   <Text size={1}>
                     4. Messages are sent via the Comlink WindowConnection to the parent dashboard
                   </Text>
-                </Stack>
+                </VStack>
               </Box>
               <Text size={1} muted>
                 Note: If you&rsquo;re testing this standalone (not embedded in a dashboard), the
                 messages may be sent but there won&rsquo;t be a receiver to process them.
               </Text>
-            </Stack>
-          </Stack>
+            </VStack>
+          </VStack>
         </Card>
-      </Stack>
+      </VStack>
     </PageLayout>
   )
 }

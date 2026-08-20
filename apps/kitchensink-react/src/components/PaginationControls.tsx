@@ -1,5 +1,5 @@
-import {Button, Flex, Text} from '@sanity/ui'
 import {JSX} from 'react'
+import {Button, Flex, Text} from 'ui5'
 
 // Props mirror the pagination slice of the `usePaginatedDocuments` return value.
 export interface PaginationControlsProps {
@@ -39,7 +39,6 @@ export function PaginationControls({
   goToPage,
   isPending,
 }: PaginationControlsProps): JSX.Element {
-  // Generate page number buttons
   const pageButtons = () => {
     const buttons = []
     const maxVisiblePages = 5
@@ -55,63 +54,59 @@ export function PaginationControls({
         <Button
           key={i}
           data-testid={`pagination-page-${i}`}
-          mode={i === currentPage ? 'default' : 'ghost'}
+          level={i === currentPage ? 'primary' : 'tertiary'}
           onClick={() => goToPage(i)}
-          fontSize={1}
-          style={{
-            ...buttonStyle,
-            fontWeight: i === currentPage ? 'bold' : 'normal',
-          }}
-        >
-          {i}
-        </Button>,
+          style={buttonStyle}
+          text={String(i)}
+        />,
       )
     }
     return buttons
   }
 
   return (
-    <Flex align="center" justify="space-between" padding={3} data-testid="pagination-controls">
+    <Flex
+      alignItems="center"
+      data-testid="pagination-controls"
+      justifyContent="space-between"
+      padding={3}
+    >
       <Flex>
         <Button
           data-testid="pagination-first"
-          onClick={firstPage}
           disabled={!hasFirstPage}
+          level="tertiary"
+          onClick={firstPage}
           style={buttonStyle}
           text="<<"
-          fontSize={1}
-          mode="ghost"
         />
         <Button
           data-testid="pagination-previous"
-          onClick={previousPage}
           disabled={!hasPreviousPage}
+          level="tertiary"
+          onClick={previousPage}
           style={buttonStyle}
           text="<"
-          fontSize={1}
-          mode="ghost"
         />
         {pageButtons()}
         <Button
           data-testid="pagination-next"
-          onClick={nextPage}
           disabled={!hasNextPage}
+          level="tertiary"
+          onClick={nextPage}
           style={buttonStyle}
           text=">"
-          fontSize={1}
-          mode="ghost"
         />
         <Button
           data-testid="pagination-last"
-          onClick={lastPage}
           disabled={!hasLastPage}
+          level="tertiary"
+          onClick={lastPage}
           style={buttonStyle}
           text=">>"
-          fontSize={1}
-          mode="ghost"
         />
       </Flex>
-      <Text size={1} style={{opacity: isPending ? 0.5 : 1}} data-testid="pagination-status">
+      <Text data-testid="pagination-status" size={1} style={{opacity: isPending ? 0.5 : 1}}>
         Page {currentPage} of {totalPages}
       </Text>
     </Flex>

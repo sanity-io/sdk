@@ -1,6 +1,7 @@
 import {useWindowConnection} from '@sanity/sdk-react'
-import {Box, Button, Card, Container, Flex, Stack, Text, TextInput} from '@sanity/ui'
+import {Button, TextInput} from '@sanity/ui'
 import {type ReactElement, Suspense, useEffect, useRef, useState} from 'react'
+import {Box, Card, Container, Flex, Text, VStack} from 'ui5'
 
 import {FromIFrameMessage, ToIFrameMessage, UserData} from './types'
 
@@ -54,12 +55,12 @@ function FramedContent() {
 
   return (
     <>
-      <Stack gap={3}>
+      <VStack gap={3}>
         <Text size={1} weight="semibold">
           Send message to parent
         </Text>
         <Flex gap={2}>
-          <Box flex={1}>
+          <Box flexGrow={1}>
             <TextInput
               fontSize={1}
               ref={messageInputRef}
@@ -68,51 +69,49 @@ function FramedContent() {
           </Box>
           <Button fontSize={1} text="Send" tone="primary" onClick={sendMessageToParent} />
         </Flex>
-      </Stack>
+      </VStack>
 
-      {/* Users section */}
-      <Card padding={3} border radius={2}>
-        <Stack gap={3}>
+      <Card density="regular">
+        <VStack gap={3}>
           <Text size={1} weight="semibold">
             Users
           </Text>
           {users.length > 0 ? (
-            <Stack gap={2}>
+            <VStack gap={2}>
               {users.map((user) => (
-                <Card key={user.id} padding={3} tone="positive" radius={2}>
-                  <Stack gap={2}>
+                <Card density="compact" key={user.id} tone="positive">
+                  <VStack gap={2}>
                     <Text size={1} weight="semibold">
                       {user.name}
                     </Text>
                     <Text size={1}>{user.email}</Text>
-                  </Stack>
+                  </VStack>
                 </Card>
               ))}
-            </Stack>
+            </VStack>
           ) : error ? (
-            <Card padding={3} tone="critical" radius={2}>
+            <Card density="compact" tone="critical">
               <Text size={1}>{error}</Text>
             </Card>
           ) : (
-            <Card padding={3} tone="default" radius={2}>
+            <Card density="compact">
               <Text size={1}>Loading users...</Text>
             </Card>
           )}
-        </Stack>
+        </VStack>
       </Card>
 
-      {/* Received messages */}
-      <Box flex={1} style={{height: '500px'}}>
-        <Stack gap={3}>
+      <Box flexGrow={1} style={{height: '500px'}}>
+        <VStack gap={3}>
           <Text size={1} weight="semibold">
             Received Messages
           </Text>
           {receivedMessages.map((msg, idx) => (
-            <Card key={idx} padding={3} radius={2}>
+            <Card density="compact" key={idx}>
               <Text>{msg}</Text>
             </Card>
           ))}
-        </Stack>
+        </VStack>
       </Box>
     </>
   )
@@ -120,17 +119,17 @@ function FramedContent() {
 
 const Framed = (): ReactElement => {
   return (
-    <Container height="fill">
-      <Card tone="transparent">
-        <Stack padding={4} gap={4}>
+    <Container>
+      <Box padding={4}>
+        <VStack gap={4}>
           <Text weight="semibold" size={1}>
             Frame Content
           </Text>
           <Suspense fallback={<Text size={1}>Connecting to ParentApp...</Text>}>
             <FramedContent />
           </Suspense>
-        </Stack>
-      </Card>
+        </VStack>
+      </Box>
     </Container>
   )
 }

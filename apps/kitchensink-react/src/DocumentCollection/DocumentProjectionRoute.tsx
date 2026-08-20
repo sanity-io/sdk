@@ -1,8 +1,8 @@
 import {DocumentHandle, useDocumentProjection, usePaginatedDocuments} from '@sanity/sdk-react'
-import {Button, Card, Flex, Spinner, Stack, Text} from '@sanity/ui'
 import groq, {defineProjection} from 'groq'
 import {JSX, ReactNode, Suspense, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+import {Button, Card, Flex, Spinner, Text, VStack} from 'ui5'
 
 import {PageLayout} from '../components/PageLayout'
 import {PaginatedListToolbar} from '../components/PaginatedListToolbar'
@@ -105,7 +105,7 @@ function ProjectionError({error}: {error: Error}): ReactNode {
   return (
     <TD padding={2}>
       <div style={{gridColumn: 'span 3'}}>
-        <Card padding={2} radius={2} tone="critical">
+        <Card density="compact" tone="critical">
           <Text size={1}>Error: {error.message}</Text>
         </Card>
       </div>
@@ -180,8 +180,8 @@ export function DocumentProjectionRoute(): JSX.Element {
       title="Document projection"
       subtitle="Switch projections on a paginated author list"
     >
-      <Card padding={4} radius={2}>
-        <Stack gap={4}>
+      <Card density="regular">
+        <VStack gap={4}>
           <PaginatedListToolbar
             noun="authors"
             searchTerm={searchTerm}
@@ -211,22 +211,19 @@ export function DocumentProjectionRoute(): JSX.Element {
           <Flex gap={2}>
             <Button
               onClick={() => setProjectionType('favoriteBooks')}
-              mode={projectionType === 'favoriteBooks' ? 'default' : 'ghost'}
-              fontSize={1}
+              level={projectionType === 'favoriteBooks' ? 'primary' : 'tertiary'}
               text="Favorite Books"
               data-testid="projection-button-favorite-books"
             />
             <Button
               onClick={() => setProjectionType('bestFriend')}
-              mode={projectionType === 'bestFriend' ? 'default' : 'ghost'}
-              fontSize={1}
+              level={projectionType === 'bestFriend' ? 'primary' : 'tertiary'}
               text="Best Friend"
               data-testid="projection-button-best-friend"
             />
             <Button
               onClick={() => setProjectionType('groqHelper')}
-              mode={projectionType === 'groqHelper' ? 'default' : 'ghost'}
-              fontSize={1}
+              level={projectionType === 'groqHelper' ? 'primary' : 'tertiary'}
               text="Book Count"
               data-testid="projection-button-book-count"
             />
@@ -263,7 +260,7 @@ export function DocumentProjectionRoute(): JSX.Element {
                   <TD padding={2}>
                     <div style={{gridColumn: 'span 3', textAlign: 'center', width: '100%'}}>
                       {isPending ? (
-                        <Flex align="center" gap={2} justify="center">
+                        <Flex alignItems="center" gap={2} justifyContent="center">
                           <Spinner />
                           <Text size={1}>Loading authors...</Text>
                         </Flex>
@@ -291,7 +288,7 @@ export function DocumentProjectionRoute(): JSX.Element {
             goToPage={goToPage}
             isPending={isPending}
           />
-        </Stack>
+        </VStack>
       </Card>
     </PageLayout>
   )

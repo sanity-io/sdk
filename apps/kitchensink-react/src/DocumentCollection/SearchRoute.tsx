@@ -1,6 +1,7 @@
 import {type DocumentHandle, useDocuments} from '@sanity/sdk-react'
-import {Text, TextInput} from '@sanity/ui'
+import {TextInput} from '@sanity/ui'
 import {type JSX, useState} from 'react'
+import {Text} from 'ui5'
 
 import {DocumentListLayout} from '../components/DocumentListLayout/DocumentListLayout'
 import {LoadMore} from '../components/LoadMore'

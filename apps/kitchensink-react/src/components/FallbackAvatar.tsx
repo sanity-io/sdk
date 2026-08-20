@@ -1,5 +1,6 @@
-import {Avatar, Box, Text} from '@sanity/ui'
+import {Avatar} from '@sanity/ui'
 import {type JSX, useState} from 'react'
+import {Box, Text} from 'ui5'
 
 interface FallbackAvatarProps {
   src?: string

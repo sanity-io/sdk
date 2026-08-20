@@ -1,6 +1,7 @@
 import {useProjects} from '@sanity/sdk-react'
-import {Box, Card, Checkbox, Flex, Stack, Text, TextInput} from '@sanity/ui'
+import {TextInput} from '@sanity/ui'
 import {ChangeEvent, type JSX, Suspense, useState} from 'react'
+import {Box, Card, Checkbox, Flex, Text, VStack} from 'ui5'
 
 import {DocumentListLayout} from '../components/DocumentListLayout/DocumentListLayout'
 import {PageLayout} from '../components/PageLayout'
@@ -10,8 +11,8 @@ export function ProjectsRoute(): JSX.Element {
   const [includeMembers, setIncludeMembers] = useState<boolean>(false)
   return (
     <PageLayout title="Organization Projects" subtitle="projects available for your user">
-      <Stack gap={3}>
-        <Stack gap={2}>
+      <VStack gap={3}>
+        <VStack gap={2}>
           <Text as="label" htmlFor="organizationId" muted size={1}>
             Organization ID
           </Text>
@@ -23,7 +24,7 @@ export function ProjectsRoute(): JSX.Element {
               setOrganizationId(e.currentTarget.value)
             }
           />
-        </Stack>
+        </VStack>
         <Checkbox
           checked={includeMembers}
           label="Include members"
@@ -36,7 +37,7 @@ export function ProjectsRoute(): JSX.Element {
         <Suspense fallback={<Text size={1}>Loading projects...</Text>}>
           <ProjectsList organizationId={organizationId} includeMembers={includeMembers} />
         </Suspense>
-      </Stack>
+      </VStack>
     </PageLayout>
   )
 }
@@ -54,10 +55,10 @@ function ProjectsList({
     <DocumentListLayout>
       {projects.map((project) => (
         <li key={project.id}>
-          <Card padding={2} radius={2} tone="inherit">
-            <Flex align="center" gap={2}>
+          <Card density="compact">
+            <Flex alignItems="center" gap={2}>
               <Box paddingY={2}>
-                <Flex direction="column" gap={1}>
+                <Flex flexDirection="column" gap={1}>
                   <Text size={1}>{project.displayName}</Text>
                   <Text muted size={1}>
                     Project ID: {project.id}

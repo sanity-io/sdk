@@ -1,4 +1,5 @@
 import '@sanity/ui/styles.css'
+import 'ui5/styles.css'
 
 import {ResourceProvider} from '@sanity/sdk-react'
 import {ThemeProvider} from '@sanity/ui'

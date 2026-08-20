@@ -1,5 +1,5 @@
-import {Box, Flex, Heading, Stack, Text} from '@sanity/ui'
 import {type ComponentType, type JSX, type ReactNode, type SVGProps} from 'react'
+import {Box, Flex, Heading, Icon, Text, VStack} from 'ui5'
 
 interface PageLayoutProps {
   children: ReactNode
@@ -8,16 +8,12 @@ interface PageLayoutProps {
   icon?: ComponentType<SVGProps<SVGSVGElement>>
 }
 
-export function PageLayout({children, title, subtitle, icon: Icon}: PageLayoutProps): JSX.Element {
+export function PageLayout({children, title, subtitle, icon}: PageLayoutProps): JSX.Element {
   return (
-    <Stack gap={5}>
+    <VStack gap={5}>
       <Box>
-        <Flex align="center" gap={2}>
-          {Icon && (
-            <Text size={2}>
-              <Icon />
-            </Text>
-          )}
+        <Flex alignItems="center" gap={2}>
+          {icon && <Icon aria-hidden icon={icon} size={2} />}
           <Heading as="h1" size={2}>
             {title}
           </Heading>
@@ -29,6 +25,6 @@ export function PageLayout({children, title, subtitle, icon: Icon}: PageLayoutPr
         </Box>
       </Box>
       {children}
-    </Stack>
+    </VStack>
   )
 }

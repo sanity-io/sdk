@@ -1,7 +1,8 @@
 import {SearchIcon} from '@sanity/icons/Search'
 import {type PerspectiveHandle, type ReleaseDocument} from '@sanity/sdk-react'
-import {Card, Stack, Text} from '@sanity/ui'
+import {Card} from '@sanity/ui'
 import {Autocomplete} from '@sanity/ui/autocomplete'
+import {Box, Text, VStack} from 'ui5'
 
 import {isReleasePerspective} from './util'
 
@@ -19,7 +20,7 @@ export function ReleasesAutocomplete({
   if (!activeReleases || activeReleases.length === 0) return null
 
   return (
-    <Card paddingBottom={4}>
+    <Box paddingBottom={4}>
       <Autocomplete
         id="release-autocomplete"
         filterOption={(query, option) =>
@@ -42,8 +43,8 @@ export function ReleasesAutocomplete({
           const formattedDate = publishDate ? new Date(publishDate).toLocaleString() : null
           return (
             <Card as="button" padding={2}>
-              <Stack gap={2}>
-                <Text size={[2, 2, 3]} weight="semibold">
+              <VStack gap={2}>
+                <Text size={1} weight="semibold">
                   {release.metadata?.title || release.name}
                 </Text>
                 <Text size={1} muted>
@@ -57,7 +58,7 @@ export function ReleasesAutocomplete({
                     Publish: {formattedDate}
                   </Text>
                 )}
-              </Stack>
+              </VStack>
             </Card>
           )
         }}
@@ -69,6 +70,6 @@ export function ReleasesAutocomplete({
         }
         onSelect={(value: string) => onSelectRelease(value)}
       />
-    </Card>
+    </Box>
   )
 }

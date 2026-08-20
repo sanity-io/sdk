@@ -4,10 +4,10 @@ import {
   useDocumentSyncStatus,
   useQuery,
 } from '@sanity/sdk-react'
-import {Box, Button, Card, Dialog, Flex, Grid, Spinner, Stack, Text} from '@sanity/ui'
-import {Code} from '@sanity/ui/code'
+import {Button, Dialog} from '@sanity/ui'
 import {type JSX, type ReactNode, Suspense, useState} from 'react'
 import {type SanityDocument} from 'sanity'
+import {Box, Card, Code, Flex, Grid, Spinner, Text, VStack} from 'ui5'
 
 import {DocumentEditorPanel} from './DocumentEditorPanel'
 import {JsonDocumentEditor} from './JsonDocumentEditor'
@@ -59,16 +59,16 @@ function ItemEditorDialog({
     >
       <Box padding={4}>
         <Suspense fallback={<Spinner />}>
-          <Stack gap={4}>
+          <VStack gap={4}>
             <DocumentEditorPanel
               docHandle={docHandle}
               nameField={editor.nameField}
               nameLabel={editor.nameLabel}
             />
             <JsonDocumentEditor documentHandle={docHandle} minHeight="500px" maxHeight="70vh" />
-          </Stack>
+          </VStack>
         </Suspense>
-        <Flex justify="flex-end" gap={2} marginTop={4}>
+        <Flex justifyContent="flex-end" gap={2} marginTop={4}>
           <Button text={synced ? 'Close' : 'Syncing...'} onClick={onClose} tone="primary" />
         </Flex>
       </Box>
@@ -88,20 +88,20 @@ function JsonBlock({
   isPending?: boolean
 }) {
   return (
-    <Card padding={4} radius={2} shadow={1}>
-      <Stack gap={3}>
-        <Flex align="center" gap={2}>
+    <Card density="regular">
+      <VStack gap={3}>
+        <Flex alignItems="center" gap={2}>
           <Text size={1} weight="semibold">
             {title}
           </Text>
           {isPending && <Spinner />}
         </Flex>
-        <Card overflow="auto" padding={3} radius={2} style={{maxHeight: 400}} tone="transparent">
+        <Box overflow="auto" padding={3} style={{maxHeight: 400}}>
           <Code data-testid={testId} language="json">
             {JSON.stringify(value, null, 2)}
           </Code>
-        </Card>
-      </Stack>
+        </Box>
+      </VStack>
     </Card>
   )
 }
@@ -178,26 +178,26 @@ export function ResourceDemoRoute({
 
   return (
     <PageLayout title={title} subtitle="Query, project, and preview against this resource">
-      <Stack gap={4}>
+      <VStack gap={4}>
         <Text size={1} muted>
           {description}
         </Text>
 
-        <Card padding={4} radius={2} shadow={1}>
-          <Stack gap={2}>
+        <Card density="regular">
+          <VStack gap={2}>
             <Text muted size={1}>
               Current query:
             </Text>
-            <Card padding={3} radius={2} tone="transparent">
+            <Box padding={3}>
               <Code>{query}</Code>
-            </Card>
-          </Stack>
+            </Box>
+          </VStack>
         </Card>
 
-        <Card padding={4} radius={2} shadow={1}>
-          <Stack gap={3}>
-            <Flex align="center" justify="space-between" wrap="wrap" gap={2}>
-              <Flex align="center" gap={2}>
+        <Card density="regular">
+          <VStack gap={3}>
+            <Flex alignItems="center" flexWrap="wrap" gap={2} justifyContent="space-between">
+              <Flex alignItems="center" gap={2}>
                 <Text size={1} weight="semibold">
                   useQuery Results:
                 </Text>
@@ -212,25 +212,19 @@ export function ResourceDemoRoute({
                 />
               )}
             </Flex>
-            <Card
-              overflow="auto"
-              padding={3}
-              radius={2}
-              style={{maxHeight: 400}}
-              tone="transparent"
-            >
+            <Box overflow="auto" padding={3} style={{maxHeight: 400}}>
               <Code data-testid="query-results" language="json">
                 {JSON.stringify(data, null, 2)}
               </Code>
-            </Card>
-          </Stack>
+            </Box>
+          </VStack>
         </Card>
 
         {firstId && (
-          <Grid gap={4} gridTemplateColumns={[1, 1, 2]}>
+          <Grid gap={4} gridTemplateColumns={['1fr', '1fr', 'repeat(2, minmax(0, 1fr))']}>
             <Suspense
               fallback={
-                <Card padding={4} radius={2} shadow={1}>
+                <Card density="regular">
                   <Spinner />
                 </Card>
               }
@@ -245,7 +239,7 @@ export function ResourceDemoRoute({
 
             <Suspense
               fallback={
-                <Card padding={4} radius={2} shadow={1}>
+                <Card density="regular">
                   <Spinner />
                 </Card>
               }
@@ -270,7 +264,7 @@ export function ResourceDemoRoute({
             onClose={() => setEditingId(null)}
           />
         )}
-      </Stack>
+      </VStack>
     </PageLayout>
   )
 }

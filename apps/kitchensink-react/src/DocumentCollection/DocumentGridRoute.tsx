@@ -1,6 +1,6 @@
 import {useDocuments} from '@sanity/sdk-react'
-import {Button} from '@sanity/ui'
 import {type JSX} from 'react'
+import {Button} from 'ui5'
 
 import {DocumentGridLayout} from '../components/DocumentGridLayout/DocumentGridLayout'
 import {PageLayout} from '../components/PageLayout'
@@ -20,11 +20,10 @@ export function DocumentGridRoute(): JSX.Element {
         ))}
       </DocumentGridLayout>
       <Button
-        text="Load more"
-        mode="ghost"
-        fontSize={1}
         disabled={isPending || !hasMore}
+        level="tertiary"
         onClick={loadMore}
+        text="Load more"
       />
     </PageLayout>
   )

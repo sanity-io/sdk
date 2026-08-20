@@ -6,9 +6,10 @@ import {
   useRecordDocumentHistoryEvent,
   useSanityInstance,
 } from '@sanity/sdk-react'
-import {Box, Button, Card, Flex, Text} from '@sanity/ui'
+import {Button} from '@sanity/ui'
 import {type JSX, Suspense} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+import {Box, Card, Flex, Text} from 'ui5'
 
 import {DocumentListLayout} from '../components/DocumentListLayout/DocumentListLayout'
 import {LoadMore} from '../components/LoadMore'
@@ -35,7 +36,7 @@ function ButtonFallback() {
 function ButtonError({error}: {error: Error}) {
   return (
     <Text size={1}>
-      <Card padding={2} radius={2} tone="critical">
+      <Card density="compact" tone="critical">
         Error: {error.message}
       </Card>
     </Text>

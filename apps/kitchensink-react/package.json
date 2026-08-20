@@ -35,7 +35,8 @@
     "react-error-boundary": "catalog:",
     "react-router": "^7.18.2",
     "styled-components": "^6.4.1",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "ui5": "npm:@sanity/ui@5.0.0-alpha.4"
   },
   "devDependencies": {
     "@playwright/test": "catalog:",

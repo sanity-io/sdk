@@ -1,7 +1,7 @@
 import {SanityDocument, useDispatchIntent, useQuery} from '@sanity/sdk-react'
-import {Button, Card, Flex, Spinner, Stack, Text} from '@sanity/ui'
-import {Code} from '@sanity/ui/code'
+import {Button} from '@sanity/ui'
 import {type JSX, Suspense} from 'react'
+import {Card, Code, Flex, Spinner, Text, VStack} from 'ui5'
 
 import {PageLayout} from '../components/PageLayout'
 
@@ -107,8 +107,8 @@ function IntentCard({
   children: JSX.Element
 }): JSX.Element {
   return (
-    <Card padding={4} radius={2} shadow={1}>
-      <Stack gap={3}>
+    <Card density="regular">
+      <VStack gap={3}>
         <Text size={1} weight="semibold">
           {title}
         </Text>
@@ -117,16 +117,16 @@ function IntentCard({
         </Text>
         {documentId && (
           <Text muted size={1}>
-            Document ID: <Code>{documentId}</Code>
+            Document ID: <Code as="span">{documentId}</Code>
           </Text>
         )}
         {documentType && (
           <Text muted size={1}>
-            Document Type: <Code>{documentType}</Code>
+            Document Type: <Code as="span">{documentType}</Code>
           </Text>
         )}
         {children}
-      </Stack>
+      </VStack>
     </Card>
   )
 }
@@ -163,15 +163,15 @@ function IntentsContent(): JSX.Element {
       title="Intent Dispatch Demo"
       subtitle="Dispatch edit intents for documents from different resources"
     >
-      <Stack gap={4}>
+      <VStack gap={4}>
         <Text size={1} muted>
           This route demonstrates dispatching intents for documents from both a traditional dataset
           and a media library resource.
         </Text>
 
         {isLoading && (
-          <Card padding={4} radius={2} shadow={1}>
-            <Flex align="center" gap={2}>
+          <Card density="regular">
+            <Flex alignItems="center" gap={2}>
               <Spinner />
               <Text size={1}>Loading documents...</Text>
             </Flex>
@@ -208,7 +208,7 @@ function IntentsContent(): JSX.Element {
         >
           <CanvasDocumentIntent document={firstCanvasDocument} />
         </IntentCard>
-      </Stack>
+      </VStack>
     </PageLayout>
   )
 }
@@ -218,8 +218,8 @@ export function IntentsRoute(): JSX.Element {
     <Suspense
       fallback={
         <PageLayout title="Intent Dispatch Demo" subtitle="Loading documents">
-          <Card padding={4} radius={2} shadow={1}>
-            <Flex align="center" gap={2}>
+          <Card density="regular">
+            <Flex alignItems="center" gap={2}>
               <Spinner />
               <Text size={1}>Loading...</Text>
             </Flex>

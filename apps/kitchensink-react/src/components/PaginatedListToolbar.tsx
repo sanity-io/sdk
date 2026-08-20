@@ -1,5 +1,6 @@
-import {Box, Flex, Select, Stack, Text, TextInput} from '@sanity/ui'
+import {Select, TextInput} from '@sanity/ui'
 import {ChangeEvent, JSX} from 'react'
+import {Box, Flex, Text, VStack} from 'ui5'
 
 export interface PaginatedListToolbarProps {
   // The plural noun for the listed items, e.g. "documents" or "authors". Used
@@ -42,10 +43,10 @@ export function PaginatedListToolbar({
   const pageSizeId = `pageSize${suffix}`
 
   return (
-    <Stack gap={3}>
-      <Flex justify="space-between" align="center" gap={3}>
-        <Box flex={1} style={{maxWidth: 300}}>
-          <Stack gap={2}>
+    <VStack gap={3}>
+      <Flex alignItems="center" gap={3} justifyContent="space-between">
+        <Box flexGrow={1} style={{maxWidth: 300}}>
+          <VStack gap={2}>
             <Text as="label" htmlFor={searchId} muted size={1}>
               Search {nounLabel}
             </Text>
@@ -57,10 +58,10 @@ export function PaginatedListToolbar({
               onChange={onSearchChange}
               placeholder={`Search ${noun}...`}
             />
-          </Stack>
+          </VStack>
         </Box>
         <Box>
-          <Stack gap={2}>
+          <VStack gap={2}>
             <Text as="label" htmlFor={pageSizeId} muted size={1}>
               Items per page
             </Text>
@@ -77,13 +78,13 @@ export function PaginatedListToolbar({
                 </option>
               ))}
             </Select>
-          </Stack>
+          </VStack>
         </Box>
       </Flex>
 
       <Text muted size={1} data-testid={`list-summary${suffix}`}>
         Showing {startIndex + 1}-{Math.min(endIndex, count)} of {count} {noun}
       </Text>
-    </Stack>
+    </VStack>
   )
 }

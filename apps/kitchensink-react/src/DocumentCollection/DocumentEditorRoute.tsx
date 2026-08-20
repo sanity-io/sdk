@@ -8,8 +8,9 @@ import {
   useDocumentSyncStatus,
   useResource,
 } from '@sanity/sdk-react'
-import {Badge, Box, Button, Card, Checkbox, Flex, Stack, Text, TextInput} from '@sanity/ui'
+import {Badge, Button, Checkbox, TextInput} from '@sanity/ui'
 import {type JSX, useMemo, useState} from 'react'
+import {Box, Card, Flex, Text, VStack} from 'ui5'
 
 import {DocumentEditorPanel} from '../components/DocumentEditorPanel'
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
@@ -34,11 +35,10 @@ function DocumentEditor({
   const {data: document} = useDocument(docHandle)
 
   return (
-    <Stack gap={4}>
-      {/* Header Section */}
-      <Card padding={3} radius={2} shadow={1}>
-        <Flex gap={3} align="center" justify="space-between">
-          <Flex gap={2} align="center">
+    <VStack gap={4}>
+      <Card density="compact">
+        <Flex alignItems="center" gap={3} justifyContent="space-between">
+          <Flex alignItems="center" gap={2}>
             <Badge
               tone={docHandle.liveEdit ? 'primary' : 'default'}
               fontSize={1}
@@ -65,8 +65,8 @@ function DocumentEditor({
       />
 
       {/* JSON Editor Section */}
-      <Card padding={4} radius={2} shadow={1}>
-        <Stack gap={3}>
+      <Card density="regular">
+        <VStack gap={3}>
           <Text size={1} weight="semibold">
             Document Content
           </Text>
@@ -93,9 +93,9 @@ function DocumentEditor({
               />
             </>
           )}
-        </Stack>
+        </VStack>
       </Card>
-    </Stack>
+    </VStack>
   )
 }
 
@@ -140,15 +140,14 @@ function Editor() {
 
   return (
     <PageLayout title="Document editor" subtitle="Load an author, then edit, publish, or delete it">
-      <Stack gap={4}>
-        {/* Load Document Section */}
-        <Card padding={4} radius={2} shadow={1}>
-          <Stack gap={4}>
+      <VStack gap={4}>
+        <Card density="regular">
+          <VStack gap={4}>
             <Text size={1} weight="semibold">
               Load Document
             </Text>
-            <Flex gap={3} align="flex-end">
-              <Box flex={1}>
+            <Flex alignItems="flex-end" gap={3}>
+              <Box flexGrow={1}>
                 <TextInput
                   fontSize={1}
                   label="Document ID"
@@ -168,9 +167,9 @@ function Editor() {
                 disabled={!newDocumentId && !docHandle?.documentId}
               />
             </Flex>
-            <Card padding={3} tone="transparent" border>
-              <Stack gap={2}>
-                <Flex gap={2} align="center">
+            <Box border padding={3}>
+              <VStack gap={2}>
+                <Flex alignItems="center" gap={2}>
                   <Checkbox
                     checked={liveEditMode}
                     onChange={(e) => setLiveEditMode(e.currentTarget.checked)}
@@ -186,14 +185,13 @@ function Editor() {
                     ? '✓ Changes apply immediately (no drafts)'
                     : 'Drafts will be created for edits'}
                 </Text>
-              </Stack>
-            </Card>
-          </Stack>
+              </VStack>
+            </Box>
+          </VStack>
         </Card>
 
-        {/* Document Editor */}
         {!docHandle ? (
-          <Card padding={4} radius={2} shadow={1} tone="transparent">
+          <Card density="regular">
             <Text align="center" muted size={1}>
               Enter a document ID above to get started
             </Text>
@@ -205,7 +203,7 @@ function Editor() {
             onDocumentIdChange={handleDocumentIdChange}
           />
         )}
-      </Stack>
+      </VStack>
     </PageLayout>
   )
 }

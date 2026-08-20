@@ -1,16 +1,16 @@
-import {Stack} from '@sanity/ui'
 import {type PropsWithChildren, type ReactElement} from 'react'
+import {VStack} from 'ui5'
 
-const listReset = {listStyle: 'none', margin: 0, padding: 0} as const
+const listReset = {listStyle: 'none'} as const
 
 /**
  * @public
  */
 export const DocumentListLayout = (props: PropsWithChildren): ReactElement => {
   return (
-    <Stack as="ol" className="DocumentListLayout" gap={2} style={listReset}>
+    <VStack as="ol" className="DocumentListLayout" gap={2} style={listReset}>
       {props.children}
-    </Stack>
+    </VStack>
   )
 }
 

@@ -1,6 +1,6 @@
 import {useDashboardOrganizationId} from '@sanity/sdk-react'
-import {Text} from '@sanity/ui'
 import {type JSX} from 'react'
+import {Text} from 'ui5'
 
 import {PageLayout} from '../components/PageLayout'
 
