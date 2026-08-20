@@ -8,8 +8,10 @@ import {createSanityInstance, type SanityInstance} from '../store/createSanityIn
 import {observeAddonDatasetClient} from './addonDatasetStore'
 import {
   commentsStore,
+  getCommentsOptionsKey,
   getCommentsState,
   getCommentThreadsState,
+  parseCommentsOptionsKey,
   resolveComments,
 } from './commentsStore'
 import {setPendingTransaction} from './reducers'
@@ -91,6 +93,37 @@ beforeEach(() => {
 
 afterEach(() => {
   instance.dispose()
+})
+
+describe('getCommentsOptionsKey', () => {
+  it('round-trips the options it is given', () => {
+    const options = {
+      ...HANDLE,
+      perspective: {releaseName: 'summer'},
+      fieldPath: 'title',
+      status: 'resolved' as const,
+    }
+
+    expect(parseCommentsOptionsKey(getCommentsOptionsKey(options))).toEqual(options)
+  })
+
+  it('gives a path array and its string form the same key', () => {
+    expect(
+      getCommentsOptionsKey({...HANDLE, fieldPath: ['body', {_key: 'intro'}, 'content']}),
+    ).toBe(getCommentsOptionsKey({...HANDLE, fieldPath: 'body[_key=="intro"].content'}))
+  })
+
+  it('separates lists that differ only by filter', () => {
+    const keys = new Set([
+      getCommentsOptionsKey(HANDLE),
+      getCommentsOptionsKey({...HANDLE, fieldPath: ''}),
+      getCommentsOptionsKey({...HANDLE, fieldPath: 'title'}),
+      getCommentsOptionsKey({...HANDLE, status: 'open'}),
+      getCommentsOptionsKey({...HANDLE, documentId: 'doc-2'}),
+    ])
+
+    expect(keys.size).toBe(5)
+  })
 })
 
 describe('getCommentsState', () => {
