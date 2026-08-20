@@ -617,7 +617,16 @@ export function diffMatchPatch(
         )
       }
 
-      const [nextValue] = applyPatches(parsePatch(dmp), value)
+      // Offsets arrive as UTF-8 byte positions and can overshoot when they
+      // land inside a multi-byte character, which happens once the string a
+      // patch was computed against has diverged. The default is to throw, and
+      // that throw escapes the rebase loop in `reducers.ts`, kills the
+      // outgoing-actions pipeline, and leaves the instance silently dropping
+      // every write. Clamping to the nearest index applies the patch instead,
+      // which is what the Studio and the Portable Text editor already do.
+      const [nextValue] = applyPatches(parsePatch(dmp), value, {
+        allowExceedingIndices: true,
+      })
       return {path, value: nextValue}
     })
     .reduce((acc, {path, value}) => setDeep(acc, path, value), input)

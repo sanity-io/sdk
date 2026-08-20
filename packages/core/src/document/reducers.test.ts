@@ -1178,6 +1178,85 @@ describe('applyRemoteDocument', () => {
     })
   })
 
+  describe('rebase over multi-byte text', () => {
+    it('does not kill the pipeline when a plain edit rebases onto multi-byte text', () => {
+      // The reported production failure: a byte-offset throw from
+      // `@sanity/diff-match-patch` is a plain `Error`, and `createMutationApplier`
+      // only converts to `ActionError` when `preserveOperations` is set. So for an
+      // ordinary `editDocument` it escapes this rebase loop, reaches the rxjs
+      // subscription, and the outgoing-actions pipeline for the whole instance
+      // dies. Every later write is then dropped silently, for every document.
+      const docId = getDraftId(DocumentId('doc1'))
+      const originalDoc: SanityDocument = {
+        ...exampleDoc,
+        _id: docId,
+        _rev: 'rev1',
+        title: 'abcdefg\u00f8',
+      }
+      const locallyEditedDoc: SanityDocument = {
+        ...originalDoc,
+        title: 'abcdefg\u00f8!',
+        _rev: 'txnLocal',
+      }
+
+      const appliedTransaction: AppliedTransaction = {
+        transactionId: 'txnLocal',
+        actions: [
+          {
+            type: 'document.edit',
+            documentId: 'doc1',
+            documentType: 'author',
+            patches: [{diffMatchPatch: {title: '@@ -9,1 +9,2 @@\n \u00f8\n+!\n'}}],
+          },
+        ],
+        previous: {[docId]: originalDoc},
+        base: {[docId]: originalDoc},
+        working: {[docId]: locallyEditedDoc},
+        previousRevs: {[docId]: 'rev1'},
+        timestamp: '2025-02-06T00:16:00.000Z',
+        outgoingActions: [],
+        outgoingMutations: [],
+      }
+
+      const initialState: SyncTransactionState = {
+        queued: [],
+        applied: [appliedTransaction],
+        outgoing: undefined,
+        grants,
+        documentStates: {
+          [docId]: {
+            id: docId,
+            subscriptions: ['sub1'],
+            local: locallyEditedDoc,
+            remote: originalDoc,
+            unverifiedRevisions: {},
+          },
+        },
+      }
+
+      // someone else changed the same field, so the local patch is rebased onto
+      // a base its byte offsets were not computed against
+      const remoteDoc: SanityDocument = {
+        ...originalDoc,
+        title: '\u00f8\u00f8\u00f8\u00f8\u00f8\u00f8',
+        _rev: 'txnForeign',
+      }
+      const remote: RemoteDocument = {
+        type: 'mutation',
+        documentId: docId,
+        document: remoteDoc,
+        revision: 'txnForeign',
+        previousRev: 'rev1',
+        timestamp: '2025-02-06T00:17:00.000Z',
+        mutations: [{patch: {id: docId, set: {title: '\u00f8\u00f8\u00f8\u00f8\u00f8\u00f8'}}}],
+      }
+
+      const events = new Subject<DocumentEvent>()
+
+      expect(() => applyRemoteDocument(initialState, remote, events)).not.toThrow()
+    })
+  })
+
   describe('rebase with preserved operations', () => {
     it('skips a preserved-operations transaction that fails to re-apply and emits rebase-error', () => {
       const docId = getDraftId(DocumentId('doc1'))
