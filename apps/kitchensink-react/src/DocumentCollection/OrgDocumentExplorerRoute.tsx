@@ -12,27 +12,14 @@ import {
   useSanityInstance,
   useUsers,
 } from '@sanity/sdk-react'
-import {
-  Avatar,
-  Box,
-  Button,
-  Card,
-  Container,
-  Dialog,
-  Flex,
-  Heading,
-  Label,
-  Select,
-  Spinner,
-  Stack,
-  Text,
-} from '@sanity/ui'
+import {Avatar, Box, Button, Card, Dialog, Flex, Select, Spinner, Stack, Text} from '@sanity/ui'
 import {defineQuery} from 'groq'
 import {JSX, startTransition, Suspense, useCallback, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
 import {LoadMore} from '../components/LoadMore'
+import {PageLayout} from '../components/PageLayout'
 import {PaginatedListToolbar} from '../components/PaginatedListToolbar'
 import {PaginationControls} from '../components/PaginationControls'
 // Import the custom table components
@@ -62,7 +49,7 @@ function DocumentEditorDialog({
       open={open}
       width={2}
     >
-      <Stack space={4} padding={4}>
+      <Stack gap={4} padding={4}>
         <JsonDocumentEditor documentHandle={handle} wrapInCard={false} maxHeight="70vh" />
         <Flex justify="flex-end">
           <Button tone="primary" text="Close" onClick={onClose} />
@@ -112,11 +99,9 @@ function DocumentRowFallback() {
   return (
     <TR>
       <TD padding={3}>
-        <Flex align="center" justify="center" padding={3}>
+        <Flex align="center" gap={2} justify="center" padding={3}>
           <Spinner />
-          <Text size={1} style={{marginLeft: '8px'}}>
-            Loading document...
-          </Text>
+          <Text size={1}>Loading document...</Text>
         </Flex>
       </TD>
       <TD padding={0} />
@@ -132,7 +117,7 @@ function DocumentRowError({error}: {error: Error}) {
     <TR>
       <TD padding={3}>
         <Card tone="critical" padding={3}>
-          <Stack space={2}>
+          <Stack gap={2}>
             <Text weight="semibold">Error loading document</Text>
             <Text size={1}>{error.message}</Text>
             {error.stack && (
@@ -202,11 +187,10 @@ function DocumentList({documentType}: DocumentListProps) {
 
   return (
     <Box padding={4}>
-      <Heading as="h3" size={2}>
-        {documentType} Documents
-      </Heading>
-
-      <Stack space={4} marginTop={4}>
+      <Stack gap={4}>
+        <Text size={1} weight="semibold">
+          {documentType} Documents
+        </Text>
         <PaginatedListToolbar
           noun="documents"
           idSuffix={documentType}
@@ -262,12 +246,10 @@ function DocumentList({documentType}: DocumentListProps) {
                 <TD padding={3}>
                   <Flex justify="center" align="center" padding={4}>
                     {isPending ? (
-                      <>
+                      <Flex align="center" gap={2}>
                         <Spinner />
-                        <Text size={2} style={{marginLeft: '8px'}}>
-                          Loading documents...
-                        </Text>
-                      </>
+                        <Text size={1}>Loading documents...</Text>
+                      </Flex>
                     ) : (
                       <Text>No documents found</Text>
                     )}
@@ -337,25 +319,27 @@ function DocumentTypes() {
   }
 
   return (
-    <Stack space={4} padding={4}>
+    <Stack gap={4} padding={4}>
       <Box>
-        <Label htmlFor={`doctype-${config.dataset}`} size={2}>
-          Document Type
-        </Label>
-        <Select
-          id={`doctype-${config.dataset}`}
-          data-testid="org-doctype-select"
-          value={selectedType || ''}
-          onChange={handleTypeChange}
-          style={{width: '100%', marginTop: '8px'}}
-        >
-          <option value="">Select a document type</option>
-          {documentTypes.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </Select>
+        <Stack gap={2}>
+          <Text as="label" htmlFor={`doctype-${config.dataset}`} muted size={1}>
+            Document Type
+          </Text>
+          <Select
+            id={`doctype-${config.dataset}`}
+            fontSize={1}
+            data-testid="org-doctype-select"
+            value={selectedType || ''}
+            onChange={handleTypeChange}
+          >
+            <option value="">Select a document type</option>
+            {documentTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </Select>
+        </Stack>
       </Box>
 
       {selectedType && (
@@ -392,25 +376,27 @@ function DatasetExplorer() {
   }
 
   return (
-    <Stack space={4} padding={4}>
+    <Stack gap={4} padding={4}>
       <Box>
-        <Label htmlFor={`dataset-${config.projectId}`} size={2}>
-          Dataset
-        </Label>
-        <Select
-          id={`dataset-${config.projectId}`}
-          data-testid="org-dataset-select"
-          value={selectedDataset || ''}
-          onChange={handleDatasetChange}
-          style={{width: '100%', marginTop: '8px'}}
-        >
-          <option value="">Select a dataset</option>
-          {datasets.map((dataset) => (
-            <option key={dataset.name} value={dataset.name}>
-              {dataset.name}
-            </option>
-          ))}
-        </Select>
+        <Stack gap={2}>
+          <Text as="label" htmlFor={`dataset-${config.projectId}`} muted size={1}>
+            Dataset
+          </Text>
+          <Select
+            id={`dataset-${config.projectId}`}
+            fontSize={1}
+            data-testid="org-dataset-select"
+            value={selectedDataset || ''}
+            onChange={handleDatasetChange}
+          >
+            <option value="">Select a dataset</option>
+            {datasets.map((dataset) => (
+              <option key={dataset.name} value={dataset.name}>
+                {dataset.name}
+              </option>
+            ))}
+          </Select>
+        </Stack>
       </Box>
 
       {selectedDataset && (
@@ -426,9 +412,9 @@ function DatasetExplorer() {
             <ResourceProvider
               dataset={selectedDataset}
               fallback={
-                <Flex align="center" padding={4}>
+                <Flex align="center" gap={2} padding={4}>
                   <Spinner />
-                  <Text style={{marginLeft: '8px'}}>Loading document types...</Text>
+                  <Text size={1}>Loading document types...</Text>
                 </Flex>
               }
             >
@@ -451,18 +437,18 @@ function UsersDialogContent() {
   const {data, hasMore, isPending, loadMore} = useUsers({batchSize: 10})
 
   return (
-    <Stack space={3}>
+    <Stack gap={3}>
       {isPending && data.length === 0 ? (
-        <Flex align="center" justify="center" padding={4}>
+        <Flex align="center" gap={2} justify="center" padding={4}>
           <Spinner />
-          <Text style={{marginLeft: '8px'}}>Loading users...</Text>
+          <Text size={1}>Loading users...</Text>
         </Flex>
       ) : (
         <>
           {data.length === 0 ? (
             <Text>No users found</Text>
           ) : (
-            <Stack space={2}>
+            <Stack gap={2}>
               {data.map((user) => (
                 <UserListItem key={user.profile.id} user={user} />
               ))}
@@ -502,13 +488,13 @@ function ProjectExplorer() {
   const handleCloseUsersDialog = () => setIsUsersDialogOpen(false)
 
   return (
-    <Stack space={4}>
+    <Stack gap={4}>
       <Box padding={3}>
         <Flex justify="space-between" align="center">
           <Box>
-            <Heading as="h3" size={2}>
+            <Text size={1} weight="semibold">
               {project.displayName || project.id}
-            </Heading>
+            </Text>
             <Text size={1} muted>
               Project ID: {project.id}
             </Text>
@@ -563,25 +549,27 @@ function ProjectsExplorer() {
   }
 
   return (
-    <Stack space={4}>
+    <Stack gap={4}>
       <Box>
-        <Label htmlFor="project-selector" size={2}>
-          Project
-        </Label>
-        <Select
-          id="project-selector"
-          data-testid="org-project-select"
-          value={selectedProject || ''}
-          onChange={handleProjectChange}
-          style={{width: '100%', marginTop: '8px'}}
-        >
-          <option value="">Select a project</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.displayName} - {project.id}
-            </option>
-          ))}
-        </Select>
+        <Stack gap={2}>
+          <Text as="label" htmlFor="project-selector" muted size={1}>
+            Project
+          </Text>
+          <Select
+            id="project-selector"
+            fontSize={1}
+            data-testid="org-project-select"
+            value={selectedProject || ''}
+            onChange={handleProjectChange}
+          >
+            <option value="">Select a project</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.displayName} - {project.id}
+              </option>
+            ))}
+          </Select>
+        </Stack>
       </Box>
 
       {selectedProject && (
@@ -597,9 +585,9 @@ function ProjectsExplorer() {
             <ResourceProvider
               projectId={selectedProject}
               fallback={
-                <Flex align="center" padding={4}>
+                <Flex align="center" gap={2} padding={4}>
                   <Spinner />
-                  <Text style={{marginLeft: '8px'}}>Loading project...</Text>
+                  <Text size={1}>Loading project...</Text>
                 </Flex>
               }
             >
@@ -615,52 +603,42 @@ function ProjectsExplorer() {
 // Main route component
 export function OrgDocumentExplorerRoute(): JSX.Element {
   return (
-    <Container width={3}>
-      <Stack space={5}>
-        <Box padding={4}>
-          <Heading as="h1" size={5}>
-            Organization Document Explorer
-          </Heading>
-          <Text muted size={1}>
-            Browse documents across your organization in a hierarchical structure
-          </Text>
-        </Box>
-
-        <Card shadow={1} radius={2}>
-          <Stack space={3}>
-            <Box padding={3} style={{borderBottom: '1px solid #eee'}}>
-              <Heading as="h2" size={2}>
-                Projects Explorer
-              </Heading>
-              <Text size={1} muted>
-                Navigate through projects → datasets → document types → documents
-              </Text>
-            </Box>
-            <Box padding={3}>
-              <ErrorBoundary
-                fallback={
-                  <Card padding={4} tone="critical">
-                    <Text>Error loading projects</Text>
-                  </Card>
-                }
-              >
-                <ResourceProvider
-                  projectId={undefined}
-                  dataset={undefined}
-                  fallback={
-                    <Flex align="center" padding={4}>
-                      <Spinner />
-                      <Text style={{marginLeft: '8px'}}>Loading projects...</Text>
-                    </Flex>
-                  }
-                >
-                  <ProjectsExplorer />
-                </ResourceProvider>
-              </ErrorBoundary>
-            </Box>
+    <PageLayout
+      title="Organization Document Explorer"
+      subtitle="Browse documents across your organization in a hierarchical structure"
+    >
+      <Card padding={4} radius={2} shadow={1}>
+        <Stack gap={4}>
+          <Stack gap={2}>
+            <Text size={1} weight="semibold">
+              Projects Explorer
+            </Text>
+            <Text size={1} muted>
+              Navigate through projects → datasets → document types → documents
+            </Text>
           </Stack>
-        </Card>
-      </Stack>
-    </Container>
+          <ErrorBoundary
+            fallback={
+              <Card padding={4} tone="critical">
+                <Text>Error loading projects</Text>
+              </Card>
+            }
+          >
+            <ResourceProvider
+              projectId={undefined}
+              dataset={undefined}
+              fallback={
+                <Flex align="center" gap={2} padding={4}>
+                  <Spinner />
+                  <Text size={1}>Loading projects...</Text>
+                </Flex>
+              }
+            >
+              <ProjectsExplorer />
+            </ResourceProvider>
+          </ErrorBoundary>
+        </Stack>
+      </Card>
+    </PageLayout>
   )
 }

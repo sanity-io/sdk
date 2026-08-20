@@ -1,10 +1,15 @@
+import 'inter-ui/inter.css'
 import './global.css'
+import '@sanity/ui/styles.css'
+// v5 is CSS-only and does not read the v4 theme. Keep v4's ThemeProvider.
+import 'ui5/styles.css'
 
 import {configureLogging, SanityApp, useDashboardNavigate} from '@sanity/sdk-react'
-import {Spinner, ThemeProvider} from '@sanity/ui'
+import {ThemeProvider} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {type JSX, Suspense} from 'react'
 import {BrowserRouter, useNavigate} from 'react-router'
+import {Spinner} from 'ui5'
 
 import {AppRoutes} from './AppRoutes'
 import {devResources, e2eResources, isE2E} from './sanityConfigs'

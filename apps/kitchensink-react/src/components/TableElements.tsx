@@ -1,5 +1,16 @@
-import {Card, CardProps} from '@sanity/ui'
-import {CSSProperties, forwardRef, JSX, PropsWithChildren, Ref} from 'react'
+import {Card, CardProps, Text} from '@sanity/ui'
+import {CSSProperties, forwardRef, JSX, PropsWithChildren, ReactNode, Ref} from 'react'
+
+function sizedText(children: ReactNode, weight?: 'semibold'): ReactNode {
+  if (typeof children === 'string' || typeof children === 'number') {
+    return (
+      <Text size={1} weight={weight}>
+        {children}
+      </Text>
+    )
+  }
+  return children
+}
 
 const trStyle = {display: 'table-row'} as const
 const tdStyle = {display: 'table-cell'} as const
@@ -29,7 +40,7 @@ export const TD = forwardRef(function TableCell(
   const {children, ...rest} = props
   return (
     <Card {...rest} style={tdStyle} as="td" ref={ref}>
-      {children}
+      {sizedText(children)}
     </Card>
   )
 })
@@ -41,7 +52,7 @@ export const TH = forwardRef(function TableHeaderCell(
   const {children, ...rest} = props
   return (
     <Card {...rest} style={thStyle} as="th" ref={ref}>
-      {children}
+      {sizedText(children, 'semibold')}
     </Card>
   )
 })

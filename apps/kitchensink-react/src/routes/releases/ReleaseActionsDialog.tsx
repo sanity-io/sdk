@@ -187,15 +187,15 @@ export function ReleaseActionsDialog({
       width={1}
     >
       <Box padding={4}>
-        <Stack space={4}>
+        <Stack gap={4}>
           {/* Metadata form */}
           <Card padding={3} radius={2} shadow={1}>
-            <Stack space={3}>
+            <Stack gap={3}>
               <Text size={1} weight="semibold">
                 Metadata
               </Text>
               <Box>
-                <Stack space={2}>
+                <Stack gap={2}>
                   <Text size={0} muted>
                     Release ID
                   </Text>
@@ -209,7 +209,7 @@ export function ReleaseActionsDialog({
                 </Stack>
               </Box>
               <Box>
-                <Stack space={2}>
+                <Stack gap={2}>
                   <Text size={0} muted>
                     Title
                   </Text>
@@ -223,7 +223,7 @@ export function ReleaseActionsDialog({
                 </Stack>
               </Box>
               <Box>
-                <Stack space={2}>
+                <Stack gap={2}>
                   <Text size={0} muted>
                     Description
                   </Text>
@@ -239,7 +239,7 @@ export function ReleaseActionsDialog({
               </Box>
               <Flex gap={3}>
                 <Box flex={1}>
-                  <Stack space={2}>
+                  <Stack gap={2}>
                     <Text size={0} muted>
                       Release type
                     </Text>
@@ -263,7 +263,7 @@ export function ReleaseActionsDialog({
                   </Stack>
                 </Box>
                 <Box flex={1}>
-                  <Stack space={2}>
+                  <Stack gap={2}>
                     <Text size={0} muted>
                       Intended publish at
                     </Text>
@@ -306,7 +306,7 @@ export function ReleaseActionsDialog({
           {/* Lifecycle actions (edit mode only) */}
           {isEdit && release && (
             <Card padding={3} radius={2} shadow={1}>
-              <Stack space={3}>
+              <Stack gap={3}>
                 <Text size={1} weight="semibold" data-testid="release-state-display">
                   Lifecycle actions — current state: {state}
                 </Text>

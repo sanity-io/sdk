@@ -12,7 +12,6 @@ import {
   Button,
   Card,
   Checkbox,
-  Code,
   Flex,
   Inline,
   Select,
@@ -20,6 +19,7 @@ import {
   Text,
   TextInput,
 } from '@sanity/ui'
+import {Code} from '@sanity/ui/code'
 import {JSX, useState} from 'react'
 import {useSearchParams} from 'react-router'
 
@@ -73,7 +73,7 @@ function FieldPresence({
   })
 
   return (
-    <Inline space={2} data-testid={`presence-field-${testId}`} data-count={presence.length}>
+    <Inline gap={2} data-testid={`presence-field-${testId}`} data-count={presence.length}>
       {presence.map((participant) => (
         <Badge
           key={participant.sessionId}
@@ -170,7 +170,7 @@ function DocumentCard({
   return (
     <Card padding={3} radius={2} tone="transparent">
       <Flex align="flex-start" gap={3}>
-        <Stack space={3} flex={1}>
+        <Stack gap={3} flex={1}>
           <Text size={1} weight="medium">
             {data?.name ?? 'Untitled'}
           </Text>
@@ -210,7 +210,7 @@ function AnnounceToggle({
           checked={announcing}
           onChange={(event) => onChange(event.currentTarget.checked)}
         />
-        <Stack space={2} flex={1}>
+        <Stack gap={2} flex={1}>
           <Text
             as="label"
             htmlFor="presence-announcing"
@@ -256,7 +256,7 @@ function ParticipantList({
   const {presence} = usePresenceForDocument({documentId, documentType: DOCUMENT_TYPE, perspective})
 
   return (
-    <Stack space={3}>
+    <Stack gap={3}>
       <Text size={1} weight="semibold">
         Others in this document
       </Text>
@@ -272,7 +272,7 @@ function ParticipantList({
             Nobody else is here
           </Text>
         ) : (
-          <Stack space={3}>
+          <Stack gap={3}>
             {presence.map((participant) => (
               <Participant key={participant.sessionId} participant={participant} />
             ))}
@@ -299,7 +299,7 @@ function FieldRow({
   const testId = `presence-input-${field.name}`
 
   return (
-    <Stack space={2}>
+    <Stack gap={2}>
       <Flex align="center" gap={2}>
         <Text size={1} weight="medium">
           {field.label}
@@ -334,7 +334,7 @@ function FieldRow({
 
 function Notes(): JSX.Element {
   return (
-    <Stack space={2}>
+    <Stack gap={2}>
       <Text size={1} muted>
         Opening the same document in a Studio checks that presence works between the two: they share
         one room per project and dataset, so each should see the other. The link assumes that Studio
@@ -403,7 +403,7 @@ function PresenceDemo({documentId}: {documentId: string}): JSX.Element {
       <AnnounceToggle announcing={announcing} onChange={setAnnouncing} />
       <ParticipantList documentId={documentId} perspective={perspective} />
 
-      <Stack space={3}>
+      <Stack gap={3}>
         <Text size={1} weight="semibold">
           Fields
         </Text>

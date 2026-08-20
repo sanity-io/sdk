@@ -1,6 +1,7 @@
 import {type ComlinkStatus, useFrameConnection} from '@sanity/sdk-react'
-import {Box, Button, Card, Label, Stack, Text, TextInput} from '@sanity/ui'
+import {Button, TextInput} from '@sanity/ui'
 import {ReactElement, useEffect, useRef, useState} from 'react'
+import {Box, Card, Flex, Text, VStack} from 'ui5'
 
 import {PageLayout} from '../components/PageLayout'
 import {FetchUsersRequest, FromIFrameMessage, ToIFrameMessage, UserData} from './types'
@@ -86,79 +87,81 @@ const ParentApp = (): ReactElement => {
 
   return (
     <PageLayout title="Comlink demo" subtitle="Explore comlink connections and fetch operations">
-      <Stack space={4} height="fill">
-        <Box flex={1}>
-          <Box display="flex" height="fill">
-            {/* Frame Navigation */}
+      <VStack gap={4}>
+        <Box flexGrow={1}>
+          <Flex>
             <Box paddingRight={4} style={{minWidth: 200, maxWidth: 250}}>
-              <Stack space={3}>
-                <Card padding={3}>
-                  <Text size={2} weight="semibold">
+              <VStack gap={3}>
+                <Card density="compact">
+                  <Text size={1} weight="semibold">
                     Frames
                   </Text>
                 </Card>
-                <Stack space={2}>
+                <VStack gap={2}>
                   {frames.map((frameNum) => (
                     <Button
                       key={frameNum}
+                      fontSize={1}
                       mode={selectedFrame === frameNum ? 'default' : 'ghost'}
                       onClick={() => setSelectedFrame(frameNum)}
                       text={`Frame ${frameNum}`}
                     />
                   ))}
-                </Stack>
-              </Stack>
+                </VStack>
+              </VStack>
             </Box>
 
-            {/* Parent App Controls */}
-            <Box flex={1}>
-              <Stack space={4}>
-                {/* Message input */}
-                <Card padding={3}>
-                  <Stack space={3}>
-                    <Label>Send message to frame</Label>
-                    <Box display="flex">
-                      <Box flex={1}>
+            <Box flexGrow={1}>
+              <VStack gap={4}>
+                <Card density="compact">
+                  <VStack gap={3}>
+                    <Text size={1} weight="semibold">
+                      Send message to frame
+                    </Text>
+                    <Flex gap={2}>
+                      <Box flexGrow={1}>
                         <TextInput
+                          fontSize={1}
                           ref={messageInputRef}
                           onKeyDown={(e) => e.key === 'Enter' && sendMessageToFramedApp()}
                           disabled={status !== 'connected'}
                         />
                       </Box>
                       <Button
+                        fontSize={1}
                         text="Send"
                         tone="primary"
                         onClick={sendMessageToFramedApp}
                         disabled={status !== 'connected'}
                       />
-                    </Box>
-                  </Stack>
+                    </Flex>
+                  </VStack>
                 </Card>
 
-                {/* Messages display */}
                 <Box>
-                  <Stack space={3}>
-                    <Text weight="semibold">Received Messages</Text>
+                  <VStack gap={3}>
+                    <Text size={1} weight="semibold">
+                      Received Messages
+                    </Text>
                     {receivedMessages.map((msg, idx) => (
-                      <Card key={idx} padding={3} radius={2}>
-                        <Stack space={2}>
+                      <Card density="compact" key={idx}>
+                        <VStack gap={2}>
                           <Text size={1} muted>
                             {msg.from}
                           </Text>
                           <Text>{msg.message}</Text>
-                        </Stack>
+                        </VStack>
                       </Card>
                     ))}
-                  </Stack>
+                  </VStack>
                 </Box>
-              </Stack>
+              </VStack>
             </Box>
-          </Box>
+          </Flex>
         </Box>
 
-        {/* Frame Display */}
-        <Box flex={1} height="fill">
-          <Card padding={3} height="fill" tone="transparent">
+        <Box flexGrow={1}>
+          <Card density="compact">
             <iframe
               ref={iframeRef}
               src={`/comlink-demo/frame${selectedFrame}`}
@@ -167,7 +170,7 @@ const ParentApp = (): ReactElement => {
             />
           </Card>
         </Box>
-      </Stack>
+      </VStack>
     </PageLayout>
   )
 }

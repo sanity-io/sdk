@@ -1,12 +1,12 @@
 import {DocumentHandle, useDocumentProjection, usePaginatedDocuments} from '@sanity/sdk-react'
-import {Box, Button, Card, Flex, Spinner, Stack, Text} from '@sanity/ui'
 import groq, {defineProjection} from 'groq'
 import {JSX, ReactNode, Suspense, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+import {Button, Card, Flex, Spinner, Text, VStack} from 'ui5'
 
+import {PageLayout} from '../components/PageLayout'
 import {PaginatedListToolbar} from '../components/PaginatedListToolbar'
 import {PaginationControls} from '../components/PaginationControls'
-// Import the custom table components
 import {Table, TD, TH, TR} from '../components/TableElements'
 
 interface PossibleAuthorProjections {
@@ -105,9 +105,9 @@ function ProjectionError({error}: {error: Error}): ReactNode {
   return (
     <TD padding={2}>
       <div style={{gridColumn: 'span 3'}}>
-        <Text size={1} style={{color: 'red'}}>
-          Error: {error.message}
-        </Text>
+        <Card density="compact" tone="critical">
+          <Text size={1}>Error: {error.message}</Text>
+        </Card>
       </div>
     </TD>
   )
@@ -176,9 +176,12 @@ export function DocumentProjectionRoute(): JSX.Element {
   }
 
   return (
-    <Stack space={4}>
-      <Card padding={4}>
-        <Stack space={4}>
+    <PageLayout
+      title="Document projection"
+      subtitle="Switch projections on a paginated author list"
+    >
+      <Card density="regular">
+        <VStack gap={4}>
           <PaginatedListToolbar
             noun="authors"
             searchTerm={searchTerm}
@@ -205,28 +208,26 @@ export function DocumentProjectionRoute(): JSX.Element {
             isPending={isPending}
           />
 
-          <Box padding={4}>
-            <Flex gap={2}>
-              <Button
-                onClick={() => setProjectionType('favoriteBooks')}
-                mode={projectionType === 'favoriteBooks' ? 'default' : 'ghost'}
-                text="Favorite Books"
-                data-testid="projection-button-favorite-books"
-              />
-              <Button
-                onClick={() => setProjectionType('bestFriend')}
-                mode={projectionType === 'bestFriend' ? 'default' : 'ghost'}
-                text="Best Friend"
-                data-testid="projection-button-best-friend"
-              />
-              <Button
-                onClick={() => setProjectionType('groqHelper')}
-                mode={projectionType === 'groqHelper' ? 'default' : 'ghost'}
-                text="Book Count"
-                data-testid="projection-button-book-count"
-              />
-            </Flex>
-          </Box>
+          <Flex gap={2}>
+            <Button
+              onClick={() => setProjectionType('favoriteBooks')}
+              level={projectionType === 'favoriteBooks' ? 'primary' : 'tertiary'}
+              text="Favorite Books"
+              data-testid="projection-button-favorite-books"
+            />
+            <Button
+              onClick={() => setProjectionType('bestFriend')}
+              level={projectionType === 'bestFriend' ? 'primary' : 'tertiary'}
+              text="Best Friend"
+              data-testid="projection-button-best-friend"
+            />
+            <Button
+              onClick={() => setProjectionType('groqHelper')}
+              level={projectionType === 'groqHelper' ? 'primary' : 'tertiary'}
+              text="Book Count"
+              data-testid="projection-button-book-count"
+            />
+          </Flex>
 
           <Table style={{opacity: isPending ? 0.5 : 1}} data-testid="projection-table">
             <thead>
@@ -259,11 +260,9 @@ export function DocumentProjectionRoute(): JSX.Element {
                   <TD padding={2}>
                     <div style={{gridColumn: 'span 3', textAlign: 'center', width: '100%'}}>
                       {isPending ? (
-                        <Flex justify="center" align="center">
+                        <Flex alignItems="center" gap={2} justifyContent="center">
                           <Spinner />
-                          <Text size={2} style={{marginLeft: '8px'}}>
-                            Loading authors...
-                          </Text>
+                          <Text size={1}>Loading authors...</Text>
                         </Flex>
                       ) : (
                         <Text>No authors found</Text>
@@ -289,8 +288,8 @@ export function DocumentProjectionRoute(): JSX.Element {
             goToPage={goToPage}
             isPending={isPending}
           />
-        </Stack>
+        </VStack>
       </Card>
-    </Stack>
+    </PageLayout>
   )
 }
