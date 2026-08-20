@@ -12,7 +12,7 @@
 ### Bug Fixes
 
 * **core:** retry transient dataset ACL fetch failures ([#1084](https://github.com/sanity-io/sdk/issues/1084)) ([03a015f](https://github.com/sanity-io/sdk/commit/03a015f5890fc859f579b1bdd0231da850f29737))
-* **core:** stop a byte-offset throw from wedging the outgoing-actions pipeline ([#1104](https://github.com/sanity-io/sdk/issues/1104)) ([3134f73](https://github.com/sanity-io/sdk/commit/3134f735e0285a4d86afeda448198c8f34dba902))
+* **core:** don't stop saving after an edit with emoji or accented text ([#1104](https://github.com/sanity-io/sdk/issues/1104)) ([3134f73](https://github.com/sanity-io/sdk/commit/3134f735e0285a4d86afeda448198c8f34dba902))
 * **core:** unregister subscription ids when reverting outgoing transactions ([#1076](https://github.com/sanity-io/sdk/issues/1076)) ([8c9a2b7](https://github.com/sanity-io/sdk/commit/8c9a2b75f97318a0991278e46a20ab4d9e9552a2))
 * **deps:** update dependency @sanity/client to ^7.24.0 ([#1064](https://github.com/sanity-io/sdk/issues/1064)) ([a2ced1b](https://github.com/sanity-io/sdk/commit/a2ced1b39f1f14180b2c67f491241a21dc11d9db))
 
