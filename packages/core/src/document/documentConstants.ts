@@ -24,3 +24,11 @@ export const UNVERIFIED_REVISION_RETENTION_TIME = 30_000
  */
 export const OUT_OF_SYNC_RETRY_BASE_DELAY = 500
 export const OUT_OF_SYNC_RETRY_MAX_DELAY = 10_000
+
+/**
+ * Base delay (ms) before retrying the dataset ACL fetch after a transient
+ * failure (a network error or 5xx response). Backoff doubles on each
+ * successive retry, capped at {@link ACL_RETRY_MAX_DELAY}.
+ */
+export const ACL_RETRY_BASE_DELAY = 500
+export const ACL_RETRY_MAX_DELAY = 10_000

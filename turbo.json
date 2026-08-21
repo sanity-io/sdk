@@ -46,7 +46,7 @@
     "dev": {
       "persistent": true,
       "cache": false,
-      "env": ["SANITY_INTERNAL_ENV"]
+      "env": ["SANITY_INTERNAL_ENV", "PTE_LOCAL_PKGS"]
     },
     "docs": {
       "dependsOn": ["^build"],

@@ -54,7 +54,12 @@ const config: KnipConfig = {
       project,
       entry: ['package.config.ts'],
       ignore: ['src/**/*.test-d.ts'],
-      ignoreDependencies: ['@sanity/browserslist-config', 'react-compiler-runtime'],
+      ignoreDependencies: [
+        '@sanity/browserslist-config',
+        'react-compiler-runtime',
+        // Loaded via createRequire in package.config.ts when VISUALIZER=true
+        'rolldown',
+      ],
     },
     'packages/@repo/e2e': {
       typescript: {
@@ -69,7 +74,11 @@ const config: KnipConfig = {
       },
       project,
       entry: ['package.config.ts'],
-      ignoreDependencies: ['@sanity/browserslist-config'],
+      ignoreDependencies: [
+        '@sanity/browserslist-config',
+        // Loaded via createRequire in package.config.ts when VISUALIZER=true
+        'rolldown',
+      ],
     },
   },
 }

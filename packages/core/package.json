@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk",
-  "version": "2.18.0",
+  "version": "2.20.1",
   "private": false,
   "description": "Sanity SDK",
   "keywords": [
@@ -35,18 +35,21 @@
   "exports": {
     ".": {
       "source": "./src/_exports/index.ts",
-      "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json",
     "./_internal": {
       "source": "./src/_exports/_internal.ts",
-      "import": "./dist/_exports/_internal.js",
       "default": "./dist/_exports/_internal.js"
     }
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "exports": {
+      ".": "./dist/index.js",
+      "./package.json": "./package.json",
+      "./_internal": "./dist/_exports/_internal.js"
+    }
   },
   "scripts": {
     "build": "pkg build --strict --clean --check",
@@ -93,7 +96,7 @@
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
     "oxfmt": "catalog:",
-    "rollup-plugin-visualizer": "catalog:",
+    "rolldown": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"

@@ -412,8 +412,23 @@ export function cleanupOutgoingTransaction(prev: SyncTransactionState): SyncTran
 
 export function revertOutgoingTransaction(prev: SyncTransactionState): SyncTransactionState {
   if (!prev.grants) return prev
+
+  // unregister the reverted batch's transaction-held subscriptions, symmetric
+  // with `cleanupOutgoingTransaction` on ack and `removeQueuedTransaction` on
+  // apply failure. without this, a reverted document's subscription IDs are
+  // never released and it can never be evicted
+  let base = prev
+  if (prev.outgoing) {
+    const ids = getDocumentIdsFromHandleLikes(prev.outgoing.actions)
+    for (const transactionId of prev.outgoing.batchedTransactionIds) {
+      for (const documentId of ids) {
+        base = removeSubscriptionIdFromDocument(base, documentId, transactionId)
+      }
+    }
+  }
+
   let working = Object.fromEntries(
-    Object.entries(prev.documentStates).map(([documentId, documentState]) => [
+    Object.entries(base.documentStates).map(([documentId, documentState]) => [
       documentId,
       documentState?.remote,
     ]),
@@ -434,7 +449,7 @@ export function revertOutgoingTransaction(prev: SyncTransactionState): SyncTrans
   }
 
   return {
-    ...prev,
+    ...base,
     applied: nextApplied,
     outgoing: undefined,
     // discarding the outgoing transaction drops its echo-recognition memory,
@@ -442,7 +457,7 @@ export function revertOutgoingTransaction(prev: SyncTransactionState): SyncTrans
     // with nothing left to wait for, so sweep afterwards
     documentStates: evictOrphanedDocumentStates(
       Object.fromEntries(
-        Object.entries(prev.documentStates)
+        Object.entries(base.documentStates)
           .filter((e): e is [string, DocumentState] => !!e[1])
           .map(([documentId, documentState]) => {
             const {unverifiedRevisions = {}} = documentState

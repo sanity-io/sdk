@@ -69,6 +69,36 @@ export {
   type RequestNewTokenMessage,
   type WindowMessage,
 } from '../comlink/types'
+export {
+  createComment,
+  type CreateCommentOptions,
+  removeComment,
+  type RemoveCommentOptions,
+  replyToComment,
+  type ReplyToCommentOptions,
+  setCommentStatus,
+  type SetCommentStatusOptions,
+  updateComment,
+  type UpdateCommentOptions,
+} from '../comments/commentActions'
+export {
+  type CommentsOptions,
+  getCommentsState,
+  getCommentThreadsState,
+  resolveComments,
+  type ResolveCommentsOptions,
+  resolveCommentThreads,
+} from '../comments/commentsStore'
+export {
+  type Comment,
+  type CommentLocalState,
+  type CommentMessage,
+  type CommentReaction,
+  type CommentStatus,
+  type CommentTextSelection,
+  type CommentTextSelectionItem,
+  type CommentThread,
+} from '../comments/types'
 export {type AuthConfig, type AuthProvider} from '../config/authConfig'
 export {
   createDatasetHandle,
@@ -193,10 +223,16 @@ export {
   type OrganizationsOptions,
   resolveOrganizations,
 } from '../organizations/organizations'
-export {getPresence} from '../presence/presenceStore'
+export {getDocumentPresence, getPresence, reportPresence} from '../presence/presenceStore'
 export type {
   DisconnectEvent,
+  DocumentPresence,
+  DocumentPresenceOptions,
   PresenceLocation,
+  PresencePerspectiveOptions,
+  PresenceSelection,
+  PresenceSelectionPoint,
+  ReportPresenceOptions,
   RollCallEvent,
   StateEvent,
   TransportEvent,

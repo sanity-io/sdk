@@ -21,8 +21,21 @@ This repo uses pnpm with Turbo. Common commands run from the root:
 - `pnpm lint` runs ESLint with `--fix`.
 - `pnpm dev` runs the kitchensink dev server.
 - `pnpm build` builds packages and apps.
+- `pnpm fallow audit` checks changed files for dead code, complexity, and duplication.
 
 Use `pnpm --filter @sanity/sdk-core ...` (or `--filter @sanity/sdk-react`) to scope a command to a single package.
+
+## Before you report work as complete
+
+Passing `pnpm test`, `pnpm ts:check`, and `pnpm lint` is not enough. Pull requests also run a Fallow audit that fails on dead code, complexity, and duplication your change introduced. None of the other checks catch those, so a change can look finished locally and still fail CI.
+
+Run the audit as the last step of any task that adds or edits source files:
+
+```bash
+pnpm fallow audit
+```
+
+It reads the working tree, so there is no need to commit first, and it finishes in about a second. Exit code 1 means CI will fail. See `.claude/rules/fallow.md` for how to read the output and fix each kind of finding.
 
 ## Coding standards
 

@@ -1,5 +1,52 @@
 # Changelog
 
+## [2.20.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.20.0...sdk-react-v2.20.1) (2026-08-21)
+
+
+### Bug Fixes
+
+* **react:** transpile JSX in the published bundle ([#1106](https://github.com/sanity-io/sdk/issues/1106)) ([5f4ec7f](https://github.com/sanity-io/sdk/commit/5f4ec7ff22a3cd3728838007dd084f5e0922d8ac))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.20.1
+
+## [2.20.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.19.0...sdk-react-v2.20.0) (2026-08-20)
+
+
+### Features
+
+* **react:** add comment hooks ([#1087](https://github.com/sanity-io/sdk/issues/1087)) ([2507e0a](https://github.com/sanity-io/sdk/commit/2507e0a4303400a0fa866598e3d8e2b449b10363))
+
+
+### Bug Fixes
+
+* **react:** allow `null` as fallback for `ResourceProvider` ([#1083](https://github.com/sanity-io/sdk/issues/1083)) ([3c06ab7](https://github.com/sanity-io/sdk/commit/3c06ab70d0f8711b78e4a90b1525219f29c7ed46))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.20.0
+
+## [2.19.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.18.0...sdk-react-v2.19.0) (2026-08-03)
+
+
+### Features
+
+* **react:** add presence reporting and per-document presence hooks ([#1081](https://github.com/sanity-io/sdk/issues/1081)) ([d2345ff](https://github.com/sanity-io/sdk/commit/d2345ff7ff972e72bcc22dc21b286a79355cba3c))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.19.0
+
 ## [2.18.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.17.0...sdk-react-v2.18.0) (2026-07-20)
 
 

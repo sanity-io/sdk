@@ -746,6 +746,60 @@ describe('revertOutgoingTransaction', () => {
     expect(docState?.unverifiedRevisions && docState.unverifiedRevisions['txnOut']).toBeUndefined()
   })
 
+  it('unregisters the reverted batch subscription ids, making documents with no other subscribers evictable', () => {
+    const draftId = getDraftId(DocumentId('doc1'))
+    const pubId = getPublishedId(DocumentId('doc1'))
+    const state: SyncTransactionState = {
+      queued: [],
+      applied: [],
+      outgoing: {
+        transactionId: 'txnRevert',
+        actions: [
+          {
+            type: 'document.edit',
+            documentId: 'doc1',
+            documentType: 'book',
+            patches: [{set: {foo: 'changed'}}],
+          },
+        ],
+        disableBatching: false,
+        batchedTransactionIds: ['txnRevert'],
+        outgoingActions: [],
+        outgoingMutations: [],
+        base: {},
+        working: {},
+        previous: {},
+        previousRevs: {},
+        timestamp: '2025-02-06T00:04:30.000Z',
+      },
+      grants,
+      documentStates: {
+        // only subscriber is the reverted transaction itself
+        [draftId]: {
+          id: draftId,
+          subscriptions: ['txnRevert'],
+          local: {...exampleDoc, _id: draftId, foo: 'changed', _rev: 'rev2'},
+          remote: {...exampleDoc, _id: draftId, foo: 'old', _rev: 'rev1'},
+        },
+        // also has a UI subscriber, so it should survive with only the
+        // transaction subscription removed
+        [pubId]: {
+          id: pubId,
+          subscriptions: ['txnRevert', 'sub-ui'],
+          local: {...exampleDoc, _id: pubId, foo: 'pub', _rev: 'revPub'},
+          remote: {...exampleDoc, _id: pubId, foo: 'pub', _rev: 'revPub'},
+        },
+      },
+    }
+    const newState = revertOutgoingTransaction(state)
+    expect(newState.outgoing).toBeUndefined()
+    // no subscribers remain, so the document state is evicted entirely
+    expect(newState.documentStates[draftId]).toBeUndefined()
+    // the UI subscription keeps the other document alive, but the reverted
+    // transaction id is gone from its subscriptions
+    expect(newState.documentStates[pubId]?.subscriptions).toEqual(['sub-ui'])
+  })
+
   it('evicts a document left with no subscribers once its unverified revision is discarded', () => {
     const docId = 'doc1'
     const state: SyncTransactionState = {
@@ -851,7 +905,9 @@ describe('revertOutgoingTransaction', () => {
     }
 
     const newState = revertOutgoingTransaction(state)
-    expect(newState.documentStates[revertedId]?.local).toMatchObject({foo: 'old'})
+    // the reverted document's only subscriber was the batch itself, so
+    // unregistering it evicts the state
+    expect(newState.documentStates[revertedId]).toBeUndefined()
     expect(newState.documentStates[retainedId]?.local).toMatchObject({foo: 'acked'})
   })
 })
@@ -1343,6 +1399,85 @@ describe('applyRemoteDocument', () => {
         transactionId: 'txnPruned',
         origin: 'local',
       })
+    })
+  })
+
+  describe('rebase over multi-byte text', () => {
+    it('does not kill the pipeline when a plain edit rebases onto multi-byte text', () => {
+      // The reported production failure: a byte-offset throw from
+      // `@sanity/diff-match-patch` is a plain `Error`, and `createMutationApplier`
+      // only converts to `ActionError` when `preserveOperations` is set. So for an
+      // ordinary `editDocument` it escapes this rebase loop, reaches the rxjs
+      // subscription, and the outgoing-actions pipeline for the whole instance
+      // dies. Every later write is then dropped silently, for every document.
+      const docId = getDraftId(DocumentId('doc1'))
+      const originalDoc: SanityDocument = {
+        ...exampleDoc,
+        _id: docId,
+        _rev: 'rev1',
+        title: 'abcdefg\u00f8',
+      }
+      const locallyEditedDoc: SanityDocument = {
+        ...originalDoc,
+        title: 'abcdefg\u00f8!',
+        _rev: 'txnLocal',
+      }
+
+      const appliedTransaction: AppliedTransaction = {
+        transactionId: 'txnLocal',
+        actions: [
+          {
+            type: 'document.edit',
+            documentId: 'doc1',
+            documentType: 'author',
+            patches: [{diffMatchPatch: {title: '@@ -9,1 +9,2 @@\n \u00f8\n+!\n'}}],
+          },
+        ],
+        previous: {[docId]: originalDoc},
+        base: {[docId]: originalDoc},
+        working: {[docId]: locallyEditedDoc},
+        previousRevs: {[docId]: 'rev1'},
+        timestamp: '2025-02-06T00:16:00.000Z',
+        outgoingActions: [],
+        outgoingMutations: [],
+      }
+
+      const initialState: SyncTransactionState = {
+        queued: [],
+        applied: [appliedTransaction],
+        outgoing: undefined,
+        grants,
+        documentStates: {
+          [docId]: {
+            id: docId,
+            subscriptions: ['sub1'],
+            local: locallyEditedDoc,
+            remote: originalDoc,
+            unverifiedRevisions: {},
+          },
+        },
+      }
+
+      // someone else changed the same field, so the local patch is rebased onto
+      // a base its byte offsets were not computed against
+      const remoteDoc: SanityDocument = {
+        ...originalDoc,
+        title: '\u00f8\u00f8\u00f8\u00f8\u00f8\u00f8',
+        _rev: 'txnForeign',
+      }
+      const remote: RemoteDocument = {
+        type: 'mutation',
+        documentId: docId,
+        document: remoteDoc,
+        revision: 'txnForeign',
+        previousRev: 'rev1',
+        timestamp: '2025-02-06T00:17:00.000Z',
+        mutations: [{patch: {id: docId, set: {title: '\u00f8\u00f8\u00f8\u00f8\u00f8\u00f8'}}}],
+      }
+
+      const events = new Subject<DocumentEvent>()
+
+      expect(() => applyRemoteDocument(initialState, remote, events)).not.toThrow()
     })
   })
 

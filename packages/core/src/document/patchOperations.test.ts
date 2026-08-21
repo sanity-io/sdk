@@ -565,6 +565,33 @@ describe('diffMatchPatch', () => {
     expect(output).toEqual(input)
   })
 
+  it('applies the patch when its offsets miss a multi-byte boundary', () => {
+    // `\u00f8` is two bytes, so this patch's offsets land inside it and the byte
+    // walk overshoots. The default is to throw, which escapes the rebase loop in
+    // `reducers.ts` and kills the whole outgoing-actions pipeline: the instance
+    // then silently stops writing every document. The patch itself is fine and
+    // still applies.
+    const input = {foo: 'abcdefg\u00f8'}
+    const patch = '@@ -9,1 +9,2 @@\n \u00f8\n+!\n'
+
+    expect(() => diffMatchPatch(input, {foo: patch})).not.toThrow()
+    expect(diffMatchPatch(input, {foo: patch})).toEqual({foo: 'abcdefg\u00f8!'})
+  })
+
+  it('still patches the other properties in the same mutation', () => {
+    const input = {multibyte: 'abcdefg\u00f8', ascii: 'the quick brown fox'}
+
+    const output = diffMatchPatch(input, {
+      multibyte: '@@ -9,1 +9,2 @@\n \u00f8\n+!\n',
+      ascii: '@@ -13,7 +13,7 @@\n own \n-fox\n+cat\n',
+    })
+
+    expect(output).toEqual({
+      multibyte: 'abcdefg\u00f8!',
+      ascii: 'the quick brown cat',
+    })
+  })
+
   it('applies a diff-match-patch that makes no changes', () => {
     const input = {foo: 'unchanged'}
     const patch = '@@ -1,9 +1,9 @@\n unchanged\n'

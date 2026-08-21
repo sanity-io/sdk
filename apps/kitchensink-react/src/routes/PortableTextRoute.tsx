@@ -4,11 +4,37 @@ import {
   PortableTextEditable,
   type RenderAnnotationFunction,
   type RenderDecoratorFunction,
-  useEditor,
-  useEditorSelector,
+  type RenderListItemFunction,
+  type RenderStyleFunction,
 } from '@portabletext/editor'
-import * as selectors from '@portabletext/editor/selectors'
+import {
+  blockquote,
+  bold,
+  code,
+  h1,
+  h2,
+  italic,
+  type KeyboardShortcut,
+  link,
+  underline,
+} from '@portabletext/keyboard-shortcuts'
 import {SDKValuePlugin} from '@portabletext/plugin-sdk-value'
+import {
+  type ExtendAnnotationSchemaType,
+  type ExtendDecoratorSchemaType,
+  type ExtendListSchemaType,
+  type ExtendStyleSchemaType,
+  type ToolbarAnnotationSchemaType,
+  type ToolbarDecoratorSchemaType,
+  type ToolbarListSchemaType,
+  type ToolbarStyleSchemaType,
+  useAnnotationButton,
+  useDecoratorButton,
+  useHistoryButtons,
+  useListButton,
+  useStyleSelector,
+  useToolbarSchema,
+} from '@portabletext/toolbar'
 import {createSanityInstance, isDatasetResource, type SanityInstance} from '@sanity/sdk'
 import {
   createDocumentHandle,
@@ -19,20 +45,51 @@ import {
   useResource,
 } from '@sanity/sdk-react'
 import {Badge, Box, Button, Card, Flex, Spinner, Stack, Text, TextInput} from '@sanity/ui'
-import {type JSX, type ReactNode, Suspense, useEffect, useMemo, useState} from 'react'
+import {
+  type ElementType,
+  type JSX,
+  type ReactNode,
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 
 import {isE2E} from '../sanityConfigs'
 
 const PTE_FIELD_PATH = 'minimalBlock'
 
 const schemaDefinition = defineSchema({
-  decorators: [{name: 'strong'}, {name: 'em'}],
+  styles: [{name: 'normal'}, {name: 'h1'}, {name: 'h2'}, {name: 'blockquote'}],
+  lists: [{name: 'bullet'}, {name: 'number'}],
+  decorators: [{name: 'strong'}, {name: 'em'}, {name: 'underline'}, {name: 'code'}],
   annotations: [{name: 'link', fields: [{name: 'href', type: 'string'}]}],
 })
 
+const simpleDecoratorTags: Record<string, ElementType> = {
+  strong: 'strong',
+  em: 'em',
+  underline: 'u',
+}
+
 const renderDecorator: RenderDecoratorFunction = (props) => {
-  if (props.value === 'strong') return <strong>{props.children}</strong>
-  if (props.value === 'em') return <em>{props.children}</em>
+  const Tag = simpleDecoratorTags[props.value]
+  if (Tag) return <Tag>{props.children}</Tag>
+  if (props.value === 'code') {
+    return (
+      <code
+        style={{
+          background: 'var(--card-code-bg-color)',
+          borderRadius: 3,
+          fontFamily: 'monospace',
+          fontSize: '0.95em',
+          padding: '0.08em 0.25em',
+        }}
+      >
+        {props.children}
+      </code>
+    )
+  }
   return <>{props.children}</>
 }
 
@@ -43,68 +100,240 @@ const renderAnnotation: RenderAnnotationFunction = (props) => {
   return <>{props.children}</>
 }
 
-function ToolbarButton(props: {
-  active: boolean
-  label: string
-  onClick: () => void
+const renderStyle: RenderStyleFunction = (props) => {
+  if (props.value === 'h1') {
+    return <h1 style={{margin: 0, fontSize: '1.5rem'}}>{props.children}</h1>
+  }
+
+  if (props.value === 'h2') {
+    return <h2 style={{margin: 0, fontSize: '1.25rem'}}>{props.children}</h2>
+  }
+
+  if (props.value === 'blockquote') {
+    return (
+      <blockquote style={{borderLeft: '3px solid #6e7683', margin: 0, paddingLeft: '0.75rem'}}>
+        {props.children}
+      </blockquote>
+    )
+  }
+
+  return <>{props.children}</>
+}
+
+const renderListItem: RenderListItemFunction = (props) => {
+  const listStyleType = props.value === 'number' ? 'decimal' : 'disc'
+  return <li style={{listStyleType, margin: 0}}>{props.children}</li>
+}
+
+// `@portabletext/toolbar`'s extend hooks are where a plain editor schema
+// picks up the display metadata (title, keyboard shortcut) a toolbar needs.
+// These are defined at module scope so `useToolbarSchema` doesn't recompute
+// the extended schema on every render.
+const decoratorDisplay: Record<string, {title: string; shortcut: KeyboardShortcut}> = {
+  strong: {title: 'Bold', shortcut: bold},
+  em: {title: 'Italic', shortcut: italic},
+  underline: {title: 'Underline', shortcut: underline},
+  code: {title: 'Code', shortcut: code},
+}
+
+const extendDecorator: ExtendDecoratorSchemaType = (decorator) => {
+  const display = decoratorDisplay[decorator.name]
+  return display ? {...decorator, ...display} : decorator
+}
+
+const extendAnnotation: ExtendAnnotationSchemaType = (annotation) => {
+  if (annotation.name === 'link') {
+    return {
+      ...annotation,
+      title: 'Link',
+      shortcut: link,
+      defaultValues: {href: 'https://www.sanity.io'},
+    }
+  }
+  return annotation
+}
+
+const extendStyle: ExtendStyleSchemaType = (style) => {
+  if (style.name === 'h1') return {...style, title: 'H1', shortcut: h1}
+  if (style.name === 'h2') return {...style, title: 'H2', shortcut: h2}
+  if (style.name === 'blockquote') return {...style, title: 'Quote', shortcut: blockquote}
+  return style
+}
+
+const extendList: ExtendListSchemaType = (list) => {
+  if (list.name === 'bullet') return {...list, title: 'UL'}
+  if (list.name === 'number') return {...list, title: 'OL'}
+  return list
+}
+
+function DecoratorButton({
+  schemaType,
+  testId,
+}: {
+  schemaType: ToolbarDecoratorSchemaType
   testId: string
 }) {
+  const decoratorButton = useDecoratorButton({schemaType})
+  const active = decoratorButton.snapshot.matches({enabled: 'active'})
+  const label = schemaType.title ?? schemaType.name
+
   return (
     <Button
-      mode={props.active ? 'default' : 'ghost'}
-      tone={props.active ? 'primary' : 'default'}
-      text={props.label}
+      mode={active ? 'default' : 'ghost'}
+      tone={active ? 'primary' : 'default'}
+      text={label}
       fontSize={1}
       padding={2}
-      onClick={props.onClick}
-      data-testid={props.testId}
+      disabled={decoratorButton.snapshot.matches('disabled')}
+      onClick={() => decoratorButton.send({type: 'toggle'})}
+      data-testid={`pte-${label.toLowerCase()}-${testId}`}
     />
   )
 }
 
-function Toolbar({testId}: {testId: string}) {
-  const editor = useEditor()
-  const strongActive = useEditorSelector(editor, selectors.isActiveDecorator('strong'))
-  const emActive = useEditorSelector(editor, selectors.isActiveDecorator('em'))
-  const linkActive = useEditorSelector(editor, selectors.isActiveAnnotation('link'))
+function AnnotationButton({
+  schemaType,
+  testId,
+}: {
+  schemaType: ToolbarAnnotationSchemaType
+  testId: string
+}) {
+  const annotationButton = useAnnotationButton({schemaType})
+  const active = annotationButton.snapshot.matches({enabled: 'active'})
+  const label = schemaType.title ?? schemaType.name
 
-  const toggleDecorator = (decorator: string) => {
-    editor.send({type: 'decorator.toggle', decorator})
-    editor.send({type: 'focus'})
-  }
-
-  const toggleLink = () => {
-    if (linkActive) {
-      editor.send({type: 'annotation.remove', annotation: {name: 'link'}})
+  // `defaultValues` from the schema extension stands in for the insert
+  // dialog a real toolbar would show: it lets `add` be sent directly
+  // instead of going through the button's dialog-open state.
+  const toggle = () => {
+    if (active) {
+      annotationButton.send({type: 'remove'})
     } else {
-      editor.send({
-        type: 'annotation.add',
-        annotation: {name: 'link', value: {href: 'https://www.sanity.io'}},
-      })
+      annotationButton.send({type: 'add', annotation: {value: schemaType.defaultValues ?? {}}})
     }
-    editor.send({type: 'focus'})
   }
 
   return (
-    <Flex gap={1}>
-      <ToolbarButton
-        active={strongActive}
-        label="Bold"
-        onClick={() => toggleDecorator('strong')}
-        testId={`pte-bold-${testId}`}
+    <Button
+      mode={active ? 'default' : 'ghost'}
+      tone={active ? 'primary' : 'default'}
+      text={label}
+      fontSize={1}
+      padding={2}
+      disabled={annotationButton.snapshot.matches('disabled')}
+      onClick={toggle}
+      data-testid={`pte-${label.toLowerCase()}-${testId}`}
+    />
+  )
+}
+
+function ListButton({schemaType, testId}: {schemaType: ToolbarListSchemaType; testId: string}) {
+  const listButton = useListButton({schemaType})
+  const active = listButton.snapshot.matches({enabled: 'active'})
+  const label = schemaType.title ?? schemaType.name
+
+  return (
+    <Button
+      mode={active ? 'default' : 'ghost'}
+      tone={active ? 'primary' : 'default'}
+      text={label}
+      fontSize={1}
+      padding={2}
+      disabled={listButton.snapshot.matches('disabled')}
+      onClick={() => listButton.send({type: 'toggle'})}
+      data-testid={`pte-${label.toLowerCase()}-${testId}`}
+    />
+  )
+}
+
+// Styles are mutually exclusive (a block has at most one), so
+// `useStyleSelector` manages the whole group behind one state machine
+// instead of one hook call per button, unlike decorators/lists/annotations.
+function StyleButtons({
+  schemaTypes,
+  testId,
+}: {
+  schemaTypes: ReadonlyArray<ToolbarStyleSchemaType>
+  testId: string
+}) {
+  const styleSelector = useStyleSelector({schemaTypes})
+  const disabled = styleSelector.snapshot.matches('disabled')
+  const {activeStyle} = styleSelector.snapshot.context
+
+  return (
+    <>
+      {schemaTypes
+        .filter((schemaType) => schemaType.name !== 'normal')
+        .map((schemaType) => {
+          const active = activeStyle === schemaType.name
+          const label = schemaType.title ?? schemaType.name
+          return (
+            <Button
+              key={schemaType.name}
+              mode={active ? 'default' : 'ghost'}
+              tone={active ? 'primary' : 'default'}
+              text={label}
+              fontSize={1}
+              padding={2}
+              disabled={disabled}
+              onClick={() => styleSelector.send({type: 'toggle', style: schemaType.name})}
+              data-testid={`pte-${label.toLowerCase()}-${testId}`}
+            />
+          )
+        })}
+    </>
+  )
+}
+
+function HistoryButtons({testId}: {testId: string}) {
+  const historyButtons = useHistoryButtons()
+  const disabled = historyButtons.snapshot.matches('disabled')
+
+  return (
+    <>
+      <Button
+        mode="ghost"
+        text="Undo"
+        fontSize={1}
+        padding={2}
+        disabled={disabled}
+        onClick={() => historyButtons.send({type: 'history.undo'})}
+        data-testid={`pte-undo-${testId}`}
       />
-      <ToolbarButton
-        active={emActive}
-        label="Italic"
-        onClick={() => toggleDecorator('em')}
-        testId={`pte-italic-${testId}`}
+      <Button
+        mode="ghost"
+        text="Redo"
+        fontSize={1}
+        padding={2}
+        disabled={disabled}
+        onClick={() => historyButtons.send({type: 'history.redo'})}
+        data-testid={`pte-redo-${testId}`}
       />
-      <ToolbarButton
-        active={linkActive}
-        label="Link"
-        onClick={toggleLink}
-        testId={`pte-link-${testId}`}
-      />
+    </>
+  )
+}
+
+function Toolbar({testId}: {testId: string}) {
+  const toolbarSchema = useToolbarSchema({
+    extendDecorator,
+    extendAnnotation,
+    extendStyle,
+    extendList,
+  })
+
+  return (
+    <Flex gap={1} style={{flexWrap: 'wrap'}}>
+      {toolbarSchema.decorators.map((decorator) => (
+        <DecoratorButton key={decorator.name} schemaType={decorator} testId={testId} />
+      ))}
+      <StyleButtons schemaTypes={toolbarSchema.styles} testId={testId} />
+      {toolbarSchema.lists.map((list) => (
+        <ListButton key={list.name} schemaType={list} testId={testId} />
+      ))}
+      {toolbarSchema.annotations.map((annotation) => (
+        <AnnotationButton key={annotation.name} schemaType={annotation} testId={testId} />
+      ))}
+      <HistoryButtons testId={testId} />
     </Flex>
   )
 }
@@ -149,6 +378,8 @@ function EditorPane({
               style={{minHeight: 120, outline: 'none'}}
               renderDecorator={renderDecorator}
               renderAnnotation={renderAnnotation}
+              renderListItem={renderListItem}
+              renderStyle={renderStyle}
               data-testid={`pte-editable-${testId}`}
             />
           </Card>
@@ -225,8 +456,9 @@ function ConcurrentEditors() {
             <Text size={1} muted>
               Both panes edit the <code>{PTE_FIELD_PATH}</code> field of the same author document,
               but the right pane runs on its own SanityInstance, so edits sync through the server
-              like two separate users. Type in both panes at once and toggle bold/italic/link
-              mid-typing: edits should interleave without overwriting each other.
+              like two separate users. Type in both panes at once and toggle toolbar formatting
+              (decorators, styles, lists, link, undo, redo) mid-typing: edits should interleave
+              without overwriting each other.
             </Text>
             <Flex gap={3} align="flex-end">
               <Box flex={1}>

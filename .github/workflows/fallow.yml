@@ -32,13 +32,20 @@ jobs:
       - name: Audit changed files
         run: |
           BASE_REF="${{ github.event.pull_request.base.ref || 'main' }}"
-          git fetch origin "$BASE_REF" --depth=1 || true
+          # The explicit refspec matters. `git fetch origin <branch>` writes only
+          # FETCH_HEAD, so `origin/<branch>` never appears for any base other than
+          # the default branch, which checkout already fetched. On a stacked PR the
+          # audit then cannot resolve its base and exits 2, which reads as a lint
+          # failure rather than a missing ref.
+          git fetch origin "+$BASE_REF:refs/remotes/origin/$BASE_REF" --depth=1 || true
           AUDIT_OUTPUT=$(pnpm --silent fallow audit --base "origin/$BASE_REF" --format markdown --quiet) || AUDIT_EXIT=$?
+          # Echoed as well as summarised: a failure is otherwise undiagnosable from
+          # the job log, since the summary is only rendered in the web UI.
           {
             echo "## Fallow audit"
             echo ""
             echo "$AUDIT_OUTPUT"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
           exit "${AUDIT_EXIT:-0}"
 
       - name: Hotspots

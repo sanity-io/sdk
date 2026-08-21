@@ -45,6 +45,9 @@ export {
   type WindowConnection,
   type WindowMessageHandler,
 } from '../hooks/comlink/useWindowConnection'
+export {type CommentActions, useCommentActions} from '../hooks/comments/useCommentActions'
+export {useComments, type UseCommentsResult} from '../hooks/comments/useComments'
+export {useCommentThreads, type UseCommentThreadsResult} from '../hooks/comments/useCommentThreads'
 export {useResource} from '../hooks/context/useResource'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
@@ -78,6 +81,11 @@ export {
   usePaginatedDocuments,
 } from '../hooks/paginatedDocuments/usePaginatedDocuments'
 export {usePresence} from '../hooks/presence/usePresence'
+export {
+  usePresenceForDocument,
+  type UsePresenceForDocumentOptions,
+} from '../hooks/presence/usePresenceForDocument'
+export {useReportPresence, type UseReportPresenceOptions} from '../hooks/presence/useReportPresence'
 export {
   useDocumentPreview,
   type useDocumentPreviewOptions,
