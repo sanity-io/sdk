@@ -3,6 +3,7 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "./dist",
+    "jsx": "react-jsx",
     // For import.meta.env/import.meta.hot definitions and similar
     "types": ["vite/client", "node"],
     "paths": {
