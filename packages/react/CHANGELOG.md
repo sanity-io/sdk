@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.20.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.20.0...sdk-react-v2.20.1) (2026-08-21)
+
+
+### Bug Fixes
+
+* **react:** transpile JSX in the published bundle ([#1106](https://github.com/sanity-io/sdk/issues/1106)) ([5f4ec7f](https://github.com/sanity-io/sdk/commit/5f4ec7ff22a3cd3728838007dd084f5e0922d8ac))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.20.1
+
 ## [2.20.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.19.0...sdk-react-v2.20.0) (2026-08-20)
 
 
