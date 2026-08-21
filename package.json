@@ -47,6 +47,7 @@
     "test:e2e:dashboard": "turbo run test:e2e --filter=@sanity/kitchensink-react -- --project=chromium --project=firefox",
     "test:e2e:webkit": "turbo run test:e2e --filter=@sanity/kitchensink-react -- --project=webkit",
     "test:kitchensink": "turbo run test --filter=@sanity/kitchensink-react",
+    "test:pack": "tsx scripts/pack-smoke-test.mts",
     "test:watch": "vitest watch",
     "ts:check": "turbo run ts:check --filter='./packages/*' --filter='./apps/*'",
     "upload:bundles": "tsx scripts/uploadBundles.mts"
@@ -63,6 +64,7 @@
     "@sanity/pkg-utils": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "esbuild": "^0.28.2",
     "eslint": "catalog:",
     "fallow": "^3.2.0",
     "husky": "^9.1.7",
