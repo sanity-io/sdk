@@ -1,28 +1,11 @@
-import {basePackageConfig} from '@repo/package.config'
+import {basePackageConfig, bundleAnalyzerPlugins} from '@repo/package.config'
 import {defineConfig} from '@sanity/pkg-utils'
-import visualizer from 'rollup-plugin-visualizer'
-
-const enableVisualizer = process.env['VISUALIZER'] === 'true'
 
 export default defineConfig({
   ...basePackageConfig,
   tsconfig: 'tsconfig.dist.json',
-  babel: {
-    reactCompiler: true,
-  },
-  reactCompilerOptions: {
+  reactCompiler: {
     target: '18',
   },
-  rollup: {
-    plugins: [
-      ...(enableVisualizer
-        ? [
-            visualizer({
-              filename: './stats/index.html',
-              open: false,
-            }),
-          ]
-        : []),
-    ],
-  },
+  plugins: bundleAnalyzerPlugins(import.meta.url),
 })

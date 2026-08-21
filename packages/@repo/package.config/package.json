@@ -7,6 +7,10 @@
   "main": "./src/package.config.ts",
   "types": "./src/package.config.ts",
   "scripts": {
-    "ts:check": "tsc --noEmit --skipLibCheck src/package.config.ts"
+    "ts:check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "@types/node": "catalog:"
   }
 }

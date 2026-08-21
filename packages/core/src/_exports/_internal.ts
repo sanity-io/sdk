@@ -6,6 +6,7 @@ export {
   getClientErrorApiType,
   isProjectUserNotFoundClientError,
 } from '../auth/utils'
+export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/commentsStore' // only used for memoizing in React, not needed for actual functionality
 export {PREVIEW_PROJECTION} from '../preview/previewConstants'
 export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
 export {getQueryKey, parseQueryKey} from '../query/queryStore' // only used for memoizing in React, not needed for actual functionality

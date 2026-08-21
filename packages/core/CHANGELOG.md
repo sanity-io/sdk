@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.20.1](https://github.com/sanity-io/sdk/compare/sdk-v2.20.0...sdk-v2.20.1) (2026-08-21)
+
+
+### Miscellaneous
+
+* **sdk:** Synchronize sdk versions
+
+## [2.20.0](https://github.com/sanity-io/sdk/compare/sdk-v2.19.0...sdk-v2.20.0) (2026-08-20)
+
+
+### Features
+
+* **core:** add commenting store and write actions ([#1085](https://github.com/sanity-io/sdk/issues/1085)) ([f5d05aa](https://github.com/sanity-io/sdk/commit/f5d05aaaa0b8c7034e5ca4f5ed0a912d81675fd4))
+* **react:** add comment hooks ([#1087](https://github.com/sanity-io/sdk/issues/1087)) ([2507e0a](https://github.com/sanity-io/sdk/commit/2507e0a4303400a0fa866598e3d8e2b449b10363))
+
+
+### Bug Fixes
+
+* **core:** retry transient dataset ACL fetch failures ([#1084](https://github.com/sanity-io/sdk/issues/1084)) ([03a015f](https://github.com/sanity-io/sdk/commit/03a015f5890fc859f579b1bdd0231da850f29737))
+* **core:** don't stop saving after an edit with emoji or accented text ([#1104](https://github.com/sanity-io/sdk/issues/1104)) ([3134f73](https://github.com/sanity-io/sdk/commit/3134f735e0285a4d86afeda448198c8f34dba902))
+* **core:** unregister subscription ids when reverting outgoing transactions ([#1076](https://github.com/sanity-io/sdk/issues/1076)) ([8c9a2b7](https://github.com/sanity-io/sdk/commit/8c9a2b75f97318a0991278e46a20ab4d9e9552a2))
+* **deps:** update dependency @sanity/client to ^7.24.0 ([#1064](https://github.com/sanity-io/sdk/issues/1064)) ([a2ced1b](https://github.com/sanity-io/sdk/commit/a2ced1b39f1f14180b2c67f491241a21dc11d9db))
+
 ## [2.19.0](https://github.com/sanity-io/sdk/compare/sdk-v2.18.0...sdk-v2.19.0) (2026-08-03)
 
 
