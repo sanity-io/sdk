@@ -54,6 +54,11 @@ jobs:
       - name: install deps & build
         run: pnpm install --ignore-scripts && pnpm build --filter=!./apps/*
         if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
+      # Last gate before npm: verify the tarballs we are about to publish parse
+      # as plain JS and have intact entry points. See scripts/pack-smoke-test.mts.
+      - name: Smoke test packed tarballs
+        run: pnpm test:pack
+        if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
       - name: Set publishing config
         run: pnpm config set '//registry.npmjs.org/:_authToken' "${NODE_AUTH_TOKEN}"
         if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
