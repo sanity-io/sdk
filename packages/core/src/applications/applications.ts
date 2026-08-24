@@ -120,6 +120,10 @@ export interface ApplicationBase {
   id: string
   type: 'studio' | 'coreApp'
   title: string
+  /** Stable, immutable identity, distinct from the mutable `slug` address. */
+  name: string
+  /** Qualified, globally-unique handle: `sanity/<name>` for singletons, `<organizationId>/<name>` otherwise. */
+  reference: string
   icon: string | null
   isSingleton: boolean
   visibility: 'default' | 'unlisted' | 'disabled'

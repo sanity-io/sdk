@@ -30,6 +30,11 @@ test('Application — no includes: only the base shape, no config or activeDeplo
   expectTypeOf<Extract<keyof Application, ChildKeys>>().toEqualTypeOf<never>()
 })
 
+test('ApplicationBase — carries name and reference as strings', () => {
+  expectTypeOf<ApplicationBase['name']>().toEqualTypeOf<string>()
+  expectTypeOf<ApplicationBase['reference']>().toEqualTypeOf<string>()
+})
+
 test('Application — config.studio adds a required config.studio', () => {
   expectTypeOf<
     Application<'config.studio'>['config']['studio']
