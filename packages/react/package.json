@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk-react",
-  "version": "3.0.0-rc.1",
+  "version": "3.0.0-rc.2",
   "private": false,
   "description": "Sanity SDK React toolkit for Content OS",
   "keywords": [
@@ -107,7 +107,6 @@
   "browserslist": "extends @sanity/browserslist-config",
   "packageManager": "pnpm@10.33.4",
   "inlinedDependencies": {
-    "@sanity/comlink": "4.0.3",
-    "xstate": "5.32.5"
+    "@sanity/comlink": "4.0.3"
   }
 }
