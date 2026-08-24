@@ -29,6 +29,11 @@ test('Installation — no includes: only the base shape', () => {
   expectTypeOf<Extract<keyof Installation, IncludeKeys>>().toEqualTypeOf<never>()
 })
 
+test('InstallationBase — the application sub-object carries name and reference', () => {
+  expectTypeOf<InstallationBase['application']['name']>().toEqualTypeOf<string>()
+  expectTypeOf<InstallationBase['application']['reference']>().toEqualTypeOf<string>()
+})
+
 test('Installation — each token adds its top-level field, required, others absent', () => {
   expectTypeOf<Installation<'access'>['access']>().toEqualTypeOf<InstallationAccess[]>()
   expectTypeOf<

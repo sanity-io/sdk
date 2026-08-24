@@ -79,6 +79,10 @@ export interface InstallationBase {
   updatedAt: string
   application: {
     title: string
+    /** Stable, immutable identity of the installed singleton, distinct from `slug`. */
+    name: string
+    /** Qualified, globally-unique handle of the installed singleton (e.g. `sanity/<name>`). */
+    reference: string
     slug: string | null
   }
 }
