@@ -13,9 +13,10 @@ import {
   useEditDocument,
   useSanityInstance,
 } from '@sanity/sdk-react'
-import {Box, Button, Card, Flex, Stack, Text, TextInput} from '@sanity/ui'
+import {Button, TextInput} from '@sanity/ui'
 import {Tooltip} from '@sanity/ui/tooltip'
 import React, {useState} from 'react'
+import {Box, Card, Flex, Text, VStack} from 'ui5'
 
 interface DocumentEditorPanelProps {
   docHandle: DocumentHandle
@@ -92,15 +93,15 @@ export function DocumentEditorPanel({
   const setName = useEditDocument<string>({...docHandle, path: nameField})
 
   return (
-    <Stack gap={4}>
+    <VStack gap={4}>
       {/* Document Info Section */}
-      <Card padding={3} radius={2} shadow={1}>
-        <Stack gap={3}>
+      <Card density="regular">
+        <VStack gap={3}>
           <Text size={1} weight="semibold">
             Document Information
           </Text>
           <Flex gap={3}>
-            <Box flex={1}>
+            <Box flexGrow={1}>
               <TextInput
                 fontSize={1}
                 label="Document ID"
@@ -113,7 +114,7 @@ export function DocumentEditorPanel({
                 }}
               />
             </Box>
-            <Box flex={1}>
+            <Box flexGrow={1}>
               <TextInput
                 fontSize={1}
                 label={nameLabel}
@@ -124,16 +125,16 @@ export function DocumentEditorPanel({
               />
             </Box>
           </Flex>
-        </Stack>
+        </VStack>
       </Card>
 
       {/* Actions Section */}
-      <Card padding={3} radius={2} shadow={1}>
-        <Stack gap={3}>
+      <Card density="regular">
+        <VStack gap={3}>
           <Text size={1} weight="semibold">
             Document Actions
           </Text>
-          <Flex gap={2} wrap="wrap">
+          <Flex flexWrap="wrap" gap={2}>
             <Tooltip content={canCreate.message}>
               <Box>
                 <Button
@@ -233,8 +234,8 @@ export function DocumentEditorPanel({
               Permissions: {canEdit.message}
             </Text>
           )}
-        </Stack>
+        </VStack>
       </Card>
-    </Stack>
+    </VStack>
   )
 }

@@ -10,7 +10,6 @@ import {
   Badge,
   Box,
   Button,
-  Card,
   Checkbox,
   Flex,
   Inline,
@@ -22,6 +21,8 @@ import {
 import {Code} from '@sanity/ui/code'
 import {JSX, useState} from 'react'
 import {useSearchParams} from 'react-router'
+
+import {Card} from 'ui5'
 
 import {PageLayout} from '../components/PageLayout'
 
@@ -168,7 +169,7 @@ function DocumentCard({
   })
 
   return (
-    <Card padding={3} radius={2} tone="transparent">
+    <Card density="regular">
       <Flex align="flex-start" gap={3}>
         <Stack gap={3} flex={1}>
           <Text size={1} weight="medium">
@@ -202,7 +203,7 @@ function AnnounceToggle({
   onChange: (next: boolean) => void
 }): JSX.Element {
   return (
-    <Card padding={3} radius={2} tone="transparent">
+    <Card density="regular">
       <Flex align="flex-start" gap={3}>
         <Checkbox
           id="presence-announcing"
@@ -260,13 +261,7 @@ function ParticipantList({
       <Text size={1} weight="semibold">
         Others in this document
       </Text>
-      <Card
-        padding={3}
-        radius={2}
-        border
-        data-testid="presence-document"
-        data-count={presence.length}
-      >
+      <Card data-count={presence.length} data-testid="presence-document" density="regular">
         {presence.length === 0 ? (
           <Text size={1} muted data-testid="presence-document-empty">
             Nobody else is here
@@ -440,7 +435,7 @@ function NoDocuments({documentIdParam}: {documentIdParam: string | null}): JSX.E
 
   return (
     <PageLayout title="Presence" subtitle="Nothing to be present in">
-      <Card padding={3} radius={2} tone="caution">
+      <Card density="regular" tone="caution">
         <Text size={1} data-testid="presence-no-documents">
           {detail}
         </Text>

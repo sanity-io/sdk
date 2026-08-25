@@ -12,8 +12,9 @@ import {
   useApplyReleaseActions,
   useResource,
 } from '@sanity/sdk-react'
-import {Box, Button, Card, Dialog, Flex, Select, Stack, Text, TextArea, TextInput} from '@sanity/ui'
+import {Box, Button, Dialog, Flex, Select, Stack, Text, TextArea, TextInput} from '@sanity/ui'
 import {useState} from 'react'
+import {Card} from 'ui5'
 
 const RELEASE_TYPES: ReleaseDocument['metadata']['releaseType'][] = [
   'asap',
@@ -189,7 +190,7 @@ export function ReleaseActionsDialog({
       <Box padding={4}>
         <Stack gap={4}>
           {/* Metadata form */}
-          <Card padding={3} radius={2} shadow={1}>
+          <Card density="regular">
             <Stack gap={3}>
               <Text size={1} weight="semibold">
                 Metadata
@@ -305,7 +306,7 @@ export function ReleaseActionsDialog({
 
           {/* Lifecycle actions (edit mode only) */}
           {isEdit && release && (
-            <Card padding={3} radius={2} shadow={1}>
+            <Card density="regular">
               <Stack gap={3}>
                 <Text size={1} weight="semibold" data-testid="release-state-display">
                   Lifecycle actions — current state: {state}
@@ -359,7 +360,7 @@ export function ReleaseActionsDialog({
           )}
 
           {status && (
-            <Card padding={3} radius={2} tone={status.tone} data-testid="release-action-status">
+            <Card data-testid="release-action-status" density="regular" tone={status.tone}>
               <Text size={1}>{status.message}</Text>
             </Card>
           )}

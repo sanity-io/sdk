@@ -8,7 +8,7 @@ import {
   useEditDocument,
   useResource,
 } from '@sanity/sdk-react'
-import {Badge, Box, Button, Card, Flex, Stack, Text, TextInput} from '@sanity/ui'
+import {Badge, Box, Button, Flex, Stack, Text, TextInput} from '@sanity/ui'
 import {defineProjection} from 'groq'
 import {type JSX, type ReactNode, type RefObject, Suspense, useRef} from 'react'
 import {useSearchParams} from 'react-router'
@@ -17,12 +17,14 @@ import {
   type MultiResourceAuthorProjectionProjectionResult,
   MultiResourceMovieProjectionProjectionResult,
 } from '../../sanity.types'
+import {Card} from 'ui5'
+
 import {PageLayout} from '../components/PageLayout'
 import {devResources, e2eResources, isE2E} from '../sanityConfigs'
 
 function LoadingFallback({message = 'Loading...'}: {message?: string}) {
   return (
-    <Card flex={1} padding={4} radius={2} shadow={1} style={{minWidth: 280}} tone="transparent">
+    <Card density="regular" style={{flex: 1, minWidth: 280}}>
       <Text muted size={1}>
         {message}
       </Text>
@@ -33,7 +35,6 @@ function LoadingFallback({message = 'Loading...'}: {message?: string}) {
 interface DemoCardProps {
   title: string
   projectInfo: string
-  tone?: 'primary' | 'positive'
   children: ReactNode
   forwardedRef?: RefObject<HTMLDivElement | null>
 }
@@ -55,7 +56,6 @@ interface ProjectionCardProps<TData = unknown> {
   docHandle: DocumentHandle
   projection: string
   title: string
-  tone?: 'primary' | 'positive'
   renderData: (data: TData | undefined, isPending: boolean) => ReactNode
 }
 
@@ -63,7 +63,6 @@ function ProjectionCard<TData = unknown>({
   docHandle,
   projection,
   title,
-  tone,
   renderData,
 }: ProjectionCardProps<TData>) {
   const ref = useRef<HTMLDivElement>(null)
@@ -77,7 +76,6 @@ function ProjectionCard<TData = unknown>({
     <DemoCard
       title={title}
       projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}
-      tone={tone}
       forwardedRef={ref}
     >
       <Stack gap={2}>
@@ -95,10 +93,9 @@ function ProjectionCard<TData = unknown>({
 interface PreviewCardProps {
   docHandle: DocumentHandle
   title: string
-  tone?: 'primary' | 'positive'
 }
 
-function PreviewCard({docHandle, title, tone}: PreviewCardProps) {
+function PreviewCard({docHandle, title}: PreviewCardProps) {
   const ref = useRef<HTMLDivElement>(null)
   const {data: preview, isPending} = useDocumentPreview({
     ...docHandle,
@@ -109,7 +106,6 @@ function PreviewCard({docHandle, title, tone}: PreviewCardProps) {
     <DemoCard
       title={title}
       projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}
-      tone={tone}
       forwardedRef={ref}
     >
       <Stack gap={2}>
@@ -141,18 +137,14 @@ function PreviewCard({docHandle, title, tone}: PreviewCardProps) {
   )
 }
 
-function DemoCard({title, projectInfo, tone, children, forwardedRef}: DemoCardProps) {
+function DemoCard({title, projectInfo, children, forwardedRef}: DemoCardProps) {
   const testId = title.toLowerCase().replace(/\s+/g, '-')
   return (
     <Card
       ref={forwardedRef}
       data-testid={`${testId}-${projectInfo.replace('.', '-')}`}
-      flex={1}
-      padding={4}
-      radius={2}
-      shadow={1}
-      style={{minWidth: 280}}
-      tone={tone}
+      density="regular"
+      style={{flex: 1, minWidth: 280}}
     >
       <Stack gap={3}>
         <Flex align="center" gap={2} justify="space-between" wrap="wrap">
@@ -175,7 +167,6 @@ function AuthorEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
     <DemoCard
       title="Author Document"
       projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}
-      tone="primary"
     >
       <Button
         as="a"
@@ -225,7 +216,6 @@ function MovieEditor({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
     <DemoCard
       title="Movie Document"
       projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}
-      tone="positive"
     >
       <Button
         as="a"
@@ -259,7 +249,6 @@ function AuthorProjection({docHandle}: {docHandle: DocumentHandle<'author'>}) {
       docHandle={docHandle}
       projection={multiResourceAuthorProjection}
       title="Author Projection"
-      tone="primary"
       renderData={(data, isPending) => (
         <Stack data-testid="author-projection-data" gap={2}>
           <Text data-testid="author-projection-name" muted={isPending} size={1}>
@@ -288,7 +277,6 @@ function MovieProjection({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
       docHandle={docHandle}
       projection={multiResourceMovieProjection}
       title="Movie Projection"
-      tone="positive"
       renderData={(data, isPending) => (
         <Stack data-testid="movie-projection-data" gap={2}>
           <Text data-testid="movie-projection-name" muted={isPending} size={1}>
@@ -307,11 +295,11 @@ function MovieProjection({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
 }
 
 function AuthorPreview({docHandle}: {docHandle: DocumentHandle<'author'>}) {
-  return <PreviewCard docHandle={docHandle} title="Author Preview" tone="primary" />
+  return <PreviewCard docHandle={docHandle} title="Author Preview" />
 }
 
 function MoviePreview({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
-  return <PreviewCard docHandle={docHandle} title="Movie Preview" tone="positive" />
+  return <PreviewCard docHandle={docHandle} title="Movie Preview" />
 }
 
 export function MultiResourceRoute(): JSX.Element {

@@ -10,9 +10,11 @@ import {
   useDocuments,
   usePerspective,
 } from '@sanity/sdk-react'
-import {Box, Button, Card, Dialog, Flex, Spinner, Stack, Text, TextInput} from '@sanity/ui'
+import {Box, Button, Card as PaperCard, Dialog, Flex, Spinner, Stack, Text, TextInput} from '@sanity/ui'
 import {Code} from '@sanity/ui/code'
 import {type JSX, Suspense, useEffect, useMemo, useState} from 'react'
+
+import {Card} from 'ui5'
 
 import {DocumentEditorPanel} from '../../components/DocumentEditorPanel'
 import {DocumentListLayout} from '../../components/DocumentListLayout/DocumentListLayout'
@@ -87,7 +89,7 @@ function DefaultPerspectiveCard({
   onClick: () => void
 }) {
   return (
-    <Card
+    <PaperCard
       padding={3}
       radius={2}
       shadow={1}
@@ -108,7 +110,7 @@ function DefaultPerspectiveCard({
           </Box>
         </Box>
       </Flex>
-    </Card>
+    </PaperCard>
   )
 }
 
@@ -125,7 +127,7 @@ function DocumentData({
 
   return (
     <Stack gap={4}>
-      <Card padding={4} radius={2} shadow={1} tone="primary" data-testid="document-data-card">
+      <Card data-testid="document-data-card" density="regular">
         <Stack gap={3}>
           <Text size={1} weight="semibold">
             Selected Document Data
@@ -134,7 +136,7 @@ function DocumentData({
         </Stack>
       </Card>
 
-      <Card padding={4} radius={2} shadow={1} tone="primary" data-testid="document-preview-card">
+      <Card data-testid="document-preview-card" density="regular">
         <Stack gap={3}>
           <Text size={1} weight="semibold">
             Document Preview
@@ -143,7 +145,7 @@ function DocumentData({
         </Stack>
       </Card>
 
-      <Card padding={4} radius={2} shadow={1} tone="primary" data-testid="document-projection-card">
+      <Card data-testid="document-projection-card" density="regular">
         <Stack gap={3}>
           <Text size={1} weight="semibold">
             Document Projection
@@ -254,7 +256,7 @@ function ReleasesContent({
           <Text size={1} weight="semibold">
             Selected Perspective
           </Text>
-          <Card padding={4} radius={2} shadow={1}>
+          <Card density="regular">
             <Code language="json">{JSON.stringify(calculatedPerspective, null, 2)}</Code>
           </Card>
         </Stack>
@@ -278,7 +280,7 @@ function ReleasesContent({
         <Text size={1} weight="semibold">
           View document across different perspectives
         </Text>
-        <Card padding={4} radius={2} shadow={1}>
+        <Card density="regular">
           <Stack gap={3}>
             <TextInput
               fontSize={1}

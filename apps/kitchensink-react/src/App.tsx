@@ -5,9 +5,9 @@ import '@sanity/ui/styles.css'
 import 'ui5/styles.css'
 
 import {configureLogging, SanityApp, useDashboardNavigate} from '@sanity/sdk-react'
-import {ThemeProvider} from '@sanity/ui'
+import {ThemeProvider, usePrefersDark} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
-import {type JSX, Suspense} from 'react'
+import {type JSX, type ReactNode, Suspense} from 'react'
 import {BrowserRouter, useNavigate} from 'react-router'
 import {Spinner} from 'ui5'
 
@@ -32,9 +32,18 @@ function NavigationHandler() {
   return null
 }
 
+function ThemedApp({children}: {children: ReactNode}): JSX.Element {
+  const prefersDark = usePrefersDark()
+  return (
+    <ThemeProvider scheme={prefersDark ? 'dark' : 'light'} theme={theme}>
+      {children}
+    </ThemeProvider>
+  )
+}
+
 export default function App(): JSX.Element {
   return (
-    <ThemeProvider theme={theme}>
+    <ThemedApp>
       <SanityApp
         fallback={<Spinner />}
         config={isE2E ? {auth: {apiHost: 'https://api.sanity.work'}} : {}}
@@ -48,6 +57,6 @@ export default function App(): JSX.Element {
           <AppRoutes />
         </BrowserRouter>
       </SanityApp>
-    </ThemeProvider>
+    </ThemedApp>
   )
 }

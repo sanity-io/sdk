@@ -44,7 +44,7 @@ import {
   useDocuments,
   useResource,
 } from '@sanity/sdk-react'
-import {Badge, Box, Button, Card, Flex, Spinner, Stack, Text, TextInput} from '@sanity/ui'
+import {Badge, Box, Button, Flex, Spinner, Stack, Text, TextInput} from '@sanity/ui'
 import {
   type ElementType,
   type JSX,
@@ -54,6 +54,8 @@ import {
   useMemo,
   useState,
 } from 'react'
+
+import {Card} from 'ui5'
 
 import {PageLayout} from '../components/PageLayout'
 import {isE2E} from '../sanityConfigs'
@@ -343,7 +345,7 @@ function FieldPreview({docHandle, testId}: {docHandle: DocumentHandle<'author'>;
   const {data} = useDocument({...docHandle, path: PTE_FIELD_PATH})
 
   return (
-    <Card padding={2} tone="transparent" border radius={2}>
+    <Card density="compact">
       <pre
         style={{margin: 0, fontSize: 10, maxHeight: 180, overflow: 'auto'}}
         data-testid={`pte-preview-${testId}`}
@@ -364,7 +366,7 @@ function EditorPane({
   testId: string
 }) {
   return (
-    <Card padding={3} radius={2} shadow={1} flex={1}>
+    <Card density="regular" style={{flex: 1}}>
       <Stack gap={3}>
         <Flex justify="space-between" align="center">
           <Text size={1} weight="semibold">
@@ -374,7 +376,7 @@ function EditorPane({
         </Flex>
         <EditorProvider initialConfig={{schemaDefinition}}>
           <Toolbar testId={testId} />
-          <Card border radius={2} padding={3}>
+          <Card density="compact">
             <PortableTextEditable
               style={{minHeight: 120, outline: 'none'}}
               renderDecorator={renderDecorator}
@@ -449,7 +451,7 @@ function ConcurrentEditors() {
   return (
     <PageLayout title="Portable Text" subtitle="Concurrent editing of the same author document">
       <Stack gap={4}>
-        <Card padding={4} radius={2} shadow={1}>
+        <Card density="regular">
           <Stack gap={3}>
             <Text size={1} weight="semibold">
               Concurrent Portable Text editing
@@ -484,7 +486,7 @@ function ConcurrentEditors() {
         </Card>
 
         {!docHandle || !resource || !isDatasetResource(resource) ? (
-          <Card padding={4} radius={2} shadow={1} tone="transparent">
+          <Card density="regular">
             <Text align="center" muted size={1}>
               No author document found. Enter a document ID above.
             </Text>

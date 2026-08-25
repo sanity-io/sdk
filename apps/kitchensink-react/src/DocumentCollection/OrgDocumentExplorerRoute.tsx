@@ -12,10 +12,12 @@ import {
   useSanityInstance,
   useUsers,
 } from '@sanity/sdk-react'
-import {Avatar, Box, Button, Card, Dialog, Flex, Select, Spinner, Stack, Text} from '@sanity/ui'
+import {Avatar, Box, Button, Dialog, Flex, Select, Spinner, Stack, Text} from '@sanity/ui'
 import {defineQuery} from 'groq'
 import {JSX, startTransition, Suspense, useCallback, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+
+import {Card} from 'ui5'
 
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
 import {LoadMore} from '../components/LoadMore'
@@ -116,7 +118,7 @@ function DocumentRowError({error}: {error: Error}) {
   return (
     <TR>
       <TD padding={3}>
-        <Card tone="critical" padding={3}>
+        <Card density="regular" tone="critical">
           <Stack gap={2}>
             <Text size={1} weight="semibold">Error loading document</Text>
             <Text size={1}>{error.message}</Text>
@@ -176,7 +178,7 @@ function DocumentList({documentType}: DocumentListProps) {
 
   if (data.length === 0 && !isPending) {
     return (
-      <Card padding={4} tone="caution">
+      <Card density="regular" tone="caution">
         <Text size={1}>
           No documents found of type &quot;{documentType}&quot; in dataset &quot;{config.dataset}
           &quot;
@@ -312,7 +314,7 @@ function DocumentTypes() {
 
   if (!documentTypes || documentTypes.length === 0) {
     return (
-      <Card padding={4} tone="caution">
+      <Card density="regular" tone="caution">
         <Text size={1}>No document types found in dataset &quot;{config.dataset}&quot;</Text>
       </Card>
     )
@@ -346,7 +348,7 @@ function DocumentTypes() {
         <ErrorBoundary
           resetKeys={[config.dataset, selectedType]}
           fallback={
-            <Card padding={4} tone="critical">
+            <Card density="regular" tone="critical">
               <Text size={1}>Error loading documents of type &quot;{selectedType}&quot;</Text>
             </Card>
           }
@@ -369,7 +371,7 @@ function DatasetExplorer() {
 
   if (datasets.length === 0) {
     return (
-      <Card padding={4} tone="caution">
+      <Card density="regular" tone="caution">
         <Text size={1}>No datasets found in this project</Text>
       </Card>
     )
@@ -400,11 +402,11 @@ function DatasetExplorer() {
       </Box>
 
       {selectedDataset && (
-        <Card shadow={1} radius={2}>
+        <Card density="regular">
           <ErrorBoundary
             resetKeys={[selectedDataset]}
             fallback={
-              <Card padding={4} tone="critical">
+              <Card density="regular" tone="critical">
                 <Text size={1}>Error loading document types from dataset &quot;{selectedDataset}&quot;</Text>
               </Card>
             }
@@ -516,10 +518,10 @@ function ProjectExplorer() {
         <UsersDialog open={isUsersDialogOpen} onClose={handleCloseUsersDialog} />
       )}
 
-      <Card shadow={1} radius={2}>
+      <Card density="regular">
         <ErrorBoundary
           fallback={
-            <Card padding={4} tone="critical">
+            <Card density="regular" tone="critical">
               <Text size={1}>Error loading datasets for project &quot;{project.id}&quot;</Text>
             </Card>
           }
@@ -542,7 +544,7 @@ function ProjectsExplorer() {
 
   if (projects.length === 0) {
     return (
-      <Card padding={4} tone="caution">
+      <Card density="regular" tone="caution">
         <Text size={1}>No projects found</Text>
       </Card>
     )
@@ -573,11 +575,11 @@ function ProjectsExplorer() {
       </Box>
 
       {selectedProject && (
-        <Card shadow={1} radius={2}>
+        <Card density="regular">
           <ErrorBoundary
             resetKeys={[selectedProject]}
             fallback={
-              <Card padding={4} tone="critical">
+              <Card density="regular" tone="critical">
                 <Text size={1}>Error loading project &quot;{selectedProject}&quot;</Text>
               </Card>
             }
@@ -607,7 +609,7 @@ export function OrgDocumentExplorerRoute(): JSX.Element {
       title="Organization Document Explorer"
       subtitle="Browse documents across your organization in a hierarchical structure"
     >
-      <Card padding={4} radius={2} shadow={1}>
+      <Card density="regular">
         <Stack gap={4}>
           <Stack gap={2}>
             <Text size={1} weight="semibold">
@@ -619,7 +621,7 @@ export function OrgDocumentExplorerRoute(): JSX.Element {
           </Stack>
           <ErrorBoundary
             fallback={
-              <Card padding={4} tone="critical">
+              <Card density="regular" tone="critical">
                 <Text size={1}>Error loading projects</Text>
               </Card>
             }
