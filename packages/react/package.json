@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk-react",
-  "version": "2.19.0",
+  "version": "2.20.1",
   "private": false,
   "description": "Sanity SDK React toolkit for Content OS",
   "keywords": [
@@ -40,11 +40,11 @@
     "./package.json": "./package.json"
   },
   "publishConfig": {
-    "access": "public",
     "exports": {
       ".": "./dist/index.js",
       "./package.json": "./package.json"
-    }
+    },
+    "access": "public"
   },
   "scripts": {
     "build": "pkg build --strict --clean --check",

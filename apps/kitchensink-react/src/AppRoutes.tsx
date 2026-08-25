@@ -4,6 +4,7 @@ import {Route, Routes} from 'react-router'
 
 import Framed from './Comlink/Framed'
 import ParentApp from './Comlink/ParentApp'
+import {CommentsRoute} from './Comments/CommentsRoute'
 import {DocumentDashboardInteractionsRoute} from './DocumentCollection/DocumentDashboardInteractionsRoute'
 import {DocumentEditorRoute} from './DocumentCollection/DocumentEditorRoute'
 import {DocumentGridRoute} from './DocumentCollection/DocumentGridRoute'
@@ -77,6 +78,10 @@ const documentCollectionRoutes = [
   {
     path: 'presence',
     element: <PresenceRoute />,
+  },
+  {
+    path: 'comments',
+    element: <CommentsRoute />,
   },
   {
     path: 'media-library',

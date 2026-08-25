@@ -9,6 +9,7 @@ etc
 node_modules
 
 .turbo
+.pnpm-store
 
 storybook-static
 docs

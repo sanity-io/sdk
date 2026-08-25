@@ -105,4 +105,5 @@ export const createPlaywrightConfig = (
 
 // Export test fixtures
 export {test} from './fixtures'
+export {type PageContext} from './helpers/pageContext'
 export {expect} from '@playwright/test'

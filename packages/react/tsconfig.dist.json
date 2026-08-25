@@ -1,5 +1,10 @@
 {
   "extends": "./tsconfig.settings",
+  "compilerOptions": {
+    // The base config uses "preserve" for source code, but we want to ship compiled JSX;
+    // rolldown reads this to compile JSX with the automatic runtime during builds
+    "jsx": "react-jsx"
+  },
   "include": ["./package.json", "./src"],
   "exclude": [
     "./src/**/__fixtures__",

@@ -33,3 +33,10 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # Packs the publishable packages and checks the tarballs the way npm
+      # consumers load them. Catches packaging regressions (untranspiled JSX,
+      # broken exports maps) that in-repo builds and tests never hit, because
+      # everything in the workspace resolves source TypeScript instead of dist.
+      - name: Smoke test packed tarballs
+        run: pnpm test:pack
