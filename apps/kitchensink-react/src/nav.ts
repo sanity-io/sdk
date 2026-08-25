@@ -27,7 +27,7 @@ import {type ComponentType, type SVGProps} from 'react'
  *
  * @internal
  */
-export type NavIcon = ComponentType<SVGProps<SVGSVGElement>>
+type NavIcon = ComponentType<SVGProps<SVGSVGElement>>
 
 /**
  * A single example destination. `path` is the React Router path without a
@@ -35,7 +35,7 @@ export type NavIcon = ComponentType<SVGProps<SVGSVGElement>>
  *
  * @internal
  */
-export interface NavItem {
+interface NavItem {
   path: string
   title: string
   icon: NavIcon
