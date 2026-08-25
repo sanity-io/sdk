@@ -102,7 +102,7 @@ function DefaultPerspectiveCard({
             {perspective.title}
           </Text>
           <Box paddingTop={1}>
-            <Text size={0} muted>
+            <Text size={1} muted>
               {perspective.description}
             </Text>
           </Box>

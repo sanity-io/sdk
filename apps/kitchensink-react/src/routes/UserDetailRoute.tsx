@@ -60,7 +60,7 @@ export function UserDetailRoute(): JSX.Element {
         title="User Not Found"
         subtitle="The requested user could not be located"
       >
-        <Text>
+        <Text size={1}>
           The user with ID &quot;{userId}&quot; was not found in this {resourceType}.
         </Text>
       </PageLayout>
@@ -79,7 +79,7 @@ export function UserDetailRoute(): JSX.Element {
                 displayName={user.profile.displayName}
               />
               <VStack gap={2}>
-                <Heading as="h2" size={2}>
+                <Heading as="h2" size={1}>
                   {user.profile.displayName}
                 </Heading>
                 <IconText icon={EnvelopeIcon} muted>
@@ -123,7 +123,7 @@ export function UserDetailRoute(): JSX.Element {
             <VStack gap={4}>
               <Flex alignItems="center" gap={2}>
                 <Icon aria-hidden icon={LockIcon} />
-                <Heading as="h3" size={2}>
+                <Heading as="h3" size={1}>
                   Access & Permissions
                 </Heading>
               </Flex>

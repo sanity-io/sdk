@@ -28,14 +28,14 @@ export function ReleasesAutocomplete({
             .toLowerCase()
             .indexOf(query.toLowerCase()) > -1
         }
-        fontSize={[2, 2, 3]}
-        icon={<SearchIcon style={{width: '1.5em', height: '1.5em'}} />}
+        fontSize={1}
+        icon={<SearchIcon />}
         openButton
         options={activeReleases.map((release) => ({
           value: release.name,
           payload: release,
         }))}
-        padding={[3, 3, 4]}
+        padding={3}
         placeholder="Type to find release …"
         renderOption={(option) => {
           const release = option.payload

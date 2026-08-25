@@ -118,7 +118,7 @@ function DocumentRowError({error}: {error: Error}) {
       <TD padding={3}>
         <Card tone="critical" padding={3}>
           <Stack gap={2}>
-            <Text weight="semibold">Error loading document</Text>
+            <Text size={1} weight="semibold">Error loading document</Text>
             <Text size={1}>{error.message}</Text>
             {error.stack && (
               <Box style={{maxHeight: '100px', overflow: 'auto', fontSize: '12px'}}>
@@ -177,7 +177,7 @@ function DocumentList({documentType}: DocumentListProps) {
   if (data.length === 0 && !isPending) {
     return (
       <Card padding={4} tone="caution">
-        <Text>
+        <Text size={1}>
           No documents found of type &quot;{documentType}&quot; in dataset &quot;{config.dataset}
           &quot;
         </Text>
@@ -251,7 +251,7 @@ function DocumentList({documentType}: DocumentListProps) {
                         <Text size={1}>Loading documents...</Text>
                       </Flex>
                     ) : (
-                      <Text>No documents found</Text>
+                      <Text size={1}>No documents found</Text>
                     )}
                   </Flex>
                 </TD>
@@ -313,7 +313,7 @@ function DocumentTypes() {
   if (!documentTypes || documentTypes.length === 0) {
     return (
       <Card padding={4} tone="caution">
-        <Text>No document types found in dataset &quot;{config.dataset}&quot;</Text>
+        <Text size={1}>No document types found in dataset &quot;{config.dataset}&quot;</Text>
       </Card>
     )
   }
@@ -347,7 +347,7 @@ function DocumentTypes() {
           resetKeys={[config.dataset, selectedType]}
           fallback={
             <Card padding={4} tone="critical">
-              <Text>Error loading documents of type &quot;{selectedType}&quot;</Text>
+              <Text size={1}>Error loading documents of type &quot;{selectedType}&quot;</Text>
             </Card>
           }
         >
@@ -370,7 +370,7 @@ function DatasetExplorer() {
   if (datasets.length === 0) {
     return (
       <Card padding={4} tone="caution">
-        <Text>No datasets found in this project</Text>
+        <Text size={1}>No datasets found in this project</Text>
       </Card>
     )
   }
@@ -405,7 +405,7 @@ function DatasetExplorer() {
             resetKeys={[selectedDataset]}
             fallback={
               <Card padding={4} tone="critical">
-                <Text>Error loading document types from dataset &quot;{selectedDataset}&quot;</Text>
+                <Text size={1}>Error loading document types from dataset &quot;{selectedDataset}&quot;</Text>
               </Card>
             }
           >
@@ -446,7 +446,7 @@ function UsersDialogContent() {
       ) : (
         <>
           {data.length === 0 ? (
-            <Text>No users found</Text>
+            <Text size={1}>No users found</Text>
           ) : (
             <Stack gap={2}>
               {data.map((user) => (
@@ -520,7 +520,7 @@ function ProjectExplorer() {
         <ErrorBoundary
           fallback={
             <Card padding={4} tone="critical">
-              <Text>Error loading datasets for project &quot;{project.id}&quot;</Text>
+              <Text size={1}>Error loading datasets for project &quot;{project.id}&quot;</Text>
             </Card>
           }
         >
@@ -543,7 +543,7 @@ function ProjectsExplorer() {
   if (projects.length === 0) {
     return (
       <Card padding={4} tone="caution">
-        <Text>No projects found</Text>
+        <Text size={1}>No projects found</Text>
       </Card>
     )
   }
@@ -578,7 +578,7 @@ function ProjectsExplorer() {
             resetKeys={[selectedProject]}
             fallback={
               <Card padding={4} tone="critical">
-                <Text>Error loading project &quot;{selectedProject}&quot;</Text>
+                <Text size={1}>Error loading project &quot;{selectedProject}&quot;</Text>
               </Card>
             }
           >
@@ -620,7 +620,7 @@ export function OrgDocumentExplorerRoute(): JSX.Element {
           <ErrorBoundary
             fallback={
               <Card padding={4} tone="critical">
-                <Text>Error loading projects</Text>
+                <Text size={1}>Error loading projects</Text>
               </Card>
             }
           >

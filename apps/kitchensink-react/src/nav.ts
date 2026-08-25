@@ -30,7 +30,7 @@ import {type ComponentType, type SVGProps} from 'react'
 export type NavIcon = ComponentType<SVGProps<SVGSVGElement>>
 
 /**
- * A single sidebar destination. `path` is the React Router path without a
+ * A single example destination. `path` is the React Router path without a
  * leading slash and must stay in sync with the routes in `AppRoutes`.
  *
  * @internal
@@ -42,7 +42,7 @@ export interface NavItem {
 }
 
 /**
- * A labeled group of sidebar destinations.
+ * A labeled group of example destinations.
  *
  * @internal
  */
@@ -52,7 +52,7 @@ export interface NavGroup {
 }
 
 /**
- * Kitchen sink example routes, grouped for the app shell sidebar.
+ * Kitchen sink example routes, grouped for the app shell menus.
  *
  * @internal
  */

@@ -115,30 +115,7 @@ export function AppRoutes(): JSX.Element {
         <Route element={<ProtectedRoute subPath="/" />}>
           <Route
             index
-            element={
-              <ProjectAuthHome
-                routes={[
-                  ...documentCollectionRoutes,
-                  ...dashboardInteractionRoutes,
-                  {
-                    path: 'comlink-demo',
-                    element: <ParentApp />,
-                  },
-                  {
-                    path: 'releases',
-                    element: <ReleasesRoute />,
-                  },
-                  {
-                    path: 'projects',
-                    element: <ProjectsRoute />,
-                  },
-                  {
-                    path: 'perspectives',
-                    element: <PerspectivesRoute />,
-                  },
-                ]}
-              />
-            }
+            element={<ProjectAuthHome />}
           />
           {documentCollectionRoutes.map((route) => (
             <Route key={route.path} path={route.path} element={route.element} />

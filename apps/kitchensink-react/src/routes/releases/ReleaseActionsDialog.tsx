@@ -196,7 +196,7 @@ export function ReleaseActionsDialog({
               </Text>
               <Box>
                 <Stack gap={2}>
-                  <Text size={0} muted>
+                  <Text size={1} muted>
                     Release ID
                   </Text>
                   <TextInput
@@ -210,7 +210,7 @@ export function ReleaseActionsDialog({
               </Box>
               <Box>
                 <Stack gap={2}>
-                  <Text size={0} muted>
+                  <Text size={1} muted>
                     Title
                   </Text>
                   <TextInput
@@ -224,7 +224,7 @@ export function ReleaseActionsDialog({
               </Box>
               <Box>
                 <Stack gap={2}>
-                  <Text size={0} muted>
+                  <Text size={1} muted>
                     Description
                   </Text>
                   <TextArea
@@ -240,7 +240,7 @@ export function ReleaseActionsDialog({
               <Flex gap={3}>
                 <Box flex={1}>
                   <Stack gap={2}>
-                    <Text size={0} muted>
+                    <Text size={1} muted>
                       Release type
                     </Text>
                     <Select
@@ -264,7 +264,7 @@ export function ReleaseActionsDialog({
                 </Box>
                 <Box flex={1}>
                   <Stack gap={2}>
-                    <Text size={0} muted>
+                    <Text size={1} muted>
                       Intended publish at
                     </Text>
                     <TextInput
@@ -350,7 +350,7 @@ export function ReleaseActionsDialog({
                     data-testid="release-delete-action"
                   />
                 </Flex>
-                <Text size={0} muted>
+                <Text size={1} muted>
                   Delete is only allowed for archived/published releases. Archive an active release
                   first.
                 </Text>

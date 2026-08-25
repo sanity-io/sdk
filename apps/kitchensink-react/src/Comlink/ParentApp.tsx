@@ -149,7 +149,7 @@ const ParentApp = (): ReactElement => {
                           <Text size={1} muted>
                             {msg.from}
                           </Text>
-                          <Text>{msg.message}</Text>
+                          <Text size={1}>{msg.message}</Text>
                         </VStack>
                       </Card>
                     ))}

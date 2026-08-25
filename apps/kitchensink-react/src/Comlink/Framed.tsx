@@ -108,7 +108,7 @@ function FramedContent() {
           </Text>
           {receivedMessages.map((msg, idx) => (
             <Card density="compact" key={idx}>
-              <Text>{msg}</Text>
+              <Text size={1}>{msg}</Text>
             </Card>
           ))}
         </VStack>

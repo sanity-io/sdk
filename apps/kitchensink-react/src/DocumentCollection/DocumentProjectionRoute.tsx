@@ -265,7 +265,7 @@ export function DocumentProjectionRoute(): JSX.Element {
                           <Text size={1}>Loading authors...</Text>
                         </Flex>
                       ) : (
-                        <Text>No authors found</Text>
+                        <Text size={1}>No authors found</Text>
                       )}
                     </div>
                   </TD>

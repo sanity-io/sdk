@@ -485,7 +485,7 @@ function ConcurrentEditors() {
 
         {!docHandle || !resource || !isDatasetResource(resource) ? (
           <Card padding={4} radius={2} shadow={1} tone="transparent">
-            <Text align="center" muted>
+            <Text align="center" muted size={1}>
               No author document found. Enter a document ID above.
             </Text>
           </Card>
