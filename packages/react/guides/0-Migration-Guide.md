@@ -241,6 +241,7 @@ Dashboard hooks are now available only from the dedicated `@sanity/sdk-react/das
 | Previously in `@sanity/sdk-react` | Now in `@sanity/sdk-react/dashboard` |
 | --------------------------------- | ------------------------------------ |
 | `useDashboardOrganizationId`      | `useOrganizationId`                  |
+| `useDashboardNavigate`            | `useNavigate`                        |
 
 ### New in v3
 

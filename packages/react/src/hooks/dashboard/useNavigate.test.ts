@@ -2,7 +2,7 @@ import {type PathChangeMessage} from '@sanity/message-protocol'
 import {renderHook} from '@testing-library/react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {useDashboardNavigate} from './useDashboardNavigate'
+import {useNavigate} from './useNavigate'
 
 const mockOnMessage = vi.fn()
 let mockMessageHandler: ((data: PathChangeMessage['data']) => void) | undefined
@@ -22,7 +22,7 @@ vi.mock('../comlink/useWindowConnection', () => {
   }
 })
 
-describe('useDashboardNavigate', () => {
+describe('useNavigate', () => {
   const mockNavigateFn = vi.fn()
 
   beforeEach(() => {
@@ -31,7 +31,7 @@ describe('useDashboardNavigate', () => {
   })
 
   it('calls navigate function with correct data when message is received', () => {
-    renderHook(() => useDashboardNavigate(mockNavigateFn))
+    renderHook(() => useNavigate(mockNavigateFn))
 
     const mockNavigationData = {
       path: '/test-path',
