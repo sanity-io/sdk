@@ -6,9 +6,9 @@ title: Migration guide
 
 ### Breaking Changes
 
-1. `useProject`, `useProjects`, `useOrganization`, and `useOrganizations` return a result object
+1. `useProject`, `useProjects`, `useOrganization`, `useOrganizations`, and `useDatasets` return a result object
 
-These four hooks are now backed by a live re-fetching utility. Instead of returning the fetched value directly, they return a `FetcherHookResult`: `{data, isFetching, error, refetch}`. The hook still suspends until the first fetch succeeds, so `data` is always present once your component renders.
+These five hooks are now backed by a live re-fetching utility. Instead of returning the fetched value directly, they return a `FetcherHookResult`: `{data, isFetching, error, refetch}`. The hook still suspends until the first fetch succeeds, so `data` is always present once your component renders.
 
 **Before:**
 
@@ -17,6 +17,7 @@ const project = useProject({projectId})
 const projects = useProjects()
 const organization = useOrganization({organizationId})
 const organizations = useOrganizations()
+const datasets = useDatasets()
 ```
 
 **After:**
@@ -26,6 +27,7 @@ const {data: project} = useProject({projectId})
 const {data: projects} = useProjects()
 const {data: organization} = useOrganization({organizationId})
 const {data: organizations} = useOrganizations()
+const {data: datasets} = useDatasets()
 ```
 
 Destructuring in place works the same way:
@@ -70,13 +72,17 @@ if (error) {
 }
 ```
 
-4. Removed the preliminary intent hooks
+4. Datasets and favorites in `@sanity/sdk` changed public interfaces
+
+The datasets and favorites stores moved onto the same fetching paradigm that backs the hooks in 1. This means their store-specific functions and the legacy fetcher-store types (`getDatasetsState`, `resolveDatasets`, `getFavoritesState`, `resolveFavoritesState`, `FetcherStore`, and `FetcherStoreState`) have been removed. Most users were likely using the `@sanity/sdk-react` hooks and are likely not affected (except for the changed return signature of `useDatasets` mentioned in the first item).
+
+5. Removed the preliminary intent hooks
 
 The `useDispatchIntent` hook and the `defineIntent` function have been removed, along with the `Intent` and `IntentFilter` types.
 
 The other half of this system was never built: defined intents were never registered anywhere, and a dispatched intent had no handler to resolve to. `dispatchIntent()` sent a window message that nothing listened for, so removing these APIs does not change how your app behaves at runtime.
 
-5. `@sanity/sdk` agent and comlink utilities moved to sub-entries
+6. `@sanity/sdk` agent and comlink utilities moved to sub-entries
 
 Agent and comlink utilities are now available only from dedicated sub-entry points:
 
@@ -100,13 +106,13 @@ import {type FrameMessage} from '@sanity/sdk/comlink'
 
 `@sanity/sdk-react` re-exports the main `@sanity/sdk` entry point, but not these two sub-entries. Make the above code changes to get access to these.
 
-6. Internal utilities removed from the public API
+7. Internal utilities removed from the public API
 
 A handful of helpers that only existed to support the React layer are no longer part of the public API: `isStudioConfig`, `getClientErrorApiBody`, `getClientErrorApiDescription`, `getClientErrorApiType`, `isProjectUserNotFoundClientError`, `ApiErrorBody`, `PREVIEW_PROJECTION`, `transformProjectionToPreview`, `getQueryKey`, `parseQueryKey`, `getUsersKey`, `parseUsersKey`, and `createGroqSearchFilter`.
 
 These were never intended as app-facing APIs and have no stability guarantee. If you depend on one, open an issue describing your use case so we can consider a supported replacement.
 
-7. Deprecated `source` APIs removed in favour of `resource`
+8. Deprecated `source` APIs removed in favour of `resource`
 
 v2 introduced `source` and then the `resource` parameter to allow for easier usage of different datasets and also Media Library and Canvas stores. The `source` alias has been removed:
 
@@ -130,7 +136,7 @@ const {data} = useDocuments({sourceName: 'media-library'})
 const {data} = useDocuments({resourceName: 'media-library'})
 ```
 
-8. Deprecated preview APIs removed
+9. Deprecated preview APIs removed
 
 The preview store was superseded by the projection store in v2 for the `core` package (`useDocumentPreview` still exists). The deprecated wrappers have been removed:
 
@@ -143,7 +149,7 @@ The preview store was superseded by the projection store in v2 for the `core` pa
 
 The `useDocumentPreview` hook is unaffected; it has been backed by the projection store since v2.
 
-9. Other deprecated options and types removed
+10. Other deprecated options and types removed
 
 | Removed                               | Use instead                                                |
 | ------------------------------------- | ---------------------------------------------------------- |
@@ -152,7 +158,7 @@ The `useDocumentPreview` hook is unaffected; it has been backed by the projectio
 | `sanityConfigs` prop on `<SanityApp>` | `config` prop                                              |
 | `ProjectWithoutMembers` type          | `Project`                                                  |
 
-10. `useSanityInstance` no longer accepts a config argument
+11. `useSanityInstance` no longer accepts a config argument
 
 Passing a config to match against the instance hierarchy was deprecated in v2 and already had no effect — it logged a warning and returned the context instance regardless. The parameter is now removed.
 

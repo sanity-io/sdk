@@ -1,12 +1,12 @@
 import {type Node} from '@sanity/comlink'
-import {firstValueFrom, of, Subject} from 'rxjs'
+import {of, Subject} from 'rxjs'
 import {describe, expect, it, type Mock, vi} from 'vitest'
 
 import {getNodeState, type NodeState} from '../comlink/node/getNodeState'
 import {type FrameMessage, type WindowMessage} from '../comlink/types'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {getFavoritesState, resolveFavoritesState} from './favorites'
+import {favorites} from './favorites'
 
 vi.mock('../comlink/node/getNodeState', () => ({
   getNodeState: vi.fn(),
@@ -62,8 +62,8 @@ describe('favoritesStore', () => {
     it('creates different keys for different contexts with schema name', async () => {
       setupMockStateSource()
       // Make two fetches with different document IDs
-      await resolveFavoritesState(instance!, mockContext)
-      await resolveFavoritesState(instance!, {
+      await favorites.resolveState(instance!, mockContext)
+      await favorites.resolveState(instance!, {
         ...mockContext,
         documentId: 'different',
       })
@@ -79,8 +79,8 @@ describe('favoritesStore', () => {
     it('creates different keys for contexts without schema name', async () => {
       setupMockStateSource()
       // Make two fetches with different document IDs
-      await resolveFavoritesState(instance!, mockContextNoSchema)
-      await resolveFavoritesState(instance!, {
+      await favorites.resolveState(instance!, mockContextNoSchema)
+      await favorites.resolveState(instance!, {
         ...mockContextNoSchema,
         documentId: 'different',
       })
@@ -110,7 +110,7 @@ describe('favoritesStore', () => {
     it('fetches favorite status and handles success', async () => {
       const mockResponse = {isFavorited: true}
       setupMockStateSource({fetchImpl: vi.fn().mockResolvedValue(mockResponse)})
-      const result = await resolveFavoritesState(instance!, mockContext)
+      const result = await favorites.resolveState(instance!, mockContext)
       expect(result).toEqual(mockResponse)
       expect(mockFetch).toHaveBeenCalledWith('dashboard/v1/events/favorite/query', {
         document: {
@@ -128,7 +128,7 @@ describe('favoritesStore', () => {
     it('handles error and returns default response', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
       setupMockStateSource({fetchImpl: vi.fn().mockRejectedValue(new Error('Failed to fetch'))})
-      const result = await resolveFavoritesState(instance!, mockContext)
+      const result = await favorites.resolveState(instance!, mockContext)
       expect(result).toEqual({isFavorited: false})
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         'Favorites service connection error',
@@ -137,25 +137,19 @@ describe('favoritesStore', () => {
       consoleErrorSpy.mockRestore()
     })
 
-    it('shares observable between multiple subscribers and cleans up', async () => {
+    it('serves subsequent reads within staleTime from the cache', async () => {
       const mockResponse = {isFavorited: true}
       setupMockStateSource({fetchImpl: vi.fn().mockResolvedValue(mockResponse)})
-      const state = getFavoritesState(instance!, mockContext)
-      // First subscriber
-      const sub1 = state.subscribe()
-      await firstValueFrom(state.observable)
+      const first = await favorites.resolveState(instance!, mockContext)
+      expect(first).toEqual(mockResponse)
       expect(mockFetch).toHaveBeenCalledTimes(1)
-      // Second subscriber should use cached response
-      const state2 = getFavoritesState(instance!, mockContext)
-      const sub2 = state2.subscribe()
-      await firstValueFrom(state2.observable)
+      // Second read is fresh (within staleTime) — no second fetch
+      const second = await favorites.resolveState(instance!, mockContext)
+      expect(second).toEqual(mockResponse)
       expect(mockFetch).toHaveBeenCalledTimes(1)
-      // Cleanup
-      sub1()
-      sub2()
     })
 
-    it('reuses active fetch via createFetcherStore/shareReplay when called again while pending', async () => {
+    it('dedupes against the in-flight fetch when called again while pending', async () => {
       vi.useFakeTimers()
       let resolveFetch: (value: {isFavorited: boolean}) => void
       const fetchPromise = new Promise<{isFavorited: boolean}>((resolve) => {
@@ -175,13 +169,15 @@ describe('favoritesStore', () => {
       } as unknown as StateSource<NodeState>
       vi.mocked(getNodeState).mockReturnValue(mockStateSource)
       // Call 1: Triggers the actual fetch
-      const promise1 = resolveFavoritesState(instance!, mockContext)
+      const promise1 = favorites.resolveState(instance!, mockContext)
+      // Let the deferred fetch start and subscribe to the node state
+      await vi.advanceTimersByTimeAsync(1)
       // Simulate node becoming connected
       subject.next({node: mockNode, status: 'connected'})
       await vi.advanceTimersByTimeAsync(1)
       expect(fetchSpy).toHaveBeenCalledTimes(1)
-      // Call 2: Should reuse the pending fetch via createFetcherStore/shareReplay
-      const promise2 = resolveFavoritesState(instance!, mockContext)
+      // Call 2: Should reuse the pending fetch
+      const promise2 = favorites.resolveState(instance!, mockContext)
       await vi.advanceTimersByTimeAsync(1)
       expect(fetchSpy).toHaveBeenCalledTimes(1)
       // Resolve the underlying fetch
