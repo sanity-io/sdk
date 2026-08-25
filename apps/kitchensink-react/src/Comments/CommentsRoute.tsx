@@ -14,7 +14,6 @@ import {
   Box,
   Button,
   Card,
-  Code,
   Flex,
   Inline,
   Select,
@@ -22,6 +21,7 @@ import {
   Text,
   TextInput,
 } from '@sanity/ui'
+import {Code} from '@sanity/ui/code'
 import {type JSX, useState} from 'react'
 import {useSearchParams} from 'react-router'
 
@@ -151,7 +151,7 @@ function CommentRow({
 
   return (
     <Card padding={3} radius={2} border data-testid="comment" data-comment-id={comment.id}>
-      <Stack space={3}>
+      <Stack gap={3}>
         <Flex align="center" gap={2}>
           <Code size={0} data-testid="comment-author">
             {authorLabel(comment)}
@@ -177,7 +177,7 @@ function CommentRow({
           </Text>
         )}
 
-        <Inline space={2}>
+        <Inline gap={2}>
           <Button
             data-testid="comment-edit-start"
             mode="bleed"
@@ -227,7 +227,7 @@ function ThreadCard({
       data-thread-id={thread.threadId}
       data-count={thread.commentsCount}
     >
-      <Stack space={3}>
+      <Stack gap={3}>
         <Flex align="center" gap={2}>
           <Badge tone={display.badge}>{thread.status}</Badge>
           <Text size={1} muted data-testid="thread-field">
@@ -305,7 +305,7 @@ function ThreadList({
   }
 
   return (
-    <Stack space={3} data-testid="threads" data-count={threads.length} data-pending={isPending}>
+    <Stack gap={3} data-testid="threads" data-count={threads.length} data-pending={isPending}>
       {threads.map((thread) => (
         <ThreadCard
           key={thread.threadId}
@@ -404,7 +404,7 @@ function DocumentCard({
   return (
     <Card padding={3} radius={2} tone="transparent">
       <Flex align="flex-start" gap={3}>
-        <Stack space={3} flex={1}>
+        <Stack gap={3} flex={1}>
           <Text size={1} weight="medium">
             {data?.name ?? 'Untitled'}
           </Text>
@@ -437,7 +437,7 @@ function Inspector({comment}: {comment: Comment | undefined}): JSX.Element | nul
   if (!comment) return null
 
   return (
-    <Stack space={2}>
+    <Stack gap={2}>
       <Text size={1} weight="semibold">
         Stored document
       </Text>
@@ -481,7 +481,7 @@ function CommentsDemo({documentId}: {documentId: string}): JSX.Element {
         onStatusChange={setStatus}
       />
 
-      <Stack space={3}>
+      <Stack gap={3}>
         <Text size={1} weight="semibold">
           New thread
         </Text>
