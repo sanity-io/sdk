@@ -4,14 +4,14 @@ import {throwError} from 'rxjs'
 import {describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
-import {useDashboardOrganizationId} from './useDashboardOrganizationId'
+import {useOrganizationId} from './useOrganizationId'
 
 vi.mock('@sanity/sdk', async (importOriginal) => {
   const actual = await importOriginal()
   return {...(actual || {}), getDashboardOrganizationId: vi.fn()}
 })
 
-describe('useDashboardOrganizationId', () => {
+describe('useOrganizationId', () => {
   it('should return undefined when no organization ID is set', () => {
     const subscribe = vi.fn()
     vi.mocked(getDashboardOrganizationId).mockReturnValue({
@@ -20,7 +20,7 @@ describe('useDashboardOrganizationId', () => {
       observable: throwError(() => new Error('Unexpected usage of observable')),
     })
 
-    const {result} = renderHook(() => useDashboardOrganizationId(), {
+    const {result} = renderHook(() => useOrganizationId(), {
       wrapper: ({children}) => (
         <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
           {children}
@@ -39,7 +39,7 @@ describe('useDashboardOrganizationId', () => {
       observable: throwError(() => new Error('Unexpected usage of observable')),
     })
 
-    const {result} = renderHook(() => useDashboardOrganizationId(), {
+    const {result} = renderHook(() => useOrganizationId(), {
       wrapper: ({children}) => (
         <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
           {children}

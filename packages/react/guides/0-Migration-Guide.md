@@ -240,6 +240,14 @@ const instance = createSanityInstance({
 
 Relatedly, `useActiveReleases` and `useAllReleases` now take a `DatasetHandle` rather than a `SanityConfig`. Both already ignored the config-only fields, and this keeps them accepting an explicit `resource`.
 
+13. Dashboard hooks moved to a sub-entry
+
+Dashboard hooks are now available only from the dedicated `@sanity/sdk-react/dashboard` entry point and have been renamed:
+
+| Previously in `@sanity/sdk-react` | Now in `@sanity/sdk-react/dashboard` |
+| --------------------------------- | ------------------------------------ |
+| `useDashboardOrganizationId`      | `useOrganizationId`                  |
+
 ### New in v3
 
 Non-breaking additions:
