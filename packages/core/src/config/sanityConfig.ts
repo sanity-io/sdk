@@ -73,11 +73,14 @@ export interface DatasetHandle<TDataset extends string = string, TProjectId exte
   dataset?: TDataset
   /**
    * @beta
-   * Explicit resource to use. On an individual operation this overrides any default;
-   * on a `SanityConfig` it becomes the instance's default resource. Unlike
-   * `projectId`/`dataset`, this can also be a media library or canvas resource.
+   * Explicit resource object to use for this operation.
    */
   resource?: DocumentResource
+  /**
+   * @deprecated Use `resource` instead.
+   * @beta
+   */
+  source?: DocumentResource
 }
 
 /**
@@ -145,6 +148,27 @@ export interface SanityConfig extends DatasetHandle, PerspectiveHandle {
    * `SDKStudioContext` provider. Can also be set explicitly for programmatic use.
    */
   studio?: StudioConfig
+
+  /**
+   * Studio mode configuration for use of the SDK in a Sanity Studio.
+   * @remarks Controls whether studio mode features are enabled.
+   * @deprecated Use `studio` instead, which provides richer integration
+   * with the Studio's workspace (auth token sync, etc.).
+   */
+  studioMode?: {
+    enabled: boolean
+  }
+
+  /**
+   * @beta
+   * A list of named resources to use for this instance.
+   */
+  resources?: Record<string, DocumentResource>
+  /**
+   * @deprecated Use `resources` instead.
+   * @beta
+   */
+  sources?: Record<string, DocumentResource>
 }
 
 /**
@@ -191,4 +215,52 @@ export function isMediaLibraryResource(
  */
 export function isCanvasResource(resource: DocumentResource): resource is CanvasResource {
   return 'canvasId' in resource
+}
+
+/**
+ * @deprecated Use `DocumentResource` instead.
+ * @beta
+ */
+export type DocumentSource = DocumentResource
+
+/**
+ * @deprecated Use `DatasetResource` instead.
+ * @beta
+ */
+export type DatasetSource = DatasetResource
+
+/**
+ * @deprecated Use `MediaLibraryResource` instead.
+ * @beta
+ */
+export type MediaLibrarySource = MediaLibraryResource
+
+/**
+ * @deprecated Use `CanvasResource` instead.
+ * @beta
+ */
+export type CanvasSource = CanvasResource
+
+/**
+ * @deprecated Use `isDatasetResource` instead.
+ * @beta
+ */
+export function isDatasetSource(source: DocumentSource): source is DatasetSource {
+  return isDatasetResource(source)
+}
+
+/**
+ * @deprecated Use `isMediaLibraryResource` instead.
+ * @beta
+ */
+export function isMediaLibrarySource(source: DocumentSource): source is MediaLibrarySource {
+  return isMediaLibraryResource(source)
+}
+
+/**
+ * @deprecated Use `isCanvasResource` instead.
+ * @beta
+ */
+export function isCanvasSource(source: DocumentSource): source is CanvasSource {
+  return isCanvasResource(source)
 }

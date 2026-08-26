@@ -13,7 +13,6 @@ export {
   type SanityInstanceProviderProps,
 } from '../context/SanityInstanceProvider'
 export {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
-export {useCheckPermissions} from '../hooks/access/useCheckPermissions'
 export {
   useAgentGenerate,
   useAgentPatch,
@@ -21,13 +20,14 @@ export {
   useAgentTransform,
   useAgentTranslate,
 } from '../hooks/agent/agentActions'
-export {useApplication} from '../hooks/applications/useApplication'
-export {useApplications} from '../hooks/applications/useApplications'
-export {useDeleteApplication} from '../hooks/applications/useDeleteApplication'
-export {useUpdateApplication} from '../hooks/applications/useUpdateApplication'
+export {
+  type AgentResourceContextOptions,
+  useAgentResourceContext,
+} from '../hooks/agent/useAgentResourceContext'
 export {useAuthState} from '../hooks/auth/useAuthState'
 export {useAuthToken} from '../hooks/auth/useAuthToken'
 export {useCurrentUser} from '../hooks/auth/useCurrentUser'
+export {useDashboardOrganizationId} from '../hooks/auth/useDashboardOrganizationId'
 export {useHandleAuthCallback} from '../hooks/auth/useHandleAuthCallback'
 export {useLoginUrl} from '../hooks/auth/useLoginUrl'
 export {useLogOut} from '../hooks/auth/useLogOut'
@@ -50,10 +50,16 @@ export {useComments, type UseCommentsResult} from '../hooks/comments/useComments
 export {useCommentThreads, type UseCommentThreadsResult} from '../hooks/comments/useCommentThreads'
 export {useResource} from '../hooks/context/useResource'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
-export {useFavorite} from '../hooks/dashboard/useFavorite'
+export {useDashboardNavigate} from '../hooks/dashboard/useDashboardNavigate'
+export {useDispatchIntent} from '../hooks/dashboard/useDispatchIntent'
+export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
+export {
+  type NavigateToStudioResult,
+  useNavigateToStudioDocument,
+} from '../hooks/dashboard/useNavigateToStudioDocument'
 export {useRecordDocumentHistoryEvent} from '../hooks/dashboard/useRecordDocumentHistoryEvent'
 export {useStudioWorkspacesByProjectIdDataset} from '../hooks/dashboard/useStudioWorkspacesByProjectIdDataset'
-export {useUpdateFavorite} from '../hooks/dashboard/useUpdateFavorite'
+export {useWindowTitle} from '../hooks/dashboard/useWindowTitle'
 export {useDatasets} from '../hooks/datasets/useDatasets'
 export {useApplyDocumentActions} from '../hooks/document/useApplyDocumentActions'
 export {type CreateDocumentOverrides, useCreateDocument} from '../hooks/document/useCreateDocument'
@@ -67,10 +73,6 @@ export {
   type DocumentsResponse,
   useDocuments,
 } from '../hooks/documents/useDocuments'
-export {type FetcherHookResult} from '../hooks/helpers/createFetcherHook'
-export {type MutationHookResult} from '../hooks/helpers/createMutationHook'
-export {useInstallation} from '../hooks/installations/useInstallation'
-export {useInstallations} from '../hooks/installations/useInstallations'
 export {useOrganization} from '../hooks/organizations/useOrganization'
 export {useOrganizations} from '../hooks/organizations/useOrganizations'
 export {
@@ -95,7 +97,7 @@ export {
   type useDocumentProjectionResults,
 } from '../hooks/projection/useDocumentProjection'
 export {useProject} from '../hooks/projects/useProject'
-export {useProjects} from '../hooks/projects/useProjects'
+export {type ProjectWithoutMembers, useProjects} from '../hooks/projects/useProjects'
 export {useQuery} from '../hooks/query/useQuery'
 export {useActiveReleases} from '../hooks/releases/useActiveReleases'
 export {useAllReleases} from '../hooks/releases/useAllReleases'

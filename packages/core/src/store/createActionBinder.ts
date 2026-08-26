@@ -21,6 +21,12 @@ export interface BoundResourceKey {
 export interface BoundPerspectiveKey extends BoundResourceKey {
   perspective: ClientPerspective | ReleasePerspective
 }
+interface BoundDatasetKey {
+  name: string
+  projectId: string
+  dataset: string
+}
+
 /**
  * Defines a store action that operates on a specific state type
  */
@@ -117,29 +123,70 @@ export function createActionBinder<
   }
 }
 
+/**
+ * Binds an action to a store that's scoped to a specific project and dataset
+ *
+ * @remarks
+ * This creates actions that operate on state isolated to a specific projectId and dataset.
+ * Different project/dataset combinations will have separate states.
+ *
+ * @throws Error if projectId or dataset is missing from the Sanity instance config
+ *
+ * @example
+ * ```ts
+ * // Define a store
+ * const documentStore = defineStore<DocumentState>({
+ *   name: 'Document',
+ *   getInitialState: () => ({ documents: {} }),
+ *   // ...
+ * })
+ *
+ * // Create dataset-specific actions
+ * export const fetchDocument = bindActionByDataset(
+ *   documentStore,
+ *   ({instance, state}, documentId) => {
+ *     // This state is isolated to the specific project/dataset
+ *     // ...fetch logic...
+ *   }
+ * )
+ *
+ * // Usage
+ * fetchDocument(sanityInstance, 'doc123')
+ * ```
+ */
+export const bindActionByDataset = createActionBinder<
+  BoundDatasetKey,
+  [(object & {projectId?: string; dataset?: string})?, ...unknown[]]
+>((instance, options) => {
+  const projectId = options?.projectId ?? instance.config.projectId
+  const dataset = options?.dataset ?? instance.config.dataset
+  if (!projectId || !dataset) {
+    throw new Error('This API requires a project ID and dataset configured.')
+  }
+  return {name: `${projectId}.${dataset}`, projectId, dataset}
+})
+
 const createResourceKey = (
   instance: SanityInstance,
   resource?: DocumentResource,
 ): BoundResourceKey => {
   let name: string | undefined
   let resourceForKey: DocumentResource | undefined
-  // A per-call resource wins; otherwise use the instance's default resource.
-  const effectiveResource = resource ?? instance.config.resource
-  if (effectiveResource) {
-    resourceForKey = effectiveResource
-    if (isDatasetResource(effectiveResource)) {
-      name = `${effectiveResource.projectId}.${effectiveResource.dataset}`
-    } else if (isMediaLibraryResource(effectiveResource)) {
-      name = `media-library:${effectiveResource.mediaLibraryId}`
-    } else if (isCanvasResource(effectiveResource)) {
-      name = `canvas:${effectiveResource.canvasId}`
+  if (resource) {
+    resourceForKey = resource
+    if (isDatasetResource(resource)) {
+      name = `${resource.projectId}.${resource.dataset}`
+    } else if (isMediaLibraryResource(resource)) {
+      name = `media-library:${resource.mediaLibraryId}`
+    } else if (isCanvasResource(resource)) {
+      name = `canvas:${resource.canvasId}`
     } else {
-      throw new Error(`Received invalid resource: ${JSON.stringify(effectiveResource)}`)
+      throw new Error(`Received invalid resource: ${JSON.stringify(resource)}`)
     }
     return {name, resource: resourceForKey}
   }
 
-  // `projectId`/`dataset` on the config are shorthand for a dataset resource.
+  // TODO: remove reference to instance.config when we get to v3
   const {projectId, dataset} = instance.config
   if (!projectId || !dataset) {
     throw new Error('This API requires a project ID and dataset configured.')
@@ -152,8 +199,8 @@ const createResourceKey = (
  **/
 export const bindActionByResource = createActionBinder<
   BoundResourceKey,
-  // `resource` is optional because it falls back to the instance config in
-  // `createResourceKey` — see the note there on why that fallback still exists.
+  // this implies resources is optional to keep backwards compatibility
+  // but in reality, we'll always pass a resource (since we'll defer to the instance until v3)
   [{resource?: DocumentResource}, ...unknown[]]
 >((instance, {resource}) => {
   return createResourceKey(instance, resource)
@@ -198,8 +245,7 @@ export const bindActionByResourceAndPerspective = createActionBinder<
   [DatasetHandle, ...unknown[]]
 >((instance, options): BoundPerspectiveKey => {
   const {resource, perspective} = options
-  // Same trade-off as the resource fallback in `createResourceKey`: configured once on the
-  // instance rather than passed to every call. Kept for the same reason.
+  // TODO: remove reference to instance.config.perspective when we get to v3
   const utilizedPerspective = perspective ?? instance.config.perspective ?? 'drafts'
   let perspectiveKey: string
   if (isReleasePerspective(utilizedPerspective)) {

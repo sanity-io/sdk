@@ -2,10 +2,11 @@
   "clone_groups": [
     "apps/kitchensink-react/src/DocumentCollection/DocumentProjectionRoute.tsx:165-176|apps/kitchensink-react/src/DocumentCollection/OrgDocumentExplorerRoute.tsx:179-190",
     "apps/kitchensink-react/src/DocumentCollection/MultiResourceRoute.tsx:112-127|apps/kitchensink-react/src/DocumentCollection/MultiResourceRoute.tsx:73-89",
-    "packages/core/src/document/patchOperations.ts:383-397|packages/core/src/document/patchOperations.ts:417-431",
-    "packages/core/src/document/patchOperations.ts:383-397|packages/core/src/document/patchOperations.ts:417-431|packages/core/src/document/patchOperations.ts:442-456",
+    "packages/core/src/document/patchOperations.ts:244-270|packages/core/src/document/patchOperations.ts:282-303",
+    "packages/core/src/document/patchOperations.ts:433-447|packages/core/src/document/patchOperations.ts:467-481",
+    "packages/core/src/document/patchOperations.ts:433-447|packages/core/src/document/patchOperations.ts:467-481|packages/core/src/document/patchOperations.ts:492-506",
     "packages/core/src/document/processActions/create.ts:37-60|packages/core/src/document/processActions/create.ts:97-129",
-    "packages/core/src/document/processActions/create.ts:64-74|packages/core/src/document/processActions/edit.ts:39-47",
+    "packages/core/src/document/processActions/create.ts:64-74|packages/core/src/document/processActions/edit.ts:42-50",
     "packages/core/src/document/processActions/delete.ts:88-95|packages/core/src/document/processActions/releaseDelete.ts:53-60",
     "packages/core/src/document/processActions/discard.ts:46-59|packages/core/src/document/processActions/publish.ts:75-88",
     "packages/core/src/document/processActions/publish.ts:18-35|packages/core/src/document/processActions/unpublish.ts:17-34",
@@ -18,8 +19,6 @@
     "packages/react/src/components/auth/AuthError.ts:12-25|packages/react/src/components/auth/ConfigurationError.ts:7-20",
     "packages/react/src/hooks/documents/useDocuments.ts:240-263|packages/react/src/hooks/paginatedDocuments/usePaginatedDocuments.ts:269-291",
     "packages/react/src/hooks/documents/useDocuments.ts:263-276|packages/react/src/hooks/paginatedDocuments/usePaginatedDocuments.ts:291-304",
-    "packages/react/src/hooks/users/useUser.ts:68-94|packages/react/src/hooks/users/useUsers.ts:110-135",
-    "scripts/release-branch.mts:18-24|scripts/release-rc.mts:14-20",
-    "scripts/release-branch.mts:26-52|scripts/release-rc.mts:25-36"
+    "packages/react/src/hooks/users/useUser.ts:68-94|packages/react/src/hooks/users/useUsers.ts:110-135"
   ]
 }

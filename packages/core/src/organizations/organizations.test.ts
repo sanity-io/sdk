@@ -5,7 +5,7 @@ import {afterEach, beforeEach, describe, it} from 'vitest'
 import {getClientState} from '../client/clientStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {getOrganizationsCacheKey, organizations} from './organizations'
+import {getOrganizationsCacheKey, resolveOrganizations} from './organizations'
 
 vi.mock('../client/clientStore')
 
@@ -21,8 +21,8 @@ describe('organizations', () => {
   })
 
   it('calls `client.observable.request` against `/organizations` and returns the result', async () => {
-    const list = [{id: 'org_1'}, {id: 'org_2'}]
-    const request = vi.fn().mockReturnValue(of(list))
+    const organizations = [{id: 'org_1'}, {id: 'org_2'}]
+    const request = vi.fn().mockReturnValue(of(organizations))
 
     const mockClient = {
       observable: {request} as unknown as SanityClient['observable'],
@@ -32,8 +32,8 @@ describe('organizations', () => {
       observable: of(mockClient),
     } as StateSource<SanityClient>)
 
-    const result = await organizations.resolveState(instance)
-    expect(result).toEqual(list)
+    const result = await resolveOrganizations(instance)
+    expect(result).toEqual(organizations)
     expect(request).toHaveBeenCalledWith({
       uri: '/organizations',
       query: {
@@ -41,7 +41,7 @@ describe('organizations', () => {
         includeMembers: 'false',
         includeFeatures: 'false',
       },
-      tag: 'organizations.list',
+      tag: 'organizations.get',
     })
   })
 
@@ -55,7 +55,7 @@ describe('organizations', () => {
       observable: of(mockClient),
     } as StateSource<SanityClient>)
 
-    await organizations.resolveState(instance, {
+    await resolveOrganizations(instance, {
       includeMembers: true,
       includeFeatures: true,
       includeImplicitMemberships: true,
@@ -68,7 +68,7 @@ describe('organizations', () => {
         includeMembers: 'true',
         includeFeatures: 'true',
       },
-      tag: 'organizations.list',
+      tag: 'organizations.get',
     })
   })
 })

@@ -3,7 +3,7 @@ import {act, render} from '@testing-library/react'
 import {type ReactNode, Suspense, useContext, useEffect} from 'react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {useOrganizationId} from '../hooks/dashboard/useOrganizationId'
+import {useDashboardOrganizationId} from '../hooks/auth/useDashboardOrganizationId'
 import {resolveOrgResources} from '../utils/resolveOrgResources'
 import {OrganizationResourcesProvider} from './OrganizationResourcesProvider'
 import {ResourcesContext} from './ResourcesContext'
@@ -28,8 +28,8 @@ vi.mock('../hooks/context/useSanityInstance', () => {
   return {useSanityInstance: () => instance}
 })
 
-vi.mock('../hooks/dashboard/useOrganizationId', () => ({
-  useOrganizationId: vi.fn(),
+vi.mock('../hooks/auth/useDashboardOrganizationId', () => ({
+  useDashboardOrganizationId: vi.fn(),
 }))
 
 vi.mock('../utils/resolveOrgResources', () => ({
@@ -37,14 +37,14 @@ vi.mock('../utils/resolveOrgResources', () => ({
 }))
 
 const mockResolveOrgResources = vi.mocked(resolveOrgResources)
-const mockUseOrganizationId = vi.mocked(useOrganizationId)
+const mockUseDashboardOrganizationId = vi.mocked(useDashboardOrganizationId)
 
 describe('OrganizationResourcesProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     instance = createSanityInstance()
     mockResolveOrgResources.mockResolvedValue({})
-    mockUseOrganizationId.mockReturnValue(undefined)
+    mockUseDashboardOrganizationId.mockReturnValue(undefined)
   })
 
   // Captures ResourcesContext via useEffect (side-effect territory, not render)
@@ -91,7 +91,7 @@ describe('OrganizationResourcesProvider', () => {
   })
 
   it('suspends children while org resources are being fetched, then renders with resolved resources', async () => {
-    mockUseOrganizationId.mockReturnValue('org-suspend-test')
+    mockUseDashboardOrganizationId.mockReturnValue('org-suspend-test')
     const {promise, resolve} = promiseWithResolvers<void>()
     mockResolveOrgResources.mockReturnValue(
       promise.then(() => ({
@@ -115,7 +115,7 @@ describe('OrganizationResourcesProvider', () => {
   })
 
   it('renders without inferred entries and logs a warning when resolveOrgResources rejects', async () => {
-    mockUseOrganizationId.mockReturnValue('org-warn-test')
+    mockUseDashboardOrganizationId.mockReturnValue('org-warn-test')
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     mockResolveOrgResources.mockRejectedValue(new Error('fetch failed'))
 
@@ -135,7 +135,7 @@ describe('OrganizationResourcesProvider', () => {
   })
 
   it('caches Promise references across providers for the same instance', () => {
-    mockUseOrganizationId.mockReturnValue('org-cache-test')
+    mockUseDashboardOrganizationId.mockReturnValue('org-cache-test')
     render(
       <Suspense fallback={null}>
         <OrganizationResourcesProvider inferMediaLibraryAndCanvas>
@@ -168,7 +168,7 @@ describe('OrganizationResourcesProvider', () => {
   })
 
   it('explicit resources take precedence over inferred ones', async () => {
-    mockUseOrganizationId.mockReturnValue('org-override-test')
+    mockUseDashboardOrganizationId.mockReturnValue('org-override-test')
     mockResolveOrgResources.mockResolvedValue({
       mediaLibrary: {mediaLibraryId: 'inferred-ml'},
       canvas: {canvasId: 'inferred-canvas'},

@@ -2,6 +2,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {type DocumentResource} from '../config/sanityConfig'
 import {
+  bindActionByDataset,
   bindActionByResource,
   bindActionByResourceAndPerspective,
   bindActionGlobally,
@@ -95,6 +96,34 @@ describe('createActionBinder', () => {
   })
 })
 
+describe('bindActionByDataset', () => {
+  it('should work correctly when projectId and dataset are provided', () => {
+    const storeDefinition = {
+      name: 'DSStore',
+      getInitialState: () => ({counter: 0}),
+    }
+    const action = vi.fn((_context, {value}: {value: string}) => value)
+    const boundAction = bindActionByDataset(storeDefinition, action)
+    const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
+    const result = boundAction(instance, {value: 'hello'})
+    expect(result).toBe('hello')
+  })
+
+  it('should throw an error if projectId or dataset is missing', () => {
+    const storeDefinition = {
+      name: 'DSStore',
+      getInitialState: () => ({counter: 0}),
+    }
+    const action = vi.fn((_context, _?) => 'fail')
+    const boundAction = bindActionByDataset(storeDefinition, action)
+    // Instance with missing dataset
+    const instance = createSanityInstance({projectId: 'proj1', dataset: ''})
+    expect(() => boundAction(instance)).toThrow(
+      'This API requires a project ID and dataset configured.',
+    )
+  })
+})
+
 describe('bindActionGlobally', () => {
   it('should work correctly ignoring config in key generation', () => {
     const storeDefinition = {
@@ -174,57 +203,6 @@ describe('bindActionByResource', () => {
       resource: {projectId: 'proj2', dataset: 'ds2'},
     })
     expect(result).toBe('success')
-  })
-})
-
-describe('instance default resource', () => {
-  const storeDefinition = {
-    name: 'DefaultResourceStore',
-    getInitialState: () => ({counter: 0}),
-  }
-  const whichResource = bindActionByResource(storeDefinition, ({key}) => key)
-
-  it('uses config.resource when no resource is passed', () => {
-    const instance = createSanityInstance({resource: {projectId: 'p', dataset: 'd'}})
-    expect(whichResource(instance, {})).toMatchObject({
-      name: 'p.d',
-      resource: {projectId: 'p', dataset: 'd'},
-    })
-    instance.dispose()
-  })
-
-  it('supports a media library as the instance default', () => {
-    const instance = createSanityInstance({resource: {mediaLibraryId: 'ml-123'}})
-    expect(whichResource(instance, {})).toMatchObject({
-      name: 'media-library:ml-123',
-      resource: {mediaLibraryId: 'ml-123'},
-    })
-    instance.dispose()
-  })
-
-  it('supports a canvas as the instance default', () => {
-    const instance = createSanityInstance({resource: {canvasId: 'c-1'}})
-    expect(whichResource(instance, {})).toMatchObject({
-      name: 'canvas:c-1',
-      resource: {canvasId: 'c-1'},
-    })
-    instance.dispose()
-  })
-
-  it('lets a per-call resource override the instance default', () => {
-    const instance = createSanityInstance({resource: {mediaLibraryId: 'ml-123'}})
-    expect(whichResource(instance, {resource: {projectId: 'x', dataset: 'y'}})).toMatchObject({
-      resource: {projectId: 'x', dataset: 'y'},
-    })
-    instance.dispose()
-  })
-
-  it('still accepts the projectId/dataset shorthand', () => {
-    const instance = createSanityInstance({projectId: 'p', dataset: 'd'})
-    expect(whichResource(instance, {})).toMatchObject({
-      resource: {projectId: 'p', dataset: 'd'},
-    })
-    instance.dispose()
   })
 })
 

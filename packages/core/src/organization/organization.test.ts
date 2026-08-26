@@ -5,7 +5,7 @@ import {afterEach, beforeEach, describe, it} from 'vitest'
 import {getClientState} from '../client/clientStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {getOrganizationCacheKey, organization} from './organization'
+import {getOrganizationCacheKey, resolveOrganization} from './organization'
 
 vi.mock('../client/clientStore')
 
@@ -21,8 +21,8 @@ describe('organization', () => {
   })
 
   it('calls `client.observable.request` against `/organizations/<id>` and returns the result', async () => {
-    const detail = {id: 'org_1'}
-    const request = vi.fn().mockReturnValue(of(detail))
+    const organization = {id: 'org_1'}
+    const request = vi.fn().mockReturnValue(of(organization))
 
     const mockClient = {
       observable: {request} as unknown as SanityClient['observable'],
@@ -32,12 +32,12 @@ describe('organization', () => {
       observable: of(mockClient),
     } as StateSource<SanityClient>)
 
-    const result = await organization.resolveState(instance, {organizationId: 'org_1'})
-    expect(result).toEqual(detail)
+    const result = await resolveOrganization(instance, {organizationId: 'org_1'})
+    expect(result).toEqual(organization)
     expect(request).toHaveBeenCalledWith({
       uri: '/organizations/org_1',
       query: {includeMembers: 'false', includeFeatures: 'false'},
-      tag: 'organizations.get',
+      tag: 'organization.get',
     })
   })
 
@@ -51,7 +51,7 @@ describe('organization', () => {
       observable: of(mockClient),
     } as StateSource<SanityClient>)
 
-    await organization.resolveState(instance, {
+    await resolveOrganization(instance, {
       organizationId: 'org_1',
       includeMembers: true,
       includeFeatures: true,
@@ -63,14 +63,14 @@ describe('organization', () => {
         includeMembers: 'true',
         includeFeatures: 'true',
       },
-      tag: 'organizations.get',
+      tag: 'organization.get',
     })
   })
 
   it('throws when no organizationId is provided', async () => {
-    await expect(
-      organization.resolveState(instance, {organizationId: ''} as never),
-    ).rejects.toThrow('An organizationId is required to use the organization API.')
+    await expect(resolveOrganization(instance, {organizationId: ''} as never)).rejects.toThrow(
+      'An organizationId is required to use the organization API.',
+    )
   })
 })
 

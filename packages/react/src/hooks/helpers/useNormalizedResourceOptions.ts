@@ -6,7 +6,7 @@ import {PerspectiveContext} from '../../context/PerspectiveContext'
 import {ResourcesContext} from '../../context/ResourcesContext'
 import {SanityInstanceContext} from '../../context/SanityInstanceContext'
 
-type NormalizedResourceFields = 'resourceName' | 'projectId' | 'dataset'
+type NormalizedResourceFields = 'resourceName' | 'source' | 'sourceName' | 'projectId' | 'dataset'
 
 /**
  * Adds React hook support (resourceName resolution) to core types.
@@ -24,6 +24,11 @@ export type WithResourceNameSupport<T extends {resource?: DocumentResource}> = T
    * @beta
    */
   resourceName?: string
+  /**
+   * @deprecated Use `resourceName` instead.
+   * @beta
+   */
+  sourceName?: string
 }
 
 /**
@@ -43,6 +48,8 @@ export function normalizeResourceOptions<
   T extends {
     resource?: DocumentResource
     resourceName?: string
+    source?: DocumentResource
+    sourceName?: string
     projectId?: string
     dataset?: string
     perspective?: unknown
@@ -53,27 +60,30 @@ export function normalizeResourceOptions<
   contextResource?: DocumentResource,
   contextPerspective?: PerspectiveHandle['perspective'],
 ): Omit<T, NormalizedResourceFields> {
-  const {resourceName, projectId, dataset, ...rest} = options
-  const resource = options.resource
+  const {resourceName, sourceName, source, projectId, dataset, ...rest} = options
 
-  if (resourceName && resource) {
+  // Coalesce deprecated aliases to their canonical equivalents
+  const effectiveResourceName = resourceName ?? sourceName
+  const effectiveResource = options.resource ?? source
+
+  if (effectiveResourceName && effectiveResource) {
     throw new Error(
-      `Resource name ${JSON.stringify(resourceName)} and resource ${JSON.stringify(resource)} cannot be used together.`,
+      `Resource name ${JSON.stringify(effectiveResourceName)} and resource ${JSON.stringify(effectiveResource)} cannot be used together.`,
     )
   }
 
   let resolvedResource: DocumentResource | undefined
 
   // Tier (a): explicit resource object or resourceName lookup
-  if (resource) {
-    resolvedResource = resource
-  } else if (resourceName) {
-    if (!Object.hasOwn(resources, resourceName)) {
+  if (effectiveResource) {
+    resolvedResource = effectiveResource
+  } else if (effectiveResourceName) {
+    if (!Object.hasOwn(resources, effectiveResourceName)) {
       throw new Error(
-        `There's no resource named ${JSON.stringify(resourceName)} in context. Please use <ResourceProvider>.`,
+        `There's no resource named ${JSON.stringify(effectiveResourceName)} in context. Please use <ResourceProvider>.`,
       )
     }
-    resolvedResource = resources[resourceName]
+    resolvedResource = resources[effectiveResourceName]
   }
 
   // Tier (b): projectId or dataset in options → synthesize a resource
@@ -111,14 +121,13 @@ export function normalizeResourceOptions<
 export function useEffectiveContextResource(): DocumentResource | undefined {
   const contextResource = useContext(ResourceContext)
   const instance = useContext(SanityInstanceContext)
-  const {projectId, dataset, resource: configResource} = instance?.config ?? {}
+  const {projectId, dataset} = instance?.config ?? {}
 
   return useMemo(() => {
     if (contextResource) return contextResource
-    if (configResource) return configResource
     if (projectId && dataset) return {projectId, dataset}
     return undefined
-  }, [contextResource, configResource, projectId, dataset])
+  }, [contextResource, projectId, dataset])
 }
 
 /**
@@ -140,6 +149,8 @@ export function useNormalizedResourceOptions<
   T extends {
     resource?: DocumentResource
     resourceName?: string
+    source?: DocumentResource
+    sourceName?: string
     projectId?: string
     dataset?: string
     perspective?: PerspectiveHandle['perspective']

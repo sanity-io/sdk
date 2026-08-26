@@ -42,7 +42,7 @@ function resolveAppTitle(resource: ContextResource): string | undefined {
  *
  * @example
  * ```tsx
- * import {useWindowTitle} from '@sanity/sdk-react/dashboard'
+ * import {useWindowTitle} from '@sanity/sdk-react'
  *
  * function MoviesList() {
  *   useWindowTitle('Movies')

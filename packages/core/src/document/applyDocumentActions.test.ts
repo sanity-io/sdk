@@ -146,10 +146,13 @@ describe('applyDocumentActions', () => {
     await expect(applyPromise).rejects.toThrow('Simulated error')
   })
 
-  it('uses the explicit resource when it does not match the instance config', async () => {
-    // The instance is configured for one resource...
-    const scopedInstance = createSanityInstance({projectId: 'child-p', dataset: 'child-d'})
-    // ...while the action refers to a different one
+  it('matches parent instance via child when action projectId and dataset do not match child config', async () => {
+    // Create a parent instance
+    const parentInstance = createSanityInstance({projectId: 'p', dataset: 'd'})
+    // Create a child instance with different config
+    const childInstance = parentInstance.createChild({projectId: 'child-p', dataset: 'child-d'})
+    // Use the child instance in context
+    // Create an action that refers to the parent's configuration
     const action: DocumentAction = {
       type: 'document.edit',
       documentId: 'doc1',
@@ -158,14 +161,14 @@ describe('applyDocumentActions', () => {
       projectId: 'p',
       dataset: 'd',
     }
-    // The explicit `resource` option should win over the instance's own config
-    const applyPromise = applyDocumentActions(scopedInstance, {
+    // Call applyDocumentActions with the context using childInstance, but with action requiring parent's config
+    const applyPromise = applyDocumentActions(childInstance, {
       actions: [action],
       transactionId: 'txn-child-match',
       resource: {projectId: 'p', dataset: 'd'},
     })
 
-    // Simulate an applied transaction for the explicitly-passed resource
+    // Simulate an applied transaction on the parent's instance
     const appliedTx: AppliedTransaction = {
       transactionId: 'txn-child-match',
       actions: [action],
@@ -196,7 +199,8 @@ describe('applyDocumentActions', () => {
     const submittedResult = await result.submitted()
     expect(submittedResult).toEqual(acceptedResult)
 
-    scopedInstance.dispose()
+    childInstance.dispose()
+    parentInstance.dispose()
   })
 
   it('normalizes actions for the bound resource before queueing', async () => {

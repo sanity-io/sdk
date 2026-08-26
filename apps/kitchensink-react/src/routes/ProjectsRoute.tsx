@@ -43,7 +43,7 @@ function ProjectsList({
   organizationId: string | undefined
   includeMembers: boolean
 }) {
-  const {data: projects} = useProjects({organizationId, includeMembers})
+  const projects = useProjects({organizationId, includeMembers})
 
   return (
     <ol className="DocumentListLayout list-none" style={{gap: 2}}>

@@ -1,9 +1,9 @@
-import {useOrganizationId} from '@sanity/sdk-react/dashboard'
+import {useDashboardOrganizationId} from '@sanity/sdk-react'
 import {Box, Heading, Text} from '@sanity/ui'
 import {type JSX} from 'react'
 
 export function DashboardContextRoute(): JSX.Element {
-  const orgId = useOrganizationId()
+  const orgId = useDashboardOrganizationId()
 
   return (
     <Box padding={4}>

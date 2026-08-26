@@ -1,12 +1,11 @@
 import {
   DocumentHandle,
   useDocuments,
-  useFavorite,
+  useManageFavorite,
+  useNavigateToStudioDocument,
   useRecordDocumentHistoryEvent,
   useSanityInstance,
-  useUpdateFavorite,
 } from '@sanity/sdk-react'
-import {useNavigateToStudioDocument} from '@sanity/sdk-react/dashboard'
 import {Box, Button, Flex, Heading} from '@sanity/ui'
 import {type JSX, Suspense} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
@@ -42,8 +41,7 @@ function FavoriteStatus({isFavorited}: {isFavorited: boolean}) {
 
 function FavoriteButton({docHandle}: {docHandle: DocumentHandle}) {
   const studioResource = useStudioResource(docHandle)
-  const isFavorited = useFavorite(studioResource)
-  const {favorite, unfavorite} = useUpdateFavorite(studioResource)
+  const {favorite, unfavorite, isFavorited} = useManageFavorite(studioResource)
 
   return (
     <ErrorBoundary fallbackRender={({error}) => <ButtonError error={error as unknown as Error} />}>

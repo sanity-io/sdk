@@ -85,10 +85,7 @@ for (const {name, version} of publishable) {
   echo`bumped ${chalk.blue(name)} from ${chalk.yellow(version)} to ${chalk.green(targetVersion)}`
 }
 
-// Build only the publishable packages. `pnpm build` also builds the internal
-// example apps (kitchensink, standalone), which aren't published and can fail
-// to typecheck without their generated types — that must not block a release.
-await $`pnpm build:packages --output-logs=errors-only`.pipe(process.stdout)
+await $`pnpm build --output-logs=errors-only`.pipe(process.stdout)
 
 for (const {name} of publishable) {
   // Capture (rather than stream) the output so we can detect pnpm's silent skip.
