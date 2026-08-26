@@ -376,7 +376,7 @@ function DocumentTypes() {
 
 function DatasetExplorer() {
   const {config} = useSanityInstance()
-  const {data: datasets} = useDatasets()
+  const datasets = useDatasets()
   const [selectedDataset, setSelectedDataset] = useState<string | null>(null)
 
   const handleDatasetChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -495,7 +495,7 @@ function UsersDialog({open, onClose}: UsersDialogProps) {
 }
 
 function ProjectExplorer() {
-  const {data: project} = useProject()
+  const project = useProject()
   const [isUsersDialogOpen, setIsUsersDialogOpen] = useState(false)
 
   const handleOpenUsersDialog = () => setIsUsersDialogOpen(true)
@@ -547,7 +547,7 @@ function ProjectExplorer() {
 
 // Component to display all projects
 function ProjectsExplorer() {
-  const {data: projects} = useProjects()
+  const projects = useProjects()
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
 
   const handleProjectChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {

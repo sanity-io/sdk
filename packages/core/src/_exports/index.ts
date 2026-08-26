@@ -5,30 +5,26 @@ import {type SanityProject as _SanityProject} from '@sanity/client'
  */
 export type SanityProject = _SanityProject
 
-export {checkPermissions} from '../access/checkPermissions'
-export {type AccessResourceType} from '../access/checkPermissions'
+export type {
+  AgentGenerateOptions,
+  AgentGenerateResult,
+  AgentPatchOptions,
+  AgentPatchResult,
+  AgentPromptOptions,
+  AgentPromptResult,
+  AgentTransformOptions,
+  AgentTransformResult,
+  AgentTranslateOptions,
+  AgentTranslateResult,
+} from '../agent/agentActions'
 export {
-  application,
-  applications,
-  deleteApplication,
-  updateApplication,
-} from '../applications/applications'
-export {
-  type Application,
-  type ApplicationAccess,
-  type ApplicationBase,
-  type ApplicationDeployment,
-  type ApplicationInclude,
-  type ApplicationInterface,
-  type ApplicationsOptions,
-  type ApplicationsResponse,
-  type ApplicationStudioConfig,
-  type ApplicationVisibility,
-  type ApplicationWorkspace,
-  type DeleteApplicationInput,
-  type DeletedResult,
-  type UpdateApplicationInput,
-} from '../applications/applications'
+  agentGenerate,
+  agentPatch,
+  agentPrompt,
+  agentTransform,
+  agentTranslate,
+} from '../agent/agentActions'
+export {isStudioConfig} from '../auth/authMode'
 export {AuthStateType} from '../auth/authStateType'
 export {
   type AuthState,
@@ -48,8 +44,31 @@ export {
 export {observeOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
+export {
+  type ApiErrorBody,
+  getClientErrorApiBody,
+  getClientErrorApiDescription,
+  getClientErrorApiType,
+  isProjectUserNotFoundClientError,
+} from '../auth/utils'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
 export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
+export {
+  type ComlinkControllerState,
+  destroyController,
+  getOrCreateChannel,
+  getOrCreateController,
+  releaseChannel,
+} from '../comlink/controller/comlinkControllerStore'
+export type {ComlinkNodeState} from '../comlink/node/comlinkNodeStore'
+export {getOrCreateNode, releaseNode} from '../comlink/node/comlinkNodeStore'
+export {getNodeState, type NodeState} from '../comlink/node/getNodeState'
+export {
+  type FrameMessage,
+  type NewTokenResponseMessage,
+  type RequestNewTokenMessage,
+  type WindowMessage,
+} from '../comlink/types'
 export {
   createComment,
   type CreateCommentOptions,
@@ -98,15 +117,22 @@ export {
 } from '../config/loggingConfig'
 export {
   type CanvasResource,
+  type CanvasSource,
   type DatasetHandle,
   type DatasetResource,
+  type DatasetSource,
   type DocumentHandle,
   type DocumentResource,
+  type DocumentSource,
   type DocumentTypeHandle,
   isCanvasResource,
+  isCanvasSource,
   isDatasetResource,
+  isDatasetSource,
   isMediaLibraryResource,
+  isMediaLibrarySource,
   type MediaLibraryResource,
+  type MediaLibrarySource,
   type PerspectiveHandle,
   type ProjectHandle,
   type ReleaseHandle,
@@ -115,7 +141,7 @@ export {
   type StudioConfig,
   type TokenSource,
 } from '../config/sanityConfig'
-export {datasets} from '../datasets/datasets'
+export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
 export {
   type Action,
   archiveRelease,
@@ -181,32 +207,22 @@ export {
 export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export {getReleaseDocumentId} from '../document/processActions/releaseUtil'
-export type {
-  FavoriteDocumentContext,
-  FavoriteStatusResponse,
-  SetFavoriteInput,
-} from '../favorites/favorites'
-export {favorites, setFavorite} from '../favorites/favorites'
-export {installation, installations} from '../installations/installations'
+export type {FavoriteStatusResponse} from '../favorites/favorites'
+export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
 export {
-  type Installation,
-  type InstallationAccess,
-  type InstallationActiveConfig,
-  type InstallationBase,
-  type InstallationInclude,
-  type InstallationInterface,
-  type InstallationsOptions,
-  type InstallationsResponse,
-} from '../installations/installations'
-export {organization} from '../organization/organization'
-export {
+  getOrganizationState,
   type Organization,
   type OrganizationBase,
   type OrganizationMember,
   type OrganizationOptions,
+  resolveOrganization,
 } from '../organization/organization'
-export {organizations} from '../organizations/organizations'
-export {type Organizations, type OrganizationsOptions} from '../organizations/organizations'
+export {
+  getOrganizationsState,
+  type Organizations,
+  type OrganizationsOptions,
+  resolveOrganizations,
+} from '../organizations/organizations'
 export {getDocumentPresence, getPresence, reportPresence} from '../presence/presenceStore'
 export type {
   DisconnectEvent,
@@ -222,28 +238,45 @@ export type {
   TransportEvent,
   UserPresence,
 } from '../presence/types'
-export type {PreviewMedia, PreviewQueryResult, PreviewValue} from '../preview/types'
+export {getPreviewState, type GetPreviewStateOptions} from '../preview/getPreviewState'
+export {PREVIEW_PROJECTION} from '../preview/previewConstants'
+export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
+export {resolvePreview, type ResolvePreviewOptions} from '../preview/resolvePreview'
+export type {
+  PreviewMedia,
+  PreviewQueryResult,
+  PreviewStoreState,
+  PreviewValue,
+  ValuePending,
+} from '../preview/types'
 export {type OrgVerificationResult} from '../project/organizationVerification'
-export {project} from '../project/project'
 export {
+  getProjectState,
   type Project,
   type ProjectBase,
   type ProjectMember,
   type ProjectMemberRole,
   type ProjectMetadata,
   type ProjectOptions,
+  resolveProject,
 } from '../project/project'
 export {getProjectionState} from '../projection/getProjectionState'
 export {resolveProjection} from '../projection/resolveProjection'
-export {type ProjectionValuePending} from '../projection/types'
-export {projects} from '../projects/projects'
-export {type ProjectsOptions} from '../projects/projects'
-export {getQueryState, type QueryOptions, resolveQuery} from '../query/queryStore'
+export {type ProjectionValuePending, type ValidProjection} from '../projection/types'
+export {getProjectsState, type ProjectsOptions, resolveProjects} from '../projects/projects'
+export {
+  getQueryKey,
+  getQueryState,
+  parseQueryKey,
+  type QueryOptions,
+  resolveQuery,
+} from '../query/queryStore'
 export {getPerspectiveState} from '../releases/getPerspectiveState'
 export type {ReleaseState} from '../releases/releasesStore'
 export {getActiveReleasesState, getAllReleasesState} from '../releases/releasesStore'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
+export {getUsersKey, parseUsersKey} from '../users/reducers'
 export {
   type GetUserOptions,
   type GetUsersOptions,
@@ -263,6 +296,9 @@ export {
   resolveUser,
   resolveUsers,
 } from '../users/usersStore'
+export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
+export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
+export {defineIntent, type Intent, type IntentFilter} from '../utils/defineIntent'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {isImportError} from '../utils/isImportError'
 export {CORE_SDK_VERSION} from '../version'

@@ -1,5 +1,10 @@
-import {createSanityInstance, type Project, project, type StateSource} from '@sanity/sdk'
-import {type FetcherSnapshot} from '@sanity/sdk/_internal'
+import {
+  createSanityInstance,
+  getProjectState,
+  type Project,
+  resolveProject,
+  type StateSource,
+} from '@sanity/sdk'
 import {type ReactNode} from 'react'
 import {type Observable} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
@@ -11,41 +16,30 @@ import {useProject} from './useProject'
 
 vi.mock('@sanity/sdk', async (importOriginal) => {
   const original = await importOriginal<typeof import('@sanity/sdk')>()
-  return {...original, project: {getState: vi.fn(), resolveState: vi.fn()}}
+  return {...original, getProjectState: vi.fn(), resolveProject: vi.fn()}
 })
 
-const stateSource = (current: Project | undefined): StateSource<FetcherSnapshot<Project>> => {
-  // Cache the snapshot: useSyncExternalStore requires a referentially stable current value.
-  const snapshot = current
-    ? {status: 'success', data: current, error: undefined, isFetching: false, dataUpdatedAt: 1}
-    : {
-        status: 'pending',
-        data: undefined,
-        error: undefined,
-        isFetching: true,
-        dataUpdatedAt: undefined,
-      }
-  return {
-    getCurrent: vi.fn(() => snapshot),
-    subscribe: vi.fn(() => () => {}),
+const stateSource = (current: Project | undefined): StateSource<Project | undefined> =>
+  ({
+    getCurrent: vi.fn(() => current),
+    subscribe: vi.fn(),
     get observable(): Observable<unknown> {
       throw new Error('Not implemented')
     },
-  } as unknown as StateSource<FetcherSnapshot<Project>>
-}
+  }) as unknown as StateSource<Project | undefined>
 
 const sanityInstance = expect.objectContaining({config: expect.any(Object)})
 
 describe('useProject', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(project.getState).mockReturnValue(stateSource({id: 'p'} as unknown as Project))
+    vi.mocked(getProjectState).mockReturnValue(stateSource({id: 'p'} as unknown as Project))
   })
 
   it('resolves the projectId from the instance config resource', () => {
     // test-utils wraps with ResourceProvider projectId="test" dataset="test".
     renderHook(() => useProject())
-    expect(project.getState).toHaveBeenCalledWith(
+    expect(getProjectState).toHaveBeenCalledWith(
       sanityInstance,
       expect.objectContaining({projectId: 'test'}),
     )
@@ -53,7 +47,7 @@ describe('useProject', () => {
 
   it('lets an explicit projectId override the ambient resource', () => {
     renderHook(() => useProject({projectId: 'explicit-project'}))
-    expect(project.getState).toHaveBeenCalledWith(
+    expect(getProjectState).toHaveBeenCalledWith(
       sanityInstance,
       expect.objectContaining({projectId: 'explicit-project'}),
     )
@@ -70,7 +64,7 @@ describe('useProject', () => {
         </ResourceProvider>
       ),
     })
-    expect(project.getState).toHaveBeenCalledWith(
+    expect(getProjectState).toHaveBeenCalledWith(
       sanityInstance,
       expect.objectContaining({projectId: 'resource-project'}),
     )
@@ -86,7 +80,7 @@ describe('useProject', () => {
     })
     // A dataset-less config can't form a DatasetResource; the projectId is carried
     // via ProjectContext and injected so project-scoped reads still resolve it.
-    expect(project.getState).toHaveBeenCalledWith(
+    expect(getProjectState).toHaveBeenCalledWith(
       sanityInstance,
       expect.objectContaining({projectId: 'config-project'}),
     )
@@ -105,16 +99,16 @@ describe('useProject', () => {
         </SanityInstanceContext.Provider>
       ),
     })
-    expect(project.getState).toHaveBeenCalledWith(
+    expect(getProjectState).toHaveBeenCalledWith(
       emptyInstance,
       expect.objectContaining({projectId: 'bare-project'}),
     )
   })
 
-  it('suspends via the project fetcher until project data is available', () => {
-    vi.mocked(project.getState).mockReturnValue(stateSource(undefined))
-    vi.mocked(project.resolveState).mockReturnValue(new Promise(() => {}))
+  it('suspends via resolveProject until project data is available', () => {
+    vi.mocked(getProjectState).mockReturnValue(stateSource(undefined))
+    vi.mocked(resolveProject).mockReturnValue(new Promise(() => {}))
     renderHook(() => useProject())
-    expect(project.resolveState).toHaveBeenCalled()
+    expect(resolveProject).toHaveBeenCalled()
   })
 })

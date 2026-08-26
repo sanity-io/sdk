@@ -8,9 +8,7 @@ import {PageLayout} from '../components/PageLayout'
 
 export function UserDetailRoute(): JSX.Element {
   const {userId} = useParams<{userId: string}>()
-  const {
-    data: {organizationId, id: projectId},
-  } = useProject()
+  const {organizationId, id: projectId} = useProject()
 
   const resourceType = organizationId ? 'organization' : 'project'
   const resourceId = organizationId || projectId

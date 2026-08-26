@@ -1,5 +1,10 @@
-import {type DocumentHandle, isDatasetResource, type QueryOptions} from '@sanity/sdk'
-import {createGroqSearchFilter, pickProperties} from '@sanity/sdk/_internal'
+import {
+  createGroqSearchFilter,
+  type DocumentHandle,
+  isDatasetResource,
+  type QueryOptions,
+} from '@sanity/sdk'
+import {pickProperties} from '@sanity/sdk/_internal'
 import {type SortOrderingItem} from '@sanity/types'
 import {useCallback, useMemo, useState} from 'react'
 

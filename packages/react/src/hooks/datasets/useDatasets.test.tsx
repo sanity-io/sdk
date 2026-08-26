@@ -1,6 +1,10 @@
 import {type DatasetsResponse} from '@sanity/client'
-import {createSanityInstance, datasets, type StateSource} from '@sanity/sdk'
-import {type FetcherSnapshot} from '@sanity/sdk/_internal'
+import {
+  createSanityInstance,
+  getDatasetsState,
+  resolveDatasets,
+  type StateSource,
+} from '@sanity/sdk'
 import {type ReactNode} from 'react'
 import {type Observable} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
@@ -12,43 +16,32 @@ import {useDatasets} from './useDatasets'
 
 vi.mock('@sanity/sdk', async (importOriginal) => {
   const original = await importOriginal<typeof import('@sanity/sdk')>()
-  return {...original, datasets: {getState: vi.fn(), resolveState: vi.fn()}}
+  return {...original, getDatasetsState: vi.fn(), resolveDatasets: vi.fn()}
 })
 
 const stateSource = (
   current: DatasetsResponse | undefined,
-): StateSource<FetcherSnapshot<DatasetsResponse>> => {
-  // Cache the snapshot: useSyncExternalStore requires a referentially stable current value.
-  const snapshot = current
-    ? {status: 'success', data: current, error: undefined, isFetching: false, dataUpdatedAt: 1}
-    : {
-        status: 'pending',
-        data: undefined,
-        error: undefined,
-        isFetching: true,
-        dataUpdatedAt: undefined,
-      }
-  return {
-    getCurrent: vi.fn(() => snapshot),
-    subscribe: vi.fn(() => () => {}),
+): StateSource<DatasetsResponse | undefined> =>
+  ({
+    getCurrent: vi.fn(() => current),
+    subscribe: vi.fn(),
     get observable(): Observable<unknown> {
       throw new Error('Not implemented')
     },
-  } as unknown as StateSource<FetcherSnapshot<DatasetsResponse>>
-}
+  }) as unknown as StateSource<DatasetsResponse | undefined>
 
 const sanityInstance = expect.objectContaining({config: expect.any(Object)})
 
 describe('useDatasets', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(datasets.getState).mockReturnValue(stateSource([] as unknown as DatasetsResponse))
+    vi.mocked(getDatasetsState).mockReturnValue(stateSource([] as unknown as DatasetsResponse))
   })
 
   it('resolves the projectId from the instance config resource', () => {
     // test-utils wraps with ResourceProvider projectId="test" dataset="test".
     renderHook(() => useDatasets())
-    expect(datasets.getState).toHaveBeenCalledWith(
+    expect(getDatasetsState).toHaveBeenCalledWith(
       sanityInstance,
       expect.objectContaining({projectId: 'test'}),
     )
@@ -56,7 +49,7 @@ describe('useDatasets', () => {
 
   it('lets an explicit projectId override the ambient resource', () => {
     renderHook(() => useDatasets({projectId: 'explicit-project'}))
-    expect(datasets.getState).toHaveBeenCalledWith(
+    expect(getDatasetsState).toHaveBeenCalledWith(
       sanityInstance,
       expect.objectContaining({projectId: 'explicit-project'}),
     )
@@ -73,7 +66,7 @@ describe('useDatasets', () => {
         </ResourceProvider>
       ),
     })
-    expect(datasets.getState).toHaveBeenCalledWith(
+    expect(getDatasetsState).toHaveBeenCalledWith(
       sanityInstance,
       expect.objectContaining({projectId: 'resource-project'}),
     )
@@ -89,7 +82,7 @@ describe('useDatasets', () => {
     })
     // A dataset-less config can't form a DatasetResource; the projectId is carried
     // via ProjectContext and injected so project-scoped reads still resolve it.
-    expect(datasets.getState).toHaveBeenCalledWith(
+    expect(getDatasetsState).toHaveBeenCalledWith(
       sanityInstance,
       expect.objectContaining({projectId: 'config-project'}),
     )
@@ -108,16 +101,16 @@ describe('useDatasets', () => {
         </SanityInstanceContext.Provider>
       ),
     })
-    expect(datasets.getState).toHaveBeenCalledWith(
+    expect(getDatasetsState).toHaveBeenCalledWith(
       emptyInstance,
       expect.objectContaining({projectId: 'bare-project'}),
     )
   })
 
-  it('suspends via the datasets fetcher until dataset data is available', () => {
-    vi.mocked(datasets.getState).mockReturnValue(stateSource(undefined))
-    vi.mocked(datasets.resolveState).mockReturnValue(new Promise(() => {}))
+  it('suspends via resolveDatasets until dataset data is available', () => {
+    vi.mocked(getDatasetsState).mockReturnValue(stateSource(undefined))
+    vi.mocked(resolveDatasets).mockReturnValue(new Promise(() => {}))
     renderHook(() => useDatasets())
-    expect(datasets.resolveState).toHaveBeenCalled()
+    expect(resolveDatasets).toHaveBeenCalled()
   })
 })

@@ -1,8 +1,8 @@
 import {type DocumentResource, type SanityInstance} from '@sanity/sdk'
 import {type ReactElement, type ReactNode, use, useMemo} from 'react'
 
+import {useDashboardOrganizationId} from '../hooks/auth/useDashboardOrganizationId'
 import {useSanityInstance} from '../hooks/context/useSanityInstance'
-import {useOrganizationId} from '../hooks/dashboard/useOrganizationId'
 import {resolveOrgResources} from '../utils/resolveOrgResources'
 import {ResourcesContext} from './ResourcesContext'
 
@@ -91,7 +91,7 @@ export function OrganizationResourcesProvider({
   children: ReactNode
 }): ReactElement {
   const instance = useSanityInstance()
-  const orgId = useOrganizationId()
+  const orgId = useDashboardOrganizationId()
 
   if (!inferMediaLibraryAndCanvas || !orgId) {
     return (

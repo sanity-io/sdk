@@ -1,6 +1,6 @@
 {
   "name": "@sanity/sdk",
-  "version": "3.0.0-rc.2",
+  "version": "2.20.1",
   "private": false,
   "description": "Sanity SDK",
   "keywords": [
@@ -41,25 +41,15 @@
     "./_internal": {
       "source": "./src/_exports/_internal.ts",
       "default": "./dist/_exports/_internal.js"
-    },
-    "./agent": {
-      "source": "./src/_exports/agent.ts",
-      "default": "./dist/_exports/agent.js"
-    },
-    "./comlink": {
-      "source": "./src/_exports/comlink.ts",
-      "default": "./dist/_exports/comlink.js"
     }
   },
   "publishConfig": {
+    "access": "public",
     "exports": {
       ".": "./dist/index.js",
       "./package.json": "./package.json",
-      "./_internal": "./dist/_exports/_internal.js",
-      "./agent": "./dist/_exports/agent.js",
-      "./comlink": "./dist/_exports/comlink.js"
-    },
-    "access": "public"
+      "./_internal": "./dist/_exports/_internal.js"
+    }
   },
   "scripts": {
     "build": "pkg build --strict --clean --check",

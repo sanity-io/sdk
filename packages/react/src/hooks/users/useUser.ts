@@ -1,5 +1,11 @@
-import {type GetUserOptions, getUsersState, resolveUsers, type SanityUser} from '@sanity/sdk'
-import {getUsersKey, parseUsersKey} from '@sanity/sdk/_internal'
+import {
+  type GetUserOptions,
+  getUsersKey,
+  getUsersState,
+  parseUsersKey,
+  resolveUsers,
+  type SanityUser,
+} from '@sanity/sdk'
 import {useEffect, useMemo, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'

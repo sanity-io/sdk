@@ -9,18 +9,6 @@ The App SDK Core is a pure TypeScript implementation of the App SDK’s business
 
 We highly recommend that users default to using the hooks provided by the React SDK for building custom apps on the Sanity platform, unless you’re looking to create your own Sanity App SDK using this core layer.
 
-## Entry points
-
-The package exposes multiple entry points:
-
-| Entry point           | Contents                                                                |
-| --------------------- | ----------------------------------------------------------------------- |
-| `@sanity/sdk`         | Core SDK — auth, documents, queries, presence, projects, users, etc.    |
-| `@sanity/sdk/agent`   | AI agent utilities — `agentGenerate`, `agentPatch`, `agentPrompt`, etc. |
-| `@sanity/sdk/comlink` | Comlink channel/controller/node utilities and message types             |
-
-`@sanity/sdk-react` re-exports the main `@sanity/sdk` entry point only. Import the agent and comlink utilities from their sub-entries directly.
-
 **Looking for our React SDK?** You’ll find it on:
 
 - [GitHub](https://github.com/sanity-io/sdk/tree/main/packages/react)

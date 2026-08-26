@@ -91,6 +91,21 @@ describe('useNormalizedResourceOptions', () => {
         ),
       ).toThrow()
     })
+
+    it('resolves deprecated `source` as `resource`', () => {
+      const {result} = renderHook(() =>
+        useNormalizedResourceOptions({source: {projectId: 'src', dataset: 'src-ds'}}),
+      )
+      expect(result.current.resource).toEqual({projectId: 'src', dataset: 'src-ds'})
+    })
+
+    it('resolves deprecated `sourceName` as `resourceName`', () => {
+      const {result} = renderHook(() => useNormalizedResourceOptions({sourceName: 'dataset'}))
+      expect(result.current.resource).toEqual({
+        projectId: 'resource-project-id',
+        dataset: 'resource-dataset',
+      })
+    })
   })
 
   describe('tier 2 — bare projectId/dataset in options', () => {
@@ -215,6 +230,18 @@ describe('useNormalizedResourceOptions', () => {
       )
       expect(result.current).not.toHaveProperty('projectId')
       expect(result.current).not.toHaveProperty('dataset')
+    })
+
+    it('strips deprecated source from the result', () => {
+      const {result} = renderHook(() =>
+        useNormalizedResourceOptions({source: {projectId: 'src', dataset: 'src-ds'}}),
+      )
+      expect(result.current).not.toHaveProperty('source')
+    })
+
+    it('strips deprecated sourceName from the result', () => {
+      const {result} = renderHook(() => useNormalizedResourceOptions({sourceName: 'dataset'}))
+      expect(result.current).not.toHaveProperty('sourceName')
     })
 
     it('preserves unrelated fields', () => {

@@ -1,18 +1,25 @@
-import {type Project, projects, type ProjectsOptions} from '@sanity/sdk'
+import {getProjectsState, type Project, type ProjectsOptions, resolveProjects} from '@sanity/sdk'
 
-import {createFetcherHook, type FetcherHookResult} from '../helpers/createFetcherHook'
+import {createStateSourceHook} from '../helpers/createStateSourceHook'
+
+/**
+ * @public
+ * @category Types
+ * @interface
+ * @deprecated use the Project type directly.
+ */
+export type ProjectWithoutMembers = Project
 
 /**
  * Returns metadata for each project you have access to.
  *
  * @category Projects
  * @param options - Configuration options
- * @returns A {@link FetcherHookResult} whose `data` is an array of project
- *   metadata. `members` is included only when `includeMembers: true`; `features`
- *   is included unless `includeFeatures: false`.
+ * @returns An array of project metadata. `members` is included only when
+ *   `includeMembers: true`; `features` is included unless `includeFeatures: false`.
  * @example
  * ```tsx
- * const {data: projects} = useProjects()
+ * const projects = useProjects()
  *
  * return (
  *   <select>
@@ -24,18 +31,20 @@ import {createFetcherHook, type FetcherHookResult} from '../helpers/createFetche
  * ```
  * @example
  * ```tsx
- * const {data: projects} = useProjects()
- * const {data: projectsWithFeatures} = useProjects()
- * const {data: projectsWithMembers} = useProjects({includeMembers: true})
- * const {data: projectsWithoutMembers} = useProjects({includeMembers: false})
- * const {data: projectsWithoutFeatures} = useProjects({includeFeatures: false})
+ * const projects = useProjects()
+ * const projectsWithFeatures = useProjects()
+ * const projectsWithMembers = useProjects({includeMembers: true})
+ * const projectsWithoutMembers = useProjects({includeMembers: false})
+ * const projectsWithoutFeatures = useProjects({includeFeatures: false})
  * ```
  * @public
  * @function
  */
-export const useProjects = createFetcherHook(projects) as <
-  IncludeMembers extends boolean = false,
-  IncludeFeatures extends boolean = true,
->(
+export const useProjects = createStateSourceHook({
+  getState: getProjectsState,
+  shouldSuspend: (instance, ...params) =>
+    getProjectsState(instance, ...params).getCurrent() === undefined,
+  suspender: resolveProjects,
+}) as <IncludeMembers extends boolean = false, IncludeFeatures extends boolean = true>(
   options?: ProjectsOptions<IncludeMembers, IncludeFeatures>,
-) => FetcherHookResult<Project<IncludeMembers, IncludeFeatures>[]>
+) => Project<IncludeMembers, IncludeFeatures>[]
