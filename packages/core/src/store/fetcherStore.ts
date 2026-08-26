@@ -1,4 +1,4 @@
-import {filter, firstValueFrom, map, type Observable, Subscription} from 'rxjs'
+import {filter, firstValueFrom, map, type Observable, Subscription, take} from 'rxjs'
 
 import {setCleanupInterval, setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {bindActionGlobally} from './createActionBinder'
@@ -490,6 +490,7 @@ const startFetch = (
   sub.add(
     def
       .fetch(instance)(...params)
+      .pipe(take(1))
       .subscribe({
         next: (data) => {
           const current = state.get().entries[key]
