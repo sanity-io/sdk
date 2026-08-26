@@ -1,4 +1,5 @@
-import {useAgentResourceContext, useDocuments, useSanityInstance} from '@sanity/sdk-react'
+import {useDocuments, useSanityInstance} from '@sanity/sdk-react'
+import {useAgentResourceContext} from '@sanity/sdk-react/dashboard'
 import {Badge, Box, Button, Card, Flex, Heading, Select, Stack, Text, TextInput} from '@sanity/ui'
 import {type JSX, useEffect, useMemo, useRef, useState} from 'react'
 

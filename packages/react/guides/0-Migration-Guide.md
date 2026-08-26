@@ -242,12 +242,22 @@ Relatedly, `useActiveReleases` and `useAllReleases` now take a `DatasetHandle` r
 
 13. Dashboard hooks moved to a sub-entry
 
-Dashboard hooks are now available only from the dedicated `@sanity/sdk-react/dashboard` entry point and have been renamed:
+Dashboard hooks have moved to the dedicated `@sanity/sdk-react/dashboard` entry point:
 
 | Previously in `@sanity/sdk-react` | Now in `@sanity/sdk-react/dashboard` |
 | --------------------------------- | ------------------------------------ |
 | `useDashboardOrganizationId`      | `useOrganizationId`                  |
 | `useDashboardNavigate`            | `useNavigate`                        |
+| `useNavigateToStudioDocument`     | `useNavigateToStudioDocument`        |
+| `useWindowTitle`                  | `useWindowTitle`                     |
+| `useAgentResourceContext`         | `useAgentResourceContext`            |
+
+The related types have moved to the same entry point:
+
+| Previously in `@sanity/sdk-react` | Now in `@sanity/sdk-react/dashboard` |
+| --------------------------------- | ------------------------------------ |
+| `AgentResourceContextOptions`     | `AgentResourceContextOptions`        |
+| `NavigateToStudioResult`          | `NavigateToStudioResult`             |
 
 ### New in v3
 
