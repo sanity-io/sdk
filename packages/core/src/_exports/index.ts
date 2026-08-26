@@ -181,8 +181,12 @@ export {
 export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export {getReleaseDocumentId} from '../document/processActions/releaseUtil'
-export type {FavoriteStatusResponse} from '../favorites/favorites'
-export {favorites} from '../favorites/favorites'
+export type {
+  FavoriteDocumentContext,
+  FavoriteStatusResponse,
+  SetFavoriteInput,
+} from '../favorites/favorites'
+export {favorites, setFavorite} from '../favorites/favorites'
 export {installation, installations} from '../installations/installations'
 export {
   type Installation,

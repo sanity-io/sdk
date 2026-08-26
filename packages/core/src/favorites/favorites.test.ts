@@ -6,7 +6,7 @@ import {getNodeState, type NodeState} from '../comlink/node/getNodeState'
 import {type FrameMessage, type WindowMessage} from '../comlink/types'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {favorites} from './favorites'
+import {favorites, setFavorite} from './favorites'
 
 vi.mock('../comlink/node/getNodeState', () => ({
   getNodeState: vi.fn(),
@@ -189,6 +189,50 @@ describe('favoritesStore', () => {
       expect(result1).toEqual({isFavorited: true})
       expect(result2).toEqual({isFavorited: true})
       vi.useRealTimers()
+    })
+  })
+
+  describe('setFavorite', () => {
+    beforeEach(() => {
+      vi.resetAllMocks()
+      instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+      setupMockStateSource({fetchImpl: vi.fn().mockResolvedValue({success: true})})
+    })
+
+    afterEach(() => {
+      instance?.dispose()
+    })
+
+    it('sends the added event with schemaName and resolves to the new state', async () => {
+      const result = await setFavorite(instance!, {...mockContext, isFavorited: true})
+      expect(result.data).toEqual({isFavorited: true})
+      expect(mockFetch).toHaveBeenCalledWith('dashboard/v1/events/favorite/mutate', {
+        eventType: 'added',
+        document: {
+          id: mockContext.documentId,
+          type: mockContext.documentType,
+          resource: {
+            id: mockContext.resourceId,
+            type: mockContext.resourceType,
+            schemaName: mockContext.schemaName,
+          },
+        },
+      })
+    })
+
+    it('sends the removed event and omits schemaName when absent', async () => {
+      const result = await setFavorite(instance!, {...mockContextNoSchema, isFavorited: false})
+      expect(result.data).toEqual({isFavorited: false})
+      const payload = mockFetch.mock.calls[0][1]
+      expect(payload.eventType).toBe('removed')
+      expect(payload.document.resource).not.toHaveProperty('schemaName')
+    })
+
+    it('rejects when the server reports failure', async () => {
+      setupMockStateSource({fetchImpl: vi.fn().mockResolvedValue({success: false})})
+      await expect(setFavorite(instance!, {...mockContext, isFavorited: true})).rejects.toThrow(
+        'Failed to update favorite status',
+      )
     })
   })
 })
