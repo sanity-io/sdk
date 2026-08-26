@@ -259,6 +259,41 @@ The related types have moved to the same entry point:
 | `AgentResourceContextOptions`     | `AgentResourceContextOptions`        |
 | `NavigateToStudioResult`          | `NavigateToStudioResult`             |
 
+14. `useManageFavorite` split into `useFavorite` and `useUpdateFavorite`
+
+`useManageFavorite` both read and wrote favorite status. It is replaced by a read hook and a write hook, matching the CRUD naming used by the rest of the SDK. `useFavorite` returns the boolean status and suspends until it resolves. `useUpdateFavorite` returns the `favorite`/`unfavorite` actions plus `{isPending, error, reset}` and does not suspend. Both take the same props `useManageFavorite` did.
+
+**Before:**
+
+```tsx
+function FavoriteButton(handle: UseFavoriteProps) {
+  const {favorite, unfavorite, isFavorited} = useManageFavorite(handle)
+
+  return (
+    <Button
+      onClick={() => (isFavorited ? unfavorite() : favorite())}
+      text={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+    />
+  )
+}
+```
+
+**After:**
+
+```tsx
+function FavoriteButton(handle: UseFavoriteProps) {
+  const isFavorited = useFavorite(handle)
+  const {favorite, unfavorite} = useUpdateFavorite(handle)
+
+  return (
+    <Button
+      onClick={() => (isFavorited ? unfavorite() : favorite())}
+      text={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+    />
+  )
+}
+```
+
 ### New in v3
 
 Non-breaking additions:
