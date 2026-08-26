@@ -11,7 +11,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @example
  * ```tsx
  * function DashboardComponent() {
- *   const orgId = useDashboardOrganizationId()
+ *   const orgId = useOrganizationId()
  *
  *   if (!orgId) return null
  *
@@ -22,7 +22,7 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @category Dashboard
  * @returns The dashboard organization ID (string | undefined)
  */
-export function useDashboardOrganizationId(): string | undefined {
+export function useOrganizationId(): string | undefined {
   const instance = useSanityInstance()
   const {subscribe, getCurrent} = useMemo(() => getDashboardOrganizationId(instance), [instance])
 

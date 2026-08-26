@@ -37,12 +37,17 @@
       "source": "./src/_exports/index.ts",
       "default": "./dist/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./dashboard": {
+      "source": "./src/_exports/dashboard.ts",
+      "default": "./dist/_exports/dashboard.js"
+    }
   },
   "publishConfig": {
     "exports": {
       ".": "./dist/index.js",
-      "./package.json": "./package.json"
+      "./package.json": "./package.json",
+      "./dashboard": "./dist/_exports/dashboard.js"
     },
     "access": "public"
   },
