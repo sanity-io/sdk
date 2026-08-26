@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.20.2](https://github.com/sanity-io/sdk/compare/sdk-v2.20.1...sdk-v2.20.2) (2026-08-26)
+
+
+### Bug Fixes
+
+* **core:** retain own-transaction memory until echo verification ([#1077](https://github.com/sanity-io/sdk/issues/1077)) ([9234643](https://github.com/sanity-io/sdk/commit/9234643d97b0ec0681eb26876df24d71b9a29e85))
+
+
 ## [2.20.1](https://github.com/sanity-io/sdk/compare/sdk-v2.20.0...sdk-v2.20.1) (2026-08-21)
 
 

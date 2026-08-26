@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.20.2](https://github.com/sanity-io/sdk/compare/sdk-react-v2.20.1...sdk-react-v2.20.2) (2026-08-26)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.20.2
+
 ## [2.20.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.20.0...sdk-react-v2.20.1) (2026-08-21)
 
 
