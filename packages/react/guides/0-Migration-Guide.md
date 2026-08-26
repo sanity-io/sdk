@@ -302,7 +302,7 @@ Non-breaking additions:
 - Applications hooks: `useApplication`, `useApplications`, `useUpdateApplication`, and `useDeleteApplication`.
 - Installations hooks: `useInstallation` and `useInstallations`.
 - A mutation hook layer. Mutation hooks return a `MutationHookResult`: `{mutate, isPending, error, data, reset}`.
-- `AuthBoundary` no longer redirects to the login URL when running in the workbench, where the host OS owns the session and mints the token.
+- `AuthBoundary` no longer redirects to the login URL when running in the dashboard, where the host OS owns the session and mints the token.
 
 ## Migrating to @sanity/sdk-react@2.0.0
 
