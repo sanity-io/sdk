@@ -5,8 +5,8 @@ import {useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
 import {ComlinkTokenRefreshProvider} from '../../context/ComlinkTokenRefresh'
-import {isWorkbenchEnvironment} from '../../context/workbenchToken'
-import {WorkbenchTokenRefreshProvider} from '../../context/WorkbenchTokenRefresh'
+import {isDashboardEnvironment} from '../../context/dashboardToken'
+import {DashboardTokenRefreshProvider} from '../../context/DashboardTokenRefresh'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
@@ -144,11 +144,11 @@ export function AuthBoundary({
 
   return (
     <ComlinkTokenRefreshProvider>
-      <WorkbenchTokenRefreshProvider>
+      <DashboardTokenRefreshProvider>
         <ErrorBoundary FallbackComponent={FallbackComponent} resetKeys={[sessionResetKey]}>
           <AuthSwitch {...props} />
         </ErrorBoundary>
-      </WorkbenchTokenRefreshProvider>
+      </DashboardTokenRefreshProvider>
     </ComlinkTokenRefreshProvider>
   )
 }
@@ -187,7 +187,7 @@ function AuthSwitch({
   const loginUrl = useLoginUrl()
 
   useEffect(() => {
-    if (isLoggedOut && !isInIframe() && !isStudio && !isWorkbenchEnvironment()) {
+    if (isLoggedOut && !isInIframe() && !isStudio && !isDashboardEnvironment()) {
       // We don't want to redirect to login if we're in the Dashboard, in studio
       // mode, or in the workbench (the OS owns the session and mints the token)
       window.location.href = loginUrl
