@@ -1,5 +1,6 @@
 import {type Message} from '@sanity/comlink'
-import {type FavoriteStatusResponse, getFavoritesState, resolveFavoritesState} from '@sanity/sdk'
+import {favorites, type FavoriteStatusResponse, type StateSource} from '@sanity/sdk'
+import {type FetcherSnapshot} from '@sanity/sdk/_internal'
 import {act, renderHook} from '@testing-library/react'
 import {BehaviorSubject} from 'rxjs'
 import {beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
@@ -15,8 +16,14 @@ vi.mock(import('@sanity/sdk'), async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
-    getFavoritesState: vi.fn(),
-    resolveFavoritesState: vi.fn(),
+    favorites: {
+      getState: vi.fn(),
+      resolveState: vi.fn(),
+      refetch: vi.fn(),
+      invalidate: vi.fn(),
+      invalidateAll: vi.fn(),
+      setData: vi.fn(),
+    },
   }
 })
 
@@ -35,24 +42,37 @@ describe('useManageFavorite', () => {
     resourceType: 'studio' as const,
   }
 
+  // Fresh objects per call are fine: the fetcher hook deep-compares snapshots
+  // before handing them to useSyncExternalStore.
+  const toSnapshot = (value: FavoriteStatusResponse): FetcherSnapshot<FavoriteStatusResponse> => ({
+    status: 'success',
+    data: value,
+    error: undefined,
+    isFetching: false,
+    dataUpdatedAt: 1,
+  })
+
   beforeEach(() => {
     favoriteStatusSubject = new BehaviorSubject<FavoriteStatusResponse>({isFavorited: false})
 
-    // Mock getFavoritesState
-    vi.mocked(getFavoritesState).mockImplementation(() => ({
-      subscribe: (callback?: () => void) => {
-        if (!callback) return () => {}
+    // Mock favorites.getState
+    vi.mocked(favorites.getState).mockImplementation(
+      () =>
+        ({
+          subscribe: (callback?: () => void) => {
+            if (!callback) return () => {}
 
-        const subscription = favoriteStatusSubject.subscribe(() => callback())
-        callback() // Initial call
-        return () => subscription.unsubscribe()
-      },
-      getCurrent: () => favoriteStatusSubject.getValue(),
-      observable: favoriteStatusSubject.asObservable(),
-    }))
+            const subscription = favoriteStatusSubject.subscribe(() => callback())
+            callback() // Initial call
+            return () => subscription.unsubscribe()
+          },
+          getCurrent: () => toSnapshot(favoriteStatusSubject.getValue()),
+          observable: favoriteStatusSubject.asObservable(),
+        }) as unknown as StateSource<FetcherSnapshot<FavoriteStatusResponse>>,
+    )
 
-    // Mock resolveFavoritesState
-    vi.mocked(resolveFavoritesState).mockImplementation(async () => {
+    // Mock favorites.refetch
+    vi.mocked(favorites.refetch).mockImplementation(async () => {
       const newValue = {isFavorited: !favoriteStatusSubject.getValue().isFavorited}
       favoriteStatusSubject.next(newValue)
       return newValue
@@ -119,7 +139,7 @@ describe('useManageFavorite', () => {
       // empty options object (from useWindowConnection)
       {},
     )
-    expect(resolveFavoritesState).toHaveBeenCalled()
+    expect(favorites.refetch).toHaveBeenCalled()
     expect(result.current.isFavorited).toBe(true)
   })
 
@@ -158,7 +178,7 @@ describe('useManageFavorite', () => {
       },
       {},
     )
-    expect(resolveFavoritesState).toHaveBeenCalled()
+    expect(favorites.refetch).toHaveBeenCalled()
     expect(result.current.isFavorited).toBe(false)
   })
 
@@ -179,7 +199,7 @@ describe('useManageFavorite', () => {
       await result.current.favorite()
     })
 
-    expect(resolveFavoritesState).not.toHaveBeenCalled()
+    expect(favorites.refetch).not.toHaveBeenCalled()
     expect(result.current.isFavorited).toBe(false)
   })
 
@@ -203,14 +223,14 @@ describe('useManageFavorite', () => {
       await expect(result.current.favorite()).rejects.toThrow(errorMessage)
     })
 
-    expect(resolveFavoritesState).not.toHaveBeenCalled()
+    expect(favorites.refetch).not.toHaveBeenCalled()
     expect(result.current.isFavorited).toBe(false)
 
     await act(async () => {
       await expect(result.current.unfavorite()).rejects.toThrow(errorMessage)
     })
 
-    expect(resolveFavoritesState).not.toHaveBeenCalled()
+    expect(favorites.refetch).not.toHaveBeenCalled()
     consoleErrorSpy.mockRestore()
   })
 
@@ -286,17 +306,23 @@ describe('useManageFavorite', () => {
     )
   })
 
-  it('should default isFavorited to false if state is undefined', () => {
-    // Mock getFavoritesState to return undefined for getCurrent
-    vi.mocked(getFavoritesState).mockImplementation(() => ({
-      subscribe: (callback?: () => void) => {
-        if (!callback) return () => {}
-        callback()
-        return () => {}
-      },
-      getCurrent: () => undefined,
-      observable: favoriteStatusSubject.asObservable(),
-    }))
+  it('should suspend until the favorite status is available', () => {
+    const pending: FetcherSnapshot<FavoriteStatusResponse> = {
+      status: 'pending',
+      data: undefined,
+      error: undefined,
+      isFetching: true,
+      dataUpdatedAt: undefined,
+    }
+    vi.mocked(favorites.getState).mockImplementation(
+      () =>
+        ({
+          subscribe: () => () => {},
+          getCurrent: () => pending,
+          observable: favoriteStatusSubject.asObservable(),
+        }) as unknown as StateSource<FetcherSnapshot<FavoriteStatusResponse>>,
+    )
+    vi.mocked(favorites.resolveState).mockReturnValue(new Promise(() => {}))
     const {result} = renderHook(() => useManageFavorite(mockDocumentHandle), {
       wrapper: ({children}) => (
         <ResourceProvider projectId="test-project" dataset="test-dataset" fallback={null}>
@@ -304,7 +330,9 @@ describe('useManageFavorite', () => {
         </ResourceProvider>
       ),
     })
-    expect(result.current.isFavorited).toBe(false)
+    // Suspended on the initial fetch — the ResourceProvider fallback renders instead.
+    expect(result.current).toBeNull()
+    expect(favorites.resolveState).toHaveBeenCalled()
   })
 
   it('should do nothing if fetch is missing', async () => {

@@ -659,8 +659,7 @@ export function defineFetcher<TParams extends unknown[], TData>(
         }))
         startInterval(state, def, instance, params, key)
 
-        // Defer the fetch decision off the subscribe call stack (see the
-        // `delay(0)` precedent in the legacy fetcher store) to avoid a
+        // Defer the fetch decision off the subscribe call stack to avoid a
         // re-entrant cache write during subscription setup.
         queueMicrotask(() => {
           const entry = state.get().entries[key]

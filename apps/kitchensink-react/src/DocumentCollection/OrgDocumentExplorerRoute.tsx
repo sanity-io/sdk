@@ -376,7 +376,7 @@ function DocumentTypes() {
 
 function DatasetExplorer() {
   const {config} = useSanityInstance()
-  const datasets = useDatasets()
+  const {data: datasets} = useDatasets()
   const [selectedDataset, setSelectedDataset] = useState<string | null>(null)
 
   const handleDatasetChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
