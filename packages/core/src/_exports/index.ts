@@ -115,7 +115,7 @@ export {
   type StudioConfig,
   type TokenSource,
 } from '../config/sanityConfig'
-export {getDatasetsState, resolveDatasets} from '../datasets/datasets'
+export {datasets} from '../datasets/datasets'
 export {
   type Action,
   archiveRelease,
@@ -182,7 +182,7 @@ export {type JsonMatch} from '../document/patchOperations'
 export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export {getReleaseDocumentId} from '../document/processActions/releaseUtil'
 export type {FavoriteStatusResponse} from '../favorites/favorites'
-export {getFavoritesState, resolveFavoritesState} from '../favorites/favorites'
+export {favorites} from '../favorites/favorites'
 export {installation, installations} from '../installations/installations'
 export {
   type Installation,
@@ -259,7 +259,6 @@ export {
   resolveUser,
   resolveUsers,
 } from '../users/usersStore'
-export {type FetcherStore, type FetcherStoreState} from '../utils/createFetcherStore'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {isImportError} from '../utils/isImportError'
 export {CORE_SDK_VERSION} from '../version'

@@ -6,17 +6,15 @@ import {
   SDK_NODE_NAME,
   type StudioResource,
 } from '@sanity/message-protocol'
-import {
-  type DocumentHandle,
-  type FavoriteStatusResponse,
-  getFavoritesState,
-  resolveFavoritesState,
-} from '@sanity/sdk'
+import {type DocumentHandle, favorites, type FavoriteStatusResponse} from '@sanity/sdk'
 import {type FrameMessage} from '@sanity/sdk/comlink'
-import {useCallback, useMemo, useSyncExternalStore} from 'react'
+import {useCallback, useMemo} from 'react'
 
 import {useWindowConnection} from '../comlink/useWindowConnection'
 import {useSanityInstance} from '../context/useSanityInstance'
+import {createFetcherHook} from '../helpers/createFetcherHook'
+
+const useFavoriteStatus = createFetcherHook(favorites)
 
 interface ManageFavorite extends FavoriteStatusResponse {
   favorite: () => Promise<void>
@@ -110,7 +108,7 @@ export function useManageFavorite({
     throw new Error('resourceId is required for media-library and canvas resources')
   }
 
-  // used for favoriteStore functions like getFavoritesState and resolveFavoritesState
+  // params for the favorites fetcher
   const context = useMemo(
     () => ({
       documentId,
@@ -122,11 +120,8 @@ export function useManageFavorite({
     [documentId, documentType, resourceId, resourceType, schemaName],
   )
 
-  // Get favorite status using StateSource
-  const favoriteState = getFavoritesState(instance, context)
-  const state = useSyncExternalStore(favoriteState.subscribe, favoriteState.getCurrent)
-
-  const isFavorited = state?.isFavorited ?? false
+  const {data, refetch} = useFavoriteStatus(context)
+  const isFavorited = data.isFavorited
 
   const handleFavoriteAction = useCallback(
     async (action: 'added' | 'removed') => {
@@ -151,7 +146,7 @@ export function useManageFavorite({
         const res = await fetch<{success: boolean}>('dashboard/v1/events/favorite/mutate', payload)
         if (res.success) {
           // Force a re-fetch of the favorite status after successful mutation
-          await resolveFavoritesState(instance, context)
+          await refetch()
         }
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -159,7 +154,7 @@ export function useManageFavorite({
         throw err
       }
     },
-    [fetch, documentId, documentType, resourceId, resourceType, schemaName, instance, context],
+    [fetch, documentId, documentType, resourceId, resourceType, schemaName, refetch],
   )
 
   const favorite = useCallback(() => handleFavoriteAction('added'), [handleFavoriteAction])
