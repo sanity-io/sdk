@@ -21,10 +21,6 @@ export {
   useAgentTransform,
   useAgentTranslate,
 } from '../hooks/agent/agentActions'
-export {
-  type AgentResourceContextOptions,
-  useAgentResourceContext,
-} from '../hooks/agent/useAgentResourceContext'
 export {useApplication} from '../hooks/applications/useApplication'
 export {useApplications} from '../hooks/applications/useApplications'
 export {useDeleteApplication} from '../hooks/applications/useDeleteApplication'
@@ -55,13 +51,8 @@ export {useCommentThreads, type UseCommentThreadsResult} from '../hooks/comments
 export {useResource} from '../hooks/context/useResource'
 export {useSanityInstance} from '../hooks/context/useSanityInstance'
 export {useManageFavorite} from '../hooks/dashboard/useManageFavorite'
-export {
-  type NavigateToStudioResult,
-  useNavigateToStudioDocument,
-} from '../hooks/dashboard/useNavigateToStudioDocument'
 export {useRecordDocumentHistoryEvent} from '../hooks/dashboard/useRecordDocumentHistoryEvent'
 export {useStudioWorkspacesByProjectIdDataset} from '../hooks/dashboard/useStudioWorkspacesByProjectIdDataset'
-export {useWindowTitle} from '../hooks/dashboard/useWindowTitle'
 export {useDatasets} from '../hooks/datasets/useDatasets'
 export {useApplyDocumentActions} from '../hooks/document/useApplyDocumentActions'
 export {type CreateDocumentOverrides, useCreateDocument} from '../hooks/document/useCreateDocument'

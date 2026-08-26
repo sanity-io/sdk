@@ -2,10 +2,10 @@ import {
   DocumentHandle,
   useDocuments,
   useManageFavorite,
-  useNavigateToStudioDocument,
   useRecordDocumentHistoryEvent,
   useSanityInstance,
 } from '@sanity/sdk-react'
+import {useNavigateToStudioDocument} from '@sanity/sdk-react/dashboard'
 import {Box, Button, Flex, Heading} from '@sanity/ui'
 import {type JSX, Suspense} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'

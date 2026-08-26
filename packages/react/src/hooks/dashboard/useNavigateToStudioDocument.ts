@@ -36,7 +36,8 @@ export interface NavigateToStudioResult {
  *
  * @example
  * ```tsx
- * import {useNavigateToStudioDocument, type DocumentHandle} from '@sanity/sdk-react'
+ * import {type DocumentHandle} from '@sanity/sdk-react'
+ * import {useNavigateToStudioDocument} from '@sanity/sdk-react/dashboard'
  * import {Button} from '@sanity/ui'
  * import {Suspense} from 'react'
  *
