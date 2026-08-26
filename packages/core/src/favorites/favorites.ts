@@ -5,12 +5,12 @@ import {
   SDK_NODE_NAME,
   type StudioResource,
 } from '@sanity/message-protocol'
-import {catchError, filter, from, map, Observable, of, shareReplay, switchMap} from 'rxjs'
+import {catchError, first, from, map, type Observable, of, switchMap} from 'rxjs'
 
 import {getNodeState} from '../comlink/node/getNodeState'
 import {type DocumentHandle} from '../config/sanityConfig'
 import {type SanityInstance} from '../store/createSanityInstance'
-import {createFetcherStore} from '../utils/createFetcherStore'
+import {defineFetcher} from '../store/fetcherStore'
 
 /**
  * @public
@@ -35,12 +35,17 @@ function createFavoriteKey(context: FavoriteDocumentContext): string {
   }`
 }
 
-const favorites = createFetcherStore<[FavoriteDocumentContext], FavoriteStatusResponse>({
-  name: 'Favorites',
-  getKey: (_instance: SanityInstance, context: FavoriteDocumentContext) => {
-    return createFavoriteKey(context)
-  },
-  fetcher: (instance: SanityInstance) => {
+/**
+ * Fetcher for a document's favorite status, read from the dashboard over
+ * comlink, on the shared fetcher cache.
+ *
+ * @internal
+ */
+export const favorites = defineFetcher<[context: FavoriteDocumentContext], FavoriteStatusResponse>({
+  name: 'favorites',
+  getKey: (_instance: SanityInstance, context: FavoriteDocumentContext) =>
+    createFavoriteKey(context),
+  fetch: (instance) => {
     return (context: FavoriteDocumentContext): Observable<FavoriteStatusResponse> => {
       const nodeStateSource = getNodeState(instance, {
         name: SDK_NODE_NAME,
@@ -59,8 +64,8 @@ const favorites = createFetcherStore<[FavoriteDocumentContext], FavoriteStatusRe
       }
 
       return nodeStateSource.observable.pipe(
-        filter((nodeState) => !!nodeState), // Only proceed when connected
-        shareReplay(1),
+        // Wait until connected, then complete after the single fetch settles.
+        first((nodeState) => !!nodeState),
         switchMap((nodeState) => {
           const node = nodeState!.node
           return from(
@@ -82,21 +87,3 @@ const favorites = createFetcherStore<[FavoriteDocumentContext], FavoriteStatusRe
     }
   },
 })
-
-/**
- * Gets a StateSource for the favorite status of a document.
- * @param instance - The Sanity instance.
- * @param context - The document context including ID, type, and resource information.
- * @returns A StateSource emitting `{ isFavorited: boolean }`.
- * @public
- */
-export const getFavoritesState = favorites.getState
-
-/**
- * Resolves the favorite status for a document.
- * @param instance - The Sanity instance.
- * @param context - The document context including ID, type, and resource information.
- * @returns A Promise resolving to `{ isFavorited: boolean }`.
- * @public
- */
-export const resolveFavoritesState = favorites.resolveState
