@@ -3,7 +3,7 @@ import {render} from '@testing-library/react'
 import React from 'react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-import {useDashboardOrganizationId} from '../hooks/auth/useDashboardOrganizationId'
+import {useOrganizationId} from '../hooks/dashboard/useOrganizationId'
 import {resolveOrgResources} from '../utils/resolveOrgResources'
 import {SDKProvider} from './SDKProvider'
 
@@ -14,8 +14,8 @@ vi.mock('../hooks/context/useSanityInstance', () => {
   return {useSanityInstance: () => instance}
 })
 
-vi.mock('../hooks/auth/useDashboardOrganizationId', () => ({
-  useDashboardOrganizationId: vi.fn(),
+vi.mock('../hooks/dashboard/useOrganizationId', () => ({
+  useOrganizationId: vi.fn(),
 }))
 
 vi.mock('../utils/resolveOrgResources', () => ({
@@ -53,13 +53,13 @@ vi.mock('./auth/AuthBoundary', () => ({
 }))
 
 const mockResolveOrgResources = vi.mocked(resolveOrgResources)
-const mockUseDashboardOrganizationId = vi.mocked(useDashboardOrganizationId)
+const mockUseOrganizationId = vi.mocked(useOrganizationId)
 
 describe('SDKProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockResolveOrgResources.mockResolvedValue({})
-    mockUseDashboardOrganizationId.mockReturnValue(undefined)
+    mockUseOrganizationId.mockReturnValue(undefined)
   })
 
   it('renders single ResourceProvider with AuthBoundary for a single config', () => {

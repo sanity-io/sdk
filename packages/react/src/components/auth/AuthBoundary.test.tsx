@@ -1,4 +1,4 @@
-import {AuthStateType, type SanityConfig} from '@sanity/sdk'
+import {AuthStateType} from '@sanity/sdk'
 import {render, screen, waitFor} from '@testing-library/react'
 import React from 'react'
 import {type FallbackProps} from 'react-error-boundary'
@@ -109,24 +109,6 @@ describe('AuthBoundary', () => {
   const mockUseLoginUrl = vi.mocked(useLoginUrl)
   const mockUseVerifyOrgProjects = vi.mocked(useVerifyOrgProjects)
   const testProjectIds = ['proj-test'] // Example project ID for tests
-
-  // Mock Sanity instance
-  const mockSanityInstance = {
-    instanceId: 'test-instance-id',
-    config: {
-      projectId: 'test-project',
-      dataset: 'test-dataset',
-    },
-    isDisposed: () => false,
-    dispose: () => {},
-    onDispose: () => () => {},
-    getParent: () => undefined,
-    createChild: (config: SanityConfig) => ({
-      ...mockSanityInstance,
-      config: {...mockSanityInstance.config, ...config},
-    }),
-    match: () => undefined,
-  }
 
   beforeEach(() => {
     vi.clearAllMocks()

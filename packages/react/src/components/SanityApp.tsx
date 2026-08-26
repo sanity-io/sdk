@@ -1,4 +1,5 @@
-import {type DocumentResource, isStudioConfig, type SanityConfig} from '@sanity/sdk'
+import {type DocumentResource, type SanityConfig} from '@sanity/sdk'
+import {isStudioConfig} from '@sanity/sdk/_internal'
 import {type ReactElement, useContext, useEffect, useMemo} from 'react'
 
 import {SDKStudioContext, type StudioWorkspaceHandle} from '../context/SDKStudioContext'
@@ -17,8 +18,6 @@ export interface SanityAppProps {
    * automatically.
    */
   config?: SanityConfig | SanityConfig[]
-  /** @deprecated use the `config` prop instead. */
-  sanityConfigs?: SanityConfig[]
   resources?: Record<string, DocumentResource>
   children: React.ReactNode
   /* Fallback content to show when child components are suspending. Same as the `fallback` prop for React Suspense. */

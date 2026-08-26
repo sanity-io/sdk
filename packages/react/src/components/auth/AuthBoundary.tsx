@@ -1,9 +1,12 @@
 import {CorsOriginError} from '@sanity/client'
-import {AuthStateType, getCorsErrorProjectId, isImportError, isStudioConfig} from '@sanity/sdk'
+import {AuthStateType, getCorsErrorProjectId, isImportError} from '@sanity/sdk'
+import {isStudioConfig} from '@sanity/sdk/_internal'
 import {useEffect, useMemo} from 'react'
 import {ErrorBoundary, type FallbackProps} from 'react-error-boundary'
 
 import {ComlinkTokenRefreshProvider} from '../../context/ComlinkTokenRefresh'
+import {isDashboardEnvironment} from '../../context/dashboardToken'
+import {DashboardTokenRefreshProvider} from '../../context/DashboardTokenRefresh'
 import {useAuthState} from '../../hooks/auth/useAuthState'
 import {useLoginUrl} from '../../hooks/auth/useLoginUrl'
 import {useVerifyOrgProjects} from '../../hooks/auth/useVerifyOrgProjects'
@@ -141,9 +144,11 @@ export function AuthBoundary({
 
   return (
     <ComlinkTokenRefreshProvider>
-      <ErrorBoundary FallbackComponent={FallbackComponent} resetKeys={[sessionResetKey]}>
-        <AuthSwitch {...props} />
-      </ErrorBoundary>
+      <DashboardTokenRefreshProvider>
+        <ErrorBoundary FallbackComponent={FallbackComponent} resetKeys={[sessionResetKey]}>
+          <AuthSwitch {...props} />
+        </ErrorBoundary>
+      </DashboardTokenRefreshProvider>
     </ComlinkTokenRefreshProvider>
   )
 }
@@ -182,8 +187,9 @@ function AuthSwitch({
   const loginUrl = useLoginUrl()
 
   useEffect(() => {
-    if (isLoggedOut && !isInIframe() && !isStudio) {
-      // We don't want to redirect to login if we're in the Dashboard nor in studio mode
+    if (isLoggedOut && !isInIframe() && !isStudio && !isDashboardEnvironment()) {
+      // We don't want to redirect to login if we're in the Dashboard, in studio
+      // mode, or in the workbench (the OS owns the session and mints the token)
       window.location.href = loginUrl
     }
   }, [isLoggedOut, loginUrl, isStudio])
