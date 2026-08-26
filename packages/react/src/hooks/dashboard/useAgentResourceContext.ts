@@ -36,7 +36,7 @@ export interface AgentResourceContextOptions {
  *
  * @example
  * ```tsx
- * import {useAgentResourceContext} from '@sanity/sdk-react'
+ * import {useAgentResourceContext} from '@sanity/sdk-react/dashboard'
  *
  * function MyComponent() {
  *   const documentId = 'my-document-id'
