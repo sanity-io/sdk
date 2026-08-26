@@ -21,13 +21,13 @@ import {useWindowConnection} from '../comlink/useWindowConnection'
  *
  * @example
  * ```tsx
- * import {useDashboardNavigate} from '@sanity/sdk-react'
- * import {BrowserRouter, useNavigate} from 'react-router'
+ * import {useNavigate} from '@sanity/sdk-react/dashboard'
+ * import {BrowserRouter, useNavigate as useRouterNavigate} from 'react-router'
  * import {Suspense} from 'react'
  *
  * function DashboardNavigationHandler() {
- *   const navigate = useNavigate()
- *   useDashboardNavigate(({path, type}) => {
+ *   const navigate = useRouterNavigate()
+ *   useNavigate(({path, type}) => {
  *     navigate(path, {replace: type === 'replace'})
  *   })
  *   return null
@@ -45,7 +45,7 @@ import {useWindowConnection} from '../comlink/useWindowConnection'
  * }
  * ```
  */
-export function useDashboardNavigate(
+export function useNavigate(
   navigateFn: (options: PathChangeMessage['data']) => void,
 ): void {
   useWindowConnection<PathChangeMessage, never>({
