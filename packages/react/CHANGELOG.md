@@ -3,11 +3,6 @@
 ## [2.20.2](https://github.com/sanity-io/sdk/compare/sdk-react-v2.20.1...sdk-react-v2.20.2) (2026-08-26)
 
 
-### Reverts
-
-* "chore: merge v3 branch ([#1066](https://github.com/sanity-io/sdk/issues/1066))" ([#1118](https://github.com/sanity-io/sdk/issues/1118)) ([7512e92](https://github.com/sanity-io/sdk/commit/7512e92170710931e9333477fa77701b408706bd))
-
-
 ### Dependencies
 
 * The following workspace dependencies were updated

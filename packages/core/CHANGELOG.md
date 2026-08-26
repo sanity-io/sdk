@@ -8,10 +8,6 @@
 * **core:** retain own-transaction memory until echo verification ([#1077](https://github.com/sanity-io/sdk/issues/1077)) ([9234643](https://github.com/sanity-io/sdk/commit/9234643d97b0ec0681eb26876df24d71b9a29e85))
 
 
-### Reverts
-
-* "chore: merge v3 branch ([#1066](https://github.com/sanity-io/sdk/issues/1066))" ([#1118](https://github.com/sanity-io/sdk/issues/1118)) ([7512e92](https://github.com/sanity-io/sdk/commit/7512e92170710931e9333477fa77701b408706bd))
-
 ## [2.20.1](https://github.com/sanity-io/sdk/compare/sdk-v2.20.0...sdk-v2.20.1) (2026-08-21)
 
 
