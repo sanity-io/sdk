@@ -1,4 +1,4 @@
-import {NEVER, of, startWith, Subject, throwError} from 'rxjs'
+import {concatWith, NEVER, of, startWith, Subject, throwError} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createSanityInstance, type SanityInstance} from './createSanityInstance'
@@ -63,6 +63,28 @@ describe('fetcherStore', () => {
     fetcher.invalidate(instance, 1)
     await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
     unsub3()
+  })
+
+  it('revalidates a stale entry on re-subscribe when the fetch source does not complete', async () => {
+    let n = 0
+    const fetchSpy = vi.fn(() => of(++n).pipe(concatWith(NEVER)))
+    const fetcher = defineFetcher<[], number>({
+      name: 'swr-non-completing',
+      staleTime: 0,
+      getKey: () => 'k',
+      fetch: () => fetchSpy,
+    })
+
+    const first = fetcher.getState(instance)
+    const unsub1 = first.subscribe()
+    await vi.waitFor(() => expect(first.getCurrent().data).toBe(1))
+    unsub1()
+
+    const second = fetcher.getState(instance)
+    const unsub2 = second.subscribe()
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
+    expect(second.getCurrent().data).toBe(2)
+    unsub2()
   })
 
   it('invalidate refetches an actively-subscribed entry', async () => {
