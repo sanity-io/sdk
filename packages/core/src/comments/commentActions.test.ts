@@ -1,33 +1,41 @@
 import {type SanityClient} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
-import {of} from 'rxjs'
+import {NEVER, of} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {getCurrentUserState} from '../auth/authStore'
-import {getClient} from '../client/clientStore'
-import {type DocumentResource} from '../config/sanityConfig'
+import {type DocumentResource, type PerspectiveHandle} from '../config/sanityConfig'
 import {bindActionByResource} from '../store/createActionBinder'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
-import {getAddonDatasetState, provisionAddonDataset} from './addonDatasetStore'
 import {
+  addReaction,
   createComment,
   removeComment,
+  removeReaction,
   replyToComment,
   setCommentStatus,
   updateComment,
+  updateCommentRange,
 } from './commentActions'
-import {commentsStore, getCommentsState} from './commentsStore'
-import {addSubscriber, getCommentsKey, setComments} from './reducers'
+import {commentTarget, ORGANIZATION_ID, storedComment} from './commentFixtures'
+import {getCommentsClient} from './commentsClient'
+import {
+  commentsStore,
+  type CommentVariants,
+  getDocumentCommentsState,
+  toDocumentCommentsKey,
+} from './commentsStore'
+import {addSubscriber, setComments} from './reducers'
 import {type StoredComment} from './types'
 
 vi.mock('../auth/authStore', () => ({getCurrentUserState: vi.fn()}))
-vi.mock('../client/clientStore', () => ({getClient: vi.fn(), getClientState: vi.fn()}))
-vi.mock('./addonDatasetStore', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./addonDatasetStore')>()),
-  getAddonDatasetState: vi.fn(),
-  provisionAddonDataset: vi.fn(),
-  observeAddonDatasetClient: vi.fn(() => of(null)),
+vi.mock('./commentsClient', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./commentsClient')>()),
+  getCommentsClient: vi.fn(),
+  // Reads are not what these tests are about, and a listener would need a whole
+  // observable client of its own.
+  observeCommentsClient: vi.fn(() => NEVER),
 }))
 
 const HANDLE = {documentId: 'doc-1', documentType: 'author'}
@@ -35,36 +43,38 @@ const HANDLE = {documentId: 'doc-1', documentType: 'author'}
 /** Creates always name a field, since a pathless comment is refused. */
 const CREATE = {...HANDLE, fieldPath: 'name'}
 
-function comment(overrides: Partial<StoredComment> & Pick<StoredComment, '_id'>) {
-  return {
-    _type: 'comment',
-    _createdAt: '2026-01-01T00:00:00Z',
-    _rev: 'rev',
-    authorId: 'user-1',
-    message: null,
-    threadId: 'thread-1',
-    status: 'open',
-    reactions: null,
-    target: {
-      documentType: 'author',
-      // Every comment points at a field, so replies inherit a real path.
-      path: {field: 'name'},
-      document: {_ref: 'doc-1', _type: 'reference', _weak: true},
-    },
-    ...overrides,
-  } satisfies StoredComment as StoredComment
+const MESSAGE = [{_type: 'block', _key: 'b1', children: [{_type: 'span', text: 'hi'}]}]
+
+const RANGE = {
+  start: {_key: 'b1', offset: 0},
+  end: {_key: 'b1', offset: 5},
 }
+
+const comment = storedComment
 
 /** Puts comments into the store without going through the listener. */
 const seedComments = bindActionByResource(
   commentsStore,
   (
-    {state},
-    options: {resource?: DocumentResource; documentId?: string; comments: StoredComment[]},
+    {state, instance: sanityInstance, key},
+    options: {
+      resource?: DocumentResource
+      documentId?: string
+      /** Which variant list to seed. Defaults to the one a plain read addresses. */
+      variants?: CommentVariants
+      perspective?: PerspectiveHandle['perspective']
+      comments: StoredComment[]
+    },
   ) => {
-    const key = getCommentsKey({documentId: options.documentId ?? 'doc-1'})
-    state.set('addSubscriber', addSubscriber(key, 'seed'))
-    state.set('setComments', setComments(key, options.comments))
+    const commentsKey = toDocumentCommentsKey(sanityInstance, {
+      ...HANDLE,
+      documentId: options.documentId ?? HANDLE.documentId,
+      ...(options.variants ? {variants: options.variants} : {}),
+      ...(options.perspective ? {perspective: options.perspective} : {}),
+      resource: key.resource,
+    })
+    state.set('addSubscriber', addSubscriber(commentsKey, 'seed'))
+    state.set('setComments', setComments(commentsKey, options.comments))
   },
 )
 
@@ -74,62 +84,45 @@ const getCommentsStoreState = bindActionByResource(
 )
 
 let instance: SanityInstance
-let client: {
+let comments: {
   create: ReturnType<typeof vi.fn>
-  createIfNotExists: ReturnType<typeof vi.fn>
-  patch: ReturnType<typeof vi.fn>
+  update: ReturnType<typeof vi.fn>
   delete: ReturnType<typeof vi.fn>
-  mutate: ReturnType<typeof vi.fn>
-  transaction: ReturnType<typeof vi.fn>
+  addReaction: ReturnType<typeof vi.fn>
+  removeReaction: ReturnType<typeof vi.fn>
+  getTargetDocumentRef: ReturnType<typeof vi.fn>
 }
-let patchCommit: ReturnType<typeof vi.fn>
-let transactionCommit: ReturnType<typeof vi.fn>
-let patchSet: ReturnType<typeof vi.fn>
 
 beforeEach(() => {
-  vi.resetAllMocks()
+  vi.mocked(getCommentsClient).mockReset()
 
-  patchCommit = vi.fn().mockResolvedValue({})
-  transactionCommit = vi.fn().mockResolvedValue({})
-  patchSet = vi.fn(() => ({commit: patchCommit, set: patchSet}))
-
-  const patch = vi.fn(() => ({set: patchSet, commit: patchCommit}))
-  const transaction = vi.fn(() => {
-    const tx = {
-      transactionId: vi.fn(() => tx),
-      patch: vi.fn(() => tx),
-      commit: transactionCommit,
-    }
-    return tx
-  })
-
-  client = {
-    create: vi.fn(async (doc) => ({...doc, _createdAt: '2026-06-01T00:00:00Z', _rev: 'rev-1'})),
-    createIfNotExists: vi.fn(async (doc) => ({
-      ...doc,
-      _createdAt: '2026-06-01T00:00:00Z',
-      _rev: 'rev-1',
-    })),
-    patch,
-    delete: vi.fn().mockResolvedValue({}),
-    mutate: vi.fn().mockResolvedValue({}),
-    transaction,
+  comments = {
+    create: vi.fn(async (body: {_id: string}) => comment({_id: body._id})),
+    update: vi.fn().mockResolvedValue(undefined),
+    delete: vi.fn().mockResolvedValue(undefined),
+    addReaction: vi.fn().mockResolvedValue(undefined),
+    removeReaction: vi.fn().mockResolvedValue(undefined),
+    getTargetDocumentRef: vi.fn(
+      (documentId: string) =>
+        `dataset:p.d:${documentId.replace(/^drafts\.|^versions\.[^.]+\./, '')}`,
+    ),
   }
 
-  vi.mocked(getClient).mockReturnValue(client as unknown as SanityClient)
-  vi.mocked(provisionAddonDataset).mockResolvedValue('d-comments')
-  vi.mocked(getAddonDatasetState).mockReturnValue({
-    observable: of('d-comments'),
-    getCurrent: () => 'd-comments',
-    subscribe: () => () => {},
-  } as unknown as StateSource<string | null | undefined>)
+  vi.mocked(getCommentsClient).mockReturnValue({
+    collaboration: {comments},
+  } as unknown as SanityClient)
+
   vi.mocked(getCurrentUserState).mockReturnValue({
     observable: of({id: 'user-1'}),
     getCurrent: () => ({id: 'user-1'}) as CurrentUser,
     subscribe: () => () => {},
   } as unknown as StateSource<CurrentUser | null>)
 
-  instance = createSanityInstance({projectId: 'p', dataset: 'd'})
+  instance = createSanityInstance({
+    projectId: 'p',
+    dataset: 'd',
+    collaboration: {organizationId: ORGANIZATION_ID},
+  })
 })
 
 afterEach(() => {
@@ -137,142 +130,128 @@ afterEach(() => {
 })
 
 describe('createComment', () => {
-  it('writes the document shape the Studio reads', async () => {
-    // Golden test. This object is the interop contract: the Studio filters on
-    // `target.document._ref` and groups on `target.path.field`, so a change
-    // here makes SDK comments invisible in the Studio without failing anything
-    // else.
+  it('writes the body the comment API expects', async () => {
+    // Asserted whole. This object is the contract with the comment API, and a
+    // field quietly dropped from it fails nothing else in the SDK.
     await createComment(instance, {
       ...HANDLE,
       commentId: 'comment-1',
       threadId: 'thread-1',
-      message: [{_type: 'block', _key: 'b1', children: [{_type: 'span', text: 'hi'}]}],
+      message: MESSAGE,
       fieldPath: ['body', {_key: 'intro'}, 'content'],
+      documentRevisionId: 'rev-7',
+      context: {tool: 'kitchensink'},
     })
 
-    expect(client.createIfNotExists).toHaveBeenCalledWith(
+    expect(comments.create).toHaveBeenCalledWith(
       {
         _id: 'comment-1',
-        _type: 'comment',
-        authorId: 'user-1',
-        message: [{_type: 'block', _key: 'b1', children: [{_type: 'span', text: 'hi'}]}],
+        message: MESSAGE,
         threadId: 'thread-1',
-        status: 'open',
-        reactions: null,
-        context: {tool: ''},
+        context: {tool: 'kitchensink'},
         target: {
-          documentRevisionId: '',
-          path: {field: 'body[_key=="intro"].content'},
-          document: {
-            _dataset: 'd',
-            _projectId: 'p',
-            _ref: 'doc-1',
-            _type: 'crossDatasetReference',
-            _weak: true,
-          },
+          documentId: 'doc-1',
           documentType: 'author',
+          documentRevisionId: 'rev-7',
+          path: 'body[_key=="intro"].content',
         },
       },
       {tag: 'comments.create'},
     )
   })
 
-  it('targets the published document from a draft id', async () => {
-    await createComment(instance, {...CREATE, documentId: 'drafts.doc-1', message: null})
+  it('sends the id it was given, draft or otherwise', async () => {
+    // The API derives the published document the comment hangs off; what it
+    // needs from us is which variant was being looked at.
+    await createComment(instance, {...CREATE, documentId: 'drafts.doc-1', message: MESSAGE})
 
-    expect(client.createIfNotExists.mock.calls[0][0].target.document._ref).toBe('doc-1')
+    expect(comments.create.mock.calls[0][0].target.documentId).toBe('drafts.doc-1')
   })
 
   it('records the release when commenting on one', async () => {
     await createComment(instance, {
       ...CREATE,
       perspective: {releaseName: 'summer'},
-      message: null,
+      message: MESSAGE,
     })
 
-    expect(client.createIfNotExists.mock.calls[0][0].target.documentVersionId).toBe('summer')
+    expect(comments.create.mock.calls[0][0].target.documentId).toBe('versions.summer.doc-1')
   })
 
-  it('carries a text selection through untouched', async () => {
-    const selection = {type: 'text' as const, value: [{_key: 'b1', text: 'marked'}]}
+  it('sends a range alongside the field it anchors within', async () => {
+    await createComment(instance, {...CREATE, message: MESSAGE, fieldPath: 'body', range: RANGE})
 
-    await createComment(instance, {...CREATE, message: null, fieldPath: 'body', selection})
-
-    expect(client.createIfNotExists.mock.calls[0][0].target.path).toEqual({
-      field: 'body',
-      selection,
-    })
-  })
-
-  it('weakens references in a content snapshot', async () => {
-    await createComment(instance, {
-      ...CREATE,
-      message: null,
-      contentSnapshot: {author: {_ref: 'other-doc', _type: 'reference'}},
-    })
-
-    expect(client.createIfNotExists.mock.calls[0][0].contentSnapshot).toEqual({
-      author: {_ref: 'other-doc', _type: 'reference', _weak: true},
+    expect(comments.create.mock.calls[0][0].target).toMatchObject({
+      path: 'body',
+      range: RANGE,
     })
   })
 
-  it('provisions the addon dataset on the way', async () => {
-    await createComment(instance, {...CREATE, message: null})
+  it('leaves out what it was not given', async () => {
+    await createComment(instance, {...CREATE, message: MESSAGE})
 
-    expect(provisionAddonDataset).toHaveBeenCalled()
-    expect(getClient).toHaveBeenCalledWith(instance, {
-      apiVersion: 'v2025-05-06',
-      projectId: 'p',
-      dataset: 'd-comments',
-    })
+    const body = comments.create.mock.calls[0][0]
+    expect('context' in body).toBe(false)
+    expect('range' in body.target).toBe(false)
+    expect('documentRevisionId' in body.target).toBe(false)
   })
 
   it('shows the comment before the server confirms it', async () => {
-    const source = getCommentsState(instance, HANDLE)
+    const source = getDocumentCommentsState(instance, HANDLE)
     source.subscribe()
+    seedComments(instance, {comments: []})
 
-    let resolveCreate: (value: unknown) => void = () => {}
-    client.createIfNotExists.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)))
+    let resolveCreate: (value: StoredComment) => void = () => {}
+    comments.create.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)))
 
-    const pending = createComment(instance, {...CREATE, commentId: 'c1', message: null})
+    const pending = createComment(instance, {...CREATE, commentId: 'c1', message: MESSAGE})
 
-    expect(source.getCurrent()!.map((c) => c.id)).toEqual(['c1'])
+    expect(source.getCurrent()!.map((thread) => thread.parentComment.id)).toEqual(['c1'])
 
-    resolveCreate({...comment({_id: 'c1'})})
+    resolveCreate(comment({_id: 'c1'}))
     await pending
   })
 
-  it('leaves a failed comment in place carrying the error', async () => {
-    const source = getCommentsState(instance, HANDLE)
-    source.subscribe()
+  it('returns the comment the server stored', async () => {
+    comments.create.mockResolvedValue(comment({_id: 'c1', status: 'resolved'}))
 
-    client.create.mockRejectedValue(new Error('nope'))
-    client.createIfNotExists.mockRejectedValue(new Error('nope'))
+    const created = await createComment(instance, {...CREATE, message: MESSAGE})
+
+    expect(created).toMatchObject({id: 'c1', status: 'resolved', authorId: 'user-1'})
+  })
+
+  it('leaves a failed comment in place carrying the error', async () => {
+    const source = getDocumentCommentsState(instance, HANDLE)
+    source.subscribe()
+    seedComments(instance, {comments: []})
+    comments.create.mockRejectedValue(new Error('nope'))
 
     await expect(
-      createComment(instance, {...CREATE, commentId: 'c1', message: null}),
+      createComment(instance, {...CREATE, commentId: 'c1', message: MESSAGE}),
     ).rejects.toThrow('nope')
 
-    expect(source.getCurrent()![0].state).toEqual({type: 'createError', error: expect.any(Error)})
+    expect(source.getCurrent()![0].parentComment.state).toEqual({
+      type: 'createError',
+      error: expect.any(Error),
+    })
   })
 
   it('marks a failed comment as retrying while the retry is in flight', async () => {
-    const source = getCommentsState(instance, HANDLE)
+    const source = getDocumentCommentsState(instance, HANDLE)
     source.subscribe()
-    client.create.mockRejectedValueOnce(new Error('nope'))
-    client.createIfNotExists.mockRejectedValueOnce(new Error('nope'))
+    seedComments(instance, {comments: []})
+    comments.create.mockRejectedValueOnce(new Error('nope'))
 
     await expect(
-      createComment(instance, {...CREATE, commentId: 'c1', message: null}),
+      createComment(instance, {...CREATE, commentId: 'c1', message: MESSAGE}),
     ).rejects.toThrow('nope')
 
-    let resolveRetry: (value: unknown) => void = () => {}
-    client.create.mockReturnValue(new Promise((resolve) => (resolveRetry = resolve)))
-    client.createIfNotExists.mockReturnValue(new Promise((resolve) => (resolveRetry = resolve)))
+    let resolveRetry: (value: StoredComment) => void = () => {}
+    comments.create.mockReturnValue(new Promise((resolve) => (resolveRetry = resolve)))
 
-    const retry = createComment(instance, {...CREATE, commentId: 'c1', message: null})
+    const retry = createComment(instance, {...CREATE, commentId: 'c1', message: MESSAGE})
 
-    expect(source.getCurrent()![0].state).toEqual({type: 'createRetrying'})
+    expect(source.getCurrent()![0].parentComment.state).toEqual({type: 'createRetrying'})
 
     resolveRetry(comment({_id: 'c1'}))
     await retry
@@ -285,7 +264,7 @@ describe('createComment', () => {
       subscribe: () => () => {},
     } as unknown as StateSource<CurrentUser | null>)
 
-    await expect(createComment(instance, {...CREATE, message: null})).rejects.toThrow(
+    await expect(createComment(instance, {...CREATE, message: MESSAGE})).rejects.toThrow(
       /requires a logged in user/,
     )
   })
@@ -295,165 +274,338 @@ describe('createComment', () => {
     // path and throws on `''`, so a pathless comment crashes the inspector for
     // everyone viewing that document until someone deletes it.
     await expect(
-      createComment(instance, {...HANDLE, fieldPath: '', message: null}),
+      createComment(instance, {...HANDLE, fieldPath: '', message: MESSAGE}),
     ).rejects.toThrow(/needs a field path/)
 
     await expect(
-      createComment(instance, {...HANDLE, fieldPath: [], message: null}),
+      createComment(instance, {...HANDLE, fieldPath: [], message: MESSAGE}),
     ).rejects.toThrow(/needs a field path/)
 
-    expect(client.createIfNotExists).not.toHaveBeenCalled()
+    expect(comments.create).not.toHaveBeenCalled()
+  })
+
+  it('says what is missing when no organization is configured', async () => {
+    const bare = createSanityInstance({projectId: 'p', dataset: 'd'})
+
+    await expect(createComment(bare, {...CREATE, message: MESSAGE})).rejects.toThrow(
+      /collaboration: \{organizationId\}/,
+    )
+
+    bare.dispose()
+  })
+})
+
+describe('the lists a new comment shows up in', () => {
+  /** A reader watching one set of variants, with an empty list to start from. */
+  function reading(variants: CommentVariants) {
+    const source = getDocumentCommentsState(instance, {...HANDLE, variants})
+    source.subscribe()
+    seedComments(instance, {variants, comments: []})
+    return source
+  }
+
+  /** Holds the create open so the optimistic state can be read. */
+  function pendingCreate() {
+    let resolveCreate: (value: StoredComment) => void = () => {}
+    comments.create.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)))
+
+    const promise = createComment(instance, {...CREATE, commentId: 'c1', message: MESSAGE})
+    return {promise, settle: () => resolveCreate(comment({_id: 'c1'}))}
+  }
+
+  it('shows it to a reader watching every variant', async () => {
+    // Which lists a comment belongs in is the readers' choice, not the writer's.
+    // Applying the create to the writer's list alone left a reader on a
+    // different `variants` waiting for the listener to catch up.
+    const all = reading('all')
+    const {promise, settle} = pendingCreate()
+
+    expect(all.getCurrent()!.map((thread) => thread.parentComment.id)).toEqual(['c1'])
+
+    settle()
+    await promise
+  })
+
+  it('shows it to a reader pinned to the exact id it was written against', async () => {
+    const exact = reading('exact')
+    const {promise, settle} = pendingCreate()
+
+    expect(exact.getCurrent()!.map((thread) => thread.parentComment.id)).toEqual(['c1'])
+
+    settle()
+    await promise
+  })
+
+  it('carries the failure into every list it was shown in', async () => {
+    const all = reading('all')
+    const exact = reading('exact')
+    comments.create.mockRejectedValue(new Error('nope'))
+
+    await expect(
+      createComment(instance, {...CREATE, commentId: 'c1', message: MESSAGE}),
+    ).rejects.toThrow('nope')
+
+    // A retry is offered from whichever list the comment is being read in, so
+    // the failure has to be visible in all of them.
+    for (const source of [all, exact]) {
+      expect(source.getCurrent()![0].parentComment.state).toEqual({
+        type: 'createError',
+        error: expect.any(Error),
+      })
+    }
+  })
+
+  it('keeps a comment written on a release out of the pooled draft list', async () => {
+    const drafts = reading('drafts')
+
+    await createComment(instance, {
+      ...CREATE,
+      perspective: {releaseName: 'summer'},
+      commentId: 'c1',
+      message: MESSAGE,
+    })
+
+    // The pooled list is draft and published only. A release's comments showing
+    // there would misreport what is being discussed on the document itself.
+    expect(drafts.getCurrent()).toEqual([])
+  })
+
+  it('shows it to a reader looking at the release it was written on', async () => {
+    const perspective = {releaseName: 'summer'}
+    const release = getDocumentCommentsState(instance, {...HANDLE, perspective})
+    release.subscribe()
+    seedComments(instance, {perspective, comments: []})
+
+    await createComment(instance, {...CREATE, perspective, commentId: 'c1', message: MESSAGE})
+
+    expect(release.getCurrent()!.map((thread) => thread.parentComment.id)).toEqual(['c1'])
   })
 })
 
 describe('replyToComment', () => {
-  it('inherits thread, field, and status from the parent', async () => {
-    seedComments(instance, {
-      comments: [
-        comment({
-          _id: 'parent',
-          threadId: 'thread-9',
-          status: 'resolved',
-          target: {
-            documentType: 'author',
-            path: {field: 'title'},
-            document: {_ref: 'doc-1', _type: 'reference', _weak: true},
-          },
-        }),
-      ],
-    })
+  it('sends only the parent and the message', async () => {
+    // Thread, field, and status are the parent's, and the API copies them
+    // across, so repeating them here would just be a second source of truth.
+    seedComments(instance, {comments: [comment({_id: 'parent'})]})
 
     await replyToComment(instance, {
       ...HANDLE,
       parentCommentId: 'parent',
       commentId: 'reply-1',
-      message: null,
+      message: MESSAGE,
     })
 
-    expect(client.createIfNotExists.mock.calls[0][0]).toMatchObject({
-      parentCommentId: 'parent',
-      threadId: 'thread-9',
-      status: 'resolved',
-      target: {path: {field: 'title'}},
-    })
+    expect(comments.create).toHaveBeenCalledWith(
+      {_id: 'reply-1', message: MESSAGE, parentCommentId: 'parent'},
+      {tag: 'comments.create'},
+    )
   })
 
   it('attaches a reply to a reply to the thread parent', async () => {
-    // The Studio's threads are one level deep; a nested reply would be orphaned.
+    // Threads are one level deep, so a nested reply would be orphaned.
     seedComments(instance, {
       comments: [comment({_id: 'parent'}), comment({_id: 'reply-1', parentCommentId: 'parent'})],
     })
 
-    await replyToComment(instance, {...HANDLE, parentCommentId: 'reply-1', message: null})
+    await replyToComment(instance, {...HANDLE, parentCommentId: 'reply-1', message: MESSAGE})
 
-    expect(client.createIfNotExists.mock.calls[0][0].parentCommentId).toBe('parent')
+    expect(comments.create.mock.calls[0][0].parentCommentId).toBe('parent')
   })
 
-  it('explains itself when the parent is not loaded', async () => {
-    await expect(
-      replyToComment(instance, {...HANDLE, parentCommentId: 'unknown', message: null}),
-    ).rejects.toThrow(/pass its threadId/)
+  it('replies to a parent that is not loaded', async () => {
+    // Nothing local is needed any more: the parent is only read to make the
+    // optimistic reply look right, and the API resolves the thread regardless.
+    await replyToComment(instance, {...HANDLE, parentCommentId: 'unknown', message: MESSAGE})
+
+    expect(comments.create.mock.calls[0][0].parentCommentId).toBe('unknown')
   })
 
-  it('requires the status when the parent is not loaded', async () => {
-    await expect(
-      replyToComment(instance, {
-        ...HANDLE,
-        parentCommentId: 'unknown',
-        threadId: 'thread-3',
-        message: null,
-      }),
-    ).rejects.toThrow(/pass its status/)
-  })
+  it('shows the reply in its parent’s thread before the server confirms it', async () => {
+    const source = getDocumentCommentsState(instance, HANDLE)
+    source.subscribe()
+    seedComments(instance, {comments: [comment({_id: 'parent', threadId: 'thread-9'})]})
 
-  it('accepts explicit thread details when the parent is not loaded', async () => {
-    await replyToComment(instance, {
+    let resolveCreate: (value: StoredComment) => void = () => {}
+    comments.create.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)))
+
+    const pending = replyToComment(instance, {
       ...HANDLE,
-      parentCommentId: 'unknown',
-      threadId: 'thread-3',
-      status: 'resolved',
-      // With no parent to inherit from, the field has to be named too.
-      fieldPath: 'name',
-      message: null,
+      parentCommentId: 'parent',
+      commentId: 'reply-1',
+      message: MESSAGE,
     })
 
-    expect(client.createIfNotExists.mock.calls[0][0]).toMatchObject({
-      threadId: 'thread-3',
-      status: 'resolved',
-    })
-  })
+    expect(source.getCurrent()).toMatchObject([
+      {threadId: 'thread-9', parentComment: {id: 'parent'}, replies: [{id: 'reply-1'}]},
+    ])
 
-  it('does not reuse a parent loaded for another document', async () => {
-    seedComments(instance, {comments: [comment({_id: 'parent'})]})
-
-    await expect(
-      replyToComment(instance, {
-        ...HANDLE,
-        documentId: 'doc-2',
-        parentCommentId: 'parent',
-        message: null,
-      }),
-    ).rejects.toThrow(/not loaded/)
+    resolveCreate(comment({_id: 'reply-1', parentCommentId: 'parent'}))
+    await pending
   })
 })
 
 describe('updateComment', () => {
-  it('patches the message and stamps lastEditedAt in one transaction', async () => {
-    await updateComment(instance, {commentId: 'c1', message: null})
+  it('patches the message and stamps lastEditedAt', async () => {
+    await updateComment(instance, {commentId: 'c1', message: MESSAGE})
 
-    expect(client.transaction).toHaveBeenCalled()
-    expect(patchSet).toHaveBeenCalledWith({message: null, lastEditedAt: expect.any(String)})
-    expect(transactionCommit).toHaveBeenCalledWith({tag: 'comments.update'})
+    expect(comments.update).toHaveBeenCalledWith(
+      'c1',
+      {message: MESSAGE},
+      {transactionId: expect.any(String), tag: 'comments.update'},
+    )
   })
 
-  it('does not create a dataset just to edit a comment', async () => {
-    await updateComment(instance, {commentId: 'c1', message: null})
+  it('shows the edit and its timestamp right away', async () => {
+    const source = getDocumentCommentsState(instance, HANDLE)
+    source.subscribe()
+    seedComments(instance, {comments: [comment({_id: 'c1'})]})
 
-    expect(provisionAddonDataset).not.toHaveBeenCalled()
+    await updateComment(instance, {commentId: 'c1', message: MESSAGE})
+
+    // `lastEditedAt` is local: the API does not return the updated comment, and
+    // an edited marker that waits for the listener looks like a lost edit.
+    expect(source.getCurrent()![0].parentComment.lastEditedAt).toEqual(expect.any(String))
   })
 
   it('does not retain a pending transaction when no comment is loaded', async () => {
-    await updateComment(instance, {commentId: 'c1', message: null})
+    await updateComment(instance, {commentId: 'c1', message: MESSAGE})
 
     expect(getCommentsStoreState(instance, {}).pendingTransactions).toEqual({})
   })
 
   it('restores the previous message when the write fails', async () => {
-    const source = getCommentsState(instance, HANDLE)
+    const source = getDocumentCommentsState(instance, HANDLE)
     source.subscribe()
-    seedComments(instance, {comments: [comment({_id: 'c1', message: null})]})
-    transactionCommit.mockRejectedValue(new Error('nope'))
-    const message: StoredComment['message'] = [
-      {_type: 'block', _key: 'block-1', children: [{_type: 'span', text: 'changed'}]},
-    ]
+    const original = [{_type: 'block', children: [{_type: 'span', text: 'hello'}]}]
+    seedComments(instance, {comments: [comment({_id: 'c1'})]})
+    comments.update.mockRejectedValue(new Error('nope'))
 
-    await expect(updateComment(instance, {commentId: 'c1', message})).rejects.toThrow('nope')
+    await expect(updateComment(instance, {commentId: 'c1', message: MESSAGE})).rejects.toThrow(
+      'nope',
+    )
 
-    expect(source.getCurrent()![0].message).toBe(null)
+    expect(source.getCurrent()![0].parentComment.message).toEqual(original)
+  })
+})
+
+describe('overlapping writes to one comment', () => {
+  function deferred() {
+    let resolve!: () => void
+    let reject!: (error: unknown) => void
+    const promise = new Promise<void>((res, rej) => {
+      resolve = res
+      reject = rej
+    })
+    return {promise, resolve, reject}
+  }
+
+  const FIRST = [{_type: 'block', _key: 'b1', children: [{_type: 'span', text: 'first'}]}]
+  const SECOND = [{_type: 'block', _key: 'b2', children: [{_type: 'span', text: 'second'}]}]
+
+  it('lets the later write roll itself back after the earlier one succeeds', async () => {
+    // The later write's transaction marker is what its rollback keys off. An
+    // earlier write settling used to clear whichever marker was there, which
+    // left the later one unable to undo itself and its edit stuck on screen.
+    const source = getDocumentCommentsState(instance, HANDLE)
+    source.subscribe()
+    seedComments(instance, {comments: [comment({_id: 'c1'})]})
+
+    const first = deferred()
+    const second = deferred()
+    comments.update.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+
+    const firstWrite = updateComment(instance, {commentId: 'c1', message: FIRST})
+    const secondWrite = updateComment(instance, {commentId: 'c1', message: SECOND})
+    const secondFailed = expect(secondWrite).rejects.toThrow('nope')
+
+    first.resolve()
+    await firstWrite
+
+    second.reject(new Error('nope'))
+    await secondFailed
+
+    // Back to what the second write found, which is the first write's message.
+    expect(source.getCurrent()![0].parentComment.message).toEqual(FIRST)
+  })
+})
+
+describe('updateCommentRange', () => {
+  it('patches the range', async () => {
+    await updateCommentRange(instance, {commentId: 'c1', range: RANGE})
+
+    expect(comments.update).toHaveBeenCalledWith(
+      'c1',
+      {range: RANGE},
+      {transactionId: expect.any(String), tag: 'comments.update-range'},
+    )
+  })
+
+  it('leaves lastEditedAt alone', async () => {
+    // Re-anchoring is the content moving under the comment, not somebody
+    // rewriting it, so it must not read as an edit.
+    const source = getDocumentCommentsState(instance, HANDLE)
+    source.subscribe()
+    seedComments(instance, {comments: [comment({_id: 'c1'})]})
+
+    await updateCommentRange(instance, {commentId: 'c1', range: RANGE})
+
+    expect(source.getCurrent()![0].parentComment.lastEditedAt).toBe(undefined)
+  })
+
+  it('drops the selection right away when the anchor is removed', async () => {
+    const source = getDocumentCommentsState(instance, HANDLE)
+    source.subscribe()
+    seedComments(instance, {
+      comments: [
+        comment({
+          _id: 'c1',
+          target: commentTarget({
+            path: {field: 'body', selection: {type: 'text', value: [{_key: 'b1', text: 'marked'}]}},
+          }),
+        }),
+      ],
+    })
+
+    await updateCommentRange(instance, {commentId: 'c1', range: null})
+
+    // Knowable locally, unlike a new selection, which the API resolves against
+    // the document.
+    expect(source.getCurrent()![0].parentComment.selection).toBe(undefined)
+    expect(source.getCurrent()![0].fieldPath).toBe('body')
+  })
+
+  it('restores the previous anchor when the write fails', async () => {
+    const source = getDocumentCommentsState(instance, HANDLE)
+    source.subscribe()
+    const selection = {type: 'text' as const, value: [{_key: 'b1', text: 'marked'}]}
+    seedComments(instance, {
+      comments: [comment({_id: 'c1', target: commentTarget({path: {field: 'body', selection}})})],
+    })
+    comments.update.mockRejectedValue(new Error('nope'))
+
+    await expect(updateCommentRange(instance, {commentId: 'c1', range: null})).rejects.toThrow(
+      'nope',
+    )
+
+    expect(source.getCurrent()![0].parentComment.selection).toEqual(selection)
   })
 })
 
 describe('setCommentStatus', () => {
-  it('patches the parent and replies in one mutation', async () => {
+  it('patches the thread’s first comment', async () => {
     await setCommentStatus(instance, {commentId: 'c1', status: 'resolved'})
 
-    expect(client.mutate).toHaveBeenCalledWith(
-      [
-        {patch: {id: 'c1', set: {status: 'resolved'}}},
-        {
-          patch: {
-            query: '*[_type == "comment" && parentCommentId == $commentId]',
-            params: {commentId: 'c1'},
-            set: {status: 'resolved'},
-          },
-        },
-      ],
+    expect(comments.update).toHaveBeenCalledWith(
+      'c1',
+      {status: 'resolved'},
       {transactionId: expect.any(String), tag: 'comments.set-status'},
     )
   })
 
   it('moves known replies immediately rather than waiting for the echo', async () => {
-    const source = getCommentsState(instance, HANDLE)
+    // The API cascades to replies, but a thread that resolves one comment at a
+    // time on screen looks broken.
+    const source = getDocumentCommentsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {
       comments: [comment({_id: 'c1'}), comment({_id: 'r1', parentCommentId: 'c1'})],
@@ -461,80 +613,192 @@ describe('setCommentStatus', () => {
 
     await setCommentStatus(instance, {commentId: 'c1', status: 'resolved'})
 
-    expect(source.getCurrent()!.every((c) => c.status === 'resolved')).toBe(true)
+    const thread = source.getCurrent()![0]
+    expect([thread.parentComment, ...thread.replies].every((c) => c.status === 'resolved')).toBe(
+      true,
+    )
   })
 
   it('restores the parent and replies when the write fails', async () => {
-    const source = getCommentsState(instance, HANDLE)
+    const source = getDocumentCommentsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {
       comments: [comment({_id: 'c1'}), comment({_id: 'r1', parentCommentId: 'c1'})],
     })
-    client.mutate.mockRejectedValue(new Error('nope'))
-    transactionCommit.mockRejectedValue(new Error('nope'))
+    comments.update.mockRejectedValue(new Error('nope'))
 
     await expect(setCommentStatus(instance, {commentId: 'c1', status: 'resolved'})).rejects.toThrow(
       'nope',
     )
 
-    expect(source.getCurrent()!.every((c) => c.status === 'open')).toBe(true)
+    const thread = source.getCurrent()![0]
+    expect([thread.parentComment, ...thread.replies].every((c) => c.status === 'open')).toBe(true)
   })
 })
 
 describe('removeComment', () => {
-  it('deletes the comment and its replies in one mutation', async () => {
+  it('deletes the comment', async () => {
     await removeComment(instance, {commentId: 'c1'})
 
-    expect(client.mutate).toHaveBeenCalledWith(
-      [
-        {
-          delete: {
-            query: '*[_type == "comment" && parentCommentId == $commentId]',
-            params: {commentId: 'c1'},
-          },
-        },
-        {delete: {id: 'c1'}},
-      ],
-      {tag: 'comments.remove'},
-    )
+    expect(comments.delete).toHaveBeenCalledWith('c1', {tag: 'comments.remove'})
   })
 
   it('drops the comment and its replies locally right away', async () => {
-    const source = getCommentsState(instance, HANDLE)
+    const source = getDocumentCommentsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {
       comments: [
         comment({_id: 'c1'}),
         comment({_id: 'r1', parentCommentId: 'c1'}),
-        comment({_id: 'other'}),
+        comment({_id: 'other', threadId: 'thread-2'}),
       ],
     })
 
     await removeComment(instance, {commentId: 'c1'})
 
-    expect(source.getCurrent()!.map((c) => c.id)).toEqual(['other'])
+    expect(source.getCurrent()!.map((thread) => thread.parentComment.id)).toEqual(['other'])
   })
 
   it('restores the comment and replies when the write fails', async () => {
-    const source = getCommentsState(instance, HANDLE)
+    const source = getDocumentCommentsState(instance, HANDLE)
     source.subscribe()
     seedComments(instance, {
       comments: [
         comment({_id: 'c1'}),
         comment({_id: 'r1', parentCommentId: 'c1'}),
-        comment({_id: 'other'}),
+        comment({_id: 'other', threadId: 'thread-2'}),
       ],
     })
-    client.mutate.mockRejectedValue(new Error('nope'))
-    client.delete.mockRejectedValue(new Error('nope'))
+    comments.delete.mockRejectedValue(new Error('nope'))
 
     await expect(removeComment(instance, {commentId: 'c1'})).rejects.toThrow('nope')
 
+    const restored = source
+      .getCurrent()!
+      .flatMap((thread) => [thread.parentComment, ...thread.replies])
+      .map((c) => c.id)
+      .sort()
+    expect(restored).toEqual(['c1', 'other', 'r1'])
+  })
+})
+
+describe('reactions', () => {
+  it('adds the current user’s reaction', async () => {
+    await addReaction(instance, {commentId: 'c1', shortName: ':+1:'})
+
+    expect(comments.addReaction).toHaveBeenCalledWith('c1', ':+1:', {
+      transactionId: expect.any(String),
+      tag: 'comments.add-reaction',
+    })
+  })
+
+  it('removes the current user’s reaction', async () => {
+    await removeReaction(instance, {commentId: 'c1', shortName: ':+1:'})
+
+    expect(comments.removeReaction).toHaveBeenCalledWith('c1', ':+1:', {
+      transactionId: expect.any(String),
+      tag: 'comments.remove-reaction',
+    })
+  })
+
+  it('shows the reaction before the server confirms it', async () => {
+    const source = getDocumentCommentsState(instance, HANDLE)
+    source.subscribe()
+    seedComments(instance, {comments: [comment({_id: 'c1'})]})
+
+    let resolve: () => void = () => {}
+    comments.addReaction.mockReturnValue(new Promise<void>((r) => (resolve = r)))
+
+    const pending = addReaction(instance, {commentId: 'c1', shortName: ':+1:'})
+
+    expect(source.getCurrent()![0].parentComment.reactions).toEqual([
+      {shortName: ':+1:', userId: 'user-1', addedAt: expect.any(String)},
+    ])
+
+    resolve()
+    await pending
+  })
+
+  it('leaves other people’s reactions alone', async () => {
+    const source = getDocumentCommentsState(instance, HANDLE)
+    source.subscribe()
+    seedComments(instance, {
+      comments: [
+        comment({
+          _id: 'c1',
+          reactions: [{_key: 'r1', shortName: ':+1:', userId: 'user-2', addedAt: 'then'}],
+        }),
+      ],
+    })
+
+    await removeReaction(instance, {commentId: 'c1', shortName: ':+1:'})
+
+    expect(source.getCurrent()![0].parentComment.reactions).toEqual([
+      {shortName: ':+1:', userId: 'user-2', addedAt: 'then'},
+    ])
+  })
+
+  it('does not add the same reaction twice', async () => {
+    // An app can ask for a reaction the list already shows, and two identical
+    // entries would double the count on screen until the listener corrected it.
+    const source = getDocumentCommentsState(instance, HANDLE)
+    source.subscribe()
+    seedComments(instance, {
+      comments: [
+        comment({
+          _id: 'c1',
+          reactions: [{_key: 'r1', shortName: ':+1:', userId: 'user-1', addedAt: 'then'}],
+        }),
+      ],
+    })
+
+    await addReaction(instance, {commentId: 'c1', shortName: ':+1:'})
+
+    expect(source.getCurrent()![0].parentComment.reactions).toHaveLength(1)
+  })
+
+  it('puts the reaction back when the write fails', async () => {
+    const source = getDocumentCommentsState(instance, HANDLE)
+    source.subscribe()
+    const existing = {_key: 'r1', shortName: ':+1:' as const, userId: 'user-1', addedAt: 'then'}
+    seedComments(instance, {comments: [comment({_id: 'c1', reactions: [existing]})]})
+    comments.removeReaction.mockRejectedValue(new Error('nope'))
+
+    await expect(removeReaction(instance, {commentId: 'c1', shortName: ':+1:'})).rejects.toThrow(
+      'nope',
+    )
+
+    expect(source.getCurrent()![0].parentComment.reactions).toEqual([
+      {shortName: ':+1:', userId: 'user-1', addedAt: 'then'},
+    ])
+  })
+
+  it('refuses to react without a logged in user', async () => {
+    vi.mocked(getCurrentUserState).mockReturnValue({
+      getCurrent: () => null,
+      observable: of(null),
+      subscribe: () => () => {},
+    } as unknown as StateSource<CurrentUser | null>)
+
+    await expect(addReaction(instance, {commentId: 'c1', shortName: ':+1:'})).rejects.toThrow(
+      /requires a logged in user/,
+    )
+  })
+})
+
+describe('client resolution', () => {
+  it('builds one client per organization the caller asks for', async () => {
+    await createComment(instance, {...CREATE, message: MESSAGE})
+    await createComment(instance, {
+      ...CREATE,
+      message: MESSAGE,
+      collaboration: {organizationId: 'org-2'},
+    })
+
+    // A per-call organization has to reach the client, or a caller working
+    // across organizations would silently write into the configured one.
     expect(
-      source
-        .getCurrent()!
-        .map((c) => c.id)
-        .sort(),
-    ).toEqual(['c1', 'other', 'r1'])
+      new Set(vi.mocked(getCommentsClient).mock.calls.map(([, options]) => options.organizationId)),
+    ).toEqual(new Set([ORGANIZATION_ID, 'org-2']))
   })
 })

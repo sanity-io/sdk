@@ -8,7 +8,7 @@ import {type JSX, Suspense} from 'react'
 import {BrowserRouter, useNavigate as useRouterNavigate} from 'react-router'
 
 import {AppRoutes} from './AppRoutes'
-import {devResources, e2eResources, isE2E} from './sanityConfigs'
+import {collaboration, devResources, e2eResources, isE2E} from './sanityConfigs'
 
 // Enable SDK logging in the browser. The wildcard picks up new namespaces
 // automatically as logging is added to more modules.
@@ -33,7 +33,7 @@ export default function App(): JSX.Element {
     <ThemeProvider theme={theme}>
       <SanityApp
         fallback={<Spinner />}
-        config={isE2E ? {auth: {apiHost: 'https://api.sanity.work'}} : {}}
+        config={{collaboration, ...(isE2E && {auth: {apiHost: 'https://api.sanity.work'}})}}
         resources={isE2E ? e2eResources : devResources}
         inferMediaLibraryAndCanvas
       >

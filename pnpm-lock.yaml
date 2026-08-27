@@ -13,8 +13,8 @@ catalogs:
       specifier: ^1.0.5
       version: 1.0.5
     '@sanity/client':
-      specifier: ^7.26.2
-      version: 7.26.2
+      specifier: ^8.3.0
+      version: 8.3.0
     '@sanity/comlink':
       specifier: ^4.0.3
       version: 4.0.3
@@ -411,7 +411,7 @@ importers:
     dependencies:
       '@sanity/client':
         specifier: 'catalog:'
-        version: 7.26.2
+        version: 8.3.0(vitest@4.1.10)
       '@sanity/uuid':
         specifier: ^3.0.3
         version: 3.0.3
@@ -505,7 +505,7 @@ importers:
         version: 1.0.0
       '@sanity/client':
         specifier: 'catalog:'
-        version: 7.26.2
+        version: 8.3.0(vitest@4.1.10)
       '@sanity/comlink':
         specifier: 'catalog:'
         version: 4.0.3
@@ -602,7 +602,7 @@ importers:
     dependencies:
       '@sanity/client':
         specifier: 'catalog:'
-        version: 7.26.2
+        version: 8.3.0(vitest@4.1.10)
       '@sanity/message-protocol':
         specifier: 'catalog:'
         version: 0.24.0
@@ -3140,6 +3140,10 @@ packages:
     resolution: {integrity: sha512-iEkGiHbrxCnT/A30A6pH+vX4otP3lLp935Vwuv0/YrnETxrKCn6PnsZU+TfTm6ZEZ9kZGs8wKP5yBLmZw5S6OQ==}
     engines: {node: '>=20'}
 
+  '@sanity/client@8.3.0':
+    resolution: {integrity: sha512-h4Xk8Xb91vbBpgbLNqQ8Wc37W4rFE4Rc9lcsC01XaEb2dDVp/B5EtvgKCRR5HmVfVcMVyiw4+r+Qmrr+wtjJ/g==}
+    engines: {node: '>=22.12.0'}
+
   '@sanity/codegen@3.88.1-typegen-experimental.0':
     resolution: {integrity: sha512-9GuT4aTNA1r8F8k6Rv2H2chmatzrmdK40fo4mosDr426nSsAkTD2gl632KVjmuI6veBnfT+ecv5Q/QvmvXl4SA==}
     engines: {node: '>=18'}
@@ -5194,6 +5198,10 @@ packages:
     resolution: {integrity: sha512-kJezFj9YFAMLeORyi7aCLxLbD5/qWMQnoMVlVPyHIll7lgRJCc3JVln9Vgl9nwQi0YkMnhdGTMNn7CkRRAptMg==}
     engines: {node: '>=18.0.0'}
 
+  eventsource-parser@4.1.0:
+    resolution: {integrity: sha512-+DHvQ1wLO//MK+1OZgcuXCbZFKgu3YjKPJt7n98rxX8vezL0ni+7s3ZQiM8bJkUEOk7MsuCycrPLj0FzUNf7Og==}
+    engines: {node: '>=22.12'}
+
   eventsource@2.0.2:
     resolution: {integrity: sha512-IzUmBGPR3+oUG9dUeXynyNmf91/3zUSJg1lCktzKw47OXuhco54U3r9B7O4XX+Rb1Itm9OZ2b0RkTs10bICOxA==}
     engines: {node: '>=12.0.0'}
@@ -5201,6 +5209,10 @@ packages:
   eventsource@4.1.0:
     resolution: {integrity: sha512-2GuF51iuHX6A9xdTccMTsNb7VO0lHZihApxhvQzJB5A03DvHDd2FQepodbMaztPBmBcE/ox7o2gqaxGhYB9LhQ==}
     engines: {node: '>=20.0.0'}
+
+  eventsource@5.1.1:
+    resolution: {integrity: sha512-onrlI7l612Ee3xnBqZNTq4djf6Fho/0yIpO/rYjRG/FzjMyPJquNx9SS3QyjglnVFxwxrube1XmX41zB+0Rdgw==}
+    engines: {node: '>=22.12.0'}
 
   execa@9.6.1:
     resolution: {integrity: sha512-9Be3ZoN4LmYR90tUoVu2te2BsbzHfhJyfEiAVfz7N5/zv+jduIfLrV2xdQXOHbaD6KgpGdO9PRPM1Y4Q9QkPkA==}
@@ -5418,13 +5430,18 @@ packages:
     resolution: {integrity: sha512-9fSjSaos/fRIVIp+xSJlE6lfwhES7LNtKaCBIamHsjr2na1BiABJPo0mOjjz8GJDURarmCPGqaiVg5mfjb98CQ==}
     engines: {node: '>= 0.4'}
 
-  get-it@8.8.0:
-    resolution: {integrity: sha512-vRyooMBzoIdEbARGT3JcvWqMD67YzC5SKlMqofyfck1ebLh2zzlpD4hVQ3xiuuiADk4jNs0rTezVlxCMqOlZfA==}
-    engines: {node: '>=14.0.0'}
-
   get-it@8.8.3:
     resolution: {integrity: sha512-IfkbWqOGO2kd2Ccgiz/NIzk3bcwjtVqBm3RNa3j/veHg2q7c1DgS3EXrCrvIWH0jbNTbhkdblnxBP7Dm8CiH+A==}
     engines: {node: '>=14.0.0'}
+
+  get-it@9.5.1:
+    resolution: {integrity: sha512-XCVgepH7ROA/VEW4iaorxII3ZqQt7bqNhRNdeOklqwWsl7iGuJCGL7jxkUzcWVpK5zsYr0WaMqeXrIfeL02Uig==}
+    engines: {node: '>=22.12.0'}
+    peerDependencies:
+      vitest: '>=2.0.0'
+    peerDependenciesMeta:
+      vitest:
+        optional: true
 
   get-latest-version@6.0.1:
     resolution: {integrity: sha512-6Zub9FhioDbCJzGTZtetVvAkLeA5UnvQEbKfFZUc62hcZm3gO3Txr21oRGOcT6SdiKhjI0vWd/Jxct+wuLJgHA==}
@@ -10843,7 +10860,7 @@ snapshots:
   '@sanity/client@7.24.0':
     dependencies:
       '@sanity/eventsource': 5.0.4
-      get-it: 8.8.0
+      get-it: 8.8.3
       nanoid: 3.3.16
       rxjs: 7.8.2
 
@@ -10853,6 +10870,15 @@ snapshots:
       get-it: 8.8.3
       nanoid: 3.3.18
       rxjs: 7.8.2
+
+  '@sanity/client@8.3.0(vitest@4.1.10)':
+    dependencies:
+      eventsource: 5.1.1
+      get-it: 9.5.1(vitest@4.1.10)
+      obug: 2.1.4
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - vitest
 
   '@sanity/codegen@3.88.1-typegen-experimental.0':
     dependencies:
@@ -13248,11 +13274,17 @@ snapshots:
 
   eventsource-parser@3.1.0: {}
 
+  eventsource-parser@4.1.0: {}
+
   eventsource@2.0.2: {}
 
   eventsource@4.1.0:
     dependencies:
       eventsource-parser: 3.1.0
+
+  eventsource@5.1.1:
+    dependencies:
+      eventsource-parser: 4.1.0
 
   execa@9.6.1:
     dependencies:
@@ -13507,19 +13539,18 @@ snapshots:
       hasown: 2.0.2
       math-intrinsics: 1.1.0
 
-  get-it@8.8.0:
-    dependencies:
-      decompress-response: 7.0.0
-      is-retry-allowed: 2.2.0
-      through2: 4.0.2
-      tunnel-agent: 0.6.0
-
   get-it@8.8.3:
     dependencies:
       decompress-response: 7.0.0
       is-retry-allowed: 2.2.0
       through2: 4.0.2
       tunnel-agent: 0.6.0
+
+  get-it@9.5.1(vitest@4.1.10):
+    dependencies:
+      undici: 7.28.0
+    optionalDependencies:
+      vitest: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1(@noble/hashes@2.0.1))(vite@8.1.5(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.36.0)(tsx@4.23.12)(yaml@2.9.0))
 
   get-latest-version@6.0.1:
     dependencies:

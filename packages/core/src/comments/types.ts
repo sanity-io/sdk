@@ -1,3 +1,8 @@
+import {
+  type CollaborationCommentDocument,
+  type CollaborationCommentRange,
+  type CollaborationCommentReactionShortName,
+} from '@sanity/client'
 import {type PortableTextBlock} from '@sanity/types'
 
 /**
@@ -14,7 +19,7 @@ export type CommentStatus = 'open' | 'resolved'
  * survives a round trip, but there is no API for composing one yet.
  * @beta
  */
-export type CommentMessage = PortableTextBlock[] | null
+export type CommentMessage = PortableTextBlock[]
 
 /**
  * One block touched by a text selection, and that block's text with the
@@ -34,6 +39,9 @@ export interface CommentTextSelectionItem {
 /**
  * A comment anchored to a run of text inside a Portable Text field.
  *
+ * Resolved by the API when a comment is written, from the {@link CommentRange}
+ * it was given. Read only: re-anchoring goes through `updateCommentRange`.
+ *
  * The SDK passes this through untouched. Resolving it back to a position in a
  * live editor needs the editor's current value, so that lives in
  * `@portabletext/plugin-sdk-value` rather than here.
@@ -45,14 +53,30 @@ export interface CommentTextSelection {
 }
 
 /**
- * An emoji reaction on a comment.
+ * Where a comment attaches inside a Portable Text field, as an offset into each
+ * end of the run of text it covers.
  *
- * Read only for now: a reaction added in the Studio shows up here, but there is
- * no action for adding or removing one.
+ * This is the write side of {@link CommentTextSelection}: pass a range when
+ * creating or re-anchoring a comment, and read the selection the API resolved
+ * it into.
+ * @beta
+ */
+export type CommentRange = CollaborationCommentRange
+
+/**
+ * The emoji a reaction can be, by short name.
+ *
+ * A closed set rather than an arbitrary string: the API rejects anything else.
+ * @beta
+ */
+export type CommentReactionShortName = CollaborationCommentReactionShortName
+
+/**
+ * An emoji reaction on a comment.
  * @beta
  */
 export interface CommentReaction {
-  shortName: string
+  shortName: CommentReactionShortName
   userId: string
   addedAt: string
 }
@@ -69,11 +93,10 @@ export type CommentLocalState = {type: 'createError'; error: Error} | {type: 'cr
 /**
  * A single comment.
  *
- * Deliberately not the stored document. Comments are moving from per-dataset
- * addon datasets to an organization-level store, and the two disagree on the
- * document type, on how the commented document is referenced, and on where the
- * author is recorded. Everything here reads the same on both sides, so an app
- * written against this survives the move.
+ * Deliberately not the stored document: this stays put while the comment API's
+ * own shape moves, and it flattens away the parts of the stored shape that
+ * exist for storage rather than for reading — the global document reference,
+ * the array keys on reactions, the nested target.
  *
  * Threads are flat: every comment in a thread shares a `threadId`, the thread's
  * first comment has no `parentCommentId`, and replies carry that first comment's
@@ -87,10 +110,8 @@ export interface Comment {
   /**
    * Who wrote it.
    *
-   * Absent when the server carries the author instead of the document. The
-   * Studio's comments dataset stores it on the document, so it is present on
-   * everything written today, but an agent-authored comment records
-   * attribution elsewhere. Render a fallback rather than assuming a user id.
+   * Absent when the server records attribution elsewhere, as it does for an
+   * agent-authored comment. Render a fallback rather than assuming a user id.
    */
   authorId?: string
   message: CommentMessage
@@ -102,13 +123,25 @@ export interface Comment {
   lastEditedAt?: string
   /** The document the thread hangs on, always the published id. */
   documentId: string
+  /**
+   * The exact document id the comment was written against: a published id, a
+   * draft id, or a version id.
+   *
+   * `documentId` groups a document's variants into one thread list; this tells
+   * them apart, which matters when reading across variants.
+   */
+  sourceDocumentId: string
   documentType: string
   /** The field the thread hangs off, for example `title`. */
   fieldPath: string
   /** Set when the comment is anchored to a run of text in a Portable Text field. */
   selection?: CommentTextSelection
-  /** A copy of the content the comment was written about. */
-  contentSnapshot?: unknown
+  /**
+   * A copy of the content the comment was written about, resolved by the API
+   * when the comment was created. Inline comments only, and only the part of
+   * each block the selection covers.
+   */
+  contentSnapshot?: CommentMessage
   reactions: CommentReaction[]
   /** Local only. Present while a create is failing or being retried. */
   state?: CommentLocalState
@@ -139,111 +172,15 @@ export interface CommentThread {
 }
 
 /**
- * Where in a document a thread hangs, as stored.
- * @internal
- */
-interface StoredCommentPath {
-  field: string
-  selection?: CommentTextSelection
-}
-
-/**
- * Ambient information the Studio records about where a comment was written.
+ * A comment as the API stores it, plus the local-only state the store keeps
+ * beside it.
  *
- * Written for the notification backend and read by nothing in the Studio UI.
- * Not surfaced on {@link Comment}: the organization-level store types this as a
- * free-form object, so nothing about the shape is worth promising.
+ * Internal on purpose: this is the API's shape, and it moves with the API.
+ * {@link Comment} is what consumers get.
  *
  * @internal
  */
-interface StoredCommentContext {
-  tool: string
-  payload?: Record<string, unknown>
-  notification?: {
-    documentTitle: string
-    url?: string
-    workspaceTitle: string
-    workspaceName: string
-    currentThreadLength?: number
-    subscribers?: string[]
-  }
-  intent?: {
-    title: string
-    name: string
-    params: Record<string, unknown>
-  }
-}
-
-/**
- * A reaction as stored, including the array key.
- * @internal
- */
-interface StoredCommentReaction extends CommentReaction {
-  _key: string
-}
-
-/**
- * What a stored comment points at.
- *
- * Comments live in a separate addon dataset, so `document` is a
- * `crossDatasetReference` back into the dataset holding the commented document.
- * It is deliberately weak: a strong reference would stop Content Lake deleting
- * the document it points at.
- *
- * @internal
- */
-interface StoredCommentTarget {
-  path?: StoredCommentPath
-  documentRevisionId?: string
-  documentVersionId?: string
-  documentType: string
-  document:
-    | {
-        _dataset: string
-        _projectId: string
-        _ref: string
-        _type: 'crossDatasetReference'
-        _weak: boolean
-      }
-    | {
-        _ref: string
-        _type: 'reference'
-        _weak: boolean
-      }
-}
-
-/**
- * A comment exactly as the Studio stores it.
- *
- * Internal on purpose. This is the addon dataset's shape, and it changes when
- * comments move to the organization-level store. {@link Comment} is what
- * consumers get.
- *
- * @internal
- */
-export interface StoredComment {
-  _type: 'comment'
-  _id: string
-  _createdAt: string
-  _rev: string
-
+export type StoredComment = CollaborationCommentDocument & {
   /** Local only. Never written to the server. */
   _state?: CommentLocalState
-
-  authorId: string
-  message: CommentMessage
-  threadId: string
-  parentCommentId?: string
-  status: CommentStatus
-  lastEditedAt?: string
-  reactions: StoredCommentReaction[] | null
-  context?: StoredCommentContext
-  contentSnapshot?: unknown
-  target: StoredCommentTarget
 }
-
-/**
- * What gets written when a comment is created.
- * @internal
- */
-export type CommentPostPayload = Omit<StoredComment, '_rev' | '_createdAt' | '_state'>

@@ -1,5 +1,4 @@
-import {type CommentsOptions, type SanityInstance, type StateSource} from '@sanity/sdk'
-import {getCommentsOptionsKey, parseCommentsOptionsKey} from '@sanity/sdk/_internal'
+import {type DocumentResource, type SanityInstance, type StateSource} from '@sanity/sdk'
 import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -9,17 +8,21 @@ import {
 } from '../helpers/useNormalizedResourceOptions'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 
-/** The pair of core functions backing one read hook. */
-export interface CommentListSource<T> {
-  getState: (instance: SanityInstance, options: CommentsOptions) => StateSource<T | undefined>
-  resolve: (
-    instance: SanityInstance,
-    options: CommentsOptions & {signal?: AbortSignal},
-  ) => Promise<T>
+/**
+ * The core functions backing one read hook, plus the option-key pair that keeps
+ * its state source steady across renders.
+ *
+ * @internal
+ */
+export interface CommentListSource<TOptions, TValue> {
+  getState: (instance: SanityInstance, options: TOptions) => StateSource<TValue | undefined>
+  resolve: (instance: SanityInstance, options: TOptions & {signal?: AbortSignal}) => Promise<TValue>
+  getKey: (options: TOptions) => string
+  parseKey: (key: string) => TOptions
 }
 
 /**
- * Shared body of {@link useComments} and {@link useCommentThreads}.
+ * Shared body of the comment read hooks.
  *
  * Suspends until the first snapshot arrives. Changing documents or filters
  * happens in a transition, so the list already on screen stays put and
@@ -29,18 +32,18 @@ export interface CommentListSource<T> {
  *
  * @internal
  */
-export function useCommentList<T>(
+export function useCommentList<TOptions extends {resource?: DocumentResource}, TValue>(
   hookName: string,
-  options: WithResourceNameSupport<CommentsOptions>,
-  {getState, resolve}: CommentListSource<T>,
-): {value: T; isPending: boolean} {
+  options: WithResourceNameSupport<TOptions>,
+  {getState, resolve, getKey, parseKey}: CommentListSource<TOptions, TValue>,
+): {value: TValue; isPending: boolean} {
   const instance = useSanityInstance()
   trackHookUsage(instance, hookName)
 
-  const normalized = useNormalizedResourceOptions(options)
+  const normalized = useNormalizedResourceOptions(options) as TOptions
   const [isPending, startTransition] = useTransition()
 
-  const key = getCommentsOptionsKey(normalized)
+  const key = getKey(normalized)
   // Held one render behind `key`, so the swap can happen inside a transition.
   const [deferredKey, setDeferredKey] = useState(key)
   const abortRef = useRef<AbortController>(new AbortController())
@@ -57,7 +60,7 @@ export function useCommentList<T>(
     })
   }, [deferredKey, key])
 
-  const deferred = useMemo(() => parseCommentsOptionsKey(deferredKey), [deferredKey])
+  const deferred = useMemo(() => parseKey(deferredKey), [deferredKey, parseKey])
   const {getCurrent, subscribe} = useMemo(
     () => getState(instance, deferred),
     [deferred, getState, instance],
@@ -73,7 +76,7 @@ export function useCommentList<T>(
     throw resolve(instance, {...deferred, signal: currentSignal})
   }
 
-  // Not memoised: both callers destructure this immediately and memoise their
+  // Not memoised: every caller destructures this immediately and memoises its
   // own result object, so a stable identity here would never be observed.
-  return {value: useSyncExternalStore(subscribe, getCurrent) as T, isPending}
+  return {value: useSyncExternalStore(subscribe, getCurrent) as TValue, isPending}
 }

@@ -1,11 +1,4 @@
-import {
-  type DocumentPresence,
-  useDocumentProjection,
-  useDocuments,
-  usePresenceForDocument,
-  useReportPresence,
-  useResource,
-} from '@sanity/sdk-react'
+import {type DocumentPresence, usePresenceForDocument, useReportPresence} from '@sanity/sdk-react'
 import {
   Badge,
   Box,
@@ -23,7 +16,9 @@ import {
 import {JSX, useState} from 'react'
 import {useSearchParams} from 'react-router'
 
+import {DocumentHeaderCard} from '../components/DocumentHeaderCard'
 import {PageLayout} from '../components/PageLayout'
+import {useDefaultDocumentId} from '../components/useDefaultDocumentId'
 
 const DOCUMENT_TYPE = 'author'
 
@@ -138,18 +133,6 @@ function PerspectiveSelect({
   )
 }
 
-/** The project and dataset in play, so a mismatch with the Studio link is visible. */
-function ScopeText(): JSX.Element | null {
-  const resource = useResource()
-  if (!resource || !('projectId' in resource)) return null
-
-  return (
-    <Text size={1} muted>
-      {`Project ${resource.projectId} · dataset ${resource.dataset}`}
-    </Text>
-  )
-}
-
 function DocumentCard({
   documentId,
   perspective,
@@ -161,36 +144,15 @@ function DocumentCard({
   onPerspectiveChange: (next: Perspective) => void
   studioUrl: string
 }): JSX.Element {
-  const {data} = useDocumentProjection<{name: string | null}>({
-    documentId,
-    documentType: DOCUMENT_TYPE,
-    projection: `{name}`,
-  })
-
   return (
-    <Card padding={3} radius={2} tone="transparent">
-      <Flex align="flex-start" gap={3}>
-        <Stack space={3} flex={1}>
-          <Text size={1} weight="medium">
-            {data?.name ?? 'Untitled'}
-          </Text>
-          <Code size={0} data-testid="presence-document-id">
-            {documentId}
-          </Code>
-          <PerspectiveSelect perspective={perspective} onChange={onPerspectiveChange} />
-          <ScopeText />
-        </Stack>
-        <Button
-          as="a"
-          href={studioUrl}
-          target="_blank"
-          rel="noreferrer"
-          mode="ghost"
-          text="Open in Studio"
-          data-testid="presence-studio-link"
-        />
-      </Flex>
-    </Card>
+    <DocumentHeaderCard
+      documentId={documentId}
+      documentType={DOCUMENT_TYPE}
+      studioUrl={studioUrl}
+      testIdPrefix="presence"
+    >
+      <PerspectiveSelect perspective={perspective} onChange={onPerspectiveChange} />
+    </DocumentHeaderCard>
   )
 }
 
@@ -450,23 +412,8 @@ function NoDocuments({documentIdParam}: {documentIdParam: string | null}): JSX.E
 }
 
 export function PresenceRoute(): JSX.Element {
-  const [searchParams] = useSearchParams()
-  const documentIdParam = searchParams.get('documentId')
+  const {documentId, documentIdParam} = useDefaultDocumentId(DOCUMENT_TYPE)
 
-  // Defaults to a real document so the route is useful the moment you open it,
-  // with no id to look up first. Ordered explicitly rather than relying on the
-  // API's default, because every tab has to land on the same document for presence
-  // to mean anything.
-  const {data} = useDocuments({
-    documentType: DOCUMENT_TYPE,
-    batchSize: 1,
-    orderings: [{field: '_createdAt', direction: 'desc'}],
-    ...(documentIdParam
-      ? {filter: '_id == $documentId', params: {documentId: documentIdParam}}
-      : {}),
-  })
-
-  const documentId = data[0]?.documentId
   if (!documentId) return <NoDocuments documentIdParam={documentIdParam} />
 
   return <PresenceDemo documentId={documentId} />
