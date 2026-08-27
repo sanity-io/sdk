@@ -2,7 +2,8 @@ import {BarChartIcon} from '@sanity/icons/BarChart'
 import {BulbOutlineIcon} from '@sanity/icons/BulbOutline'
 import {EnvelopeIcon} from '@sanity/icons/Envelope'
 import {WrenchIcon} from '@sanity/icons/Wrench'
-import {useAgentResourceContext, useDocuments, useSanityInstance} from '@sanity/sdk-react'
+import {useDocuments, useSanityInstance} from '@sanity/sdk-react'
+import {useAgentResourceContext} from '@sanity/sdk-react/dashboard'
 import {Badge, Button, Select, TextInput} from '@sanity/ui'
 import {
   type ComponentType,

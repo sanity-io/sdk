@@ -4,14 +4,14 @@ import {
   compareProjectOrganization,
   type OrgVerificationResult,
 } from '../project/organizationVerification'
-import {getProjectState} from '../project/project'
+import {project} from '../project/project'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {getDashboardOrganizationId} from './dashboardUtils'
 
 /**
  * Creates an observable that emits the organization verification state for a given instance.
  * It combines the dashboard organization ID (from auth context) with the
- * project's actual organization ID (fetched via getProjectState) and compares them.
+ * project's actual organization ID (fetched via the project fetcher) and compares them.
  * @public
  */
 export function observeOrganizationVerificationState(
@@ -24,8 +24,8 @@ export function observeOrganizationVerificationState(
 
   // Create observables for each project's org ID
   const projectOrgIdObservables = projectIds.map((id) =>
-    getProjectState(instance, {projectId: id}).observable.pipe(
-      map((project) => ({projectId: id, orgId: project?.organizationId ?? null})),
+    project.getState(instance, {projectId: id}).observable.pipe(
+      map((snapshot) => ({projectId: id, orgId: snapshot.data?.organizationId ?? null})),
       // Ensure we only proceed if the orgId is loaded, distinct prevents unnecessary checks
       distinctUntilChanged((prev, curr) => prev.orgId === curr.orgId),
     ),

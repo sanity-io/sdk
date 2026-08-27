@@ -1,12 +1,11 @@
 import {type MessageData, type NodeInput} from '@sanity/comlink'
+import {type SanityInstance, type StateSource} from '@sanity/sdk'
 import {
   type FrameMessage,
   getNodeState,
   type NodeState,
-  type SanityInstance,
-  type StateSource,
   type WindowMessage,
-} from '@sanity/sdk'
+} from '@sanity/sdk/comlink'
 import {useCallback, useEffect, useRef} from 'react'
 import {filter, firstValueFrom} from 'rxjs'
 
@@ -67,7 +66,7 @@ const useNodeState = createStateSourceHook({
  * as well as sharing a single node between invocations if they share the same name.
  *
  * Generally not to be used directly, but to be used as a dependency of
- * Comlink-powered hooks like `useManageFavorite`.
+ * Comlink-powered hooks like `useStudioWorkspacesByProjectIdDataset`.
  */
 export function useWindowConnection<
   TWindowMessage extends WindowMessage,

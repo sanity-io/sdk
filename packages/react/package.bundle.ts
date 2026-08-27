@@ -6,7 +6,8 @@ export default defineConfig(() => {
     build: {
       lib: {
         entry: {
-          index: './src/_exports/index.ts',
+          'index': './src/_exports/index.ts',
+          '_exports/dashboard': './src/_exports/dashboard.ts',
         },
       },
     },

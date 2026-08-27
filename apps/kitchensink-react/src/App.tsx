@@ -4,11 +4,12 @@ import '@sanity/ui/styles.css'
 // v5 is CSS-only and does not read the v4 theme. Keep v4's ThemeProvider.
 import 'ui5/styles.css'
 
-import {configureLogging, SanityApp, useDashboardNavigate} from '@sanity/sdk-react'
+import {configureLogging, SanityApp} from '@sanity/sdk-react'
+import {useNavigate} from '@sanity/sdk-react/dashboard'
 import {ThemeProvider, usePrefersDark} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {type JSX, type ReactNode, Suspense} from 'react'
-import {BrowserRouter, useNavigate} from 'react-router'
+import {BrowserRouter, useNavigate as useRouterNavigate} from 'react-router'
 import {Spinner} from 'ui5'
 
 import {AppRoutes} from './AppRoutes'
@@ -25,8 +26,8 @@ configureLogging({
 const theme = buildTheme({})
 
 function NavigationHandler() {
-  const navigate = useNavigate()
-  useDashboardNavigate(({path, type}) => {
+  const navigate = useRouterNavigate()
+  useNavigate(({path, type}) => {
     navigate(path, {replace: type === 'replace'})
   })
   return null

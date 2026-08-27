@@ -2,8 +2,8 @@ import {switchMap} from 'rxjs'
 
 import {getClientState} from '../client/clientStore'
 import {type SanityInstance} from '../store/createSanityInstance'
-import {type StateSource} from '../store/createStateSourceAction'
-import {createFetcherStore} from '../utils/createFetcherStore'
+import {defineFetcher} from '../store/fetcherStore'
+import {buildQuery} from '../utils/buildQuery'
 
 const API_VERSION = 'v2025-02-19'
 
@@ -110,57 +110,29 @@ export function getOrganizationCacheKey(
   return `organization:${organizationId}${membersKey}${featuresKey}`
 }
 
-const organization = createFetcherStore({
-  name: 'Organization',
-  getKey: getOrganizationCacheKey,
-  fetcher: (instance) => (options?: OrganizationOptions<boolean, boolean>) => {
-    const organizationId = resolveOrganizationId(options)
-
-    return getClientState(instance, {
-      apiVersion: API_VERSION,
-      scope: 'global',
-    }).observable.pipe(
-      switchMap((client) => {
-        const normalized = normalizeOrganizationOptions(options)
-        const query = Object.fromEntries(
-          Object.entries(normalized)
-            .filter(([, value]) => value !== undefined)
-            .map(([key, value]) => [key, String(value)]),
-        )
-
-        return client.observable.request({
-          uri: `/organizations/${organizationId}`,
-          query,
-          tag: 'organization.get',
-        })
-      }),
-    )
-  },
-})
-
 /**
- * Public signature for the organization state source. The conditional generics
- * cannot flow through `BoundStoreAction`, so we declare the signature here
- * and assign the (already-correct) runtime function to it.
+ * Fetcher for a single organization (`GET /organizations/:id`), on the shared
+ * fetcher cache. No pre-seeding from the organizations list: it returns a
+ * subset of the detail fields, and a partial seed would serve as fresh for
+ * the whole stale window.
+ *
+ * @internal
  */
-type GetOrganizationState = <
-  IncludeMembers extends boolean = false,
-  IncludeFeatures extends boolean = false,
->(
-  instance: SanityInstance,
-  options: OrganizationOptions<IncludeMembers, IncludeFeatures>,
-) => StateSource<Organization<IncludeMembers, IncludeFeatures> | undefined>
-
-type ResolveOrganization = <
-  IncludeMembers extends boolean = false,
-  IncludeFeatures extends boolean = false,
->(
-  instance: SanityInstance,
-  options: OrganizationOptions<IncludeMembers, IncludeFeatures>,
-) => Promise<Organization<IncludeMembers, IncludeFeatures>>
-
-/** @public */
-export const getOrganizationState: GetOrganizationState = organization.getState
-
-/** @public */
-export const resolveOrganization: ResolveOrganization = organization.resolveState
+export const organization = defineFetcher<
+  [options?: OrganizationOptions<boolean, boolean>],
+  Organization<boolean, boolean>
+>({
+  name: 'organization',
+  getKey: getOrganizationCacheKey,
+  fetch: (instance) => (options) =>
+    getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
+      switchMap((client) =>
+        client.observable.request<Organization<boolean, boolean>>({
+          uri: `/organizations/${resolveOrganizationId(options)}`,
+          query: buildQuery(normalizeOrganizationOptions(options)),
+          tag: 'organizations.get',
+        }),
+      ),
+    ),
+  tags: (data) => [{type: 'organization', id: data.id}],
+})

@@ -3,8 +3,8 @@ import {switchMap} from 'rxjs'
 import {getClientState} from '../client/clientStore'
 import {type Project} from '../project/project'
 import {type SanityInstance} from '../store/createSanityInstance'
-import {type StateSource} from '../store/createStateSourceAction'
-import {createFetcherStore} from '../utils/createFetcherStore'
+import {defineFetcher} from '../store/fetcherStore'
+import {buildQuery} from '../utils/buildQuery'
 
 const API_VERSION = 'v2025-02-19'
 
@@ -42,54 +42,30 @@ export function getProjectsCacheKey(
   return `projects${orgKey}${membersKey}${featuresKey}${explicitKey}`
 }
 
-const projects = createFetcherStore({
-  name: 'Projects',
-  getKey: getProjectsCacheKey,
-  fetcher: (instance) => (options?: ProjectsOptions<boolean, boolean>) =>
-    getClientState(instance, {
-      apiVersion: API_VERSION,
-      scope: 'global',
-    }).observable.pipe(
-      switchMap((client) => {
-        const normalized = normalizeProjectsOptions(options)
-        const query = Object.fromEntries(
-          Object.entries(normalized)
-            .filter(([, value]) => value !== undefined)
-            .map(([key, value]) => [key, String(value)]),
-        )
-
-        return client.observable.request({
-          uri: '/projects',
-          query,
-          tag: 'projects.get',
-        })
-      }),
-    ),
-})
-
 /**
- * Public signature for the projects state source. The conditional generics
- * cannot flow through `BoundStoreAction`, so we declare the signature here
- * and assign the (already-correct) runtime function to it.
+ * Fetcher for the current user's projects (`GET /projects`), on the shared
+ * fetcher cache.
+ *
+ * @internal
  */
-type GetProjectsState = <
-  IncludeMembers extends boolean = false,
-  IncludeFeatures extends boolean = true,
->(
-  instance: SanityInstance,
-  options?: ProjectsOptions<IncludeMembers, IncludeFeatures>,
-) => StateSource<Project<IncludeMembers, IncludeFeatures>[] | undefined>
-
-type ResolveProjects = <
-  IncludeMembers extends boolean = false,
-  IncludeFeatures extends boolean = true,
->(
-  instance: SanityInstance,
-  options?: ProjectsOptions<IncludeMembers, IncludeFeatures>,
-) => Promise<Project<IncludeMembers, IncludeFeatures>[]>
-
-/** @public */
-export const getProjectsState: GetProjectsState = projects.getState
-
-/** @public */
-export const resolveProjects: ResolveProjects = projects.resolveState
+export const projects = defineFetcher<
+  [options?: ProjectsOptions<boolean, boolean>],
+  Project<boolean, boolean>[]
+>({
+  name: 'projects',
+  getKey: getProjectsCacheKey,
+  fetch: (instance) => (options) =>
+    getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
+      switchMap((client) =>
+        client.observable.request<Project<boolean, boolean>[]>({
+          uri: '/projects',
+          query: buildQuery(normalizeProjectsOptions(options)),
+          tag: 'projects.list',
+        }),
+      ),
+    ),
+  tags: (data) => [
+    {type: 'project', id: 'LIST'},
+    ...data.map((project) => ({type: 'project', id: project.id})),
+  ],
+})

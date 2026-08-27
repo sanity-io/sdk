@@ -1,5 +1,6 @@
 import {type Message, type Node} from '@sanity/comlink'
-import {getNodeState, type NodeState, type StateSource} from '@sanity/sdk'
+import {type StateSource} from '@sanity/sdk'
+import {getNodeState, type NodeState} from '@sanity/sdk/comlink'
 import {screen} from '@testing-library/react'
 import {Suspense} from 'react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
@@ -7,8 +8,8 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 import {render, renderHook} from '../../../test/test-utils'
 import {useWindowConnection} from './useWindowConnection'
 
-vi.mock('@sanity/sdk', async () => {
-  const actual = await vi.importActual('@sanity/sdk')
+vi.mock('@sanity/sdk/comlink', async () => {
+  const actual = await vi.importActual('@sanity/sdk/comlink')
   return {
     ...actual,
     getNodeState: vi.fn(),

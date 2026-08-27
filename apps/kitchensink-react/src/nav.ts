@@ -1,6 +1,5 @@
 import {ActivityIcon} from '@sanity/icons/Activity'
 import {BlockContentIcon} from '@sanity/icons/BlockContent'
-import {BoltIcon} from '@sanity/icons/Bolt'
 import {ComposeIcon} from '@sanity/icons/Compose'
 import {CubeIcon} from '@sanity/icons/Cube'
 import {DashboardIcon} from '@sanity/icons/Dashboard'
@@ -91,7 +90,6 @@ export const navGroups: NavGroup[] = [
       {path: 'agent-resource-context', title: 'Agent resource context', icon: CubeIcon},
       {path: 'agent-actions', title: 'Agent actions', icon: GenerateIcon},
       {path: 'canvas', title: 'Canvas', icon: ComposeIcon},
-      {path: 'intents', title: 'Intents', icon: BoltIcon},
       {path: 'media-library', title: 'Media library', icon: ImagesIcon},
     ],
   },
