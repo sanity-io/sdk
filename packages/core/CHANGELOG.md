@@ -1,5 +1,45 @@
 # Changelog
 
+## [3.0.0](https://github.com/sanity-io/sdk/compare/sdk-v2.20.2...sdk-v3.0.0) (2026-08-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **react:** split useManageFavorite into useFavorite and useUpdateFavorite ([#1116](https://github.com/sanity-io/sdk/issues/1116))
+* migrate favorites and datasets to new fetcher, remove old fetcher ([#1110](https://github.com/sanity-io/sdk/issues/1110))
+* remove deprecated user-application stores and hooks ([#1102](https://github.com/sanity-io/sdk/issues/1102))
+* remove deprecated utils ([#1100](https://github.com/sanity-io/sdk/issues/1100))
+* split other utils into subdomain and internal exports ([#1098](https://github.com/sanity-io/sdk/issues/1098))
+* remove the unimplemented intent system ([#1073](https://github.com/sanity-io/sdk/issues/1073))
+* **core:** add global resource stores ([#1045](https://github.com/sanity-io/sdk/issues/1045))
+
+### refactor
+
+* **react:** split useManageFavorite into useFavorite and useUpdateFavorite ([#1116](https://github.com/sanity-io/sdk/issues/1116)) ([f32551d](https://github.com/sanity-io/sdk/commit/f32551d33f51b1de8c7904fca5f188bf97c3916b))
+
+
+### Features
+
+* **core:** add global resource stores ([#1045](https://github.com/sanity-io/sdk/issues/1045)) ([7eeea70](https://github.com/sanity-io/sdk/commit/7eeea70f9138bba6945835d95fa389e329c6637c))
+* **core:** new fetcher store design with invalidation and optimistic updates ([#1034](https://github.com/sanity-io/sdk/issues/1034)) ([b241002](https://github.com/sanity-io/sdk/commit/b2410024dae2e5c0dde16e915d2e0bf07aed6d34))
+* **react:** add mutation hook layer ([#1049](https://github.com/sanity-io/sdk/issues/1049)) ([884aae0](https://github.com/sanity-io/sdk/commit/884aae0f42ddfd9e9207dc09aacdae30d217cd1c))
+* surface application name and reference on application and installation types ([#1109](https://github.com/sanity-io/sdk/issues/1109)) ([a3cc734](https://github.com/sanity-io/sdk/commit/a3cc73400184c179fdbfd843aad00a35839910af))
+
+
+### Bug Fixes
+
+* **core:** sync publishConfig.exports with agent and comlink entrypoints ([98492ee](https://github.com/sanity-io/sdk/commit/98492eedb905343e3a7dfcf48f7602ee5fe77b19))
+* fix subscription leak in fetcher store ([#1121](https://github.com/sanity-io/sdk/issues/1121)) ([8ccfdc4](https://github.com/sanity-io/sdk/commit/8ccfdc4ec58c4cf9bc0cccb6106115f1ec8e1597))
+* remove deprecated user-application stores and hooks ([#1102](https://github.com/sanity-io/sdk/issues/1102)) ([5f7f1b1](https://github.com/sanity-io/sdk/commit/5f7f1b1939cacf8956ca2c1a55ca877d603d854d))
+* remove deprecated utils ([#1100](https://github.com/sanity-io/sdk/issues/1100)) ([943124a](https://github.com/sanity-io/sdk/commit/943124a578dda7cfca78baeaf975354d03770f06))
+* split other utils into subdomain and internal exports ([#1098](https://github.com/sanity-io/sdk/issues/1098)) ([aadbaaa](https://github.com/sanity-io/sdk/commit/aadbaaa470b74c1a4e68003bc18ebd0f5a146004))
+
+
+### Miscellaneous
+
+* migrate favorites and datasets to new fetcher, remove old fetcher ([#1110](https://github.com/sanity-io/sdk/issues/1110)) ([6c43ac9](https://github.com/sanity-io/sdk/commit/6c43ac914a08b4bf3f4c4ed6381d1d13a07f53ff))
+* remove the unimplemented intent system ([#1073](https://github.com/sanity-io/sdk/issues/1073)) ([fd02862](https://github.com/sanity-io/sdk/commit/fd02862890d947fd65ed0b0d77243355e3ac67b8))
+
 ## [2.20.2](https://github.com/sanity-io/sdk/compare/sdk-v2.20.1...sdk-v2.20.2) (2026-08-26)
 
 
