@@ -1,9 +1,11 @@
+import {type Application} from '@sanity/sdk'
+
 import {useTopic} from './useTopic'
 
 /**
- * Reads the foreground dashboard application id.
+ * Returns the id of the application in the foreground.
  * @public
  */
-export function useApplicationForegroundId(): string | null | undefined {
-  return useTopic('applications.foreground')
+export function useApplicationForegroundId(): Application['id'] | null {
+  return useTopic('applications.foreground') ?? null
 }
