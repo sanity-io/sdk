@@ -78,6 +78,7 @@
     "groq": "catalog:",
     "react-compiler-runtime": "catalog:",
     "react-error-boundary": "catalog:",
+    "react-rx": "^4.2.2",
     "rxjs": "catalog:"
   },
   "devDependencies": {
