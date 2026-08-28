@@ -53,7 +53,7 @@ const SOURCE: CommentListSource<CommentsQueryOptions, Comment[]> = {
  * ```tsx
  * function Mentions({userId}: {userId: string}) {
  *   const {comments} = useCommentsQuery({
- *     filter: 'count(message[_type == "mention" && userId == $userId]) > 0',
+ *     filter: 'count(message[].children[_type == "mention" && userId == $userId]) > 0',
  *     params: {userId},
  *   })
  *
