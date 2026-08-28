@@ -1,5 +1,18 @@
 export {DashboardTokenRefreshProvider as TokenRefreshProvider} from '../context/DashboardTokenRefresh'
 export {
+  type CanvasUrl,
+  type CreateIntentParameters,
+  type DashboardUrl,
+  type DashboardUrls,
+  type EditIntentParameters,
+  type MediaLibraryUrl,
+  type ReleaseIntentParameters,
+  type StudioIntentUrl,
+  type StudioUrl,
+  type StudioWorkspaceUrl,
+  urlFor,
+} from '../dashboard/urlFor'
+export {
   type AgentResourceContextOptions,
   useAgentResourceContext,
 } from '../hooks/dashboard/useAgentResourceContext'
