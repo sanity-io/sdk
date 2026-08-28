@@ -5,9 +5,25 @@ export interface DashboardUrl {
   toString(): string
 }
 
+const dashboardUrlBuilderContext = Symbol('DashboardUrlBuilderContext')
+
 /** @public */
-export interface DashboardNamespaceUrl extends DashboardUrl {
-  path(...path: string[]): DashboardNamespaceUrl
+export interface DashboardUrlBuilderContext {
+  readonly [dashboardUrlBuilderContext]: true
+}
+
+/** @public */
+export interface DashboardUrlBuilderClass<
+  Builder extends DashboardUrlBuilder = DashboardUrlBuilder,
+> {
+  new (context: DashboardUrlBuilderContext): Builder
+}
+
+/** @public */
+export interface DashboardUrlBuilderNamespaceClass<
+  Builder extends DashboardUrlBuilder = DashboardUrlBuilder,
+> extends DashboardUrlBuilderClass<Builder> {
+  readonly namespace: string
 }
 
 /** @public */
@@ -49,35 +65,6 @@ export interface StudioIntentUrl extends DashboardUrl {
   task(taskId: string): DashboardUrl
 }
 
-/** @public */
-export interface MediaLibraryUrl extends DashboardUrl {
-  asset(assetId: string): DashboardUrl
-  collection(collectionId: string): DashboardUrl
-}
-
-/** @public */
-export interface CanvasUrl extends DashboardUrl {
-  document(documentId: string): DashboardUrl
-}
-
-/** @public */
-export interface DashboardUrls {
-  studios(): DashboardUrl
-  studios(appId: string): StudioUrl
-  applications(): DashboardUrl
-  applications(appId: string): DashboardUrl
-  mediaLibrary(): MediaLibraryUrl
-  canvas(): CanvasUrl
-  home(): DashboardUrl
-  extend<const Namespaces extends Readonly<Record<string, string>>>(
-    namespaces: Namespaces & Partial<Record<keyof this, never>>,
-  ): this & {readonly [Name in keyof Namespaces]: () => DashboardNamespaceUrl}
-}
-
-type DashboardUrlNamespaceMethods<Namespaces extends Readonly<Record<string, string>>> = {
-  readonly [Name in keyof Namespaces]: () => DashboardNamespaceUrl
-}
-
 type IntentArguments =
   | [intent: 'edit', parameters: EditIntentParameters]
   | [intent: 'create', parameters: CreateIntentParameters]
@@ -85,7 +72,24 @@ type IntentArguments =
 
 type Parameter = readonly [name: string, value: string]
 
-type Intent = {name: string; parameters: readonly Parameter[]}
+type PathSegment = {raw: boolean; value: string}
+
+type BuilderState = {
+  segments: readonly PathSegment[]
+  search: readonly Parameter[]
+  trailingSlash: boolean
+}
+
+type InternalBuilderContext = DashboardUrlBuilderContext & {
+  create: (state: BuilderState) => DashboardUrlBuilder
+  state: BuilderState
+}
+
+type BuilderRegistry = Readonly<Record<string, DashboardUrlBuilderNamespaceClass>>
+
+type BuilderMethods<Builders extends BuilderRegistry> = {
+  readonly [Name in keyof Builders]: () => InstanceType<Builders[Name]>
+}
 
 const splitPath = (path: readonly string[]) =>
   path.flatMap((part) => part.split('/')).filter(Boolean)
@@ -110,78 +114,92 @@ const intentParametersOf = (...[intent, parameters]: IntentArguments) => {
   }
 }
 
+const parseParameters = (parameters: string): Parameter[] =>
+  parameters.split(';').map((parameter) => {
+    const separator = parameter.indexOf('=')
+    return [parameter.slice(0, separator), decodeURIComponent(parameter.slice(separator + 1))]
+  })
+
 const serializeParameters = (parameters: readonly Parameter[]) =>
   parameters.map(([name, value]) => `${name}=${encodeURIComponent(value)}`).join(';')
 
-type BuilderState = {
-  segments: readonly string[]
-  intent: Intent | null
-  search: readonly Parameter[]
+const appendSegments = (
+  state: BuilderState,
+  segments: readonly string[],
+  raw: boolean,
+): BuilderState => ({
+  ...state,
+  segments: [...state.segments, ...segments.map((value) => ({raw, value}))],
+  trailingSlash: false,
+})
+
+const createBuilder = <Builder extends DashboardUrlBuilder>(
+  Builder: DashboardUrlBuilderClass<Builder>,
+  state: BuilderState,
+): Builder => {
+  const context: InternalBuilderContext = {
+    [dashboardUrlBuilderContext]: true,
+    create: (nextState) => createBuilder(Builder, nextState),
+    state,
+  }
+
+  return new Builder(context)
 }
 
-class UrlBuilder
-  implements
-    StudioUrl,
-    StudioWorkspaceUrl,
-    StudioIntentUrl,
-    MediaLibraryUrl,
-    CanvasUrl,
-    DashboardNamespaceUrl
-{
+/**
+ * Base class for immutable dashboard URL grammars.
+ *
+ * @public
+ */
+export abstract class DashboardUrlBuilder implements DashboardUrl {
+  readonly #create: (state: BuilderState) => this
   readonly #state: BuilderState
 
-  constructor(state: BuilderState) {
+  constructor(context: DashboardUrlBuilderContext) {
+    const {create, state} = context as InternalBuilderContext
+    this.#create = create as (nextState: BuilderState) => this
     this.#state = state
   }
 
-  workspace(workspace: string): StudioWorkspaceUrl {
-    return this.#append(workspace)
+  protected append(...segments: string[]): this {
+    return this.#create(appendSegments(this.#state, segments, false))
   }
 
-  intent(intent: 'edit', parameters: EditIntentParameters): StudioIntentUrl
-  intent(intent: 'create', parameters: CreateIntentParameters): StudioIntentUrl
-  intent(intent: 'release', parameters: ReleaseIntentParameters): StudioIntentUrl
-  intent(...args: IntentArguments): StudioIntentUrl {
-    return this.#with({intent: {name: args[0], parameters: intentParametersOf(...args)}})
+  protected appendPath(...path: string[]): this {
+    return this.append(...splitPath(path))
   }
 
-  perspective(perspective: string): StudioIntentUrl {
-    return this.#withSearchParameter('perspective', perspective)
+  protected appendRaw(segment: string): this {
+    return this.#create(appendSegments(this.#state, [segment], true))
   }
 
-  comment(commentId: string): StudioIntentUrl {
-    const intent = this.#state.intent!
+  protected lastSegment(): string | undefined {
+    return this.#state.segments.at(-1)?.value
+  }
 
-    return this.#with({
-      intent: {
-        ...intent,
-        parameters: [
-          ...intent.parameters.filter(([name]) => name !== 'inspect' && name !== 'comment'),
-          ['inspect', 'sanity/comments'],
-          ['comment', commentId],
-        ],
-      },
+  protected replaceLastRawSegment(segment: string): this {
+    return this.#create({
+      ...this.#state,
+      segments: [...this.#state.segments.slice(0, -1), {raw: true, value: segment}],
     })
   }
 
-  task(taskId: string): DashboardUrl {
-    return this.#withSearchParameter('selectedTask', taskId)
+  protected setSearchParameter(name: string, value: string): this {
+    return this.#create({
+      ...this.#state,
+      search: [...this.#state.search.filter(([current]) => current !== name), [name, value]],
+    })
   }
 
-  path(...path: string[]): DashboardNamespaceUrl {
-    return this.#append(...splitPath(path))
+  protected trailingSlash(): this {
+    return this.#create({...this.#state, trailingSlash: true})
   }
 
-  asset(assetId: string): DashboardUrl {
-    return this.#append('assets', assetId)
-  }
-
-  collection(collectionId: string): DashboardUrl {
-    return this.#append('collections', collectionId)
-  }
-
-  document(documentId: string): DashboardUrl {
-    return this.#append('doc', documentId)
+  protected transition<Builder extends DashboardUrlBuilder>(
+    Builder: DashboardUrlBuilderClass<Builder>,
+    ...segments: string[]
+  ): Builder {
+    return createBuilder(Builder, appendSegments(this.#state, segments, false))
   }
 
   url(options?: {absolute?: boolean}): string {
@@ -201,82 +219,167 @@ class UrlBuilder
     return this.url()
   }
 
-  #append(...segments: string[]): UrlBuilder {
-    return this.#with({segments: [...this.#state.segments, ...segments]})
-  }
-
-  #withSearchParameter(name: string, value: string): UrlBuilder {
-    return this.#with({
-      search: [...this.#state.search.filter(([current]) => current !== name), [name, value]],
-    })
-  }
-
-  #with(state: Partial<BuilderState>): UrlBuilder {
-    return new UrlBuilder({...this.#state, ...state})
-  }
-
-  #pathname(): string {
-    const {segments, intent} = this.#state
-    const base = `/${segments.map(encodeURIComponent).join('/')}`
-    if (!intent) return base
-    return `${base}/intent/${intent.name}/${serializeParameters(intent.parameters)}/`
-  }
-
   #relativeUrl(): string {
-    const {search} = this.#state
-    if (search.length === 0) return this.#pathname()
+    const {search, segments, trailingSlash} = this.#state
+    const pathname = `/${segments
+      .map(({raw, value}) => (raw ? value : encodeURIComponent(value)))
+      .join('/')}${trailingSlash && segments.length > 0 ? '/' : ''}`
+    if (search.length === 0) return pathname
 
     const parameters = new URLSearchParams(search.map(([name, value]) => [name, value]))
-    return `${this.#pathname()}?${parameters.toString()}`
+    return `${pathname}?${parameters.toString()}`
   }
 }
 
-const builder = (...segments: string[]) => new UrlBuilder({segments, intent: null, search: []})
+class TerminalUrlBuilder extends DashboardUrlBuilder {}
 
-const createDashboardUrls = <const Namespaces extends Readonly<Record<string, string>>>(
-  createBuilder: typeof builder,
-  namespaces: Namespaces,
-): DashboardUrls & DashboardUrlNamespaceMethods<Namespaces> => {
-  const rootedAt = (root: string) => (appId?: string) =>
-    appId === undefined ? createBuilder(root) : createBuilder(root, appId)
+/** @public */
+export class CoreApplicationUrlBuilder extends DashboardUrlBuilder {
+  static readonly namespace = 'application'
 
+  path(...path: string[]): this {
+    return this.appendPath(...path)
+  }
+}
+
+/** @public */
+export class MediaLibraryUrlBuilder extends DashboardUrlBuilder {
+  static readonly namespace = 'media'
+
+  asset(assetId: string): DashboardUrlBuilder {
+    return this.append('assets', assetId)
+  }
+
+  collection(collectionId: string): DashboardUrlBuilder {
+    return this.append('collections', collectionId)
+  }
+}
+
+/** @public */
+export class CanvasUrlBuilder extends DashboardUrlBuilder {
+  static readonly namespace = 'canvas'
+
+  document(documentId: string): DashboardUrlBuilder {
+    return this.append('doc', documentId)
+  }
+}
+
+/** @public */
+export class StudioUrlBuilder
+  extends DashboardUrlBuilder
+  implements StudioUrl, StudioWorkspaceUrl, StudioIntentUrl
+{
+  static readonly namespace = 'studio'
+
+  workspace(workspace: string): StudioWorkspaceUrl {
+    return this.append(workspace)
+  }
+
+  intent(intent: 'edit', parameters: EditIntentParameters): StudioIntentUrl
+  intent(intent: 'create', parameters: CreateIntentParameters): StudioIntentUrl
+  intent(intent: 'release', parameters: ReleaseIntentParameters): StudioIntentUrl
+  intent(...args: IntentArguments): StudioIntentUrl {
+    return this.append('intent', args[0])
+      .appendRaw(serializeParameters(intentParametersOf(...args)))
+      .trailingSlash()
+  }
+
+  perspective(perspective: string): StudioIntentUrl {
+    return this.setSearchParameter('perspective', perspective)
+  }
+
+  comment(commentId: string): StudioIntentUrl {
+    const parameters = parseParameters(this.lastSegment()!)
+
+    return this.replaceLastRawSegment(
+      serializeParameters([
+        ...parameters.filter(([name]) => name !== 'inspect' && name !== 'comment'),
+        ['inspect', 'sanity/comments'],
+        ['comment', commentId],
+      ]),
+    )
+  }
+
+  task(taskId: string): DashboardUrlBuilder {
+    return this.setSearchParameter('selectedTask', taskId)
+  }
+
+  path(...path: string[]): DashboardUrlBuilder {
+    return this.appendPath(...path)
+  }
+}
+
+/** @public */
+export interface DashboardUrls {
+  studios(): DashboardUrl
+  studios(appId: string): StudioUrl
+  applications(): DashboardUrl
+  applications(appId: string): CoreApplicationUrlBuilder
+  mediaLibrary(): MediaLibraryUrlBuilder
+  canvas(): CanvasUrlBuilder
+  home(): DashboardUrl
+  extend<const Builders extends Readonly<Record<string, DashboardUrlBuilderNamespaceClass>>>(
+    builders: Builders & Partial<Record<keyof this, never>>,
+  ): this & {readonly [Name in keyof Builders]: () => InstanceType<Builders[Name]>}
+}
+
+type RootBuilder = <Builder extends DashboardUrlBuilder>(
+  Builder: DashboardUrlBuilderClass<Builder>,
+  ...segments: string[]
+) => Builder
+
+const builder: RootBuilder = (Builder, ...segments) =>
+  createBuilder(Builder, {
+    search: [],
+    segments: segments.map((value) => ({raw: false, value})),
+    trailingSlash: false,
+  })
+
+const createDashboardUrls = <const Builders extends BuilderRegistry>(
+  createRootBuilder: RootBuilder,
+  builders: Builders,
+): DashboardUrls & BuilderMethods<Builders> => {
   function studios(): DashboardUrl
   function studios(appId: string): StudioUrl
   function studios(appId?: string): DashboardUrl | StudioUrl {
-    return rootedAt('studio')(appId)
+    return appId === undefined
+      ? createRootBuilder(TerminalUrlBuilder, StudioUrlBuilder.namespace)
+      : createRootBuilder(StudioUrlBuilder, StudioUrlBuilder.namespace, appId)
   }
 
   function applications(): DashboardUrl
-  function applications(appId: string): DashboardUrl
-  function applications(appId?: string): DashboardUrl {
-    return rootedAt('application')(appId)
+  function applications(appId: string): CoreApplicationUrlBuilder
+  function applications(appId?: string): DashboardUrl | CoreApplicationUrlBuilder {
+    return appId === undefined
+      ? createRootBuilder(TerminalUrlBuilder, CoreApplicationUrlBuilder.namespace)
+      : createRootBuilder(CoreApplicationUrlBuilder, CoreApplicationUrlBuilder.namespace, appId)
   }
 
   const methods = Object.fromEntries(
-    Object.entries(namespaces).map(([name, namespace]) => [name, () => createBuilder(namespace)]),
+    Object.entries(builders).map(([name, Builder]) => [
+      name,
+      () => createRootBuilder(Builder, Builder.namespace),
+    ]),
   )
 
   const dashboardUrls = {
     studios,
     applications,
-    mediaLibrary: () => createBuilder('media'),
-    canvas: () => createBuilder('canvas'),
-    home: () => createBuilder(),
-    extend<const AddedNamespaces extends Readonly<Record<string, string>>>(
-      addedNamespaces: AddedNamespaces,
-    ) {
-      for (const name of Object.keys(addedNamespaces)) {
+    mediaLibrary: () => createRootBuilder(MediaLibraryUrlBuilder, MediaLibraryUrlBuilder.namespace),
+    canvas: () => createRootBuilder(CanvasUrlBuilder, CanvasUrlBuilder.namespace),
+    home: () => createRootBuilder(TerminalUrlBuilder),
+    extend<const AddedBuilders extends BuilderRegistry>(addedBuilders: AddedBuilders) {
+      for (const name of Object.keys(addedBuilders)) {
         if (name in dashboardUrls || name in methods) {
           throw new Error(`Dashboard URL namespace "${name}" already exists`)
         }
       }
 
-      return createDashboardUrls(createBuilder, {...namespaces, ...addedNamespaces})
+      return createDashboardUrls(createRootBuilder, {...builders, ...addedBuilders})
     },
   }
 
-  return Object.assign(dashboardUrls, methods) as DashboardUrls &
-    DashboardUrlNamespaceMethods<Namespaces>
+  return Object.assign(dashboardUrls, methods) as DashboardUrls & BuilderMethods<Builders>
 }
 
 /** @public */

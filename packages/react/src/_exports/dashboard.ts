@@ -1,15 +1,20 @@
 export {DashboardTokenRefreshProvider as TokenRefreshProvider} from '../context/DashboardTokenRefresh'
 export {
-  type CanvasUrl,
+  CanvasUrlBuilder,
+  CoreApplicationUrlBuilder,
   type CreateIntentParameters,
-  type DashboardNamespaceUrl,
   type DashboardUrl,
+  DashboardUrlBuilder,
+  type DashboardUrlBuilderClass,
+  type DashboardUrlBuilderContext,
+  type DashboardUrlBuilderNamespaceClass,
   type DashboardUrls,
   type EditIntentParameters,
-  type MediaLibraryUrl,
+  MediaLibraryUrlBuilder,
   type ReleaseIntentParameters,
   type StudioIntentUrl,
   type StudioUrl,
+  StudioUrlBuilder,
   type StudioWorkspaceUrl,
   urlFor,
 } from '../dashboard/urlFor'

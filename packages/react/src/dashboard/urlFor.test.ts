@@ -1,15 +1,43 @@
 import {describe, expect, expectTypeOf, it} from 'vitest'
 
 import {
-  type CanvasUrl,
-  type DashboardNamespaceUrl,
+  CanvasUrlBuilder,
+  CoreApplicationUrlBuilder,
   type DashboardUrl,
-  type MediaLibraryUrl,
+  DashboardUrlBuilder,
+  MediaLibraryUrlBuilder,
   type StudioIntentUrl,
   type StudioUrl,
+  StudioUrlBuilder,
   type StudioWorkspaceUrl,
   urlFor,
 } from './urlFor'
+
+class ContentAgentDocumentUrlBuilder extends DashboardUrlBuilder {
+  perspective(perspective: string): this {
+    return this.setSearchParameter('perspective', perspective)
+  }
+}
+
+class ContentAgentUrlBuilder extends DashboardUrlBuilder {
+  static readonly namespace = 'content-agent'
+
+  context(contextId: string): this {
+    return this.append('contexts', contextId)
+  }
+
+  document(documentId: string): ContentAgentDocumentUrlBuilder {
+    return this.transition(ContentAgentDocumentUrlBuilder, 'documents', documentId)
+  }
+}
+
+class PersonaUrlBuilder extends DashboardUrlBuilder {
+  static readonly namespace = 'persona'
+
+  person(personId: string): this {
+    return this.append('people', personId)
+  }
+}
 
 describe('urlFor', () => {
   it('builds studio URLs', () => {
@@ -88,6 +116,9 @@ describe('urlFor', () => {
   it('builds app URLs', () => {
     expect(urlFor.applications().url()).toBe('/application')
     expect(urlFor.applications('app-1').url()).toBe('/application/app-1')
+    expect(urlFor.applications('app-1').path('documents', 'document/1').url()).toBe(
+      '/application/app-1/documents/document/1',
+    )
   })
 
   it('builds media library URLs', () => {
@@ -127,24 +158,31 @@ describe('urlFor', () => {
     expect(intent.url()).toBe('/studio/studio-1/intent/edit/id=document-1/')
   })
 
-  it('extends the URL builder with typed namespaces', () => {
-    const extendedUrlFor = urlFor.extend({context: 'context', contentAgent: 'content-agent'})
-    const reextendedUrlFor = extendedUrlFor.extend({persona: 'persona'})
+  it('extends the URL builder with custom builder classes', () => {
+    const extendedUrlFor = urlFor.extend({contentAgent: ContentAgentUrlBuilder})
+    const reextendedUrlFor = extendedUrlFor.extend({persona: PersonaUrlBuilder})
 
-    expect(extendedUrlFor.context().path('documents', 'document/1').url()).toBe(
-      '/context/documents/document/1',
-    )
-    expect(extendedUrlFor.contentAgent().url()).toBe('/content-agent')
-    expect(reextendedUrlFor.persona().path('person/1').url()).toBe('/persona/person/1')
-    expect(reextendedUrlFor.context().url()).toBe('/context')
-    expect(urlFor).not.toHaveProperty('context')
+    expect(
+      extendedUrlFor
+        .contentAgent()
+        .context('context/1')
+        .document('document/1')
+        .perspective('published')
+        .url(),
+    ).toBe('/content-agent/contexts/context%2F1/documents/document%2F1?perspective=published')
+    expect(reextendedUrlFor.persona().person('person/1').url()).toBe('/persona/people/person%2F1')
+    expect(reextendedUrlFor.contentAgent().url()).toBe('/content-agent')
+    expect(urlFor).not.toHaveProperty('contentAgent')
 
-    expectTypeOf(extendedUrlFor.context()).toEqualTypeOf<DashboardNamespaceUrl>()
-    expectTypeOf(reextendedUrlFor.persona()).toEqualTypeOf<DashboardNamespaceUrl>()
+    expectTypeOf(extendedUrlFor.contentAgent()).toEqualTypeOf<ContentAgentUrlBuilder>()
+    expectTypeOf(
+      extendedUrlFor.contentAgent().document('document-1'),
+    ).toEqualTypeOf<ContentAgentDocumentUrlBuilder>()
+    expectTypeOf(reextendedUrlFor.persona()).toEqualTypeOf<PersonaUrlBuilder>()
   })
 
   it('rejects duplicate URL namespaces', () => {
-    expect(() => urlFor.extend({canvas: 'custom-canvas'} as never)).toThrow(
+    expect(() => urlFor.extend({canvas: ContentAgentUrlBuilder} as never)).toThrow(
       'Dashboard URL namespace "canvas" already exists',
     )
   })
@@ -169,9 +207,10 @@ describe('urlFor', () => {
     ).toEqualTypeOf<StudioIntentUrl>()
     expectTypeOf(urlFor.studios()).toEqualTypeOf<DashboardUrl>()
     expectTypeOf(urlFor.applications()).toEqualTypeOf<DashboardUrl>()
-    expectTypeOf(urlFor.applications('app-1')).toEqualTypeOf<DashboardUrl>()
-    expectTypeOf(urlFor.mediaLibrary()).toEqualTypeOf<MediaLibraryUrl>()
-    expectTypeOf(urlFor.canvas()).toEqualTypeOf<CanvasUrl>()
+    expectTypeOf(urlFor.applications('app-1')).toEqualTypeOf<CoreApplicationUrlBuilder>()
+    expectTypeOf(urlFor.mediaLibrary()).toEqualTypeOf<MediaLibraryUrlBuilder>()
+    expectTypeOf(urlFor.canvas()).toEqualTypeOf<CanvasUrlBuilder>()
     expectTypeOf(urlFor.home()).toEqualTypeOf<DashboardUrl>()
+    expect(urlFor.studios('studio-1')).toBeInstanceOf(StudioUrlBuilder)
   })
 })
