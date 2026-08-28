@@ -1,11 +1,13 @@
 /** @public */
 export interface DashboardUrl {
-  url(options?: {absolute?: boolean}): string
-  toURL(): URL
+  absolute(options: {origin: string}): string
+  url(): string
+  toURL(options: {origin: string}): URL
   toString(): string
 }
 
-const defaultDashboardOrigin = 'https://dashboard.invalid'
+// URL requires an origin; public output always strips this parsing base.
+const relativeUrlBase = 'https://dashboard.invalid'
 
 /** @public */
 export interface EditIntentParameters {
@@ -233,7 +235,24 @@ export class DashboardUrlBuilder implements DashboardUrl {
   }
 
   /**
-   * Returns the dashboard URL as a relative string, or as an absolute string when requested.
+   * Returns the dashboard URL as an absolute string using the supplied origin.
+   *
+   * @example
+   * ```ts
+   * const builder = new DashboardUrlBuilder(
+   *   new URL('/application/my-app', 'https://dashboard.sanity.io'),
+   * )
+   *
+   * builder.absolute({origin: 'https://dashboard.sanity.io'})
+   * // 'https://dashboard.sanity.io/application/my-app'
+   * ```
+   */
+  absolute(options: {origin: string}): string {
+    return this.toURL(options).href
+  }
+
+  /**
+   * Returns the dashboard URL as a relative string.
    *
    * @example
    * ```ts
@@ -242,15 +261,14 @@ export class DashboardUrlBuilder implements DashboardUrl {
    * )
    *
    * builder.url() // '/application/my-app'
-   * builder.url({absolute: true}) // 'https://dashboard.sanity.io/application/my-app'
    * ```
    */
-  url(options?: {absolute?: boolean}): string {
-    return options?.absolute ? this.toURL().href : this.#relativeUrl()
+  url(): string {
+    return this.#relativeUrl()
   }
 
   /**
-   * Returns the dashboard URL as a platform `URL` object.
+   * Returns the dashboard URL as a platform `URL` object using the supplied origin.
    *
    * @example
    * ```ts
@@ -258,16 +276,11 @@ export class DashboardUrlBuilder implements DashboardUrl {
    *   new URL('/application/my-app', 'https://dashboard.sanity.io'),
    * )
    *
-   * builder.toURL().pathname // '/application/my-app'
+   * builder.toURL({origin: 'https://dashboard.sanity.io'}).pathname
+   * // '/application/my-app'
    * ```
    */
-  toURL(): URL {
-    const origin =
-      this.#url.origin === defaultDashboardOrigin ? globalThis.location?.origin : this.#url.origin
-    if (!origin) {
-      throw new Error('Cannot create an absolute dashboard URL without an origin')
-    }
-
+  toURL({origin}: {origin: string}): URL {
     return new URL(this.#relativeUrl(), origin)
   }
 
@@ -397,7 +410,7 @@ const createRootBuilder = <Builder extends DashboardUrlBuilder>(
   Builder: (new (url: URL) => Builder) & {readonly namespace: string},
   ...segments: string[]
 ): Builder =>
-  new Builder(appendSegments(new URL(defaultDashboardOrigin), [Builder.namespace, ...segments]))
+  new Builder(appendSegments(new URL(relativeUrlBase), [Builder.namespace, ...segments]))
 
 const createDashboardUrls = <const Builders extends BuilderRegistry>(
   builders: Builders,
@@ -427,7 +440,7 @@ const createDashboardUrls = <const Builders extends BuilderRegistry>(
     applications,
     mediaLibrary: () => createRootBuilder(MediaLibraryUrlBuilder),
     canvas: () => createRootBuilder(CanvasUrlBuilder),
-    home: () => new DashboardUrlBuilder(new URL(defaultDashboardOrigin)),
+    home: () => new DashboardUrlBuilder(new URL(relativeUrlBase)),
     extend<const AddedBuilders extends BuilderRegistry>(addedBuilders: AddedBuilders) {
       const namespaces = new Set([
         '',
