@@ -5,26 +5,7 @@ export interface DashboardUrl {
   toString(): string
 }
 
-const dashboardUrlBuilderContext = Symbol('DashboardUrlBuilderContext')
-
-/** @public */
-export interface DashboardUrlBuilderContext {
-  readonly [dashboardUrlBuilderContext]: true
-}
-
-/** @public */
-export interface DashboardUrlBuilderClass<
-  Builder extends DashboardUrlBuilder = DashboardUrlBuilder,
-> {
-  new (context: DashboardUrlBuilderContext): Builder
-}
-
-/** @public */
-export interface DashboardUrlBuilderNamespaceClass<
-  Builder extends DashboardUrlBuilder = DashboardUrlBuilder,
-> extends DashboardUrlBuilderClass<Builder> {
-  readonly namespace: string
-}
+const defaultDashboardOrigin = 'https://dashboard.invalid'
 
 /** @public */
 export interface EditIntentParameters {
@@ -65,27 +46,36 @@ export interface StudioIntentUrl extends DashboardUrl {
   task(taskId: string): DashboardUrl
 }
 
+/** @public */
+export interface CoreApplicationUrl extends DashboardUrl {
+  path(...path: string[]): DashboardUrl
+}
+
+/** @public */
+export interface MediaLibraryUrl extends DashboardUrl {
+  asset(assetId: string): DashboardUrl
+  collection(collectionId: string): DashboardUrl
+}
+
+/** @public */
+export interface CanvasUrl extends DashboardUrl {
+  document(documentId: string): DashboardUrl
+}
+
 type IntentArguments =
   | [intent: 'edit', parameters: EditIntentParameters]
   | [intent: 'create', parameters: CreateIntentParameters]
   | [intent: 'release', parameters: ReleaseIntentParameters]
 
-type Parameter = readonly [name: string, value: string]
-
-type PathSegment = {raw: boolean; value: string}
-
-type BuilderState = {
-  segments: readonly PathSegment[]
-  search: readonly Parameter[]
-  trailingSlash: boolean
-}
-
-type InternalBuilderContext = DashboardUrlBuilderContext & {
-  create: (state: BuilderState) => DashboardUrlBuilder
-  state: BuilderState
-}
-
-type BuilderRegistry = Readonly<Record<string, DashboardUrlBuilderNamespaceClass>>
+type BuilderRegistry = Readonly<
+  Record<
+    string,
+    {
+      readonly namespace: string
+      new (url: URL): DashboardUrlBuilder
+    }
+  >
+>
 
 type BuilderMethods<Builders extends BuilderRegistry> = {
   readonly [Name in keyof Builders]: () => InstanceType<Builders[Name]>
@@ -95,55 +85,47 @@ const splitPath = (path: readonly string[]) =>
   path.flatMap((part) => part.split('/')).filter(Boolean)
 
 const intentParametersOf = (...[intent, parameters]: IntentArguments) => {
+  const searchParameters = new URLSearchParams()
+
   switch (intent) {
     case 'edit': {
       const {id, type, mode} = parameters
-      return [
-        ['id', id],
-        ...(type === undefined ? [] : ([['type', type]] satisfies Parameter[])),
-        ...(mode === undefined ? [] : ([['mode', mode]] satisfies Parameter[])),
-      ] satisfies Parameter[]
+      searchParameters.set('id', id)
+      if (type !== undefined) searchParameters.set('type', type)
+      if (mode !== undefined) searchParameters.set('mode', mode)
+      break
     }
-    case 'create':
-      return [
-        ['template', parameters.template],
-        ['type', parameters.type],
-      ] satisfies Parameter[]
-    case 'release':
-      return [['id', parameters.id]] satisfies Parameter[]
+    case 'create': {
+      searchParameters.set('template', parameters.template)
+      searchParameters.set('type', parameters.type)
+      break
+    }
+    case 'release': {
+      searchParameters.set('id', parameters.id)
+      break
+    }
   }
+
+  return searchParameters
 }
 
-const parseParameters = (parameters: string): Parameter[] =>
-  parameters.split(';').map((parameter) => {
-    const separator = parameter.indexOf('=')
-    return [parameter.slice(0, separator), decodeURIComponent(parameter.slice(separator + 1))]
-  })
+const parseIntentParameters = (parameters: string) =>
+  new URLSearchParams(parameters.replaceAll(';', '&'))
 
-const serializeParameters = (parameters: readonly Parameter[]) =>
-  parameters.map(([name, value]) => `${name}=${encodeURIComponent(value)}`).join(';')
+const serializeIntentParameters = (parameters: URLSearchParams) =>
+  Array.from(
+    parameters,
+    ([name, value]) => `${encodeURIComponent(name)}=${encodeURIComponent(value)}`,
+  ).join(';')
 
-const appendSegments = (
-  state: BuilderState,
-  segments: readonly string[],
-  raw: boolean,
-): BuilderState => ({
-  ...state,
-  segments: [...state.segments, ...segments.map((value) => ({raw, value}))],
-  trailingSlash: false,
-})
+const appendSegments = (url: URL, segments: readonly string[]): URL => {
+  const nextUrl = new URL(url)
+  if (segments.length === 0) return nextUrl
 
-const createBuilder = <Builder extends DashboardUrlBuilder>(
-  Builder: DashboardUrlBuilderClass<Builder>,
-  state: BuilderState,
-): Builder => {
-  const context: InternalBuilderContext = {
-    [dashboardUrlBuilderContext]: true,
-    create: (nextState) => createBuilder(Builder, nextState),
-    state,
-  }
-
-  return new Builder(context)
+  nextUrl.pathname = `${nextUrl.pathname.replace(/\/$/, '')}/${segments
+    .map(encodeURIComponent)
+    .join('/')}`
+  return nextUrl
 }
 
 /**
@@ -152,54 +134,31 @@ const createBuilder = <Builder extends DashboardUrlBuilder>(
  * @public
  */
 export abstract class DashboardUrlBuilder implements DashboardUrl {
-  readonly #create: (state: BuilderState) => this
-  readonly #state: BuilderState
+  readonly #url: URL
 
-  constructor(context: DashboardUrlBuilderContext) {
-    const {create, state} = context as InternalBuilderContext
-    this.#create = create as (nextState: BuilderState) => this
-    this.#state = state
+  constructor(url: URL) {
+    this.#url = new URL(url)
   }
 
   protected append(...segments: string[]): this {
-    return this.#create(appendSegments(this.#state, segments, false))
+    return this.#create(appendSegments(this.#url, segments))
   }
 
   protected appendPath(...path: string[]): this {
     return this.append(...splitPath(path))
   }
 
-  protected appendRaw(segment: string): this {
-    return this.#create(appendSegments(this.#state, [segment], true))
-  }
-
-  protected lastSegment(): string | undefined {
-    return this.#state.segments.at(-1)?.value
-  }
-
-  protected replaceLastRawSegment(segment: string): this {
-    return this.#create({
-      ...this.#state,
-      segments: [...this.#state.segments.slice(0, -1), {raw: true, value: segment}],
-    })
-  }
-
-  protected setSearchParameter(name: string, value: string): this {
-    return this.#create({
-      ...this.#state,
-      search: [...this.#state.search.filter(([current]) => current !== name), [name, value]],
-    })
-  }
-
-  protected trailingSlash(): this {
-    return this.#create({...this.#state, trailingSlash: true})
+  protected edit(update: (url: URL) => void): this {
+    const url = new URL(this.#url)
+    update(url)
+    return this.#create(url)
   }
 
   protected transition<Builder extends DashboardUrlBuilder>(
-    Builder: DashboardUrlBuilderClass<Builder>,
+    Builder: new (url: URL) => Builder,
     ...segments: string[]
   ): Builder {
-    return createBuilder(Builder, appendSegments(this.#state, segments, false))
+    return new Builder(appendSegments(this.#url, segments))
   }
 
   url(options?: {absolute?: boolean}): string {
@@ -207,7 +166,8 @@ export abstract class DashboardUrlBuilder implements DashboardUrl {
   }
 
   toURL(): URL {
-    const origin = globalThis.location?.origin
+    const origin =
+      this.#url.origin === defaultDashboardOrigin ? globalThis.location?.origin : this.#url.origin
     if (!origin) {
       throw new Error('Cannot create an absolute dashboard URL without an origin')
     }
@@ -220,21 +180,18 @@ export abstract class DashboardUrlBuilder implements DashboardUrl {
   }
 
   #relativeUrl(): string {
-    const {search, segments, trailingSlash} = this.#state
-    const pathname = `/${segments
-      .map(({raw, value}) => (raw ? value : encodeURIComponent(value)))
-      .join('/')}${trailingSlash && segments.length > 0 ? '/' : ''}`
-    if (search.length === 0) return pathname
+    return `${this.#url.pathname}${this.#url.search}${this.#url.hash}`
+  }
 
-    const parameters = new URLSearchParams(search.map(([name, value]) => [name, value]))
-    return `${pathname}?${parameters.toString()}`
+  #create(url: URL): this {
+    const Builder = this.constructor as new (url: URL) => this
+    return new Builder(url)
   }
 }
 
 class TerminalUrlBuilder extends DashboardUrlBuilder {}
 
-/** @public */
-export class CoreApplicationUrlBuilder extends DashboardUrlBuilder {
+class CoreApplicationUrlBuilder extends DashboardUrlBuilder implements CoreApplicationUrl {
   static readonly namespace = 'application'
 
   path(...path: string[]): this {
@@ -242,30 +199,27 @@ export class CoreApplicationUrlBuilder extends DashboardUrlBuilder {
   }
 }
 
-/** @public */
-export class MediaLibraryUrlBuilder extends DashboardUrlBuilder {
+class MediaLibraryUrlBuilder extends DashboardUrlBuilder implements MediaLibraryUrl {
   static readonly namespace = 'media'
 
-  asset(assetId: string): DashboardUrlBuilder {
+  asset(assetId: string): DashboardUrl {
     return this.append('assets', assetId)
   }
 
-  collection(collectionId: string): DashboardUrlBuilder {
+  collection(collectionId: string): DashboardUrl {
     return this.append('collections', collectionId)
   }
 }
 
-/** @public */
-export class CanvasUrlBuilder extends DashboardUrlBuilder {
+class CanvasUrlBuilder extends DashboardUrlBuilder implements CanvasUrl {
   static readonly namespace = 'canvas'
 
-  document(documentId: string): DashboardUrlBuilder {
+  document(documentId: string): DashboardUrl {
     return this.append('doc', documentId)
   }
 }
 
-/** @public */
-export class StudioUrlBuilder
+class StudioUrlBuilder
   extends DashboardUrlBuilder
   implements StudioUrl, StudioWorkspaceUrl, StudioIntentUrl
 {
@@ -279,32 +233,32 @@ export class StudioUrlBuilder
   intent(intent: 'create', parameters: CreateIntentParameters): StudioIntentUrl
   intent(intent: 'release', parameters: ReleaseIntentParameters): StudioIntentUrl
   intent(...args: IntentArguments): StudioIntentUrl {
-    return this.append('intent', args[0])
-      .appendRaw(serializeParameters(intentParametersOf(...args)))
-      .trailingSlash()
+    return this.append('intent', args[0]).edit((url) => {
+      url.pathname = `${url.pathname}/${serializeIntentParameters(intentParametersOf(...args))}/`
+    })
   }
 
   perspective(perspective: string): StudioIntentUrl {
-    return this.setSearchParameter('perspective', perspective)
+    return this.edit((url) => url.searchParams.set('perspective', perspective))
   }
 
   comment(commentId: string): StudioIntentUrl {
-    const parameters = parseParameters(this.lastSegment()!)
-
-    return this.replaceLastRawSegment(
-      serializeParameters([
-        ...parameters.filter(([name]) => name !== 'inspect' && name !== 'comment'),
-        ['inspect', 'sanity/comments'],
-        ['comment', commentId],
-      ]),
-    )
+    return this.edit((url) => {
+      const segments = url.pathname.split('/')
+      const parametersIndex = segments.length - 2
+      const parameters = parseIntentParameters(segments[parametersIndex]!)
+      parameters.set('inspect', 'sanity/comments')
+      parameters.set('comment', commentId)
+      segments[parametersIndex] = serializeIntentParameters(parameters)
+      url.pathname = segments.join('/')
+    })
   }
 
-  task(taskId: string): DashboardUrlBuilder {
-    return this.setSearchParameter('selectedTask', taskId)
+  task(taskId: string): DashboardUrl {
+    return this.edit((url) => url.searchParams.set('selectedTask', taskId))
   }
 
-  path(...path: string[]): DashboardUrlBuilder {
+  path(...path: string[]): DashboardUrl {
     return this.appendPath(...path)
   }
 }
@@ -314,29 +268,31 @@ export interface DashboardUrls {
   studios(): DashboardUrl
   studios(appId: string): StudioUrl
   applications(): DashboardUrl
-  applications(appId: string): CoreApplicationUrlBuilder
-  mediaLibrary(): MediaLibraryUrlBuilder
-  canvas(): CanvasUrlBuilder
+  applications(appId: string): CoreApplicationUrl
+  mediaLibrary(): MediaLibraryUrl
+  canvas(): CanvasUrl
   home(): DashboardUrl
-  extend<const Builders extends Readonly<Record<string, DashboardUrlBuilderNamespaceClass>>>(
+  extend<
+    const Builders extends Readonly<
+      Record<
+        string,
+        {
+          readonly namespace: string
+          new (url: URL): DashboardUrlBuilder
+        }
+      >
+    >,
+  >(
     builders: Builders & Partial<Record<keyof this, never>>,
   ): this & {readonly [Name in keyof Builders]: () => InstanceType<Builders[Name]>}
 }
 
-type RootBuilder = <Builder extends DashboardUrlBuilder>(
-  Builder: DashboardUrlBuilderClass<Builder>,
+const createRootBuilder = <Builder extends DashboardUrlBuilder>(
+  Builder: new (url: URL) => Builder,
   ...segments: string[]
-) => Builder
-
-const builder: RootBuilder = (Builder, ...segments) =>
-  createBuilder(Builder, {
-    search: [],
-    segments: segments.map((value) => ({raw: false, value})),
-    trailingSlash: false,
-  })
+): Builder => new Builder(appendSegments(new URL(defaultDashboardOrigin), segments))
 
 const createDashboardUrls = <const Builders extends BuilderRegistry>(
-  createRootBuilder: RootBuilder,
   builders: Builders,
 ): DashboardUrls & BuilderMethods<Builders> => {
   function studios(): DashboardUrl
@@ -348,8 +304,8 @@ const createDashboardUrls = <const Builders extends BuilderRegistry>(
   }
 
   function applications(): DashboardUrl
-  function applications(appId: string): CoreApplicationUrlBuilder
-  function applications(appId?: string): DashboardUrl | CoreApplicationUrlBuilder {
+  function applications(appId: string): CoreApplicationUrl
+  function applications(appId?: string): DashboardUrl | CoreApplicationUrl {
     return appId === undefined
       ? createRootBuilder(TerminalUrlBuilder, CoreApplicationUrlBuilder.namespace)
       : createRootBuilder(CoreApplicationUrlBuilder, CoreApplicationUrlBuilder.namespace, appId)
@@ -369,13 +325,26 @@ const createDashboardUrls = <const Builders extends BuilderRegistry>(
     canvas: () => createRootBuilder(CanvasUrlBuilder, CanvasUrlBuilder.namespace),
     home: () => createRootBuilder(TerminalUrlBuilder),
     extend<const AddedBuilders extends BuilderRegistry>(addedBuilders: AddedBuilders) {
-      for (const name of Object.keys(addedBuilders)) {
+      const namespaces = new Set([
+        '',
+        StudioUrlBuilder.namespace,
+        CoreApplicationUrlBuilder.namespace,
+        MediaLibraryUrlBuilder.namespace,
+        CanvasUrlBuilder.namespace,
+        ...Object.values(builders).map((Builder) => Builder.namespace),
+      ])
+
+      for (const [name, Builder] of Object.entries(addedBuilders)) {
         if (name in dashboardUrls || name in methods) {
-          throw new Error(`Dashboard URL namespace "${name}" already exists`)
+          throw new Error(`Dashboard URL builder "${name}" already exists`)
         }
+        if (namespaces.has(Builder.namespace)) {
+          throw new Error(`Dashboard URL namespace "${Builder.namespace}" already exists`)
+        }
+        namespaces.add(Builder.namespace)
       }
 
-      return createDashboardUrls(createRootBuilder, {...builders, ...addedBuilders})
+      return createDashboardUrls({...builders, ...addedBuilders})
     },
   }
 
@@ -383,4 +352,4 @@ const createDashboardUrls = <const Builders extends BuilderRegistry>(
 }
 
 /** @public */
-export const urlFor: DashboardUrls = createDashboardUrls(builder, {})
+export const urlFor: DashboardUrls = createDashboardUrls({})

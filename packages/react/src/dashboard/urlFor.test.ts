@@ -1,21 +1,26 @@
 import {describe, expect, expectTypeOf, it} from 'vitest'
 
 import {
-  CanvasUrlBuilder,
-  CoreApplicationUrlBuilder,
+  type CanvasUrl,
+  type CoreApplicationUrl,
   type DashboardUrl,
   DashboardUrlBuilder,
-  MediaLibraryUrlBuilder,
+  type MediaLibraryUrl,
   type StudioIntentUrl,
   type StudioUrl,
-  StudioUrlBuilder,
   type StudioWorkspaceUrl,
   urlFor,
 } from './urlFor'
 
 class ContentAgentDocumentUrlBuilder extends DashboardUrlBuilder {
   perspective(perspective: string): this {
-    return this.setSearchParameter('perspective', perspective)
+    return this.edit((url) => url.searchParams.set('perspective', perspective))
+  }
+
+  panel(panelId: string): this {
+    return this.edit((url) => {
+      url.hash = `panel/${panelId}`
+    })
   }
 }
 
@@ -37,6 +42,10 @@ class PersonaUrlBuilder extends DashboardUrlBuilder {
   person(personId: string): this {
     return this.append('people', personId)
   }
+}
+
+class CanvasAliasUrlBuilder extends DashboardUrlBuilder {
+  static readonly namespace = 'canvas'
 }
 
 describe('urlFor', () => {
@@ -168,8 +177,11 @@ describe('urlFor', () => {
         .context('context/1')
         .document('document/1')
         .perspective('published')
+        .panel('review 1')
         .url(),
-    ).toBe('/content-agent/contexts/context%2F1/documents/document%2F1?perspective=published')
+    ).toBe(
+      '/content-agent/contexts/context%2F1/documents/document%2F1?perspective=published#panel/review%201',
+    )
     expect(reextendedUrlFor.persona().person('person/1').url()).toBe('/persona/people/person%2F1')
     expect(reextendedUrlFor.contentAgent().url()).toBe('/content-agent')
     expect(urlFor).not.toHaveProperty('contentAgent')
@@ -182,9 +194,20 @@ describe('urlFor', () => {
   })
 
   it('rejects duplicate URL namespaces', () => {
+    const extendedUrlFor = urlFor.extend({contentAgent: ContentAgentUrlBuilder})
+
     expect(() => urlFor.extend({canvas: ContentAgentUrlBuilder} as never)).toThrow(
+      'Dashboard URL builder "canvas" already exists',
+    )
+    expect(() => urlFor.extend({canvasAlias: CanvasAliasUrlBuilder})).toThrow(
       'Dashboard URL namespace "canvas" already exists',
     )
+    expect(() => extendedUrlFor.extend({agent: ContentAgentUrlBuilder})).toThrow(
+      'Dashboard URL namespace "content-agent" already exists',
+    )
+    expect(() =>
+      urlFor.extend({agent: ContentAgentUrlBuilder, assistant: ContentAgentUrlBuilder}),
+    ).toThrow('Dashboard URL namespace "content-agent" already exists')
   })
 
   it('covers the studio path grammar with path(), tools included', () => {
@@ -207,10 +230,9 @@ describe('urlFor', () => {
     ).toEqualTypeOf<StudioIntentUrl>()
     expectTypeOf(urlFor.studios()).toEqualTypeOf<DashboardUrl>()
     expectTypeOf(urlFor.applications()).toEqualTypeOf<DashboardUrl>()
-    expectTypeOf(urlFor.applications('app-1')).toEqualTypeOf<CoreApplicationUrlBuilder>()
-    expectTypeOf(urlFor.mediaLibrary()).toEqualTypeOf<MediaLibraryUrlBuilder>()
-    expectTypeOf(urlFor.canvas()).toEqualTypeOf<CanvasUrlBuilder>()
+    expectTypeOf(urlFor.applications('app-1')).toEqualTypeOf<CoreApplicationUrl>()
+    expectTypeOf(urlFor.mediaLibrary()).toEqualTypeOf<MediaLibraryUrl>()
+    expectTypeOf(urlFor.canvas()).toEqualTypeOf<CanvasUrl>()
     expectTypeOf(urlFor.home()).toEqualTypeOf<DashboardUrl>()
-    expect(urlFor.studios('studio-1')).toBeInstanceOf(StudioUrlBuilder)
   })
 })
