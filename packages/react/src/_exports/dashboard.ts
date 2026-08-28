@@ -22,6 +22,7 @@ export {
   type AgentResourceContextOptions,
   useAgentResourceContext,
 } from '../hooks/dashboard/useAgentResourceContext'
+export {useApplicationForegroundId} from '../hooks/dashboard/useApplicationForegroundId'
 export {useNavigate} from '../hooks/dashboard/useNavigate'
 export {
   type NavigateToStudioResult,
