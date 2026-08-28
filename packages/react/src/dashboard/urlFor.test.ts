@@ -151,11 +151,13 @@ describe('urlFor', () => {
 
   it('returns relative and absolute URL forms', () => {
     const dashboardUrl = urlFor.applications('app-1')
-    const absolute = new URL('/application/app-1', globalThis.location.origin)
+    const origin = 'https://dashboard.sanity.io'
+    const absolute = new URL('/application/app-1', origin)
 
     expect(dashboardUrl.toString()).toBe('/application/app-1')
-    expect(dashboardUrl.toURL()).toEqual(absolute)
-    expect(dashboardUrl.url({absolute: true})).toBe(absolute.href)
+    expect(dashboardUrl.url()).toBe('/application/app-1')
+    expect(dashboardUrl.toURL({origin})).toEqual(absolute)
+    expect(dashboardUrl.absolute({origin})).toBe(absolute.href)
   })
 
   it('keeps builders immutable', () => {
