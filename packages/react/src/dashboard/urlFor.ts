@@ -1,7 +1,6 @@
 /** @public */
 export interface DashboardUrl {
-  absolute(options: {origin: string}): string
-  url(): string
+  url(options?: {origin?: string}): string
   toURL(options: {origin: string}): URL
   toString(): string
 }
@@ -235,24 +234,9 @@ export class DashboardUrlBuilder implements DashboardUrl {
   }
 
   /**
-   * Returns the dashboard URL as an absolute string using the supplied origin.
+   * Returns the dashboard URL as a relative string by default.
    *
-   * @example
-   * ```ts
-   * const builder = new DashboardUrlBuilder(
-   *   new URL('/application/my-app', 'https://dashboard.sanity.io'),
-   * )
-   *
-   * builder.absolute({origin: 'https://dashboard.sanity.io'})
-   * // 'https://dashboard.sanity.io/application/my-app'
-   * ```
-   */
-  absolute(options: {origin: string}): string {
-    return this.toURL(options).href
-  }
-
-  /**
-   * Returns the dashboard URL as a relative string.
+   * Supplying an origin returns an absolute URL string for the same dashboard route.
    *
    * @example
    * ```ts
@@ -261,10 +245,13 @@ export class DashboardUrlBuilder implements DashboardUrl {
    * )
    *
    * builder.url() // '/application/my-app'
+   * builder.url({origin: 'https://dashboard.sanity.io'})
+   * // 'https://dashboard.sanity.io/application/my-app'
    * ```
    */
-  url(): string {
-    return this.#relativeUrl()
+  url(options?: {origin?: string}): string {
+    const relativeUrl = this.#relativeUrl()
+    return options?.origin === undefined ? relativeUrl : new URL(relativeUrl, options.origin).href
   }
 
   /**

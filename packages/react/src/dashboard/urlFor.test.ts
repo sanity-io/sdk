@@ -157,7 +157,7 @@ describe('urlFor', () => {
     expect(dashboardUrl.toString()).toBe('/application/app-1')
     expect(dashboardUrl.url()).toBe('/application/app-1')
     expect(dashboardUrl.toURL({origin})).toEqual(absolute)
-    expect(dashboardUrl.absolute({origin})).toBe(absolute.href)
+    expect(dashboardUrl.url({origin})).toBe(absolute.href)
   })
 
   it('keeps builders immutable', () => {
