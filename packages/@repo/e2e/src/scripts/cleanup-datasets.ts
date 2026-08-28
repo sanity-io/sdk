@@ -24,7 +24,7 @@ async function findCommentsAddon(
 ): Promise<string | undefined> {
   try {
     const datasets = await client.request<{name: string}[] | undefined>({
-      uri: `/projects/${env.SANITY_APP_E2E_PROJECT_ID}/datasets?datasetProfile=comments&addonFor=${dataset}`,
+      url: `/projects/${env.SANITY_APP_E2E_PROJECT_ID}/datasets?datasetProfile=comments&addonFor=${dataset}`,
     })
     return datasets?.[0]?.name
   } catch (error) {

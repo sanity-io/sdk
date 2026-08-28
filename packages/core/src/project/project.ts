@@ -130,7 +130,7 @@ export const project = defineFetcher<
     getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
       switchMap((client) =>
         client.observable.request<Project<boolean, boolean>>({
-          uri: `/projects/${resolveProjectId(instance, options)}`,
+          url: `/projects/${resolveProjectId(instance, options)}`,
           query: buildQuery(normalizeProjectOptions(options)),
           tag: 'projects.get',
         }),

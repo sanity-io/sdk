@@ -993,7 +993,7 @@ it('does not send credentials with the dataset ACL request', async () => {
 
   const aclCall = vi
     .mocked(client.request)
-    .mock.calls.find(([options]) => options.uri?.endsWith('/acl'))
+    .mock.calls.find(([options]) => options.url?.endsWith('/acl'))
   expect(aclCall).toBeDefined()
   expect(aclCall![0]).not.toHaveProperty('withCredentials')
 })

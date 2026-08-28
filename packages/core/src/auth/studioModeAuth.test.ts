@@ -35,7 +35,7 @@ describe('checkForCookieAuth', () => {
 
     expect(result).toBe(true)
     expect(mockClient.request).toHaveBeenCalledWith({
-      uri: '/users/me',
+      url: '/users/me',
       withCredentials: true,
       tag: 'users.get-current',
     })
