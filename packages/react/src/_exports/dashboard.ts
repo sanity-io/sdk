@@ -1,6 +1,7 @@
 export {
   type CanvasUrl,
   type CreateIntentParameters,
+  type DashboardNamespaceUrl,
   type DashboardUrl,
   type DashboardUrls,
   type EditIntentParameters,

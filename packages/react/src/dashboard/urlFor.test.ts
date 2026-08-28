@@ -2,6 +2,7 @@ import {describe, expect, expectTypeOf, it} from 'vitest'
 
 import {
   type CanvasUrl,
+  type DashboardNamespaceUrl,
   type DashboardUrl,
   type MediaLibraryUrl,
   type StudioIntentUrl,
@@ -124,6 +125,28 @@ describe('urlFor', () => {
     intent.perspective('release-1')
 
     expect(intent.url()).toBe('/studio/studio-1/intent/edit/id=document-1/')
+  })
+
+  it('extends the URL builder with typed namespaces', () => {
+    const extendedUrlFor = urlFor.extend({context: 'context', contentAgent: 'content-agent'})
+    const reextendedUrlFor = extendedUrlFor.extend({persona: 'persona'})
+
+    expect(extendedUrlFor.context().path('documents', 'document/1').url()).toBe(
+      '/context/documents/document/1',
+    )
+    expect(extendedUrlFor.contentAgent().url()).toBe('/content-agent')
+    expect(reextendedUrlFor.persona().path('person/1').url()).toBe('/persona/person/1')
+    expect(reextendedUrlFor.context().url()).toBe('/context')
+    expect(urlFor).not.toHaveProperty('context')
+
+    expectTypeOf(extendedUrlFor.context()).toEqualTypeOf<DashboardNamespaceUrl>()
+    expectTypeOf(reextendedUrlFor.persona()).toEqualTypeOf<DashboardNamespaceUrl>()
+  })
+
+  it('rejects duplicate URL namespaces', () => {
+    expect(() => urlFor.extend({canvas: 'custom-canvas'} as never)).toThrow(
+      'Dashboard URL namespace "canvas" already exists',
+    )
   })
 
   it('covers the studio path grammar with path(), tools included', () => {
