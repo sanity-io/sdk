@@ -1,9 +1,10 @@
 import {ClientError} from '@sanity/client'
-import {AuthStateType, getIsInDashboardState} from '@sanity/sdk'
+import {AuthStateType, getIsInDashboardState, shouldDeferErrorToSdk} from '@sanity/sdk'
 import {
   getClientErrorApiBody,
   getClientErrorApiDescription,
-  isProjectUserNotFoundClientError,
+  getClientErrorFromCauseChain,
+  getClientErrorStatusCode,
 } from '@sanity/sdk/_internal'
 import {Suspense, useCallback, useEffect, useMemo, useRef} from 'react'
 import {type FallbackProps} from 'react-error-boundary'
@@ -31,7 +32,8 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
     !(
       error instanceof AuthError ||
       error instanceof ConfigurationError ||
-      error instanceof ClientError
+      error instanceof ClientError ||
+      shouldDeferErrorToSdk(error)
     )
   )
     throw error
@@ -44,20 +46,17 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
   } = instance
 
   // Errors surfaced through `AuthBoundary` arrive wrapped in `AuthError`, with
-  // the original `ClientError` tucked under `.cause`. Unwrapping it here lets
-  // the 401/404 branches below respond to the real status code instead of
-  // silently skipping because `error instanceof ClientError` is false.
-  const clientError: ClientError | null =
-    error instanceof ClientError
-      ? error
-      : error instanceof AuthError && error.cause instanceof ClientError
-        ? error.cause
-        : null
+  // the original `ClientError` tucked under `.cause`, and an app's own boundary
+  // may add wrappers of its own before rethrowing. Walking the `cause` chain
+  // structurally lets the 401/404 branches below respond to the real status
+  // code, including when the app bundles a second copy of `@sanity/client` and
+  // `error instanceof ClientError` is therefore false.
+  const apiError = getClientErrorFromCauseChain(error)
+  const statusCode = getClientErrorStatusCode(apiError)
 
   const isInDashboard = getIsInDashboardState(instance).getCurrent()
 
-  const isProjectUserNotFound =
-    !!clientError && clientError.statusCode === 401 && isProjectUserNotFoundClientError(clientError)
+  const isProjectUserNotFound = shouldDeferErrorToSdk(error)
 
   // The dashboard access request flow relies on a comlink connection to the
   // parent window. In standalone apps that connection never materializes, so
@@ -78,10 +77,10 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
     let message = 'Please try again or contact support if the problem persists.'
     let retry = true
 
-    if (clientError) {
-      if (clientError.statusCode === 401) {
+    if (statusCode !== undefined) {
+      if (statusCode === 401) {
         if (isProjectUserNotFound) {
-          const description = getClientErrorApiDescription(clientError)
+          const description = getClientErrorApiDescription(apiError)
           if (description) message = description
           retry = false
         } else if (!isInDashboard) {
@@ -91,8 +90,8 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
         // Dashboard non-projectUserNotFound 401: leave the current UI in place
         // and let ComlinkTokenRefreshProvider request a fresh token from the
         // parent window. The Retry button remains as a manual fallback.
-      } else if (clientError.statusCode === 404) {
-        const errorMessage = getClientErrorApiBody(clientError)?.message || ''
+      } else if (statusCode === 404) {
+        const errorMessage = getClientErrorApiBody(apiError)?.message || ''
         message =
           errorMessage.startsWith('Session with sid') && errorMessage.endsWith('not found')
             ? 'The session ID is invalid or expired.'
@@ -105,7 +104,7 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
       retry = true
     }
     return {authErrorMessage: message, showRetryCta: retry}
-  }, [authState, clientError, error, isInDashboard, isProjectUserNotFound])
+  }, [apiError, authState, error, isInDashboard, isProjectUserNotFound, statusCode])
 
   // Guards against re-entering the standalone auto-logout branch below. Once
   // `logout()` flips the auth store to LOGGED_OUT, `useAuthState` emits a new
@@ -119,8 +118,7 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
   // redirect to the Sanity login URL.
   useEffect(() => {
     if (
-      clientError &&
-      clientError.statusCode === 401 &&
+      statusCode === 401 &&
       !isProjectUserNotFound &&
       !isInDashboard &&
       !hasAutoLoggedOutRef.current
@@ -128,7 +126,7 @@ export function LoginError({error, resetErrorBoundary}: LoginErrorProps): React.
       hasAutoLoggedOutRef.current = true
       handleRetry()
     }
-  }, [clientError, handleRetry, isInDashboard, isProjectUserNotFound])
+  }, [handleRetry, isInDashboard, isProjectUserNotFound, statusCode])
 
   return (
     <>

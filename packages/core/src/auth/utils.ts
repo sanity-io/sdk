@@ -1,4 +1,3 @@
-import {type ClientError} from '@sanity/client'
 import {type CurrentUser} from '@sanity/types'
 import {EMPTY, fromEvent, Observable} from 'rxjs'
 
@@ -181,25 +180,123 @@ export type ApiErrorBody = {
   message?: string
 }
 
-/** @internal Extracts the structured API error body from a ClientError, if present. */
-export function getClientErrorApiBody(error: ClientError): ApiErrorBody | undefined {
-  const body: unknown = (error as ClientError).response?.body
-  return body && typeof body === 'object' ? (body as ApiErrorBody) : undefined
+/**
+ * Upper bound on how many `cause` links are followed when looking for a Sanity
+ * API error inside a wrapped error. Keeps a circular `cause` chain from looping
+ * forever.
+ */
+const MAX_ERROR_CAUSE_DEPTH = 10
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+/**
+ * @internal Extracts the structured API error body from a Sanity API error, if present.
+ *
+ * The lookup is deliberately structural rather than an `instanceof ClientError`
+ * check: an app that bundles its own copy of `@sanity/client` throws
+ * `ClientError` instances that are not `instanceof` this package's copy.
+ */
+export function getClientErrorApiBody(error: unknown): ApiErrorBody | undefined {
+  if (!isRecord(error)) return undefined
+  const response = error['response']
+  if (!isRecord(response)) return undefined
+  const body = response['body']
+  return isRecord(body) ? (body as ApiErrorBody) : undefined
 }
 
 /** @internal Returns the error type string from an API error body, if available. */
-export function getClientErrorApiType(error: ClientError): string | undefined {
+export function getClientErrorApiType(error: unknown): string | undefined {
   const body = getClientErrorApiBody(error)
   return body?.error?.type ?? body?.type
 }
 
 /** @internal Returns the error description string from an API error body, if available. */
-export function getClientErrorApiDescription(error: ClientError): string | undefined {
+export function getClientErrorApiDescription(error: unknown): string | undefined {
   const body = getClientErrorApiBody(error)
   return body?.error?.description ?? body?.description
 }
 
-/** @internal True if the error represents a projectUserNotFoundError. */
-export function isProjectUserNotFoundClientError(error: ClientError): boolean {
+/**
+ * @internal Returns the HTTP status code reported by a Sanity API error, if available.
+ *
+ * Structural for the same reason as {@link getClientErrorApiBody}.
+ */
+export function getClientErrorStatusCode(error: unknown): number | undefined {
+  if (!isRecord(error)) return undefined
+  const statusCode = error['statusCode']
+  if (typeof statusCode === 'number') return statusCode
+  const response = error['response']
+  const responseStatusCode = isRecord(response) ? response['statusCode'] : undefined
+  return typeof responseStatusCode === 'number' ? responseStatusCode : undefined
+}
+
+/**
+ * @internal Walks an error's `cause` chain and returns the first value that looks
+ * like a Sanity API error, i.e. one carrying a `response` body or a `statusCode`.
+ *
+ * Errors surfaced through `AuthBoundary` arrive wrapped in an `AuthError` with
+ * the original `ClientError` under `.cause`, and apps may add wrappers of their
+ * own, so the API error is rarely the value that was caught.
+ */
+export function getClientErrorFromCauseChain(error: unknown): unknown {
+  let candidate: unknown = error
+  for (let depth = 0; isRecord(candidate) && depth < MAX_ERROR_CAUSE_DEPTH; depth += 1) {
+    if (
+      getClientErrorApiBody(candidate) !== undefined ||
+      getClientErrorStatusCode(candidate) !== undefined
+    ) {
+      return candidate
+    }
+    candidate = candidate['cause']
+  }
+  return undefined
+}
+
+/**
+ * Returns `true` when a Sanity API error reports `projectUserNotFoundError`,
+ * meaning the token's user has no member record in the project the request was
+ * made against. The API raises it with a `401` status before any dataset or ACL
+ * check, so it can surface from an ordinary query.
+ *
+ * The check inspects the API response body instead of using
+ * `instanceof ClientError`, so it also recognises errors thrown by a duplicate
+ * copy of `@sanity/client` bundled by the app.
+ *
+ * @param error - Any caught value.
+ * @returns `true` if the error body reports `projectUserNotFoundError`.
+ * @public
+ */
+export function isProjectUserNotFoundClientError(error: unknown): boolean {
   return getClientErrorApiType(error) === 'projectUserNotFoundError'
+}
+
+/**
+ * Returns `true` when an error caught by an application's own error boundary
+ * should be rethrown so that the SDK's `AuthBoundary` fallback handles it
+ * instead of the application's generic crash screen.
+ *
+ * Apps normally mount their error boundary inside `<SanityApp>`, so it catches
+ * project-access errors before the SDK ever sees them. Call this first and
+ * rethrow when it returns `true`:
+ *
+ * ```tsx
+ * function Fallback({error}: FallbackProps) {
+ *   if (shouldDeferErrorToSdk(error)) throw error
+ *   return <MyCrashScreen error={error} />
+ * }
+ * ```
+ *
+ * Detection is structural — HTTP status plus API error body, walking the
+ * `cause` chain — so it keeps working when the error is wrapped and when the
+ * app bundles its own copy of `@sanity/client`.
+ *
+ * @param error - The error caught by the application's error boundary.
+ * @returns `true` when the SDK has dedicated handling for this error.
+ * @public
+ */
+export function shouldDeferErrorToSdk(error: unknown): boolean {
+  const apiError = getClientErrorFromCauseChain(error)
+  return getClientErrorStatusCode(apiError) === 401 && isProjectUserNotFoundClientError(apiError)
 }

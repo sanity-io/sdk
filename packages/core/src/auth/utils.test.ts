@@ -5,11 +5,16 @@ import {AUTH_CODE_PARAM, DEFAULT_BASE} from './authConstants'
 import {
   getAuthCode,
   getCleanedUrl,
+  getClientErrorApiDescription,
+  getClientErrorFromCauseChain,
+  getClientErrorStatusCode,
   getDefaultLocation,
   getDefaultStorage,
   getStorageEvents,
   getTokenFromLocation,
   getTokenFromStorage,
+  isProjectUserNotFoundClientError,
+  shouldDeferErrorToSdk,
 } from './utils'
 
 vi.mock('rxjs', async (importOriginal) => {
@@ -262,5 +267,122 @@ describe('getCleanedUrl', () => {
     const url = 'http://example.com/page#section'
     const cleaned = getCleanedUrl(url)
     expect(cleaned).toBe('http://example.com/page#section')
+  })
+})
+/**
+ * Mimics the shape a `ClientError` exposes without constructing one, which is
+ * exactly the situation these helpers exist for: an app bundling a second copy
+ * of `@sanity/client` throws errors that fail `instanceof` against ours.
+ */
+function makeApiErrorLike(statusCode: number, body: unknown): Record<string, unknown> {
+  return {statusCode, response: {statusCode, body}}
+}
+
+const projectUserNotFoundBody = {
+  error: {
+    type: 'projectUserNotFoundError',
+    description: 'User is not a member of this project.',
+    projectID: 'abc123',
+    userID: 'uXYZ',
+  },
+}
+
+describe('getClientErrorStatusCode', () => {
+  it('reads a top-level statusCode', () => {
+    expect(getClientErrorStatusCode({statusCode: 401})).toBe(401)
+  })
+
+  it('falls back to the response statusCode', () => {
+    expect(getClientErrorStatusCode({response: {statusCode: 404}})).toBe(404)
+  })
+
+  it('returns undefined for values without a status code', () => {
+    expect(getClientErrorStatusCode(new Error('boom'))).toBe(undefined)
+    expect(getClientErrorStatusCode(null)).toBe(undefined)
+    expect(getClientErrorStatusCode('nope')).toBe(undefined)
+  })
+})
+
+describe('isProjectUserNotFoundClientError', () => {
+  it('recognises the error type nested under `error`', () => {
+    expect(isProjectUserNotFoundClientError(makeApiErrorLike(401, projectUserNotFoundBody))).toBe(
+      true,
+    )
+  })
+
+  it('recognises the error type at the top level of the body', () => {
+    expect(
+      isProjectUserNotFoundClientError(
+        makeApiErrorLike(401, {type: 'projectUserNotFoundError', description: 'nope'}),
+      ),
+    ).toBe(true)
+  })
+
+  it('returns false for other API error types and for non-API values', () => {
+    expect(
+      isProjectUserNotFoundClientError(makeApiErrorLike(401, {error: {type: 'unauthorized'}})),
+    ).toBe(false)
+    expect(isProjectUserNotFoundClientError(new Error('boom'))).toBe(false)
+    expect(isProjectUserNotFoundClientError(undefined)).toBe(false)
+  })
+})
+
+describe('getClientErrorFromCauseChain', () => {
+  it('returns the error itself when it carries the API response', () => {
+    const apiError = makeApiErrorLike(401, projectUserNotFoundBody)
+    expect(getClientErrorFromCauseChain(apiError)).toBe(apiError)
+  })
+
+  it('finds an API error wrapped several causes deep', () => {
+    const apiError = makeApiErrorLike(401, projectUserNotFoundBody)
+    const wrapped = new Error('outer', {cause: new Error('inner', {cause: apiError})})
+    expect(getClientErrorFromCauseChain(wrapped)).toBe(apiError)
+  })
+
+  it('returns undefined when no link in the chain is an API error', () => {
+    expect(getClientErrorFromCauseChain(new Error('outer', {cause: new Error('inner')}))).toBe(
+      undefined,
+    )
+  })
+
+  it('does not loop forever on a circular cause chain', () => {
+    const first: {cause?: unknown} = {}
+    const second = {cause: first}
+    first.cause = second
+    expect(getClientErrorFromCauseChain(first)).toBe(undefined)
+  })
+})
+
+describe('getClientErrorApiDescription', () => {
+  it('reads the description from the API error body', () => {
+    expect(getClientErrorApiDescription(makeApiErrorLike(401, projectUserNotFoundBody))).toBe(
+      'User is not a member of this project.',
+    )
+  })
+})
+
+describe('shouldDeferErrorToSdk', () => {
+  it('defers a 401 projectUserNotFoundError that is not an instanceof ClientError', () => {
+    expect(shouldDeferErrorToSdk(makeApiErrorLike(401, projectUserNotFoundBody))).toBe(true)
+  })
+
+  it('defers the same error when an app wrapper rethrows it as a cause', () => {
+    const apiError = makeApiErrorLike(401, projectUserNotFoundBody)
+    expect(shouldDeferErrorToSdk(new Error('Something went wrong', {cause: apiError}))).toBe(true)
+  })
+
+  it('does not defer a 401 with a different error type', () => {
+    expect(shouldDeferErrorToSdk(makeApiErrorLike(401, {error: {type: 'unauthorized'}}))).toBe(
+      false,
+    )
+  })
+
+  it('does not defer a projectUserNotFoundError on a non-401 status', () => {
+    expect(shouldDeferErrorToSdk(makeApiErrorLike(403, projectUserNotFoundBody))).toBe(false)
+  })
+
+  it('does not defer ordinary application errors', () => {
+    expect(shouldDeferErrorToSdk(new Error('render crash'))).toBe(false)
+    expect(shouldDeferErrorToSdk(undefined)).toBe(false)
   })
 })

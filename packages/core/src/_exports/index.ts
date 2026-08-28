@@ -48,6 +48,7 @@ export {
 export {observeOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
+export {isProjectUserNotFoundClientError, shouldDeferErrorToSdk} from '../auth/utils'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
 export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
 export {

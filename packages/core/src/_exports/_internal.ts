@@ -4,6 +4,8 @@ export {
   getClientErrorApiBody,
   getClientErrorApiDescription,
   getClientErrorApiType,
+  getClientErrorFromCauseChain,
+  getClientErrorStatusCode,
   isProjectUserNotFoundClientError,
 } from '../auth/utils'
 export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/commentsStore' // only used for memoizing in React, not needed for actual functionality
