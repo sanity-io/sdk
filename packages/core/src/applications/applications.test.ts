@@ -42,7 +42,7 @@ describe('applications', () => {
       scope: 'global',
     })
     expect(request).toHaveBeenCalledWith({
-      uri: '/applications',
+      url: '/applications',
       query: {organizationId: 'org1', include: 'access,workspaces', limit: 'none'},
       tag: 'applications.list',
     })
@@ -56,7 +56,7 @@ describe('applications', () => {
 
     expect(result).toEqual(app)
     expect(request).toHaveBeenCalledWith({
-      uri: '/applications/app1',
+      url: '/applications/app1',
       query: {},
       tag: 'applications.get',
     })
@@ -105,7 +105,7 @@ describe('applications', () => {
 
     expect(data).toEqual({id: 'app1', title: 'New'})
     expect(request).toHaveBeenCalledWith({
-      uri: '/applications/app1',
+      url: '/applications/app1',
       method: 'PATCH',
       body: {title: 'New'},
       tag: 'applications.update',
@@ -122,7 +122,7 @@ describe('applications', () => {
 
     expect(data).toEqual({deleted: true})
     expect(request).toHaveBeenCalledWith({
-      uri: '/applications/app1',
+      url: '/applications/app1',
       method: 'DELETE',
       tag: 'applications.delete',
     })

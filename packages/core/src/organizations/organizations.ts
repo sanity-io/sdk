@@ -94,7 +94,7 @@ export const organizations = defineFetcher<
     getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
       switchMap((client) =>
         client.observable.request<Organizations<boolean, boolean>>({
-          uri: '/organizations',
+          url: '/organizations',
           query: buildQuery(normalizeOrganizationsOptions(options)),
           tag: 'organizations.list',
         }),

@@ -38,7 +38,7 @@ describe('checkPermissions', () => {
       scope: 'global',
     })
     expect(request).toHaveBeenCalledWith({
-      uri: '/access/project/p1/user-permissions/me/check',
+      url: '/access/project/p1/user-permissions/me/check',
       query: {permissions: ['sanity.project.read']},
       tag: 'access.check',
     })

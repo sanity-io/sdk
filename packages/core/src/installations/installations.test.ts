@@ -40,7 +40,7 @@ describe('installations', () => {
       scope: 'global',
     })
     expect(request).toHaveBeenCalledWith({
-      uri: '/installations',
+      url: '/installations',
       query: {organizationId: 'org1', include: 'interfaces'},
       tag: 'installations.list',
     })
@@ -54,7 +54,7 @@ describe('installations', () => {
 
     expect(result).toEqual(inst)
     expect(request).toHaveBeenCalledWith({
-      uri: '/installations/inst1',
+      url: '/installations/inst1',
       query: {},
       tag: 'installations.get',
     })

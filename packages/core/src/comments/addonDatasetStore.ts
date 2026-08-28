@@ -67,7 +67,7 @@ function requestAddonDataset(
 ): Observable<string | undefined> {
   return client.observable
     .request<{name: string}[] | undefined>({
-      uri: `/projects/${projectId}/datasets?datasetProfile=${ADDON_DATASET_PROFILE}&addonFor=${dataset}`,
+      url: `/projects/${projectId}/datasets?datasetProfile=${ADDON_DATASET_PROFILE}&addonFor=${dataset}`,
       tag: 'comments.addon-dataset.list',
     })
     .pipe(map((datasets) => datasets?.[0]?.name))
@@ -182,7 +182,7 @@ export const provisionAddonDataset: (
       })
 
       const response = await client.request<{datasetName?: string} | undefined>({
-        uri: `/comments/${resource.dataset}/setup`,
+        url: `/comments/${resource.dataset}/setup`,
         method: 'POST',
         tag: 'comments.addon-dataset.setup',
       })
