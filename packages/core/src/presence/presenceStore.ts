@@ -411,7 +411,7 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
       subscription.add(
         globalClient.observable
           .request<{organizationId: string}>({
-            uri: `/canvases/${resource.canvasId}`,
+            url: `/canvases/${resource.canvasId}`,
             tag: 'canvases.get',
           })
           .subscribe({

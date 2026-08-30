@@ -73,7 +73,7 @@ export const subscribeToStateAndFetchCurrentUser = (
       switchMap((client) =>
         client.observable
           .request<CurrentUser>({
-            uri: '/users/me',
+            url: '/users/me',
             method: 'GET',
             tag: 'users.get-current',
           })

@@ -130,7 +130,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                 return client.observable
                   .request<PatchedSanityUserFromClient>({
                     method: 'GET',
-                    uri: `/users/${userId}`,
+                    url: `/users/${userId}`,
                     tag: 'users.get',
                   })
                   .pipe(
@@ -184,7 +184,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
               return client.observable
                 .request<SanityUser | SanityUserResponse>({
                   method: 'GET',
-                  uri: `access/${resourceType}/${resourceId}/users/${userId}`,
+                  url: `access/${resourceType}/${resourceId}/users/${userId}`,
                   tag: 'users.get',
                 })
                 .pipe(
@@ -253,7 +253,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
               switchMap(([[resource, client], cursor]) =>
                 client.observable.request<SanityUserResponse>({
                   method: 'GET',
-                  uri: `access/${resource.type}/${resource.id}/users`,
+                  url: `access/${resource.type}/${resource.id}/users`,
                   tag: 'users.list',
                   query: cursor
                     ? {nextCursor: cursor, limit: batchSize.toString()}

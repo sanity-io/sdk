@@ -57,7 +57,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     })
     expect(mockRequest).toHaveBeenCalledWith({
       method: 'GET',
-      uri: '/users/me',
+      url: '/users/me',
       tag: 'users.get-current',
     })
 
@@ -97,7 +97,7 @@ describe('subscribeToStateAndFetchCurrentUser', () => {
     })
     expect(mockRequest).toHaveBeenCalledWith({
       method: 'GET',
-      uri: '/users/me',
+      url: '/users/me',
       tag: 'users.get-current',
     })
 

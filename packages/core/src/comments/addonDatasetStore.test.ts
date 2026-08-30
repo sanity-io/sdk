@@ -59,7 +59,7 @@ describe('getAddonDatasetState', () => {
     )
 
     expect(observableRequest).toHaveBeenCalledWith({
-      uri: '/projects/p/datasets?datasetProfile=comments&addonFor=d',
+      url: '/projects/p/datasets?datasetProfile=comments&addonFor=d',
       tag: 'comments.addon-dataset.list',
     })
   })
@@ -139,7 +139,7 @@ describe('provisionAddonDataset', () => {
 
     await expect(provisionAddonDataset(instance, {})).resolves.toBe('d-comments')
     expect(request).toHaveBeenCalledWith({
-      uri: '/comments/d/setup',
+      url: '/comments/d/setup',
       method: 'POST',
       tag: 'comments.addon-dataset.setup',
     })

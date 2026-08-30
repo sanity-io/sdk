@@ -160,7 +160,7 @@ export const installations = defineFetcher<
     getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
       switchMap((client) =>
         client.observable.request<InstallationsResponse<InstallationInclude>>({
-          uri: '/installations',
+          url: '/installations',
           query: buildQuery({
             organizationId: options.organizationId,
             include: serializeInclude(options.include),
@@ -196,7 +196,7 @@ export const installation = defineFetcher<
     getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
       switchMap((client) =>
         client.observable.request<Installation<InstallationInclude>>({
-          uri: `/installations/${installationId}`,
+          url: `/installations/${installationId}`,
           query: buildQuery({include: serializeInclude(options?.include)}),
           tag: 'installations.get',
         }),

@@ -227,7 +227,7 @@ export const applications = defineFetcher<
     getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
       switchMap((client) =>
         client.observable.request<ApplicationsResponse<ApplicationInclude>>({
-          uri: '/applications',
+          url: '/applications',
           query: buildQuery({
             organizationId: options.organizationId,
             type: options.type,
@@ -264,7 +264,7 @@ export const application = defineFetcher<
     getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
       switchMap((client) =>
         client.observable.request<Application<ApplicationInclude>>({
-          uri: `/applications/${applicationId}`,
+          url: `/applications/${applicationId}`,
           query: buildQuery({include: serializeInclude(options?.include)}),
           tag: 'applications.get',
         }),
@@ -317,7 +317,7 @@ export const updateApplication = defineMutation<UpdateApplicationInput, Applicat
       getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
         switchMap((client) =>
           client.observable.request<Application>({
-            uri: `/applications/${applicationId}`,
+            url: `/applications/${applicationId}`,
             method: 'PATCH',
             body,
             tag: 'applications.update',
@@ -354,7 +354,7 @@ export const deleteApplication = defineMutation<DeleteApplicationInput, DeletedR
       getClientState(instance, {apiVersion: API_VERSION, scope: 'global'}).observable.pipe(
         switchMap((client) =>
           client.observable.request<DeletedResult>({
-            uri: `/applications/${applicationId}`,
+            url: `/applications/${applicationId}`,
             method: 'DELETE',
             tag: 'applications.delete',
           }),
