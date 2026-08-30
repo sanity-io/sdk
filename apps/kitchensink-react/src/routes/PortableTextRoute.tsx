@@ -54,7 +54,6 @@ import {
   useMemo,
   useState,
 } from 'react'
-
 import {Card} from 'ui5'
 
 import {PageLayout} from '../components/PageLayout'

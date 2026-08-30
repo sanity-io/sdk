@@ -12,12 +12,11 @@ import {
   useSanityInstance,
   useUsers,
 } from '@sanity/sdk-react'
-import {Avatar, Box, Button, Dialog, Flex, Select, Spinner, Stack, Text} from '@sanity/ui'
+import {Avatar, Button, Dialog, Select} from '@sanity/ui'
 import {defineQuery} from 'groq'
 import {JSX, startTransition, Suspense, useCallback, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
-
-import {Card} from 'ui5'
+import {Box, Card, Flex, Spinner, Text, VStack} from 'ui5'
 
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
 import {LoadMore} from '../components/LoadMore'
@@ -51,12 +50,12 @@ function DocumentEditorDialog({
       open={open}
       width={2}
     >
-      <Stack gap={4} padding={4}>
+      <Flex flexDirection="column" gap={4} padding={4}>
         <JsonDocumentEditor documentHandle={handle} wrapInCard={false} maxHeight="70vh" />
-        <Flex justify="flex-end">
+        <Flex justifyContent="flex-end">
           <Button tone="primary" text="Close" onClick={onClose} />
         </Flex>
-      </Stack>
+      </Flex>
     </Dialog>
   )
 }
@@ -101,7 +100,7 @@ function DocumentRowFallback() {
   return (
     <TR>
       <TD padding={3}>
-        <Flex align="center" gap={2} justify="center" padding={3}>
+        <Flex alignItems="center" gap={2} justifyContent="center" padding={3}>
           <Spinner />
           <Text size={1}>Loading document...</Text>
         </Flex>
@@ -119,15 +118,17 @@ function DocumentRowError({error}: {error: Error}) {
     <TR>
       <TD padding={3}>
         <Card density="regular" tone="critical">
-          <Stack gap={2}>
-            <Text size={1} weight="semibold">Error loading document</Text>
+          <VStack gap={2}>
+            <Text size={1} weight="semibold">
+              Error loading document
+            </Text>
             <Text size={1}>{error.message}</Text>
             {error.stack && (
-              <Box style={{maxHeight: '100px', overflow: 'auto', fontSize: '12px'}}>
+              <Box maxHeight="100px" overflow="auto" style={{fontSize: '12px'}}>
                 <pre style={{margin: 0}}>{error.stack}</pre>
               </Box>
             )}
-          </Stack>
+          </VStack>
         </Card>
       </TD>
     </TR>
@@ -189,7 +190,7 @@ function DocumentList({documentType}: DocumentListProps) {
 
   return (
     <Box padding={4}>
-      <Stack gap={4}>
+      <VStack gap={4}>
         <Text size={1} weight="semibold">
           {documentType} Documents
         </Text>
@@ -246,9 +247,9 @@ function DocumentList({documentType}: DocumentListProps) {
             ) : (
               <TR>
                 <TD padding={3}>
-                  <Flex justify="center" align="center" padding={4}>
+                  <Flex alignItems="center" justifyContent="center" padding={4}>
                     {isPending ? (
-                      <Flex align="center" gap={2}>
+                      <Flex alignItems="center" gap={2}>
                         <Spinner />
                         <Text size={1}>Loading documents...</Text>
                       </Flex>
@@ -280,7 +281,7 @@ function DocumentList({documentType}: DocumentListProps) {
           goToPage={goToPage}
           isPending={isPending}
         />
-      </Stack>
+      </VStack>
     </Box>
   )
 }
@@ -321,9 +322,9 @@ function DocumentTypes() {
   }
 
   return (
-    <Stack gap={4} padding={4}>
+    <Flex flexDirection="column" gap={4} padding={4}>
       <Box>
-        <Stack gap={2}>
+        <VStack gap={2}>
           <Text as="label" htmlFor={`doctype-${config.dataset}`} muted size={1}>
             Document Type
           </Text>
@@ -341,7 +342,7 @@ function DocumentTypes() {
               </option>
             ))}
           </Select>
-        </Stack>
+        </VStack>
       </Box>
 
       {selectedType && (
@@ -356,7 +357,7 @@ function DocumentTypes() {
           <DocumentList documentType={selectedType} />
         </ErrorBoundary>
       )}
-    </Stack>
+    </Flex>
   )
 }
 
@@ -378,9 +379,9 @@ function DatasetExplorer() {
   }
 
   return (
-    <Stack gap={4} padding={4}>
+    <Flex flexDirection="column" gap={4} padding={4}>
       <Box>
-        <Stack gap={2}>
+        <VStack gap={2}>
           <Text as="label" htmlFor={`dataset-${config.projectId}`} muted size={1}>
             Dataset
           </Text>
@@ -398,7 +399,7 @@ function DatasetExplorer() {
               </option>
             ))}
           </Select>
-        </Stack>
+        </VStack>
       </Box>
 
       {selectedDataset && (
@@ -407,14 +408,16 @@ function DatasetExplorer() {
             resetKeys={[selectedDataset]}
             fallback={
               <Card density="regular" tone="critical">
-                <Text size={1}>Error loading document types from dataset &quot;{selectedDataset}&quot;</Text>
+                <Text size={1}>
+                  Error loading document types from dataset &quot;{selectedDataset}&quot;
+                </Text>
               </Card>
             }
           >
             <ResourceProvider
               dataset={selectedDataset}
               fallback={
-                <Flex align="center" gap={2} padding={4}>
+                <Flex alignItems="center" gap={2} padding={4}>
                   <Spinner />
                   <Text size={1}>Loading document types...</Text>
                 </Flex>
@@ -425,7 +428,7 @@ function DatasetExplorer() {
           </ErrorBoundary>
         </Card>
       )}
-    </Stack>
+    </Flex>
   )
 }
 
@@ -439,9 +442,9 @@ function UsersDialogContent() {
   const {data, hasMore, isPending, loadMore} = useUsers({batchSize: 10})
 
   return (
-    <Stack gap={3}>
+    <VStack gap={3}>
       {isPending && data.length === 0 ? (
-        <Flex align="center" gap={2} justify="center" padding={4}>
+        <Flex alignItems="center" gap={2} justifyContent="center" padding={4}>
           <Spinner />
           <Text size={1}>Loading users...</Text>
         </Flex>
@@ -450,17 +453,17 @@ function UsersDialogContent() {
           {data.length === 0 ? (
             <Text size={1}>No users found</Text>
           ) : (
-            <Stack gap={2}>
+            <VStack gap={2}>
               {data.map((user) => (
                 <UserListItem key={user.profile.id} user={user} />
               ))}
 
               <LoadMore as="div" isPending={isPending} hasMore={hasMore} onLoadMore={loadMore} />
-            </Stack>
+            </VStack>
           )}
         </>
       )}
-    </Stack>
+    </VStack>
   )
 }
 
@@ -473,7 +476,7 @@ function UsersDialog({open, onClose}: UsersDialogProps) {
       open={open}
       width={1}
     >
-      <Box padding={4} style={{maxHeight: '70vh', overflow: 'auto'}}>
+      <Box maxHeight="70vh" overflow="auto" padding={4}>
         <Suspense fallback={<Spinner />}>
           <UsersDialogContent />
         </Suspense>
@@ -490,9 +493,9 @@ function ProjectExplorer() {
   const handleCloseUsersDialog = () => setIsUsersDialogOpen(false)
 
   return (
-    <Stack gap={4}>
+    <VStack gap={4}>
       <Box padding={3}>
-        <Flex justify="space-between" align="center">
+        <Flex alignItems="center" justifyContent="space-between">
           <Box>
             <Text size={1} weight="semibold">
               {project.displayName || project.id}
@@ -529,7 +532,7 @@ function ProjectExplorer() {
           <DatasetExplorer />
         </ErrorBoundary>
       </Card>
-    </Stack>
+    </VStack>
   )
 }
 
@@ -551,9 +554,9 @@ function ProjectsExplorer() {
   }
 
   return (
-    <Stack gap={4}>
+    <VStack gap={4}>
       <Box>
-        <Stack gap={2}>
+        <VStack gap={2}>
           <Text as="label" htmlFor="project-selector" muted size={1}>
             Project
           </Text>
@@ -571,7 +574,7 @@ function ProjectsExplorer() {
               </option>
             ))}
           </Select>
-        </Stack>
+        </VStack>
       </Box>
 
       {selectedProject && (
@@ -587,7 +590,7 @@ function ProjectsExplorer() {
             <ResourceProvider
               projectId={selectedProject}
               fallback={
-                <Flex align="center" gap={2} padding={4}>
+                <Flex alignItems="center" gap={2} padding={4}>
                   <Spinner />
                   <Text size={1}>Loading project...</Text>
                 </Flex>
@@ -598,7 +601,7 @@ function ProjectsExplorer() {
           </ErrorBoundary>
         </Card>
       )}
-    </Stack>
+    </VStack>
   )
 }
 
@@ -610,15 +613,15 @@ export function OrgDocumentExplorerRoute(): JSX.Element {
       subtitle="Browse documents across your organization in a hierarchical structure"
     >
       <Card density="regular">
-        <Stack gap={4}>
-          <Stack gap={2}>
+        <VStack gap={4}>
+          <VStack gap={2}>
             <Text size={1} weight="semibold">
               Projects Explorer
             </Text>
             <Text size={1} muted>
               Navigate through projects → datasets → document types → documents
             </Text>
-          </Stack>
+          </VStack>
           <ErrorBoundary
             fallback={
               <Card density="regular" tone="critical">
@@ -630,7 +633,7 @@ export function OrgDocumentExplorerRoute(): JSX.Element {
               projectId={undefined}
               dataset={undefined}
               fallback={
-                <Flex align="center" gap={2} padding={4}>
+                <Flex alignItems="center" gap={2} padding={4}>
                   <Spinner />
                   <Text size={1}>Loading projects...</Text>
                 </Flex>
@@ -639,7 +642,7 @@ export function OrgDocumentExplorerRoute(): JSX.Element {
               <ProjectsExplorer />
             </ResourceProvider>
           </ErrorBoundary>
-        </Stack>
+        </VStack>
       </Card>
     </PageLayout>
   )

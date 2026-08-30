@@ -9,11 +9,17 @@ import {useNavigate} from '@sanity/sdk-react/dashboard'
 import {ThemeProvider, usePrefersDark} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
 import {type JSX, type ReactNode, Suspense} from 'react'
+import {registerLanguage} from 'react-refractor'
 import {BrowserRouter, useNavigate as useRouterNavigate} from 'react-router'
+import json from 'refractor/json'
 import {Spinner} from 'ui5'
 
 import {AppRoutes} from './AppRoutes'
 import {devResources, e2eResources, isE2E} from './sanityConfigs'
+
+// Sanity UI's Code renders plain text for any language refractor does not know
+// about, and it ships with none registered. Every Code on these pages is JSON.
+registerLanguage(json)
 
 // Enable SDK logging in the browser. The wildcard picks up new namespaces
 // automatically as logging is added to more modules.

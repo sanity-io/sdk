@@ -6,23 +6,10 @@ import {
   useReportPresence,
   useResource,
 } from '@sanity/sdk-react'
-import {
-  Badge,
-  Box,
-  Button,
-  Checkbox,
-  Flex,
-  Inline,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-} from '@sanity/ui'
-import {Code} from '@sanity/ui/code'
+import {Badge, Button, Checkbox, Select, TextInput} from '@sanity/ui'
 import {JSX, useState} from 'react'
 import {useSearchParams} from 'react-router'
-
-import {Card} from 'ui5'
+import {Box, Card, Code, Flex, HStack, Text, VStack} from 'ui5'
 
 import {PageLayout} from '../components/PageLayout'
 
@@ -74,7 +61,7 @@ function FieldPresence({
   })
 
   return (
-    <Inline gap={2} data-testid={`presence-field-${testId}`} data-count={presence.length}>
+    <HStack gap={2} data-testid={`presence-field-${testId}`} data-count={presence.length}>
       {presence.map((participant) => (
         <Badge
           key={participant.sessionId}
@@ -84,7 +71,7 @@ function FieldPresence({
           {participant.user.profile.displayName}
         </Badge>
       ))}
-    </Inline>
+    </HStack>
   )
 }
 
@@ -121,7 +108,7 @@ function PerspectiveSelect({
   onChange: (next: Perspective) => void
 }): JSX.Element {
   return (
-    <Flex align="center" gap={2}>
+    <Flex alignItems="center" gap={2}>
       <Text size={1} muted>
         Perspective
       </Text>
@@ -170,8 +157,8 @@ function DocumentCard({
 
   return (
     <Card density="regular">
-      <Flex align="flex-start" gap={3}>
-        <Stack gap={3} flex={1}>
+      <Flex alignItems="flex-start" gap={3}>
+        <Flex flexDirection="column" flexGrow={1} gap={3}>
           <Text size={1} weight="medium">
             {data?.name ?? 'Untitled'}
           </Text>
@@ -180,7 +167,7 @@ function DocumentCard({
           </Code>
           <PerspectiveSelect perspective={perspective} onChange={onPerspectiveChange} />
           <ScopeText />
-        </Stack>
+        </Flex>
         <Button
           as="a"
           href={studioUrl}
@@ -204,14 +191,14 @@ function AnnounceToggle({
 }): JSX.Element {
   return (
     <Card density="regular">
-      <Flex align="flex-start" gap={3}>
+      <Flex alignItems="flex-start" gap={3}>
         <Checkbox
           id="presence-announcing"
           data-testid="presence-announcing"
           checked={announcing}
           onChange={(event) => onChange(event.currentTarget.checked)}
         />
-        <Stack gap={2} flex={1}>
+        <Flex flexDirection="column" flexGrow={1} gap={2}>
           <Text
             as="label"
             htmlFor="presence-announcing"
@@ -225,7 +212,7 @@ function AnnounceToggle({
             Turn this off to read presence without appearing to anyone else, which is how an app
             that only displays presence behaves.
           </Text>
-        </Stack>
+        </Flex>
       </Flex>
     </Card>
   )
@@ -233,7 +220,7 @@ function AnnounceToggle({
 
 function Participant({participant}: {participant: DocumentPresence}): JSX.Element {
   return (
-    <Flex align="center" gap={2} data-testid="presence-document-participant">
+    <Flex alignItems="center" gap={2} data-testid="presence-document-participant">
       <Badge tone="primary">{participant.user.profile.displayName}</Badge>
       <Code size={0} data-testid="presence-participant-document-id">
         {participant.documentId}
@@ -257,7 +244,7 @@ function ParticipantList({
   const {presence} = usePresenceForDocument({documentId, documentType: DOCUMENT_TYPE, perspective})
 
   return (
-    <Stack gap={3}>
+    <VStack gap={3}>
       <Text size={1} weight="semibold">
         Others in this document
       </Text>
@@ -267,14 +254,14 @@ function ParticipantList({
             Nobody else is here
           </Text>
         ) : (
-          <Stack gap={3}>
+          <VStack gap={3}>
             {presence.map((participant) => (
               <Participant key={participant.sessionId} participant={participant} />
             ))}
-          </Stack>
+          </VStack>
         )}
       </Card>
-    </Stack>
+    </VStack>
   )
 }
 
@@ -294,8 +281,8 @@ function FieldRow({
   const testId = `presence-input-${field.name}`
 
   return (
-    <Stack gap={2}>
-      <Flex align="center" gap={2}>
+    <VStack gap={2}>
+      <Flex alignItems="center" gap={2}>
         <Text size={1} weight="medium">
           {field.label}
         </Text>
@@ -323,13 +310,13 @@ function FieldRow({
           onBlur={onBlur}
         />
       )}
-    </Stack>
+    </VStack>
   )
 }
 
 function Notes(): JSX.Element {
   return (
-    <Stack gap={2}>
+    <VStack gap={2}>
       <Text size={1} muted>
         Opening the same document in a Studio checks that presence works between the two: they share
         one room per project and dataset, so each should see the other. The link assumes that Studio
@@ -346,7 +333,7 @@ function Notes(): JSX.Element {
         to the URL to pick a different one, or ?studio=&lt;baseUrl&gt; to point the link at another
         Studio.
       </Text>
-    </Stack>
+    </VStack>
   )
 }
 
@@ -398,7 +385,7 @@ function PresenceDemo({documentId}: {documentId: string}): JSX.Element {
       <AnnounceToggle announcing={announcing} onChange={setAnnouncing} />
       <ParticipantList documentId={documentId} perspective={perspective} />
 
-      <Stack gap={3}>
+      <VStack gap={3}>
         <Text size={1} weight="semibold">
           Fields
         </Text>
@@ -423,7 +410,7 @@ function PresenceDemo({documentId}: {documentId: string}): JSX.Element {
             onClick={() => setFocusedField(undefined)}
           />
         </Box>
-      </Stack>
+      </VStack>
     </PageLayout>
   )
 }

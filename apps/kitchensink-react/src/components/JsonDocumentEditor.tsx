@@ -34,7 +34,9 @@ function ErrorFallback({error}: {error: Error}) {
   return (
     <Card density="regular" tone="critical">
       <VStack gap={3}>
-        <Text size={1} weight="semibold">Failed to load editor</Text>
+        <Text size={1} weight="semibold">
+          Failed to load editor
+        </Text>
         <Text size={1}>{error.message}</Text>
       </VStack>
     </Card>

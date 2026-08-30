@@ -113,10 +113,7 @@ export function AppRoutes(): JSX.Element {
     <Routes>
       <Route path="/">
         <Route element={<ProtectedRoute subPath="/" />}>
-          <Route
-            index
-            element={<ProjectAuthHome />}
-          />
+          <Route index element={<ProjectAuthHome />} />
           {documentCollectionRoutes.map((route) => (
             <Route key={route.path} path={route.path} element={route.element} />
           ))}

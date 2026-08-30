@@ -8,17 +8,16 @@ import {
   useEditDocument,
   useResource,
 } from '@sanity/sdk-react'
-import {Badge, Box, Button, Flex, Stack, Text, TextInput} from '@sanity/ui'
+import {Badge, Button, TextInput} from '@sanity/ui'
 import {defineProjection} from 'groq'
 import {type JSX, type ReactNode, type RefObject, Suspense, useRef} from 'react'
 import {useSearchParams} from 'react-router'
+import {Box, Card, Flex, Text, VStack} from 'ui5'
 
 import {
   type MultiResourceAuthorProjectionProjectionResult,
   MultiResourceMovieProjectionProjectionResult,
 } from '../../sanity.types'
-import {Card} from 'ui5'
-
 import {PageLayout} from '../components/PageLayout'
 import {devResources, e2eResources, isE2E} from '../sanityConfigs'
 
@@ -78,14 +77,14 @@ function ProjectionCard<TData = unknown>({
       projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}
       forwardedRef={ref}
     >
-      <Stack gap={2}>
+      <VStack gap={2}>
         {isPending && (
           <Text muted size={1}>
             Loading projection data...
           </Text>
         )}
         {renderData(data as TData | undefined, isPending)}
-      </Stack>
+      </VStack>
     </DemoCard>
   )
 }
@@ -108,7 +107,7 @@ function PreviewCard({docHandle, title}: PreviewCardProps) {
       projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}
       forwardedRef={ref}
     >
-      <Stack gap={2}>
+      <VStack gap={2}>
         {isPending && (
           <Text muted size={1}>
             Loading preview data...
@@ -132,7 +131,7 @@ function PreviewCard({docHandle, title}: PreviewCardProps) {
             />
           </Box>
         )}
-      </Stack>
+      </VStack>
     </DemoCard>
   )
 }
@@ -146,15 +145,15 @@ function DemoCard({title, projectInfo, children, forwardedRef}: DemoCardProps) {
       density="regular"
       style={{flex: 1, minWidth: 280}}
     >
-      <Stack gap={3}>
-        <Flex align="center" gap={2} justify="space-between" wrap="wrap">
+      <VStack gap={3}>
+        <Flex alignItems="center" flexWrap="wrap" gap={2} justifyContent="space-between">
           <Text size={1} weight="semibold">
             {title} ({projectInfo})
           </Text>
           <Badge fontSize={1}>{projectInfo}</Badge>
         </Flex>
         {children}
-      </Stack>
+      </VStack>
     </Card>
   )
 }
@@ -164,10 +163,7 @@ function AuthorEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
   const setAuthorName = useEditDocument({...docHandle, path: 'name'})
 
   return (
-    <DemoCard
-      title="Author Document"
-      projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}
-    >
+    <DemoCard title="Author Document" projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}>
       <Button
         as="a"
         fontSize={1}
@@ -191,18 +187,18 @@ function AuthorEditor({docHandle}: {docHandle: DocumentHandle<'author'>}) {
       />
       {author?.role && <Text size={1}>Role: {author.role}</Text>}
       {author?.awards && author.awards.length > 0 && (
-        <Stack gap={2}>
+        <VStack gap={2}>
           <Text size={1} weight="semibold">
             Awards
           </Text>
-          <Stack as="ul" gap={1} paddingLeft={4}>
+          <Flex as="ul" flexDirection="column" gap={1} paddingLeft={4}>
             {author.awards.map((award: string, index: number) => (
               <Text as="li" key={index} size={1}>
                 {award}
               </Text>
             ))}
-          </Stack>
-        </Stack>
+          </Flex>
+        </VStack>
       )}
     </DemoCard>
   )
@@ -213,10 +209,7 @@ function MovieEditor({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
   const setMovieName = useEditDocument({...docHandle, path: 'title'})
 
   return (
-    <DemoCard
-      title="Movie Document"
-      projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}
-    >
+    <DemoCard title="Movie Document" projectInfo={`${docHandle.projectId}.${docHandle.dataset}`}>
       <Button
         as="a"
         fontSize={1}
@@ -250,7 +243,7 @@ function AuthorProjection({docHandle}: {docHandle: DocumentHandle<'author'>}) {
       projection={multiResourceAuthorProjection}
       title="Author Projection"
       renderData={(data, isPending) => (
-        <Stack data-testid="author-projection-data" gap={2}>
+        <VStack data-testid="author-projection-data" gap={2}>
           <Text data-testid="author-projection-name" muted={isPending} size={1}>
             Name: {data?.name ?? 'No name'}
           </Text>
@@ -265,7 +258,7 @@ function AuthorProjection({docHandle}: {docHandle: DocumentHandle<'author'>}) {
               First Award: {data.firstAward}
             </Text>
           )}
-        </Stack>
+        </VStack>
       )}
     />
   )
@@ -278,7 +271,7 @@ function MovieProjection({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
       projection={multiResourceMovieProjection}
       title="Movie Projection"
       renderData={(data, isPending) => (
-        <Stack data-testid="movie-projection-data" gap={2}>
+        <VStack data-testid="movie-projection-data" gap={2}>
           <Text data-testid="movie-projection-name" muted={isPending} size={1}>
             Title: {data?.title ?? 'No title'}
           </Text>
@@ -288,7 +281,7 @@ function MovieProjection({docHandle}: {docHandle: DocumentHandle<'movie'>}) {
           <Text data-testid="movie-projection-has-poster" muted={isPending} size={1}>
             Has Poster: {data?.hasPoster ? 'Yes' : 'No'}
           </Text>
-        </Stack>
+        </VStack>
       )}
     />
   )
@@ -347,7 +340,7 @@ export function MultiResourceRoute(): JSX.Element {
 
   return (
     <PageLayout title="Multi-resource" subtitle="Documents from two projects on one page">
-      <Stack gap={5}>
+      <VStack gap={5}>
         <Text size={1} muted>
           This route demonstrates how to use multiple resources in a single page. You must have
           access to both resources ({(defaultResource as DatasetResource).projectId}.
@@ -356,21 +349,21 @@ export function MultiResourceRoute(): JSX.Element {
           {(secondaryResource as DatasetResource).dataset}) to see the documents.
         </Text>
 
-        <Stack gap={3}>
+        <VStack gap={3}>
           <Text size={1} weight="semibold">
             Document Editors
           </Text>
-          <Flex gap={4} wrap="wrap">
+          <Flex flexWrap="wrap" gap={4}>
             <AuthorEditor docHandle={authorHandle} />
             <MovieEditor docHandle={movieHandle} />
           </Flex>
-        </Stack>
+        </VStack>
 
-        <Stack gap={3}>
+        <VStack gap={3}>
           <Text size={1} weight="semibold">
             Document Projections
           </Text>
-          <Flex gap={4} wrap="wrap">
+          <Flex flexWrap="wrap" gap={4}>
             <Suspense fallback={<LoadingFallback message="Loading author projection..." />}>
               <AuthorProjection docHandle={authorHandle} />
             </Suspense>
@@ -378,13 +371,13 @@ export function MultiResourceRoute(): JSX.Element {
               <MovieProjection docHandle={movieHandle} />
             </Suspense>
           </Flex>
-        </Stack>
+        </VStack>
 
-        <Stack gap={3}>
+        <VStack gap={3}>
           <Text size={1} weight="semibold">
             Document Previews
           </Text>
-          <Flex gap={4} wrap="wrap">
+          <Flex flexWrap="wrap" gap={4}>
             <Suspense fallback={<LoadingFallback message="Loading author preview..." />}>
               <AuthorPreview docHandle={authorHandle} />
             </Suspense>
@@ -392,8 +385,8 @@ export function MultiResourceRoute(): JSX.Element {
               <MoviePreview docHandle={movieHandle} />
             </Suspense>
           </Flex>
-        </Stack>
-      </Stack>
+        </VStack>
+      </VStack>
     </PageLayout>
   )
 }

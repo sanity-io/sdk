@@ -10,7 +10,7 @@ import {
 } from '@sanity/sdk-react'
 import {Badge, Button, Checkbox, TextInput} from '@sanity/ui'
 import {type JSX, useMemo, useState} from 'react'
-import {Box, Card, Flex, Text, VStack} from 'ui5'
+import {Box, Card, Flex, Text, VisuallyHidden, VStack} from 'ui5'
 
 import {DocumentEditorPanel} from '../components/DocumentEditorPanel'
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
@@ -72,19 +72,10 @@ function DocumentEditor({
           </Text>
           {document && (
             <>
-              {/* Hidden element for e2e tests */}
-              <Box
-                style={{
-                  position: 'absolute',
-                  width: 1,
-                  height: 1,
-                  overflow: 'hidden',
-                  left: -9999,
-                }}
-                data-testid="document-content"
-              >
+              {/* Gives the e2e specs the raw document to assert against. */}
+              <VisuallyHidden data-testid="document-content">
                 {JSON.stringify(document)}
-              </Box>
+              </VisuallyHidden>
               <JsonDocumentEditor
                 documentHandle={docHandle}
                 minHeight="400px"

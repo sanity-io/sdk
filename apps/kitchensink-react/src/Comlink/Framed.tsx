@@ -101,7 +101,7 @@ function FramedContent() {
         </VStack>
       </Card>
 
-      <Box flexGrow={1} style={{height: '500px'}}>
+      <Box flexGrow={1} height="500px">
         <VStack gap={3}>
           <Text size={1} weight="semibold">
             Received Messages

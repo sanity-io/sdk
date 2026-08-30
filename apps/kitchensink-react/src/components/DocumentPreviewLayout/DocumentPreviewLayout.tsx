@@ -1,6 +1,7 @@
 import {DocumentIcon} from '@sanity/icons/Document'
-import {Badge, Box, Card, Flex, Text} from '@sanity/ui'
+import {Badge, Card} from '@sanity/ui'
 import {forwardRef, type JSX} from 'react'
+import {Box, Flex, Text} from 'ui5'
 
 /**
  * @public
@@ -66,22 +67,25 @@ export const DocumentPreviewLayout = forwardRef(
         data-testid={`document-preview-${documentId || 'unknown'}`}
         style={{width: '100%', textAlign: 'start', cursor: 'pointer'}}
       >
-        <Flex align="center" gap={3}>
+        <Flex alignItems="center" gap={3}>
           <Flex
-            align="center"
-            justify="center"
-            style={{width: 33, height: 33, flexShrink: 0, overflow: 'hidden'}}
+            alignItems="center"
+            flexShrink={0}
+            height="33px"
+            justifyContent="center"
+            overflow="hidden"
+            width="33px"
           >
             {previewMedia}
           </Flex>
 
-          <Box flex={1} style={{minWidth: 0}}>
-            <Text data-testid="document-title" size={1} textOverflow="ellipsis" weight="medium">
+          <Box flexGrow={1} minWidth="0">
+            <Text data-testid="document-title" size={1} truncate={1} weight="medium">
               {title}
             </Text>
             {subtitle && (
               <Box marginTop={1}>
-                <Text data-testid="document-subtitle" muted size={1} textOverflow="ellipsis">
+                <Text data-testid="document-subtitle" muted size={1} truncate={1}>
                   {subtitle}
                 </Text>
               </Box>

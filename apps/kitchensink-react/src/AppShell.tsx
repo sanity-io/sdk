@@ -21,6 +21,7 @@ export function AppShell(): JSX.Element {
         alignItems="center"
         borderBottom
         flexShrink={0}
+        gap={2}
         padding={2}
       >
         <Button as={Link} iconStart={HomeIcon} level="secondary" text="Kitchen Sink" to="/" />

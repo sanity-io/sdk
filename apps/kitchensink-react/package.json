@@ -33,7 +33,9 @@
     "react-compiler-runtime": "catalog:",
     "react-dom": "catalog:",
     "react-error-boundary": "catalog:",
+    "react-refractor": "^4.0.0",
     "react-router": "^7.18.2",
+    "refractor": "^5.0.0",
     "styled-components": "^6.4.1",
     "typescript": "catalog:",
     "ui5": "npm:@sanity/ui@5.0.0-alpha.4"

@@ -10,10 +10,19 @@ import {
   useDocuments,
   usePerspective,
 } from '@sanity/sdk-react'
-import {Box, Button, Card as PaperCard, Dialog, Flex, Spinner, Stack, Text, TextInput} from '@sanity/ui'
+import {
+  Box,
+  Button,
+  Card as PaperCard,
+  Dialog,
+  Flex,
+  Spinner,
+  Stack,
+  Text,
+  TextInput,
+} from '@sanity/ui'
 import {Code} from '@sanity/ui/code'
 import {type JSX, Suspense, useEffect, useMemo, useState} from 'react'
-
 import {Card} from 'ui5'
 
 import {DocumentEditorPanel} from '../../components/DocumentEditorPanel'

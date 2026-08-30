@@ -1,5 +1,6 @@
-import {Card, CardProps, Text} from '@sanity/ui'
+import {Card, CardProps} from '@sanity/ui'
 import {CSSProperties, forwardRef, JSX, PropsWithChildren, ReactNode, Ref} from 'react'
+import {Text} from 'ui5'
 
 function sizedText(children: ReactNode, weight?: 'semibold'): ReactNode {
   if (typeof children === 'string' || typeof children === 'number') {
