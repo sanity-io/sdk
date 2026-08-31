@@ -38,6 +38,10 @@
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json",
+    "./_internal": {
+      "source": "./src/_exports/_internal.ts",
+      "default": "./dist/_exports/_internal.js"
+    },
     "./dashboard": {
       "source": "./src/_exports/dashboard.ts",
       "default": "./dist/_exports/dashboard.js"
@@ -47,6 +51,7 @@
     "exports": {
       ".": "./dist/index.js",
       "./package.json": "./package.json",
+      "./_internal": "./dist/_exports/_internal.js",
       "./dashboard": "./dist/_exports/dashboard.js"
     },
     "access": "public"
