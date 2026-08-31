@@ -1,7 +1,11 @@
 export {DashboardTokenRefreshProvider as TokenRefreshProvider} from '../context/DashboardTokenRefresh'
-export type {Bus, CreateMessageBusOptions, StateSource} from '../dashboard/messageBus/bus'
-export {createMessageBus} from '../dashboard/messageBus/bus'
-export {MessageBusError} from '../dashboard/messageBus/errors'
+export type {
+  ConnectMessageBusOptions,
+  MessageBus,
+  MessageBusStateSource,
+} from '../dashboard/messageBus/bus'
+export {connectMessageBus} from '../dashboard/messageBus/bus'
+export {MessageBusError} from '../dashboard/messageBus/bus'
 export type {
   NavigationLocation,
   NavigationTarget,

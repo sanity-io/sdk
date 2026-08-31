@@ -12,14 +12,13 @@ type RemoteModule = {
 }
 
 /**
- * Declares a state topic: holds a current value, replayed to new subscribers.
+ * Declares a topic that stores and replays its current value.
  * @public
  */
 export type StateTopicDef<T> = {kind: 'state'; value: T}
 
 /**
- * Declares an event topic: a stream of occurrences with no memory. Declaring a
- * `reply` makes it a request topic — an awaited `emit` resolves with that reply.
+ * Declares a topic that delivers events and an optional reply.
  * @public
  */
 export type EventTopicDef<P, R = never> = {
@@ -29,88 +28,60 @@ export type EventTopicDef<P, R = never> = {
 }
 
 /**
- * The value of a state topic that can fail independently of the session. One
- * `ok` discriminant across all such topics, so consumers can share failure
- * handling (e.g. a retry utility) without per-topic shapes.
+ * Represents a successful topic value or a failed topic operation.
  * @public
  */
 export type TopicResult<T> = {ok: true; value: T} | {ok: false}
 
 /**
- * A place in the workbench: an application plus a route inside it, never a shell
- * URL — the shape has to survive a router swap. `appId` is `null` on
- * workbench-level pages (home, account) and on any path no application claims,
- * an unresolved app route included. `path` carries the query string and
- * fragment; app-internal it has no leading slash, a workbench-level one keeps it.
+ * Identifies a dashboard application and a route within it.
  * @public
  */
 export type NavigationTarget = {
+  /** The application ID, or `null` for dashboard-level routes. */
   appId: Application['id'] | null
+  /** The route path, including its query string and fragment. */
   path: string
 }
 
 /**
- * Where the workbench is, plus the navigation in flight. Mirrors the Navigation
- * API's `navigation.transition`, minus its `from` — that is this value.
+ * Describes the current dashboard location and an active navigation.
  * @public
  */
 export type NavigationLocation = NavigationTarget & {
+  /** The active navigation, or `null` when navigation is idle. */
   transition: {
+    /** Whether the navigation pushes or replaces browser history. */
     navigationType: 'push' | 'replace'
+    /** The requested destination. */
     to: NavigationTarget
   } | null
 }
 
 /**
- * The topics the workbench itself owns. Every topic lands here with its owner's
- * publish wiring. A session-derived value must not outlive the session: such
- * topics clear (publish `null`) when the user signs out.
+ * Declares the topics provided by the dashboard.
  * @public
  */
-export interface WorkbenchTopics {
+export interface DashboardTopics {
+  /** The foreground application ID, or `null` on dashboard-level routes. */
   'applications.foreground': StateTopicDef<Application['id'] | null>
+  /** The dashboard applications available to the current user. */
   'applications.list': StateTopicDef<TopicResult<Application<ApplicationInclude>[]> | null>
-  /**
-   * The session token the requesting app reads; `null` while signed out. Each
-   * connection carries its app id, so per-app tokens can land later without
-   * changing the contract — today every app reads the same session token.
-   * Read-only for apps: published by the auth machine, cleared to `null` on
-   * sign-out. Suspends until auth settles.
-   */
+  /** The dashboard session token, or `null` while signed out. */
   'auth.token': StateTopicDef<string | null>
-  /**
-   * Requests the session token on demand, for an app that wants to re-fetch
-   * rather than wait on its `auth.token` subscription (e.g. after a rejected
-   * request). Carries the caller's app id. Today it resends the session's
-   * current token — the seam where per-app re-issuance lands later. Fails
-   * `NO_RESPONDER` while signed out.
-   */
+  /** Requests a dashboard session token. */
   'auth.token.refresh': EventTopicDef<void, string>
-  /**
-   * The media library's deployment configuration, as a {@link RemoteModule}
-   * to its config federation module.
-   */
+  /** The media library configuration module. */
   'media-libraries.config': StateTopicDef<RemoteModule | null>
-  /**
-   * Where the workbench is, and what navigation is in flight; `null` once the
-   * session ends. Unlike `applications.foreground`, this publishes on in-app
-   * navigation too. Suspends until the first publish; published by the
-   * navigation machine.
-   */
+  /** The current dashboard location and active navigation. */
   'navigation.location': StateTopicDef<NavigationLocation | null>
   /**
-   * Requests navigation, replying once it commits — the URL has changed and
-   * `navigation.location` carries where the user landed. Requesting the
-   * current location replies `ok` without navigating. Accepts relative and
-   * same-origin absolute URLs; `history` defaults to `push`.
+   * Requests navigation and replies when the location commits.
    *
    * `ok: false` reasons:
-   * - `not-navigable` — off-origin, a URL that does not parse, a panel-only app, or a path a deployed core app's route cannot carry
-   * - `interrupted` — superseded by a newer request, or the user navigated elsewhere, before it committed
-   * - `failed` — the router refused the href, or never committed within 10s, which
-   *   only a caller waiting longer than the default 5s `emit` timeout ever reads
-   *
-   * Fails `NO_RESPONDER` while signed out. Responded to by the navigation machine.
+   * - `not-navigable`: the URL cannot be handled by a dashboard application
+   * - `interrupted`: another navigation superseded the request
+   * - `failed`: the router rejected or did not commit the request
    */
   'navigation.location.update': EventTopicDef<
     {
@@ -119,61 +90,32 @@ export interface WorkbenchTopics {
     },
     {ok: true} | {ok: false; reason: 'not-navigable' | 'interrupted' | 'failed'}
   >
-  /**
-   * The session's organization context; `null` when signed out or the fetch
-   * failed. Everything else is fetched against it. Suspends until the first
-   * value arrives; published by the organization machine, which keeps it in
-   * step with the organization store for as long as the session is open.
-   */
+  /** The current organization, or `null` without an active organization. */
   'organizations.current': StateTopicDef<Pick<OrganizationBase, 'id' | 'name' | 'slug'> | null>
-  /**
-   * The open panel — its owning app, the panel view's name, and its mode. Only
-   * `aside` carries a width (px); `full` overlays the main area, so a width is
-   * meaningless there. `value: null` when closed, `null` once the session ends.
-   * Width is remembered per app + panel name across mode switches. The
-   * applications machine and applications may publish changes.
-   */
+  /** The open panel, its application, display mode, and optional width in pixels. */
   'panels.mode': StateTopicDef<TopicResult<
     | {appId: string; name: string; mode: 'aside'; size?: number}
     | {appId: string; name: string; mode: 'full'}
     | null
   > | null>
-  /**
-   * A change an app requests for its own panel: set its mode (opens it, or
-   * switches aside/full), resize it without resending the mode, or `null` to
-   * close.
-   */
+  /** Opens, updates, resizes, or closes an application's panel. */
   'panels.mode.set': EventTopicDef<
     {name: string; mode: 'aside' | 'full'} | {name: string; size: number} | null
   >
-  /**
-   * The resolved color scheme the workbench renders with — the user's
-   * preference, falling back to the OS scheme. Environment-derived, not
-   * session data: it stays published across sign-out (the login screen renders
-   * with it too). The system-preferences machine publishes at boot;
-   * applications may publish later changes.
-   */
+  /** The resolved dashboard color scheme. */
   'preferences.color-scheme': StateTopicDef<'light' | 'dark'>
-  /**
-   * Whether the dock sidebar is pinned open. Like `preferences.color-scheme`,
-   * an environment-derived UI preference that stays published across sign-out.
-   * The system-preferences machine publishes at boot; applications may publish
-   * later changes.
-   */
+  /** Whether the dashboard dock is pinned open. */
   'preferences.dock-locked': StateTopicDef<boolean>
-  /**
-   * The signed-in user, or `null` when signed out. Suspends until auth settles;
-   * published by the auth machine.
-   */
+  /** The signed-in user, or `null` while signed out. */
   'users.current': StateTopicDef<Pick<CurrentUser, 'id' | 'name' | 'email' | 'profileImage'> | null>
 }
 
 /**
- * The central topic registry — every call site is type-checked against it.
+ * Declares every topic available through the message bus.
  * @public
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- Declaration merging extends the SDK manifest.
-export interface Topics extends WorkbenchTopics {}
+export interface Topics extends DashboardTopics {}
 
 /**
  * Every declared topic name.
@@ -207,38 +149,34 @@ const withOwnership =
     topic: Topic,
   ) => ({...topic, ownership})
 
-// `same_app`: only the app that installed the bus can publish state or respond to events.
-const workbenchTopic = withOwnership({type: 'same_app'})
-// `any_app`: every connected app can publish state or respond to events.
+// `same_app` restricts publishing and responding to the application that installed the bus.
+const dashboardTopic = withOwnership({type: 'same_app'})
+// `any_app` allows every connected application to publish and respond.
 const sharedTopic = withOwnership({type: 'any_app'})
 
 /**
- * What the bus knows about each topic at runtime: its kind, ownership, and
- * initial value. Mirrors {@link WorkbenchTopics}, which is types-only.
- * Every copy merges this into the shared core on `connect`, so it doesn't
- * matter which copy loads first (SDK-1876). Topics added by augmenting
- * `Topics` use `defineStateTopics` instead.
+ * Defines the runtime kind, ownership, and initial value of dashboard topics.
  * @internal
  */
-export const WORKBENCH_TOPIC_MANIFEST: {
-  readonly [K in keyof WorkbenchTopics]: TopicManifestEntry<WorkbenchTopics[K]>
+export const DASHBOARD_TOPIC_MANIFEST: {
+  readonly [K in keyof DashboardTopics]: TopicManifestEntry<DashboardTopics[K]>
 } = {
-  'applications.foreground': workbenchTopic({kind: 'state', seed: null}),
-  'applications.list': workbenchTopic({kind: 'state', seed: undefined}),
-  'auth.token': workbenchTopic({kind: 'state', seed: undefined}),
-  'auth.token.refresh': workbenchTopic({kind: 'event'}),
-  'media-libraries.config': workbenchTopic({
+  'applications.foreground': dashboardTopic({kind: 'state', seed: null}),
+  'applications.list': dashboardTopic({kind: 'state', seed: undefined}),
+  'auth.token': dashboardTopic({kind: 'state', seed: undefined}),
+  'auth.token.refresh': dashboardTopic({kind: 'event'}),
+  'media-libraries.config': dashboardTopic({
     kind: 'state',
     seed: undefined,
   }),
-  'navigation.location': workbenchTopic({kind: 'state', seed: undefined}),
-  'navigation.location.update': workbenchTopic({kind: 'event'}),
-  'organizations.current': workbenchTopic({kind: 'state', seed: undefined}),
+  'navigation.location': dashboardTopic({kind: 'state', seed: undefined}),
+  'navigation.location.update': dashboardTopic({kind: 'event'}),
+  'organizations.current': dashboardTopic({kind: 'state', seed: undefined}),
   'panels.mode': sharedTopic({
     kind: 'state',
     seed: {ok: true, value: null},
   }),
-  'panels.mode.set': workbenchTopic({kind: 'event'}),
+  'panels.mode.set': dashboardTopic({kind: 'event'}),
   'preferences.color-scheme': sharedTopic({
     kind: 'state',
     seed: undefined,
@@ -247,12 +185,11 @@ export const WORKBENCH_TOPIC_MANIFEST: {
     kind: 'state',
     seed: undefined,
   }),
-  'users.current': workbenchTopic({kind: 'state', seed: undefined}),
+  'users.current': dashboardTopic({kind: 'state', seed: undefined}),
 }
 
 /**
- * What `connect` merges into the shared core. Loose on purpose: another copy
- * may know topics this one doesn't.
+ * Defines the runtime manifest accepted from any message bus version.
  * @internal
  */
 export type TopicManifest = Readonly<
@@ -296,22 +233,22 @@ export type ReplyOf<K extends EventTopic> =
   Topics[K] extends EventTopicDef<infer _P, infer R> ? R : never
 
 /**
- * One adjacent version step: `up` lifts the older shape, `down` projects back.
- * Request replies are not migrated — evolve them additively.
+ * Converts a topic value between 2 adjacent versions.
  * @internal
  */
 export interface TopicMigration {
-  /** The older version this step lifts from / projects back to. */
+  /** The older version. */
   readonly from: number
-  /** The newer version (`from + 1`). */
+  /** The newer version. */
   readonly to: number
+  /** Converts an older value to the newer version. */
   up(older: unknown): unknown
+  /** Converts a newer value to the older version. */
   down(newer: unknown): unknown
 }
 
 /**
- * Per-topic migration chains; a topic's version is its chain depth. On a shape
- * change, keep `Topics` at the newest shape and append the adjacent step here.
+ * Defines the bundled migration chain for each topic.
  * @internal
  */
 export const topicMigrations: Partial<Record<TopicName, readonly TopicMigration[]>> = {}

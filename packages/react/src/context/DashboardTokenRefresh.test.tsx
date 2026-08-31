@@ -4,13 +4,16 @@ import {of} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest'
 
 import {useAuthState} from '../hooks/auth/useAuthState'
-import {
-  isDashboardEnvironment,
-  observeDashboardToken,
-  refreshDashboardToken,
-} from './dashboardToken'
 import {DashboardTokenRefreshProvider} from './DashboardTokenRefresh'
 import {ResourceProvider} from './ResourceProvider'
+
+const messageBus = vi.hoisted(() => ({
+  client: undefined as
+    | undefined
+    | {emit: ReturnType<typeof vi.fn>; subscribe: ReturnType<typeof vi.fn>},
+  emit: vi.fn(),
+  subscribe: vi.fn(),
+}))
 
 vi.mock('@sanity/sdk', async () => {
   const actual = await vi.importActual('@sanity/sdk')
@@ -24,17 +27,15 @@ vi.mock('../hooks/auth/useAuthState', () => ({
   useAuthState: vi.fn(),
 }))
 
-vi.mock('./dashboardToken', () => ({
-  isDashboardEnvironment: vi.fn(() => false),
-  observeDashboardToken: vi.fn(() => undefined),
-  refreshDashboardToken: vi.fn(),
+vi.mock('../dashboard/messageBus/client', () => ({
+  get dashboardMessageBus() {
+    return messageBus.client
+  },
+  isDashboardEnvironment: () => messageBus.client !== undefined,
 }))
 
 const mockSetAuthToken = setAuthToken as Mock
 const mockUseAuthState = useAuthState as Mock
-const mockIsDashboardEnvironment = isDashboardEnvironment as Mock
-const mockObserveDashboardToken = observeDashboardToken as Mock
-const mockRefreshDashboardToken = refreshDashboardToken as Mock
 
 const renderProvider = () =>
   render(
@@ -47,6 +48,7 @@ const renderProvider = () =>
 
 describe('DashboardTokenRefreshProvider', () => {
   beforeEach(() => {
+    messageBus.client = undefined
     mockUseAuthState.mockReturnValue({type: AuthStateType.LOGGED_IN})
   })
 
@@ -55,9 +57,7 @@ describe('DashboardTokenRefreshProvider', () => {
   })
 
   describe('when not in the dashboard', () => {
-    it('does not subscribe to the OS token', () => {
-      mockIsDashboardEnvironment.mockReturnValue(false)
-
+    it('does not subscribe to a dashboard token', () => {
       act(() => {
         renderProvider()
       })
@@ -68,12 +68,11 @@ describe('DashboardTokenRefreshProvider', () => {
 
   describe('when in the dashboard', () => {
     beforeEach(() => {
-      mockIsDashboardEnvironment.mockReturnValue(true)
+      messageBus.client = messageBus
+      messageBus.subscribe.mockReturnValue(of('dashboard-token'))
     })
 
-    it('mirrors the OS token into the auth store', () => {
-      mockObserveDashboardToken.mockReturnValue(of('dashboard-token'))
-
+    it('mirrors the dashboard token into the auth store', () => {
       act(() => {
         renderProvider()
       })
@@ -81,9 +80,20 @@ describe('DashboardTokenRefreshProvider', () => {
       expect(mockSetAuthToken).toHaveBeenCalledWith(expect.anything(), 'dashboard-token')
     })
 
-    it('asks the OS to reissue the token on a 401', () => {
-      mockObserveDashboardToken.mockReturnValue(of('dashboard-token'))
+    it('treats subscription failures as a missing token', () => {
+      messageBus.subscribe.mockImplementationOnce(() => {
+        throw new Error('Incompatible message bus')
+      })
 
+      expect(() => {
+        act(() => {
+          renderProvider()
+        })
+      }).not.toThrow()
+      expect(mockSetAuthToken).toHaveBeenCalledWith(expect.anything(), null)
+    })
+
+    it('asks the message bus to reissue the token on a 401', () => {
       const {rerender} = renderProvider()
 
       mockUseAuthState.mockReturnValue({
@@ -100,7 +110,7 @@ describe('DashboardTokenRefreshProvider', () => {
         )
       })
 
-      expect(mockRefreshDashboardToken).toHaveBeenCalledTimes(1)
+      expect(messageBus.emit).toHaveBeenCalledWith('auth.token.refresh', undefined)
     })
   })
 })
