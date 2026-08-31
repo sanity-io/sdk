@@ -329,7 +329,7 @@ class StudioUrlBuilder
   extends UrlBuilder
   implements StudioUrl, StudioWorkspaceUrl, StudioIntentUrl
 {
-  static readonly namespace = 'studio'
+  static readonly namespace = 'studios'
 
   workspace(workspace: string): StudioWorkspaceUrl {
     return this.append(workspace)
@@ -414,7 +414,7 @@ const createUrls = <const Builders extends BuilderRegistry>(
   function applications(appId: string): CoreApplicationUrl
   function applications(appId?: string): Url | CoreApplicationUrl {
     return appId === undefined
-      ? createRootBuilder(CoreApplicationUrlBuilder)
+      ? new UrlBuilder(new URL('/applications', relativeUrlBase))
       : createRootBuilder(CoreApplicationUrlBuilder, appId)
   }
 
@@ -431,6 +431,7 @@ const createUrls = <const Builders extends BuilderRegistry>(
     extend<const AddedBuilders extends BuilderRegistry>(addedBuilders: AddedBuilders) {
       const namespaces = new Set([
         '',
+        'applications',
         StudioUrlBuilder.namespace,
         CoreApplicationUrlBuilder.namespace,
         MediaLibraryUrlBuilder.namespace,
