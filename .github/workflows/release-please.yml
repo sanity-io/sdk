@@ -33,7 +33,7 @@ jobs:
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         id: generate-token
         with:
-          app-id: ${{ secrets.ECOSPARK_APP_ID }}
+          client-id: ${{ secrets.ECOSPARK_APP_ID }}
           private-key: ${{ secrets.ECOSPARK_APP_PRIVATE_KEY }}
       # This action will create a release PR when regular conventional commits are pushed to main, it'll also detect if a release PR is merged and npm publish should happen
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
