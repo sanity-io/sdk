@@ -2,19 +2,15 @@ import {from, type Observable, of} from 'rxjs'
 import {catchError, switchMap} from 'rxjs/operators'
 
 // The dashboard host installs its shared message bus on this well-known global
-// symbol before it loads the apps it embeds in its own window. It must match
-// the key used by `@sanity/workbench` (`Symbol.for('sanity.os.bus')`).
+// symbol before it loads federated remotes.
 const OS_BUS_KEY = Symbol.for('sanity.os.bus')
 
 /**
  * Whether this app is running inside the dashboard, embedded in its window.
  *
- * Apps embedded this way share the dashboard's realm, so the bus it installs
- * is visible on `globalThis`. This is `false` in a standalone app, where we
- * must never import `@sanity/workbench` (it would install a bus and add bundle
- * weight for no reason). Note: this is a different embedding model to the Core
- * UI iframe, which is detected separately via the dashboard context — that
- * signal is not set for apps sharing the dashboard's window.
+ * Federation shares the host's realm, so the installed bus is visible on
+ * `globalThis`. This is `false` in a standalone app, where the message bus must
+ * stay out of the bundle. The Core UI iframe uses the dashboard context instead.
  *
  * @internal
  */
@@ -38,9 +34,9 @@ export function isDashboardEnvironment(): boolean {
 export function observeDashboardToken(): Observable<string | null> | undefined {
   if (!isDashboardEnvironment()) return undefined
 
-  return from(import('@sanity/workbench')).pipe(
-    switchMap(({os}) => os.subscribe('auth.token')),
-    // Any failure (importing the host bundle, or the subscription) means "no OS token".
+  return from(import('../dashboard/messageBus/bus')).pipe(
+    switchMap(({createMessageBus}) => createMessageBus().subscribe('auth.token')),
+    // Any failure (importing the bus, or the subscription) means "no OS token".
     catchError(() => of(null)),
   )
 }
@@ -56,8 +52,10 @@ export function observeDashboardToken(): Observable<string | null> | undefined {
 export function refreshDashboardToken(): void {
   if (!isDashboardEnvironment()) return
 
-  void import('@sanity/workbench').then(
-    ({os}) => os.emit('auth.token.refresh', undefined),
+  void import('../dashboard/messageBus/bus').then(
+    ({createMessageBus}) => {
+      createMessageBus().emit('auth.token.refresh', undefined)
+    },
     () => {},
   )
 }

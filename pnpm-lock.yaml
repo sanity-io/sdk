@@ -618,9 +618,6 @@ importers:
       '@sanity/types':
         specifier: 'catalog:'
         version: 6.12.0(@types/react@19.2.17)(vitest@4.1.10)
-      '@sanity/workbench':
-        specifier: 0.1.0-alpha.45
-        version: 0.1.0-alpha.45(@sanity/sdk@packages+core)(react@19.2.8)(vitest@4.1.10)(xstate@5.32.6)
       groq:
         specifier: 'catalog:'
         version: 3.88.1-typegen-experimental.0
@@ -633,9 +630,6 @@ importers:
       rxjs:
         specifier: 'catalog:'
         version: 7.8.2
-      xstate:
-        specifier: ^5.31.0
-        version: 5.32.6
     devDependencies:
       '@repo/config-eslint':
         specifier: workspace:*
@@ -3372,13 +3366,6 @@ packages:
     engines: {node: '>=20.19.1 <22 || >=22.12'}
     peerDependencies:
       '@sanity/sdk': ^2.9.0
-      xstate: ^5.31.0
-
-  '@sanity/workbench@0.1.0-alpha.45':
-    resolution: {integrity: sha512-rvRR0moauHmzXIVZzVhLdENDAsQcVvngmx9sOpAaZEx8gYjP5Z4ofj6dpWZ0ZVz2bVOFqJuFTgVtbU7IN0jKEw==}
-    engines: {node: '>=20.19.1 <22 || >=22.12'}
-    peerDependencies:
-      '@sanity/sdk': ^3.0.0
       xstate: ^5.31.0
 
   '@sanity/worker-channels@2.0.0':
@@ -11294,22 +11281,6 @@ snapshots:
       zod: 4.5.4
     transitivePeerDependencies:
       - react
-
-  '@sanity/workbench@0.1.0-alpha.45(@sanity/sdk@packages+core)(react@19.2.8)(vitest@4.1.10)(xstate@5.32.6)':
-    dependencies:
-      '@module-federation/runtime': 2.9.0
-      '@sanity/client': 8.4.0(vitest@4.1.10)
-      '@sanity/color': 3.0.8
-      '@sanity/sdk': link:packages/core
-      '@sanity/telemetry': 1.1.0(react@19.2.8)
-      es-toolkit: 1.52.0
-      rxjs: 7.8.2
-      verkit: 0.4.0
-      xstate: 5.32.6
-      zod: 4.5.4
-    transitivePeerDependencies:
-      - react
-      - vitest
 
   '@sanity/worker-channels@2.0.0': {}
 
