@@ -51,14 +51,13 @@ export function handleDelete(
     base = processMutations({documents: base, transactionId, mutations, timestamp})
     working = processMutations({documents: working, transactionId, mutations, timestamp})
 
-    // although liveEdit documents can use the actions API for deletion,
-    // having this be an action while other operations are mutations creates an inconsistency
-    // (and a possible race condition in document store where mutations might get skipped)
+    // liveEdit documents could use the actions API for deletion, but mixing an
+    // action in with the mutations their other operations use can race in the
+    // document store and skip mutations
     outgoingMutations.push(...mutations)
     return {base, working}
   }
 
-  // Standard draft/published logic
   const draftId = getDraftId(DocumentId(documentId))
   const publishedId = getPublishedId(DocumentId(documentId))
 

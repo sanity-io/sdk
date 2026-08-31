@@ -44,8 +44,8 @@ describe('document actions', () => {
     })
 
     it('creates a document action from a document type handle', () => {
-      // A document type handle is similar to a document handle,
-      // but _id is optional.
+      // A document type handle is like a document handle, but `documentId`
+      // is optional.
       const typeHandle = {documentId: 'abc456', documentType: 'anotherType'}
       const action = createDocument(typeHandle)
       expect(action).toEqual({

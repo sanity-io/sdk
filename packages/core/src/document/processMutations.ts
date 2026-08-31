@@ -17,7 +17,7 @@ import {
 } from './patchOperations'
 
 /**
- * Represents a set of document that will go into `applyMutations`. Before
+ * Represents a set of documents that will go into `applyMutations`. Before
  * applying a mutation, it's expected that all relevant documents that the
  * mutations affect are included, including those that do not exist yet.
  * Documents that don't exist have a `null` value.
@@ -48,17 +48,9 @@ const patchOperations = {
 }
 
 /**
- * Implements ID generation:
- *
- * A create mutation creates a new document. It takes the literal document
- * content as its argument. The rules for the new document's identifier are as
- * follows:
- *
- * - If the `_id` attribute is missing, then a new, random, unique ID is
- *   generated.
- * - If the `_id` attribute is present but ends with `.`, then it is used as a
- *   prefix for a new, random, unique ID.
- * - If the _id attribute is present, it is used as-is.
+ * Returns the ID a created document gets. A missing `id` becomes a new random
+ * unique ID; an `id` ending in `.` is used as the prefix for one; anything else
+ * is used as-is.
  *
  * [- source](https://www.sanity.io/docs/http-mutations#c732f27330a4)
  */
@@ -83,8 +75,8 @@ interface ProcessMutationsOptions {
    */
   mutations: Mutation[]
   /**
-   * An optional timestamp that will be used for `_createdAt` and `_updatedAt`
-   * timestamp when applicable.
+   * The timestamp used for `_createdAt` and `_updatedAt` where applicable.
+   * Defaults to now.
    */
   timestamp?: string
 }
@@ -107,18 +99,13 @@ export function getDocumentIds(selection: MutationSelection): string[] {
 }
 
 /**
- * Applies the given mutation to the given document set. Note, it is expected
- * that all relevant documents that the mutations affect should be within the
- * given `document` set. If a document does not exist, it should have the value
- * `null`. If a document is deleted as a result of the mutations, it will still
- * have its document ID present in the returns documents, but it will have a
- * value of `null`.
+ * Applies the given mutations to the given document set. Every document the
+ * mutations affect must be present in `documents`, with the value `null` for
+ * documents that do not exist. A document deleted by the mutations keeps its ID
+ * in the returned set, with a value of `null`.
  *
- * The given `transactionId` will be used as the resulting `_rev` for documents
- * affected by the given set of mutations.
- *
- * If a `timestamp` is given, that will be used as for the relevant `_updatedAt`
- * and `_createdAt` timestamps.
+ * `transactionId` becomes the resulting `_rev` for every affected document, and
+ * `timestamp`, when given, the relevant `_createdAt` and `_updatedAt`.
  */
 export function processMutations({
   documents,
@@ -166,8 +153,8 @@ export function processMutations({
 
       const document: SanityDocument = {
         ...mutation.createOrReplace,
-        // otherwise, if the mutation provided, a `_createdAt` time, use it,
-        // otherwise default to now
+        // `_createdAt` falls back in order: the existing document's value,
+        // then the mutation's own, then now
         _createdAt:
           // if there was an existing document, use the previous `_createdAt`
           // since we're replacing the current document

@@ -38,8 +38,8 @@ describe('getEditingDocumentId', () => {
   })
 
   it('differs from getEffectiveDocumentId precisely where it has to', () => {
-    // The canonical key collapses a draft onto its published id, which is right for
-    // storing state and wrong for anything comparing exact ids.
+    // getEffectiveDocumentId collapses a draft onto its published id, which is
+    // right for storing state and wrong for anything comparing exact ids.
     expect(getEffectiveDocumentId({documentId: DRAFT, documentType: 'movie'})).toBe(PUBLISHED)
     expect(getEditingDocumentId({documentId: DRAFT})).toBe(DRAFT)
   })

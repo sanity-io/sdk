@@ -38,11 +38,11 @@ export interface ApplyDocumentActionsOptions {
   resource?: DocumentResource
 
   /**
-   * Optionally provide an ID to be used as this transaction ID
+   * An ID to use as this transaction's ID. Defaults to a random UUID.
    */
   transactionId?: string
   /**
-   * Set this to true to prevent this action from being batched with others.
+   * Prevents this transaction from being batched with others.
    */
   disableBatching?: boolean
 }

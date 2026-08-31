@@ -105,8 +105,8 @@ export interface DocumentStoreState {
 export interface DocumentState {
   id: string
   /**
-   * the "remote" local copy that matches the server. represents the last known
-   * server state. this gets updated every time we confirm remote patches
+   * the local copy that matches the server: the last known server state,
+   * updated every time we confirm remote patches
    */
   remote?: SanityDocument | null
   /**

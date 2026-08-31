@@ -85,9 +85,9 @@ export type HttpAction =
   | {actionType: ActionMap['releaseDelete']; releaseId: string}
 
 /**
- * Represents a transaction that is queued to be applied but has not yet been
- * applied. A transaction will remain in a queued state until all required
- * documents for the transactions are available locally.
+ * Represents a transaction that has been queued but not yet applied. A
+ * transaction remains queued until every document it requires is available
+ * locally.
  */
 export interface QueuedTransaction {
   /**
@@ -95,21 +95,19 @@ export interface QueuedTransaction {
    */
   transactionId: string
   /**
-   * the high-level actions associated with this transaction. note that these
-   * actions don't mention draft IDs and is meant to abstract away the draft
-   * model from users.
+   * the high-level actions associated with this transaction. these actions
+   * don't mention draft IDs; they abstract the draft model away from users.
    */
   actions: Action[]
   /**
-   * An optional flag set to disable this transaction from being batched with
-   * other transactions.
+   * Prevents this transaction from being batched with other transactions.
    */
   disableBatching?: boolean
 }
 
 /**
- * Represents a transaction that has been applied locally but has not been
- * committed/transitioned-to-outgoing. These transactions are visible to the
+ * Represents a transaction that has been applied locally but not yet
+ * transitioned to outgoing. These transactions are visible to the
  * user but may be rebased upon a new working document set. Applied transactions
  * also contain the resulting `outgoingActions` that will be submitted to
  * Content Lake. These `outgoingActions` depend on the state of the working
@@ -555,12 +553,10 @@ export function applyRemoteDocument(
     }
   }
 
-  // if this remote document is from a `'sync'` event (meaning that the whole
-  // thing was just fetched and not re-created from mutations)
+  // a `'sync'` event means the whole document was just fetched rather than
+  // re-created from mutations, so unverified revisions older than the sync no
+  // longer need verifying for a rebase
   if (type === 'sync') {
-    // then remove unverified revisions that are older than our sync time. we
-    // don't need to verify them for a rebase any more because we synced and
-    // grabbed the latest document
     unverifiedRevisions = Object.fromEntries(
       Object.entries(unverifiedRevisions).filter(([, unverifiedRevision]) => {
         if (!unverifiedRevision) return false
@@ -638,10 +634,9 @@ export function applyRemoteDocument(
     try {
       const next = processActions({...curr, working, grants: prev.grants, identity: prev.identity})
       working = next.working
-      // next includes an updated `previous` set and `working` set and updates
-      // the `outgoingAction` and `outgoingMutations`. the `base` set from the
-      // original applied transaction gets put back into the updated transaction
-      // as-is to preserve the intended base for a 3-way merge
+      // the `base` set from the original applied transaction gets put back into
+      // the updated transaction as-is to preserve the intended base for a
+      // 3-way merge
       nextApplied.push({...curr, ...next})
     } catch (error) {
       // if processing the action ever throws a related error, we can skip this

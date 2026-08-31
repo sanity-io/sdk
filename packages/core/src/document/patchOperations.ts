@@ -72,7 +72,7 @@ type ParseBracket<TInput extends string> = TInput extends `[${infer TPart}]${inf
  * [...ParseSegment<"friends[0]">, ...ParseSegment<"name">]
  * ```
  *
- * (We use a simple recursion that splits on the first dot.)
+ * (Recurses, splitting on the first dot each time.)
  */
 type PathParts<TPath extends string> = TPath extends `${infer Head}.${infer Tail}`
   ? [Head, ...PathParts<Tail>]
@@ -81,10 +81,12 @@ type PathParts<TPath extends string> = TPath extends `${infer Head}.${infer Tail
     : [TPath]
 
 /**
- * Given a type T and an array of "access keys" Parts, recursively index into T.
+ * Given a type `TValue` and an array of "access keys" `TPath`, recursively index
+ * into `TValue`.
  *
- * If a part is a key, it looks up that property.
- * If T is an array and the part is a number, it "indexes" into the element type.
+ * If a segment is a key, it looks up that property.
+ * If `TValue` is an array and the segment is a number, it "indexes" into the
+ * element type.
  */
 type DeepGet<TValue, TPath extends readonly (string | number)[]> = TPath extends []
   ? TValue
@@ -147,17 +149,14 @@ export const ensureArrayKeysDeep = memoize(<R>(input: R): R => {
   if (!input || typeof input !== 'object') return input
 
   if (Array.isArray(input)) {
-    // if the array is empty then just return the input
     if (!input.length) return input
     const first = input[0]
-    // if the first input in the array isn't an object (null is allowed) then
-    // assume that this is an array of primitives, just return the input
+    // if the first item isn't an object (null is allowed) then assume this is an
+    // array of primitives and return the input as-is
     if (typeof first !== 'object') return input
 
-    // if all the items already have a key, then return the input
     if (input.every(isKeyedObject)) return input
 
-    // otherwise return a new object item with a new key
     return input.map((item: unknown) => {
       if (!item || typeof item !== 'object') return item
       if (isKeyedObject(item)) return ensureArrayKeysDeep(item)
@@ -224,8 +223,7 @@ function resolvesArraySegments(input: unknown, path: SingleValuePath): boolean {
 }
 
 /**
- * Given an input object and a record of path expressions to values, this
- * function will set each match with the given value.
+ * Sets every match of the given path expressions to the given value.
  *
  * ```js
  * const output = set(
@@ -253,9 +251,8 @@ export function set(input: unknown, pathExpressionValues: Record<string, unknown
 }
 
 /**
- * Given an input object and a record of path expressions to values, this
- * function will set each match with the given value **if the value at the current
- * path is missing** (i.e. `null` or `undefined`).
+ * Sets every match of the given path expressions to the given value **if the
+ * value at that path is missing** (i.e. `null` or `undefined`).
  *
  * ```js
  * const output = setIfMissing(
@@ -287,8 +284,7 @@ export function setIfMissing(
 }
 
 /**
- * Given an input object and an array of path expressions, this function will
- * remove each match from the input object.
+ * Removes every match of the given path expressions from the input object.
  *
  * ```js
  * const output = unset(
@@ -313,8 +309,8 @@ export function unset(input: unknown, pathExpressions: string[]): unknown {
 }
 
 /**
- * Given an input object, a path expression (inside the insert patch object), and an array of items,
- * this function will insert or replace the matched items.
+ * Inserts or replaces the matched items, at the position named by the insert
+ * patch's `before`, `after`, or `replace` path expression.
  *
  * **Insert before:**
  *
@@ -415,7 +411,7 @@ export function insert(input: unknown, {items, ...insertPatch}: InsertPatch): un
   if (!operation) return input
   if (typeof pathExpression !== 'string') return input
 
-  // in order to do an insert patch, you need to provide at least one path segment
+  // an insert patch needs at least one path segment
   if (!pathExpression.length) return input
 
   const arrayPath = slicePath(pathExpression, 0, -1)
@@ -452,13 +448,12 @@ export function insert(input: unknown, {items, ...insertPatch}: InsertPatch): un
 
         if (position === Infinity) continue
 
-        // remove all other indexes
         arr = arr
           .map((item, index) => ({item, index}))
           .filter(({index}) => !indexesToRemove.has(index))
           .map(({item}) => item)
 
-        // insert at the min index
+        // insert at the lowest of the matched indexes
         arr = [...arr.slice(0, position), ...items, ...arr.slice(position, arr.length)]
 
         break
@@ -525,8 +520,8 @@ export function insert(input: unknown, {items, ...insertPatch}: InsertPatch): un
 }
 
 /**
- * Given an input object and a record of path expressions to numeric values,
- * this function will increment each match with the given value.
+ * Increments every numeric match of the given path expressions by the given
+ * value.
  *
  * ```js
  * const output = inc(
@@ -557,8 +552,8 @@ export function inc(input: unknown, pathExpressionValues: Record<string, number>
 }
 
 /**
- * Given an input object and a record of path expressions to numeric values,
- * this function will decrement each match with the given value.
+ * Decrements every numeric match of the given path expressions by the given
+ * value.
  *
  * ```js
  * const output = dec(
@@ -585,8 +580,8 @@ export function dec(input: unknown, pathExpressionValues: Record<string, number>
 }
 
 /**
- * Given an input object and a record of paths to [diff match patches][0], this
- * function will apply the diff match patch for the string at each match.
+ * Applies a [diff match patch][0] to the string at every match of the given
+ * paths.
  *
  * [0]: https://www.sanity.io/docs/http-patches#aTbJhlAJ
  *
@@ -635,10 +630,9 @@ export function diffMatchPatch(
 }
 
 /**
- * Simply checks if the given document input has a `_rev` that matches the given
- * `revisionId` and throws otherwise.
+ * Returns the input unchanged when its `_rev` matches `revisionId`.
  *
- * (No code example provided.)
+ * @throws Error when the input has no `_rev`, or when it does not match.
  */
 export function ifRevisionID<R>(input: unknown, revisionId: string): R
 export function ifRevisionID(input: unknown, revisionId: string): unknown {
@@ -699,7 +693,7 @@ export function setDeep(input: unknown, path: SingleValuePath, value: unknown): 
   const [currentSegment, ...restOfPath] = path
   if (currentSegment === undefined) return value
 
-  // If the current input is not an object, create a new container.
+  // there is no container here yet, so create one
   if (typeof input !== 'object' || input === null) {
     if (typeof currentSegment === 'string') {
       return {[currentSegment]: setDeep(null, restOfPath, value)}
@@ -750,10 +744,9 @@ export function setDeep(input: unknown, path: SingleValuePath, value: unknown): 
     ]
   }
 
-  // For keyed segments that aren't arrays, do nothing.
+  // a keyed segment can only address an array item
   if (typeof currentSegment === 'object') return input
 
-  // For plain objects, update an existing property if it exists…
   if (currentSegment in input) {
     return Object.fromEntries(
       Object.entries(input).map(([key, nestedInput]) =>
@@ -764,13 +757,11 @@ export function setDeep(input: unknown, path: SingleValuePath, value: unknown): 
     )
   }
 
-  // ...otherwise create the new nested path.
   return {...input, [currentSegment]: setDeep(null, restOfPath, value)}
 }
 
 /**
- * Given an object and an exact path as an array, this unsets the value at the
- * given path.
+ * Removes the value at the given exact path.
  */
 export function unsetDeep<R>(input: unknown, path: SingleValuePath): R
 export function unsetDeep(input: unknown, path: SingleValuePath): unknown {
