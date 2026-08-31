@@ -120,9 +120,6 @@ jobs:
           RUN_URL: ${{ steps.dispatch.outputs.run_url }}
           RUN_OK: ${{ steps.watch.outcome == 'success' }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          DASHBOARD_BASE: https://www.sanity.io/@oSyH1iET5/application/l3gwk99w5xtv3dl8wxv94uny
-          STUDIO_TASKS_BASE: https://www.sanity.io/@oSyH1iET5/studio/v1hea81zrw9q7stf01cudwae/editor/structure/ailfTasks
-          STUDIO_BASE: https://sanity.io/@oSyH1iET5/studio/s6414xxopd34fx9vvgzkj49b
         run: |
           MARKER="<!-- ailf-run-comment -->"
           PROPOSAL=results/task-proposal/task-proposal.json
@@ -158,10 +155,12 @@ jobs:
                   if [ -f "$STAGED" ]; then
                     RELEASE_ID=$(jq -r '.releaseId // empty' "$STAGED")
                     if [ -n "$RELEASE_ID" ]; then
-                      echo "- 📦 [Review the docs release \`$RELEASE_ID\`]($STUDIO_BASE/default/releases/$RELEASE_ID?perspective=$RELEASE_ID) — publish it to ship the docs, discard it to abandon them."
+                      echo "- 📦 Docs are staged in content release \`$RELEASE_ID\` — publish it to ship the docs, discard it to abandon them."
                     fi
                   fi
-                  echo "- 📝 [Review and activate the draft task]($STUDIO_TASKS_BASE;ailf.task.$TASK_ID) to make it permanent."
+                  echo "- 📝 Review and activate the draft task to make it permanent."
+                  echo ""
+                  echo "Review links are in the [pipeline run summary]($RUN_URL) (Sanity-internal)."
                   if [ -f "$FEATURE_DOCS" ]; then
                     echo ""
                     echo "<details>"
@@ -179,7 +178,7 @@ jobs:
                   echo ""
                   jq -r '.proposedUpdates[] | "- \(.)"' "$PROPOSAL"
                   echo ""
-                  echo "[Review the task in Studio]($STUDIO_TASKS_BASE;$TASK_DOC_ID) — nothing was changed automatically."
+                  echo "Review \`$TASK_DOC_ID\` in Studio — nothing was changed automatically. Links are in the [pipeline run summary]($RUN_URL) (Sanity-internal)."
                   ;;
                 existing)
                   echo "### ✔️ Covered by existing task \`$TASK_ID\`"
@@ -202,7 +201,7 @@ jobs:
               if [ -n "$REPORT_ID" ]; then
                 echo "### 📊 Eval report"
                 echo ""
-                echo "[View the report on the Sanity dashboard]($DASHBOARD_BASE/?view=report&id=$REPORT_ID) (\`$REPORT_ID\`)"
+                echo "Report \`$REPORT_ID\` — the dashboard link is in the [pipeline run summary]($RUN_URL) (Sanity-internal)."
                 echo ""
               fi
             fi
