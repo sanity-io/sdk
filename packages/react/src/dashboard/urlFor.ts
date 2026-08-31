@@ -133,38 +133,134 @@ const appendSegments = (url: URL, segments: readonly string[]): URL => {
  *
  * @public
  */
-export abstract class DashboardUrlBuilder implements DashboardUrl {
+export class DashboardUrlBuilder implements DashboardUrl {
   readonly #url: URL
 
+  /**
+   * Creates an immutable dashboard URL builder at the supplied URL.
+   *
+   * @example
+   * ```ts
+   * const builder = new DashboardUrlBuilder(
+   *   new URL('/application/my-app', 'https://dashboard.sanity.io'),
+   * )
+   *
+   * builder.url() // '/application/my-app'
+   * ```
+   */
   constructor(url: URL) {
     this.#url = new URL(url)
   }
 
+  /**
+   * Returns a builder with each value appended as one encoded path segment.
+   *
+   * Route literals and identifiers can be passed together. A slash inside a value stays within
+   * that segment instead of creating another route level.
+   *
+   * @example
+   * ```ts
+   * class DocumentUrlBuilder extends DashboardUrlBuilder {
+   *   document(documentId: string) {
+   *     return this.append('documents', documentId)
+   *   }
+   * }
+   *
+   * const builder = new DocumentUrlBuilder(new URL('https://dashboard.sanity.io'))
+   * builder.document('drafts/document-1').url()
+   * // '/documents/drafts%2Fdocument-1'
+   * ```
+   */
   protected append(...segments: string[]): this {
     return this.#create(appendSegments(this.#url, segments))
   }
 
-  protected appendPath(...path: string[]): this {
-    return this.append(...splitPath(path))
-  }
-
+  /**
+   * Returns a builder with changes made through the platform `URL` API.
+   *
+   * This supports URL details outside the path grammar, including search parameters and hashes.
+   *
+   * @example
+   * ```ts
+   * class DocumentUrlBuilder extends DashboardUrlBuilder {
+   *   perspective(name: string) {
+   *     return this.edit((url) => url.searchParams.set('perspective', name))
+   *   }
+   *
+   *   panel(panelId: string) {
+   *     return this.edit((url) => {
+   *       url.hash = `panel/${panelId}`
+   *     })
+   *   }
+   * }
+   * ```
+   */
   protected edit(update: (url: URL) => void): this {
     const url = new URL(this.#url)
     update(url)
     return this.#create(url)
   }
 
-  protected transition<Builder extends DashboardUrlBuilder>(
+  /**
+   * Returns another builder type rooted at the appended path segments.
+   *
+   * Use this when a route moves into a grammar with a different set of available methods.
+   *
+   * @example
+   * ```ts
+   * class DocumentUrlBuilder extends DashboardUrlBuilder {
+   *   perspective(name: string) {
+   *     return this.edit((url) => url.searchParams.set('perspective', name))
+   *   }
+   * }
+   *
+   * class ApplicationUrlBuilder extends DashboardUrlBuilder {
+   *   document(documentId: string) {
+   *     return this.transitionTo(DocumentUrlBuilder, 'documents', documentId)
+   *   }
+   * }
+   *
+   * const builder = new ApplicationUrlBuilder(new URL('https://dashboard.sanity.io'))
+   * builder.document('document-1').perspective('published').url()
+   * // '/documents/document-1?perspective=published'
+   * ```
+   */
+  protected transitionTo<Builder extends DashboardUrlBuilder>(
     Builder: new (url: URL) => Builder,
     ...segments: string[]
   ): Builder {
     return new Builder(appendSegments(this.#url, segments))
   }
 
+  /**
+   * Returns the dashboard URL as a relative string, or as an absolute string when requested.
+   *
+   * @example
+   * ```ts
+   * const builder = new DashboardUrlBuilder(
+   *   new URL('/application/my-app', 'https://dashboard.sanity.io'),
+   * )
+   *
+   * builder.url() // '/application/my-app'
+   * builder.url({absolute: true}) // 'https://dashboard.sanity.io/application/my-app'
+   * ```
+   */
   url(options?: {absolute?: boolean}): string {
     return options?.absolute ? this.toURL().href : this.#relativeUrl()
   }
 
+  /**
+   * Returns the dashboard URL as a platform `URL` object.
+   *
+   * @example
+   * ```ts
+   * const builder = new DashboardUrlBuilder(
+   *   new URL('/application/my-app', 'https://dashboard.sanity.io'),
+   * )
+   *
+   * builder.toURL().pathname // '/application/my-app'
+   * ```
+   */
   toURL(): URL {
     const origin =
       this.#url.origin === defaultDashboardOrigin ? globalThis.location?.origin : this.#url.origin
@@ -175,6 +271,18 @@ export abstract class DashboardUrlBuilder implements DashboardUrl {
     return new URL(this.#relativeUrl(), origin)
   }
 
+  /**
+   * Returns the same relative dashboard URL as {@link DashboardUrlBuilder.url}.
+   *
+   * @example
+   * ```ts
+   * const builder = new DashboardUrlBuilder(
+   *   new URL('/application/my-app', 'https://dashboard.sanity.io'),
+   * )
+   *
+   * `${builder}` // '/application/my-app'
+   * ```
+   */
   toString(): string {
     return this.url()
   }
@@ -189,13 +297,11 @@ export abstract class DashboardUrlBuilder implements DashboardUrl {
   }
 }
 
-class TerminalUrlBuilder extends DashboardUrlBuilder {}
-
 class CoreApplicationUrlBuilder extends DashboardUrlBuilder implements CoreApplicationUrl {
   static readonly namespace = 'application'
 
   path(...path: string[]): this {
-    return this.appendPath(...path)
+    return this.append(...splitPath(path))
   }
 }
 
@@ -259,7 +365,7 @@ class StudioUrlBuilder
   }
 
   path(...path: string[]): DashboardUrl {
-    return this.appendPath(...path)
+    return this.append(...splitPath(path))
   }
 }
 
@@ -288,9 +394,10 @@ export interface DashboardUrls {
 }
 
 const createRootBuilder = <Builder extends DashboardUrlBuilder>(
-  Builder: new (url: URL) => Builder,
+  Builder: (new (url: URL) => Builder) & {readonly namespace: string},
   ...segments: string[]
-): Builder => new Builder(appendSegments(new URL(defaultDashboardOrigin), segments))
+): Builder =>
+  new Builder(appendSegments(new URL(defaultDashboardOrigin), [Builder.namespace, ...segments]))
 
 const createDashboardUrls = <const Builders extends BuilderRegistry>(
   builders: Builders,
@@ -299,31 +406,28 @@ const createDashboardUrls = <const Builders extends BuilderRegistry>(
   function studios(appId: string): StudioUrl
   function studios(appId?: string): DashboardUrl | StudioUrl {
     return appId === undefined
-      ? createRootBuilder(TerminalUrlBuilder, StudioUrlBuilder.namespace)
-      : createRootBuilder(StudioUrlBuilder, StudioUrlBuilder.namespace, appId)
+      ? createRootBuilder(StudioUrlBuilder)
+      : createRootBuilder(StudioUrlBuilder, appId)
   }
 
   function applications(): DashboardUrl
   function applications(appId: string): CoreApplicationUrl
   function applications(appId?: string): DashboardUrl | CoreApplicationUrl {
     return appId === undefined
-      ? createRootBuilder(TerminalUrlBuilder, CoreApplicationUrlBuilder.namespace)
-      : createRootBuilder(CoreApplicationUrlBuilder, CoreApplicationUrlBuilder.namespace, appId)
+      ? createRootBuilder(CoreApplicationUrlBuilder)
+      : createRootBuilder(CoreApplicationUrlBuilder, appId)
   }
 
   const methods = Object.fromEntries(
-    Object.entries(builders).map(([name, Builder]) => [
-      name,
-      () => createRootBuilder(Builder, Builder.namespace),
-    ]),
+    Object.entries(builders).map(([name, Builder]) => [name, () => createRootBuilder(Builder)]),
   )
 
   const dashboardUrls = {
     studios,
     applications,
-    mediaLibrary: () => createRootBuilder(MediaLibraryUrlBuilder, MediaLibraryUrlBuilder.namespace),
-    canvas: () => createRootBuilder(CanvasUrlBuilder, CanvasUrlBuilder.namespace),
-    home: () => createRootBuilder(TerminalUrlBuilder),
+    mediaLibrary: () => createRootBuilder(MediaLibraryUrlBuilder),
+    canvas: () => createRootBuilder(CanvasUrlBuilder),
+    home: () => new DashboardUrlBuilder(new URL(defaultDashboardOrigin)),
     extend<const AddedBuilders extends BuilderRegistry>(addedBuilders: AddedBuilders) {
       const namespaces = new Set([
         '',

@@ -32,7 +32,7 @@ class ContentAgentUrlBuilder extends DashboardUrlBuilder {
   }
 
   document(documentId: string): ContentAgentDocumentUrlBuilder {
-    return this.transition(ContentAgentDocumentUrlBuilder, 'documents', documentId)
+    return this.transitionTo(ContentAgentDocumentUrlBuilder, 'documents', documentId)
   }
 }
 
