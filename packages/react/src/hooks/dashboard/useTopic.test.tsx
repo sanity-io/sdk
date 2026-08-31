@@ -1,23 +1,25 @@
-import {type ValueOf} from '@sanity/workbench'
 import {act, renderHook, waitFor} from '@testing-library/react'
 import {BehaviorSubject} from 'rxjs'
-import {afterEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
+import {beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
 
+import {type ValueOf} from '../../dashboard/messageBus/topics'
 import {useTopic} from './useTopic'
 
 const mocks = vi.hoisted(() => ({
-  isDashboardEnvironment: vi.fn(() => true),
+  client: undefined as undefined | {subscribe: ReturnType<typeof vi.fn>},
   subscribe: vi.fn(),
 }))
 
-vi.mock('@sanity/workbench', () => ({os: {subscribe: mocks.subscribe}}))
-vi.mock('../../context/dashboardToken', () => ({
-  isDashboardEnvironment: mocks.isDashboardEnvironment,
+vi.mock('../../dashboard/messageBus/client', () => ({
+  get dashboardMessageBus() {
+    return mocks.client
+  },
+  isDashboardEnvironment: (client: unknown) => client !== undefined,
 }))
 
 describe('useTopic', () => {
-  afterEach(() => {
-    mocks.isDashboardEnvironment.mockReturnValue(true)
+  beforeEach(() => {
+    mocks.client = {subscribe: mocks.subscribe}
     mocks.subscribe.mockReset()
   })
 
@@ -37,7 +39,7 @@ describe('useTopic', () => {
   })
 
   it('throws outside a dashboard application', () => {
-    mocks.isDashboardEnvironment.mockReturnValue(false)
+    mocks.client = undefined
 
     expect(() => renderHook(() => useTopic('applications.foreground'))).toThrow(
       'useTopic must be used inside a dashboard application',
