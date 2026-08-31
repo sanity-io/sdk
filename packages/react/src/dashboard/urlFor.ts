@@ -1,5 +1,5 @@
 /** @public */
-export interface DashboardUrl {
+export interface Url {
   url(options?: {origin?: string}): string
   toURL(options: {origin: string}): URL
   toString(): string
@@ -27,12 +27,12 @@ export interface ReleaseIntentParameters {
 }
 
 /** @public */
-export interface StudioWorkspaceUrl extends DashboardUrl {
+export interface StudioWorkspaceUrl extends Url {
   intent(intent: 'edit', parameters: EditIntentParameters): StudioIntentUrl
   intent(intent: 'create', parameters: CreateIntentParameters): StudioIntentUrl
   intent(intent: 'release', parameters: ReleaseIntentParameters): StudioIntentUrl
-  path(...path: string[]): DashboardUrl
-  task(taskId: string): DashboardUrl
+  path(...path: string[]): Url
+  task(taskId: string): Url
 }
 
 /** @public */
@@ -41,26 +41,26 @@ export interface StudioUrl extends StudioWorkspaceUrl {
 }
 
 /** @public */
-export interface StudioIntentUrl extends DashboardUrl {
+export interface StudioIntentUrl extends Url {
   perspective(perspective: string): StudioIntentUrl
   comment(commentId: string): StudioIntentUrl
-  task(taskId: string): DashboardUrl
+  task(taskId: string): Url
 }
 
 /** @public */
-export interface CoreApplicationUrl extends DashboardUrl {
-  path(...path: string[]): DashboardUrl
+export interface CoreApplicationUrl extends Url {
+  path(...path: string[]): Url
 }
 
 /** @public */
-export interface MediaLibraryUrl extends DashboardUrl {
-  asset(assetId: string): DashboardUrl
-  collection(collectionId: string): DashboardUrl
+export interface MediaLibraryUrl extends Url {
+  asset(assetId: string): Url
+  collection(collectionId: string): Url
 }
 
 /** @public */
-export interface CanvasUrl extends DashboardUrl {
-  document(documentId: string): DashboardUrl
+export interface CanvasUrl extends Url {
+  document(documentId: string): Url
 }
 
 type IntentArguments =
@@ -73,7 +73,7 @@ type BuilderRegistry = Readonly<
     string,
     {
       readonly namespace: string
-      new (url: URL): DashboardUrlBuilder
+      new (url: URL): UrlBuilder
     }
   >
 >
@@ -130,19 +130,19 @@ const appendSegments = (url: URL, segments: readonly string[]): URL => {
 }
 
 /**
- * Base class for immutable dashboard URL grammars.
+ * Base class for immutable URL grammars.
  *
  * @public
  */
-export class DashboardUrlBuilder implements DashboardUrl {
+export class UrlBuilder implements Url {
   readonly #url: URL
 
   /**
-   * Creates an immutable dashboard URL builder at the supplied URL.
+   * Creates an immutable URL builder at the supplied URL.
    *
    * @example
    * ```ts
-   * const builder = new DashboardUrlBuilder(
+   * const builder = new UrlBuilder(
    *   new URL('/application/my-app', 'https://dashboard.sanity.io'),
    * )
    *
@@ -161,7 +161,7 @@ export class DashboardUrlBuilder implements DashboardUrl {
    *
    * @example
    * ```ts
-   * class DocumentUrlBuilder extends DashboardUrlBuilder {
+   * class DocumentUrlBuilder extends UrlBuilder {
    *   document(documentId: string) {
    *     return this.append('documents', documentId)
    *   }
@@ -183,7 +183,7 @@ export class DashboardUrlBuilder implements DashboardUrl {
    *
    * @example
    * ```ts
-   * class DocumentUrlBuilder extends DashboardUrlBuilder {
+   * class DocumentUrlBuilder extends UrlBuilder {
    *   perspective(name: string) {
    *     return this.edit((url) => url.searchParams.set('perspective', name))
    *   }
@@ -209,13 +209,13 @@ export class DashboardUrlBuilder implements DashboardUrl {
    *
    * @example
    * ```ts
-   * class DocumentUrlBuilder extends DashboardUrlBuilder {
+   * class DocumentUrlBuilder extends UrlBuilder {
    *   perspective(name: string) {
    *     return this.edit((url) => url.searchParams.set('perspective', name))
    *   }
    * }
    *
-   * class ApplicationUrlBuilder extends DashboardUrlBuilder {
+   * class ApplicationUrlBuilder extends UrlBuilder {
    *   document(documentId: string) {
    *     return this.transitionTo(DocumentUrlBuilder, 'documents', documentId)
    *   }
@@ -226,7 +226,7 @@ export class DashboardUrlBuilder implements DashboardUrl {
    * // '/documents/document-1?perspective=published'
    * ```
    */
-  protected transitionTo<Builder extends DashboardUrlBuilder>(
+  protected transitionTo<Builder extends UrlBuilder>(
     Builder: new (url: URL) => Builder,
     ...segments: string[]
   ): Builder {
@@ -234,13 +234,13 @@ export class DashboardUrlBuilder implements DashboardUrl {
   }
 
   /**
-   * Returns the dashboard URL as a relative string by default.
+   * Returns the URL as a relative string by default.
    *
    * Supplying an origin returns an absolute URL string for the same dashboard route.
    *
    * @example
    * ```ts
-   * const builder = new DashboardUrlBuilder(
+   * const builder = new UrlBuilder(
    *   new URL('/application/my-app', 'https://dashboard.sanity.io'),
    * )
    *
@@ -255,11 +255,11 @@ export class DashboardUrlBuilder implements DashboardUrl {
   }
 
   /**
-   * Returns the dashboard URL as a platform `URL` object using the supplied origin.
+   * Returns the URL as a platform `URL` object using the supplied origin.
    *
    * @example
    * ```ts
-   * const builder = new DashboardUrlBuilder(
+   * const builder = new UrlBuilder(
    *   new URL('/application/my-app', 'https://dashboard.sanity.io'),
    * )
    *
@@ -272,11 +272,11 @@ export class DashboardUrlBuilder implements DashboardUrl {
   }
 
   /**
-   * Returns the same relative dashboard URL as {@link DashboardUrlBuilder.url}.
+   * Returns the same relative URL as {@link UrlBuilder.url}.
    *
    * @example
    * ```ts
-   * const builder = new DashboardUrlBuilder(
+   * const builder = new UrlBuilder(
    *   new URL('/application/my-app', 'https://dashboard.sanity.io'),
    * )
    *
@@ -297,7 +297,7 @@ export class DashboardUrlBuilder implements DashboardUrl {
   }
 }
 
-class CoreApplicationUrlBuilder extends DashboardUrlBuilder implements CoreApplicationUrl {
+class CoreApplicationUrlBuilder extends UrlBuilder implements CoreApplicationUrl {
   static readonly namespace = 'application'
 
   path(...path: string[]): this {
@@ -305,28 +305,28 @@ class CoreApplicationUrlBuilder extends DashboardUrlBuilder implements CoreAppli
   }
 }
 
-class MediaLibraryUrlBuilder extends DashboardUrlBuilder implements MediaLibraryUrl {
+class MediaLibraryUrlBuilder extends UrlBuilder implements MediaLibraryUrl {
   static readonly namespace = 'media'
 
-  asset(assetId: string): DashboardUrl {
+  asset(assetId: string): Url {
     return this.append('assets', assetId)
   }
 
-  collection(collectionId: string): DashboardUrl {
+  collection(collectionId: string): Url {
     return this.append('collections', collectionId)
   }
 }
 
-class CanvasUrlBuilder extends DashboardUrlBuilder implements CanvasUrl {
+class CanvasUrlBuilder extends UrlBuilder implements CanvasUrl {
   static readonly namespace = 'canvas'
 
-  document(documentId: string): DashboardUrl {
+  document(documentId: string): Url {
     return this.append('doc', documentId)
   }
 }
 
 class StudioUrlBuilder
-  extends DashboardUrlBuilder
+  extends UrlBuilder
   implements StudioUrl, StudioWorkspaceUrl, StudioIntentUrl
 {
   static readonly namespace = 'studio'
@@ -360,31 +360,31 @@ class StudioUrlBuilder
     })
   }
 
-  task(taskId: string): DashboardUrl {
+  task(taskId: string): Url {
     return this.edit((url) => url.searchParams.set('selectedTask', taskId))
   }
 
-  path(...path: string[]): DashboardUrl {
+  path(...path: string[]): Url {
     return this.append(...splitPath(path))
   }
 }
 
 /** @public */
-export interface DashboardUrls {
-  studios(): DashboardUrl
+export interface Urls {
+  studios(): Url
   studios(appId: string): StudioUrl
-  applications(): DashboardUrl
+  applications(): Url
   applications(appId: string): CoreApplicationUrl
   mediaLibrary(): MediaLibraryUrl
   canvas(): CanvasUrl
-  home(): DashboardUrl
+  home(): Url
   extend<
     const Builders extends Readonly<
       Record<
         string,
         {
           readonly namespace: string
-          new (url: URL): DashboardUrlBuilder
+          new (url: URL): UrlBuilder
         }
       >
     >,
@@ -393,26 +393,26 @@ export interface DashboardUrls {
   ): this & {readonly [Name in keyof Builders]: () => InstanceType<Builders[Name]>}
 }
 
-const createRootBuilder = <Builder extends DashboardUrlBuilder>(
+const createRootBuilder = <Builder extends UrlBuilder>(
   Builder: (new (url: URL) => Builder) & {readonly namespace: string},
   ...segments: string[]
 ): Builder =>
   new Builder(appendSegments(new URL(relativeUrlBase), [Builder.namespace, ...segments]))
 
-const createDashboardUrls = <const Builders extends BuilderRegistry>(
+const createUrls = <const Builders extends BuilderRegistry>(
   builders: Builders,
-): DashboardUrls & BuilderMethods<Builders> => {
-  function studios(): DashboardUrl
+): Urls & BuilderMethods<Builders> => {
+  function studios(): Url
   function studios(appId: string): StudioUrl
-  function studios(appId?: string): DashboardUrl | StudioUrl {
+  function studios(appId?: string): Url | StudioUrl {
     return appId === undefined
       ? createRootBuilder(StudioUrlBuilder)
       : createRootBuilder(StudioUrlBuilder, appId)
   }
 
-  function applications(): DashboardUrl
+  function applications(): Url
   function applications(appId: string): CoreApplicationUrl
-  function applications(appId?: string): DashboardUrl | CoreApplicationUrl {
+  function applications(appId?: string): Url | CoreApplicationUrl {
     return appId === undefined
       ? createRootBuilder(CoreApplicationUrlBuilder)
       : createRootBuilder(CoreApplicationUrlBuilder, appId)
@@ -422,12 +422,12 @@ const createDashboardUrls = <const Builders extends BuilderRegistry>(
     Object.entries(builders).map(([name, Builder]) => [name, () => createRootBuilder(Builder)]),
   )
 
-  const dashboardUrls = {
+  const urls = {
     studios,
     applications,
     mediaLibrary: () => createRootBuilder(MediaLibraryUrlBuilder),
     canvas: () => createRootBuilder(CanvasUrlBuilder),
-    home: () => new DashboardUrlBuilder(new URL(relativeUrlBase)),
+    home: () => new UrlBuilder(new URL(relativeUrlBase)),
     extend<const AddedBuilders extends BuilderRegistry>(addedBuilders: AddedBuilders) {
       const namespaces = new Set([
         '',
@@ -439,21 +439,21 @@ const createDashboardUrls = <const Builders extends BuilderRegistry>(
       ])
 
       for (const [name, Builder] of Object.entries(addedBuilders)) {
-        if (name in dashboardUrls || name in methods) {
-          throw new Error(`Dashboard URL builder "${name}" already exists`)
+        if (name in urls || name in methods) {
+          throw new Error(`URL builder "${name}" already exists`)
         }
         if (namespaces.has(Builder.namespace)) {
-          throw new Error(`Dashboard URL namespace "${Builder.namespace}" already exists`)
+          throw new Error(`URL namespace "${Builder.namespace}" already exists`)
         }
         namespaces.add(Builder.namespace)
       }
 
-      return createDashboardUrls({...builders, ...addedBuilders})
+      return createUrls({...builders, ...addedBuilders})
     },
   }
 
-  return Object.assign(dashboardUrls, methods) as DashboardUrls & BuilderMethods<Builders>
+  return Object.assign(urls, methods) as Urls & BuilderMethods<Builders>
 }
 
 /** @public */
-export const urlFor: DashboardUrls = createDashboardUrls({})
+export const urlFor: Urls = createUrls({})

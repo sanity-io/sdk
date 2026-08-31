@@ -3,16 +3,16 @@ import {describe, expect, expectTypeOf, it} from 'vitest'
 import {
   type CanvasUrl,
   type CoreApplicationUrl,
-  type DashboardUrl,
-  DashboardUrlBuilder,
   type MediaLibraryUrl,
   type StudioIntentUrl,
   type StudioUrl,
   type StudioWorkspaceUrl,
+  type Url,
+  UrlBuilder,
   urlFor,
 } from './urlFor'
 
-class ContentAgentDocumentUrlBuilder extends DashboardUrlBuilder {
+class ContentAgentDocumentUrlBuilder extends UrlBuilder {
   perspective(perspective: string): this {
     return this.edit((url) => url.searchParams.set('perspective', perspective))
   }
@@ -24,7 +24,7 @@ class ContentAgentDocumentUrlBuilder extends DashboardUrlBuilder {
   }
 }
 
-class ContentAgentUrlBuilder extends DashboardUrlBuilder {
+class ContentAgentUrlBuilder extends UrlBuilder {
   static readonly namespace = 'content-agent'
 
   context(contextId: string): this {
@@ -36,7 +36,7 @@ class ContentAgentUrlBuilder extends DashboardUrlBuilder {
   }
 }
 
-class PersonaUrlBuilder extends DashboardUrlBuilder {
+class PersonaUrlBuilder extends UrlBuilder {
   static readonly namespace = 'persona'
 
   person(personId: string): this {
@@ -44,7 +44,7 @@ class PersonaUrlBuilder extends DashboardUrlBuilder {
   }
 }
 
-class CanvasAliasUrlBuilder extends DashboardUrlBuilder {
+class CanvasAliasUrlBuilder extends UrlBuilder {
   static readonly namespace = 'canvas'
 }
 
@@ -199,17 +199,17 @@ describe('urlFor', () => {
     const extendedUrlFor = urlFor.extend({contentAgent: ContentAgentUrlBuilder})
 
     expect(() => urlFor.extend({canvas: ContentAgentUrlBuilder} as never)).toThrow(
-      'Dashboard URL builder "canvas" already exists',
+      'URL builder "canvas" already exists',
     )
     expect(() => urlFor.extend({canvasAlias: CanvasAliasUrlBuilder})).toThrow(
-      'Dashboard URL namespace "canvas" already exists',
+      'URL namespace "canvas" already exists',
     )
     expect(() => extendedUrlFor.extend({agent: ContentAgentUrlBuilder})).toThrow(
-      'Dashboard URL namespace "content-agent" already exists',
+      'URL namespace "content-agent" already exists',
     )
     expect(() =>
       urlFor.extend({agent: ContentAgentUrlBuilder, assistant: ContentAgentUrlBuilder}),
-    ).toThrow('Dashboard URL namespace "content-agent" already exists')
+    ).toThrow('URL namespace "content-agent" already exists')
   })
 
   it('covers the studio path grammar with path(), tools included', () => {
@@ -230,11 +230,11 @@ describe('urlFor', () => {
     expectTypeOf(
       urlFor.studios('studio-1').intent('edit', {id: 'document-1'}),
     ).toEqualTypeOf<StudioIntentUrl>()
-    expectTypeOf(urlFor.studios()).toEqualTypeOf<DashboardUrl>()
-    expectTypeOf(urlFor.applications()).toEqualTypeOf<DashboardUrl>()
+    expectTypeOf(urlFor.studios()).toEqualTypeOf<Url>()
+    expectTypeOf(urlFor.applications()).toEqualTypeOf<Url>()
     expectTypeOf(urlFor.applications('app-1')).toEqualTypeOf<CoreApplicationUrl>()
     expectTypeOf(urlFor.mediaLibrary()).toEqualTypeOf<MediaLibraryUrl>()
     expectTypeOf(urlFor.canvas()).toEqualTypeOf<CanvasUrl>()
-    expectTypeOf(urlFor.home()).toEqualTypeOf<DashboardUrl>()
+    expectTypeOf(urlFor.home()).toEqualTypeOf<Url>()
   })
 })
