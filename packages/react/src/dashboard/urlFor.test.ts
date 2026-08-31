@@ -12,7 +12,7 @@ import {
   urlFor,
 } from './urlFor'
 
-class ContentAgentDocumentUrlBuilder extends UrlBuilder {
+class AcmeDocumentUrlBuilder extends UrlBuilder {
   perspective(perspective: string): this {
     return this.edit((url) => url.searchParams.set('perspective', perspective))
   }
@@ -24,15 +24,15 @@ class ContentAgentDocumentUrlBuilder extends UrlBuilder {
   }
 }
 
-class ContentAgentUrlBuilder extends UrlBuilder {
-  static readonly namespace = 'content-agent'
+class AcmeUrlBuilder extends UrlBuilder {
+  static readonly namespace = 'acme'
 
   context(contextId: string): this {
     return this.append('contexts', contextId)
   }
 
-  document(documentId: string): ContentAgentDocumentUrlBuilder {
-    return this.transitionTo(ContentAgentDocumentUrlBuilder, 'documents', documentId)
+  document(documentId: string): AcmeDocumentUrlBuilder {
+    return this.transitionTo(AcmeDocumentUrlBuilder, 'documents', documentId)
   }
 }
 
@@ -152,7 +152,7 @@ describe('coreApp', () => {
   })
 })
 
-describe('Media Library and Canvas', () => {
+describe('Media Library', () => {
   it('builds media library URLs', () => {
     expect(urlFor.mediaLibrary().url()).toBe('/media')
     expect(urlFor.mediaLibrary().asset('asset/1').url()).toBe('/media/assets/asset%2F1')
@@ -161,12 +161,17 @@ describe('Media Library and Canvas', () => {
     )
   })
 
+  it('exposes the Media Library builder interface', () => {
+    expectTypeOf(urlFor.mediaLibrary()).toEqualTypeOf<MediaLibraryUrl>()
+  })
+})
+
+describe('Canvas', () => {
   it('builds Canvas URLs', () => {
     expect(urlFor.canvas().document('document/1').url()).toBe('/canvas/doc/document%2F1')
   })
 
-  it('exposes singleton-specific builder interfaces', () => {
-    expectTypeOf(urlFor.mediaLibrary()).toEqualTypeOf<MediaLibraryUrl>()
+  it('exposes the Canvas builder interface', () => {
     expectTypeOf(urlFor.canvas()).toEqualTypeOf<CanvasUrl>()
   })
 })
@@ -184,54 +189,54 @@ describe('UrlBuilder', () => {
   })
 
   it('keeps builders immutable', () => {
-    const builder = new ContentAgentUrlBuilder(new URL('https://dashboard.sanity.io/content-agent'))
+    const builder = new AcmeUrlBuilder(new URL('https://dashboard.sanity.io/acme'))
 
     builder.context('context-1')
 
-    expect(builder.url()).toBe('/content-agent')
+    expect(builder.url()).toBe('/acme')
   })
 
   it('extends the URL builder with custom builder classes', () => {
-    const extendedUrlFor = urlFor.extend({contentAgent: ContentAgentUrlBuilder})
+    const extendedUrlFor = urlFor.extend({acme: AcmeUrlBuilder})
     const reextendedUrlFor = extendedUrlFor.extend({persona: PersonaUrlBuilder})
 
     expect(
       extendedUrlFor
-        .contentAgent()
+        .acme()
         .context('context/1')
         .document('document/1')
         .perspective('published')
         .panel('review 1')
         .url(),
     ).toBe(
-      '/content-agent/contexts/context%2F1/documents/document%2F1?perspective=published#panel/review%201',
+      '/acme/contexts/context%2F1/documents/document%2F1?perspective=published#panel/review%201',
     )
     expect(reextendedUrlFor.persona().person('person/1').url()).toBe('/persona/people/person%2F1')
-    expect(reextendedUrlFor.contentAgent().url()).toBe('/content-agent')
-    expect(urlFor).not.toHaveProperty('contentAgent')
+    expect(reextendedUrlFor.acme().url()).toBe('/acme')
+    expect(urlFor).not.toHaveProperty('acme')
 
-    expectTypeOf(extendedUrlFor.contentAgent()).toEqualTypeOf<ContentAgentUrlBuilder>()
+    expectTypeOf(extendedUrlFor.acme()).toEqualTypeOf<AcmeUrlBuilder>()
     expectTypeOf(
-      extendedUrlFor.contentAgent().document('document-1'),
-    ).toEqualTypeOf<ContentAgentDocumentUrlBuilder>()
+      extendedUrlFor.acme().document('document-1'),
+    ).toEqualTypeOf<AcmeDocumentUrlBuilder>()
     expectTypeOf(reextendedUrlFor.persona()).toEqualTypeOf<PersonaUrlBuilder>()
   })
 
   it('rejects duplicate URL namespaces', () => {
-    const extendedUrlFor = urlFor.extend({contentAgent: ContentAgentUrlBuilder})
+    const extendedUrlFor = urlFor.extend({acme: AcmeUrlBuilder})
 
-    expect(() => urlFor.extend({canvas: ContentAgentUrlBuilder} as never)).toThrow(
+    expect(() => urlFor.extend({canvas: AcmeUrlBuilder} as never)).toThrow(
       'URL builder "canvas" already exists',
     )
     expect(() => urlFor.extend({canvasAlias: CanvasAliasUrlBuilder})).toThrow(
       'URL namespace "canvas" already exists',
     )
-    expect(() => extendedUrlFor.extend({agent: ContentAgentUrlBuilder})).toThrow(
-      'URL namespace "content-agent" already exists',
+    expect(() => extendedUrlFor.extend({acmeAlias: AcmeUrlBuilder})).toThrow(
+      'URL namespace "acme" already exists',
     )
-    expect(() =>
-      urlFor.extend({agent: ContentAgentUrlBuilder, assistant: ContentAgentUrlBuilder}),
-    ).toThrow('URL namespace "content-agent" already exists')
+    expect(() => urlFor.extend({first: AcmeUrlBuilder, second: AcmeUrlBuilder})).toThrow(
+      'URL namespace "acme" already exists',
+    )
   })
 
   it('builds the home URL', () => {
