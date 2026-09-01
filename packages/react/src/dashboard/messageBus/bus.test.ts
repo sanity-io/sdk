@@ -171,15 +171,20 @@ describe('dashboard connection', () => {
     expect(error).toMatchObject({code: 'NO_RESPONDER'})
   })
 
-  it('defers a missing application id error until the connection is used', () => {
+  it('returns undefined without an application id', () => {
     installMessageBus({appId: 'dashboard'})
 
-    const application = connectMessageBus()
+    expect(connectMessageBus()).toBeUndefined()
+  })
 
-    expect(application).toBeDefined()
-    expect(() => application?.subscribe('auth.token')).toThrowError(
-      expect.objectContaining({code: 'MISSING_APP_ID'}),
-    )
+  it('returns undefined when the installed protocol is incompatible', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    installMessageBus({appId: 'dashboard'})
+    const protocolKey = Symbol.for('sanity.os.protocol')
+    const installedMessageBus = globals[MESSAGE_BUS_KEY] as Record<symbol, unknown>
+    installedMessageBus[protocolKey] = 2
+
+    expect(connectMessageBus({appId: 'favorites'})).toBeUndefined()
   })
 })
 
@@ -190,12 +195,13 @@ describe('state topics', () => {
     const source = messageBus.subscribe('test.count')
     const seen: number[] = []
     source.subscribe((value) => seen.push(value))
+    const firstValue = source.firstValue
 
     messageBus.emit('test.count', 1)
     messageBus.emit('test.count', 2)
 
     expect(source.getCurrent()).toBe(2)
-    await expect(source.firstValue).resolves.toBe(0)
+    await expect(firstValue).resolves.toBe(0)
     expect(seen).toEqual([0, 1, 2])
     expect(messageBus.subscribe('test.count').getCurrent()).toBe(2)
   })
@@ -278,6 +284,24 @@ describe('state topics', () => {
     registerStateTopics(messageBus, {'test.count': 2})
 
     expect(messageBus.subscribe('test.count').getCurrent()).toBe(2)
+  })
+
+  it('preserves ownership when seeding a manifest topic', async () => {
+    const messageBus = createMessageBus()
+
+    registerStateTopics(messageBus, {'users.current': null})
+
+    await expect(messageBus.query('users.current')).resolves.toBeNull()
+  })
+
+  it('assigns augmented state topics to the installing application', () => {
+    const messageBus = createMessageBus()
+    registerStateTopics(messageBus, {'test.count': 0}, {ownership: 'same_app'})
+    const application = connectApplicationToMessageBus(messageBus, {appId: 'favorites'})
+
+    expect(() => application.emit('test.count', 1)).toThrowError(
+      expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}),
+    )
   })
 
   it('rejects an event registered as state', () => {
@@ -441,6 +465,17 @@ describe('reset', () => {
 
   it('does nothing when no message bus is installed', () => {
     expect(() => resetMessageBus()).not.toThrow()
+  })
+
+  it('resets state sources without unhandled rejections', async () => {
+    const messageBus = installMessageBus({appId: 'dashboard'})
+    messageBus.subscribe('media-libraries.config')
+    const pending = messageBus.query('applications.list')
+
+    resetMessageBus()
+
+    await expect(pending).rejects.toMatchObject({code: 'ABORTED'})
+    await new Promise((resolve) => setTimeout(resolve, 0))
   })
 
   it('aborts pending work and keeps existing application connections reusable', async () => {

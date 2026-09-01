@@ -1,4 +1,5 @@
 /* eslint-disable no-console -- The bus can initialize before the SDK logger exists. */
+import {type Application} from '@sanity/sdk'
 import {
   BehaviorSubject,
   filter,
@@ -52,12 +53,12 @@ export class MessageBusError extends Error {
 }
 
 /**
- * Identifies the application and time that produced a message.
+ * Metadata that travels with each message bus event.
  * @public
  */
 export interface MessageBusMeta {
   /** The application that produced the message. */
-  appId: string
+  appId: Application['id']
   /** The Unix timestamp in milliseconds when the message was produced. */
   timestamp: number
 }
@@ -87,7 +88,7 @@ export interface MessageBusStateSource<T> extends Observable<T> {
   /** Returns the current value, or `undefined` before the first value is published. */
   getCurrent(): T | undefined
   /** Resolves with the first published value. */
-  firstValue: Promise<T>
+  readonly firstValue: Promise<T>
 }
 
 /**
@@ -153,7 +154,6 @@ export interface MessageBus {
   subscribe<K extends EventTopic>(type: K): Observable<PayloadOf<K>>
 }
 
-// These registered keys are the protocol seam shared by independently bundled SDK copies.
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 const MESSAGE_BUS_PROTOCOL_KEY = Symbol.for('sanity.os.protocol')
 const MESSAGE_BUS_REGISTRY_KEY = Symbol.for('sanity.os.registry')
@@ -216,7 +216,11 @@ function toStateSource(
 ): MessageBusStateSource<unknown> {
   const source = values as MessageBusStateSource<unknown>
   source.getCurrent = getCurrent
-  source.firstValue = firstValueFrom(values)
+  // Unread sources must not create promises that reject when reset completes them.
+  let firstValue: Promise<unknown> | undefined
+  Object.defineProperty(source, 'firstValue', {
+    get: () => (firstValue ??= firstValueFrom(values)),
+  })
   return source
 }
 
@@ -461,11 +465,18 @@ function query(
       reject(new MessageBusError('ABORTED'))
     }
     signal?.addEventListener('abort', onAbort, {once: true})
-    void source.firstValue.then((value) => {
-      clearTimeout(timer)
-      signal?.removeEventListener('abort', onAbort)
-      resolve(value)
-    })
+    void source.firstValue.then(
+      (value) => {
+        clearTimeout(timer)
+        signal?.removeEventListener('abort', onAbort)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        signal?.removeEventListener('abort', onAbort)
+        reject(error)
+      },
+    )
   })
 }
 
@@ -882,7 +893,7 @@ function getInstalledMessageBus(): MessageBus | undefined {
 }
 
 /**
- * Returns whether a compatible message bus is installed.
+ * Returns whether a message bus registry is installed.
  * @internal
  */
 export function isMessageBusInstalled(): boolean {
@@ -899,7 +910,7 @@ export interface ConnectMessageBusOptions {
 }
 
 /**
- * Connects this application to the installed message bus, or returns `undefined` when absent.
+ * Connects to the installed message bus, or returns `undefined` when no compatible connection exists.
  * @public
  */
 export function connectMessageBus(options: ConnectMessageBusOptions = {}): MessageBus | undefined {
@@ -907,9 +918,10 @@ export function connectMessageBus(options: ConnectMessageBusOptions = {}): Messa
   if (!installedMessageBus) return undefined
 
   const appId = resolveAppId(options.appId)
-  return appId
-    ? connectApplicationToMessageBus(installedMessageBus, {appId})
-    : createFailedMessageBus(throwMissingAppId)
+  if (!appId) return undefined
+
+  const connection = connectApplicationToMessageBus(installedMessageBus, {appId})
+  return MESSAGE_BUS_REGISTRY_KEY in connection ? connection : undefined
 }
 
 /**
@@ -933,25 +945,32 @@ export function installMessageBus(options: ConnectMessageBusOptions = {}): Messa
 
   const globals = globalThis as {[MESSAGE_BUS_KEY]?: MessageBus}
   if (globals[MESSAGE_BUS_KEY]) {
-    console.warn('[sanity-sdk:message-bus] replaced a foreign value at the message bus install key')
+    console.warn('[sanity-sdk:message-bus] message bus already installed')
   }
   globals[MESSAGE_BUS_KEY] = createIsolatedMessageBus(appId)
   return connectApplicationToMessageBus(globals[MESSAGE_BUS_KEY], {appId})
 }
 
 /**
- * Registers state topics on an isolated message bus.
+ * Registers or reseeds state topics, preserving existing ownership and sharing new topics by default.
  * @internal
  */
 export function registerStateTopics(
   target: MessageBus,
   topics: Partial<{[K in StateTopic]: ValueOf<K> | undefined}>,
+  options: {ownership?: 'same_app' | 'any_app'} = {},
 ): void {
   const registry = (target as InternalMessageBus)[MESSAGE_BUS_REGISTRY_KEY]
   const manifest: TopicManifest = Object.fromEntries(
     Object.entries(topics).map(([name, seed]) => [
       name,
-      {kind: 'state', ownership: {type: 'any_app'}, seed},
+      {
+        kind: 'state',
+        ownership: registry.topics.get(name)?.ownership ?? {
+          type: options.ownership ?? 'any_app',
+        },
+        seed,
+      },
     ]),
   )
   registerTopics(registry, manifest, {reseed: true})

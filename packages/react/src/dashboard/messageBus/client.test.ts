@@ -47,4 +47,14 @@ describe('dashboard message bus client', () => {
     expect(dashboard.isDashboardEnvironment()).toBe(true)
     expect(messageBus.connect).toHaveBeenCalledOnce()
   })
+
+  it('does not report a dashboard environment when connection fails', async () => {
+    messageBus.installed.mockReturnValue(true)
+    messageBus.connect.mockReturnValue(undefined)
+
+    const dashboard = await import('./client')
+
+    expect(dashboard.isDashboardEnvironment()).toBe(false)
+    expect(messageBus.connect).toHaveBeenCalledOnce()
+  })
 })
