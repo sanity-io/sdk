@@ -15,7 +15,7 @@ vi.mock('../../dashboard/messageBus/client', () => ({
 }))
 
 const localConfig: ApplicationConfig = {
-  appType: 'media-libraries',
+  appType: 'media-library',
   entry: 'http://localhost:3333',
   moduleId: 'configs/installation_config',
   version: 'local',
@@ -23,7 +23,7 @@ const localConfig: ApplicationConfig = {
 
 const applicationConfig: ApplicationConfig = {
   appId: 'application-1',
-  appType: 'media-libraries',
+  appType: 'media-library',
   entry: 'https://application-config.sanity.run',
   moduleId: 'configs/installation_config',
   version: '1',
@@ -38,7 +38,7 @@ describe('useApplicationConfig', () => {
     const {result, rerender} = renderHook(
       ({selector}: {selector: ApplicationConfigSelector}) =>
         useApplicationConfig(selector, {suspend: false}),
-      {initialProps: {selector: {appType: 'media-libraries'}}},
+      {initialProps: {selector: {appType: 'media-library'}}},
     )
 
     expectTypeOf(result.current).toEqualTypeOf<UseTopicResult<ApplicationConfig | null, false>>()
