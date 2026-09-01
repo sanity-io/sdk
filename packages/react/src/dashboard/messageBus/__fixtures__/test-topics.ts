@@ -13,6 +13,6 @@ declare module '../topics' {
       fullName: string
       tags: readonly string[]
     }>
-    'test.greet': EventTopicDef<{fullName: string}>
+    'test.greet': EventTopicDef<{fullName: string}, {salutation: string; language: string}>
   }
 }

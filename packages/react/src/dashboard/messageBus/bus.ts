@@ -366,6 +366,15 @@ function createReplyPromise(
   })
 }
 
+function createEmitResult<R>(awaitReply: () => Promise<R>): MessageBusEmitResult<R> {
+  return {
+    // oxlint-disable-next-line unicorn/no-thenable -- awaiting arms reply failure handling; fire-and-forget does not.
+    then: (onFulfilled, onRejected) => awaitReply().then(onFulfilled, onRejected),
+    catch: (onRejected) => awaitReply().then(undefined, onRejected),
+    finally: (onFinally) => awaitReply().finally(onFinally),
+  }
+}
+
 function emitEvent(
   registry: MessageBusRegistry,
   type: string,
@@ -388,12 +397,7 @@ function emitEvent(
       ...options,
       hadResponder,
     }))
-  return {
-    // oxlint-disable-next-line unicorn/no-thenable -- intentional PromiseLike: awaiting it arms the failure machinery; not awaiting is fire-and-forget.
-    then: (onFulfilled, onRejected) => awaitReply().then(onFulfilled, onRejected),
-    catch: (onRejected) => awaitReply().then(undefined, onRejected),
-    finally: (onFinally) => awaitReply().finally(onFinally),
-  }
+  return createEmitResult(awaitReply)
 }
 
 const isStateTopic = (registry: MessageBusRegistry, type: string): boolean =>
@@ -603,8 +607,8 @@ function topicAdapters(
   installedMigrations: ReadonlyMap<string, readonly TopicMigration[]>,
   applicationMigrations: ReadonlyMap<string, readonly TopicMigration[]>,
 ): {
-  toInstalled: (type: string, value: unknown) => unknown
-  toApplication: (type: string, value: unknown) => unknown
+  value: TopicAdapter
+  reply: TopicAdapter
 } {
   const installedVersions = topicVersions(installedMigrations)
   const applicationVersions = topicVersions(applicationMigrations)
@@ -615,12 +619,39 @@ function topicAdapters(
       ? applicationMigrations
       : installedMigrations
     ).get(type)
-  return {
+  const adapter = (
+    select: (step: TopicMigration) => TopicMigrationTransform | undefined,
+  ): TopicAdapter => ({
     toInstalled: (type, value) =>
-      applyChain(chainFor(type), value, applicationVersion(type), installedVersion(type)),
+      applyChain(chainFor(type), value, applicationVersion(type), installedVersion(type), select),
     toApplication: (type, value) =>
-      applyChain(chainFor(type), value, installedVersion(type), applicationVersion(type)),
+      applyChain(chainFor(type), value, installedVersion(type), applicationVersion(type), select),
+  })
+  return {
+    value: adapter((step) => step),
+    reply: adapter((step) => step.reply),
   }
+}
+
+type TopicAdapter = {
+  toInstalled: (type: string, value: unknown) => unknown
+  toApplication: (type: string, value: unknown) => unknown
+}
+
+type TopicMigrationTransform = Pick<TopicMigration, 'up' | 'down'>
+
+const identityMigration: TopicMigrationTransform = {
+  up: (value) => value,
+  down: (value) => value,
+}
+
+function transformFor(
+  steps: readonly TopicMigration[] | undefined,
+  version: number,
+  select: (step: TopicMigration) => TopicMigrationTransform | undefined,
+): TopicMigrationTransform {
+  const step = steps?.find((candidate) => candidate.from === version)
+  return (step ? select(step) : undefined) ?? identityMigration
 }
 
 function applyChain(
@@ -628,19 +659,18 @@ function applyChain(
   value: unknown,
   from: number,
   to: number,
+  select: (step: TopicMigration) => TopicMigrationTransform | undefined,
 ): unknown {
-  if (!steps || steps.length === 0 || from === to) return value
+  if (from === to) return value
 
   let current = value
   if (from < to) {
     for (let version = from; version < to; version++) {
-      const step = steps.find((candidate) => candidate.from === version)
-      if (step) current = step.up(current)
+      current = transformFor(steps, version, select).up(current)
     }
   } else {
     for (let version = from; version > to; version--) {
-      const step = steps.find((candidate) => candidate.from === version - 1)
-      if (step) current = step.down(current)
+      current = transformFor(steps, version - 1, select).down(current)
     }
   }
   return current
@@ -672,18 +702,27 @@ function mapStateSource(
 
 function adaptMessage(
   message: MessageBusMessage<unknown, unknown>,
-  downPayload: (value: unknown) => unknown,
+  payload: (value: unknown) => unknown,
+  reply: (value: unknown) => unknown,
 ): MessageBusMessage<unknown, unknown> {
-  // Request replies are versioned independently from event payloads.
   return {
     type: message.type,
-    payload: downPayload(message.payload),
+    payload: payload(message.payload),
     meta: message.meta,
-    reply: message.reply,
+    reply: (value) => message.reply(reply(value)),
     get signal() {
       return message.signal
     },
   }
+}
+
+function mapEmitResult(
+  result: MessageBusEmitResult<unknown> | undefined,
+  project: (value: unknown) => unknown,
+): MessageBusEmitResult<unknown> | undefined {
+  if (!result) return undefined
+  let projected: Promise<unknown> | undefined
+  return createEmitResult(() => (projected ??= Promise.resolve(result).then(project)))
 }
 
 function createFailedMessageBus(fail: () => never): MessageBus {
@@ -752,7 +791,7 @@ export function connectApplicationToMessageBus(
       throw error
     })
   }
-  const {toInstalled, toApplication} = topicAdapters(registry.migrations, applicationMigrations)
+  const adapters = topicAdapters(registry.migrations, applicationMigrations)
   const isState = (type: string) => isStateTopic(registry, type)
 
   // Reuse topic streams because React external-store snapshots require stable references.
@@ -761,9 +800,12 @@ export function connectApplicationToMessageBus(
 
   const api = {
     emit: (type: string, payload: unknown, options?: MessageBusEmitOptions) =>
-      emit(registry, type, toInstalled(type, payload), options, appId),
+      mapEmitResult(
+        emit(registry, type, adapters.value.toInstalled(type, payload), options, appId),
+        (value) => adapters.reply.toApplication(type, value),
+      ),
     query: (type: string, options?: MessageBusAbortOptions) =>
-      query(registry, type, options).then((value) => toApplication(type, value)),
+      query(registry, type, options).then((value) => adapters.value.toApplication(type, value)),
     subscribe: (type: string, handler?: (arg: never) => void, options?: MessageBusAbortOptions) => {
       if (!handler) {
         if (streamGeneration !== registry.generation) {
@@ -775,18 +817,25 @@ export function connectApplicationToMessageBus(
           const raw = subscribe(registry, type, undefined, options, appId)
           stream = isState(type)
             ? mapStateSource(raw as MessageBusStateSource<unknown>, (value) =>
-                toApplication(type, value),
+                adapters.value.toApplication(type, value),
               )
-            : (raw as Observable<unknown>).pipe(map((payload) => toApplication(type, payload)))
+            : (raw as Observable<unknown>).pipe(
+                map((payload) => adapters.value.toApplication(type, payload)),
+              )
           applicationStreams.set(type, stream)
         }
         return stream
       }
       const adapted = isState(type)
-        ? (value: unknown) => (handler as (value: unknown) => void)(toApplication(type, value))
+        ? (value: unknown) =>
+            (handler as (value: unknown) => void)(adapters.value.toApplication(type, value))
         : (message: MessageBusMessage<unknown, unknown>) =>
             (handler as (message: MessageBusMessage<unknown, unknown>) => void)(
-              adaptMessage(message, (value) => toApplication(type, value)),
+              adaptMessage(
+                message,
+                (value) => adapters.value.toApplication(type, value),
+                (value) => adapters.reply.toInstalled(type, value),
+              ),
             )
       return subscribe(registry, type, adapted as (arg: never) => void, options, appId)
     },

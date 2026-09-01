@@ -72,6 +72,15 @@ const greetMigrations: readonly TopicMigration[] = [
     to: 2,
     up: (value) => ({fullName: (value as {name: string}).name}),
     down: (value) => ({name: (value as {fullName: string}).fullName}),
+    reply: {
+      up: (value) => ({
+        salutation: (value as {greeting: string}).greeting,
+        language: 'en',
+      }),
+      down: (value) => ({
+        greeting: (value as {salutation: string}).salutation,
+      }),
+    },
   },
 ]
 
@@ -544,6 +553,57 @@ describe('compatibility', () => {
 
     expect(dashboardPayloads).toEqual([{fullName: 'Ada'}, {fullName: 'Grace'}])
     expect(applicationPayloads).toEqual([{name: 'Grace'}])
+  })
+
+  it('adapts event replies for an older emitter', async () => {
+    const dashboard = createRuntimeMessageBus('dashboard', {migrations: latestMigrations})
+    const application = connectApplicationToMessageBus(dashboard, {
+      appId: 'favorites',
+      migrations: new Map(),
+    })
+    dashboard.subscribe('test.greet', (message) =>
+      message.reply({salutation: `Hello ${message.payload.fullName}`, language: 'en'}),
+    )
+
+    await expect(application.emit('test.greet', {name: 'Ada'} as never)).resolves.toEqual({
+      greeting: 'Hello Ada',
+    })
+  })
+
+  it('adapts event replies from an older responder', async () => {
+    const dashboard = createRuntimeMessageBus('dashboard', {migrations: latestMigrations})
+    const application = connectApplicationToMessageBus(dashboard, {
+      appId: 'favorites',
+      migrations: new Map(),
+    })
+    application.subscribe('test.greet', (message) =>
+      message.reply({
+        greeting: `Hello ${(message.payload as unknown as {name: string}).name}`,
+      } as never),
+    )
+
+    await expect(dashboard.emit('test.greet', {fullName: 'Ada'})).resolves.toEqual({
+      salutation: 'Hello Ada',
+      language: 'en',
+    })
+  })
+
+  it('keeps migrated fire-and-forget replies lazy', () => {
+    vi.useFakeTimers()
+    const dashboard = createRuntimeMessageBus('dashboard', {migrations: latestMigrations})
+    const application = connectApplicationToMessageBus(dashboard, {
+      appId: 'favorites',
+      migrations: new Map(),
+    })
+    let responderSignal: AbortSignal | undefined
+    dashboard.subscribe('test.greet', (message) => {
+      responderSignal = message.signal
+    })
+
+    application.emit('test.greet', {name: 'Ada'} as never, {timeout: 1})
+    vi.advanceTimersByTime(1)
+
+    expect(responderSignal?.aborted).toBe(false)
   })
 
   it('returns a failed connection without replacing a conflicting manifest', () => {

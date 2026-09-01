@@ -241,10 +241,17 @@ export interface TopicMigration {
   readonly from: number
   /** The newer version. */
   readonly to: number
-  /** Converts an older value to the newer version. */
+  /** Converts an older state value or event payload to the newer version. */
   up(older: unknown): unknown
-  /** Converts a newer value to the older version. */
+  /** Converts a newer state value or event payload to the older version. */
   down(newer: unknown): unknown
+  /** Converts event replies between these versions. */
+  readonly reply?: {
+    /** Converts an older reply to the newer version. */
+    up(older: unknown): unknown
+    /** Converts a newer reply to the older version. */
+    down(newer: unknown): unknown
+  }
 }
 
 /**
