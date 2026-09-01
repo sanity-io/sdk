@@ -10,6 +10,7 @@ import {
   type Subscription,
 } from 'rxjs'
 
+import {createTopicCompatibility} from './topicCompatibility'
 import {
   DASHBOARD_TOPIC_MANIFEST,
   type EventTopic,
@@ -157,7 +158,7 @@ export interface MessageBus {
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
 const MESSAGE_BUS_PROTOCOL_KEY = Symbol.for('sanity.os.protocol')
 const MESSAGE_BUS_REGISTRY_KEY = Symbol.for('sanity.os.registry')
-const MESSAGE_BUS_REQUEST_KEY = Symbol.for('sanity.os.request')
+const MESSAGE_BUS_PENDING_REPLY_KEY = Symbol.for('sanity.os.request')
 
 const MESSAGE_BUS_PROTOCOL = 1
 
@@ -166,17 +167,17 @@ const DEFAULT_TIMEOUT_MS = 5000
 // Distinguishes an unpublished topic from a published `undefined` value.
 const NO_VALUE = Symbol.for('sanity.os.no-value')
 
-type Outcome =
+type ReplyOutcome =
   | {readonly ok: true; readonly value: unknown}
   | {readonly ok: false; readonly error: unknown}
 
-// Defers Promise creation until the request is awaited to preserve fire-and-forget emission.
-interface PendingRequest {
+// Defers Promise creation until the reply is awaited to preserve fire-and-forget emission.
+interface PendingReply {
   readonly responderAbort: AbortController
   readonly responderSignal: AbortSignal
   settled: boolean
-  capturedOutcome?: Outcome
-  deliver?: (outcome: Outcome) => void
+  outcomeBeforeAwait?: ReplyOutcome
+  settlePromise?: (outcome: ReplyOutcome) => void
   replyPromise?: Promise<unknown>
 }
 
@@ -209,7 +210,6 @@ function resolveStateSubject(registry: MessageBusRegistry, type: string): Behavi
   return subject
 }
 
-// Cache this source because React external-store snapshots require stable references.
 function toStateSource(
   values: Observable<unknown>,
   getCurrent: () => unknown,
@@ -228,6 +228,7 @@ function resolveStateSource(
   registry: MessageBusRegistry,
   type: string,
 ): MessageBusStateSource<unknown> {
+  // React external-store snapshots require the source reference to remain stable until reset.
   let source = registry.stateSources.get(type)
   if (!source) {
     const subject = resolveStateSubject(registry, type)
@@ -240,7 +241,10 @@ function resolveStateSource(
   return source
 }
 
-function validateTopics(registry: MessageBusRegistry, manifest: TopicManifest): void {
+function assertCompatibleTopicManifest(
+  registry: MessageBusRegistry,
+  manifest: TopicManifest,
+): void {
   for (const [type, entry] of Object.entries(manifest)) {
     const existing = registry.topics.get(type)
     if (existing && existing.kind !== entry.kind) {
@@ -255,12 +259,12 @@ function validateTopics(registry: MessageBusRegistry, manifest: TopicManifest): 
   }
 }
 
-function registerTopics(
+function mergeTopicManifest(
   registry: MessageBusRegistry,
   manifest: TopicManifest,
   {reseed = false}: {reseed?: boolean} = {},
 ): void {
-  validateTopics(registry, manifest)
+  assertCompatibleTopicManifest(registry, manifest)
   for (const [type, entry] of Object.entries(manifest)) {
     registry.topics.set(type, entry)
     if (entry.kind !== 'state') continue
@@ -291,75 +295,76 @@ function resolveEventSubject(
   return subject
 }
 
-function settle(request: PendingRequest, outcome: Outcome): void {
-  if (request.settled) return
-  request.settled = true
-  if (request.deliver) request.deliver(outcome)
-  else request.capturedOutcome = outcome
+function settleReply(reply: PendingReply, outcome: ReplyOutcome): void {
+  if (reply.settled) return
+  reply.settled = true
+  if (reply.settlePromise) reply.settlePromise(outcome)
+  else reply.outcomeBeforeAwait = outcome
 }
 
-function createMessage(
+function createEventMessage(
   appId: string,
   type: string,
   payload: unknown,
-  request: PendingRequest,
+  pendingReply: PendingReply,
 ): MessageBusMessage<unknown, unknown> {
   const message: MessageBusMessage<unknown, unknown> & {
-    [MESSAGE_BUS_REQUEST_KEY]?: PendingRequest
+    [MESSAGE_BUS_PENDING_REPLY_KEY]?: PendingReply
   } = {
     type: type as TopicName,
     payload,
     meta: {appId, timestamp: Date.now()},
     reply: (value) => {
-      if (request.settled) {
+      if (pendingReply.settled) {
         console.warn(
           `[sanity-sdk:message-bus] reply ignored for "${type}": no waiting caller or already replied`,
         )
         return
       }
-      settle(request, {ok: true, value})
+      settleReply(pendingReply, {ok: true, value})
     },
     get signal() {
-      return request.responderSignal
+      return pendingReply.responderSignal
     },
   }
 
-  message[MESSAGE_BUS_REQUEST_KEY] = request
+  message[MESSAGE_BUS_PENDING_REPLY_KEY] = pendingReply
   return message
 }
 
 function createReplyPromise(
-  request: PendingRequest,
-  options: MessageBusEmitOptions & {hadResponder: boolean},
+  pendingReply: PendingReply,
+  options: MessageBusEmitOptions & {hadResponderAtEmission: boolean},
 ): Promise<unknown> {
   return new Promise<unknown>((resolve, reject) => {
-    const deliver = (outcome: Outcome) =>
+    const settlePromise = (outcome: ReplyOutcome) =>
       outcome.ok ? resolve(outcome.value) : reject(outcome.error)
 
-    if (request.capturedOutcome) {
-      request.responderAbort.abort()
-      deliver(request.capturedOutcome)
+    if (pendingReply.outcomeBeforeAwait) {
+      pendingReply.responderAbort.abort()
+      settlePromise(pendingReply.outcomeBeforeAwait)
       return
     }
-    if (!options.hadResponder) {
+    if (!options.hadResponderAtEmission) {
       reject(new MessageBusError('NO_RESPONDER'))
       return
     }
 
     const timeoutMs = options.timeout === undefined ? DEFAULT_TIMEOUT_MS : options.timeout
     let timer: ReturnType<typeof setTimeout> | undefined
-    const onAbort = () => settle(request, {ok: false, error: new MessageBusError('ABORTED')})
+    const onAbort = () =>
+      settleReply(pendingReply, {ok: false, error: new MessageBusError('ABORTED')})
 
-    request.deliver = (outcome) => {
+    pendingReply.settlePromise = (outcome) => {
       if (timer !== undefined) clearTimeout(timer)
       options.signal?.removeEventListener('abort', onAbort)
-      request.responderAbort.abort()
-      deliver(outcome)
+      pendingReply.responderAbort.abort()
+      settlePromise(outcome)
     }
 
     if (timeoutMs !== null) {
       timer = setTimeout(
-        () => settle(request, {ok: false, error: new MessageBusError('TIMEOUT')}),
+        () => settleReply(pendingReply, {ok: false, error: new MessageBusError('TIMEOUT')}),
         timeoutMs,
       )
     }
@@ -370,7 +375,7 @@ function createReplyPromise(
   })
 }
 
-function createEmitResult<R>(awaitReply: () => Promise<R>): MessageBusEmitResult<R> {
+function createLazyReply<R>(awaitReply: () => Promise<R>): MessageBusEmitResult<R> {
   return {
     // oxlint-disable-next-line unicorn/no-thenable -- awaiting arms reply failure handling; fire-and-forget does not.
     then: (onFulfilled, onRejected) => awaitReply().then(onFulfilled, onRejected),
@@ -386,28 +391,28 @@ function emitEvent(
   options: MessageBusEmitOptions | undefined,
   appId: string,
 ): MessageBusEmitResult<unknown> {
-  const hadResponder = (registry.responderCounts.get(type) ?? 0) > 0
+  const hadResponderAtEmission = (registry.responderCounts.get(type) ?? 0) > 0
   const responderAbort = new AbortController()
-  const request: PendingRequest = {
+  const pendingReply: PendingReply = {
     responderAbort,
     responderSignal: scopeSignal(options?.signal, responderAbort.signal),
     settled: false,
   }
 
-  resolveEventSubject(registry, type).next(createMessage(appId, type, payload, request))
+  resolveEventSubject(registry, type).next(createEventMessage(appId, type, payload, pendingReply))
 
   const awaitReply = () =>
-    (request.replyPromise ??= createReplyPromise(request, {
+    (pendingReply.replyPromise ??= createReplyPromise(pendingReply, {
       ...options,
-      hadResponder,
+      hadResponderAtEmission,
     }))
-  return createEmitResult(awaitReply)
+  return createLazyReply(awaitReply)
 }
 
 const isStateTopic = (registry: MessageBusRegistry, type: string): boolean =>
   registry.topics.get(type)?.kind === 'state'
 
-const isOwner = (
+const canPublishOrRespond = (
   registry: MessageBusRegistry,
   ownership: TopicManifest[string]['ownership'],
   appId: string,
@@ -422,7 +427,7 @@ function emit(
 ): MessageBusEmitResult<unknown> | undefined {
   const topic = registry.topics.get(type)
   if (topic?.kind === 'state') {
-    if (!isOwner(registry, topic.ownership, appId)) {
+    if (!canPublishOrRespond(registry, topic.ownership, appId)) {
       throw new MessageBusError(
         'OWNERSHIP_MISMATCH',
         `Cannot emit state topic "${type}" from app "${appId}". Only the app that owns this topic can publish it. Other apps can read it with query() or subscribe().`,
@@ -497,12 +502,14 @@ function scopeSignal(signal: AbortSignal | undefined, lifecycle: AbortSignal): A
 
 function invokeResponder(
   handler: (message: MessageBusMessage<unknown, unknown>) => unknown,
-  message: MessageBusMessage<unknown, unknown> & {[MESSAGE_BUS_REQUEST_KEY]?: PendingRequest},
+  message: MessageBusMessage<unknown, unknown> & {
+    [MESSAGE_BUS_PENDING_REPLY_KEY]?: PendingReply
+  },
 ): void {
-  const request = message[MESSAGE_BUS_REQUEST_KEY]
+  const pendingReply = message[MESSAGE_BUS_PENDING_REPLY_KEY]
   const fail = (error: unknown) => {
-    if (request) {
-      settle(request, {
+    if (pendingReply) {
+      settleReply(pendingReply, {
         ok: false,
         error: new MessageBusError('HANDLER_THREW', undefined, {
           cause: error,
@@ -542,7 +549,7 @@ function subscribe(
   }
 
   const topic = registry.topics.get(type)
-  if (topic && !isOwner(registry, topic.ownership, appId)) {
+  if (topic && !canPublishOrRespond(registry, topic.ownership, appId)) {
     throw new MessageBusError(
       'OWNERSHIP_MISMATCH',
       `Cannot register a handler for event topic "${type}" from app "${appId}". Only the app that owns this topic can respond to it. Other apps can send it with emit().`,
@@ -586,9 +593,9 @@ export function createIsolatedMessageBus(
     generation: 0,
   }
 
-  registerTopics(registry, DASHBOARD_TOPIC_MANIFEST)
+  mergeTopicManifest(registry, DASHBOARD_TOPIC_MANIFEST)
 
-  const api = {
+  const messageBus = {
     emit: (type: string, payload: unknown, options?: MessageBusEmitOptions) =>
       emit(registry, type, payload, options, registry.appId),
     query: (type: string, options?: MessageBusAbortOptions) => query(registry, type, options),
@@ -596,95 +603,10 @@ export function createIsolatedMessageBus(
       subscribe(registry, type, handler, options, registry.appId),
   }
 
-  const instance = api as unknown as InternalMessageBus
+  const instance = messageBus as unknown as InternalMessageBus
   instance[MESSAGE_BUS_REGISTRY_KEY] = registry
   instance[MESSAGE_BUS_PROTOCOL_KEY] = MESSAGE_BUS_PROTOCOL
   return instance
-}
-
-function topicVersions(
-  migrations: ReadonlyMap<string, readonly TopicMigration[]>,
-): Map<string, number> {
-  const versions = new Map<string, number>()
-  for (const [topic, steps] of migrations) {
-    let version = 1
-    for (const step of steps) if (step.to > version) version = step.to
-    versions.set(topic, version)
-  }
-  return versions
-}
-
-function topicAdapters(
-  installedMigrations: ReadonlyMap<string, readonly TopicMigration[]>,
-  applicationMigrations: ReadonlyMap<string, readonly TopicMigration[]>,
-): {
-  value: TopicAdapter
-  reply: TopicAdapter
-} {
-  const installedVersions = topicVersions(installedMigrations)
-  const applicationVersions = topicVersions(applicationMigrations)
-  const applicationVersion = (type: string) => applicationVersions.get(type) ?? 1
-  const installedVersion = (type: string) => installedVersions.get(type) ?? 1
-  const chainFor = (type: string) =>
-    (applicationVersion(type) > installedVersion(type)
-      ? applicationMigrations
-      : installedMigrations
-    ).get(type)
-  const adapter = (
-    select: (step: TopicMigration) => TopicMigrationTransform | undefined,
-  ): TopicAdapter => ({
-    toInstalled: (type, value) =>
-      applyChain(chainFor(type), value, applicationVersion(type), installedVersion(type), select),
-    toApplication: (type, value) =>
-      applyChain(chainFor(type), value, installedVersion(type), applicationVersion(type), select),
-  })
-  return {
-    value: adapter((step) => step),
-    reply: adapter((step) => step.reply),
-  }
-}
-
-type TopicAdapter = {
-  toInstalled: (type: string, value: unknown) => unknown
-  toApplication: (type: string, value: unknown) => unknown
-}
-
-type TopicMigrationTransform = Pick<TopicMigration, 'up' | 'down'>
-
-const identityMigration: TopicMigrationTransform = {
-  up: (value) => value,
-  down: (value) => value,
-}
-
-function transformFor(
-  steps: readonly TopicMigration[] | undefined,
-  version: number,
-  select: (step: TopicMigration) => TopicMigrationTransform | undefined,
-): TopicMigrationTransform {
-  const step = steps?.find((candidate) => candidate.from === version)
-  return (step ? select(step) : undefined) ?? identityMigration
-}
-
-function applyChain(
-  steps: readonly TopicMigration[] | undefined,
-  value: unknown,
-  from: number,
-  to: number,
-  select: (step: TopicMigration) => TopicMigrationTransform | undefined,
-): unknown {
-  if (from === to) return value
-
-  let current = value
-  if (from < to) {
-    for (let version = from; version < to; version++) {
-      current = transformFor(steps, version, select).up(current)
-    }
-  } else {
-    for (let version = from; version > to; version--) {
-      current = transformFor(steps, version - 1, select).down(current)
-    }
-  }
-  return current
 }
 
 // Cache projections by input reference to keep state snapshots stable.
@@ -711,7 +633,7 @@ function mapStateSource(
   return toStateSource(source.pipe(map(project)), projectCurrent(source.getCurrent, project))
 }
 
-function adaptMessage(
+function migrateEventMessage(
   message: MessageBusMessage<unknown, unknown>,
   payload: (value: unknown) => unknown,
   reply: (value: unknown) => unknown,
@@ -727,20 +649,20 @@ function adaptMessage(
   }
 }
 
-function mapEmitResult(
+function migrateEventReply(
   result: MessageBusEmitResult<unknown> | undefined,
   project: (value: unknown) => unknown,
 ): MessageBusEmitResult<unknown> | undefined {
   if (!result) return undefined
   let projected: Promise<unknown> | undefined
-  return createEmitResult(() => (projected ??= Promise.resolve(result).then(project)))
+  return createLazyReply(() => (projected ??= Promise.resolve(result).then(project)))
 }
 
-function createFailedMessageBus(fail: () => never): MessageBus {
+function createRejectedConnection(throwConnectionError: () => never): MessageBus {
   return {
-    emit: fail,
-    query: fail,
-    subscribe: fail,
+    emit: throwConnectionError,
+    query: throwConnectionError,
+    subscribe: throwConnectionError,
   } as unknown as MessageBus
 }
 
@@ -773,7 +695,7 @@ export function connectApplicationToMessageBus(
     console.error(
       `[sanity-sdk:message-bus] protocol mismatch for "${appId}": installed ${String(installedProtocol)}, this copy speaks ${MESSAGE_BUS_PROTOCOL}`,
     )
-    return createFailedMessageBus(() => {
+    return createRejectedConnection(() => {
       throw new MessageBusError(
         'PROTOCOL_MISMATCH',
         `installed message bus speaks protocol ${String(installedProtocol)}, this copy speaks ${MESSAGE_BUS_PROTOCOL}`,
@@ -784,7 +706,7 @@ export function connectApplicationToMessageBus(
   const registry = (installedMessageBus as Partial<InternalMessageBus>)[MESSAGE_BUS_REGISTRY_KEY]
   if (!registry) {
     console.error(`[sanity-sdk:message-bus] incompatible message bus for "${appId}"`)
-    return createFailedMessageBus(() => {
+    return createRejectedConnection(() => {
       throw new MessageBusError(
         'PROTOCOL_MISMATCH',
         'installed message bus does not expose a compatible registry',
@@ -795,28 +717,30 @@ export function connectApplicationToMessageBus(
   const applicationMigrations = config.migrations ?? bundledMigrations()
 
   try {
-    registerTopics(registry, DASHBOARD_TOPIC_MANIFEST)
+    mergeTopicManifest(registry, DASHBOARD_TOPIC_MANIFEST)
   } catch (error) {
     console.error(`[sanity-sdk:message-bus] topic manifest conflict for "${appId}"`, {error})
-    return createFailedMessageBus(() => {
+    return createRejectedConnection(() => {
       throw error
     })
   }
-  const adapters = topicAdapters(registry.migrations, applicationMigrations)
+  const compatibility = createTopicCompatibility(registry.migrations, applicationMigrations)
   const isState = (type: string) => isStateTopic(registry, type)
 
   // Reuse topic streams because React external-store snapshots require stable references.
   const applicationStreams = new Map<string, MessageBusStateSource<unknown> | Observable<unknown>>()
   let streamGeneration = registry.generation
 
-  const api = {
+  const connection = {
     emit: (type: string, payload: unknown, options?: MessageBusEmitOptions) =>
-      mapEmitResult(
-        emit(registry, type, adapters.value.toInstalled(type, payload), options, appId),
-        (value) => adapters.reply.toApplication(type, value),
+      migrateEventReply(
+        emit(registry, type, compatibility.toInstalledEmission(type, payload), options, appId),
+        (value) => compatibility.toApplicationEventReply(type, value),
       ),
     query: (type: string, options?: MessageBusAbortOptions) =>
-      query(registry, type, options).then((value) => adapters.value.toApplication(type, value)),
+      query(registry, type, options).then((value) =>
+        compatibility.toApplicationStateValue(type, value),
+      ),
     subscribe: (type: string, handler?: (arg: never) => void, options?: MessageBusAbortOptions) => {
       if (!handler) {
         if (streamGeneration !== registry.generation) {
@@ -825,34 +749,36 @@ export function connectApplicationToMessageBus(
         }
         let stream = applicationStreams.get(type)
         if (!stream) {
-          const raw = subscribe(registry, type, undefined, options, appId)
+          const installedSource = subscribe(registry, type, undefined, options, appId)
           stream = isState(type)
-            ? mapStateSource(raw as MessageBusStateSource<unknown>, (value) =>
-                adapters.value.toApplication(type, value),
+            ? mapStateSource(installedSource as MessageBusStateSource<unknown>, (value) =>
+                compatibility.toApplicationStateValue(type, value),
               )
-            : (raw as Observable<unknown>).pipe(
-                map((payload) => adapters.value.toApplication(type, payload)),
+            : (installedSource as Observable<unknown>).pipe(
+                map((payload) => compatibility.toApplicationEventPayload(type, payload)),
               )
           applicationStreams.set(type, stream)
         }
         return stream
       }
-      const adapted = isState(type)
+      const applicationHandler = isState(type)
         ? (value: unknown) =>
-            (handler as (value: unknown) => void)(adapters.value.toApplication(type, value))
+            (handler as (value: unknown) => void)(
+              compatibility.toApplicationStateValue(type, value),
+            )
         : (message: MessageBusMessage<unknown, unknown>) =>
             (handler as (message: MessageBusMessage<unknown, unknown>) => void)(
-              adaptMessage(
+              migrateEventMessage(
                 message,
-                (value) => adapters.value.toApplication(type, value),
-                (value) => adapters.reply.toInstalled(type, value),
+                (value) => compatibility.toApplicationEventPayload(type, value),
+                (value) => compatibility.toInstalledEventReply(type, value),
               ),
             )
-      return subscribe(registry, type, adapted as (arg: never) => void, options, appId)
+      return subscribe(registry, type, applicationHandler as (arg: never) => void, options, appId)
     },
   }
 
-  const instance = api as unknown as InternalMessageBus
+  const instance = connection as unknown as InternalMessageBus
   instance[MESSAGE_BUS_REGISTRY_KEY] = registry
   instance[MESSAGE_BUS_PROTOCOL_KEY] = MESSAGE_BUS_PROTOCOL
   return instance
@@ -870,7 +796,7 @@ function reset(registry: MessageBusRegistry): void {
   registry.responderCounts.clear()
   registry.resetAbort = new AbortController()
   registry.generation += 1
-  registerTopics(registry, DASHBOARD_TOPIC_MANIFEST)
+  mergeTopicManifest(registry, DASHBOARD_TOPIC_MANIFEST)
 }
 
 declare const __SANITY_APP_ID__: string | undefined
@@ -973,5 +899,5 @@ export function registerStateTopics(
       },
     ]),
   )
-  registerTopics(registry, manifest, {reseed: true})
+  mergeTopicManifest(registry, manifest, {reseed: true})
 }
