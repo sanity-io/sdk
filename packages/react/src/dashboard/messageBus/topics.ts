@@ -19,7 +19,7 @@ export interface RemoteModuleRef {
  * Application types that can receive configuration modules.
  * @public
  */
-export type ApplicationConfigAppType = 'media-libraries'
+export type ApplicationConfigAppType = 'media-library'
 
 /**
  * Identifies a configuration module for an application or application type.
