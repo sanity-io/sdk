@@ -5,6 +5,7 @@ import {
   type SanityDocument,
 } from '@sanity/types'
 
+import {randomUuid} from '../utils/ids'
 import {
   dec,
   diffMatchPatch,
@@ -63,8 +64,8 @@ const patchOperations = {
  * [- source](https://www.sanity.io/docs/http-mutations#c732f27330a4)
  */
 export function getId(id?: string): string {
-  if (!id || typeof id !== 'string') return crypto.randomUUID()
-  if (id.endsWith('.')) return `${id}${crypto.randomUUID()}`
+  if (!id || typeof id !== 'string') return randomUuid()
+  if (id.endsWith('.')) return `${id}${randomUuid()}`
   return id
 }
 

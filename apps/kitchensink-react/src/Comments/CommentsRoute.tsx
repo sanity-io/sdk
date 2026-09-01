@@ -1,3 +1,4 @@
+import {randomUuid} from '@sanity/sdk/_internal'
 import {
   type Comment,
   type CommentMessage,
@@ -70,10 +71,10 @@ function toMessage(text: string): CommentMessage {
   return [
     {
       _type: 'block',
-      _key: crypto.randomUUID(),
+      _key: randomUuid(),
       style: 'normal',
       markDefs: [],
-      children: [{_type: 'span', _key: crypto.randomUUID(), text, marks: []}],
+      children: [{_type: 'span', _key: randomUuid(), text, marks: []}],
     },
   ]
 }

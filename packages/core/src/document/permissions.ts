@@ -5,6 +5,7 @@ import {createSelector} from 'reselect'
 
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type SelectorContext} from '../store/createStateSourceAction'
+import {randomId} from '../utils/ids'
 import {MultiKeyWeakMap} from '../utils/MultiKeyWeakMap'
 import {type DocumentAction} from './actions'
 import {ActionError, PermissionActionError, processActions} from './processActions/processActions'
@@ -190,7 +191,7 @@ const _calculatePermissions = createSelector(
     try {
       processActions({
         actions,
-        transactionId: crypto.randomUUID(),
+        transactionId: randomId(16),
         working: documents,
         base: documents,
         timestamp,
