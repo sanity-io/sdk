@@ -22,7 +22,15 @@ export {
   type AgentResourceContextOptions,
   useAgentResourceContext,
 } from '../hooks/dashboard/useAgentResourceContext'
+export {useApplication} from '../hooks/dashboard/useApplication'
 export {useApplicationForegroundId} from '../hooks/dashboard/useApplicationForegroundId'
+export {
+  type Application,
+  type RemoteModuleRef,
+  useApplications,
+  type View,
+  type WebWorker,
+} from '../hooks/dashboard/useApplications'
 export {useNavigate} from '../hooks/dashboard/useNavigate'
 export {
   type NavigateToStudioResult,
