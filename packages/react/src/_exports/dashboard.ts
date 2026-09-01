@@ -26,7 +26,6 @@ export {useApplication} from '../hooks/dashboard/useApplication'
 export {useApplicationForegroundId} from '../hooks/dashboard/useApplicationForegroundId'
 export {
   type Application,
-  type RemoteModuleRef,
   useApplications,
   type View,
   type WebWorker,

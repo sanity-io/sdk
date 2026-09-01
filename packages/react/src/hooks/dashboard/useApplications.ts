@@ -1,18 +1,8 @@
 import {type ApplicationBase, type ApplicationInterface} from '@sanity/sdk'
 import {useMemo} from 'react'
 
-import {type ValueOf} from '../../dashboard/messageBus/topics'
+import {type RemoteModuleRef, type ValueOf} from '../../dashboard/messageBus/topics'
 import {useTopic, type UseTopicOptions, type UseTopicResult} from './useTopic'
-
-/**
- * Identifies a module federation expose and the manifest that serves it.
- * @public
- */
-export interface RemoteModuleRef {
-  readonly entry: string
-  readonly moduleId: string
-  readonly version: string
-}
 
 type DashboardInterfaceBase = Omit<ApplicationInterface, 'metadata' | 'type'>
 type DashboardApplicationInterface = DashboardInterfaceBase &
