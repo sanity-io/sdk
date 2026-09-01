@@ -11,7 +11,7 @@ overrides:
 onlyBuiltDependencies:
   - esbuild
 
-minimumReleaseAge: 4320
+minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
   - '@portabletext/*'
