@@ -5,6 +5,9 @@ packages:
   - apps/*
   - '@repo/package.config'
 
+overrides:
+  '@babel/types': 7.29.7
+
 onlyBuiltDependencies:
   - esbuild
 
@@ -48,9 +51,9 @@ catalog:
   groq-js: '^2.0.0'
   lodash-es: '^4.18.1'
   oxfmt: '^0.58.0'
-  react: '^19.2.7'
+  react: '^19.2.8'
   react-compiler-runtime: '^1.0.0'
-  react-dom: '^19.2.7'
+  react-dom: '^19.2.8'
   react-error-boundary: '^6.1.2'
   rimraf: '^6.0.1'
   rolldown: '^1.2.3'
