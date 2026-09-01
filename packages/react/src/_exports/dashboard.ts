@@ -2,6 +2,8 @@ export {DashboardTokenRefreshProvider as TokenRefreshProvider} from '../context/
 export type {
   ConnectMessageBusOptions,
   MessageBus,
+  MessageBusEmitOptions,
+  MessageBusEmitResult,
   MessageBusStateSource,
 } from '../dashboard/messageBus/bus'
 export {connectMessageBus, resetMessageBus} from '../dashboard/messageBus/bus'
@@ -9,6 +11,7 @@ export {MessageBusError} from '../dashboard/messageBus/bus'
 export type {
   ApplicationConfig,
   ApplicationConfigAppType,
+  EventTopic,
   NavigationLocation,
   NavigationTarget,
   PayloadOf,
@@ -30,6 +33,7 @@ export {
   type View,
   type WebWorker,
 } from '../hooks/dashboard/useApplications'
+export {useEmit} from '../hooks/dashboard/useEmit'
 export {useNavigate} from '../hooks/dashboard/useNavigate'
 export {
   type NavigateToStudioResult,
