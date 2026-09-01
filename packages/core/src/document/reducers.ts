@@ -24,6 +24,28 @@ const EMPTY_REVISIONS: NonNullable<Required<DocumentState['unverifiedRevisions']
  */
 const MAX_RECENT_OWN_TRANSACTION_IDS = 50
 
+/**
+ * The slice of the document store the reducers in this file operate on. Each
+ * reducer takes the current state and returns the next one; `documentStore.ts`
+ * drives them from an observable of state.
+ *
+ * A transaction advances one stage at a time:
+ *
+ * 1. `queued`, waiting on grants and on every document it touches to load.
+ * 2. `applied`, written into `documentStates[id].local` so the user sees it,
+ *    and re-applied on top of remote changes until it leaves.
+ * 3. `outgoing`, in flight to Content Lake. Only one exists at a time; it is
+ *    cleared on ack and reverted if the request fails.
+ *
+ * A reducer that cannot advance returns `prev` unchanged instead of failing,
+ * because the store re-runs it on the next state change.
+ *
+ * Document states are evicted once nothing needs them, which is what most of
+ * the bookkeeping here is for. Two things hold one open: a subscription ID,
+ * held either by a reader (`manageSubscriberIds`) or by a transaction that
+ * touches the document, and an unverified revision, which keeps a document
+ * alive while its own listener echo is still expected.
+ */
 export type SyncTransactionState = Pick<
   DocumentStoreState,
   'queued' | 'applied' | 'documentStates' | 'outgoing' | 'grants' | 'identity'
@@ -107,16 +129,16 @@ export interface QueuedTransaction {
 
 /**
  * Represents a transaction that has been applied locally but not yet
- * transitioned to outgoing. These transactions are visible to the
- * user but may be rebased upon a new working document set. Applied transactions
- * also contain the resulting `outgoingActions` that will be submitted to
- * Content Lake. These `outgoingActions` depend on the state of the working
- * documents so they are recomputed on rebase and are only relevant to applied
- * actions (we cannot compute `outgoingActions` for queued transactions because
- * we haven't resolved the set of documents the actions are dependent on yet).
+ * transitioned to outgoing. These transactions are visible to the user but may
+ * be rebased upon a new working document set.
  *
- * In order to support better conflict resolution, the original `previous` set
- * is saved as the `base` set.
+ * An applied transaction also carries the `outgoingActions` that will be
+ * submitted to Content Lake. Those depend on the state of the working
+ * documents, so they are recomputed on rebase. Queued transactions have none,
+ * because the set of documents their actions depend on is not resolved yet.
+ *
+ * The original `previous` set is saved as the `base` set to support better
+ * conflict resolution.
  */
 export interface AppliedTransaction extends QueuedTransaction {
   /**
@@ -130,10 +152,9 @@ export interface AppliedTransaction extends QueuedTransaction {
   previous: DocumentSet
 
   /**
-   * the original `previous` document set captured when this action was
-   * originally applied. this is used as a reference point to do a 3-way merge
-   * if this applied transaction ever needs to be reapplied on a different
-   * set of documents.
+   * the `previous` document set captured the first time this action was
+   * applied. serves as the reference point for a 3-way merge if this applied
+   * transaction is ever reapplied on a different set of documents.
    */
   base: DocumentSet
 
@@ -156,16 +177,15 @@ export interface AppliedTransaction extends QueuedTransaction {
 
   /**
    * similar to `outgoingActions` but comprised of mutations instead of actions.
-   * Useful for debugging, and is also used by liveEdit documents to send mutations,
-   * since they can't use the Actions API which is pretty dependent on the draft model.
+   * Useful for debugging, and also sent by liveEdit documents, which can't use
+   * the Actions API because it depends on the draft model.
    */
   outgoingMutations: Mutation[]
 }
 
 /**
  * Represents a set of applied transactions batched into a single outgoing
- * transaction. An outgoing transaction is the result of batching many applied
- * actions. An outgoing transaction may be reverted locally if the server
+ * transaction. An outgoing transaction may be reverted locally if the server
  * does not accept it.
  */
 export interface OutgoingTransaction extends AppliedTransaction {
@@ -180,6 +200,16 @@ export interface UnverifiedDocumentRevision {
   timestamp: string
 }
 
+/**
+ * Appends a transaction to `queued` and registers its transaction ID as a
+ * subscription on every document it touches.
+ *
+ * That subscription is what keeps those document states alive while the
+ * transaction is in flight, even after every reader has unsubscribed. It is
+ * released by `removeQueuedTransaction` if the transaction never applies, and
+ * by `cleanupOutgoingTransaction` or `revertOutgoingTransaction` once it has
+ * been submitted.
+ */
 export function queueTransaction(
   prev: SyncTransactionState,
   transaction: QueuedTransaction,
@@ -214,9 +244,21 @@ export function removeQueuedTransaction(
   }
 }
 
+/**
+ * Applies the head of `queued` to the local documents and moves it to
+ * `applied`.
+ *
+ * Returns `prev` unchanged when the transaction is not ready to apply: grants
+ * have not loaded, or one of its documents is still being fetched.
+ *
+ * @throws ActionError when the transaction cannot be applied. The store catches
+ * this, drops the transaction from `queued`, and reports it to the caller.
+ */
 export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTransactionState {
   const queued = prev.queued.at(0)
   if (!queued) return prev
+  // grants come from the dataset ACL and load asynchronously; `processActions`
+  // needs them to permission-check every action
   if (!prev.grants) return prev
 
   const ids = getDocumentIdsFromHandleLikes(queued.actions)
@@ -262,6 +304,16 @@ export function applyFirstQueuedTransaction(prev: SyncTransactionState): SyncTra
   }
 }
 
+/**
+ * Collapses the leading run of batchable transactions in `applied` into a
+ * single outgoing transaction. Returns `undefined` when there is nothing to
+ * send.
+ *
+ * Only single-action `document.edit` transactions batch together, and only with
+ * edits of the same `liveEdit` kind, since liveEdit edits go to the mutations
+ * API and everything else goes to the actions API. Anything else is returned on
+ * its own with `disableBatching` set.
+ */
 export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
   | OutgoingTransaction
   | undefined {
@@ -335,6 +387,13 @@ export function batchAppliedTransactions([curr, ...rest]: AppliedTransaction[]):
   }
 }
 
+/**
+ * Moves the next batch of applied transactions into `outgoing` and records an
+ * unverified revision for every document that batch changed.
+ *
+ * Returns `prev` unchanged while a transaction is already in flight; only one
+ * outgoing transaction exists at a time.
+ */
 export function transitionAppliedTransactionsToOutgoing(
   prev: SyncTransactionState,
 ): SyncTransactionState {
@@ -357,6 +416,10 @@ export function transitionAppliedTransactionsToOutgoing(
     applied: prev.applied.filter((i) => !consumedTransactions.includes(i.transactionId)),
     documentStates: Object.entries(previousRevs).reduce(
       (acc, [documentId, previousRev]) => {
+        // `processMutations` stamps `_rev` with the transaction ID, so an
+        // unchanged `_rev` means this transaction only read the document. no
+        // echo will mention it, and a revision that can never be verified would
+        // pin the document until the retention window expires
         if (working[documentId]?._rev === previousRev) return acc
 
         const documentState = prev.documentStates[documentId]
@@ -387,6 +450,10 @@ export function transitionAppliedTransactionsToOutgoing(
   }
 }
 
+/**
+ * Clears `outgoing` once the server has accepted it, releasing the
+ * subscriptions its batched transactions held on each document.
+ */
 export function cleanupOutgoingTransaction(prev: SyncTransactionState): SyncTransactionState {
   const {outgoing} = prev
   if (!outgoing) return prev
@@ -399,8 +466,8 @@ export function cleanupOutgoingTransaction(prev: SyncTransactionState): SyncTran
     }
   }
 
-  // every ack is also when a previously retained document's echo may have
-  // stopped being expected, so re-make that eviction decision here
+  // an ack is another point at which a retained document may have stopped
+  // expecting its echo, so re-make that eviction decision here
   return {
     ...next,
     outgoing: undefined,
@@ -408,6 +475,13 @@ export function cleanupOutgoingTransaction(prev: SyncTransactionState): SyncTran
   }
 }
 
+/**
+ * Discards `outgoing` after its request failed, then rebuilds the applied
+ * transactions and each document's `local` from `remote`.
+ *
+ * Applied transactions that no longer process are dropped without an event,
+ * unlike in `applyRemoteDocument`: this is already the failure path.
+ */
 export function revertOutgoingTransaction(prev: SyncTransactionState): SyncTransactionState {
   if (!prev.grants) return prev
 
@@ -506,6 +580,17 @@ function extractPatchOperations(
   })
 }
 
+/**
+ * Folds a document received from the listener into the store, taking one of
+ * three paths: the document has no state left, so the event is dropped; the
+ * event is the echo of one of our own transactions arriving on the revision we
+ * predicted, so `remote` advances without a rebase; or the event is unexpected,
+ * so every applied transaction is re-applied on top of it.
+ *
+ * Emits `remote-patches` for consumers that track their own copy of the
+ * document, and `rebase-error` for each applied transaction that no longer
+ * applies.
+ */
 export function applyRemoteDocument(
   prev: SyncTransactionState,
   {document, documentId, previousRev, revision, timestamp, type, mutations}: RemoteDocument,
@@ -612,19 +697,17 @@ export function applyRemoteDocument(
     }
   }
 
-  // if we got this far, this means that we could not fast-forward this revision
-  // for this document. now we can rebase our local changes (if any) on top of
-  // this new base from remote. in order to do that we grab the set of documents
-  // captured before the earliest local transaction
+  // this revision could not be fast-forwarded, so rebase our local changes (if
+  // any) on top of this new base from remote, starting from the set of
+  // documents captured before the earliest local transaction
   const previous = prev.applied.at(0)?.previous
   // our initial working set now is the state of the documents before any of our
   // local transactions plus the newly updated document from remote
   let working = {...previous, [documentId]: document}
   const nextApplied: AppliedTransaction[] = []
 
-  // now we can iterate through our applied (but not yet committed) transactions
-  // starting with the updated working set and re-apply each transaction in
-  // order creating a new set of applied transactions as we go.
+  // re-apply our applied (but not yet committed) transactions in order onto the
+  // updated working set, building a new set of applied transactions.
   //
   // NOTE: we don't want to rebase over the outgoing transaction because that
   // transaction is already on its way to the server. if an outgoing transaction
@@ -634,9 +717,10 @@ export function applyRemoteDocument(
     try {
       const next = processActions({...curr, working, grants: prev.grants, identity: prev.identity})
       working = next.working
-      // the `base` set from the original applied transaction gets put back into
-      // the updated transaction as-is to preserve the intended base for a
-      // 3-way merge
+      // next includes an updated `previous` set and `working` set and updates
+      // the `outgoingActions` and `outgoingMutations`. the `base` set from the
+      // original applied transaction gets put back into the updated transaction
+      // as-is to preserve the intended base for a 3-way merge
       nextApplied.push({...curr, ...next})
     } catch (error) {
       // if processing the action ever throws a related error, we can skip this
@@ -655,7 +739,7 @@ export function applyRemoteDocument(
     }
   }
 
-  // when the recompute lands on a value deep-equal to the current local
+  // when the recompute produces a value deep-equal to the current local
   // (the common case for echoes of our own transactions), keep the previous
   // reference so subscribers don't re-render for an identical value
   const nextLocal = working[documentId]
@@ -779,6 +863,11 @@ function evictOrphanedDocumentStates(
   return next
 }
 
+/**
+ * Registers one subscription ID against every document the given handles
+ * resolve to. The returned function releases it after
+ * `DOCUMENT_STATE_CLEAR_DELAY`.
+ */
 export function manageSubscriberIds(
   {state}: StoreContext<SyncTransactionState>,
   handles: DocumentHandleLike[],

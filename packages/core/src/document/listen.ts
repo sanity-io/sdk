@@ -133,8 +133,9 @@ function discardChainTo(chain: MutationEvent[], revision: string | undefined): M
 }
 
 /**
- * Emits listener events in sequence, buffering mutation events that don't line
- * up in [previousRev, resultRev] pairs and re-checking for an unbroken chain on
+ * Takes listener events that might arrive out of order and emits them in
+ * sequence. Mutation events that don't line up in [previousRev, resultRev]
+ * pairs are buffered, and the buffer is re-checked for an unbroken chain on
  * every new event.
  *
  * Buffered chains that lead up to the current base revision are discarded:

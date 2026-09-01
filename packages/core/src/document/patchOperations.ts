@@ -114,7 +114,7 @@ type DeepGet<TValue, TPath extends readonly (string | number)[]> = TPath extends
  */
 export type JsonMatch<TDocument, TPath extends string> = DeepGet<TDocument, PathParts<TPath>>
 
-// this is a similar array key to the studio:
+// generates array keys like the Studio's:
 // https://github.com/sanity-io/sanity/blob/v3.74.1/packages/sanity/src/core/form/inputs/arrays/ArrayOfObjectsInput/createProtoArrayValue.ts
 function generateArrayKey(length: number = 12): string {
   // Each byte gives two hex characters, so generate enough bytes.
@@ -167,6 +167,9 @@ export const ensureArrayKeysDeep = memoize(<R>(input: R): R => {
 
   const entries = Object.entries(input).map(([key, value]) => [key, ensureArrayKeysDeep(value)])
 
+  // return the input itself when nothing below it changed. that keeps unchanged
+  // subtrees reference-equal, so the memo above hits on the next call and
+  // parents can take this same shortcut
   if (entries.every(([key, value]) => input[key as keyof typeof input] === value)) {
     return input
   }
@@ -300,8 +303,8 @@ export function unset<R>(input: unknown, pathExpressions: string[]): R
 export function unset(input: unknown, pathExpressions: string[]): unknown {
   const result = pathExpressions
     .flatMap((pathExpression) => Array.from(jsonMatch(input, pathExpression)))
-    // ensure that we remove in the reverse order the paths were found in
-    // this is necessary for array unsets so the indexes don't change as we unset
+    // remove in the reverse order the paths were found, so that unsetting an
+    // array item does not shift the indexes of the items still to remove
     .reverse()
     .reduce((acc, {path}) => unsetDeep(acc, path), input)
 
@@ -392,8 +395,8 @@ export function insert(input: unknown, {items, ...insertPatch}: InsertPatch): un
   let pathExpression
 
   // behavior observed from content-lake when inserting:
-  // 1. if the operation is before, out of all the matches, it will use the
-  //    insert the items before the first match that appears in the array
+  // 1. if the operation is before, out of all the matches, it inserts the items
+  //    before the first match that appears in the array
   // 2. if the operation is after, it will insert the items after the first
   //    match that appears in the array
   // 3. if the operation is replace, then insert the items before the first
@@ -414,6 +417,9 @@ export function insert(input: unknown, {items, ...insertPatch}: InsertPatch): un
   // an insert patch needs at least one path segment
   if (!pathExpression.length) return input
 
+  // an insert patch addresses an item, but the work happens on the array that
+  // holds it: everything but the last segment finds the array, and the last
+  // segment resolves the position inside it
   const arrayPath = slicePath(pathExpression, 0, -1)
   const positionPath = slicePath(pathExpression, -1)
 
@@ -594,6 +600,8 @@ export function dec(input: unknown, pathExpressionValues: Record<string, number>
  * // { foo: 'the quick brown cat' }
  * console.log(output);
  * ```
+ *
+ * @throws Error when a matched value is neither a string nor `undefined`.
  */
 export function diffMatchPatch<R>(input: unknown, pathExpressionValues: Record<string, string>): R
 export function diffMatchPatch(
@@ -706,7 +714,7 @@ export function setDeep(input: unknown, path: SingleValuePath, value: unknown): 
     } else if (typeof currentSegment === 'number' && currentSegment >= 0) {
       index = currentSegment
     } else {
-      // For negative numbers in a non‐object we simply return input.
+      // For negative numbers in a non-object, return input unchanged.
       return input
     }
 

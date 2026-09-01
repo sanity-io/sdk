@@ -32,9 +32,10 @@ export function handleReleasePublish(
     })
   }
 
-  // A release publish cascades to every version document in the release. Those
-  // are left to the server rather than searched for in the document store; the
-  // listener updates the local copies.
+  // A release publish cascades to every version document in the release. We
+  // could search the document store for the related version documents, but for
+  // now it is simpler to let the server handle it; the listener eventually
+  // updates the local copies.
   outgoingActions.push({
     actionType: 'sanity.action.release.publish',
     releaseId: action.releaseId,

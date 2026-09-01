@@ -32,9 +32,10 @@ export function handleReleaseArchive(
     })
   }
 
-  // Archiving deletes every version document in the release server-side. Those
-  // deletions are left to the server rather than applied across the document
-  // store; the listener updates the local copies.
+  // Archiving deletes every version document in the release server-side. We
+  // could apply those deletions across the document store, but for now it is
+  // simpler to let the server handle it; the listener eventually updates the
+  // local copies.
   outgoingActions.push({
     actionType: 'sanity.action.release.archive',
     releaseId: action.releaseId,
