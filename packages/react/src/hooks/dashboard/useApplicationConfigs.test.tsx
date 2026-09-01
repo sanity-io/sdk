@@ -16,14 +16,14 @@ vi.mock('../../dashboard/messageBus/client', () => ({
 
 const configs: ApplicationConfig[] = [
   {
-    appType: 'media-libraries',
+    appType: 'media-library',
     entry: 'https://media-library-config.sanity.run',
     moduleId: 'configs/installation_config',
     version: '1',
   },
   {
     appId: 'application-1',
-    appType: 'media-libraries',
+    appType: 'media-library',
     entry: 'https://application-config.sanity.run',
     moduleId: 'configs/installation_config',
     version: '2',
