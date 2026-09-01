@@ -951,7 +951,12 @@ export function connectMessageBus(options: ConnectMessageBusOptions = {}): Messa
   if (!installedMessageBus) return undefined
 
   const appId = resolveAppId(options.appId)
-  if (!appId) return undefined
+  if (!appId) {
+    console.warn(
+      '[sanity-sdk:message-bus] cannot connect without an app ID; build with the Sanity CLI or pass appId',
+    )
+    return undefined
+  }
 
   const connection = connectApplicationToMessageBus(installedMessageBus, {appId})
   return MESSAGE_BUS_REGISTRY_KEY in connection ? connection : undefined

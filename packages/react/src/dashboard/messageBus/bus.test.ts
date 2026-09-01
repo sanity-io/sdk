@@ -171,10 +171,14 @@ describe('dashboard connection', () => {
     expect(error).toMatchObject({code: 'NO_RESPONDER'})
   })
 
-  it('returns undefined without an application id', () => {
+  it('warns and returns undefined without an application id', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     installMessageBus({appId: 'dashboard'})
 
     expect(connectMessageBus()).toBeUndefined()
+    expect(warn).toHaveBeenCalledWith(
+      '[sanity-sdk:message-bus] cannot connect without an app ID; build with the Sanity CLI or pass appId',
+    )
   })
 
   it('returns undefined when the installed protocol is incompatible', () => {
