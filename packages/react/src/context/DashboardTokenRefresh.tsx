@@ -48,18 +48,22 @@ function DashboardTokenRefresh({children}: PropsWithChildren) {
 }
 
 /**
- * Keeps the SDK's auth store in sync with the session owned by the Sanity
- * Dashboard when the app runs as a federated remote inside it. Renders
- * children unchanged outside the dashboard, where the app uses its normal
- * auth flow.
+ * Authenticates the SDK with the Sanity Dashboard's session when the app runs
+ * inside the dashboard.
+ *
+ * The dashboard owns the session there: this provider subscribes to the token
+ * the dashboard issues, writes each new value into the SDK's auth store (where
+ * SDK hooks read it from), and asks the dashboard for a fresh token when a
+ * request fails with a 401. Outside the dashboard it renders children
+ * unchanged and the app's normal auth flow applies.
  *
  * @remarks
  * `AuthBoundary` mounts this automatically, so most apps never need it
- * directly. Mount it yourself when your app runs inside the dashboard but
- * cannot use `AuthBoundary` — for example a federated app that renders its
- * own loading and error UI and must not show the SDK's login flow (the
- * dashboard already owns the session) — while still using SDK hooks, which
- * read their token from the instance's auth store.
+ * directly. Mount it yourself only when your app runs inside the dashboard
+ * without `AuthBoundary` — that is, the app renders its own loading and error
+ * UI instead of the SDK's login flow — but still uses SDK hooks such as
+ * `useQuery`, which need the dashboard's token in the auth store to
+ * authenticate their requests.
  *
  * Mount it once, inside the provider that creates the Sanity instance whose
  * store should receive the token.
