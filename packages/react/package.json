@@ -70,7 +70,7 @@
     "@sanity/message-protocol": "catalog:",
     "@sanity/sdk": "workspace:*",
     "@sanity/types": "catalog:",
-    "@sanity/workbench": "0.1.0-alpha.24",
+    "@sanity/workbench": "0.1.0-alpha.45",
     "groq": "catalog:",
     "react-compiler-runtime": "catalog:",
     "react-error-boundary": "catalog:",
