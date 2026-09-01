@@ -819,6 +819,14 @@ function getInstalledMessageBus(): MessageBus | undefined {
 }
 
 /**
+ * Returns whether a compatible message bus is installed.
+ * @internal
+ */
+export function isMessageBusInstalled(): boolean {
+  return getInstalledMessageBus() !== undefined
+}
+
+/**
  * Options for connecting to an installed message bus.
  * @public
  */

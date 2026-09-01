@@ -1,30 +1,38 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
-const connectMessageBus = vi.hoisted(() => vi.fn())
+const messageBus = vi.hoisted(() => ({
+  connect: vi.fn(),
+  installed: vi.fn(),
+}))
 
-vi.mock('./bus', () => ({connectMessageBus}))
+vi.mock('./bus', () => ({
+  connectMessageBus: messageBus.connect,
+  isMessageBusInstalled: messageBus.installed,
+}))
 
 describe('dashboard message bus client', () => {
   beforeEach(() => {
     vi.resetModules()
-    connectMessageBus.mockReset()
+    messageBus.connect.mockReset()
+    messageBus.installed.mockReset()
   })
 
   it('connects lazily once and reuses the client', async () => {
     const client = {}
-    connectMessageBus.mockReturnValue(client)
+    messageBus.connect.mockReturnValue(client)
+    messageBus.installed.mockReturnValue(true)
 
     const dashboard = await import('./client')
 
-    expect(connectMessageBus).not.toHaveBeenCalled()
+    expect(messageBus.connect).not.toHaveBeenCalled()
     expect(dashboard.getDashboardMessageBus()).toBe(client)
-    expect(connectMessageBus).toHaveBeenCalledOnce()
+    expect(messageBus.connect).toHaveBeenCalledOnce()
     expect(dashboard.isDashboardEnvironment()).toBe(true)
-    expect(connectMessageBus).toHaveBeenCalledOnce()
+    expect(messageBus.connect).toHaveBeenCalledOnce()
   })
 
   it('retries after the host installs the message bus', async () => {
-    connectMessageBus.mockReturnValue(undefined)
+    messageBus.installed.mockReturnValue(false)
 
     const dashboard = await import('./client')
 
@@ -32,10 +40,11 @@ describe('dashboard message bus client', () => {
     expect(dashboard.isDashboardEnvironment()).toBe(false)
 
     const client = {}
-    connectMessageBus.mockReturnValue(client)
+    messageBus.installed.mockReturnValue(true)
+    messageBus.connect.mockReturnValue(client)
 
     expect(dashboard.getDashboardMessageBus()).toBe(client)
     expect(dashboard.isDashboardEnvironment()).toBe(true)
-    expect(connectMessageBus).toHaveBeenCalledTimes(3)
+    expect(messageBus.connect).toHaveBeenCalledOnce()
   })
 })
