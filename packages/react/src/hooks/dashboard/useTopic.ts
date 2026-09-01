@@ -1,12 +1,28 @@
 import {use, useMemo} from 'react'
 import {useObservable} from 'react-rx'
-import {map} from 'rxjs'
+import {
+  defer,
+  finalize,
+  firstValueFrom,
+  map,
+  type Observable,
+  ReplaySubject,
+  share,
+  timer,
+} from 'rxjs'
 
+import {type MessageBus, type MessageBusStateSource} from '../../dashboard/messageBus/bus'
 import {dashboardMessageBus, isDashboardEnvironment} from '../../dashboard/messageBus/client'
-import {type StateTopic, type ValueOf} from '../../dashboard/messageBus/topics'
+import {
+  type EventTopic,
+  type PayloadOf,
+  type StateTopic,
+  type TopicName,
+  type ValueOf,
+} from '../../dashboard/messageBus/topics'
 
 /**
- * A dashboard topic result that distinguishes an unpublished topic from a ready value.
+ * A dashboard topic result containing either a ready value or a pending state.
  * @public
  */
 export type UseTopicResult<T, Suspend extends boolean = boolean> = Suspend extends true
@@ -23,39 +39,109 @@ const pendingTopicResult = {data: undefined, isPending: true} as const
 
 const readyTopicResult = <T>(data: T) => ({data, isPending: false}) as const
 
+type TopicData<K extends TopicName> = K extends StateTopic
+  ? ValueOf<K>
+  : K extends EventTopic
+    ? PayloadOf<K>
+    : never
+
+interface TopicSource<T> {
+  readonly firstValue: Promise<T>
+  observable: Observable<T>
+}
+
+// Suspense retries discard hook state, so event sources and their first-value promises live here.
+const eventSources = new WeakMap<MessageBus, Map<EventTopic, TopicSource<unknown>>>()
+
+function subscribeToTopic<K extends TopicName>(
+  messageBus: MessageBus,
+  topic: K,
+): Observable<TopicData<K>> {
+  const subscribe = messageBus.subscribe as (name: TopicName) => Observable<TopicData<K>>
+  return subscribe(topic)
+}
+
+function isStateSource<T>(source: Observable<T>): source is MessageBusStateSource<T> {
+  return 'firstValue' in source
+}
+
+function getEventSource<K extends EventTopic>(
+  messageBus: MessageBus,
+  topic: K,
+): TopicSource<PayloadOf<K>> {
+  let sources = eventSources.get(messageBus)
+  if (!sources) {
+    sources = new Map()
+    eventSources.set(messageBus, sources)
+  }
+
+  let eventSource = sources.get(topic)
+  if (!eventSource) {
+    let firstValue: Promise<PayloadOf<K>> | undefined
+    const observable = defer(() => messageBus.subscribe(topic)).pipe(
+      finalize(() => sources.delete(topic)),
+      share({
+        connector: () => new ReplaySubject<PayloadOf<K>>(1),
+        // Keep the replay alive until React can commit the render awakened by the first event.
+        resetOnRefCountZero: () => timer(0),
+      }),
+    )
+    eventSource = {
+      get firstValue() {
+        return (firstValue ??= firstValueFrom(observable))
+      },
+      observable,
+    }
+    sources.set(topic, eventSource)
+  }
+
+  return eventSource as TopicSource<PayloadOf<K>>
+}
+
+function getTopicSource<K extends TopicName>(
+  messageBus: MessageBus,
+  topic: K,
+): TopicSource<TopicData<K>> {
+  const source = subscribeToTopic(messageBus, topic)
+  if (isStateSource(source)) return {firstValue: source.firstValue, observable: source}
+
+  return getEventSource(messageBus, topic as EventTopic) as TopicSource<TopicData<K>>
+}
+
 /**
- * Returns the latest value of a dashboard state topic.
+ * Returns the latest state value or event payload for a dashboard topic.
  *
  * The hook suspends until the first value by default. Pass `{suspend: false}` to render
  * immediately and use `isPending` to distinguish an unpublished topic from a ready value.
+ * Event payloads are forgotten after the last consumer unmounts.
  *
  * @example
  * ```tsx
  * const {data: foregroundId} = useTopic('applications.foreground')
  *
- * const token = useTopic('auth.token', {suspend: false})
- * if (token.isPending) return <Spinner />
- * return token.data
+ * const navigation = useTopic('navigation.location.update', {suspend: false})
+ * if (navigation.isPending) return null
+ * return navigation.data.url
  * ```
  *
  * @public
  */
-export function useTopic<K extends StateTopic, Suspend extends boolean = true>(
+export function useTopic<K extends TopicName, Suspend extends boolean = true>(
   topic: K,
   options: UseTopicOptions<Suspend> = {},
-): UseTopicResult<ValueOf<K>, Suspend> {
-  const {source, results} = useMemo(() => {
+): UseTopicResult<TopicData<K>, Suspend> {
+  const source = useMemo(() => {
     if (!isDashboardEnvironment(dashboardMessageBus)) {
       throw new Error('useTopic must be used inside a dashboard application')
     }
-    const topicSource = dashboardMessageBus.subscribe(topic)
-    return {source: topicSource, results: topicSource.pipe(map(readyTopicResult))}
+    return getTopicSource(dashboardMessageBus, topic)
   }, [topic])
 
+  const results = useMemo(() => source.observable.pipe(map(readyTopicResult)), [source.observable])
   const result = useObservable(results, pendingTopicResult)
   return (
     result.isPending && options.suspend !== false
       ? readyTopicResult(use(source.firstValue))
       : result
-  ) as UseTopicResult<ValueOf<K>, Suspend>
+  ) as UseTopicResult<TopicData<K>, Suspend>
 }
