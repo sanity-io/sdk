@@ -7,6 +7,7 @@ packages:
 
 overrides:
   '@babel/types': 7.29.7
+  '@sanity/workbench': 0.1.0-alpha.45
 
 onlyBuiltDependencies:
   - esbuild
@@ -28,6 +29,16 @@ minimumReleaseAgeExclude:
   - '@oxfmt/*'
   # Renovate security update: react-router@7.18.2
   - react-router@7.18.2
+  # sanity@6.12.0 requires this recently published version
+  - '@sentry/browser-utils@10.73.0'
+  - '@sentry/browser@10.73.0'
+  - '@sentry/core@10.73.0'
+  - '@sentry/feedback@10.73.0'
+  - '@sentry/react@10.73.0'
+  - '@sentry/replay-canvas@10.73.0'
+  - '@sentry/replay@10.73.0'
+  - 'i18next@26.4.1'
+  - 'react-i18next@17.0.13'
 
 catalog:
   '@playwright/test': '^1.61.1'
