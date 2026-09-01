@@ -1,6 +1,6 @@
 import {act, render, renderHook, screen} from '@testing-library/react'
 import {Suspense} from 'react'
-import {beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
+import {afterEach, beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
 
 import {createIsolatedMessageBus, type MessageBus} from '../../dashboard/messageBus/bus'
 import {type PayloadOf, type ValueOf} from '../../dashboard/messageBus/topics'
@@ -11,15 +11,16 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('../../dashboard/messageBus/client', () => ({
-  get dashboardMessageBus() {
-    return mocks.client
-  },
-  isDashboardEnvironment: (client: unknown) => client !== undefined,
+  getDashboardMessageBus: () => mocks.client,
 }))
 
 describe('useTopic', () => {
   beforeEach(() => {
     mocks.client = createIsolatedMessageBus('dashboard')
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('reads a seeded value and follows topic updates', () => {
@@ -36,6 +37,7 @@ describe('useTopic', () => {
   })
 
   it('suspends an unseeded topic until its first value', async () => {
+    const query = vi.spyOn(mocks.client as MessageBus, 'query')
     const firstValue = mocks.client?.subscribe('auth.token').firstValue
 
     function Token() {
@@ -51,6 +53,7 @@ describe('useTopic', () => {
     })
 
     expect(screen.getByText('Loading')).toBeInTheDocument()
+    expect(query).toHaveBeenCalledWith('auth.token')
 
     await act(async () => {
       mocks.client?.emit('auth.token', 'token')
@@ -96,6 +99,8 @@ describe('useTopic', () => {
   })
 
   it('suspends an event topic until its first payload', async () => {
+    const query = vi.spyOn(mocks.client as MessageBus, 'query')
+
     function NavigationRequest() {
       return useTopic('navigation.location.update').data.url
     }
@@ -109,12 +114,13 @@ describe('useTopic', () => {
     })
 
     expect(screen.getByText('Loading')).toBeInTheDocument()
+    expect(query).not.toHaveBeenCalled()
 
     await act(async () => {
       mocks.client?.emit('navigation.location.update', {url: '/desk'})
     })
 
-    expect(await screen.findByText('/desk')).toBeInTheDocument()
+    expect(screen.getByText('/desk')).toBeInTheDocument()
   })
 
   it('forgets an event payload after the last consumer unmounts', async () => {

@@ -12,7 +12,7 @@ import {
 } from 'rxjs'
 
 import {type MessageBus, type MessageBusStateSource} from '../../dashboard/messageBus/bus'
-import {dashboardMessageBus, isDashboardEnvironment} from '../../dashboard/messageBus/client'
+import {getDashboardMessageBus} from '../../dashboard/messageBus/client'
 import {
   type EventTopic,
   type PayloadOf,
@@ -53,6 +53,9 @@ interface TopicSource<T> {
 // Suspense retries discard hook state, so event sources and their first-value promises live here.
 const eventSources = new WeakMap<MessageBus, Map<EventTopic, TopicSource<unknown>>>()
 
+// State Suspense reads share query()'s timeout across render retries.
+const stateFirstValues = new WeakMap<MessageBusStateSource<unknown>, Promise<unknown>>()
+
 function subscribeToTopic<K extends TopicName>(
   messageBus: MessageBus,
   topic: K,
@@ -63,6 +66,20 @@ function subscribeToTopic<K extends TopicName>(
 
 function isStateSource<T>(source: Observable<T>): source is MessageBusStateSource<T> {
   return 'firstValue' in source
+}
+
+function getStateFirstValue(
+  messageBus: MessageBus,
+  topic: StateTopic,
+  source: MessageBusStateSource<unknown>,
+): Promise<unknown> {
+  let firstValue = stateFirstValues.get(source)
+  if (!firstValue) {
+    firstValue = messageBus.query(topic)
+    stateFirstValues.set(source, firstValue)
+    void firstValue.catch(() => stateFirstValues.delete(source))
+  }
+  return firstValue
 }
 
 function getEventSource<K extends EventTopic>(
@@ -103,7 +120,14 @@ function getTopicSource<K extends TopicName>(
   topic: K,
 ): TopicSource<TopicData<K>> {
   const source = subscribeToTopic(messageBus, topic)
-  if (isStateSource(source)) return {firstValue: source.firstValue, observable: source}
+  if (isStateSource(source)) {
+    return {
+      get firstValue() {
+        return getStateFirstValue(messageBus, topic as StateTopic, source) as Promise<TopicData<K>>
+      },
+      observable: source,
+    }
+  }
 
   return getEventSource(messageBus, topic as EventTopic) as TopicSource<TopicData<K>>
 }
@@ -113,6 +137,7 @@ function getTopicSource<K extends TopicName>(
  *
  * The hook suspends until the first value by default. Pass `{suspend: false}` to render
  * immediately and use `isPending` to distinguish an unpublished topic from a ready value.
+ * Suspended state reads use the bus query deadline; event reads wait for the next payload.
  * Event payloads are forgotten after the last consumer unmounts.
  *
  * @example
@@ -131,10 +156,11 @@ export function useTopic<K extends TopicName, Suspend extends boolean = true>(
   options: UseTopicOptions<Suspend> = {},
 ): UseTopicResult<TopicData<K>, Suspend> {
   const source = useMemo(() => {
-    if (!isDashboardEnvironment(dashboardMessageBus)) {
+    const messageBus = getDashboardMessageBus()
+    if (!messageBus) {
       throw new Error('useTopic must be used inside a dashboard application')
     }
-    return getTopicSource(dashboardMessageBus, topic)
+    return getTopicSource(messageBus, topic)
   }, [topic])
 
   const results = useMemo(() => source.observable.pipe(map(readyTopicResult)), [source.observable])
