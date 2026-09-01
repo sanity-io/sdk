@@ -473,7 +473,7 @@ describe('reset', () => {
 
   it('resets state sources without unhandled rejections', async () => {
     const messageBus = installMessageBus({appId: 'dashboard'})
-    messageBus.subscribe('media-libraries.config')
+    messageBus.subscribe('applications.config')
     const pending = messageBus.query('applications.list')
 
     resetMessageBus()

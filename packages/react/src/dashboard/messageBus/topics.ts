@@ -5,10 +5,29 @@ import {
   type OrganizationBase,
 } from '@sanity/sdk'
 
-type RemoteModule = {
+/**
+ * Identifies a module federation expose and the manifest that serves it.
+ * @public
+ */
+export interface RemoteModuleRef {
   readonly entry: string
   readonly moduleId: string
   readonly version: string
+}
+
+/**
+ * Application types that can receive configuration modules.
+ * @public
+ */
+export type ApplicationConfigAppType = 'media-libraries'
+
+/**
+ * Identifies a configuration module for an application or application type.
+ * @public
+ */
+export interface ApplicationConfig extends RemoteModuleRef {
+  readonly appId?: Application['id']
+  readonly appType: ApplicationConfigAppType
 }
 
 /**
@@ -63,6 +82,8 @@ export type NavigationLocation = NavigationTarget & {
  * @public
  */
 export interface DashboardTopics {
+  /** The available application configuration modules. */
+  'applications.config': StateTopicDef<ApplicationConfig[] | null>
   /** The foreground application ID, or `null` on dashboard-level routes. */
   'applications.foreground': StateTopicDef<Application['id'] | null>
   /** The dashboard applications available to the current user. */
@@ -71,8 +92,6 @@ export interface DashboardTopics {
   'auth.token': StateTopicDef<string | null>
   /** Requests a dashboard session token. */
   'auth.token.refresh': EventTopicDef<void, string>
-  /** The media library configuration module. */
-  'media-libraries.config': StateTopicDef<RemoteModule | null>
   /** The current dashboard location and active navigation. */
   'navigation.location': StateTopicDef<NavigationLocation | null>
   /**
@@ -161,14 +180,11 @@ const sharedTopic = withOwnership({type: 'any_app'})
 export const DASHBOARD_TOPIC_MANIFEST: {
   readonly [K in keyof DashboardTopics]: TopicManifestEntry<DashboardTopics[K]>
 } = {
+  'applications.config': dashboardTopic({kind: 'state', seed: undefined}),
   'applications.foreground': dashboardTopic({kind: 'state', seed: null}),
   'applications.list': dashboardTopic({kind: 'state', seed: undefined}),
   'auth.token': dashboardTopic({kind: 'state', seed: undefined}),
   'auth.token.refresh': dashboardTopic({kind: 'event'}),
-  'media-libraries.config': dashboardTopic({
-    kind: 'state',
-    seed: undefined,
-  }),
   'navigation.location': dashboardTopic({kind: 'state', seed: undefined}),
   'navigation.location.update': dashboardTopic({kind: 'event'}),
   'organizations.current': dashboardTopic({kind: 'state', seed: undefined}),

@@ -7,9 +7,12 @@ export type {
 export {connectMessageBus, resetMessageBus} from '../dashboard/messageBus/bus'
 export {MessageBusError} from '../dashboard/messageBus/bus'
 export type {
+  ApplicationConfig,
+  ApplicationConfigAppType,
   NavigationLocation,
   NavigationTarget,
   PayloadOf,
+  RemoteModuleRef,
   ReplyOf,
   StateTopic,
   TopicResult,
