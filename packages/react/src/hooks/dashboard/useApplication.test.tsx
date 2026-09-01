@@ -12,10 +12,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('../../dashboard/messageBus/client', () => ({
-  get dashboardMessageBus() {
-    return mocks.client
-  },
-  isDashboardEnvironment: (messageBus: MessageBus | undefined) => messageBus !== undefined,
+  getDashboardMessageBus: () => mocks.client,
 }))
 
 const application = {
