@@ -125,8 +125,8 @@ export interface DashboardTopics {
   'preferences.color-scheme': StateTopicDef<'light' | 'dark'>
   /** Whether the dashboard dock is pinned open. */
   'preferences.dock-locked': StateTopicDef<boolean>
-  /** The signed-in user, or `null` while signed out. */
-  'users.current': StateTopicDef<Pick<CurrentUser, 'id' | 'name' | 'email' | 'profileImage'> | null>
+  /** The full signed-in user profile, or `null` while signed out. */
+  'users.current': StateTopicDef<CurrentUser | null>
 }
 
 /**

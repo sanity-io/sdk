@@ -1,7 +1,9 @@
 import {getDashboardOrganizationId} from '@sanity/sdk'
-import {useMemo, useSyncExternalStore} from 'react'
 
-import {useSanityInstance} from '../context/useSanityInstance'
+import {useDashboardState} from './useDashboardState'
+
+const organizationIdFromCore = (organizationId: string | undefined) => organizationId
+const organizationIdFromTopic = (organization: {id: string} | null) => organization?.id
 
 /**
  * @public
@@ -23,8 +25,10 @@ import {useSanityInstance} from '../context/useSanityInstance'
  * @returns The dashboard organization ID (string | undefined)
  */
 export function useOrganizationId(): string | undefined {
-  const instance = useSanityInstance()
-  const {subscribe, getCurrent} = useMemo(() => getDashboardOrganizationId(instance), [instance])
-
-  return useSyncExternalStore(subscribe, getCurrent)
+  return useDashboardState(
+    'organizations.current',
+    getDashboardOrganizationId,
+    organizationIdFromCore,
+    organizationIdFromTopic,
+  )
 }

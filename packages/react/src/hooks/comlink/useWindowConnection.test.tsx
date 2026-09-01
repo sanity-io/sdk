@@ -6,7 +6,7 @@ import {Suspense} from 'react'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {render, renderHook} from '../../../test/test-utils'
-import {useWindowConnection} from './useWindowConnection'
+import {useOptionalWindowConnection, useWindowConnection} from './useWindowConnection'
 
 vi.mock('@sanity/sdk/comlink', async () => {
   const actual = await vi.importActual('@sanity/sdk/comlink')
@@ -42,6 +42,7 @@ describe('useWindowConnection', () => {
   }
 
   beforeEach(() => {
+    vi.clearAllMocks()
     node = createMockNode()
     stableNodeEntry = {node, status: 'connected'}
     mockStateSource = {
@@ -142,5 +143,17 @@ describe('useWindowConnection', () => {
     const responseNoArgs = await result.current.fetch('TYPE')
     expect(mockFetch).toHaveBeenCalledWith('TYPE', undefined, {})
     expect(responseNoArgs).toBe('fetch-result')
+  })
+
+  it('does not create a Comlink node while disabled', () => {
+    const {result} = renderHook(() =>
+      useOptionalWindowConnection<TestMessages, TestMessages>(
+        {name: 'test', connectTo: 'window'},
+        false,
+      ),
+    )
+
+    expect(result.current).toBeUndefined()
+    expect(getNodeState).not.toHaveBeenCalled()
   })
 })

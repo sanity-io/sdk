@@ -1,16 +1,15 @@
 import {type MessageData, type NodeInput} from '@sanity/comlink'
-import {type SanityInstance, type StateSource} from '@sanity/sdk'
+import {type StateSource} from '@sanity/sdk'
 import {
   type FrameMessage,
   getNodeState,
   type NodeState,
   type WindowMessage,
 } from '@sanity/sdk/comlink'
-import {useCallback, useEffect, useRef} from 'react'
+import {use, useCallback, useEffect, useSyncExternalStore} from 'react'
 import {filter, firstValueFrom} from 'rxjs'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
 /**
  * @internal
@@ -47,57 +46,47 @@ export interface WindowConnection<TMessage extends WindowMessage> {
   ) => Promise<TResponse>
 }
 
-const useNodeState = createStateSourceHook({
-  getState: getNodeState as (
-    instance: SanityInstance,
-    nodeInput: NodeInput,
-  ) => StateSource<NodeState>,
-  shouldSuspend: (instance: SanityInstance, nodeInput: NodeInput) =>
-    getNodeState(instance, nodeInput).getCurrent() === undefined,
-  suspender: (instance: SanityInstance, nodeInput: NodeInput) => {
-    return firstValueFrom(getNodeState(instance, nodeInput).observable.pipe(filter(Boolean)))
-  },
-})
+const getNoNode = () => undefined
+const subscribeToNoNode = () => () => {}
 
-/**
- * @internal
- * Hook to wrap a Comlink node in a React hook.
- * Our store functionality takes care of the lifecycle of the node,
- * as well as sharing a single node between invocations if they share the same name.
- *
- * Generally not to be used directly, but to be used as a dependency of
- * Comlink-powered hooks like `useStudioWorkspacesByProjectIdDataset`.
- */
-export function useWindowConnection<
+function useNodeState(nodeInput: NodeInput, enabled: boolean): NodeState | undefined {
+  const instance = useSanityInstance()
+  const source: StateSource<NodeState | undefined> | undefined = enabled
+    ? getNodeState(instance, nodeInput)
+    : undefined
+
+  if (source && source.getCurrent() === undefined) {
+    use(firstValueFrom(source.observable.pipe(filter(Boolean))))
+  }
+
+  return useSyncExternalStore(
+    source?.subscribe ?? subscribeToNoNode,
+    source?.getCurrent ?? getNoNode,
+  )
+}
+
+function useWindowConnectionState<
   TWindowMessage extends WindowMessage,
   TFrameMessage extends FrameMessage,
->({
-  name,
-  connectTo,
-  onMessage,
-}: UseWindowConnectionOptions<TFrameMessage>): WindowConnection<TWindowMessage> {
-  const {node} = useNodeState({name, connectTo})
-  const messageUnsubscribers = useRef<(() => void)[]>([])
-  const instance = useSanityInstance()
+>(
+  {name, connectTo, onMessage}: UseWindowConnectionOptions<TFrameMessage>,
+  enabled: boolean,
+): WindowConnection<TWindowMessage> | undefined {
+  const nodeState = useNodeState({name, connectTo}, enabled)
+  const node = nodeState?.node
 
   useEffect(() => {
-    if (onMessage) {
-      Object.entries(onMessage).forEach(([type, handler]) => {
-        const messageUnsubscribe = node.on(type, handler as WindowMessageHandler<TFrameMessage>)
-        if (messageUnsubscribe) {
-          messageUnsubscribers.current.push(messageUnsubscribe)
-        }
-      })
-    }
+    if (!node || !onMessage) return undefined
+    const unsubscribers = Object.entries(onMessage)
+      .map(([type, handler]) => node.on(type, handler as WindowMessageHandler<TFrameMessage>))
+      .filter((unsubscribe): unsubscribe is () => void => unsubscribe !== undefined)
 
-    return () => {
-      messageUnsubscribers.current.forEach((unsubscribe) => unsubscribe())
-      messageUnsubscribers.current = []
-    }
-  }, [instance, name, onMessage, node])
+    return () => unsubscribers.forEach((unsubscribe) => unsubscribe())
+  }, [node, onMessage])
 
   const sendMessage = useCallback(
     (type: TWindowMessage['type'], data?: Extract<TWindowMessage, {type: typeof type}>['data']) => {
+      if (!node) throw new Error('Comlink is not connected')
       node.post(type, data)
     },
     [node],
@@ -113,12 +102,37 @@ export function useWindowConnection<
         suppressWarnings?: boolean
       },
     ): Promise<TResponse> => {
+      if (!node) return Promise.reject(new Error('Comlink is not connected'))
       return node.fetch(type, data, fetchOptions ?? {}) as Promise<TResponse>
     },
     [node],
   )
-  return {
-    sendMessage,
-    fetch,
-  }
+
+  return node ? {sendMessage, fetch} : undefined
+}
+
+/** Connects a component to a shared Comlink window node. @internal */
+export function useWindowConnection<
+  TWindowMessage extends WindowMessage,
+  TFrameMessage extends FrameMessage,
+>({
+  name,
+  connectTo,
+  onMessage,
+}: UseWindowConnectionOptions<TFrameMessage>): WindowConnection<TWindowMessage> {
+  return useWindowConnectionState<TWindowMessage, TFrameMessage>(
+    {name, connectTo, onMessage},
+    true,
+  ) as WindowConnection<TWindowMessage>
+}
+
+/** Returns a Comlink connection only while it is enabled. @internal */
+export function useOptionalWindowConnection<
+  TWindowMessage extends WindowMessage,
+  TFrameMessage extends FrameMessage,
+>(
+  options: UseWindowConnectionOptions<TFrameMessage>,
+  enabled: boolean,
+): WindowConnection<TWindowMessage> | undefined {
+  return useWindowConnectionState<TWindowMessage, TFrameMessage>(options, enabled)
 }

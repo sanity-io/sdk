@@ -1,23 +1,37 @@
 import {type PathChangeMessage, SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
+import {getIsInDashboardState} from '@sanity/sdk'
+import {useCallback, useEffect, useMemo, useRef} from 'react'
+import {combineLatest, distinctUntilChanged, filter, map} from 'rxjs'
 
-import {useWindowConnection} from '../comlink/useWindowConnection'
+import {getDashboardMessageBus} from '../../dashboard/messageBus/client'
+import {type ValueOf} from '../../dashboard/messageBus/topics'
+import {useOptionalWindowConnection} from '../comlink/useWindowConnection'
+import {useSanityInstance} from '../context/useSanityInstance'
+
+type NavigationSnapshot = readonly [
+  ValueOf<'navigation.location'>,
+  ValueOf<'applications.foreground'>,
+]
+
+function pathChangeFromSnapshot([location, foregroundApplicationId]: NavigationSnapshot):
+  | PathChangeMessage['data']
+  | null {
+  if (!location) return null
+  const target = location.transition?.to ?? location
+  if (target.appId !== foregroundApplicationId) return null
+  return {
+    path: target.path,
+    type: location.transition?.navigationType ?? 'pop',
+  }
+}
 
 /**
  * @public
  *
- * A helper hook designed to be injected into routing components for apps within the Dashboard.
- * While the Dashboard can usually handle navigation, there are special cases when you
- * are already within a target app, and need to navigate to another route inside of that app.
+ * Routes dashboard navigation into the current application.
+ * Embedded applications receive Comlink messages; federated applications follow message bus state.
  *
- * For example, your user might "favorite" a document inside of your application.
- * If they click on the Dashboard favorites item in the sidebar, and are already within your application,
- * there needs to be some way for the dashboard to signal to your application to reroute to where that document was favorited.
- *
- * This hook is intended to receive those messages, and takes a function to route to the correct path.
- *
- * @param navigateFn - Function to handle navigation; should accept:
- * - `path`: a string, which will be a relative path (for example, 'my-route')
- * - `type`: 'push', 'replace', or 'pop', which will be the type of navigation to perform
+ * @param navigateFn - Handles a relative path and its `push`, `replace`, or `pop` navigation type.
  *
  * @example
  * ```tsx
@@ -45,16 +59,45 @@ import {useWindowConnection} from '../comlink/useWindowConnection'
  * }
  * ```
  */
-export function useNavigate(
-  navigateFn: (options: PathChangeMessage['data']) => void,
-): void {
-  useWindowConnection<PathChangeMessage, never>({
-    name: SDK_NODE_NAME,
-    connectTo: SDK_CHANNEL_NAME,
-    onMessage: {
-      'dashboard/v1/history/change-path': (data: PathChangeMessage['data']) => {
-        navigateFn(data)
-      },
-    },
-  })
+export function useNavigate(navigateFn: (options: PathChangeMessage['data']) => void): void {
+  const instance = useSanityInstance()
+  const isComlinkContext = getIsInDashboardState(instance).getCurrent()
+  const messageBus = isComlinkContext ? undefined : getDashboardMessageBus()
+  if (!isComlinkContext && !messageBus) {
+    throw new Error('useNavigate must be used inside a dashboard application')
+  }
+  const navigateRef = useRef(navigateFn)
+  useEffect(() => {
+    navigateRef.current = navigateFn
+  }, [navigateFn])
+  const navigate = useCallback((change: PathChangeMessage['data']) => {
+    navigateRef.current(change)
+  }, [])
+  const onMessage = useMemo(
+    () => ({
+      'dashboard/v1/history/change-path': navigate,
+    }),
+    [navigate],
+  )
+
+  useOptionalWindowConnection<PathChangeMessage, never>(
+    {name: SDK_NODE_NAME, connectTo: SDK_CHANNEL_NAME, onMessage},
+    isComlinkContext,
+  )
+
+  useEffect(() => {
+    if (!messageBus) return undefined
+    const subscription = combineLatest([
+      messageBus.subscribe('navigation.location'),
+      messageBus.subscribe('applications.foreground'),
+    ])
+      .pipe(
+        map(pathChangeFromSnapshot),
+        filter((change): change is PathChangeMessage['data'] => change !== null),
+        distinctUntilChanged((previous, current) => previous.path === current.path),
+      )
+      .subscribe(navigate)
+
+    return () => subscription.unsubscribe()
+  }, [messageBus, navigate])
 }
