@@ -6,6 +6,7 @@ export {SanityApp, type SanityAppProps} from '../components/SanityApp'
 export {SDKProvider, type SDKProviderProps} from '../components/SDKProvider'
 export {type DocumentHandle, type DocumentTypeHandle, type ResourceHandle} from '../config/handles'
 export {ComlinkTokenRefreshProvider} from '../context/ComlinkTokenRefresh'
+export {DashboardTokenRefreshProvider} from '../context/DashboardTokenRefresh'
 export {renderSanityApp} from '../context/renderSanityApp'
 export {ResourceProvider, type ResourceProviderProps} from '../context/ResourceProvider'
 export {

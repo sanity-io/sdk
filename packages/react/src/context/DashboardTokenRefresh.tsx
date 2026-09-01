@@ -48,9 +48,38 @@ function DashboardTokenRefresh({children}: PropsWithChildren) {
 }
 
 /**
- * Provides dashboard OS token refresh. No-op outside the dashboard, where the
- * app uses its normal auth flow.
- * @internal
+ * Keeps the SDK's auth store in sync with the session owned by the Sanity
+ * Dashboard when the app runs as a federated remote inside it. Renders
+ * children unchanged outside the dashboard, where the app uses its normal
+ * auth flow.
+ *
+ * @remarks
+ * `AuthBoundary` mounts this automatically, so most apps never need it
+ * directly. Mount it yourself when your app runs inside the dashboard but
+ * cannot use `AuthBoundary` — for example a federated app that renders its
+ * own loading and error UI and must not show the SDK's login flow (the
+ * dashboard already owns the session) — while still using SDK hooks, which
+ * read their token from the instance's auth store.
+ *
+ * Mount it once, inside the provider that creates the Sanity instance whose
+ * store should receive the token.
+ *
+ * @example
+ * ```tsx
+ * import {DashboardTokenRefreshProvider, ResourceProvider} from '@sanity/sdk-react'
+ *
+ * function EmbeddedApp() {
+ *   return (
+ *     <ResourceProvider fallback={<Loading />}>
+ *       <DashboardTokenRefreshProvider>
+ *         <App />
+ *       </DashboardTokenRefreshProvider>
+ *     </ResourceProvider>
+ *   )
+ * }
+ * ```
+ *
+ * @public
  */
 export const DashboardTokenRefreshProvider: React.FC<PropsWithChildren> = ({children}) => {
   if (isDashboardEnvironment()) {
