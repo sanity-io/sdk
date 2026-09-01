@@ -11,8 +11,10 @@ const relativeUrlBase = 'https://dashboard.invalid'
 /** @public */
 export interface EditIntentParameters {
   id: string
+  /** The document schema type, for example `post`. */
   type?: string
-  mode?: string
+  /** Requests a Studio edit mode, such as `structure` or `presentation`. */
+  mode?: 'structure' | 'presentation' | (string & Record<never, never>)
 }
 
 /** @public */
@@ -205,7 +207,8 @@ export class UrlBuilder implements Url {
   /**
    * Returns another builder type rooted at the appended path segments.
    *
-   * Use this when a route moves into a grammar with a different set of available methods.
+   * Use this inside a custom builder method only when its route enters a child grammar with
+   * different methods; use `append` when chaining stays on the current grammar.
    *
    * @example
    * ```ts
