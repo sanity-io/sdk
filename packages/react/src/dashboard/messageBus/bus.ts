@@ -159,8 +159,7 @@ const MESSAGE_BUS_PROTOCOL_KEY = Symbol.for('sanity.os.protocol')
 const MESSAGE_BUS_REGISTRY_KEY = Symbol.for('sanity.os.registry')
 const MESSAGE_BUS_REQUEST_KEY = Symbol.for('sanity.os.request')
 
-// Older SDK copies use this fixed marker to recognize the shared registry.
-const LEGACY_MESSAGE_BUS_PROTOCOL = 1
+const MESSAGE_BUS_PROTOCOL = 1
 
 const DEFAULT_TIMEOUT_MS = 5000
 
@@ -584,7 +583,7 @@ export function createIsolatedMessageBus(
 
   const instance = api as unknown as InternalMessageBus
   instance[MESSAGE_BUS_REGISTRY_KEY] = registry
-  instance[MESSAGE_BUS_PROTOCOL_KEY] = LEGACY_MESSAGE_BUS_PROTOCOL
+  instance[MESSAGE_BUS_PROTOCOL_KEY] = MESSAGE_BUS_PROTOCOL
   return instance
 }
 
@@ -717,6 +716,21 @@ export function connectApplicationToMessageBus(
   if (!config.appId) throwMissingAppId()
 
   const {appId} = config
+  const installedProtocol = (installedMessageBus as Partial<InternalMessageBus>)[
+    MESSAGE_BUS_PROTOCOL_KEY
+  ]
+  if (installedProtocol !== MESSAGE_BUS_PROTOCOL) {
+    console.error(
+      `[sanity-sdk:message-bus] protocol mismatch for "${appId}": installed ${String(installedProtocol)}, this copy speaks ${MESSAGE_BUS_PROTOCOL}`,
+    )
+    return createFailedMessageBus(() => {
+      throw new MessageBusError(
+        'PROTOCOL_MISMATCH',
+        `installed message bus speaks protocol ${String(installedProtocol)}, this copy speaks ${MESSAGE_BUS_PROTOCOL}`,
+      )
+    })
+  }
+
   const registry = (installedMessageBus as Partial<InternalMessageBus>)[MESSAGE_BUS_REGISTRY_KEY]
   if (!registry) {
     console.error(`[sanity-sdk:message-bus] incompatible message bus for "${appId}"`)
@@ -780,7 +794,7 @@ export function connectApplicationToMessageBus(
 
   const instance = api as unknown as InternalMessageBus
   instance[MESSAGE_BUS_REGISTRY_KEY] = registry
-  instance[MESSAGE_BUS_PROTOCOL_KEY] = LEGACY_MESSAGE_BUS_PROTOCOL
+  instance[MESSAGE_BUS_PROTOCOL_KEY] = MESSAGE_BUS_PROTOCOL
   return instance
 }
 

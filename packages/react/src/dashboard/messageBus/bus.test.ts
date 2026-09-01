@@ -476,15 +476,17 @@ describe('compatibility', () => {
     await expect(application.emit('test.echo', {n: 1})).resolves.toEqual({n: 2})
   })
 
-  it('connects through the shared registry without comparing connection versions', async () => {
+  it('rejects incompatible message bus protocol semantics', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
     const dashboard = createMessageBus('dashboard')
     const protocolKey = Symbol.for('sanity.os.protocol')
     const internalDashboard = dashboard as unknown as Record<symbol, unknown>
     internalDashboard[protocolKey] = 2
     const application = connectApplicationToMessageBus(dashboard, {appId: 'favorites'})
-    dashboard.subscribe('test.echo', (message) => message.reply(message.payload))
 
-    await expect(application.emit('test.echo', {n: 1})).resolves.toEqual({n: 1})
+    expect(() => application.query('applications.foreground')).toThrowError(
+      expect.objectContaining({code: 'PROTOCOL_MISMATCH'}),
+    )
   })
 
   it('adapts state across the full migration chain', async () => {
