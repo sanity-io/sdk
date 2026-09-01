@@ -82,7 +82,7 @@ function getEventSource<K extends EventTopic>(
       finalize(() => sources.delete(topic)),
       share({
         connector: () => new ReplaySubject<PayloadOf<K>>(1),
-        // Keep the replay alive until React can commit the render awakened by the first event.
+        // Unsubscribes after the last consumer leaves, delayed so Suspense can commit its retry.
         resetOnRefCountZero: () => timer(0),
       }),
     )
