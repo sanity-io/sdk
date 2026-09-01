@@ -5,7 +5,7 @@ import {defer, of} from 'rxjs'
 import {catchError} from 'rxjs/operators'
 
 import {type MessageBus} from '../dashboard/messageBus/bus'
-import {dashboardMessageBus, isDashboardEnvironment} from '../dashboard/messageBus/client'
+import {getDashboardMessageBus} from '../dashboard/messageBus/client'
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useSanityInstance} from '../hooks/context/useSanityInstance'
 
@@ -89,9 +89,10 @@ function DashboardTokenRefresh({
  * @public
  */
 export const DashboardTokenRefreshProvider: React.FC<PropsWithChildren> = ({children}) => {
-  if (isDashboardEnvironment(dashboardMessageBus)) {
+  const messageBus = getDashboardMessageBus()
+  if (messageBus) {
     return (
-      <DashboardTokenRefresh messageBus={dashboardMessageBus}>{children}</DashboardTokenRefresh>
+      <DashboardTokenRefresh messageBus={messageBus}>{children}</DashboardTokenRefresh>
     )
   }
 

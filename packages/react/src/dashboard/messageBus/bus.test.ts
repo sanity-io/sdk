@@ -10,6 +10,7 @@ import {
   type MessageBus,
   MessageBusError,
   registerStateTopics,
+  resetMessageBus,
 } from './bus'
 import {type TopicManifest, type TopicMigration} from './topics'
 
@@ -159,6 +160,17 @@ describe('dashboard connection', () => {
 
     expect(error).toBeInstanceOf(MessageBusError)
     expect(error).toMatchObject({code: 'NO_RESPONDER'})
+  })
+
+  it('defers a missing application id error until the connection is used', () => {
+    installMessageBus({appId: 'dashboard'})
+
+    const application = connectMessageBus()
+
+    expect(application).toBeDefined()
+    expect(() => application?.subscribe('auth.token')).toThrowError(
+      expect.objectContaining({code: 'MISSING_APP_ID'}),
+    )
   })
 })
 
@@ -415,14 +427,22 @@ describe('application connections', () => {
 })
 
 describe('reset', () => {
+  beforeEach(preserveMessageBusInstallation)
+  afterEach(restoreMessageBusInstallation)
+
+  it('does nothing when no message bus is installed', () => {
+    expect(() => resetMessageBus()).not.toThrow()
+  })
+
   it('aborts pending work and keeps existing application connections reusable', async () => {
-    const installedMessageBus = createMessageBus('dashboard')
-    const application = connectApplicationToMessageBus(installedMessageBus, {appId: 'favorites'})
+    const installedMessageBus = installMessageBus({appId: 'dashboard'})
+    const application = connectMessageBus({appId: 'favorites'})
+    if (!application) throw new Error('Expected a dashboard message bus')
     installedMessageBus.subscribe('test.echo', () => {})
     const pending = application.emit('test.echo', {n: 1}, {timeout: null})
     pending.catch(() => {})
 
-    installedMessageBus.reset()
+    resetMessageBus()
 
     await expect(pending).rejects.toMatchObject({code: 'ABORTED'})
     const seen: unknown[] = []
@@ -454,6 +474,17 @@ describe('compatibility', () => {
     dashboard.subscribe('test.echo', (message) => message.reply({n: message.payload.n + 1}))
 
     await expect(application.emit('test.echo', {n: 1})).resolves.toEqual({n: 2})
+  })
+
+  it('connects through the shared registry without comparing connection versions', async () => {
+    const dashboard = createMessageBus('dashboard')
+    const protocolKey = Symbol.for('sanity.os.protocol')
+    const internalDashboard = dashboard as unknown as Record<symbol, unknown>
+    internalDashboard[protocolKey] = 2
+    const application = connectApplicationToMessageBus(dashboard, {appId: 'favorites'})
+    dashboard.subscribe('test.echo', (message) => message.reply(message.payload))
+
+    await expect(application.emit('test.echo', {n: 1})).resolves.toEqual({n: 1})
   })
 
   it('adapts state across the full migration chain', async () => {
@@ -541,7 +572,6 @@ describe('compatibility', () => {
     const foreignMessageBus = {
       emit() {},
       query() {},
-      reset() {},
       subscribe() {},
     } as unknown as MessageBus
 

@@ -4,7 +4,7 @@ export type {
   MessageBus,
   MessageBusStateSource,
 } from '../dashboard/messageBus/bus'
-export {connectMessageBus} from '../dashboard/messageBus/bus'
+export {connectMessageBus, resetMessageBus} from '../dashboard/messageBus/bus'
 export {MessageBusError} from '../dashboard/messageBus/bus'
 export type {
   NavigationLocation,

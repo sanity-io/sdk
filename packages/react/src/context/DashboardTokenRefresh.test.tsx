@@ -28,10 +28,7 @@ vi.mock('../hooks/auth/useAuthState', () => ({
 }))
 
 vi.mock('../dashboard/messageBus/client', () => ({
-  get dashboardMessageBus() {
-    return messageBus.client
-  },
-  isDashboardEnvironment: () => messageBus.client !== undefined,
+  getDashboardMessageBus: () => messageBus.client,
 }))
 
 const mockSetAuthToken = setAuthToken as Mock

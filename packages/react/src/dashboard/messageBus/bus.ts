@@ -124,8 +124,6 @@ export interface MessageBusEmitResult<R> extends PromiseLike<R> {
  * @public
  */
 export interface MessageBus {
-  /** Resets all topics, subscriptions, responders, and pending requests. */
-  reset(): void
   /** Publishes the current value of a state topic. */
   emit<K extends StateTopic>(type: K, value: ValueOf<K>): void
   /** Emits an event topic and provides its reply when awaited. */
@@ -161,7 +159,8 @@ const MESSAGE_BUS_PROTOCOL_KEY = Symbol.for('sanity.os.protocol')
 const MESSAGE_BUS_REGISTRY_KEY = Symbol.for('sanity.os.registry')
 const MESSAGE_BUS_REQUEST_KEY = Symbol.for('sanity.os.request')
 
-const MESSAGE_BUS_PROTOCOL = 1
+// Older SDK copies use this fixed marker to recognize the shared registry.
+const LEGACY_MESSAGE_BUS_PROTOCOL = 1
 
 const DEFAULT_TIMEOUT_MS = 5000
 
@@ -576,7 +575,6 @@ export function createIsolatedMessageBus(
   registerTopics(registry, DASHBOARD_TOPIC_MANIFEST)
 
   const api = {
-    reset: () => reset(registry),
     emit: (type: string, payload: unknown, options?: MessageBusEmitOptions) =>
       emit(registry, type, payload, options, registry.appId),
     query: (type: string, options?: MessageBusAbortOptions) => query(registry, type, options),
@@ -586,7 +584,7 @@ export function createIsolatedMessageBus(
 
   const instance = api as unknown as InternalMessageBus
   instance[MESSAGE_BUS_REGISTRY_KEY] = registry
-  instance[MESSAGE_BUS_PROTOCOL_KEY] = MESSAGE_BUS_PROTOCOL
+  instance[MESSAGE_BUS_PROTOCOL_KEY] = LEGACY_MESSAGE_BUS_PROTOCOL
   return instance
 }
 
@@ -693,7 +691,6 @@ function createFailedMessageBus(fail: () => never): MessageBus {
   return {
     emit: fail,
     query: fail,
-    reset: fail,
     subscribe: fail,
   } as unknown as MessageBus
 }
@@ -720,23 +717,18 @@ export function connectApplicationToMessageBus(
   if (!config.appId) throwMissingAppId()
 
   const {appId} = config
-  const installedProtocol = (installedMessageBus as Partial<InternalMessageBus>)[
-    MESSAGE_BUS_PROTOCOL_KEY
-  ]
-  if (installedProtocol !== MESSAGE_BUS_PROTOCOL) {
-    console.error(
-      `[sanity-sdk:message-bus] protocol mismatch for "${appId}": installed ${String(installedProtocol)}, this copy speaks ${MESSAGE_BUS_PROTOCOL}`,
-    )
+  const registry = (installedMessageBus as Partial<InternalMessageBus>)[MESSAGE_BUS_REGISTRY_KEY]
+  if (!registry) {
+    console.error(`[sanity-sdk:message-bus] incompatible message bus for "${appId}"`)
     return createFailedMessageBus(() => {
       throw new MessageBusError(
         'PROTOCOL_MISMATCH',
-        `installed message bus speaks protocol ${String(installedProtocol)}, this copy speaks ${MESSAGE_BUS_PROTOCOL}`,
+        'installed message bus does not expose a compatible registry',
       )
     })
   }
 
   const applicationMigrations = config.migrations ?? bundledMigrations()
-  const registry = (installedMessageBus as InternalMessageBus)[MESSAGE_BUS_REGISTRY_KEY]
 
   try {
     registerTopics(registry, DASHBOARD_TOPIC_MANIFEST)
@@ -754,7 +746,6 @@ export function connectApplicationToMessageBus(
   let streamGeneration = registry.generation
 
   const api = {
-    reset: () => reset(registry),
     emit: (type: string, payload: unknown, options?: MessageBusEmitOptions) =>
       emit(registry, type, toInstalled(type, payload), options, appId),
     query: (type: string, options?: MessageBusAbortOptions) =>
@@ -789,7 +780,7 @@ export function connectApplicationToMessageBus(
 
   const instance = api as unknown as InternalMessageBus
   instance[MESSAGE_BUS_REGISTRY_KEY] = registry
-  instance[MESSAGE_BUS_PROTOCOL_KEY] = MESSAGE_BUS_PROTOCOL
+  instance[MESSAGE_BUS_PROTOCOL_KEY] = LEGACY_MESSAGE_BUS_PROTOCOL
   return instance
 }
 
@@ -817,15 +808,12 @@ function throwMissingAppId(): never {
   )
 }
 
-function resolveAppId(appId?: string): string {
-  const resolved = appId ?? (typeof __SANITY_APP_ID__ === 'string' ? __SANITY_APP_ID__ : undefined)
-  if (resolved) return resolved
-  return throwMissingAppId()
-}
+const resolveAppId = (appId?: string): string | undefined =>
+  appId ?? (typeof __SANITY_APP_ID__ === 'string' ? __SANITY_APP_ID__ : undefined)
 
 function getInstalledMessageBus(): MessageBus | undefined {
   const bus = (globalThis as {[MESSAGE_BUS_KEY]?: unknown})[MESSAGE_BUS_KEY]
-  return typeof bus === 'object' && bus !== null && MESSAGE_BUS_PROTOCOL_KEY in bus
+  return typeof bus === 'object' && bus !== null && MESSAGE_BUS_REGISTRY_KEY in bus
     ? (bus as unknown as MessageBus)
     : undefined
 }
@@ -845,9 +833,22 @@ export interface ConnectMessageBusOptions {
  */
 export function connectMessageBus(options: ConnectMessageBusOptions = {}): MessageBus | undefined {
   const installedMessageBus = getInstalledMessageBus()
-  return installedMessageBus
-    ? connectApplicationToMessageBus(installedMessageBus, {appId: resolveAppId(options.appId)})
-    : undefined
+  if (!installedMessageBus) return undefined
+
+  const appId = resolveAppId(options.appId)
+  return appId
+    ? connectApplicationToMessageBus(installedMessageBus, {appId})
+    : createFailedMessageBus(throwMissingAppId)
+}
+
+/**
+ * Resets the installed message bus for test isolation.
+ * @public
+ */
+export function resetMessageBus(): void {
+  const installedMessageBus = getInstalledMessageBus()
+  if (!installedMessageBus) return
+  reset((installedMessageBus as InternalMessageBus)[MESSAGE_BUS_REGISTRY_KEY])
 }
 
 /**
@@ -855,7 +856,7 @@ export function connectMessageBus(options: ConnectMessageBusOptions = {}): Messa
  * @internal
  */
 export function installMessageBus(options: ConnectMessageBusOptions = {}): MessageBus {
-  const appId = resolveAppId(options.appId)
+  const appId = resolveAppId(options.appId) ?? throwMissingAppId()
   const installedMessageBus = getInstalledMessageBus()
   if (installedMessageBus) return connectApplicationToMessageBus(installedMessageBus, {appId})
 
