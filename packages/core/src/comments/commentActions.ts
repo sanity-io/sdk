@@ -16,6 +16,7 @@ import {bindActionByResource, type BoundResourceKey} from '../store/createAction
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StoreState} from '../store/createStoreState'
 import {type StoreContext} from '../store/defineStore'
+import {randomUuid} from '../utils/ids'
 import {
   assertDatasetResource,
   getAddonDatasetState,
@@ -326,7 +327,7 @@ export const createComment: (
       options,
       buildCommentPayload({
         authorId: requireCurrentUserId(instance),
-        commentId: options.commentId ?? crypto.randomUUID(),
+        commentId: options.commentId ?? randomUuid(),
         contentSnapshot: options.contentSnapshot,
         context: options.context,
         documentRevisionId: options.documentRevisionId,
@@ -336,7 +337,7 @@ export const createComment: (
         fieldPath,
         selection: options.selection,
         status: options.status ?? 'open',
-        threadId: options.threadId ?? crypto.randomUUID(),
+        threadId: options.threadId ?? randomUuid(),
         ...(isReleasePerspective(perspective) ? {documentVersionId: perspective.releaseName} : {}),
       }),
     )
@@ -386,7 +387,7 @@ export const replyToComment: (
       options,
       buildCommentPayload({
         authorId: requireCurrentUserId(instance),
-        commentId: options.commentId ?? crypto.randomUUID(),
+        commentId: options.commentId ?? randomUuid(),
         handle: options,
         message: options.message,
         // Replies to a reply belong to the thread's first comment, matching how
@@ -420,7 +421,7 @@ export const updateComment: (
     {commentId, message}: UpdateCommentOptions,
   ) => {
     const lastEditedAt = new Date().toISOString()
-    const transactionId = crypto.randomUUID()
+    const transactionId = randomUuid()
     const previous = findCommentById(state, commentId)
 
     if (previous) {
@@ -468,7 +469,7 @@ export const setCommentStatus: (
     {state, instance, key}: StoreContext<CommentsStoreState, BoundResourceKey>,
     {commentId, status}: SetCommentStatusOptions,
   ) => {
-    const transactionId = crypto.randomUUID()
+    const transactionId = randomUuid()
     const previousComments: StoredComment[] = []
 
     for (const entry of Object.values(state.get().entries)) {

@@ -4,7 +4,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StoreState} from '../store/createStoreState'
 import {hashString} from '../utils/hashString'
-import {insecureRandomId} from '../utils/ids'
+import {randomId} from '../utils/ids'
 import {getProjectionState} from './getProjectionState'
 import {subscribeToStateAndFetchBatches} from './subscribeToStateAndFetchBatches'
 import {type ProjectionStoreState} from './types'
@@ -19,7 +19,7 @@ vi.mock('../utils/ids', async (importOriginal) => {
   // Mock implementation uses the external counter
   return {
     ...util,
-    insecureRandomId: vi.fn(() => {
+    randomId: vi.fn(() => {
       const id = `testSubId_${++mockIdCounter}`
       return id
     }),
@@ -39,8 +39,7 @@ describe('getProjectionState', () => {
   let state: StoreState<ProjectionStoreState & {extra?: unknown}>
 
   beforeEach(() => {
-    mockIdCounter = 0
-    vi.mocked(insecureRandomId).mockClear()
+    vi.mocked(randomId).mockClear()
 
     // Capture state
     vi.mocked(subscribeToStateAndFetchBatches).mockImplementation((context) => {
@@ -49,6 +48,9 @@ describe('getProjectionState', () => {
     })
 
     instance = createSanityInstance({projectId: 'exampleProject', dataset: 'exampleDataset'})
+    // Reset after instance creation: the instanceId also comes from randomId,
+    // but the test ids should only count subscription-related calls
+    mockIdCounter = 0
     vi.useFakeTimers() // Enable fake timers for each test
   })
 

@@ -36,6 +36,7 @@ import {getClientState} from '../client/clientStore'
 import {createDocumentHandle} from '../config/handles'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
+import {randomUuid} from '../utils/ids'
 import {
   createDocument,
   deleteDocument,
@@ -369,7 +370,7 @@ it('labels an echo that arrives after the last subscriber left as its own', asyn
   // and out of band, which is the ordering the real API produces
   const clientActionMockImplementation = vi.mocked(client.action).getMockImplementation()!
   vi.mocked(client.action).mockImplementation(
-    async (_input, {transactionId = crypto.randomUUID()} = {}) => ({transactionId}),
+    async (_input, {transactionId = randomUuid()} = {}) => ({transactionId}),
   )
 
   const patchEvents: DocumentRemotePatchesEvent[] = []
@@ -671,7 +672,7 @@ it('fetches documents if there are no active subscriptions for the actions appli
 })
 
 it('batches edit transaction into one outgoing transaction', async () => {
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
 
   const unsubscribe = getDocumentState(instance, doc).subscribe()
 
@@ -747,7 +748,7 @@ it('submits liveEdit document edits through observable.mutate', async () => {
 })
 
 it('provides the consistency status via `getDocumentSyncStatus`', async () => {
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
 
   const syncStatus = getDocumentSyncStatus(instance, doc)
   expect(syncStatus.getCurrent()).toBeUndefined()
@@ -802,7 +803,7 @@ it('reverts failed outgoing transaction locally', async () => {
     })
   })
 
-  const documentId = DocumentId(crypto.randomUUID())
+  const documentId = DocumentId(randomUuid())
   const doc = createDocumentHandle({documentId, documentType: 'article'})
 
   const {getCurrent, subscribe} = getDocumentState(instance, doc)
@@ -870,7 +871,7 @@ it('removes a queued transaction if it fails to apply', async () => {
     })
   })
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
   const state = getDocumentState(instance, doc)
   const unsubscribe = state.subscribe()
 
@@ -975,8 +976,8 @@ it('fetches dataset ACL and updates grants in the document store state', async (
   ]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
-  const book = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'book'})
-  const author = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'author'})
+  const book = createDocumentHandle({documentId: randomUuid(), documentType: 'book'})
+  const author = createDocumentHandle({documentId: randomUuid(), documentType: 'author'})
 
   expect(await resolvePermissions(instance, {actions: [createDocument(book)]})).toEqual({
     allowed: true,
@@ -988,7 +989,7 @@ it('fetches dataset ACL and updates grants in the document store state', async (
 })
 
 it('does not send credentials with the dataset ACL request', async () => {
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
   await resolvePermissions(instance, {actions: [createDocument(doc)]})
 
   const aclCall = vi
@@ -1011,7 +1012,7 @@ it('retries transient dataset ACL fetch failures instead of failing fatally', as
     }),
   )
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
   const result = await resolvePermissions(instance, {actions: [createDocument(doc)]})
 
   expect(result).toEqual({allowed: true})
@@ -1037,7 +1038,7 @@ it('does not retry dataset ACL fetch failures caused by 4xx client errors', asyn
     }),
   )
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
   const documentState = getDocumentState(instance, doc)
   const unsubscribe = documentState.subscribe()
 
@@ -1070,7 +1071,7 @@ it('retries dataset ACL fetch failures caused by 429 rate-limit errors', async (
     }),
   )
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
   const result = await resolvePermissions(instance, {actions: [createDocument(doc)]})
 
   expect(result).toEqual({allowed: true})
@@ -1087,7 +1088,7 @@ it('fetches ACL for MediaLibraryResource', async () => {
   const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
   const mediaLibraryResource = {mediaLibraryId: 'test-media-library'}
 
   const result = await resolvePermissions(mediaLibraryInstance, {
@@ -1105,7 +1106,7 @@ it('fetches ACL for CanvasResource', async () => {
   const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
   const canvasResource = {canvasId: 'test-canvas'}
 
   const result = await resolvePermissions(canvasInstance, {
@@ -1118,7 +1119,7 @@ it('fetches ACL for CanvasResource', async () => {
 })
 
 it('returns a promise that resolves when a document has been loaded in the store (useful for suspense)', async () => {
-  const documentId = DocumentId(crypto.randomUUID())
+  const documentId = DocumentId(randomUuid())
   const doc = createDocumentHandle({documentId, documentType: 'article'})
 
   expect(await resolveDocument(instance, doc)).toBe(null)
@@ -1143,7 +1144,7 @@ it('emits an event for each action after an outgoing transaction has been accept
   const handler = vi.fn()
   const unsubscribe = subscribeDocumentEvents(instance, {resource, eventHandler: handler})
 
-  const documentId = DocumentId(crypto.randomUUID())
+  const documentId = DocumentId(randomUuid())
   const doc = createDocumentHandle({documentId, documentType: 'article'})
   expect(handler).toHaveBeenCalledTimes(0)
 
@@ -1574,7 +1575,7 @@ beforeEach(() => {
       mutations: Mutation[],
       options: BaseMutationOptions = {},
     ): Promise<MultipleMutationResult> => {
-      const transactionId = options.transactionId ?? crypto.randomUUID()
+      const transactionId = options.transactionId ?? randomUuid()
       const timestamp = new Date().toISOString()
       const prior = {...documents}
       let next = {...documents}
@@ -1647,7 +1648,7 @@ beforeEach(() => {
   const action = vi.fn(
     async (
       input: HttpAction | HttpAction[],
-      {transactionId = crypto.randomUUID(), dryRun}: BaseActionOptions,
+      {transactionId = randomUuid(), dryRun}: BaseActionOptions,
     ): Promise<SingleActionResult | MultipleActionResult> => {
       const actions = Array.isArray(input) ? input : [input]
       let next: DocumentSet = {...documents}

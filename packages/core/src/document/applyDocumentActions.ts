@@ -5,6 +5,7 @@ import {type DocumentResource} from '../config/sanityConfig'
 import {bindActionByResource} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StoreContext} from '../store/defineStore'
+import {randomUuid} from '../utils/ids'
 import {type Action} from './actions'
 import {documentStore, type DocumentStoreState} from './documentStore'
 import {type DocumentTransactionSubmissionResult} from './events'
@@ -74,12 +75,7 @@ const boundApplyDocumentActions = bindActionByResource(documentStore, _applyDocu
 /** @internal */
 async function _applyDocumentActions(
   {state}: StoreContext<DocumentStoreState>,
-  {
-    actions,
-    resource,
-    transactionId = crypto.randomUUID(),
-    disableBatching,
-  }: ApplyDocumentActionsOptions,
+  {actions, resource, transactionId = randomUuid(), disableBatching}: ApplyDocumentActionsOptions,
 ): Promise<ActionsResult> {
   const {events} = state.get()
 

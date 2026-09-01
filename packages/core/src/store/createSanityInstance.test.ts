@@ -6,7 +6,7 @@ import {createSanityInstance} from './createSanityInstance'
 describe('createSanityInstance', () => {
   it('should create an instance with a unique instanceId and given config', () => {
     const instance = createSanityInstance({projectId: 'proj1', dataset: 'ds1'})
-    expect(typeof instance.instanceId).toBe('string')
+    expect(instance.instanceId).toMatch(/^[a-zA-Z0-9]{16}$/)
     expect(instance.config).toEqual({projectId: 'proj1', dataset: 'ds1'})
     expect(instance.isDisposed()).toBe(false)
   })

@@ -4,7 +4,7 @@ import {type Mutation, type PatchOperations, type SanityDocumentLike} from '@san
 import {type DocumentHandle} from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {type StoreContext} from '../store/defineStore'
-import {insecureRandomId} from '../utils/ids'
+import {randomId} from '../utils/ids'
 import {isDeepEqual, omitProperty} from '../utils/object'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {type Action} from './actions'
@@ -790,7 +790,7 @@ export function manageSubscriberIds(
 ): () => void {
   const documentIds = getDocumentIdsFromHandleLikes(handles)
 
-  const subscriptionId = insecureRandomId()
+  const subscriptionId = randomId(16)
   state.set('addSubscribers', (prev) =>
     documentIds.reduce(
       (acc, id) => addSubscriptionIdToDocument(acc, id, subscriptionId),

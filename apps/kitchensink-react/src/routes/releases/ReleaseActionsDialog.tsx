@@ -1,3 +1,4 @@
+import {randomId} from '@sanity/sdk/_internal'
 import {
   archiveRelease,
   createRelease,
@@ -37,8 +38,8 @@ interface ReleaseActionsDialogProps {
 }
 
 function generateReleaseId(): string {
-  // Match the studio's short ID style: `r<7 hex chars>`.
-  return `r${crypto.randomUUID().replace(/-/g, '').slice(0, 7)}`
+  // Match the studio's release ID style: `r` + 8 alphanumeric chars.
+  return `r${randomId(8)}`
 }
 
 function toDatetimeLocal(iso?: string): string {
