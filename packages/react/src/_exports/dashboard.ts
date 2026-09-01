@@ -26,6 +26,11 @@ export {
   useAgentResourceContext,
 } from '../hooks/dashboard/useAgentResourceContext'
 export {useApplication} from '../hooks/dashboard/useApplication'
+export {
+  type ApplicationConfigSelector,
+  useApplicationConfig,
+} from '../hooks/dashboard/useApplicationConfig'
+export {useApplicationConfigs} from '../hooks/dashboard/useApplicationConfigs'
 export {useApplicationForegroundId} from '../hooks/dashboard/useApplicationForegroundId'
 export {
   type Application,
