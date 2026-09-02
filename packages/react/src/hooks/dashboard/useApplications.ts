@@ -1,22 +1,16 @@
-import {type ApplicationBase, type ApplicationInterface} from '@sanity/sdk'
+import {type ApplicationBase} from '@sanity/sdk'
 import {useMemo} from 'react'
 
 import {type RemoteModuleRef, type ValueOf} from '../../dashboard/messageBus/topics'
 import {useTopic, type UseTopicOptions, type UseTopicResult} from './useTopic'
 
-type DashboardInterfaceBase = Omit<ApplicationInterface, 'metadata' | 'type'>
-type DashboardApplicationInterface = DashboardInterfaceBase &
-  (
-    | {type: 'app'; metadata: {dock?: {group?: string; order?: number}} | null}
-    | {type: 'panel'; metadata: {dock?: {group?: string; order?: number}} | null}
-    | {type: 'asset_source'; metadata: null}
-    | {type: 'worker'; metadata: null}
-    | {type: 'tile'; metadata: {order?: number; size: 'small' | 'large' | 'banner'}}
-  )
-type DashboardTopicApplication = ApplicationBase & {
-  activeDeployment?: {interfaces?: DashboardApplicationInterface[]} | null
-  config?: {mfManifest?: unknown}
-}
+type DashboardTopicApplication = Extract<
+  NonNullable<ValueOf<'applications.list'>>,
+  {ok: true}
+>['value'][number]
+type DashboardApplicationInterface = NonNullable<
+  NonNullable<DashboardTopicApplication['activeDeployment']>['interfaces']
+>[number]
 type ViewInterface = Exclude<DashboardApplicationInterface, {type: 'worker'}>
 
 /**
@@ -112,7 +106,7 @@ const toApplication = (application: DashboardTopicApplication): Application => {
 const applicationsFromTopic = (topic: ValueOf<'applications.list'>): Application[] => {
   if (topic === null) return []
   if (!topic.ok) throw new Error('The dashboard failed to load applications')
-  return topic.value.map((application) => toApplication(application as DashboardTopicApplication))
+  return topic.value.map(toApplication)
 }
 
 /**
