@@ -46,12 +46,17 @@ const normalizedDoc = {
   resource: {projectId: 'test', dataset: 'test'},
 }
 
+// An edit that changes nothing sends no action handles, so the resource travels
+// on its own.
+const resourceOptions = {resource: normalizedDoc.resource}
+
 // Define a single generic TestDocument type
 interface Book extends SanityDocument {
   _type: 'book'
   foo?: string
   extra?: string
   title?: string
+  body?: {_key: string; text: string}[]
 }
 
 // Scope the TestDocument type to the project/datasets used in tests
@@ -103,9 +108,75 @@ describe('useEditDocument hook', () => {
 
     const {result} = renderHook(() => useEditDocument(docHandle))
     const promise = result.current({...doc, foo: 'baz', extra: 'old', _id: 'doc1'})
-    expect(apply).toHaveBeenCalledWith([editDocument(normalizedDoc, {set: {foo: 'baz'}})])
+    expect(apply).toHaveBeenCalledWith(
+      [editDocument(normalizedDoc, {set: {foo: 'baz'}})],
+      resourceOptions,
+    )
     const actionsResult = await promise
     expect(actionsResult).toEqual({transactionId: 'tx2'})
+  })
+
+  it('ignores fields that are only new copies of the value already stored', async () => {
+    const currentDoc = {...doc, title: 'Dune', body: [{_key: 'a', text: 'Arrakis'}]} satisfies Book
+    const getCurrent = vi.fn().mockReturnValue(currentDoc)
+    const subscribe = vi.fn().mockReturnValue(vi.fn())
+    vi.mocked(getDocumentState).mockReturnValue({
+      getCurrent,
+      subscribe,
+    } as unknown as StateSource<SanityDocument>)
+
+    const apply = vi.fn().mockResolvedValue({transactionId: 'tx5'})
+    vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
+
+    // A caller that re-parses or clones hands back fresh references for every
+    // object and array; only `title` changed.
+    const reparsed = JSON.parse(JSON.stringify({...currentDoc, title: 'Dune Messiah'})) as Book
+
+    const {result} = renderHook(() => useEditDocument(docHandle))
+    await result.current(reparsed)
+
+    expect(apply).toHaveBeenCalledWith(
+      [editDocument(normalizedDoc, {set: {title: 'Dune Messiah'}})],
+      resourceOptions,
+    )
+  })
+
+  it('applies no actions when the whole document is unchanged', async () => {
+    const currentDoc = {...doc, body: [{_key: 'a', text: 'Arrakis'}]} satisfies Book
+    const getCurrent = vi.fn().mockReturnValue(currentDoc)
+    const subscribe = vi.fn().mockReturnValue(vi.fn())
+    vi.mocked(getDocumentState).mockReturnValue({
+      getCurrent,
+      subscribe,
+    } as unknown as StateSource<SanityDocument>)
+
+    const apply = vi.fn().mockResolvedValue({transactionId: 'tx6'})
+    vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
+
+    const {result} = renderHook(() => useEditDocument(docHandle))
+    await result.current(JSON.parse(JSON.stringify(currentDoc)) as Book)
+
+    expect(editDocument).not.toHaveBeenCalled()
+    expect(apply).toHaveBeenCalledWith([], resourceOptions)
+  })
+
+  it('applies no actions when a path is set to the value it already holds', async () => {
+    const currentValue = [{_key: 'a', text: 'Arrakis'}]
+    const getCurrent = vi.fn().mockReturnValue(currentValue)
+    const subscribe = vi.fn().mockReturnValue(vi.fn())
+    vi.mocked(getDocumentState).mockReturnValue({
+      getCurrent,
+      subscribe,
+    } as unknown as StateSource<SanityDocument>)
+
+    const apply = vi.fn().mockResolvedValue({transactionId: 'tx7'})
+    vi.mocked(useApplyDocumentActions).mockReturnValue(apply)
+
+    const {result} = renderHook(() => useEditDocument<Book['body']>({...docHandle, path: 'body'}))
+    await result.current(JSON.parse(JSON.stringify(currentValue)) as Book['body'])
+
+    expect(editDocument).not.toHaveBeenCalled()
+    expect(apply).toHaveBeenCalledWith([], resourceOptions)
   })
 
   it('applies a single edit action using an updater function for the given path', async () => {
@@ -141,7 +212,10 @@ describe('useEditDocument hook', () => {
 
     const {result} = renderHook(() => useEditDocument(docHandle))
     const promise = result.current((prevDoc: Book) => ({...prevDoc, foo: 'baz'}))
-    expect(apply).toHaveBeenCalledWith([editDocument(normalizedDoc, {set: {foo: 'baz'}})])
+    expect(apply).toHaveBeenCalledWith(
+      [editDocument(normalizedDoc, {set: {foo: 'baz'}})],
+      resourceOptions,
+    )
     const actionsResult = await promise
     expect(actionsResult).toEqual({transactionId: 'tx4'})
   })

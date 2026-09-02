@@ -95,6 +95,18 @@ describe('useApplyActions', () => {
     })
   })
 
+  // `useEditDocument` sends an empty list when an edit changes nothing, leaving
+  // no action handles to carry the resource.
+  it('forwards an empty action list with the resource from options', async () => {
+    const {result} = renderHook(() => useApplyActions())
+    result.current([], {resource: {projectId: 'p', dataset: 'd123'}})
+
+    expect(applyDocumentActions).toHaveBeenCalledExactlyOnceWith(instance, {
+      actions: [],
+      resource: {projectId: 'p', dataset: 'd123'},
+    })
+  })
+
   it('throws when actions have mismatched project IDs', async () => {
     const {result} = renderHook(() => useApplyActions())
     expect(() => {
