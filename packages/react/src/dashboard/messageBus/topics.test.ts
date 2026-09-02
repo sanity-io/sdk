@@ -1,4 +1,4 @@
-import {type Application, type ApplicationInclude} from '@sanity/sdk'
+import {type Application, type ApplicationBase} from '@sanity/sdk'
 import {describe, expectTypeOf, it} from 'vitest'
 
 import {type MessageBus} from './bus'
@@ -12,6 +12,13 @@ import {
 } from './topics'
 
 type IsStateTopic<Topic> = Topic extends StateTopic ? true : false
+type ListedApplication = Extract<
+  NonNullable<ValueOf<'applications.list'>>,
+  {ok: true}
+>['value'][number]
+type ListedInterface = NonNullable<
+  NonNullable<ListedApplication['activeDeployment']>['interfaces']
+>[number]
 
 describe('dashboard topic types', () => {
   it('distinguishes state and event topics', () => {
@@ -22,9 +29,16 @@ describe('dashboard topic types', () => {
 
   it('exposes application state values', () => {
     expectTypeOf<ValueOf<'applications.config'>>().toEqualTypeOf<ApplicationConfig[] | null>()
-    expectTypeOf<ValueOf<'applications.list'>>().toEqualTypeOf<TopicResult<
-      Application<ApplicationInclude>[]
+    expectTypeOf<ValueOf<'applications.list'>>().toMatchTypeOf<TopicResult<
+      ApplicationBase[]
     > | null>()
+    expectTypeOf<Extract<ListedInterface, {type: 'tile'}>['metadata']>().toEqualTypeOf<{
+      order?: number
+      size: 'small' | 'large' | 'banner'
+    }>()
+    expectTypeOf<Extract<ListedInterface, {type: 'panel'}>['metadata']>().toEqualTypeOf<{
+      dock: {group?: 'dock.system' | 'dock.applications' | 'dock.user'; order?: number}
+    } | null>()
     expectTypeOf<ValueOf<'applications.foreground'>>().toEqualTypeOf<Application['id'] | null>()
   })
 

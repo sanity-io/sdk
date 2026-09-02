@@ -1,9 +1,25 @@
 import {
   type Application,
-  type ApplicationInclude,
+  type ApplicationBase,
+  type ApplicationInterface,
   type CurrentUser,
   type OrganizationBase,
 } from '@sanity/sdk'
+
+type DashboardInterfaceBase = Omit<ApplicationInterface, 'metadata' | 'type'>
+type DashboardDockGroup = 'dock.system' | 'dock.applications' | 'dock.user'
+type DashboardApplicationInterface = DashboardInterfaceBase &
+  (
+    | {type: 'app'; metadata: {dock: {group?: DashboardDockGroup; order?: number}} | null}
+    | {type: 'panel'; metadata: {dock: {group?: DashboardDockGroup; order?: number}} | null}
+    | {type: 'asset_source'; metadata: null}
+    | {type: 'worker'; metadata: null}
+    | {type: 'tile'; metadata: {order?: number; size: 'small' | 'large' | 'banner'}}
+  )
+type DashboardApplication = ApplicationBase & {
+  activeDeployment?: {interfaces?: DashboardApplicationInterface[]} | null
+  config?: {mfManifest?: unknown}
+}
 
 /**
  * Identifies a module federation expose and the manifest that serves it.
@@ -87,7 +103,7 @@ export interface DashboardTopics {
   /** The foreground application ID, or `null` on dashboard-level routes. */
   'applications.foreground': StateTopicDef<Application['id'] | null>
   /** The dashboard applications available to the current user. */
-  'applications.list': StateTopicDef<TopicResult<Application<ApplicationInclude>[]> | null>
+  'applications.list': StateTopicDef<TopicResult<DashboardApplication[]> | null>
   /** The dashboard session token, or `null` while signed out. */
   'auth.token': StateTopicDef<string | null>
   /** Requests a dashboard session token. */
