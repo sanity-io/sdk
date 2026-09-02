@@ -70,14 +70,15 @@ function DashboardTokenRefresh({children}: PropsWithChildren) {
  *
  * @example
  * ```tsx
- * import {DashboardTokenRefreshProvider, ResourceProvider} from '@sanity/sdk-react'
+ * import {ResourceProvider} from '@sanity/sdk-react'
+ * import {TokenRefreshProvider} from '@sanity/sdk-react/dashboard'
  *
  * function EmbeddedApp() {
  *   return (
  *     <ResourceProvider fallback={<Loading />}>
- *       <DashboardTokenRefreshProvider>
+ *       <TokenRefreshProvider>
  *         <App />
- *       </DashboardTokenRefreshProvider>
+ *       </TokenRefreshProvider>
  *     </ResourceProvider>
  *   )
  * }
