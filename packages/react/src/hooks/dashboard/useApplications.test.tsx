@@ -94,7 +94,7 @@ const nonFederatedApplication = {
   slug: 'legacy',
   title: 'Legacy',
   isSingleton: false,
-  config: {},
+  config: undefined,
 }
 
 const nonSingletonApplication = {
