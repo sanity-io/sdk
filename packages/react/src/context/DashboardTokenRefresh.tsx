@@ -13,8 +13,8 @@ import {
 /**
  * Keeps the SDK auth token in sync with the dashboard "OS".
  *
- * When running as a federated remote inside the dashboard the OS owns the
- * session, so we subscribe to its `auth.token` stream and mirror each value into
+ * When running inside the dashboard the OS owns the session, so we subscribe
+ * to its `auth.token` stream and mirror each value into
  * the auth store — a token logs us in, `null` logs us out, and later OS
  * sign-in/out propagates automatically. When a request is rejected with a 401
  * (the token expired), we ask the OS to reissue rather than tearing the session
