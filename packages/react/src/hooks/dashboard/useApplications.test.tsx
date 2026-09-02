@@ -53,7 +53,7 @@ const application = {
         title: 'Notifications',
         version: '1',
         moduleId: 'views/notifications',
-        metadata: {dock: {group: 'dock.applications', order: 1}},
+        metadata: {dock: {group: 'applications', order: 1}},
       },
       {
         id: 'tile-1',
