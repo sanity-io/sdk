@@ -44,7 +44,7 @@ import {
   useDocuments,
   useResource,
 } from '@sanity/sdk-react'
-import {Badge, Box, Button, Card, Flex, Spinner, Stack, Text, TextInput} from '@sanity/ui'
+import {Badge, Box, Button, Flex, Spinner, Stack, Text, TextInput} from '@sanity/ui'
 import {
   type JSX,
   type ReactElement,
@@ -54,7 +54,9 @@ import {
   useMemo,
   useState,
 } from 'react'
+import {Card} from 'ui5'
 
+import {PageLayout} from '../components/PageLayout'
 import {isE2E} from '../sanityConfigs'
 
 const PTE_FIELD_PATH = 'minimalBlock'
@@ -358,7 +360,7 @@ function FieldPreview({docHandle, testId}: {docHandle: DocumentHandle<'author'>;
   const {data} = useDocument({...docHandle, path: PTE_FIELD_PATH})
 
   return (
-    <Card padding={2} tone="transparent" border radius={2}>
+    <Card density="compact">
       <pre
         style={{margin: 0, fontSize: 10, maxHeight: 180, overflow: 'auto'}}
         data-testid={`pte-preview-${testId}`}
@@ -379,8 +381,8 @@ function EditorPane({
   testId: string
 }) {
   return (
-    <Card padding={3} radius={2} shadow={1} flex={1}>
-      <Stack space={3}>
+    <Card density="regular" style={{flex: 1}}>
+      <Stack gap={3}>
         <Flex justify="space-between" align="center">
           <Text size={1} weight="semibold">
             {label}
@@ -390,7 +392,7 @@ function EditorPane({
         <EditorProvider initialConfig={{schemaDefinition}}>
           <NodePlugin nodes={editorNodes} />
           <Toolbar testId={testId} />
-          <Card border radius={2} padding={3}>
+          <Card density="compact">
             <PortableTextEditable
               style={{minHeight: 120, outline: 'none'}}
               data-testid={`pte-editable-${testId}`}
@@ -459,11 +461,11 @@ function ConcurrentEditors() {
   )
 
   return (
-    <Box padding={4}>
-      <Stack space={4}>
-        <Card padding={4} radius={2} shadow={1}>
-          <Stack space={3}>
-            <Text size={2} weight="semibold">
+    <PageLayout title="Portable Text" subtitle="Concurrent editing of the same author document">
+      <Stack gap={4}>
+        <Card density="regular">
+          <Stack gap={3}>
+            <Text size={1} weight="semibold">
               Concurrent Portable Text editing
             </Text>
             <Text size={1} muted>
@@ -476,7 +478,7 @@ function ConcurrentEditors() {
             <Flex gap={3} align="flex-end">
               <Box flex={1}>
                 <TextInput
-                  fontSize={2}
+                  fontSize={1}
                   value={draftId}
                   placeholder="Author document ID"
                   onChange={(e) => setDraftId(e.currentTarget.value)}
@@ -486,7 +488,7 @@ function ConcurrentEditors() {
               <Button
                 text="Load"
                 tone="primary"
-                fontSize={2}
+                fontSize={1}
                 disabled={!draftId}
                 onClick={() => setDocumentId(draftId)}
                 data-testid="pte-load-button"
@@ -496,8 +498,8 @@ function ConcurrentEditors() {
         </Card>
 
         {!docHandle || !resource || !isDatasetResource(resource) ? (
-          <Card padding={4} radius={2} shadow={1} tone="transparent">
-            <Text align="center" muted>
+          <Card density="regular">
+            <Text align="center" muted size={1}>
               No author document found. Enter a document ID above.
             </Text>
           </Card>
@@ -526,7 +528,7 @@ function ConcurrentEditors() {
           </Flex>
         )}
       </Stack>
-    </Box>
+    </PageLayout>
   )
 }
 

@@ -1,5 +1,5 @@
-import {Flex, Text} from '@sanity/ui'
 import {useEffect, useLayoutEffect, useRef, useState} from 'react'
+import {Flex, Text} from 'ui5'
 
 interface LoadMoreProps {
   // Whether a fetch is currently in flight (renders a "Loading…" hint).
@@ -56,13 +56,13 @@ export function LoadMore({
     <Flex
       as={as}
       data-testid="load-more"
-      style={{height: 12}}
-      ref={ref}
-      flex="auto"
-      justify="center"
+      flexGrow={1}
+      height="12px"
+      justifyContent="center"
       padding={3}
+      ref={ref}
     >
-      {isPending && <Text>Loading…</Text>}
+      {isPending && <Text size={1}>Loading…</Text>}
     </Flex>
   )
 }

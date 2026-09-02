@@ -12,27 +12,15 @@ import {
   useSanityInstance,
   useUsers,
 } from '@sanity/sdk-react'
-import {
-  Avatar,
-  Box,
-  Button,
-  Card,
-  Container,
-  Dialog,
-  Flex,
-  Heading,
-  Label,
-  Select,
-  Spinner,
-  Stack,
-  Text,
-} from '@sanity/ui'
+import {Avatar, Button, Dialog, Select} from '@sanity/ui'
 import {defineQuery} from 'groq'
 import {JSX, startTransition, Suspense, useCallback, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+import {Box, Card, Flex, Spinner, Text, VStack} from 'ui5'
 
 import {JsonDocumentEditor} from '../components/JsonDocumentEditor'
 import {LoadMore} from '../components/LoadMore'
+import {PageLayout} from '../components/PageLayout'
 import {PaginatedListToolbar} from '../components/PaginatedListToolbar'
 import {PaginationControls} from '../components/PaginationControls'
 // Import the custom table components
@@ -62,12 +50,12 @@ function DocumentEditorDialog({
       open={open}
       width={2}
     >
-      <Stack space={4} padding={4}>
+      <Flex flexDirection="column" gap={4} padding={4}>
         <JsonDocumentEditor documentHandle={handle} wrapInCard={false} maxHeight="70vh" />
-        <Flex justify="flex-end">
+        <Flex justifyContent="flex-end">
           <Button tone="primary" text="Close" onClick={onClose} />
         </Flex>
-      </Stack>
+      </Flex>
     </Dialog>
   )
 }
@@ -112,11 +100,9 @@ function DocumentRowFallback() {
   return (
     <TR>
       <TD padding={3}>
-        <Flex align="center" justify="center" padding={3}>
+        <Flex alignItems="center" gap={2} justifyContent="center" padding={3}>
           <Spinner />
-          <Text size={1} style={{marginLeft: '8px'}}>
-            Loading document...
-          </Text>
+          <Text size={1}>Loading document...</Text>
         </Flex>
       </TD>
       <TD padding={0} />
@@ -131,16 +117,18 @@ function DocumentRowError({error}: {error: Error}) {
   return (
     <TR>
       <TD padding={3}>
-        <Card tone="critical" padding={3}>
-          <Stack space={2}>
-            <Text weight="semibold">Error loading document</Text>
+        <Card density="regular" tone="critical">
+          <VStack gap={2}>
+            <Text size={1} weight="semibold">
+              Error loading document
+            </Text>
             <Text size={1}>{error.message}</Text>
             {error.stack && (
-              <Box style={{maxHeight: '100px', overflow: 'auto', fontSize: '12px'}}>
+              <Box maxHeight="100px" overflow="auto" style={{fontSize: '12px'}}>
                 <pre style={{margin: 0}}>{error.stack}</pre>
               </Box>
             )}
-          </Stack>
+          </VStack>
         </Card>
       </TD>
     </TR>
@@ -191,8 +179,8 @@ function DocumentList({documentType}: DocumentListProps) {
 
   if (data.length === 0 && !isPending) {
     return (
-      <Card padding={4} tone="caution">
-        <Text>
+      <Card density="regular" tone="caution">
+        <Text size={1}>
           No documents found of type &quot;{documentType}&quot; in dataset &quot;{config.dataset}
           &quot;
         </Text>
@@ -202,11 +190,10 @@ function DocumentList({documentType}: DocumentListProps) {
 
   return (
     <Box padding={4}>
-      <Heading as="h3" size={2}>
-        {documentType} Documents
-      </Heading>
-
-      <Stack space={4} marginTop={4}>
+      <VStack gap={4}>
+        <Text size={1} weight="semibold">
+          {documentType} Documents
+        </Text>
         <PaginatedListToolbar
           noun="documents"
           idSuffix={documentType}
@@ -260,16 +247,14 @@ function DocumentList({documentType}: DocumentListProps) {
             ) : (
               <TR>
                 <TD padding={3}>
-                  <Flex justify="center" align="center" padding={4}>
+                  <Flex alignItems="center" justifyContent="center" padding={4}>
                     {isPending ? (
-                      <>
+                      <Flex alignItems="center" gap={2}>
                         <Spinner />
-                        <Text size={2} style={{marginLeft: '8px'}}>
-                          Loading documents...
-                        </Text>
-                      </>
+                        <Text size={1}>Loading documents...</Text>
+                      </Flex>
                     ) : (
-                      <Text>No documents found</Text>
+                      <Text size={1}>No documents found</Text>
                     )}
                   </Flex>
                 </TD>
@@ -296,7 +281,7 @@ function DocumentList({documentType}: DocumentListProps) {
           goToPage={goToPage}
           isPending={isPending}
         />
-      </Stack>
+      </VStack>
     </Box>
   )
 }
@@ -330,47 +315,49 @@ function DocumentTypes() {
 
   if (!documentTypes || documentTypes.length === 0) {
     return (
-      <Card padding={4} tone="caution">
-        <Text>No document types found in dataset &quot;{config.dataset}&quot;</Text>
+      <Card density="regular" tone="caution">
+        <Text size={1}>No document types found in dataset &quot;{config.dataset}&quot;</Text>
       </Card>
     )
   }
 
   return (
-    <Stack space={4} padding={4}>
+    <Flex flexDirection="column" gap={4} padding={4}>
       <Box>
-        <Label htmlFor={`doctype-${config.dataset}`} size={2}>
-          Document Type
-        </Label>
-        <Select
-          id={`doctype-${config.dataset}`}
-          data-testid="org-doctype-select"
-          value={selectedType || ''}
-          onChange={handleTypeChange}
-          style={{width: '100%', marginTop: '8px'}}
-        >
-          <option value="">Select a document type</option>
-          {documentTypes.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </Select>
+        <VStack gap={2}>
+          <Text as="label" htmlFor={`doctype-${config.dataset}`} muted size={1}>
+            Document Type
+          </Text>
+          <Select
+            id={`doctype-${config.dataset}`}
+            fontSize={1}
+            data-testid="org-doctype-select"
+            value={selectedType || ''}
+            onChange={handleTypeChange}
+          >
+            <option value="">Select a document type</option>
+            {documentTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </Select>
+        </VStack>
       </Box>
 
       {selectedType && (
         <ErrorBoundary
           resetKeys={[config.dataset, selectedType]}
           fallback={
-            <Card padding={4} tone="critical">
-              <Text>Error loading documents of type &quot;{selectedType}&quot;</Text>
+            <Card density="regular" tone="critical">
+              <Text size={1}>Error loading documents of type &quot;{selectedType}&quot;</Text>
             </Card>
           }
         >
           <DocumentList documentType={selectedType} />
         </ErrorBoundary>
       )}
-    </Stack>
+    </Flex>
   )
 }
 
@@ -385,50 +372,54 @@ function DatasetExplorer() {
 
   if (datasets.length === 0) {
     return (
-      <Card padding={4} tone="caution">
-        <Text>No datasets found in this project</Text>
+      <Card density="regular" tone="caution">
+        <Text size={1}>No datasets found in this project</Text>
       </Card>
     )
   }
 
   return (
-    <Stack space={4} padding={4}>
+    <Flex flexDirection="column" gap={4} padding={4}>
       <Box>
-        <Label htmlFor={`dataset-${config.projectId}`} size={2}>
-          Dataset
-        </Label>
-        <Select
-          id={`dataset-${config.projectId}`}
-          data-testid="org-dataset-select"
-          value={selectedDataset || ''}
-          onChange={handleDatasetChange}
-          style={{width: '100%', marginTop: '8px'}}
-        >
-          <option value="">Select a dataset</option>
-          {datasets.map((dataset) => (
-            <option key={dataset.name} value={dataset.name}>
-              {dataset.name}
-            </option>
-          ))}
-        </Select>
+        <VStack gap={2}>
+          <Text as="label" htmlFor={`dataset-${config.projectId}`} muted size={1}>
+            Dataset
+          </Text>
+          <Select
+            id={`dataset-${config.projectId}`}
+            fontSize={1}
+            data-testid="org-dataset-select"
+            value={selectedDataset || ''}
+            onChange={handleDatasetChange}
+          >
+            <option value="">Select a dataset</option>
+            {datasets.map((dataset) => (
+              <option key={dataset.name} value={dataset.name}>
+                {dataset.name}
+              </option>
+            ))}
+          </Select>
+        </VStack>
       </Box>
 
       {selectedDataset && (
-        <Card shadow={1} radius={2}>
+        <Card density="regular">
           <ErrorBoundary
             resetKeys={[selectedDataset]}
             fallback={
-              <Card padding={4} tone="critical">
-                <Text>Error loading document types from dataset &quot;{selectedDataset}&quot;</Text>
+              <Card density="regular" tone="critical">
+                <Text size={1}>
+                  Error loading document types from dataset &quot;{selectedDataset}&quot;
+                </Text>
               </Card>
             }
           >
             <ResourceProvider
               dataset={selectedDataset}
               fallback={
-                <Flex align="center" padding={4}>
+                <Flex alignItems="center" gap={2} padding={4}>
                   <Spinner />
-                  <Text style={{marginLeft: '8px'}}>Loading document types...</Text>
+                  <Text size={1}>Loading document types...</Text>
                 </Flex>
               }
             >
@@ -437,7 +428,7 @@ function DatasetExplorer() {
           </ErrorBoundary>
         </Card>
       )}
-    </Stack>
+    </Flex>
   )
 }
 
@@ -451,28 +442,28 @@ function UsersDialogContent() {
   const {data, hasMore, isPending, loadMore} = useUsers({batchSize: 10})
 
   return (
-    <Stack space={3}>
+    <VStack gap={3}>
       {isPending && data.length === 0 ? (
-        <Flex align="center" justify="center" padding={4}>
+        <Flex alignItems="center" gap={2} justifyContent="center" padding={4}>
           <Spinner />
-          <Text style={{marginLeft: '8px'}}>Loading users...</Text>
+          <Text size={1}>Loading users...</Text>
         </Flex>
       ) : (
         <>
           {data.length === 0 ? (
-            <Text>No users found</Text>
+            <Text size={1}>No users found</Text>
           ) : (
-            <Stack space={2}>
+            <VStack gap={2}>
               {data.map((user) => (
                 <UserListItem key={user.profile.id} user={user} />
               ))}
 
               <LoadMore as="div" isPending={isPending} hasMore={hasMore} onLoadMore={loadMore} />
-            </Stack>
+            </VStack>
           )}
         </>
       )}
-    </Stack>
+    </VStack>
   )
 }
 
@@ -485,7 +476,7 @@ function UsersDialog({open, onClose}: UsersDialogProps) {
       open={open}
       width={1}
     >
-      <Box padding={4} style={{maxHeight: '70vh', overflow: 'auto'}}>
+      <Box maxHeight="70vh" overflow="auto" padding={4}>
         <Suspense fallback={<Spinner />}>
           <UsersDialogContent />
         </Suspense>
@@ -502,13 +493,13 @@ function ProjectExplorer() {
   const handleCloseUsersDialog = () => setIsUsersDialogOpen(false)
 
   return (
-    <Stack space={4}>
+    <VStack gap={4}>
       <Box padding={3}>
-        <Flex justify="space-between" align="center">
+        <Flex alignItems="center" justifyContent="space-between">
           <Box>
-            <Heading as="h3" size={2}>
+            <Text size={1} weight="semibold">
               {project.displayName || project.id}
-            </Heading>
+            </Text>
             <Text size={1} muted>
               Project ID: {project.id}
             </Text>
@@ -530,18 +521,18 @@ function ProjectExplorer() {
         <UsersDialog open={isUsersDialogOpen} onClose={handleCloseUsersDialog} />
       )}
 
-      <Card shadow={1} radius={2}>
+      <Card density="regular">
         <ErrorBoundary
           fallback={
-            <Card padding={4} tone="critical">
-              <Text>Error loading datasets for project &quot;{project.id}&quot;</Text>
+            <Card density="regular" tone="critical">
+              <Text size={1}>Error loading datasets for project &quot;{project.id}&quot;</Text>
             </Card>
           }
         >
           <DatasetExplorer />
         </ErrorBoundary>
       </Card>
-    </Stack>
+    </VStack>
   )
 }
 
@@ -556,50 +547,52 @@ function ProjectsExplorer() {
 
   if (projects.length === 0) {
     return (
-      <Card padding={4} tone="caution">
-        <Text>No projects found</Text>
+      <Card density="regular" tone="caution">
+        <Text size={1}>No projects found</Text>
       </Card>
     )
   }
 
   return (
-    <Stack space={4}>
+    <VStack gap={4}>
       <Box>
-        <Label htmlFor="project-selector" size={2}>
-          Project
-        </Label>
-        <Select
-          id="project-selector"
-          data-testid="org-project-select"
-          value={selectedProject || ''}
-          onChange={handleProjectChange}
-          style={{width: '100%', marginTop: '8px'}}
-        >
-          <option value="">Select a project</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.displayName} - {project.id}
-            </option>
-          ))}
-        </Select>
+        <VStack gap={2}>
+          <Text as="label" htmlFor="project-selector" muted size={1}>
+            Project
+          </Text>
+          <Select
+            id="project-selector"
+            fontSize={1}
+            data-testid="org-project-select"
+            value={selectedProject || ''}
+            onChange={handleProjectChange}
+          >
+            <option value="">Select a project</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.displayName} - {project.id}
+              </option>
+            ))}
+          </Select>
+        </VStack>
       </Box>
 
       {selectedProject && (
-        <Card shadow={1} radius={2}>
+        <Card density="regular">
           <ErrorBoundary
             resetKeys={[selectedProject]}
             fallback={
-              <Card padding={4} tone="critical">
-                <Text>Error loading project &quot;{selectedProject}&quot;</Text>
+              <Card density="regular" tone="critical">
+                <Text size={1}>Error loading project &quot;{selectedProject}&quot;</Text>
               </Card>
             }
           >
             <ResourceProvider
               projectId={selectedProject}
               fallback={
-                <Flex align="center" padding={4}>
+                <Flex alignItems="center" gap={2} padding={4}>
                   <Spinner />
-                  <Text style={{marginLeft: '8px'}}>Loading project...</Text>
+                  <Text size={1}>Loading project...</Text>
                 </Flex>
               }
             >
@@ -608,59 +601,49 @@ function ProjectsExplorer() {
           </ErrorBoundary>
         </Card>
       )}
-    </Stack>
+    </VStack>
   )
 }
 
 // Main route component
 export function OrgDocumentExplorerRoute(): JSX.Element {
   return (
-    <Container width={3}>
-      <Stack space={5}>
-        <Box padding={4}>
-          <Heading as="h1" size={5}>
-            Organization Document Explorer
-          </Heading>
-          <Text muted size={1}>
-            Browse documents across your organization in a hierarchical structure
-          </Text>
-        </Box>
-
-        <Card shadow={1} radius={2}>
-          <Stack space={3}>
-            <Box padding={3} style={{borderBottom: '1px solid #eee'}}>
-              <Heading as="h2" size={2}>
-                Projects Explorer
-              </Heading>
-              <Text size={1} muted>
-                Navigate through projects → datasets → document types → documents
-              </Text>
-            </Box>
-            <Box padding={3}>
-              <ErrorBoundary
-                fallback={
-                  <Card padding={4} tone="critical">
-                    <Text>Error loading projects</Text>
-                  </Card>
-                }
-              >
-                <ResourceProvider
-                  projectId={undefined}
-                  dataset={undefined}
-                  fallback={
-                    <Flex align="center" padding={4}>
-                      <Spinner />
-                      <Text style={{marginLeft: '8px'}}>Loading projects...</Text>
-                    </Flex>
-                  }
-                >
-                  <ProjectsExplorer />
-                </ResourceProvider>
-              </ErrorBoundary>
-            </Box>
-          </Stack>
-        </Card>
-      </Stack>
-    </Container>
+    <PageLayout
+      title="Organization Document Explorer"
+      subtitle="Browse documents across your organization in a hierarchical structure"
+    >
+      <Card density="regular">
+        <VStack gap={4}>
+          <VStack gap={2}>
+            <Text size={1} weight="semibold">
+              Projects Explorer
+            </Text>
+            <Text size={1} muted>
+              Navigate through projects → datasets → document types → documents
+            </Text>
+          </VStack>
+          <ErrorBoundary
+            fallback={
+              <Card density="regular" tone="critical">
+                <Text size={1}>Error loading projects</Text>
+              </Card>
+            }
+          >
+            <ResourceProvider
+              projectId={undefined}
+              dataset={undefined}
+              fallback={
+                <Flex alignItems="center" gap={2} padding={4}>
+                  <Spinner />
+                  <Text size={1}>Loading projects...</Text>
+                </Flex>
+              }
+            >
+              <ProjectsExplorer />
+            </ResourceProvider>
+          </ErrorBoundary>
+        </VStack>
+      </Card>
+    </PageLayout>
   )
 }
