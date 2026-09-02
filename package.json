@@ -81,11 +81,5 @@
     "vitest": "catalog:",
     "zx": "^8.8.5"
   },
-  "packageManager": "pnpm@10.33.4",
-  "pnpm": {
-    "overrides": {
-      "@babel/types": "7.29.7",
-      "@sanity/client": "^8.4.0"
-    }
-  }
+  "packageManager": "pnpm@10.33.4"
 }

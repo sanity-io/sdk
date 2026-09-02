@@ -1,3 +1,4 @@
+import {randomUuid} from '@sanity/sdk/_internal'
 import {type AgentGenerateOptions, type AgentPromptOptions} from '@sanity/sdk/agent'
 import {useAgentGenerate, useAgentPrompt} from '@sanity/sdk-react'
 import {Button} from '@sanity/ui'
@@ -20,7 +21,7 @@ export function AgentActionsRoute(): JSX.Element {
       schemaId: '_.schemas.default',
       targetDocument: {
         operation: 'create',
-        _id: crypto.randomUUID(),
+        _id: randomUuid(),
         _type: 'movie',
       },
       instruction:

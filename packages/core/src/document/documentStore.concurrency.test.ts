@@ -44,6 +44,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {getClientState} from '../client/clientStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
+import {randomUuid} from '../utils/ids'
 import {editDocument, publishDocument} from './actions'
 import {applyDocumentActions} from './applyDocumentActions'
 import {getDocumentState, getDocumentSyncStatus} from './documentStore'
@@ -273,7 +274,7 @@ function createMockClient(server: MockContentLake): SanityClient {
 
   const action = vi.fn(async (input: HttpAction | HttpAction[], options?: BaseActionOptions) => {
     const actions = Array.isArray(input) ? input : [input]
-    return server.submitActions(actions, options?.transactionId ?? crypto.randomUUID())
+    return server.submitActions(actions, options?.transactionId ?? randomUuid())
   })
 
   const request = vi.fn(async () => {

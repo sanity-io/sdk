@@ -1,4 +1,5 @@
 import {createDocument} from '@sanity/sdk'
+import {randomUuid} from '@sanity/sdk/_internal'
 import {type SanityDocument} from 'groq'
 
 import {type DocumentHandle, type DocumentTypeHandle} from '../../config/handles'
@@ -109,7 +110,7 @@ export function useCreateDocument(
   const apply = useApplyDocumentActions()
 
   return async (initialValue, overrides) => {
-    const documentId = overrides?.documentId ?? options.documentId ?? crypto.randomUUID()
+    const documentId = overrides?.documentId ?? options.documentId ?? randomUuid()
     const handle: DocumentHandle = {...options, documentId}
     await apply(createDocument(handle, initialValue))
     return handle
