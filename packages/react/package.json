@@ -110,7 +110,7 @@
     "react-dom": "^19.2.0"
   },
   "browserslist": "extends @sanity/browserslist-config",
-  "packageManager": "pnpm@10.33.4",
+  "packageManager": "pnpm@10.34.5",
   "inlinedDependencies": {
     "@sanity/comlink": "4.0.3"
   }
