@@ -189,7 +189,11 @@ export {
   type TransactionRevertedEvent,
 } from '../document/events'
 export {type JsonMatch} from '../document/patchOperations'
-export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
+export {
+  type DocumentPermissionsResult,
+  type Grant,
+  type PermissionDeniedReason,
+} from '../document/permissions'
 export {getReleaseDocumentId} from '../document/processActions/releaseUtil'
 export type {
   FavoriteDocumentContext,
@@ -273,6 +277,15 @@ export {
   resolveUser,
   resolveUsers,
 } from '../users/usersStore'
+export {
+  getUsersWithGrantsState,
+  loadMoreUsersWithGrants,
+  resolveUsersWithGrants,
+  type ResolveUsersWithGrantsOptions,
+  type UsersWithGrantsOptions,
+  type UsersWithGrantsResult,
+  type UserWithGrants,
+} from '../users/usersWithGrants'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {isImportError} from '../utils/isImportError'
 export {CORE_SDK_VERSION} from '../version'

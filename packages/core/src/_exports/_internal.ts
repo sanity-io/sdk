@@ -29,5 +29,7 @@ export {
 } from '../store/fetcherStore'
 export {getTelemetryManager, initTelemetry, trackHookMounted} from '../telemetry/initTelemetry'
 export {getUsersKey, parseUsersKey} from '../users/reducers' // only used for memoizing in React, not needed for actual functionality
+// only used for memoizing in React, not needed for actual functionality
+export {getUsersWithGrantsKey, parseUsersWithGrantsKey} from '../users/usersWithGrants'
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
 export {isDeepEqual, pickProperties} from '../utils/object'
