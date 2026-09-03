@@ -18,19 +18,50 @@ import {
   type PayloadOf,
   type StateTopic,
   type TopicName,
+  type TopicResult,
   type ValueOf,
 } from '../../dashboard/messageBus/topics'
 
 /**
- * A dashboard topic result containing either a ready value or a pending state.
+ * An error raised when a dashboard state topic reports failure.
  * @public
  */
-export type UseTopicResult<T, Suspend extends boolean = boolean> = Suspend extends true
-  ? {data: T; isPending: false}
-  : {data: T; isPending: false} | {data: undefined; isPending: true}
+export class TopicError extends Error {
+  /** Identifies a failed topic read. */
+  readonly code = 'TOPIC_FAILED'
+
+  /** The topic that failed. */
+  readonly topic: TopicName
+
+  /** Creates an error for a failed topic. */
+  constructor(topic: TopicName) {
+    super(`Topic "${topic}" failed`)
+    this.name = 'TopicError'
+    this.topic = topic
+  }
+}
+
+type ReadyTopicResult<T> = {data: T; error?: never; isPending: false}
+type PendingTopicResult = {data: undefined; error?: never; isPending: true}
+type FailedTopicResult<TError> = {data?: never; error: TError; isPending: false}
 
 /**
- * Controls whether {@link useTopic} suspends until its first value.
+ * The current data, pending state, or error for a dashboard topic.
+ * @public
+ */
+export type UseTopicResult<
+  T,
+  Suspend extends boolean = boolean,
+  TError = never,
+> = Suspend extends true
+  ? ReadyTopicResult<T>
+  :
+      | ReadyTopicResult<T>
+      | PendingTopicResult
+      | ([TError] extends [never] ? never : FailedTopicResult<TError>)
+
+/**
+ * Controls whether {@link useTopic} suspends pending reads and throws failed reads.
  * @public
  */
 export type UseTopicOptions<Suspend extends boolean = boolean> = {suspend?: Suspend}
@@ -39,14 +70,39 @@ const pendingTopicResult = {data: undefined, isPending: true} as const
 
 const readyTopicResult = <T>(data: T) => ({data, isPending: false}) as const
 
-type TopicData<K extends TopicName> = K extends StateTopic
+const failedTopicResult = (topic: TopicName) =>
+  ({
+    error: new TopicError(topic),
+    isPending: false,
+  }) as const
+
+type WireTopicData<K extends TopicName> = K extends StateTopic
   ? ValueOf<K>
   : K extends EventTopic
     ? PayloadOf<K>
     : never
 
+type UnwrapTopicResult<T> = T extends {ok: true; value: infer Value}
+  ? Value
+  : T extends {ok: false}
+    ? never
+    : T
+
+type TopicData<K extends TopicName> = K extends StateTopic
+  ? UnwrapTopicResult<ValueOf<K>>
+  : K extends EventTopic
+    ? PayloadOf<K>
+    : never
+
+type TopicErrorFor<K extends TopicName> = K extends StateTopic
+  ? [Extract<ValueOf<K>, {ok: false}>] extends [never]
+    ? never
+    : TopicError
+  : never
+
 interface TopicSource<T> {
   readonly firstValue: Promise<T>
+  readonly kind: 'event' | 'state'
   observable: Observable<T>
 }
 
@@ -59,9 +115,26 @@ const stateFirstValues = new WeakMap<MessageBusStateSource<unknown>, Promise<unk
 function subscribeToTopic<K extends TopicName>(
   messageBus: MessageBus,
   topic: K,
-): Observable<TopicData<K>> {
-  const subscribe = messageBus.subscribe as (name: TopicName) => Observable<TopicData<K>>
+): Observable<WireTopicData<K>> {
+  const subscribe = messageBus.subscribe as (name: TopicName) => Observable<WireTopicData<K>>
   return subscribe(topic)
+}
+
+function isTopicResult(value: unknown): value is TopicResult<unknown> {
+  return (
+    typeof value === 'object' && value !== null && 'ok' in value && typeof value.ok === 'boolean'
+  )
+}
+
+function toUseTopicResult<K extends TopicName>(
+  topic: K,
+  kind: TopicSource<WireTopicData<K>>['kind'],
+  value: WireTopicData<K>,
+): UseTopicResult<TopicData<K>, false, TopicError> {
+  if (kind === 'state' && isTopicResult(value)) {
+    return value.ok ? readyTopicResult(value.value as TopicData<K>) : failedTopicResult(topic)
+  }
+  return readyTopicResult(value as TopicData<K>)
 }
 
 function isStateSource<T>(source: Observable<T>): source is MessageBusStateSource<T> {
@@ -107,6 +180,7 @@ function getEventSource<K extends EventTopic>(
       get firstValue() {
         return (firstValue ??= firstValueFrom(observable))
       },
+      kind: 'event',
       observable,
     }
     sources.set(topic, eventSource)
@@ -118,27 +192,32 @@ function getEventSource<K extends EventTopic>(
 function getTopicSource<K extends TopicName>(
   messageBus: MessageBus,
   topic: K,
-): TopicSource<TopicData<K>> {
+): TopicSource<WireTopicData<K>> {
   const source = subscribeToTopic(messageBus, topic)
   if (isStateSource(source)) {
     return {
       get firstValue() {
-        return getStateFirstValue(messageBus, topic as StateTopic, source) as Promise<TopicData<K>>
+        return getStateFirstValue(messageBus, topic as StateTopic, source) as Promise<
+          WireTopicData<K>
+        >
       },
+      kind: 'state',
       observable: source,
     }
   }
 
-  return getEventSource(messageBus, topic as EventTopic) as TopicSource<TopicData<K>>
+  return getEventSource(messageBus, topic as EventTopic) as TopicSource<WireTopicData<K>>
 }
 
 /**
  * Returns the latest state value or event payload for a dashboard topic.
  *
  * The hook suspends until the first value by default. Pass `{suspend: false}` to render
- * immediately and use `isPending` to distinguish an unpublished topic from a ready value.
- * Suspended state reads use the bus query deadline; event reads wait for the next payload.
- * Event payloads are forgotten after the last consumer unmounts.
+ * immediately and handle pending and failed reads through the returned result. Suspended topic
+ * failures propagate to the nearest error boundary. Suspended state reads use the bus query
+ * deadline; event reads wait for the next payload. Event payloads are forgotten after the last
+ * consumer unmounts. State topics declared with {@link TopicResult} expose their successful value
+ * as `data`; result-shaped event payloads remain unchanged.
  *
  * @example
  * ```tsx
@@ -154,7 +233,7 @@ function getTopicSource<K extends TopicName>(
 export function useTopic<K extends TopicName, Suspend extends boolean = true>(
   topic: K,
   options: UseTopicOptions<Suspend> = {},
-): UseTopicResult<TopicData<K>, Suspend> {
+): UseTopicResult<TopicData<K>, Suspend, TopicErrorFor<K>> {
   const source = useMemo(() => {
     const messageBus = getDashboardMessageBus()
     if (!messageBus) {
@@ -163,11 +242,16 @@ export function useTopic<K extends TopicName, Suspend extends boolean = true>(
     return getTopicSource(messageBus, topic)
   }, [topic])
 
-  const results = useMemo(() => source.observable.pipe(map(readyTopicResult)), [source.observable])
+  const results = useMemo(
+    () => source.observable.pipe(map((value) => toUseTopicResult(topic, source.kind, value))),
+    [source, topic],
+  )
   const result = useObservable(results, pendingTopicResult)
-  return (
-    result.isPending && options.suspend !== false
-      ? readyTopicResult(use(source.firstValue))
+  const suspend = options.suspend !== false
+  const resolved =
+    result.isPending && suspend
+      ? toUseTopicResult(topic, source.kind, use(source.firstValue))
       : result
-  ) as UseTopicResult<TopicData<K>, Suspend>
+  if (suspend && 'error' in resolved && resolved.error) throw resolved.error
+  return resolved as UseTopicResult<TopicData<K>, Suspend, TopicErrorFor<K>>
 }
