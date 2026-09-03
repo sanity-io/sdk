@@ -1,10 +1,10 @@
 import {getTokenState} from '@sanity/sdk'
 
-import {useDashboardState} from '../dashboard/useDashboardState'
+import {createStateSourceHook} from '../helpers/createStateSourceHook'
 
-const tokenFromState = (token: string | null) => token
-
-/** Returns the current authentication token, or `null` while signed out. @public */
-export function useAuthToken(): string | null {
-  return useDashboardState('auth.token', getTokenState, tokenFromState, tokenFromState)
-}
+/**
+ * Hook to get the currently logged in user
+ * @internal
+ * @returns The current user or null if not authenticated
+ */
+export const useAuthToken = createStateSourceHook(getTokenState)

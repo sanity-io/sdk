@@ -1,22 +1,22 @@
-import {type PathChangeMessage} from '@sanity/message-protocol'
-import {getIsInDashboardState, type StateSource} from '@sanity/sdk'
+import {type Message, type Node} from '@sanity/comlink'
+import {SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
+import {type StateSource} from '@sanity/sdk'
+import {getNodeState, type NodeState} from '@sanity/sdk/comlink'
 import {act, renderHook} from '@testing-library/react'
 import {of} from 'rxjs'
 import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {createIsolatedMessageBus, type MessageBus} from '../../dashboard/messageBus/bus'
-import {useOptionalWindowConnection} from '../comlink/useWindowConnection'
 import {useNavigate} from './useNavigate'
 
 const mocks = vi.hoisted(() => ({
   instance: {config: {}},
   messageBus: undefined as MessageBus | undefined,
-  messageHandler: undefined as ((data: PathChangeMessage['data']) => void) | undefined,
 }))
 
-vi.mock('@sanity/sdk', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@sanity/sdk')>()),
-  getIsInDashboardState: vi.fn(),
+vi.mock('@sanity/sdk/comlink', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@sanity/sdk/comlink')>()),
+  getNodeState: vi.fn(),
 }))
 
 vi.mock('../../dashboard/messageBus/client', () => ({
@@ -27,25 +27,23 @@ vi.mock('../context/useSanityInstance', () => ({
   useSanityInstance: () => mocks.instance,
 }))
 
-vi.mock('../comlink/useWindowConnection', () => ({
-  useOptionalWindowConnection: vi.fn((options, enabled: boolean) => {
-    mocks.messageHandler = enabled
-      ? options.onMessage?.['dashboard/v1/history/change-path']
-      : undefined
-  }),
-}))
-
-const dashboardContextState = (value: boolean): StateSource<boolean> => ({
-  getCurrent: () => value,
-  observable: of(value),
-  subscribe: () => () => {},
-})
-
 describe('useNavigate', () => {
+  let node: Node<Message, Message>
+
   beforeEach(() => {
+    vi.clearAllMocks()
     mocks.messageBus = undefined
-    mocks.messageHandler = undefined
-    vi.mocked(getIsInDashboardState).mockReturnValue(dashboardContextState(true))
+    node = {
+      on: vi.fn(() => () => {}),
+      post: vi.fn(),
+      stop: vi.fn(),
+    } as unknown as Node<Message, Message>
+    const state = {node, status: 'connected'} as unknown as NodeState
+    vi.mocked(getNodeState).mockReturnValue({
+      getCurrent: () => state,
+      observable: of(state),
+      subscribe: () => () => {},
+    } as StateSource<NodeState | undefined>)
   })
 
   it('receives navigation through Comlink inside an embedded application', () => {
@@ -53,15 +51,18 @@ describe('useNavigate', () => {
     renderHook(() => useNavigate(navigate))
 
     const change = {path: '/test-path', type: 'push'} as const
-    mocks.messageHandler?.(change)
+    const messageHandler = vi.mocked(node.on).mock.calls[0][1]
+    messageHandler(change)
 
     expect(navigate).toHaveBeenCalledWith(change)
-    expect(useOptionalWindowConnection).toHaveBeenCalledWith(expect.anything(), true)
+    expect(getNodeState).toHaveBeenCalledWith(mocks.instance, {
+      name: SDK_NODE_NAME,
+      connectTo: SDK_CHANNEL_NAME,
+    })
   })
 
   it('follows navigation for the foreground federated application', () => {
     const navigate = vi.fn()
-    vi.mocked(getIsInDashboardState).mockReturnValue(dashboardContextState(false))
     mocks.messageBus = createIsolatedMessageBus('application')
     mocks.messageBus.emit('applications.foreground', 'application')
     mocks.messageBus.emit('navigation.location', {
@@ -73,7 +74,7 @@ describe('useNavigate', () => {
     renderHook(() => useNavigate(navigate))
 
     expect(navigate).toHaveBeenLastCalledWith({path: 'initial', type: 'pop'})
-    expect(useOptionalWindowConnection).toHaveBeenCalledWith(expect.anything(), false)
+    expect(getNodeState).not.toHaveBeenCalled()
 
     act(() =>
       mocks.messageBus?.emit('navigation.location', {
@@ -101,7 +102,6 @@ describe('useNavigate', () => {
 
   it('ignores navigation for another application', () => {
     const navigate = vi.fn()
-    vi.mocked(getIsInDashboardState).mockReturnValue(dashboardContextState(false))
     mocks.messageBus = createIsolatedMessageBus('application')
     mocks.messageBus.emit('applications.foreground', 'application')
     mocks.messageBus.emit('navigation.location', {
