@@ -3,11 +3,11 @@ import {describe, expect, expectTypeOf, it} from 'vitest'
 import {
   type CanvasUrl,
   type CoreApplicationUrl,
+  type DashboardUrl,
   type MediaLibraryUrl,
   type StudioIntentUrl,
   type StudioUrl,
   type StudioWorkspaceUrl,
-  type Url,
   UrlBuilder,
   urlFor,
 } from './urlFor'
@@ -50,7 +50,7 @@ class CanvasAliasUrlBuilder extends UrlBuilder {
 
 describe('studio', () => {
   it('builds studio URLs', () => {
-    expect(urlFor.studios().url()).toBe('/studios')
+    expect(urlFor.studios().url()).toBe('/studios/')
     expect(urlFor.studios('studio-1').url()).toBe('/studios/studio-1')
     expect(urlFor.studios('studio-1').workspace('default').url()).toBe('/studios/studio-1/default')
   })
@@ -126,7 +126,7 @@ describe('studio', () => {
   })
 
   it('exposes studio-specific builder interfaces', () => {
-    expectTypeOf(urlFor.studios()).toEqualTypeOf<Url>()
+    expectTypeOf(urlFor.studios()).toEqualTypeOf<DashboardUrl>()
     expectTypeOf(urlFor.studios('studio-1')).toEqualTypeOf<StudioUrl>()
     expectTypeOf(
       urlFor.studios('studio-1').workspace('default'),
@@ -139,15 +139,15 @@ describe('studio', () => {
 
 describe('coreApp', () => {
   it('builds collection and application URLs', () => {
-    expect(urlFor.applications().url()).toBe('/applications')
-    expect(urlFor.applications('app-1').url()).toBe('/application/app-1')
+    expect(urlFor.applications().url()).toBe('/applications/')
+    expect(urlFor.applications('app-1').url()).toBe('/applications/app-1')
     expect(urlFor.applications('app-1').path('documents', 'document/1').url()).toBe(
-      '/application/app-1/documents/document/1',
+      '/applications/app-1/documents/document/1',
     )
   })
 
   it('exposes application-specific builder interfaces', () => {
-    expectTypeOf(urlFor.applications()).toEqualTypeOf<Url>()
+    expectTypeOf(urlFor.applications()).toEqualTypeOf<DashboardUrl>()
     expectTypeOf(urlFor.applications('app-1')).toEqualTypeOf<CoreApplicationUrl>()
   })
 })
@@ -179,11 +179,11 @@ describe('Canvas', () => {
 describe('UrlBuilder', () => {
   it('returns relative and absolute URL forms', () => {
     const origin = 'https://dashboard.sanity.io'
-    const builder = new UrlBuilder(new URL('/application/app-1', origin))
-    const absolute = new URL('/application/app-1', origin)
+    const builder = new UrlBuilder(new URL('/applications/app-1', origin))
+    const absolute = new URL('/applications/app-1', origin)
 
-    expect(builder.toString()).toBe('/application/app-1')
-    expect(builder.url()).toBe('/application/app-1')
+    expect(builder.toString()).toBe('/applications/app-1')
+    expect(builder.url()).toBe('/applications/app-1')
     expect(builder.toURL({origin})).toEqual(absolute)
     expect(builder.url({origin})).toBe(absolute.href)
   })
@@ -241,6 +241,6 @@ describe('UrlBuilder', () => {
 
   it('builds the home URL', () => {
     expect(urlFor.home().url()).toBe('/')
-    expectTypeOf(urlFor.home()).toEqualTypeOf<Url>()
+    expectTypeOf(urlFor.home()).toEqualTypeOf<DashboardUrl>()
   })
 })
