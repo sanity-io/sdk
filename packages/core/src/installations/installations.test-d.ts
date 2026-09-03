@@ -11,7 +11,6 @@ import {
   type InstallationActiveConfig,
   type InstallationBase,
   type InstallationInclude,
-  type InstallationInterface,
   installations,
   type InstallationsResponse,
 } from './installations'
@@ -35,17 +34,13 @@ test('InstallationBase — the application sub-object carries name and reference
   expectTypeOf<InstallationBase['application']['reference']>().toEqualTypeOf<string>()
 })
 
-test('InstallationInterface — reuses the application interface response', () => {
-  expectTypeOf<InstallationInterface>().toEqualTypeOf<ApplicationInterface>()
-})
-
 test('Installation — each token adds its top-level field, required, others absent', () => {
   expectTypeOf<Installation<'access'>['access']>().toEqualTypeOf<InstallationAccess[]>()
   expectTypeOf<
     Extract<keyof Installation<'access'>, 'activeConfig' | 'interfaces'>
   >().toEqualTypeOf<never>()
 
-  expectTypeOf<Installation<'interfaces'>['interfaces']>().toEqualTypeOf<InstallationInterface[]>()
+  expectTypeOf<Installation<'interfaces'>['interfaces']>().toEqualTypeOf<ApplicationInterface[]>()
   expectTypeOf<
     Installation<'activeConfig'>['activeConfig']
   >().toEqualTypeOf<InstallationActiveConfig | null>()
@@ -54,7 +49,7 @@ test('Installation — each token adds its top-level field, required, others abs
 test('Installation — multiple tokens add each field', () => {
   type Both = Installation<'access' | 'interfaces'>
   expectTypeOf<Both['access']>().toEqualTypeOf<InstallationAccess[]>()
-  expectTypeOf<Both['interfaces']>().toEqualTypeOf<InstallationInterface[]>()
+  expectTypeOf<Both['interfaces']>().toEqualTypeOf<ApplicationInterface[]>()
   expectTypeOf<Extract<keyof Both, 'activeConfig'>>().toEqualTypeOf<never>()
 })
 

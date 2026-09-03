@@ -31,15 +31,6 @@ export interface InstallationAccess {
 }
 
 /**
- * An interface exposed by an installation, embedded when `interfaces` is
- * included.
- *
- * @see https://www.sanity.io/docs/http-reference/applications-api
- * @public
- */
-export type InstallationInterface = ApplicationInterface
-
-/**
  * The active config of an installation, embedded when `activeConfig` is
  * included. `null` when nothing is deployed.
  *
@@ -96,7 +87,7 @@ export type Installation<Include extends InstallationInclude = never> = Installa
     {activeConfig: InstallationActiveConfig | null}
   > &
   Included<InstallationInclude, 'access', Include, {access: InstallationAccess[]}> &
-  Included<InstallationInclude, 'interfaces', Include, {interfaces: InstallationInterface[]}>
+  Included<InstallationInclude, 'interfaces', Include, {interfaces: ApplicationInterface[]}>
 
 /**
  * Options for listing an organization's installations.
