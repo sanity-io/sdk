@@ -15,7 +15,7 @@ For Renovate's own docs, see [Dependency Dashboard](https://docs.renovatebot.com
 
 - Config: [`.github/renovate.json`](renovate.json)
 - Runner: [`.github/workflows/renovate.yml`](workflows/renovate.yml)
-- Running state: [Dependency Dashboard issue](../../issues/9)
+- Running state: [Dependency Dashboard issue](../../issues/1166)
 - Auto-approve workflow: [`.github/workflows/renovate-auto-approve.yml`](workflows/renovate-auto-approve.yml)
 
 ## Reading the dashboard
@@ -119,7 +119,7 @@ Renovate PRs are identified by a `renovate/` branch in this repository, rather t
 
 ### Weekly checklist
 
-- Skim the [Dependency Dashboard](../../issues/9) for anything stuck (errored, or repeatedly failing automerge).
+- Skim the [Dependency Dashboard](../../issues/1166) for anything stuck (errored, or repeatedly failing automerge).
 - Merge the release-please PR if ready.
 - Note any major updates that need planning.
 
