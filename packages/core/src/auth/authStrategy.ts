@@ -3,6 +3,7 @@ import {type ClientConfig, type SanityClient} from '@sanity/client'
 import {type AuthConfig} from '../config/authConfig'
 import {type TokenSource} from '../config/sanityConfig'
 import {type AuthMethodOptions, type AuthState, type DashboardContext} from './authStore'
+import {type OAuthTokens} from './oauth/types'
 
 /**
  * The result returned by each auth strategy's `getInitialState` function.
@@ -17,6 +18,7 @@ export interface AuthStrategyResult {
   storageArea: Storage | undefined
   authMethod: AuthMethodOptions
   dashboardContext: DashboardContext
+  oauthTokens?: OAuthTokens
 }
 
 /**

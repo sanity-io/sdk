@@ -18,6 +18,30 @@ describe('resolveAuthMode', () => {
   it('returns "standalone" by default', () => {
     expect(resolveAuthMode({}, 'https://example.com')).toBe('standalone')
   })
+
+  it('returns "oauth" when auth.oauth config is provided', () => {
+    const config: SanityConfig = {
+      auth: {oauth: {clientId: 'c', redirectUri: 'https://app/cb', organizationId: 'o'}},
+    }
+    expect(resolveAuthMode(config, 'https://example.com')).toBe('oauth')
+  })
+
+  it('prefers "oauth" over dashboard context detection', () => {
+    const context = encodeURIComponent(JSON.stringify({orgId: '123'}))
+    const href = `https://example.com?_context=${context}`
+    const config: SanityConfig = {
+      auth: {oauth: {clientId: 'c', redirectUri: 'https://app/cb', organizationId: 'o'}},
+    }
+    expect(resolveAuthMode(config, href)).toBe('oauth')
+  })
+
+  it('prefers "studio" over oauth config', () => {
+    const config: SanityConfig = {
+      studio: {},
+      auth: {oauth: {clientId: 'c', redirectUri: 'https://app/cb', organizationId: 'o'}},
+    }
+    expect(resolveAuthMode(config, 'https://example.com')).toBe('studio')
+  })
 })
 
 describe('isStudioConfig', () => {
