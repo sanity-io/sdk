@@ -25,26 +25,29 @@ export type ApplicationInclude =
   | 'config.mfManifest'
   | 'activeDeployment'
 
+type ApplicationInterfaceBase = {
+  id: string
+  name: string
+  title: string
+  version: string
+  /** Module federation module ID; resolved from the host mf-manifest at runtime */
+  moduleId: string
+}
+
 /**
  * An interface exposed by a deployment, embedded when `interfaces` is included.
  *
  * @see https://www.sanity.io/docs/http-reference/applications-api
  * @public
  */
-export interface ApplicationInterface {
-  id: string
-  type: 'app' | 'worker' | 'asset_source' | 'panel' | 'tile'
-  name: string
-  title: string
-  version: string
-  /** Module federation module ID; resolved from the host mf-manifest at runtime */
-  moduleId: string
-  metadata: {
-    dock?: {group?: string; order?: number}
-    order?: number
-    size?: 'small' | 'large' | 'banner'
-  } | null
-}
+export type ApplicationInterface = ApplicationInterfaceBase &
+  (
+    | {type: 'app'; metadata: {dock?: {group?: string; order?: number}} | null}
+    | {type: 'panel'; metadata: {dock?: {group?: string; order?: number}} | null}
+    | {type: 'asset_source'; metadata: null}
+    | {type: 'worker'; metadata: null}
+    | {type: 'tile'; metadata: {order?: number; size: 'small' | 'large' | 'banner'}}
+  )
 
 /**
  * A studio workspace of a deployment, embedded when `workspaces` is included.

@@ -39,11 +39,14 @@ test('ApplicationInterface — matches the interface response', () => {
   expectTypeOf<ApplicationInterface['type']>().toEqualTypeOf<
     'app' | 'worker' | 'asset_source' | 'panel' | 'tile'
   >()
-  expectTypeOf<ApplicationInterface['metadata']>().toEqualTypeOf<{
+  expectTypeOf<Extract<ApplicationInterface, {type: 'app'}>['metadata']>().toEqualTypeOf<{
     dock?: {group?: string; order?: number}
-    order?: number
-    size?: 'small' | 'large' | 'banner'
   } | null>()
+  expectTypeOf<Extract<ApplicationInterface, {type: 'worker'}>['metadata']>().toEqualTypeOf<null>()
+  expectTypeOf<Extract<ApplicationInterface, {type: 'tile'}>['metadata']>().toEqualTypeOf<{
+    order?: number
+    size: 'small' | 'large' | 'banner'
+  }>()
 })
 
 test('Application — config.studio adds config with an optional stored value', () => {
