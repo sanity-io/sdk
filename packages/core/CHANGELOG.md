@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.1.0](https://github.com/sanity-io/sdk/compare/sdk-v3.0.0...sdk-v3.1.0) (2026-09-03)
+
+
+### Bug Fixes
+
+* allow insecure random IDs, shorten where possible ([#1149](https://github.com/sanity-io/sdk/issues/1149)) ([d8c8eaf](https://github.com/sanity-io/sdk/commit/d8c8eaf94f8d4cf46a9c130f1529f30281019ede))
+* **deps:** align workspace on @sanity/client v8 ([#1130](https://github.com/sanity-io/sdk/issues/1130)) ([bedc960](https://github.com/sanity-io/sdk/commit/bedc960bd02d2acbe6c32bc958c40cf2b2d6727a))
+
 ## [3.0.0](https://github.com/sanity-io/sdk/compare/sdk-v2.20.2...sdk-v3.0.0) (2026-08-27)
 
 
