@@ -9,9 +9,19 @@ jobs:
     if: >-
       github.event.pull_request.draft == false &&
       !contains(github.event.pull_request.labels.*.name, 'skip-review') &&
-      github.actor != 'squiggler[bot]' &&
-      github.actor != 'squiggler-app[bot]' &&
-      (github.actor != 'renovate[bot]' || contains(github.event.pull_request.labels.*.name, 'major-update'))
+      (
+        (
+          !(github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'renovate/')) &&
+          github.actor != 'squiggler[bot]' &&
+          github.actor != 'squiggler-app[bot]' &&
+          github.actor != 'renovate[bot]'
+        ) ||
+        (
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          startsWith(github.event.pull_request.head.ref, 'renovate/') &&
+          contains(github.event.pull_request.labels.*.name, 'major-update')
+        )
+      )
 
     runs-on: ubuntu-latest
     permissions:
@@ -36,7 +46,9 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Run Claude Code Review
-        if: github.actor != 'renovate[bot]'
+        if: >-
+          !(github.event.pull_request.head.repo.full_name == github.repository &&
+          startsWith(github.event.pull_request.head.ref, 'renovate/'))
         id: claude-review
         uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975 # v1
         with:
@@ -53,7 +65,9 @@ jobs:
           allowed_bots: 'cursor,renovate'
 
       - name: Run Claude Review for Renovate Major Update
-        if: github.actor == 'renovate[bot]'
+        if: >-
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          startsWith(github.event.pull_request.head.ref, 'renovate/')
         id: claude-review-renovate
         uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975 # v1
         with:
