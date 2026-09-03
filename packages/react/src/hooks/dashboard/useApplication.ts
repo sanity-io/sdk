@@ -1,7 +1,7 @@
 import {useMemo} from 'react'
 
 import {type Application, useApplications} from './useApplications'
-import {type UseTopicOptions, type UseTopicResult} from './useTopic'
+import {type TopicError, type UseTopicOptions, type UseTopicResult} from './useTopic'
 
 /**
  * Returns a dashboard application by id, or `null` when it is unavailable.
@@ -12,16 +12,16 @@ import {type UseTopicOptions, type UseTopicResult} from './useTopic'
 export function useApplication<Suspend extends boolean = true>(
   applicationId: Application['id'],
   options: UseTopicOptions<Suspend> = {},
-): UseTopicResult<Application | null, Suspend> {
+): UseTopicResult<Application | null, Suspend, TopicError> {
   const result = useApplications(options)
   return useMemo(
     () =>
-      result.isPending
+      result.isPending || result.error
         ? result
         : {
             data: result.data.find(({id}) => id === applicationId) ?? null,
             isPending: false,
           },
     [applicationId, result],
-  ) as UseTopicResult<Application | null, Suspend>
+  ) as UseTopicResult<Application | null, Suspend, TopicError>
 }

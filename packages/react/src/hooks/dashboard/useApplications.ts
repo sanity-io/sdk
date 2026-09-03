@@ -2,7 +2,7 @@ import {type ApplicationBase} from '@sanity/sdk'
 import {useMemo} from 'react'
 
 import {type RemoteModuleRef, type ValueOf} from '../../dashboard/messageBus/topics'
-import {useTopic, type UseTopicOptions, type UseTopicResult} from './useTopic'
+import {type TopicError, useTopic, type UseTopicOptions, type UseTopicResult} from './useTopic'
 
 type DashboardTopicApplication = Extract<
   NonNullable<ValueOf<'applications.list'>>,
@@ -43,11 +43,11 @@ export type Application = ApplicationBase & {
   readonly webWorkers: WebWorker[]
 }
 
-type TopicState<T> = UseTopicResult<T, false>
+type TopicState<T> = UseTopicResult<T, false, TopicError>
 type SanityGlobal = typeof globalThis & {__SANITY_STAGING__?: boolean}
 
 const mapTopicState = <T, U>(result: TopicState<T>, map: (data: T) => U): TopicState<U> =>
-  result.isPending ? result : {data: map(result.data), isPending: false}
+  result.isPending || result.error ? result : {data: map(result.data), isPending: false}
 
 const applicationOrigin = (application: ApplicationBase): string => {
   if (application.externalUrl !== null) return new URL(application.externalUrl).origin
@@ -103,11 +103,8 @@ const toApplication = (application: DashboardTopicApplication): Application => {
   return {...applicationBase, views, webWorkers}
 }
 
-const applicationsFromTopic = (topic: ValueOf<'applications.list'>): Application[] => {
-  if (topic === null) return []
-  if (!topic.ok) throw new Error('The dashboard failed to load applications')
-  return topic.value.map(toApplication)
-}
+const applicationsFromTopic = (applications: DashboardTopicApplication[] | null): Application[] =>
+  applications?.map(toApplication) ?? []
 
 /**
  * Returns the applications available in the dashboard.
@@ -117,10 +114,11 @@ const applicationsFromTopic = (topic: ValueOf<'applications.list'>): Application
  */
 export function useApplications<Suspend extends boolean = true>(
   options: UseTopicOptions<Suspend> = {},
-): UseTopicResult<Application[], Suspend> {
+): UseTopicResult<Application[], Suspend, TopicError> {
   const result = useTopic('applications.list', options)
   return useMemo(() => mapTopicState(result, applicationsFromTopic), [result]) as UseTopicResult<
     Application[],
-    Suspend
+    Suspend,
+    TopicError
   >
 }

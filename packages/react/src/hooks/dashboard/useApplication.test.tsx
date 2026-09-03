@@ -5,7 +5,7 @@ import {createIsolatedMessageBus, type MessageBus} from '../../dashboard/message
 import {type ValueOf} from '../../dashboard/messageBus/topics'
 import {useApplication} from './useApplication'
 import {type Application} from './useApplications'
-import {type UseTopicResult} from './useTopic'
+import {type TopicError, type UseTopicResult} from './useTopic'
 
 const mocks = vi.hoisted(() => ({
   client: undefined as MessageBus | undefined,
@@ -42,7 +42,9 @@ describe('useApplication', () => {
       {initialProps: {applicationId: application.id}},
     )
 
-    expectTypeOf(result.current).toEqualTypeOf<UseTopicResult<Application | null, false>>()
+    expectTypeOf(result.current).toEqualTypeOf<
+      UseTopicResult<Application | null, false, TopicError>
+    >()
 
     act(() =>
       mocks.client?.emit('applications.list', {

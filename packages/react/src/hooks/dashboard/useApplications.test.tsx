@@ -4,7 +4,7 @@ import {beforeEach, describe, expect, expectTypeOf, it, vi} from 'vitest'
 import {createIsolatedMessageBus, type MessageBus} from '../../dashboard/messageBus/bus'
 import {type ValueOf} from '../../dashboard/messageBus/topics'
 import {type Application, useApplications} from './useApplications'
-import {type UseTopicResult} from './useTopic'
+import {TopicError, type UseTopicResult} from './useTopic'
 
 const mocks = vi.hoisted(() => ({
   client: undefined as MessageBus | undefined,
@@ -103,13 +103,13 @@ describe('dashboard applications', () => {
   it('returns minimal applications with loadable views and web workers', () => {
     const {result} = renderHook(() => useApplications({suspend: false}))
 
-    expectTypeOf(result.current).toEqualTypeOf<UseTopicResult<Application[], false>>()
+    expectTypeOf(result.current).toEqualTypeOf<UseTopicResult<Application[], false, TopicError>>()
     expect(result.current).toEqual({data: undefined, isPending: true})
 
     act(() => emitApplications([application, nonFederatedApplication, nonSingletonApplication]))
 
     expect(result.current.isPending).toBe(false)
-    if (result.current.isPending) throw new Error('expected applications')
+    if (result.current.isPending || result.current.error) throw new Error('expected applications')
 
     const [federated, nonFederated, nonSingleton] = result.current.data
     expect(federated).not.toHaveProperty('activeDeployment')
@@ -164,11 +164,14 @@ describe('dashboard applications', () => {
     expect(result.current).toEqual({data: [], isPending: false})
   })
 
-  it('throws when the dashboard fails to load applications', () => {
+  it('returns an error when the dashboard fails to load applications', () => {
     mocks.client?.emit('applications.list', {ok: false})
 
-    expect(() => renderHook(() => useApplications({suspend: false}))).toThrow(
-      'The dashboard failed to load applications',
-    )
+    const {result} = renderHook(() => useApplications({suspend: false}))
+
+    expect(result.current).toEqual({
+      error: new TopicError('applications.list'),
+      isPending: false,
+    })
   })
 })
