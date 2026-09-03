@@ -1,5 +1,6 @@
 import {switchMap} from 'rxjs'
 
+import {type ApplicationInterface} from '../applications/applications'
 import {getClientState} from '../client/clientStore'
 import {defineFetcher} from '../store/fetcherStore'
 import {buildQuery} from '../utils/buildQuery'
@@ -36,16 +37,7 @@ export interface InstallationAccess {
  * @see https://www.sanity.io/docs/http-reference/applications-api
  * @public
  */
-export interface InstallationInterface {
-  id: string
-  type: 'app' | 'worker' | 'asset_source' | 'panel'
-  name: string
-  title: string
-  version: string
-  /** Module federation module ID; resolved from the host mf-manifest at runtime */
-  moduleId: string
-  metadata: {group?: string; priority?: number} | null
-}
+export type InstallationInterface = ApplicationInterface
 
 /**
  * The active config of an installation, embedded when `activeConfig` is
