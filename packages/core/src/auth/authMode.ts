@@ -6,6 +6,8 @@ import {DEFAULT_BASE} from './authConstants'
  *
  * - `studio`     — Running inside Sanity Studio. Token is discovered from
  *                  Studio's localStorage entry or via cookie auth.
+ * - `oauth`      — Configured with `auth.oauth`. Authenticates via Sanity's
+ *                  OAuth 2.0 authorization-code + PKCE flow.
  * - `dashboard`  — Running inside the Sanity Dashboard iframe. Token is
  *                  provided by the parent frame via Comlink.
  * - `standalone` — Running as an independent app. Token comes from
@@ -13,20 +15,23 @@ import {DEFAULT_BASE} from './authConstants'
  *
  * @internal
  */
-type AuthMode = 'studio' | 'dashboard' | 'standalone'
+type AuthMode = 'studio' | 'oauth' | 'dashboard' | 'standalone'
 
 /**
  * Determines the auth mode from instance config and environment.
  *
  * Priority:
  * 1. `studio` config provided → `'studio'`
- * 2. Dashboard context detected (`_context` URL param with content) → `'dashboard'`
- * 3. Otherwise → `'standalone'`
+ * 2. `auth.oauth` config provided → `'oauth'` (explicit config wins over
+ *    environment detection)
+ * 3. Dashboard context detected (`_context` URL param with content) → `'dashboard'`
+ * 4. Otherwise → `'standalone'`
  *
  * @internal
  */
 export function resolveAuthMode(config: SanityConfig, locationHref: string): AuthMode {
   if (isStudioConfig(config)) return 'studio'
+  if (config.auth?.oauth) return 'oauth'
   if (detectDashboardContext(locationHref)) return 'dashboard'
   return 'standalone'
 }
