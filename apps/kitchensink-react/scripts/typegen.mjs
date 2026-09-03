@@ -41,6 +41,27 @@ const GENERATED_FILE_WARNING = `/**
  * ---------------------------------------------------------------------------------
  */\n\n`
 
+/**
+ * Removes helper types the generator imports from `groq` but never uses, which trips
+ * `noUnusedLocals` in the app's typecheck. It emits the full helper list unconditionally,
+ * so a run with no projections leaves `ProjectionBase` dangling.
+ */
+function dropUnusedGroqImports(code) {
+  return code.replace(
+    // Runs before formatting, so the line is still in the generator's raw style:
+    // double quotes and a trailing semicolon.
+    /^import type \{([^}]+)\} from ["']groq["'];?\n/m,
+    (line, names) => {
+      const body = code.slice(code.indexOf(line) + line.length)
+      const used = names
+        .split(',')
+        .map((n) => n.trim())
+        .filter((n) => n && new RegExp(`\\b${n}\\b`).test(body))
+      return used.length > 0 ? `import type {${used.join(', ')}} from "groq";\n` : ''
+    },
+  )
+}
+
 const DEFAULT_CONFIG_PATH = 'sanity-typegen.json'
 const configPath = process.argv[2] ?? DEFAULT_CONFIG_PATH
 
@@ -112,7 +133,7 @@ try {
   if (formatGeneratedCode) {
     const {format} = await import('oxfmt')
     fileHandle = await open(outputPath, 'r+')
-    const code = await fileHandle.readFile({encoding: 'utf-8'})
+    const code = dropUnusedGroqImports(await fileHandle.readFile({encoding: 'utf-8'}))
     // Mirror the repo's .oxfmtrc.json so generated types match committed style.
     const {code: formatted, errors} = await format(outputPath, code, {
       bracketSpacing: false,

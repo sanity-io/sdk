@@ -1,5 +1,6 @@
+import {defineProjection} from '@sanity/sdk'
 import {DocumentHandle, useDocumentProjection, usePaginatedDocuments} from '@sanity/sdk-react'
-import groq, {defineProjection} from 'groq'
+import groq from 'groq'
 import {JSX, ReactNode, Suspense, useRef, useState} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
 import {Button, Card, Flex, Spinner, Text, VStack} from 'ui5'

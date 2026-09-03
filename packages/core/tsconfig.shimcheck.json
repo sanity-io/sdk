@@ -1,0 +1,14 @@
+{
+  // Guards the `groq` compatibility shim against a future GA `groq` that exports a name
+  // the shim also declares. Type aliases collide as TS2300; interfaces merge and are
+  // safe. The repo's base config sets `skipLibCheck: true`, which suppresses that error,
+  // so this config turns it back on over the smallest program that can show it: the
+  // augmentation plus `groq` itself. Delete alongside src/typegen/groqCompat.ts.
+  "extends": "./tsconfig.settings.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": false
+  },
+  "include": [],
+  "files": ["./package.json", "./src/typegen/groqCompat.ts", "./shimcheck/fixture.ts"]
+}

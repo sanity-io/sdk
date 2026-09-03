@@ -1,5 +1,4 @@
-import {type ActionsResult, type DocumentAction} from '@sanity/sdk'
-import {type SanityDocument} from 'groq'
+import {type ActionsResult, type DocumentAction, type ResolveDocument} from '@sanity/sdk'
 
 import {type ResourceHandle} from '../../config/handles'
 import {useApplyActions} from '../helpers/useApplyActions'
@@ -20,7 +19,7 @@ interface UseApplyDocumentActions {
       | DocumentAction<TDocumentType, TDataset, TProjectId>
       | DocumentAction<TDocumentType, TDataset, TProjectId>[],
     options?: ResourceHandle,
-  ) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
+  ) => Promise<ActionsResult<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 }
 
 /**
