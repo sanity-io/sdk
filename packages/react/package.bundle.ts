@@ -8,6 +8,7 @@ export default defineConfig(() => {
         entry: {
           'index': './src/_exports/index.ts',
           '_exports/dashboard': './src/_exports/dashboard.ts',
+          '_exports/dashboard-internal': './src/_exports/dashboard-internal.ts',
         },
       },
     },
