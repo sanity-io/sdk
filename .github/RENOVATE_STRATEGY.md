@@ -105,6 +105,8 @@ Renovate reads the pnpm version from the root `package.json` `packageManager` fi
 
 Branch protection requires at least 1 approval before merging. The auto-approve workflow (`.github/workflows/renovate-auto-approve.yml`) waits for CI (build, test, lint, typecheck) and then approves so Renovate's automerge can proceed.
 
+Renovate PRs are identified by a `renovate/` branch in this repository, rather than by the bot account that opened them. This works with the self-hosted Ecospark identity without trusting similarly named branches from forks.
+
 **Known gap**: the workflow uses `GITHUB_TOKEN`, whose approvals don't count toward CODEOWNERS or team-approval rules. Under the current branch protection, each Renovate PR still needs a qualifying reviewer.
 
 ## Expected weekly flow

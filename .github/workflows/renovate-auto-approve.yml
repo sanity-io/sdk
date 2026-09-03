@@ -12,7 +12,8 @@ jobs:
   auto-approve:
     runs-on: ubuntu-latest
     if: |
-      github.actor == 'renovate[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'renovate/') &&
       !contains(github.event.pull_request.labels.*.name, 'needs-review')
 
     steps:
