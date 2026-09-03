@@ -1,5 +1,6 @@
 import {expectTypeOf, test} from 'vitest'
 
+import {type ApplicationInterface} from '../applications/applications'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {type FetcherSnapshot} from '../store/fetcherStore'
@@ -32,6 +33,10 @@ test('Installation — no includes: only the base shape', () => {
 test('InstallationBase — the application sub-object carries name and reference', () => {
   expectTypeOf<InstallationBase['application']['name']>().toEqualTypeOf<string>()
   expectTypeOf<InstallationBase['application']['reference']>().toEqualTypeOf<string>()
+})
+
+test('InstallationInterface — reuses the application interface response', () => {
+  expectTypeOf<InstallationInterface>().toEqualTypeOf<ApplicationInterface>()
 })
 
 test('Installation — each token adds its top-level field, required, others absent', () => {

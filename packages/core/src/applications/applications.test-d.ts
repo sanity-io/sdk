@@ -35,10 +35,21 @@ test('ApplicationBase — carries name and reference as strings', () => {
   expectTypeOf<ApplicationBase['reference']>().toEqualTypeOf<string>()
 })
 
-test('Application — config.studio adds a required config.studio', () => {
-  expectTypeOf<
-    Application<'config.studio'>['config']['studio']
-  >().toEqualTypeOf<ApplicationStudioConfig>()
+test('ApplicationInterface — matches the interface response', () => {
+  expectTypeOf<ApplicationInterface['type']>().toEqualTypeOf<
+    'app' | 'worker' | 'asset_source' | 'panel' | 'tile'
+  >()
+  expectTypeOf<ApplicationInterface['metadata']>().toEqualTypeOf<{
+    dock?: {group?: string; order?: number}
+    order?: number
+    size?: 'small' | 'large' | 'banner'
+  } | null>()
+})
+
+test('Application — config.studio adds config with an optional stored value', () => {
+  expectTypeOf<Application<'config.studio'>['config']['studio']>().toEqualTypeOf<
+    ApplicationStudioConfig | undefined
+  >()
   // mfManifest not requested → not present under config
   expectTypeOf<
     Extract<keyof Application<'config.studio'>['config'], 'mfManifest'>
@@ -51,7 +62,7 @@ test('Application — config.studio adds a required config.studio', () => {
 
 test('Application — both config tokens merge under a single config', () => {
   type Config = Application<'config.studio' | 'config.mfManifest'>['config']
-  expectTypeOf<Config['studio']>().toEqualTypeOf<ApplicationStudioConfig>()
+  expectTypeOf<Config['studio']>().toEqualTypeOf<ApplicationStudioConfig | undefined>()
   expectTypeOf<Config['mfManifest']>().toEqualTypeOf<unknown>()
 })
 
@@ -73,6 +84,9 @@ test('Application — a wide include array makes config and activeDeployment opt
   type Wide = Application<ApplicationInclude>
   expectTypeOf<KeyModifier<Wide, 'activeDeployment'>>().toEqualTypeOf<'optional'>()
   expectTypeOf<KeyModifier<Wide, 'config'>>().toEqualTypeOf<'optional'>()
+  type Config = NonNullable<Wide['config']>
+  expectTypeOf<Config['studio']>().toEqualTypeOf<ApplicationStudioConfig | undefined>()
+  expectTypeOf<Config['mfManifest']>().toEqualTypeOf<unknown>()
 })
 
 test('applications.resolveState — resolves the wide list envelope', () => {
