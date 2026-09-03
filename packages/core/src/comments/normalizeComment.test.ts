@@ -19,7 +19,7 @@ describe('normalizeComment', () => {
       documentId: 'doc-1',
       sourceDocumentId: 'doc-1',
       documentType: 'author',
-      fieldPath: '',
+      fieldPath: 'name',
       reactions: [],
     })
   })

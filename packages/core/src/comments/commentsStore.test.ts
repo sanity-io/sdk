@@ -220,7 +220,7 @@ describe('getDocumentCommentsState', () => {
 
     snapshot([
       storedComment({_id: 'a', target: commentTarget({path: {field: 'title'}})}),
-      storedComment({_id: 'b', threadId: 'thread-2'}),
+      storedComment({_id: 'b', threadId: 'thread-2', target: commentTarget({path: undefined})}),
     ])
 
     expect(source.getCurrent()!.map((thread) => thread.parentComment.id)).toEqual(['b'])

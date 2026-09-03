@@ -168,11 +168,17 @@ describe('useUsersWithGrants', () => {
 
     expect(loadMoreUsersWithGrants).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({batchSize: 10, projectId: 'p'}),
+      expect.objectContaining({
+        batchSize: 10,
+        document: expect.objectContaining({resource: {projectId: 'p', dataset: 'd'}}),
+      }),
     )
   })
 
   it('resolves the document handle against the ambient resource', () => {
+    // The document's own resource is what decides the audience as well, so this
+    // is the only thing that has to be resolved for the read to reach the right
+    // project's users and access groups.
     mockStaticState({data: mockUsers, hasMore: false, totalCount: 2})
 
     function TestComponent() {
@@ -192,34 +198,11 @@ describe('useUsersWithGrants', () => {
     expect(getUsersWithGrantsState).toHaveBeenLastCalledWith(
       expect.anything(),
       expect.objectContaining({
-        projectId: 'resource-project',
         document: expect.objectContaining({
           documentId: 'article-1',
           resource: {projectId: 'resource-project', dataset: 'production'},
         }),
       }),
     )
-  })
-
-  it('reads no groups and grants everyone when no document is given', () => {
-    mockStaticState({
-      data: mockUsers.map((user) => ({...user, granted: true})),
-      hasMore: false,
-      totalCount: 2,
-    })
-
-    function TestComponent() {
-      const {data} = useUsersWithGrants()
-      return <div data-testid="output">{data.filter((user) => user.granted).length} granted</div>
-    }
-
-    render(
-      <ResourceProvider projectId="p" dataset="d" fallback={<p>Loading...</p>}>
-        <TestComponent />
-      </ResourceProvider>,
-    )
-
-    expect(screen.getByTestId('output').textContent).toBe('2 granted')
-    expect(vi.mocked(getUsersWithGrantsState).mock.lastCall?.[1]).not.toHaveProperty('document')
   })
 })

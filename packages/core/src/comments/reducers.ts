@@ -63,6 +63,18 @@ export function parseCommentsKey(key: string): CommentsKeyParts {
   return {organizationId, filter, params: Object.fromEntries(params)}
 }
 
+/**
+ * Whether any entry still holds the comment.
+ *
+ * The reconciliation state below is keyed by comment id rather than by entry,
+ * because a write is in flight against a comment rather than against a list, and
+ * a comment sits in every list its target matches. So it outlives any one of
+ * them: only the last list to let go of a comment may clear its markers.
+ */
+function isHeld(entries: CommentsStoreState['entries'], commentId: string): boolean {
+  return Object.values(entries).some((entry) => Object.hasOwn(entry?.comments ?? {}, commentId))
+}
+
 export const addSubscriber =
   (key: string, subscriptionId: string) =>
   (prev: CommentsStoreState): CommentsStoreState => {
@@ -78,23 +90,19 @@ export const removeSubscriber =
     if (!entry) return prev
     const subscribers = entry.subscribers.filter((id) => id !== subscriptionId)
     if (!subscribers.length) {
+      const entries = omitProperty(prev.entries, key)
       const pendingCreates = {...prev.pendingCreates}
       const pendingTransactions = {...prev.pendingTransactions}
       const droppedEchoes = {...prev.droppedEchoes}
 
       for (const commentId of Object.keys(entry.comments ?? {})) {
+        if (isHeld(entries, commentId)) continue
         delete pendingCreates[commentId]
         delete pendingTransactions[commentId]
         delete droppedEchoes[commentId]
       }
 
-      return {
-        ...prev,
-        entries: omitProperty(prev.entries, key),
-        pendingCreates,
-        pendingTransactions,
-        droppedEchoes,
-      }
+      return {...prev, entries, pendingCreates, pendingTransactions, droppedEchoes}
     }
     return {...prev, entries: {...prev.entries, [key]: {...entry, subscribers}}}
   }
@@ -261,11 +269,7 @@ export const removeCommentFromEntry =
 
     // The comment can still be in another entry, whose in-flight write is the
     // one these markers belong to.
-    const heldElsewhere = Object.values(entries).some((candidate) =>
-      Object.hasOwn(candidate?.comments ?? {}, commentId),
-    )
-
-    if (heldElsewhere) return {...prev, entries}
+    if (isHeld(entries, commentId)) return {...prev, entries}
 
     return {
       ...prev,

@@ -189,11 +189,7 @@ export {
   type TransactionRevertedEvent,
 } from '../document/events'
 export {type JsonMatch} from '../document/patchOperations'
-export {
-  type DocumentPermissionsResult,
-  type Grant,
-  type PermissionDeniedReason,
-} from '../document/permissions'
+export {type DocumentPermissionsResult, type PermissionDeniedReason} from '../document/permissions'
 export {getReleaseDocumentId} from '../document/processActions/releaseUtil'
 export type {
   FavoriteDocumentContext,

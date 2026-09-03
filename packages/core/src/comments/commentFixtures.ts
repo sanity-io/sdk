@@ -13,7 +13,13 @@ export const ORGANIZATION_ID = 'org-1'
 /** The global document reference for `doc-1` in the `p.d` dataset resource. */
 export const TARGET_REF = 'dataset:p.d:doc-1'
 
-/** @internal */
+/**
+ * A field path is part of the default because every comment the API stores has
+ * one — a pathless comment is refused on the way in. Pass `path: undefined` for
+ * the tests that are about what happens without one.
+ *
+ * @internal
+ */
 export function commentTarget(
   overrides: Partial<StoredComment['target']> = {},
 ): StoredComment['target'] {
@@ -21,6 +27,7 @@ export function commentTarget(
     document: {_ref: TARGET_REF, _type: 'globalDocumentReference', _weak: true},
     documentType: 'author',
     sourceDocumentId: 'doc-1',
+    path: {field: 'name'},
     ...overrides,
   }
 }

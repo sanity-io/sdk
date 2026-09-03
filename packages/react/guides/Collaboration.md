@@ -114,7 +114,7 @@ function ResolveButton({commentId}: {commentId: string}) {
 | Action               | Key options                                       | Notes                                                          |
 | -------------------- | ------------------------------------------------- | -------------------------------------------------------------- |
 | `createComment`      | document handle, `fieldPath`, `message`, `range?` | Starts a thread. Returns the new `Comment`.                    |
-| `replyToComment`     | document handle, `parentCommentId`, `message`     | Replies to a reply join the same thread. Returns the reply.    |
+| `replyToComment`     | `parentCommentId`, `message`                      | Placement comes from the parent, which has to be loaded.       |
 | `updateComment`      | `commentId`, `message`                            | Rewrites the message and marks the comment edited.             |
 | `updateCommentRange` | `commentId`, `range`                              | Re-anchors without marking it edited. `null` drops the anchor. |
 | `setCommentStatus`   | `commentId`, `status`                             | Pass the thread's first comment; replies follow it.            |

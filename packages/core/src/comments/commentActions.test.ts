@@ -389,7 +389,6 @@ describe('replyToComment', () => {
     seedComments(instance, {comments: [comment({_id: 'parent'})]})
 
     await replyToComment(instance, {
-      ...HANDLE,
       parentCommentId: 'parent',
       commentId: 'reply-1',
       message: MESSAGE,
@@ -407,17 +406,34 @@ describe('replyToComment', () => {
       comments: [comment({_id: 'parent'}), comment({_id: 'reply-1', parentCommentId: 'parent'})],
     })
 
-    await replyToComment(instance, {...HANDLE, parentCommentId: 'reply-1', message: MESSAGE})
+    await replyToComment(instance, {parentCommentId: 'reply-1', message: MESSAGE})
 
     expect(comments.create.mock.calls[0][0].parentCommentId).toBe('parent')
   })
 
-  it('replies to a parent that is not loaded', async () => {
-    // Nothing local is needed any more: the parent is only read to make the
-    // optimistic reply look right, and the API resolves the thread regardless.
-    await replyToComment(instance, {...HANDLE, parentCommentId: 'unknown', message: MESSAGE})
+  it('refuses to reply to a parent that is not loaded', async () => {
+    // Everything placing the optimistic reply comes from the parent, so without
+    // one it would land in no thread a reader can see — and a failed reply would
+    // carry its error there too, with nothing able to offer a retry.
+    await expect(
+      replyToComment(instance, {parentCommentId: 'unknown', message: MESSAGE}),
+    ).rejects.toThrow('Cannot reply to comment unknown: it is not loaded.')
 
-    expect(comments.create.mock.calls[0][0].parentCommentId).toBe('unknown')
+    expect(comments.create).not.toHaveBeenCalled()
+  })
+
+  it('refuses to reply to a parent that points at no field', async () => {
+    // A reply inherits the parent's path, so a pathless one would take down the
+    // Studio's inspector exactly as a pathless comment does.
+    seedComments(instance, {
+      comments: [comment({_id: 'parent', target: commentTarget({path: undefined})})],
+    })
+
+    await expect(
+      replyToComment(instance, {parentCommentId: 'parent', message: MESSAGE}),
+    ).rejects.toThrow(/needs a field path/)
+
+    expect(comments.create).not.toHaveBeenCalled()
   })
 
   it('shows the reply in its parent’s thread before the server confirms it', async () => {
@@ -429,7 +445,6 @@ describe('replyToComment', () => {
     comments.create.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)))
 
     const pending = replyToComment(instance, {
-      ...HANDLE,
       parentCommentId: 'parent',
       commentId: 'reply-1',
       message: MESSAGE,

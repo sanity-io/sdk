@@ -1,4 +1,4 @@
-import {useEffect, useState, useTransition} from 'react'
+import {useEffect, useRef, useState, useTransition} from 'react'
 
 /**
  * @internal
@@ -24,25 +24,35 @@ export interface DeferredRequestKey {
  * whose options change keeps rendering its previous data instead of falling
  * back to a Suspense boundary.
  *
+ * The controller lives in a ref rather than in state because the effect below
+ * both reads and replaces it. As state it would be an effect dependency, so
+ * replacing it would re-run the effect against a controller a suspended render
+ * may already have captured, and a rapid run of key changes could abort the
+ * signal a resolve is about to be started with.
+ *
  * @internal
  */
 export function useDeferredRequestKey(key: string): DeferredRequestKey {
   const [isPending, startTransition] = useTransition()
   const [deferredKey, setDeferredKey] = useState(key)
-  const [controller, setController] = useState<AbortController>(new AbortController())
+  const abortRef = useRef<AbortController>(new AbortController())
 
   useEffect(() => {
     if (key === deferredKey) return
 
     startTransition(() => {
-      if (!controller.signal.aborted) {
-        controller.abort()
-        setController(new AbortController())
+      if (!abortRef.current.signal.aborted) {
+        abortRef.current.abort()
+        abortRef.current = new AbortController()
       }
 
       setDeferredKey(key)
     })
-  }, [controller, deferredKey, key])
+  }, [deferredKey, key])
 
-  return {deferredKey, signal: controller.signal, isPending}
+  // Reading the ref during render is safe here: React runs no effects for a
+  // render that suspends, so the signal handed out now cannot be swapped
+  // underneath the read that uses it.
+  // eslint-disable-next-line react-hooks/refs -- intentional; see above
+  return {deferredKey, signal: abortRef.current.signal, isPending}
 }

@@ -45,6 +45,18 @@ function stateWith(comments: StoredComment[]): CommentsStoreState {
   })
 }
 
+/** A second list holding the same comments, as a GROQ query would. */
+const OTHER_KEY = getCommentsKey({
+  filter: 'status == "open"',
+  params: {},
+  organizationId: ORGANIZATION_ID,
+})
+
+function stateWithBoth(comments: StoredComment[]): CommentsStoreState {
+  const both = addSubscriber(OTHER_KEY, 'sub-2')(stateWith(comments))
+  return setComments(OTHER_KEY, comments)(both)
+}
+
 const emptyState = (): CommentsStoreState => ({
   entries: {},
   pendingCreates: {},
@@ -114,6 +126,25 @@ describe('subscribers', () => {
     expect(next.pendingCreates).toEqual({})
     expect(next.pendingTransactions).toEqual({})
     expect(next.droppedEchoes).toEqual({})
+  })
+
+  it('keeps reconciliation state while another entry still holds the comment', () => {
+    // A create fans out into every list its target matches, so one of them
+    // going away mid-write must not strip the markers the others still need to
+    // roll back or to report the failure.
+    const before: CommentsStoreState = {
+      ...stateWithBoth([comment({_id: 'a'})]),
+      pendingCreates: {a: true},
+      pendingTransactions: {a: 'tx-1'},
+      droppedEchoes: {a: comment({_id: 'a'})},
+    }
+
+    const next = removeSubscriber(KEY, 'sub-1')(before)
+
+    expect(next.entries[KEY]).toBeUndefined()
+    expect(next.pendingCreates).toEqual({a: true})
+    expect(next.pendingTransactions).toEqual({a: 'tx-1'})
+    expect(next.droppedEchoes).toHaveProperty('a')
   })
 
   it('ignores removal for an unknown key', () => {
@@ -232,18 +263,6 @@ describe('applyCommentUpdate', () => {
 })
 
 describe('removeCommentFromEntry', () => {
-  /** A second list holding the same comments, as a GROQ query would. */
-  const OTHER_KEY = getCommentsKey({
-    filter: 'status == "open"',
-    params: {},
-    organizationId: ORGANIZATION_ID,
-  })
-
-  function stateWithBoth(comments: StoredComment[]): CommentsStoreState {
-    const both = addSubscriber(OTHER_KEY, 'sub-2')(stateWith(comments))
-    return setComments(OTHER_KEY, comments)(both)
-  }
-
   it('removes the comment from the entry that lost it', () => {
     const before = stateWith([comment({_id: 'a'}), comment({_id: 'b'})])
 

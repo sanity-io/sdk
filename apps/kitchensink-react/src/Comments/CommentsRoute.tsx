@@ -305,12 +305,10 @@ function CommentRow({
 
 function ThreadCard({
   thread,
-  documentId,
   perspective,
   onSelect,
 }: {
   thread: CommentThread
-  documentId: string
   perspective: Perspective
   onSelect: (comment: Comment) => void
 }): JSX.Element {
@@ -360,8 +358,6 @@ function ThreadCard({
           testId="thread-reply"
           onSubmit={(text) =>
             replyToComment({
-              documentId,
-              documentType: DOCUMENT_TYPE,
               perspective,
               parentCommentId: thread.parentComment.id,
               message: toMessage(text),
@@ -413,7 +409,6 @@ function ThreadList({
         <ThreadCard
           key={thread.threadId}
           thread={thread}
-          documentId={documentId}
           perspective={perspective}
           onSelect={onSelect}
         />

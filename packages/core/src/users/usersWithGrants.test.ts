@@ -8,9 +8,9 @@ import {getDocumentState, resolveDocument} from '../document/documentStore'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
 import {type FetcherSnapshot} from '../store/fetcherStore'
-import {type ProjectUserIds, projectUserIds} from './projectUserIds'
 import {type SystemGroup, systemGroups} from './systemGroups'
 import {type SanityUser, type SanityUserResponse} from './types'
+import {DEFAULT_USERS_BATCH_SIZE} from './usersConstants'
 import {
   getUsersWithGrantsKey,
   getUsersWithGrantsState,
@@ -31,15 +31,6 @@ vi.mock('./systemGroups', async (importOriginal) => ({
     resolveState: vi.fn(),
   },
 }))
-vi.mock('./projectUserIds', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./projectUserIds')>()),
-  projectUserIds: {
-    getState: vi.fn(),
-    resolveState: vi.fn(),
-    refetch: vi.fn(),
-  },
-}))
-
 /**
  * The access API returns the account-wide id as both `sanityUserId` and
  * `profile.id`; only the project membership carries the project user id that
@@ -81,6 +72,7 @@ const document = {documentId: 'article-1', documentType: 'article'}
 
 describe('usersWithGrants', () => {
   let instance: SanityInstance
+  let usersRequest: ReturnType<typeof vi.fn>
 
   const mockUsers = (users: SanityUser[]) => {
     const response: SanityUserResponse = {
@@ -88,13 +80,13 @@ describe('usersWithGrants', () => {
       totalCount: users.length,
       nextCursor: null,
     }
-    const request = vi.fn().mockReturnValue(of(response).pipe(delay(0)))
+    usersRequest = vi.fn().mockReturnValue(of(response).pipe(delay(0)))
 
     vi.mocked(getClientState).mockReturnValue({
-      observable: of({observable: {request}} as unknown as SanityClient),
+      observable: of({observable: {request: usersRequest}} as unknown as SanityClient),
     } as StateSource<SanityClient>)
     vi.mocked(getClient).mockReturnValue({
-      observable: {request},
+      observable: {request: usersRequest},
     } as unknown as SanityClient)
   }
 
@@ -105,40 +97,13 @@ describe('usersWithGrants', () => {
     vi.mocked(resolveDocument).mockResolvedValue(article)
   })
 
-  it('grants everyone when no document is given', async () => {
-    const result = await resolveUsersWithGrants(instance, {
-      resourceType: 'project',
-      projectId: 'p',
-    })
-
-    expect(result?.data).toEqual([
-      {...ada, granted: true},
-      {...grace, granted: true},
-    ])
-    expect(systemGroups.resolveState).not.toHaveBeenCalled()
-
-    instance.dispose()
-  })
-
-  it('grants everyone in an organization read when no document is given', async () => {
-    const result = await resolveUsersWithGrants(instance, {
-      resourceType: 'organization',
-      organizationId: 'org-1',
-    })
-
-    expect(result?.data.map((entry) => entry.granted)).toEqual([true, true])
-    expect(systemGroups.resolveState).not.toHaveBeenCalled()
-
-    instance.dispose()
-  })
-
   it('grants only the members of a group whose filter matches the document', async () => {
     vi.mocked(systemGroups.resolveState).mockResolvedValue([
       {members: ['p-ada'], grants: [{filter: '_type == "article"', permissions: ['read']}]},
       {members: ['p-grace'], grants: [{filter: '_type == "report"', permissions: ['read']}]},
     ])
 
-    const result = await resolveUsersWithGrants(instance, {projectId: 'p', document})
+    const result = await resolveUsersWithGrants(instance, {document})
 
     expect(result?.data).toEqual([
       {...ada, granted: true},
@@ -152,21 +117,19 @@ describe('usersWithGrants', () => {
     instance.dispose()
   })
 
-  it('measures the requested grant rather than always read', async () => {
+  it('measures read rather than any other permission a group grants', async () => {
+    // Visibility is the question, so a group that can update without being able
+    // to read is not what makes a user available to a picker.
     vi.mocked(systemGroups.resolveState).mockResolvedValue([
       {members: ['p-ada'], grants: [{filter: 'true', permissions: ['read']}]},
-      {members: ['p-grace'], grants: [{filter: 'true', permissions: ['read', 'update']}]},
+      {members: ['p-grace'], grants: [{filter: 'true', permissions: ['update']}]},
     ])
 
-    const result = await resolveUsersWithGrants(instance, {
-      projectId: 'p',
-      document,
-      grant: 'update',
-    })
+    const result = await resolveUsersWithGrants(instance, {document})
 
     expect(result?.data).toEqual([
-      {...ada, granted: false},
-      {...grace, granted: true},
+      {...ada, granted: true},
+      {...grace, granted: false},
     ])
 
     instance.dispose()
@@ -177,7 +140,7 @@ describe('usersWithGrants', () => {
       {members: ['p-ada'], grants: [{filter: 'true', permissions: ['read']}]},
     ])
 
-    const result = await resolveUsersWithGrants(instance, {projectId: 'p', document})
+    const result = await resolveUsersWithGrants(instance, {document})
 
     expect(result?.data.map((entry) => [entry.profile.displayName, entry.granted])).toEqual([
       ['Ada', true],
@@ -203,7 +166,7 @@ describe('usersWithGrants', () => {
       },
     ])
 
-    const result = await resolveUsersWithGrants(instance, {projectId: 'p', document})
+    const result = await resolveUsersWithGrants(instance, {document})
 
     // Ada keeps the grant that does evaluate; Grace has nothing else to fall back on.
     expect(result?.data.map((entry) => entry.granted)).toEqual([true, false])
@@ -220,22 +183,25 @@ describe('usersWithGrants', () => {
       {members: ['p-ada'], grants: [{filter: 'true', permissions: ['read']}]},
     ])
 
-    const result = await resolveUsersWithGrants(instance, {projectId: 'p', document})
+    const result = await resolveUsersWithGrants(instance, {document})
 
     expect(result?.data.map((entry) => entry.granted)).toEqual([true, false])
 
     instance.dispose()
   })
 
-  it('grants everyone when the document does not exist', async () => {
+  it('denies everyone when the document does not exist', async () => {
+    // A grant is a filter measured against a document. With no document there
+    // is nothing anyone can be shown to hold, and reporting the whole project
+    // as able to read something that is not there is the worse answer.
     vi.mocked(resolveDocument).mockResolvedValue(null)
     vi.mocked(systemGroups.resolveState).mockResolvedValue([
-      {members: ['p-ada'], grants: [{filter: '_type == "report"', permissions: ['read']}]},
+      {members: ['p-ada'], grants: [{filter: 'true', permissions: ['read']}]},
     ])
 
-    const result = await resolveUsersWithGrants(instance, {projectId: 'p', document})
+    const result = await resolveUsersWithGrants(instance, {document})
 
-    expect(result?.data.map((entry) => entry.granted)).toEqual([true, true])
+    expect(result?.data.map((entry) => entry.granted)).toEqual([false, false])
 
     instance.dispose()
   })
@@ -248,7 +214,7 @@ describe('usersWithGrants', () => {
       {members: ['p-ada', 'p-mallory'], grants: [{filter: 'true', permissions: ['read']}]},
     ])
 
-    const result = await resolveUsersWithGrants(instance, {projectId: 'p', document})
+    const result = await resolveUsersWithGrants(instance, {document})
 
     expect(result?.data.map((entry) => entry.granted)).toEqual([true, false])
 
@@ -260,249 +226,48 @@ describe('usersWithGrants', () => {
       {members: ['everyone'], grants: [{filter: '_id in path("*")', permissions: ['read']}]},
     ])
 
-    const result = await resolveUsersWithGrants(instance, {projectId: 'p', document})
+    const result = await resolveUsersWithGrants(instance, {document})
 
     expect(result?.data.map((entry) => entry.granted)).toEqual([true, true])
 
     instance.dispose()
   })
 
-  describe('organization audience', () => {
-    // An organization users read returns no project user id, so these carry a
-    // project membership with no `resourceUserId` on it.
-    const orgUser = (id: string, displayName: string, inProject: boolean): SanityUser => ({
-      ...user(id, displayName),
-      memberships: [
-        {resourceType: 'organization', resourceId: 'org-1', roleNames: ['member']},
-        ...(inProject ? [{resourceType: 'project', resourceId: 'p', roleNames: ['editor']}] : []),
-      ],
+  it('always reads the project audience, which carries the project user ids', async () => {
+    // Access groups name their members by project user id, and only a project
+    // users read returns one inline, so the audience is not the caller's to pick.
+    vi.mocked(systemGroups.resolveState).mockResolvedValue([
+      {members: ['p-ada'], grants: [{filter: 'true', permissions: ['read']}]},
+    ])
+
+    await resolveUsersWithGrants(instance, {document})
+
+    expect(usersRequest).toHaveBeenCalledWith(
+      expect.objectContaining({uri: 'access/project/p/users'}),
+    )
+
+    instance.dispose()
+  })
+
+  it('reads the users of the document’s project, not the ambient one', async () => {
+    // A project user id means nothing outside its own project, so reading users
+    // from one project and measuring them against another's groups would deny
+    // everybody.
+    vi.mocked(systemGroups.resolveState).mockResolvedValue([])
+
+    await resolveUsersWithGrants(instance, {
+      document: {...document, resource: {projectId: 'other', dataset: 'other-dataset'}},
     })
 
-    const orgOptions = {
-      resourceType: 'organization',
-      organizationId: 'org-1',
-      document,
-    } as const
-
-    it('looks the project user ids up so members still get real grants', async () => {
-      mockUsers([orgUser('ada', 'Ada', true), orgUser('bob', 'Bob', true)])
-      vi.mocked(projectUserIds.resolveState).mockResolvedValue(
-        new Map([
-          ['g-ada', 'p-ada'],
-          ['g-bob', 'p-bob'],
-        ]),
-      )
-      vi.mocked(systemGroups.resolveState).mockResolvedValue([
-        {members: ['p-ada'], grants: [{filter: '_type == "article"', permissions: ['read']}]},
-        {members: ['p-bob'], grants: [{filter: '_type == "report"', permissions: ['read']}]},
-      ])
-
-      const result = await resolveUsersWithGrants(instance, orgOptions)
-
-      expect(result?.data.map((entry) => entry.granted)).toEqual([true, false])
-      expect(projectUserIds.resolveState).toHaveBeenCalledWith(instance, 'p')
-
-      instance.dispose()
+    expect(usersRequest).toHaveBeenCalledWith(
+      expect.objectContaining({uri: 'access/project/other/users'}),
+    )
+    expect(systemGroups.resolveState).toHaveBeenCalledWith(instance, {
+      projectId: 'other',
+      dataset: 'other-dataset',
     })
 
-    it('denies organization members who are not in the project', async () => {
-      mockUsers([orgUser('ada', 'Ada', true), orgUser('mallory', 'Mallory', false)])
-      vi.mocked(projectUserIds.resolveState).mockResolvedValue(new Map([['g-ada', 'p-ada']]))
-      vi.mocked(systemGroups.resolveState).mockResolvedValue([
-        {members: ['p-ada'], grants: [{filter: 'true', permissions: ['read']}]},
-      ])
-
-      const result = await resolveUsersWithGrants(instance, orgOptions)
-
-      expect(result?.data.map((entry) => entry.granted)).toEqual([true, false])
-
-      instance.dispose()
-    })
-
-    it('rebuilds the map for a member it cannot explain, and annotates with the rebuild', async () => {
-      mockUsers([orgUser('ada', 'Ada', true), orgUser('newcomer', 'Newcomer', true)])
-      vi.mocked(projectUserIds.resolveState).mockResolvedValue(new Map([['g-ada', 'p-ada']]))
-      vi.mocked(projectUserIds.refetch).mockResolvedValue(
-        new Map([
-          ['g-ada', 'p-ada'],
-          ['g-newcomer', 'p-newcomer'],
-        ]),
-      )
-      vi.mocked(systemGroups.resolveState).mockResolvedValue([
-        {members: ['p-ada', 'p-newcomer'], grants: [{filter: 'true', permissions: ['read']}]},
-      ])
-
-      const result = await resolveUsersWithGrants(instance, orgOptions)
-
-      expect(projectUserIds.refetch).toHaveBeenCalledWith(instance, 'p')
-      expect(result?.data.map((entry) => entry.granted)).toEqual([true, true])
-
-      instance.dispose()
-    })
-
-    it('does not rebuild for a member of the organization but not the project', async () => {
-      mockUsers([orgUser('ada', 'Ada', true), orgUser('mallory', 'Mallory', false)])
-      vi.mocked(projectUserIds.resolveState).mockResolvedValue(new Map([['g-ada', 'p-ada']]))
-      vi.mocked(systemGroups.resolveState).mockResolvedValue([
-        {members: ['p-ada'], grants: [{filter: 'true', permissions: ['read']}]},
-      ])
-
-      await resolveUsersWithGrants(instance, orgOptions)
-
-      expect(projectUserIds.refetch).not.toHaveBeenCalled()
-
-      instance.dispose()
-    })
-
-    it('rebuilds only once for a member no rebuild ever explains', async () => {
-      const partial = new Map([['g-ada', 'p-ada']])
-      mockUsers([orgUser('ada', 'Ada', true), orgUser('ghost', 'Ghost', true)])
-      vi.mocked(projectUserIds.resolveState).mockResolvedValue(partial)
-      vi.mocked(projectUserIds.refetch).mockResolvedValue(partial)
-      vi.mocked(systemGroups.resolveState).mockResolvedValue([
-        {members: ['p-ada'], grants: [{filter: 'true', permissions: ['read']}]},
-      ])
-
-      await resolveUsersWithGrants(instance, orgOptions)
-      const result = await resolveUsersWithGrants(instance, orgOptions)
-
-      expect(projectUserIds.refetch).toHaveBeenCalledTimes(1)
-      expect(result?.data.map((entry) => entry.granted)).toEqual([true, false])
-
-      instance.dispose()
-    })
-
-    it('does not read the id map when there is no document', async () => {
-      await resolveUsersWithGrants(instance, {
-        resourceType: 'organization',
-        organizationId: 'org-1',
-      })
-
-      expect(projectUserIds.resolveState).not.toHaveBeenCalled()
-
-      instance.dispose()
-    })
-
-    it('does not read the id map for a project read that also carries an organization id', async () => {
-      // `usersStore` lets an explicit `resourceType` win over either id, so
-      // this is a project read and its ids arrive inline.
-      vi.mocked(systemGroups.resolveState).mockResolvedValue([
-        {members: ['p-ada'], grants: [{filter: 'true', permissions: ['read']}]},
-      ])
-
-      const result = await resolveUsersWithGrants(instance, {
-        resourceType: 'project',
-        projectId: 'p',
-        organizationId: 'org-1',
-        document,
-      })
-
-      expect(projectUserIds.resolveState).not.toHaveBeenCalled()
-      expect(result?.data.map((entry) => entry.granted)).toEqual([true, false])
-
-      instance.dispose()
-    })
-
-    describe('rebuild failures', () => {
-      const fullMap = () =>
-        new Map([
-          ['g-ada', 'p-ada'],
-          ['g-newcomer', 'p-newcomer'],
-        ])
-
-      beforeEach(() => {
-        mockUsers([orgUser('ada', 'Ada', true), orgUser('newcomer', 'Newcomer', true)])
-        vi.mocked(projectUserIds.resolveState).mockResolvedValue(new Map([['g-ada', 'p-ada']]))
-        vi.mocked(systemGroups.resolveState).mockResolvedValue([
-          {members: ['p-ada', 'p-newcomer'], grants: [{filter: 'true', permissions: ['read']}]},
-        ])
-      })
-
-      it('serves the map it has when the rebuild fails, rather than failing the read', async () => {
-        vi.mocked(projectUserIds.refetch).mockRejectedValue(new Error('network blip'))
-
-        const result = await resolveUsersWithGrants(instance, orgOptions)
-
-        // A best-effort accuracy fix must not reject: this backs a suspense
-        // promise, so rejecting would blank the component over a blip.
-        expect(result?.data.map((entry) => entry.granted)).toEqual([true, false])
-
-        instance.dispose()
-      })
-
-      it('retries after a failed rebuild instead of giving up on the user', async () => {
-        vi.mocked(projectUserIds.refetch)
-          .mockRejectedValueOnce(new Error('network blip'))
-          .mockResolvedValueOnce(fullMap())
-
-        await resolveUsersWithGrants(instance, orgOptions)
-        const second = await resolveUsersWithGrants(instance, orgOptions)
-
-        expect(projectUserIds.refetch).toHaveBeenCalledTimes(2)
-        expect(second?.data.map((entry) => entry.granted)).toEqual([true, true])
-
-        instance.dispose()
-      })
-
-      it('leaves no unhandled rejection when a rebuild fails behind the state source', async () => {
-        // Stubbed raw rather than with `vi.fn`, which records settled results by
-        // attaching its own handlers and so masks the very failure this covers.
-        const original = projectUserIds.refetch
-        Object.assign(projectUserIds, {
-          refetch: () => Promise.reject(new Error('map rebuild exploded')),
-        })
-
-        const unhandled: unknown[] = []
-        const onUnhandled = (error: unknown) => unhandled.push(error)
-        process.on('unhandledRejection', onUnhandled)
-
-        vi.mocked(getDocumentState).mockReturnValue({
-          getCurrent: () => article,
-          subscribe: () => () => {},
-          observable: NEVER,
-        } as unknown as StateSource<SanityDocument | null | undefined>)
-        vi.mocked(systemGroups.getState).mockReturnValue({
-          getCurrent: () => ({
-            status: 'success',
-            data: [
-              {members: ['p-ada', 'p-newcomer'], grants: [{filter: 'true', permissions: ['read']}]},
-            ],
-          }),
-          subscribe: () => () => {},
-          observable: NEVER,
-        } as unknown as StateSource<FetcherSnapshot<SystemGroup[]>>)
-        vi.mocked(projectUserIds.getState).mockReturnValue({
-          getCurrent: () => ({status: 'success', data: new Map([['g-ada', 'p-ada']])}),
-          subscribe: () => () => {},
-          observable: NEVER,
-        } as unknown as StateSource<FetcherSnapshot<ProjectUserIds>>)
-
-        const state = getUsersWithGrantsState(instance, orgOptions)
-        const unsubscribe = state.subscribe()
-        await new Promise((resolve) => setTimeout(resolve, 20))
-
-        expect(state.getCurrent()?.data.map((entry) => entry.granted)).toEqual([true, false])
-        expect(unhandled).toEqual([])
-
-        process.off('unhandledRejection', onUnhandled)
-        Object.assign(projectUserIds, {refetch: original})
-        unsubscribe()
-        instance.dispose()
-      })
-    })
-
-    it('does not read the id map for a project audience, which has the ids inline', async () => {
-      vi.mocked(systemGroups.resolveState).mockResolvedValue([
-        {members: ['p-ada'], grants: [{filter: 'true', permissions: ['read']}]},
-      ])
-
-      const result = await resolveUsersWithGrants(instance, {projectId: 'p', document})
-
-      expect(result?.data.map((entry) => entry.granted)).toEqual([true, false])
-      expect(projectUserIds.resolveState).not.toHaveBeenCalled()
-
-      instance.dispose()
-    })
+    instance.dispose()
   })
 
   it('rejects a document on a resource that has no dataset', () => {
@@ -542,7 +307,7 @@ describe('usersWithGrants', () => {
     it('stays undefined while the access groups are still loading', async () => {
       mockGroups({status: 'pending'})
 
-      const state = getUsersWithGrantsState(instance, {projectId: 'p', document})
+      const state = getUsersWithGrantsState(instance, {document})
       const unsubscribe = await usersArrived(state)
 
       // Annotating against a half-known set of groups would report users as
@@ -556,7 +321,7 @@ describe('usersWithGrants', () => {
     it('surfaces an access group read failure rather than granting everyone', async () => {
       mockGroups({status: 'error', error: new Error('no access to system.group')})
 
-      const state = getUsersWithGrantsState(instance, {projectId: 'p', document})
+      const state = getUsersWithGrantsState(instance, {document})
       const unsubscribe = await usersArrived(state)
 
       expect(() => state.getCurrent()).toThrow('no access to system.group')
@@ -571,7 +336,7 @@ describe('usersWithGrants', () => {
         data: [{members: ['p-ada'], grants: [{filter: 'true', permissions: ['read']}]}],
       })
 
-      const state = getUsersWithGrantsState(instance, {projectId: 'p', document})
+      const state = getUsersWithGrantsState(instance, {document})
       const unsubscribe = await usersArrived(state)
 
       // `useSyncExternalStore` loops on a snapshot that changes identity.
@@ -584,17 +349,17 @@ describe('usersWithGrants', () => {
   })
 
   describe('keys', () => {
-    it('separates reads that differ only by grant', () => {
-      expect(getUsersWithGrantsKey(instance, {document, grant: 'read'})).not.toEqual(
-        getUsersWithGrantsKey(instance, {document, grant: 'update'}),
+    it('separates reads that differ only by search terms', () => {
+      expect(getUsersWithGrantsKey({document, displayName: 'ada'})).not.toEqual(
+        getUsersWithGrantsKey({document, displayName: 'grace'}),
       )
 
       instance.dispose()
     })
 
     it('separates reads that differ only by document', () => {
-      expect(getUsersWithGrantsKey(instance, {document})).not.toEqual(
-        getUsersWithGrantsKey(instance, {
+      expect(getUsersWithGrantsKey({document})).not.toEqual(
+        getUsersWithGrantsKey({
           document: {documentId: 'article-2', documentType: 'article'},
         }),
       )
@@ -604,38 +369,46 @@ describe('usersWithGrants', () => {
 
     it('is stable across the key order of a caller object literal', () => {
       expect(
-        getUsersWithGrantsKey(instance, {
+        getUsersWithGrantsKey({
           document: {documentType: 'article', documentId: 'article-1'},
         }),
-      ).toEqual(getUsersWithGrantsKey(instance, {document}))
+      ).toEqual(getUsersWithGrantsKey({document}))
 
       instance.dispose()
     })
 
-    it('round-trips the document and grant', () => {
+    it('round-trips the search terms and the document', () => {
+      // React reads and resolves against the parsed key rather than the options
+      // it was handed, so anything the key loses is a field the read ignores.
       const parsed = parseUsersWithGrantsKey(
-        getUsersWithGrantsKey(instance, {
-          projectId: 'p',
-          displayName: 'ada',
+        getUsersWithGrantsKey({
           document,
-          grant: 'update',
+          batchSize: 25,
+          displayName: 'ada',
+          email: 'ada@example.com',
+          sortBy: 'displayName',
+          orderBy: 'desc',
         }),
       )
 
-      expect(parsed).toMatchObject({
-        projectId: 'p',
+      expect(parsed).toEqual({
+        document: {documentId: 'article-1', documentType: 'article'},
+        batchSize: 25,
         displayName: 'ada',
-        grant: 'update',
-        document: expect.objectContaining({documentId: 'article-1', documentType: 'article'}),
+        email: 'ada@example.com',
+        sortBy: 'displayName',
+        orderBy: 'desc',
       })
 
       instance.dispose()
     })
 
-    it('omits the document when there is none', () => {
-      expect(
-        parseUsersWithGrantsKey(getUsersWithGrantsKey(instance, {projectId: 'p'})),
-      ).not.toHaveProperty('document')
+    it('keys the default batch size explicitly', () => {
+      // Otherwise asking for the default and not asking at all would be two
+      // keys over one entry.
+      expect(getUsersWithGrantsKey({document})).toEqual(
+        getUsersWithGrantsKey({document, batchSize: DEFAULT_USERS_BATCH_SIZE}),
+      )
 
       instance.dispose()
     })

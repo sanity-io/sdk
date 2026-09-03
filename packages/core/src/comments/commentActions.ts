@@ -79,8 +79,14 @@ export interface CreateCommentOptions extends DocumentHandle {
   context?: Record<string, unknown>
 }
 
-/** @beta */
-export interface ReplyToCommentOptions extends DocumentHandle {
+/**
+ * A dataset handle rather than a document one: everything placing the reply —
+ * the thread, the field, the document it targets — is read off the parent
+ * comment, so naming a document here would only be a second source of truth.
+ *
+ * @beta
+ */
+export interface ReplyToCommentOptions extends DatasetHandle {
   /** The comment being replied to. Replies to a reply join the same thread. */
   parentCommentId: string
   message: CommentMessage
@@ -170,6 +176,28 @@ function findComment(
     if (comment) return comment
   }
   return undefined
+}
+
+/**
+ * Refuses to reply to a comment we do not hold.
+ *
+ * The reply is shown before the server confirms it, and everything placing it —
+ * the thread, the field, the target the lists are keyed on — comes from the
+ * parent. Guessing those puts the optimistic reply in no thread any reader can
+ * see, so a failed one would carry its `createError` somewhere invisible, with
+ * no way to offer a retry. Anyone with a comment to reply to has it loaded.
+ */
+function requireLoadedParent(
+  state: StoreState<CommentsStoreState>,
+  parentCommentId: string,
+): StoredComment {
+  const parent = findComment(state, parentCommentId)
+  if (!parent) {
+    throw new Error(
+      `Cannot reply to comment ${parentCommentId}: it is not loaded. Read the thread it belongs to first.`,
+    )
+  }
+  return parent
 }
 
 /**
@@ -346,29 +374,30 @@ export const replyToComment: (
     const {instance, key, state} = context
     const client = getWritableClient(instance, key, options)
     const commentId = options.commentId ?? crypto.randomUUID()
-    const parent = findComment(state, options.parentCommentId)
-    const sourceDocumentId = toSourceDocumentId(instance, options)
+    const parent = requireLoadedParent(state, options.parentCommentId)
 
     // Replies to a reply belong to the thread's first comment, matching how the
     // Studio flattens threads.
-    const parentCommentId = parent?.parentCommentId ?? options.parentCommentId
+    const parentCommentId = parent.parentCommentId ?? options.parentCommentId
 
     const optimistic = buildOptimisticComment({
       authorId: requireCurrentUserId(instance),
       commentId,
       context: options.context,
-      documentType: parent?.target.documentType ?? options.documentType,
-      // Inherited from the parent when it is loaded. The API is the authority
-      // either way: it copies the parent's target onto the reply.
-      fieldPath: parent?.target.path?.field ?? '',
+      documentType: parent.target.documentType,
+      // The parent's, so the reply lands in the same thread and the same lists.
+      // The API is the authority either way: it copies the parent's target onto
+      // the reply. Checked rather than defaulted to `''`, because a pathless
+      // reply takes down the Studio's inspector exactly as a pathless comment
+      // does.
+      fieldPath: requireFieldPath(parent.target.path?.field ?? ''),
       message: options.message,
       parentCommentId,
-      sourceDocumentId: parent?.target.sourceDocumentId ?? sourceDocumentId,
-      status: parent?.status ?? 'open',
-      targetRef:
-        parent?.target.document._ref ??
-        client.collaboration.comments.getTargetDocumentRef(sourceDocumentId),
-      threadId: parent?.threadId ?? parentCommentId,
+      sourceDocumentId: parent.target.sourceDocumentId,
+      status: parent.status,
+      targetRef: parent.target.document._ref,
+      // A thread the parent does not name is the one it starts.
+      threadId: parent.threadId ?? parentCommentId,
     })
 
     return postComment(

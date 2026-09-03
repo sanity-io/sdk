@@ -12,15 +12,7 @@ import {type DocumentHandle} from '../../config/handles'
 import {useSanityInstance} from '../context/useSanityInstance'
 import {useDeferredRequestKey} from '../helpers/useDeferredRequestKey'
 import {useNormalizedResourceOptions} from '../helpers/useNormalizedResourceOptions'
-import {useResolvedProjectId, withResolvedProjectId} from '../helpers/useResolvedProjectId'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
-
-/**
- * Stands in for the absent handle so the normalizing hook can be called
- * unconditionally. Never reaches core: the result is only read when the caller
- * actually passed a document.
- */
-const EMPTY_DOCUMENT: DocumentHandle = {documentId: '', documentType: ''}
 
 /**
  * @public
@@ -31,7 +23,7 @@ export interface UseUsersWithGrantsOptions extends Omit<UsersWithGrantsOptions, 
    * The document to measure each user against. Accepts a `resourceName` on top
    * of the core handle, so it resolves against `<SanityApp>`'s `resources`.
    */
-  document?: DocumentHandle
+  document: DocumentHandle
 }
 
 /**
@@ -40,7 +32,7 @@ export interface UseUsersWithGrantsOptions extends Omit<UsersWithGrantsOptions, 
  */
 export interface UsersWithGrantsHookResult {
   /**
-   * The users fetched, each carrying whether they hold the grant.
+   * The users fetched, each carrying whether they can read the document.
    */
   data: UserWithGrants[]
   /**
@@ -61,16 +53,16 @@ export interface UsersWithGrantsHookResult {
  *
  * @public
  *
- * Retrieves the users for a project or an organization, each annotated with
- * whether they hold a grant on a document.
+ * Retrieves a project's users, each annotated with whether they can read a
+ * document.
  *
- * Users who do not hold the grant are returned with `granted: false` rather
- * than dropped, so a picker can show them as unavailable. Filtering them out
- * here would make pagination misleading: `hasMore` tracks the unfiltered list,
- * so a full page could yield only a handful of visible users.
+ * Users who cannot are returned with `granted: false` rather than dropped, so a
+ * picker can show them as unavailable. Filtering them out here would make
+ * pagination misleading: `hasMore` tracks the unfiltered list, so a full page
+ * could yield only a handful of visible users.
  *
  * @category Users
- * @param options - The resource to read users from, the batch size, and optionally the document to measure them against
+ * @param options - The document to measure users against, the batch size, and any search terms
  * @returns The annotated users, whether more can be fetched, and a function to fetch them
  *
  * @example Who can read this document
@@ -89,11 +81,9 @@ export interface UsersWithGrantsHookResult {
  * )
  * ```
  *
- * @example Searching the whole organization, server-side
+ * @example Searching the project, server-side
  * ```tsx
  * const {data} = useUsersWithGrants({
- *   resourceType: 'organization',
- *   organizationId: 'my-org-id',
  *   displayName: query,
  *   sortBy: 'displayName',
  *   document: docHandle,
@@ -102,32 +92,30 @@ export interface UsersWithGrantsHookResult {
  *
  * @remarks
  * Reading grants means reading the dataset's `system.group` documents, so this
- * throws for users who can reach the dataset but not its access groups. Without
- * a `document` no groups are read and every user is `granted: true`.
+ * throws for users who can reach the dataset but not its access groups.
  *
- * An organization audience combined with a `document` costs an extra read.
- * Access groups identify their members by project user id, which only a
- * project users read returns inline, so the project's id map is walked and
- * cached first. Organization members outside the project are `granted: false`.
+ * The audience is the document's project, because a dataset's access groups
+ * identify their members by project user id, which only a project users read
+ * returns inline.
+ *
+ * A document that does not exist denies everyone: a grant is a filter measured
+ * against a document, so there is nothing for anyone to hold.
  */
-export function useUsersWithGrants(options?: UseUsersWithGrantsOptions): UsersWithGrantsHookResult {
+export function useUsersWithGrants(options: UseUsersWithGrantsOptions): UsersWithGrantsHookResult {
   const instance = useSanityInstance()
   trackHookUsage(instance, 'useUsersWithGrants')
 
   // The document handle resolves its own resource the way `useDocument` does,
   // so a `resourceName` or a bare `projectId`/`dataset` pair still reaches the
   // dataset whose access groups decide the answer.
-  const documentHandle = options?.document
-  const document = useNormalizedResourceOptions(documentHandle ?? EMPTY_DOCUMENT)
-  const resolvedProjectId = useResolvedProjectId(options)
-  const effectiveOptions = useMemo((): UsersWithGrantsOptions | undefined => {
-    const withProjectId = withResolvedProjectId(options, resolvedProjectId)
-    if (!documentHandle) return withProjectId
-    return {...withProjectId, document}
-  }, [document, documentHandle, options, resolvedProjectId])
+  const document = useNormalizedResourceOptions(options.document)
+  const effectiveOptions = useMemo(
+    (): UsersWithGrantsOptions => ({...options, document}),
+    [document, options],
+  )
 
   const {deferredKey, signal, isPending} = useDeferredRequestKey(
-    getUsersWithGrantsKey(instance, effectiveOptions),
+    getUsersWithGrantsKey(effectiveOptions),
   )
   const deferred = useMemo(() => parseUsersWithGrantsKey(deferredKey), [deferredKey])
 
