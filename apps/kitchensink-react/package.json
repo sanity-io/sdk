@@ -53,7 +53,7 @@
     "@types/react-dom": "catalog:",
     "eslint": "catalog:",
     "oxfmt": "catalog:",
-    "sanity": "6.11.0",
+    "sanity": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
   }
