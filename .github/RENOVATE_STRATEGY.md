@@ -14,6 +14,7 @@ For Renovate's own docs, see [Dependency Dashboard](https://docs.renovatebot.com
 ## Where to look
 
 - Config: [`.github/renovate.json`](renovate.json)
+- Runner: [`.github/workflows/renovate.yml`](workflows/renovate.yml)
 - Running state: [Dependency Dashboard issue](../../issues/9)
 - Auto-approve workflow: [`.github/workflows/renovate-auto-approve.yml`](workflows/renovate-auto-approve.yml)
 
