@@ -12,7 +12,7 @@
     "install": "npm run schema:extract && npm run types:generate",
     "lint": "eslint .",
     "preview": "sanity preview",
-    "schema:extract": "sanity schema extract --workspace ppsg7ml5-test --path schema.ppsg7ml5.test.json && sanity schema extract --workspace vo1ysemo-production --path schema.vo1ysemo.production.json",
+    "schema:extract": "sanity schema extract --workspace ppsg7ml5-test --path schema.ppsg7ml5.test.json --force && sanity schema extract --workspace vo1ysemo-production --path schema.vo1ysemo.production.json --force",
     "test:e2e": "playwright test",
     "tsc": "tsc --noEmit",
     "types:generate": "node scripts/typegen.mjs"
