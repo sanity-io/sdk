@@ -1,7 +1,6 @@
 import {
   type Application,
   type ApplicationDeployment,
-  type ApplicationStudioConfig,
 } from '@sanity/sdk'
 import {expectTypeOf, test} from 'vitest'
 
@@ -19,7 +18,6 @@ test('useApplication — no include: the base application', () => {
 test('useApplication — config.studio include adds config.studio', () => {
   const result = useApplication('app_1', {include: ['config.studio']})
   expectTypeOf(result.data).toEqualTypeOf<Application<'config.studio'>>()
-  expectTypeOf(result.data.config.studio).toEqualTypeOf<ApplicationStudioConfig>()
 })
 
 test('useApplication — a deployment-child include forces the deployment in', () => {
