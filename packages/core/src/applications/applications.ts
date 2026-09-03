@@ -35,6 +35,16 @@ type ApplicationInterfaceBase = {
 }
 
 /**
+ * Placement metadata for application and panel interfaces.
+ *
+ * @see https://www.sanity.io/docs/http-reference/applications-api
+ * @public
+ */
+export type ApplicationInterfacePlacementMetadata = {
+  dock?: {group?: string; order?: number}
+}
+
+/**
  * An interface exposed by a deployment, embedded when `interfaces` is included.
  *
  * @see https://www.sanity.io/docs/http-reference/applications-api
@@ -42,8 +52,8 @@ type ApplicationInterfaceBase = {
  */
 export type ApplicationInterface = ApplicationInterfaceBase &
   (
-    | {type: 'app'; metadata: {dock?: {group?: string; order?: number}} | null}
-    | {type: 'panel'; metadata: {dock?: {group?: string; order?: number}} | null}
+    | {type: 'app'; metadata: ApplicationInterfacePlacementMetadata | null}
+    | {type: 'panel'; metadata: ApplicationInterfacePlacementMetadata | null}
     | {type: 'asset_source'; metadata: null}
     | {type: 'worker'; metadata: null}
     | {type: 'tile'; metadata: {order?: number; size: 'small' | 'large' | 'banner'}}

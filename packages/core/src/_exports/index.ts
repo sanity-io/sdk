@@ -20,6 +20,7 @@ export {
   type ApplicationDeployment,
   type ApplicationInclude,
   type ApplicationInterface,
+  type ApplicationInterfacePlacementMetadata,
   type ApplicationsOptions,
   type ApplicationsResponse,
   type ApplicationStudioConfig,
