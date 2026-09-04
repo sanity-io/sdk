@@ -13,15 +13,19 @@ Before contributing, please read our [code of conduct](https://github.com/sanity
 
 ### Prerequisites
 
-- **Node.js**: see [`.nvmrc`](.nvmrc). Run `nvm use` (or your equivalent for [fnm](https://github.com/Schniz/fnm), [asdf](https://asdf-vm.com/), [Volta](https://volta.sh/), etc.) to match.
-- **pnpm**: pinned via the `packageManager` field in `package.json`. Run `corepack enable` once and pnpm will resolve to the correct version automatically.
+- [mise](https://mise.jdx.dev/) installs the Node.js and pnpm versions pinned in
+  [`mise.toml`](mise.toml).
 
-Check your versions:
+Install the tools and check their versions:
 
 ```bash
-node --version
-pnpm --version
+mise install
+mise exec -- node --version
+mise exec -- pnpm --version
 ```
+
+The `packageManager` field in `package.json` remains available for contributors who prefer to
+manage pnpm with Corepack.
 
 ## Setup
 
