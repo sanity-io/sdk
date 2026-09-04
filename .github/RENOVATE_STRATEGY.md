@@ -97,9 +97,11 @@ Our rules align Renovate's commit types with [release-please](../release-please-
 
 If a production major dep breaks our public API, override the commit type at squash time from `fix(deps)` to `feat(deps)!` or add a `BREAKING CHANGE:` footer so release-please produces a minor/major release.
 
-## pnpm version
+## Development tool versions
 
-Renovate reads the pnpm version from the root `package.json` `packageManager` field automatically. We do **not** set a `constraints.pnpm` override (it only drifts out of sync).
+Renovate's mise manager updates Node.js and pnpm in `mise.toml`. It also reads pnpm from the
+`packageManager` fields used by Corepack and package metadata. We do **not** set a
+`constraints.pnpm` override (it only drifts out of sync).
 
 ## Auto-approval workflow
 
