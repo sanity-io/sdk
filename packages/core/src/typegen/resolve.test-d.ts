@@ -1,5 +1,6 @@
 import {expectTypeOf, test} from 'vitest'
 
+import {defineProjection} from './defineProjection'
 import {
   type ResolveDocument,
   type ResolveProjectionResult,
@@ -92,4 +93,10 @@ test('ResolveProjectionResult — narrows by projection and by document type', (
   expectTypeOf<ResolveProjectionResult<'{title}', 'post', 'new.dataset'>>().toEqualTypeOf<{
     title: string | null
   }>()
+})
+
+test('defineProjection — preserves the projection as a literal type', () => {
+  // Typegen keys its result map on the literal, so widening to `string` would break
+  // every projection lookup.
+  expectTypeOf(defineProjection('{name}')).toEqualTypeOf<'{name}'>()
 })

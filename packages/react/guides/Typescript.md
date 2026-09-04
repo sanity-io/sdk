@@ -73,6 +73,13 @@ Your app needs the `schema.json` file, not the `sanity` package. If you keep a
 `sanity-typegen.json`, do not set `overloadClientMethods` to `false`; that flag
 suppresses the module augmentation the SDK reads.
 
+**Your app and the SDK must resolve the same copy of `groq`.** The SDK's compatibility
+declarations attach to the `groq` directory its own types resolve to, so a second copy at
+a different version leaves your generated file importing helpers from a copy that never
+received them, and it fails with `TS2614: Module '"groq"' has no exported member
+'SchemaOrigin'`. Both the SDK and this guide use `^6`, so an app on the same range
+dedupes to one copy. Pinning `groq` to an exact or older version is what splits it.
+
 Then add one file to connect the generated schema types to your dataset:
 
 ```typescript
@@ -142,7 +149,8 @@ function BookList() {
 }
 ```
 
-A query built from a plain string, or assembled at runtime, resolves to `unknown`.
+A query that is not a literal, built from a plain string or assembled at runtime,
+resolves to `never`. Pass an explicit type parameter for those.
 
 ## Projections
 
@@ -167,6 +175,10 @@ function AuthorCard({doc}: {doc: DocumentHandle<'author'>}) {
 A projection runs against every document type in the schema, so its result narrows by
 document type as well as by dataset. That is why the handle's `documentType` matters here
 as much as it does to `useDocument`.
+
+`data` is only inferred for an app set up with the experimental packages, per the table
+above. `sanity typegen generate` emits no projection types, so a new app gets `never`
+here and should pass an explicit type parameter until the multi-resource command ships.
 
 Projections chosen at runtime are never inferred, because static analysis cannot tell
 which one is in play:
@@ -245,11 +257,11 @@ with no document type, is what yields the base document shape.
 Generated types are a build artifact, and a schema deployed by someone else changes your
 app's types without a commit in your repository, so run generation in CI.
 
-**TypeGen is additive.** Without it, `useQuery` returns `unknown` and `useDocument`
-returns the base document shape for an untyped handle. Pass a handle with a literal
-`documentType` and no generated types, and it resolves to `never`; pass an explicit
-generic in that case. Runtime behavior is identical either way, so it is safe to adopt in
-an existing app and safe to leave out.
+**TypeGen is additive.** Without it, `useQuery` and a literal-`documentType`
+`useDocument` both resolve to `never`, because every lookup misses; pass an explicit
+generic in that case. An untyped handle still gives `useDocument` the base document
+shape. Runtime behavior is identical either way, so it is safe to adopt in an existing
+app and safe to leave out.
 
 **JavaScript projects benefit too.** Editors read the generated declarations for
 autocompletion even where there is no annotation to check. `defineQuery` and
