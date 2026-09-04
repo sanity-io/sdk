@@ -88,6 +88,9 @@ received them, and it fails with `TS2614: Module '"groq"' has no exported member
 'SchemaOrigin'`. The `^6` range above is what keeps them deduped. Pinning `groq` to an
 exact or older version is what splits it.
 
+The same rule covers `@sanity/client`, which the bridge file below augments. A split there
+is quieter: no error, just `never` everywhere.
+
 Then add one file to connect the generated schema types to your dataset:
 
 ```typescript
@@ -105,7 +108,7 @@ Add one entry per dataset. Pass the whole `AllSanitySchemaTypes` union; it inclu
 object types such as `slug` alongside your documents, and the SDK filters those out.
 Delete this file once the multi-resource command generates the same declaration.
 
-Two ways to get `never` out of this file, both silent at the declaration:
+Three ways to get `never` out of this file, all silent at the declaration:
 
 - **A wrong key.** `useDocument` on a handle with a literal `documentType` resolves to
   `never`, so every field access fails. Check the key against your `projectId.dataset`
@@ -115,6 +118,8 @@ Two ways to get `never` out of this file, both silent at the declaration:
   and an interface none, and the SDK matches on that signature to tell documents from
   object types. An `interface Book {...}` registered here never matches and resolves to
   `never`; `type Book = {...}` works.
+- **Two copies of `@sanity/client`.** The augmentation attaches to whichever copy this
+  file resolves, and the SDK reads its own. Run `npm ls @sanity/client` and expect one.
 
 ## Handles carry the type context
 

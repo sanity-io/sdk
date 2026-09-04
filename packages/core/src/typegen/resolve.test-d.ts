@@ -54,7 +54,7 @@ test('ResolveDocument — resolves a document from the @sanity/client resource s
 })
 
 test('ResolveDocument — never returns a non-document type from the same schema', () => {
-  expectTypeOf<ResolveDocument<'seo', 'new.dataset'>>().not.toEqualTypeOf<Seo>()
+  expectTypeOf<ResolveDocument<'seo', 'new.dataset'>>().toEqualTypeOf<never>()
 })
 
 test('ResolveDocument — an unconstrained lookup still yields a usable document shape', () => {

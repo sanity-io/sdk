@@ -130,10 +130,13 @@ try {
   await fileHandle.close()
   fileHandle = null
 
+  // The typecheck needs this whether or not formatting runs, so it sits outside the
+  // branch below.
+  fileHandle = await open(outputPath, 'r+')
+  let code = dropUnusedGroqImports(await fileHandle.readFile({encoding: 'utf-8'}))
+
   if (formatGeneratedCode) {
     const {format} = await import('oxfmt')
-    fileHandle = await open(outputPath, 'r+')
-    const code = dropUnusedGroqImports(await fileHandle.readFile({encoding: 'utf-8'}))
     // Mirror the repo's .oxfmtrc.json so generated types match committed style.
     const {code: formatted, errors} = await format(outputPath, code, {
       bracketSpacing: false,
@@ -147,11 +150,13 @@ try {
     if (errors.length > 0) {
       throw new Error(`Failed to format generated types:\n${errors.map(String).join('\n')}`)
     }
-    await fileHandle.truncate()
-    await fileHandle.write(formatted, 0)
-    await fileHandle.close()
-    fileHandle = null
+    code = formatted
   }
+
+  await fileHandle.truncate()
+  await fileHandle.write(code, 0)
+  await fileHandle.close()
+  fileHandle = null
 } finally {
   await fileHandle?.close()
 }
