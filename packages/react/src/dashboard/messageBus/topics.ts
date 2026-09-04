@@ -152,33 +152,56 @@ type StateTopicsOf<T> = {
  */
 export type StateTopic = StateTopicsOf<Topics>
 
+type TopicOwnership = {readonly type: 'same_app'} | {readonly type: 'any_app'}
+
 type TopicManifestEntry<T> = T extends {kind: 'state'; value: infer V}
   ? {
       readonly kind: 'state'
+      readonly ownership: TopicOwnership
       readonly seed: V | undefined
     }
-  : {readonly kind: 'event'}
+  : {readonly kind: 'event'; readonly ownership: TopicOwnership}
+
+const withOwnership =
+  <const Ownership extends TopicOwnership>(ownership: Ownership) =>
+  <const Topic extends {readonly kind: 'state'; readonly seed: unknown} | {readonly kind: 'event'}>(
+    topic: Topic,
+  ) => ({...topic, ownership})
+
+// `same_app` restricts publishing and responding to the application that installed the bus.
+const dashboardTopic = withOwnership({type: 'same_app'})
+// `any_app` allows every connected application to publish and respond.
+const sharedTopic = withOwnership({type: 'any_app'})
 
 /**
- * Defines the runtime kind and initial value of dashboard topics.
+ * Defines the runtime kind, ownership, and initial value of dashboard topics.
  * @internal
  */
 export const DASHBOARD_TOPIC_MANIFEST: {
   readonly [K in keyof DashboardTopics]: TopicManifestEntry<DashboardTopics[K]>
 } = {
-  'applications.config': {kind: 'state', seed: undefined},
-  'applications.foreground': {kind: 'state', seed: null},
-  'applications.list': {kind: 'state', seed: undefined},
-  'auth.token': {kind: 'state', seed: undefined},
-  'auth.token.refresh': {kind: 'event'},
-  'navigation.location': {kind: 'state', seed: undefined},
-  'navigation.location.update': {kind: 'event'},
-  'organizations.current': {kind: 'state', seed: undefined},
-  'panels.mode': {kind: 'state', seed: {ok: true, value: null}},
-  'panels.mode.set': {kind: 'event'},
-  'preferences.color-scheme': {kind: 'state', seed: undefined},
-  'preferences.dock-locked': {kind: 'state', seed: undefined},
-  'users.current': {kind: 'state', seed: undefined},
+  'applications.config': dashboardTopic({kind: 'state', seed: undefined}),
+  'applications.foreground': dashboardTopic({kind: 'state', seed: null}),
+  'applications.list': dashboardTopic({kind: 'state', seed: undefined}),
+  'auth.token': dashboardTopic({kind: 'state', seed: undefined}),
+  'auth.token.refresh': dashboardTopic({kind: 'event'}),
+  'navigation.location': dashboardTopic({kind: 'state', seed: undefined}),
+  'navigation.location.update': dashboardTopic({kind: 'event'}),
+  'organizations.current': dashboardTopic({kind: 'state', seed: undefined}),
+  'panels.mode': sharedTopic({
+    kind: 'state',
+    seed: {ok: true, value: null},
+  }),
+  'panels.mode.set': dashboardTopic({kind: 'event'}),
+  'preferences.color-scheme': sharedTopic({
+    kind: 'state',
+    seed: undefined,
+  }),
+  'preferences.dock-locked': sharedTopic({
+    kind: 'state',
+    seed: undefined,
+  }),
+  'users.current': dashboardTopic({kind: 'state', seed: undefined}),
 }
 
 /**
@@ -190,9 +213,10 @@ export type TopicManifest = Readonly<
     string,
     | {
         readonly kind: 'state'
+        readonly ownership: TopicOwnership
         readonly seed: unknown
       }
-    | {readonly kind: 'event'}
+    | {readonly kind: 'event'; readonly ownership: TopicOwnership}
   >
 >
 

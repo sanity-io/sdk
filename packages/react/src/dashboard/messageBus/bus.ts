@@ -31,6 +31,7 @@ export type MessageBusErrorCode =
   | 'ABORTED'
   | 'HANDLER_THREW'
   | 'PROTOCOL_MISMATCH'
+  | 'OWNERSHIP_MISMATCH'
   | 'MISSING_APP_ID'
 
 /**
@@ -248,6 +249,9 @@ function assertCompatibleTopicManifest(
         `topic "${type}" is declared "${entry.kind}" but the installed bus knows it as "${existing.kind}"`,
       )
     }
+    if (existing && existing.ownership.type !== entry.ownership.type) {
+      throw new MessageBusError('OWNERSHIP_MISMATCH', `topic "${type}" has conflicting ownership`)
+    }
   }
 }
 
@@ -404,6 +408,12 @@ function emitEvent(
 const isStateTopic = (registry: MessageBusRegistry, type: string): boolean =>
   registry.topics.get(type)?.kind === 'state'
 
+const canPublishOrRespond = (
+  registry: MessageBusRegistry,
+  ownership: TopicManifest[string]['ownership'],
+  appId: string,
+): boolean => ownership.type === 'any_app' || appId === registry.appId
+
 function emit(
   registry: MessageBusRegistry,
   type: string,
@@ -413,6 +423,12 @@ function emit(
 ): MessageBusEmitResult<unknown> | undefined {
   const topic = registry.topics.get(type)
   if (topic?.kind === 'state') {
+    if (!canPublishOrRespond(registry, topic.ownership, appId)) {
+      throw new MessageBusError(
+        'OWNERSHIP_MISMATCH',
+        `Cannot emit state topic "${type}" from app "${appId}". Only the app that owns this topic can publish it. Other apps can read it with query() or subscribe().`,
+      )
+    }
     const subject = resolveStateSubject(registry, type)
     if (!Object.is(subject.getValue(), payload)) subject.next(payload)
     return undefined
@@ -510,6 +526,7 @@ function subscribe(
   type: string,
   handler: ((arg: never) => void) | undefined,
   options: MessageBusAbortOptions | undefined,
+  appId: string,
 ): MessageBusStateSource<unknown> | Observable<unknown> | void {
   const isState = isStateTopic(registry, type)
 
@@ -525,6 +542,14 @@ function subscribe(
     )
     unsubscribeOnAbort(subscription, scopeSignal(options?.signal, registry.resetAbort.signal))
     return
+  }
+
+  const topic = registry.topics.get(type)
+  if (topic && !canPublishOrRespond(registry, topic.ownership, appId)) {
+    throw new MessageBusError(
+      'OWNERSHIP_MISMATCH',
+      `Cannot register a handler for event topic "${type}" from app "${appId}". Only the app that owns this topic can respond to it. Other apps can send it with emit().`,
+    )
   }
 
   registry.responderCounts.set(type, (registry.responderCounts.get(type) ?? 0) + 1)
@@ -563,7 +588,7 @@ export function createIsolatedMessageBus(appId: string): MessageBus {
       emit(registry, type, payload, options, registry.appId),
     query: (type: string, options?: MessageBusAbortOptions) => query(registry, type, options),
     subscribe: (type: string, handler?: (arg: never) => void, options?: MessageBusAbortOptions) =>
-      subscribe(registry, type, handler, options),
+      subscribe(registry, type, handler, options, registry.appId),
   }
 
   const instance = messageBus as unknown as InternalMessageBus
@@ -612,14 +637,14 @@ export function connectApplicationToMessageBus(
         }
         let stream = applicationStreams.get(type)
         if (!stream) {
-          stream = subscribe(registry, type, undefined, options) as
+          stream = subscribe(registry, type, undefined, options, appId) as
             | MessageBusStateSource<unknown>
             | Observable<unknown>
           applicationStreams.set(type, stream)
         }
         return stream
       }
-      return subscribe(registry, type, handler, options)
+      return subscribe(registry, type, handler, options, appId)
     },
   }
 
@@ -728,16 +753,26 @@ export function installMessageBus(options: ConnectMessageBusOptions = {}): Messa
 }
 
 /**
- * Registers or reseeds state topics.
+ * Registers or reseeds state topics, preserving existing ownership and sharing new topics by default.
  * @internal
  */
 export function registerStateTopics(
   target: MessageBus,
   topics: Partial<{[K in StateTopic]: ValueOf<K> | undefined}>,
+  options: {ownership?: 'same_app' | 'any_app'} = {},
 ): void {
   const registry = (target as InternalMessageBus)[MESSAGE_BUS_REGISTRY_KEY]
   const manifest: TopicManifest = Object.fromEntries(
-    Object.entries(topics).map(([name, seed]) => [name, {kind: 'state', seed}]),
+    Object.entries(topics).map(([name, seed]) => [
+      name,
+      {
+        kind: 'state',
+        ownership: registry.topics.get(name)?.ownership ?? {
+          type: options.ownership ?? 'any_app',
+        },
+        seed,
+      },
+    ]),
   )
   mergeTopicManifest(registry, manifest, {reseed: true})
 }

@@ -93,6 +93,9 @@ describe('dashboard connection', () => {
     dashboard.emit('auth.token', 'token')
 
     expect(application.subscribe('auth.token').getCurrent()).toBe('token')
+    expect(() => application.emit('auth.token', 'spoofed')).toThrowError(
+      expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}),
+    )
   })
 
   it('reports request failures as MessageBusError values', async () => {
@@ -215,6 +218,24 @@ describe('state topics', () => {
     expect(messageBus.subscribe('test.count').getCurrent()).toBe(2)
   })
 
+  it('preserves ownership when seeding a manifest topic', async () => {
+    const messageBus = createMessageBus()
+
+    registerStateTopics(messageBus, {'users.current': null})
+
+    await expect(messageBus.query('users.current')).resolves.toBeNull()
+  })
+
+  it('assigns augmented state topics to the installing application', () => {
+    const messageBus = createMessageBus()
+    registerStateTopics(messageBus, {'test.count': 0}, {ownership: 'same_app'})
+    const application = connectApplicationToMessageBus(messageBus, {appId: 'favorites'})
+
+    expect(() => application.emit('test.count', 1)).toThrowError(
+      expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}),
+    )
+  })
+
   it('rejects an event registered as state', () => {
     const messageBus = createMessageBus()
 
@@ -333,6 +354,20 @@ describe('application connections', () => {
     await application.emit('test.echo', {n: 1})
 
     expect(applicationId).toBe('favorites')
+  })
+
+  it('enforces state and responder ownership', () => {
+    const installedMessageBus = createMessageBus('dashboard')
+    const application = connectApplicationToMessageBus(installedMessageBus, {appId: 'favorites'})
+    installedMessageBus.emit('auth.token', 'trusted')
+
+    expect(() => application.emit('auth.token', 'spoofed')).toThrowError(
+      expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}),
+    )
+    expect(() =>
+      application.subscribe('auth.token.refresh', (message) => message.reply('spoofed')),
+    ).toThrowError(expect.objectContaining({code: 'OWNERSHIP_MISMATCH'}))
+    expect(application.subscribe('auth.token').getCurrent()).toBe('trusted')
   })
 
   it('allows applications to publish shared state topics', () => {
