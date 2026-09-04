@@ -34,7 +34,7 @@ function isExactMatchToken(token: string | undefined): boolean {
  * from a raw search query string.
  *
  * It applies wildcard ('*') logic to the last eligible token and escapes
- * double quotes within the search term.
+ * backslashes and double quotes within the search term.
  *
  * If the input query is empty or only whitespace, it returns an empty string.
  *
@@ -77,8 +77,11 @@ export function createGroqSearchFilter(query: string): string {
   // Join the tokens back into a space-separated string
   const wildcardSearch = processedTokens.join(' ')
 
-  // Escape double quotes within the final search term for the GROQ query
-  const escapedSearch = wildcardSearch.replace(/"/g, '\\"')
+  // Escape backslashes and double quotes within the final search term for the
+  // GROQ query. Backslashes go first, so the escapes added for quotes are not
+  // themselves escaped. Without this a trailing backslash would escape the
+  // closing quote and let the input break out of the string literal.
+  const escapedSearch = wildcardSearch.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 
   // Construct the final GROQ filter clause
   return `[@] match text::query("${escapedSearch}")`
