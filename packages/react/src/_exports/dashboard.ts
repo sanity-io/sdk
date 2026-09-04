@@ -1,4 +1,23 @@
 export {DashboardTokenRefreshProvider as TokenRefreshProvider} from '../context/DashboardTokenRefresh'
+export type {
+  ConnectMessageBusOptions,
+  MessageBus,
+  MessageBusStateSource,
+} from '../dashboard/messageBus/bus'
+export {connectMessageBus, resetMessageBus} from '../dashboard/messageBus/bus'
+export {MessageBusError} from '../dashboard/messageBus/bus'
+export type {
+  ApplicationConfig,
+  ApplicationConfigAppType,
+  NavigationLocation,
+  NavigationTarget,
+  PayloadOf,
+  RemoteModuleRef,
+  ReplyOf,
+  StateTopic,
+  TopicResult,
+  ValueOf,
+} from '../dashboard/messageBus/topics'
 export {
   type AgentResourceContextOptions,
   useAgentResourceContext,
