@@ -621,9 +621,6 @@ importers:
       '@sanity/types':
         specifier: 'catalog:'
         version: 6.12.0(@types/react@19.2.17)(vitest@4.1.10)
-      '@sanity/workbench':
-        specifier: 0.1.0-alpha.45
-        version: 0.1.0-alpha.45(@sanity/sdk@packages+core)(react@19.2.8)(vitest@4.1.10)(xstate@5.32.6)
       groq:
         specifier: 'catalog:'
         version: 3.88.1-typegen-experimental.0
@@ -636,9 +633,6 @@ importers:
       rxjs:
         specifier: 'catalog:'
         version: 7.8.2
-      xstate:
-        specifier: ^5.31.0
-        version: 5.32.6
     devDependencies:
       '@repo/config-eslint':
         specifier: workspace:*
