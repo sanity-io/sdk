@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.2.0](https://github.com/sanity-io/sdk/compare/sdk-react-v3.1.0...sdk-react-v3.2.0) (2026-09-04)
+
+
+### Features
+
+* **react:** add typed dashboard URL builder ([#1125](https://github.com/sanity-io/sdk/issues/1125)) ([f520604](https://github.com/sanity-io/sdk/commit/f5206042932cf0821cdb6daf259530dc34dd2c81))
+
+
+### Bug Fixes
+
+* **core:** align application types with brett ([#1160](https://github.com/sanity-io/sdk/issues/1160)) ([115e74e](https://github.com/sanity-io/sdk/commit/115e74e0d7e3d1743699502dd1a15d1ac44d8926))
+
+
+### Documentation
+
+* **react:** correct editDocument patch shape in useApplyDocumentActions example ([#1158](https://github.com/sanity-io/sdk/issues/1158)) ([e410ce5](https://github.com/sanity-io/sdk/commit/e410ce55dad9291377b841881f944f9a5ed9f8eb))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 3.2.0
+
 ## [3.1.0](https://github.com/sanity-io/sdk/compare/sdk-react-v3.0.0...sdk-react-v3.1.0) (2026-09-03)
 
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.2.0](https://github.com/sanity-io/sdk/compare/sdk-v3.1.0...sdk-v3.2.0) (2026-09-04)
+
+
+### Bug Fixes
+
+* **core:** align application types with brett ([#1160](https://github.com/sanity-io/sdk/issues/1160)) ([115e74e](https://github.com/sanity-io/sdk/commit/115e74e0d7e3d1743699502dd1a15d1ac44d8926))
+* **core:** escape backslashes in GROQ search filter ([#1188](https://github.com/sanity-io/sdk/issues/1188)) ([90763ac](https://github.com/sanity-io/sdk/commit/90763acbcac18eb58596b74dc6886418a77b0952))
+
 ## [3.1.0](https://github.com/sanity-io/sdk/compare/sdk-v3.0.0...sdk-v3.1.0) (2026-09-03)
 
 
