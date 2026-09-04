@@ -4,6 +4,8 @@ on:
   release:
     types: [published] # triggers only when a new release is published
 
+permissions: {}
+
 jobs:
   notify:
     runs-on: ubuntu-latest
