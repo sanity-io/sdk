@@ -1,3 +1,4 @@
+export {DashboardTokenRefreshProvider as TokenRefreshProvider} from '../context/DashboardTokenRefresh'
 export {
   type AgentResourceContextOptions,
   useAgentResourceContext,

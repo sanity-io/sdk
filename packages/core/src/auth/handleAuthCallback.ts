@@ -94,7 +94,7 @@ export const handleAuthCallback = bindActionGlobally(
       logger.debug('Fetching token from auth endpoint')
       const {token} = await client.request<{token: string; label: string}>({
         method: 'GET',
-        uri: '/auth/fetch',
+        url: '/auth/fetch',
         query: {sid: authCode},
         tag: 'fetch-token',
       })

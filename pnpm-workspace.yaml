@@ -5,10 +5,13 @@ packages:
   - apps/*
   - '@repo/package.config'
 
+overrides:
+  '@babel/types': 7.29.7
+
 onlyBuiltDependencies:
   - esbuild
 
-minimumReleaseAge: 4320
+minimumReleaseAge: 1440
 
 minimumReleaseAgeExclude:
   - '@portabletext/*'
@@ -29,12 +32,13 @@ minimumReleaseAgeExclude:
 catalog:
   '@playwright/test': '^1.61.1'
   '@sanity/browserslist-config': '^1.0.5'
-  '@sanity/client': '^8.3.0'
+  '@sanity/client': '^8.4.0'
   '@sanity/comlink': '^4.0.3'
   '@sanity/message-protocol': '^0.24.0'
   '@sanity/pkg-utils': '^12.1.0'
   '@sanity/tsconfig': '^2.2.1'
-  '@sanity/types': '^6.9.1'
+  '@sanity/types': '^6.12.0'
+  'sanity': '^6.12.0'
   '@testing-library/jest-dom': '^6.9.1'
   '@testing-library/react': '^16.3.2'
   '@types/lodash-es': '^4.17.12'
@@ -43,14 +47,14 @@ catalog:
   '@types/react-dom': '^19.2.3'
   '@vitejs/plugin-react': '^6.0.3'
   '@vitest/coverage-v8': '^4.1.10'
-  eslint: '^10.6.0'
+  eslint: '^10.9.1'
   groq: '3.88.1-typegen-experimental.0'
   groq-js: '^2.0.0'
   lodash-es: '^4.18.1'
   oxfmt: '^0.58.0'
-  react: '^19.2.7'
+  react: '^19.2.8'
   react-compiler-runtime: '^1.0.0'
-  react-dom: '^19.2.7'
+  react-dom: '^19.2.8'
   react-error-boundary: '^6.1.2'
   rimraf: '^6.0.1'
   rolldown: '^1.2.3'

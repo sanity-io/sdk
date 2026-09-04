@@ -41,7 +41,7 @@ export const checkPermissions = defineFetcher<
       switchMap((client) =>
         client.observable
           .request<{data: Record<string, boolean>}>({
-            uri: `/access/${resourceType}/${resourceId}/user-permissions/me/check`,
+            url: `/access/${resourceType}/${resourceId}/user-permissions/me/check`,
             query: {permissions},
             tag: 'access.check',
           })

@@ -34,7 +34,7 @@ import {
 } from '../store/createStateSourceAction'
 import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
-import {insecureRandomId} from '../utils/ids'
+import {randomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {buildCommentThreads} from './buildCommentThreads'
 import {toCommentFieldPath} from './commentFieldPath'
@@ -491,7 +491,7 @@ function selectCommentsQuery(
  * little longer, so a reader that comes straight back reuses the loaded list.
  */
 function subscribeToEntry(state: StoreState<CommentsStoreState>, key: string): () => void {
-  const subscriptionId = insecureRandomId()
+  const subscriptionId = randomId(16)
   state.set('addSubscriber', addSubscriber(key, subscriptionId))
 
   return () => {
@@ -611,7 +611,7 @@ function resolveList<T>(
   // fetch and this promise would never settle. Holding it only for the duration
   // of the resolve also means a component that suspends and then errors before
   // mounting does not leave a subscriber-less entry behind holding its error.
-  const subscriptionId = insecureRandomId()
+  const subscriptionId = randomId(16)
   state.set('addSubscriber', addSubscriber(key, subscriptionId))
 
   const release = () => state.set('removeSubscriber', removeSubscriber(key, subscriptionId))

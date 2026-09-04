@@ -4,10 +4,11 @@ import {
   useDocumentSyncStatus,
   useEditDocument,
 } from '@sanity/sdk-react'
-import {Badge, Box, Card, Stack, Text} from '@sanity/ui'
+import {Badge} from '@sanity/ui'
 import {type JsonData, JsonEditor} from 'json-edit-react'
 import React from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+import {Box, Card, Text, VStack} from 'ui5'
 
 interface JsonDocumentEditorProps {
   /** Document handle for the document being edited */
@@ -31,11 +32,13 @@ interface JsonDocumentEditorProps {
 
 function ErrorFallback({error}: {error: Error}) {
   return (
-    <Card tone="critical" padding={4}>
-      <Stack space={3}>
-        <Text weight="semibold">Failed to load editor</Text>
+    <Card density="regular" tone="critical">
+      <VStack gap={3}>
+        <Text size={1} weight="semibold">
+          Failed to load editor
+        </Text>
         <Text size={1}>{error.message}</Text>
-      </Stack>
+      </VStack>
     </Card>
   )
 }
@@ -53,7 +56,7 @@ export function JsonDocumentEditor({
   const synced = useDocumentSyncStatus(documentHandle)
 
   const editorContent = (
-    <Stack space={3}>
+    <VStack gap={3}>
       {showSyncStatus && (
         <Box>
           {synced ? (
@@ -77,11 +80,11 @@ export function JsonDocumentEditor({
       >
         <JsonEditor data={document || {}} setData={editDocument as (data: JsonData) => void} />
       </Box>
-    </Stack>
+    </VStack>
   )
 
   const content = wrapInCard ? (
-    <Card padding={4} style={{minHeight}}>
+    <Card density="regular" style={{minHeight}}>
       {editorContent}
     </Card>
   ) : (

@@ -136,7 +136,7 @@ describe('usersStore', () => {
 
     expect(request).toHaveBeenCalledWith({
       method: 'GET',
-      uri: 'access/project/project1/users',
+      url: 'access/project/project1/users',
       tag: 'users.list',
       query: {
         limit: '25',
@@ -489,7 +489,7 @@ describe('usersStore', () => {
       )
       expect(specificRequest).toHaveBeenCalledWith({
         method: 'GET',
-        uri: `/users/${projectUserId}`,
+        url: `/users/${projectUserId}`,
         tag: 'users.get',
       })
 

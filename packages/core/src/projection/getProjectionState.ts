@@ -10,7 +10,7 @@ import {
   type StateSource,
 } from '../store/createStateSourceAction'
 import {hashString} from '../utils/hashString'
-import {insecureRandomId} from '../utils/ids'
+import {randomId} from '../utils/ids'
 import {omitProperty} from '../utils/object'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {projectionStore} from './projectionStore'
@@ -85,7 +85,7 @@ export const _getProjectionState = bindActionByResourceAndPerspective(
     },
     onSubscribe: ({state}, options: ProjectionOptions<string, string, string, string>) => {
       const {projection, ...docHandle} = options
-      const subscriptionId = insecureRandomId()
+      const subscriptionId = randomId(16)
       const documentId = getPublishedId(DocumentId(docHandle.documentId))
       const validProjection = validateProjection(projection)
       const projectionHash = hashString(validProjection)

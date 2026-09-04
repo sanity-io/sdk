@@ -32,4 +32,5 @@ export {getUsersKey, parseUsersKey} from '../users/reducers' // only used for me
 // only used for memoizing in React, not needed for actual functionality
 export {getUsersWithGrantsKey, parseUsersWithGrantsKey} from '../users/usersWithGrants'
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
+export {randomId, randomUuid} from '../utils/ids'
 export {isDeepEqual, pickProperties} from '../utils/object'

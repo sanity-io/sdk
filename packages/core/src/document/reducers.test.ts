@@ -4,6 +4,7 @@ import {parse} from 'groq-js'
 import {Subject} from 'rxjs'
 import {describe, expect, it} from 'vitest'
 
+import {UNVERIFIED_REVISION_RETENTION_TIME} from './documentConstants'
 import {type DocumentEvent} from './events'
 import {type RemoteDocument} from './listen'
 import {type DocumentSet} from './processMutations'
@@ -556,6 +557,118 @@ describe('cleanupOutgoingTransaction', () => {
   })
 })
 
+describe('document state retention between ack and echo', () => {
+  const docId = 'doc1'
+  const justNow = new Date().toISOString()
+  const longAgo = new Date(Date.now() - UNVERIFIED_REVISION_RETENTION_TIME - 1000).toISOString()
+
+  const outgoing: NonNullable<SyncTransactionState['outgoing']> = {
+    transactionId: 'txnOut',
+    actions: [
+      {
+        type: 'document.edit',
+        documentId: docId,
+        documentType: 'book',
+        liveEdit: true,
+        patches: [{set: {foo: 'changed'}}],
+      },
+    ],
+    disableBatching: false,
+    batchedTransactionIds: ['txnOut'],
+    outgoingActions: [],
+    outgoingMutations: [],
+    base: {},
+    working: {},
+    previous: {},
+    previousRevs: {},
+    timestamp: justNow,
+  }
+
+  const unverifiedRevision = (timestamp: string) => ({
+    txnOut: {transactionId: 'txnOut', documentId: docId, previousRev: 'txn0', timestamp},
+  })
+
+  const stateAfterAck = (timestamp: string): SyncTransactionState => ({
+    queued: [],
+    applied: [],
+    outgoing,
+    grants,
+    documentStates: {
+      [docId]: {
+        id: docId,
+        // the UI unsubscribed before the ack arrived, so the transaction's
+        // own subscription id is the only one left
+        subscriptions: ['txnOut'],
+        local: {...exampleDoc, _id: docId, foo: 'changed'},
+        remote: {...exampleDoc, _id: docId, foo: 'old'},
+        unverifiedRevisions: unverifiedRevision(timestamp),
+        recentOwnTransactionIds: ['txnOut'],
+      },
+    },
+  })
+
+  it('keeps echo-recognition memory alive through cleanup so a late echo still labels "local"', () => {
+    // the HTTP ack arrives and cleans up the outgoing transaction's
+    // subscription. previously this deleted the whole DocumentState
+    // immediately, before the listener echo had a chance to arrive
+    const afterCleanup = cleanupOutgoingTransaction(stateAfterAck(justNow))
+    expect(afterCleanup.outgoing).toBeUndefined()
+
+    const docStateAfterCleanup = afterCleanup.documentStates[docId]
+    expect(docStateAfterCleanup).toBeDefined()
+    expect(docStateAfterCleanup?.subscriptions).toEqual([])
+    expect(docStateAfterCleanup?.unverifiedRevisions?.['txnOut']).toBeDefined()
+
+    // now the echo finally arrives over the shared listener
+    const events = new Subject<DocumentEvent>()
+    const received: DocumentEvent[] = []
+    events.subscribe((e) => received.push(e))
+
+    const echo: RemoteDocument = {
+      type: 'mutation',
+      documentId: docId,
+      document: {...exampleDoc, _id: docId, foo: 'changed'},
+      revision: 'txnOut',
+      previousRev: 'txn0',
+      timestamp: new Date().toISOString(),
+      mutations: [{patch: {id: docId, set: {foo: 'changed'}}}],
+    }
+
+    const afterEcho = applyRemoteDocument(afterCleanup, echo, events)
+
+    const remotePatchesEvents = received.filter((e) => e.type === 'remote-patches')
+    expect(remotePatchesEvents).toHaveLength(1)
+    expect(remotePatchesEvents[0]).toMatchObject({origin: 'local', transactionId: 'txnOut'})
+
+    // the echo verified the revision and nothing was subscribed any more, so
+    // the now fully-idle document state can finally be evicted
+    expect(afterEcho.documentStates[docId]).toBeUndefined()
+  })
+
+  it('stops waiting for an echo that is older than the retention time', () => {
+    // an accepted transaction whose operations all no-op server-side never
+    // produces an echo, so the wait has to expire or the document (and its
+    // listener) would be pinned for the lifetime of the store
+    const afterCleanup = cleanupOutgoingTransaction(stateAfterAck(longAgo))
+    expect(afterCleanup.documentStates[docId]).toBeUndefined()
+  })
+
+  it('does not extend the wait on `recentOwnTransactionIds` alone', () => {
+    const state = stateAfterAck(justNow)
+    const documentState = state.documentStates[docId]!
+    const withoutUnverifiedRevisions: SyncTransactionState = {
+      ...state,
+      documentStates: {
+        [docId]: {...documentState, unverifiedRevisions: {}, recentOwnTransactionIds: ['txnOut']},
+      },
+    }
+
+    expect(
+      cleanupOutgoingTransaction(withoutUnverifiedRevisions).documentStates[docId],
+    ).toBeUndefined()
+  })
+})
+
 describe('revertOutgoingTransaction', () => {
   it('reverts the outgoing transaction and updates documentStates by removing unverified revisions', () => {
     const draftId = getDraftId(DocumentId('doc1'))
@@ -685,6 +798,117 @@ describe('revertOutgoingTransaction', () => {
     // the UI subscription keeps the other document alive, but the reverted
     // transaction id is gone from its subscriptions
     expect(newState.documentStates[pubId]?.subscriptions).toEqual(['sub-ui'])
+  })
+
+  it('evicts a document left with no subscribers once its unverified revision is discarded', () => {
+    const docId = 'doc1'
+    const state: SyncTransactionState = {
+      queued: [],
+      applied: [],
+      outgoing: {
+        transactionId: 'txnOut',
+        actions: [
+          {
+            type: 'document.edit',
+            documentId: docId,
+            documentType: 'book',
+            liveEdit: true,
+            patches: [{set: {foo: 'changed'}}],
+          },
+        ],
+        disableBatching: false,
+        batchedTransactionIds: ['txnOut'],
+        outgoingActions: [],
+        outgoingMutations: [],
+        base: {},
+        working: {},
+        previous: {},
+        previousRevs: {},
+        timestamp: new Date().toISOString(),
+      },
+      grants,
+      documentStates: {
+        // the reverted transaction was this document's last subscriber, so the
+        // revision discarded below is the only thing keeping it around
+        [docId]: {
+          id: docId,
+          subscriptions: [],
+          local: {...exampleDoc, _id: docId, foo: 'changed'},
+          remote: {...exampleDoc, _id: docId, foo: 'old'},
+          unverifiedRevisions: {
+            txnOut: {
+              transactionId: 'txnOut',
+              documentId: docId,
+              previousRev: 'txn0',
+              timestamp: new Date().toISOString(),
+            },
+          },
+        },
+      },
+    }
+
+    expect(revertOutgoingTransaction(state).documentStates[docId]).toBeUndefined()
+  })
+
+  it('leaves `local` intact for a document still waiting on its own acked transaction', () => {
+    const revertedId = 'doc-reverted'
+    const retainedId = 'doc-retained'
+    const state: SyncTransactionState = {
+      queued: [],
+      applied: [],
+      outgoing: {
+        transactionId: 'txnOut',
+        actions: [
+          {
+            type: 'document.edit',
+            documentId: revertedId,
+            documentType: 'book',
+            liveEdit: true,
+            patches: [{set: {foo: 'changed'}}],
+          },
+        ],
+        disableBatching: false,
+        batchedTransactionIds: ['txnOut'],
+        outgoingActions: [],
+        outgoingMutations: [],
+        base: {},
+        working: {},
+        previous: {},
+        previousRevs: {},
+        timestamp: new Date().toISOString(),
+      },
+      grants,
+      documentStates: {
+        [revertedId]: {
+          id: revertedId,
+          subscriptions: ['txnOut'],
+          local: {...exampleDoc, _id: revertedId, foo: 'changed'},
+          remote: {...exampleDoc, _id: revertedId, foo: 'old'},
+        },
+        // unrelated to the reverted batch: acked, unsubscribed, and still
+        // waiting on the echo that will settle its optimistic value
+        [retainedId]: {
+          id: retainedId,
+          subscriptions: [],
+          local: {...exampleDoc, _id: retainedId, foo: 'acked'},
+          remote: {...exampleDoc, _id: retainedId, foo: 'old'},
+          unverifiedRevisions: {
+            txnAcked: {
+              transactionId: 'txnAcked',
+              documentId: retainedId,
+              previousRev: 'txn0',
+              timestamp: new Date().toISOString(),
+            },
+          },
+        },
+      },
+    }
+
+    const newState = revertOutgoingTransaction(state)
+    // the reverted document's only subscriber was the batch itself, so
+    // unregistering it evicts the state
+    expect(newState.documentStates[revertedId]).toBeUndefined()
+    expect(newState.documentStates[retainedId]?.local).toMatchObject({foo: 'acked'})
   })
 })
 

@@ -11,6 +11,7 @@ import {bindActionByResource, type BoundResourceKey} from '../store/createAction
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StoreState} from '../store/createStoreState'
 import {type StoreContext} from '../store/defineStore'
+import {randomUuid} from '../utils/ids'
 import {toCommentFieldPath} from './commentFieldPath'
 import {toStoredMessage} from './commentMessage'
 import {getCommentsClient, requireOrganizationId} from './commentsClient'
@@ -313,8 +314,8 @@ export const createComment: (
     const {instance, key} = context
     const client = getWritableClient(instance, key, options)
     const fieldPath = requireFieldPath(options.fieldPath)
-    const commentId = options.commentId ?? crypto.randomUUID()
-    const threadId = options.threadId ?? crypto.randomUUID()
+    const commentId = options.commentId ?? randomUuid()
+    const threadId = options.threadId ?? randomUuid()
     const sourceDocumentId = toSourceDocumentId(instance, options)
 
     const optimistic = buildOptimisticComment({
@@ -373,7 +374,7 @@ export const replyToComment: (
   ) => {
     const {instance, key, state} = context
     const client = getWritableClient(instance, key, options)
-    const commentId = options.commentId ?? crypto.randomUUID()
+    const commentId = options.commentId ?? randomUuid()
     const parent = requireLoadedParent(state, options.parentCommentId)
 
     // Replies to a reply belong to the thread's first comment, matching how the
@@ -435,7 +436,7 @@ async function writeOptimistically(
   write: (client: SanityClient, transactionId: string) => Promise<unknown>,
 ): Promise<void> {
   const {commentId} = options
-  const transactionId = crypto.randomUUID()
+  const transactionId = randomUuid()
   const previous = findComment(state, commentId)
 
   if (previous) {
@@ -547,7 +548,7 @@ export const setCommentStatus: (
     options: SetCommentStatusOptions,
   ) => {
     const {commentId, status} = options
-    const transactionId = crypto.randomUUID()
+    const transactionId = randomUuid()
     // Keyed by id, because the same comment can sit in several entries at once
     // and one rollback snapshot per comment is what is wanted. The patch below
     // reaches every entry holding it regardless.
@@ -648,7 +649,7 @@ function writeReaction(
         reactions: reacted
           ? [
               ...withoutMine,
-              {_key: crypto.randomUUID(), shortName, userId, addedAt: new Date().toISOString()},
+              {_key: randomUuid(), shortName, userId, addedAt: new Date().toISOString()},
             ]
           : withoutMine,
       }

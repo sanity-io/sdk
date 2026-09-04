@@ -243,7 +243,7 @@ describe('usersWithGrants', () => {
     await resolveUsersWithGrants(instance, {document})
 
     expect(usersRequest).toHaveBeenCalledWith(
-      expect.objectContaining({uri: 'access/project/p/users'}),
+      expect.objectContaining({url: 'access/project/p/users'}),
     )
 
     instance.dispose()
@@ -260,7 +260,7 @@ describe('usersWithGrants', () => {
     })
 
     expect(usersRequest).toHaveBeenCalledWith(
-      expect.objectContaining({uri: 'access/project/other/users'}),
+      expect.objectContaining({url: 'access/project/other/users'}),
     )
     expect(systemGroups.resolveState).toHaveBeenCalledWith(instance, {
       projectId: 'other',

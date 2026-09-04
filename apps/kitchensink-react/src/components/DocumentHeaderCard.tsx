@@ -1,6 +1,7 @@
 import {useDocumentProjection, useResource} from '@sanity/sdk-react'
-import {Button, Card, Code, Flex, Stack, Text} from '@sanity/ui'
+import {Button} from '@sanity/ui'
 import {type JSX, type ReactNode} from 'react'
+import {Card, Code, Flex, Text} from 'ui5'
 
 /** The project and dataset in play, so a mismatch with the Studio link is visible. */
 function ScopeText(): JSX.Element | null {
@@ -43,9 +44,9 @@ export function DocumentHeaderCard({
   })
 
   return (
-    <Card padding={3} radius={2} tone="transparent">
-      <Flex align="flex-start" gap={3}>
-        <Stack space={3} flex={1}>
+    <Card density="regular">
+      <Flex alignItems="flex-start" gap={3}>
+        <Flex flexDirection="column" flexGrow={1} gap={3}>
           <Text size={1} weight="medium">
             {data?.name ?? 'Untitled'}
           </Text>
@@ -54,7 +55,7 @@ export function DocumentHeaderCard({
           </Code>
           {children}
           <ScopeText />
-        </Stack>
+        </Flex>
         <Button
           as="a"
           href={studioUrl}

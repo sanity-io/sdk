@@ -36,6 +36,7 @@ import {getClientState} from '../client/clientStore'
 import {createDocumentHandle} from '../config/handles'
 import {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 import {type StateSource} from '../store/createStateSourceAction'
+import {randomUuid} from '../utils/ids'
 import {
   createDocument,
   deleteDocument,
@@ -357,6 +358,75 @@ it('emits remote-patches events distinguishing own and foreign transactions', as
   state2Unsubscribe()
 })
 
+it('labels an echo that arrives after the last subscriber left as its own', async () => {
+  const doc = createDocumentHandle({documentId: 'existing-doc', documentType: 'article'})
+  const draftId = getDraftId(DocumentId(doc.documentId))
+  const state = getDocumentState(instance, doc)
+  const unsubscribe = state.subscribe()
+  await vi.waitUntil(() => state.getCurrent() !== undefined)
+  const previousRev = state.getCurrent()?._rev
+
+  // ack without emitting the listener echo, so the echo can be delivered later
+  // and out of band, which is the ordering the real API produces
+  const clientActionMockImplementation = vi.mocked(client.action).getMockImplementation()!
+  vi.mocked(client.action).mockImplementation(
+    async (_input, {transactionId = randomUuid()} = {}) => ({transactionId}),
+  )
+
+  const patchEvents: DocumentRemotePatchesEvent[] = []
+  const unsubscribeEvents = subscribeDocumentEvents(instance, {
+    resource,
+    eventHandler: (e) => {
+      if (e.type === 'remote-patches') patchEvents.push(e)
+    },
+  })
+
+  const edited = await applyDocumentActions(instance, {
+    actions: [editDocument(doc, {set: {title: 'edited while leaving'}})],
+    resource,
+  })
+
+  // the last subscriber leaves before the ack comes back, which used to delete
+  // the document state (and with it the memory of our own transaction) as soon
+  // as the ack released the transaction's subscription
+  unsubscribe()
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  await edited.submitted()
+
+  const {events: listenerEvents} = (
+    createSharedListener as () => {
+      dispose: () => void
+      events: Subject<ListenEvent<SanityDocument>>
+    }
+  )()
+  listenerEvents.next({
+    type: 'mutation',
+    documentId: draftId,
+    eventId: `${edited.transactionId}#${draftId}`,
+    identity: 'example-user',
+    mutations: [{patch: {id: draftId, set: {title: 'edited while leaving'}}}],
+    timestamp: new Date().toISOString(),
+    transactionId: edited.transactionId,
+    transactionCurrentEvent: 1,
+    transactionTotalEvents: 1,
+    transition: 'update',
+    visibility: 'query',
+    previousRev,
+    resultRev: edited.transactionId,
+  } satisfies MutationEvent)
+  await vi.waitUntil(() => patchEvents.length > 0)
+
+  expect(patchEvents).toHaveLength(1)
+  expect(patchEvents[0]).toMatchObject({
+    documentId: draftId,
+    transactionId: edited.transactionId,
+    origin: 'local',
+  })
+
+  unsubscribeEvents()
+  vi.mocked(client.action).mockImplementation(clientActionMockImplementation)
+})
+
 it('handles concurrent edits and resolves conflicts', async () => {
   const doc = createDocumentHandle({documentId: 'doc-concurrent', documentType: 'article'})
   const state1 = getDocumentState(instance1, doc)
@@ -602,7 +672,7 @@ it('fetches documents if there are no active subscriptions for the actions appli
 })
 
 it('batches edit transaction into one outgoing transaction', async () => {
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
 
   const unsubscribe = getDocumentState(instance, doc).subscribe()
 
@@ -678,7 +748,7 @@ it('submits liveEdit document edits through observable.mutate', async () => {
 })
 
 it('provides the consistency status via `getDocumentSyncStatus`', async () => {
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
 
   const syncStatus = getDocumentSyncStatus(instance, doc)
   expect(syncStatus.getCurrent()).toBeUndefined()
@@ -733,7 +803,7 @@ it('reverts failed outgoing transaction locally', async () => {
     })
   })
 
-  const documentId = DocumentId(crypto.randomUUID())
+  const documentId = DocumentId(randomUuid())
   const doc = createDocumentHandle({documentId, documentType: 'article'})
 
   const {getCurrent, subscribe} = getDocumentState(instance, doc)
@@ -801,7 +871,7 @@ it('removes a queued transaction if it fails to apply', async () => {
     })
   })
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
   const state = getDocumentState(instance, doc)
   const unsubscribe = state.subscribe()
 
@@ -906,8 +976,8 @@ it('fetches dataset ACL and updates grants in the document store state', async (
   ]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
-  const book = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'book'})
-  const author = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'author'})
+  const book = createDocumentHandle({documentId: randomUuid(), documentType: 'book'})
+  const author = createDocumentHandle({documentId: randomUuid(), documentType: 'author'})
 
   expect(await resolvePermissions(instance, {actions: [createDocument(book)]})).toEqual({
     allowed: true,
@@ -919,12 +989,12 @@ it('fetches dataset ACL and updates grants in the document store state', async (
 })
 
 it('does not send credentials with the dataset ACL request', async () => {
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
   await resolvePermissions(instance, {actions: [createDocument(doc)]})
 
   const aclCall = vi
     .mocked(client.request)
-    .mock.calls.find(([options]) => options.uri?.endsWith('/acl'))
+    .mock.calls.find(([options]) => options.url?.endsWith('/acl'))
   expect(aclCall).toBeDefined()
   expect(aclCall![0]).not.toHaveProperty('withCredentials')
 })
@@ -942,7 +1012,7 @@ it('retries transient dataset ACL fetch failures instead of failing fatally', as
     }),
   )
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
   const result = await resolvePermissions(instance, {actions: [createDocument(doc)]})
 
   expect(result).toEqual({allowed: true})
@@ -968,7 +1038,7 @@ it('does not retry dataset ACL fetch failures caused by 4xx client errors', asyn
     }),
   )
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
   const documentState = getDocumentState(instance, doc)
   const unsubscribe = documentState.subscribe()
 
@@ -1001,7 +1071,7 @@ it('retries dataset ACL fetch failures caused by 429 rate-limit errors', async (
     }),
   )
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
   const result = await resolvePermissions(instance, {actions: [createDocument(doc)]})
 
   expect(result).toEqual({allowed: true})
@@ -1018,7 +1088,7 @@ it('fetches ACL for MediaLibraryResource', async () => {
   const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
   const mediaLibraryResource = {mediaLibraryId: 'test-media-library'}
 
   const result = await resolvePermissions(mediaLibraryInstance, {
@@ -1036,7 +1106,7 @@ it('fetches ACL for CanvasResource', async () => {
   const datasetAcl = [{filter: 'true', permissions: ['read', 'update', 'create', 'history']}]
   vi.mocked(client.request).mockResolvedValue(datasetAcl)
 
-  const doc = createDocumentHandle({documentId: crypto.randomUUID(), documentType: 'article'})
+  const doc = createDocumentHandle({documentId: randomUuid(), documentType: 'article'})
   const canvasResource = {canvasId: 'test-canvas'}
 
   const result = await resolvePermissions(canvasInstance, {
@@ -1049,7 +1119,7 @@ it('fetches ACL for CanvasResource', async () => {
 })
 
 it('returns a promise that resolves when a document has been loaded in the store (useful for suspense)', async () => {
-  const documentId = DocumentId(crypto.randomUUID())
+  const documentId = DocumentId(randomUuid())
   const doc = createDocumentHandle({documentId, documentType: 'article'})
 
   expect(await resolveDocument(instance, doc)).toBe(null)
@@ -1074,7 +1144,7 @@ it('emits an event for each action after an outgoing transaction has been accept
   const handler = vi.fn()
   const unsubscribe = subscribeDocumentEvents(instance, {resource, eventHandler: handler})
 
-  const documentId = DocumentId(crypto.randomUUID())
+  const documentId = DocumentId(randomUuid())
   const doc = createDocumentHandle({documentId, documentType: 'article'})
   expect(handler).toHaveBeenCalledTimes(0)
 
@@ -1505,7 +1575,7 @@ beforeEach(() => {
       mutations: Mutation[],
       options: BaseMutationOptions = {},
     ): Promise<MultipleMutationResult> => {
-      const transactionId = options.transactionId ?? crypto.randomUUID()
+      const transactionId = options.transactionId ?? randomUuid()
       const timestamp = new Date().toISOString()
       const prior = {...documents}
       let next = {...documents}
@@ -1578,7 +1648,7 @@ beforeEach(() => {
   const action = vi.fn(
     async (
       input: HttpAction | HttpAction[],
-      {transactionId = crypto.randomUUID(), dryRun}: BaseActionOptions,
+      {transactionId = randomUuid(), dryRun}: BaseActionOptions,
     ): Promise<SingleActionResult | MultipleActionResult> => {
       const actions = Array.isArray(input) ? input : [input]
       let next: DocumentSet = {...documents}

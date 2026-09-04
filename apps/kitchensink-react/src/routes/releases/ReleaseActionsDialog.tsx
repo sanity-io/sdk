@@ -1,3 +1,4 @@
+import {randomId} from '@sanity/sdk/_internal'
 import {
   archiveRelease,
   createRelease,
@@ -12,8 +13,9 @@ import {
   useApplyReleaseActions,
   useResource,
 } from '@sanity/sdk-react'
-import {Box, Button, Card, Dialog, Flex, Select, Stack, Text, TextArea, TextInput} from '@sanity/ui'
+import {Button, Dialog, Select, TextArea, TextInput} from '@sanity/ui'
 import {useState} from 'react'
+import {Box, Card, Flex, Text, VStack} from 'ui5'
 
 const RELEASE_TYPES: ReleaseDocument['metadata']['releaseType'][] = [
   'asap',
@@ -37,8 +39,8 @@ interface ReleaseActionsDialogProps {
 }
 
 function generateReleaseId(): string {
-  // Match the studio's short ID style: `r<7 hex chars>`.
-  return `r${crypto.randomUUID().replace(/-/g, '').slice(0, 7)}`
+  // Match the studio's release ID style: `r` + 8 alphanumeric chars.
+  return `r${randomId(8)}`
 }
 
 function toDatetimeLocal(iso?: string): string {
@@ -187,16 +189,16 @@ export function ReleaseActionsDialog({
       width={1}
     >
       <Box padding={4}>
-        <Stack space={4}>
+        <VStack gap={4}>
           {/* Metadata form */}
-          <Card padding={3} radius={2} shadow={1}>
-            <Stack space={3}>
+          <Card density="regular">
+            <VStack gap={3}>
               <Text size={1} weight="semibold">
                 Metadata
               </Text>
               <Box>
-                <Stack space={2}>
-                  <Text size={0} muted>
+                <VStack gap={2}>
+                  <Text size={1} muted>
                     Release ID
                   </Text>
                   <TextInput
@@ -206,11 +208,11 @@ export function ReleaseActionsDialog({
                     fontSize={1}
                     data-testid="release-id-input"
                   />
-                </Stack>
+                </VStack>
               </Box>
               <Box>
-                <Stack space={2}>
-                  <Text size={0} muted>
+                <VStack gap={2}>
+                  <Text size={1} muted>
                     Title
                   </Text>
                   <TextInput
@@ -220,11 +222,11 @@ export function ReleaseActionsDialog({
                     fontSize={1}
                     data-testid="release-title-input"
                   />
-                </Stack>
+                </VStack>
               </Box>
               <Box>
-                <Stack space={2}>
-                  <Text size={0} muted>
+                <VStack gap={2}>
+                  <Text size={1} muted>
                     Description
                   </Text>
                   <TextArea
@@ -235,12 +237,12 @@ export function ReleaseActionsDialog({
                     rows={3}
                     data-testid="release-description-input"
                   />
-                </Stack>
+                </VStack>
               </Box>
               <Flex gap={3}>
-                <Box flex={1}>
-                  <Stack space={2}>
-                    <Text size={0} muted>
+                <Box flexGrow={1}>
+                  <VStack gap={2}>
+                    <Text size={1} muted>
                       Release type
                     </Text>
                     <Select
@@ -260,11 +262,11 @@ export function ReleaseActionsDialog({
                         </option>
                       ))}
                     </Select>
-                  </Stack>
+                  </VStack>
                 </Box>
-                <Box flex={1}>
-                  <Stack space={2}>
-                    <Text size={0} muted>
+                <Box flexGrow={1}>
+                  <VStack gap={2}>
+                    <Text size={1} muted>
                       Intended publish at
                     </Text>
                     <TextInput
@@ -275,14 +277,14 @@ export function ReleaseActionsDialog({
                       fontSize={1}
                       data-testid="release-intended-publish-at-input"
                     />
-                  </Stack>
+                  </VStack>
                 </Box>
               </Flex>
-            </Stack>
+            </VStack>
           </Card>
 
           {/* Primary action */}
-          <Flex gap={2} wrap="wrap">
+          <Flex flexWrap="wrap" gap={2}>
             {!isEdit && (
               <Button
                 text="Create release"
@@ -305,12 +307,12 @@ export function ReleaseActionsDialog({
 
           {/* Lifecycle actions (edit mode only) */}
           {isEdit && release && (
-            <Card padding={3} radius={2} shadow={1}>
-              <Stack space={3}>
+            <Card density="regular">
+              <VStack gap={3}>
                 <Text size={1} weight="semibold" data-testid="release-state-display">
                   Lifecycle actions — current state: {state}
                 </Text>
-                <Flex gap={2} wrap="wrap">
+                <Flex flexWrap="wrap" gap={2}>
                   <Button
                     text="Publish"
                     tone="positive"
@@ -350,20 +352,20 @@ export function ReleaseActionsDialog({
                     data-testid="release-delete-action"
                   />
                 </Flex>
-                <Text size={0} muted>
+                <Text size={1} muted>
                   Delete is only allowed for archived/published releases. Archive an active release
                   first.
                 </Text>
-              </Stack>
+              </VStack>
             </Card>
           )}
 
           {status && (
-            <Card padding={3} radius={2} tone={status.tone} data-testid="release-action-status">
+            <Card data-testid="release-action-status" density="regular" tone={status.tone}>
               <Text size={1}>{status.message}</Text>
             </Card>
           )}
-        </Stack>
+        </VStack>
       </Box>
     </Dialog>
   )

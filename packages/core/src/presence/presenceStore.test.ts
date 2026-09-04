@@ -24,6 +24,12 @@ vi.mock('../client/clientStore')
 vi.mock('../users/usersStore')
 vi.mock('./bifurTransport')
 
+function lastTransportSessionId(): string {
+  const call = vi.mocked(createBifurTransport).mock.calls.at(-1)
+  if (!call) throw new Error('createBifurTransport was not called')
+  return call[0].sessionId
+}
+
 describe('presenceStore', () => {
   let instance: SanityInstance
   let mockClient: SanityClient
@@ -48,13 +54,6 @@ describe('presenceStore', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-
-    // Mock crypto.randomUUID
-    Object.defineProperty(global, 'crypto', {
-      value: {
-        randomUUID: vi.fn(() => 'test-session-id'),
-      },
-    })
 
     mockClient = {
       withConfig: vi.fn().mockReturnThis(),
@@ -103,7 +102,7 @@ describe('presenceStore', () => {
       expect(createBifurTransport).toHaveBeenCalledWith({
         client: mockClient,
         token$: expect.any(Object),
-        sessionId: 'test-session-id',
+        sessionId: expect.stringMatching(/^[a-zA-Z0-9]{16}$/),
       })
     })
 
@@ -164,7 +163,7 @@ describe('presenceStore', () => {
       mockIncomingEvents.next({
         type: 'state',
         userId: 'user-1',
-        sessionId: 'test-session-id', // Same as our session
+        sessionId: lastTransportSessionId(), // Same as our session
         timestamp: '2023-01-01T12:00:00Z',
         locations: [],
       })
@@ -314,7 +313,7 @@ describe('presenceStore', () => {
       getPresence(instance, {resource: canvasResource})
 
       expect(mockClient.observable.request).toHaveBeenCalledWith({
-        uri: '/canvases/canvas123',
+        url: '/canvases/canvas123',
         tag: 'canvases.get',
       })
     })
@@ -1050,7 +1049,7 @@ describe('presenceStore', () => {
         mockIncomingEvents.next({
           type: 'rollCall',
           userId: 'user-1',
-          sessionId: 'test-session-id',
+          sessionId: lastTransportSessionId(),
         })
         await flush()
 
@@ -1139,25 +1138,19 @@ describe('presenceStore', () => {
   })
 
   describe('session id', () => {
-    afterEach(() => {
-      vi.unstubAllGlobals()
-    })
-
     it('gives each store its own id, so nothing can collide across tabs', () => {
       // Ids are deliberately not persisted: a tab that inherits another's
       // session storage would otherwise reuse the id and the two live clients
       // would filter each other out as their own session.
-      let counter = 0
-      vi.stubGlobal('crypto', {randomUUID: vi.fn(() => `session-${++counter}`)})
-
       getPresence(instance, {resource: {projectId: 'p1', dataset: 'd1'}}).subscribe(() => {})
-      const first = vi.mocked(createBifurTransport).mock.calls.at(-1)?.[0].sessionId
+      const first = lastTransportSessionId()
 
       getPresence(instance, {resource: {projectId: 'p2', dataset: 'd2'}}).subscribe(() => {})
-      const second = vi.mocked(createBifurTransport).mock.calls.at(-1)?.[0].sessionId
+      const second = lastTransportSessionId()
 
-      expect(first).toBe('session-1')
-      expect(second).toBe('session-2')
+      expect(first).toMatch(/^[a-zA-Z0-9]{16}$/)
+      expect(second).toMatch(/^[a-zA-Z0-9]{16}$/)
+      expect(first).not.toBe(second)
     })
   })
 })

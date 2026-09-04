@@ -13,7 +13,7 @@ const config: KnipConfig = {
       // scripts/release-branch.mts that knip's shell parser misidentifies
       // as a binary.
       ignoreBinaries: ['open', 'prerelease'],
-      entry: ['package.config.ts'],
+      entry: ['package.config.ts', 'bundle-stats.config.ts'],
     },
     'scripts/*': {
       typescript: {

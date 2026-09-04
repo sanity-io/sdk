@@ -1,5 +1,90 @@
 # Changelog
 
+## [3.1.0](https://github.com/sanity-io/sdk/compare/sdk-react-v3.0.0...sdk-react-v3.1.0) (2026-09-03)
+
+
+### Features
+
+* **react:** export DashboardTokenRefreshProvider ([#1145](https://github.com/sanity-io/sdk/issues/1145)) ([7f9f59e](https://github.com/sanity-io/sdk/commit/7f9f59e9ca7bc97d19eccbc6acc413cc17f2295b))
+
+
+### Bug Fixes
+
+* allow insecure random IDs, shorten where possible ([#1149](https://github.com/sanity-io/sdk/issues/1149)) ([d8c8eaf](https://github.com/sanity-io/sdk/commit/d8c8eaf94f8d4cf46a9c130f1529f30281019ede))
+* **deps:** align workspace on @sanity/client v8 ([#1130](https://github.com/sanity-io/sdk/issues/1130)) ([bedc960](https://github.com/sanity-io/sdk/commit/bedc960bd02d2acbe6c32bc958c40cf2b2d6727a))
+* **deps:** update @sanity/workbench to 0.1.0-alpha.45 ([d0b8bad](https://github.com/sanity-io/sdk/commit/d0b8badc7d5c2cd97df9e3db22a078ca0b195823))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 3.1.0
+
+## [3.0.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.20.2...sdk-react-v3.0.0) (2026-08-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **react:** split useManageFavorite into useFavorite and useUpdateFavorite ([#1116](https://github.com/sanity-io/sdk/issues/1116))
+* **react:** move dashboard-only Comlink hooks to dashboard entrypoint ([#1114](https://github.com/sanity-io/sdk/issues/1114))
+* **react:** scope useNavigate to the dashboard entrypoint ([#1112](https://github.com/sanity-io/sdk/issues/1112))
+* **react:** scope useOrganizationId to the dashboard entrypoint ([#1111](https://github.com/sanity-io/sdk/issues/1111))
+* migrate favorites and datasets to new fetcher, remove old fetcher ([#1110](https://github.com/sanity-io/sdk/issues/1110))
+* **react:** require React 19.2 baseline ([#1115](https://github.com/sanity-io/sdk/issues/1115))
+* remove deprecated user-application stores and hooks ([#1102](https://github.com/sanity-io/sdk/issues/1102))
+* remove deprecated utils ([#1100](https://github.com/sanity-io/sdk/issues/1100))
+* split other utils into subdomain and internal exports ([#1098](https://github.com/sanity-io/sdk/issues/1098))
+* remove the unimplemented intent system ([#1073](https://github.com/sanity-io/sdk/issues/1073))
+* **react:** return fetch state and refetch from resource hooks ([#1048](https://github.com/sanity-io/sdk/issues/1048))
+* **core:** add global resource stores ([#1045](https://github.com/sanity-io/sdk/issues/1045))
+
+### refactor
+
+* **react:** split useManageFavorite into useFavorite and useUpdateFavorite ([#1116](https://github.com/sanity-io/sdk/issues/1116)) ([f32551d](https://github.com/sanity-io/sdk/commit/f32551d33f51b1de8c7904fca5f188bf97c3916b))
+
+
+### Features
+
+* **core:** add global resource stores ([#1045](https://github.com/sanity-io/sdk/issues/1045)) ([7eeea70](https://github.com/sanity-io/sdk/commit/7eeea70f9138bba6945835d95fa389e329c6637c))
+* **react:** add mutation hook layer ([#1049](https://github.com/sanity-io/sdk/issues/1049)) ([884aae0](https://github.com/sanity-io/sdk/commit/884aae0f42ddfd9e9207dc09aacdae30d217cd1c))
+* **react:** authenticate AuthBoundary from the workbench OS ([#1039](https://github.com/sanity-io/sdk/issues/1039)) ([1f5c57f](https://github.com/sanity-io/sdk/commit/1f5c57f6e67e8b2aa3425ce11f8750f689396d5e))
+* **react:** move dashboard-only Comlink hooks to dashboard entrypoint ([#1114](https://github.com/sanity-io/sdk/issues/1114)) ([c494538](https://github.com/sanity-io/sdk/commit/c494538b8e8e0e09e7744be88c419e5772cfb65f))
+* **react:** require React 19.2 baseline ([#1115](https://github.com/sanity-io/sdk/issues/1115)) ([0ea64c2](https://github.com/sanity-io/sdk/commit/0ea64c28b5b98eea0d1db6360274cdc9d6b22545))
+* **react:** return fetch state and refetch from resource hooks ([#1048](https://github.com/sanity-io/sdk/issues/1048)) ([f18daea](https://github.com/sanity-io/sdk/commit/f18daeab4019eefccc1675efc40105d1517ce82d))
+* **react:** scope useNavigate to the dashboard entrypoint ([#1112](https://github.com/sanity-io/sdk/issues/1112)) ([d029f3d](https://github.com/sanity-io/sdk/commit/d029f3d6a78d2d96df4e92f94228585a5f79ed81))
+* **react:** scope useOrganizationId to the dashboard entrypoint ([#1111](https://github.com/sanity-io/sdk/issues/1111)) ([d62f0e2](https://github.com/sanity-io/sdk/commit/d62f0e273f181bfecf4bd547087f5eae0a802d16))
+
+
+### Bug Fixes
+
+* remove deprecated user-application stores and hooks ([#1102](https://github.com/sanity-io/sdk/issues/1102)) ([5f7f1b1](https://github.com/sanity-io/sdk/commit/5f7f1b1939cacf8956ca2c1a55ca877d603d854d))
+* remove deprecated utils ([#1100](https://github.com/sanity-io/sdk/issues/1100)) ([943124a](https://github.com/sanity-io/sdk/commit/943124a578dda7cfca78baeaf975354d03770f06))
+* split other utils into subdomain and internal exports ([#1098](https://github.com/sanity-io/sdk/issues/1098)) ([aadbaaa](https://github.com/sanity-io/sdk/commit/aadbaaa470b74c1a4e68003bc18ebd0f5a146004))
+* workbench requires xstate dep ([cb363a9](https://github.com/sanity-io/sdk/commit/cb363a993989e93f3a18325268f4ea2d082944a0))
+
+
+### Miscellaneous
+
+* migrate favorites and datasets to new fetcher, remove old fetcher ([#1110](https://github.com/sanity-io/sdk/issues/1110)) ([6c43ac9](https://github.com/sanity-io/sdk/commit/6c43ac914a08b4bf3f4c4ed6381d1d13a07f53ff))
+* remove the unimplemented intent system ([#1073](https://github.com/sanity-io/sdk/issues/1073)) ([fd02862](https://github.com/sanity-io/sdk/commit/fd02862890d947fd65ed0b0d77243355e3ac67b8))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 3.0.0
+
+## [2.20.2](https://github.com/sanity-io/sdk/compare/sdk-react-v2.20.1...sdk-react-v2.20.2) (2026-08-26)
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 2.20.2
+
 ## [2.20.1](https://github.com/sanity-io/sdk/compare/sdk-react-v2.20.0...sdk-react-v2.20.1) (2026-08-21)
 
 

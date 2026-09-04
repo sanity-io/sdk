@@ -1,12 +1,12 @@
 import {
+  defineAnnotation,
+  defineDecorator,
   defineSchema,
+  defineTextBlock,
   EditorProvider,
   PortableTextEditable,
-  type RenderAnnotationFunction,
-  type RenderDecoratorFunction,
-  type RenderListItemFunction,
-  type RenderStyleFunction,
 } from '@portabletext/editor'
+import {NodePlugin} from '@portabletext/editor/plugins'
 import {
   blockquote,
   bold,
@@ -44,17 +44,19 @@ import {
   useDocuments,
   useResource,
 } from '@sanity/sdk-react'
-import {Badge, Box, Button, Card, Flex, Spinner, Stack, Text, TextInput} from '@sanity/ui'
+import {Badge, Box, Button, Flex, Spinner, Stack, Text, TextInput} from '@sanity/ui'
 import {
-  type ElementType,
   type JSX,
+  type ReactElement,
   type ReactNode,
   Suspense,
   useEffect,
   useMemo,
   useState,
 } from 'react'
+import {Card} from 'ui5'
 
+import {PageLayout} from '../components/PageLayout'
 import {isE2E} from '../sanityConfigs'
 
 const PTE_FIELD_PATH = 'minimalBlock'
@@ -66,64 +68,80 @@ const schemaDefinition = defineSchema({
   annotations: [{name: 'link', fields: [{name: 'href', type: 'string'}]}],
 })
 
-const simpleDecoratorTags: Record<string, ElementType> = {
-  strong: 'strong',
-  em: 'em',
-  underline: 'u',
+const strongNode = defineDecorator({
+  type: 'strong',
+  render: ({children}) => <strong>{children}</strong>,
+})
+
+const emphasisNode = defineDecorator({
+  type: 'em',
+  render: ({children}) => <em>{children}</em>,
+})
+
+const underlineNode = defineDecorator({
+  type: 'underline',
+  render: ({children}) => <u>{children}</u>,
+})
+
+const codeNode = defineDecorator({
+  type: 'code',
+  render: ({children}) => (
+    <code
+      style={{
+        background: 'var(--card-code-bg-color)',
+        borderRadius: 3,
+        fontFamily: 'monospace',
+        fontSize: '0.95em',
+        padding: '0.08em 0.25em',
+      }}
+    >
+      {children}
+    </code>
+  ),
+})
+
+const linkNode = defineAnnotation({
+  type: 'link',
+  render: ({children}) => (
+    <span style={{textDecoration: 'underline', color: 'blue'}}>{children}</span>
+  ),
+})
+
+const blockStyleRenderers: Record<string, (children: ReactElement) => ReactElement> = {
+  h1: (children) => <h1 style={{margin: 0, fontSize: '1.5rem'}}>{children}</h1>,
+  h2: (children) => <h2 style={{margin: 0, fontSize: '1.25rem'}}>{children}</h2>,
+  blockquote: (children) => (
+    <blockquote style={{borderLeft: '3px solid #6e7683', margin: 0, paddingLeft: '0.75rem'}}>
+      {children}
+    </blockquote>
+  ),
 }
 
-const renderDecorator: RenderDecoratorFunction = (props) => {
-  const Tag = simpleDecoratorTags[props.value]
-  if (Tag) return <Tag>{props.children}</Tag>
-  if (props.value === 'code') {
-    return (
-      <code
-        style={{
-          background: 'var(--card-code-bg-color)',
-          borderRadius: 3,
-          fontFamily: 'monospace',
-          fontSize: '0.95em',
-          padding: '0.08em 0.25em',
-        }}
-      >
-        {props.children}
-      </code>
-    )
-  }
-  return <>{props.children}</>
+const listStyleTypes: Record<string, 'decimal' | 'disc'> = {
+  bullet: 'disc',
+  number: 'decimal',
 }
 
-const renderAnnotation: RenderAnnotationFunction = (props) => {
-  if (props.schemaType.name === 'link') {
-    return <span style={{textDecoration: 'underline', color: 'blue'}}>{props.children}</span>
-  }
-  return <>{props.children}</>
+function renderBlockStyle(style: string | undefined, children: ReactElement): ReactElement {
+  return (style === undefined ? undefined : blockStyleRenderers[style])?.(children) ?? children
 }
 
-const renderStyle: RenderStyleFunction = (props) => {
-  if (props.value === 'h1') {
-    return <h1 style={{margin: 0, fontSize: '1.5rem'}}>{props.children}</h1>
-  }
+function renderListItem(listItem: string | undefined, children: ReactElement): ReactElement {
+  if (listItem === undefined) return children
 
-  if (props.value === 'h2') {
-    return <h2 style={{margin: 0, fontSize: '1.25rem'}}>{props.children}</h2>
-  }
-
-  if (props.value === 'blockquote') {
-    return (
-      <blockquote style={{borderLeft: '3px solid #6e7683', margin: 0, paddingLeft: '0.75rem'}}>
-        {props.children}
-      </blockquote>
-    )
-  }
-
-  return <>{props.children}</>
+  return <li style={{listStyleType: listStyleTypes[listItem] ?? 'disc', margin: 0}}>{children}</li>
 }
 
-const renderListItem: RenderListItemFunction = (props) => {
-  const listStyleType = props.value === 'number' ? 'decimal' : 'disc'
-  return <li style={{listStyleType, margin: 0}}>{props.children}</li>
-}
+const textBlockNode = defineTextBlock({
+  type: 'block',
+  render: ({attributes, children, node}) => {
+    const content = renderListItem(node.listItem, renderBlockStyle(node.style, children))
+
+    return <div {...attributes}>{content}</div>
+  },
+})
+
+const editorNodes = [textBlockNode, strongNode, emphasisNode, underlineNode, codeNode, linkNode]
 
 // `@portabletext/toolbar`'s extend hooks are where a plain editor schema
 // picks up the display metadata (title, keyboard shortcut) a toolbar needs.
@@ -342,7 +360,7 @@ function FieldPreview({docHandle, testId}: {docHandle: DocumentHandle<'author'>;
   const {data} = useDocument({...docHandle, path: PTE_FIELD_PATH})
 
   return (
-    <Card padding={2} tone="transparent" border radius={2}>
+    <Card density="compact">
       <pre
         style={{margin: 0, fontSize: 10, maxHeight: 180, overflow: 'auto'}}
         data-testid={`pte-preview-${testId}`}
@@ -363,8 +381,8 @@ function EditorPane({
   testId: string
 }) {
   return (
-    <Card padding={3} radius={2} shadow={1} flex={1}>
-      <Stack space={3}>
+    <Card density="regular" style={{flex: 1}}>
+      <Stack gap={3}>
         <Flex justify="space-between" align="center">
           <Text size={1} weight="semibold">
             {label}
@@ -372,14 +390,11 @@ function EditorPane({
           <Badge fontSize={0}>{docHandle.documentId}</Badge>
         </Flex>
         <EditorProvider initialConfig={{schemaDefinition}}>
+          <NodePlugin nodes={editorNodes} />
           <Toolbar testId={testId} />
-          <Card border radius={2} padding={3}>
+          <Card density="compact">
             <PortableTextEditable
               style={{minHeight: 120, outline: 'none'}}
-              renderDecorator={renderDecorator}
-              renderAnnotation={renderAnnotation}
-              renderListItem={renderListItem}
-              renderStyle={renderStyle}
               data-testid={`pte-editable-${testId}`}
             />
           </Card>
@@ -446,11 +461,11 @@ function ConcurrentEditors() {
   )
 
   return (
-    <Box padding={4}>
-      <Stack space={4}>
-        <Card padding={4} radius={2} shadow={1}>
-          <Stack space={3}>
-            <Text size={2} weight="semibold">
+    <PageLayout title="Portable Text" subtitle="Concurrent editing of the same author document">
+      <Stack gap={4}>
+        <Card density="regular">
+          <Stack gap={3}>
+            <Text size={1} weight="semibold">
               Concurrent Portable Text editing
             </Text>
             <Text size={1} muted>
@@ -463,7 +478,7 @@ function ConcurrentEditors() {
             <Flex gap={3} align="flex-end">
               <Box flex={1}>
                 <TextInput
-                  fontSize={2}
+                  fontSize={1}
                   value={draftId}
                   placeholder="Author document ID"
                   onChange={(e) => setDraftId(e.currentTarget.value)}
@@ -473,7 +488,7 @@ function ConcurrentEditors() {
               <Button
                 text="Load"
                 tone="primary"
-                fontSize={2}
+                fontSize={1}
                 disabled={!draftId}
                 onClick={() => setDocumentId(draftId)}
                 data-testid="pte-load-button"
@@ -483,8 +498,8 @@ function ConcurrentEditors() {
         </Card>
 
         {!docHandle || !resource || !isDatasetResource(resource) ? (
-          <Card padding={4} radius={2} shadow={1} tone="transparent">
-            <Text align="center" muted>
+          <Card density="regular">
+            <Text align="center" muted size={1}>
               No author document found. Enter a document ID above.
             </Text>
           </Card>
@@ -513,7 +528,7 @@ function ConcurrentEditors() {
           </Flex>
         )}
       </Stack>
-    </Box>
+    </PageLayout>
   )
 }
 

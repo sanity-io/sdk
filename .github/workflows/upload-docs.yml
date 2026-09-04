@@ -3,10 +3,50 @@ name: Upload Docs
 on:
   release:
     types: [published]
+  pull_request:
+    paths:
+      - 'packages/core/src/**'
+      - 'packages/core/guides/**'
+      - 'packages/core/README.md'
+      - 'packages/core/typedoc.json'
+      - 'packages/core/package.json'
+      - 'packages/react/src/**'
+      - 'packages/react/guides/**'
+      - 'packages/react/README.md'
+      - 'packages/react/typedoc.json'
+      - 'packages/react/package.json'
+      - 'README-typedoc.md'
+      - 'typedoc*.json'
+      - 'typedoc-theme/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - '.github/actions/setup/**'
+      - '.github/workflows/upload-docs.yml'
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: Upload generated TypeDoc files
+        required: false
+        default: false
+        type: boolean
+      package:
+        description: Package to upload
+        required: false
+        default: sdk
+        type: choice
+        options:
+          - sdk
+          - sdk-react
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   build:
@@ -15,37 +55,97 @@ jobs:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup Environment
         uses: ./.github/actions/setup
         with:
           node-version: 22
 
-      - name: Build Docs
-        run: pnpm build:docs
+      - name: Generate TypeDoc
+        id: generate
+        run: |
+          echo "🔄 Generating TypeDoc documentation..."
+          pnpm build:docs
+
+          TYPEDOC_FILES=(
+            packages/core/docs/typedoc.json
+            packages/react/docs/typedoc.json
+          )
+
+          if [ -f "${TYPEDOC_FILES[0]}" ] && [ -f "${TYPEDOC_FILES[1]}" ] && [ -f "docs/index.html" ]; then
+            FILE_SIZE=$(du -ch "${TYPEDOC_FILES[@]}" | awk 'END {print $1}')
+            EXPORT_COUNT=$(jq -s '[.[] | .children[]?.children // empty | length] | add // 0' "${TYPEDOC_FILES[@]}")
+            echo "✅ TypeDoc generated successfully"
+            echo "📄 JSON file size: $FILE_SIZE"
+            echo "📊 Total exports: $EXPORT_COUNT"
+            echo "file_size=$FILE_SIZE" >> "$GITHUB_OUTPUT"
+            echo "export_count=$EXPORT_COUNT" >> "$GITHUB_OUTPUT"
+            echo "success=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "❌ TypeDoc JSON files or HTML site were not generated"
+            echo "success=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Upload HTML docs artifact
+        if: github.event_name == 'pull_request' && steps.generate.outputs.success == 'true'
+        id: html-artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: typedoc-html-pr-${{ github.event.pull_request.number }}
+          path: docs
+          retention-days: 7
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && steps.generate.outputs.success == 'true'
+        uses: thollander/actions-comment-pull-request@24bffb9b452ba05a4f3f77933840a6a841d1b32b # v3
+        with:
+          comment-tag: typedoc-result
+          message: |
+            ## 📚 TypeDoc Generation Result
+
+            ✅ **TypeDoc generated successfully!**
+
+            - **JSON file size:** ${{ steps.generate.outputs.file_size }}
+            - **Total exports:** ${{ steps.generate.outputs.export_count }}
+            - **Artifact:** `typedoc-html-pr-${{ github.event.pull_request.number }}`
+            - **HTML docs preview:** [Download artifact](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.html-artifact.outputs.artifact-id }})
+
+            The package TypeDoc JSON files and combined HTML site have been generated successfully.
 
       - name: Extract package info
+        if: github.event_name == 'release' || inputs.upload == true
         id: package_info
         run: |
-          # Extract package name (everything before -v)
-          PACKAGE_NAME=$(echo "${{ github.ref_name }}" | sed 's/-v.*//')
+          if [ "${{ github.event_name }}" = "release" ]; then
+            # Extract package name (everything before -v)
+            PACKAGE_NAME=$(echo "${{ github.ref_name }}" | sed 's/-v.*//')
 
-          # Extract version (everything after -v)
-          VERSION=$(echo "${{ github.ref_name }}" | sed 's/.*-v//')
+            # Extract version (everything after -v)
+            VERSION=$(echo "${{ github.ref_name }}" | sed 's/.*-v//')
+          else
+            PACKAGE_NAME="${{ inputs.package }}"
+          fi
 
-          # Set package name and docs path based on input
+          # Set package name and docs path based on release tag or manual input
           if [ "$PACKAGE_NAME" = "sdk" ]; then
             echo "package_name=@sanity/sdk" >> $GITHUB_OUTPUT
             echo "typedoc_path=packages/core/docs/typedoc.json" >> $GITHUB_OUTPUT
+            VERSION=${VERSION:-$(node -p "require('./packages/core/package.json').version")}
           elif [ "$PACKAGE_NAME" = "sdk-react" ]; then
             echo "package_name=@sanity/sdk-react" >> $GITHUB_OUTPUT
             echo "typedoc_path=packages/react/docs/typedoc.json" >> $GITHUB_OUTPUT
+            VERSION=${VERSION:-$(node -p "require('./packages/react/package.json').version")}
+          else
+            echo "Unsupported package: $PACKAGE_NAME"
+            exit 1
           fi
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Upload Docs
+        if: github.event_name == 'release' || inputs.upload == true
         uses: sanity-io/reference-api-typedoc/.github/actions/typedoc-upload@6e7add0dc02df874b4c52111e59f1fe10de014ed # main
         with:
           packageName: ${{ steps.package_info.outputs.package_name }}

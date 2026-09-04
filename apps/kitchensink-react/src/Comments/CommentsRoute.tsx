@@ -1,3 +1,4 @@
+import {randomUuid} from '@sanity/sdk/_internal'
 import {
   type Comment,
   type CommentMessage,
@@ -10,21 +11,10 @@ import {
   useCurrentUser,
   useDocumentComments,
 } from '@sanity/sdk-react'
-import {
-  Badge,
-  Box,
-  Button,
-  Card,
-  Code,
-  Flex,
-  Inline,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-} from '@sanity/ui'
+import {Badge, Button, Card, Select, TextInput} from '@sanity/ui'
 import {type JSX, useState} from 'react'
 import {useSearchParams} from 'react-router'
+import {Box, Code, Flex, HStack, Text, VStack} from 'ui5'
 
 import {DocumentHeaderCard} from '../components/DocumentHeaderCard'
 import {PageLayout} from '../components/PageLayout'
@@ -80,10 +70,10 @@ function toMessage(text: string): CommentMessage {
   return [
     {
       _type: 'block',
-      _key: crypto.randomUUID(),
+      _key: randomUuid(),
       style: 'normal',
       markDefs: [],
-      children: [{_type: 'span', _key: crypto.randomUUID(), text, marks: []}],
+      children: [{_type: 'span', _key: randomUuid(), text, marks: []}],
     },
   ]
 }
@@ -114,8 +104,8 @@ function Composer({
   const [text, setText] = useState(initialValue)
 
   return (
-    <Flex gap={2} align="center">
-      <Box flex={1}>
+    <Flex alignItems="center" gap={2}>
+      <Box flexGrow={1}>
         <TextInput
           data-testid={`${testId}-input`}
           value={text}
@@ -160,7 +150,7 @@ function Reactions({comment}: {comment: Comment}): JSX.Element {
   const currentUser = useCurrentUser()
 
   return (
-    <Inline space={2} data-testid="comment-reactions">
+    <HStack gap={2} data-testid="comment-reactions">
       {REACTIONS.map((shortName) => {
         const reactions = comment.reactions.filter((reaction) => reaction.shortName === shortName)
         const mine = reactions.some((reaction) => reaction.userId === currentUser?.id)
@@ -181,7 +171,7 @@ function Reactions({comment}: {comment: Comment}): JSX.Element {
           />
         )
       })}
-    </Inline>
+    </HStack>
   )
 }
 
@@ -199,7 +189,7 @@ function AnchorControls({comment}: {comment: Comment}): JSX.Element | null {
   if (!blockKey) return null
 
   return (
-    <Inline space={2}>
+    <HStack gap={2}>
       <Button
         data-testid="comment-reanchor"
         mode="bleed"
@@ -217,7 +207,7 @@ function AnchorControls({comment}: {comment: Comment}): JSX.Element | null {
         text="Clear anchor"
         onClick={() => updateCommentRange({commentId: comment.id, range: null})}
       />
-    </Inline>
+    </HStack>
   )
 }
 
@@ -230,7 +220,7 @@ function AnchorControls({comment}: {comment: Comment}): JSX.Element | null {
  */
 function CommentHeader({comment}: {comment: Comment}): JSX.Element {
   return (
-    <Flex align="center" gap={2}>
+    <Flex alignItems="center" gap={2}>
       <Code size={0} data-testid="comment-author">
         {authorLabel(comment)}
       </Code>
@@ -253,7 +243,7 @@ function CommentRow({
 
   return (
     <Card padding={3} radius={2} border data-testid="comment" data-comment-id={comment.id}>
-      <Stack space={3}>
+      <VStack gap={3}>
         <CommentHeader comment={comment} />
 
         {editing ? (
@@ -275,7 +265,7 @@ function CommentRow({
 
         <Reactions comment={comment} />
 
-        <Inline space={2}>
+        <HStack gap={2}>
           <Button
             data-testid="comment-edit-start"
             mode="bleed"
@@ -295,10 +285,10 @@ function CommentRow({
             text="Inspect"
             onClick={() => onSelect(comment)}
           />
-        </Inline>
+        </HStack>
 
         <AnchorControls comment={comment} />
-      </Stack>
+      </VStack>
     </Card>
   )
 }
@@ -325,13 +315,13 @@ function ThreadCard({
       data-thread-id={thread.threadId}
       data-count={thread.commentsCount}
     >
-      <Stack space={3}>
-        <Flex align="center" gap={2}>
+      <VStack gap={3}>
+        <Flex alignItems="center" gap={2}>
           <Badge tone={display.badge}>{thread.status}</Badge>
           <Text size={1} muted data-testid="thread-field">
             {thread.fieldPath}
           </Text>
-          <Box flex={1} />
+          <Box flexGrow={1} />
           <Button
             data-testid="thread-toggle-status"
             mode="ghost"
@@ -364,7 +354,7 @@ function ThreadCard({
             })
           }
         />
-      </Stack>
+      </VStack>
     </Card>
   )
 }
@@ -404,7 +394,7 @@ function ThreadList({
   }
 
   return (
-    <Stack space={3} data-testid="threads" data-count={threads.length} data-pending={isPending}>
+    <VStack gap={3} data-testid="threads" data-count={threads.length} data-pending={isPending}>
       {threads.map((thread) => (
         <ThreadCard
           key={thread.threadId}
@@ -413,7 +403,7 @@ function ThreadList({
           onSelect={onSelect}
         />
       ))}
-    </Stack>
+    </VStack>
   )
 }
 
@@ -437,7 +427,7 @@ function Toolbar({
   onVariantsChange: (next: CommentVariants) => void
 }): JSX.Element {
   return (
-    <Flex gap={3} wrap="wrap">
+    <Flex flexWrap="wrap" gap={3}>
       <Select
         data-testid="comments-perspective"
         value={perspective}
@@ -499,7 +489,7 @@ function Inspector({comment}: {comment: Comment | undefined}): JSX.Element | nul
   if (!comment) return null
 
   return (
-    <Stack space={2}>
+    <VStack gap={2}>
       <Text size={1} weight="semibold">
         Stored document
       </Text>
@@ -508,7 +498,7 @@ function Inspector({comment}: {comment: Comment | undefined}): JSX.Element | nul
           {JSON.stringify(comment, null, 2)}
         </Code>
       </Card>
-    </Stack>
+    </VStack>
   )
 }
 
@@ -531,7 +521,7 @@ function RangeFields({
     onChange({...range, [end]: {...range[end], offset: Number(value) || 0}})
 
   return (
-    <Flex gap={2} align="center">
+    <Flex alignItems="center" gap={2}>
       <Text size={1} muted>
         Block
       </Text>
@@ -588,11 +578,11 @@ function NewThreadPanel({
   const isPortableTextField = FIELDS.find((field) => field.value === fieldPath)?.portableText
 
   return (
-    <Stack space={3}>
+    <VStack gap={3}>
       <Text size={1} weight="semibold">
         New thread
       </Text>
-      <Flex gap={2} align="center">
+      <Flex alignItems="center" gap={2}>
         <Text size={1} muted>
           On field
         </Text>
@@ -626,7 +616,7 @@ function NewThreadPanel({
           })
         }
       />
-    </Stack>
+    </VStack>
   )
 }
 

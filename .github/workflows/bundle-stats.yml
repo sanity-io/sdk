@@ -18,7 +18,7 @@ jobs:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup Environment
         uses: ./.github/actions/setup
@@ -26,8 +26,6 @@ jobs:
           node-version: 24
 
       - name: Bundle Stats
-        uses: rexxars/bundle-stats@d3671d09a4973b4b2b09c4fe8b1c07c360683397 # v1.11.3
+        uses: rexxars/bundle-stats@4c3c939363da017fdb1a44b2de0c2927a0c95020 # v2.0.0
         with:
-          packages: 'packages/core,packages/react'
           build-command: 'pnpm turbo run build --filter=@sanity/sdk... --filter=@sanity/sdk-react...'
-          compare-npm: 'latest'

@@ -31,7 +31,7 @@ import {createStateSourceAction, type SelectorContext} from '../store/createStat
 import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {buildQuery} from '../utils/buildQuery'
-import {insecureRandomId} from '../utils/ids'
+import {randomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {
   addSubscription,
@@ -131,7 +131,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
                 return client.observable
                   .request<PatchedSanityUserFromClient>({
                     method: 'GET',
-                    uri: `/users/${userId}`,
+                    url: `/users/${userId}`,
                     tag: 'users.get',
                   })
                   .pipe(
@@ -185,7 +185,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
               return client.observable
                 .request<SanityUser | SanityUserResponse>({
                   method: 'GET',
-                  uri: `access/${resourceType}/${resourceId}/users/${userId}`,
+                  url: `access/${resourceType}/${resourceId}/users/${userId}`,
                   tag: 'users.get',
                 })
                 .pipe(
@@ -254,7 +254,7 @@ const listenForLoadMoreAndFetch = ({state, instance}: StoreContext<UsersStoreSta
               switchMap(([[resource, client], cursor]) =>
                 client.observable.request<SanityUserResponse>({
                   method: 'GET',
-                  uri: `access/${resource.type}/${resource.id}/users`,
+                  url: `access/${resource.type}/${resource.id}/users`,
                   tag: 'users.list',
                   query: buildQuery({
                     limit: batchSize,
@@ -316,7 +316,7 @@ export const getUsersState = bindActionGlobally(
       },
     ),
     onSubscribe: ({instance, state}, options?: GetUsersOptions) => {
-      const subscriptionId = insecureRandomId()
+      const subscriptionId = randomId(16)
       const key = getUsersKey(instance, options)
       state.set('addSubscription', addSubscription(subscriptionId, key))
       return () => {
