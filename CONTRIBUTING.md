@@ -23,6 +23,14 @@ node --version
 pnpm --version
 ```
 
+Alternatively, [mise](https://mise.jdx.dev/) can install both pinned versions from the same files:
+
+```bash
+mise install
+```
+
+This does not replace the nvm or Corepack workflows above; use whichever setup you prefer.
+
 ## Setup
 
 1. Clone the repository
