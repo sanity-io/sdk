@@ -247,3 +247,31 @@ export type PayloadOf<K extends EventTopic> =
  */
 export type ReplyOf<K extends EventTopic> =
   Topics[K] extends EventTopicDef<infer _P, infer R> ? R : never
+
+/**
+ * Converts a topic value between 2 adjacent versions.
+ * @internal
+ */
+export interface TopicMigration {
+  /** The older version. */
+  readonly from: number
+  /** The newer version. */
+  readonly to: number
+  /** Converts an older state value or event payload to the newer version. */
+  up(older: unknown): unknown
+  /** Converts a newer state value or event payload to the older version. */
+  down(newer: unknown): unknown
+  /** Converts event replies between these versions. */
+  readonly reply?: {
+    /** Converts an older reply to the newer version. */
+    up(older: unknown): unknown
+    /** Converts a newer reply to the older version. */
+    down(newer: unknown): unknown
+  }
+}
+
+/**
+ * Defines the bundled migration chain for each topic.
+ * @internal
+ */
+export const topicMigrations: Partial<Record<TopicName, readonly TopicMigration[]>> = {}
