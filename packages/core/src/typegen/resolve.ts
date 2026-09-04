@@ -26,6 +26,10 @@ type At<T, TKey extends string> = TKey extends keyof T ? T[TKey] : never
 /**
  * Fields Sanity adds to every document. A resource's key space holds every type in its
  * schema, objects included, so {@link ResolveDocument} filters by these.
+ *
+ * The index signature means only type aliases match: TypeScript gives an alias an
+ * implicit index signature and an interface none. That suits `sanity typegen generate`,
+ * which emits aliases, but a hand-registered `interface` resolves to `never`.
  */
 type DocumentFields = {
   _id: string
@@ -61,9 +65,9 @@ export type ResolveDocument<
  *
  * The flat space carries no resource, so a query registered there resolves the same way
  * for every handle. It is still tried before the legacy space, because the legacy lookup
- * matches loosely: {@link SafeAccess} falls back to the union of every registered value
- * when a key is absent, so it would answer for a query it does not carry. An app holding
- * both a legacy file and a generated one needs the exact lookup to win.
+ * matches loosely: it falls back to the union of every registered value when a key is
+ * absent, so it would answer for a query it does not carry. An app holding both a legacy
+ * file and a generated one needs the exact lookup to win.
  *
  * @beta
  */

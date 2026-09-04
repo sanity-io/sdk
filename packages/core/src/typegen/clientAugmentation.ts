@@ -24,8 +24,6 @@
  * ```
  */
 
-// fallow-ignore-file unused-type -- consumers are outside this repo: generated files in
-// consuming apps merge entries into these.
 /* eslint-disable @typescript-eslint/no-empty-object-type -- augmentation targets:
    generated files merge entries in, so they stay empty interfaces here. */
 declare module '@sanity/client' {

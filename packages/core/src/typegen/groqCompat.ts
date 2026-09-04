@@ -13,8 +13,6 @@
  * Delete once nothing generates the legacy shape.
  */
 
-// fallow-ignore-file unused-type -- consumers are outside this repo: generated files and
-// app code import these from `groq`.
 /* eslint-disable @typescript-eslint/no-empty-object-type -- augmentation targets:
    generated files merge entries in, so they stay empty interfaces here. */
 declare module 'groq' {

@@ -62,7 +62,15 @@ One import changes:
 
 ## Setup in brief
 
-Extract the schema from your Studio project, then generate:
+Your app imports `defineQuery` from `groq`, so install it directly. The SDK depends on
+it too, but a transitive dependency is not importable from your own code under pnpm's
+default layout:
+
+```bash
+npm install groq@^6
+```
+
+Then extract the schema from your Studio project and generate:
 
 ```bash
 npx sanity schema extract --workspace <workspace-name> --path schema.json
@@ -77,8 +85,8 @@ suppresses the module augmentation the SDK reads.
 declarations attach to the `groq` directory its own types resolve to, so a second copy at
 a different version leaves your generated file importing helpers from a copy that never
 received them, and it fails with `TS2614: Module '"groq"' has no exported member
-'SchemaOrigin'`. Both the SDK and this guide use `^6`, so an app on the same range
-dedupes to one copy. Pinning `groq` to an exact or older version is what splits it.
+'SchemaOrigin'`. The `^6` range above is what keeps them deduped. Pinning `groq` to an
+exact or older version is what splits it.
 
 Then add one file to connect the generated schema types to your dataset:
 
@@ -97,9 +105,16 @@ Add one entry per dataset. Pass the whole `AllSanitySchemaTypes` union; it inclu
 object types such as `slug` alongside your documents, and the SDK filters those out.
 Delete this file once the multi-resource command generates the same declaration.
 
-Get the key wrong and nothing errors at the declaration, but `useDocument` on a handle
-with a literal `documentType` resolves to `never`, so every field access fails. Check the
-key against your `projectId.dataset` before debugging anything else.
+Two ways to get `never` out of this file, both silent at the declaration:
+
+- **A wrong key.** `useDocument` on a handle with a literal `documentType` resolves to
+  `never`, so every field access fails. Check the key against your `projectId.dataset`
+  first.
+- **A document type declared as an `interface`.** Register type aliases, which is what
+  `sanity typegen generate` emits. TypeScript gives an alias an implicit index signature
+  and an interface none, and the SDK matches on that signature to tell documents from
+  object types. An `interface Book {...}` registered here never matches and resolves to
+  `never`; `type Book = {...}` works.
 
 ## Handles carry the type context
 
@@ -149,8 +164,11 @@ function BookList() {
 }
 ```
 
-A query that is not a literal, built from a plain string or assembled at runtime,
-resolves to `never`. Pass an explicit type parameter for those.
+A query that is not a literal, built from a plain string or assembled at runtime, is not
+looked up. In a new app that yields `never`. In an app carrying a legacy
+`sanity.types.ts` it is worse: the legacy lookup matches loosely and returns the union of
+every query result registered for that dataset, so you get a type that compiles and is
+wrong. Pass an explicit type parameter for these; it is required, not just advisable.
 
 ## Projections
 
@@ -248,8 +266,9 @@ function processBook(book: BookData) {
 ```
 
 The second parameter is required in practice. Omit it and there is no key to match, so a
-literal document type resolves to `never`. `ResolveDocument<string, 'abc.production'>`,
-with no document type, is what yields the base document shape.
+literal document type resolves to `never`. Passing the dataset but no document type,
+`ResolveDocument<string, 'abc.production'>`, gives you the union of that dataset's
+document types; you only get the base document shape when the dataset is unregistered.
 
 ## Workflow
 

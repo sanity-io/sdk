@@ -66,9 +66,8 @@ export interface useDocumentProjectionResults<TData> {
  * @example Using Typegen for a book preview
  * ```tsx
  * // ProjectionComponent.tsx
- * import {useDocumentProjection, type DocumentHandle} from '@sanity/sdk-react'
+ * import {defineProjection, useDocumentProjection, type DocumentHandle} from '@sanity/sdk-react'
  * import {useRef} from 'react'
- * import {defineProjection} from '@sanity/sdk'
  *
  * // Define props using DocumentHandle with the specific document type
  * type ProjectionComponentProps = {
