@@ -56,6 +56,7 @@ catalog:
   react-compiler-runtime: '^1.0.0'
   react-dom: '^19.2.8'
   react-error-boundary: '^6.1.2'
+  react-rx: '^4.2.2'
   rimraf: '^6.0.1'
   rolldown: '^1.2.3'
   rxjs: '^7.8.2'

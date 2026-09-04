@@ -28,4 +28,10 @@ export {
   useNavigateToStudioDocument,
 } from '../hooks/dashboard/useNavigateToStudioDocument'
 export {useOrganizationId} from '../hooks/dashboard/useOrganizationId'
+export {
+  TopicError,
+  useTopic,
+  type UseTopicOptions,
+  type UseTopicResult,
+} from '../hooks/dashboard/useTopic'
 export {useWindowTitle} from '../hooks/dashboard/useWindowTitle'
