@@ -87,10 +87,12 @@ declare module '@sanity/client' {
 ```
 
 Add one entry per dataset. Pass the whole `AllSanitySchemaTypes` union; it includes
-object types such as `slug` alongside your documents, and the SDK filters those out. A
-typo in the key fails silently, so `useDocument` falls back to the base document shape
-rather than erroring. Delete this file once the multi-resource command generates the same
-declaration.
+object types such as `slug` alongside your documents, and the SDK filters those out.
+Delete this file once the multi-resource command generates the same declaration.
+
+Get the key wrong and nothing errors at the declaration, but `useDocument` on a handle
+with a literal `documentType` resolves to `never`, so every field access fails. Check the
+key against your `projectId.dataset` before debugging anything else.
 
 ## Handles carry the type context
 
@@ -233,8 +235,9 @@ function processBook(book: BookData) {
 }
 ```
 
-The second parameter is required in practice. Omit it and the lookup has no key to match,
-so the type falls back to the base document shape.
+The second parameter is required in practice. Omit it and there is no key to match, so a
+literal document type resolves to `never`. `ResolveDocument<string, 'abc.production'>`,
+with no document type, is what yields the base document shape.
 
 ## Workflow
 
@@ -242,9 +245,11 @@ so the type falls back to the base document shape.
 Generated types are a build artifact, and a schema deployed by someone else changes your
 app's types without a commit in your repository, so run generation in CI.
 
-**TypeGen is additive.** Without it, `useDocument` returns the base document shape and
-`useQuery` returns `unknown`. Runtime behavior is identical either way, so it is safe to
-adopt in an existing app and safe to leave out.
+**TypeGen is additive.** Without it, `useQuery` returns `unknown` and `useDocument`
+returns the base document shape for an untyped handle. Pass a handle with a literal
+`documentType` and no generated types, and it resolves to `never`; pass an explicit
+generic in that case. Runtime behavior is identical either way, so it is safe to adopt in
+an existing app and safe to leave out.
 
 **JavaScript projects benefit too.** Editors read the generated declarations for
 autocompletion even where there is no annotation to check. `defineQuery` and

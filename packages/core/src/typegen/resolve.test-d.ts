@@ -45,7 +45,8 @@ declare module '@sanity/client' {
 
 // Augmenting `groq` here would change what the other test files in this program resolve:
 // the legacy lookups fall back to the union of every registered schema when a key is
-// absent. The kitchensink's checked-in generated file covers the legacy path instead.
+// absent. The kitchensink covers the legacy path instead, through the file its `install`
+// script generates.
 
 test('ResolveDocument — resolves a document from the @sanity/client resource space', () => {
   expectTypeOf<ResolveDocument<'post', 'new.dataset'>>().toEqualTypeOf<Post>()
@@ -77,6 +78,14 @@ test('ResolveQueryResult — falls back to the flat SanityQueries space', () => 
 
 test('ResolveQueryResult — the resource space wins over the flat space', () => {
   expectTypeOf<ResolveQueryResult<'*[_type == "post"]', 'new.dataset'>>().toEqualTypeOf<Post[]>()
+})
+
+test('ResolveQueryResult — the flat space wins over the loose legacy lookup', () => {
+  // An app mid-migration holds a legacy `sanity.types.ts` and a newly generated one. The
+  // legacy lookup answers for keys it does not carry, so the exact flat lookup runs first.
+  expectTypeOf<ResolveQueryResult<'*[_type == "flat"]', 'legacy.dataset'>>().toEqualTypeOf<
+    {_id: string; flat: true}[]
+  >()
 })
 
 test('ResolveProjectionResult — narrows by projection and by document type', () => {

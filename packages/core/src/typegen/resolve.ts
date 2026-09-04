@@ -56,12 +56,14 @@ export type ResolveDocument<
 
 /**
  * Resolves a query result from the resource-keyed interfaces on `@sanity/client`,
- * falling back first to the legacy `groq` key space and then to `@sanity/client`'s flat
- * `SanityQueries`, which is what `sanity typegen generate` emits.
+ * falling back to that module's flat `SanityQueries`, which is what
+ * `sanity typegen generate` emits, and then to the legacy `groq` key space.
  *
  * The flat space carries no resource, so a query registered there resolves the same way
- * for every handle. It is tried last for that reason: an app with resource-keyed types
- * never reaches it.
+ * for every handle. It is still tried before the legacy space, because the legacy lookup
+ * matches loosely: {@link SafeAccess} falls back to the union of every registered value
+ * when a key is absent, so it would answer for a query it does not carry. An app holding
+ * both a legacy file and a generated one needs the exact lookup to win.
  *
  * @beta
  */
@@ -70,7 +72,7 @@ export type ResolveQueryResult<
   TResourceKey extends string = string,
 > = Or<
   At<At<SanityQueriesByResource, TResourceKey>, TQuery>,
-  Or<LegacySanityQueryResult<TQuery, TResourceKey>, At<SanityQueries, TQuery>>
+  Or<At<SanityQueries, TQuery>, LegacySanityQueryResult<TQuery, TResourceKey>>
 >
 
 /**

@@ -62,7 +62,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "pkg build --strict --clean --check",
+    "build": "pkg build --strict --clean --check && node scripts/assertAugmentations.mjs",
     "build:bundle": "vite build --configLoader runner --config package.bundle.ts",
     "clean": "rimraf dist",
     "dev": "pkg watch",
