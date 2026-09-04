@@ -1,5 +1,6 @@
 import {switchMap} from 'rxjs'
 
+import {type ApplicationInterface} from '../applications/applications'
 import {getClientState} from '../client/clientStore'
 import {defineFetcher} from '../store/fetcherStore'
 import {buildQuery} from '../utils/buildQuery'
@@ -27,24 +28,6 @@ export interface InstallationAccess {
   id: string
   resourceType: 'datasets' | 'canvases' | 'dashboards' | 'media-libraries'
   resourceId: string
-}
-
-/**
- * An interface exposed by an installation, embedded when `interfaces` is
- * included.
- *
- * @see https://www.sanity.io/docs/http-reference/applications-api
- * @public
- */
-export interface InstallationInterface {
-  id: string
-  type: 'app' | 'worker' | 'asset_source' | 'panel'
-  name: string
-  title: string
-  version: string
-  /** Module federation module ID; resolved from the host mf-manifest at runtime */
-  moduleId: string
-  metadata: {group?: string; priority?: number} | null
 }
 
 /**
@@ -104,7 +87,7 @@ export type Installation<Include extends InstallationInclude = never> = Installa
     {activeConfig: InstallationActiveConfig | null}
   > &
   Included<InstallationInclude, 'access', Include, {access: InstallationAccess[]}> &
-  Included<InstallationInclude, 'interfaces', Include, {interfaces: InstallationInterface[]}>
+  Included<InstallationInclude, 'interfaces', Include, {interfaces: ApplicationInterface[]}>
 
 /**
  * Options for listing an organization's installations.
