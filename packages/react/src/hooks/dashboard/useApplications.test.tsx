@@ -118,7 +118,7 @@ describe('dashboard applications', () => {
       expect.objectContaining({
         application: expect.objectContaining({id: 'application-1'}),
         module: {
-          entry: 'https://inbox-apps-organization-1.sanity.run/mf-manifest.json',
+          entry: 'https://inbox-apps-organization-1.sanity.run',
           moduleId: 'application-1/App',
           version: '1',
         },
@@ -139,20 +139,19 @@ describe('dashboard applications', () => {
       }),
     ])
     expect(nonFederated).toMatchObject({views: [], webWorkers: []})
-    expect(nonSingleton?.views[0]?.module.entry).toBe(
-      'https://canvas-apps-organization-1.sanity.run/mf-manifest.json',
-    )
+    expect(nonSingleton?.views[0]?.module.entry).toBe('https://canvas.sanity.studio')
   })
 
   it('uses the staging application origin', () => {
     vi.stubGlobal('__SANITY_STAGING__', true)
     const {result} = renderHook(() => useApplications({suspend: false}))
 
-    act(() => emitApplications([nonSingletonApplication]))
+    act(() => emitApplications([application, nonSingletonApplication]))
 
-    expect(result.current.data?.[0]?.views[0]?.module.entry).toBe(
-      'https://canvas-apps-organization-1.run.sanity.work/mf-manifest.json',
-    )
+    expect(result.current.data?.map(({views}) => views[0]?.module.entry)).toEqual([
+      'https://inbox-apps-organization-1.run.sanity.work',
+      'https://canvas.studio.sanity.work',
+    ])
     vi.unstubAllGlobals()
   })
 

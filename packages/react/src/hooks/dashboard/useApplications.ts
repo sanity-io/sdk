@@ -43,68 +43,54 @@ export type Application = ApplicationBase & {
   readonly webWorkers: WebWorker[]
 }
 
-type TopicState<T> = UseTopicResult<T, false, TopicError>
 type SanityGlobal = typeof globalThis & {__SANITY_STAGING__?: boolean}
-
-const mapTopicState = <T, U>(result: TopicState<T>, map: (data: T) => U): TopicState<U> =>
-  result.isPending || result.error ? result : {data: map(result.data), isPending: false}
 
 const applicationOrigin = (application: ApplicationBase): string => {
   if (application.externalUrl !== null) return new URL(application.externalUrl).origin
   if (application.slug === null) throw new Error(`Application ${application.id} has no URL`)
 
   const staging = (globalThis as SanityGlobal).__SANITY_STAGING__ === true
-  const domain = staging ? 'run.sanity.work' : 'sanity.run'
-  return `https://${application.slug}-apps-${application.organizationId}.${domain}`
+  if (application.isSingleton) {
+    const domain = staging ? 'run.sanity.work' : 'sanity.run'
+    return `https://${application.slug}-apps-${application.organizationId}.${domain}`
+  }
+
+  const domain = staging ? 'studio.sanity.work' : 'sanity.studio'
+  return `https://${application.slug}.${domain}`
 }
-
-const remoteModuleRef = (
-  application: ApplicationBase,
-  extension: Pick<DashboardApplicationInterface, 'moduleId' | 'version'>,
-): RemoteModuleRef => ({
-  entry: new URL('/mf-manifest.json', applicationOrigin(application)).href,
-  moduleId: `${application.id}/${extension.moduleId}`,
-  version: extension.version,
-})
-
-const isView = (extension: DashboardApplicationInterface): extension is ViewInterface =>
-  extension.type !== 'worker'
-
-const toView = (application: ApplicationBase, extension: ViewInterface): View => {
-  const {type, ...view} = extension
-  return {
-    ...view,
-    application,
-    module: remoteModuleRef(application, extension),
-    surface: type === 'app' ? 'window' : type,
-  } as View
-}
-
-const toWebWorker = (
-  application: ApplicationBase,
-  extension: Extract<DashboardApplicationInterface, {type: 'worker'}>,
-): WebWorker => ({
-  ...extension,
-  application,
-  module: remoteModuleRef(application, extension),
-})
 
 const toApplication = (application: DashboardTopicApplication): Application => {
   const {activeDeployment, config, ...applicationBase} = application
   const interfaces = config?.mfManifest === undefined ? [] : (activeDeployment?.interfaces ?? [])
+  if (interfaces.length === 0) return {...applicationBase, views: [], webWorkers: []}
+
+  const entry = applicationOrigin(applicationBase)
   const views: View[] = []
   const webWorkers: WebWorker[] = []
 
   for (const extension of interfaces) {
-    if (isView(extension)) views.push(toView(applicationBase, extension))
-    else webWorkers.push(toWebWorker(applicationBase, extension))
+    const module: RemoteModuleRef = {
+      entry,
+      moduleId: `${applicationBase.id}/${extension.moduleId}`,
+      version: extension.version,
+    }
+
+    if (extension.type === 'worker') {
+      webWorkers.push({...extension, application: applicationBase, module})
+      continue
+    }
+
+    const {type, ...view} = extension
+    views.push({
+      ...view,
+      application: applicationBase,
+      module,
+      surface: type === 'app' ? 'window' : type,
+    } as View)
   }
 
   return {...applicationBase, views, webWorkers}
 }
-
-const applicationsFromTopic = (applications: DashboardTopicApplication[] | null): Application[] =>
-  applications?.map(toApplication) ?? []
 
 /**
  * Returns the applications available in the dashboard.
@@ -116,9 +102,11 @@ export function useApplications<Suspend extends boolean = true>(
   options: UseTopicOptions<Suspend> = {},
 ): UseTopicResult<Application[], Suspend, TopicError> {
   const result = useTopic('applications.list', options)
-  return useMemo(() => mapTopicState(result, applicationsFromTopic), [result]) as UseTopicResult<
-    Application[],
-    Suspend,
-    TopicError
-  >
+  return useMemo(
+    () =>
+      result.isPending || result.error
+        ? result
+        : {data: result.data?.map(toApplication) ?? [], isPending: false},
+    [result],
+  ) as UseTopicResult<Application[], Suspend, TopicError>
 }
