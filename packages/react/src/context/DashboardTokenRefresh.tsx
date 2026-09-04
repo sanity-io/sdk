@@ -1,14 +1,13 @@
 import {type ClientError} from '@sanity/client'
 import {AuthStateType, setAuthToken} from '@sanity/sdk'
 import React, {type PropsWithChildren, useEffect, useRef} from 'react'
+import {defer, of} from 'rxjs'
+import {catchError} from 'rxjs/operators'
 
+import {type MessageBus} from '../dashboard/messageBus/bus'
+import {getDashboardMessageBus} from '../dashboard/messageBus/client'
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useSanityInstance} from '../hooks/context/useSanityInstance'
-import {
-  isDashboardEnvironment,
-  observeDashboardToken,
-  refreshDashboardToken,
-} from './dashboardToken'
 
 /**
  * Keeps the SDK auth token in sync with the dashboard "OS".
@@ -20,17 +19,20 @@ import {
  * (the token expired), we ask the OS to reissue rather than tearing the session
  * down; the new token arrives back through the same subscription.
  */
-function DashboardTokenRefresh({children}: PropsWithChildren) {
+function DashboardTokenRefresh({
+  children,
+  messageBus,
+}: PropsWithChildren<{messageBus: MessageBus}>) {
   const instance = useSanityInstance()
   const authState = useAuthState()
   const processed401ErrorRef = useRef<unknown | null>(null)
 
   useEffect(() => {
-    const token$ = observeDashboardToken()
-    if (!token$) return undefined
-    const subscription = token$.subscribe((token) => setAuthToken(instance, token))
+    const subscription = defer(() => messageBus.subscribe('auth.token'))
+      .pipe(catchError(() => of(null)))
+      .subscribe((token) => setAuthToken(instance, token))
     return () => subscription.unsubscribe()
-  }, [instance])
+  }, [instance, messageBus])
 
   useEffect(() => {
     const has401Error =
@@ -38,11 +40,11 @@ function DashboardTokenRefresh({children}: PropsWithChildren) {
 
     if (has401Error && processed401ErrorRef.current !== authState.error) {
       processed401ErrorRef.current = authState.error
-      refreshDashboardToken()
+      messageBus.emit('auth.token.refresh', undefined)
     } else if (!has401Error) {
       processed401ErrorRef.current = null
     }
-  }, [authState])
+  }, [authState, messageBus])
 
   return children
 }
@@ -87,8 +89,11 @@ function DashboardTokenRefresh({children}: PropsWithChildren) {
  * @public
  */
 export const DashboardTokenRefreshProvider: React.FC<PropsWithChildren> = ({children}) => {
-  if (isDashboardEnvironment()) {
-    return <DashboardTokenRefresh>{children}</DashboardTokenRefresh>
+  const messageBus = getDashboardMessageBus()
+  if (messageBus) {
+    return (
+      <DashboardTokenRefresh messageBus={messageBus}>{children}</DashboardTokenRefresh>
+    )
   }
 
   return children

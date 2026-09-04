@@ -41,13 +41,18 @@
     "./dashboard": {
       "source": "./src/_exports/dashboard.ts",
       "default": "./dist/_exports/dashboard.js"
+    },
+    "./dashboard/_internal": {
+      "source": "./src/_exports/dashboard-internal.ts",
+      "default": "./dist/_exports/dashboard-internal.js"
     }
   },
   "publishConfig": {
     "exports": {
       ".": "./dist/index.js",
       "./package.json": "./package.json",
-      "./dashboard": "./dist/_exports/dashboard.js"
+      "./dashboard": "./dist/_exports/dashboard.js",
+      "./dashboard/_internal": "./dist/_exports/dashboard-internal.js"
     },
     "access": "public"
   },
@@ -70,12 +75,10 @@
     "@sanity/message-protocol": "catalog:",
     "@sanity/sdk": "workspace:*",
     "@sanity/types": "catalog:",
-    "@sanity/workbench": "0.1.0-alpha.45",
     "groq": "catalog:",
     "react-compiler-runtime": "catalog:",
     "react-error-boundary": "catalog:",
-    "rxjs": "catalog:",
-    "xstate": "^5.31.0"
+    "rxjs": "catalog:"
   },
   "devDependencies": {
     "@repo/config-eslint": "workspace:*",
@@ -112,6 +115,7 @@
   "browserslist": "extends @sanity/browserslist-config",
   "packageManager": "pnpm@10.34.5",
   "inlinedDependencies": {
-    "@sanity/comlink": "4.0.3"
+    "@sanity/comlink": "4.0.3",
+    "xstate": "5.32.5"
   }
 }
