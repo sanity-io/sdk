@@ -1,6 +1,32 @@
+import {type Message, type Node} from '@sanity/comlink'
 import {type PathChangeMessage, SDK_CHANNEL_NAME, SDK_NODE_NAME} from '@sanity/message-protocol'
+import {getNodeState} from '@sanity/sdk/comlink'
+import {useEffect, useMemo, useSyncExternalStore} from 'react'
+import {combineLatest, distinctUntilChanged, filter, firstValueFrom, map} from 'rxjs'
 
-import {useWindowConnection} from '../comlink/useWindowConnection'
+import {getDashboardMessageBus} from '../../dashboard/messageBus/client'
+import {type ValueOf} from '../../dashboard/messageBus/topics'
+import {useSanityInstance} from '../context/useSanityInstance'
+
+const getNoNode = () => undefined
+const subscribeToNoNode = () => () => {}
+
+type NavigationSnapshot = readonly [
+  ValueOf<'navigation.location'>,
+  ValueOf<'applications.foreground'>,
+]
+
+function pathChangeFromSnapshot([location, foregroundApplicationId]: NavigationSnapshot):
+  | PathChangeMessage['data']
+  | null {
+  if (!location) return null
+  const target = location.transition?.to ?? location
+  if (target.appId !== foregroundApplicationId) return null
+  return {
+    path: target.path,
+    type: location.transition?.navigationType ?? 'pop',
+  }
+}
 
 /**
  * @public
@@ -45,16 +71,47 @@ import {useWindowConnection} from '../comlink/useWindowConnection'
  * }
  * ```
  */
-export function useNavigate(
-  navigateFn: (options: PathChangeMessage['data']) => void,
-): void {
-  useWindowConnection<PathChangeMessage, never>({
-    name: SDK_NODE_NAME,
-    connectTo: SDK_CHANNEL_NAME,
-    onMessage: {
-      'dashboard/v1/history/change-path': (data: PathChangeMessage['data']) => {
-        navigateFn(data)
-      },
-    },
-  })
+export function useNavigate(navigateFn: (options: PathChangeMessage['data']) => void): void {
+  const instance = useSanityInstance()
+  const messageBus = getDashboardMessageBus()
+  const nodeSource = useMemo(
+    () =>
+      messageBus
+        ? undefined
+        : getNodeState(instance, {name: SDK_NODE_NAME, connectTo: SDK_CHANNEL_NAME}),
+    [instance, messageBus],
+  )
+
+  if (nodeSource && nodeSource.getCurrent() === undefined) {
+    throw firstValueFrom(nodeSource.observable.pipe(filter(Boolean)))
+  }
+
+  const nodeState = useSyncExternalStore(
+    nodeSource?.subscribe ?? subscribeToNoNode,
+    nodeSource?.getCurrent ?? getNoNode,
+  )
+
+  useEffect(() => {
+    const node = nodeState?.node as unknown as Node<Message, PathChangeMessage> | undefined
+    return node?.on('dashboard/v1/history/change-path', (data) => {
+      navigateFn(data)
+      return undefined
+    })
+  }, [navigateFn, nodeState])
+
+  useEffect(() => {
+    if (!messageBus) return undefined
+    const subscription = combineLatest([
+      messageBus.subscribe('navigation.location'),
+      messageBus.subscribe('applications.foreground'),
+    ])
+      .pipe(
+        map(pathChangeFromSnapshot),
+        filter((change): change is PathChangeMessage['data'] => change !== null),
+        distinctUntilChanged((previous, current) => previous.path === current.path),
+      )
+      .subscribe(navigateFn)
+
+    return () => subscription.unsubscribe()
+  }, [messageBus, navigateFn])
 }

@@ -126,7 +126,7 @@ export interface DashboardTopics {
   /** Whether the dashboard dock is pinned open. */
   'preferences.dock-locked': StateTopicDef<boolean>
   /** The signed-in user, or `null` while signed out. */
-  'users.current': StateTopicDef<Pick<CurrentUser, 'id' | 'name' | 'email' | 'profileImage'> | null>
+  'users.current': StateTopicDef<CurrentUser | null>
 }
 
 /**
