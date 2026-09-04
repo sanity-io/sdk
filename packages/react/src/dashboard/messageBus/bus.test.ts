@@ -7,14 +7,17 @@ import {
   connectMessageBus,
   createIsolatedMessageBus as createRuntimeMessageBus,
   installMessageBus,
+  type MessageBus,
   MessageBusError,
   registerStateTopics,
   resetMessageBus,
 } from './bus'
+import {type TopicManifest, type TopicMigration} from './topics'
 
 const createMessageBus = (appId = 'dashboard') => createRuntimeMessageBus(appId)
 
 const MESSAGE_BUS_KEY = Symbol.for('sanity.os.bus')
+const MESSAGE_BUS_REGISTRY_KEY = Symbol.for('sanity.os.registry')
 const globals = globalThis as Record<symbol, unknown>
 let previousMessageBus: unknown
 
@@ -26,6 +29,65 @@ const preserveMessageBusInstallation = () => {
 const restoreMessageBusInstallation = () => {
   globals[MESSAGE_BUS_KEY] = previousMessageBus
 }
+
+const getRegistry = (messageBus: MessageBus) =>
+  (
+    messageBus as unknown as Record<
+      symbol,
+      {
+        topics: Map<string, TopicManifest[string]>
+        stateSubjects: Map<string, unknown>
+      }
+    >
+  )[MESSAGE_BUS_REGISTRY_KEY]
+
+type ProfileV1 = {name: string}
+type ProfileV2 = {name: string; tags: readonly string[]}
+type ProfileV3 = {fullName: string; tags: readonly string[]}
+
+const profileMigrations: readonly TopicMigration[] = [
+  {
+    from: 1,
+    to: 2,
+    up: (value) => ({name: (value as ProfileV1).name, tags: []}),
+    down: (value) => ({name: (value as ProfileV2).name}),
+  },
+  {
+    from: 2,
+    to: 3,
+    up: (value) => ({
+      fullName: (value as ProfileV2).name,
+      tags: (value as ProfileV2).tags,
+    }),
+    down: (value) => ({
+      name: (value as ProfileV3).fullName,
+      tags: (value as ProfileV3).tags,
+    }),
+  },
+]
+
+const greetMigrations: readonly TopicMigration[] = [
+  {
+    from: 1,
+    to: 2,
+    up: (value) => ({fullName: (value as {name: string}).name}),
+    down: (value) => ({name: (value as {fullName: string}).fullName}),
+    reply: {
+      up: (value) => ({
+        salutation: (value as {greeting: string}).greeting,
+        language: 'en',
+      }),
+      down: (value) => ({
+        greeting: (value as {salutation: string}).salutation,
+      }),
+    },
+  },
+]
+
+const latestMigrations = new Map([
+  ['test.profile', profileMigrations],
+  ['test.greet', greetMigrations],
+])
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -117,6 +179,16 @@ describe('dashboard connection', () => {
     expect(warn).toHaveBeenCalledWith(
       '[sanity-sdk:message-bus] cannot connect without an app ID; build with the Sanity CLI or pass appId',
     )
+  })
+
+  it('returns undefined when the installed protocol is incompatible', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    installMessageBus({appId: 'dashboard'})
+    const protocolKey = Symbol.for('sanity.os.protocol')
+    const installedMessageBus = globals[MESSAGE_BUS_KEY] as Record<symbol, unknown>
+    installedMessageBus[protocolKey] = 2
+
+    expect(connectMessageBus({appId: 'favorites'})).toBeUndefined()
   })
 })
 
@@ -429,5 +501,185 @@ describe('reset', () => {
     }
     application.emit('panels.mode', panel)
     expect(seen).toEqual([{ok: true, value: null}, panel])
+  })
+})
+
+describe('compatibility', () => {
+  beforeEach(preserveMessageBusInstallation)
+  afterEach(() => {
+    restoreMessageBusInstallation()
+    vi.resetModules()
+  })
+
+  it('connects independently loaded SDK copies through the shared symbol', async () => {
+    const installer = await import('./bus')
+    const dashboard = installer.installMessageBus({appId: 'dashboard'})
+    vi.resetModules()
+    const consumer = await import('./bus')
+    const application = consumer.connectMessageBus({appId: 'favorites'})
+    if (!application) throw new Error('Expected a dashboard message bus')
+
+    dashboard.subscribe('test.echo', (message) => message.reply({n: message.payload.n + 1}))
+
+    await expect(application.emit('test.echo', {n: 1})).resolves.toEqual({n: 2})
+  })
+
+  it('rejects incompatible message bus protocol semantics', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const dashboard = createMessageBus('dashboard')
+    const protocolKey = Symbol.for('sanity.os.protocol')
+    const internalDashboard = dashboard as unknown as Record<symbol, unknown>
+    internalDashboard[protocolKey] = 2
+    const application = connectApplicationToMessageBus(dashboard, {appId: 'favorites'})
+
+    expect(() => application.query('applications.foreground')).toThrowError(
+      expect.objectContaining({code: 'PROTOCOL_MISMATCH'}),
+    )
+  })
+
+  it('adapts state across the full migration chain', async () => {
+    const dashboard = createRuntimeMessageBus('dashboard', {migrations: latestMigrations})
+    registerStateTopics(dashboard, {
+      'test.profile': {fullName: 'Initial', tags: ['one']},
+    })
+    const application = connectApplicationToMessageBus(dashboard, {
+      appId: 'favorites',
+      migrations: new Map(),
+    })
+    const source = application.subscribe('test.profile')
+
+    expect(source.getCurrent() as unknown).toEqual({name: 'Initial'})
+    await expect(source.firstValue as Promise<unknown>).resolves.toEqual({name: 'Initial'})
+    expect(source.getCurrent()).toBe(source.getCurrent())
+
+    application.emit('test.profile', {name: 'Ada'} as never)
+
+    await expect(dashboard.query('test.profile')).resolves.toEqual({fullName: 'Ada', tags: []})
+    expect((await application.query('test.profile')) as unknown).toEqual({name: 'Ada'})
+  })
+
+  it('adapts an application newer than the installed message bus', async () => {
+    const dashboard = createMessageBus()
+    registerStateTopics(dashboard, {'test.profile': undefined})
+    const application = connectApplicationToMessageBus(dashboard, {
+      appId: 'favorites',
+      migrations: new Map([['test.profile', [profileMigrations[1]]]]),
+    })
+
+    application.emit('test.profile', {fullName: 'Ada', tags: []})
+
+    expect((await dashboard.query('test.profile')) as unknown).toEqual({
+      name: 'Ada',
+      tags: [],
+    })
+    await expect(application.query('test.profile')).resolves.toEqual({fullName: 'Ada', tags: []})
+  })
+
+  it('adapts event payloads in both directions', () => {
+    const dashboard = createRuntimeMessageBus('dashboard', {migrations: latestMigrations})
+    const application = connectApplicationToMessageBus(dashboard, {
+      appId: 'favorites',
+      migrations: new Map(),
+    })
+    const dashboardPayloads: unknown[] = []
+    dashboard.subscribe('test.greet', (message) => dashboardPayloads.push(message.payload))
+
+    application.emit('test.greet', {name: 'Ada'} as never)
+
+    const applicationPayloads: unknown[] = []
+    application.subscribe('test.greet', (message) => applicationPayloads.push(message.payload))
+    dashboard.emit('test.greet', {fullName: 'Grace'})
+
+    expect(dashboardPayloads).toEqual([{fullName: 'Ada'}, {fullName: 'Grace'}])
+    expect(applicationPayloads).toEqual([{name: 'Grace'}])
+  })
+
+  it('adapts event replies for an older emitter', async () => {
+    const dashboard = createRuntimeMessageBus('dashboard', {migrations: latestMigrations})
+    const application = connectApplicationToMessageBus(dashboard, {
+      appId: 'favorites',
+      migrations: new Map(),
+    })
+    dashboard.subscribe('test.greet', (message) =>
+      message.reply({salutation: `Hello ${message.payload.fullName}`, language: 'en'}),
+    )
+
+    await expect(application.emit('test.greet', {name: 'Ada'} as never)).resolves.toEqual({
+      greeting: 'Hello Ada',
+    })
+  })
+
+  it('adapts event replies from an older responder', async () => {
+    const dashboard = createRuntimeMessageBus('dashboard', {migrations: latestMigrations})
+    const application = connectApplicationToMessageBus(dashboard, {
+      appId: 'favorites',
+      migrations: new Map(),
+    })
+    application.subscribe('test.greet', (message) =>
+      message.reply({
+        greeting: `Hello ${(message.payload as unknown as {name: string}).name}`,
+      } as never),
+    )
+
+    await expect(dashboard.emit('test.greet', {fullName: 'Ada'})).resolves.toEqual({
+      salutation: 'Hello Ada',
+      language: 'en',
+    })
+  })
+
+  it('keeps migrated fire-and-forget replies lazy', () => {
+    vi.useFakeTimers()
+    const dashboard = createRuntimeMessageBus('dashboard', {migrations: latestMigrations})
+    const application = connectApplicationToMessageBus(dashboard, {
+      appId: 'favorites',
+      migrations: new Map(),
+    })
+    let responderSignal: AbortSignal | undefined
+    dashboard.subscribe('test.greet', (message) => {
+      responderSignal = message.signal
+    })
+
+    application.emit('test.greet', {name: 'Ada'} as never, {timeout: 1})
+    vi.advanceTimersByTime(1)
+
+    expect(responderSignal?.aborted).toBe(false)
+  })
+
+  it('returns a failed connection without replacing a conflicting manifest', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const dashboard = createMessageBus()
+    const registry = getRegistry(dashboard)
+    registry.topics.set('panels.mode', {
+      kind: 'event',
+      ownership: {type: 'any_app'},
+    })
+    registry.topics.delete('auth.token')
+    registry.stateSubjects.delete('auth.token')
+
+    const application = connectApplicationToMessageBus(dashboard, {appId: 'favorites'})
+
+    expect(() => application.subscribe('panels.mode')).toThrowError(
+      expect.objectContaining({code: 'PROTOCOL_MISMATCH'}),
+    )
+    expect(registry.topics.get('panels.mode')).toEqual({
+      kind: 'event',
+      ownership: {type: 'any_app'},
+    })
+    expect(registry.topics.has('auth.token')).toBe(false)
+  })
+
+  it('returns a failed connection for an incompatible message bus', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const foreignMessageBus = {
+      emit() {},
+      query() {},
+      subscribe() {},
+    } as unknown as MessageBus
+
+    const application = connectApplicationToMessageBus(foreignMessageBus, {appId: 'stale'})
+
+    expect(() => application.subscribe('panels.mode')).toThrowError(
+      expect.objectContaining({code: 'PROTOCOL_MISMATCH'}),
+    )
   })
 })

@@ -17,6 +17,8 @@ import {
   type ReplyOf,
   type StateTopic,
   type TopicManifest,
+  type TopicMigration,
+  topicMigrations,
   type TopicName,
   type ValueOf,
 } from './topics'
@@ -185,6 +187,7 @@ interface MessageBusRegistry {
   readonly stateSources: Map<string, MessageBusStateSource<unknown>>
   readonly eventSubjects: Map<string, Subject<MessageBusMessage<unknown, unknown>>>
   readonly responderCounts: Map<string, number>
+  readonly migrations: ReadonlyMap<string, readonly TopicMigration[]>
   resetAbort: AbortController
   generation: number
 }
@@ -563,11 +566,18 @@ function subscribe(
   unsubscribeOnAbort(subscription, scopeSignal(options?.signal, registry.resetAbort.signal))
 }
 
+const bundledMigrations = () => new Map(Object.entries(topicMigrations))
+
 /**
  * Creates an isolated message bus without installing it globally.
  * @internal
  */
-export function createIsolatedMessageBus(appId: string): MessageBus {
+export function createIsolatedMessageBus(
+  appId: string,
+  config: {
+    migrations?: ReadonlyMap<string, readonly TopicMigration[]>
+  } = {},
+): MessageBus {
   if (!appId) throwMissingAppId()
 
   const registry: MessageBusRegistry = {
@@ -577,6 +587,7 @@ export function createIsolatedMessageBus(appId: string): MessageBus {
     stateSources: new Map(),
     eventSubjects: new Map(),
     responderCounts: new Map(),
+    migrations: config.migrations ?? bundledMigrations(),
     resetAbort: new AbortController(),
     generation: 0,
   }
@@ -597,6 +608,171 @@ export function createIsolatedMessageBus(appId: string): MessageBus {
   return instance
 }
 
+type TopicVersionAdapter = {
+  toInstalled: (type: string, value: unknown) => unknown
+  toApplication: (type: string, value: unknown) => unknown
+}
+
+type TopicCompatibility = {
+  toInstalledEmission: TopicVersionAdapter['toInstalled']
+  toApplicationStateValue: TopicVersionAdapter['toApplication']
+  toApplicationEventPayload: TopicVersionAdapter['toApplication']
+  toInstalledEventReply: TopicVersionAdapter['toInstalled']
+  toApplicationEventReply: TopicVersionAdapter['toApplication']
+}
+
+type TopicMigrationTransform = Pick<TopicMigration, 'up' | 'down'>
+
+const identityMigration: TopicMigrationTransform = {
+  up: (value) => value,
+  down: (value) => value,
+}
+
+function effectiveTopicVersions(
+  migrations: ReadonlyMap<string, readonly TopicMigration[]>,
+): Map<string, number> {
+  const versions = new Map<string, number>()
+  for (const [topic, steps] of migrations) {
+    let version = 1
+    for (const step of steps) if (step.to > version) version = step.to
+    versions.set(topic, version)
+  }
+  return versions
+}
+
+function migrationTransformAt(
+  steps: readonly TopicMigration[] | undefined,
+  version: number,
+  select: (step: TopicMigration) => TopicMigrationTransform | undefined,
+): TopicMigrationTransform {
+  const step = steps?.find((candidate) => candidate.from === version)
+  return (step ? select(step) : undefined) ?? identityMigration
+}
+
+function migrateVersionedValue(
+  steps: readonly TopicMigration[] | undefined,
+  value: unknown,
+  from: number,
+  to: number,
+  select: (step: TopicMigration) => TopicMigrationTransform | undefined,
+): unknown {
+  if (from === to) return value
+
+  let current = value
+  if (from < to) {
+    for (let version = from; version < to; version++) {
+      current = migrationTransformAt(steps, version, select).up(current)
+    }
+  } else {
+    for (let version = from; version > to; version--) {
+      current = migrationTransformAt(steps, version - 1, select).down(current)
+    }
+  }
+  return current
+}
+
+function createTopicCompatibility(
+  installedMigrations: ReadonlyMap<string, readonly TopicMigration[]>,
+  applicationMigrations: ReadonlyMap<string, readonly TopicMigration[]>,
+): TopicCompatibility {
+  const installedVersions = effectiveTopicVersions(installedMigrations)
+  const applicationVersions = effectiveTopicVersions(applicationMigrations)
+  const applicationVersion = (type: string) => applicationVersions.get(type) ?? 1
+  const installedVersion = (type: string) => installedVersions.get(type) ?? 1
+  const migrationChainFor = (type: string) =>
+    (applicationVersion(type) > installedVersion(type)
+      ? applicationMigrations
+      : installedMigrations
+    ).get(type)
+  const createVersionAdapter = (
+    select: (step: TopicMigration) => TopicMigrationTransform | undefined,
+  ): TopicVersionAdapter => ({
+    toInstalled: (type, value) =>
+      migrateVersionedValue(
+        migrationChainFor(type),
+        value,
+        applicationVersion(type),
+        installedVersion(type),
+        select,
+      ),
+    toApplication: (type, value) =>
+      migrateVersionedValue(
+        migrationChainFor(type),
+        value,
+        installedVersion(type),
+        applicationVersion(type),
+        select,
+      ),
+  })
+
+  const stateValueAndEventPayload = createVersionAdapter((step) => step)
+  const eventReply = createVersionAdapter((step) => step.reply)
+  return {
+    toInstalledEmission: stateValueAndEventPayload.toInstalled,
+    toApplicationStateValue: stateValueAndEventPayload.toApplication,
+    toApplicationEventPayload: stateValueAndEventPayload.toApplication,
+    toInstalledEventReply: eventReply.toInstalled,
+    toApplicationEventReply: eventReply.toApplication,
+  }
+}
+
+// Cache projections by input reference to keep state snapshots stable.
+function projectCurrent(input: () => unknown, project: (value: unknown) => unknown): () => unknown {
+  let lastInput: unknown
+  let lastOutput: unknown
+  let cached = false
+  return () => {
+    const current = input()
+    if (current === undefined) return undefined
+    if (!cached || current !== lastInput) {
+      lastInput = current
+      lastOutput = project(current)
+      cached = true
+    }
+    return lastOutput
+  }
+}
+
+function mapStateSource(
+  source: MessageBusStateSource<unknown>,
+  project: (value: unknown) => unknown,
+): MessageBusStateSource<unknown> {
+  return toStateSource(source.pipe(map(project)), projectCurrent(source.getCurrent, project))
+}
+
+function migrateEventMessage(
+  message: MessageBusMessage<unknown, unknown>,
+  payload: (value: unknown) => unknown,
+  reply: (value: unknown) => unknown,
+): MessageBusMessage<unknown, unknown> {
+  return {
+    type: message.type,
+    payload: payload(message.payload),
+    meta: message.meta,
+    reply: (value) => message.reply(reply(value)),
+    get signal() {
+      return message.signal
+    },
+  }
+}
+
+function migrateEventReply(
+  result: MessageBusEmitResult<unknown> | undefined,
+  project: (value: unknown) => unknown,
+): MessageBusEmitResult<unknown> | undefined {
+  if (!result) return undefined
+  let projected: Promise<unknown> | undefined
+  return createLazyReply(() => (projected ??= Promise.resolve(result).then(project)))
+}
+
+function createRejectedConnection(throwConnectionError: () => never): MessageBus {
+  return {
+    emit: throwConnectionError,
+    query: throwConnectionError,
+    subscribe: throwConnectionError,
+  } as unknown as MessageBus
+}
+
 /**
  * Options for connecting an application to an isolated message bus.
  * @internal
@@ -604,6 +780,8 @@ export function createIsolatedMessageBus(appId: string): MessageBus {
 export interface ConnectApplicationToMessageBusOptions {
   /** The application ID stamped on emitted messages. */
   appId: string
+  /** The topic migrations supported by the application. */
+  migrations?: ReadonlyMap<string, readonly TopicMigration[]>
 }
 
 /**
@@ -617,9 +795,44 @@ export function connectApplicationToMessageBus(
   if (!config.appId) throwMissingAppId()
 
   const {appId} = config
-  const registry = (installedMessageBus as InternalMessageBus)[MESSAGE_BUS_REGISTRY_KEY]
+  const installedProtocol = (installedMessageBus as Partial<InternalMessageBus>)[
+    MESSAGE_BUS_PROTOCOL_KEY
+  ]
+  if (installedProtocol !== MESSAGE_BUS_PROTOCOL) {
+    console.error(
+      `[sanity-sdk:message-bus] protocol mismatch for "${appId}": installed ${String(installedProtocol)}, this copy speaks ${MESSAGE_BUS_PROTOCOL}`,
+    )
+    return createRejectedConnection(() => {
+      throw new MessageBusError(
+        'PROTOCOL_MISMATCH',
+        `installed message bus speaks protocol ${String(installedProtocol)}, this copy speaks ${MESSAGE_BUS_PROTOCOL}`,
+      )
+    })
+  }
 
-  mergeTopicManifest(registry, DASHBOARD_TOPIC_MANIFEST)
+  const registry = (installedMessageBus as Partial<InternalMessageBus>)[MESSAGE_BUS_REGISTRY_KEY]
+  if (!registry) {
+    console.error(`[sanity-sdk:message-bus] incompatible message bus for "${appId}"`)
+    return createRejectedConnection(() => {
+      throw new MessageBusError(
+        'PROTOCOL_MISMATCH',
+        'installed message bus does not expose a compatible registry',
+      )
+    })
+  }
+
+  const applicationMigrations = config.migrations ?? bundledMigrations()
+
+  try {
+    mergeTopicManifest(registry, DASHBOARD_TOPIC_MANIFEST)
+  } catch (error) {
+    console.error(`[sanity-sdk:message-bus] topic manifest conflict for "${appId}"`, {error})
+    return createRejectedConnection(() => {
+      throw error
+    })
+  }
+  const compatibility = createTopicCompatibility(registry.migrations, applicationMigrations)
+  const isState = (type: string) => isStateTopic(registry, type)
 
   // Reuse topic streams because React external-store snapshots require stable references.
   const applicationStreams = new Map<string, MessageBusStateSource<unknown> | Observable<unknown>>()
@@ -627,8 +840,14 @@ export function connectApplicationToMessageBus(
 
   const connection = {
     emit: (type: string, payload: unknown, options?: MessageBusEmitOptions) =>
-      emit(registry, type, payload, options, appId),
-    query: (type: string, options?: MessageBusAbortOptions) => query(registry, type, options),
+      migrateEventReply(
+        emit(registry, type, compatibility.toInstalledEmission(type, payload), options, appId),
+        (value) => compatibility.toApplicationEventReply(type, value),
+      ),
+    query: (type: string, options?: MessageBusAbortOptions) =>
+      query(registry, type, options).then((value) =>
+        compatibility.toApplicationStateValue(type, value),
+      ),
     subscribe: (type: string, handler?: (arg: never) => void, options?: MessageBusAbortOptions) => {
       if (!handler) {
         if (streamGeneration !== registry.generation) {
@@ -637,14 +856,32 @@ export function connectApplicationToMessageBus(
         }
         let stream = applicationStreams.get(type)
         if (!stream) {
-          stream = subscribe(registry, type, undefined, options, appId) as
-            | MessageBusStateSource<unknown>
-            | Observable<unknown>
+          const installedSource = subscribe(registry, type, undefined, options, appId)
+          stream = isState(type)
+            ? mapStateSource(installedSource as MessageBusStateSource<unknown>, (value) =>
+                compatibility.toApplicationStateValue(type, value),
+              )
+            : (installedSource as Observable<unknown>).pipe(
+                map((payload) => compatibility.toApplicationEventPayload(type, payload)),
+              )
           applicationStreams.set(type, stream)
         }
         return stream
       }
-      return subscribe(registry, type, handler, options, appId)
+      const applicationHandler = isState(type)
+        ? (value: unknown) =>
+            (handler as (value: unknown) => void)(
+              compatibility.toApplicationStateValue(type, value),
+            )
+        : (message: MessageBusMessage<unknown, unknown>) =>
+            (handler as (message: MessageBusMessage<unknown, unknown>) => void)(
+              migrateEventMessage(
+                message,
+                (value) => compatibility.toApplicationEventPayload(type, value),
+                (value) => compatibility.toInstalledEventReply(type, value),
+              ),
+            )
+      return subscribe(registry, type, applicationHandler as (arg: never) => void, options, appId)
     },
   }
 
