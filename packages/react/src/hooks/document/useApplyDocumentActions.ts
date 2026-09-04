@@ -199,7 +199,7 @@ interface UseApplyDocumentActions {
  *       perspective: {releaseName: 'summer-drop'},
  *     })
  *
- *     apply(editDocument(docHandle, {title: 'Updated for release'}))
+ *     apply(editDocument(docHandle, {set: {title: 'Updated for release'}}))
  *   }
  *
  *   return <button onClick={handleEdit}>Edit in Release</button>
