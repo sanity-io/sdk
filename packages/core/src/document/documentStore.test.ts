@@ -650,7 +650,7 @@ it('fetches documents if there are no active subscriptions for the actions appli
 
   expect(getDocumentSyncStatus(instance, doc).getCurrent()).toBe(false)
 
-  // await submitted in order to test that there is no subscriptions
+  // await submitted to test that there are no subscriptions
   const result = await applyDocumentActions(instance, {
     actions: [editDocument(doc, {set: {title: 'updated title'}})],
     resource,

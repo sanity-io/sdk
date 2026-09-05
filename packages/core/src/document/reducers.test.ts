@@ -673,7 +673,7 @@ describe('revertOutgoingTransaction', () => {
   it('reverts the outgoing transaction and updates documentStates by removing unverified revisions', () => {
     const draftId = getDraftId(DocumentId('doc1'))
     const pubId = getPublishedId(DocumentId('doc1'))
-    // In this test we simulate a state with one applied transaction and an outgoing transaction.
+    // one applied transaction plus an outgoing transaction
     const state: SyncTransactionState = {
       queued: [],
       applied: [
@@ -1098,7 +1098,7 @@ describe('applyRemoteDocument', () => {
   })
 
   it('rebases local changes when no matching unverified revision is found', () => {
-    // In this branch we simply let processActions rebase so that the local becomes the remote.
+    // no matching revision, so processActions rebases and local ends up as remote
     const docId = getDraftId(DocumentId('doc1'))
     const initialState: SyncTransactionState = {
       queued: [],
@@ -1128,7 +1128,7 @@ describe('applyRemoteDocument', () => {
     const newDocState = newState.documentStates[docId]
     expect(newDocState?.remote).toEqual(remote.document)
     expect(newDocState?.remoteRev).toEqual(remote.revision)
-    // For this simple test we expect that the local is “rebased” to the remote document.
+    // local is rebased onto the remote document
     expect(newDocState?.local).toEqual(remote.document)
   })
 

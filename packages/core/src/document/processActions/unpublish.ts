@@ -29,7 +29,7 @@ export function handleUnpublish(
     })
   }
 
-  // Standard draft/published or version logic
+  // Standard draft/published logic; version perspectives were rejected above
   const draftId = getDraftId(DocumentId(documentId))
   const publishedId = getPublishedId(DocumentId(documentId))
 

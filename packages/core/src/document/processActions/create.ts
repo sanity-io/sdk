@@ -82,8 +82,9 @@ export function handleCreate(
     })
   }
 
-  // Spread the (possibly undefined) draft or published version directly.
-  // (studio uses the draft version as a base if you are in a release perspective)
+  // Studio bases a new release version on the draft, so both paths start from
+  // the draft and fall back to the published version. Either may be undefined,
+  // which spreads to nothing.
   const newDocBase = {
     ...(base[draftId] ?? base[publishedId]),
     _type: action.documentType,

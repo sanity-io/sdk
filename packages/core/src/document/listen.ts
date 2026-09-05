@@ -48,11 +48,11 @@ export type ListenerEvent = SyncEvent | MutationEvent
 
 interface ListenerSequenceState {
   /**
-   * Tracks the latest revision from the server that can be applied locally
-   * Once we receive a mutation event that has a `previousRev` that equals `base.revision`
-   * we will move `base.revision` to the event's `resultRev`
-   * `base.revision` will be undefined if document doesn't exist.
-   * `base` is `undefined` until the snapshot event is received
+   * The latest revision from the server that can be applied locally. When a
+   * mutation event arrives whose `previousRev` equals `base.revision`,
+   * `base.revision` moves to that event's `resultRev`. `revision` is `undefined`
+   * if the document doesn't exist; `base` itself is `undefined` until the
+   * snapshot event is received.
    */
   base: {revision: string | undefined} | undefined
   /**
@@ -60,7 +60,7 @@ interface ListenerSequenceState {
    */
   emitEvents: ListenerEvent[]
   /**
-   * Buffer to keep track of events that doesn't line up in a [previousRev, resultRev] -- [previousRev, resultRev] sequence
+   * Events that don't line up in a [previousRev, resultRev] -- [previousRev, resultRev] sequence.
    * This can happen if events arrive out of order, or if an event in the middle for some reason gets lost
    */
   buffer: MutationEvent[]
@@ -133,16 +133,18 @@ function discardChainTo(chain: MutationEvent[], revision: string | undefined): M
 }
 
 /**
- * Takes an input observable of listener events that might arrive out of order, and emits them in sequence
- * If we receive mutation events that doesn't line up in [previousRev, resultRev] pairs we'll put them in a buffer and
- * check if we have an unbroken chain every time we receive a new event
+ * Takes listener events that might arrive out of order and emits them in
+ * sequence. Mutation events that don't line up in [previousRev, resultRev]
+ * pairs are buffered, and the buffer is re-checked for an unbroken chain on
+ * every new event.
  *
  * Buffered chains that lead up to the current base revision are discarded:
  * they describe changes already reflected in the base (e.g. events replayed
  * by a resumed listener after the snapshot was refetched)
  *
- * If the buffer grows beyond `maxBufferSize`, or if `resolveChainDeadline` milliseconds passes before the chain resolves
- * an OutOfSyncError will be thrown on the stream
+ * @throws OutOfSyncError on the stream when the buffer grows beyond
+ * `maxBufferSize`, or when `resolveChainDeadline` milliseconds pass before the
+ * chain resolves.
  *
  * @internal
  */
@@ -207,7 +209,7 @@ export function sortListenerEvents(options?: SortListenerEventsOptions) {
               emitEvents: [],
             }
           }
-          // Any other event is simply forwarded.
+          // Any other event is forwarded unchanged.
           return {...state, emitEvents: [event]}
         },
         {
