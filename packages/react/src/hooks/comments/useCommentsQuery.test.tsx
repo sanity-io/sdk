@@ -1,8 +1,8 @@
 import {
   type Comment,
-  type CommentsOptions,
-  getCommentsState,
-  resolveComments,
+  type CommentsQueryOptions,
+  getCommentsQueryState,
+  resolveCommentsQuery,
   type StateSource,
 } from '@sanity/sdk'
 import {act, render, screen} from '@testing-library/react'
@@ -12,43 +12,35 @@ import {beforeEach, describe, expect, it, vi} from 'vitest'
 
 import {ResourceProvider} from '../../context/ResourceProvider'
 import {ResourcesContext} from '../../context/ResourcesContext'
-import {useComments} from './useComments'
+import {useCommentsQuery} from './useCommentsQuery'
 
 vi.mock('@sanity/sdk', async (importOriginal) => {
   const original = await importOriginal<typeof import('@sanity/sdk')>()
-  return {...original, getCommentsState: vi.fn(), resolveComments: vi.fn()}
+  return {...original, getCommentsQueryState: vi.fn(), resolveCommentsQuery: vi.fn()}
 })
-
-const HANDLE = {documentId: 'doc-1', documentType: 'author'}
 
 function comment(id: string): Comment {
   return {
     id,
     createdAt: '2026-01-01T00:00:00Z',
     authorId: 'user-1',
-    message: null,
+    message: [{_type: 'block', _key: 'b1', children: [{_type: 'span', text: 'hello'}]}],
     threadId: 'thread-1',
     status: 'open',
     documentId: 'doc-1',
+    sourceDocumentId: 'doc-1',
     documentType: 'author',
-    fieldPath: '',
+    fieldPath: 'title',
     reactions: [],
   }
 }
 
-/**
- * Stands in for the store, one source per option set so a test can hold one
- * document loaded and another not.
- *
- * `getCurrent` must hand back the same array every call for a given option set.
- * Returning a fresh one sends `useSyncExternalStore` into a render loop, which
- * is why the store memoises its selectors.
- */
+/** See the equivalent in `useDocumentComments.test.tsx` for why this is keyed. */
 function mockSource(
-  getCurrent: (options: CommentsOptions) => Comment[] | undefined,
+  getCurrent: (options: CommentsQueryOptions) => Comment[] | undefined,
   changed$?: Subject<void>,
 ) {
-  vi.mocked(getCommentsState).mockImplementation(
+  vi.mocked(getCommentsQueryState).mockImplementation(
     (_instance, options) =>
       ({
         getCurrent: () => getCurrent(options),
@@ -63,9 +55,6 @@ function mockSource(
   )
 }
 
-/** Hoisted so the context value stays identical across renders. */
-const RELEASE_PERSPECTIVE = {releaseName: 'summer'}
-
 function Wrapper({children}: {children: React.ReactNode}) {
   return (
     <ResourceProvider projectId="p" dataset="d" fallback={<p>Loading…</p>}>
@@ -76,20 +65,7 @@ function Wrapper({children}: {children: React.ReactNode}) {
   )
 }
 
-function PerspectiveWrapper({children}: {children: React.ReactNode}) {
-  return (
-    <ResourceProvider
-      projectId="p"
-      dataset="d"
-      perspective={RELEASE_PERSPECTIVE}
-      fallback={<p>Loading…</p>}
-    >
-      <Suspense fallback={<p data-testid="suspended">Suspended</p>}>{children}</Suspense>
-    </ResourceProvider>
-  )
-}
-
-describe('useComments', () => {
+describe('useCommentsQuery', () => {
   beforeEach(() => {
     vi.resetAllMocks()
   })
@@ -99,7 +75,7 @@ describe('useComments', () => {
     mockSource(() => loaded)
 
     function TestComponent() {
-      const {comments, isPending} = useComments(HANDLE)
+      const {comments, isPending} = useCommentsQuery({filter: 'status == "open"'})
       return <div data-testid="out">{`${comments.length} ${isPending ? 'pending' : 'idle'}`}</div>
     }
 
@@ -115,14 +91,14 @@ describe('useComments', () => {
     mockSource(() => ref.current, changed$)
 
     let settle: () => void = () => {}
-    vi.mocked(resolveComments).mockReturnValue(
+    vi.mocked(resolveCommentsQuery).mockReturnValue(
       new Promise<Comment[]>((resolve) => {
         settle = () => resolve(loaded)
       }),
     )
 
     function TestComponent() {
-      const {comments} = useComments(HANDLE)
+      const {comments} = useCommentsQuery({filter: 'status == "open"'})
       return <div data-testid="out">{comments.length}</div>
     }
 
@@ -137,23 +113,22 @@ describe('useComments', () => {
     expect(screen.getByTestId('out').textContent).toBe('1')
   })
 
-  it('passes the field path and status through to the store', () => {
+  it('passes the filter and its params through to the store', () => {
     const loaded: Comment[] = []
     mockSource(() => loaded)
 
     function TestComponent() {
-      useComments({...HANDLE, fieldPath: ['body', {_key: 'intro'}], status: 'resolved'})
+      useCommentsQuery({filter: '_system.createdBy == $userId', params: {userId: 'user-1'}})
       return null
     }
 
     render(<TestComponent />, {wrapper: Wrapper})
 
-    expect(getCommentsState).toHaveBeenCalledWith(
+    expect(getCommentsQueryState).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        documentId: 'doc-1',
-        fieldPath: 'body[_key=="intro"]',
-        status: 'resolved',
+        filter: '_system.createdBy == $userId',
+        params: {userId: 'user-1'},
         resource: {projectId: 'p', dataset: 'd'},
       }),
     )
@@ -164,76 +139,69 @@ describe('useComments', () => {
     mockSource(() => loaded)
 
     function TestComponent() {
-      useComments({...HANDLE, resourceName: 'other'})
+      useCommentsQuery({filter: 'status == "open"', resourceName: 'other'})
       return null
     }
 
     render(<TestComponent />, {wrapper: Wrapper})
 
-    expect(getCommentsState).toHaveBeenCalledWith(
+    expect(getCommentsQueryState).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({resource: {projectId: 'p2', dataset: 'd2'}}),
     )
   })
 
-  it('fills in the perspective from context', () => {
-    // Core turns a release perspective into `target.documentVersionId` and into
-    // the key the list is stored under, so dropping it here would read and
-    // write the wrong release with nothing to show that anything went wrong.
+  it('re-reads when a param changes rather than only when the filter does', () => {
+    // The filter is a template and the params are what it means, so keying on
+    // the filter alone would leave a user's list showing another user's
+    // comments.
     const loaded: Comment[] = []
     mockSource(() => loaded)
 
-    function TestComponent() {
-      useComments(HANDLE)
+    function TestComponent({userId}: {userId: string}) {
+      useCommentsQuery({filter: '_system.createdBy == $userId', params: {userId}})
       return null
     }
 
-    render(<TestComponent />, {wrapper: PerspectiveWrapper})
+    const {rerender} = render(<TestComponent userId="user-1" />, {wrapper: Wrapper})
+    rerender(<TestComponent userId="user-2" />)
 
-    expect(getCommentsState).toHaveBeenCalledWith(
+    expect(getCommentsQueryState).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({perspective: RELEASE_PERSPECTIVE}),
+      expect.objectContaining({params: {userId: 'user-2'}}),
     )
   })
 
-  it('keeps the previous list on screen while a different document loads', async () => {
-    const first = [comment('a')]
-    const second = [comment('b'), comment('c')]
-    // Only `doc-1` is loaded, so switching to `doc-2` has to suspend.
-    const byDocument: Record<string, Comment[] | undefined> = {'doc-1': first}
-    mockSource((options) => byDocument[options.documentId])
+  it('keeps the previous list on screen while a different filter loads', async () => {
+    const open = [comment('a')]
+    const resolved = [comment('b'), comment('c')]
+    const byFilter: Record<string, Comment[] | undefined> = {'status == "open"': open}
+    mockSource((options) => byFilter[options.filter])
 
     let settle: () => void = () => {}
-    vi.mocked(resolveComments).mockReturnValue(
+    vi.mocked(resolveCommentsQuery).mockReturnValue(
       new Promise<Comment[]>((resolve) => {
-        settle = () => resolve(second)
+        settle = () => resolve(resolved)
       }),
     )
 
-    function TestComponent({documentId}: {documentId: string}) {
-      const {comments, isPending} = useComments({...HANDLE, documentId})
+    function TestComponent({filter}: {filter: string}) {
+      const {comments, isPending} = useCommentsQuery({filter})
       return <div data-testid="out">{`${comments.length} ${isPending ? 'pending' : 'idle'}`}</div>
     }
 
-    const {rerender} = render(<TestComponent documentId="doc-1" />, {wrapper: Wrapper})
+    const {rerender} = render(<TestComponent filter='status == "open"' />, {wrapper: Wrapper})
     expect(screen.getByTestId('out').textContent).toBe('1 idle')
 
     await act(async () => {
-      rerender(<TestComponent documentId="doc-2" />)
+      rerender(<TestComponent filter='status == "resolved"' />)
     })
 
-    // The swap happens inside a transition, so the render that suspends is
-    // thrown away rather than falling back: `doc-1` stays on screen and
-    // `isPending` is what reports the switch.
     expect(screen.queryByTestId('suspended')).not.toBeInTheDocument()
     expect(screen.getByTestId('out').textContent).toBe('1 pending')
-    expect(getCommentsState).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({documentId: 'doc-2'}),
-    )
 
     await act(async () => {
-      byDocument['doc-2'] = second
+      byFilter['status == "resolved"'] = resolved
       settle()
     })
 

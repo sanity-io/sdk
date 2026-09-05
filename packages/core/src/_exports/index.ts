@@ -52,30 +52,40 @@ export {logout} from '../auth/logout'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
 export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
 export {
+  addReaction,
   createComment,
   type CreateCommentOptions,
+  type ReactionOptions,
   removeComment,
   type RemoveCommentOptions,
+  removeReaction,
   replyToComment,
   type ReplyToCommentOptions,
   setCommentStatus,
   type SetCommentStatusOptions,
   updateComment,
   type UpdateCommentOptions,
+  updateCommentRange,
+  type UpdateCommentRangeOptions,
 } from '../comments/commentActions'
 export {
   type CommentsOptions,
-  getCommentsState,
-  getCommentThreadsState,
-  resolveComments,
-  type ResolveCommentsOptions,
-  resolveCommentThreads,
+  type CommentsQueryOptions,
+  type CommentVariants,
+  getCommentsQueryState,
+  getDocumentCommentsState,
+  resolveCommentsQuery,
+  type ResolveCommentsQueryOptions,
+  resolveDocumentComments,
+  type ResolveDocumentCommentsOptions,
 } from '../comments/commentsStore'
 export {
   type Comment,
   type CommentLocalState,
   type CommentMessage,
+  type CommentRange,
   type CommentReaction,
+  type CommentReactionShortName,
   type CommentStatus,
   type CommentTextSelection,
   type CommentTextSelectionItem,
@@ -263,6 +273,15 @@ export {
   resolveUser,
   resolveUsers,
 } from '../users/usersStore'
+export {
+  getUsersWithGrantsState,
+  loadMoreUsersWithGrants,
+  resolveUsersWithGrants,
+  type ResolveUsersWithGrantsOptions,
+  type UsersWithGrantsOptions,
+  type UsersWithGrantsResult,
+  type UserWithGrants,
+} from '../users/usersWithGrants'
 export {getCorsErrorProjectId} from '../utils/getCorsErrorProjectId'
 export {isImportError} from '../utils/isImportError'
 export {CORE_SDK_VERSION} from '../version'

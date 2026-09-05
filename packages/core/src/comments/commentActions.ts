@@ -1,37 +1,27 @@
-import {type SanityClient} from '@sanity/client'
-import {DocumentId, getPublishedId} from '@sanity/id-utils'
+import {
+  type CollaborationCommentCreate,
+  type CollaborationCommentUpdate,
+  type SanityClient,
+} from '@sanity/client'
 import {type Path} from '@sanity/types'
-import {filter, firstValueFrom, take} from 'rxjs'
 
 import {getCurrentUserState} from '../auth/authStore'
-import {getClient} from '../client/clientStore'
-import {
-  type DatasetHandle,
-  type DatasetResource,
-  type DocumentHandle,
-  type DocumentResource,
-} from '../config/sanityConfig'
-import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
+import {type DatasetHandle, type DocumentHandle} from '../config/sanityConfig'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StoreState} from '../store/createStoreState'
 import {type StoreContext} from '../store/defineStore'
 import {randomUuid} from '../utils/ids'
-import {
-  assertDatasetResource,
-  getAddonDatasetState,
-  provisionAddonDataset,
-} from './addonDatasetStore'
 import {toCommentFieldPath} from './commentFieldPath'
-import {COMMENTS_API_VERSION} from './commentsConstants'
-import {type CommentsOptions, commentsStore, toCommentsKeyParts} from './commentsStore'
+import {toStoredMessage} from './commentMessage'
+import {getCommentsClient, requireOrganizationId} from './commentsClient'
+import {commentsStore, toSourceDocumentId, toWrittenCommentKeys} from './commentsStore'
 import {normalizeComment} from './normalizeComment'
 import {
   addComment,
   applyCommentUpdate,
   clearPendingTransaction,
   type CommentsStoreState,
-  getCommentsKey,
   receiveComment,
   removeCommentById,
   restoreComments,
@@ -42,12 +32,11 @@ import {
 import {
   type Comment,
   type CommentMessage,
-  type CommentPostPayload,
+  type CommentRange,
+  type CommentReactionShortName,
   type CommentStatus,
-  type CommentTextSelection,
   type StoredComment,
 } from './types'
-import {weakenReferencesInContentSnapshot} from './weakenReferences'
 
 /** @beta */
 export interface CreateCommentOptions extends DocumentHandle {
@@ -64,57 +53,62 @@ export interface CreateCommentOptions extends DocumentHandle {
    */
   fieldPath: string | Path
   /**
-   * Anchors the comment to a run of text inside a Portable Text field. Building
-   * one needs a live editor, so this comes from
-   * `@portabletext/plugin-sdk-value` rather than being constructed by hand.
+   * Anchors the comment to a run of text inside the field, by offset into the
+   * Portable Text blocks it spans.
+   *
+   * The API resolves this into the stored selection and content snapshot, so
+   * what comes back is {@link Comment.selection} rather than the range itself.
    */
-  selection?: CommentTextSelection
+  range?: CommentRange
   /** Reuse the id of a failed comment to retry it. Defaults to a new id. */
   commentId?: string
   /** Defaults to a new id, which starts a new thread. */
   threadId?: string
-  /** @defaultValue `'open'` */
-  status?: CommentStatus
   /**
    * The `_rev` of the document when the comment was written.
    *
    * Not filled in automatically: the SDK's local document revision is replaced
    * by a transaction id while an edit is in flight, so it can name a revision
-   * that never reached the server. Nothing in the Studio reads this today.
+   * that never reached the server.
    */
   documentRevisionId?: string
   /**
-   * Ambient information stored alongside the comment, merged over the defaults.
-   *
-   * The Studio writes `tool`, `payload`, `intent`, and `notification` here for
-   * its notification backend. The SDK has no source for any of them, so
-   * mentions in comments created this way do not send email unless you supply
-   * `notification` yourself. Deliberately loose: the organization-level store
-   * treats this as free-form, so no shape is worth promising.
+   * Ambient information stored alongside the comment, for the writing app's own
+   * use. Deliberately loose: the comment API treats this as free-form, so no
+   * shape is worth promising.
    */
   context?: Record<string, unknown>
-  /** A copy of the content being discussed. References in it are weakened. */
-  contentSnapshot?: unknown
 }
 
-/** @beta */
-export interface ReplyToCommentOptions extends DocumentHandle {
+/**
+ * A dataset handle rather than a document one: everything placing the reply —
+ * the thread, the field, the document it targets — is read off the parent
+ * comment, so naming a document here would only be a second source of truth.
+ *
+ * @beta
+ */
+export interface ReplyToCommentOptions extends DatasetHandle {
   /** The comment being replied to. Replies to a reply join the same thread. */
   parentCommentId: string
   message: CommentMessage
   commentId?: string
-  /** Only needed when the parent is not loaded, such as following a deep link. */
-  threadId?: string
-  /** Only needed when the parent is not loaded. */
-  fieldPath?: string | Path
-  /** Required when the parent is not loaded. */
-  status?: CommentStatus
+  context?: Record<string, unknown>
 }
 
 /** @beta */
 export interface UpdateCommentOptions extends DatasetHandle {
   commentId: string
   message: CommentMessage
+}
+
+/** @beta */
+export interface UpdateCommentRangeOptions extends DatasetHandle {
+  commentId: string
+  /**
+   * Where the comment now attaches, within the field and document it already
+   * targets. `null` drops the anchor and leaves a field-level comment.
+   */
+  range: CommentRange | null
 }
 
 /** @beta */
@@ -127,6 +121,12 @@ export interface SetCommentStatusOptions extends DatasetHandle {
 /** @beta */
 export interface RemoveCommentOptions extends DatasetHandle {
   commentId: string
+}
+
+/** @beta */
+export interface ReactionOptions extends DatasetHandle {
+  commentId: string
+  shortName: CommentReactionShortName
 }
 
 /**
@@ -156,106 +156,18 @@ function requireCurrentUserId(instance: SanityInstance): string {
   return userId
 }
 
-/** Waits out discovery, then insists the addon dataset exists. */
-async function requireAddonDataset(
+function getWritableClient(
   instance: SanityInstance,
-  resource: DocumentResource,
-): Promise<string> {
-  const datasetName = await firstValueFrom(
-    getAddonDatasetState(instance, {resource}).observable.pipe(
-      filter((value) => value !== undefined),
-      take(1),
-    ),
-  )
-
-  if (!datasetName) {
-    throw new Error('This project has no comments dataset, so there is no comment to change.')
-  }
-
-  return datasetName
-}
-
-async function getWritableClient(
-  instance: SanityInstance,
-  resource: DocumentResource,
-  {createIfMissing}: {createIfMissing: boolean},
-): Promise<SanityClient> {
-  const {projectId} = assertDatasetResource(resource)
-
-  // Provisioning is a project-wide side effect, so only the create path may
-  // trigger it. Editing or deleting a comment implies the dataset is there.
-  const dataset = createIfMissing
-    ? await provisionAddonDataset(instance, {resource})
-    : await requireAddonDataset(instance, resource)
-
-  return getClient(instance, {apiVersion: COMMENTS_API_VERSION, projectId, dataset})
-}
-
-function buildCommentPayload(options: {
-  authorId: string
-  commentId: string
-  contentSnapshot?: unknown
-  context?: Record<string, unknown>
-  documentRevisionId?: string
-  handle: DocumentHandle
-  message: CommentMessage
-  parentCommentId?: string
-  resource: DatasetResource
-  fieldPath: string
-  selection?: CommentTextSelection
-  status: CommentStatus
-  threadId: string
-  documentVersionId?: string
-}): CommentPostPayload {
-  const {handle, resource} = options
-
-  return {
-    _id: options.commentId,
-    _type: 'comment',
-    authorId: options.authorId,
-    message: options.message,
-    threadId: options.threadId,
-    ...(options.parentCommentId ? {parentCommentId: options.parentCommentId} : {}),
-    status: options.status,
-    reactions: null,
-    // The Studio writes an empty tool name when no tool is active, and reads
-    // this nowhere in its UI.
-    context: {tool: '', ...options.context},
-    ...(options.contentSnapshot === undefined
-      ? {}
-      : {contentSnapshot: weakenReferencesInContentSnapshot(options.contentSnapshot)}),
-    target: {
-      documentRevisionId: options.documentRevisionId ?? '',
-      path: {
-        field: options.fieldPath,
-        ...(options.selection ? {selection: options.selection} : {}),
-      },
-      // The comment lives in the addon dataset, so this points across to the
-      // dataset holding the document. Weak, or Content Lake would refuse to
-      // delete a commented document.
-      document: {
-        _dataset: resource.dataset,
-        _projectId: resource.projectId,
-        _ref: getPublishedId(DocumentId(handle.documentId)),
-        _type: 'crossDatasetReference',
-        _weak: true,
-      },
-      documentType: handle.documentType,
-      ...(options.documentVersionId ? {documentVersionId: options.documentVersionId} : {}),
-    },
-  }
+  key: BoundResourceKey,
+  options: Pick<DatasetHandle, 'collaboration'>,
+): SanityClient {
+  return getCommentsClient(instance, {
+    resource: key.resource,
+    organizationId: requireOrganizationId(instance, options),
+  })
 }
 
 function findComment(
-  state: StoreState<CommentsStoreState>,
-  commentsKey: string,
-  commentId: string,
-): StoredComment | undefined {
-  const comments = state.get().entries[commentsKey]?.comments
-  return comments && Object.hasOwn(comments, commentId) ? comments[commentId] : undefined
-}
-
-function findCommentById(
   state: StoreState<CommentsStoreState>,
   commentId: string,
 ): StoredComment | undefined {
@@ -267,43 +179,124 @@ function findCommentById(
   return undefined
 }
 
+/**
+ * Refuses to reply to a comment we do not hold.
+ *
+ * The reply is shown before the server confirms it, and everything placing it —
+ * the thread, the field, the target the lists are keyed on — comes from the
+ * parent. Guessing those puts the optimistic reply in no thread any reader can
+ * see, so a failed one would carry its `createError` somewhere invisible, with
+ * no way to offer a retry. Anyone with a comment to reply to has it loaded.
+ */
+function requireLoadedParent(
+  state: StoreState<CommentsStoreState>,
+  parentCommentId: string,
+): StoredComment {
+  const parent = findComment(state, parentCommentId)
+  if (!parent) {
+    throw new Error(
+      `Cannot reply to comment ${parentCommentId}: it is not loaded. Read the thread it belongs to first.`,
+    )
+  }
+  return parent
+}
+
+/**
+ * The comment as it will look once the server has it, near enough to show now.
+ *
+ * The API owns the timestamps, the revision, and — for an inline comment — the
+ * resolved selection and content snapshot. The revision is left empty and the
+ * timestamps stand in until the real comment arrives, because a list sorts on
+ * `_createdAt` and cannot wait for a round trip. Everything a list renders is
+ * present.
+ */
+function buildOptimisticComment(options: {
+  authorId: string
+  commentId: string
+  context?: Record<string, unknown>
+  documentRevisionId?: string
+  documentType: string
+  fieldPath: string
+  message: CommentMessage
+  parentCommentId?: string
+  sourceDocumentId: string
+  status: CommentStatus
+  targetRef: StoredComment['target']['document']['_ref']
+  threadId: string
+}): StoredComment {
+  const now = new Date().toISOString()
+
+  return {
+    _id: options.commentId,
+    _type: 'sanity.comment',
+    _createdAt: now,
+    _updatedAt: now,
+    _rev: '',
+    _system: {createdBy: options.authorId},
+    message: toStoredMessage(options.message),
+    threadId: options.threadId,
+    ...(options.parentCommentId ? {parentCommentId: options.parentCommentId} : {}),
+    status: options.status,
+    reactions: [],
+    ...(options.context ? {context: options.context} : {}),
+    target: {
+      document: {_ref: options.targetRef, _type: 'globalDocumentReference', _weak: true},
+      documentType: options.documentType,
+      sourceDocumentId: options.sourceDocumentId,
+      ...(options.documentRevisionId ? {documentRevisionId: options.documentRevisionId} : {}),
+      path: {field: options.fieldPath},
+    },
+  }
+}
+
+/**
+ * Writes a comment, showing it before the round trip so a thread feels
+ * immediate.
+ *
+ * A failed create stays on screen carrying the failure, so an app can offer a
+ * retry with the same id rather than silently losing what someone typed.
+ *
+ * Applied to every list the comment belongs in rather than just the one matching
+ * the writer's own perspective, so a reader watching a different set of variants
+ * does not have to wait for the listener to catch up.
+ */
 async function postComment(
   context: StoreContext<CommentsStoreState, BoundResourceKey>,
-  handle: DocumentHandle & CommentsOptions,
-  payload: CommentPostPayload,
+  commentsKeys: string[],
+  optimistic: StoredComment,
+  body: CollaborationCommentCreate,
+  client: SanityClient,
 ): Promise<Comment> {
-  const {state, instance, key} = context
-  const commentsKey = getCommentsKey(toCommentsKeyParts(instance, handle))
+  const {state} = context
 
-  // Show it before the round trip, so a thread feels immediate.
-  state.set('addComment', addComment(commentsKey, payload))
+  for (const commentsKey of commentsKeys) {
+    state.set('addComment', addComment(commentsKey, optimistic))
+  }
 
   try {
-    const client = await getWritableClient(instance, key.resource, {createIfMissing: true})
-    // `createIfNotExists` makes duplicate writes of the same id harmless, which
-    // covers both a retry after a lost response and two concurrent calls with
-    // the same comment id.
-    const created = await client.createIfNotExists(payload, {tag: 'comments.create'})
-    state.set('receiveComment', receiveComment(commentsKey, created))
+    const created = await client.collaboration.comments.create(body, {tag: 'comments.create'})
+    for (const commentsKey of commentsKeys) {
+      state.set('receiveComment', receiveComment(commentsKey, created))
+    }
     return normalizeComment(created)
   } catch (error) {
-    // Keep it on screen carrying the failure, so an app can offer a retry with
-    // the same id rather than silently losing what someone typed.
     state.set(
       'setCommentCreateError',
-      setCommentCreateError(payload._id, error instanceof Error ? error : new Error(String(error))),
+      setCommentCreateError(
+        optimistic._id,
+        error instanceof Error ? error : new Error(String(error)),
+      ),
     )
     throw error
   }
 }
 
 /**
- * Starts a thread on a document, or on one of its fields.
+ * Starts a thread on one of a document's fields.
  *
- * Creates the project's comments dataset if this is the first comment anywhere
- * in it. The comment appears locally before the server confirms it; if the
- * write fails it stays, carrying `_state.createError`, and retrying with the
- * same `commentId` replaces it.
+ * The comment appears locally before the server confirms it; if the write fails
+ * it stays, carrying `state.createError`, and retrying with the same
+ * `commentId` replaces it.
  *
  * @beta
  */
@@ -319,27 +312,45 @@ export const createComment: (
     options: CreateCommentOptions,
   ) => {
     const {instance, key} = context
-    const perspective = options.perspective ?? instance.config.perspective
+    const client = getWritableClient(instance, key, options)
     const fieldPath = requireFieldPath(options.fieldPath)
+    const commentId = options.commentId ?? randomUuid()
+    const threadId = options.threadId ?? randomUuid()
+    const sourceDocumentId = toSourceDocumentId(instance, options)
+
+    const optimistic = buildOptimisticComment({
+      authorId: requireCurrentUserId(instance),
+      commentId,
+      context: options.context,
+      documentRevisionId: options.documentRevisionId,
+      documentType: options.documentType,
+      fieldPath,
+      message: options.message,
+      sourceDocumentId,
+      status: 'open',
+      targetRef: client.collaboration.comments.getTargetDocumentRef(sourceDocumentId),
+      threadId,
+    })
 
     return postComment(
       context,
-      options,
-      buildCommentPayload({
-        authorId: requireCurrentUserId(instance),
-        commentId: options.commentId ?? randomUuid(),
-        contentSnapshot: options.contentSnapshot,
-        context: options.context,
-        documentRevisionId: options.documentRevisionId,
-        handle: options,
-        message: options.message,
-        resource: assertDatasetResource(key.resource),
-        fieldPath,
-        selection: options.selection,
-        status: options.status ?? 'open',
-        threadId: options.threadId ?? randomUuid(),
-        ...(isReleasePerspective(perspective) ? {documentVersionId: perspective.releaseName} : {}),
-      }),
+      toWrittenCommentKeys(instance, options, optimistic),
+      optimistic,
+      {
+        _id: commentId,
+        message: toStoredMessage(options.message),
+        threadId,
+        ...(options.context ? {context: options.context} : {}),
+        target: {
+          documentId: sourceDocumentId,
+          documentType: options.documentType,
+          ...(options.documentRevisionId ? {documentRevisionId: options.documentRevisionId} : {}),
+          // The API stores the field as `target.path.field` and resolves the
+          // range against the document into a selection.
+          ...(options.range ? {path: fieldPath, range: options.range} : {path: fieldPath}),
+        },
+      },
+      client,
     )
   },
 )
@@ -347,9 +358,8 @@ export const createComment: (
 /**
  * Adds a reply to an existing thread.
  *
- * The thread and field are taken from the parent comment, so a reply always
- * matches the same list as the comment it answers. Supply them only when the
- * parent is not loaded.
+ * The thread, field, and status come from the parent comment, so a reply always
+ * matches the same list as the comment it answers.
  *
  * @beta
  */
@@ -363,49 +373,102 @@ export const replyToComment: (
     options: ReplyToCommentOptions,
   ) => {
     const {instance, key, state} = context
-    const commentsKey = getCommentsKey(toCommentsKeyParts(instance, options))
-    const parent = findComment(state, commentsKey, options.parentCommentId)
+    const client = getWritableClient(instance, key, options)
+    const commentId = options.commentId ?? randomUuid()
+    const parent = requireLoadedParent(state, options.parentCommentId)
 
-    const threadId = options.threadId ?? parent?.threadId
-    if (!threadId) {
-      throw new Error(
-        `Cannot reply to "${options.parentCommentId}": it is not loaded, so pass its threadId.`,
-      )
-    }
+    // Replies to a reply belong to the thread's first comment, matching how the
+    // Studio flattens threads.
+    const parentCommentId = parent.parentCommentId ?? options.parentCommentId
 
-    const status = parent?.status ?? options.status
-    if (!status) {
-      throw new Error(
-        `Cannot reply to "${options.parentCommentId}": it is not loaded, so pass its status.`,
-      )
-    }
-
-    const perspective = options.perspective ?? instance.config.perspective
+    const optimistic = buildOptimisticComment({
+      authorId: requireCurrentUserId(instance),
+      commentId,
+      context: options.context,
+      documentType: parent.target.documentType,
+      // The parent's, so the reply lands in the same thread and the same lists.
+      // The API is the authority either way: it copies the parent's target onto
+      // the reply. Checked rather than defaulted to `''`, because a pathless
+      // reply takes down the Studio's inspector exactly as a pathless comment
+      // does.
+      fieldPath: requireFieldPath(parent.target.path?.field ?? ''),
+      message: options.message,
+      parentCommentId,
+      sourceDocumentId: parent.target.sourceDocumentId,
+      status: parent.status,
+      targetRef: parent.target.document._ref,
+      // A thread the parent does not name is the one it starts.
+      threadId: parent.threadId ?? parentCommentId,
+    })
 
     return postComment(
       context,
-      options,
-      buildCommentPayload({
-        authorId: requireCurrentUserId(instance),
-        commentId: options.commentId ?? randomUuid(),
-        handle: options,
-        message: options.message,
-        // Replies to a reply belong to the thread's first comment, matching how
-        // the Studio flattens threads.
-        parentCommentId: parent?.parentCommentId ?? options.parentCommentId,
-        resource: assertDatasetResource(key.resource),
-        // Inherited from the parent unless the caller names one, and checked
-        // either way: a reply with no path crashes the Studio inspector exactly
-        // as a pathless thread would.
-        fieldPath: requireFieldPath(options.fieldPath ?? parent?.target.path?.field ?? ''),
-        // A reply into a resolved thread stays consistent with its parent.
-        status,
-        threadId,
-        ...(isReleasePerspective(perspective) ? {documentVersionId: perspective.releaseName} : {}),
-      }),
+      toWrittenCommentKeys(instance, options, optimistic),
+      optimistic,
+      {
+        _id: commentId,
+        message: toStoredMessage(options.message),
+        parentCommentId,
+        ...(options.context ? {context: options.context} : {}),
+      },
+      client,
     )
   },
 )
+
+/**
+ * Applies a change to one comment, showing it first and rolling it back if the
+ * server rejects it.
+ *
+ * The optimistic patch is a function of the comment we hold, because most of
+ * these changes are relative to it — a reaction added to the ones already
+ * there, an anchor dropped from the target it shares with the field. When the
+ * comment is not loaded there is nothing to show and nothing to roll back, so
+ * the write goes out on its own.
+ *
+ * The transaction id is what tells our own echo apart from someone else's
+ * write, so the listener can drop an outdated one rather than undoing this.
+ */
+async function writeOptimistically(
+  {state, instance, key}: StoreContext<CommentsStoreState, BoundResourceKey>,
+  options: DatasetHandle & {commentId: string},
+  optimistic: (previous: StoredComment) => Partial<StoredComment>,
+  write: (client: SanityClient, transactionId: string) => Promise<unknown>,
+): Promise<void> {
+  const {commentId} = options
+  const transactionId = randomUuid()
+  const previous = findComment(state, commentId)
+
+  if (previous) {
+    state.set('setPendingTransaction', setPendingTransaction(commentId, transactionId))
+    state.set('applyCommentUpdate', applyCommentUpdate(commentId, optimistic(previous)))
+  }
+
+  try {
+    await write(getWritableClient(instance, key, options), transactionId)
+    if (previous) {
+      state.set('clearPendingTransaction', clearPendingTransaction(commentId, transactionId))
+    }
+  } catch (error) {
+    if (previous) {
+      state.set('rollbackCommentUpdate', rollbackCommentUpdate(commentId, transactionId, previous))
+    }
+    throw error
+  }
+}
+
+/** The above, for the changes that are a plain update of the comment. */
+function patchComment(
+  context: StoreContext<CommentsStoreState, BoundResourceKey>,
+  options: DatasetHandle & {commentId: string},
+  optimistic: (previous: StoredComment) => Partial<StoredComment>,
+  body: CollaborationCommentUpdate,
+  tag: string,
+): Promise<void> {
+  return writeOptimistically(context, options, optimistic, (client, transactionId) =>
+    client.collaboration.comments.update(options.commentId, body, {transactionId, tag}),
+  )
+}
 
 /**
  * Rewrites a comment's message and stamps `lastEditedAt`.
@@ -417,46 +480,61 @@ export const updateComment: (
 ) => Promise<void> = bindActionByResource(
   commentsStore,
   async (
-    {state, instance, key}: StoreContext<CommentsStoreState, BoundResourceKey>,
-    {commentId, message}: UpdateCommentOptions,
+    context: StoreContext<CommentsStoreState, BoundResourceKey>,
+    options: UpdateCommentOptions,
   ) => {
-    const lastEditedAt = new Date().toISOString()
-    const transactionId = randomUuid()
-    const previous = findCommentById(state, commentId)
+    const message = toStoredMessage(options.message)
+    return patchComment(
+      context,
+      options,
+      () => ({message, lastEditedAt: new Date().toISOString()}),
+      {message},
+      'comments.update',
+    )
+  },
+)
 
-    if (previous) {
-      state.set('setPendingTransaction', setPendingTransaction(commentId, transactionId))
-      state.set('updateComment', applyCommentUpdate(commentId, {message, lastEditedAt}))
-    }
+/**
+ * Re-anchors a comment to a different run of text.
+ *
+ * Separate from {@link updateComment} because re-anchoring is mechanical — the
+ * content moved under the comment — rather than something a person wrote, so it
+ * leaves `lastEditedAt` alone. The API resolves the new range into a selection,
+ * so the change shows up on `selection` once the write lands.
+ *
+ * @beta
+ */
+export const updateCommentRange: (
+  instance: SanityInstance,
+  options: UpdateCommentRangeOptions,
+) => Promise<void> = bindActionByResource(
+  commentsStore,
+  async (
+    context: StoreContext<CommentsStoreState, BoundResourceKey>,
+    options: UpdateCommentRangeOptions,
+  ) => {
+    const {range} = options
 
-    try {
-      const client = await getWritableClient(instance, key.resource, {createIfMissing: false})
-      await client
-        .transaction()
-        .transactionId(transactionId)
-        .patch(client.patch(commentId).set({message, lastEditedAt}))
-        .commit({tag: 'comments.update'})
-      if (previous) {
-        state.set('clearPendingTransaction', clearPendingTransaction(commentId))
-      }
-    } catch (error) {
-      if (previous) {
-        state.set(
-          'rollbackCommentUpdate',
-          rollbackCommentUpdate(commentId, transactionId, previous),
-        )
-      }
-      throw error
-    }
+    return patchComment(
+      context,
+      options,
+      // A new anchor has nothing local to show: the selection it becomes is the
+      // API's to resolve against the document. Dropping one is knowable, so
+      // that shows straight away.
+      (previous) =>
+        range === null && previous.target.path
+          ? {target: {...previous.target, path: {field: previous.target.path.field}}}
+          : {},
+      {range},
+      'comments.update-range',
+    )
   },
 )
 
 /**
  * Resolves or reopens a thread.
  *
- * Pass the thread's first comment: replies follow it, patched server-side in
- * one query so a reply created by someone else at the same moment is caught
- * too.
+ * Pass the thread's first comment: the API cascades the status to its replies.
  *
  * @beta
  */
@@ -467,41 +545,39 @@ export const setCommentStatus: (
   commentsStore,
   async (
     {state, instance, key}: StoreContext<CommentsStoreState, BoundResourceKey>,
-    {commentId, status}: SetCommentStatusOptions,
+    options: SetCommentStatusOptions,
   ) => {
+    const {commentId, status} = options
     const transactionId = randomUuid()
-    const previousComments: StoredComment[] = []
+    // Keyed by id, because the same comment can sit in several entries at once
+    // and one rollback snapshot per comment is what is wanted. The patch below
+    // reaches every entry holding it regardless.
+    const previousComments = new Map<string, StoredComment>()
 
+    // The cascade happens server-side, but a thread that resolves one comment
+    // at a time on screen looks broken, so mirror it locally.
     for (const entry of Object.values(state.get().entries)) {
       for (const candidate of Object.values(entry?.comments ?? {})) {
         if (candidate._id !== commentId && candidate.parentCommentId !== commentId) continue
-        previousComments.push(candidate)
+        if (previousComments.has(candidate._id)) continue
+        previousComments.set(candidate._id, candidate)
         state.set('setPendingTransaction', setPendingTransaction(candidate._id, transactionId))
         state.set('updateCommentStatus', applyCommentUpdate(candidate._id, {status}))
       }
     }
 
     try {
-      const client = await getWritableClient(instance, key.resource, {createIfMissing: false})
-
-      await client.mutate(
-        [
-          {patch: {id: commentId, set: {status}}},
-          {
-            patch: {
-              query: '*[_type == "comment" && parentCommentId == $commentId]',
-              params: {commentId},
-              set: {status},
-            },
-          },
-        ],
+      const client = getWritableClient(instance, key, options)
+      await client.collaboration.comments.update(
+        commentId,
+        {status},
         {transactionId, tag: 'comments.set-status'},
       )
-      for (const previous of previousComments) {
-        state.set('clearPendingTransaction', clearPendingTransaction(previous._id))
+      for (const previous of previousComments.values()) {
+        state.set('clearPendingTransaction', clearPendingTransaction(previous._id, transactionId))
       }
     } catch (error) {
-      for (const previous of previousComments) {
+      for (const previous of previousComments.values()) {
         state.set(
           'rollbackCommentUpdate',
           rollbackCommentUpdate(previous._id, transactionId, previous),
@@ -523,8 +599,9 @@ export const removeComment: (
   commentsStore,
   async (
     {state, instance, key}: StoreContext<CommentsStoreState, BoundResourceKey>,
-    {commentId}: RemoveCommentOptions,
+    options: RemoveCommentOptions,
   ) => {
+    const {commentId} = options
     const removed = Object.entries(state.get().entries).flatMap(([entryKey, entry]) => {
       const comments = Object.values(entry?.comments ?? {}).filter(
         (comment) => comment._id === commentId || comment.parentCommentId === commentId,
@@ -535,22 +612,81 @@ export const removeComment: (
     state.set('removeComment', removeCommentById(commentId))
 
     try {
-      const client = await getWritableClient(instance, key.resource, {createIfMissing: false})
-      await client.mutate(
-        [
-          {
-            delete: {
-              query: '*[_type == "comment" && parentCommentId == $commentId]',
-              params: {commentId},
-            },
-          },
-          {delete: {id: commentId}},
-        ],
-        {tag: 'comments.remove'},
-      )
+      const client = getWritableClient(instance, key, options)
+      await client.collaboration.comments.delete(commentId, {tag: 'comments.remove'})
     } catch (error) {
       state.set('restoreComments', restoreComments(removed))
       throw error
     }
   },
 )
+
+/**
+ * Applies a reaction change locally, then asks the server for it.
+ *
+ * Reactions are per user, so the local guess only has to add or drop this
+ * user's own entry. The `_key` is the server's to assign; a reaction is
+ * addressed by short name and user, so a stand-in is harmless until the real
+ * comment arrives.
+ */
+function writeReaction(
+  context: StoreContext<CommentsStoreState, BoundResourceKey>,
+  options: ReactionOptions,
+  reacted: boolean,
+): Promise<void> {
+  const {commentId, shortName} = options
+  const userId = requireCurrentUserId(context.instance)
+
+  return writeOptimistically(
+    context,
+    options,
+    (previous) => {
+      const withoutMine = previous.reactions.filter(
+        (reaction) => reaction.shortName !== shortName || reaction.userId !== userId,
+      )
+
+      return {
+        reactions: reacted
+          ? [
+              ...withoutMine,
+              {_key: randomUuid(), shortName, userId, addedAt: new Date().toISOString()},
+            ]
+          : withoutMine,
+      }
+    },
+    ({collaboration: {comments}}, transactionId) =>
+      reacted
+        ? comments.addReaction(commentId, shortName, {transactionId, tag: 'comments.add-reaction'})
+        : comments.removeReaction(commentId, shortName, {
+            transactionId,
+            tag: 'comments.remove-reaction',
+          }),
+  )
+}
+
+/**
+ * Adds the current user's reaction to a comment.
+ *
+ * Explicit rather than a toggle: an app knows whether the user has already
+ * reacted, and a toggle would guess wrong whenever the list is a moment stale.
+ * Adding a reaction that is already there is harmless.
+ *
+ * @beta
+ */
+export const addReaction: (instance: SanityInstance, options: ReactionOptions) => Promise<void> =
+  bindActionByResource(
+    commentsStore,
+    async (context: StoreContext<CommentsStoreState, BoundResourceKey>, options: ReactionOptions) =>
+      writeReaction(context, options, true),
+  )
+
+/**
+ * Removes the current user's reaction from a comment.
+ * @beta
+ */
+export const removeReaction: (instance: SanityInstance, options: ReactionOptions) => Promise<void> =
+  bindActionByResource(
+    commentsStore,
+    async (context: StoreContext<CommentsStoreState, BoundResourceKey>, options: ReactionOptions) =>
+      writeReaction(context, options, false),
+  )
