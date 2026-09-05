@@ -6,6 +6,7 @@ import {
   type JsonMatch,
   resolveDocument,
 } from '@sanity/sdk'
+import {isDeepEqual} from '@sanity/sdk/_internal'
 import {type SanityDocument} from 'groq'
 import {useCallback} from 'react'
 
@@ -91,6 +92,7 @@ export function useEditDocument<TData>(
  * @remarks
  * This hook simplifies editing documents by automatically:
  * - Comparing the current and next states to determine the minimal set of `set` and `unset` operations required for the update via `editDocument`.
+ *   The comparison is deep: a copy of the stored value, from re-parsing or cloning, produces no write.
  * - Handling both full document updates and specific path updates.
  * - Supporting functional updates (e.g., `edit(prev => ({...prev, title: 'New'}))`).
  * - Integrating with the active {@link SanityInstance} context.
@@ -309,6 +311,8 @@ export function useEditDocument({
           ? (updater as (prev: typeof currentValue) => typeof currentValue)(currentValue)
           : updater
 
+      if (isDeepEqual(currentValue, nextValue)) return apply([], {resource: normalizedDoc.resource})
+
       return apply(editDocument(normalizedDoc, {set: {[currentPath]: nextValue}}))
     }
 
@@ -325,19 +329,19 @@ export function useEditDocument({
       )
     }
 
-    const allKeys = Object.keys({...current, ...nextValue})
+    const currentDocument = (current ?? {}) as Record<string, unknown>
+    const nextDocument = nextValue as Record<string, unknown>
+
+    const allKeys = Object.keys({...currentDocument, ...nextDocument})
     const editActions = allKeys
       .filter((key) => !ignoredKeys.includes(key))
-      .filter(
-        (key) =>
-          current?.[key as keyof typeof current] !== (nextValue as Record<string, unknown>)[key],
-      )
+      .filter((key) => !isDeepEqual(currentDocument[key], nextDocument[key]))
       .map((key) =>
-        key in nextValue
-          ? editDocument(normalizedDoc, {set: {[key]: (nextValue as Record<string, unknown>)[key]}})
+        key in nextDocument
+          ? editDocument(normalizedDoc, {set: {[key]: nextDocument[key]}})
           : editDocument(normalizedDoc, {unset: [key]}),
       )
 
-    return apply(editActions)
+    return apply(editActions, {resource: normalizedDoc.resource})
   }
 }
