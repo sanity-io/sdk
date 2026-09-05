@@ -1,253 +1,167 @@
 ---
-title: Typescript with TypeGen (experimental)
+title: TypeScript with TypeGen (beta)
 ---
 
-# Using Typegen with the Sanity SDK
+# Using TypeGen with the Sanity SDK (beta)
 
-[Sanity TypeGen](https://www.sanity.io/docs/sanity-typegen) is a tool that generates TypeScript types directly from your Sanity schemas and GROQ queries. When used with the Sanity SDK, it provides strong type safety and autocompletion for your documents, query results, and projections, significantly improving the development experience.
+[Sanity TypeGen](https://www.sanity.io/docs/sanity-typegen) generates TypeScript types
+from your schemas and GROQ queries. The SDK hooks read them, so `useQuery` returns the
+shape your query selects and `useDocument` returns the document type your handle names.
 
-This guide explains how to set up and use Typegen within your SDK project.
+What you get depends on how your app was set up, because the generation side is
+mid-rebuild:
 
-## Benefits
+|                         | Set up with the experimental packages | New app, using `sanity typegen generate` |
+| ----------------------- | ------------------------------------- | ---------------------------------------- |
+| `useQuery`              | Typed                                 | Typed                                    |
+| `useDocument`           | Typed                                 | Typed, after the bridge file below       |
+| `useDocumentProjection` | Typed                                 | Not yet                                  |
 
-- **Type Safety:** Catch errors at build time instead of runtime.
-- **Autocompletion:** Get intelligent suggestions for document fields and query results in your editor.
-- **Improved Maintainability:** Types make code easier to understand and refactor.
-- **Dataset & Document Scoping:** Generate types that correctly narrow based on the specific dataset or document type context.
+The full setup lives in
+[App SDK and TypeGen](https://www.sanity.io/docs/app-sdk/sdk-typegen). This guide covers
+the parts specific to the SDK's hooks.
 
-## Setup
+## Stability
 
-Using Typegen involves two main steps: extracting your schema(s) and then generating the types. Both commands are available via the CLI.
+TypeGen support in the App SDK is in beta. The hooks are not: `useDocument`, `useQuery`,
+and `useDocumentProjection` are stable, and none of their runtime behavior changes here.
+What is in beta is the type layer between your generated file and those hooks.
 
-### 1. Extracting Schemas
+| Stable                                  | In beta                                                          |
+| --------------------------------------- | ---------------------------------------------------------------- |
+| The hooks themselves                    | `defineProjection`'s home. It moves from `@sanity/sdk` to `groq` |
+| `defineQuery`, from `groq`              | The `SanitySchemasByResource` interface name                     |
+| Handles and the `create*Handle` helpers | `ResolveDocument` and its siblings                               |
+| What you write in a component           | The bridge file, which gets deleted                              |
 
-First, you need to extract your Sanity schema(s) into a JSON format that Typegen can understand. **Currently, this step relies on the full `sanity` package**, typically used within your Sanity Studio project, as Typegen needs access to the complete schema definition to generate accurate types.
+What you write stays as it is. What changes sits underneath it, so expect an import to
+move and a hand-written file to become unnecessary, not a rewrite of your components.
 
-Schema extraction is performed within your Studio setup to generate the `schema.json` file. Once created, this file can be used independently by other tools or parts of your workflow.
+"Experimental" in this guide means one thing only: the `groq@typegen-experimental-*` and
+`@sanity/cli@typegen-experimental-*` packages, which you should not install.
 
-**Note:** We recognize that requiring the Studio environment solely for this generation step isn't ideal, and we're actively working on improving this workflow in future SDK updates to make the process more self-contained.
+## If your app used the experimental packages
 
-Use the `sanity schema extract` command within your Studio project or a project that has the `sanity` package installed:
+Do not install `groq@typegen-experimental-*` or `@sanity/cli@typegen-experimental-*`.
+The SDK depends on released `groq`, and installing the fork alongside it produces
+duplicate type declarations.
+
+Your existing `sanity.types.ts` keeps working. The SDK ships compatibility declarations
+for the fork's helper types, so the file still compiles and still gives you typed
+documents, queries, and projections. **Do not regenerate it**: `sanity typegen generate`
+would replace it with a file that types `useQuery` and nothing else.
+
+One import changes:
+
+```diff
+- import {defineProjection} from 'groq'
++ import {defineProjection} from '@sanity/sdk'
+```
+
+`defineQuery` still comes from `groq`.
+
+## Setup in brief
+
+Your app imports `defineQuery` from `groq`, so install it directly. The SDK depends on
+it too, but a transitive dependency is not importable from your own code under pnpm's
+default layout:
 
 ```bash
-# Run this in your Sanity Studio project directory
-npx sanity schema extract --workspace <workspace-name> --output-path <path/to/schema.json>
+npm install groq@^6
 ```
 
-This `schema.json` file can be copied to (or the `--output-path` can be set directly to) your Sanity app's repository. Your application itself does _not_ need the full `sanity` package as a dependency to use the generated types; it only needs the `schema.json` file for the `typegen generate` step.
-
-- **Multiple Schemas/Workspaces:** If your Studio project defines multiple workspaces or you need types for different schemas (e.g., for different datasets), run the `extract` command for each one, outputting to separate JSON files.
-
-Example `package.json` script within a Studio project for extracting two schemas:
-
-```json
-{
-  "scripts": {
-    "schema:extract:test": "sanity schema extract --workspace test --output-path ../my-frontend-app/schema-test.json",
-    "schema:extract:prod": "sanity schema extract --workspace production --output-path ../my-frontend-app/schema-prod.json",
-    "schema:extract": "npm run schema:extract:test && npm run schema:extract:prod"
-  }
-}
-```
-
-**Note:** We plan to improve this schema extraction process as the SDK matures to potentially reduce the dependencies and improve overall developer experience.
-
-### 2. Installing Experimental Packages
-
-To use the Typegen features described in this guide, your Sanity app needs specific experimental versions of `@sanity/cli` and `groq` installed:
+Then extract the schema from your Studio project and generate:
 
 ```bash
-# Using npm
-npm install groq@typegen-experimental-2025-04-23
-npm install @sanity/cli@typegen-experimental-2025-04-23 --save-dev
-
-# Or using pnpm
-pnpm add groq@typegen-experimental-2025-04-23
-pnpm add @sanity/cli@typegen-experimental-2025-04-23 --save-dev
+npx sanity schema extract --workspace <workspace-name> --path schema.json
+npx sanity typegen generate
 ```
 
-**Note:** These are experimental pre-release versions. The package names and installation process may change as these features stabilize.
+Your app needs the `schema.json` file, not the `sanity` package. If you keep a
+`sanity-typegen.json`, do not set `overloadClientMethods` to `false`; that flag
+suppresses the module augmentation the SDK reads.
 
-### 3. Configuring Typegen (Optional)
+**Your app and the SDK must resolve the same copy of `groq`.** The SDK's compatibility
+declarations attach to the `groq` directory its own types resolve to, so a second copy at
+a different version leaves your generated file importing helpers from a copy that never
+received them, and it fails with `TS2614: Module '"groq"' has no exported member
+'SchemaOrigin'`. The `^6` range above is what keeps them deduped. Pinning `groq` to an
+exact or older version is what splits it.
 
-For the most common use case – a single Sanity schema for your project – **no configuration file is needed**.
-However, you'll need to create a Typegen configuration file for more complex use cases, such as:
+The same rule covers `@sanity/client`, which the bridge file below augments. A split there
+is quieter: no error, just `never` everywhere.
 
-- Using multiple schemas (e.g., from different workspaces or for different datasets).
-- Needing to explicitly map a single schema to a specific `projectId` and `dataset` for accurate type scoping (instead of using `'default'`).
-- Using a different name or location for your schema file(s).
-- Specifying a custom output path for the generated types file.
-
-If you need this level of configuration, create a Typegen configuration file (`sanity-typegen.json` ) and use the `unstable_schemas` array:
-
-```jsonc
-// sanity-typegen.json
-{
-  "unstable_schemas": [
-    {
-      // Path to this schema
-      "schemaPath": "./schemas/products-schema.json",
-      // The schema ID is a combination of your `projectId.datasetName`
-      "schemaId": "your-project-id.products",
-    },
-    {
-      "schemaPath": "./schemas/authors-schema.json",
-      "schemaId": "your-project-id.authors",
-    },
-    // Add more schema objects if needed
-  ],
-  "overloadClientMethods": false, // client methods are not needed for the SDK
-  // Optional: Specify output path for generated types
-  // "outputPath": "./src/generated/sanity-types.ts"
-}
-```
-
-Objects in the `unstable_schemas` array each consist of the following properties:
-
-- **`schemaPath`:** The path (relative to the project root) to the corresponding extracted schema JSON file.
-- **`schemaId`:** A string combining your `projectId` and `dataset` (e.g., `"your-project-id.your-dataset-name"`). This is used to map the schema to the correct project and dataset context for type generation, as the extracted `schema.json` doesn't contain this information itself.
-
-By default, Typegen works seamlessly for the common single-schema setup without extra configuration. Use `sanity-typegen.json` only when your needs require more explicit control. The optional **`outputPath`** property specifies where to write the generated `sanity.types.ts` file. It defaults to the project root.
-
-### 4. Generating Types
-
-Now, with the necessary packages installed and your schema(s) extracted (and optionally configured in `sanity-typegen.json`), you can run the `sanity typegen generate` command:
-
-```bash
-# use `@sanity/cli` package directly for now
-./node_modules/@sanity/cli/bin/sanity typegen generate
-```
-
-This command reads your configuration (either `sanity-typegen.json` or the default `schema.json`), processes the specified schemas, and generates `sanity.types.ts` containing your types. It's recommended to add this command to your `package.json` scripts.
-
-```json
-{
-  "scripts": {
-    "typegen": "./node_modules/@sanity/cli/bin/sanity typegen generate"
-  }
-}
-```
-
-## Using Generated Types
-
-The generated file contains types for your schema documents, projections, and query results. The SDK hooks will automatically pick up these types if the Typegen file exists in your project.
-
-### Document Types & Schema Scoping
-
-Typegen generates interfaces for each document type defined in your schemas. For projects using multiple schemas/datasets defined in `sanity-typegen.json`, it utilizes a helper type `SchemaOrigin` (imported from `groq`) to brand the types. This allows TypeScript to narrow down the possible document types based on the dataset context provided via a `DocumentHandle`.
+Then add one file to connect the generated schema types to your dataset:
 
 ```typescript
-import {useDocument, createDocumentHandle} from '@sanity/sdk-react'
+// sanity.typegen-bridge.ts
+import type {AllSanitySchemaTypes} from './sanity.types'
 
-// Assuming 'book' is only in 'test' dataset, 'dog' only in 'production'
-const testHandle = createDocumentHandle({
-  projectId: 'your-project-id',
-  dataset: 'test',
-  documentId: 'some-id',
-  documentType: 'book', // Type narrowed to 'book'
-})
-
-const prodHandle = createDocumentHandle({
-  projectId: 'your-project-id',
-  dataset: 'production',
-  documentId: 'another-id',
-  documentType: 'dog', // Type narrowed to 'dog'
-})
-
-function MyComponent() {
-  const {data: bookData} = useDocument(testHandle)
-  // bookData is correctly typed as Book
-
-  const {data: dogData} = useDocument(prodHandle)
-  // dogData is correctly typed as Dog
-
-  // ...
+declare module '@sanity/client' {
+  interface SanitySchemasByResource {
+    'your-project-id.your-dataset': AllSanitySchemaTypes
+  }
 }
 ```
 
-### Handles and Literal Types: `createDocumentHandle` vs `as const`
+Add one entry per dataset. Pass the whole `AllSanitySchemaTypes` union; it includes
+object types such as `slug` alongside your documents, and the SDK filters those out.
+Delete this file once the multi-resource command generates the same declaration.
 
-For Typegen to correctly infer types in hooks like `useDocument`, it needs to know the _specific_ literal type of the `documentType` (e.g., `'book'` instead of just `string`).
+Three ways to get `never` out of this file, all silent at the declaration:
 
-The SDK provides helper functions (like `createDocumentHandle`, `createDatasetHandle` located in `@sanity/sdk` or `@sanity/core`) that help capture these literal types:
+- **A wrong key.** `useDocument` on a handle with a literal `documentType` resolves to
+  `never`, so every field access fails. Check the key against your `projectId.dataset`
+  first.
+- **A document type declared as an `interface`.** Register type aliases, which is what
+  `sanity typegen generate` emits. TypeScript gives an alias an implicit index signature
+  and an interface none, and the SDK matches on that signature to tell documents from
+  object types. An `interface Book {...}` registered here never matches and resolves to
+  `never`; `type Book = {...}` works.
+- **Two copies of `@sanity/client`.** The augmentation attaches to whichever copy this
+  file resolves, and the SDK reads its own. Run `npm ls @sanity/client` and expect one.
+
+## Handles carry the type context
+
+Inference depends on `documentType` being the literal `'book'` rather than `string`. The
+`create*Handle` helpers capture that:
 
 ```typescript
 import {createDocumentHandle} from '@sanity/sdk'
 
-// Using the helper ensures handle.documentType is typed as 'book'
-const handle = createDocumentHandle({
+const bookHandle = createDocumentHandle({
+  projectId: 'abc',
+  dataset: 'production',
   documentId: '123',
   documentType: 'book',
-  dataset: 'production',
-  projectId: 'abc',
 })
 ```
 
-Alternatively, if you prefer defining handles as plain objects, use `as const`:
+A plain object works with `as const`. Prefer the helpers: they are shorter and they fail
+earlier when a field is missing.
+
+Handles also carry the dataset, which is how two datasets with a document type of the
+same name keep separate shapes.
+
+## Queries
+
+Wrap queries in `defineQuery` from `groq`. It returns the string unchanged; it exists so
+the query survives as a literal type that TypeGen can attribute a result to.
 
 ```typescript
-const handle = {
-  documentId: '123',
-  documentType: 'book',
-  dataset: 'production',
-  projectId: 'abc',
-} as const // 'as const' ensures documentType is 'book', not string
-
-// Now handle.documentType has the literal type 'book'
-```
-
-**Recommendation:** Use `createDocumentHandle` (or other `create*Handle` helpers) when using Typegen for cleaner code.
-
-### Projections: `defineProjection`
-
-To get types for GROQ projections used with `useDocumentProjection`, you **must** define them using the `defineProjection` helper from `groq`. Typegen scans your code for these definitions.
-
-```typescript
-import {defineProjection} from 'groq'
-import {useDocumentProjection, type DocumentHandle} from '@sanity/sdk-react'
-
-// Typegen derives the type name (AuthorSummaryProjectionResult) from the variable name
-export const authorSummary = defineProjection({
-  name: 'name',
-  favoriteBookTitles: 'favoriteBooks[]->title',
-})
-
-function AuthorDetails({doc}: {doc: DocumentHandle<'author'>}) {
-  // The type of `data` is inferred from `authorProjection`
-  const {data} = useDocumentProjection({
-    ...doc, // Spread the handle containing documentId, type, etc.
-    projection: authorProjection,
-  })
-
-  // data is typed as AuthorSummaryProjectionResult
-  // Autocompletion works for data.name and data.favoriteBookTitles
-  return <div>{data?.name}</div>
-}
-```
-
-- The generated type (e.g., `AuthorSummaryProjectionResult`) includes a `ProjectionBase` brand, allowing unions of projection results if a projection applies to multiple document types.
-- Typegen intelligently removes types from the projection result if all fields in the projection evaluate to `null` for a given document type.
-- When using Typegen, you **cannot** pass raw projection strings to `useDocumentProjection` and get type inference; you must use `defineProjection`.
-
-### Queries: `defineQuery`
-
-Similarly, for `useQuery`, you **must** define your GROQ queries using `defineQuery` from `@sanity/groq-sdk` to get type inference.
-
-```typescript
-import {defineQuery} from '@sanity/groq-sdk'
+import {createDatasetHandle} from '@sanity/sdk'
 import {useQuery} from '@sanity/sdk-react'
+import {defineQuery} from 'groq'
 
-// Typegen derives the type name (AllBooksQuery) from the variable name
-export const allBooksQuery = defineQuery('*[_type == "book"]{ _id, title }')
+const allBooks = defineQuery('*[_type == "book"]{_id, title}')
+const dataset = createDatasetHandle({projectId: 'abc', dataset: 'production'})
 
 function BookList() {
-  // Type of `data` is inferred from `allBooksQuery`
-  const {data} = useQuery({query: allBooksQuery})
-
-  // data is typed as Array<{_id: string, title: string}> (or similar)
+  const {data} = useQuery({...dataset, query: allBooks})
+  // data: {_id: string, title: string | null}[]
   return (
     <ul>
-      {data?.map((book) => (
+      {data.map((book) => (
         <li key={book._id}>{book.title}</li>
       ))}
     </ul>
@@ -255,38 +169,72 @@ function BookList() {
 }
 ```
 
-- `useQuery` accepts options as a single object, allowing you to spread handles easily:
-  ```typescript
-  const handle = createDatasetHandle({dataset: 'test', projectId: 'abc'})
-  const {data} = useQuery({...handle, query: allBooksQuery})
-  ```
+A query that is not a literal, built from a plain string or assembled at runtime, is not
+looked up. In a new app that yields `never`. In an app carrying a legacy
+`sanity.types.ts` it is worse: the legacy lookup matches loosely and returns the union of
+every query result registered for that dataset, so you get a type that compiles and is
+wrong. Pass an explicit type parameter for these; it is required, not just advisable.
 
-### List Hooks: `useDocuments` & `usePaginatedDocuments`
+## Projections
 
-These hooks benefit from Typegen through dataset scoping (as shown earlier). Use the `documentType` option to specify the document type(s) you are querying:
+Wrap projections in `defineProjection` from `@sanity/sdk`, then pass the result to
+`useDocumentProjection`.
 
 ```tsx
-import {usePaginatedDocuments} from '@sanity/sdk-react'
-import {createDatasetHandle} from '@sanity/sdk'
-import {DocumentPreview} from './your-document-preview'
+import {defineProjection} from '@sanity/sdk'
+import {useDocumentProjection, type DocumentHandle} from '@sanity/sdk-react'
 
-const testDataset = createDatasetHandle({dataset: 'test', projectId: 'abc'})
+const authorSummary = defineProjection(`{
+  name,
+  "awardCount": count(awards)
+}`)
+
+function AuthorCard({doc}: {doc: DocumentHandle<'author'>}) {
+  const {data} = useDocumentProjection({...doc, projection: authorSummary})
+  return <span>{data?.name}</span>
+}
+```
+
+A projection runs against every document type in the schema, so its result narrows by
+document type as well as by dataset. That is why the handle's `documentType` matters here
+as much as it does to `useDocument`.
+
+`data` is only inferred for an app set up with the experimental packages, per the table
+above. `sanity typegen generate` emits no projection types, so a new app gets `never`
+here and should pass an explicit type parameter until the multi-resource command ships.
+
+Projections chosen at runtime are never inferred, because static analysis cannot tell
+which one is in play:
+
+```typescript
+// Not inferred: the map widens every entry to `string`
+const projections: Record<string, string> = {summary: authorSummary, full: authorFull}
+const {data} = useDocumentProjection({...doc, projection: projections[selected]})
+```
+
+Pass an explicit type parameter for that case.
+
+## List hooks
+
+`useDocuments` and `usePaginatedDocuments` take `documentType` as a string or an array,
+and return handles carrying that type. Hooks further down the tree narrow from them.
+
+```tsx
+import {createDatasetHandle} from '@sanity/sdk'
+import {usePaginatedDocuments} from '@sanity/sdk-react'
+import {Suspense} from 'react'
+
+import {DocumentPreview} from './DocumentPreview'
+
+const dataset = createDatasetHandle({projectId: 'abc', dataset: 'test'})
 
 function MixedList() {
-  // Specify the types being queried
-  const {data} = usePaginatedDocuments({
-    ...testDataset,
-    documentType: ['author', 'book'], // Pass string or array of strings
-  })
+  const {data} = usePaginatedDocuments({...dataset, documentType: ['author', 'book']})
 
-  // `data` is an array of DocumentHandles, correctly scoped.
-  // If used with `useDocument` (and other hooks) later, types will be scoped
-  // appropriately (e.g. Author | Book).
   return (
     <ul>
-      {docHandles.map((doc) => (
-        // Use Suspense for each item in case projection is slow
-        <Suspense key={doc.documentId} fallback={<li>Loading...</li>}>
+      {data.map((doc) => (
+        <Suspense key={doc.documentId} fallback={<li>Loading…</li>}>
           <DocumentPreview doc={doc} />
         </Suspense>
       ))}
@@ -295,71 +243,51 @@ function MixedList() {
 }
 ```
 
-### Working with Specific Document Types
+## Typing handles and document data
 
-When you know the specific document type you're dealing with, you can make your TypeScript code even more precise.
-
-#### Parameterizing `DocumentHandle`
-
-`DocumentHandle` is a generic type that accept type parameters. You can provide a specific document type literal (like `'book'`) as a type argument. This is useful for typing props or variables that should only reference a handle for a specific document type:
+`DocumentHandle` takes the document type as a parameter, which is useful for props that
+must reference one type:
 
 ```typescript
-import {type DocumentHandle} from '@sanity/sdk-react'
+import {useDocument, type DocumentHandle} from '@sanity/sdk-react'
 
-// This function expects a handle that *must* reference a 'book' document
 function BookComponent({doc}: {doc: DocumentHandle<'book'>}) {
-  // Thanks to DocumentHandle<'book'>, TypeScript knows the context
   const {data} = useDocument(doc)
-  // `data` will be typed as the generated `Book` interface
-  // ...
+  // data: Book
 }
 ```
 
-This works because the full definition of `DocumentHandle` includes generic type parameters (`TDocumentType`, `TDataset`, `TProjectId`) that default to `string` but can be made more specific.
-
-#### Using `SanityDocument` for Document Data
-
-If you need the type for the actual document _data_ itself (not just the handle), the `groq` package exports the `SanityDocument<TDocumentType>` helper type. Pass the document type literal to get the corresponding generated interface for the document content:
+For the document data itself, use `ResolveDocument` from `@sanity/sdk`. It takes the
+document type and the dataset, in the `projectId.dataset` form:
 
 ```typescript
-import {type SanityDocument} from 'groq'
+import {type ResolveDocument} from '@sanity/sdk'
 
-type BookData = SanityDocument<'book'>
-// BookData is now equivalent to the generated Book interface (e.g., { _id: string; title: string; ... })
+type BookData = ResolveDocument<'book', 'abc.production'>
 
-// This function expects the fully typed book data
 function processBook(book: BookData) {
-  console.log(book.title) // Autocomplete works!
+  console.log(book.title)
 }
 ```
 
-In summary:
+The second parameter is required in practice. Omit it and there is no key to match, so a
+literal document type resolves to `never`. Passing the dataset but no document type,
+`ResolveDocument<string, 'abc.production'>`, gives you the union of that dataset's
+document types; you only get the base document shape when the dataset is unregistered.
 
-- Use `DocumentHandle<'yourType'>` to constrain a document handle to documents of a specific type.
-- Use `SanityDocument<'yourType'>` to type the actual data structure of a document of a specific type.
+## Workflow
 
-## Workflow Considerations
+**Regenerate after schema and query changes**, once you are on a setup that can.
+Generated types are a build artifact, and a schema deployed by someone else changes your
+app's types without a commit in your repository, so run generation in CI.
 
-By integrating Sanity TypeGen into your workflow, you can leverage the full power of TypeScript with the Sanity SDK, leading to more robust, maintainable, and developer-friendly applications.
+**TypeGen is additive.** Without it, `useQuery` and a literal-`documentType`
+`useDocument` both resolve to `never`, because every lookup misses; pass an explicit
+generic in that case. An untyped handle still gives `useDocument` the base document
+shape. Runtime behavior is identical either way, so it is safe to adopt in an existing
+app and safe to leave out.
 
-### Regeneration
-
-You'll need to re-run `npx sanity typegen generate` whenever you:
-
-- Change your Sanity schemas.
-- Add or modify queries/projections defined with `defineQuery` or `defineProjection`.
-- Consider integrating this into your `dev` script or a file watcher.
-
-### Typegen is additive
-
-Typegen is designed to enhance the SDK experience. If you don't use it, the SDK hooks will still work, but data types will often default to `any` or `unknown`, losing the benefits of TypeScript. Adopting Typegen later should be a non-breaking change that simply adds type safety.
-
-### JavaScript Projects
-
-Even if your project doesn't use TypeScript, you can still leverage Typegen to enhance your JavaScript development experience.
-
-By following the steps in this guide – extracting your schema, installing the necessary packages, using helpers like `createDocumentHandle`, `defineProjection`, and `defineQuery`, and running `npx sanity typegen generate` – you create a `sanity.types.ts` file.
-
-While your JavaScript code won't undergo compile-time type checking, modern code editors (like VS Code) that use the TypeScript language service can read this generated file.
-
-This often results in significantly better autocompletion and Intellisense within your JavaScript files when interacting with SDK hooks and data, compared to working without Typegen. Remember, using `defineProjection` and `defineQuery` is still required for Typegen to generate types for those specific artifacts.
+**JavaScript projects benefit too.** Editors read the generated declarations for
+autocompletion even where there is no annotation to check. `defineQuery` and
+`defineProjection` are still required, since they are what make a query string
+statically findable.

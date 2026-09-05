@@ -1,5 +1,4 @@
-import {getProjectionState, resolveProjection} from '@sanity/sdk'
-import {type SanityProjectionResult} from 'groq'
+import {getProjectionState, resolveProjection, type ResolveProjectionResult} from '@sanity/sdk'
 import {useCallback, useMemo, useSyncExternalStore} from 'react'
 import {distinctUntilChanged, EMPTY, Observable, startWith, switchMap} from 'rxjs'
 
@@ -67,9 +66,8 @@ export interface useDocumentProjectionResults<TData> {
  * @example Using Typegen for a book preview
  * ```tsx
  * // ProjectionComponent.tsx
- * import {useDocumentProjection, type DocumentHandle} from '@sanity/sdk-react'
+ * import {defineProjection, useDocumentProjection, type DocumentHandle} from '@sanity/sdk-react'
  * import {useRef} from 'react'
- * import {defineProjection} from 'groq'
  *
  * // Define props using DocumentHandle with the specific document type
  * type ProjectionComponentProps = {
@@ -120,7 +118,7 @@ export function useDocumentProjection<
 >(
   options: useDocumentProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
 ): useDocumentProjectionResults<
-  SanityProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
+  ResolveProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
 >
 
 // Overload 2: Explicit type provided

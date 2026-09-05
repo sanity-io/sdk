@@ -1,8 +1,8 @@
-import {type SanityProjectionResult} from 'groq'
 import {filter, firstValueFrom} from 'rxjs'
 
 import {bindActionByResourceAndPerspective} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
+import {type ResolveProjectionResult} from '../typegen/resolve'
 import {getProjectionState, type ProjectionOptions} from './getProjectionState'
 import {projectionStore} from './projectionStore'
 import {type ProjectionValuePending} from './types'
@@ -18,7 +18,7 @@ export function resolveProjection<
   options: ProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
 ): Promise<
   ProjectionValuePending<
-    SanityProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
+    ResolveProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
   >
 >
 

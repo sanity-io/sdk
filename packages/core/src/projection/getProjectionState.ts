@@ -1,5 +1,4 @@
 import {DocumentId, getPublishedId} from '@sanity/id-utils'
-import {type SanityProjectionResult} from 'groq'
 
 import {type DocumentHandle} from '../config/sanityConfig'
 import {bindActionByResourceAndPerspective} from '../store/createActionBinder'
@@ -9,6 +8,7 @@ import {
   type SelectorContext,
   type StateSource,
 } from '../store/createStateSourceAction'
+import {type ResolveProjectionResult} from '../typegen/resolve'
 import {hashString} from '../utils/hashString'
 import {randomId} from '../utils/ids'
 import {omitProperty} from '../utils/object'
@@ -39,7 +39,7 @@ export function getProjectionState<
   options: ProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
 ): StateSource<
   | ProjectionValuePending<
-      SanityProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
+      ResolveProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
     >
   | undefined
 >
