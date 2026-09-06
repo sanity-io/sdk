@@ -10,7 +10,7 @@
  * type-only augmentation turns a compile error into `undefined is not a function`.
  * `@sanity/sdk` exports it instead.
  *
- * Delete once nothing generates the legacy shape.
+ * Keep these declarations while the SDK supports existing experimental generated files.
  */
 
 /* eslint-disable @typescript-eslint/no-empty-object-type -- augmentation targets:

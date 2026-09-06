@@ -63,7 +63,7 @@ export interface useDocumentProjectionResults<TData> {
  * @param options - Options including the document handle properties (`documentId`, `documentType`, etc.) and the `projection`.
  * @returns The projected data, typed based on Typegen.
  *
- * @example Using Typegen for a book preview
+ * @example Using an existing experimental Typegen file for a book preview
  * ```tsx
  * // ProjectionComponent.tsx
  * import {defineProjection, useDocumentProjection, type DocumentHandle} from '@sanity/sdk-react'
@@ -74,7 +74,8 @@ export interface useDocumentProjectionResults<TData> {
  *   doc: DocumentHandle<'book'> // Typegen knows 'book'
  * }
  *
- * // This is required for typegen to generate the correct return type
+ * // Keep the projection string identical to its entry in the existing generated file.
+ * // Current Typegen does not scan defineProjection imported from the SDK.
  * const myProjection = defineProjection(`{
  *   title,
  *   'coverImage': cover.asset->url,

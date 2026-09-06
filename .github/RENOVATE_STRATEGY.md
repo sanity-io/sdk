@@ -50,17 +50,18 @@ Inventory of everything Renovate tracks. No action required.
 
 Rules are scoped by **package name** (or, for apps, by file path) — never by `matchFileNames` on the published packages. Everything automerges after CI passes and applicable release-age checks clear; the auto-approve workflow supplies the required approval.
 
-| Dependency type                                                                                          | Update type | Commit type                                 | Triggers release?     |
-| -------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------- | --------------------- |
-| `@sanity/*` (grouped as `sanity`)                                                                        | any         | `fix(deps)`                                 | **Yes, patch**        |
-| Other production `dependencies` (catch-all)                                                              | any         | `fix(deps)`                                 | **Yes, patch**        |
-| Catalog non-`@sanity` runtime deps (`rxjs`, `groq-js`, `react-compiler-runtime`, `react-error-boundary`) | any         | `chore`                                     | No — see caveat below |
-| eslint / vitest / commitlint / react groups                                                              | any         | `chore(tooling)` / `chore(dev-deps)`        | No                    |
-| `devDependencies`                                                                                        | any         | `chore(dev-deps)`                           | No                    |
-| Anything under `apps/**`                                                                                 | any         | `chore(apps)`                               | No                    |
-| `groq`, `@sanity/codegen`                                                                                | —           | disabled (pinned to `typegen-experimental`) | —                     |
-| High-severity security                                                                                   | any         | varies                                      | varies                |
-| Trusted upstream (Sanity-maintained, React, Next, `@types/*`, etc.)                                      | inherits    | inherits                                    | inherits              |
+| Dependency type                                                                                          | Update type | Commit type                                   | Triggers release?    |
+| -------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------- | -------------------- |
+| `@sanity/*` (grouped as `sanity`)                                                                        | any         | `fix(deps)`                                   | **Yes, patch**       |
+| Other production `dependencies` (catch-all)                                                              | any         | `fix(deps)`                                   | **Yes, patch**       |
+| Catalog non-`@sanity` runtime deps (`rxjs`, `groq-js`, `react-compiler-runtime`, `react-error-boundary`) | any         | `chore`                                       | No, see caveat below |
+| eslint / vitest / commitlint / react groups                                                              | any         | `chore(tooling)` / `chore(dev-deps)`          | No                   |
+| `devDependencies`                                                                                        | any         | `chore(dev-deps)`                             | No                   |
+| Anything under `apps/**`                                                                                 | any         | `chore(apps)`                                 | No                   |
+| `groq`                                                                                                   | any         | `fix(deps)`                                   | Yes                  |
+| `@sanity/codegen`                                                                                        | any         | disabled (kitchensink experimental generator) | No                   |
+| High-severity security                                                                                   | any         | varies                                        | varies               |
+| Trusted upstream (Sanity-maintained, React, Next, `@types/*`, etc.)                                      | inherits    | inherits                                      | inherits             |
 
 Majors are never grouped — each opens its own PR (`separateMajorMinor` is on by default), so a breaking bump is reviewed in isolation before it automerges.
 

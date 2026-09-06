@@ -4,161 +4,49 @@ title: TypeScript with TypeGen (beta)
 
 # Using TypeGen with the Sanity SDK (beta)
 
-[Sanity TypeGen](https://www.sanity.io/docs/sanity-typegen) generates TypeScript types
-from your schemas and GROQ queries. The SDK hooks read them, so `useQuery` returns the
-shape your query selects and `useDocument` returns the document type your handle names.
+[Sanity TypeGen](https://www.sanity.io/docs/sanity-typegen) generates types from your
+schemas and GROQ queries. The SDK supports two ways to use those types:
 
-What you get depends on how your app was set up, because the generation side is
-mid-rebuild:
+| Setup                                | How hooks receive their types                                                                                    |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Current TypeGen                      | Import generated types and pass them as hook generics.                                                           |
+| Existing experimental TypeGen output | Keep the generated file to preserve document, query, and projection inference. Follow the migration steps below. |
 
-|                         | Set up with the experimental packages | New app, using `sanity typegen generate` |
-| ----------------------- | ------------------------------------- | ---------------------------------------- |
-| `useQuery`              | Typed                                 | Typed                                    |
-| `useDocument`           | Typed                                 | Typed, after the bridge file below       |
-| `useDocumentProjection` | Typed                                 | Not yet                                  |
+The SDK now depends on released `groq` instead of the experimental fork. This removes
+that experimental package from the SDK's runtime dependencies. It does not add automatic
+hook inference for current TypeGen output or change how hooks fetch and update data.
 
-The full setup lives in
-[App SDK and TypeGen](https://www.sanity.io/docs/app-sdk/sdk-typegen). This guide covers
-the parts specific to the SDK's hooks.
+## Current TypeGen
 
-## Stability
+Follow [Migrating from experimental TypeGen in App SDK](https://www.sanity.io/docs/app-sdk/migrating-from-experimental-typegen-in-app-sdk)
+for schema extraction and generation setup. Extract the schema in your Studio, then
+make the resulting `schema.json` available to TypeGen in your app.
 
-TypeGen support in the App SDK is in beta. The hooks are not: `useDocument`, `useQuery`,
-and `useDocumentProjection` are stable, and none of their runtime behavior changes here.
-What is in beta is the type layer between your generated file and those hooks.
-
-| Stable                                  | In beta                                                          |
-| --------------------------------------- | ---------------------------------------------------------------- |
-| The hooks themselves                    | `defineProjection`'s home. It moves from `@sanity/sdk` to `groq` |
-| `defineQuery`, from `groq`              | The `SanitySchemasByResource` interface name                     |
-| Handles and the `create*Handle` helpers | `ResolveDocument` and its siblings                               |
-| What you write in a component           | The bridge file, which gets deleted                              |
-
-What you write stays as it is. What changes sits underneath it, so expect an import to
-move and a hand-written file to become unnecessary, not a rewrite of your components.
-
-"Experimental" in this guide means one thing only: the `groq@typegen-experimental-*` and
-`@sanity/cli@typegen-experimental-*` packages, which you should not install.
-
-## If your app used the experimental packages
-
-Do not install `groq@typegen-experimental-*` or `@sanity/cli@typegen-experimental-*`.
-The SDK depends on released `groq`, and installing the fork alongside it produces
-duplicate type declarations.
-
-Your existing `sanity.types.ts` keeps working. The SDK ships compatibility declarations
-for the fork's helper types, so the file still compiles and still gives you typed
-documents, queries, and projections. **Do not regenerate it**: `sanity typegen generate`
-would replace it with a file that types `useQuery` and nothing else.
-
-One import changes:
-
-```diff
-- import {defineProjection} from 'groq'
-+ import {defineProjection} from '@sanity/sdk'
-```
-
-`defineQuery` still comes from `groq`.
-
-## Setup in brief
-
-Your app imports `defineQuery` from `groq`, so install it directly. The SDK depends on
-it too, but a transitive dependency is not importable from your own code under pnpm's
-default layout:
+Define queries with `defineQuery` from released `groq`. Install it directly in your app
+if your code imports it:
 
 ```bash
-npm install groq@^6
+pnpm add groq@^6.12.0
 ```
 
-Then extract the schema from your Studio project and generate:
+The generator scans `defineQuery` calls to produce query result types. Pass those types
+to SDK hooks explicitly:
 
-```bash
-npx sanity schema extract --workspace <workspace-name> --path schema.json
-npx sanity typegen generate
-```
-
-Your app needs the `schema.json` file, not the `sanity` package. If you keep a
-`sanity-typegen.json`, do not set `overloadClientMethods` to `false`; that flag
-suppresses the module augmentation the SDK reads.
-
-**Your app and the SDK must resolve the same copy of `groq`.** The SDK's compatibility
-declarations attach to the `groq` directory its own types resolve to, so a second copy at
-a different version leaves your generated file importing helpers from a copy that never
-received them, and it fails with `TS2614: Module '"groq"' has no exported member
-'SchemaOrigin'`. The `^6` range above is what keeps them deduped. Pinning `groq` to an
-exact or older version is what splits it.
-
-The same rule covers `@sanity/client`, which the bridge file below augments. A split there
-is quieter: no error, just `never` everywhere.
-
-Then add one file to connect the generated schema types to your dataset:
-
-```typescript
-// sanity.typegen-bridge.ts
-import type {AllSanitySchemaTypes} from './sanity.types'
-
-declare module '@sanity/client' {
-  interface SanitySchemasByResource {
-    'your-project-id.your-dataset': AllSanitySchemaTypes
-  }
-}
-```
-
-Add one entry per dataset. Pass the whole `AllSanitySchemaTypes` union; it includes
-object types such as `slug` alongside your documents, and the SDK filters those out.
-Delete this file once the multi-resource command generates the same declaration.
-
-Three ways to get `never` out of this file, all silent at the declaration:
-
-- **A wrong key.** `useDocument` on a handle with a literal `documentType` resolves to
-  `never`, so every field access fails. Check the key against your `projectId.dataset`
-  first.
-- **A document type declared as an `interface`.** Register type aliases, which is what
-  `sanity typegen generate` emits. TypeScript gives an alias an implicit index signature
-  and an interface none, and the SDK matches on that signature to tell documents from
-  object types. An `interface Book {...}` registered here never matches and resolves to
-  `never`; `type Book = {...}` works.
-- **Two copies of `@sanity/client`.** The augmentation attaches to whichever copy this
-  file resolves, and the SDK reads its own. Run `npm ls @sanity/client` and expect one.
-
-## Handles carry the type context
-
-Inference depends on `documentType` being the literal `'book'` rather than `string`. The
-`create*Handle` helpers capture that:
-
-```typescript
-import {createDocumentHandle} from '@sanity/sdk'
-
-const bookHandle = createDocumentHandle({
-  projectId: 'abc',
-  dataset: 'production',
-  documentId: '123',
-  documentType: 'book',
-})
-```
-
-A plain object works with `as const`. Prefer the helpers: they are shorter and they fail
-earlier when a field is missing.
-
-Handles also carry the dataset, which is how two datasets with a document type of the
-same name keep separate shapes.
-
-## Queries
-
-Wrap queries in `defineQuery` from `groq`. It returns the string unchanged; it exists so
-the query survives as a literal type that TypeGen can attribute a result to.
-
-```typescript
-import {createDatasetHandle} from '@sanity/sdk'
-import {useQuery} from '@sanity/sdk-react'
+```tsx
+import {useDocument, useQuery, type DocumentHandle} from '@sanity/sdk-react'
 import {defineQuery} from 'groq'
 
-const allBooks = defineQuery('*[_type == "book"]{_id, title}')
-const dataset = createDatasetHandle({projectId: 'abc', dataset: 'production'})
+import type {Book, AllBooksResult} from './sanity.types'
+
+export const allBooks = defineQuery('*[_type == "book"]{_id, title}')
+
+function BookTitle({doc}: {doc: DocumentHandle<'book'>}) {
+  const {data: book} = useDocument<Book>(doc)
+  return <h1>{book?.title ?? 'Untitled'}</h1>
+}
 
 function BookList() {
-  const {data} = useQuery({...dataset, query: allBooks})
-  // data: {_id: string, title: string | null}[]
+  const {data} = useQuery<AllBooksResult>({query: allBooks})
   return (
     <ul>
       {data.map((book) => (
@@ -169,125 +57,118 @@ function BookList() {
 }
 ```
 
-A query that is not a literal, built from a plain string or assembled at runtime, is not
-looked up. In a new app that yields `never`. In an app carrying a legacy
-`sanity.types.ts` it is worse: the legacy lookup matches loosely and returns the union of
-every query result registered for that dataset, so you get a type that compiles and is
-wrong. Pass an explicit type parameter for these; it is required, not just advisable.
+`AllBooksResult` is generated from the `allBooks` query. Run generation after changing
+the query or schema. When using multiple datasets, generate a file for each schema and
+import the type for the dataset the hook reads.
 
-## Projections
-
-Wrap projections in `defineProjection` from `@sanity/sdk`, then pass the result to
-`useDocumentProjection`.
+Current TypeGen does not generate projection types. Supply a result type yourself, or
+use a full query with `defineQuery` and its generated result type:
 
 ```tsx
-import {defineProjection} from '@sanity/sdk'
 import {useDocumentProjection, type DocumentHandle} from '@sanity/sdk-react'
 
-const authorSummary = defineProjection(`{
-  name,
-  "awardCount": count(awards)
-}`)
+type BookPreview = {title: string | null}
 
-function AuthorCard({doc}: {doc: DocumentHandle<'author'>}) {
-  const {data} = useDocumentProjection({...doc, projection: authorSummary})
-  return <span>{data?.name}</span>
+function BookCard({doc}: {doc: DocumentHandle<'book'>}) {
+  const {data} = useDocumentProjection<BookPreview>({...doc, projection: '{title}'})
+  return <span>{data?.title}</span>
 }
 ```
 
-A projection runs against every document type in the schema, so its result narrows by
-document type as well as by dataset. That is why the handle's `documentType` matters here
-as much as it does to `useDocument`.
+## Migrating an existing experimental setup
 
-`data` is only inferred for an app set up with the experimental packages, per the table
-above. `sanity typegen generate` emits no projection types, so a new app gets `never`
-here and should pass an explicit type parameter until the multi-resource command ships.
+Existing generated files import helper types such as `SchemaOrigin` from `groq`.
+The SDK supplies compatibility declarations for those imports. This preserves the old
+lookup behavior while your app uses released `groq`.
 
-Projections chosen at runtime are never inferred, because static analysis cannot tell
-which one is in play:
+This migration requires dependency and import changes:
 
-```typescript
-// Not inferred: the map widens every entry to `string`
-const projections: Record<string, string> = {summary: authorSummary, full: authorFull}
-const {data} = useDocumentProjection({...doc, projection: projections[selected]})
-```
+1. Keep a copy of your existing `sanity.types.ts`. Stop any install or build script that
+   regenerates it with the experimental CLI.
+2. Replace your direct experimental `groq` dependency with released `groq`:
 
-Pass an explicit type parameter for that case.
+   ```bash
+   pnpm add groq@^6.12.0
+   ```
 
-## List hooks
+3. Remove the experimental CLI dependency, including any alias used to install it beside
+   the current CLI. Keep the current CLI if other commands use it.
+4. Change projection imports. Both SDK packages export the replacement helper:
 
-`useDocuments` and `usePaginatedDocuments` take `documentType` as a string or an array,
-and return handles carrying that type. Hooks further down the tree narrow from them.
+   ```diff
+   - import {defineProjection} from 'groq'
+   + import {defineProjection} from '@sanity/sdk-react'
+   ```
+
+   `defineQuery` continues to come from `groq`. Keep existing query and projection strings
+   unchanged so they match the entries in your saved generated file.
+
+5. Check your dependency tree and typecheck the app:
+
+   ```bash
+   pnpm why groq
+   pnpm exec tsc --noEmit
+   ```
+
+Your generated file and the SDK must resolve the same released `groq` declarations.
+Matching version ranges help, but a lockfile or override can still keep separate versions.
+If inference disappears or TypeScript reports missing helper exports, align the app and
+SDK versions and update the lockfile. Keeping the experimental fork alongside released
+`groq` is unsupported: depending on resolution, it can cause declaration conflicts or
+silently lose inference.
+
+### Updating schemas or projections after migration
+
+The saved file describes the schemas and queries from its last generation. It does not
+stay current automatically. The experimental generator does not recognize
+`defineProjection` imported from the SDK, and current TypeGen does not generate these
+projection declarations either.
+
+To resume generation, use current TypeGen and pass generated types explicitly as shown
+above. Replacing the old file removes its automatic hook inference. Update the affected
+hook calls as part of that migration, and supply explicit types for projections.
+
+Do not install the experimental packages in a new app. The
+[older experimental guide](https://www.sanity.io/docs/app-sdk/sdk-typegen) describes the
+previous setup and is retained for reference.
+
+## Inference with a saved experimental file
+
+The following example assumes the saved generated file already registers the book schema
+for `example.production` and the exact projection string `{title}`:
 
 ```tsx
-import {createDatasetHandle} from '@sanity/sdk'
-import {usePaginatedDocuments} from '@sanity/sdk-react'
-import {Suspense} from 'react'
+import {
+  createDocumentHandle,
+  defineProjection,
+  useDocument,
+  useDocumentProjection,
+} from '@sanity/sdk-react'
 
-import {DocumentPreview} from './DocumentPreview'
+const bookHandle = createDocumentHandle({
+  projectId: 'example',
+  dataset: 'production',
+  documentId: 'book-1',
+  documentType: 'book',
+})
+const preview = defineProjection('{title}')
 
-const dataset = createDatasetHandle({projectId: 'abc', dataset: 'test'})
-
-function MixedList() {
-  const {data} = usePaginatedDocuments({...dataset, documentType: ['author', 'book']})
-
-  return (
-    <ul>
-      {data.map((doc) => (
-        <Suspense key={doc.documentId} fallback={<li>Loading…</li>}>
-          <DocumentPreview doc={doc} />
-        </Suspense>
-      ))}
-    </ul>
-  )
+function BookCard() {
+  const {data: book} = useDocument(bookHandle)
+  const {data: summary} = useDocumentProjection({...bookHandle, projection: preview})
+  return <span>{summary?.title ?? book?.title ?? 'Untitled'}</span>
 }
 ```
 
-## Typing handles and document data
+The handle records the document type and dataset. Keep those values as literal types
+when passing handles through component props if you need to distinguish the same document
+type across datasets. `createDocumentHandle` captures them; a plain object can use
+`as const`.
 
-`DocumentHandle` takes the document type as a parameter, which is useful for props that
-must reference one type:
+Legacy inference has limitations. For example, field-path reads can return a union of
+field types across datasets. A widened or unregistered query can also resolve to the
+union of registered query results. Use an explicit result type when a query is built at
+runtime or when you need more precise types than the legacy lookup provides.
 
-```typescript
-import {useDocument, type DocumentHandle} from '@sanity/sdk-react'
-
-function BookComponent({doc}: {doc: DocumentHandle<'book'>}) {
-  const {data} = useDocument(doc)
-  // data: Book
-}
-```
-
-For the document data itself, use `ResolveDocument` from `@sanity/sdk`. It takes the
-document type and the dataset, in the `projectId.dataset` form:
-
-```typescript
-import {type ResolveDocument} from '@sanity/sdk'
-
-type BookData = ResolveDocument<'book', 'abc.production'>
-
-function processBook(book: BookData) {
-  console.log(book.title)
-}
-```
-
-The second parameter is required in practice. Omit it and there is no key to match, so a
-literal document type resolves to `never`. Passing the dataset but no document type,
-`ResolveDocument<string, 'abc.production'>`, gives you the union of that dataset's
-document types; you only get the base document shape when the dataset is unregistered.
-
-## Workflow
-
-**Regenerate after schema and query changes**, once you are on a setup that can.
-Generated types are a build artifact, and a schema deployed by someone else changes your
-app's types without a commit in your repository, so run generation in CI.
-
-**TypeGen is additive.** Without it, `useQuery` and a literal-`documentType`
-`useDocument` both resolve to `never`, because every lookup misses; pass an explicit
-generic in that case. An untyped handle still gives `useDocument` the base document
-shape. Runtime behavior is identical either way, so it is safe to adopt in an existing
-app and safe to leave out.
-
-**JavaScript projects benefit too.** Editors read the generated declarations for
-autocompletion even where there is no annotation to check. `defineQuery` and
-`defineProjection` are still required, since they are what make a query string
-statically findable.
+Without a generated file, use explicit hook generics. Runtime fetching works the same;
+automatic inference requires the corresponding generated declarations.

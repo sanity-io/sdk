@@ -1,10 +1,9 @@
 /**
- * Captures a GROQ projection as a string literal type so Typegen can attribute a result
- * type to it, as `defineQuery` does for a whole query. Returns the projection unchanged.
+ * Preserves a projection string's literal type and returns the string unchanged.
+ * Use this import when migrating an app with existing experimental Typegen output.
  *
- * Lives here rather than in `groq`: GA `groq` has no `defineProjection`, and a type-only
- * module augmentation cannot add a runtime value. Replace with a re-export of `groq`'s
- * once it ships one; what apps import does not change.
+ * Current Typegen does not scan this helper. New or changed projections need an
+ * explicit result type until projection generation is supported.
  *
  * @example
  * ```ts

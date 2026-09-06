@@ -102,8 +102,15 @@
       "semanticCommitScope": "apps"
     },
     {
-      "description": "Pin groq and @sanity/codegen to the typegen-experimental prerelease; don't bump to stable",
-      "matchDepNames": ["groq", "@sanity/codegen"],
+      "description": "Update released groq; production dependency, triggers a patch release",
+      "matchDepNames": ["groq"],
+      "rangeStrategy": "bump",
+      "semanticCommitType": "fix",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "description": "Keep the kitchensink generator on the experimental release until its migration",
+      "matchDepNames": ["@sanity/codegen"],
       "enabled": false
     }
   ]
