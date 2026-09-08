@@ -75,7 +75,6 @@
     "@sanity/message-protocol": "catalog:",
     "@sanity/sdk": "workspace:*",
     "@sanity/types": "catalog:",
-    "groq": "catalog:",
     "react-compiler-runtime": "catalog:",
     "react-error-boundary": "catalog:",
     "rxjs": "catalog:"
@@ -98,6 +97,7 @@
     "@vitest/coverage-v8": "catalog:",
     "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "catalog:",
+    "groq": "catalog:",
     "groq-js": "catalog:",
     "jsdom": "^29.1.1",
     "oxfmt": "catalog:",
