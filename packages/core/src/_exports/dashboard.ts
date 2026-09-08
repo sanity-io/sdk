@@ -2,6 +2,7 @@ export type {
   ConnectMessageBusOptions,
   MessageBus,
   MessageBusAbortOptions,
+  MessageBusConnection,
   MessageBusEmitOptions,
   MessageBusEmitResult,
   MessageBusErrorCode,
