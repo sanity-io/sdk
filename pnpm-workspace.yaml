@@ -17,6 +17,7 @@ minimumReleaseAgeExclude:
   - '@portabletext/*'
   - '@sanity/*'
   - '@types/*'
+  - 'get-it'
   - 'groq-js'
   - 'groq'
   - 'lodash-es'
