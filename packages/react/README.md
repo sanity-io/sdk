@@ -719,15 +719,18 @@ function DocStatus({handle}: {handle: DocumentHandle}) {
 
 ## Quick Reference
 
-| Task                  | Hook/Function                               |
-| --------------------- | ------------------------------------------- |
-| List documents        | `useDocuments`, `usePaginatedDocuments`     |
-| Read document         | `useDocument`, `useDocumentProjection`      |
-| Edit field            | `useEditDocument`                           |
-| Publish/Delete/Create | `useApplyDocumentActions` + action creators |
-| GROQ query            | `useQuery`                                  |
-| Check permissions     | `useDocumentPermissions`                    |
-| Listen to changes     | `useDocumentEvent`                          |
+| Task                  | Hook/Function                                                  |
+| --------------------- | -------------------------------------------------------------- |
+| List documents        | `useDocuments`, `usePaginatedDocuments`                        |
+| Read document         | `useDocument`, `useDocumentProjection`                         |
+| Edit field            | `useEditDocument`                                              |
+| Publish/Delete/Create | `useApplyDocumentActions` + action creators                    |
+| GROQ query            | `useQuery`                                                     |
+| Check permissions     | `useDocumentPermissions`                                       |
+| Listen to changes     | `useDocumentEvent`                                             |
+| Comments              | `useDocumentComments`, `useCommentsQuery`, `useCommentActions` |
+
+Comments have their own guide: [Collaboration](./guides/Collaboration.md).
 
 ---
 
@@ -736,6 +739,7 @@ function DocStatus({handle}: {handle: DocumentHandle}) {
 - **[Sanity Docs](https://sanity.io/docs/app-sdk)** — Conceptual overview, quickstart guide, and step-by-step walkthrough
 - **[App SDK Reference](https://reference.sanity.io/_sanity/sdk-react)** — In-depth API documentation
 - **[SDK Explorer](https://sdk-explorer.sanity.io)** — Example implementations
+- **[Collaboration Guide](./guides/Collaboration.md)** — Reading and writing comments
 - **[Migration Guide](./guides/0-Migration-Guide.md)** — Upgrading from previous versions
 - **[Learn Course](https://www.sanity.io/learn/course/build-content-apps-with-sanity-app-sdk)** — Interactive video tutorial
 

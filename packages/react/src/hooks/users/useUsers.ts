@@ -6,10 +6,11 @@ import {
   type SanityUser,
 } from '@sanity/sdk'
 import {getUsersKey, parseUsersKey} from '@sanity/sdk/_internal'
-import {useCallback, useEffect, useMemo, useState, useSyncExternalStore, useTransition} from 'react'
+import {useCallback, useMemo, useSyncExternalStore} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
-import {useResolvedProjectId} from '../helpers/useResolvedProjectId'
+import {useDeferredRequestKey} from '../helpers/useDeferredRequestKey'
+import {useResolvedProjectId, withResolvedProjectId} from '../helpers/useResolvedProjectId'
 import {trackHookUsage} from '../helpers/useTrackHookUsage'
 
 /**
@@ -34,23 +35,6 @@ export interface UsersResult {
    * Load more users.
    */
   loadMore: () => void
-}
-
-/**
- * Injects a resolved `projectId` into project-scoped users options. A missing
- * `projectId` is a no-op, and organization-scoped queries (explicit
- * `resourceType`/`organizationId`) or options that already carry a `projectId`
- * are returned unchanged.
- */
-function withResolvedProjectId(
-  options: GetUsersOptions | undefined,
-  projectId: string | undefined,
-): GetUsersOptions | undefined {
-  if (!projectId) return options
-  if (!options) return {projectId}
-  const isOrgScoped = options.resourceType === 'organization' || !!options.organizationId
-  if (isOrgScoped || options.projectId) return options
-  return {...options, projectId}
 }
 
 /**
@@ -94,8 +78,6 @@ function withResolvedProjectId(
 export function useUsers(options?: GetUsersOptions): UsersResult {
   const instance = useSanityInstance()
   trackHookUsage(instance, 'useUsers')
-  // Use React's useTransition to avoid UI jank when user options change
-  const [isPending, startTransition] = useTransition()
 
   // Resolve the projectId from the ambient project/resource context so a
   // project-scoped users request can pick it up rather than the top-level config.
@@ -106,28 +88,11 @@ export function useUsers(options?: GetUsersOptions): UsersResult {
   )
 
   // Get the unique key for this users request and its options
-  const key = getUsersKey(instance, effectiveOptions)
-  // Use a deferred state to avoid immediate re-renders when the users request changes
-  const [deferredKey, setDeferredKey] = useState(key)
+  const {deferredKey, signal, isPending} = useDeferredRequestKey(
+    getUsersKey(instance, effectiveOptions),
+  )
   // Parse the deferred users key back into users options
   const deferred = useMemo(() => parseUsersKey(deferredKey), [deferredKey])
-
-  // Create an AbortController to cancel in-flight requests when needed
-  const [ref, setRef] = useState<AbortController>(new AbortController())
-
-  // When the users request or options change, start a transition to update the request
-  useEffect(() => {
-    if (key === deferredKey) return
-
-    startTransition(() => {
-      if (!ref.signal.aborted) {
-        ref.abort()
-        setRef(new AbortController())
-      }
-
-      setDeferredKey(key)
-    })
-  }, [deferredKey, key, ref])
 
   // Get the state source for this users request from the users store
   const {getCurrent, subscribe} = useMemo(() => {
@@ -138,7 +103,7 @@ export function useUsers(options?: GetUsersOptions): UsersResult {
   // This is the React Suspense integration - throwing a promise
   // will cause React to show the nearest Suspense fallback
   if (getCurrent() === undefined) {
-    throw resolveUsers(instance, {...deferred, signal: ref.signal})
+    throw resolveUsers(instance, {...deferred, signal})
   }
 
   // Subscribe to updates and get the current data

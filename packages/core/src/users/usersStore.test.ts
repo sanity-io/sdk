@@ -121,6 +121,45 @@ describe('usersStore', () => {
     instance.dispose()
   })
 
+  it('sends the search and sort options as query params', async () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+
+    await resolveUsers(instance, {
+      resourceType: 'project',
+      projectId: 'project1',
+      batchSize: 25,
+      displayName: 'ada',
+      email: 'ada@example.com',
+      sortBy: 'displayName',
+      orderBy: 'desc',
+    })
+
+    expect(request).toHaveBeenCalledWith({
+      method: 'GET',
+      url: 'access/project/project1/users',
+      tag: 'users.list',
+      query: {
+        limit: '25',
+        displayName: 'ada',
+        email: 'ada@example.com',
+        sortBy: 'displayName',
+        orderBy: 'desc',
+      },
+    })
+
+    instance.dispose()
+  })
+
+  it('omits the search and sort params when unset', async () => {
+    const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
+
+    await resolveUsers(instance, {resourceType: 'project', projectId: 'project1'})
+
+    expect(request).toHaveBeenCalledWith(expect.objectContaining({query: {limit: '100'}}))
+
+    instance.dispose()
+  })
+
   it('maintains state when multiple subscribers exist', async () => {
     const instance = createSanityInstance({projectId: 'test', dataset: 'test'})
     const state = getUsersState(instance, {

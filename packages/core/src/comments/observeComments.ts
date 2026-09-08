@@ -1,7 +1,7 @@
-import {type ListenEvent, type SanityClient} from '@sanity/client'
+import {type ListenEvent, type QueryParams, type SanityClient} from '@sanity/client'
 import {filter, map, Observable, share, switchMap, take} from 'rxjs'
 
-import {buildCommentsListenQuery, buildCommentsQuery, LISTEN_OPTIONS} from './commentsConstants'
+import {buildListenQuery, buildSnapshotQuery, LISTEN_OPTIONS} from './commentsConstants'
 import {type StoredComment} from './types'
 
 /** What the listener saw, in terms the store can apply. */
@@ -31,7 +31,7 @@ function toCommentsEvent(event: ListenEvent<StoredComment>): CommentsEvent | und
 }
 
 /**
- * Watches one document's comments: a snapshot on connect, then live changes.
+ * Watches one comment query: a snapshot on connect, then live changes.
  *
  * The Studio awaits its snapshot inside the event handler, which loses any
  * mutation that arrives while the fetch is in flight, because the older
@@ -47,19 +47,15 @@ function toCommentsEvent(event: ListenEvent<StoredComment>): CommentsEvent | und
  */
 export function observeComments(options: {
   client: SanityClient
-  documentId: string
-  documentVersionId?: string
+  filter: string
+  params: QueryParams
 }): Observable<CommentsEvent> {
-  const {client, documentId, documentVersionId} = options
+  const {client, filter: commentsFilter, params} = options
+  const {comments} = client.observable.collaboration
 
-  const params = {
-    documentId,
-    ...(documentVersionId ? {documentVersionId} : {}),
-  }
-
-  const events$ = client.observable
-    .listen<StoredComment>(buildCommentsListenQuery(documentVersionId), params, LISTEN_OPTIONS)
-    .pipe(share())
+  const events$ = comments
+    .listen(buildListenQuery(commentsFilter), params, LISTEN_OPTIONS)
+    .pipe(share()) as Observable<ListenEvent<StoredComment>>
 
   const mutations$ = events$.pipe(
     map(toCommentsEvent),
@@ -84,14 +80,14 @@ export function observeComments(options: {
             error: (error: unknown) => observer.error(error),
           })
 
-          const snapshotSubscription = client.observable
-            .fetch<StoredComment[]>(buildCommentsQuery(documentVersionId), params, {
+          const snapshotSubscription = comments
+            .fetch<StoredComment[]>(buildSnapshotQuery(commentsFilter), params, {
               tag: 'comments.list',
             })
             .pipe(take(1))
             .subscribe({
-              next: (comments) => {
-                observer.next({type: 'snapshot', comments})
+              next: (snapshot) => {
+                observer.next({type: 'snapshot', comments: snapshot})
                 snapshotReceived = true
                 for (const event of buffered) observer.next(event)
                 buffered.length = 0

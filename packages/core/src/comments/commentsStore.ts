@@ -1,4 +1,5 @@
-import {DocumentId, getPublishedId} from '@sanity/id-utils'
+import {type QueryParams} from '@sanity/client'
+import {DocumentId, getVersionId, isVersionId} from '@sanity/id-utils'
 import {type Path} from '@sanity/types'
 import {
   catchError,
@@ -18,7 +19,11 @@ import {
   tap,
 } from 'rxjs'
 
-import {type DocumentHandle} from '../config/sanityConfig'
+import {
+  type DatasetHandle,
+  type DocumentHandle,
+  type DocumentResource,
+} from '../config/sanityConfig'
 import {isReleasePerspective} from '../releases/utils/isReleasePerspective'
 import {bindActionByResource, type BoundResourceKey} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
@@ -31,21 +36,26 @@ import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {randomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
-import {observeAddonDatasetClient} from './addonDatasetStore'
 import {buildCommentThreads} from './buildCommentThreads'
 import {toCommentFieldPath} from './commentFieldPath'
-import {COMMENTS_STATE_CLEAR_DELAY} from './commentsConstants'
+import {getCommentsClient, observeCommentsClient, requireOrganizationId} from './commentsClient'
+import {
+  buildCommentsQueryFilter,
+  buildDocumentCommentsQuery,
+  COMMENTS_STATE_CLEAR_DELAY,
+  type CommentsScope,
+} from './commentsConstants'
 import {normalizeComment} from './normalizeComment'
 import {type CommentsEvent, observeComments} from './observeComments'
 import {
   addSubscriber,
   clearPendingTransaction,
-  type CommentsKeyParts,
   type CommentsStoreState,
   getCommentsKey,
   parseCommentsKey,
   receiveComment,
-  removeCommentById,
+  recordDroppedEcho,
+  removeCommentFromEntry,
   removeSubscriber,
   setComments,
   setCommentsError,
@@ -53,26 +63,66 @@ import {
 import {type Comment, type CommentStatus, type CommentThread, type StoredComment} from './types'
 
 /**
- * Which comments to read.
+ * Which variants of a document to read comments from.
+ *
+ * @beta
+ */
+export type CommentVariants = 'perspective' | 'drafts' | 'exact' | 'all'
+
+/**
+ * Which of a document's comments to read.
  * @beta
  */
 export interface CommentsOptions extends DocumentHandle {
-  /**
-   * Narrow to one field. Omit to get every comment on the document.
-   */
+  /** Narrow to one field. Omit to get every comment on the document. */
   fieldPath?: string | Path
   /** Narrow to open or resolved threads. Omit for both. */
   status?: CommentStatus
+  /**
+   * Which variants of the document to read comments from.
+   *
+   * - `'perspective'` follows what you are viewing: a release shows that
+   *   release's comments, anything else pools draft and published.
+   * - `'drafts'` pools draft and published and ignores releases.
+   * - `'exact'` matches only the precise document id passed.
+   * - `'all'` returns every comment on the document.
+   *
+   * @defaultValue 'perspective'
+   */
+  variants?: CommentVariants
 }
 
 /** @beta */
-export interface ResolveCommentsOptions extends CommentsOptions {
+export interface ResolveDocumentCommentsOptions extends CommentsOptions {
   signal?: AbortSignal
 }
 
 /**
- * Fields on {@link CommentsOptions} that are deliberately left out of the key
- * below, because neither changes which comments an option set addresses.
+ * An arbitrary comment query, for anything that is not "comments on this
+ * document" — cross-document views, per-user views, organization-wide activity.
+ *
+ * @beta
+ */
+export interface CommentsQueryOptions extends DatasetHandle {
+  /**
+   * GROQ filter applied to comment documents. `_type == "sanity.comment"` is
+   * added for you, so this only has to say which comments.
+   */
+  filter: string
+  params?: QueryParams
+}
+
+/** @beta */
+export interface ResolveCommentsQueryOptions extends CommentsQueryOptions {
+  signal?: AbortSignal
+}
+
+/** Read options with the resource they address already resolved. */
+type WithResource<T> = T & {resource: DocumentResource}
+
+/**
+ * Fields on the read option types that are deliberately left out of the keys
+ * below, because none of them changes which comments an option set addresses.
  *
  * `source` is the deprecated alias for `resource` and is folded into it before
  * a key is ever built, so keying on both would give one list two keys.
@@ -82,7 +132,7 @@ export interface ResolveCommentsOptions extends CommentsOptions {
 type CommentsKeyIrrelevantField = 'source' | 'liveEdit'
 
 /**
- * A stable string standing for one set of read options.
+ * A stable string standing for one set of document read options.
  *
  * Only React needs this: it holds one state source steady across renders and
  * defers swapping to a new one while the previous list is still on screen.
@@ -91,16 +141,18 @@ type CommentsKeyIrrelevantField = 'source' | 'liveEdit'
  *
  * @internal
  */
-export function getCommentsOptionsKey(options: CommentsOptions): string {
+export function getDocumentCommentsOptionsKey(options: CommentsOptions): string {
   return JSON.stringify({
     documentId: options.documentId,
     documentType: options.documentType,
     projectId: options.projectId,
     dataset: options.dataset,
     resource: options.resource,
+    collaboration: options.collaboration,
     perspective: options.perspective,
     fieldPath: options.fieldPath === undefined ? undefined : toCommentFieldPath(options.fieldPath),
     status: options.status,
+    variants: options.variants,
     // The `Record` half makes a new field on `CommentsOptions` a compile
     // error here unless it is listed above or named as irrelevant. Left to
     // `satisfies CommentsOptions` alone, a forgotten field would just be
@@ -111,25 +163,130 @@ export function getCommentsOptionsKey(options: CommentsOptions): string {
 }
 
 /** @internal */
-export function parseCommentsOptionsKey(key: string): CommentsOptions {
+export function parseDocumentCommentsOptionsKey(key: string): CommentsOptions {
   return JSON.parse(key) as CommentsOptions
 }
 
 /**
- * Which comment list an option set addresses.
+ * The same, for the GROQ escape hatch.
  *
- * Comments hang off the published id, so a draft and its published document
- * share one list. A release keeps its own.
+ * @internal
  */
-export function toCommentsKeyParts(
-  instance: SanityInstance,
-  options: CommentsOptions,
-): CommentsKeyParts {
+export function getCommentsQueryOptionsKey(options: CommentsQueryOptions): string {
+  return JSON.stringify({
+    filter: options.filter,
+    params: options.params,
+    projectId: options.projectId,
+    dataset: options.dataset,
+    resource: options.resource,
+    collaboration: options.collaboration,
+    perspective: options.perspective,
+  } satisfies CommentsQueryOptions &
+    Record<Exclude<keyof CommentsQueryOptions, CommentsKeyIrrelevantField>, unknown>)
+}
+
+/** @internal */
+export function parseCommentsQueryOptionsKey(key: string): CommentsQueryOptions {
+  return JSON.parse(key) as CommentsQueryOptions
+}
+
+/**
+ * Which of a document's variants an option set covers.
+ *
+ * Comments hang off the published id, so pooling draft and published is the
+ * default and a release keeps its own list.
+ */
+function toCommentsScope(instance: SanityInstance, options: CommentsOptions): CommentsScope {
+  const variants = options.variants ?? 'perspective'
+  if (variants === 'all') return {type: 'any'}
+  if (variants === 'drafts') return {type: 'no-versions'}
+  if (variants === 'exact') return {type: 'exact', sourceDocumentId: options.documentId}
+
+  const documentId = DocumentId(options.documentId)
   const perspective = options.perspective ?? instance.config.perspective
-  return {
-    documentId: getPublishedId(DocumentId(options.documentId)),
-    ...(isReleasePerspective(perspective) ? {documentVersionId: perspective.releaseName} : {}),
+
+  if (isReleasePerspective(perspective)) {
+    return {
+      type: 'exact',
+      sourceDocumentId: getVersionId(documentId, perspective.releaseName),
+    }
   }
+
+  // A version id names a release on its own, with or without a perspective
+  // saying so.
+  if (isVersionId(documentId)) return {type: 'exact', sourceDocumentId: documentId}
+
+  return {type: 'no-versions'}
+}
+
+/**
+ * Which entry a document read addresses.
+ *
+ * The target reference comes from the client, which turns whatever id the
+ * caller passed into the published one, so callers keep passing the id they
+ * have.
+ *
+ * @internal
+ */
+export function toDocumentCommentsKey(
+  instance: SanityInstance,
+  options: CommentsOptions & {resource: DocumentResource},
+): string {
+  const organizationId = requireOrganizationId(instance, options)
+  const client = getCommentsClient(instance, {resource: options.resource, organizationId})
+  const targetRef = client.collaboration.comments.getTargetDocumentRef(options.documentId)
+
+  return toEntryKey(organizationId, targetRef, toCommentsScope(instance, options))
+}
+
+function toEntryKey(organizationId: string, targetRef: string, scope: CommentsScope): string {
+  const {filter, params} = buildDocumentCommentsQuery(targetRef, scope)
+  return getCommentsKey({filter, params, organizationId})
+}
+
+/**
+ * Every entry a document read could be holding a newly written comment under.
+ *
+ * A create shows before the server confirms it, and which lists it belongs in is
+ * decided by the `variants` each reader asked for rather than by anything the
+ * writer said. They all key off the comment's own target, so they can be
+ * enumerated, which is what lets a reader watching one variant see a new comment
+ * at the same moment as a reader watching another.
+ *
+ * GROQ reads are deliberately not covered: an arbitrary filter cannot be
+ * evaluated locally, so those lists follow when the listener echoes the comment.
+ *
+ * @internal
+ */
+export function toWrittenCommentKeys(
+  instance: SanityInstance,
+  options: Pick<DatasetHandle, 'collaboration'>,
+  comment: StoredComment,
+): string[] {
+  const organizationId = requireOrganizationId(instance, options)
+  const {sourceDocumentId} = comment.target
+
+  const scopes: CommentsScope[] = [
+    {type: 'any'},
+    {type: 'exact', sourceDocumentId},
+    // A draft or published id belongs in the pooled list as well. A version id
+    // does not, which is what keeps a release's comments out of it.
+    ...(isVersionId(DocumentId(sourceDocumentId)) ? [] : [{type: 'no-versions' as const}]),
+  ]
+
+  return scopes.map((scope) => toEntryKey(organizationId, comment.target.document._ref, scope))
+}
+
+/** Which entry a GROQ read addresses. */
+function toCommentsQueryKey(
+  instance: SanityInstance,
+  options: WithResource<CommentsQueryOptions>,
+): string {
+  return getCommentsKey({
+    filter: buildCommentsQueryFilter(options.filter),
+    params: options.params ?? {},
+    organizationId: requireOrganizationId(instance, options),
+  })
 }
 
 function applyEvent(
@@ -145,7 +302,7 @@ function applyEvent(
       state.set('receiveComment', receiveComment(key, event.comment))
       return
     case 'disappear':
-      state.set('removeComment', removeCommentById(event.commentId))
+      state.set('removeComment', removeCommentFromEntry(key, event.commentId))
       return
     case 'error':
       state.set('setCommentsError', setCommentsError(key, event.error))
@@ -155,24 +312,27 @@ function applyEvent(
 
       // Our own writes come back through the listener. When a later transaction
       // is already in flight for this comment, an echo of an earlier one would
-      // undo it on screen, so drop it and wait for the one we are expecting.
-      if (pending && pending !== event.transactionId) return
+      // undo it on screen, so hold it back and wait for the one we are
+      // expecting. Held rather than discarded, so that if our write fails the
+      // rollback can land on this state instead of erasing it.
+      if (pending && pending !== event.transactionId) {
+        state.set('recordDroppedEcho', recordDroppedEcho(event.comment))
+        return
+      }
 
       state.set('receiveComment', receiveComment(key, event.comment))
       if (pending) {
-        state.set('clearPendingTransaction', clearPendingTransaction(event.comment._id))
+        state.set('clearPendingTransaction', clearPendingTransaction(event.comment._id, pending))
       }
     }
   }
 }
 
-const watchSubscribedDocuments = ({
+const watchSubscribedQueries = ({
   state,
   instance,
   key,
 }: StoreContext<CommentsStoreState, BoundResourceKey>) => {
-  const client$ = observeAddonDatasetClient(instance, {resource: key.resource})
-
   return state.observable
     .pipe(
       map((current) => new Set(Object.keys(current.entries))),
@@ -195,28 +355,23 @@ const watchSubscribedDocuments = ({
           switchMap((event) => {
             if (!event.added) return EMPTY
 
-            const {documentId, documentVersionId} = parseCommentsKey(group$.key)
+            const {filter, params, organizationId} = parseCommentsKey(group$.key)
 
-            return client$.pipe(
-              switchMap((client) => {
-                if (!client) {
-                  // A dataset that does not exist holds no comments. Settling on
-                  // an empty list matters: leaving it unset would suspend
-                  // readers forever on a project nobody has commented in.
-                  state.set('setComments', setComments(group$.key, []))
-                  return EMPTY
-                }
-
-                return observeComments({client, documentId, documentVersionId}).pipe(
+            return observeCommentsClient(instance, {
+              resource: key.resource,
+              organizationId,
+            }).pipe(
+              switchMap((client) =>
+                observeComments({client, filter, params}).pipe(
                   tap((commentsEvent) => applyEvent(state, group$.key, commentsEvent)),
-                  // Keep following the addon client after one listener fails.
-                  // A token refresh or reconnect can then supply a new client.
+                  // Keep following the client after one listener fails. A token
+                  // refresh or reconnect can then supply a new one.
                   catchError((error: unknown) => {
                     state.set('setCommentsError', setCommentsError(group$.key, error))
                     return EMPTY
                   }),
-                )
-              }),
+                ),
+              ),
             )
           }),
         ),
@@ -231,9 +386,10 @@ export const commentsStore = defineStore<CommentsStoreState, BoundResourceKey>({
     entries: {},
     pendingCreates: {},
     pendingTransactions: {},
+    droppedEchoes: {},
   }),
   initialize: (context) => {
-    const subscription = watchSubscribedDocuments(context)
+    const subscription = watchSubscribedQueries(context)
     return () => subscription.unsubscribe()
   },
 })
@@ -249,7 +405,6 @@ export const commentsStore = defineStore<CommentsStoreState, BoundResourceKey>({
  * die with the map they belong to.
  */
 const normalizedCache = new WeakMap<object, Comment[]>()
-const filteredCache = new WeakMap<object, Map<string, Comment[]>>()
 const threadCache = new WeakMap<object, Map<string, CommentThread[]>>()
 
 /**
@@ -272,60 +427,37 @@ function normalizeAll(commentsById: Record<string, StoredComment>): Comment[] {
   return normalized
 }
 
-function filterComments(
-  all: Comment[],
-  fieldPath: string | undefined,
-  status: CommentStatus | undefined,
-): Comment[] {
-  let byFilter = filteredCache.get(all)
-  if (!byFilter) {
-    byFilter = new Map()
-    filteredCache.set(all, byFilter)
-  }
-
-  // `\0` stands in for "no field filter", which is not the same as `''`.
-  const cacheKey = `${fieldPath ?? '\0'}|${status ?? ''}`
-  const cached = byFilter.get(cacheKey)
-  if (cached) return cached
-
-  const filtered = all.filter((comment) => {
-    if (status && comment.status !== status) return false
-    if (fieldPath === undefined) return true
-    return comment.fieldPath === fieldPath
-  })
-
-  byFilter.set(cacheKey, filtered)
-  return filtered
-}
-
-function selectComments(
-  {state, instance}: SelectorContext<CommentsStoreState>,
-  options: CommentsOptions,
-): Comment[] | undefined {
+/** The entry's comments, or `undefined` while it has yet to load. */
+function selectEntry(
+  {state}: SelectorContext<CommentsStoreState>,
+  key: string,
+): Record<string, StoredComment> | undefined {
   if (state.error) throw state.error
 
-  const entry = state.entries[getCommentsKey(toCommentsKeyParts(instance, options))]
-  if (entry?.error) throw entry.error
-  if (!entry?.comments) return undefined
+  const entry = state.entries[key]
 
-  return filterComments(
-    normalizeAll(entry.comments),
-    options.fieldPath === undefined ? undefined : toCommentFieldPath(options.fieldPath),
-    options.status,
-  )
+  // A list that has loaded keeps being served after its listener fails. The
+  // comments stop updating until the listener comes back, which is worse than
+  // live but better than replacing a list someone is reading with an error. A
+  // failure before the first snapshot has nothing to fall back on.
+  if (entry?.error && !entry.comments) throw entry.error
+
+  return entry?.comments
 }
 
-function selectCommentThreads(
+function selectDocumentComments(
   context: SelectorContext<CommentsStoreState>,
-  options: CommentsOptions,
+  options: WithResource<CommentsOptions>,
 ): CommentThread[] | undefined {
-  const comments = selectComments(context, {...options, fieldPath: undefined, status: undefined})
-  if (comments === undefined) return undefined
+  const comments = selectEntry(context, toDocumentCommentsKey(context.instance, options))
+  if (!comments) return undefined
 
-  let byFilter = threadCache.get(comments)
+  const all = normalizeAll(comments)
+
+  let byFilter = threadCache.get(all)
   if (!byFilter) {
     byFilter = new Map()
-    threadCache.set(comments, byFilter)
+    threadCache.set(all, byFilter)
   }
 
   const fieldPath =
@@ -334,7 +466,9 @@ function selectCommentThreads(
   const cached = byFilter.get(cacheKey)
   if (cached) return cached
 
-  const threads = buildCommentThreads(comments).filter((thread) => {
+  // Threads are built from every comment on the document and filtered whole, so
+  // that a resolved thread's replies travel with their parent.
+  const threads = buildCommentThreads(all).filter((thread) => {
     if (options.status && thread.parentComment.status !== options.status) return false
     if (fieldPath === undefined) return true
     return thread.fieldPath === fieldPath
@@ -343,111 +477,136 @@ function selectCommentThreads(
   return threads
 }
 
+function selectCommentsQuery(
+  context: SelectorContext<CommentsStoreState>,
+  options: WithResource<CommentsQueryOptions>,
+): Comment[] | undefined {
+  const comments = selectEntry(context, toCommentsQueryKey(context.instance, options))
+  if (!comments) return undefined
+  return normalizeAll(comments)
+}
+
 /**
- * Every comment on a document, newest first.
+ * Holds a subscriber for as long as something is reading the entry, and a
+ * little longer, so a reader that comes straight back reuses the loaded list.
+ */
+function subscribeToEntry(state: StoreState<CommentsStoreState>, key: string): () => void {
+  const subscriptionId = randomId(16)
+  state.set('addSubscriber', addSubscriber(key, subscriptionId))
+
+  return () => {
+    setCleanupTimeout(
+      () => state.set('removeSubscriber', removeSubscriber(key, subscriptionId)),
+      COMMENTS_STATE_CLEAR_DELAY,
+    )
+  }
+}
+
+const documentCommentsState = createStateSourceAction({
+  selector: selectDocumentComments,
+  onSubscribe: ({state, instance}, options: WithResource<CommentsOptions>) =>
+    subscribeToEntry(state, toDocumentCommentsKey(instance, options)),
+})
+
+const commentsQueryState = createStateSourceAction({
+  selector: selectCommentsQuery,
+  onSubscribe: ({state, instance}, options: WithResource<CommentsQueryOptions>) =>
+    subscribeToEntry(state, toCommentsQueryKey(instance, options)),
+})
+
+/**
+ * Threads on a document, newest thread first, each with its replies oldest
+ * first.
  *
- * `undefined` until the first snapshot arrives. Replies are included; use
- * {@link getCommentThreadsState} to read them grouped.
+ * `undefined` until the first snapshot arrives. A thread's `status` and
+ * `fieldPath` come from its first comment, so filtering by either selects whole
+ * threads rather than individual replies.
  *
  * @beta
  */
-export const getCommentsState: (
-  instance: SanityInstance,
-  options: CommentsOptions,
-) => StateSource<Comment[] | undefined> = bindActionByResource(
-  commentsStore,
-  createStateSourceAction({
-    selector: selectComments,
-    onSubscribe: ({state, instance}, options: CommentsOptions) => {
-      const key = getCommentsKey(toCommentsKeyParts(instance, options))
-      const subscriptionId = randomId(16)
-      state.set('addSubscriber', addSubscriber(key, subscriptionId))
-
-      return () => {
-        setCleanupTimeout(
-          () => state.set('removeSubscriber', removeSubscriber(key, subscriptionId)),
-          COMMENTS_STATE_CLEAR_DELAY,
-        )
-      }
-    },
-  }),
-)
-
-/**
- * Threads on a document, newest thread first, each with its replies oldest first.
- *
- * A thread's `status` and `fieldPath` come from its first comment, so filtering
- * by either selects whole threads rather than individual replies.
- *
- * @beta
- */
-export const getCommentThreadsState: (
+export const getDocumentCommentsState: (
   instance: SanityInstance,
   options: CommentsOptions,
 ) => StateSource<CommentThread[] | undefined> = bindActionByResource(
   commentsStore,
-  createStateSourceAction({
-    selector: selectCommentThreads,
-    onSubscribe: ({state, instance}, options: CommentsOptions) => {
-      const key = getCommentsKey(toCommentsKeyParts(instance, options))
-      const subscriptionId = randomId(16)
-      state.set('addSubscriber', addSubscriber(key, subscriptionId))
-
-      return () => {
-        setCleanupTimeout(
-          () => state.set('removeSubscriber', removeSubscriber(key, subscriptionId)),
-          COMMENTS_STATE_CLEAR_DELAY,
-        )
-      }
-    },
-  }),
+  (context: StoreContext<CommentsStoreState, BoundResourceKey>, options: CommentsOptions) =>
+    documentCommentsState(context, {...options, resource: context.key.resource}),
 )
 
 /**
- * Waits for a document's comments to load.
+ * Comments matching a GROQ filter, newest first, replies included.
+ *
+ * `undefined` until the first snapshot arrives.
+ *
+ * @beta
+ */
+export const getCommentsQueryState: (
+  instance: SanityInstance,
+  options: CommentsQueryOptions,
+) => StateSource<Comment[] | undefined> = bindActionByResource(
+  commentsStore,
+  (context: StoreContext<CommentsStoreState, BoundResourceKey>, options: CommentsQueryOptions) =>
+    commentsQueryState(context, {...options, resource: context.key.resource}),
+)
+
+/**
+ * Waits for a document's threads to load.
  *
  * Holds a subscriber only while resolving, so a component that suspends on this
  * and then errors before mounting does not strand the list. Throw the promise
- * for Suspense, then read through {@link getCommentsState}.
+ * for Suspense, then read through {@link getDocumentCommentsState}.
  *
  * @beta
  */
-export const resolveComments: (
+export const resolveDocumentComments: (
   instance: SanityInstance,
-  options: ResolveCommentsOptions,
-) => Promise<Comment[]> = bindActionByResource(
-  commentsStore,
-  (
-    {state, instance}: StoreContext<CommentsStoreState, BoundResourceKey>,
-    {signal, ...options}: ResolveCommentsOptions,
-  ) => resolveList(state, instance, options, signal, getCommentsState),
-)
-
-/**
- * Waits for a document's comments to load, grouped into threads.
- * @beta
- */
-export const resolveCommentThreads: (
-  instance: SanityInstance,
-  options: ResolveCommentsOptions,
+  options: ResolveDocumentCommentsOptions,
 ) => Promise<CommentThread[]> = bindActionByResource(
   commentsStore,
   (
-    {state, instance}: StoreContext<CommentsStoreState, BoundResourceKey>,
-    {signal, ...options}: ResolveCommentsOptions,
-  ) => resolveList(state, instance, options, signal, getCommentThreadsState),
+    context: StoreContext<CommentsStoreState, BoundResourceKey>,
+    {signal, ...options}: ResolveDocumentCommentsOptions,
+  ) => {
+    const withResource = {...options, resource: context.key.resource}
+    return resolveList(
+      context.state,
+      toDocumentCommentsKey(context.instance, withResource),
+      documentCommentsState(context, withResource),
+      signal,
+    )
+  },
+)
+
+/**
+ * Waits for a GROQ comment query to load.
+ *
+ * @beta
+ */
+export const resolveCommentsQuery: (
+  instance: SanityInstance,
+  options: ResolveCommentsQueryOptions,
+) => Promise<Comment[]> = bindActionByResource(
+  commentsStore,
+  (
+    context: StoreContext<CommentsStoreState, BoundResourceKey>,
+    {signal, ...options}: ResolveCommentsQueryOptions,
+  ) => {
+    const withResource = {...options, resource: context.key.resource}
+    return resolveList(
+      context.state,
+      toCommentsQueryKey(context.instance, withResource),
+      commentsQueryState(context, withResource),
+      signal,
+    )
+  },
 )
 
 function resolveList<T>(
   state: StoreState<CommentsStoreState>,
-  instance: SanityInstance,
-  options: CommentsOptions,
+  key: string,
+  {getCurrent}: StateSource<T | undefined>,
   signal: AbortSignal | undefined,
-  getState: (i: SanityInstance, o: CommentsOptions) => StateSource<T | undefined>,
 ): Promise<T> {
-  const key = getCommentsKey(toCommentsKeyParts(instance, options))
-  const {getCurrent} = getState(instance, options)
-
   // Loading is driven by subscribers, so without one here nothing would ever
   // fetch and this promise would never settle. Holding it only for the duration
   // of the resolve also means a component that suspends and then errors before
@@ -480,4 +639,24 @@ function resolveList<T>(
   const releaseLater = () => setCleanupTimeout(release, COMMENTS_STATE_CLEAR_DELAY)
   promise.then(releaseLater, releaseLater)
   return promise
+}
+
+/**
+ * The exact document id a comment is written against.
+ *
+ * Under a release perspective that is the document's version id, so a comment
+ * written while viewing a release belongs to that release. The API derives the
+ * published id it hangs off from this.
+ *
+ * @internal
+ */
+export function toSourceDocumentId(instance: SanityInstance, options: DocumentHandle): string {
+  const documentId = DocumentId(options.documentId)
+  const perspective = options.perspective ?? instance.config.perspective
+
+  if (isReleasePerspective(perspective) && !isVersionId(documentId)) {
+    return getVersionId(documentId, perspective.releaseName)
+  }
+
+  return documentId
 }

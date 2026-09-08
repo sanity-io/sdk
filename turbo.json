@@ -17,7 +17,7 @@
     "@sanity/kitchensink-react#build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"],
-      "env": ["SDK_E2E_*", "SANITY_APP_E2E_*"]
+      "env": ["SDK_E2E_*", "SANITY_APP_E2E_*", "SANITY_APP_ORGANIZATION_ID"]
     },
     "build:bundle": {
       "dependsOn": ["^build:bundle"],
@@ -46,7 +46,7 @@
     "dev": {
       "persistent": true,
       "cache": false,
-      "env": ["SANITY_INTERNAL_ENV", "PTE_LOCAL_PKGS"]
+      "env": ["SANITY_INTERNAL_ENV", "PTE_LOCAL_PKGS", "SANITY_APP_ORGANIZATION_ID"]
     },
     "docs": {
       "dependsOn": ["^build"],
