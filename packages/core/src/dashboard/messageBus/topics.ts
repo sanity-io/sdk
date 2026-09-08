@@ -1,9 +1,7 @@
-import {
-  type Application,
-  type ApplicationInclude,
-  type CurrentUser,
-  type OrganizationBase,
-} from '@sanity/sdk'
+import {type CurrentUser} from '@sanity/types'
+
+import {type Application, type ApplicationInclude} from '../../applications/applications'
+import {type OrganizationBase} from '../../organization/organization'
 
 /**
  * Identifies a module federation expose and the manifest that serves it.

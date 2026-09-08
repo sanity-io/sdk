@@ -1,11 +1,11 @@
 import {type ClientError} from '@sanity/client'
 import {AuthStateType, setAuthToken} from '@sanity/sdk'
+import {getDashboardMessageBus} from '@sanity/sdk/_internal'
+import {type MessageBus} from '@sanity/sdk/dashboard'
 import React, {type PropsWithChildren, useEffect, useRef} from 'react'
 import {defer, of} from 'rxjs'
 import {catchError} from 'rxjs/operators'
 
-import {type MessageBus} from '../dashboard/messageBus/bus'
-import {getDashboardMessageBus} from '../dashboard/messageBus/client'
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useSanityInstance} from '../hooks/context/useSanityInstance'
 

@@ -1,5 +1,4 @@
 /* eslint-disable no-console -- The bus can initialize before the SDK logger exists. */
-import {type Application} from '@sanity/sdk'
 import {
   BehaviorSubject,
   filter,
@@ -10,6 +9,7 @@ import {
   type Subscription,
 } from 'rxjs'
 
+import {type Application} from '../../applications/applications'
 import {
   DASHBOARD_TOPIC_MANIFEST,
   type EventTopic,

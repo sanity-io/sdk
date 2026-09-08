@@ -1,36 +1,4 @@
 export {DashboardTokenRefreshProvider as TokenRefreshProvider} from '../context/DashboardTokenRefresh'
-export type {
-  ConnectMessageBusOptions,
-  MessageBus,
-  MessageBusAbortOptions,
-  MessageBusEmitOptions,
-  MessageBusEmitResult,
-  MessageBusErrorCode,
-  MessageBusMessage,
-  MessageBusMeta,
-  MessageBusQueryOptions,
-  MessageBusStateSource,
-} from '../dashboard/messageBus/bus'
-export {connectMessageBus} from '../dashboard/messageBus/bus'
-export {MessageBusError} from '../dashboard/messageBus/bus'
-export type {
-  ApplicationConfig,
-  ApplicationConfigAppType,
-  DashboardTopics,
-  EventTopic,
-  EventTopicDef,
-  NavigationLocation,
-  NavigationTarget,
-  PayloadOf,
-  RemoteModuleRef,
-  ReplyOf,
-  StateTopic,
-  StateTopicDef,
-  TopicName,
-  TopicResult,
-  Topics,
-  ValueOf,
-} from '../dashboard/messageBus/topics'
 export {
   type CanvasUrl,
   type CoreApplicationUrl,
@@ -57,3 +25,32 @@ export {
 } from '../hooks/dashboard/useNavigateToStudioDocument'
 export {useOrganizationId} from '../hooks/dashboard/useOrganizationId'
 export {useWindowTitle} from '../hooks/dashboard/useWindowTitle'
+export type {
+  ApplicationConfig,
+  ApplicationConfigAppType,
+  ConnectMessageBusOptions,
+  DashboardTopics,
+  EventTopic,
+  EventTopicDef,
+  MessageBus,
+  MessageBusAbortOptions,
+  MessageBusEmitOptions,
+  MessageBusEmitResult,
+  MessageBusErrorCode,
+  MessageBusMessage,
+  MessageBusMeta,
+  MessageBusQueryOptions,
+  MessageBusStateSource,
+  NavigationLocation,
+  NavigationTarget,
+  PayloadOf,
+  RemoteModuleRef,
+  ReplyOf,
+  StateTopic,
+  StateTopicDef,
+  TopicName,
+  TopicResult,
+  Topics,
+  ValueOf,
+} from '@sanity/sdk/dashboard'
+export {connectMessageBus, MessageBusError} from '@sanity/sdk/dashboard'

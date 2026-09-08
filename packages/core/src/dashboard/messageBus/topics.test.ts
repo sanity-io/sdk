@@ -1,6 +1,6 @@
-import {type Application, type ApplicationInclude} from '@sanity/sdk'
 import {describe, expectTypeOf, it} from 'vitest'
 
+import {type Application, type ApplicationInclude} from '../../applications/applications'
 import {type MessageBus} from './bus'
 import {
   type ApplicationConfig,
