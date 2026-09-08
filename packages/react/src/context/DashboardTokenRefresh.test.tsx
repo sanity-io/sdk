@@ -27,7 +27,8 @@ vi.mock('../hooks/auth/useAuthState', () => ({
   useAuthState: vi.fn(),
 }))
 
-vi.mock('../dashboard/messageBus/client', () => ({
+vi.mock('@sanity/sdk/_internal', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@sanity/sdk/_internal')>()),
   getDashboardMessageBus: () => messageBus.client,
 }))
 

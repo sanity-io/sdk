@@ -2,7 +2,10 @@ import {connectMessageBus, isMessageBusInstalled, type MessageBus} from './bus'
 
 let dashboardMessageBus: MessageBus | undefined
 
-/** Returns the shared message bus connection for this dashboard application. */
+/**
+ * Returns the shared message bus connection for this dashboard application.
+ * @internal
+ */
 export function getDashboardMessageBus(): MessageBus | undefined {
   // An absent host is retried because remotes can load before Workbench installs the bus.
   if (!dashboardMessageBus && isMessageBusInstalled()) {
@@ -11,7 +14,10 @@ export function getDashboardMessageBus(): MessageBus | undefined {
   return dashboardMessageBus
 }
 
-/** Returns whether this application is connected to an installed dashboard message bus. */
+/**
+ * Returns whether this application is connected to an installed dashboard message bus.
+ * @internal
+ */
 export function isDashboardEnvironment(): boolean {
   return getDashboardMessageBus() !== undefined
 }

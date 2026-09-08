@@ -49,6 +49,10 @@
     "./comlink": {
       "source": "./src/_exports/comlink.ts",
       "default": "./dist/_exports/comlink.js"
+    },
+    "./dashboard": {
+      "source": "./src/_exports/dashboard.ts",
+      "default": "./dist/_exports/dashboard.js"
     }
   },
   "publishConfig": {
@@ -57,7 +61,8 @@
       "./package.json": "./package.json",
       "./_internal": "./dist/_exports/_internal.js",
       "./agent": "./dist/_exports/agent.js",
-      "./comlink": "./dist/_exports/comlink.js"
+      "./comlink": "./dist/_exports/comlink.js",
+      "./dashboard": "./dist/_exports/dashboard.js"
     },
     "access": "public"
   },

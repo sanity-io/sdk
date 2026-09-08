@@ -1,1 +1,1 @@
-export {installMessageBus, resetMessageBus} from '../dashboard/messageBus/bus'
+export {installMessageBus, resetMessageBus} from '@sanity/sdk/_internal'
