@@ -50,6 +50,11 @@ const RANGE = {
   end: {_key: 'b1', offset: 5},
 }
 
+/** The blocks a range can be resolved against instead of the stored document. */
+const FIELD_VALUE = [
+  {_type: 'block', _key: 'b1', children: [{_type: 'span', text: 'unsaved text'}]},
+]
+
 const comment = storedComment
 
 /** Puts comments into the store without going through the listener. */
@@ -187,12 +192,32 @@ describe('createComment', () => {
     })
   })
 
+  it('sends the blocks a range is to be resolved against', async () => {
+    // What an editor holding unsaved changes has to pass: the offsets count
+    // into text the server has not seen, so resolving them against the stored
+    // document would land the comment on the wrong words.
+    await createComment(instance, {
+      ...CREATE,
+      message: MESSAGE,
+      fieldPath: 'body',
+      range: RANGE,
+      fieldValue: FIELD_VALUE,
+    })
+
+    expect(comments.create.mock.calls[0][0].target).toMatchObject({
+      path: 'body',
+      range: RANGE,
+      fieldValue: FIELD_VALUE,
+    })
+  })
+
   it('leaves out what it was not given', async () => {
     await createComment(instance, {...CREATE, message: MESSAGE})
 
     const body = comments.create.mock.calls[0][0]
     expect('context' in body).toBe(false)
     expect('range' in body.target).toBe(false)
+    expect('fieldValue' in body.target).toBe(false)
     expect('documentRevisionId' in body.target).toBe(false)
   })
 
@@ -553,6 +578,24 @@ describe('updateCommentRange', () => {
       {range: RANGE},
       {transactionId: expect.any(String), tag: 'comments.update-range'},
     )
+  })
+
+  it('patches the blocks a new range is to be resolved against', async () => {
+    await updateCommentRange(instance, {commentId: 'c1', range: RANGE, fieldValue: FIELD_VALUE})
+
+    expect(comments.update).toHaveBeenCalledWith(
+      'c1',
+      {range: RANGE, fieldValue: FIELD_VALUE},
+      {transactionId: expect.any(String), tag: 'comments.update-range'},
+    )
+  })
+
+  it('writes nothing when it is not given a range', async () => {
+    // Legal, since the API's update body treats an absent range as "leave it
+    // alone", but for this action that is a request with nothing in it.
+    await updateCommentRange(instance, {commentId: 'c1'})
+
+    expect(comments.update).not.toHaveBeenCalled()
   })
 
   it('leaves lastEditedAt alone', async () => {

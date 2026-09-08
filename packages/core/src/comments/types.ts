@@ -1,5 +1,6 @@
 import {
   type CollaborationCommentDocument,
+  type CollaborationCommentFieldValue,
   type CollaborationCommentRange,
   type CollaborationCommentReactionShortName,
 } from '@sanity/client'
@@ -62,6 +63,21 @@ export interface CommentTextSelection {
  * @beta
  */
 export type CommentRange = CollaborationCommentRange
+
+/**
+ * The Portable Text a {@link CommentRange} is offsets into.
+ *
+ * Pass it alongside a range to have the API resolve the range against these
+ * blocks rather than against the document it holds. That is what an editor with
+ * unsaved changes needs: the range describes text the server has not seen yet,
+ * so resolving it against the stored document lands the comment on the wrong
+ * words, or nowhere.
+ *
+ * The blocks from the range's start `_key` through its end `_key` are enough;
+ * the whole field is also fine.
+ * @beta
+ */
+export type CommentFieldValue = CollaborationCommentFieldValue
 
 /**
  * The emoji a reaction can be, by short name.

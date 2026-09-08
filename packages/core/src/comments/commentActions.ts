@@ -31,6 +31,7 @@ import {
 } from './reducers'
 import {
   type Comment,
+  type CommentFieldValue,
   type CommentMessage,
   type CommentRange,
   type CommentReactionShortName,
@@ -38,8 +39,38 @@ import {
   type StoredComment,
 } from './types'
 
+/**
+ * An inline anchor being written, and optionally the text to resolve it
+ * against.
+ *
+ * The two travel together rather than being independent options, because a
+ * `fieldValue` describes a range and means nothing without one. Same shape the
+ * comment API's own types use, so the combinations it rejects do not compile.
+ *
+ * @beta
+ */
+export interface CommentAnchor {
+  /**
+   * Anchors the comment to a run of text inside the field, by offset into the
+   * Portable Text blocks it spans.
+   *
+   * The API resolves this into the stored selection and content snapshot, so
+   * what comes back is {@link Comment.selection} rather than the range itself.
+   */
+  range: CommentRange
+  /**
+   * The blocks the offsets in `range` count into. Defaults to the field as the
+   * server holds it.
+   *
+   * Pass the editor's current value when it has changes the server has not seen
+   * yet, since a range resolved against the stored document would land on the
+   * wrong words.
+   */
+  fieldValue?: CommentFieldValue
+}
+
 /** @beta */
-export interface CreateCommentOptions extends DocumentHandle {
+export type CreateCommentOptions = DocumentHandle & {
   message: CommentMessage
   /**
    * Which field the thread hangs off, for example `title` or
@@ -52,14 +83,6 @@ export interface CreateCommentOptions extends DocumentHandle {
    * looking at that document.
    */
   fieldPath: string | Path
-  /**
-   * Anchors the comment to a run of text inside the field, by offset into the
-   * Portable Text blocks it spans.
-   *
-   * The API resolves this into the stored selection and content snapshot, so
-   * what comes back is {@link Comment.selection} rather than the range itself.
-   */
-  range?: CommentRange
   /** Reuse the id of a failed comment to retry it. Defaults to a new id. */
   commentId?: string
   /** Defaults to a new id, which starts a new thread. */
@@ -78,7 +101,7 @@ export interface CreateCommentOptions extends DocumentHandle {
    * shape is worth promising.
    */
   context?: Record<string, unknown>
-}
+} & (CommentAnchor | {range?: never; fieldValue?: never})
 
 /**
  * A dataset handle rather than a document one: everything placing the reply —
@@ -101,15 +124,16 @@ export interface UpdateCommentOptions extends DatasetHandle {
   message: CommentMessage
 }
 
-/** @beta */
-export interface UpdateCommentRangeOptions extends DatasetHandle {
+/**
+ * Where a comment now attaches, within the field and document it already
+ * targets: a new range, `null` to drop the anchor and leave a field-level
+ * comment, or nothing at all to leave the anchor as it is.
+ *
+ * @beta
+ */
+export type UpdateCommentRangeOptions = DatasetHandle & {
   commentId: string
-  /**
-   * Where the comment now attaches, within the field and document it already
-   * targets. `null` drops the anchor and leaves a field-level comment.
-   */
-  range: CommentRange | null
-}
+} & (CommentAnchor | {range: null; fieldValue?: never} | {range?: undefined; fieldValue?: never})
 
 /** @beta */
 export interface SetCommentStatusOptions extends DatasetHandle {
@@ -312,6 +336,7 @@ export const createComment: (
     options: CreateCommentOptions,
   ) => {
     const {instance, key} = context
+    const {range, fieldValue} = options
     const client = getWritableClient(instance, key, options)
     const fieldPath = requireFieldPath(options.fieldPath)
     const commentId = options.commentId ?? randomUuid()
@@ -346,8 +371,11 @@ export const createComment: (
           documentType: options.documentType,
           ...(options.documentRevisionId ? {documentRevisionId: options.documentRevisionId} : {}),
           // The API stores the field as `target.path.field` and resolves the
-          // range against the document into a selection.
-          ...(options.range ? {path: fieldPath, range: options.range} : {path: fieldPath}),
+          // range into a selection — against `fieldValue` when it was given one,
+          // otherwise against the document.
+          ...(range
+            ? {path: fieldPath, range, ...(fieldValue ? {fieldValue} : {})}
+            : {path: fieldPath}),
         },
       },
       client,
@@ -513,19 +541,23 @@ export const updateCommentRange: (
     context: StoreContext<CommentsStoreState, BoundResourceKey>,
     options: UpdateCommentRangeOptions,
   ) => {
-    const {range} = options
+    const {range, fieldValue} = options
+
+    // The API takes an update that leaves the range alone, since it shares one
+    // body with the other comment updates. Here it would be a request that
+    // changes nothing, so it is not worth making.
+    if (range === undefined) return
 
     return patchComment(
       context,
       options,
       // A new anchor has nothing local to show: the selection it becomes is the
-      // API's to resolve against the document. Dropping one is knowable, so
-      // that shows straight away.
+      // API's to resolve. Dropping one is knowable, so that shows straight away.
       (previous) =>
         range === null && previous.target.path
           ? {target: {...previous.target, path: {field: previous.target.path.field}}}
           : {},
-      {range},
+      range === null ? {range} : {range, ...(fieldValue ? {fieldValue} : {})},
       'comments.update-range',
     )
   },

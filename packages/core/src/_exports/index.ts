@@ -52,6 +52,7 @@ export type {ClientStoreState as ClientState} from '../client/clientStore'
 export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
 export {
   addReaction,
+  type CommentAnchor,
   createComment,
   type CreateCommentOptions,
   type ReactionOptions,
@@ -80,6 +81,7 @@ export {
 } from '../comments/commentsStore'
 export {
   type Comment,
+  type CommentFieldValue,
   type CommentLocalState,
   type CommentMessage,
   type CommentRange,

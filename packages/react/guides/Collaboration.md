@@ -111,16 +111,16 @@ function ResolveButton({commentId}: {commentId: string}) {
 }
 ```
 
-| Action               | Key options                                       | Notes                                                          |
-| -------------------- | ------------------------------------------------- | -------------------------------------------------------------- |
-| `createComment`      | document handle, `fieldPath`, `message`, `range?` | Starts a thread. Returns the new `Comment`.                    |
-| `replyToComment`     | `parentCommentId`, `message`                      | Placement comes from the parent, which has to be loaded.       |
-| `updateComment`      | `commentId`, `message`                            | Rewrites the message and marks the comment edited.             |
-| `updateCommentRange` | `commentId`, `range`                              | Re-anchors without marking it edited. `null` drops the anchor. |
-| `setCommentStatus`   | `commentId`, `status`                             | Pass the thread's first comment; replies follow it.            |
-| `removeComment`      | `commentId`                                       | Removes replies too when it starts a thread.                   |
-| `addReaction`        | `commentId`, `shortName`                          | Adds the current user's reaction.                              |
-| `removeReaction`     | `commentId`, `shortName`                          | Removes the current user's reaction.                           |
+| Action               | Key options                                                      | Notes                                                                                    |
+| -------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `createComment`      | document handle, `fieldPath`, `message`, `range?`, `fieldValue?` | Starts a thread. Returns the new `Comment`.                                              |
+| `replyToComment`     | `parentCommentId`, `message`                                     | Placement comes from the parent, which has to be loaded.                                 |
+| `updateComment`      | `commentId`, `message`                                           | Rewrites the message and marks the comment edited.                                       |
+| `updateCommentRange` | `commentId`, `range`, `fieldValue?`                              | Re-anchors without marking it edited. `null` drops the anchor; omitting it does nothing. |
+| `setCommentStatus`   | `commentId`, `status`                                            | Pass the thread's first comment; replies follow it.                                      |
+| `removeComment`      | `commentId`                                                      | Removes replies too when it starts a thread.                                             |
+| `addReaction`        | `commentId`, `shortName`                                         | Adds the current user's reaction.                                                        |
+| `removeReaction`     | `commentId`, `shortName`                                         | Removes the current user's reaction.                                                     |
 
 `createComment` also takes `commentId` and `threadId` to write against ids you chose, `documentRevisionId` to record which revision the comment was written about, and `context` for free-form data of your own.
 
@@ -203,11 +203,30 @@ The API resolves the range and the comment comes back with:
 
 Resolving a selection back to a position in a live editor needs the editor's current value, so that lives in `@portabletext/plugin-sdk-value` rather than in the SDK — see [Portable Text Editor](../README.md#portable-text-editor).
 
-When the anchored text moves, re-anchor with `updateCommentRange`. It exists precisely so that a mechanical move does not come back marked as edited:
+### Ranges into unsaved text
+
+The range is resolved against the document the API holds, which is a problem when the offsets count into text nobody has saved yet: the comment lands on the wrong words, or on nothing. Pass `fieldValue` — the blocks the offsets belong to — and the range is resolved against those instead:
+
+```tsx
+createComment({
+  documentId,
+  documentType: 'article',
+  fieldPath: 'body',
+  message: toMessage('Tighten this up'),
+  range: {start: {_key: 'b1', offset: 0}, end: {_key: 'b1', offset: 12}},
+  fieldValue: editorValue, // the blocks `b1` through `b1`, or the whole field
+})
+```
+
+`fieldValue` only means something as the text a range counts into, so it goes with a `range` or not at all — passing one alone does not compile.
+
+When the anchored text moves, re-anchor with `updateCommentRange`. It exists precisely so that a mechanical move does not come back marked as edited, and it takes a `fieldValue` for the same reason `createComment` does:
 
 ```tsx
 updateCommentRange({commentId, range: {start: {_key, offset: 4}, end: {_key, offset: 16}}})
+updateCommentRange({commentId, range: {start, end}, fieldValue: editorValue})
 updateCommentRange({commentId, range: null}) // leaves a field-level comment
+updateCommentRange({commentId}) // legal, and does nothing
 ```
 
 ## Multiple resources and perspectives
@@ -233,6 +252,7 @@ Exported from `@sanity/sdk-react` and `@sanity/sdk`:
 - `CommentStatus` — `'open' | 'resolved'`
 - `CommentMessage` — the Portable Text body
 - `CommentRange` and `CommentTextSelection` — the write and read sides of an inline anchor
+- `CommentFieldValue` — Portable Text a `CommentRange` is resolved against, and `CommentAnchor` — the two together, as the write actions take them
 - `CommentReaction` and `CommentReactionShortName` — reactions, by emoji short name such as `':+1:'`. The set is closed; the API rejects anything else.
 - `CommentVariants` — which versions of a document to read comments from
 - `CommentLocalState` — why a comment is not yet on the server

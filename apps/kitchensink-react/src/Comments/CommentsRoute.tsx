@@ -605,16 +605,18 @@ function NewThreadPanel({
       <Composer
         label="Comment"
         testId="comments-new-thread"
-        onSubmit={(text) =>
-          createComment({
+        onSubmit={(text) => {
+          // Picked whole rather than spread in, since `range` and `fieldValue`
+          // are one option between them and a spread loses that.
+          const options = {
             documentId,
             documentType: DOCUMENT_TYPE,
             perspective,
             fieldPath,
             message: toMessage(text),
-            ...(isPortableTextField ? {range} : {}),
-          })
-        }
+          }
+          return createComment(isPortableTextField ? {...options, range} : options)
+        }}
       />
     </VStack>
   )
