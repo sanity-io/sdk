@@ -53,9 +53,9 @@
     "upload:bundles": "tsx scripts/uploadBundles.mts"
   },
   "devDependencies": {
-    "@commitlint/cli": "^21.0.2",
-    "@commitlint/config-conventional": "^21.0.2",
-    "@commitlint/types": "^21.0.1",
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
+    "@commitlint/types": "^21.2.0",
     "@google-cloud/storage": "^7.22.0",
     "@playwright/test": "catalog:",
     "@repo/config-eslint": "workspace:*",

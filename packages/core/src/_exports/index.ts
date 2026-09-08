@@ -20,6 +20,7 @@ export {
   type ApplicationDeployment,
   type ApplicationInclude,
   type ApplicationInterface,
+  type ApplicationInterfacePlacementMetadata,
   type ApplicationsOptions,
   type ApplicationsResponse,
   type ApplicationStudioConfig,
@@ -194,7 +195,6 @@ export {
   type InstallationActiveConfig,
   type InstallationBase,
   type InstallationInclude,
-  type InstallationInterface,
   type InstallationsOptions,
   type InstallationsResponse,
 } from '../installations/installations'
