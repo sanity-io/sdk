@@ -1,11 +1,18 @@
 import {type ClientError} from '@sanity/client'
 import {AuthStateType, setAuthToken} from '@sanity/sdk'
-import {getDashboardMessageBus} from '@sanity/sdk/_internal'
+import {getDashboardEnvironmentState, getDashboardMessageBus} from '@sanity/sdk/_internal'
 import {type MessageBus} from '@sanity/sdk/dashboard'
-import React, {type PropsWithChildren, useEffect, useRef} from 'react'
+import React, {
+  type PropsWithChildren,
+  useContext,
+  useEffect,
+  useRef,
+  useSyncExternalStore,
+} from 'react'
 import {defer, of} from 'rxjs'
 import {catchError} from 'rxjs/operators'
 
+import {getDashboardModuleContext} from '../dashboard/module'
 import {useAuthState} from '../hooks/auth/useAuthState'
 import {useSanityInstance} from '../hooks/context/useSanityInstance'
 
@@ -93,7 +100,21 @@ function DashboardTokenRefresh({
  * @public
  */
 export const DashboardTokenRefreshProvider: React.FC<PropsWithChildren> = ({children}) => {
-  const messageBus = getDashboardMessageBus()
+  const instance = useSanityInstance()
+  const moduleId = useContext(getDashboardModuleContext())
+  // The store owns the connection and exposes whether one exists as a state source, so React
+  // subscribes to that rather than mirroring it into local state. Connecting happens in an
+  // effect, after commit: a store write during render would notify subscribers mid-render,
+  // and deferring the attempt also gives a host that loads remotes before installing the bus
+  // until mount to do so. A failed attempt is not cached, so any re-run of the effect (deps
+  // changing) tries again; there is no polling.
+  const environment = getDashboardEnvironmentState(instance)
+  const connected = useSyncExternalStore(environment.subscribe, environment.getCurrent)
+  useEffect(() => {
+    if (!connected) getDashboardMessageBus(instance, moduleId)
+  }, [instance, moduleId, connected])
+  // Once connected, this is a cached read: the store returns the existing connection.
+  const messageBus = connected ? getDashboardMessageBus(instance, moduleId) : undefined
   if (messageBus) {
     return <DashboardTokenRefresh messageBus={messageBus}>{children}</DashboardTokenRefresh>
   }
