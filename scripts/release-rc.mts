@@ -38,11 +38,11 @@ async function publishedVersions(name: string): Promise<string[]> {
   // Pass args as an array so the interpolation is the final token. A trailing
   // bare word like `versions` here trips knip's binary detection (depcheck).
   const result = await $`pnpm view ${[name, 'versions', '--json']}`.quiet().nothrow()
-  const parsed = JSON.parse(result.stdout)
   if (result.exitCode === 0) {
+    const parsed = JSON.parse(result.stdout)
     return Array.isArray(parsed) ? parsed : [parsed]
   }
-  if (parsed.error.code === 'ERR_PNPM_FETCH_404') return []
+  if (`${result.stdout}${result.stderr}`.includes('ERR_PNPM_FETCH_404')) return []
   throw result
 }
 
