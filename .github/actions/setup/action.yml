@@ -10,6 +10,7 @@ runs:
   using: composite
   steps:
     - name: Setup Node.js
+      id: node
       uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
         node-version: ${{ inputs.node-version }}
@@ -33,4 +34,15 @@ runs:
     - name: Install dependencies
       # Use setup-node's version so each CI matrix entry tests its requested runtime.
       run: pnpm install --frozen-lockfile --no-runtime
+      shell: bash
+
+    - name: Verify Node.js runtime
+      env:
+        EXPECTED_NODE_VERSION: ${{ steps.node.outputs.node-version }}
+      run: |
+        actual="$(pnpm exec node --version)"
+        if [ "${actual#v}" != "${EXPECTED_NODE_VERSION#v}" ]; then
+          echo "::error::Expected Node $EXPECTED_NODE_VERSION, but pnpm uses $actual"
+          exit 1
+        fi
       shell: bash

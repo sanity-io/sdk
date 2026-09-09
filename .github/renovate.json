@@ -8,6 +8,20 @@
   ],
   "ignorePresets": ["github>sanity-io/renovate-config:group-non-major"],
   "postUpdateOptions": ["pnpmDedupe"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track the development Node runtime until Renovate supports devEngines natively",
+      "managerFilePatterns": ["/^package\\.json$/"],
+      "matchStrings": [
+        "\"devEngines\"\\s*:\\s*\\{\\s*\"runtime\"\\s*:\\s*\\{\\s*\"name\"\\s*:\\s*\"node\"\\s*,\\s*\"version\"\\s*:\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "depNameTemplate": "node",
+      "depTypeTemplate": "devEngines.runtime",
+      "datasourceTemplate": "node-version",
+      "versioningTemplate": "node"
+    }
+  ],
   "schedule": ["before 5am"],
   "prConcurrentLimit": 20,
   "branchConcurrentLimit": 5,
@@ -27,6 +41,20 @@
     "automerge": false
   },
   "packageRules": [
+    {
+      "description": "Update the development Node pin and its pnpm lockfile together",
+      "matchManagers": ["custom.regex"],
+      "matchDepTypes": ["devEngines.runtime"],
+      "matchPackageNames": ["node"],
+      "semanticCommitType": "chore",
+      "semanticCommitScope": "tooling",
+      "postUpgradeTasks": {
+        "commands": ["pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile"],
+        "fileFilters": ["pnpm-lock.yaml"],
+        "executionMode": "branch",
+        "installTools": {"pnpm": {}}
+      }
+    },
     {
       "description": "Allow action digest branches after the release-age lookup passes",
       "matchManagers": ["github-actions"],

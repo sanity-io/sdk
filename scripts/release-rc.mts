@@ -33,17 +33,17 @@ function maxStable(versions: string[]): string {
 }
 
 // Looks up every version already published for a package. Returns an empty list
-// when the package has never been published (npm exits non-zero).
+// when the registry reports that the package has never been published.
 async function publishedVersions(name: string): Promise<string[]> {
-  try {
-    // Pass args as an array so the interpolation is the final token — a trailing
-    // bare word like `versions` here trips knip's binary detection (depcheck).
-    const {stdout} = await $`npm view ${[name, 'versions', '--json']}`.quiet()
-    const parsed = JSON.parse(stdout)
+  // Pass args as an array so the interpolation is the final token. A trailing
+  // bare word like `versions` here trips knip's binary detection (depcheck).
+  const result = await $`pnpm view ${[name, 'versions', '--json']}`.quiet().nothrow()
+  const parsed = JSON.parse(result.stdout)
+  if (result.exitCode === 0) {
     return Array.isArray(parsed) ? parsed : [parsed]
-  } catch {
-    return []
   }
+  if (parsed.error.code === 'ERR_PNPM_FETCH_404') return []
+  throw result
 }
 
 const existing = (await Promise.all(publishable.map(({name}) => publishedVersions(name)))).flat()

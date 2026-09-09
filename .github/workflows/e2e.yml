@@ -36,7 +36,9 @@ jobs:
       # see if the Playwright version we're using is already cached -- skip download if so
       - name: 🔍 Determine Playwright version
         id: pw-version
-        run: echo "version=$(pnpm exec playwright --version | sed 's/Version //')" >> "$GITHUB_OUTPUT"
+        run: |
+          version="$(pnpm exec playwright --version)"
+          echo "version=${version#Version }" >> "$GITHUB_OUTPUT"
 
       - name: 💾 Cache Playwright browsers
         id: cache-playwright-browsers
@@ -92,7 +94,9 @@ jobs:
 
       - name: 🔍 Determine Playwright version
         id: pw-version
-        run: echo "version=$(pnpm exec playwright --version | sed 's/Version //')" >> "$GITHUB_OUTPUT"
+        run: |
+          version="$(pnpm exec playwright --version)"
+          echo "version=${version#Version }" >> "$GITHUB_OUTPUT"
 
       - name: 💾 Restore cached Playwright browsers
         id: cache-playwright-browsers
