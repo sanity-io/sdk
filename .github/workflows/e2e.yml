@@ -36,7 +36,7 @@ jobs:
       # see if the Playwright version we're using is already cached -- skip download if so
       - name: 🔍 Determine Playwright version
         id: pw-version
-        run: echo "version=$(npx playwright --version | sed 's/Version //')" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(pnpm exec playwright --version | sed 's/Version //')" >> "$GITHUB_OUTPUT"
 
       - name: 💾 Cache Playwright browsers
         id: cache-playwright-browsers
@@ -47,7 +47,7 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps
+        run: pnpm exec playwright install --with-deps
 
   playwright-tests:
     needs: setup
@@ -92,7 +92,7 @@ jobs:
 
       - name: 🔍 Determine Playwright version
         id: pw-version
-        run: echo "version=$(npx playwright --version | sed 's/Version //')" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(pnpm exec playwright --version | sed 's/Version //')" >> "$GITHUB_OUTPUT"
 
       - name: 💾 Restore cached Playwright browsers
         id: cache-playwright-browsers
@@ -103,7 +103,7 @@ jobs:
 
       - name: Install Playwright browsers
         if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps
+        run: pnpm exec playwright install --with-deps
 
       - name: Install WebKit Dependencies
         if: matrix.browser == 'webkit'
