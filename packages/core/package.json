@@ -117,5 +117,5 @@
     "vitest": "catalog:"
   },
   "browserslist": "extends @sanity/browserslist-config",
-  "packageManager": "pnpm@10.34.5"
+  "packageManager": "pnpm@12.4.0"
 }

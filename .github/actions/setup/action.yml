@@ -31,5 +31,6 @@ runs:
           ${{ runner.os }}-pnpm-store-
 
     - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+      # Use setup-node's version so each CI matrix entry tests its requested runtime.
+      run: pnpm install --frozen-lockfile --no-runtime
       shell: bash

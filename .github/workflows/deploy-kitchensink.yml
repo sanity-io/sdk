@@ -30,7 +30,7 @@ jobs:
         run: pnpm -v
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --no-runtime
 
       - name: Deploy Sanity App
         env:
