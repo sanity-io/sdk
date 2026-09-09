@@ -136,6 +136,14 @@ pnpm run build:bundle                                 # bundle size
 
 ## Troubleshooting
 
+### Development Node updates
+
+Renovate tracks `devEngines.runtime.version` in the root `package.json` with a custom manager until [native support](https://github.com/renovatebot/renovate/pull/43369) is available. These updates use `chore(tooling)` commits.
+
+The Node update rule runs `pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile` before Renovate commits the update. The self-hosted runner allows this exact command, and the task includes `pnpm-lock.yaml` in the same commit. Updating the manifest alone would leave the runtime version in the lockfile out of sync.
+
+When native support handles both the runtime pin and its lockfile, remove the custom manager, its package rule, and the runner's `allowedCommands` entry together.
+
 ### A Renovate PR's lockfile looks broken
 
 We use `postUpdateOptions: ["pnpmDedupe"]`. If a lockfile slips through broken, run `pnpm install` locally, commit, and push to the Renovate branch — Renovate won't overwrite manual commits.

@@ -52,7 +52,7 @@ jobs:
           cache: pnpm
           node-version: lts/*
       - name: install deps & build
-        run: pnpm install --ignore-scripts && pnpm build --filter=!./apps/*
+        run: pnpm install --ignore-scripts --no-runtime && pnpm build --filter=!./apps/*
         if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
       # Last gate before npm: verify the tarballs we are about to publish parse
       # as plain JS and have intact entry points. See scripts/pack-smoke-test.mts.
@@ -66,10 +66,8 @@ jobs:
           NODE_AUTH_TOKEN: ${{secrets.NPM_PUBLISH_TOKEN}}
       # Release Please has already incremented versions and published tags, so we just
       # need to publish all unpublished versions to NPM here
-      - run: pnpm publish -r --filter=!./apps/*
+      - run: pnpm publish -r --filter=!./apps/* --provenance
         if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
-        env:
-          NPM_CONFIG_PROVENANCE: true
 
   post-release-steps:
     runs-on: ubuntu-latest

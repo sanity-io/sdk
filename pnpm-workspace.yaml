@@ -8,8 +8,12 @@ packages:
 overrides:
   '@babel/types': 7.29.7
 
-onlyBuiltDependencies:
-  - esbuild
+allowBuilds:
+  esbuild: true
+  unrs-resolver: false
+
+publicHoistPattern:
+  - '*eslint*'
 
 minimumReleaseAge: 1440
 

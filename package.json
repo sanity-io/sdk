@@ -81,5 +81,12 @@
     "vitest": "catalog:",
     "zx": "^8.8.5"
   },
-  "packageManager": "pnpm@10.34.5"
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "24.21.0",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@12.4.0"
 }
