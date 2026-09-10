@@ -24,6 +24,7 @@ export {
   useNavigateToStudioDocument,
 } from '../hooks/dashboard/useNavigateToStudioDocument'
 export {useOrganizationId} from '../hooks/dashboard/useOrganizationId'
+export {useTopic} from '../hooks/dashboard/useTopic'
 export {useWindowTitle} from '../hooks/dashboard/useWindowTitle'
 export type {
   ApplicationConfig,
@@ -49,9 +50,10 @@ export type {
   ReplyOf,
   StateTopic,
   StateTopicDef,
+  TopicData,
   TopicName,
   TopicResult,
   Topics,
   ValueOf,
 } from '@sanity/sdk/dashboard'
-export {connectMessageBus, MessageBusError} from '@sanity/sdk/dashboard'
+export {connectMessageBus, MessageBusError, TopicError} from '@sanity/sdk/dashboard'
