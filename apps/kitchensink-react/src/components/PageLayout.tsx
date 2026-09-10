@@ -1,32 +1,30 @@
-import {Box, Card, Container, Heading, Stack, Text} from '@sanity/ui'
-import {type JSX, ReactNode} from 'react'
+import {type ComponentType, type JSX, type ReactNode, type SVGProps} from 'react'
+import {Box, Flex, Heading, Icon, Text, VStack} from 'ui5'
 
 interface PageLayoutProps {
   children: ReactNode
   title: string
   subtitle: string
+  icon?: ComponentType<SVGProps<SVGSVGElement>>
 }
 
-export function PageLayout({children, title, subtitle}: PageLayoutProps): JSX.Element {
+export function PageLayout({children, title, subtitle, icon}: PageLayoutProps): JSX.Element {
   return (
-    <Box style={{width: '100%'}}>
-      <Container width={2} padding={7}>
-        <Card padding={5} radius={3} shadow={1}>
-          <Stack space={5}>
-            <Box>
-              <Heading as="h1" size={4} align="center">
-                {title}
-              </Heading>
-              <Box marginTop={3}>
-                <Text align="center" size={2} style={{color: '#6e7683'}}>
-                  {subtitle}
-                </Text>
-              </Box>
-            </Box>
-            {children}
-          </Stack>
-        </Card>
-      </Container>
-    </Box>
+    <VStack gap={5}>
+      <Box>
+        <Flex alignItems="center" gap={2}>
+          {icon && <Icon aria-hidden icon={icon} size={2} />}
+          <Heading as="h1" size={2}>
+            {title}
+          </Heading>
+        </Flex>
+        <Box marginTop={2}>
+          <Text muted size={1}>
+            {subtitle}
+          </Text>
+        </Box>
+      </Box>
+      {children}
+    </VStack>
   )
 }

@@ -1,5 +1,4 @@
-import {type ActionsResult, type DocumentAction} from '@sanity/sdk'
-import {type SanityDocument} from 'groq'
+import {type ActionsResult, type DocumentAction, type ResolveDocument} from '@sanity/sdk'
 
 import {type ResourceHandle} from '../../config/handles'
 import {useApplyActions} from '../helpers/useApplyActions'
@@ -20,7 +19,7 @@ interface UseApplyDocumentActions {
       | DocumentAction<TDocumentType, TDataset, TProjectId>
       | DocumentAction<TDocumentType, TDataset, TProjectId>[],
     options?: ResourceHandle,
-  ) => Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
+  ) => Promise<ActionsResult<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 }
 
 /**
@@ -199,7 +198,7 @@ interface UseApplyDocumentActions {
  *       perspective: {releaseName: 'summer-drop'},
  *     })
  *
- *     apply(editDocument(docHandle, {title: 'Updated for release'}))
+ *     apply(editDocument(docHandle, {set: {title: 'Updated for release'}}))
  *   }
  *
  *   return <button onClick={handleEdit}>Edit in Release</button>

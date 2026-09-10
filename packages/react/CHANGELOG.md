@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.1.0](https://github.com/sanity-io/sdk/compare/sdk-react-v3.0.0...sdk-react-v3.1.0) (2026-09-03)
+
+
+### Features
+
+* **react:** export DashboardTokenRefreshProvider ([#1145](https://github.com/sanity-io/sdk/issues/1145)) ([7f9f59e](https://github.com/sanity-io/sdk/commit/7f9f59e9ca7bc97d19eccbc6acc413cc17f2295b))
+
+
+### Bug Fixes
+
+* allow insecure random IDs, shorten where possible ([#1149](https://github.com/sanity-io/sdk/issues/1149)) ([d8c8eaf](https://github.com/sanity-io/sdk/commit/d8c8eaf94f8d4cf46a9c130f1529f30281019ede))
+* **deps:** align workspace on @sanity/client v8 ([#1130](https://github.com/sanity-io/sdk/issues/1130)) ([bedc960](https://github.com/sanity-io/sdk/commit/bedc960bd02d2acbe6c32bc958c40cf2b2d6727a))
+* **deps:** update @sanity/workbench to 0.1.0-alpha.45 ([d0b8bad](https://github.com/sanity-io/sdk/commit/d0b8badc7d5c2cd97df9e3db22a078ca0b195823))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @sanity/sdk bumped to 3.1.0
+
 ## [3.0.0](https://github.com/sanity-io/sdk/compare/sdk-react-v2.20.2...sdk-react-v3.0.0) (2026-08-27)
 
 

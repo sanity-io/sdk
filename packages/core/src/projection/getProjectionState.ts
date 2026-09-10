@@ -1,5 +1,4 @@
 import {DocumentId, getPublishedId} from '@sanity/id-utils'
-import {type SanityProjectionResult} from 'groq'
 
 import {type DocumentHandle} from '../config/sanityConfig'
 import {bindActionByResourceAndPerspective} from '../store/createActionBinder'
@@ -9,8 +8,9 @@ import {
   type SelectorContext,
   type StateSource,
 } from '../store/createStateSourceAction'
+import {type ResolveProjectionResult} from '../typegen/resolve'
 import {hashString} from '../utils/hashString'
-import {insecureRandomId} from '../utils/ids'
+import {randomId} from '../utils/ids'
 import {omitProperty} from '../utils/object'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {projectionStore} from './projectionStore'
@@ -39,7 +39,7 @@ export function getProjectionState<
   options: ProjectionOptions<TProjection, TDocumentType, TDataset, TProjectId>,
 ): StateSource<
   | ProjectionValuePending<
-      SanityProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
+      ResolveProjectionResult<TProjection, TDocumentType, `${TProjectId}.${TDataset}`>
     >
   | undefined
 >
@@ -85,7 +85,7 @@ export const _getProjectionState = bindActionByResourceAndPerspective(
     },
     onSubscribe: ({state}, options: ProjectionOptions<string, string, string, string>) => {
       const {projection, ...docHandle} = options
-      const subscriptionId = insecureRandomId()
+      const subscriptionId = randomId(16)
       const documentId = getPublishedId(DocumentId(docHandle.documentId))
       const validProjection = validateProjection(projection)
       const projectionHash = hashString(validProjection)

@@ -1,5 +1,5 @@
-import {createDocument} from '@sanity/sdk'
-import {type SanityDocument} from 'groq'
+import {createDocument, type ResolveDocument} from '@sanity/sdk'
+import {randomUuid} from '@sanity/sdk/_internal'
 
 import {type DocumentHandle, type DocumentTypeHandle} from '../../config/handles'
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -37,7 +37,7 @@ export function useCreateDocument<
   options: DocumentTypeHandle<TDocumentType, TDataset, TProjectId>,
 ): (
   initialValue?: Partial<
-    Omit<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>, IgnoredKey>
+    Omit<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>, IgnoredKey>
   >,
   overrides?: CreateDocumentOverrides,
 ) => Promise<DocumentHandle<TDocumentType, TDataset, TProjectId>>
@@ -109,7 +109,7 @@ export function useCreateDocument(
   const apply = useApplyDocumentActions()
 
   return async (initialValue, overrides) => {
-    const documentId = overrides?.documentId ?? options.documentId ?? crypto.randomUUID()
+    const documentId = overrides?.documentId ?? options.documentId ?? randomUuid()
     const handle: DocumentHandle = {...options, documentId}
     await apply(createDocument(handle, initialValue))
     return handle

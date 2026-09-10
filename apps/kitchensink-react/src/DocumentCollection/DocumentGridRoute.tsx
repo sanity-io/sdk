@@ -1,8 +1,9 @@
 import {useDocuments} from '@sanity/sdk-react'
-import {Box, Button, Heading} from '@sanity/ui'
 import {type JSX} from 'react'
+import {Button} from 'ui5'
 
 import {DocumentGridLayout} from '../components/DocumentGridLayout/DocumentGridLayout'
+import {PageLayout} from '../components/PageLayout'
 import {DocumentPreview} from './DocumentPreview'
 
 export function DocumentGridRoute(): JSX.Element {
@@ -12,18 +13,18 @@ export function DocumentGridRoute(): JSX.Element {
   })
 
   return (
-    <Box padding={4}>
-      <Heading as="h1" size={5}>
-        Document Grid
-      </Heading>
-      <Box paddingY={5}>
-        <DocumentGridLayout>
-          {data.map((doc) => (
-            <DocumentPreview key={doc.documentId} {...doc} />
-          ))}
-        </DocumentGridLayout>
-        <Button text="Load more" mode="ghost" disabled={isPending || !hasMore} onClick={loadMore} />
-      </Box>
-    </Box>
+    <PageLayout title="Document grid" subtitle="Authors, A to Z">
+      <DocumentGridLayout>
+        {data.map((doc) => (
+          <DocumentPreview key={doc.documentId} {...doc} />
+        ))}
+      </DocumentGridLayout>
+      <Button
+        disabled={isPending || !hasMore}
+        level="tertiary"
+        onClick={loadMore}
+        text="Load more"
+      />
+    </PageLayout>
   )
 }

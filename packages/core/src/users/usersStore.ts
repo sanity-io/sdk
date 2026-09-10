@@ -30,7 +30,7 @@ import {bindActionGlobally} from '../store/createActionBinder'
 import {createStateSourceAction, type SelectorContext} from '../store/createStateSourceAction'
 import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
-import {insecureRandomId} from '../utils/ids'
+import {randomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {
   addSubscription,
@@ -310,7 +310,7 @@ export const getUsersState = bindActionGlobally(
       },
     ),
     onSubscribe: ({instance, state}, options?: GetUsersOptions) => {
-      const subscriptionId = insecureRandomId()
+      const subscriptionId = randomId(16)
       const key = getUsersKey(instance, options)
       state.set('addSubscription', addSubscription(subscriptionId, key))
       return () => {

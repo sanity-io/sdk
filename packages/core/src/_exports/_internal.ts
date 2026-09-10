@@ -7,6 +7,8 @@ export {
   isProjectUserNotFoundClientError,
 } from '../auth/utils'
 export {getCommentsOptionsKey, parseCommentsOptionsKey} from '../comments/commentsStore' // only used for memoizing in React, not needed for actual functionality
+export {installMessageBus, resetMessageBus} from '../dashboard/messageBus/bus'
+export {getDashboardMessageBus, isDashboardEnvironment} from '../dashboard/messageBus/client'
 export {PREVIEW_PROJECTION} from '../preview/previewConstants'
 export {transformProjectionToPreview} from '../preview/previewProjectionUtils'
 export {getQueryKey, parseQueryKey} from '../query/queryStore' // only used for memoizing in React, not needed for actual functionality
@@ -24,4 +26,5 @@ export {
 export {getTelemetryManager, initTelemetry, trackHookMounted} from '../telemetry/initTelemetry'
 export {getUsersKey, parseUsersKey} from '../users/reducers' // only used for memoizing in React, not needed for actual functionality
 export {createGroqSearchFilter} from '../utils/createGroqSearchFilter'
+export {randomId, randomUuid} from '../utils/ids'
 export {isDeepEqual, pickProperties} from '../utils/object'

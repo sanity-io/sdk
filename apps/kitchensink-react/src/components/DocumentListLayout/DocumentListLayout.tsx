@@ -1,12 +1,17 @@
-import '../../css/styles.css'
-
 import {type PropsWithChildren, type ReactElement} from 'react'
+import {VStack} from 'ui5'
+
+const listReset = {listStyle: 'none'} as const
 
 /**
  * @public
  */
 export const DocumentListLayout = (props: PropsWithChildren): ReactElement => {
-  return <ol className="DocumentListLayout list-none">{props.children}</ol>
+  return (
+    <VStack as="ol" className="DocumentListLayout" gap={2} style={listReset}>
+      {props.children}
+    </VStack>
+  )
 }
 
 DocumentListLayout.displayName = 'DocumentListLayout'

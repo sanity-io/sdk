@@ -1,5 +1,6 @@
+import {randomUUID} from 'node:crypto'
+
 import {type MultipleMutationResult, type SanityDocumentStub} from '@sanity/client'
-import {uuid} from '@sanity/uuid'
 
 import {getClient} from './clients'
 import {getE2EEnv} from './getE2EEnv'
@@ -12,7 +13,7 @@ export type DocumentStub = Omit<SanityDocumentStub, '_id'> & {_id?: string}
 const documentIds = new Set<string>()
 
 function getUniqueDocumentId(): string {
-  const documentId = uuid()
+  const documentId = randomUUID()
   documentIds.add(documentId)
   return documentId
 }

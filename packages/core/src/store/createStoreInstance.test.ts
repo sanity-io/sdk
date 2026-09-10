@@ -8,11 +8,6 @@ describe('createStoreInstance', () => {
   let instance: ReturnType<typeof createSanityInstance>
 
   beforeEach(() => {
-    // Mock crypto for predictable instance IDs
-    vi.stubGlobal('crypto', {
-      randomUUID: () => 'test-uuid-1234',
-    })
-
     instance = createSanityInstance({projectId: 'test', dataset: 'test'})
   })
 

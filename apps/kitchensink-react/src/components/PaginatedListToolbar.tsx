@@ -1,5 +1,6 @@
-import {Box, Flex, Label, Text, TextInput} from '@sanity/ui'
+import {Select, TextInput} from '@sanity/ui'
 import {ChangeEvent, JSX} from 'react'
+import {Box, Flex, Text, VStack} from 'ui5'
 
 export interface PaginatedListToolbarProps {
   // The plural noun for the listed items, e.g. "documents" or "authors". Used
@@ -42,50 +43,48 @@ export function PaginatedListToolbar({
   const pageSizeId = `pageSize${suffix}`
 
   return (
-    <>
-      <Flex justify="space-between" align="center">
-        <Box style={{width: '300px'}}>
-          <Label htmlFor={searchId} size={1} style={{marginBottom: '4px', display: 'block'}}>
-            Search {nounLabel}
-          </Label>
-          <TextInput
-            id={searchId}
-            data-testid={`list-search-input${suffix}`}
-            value={searchTerm}
-            onChange={onSearchChange}
-            placeholder={`Search ${noun}...`}
-            style={{width: '100%'}}
-          />
+    <VStack gap={3}>
+      <Flex alignItems="center" gap={3} justifyContent="space-between">
+        <Box flexGrow={1} style={{maxWidth: 300}}>
+          <VStack gap={2}>
+            <Text as="label" htmlFor={searchId} muted size={1}>
+              Search {nounLabel}
+            </Text>
+            <TextInput
+              id={searchId}
+              data-testid={`list-search-input${suffix}`}
+              fontSize={1}
+              value={searchTerm}
+              onChange={onSearchChange}
+              placeholder={`Search ${noun}...`}
+            />
+          </VStack>
         </Box>
         <Box>
-          <Label htmlFor={pageSizeId} size={1} style={{marginBottom: '4px', display: 'block'}}>
-            Items per page
-          </Label>
-          <select
-            id={pageSizeId}
-            data-testid={`list-page-size${suffix}`}
-            value={pageSize}
-            onChange={onPageSizeChange}
-            style={{
-              padding: '8px',
-              borderRadius: '4px',
-              border: '1px solid #ccc',
-            }}
-          >
-            {pageSizeOptions.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
+          <VStack gap={2}>
+            <Text as="label" htmlFor={pageSizeId} muted size={1}>
+              Items per page
+            </Text>
+            <Select
+              id={pageSizeId}
+              data-testid={`list-page-size${suffix}`}
+              fontSize={1}
+              value={pageSize}
+              onChange={onPageSizeChange}
+            >
+              {pageSizeOptions.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </Select>
+          </VStack>
         </Box>
       </Flex>
 
-      <Box style={{borderRadius: '4px', border: '1px solid #eee', padding: '8px'}}>
-        <Text size={1} data-testid={`list-summary${suffix}`}>
-          Showing {startIndex + 1}-{Math.min(endIndex, count)} of {count} {noun}
-        </Text>
-      </Box>
-    </>
+      <Text muted size={1} data-testid={`list-summary${suffix}`}>
+        Showing {startIndex + 1}-{Math.min(endIndex, count)} of {count} {noun}
+      </Text>
+    </VStack>
   )
 }

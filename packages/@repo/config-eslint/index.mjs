@@ -96,6 +96,15 @@ export default [
           ],
         },
       ],
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'crypto',
+          property: 'randomUUID',
+          message:
+            'crypto.randomUUID() throws on insecure origins (plain http, e.g. testing from a phone on a local network). Use randomUuid() for a v4 UUID, or randomId() for a short base62 ID - both from utils/ids (core) or @sanity/sdk/_internal.',
+        },
+      ],
       'no-shadow': 'error',
       'no-unused-vars': 'off',
       'no-warning-comments': [

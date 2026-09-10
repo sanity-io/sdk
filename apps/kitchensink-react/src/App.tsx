@@ -1,14 +1,25 @@
+import 'inter-ui/inter.css'
 import './global.css'
+import '@sanity/ui/styles.css'
+// v5 is CSS-only and does not read the v4 theme. Keep v4's ThemeProvider.
+import 'ui5/styles.css'
 
 import {configureLogging, SanityApp} from '@sanity/sdk-react'
 import {useNavigate} from '@sanity/sdk-react/dashboard'
-import {Spinner, ThemeProvider} from '@sanity/ui'
+import {ThemeProvider, usePrefersDark} from '@sanity/ui'
 import {buildTheme} from '@sanity/ui/theme'
-import {type JSX, Suspense} from 'react'
+import {type JSX, type ReactNode, Suspense} from 'react'
+import {registerLanguage} from 'react-refractor'
 import {BrowserRouter, useNavigate as useRouterNavigate} from 'react-router'
+import json from 'refractor/json'
+import {Spinner} from 'ui5'
 
 import {AppRoutes} from './AppRoutes'
 import {devResources, e2eResources, isE2E} from './sanityConfigs'
+
+// Sanity UI's Code renders plain text for any language refractor does not know
+// about, and it ships with none registered. Every Code on these pages is JSON.
+registerLanguage(json)
 
 // Enable SDK logging in the browser. The wildcard picks up new namespaces
 // automatically as logging is added to more modules.
@@ -28,9 +39,18 @@ function NavigationHandler() {
   return null
 }
 
+function ThemedApp({children}: {children: ReactNode}): JSX.Element {
+  const prefersDark = usePrefersDark()
+  return (
+    <ThemeProvider scheme={prefersDark ? 'dark' : 'light'} theme={theme}>
+      {children}
+    </ThemeProvider>
+  )
+}
+
 export default function App(): JSX.Element {
   return (
-    <ThemeProvider theme={theme}>
+    <ThemedApp>
       <SanityApp
         fallback={<Spinner />}
         config={isE2E ? {auth: {apiHost: 'https://api.sanity.work'}} : {}}
@@ -44,6 +64,6 @@ export default function App(): JSX.Element {
           <AppRoutes />
         </BrowserRouter>
       </SanityApp>
-    </ThemeProvider>
+    </ThemedApp>
   )
 }

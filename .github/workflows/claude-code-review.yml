@@ -9,9 +9,19 @@ jobs:
     if: >-
       github.event.pull_request.draft == false &&
       !contains(github.event.pull_request.labels.*.name, 'skip-review') &&
-      github.actor != 'squiggler[bot]' &&
-      github.actor != 'squiggler-app[bot]' &&
-      (github.actor != 'renovate[bot]' || contains(github.event.pull_request.labels.*.name, 'major-update'))
+      (
+        (
+          !(github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'renovate/')) &&
+          github.actor != 'squiggler[bot]' &&
+          github.actor != 'squiggler-app[bot]' &&
+          github.actor != 'renovate[bot]'
+        ) ||
+        (
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          startsWith(github.event.pull_request.head.ref, 'renovate/') &&
+          contains(github.event.pull_request.labels.*.name, 'major-update')
+        )
+      )
 
     runs-on: ubuntu-latest
     permissions:
@@ -22,7 +32,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
 
@@ -36,9 +46,11 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Run Claude Code Review
-        if: github.actor != 'renovate[bot]'
+        if: >-
+          !(github.event.pull_request.head.repo.full_name == github.repository &&
+          startsWith(github.event.pull_request.head.ref, 'renovate/'))
         id: claude-review
-        uses: anthropics/claude-code-action@f1bd27ca5b54584506e40e17884d90bdaaa1a9b3 # v1
+        uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975 # v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           track_progress: true
@@ -53,9 +65,11 @@ jobs:
           allowed_bots: 'cursor,renovate'
 
       - name: Run Claude Review for Renovate Major Update
-        if: github.actor == 'renovate[bot]'
+        if: >-
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          startsWith(github.event.pull_request.head.ref, 'renovate/')
         id: claude-review-renovate
-        uses: anthropics/claude-code-action@f1bd27ca5b54584506e40e17884d90bdaaa1a9b3 # v1
+        uses: anthropics/claude-code-action@6b082c41935b4c8a3b8b0ef85ba4ba4d9eeb8975 # v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           track_progress: true

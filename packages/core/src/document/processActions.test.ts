@@ -2,6 +2,7 @@ import {type CreateMutation, type Reference, type SanityDocument} from '@sanity/
 import {parse} from 'groq-js'
 import {describe, expect, it} from 'vitest'
 
+import {randomUuid} from '../utils/ids'
 import {type Action, type DocumentAction} from './actions'
 import {ActionError, processActions} from './processActions/processActions'
 import {type DocumentSet, processMutations} from './processMutations'
@@ -973,7 +974,7 @@ describe('processActions', () => {
     })
 
     it('should strengthen `_strengthenOnPublish` references', () => {
-      const _ref = crypto.randomUUID()
+      const _ref = randomUuid()
       const referenceToStrength: Reference = {
         _ref,
         _type: 'reference',

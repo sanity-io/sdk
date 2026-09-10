@@ -10,12 +10,25 @@ import {
   useDocuments,
   usePerspective,
 } from '@sanity/sdk-react'
-import {Box, Button, Card, Dialog, Flex, Heading, Spinner, Stack, Text, TextInput} from '@sanity/ui'
+import {
+  Box,
+  Button,
+  Card as PaperCard,
+  Dialog,
+  Flex,
+  Spinner,
+  Stack,
+  Text,
+  TextInput,
+} from '@sanity/ui'
+import {Code} from '@sanity/ui/code'
 import {type JSX, Suspense, useEffect, useMemo, useState} from 'react'
+import {Card} from 'ui5'
 
 import {DocumentEditorPanel} from '../../components/DocumentEditorPanel'
 import {DocumentListLayout} from '../../components/DocumentListLayout/DocumentListLayout'
 import {JsonDocumentEditor} from '../../components/JsonDocumentEditor'
+import {PageLayout} from '../../components/PageLayout'
 import {DocumentPreview} from '../../DocumentCollection/DocumentPreview'
 import {isE2E} from '../../sanityConfigs'
 import {ReleaseActionsDialog} from './ReleaseActionsDialog'
@@ -45,8 +58,8 @@ function DocumentListContent({
   })
 
   return (
-    <div>
-      <p>Documents in perspective: {JSON.stringify(perspectiveData)}</p>
+    <Stack gap={3}>
+      <Text size={1}>Documents in perspective: {JSON.stringify(perspectiveData)}</Text>
       <DocumentListLayout>
         {data.map((docHandle: DocumentHandle) => (
           <DocumentPreview
@@ -56,7 +69,7 @@ function DocumentListContent({
           />
         ))}
       </DocumentListLayout>
-    </div>
+    </Stack>
   )
 }
 
@@ -85,7 +98,7 @@ function DefaultPerspectiveCard({
   onClick: () => void
 }) {
   return (
-    <Card
+    <PaperCard
       padding={3}
       radius={2}
       shadow={1}
@@ -100,13 +113,13 @@ function DefaultPerspectiveCard({
             {perspective.title}
           </Text>
           <Box paddingTop={1}>
-            <Text size={0} muted>
+            <Text size={1} muted>
               {perspective.description}
             </Text>
           </Box>
         </Box>
       </Flex>
-    </Card>
+    </PaperCard>
   )
 }
 
@@ -122,32 +135,32 @@ function DocumentData({
   const projectionResult = useDocumentProjection(documentProjectionOptions)
 
   return (
-    <Stack space={4}>
-      <Card padding={4} radius={2} shadow={1} tone="primary" data-testid="document-data-card">
-        <Heading as="h3" size={2} style={{marginBottom: 8}}>
-          Selected Document Data
-        </Heading>
-        <pre style={{whiteSpace: 'pre-wrap', wordBreak: 'break-all'}}>
-          {JSON.stringify(documentResult.data, null, 2)}
-        </pre>
+    <Stack gap={4}>
+      <Card data-testid="document-data-card" density="regular">
+        <Stack gap={3}>
+          <Text size={1} weight="semibold">
+            Selected Document Data
+          </Text>
+          <Code language="json">{JSON.stringify(documentResult.data, null, 2)}</Code>
+        </Stack>
       </Card>
 
-      <Card padding={4} radius={2} shadow={1} tone="primary" data-testid="document-preview-card">
-        <Heading as="h3" size={2} style={{marginBottom: 8}}>
-          Document Preview
-        </Heading>
-        <pre style={{whiteSpace: 'pre-wrap', wordBreak: 'break-all'}}>
-          {JSON.stringify(previewResult.data, null, 2)}
-        </pre>
+      <Card data-testid="document-preview-card" density="regular">
+        <Stack gap={3}>
+          <Text size={1} weight="semibold">
+            Document Preview
+          </Text>
+          <Code language="json">{JSON.stringify(previewResult.data, null, 2)}</Code>
+        </Stack>
       </Card>
 
-      <Card padding={4} radius={2} shadow={1} tone="primary" data-testid="document-projection-card">
-        <Heading as="h3" size={2} style={{marginBottom: 8}}>
-          Document Projection
-        </Heading>
-        <pre style={{whiteSpace: 'pre-wrap', wordBreak: 'break-all'}}>
-          {JSON.stringify(projectionResult.data, null, 2)}
-        </pre>
+      <Card data-testid="document-projection-card" density="regular">
+        <Stack gap={3}>
+          <Text size={1} weight="semibold">
+            Document Projection
+          </Text>
+          <Code language="json">{JSON.stringify(projectionResult.data, null, 2)}</Code>
+        </Stack>
       </Card>
     </Stack>
   )
@@ -204,11 +217,11 @@ function ReleasesContent({
 
   return (
     <>
-      <Box>
-        <Text size={1} weight="semibold" style={{marginBottom: '8px'}}>
+      <Stack gap={2}>
+        <Text size={1} weight="semibold">
           Default Perspectives
         </Text>
-        <Stack space={2}>
+        <Stack gap={2}>
           {DEFAULT_PERSPECTIVES.map((perspective) => (
             <DefaultPerspectiveCard
               key={perspective.name}
@@ -221,10 +234,10 @@ function ReleasesContent({
             />
           ))}
         </Stack>
-      </Box>
+      </Stack>
 
-      <Box>
-        <Flex align="center" justify="space-between" style={{marginBottom: '8px'}}>
+      <Stack gap={2}>
+        <Flex align="center" justify="space-between">
           <Text size={1} weight="semibold">
             Releases
           </Text>
@@ -245,51 +258,53 @@ function ReleasesContent({
             }
           }}
         />
-      </Box>
+      </Stack>
 
       {selectedPerspective && (
-        <Box>
-          <Heading as="h2" size={3}>
+        <Stack gap={2}>
+          <Text size={1} weight="semibold">
             Selected Perspective
-          </Heading>
-          <Card padding={4} radius={2} shadow={1}>
-            <pre>{JSON.stringify(calculatedPerspective, null, 2)}</pre>
+          </Text>
+          <Card density="regular">
+            <Code language="json">{JSON.stringify(calculatedPerspective, null, 2)}</Code>
           </Card>
-        </Box>
+        </Stack>
       )}
 
       {selectedPerspective && (
-        <Box>
-          <Heading as="h2" size={3}>
+        <Stack gap={2}>
+          <Text size={1} weight="semibold">
             Document List in Selected{' '}
             {isReleasePerspective(selectedPerspective.perspective) ? 'Release' : 'Perspective'}
-          </Heading>
+          </Text>
           <DocumentList
             perspective={selectedPerspective}
             onSelectDocument={(doc) => onDocumentIdSubmit(doc.documentId)}
             selectedDocumentId={selectedDocument?.documentId}
           />
-        </Box>
+        </Stack>
       )}
 
-      <Box>
-        <Heading as="h2" size={3}>
+      <Stack gap={2}>
+        <Text size={1} weight="semibold">
           View document across different perspectives
-        </Heading>
-        <Card padding={4} radius={2} shadow={1}>
-          <Stack space={3}>
+        </Text>
+        <Card density="regular">
+          <Stack gap={3}>
             <TextInput
+              fontSize={1}
               value={selectedDocument?.documentId}
               onChange={(event) => onDocumentIdSubmit(event.currentTarget.value)}
               placeholder="Enter document ID"
             />
             <Button
+              fontSize={1}
               text="View Document"
               onClick={() => onDocumentIdSubmit(selectedDocument?.documentId || '')}
             />
           </Stack>
         </Card>
-      </Box>
+      </Stack>
 
       {selectedDocument && (
         <Box paddingTop={4}>
@@ -303,11 +318,11 @@ function ReleasesContent({
       )}
 
       {selectedReleaseDocument && (
-        <Box>
+        <Stack gap={2}>
           <Flex align="center" justify="space-between">
-            <Heading as="h2" size={3}>
+            <Text size={1} weight="semibold">
               Selected Release Document
-            </Heading>
+            </Text>
             <Button
               text="Edit release"
               tone="primary"
@@ -317,10 +332,10 @@ function ReleasesContent({
               }
             />
           </Flex>
-          <pre data-testid="selected-release-document">
+          <Code data-testid="selected-release-document" language="json">
             {JSON.stringify(selectedReleaseDocument, null, 2)}
-          </pre>
-        </Box>
+          </Code>
+        </Stack>
       )}
 
       {releaseDialog && (
@@ -362,12 +377,8 @@ export function ReleasesRoute(): JSX.Element {
   }
 
   return (
-    <Box padding={4}>
-      <Stack space={4}>
-        <Heading as="h1" size={5}>
-          Releases
-        </Heading>
-
+    <PageLayout title="Releases" subtitle="Switch perspectives and inspect documents">
+      <Stack gap={4}>
         <Suspense fallback={<Spinner />}>
           <ReleasesContent
             selectedPerspective={selectedPerspective}
@@ -396,7 +407,7 @@ export function ReleasesRoute(): JSX.Element {
           >
             <Box padding={4}>
               <Suspense fallback={<Spinner />}>
-                <Stack space={4}>
+                <Stack gap={4}>
                   <DocumentEditorPanel
                     docHandle={{...selectedDocument, perspective: selectedPerspective.perspective}}
                     onDocumentIdChange={handleDocumentIdSubmit}
@@ -415,6 +426,6 @@ export function ReleasesRoute(): JSX.Element {
           </Dialog>
         )}
       </Stack>
-    </Box>
+    </PageLayout>
   )
 }

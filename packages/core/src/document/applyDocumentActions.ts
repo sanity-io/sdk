@@ -1,10 +1,11 @@
-import {type SanityDocument} from 'groq'
 import {distinctUntilChanged, filter, first, firstValueFrom, map, race} from 'rxjs'
 
 import {type DocumentResource} from '../config/sanityConfig'
 import {bindActionByResource} from '../store/createActionBinder'
 import {type SanityInstance} from '../store/createSanityInstance'
 import {type StoreContext} from '../store/defineStore'
+import {type ResolveDocument} from '../typegen/resolve'
+import {randomUuid} from '../utils/ids'
 import {type Action} from './actions'
 import {documentStore, type DocumentStoreState} from './documentStore'
 import {type DocumentTransactionSubmissionResult} from './events'
@@ -13,7 +14,7 @@ import {type AppliedTransaction, type QueuedTransaction, queueTransaction} from 
 import {normalizeActionsForResource} from './resourceRules'
 
 /** @beta */
-export interface ActionsResult<TDocument extends SanityDocument = SanityDocument> {
+export interface ActionsResult<TDocument extends ResolveDocument = ResolveDocument> {
   transactionId: string
   documents: DocumentSet<TDocument>
   previous: DocumentSet<TDocument>
@@ -55,7 +56,7 @@ export function applyDocumentActions<
 >(
   instance: SanityInstance,
   options: ApplyDocumentActionsOptions,
-): Promise<ActionsResult<SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
+): Promise<ActionsResult<ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>>>
 /** @beta */
 export function applyDocumentActions(
   instance: SanityInstance,
@@ -74,12 +75,7 @@ const boundApplyDocumentActions = bindActionByResource(documentStore, _applyDocu
 /** @internal */
 async function _applyDocumentActions(
   {state}: StoreContext<DocumentStoreState>,
-  {
-    actions,
-    resource,
-    transactionId = crypto.randomUUID(),
-    disableBatching,
-  }: ApplyDocumentActionsOptions,
+  {actions, resource, transactionId = randomUuid(), disableBatching}: ApplyDocumentActionsOptions,
 ): Promise<ActionsResult> {
   const {events} = state.get()
 

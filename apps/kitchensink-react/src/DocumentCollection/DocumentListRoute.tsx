@@ -1,9 +1,9 @@
 import {useDocuments} from '@sanity/sdk-react'
-import {Box, Heading} from '@sanity/ui'
 import {type JSX} from 'react'
 
 import {DocumentListLayout} from '../components/DocumentListLayout/DocumentListLayout'
 import {LoadMore} from '../components/LoadMore'
+import {PageLayout} from '../components/PageLayout'
 import {DocumentPreview} from './DocumentPreview'
 
 export function DocumentListRoute(): JSX.Element {
@@ -13,18 +13,13 @@ export function DocumentListRoute(): JSX.Element {
   })
 
   return (
-    <Box padding={4}>
-      <Heading as="h1" size={5}>
-        Document List
-      </Heading>
-      <Box paddingY={5}>
-        <DocumentListLayout>
-          {data.map((docHandle) => (
-            <DocumentPreview key={docHandle.documentId} {...docHandle} />
-          ))}
-          <LoadMore hasMore={hasMore} isPending={isPending} onLoadMore={loadMore} />
-        </DocumentListLayout>
-      </Box>
-    </Box>
+    <PageLayout title="Document list" subtitle="Authors, newest first">
+      <DocumentListLayout>
+        {data.map((docHandle) => (
+          <DocumentPreview key={docHandle.documentId} {...docHandle} />
+        ))}
+        <LoadMore hasMore={hasMore} isPending={isPending} onLoadMore={loadMore} />
+      </DocumentListLayout>
+    </PageLayout>
   )
 }

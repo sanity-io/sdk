@@ -7,12 +7,14 @@ import {
   useUpdateFavorite,
 } from '@sanity/sdk-react'
 import {useNavigateToStudioDocument} from '@sanity/sdk-react/dashboard'
-import {Box, Button, Flex, Heading} from '@sanity/ui'
+import {Button} from '@sanity/ui'
 import {type JSX, Suspense} from 'react'
 import {ErrorBoundary} from 'react-error-boundary'
+import {Box, Card, Flex, Text} from 'ui5'
 
 import {DocumentListLayout} from '../components/DocumentListLayout/DocumentListLayout'
 import {LoadMore} from '../components/LoadMore'
+import {PageLayout} from '../components/PageLayout'
 import {DocumentPreview} from './DocumentPreview'
 
 function useStudioResource<T extends DocumentHandle>(docHandle: T) {
@@ -33,7 +35,13 @@ function ButtonFallback() {
 
 // Error fallback for ErrorBoundary
 function ButtonError({error}: {error: Error}) {
-  return <span style={{color: 'red'}}>Error: {error.message}</span>
+  return (
+    <Text size={1}>
+      <Card density="compact" tone="critical">
+        Error: {error.message}
+      </Card>
+    </Text>
+  )
 }
 
 function FavoriteStatus({isFavorited}: {isFavorited: boolean}) {
@@ -109,21 +117,16 @@ export function DocumentDashboardInteractionsRoute(): JSX.Element {
   })
 
   return (
-    <Box padding={4}>
-      <Heading as="h1" size={5}>
-        Document Actions Demo
-      </Heading>
-      <Box paddingY={5}>
-        <DocumentListLayout>
-          {data.map((doc) => (
-            <Box key={doc.documentId}>
-              <DocumentPreview {...doc} />
-              <ActionButtons {...doc} />
-            </Box>
-          ))}
-          <LoadMore hasMore={hasMore} isPending={isPending} onLoadMore={loadMore} />
-        </DocumentListLayout>
-      </Box>
-    </Box>
+    <PageLayout title="Document actions" subtitle="Favorites, history, and Studio navigation">
+      <DocumentListLayout>
+        {data.map((doc) => (
+          <Box key={doc.documentId}>
+            <DocumentPreview {...doc} />
+            <ActionButtons {...doc} />
+          </Box>
+        ))}
+        <LoadMore hasMore={hasMore} isPending={isPending} onLoadMore={loadMore} />
+      </DocumentListLayout>
+    </PageLayout>
   )
 }

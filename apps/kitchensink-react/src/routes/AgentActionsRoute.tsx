@@ -1,7 +1,9 @@
+import {randomUuid} from '@sanity/sdk/_internal'
 import {type AgentGenerateOptions, type AgentPromptOptions} from '@sanity/sdk/agent'
 import {useAgentGenerate, useAgentPrompt} from '@sanity/sdk-react'
-import {Box, Button, Card, Code, Label, Stack, Text} from '@sanity/ui'
+import {Button} from '@sanity/ui'
 import {type JSX, useMemo, useState} from 'react'
+import {Box, Card, Code, Text, VStack} from 'ui5'
 
 import {PageLayout} from '../components/PageLayout'
 
@@ -19,7 +21,7 @@ export function AgentActionsRoute(): JSX.Element {
       schemaId: '_.schemas.default',
       targetDocument: {
         operation: 'create',
-        _id: crypto.randomUUID(),
+        _id: randomUuid(),
         _type: 'movie',
       },
       instruction:
@@ -37,28 +39,35 @@ export function AgentActionsRoute(): JSX.Element {
 
   return (
     <PageLayout title="Agent Actions" subtitle="Prompt and generate using the movie schema">
-      <Stack space={4}>
-        <Card padding={4} radius={2} shadow={1} tone="inherit">
-          <Stack space={3}>
-            <Label size={1}>Prompt</Label>
+      <VStack gap={4}>
+        <Card density="regular">
+          <VStack gap={3}>
+            <Text size={1} weight="medium">
+              Prompt
+            </Text>
             <Text muted size={1}>
               Sends an instruction to the LLM and returns plain text (or JSON if requested). Does
               not reference a schema or write any data.
             </Text>
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              disabled={isLoadingPrompt}
-              style={{
-                width: '100%',
-                height: 120,
-                border: '1px solid #ccc',
-                borderRadius: 4,
-                padding: 8,
-              }}
-            />
+            <Box border padding={2}>
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                disabled={isLoadingPrompt}
+                style={{
+                  width: '100%',
+                  height: 120,
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'inherit',
+                  font: 'inherit',
+                  resize: 'vertical',
+                }}
+              />
+            </Box>
             <Box>
               <Button
+                fontSize={1}
                 text="Run prompt"
                 tone="primary"
                 disabled={isLoadingPrompt}
@@ -75,18 +84,20 @@ export function AgentActionsRoute(): JSX.Element {
               />
             </Box>
             {promptResult && (
-              <Card padding={3} radius={2} tone="transparent">
-                <Text>
-                  <Code style={{whiteSpace: 'pre-wrap'}}>{promptResult}</Code>
-                </Text>
-              </Card>
+              <Box padding={3}>
+                <Code as="span" size={1} style={{whiteSpace: 'pre-wrap'}}>
+                  {promptResult}
+                </Code>
+              </Box>
             )}
-          </Stack>
+          </VStack>
         </Card>
 
-        <Card padding={4} radius={2} shadow={1} tone="inherit">
-          <Stack space={3}>
-            <Label size={1}>Generaten a Sanity document (no write)</Label>
+        <Card density="regular">
+          <VStack gap={3}>
+            <Text size={1} weight="medium">
+              Generate a Sanity document (no write)
+            </Text>
             <Text muted size={1}>
               Generates title and overview for a movie; does not persist changes.
             </Text>
@@ -97,6 +108,7 @@ export function AgentActionsRoute(): JSX.Element {
             </Text>
             <Box>
               <Button
+                fontSize={1}
                 text="Generate"
                 tone="primary"
                 disabled={isLoadingGenerate}
@@ -118,15 +130,15 @@ export function AgentActionsRoute(): JSX.Element {
               />
             </Box>
             {generateResult && (
-              <Card padding={3} radius={2} tone="transparent">
-                <Text>
-                  <Code style={{whiteSpace: 'pre-wrap'}}>{generateResult}</Code>
-                </Text>
-              </Card>
+              <Box padding={3}>
+                <Code as="span" size={1} style={{whiteSpace: 'pre-wrap'}}>
+                  {generateResult}
+                </Code>
+              </Box>
             )}
-          </Stack>
+          </VStack>
         </Card>
-      </Stack>
+      </VStack>
     </PageLayout>
   )
 }

@@ -1,5 +1,4 @@
 import {type ResponseQueryOptions} from '@sanity/client'
-import {type SanityQueryResult} from 'groq'
 import {
   catchError,
   combineLatest,
@@ -36,7 +35,8 @@ import {
 } from '../store/createStateSourceAction'
 import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
-import {insecureRandomId} from '../utils/ids'
+import {type ResolveQueryResult} from '../typegen/resolve'
+import {randomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {
   QUERY_STATE_CLEAR_DELAY,
@@ -278,7 +278,7 @@ export function getQueryState<
 >(
   instance: SanityInstance,
   queryOptions: QueryOptions<TQuery, TDataset, TProjectId>,
-): StateSource<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`> | undefined>
+): StateSource<ResolveQueryResult<TQuery, `${TProjectId}.${TDataset}`> | undefined>
 
 /** @beta */
 export function getQueryState<TData>(
@@ -309,7 +309,7 @@ const _getQueryState = bindActionByResource(
       return queryState?.result
     },
     onSubscribe: ({state, instance}, options: QueryOptions) => {
-      const subscriptionId = insecureRandomId()
+      const subscriptionId = randomId(16)
       const key = getQueryKey(instance, options)
 
       state.set('addSubscriber', addSubscriber(key, subscriptionId))
@@ -347,7 +347,7 @@ export function resolveQuery<
 >(
   instance: SanityInstance,
   queryOptions: ResolveQueryOptions<TQuery, TDataset, TProjectId>,
-): Promise<SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>>
+): Promise<ResolveQueryResult<TQuery, `${TProjectId}.${TDataset}`>>
 
 /** @beta */
 export function resolveQuery<TData>(
@@ -370,7 +370,7 @@ const _resolveQuery = bindActionByResource(
     // while a component is suspended leaves a subscriber-less key behind — the
     // component never commits, so no other subscriber exists — and its stored
     // error would be rethrown on every future mount without ever refetching.
-    const subscriptionId = insecureRandomId()
+    const subscriptionId = randomId(16)
     state.set('addSubscriber', addSubscriber(key, subscriptionId))
 
     const aborted$ = signal

@@ -38,6 +38,7 @@ import {
 import {defineStore, type StoreContext} from '../store/defineStore'
 import {type SanityUser} from '../users/types'
 import {getUserState} from '../users/usersStore'
+import {randomId} from '../utils/ids'
 import {createLogger} from '../utils/logger'
 import {createBifurTransport} from './bifurTransport'
 import {startsWithPath} from './paths'
@@ -198,7 +199,7 @@ export const presenceStore = defineStore<PresenceStoreState, BoundResourceKey>({
     // storage (`window.open`, or a same-origin iframe), making two live clients
     // filter each other out as self. Stale sessions are handled by the
     // disconnect on unload, with the expiry sweep above as the backstop.
-    const sessionId = crypto.randomUUID()
+    const sessionId = randomId(16)
 
     // Dataset resources must use the project hostname so the socket URL is project-specific.
     // Canvas resources use the global API endpoint via the resource config.

@@ -1,5 +1,5 @@
 import {type SanityConfig} from '../config/sanityConfig'
-import {insecureRandomId} from '../utils/ids'
+import {randomId} from '../utils/ids'
 import {createLogger, type InstanceContext} from '../utils/logger'
 
 /**
@@ -10,7 +10,7 @@ import {createLogger, type InstanceContext} from '../utils/logger'
 export interface SanityInstance {
   /**
    * Unique identifier for this instance
-   * @remarks Generated using crypto.randomUUID()
+   * @remarks Generated as a random 16-character alphanumeric ID
    */
   readonly instanceId: string
 
@@ -47,7 +47,7 @@ export interface SanityInstance {
  * @public
  */
 export function createSanityInstance(config: SanityConfig = {}): SanityInstance {
-  const instanceId = crypto.randomUUID()
+  const instanceId = randomId(16)
   const disposeListeners = new Map<string, () => void>()
   const disposed = {current: false}
 
@@ -99,7 +99,7 @@ export function createSanityInstance(config: SanityConfig = {}): SanityInstance 
       logger.info('Instance disposed')
     },
     onDispose: (cb) => {
-      const listenerId = insecureRandomId()
+      const listenerId = randomId(16)
       disposeListeners.set(listenerId, cb)
       return () => {
         disposeListeners.delete(listenerId)

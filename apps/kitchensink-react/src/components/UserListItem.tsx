@@ -1,7 +1,8 @@
 import {useUsers} from '@sanity/sdk-react'
-import {Avatar, Box, Card, Flex, Text} from '@sanity/ui'
+import {Avatar} from '@sanity/ui'
 import {ComponentProps, JSX} from 'react'
 import {Link} from 'react-router'
+import {Box, Card, Flex, Text} from 'ui5'
 
 import {FallbackAvatar} from './FallbackAvatar'
 
@@ -19,22 +20,23 @@ export interface UserListItemProps {
 export function UserListItem({user, href, avatarSize = 2}: UserListItemProps): JSX.Element {
   const card = (
     <Card
-      width="fill"
-      marginBottom={2}
-      tone="inherit"
+      density="compact"
       data-testid={`user-list-item-${user.profile.id}`}
+      marginBottom={2}
       style={href ? {cursor: 'pointer'} : undefined}
     >
-      <Flex align="center" gap={2} padding={2}>
+      <Flex alignItems="center" gap={2} padding={2}>
         <FallbackAvatar
           size={avatarSize}
           src={user.profile.imageUrl}
           displayName={user.profile.displayName}
         />
         <Box paddingY={2}>
-          <Flex direction="column" gap={1}>
-            <Text>{user.profile.displayName}</Text>
-            <Text muted>{user.profile.email}</Text>
+          <Flex flexDirection="column" gap={1}>
+            <Text size={1}>{user.profile.displayName}</Text>
+            <Text muted size={1}>
+              {user.profile.email}
+            </Text>
           </Flex>
         </Box>
       </Flex>

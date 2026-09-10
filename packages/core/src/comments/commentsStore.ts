@@ -29,7 +29,7 @@ import {
 } from '../store/createStateSourceAction'
 import {type StoreState} from '../store/createStoreState'
 import {defineStore, type StoreContext} from '../store/defineStore'
-import {insecureRandomId} from '../utils/ids'
+import {randomId} from '../utils/ids'
 import {setCleanupTimeout} from '../utils/setCleanupTimeout'
 import {observeAddonDatasetClient} from './addonDatasetStore'
 import {buildCommentThreads} from './buildCommentThreads'
@@ -360,7 +360,7 @@ export const getCommentsState: (
     selector: selectComments,
     onSubscribe: ({state, instance}, options: CommentsOptions) => {
       const key = getCommentsKey(toCommentsKeyParts(instance, options))
-      const subscriptionId = insecureRandomId()
+      const subscriptionId = randomId(16)
       state.set('addSubscriber', addSubscriber(key, subscriptionId))
 
       return () => {
@@ -390,7 +390,7 @@ export const getCommentThreadsState: (
     selector: selectCommentThreads,
     onSubscribe: ({state, instance}, options: CommentsOptions) => {
       const key = getCommentsKey(toCommentsKeyParts(instance, options))
-      const subscriptionId = insecureRandomId()
+      const subscriptionId = randomId(16)
       state.set('addSubscriber', addSubscriber(key, subscriptionId))
 
       return () => {
@@ -452,7 +452,7 @@ function resolveList<T>(
   // fetch and this promise would never settle. Holding it only for the duration
   // of the resolve also means a component that suspends and then errors before
   // mounting does not leave a subscriber-less entry behind holding its error.
-  const subscriptionId = insecureRandomId()
+  const subscriptionId = randomId(16)
   state.set('addSubscriber', addSubscriber(key, subscriptionId))
 
   const release = () => state.set('removeSubscriber', removeSubscriber(key, subscriptionId))

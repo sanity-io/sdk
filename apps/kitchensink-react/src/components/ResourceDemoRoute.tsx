@@ -4,12 +4,14 @@ import {
   useDocumentSyncStatus,
   useQuery,
 } from '@sanity/sdk-react'
-import {Box, Button, Card, Dialog, Flex, Spinner, Stack, Text} from '@sanity/ui'
+import {Button, Dialog} from '@sanity/ui'
 import {type JSX, type ReactNode, Suspense, useState} from 'react'
 import {type SanityDocument} from 'sanity'
+import {Box, Card, Code, Flex, Grid, Spinner, Text, VStack} from 'ui5'
 
 import {DocumentEditorPanel} from './DocumentEditorPanel'
 import {JsonDocumentEditor} from './JsonDocumentEditor'
+import {PageLayout} from './PageLayout'
 
 interface EditorConfig {
   nameField: string
@@ -57,20 +59,50 @@ function ItemEditorDialog({
     >
       <Box padding={4}>
         <Suspense fallback={<Spinner />}>
-          <Stack space={4}>
+          <VStack gap={4}>
             <DocumentEditorPanel
               docHandle={docHandle}
               nameField={editor.nameField}
               nameLabel={editor.nameLabel}
             />
             <JsonDocumentEditor documentHandle={docHandle} minHeight="500px" maxHeight="70vh" />
-          </Stack>
+          </VStack>
         </Suspense>
-        <Flex justify="flex-end" gap={2} marginTop={4}>
+        <Flex justifyContent="flex-end" gap={2} marginTop={4}>
           <Button text={synced ? 'Close' : 'Syncing...'} onClick={onClose} tone="primary" />
         </Flex>
       </Box>
     </Dialog>
+  )
+}
+
+function JsonBlock({
+  title,
+  testId,
+  value,
+  isPending,
+}: {
+  title: string
+  testId: string
+  value: unknown
+  isPending?: boolean
+}) {
+  return (
+    <Card density="regular">
+      <VStack gap={3}>
+        <Flex alignItems="center" gap={2}>
+          <Text size={1} weight="semibold">
+            {title}
+          </Text>
+          {isPending && <Spinner />}
+        </Flex>
+        <Box overflow="auto" padding={3} style={{maxHeight: 400}}>
+          <Code data-testid={testId} language="json">
+            {JSON.stringify(value, null, 2)}
+          </Code>
+        </Box>
+      </VStack>
+    </Card>
   )
 }
 
@@ -93,29 +125,7 @@ function ItemProjection({
   })
 
   return (
-    <Card padding={3} style={{backgroundColor: '#1a1a1a'}}>
-      <div style={{display: 'flex', alignItems: 'center', marginBottom: '1rem'}}>
-        <Text size={1} weight="medium" style={{color: '#fff'}}>
-          Projection Results:
-        </Text>
-      </div>
-
-      <pre
-        data-testid="projection-results"
-        style={{
-          backgroundColor: '#2a2a2a',
-          padding: '1rem',
-          borderRadius: '4px',
-          overflow: 'auto',
-          maxHeight: '400px',
-          fontSize: '0.875rem',
-          color: '#fff',
-          whiteSpace: 'pre-wrap',
-        }}
-      >
-        {JSON.stringify(projectionData, null, 2)}
-      </pre>
-    </Card>
+    <JsonBlock title="Projection Results:" testId="projection-results" value={projectionData} />
   )
 }
 
@@ -135,30 +145,12 @@ function ItemPreview({
   })
 
   return (
-    <Card padding={3} style={{backgroundColor: '#1a1a1a'}}>
-      <div style={{display: 'flex', alignItems: 'center', marginBottom: '1rem'}}>
-        <Text size={1} weight="medium" style={{color: '#fff'}}>
-          Preview Results:
-        </Text>
-        {isPending && <Spinner style={{marginLeft: '0.5rem'}} />}
-      </div>
-
-      <pre
-        data-testid="preview-results"
-        style={{
-          backgroundColor: '#2a2a2a',
-          padding: '1rem',
-          borderRadius: '4px',
-          overflow: 'auto',
-          maxHeight: '400px',
-          fontSize: '0.875rem',
-          color: '#fff',
-          whiteSpace: 'pre-wrap',
-        }}
-      >
-        {JSON.stringify(previewData, null, 2)}
-      </pre>
-    </Card>
+    <JsonBlock
+      title="Preview Results:"
+      testId="preview-results"
+      value={previewData}
+      isPending={isPending}
+    />
   )
 }
 
@@ -185,123 +177,94 @@ export function ResourceDemoRoute({
     data && Array.isArray(data) && data.length > 0 && data[0]?._id ? data[0]._id : null
 
   return (
-    <div style={{padding: '2rem', maxWidth: '1200px', margin: '0 auto'}}>
-      <Text size={4} weight="bold" style={{marginBottom: '2rem', color: 'white'}}>
-        {title}
-      </Text>
+    <PageLayout title={title} subtitle="Query, project, and preview against this resource">
+      <VStack gap={4}>
+        <Text size={1} muted>
+          {description}
+        </Text>
 
-      <Text size={2} style={{marginBottom: '2rem'}}>
-        {description}
-      </Text>
-
-      <Card padding={3} style={{marginBottom: '2rem', backgroundColor: '#1a1a1a'}}>
-        <div style={{marginBottom: '1rem'}}>
-          <Text size={1} style={{color: '#ccc', marginBottom: '0.5rem'}}>
-            Current query:
-          </Text>
-          <code
-            style={{
-              display: 'block',
-              padding: '0.5rem',
-              backgroundColor: '#2a2a2a',
-              borderRadius: '4px',
-              fontFamily: 'monospace',
-              fontSize: '0.875rem',
-              color: '#fff',
-              wordBreak: 'break-all',
-            }}
-          >
-            {query}
-          </code>
-        </div>
-      </Card>
-
-      <Card padding={3} style={{marginBottom: '2rem', backgroundColor: '#1a1a1a'}}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '1rem',
-          }}
-        >
-          <div style={{display: 'flex', alignItems: 'center'}}>
-            <Text size={1} weight="medium" style={{color: '#fff'}}>
-              useQuery Results:
+        <Card density="regular">
+          <VStack gap={2}>
+            <Text muted size={1}>
+              Current query:
             </Text>
-            {(isPending || isLoading) && <Spinner style={{marginLeft: '0.5rem'}} />}
-          </div>
-          {firstId && (
-            <Button
-              text={`Edit First ${itemNoun}`}
-              tone="primary"
-              fontSize={1}
-              onClick={() => setEditingId(firstId)}
-            />
-          )}
-        </div>
+            <Box padding={3}>
+              <Code>{query}</Code>
+            </Box>
+          </VStack>
+        </Card>
 
-        <pre
-          data-testid="query-results"
-          style={{
-            backgroundColor: '#2a2a2a',
-            padding: '1rem',
-            borderRadius: '4px',
-            overflow: 'auto',
-            maxHeight: '400px',
-            fontSize: '0.875rem',
-            color: '#fff',
-            whiteSpace: 'pre-wrap',
-          }}
-        >
-          {JSON.stringify(data, null, 2)}
-        </pre>
-      </Card>
+        <Card density="regular">
+          <VStack gap={3}>
+            <Flex alignItems="center" flexWrap="wrap" gap={2} justifyContent="space-between">
+              <Flex alignItems="center" gap={2}>
+                <Text size={1} weight="semibold">
+                  useQuery Results:
+                </Text>
+                {(isPending || isLoading) && <Spinner />}
+              </Flex>
+              {firstId && (
+                <Button
+                  text={`Edit First ${itemNoun}`}
+                  tone="primary"
+                  fontSize={1}
+                  onClick={() => setEditingId(firstId)}
+                />
+              )}
+            </Flex>
+            <Box overflow="auto" padding={3} style={{maxHeight: 400}}>
+              <Code data-testid="query-results" language="json">
+                {JSON.stringify(data, null, 2)}
+              </Code>
+            </Box>
+          </VStack>
+        </Card>
 
-      {firstId && (
-        <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
-          <Suspense
-            fallback={
-              <Card padding={3} style={{backgroundColor: '#1a1a1a'}}>
-                <Spinner />
-              </Card>
-            }
-          >
-            <ItemProjection
-              documentId={firstId}
-              documentType={documentType}
-              resourceName={resourceName}
-              projection={projection}
-            />
-          </Suspense>
+        {firstId && (
+          <Grid gap={4} gridTemplateColumns={['1fr', '1fr', 'repeat(2, minmax(0, 1fr))']}>
+            <Suspense
+              fallback={
+                <Card density="regular">
+                  <Spinner />
+                </Card>
+              }
+            >
+              <ItemProjection
+                documentId={firstId}
+                documentType={documentType}
+                resourceName={resourceName}
+                projection={projection}
+              />
+            </Suspense>
 
-          <Suspense
-            fallback={
-              <Card padding={3} style={{backgroundColor: '#1a1a1a'}}>
-                <Spinner />
-              </Card>
-            }
-          >
-            <ItemPreview
-              documentId={firstId}
-              documentType={documentType}
-              resourceName={resourceName}
-            />
-          </Suspense>
-        </div>
-      )}
+            <Suspense
+              fallback={
+                <Card density="regular">
+                  <Spinner />
+                </Card>
+              }
+            >
+              <ItemPreview
+                documentId={firstId}
+                documentType={documentType}
+                resourceName={resourceName}
+              />
+            </Suspense>
+          </Grid>
+        )}
 
-      {editingId && (
-        <ItemEditorDialog
-          itemNoun={itemNoun}
-          documentId={editingId}
-          documentType={documentType}
-          resourceName={resourceName}
-          editor={editor}
-          open={!!editingId}
-          onClose={() => setEditingId(null)}
-        />
-      )}
-    </div>
+        {editingId && (
+          <ItemEditorDialog
+            itemNoun={itemNoun}
+            documentId={editingId}
+            documentType={documentType}
+            resourceName={resourceName}
+            editor={editor}
+            open={!!editingId}
+            onClose={() => setEditingId(null)}
+          />
+        )}
+      </VStack>
+    </PageLayout>
   )
 }

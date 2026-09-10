@@ -1,0 +1,34 @@
+import './legacy.types.js'
+
+import {
+  createDocumentHandle,
+  defineProjection,
+  useDocument,
+  useDocumentProjection,
+  useQuery,
+} from '@sanity/sdk-react'
+import {defineQuery} from 'groq'
+
+type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+  ? true
+  : false
+type Assert<T extends true> = T
+
+const handle = createDocumentHandle({
+  projectId: 'example',
+  dataset: 'primary',
+  documentId: 'post-1',
+  documentType: 'post',
+})
+const query = defineQuery('*[_type == "post"]{title}')
+const projection = defineProjection('{title}')
+const document = useDocument(handle).data
+const posts = useQuery({...handle, query}).data
+const preview = useDocumentProjection({...handle, projection}).data
+
+// The other schema has a numeric title. Each hook must infer this dataset's string.
+export type Checks = [
+  Assert<Equal<NonNullable<typeof document>['title'], string>>,
+  Assert<Equal<(typeof posts)[number]['title'], string>>,
+  Assert<Equal<typeof preview.title, string>>,
+]
