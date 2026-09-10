@@ -24,6 +24,7 @@ export {
   useNavigateToStudioDocument,
 } from '../hooks/dashboard/useNavigateToStudioDocument'
 export {useOrganizationId} from '../hooks/dashboard/useOrganizationId'
+export {type TopicData, TopicError, useTopic} from '../hooks/dashboard/useTopic'
 export {useWindowTitle} from '../hooks/dashboard/useWindowTitle'
 export type {
   ApplicationConfig,
