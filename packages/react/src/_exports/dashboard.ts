@@ -18,7 +18,14 @@ export {
   type AgentResourceContextOptions,
   useAgentResourceContext,
 } from '../hooks/dashboard/useAgentResourceContext'
+export {useApplication} from '../hooks/dashboard/useApplication'
 export {useApplicationForegroundId} from '../hooks/dashboard/useApplicationForegroundId'
+export {
+  type Application,
+  useApplications,
+  type View,
+  type WebWorker,
+} from '../hooks/dashboard/useApplications'
 export {type TopicEmitter, useEmit} from '../hooks/dashboard/useEmit'
 export {useNavigate} from '../hooks/dashboard/useNavigate'
 export {
