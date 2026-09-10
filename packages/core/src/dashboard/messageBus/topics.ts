@@ -179,7 +179,7 @@ export const DASHBOARD_TOPIC_MANIFEST: {
   readonly [K in keyof DashboardTopics]: TopicManifestEntry<DashboardTopics[K]>
 } = {
   'applications.config': dashboardTopic({kind: 'state', seed: undefined}),
-  'applications.foreground': dashboardTopic({kind: 'state', seed: null}),
+  'applications.foreground': dashboardTopic({kind: 'state', seed: undefined}),
   'applications.list': dashboardTopic({kind: 'state', seed: undefined}),
   'auth.token': dashboardTopic({kind: 'state', seed: undefined}),
   'auth.token.refresh': dashboardTopic({kind: 'event'}),

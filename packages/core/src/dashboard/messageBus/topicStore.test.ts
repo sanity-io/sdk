@@ -29,8 +29,9 @@ describe('dashboard topic store', () => {
   })
 
   it('reads the current value from the bus and unwraps topic results', () => {
+    expect(getTopicState(instance, 'applications.foreground').getCurrent()).toBeUndefined()
+    host.emit('applications.foreground', null)
     expect(getTopicState(instance, 'applications.foreground').getCurrent()).toBeNull()
-    expect(getTopicState(instance, 'auth.token').getCurrent()).toBeUndefined()
 
     host.emit('applications.list', {ok: true, value: []})
     expect(getTopicState(instance, 'applications.list').getCurrent()).toEqual([])
