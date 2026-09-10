@@ -1,4 +1,4 @@
-import {type SanityClient} from '@sanity/client'
+import {ClientError, type SanityClient} from '@sanity/client'
 
 import {bindActionGlobally} from '../../store/createActionBinder'
 import {createStateSourceAction} from '../../store/createStateSourceAction'
@@ -239,6 +239,16 @@ export const handleOAuthCallback = bindActionGlobally(
   },
 )
 
+/**
+ * A refresh failure is unrecoverable only when the token endpoint rejects the
+ * refresh token itself (a 4xx). Rate-limit (429) and request-timeout (408)
+ * responses, 5xx errors and network failures are transient, so the session is
+ * kept intact for the caller to retry rather than forcing a logout.
+ */
+function isUnrecoverableRefreshError(error: unknown): boolean {
+  return error instanceof ClientError && error.statusCode !== 408 && error.statusCode !== 429
+}
+
 // Single-flight refresh shared across concurrent callers. Safe as a module
 // singleton because `authStore` is a global store (one shared state).
 // ponytail: module-level single-flight; upgrade to per-store keying only if
@@ -247,8 +257,10 @@ let refreshInFlight: Promise<OAuthTokens | null> | null = null
 
 /**
  * Refreshes the OAuth tokens using the `refresh_token` grant. Concurrent
- * callers share a single in-flight request. An unrecoverable failure
- * (e.g. `invalid_grant`) clears the tokens and transitions to `LOGGED_OUT`.
+ * callers share a single in-flight request. An unrecoverable failure (a 4xx
+ * rejecting the refresh token) clears the tokens and transitions to
+ * `LOGGED_OUT`; transient failures (network, 5xx, rate limits) leave the
+ * session intact and rethrow so the caller can retry.
  *
  * @public
  */
@@ -305,6 +317,12 @@ async function doRefreshOAuthTokens({
     })
     return tokens
   } catch (error) {
+    if (!isUnrecoverableRefreshError(error)) {
+      // Transient (network / 5xx / rate limit) — keep the session so the
+      // caller can retry instead of forcing a logout.
+      logger.warn('OAuth token refresh failed — keeping session for retry', {error})
+      throw error
+    }
     logger.error('OAuth token refresh failed — logging out', {error})
     options.storageArea?.removeItem(options.storageKey)
     state.set('oauthRefreshFailed', {

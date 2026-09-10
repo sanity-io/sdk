@@ -5,6 +5,9 @@ import {createSanityInstance, type SanityInstance} from '../store/createSanityIn
 import {AuthStateType} from './authStateType'
 import {getAuthState} from './authStore'
 import {logout} from './logout'
+import {getOAuthTokensState, serializeTokens} from './oauth/oauthActions'
+import {OAUTH_TOKENS_KEY} from './oauth/oauthAuth'
+import {type OAuthTokens} from './oauth/types'
 import {subscribeToStateAndFetchCurrentUser} from './subscribeToStateAndFetchCurrentUser'
 import {subscribeToStorageEventsAndSetToken} from './subscribeToStorageEventsAndSetToken'
 import {getTokenFromStorage} from './utils'
@@ -164,6 +167,48 @@ describe('logout', () => {
 
     // Should still clean up storage
     expect(removeItem).toHaveBeenCalledWith('__sanity_auth_token')
+  })
+
+  it('clears the OAuth tokens from the store on logout', async () => {
+    const oauthTokens: OAuthTokens = {
+      accessToken: 'oauth-access',
+      tokenType: 'bearer',
+      expiresIn: 3600,
+      expiresAt: new Date('2030-01-01T00:00:00.000Z'),
+      refreshToken: 'oauth-refresh',
+    }
+    const map = new Map<string, string>([[OAUTH_TOKENS_KEY, serializeTokens(oauthTokens)]])
+    const storageArea = {
+      getItem: (k: string) => map.get(k) ?? null,
+      setItem: (k: string, v: string) => void map.set(k, v),
+      removeItem: (k: string) => void map.delete(k),
+    } as Storage
+
+    const mockRequest = vi.fn().mockResolvedValue(undefined)
+    const clientFactory = vi.fn().mockReturnValue({request: mockRequest})
+
+    instance = createSanityInstance({
+      projectId: 'p',
+      dataset: 'd',
+      auth: {
+        clientFactory,
+        storageArea,
+        oauth: {
+          clientId: 'client-abc',
+          redirectUri: 'https://app.example.com/callback',
+          organizationId: 'org123',
+        },
+      },
+    })
+
+    // Boots logged in with the persisted OAuth tokens exposed on the store.
+    expect(getOAuthTokensState(instance).getCurrent()).toMatchObject({accessToken: 'oauth-access'})
+
+    await logout(instance)
+
+    expect(getOAuthTokensState(instance).getCurrent()).toBeNull()
+    expect(getAuthState(instance).getCurrent()).toMatchObject({type: AuthStateType.LOGGED_OUT})
+    expect(map.get(OAUTH_TOKENS_KEY)).toBeUndefined()
   })
 
   it('cleans up storage even if logout request fails', async () => {

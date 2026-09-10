@@ -1,4 +1,4 @@
-import {type ClientConfig, type SanityClient} from '@sanity/client'
+import {type ClientConfig, ClientError, type SanityClient} from '@sanity/client'
 import {NEVER} from 'rxjs'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 
@@ -352,16 +352,53 @@ describe('refreshOAuthTokens', () => {
     expect(getAuthState(instance!).getCurrent()).toMatchObject({type: AuthStateType.LOGGED_OUT})
   })
 
-  it('clears tokens and logs out on an unrecoverable refresh failure', async () => {
-    const request = vi.fn().mockRejectedValue(new Error('invalid_grant'))
+  it('clears tokens and logs out on an unrecoverable (4xx) refresh failure', async () => {
+    const invalidGrant = new ClientError({
+      statusCode: 400,
+      headers: {},
+      body: {error: 'invalid_grant'},
+    })
+    const request = vi.fn().mockRejectedValue(invalidGrant)
     const {storageArea} = setup({
       request,
       storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
     })
 
-    await expect(refreshOAuthTokens(instance!)).rejects.toThrow('invalid_grant')
+    await expect(refreshOAuthTokens(instance!)).rejects.toBe(invalidGrant)
     expect(readStored(storageArea)).toBeNull()
     expect(getAuthState(instance!).getCurrent()).toMatchObject({type: AuthStateType.LOGGED_OUT})
+  })
+
+  it('keeps the session on a transient refresh failure', async () => {
+    const networkError = new Error('network down')
+    const request = vi.fn().mockRejectedValue(networkError)
+    const {storageArea} = setup({
+      request,
+      storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+    })
+
+    await expect(refreshOAuthTokens(instance!)).rejects.toBe(networkError)
+    // Tokens are preserved and the user stays logged in for a retry.
+    expect(readStored(storageArea)).toMatchObject({accessToken: 'stored-access'})
+    expect(getOAuthTokensState(instance!).getCurrent()).toMatchObject({
+      accessToken: 'stored-access',
+    })
+  })
+
+  it('keeps the session on a 429 rate-limit refresh failure', async () => {
+    const rateLimited = new ClientError({
+      statusCode: 429,
+      headers: {},
+      body: {error: 'rate_limited'},
+    })
+    const request = vi.fn().mockRejectedValue(rateLimited)
+    const {storageArea} = setup({
+      request,
+      storageSeed: {[OAUTH_TOKENS_KEY]: serializeTokens(seededTokens)},
+    })
+
+    await expect(refreshOAuthTokens(instance!)).rejects.toBe(rateLimited)
+    expect(readStored(storageArea)).toMatchObject({accessToken: 'stored-access'})
   })
 })
 
