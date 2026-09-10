@@ -18,6 +18,7 @@ export {
   type AgentResourceContextOptions,
   useAgentResourceContext,
 } from '../hooks/dashboard/useAgentResourceContext'
+export {useApplicationForegroundId} from '../hooks/dashboard/useApplicationForegroundId'
 export {type TopicEmitter, useEmit} from '../hooks/dashboard/useEmit'
 export {useNavigate} from '../hooks/dashboard/useNavigate'
 export {
