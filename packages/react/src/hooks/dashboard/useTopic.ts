@@ -1,13 +1,8 @@
 import {type SanityInstance, type StateSource} from '@sanity/sdk'
-import {getDashboardMessageBus} from '@sanity/sdk/_internal'
-import {
-  type MessageBus,
-  type MessageBusStateSource,
-  type StateTopic,
-  type ValueOf,
-} from '@sanity/sdk/dashboard'
+import {type MessageBusStateSource, type StateTopic, type ValueOf} from '@sanity/sdk/dashboard'
 
 import {createStateSourceHook} from '../helpers/createStateSourceHook'
+import {getMessageBus} from './getMessageBus'
 
 /**
  * An error raised when a dashboard state topic reports failure.
@@ -51,12 +46,6 @@ function unwrapTopicResult(topic: StateTopic, value: unknown): unknown {
   return value.value
 }
 
-function getMessageBus(instance: SanityInstance): MessageBus {
-  const messageBus = getDashboardMessageBus(instance)
-  if (!messageBus) throw new Error('useTopic must be used inside a dashboard application')
-  return messageBus
-}
-
 // The bus keeps one source per topic, so caching per source keeps `subscribe` stable across renders.
 const stateSources = new WeakMap<MessageBusStateSource<unknown>, StateSource<unknown>>()
 
@@ -73,7 +62,7 @@ function readTopicValue(topic: StateTopic, source: MessageBusStateSource<unknown
 }
 
 function getTopicState(instance: SanityInstance, topic: StateTopic): StateSource<unknown> {
-  const source = getMessageBus(instance).subscribe(topic)
+  const source = getMessageBus(instance, 'useTopic').subscribe(topic)
   let state = stateSources.get(source)
   if (!state) {
     state = {
@@ -90,7 +79,7 @@ function getTopicState(instance: SanityInstance, topic: StateTopic): StateSource
 }
 
 function queryTopic(instance: SanityInstance, topic: StateTopic): Promise<unknown> {
-  const messageBus = getMessageBus(instance)
+  const messageBus = getMessageBus(instance, 'useTopic')
   const source = messageBus.subscribe(topic)
   return messageBus.query(topic).catch((error: unknown) => {
     failedReads.set(source, error)
@@ -117,7 +106,7 @@ function queryTopic(instance: SanityInstance, topic: StateTopic): Promise<unknow
 export const useTopic = createStateSourceHook({
   getState: getTopicState,
   shouldSuspend: (instance, topic) => {
-    const source = getMessageBus(instance).subscribe(topic)
+    const source = getMessageBus(instance, 'useTopic').subscribe(topic)
     return !failedReads.has(source) && source.getCurrent() === undefined
   },
   suspender: queryTopic,
