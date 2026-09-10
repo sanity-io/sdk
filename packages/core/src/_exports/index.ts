@@ -20,6 +20,7 @@ export {
   type ApplicationDeployment,
   type ApplicationInclude,
   type ApplicationInterface,
+  type ApplicationInterfacePlacementMetadata,
   type ApplicationsOptions,
   type ApplicationsResponse,
   type ApplicationStudioConfig,
@@ -48,6 +49,14 @@ export {
 export {observeOrganizationVerificationState} from '../auth/getOrganizationVerificationState'
 export {handleAuthCallback} from '../auth/handleAuthCallback'
 export {logout} from '../auth/logout'
+export {
+  getOAuthTokensState,
+  handleOAuthCallback,
+  refreshOAuthTokens,
+  revokeOAuthTokens,
+  startOAuthAuthorization,
+} from '../auth/oauth/oauthActions'
+export {type OAuthTokens} from '../auth/oauth/types'
 export type {ClientStoreState as ClientState} from '../client/clientStore'
 export {type ClientOptions, getClient, getClientState} from '../client/clientStore'
 export {
@@ -194,7 +203,6 @@ export {
   type InstallationActiveConfig,
   type InstallationBase,
   type InstallationInclude,
-  type InstallationInterface,
   type InstallationsOptions,
   type InstallationsResponse,
 } from '../installations/installations'
@@ -244,6 +252,8 @@ export type {ReleaseState} from '../releases/releasesStore'
 export {getActiveReleasesState, getAllReleasesState} from '../releases/releasesStore'
 export {createSanityInstance, type SanityInstance} from '../store/createSanityInstance'
 export {type Selector, type StateSource} from '../store/createStateSourceAction'
+export {defineProjection} from '../typegen/defineProjection'
+export type {ResolveDocument, ResolveProjectionResult, ResolveQueryResult} from '../typegen/resolve'
 export {
   type GetUserOptions,
   type GetUsersOptions,

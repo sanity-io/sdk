@@ -2,13 +2,13 @@ import {type ReleaseDocument} from '@sanity/client'
 import {SanityEncoder} from '@sanity/mutate'
 import {type PatchMutation as SanityMutatePatchMutation} from '@sanity/mutate/_unstable_store'
 import {type PatchMutation, type PatchOperations} from '@sanity/types'
-import {type SanityDocument} from 'groq'
 
 import {
   type DocumentHandle,
   type DocumentTypeHandle,
   type ReleaseHandle,
 } from '../config/sanityConfig'
+import {type ResolveDocument} from '../typegen/resolve'
 import {getEffectiveDocumentId} from './util'
 
 const isSanityMutatePatch = (value: unknown): value is SanityMutatePatchMutation => {
@@ -37,7 +37,7 @@ export interface CreateDocumentAction<
    */
   initialValue?: Partial<
     Omit<
-      SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>,
+      ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>,
       '_id' | '_type' | '_rev' | '_createdAt' | '_updatedAt'
     >
   >
@@ -166,7 +166,7 @@ export function createDocument<
   doc: DocumentTypeHandle<TDocumentType, TDataset, TProjectId>,
   initialValue?: Partial<
     Omit<
-      SanityDocument<TDocumentType, `${TProjectId}.${TDataset}`>,
+      ResolveDocument<TDocumentType, `${TProjectId}.${TDataset}`>,
       '_id' | '_type' | '_rev' | '_createdAt' | '_updatedAt'
     >
   >,

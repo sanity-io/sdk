@@ -1,6 +1,16 @@
 /* eslint-disable no-console */
 import {execFileSync} from 'node:child_process'
-import {existsSync, mkdtempSync, readdirSync, readFileSync, rmSync} from 'node:fs'
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import {tmpdir} from 'node:os'
 import path from 'node:path'
 
@@ -19,6 +29,7 @@ import {transformSync} from 'esbuild'
 // 2. Every JavaScript file under `dist/` must parse as plain JS. Vite and
 //    esbuild parse `.js` files with JSX disabled, so raw JSX or TypeScript
 //    syntax in the bundle breaks real installs even when Node can import it.
+// 3. A TypeScript consumer must infer legacy types through the packed declarations.
 //
 // Run after building: `pnpm build:packages && pnpm test:pack`.
 
@@ -50,20 +61,37 @@ function fail(message: string): void {
   console.error(`✗ ${message}`)
 }
 
-for (const workspace of PACKAGES) {
-  const packageDir = path.join(BASE_PATH, workspace)
-  const tempDir = mkdtempSync(path.join(tmpdir(), 'sdk-pack-smoke-'))
+const tempDir = mkdtempSync(path.join(tmpdir(), 'sdk-pack-smoke-'))
 
-  try {
-    const tarball = path.join(tempDir, 'package.tgz')
+try {
+  for (const workspace of PACKAGES) {
+    const packageDir = path.join(BASE_PATH, workspace)
+    const sourceManifest = JSON.parse(readFileSync(path.join(packageDir, 'package.json'), 'utf8'))
+    const extractedRoot = path.join(tempDir, 'node_modules', sourceManifest.name)
+    mkdirSync(extractedRoot, {recursive: true})
+    const tarball = path.join(tempDir, `${path.basename(workspace)}.tgz`)
     // `pnpm pack` applies `publishConfig` overrides, so the extracted manifest
     // matches what `pnpm publish` would upload.
     execFileSync('pnpm', ['pack', '--out', tarball], {cwd: packageDir, stdio: 'pipe'})
-    execFileSync('tar', ['-xzf', tarball], {cwd: tempDir, stdio: 'pipe'})
-
-    const extractedRoot = path.join(tempDir, 'package')
+    execFileSync('tar', ['-xzf', tarball, '--strip-components=1'], {
+      cwd: extractedRoot,
+      stdio: 'pipe',
+    })
     const manifest = JSON.parse(readFileSync(path.join(extractedRoot, 'package.json'), 'utf8'))
     console.log(`\n${manifest.name}@${manifest.version}`)
+
+    // Reuse installed external dependencies, but resolve SDK imports to the tarballs.
+    for (const dependency of [
+      ...Object.keys(manifest.dependencies ?? {}),
+      ...Object.keys(manifest.peerDependencies ?? {}),
+      '@types/node',
+      ...(workspace === 'packages/react' ? ['@types/react', '@types/react-dom'] : []),
+    ]) {
+      const destination = path.join(tempDir, 'node_modules', dependency)
+      if (existsSync(destination)) continue
+      mkdirSync(path.dirname(destination), {recursive: true})
+      symlinkSync(path.join(packageDir, 'node_modules', dependency), destination, 'dir')
+    }
 
     // 1. Every published entry point must exist in the tarball.
     const targets = collectExportTargets(manifest.exports)
@@ -97,9 +125,35 @@ for (const workspace of PACKAGES) {
       }
     }
     if (parsed > 0) console.log(`  ✓ ${parsed}/${jsFiles.length} dist files parse as plain JS`)
-  } finally {
-    rmSync(tempDir, {recursive: true, force: true})
   }
+  // Compile one legacy app through sdk-react, which also loads the packed core package.
+  for (const filename of ['consumer.ts', 'legacy.types.ts']) {
+    copyFileSync(
+      path.join(BASE_PATH, 'scripts/fixtures/typegen', `${filename}.txt`),
+      path.join(tempDir, filename),
+    )
+  }
+  writeFileSync(path.join(tempDir, 'package.json'), '{"type":"module"}')
+  execFileSync(
+    process.execPath,
+    [
+      path.join(BASE_PATH, 'node_modules/typescript/bin/tsc'),
+      '--noEmit',
+      '--strict',
+      '--skipLibCheck',
+      '--target',
+      'es2022',
+      '--module',
+      'nodenext',
+      '--types',
+      'node',
+      'consumer.ts',
+    ],
+    {cwd: tempDir, stdio: 'inherit'},
+  )
+  console.log('  ✓ legacy document, query, and projection inference')
+} finally {
+  rmSync(tempDir, {recursive: true, force: true})
 }
 
 if (failures > 0) {

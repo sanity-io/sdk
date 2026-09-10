@@ -1,6 +1,5 @@
-import {getQueryState, type QueryOptions, resolveQuery} from '@sanity/sdk'
+import {getQueryState, type QueryOptions, resolveQuery, type ResolveQueryResult} from '@sanity/sdk'
 import {getQueryKey, parseQueryKey} from '@sanity/sdk/_internal'
-import {type SanityQueryResult} from 'groq'
 import {useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition} from 'react'
 
 import {useSanityInstance} from '../context/useSanityInstance'
@@ -83,7 +82,7 @@ export function useQuery<
   options: UseQueryOptions<TQuery, TDataset, TProjectId>,
 ): {
   /** The query result, typed based on the GROQ query string */
-  data: SanityQueryResult<TQuery, `${TProjectId}.${TDataset}`>
+  data: ResolveQueryResult<TQuery, `${TProjectId}.${TDataset}`>
   /** True if a query transition is in progress */
   isPending: boolean
 }
@@ -205,6 +204,6 @@ export function useQuery(options: WithResourceNameSupport<QueryOptions>): {
 
   // Subscribe to updates and get the current data
   // useSyncExternalStore ensures the component re-renders when the data changes
-  const data = useSyncExternalStore(subscribe, getCurrent) as SanityQueryResult
+  const data = useSyncExternalStore(subscribe, getCurrent) as ResolveQueryResult
   return useMemo(() => ({data, isPending}), [data, isPending])
 }

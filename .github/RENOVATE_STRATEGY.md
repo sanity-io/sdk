@@ -14,7 +14,8 @@ For Renovate's own docs, see [Dependency Dashboard](https://docs.renovatebot.com
 ## Where to look
 
 - Config: [`.github/renovate.json`](renovate.json)
-- Running state: [Dependency Dashboard issue](../../issues/9)
+- Runner: [`.github/workflows/renovate.yml`](workflows/renovate.yml)
+- Running state: [Dependency Dashboard issue](../../issues/1166)
 - Auto-approve workflow: [`.github/workflows/renovate-auto-approve.yml`](workflows/renovate-auto-approve.yml)
 
 ## Reading the dashboard
@@ -49,17 +50,18 @@ Inventory of everything Renovate tracks. No action required.
 
 Rules are scoped by **package name** (or, for apps, by file path) — never by `matchFileNames` on the published packages. Everything automerges after CI passes and applicable release-age checks clear; the auto-approve workflow supplies the required approval.
 
-| Dependency type                                                                                          | Update type | Commit type                                 | Triggers release?     |
-| -------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------- | --------------------- |
-| `@sanity/*` (grouped as `sanity`)                                                                        | any         | `fix(deps)`                                 | **Yes, patch**        |
-| Other production `dependencies` (catch-all)                                                              | any         | `fix(deps)`                                 | **Yes, patch**        |
-| Catalog non-`@sanity` runtime deps (`rxjs`, `groq-js`, `react-compiler-runtime`, `react-error-boundary`) | any         | `chore`                                     | No — see caveat below |
-| eslint / vitest / commitlint / react groups                                                              | any         | `chore(tooling)` / `chore(dev-deps)`        | No                    |
-| `devDependencies`                                                                                        | any         | `chore(dev-deps)`                           | No                    |
-| Anything under `apps/**`                                                                                 | any         | `chore(apps)`                               | No                    |
-| `groq`, `@sanity/codegen`                                                                                | —           | disabled (pinned to `typegen-experimental`) | —                     |
-| High-severity security                                                                                   | any         | varies                                      | varies                |
-| Trusted upstream (Sanity-maintained, React, Next, `@types/*`, etc.)                                      | inherits    | inherits                                    | inherits              |
+| Dependency type                                                                                          | Update type | Commit type                                   | Triggers release?    |
+| -------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------- | -------------------- |
+| `@sanity/*` (grouped as `sanity`)                                                                        | any         | `fix(deps)`                                   | **Yes, patch**       |
+| Other production `dependencies` (catch-all)                                                              | any         | `fix(deps)`                                   | **Yes, patch**       |
+| Catalog non-`@sanity` runtime deps (`rxjs`, `groq-js`, `react-compiler-runtime`, `react-error-boundary`) | any         | `chore`                                       | No, see caveat below |
+| eslint / vitest / commitlint / react groups                                                              | any         | `chore(tooling)` / `chore(dev-deps)`          | No                   |
+| `devDependencies`                                                                                        | any         | `chore(dev-deps)`                             | No                   |
+| Anything under `apps/**`                                                                                 | any         | `chore(apps)`                                 | No                   |
+| `groq`                                                                                                   | any         | `fix(deps)`                                   | Yes                  |
+| `@sanity/codegen`                                                                                        | any         | disabled (kitchensink experimental generator) | No                   |
+| High-severity security                                                                                   | any         | varies                                        | varies               |
+| Trusted upstream (Sanity-maintained, React, Next, `@types/*`, etc.)                                      | inherits    | inherits                                      | inherits             |
 
 Majors are never grouped — each opens its own PR (`separateMajorMinor` is on by default), so a breaking bump is reviewed in isolation before it automerges.
 
@@ -104,6 +106,8 @@ Renovate reads the pnpm version from the root `package.json` `packageManager` fi
 
 Branch protection requires at least 1 approval before merging. The auto-approve workflow (`.github/workflows/renovate-auto-approve.yml`) waits for CI (build, test, lint, typecheck) and then approves so Renovate's automerge can proceed.
 
+Renovate PRs are identified by a `renovate/` branch in this repository, rather than by the bot account that opened them. This works with the self-hosted Ecospark identity without trusting similarly named branches from forks.
+
 **Known gap**: the workflow uses `GITHUB_TOKEN`, whose approvals don't count toward CODEOWNERS or team-approval rules. Under the current branch protection, each Renovate PR still needs a qualifying reviewer.
 
 ## Expected weekly flow
@@ -116,7 +120,7 @@ Branch protection requires at least 1 approval before merging. The auto-approve 
 
 ### Weekly checklist
 
-- Skim the [Dependency Dashboard](../../issues/9) for anything stuck (errored, or repeatedly failing automerge).
+- Skim the [Dependency Dashboard](../../issues/1166) for anything stuck (errored, or repeatedly failing automerge).
 - Merge the release-please PR if ready.
 - Note any major updates that need planning.
 
@@ -131,6 +135,14 @@ pnpm run build:bundle                                 # bundle size
 ```
 
 ## Troubleshooting
+
+### Development Node updates
+
+Renovate tracks `devEngines.runtime.version` in the root `package.json` with a custom manager until [native support](https://github.com/renovatebot/renovate/pull/43369) is available. These updates use `chore(tooling)` commits.
+
+The Node update rule runs `pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile` before Renovate commits the update. The self-hosted runner allows this exact command, and the task includes `pnpm-lock.yaml` in the same commit. Updating the manifest alone would leave the runtime version in the lockfile out of sync.
+
+When native support handles both the runtime pin and its lockfile, remove the custom manager, its package rule, and the runner's `allowedCommands` entry together.
 
 ### A Renovate PR's lockfile looks broken
 

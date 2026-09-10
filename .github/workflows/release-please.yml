@@ -42,17 +42,17 @@ jobs:
           token: ${{ steps.generate-token.outputs.token }}
 
       # Publish to NPM on new releases
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
-      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
         with:
           cache: pnpm
           node-version: lts/*
       - name: install deps & build
-        run: pnpm install --ignore-scripts && pnpm build --filter=!./apps/*
+        run: pnpm install --ignore-scripts --no-runtime && pnpm build --filter=!./apps/*
         if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
       # Last gate before npm: verify the tarballs we are about to publish parse
       # as plain JS and have intact entry points. See scripts/pack-smoke-test.mts.
@@ -66,10 +66,8 @@ jobs:
           NODE_AUTH_TOKEN: ${{secrets.NPM_PUBLISH_TOKEN}}
       # Release Please has already incremented versions and published tags, so we just
       # need to publish all unpublished versions to NPM here
-      - run: pnpm publish -r --filter=!./apps/*
+      - run: pnpm publish -r --filter=!./apps/* --provenance
         if: ${{ steps.release.outputs.releases_created == 'true' || github.event.inputs.publish == 'true' }}
-        env:
-          NPM_CONFIG_PROVENANCE: true
 
   post-release-steps:
     runs-on: ubuntu-latest
@@ -77,7 +75,7 @@ jobs:
     if: ${{ needs.release-please.outputs.command == 'true' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest

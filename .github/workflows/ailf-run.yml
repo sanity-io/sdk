@@ -1,0 +1,231 @@
+name: AILF Run
+
+# Label a PR with `trigger: ailf` to run the AILF pipeline against it:
+# the app-sdk-ailf repo (sanity-labs) judges the PR diff, drafts an eval task
+# when the PR changes how users use the SDK, runs a task-scoped eval, proposes
+# docs improvements off the report, and this workflow posts the results back
+# here as a PR comment.
+#
+# Only people with triage/write access can add labels, so outside contributors
+# cannot trigger this.
+#
+# GitHub App configuration:
+#   AILF_APP_CLIENT_ID / AILF_APP_PRIVATE_KEY (repository secrets).
+#   The first step mints a short-lived installation token for only
+#   sanity-labs/app-sdk-ailf, used to dispatch the ailf-eval workflow, watch
+#   the run, and download its artifacts. The app must be installed on
+#   sanity-labs with Actions: read and write on app-sdk-ailf. Commenting on
+#   the PR uses the regular GITHUB_TOKEN.
+
+on:
+  # Run in the base-branch context so the app credential is available for
+  # maintainer-labeled PRs from forks. This workflow never checks out or runs
+  # code from the PR.
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ailf-run-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  TARGET_REPO: sanity-labs/app-sdk-ailf
+  TARGET_WORKFLOW: ailf-eval.yml
+
+jobs:
+  ailf:
+    # Compare against the label that was just added (not the label set), so a
+    # PR that already carries other labels doesn't re-trigger on unrelated adds.
+    if: "github.event.label.name == 'trigger: ailf'"
+    runs-on: ubuntu-latest
+    # The dispatched run does an agent task-proposal pass (~10m), a remote eval (~10m),
+    # and a docs-improvement agent run (~15m); leave queueing headroom on top.
+    timeout-minutes: 100
+
+    steps:
+      # GITHUB_TOKEN is repo-scoped and can't dispatch workflows in sanity-labs.
+      - name: Mint dispatch token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ secrets.AILF_APP_CLIENT_ID }}
+          private-key: ${{ secrets.AILF_APP_PRIVATE_KEY }}
+          owner: sanity-labs
+          repositories: app-sdk-ailf
+          permission-actions: write
+
+      - name: Dispatch AILF eval
+        id: dispatch
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          DISTINCT_ID="sdk-pr-${{ github.event.pull_request.number }}-${{ github.run_id }}-${{ github.run_attempt }}"
+          RUN_ID=$(gh api \
+            --method POST \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
+            "repos/$TARGET_REPO/actions/workflows/$TARGET_WORKFLOW/dispatches" \
+            -f ref=main \
+            -f "inputs[pr_repo]=${{ github.repository }}" \
+            -f "inputs[pr_number]=${{ github.event.pull_request.number }}" \
+            -F "inputs[run_docs_improvement]=true" \
+            -f "inputs[distinct_id]=$DISTINCT_ID" \
+            --jq .workflow_run_id)
+          echo "Dispatched run $RUN_ID"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "run_url=https://github.com/$TARGET_REPO/actions/runs/$RUN_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for run to complete
+        id: watch
+        # Keep going on failure — the comment below reports the outcome either way.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          while true; do
+            RUN=$(gh api "repos/$TARGET_REPO/actions/runs/${{ steps.dispatch.outputs.run_id }}")
+            STATUS=$(jq -r '.status' <<< "$RUN")
+            CONCLUSION=$(jq -r '.conclusion // empty' <<< "$RUN")
+            echo "AILF run status: $STATUS${CONCLUSION:+ ($CONCLUSION)}"
+            if [ "$STATUS" = "completed" ]; then
+              [ "$CONCLUSION" = "success" ]
+              exit
+            fi
+            sleep 30
+          done
+
+      - name: Download results
+        if: always() && steps.dispatch.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          mkdir -p results
+          # Each artifact only exists when its step ran; missing ones are fine.
+          for name in task-proposal eval-results docs-improvement; do
+            gh run download "${{ steps.dispatch.outputs.run_id }}" \
+              --repo "$TARGET_REPO" \
+              --name "$name" \
+              --dir "results/$name" || echo "(no $name artifact)"
+          done
+          find results -type f | sort
+
+      - name: Comment results on PR
+        if: always() && steps.dispatch.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ steps.dispatch.outputs.run_url }}
+          RUN_OK: ${{ steps.watch.outcome == 'success' }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          MARKER="<!-- ailf-run-comment -->"
+          PROPOSAL=results/task-proposal/task-proposal.json
+          STAGED=results/task-proposal/staged-docs.json
+          FEATURE_DOCS=results/task-proposal/feature-docs.md
+          META=results/eval-results/job-metadata.json
+          DOCS=results/docs-improvement/docs-improvement.md
+
+          {
+            echo "$MARKER"
+            echo "## AILF results"
+            echo ""
+            if [ "$RUN_OK" = "true" ]; then
+              echo "✅ [Pipeline run]($RUN_URL) completed."
+            else
+              echo "❌ [Pipeline run]($RUN_URL) failed or timed out — results below may be partial."
+            fi
+            echo ""
+
+            if [ -f "$PROPOSAL" ]; then
+              VERDICT=$(jq -r '.verdict' "$PROPOSAL")
+              REASON=$(jq -r '.reason // ""' "$PROPOSAL")
+              TASK_ID=$(jq -r '.taskId // empty' "$PROPOSAL")
+              TASK_DOC_ID=$(jq -r '.taskDocumentId // empty' "$PROPOSAL")
+              case "$VERDICT" in
+                create)
+                  echo "### 📝 New draft task: \`$TASK_ID\` (with drafted docs)"
+                  echo ""
+                  echo "$REASON"
+                  echo ""
+                  echo "Docs for the new surface were drafted first and staged in a content release; the task was evaluated **against those drafted docs**."
+                  echo ""
+                  if [ -f "$STAGED" ]; then
+                    RELEASE_ID=$(jq -r '.releaseId // empty' "$STAGED")
+                    if [ -n "$RELEASE_ID" ]; then
+                      echo "- 📦 Docs are staged in content release \`$RELEASE_ID\` — publish it to ship the docs, discard it to abandon them."
+                    fi
+                  fi
+                  echo "- 📝 Review and activate the draft task to make it permanent."
+                  echo ""
+                  echo "Review links are in the [pipeline run summary]($RUN_URL) (Sanity-internal)."
+                  if [ -f "$FEATURE_DOCS" ]; then
+                    echo ""
+                    echo "<details>"
+                    echo "<summary>Drafted feature docs</summary>"
+                    echo ""
+                    cat "$FEATURE_DOCS"
+                    echo ""
+                    echo "</details>"
+                  fi
+                  ;;
+                update)
+                  echo "### ✏️ Existing task \`$TASK_ID\` may need updates"
+                  echo ""
+                  echo "$REASON"
+                  echo ""
+                  jq -r '.proposedUpdates[] | "- \(.)"' "$PROPOSAL"
+                  echo ""
+                  echo "Review \`$TASK_DOC_ID\` in Studio — nothing was changed automatically. Links are in the [pipeline run summary]($RUN_URL) (Sanity-internal)."
+                  ;;
+                existing)
+                  echo "### ✔️ Covered by existing task \`$TASK_ID\`"
+                  echo ""
+                  echo "$REASON"
+                  ;;
+                none)
+                  echo "### No AILF-relevant changes"
+                  echo ""
+                  echo "$REASON"
+                  echo ""
+                  echo "_The eval was skipped for this PR._"
+                  ;;
+              esac
+              echo ""
+            fi
+
+            if [ -f "$META" ]; then
+              REPORT_ID=$(jq -r '.reportId // empty' "$META")
+              if [ -n "$REPORT_ID" ]; then
+                echo "### 📊 Eval report"
+                echo ""
+                echo "Report \`$REPORT_ID\` — the dashboard link is in the [pipeline run summary]($RUN_URL) (Sanity-internal)."
+                echo ""
+              fi
+            fi
+
+            if [ -f "$DOCS" ]; then
+              echo "<details>"
+              echo "<summary>📚 Proposed docs improvements</summary>"
+              echo ""
+              cat "$DOCS"
+              echo ""
+              echo "</details>"
+            fi
+          } > comment.md
+
+          # Sticky: update the existing results comment when there is one.
+          EXISTING=$(gh api "repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            --paginate --jq ".[] | select(.body | startswith(\"$MARKER\")) | .id" | head -1)
+          if [ -n "$EXISTING" ]; then
+            gh api -X PATCH "repos/${{ github.repository }}/issues/comments/$EXISTING" -F body=@comment.md
+          else
+            gh pr comment "$PR_NUMBER" --repo "${{ github.repository }}" --body-file comment.md
+          fi
+
+      # The watch step is allowed to continue so the failure can be reported in
+      # the sticky PR comment. Propagate that failure after the comment is posted.
+      - name: Propagate AILF failure
+        if: always() && steps.dispatch.outcome == 'success' && steps.watch.outcome != 'success'
+        run: exit 1
