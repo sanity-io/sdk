@@ -30,7 +30,7 @@ At the heart of the SDK is a three-layered component hierarchy:
 
 1. **SanityApp**: The public-facing component that users interact with
 2. **SDKProvider**: A specialized component that creates the provider structure and adds in an `AuthBoundary`. Useful without a `SanityApp` for some use cases.
-3. **ResourceProvider**: The foundational component that creates and manages Sanity instances
+3. **ResourceProvider**: The foundational component that provides resource and perspective context and owns the root Sanity instance
 
 This layered approach provides both convenience for users and flexibility for implementation. Here's how it works:
 
@@ -46,42 +46,43 @@ This layered approach provides both convenience for users and flexibility for im
   <App />
 </SanityApp>
 
-// Internally transforms to:
+// Internally passes the configurations to SDKProvider:
 <SDKProvider
   config={[
-    { projectId: 'project2', dataset: 'production' },
-    { projectId: 'project1', dataset: 'production' }
+    { projectId: 'project1', dataset: 'production' },
+    { projectId: 'project2', dataset: 'production' }
   ]}
   fallback={<Loading />}
 >
   <App />
 </SDKProvider>
 
-// Which further creates this nested structure:
-<ResourceProvider projectId="project2" dataset="production" fallback={<Loading />}>
-  <ResourceProvider projectId="project1" dataset="production" fallback={<Loading />}>
-    <AuthBoundary>
+// SDKProvider uses the first configuration as the default resource:
+<ResourceProvider
+  projectId="project1"
+  dataset="production"
+  resource={{projectId: 'project1', dataset: 'production'}}
+  fallback={<Loading />}
+>
+  <AuthBoundary>
+    <OrganizationResourcesProvider resources={resources}>
       <App />
-    </AuthBoundary>
-  </ResourceProvider>
+    </OrganizationResourcesProvider>
+  </AuthBoundary>
 </ResourceProvider>
 ```
 
-### Implementation Details: Configuration Order and Nesting
+### Implementation Details: Default Configuration and Resources
 
-A critical implementation detail is how configurations are ordered and nested:
+A critical implementation detail is how the default configuration and resources are selected:
 
 1. **SanityApp** receives configurations and passes them to SDKProvider
-2. **SDKProvider** creates a nested structure of ResourceProviders, reversing the order and starting with the first config in the array as the last provider to make it the default instance.
-3. **ResourceProvider** instances create a hierarchy where child instances inherit from parents
+2. **SDKProvider** uses the first configuration as the default configuration and converts its project/dataset pair into the resource named `default`, unless an explicit `resources.default` was supplied
+3. **ResourceProvider** creates one Sanity instance at the root; nested ResourceProviders reuse that instance while overriding resource or perspective context
 
 ```tsx
 // In SanityApp.tsx:
-export function SanityApp({
-  children,
-  fallback = <div>Loading...</div>,
-  config,
-}: SanityAppProps): ReactElement {
+export function SanityApp({children, fallback, config}: SanityAppProps): ReactElement {
   return (
     <SDKProvider {...restProps} fallback={fallback} config={config}>
       {children}
@@ -96,59 +97,65 @@ export function SDKProvider({
   fallback,
   ...props
 }: SDKProviderProps): ReactElement {
-  // reverse because we want the first config to be the default, but the
-  // ResourceProvider nesting makes the last one the default
-  const configs = (Array.isArray(config) ? config : [config]).slice().reverse()
-
-  // Create a nested structure of ResourceProviders for each config
-  const createNestedProviders = (index: number): ReactElement => {
-    if (index >= configs.length) {
-      return <AuthBoundary {...props}>{children}</AuthBoundary>
-    }
-
-    return (
-      <ResourceProvider {...configs[index]} fallback={fallback}>
-        {createNestedProviders(index + 1)}
-      </ResourceProvider>
-    )
+  const defaultConfig = Array.isArray(config) ? config[0] : config
+  const resources = {
+    ...(defaultConfig?.projectId && defaultConfig.dataset
+      ? {default: {projectId: defaultConfig.projectId, dataset: defaultConfig.dataset}}
+      : {}),
+    ...props.resources,
   }
 
-  return createNestedProviders(0)
+  return (
+    <ResourceProvider {...defaultConfig} resource={resources.default} fallback={fallback}>
+      <AuthBoundary {...props}>
+        <OrganizationResourcesProvider resources={resources}>
+          {children}
+        </OrganizationResourcesProvider>
+      </AuthBoundary>
+    </ResourceProvider>
+  )
 }
 ```
 
-The ordering is crucial because when a hook like `useSanityInstance()` is called without specific configuration, it returns the nearest instance in the tree, which will be the innermost ResourceProvider - and therefore the first config provided by the user.
+The first configuration remains the default for compatibility. For multi-resource applications, prefer the `resources` prop and select a named resource with `resourceName`, or use a `ResourceProvider` to change the default resource for a subtree.
 
-### Resource Providers and Instance Hierarchy
+### Resource Providers and Resource Hierarchy
 
-The `ResourceProvider` component creates and manages what we call "Sanity instances". These instances are organized in a hierarchy where child instances inherit settings from their parents but can override them as needed. This design provides flexibility while maintaining clear resource boundaries:
+The root `ResourceProvider` creates and manages a Sanity instance. Nested providers reuse that instance while inheriting and overriding resource or perspective context as needed. This design provides flexibility while maintaining clear resource boundaries:
 
 ```tsx
-// A basic example showing nested ResourceProviders with inheritance
-<ResourceProvider projectId="main-project" dataset="production" fallback={<Loading />}>
-  <ResourceProvider dataset="staging" fallback={<Loading />}>
-    {/* This context inherits projectId="main-project" but uses dataset="staging" */}
+// A basic example showing nested ResourceProviders with resource overrides
+<ResourceProvider
+  resource={{projectId: 'main-project', dataset: 'production'}}
+  fallback={<Loading />}
+>
+  <ResourceProvider
+    resource={{projectId: 'main-project', dataset: 'staging'}}
+    fallback={<Loading />}
+  >
+    {/* This subtree uses staging while reusing the same Sanity instance */}
   </ResourceProvider>
 </ResourceProvider>
 ```
 
 ### Instance Lifecycle and Resource Management
 
-Each `ResourceProvider` creates a Sanity instance with its own lifecycle. The SDK manages these instances and their resources following a simple pattern:
+The root `ResourceProvider` creates a Sanity instance with its own lifecycle. Nested ResourceProviders reuse it. The SDK manages the instance and its resources following a simple pattern:
 
-1. **Creation**: A new instance is born when a `ResourceProvider` mounts
+1. **Creation**: A new instance is born when a root `ResourceProvider` mounts
 2. **Initialization**: Resources (like data connections) are created only when first needed
-3. **Cleanup**: Everything gets cleaned up when the `ResourceProvider` unmounts
+3. **Cleanup**: Everything gets cleaned up when the root `ResourceProvider` unmounts
 
-Here's how it looks in practice:
+Here's how it looks when `ResourceProvider` is mounted without a parent Sanity instance (for
+example, when used as the application root):
 
 ```tsx
 function MyComponent() {
   return (
-    <ResourceProvider projectId="project1" dataset="production">
-      {/* A new instance is created here */}
+    <ResourceProvider projectId="project1" dataset="production" fallback={<Loading />}>
+      {/* With no parent instance, this root provider creates one */}
       <DataComponent />
-      {/* When this component unmounts, the instance and all its resources are cleaned up */}
+      {/* When the root provider unmounts, its instance and resources are cleaned up */}
     </ResourceProvider>
   )
 }
@@ -156,12 +163,10 @@ function MyComponent() {
 
 ### Understanding Sanity Instances and Configuration
 
-A "Sanity instance" is a self-contained unit that manages a specific configuration and its associated resources. Each instance has:
+A "Sanity instance" is a self-contained unit that manages application configuration and associated resources. Each instance has:
 
 1. **Configuration**: Settings like which project and dataset to use
 2. **Lifecycle Management**: A way to clean up resources when they're no longer needed
-3. **Family Relationships**: Links to parent instances it inherits from
-4. **Instance Matching**: The ability to find instances with specific configurations
 
 Here's what the technical structure looks like:
 
@@ -177,11 +182,6 @@ interface SanityInstance {
   isDisposed(): boolean
   dispose(): void
   onDispose(cb: () => void): () => void
-
-  // Methods to work with the instance hierarchy
-  getParent(): SanityInstance | undefined
-  createChild(config: SanityConfig): SanityInstance
-  match(targetConfig: Partial<SanityConfig>): SanityInstance | undefined
 }
 ```
 
@@ -190,77 +190,88 @@ interface SanityInstance {
 The SDK handles instance creation using React context. Here's a simplified look at how the `ResourceProvider` component works:
 
 ```tsx
-function ResourceProvider({children, fallback, ...config}) {
+function ResourceProvider({children, fallback, resource, ...config}) {
   // Check if we have a parent instance
-  const parent = use(SanityInstanceContext)
+  const parent = useContext(SanityInstanceContext)
+  const parentResource = useContext(ResourceContext)
+  const parentPerspective = useContext(PerspectiveContext)
+  const parentProjectId = useContext(ProjectContext)
+  const {projectId, dataset, perspective} = config
 
-  // Create our instance, either brand new or as a child of the parent
-  const instance = useMemo(
-    () => (parent ? parent.createChild(config) : createSanityInstance(config)),
-    [config, parent],
-  )
+  // Create an instance only at the root; nested providers reuse it
+  const [instance] = useState(() => parent ?? createSanityInstance(config))
+
+  // Legacy compatibility: a dataset-only provider inherits its parent project
+  const configResource =
+    projectId && dataset
+      ? {projectId, dataset}
+      : dataset && parentProjectId
+        ? {projectId: parentProjectId, dataset}
+        : undefined
+
+  // Legacy compatibility: a bare projectId creates project scope, not a resource
+  const effectiveResource = resource ?? configResource ?? (projectId ? undefined : parentResource)
+  const effectiveProjectId =
+    effectiveResource && isDatasetResource(effectiveResource)
+      ? effectiveResource.projectId
+      : (projectId ?? parentProjectId)
 
   // Clean up when component unmounts
   useEffect(() => {
     return () => {
-      if (!instance.isDisposed()) {
-        instance.dispose()
-      }
+      // Strict Mode's deferred/cancelable disposal handling is omitted here
+      if (!instance.isDisposed() && instance !== parent) instance.dispose()
     }
-  }, [instance])
+  }, [instance, parent])
 
-  // Make this instance available to children
+  // Provide the shared instance and this subtree's project/resource/perspective
   return (
-    <SanityInstanceContext.Provider value={instance}>
-      <Suspense fallback={fallback}>{children}</Suspense>
-    </SanityInstanceContext.Provider>
+    <SanityInstanceProvider instance={instance} fallback={fallback}>
+      <ResourceContext.Provider value={effectiveResource}>
+        <ProjectContext.Provider value={effectiveProjectId}>
+          <PerspectiveContext.Provider value={perspective ?? parentPerspective}>
+            {children}
+          </PerspectiveContext.Provider>
+        </ProjectContext.Provider>
+      </ResourceContext.Provider>
+    </SanityInstanceProvider>
   )
 }
 ```
 
-Components can then access the current instance or find a specific one using the `useSanityInstance` hook:
+Components can then access the current instance with `useSanityInstance`, inspect the current resource with `useResource`, or select another resource in a hook's options:
 
 ```tsx
 function MyComponent() {
   // Get the nearest instance
   const instance = useSanityInstance()
 
-  // Or find a specific instance
-  const productionInstance = useSanityInstance({
-    dataset: 'production',
-  })
+  // Get the active resource for this subtree
+  const resource = useResource()
 
-  // Now you can use the instance...
+  // Or select a named resource for an operation
+  const {data} = useDocuments({documentType: 'article', resourceName: 'production'})
 }
 ```
 
-Here is the implementation of `useSanityInstance`. Notice how it utilizes the `instance.match` method to find an applicable parent configuration to make the above example possible:
+Here is the implementation of `useSanityInstance`:
 
 ```ts
-export const useSanityInstance = (config?: SanityConfig): SanityInstance => {
-  const instance = use(SanityInstanceContext)
+export const useSanityInstance = (): SanityInstance => {
+  const instance = useContext(SanityInstanceContext)
 
   if (!instance) {
     throw new Error(`SanityInstance context not found.`)
   }
 
-  if (!config) return instance
-
-  const match = instance.match(config)
-  if (!match) {
-    throw new Error(
-      `Could not find a matching Sanity instance for the requested configuration: ${JSON.stringify(config, null, 2)}.`,
-    )
-  }
-
-  return match
+  return instance
 }
 ```
 
 This system makes it possible to:
 
 - Pass configuration down through your component tree
-- Find instances with specific settings when you need them
+- Select resources explicitly or through resource context when you need them
 - Automatically clean up resources when components unmount
 - Use React Suspense for elegant loading states
 
@@ -277,6 +288,8 @@ interface ProjectHandle {
 // Project plus dataset information
 interface DatasetHandle extends ProjectHandle {
   dataset?: string
+  resource?: DocumentResource
+  perspective?: ClientPerspective | ReleasePerspective
 }
 
 // The complete configuration
@@ -343,7 +356,7 @@ Now these components can be utilized with other APIs that operate with handles:
 ```tsx
 function DocumentList() {
   // Returns document handles for all 'person' documents
-  const {data} = useInfiniteList({
+  const {data} = useDocuments({
     filter: '_type == $type',
     params: {type: 'person'},
   })
@@ -369,7 +382,7 @@ This handle-based approach gives you:
 - **Flexibility**: Components can work with partial configuration
 - **Context Preservation**: Configuration flows naturally through your component tree
 
-To further improve type safety and facilitate integration with tools like Sanity Typegen, the SDK provides helper functions like `createDocumentHandle`, `createDocumentTypeHandle`, `createProjectHandle`, and `createDatasetHandle` (defined in `@sanity/core`). These functions act primarily as identity functions at runtime but provide stronger type guarantees in TypeScript. They help capture literal types (e.g., `{ documentType: 'author' }` instead of `{ documentType: string }`) without requiring the use of `as const` on the handle object literal.
+To further improve type safety and facilitate integration with tools like Sanity Typegen, the SDK provides helper functions like `createDocumentHandle`, `createDocumentTypeHandle`, `createProjectHandle`, and `createDatasetHandle` (defined in `@sanity/sdk` and re-exported by `@sanity/sdk-react`). These functions act primarily as identity functions at runtime but provide stronger type guarantees in TypeScript. They help capture literal types (e.g., `{ documentType: 'author' }` instead of `{ documentType: string }`) without requiring the use of `as const` on the handle object literal.
 
 While you can still create handles using plain objects (especially with `as const` if needed for Typescript), using these helper functions is recommended, particularly when leveraging Typegen, as it ensures the necessary type information is preserved for accurate type inference downstream in hooks like `useDocument`.
 
@@ -419,15 +432,16 @@ When a store is actually needed, the SDK creates a "store instance" tied to a sp
 - Sets up proper cleanup when the instance is disposed
 
 ```ts
-export function createStoreInstance<TState>(
+export function createStoreInstance<TState, TKey extends {name: string}>(
   instance: SanityInstance,
-  {name, getInitialState, initialize}: StoreDefinition<TState>,
+  key: TKey,
+  {name, getInitialState, initialize}: StoreDefinition<TState, TKey>,
 ): StoreInstance<TState> {
-  const state = createStoreState(getInitialState(instance), {
+  const state = createStoreState(getInitialState(instance, key), {
     enabled: !!getEnv('DEV'),
-    name: `${name}-${instance.instanceId}`,
+    name: `${name}-${key.name}`,
   })
-  const dispose = initialize?.({state, instance})
+  const dispose = initialize?.({state, instance, key})
   const disposed = {current: false}
 
   return {
@@ -442,21 +456,22 @@ export function createStoreInstance<TState>(
 }
 ```
 
-The smart part is that each store instance is isolated to its own context. For example, a document store for "project1/production" is separate from a document store for "project1/staging" - they don't interfere with each other and the implementation can remain simple operating on a single dataset.
+The smart part is that each store instance is isolated by its binder key. For example, a document store for "project1/production" is separate from a document store for "project1/staging" - they don't interfere with each other and the implementation can remain simple operating on a single resource.
 
 ### Action Binding and State Updates
 
 To interact with stores, the SDK uses "action binding" - a pattern where functions are connected (or "bound") to specific store instances. When you call a bound store action, it automatically knows which store instance to use. Importantly, stores are lazily initialized - they aren't created until the first time an action is called. This approach both simplifies state management and optimizes performance by only creating store instances when they're actually needed.
 
-There are two main ways actions are bound to stores:
+There are three main ways actions are bound to stores:
 
 1. **Global Binding** (`bindActionGlobally`): Creates one shared store instance that all Sanity instances access together, regardless of their `instance.config` - useful for app-wide state like authentication
-2. **Dataset Binding** (`bindActionByDataset`): Creates independent store instances based on each instance's `config` properties - keeping data properly isolated between different project/dataset combinations
+2. **Resource Binding** (`bindActionByResource`): Creates independent store instances for each dataset, media library, or canvas resource
+3. **Resource and Perspective Binding** (`bindActionByResourceAndPerspective`): Further isolates resource state by perspective
 
 Here's a simplified look at how the action binding system works:
 
 ```typescript
-function createActionBinder(keyFn: (config: SanityConfig) => string) {
+function createActionBinder(keyFn: (instance: SanityInstance, ...params) => {name: string}) {
   // Track store instances and which Sanity instances use them
   const instanceRegistry = new Map<string, Set<string>>()
   const storeRegistry = new Map<string, StoreInstance<unknown>>()
@@ -464,13 +479,14 @@ function createActionBinder(keyFn: (config: SanityConfig) => string) {
   return function bindAction(storeDefinition, action) {
     return function boundAction(instance, ...params) {
       // Generate a unique key for this store instance
-      const key = `${storeDefinition.name}:${keyFn(instance.config)}`
+      const key = keyFn(instance, ...params)
+      const compositeKey = `${storeDefinition.name}:${key.name}`
 
       // Get or create set of instances using this store
-      let instances = instanceRegistry.get(key)
+      let instances = instanceRegistry.get(compositeKey)
       if (!instances) {
         instances = new Set()
-        instanceRegistry.set(key, instances)
+        instanceRegistry.set(compositeKey, instances)
       }
 
       // Track this instance for cleanup
@@ -483,43 +499,40 @@ function createActionBinder(keyFn: (config: SanityConfig) => string) {
 
           // If no instances left, clean up store
           if (instances.size === 0) {
-            storeRegistry.get(key)?.dispose()
-            storeRegistry.delete(key)
-            instanceRegistry.delete(key)
+            storeRegistry.get(compositeKey)?.dispose()
+            storeRegistry.delete(compositeKey)
+            instanceRegistry.delete(compositeKey)
           }
         })
       }
 
       // Get or create store instance
-      let store = storeRegistry.get(key)
+      let store = storeRegistry.get(compositeKey)
       if (!store) {
-        store = createStoreInstance(instance, storeDefinition)
-        storeRegistry.set(key, store)
+        store = createStoreInstance(instance, key, storeDefinition)
+        storeRegistry.set(compositeKey, store)
       }
 
       // Execute action with store context
-      return action({instance, state: store.state}, ...params)
+      return action({instance, state: store.state, key}, ...params)
     }
   }
 }
 
-// Create dataset-specific stores
-const bindActionByDataset = createActionBinder(({projectId, dataset}) => {
-  if (!projectId || !dataset) {
-    throw new Error('This API requires a project ID and dataset configured.')
-  }
-  return `${projectId}.${dataset}`
-})
+// Create resource-specific stores
+const bindActionByResource = createActionBinder((instance, {resource}) =>
+  createResourceKey(instance, resource),
+)
 
 // Create globally shared stores
-const bindActionGlobally = createActionBinder(() => 'global')
+const bindActionGlobally = createActionBinder(() => ({name: 'global'}))
 ```
 
 The action binding system is responsible for:
 
 1. **Store Instance Management**: Creating and tracking store instances based on unique keys
 2. **Resource Cleanup**: Ensuring stores are cleaned up when no instances are using them
-3. **State Isolation**: Keeping state separate between different configurations (for dataset-bound stores)
+3. **State Isolation**: Keeping state separate between different resources and perspectives
 4. **State Sharing**: Allowing state to be shared across all instances (for global stores)
 
 Behind the scenes, the binding system:
@@ -534,9 +547,15 @@ Here's a simple example:
 // This action is bound globally - all instances share the same auth state
 const getCurrentUser = bindActionGlobally(authStore, ({state}) => state.get().user)
 
-// This action is bound by dataset - each project/dataset has its own documents
-const getDocuments = bindActionByDataset(documentStore, ({state}) => state.get().documents)
+// This action is bound by resource - each resource has its own documents
+const getDocuments = bindActionByResource(documentStore, ({state}) => state.get().documents)
 ```
+
+### v3 Fetcher and Mutation Utilities
+
+For API-style resources, v3 replaced `createFetcherStore` with `defineFetcher` in `packages/core/src/store/fetcherStore.ts`. Fetcher definitions share a globally bound cache while their names and parameter keys keep entries isolated. The cache supports stale-while-revalidate behavior, garbage collection, explicit refetching, and tag-based invalidation.
+
+`defineMutation` uses the same cache for optimistic writes, rollback on failure, reconciliation, and invalidation. See `SDK-Developer-Onboarding.md` for a focused walkthrough of these utilities.
 
 ## Seeing It All In Action: A Complex Example
 
@@ -547,7 +566,7 @@ import {
   DocumentHandle,
   ResourceProvider,
   useDatasets,
-  usePaginatedList,
+  usePaginatedDocuments,
   useDocumentProjection,
   useProjects,
   useQuery,
@@ -561,7 +580,7 @@ function ProjectExplorer() {
   const [selectedProjectId, setSelectedProjectId] = useState('')
 
   // Get all available projects
-  const projects = useProjects()
+  const {data: projects} = useProjects()
 
   return (
     <div>
@@ -597,7 +616,7 @@ function Datasets() {
   const [selectedDataset, setSelectedDataset] = useState('')
 
   // Get datasets for the current project
-  const datasets = useDatasets()
+  const {data: datasets} = useDatasets()
 
   return (
     <div>
@@ -630,7 +649,9 @@ function DocumentTypes() {
   const [selectedType, setSelectedType] = useState('')
 
   // Get all unique document types in this dataset
-  const {data: documentTypes} = useQuery('array::unique(*[]._type)')
+  const {data: documentTypes} = useQuery<string[]>({
+    query: 'array::unique(*[]._type)',
+  })
 
   return (
     <div>
@@ -656,7 +677,7 @@ function DocumentTypes() {
 
 function DocumentList({type}) {
   // Get a paginated list of documents
-  const {data: docHandles} = usePaginatedList({
+  const {data: docHandles} = usePaginatedDocuments({
     filter: `_type == $type`,
     params: {type},
     pageSize: 10,
@@ -697,12 +718,12 @@ This example shows several key patterns in action:
 
 2. **Handle Usage**
 
-   - Document handles from `usePaginatedList` preserve all context
+   - Document handles from `usePaginatedDocuments` preserve all context
    - Handles are spread into components like `DocumentPreview`
    - Components remain agnostic about where their data comes from
 
 3. **Smart Resource Management**
-   - When selections change, old resources are automatically cleaned up
+   - When selections change, the subtree receives the newly selected resource context
    - Suspense boundaries provide loading states at appropriate levels
    - State is isolated appropriately (project list vs. dataset-specific data)
 
@@ -717,6 +738,7 @@ function DatasetExplorer({projectId}: ProjectHandle) {
     <ResourceProvider
       projectId={projectId}
       dataset={environment === 'production' ? 'production' : 'staging'}
+      fallback={<div>Loading...</div>}
     >
       <EnvironmentToggle value={environment} onChange={setEnvironment} />
       <DocumentExplorer />
@@ -732,12 +754,12 @@ When implementing or modifying the SDK's resource management system, keep these 
 1. **Maintain the Component Hierarchy**
 
    - SanityApp should remain the public API
-   - SDKProvider should handle the nesting logic and configuration transformation
-   - ResourceProvider should focus on single-instance management
+   - SDKProvider should select the default configuration and provide the named resources map
+   - ResourceProvider should create the root instance and provide resource context to subtrees
 
 2. **Preserve Config Ordering Semantics**
 
-   - The first configuration in the user-provided array should always be the default (innermost) instance
+   - The first configuration in the user-provided array should remain the default configuration
    - Any changes to config handling must maintain this contract
 
 3. **Isolate Internal Components**
@@ -754,7 +776,8 @@ When implementing or modifying the SDK's resource management system, keep these 
 
 5. **Choose the Right Binding Type**
    - Use global binding for state that should be shared everywhere (like authentication)
-   - Use dataset binding for data that's specific to a particular project or dataset
+   - Use resource binding for data that's specific to a dataset, media library, or canvas
+   - Use resource-and-perspective binding when the same resource needs perspective-specific state
    - Clearly document which pattern is used for each store
 
 ## Conclusion
