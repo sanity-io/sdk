@@ -775,28 +775,28 @@ Everything else is mostly refinement.
 
 ## 🧰 Core Utility Deep Dive: The Other Important Area
 
-Directory: `packages/core/src/utils`
+File: `packages/core/src/store/fetcherStore.ts`
 
-### `createFetcherStore`
+### `defineFetcher`
 
 This is one of the highest-value files to understand.
 
-It creates a parameterized fetch/cache/subscription store.
+It registers a typed, parameterized view onto the shared fetch/cache/subscription store.
 
 Key ideas:
 
-- state is keyed by serialized params
-- the store is globally bound
-- adding a subscription can trigger a fetch
-- fetches are throttled
+- state is keyed by the fetcher name plus the key returned by `getKey(instance, ...params)`
+- the cache store is globally bound
+- adding a subscription can trigger an initial fetch or stale revalidation
+- fresh entries are reused while stale entries revalidate in the background
 - state can expire after the last subscription disappears
-- `resolveState` turns the reactive state source into a promise for the next defined value
+- `resolveState` turns the reactive state source into a promise for the first available data
 
 This is easy to misread as "just a cache helper." It is really a reactive fetch orchestration pattern.
 
 #### The Blunt Mental Model
 
-If `createFetcherStore` feels like wizard code, translate it to this:
+If `defineFetcher` feels like wizard code, translate it to this:
 
 - "keep one state entry per request key"
 - "when someone starts caring about a key, fetch it"
@@ -814,7 +814,7 @@ For each key:
 1. a subscriber appears
 2. the key gets a subscription record in store state
 3. the subscription-count change is observed
-4. a fetch may be triggered if throttling allows it
+4. a fetch may be triggered if the entry is missing or stale
 5. data or error is written back into the keyed entry
 6. when the last subscriber disappears, the keyed state is eventually removed
 
@@ -830,7 +830,7 @@ That is why it looks denser than a normal "data fetching helper."
 
 `getState(...)` gives you a reactive `StateSource`.
 
-`resolveState(...)` is the imperative sibling. It waits until the keyed state produces a non-`undefined` value, then resolves a promise.
+`resolveState(...)` is the imperative sibling. It waits until the keyed state leaves its pending status, then resolves with data or rejects with the initial error.
 
 If `getState(...)` is the version that stays in the conversation, `resolveState(...)` is the version that waits quietly until the data finally shows up and then says, "okay, here you go."
 
@@ -838,7 +838,7 @@ That is useful when some part of core wants the same underlying reactive machine
 
 #### The Main Thing Not To Miss
 
-`createFetcherStore` is globally bound in its own implementation.
+The cache used by `defineFetcher` is globally bound in its implementation.
 
 That does not mean all data is mashed together. The per-request key still partitions state inside the store.
 
@@ -1016,11 +1016,11 @@ Files:
 
 This is the seam between core reactivity and React subscriptions.
 
-### 7. `createFetcherStore` is more than a cache
+### 7. `defineFetcher` is more than a cache
 
-File: `packages/core/src/utils/createFetcherStore.ts`
+File: `packages/core/src/store/fetcherStore.ts`
 
-It coordinates subscription counts, fetch timing, cache state, and expiration.
+It coordinates subscription counts, staleness, fetch timing, cache state, and expiration.
 
 ### 8. Handle helper functions can be mostly type helpers
 
@@ -1070,7 +1070,7 @@ This repo tests the real hosting model, not just a plain localhost SPA.
 5. `packages/react/src/hooks/helpers/useNormalizedResourceOptions.ts`
 6. `packages/core/src/store/createActionBinder.ts`
 7. `packages/core/src/store/createStateSourceAction.ts`
-8. `packages/core/src/utils/createFetcherStore.ts`
+8. `packages/core/src/store/fetcherStore.ts`
 
 ### Third Pass
 
@@ -1104,7 +1104,7 @@ This repo tests the real hosting model, not just a plain localhost SPA.
 
 ### Day 4
 
-- read `createFetcherStore.ts`
+- read `fetcherStore.ts`
 - read one query or projection flow that uses it
 - validate the behavior in kitchensink or tests
 
